@@ -11,7 +11,7 @@ services:
       # - .:/app
       # - /app/node_modules
       # - /app/.next
-      - db-data:/data
+      - ./data:/data
     ports:
       - "3000:3000"
     env_file:
