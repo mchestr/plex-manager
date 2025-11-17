@@ -1,18 +1,18 @@
 "use server"
 
+import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { generateWrappedWithLLM } from "@/lib/wrapped/llm"
 import {
-  fetchOverseerrStatistics,
-  fetchPlexServerStatistics,
-  fetchTautulliStatistics,
-  fetchTopContentLeaderboards,
-  fetchWatchTimeLeaderboard,
+    fetchOverseerrStatistics,
+    fetchPlexServerStatistics,
+    fetchTautulliStatistics,
+    fetchTopContentLeaderboards,
+    fetchWatchTimeLeaderboard,
 } from "@/lib/wrapped/statistics"
 import { WrappedStatistics } from "@/types/wrapped"
-import { revalidatePath } from "next/cache"
 import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { revalidatePath } from "next/cache"
 
 /**
  * Generate Plex Wrapped for a specific user
@@ -32,6 +32,11 @@ export async function generatePlexWrapped(
 
     const currentUserId = session.user.id
     const isAdmin = session.user.isAdmin
+
+    // Validate that session has a valid user ID
+    if (!currentUserId || currentUserId.trim() === "") {
+      return { success: false, error: "Unauthorized: Invalid session" }
+    }
 
     // Check if user exists
     const user = await prisma.user.findUnique({
@@ -56,6 +61,11 @@ export async function generatePlexWrapped(
     // - Users can generate their own wrapped if it doesn't exist (initial generation)
     // - Users can retry their own wrapped if it failed (status === "failed")
     // - Only admins can regenerate completed wrapped or generate for other users
+    // Normalize IDs for comparison (trim whitespace and ensure they're strings)
+    const normalizedCurrentUserId = String(currentUserId).trim()
+    const normalizedUserId = String(userId).trim()
+    const isOwnWrapped = normalizedCurrentUserId === normalizedUserId
+
     if (existingWrapped) {
       if (existingWrapped.status === "completed") {
         // Completed wrapped exists - this is a regeneration, require admin
@@ -64,18 +74,18 @@ export async function generatePlexWrapped(
         }
       } else if (existingWrapped.status === "failed") {
         // Failed wrapped - allow user to retry their own, or admin for any user
-        if (currentUserId !== userId && !isAdmin) {
+        if (!isOwnWrapped && !isAdmin) {
           return { success: false, error: "Unauthorized: You can only retry your own wrapped" }
         }
       } else {
         // Generating status - allow user to retry their own, or admin for any user
-        if (currentUserId !== userId && !isAdmin) {
+        if (!isOwnWrapped && !isAdmin) {
           return { success: false, error: "Unauthorized: You can only generate your own wrapped" }
         }
       }
     } else {
       // Wrapped doesn't exist - allow if user is generating their own, or if admin
-      if (currentUserId !== userId && !isAdmin) {
+      if (!isOwnWrapped && !isAdmin) {
         return { success: false, error: "Unauthorized: You can only generate your own wrapped" }
       }
     }

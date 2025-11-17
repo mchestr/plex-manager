@@ -3,6 +3,7 @@ import { Metadata } from "next"
 import { WrappedShareSummary } from "@/components/wrapped-share-summary"
 import { WrappedData } from "@/types/wrapped"
 import { getBaseUrl } from "@/lib/utils"
+import { stripHighlightTags } from "@/lib/wrapped/text-processor"
 
 export const dynamic = 'force-dynamic'
 
@@ -49,7 +50,9 @@ export async function generateMetadata({
 
   const userName = wrapped.userName || "Someone"
   const year = wrapped.year
-  const summary = wrapped.summary || `Check out ${userName}'s ${year} Plex Wrapped!`
+  const rawSummary = wrapped.summary || `Check out ${userName}'s ${year} Plex Wrapped!`
+  // Strip highlight tags for social media sharing (they look ugly in previews)
+  const summary = stripHighlightTags(rawSummary)
   const title = `${userName}'s ${year} Plex Wrapped`
 
   // Create a default OG image URL (you can replace this with a dynamic image generator later)

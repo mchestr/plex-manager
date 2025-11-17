@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useState, useCallback } from "react"
 import { WrappedGeneratingAnimation } from "./wrapped-generating-animation"
+import { WrappedShareButton } from "./wrapped-share-button"
 
 interface WrappedHomeButtonProps {
   userId: string
@@ -162,6 +163,9 @@ export function WrappedHomeButton({ userId, serverName }: WrappedHomeButtonProps
           </span>
           <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 opacity-0 group-hover:opacity-20 rounded-xl blur-xl transition-opacity"></div>
         </Link>
+        {wrapped.shareToken && (
+          <WrappedShareButton shareToken={wrapped.shareToken} year={currentYear} />
+        )}
       </div>
     )
   }

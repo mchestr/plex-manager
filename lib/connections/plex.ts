@@ -89,11 +89,16 @@ export async function getPlexUserInfo(token: string): Promise<{ success: boolean
 
     // Plex API v2 returns user data in a specific format
     // Handle both possible response structures
+    const extractedId = data.id?.toString() || data.uuid?.toString() || data.user?.id?.toString()
+    const extractedUsername = data.username || data.user?.username
+    const extractedEmail = data.email || data.user?.email
+    const extractedThumb = data.thumb || data.user?.thumb
+
     const userInfo: PlexUserInfo = {
-      id: data.id?.toString() || data.uuid?.toString() || data.user?.id?.toString(),
-      username: data.username || data.user?.username,
-      email: data.email || data.user?.email,
-      thumb: data.thumb || data.user?.thumb,
+      id: extractedId,
+      username: extractedUsername,
+      email: extractedEmail,
+      thumb: extractedThumb,
     }
 
     // Validate required fields
@@ -115,43 +120,48 @@ export async function getPlexUserInfo(token: string): Promise<{ success: boolean
 
 /**
  * Checks if a user has access to a configured Plex server
- * Uses the user's token to attempt accessing the server
+ * Uses the server's admin token to check if the user exists in the server's user list
+ * This is more reliable than using the user's token directly
  */
 export async function checkUserServerAccess(
-  userToken: string,
-  serverConfig: { hostname: string; port: number; protocol: string }
+  serverConfig: { hostname: string; port: number; protocol: string; token: string },
+  plexUserId: string
 ): Promise<{ success: boolean; hasAccess: boolean; error?: string }> {
   try {
-    const url = `${serverConfig.protocol}://${serverConfig.hostname}:${serverConfig.port}/library/sections?X-Plex-Token=${userToken}`
-
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
-
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "Accept": "application/json",
-      },
-      signal: controller.signal,
+    // First, get the list of users from the server using the admin token
+    const usersResult = await getAllPlexServerUsers({
+      hostname: serverConfig.hostname,
+      port: serverConfig.port,
+      protocol: serverConfig.protocol,
+      token: serverConfig.token,
     })
 
-    clearTimeout(timeoutId)
-
-    if (response.status === 401) {
-      return { success: true, hasAccess: false, error: "Unauthorized - no access to server" }
+    if (!usersResult.success) {
+      return { success: false, hasAccess: false, error: usersResult.error || "Failed to fetch server users" }
     }
 
-    if (!response.ok) {
-      return { success: false, hasAccess: false, error: `Server check failed: ${response.statusText}` }
+    if (!usersResult.data) {
+      return { success: false, hasAccess: false, error: "No user data returned from server" }
     }
 
-    // If we get a successful response, the user has access
-    return { success: true, hasAccess: true }
+    // Check if the user's Plex ID exists in the server's user list
+    // Normalize IDs for comparison (convert to string and trim)
+    const normalizedPlexUserId = String(plexUserId).trim()
+
+    // Check each user individually
+    const userExists = usersResult.data.some((user) => {
+      const normalizedServerUserId = String(user.id).trim()
+      return normalizedServerUserId === normalizedPlexUserId
+    })
+
+    if (userExists) {
+      return { success: true, hasAccess: true }
+    }
+
+    // User not found in server's user list
+    return { success: true, hasAccess: false, error: "User not found in server's user list" }
   } catch (error) {
     if (error instanceof Error) {
-      if (error.name === "AbortError") {
-        return { success: false, hasAccess: false, error: "Connection timeout" }
-      }
       return { success: false, hasAccess: false, error: `Error checking server access: ${error.message}` }
     }
     return { success: false, hasAccess: false, error: "Failed to check server access" }
@@ -217,16 +227,16 @@ export async function getAllPlexServerUsers(
     const users: PlexServerUser[] = []
 
     accounts.forEach((account: any) => {
-      const id = account["@_id"]
+      const rawId = account["@_id"]
       const name = account["@_name"]
       const email = account["@_email"] || undefined
       const thumb = account["@_thumb"] || undefined
       const restricted = account["@_restricted"] === "1"
       const serverAdmin = account["@_serverAdmin"] === "1"
 
-      if (id && name) {
+      if (rawId && name) {
         users.push({
-          id: id.toString(),
+          id: rawId.toString(),
           name,
           email,
           thumb,

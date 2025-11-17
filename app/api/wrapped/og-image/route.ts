@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma"
 import { NextRequest, NextResponse } from "next/server"
 import { shareRateLimiter } from "@/lib/security/rate-limit"
 import { createSafeError, ErrorCode, getStatusCode, logError } from "@/lib/security/error-handler"
+import { stripHighlightTags } from "@/lib/wrapped/text-processor"
 
 // Force dynamic rendering since we use request.headers for rate limiting
 export const dynamic = 'force-dynamic'
@@ -52,7 +53,9 @@ export async function GET(request: NextRequest) {
     const wrappedData = JSON.parse(wrapped.data)
     const userName = wrapped.user.name || wrapped.user.email || "Someone"
     const year = wrapped.year
-    const summary = wrapped.summary || `Check out ${userName}'s ${year} Plex Wrapped!`
+    const rawSummary = wrapped.summary || `Check out ${userName}'s ${year} Plex Wrapped!`
+    // Strip highlight tags for OG image (they look ugly in social previews)
+    const summary = stripHighlightTags(rawSummary)
 
     // Extract some key stats for the image
     const stats = wrappedData.statistics || {}

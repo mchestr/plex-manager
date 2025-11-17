@@ -3,10 +3,10 @@
  */
 
 import {
-  testPlexConnection,
-  getPlexUserInfo,
   checkUserServerAccess,
   getAllPlexServerUsers,
+  getPlexUserInfo,
+  testPlexConnection,
 } from '@/lib/connections/plex'
 
 describe('Plex Connection', () => {
@@ -199,55 +199,128 @@ describe('Plex Connection', () => {
   })
 
   describe('checkUserServerAccess', () => {
-    it('should return true when user has access', async () => {
+    it('should return true when user exists in server user list', async () => {
+      const xmlResponse = `<?xml version="1.0" encoding="UTF-8"?>
+<MediaContainer>
+  <Account id="123" name="Test User" email="test@example.com" restricted="0" serverAdmin="0"/>
+  <Account id="456" name="Other User" email="other@example.com" restricted="0" serverAdmin="0"/>
+</MediaContainer>`
+
       ;(global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
-        status: 200,
+        text: async () => xmlResponse,
       })
 
-      const result = await checkUserServerAccess('user-token', {
-        hostname: 'plex.example.com',
-        port: 32400,
-        protocol: 'https',
-      })
+      const result = await checkUserServerAccess(
+        {
+          hostname: 'plex.example.com',
+          port: 32400,
+          protocol: 'https',
+          token: 'server-token',
+        },
+        '123'
+      )
 
       expect(result.success).toBe(true)
       expect(result.hasAccess).toBe(true)
     })
 
-    it('should return false when user does not have access', async () => {
+    it('should return false when user does not exist in server user list', async () => {
+      const xmlResponse = `<?xml version="1.0" encoding="UTF-8"?>
+<MediaContainer>
+  <Account id="123" name="Test User" email="test@example.com" restricted="0" serverAdmin="0"/>
+  <Account id="456" name="Other User" email="other@example.com" restricted="0" serverAdmin="0"/>
+</MediaContainer>`
+
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        text: async () => xmlResponse,
+      })
+
+      const result = await checkUserServerAccess(
+        {
+          hostname: 'plex.example.com',
+          port: 32400,
+          protocol: 'https',
+          token: 'server-token',
+        },
+        '999'
+      )
+
+      expect(result.success).toBe(true)
+      expect(result.hasAccess).toBe(false)
+      expect(result.error).toContain("User not found in server's user list")
+    })
+
+    it('should handle normalized ID comparison (trim whitespace)', async () => {
+      const xmlResponse = `<?xml version="1.0" encoding="UTF-8"?>
+<MediaContainer>
+  <Account id=" 123 " name="Test User" email="test@example.com" restricted="0" serverAdmin="0"/>
+</MediaContainer>`
+
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        text: async () => xmlResponse,
+      })
+
+      const result = await checkUserServerAccess(
+        {
+          hostname: 'plex.example.com',
+          port: 32400,
+          protocol: 'https',
+          token: 'server-token',
+        },
+        '123'
+      )
+
+      expect(result.success).toBe(true)
+      expect(result.hasAccess).toBe(true)
+    })
+
+    it('should handle failed server user fetch', async () => {
       ;(global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: false,
         status: 401,
       })
 
-      const result = await checkUserServerAccess('user-token', {
-        hostname: 'plex.example.com',
-        port: 32400,
-        protocol: 'https',
-      })
-
-      expect(result.success).toBe(true)
-      expect(result.hasAccess).toBe(false)
-      expect(result.error).toContain('no access')
-    })
-
-    it('should handle server errors', async () => {
-      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: false,
-        status: 500,
-        statusText: 'Internal Server Error',
-      })
-
-      const result = await checkUserServerAccess('user-token', {
-        hostname: 'plex.example.com',
-        port: 32400,
-        protocol: 'https',
-      })
+      const result = await checkUserServerAccess(
+        {
+          hostname: 'plex.example.com',
+          port: 32400,
+          protocol: 'https',
+          token: 'invalid-token',
+        },
+        '123'
+      )
 
       expect(result.success).toBe(false)
       expect(result.hasAccess).toBe(false)
-      expect(result.error).toContain('Server check failed')
+      expect(result.error).toContain('Unauthorized')
+    })
+
+    it('should handle empty user list', async () => {
+      const xmlResponse = `<?xml version="1.0" encoding="UTF-8"?>
+<MediaContainer>
+</MediaContainer>`
+
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        text: async () => xmlResponse,
+      })
+
+      const result = await checkUserServerAccess(
+        {
+          hostname: 'plex.example.com',
+          port: 32400,
+          protocol: 'https',
+          token: 'server-token',
+        },
+        '123'
+      )
+
+      expect(result.success).toBe(true)
+      expect(result.hasAccess).toBe(false)
+      expect(result.error).toContain("User not found in server's user list")
     })
 
     it('should handle connection timeout', async () => {
@@ -255,11 +328,15 @@ describe('Plex Connection', () => {
       abortError.name = 'AbortError'
       ;(global.fetch as jest.Mock).mockRejectedValueOnce(abortError)
 
-      const result = await checkUserServerAccess('user-token', {
-        hostname: 'plex.example.com',
-        port: 32400,
-        protocol: 'https',
-      })
+      const result = await checkUserServerAccess(
+        {
+          hostname: 'plex.example.com',
+          port: 32400,
+          protocol: 'https',
+          token: 'server-token',
+        },
+        '123'
+      )
 
       expect(result.success).toBe(false)
       expect(result.hasAccess).toBe(false)

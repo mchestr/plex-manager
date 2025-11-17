@@ -44,13 +44,25 @@ export const authOptions: NextAuthOptions = {
           }
 
           // Check if user has access to the configured Plex server
-          const accessCheck = await checkUserServerAccess(authToken, {
-            hostname: plexServer.hostname,
-            port: plexServer.port,
-            protocol: plexServer.protocol,
-          })
+          // Use the server's admin token to check if the user exists in the server's user list
+          const accessCheck = await checkUserServerAccess(
+            {
+              hostname: plexServer.hostname,
+              port: plexServer.port,
+              protocol: plexServer.protocol,
+              token: plexServer.token,
+            },
+            plexUser.id
+          )
 
           if (!accessCheck.success || !accessCheck.hasAccess) {
+            console.log("[AUTH] - Plex user denied access:", {
+              plexUserId: plexUser.id,
+              username: plexUser.username,
+              email: plexUser.email,
+              serverHostname: plexServer.hostname,
+              reason: accessCheck.error || "No access to server",
+            })
             throw new Error("ACCESS_DENIED")
           }
 
@@ -150,6 +162,8 @@ export const authOptions: NextAuthOptions = {
         token.sub = user.id
         token.isAdmin = (user as any).isAdmin || false
       }
+      // Preserve token.sub on refresh (when user is not provided)
+      // This ensures the session user ID remains available
       return token
     },
   },
