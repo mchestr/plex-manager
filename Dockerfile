@@ -54,10 +54,11 @@ COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 
-# Copy package.json and install Prisma CLI with all dependencies
+# Copy package.json and install Prisma CLI and Client with all dependencies
 COPY --from=builder /app/package.json ./package.json
 RUN PRISMA_VERSION=$(node -p "require('./package.json').devDependencies.prisma") && \
-    npm install --no-save --no-package-lock "prisma@${PRISMA_VERSION}" && \
+    PRISMA_CLIENT_VERSION=$(node -p "require('./package.json').dependencies['@prisma/client']") && \
+    npm install --no-save --no-package-lock "prisma@${PRISMA_VERSION}" "@prisma/client@${PRISMA_CLIENT_VERSION}" && \
     npm cache clean --force && \
     chown -R nextjs:nodejs node_modules
 
