@@ -58,43 +58,17 @@ export function generateWrappedPrompt(
 
 Your task is to generate engaging, fun, and personalized content based on viewing statistics. Be creative, use emojis sparingly, and make it feel celebratory and personal.
 
-=== CRITICAL STYLE GUIDELINES ===
+=== STYLE GUIDELINES ===
 
-1. PERSON (MANDATORY):
-   - ALWAYS use 2nd person ("you", "your") when referring to the user
-   - NEVER use 3rd person ("they", "their", "he", "she", "them")
-   - Examples:
-     ✓ Correct: "You watched 45 movies!" or "Your top show was..."
-     ✗ Incorrect: "They watched 45 movies" or "Their top show was..."
+1. PERSON: Always use 2nd person ("you", "your") - never 3rd person ("they", "their")
 
-2. TONE & VOICE:
-   - Write in a fun, playful, and energetic tone - like celebrating achievements!
-   - Be enthusiastic and celebratory - this is a year in review, make it feel special!
-   - Use varied sentence structures and avoid repetitive phrasing
-   - Use exciting comparisons and metaphors (e.g., "That's like watching the entire Lord of the Rings trilogy 47 times!" or "You could have flown to Mars and back!")
+2. TONE: Fun, energetic, celebratory - use creative comparisons and metaphors
 
-3. STYLING TAGS (<highlight>):
-   - Use <highlight>text</highlight> tags for ALL numbers, times, counts, and important stats
-   - These render with: animated gradient colors (cyan → purple → pink), bold font, subtle pulsing animation
-   - Wrap: numbers, watch times, percentages, counts - anything that should "pop" visually
-   - Use liberally - they make content more engaging and visually dynamic!
-   - Examples:
-     * "You watched <highlight>45 days</highlight> of content!"
-     * "That's <highlight>1,234</highlight> movies!"
-     * "Your top <highlight>5</highlight> movies were amazing!"
+3. HIGHLIGHT TAGS: Wrap ALL numbers, times, and stats in <highlight>tags</highlight> for visual impact
 
-4. WATCH TIME FORMATTING:
-   - All watch times are measured in MINUTES internally
-   - Always convert to explicit units (days, hours, minutes) in your content
-   - Example: Instead of "1,440 minutes", write "<highlight>1 day</highlight>" or "<highlight>24 hours</highlight>"
+4. WATCH TIME: Convert minutes to readable units (days, hours, minutes) - never show raw minutes
 
-5. SERVER REFERENCES (CRITICAL):
-   - The user does NOT own the Plex server - they are accessing someone else's server
-   - When referencing the server, use ONLY the server name (e.g., "MikeFlix", "MediaServer")
-   - NEVER use possessive language like "Your Plex server" or "Your server"
-   - Examples:
-     ✓ Correct: "MikeFlix is a treasure trove with..." or "MikeFlix has enough content to..."
-     ✗ Incorrect: "Your Plex server, MikeFlix..." or "Your server has..."
+5. SERVER REFERENCES: Use server name only (e.g., "MikeFlix") - never say "Your Plex server" or "Your server"
 
 === VIEWING STATISTICS FOR ${year} ===
 
@@ -188,76 +162,42 @@ ${statistics.watchTimeByMonth.map(month => {
 
 === SECTION REQUIREMENTS ===
 
-HERO SECTION (CRITICAL):
-- Content field: EXACTLY 2-3 powerful, high-impact sentences
-- Display: Prominently shown as the hero message
-- Style: EXCITING, energetic, immediately grabs attention
-- Start: Bold statement or engaging question
-- Include: Creative comparisons, metaphors, or surprising facts
-- Tone: Make it feel like a celebration!
-- Highlight tags: Use LIBERALLY - wrap EVERY number, stat, time, count, and impressive metric
-- Minimum highlights: AT LEAST 3-5 highlight tags for visual impact
-- Reference: Use actual stats from the data above and wrap numbers in <highlight> tags
-- Flow: Each sentence should be impactful and flow naturally into the next
-- Prominent Stat: REQUIRED - Include a "prominentStat" field in the data object with:
-  * "value": The single most impressive/meaningful number (e.g., total watch time in days, total movies watched, etc.)
-  * "label": A short descriptive label (e.g., "days watched", "movies", "hours", "episodes")
-  * "description": A brief 1-sentence context (e.g., "Total viewing time", "Movies completed", "Episodes binged")
-  * Choose the MOST impressive statistic that best represents their year - this will be displayed prominently as a large number
-- Example: "Ready to see how <highlight>45</highlight> movies and <highlight>12</highlight> shows shaped your year? You didn't just watch content in ${year} - you embarked on an epic journey through <highlight>67 days</highlight> of pure entertainment!"
+HERO SECTION:
+- Content: 2-3 exciting sentences with bold statements or engaging questions
+- Style: Energetic, celebratory, use creative comparisons/metaphors
+- Highlight tags: Wrap ALL numbers and stats (use 3-5+ highlights)
+- Prominent Stat: REQUIRED in data object:
+  * "value": Most impressive number (watch time in days, movies watched, etc.)
+  * "label": Short label ("days", "movies", "hours", "episodes")
+  * "description": Brief context ("Total viewing time", "Movies completed", etc.)
+- Example: "Ready to see how <highlight>45</highlight> movies shaped your year? You embarked on an epic journey through <highlight>67 days</highlight> of entertainment!" (Use YOUR actual stats!)
 
-ANIMATION DELAY RULES (CRITICAL):
-- Purpose: Control when each section appears, creating a smooth, paced reading experience
-- Unit: Delays are measured in milliseconds (ms)
+ANIMATION DELAY RULES:
 - Hero section: Always use "animationDelay": 0 (appears first)
+- Other sections: Calculate delays based on content length to pace the reading experience
+- Simple formula: Estimate reading time (words ÷ 200 × 60 × 1000ms) × 1.5, then add to previous section's delay
+- Minimum delay between sections: 2000ms (2 seconds)
+- For list sections (top-movies, top-shows, fun-facts): Add extra 2000-3000ms for scanning
+- Example: ~50 words = ~22,500ms, ~100 words = ~45,000ms
 
-CALCULATING DELAYS BASED ON READING TIME:
-- Reading Speed Assumption: Average readers consume ~200 words per minute (WPM)
-- Formula: Calculate delay based on word count + buffer for comfortable pacing
-- Step 1: Count total words in the section:
-  * Count words in: title, subtitle, content, and all text in data fields (movie/show titles, fact text, etc.)
-  * For list sections (top-movies, top-shows, fun-facts): count each item's text (title, description, etc.)
-  * Example: A section with 50 words in content + 5 movie titles (~10 words each) = ~100 total words
-- Step 2: Calculate base reading time:
-  * Reading time (seconds) = word count / 200 WPM
-  * Reading time (ms) = (word count / 200) * 60 * 1000
-  * Example: 100 words = (100/200) * 60 * 1000 = 30,000ms = 30 seconds
-- Step 3: Add buffer/wiggle room:
-  * Multiply reading time by 1.5-2x for comfortable pacing (allows slower readers + processing time)
-  * Recommended buffer: 1.75x multiplier for balanced pacing
-  * Example: 30 seconds * 1.75 = 52.5 seconds = 52,500ms
-- Step 4: Apply minimum spacing:
-  * Minimum delay between sections: 2000ms (2 seconds)
-  * If calculated delay is less than 2000ms, use 2000ms
-  * Each section's delay should be: previous section delay + calculated reading time delay
-- Step 5: Special considerations:
-  * List-heavy sections (top-movies, top-shows, fun-facts): Add extra 2000-3000ms for scanning lists
-  * Sections with prominent stats/numbers: Add 1000-2000ms for visual processing
-  * Complex sections (overseerr-stats with multiple stats): Add 2000-4000ms buffer
-
-RECOMMENDED DELAY CALCULATION EXAMPLES:
-- Short section (~30 words): (30/200)*60*1000*1.75 = 15,750ms ≈ 16,000ms
-- Medium section (~80 words): (80/200)*60*1000*1.75 = 42,000ms ≈ 42,000ms
-- Long section (~150 words): (150/200)*60*1000*1.75 = 78,750ms ≈ 79,000ms
-- List section (5 items, ~200 words total): (200/200)*60*1000*1.75 + 3000 = 55,500ms ≈ 56,000ms
-
-PROGRESSION EXAMPLE:
-- Hero: 0ms (always first)
-- Second section (~50 words): Previous (0) + max(calculated(~26,000ms), 2000) = 26,000ms
-- Third section (~80 words): Previous (26,000) + max(calculated(~42,000ms), 2000) = 68,000ms
-- Fourth section (~120 words): Previous (68,000) + max(calculated(~63,000ms), 2000) = 131,000ms
-- Continue this pattern, ensuring each delay accounts for reading time + buffer
-
-FUN-FACTS SECTION (FINAL SECTION):
-- This is ALWAYS the last section in the wrapped experience
-- When server stats are available, combine fun facts about viewing habits with information about the server's library
-- Include server library size facts (movies, shows, episodes, storage) as part of the fun facts list
-- Reference the server by name only (e.g., "MikeFlix"), NOT as "Your Plex server" or "Your server"
-- Calculate delay normally based on word count, but ensure it's substantial since users need time to read all previous content
+FUN-FACTS SECTION:
+- MUST be the last section
+- Combine viewing habit facts with server library info (if available)
+- Reference server by name only (e.g., "MikeFlix"), NOT "Your Plex server"
 
 === OUTPUT FORMAT ===
 
 Generate a JSON response with the following structure. Make it fun, engaging, and personalized:
+
+**IMPORTANT: The JSON structure below shows the REQUIRED FORMAT. DO NOT copy example values - use YOUR actual statistics!**
+
+**Key Requirements:**
+- Hero section first (animationDelay: 0), fun-facts section last
+- Include only relevant sections (e.g., overseerr-stats only if overseerrStats data exists)
+- Use actual movie/show objects from statistics in data.movies and data.shows arrays
+- Calculate bingeWatcher: true if any show has episodesWatched > 20, else false
+- Calculate discoveryScore: min(100, max(0, floor((moviesWatched + showsWatched) / 10)))
+- Calculate animation delays based on content length (not the example values shown)
 
 {
   "sections": [
@@ -266,7 +206,7 @@ Generate a JSON response with the following structure. Make it fun, engaging, an
       "type": "hero",
       "title": "Your ${year} Plex Year",
       "subtitle": "A personalized look at your viewing habits",
-      "content": "Your 2-3 exciting, high-impact sentences with highlights go here. Make them energetic and celebratory!",
+      "content": "[EXAMPLE - REPLACE WITH REAL CONTENT] Your 2-3 exciting, high-impact sentences with highlights go here. Make them energetic and celebratory!",
       "data": {
         "prominentStat": {
           "value": 67,
@@ -281,7 +221,7 @@ Generate a JSON response with the following structure. Make it fun, engaging, an
       "type": "total-watch-time",
       "title": "You watched...",
       "subtitle": "Total viewing time",
-      "content": "A fun, engaging description of your total watch time with exciting comparisons (e.g., 'That's like watching <highlight>X</highlight> movies back to back!' or 'You could have flown to the moon <highlight>X</highlight> times!'). Be playful and celebratory! Always include explicit units (days, hours, minutes) when mentioning watch times. Use <highlight>tags</highlight> around ALL numbers to make them visually pop!",
+      "content": "[EXAMPLE - REPLACE WITH REAL CONTENT] A fun, engaging description of your total watch time with exciting comparisons (e.g., 'That's like watching <highlight>X</highlight> movies back to back!' or 'You could have flown to the moon <highlight>X</highlight> times!'). Be playful and celebratory! Always include explicit units (days, hours, minutes) when mentioning watch times. Use <highlight>tags</highlight> around ALL numbers to make them visually pop!",
       "animationDelay": 2000
     },
     {
@@ -289,7 +229,7 @@ Generate a JSON response with the following structure. Make it fun, engaging, an
       "type": "movies-breakdown",
       "title": "Movie Marathon",
       "subtitle": "Your movie viewing stats",
-      "content": "A fun, playful message about your movie watching habits. Celebrate your cinematic journey! Use <highlight>tags</highlight> around all numbers and stats to make them visually pop!",
+      "content": "[EXAMPLE - REPLACE WITH REAL CONTENT] A fun, playful message about your movie watching habits. Celebrate your cinematic journey! Use <highlight>tags</highlight> around all numbers and stats to make them visually pop!",
       "animationDelay": 4000
     },
     {
@@ -297,7 +237,7 @@ Generate a JSON response with the following structure. Make it fun, engaging, an
       "type": "shows-breakdown",
       "title": "Binge Watcher",
       "subtitle": "Your show viewing stats",
-      "content": "A fun, playful message about your show watching habits. Celebrate your binge-watching achievements! Use <highlight>tags</highlight> around all numbers and stats to make them visually pop!",
+      "content": "[EXAMPLE - REPLACE WITH REAL CONTENT] A fun, playful message about your show watching habits. Celebrate your binge-watching achievements! Use <highlight>tags</highlight> around all numbers and stats to make them visually pop!",
       "animationDelay": 6000
     },
     {
@@ -305,7 +245,7 @@ Generate a JSON response with the following structure. Make it fun, engaging, an
       "type": "top-movies",
       "title": "Your Top Movies",
       "subtitle": "The films you couldn't stop watching",
-      "content": "A fun, energetic description of your top movies with playful insights. Make it exciting! Use <highlight>tags</highlight> around all numbers to make them visually pop!",
+      "content": "[EXAMPLE - REPLACE WITH REAL CONTENT] A fun, energetic description of your top movies with playful insights. Make it exciting! Use <highlight>tags</highlight> around all numbers to make them visually pop!",
       "data": {
         "movies": ${JSON.stringify(statistics.topMovies.slice(0, 5))}
       },
@@ -316,7 +256,7 @@ Generate a JSON response with the following structure. Make it fun, engaging, an
       "type": "top-shows",
       "title": "Your Top Shows",
       "subtitle": "The series that kept you coming back",
-      "content": "A fun, energetic description of your top shows with playful insights. Celebrate your binge-watching! Use <highlight>tags</highlight> around all numbers to make them visually pop!",
+      "content": "[EXAMPLE - REPLACE WITH REAL CONTENT] A fun, energetic description of your top shows with playful insights. Celebrate your binge-watching! Use <highlight>tags</highlight> around all numbers to make them visually pop!",
       "data": {
         "shows": ${JSON.stringify(statistics.topShows.slice(0, 5))}
       },
@@ -327,7 +267,7 @@ Generate a JSON response with the following structure. Make it fun, engaging, an
       "type": "overseerr-stats",
       "title": "Your Requests",
       "subtitle": "Building your perfect library",
-      "content": "A fun, playful message about your Overseerr request habits. Celebrate your contribution to building the library! Use <highlight>tags</highlight> around all numbers to make them visually pop!",
+      "content": "[EXAMPLE - REPLACE WITH REAL CONTENT] A fun, playful message about your Overseerr request habits. Celebrate your contribution to building the library! Use <highlight>tags</highlight> around all numbers to make them visually pop!",
       "animationDelay": ${statistics.serverStats ? 12000 : 10000}
     }` : ""},
     {
@@ -335,7 +275,7 @@ Generate a JSON response with the following structure. Make it fun, engaging, an
       "type": "insights",
       "title": "Your Viewing Personality",
       "subtitle": "What your stats say about you",
-      "content": "A fun, personalized insight paragraph (3-4 sentences) about your viewing personality. Be playful and celebratory! Use <highlight>tags</highlight> around all numbers to make them visually pop!",
+      "content": "[EXAMPLE - REPLACE WITH REAL CONTENT] A fun, personalized insight paragraph (3-4 sentences) about your viewing personality. Be playful and celebratory! Use <highlight>tags</highlight> around all numbers to make them visually pop!",
       "animationDelay": ${statistics.overseerrStats ? 14000 : statistics.serverStats ? 12000 : 10000}
     },
     {
@@ -343,42 +283,41 @@ Generate a JSON response with the following structure. Make it fun, engaging, an
       "type": "fun-facts",
       "title": "Fun Facts & Server Stats",
       "subtitle": "Did you know?",
-      "content": "${statistics.serverStats ? `A fun, engaging introductory message combining interesting facts about your viewing habits with information about ${statistics.serverStats.serverName}. IMPORTANT: Reference the server by name only (e.g., '${statistics.serverStats.serverName}'), NOT as 'Your Plex server' or 'Your server' - the user does not own the server. Use phrases like '${statistics.serverStats.serverName} is a treasure trove with...' or '${statistics.serverStats.serverName} has enough content to watch for <highlight>X</highlight> years!'` : "A fun, engaging introductory message about interesting facts from your viewing habits."} Make it exciting and playful! Use <highlight>tags</highlight> around all numbers to make them visually pop!",
+      "content": "[EXAMPLE - REPLACE WITH REAL CONTENT] ${statistics.serverStats ? `A fun, engaging introductory message combining interesting facts about your viewing habits with information about ${statistics.serverStats.serverName}. IMPORTANT: Reference the server by name only (e.g., '${statistics.serverStats.serverName}'), NOT as 'Your Plex server' or 'Your server' - the user does not own the server. Use phrases like '${statistics.serverStats.serverName} is a treasure trove with...' or '${statistics.serverStats.serverName} has enough content to watch for <highlight>X</highlight> years!'` : "A fun, engaging introductory message about interesting facts from your viewing habits."} Make it exciting and playful! Use <highlight>tags</highlight> around all numbers to make them visually pop!",
       "data": {
         "facts": [
-          "Fun fact about your viewing habits (use <highlight>tags</highlight> around numbers)",
-          "Another fun fact about your viewing habits (use <highlight>tags</highlight> around numbers)",
-          "One more fun fact about your viewing habits (use <highlight>tags</highlight> around numbers)"${statistics.serverStats ? `,
-          "Fun fact about ${statistics.serverStats.serverName}'s library size - mention the <highlight>${statistics.serverStats.librarySize.movies.toLocaleString()}</highlight> movies available (use <highlight>tags</highlight> around numbers)",
-          "Fun fact about ${statistics.serverStats.serverName}'s storage - mention the <highlight>${statistics.serverStats.totalStorageFormatted}</highlight> total storage (use <highlight>tags</highlight> around numbers)"` : ""}
+          "[EXAMPLE - REPLACE] Fun fact about your viewing habits (use <highlight>tags</highlight> around numbers)",
+          "[EXAMPLE - REPLACE] Another fun fact about your viewing habits (use <highlight>tags</highlight> around numbers)",
+          "[EXAMPLE - REPLACE] One more fun fact about your viewing habits (use <highlight>tags</highlight> around numbers)"${statistics.serverStats ? `,
+          "[EXAMPLE - REPLACE] Fun fact about ${statistics.serverStats.serverName}'s library size - mention the <highlight>${statistics.serverStats.librarySize.movies.toLocaleString()}</highlight> movies available (use <highlight>tags</highlight> around numbers)",
+          "[EXAMPLE - REPLACE] Fun fact about ${statistics.serverStats.serverName}'s storage - mention the <highlight>${statistics.serverStats.totalStorageFormatted}</highlight> total storage (use <highlight>tags</highlight> around numbers)"` : ""}
         ]
       },
       "animationDelay": ${statistics.overseerrStats ? 16000 : statistics.serverStats ? 14000 : 12000}
     }
   ],
   "insights": {
-    "personality": "A short personality description (e.g., 'Cinephile', 'Binge Watcher', 'Genre Explorer')",
-    "topGenre": "Your most watched genre",
+    "personality": "[EXAMPLE - REPLACE] A short personality description (e.g., 'Cinephile', 'Binge Watcher', 'Genre Explorer')",
+    "topGenre": "[EXAMPLE - REPLACE] Your most watched genre",
     "bingeWatcher": ${statistics.topShows.some(s => s.episodesWatched > 20) ? "true" : "false"},
     "discoveryScore": ${Math.min(100, Math.max(0, Math.floor((statistics.moviesWatched + statistics.showsWatched) / 10)))},
     "funFacts": [
-      "Fun fact 1 about your viewing (use <highlight>tags</highlight> around numbers)",
-      "Fun fact 2 about your viewing (use <highlight>tags</highlight> around numbers)",
-      "Fun fact 3 about your viewing (use <highlight>tags</highlight> around numbers)"
+      "[EXAMPLE - REPLACE] Fun fact 1 about your viewing (use <highlight>tags</highlight> around numbers)",
+      "[EXAMPLE - REPLACE] Fun fact 2 about your viewing (use <highlight>tags</highlight> around numbers)",
+      "[EXAMPLE - REPLACE] Fun fact 3 about your viewing (use <highlight>tags</highlight> around numbers)"
     ]
   },
-  "summary": "A concise, shareable summary (2-3 sentences) highlighting the most impressive or interesting stats from your year. This will be used for social sharing, so make it engaging, fun, and celebratory! Include key numbers like total watch time, top movie/show, or interesting comparisons. Use <highlight>tags</highlight> around all numbers! Example: 'In ${year}, I watched <highlight>${formatWatchTime(statistics.totalWatchTime.total)}</highlight> of content! My top movie was ${statistics.topMovies[0]?.title || "amazing films"} and I binged <highlight>${statistics.showsWatched}</highlight> shows. What a year!'"
+  "summary": "[EXAMPLE - REPLACE] A concise, shareable summary (2-3 sentences) highlighting the most impressive or interesting stats from your year. This will be used for social sharing, so make it engaging, fun, and celebratory! Include key numbers like total watch time, top movie/show, or interesting comparisons. Use <highlight>tags</highlight> around all numbers! IMPORTANT: Use YOUR actual statistics from the data above, not example values. Reference the actual top movie title, actual watch time, and actual show count from the statistics provided."
 }
 
 === OUTPUT REQUIREMENTS ===
 
-CRITICAL: Return ONLY valid JSON. Do not include:
-- Markdown formatting (no code blocks)
-- Explanatory text before or after the JSON
-- Comments or notes
-- Any text outside the JSON object
-
-Return just the raw JSON object starting with { and ending with }.
+**CRITICAL:**
+- Use REAL statistics from the data above - NOT example values
+- Write personalized content - NOT placeholder text like "[EXAMPLE - REPLACE]"
+- Calculate animation delays based on content length - NOT example delays (2000, 4000, etc.)
+- Include actual movie/show objects in data arrays - NOT empty arrays
+- Return ONLY valid JSON - no markdown, no comments, no explanatory text
 `
 
   return prompt
@@ -409,6 +348,76 @@ export function parseWrappedResponse(
     }
 
     const parsed = JSON.parse(cleaned)
+
+    // Validate that response doesn't contain example/placeholder values
+    const examplePlaceholders = [
+      "[EXAMPLE - REPLACE]",
+      "[EXAMPLE - REPLACE WITH REAL CONTENT]",
+      "Your 2-3 exciting, high-impact sentences",
+      "A fun, engaging description",
+      "A fun, playful message",
+      "A fun, energetic description",
+      "A fun, personalized insight paragraph",
+      "A concise, shareable summary",
+      "Fun fact about your viewing habits",
+      "Another fun fact about your viewing habits",
+      "One more fun fact about your viewing habits",
+      "Fun fact 1 about your viewing",
+      "Fun fact 2 about your viewing",
+      "Fun fact 3 about your viewing",
+    ]
+
+    // Check for example placeholder text in content fields
+    const responseString = JSON.stringify(parsed).toLowerCase()
+    for (const placeholder of examplePlaceholders) {
+      if (responseString.includes(placeholder.toLowerCase())) {
+        throw new Error(
+          `Response contains example placeholder text: "${placeholder}". The LLM must generate personalized content, not copy example values.`
+        )
+      }
+    }
+
+    // Check for example prominentStat value (67 days)
+    if (parsed.sections) {
+      for (const section of parsed.sections) {
+        if (section.data?.prominentStat?.value === 67 && section.data?.prominentStat?.label === "days") {
+          throw new Error(
+            "Response contains example prominentStat value (67 days). The LLM must use actual statistics from the provided data."
+          )
+        }
+      }
+    }
+
+    // Check for example animation delays (common example values)
+    const exampleDelays = [2000, 4000, 6000, 8000, 10000, 12000, 14000, 16000]
+    if (parsed.sections) {
+      const delays = parsed.sections
+        .map((s: any) => s.animationDelay)
+        .filter((d: any) => d !== undefined && d !== 0)
+      // If all delays match example values exactly, it's suspicious
+      if (delays.length > 0 && delays.every((d: number) => exampleDelays.includes(d))) {
+        // Allow if there are many sections (might be coincidence), but warn if few sections
+        if (parsed.sections.length <= 5) {
+          console.warn(
+            "[PROMPT] Warning: Animation delays match example values exactly. This may indicate copied example data."
+          )
+        }
+      }
+
+      // Validate that top-movies and top-shows sections have actual data
+      for (const section of parsed.sections) {
+        if (section.type === "top-movies" && (!section.data?.movies || !Array.isArray(section.data.movies) || section.data.movies.length === 0)) {
+          throw new Error(
+            "top-movies section must include actual movie data from statistics. The movies array cannot be empty."
+          )
+        }
+        if (section.type === "top-shows" && (!section.data?.shows || !Array.isArray(section.data.shows) || section.data.shows.length === 0)) {
+          throw new Error(
+            "top-shows section must include actual show data from statistics. The shows array cannot be empty."
+          )
+        }
+      }
+    }
 
     return {
       year,
