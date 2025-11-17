@@ -89,6 +89,7 @@ export async function getLLMUsageRecords(page: number = 1, pageSize: number = 50
             id: true,
             name: true,
             email: true,
+            image: true,
           },
         },
         wrapped: {

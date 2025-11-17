@@ -251,8 +251,6 @@ export function WrappedViewer({
           onShowAll={handleShowAll}
           isShared={isShared}
           shareToken={shareToken}
-          summary={summary || wrappedData.summary}
-          userName={userName || wrappedData.userName}
           year={wrappedData.year}
         />
       </div>

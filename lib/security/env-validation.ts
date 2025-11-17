@@ -1,6 +1,18 @@
 import { z } from "zod"
 
 /**
+ * Preprocess environment variables to handle empty strings for optional fields
+ */
+function preprocessEnv(env: Record<string, string | undefined>) {
+  const processed = { ...env }
+  // Convert empty strings to undefined for optional fields
+  if (processed.PLEX_CLIENT_IDENTIFIER === "") {
+    processed.PLEX_CLIENT_IDENTIFIER = undefined
+  }
+  return processed
+}
+
+/**
  * Environment variable validation schema
  */
 const envSchema = z.object({
@@ -14,7 +26,7 @@ const envSchema = z.object({
   // Authentication
   NEXTAUTH_SECRET: z.string().min(32, "NEXTAUTH_SECRET must be at least 32 characters"),
 
-  // Plex
+  // Plex - optional UUID
   PLEX_CLIENT_IDENTIFIER: z.string().uuid("PLEX_CLIENT_IDENTIFIER must be a valid UUID").optional(),
 
   // Node environment
@@ -27,7 +39,8 @@ const envSchema = z.object({
  */
 export function validateEnv() {
   try {
-    const env = envSchema.parse(process.env)
+    const processedEnv = preprocessEnv(process.env as Record<string, string | undefined>)
+    const env = envSchema.parse(processedEnv)
 
     // Additional validation
     if (process.env.NODE_ENV === "production") {
@@ -58,8 +71,13 @@ export function validateEnv() {
   }
 }
 
-// Validate on import (only in non-test environments)
-if (process.env.NODE_ENV !== "test") {
+// Validate on import (only in non-test environments and not during build)
+// During build, Next.js may not have all environment variables set
+const isBuildTime = process.env.NEXT_PHASE === "phase-production-build" ||
+                    process.env.NEXT_PHASE === "phase-development-build" ||
+                    process.argv.includes("build")
+
+if (process.env.NODE_ENV !== "test" && !isBuildTime) {
   validateEnv()
 }
 

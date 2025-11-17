@@ -35,5 +35,6 @@ jobs:
           DATABASE_URL: "file:./prisma/test.db"
           NEXT_PUBLIC_APP_URL: "http://localhost:3000"
           NEXTAUTH_URL: "http://localhost:3000"
-          NEXTAUTH_SECRET: "test-secret-for-ci"
+          NEXTAUTH_SECRET: "test-secret-for-ci-build-at-least-32-chars-long"
+          PLEX_CLIENT_IDENTIFIER: "00000000-0000-0000-0000-000000000000"
 

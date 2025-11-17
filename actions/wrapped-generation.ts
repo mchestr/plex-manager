@@ -148,6 +148,9 @@ export async function generatePlexWrapped(
         throw new Error(tautulliStats.error || "Failed to fetch Tautulli statistics")
       }
 
+      // Extract data for type narrowing
+      const tautulliStatsData = tautulliStats.data
+
       // 2. Fetch server statistics on the fly from Plex API
       const plexServer = await prisma.plexServer.findFirst({
         where: { isActive: true },
@@ -204,7 +207,7 @@ export async function generatePlexWrapped(
 
       // 4. Fetch leaderboard data
       let leaderboards
-      if (tautulli && tautulliStats.data.tautulliUserId) {
+      if (tautulli && tautulliStatsData.tautulliUserId) {
         const [topContentLeaderboards, watchTimeLeaderboard] = await Promise.all([
           fetchTopContentLeaderboards(
             {
@@ -213,9 +216,9 @@ export async function generatePlexWrapped(
               protocol: tautulli.protocol,
               apiKey: tautulli.apiKey,
             },
-            tautulliStats.data.topMovies,
-            tautulliStats.data.topShows,
-            tautulliStats.data.tautulliUserId,
+            tautulliStatsData.topMovies,
+            tautulliStatsData.topShows,
+            tautulliStatsData.tautulliUserId,
             year
           ),
           fetchWatchTimeLeaderboard(
@@ -231,7 +234,7 @@ export async function generatePlexWrapped(
 
         if (topContentLeaderboards.success && topContentLeaderboards.data && watchTimeLeaderboard.success && watchTimeLeaderboard.data) {
           const userIndex = watchTimeLeaderboard.data.findIndex(
-            (entry) => entry.userId === tautulliStats.data.tautulliUserId
+            (entry) => entry.userId === tautulliStatsData.tautulliUserId
           )
           leaderboards = {
             topContent: topContentLeaderboards.data,
@@ -247,16 +250,16 @@ export async function generatePlexWrapped(
       // 5. Build statistics object
       const statistics: WrappedStatistics = {
         totalWatchTime: {
-          total: tautulliStats.data.totalWatchTime,
-          movies: tautulliStats.data.moviesWatchTime,
-          shows: tautulliStats.data.showsWatchTime,
+          total: tautulliStatsData.totalWatchTime,
+          movies: tautulliStatsData.moviesWatchTime,
+          shows: tautulliStatsData.showsWatchTime,
         },
-        moviesWatched: tautulliStats.data.moviesWatched,
-        showsWatched: tautulliStats.data.showsWatched,
-        episodesWatched: tautulliStats.data.episodesWatched,
-        topMovies: tautulliStats.data.topMovies,
-        topShows: tautulliStats.data.topShows,
-        watchTimeByMonth: tautulliStats.data.watchTimeByMonth,
+        moviesWatched: tautulliStatsData.moviesWatched,
+        showsWatched: tautulliStatsData.showsWatched,
+        episodesWatched: tautulliStatsData.episodesWatched,
+        topMovies: tautulliStatsData.topMovies,
+        topShows: tautulliStatsData.topShows,
+        watchTimeByMonth: tautulliStatsData.watchTimeByMonth,
         ...(serverStats && { serverStats }),
         ...(overseerrStats && { overseerrStats }),
         ...(leaderboards && { leaderboards }),

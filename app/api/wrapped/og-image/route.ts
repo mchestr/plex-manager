@@ -3,6 +3,9 @@ import { NextRequest, NextResponse } from "next/server"
 import { shareRateLimiter } from "@/lib/security/rate-limit"
 import { createSafeError, ErrorCode, getStatusCode, logError } from "@/lib/security/error-handler"
 
+// Force dynamic rendering since we use request.headers for rate limiting
+export const dynamic = 'force-dynamic'
+
 /**
  * GET /api/wrapped/og-image?token=[token]
  * Generate an Open Graph image for social media sharing

@@ -65,3 +65,11 @@ run = [
   "mise run db:push"
 ]
 
+[tasks.ci]
+description = "Run CI checks (matches GitHub Actions workflow)"
+run = [
+  "npm ci",
+  "npx prisma generate",
+  "npm run lint",
+  "npm run build"
+]
