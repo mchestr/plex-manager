@@ -1,8 +1,8 @@
 import { prisma } from "@/lib/prisma"
-import { NextRequest, NextResponse } from "next/server"
 import { requireAdminAPI } from "@/lib/security/api-helpers"
-import { adminRateLimiter } from "@/lib/security/rate-limit"
 import { createSafeError, ErrorCode, getStatusCode, logError } from "@/lib/security/error-handler"
+import { adminRateLimiter } from "@/lib/security/rate-limit"
+import { NextRequest, NextResponse } from "next/server"
 
 export async function GET(
   request: NextRequest,
@@ -44,4 +44,3 @@ export async function GET(
     )
   }
 }
-
