@@ -54,14 +54,13 @@ COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 
-# Copy package.json for Prisma CLI installation
-COPY --from=builder /app/package.json ./package.json
+# Copy Prisma CLI and its dependencies from builder (where they're already installed with all deps)
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
 
-# Install Prisma CLI for migrations (needed at runtime)
-RUN PRISMA_VERSION=$(node -p "require('./package.json').devDependencies.prisma") && \
-    npm install --no-save --no-package-lock "prisma@${PRISMA_VERSION}" && \
-    npm cache clean --force && \
-    chown -R nextjs:nodejs node_modules/prisma node_modules/.bin/prisma
+# Copy Prisma CLI peer dependencies (effect is required by @prisma/config)
+RUN mkdir -p node_modules && chown -R nextjs:nodejs node_modules
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/effect ./node_modules/effect
 
 # Copy and set up entrypoint script
 COPY --chown=nextjs:nodejs docker-entrypoint.sh ./docker-entrypoint.sh
