@@ -1,14 +1,14 @@
-# 🎬 Plex Wrapped
+# Plex Wrapped
 
-> ⚠️ **WARNING: This project is a Work In Progress (WIP)** ⚠️
+> **WARNING: This project is a Work In Progress (WIP)**
 >
 > This project is currently under active development. Features may be incomplete, unstable, or subject to change. Use at your own risk.
 
-> **Your Year in Review, Personalized** ✨
+**Your year in movies and shows, beautifully wrapped.**
 
-Transform your Plex viewing data into a stunning, shareable year-end summary—just like Spotify Wrapped, but for your media library. Discover your viewing habits, celebrate your favorite content, and share your stats with friends.
+Plex Wrapped transforms your viewing history into a personalized, shareable year-end summary. Connect your Plex server, Tautulli, and Overseerr to discover your viewing habits, celebrate your favorite content, and share your stats with friends—all powered by AI to make your year feel special.
 
-## 📸 Screenshots
+## Screenshots
 
 <div align="center">
 
@@ -51,28 +51,27 @@ Transform your Plex viewing data into a stunning, shareable year-end summary—j
 
 ---
 
-## 🌟 Features
+## Features
 
-### 📊 **Comprehensive Statistics**
+### Comprehensive Statistics
 - **Total watch time** breakdown (movies vs. shows)
 - **Top movies and shows** with play counts and ratings
 - **Server-wide leaderboards** to see how you rank
 - **Overseerr integration** for request statistics
-- **Beautiful visualizations** with animated charts and transitions
+- **Visualizations** with animated charts and transitions
 
-### 🤖 **AI-Powered Personalization**
-- **LLM-generated insights** that feel personal and engaging
-- **Fun facts and comparisons** ("That's like watching the entire Lord of the Rings trilogy 47 times!")
-- **Celebratory tone** that makes your year feel special
+### AI-Powered Personalization
+- **LLM-generated insights** based on your viewing data
+- **Fun facts and comparisons** (e.g., "That's like watching the entire Lord of the Rings trilogy 47 times!")
 - **Customizable** with OpenAI support (extensible for other providers)
 
-### 🔗 **Share & Discover**
+### Share & Discover
 - **One-click sharing** with secure, unguessable tokens
 - **Public share links** for easy social media sharing
 - **Analytics tracking** for shared wraps
-- **Beautiful, responsive design** that looks great on any device
+- **Responsive design** that works on any device
 
-### 👥 **Admin Features**
+### Admin Features
 - **User management** dashboard
 - **LLM usage tracking** and cost monitoring
 - **Share analytics** to see what's popular
@@ -80,7 +79,7 @@ Transform your Plex viewing data into a stunning, shareable year-end summary—j
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -140,7 +139,7 @@ On first launch, you'll be guided through configuring:
 
 ---
 
-## 🛠️ Development
+## Development
 
 ### Project Structure
 
@@ -230,7 +229,7 @@ See `example.env` for all available configuration options. Key variables:
 
 ---
 
-## 🚢 Deployment
+## Deployment
 
 ### Production Deployment Requirements
 
@@ -268,14 +267,14 @@ The project includes a `Dockerfile` for containerized deployments. When deployin
 
 ---
 
-## 🏗️ Tech Stack
+## Tech Stack
 
 | Category | Technology |
 |----------|-----------|
 | **Framework** | Next.js 14+ (App Router) |
 | **Language** | TypeScript (strict mode) |
 | **Database** | Prisma + SQLite |
-| **Authentication** | NextAuth.js (Plex OAuth) |
+| **Authentication** | NextAuth.js (Plex PIN-based authentication) |
 | **Data Fetching** | TanStack Query (React Query) |
 | **Styling** | Tailwind CSS |
 | **Animations** | Framer Motion |
@@ -284,20 +283,21 @@ The project includes a `Dockerfile` for containerized deployments. When deployin
 
 ---
 
-## 📖 How It Works
+## How It Works
 
-1. **User Authentication** - Sign in with your Plex account via OAuth
+1. **User Authentication** - Sign in with your Plex account using PIN-based authentication
 2. **Data Collection** - Fetch viewing statistics from Tautulli and Plex
 3. **Statistics Processing** - Aggregate watch time, top content, and leaderboards
-4. **AI Generation** - Use LLM to create personalized, engaging content
-5. **Wrapped Creation** - Generate beautiful, shareable year-end summary
+4. **AI Generation** - Use LLM to generate personalized insights and fun facts
+5. **Wrapped Creation** - Generate shareable year-end summary with animated visualizations
 6. **Sharing** - Share your wrapped with secure, unique tokens
 
 ---
 
-## 🔒 Security
+## Security
 
-- **OAuth authentication** via Plex
+- **PIN-based authentication** via Plex
+- **Server access verification** - only users with access to your Plex server can sign in
 - **Secure token generation** for sharing
 - **Admin-only actions** protected by role checks
 - **Input validation** with Zod schemas
@@ -305,18 +305,18 @@ The project includes a `Dockerfile` for containerized deployments. When deployin
 
 ---
 
-## 📝 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
-Inspired by Spotify Wrapped. Built with ❤️ for the Plex community.
+Inspired by Spotify Wrapped. Built for the Plex community.
