@@ -1,6 +1,5 @@
 import { getUserPlexWrapped } from "@/actions/users"
-import { SignOutButton } from "@/components/admin/sign-out-button"
-import { HistoricalWrappedSelector } from "@/components/admin/historical-wrapped-selector"
+import { HistoricalWrappedSelectorHeader } from "@/components/admin/historical-wrapped-selector-header"
 import { WrappedPageClient } from "@/components/wrapped-page-client"
 import { WrappedViewerWrapper } from "@/components/wrapped-viewer-wrapper"
 import { authOptions } from "@/lib/auth"
@@ -31,14 +30,14 @@ export default async function UserWrappedPage({
   const wrapped = await getUserPlexWrapped(params.userId, currentYear)
 
   // Admin header component
-  const AdminHeader = ({ userName }: { userName?: string | null }) => (
+  const AdminHeader = ({ userName, wrappedId, userId }: { userName?: string | null; wrappedId?: string; userId: string }) => (
     <div className="fixed top-0 left-0 right-0 z-50 bg-slate-900/90 backdrop-blur-sm border-b border-slate-700">
       <div className="max-w-7xl mx-auto px-6 py-4">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-4">
+        <div className="flex justify-between items-center gap-4">
+          <div className="flex items-center gap-4 flex-1 min-w-0">
             <Link
               href="/admin/users"
-              className="text-slate-400 hover:text-white transition-colors"
+              className="text-slate-400 hover:text-white transition-colors flex-shrink-0"
             >
               <svg
                 className="w-5 h-5"
@@ -55,8 +54,8 @@ export default async function UserWrappedPage({
                 />
               </svg>
             </Link>
-            <div>
-              <h1 className="text-xl font-bold text-white">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl font-bold text-white truncate">
                 {userName || "User"}&apos;s {currentYear} Wrapped
               </h1>
               <p className="text-xs text-slate-400 mt-0.5">
@@ -64,7 +63,11 @@ export default async function UserWrappedPage({
               </p>
             </div>
           </div>
-          <SignOutButton />
+          <div className="flex items-center gap-3 flex-shrink-0">
+            {wrappedId && (
+              <HistoricalWrappedSelectorHeader wrappedId={wrappedId} userId={userId} />
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -73,8 +76,8 @@ export default async function UserWrappedPage({
   if (!wrapped) {
     return (
       <main className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
-        <AdminHeader />
-        <div className="pt-24 p-6">
+        <AdminHeader userName={null} userId={params.userId} />
+        <div className="pt-20 p-6">
           <div className="max-w-7xl mx-auto">
             <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-8 text-center">
               <p className="text-slate-400 mb-4">No wrapped found for this user.</p>
@@ -93,19 +96,16 @@ export default async function UserWrappedPage({
 
   return (
     <main className="min-h-screen">
-      <AdminHeader userName={wrapped.user.name || wrapped.user.email} />
-      <div className="pt-16">
+      <AdminHeader userName={wrapped.user.name || wrapped.user.email} wrappedId={wrapped.id} userId={params.userId} />
+      <div className="pt-20">
         {wrapped.status === "completed" && wrapped.data ? (
           (() => {
             try {
               const wrappedData: WrappedData = JSON.parse(wrapped.data)
               return (
-                <>
-                  <HistoricalWrappedSelector wrappedId={wrapped.id} userId={params.userId} />
-                  <div className="max-w-7xl mx-auto px-6 pb-[80px]">
-                    <WrappedViewerWrapper wrappedData={wrappedData} year={currentYear} />
-                  </div>
-                </>
+                <div className="max-w-7xl mx-auto px-6 pb-8">
+                  <WrappedViewerWrapper wrappedData={wrappedData} year={currentYear} />
+                </div>
               )
             } catch (error) {
               console.error("Failed to parse wrapped data:", error)

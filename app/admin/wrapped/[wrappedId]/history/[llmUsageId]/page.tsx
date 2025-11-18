@@ -1,6 +1,5 @@
 import { getHistoricalWrappedData } from "@/actions/admin"
-import { SignOutButton } from "@/components/admin/sign-out-button"
-import { HistoricalWrappedSelector } from "@/components/admin/historical-wrapped-selector"
+import { HistoricalWrappedSelectorHeader } from "@/components/admin/historical-wrapped-selector-header"
 import { WrappedViewerWrapper } from "@/components/wrapped-viewer-wrapper"
 import { authOptions } from "@/lib/auth"
 import { WrappedData } from "@/types/wrapped"
@@ -33,31 +32,40 @@ export default async function HistoricalWrappedPage({
       <main className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
         <div className="fixed top-0 left-0 right-0 z-50 bg-slate-900/90 backdrop-blur-sm border-b border-slate-700">
           <div className="max-w-7xl mx-auto px-6 py-4">
-            <div className="flex justify-between items-center">
-              <Link
-                href="/admin/users"
-                className="text-slate-400 hover:text-white transition-colors"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
+            <div className="flex justify-between items-center gap-4">
+              <div className="flex items-center gap-4 flex-1 min-w-0">
+                <Link
+                  href="/admin/users"
+                  className="text-slate-400 hover:text-white transition-colors flex-shrink-0"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 19l-7-7 7-7"
-                  />
-                </svg>
-              </Link>
-              <SignOutButton />
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 19l-7-7 7-7"
+                    />
+                  </svg>
+                </Link>
+                <div className="flex-1 min-w-0">
+                  <h1 className="text-xl font-bold text-white truncate">
+                    Historical Version Not Found
+                  </h1>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Viewing as admin
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-        <div className="pt-24 p-6">
+        <div className="pt-20 p-6">
           <div className="max-w-7xl mx-auto">
             <div className="bg-slate-800/50 backdrop-blur-sm border border-red-500/50 rounded-lg p-8 text-center">
               <h2 className="text-2xl font-bold text-white mb-2">Historical Version Not Found</h2>
@@ -93,11 +101,11 @@ export default async function HistoricalWrappedPage({
     <main className="min-h-screen">
       <div className="fixed top-0 left-0 right-0 z-50 bg-slate-900/90 backdrop-blur-sm border-b border-slate-700">
         <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-4">
+          <div className="flex justify-between items-center gap-4">
+            <div className="flex items-center gap-4 flex-1 min-w-0">
               <Link
                 href="/admin/users"
-                className="text-slate-400 hover:text-white transition-colors"
+                className="text-slate-400 hover:text-white transition-colors flex-shrink-0"
               >
                 <svg
                   className="w-5 h-5"
@@ -114,8 +122,8 @@ export default async function HistoricalWrappedPage({
                   />
                 </svg>
               </Link>
-              <div>
-                <h1 className="text-xl font-bold text-white">
+              <div className="flex-1 min-w-0">
+                <h1 className="text-xl font-bold text-white truncate">
                   {wrappedData.userName}&apos;s {wrappedData.year} Wrapped
                 </h1>
                 <p className="text-xs text-slate-400 mt-0.5">
@@ -123,21 +131,14 @@ export default async function HistoricalWrappedPage({
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              <Link
-                href={`/admin/users/${wrappedData.userId}/wrapped`}
-                className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors"
-              >
-                View Current Version
-              </Link>
-              <SignOutButton />
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <HistoricalWrappedSelectorHeader wrappedId={params.wrappedId} userId={wrappedData.userId} />
             </div>
           </div>
         </div>
       </div>
-      <div className="pt-16">
-        <HistoricalWrappedSelector wrappedId={params.wrappedId} userId={wrappedData.userId} />
-        <div className="pb-[80px]">
+      <div className="pt-20">
+        <div className="max-w-7xl mx-auto px-6 pb-8">
           <WrappedViewerWrapper wrappedData={wrappedData as WrappedData} year={wrappedData.year} />
         </div>
       </div>
