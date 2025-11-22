@@ -20,6 +20,10 @@ export interface AuditLogEntry {
   timestamp: Date
 }
 
+import { createLogger } from "@/lib/utils/logger"
+
+const auditLogger = createLogger("AUDIT")
+
 /**
  * Log an audit event
  * In production, this should write to a secure audit log system
@@ -40,8 +44,13 @@ export function logAuditEvent(
     timestamp: new Date(),
   }
 
-  // Log to console (in production, use a proper audit log system)
-  console.log("[AUDIT]", JSON.stringify(entry))
+  // Log audit event (in production, use a proper audit log system)
+  auditLogger.info(`Audit event: ${type}`, {
+    type,
+    userId,
+    targetUserId: entry.targetUserId,
+    details: entry.details,
+  })
 
   // TODO: In production, write to:
   // - Database audit log table

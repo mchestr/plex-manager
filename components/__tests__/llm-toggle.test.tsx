@@ -1,15 +1,35 @@
+import React from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { LLMToggle } from '../admin/settings/llm-toggle'
 import * as adminActions from '@/actions/admin'
+import { ToastProvider } from '@/components/ui/toast'
 
 // Mock the admin actions
 jest.mock('@/actions/admin', () => ({
   setLLMDisabled: jest.fn(),
 }))
 
-// Mock window.alert
-window.alert = jest.fn()
+// Mock the toast hook
+const mockShowError = jest.fn()
+const mockShowSuccess = jest.fn()
+
+jest.mock('@/components/ui/toast', () => {
+  const actual = jest.requireActual('@/components/ui/toast')
+  return {
+    ...actual,
+    useToast: () => ({
+      showToast: jest.fn(),
+      showSuccess: mockShowSuccess,
+      showError: mockShowError,
+      showInfo: jest.fn(),
+    }),
+  }
+})
+
+const renderWithToast = (component: React.ReactElement) => {
+  return render(<ToastProvider>{component}</ToastProvider>)
+}
 
 describe('LLMToggle', () => {
   beforeEach(() => {
@@ -17,14 +37,14 @@ describe('LLMToggle', () => {
   })
 
   it('should render toggle with initial disabled state', () => {
-    render(<LLMToggle initialDisabled={true} />)
+    renderWithToast(<LLMToggle initialDisabled={true} />)
     const checkbox = screen.getByRole('checkbox')
     expect(checkbox).toBeChecked()
     expect(screen.getByText('OFF')).toBeInTheDocument()
   })
 
   it('should render toggle with initial enabled state', () => {
-    render(<LLMToggle initialDisabled={false} />)
+    renderWithToast(<LLMToggle initialDisabled={false} />)
     const checkbox = screen.getByRole('checkbox')
     expect(checkbox).not.toBeChecked()
     expect(screen.getByText('ON')).toBeInTheDocument()
@@ -37,7 +57,7 @@ describe('LLMToggle', () => {
       config: { id: 'config', llmDisabled: true, updatedAt: new Date(), updatedBy: null },
     })
 
-    render(<LLMToggle initialDisabled={false} />)
+    renderWithToast(<LLMToggle initialDisabled={false} />)
     const checkbox = screen.getByRole('checkbox')
 
     await user.click(checkbox)
@@ -54,7 +74,7 @@ describe('LLMToggle', () => {
       config: { id: 'config', llmDisabled: true, updatedAt: new Date(), updatedBy: null },
     })
 
-    render(<LLMToggle initialDisabled={false} />)
+    renderWithToast(<LLMToggle initialDisabled={false} />)
     const checkbox = screen.getByRole('checkbox')
 
     await user.click(checkbox)
@@ -65,50 +85,50 @@ describe('LLMToggle', () => {
     })
   })
 
-  it('should show error alert when toggle fails', async () => {
+  it('should show error toast when toggle fails', async () => {
     const user = userEvent.setup()
     jest.spyOn(adminActions, 'setLLMDisabled').mockResolvedValue({
       success: false,
       error: 'Failed to update',
     })
 
-    render(<LLMToggle initialDisabled={false} />)
+    renderWithToast(<LLMToggle initialDisabled={false} />)
     const checkbox = screen.getByRole('checkbox')
 
     await user.click(checkbox)
 
     await waitFor(() => {
-      expect(window.alert).toHaveBeenCalledWith('Failed to update')
+      expect(mockShowError).toHaveBeenCalledWith('Failed to update')
     })
   })
 
-  it('should show generic error alert when error is not provided', async () => {
+  it('should show generic error toast when error is not provided', async () => {
     const user = userEvent.setup()
     jest.spyOn(adminActions, 'setLLMDisabled').mockResolvedValue({
       success: false,
     } as any)
 
-    render(<LLMToggle initialDisabled={false} />)
+    renderWithToast(<LLMToggle initialDisabled={false} />)
     const checkbox = screen.getByRole('checkbox')
 
     await user.click(checkbox)
 
     await waitFor(() => {
-      expect(window.alert).toHaveBeenCalledWith('Failed to update setting')
+      expect(mockShowError).toHaveBeenCalledWith('Failed to update setting')
     })
   })
 
-  it('should show error alert when exception occurs', async () => {
+  it('should show error toast when exception occurs', async () => {
     const user = userEvent.setup()
     jest.spyOn(adminActions, 'setLLMDisabled').mockRejectedValue(new Error('Network error'))
 
-    render(<LLMToggle initialDisabled={false} />)
+    renderWithToast(<LLMToggle initialDisabled={false} />)
     const checkbox = screen.getByRole('checkbox')
 
     await user.click(checkbox)
 
     await waitFor(() => {
-      expect(window.alert).toHaveBeenCalledWith('Failed to update setting')
+      expect(mockShowError).toHaveBeenCalledWith('Failed to update setting')
     })
   })
 
@@ -120,7 +140,7 @@ describe('LLMToggle', () => {
     })
     jest.spyOn(adminActions, 'setLLMDisabled').mockReturnValue(setLLMPromise)
 
-    render(<LLMToggle initialDisabled={false} />)
+    renderWithToast(<LLMToggle initialDisabled={false} />)
     const checkbox = screen.getByRole('checkbox')
 
     await user.click(checkbox)
@@ -140,7 +160,7 @@ describe('LLMToggle', () => {
     })
     jest.spyOn(adminActions, 'setLLMDisabled').mockReturnValue(setLLMPromise)
 
-    render(<LLMToggle initialDisabled={false} />)
+    renderWithToast(<LLMToggle initialDisabled={false} />)
     const checkbox = screen.getByRole('checkbox')
 
     await user.click(checkbox)
@@ -154,13 +174,13 @@ describe('LLMToggle', () => {
   })
 
   it('should apply correct styling for OFF state', () => {
-    render(<LLMToggle initialDisabled={true} />)
+    renderWithToast(<LLMToggle initialDisabled={true} />)
     const statusText = screen.getByText('OFF')
     expect(statusText).toHaveClass('text-red-400')
   })
 
   it('should apply correct styling for ON state', () => {
-    render(<LLMToggle initialDisabled={false} />)
+    renderWithToast(<LLMToggle initialDisabled={false} />)
     const statusText = screen.getByText('ON')
     expect(statusText).toHaveClass('text-green-400')
   })

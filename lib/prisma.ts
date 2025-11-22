@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client'
 
 // Validate environment variables on startup
 // This ensures required env vars are set before the app starts
-if (process.env.NODE_ENV !== 'test') {
+if (typeof window === "undefined" && process.env.NODE_ENV !== 'test') {
   require('@/lib/security/env-validation')
 }
 

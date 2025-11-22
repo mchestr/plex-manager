@@ -166,24 +166,24 @@ export function AdminFooterClient({
             </div>
 
             {/* Navigation links */}
-            <div className="flex items-center gap-3 pt-1 border-t border-slate-700">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-3 border-t border-slate-700">
               <Link
                 href="/"
-                className="text-cyan-400 hover:text-cyan-300 transition-colors font-medium text-xs"
+                className="text-cyan-400 hover:text-cyan-300 transition-colors font-medium text-sm py-1"
               >
                 Home
               </Link>
-              <span className="text-slate-600">|</span>
+              <span className="text-slate-600 hidden sm:inline">|</span>
               <Link
                 href="/admin"
-                className="text-cyan-400 hover:text-cyan-300 transition-colors font-medium text-xs"
+                className="text-cyan-400 hover:text-cyan-300 transition-colors font-medium text-sm py-1"
               >
                 Dashboard →
               </Link>
-              <span className="text-slate-600">|</span>
+              <span className="text-slate-600 hidden sm:inline">|</span>
               <button
                 onClick={handleSignOut}
-                className="text-red-400 hover:text-red-300 transition-colors font-medium text-xs"
+                className="text-red-400 hover:text-red-300 transition-colors font-medium text-sm py-1"
               >
                 Logout
               </button>

@@ -1,6 +1,6 @@
-import { SignInButton } from "@/components/auth/sign-in-button";
-import { WrappedHomeButton } from "@/components/wrapped/wrapped-home-button";
+import { PlexSignInButton } from "@/components/auth/plex-sign-in-button";
 import { AdminFooter } from "@/components/shared/admin-footer";
+import { WrappedHomeButton } from "@/components/wrapped/wrapped-home-button";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -28,7 +28,15 @@ export default async function Home() {
                 <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-center mb-6 bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent px-4">
                   {heroTitle}
                 </h1>
-                <SignInButton serverName={serverName} />
+                <PlexSignInButton
+                  serverName={serverName}
+                  showWarning={true}
+                  warningDelay={3000}
+                  showDisclaimer={true}
+                  buttonText="Sign in with Plex"
+                  loadingText="Preparing..."
+                  buttonClassName="px-12 py-6 flex justify-center items-center gap-3 text-white text-xl font-semibold rounded-xl bg-gradient-to-r from-cyan-600 via-purple-600 to-pink-600 hover:from-cyan-500 hover:via-purple-500 hover:to-pink-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg"
+                />
               </>
             )}
           </div>

@@ -335,7 +335,8 @@ export async function generatePlexWrapped(
     revalidatePath("/")
     return { success: true, wrappedId: wrapped.id }
   } catch (error) {
-    console.error("[USERS ACTION] - Error generating wrapped:", error)
+    const logger = (await import("@/lib/utils/logger")).createLogger("USERS_ACTION")
+    logger.error("Error generating wrapped", error)
 
     // Update wrapped status to failed if it exists
     try {
@@ -358,7 +359,8 @@ export async function generatePlexWrapped(
         })
       }
     } catch (updateError) {
-      console.error("[USERS ACTION] - Error updating wrapped status:", updateError)
+      const logger = (await import("@/lib/utils/logger")).createLogger("USERS_ACTION")
+      logger.error("Error updating wrapped status", updateError)
     }
 
     return {
@@ -419,7 +421,8 @@ export async function generateAllPlexWrapped(
       errors,
     }
   } catch (error) {
-    console.error("[USERS ACTION] - Error generating all wrapped:", error)
+    const logger = (await import("@/lib/utils/logger")).createLogger("USERS_ACTION")
+    logger.error("Error generating all wrapped", error)
     return {
       success: false,
       generated: 0,

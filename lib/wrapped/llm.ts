@@ -3,10 +3,13 @@
  */
 
 import { prisma } from "@/lib/prisma"
+import { createLogger } from "@/lib/utils/logger"
 import { WrappedData, WrappedStatistics } from "@/types/wrapped"
 import { callOpenAI, LLMConfig } from "./api-calls"
 import { generateMockWrappedData } from "./mock-data"
 import { generateWrappedPrompt } from "./prompt-template"
+
+const logger = createLogger("LLM")
 
 /**
  * Call LLM to generate wrapped content
@@ -35,7 +38,7 @@ export async function generateWrappedWithLLM(
     })
 
     if (appConfig?.llmDisabled) {
-      console.log("[LLM] LLM calls are disabled - returning mock data")
+      logger.info("LLM calls are disabled - returning mock data")
       const mockData = generateMockWrappedData(userName, year, userId, statistics)
 
       // Still save a record that this was generated with mock data (no cost)
@@ -56,7 +59,7 @@ export async function generateWrappedWithLLM(
           },
         })
       } catch (dbError) {
-        console.error("[LLM] Failed to save mock usage to database:", dbError)
+        logger.error("Failed to save mock usage to database", dbError)
         // Don't fail the whole operation if logging fails
       }
 
@@ -124,14 +127,14 @@ export async function generateWrappedWithLLM(
           },
         })
       } catch (dbError) {
-        console.error("[LLM] Failed to save token usage to database:", dbError)
+        logger.error("Failed to save token usage to database", dbError)
         // Don't fail the whole operation if logging fails
       }
     }
 
     return llmResult
   } catch (error) {
-    console.error("[LLM] Error generating wrapped content:", error)
+    logger.error("Error generating wrapped content", error)
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to generate wrapped content",

@@ -106,7 +106,7 @@ describe('checkServerAccess', () => {
     expect(result).toEqual({
       success: false,
       hasAccess: false,
-      error: 'Failed to fetch user information',
+      error: 'Failed to fetch user info',
     })
     expect(mockCheckUserServerAccess).not.toHaveBeenCalled()
   })

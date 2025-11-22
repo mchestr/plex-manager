@@ -2,6 +2,18 @@
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**',
+      },
+      {
+        protocol: 'http',
+        hostname: '**',
+      },
+    ],
+  },
   async headers() {
     return [
       {

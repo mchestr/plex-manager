@@ -1,6 +1,7 @@
 "use client"
 
 import { setLLMDisabled } from "@/actions/admin"
+import { useToast } from "@/components/ui/toast"
 import { useState } from "react"
 
 interface LLMToggleProps {
@@ -8,6 +9,7 @@ interface LLMToggleProps {
 }
 
 export function LLMToggle({ initialDisabled }: LLMToggleProps) {
+  const toast = useToast()
   const [llmDisabled, setLlmDisabled] = useState<boolean>(initialDisabled)
   const [isSaving, setIsSaving] = useState(false)
 
@@ -17,12 +19,13 @@ export function LLMToggle({ initialDisabled }: LLMToggleProps) {
       const result = await setLLMDisabled(disabled)
       if (result.success && result.config) {
         setLlmDisabled(result.config.llmDisabled)
+        toast.showSuccess(`LLM ${disabled ? "disabled" : "enabled"} successfully`)
       } else {
-        alert(result.error || "Failed to update setting")
+        toast.showError(result.error || "Failed to update setting")
       }
     } catch (error) {
       console.error("Failed to update config:", error)
-      alert("Failed to update setting")
+      toast.showError("Failed to update setting")
     } finally {
       setIsSaving(false)
     }

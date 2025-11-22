@@ -3,10 +3,13 @@
  * Currently supports OpenAI, but designed to be extensible for other providers
  */
 
+import { createLogger } from "@/lib/utils/logger"
 import { WrappedData, WrappedStatistics } from "@/types/wrapped"
 import { calculateCost } from "./pricing"
 import { parseWrappedResponse } from "./prompt"
 import { generateSystemPrompt } from "./prompt-template"
+
+const logger = createLogger("LLM")
 
 const DEFAULT_MODEL = "gpt-4"
 const DEFAULT_TEMPERATURE = 0.8
@@ -92,11 +95,15 @@ export async function callOpenAI(
   try {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => {
-      console.warn(`[LLM] Request timeout after ${REQUEST_TIMEOUT_MS}ms (${REQUEST_TIMEOUT_MS / 1000}s)`)
+      logger.warn("Request timeout", { timeoutMs: REQUEST_TIMEOUT_MS, timeoutSeconds: REQUEST_TIMEOUT_MS / 1000 })
       controller.abort()
     }, REQUEST_TIMEOUT_MS)
 
-    console.log(`[LLM] Starting OpenAI API call with ${REQUEST_TIMEOUT_MS}ms timeout (${REQUEST_TIMEOUT_MS / 1000}s)`)
+    logger.debug("Starting OpenAI API call", {
+      timeoutMs: REQUEST_TIMEOUT_MS,
+      timeoutSeconds: REQUEST_TIMEOUT_MS / 1000,
+      model,
+    })
     const requestStartTime = Date.now()
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -111,10 +118,18 @@ export async function callOpenAI(
 
     clearTimeout(timeoutId)
     const requestDuration = Date.now() - requestStartTime
-    console.log(`[LLM] OpenAI API call completed in ${requestDuration}ms (${(requestDuration / 1000).toFixed(2)}s)`)
+    logger.debug("OpenAI API call completed", {
+      duration: requestDuration,
+      durationSeconds: (requestDuration / 1000).toFixed(2),
+    })
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
+      logger.error("OpenAI API error", undefined, {
+        status: response.status,
+        statusText: response.statusText,
+        errorMessage: errorData.error?.message,
+      })
       return {
         success: false,
         error: errorData.error?.message ?? `OpenAI API error: ${response.statusText}`,
@@ -126,6 +141,7 @@ export async function callOpenAI(
     const content = choice?.message?.content
 
     if (!content) {
+      logger.error("No content in LLM response")
       return { success: false, error: "No content in LLM response" }
     }
 
@@ -139,7 +155,7 @@ export async function callOpenAI(
     // If finish reason is "length", the response was definitely truncated
     // Also check if JSON structure appears incomplete
     if (finishReason === "length" || isIncompleteJson) {
-      console.error("[LLM] Response appears to be truncated:", {
+      logger.error("Response appears to be truncated", undefined, {
         finishReason,
         contentLength: content.length,
         lastChars: trimmedContent.slice(-100),
@@ -176,19 +192,19 @@ export async function callOpenAI(
   } catch (error) {
     if (error instanceof Error) {
       if (error.name === "AbortError") {
-        console.error(`[LLM] Request aborted due to timeout after ${REQUEST_TIMEOUT_MS}ms`)
+        logger.error("Request aborted due to timeout", undefined, { timeoutMs: REQUEST_TIMEOUT_MS })
         return {
           success: false,
           error: `Request timeout - the API call exceeded the ${REQUEST_TIMEOUT_MS / 1000}s timeout limit. LLM generation can take longer for complex prompts. Consider increasing LLM_REQUEST_TIMEOUT_MS environment variable if needed.`,
         }
       }
-      console.error(`[LLM] OpenAI API error:`, error.message)
+      logger.error("OpenAI API error", error)
       return {
         success: false,
         error: `OpenAI API error: ${error.message}`,
       }
     }
-    console.error(`[LLM] Unexpected error:`, error)
+    logger.error("Unexpected error", error)
     return {
       success: false,
       error: "An unexpected error occurred while calling the OpenAI API",

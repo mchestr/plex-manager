@@ -1,9 +1,11 @@
 "use client"
 
 import { getConfig, setLLMDisabled } from "@/actions/admin"
+import { useToast } from "@/components/ui/toast"
 import { useEffect, useState } from "react"
 
 export function LLMSettings() {
+  const toast = useToast()
   const [llmDisabled, setLlmDisabled] = useState<boolean>(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -31,12 +33,13 @@ export function LLMSettings() {
       if (result.success && result.config) {
         setLlmDisabled(result.config.llmDisabled)
         setLastUpdated(result.config.updatedAt)
+        toast.showSuccess(`LLM ${disabled ? "disabled" : "enabled"} successfully`)
       } else {
-        alert(result.error || "Failed to update setting")
+        toast.showError(result.error || "Failed to update setting")
       }
     } catch (error) {
       console.error("Failed to update config:", error)
-      alert("Failed to update setting")
+      toast.showError("Failed to update setting")
     } finally {
       setIsSaving(false)
     }

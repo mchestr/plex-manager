@@ -41,18 +41,14 @@ export function createSafeError(
   return error
 }
 
+import { createLogger } from "@/lib/utils/logger"
+
 /**
  * Log error securely (detailed logging server-side only)
  */
 export function logError(context: string, error: unknown, metadata?: Record<string, unknown>) {
-  const errorMessage = error instanceof Error ? error.message : String(error)
-  const errorStack = error instanceof Error ? error.stack : undefined
-
-  console.error(`[${context}] Error:`, {
-    message: errorMessage,
-    stack: errorStack,
-    ...metadata,
-  })
+  const logger = createLogger(context)
+  logger.error("Error occurred", error, metadata)
 }
 
 /**

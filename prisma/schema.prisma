@@ -21,6 +21,7 @@ model User {
   isAdmin       Boolean       @default(false)
   plexWrapped   PlexWrapped[]
   llmUsage      LLMUsage[]
+  inviteUsages  InviteUsage[]
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -185,3 +186,34 @@ model PromptTemplate {
 }
 
 // Server Statistics are now calculated on the fly - no database caching needed
+
+model Invite {
+  id          String    @id @default(cuid())
+  code        String    @unique
+  maxUses     Int       @default(1)
+  useCount    Int       @default(0)
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdBy   String?   // Admin User ID who created the invite
+
+  // Library access settings
+  librarySectionIds String? // JSON array of library section IDs to share (null = all libraries)
+  allowDownloads Boolean @default(false) // Allow downloads (allowSync)
+
+  usages      InviteUsage[]
+
+  @@index([code])
+}
+
+model InviteUsage {
+  id        String   @id @default(cuid())
+  inviteId  String
+  invite    Invite   @relation(fields: [inviteId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  usedAt    DateTime @default(now())
+
+  @@index([inviteId])
+  @@index([userId])
+}

@@ -59,6 +59,7 @@ export function validateEnv() {
 
     return env
   } catch (error) {
+    // Use console.error directly for startup errors (logger may not be initialized)
     if (error instanceof z.ZodError) {
       console.error("❌ Invalid environment variables:")
       error.errors.forEach((err) => {
@@ -77,7 +78,7 @@ const isBuildTime = process.env.NEXT_PHASE === "phase-production-build" ||
                     process.env.NEXT_PHASE === "phase-development-build" ||
                     process.argv.includes("build")
 
-if (process.env.NODE_ENV !== "test" && !isBuildTime) {
+if (typeof window === "undefined" && process.env.NODE_ENV !== "test" && !isBuildTime) {
   validateEnv()
 }
 

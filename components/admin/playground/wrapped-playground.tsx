@@ -2,6 +2,7 @@
 
 import { savePlaygroundWrapped } from "@/actions/playground-wrapped"
 import { testPromptTemplate } from "@/actions/prompt-test"
+import { useToast } from "@/components/ui/toast"
 import { usePlaygroundState } from "@/hooks/use-playground-state"
 import { estimateCost } from "@/lib/wrapped/pricing"
 import { parseWrappedResponse } from "@/lib/wrapped/prompt"
@@ -31,6 +32,7 @@ interface WrappedPlaygroundProps {
 }
 
 export function WrappedPlayground({ templates, initialTemplateId }: WrappedPlaygroundProps) {
+  const toast = useToast()
   const {
     selectedTemplateId,
     setSelectedTemplateId,
@@ -271,10 +273,13 @@ export function WrappedPlayground({ templates, initialTemplateId }: WrappedPlayg
       if (saveResult.success) {
         // Close preview and show success
         setShowPreview(false)
-        // Optionally redirect or show success message
-        alert(`Wrapped saved successfully! User ID: ${saveResult.userId}, Wrapped ID: ${saveResult.wrappedId}`)
+        toast.showSuccess(
+          `Wrapped saved successfully! User ID: ${saveResult.userId}, Wrapped ID: ${saveResult.wrappedId}`
+        )
       } else {
-        setSaveError(saveResult.error || "Failed to save wrapped")
+        const errorMessage = saveResult.error || "Failed to save wrapped"
+        setSaveError(errorMessage)
+        toast.showError(errorMessage)
       }
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "Failed to save wrapped")

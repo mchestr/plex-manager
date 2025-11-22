@@ -1,8 +1,11 @@
 import { checkUserServerAccess, getPlexUserInfo } from "@/lib/connections/plex"
 import { prisma } from "@/lib/prisma"
+import { createLogger } from "@/lib/utils/logger"
 import { PrismaAdapter } from "@next-auth/prisma-adapter"
 import { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
+
+const logger = createLogger("AUTH")
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -27,7 +30,7 @@ export const authOptions: NextAuthOptions = {
           // Fetch user info from Plex API
           const userInfoResult = await getPlexUserInfo(authToken)
           if (!userInfoResult.success || !userInfoResult.data) {
-            console.error("[AUTH] - Failed to fetch user:", userInfoResult.error)
+            logger.error("Failed to fetch user", undefined, { error: userInfoResult.error })
             return null
           }
 
@@ -39,7 +42,7 @@ export const authOptions: NextAuthOptions = {
           })
 
           if (!plexServer) {
-            console.error("[AUTH] - No active Plex server configured")
+            logger.error("No active Plex server configured")
             throw new Error("NO_SERVER_CONFIGURED")
           }
 
@@ -58,10 +61,10 @@ export const authOptions: NextAuthOptions = {
           )
 
           if (!accessCheck.success || !accessCheck.hasAccess) {
-            console.log("[AUTH] - Plex user denied access:", {
+            logger.warn("Plex user denied access", {
               plexUserId: plexUser.id,
               username: plexUser.username,
-              email: plexUser.email,
+              // Email is automatically sanitized by logger in production
               serverHostname: plexServer.hostname,
               reason: accessCheck.error || "No access to server",
             })
@@ -135,7 +138,7 @@ export const authOptions: NextAuthOptions = {
             isAdmin: dbUser.isAdmin,
           }
         } catch (error) {
-          console.error("[AUTH] - Error authenticating user:", error)
+          logger.error("Error authenticating user", error)
           // Re-throw access denied errors so they can be handled specially
           if (error instanceof Error && (error.message === "ACCESS_DENIED" || error.message === "NO_SERVER_CONFIGURED")) {
             throw error

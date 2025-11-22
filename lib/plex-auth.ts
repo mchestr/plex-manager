@@ -1,7 +1,10 @@
 "use server"
 
-import qs from "qs"
+import { createLogger } from "@/lib/utils/logger"
 import { getBaseUrl } from "@/lib/utils"
+import qs from "qs"
+
+const logger = createLogger("PLEX_AUTH")
 
 const PLEX_API_ENDPOINT = "https://plex.tv/api/v2"
 const PLEX_PRODUCT_NAME = "Plex Wrapped"
@@ -56,7 +59,7 @@ export async function createPlexPin(): Promise<PlexPinResponse> {
 
     return await response.json()
   } catch (error) {
-    console.error("[PLEX AUTH] - Error creating Plex PIN:", error)
+    logger.error("Error creating Plex PIN", error)
     throw error
   }
 }
@@ -84,7 +87,7 @@ export async function getPlexAuthToken(pinId: string): Promise<string | null> {
     const data: PlexPinStatusResponse = await response.json()
     return data.authToken || null
   } catch (error) {
-    console.error("[PLEX AUTH] - Error getting Plex auth token:", error)
+    logger.error("Error getting Plex auth token", error)
     return null
   }
 }
@@ -112,7 +115,7 @@ export async function verifyPlexAuthToken(authToken: string): Promise<boolean> {
 
     return response.ok
   } catch (error) {
-    console.error("[PLEX AUTH] - Error verifying Plex auth token:", error)
+    logger.error("Error verifying Plex auth token", error)
     return false
   }
 }
@@ -120,9 +123,14 @@ export async function verifyPlexAuthToken(authToken: string): Promise<boolean> {
 /**
  * Create the Plex authorization URL with PIN code
  */
-export async function createPlexAuthUrl(pinId: number, pinCode: string): Promise<string> {
+export async function createPlexAuthUrl(pinId: number, pinCode: string, inviteCode?: string): Promise<string> {
   const baseUrl = getBaseUrl()
-  const forwardUrl = `${baseUrl}/auth/callback/plex?plexPinId=${pinId}`
+  let forwardUrl = `${baseUrl}/auth/callback/plex?plexPinId=${pinId}`
+
+  if (inviteCode) {
+    forwardUrl += `&inviteCode=${inviteCode}`
+  }
+
   const clientIdentifier = getClientIdentifier()
 
   // Use qs.stringify to properly handle nested objects in query string
