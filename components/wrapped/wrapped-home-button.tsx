@@ -158,7 +158,7 @@ export function WrappedHomeButton({ userId, serverName }: WrappedHomeButtonProps
               d="M13 10V3L4 14h7v7l9-11h-7z"
             />
           </svg>
-          Let&apos;s Get Started!
+          Let's Get Started!
         </Link>
         {wrapped.shareToken && (
           <WrappedShareButton shareToken={wrapped.shareToken} year={currentYear} />
@@ -175,7 +175,7 @@ export function WrappedHomeButton({ userId, serverName }: WrappedHomeButtonProps
           {heroTitle}
         </h1>
         <p className="text-sm text-slate-400 text-center max-w-xl">
-          There was an error generating your wrapped. Let&apos;s try again!
+          There was an error generating your wrapped. Let's try again!
         </p>
         {wrapped.error && (
           <div className="w-full max-w-md p-4 bg-red-900/30 border border-red-500/50 rounded-lg">

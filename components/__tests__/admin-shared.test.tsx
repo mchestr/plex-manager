@@ -2,8 +2,6 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { usePathname, useRouter } from 'next/navigation'
 import { signOut } from 'next-auth/react'
-import AdminLayoutClient from '@/components/admin/shared/admin-layout-client'
-import AdminLayout from '@/components/admin/shared/admin-layout'
 import { AdminNav } from '@/components/admin/shared/admin-nav'
 
 // Mock Next.js navigation
@@ -24,98 +22,6 @@ const mockSignOut = jest.fn()
 jest.mock('next-auth/react', () => ({
   signOut: () => mockSignOut(),
 }))
-
-describe('AdminLayoutClient', () => {
-  beforeEach(() => {
-    jest.clearAllMocks()
-    mockUsePathname.mockReturnValue('/admin/users')
-  })
-
-  it('should render children', () => {
-    render(
-      <AdminLayoutClient>
-        <div>Test Content</div>
-      </AdminLayoutClient>
-    )
-
-    expect(screen.getByText('Test Content')).toBeInTheDocument()
-  })
-
-  it('should render AdminNav component', () => {
-    render(
-      <AdminLayoutClient>
-        <div>Test Content</div>
-      </AdminLayoutClient>
-    )
-
-    expect(screen.getByText('Admin Panel')).toBeInTheDocument()
-  })
-
-  it('should have proper layout structure', () => {
-    const { container } = render(
-      <AdminLayoutClient>
-        <div>Test Content</div>
-      </AdminLayoutClient>
-    )
-
-    const layoutDiv = container.querySelector('.min-h-screen.bg-gradient-to-b')
-    expect(layoutDiv).toBeInTheDocument()
-    expect(layoutDiv).toHaveClass('from-slate-900', 'via-slate-800', 'to-slate-900')
-  })
-
-  it('should have proper main content styling', () => {
-    const { container } = render(
-      <AdminLayoutClient>
-        <div>Test Content</div>
-      </AdminLayoutClient>
-    )
-
-    const main = container.querySelector('main')
-    expect(main).toBeInTheDocument()
-    expect(main).toHaveClass('md:ml-64', 'pb-20', 'md:pb-6')
-  })
-
-  it('should render multiple children', () => {
-    render(
-      <AdminLayoutClient>
-        <div>First Child</div>
-        <div>Second Child</div>
-      </AdminLayoutClient>
-    )
-
-    expect(screen.getByText('First Child')).toBeInTheDocument()
-    expect(screen.getByText('Second Child')).toBeInTheDocument()
-  })
-})
-
-describe('AdminLayout', () => {
-  beforeEach(() => {
-    jest.clearAllMocks()
-    mockUsePathname.mockReturnValue('/admin/users')
-  })
-
-  it('should render children through AdminLayoutClient', () => {
-    render(
-      <AdminLayout>
-        <div>Layout Content</div>
-      </AdminLayout>
-    )
-
-    expect(screen.getByText('Layout Content')).toBeInTheDocument()
-  })
-
-  it('should pass children prop correctly', () => {
-    render(
-      <AdminLayout>
-        <div>First</div>
-        <div>Second</div>
-      </AdminLayout>
-    )
-
-    expect(screen.getByText('First')).toBeInTheDocument()
-    expect(screen.getByText('Second')).toBeInTheDocument()
-  })
-})
 
 describe('AdminNav', () => {
   beforeEach(() => {
@@ -509,9 +415,15 @@ describe('AdminNav', () => {
     it('should handle undefined pathname', () => {
       mockUsePathname.mockReturnValue(undefined as any)
 
-      // The component will throw because pathname.startsWith is called on undefined
-      // This is expected behavior - the component requires a valid pathname
-      expect(() => render(<AdminNav />)).toThrow()
+      // The component should handle undefined pathname gracefully
+      const { container } = render(<AdminNav />)
+
+      // Component should render without errors
+      expect(container.querySelector('aside')).toBeInTheDocument()
+
+      // No links should be active when pathname is undefined
+      const activeLinks = container.querySelectorAll('.from-cyan-600\\/20')
+      expect(activeLinks.length).toBe(0)
     })
 
     it('should handle pathname without /admin prefix', () => {

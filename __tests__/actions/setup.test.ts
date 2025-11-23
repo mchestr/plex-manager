@@ -3,20 +3,20 @@
  */
 
 import {
-  getSetupStatus,
-  savePlexServer,
-  saveTautulli,
-  saveOverseerr,
-  saveLLMProvider,
-  completeSetup,
-  fetchLLMModels,
+    completeSetup,
+    fetchLLMModels,
+    getSetupStatus,
+    saveLLMProvider,
+    saveOverseerr,
+    savePlexServer,
+    saveTautulli,
 } from '@/actions/setup'
-import { prisma } from '@/lib/prisma'
-import { testPlexConnection, getPlexUserInfo } from '@/lib/connections/plex'
-import { testTautulliConnection } from '@/lib/connections/tautulli'
-import { testOverseerrConnection } from '@/lib/connections/overseerr'
 import { testLLMProviderConnection } from '@/lib/connections/llm-provider'
 import { fetchOpenAIModels } from '@/lib/connections/openai'
+import { testOverseerrConnection } from '@/lib/connections/overseerr'
+import { getPlexUserInfo, testPlexConnection } from '@/lib/connections/plex'
+import { testTautulliConnection } from '@/lib/connections/tautulli'
+import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 
 // Mock dependencies

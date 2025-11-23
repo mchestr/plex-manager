@@ -1,6 +1,7 @@
 "use client"
 
 import { getSetupStatus } from "@/actions/setup"
+import { LoadingScreen } from "@/components/ui/loading-screen"
 import { usePathname, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 
@@ -24,19 +25,25 @@ export function SetupGuard({ children }: SetupGuardProps) {
         const { isComplete: setupComplete } = await getSetupStatus()
         setIsComplete(setupComplete)
 
-        // Only allow /setup and /api routes when setup is not complete
-        // All other routes (including /auth/*) should redirect to /setup
-        const isAllowedRoute = pathname.startsWith("/setup") || pathname.startsWith("/api")
+        // Allow /setup, /api, /auth, /invite, and /admin routes when setup is not complete
+        // to ensure smooth auth flows and setup process
+        const isAllowedRoute =
+          pathname.startsWith("/setup") ||
+          pathname.startsWith("/api") ||
+          pathname.startsWith("/auth") ||
+          pathname.startsWith("/invite") ||
+          pathname.startsWith("/admin")
 
         if (!setupComplete && !isAllowedRoute) {
           router.replace("/setup")
           return
         }
+
+        setIsChecking(false)
       } catch (error) {
         console.error("Error checking setup status:", error)
         // On error, assume setup is complete to avoid blocking the app
         setIsComplete(true)
-      } finally {
         setIsChecking(false)
       }
     }
@@ -44,18 +51,42 @@ export function SetupGuard({ children }: SetupGuardProps) {
     checkSetup()
   }, [pathname, router])
 
-  // Show nothing while checking (prevents flash of content)
+  // Check if route is allowed regardless of check status
+  // We allow setup, api, auth, invite, and admin routes to render immediately to prevent blocking
+  // and ensure smooth transitions/auth flows.
+  // If setup is incomplete, the useEffect will handle the redirect for non-allowed routes.
+  const isAllowedRoute =
+    pathname.startsWith("/setup") ||
+    pathname.startsWith("/api") ||
+    pathname.startsWith("/auth") ||
+    pathname.startsWith("/invite") ||
+    pathname.startsWith("/admin")
+
+  // Optimization: If on an allowed route, don't show global loading screen.
+  if (isAllowedRoute) {
+    return <>{children}</>
+  }
+
+  // Show loading screen while checking
   if (isChecking) {
-    return null
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+        <LoadingScreen message="Checking setup status..." />
+      </div>
+    )
   }
 
   // If setup is not complete and we're on a protected route, don't render children
-  // (the redirect will handle navigation)
-  const isAllowedRoute = pathname.startsWith("/setup") || pathname.startsWith("/api")
-  if (!isComplete && !isAllowedRoute) {
-    return null
+  // (the redirect will handle navigation, but we keep loading state just in case)
+  // Note: We re-calculate isAllowedRoute logic here strictly for the guard condition
+  const isStrictlyAllowed = pathname.startsWith("/setup") || pathname.startsWith("/api")
+  if (!isComplete && !isStrictlyAllowed) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+        <LoadingScreen message="Redirecting to setup..." />
+      </div>
+    )
   }
 
   return <>{children}</>
 }
-

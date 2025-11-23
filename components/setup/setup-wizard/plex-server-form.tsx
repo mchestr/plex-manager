@@ -2,10 +2,10 @@
 
 import { getDevDefaults } from "@/actions/dev-defaults"
 import { savePlexServer } from "@/actions/setup"
+import { StyledInput } from "@/components/ui/styled-input"
 import { constructServerUrl } from "@/lib/utils"
 import { type PlexServerInput } from "@/lib/validations/plex"
 import { memo, useCallback, useEffect, useState, useTransition } from "react"
-import { StyledInput } from "@/components/ui/styled-input"
 
 interface PlexServerFormProps {
   onComplete: () => void

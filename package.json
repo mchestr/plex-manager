@@ -2,20 +2,28 @@
   "name": "plex-wrapped",
   "version": "0.1.0",
   "private": true,
+  "prisma": {
+    "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
+  },
   "scripts": {
     "dev": "next dev",
+    "dev:test": "NODE_ENV=test NEXT_PUBLIC_ENABLE_TEST_AUTH=true FAST_REFRESH=false next dev",
     "build": "next build",
     "start": "next start",
     "start:prod": "node server.js",
     "lint": "next lint",
     "test": "jest",
-    "test:integration": "DATABASE_URL='postgresql://postgres:postgres@localhost:5432/plex_wrapped?schema=test_integration' npx prisma db push --accept-data-loss && DATABASE_URL='postgresql://postgres:postgres@localhost:5432/plex_wrapped?schema=test_integration' jest -c jest.integration.config.js",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:headed": "playwright test --headed",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "db:seed": "prisma db seed"
   },
   "dependencies": {
     "@next-auth/prisma-adapter": "^1.0.7",

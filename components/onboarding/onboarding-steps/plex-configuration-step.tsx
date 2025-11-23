@@ -43,7 +43,7 @@ export function PlexConfigurationStep({ onComplete, onBack }: PlexConfigurationS
         </h3>
         <div className="space-y-4 text-slate-300">
           <p>
-            By default, some Plex clients (like TV apps or Browsers) limit quality to 720p. This causes the server to "transcode" (convert) video, which reduces quality and can cause buffering.
+            By default, some Plex clients (like TV apps or Browsers) limit quality to 720p. This causes the server to &ldquo;transcode&rdquo; (convert) video, which reduces quality and can cause buffering.
           </p>
 
           <div className="bg-slate-900/50 p-4 rounded-md border-l-4 border-amber-500">
@@ -52,7 +52,7 @@ export function PlexConfigurationStep({ onComplete, onBack }: PlexConfigurationS
               <li>Open Plex <strong>Settings</strong> within the app on your device.</li>
               <li>Go to <strong>Video</strong> or <strong>Quality</strong>.</li>
               <li>Set <strong>Remote Streaming</strong> (or Internet Streaming) to <strong className="text-white">Maximum</strong> or <strong className="text-white">Original</strong>.</li>
-              <li>Turn <strong className="text-white">OFF</strong> "Adjust Automatically".</li>
+              <li>Turn <strong className="text-white">OFF</strong> &ldquo;Adjust Automatically&rdquo;.</li>
             </ol>
           </div>
         </div>

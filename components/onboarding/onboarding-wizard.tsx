@@ -1,14 +1,13 @@
 "use client"
 
 import { completeOnboarding, getOnboardingInfo } from "@/actions/onboarding"
+import { FinalStep, MediaRequestStep, PlexConfigurationStep, ReportIssuesStep, WelcomeStep } from "@/components/onboarding/onboarding-steps"
+import { FinalSuccessAnimation } from "@/components/setup/setup-wizard/final-success-animation"
+import { SuccessAnimation } from "@/components/setup/setup-wizard/success-animation"
 import { ONBOARDING_STEPS } from "@/types/onboarding"
 import { AnimatePresence, motion } from "framer-motion"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
-import { FinalStep, MediaRequestStep, PlexConfigurationStep, ReportIssuesStep, WelcomeStep } from "@/components/onboarding/onboarding-steps"
-import { SpaceBackground } from "@/components/setup/setup-wizard/space-background"
-import { SuccessAnimation } from "@/components/setup/setup-wizard/success-animation"
-import { FinalSuccessAnimation } from "@/components/setup/setup-wizard/final-success-animation"
 
 interface OnboardingWizardProps {
   currentStep: number
@@ -90,9 +89,7 @@ export function OnboardingWizard({ currentStep: initialStep }: OnboardingWizardP
   }
 
   return (
-    <div className="min-h-screen relative py-12 px-4 sm:px-6 lg:px-8">
-      <SpaceBackground />
-
+    <>
       {/* Success Animation Overlay */}
       <AnimatePresence>
         {showSuccess && (
@@ -121,7 +118,7 @@ export function OnboardingWizard({ currentStep: initialStep }: OnboardingWizardP
           <h1 className="text-4xl font-bold mb-2 drop-shadow-lg bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
             Welcome!
           </h1>
-          <p className="text-slate-300 text-lg">Let&apos;s get you started</p>
+          <p className="text-slate-300 text-lg">Let's get you started</p>
         </motion.div>
 
         {/* Step Indicator */}
@@ -219,6 +216,6 @@ export function OnboardingWizard({ currentStep: initialStep }: OnboardingWizardP
           </motion.div>
         </AnimatePresence>
       </div>
-    </div>
+    </>
   )
 }

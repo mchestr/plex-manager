@@ -1,6 +1,4 @@
-import { requireAdmin } from "@/lib/admin"
 import { getPromptTemplate } from "@/actions/prompts"
-import AdminLayoutClient from "@/components/admin/shared/admin-layout-client"
 import { ExpandablePrompt } from "@/components/admin/prompts/expandable-prompt"
 import Link from "next/link"
 import { notFound } from "next/navigation"
@@ -13,8 +11,6 @@ export default async function PromptTemplatePage({
 }: {
   params: { id: string }
 }) {
-  await requireAdmin()
-
   const result = await getPromptTemplate(params.id)
   if (!result.success || !result.data) {
     notFound()
@@ -34,9 +30,8 @@ export default async function PromptTemplatePage({
   }
 
   return (
-    <AdminLayoutClient>
-      <div className="p-4 sm:p-6">
-        <div className="max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto">
           <div className="mb-6">
             <Link
               href="/admin/prompts"
@@ -99,8 +94,7 @@ export default async function PromptTemplatePage({
             title="Template Content"
             characterCount={template.template.length}
           />
-        </div>
       </div>
-    </AdminLayoutClient>
+    </div>
   )
 }

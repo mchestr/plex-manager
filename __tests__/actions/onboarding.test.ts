@@ -1,5 +1,5 @@
 
-import { getOnboardingInfo, getOnboardingStatus, completeOnboarding } from '@/actions/onboarding'
+import { completeOnboarding, getOnboardingInfo, getOnboardingStatus } from '@/actions/onboarding'
 import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 

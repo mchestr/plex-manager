@@ -1,5 +1,6 @@
 "use server"
 
+import { requireAdmin } from "@/lib/admin"
 import { testLLMProviderConnection } from "@/lib/connections/llm-provider"
 import { testOverseerrConnection } from "@/lib/connections/overseerr"
 import { testPlexConnection } from "@/lib/connections/plex"
@@ -10,7 +11,6 @@ import { overseerrSchema, type OverseerrInput, type OverseerrParsed } from "@/li
 import { plexServerSchema, type PlexServerInput, type PlexServerParsed } from "@/lib/validations/plex"
 import { tautulliSchema, type TautulliInput, type TautulliParsed } from "@/lib/validations/tautulli"
 import { revalidatePath } from "next/cache"
-import { requireAdmin } from "@/lib/admin"
 
 export async function getSetupStatus() {
   const setup = await prisma.setup.findFirst({

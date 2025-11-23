@@ -109,6 +109,11 @@ export function AdminNav() {
 
   // Check if current path matches a nav item
   const isActive = (href: string) => {
+    // Handle undefined or null pathname
+    if (!pathname) {
+      return false
+    }
+
     if (href === "/admin/users") {
       return pathname === "/admin/users" || pathname === "/admin"
     }

@@ -1,6 +1,6 @@
-import { OnboardingWizard } from '@/components/onboarding/onboarding-wizard'
 import { completeOnboarding } from '@/actions/onboarding'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { OnboardingWizard } from '@/components/onboarding/onboarding-wizard'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { useRouter } from 'next/navigation'
 
 // Mock the dependencies

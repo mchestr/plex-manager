@@ -1,13 +1,9 @@
-import { requireAdmin } from "@/lib/admin"
 import { getPromptTemplates } from "@/actions/prompts"
-import AdminLayoutClient from "@/components/admin/shared/admin-layout-client"
 import Link from "next/link"
 
 export const dynamic = 'force-dynamic'
 
 export default async function PromptsPage() {
-  await requireAdmin()
-
   const result = await getPromptTemplates()
   const templates = result.success ? result.data : []
 
@@ -22,9 +18,8 @@ export default async function PromptsPage() {
   }
 
   return (
-    <AdminLayoutClient>
-      <div className="p-4 sm:p-6">
-        <div className="max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto">
           <div className="mb-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
               <div>
@@ -142,8 +137,7 @@ export default async function PromptsPage() {
               </table>
             </div>
           </div>
-        </div>
       </div>
-    </AdminLayoutClient>
+    </div>
   )
 }

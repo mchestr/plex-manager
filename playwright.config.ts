@@ -24,6 +24,9 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
 
+  /* Set up database before running tests */
+  globalSetup: require.resolve('./e2e/global-setup.ts'),
+
   /* Configure projects for major browsers */
   projects: [
     {
@@ -34,9 +37,11 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: 'npm run dev',
+    // Use dev:test script which sets the required env vars for test mode
+    command: 'npm run dev:test',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
+    timeout: 120000, // 2 minutes to allow for build/startup
   },
 });
 

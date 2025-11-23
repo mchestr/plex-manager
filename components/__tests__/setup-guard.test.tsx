@@ -87,7 +87,7 @@ describe('SetupGuard', () => {
     it('should redirect to /setup when on root path', async () => {
       mockPathname.mockReturnValue('/')
 
-      const { container } = render(
+      render(
         <SetupGuard>
           <div>Protected Content</div>
         </SetupGuard>
@@ -98,45 +98,47 @@ describe('SetupGuard', () => {
       })
 
       // Should not render children
-      expect(container.textContent).toBe('')
+      expect(screen.queryByText('Protected Content')).not.toBeInTheDocument()
     })
 
-    it('should redirect to /setup when on auth callback route', async () => {
+    it('should allow access to auth callback route even when setup incomplete', async () => {
       mockPathname.mockReturnValue('/auth/callback')
 
-      const { container } = render(
+      render(
         <SetupGuard>
           <div>Auth Content</div>
         </SetupGuard>
       )
 
       await waitFor(() => {
-        expect(mockReplace).toHaveBeenCalledWith('/setup')
+        expect(screen.getByText('Auth Content')).toBeInTheDocument()
       })
 
-      expect(container.textContent).toBe('')
+      // Should not redirect auth routes
+      expect(mockReplace).not.toHaveBeenCalled()
     })
 
-    it('should redirect to /setup when on admin route', async () => {
+    it('should allow access to admin routes even during incomplete setup', async () => {
       mockPathname.mockReturnValue('/admin/users')
 
-      const { container } = render(
+      render(
         <SetupGuard>
           <div>Admin Content</div>
         </SetupGuard>
       )
 
+      // /admin routes are now allowed even during incomplete setup
       await waitFor(() => {
-        expect(mockReplace).toHaveBeenCalledWith('/setup')
+        expect(screen.getByText('Admin Content')).toBeInTheDocument()
       })
 
-      expect(container.textContent).toBe('')
+      expect(mockReplace).not.toHaveBeenCalled()
     })
 
     it('should redirect to /setup when on wrapped route', async () => {
       mockPathname.mockReturnValue('/wrapped')
 
-      const { container } = render(
+      render(
         <SetupGuard>
           <div>Wrapped Content</div>
         </SetupGuard>
@@ -146,7 +148,7 @@ describe('SetupGuard', () => {
         expect(mockReplace).toHaveBeenCalledWith('/setup')
       })
 
-      expect(container.textContent).toBe('')
+      expect(screen.queryByText('Wrapped Content')).not.toBeInTheDocument()
     })
 
     it('should allow access to /setup route', async () => {
@@ -198,56 +200,58 @@ describe('SetupGuard', () => {
     })
 
     it('should not render children while redirecting', async () => {
-      mockPathname.mockReturnValue('/admin')
+      // Use a non-admin route since /admin routes are now allowed
+      mockPathname.mockReturnValue('/wrapped')
 
-      const { container } = render(
+      render(
         <SetupGuard>
           <div>Protected Content</div>
         </SetupGuard>
       )
 
-      // Initially should show nothing
-      expect(container.textContent).toBe('')
+      // Initially should show loading screen
+      expect(screen.getByText('Checking setup status...')).toBeInTheDocument()
+      expect(screen.queryByText('Protected Content')).not.toBeInTheDocument()
 
       await waitFor(() => {
         expect(mockReplace).toHaveBeenCalledWith('/setup')
       })
 
-      // Should still show nothing after redirect
-      expect(container.textContent).toBe('')
+      // Should still not show protected content after redirect
+      expect(screen.queryByText('Protected Content')).not.toBeInTheDocument()
     })
   })
 
   describe('Loading State', () => {
-    it('should show nothing while checking setup status', () => {
+    it('should show loading screen while checking setup status', () => {
       jest.spyOn(setupActions, 'getSetupStatus').mockImplementation(
         () => new Promise(() => {}) // Never resolves
       )
 
-      const { container } = render(
+      render(
         <SetupGuard>
           <div>Protected Content</div>
         </SetupGuard>
       )
 
-      // Should not render children while checking
-      expect(container.textContent).toBe('')
+      // Should show loading screen while checking
+      expect(screen.getByText('Checking setup status...')).toBeInTheDocument()
       expect(screen.queryByText('Protected Content')).not.toBeInTheDocument()
     })
 
-    it('should not show loading spinner', () => {
+    it('should show loading screen while checking', () => {
       jest.spyOn(setupActions, 'getSetupStatus').mockImplementation(
         () => new Promise(() => {}) // Never resolves
       )
 
-      const { container } = render(
+      render(
         <SetupGuard>
           <div>Protected Content</div>
         </SetupGuard>
       )
 
-      // Should return null (nothing visible)
-      expect(container.textContent).toBe('')
+      // Should show loading screen
+      expect(screen.getByText('Checking setup status...')).toBeInTheDocument()
     })
   })
 
@@ -381,17 +385,18 @@ describe('SetupGuard', () => {
       })
       mockPathname.mockReturnValue('/admin/setup-config')
 
-      const { container } = render(
+      render(
         <SetupGuard>
           <div>Config Content</div>
         </SetupGuard>
       )
 
+      // /admin routes are now allowed even during incomplete setup
       await waitFor(() => {
-        expect(mockReplace).toHaveBeenCalledWith('/setup')
+        expect(screen.getByText('Config Content')).toBeInTheDocument()
       })
 
-      expect(container.textContent).toBe('')
+      expect(mockReplace).not.toHaveBeenCalled()
     })
 
     it('should not allow routes that only contain "api" in the middle', async () => {
@@ -401,17 +406,18 @@ describe('SetupGuard', () => {
       })
       mockPathname.mockReturnValue('/admin/api-settings')
 
-      const { container } = render(
+      render(
         <SetupGuard>
           <div>API Settings</div>
         </SetupGuard>
       )
 
+      // /admin routes are now allowed even during incomplete setup
       await waitFor(() => {
-        expect(mockReplace).toHaveBeenCalledWith('/setup')
+        expect(screen.getByText('API Settings')).toBeInTheDocument()
       })
 
-      expect(container.textContent).toBe('')
+      expect(mockReplace).not.toHaveBeenCalled()
     })
   })
 
@@ -465,9 +471,12 @@ describe('SetupGuard', () => {
         </SetupGuard>
       )
 
+      // /admin routes are now allowed even during incomplete setup
       await waitFor(() => {
-        expect(mockReplace).toHaveBeenCalledWith('/setup')
+        expect(screen.getByText('Admin Content')).toBeInTheDocument()
       })
+
+      expect(mockReplace).not.toHaveBeenCalled()
 
       // Now navigate to setup
       mockPathname.mockReturnValue('/setup')
@@ -495,7 +504,7 @@ describe('SetupGuard', () => {
       })
       mockPathname.mockReturnValue('')
 
-      const { container } = render(
+      render(
         <SetupGuard>
           <div>Content</div>
         </SetupGuard>
@@ -505,7 +514,7 @@ describe('SetupGuard', () => {
         expect(mockReplace).toHaveBeenCalledWith('/setup')
       })
 
-      expect(container.textContent).toBe('')
+      expect(screen.queryByText('Content')).not.toBeInTheDocument()
     })
 
     it('should handle case-sensitive routes', async () => {
@@ -515,7 +524,7 @@ describe('SetupGuard', () => {
       })
       mockPathname.mockReturnValue('/Setup')
 
-      const { container } = render(
+      render(
         <SetupGuard>
           <div>Content</div>
         </SetupGuard>
@@ -526,7 +535,8 @@ describe('SetupGuard', () => {
         expect(mockReplace).toHaveBeenCalledWith('/setup')
       })
 
-      expect(container.textContent).toBe('')
+      // Should show loading/redirecting screen, not the content
+      expect(screen.queryByText('Content')).not.toBeInTheDocument()
     })
 
     it('should handle multiple children', async () => {
@@ -687,14 +697,11 @@ describe('SetupGuard', () => {
         currentStep: 2,
       })
 
+      // Routes that should be blocked (not /admin routes which are now allowed)
       const blockedRoutes = [
         '/',
-        '/admin',
-        '/admin/users',
         '/wrapped',
         '/wrapped/share',
-        '/auth/signin',
-        '/auth/callback',
         '/onboarding',
       ]
 
@@ -702,7 +709,7 @@ describe('SetupGuard', () => {
         mockPathname.mockReturnValue(route)
         mockReplace.mockClear()
 
-        const { container, unmount } = render(
+        const { unmount } = render(
           <SetupGuard>
             <div>Protected Content</div>
           </SetupGuard>
@@ -712,7 +719,28 @@ describe('SetupGuard', () => {
           expect(mockReplace).toHaveBeenCalledWith('/setup')
         })
 
-        expect(container.textContent).toBe('')
+        // Should show loading/redirecting screen, not the protected content
+        expect(screen.queryByText('Protected Content')).not.toBeInTheDocument()
+        unmount()
+      }
+
+      // Test that /admin routes are allowed
+      const allowedAdminRoutes = ['/admin', '/admin/users']
+      for (const route of allowedAdminRoutes) {
+        mockPathname.mockReturnValue(route)
+        mockReplace.mockClear()
+
+        const { unmount } = render(
+          <SetupGuard>
+            <div>Admin Content</div>
+          </SetupGuard>
+        )
+
+        await waitFor(() => {
+          expect(screen.getByText('Admin Content')).toBeInTheDocument()
+        })
+
+        expect(mockReplace).not.toHaveBeenCalled()
         unmount()
       }
     })
@@ -747,9 +775,10 @@ describe('SetupGuard', () => {
         currentStep: 1,
       })
 
-      mockPathname.mockReturnValue('/admin/settings')
+      // Use a non-admin route for this test since /admin routes are now allowed
+      mockPathname.mockReturnValue('/wrapped/settings')
 
-      const { container } = render(
+      render(
         <SetupGuard>
           <div>Sensitive Settings</div>
         </SetupGuard>
@@ -762,7 +791,8 @@ describe('SetupGuard', () => {
         expect(mockReplace).toHaveBeenCalledWith('/setup')
       })
 
-      expect(container.textContent).toBe('')
+      // Should still not render sensitive content after redirect
+      expect(screen.queryByText('Sensitive Settings')).not.toBeInTheDocument()
     })
   })
 

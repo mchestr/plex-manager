@@ -2,10 +2,10 @@
 
 import { getDevDefaults } from "@/actions/dev-defaults"
 import { saveOverseerr } from "@/actions/setup"
+import { StyledInput } from "@/components/ui/styled-input"
 import { constructServerUrl } from "@/lib/utils"
 import { type OverseerrInput } from "@/lib/validations/overseerr"
 import { useEffect, useState, useTransition } from "react"
-import { StyledInput } from "@/components/ui/styled-input"
 
 interface OverseerrFormProps {
   onComplete: () => void

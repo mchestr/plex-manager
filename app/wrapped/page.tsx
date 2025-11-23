@@ -20,7 +20,7 @@ export default async function WrappedPage() {
   const wrapped = await getUserPlexWrapped(session.user.id, currentYear)
 
   return (
-    <main className="min-h-screen">
+    <>
       {wrapped && wrapped.status === "completed" && wrapped.data ? (
           (() => {
             try {
@@ -105,7 +105,7 @@ export default async function WrappedPage() {
               </svg>
               <h2 className="text-2xl font-bold text-white mb-2">No Wrapped Found</h2>
               <p className="text-slate-400 mb-6">
-                You haven&apos;t generated your {currentYear} Plex Wrapped yet.
+                You haven't generated your {currentYear} Plex Wrapped yet.
               </p>
               <Link
                 href="/"
@@ -116,7 +116,6 @@ export default async function WrappedPage() {
             </div>
           </div>
         )}
-    </main>
+    </>
   )
 }
-

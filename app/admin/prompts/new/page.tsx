@@ -1,13 +1,13 @@
-import { requireAdmin } from "@/lib/admin"
 import { getUserPlexWrapped } from "@/actions/user-queries"
-import AdminLayoutClient from "@/components/admin/shared/admin-layout-client"
 import { PromptTemplateEditor } from "@/components/admin/prompts/prompt-template-editor"
+import { authOptions } from "@/lib/auth"
+import { getServerSession } from "next-auth"
 import Link from "next/link"
 
 export const dynamic = 'force-dynamic'
 
 export default async function NewPromptTemplatePage() {
-  const session = await requireAdmin()
+  const session = await getServerSession(authOptions)
 
   // Get current user's wrapped data for placeholder examples
   const currentYear = new Date().getFullYear()
@@ -16,9 +16,8 @@ export default async function NewPromptTemplatePage() {
     : null
 
   return (
-    <AdminLayoutClient>
-      <div className="p-4 sm:p-6 lg:p-8">
-        <div className="max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto">
           <div className="mb-8">
             <Link
               href="/admin/prompts"
@@ -45,8 +44,7 @@ export default async function NewPromptTemplatePage() {
             userWrapped={userWrapped}
             userName={session?.user?.name || "User"}
           />
-        </div>
       </div>
-    </AdminLayoutClient>
+    </div>
   )
 }

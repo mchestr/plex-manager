@@ -1,17 +1,13 @@
 import { getUserDetails } from "@/actions/users"
-import AdminLayoutClient from "@/components/admin/shared/admin-layout-client"
 import { RegenerateWrappedButton } from "@/components/admin/users/regenerate-wrapped-button"
 import { UnshareUserButton } from "@/components/admin/users/unshare-user-button"
 import { UserStatusBadge } from "@/components/admin/users/user-status-badge"
-import { requireAdmin } from "@/lib/admin"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
 export const dynamic = 'force-dynamic'
 
 export default async function UserDetailsPage({ params }: { params: { userId: string } }) {
-  await requireAdmin()
-
   const user = await getUserDetails(params.userId)
 
   if (!user) {
@@ -32,9 +28,8 @@ export default async function UserDetailsPage({ params }: { params: { userId: st
   const currentYearWrapped = user.wrapped.find((w) => w.year === currentYear)
 
   return (
-    <AdminLayoutClient>
-      <div className="p-4 sm:p-6">
-        <div className="max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto">
           <div className="mb-6">
             <Link
               href="/admin/users"
@@ -316,9 +311,8 @@ export default async function UserDetailsPage({ params }: { params: { userId: st
               </div>
             </div>
           )}
-        </div>
       </div>
-    </AdminLayoutClient>
+    </div>
   )
 }
 

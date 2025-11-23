@@ -1,12 +1,14 @@
+import { WrappedGeneratorStatus } from '@/components/generator/wrapped-generator-status'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { WrappedGeneratorStatus } from '@/components/generator/wrapped-generator-status'
 
 // Mock Next.js Link component
 jest.mock('next/link', () => {
-  return ({ children, href }: { children: React.ReactNode; href: string }) => {
+  const MockLink = ({ children, href }: { children: React.ReactNode; href: string }) => {
     return <a href={href}>{children}</a>
   }
+  MockLink.displayName = 'Link'
+  return MockLink
 })
 
 describe('WrappedGeneratorStatus', () => {

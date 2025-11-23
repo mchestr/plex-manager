@@ -29,7 +29,7 @@ export function DeniedAccessPageClient() {
   }, [])
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 relative overflow-hidden">
+    <>
       {/* Animated particles background */}
       {particles.map((particle) => (
         <motion.div
@@ -161,7 +161,7 @@ export function DeniedAccessPageClient() {
               Access Denied
             </motion.h1>
             <p className="text-lg text-slate-300 mb-2">
-              You don&apos;t have access to this Plex server
+              You don't have access to this Plex server
             </p>
             <p className="text-sm text-slate-400 mb-6">
               Please contact the server administrator if you believe this is an error
@@ -190,7 +190,6 @@ export function DeniedAccessPageClient() {
           </motion.div>
         </motion.div>
       </div>
-    </main>
+    </>
   )
 }
-

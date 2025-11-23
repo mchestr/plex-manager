@@ -1,7 +1,5 @@
 import React from "react"
 import { getLLMUsageRecords, getLLMUsageStats, getUserById } from "@/actions/admin"
-import AdminLayoutClient from "@/components/admin/shared/admin-layout-client"
-import { requireAdmin } from "@/lib/admin"
 import Link from "next/link"
 
 export const dynamic = 'force-dynamic'
@@ -11,8 +9,6 @@ export default async function LLMUsagePage({
 }: {
   searchParams: { page?: string; userId?: string }
 }) {
-  await requireAdmin()
-
   const page = parseInt(searchParams.page || "1", 10)
   const userId = searchParams.userId
 
@@ -43,9 +39,8 @@ export default async function LLMUsagePage({
   }
 
   return (
-    <AdminLayoutClient>
-      <div className="p-4 sm:p-6">
-        <div className="max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto">
           <div className="mb-6">
             <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">LLM Requests</h1>
             <p className="text-sm text-slate-400">
@@ -299,8 +294,7 @@ export default async function LLMUsagePage({
           )}
         </div>
       </div>
-      </div>
-    </AdminLayoutClient>
+    </div>
   )
 }
 

@@ -198,7 +198,7 @@ describe('OnboardingGuard', () => {
       expect(mockReplace).not.toHaveBeenCalled()
     })
 
-    it('should redirect for admin routes when onboarding incomplete', async () => {
+    it('should allow admin routes even when onboarding incomplete', async () => {
       ;(usePathname as jest.Mock).mockReturnValue('/admin/users')
 
       render(
@@ -207,11 +207,12 @@ describe('OnboardingGuard', () => {
         </OnboardingGuard>
       )
 
+      // /admin routes are allowed even during incomplete onboarding
       await waitFor(() => {
-        expect(mockReplace).toHaveBeenCalledWith('/onboarding')
+        expect(screen.getByText('Admin Content')).toBeInTheDocument()
       })
 
-      expect(screen.queryByText('Admin Content')).not.toBeInTheDocument()
+      expect(mockReplace).not.toHaveBeenCalled()
     })
   })
 
@@ -264,20 +265,20 @@ describe('OnboardingGuard', () => {
   })
 
   describe('loading state', () => {
-    it('should render nothing while checking onboarding status', () => {
+    it('should show loading screen while checking onboarding status', () => {
       mockGetOnboardingStatus.mockImplementation(
         () => new Promise((resolve) => setTimeout(() => resolve({ isComplete: true }), 100))
       )
       ;(usePathname as jest.Mock).mockReturnValue('/wrapped')
 
-      const { container } = render(
+      render(
         <OnboardingGuard>
           <div>Protected Content</div>
         </OnboardingGuard>
       )
 
-      // Should render nothing initially
-      expect(container.firstChild).toBeNull()
+      // Should show loading screen initially
+      expect(screen.getByText('Checking account status...')).toBeInTheDocument()
       expect(screen.queryByText('Protected Content')).not.toBeInTheDocument()
     })
 

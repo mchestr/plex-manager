@@ -2,13 +2,13 @@
 
 ```yaml
 - generic [active] [ref=e1]:
-  - generic [ref=e3]:
-    - img [ref=e5]
-    - generic [ref=e18]: "401"
-  - alert [ref=e19]
-  - generic [ref=e22] [cursor=pointer]:
-    - img [ref=e23]
-    - generic [ref=e25]: 1 error
-    - button "Hide Errors" [ref=e26]:
-      - img [ref=e27]
+  - main [ref=e2]:
+    - generic [ref=e4]:
+      - heading "MikeFlix Manager" [level=1] [ref=e5]
+      - generic [ref=e6]:
+        - button "Sign in with Plex" [ref=e7] [cursor=pointer]
+        - generic [ref=e8]:
+          - paragraph [ref=e9]: Only subscribers on MikeFlix will be able to generate a wrapped.
+          - paragraph [ref=e10]: No personal information will be saved or stored.
+  - alert [ref=e11]
 ```

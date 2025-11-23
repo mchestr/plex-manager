@@ -35,10 +35,10 @@ export function FinalStep({ onComplete, onBack }: FinalStepProps) {
         </div>
 
         <h2 className="text-3xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-          You&apos;re All Set!
+          You're All Set!
         </h2>
         <p className="text-slate-300 text-lg leading-relaxed">
-          You&apos;re ready to start exploring the dashboard.
+          You're ready to start exploring the dashboard.
         </p>
       </motion.div>
 
@@ -48,7 +48,7 @@ export function FinalStep({ onComplete, onBack }: FinalStepProps) {
         transition={{ duration: 0.5, delay: 0.3 }}
         className="bg-slate-800/50 rounded-lg p-6 border border-cyan-500/20"
       >
-        <h3 className="text-white font-semibold mb-3">What&apos;s Next:</h3>
+        <h3 className="text-white font-semibold mb-3">What's Next:</h3>
         <ul className="space-y-2 text-slate-300">
           <li className="flex items-start">
             <span className="text-cyan-400 mr-2">•</span>

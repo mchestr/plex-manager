@@ -108,14 +108,11 @@ export default async function SharedWrappedPage({
   const wrappedData: WrappedData = sharedWrapped.data
 
   return (
-    <main className="min-h-screen">
-      <WrappedShareSummary
-        wrappedData={wrappedData}
-        year={sharedWrapped.year}
-        userName={sharedWrapped.userName}
-        summary={sharedWrapped.summary}
-      />
-    </main>
+    <WrappedShareSummary
+      wrappedData={wrappedData}
+      year={sharedWrapped.year}
+      userName={sharedWrapped.userName}
+      summary={sharedWrapped.summary}
+    />
   )
 }
-

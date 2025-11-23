@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/react'
-import { UserWrappedViewer } from '@/components/wrapped/user-wrapped-viewer'
-import { Prisma } from '@prisma/client'
+import { UserWrappedViewer } from '@/components/wrapped/user-wrapped-viewer';
+import { Prisma } from '@prisma/client';
+import { render, screen } from '@testing-library/react';
 
 // Mock the WrappedGeneratingAnimation component
 jest.mock('@/components/generator/wrapped-generating-animation', () => ({
@@ -13,9 +13,11 @@ jest.mock('@/components/generator/wrapped-generating-animation', () => ({
 
 // Mock next/link
 jest.mock('next/link', () => {
-  return ({ children, href }: { children: React.ReactNode; href: string }) => (
+  const MockLink = ({ children, href }: { children: React.ReactNode; href: string }) => (
     <a href={href}>{children}</a>
   )
+  MockLink.displayName = 'Link'
+  return MockLink
 })
 
 type WrappedWithUser = Prisma.PlexWrappedGetPayload<{

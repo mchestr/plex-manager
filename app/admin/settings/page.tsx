@@ -1,23 +1,18 @@
 import { getAdminSettings } from "@/actions/admin"
 import { LLMProviderForm, LLMToggle, ServerForm } from "@/components/admin/settings/settings-edit-forms"
-import AdminLayoutClient from "@/components/admin/shared/admin-layout-client"
-import { requireAdmin } from "@/lib/admin"
 import { getBaseUrl } from "@/lib/utils"
 
 export const dynamic = 'force-dynamic'
 
 export default async function SettingsPage() {
-  await requireAdmin()
-
   const settings = await getAdminSettings()
   const baseUrl = getBaseUrl()
   const nodeVersion = process.version
   const nodeEnv = process.env.NODE_ENV || "development"
 
   return (
-    <AdminLayoutClient>
-      <div className="p-4 sm:p-6">
-        <div className="max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="mb-6">
             <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Settings</h1>
@@ -216,9 +211,8 @@ export default async function SettingsPage() {
             </div>
 
           </div>
-        </div>
       </div>
-    </AdminLayoutClient>
+    </div>
   )
 }
 

@@ -1,8 +1,8 @@
-import type { Metadata, Viewport } from "next";
 import "@/app/globals.css";
-import { Providers } from "@/lib/providers";
-import { SetupGuard } from "@/components/setup/setup-guard";
 import { OnboardingGuard } from "@/components/onboarding/onboarding-guard";
+import { SetupGuard } from "@/components/setup/setup-guard";
+import { Providers } from "@/lib/providers";
+import type { Metadata, Viewport } from "next";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -40,4 +40,3 @@ export default function RootLayout({
     </html>
   );
 }
-

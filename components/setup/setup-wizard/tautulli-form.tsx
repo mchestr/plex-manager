@@ -2,10 +2,10 @@
 
 import { getDevDefaults } from "@/actions/dev-defaults"
 import { saveTautulli } from "@/actions/setup"
+import { StyledInput } from "@/components/ui/styled-input"
 import { constructServerUrl } from "@/lib/utils"
 import { type TautulliInput } from "@/lib/validations/tautulli"
 import { useEffect, useState, useTransition } from "react"
-import { StyledInput } from "@/components/ui/styled-input"
 
 interface TautulliFormProps {
   onComplete: () => void

@@ -1,7 +1,7 @@
-import { requireAdmin } from "@/lib/admin"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 import { getPromptTemplate } from "@/actions/prompts"
 import { getUserPlexWrapped } from "@/actions/user-queries"
-import AdminLayoutClient from "@/components/admin/shared/admin-layout-client"
 import { PromptTemplateEditor } from "@/components/admin/prompts/prompt-template-editor"
 import Link from "next/link"
 import { notFound } from "next/navigation"
@@ -13,7 +13,7 @@ export default async function EditPromptTemplatePage({
 }: {
   params: { id: string }
 }) {
-  const session = await requireAdmin()
+  const session = await getServerSession(authOptions)
 
   const result = await getPromptTemplate(params.id)
   if (!result.success || !result.data) {
@@ -27,9 +27,8 @@ export default async function EditPromptTemplatePage({
     : null
 
   return (
-    <AdminLayoutClient>
-      <div className="p-4 sm:p-6 lg:p-8">
-        <div className="max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto">
           <div className="mb-8">
             <Link
               href={`/admin/prompts/${params.id}`}
@@ -57,9 +56,8 @@ export default async function EditPromptTemplatePage({
             userWrapped={userWrapped}
             userName={session?.user?.name || "User"}
           />
-        </div>
       </div>
-    </AdminLayoutClient>
+    </div>
   )
 }
 

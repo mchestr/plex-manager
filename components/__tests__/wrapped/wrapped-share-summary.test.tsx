@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/react'
 import { WrappedShareSummary } from '@/components/wrapped/wrapped-share-summary'
 import { WrappedData } from '@/types/wrapped'
+import { render, screen } from '@testing-library/react'
 
 // Mock framer-motion
 jest.mock('framer-motion', () => ({
@@ -21,9 +21,11 @@ jest.mock('@/components/setup/setup-wizard/space-background', () => ({
 
 // Mock next/link
 jest.mock('next/link', () => {
-  return ({ children, href }: { children: React.ReactNode; href: string }) => (
+  const MockLink = ({ children, href }: { children: React.ReactNode; href: string }) => (
     <a href={href}>{children}</a>
   )
+  MockLink.displayName = 'Link'
+  return MockLink
 })
 
 const createMockWrappedData = (overrides?: Partial<WrappedData>): WrappedData => ({

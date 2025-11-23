@@ -1,17 +1,16 @@
 "use client"
 
 import { completeSetup } from "@/actions/setup"
-import { SETUP_STEPS } from "@/types/setup"
-import { AnimatePresence, motion } from "framer-motion"
-import { useRouter } from "next/navigation"
-import { useState } from "react"
 import { FinalSuccessAnimation } from "@/components/setup/setup-wizard/final-success-animation"
 import { LLMProviderForm } from "@/components/setup/setup-wizard/llm-provider-form"
 import { OverseerrForm } from "@/components/setup/setup-wizard/overseerr-form"
 import { PlexServerForm } from "@/components/setup/setup-wizard/plex-server-form"
-import { SpaceBackground } from "@/components/setup/setup-wizard/space-background"
 import { SuccessAnimation } from "@/components/setup/setup-wizard/success-animation"
 import { TautulliForm } from "@/components/setup/setup-wizard/tautulli-form"
+import { SETUP_STEPS } from "@/types/setup"
+import { AnimatePresence, motion } from "framer-motion"
+import { useRouter } from "next/navigation"
+import { useState } from "react"
 
 interface SetupWizardProps {
   currentStep: number
@@ -66,9 +65,7 @@ export function SetupWizard({ currentStep: initialStep }: SetupWizardProps) {
   }
 
   return (
-    <div className="min-h-screen relative py-12 px-4 sm:px-6 lg:px-8">
-      <SpaceBackground />
-
+    <>
       {/* Success Animation Overlay */}
       <AnimatePresence>
         {showSuccess && (
@@ -90,7 +87,7 @@ export function SetupWizard({ currentStep: initialStep }: SetupWizardProps) {
             Welcome to Plex Manager
           </h1>
           <p className="text-slate-300 text-lg">
-            Let&apos;s get your Plex Manager setup configured
+            Let's get your Plex Manager setup configured
           </p>
         </motion.div>
 
@@ -190,7 +187,6 @@ export function SetupWizard({ currentStep: initialStep }: SetupWizardProps) {
           </motion.div>
         </AnimatePresence>
       </div>
-    </div>
+    </>
   )
 }
-

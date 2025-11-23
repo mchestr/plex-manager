@@ -41,3 +41,5 @@ prisma/dev.db-journal
 data/
 test.db
 test.db-journal
+test-results/
+playwright-report/

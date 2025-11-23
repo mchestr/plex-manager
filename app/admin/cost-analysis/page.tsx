@@ -1,11 +1,9 @@
 import { getLLMUsageStats } from "@/actions/admin"
-import AdminLayoutClient from "@/components/admin/shared/admin-layout-client"
-import { CostTrendChart } from "@/components/admin/cost-analysis/cost-trend-chart"
-import { CostProviderChart } from "@/components/admin/cost-analysis/cost-provider-chart"
-import { CostModelChart } from "@/components/admin/cost-analysis/cost-model-chart"
-import { CostUserChart } from "@/components/admin/cost-analysis/cost-user-chart"
 import { CostDateFilter } from "@/components/admin/cost-analysis/cost-date-filter"
-import { requireAdmin } from "@/lib/admin"
+import { CostModelChart } from "@/components/admin/cost-analysis/cost-model-chart"
+import { CostProviderChart } from "@/components/admin/cost-analysis/cost-provider-chart"
+import { CostTrendChart } from "@/components/admin/cost-analysis/cost-trend-chart"
+import { CostUserChart } from "@/components/admin/cost-analysis/cost-user-chart"
 import { Suspense } from "react"
 
 export const dynamic = 'force-dynamic'
@@ -15,8 +13,6 @@ interface CostAnalysisPageProps {
 }
 
 export default async function CostAnalysisPage({ searchParams }: CostAnalysisPageProps) {
-  await requireAdmin()
-
   // Parse date filters
   const startDate = searchParams.startDate ? new Date(searchParams.startDate) : undefined
   const endDate = searchParams.endDate ? new Date(searchParams.endDate) : undefined
@@ -58,9 +54,8 @@ export default async function CostAnalysisPage({ searchParams }: CostAnalysisPag
   }
 
   return (
-    <AdminLayoutClient>
-      <div className="p-4 sm:p-6">
-        <div className="max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="mb-6">
             <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Cost Analysis</h1>
@@ -256,9 +251,8 @@ export default async function CostAnalysisPage({ searchParams }: CostAnalysisPag
               </div>
             </div>
           </div>
-        </div>
       </div>
-    </AdminLayoutClient>
+    </div>
   )
 }
 

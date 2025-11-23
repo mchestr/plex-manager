@@ -176,13 +176,16 @@ plex-wrapped/
 | `npm run build` | Build for production |
 | `npm run start` | Start production server |
 | `npm run lint` | Run ESLint |
-| `npm test` | Run tests |
+| `npm test` | Run unit/integration tests |
 | `npm run test:watch` | Run tests in watch mode |
 | `npm run test:coverage` | Generate coverage report |
+| `npm run test:e2e` | Run end-to-end tests (Playwright) |
+| `npm run test:e2e:ui` | Run E2E tests in UI mode |
 | `npm run db:generate` | Generate Prisma Client |
 | `npm run db:push` | Push schema changes to database |
 | `npm run db:migrate` | Run database migrations |
 | `npm run db:studio` | Open Prisma Studio (database GUI) |
+| `npm run db:seed` | Seed database with test data |
 
 ### Development Guidelines
 
@@ -201,7 +204,10 @@ plex-wrapped/
 #### **Testing**
 - **Jest** - Unit and integration tests
 - **Testing Library** - Component testing utilities
+- **Playwright** - End-to-end testing with authenticated sessions
 - **Coverage** - Aim for comprehensive test coverage
+
+See [E2E Testing Guide](e2e/README.md) for details on writing Playwright tests with authenticated sessions.
 
 #### **Logging**
 - Use the `createLogger` utility from `@/lib/utils/logger`
@@ -286,7 +292,7 @@ The project includes a `Dockerfile` for containerized deployments. When deployin
 | **Styling** | Tailwind CSS |
 | **Animations** | Framer Motion |
 | **Validation** | Zod |
-| **Testing** | Jest + Testing Library |
+| **Testing** | Jest + Testing Library + Playwright |
 
 ---
 

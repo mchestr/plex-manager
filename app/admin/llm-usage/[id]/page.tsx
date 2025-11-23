@@ -1,15 +1,11 @@
 import { getLLMUsageById } from "@/actions/admin"
-import AdminLayoutClient from "@/components/admin/shared/admin-layout-client"
 import { ExpandablePrompt } from "@/components/admin/prompts/expandable-prompt"
-import { requireAdmin } from "@/lib/admin"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
 export const dynamic = 'force-dynamic'
 
 export default async function LLMUsageDetailPage({ params }: { params: { id: string } }) {
-  await requireAdmin()
-
   const record = await getLLMUsageById(params.id)
 
   if (!record) {
@@ -51,9 +47,8 @@ export default async function LLMUsageDetailPage({ params }: { params: { id: str
   }
 
   return (
-    <AdminLayoutClient>
-      <div className="p-4 sm:p-6">
-        <div className="max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto">
           <div className="mb-6">
             <Link
               href="/admin/llm-usage"
@@ -206,9 +201,8 @@ export default async function LLMUsageDetailPage({ params }: { params: { id: str
           characterCount={record.response.length}
           characterCountSuffix={isJson ? "(JSON formatted)" : undefined}
         />
-        </div>
       </div>
-    </AdminLayoutClient>
+    </div>
   )
 }
 
