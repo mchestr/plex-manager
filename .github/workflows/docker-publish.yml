@@ -1,9 +1,11 @@
 name: Docker Build and Publish
 
 on:
+  workflow_run:
+    workflows: ["Build"]
+    types:
+      - completed
   push:
-    branches:
-      - '**'  # Run on all branches
     tags:
       - 'v*'  # Also run on version tags
   workflow_dispatch:
@@ -15,6 +17,12 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    # Only run if triggered by workflow_run and the build workflow succeeded,
+    # or if triggered by tags/workflow_dispatch
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     permissions:
       contents: read
       packages: write
@@ -22,6 +30,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          # When triggered by workflow_run, checkout the commit from the triggering workflow
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
