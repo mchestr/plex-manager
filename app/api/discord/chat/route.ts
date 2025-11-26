@@ -37,28 +37,28 @@ function coerceHistory(value: Prisma.JsonValue | null | undefined): ChatMessage[
     return []
   }
 
-  return value
-    .map((entry) => {
-      if (!entry || typeof entry !== "object") {
-        return null
-      }
-      const record = entry as Record<string, unknown>
-      if (record.role !== "user" && record.role !== "assistant") {
-        return null
-      }
-      if (typeof record.content !== "string") {
-        return null
-      }
-      return {
-        role: record.role,
-        content: record.content,
-        timestamp: typeof record.timestamp === "number" ? record.timestamp : Date.now(),
-        sources: Array.isArray(record.sources)
-          ? (record.sources as Array<{ tool: string; description: string }>)
-          : undefined,
-      } satisfies ChatMessage
+  const result: ChatMessage[] = []
+  for (const entry of value) {
+    if (!entry || typeof entry !== "object") {
+      continue
+    }
+    const record = entry as Record<string, unknown>
+    if (record.role !== "user" && record.role !== "assistant") {
+      continue
+    }
+    if (typeof record.content !== "string") {
+      continue
+    }
+    result.push({
+      role: record.role,
+      content: record.content,
+      timestamp: typeof record.timestamp === "number" ? record.timestamp : Date.now(),
+      sources: Array.isArray(record.sources)
+        ? (record.sources as Array<{ tool: string; description: string }>)
+        : undefined,
     })
-    .filter((entry): entry is ChatMessage => Boolean(entry))
+  }
+  return result
 }
 
 function trimHistory(messages: ChatMessage[]): ChatMessage[] {
@@ -214,7 +214,7 @@ export async function POST(request: Request) {
   await prisma.discordChatSession.update({
     where: { id: session.id },
     data: {
-      messages: updatedHistory as Prisma.JsonArray,
+      messages: updatedHistory as unknown as Prisma.JsonArray,
       lastMessageAt: new Date(),
       isActive: true,
       chatConversationId: chatbotResponse.conversationId ?? session.chatConversationId,

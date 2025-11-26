@@ -6,16 +6,6 @@ import { ConversationUsageRow } from "@/components/admin/llm-usage/conversation-
 
 export const dynamic = "force-dynamic"
 
-function formatDateTime(date: Date) {
-  return new Date(date).toLocaleString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  })
-}
-
 function formatTimeRange(start: Date, end: Date) {
   const sameDay = start.toDateString() === end.toDateString()
   const dateFormatter = new Intl.DateTimeFormat("en-US", {
@@ -55,22 +45,6 @@ function getDurationLabel(start: Date, end: Date) {
   const hours = Math.floor(minutes / 60)
   const remMinutes = minutes % 60
   return remMinutes > 0 ? `${hours}h ${remMinutes}m` : `${hours}h`
-}
-
-function getLastUserSnippet(prompt: string, maxLength: number = 80): string | null {
-  try {
-    const parsed = JSON.parse(prompt) as Array<{ role?: string; content?: unknown }>
-    if (!Array.isArray(parsed)) return null
-    const userMessages = parsed.filter((m) => m.role === "user" && typeof m.content === "string")
-    const last = userMessages[userMessages.length - 1]
-    if (!last || typeof last.content !== "string") return null
-    const trimmed = last.content.trim()
-    if (!trimmed) return null
-    if (trimmed.length <= maxLength) return trimmed
-    return trimmed.slice(0, maxLength - 1) + "…"
-  } catch {
-    return null
-  }
 }
 
 export default async function LLMConversationPage({

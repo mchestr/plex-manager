@@ -5,14 +5,12 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './e2e',
-  /* Run tests in a single worker to avoid DB/state interference between tests */
-  fullyParallel: false,
+  fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
-  /* Use a single worker everywhere to keep E2E tests isolated against shared DB and dev server */
-  workers: 1,
+  workers: process.env.CI ? 2 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: 'html',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
@@ -31,6 +29,13 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+      testIgnore: /setup-wizard\.spec\.ts/,
+    },
+    {
+      name: 'setup-wizard',
+      testMatch: /setup-wizard\.spec\.ts/,
+      workers: 1,
       use: { ...devices['Desktop Chrome'] },
     },
   ],

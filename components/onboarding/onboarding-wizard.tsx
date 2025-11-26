@@ -6,7 +6,6 @@ import { FinalSuccessAnimation } from "@/components/setup/setup-wizard/final-suc
 import { SuccessAnimation } from "@/components/setup/setup-wizard/success-animation"
 import { ONBOARDING_STEPS } from "@/types/onboarding"
 import { AnimatePresence, motion } from "framer-motion"
-import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 
 interface OnboardingWizardProps {
@@ -14,7 +13,6 @@ interface OnboardingWizardProps {
 }
 
 export function OnboardingWizard({ currentStep: initialStep }: OnboardingWizardProps) {
-  const router = useRouter()
   const [currentStep, setCurrentStep] = useState(initialStep)
   const [showSuccess, setShowSuccess] = useState(false)
   const [showFinalSuccess, setShowFinalSuccess] = useState(false)

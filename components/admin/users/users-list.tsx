@@ -3,12 +3,12 @@
 import { AdminUserWithWrappedStats } from "@/types/admin"
 import { UserTableRow } from "./user-table-row"
 
-interface UsersListClientProps {
+interface UsersListProps {
   users: AdminUserWithWrappedStats[]
   currentYear: number
 }
 
-export function UsersListClient({ users, currentYear }: UsersListClientProps) {
+export function UsersList({ users, currentYear }: UsersListProps) {
   return (
     <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg overflow-hidden">
       <div className="overflow-x-auto">

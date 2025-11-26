@@ -1,6 +1,6 @@
 import { getAllUsersWithWrapped } from "@/actions/users"
-import { ImportPlexUsersClient } from "@/components/admin/users/import-plex-users-client"
-import { UsersListClient } from "@/components/admin/users/users-list-client"
+import { ImportPlexUsersButton } from "@/components/admin/users/import-plex-users-button"
+import { UsersList } from "@/components/admin/users/users-list"
 import { UsersStatsSummary } from "@/components/admin/users/users-stats-summary"
 
 export const dynamic = 'force-dynamic'
@@ -20,11 +20,11 @@ export default async function UsersPage() {
                 {allUsers.length} user{allUsers.length !== 1 ? "s" : ""} in database
               </p>
             </div>
-            <ImportPlexUsersClient />
+            <ImportPlexUsersButton />
           </div>
         </div>
 
-        <UsersListClient users={allUsers} currentYear={currentYear} />
+        <UsersList users={allUsers} currentYear={currentYear} />
 
         <UsersStatsSummary users={allUsers} />
       </div>

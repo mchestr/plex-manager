@@ -4,8 +4,8 @@ import { prisma } from "@/lib/prisma"
 export async function executeRadarrTool(
   toolName: string,
   args: Record<string, unknown>,
-  userId?: string,
-  context?: string
+  _userId?: string,
+  _context?: string
 ): Promise<string> {
   const server = await prisma.radarr.findFirst({ where: { isActive: true } })
   if (!server) return "Error: No active Radarr server configured."
@@ -60,18 +60,19 @@ export async function executeRadarrTool(
 
       // If movieName is provided, search for the movie first
       if (typeof args.movieName === "string" && !movieId) {
+        const movieName = args.movieName
         const allMovies = await getRadarrMovies(config)
         const matchingMovie = Array.isArray(allMovies)
           ? allMovies.find(
               (m: { title?: string; titleSlug?: string }) =>
-                m.title?.toLowerCase().includes(args.movieName.toLowerCase()) ||
-                m.titleSlug?.toLowerCase().includes(args.movieName.toLowerCase())
+                m.title?.toLowerCase().includes(movieName.toLowerCase()) ||
+                m.titleSlug?.toLowerCase().includes(movieName.toLowerCase())
             )
           : null
 
         if (!matchingMovie) {
           return JSON.stringify({
-            error: `Movie "${args.movieName}" not found in Radarr library`,
+            error: `Movie "${movieName}" not found in Radarr library`,
           })
         }
 

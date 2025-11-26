@@ -72,14 +72,14 @@ export function DiscordIntegrationForm({ onComplete, onBack }: DiscordIntegratio
     }
 
     startTransition(async () => {
-      const payload: DiscordIntegrationInput = {
+      const payload = {
         ...formData,
         clientId: formData.clientId?.trim() || undefined,
         clientSecret: formData.clientSecret?.trim() || undefined,
         guildId: formData.guildId?.trim() || undefined,
-        metadataKey: formData.metadataKey?.trim() || undefined,
-        metadataValue: formData.metadataValue?.trim() || undefined,
-        platformName: formData.platformName?.trim() || undefined,
+        metadataKey: formData.metadataKey?.trim() || "",
+        metadataValue: formData.metadataValue?.trim() || "",
+        platformName: formData.platformName?.trim() || "",
         instructions: formData.instructions?.trim() || undefined,
         botSharedSecret: formData.botSharedSecret?.trim() || undefined,
         isEnabled: formData.isEnabled,

@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import { UsersListClient } from '../admin/users/users-list-client'
+import { UsersList } from '../admin/users/users-list'
 import { makeAdminUserWithStats } from '@/__tests__/utils/test-builders'
 
 // Mock UserTableRow to simplify test and avoid testing child implementation
@@ -11,14 +11,14 @@ jest.mock('../admin/users/user-table-row', () => ({
   ),
 }))
 
-describe('UsersListClient', () => {
+describe('UsersList', () => {
   it('should render a list of users', () => {
     const users = [
       makeAdminUserWithStats({ id: '1', name: 'User 1' }),
       makeAdminUserWithStats({ id: '2', name: 'User 2' }),
     ]
 
-    render(<UsersListClient users={users} currentYear={2024} />)
+    render(<UsersList users={users} currentYear={2024} />)
 
     const rows = screen.getAllByTestId('user-row')
     expect(rows).toHaveLength(2)
@@ -27,7 +27,7 @@ describe('UsersListClient', () => {
   })
 
   it('should render empty state when no users', () => {
-    render(<UsersListClient users={[]} currentYear={2024} />)
+    render(<UsersList users={[]} currentYear={2024} />)
 
     expect(screen.getByText('No users found')).toBeInTheDocument()
   })

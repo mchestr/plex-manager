@@ -113,14 +113,9 @@ const systemNavItems: NavItem[] = [
 // Flattened array for mobile navigation (no separators needed)
 const navItems: NavItem[] = [...coreNavItems, ...analyticsNavItems, ...configNavItems, ...systemNavItems]
 
-export function AdminNav({ hide = false }: { hide?: boolean }) {
+export function AdminNav() {
   const pathname = usePathname()
   const router = useRouter()
-
-  // Always call hooks in the same order, but return early if hidden
-  if (hide) {
-    return null
-  }
 
   const handleSignOut = async () => {
     await signOut({ redirect: false })

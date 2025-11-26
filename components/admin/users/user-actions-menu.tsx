@@ -1,9 +1,10 @@
 "use client"
 
-import Link from "next/link"
-import { useEffect, useRef, useState } from "react"
 import { RegenerateWrappedButton } from "@/components/admin/users/regenerate-wrapped-button"
 import { UnshareUserButton } from "@/components/admin/users/unshare-user-button"
+import Link from "next/link"
+import { useEffect, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 
 interface UserActionsMenuProps {
   user: {
@@ -17,27 +18,24 @@ interface UserActionsMenuProps {
 
 export function UserActionsMenu({ user }: UserActionsMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
-
-  // Close menu when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsOpen(false)
-      }
-    }
-
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside)
-      return () => document.removeEventListener("mousedown", handleClickOutside)
-    }
-    return undefined
-  }, [isOpen])
+  const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0 })
+  const buttonRef = useRef<HTMLButtonElement>(null)
 
   const hasActions = user.wrappedStatus === "completed" ||
                      user.wrappedStatus === "failed" ||
                      !user.wrappedStatus ||
                      (!user.isAdmin && user.hasPlexAccess === true)
+
+  // Calculate menu position when opening
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
+      setMenuPosition({
+        top: rect.bottom + 4, // 4px gap (mt-1)
+        right: window.innerWidth - rect.right,
+      })
+    }
+  }, [isOpen])
 
   if (!hasActions) {
     return (
@@ -48,9 +46,10 @@ export function UserActionsMenu({ user }: UserActionsMenuProps) {
   }
 
   return (
-    <div className="relative" ref={menuRef}>
+    <>
       {/* Menu Button */}
       <button
+        ref={buttonRef}
         onClick={(e) => {
           e.stopPropagation()
           setIsOpen(!isOpen)
@@ -73,10 +72,22 @@ export function UserActionsMenu({ user }: UserActionsMenuProps) {
         </svg>
       </button>
 
-      {/* Dropdown Menu */}
-      {isOpen && (
+      {/* Dropdown Menu - rendered via portal to escape table overflow */}
+      {isOpen &&
+        typeof window !== "undefined" &&
+        createPortal(
+          <>
+            {/* Backdrop - closes menu when clicking outside */}
         <div
-          className="absolute right-0 mt-1 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 overflow-hidden"
+              className="fixed inset-0 z-40"
+              onClick={() => setIsOpen(false)}
+            />
+            <div
+              className="fixed w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 overflow-hidden"
+              style={{
+                top: `${menuPosition.top}px`,
+                right: `${menuPosition.right}px`,
+              }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* View Wrapped */}
@@ -134,7 +145,9 @@ export function UserActionsMenu({ user }: UserActionsMenuProps) {
             </div>
           )}
         </div>
+          </>,
+          document.body
       )}
-    </div>
+    </>
   )
 }

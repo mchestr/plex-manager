@@ -12,6 +12,7 @@ import globalSetup from './global-setup';
 import { navigateAndVerify, waitForLoadingGone } from './helpers/test-utils';
 
 test.describe('Setup Wizard', () => {
+  test.describe.configure({ mode: 'serial' });
   let prisma: PrismaClient;
 
   test.beforeAll(async () => {

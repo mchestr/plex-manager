@@ -62,7 +62,7 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
       if (typeof firstItem === 'object' && firstItem !== null && ('role' in firstItem || 'content' in firstItem)) {
         promptIsChatMessages = true
         // Format as readable chat messages with separator
-        formattedPrompt = parsedPrompt.map((msg: any, idx: number) => {
+        formattedPrompt = parsedPrompt.map((msg: any) => {
           const role = msg.role || 'unknown'
           let content: string
 

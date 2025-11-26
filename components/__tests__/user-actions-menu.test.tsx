@@ -1,5 +1,5 @@
-import { render, screen, fireEvent } from '@testing-library/react'
 import { UserActionsMenu } from '@/components/admin/users/user-actions-menu'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { makeAdminUserWithStats } from '../../__tests__/utils/test-builders'
 
 // Mock child components
@@ -76,18 +76,16 @@ describe('UserActionsMenu', () => {
 
   it('should close menu when clicking outside', () => {
     const user = makeAdminUserWithStats({ wrappedStatus: 'completed' })
-    render(
-      <div>
-        <div data-testid="outside">Outside</div>
-        <UserActionsMenu user={user} />
-      </div>
-    )
+    render(<UserActionsMenu user={user} />)
 
     const button = screen.getByTitle('Actions')
     fireEvent.click(button)
     expect(screen.getByText('View Wrapped')).toBeInTheDocument()
 
-    fireEvent.mouseDown(screen.getByTestId('outside'))
+    // Click on the backdrop to close
+    const backdrop = document.querySelector('.fixed.inset-0')
+    expect(backdrop).toBeInTheDocument()
+    fireEvent.click(backdrop!)
     expect(screen.queryByText('View Wrapped')).not.toBeInTheDocument()
   })
 })

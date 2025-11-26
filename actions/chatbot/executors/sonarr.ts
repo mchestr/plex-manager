@@ -4,8 +4,8 @@ import { prisma } from "@/lib/prisma"
 export async function executeSonarrTool(
   toolName: string,
   args: Record<string, unknown>,
-  userId?: string,
-  context?: string
+  _userId?: string,
+  _context?: string
 ): Promise<string> {
   const server = await prisma.sonarr.findFirst({ where: { isActive: true } })
   if (!server) return "Error: No active Sonarr server configured."
@@ -61,18 +61,19 @@ export async function executeSonarrTool(
 
       // If seriesName is provided, search for the series first
       if (typeof args.seriesName === "string" && !seriesId) {
+        const seriesName = args.seriesName
         const allSeries = await getSonarrSeries(config)
         const matchingSeries = Array.isArray(allSeries)
           ? allSeries.find(
               (s: { title?: string; titleSlug?: string }) =>
-                s.title?.toLowerCase().includes(args.seriesName.toLowerCase()) ||
-                s.titleSlug?.toLowerCase().includes(args.seriesName.toLowerCase())
+                s.title?.toLowerCase().includes(seriesName.toLowerCase()) ||
+                s.titleSlug?.toLowerCase().includes(seriesName.toLowerCase())
             )
           : null
 
         if (!matchingSeries) {
           return JSON.stringify({
-            error: `Series "${args.seriesName}" not found in Sonarr library`,
+            error: `Series "${seriesName}" not found in Sonarr library`,
           })
         }
 

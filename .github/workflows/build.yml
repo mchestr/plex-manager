@@ -60,7 +60,6 @@ jobs:
         run: npx playwright install --with-deps
 
       - name: Run Playwright E2E tests
-        continue-on-error: true
         run: npm run test:e2e
         env:
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/test_db?schema=public"

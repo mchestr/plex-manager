@@ -26,11 +26,11 @@ export function AdminLayoutShell({ children, hasChatLLM, chatUserName }: AdminLa
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
-      <AdminNav hide={hideChrome} />
+      {!hideChrome && <AdminNav />}
       <main className={cn("pb-20 md:pb-6 transition-all", hideChrome ? "md:ml-0" : "md:ml-64")}>
         {children}
       </main>
-      <Chatbot userName={chatUserName} enabled={hasChatLLM} />
+      {hasChatLLM && <Chatbot userName={chatUserName} />}
     </div>
   )
 }
