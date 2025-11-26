@@ -45,6 +45,7 @@
     "**/*.test.ts",
     "**/*.test.tsx",
     "**/__tests__/**",
+    "e2e/**",
     "jest.config.js",
     "jest.setup.js"
   ]

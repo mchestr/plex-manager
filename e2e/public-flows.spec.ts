@@ -1,5 +1,5 @@
-import { PrismaClient } from '@/lib/generated/prisma/client';
 import { expect, test } from '@playwright/test';
+import { PrismaClient } from '../lib/generated/prisma/client';
 import { navigateAndVerify, waitForLoadingGone } from './helpers/test-utils';
 
 test.describe('Public Flows', () => {

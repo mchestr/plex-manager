@@ -6,8 +6,8 @@
  * which causes all connection test functions to return success immediately.
  */
 
-import { PrismaClient } from '@/lib/generated/prisma/client';
 import { expect, test } from '@playwright/test';
+import { PrismaClient } from '../lib/generated/prisma/client';
 import globalSetup from './global-setup';
 import { navigateAndVerify, waitForLoadingGone } from './helpers/test-utils';
 
