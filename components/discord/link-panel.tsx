@@ -143,7 +143,7 @@ export function DiscordLinkPanel({ connection, instructions, connectUrl, isEnabl
             <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14m7-7H5" />
             </svg>
-            Link Discord account
+            Start Discord linking
           </Link>
         </div>
       )}
@@ -161,14 +161,14 @@ export function DiscordLinkPanel({ connection, instructions, connectUrl, isEnabl
         </div>
       )}
 
-      <div className="flex flex-wrap gap-3">
-        <Link
-          href={connectUrl}
-          className="inline-flex flex-1 min-w-[180px] items-center justify-center rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:border-white/30"
-        >
-          {connection ? "Review Discord link" : "Start linking"}
-        </Link>
-        {connection && (
+      {connection && (
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href={connectUrl}
+            className="inline-flex flex-1 min-w-[180px] items-center justify-center rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:border-white/30"
+          >
+            Review Discord link
+          </Link>
           <button
             onClick={handleDisconnect}
             disabled={isPending}
@@ -176,8 +176,8 @@ export function DiscordLinkPanel({ connection, instructions, connectUrl, isEnabl
           >
             Disconnect
           </button>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }

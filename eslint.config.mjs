@@ -1,15 +1,5 @@
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
-import { FlatCompat } from "@eslint/eslintrc";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
 
 export default [
   {
@@ -26,12 +16,13 @@ export default [
       "playwright.config.ts",
       "next.config.js",
       "postcss.config.js",
+      "prisma/schema.prisma",
     ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
-  ...compat.extends("next/core-web-vitals"),
   {
+    files: ["**/*.js", "**/*.jsx", "**/*.ts", "**/*.tsx"],
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-require-imports": "off",
@@ -39,6 +30,7 @@ export default [
       "@typescript-eslint/ban-ts-comment": "off",
       "@typescript-eslint/no-this-alias": "off",
       "prefer-const": "off",
+      "react/no-unescaped-entities": "off",
     },
   },
 ];

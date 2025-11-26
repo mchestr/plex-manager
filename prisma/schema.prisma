@@ -220,17 +220,28 @@ model Config {
 model DiscordIntegration {
   id               String   @id @default("discord")
   isEnabled        Boolean  @default(false)
+  botEnabled       Boolean  @default(false)
   clientId         String?
   clientSecret     String?
   guildId          String?
-  metadataKey      String   @default("is_subscribed")
-  metadataValue    String   @default("true")
   platformName     String   @default("Plex Wrapped")
   instructions     String?
-  botSharedSecret  String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   updatedBy        String?
+}
+
+// Distributed lock for Discord bot (ensures only one pod runs the bot)
+model DiscordBotLock {
+  id           String   @id @default("discord-bot")
+  instanceId   String   // Unique identifier for this pod/instance
+  acquiredAt   DateTime @default(now())
+  expiresAt    DateTime // Lock expires if not renewed (handles crashed pods)
+  lastRenewedAt DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([expiresAt])
 }
 
 model DiscordConnection {

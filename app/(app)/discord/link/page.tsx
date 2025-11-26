@@ -132,25 +132,6 @@ export default async function DiscordLinkPage({ searchParams }: DiscordLinkPageP
                   </div>
                 ))}
               </div>
-
-              <div className="flex flex-wrap gap-3">
-                <Link
-                  href={connectUrl}
-                  className={`inline-flex items-center justify-center rounded-xl px-5 py-3 text-sm font-semibold transition-all ${
-                    isEnabled
-                      ? "bg-gradient-to-r from-cyan-500 via-indigo-500 to-purple-500 text-white shadow-lg shadow-purple-900/30 hover:scale-[1.01]"
-                      : "cursor-not-allowed bg-slate-800/80 text-slate-500"
-                  }`}
-                >
-                  {isLinked ? "Relink Discord" : "Start Discord linking"}
-                </Link>
-                <Link
-                  href="/"
-                  className="inline-flex items-center justify-center rounded-xl border border-white/10 px-5 py-3 text-sm font-semibold text-white/80 transition hover:border-white/30 hover:text-white"
-                >
-                  Return home
-                </Link>
-              </div>
             </div>
           </section>
 

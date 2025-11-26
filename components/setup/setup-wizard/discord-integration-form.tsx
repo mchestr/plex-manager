@@ -21,14 +21,12 @@ export function DiscordIntegrationForm({ onComplete, onBack }: DiscordIntegratio
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [formData, setFormData] = useState<DiscordFormState>({
     isEnabled: false,
+    botEnabled: false,
     clientId: "",
     clientSecret: "",
     guildId: "",
-    metadataKey: "is_subscribed",
-    metadataValue: "true",
     platformName: "Plex Wrapped",
     instructions: "",
-    botSharedSecret: "",
   })
 
   const handleChange = useCallback(
@@ -42,23 +40,6 @@ export function DiscordIntegrationForm({ onComplete, onBack }: DiscordIntegratio
     []
   )
 
-  const handleSecretGenerate = () => {
-    try {
-      const secret = crypto.randomUUID().replace(/-/g, "")
-      setFormData((prev) => ({
-        ...prev,
-        botSharedSecret: secret,
-      }))
-    } catch {
-      const fallback = Array.from({ length: 32 }, () =>
-        Math.floor(Math.random() * 36).toString(36)
-      ).join("")
-      setFormData((prev) => ({
-        ...prev,
-        botSharedSecret: fallback,
-      }))
-    }
-  }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -77,11 +58,8 @@ export function DiscordIntegrationForm({ onComplete, onBack }: DiscordIntegratio
         clientId: formData.clientId?.trim() || undefined,
         clientSecret: formData.clientSecret?.trim() || undefined,
         guildId: formData.guildId?.trim() || undefined,
-        metadataKey: formData.metadataKey?.trim() || "",
-        metadataValue: formData.metadataValue?.trim() || "",
         platformName: formData.platformName?.trim() || "",
         instructions: formData.instructions?.trim() || undefined,
-        botSharedSecret: formData.botSharedSecret?.trim() || undefined,
         isEnabled: formData.isEnabled,
       }
 
@@ -195,65 +173,6 @@ export function DiscordIntegrationForm({ onComplete, onBack }: DiscordIntegratio
             disabled={isPending}
             size="md"
           />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-cyan-400 mb-2">Metadata Key</label>
-          <StyledInput
-            type="text"
-            name="metadataKey"
-            value={formData.metadataKey}
-            onChange={handleChange}
-            placeholder="is_subscribed"
-            disabled={isPending}
-            size="md"
-          />
-          <p className="mt-1 text-xs text-slate-400">
-            Must match the metadata key you configured in Discord Linked Roles.
-          </p>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-cyan-400 mb-2">Metadata Value</label>
-          <StyledInput
-            type="text"
-            name="metadataValue"
-            value={formData.metadataValue}
-            onChange={handleChange}
-            placeholder="true"
-            disabled={isPending}
-            size="md"
-          />
-          <p className="mt-1 text-xs text-slate-400">
-            Value applied when Plex access is verified.
-          </p>
-        </div>
-        <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-cyan-400 mb-2">
-            Bot Shared Secret <span className="text-slate-500 font-normal">(optional)</span>
-          </label>
-          <div className="flex gap-2">
-            <StyledInput
-              type="text"
-              name="botSharedSecret"
-              value={formData.botSharedSecret}
-              onChange={handleChange}
-              placeholder="Secret used when your bot calls the verification API"
-              disabled={isPending}
-              size="md"
-              className="flex-1"
-            />
-            <button
-              type="button"
-              onClick={handleSecretGenerate}
-              className="px-3 py-2 text-xs font-medium rounded-md border border-slate-600 bg-slate-800/70 text-slate-200 hover:text-white hover:border-cyan-400 transition-colors"
-              disabled={isPending}
-            >
-              Generate
-            </button>
-          </div>
-          <p className="mt-1 text-xs text-slate-400">
-            Send this value in the <code className="font-mono">X-PlexWrapped-Bot-Key</code> header
-            when calling the verification endpoint.
-          </p>
         </div>
       </div>
 

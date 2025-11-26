@@ -1,11 +1,11 @@
 "use server"
 
+import { requireAdmin } from "@/lib/admin"
 import { authOptions } from "@/lib/auth"
 import { clearDiscordRoleForUser, syncDiscordRoleConnection } from "@/lib/discord/integration"
 import { prisma } from "@/lib/prisma"
-import { requireAdmin } from "@/lib/admin"
-import { discordIntegrationSchema } from "@/lib/validations/discord"
 import { createLogger } from "@/lib/utils/logger"
+import { discordIntegrationSchema } from "@/lib/validations/discord"
 import { getServerSession } from "next-auth"
 import { revalidatePath } from "next/cache"
 
@@ -17,6 +17,7 @@ export async function updateDiscordIntegrationSettings(data: Record<string, unkn
   try {
     const parsed = discordIntegrationSchema.parse(data)
     const isEnabled = parsed.isEnabled ?? false
+    const botEnabled = parsed.botEnabled ?? false
 
     if (isEnabled && (!parsed.clientId || !parsed.clientSecret)) {
       return {
@@ -29,27 +30,23 @@ export async function updateDiscordIntegrationSettings(data: Record<string, unkn
       where: { id: "discord" },
       update: {
         isEnabled,
+        botEnabled,
         clientId: parsed.clientId,
         clientSecret: parsed.clientSecret,
         guildId: parsed.guildId,
-        metadataKey: parsed.metadataKey,
-        metadataValue: parsed.metadataValue,
         platformName: parsed.platformName,
         instructions: parsed.instructions,
-        botSharedSecret: parsed.botSharedSecret,
         updatedBy: session.user.id,
       },
       create: {
         id: "discord",
         isEnabled,
+        botEnabled,
         clientId: parsed.clientId,
         clientSecret: parsed.clientSecret,
         guildId: parsed.guildId,
-        metadataKey: parsed.metadataKey,
-        metadataValue: parsed.metadataValue,
         platformName: parsed.platformName,
         instructions: parsed.instructions,
-        botSharedSecret: parsed.botSharedSecret,
         updatedBy: session.user.id,
       },
     })

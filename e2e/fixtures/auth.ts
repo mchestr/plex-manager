@@ -1,4 +1,5 @@
 import { test as base, expect as baseExpect, Page } from '@playwright/test';
+import { PrismaClient } from '@prisma/client';
 
 /**
  * Test user types for different authentication scenarios
@@ -49,8 +50,24 @@ type AuthFixtures = {
  * Authenticate a page by navigating to the callback URL with a test token
  * This simulates a successful OAuth callback in test mode
  */
-async function authenticateAs(page: Page, testToken: string): Promise<void> {
+async function authenticateAs(page: Page, testToken: string, expectedUser?: TestUser): Promise<void> {
   console.log(`[E2E Auth] Authenticating with token: ${testToken}`);
+
+  // Ensure user has completed onboarding before authentication
+  if (expectedUser) {
+    const prisma = new PrismaClient();
+    try {
+      await prisma.user.update({
+        where: { id: expectedUser.id },
+        data: { onboardingCompleted: true },
+      });
+      console.log(`[E2E Auth] Ensured onboarding is complete for user: ${expectedUser.email}`);
+    } catch (err) {
+      console.warn(`[E2E Auth] Could not update onboarding status:`, err);
+    } finally {
+      await prisma.$disconnect();
+    }
+  }
 
   // Listen to console messages for debugging
   page.on('console', msg => {
@@ -63,18 +80,36 @@ async function authenticateAs(page: Page, testToken: string): Promise<void> {
   await page.goto(`/auth/callback/plex?testToken=${testToken}`, { waitUntil: 'load' });
   console.log(`[E2E Auth] Callback page loaded`);
 
-  // Wait for the redirect to home - be more flexible with URL matching
+  // Wait for redirect to home - accept both home and onboarding as valid redirects
+  // Users with incomplete onboarding will be redirected to /onboarding
   try {
     await page.waitForURL((url) => {
       const isHome = url.pathname === '/' || url.pathname === '';
-      console.log(`[E2E Auth] Checking URL: ${url.pathname}, isHome: ${isHome}`);
-      return isHome;
+      const isOnboarding = url.pathname === '/onboarding';
+      const isValid = isHome || isOnboarding;
+      console.log(`[E2E Auth] Checking URL: ${url.pathname}, isHome: ${isHome}, isOnboarding: ${isOnboarding}`);
+      return isValid;
     }, { timeout: 30000 });
     console.log(`[E2E Auth] Redirected to: ${page.url()}`);
+
+    // If redirected to onboarding, navigate to home (onboarding should already be complete)
+    if (page.url().includes('/onboarding')) {
+      console.log(`[E2E Auth] User redirected to onboarding, navigating to home...`);
+      await page.goto('/');
+      await page.waitForLoadState('networkidle');
+      console.log(`[E2E Auth] Navigated to home: ${page.url()}`);
+    }
   } catch (error) {
-    console.error(`[E2E Auth] Failed to redirect to home. Current URL: ${page.url()}`);
-    // Take a screenshot for debugging
-    await page.screenshot({ path: 'test-results/auth-redirect-failure.png' });
+    const currentUrl = page.url();
+    console.error(`[E2E Auth] Failed to redirect to expected page. Current URL: ${currentUrl}`);
+    // Take a screenshot for debugging (only if page is still open)
+    try {
+      if (!page.isClosed()) {
+        await page.screenshot({ path: 'test-results/auth-redirect-failure.png' });
+      }
+    } catch (screenshotError) {
+      console.error(`[E2E Auth] Could not take screenshot:`, screenshotError);
+    }
     throw error;
   }
 
@@ -153,7 +188,7 @@ export const test = base.extend<AuthFixtures>({
     });
     const page = await context.newPage();
 
-    await authenticateAs(page, TEST_USERS.ADMIN.testToken);
+    await authenticateAs(page, TEST_USERS.ADMIN.testToken, TEST_USERS.ADMIN);
 
     await use(page);
 
@@ -168,7 +203,7 @@ export const test = base.extend<AuthFixtures>({
     });
     const page = await context.newPage();
 
-    await authenticateAs(page, TEST_USERS.ADMIN.testToken);
+    await authenticateAs(page, TEST_USERS.ADMIN.testToken, TEST_USERS.ADMIN);
     await verifyAuthentication(page, true);
 
     await use(page);
@@ -184,7 +219,7 @@ export const test = base.extend<AuthFixtures>({
     });
     const page = await context.newPage();
 
-    await authenticateAs(page, TEST_USERS.REGULAR.testToken);
+    await authenticateAs(page, TEST_USERS.REGULAR.testToken, TEST_USERS.REGULAR);
     await verifyAuthentication(page, false);
 
     await use(page);

@@ -172,10 +172,7 @@ test.describe('Setup Wizard', () => {
       clientId: 'discord-client-id',
       clientSecret: 'discord-client-secret',
       guildId: '1234567890',
-      metadataKey: 'plex_member',
-      metadataValue: '42',
       platformName: 'Plex Wrapped Test',
-      botSharedSecret: 'discord-shared-secret',
       instructions: 'Use this Discord app for linked roles.',
     });
 

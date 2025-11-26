@@ -8,13 +8,13 @@ import { testRadarrConnection } from "@/lib/connections/radarr"
 import { testSonarrConnection } from "@/lib/connections/sonarr"
 import { testTautulliConnection } from "@/lib/connections/tautulli"
 import { prisma } from "@/lib/prisma"
+import { discordIntegrationSchema, type DiscordIntegrationInput } from "@/lib/validations/discord"
 import { llmProviderSchema, type LLMProviderInput } from "@/lib/validations/llm-provider"
 import { overseerrSchema, type OverseerrInput, type OverseerrParsed } from "@/lib/validations/overseerr"
 import { plexServerSchema, type PlexServerInput, type PlexServerParsed } from "@/lib/validations/plex"
 import { radarrSchema, type RadarrInput, type RadarrParsed } from "@/lib/validations/radarr"
 import { sonarrSchema, type SonarrInput, type SonarrParsed } from "@/lib/validations/sonarr"
 import { tautulliSchema, type TautulliInput, type TautulliParsed } from "@/lib/validations/tautulli"
-import { discordIntegrationSchema, type DiscordIntegrationInput } from "@/lib/validations/discord"
 import { revalidatePath } from "next/cache"
 
 export async function getSetupStatus() {
@@ -342,6 +342,7 @@ export async function saveDiscordIntegration(data: DiscordIntegrationInput) {
 
     const validated = discordIntegrationSchema.parse(data)
     const isEnabled = validated.isEnabled ?? false
+    const botEnabled = validated.botEnabled ?? false
 
     if (isEnabled && (!validated.clientId || !validated.clientSecret)) {
       return {
@@ -374,26 +375,22 @@ export async function saveDiscordIntegration(data: DiscordIntegrationInput) {
         where: { id: "discord" },
         update: {
           isEnabled,
+          botEnabled,
           clientId: validated.clientId,
           clientSecret: validated.clientSecret,
           guildId: validated.guildId,
-          metadataKey: validated.metadataKey,
-          metadataValue: validated.metadataValue,
           platformName: validated.platformName,
           instructions: validated.instructions,
-          botSharedSecret: validated.botSharedSecret,
         },
         create: {
           id: "discord",
           isEnabled,
+          botEnabled,
           clientId: validated.clientId,
           clientSecret: validated.clientSecret,
           guildId: validated.guildId,
-          metadataKey: validated.metadataKey,
-          metadataValue: validated.metadataValue,
           platformName: validated.platformName,
           instructions: validated.instructions,
-          botSharedSecret: validated.botSharedSecret,
         },
       })
     })

@@ -1,7 +1,9 @@
+import { checkUserServerAccess } from "@/lib/connections/plex"
 import { exchangeDiscordCode, fetchDiscordUserProfile, refreshDiscordToken, updateDiscordRoleConnection } from "@/lib/discord/api"
 import { prisma } from "@/lib/prisma"
 import { getBaseUrl } from "@/lib/utils"
 import { createLogger } from "@/lib/utils/logger"
+import { fetchTautulliStatistics } from "@/lib/wrapped/statistics"
 import { randomBytes } from "crypto"
 
 const logger = createLogger("DISCORD_INTEGRATION")
@@ -282,16 +284,77 @@ export async function syncDiscordRoleConnection(userId: string) {
     throw new Error("User not found")
   }
 
-  const metadataKey = integration.metadataKey || "is_subscribed"
-  const metadataValueRaw = integration.metadataValue || "true"
-  // Parse boolean: "true"/"1" -> true, "false"/"0"/empty -> false
-  const metadataValue = metadataValueRaw.toLowerCase() === "true" || metadataValueRaw === "1"
+  if (!integration.clientId) {
+    throw new Error("Discord integration client ID is not configured")
+  }
 
   const platformName = integration.platformName || "Plex Wrapped"
   const platformUsername = user.name || user.email || user.plexUserId || "Plex User"
 
-  if (!integration.clientId) {
-    throw new Error("Discord integration client ID is not configured")
+  // --- Compute real subscription + watch time metadata ---
+  const metadataKey = "is_subscribed" // Hardcoded metadata key (metadataKey field was removed from schema)
+  const metadata: Record<string, boolean | number> = {}
+
+  // 1) Determine "is_subscribed" from Plex server access (same logic as admin user list)
+  let resolvedSubscribed: boolean | null = null
+  try {
+    const plexServer = await prisma.plexServer.findFirst({
+      where: { isActive: true },
+    })
+
+    if (plexServer && user.plexUserId) {
+      const accessResult = await checkUserServerAccess(
+        {
+          url: plexServer.url,
+          token: plexServer.token,
+          adminPlexUserId: plexServer.adminPlexUserId,
+        },
+        user.plexUserId
+      )
+
+      if (accessResult.success) {
+        resolvedSubscribed = accessResult.hasAccess
+      }
+    }
+  } catch (error) {
+    logger.warn("Failed to determine Plex access for Discord metadata", {
+      userId,
+      error: error instanceof Error ? error.message : "unknown",
+    })
+  }
+
+  // If we can't determine access from Plex, treat as not subscribed
+  metadata[metadataKey] = resolvedSubscribed ?? false
+
+  // 2) Determine watched_hours from real Tautulli statistics (if configured)
+  try {
+    const tautulli = await prisma.tautulli.findFirst({
+      where: { isActive: true },
+    })
+
+    if (tautulli && user.plexUserId) {
+      const year = new Date().getFullYear()
+      const stats = await fetchTautulliStatistics(
+        {
+          url: tautulli.url,
+          apiKey: tautulli.apiKey,
+        },
+        user.plexUserId,
+        user.email,
+        year
+      )
+
+      if (stats.success && stats.data) {
+        // totalWatchTime is in MINUTES – convert to integer hours
+        const watchedHours = Math.floor(stats.data.totalWatchTime / 60)
+        metadata["watched_hours"] = watchedHours
+      }
+    }
+  } catch (error) {
+    logger.warn("Failed to determine Tautulli watch time for Discord metadata", {
+      userId,
+      error: error instanceof Error ? error.message : "unknown",
+    })
   }
 
   await updateDiscordRoleConnection({
@@ -299,9 +362,7 @@ export async function syncDiscordRoleConnection(userId: string) {
     applicationId: integration.clientId,
     platform_name: platformName,
     platform_username: platformUsername,
-    metadata: {
-      [metadataKey]: metadataValue,
-    },
+    metadata,
   })
 
   await prisma.discordConnection.update({

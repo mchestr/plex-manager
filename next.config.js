@@ -2,6 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
+  serverExternalPackages: ['discord.js', '@discordjs/ws', 'zlib-sync', 'bufferutil', 'utf-8-validate'],
   images: {
     remotePatterns: [
       {
@@ -54,6 +55,37 @@ const nextConfig = {
         ],
       },
     ]
+  },
+  // Turbopack configuration
+  // The serverExternalPackages option handles Discord.js externals in Turbopack
+  turbopack: {},
+
+  // Keep webpack config for compatibility when explicitly using --webpack flag
+  webpack: (config, { isServer }) => {
+    // Exclude Discord.js and native dependencies from bundling
+    // These are server-only modules that shouldn't be bundled
+    if (isServer) {
+      const existingExternals = config.externals || []
+      config.externals = [
+        ...(Array.isArray(existingExternals) ? existingExternals : [existingExternals]),
+        // Mark Discord.js packages as external to prevent bundling
+        ({ request }, callback) => {
+          if (
+            request === 'discord.js' ||
+            request === '@discordjs/ws' ||
+            request === 'zlib-sync' ||
+            request === 'bufferutil' ||
+            request === 'utf-8-validate' ||
+            request?.startsWith('discord.js/') ||
+            request?.startsWith('@discordjs/')
+          ) {
+            return callback(null, `commonjs ${request}`)
+          }
+          callback()
+        },
+      ]
+    }
+    return config
   },
 }
 

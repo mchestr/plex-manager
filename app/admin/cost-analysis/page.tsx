@@ -9,13 +9,14 @@ import { Suspense } from "react"
 export const dynamic = 'force-dynamic'
 
 interface CostAnalysisPageProps {
-  searchParams: { startDate?: string; endDate?: string }
+  searchParams: Promise<{ startDate?: string; endDate?: string }>
 }
 
 export default async function CostAnalysisPage({ searchParams }: CostAnalysisPageProps) {
   // Parse date filters
-  const startDate = searchParams.startDate ? new Date(searchParams.startDate) : undefined
-  const endDate = searchParams.endDate ? new Date(searchParams.endDate) : undefined
+  const params = await searchParams
+  const startDate = params.startDate ? new Date(params.startDate) : undefined
+  const endDate = params.endDate ? new Date(params.endDate) : undefined
 
   // Get stats for the selected period
   const stats = await getLLMUsageStats(startDate, endDate)

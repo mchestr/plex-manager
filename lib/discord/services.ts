@@ -4,32 +4,37 @@ import { sanitizeDiscordResponse } from "@/lib/discord/chat-safety"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 import { Prisma } from "@prisma/client"
-import { NextResponse } from "next/server"
 
-const logger = createLogger("DISCORD_CHAT_ROUTE")
+const logger = createLogger("DISCORD_SERVICES")
 const HISTORY_LIMIT = 12
 const SESSION_IDLE_TIMEOUT_MS = 30 * 60 * 1000 // 30 minutes
 
-interface DiscordChatPayload {
-  discordUserId?: string
-  channelId?: string
-  message?: string
-  messageId?: string
-  channelType?: string
+export interface VerifyDiscordUserResult {
+  linked: boolean
+  user?: {
+    id: string
+    name: string | null
+    email: string | null
+    plexUserId: string | null
+    isAdmin: boolean
+  }
+  metadataSyncedAt?: Date | null
+  linkedAt?: Date
 }
 
-function extractSecret(request: Request): string | null {
-  const headerKey = request.headers.get("x-plexwrapped-bot-key")
-  if (headerKey) return headerKey
+export interface DiscordChatResult {
+  success: boolean
+  linked: boolean
+  message?: ChatMessage
+  conversationId?: string
+  error?: string
+}
 
-  const authHeader = request.headers.get("authorization")
-  if (!authHeader) return null
-
-  if (authHeader.startsWith("Bearer ")) {
-    return authHeader.slice("Bearer ".length).trim()
-  }
-
-  return authHeader.trim()
+export interface ClearChatResult {
+  success: boolean
+  linked: boolean
+  conversationId?: string
+  error?: string
 }
 
 function coerceHistory(value: Prisma.JsonValue | null | undefined): ChatMessage[] {
@@ -69,36 +74,57 @@ function trimHistory(messages: ChatMessage[]): ChatMessage[] {
   return messages.slice(messages.length - HISTORY_LIMIT)
 }
 
-export async function POST(request: Request) {
-  const integration = await prisma.discordIntegration.findUnique({ where: { id: "discord" } })
-  if (!integration?.botSharedSecret) {
-    return NextResponse.json({ error: "Bot chat is not configured" }, { status: 503 })
+/**
+ * Verify if a Discord user is linked to a Plex Wrapped account
+ * Direct function call - no HTTP overhead
+ */
+export async function verifyDiscordUser(discordUserId: string): Promise<VerifyDiscordUserResult> {
+  const connection = await prisma.discordConnection.findUnique({
+    where: { discordUserId },
+    include: {
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          plexUserId: true,
+          isAdmin: true,
+        },
+      },
+    },
+  })
+
+  if (!connection || connection.revokedAt) {
+    return { linked: false }
   }
 
-  const providedSecret = extractSecret(request)
-  if (!providedSecret || providedSecret !== integration.botSharedSecret) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  return {
+    linked: true,
+    user: {
+      id: connection.userId,
+      name: connection.user.name,
+      email: connection.user.email,
+      plexUserId: connection.user.plexUserId,
+      isAdmin: connection.user.isAdmin,
+    },
+    metadataSyncedAt: connection.metadataSyncedAt,
+    linkedAt: connection.linkedAt,
   }
+}
 
-  let payload: DiscordChatPayload
-  try {
-    payload = await request.json()
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 })
-  }
-
-  const discordUserId = payload.discordUserId?.trim()
-  const channelId = payload.channelId?.trim()
-  const content = payload.message?.trim()
-
-  if (!discordUserId || !channelId) {
-    return NextResponse.json({ error: "discordUserId and channelId are required" }, { status: 400 })
-  }
-
-  if (!content) {
-    return NextResponse.json({ error: "message is required" }, { status: 400 })
-  }
-
+/**
+ * Handle a Discord chatbot message
+ * Direct function call - no HTTP overhead
+ */
+export async function handleDiscordChat({
+  discordUserId,
+  channelId,
+  message,
+}: {
+  discordUserId: string
+  channelId: string
+  message: string
+}): Promise<DiscordChatResult> {
   const connection = await prisma.discordConnection.findUnique({
     where: { discordUserId },
     include: {
@@ -111,7 +137,7 @@ export async function POST(request: Request) {
   })
 
   if (!connection || connection.revokedAt) {
-    return NextResponse.json({ linked: false, error: "Discord account is not linked" }, { status: 403 })
+    return { success: false, linked: false, error: "Discord account is not linked" }
   }
 
   const now = Date.now()
@@ -156,17 +182,17 @@ export async function POST(request: Request) {
   }
 
   if (!session) {
-    logger.error("Failed to initialize Discord chat session", {
+    logger.error("Failed to initialize Discord chat session", undefined, {
       discordUserId,
       channelId,
     })
-    return NextResponse.json({ error: "Unable to initialize chat session" }, { status: 500 })
+    return { success: false, linked: true, error: "Unable to initialize chat session" }
   }
 
   const history = trimHistory(coerceHistory(session?.messages))
   const userMessage: ChatMessage = {
     role: "user",
-    content,
+    content: message,
     timestamp: now,
   }
 
@@ -185,20 +211,18 @@ export async function POST(request: Request) {
       channelId,
       error: chatbotResponse.error,
     })
-    return NextResponse.json(
-      {
-        success: false,
-        error: chatbotResponse.error ?? "Failed to process chatbot request",
-      },
-      { status: 500 }
-    )
+    return {
+      success: false,
+      linked: true,
+      error: chatbotResponse.error ?? "Failed to process chatbot request",
+    }
   }
 
   const sanitized = sanitizeDiscordResponse(chatbotResponse.message.content)
   const baseContent =
     sanitized.content.trim().length > 0
       ? sanitized.content
-      : "Here’s what I can help with: system status, queue issues, and download problems for Plex, Tautulli, Overseerr, Sonarr, or Radarr."
+      : "Here's what I can help with: system status, queue issues, and download problems for Plex, Tautulli, Overseerr, Sonarr, or Radarr."
 
   const safeContent = sanitized.redacted
     ? `${baseContent}\n\n_(Personal details were removed for privacy.)_`
@@ -225,15 +249,84 @@ export async function POST(request: Request) {
     discordUserId,
     channelId,
     conversationId: chatbotResponse.conversationId ?? session?.chatConversationId,
-    channelType: payload.channelType ?? "unknown",
   })
 
-  return NextResponse.json({
+  return {
     success: true,
     linked: true,
     message: safeMessage,
     conversationId: chatbotResponse.conversationId ?? session?.chatConversationId,
-  })
+  }
 }
 
+/**
+ * Clear Discord chat context for a user/channel
+ * Direct function call - no HTTP overhead
+ */
+export async function clearDiscordChat({
+  discordUserId,
+  channelId,
+}: {
+  discordUserId: string
+  channelId: string
+}): Promise<ClearChatResult> {
+  const connection = await prisma.discordConnection.findUnique({
+    where: { discordUserId },
+  })
+
+  if (!connection || connection.revokedAt) {
+    return { success: false, linked: false, error: "Discord account is not linked" }
+  }
+
+  const sessionKey = {
+    discordUserId,
+    discordChannelId: channelId,
+  }
+
+  const session = await prisma.discordChatSession.findUnique({
+    where: {
+      discordUserId_discordChannelId: sessionKey,
+    },
+  })
+
+  if (!session) {
+    // No session to clear, return success anyway
+    logger.info("No session found to clear", {
+      discordUserId,
+      channelId,
+    })
+    return {
+      success: true,
+      linked: true,
+    }
+  }
+
+  // Create a new conversation and clear the messages
+  const conversation = await prisma.chatConversation.create({
+    data: { userId: connection.userId },
+  })
+
+  await prisma.discordChatSession.update({
+    where: { id: session.id },
+    data: {
+      chatConversationId: conversation.id,
+      messages: [],
+      isActive: true,
+      lastMessageAt: new Date(),
+    },
+  })
+
+  logger.info("Discord chat session cleared", {
+    discordUserId,
+    channelId,
+    oldConversationId: session.chatConversationId,
+    newConversationId: conversation.id,
+  })
+
+  return {
+    success: true,
+    linked: true,
+    conversationId: conversation.id,
+  }
+}
 

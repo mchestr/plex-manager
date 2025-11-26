@@ -13,7 +13,7 @@
  *   npm run register-discord-metadata
  */
 
-import { getRoleConnectionMetadata } from "@/lib/discord/api"
+import { getRoleConnectionMetadata, registerRoleConnectionMetadata } from "@/lib/discord/api"
 import dotenv from "dotenv"
 
 dotenv.config()
@@ -50,16 +50,18 @@ function displayMetadata(metadata: Array<{ type: number; key: string; name: stri
     return
   }
 
-  console.log(`   Found ${metadata.length} metadata field(s):`)
-  console.log("")
   metadata.forEach((field, index) => {
-    console.log(`   ${index + 1}. ${field.name} (${field.key})`)
+    // Use emoji for boolean types, name for others (matching Discord's display format)
+    const displayName = field.type === 7 || field.type === 8 ? "⭐" : field.name
+    console.log(`   ${index + 1}. ${displayName} (${field.key})`)
     console.log(`      Type: ${field.type} (${TYPE_NAMES[field.type] || "UNKNOWN"})`)
     console.log(`      Description: ${field.description}`)
     if (field.name_localizations) {
       console.log(`      Localizations: ${Object.keys(field.name_localizations).length} languages`)
     }
-    console.log("")
+    if (index < metadata.length - 1) {
+      console.log("")
+    }
   })
 }
 
@@ -111,16 +113,19 @@ async function main() {
   // Type 6 = DATETIME_GREATER_THAN_OR_EQUAL
   // Type 7 = BOOLEAN_EQUAL
   // Type 8 = BOOLEAN_NOT_EQUAL
-  //
-  // For a simple "has linked account" check, we use type 7 (BOOLEAN_EQUAL) or type 3 (INTEGER_EQUAL)
-  // Since your code uses a number (metadataValue defaults to "1"), we'll use INTEGER_EQUAL (type 3)
 
   const metadata = [
     {
-      type: 3 as const, // INTEGER_EQUAL - checks if the value equals a specific number
-      key: "plex_member", // Must match your metadataKey in DiscordIntegration
-      name: "Plex Member",
-      description: "Whether the user has linked their Plex account",
+      type: 7 as const, // BOOLEAN_EQUAL - checks if the user has Plex access
+      key: "is_subscribed", // Must match your metadataKey in DiscordIntegration
+      name: "Subscribed", // Display will show ⭐ for boolean types
+      description: "Access to Plex Server",
+    },
+    {
+      type: 2 as const, // INTEGER_GREATER_THAN_OR_EQUAL - checks hours streamed
+      key: "watched_hours", // Hours spent streaming
+      name: "Hours Streamed",
+      description: "Hours spent streaming",
     },
   ]
 
@@ -129,26 +134,26 @@ async function main() {
   displayMetadata(metadata)
   console.log("")
 
-//   try {
-//     await registerRoleConnectionMetadata(BOT_TOKEN, CLIENT_ID, metadata)
-//     console.log("✅ Successfully registered role connection metadata schema!")
-//     console.log("")
-//     console.log("You can now use the role_connections.write scope in OAuth2.")
-//     console.log("")
-//     console.log("Next steps:")
-//     console.log("1. Go to your Discord server")
-//     console.log("2. Server Settings → Roles → Create/Edit a role")
-//     console.log("3. Enable 'Linked Roles' and select your application")
-//     console.log("4. Set the condition: plex_member equals 1")
-//   } catch (error) {
-//     console.error("❌ Failed to register metadata schema:")
-//     if (error instanceof Error) {
-//       console.error(`   ${error.message}`)
-//     } else {
-//       console.error(error)
-//     }
-//     process.exit(1)
-//   }
+  try {
+    await registerRoleConnectionMetadata(BOT_TOKEN, CLIENT_ID, metadata)
+    console.log("✅ Successfully registered role connection metadata schema!")
+    console.log("")
+    console.log("You can now use the role_connections.write scope in OAuth2.")
+    console.log("")
+    console.log("Next steps:")
+    console.log("1. Go to your Discord server")
+    console.log("2. Server Settings → Roles → Create/Edit a role")
+    console.log("3. Enable 'Linked Roles' and select your application")
+    console.log("4. Set conditions using is_subscribed (boolean) or watched_hours (integer)")
+  } catch (error) {
+    console.error("❌ Failed to register metadata schema:")
+    if (error instanceof Error) {
+      console.error(`   ${error.message}`)
+    } else {
+      console.error(error)
+    }
+    process.exit(1)
+  }
 }
 
 main().catch((error) => {

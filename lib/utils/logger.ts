@@ -62,9 +62,7 @@ let chalk: any = null // Chalk types are hard to import conditionally without es
 
 if (canUseWinston) {
   try {
-    // eslint-disable-next-line
     winston = require("winston")
-    // eslint-disable-next-line
     chalk = require("chalk")
   } catch {
     // Ignore if modules can't be loaded
@@ -83,7 +81,6 @@ function createAsyncLocalStorage() {
   // Only import AsyncLocalStorage on server-side
   if (typeof window === "undefined") {
     try {
-      // eslint-disable-next-line
       const { AsyncLocalStorage } = require("async_hooks")
       return new AsyncLocalStorage()
     } catch {
@@ -406,7 +403,6 @@ const baseLogger = canUseWinston ? createWinstonLogger() : null
 export function generateRequestId(): string {
   if (typeof window === "undefined") {
     try {
-      // eslint-disable-next-line
       const { randomUUID } = require("crypto")
       return randomUUID()
     } catch {

@@ -77,15 +77,27 @@ test.describe('User Scenarios', () => {
       };
 
       try {
-        // Create mock wrapped data for the regular user
-        await prisma.plexWrapped.create({
-          data: {
+        // Create or update mock wrapped data for the regular user
+        // Using upsert to handle existing records (ensures test isolation)
+        await prisma.plexWrapped.upsert({
+          where: {
+            userId_year: {
+              userId: TEST_USERS.REGULAR.id,
+              year: currentYear,
+            },
+          },
+          create: {
             userId: TEST_USERS.REGULAR.id,
             year: currentYear,
             status: 'completed',
             data: JSON.stringify(mockWrappedData),
             generatedAt: new Date(),
-          }
+          },
+          update: {
+            status: 'completed',
+            data: JSON.stringify(mockWrappedData),
+            generatedAt: new Date(),
+          },
         });
 
         // Navigate to wrapped page
@@ -163,9 +175,16 @@ test.describe('User Scenarios', () => {
       const anonymousPage = await context.newPage();
 
       try {
-        // Create mock wrapped data with shareToken for the regular user
-        await prisma.plexWrapped.create({
-          data: {
+        // Create or update mock wrapped data with shareToken for the regular user
+        // Using upsert to handle existing records (ensures test isolation)
+        await prisma.plexWrapped.upsert({
+          where: {
+            userId_year: {
+              userId: TEST_USERS.REGULAR.id,
+              year: currentYear,
+            },
+          },
+          create: {
             userId: TEST_USERS.REGULAR.id,
             year: currentYear,
             status: 'completed',
@@ -173,7 +192,14 @@ test.describe('User Scenarios', () => {
             shareToken: shareToken,
             summary: `Check out ${TEST_USERS.REGULAR.name}'s ${currentYear} Plex Wrapped!`,
             generatedAt: new Date(),
-          }
+          },
+          update: {
+            status: 'completed',
+            data: JSON.stringify(mockWrappedData),
+            shareToken: shareToken,
+            summary: `Check out ${TEST_USERS.REGULAR.name}'s ${currentYear} Plex Wrapped!`,
+            generatedAt: new Date(),
+          },
         });
 
         // Navigate to share page as anonymous user

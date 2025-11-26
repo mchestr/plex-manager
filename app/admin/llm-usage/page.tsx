@@ -1,18 +1,19 @@
 import { getLLMUsageRecords, getLLMUsageStats, getUserById } from "@/actions/admin"
 import { aggregateLlmUsage } from "@/lib/utils"
-import Link from "next/link"
 import Image from "next/image"
+import Link from "next/link"
 
 export const dynamic = 'force-dynamic'
 
 export default async function LLMUsagePage({
   searchParams,
 }: {
-  searchParams: { page?: string; userId?: string; conversationId?: string }
+  searchParams: Promise<{ page?: string; userId?: string; conversationId?: string }>
 }) {
-  const page = parseInt(searchParams.page || "1", 10)
-  const userId = searchParams.userId
-  const conversationId = searchParams.conversationId
+  const params = await searchParams
+  const page = parseInt(params.page || "1", 10)
+  const userId = params.userId
+  const conversationId = params.conversationId
 
   const { records, pagination } = await getLLMUsageRecords(page, 50, userId, conversationId)
   const stats = await getLLMUsageStats(undefined, undefined, userId)

@@ -6,9 +6,10 @@ export const dynamic = 'force-dynamic'
 export default async function PlaygroundPage({
   searchParams,
 }: {
-  searchParams: { templateId?: string }
+  searchParams: Promise<{ templateId?: string }>
 }) {
   // Get all templates for selection
+  const params = await searchParams
   const templatesResult = await getPromptTemplates()
   const templates = templatesResult.success ? templatesResult.data : []
 
@@ -24,7 +25,7 @@ export default async function PlaygroundPage({
             </p>
           </div>
 
-          <WrappedPlayground templates={templates} initialTemplateId={searchParams.templateId} />
+          <WrappedPlayground templates={templates} initialTemplateId={params.templateId} />
       </div>
     </div>
   )
