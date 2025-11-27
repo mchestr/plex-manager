@@ -1,4 +1,4 @@
-import { FinalStep, MediaRequestStep, PlexConfigurationStep, ReportIssuesStep, WelcomeStep } from '@/components/onboarding/onboarding-steps'
+import { DiscordSupportStep, FinalStep, MediaRequestStep, PlexConfigurationStep, WelcomeStep } from '@/components/onboarding/onboarding-steps'
 
 describe('Onboarding Steps Index', () => {
   describe('Exports', () => {
@@ -17,9 +17,9 @@ describe('Onboarding Steps Index', () => {
       expect(typeof MediaRequestStep).toBe('function')
     })
 
-    it('should export ReportIssuesStep', () => {
-      expect(ReportIssuesStep).toBeDefined()
-      expect(typeof ReportIssuesStep).toBe('function')
+    it('should export DiscordSupportStep', () => {
+      expect(DiscordSupportStep).toBeDefined()
+      expect(typeof DiscordSupportStep).toBe('function')
     })
 
     it('should export FinalStep', () => {
@@ -29,15 +29,15 @@ describe('Onboarding Steps Index', () => {
   })
 
   describe('Component Availability', () => {
-    it('should have all five step components available', () => {
-      const exports = { WelcomeStep, PlexConfigurationStep, MediaRequestStep, ReportIssuesStep, FinalStep }
+    it('should have all step components available', () => {
+      const exports = { WelcomeStep, PlexConfigurationStep, MediaRequestStep, DiscordSupportStep, FinalStep }
       const componentNames = Object.keys(exports)
 
       expect(componentNames).toHaveLength(5)
       expect(componentNames).toContain('WelcomeStep')
       expect(componentNames).toContain('PlexConfigurationStep')
       expect(componentNames).toContain('MediaRequestStep')
-      expect(componentNames).toContain('ReportIssuesStep')
+      expect(componentNames).toContain('DiscordSupportStep')
       expect(componentNames).toContain('FinalStep')
     })
 
@@ -45,7 +45,7 @@ describe('Onboarding Steps Index', () => {
       expect(WelcomeStep.name).toBe('WelcomeStep')
       expect(PlexConfigurationStep.name).toBe('PlexConfigurationStep')
       expect(MediaRequestStep.name).toBe('MediaRequestStep')
-      expect(ReportIssuesStep.name).toBe('ReportIssuesStep')
+      expect(DiscordSupportStep.name).toBe('DiscordSupportStep')
       expect(FinalStep.name).toBe('FinalStep')
     })
   })

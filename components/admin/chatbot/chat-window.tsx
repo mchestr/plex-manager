@@ -94,7 +94,7 @@ export function Chatbot({ userName }: ChatbotProps) {
       {/* Toggle Button */}
       <button
         onClick={toggleChat}
-        className="fixed bottom-6 right-6 z-50 p-4 bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500 text-white rounded-full shadow-lg hover:shadow-cyan-500/30 transition-all duration-300 flex items-center justify-center"
+        className="fixed bottom-24 md:bottom-6 right-6 z-40 p-4 bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500 text-white rounded-full shadow-lg hover:shadow-cyan-500/30 transition-all duration-300 flex items-center justify-center"
         aria-label="Toggle Chatbot"
       >
         {isOpen ? (
@@ -116,10 +116,10 @@ export function Chatbot({ userName }: ChatbotProps) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className={`fixed bottom-24 right-6 z-50 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 ${
+            className={`fixed bottom-24 md:bottom-24 right-6 z-40 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 ${
               isExpanded
-                ? "w-[600px] h-[700px] max-w-[calc(100vw-3rem)] max-h-[85vh]"
-                : "w-96 h-[500px] max-h-[80vh]"
+                ? "w-[600px] h-[700px] max-w-[calc(100vw-3rem)] max-h-[calc(100vh-7rem)] md:max-h-[85vh]"
+                : "w-96 h-[500px] max-h-[calc(100vh-7rem)] md:max-h-[80vh]"
             }`}
           >
             {/* Header */}

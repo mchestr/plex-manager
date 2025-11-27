@@ -1,5 +1,26 @@
 import { LLMResponse } from "@/components/admin/playground/llm-response"
 import { fireEvent, render, screen } from "@testing-library/react"
+import React from 'react'
+
+// Mock the toast to prevent infinite loops and timeouts
+const mockShowError = jest.fn()
+const mockShowSuccess = jest.fn()
+const mockShowInfo = jest.fn()
+const mockShowToast = jest.fn()
+
+jest.mock('@/components/ui/toast', () => {
+  const actual = jest.requireActual('@/components/ui/toast')
+  return {
+    ...actual,
+    useToast: () => ({
+      showToast: mockShowToast,
+      showSuccess: mockShowSuccess,
+      showError: mockShowError,
+      showInfo: mockShowInfo,
+    }),
+    ToastProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  }
+})
 
 describe("LLMResponse", () => {
   const mockProps = {
@@ -11,13 +32,21 @@ describe("LLMResponse", () => {
     previewError: null,
   }
 
+  const renderWithToast = (component: React.ReactElement) => {
+    return render(component)
+  }
+
   beforeEach(() => {
     jest.clearAllMocks()
+    mockShowError.mockClear()
+    mockShowSuccess.mockClear()
+    mockShowInfo.mockClear()
+    mockShowToast.mockClear()
   })
 
   describe("Basic Rendering", () => {
     it("should render the component with llm response", () => {
-      render(<LLMResponse {...mockProps} />)
+      renderWithToast(<LLMResponse {...mockProps} />)
 
       expect(screen.getByText("LLM Response")).toBeInTheDocument()
       expect(
@@ -27,21 +56,21 @@ describe("LLMResponse", () => {
     })
 
     it("should render preview button", () => {
-      render(<LLMResponse {...mockProps} />)
+      renderWithToast(<LLMResponse {...mockProps} />)
 
       const previewButton = screen.getByRole("button", { name: /preview/i })
       expect(previewButton).toBeInTheDocument()
     })
 
     it("should render save button", () => {
-      render(<LLMResponse {...mockProps} />)
+      renderWithToast(<LLMResponse {...mockProps} />)
 
       const saveButton = screen.getByRole("button", { name: /save as wrapped/i })
       expect(saveButton).toBeInTheDocument()
     })
 
     it("should display llm response in pre element", () => {
-      const { container } = render(<LLMResponse {...mockProps} />)
+      const { container } = renderWithToast(<LLMResponse {...mockProps} />)
 
       const preElement = container.querySelector("pre")
       expect(preElement).toBeInTheDocument()
@@ -51,7 +80,7 @@ describe("LLMResponse", () => {
 
   describe("Button Interactions", () => {
     it("should call onPreview when preview button is clicked", () => {
-      render(<LLMResponse {...mockProps} />)
+      renderWithToast(<LLMResponse {...mockProps} />)
 
       const previewButton = screen.getByRole("button", { name: /preview/i })
       fireEvent.click(previewButton)
@@ -60,7 +89,7 @@ describe("LLMResponse", () => {
     })
 
     it("should call onSave when save button is clicked", () => {
-      render(<LLMResponse {...mockProps} />)
+      renderWithToast(<LLMResponse {...mockProps} />)
 
       const saveButton = screen.getByRole("button", { name: /save as wrapped/i })
       fireEvent.click(saveButton)
@@ -69,7 +98,7 @@ describe("LLMResponse", () => {
     })
 
     it("should not call onSave when button is disabled", () => {
-      render(<LLMResponse {...mockProps} isSaving={true} />)
+      renderWithToast(<LLMResponse {...mockProps} isSaving={true} />)
 
       const saveButton = screen.getByRole("button", { name: /saving/i })
       fireEvent.click(saveButton)
@@ -80,20 +109,20 @@ describe("LLMResponse", () => {
 
   describe("Saving State", () => {
     it("should disable save button when isSaving is true", () => {
-      render(<LLMResponse {...mockProps} isSaving={true} />)
+      renderWithToast(<LLMResponse {...mockProps} isSaving={true} />)
 
       const saveButton = screen.getByRole("button", { name: /saving/i })
       expect(saveButton).toBeDisabled()
     })
 
     it("should show saving text when isSaving is true", () => {
-      render(<LLMResponse {...mockProps} isSaving={true} />)
+      renderWithToast(<LLMResponse {...mockProps} isSaving={true} />)
 
       expect(screen.getByText("Saving...")).toBeInTheDocument()
     })
 
     it("should show save icon when not saving", () => {
-      const { container } = render(<LLMResponse {...mockProps} isSaving={false} />)
+      const { container } = renderWithToast(<LLMResponse {...mockProps} isSaving={false} />)
 
       const saveButton = screen.getByRole("button", { name: /save as wrapped/i })
       const svg = saveButton.querySelector("svg")
@@ -101,7 +130,7 @@ describe("LLMResponse", () => {
     })
 
     it("should show spinner when saving", () => {
-      const { container } = render(<LLMResponse {...mockProps} isSaving={true} />)
+      const { container } = renderWithToast(<LLMResponse {...mockProps} isSaving={true} />)
 
       const saveButton = screen.getByRole("button", { name: /saving/i })
       const spinner = saveButton.querySelector(".animate-spin")
@@ -111,19 +140,21 @@ describe("LLMResponse", () => {
 
   describe("Error Handling", () => {
     it("should display save error when provided", () => {
-      render(<LLMResponse {...mockProps} saveError="Failed to save wrapped data" />)
+      renderWithToast(<LLMResponse {...mockProps} saveError="Failed to save wrapped data" />)
 
-      expect(screen.getByText("Failed to save wrapped data")).toBeInTheDocument()
+      // Error is shown as toast, not in UI
+      expect(mockShowError).toHaveBeenCalledWith("Failed to save wrapped data")
     })
 
     it("should display preview error when provided", () => {
-      render(<LLMResponse {...mockProps} previewError="Failed to preview wrapped data" />)
+      renderWithToast(<LLMResponse {...mockProps} previewError="Failed to preview wrapped data" />)
 
-      expect(screen.getByText("Failed to preview wrapped data")).toBeInTheDocument()
+      // Error is shown as toast, not in UI
+      expect(mockShowError).toHaveBeenCalledWith("Failed to preview wrapped data")
     })
 
     it("should display both errors when both are provided", () => {
-      render(
+      renderWithToast(
         <LLMResponse
           {...mockProps}
           saveError="Save error"
@@ -131,31 +162,31 @@ describe("LLMResponse", () => {
         />
       )
 
-      expect(screen.getByText("Save error")).toBeInTheDocument()
-      expect(screen.getByText("Preview error")).toBeInTheDocument()
+      // Errors are shown as toasts, not in UI
+      expect(mockShowError).toHaveBeenCalledWith("Save error")
+      expect(mockShowError).toHaveBeenCalledWith("Preview error")
     })
 
     it("should not display error messages when errors are null", () => {
-      render(<LLMResponse {...mockProps} saveError={null} previewError={null} />)
+      renderWithToast(<LLMResponse {...mockProps} saveError={null} previewError={null} />)
 
-      const errorElements = screen.queryAllByText(/error/i)
-      expect(errorElements).toHaveLength(0)
+      // No toasts should be called
+      expect(mockShowError).not.toHaveBeenCalled()
     })
 
-    it("should style error messages with red background", () => {
-      const { container } = render(
+    it("should show error as toast when saveError is provided", () => {
+      renderWithToast(
         <LLMResponse {...mockProps} saveError="Test error" />
       )
 
-      const errorDiv = container.querySelector(".bg-red-500\\/10")
-      expect(errorDiv).toBeInTheDocument()
-      expect(errorDiv).toHaveClass("border-red-500/50", "text-red-400")
+      // Error is shown as toast
+      expect(mockShowError).toHaveBeenCalledWith("Test error")
     })
   })
 
   describe("Visual Elements", () => {
     it("should render with proper styling classes", () => {
-      const { container } = render(<LLMResponse {...mockProps} />)
+      const { container } = renderWithToast(<LLMResponse {...mockProps} />)
 
       const mainDiv = container.querySelector(".bg-slate-800\\/50")
       expect(mainDiv).toBeInTheDocument()
@@ -163,7 +194,7 @@ describe("LLMResponse", () => {
     })
 
     it("should render icon for LLM Response header", () => {
-      const { container } = render(<LLMResponse {...mockProps} />)
+      const { container } = renderWithToast(<LLMResponse {...mockProps} />)
 
       const svg = container.querySelector("svg")
       expect(svg).toBeInTheDocument()
@@ -171,7 +202,7 @@ describe("LLMResponse", () => {
     })
 
     it("should render response in scrollable container", () => {
-      const { container } = render(<LLMResponse {...mockProps} />)
+      const { container } = renderWithToast(<LLMResponse {...mockProps} />)
 
       const scrollableDiv = container.querySelector(".max-h-96")
       expect(scrollableDiv).toBeInTheDocument()
@@ -181,21 +212,21 @@ describe("LLMResponse", () => {
 
   describe("Button Styling", () => {
     it("should style preview button with cyan-purple gradient", () => {
-      render(<LLMResponse {...mockProps} />)
+      renderWithToast(<LLMResponse {...mockProps} />)
 
       const previewButton = screen.getByRole("button", { name: /preview/i })
       expect(previewButton).toHaveClass("bg-gradient-to-r", "from-cyan-600", "to-purple-600")
     })
 
     it("should style save button with green-emerald gradient", () => {
-      render(<LLMResponse {...mockProps} />)
+      renderWithToast(<LLMResponse {...mockProps} />)
 
       const saveButton = screen.getByRole("button", { name: /save as wrapped/i })
       expect(saveButton).toHaveClass("bg-gradient-to-r", "from-green-600", "to-emerald-600")
     })
 
     it("should apply disabled styling when saving", () => {
-      render(<LLMResponse {...mockProps} isSaving={true} />)
+      renderWithToast(<LLMResponse {...mockProps} isSaving={true} />)
 
       const saveButton = screen.getByRole("button", { name: /saving/i })
       expect(saveButton).toHaveClass("disabled:opacity-50", "disabled:cursor-not-allowed")
@@ -205,14 +236,14 @@ describe("LLMResponse", () => {
   describe("Long Content", () => {
     it("should handle very long llm responses", () => {
       const longResponse = "A".repeat(10000)
-      render(<LLMResponse {...mockProps} llmResponse={longResponse} />)
+      renderWithToast(<LLMResponse {...mockProps} llmResponse={longResponse} />)
 
       expect(screen.getByText(longResponse)).toBeInTheDocument()
     })
 
     it("should preserve whitespace in response", () => {
       const responseWithWhitespace = "Line 1\n\nLine 2\n  Indented Line 3"
-      const { container } = render(
+      const { container } = renderWithToast(
         <LLMResponse {...mockProps} llmResponse={responseWithWhitespace} />
       )
 

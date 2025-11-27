@@ -1,6 +1,7 @@
 import { WrappedGeneratorStatus } from '@/components/generator/wrapped-generator-status'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import React from 'react'
 
 // Mock Next.js Link component
 jest.mock('next/link', () => {
@@ -11,17 +12,45 @@ jest.mock('next/link', () => {
   return MockLink
 })
 
+// Mock the toast to prevent infinite loops and timeouts
+const mockShowError = jest.fn()
+const mockShowSuccess = jest.fn()
+const mockShowInfo = jest.fn()
+const mockShowToast = jest.fn()
+
+jest.mock('@/components/ui/toast', () => {
+  const actual = jest.requireActual('@/components/ui/toast')
+  return {
+    ...actual,
+    useToast: () => ({
+      showToast: mockShowToast,
+      showSuccess: mockShowSuccess,
+      showError: mockShowError,
+      showInfo: mockShowInfo,
+    }),
+    ToastProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  }
+})
+
+const renderWithToast = (component: React.ReactElement) => {
+  return render(component)
+}
+
 describe('WrappedGeneratorStatus', () => {
   const mockOnRegenerate = jest.fn()
   const year = 2024
 
   beforeEach(() => {
     jest.clearAllMocks()
+    mockShowError.mockClear()
+    mockShowSuccess.mockClear()
+    mockShowInfo.mockClear()
+    mockShowToast.mockClear()
   })
 
   describe('Completed State', () => {
     it('should render completed status with success styling', () => {
-      render(
+      renderWithToast(
         <WrappedGeneratorStatus
           status="completed"
           year={year}
@@ -36,7 +65,7 @@ describe('WrappedGeneratorStatus', () => {
     })
 
     it('should display success message when completed', () => {
-      render(
+      renderWithToast(
         <WrappedGeneratorStatus
           status="completed"
           year={year}
@@ -49,7 +78,7 @@ describe('WrappedGeneratorStatus', () => {
     })
 
     it('should show link to view wrapped when completed', () => {
-      render(
+      renderWithToast(
         <WrappedGeneratorStatus
           status="completed"
           year={year}
@@ -65,7 +94,7 @@ describe('WrappedGeneratorStatus', () => {
 
     it('should display error message even when completed if error is provided', () => {
       const errorMessage = 'Warning: Some data was incomplete'
-      render(
+      renderWithToast(
         <WrappedGeneratorStatus
           status="completed"
           year={year}
@@ -75,12 +104,12 @@ describe('WrappedGeneratorStatus', () => {
         />
       )
 
-      expect(screen.getByText(errorMessage)).toBeInTheDocument()
-      expect(screen.getByText(errorMessage)).toHaveClass('text-red-300')
+      // Error is shown as toast, not in UI
+      expect(mockShowError).toHaveBeenCalledWith(errorMessage, 6000)
     })
 
     it('should not show regenerate button when completed', () => {
-      render(
+      renderWithToast(
         <WrappedGeneratorStatus
           status="completed"
           year={year}
@@ -93,7 +122,7 @@ describe('WrappedGeneratorStatus', () => {
     })
 
     it('should have proper styling for completed state container', () => {
-      const { container } = render(
+      const { container } = renderWithToast(
         <WrappedGeneratorStatus
           status="completed"
           year={year}
@@ -109,7 +138,7 @@ describe('WrappedGeneratorStatus', () => {
 
   describe('Failed State', () => {
     it('should render failed status with error styling', () => {
-      render(
+      renderWithToast(
         <WrappedGeneratorStatus
           status="failed"
           year={year}
@@ -125,7 +154,7 @@ describe('WrappedGeneratorStatus', () => {
 
     it('should display error message when failed', () => {
       const errorMessage = 'Generation failed due to timeout'
-      render(
+      renderWithToast(
         <WrappedGeneratorStatus
           status="failed"
           year={year}
@@ -135,12 +164,12 @@ describe('WrappedGeneratorStatus', () => {
         />
       )
 
-      expect(screen.getByText(errorMessage)).toBeInTheDocument()
-      expect(screen.getByText(errorMessage)).toHaveClass('text-red-300')
+      // Error is shown as toast, not in UI
+      expect(mockShowError).toHaveBeenCalledWith(errorMessage, 6000)
     })
 
     it('should show Try Again button when failed', () => {
-      render(
+      renderWithToast(
         <WrappedGeneratorStatus
           status="failed"
           year={year}
@@ -154,7 +183,7 @@ describe('WrappedGeneratorStatus', () => {
 
     it('should call onRegenerate when Try Again is clicked', async () => {
       const user = userEvent.setup()
-      render(
+      renderWithToast(
         <WrappedGeneratorStatus
           status="failed"
           year={year}
@@ -170,7 +199,7 @@ describe('WrappedGeneratorStatus', () => {
     })
 
     it('should disable Try Again button when regenerating', () => {
-      render(
+      renderWithToast(
         <WrappedGeneratorStatus
           status="failed"
           year={year}
@@ -185,7 +214,7 @@ describe('WrappedGeneratorStatus', () => {
     })
 
     it('should show loading spinner when regenerating', () => {
-      render(
+      renderWithToast(
         <WrappedGeneratorStatus
           status="failed"
           year={year}
@@ -203,7 +232,7 @@ describe('WrappedGeneratorStatus', () => {
     })
 
     it('should have proper styling for failed state container', () => {
-      const { container } = render(
+      const { container } = renderWithToast(
         <WrappedGeneratorStatus
           status="failed"
           year={year}
@@ -217,7 +246,7 @@ describe('WrappedGeneratorStatus', () => {
     })
 
     it('should not show View Wrapped link when failed', () => {
-      render(
+      renderWithToast(
         <WrappedGeneratorStatus
           status="failed"
           year={year}
@@ -232,7 +261,7 @@ describe('WrappedGeneratorStatus', () => {
 
   describe('Generating State', () => {
     it('should return null for generating status', () => {
-      const { container } = render(
+      const { container } = renderWithToast(
         <WrappedGeneratorStatus
           status="generating"
           year={year}
@@ -247,7 +276,7 @@ describe('WrappedGeneratorStatus', () => {
 
   describe('Null State', () => {
     it('should return null when status is null', () => {
-      const { container } = render(
+      const { container } = renderWithToast(
         <WrappedGeneratorStatus
           status={null}
           year={year}
@@ -262,7 +291,7 @@ describe('WrappedGeneratorStatus', () => {
 
   describe('Error Handling', () => {
     it('should handle null error gracefully in completed state', () => {
-      render(
+      renderWithToast(
         <WrappedGeneratorStatus
           status="completed"
           year={year}
@@ -278,7 +307,7 @@ describe('WrappedGeneratorStatus', () => {
     })
 
     it('should handle undefined error gracefully in completed state', () => {
-      render(
+      renderWithToast(
         <WrappedGeneratorStatus
           status="completed"
           year={year}
@@ -293,7 +322,7 @@ describe('WrappedGeneratorStatus', () => {
     })
 
     it('should handle empty string error in failed state', () => {
-      render(
+      renderWithToast(
         <WrappedGeneratorStatus
           status="failed"
           year={year}
@@ -309,7 +338,7 @@ describe('WrappedGeneratorStatus', () => {
 
     it('should handle long error messages', () => {
       const longError = 'A'.repeat(500)
-      render(
+      renderWithToast(
         <WrappedGeneratorStatus
           status="failed"
           year={year}
@@ -319,12 +348,13 @@ describe('WrappedGeneratorStatus', () => {
         />
       )
 
-      expect(screen.getByText(longError)).toBeInTheDocument()
+      // Error is shown as toast, not in UI
+      expect(mockShowError).toHaveBeenCalledWith(longError, 6000)
     })
 
     it('should handle error with special characters', () => {
       const errorWithSpecialChars = 'Error: <script>alert("xss")</script>'
-      render(
+      renderWithToast(
         <WrappedGeneratorStatus
           status="failed"
           year={year}
@@ -334,14 +364,14 @@ describe('WrappedGeneratorStatus', () => {
         />
       )
 
-      // React should escape the content
-      expect(screen.getByText(errorWithSpecialChars)).toBeInTheDocument()
+      // Error is shown as toast, not in UI
+      expect(mockShowError).toHaveBeenCalledWith(errorWithSpecialChars, 6000)
     })
   })
 
   describe('Year Display', () => {
     it('should display correct year in completed state', () => {
-      render(
+      renderWithToast(
         <WrappedGeneratorStatus
           status="completed"
           year={2023}
@@ -355,7 +385,7 @@ describe('WrappedGeneratorStatus', () => {
     })
 
     it('should display correct year in failed state', () => {
-      render(
+      renderWithToast(
         <WrappedGeneratorStatus
           status="failed"
           year={2022}
@@ -368,7 +398,7 @@ describe('WrappedGeneratorStatus', () => {
     })
 
     it('should handle year 0', () => {
-      render(
+      renderWithToast(
         <WrappedGeneratorStatus
           status="completed"
           year={0}
@@ -381,7 +411,7 @@ describe('WrappedGeneratorStatus', () => {
     })
 
     it('should handle future year', () => {
-      render(
+      renderWithToast(
         <WrappedGeneratorStatus
           status="completed"
           year={2099}
@@ -396,7 +426,7 @@ describe('WrappedGeneratorStatus', () => {
 
   describe('Button States', () => {
     it('should have proper button styling when not regenerating', () => {
-      render(
+      renderWithToast(
         <WrappedGeneratorStatus
           status="failed"
           year={year}
@@ -412,7 +442,7 @@ describe('WrappedGeneratorStatus', () => {
 
     it('should prevent multiple clicks when regenerating', async () => {
       const user = userEvent.setup()
-      render(
+      renderWithToast(
         <WrappedGeneratorStatus
           status="failed"
           year={year}
@@ -433,7 +463,7 @@ describe('WrappedGeneratorStatus', () => {
     })
 
     it('should show correct text when not regenerating', () => {
-      render(
+      renderWithToast(
         <WrappedGeneratorStatus
           status="failed"
           year={year}
@@ -447,7 +477,7 @@ describe('WrappedGeneratorStatus', () => {
     })
 
     it('should show correct text when regenerating', () => {
-      render(
+      renderWithToast(
         <WrappedGeneratorStatus
           status="failed"
           year={year}
@@ -463,7 +493,7 @@ describe('WrappedGeneratorStatus', () => {
 
   describe('Accessibility', () => {
     it('should have proper semantic HTML in completed state', () => {
-      render(
+      renderWithToast(
         <WrappedGeneratorStatus
           status="completed"
           year={year}
@@ -480,7 +510,7 @@ describe('WrappedGeneratorStatus', () => {
     })
 
     it('should have proper semantic HTML in failed state', () => {
-      render(
+      renderWithToast(
         <WrappedGeneratorStatus
           status="failed"
           year={year}
@@ -497,7 +527,7 @@ describe('WrappedGeneratorStatus', () => {
     })
 
     it('should indicate loading state to screen readers', () => {
-      render(
+      renderWithToast(
         <WrappedGeneratorStatus
           status="failed"
           year={year}
@@ -511,7 +541,7 @@ describe('WrappedGeneratorStatus', () => {
     })
 
     it('should have proper color contrast for text', () => {
-      render(
+      renderWithToast(
         <WrappedGeneratorStatus
           status="completed"
           year={year}
@@ -527,7 +557,7 @@ describe('WrappedGeneratorStatus', () => {
 
   describe('Edge Cases', () => {
     it('should handle rapid status changes', () => {
-      const { rerender } = render(
+      const { rerender } = renderWithToast(
         <WrappedGeneratorStatus
           status="failed"
           year={year}
@@ -552,7 +582,7 @@ describe('WrappedGeneratorStatus', () => {
     })
 
     it('should handle regenerating flag change', () => {
-      const { rerender } = render(
+      const { rerender } = renderWithToast(
         <WrappedGeneratorStatus
           status="failed"
           year={year}

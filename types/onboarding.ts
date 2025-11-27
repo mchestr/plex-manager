@@ -23,15 +23,10 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: 4,
     title: "Support",
-    description: "Report issues & feedback",
+    description: "Get help & join community",
   },
   {
     id: 5,
-    title: "Discord",
-    description: "Get support & community access",
-  },
-  {
-    id: 6,
     title: "All Set!",
     description: "Start exploring",
   },

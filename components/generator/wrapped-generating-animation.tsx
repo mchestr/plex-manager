@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useState, useMemo } from "react"
+import { RexDinosaur } from "@/components/shared/rex-dinosaur"
+import { useEffect, useMemo, useState } from "react"
 
 interface WrappedGeneratingAnimationProps {
   year?: number
@@ -73,82 +74,10 @@ export function WrappedGeneratingAnimation({ year, compact = false }: WrappedGen
     }))
   }, [])
 
-  // Cute dinosaur SVG component
+  // Wrapper component that includes floating particles for the full animation
   const DinosaurAnimation = ({ size = "w-32 h-32" }: { size?: string }) => (
     <div className={`${size} relative`}>
-      <svg
-        viewBox="0 0 200 200"
-        className="w-full h-full"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        {/* Dinosaur body */}
-        <ellipse
-          cx="100"
-          cy="120"
-          rx="50"
-          ry="40"
-          fill="#4ade80"
-          className="animate-pulse"
-          style={{ animationDuration: "2s" }}
-        />
-        {/* Dinosaur head */}
-        <ellipse
-          cx="100"
-          cy="70"
-          rx="35"
-          ry="30"
-          fill="#22c55e"
-        />
-        {/* Eye */}
-        <circle
-          cx="90"
-          cy="65"
-          r="5"
-          fill="#1e293b"
-          className="animate-blink"
-          style={{ animationDuration: "3s" }}
-        />
-        {/* Smile */}
-        <path
-          d="M 85 75 Q 100 80 115 75"
-          stroke="#1e293b"
-          strokeWidth="2"
-          fill="none"
-          strokeLinecap="round"
-        />
-        {/* Tail */}
-        <ellipse
-          cx="50"
-          cy="130"
-          rx="25"
-          ry="20"
-          fill="#4ade80"
-          className="animate-wiggle"
-          style={{
-            animationDuration: "1.5s",
-            transformOrigin: "50px 130px"
-          }}
-        />
-        {/* Legs */}
-        <ellipse cx="80" cy="160" rx="12" ry="20" fill="#22c55e" />
-        <ellipse cx="120" cy="160" rx="12" ry="20" fill="#22c55e" />
-        {/* Spikes on back */}
-        <path
-          d="M 70 100 L 75 80 L 80 100"
-          fill="#16a34a"
-        />
-        <path
-          d="M 85 105 L 90 85 L 95 105"
-          fill="#16a34a"
-        />
-        <path
-          d="M 100 110 L 105 90 L 110 110"
-          fill="#16a34a"
-        />
-        {/* Little arms */}
-        <ellipse cx="75" cy="110" rx="8" ry="12" fill="#22c55e" />
-        <ellipse cx="125" cy="110" rx="8" ry="12" fill="#22c55e" />
-      </svg>
+      <RexDinosaur size={size} />
       {/* Floating particles around dinosaur */}
       {[0, 1, 2, 3, 4].map((i) => (
         <div
@@ -168,7 +97,7 @@ export function WrappedGeneratingAnimation({ year, compact = false }: WrappedGen
   if (compact) {
     return (
       <div className="flex flex-col items-center justify-center p-8 min-h-[400px]">
-        <div className="mb-8 animate-bounce" style={{ animationDuration: "2s" }}>
+        <div className="mb-8">
           <DinosaurAnimation size="w-24 h-24" />
         </div>
 
@@ -224,7 +153,7 @@ export function WrappedGeneratingAnimation({ year, compact = false }: WrappedGen
       <div className="max-w-3xl w-full text-center relative z-10">
         {/* Main Dinosaur Animation */}
         <div className="mb-12 flex justify-center">
-          <div className="relative animate-bounce" style={{ animationDuration: "2.5s" }}>
+          <div className="relative">
             <DinosaurAnimation size="w-48 h-48 md:w-64 md:h-64" />
             {/* Glow effect around dinosaur */}
             <div className="absolute inset-0 bg-gradient-to-r from-green-400/20 via-cyan-400/20 to-purple-400/20 rounded-full blur-3xl -z-10 animate-pulse" style={{ animationDuration: "3s" }} />

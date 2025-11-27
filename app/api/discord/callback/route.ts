@@ -9,7 +9,7 @@ export async function GET(request: Request) {
   const errorParam = url.searchParams.get("error")
   const errorDescription = url.searchParams.get("error_description")
 
-  let redirectPath = "/discord/link"
+  let redirectPath = "/"
   let status: string | null = null
   let errorMessage: string | null = null
 
@@ -25,7 +25,7 @@ export async function GET(request: Request) {
   } else {
     try {
       const { redirectTo } = await completeDiscordLink(code, state)
-      redirectPath = redirectTo || "/discord/link"
+      redirectPath = redirectTo || "/"
       status = "linked"
     } catch (error) {
       errorMessage = error instanceof Error ? error.message : "Failed to complete Discord linking"

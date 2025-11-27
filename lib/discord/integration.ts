@@ -65,7 +65,7 @@ function sanitizeRedirectPath(path?: string | null): string | undefined {
     return undefined
   }
 
-  return path === "/" ? "/discord/link" : path
+  return path === "/" ? "/" : path
 }
 
 export async function createDiscordAuthorizationUrl(userId: string, redirectTo?: string) {
@@ -75,7 +75,7 @@ export async function createDiscordAuthorizationUrl(userId: string, redirectTo?:
   }
 
   const state = toBase64Url(randomBytes(24))
-  const redirectPath = sanitizeRedirectPath(redirectTo) ?? "/discord/link"
+  const redirectPath = sanitizeRedirectPath(redirectTo) ?? "/"
 
   const expiresAt = new Date(Date.now() + STATE_TTL_MS)
 
@@ -214,7 +214,7 @@ export async function completeDiscordLink(code: string, state: string) {
   }
 
   return {
-    redirectTo: oauthState.redirectTo ?? "/discord/link",
+    redirectTo: oauthState.redirectTo ?? "/",
   }
 }
 
@@ -409,6 +409,26 @@ export async function getDiscordLinkStatus(userId: string) {
     }),
   ])
 
+  let isOnServer: boolean | null = null
+
+  // Check if user is on the Discord server (if we have bot token and guild ID)
+  if (connection && integration?.guildId && process.env.DISCORD_BOT_TOKEN) {
+    try {
+      const { checkGuildMembership } = await import("./api")
+      isOnServer = await checkGuildMembership(
+        process.env.DISCORD_BOT_TOKEN,
+        integration.guildId,
+        connection.discordUserId
+      )
+    } catch (error) {
+      logger.warn("Failed to check Discord server membership", {
+        userId,
+        error: error instanceof Error ? error.message : "unknown",
+      })
+      // Leave as null if we can't determine
+    }
+  }
+
   return {
     isEnabled: Boolean(integration?.isEnabled && integration?.clientId && integration?.clientSecret),
     connection: connection
@@ -422,6 +442,7 @@ export async function getDiscordLinkStatus(userId: string) {
           lastError: connection.lastError,
         }
       : null,
+    isOnServer,
   }
 }
 

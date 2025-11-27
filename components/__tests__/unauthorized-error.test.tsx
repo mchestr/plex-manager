@@ -9,17 +9,35 @@ describe('UnauthorizedError', () => {
     expect(screen.getByText(/You don't have permission to access this admin page/)).toBeInTheDocument()
   })
 
-  it('should render navigation links', () => {
+  it('should render home navigation link', () => {
     render(<UnauthorizedError />)
 
     const homeLink = screen.getByText('Go to Home')
-    const wrappedLink = screen.getByText('View Your Wrapped')
-
     expect(homeLink).toBeInTheDocument()
-    expect(wrappedLink).toBeInTheDocument()
-
     expect(homeLink.closest('a')).toHaveAttribute('href', '/')
-    expect(wrappedLink.closest('a')).toHaveAttribute('href', '/wrapped')
+  })
+
+  it('should not render wrapped button', () => {
+    render(<UnauthorizedError />)
+
+    const wrappedLink = screen.queryByText('View Your Wrapped')
+    expect(wrappedLink).not.toBeInTheDocument()
+  })
+
+  it('should render Rex dinosaur', () => {
+    render(<UnauthorizedError />)
+
+    const rexContainer = screen.getByTestId('rex-dinosaur')
+    expect(rexContainer).toBeInTheDocument()
+  })
+
+  it('should have proper testid attributes', () => {
+    render(<UnauthorizedError />)
+
+    expect(screen.getByTestId('unauthorized-error-page')).toBeInTheDocument()
+    expect(screen.getByTestId('rex-dinosaur')).toBeInTheDocument()
+    expect(screen.getByTestId('access-denied-heading')).toBeInTheDocument()
+    expect(screen.getByTestId('go-home-button')).toBeInTheDocument()
   })
 
   it('should have proper styling classes', () => {
@@ -30,19 +48,12 @@ describe('UnauthorizedError', () => {
     expect(mainDiv).toHaveClass('bg-gradient-to-b')
   })
 
-  it('should display warning icon', () => {
-    const { container } = render(<UnauthorizedError />)
-
-    const svg = container.querySelector('svg')
-    expect(svg).toBeInTheDocument()
-    expect(svg).toHaveAttribute('viewBox', '0 0 24 24')
-  })
-
   it('should have accessible structure', () => {
     render(<UnauthorizedError />)
 
     const heading = screen.getByRole('heading', { level: 1 })
     expect(heading).toHaveTextContent('Access Denied')
+    expect(heading).toHaveAttribute('data-testid', 'access-denied-heading')
   })
 })
 

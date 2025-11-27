@@ -18,6 +18,7 @@ interface StyledDropdownProps {
   size?: "sm" | "md" | "lg"
   id?: string
   name?: string
+  "data-testid"?: string
 }
 
 const sizeClasses = {
@@ -42,6 +43,7 @@ export function StyledDropdown({
   size = "md",
   id,
   name,
+  "data-testid": testId,
 }: StyledDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -96,6 +98,7 @@ export function StyledDropdown({
       <button
         type="button"
         id={id}
+        data-testid={testId}
         disabled={disabled}
         onClick={() => !disabled && setIsOpen(!isOpen)}
         className={`${baseButtonClasses} ${sizeClass}`}
@@ -138,6 +141,7 @@ export function StyledDropdown({
                     type="button"
                     onClick={() => handleSelect(option.value)}
                     disabled={isDisabled}
+                    data-testid={testId ? `${testId}-option-${option.value}` : undefined}
                     className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
                       isSelected
                         ? "bg-cyan-500/20 border border-cyan-500/50 text-cyan-300"

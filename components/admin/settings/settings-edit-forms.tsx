@@ -2,6 +2,7 @@
 
 import { setLLMDisabled, updateChatLLMProvider, updateOverseerr, updatePlexServer, updateRadarr, updateSonarr, updateTautulli, updateWrappedLLMProvider } from "@/actions/admin"
 import { updateDiscordIntegrationSettings } from "@/actions/discord"
+import { StyledCheckbox } from "@/components/ui/styled-checkbox"
 import { StyledDropdown } from "@/components/ui/styled-dropdown"
 import { StyledInput } from "@/components/ui/styled-input"
 import { useRouter } from "next/navigation"
@@ -524,11 +525,7 @@ export function LLMToggle({ disabled }: LLMToggleProps) {
       <button
         onClick={handleToggle}
         disabled={isPending}
-        className={`px-3 py-1 rounded text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center border ${
-          disabled
-            ? "bg-green-500/10 hover:bg-green-500/20 text-green-400 border-green-500/30 hover:border-green-500/50"
-            : "bg-red-500/10 hover:bg-red-500/20 text-red-400 border-red-500/30 hover:border-red-500/50"
-        }`}
+        className="px-3 py-1 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-600 hover:border-cyan-500/50 text-slate-300 hover:text-white text-xs font-medium rounded transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center whitespace-nowrap"
       >
         {isPending ? "Updating..." : disabled ? "Enable LLM" : "Disable LLM"}
       </button>
@@ -546,12 +543,35 @@ interface DiscordIntegrationFormProps {
     clientId?: string | null
     clientSecret?: string | null
     guildId?: string | null
+    serverInviteCode?: string | null
     platformName?: string | null
     instructions?: string | null
     updatedAt?: Date
   } | null
   linkedCount: number
   portalUrl: string
+}
+
+/**
+ * Parses a Discord invite code from either a full URL or just the code
+ * Examples:
+ * - https://discord.gg/axzpDYH6jz -> axzpDYH6jz
+ * - discord.gg/axzpDYH6jz -> axzpDYH6jz
+ * - axzpDYH6jz -> axzpDYH6jz
+ */
+function parseDiscordInviteCode(input: string): string {
+  if (!input) return ""
+
+  const trimmed = input.trim()
+
+  // Match Discord invite URLs (https://discord.gg/CODE or discord.gg/CODE)
+  const urlMatch = trimmed.match(/discord\.gg\/([a-zA-Z0-9]+)/i)
+  if (urlMatch) {
+    return urlMatch[1]
+  }
+
+  // If it's already just a code, return as-is
+  return trimmed
 }
 
 export function DiscordIntegrationForm({ integration, linkedCount, portalUrl }: DiscordIntegrationFormProps) {
@@ -567,6 +587,7 @@ export function DiscordIntegrationForm({ integration, linkedCount, portalUrl }: 
     clientId: integration?.clientId ?? "",
     clientSecret: integration?.clientSecret ?? "",
     guildId: integration?.guildId ?? "",
+    serverInviteCode: integration?.serverInviteCode ?? "",
     platformName: integration?.platformName ?? "Plex Wrapped",
     instructions: integration?.instructions ?? "",
   }
@@ -657,34 +678,23 @@ export function DiscordIntegrationForm({ integration, linkedCount, portalUrl }: 
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <input
-            id="discord-enabled"
-            type="checkbox"
-            checked={formData.isEnabled}
-            onChange={(e) => setFormData({ ...formData, isEnabled: e.target.checked })}
-            disabled={isPending}
-            className="h-4 w-4 rounded border-slate-600 text-cyan-500 focus:ring-cyan-400"
-          />
-          <label htmlFor="discord-enabled" className="text-sm text-white">
-            Enable Discord Linked Roles
-          </label>
-        </div>
-        <div className="flex items-center gap-2">
-          <input
-            id="discord-bot-enabled"
-            type="checkbox"
-            checked={formData.botEnabled}
-            onChange={(e) => setFormData({ ...formData, botEnabled: e.target.checked })}
-            disabled={isPending}
-            className="h-4 w-4 rounded border-slate-600 text-cyan-500 focus:ring-cyan-400"
-          />
-          <label htmlFor="discord-bot-enabled" className="text-sm text-white">
-            Enable Discord Bot
-          </label>
-          <span className="text-xs text-slate-400">(runs automatically when enabled)</span>
-        </div>
+      <div className="space-y-4 p-4 bg-slate-900/30 border border-slate-700 rounded-lg">
+        <StyledCheckbox
+          id="discord-enabled"
+          checked={formData.isEnabled}
+          onChange={(e) => setFormData({ ...formData, isEnabled: e.target.checked })}
+          disabled={isPending}
+          label="Enable Discord Linked Roles"
+          description="Allow users to link their Discord account and verify Plex access through Discord Linked Roles"
+        />
+        <StyledCheckbox
+          id="discord-bot-enabled"
+          checked={formData.botEnabled}
+          onChange={(e) => setFormData({ ...formData, botEnabled: e.target.checked })}
+          disabled={isPending}
+          label="Enable Discord Bot"
+          description="Automatically monitor support channels and verify user roles (runs automatically when enabled)"
+        />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -727,6 +737,26 @@ export function DiscordIntegrationForm({ integration, linkedCount, portalUrl }: 
           />
         </div>
         <div>
+          <label className="block text-xs font-medium text-slate-400 mb-1">
+            Server Invite Code <span className="text-slate-500 font-normal">(optional)</span>
+          </label>
+          <StyledInput
+            type="text"
+            value={formData.serverInviteCode}
+            onChange={(e) => {
+              const value = e.target.value
+              // Parse Discord invite link if full URL is pasted
+              const parsedCode = parseDiscordInviteCode(value)
+              setFormData({ ...formData, serverInviteCode: parsedCode })
+            }}
+            placeholder="Discord invite code or full link (e.g., abc123 or https://discord.gg/abc123)"
+            disabled={isPending}
+          />
+          <p className="text-xs text-slate-500 mt-1">
+            Paste the invite code or full Discord invite link (e.g., https://discord.gg/axzpDYH6jz)
+          </p>
+        </div>
+        <div>
           <label className="block text-xs font-medium text-slate-400 mb-1">Platform Name</label>
           <StyledInput
             type="text"
@@ -740,12 +770,15 @@ export function DiscordIntegrationForm({ integration, linkedCount, portalUrl }: 
 
       <div>
         <label className="block text-xs font-medium text-slate-400 mb-1">
-          Support Instructions <span className="text-slate-500 font-normal">(optional)</span>
+          Server Notes for Onboarding <span className="text-slate-500 font-normal">(optional)</span>
         </label>
+        <p className="text-xs text-slate-500 mb-2">
+          Custom notes displayed to users during the onboarding guide's Discord support step. Use this to provide server-specific instructions or important information.
+        </p>
         <textarea
           value={formData.instructions}
           onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
-          placeholder="Shown to admins for sharing setup instructions"
+          placeholder="e.g., Join our Discord server and mention your username in #support for faster help..."
           disabled={isPending}
           className="w-full min-h-[120px] bg-slate-900 text-white border border-slate-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
         />

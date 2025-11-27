@@ -258,3 +258,54 @@ export async function updateDiscordRoleConnection({
   }
 }
 
+/**
+ * Check if a Discord user is a member of a specific guild (server)
+ * Requires a bot token with appropriate permissions
+ *
+ * @param botToken - Your Discord bot token
+ * @param guildId - The Discord server (guild) ID
+ * @param userId - The Discord user ID to check
+ * @returns True if user is a member, false otherwise
+ */
+export async function checkGuildMembership(
+  botToken: string,
+  guildId: string,
+  userId: string
+): Promise<boolean> {
+  try {
+    const response = await fetch(`${DISCORD_API_BASE}/guilds/${guildId}/members/${userId}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bot ${botToken}`,
+      },
+    })
+
+    if (response.status === 404) {
+      // User is not a member of the guild
+      return false
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "")
+      logger.error("Failed to check Discord guild membership", undefined, {
+        status: response.status,
+        body: errorText,
+        guildId,
+        userId,
+      })
+      // If we can't determine, assume false to be safe
+      return false
+    }
+
+    // User is a member (200 OK)
+    return true
+  } catch (error) {
+    logger.error("Error checking Discord guild membership", error instanceof Error ? error : undefined, {
+      guildId,
+      userId,
+    })
+    // If we can't determine, assume false to be safe
+    return false
+  }
+}
+

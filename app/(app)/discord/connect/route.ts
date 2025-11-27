@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(url)
   } catch (error) {
     const reason = error instanceof Error ? error.message : "Discord linking unavailable"
-    const fallback = new URL("/discord/link", request.url)
+    const fallback = new URL("/", request.url)
     fallback.searchParams.set("error", reason)
     return NextResponse.redirect(fallback)
   }

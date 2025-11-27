@@ -470,5 +470,58 @@ describe("chatbot sources tracking", () => {
       expect(response.message?.sources?.[0].description).toContain("sessions")
     })
   })
+
+  describe("LLM disabled scenarios", () => {
+    it("should return disabled message when LLM is disabled and not call OpenAI", async () => {
+      mockPrisma.config.findUnique.mockResolvedValue({
+        llmDisabled: true,
+      } as any)
+
+      const messages: ChatMessage[] = [
+        {
+          role: "user",
+          content: "Check Plex status",
+          timestamp: Date.now(),
+        },
+      ]
+
+      const response = await chatWithAdminBot(messages)
+
+      expect(response.success).toBe(true)
+      expect(response.message?.content).toContain("AI features are currently disabled")
+      expect(response.message?.content).toContain("configure a chat OpenAI model")
+      expect(mockCallChatLLM).not.toHaveBeenCalled()
+      expect(mockPrisma.chatConversation.create).not.toHaveBeenCalled()
+    })
+
+    it("should return disabled message when LLM is disabled even with provider configured", async () => {
+      mockPrisma.config.findUnique.mockResolvedValue({
+        llmDisabled: true,
+      } as any)
+
+      // Even if provider exists, should not use it
+      mockPrisma.lLMProvider.findFirst.mockResolvedValue({
+        id: "provider-1",
+        provider: "openai",
+        apiKey: "test-key",
+        model: "gpt-4",
+        isActive: true,
+      } as any)
+
+      const messages: ChatMessage[] = [
+        {
+          role: "user",
+          content: "Hello",
+          timestamp: Date.now(),
+        },
+      ]
+
+      const response = await chatWithAdminBot(messages)
+
+      expect(response.success).toBe(true)
+      expect(response.message?.content).toContain("AI features are currently disabled")
+      expect(mockCallChatLLM).not.toHaveBeenCalled()
+    })
+  })
 })
 

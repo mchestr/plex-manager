@@ -156,7 +156,11 @@ export default function InvitePage() {
             transition={{ delay: 0.4, duration: 0.6 }}
             className="text-slate-300 mb-6 sm:mb-8 text-sm sm:text-base leading-relaxed px-2"
           >
-            You've been invited to join the Plex Server. Sign in with your Plex account to accept.
+            You've been invited to join{" "}
+            <span className="font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+              {serverName}
+            </span>
+            . Sign in with your Plex account to accept.
           </motion.p>
 
           <motion.div

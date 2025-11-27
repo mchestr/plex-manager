@@ -15,6 +15,7 @@ interface UserDashboardProps {
   isAdmin: boolean
   discordEnabled: boolean
   discordConnection: DashboardDiscordConnection | null
+  serverInviteCode?: string | null
 }
 
 export function UserDashboard({
@@ -24,6 +25,7 @@ export function UserDashboard({
   isAdmin,
   discordEnabled,
   discordConnection,
+  serverInviteCode,
 }: UserDashboardProps) {
   const router = useRouter()
 
@@ -37,14 +39,6 @@ export function UserDashboard({
     <ChatProvider>
       <div className="relative min-h-screen flex flex-col bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
         <header className="w-full p-4 flex items-center justify-end gap-4 z-20">
-          {discordEnabled && (
-            <Link
-              href="/discord/link"
-              className="px-4 py-2 text-sm font-medium text-indigo-400 hover:text-indigo-300 transition-colors rounded-lg hover:bg-white/5"
-            >
-              Discord Support
-            </Link>
-          )}
           {isAdmin && (
             <Link
               href="/admin"
@@ -67,7 +61,7 @@ export function UserDashboard({
               <section className="rounded-3xl border border-white/10 bg-slate-950/70 p-6 sm:p-10 shadow-2xl shadow-black/40 ring-1 ring-white/10 backdrop-blur">
                 <WrappedHomeButton userId={userId} serverName={serverName} />
               </section>
-              {discordEnabled && <DiscordLinkCallout connection={discordConnection} isEnabled={discordEnabled} />}
+              {discordEnabled && <DiscordLinkCallout connection={discordConnection} isEnabled={discordEnabled} serverInviteCode={serverInviteCode} />}
             </div>
           </div>
         </main>

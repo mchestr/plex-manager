@@ -1,32 +1,34 @@
 "use client"
 
 import { generateAllPlexWrapped } from "@/actions/users"
+import { useToast } from "@/components/ui/toast"
 import Link from "next/link"
 import { useState } from "react"
 
 export function UserManagement() {
+  const toast = useToast()
   const [isGenerating, setIsGenerating] = useState(false)
-  const [generateResult, setGenerateResult] = useState<{
-    success: boolean
-    generated: number
-    failed: number
-    errors: string[]
-  } | null>(null)
 
   const handleGenerateAllWrapped = async () => {
     setIsGenerating(true)
-    setGenerateResult(null)
     try {
       const currentYear = new Date().getFullYear()
       const result = await generateAllPlexWrapped(currentYear)
-      setGenerateResult(result)
+      if (result.success) {
+        const message = `Generation complete! Generated: ${result.generated}, Failed: ${result.failed}`
+        if (result.errors.length > 0) {
+          toast.showError(`${message}. ${result.errors.length} error(s) occurred.`, 8000)
+          result.errors.forEach((error) => {
+            toast.showError(error, 6000)
+          })
+        } else {
+          toast.showSuccess(message, 5000)
+        }
+      } else {
+        toast.showError("Failed to generate wrapped", 5000)
+      }
     } catch (error) {
-      setGenerateResult({
-        success: false,
-        generated: 0,
-        failed: 0,
-        errors: [error instanceof Error ? error.message : "Failed to generate wrapped"],
-      })
+      toast.showError(error instanceof Error ? error.message : "Failed to generate wrapped", 5000)
     } finally {
       setIsGenerating(false)
     }
@@ -87,38 +89,6 @@ export function UserManagement() {
             "Generate All Wrapped"
           )}
         </button>
-
-        {generateResult && (
-          <div
-            className={`mt-4 p-4 rounded-md ${
-              generateResult.success
-                ? "bg-green-900/30 border border-green-500/50"
-                : "bg-red-900/30 border border-red-500/50"
-            }`}
-          >
-            <p
-              className={`text-sm font-medium mb-2 ${
-                generateResult.success ? "text-green-300" : "text-red-300"
-              }`}
-            >
-              {generateResult.success ? "Generation Complete!" : "Error"}
-            </p>
-            <div className="text-sm text-slate-300 space-y-1">
-              <p>Generated: {generateResult.generated}</p>
-              <p>Failed: {generateResult.failed}</p>
-              {generateResult.errors.length > 0 && (
-                <div className="mt-2">
-                  <p className="text-red-300 font-medium">Errors:</p>
-                  <ul className="list-disc list-inside text-red-200 max-h-32 overflow-y-auto">
-                    {generateResult.errors.map((error, idx) => (
-                      <li key={idx}>{error}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )

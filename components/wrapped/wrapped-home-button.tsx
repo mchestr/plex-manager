@@ -2,6 +2,7 @@
 
 import { getWrappedSettings } from "@/actions/admin"
 import { generatePlexWrapped, getUserPlexWrapped } from "@/actions/users"
+import { useToast } from "@/components/ui/toast"
 import { WrappedGeneratingAnimation } from "@/components/generator/wrapped-generating-animation"
 import { WrappedShareButton } from "@/components/wrapped/wrapped-share-button"
 import Link from "next/link"
@@ -14,10 +15,10 @@ interface WrappedHomeButtonProps {
 }
 
 export function WrappedHomeButton({ userId, serverName }: WrappedHomeButtonProps) {
+  const toast = useToast()
   const router = useRouter()
   const [isGenerating, setIsGenerating] = useState(false)
   const [wrapped, setWrapped] = useState<any>(null)
-  const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [wrappedSettings, setWrappedSettings] = useState<{ enabled: boolean; year: number } | null>(null)
 
@@ -39,16 +40,15 @@ export function WrappedHomeButton({ userId, serverName }: WrappedHomeButtonProps
     if (!userId || !wrappedSettings) return
 
     setIsLoading(true)
-    setError(null)
     try {
       const wrappedData = await getUserPlexWrapped(userId, wrappedYear)
       setWrapped(wrappedData)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load wrapped")
+      toast.showError(err instanceof Error ? err.message : "Failed to load wrapped")
     } finally {
       setIsLoading(false)
     }
-  }, [userId, wrappedYear, wrappedSettings])
+  }, [userId, wrappedYear, wrappedSettings, toast])
 
   useEffect(() => {
     if (userId && wrappedSettings) {
@@ -77,7 +77,7 @@ export function WrappedHomeButton({ userId, serverName }: WrappedHomeButtonProps
         } else if (wrappedData?.status === "failed") {
           setIsGenerating(false)
           clearInterval(pollInterval)
-          setError(wrappedData.error || "Failed to generate wrapped")
+          toast.showError(wrappedData.error || "Failed to generate wrapped")
         }
       } catch (err) {
         console.error("Error polling wrapped status:", err)
@@ -85,24 +85,23 @@ export function WrappedHomeButton({ userId, serverName }: WrappedHomeButtonProps
     }, 2000) // Poll every 2 seconds
 
     return () => clearInterval(pollInterval)
-  }, [userId, isGenerating, wrapped?.status, wrappedYear, router, loadWrapped])
+  }, [userId, isGenerating, wrapped?.status, wrappedYear, router, loadWrapped, toast])
 
   const handleGenerate = async () => {
     if (!userId) return
 
     setIsGenerating(true)
-    setError(null)
     try {
       const result = await generatePlexWrapped(userId, wrappedYear)
       if (result.success) {
         // Reload wrapped data
         await loadWrapped()
       } else {
-        setError(result.error || "Failed to generate wrapped")
+        toast.showError(result.error || "Failed to generate wrapped")
         setIsGenerating(false)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to generate wrapped")
+      toast.showError(err instanceof Error ? err.message : "Failed to generate wrapped")
       setIsGenerating(false)
     }
   }
@@ -148,11 +147,6 @@ export function WrappedHomeButton({ userId, serverName }: WrappedHomeButtonProps
         <p className="text-sm text-slate-400 text-center max-w-xl">
           Your personalized viewing summary is ready!
         </p>
-        {error && (
-          <div className="w-full max-w-md p-4 bg-red-900/30 border border-red-500/50 rounded-lg">
-            <p className="text-sm text-red-300 text-center">{error}</p>
-          </div>
-        )}
         <Link
           href="/wrapped"
           className="px-12 py-6 flex items-center justify-center gap-3 text-white text-xl font-semibold rounded-xl bg-gradient-to-r from-cyan-600 via-purple-600 to-pink-600 hover:from-cyan-500 hover:via-purple-500 hover:to-pink-500 transition-all duration-200 shadow-lg"
@@ -220,16 +214,13 @@ export function WrappedHomeButton({ userId, serverName }: WrappedHomeButtonProps
     )
   }
 
-  // Show message if wrapped is disabled
+  // Show only server name if wrapped is disabled or not in time range
   if (wrappedSettings && !wrappedSettings.enabled) {
     return (
       <div className="flex flex-col items-center gap-6">
         <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-center mb-4 bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent px-4">
           {heroTitle}
         </h1>
-        <p className="text-sm text-slate-400 text-center max-w-xl">
-          Wrapped generation is currently disabled. Please check back later or contact your administrator.
-        </p>
       </div>
     )
   }
@@ -243,11 +234,6 @@ export function WrappedHomeButton({ userId, serverName }: WrappedHomeButtonProps
       <p className="text-sm text-slate-400 text-center max-w-xl">
         Your personalized year-end summary of movies and shows you watched
       </p>
-      {error && (
-        <div className="w-full max-w-md p-4 bg-red-900/30 border border-red-500/50 rounded-lg">
-          <p className="text-sm text-red-300 text-center">{error}</p>
-        </div>
-      )}
       <button
         onClick={handleGenerate}
         disabled={isGenerating || !wrappedSettings?.enabled}

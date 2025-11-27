@@ -1,5 +1,5 @@
-import { render, screen, waitFor } from '@testing-library/react'
 import { WrappedGeneratingAnimation } from '@/components/generator/wrapped-generating-animation'
+import { act, render, screen } from '@testing-library/react'
 
 describe('WrappedGeneratingAnimation', () => {
   beforeEach(() => {
@@ -136,13 +136,19 @@ describe('WrappedGeneratingAnimation', () => {
       const phraseContainer = screen.getByText('|').parentElement
 
       // Fast forward through typing animation (80ms per char * ~50 chars)
-      jest.advanceTimersByTime(4000)
+      act(() => {
+        jest.advanceTimersByTime(4000)
+      })
 
       // Fast forward through display time (2500ms)
-      jest.advanceTimersByTime(2500)
+      act(() => {
+        jest.advanceTimersByTime(2500)
+      })
 
       // Fast forward through next typing animation
-      jest.advanceTimersByTime(4000)
+      act(() => {
+        jest.advanceTimersByTime(4000)
+      })
 
       // Phrase should have changed (cursor should still be there)
       expect(screen.getByText('|')).toBeInTheDocument()
@@ -178,9 +184,9 @@ describe('WrappedGeneratingAnimation', () => {
       const svg = container.querySelector('svg')
       expect(svg).toBeInTheDocument()
 
-      // Check for main body parts (ellipses for body, head, tail, legs)
-      const ellipses = svg?.querySelectorAll('ellipse')
-      expect(ellipses && ellipses.length).toBeGreaterThan(5) // body, head, tail, legs
+      // Check for main body parts (paths for body, head, tail, legs)
+      const paths = svg?.querySelectorAll('path')
+      expect(paths && paths.length).toBeGreaterThan(5) // body, head, tail, legs, arms
     })
 
     it('should render dinosaur with eye', () => {

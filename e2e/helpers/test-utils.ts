@@ -61,9 +61,14 @@ export async function waitForLoadingGone(page: Page, timeout = 15000): Promise<v
 export async function verifyPageAccessible(page: Page): Promise<void> {
   await waitForLoadingGone(page);
 
+  // Check using testid first (more reliable)
+  const unauthorizedErrorPage = page.getByTestId('unauthorized-error-page');
+  const accessDeniedHeading = page.getByTestId('access-denied-heading');
   const unauthorizedError = page.getByText('401', { exact: true });
   const accessDeniedError = page.getByText('Access Denied');
 
+  await expect(unauthorizedErrorPage).not.toBeVisible();
+  await expect(accessDeniedHeading).not.toBeVisible();
   await expect(unauthorizedError).not.toBeVisible();
   await expect(accessDeniedError).not.toBeVisible();
 }
@@ -76,15 +81,43 @@ export async function verifyPageUnauthorized(page: Page): Promise<void> {
   await waitForLoadingGone(page);
 
   // Check for either 401 error (unauthenticated) or Access Denied (authenticated non-admin)
+  // Try using testid first for more reliable detection
+  const unauthorizedErrorPage = page.getByTestId('unauthorized-error-page');
+  const accessDeniedHeading = page.getByTestId('access-denied-heading');
   const unauthorizedError = page.getByText('401', { exact: true });
   const accessDeniedError = page.getByText('Access Denied');
 
-  // At least one should be visible
-  const is401Visible = await unauthorizedError.isVisible().catch(() => false);
-  const isAccessDeniedVisible = await accessDeniedError.isVisible().catch(() => false);
+  // Wait a bit for error boundary to render
+  await page.waitForTimeout(500);
 
-  if (!is401Visible && !isAccessDeniedVisible) {
-    throw new Error('Expected to see either "401" or "Access Denied" error, but neither was found');
+  // Check for testid first (more reliable)
+  const isUnauthorizedPageVisible = await unauthorizedErrorPage.isVisible().catch(() => false);
+  const isAccessDeniedHeadingVisible = await accessDeniedHeading.isVisible().catch(() => false);
+
+  // Fallback to text-based checks
+  const is401Visible = await unauthorizedError.isVisible().catch(() => false);
+  const isAccessDeniedTextVisible = await accessDeniedError.isVisible().catch(() => false);
+
+  const isUnauthorized = isUnauthorizedPageVisible || isAccessDeniedHeadingVisible || is401Visible || isAccessDeniedTextVisible;
+
+  if (!isUnauthorized) {
+    // Check if we're seeing a 404 page instead
+    const notFoundHeading = page.getByRole('heading', { name: '404' });
+    const is404Visible = await notFoundHeading.isVisible().catch(() => false);
+
+    if (is404Visible) {
+      throw new Error(
+        `Expected to see either "401" or "Access Denied" error, but got 404 page instead. ` +
+        `This suggests the error thrown in the admin layout isn't being caught by the error boundary. ` +
+        `The route exists but Next.js is treating the authentication error as a missing route. ` +
+        `URL: ${page.url()}`
+      );
+    }
+
+    throw new Error(
+      `Expected to see either "401" or "Access Denied" error, but neither was found. ` +
+      `URL: ${page.url()}`
+    );
   }
 }
 

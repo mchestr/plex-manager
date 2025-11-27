@@ -54,6 +54,7 @@ export default async function Home() {
         isAdmin={session.user.isAdmin}
         discordEnabled={discordEnabled}
         discordConnection={discordConnectionSummary}
+        serverInviteCode={discordIntegration?.serverInviteCode ?? null}
       />
     );
   }

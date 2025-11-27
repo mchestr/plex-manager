@@ -20,9 +20,24 @@ test.describe('Admin Functionality', () => {
   });
 
   test('should access admin users list', async ({ adminPage }) => {
-    // Already on /admin/users; just verify content
+    // Already on /admin/users; verify heading first
     await waitForAdminContent(adminPage, [
-      { type: 'heading', value: 'Users' },
+      { type: 'heading', value: 'Users' }
+    ], { timeout: 30000 });
+
+    // The default filter is "Plex Access: Yes", which may filter out the admin user
+    // Change filter to "All" to see all users including admin
+    const plexAccessFilter = adminPage.getByTestId('users-filter-plex-access');
+    await plexAccessFilter.click();
+
+    // Wait for dropdown to open and click "All" option
+    await adminPage.getByTestId('users-filter-plex-access-option-all').click();
+
+    // Wait a moment for the filter to apply
+    await adminPage.waitForTimeout(500);
+
+    // Now verify all users are visible
+    await waitForAdminContent(adminPage, [
       { type: 'text', value: 'Admin User' },
       { type: 'text', value: 'admin@example.com' },
       { type: 'text', value: 'Regular User' },

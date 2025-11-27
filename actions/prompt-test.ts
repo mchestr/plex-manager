@@ -47,6 +47,20 @@ export async function testPromptTemplate(input: TestPromptInput) {
 
     // If sendToAI is true, use the configured LLM provider from database
     if (input.sendToAI) {
+      // Check if LLM is disabled in config
+      const appConfig = await prisma.config.findUnique({
+        where: { id: "config" },
+        select: { llmDisabled: true },
+      })
+
+      if (appConfig?.llmDisabled) {
+        return {
+          success: false,
+          renderedPrompt,
+          error: "LLM calls are currently disabled. Please enable LLM in admin settings to test prompts with AI.",
+        }
+      }
+
       // Get active LLM provider for wrapped generation
       const llmProvider = await prisma.lLMProvider.findFirst({
         where: { isActive: true, purpose: "wrapped" },

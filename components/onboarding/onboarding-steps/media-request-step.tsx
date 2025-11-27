@@ -25,7 +25,7 @@ export function MediaRequestStep({ onComplete, onBack, overseerrUrl }: MediaRequ
           </div>
         </div>
 
-        <h2 className="text-2xl font-bold text-white">
+        <h2 data-testid="onboarding-media-request-heading" className="text-2xl font-bold text-white">
           Requesting Media
         </h2>
         <p className="text-slate-300 text-base">
@@ -80,12 +80,14 @@ export function MediaRequestStep({ onComplete, onBack, overseerrUrl }: MediaRequ
       >
         <button
           onClick={onBack}
+          data-testid="onboarding-media-request-back"
           className="px-4 py-2 text-slate-400 hover:text-white transition-colors font-medium"
         >
           Back
         </button>
         <button
           onClick={onComplete}
+          data-testid="onboarding-media-request-continue"
           className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors"
         >
           Next

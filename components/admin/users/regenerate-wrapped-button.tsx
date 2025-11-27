@@ -1,6 +1,7 @@
 "use client"
 
 import { generatePlexWrapped } from "@/actions/users"
+import { useToast } from "@/components/ui/toast"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { ConfirmModal } from "@/components/admin/shared/confirm-modal"
@@ -18,15 +19,14 @@ export function RegenerateWrappedButton({
   onSuccess,
   inline = false,
 }: RegenerateWrappedButtonProps) {
+  const toast = useToast()
   const [isRegenerating, setIsRegenerating] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [showSuccess, setShowSuccess] = useState(false)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const router = useRouter()
 
   const handleRegenerate = async () => {
     setIsRegenerating(true)
-    setError(null)
     setShowSuccess(false)
 
     try {
@@ -38,15 +38,16 @@ export function RegenerateWrappedButton({
 
         // Show success flash indicator
         setShowSuccess(true)
+        toast.showSuccess("Wrapped regeneration started successfully")
         // Hide success message after 3 seconds
         setTimeout(() => {
           setShowSuccess(false)
         }, 3000)
       } else {
-        setError(result.error || "Failed to regenerate wrapped")
+        toast.showError(result.error || "Failed to regenerate wrapped")
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to regenerate wrapped")
+      toast.showError(err instanceof Error ? err.message : "Failed to regenerate wrapped")
     } finally {
       setIsRegenerating(false)
     }
@@ -115,9 +116,6 @@ export function RegenerateWrappedButton({
             {isRegenerating ? "Regenerating..." : showSuccess ? "Started!" : "Regenerate Wrapped"}
           </span>
         </button>
-        {error && (
-          <span className="text-xs text-red-400 mt-1">{error}</span>
-        )}
         <ConfirmModal
           isOpen={showConfirmModal}
           onClose={() => setShowConfirmModal(false)}
@@ -204,16 +202,6 @@ export function RegenerateWrappedButton({
             </>
           )}
         </button>
-        {error && (
-          <span className="text-xs text-red-400 truncate" title={error}>
-            {error}
-          </span>
-        )}
-        {showSuccess && !error && (
-          <span className="text-xs text-green-400 truncate animate-pulse">
-            Started!
-          </span>
-        )}
       </div>
 
       <ConfirmModal

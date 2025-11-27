@@ -44,12 +44,6 @@ jest.mock('@/components/onboarding/onboarding-steps', () => ({
       <button onClick={onComplete}>Next</button>
     </div>
   ),
-  ReportIssuesStep: ({ onComplete, onBack }: any) => (
-    <div data-testid="report-issues-step">
-      <button onClick={onBack}>Back</button>
-      <button onClick={onComplete}>Finish</button>
-    </div>
-  ),
   DiscordSupportStep: ({ onComplete, onBack }: any) => (
     <div data-testid="discord-support-step">
       <button onClick={onBack}>Back</button>
@@ -137,15 +131,7 @@ describe('OnboardingWizard', () => {
     expect(screen.getByTestId('success-animation')).toBeInTheDocument()
     fireEvent.click(screen.getByTestId('success-animation'))
 
-    // Step 4: Report Issues
-    expect(screen.getByTestId('report-issues-step')).toBeInTheDocument()
-    fireEvent.click(screen.getByText('Finish'))
-
-    // Success Animation -> Next Step
-    expect(screen.getByTestId('success-animation')).toBeInTheDocument()
-    fireEvent.click(screen.getByTestId('success-animation'))
-
-    // Step 5: Discord Support
+    // Step 4: Discord Support
     expect(screen.getByTestId('discord-support-step')).toBeInTheDocument()
     fireEvent.click(screen.getByText('Next'))
 
@@ -153,7 +139,7 @@ describe('OnboardingWizard', () => {
     expect(screen.getByTestId('success-animation')).toBeInTheDocument()
     fireEvent.click(screen.getByTestId('success-animation'))
 
-    // Step 6: Final
+    // Step 5: Final
     expect(screen.getByTestId('final-step')).toBeInTheDocument()
     fireEvent.click(screen.getByText('Go to Dashboard'))
 

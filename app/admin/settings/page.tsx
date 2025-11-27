@@ -105,16 +105,6 @@ export default async function SettingsPage() {
                     <div className="text-xs font-medium text-slate-400 mb-1">Node.js Version</div>
                     <div className="text-sm text-white font-mono">{nodeVersion}</div>
                   </div>
-                  <div>
-                    <div className="text-xs font-medium text-slate-400 mb-1">LLM Feature</div>
-                    <div className="flex items-center gap-2">
-                      <FeatureStatusBadge
-                        featureName="LLM"
-                        enabled={!settings.config.llmDisabled}
-                      />
-                      <LLMToggle disabled={settings.config.llmDisabled} />
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
@@ -122,13 +112,24 @@ export default async function SettingsPage() {
             {/* LLM Configuration */}
             <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg overflow-hidden">
               <div className="p-4 border-b border-slate-700">
-                <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-                  <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                  </svg>
-                  LLM Configuration
-                </h2>
-                <p className="text-xs text-slate-400 mt-1">AI provider and model settings for chat assistant and wrapped generation</p>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                      <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                      </svg>
+                      LLM Configuration
+                    </h2>
+                    <p className="text-xs text-slate-400 mt-1">AI provider and model settings for chat assistant and wrapped generation</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <FeatureStatusBadge
+                      featureName="LLM"
+                      enabled={!settings.config.llmDisabled}
+                    />
+                    <LLMToggle disabled={settings.config.llmDisabled} />
+                  </div>
+                </div>
               </div>
               <div className="p-4 space-y-6">
                 {/* Chat Assistant Configuration */}
@@ -168,7 +169,11 @@ export default async function SettingsPage() {
                   <div className="space-y-4">
                     <WrappedSettingsForm
                       enabled={settings.config.wrappedEnabled ?? true}
-                      year={settings.config.wrappedYear}
+                      year={settings.config.wrappedGenerationStartDate
+                        ? new Date(settings.config.wrappedGenerationStartDate).getFullYear()
+                        : new Date().getFullYear()}
+                      startDate={settings.config.wrappedGenerationStartDate}
+                      endDate={settings.config.wrappedGenerationEndDate}
                     />
                     <div className="pt-4 border-t border-slate-700">
                       <LLMProviderForm
@@ -179,7 +184,7 @@ export default async function SettingsPage() {
                   </div>
                 </div>
 
-                {/* Discord Bot Configuration */}
+                {/* Discord Configuration */}
                 <div className="border border-slate-700 rounded-lg p-4">
                   <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
@@ -187,12 +192,12 @@ export default async function SettingsPage() {
                         <svg className="w-4 h-4 text-indigo-400" fill="currentColor" viewBox="0 0 24 24">
                           <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.582.074.074 0 0 1 .06-.053c.05-.025.1-.051.151-.075a.075.075 0 0 1 .079.007c.04.03.08.062.116.098a.077.077 0 0 1 .021.075c-.016.03-.036.06-.054.089a.074.074 0 0 1-.041.034c-.05.012-.102.023-.152.033a.077.077 0 0 0-.058.043c-.047.105-.09.212-.13.321a.076.076 0 0 0 .021.08c.49.49 1.043.905 1.66 1.226a.077.077 0 0 0 .084-.01c.405-.363.765-.77 1.076-1.214a.074.074 0 0 0-.041-.11c-.61-.227-1.19-.52-1.733-.874a.077.077 0 0 1-.007-.128c.12-.09.246-.174.38-.253a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.134.08.26.163.38.253a.077.077 0 0 1-.006.127c-.543.355-1.123.648-1.733.875a.076.076 0 0 0-.041.11c.31.443.67.85 1.075 1.214a.077.077 0 0 0 .084.01c.617-.32 1.17-.736 1.66-1.226a.076.076 0 0 0 .022-.08c-.04-.11-.083-.217-.13-.322a.077.077 0 0 0-.057-.043c-.05-.01-.102-.02-.152-.033a.074.074 0 0 1-.041-.034c-.019-.03-.038-.06-.054-.09a.077.077 0 0 1 .021-.075c.036-.036.075-.068.116-.098a.075.075 0 0 1 .079-.007c.05.024.1.05.151.075a.074.074 0 0 1 .06.053c.026.033.057.063.085.095a.073.073 0 0 1 .026.063.076.076 0 0 1-.021.086c-.025.03-.051.06-.08.087a.08.08 0 0 1-.079.028 13.105 13.105 0 0 1-1.874.892.077.077 0 0 0-.041.107c.35.698.764 1.362 1.226 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
                         </svg>
-                        Discord Bot
+                        Discord
                       </h3>
                       <p className="text-xs text-slate-400 mt-1">Discord Linked Roles integration and bot configuration</p>
                     </div>
                     <FeatureStatusBadge
-                      featureName="Discord Bot"
+                      featureName="Discord"
                       enabled={Boolean(settings.discordIntegration?.isEnabled)}
                     />
                   </div>

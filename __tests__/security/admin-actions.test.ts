@@ -108,7 +108,6 @@ describe('Admin Actions Security', () => {
           id: 'config',
           llmDisabled: false,
           wrappedEnabled: true,
-          wrappedYear: expect.any(Number),
         },
       })
       expect(result.id).toBe('config')

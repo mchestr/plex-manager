@@ -1,6 +1,7 @@
-import { render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import * as userActions from '@/actions/users'
+import { ToastProvider } from '@/components/ui/toast'
+import { render, screen, waitFor } from '@testing-library/react'
+import React from 'react'
 
 // Mock the admin actions first (before component import)
 jest.mock('@/actions/admin', () => ({
@@ -36,8 +37,12 @@ jest.mock('../wrapped/wrapped-share-button', () => ({
 }))
 
 // Import component after mocks
-import { WrappedHomeButton } from '@/components/wrapped/wrapped-home-button'
 import * as adminActions from '@/actions/admin'
+import { WrappedHomeButton } from '@/components/wrapped/wrapped-home-button'
+
+const renderWithToast = (component: React.ReactElement) => {
+  return render(<ToastProvider>{component}</ToastProvider>)
+}
 
 describe('WrappedHomeButton', () => {
   const currentYear = new Date().getFullYear()
@@ -55,7 +60,7 @@ describe('WrappedHomeButton', () => {
     it('should render generate button when no wrapped exists', async () => {
       jest.spyOn(userActions, 'getUserPlexWrapped').mockResolvedValue(null)
 
-      render(<WrappedHomeButton userId="user-1" serverName="My Server" />)
+      renderWithToast(<WrappedHomeButton userId="user-1" serverName="My Server" />)
 
       await waitFor(() => {
         expect(screen.getByText(/My Server/i)).toBeInTheDocument()
@@ -68,7 +73,7 @@ describe('WrappedHomeButton', () => {
         () => new Promise(() => {}) // Never resolves
       )
 
-      render(<WrappedHomeButton userId="user-1" serverName="My Server" />)
+      renderWithToast(<WrappedHomeButton userId="user-1" serverName="My Server" />)
 
       await waitFor(() => {
         const spinner = document.querySelector('.animate-spin')
@@ -84,7 +89,7 @@ describe('WrappedHomeButton', () => {
         shareToken: 'test-token',
       } as any)
 
-      render(<WrappedHomeButton userId="user-1" serverName="My Server" />)
+      renderWithToast(<WrappedHomeButton userId="user-1" serverName="My Server" />)
 
       const viewButton = await screen.findByText("Let's Get Started!", {}, { timeout: 2000 })
       expect(viewButton).toBeInTheDocument()
@@ -98,7 +103,7 @@ describe('WrappedHomeButton', () => {
         year: currentYear,
       } as any)
 
-      render(<WrappedHomeButton userId="user-1" serverName="My Server" />)
+      renderWithToast(<WrappedHomeButton userId="user-1" serverName="My Server" />)
 
       await waitFor(() => {
         expect(screen.getByText('Try Again')).toBeInTheDocument()
@@ -113,7 +118,7 @@ describe('WrappedHomeButton', () => {
         year: currentYear,
       } as any)
 
-      render(<WrappedHomeButton userId="user-1" serverName="My Server" />)
+      renderWithToast(<WrappedHomeButton userId="user-1" serverName="My Server" />)
 
       await waitFor(() => {
         expect(screen.getByTestId('generating-animation')).toBeInTheDocument()
@@ -125,7 +130,7 @@ describe('WrappedHomeButton', () => {
     it('should render generate button when no wrapped exists', async () => {
       jest.spyOn(userActions, 'getUserPlexWrapped').mockResolvedValue(null)
 
-      render(<WrappedHomeButton userId="user-1" serverName="My Server" />)
+      renderWithToast(<WrappedHomeButton userId="user-1" serverName="My Server" />)
 
       // Wait for button to appear (settings must load first)
       const generateButton = await screen.findByText(
@@ -144,23 +149,28 @@ describe('WrappedHomeButton', () => {
     it('should not load wrapped when userId is not provided', () => {
       const mockGetWrapped = jest.spyOn(userActions, 'getUserPlexWrapped')
 
-      render(<WrappedHomeButton userId="" serverName="My Server" />)
+      renderWithToast(<WrappedHomeButton userId="" serverName="My Server" />)
 
       // Should not call getUserPlexWrapped with empty userId
       expect(mockGetWrapped).not.toHaveBeenCalled()
     })
 
-    it('should handle wrapped settings not enabled', async () => {
+    it('should show only server name when wrapped settings not enabled', async () => {
       jest.spyOn(adminActions, 'getWrappedSettings').mockResolvedValue({
         wrappedEnabled: false,
         wrappedYear: currentYear,
       })
       jest.spyOn(userActions, 'getUserPlexWrapped').mockResolvedValue(null)
 
-      render(<WrappedHomeButton userId="user-1" serverName="My Server" />)
+      renderWithToast(<WrappedHomeButton userId="user-1" serverName="My Server" />)
 
       await waitFor(() => {
-        expect(screen.getByText(/Wrapped generation is currently disabled/i)).toBeInTheDocument()
+        // Component should show server name but no disabled message
+        expect(screen.getByText(/My Server/i)).toBeInTheDocument()
+        // Check that the disabled message is NOT present
+        expect(screen.queryByText(/Wrapped generation is currently disabled/i)).not.toBeInTheDocument()
+        // Check that wrapped generation button is NOT shown
+        expect(screen.queryByText(`Generate My ${currentYear} Wrapped`)).not.toBeInTheDocument()
       })
     })
   })

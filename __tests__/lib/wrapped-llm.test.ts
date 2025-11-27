@@ -59,7 +59,7 @@ describe('generateWrappedWithLLM', () => {
     jest.clearAllMocks()
   })
 
-  it('should return mock data when LLM is disabled', async () => {
+  it('should return mock data when LLM is disabled and NOT call OpenAI API', async () => {
     ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({
       id: 'config',
       llmDisabled: true,
@@ -89,6 +89,10 @@ describe('generateWrappedWithLLM', () => {
       'user-1',
       mockStatistics
     )
+    // Verify OpenAI API is NOT called
+    expect(callOpenAI).not.toHaveBeenCalled()
+    expect(generateWrappedPrompt).not.toHaveBeenCalled()
+    expect(prisma.lLMProvider.findFirst).not.toHaveBeenCalled()
     expect(prisma.lLMUsage.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({

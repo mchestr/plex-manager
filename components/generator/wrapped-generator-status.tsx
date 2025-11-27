@@ -1,6 +1,8 @@
 "use client"
 
+import { useToast } from "@/components/ui/toast"
 import Link from "next/link"
+import { useEffect } from "react"
 
 interface WrappedGeneratorStatusProps {
   status: "completed" | "generating" | "failed" | null
@@ -17,6 +19,15 @@ export function WrappedGeneratorStatus({
   isRegenerating,
   error,
 }: WrappedGeneratorStatusProps) {
+  const toast = useToast()
+
+  // Show error as toast when it appears
+  useEffect(() => {
+    if (error) {
+      toast.showError(error, 6000)
+    }
+  }, [error, toast])
+
   if (status === "completed") {
     return (
       <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6">
@@ -29,11 +40,6 @@ export function WrappedGeneratorStatus({
         <p className="text-slate-400 mb-4">
           Your Plex Wrapped for {year} has been generated!
         </p>
-        {error && (
-          <div className="mb-4 p-3 bg-red-900/30 border border-red-500/50 rounded-md">
-            <p className="text-sm text-red-300">{error}</p>
-          </div>
-        )}
         <Link
           href="/wrapped"
           className="inline-block px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-md text-sm font-medium transition-colors"
@@ -53,7 +59,6 @@ export function WrappedGeneratorStatus({
             Failed
           </span>
         </div>
-        {error && <p className="text-red-300 mb-4">{error}</p>}
         <button
           onClick={onRegenerate}
           disabled={isRegenerating}

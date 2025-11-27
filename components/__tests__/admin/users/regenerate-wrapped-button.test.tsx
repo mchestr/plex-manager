@@ -1,8 +1,10 @@
-import { render, screen, waitFor, act } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { RegenerateWrappedButton } from '@/components/admin/users/regenerate-wrapped-button'
 import * as usersAction from '@/actions/users'
+import { RegenerateWrappedButton } from '@/components/admin/users/regenerate-wrapped-button'
+import { ToastProvider } from '@/components/ui/toast'
+import { act, render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { useRouter } from 'next/navigation'
+import React from 'react'
 
 // Mock the users action
 jest.mock('@/actions/users', () => ({
@@ -29,6 +31,10 @@ jest.mock('@/components/admin/shared/confirm-modal', () => ({
   },
 }))
 
+const renderWithToast = (component: React.ReactElement) => {
+  return render(<ToastProvider>{component}</ToastProvider>)
+}
+
 describe('RegenerateWrappedButton', () => {
   const mockRefresh = jest.fn()
   const mockOnSuccess = jest.fn()
@@ -48,14 +54,14 @@ describe('RegenerateWrappedButton', () => {
 
   describe('Default (non-inline) mode', () => {
     it('should render the regenerate button', () => {
-      render(<RegenerateWrappedButton userId="user-1" />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" />)
       const button = screen.getByTitle('Regenerate wrapped')
       expect(button).toBeInTheDocument()
     })
 
     it('should show confirm modal when clicked', async () => {
       const user = userEvent.setup({ delay: null })
-      render(<RegenerateWrappedButton userId="user-1" year={2024} />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" year={2024} />)
       const button = screen.getByTitle('Regenerate wrapped')
 
       await user.click(button)
@@ -71,7 +77,7 @@ describe('RegenerateWrappedButton', () => {
 
     it('should close modal when cancel is clicked', async () => {
       const user = userEvent.setup({ delay: null })
-      render(<RegenerateWrappedButton userId="user-1" />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" />)
       const button = screen.getByTitle('Regenerate wrapped')
 
       await user.click(button)
@@ -89,7 +95,7 @@ describe('RegenerateWrappedButton', () => {
         success: true,
       })
 
-      render(<RegenerateWrappedButton userId="user-1" year={2024} />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" year={2024} />)
       const button = screen.getByTitle('Regenerate wrapped')
 
       await user.click(button)
@@ -109,7 +115,7 @@ describe('RegenerateWrappedButton', () => {
       })
       jest.spyOn(usersAction, 'generatePlexWrapped').mockReturnValue(generatePromise as any)
 
-      render(<RegenerateWrappedButton userId="user-1" />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" />)
       const button = screen.getByTitle('Regenerate wrapped')
 
       await user.click(button)
@@ -132,7 +138,7 @@ describe('RegenerateWrappedButton', () => {
         success: true,
       })
 
-      render(<RegenerateWrappedButton userId="user-1" />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" />)
       const button = screen.getByTitle('Regenerate wrapped')
 
       await user.click(button)
@@ -140,7 +146,11 @@ describe('RegenerateWrappedButton', () => {
       await user.click(confirmButton)
 
       await waitFor(() => {
-        expect(screen.getByText('Started!')).toBeInTheDocument()
+        // In non-inline mode, success shows green button with checkmark icon
+        const successButton = screen.getByTitle('Regenerate wrapped')
+        expect(successButton).toHaveClass('bg-green-600')
+        const checkmark = successButton.querySelector('svg')
+        expect(checkmark).toBeInTheDocument()
       })
     })
 
@@ -150,7 +160,7 @@ describe('RegenerateWrappedButton', () => {
         success: true,
       })
 
-      render(<RegenerateWrappedButton userId="user-1" />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" />)
       const button = screen.getByTitle('Regenerate wrapped')
 
       await user.click(button)
@@ -158,7 +168,9 @@ describe('RegenerateWrappedButton', () => {
       await user.click(confirmButton)
 
       await waitFor(() => {
-        expect(screen.getByText('Started!')).toBeInTheDocument()
+        // In non-inline mode, success shows green button with checkmark icon
+        const successButton = screen.getByTitle('Regenerate wrapped')
+        expect(successButton).toHaveClass('bg-green-600')
       })
 
       act(() => {
@@ -166,7 +178,10 @@ describe('RegenerateWrappedButton', () => {
       })
 
       await waitFor(() => {
-        expect(screen.queryByText('Started!')).not.toBeInTheDocument()
+        // After 3 seconds, button should return to purple (non-success state)
+        const button = screen.getByTitle('Regenerate wrapped')
+        expect(button).toHaveClass('bg-purple-600')
+        expect(button).not.toHaveClass('bg-green-600')
       })
     })
 
@@ -176,7 +191,7 @@ describe('RegenerateWrappedButton', () => {
         success: true,
       })
 
-      render(<RegenerateWrappedButton userId="user-1" onSuccess={mockOnSuccess} />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" onSuccess={mockOnSuccess} />)
       const button = screen.getByTitle('Regenerate wrapped')
 
       await user.click(button)
@@ -194,7 +209,7 @@ describe('RegenerateWrappedButton', () => {
         success: true,
       })
 
-      render(<RegenerateWrappedButton userId="user-1" />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" />)
       const button = screen.getByTitle('Regenerate wrapped')
 
       await user.click(button)
@@ -213,7 +228,7 @@ describe('RegenerateWrappedButton', () => {
         error: 'Failed to generate wrapped',
       })
 
-      render(<RegenerateWrappedButton userId="user-1" />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" />)
       const button = screen.getByTitle('Regenerate wrapped')
 
       await user.click(button)
@@ -231,7 +246,7 @@ describe('RegenerateWrappedButton', () => {
         success: false,
       })
 
-      render(<RegenerateWrappedButton userId="user-1" />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" />)
       const button = screen.getByTitle('Regenerate wrapped')
 
       await user.click(button)
@@ -249,7 +264,7 @@ describe('RegenerateWrappedButton', () => {
         new Error('Network error')
       )
 
-      render(<RegenerateWrappedButton userId="user-1" />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" />)
       const button = screen.getByTitle('Regenerate wrapped')
 
       await user.click(button)
@@ -265,7 +280,7 @@ describe('RegenerateWrappedButton', () => {
       const user = userEvent.setup({ delay: null })
       jest.spyOn(usersAction, 'generatePlexWrapped').mockRejectedValue('String error')
 
-      render(<RegenerateWrappedButton userId="user-1" />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" />)
       const button = screen.getByTitle('Regenerate wrapped')
 
       await user.click(button)
@@ -284,7 +299,7 @@ describe('RegenerateWrappedButton', () => {
         success: true,
       })
 
-      render(<RegenerateWrappedButton userId="user-1" />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" />)
       const button = screen.getByTitle('Regenerate wrapped')
 
       await user.click(button)
@@ -306,13 +321,13 @@ describe('RegenerateWrappedButton', () => {
 
   describe('Inline mode', () => {
     it('should render inline button with correct styling', () => {
-      render(<RegenerateWrappedButton userId="user-1" inline={true} />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" inline={true} />)
       const button = screen.getByTitle('Regenerate wrapped')
       expect(button).toHaveClass('w-full', 'flex', 'items-center', 'gap-2', 'text-sm')
     })
 
     it('should show "Regenerate Wrapped" text in inline mode', () => {
-      render(<RegenerateWrappedButton userId="user-1" inline={true} />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" inline={true} />)
       expect(screen.getByText('Regenerate Wrapped')).toBeInTheDocument()
     })
 
@@ -324,7 +339,7 @@ describe('RegenerateWrappedButton', () => {
       })
       jest.spyOn(usersAction, 'generatePlexWrapped').mockReturnValue(generatePromise as any)
 
-      render(<RegenerateWrappedButton userId="user-1" inline={true} />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" inline={true} />)
       const button = screen.getByTitle('Regenerate wrapped')
 
       await user.click(button)
@@ -344,7 +359,7 @@ describe('RegenerateWrappedButton', () => {
         success: true,
       })
 
-      render(<RegenerateWrappedButton userId="user-1" inline={true} />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" inline={true} />)
       const button = screen.getByTitle('Regenerate wrapped')
 
       await user.click(button)
@@ -363,7 +378,7 @@ describe('RegenerateWrappedButton', () => {
         error: 'Inline error',
       })
 
-      render(<RegenerateWrappedButton userId="user-1" inline={true} />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" inline={true} />)
       const button = screen.getByTitle('Regenerate wrapped')
 
       await user.click(button)
@@ -381,7 +396,7 @@ describe('RegenerateWrappedButton', () => {
         success: true,
       })
 
-      const { container } = render(<RegenerateWrappedButton userId="user-1" inline={true} />)
+      const { container } = renderWithToast(<RegenerateWrappedButton userId="user-1" inline={true} />)
 
       // Initial state - refresh icon
       let svg = container.querySelector('svg.text-purple-400')
@@ -403,7 +418,7 @@ describe('RegenerateWrappedButton', () => {
   describe('Confirm modal integration', () => {
     it('should pass correct props to ConfirmModal', async () => {
       const user = userEvent.setup({ delay: null })
-      render(<RegenerateWrappedButton userId="user-1" year={2023} />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" year={2023} />)
       const button = screen.getByTitle('Regenerate wrapped')
 
       await user.click(button)

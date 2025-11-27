@@ -34,6 +34,7 @@ export async function updateDiscordIntegrationSettings(data: Record<string, unkn
         clientId: parsed.clientId,
         clientSecret: parsed.clientSecret,
         guildId: parsed.guildId,
+        serverInviteCode: parsed.serverInviteCode,
         platformName: parsed.platformName,
         instructions: parsed.instructions,
         updatedBy: session.user.id,
@@ -45,6 +46,7 @@ export async function updateDiscordIntegrationSettings(data: Record<string, unkn
         clientId: parsed.clientId,
         clientSecret: parsed.clientSecret,
         guildId: parsed.guildId,
+        serverInviteCode: parsed.serverInviteCode,
         platformName: parsed.platformName,
         instructions: parsed.instructions,
         updatedBy: session.user.id,
@@ -73,6 +75,7 @@ export async function disconnectDiscordAccount() {
   try {
     await clearDiscordRoleForUser(session.user.id)
     revalidatePath("/discord/link")
+    revalidatePath("/")
     return { success: true }
   } catch (error) {
     logger.error("Failed to disconnect Discord account", error instanceof Error ? error : undefined)

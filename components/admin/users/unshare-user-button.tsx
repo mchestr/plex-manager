@@ -1,6 +1,7 @@
 "use client"
 
 import { unshareUserLibrary } from "@/actions/users"
+import { useToast } from "@/components/ui/toast"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { ConfirmModal } from "@/components/admin/shared/confirm-modal"
@@ -18,15 +19,14 @@ export function UnshareUserButton({
   onSuccess,
   inline = false,
 }: UnshareUserButtonProps) {
+  const toast = useToast()
   const [isUnsharing, setIsUnsharing] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [showSuccess, setShowSuccess] = useState(false)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const router = useRouter()
 
   const handleUnshare = async () => {
     setIsUnsharing(true)
-    setError(null)
     setShowSuccess(false)
 
     try {
@@ -38,15 +38,16 @@ export function UnshareUserButton({
 
         // Show success flash indicator
         setShowSuccess(true)
+        toast.showSuccess("Library access removed successfully")
         // Hide success message after 3 seconds
         setTimeout(() => {
           setShowSuccess(false)
         }, 3000)
       } else {
-        setError(result.error || "Failed to unshare library")
+        toast.showError(result.error || "Failed to unshare library")
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to unshare library")
+      toast.showError(err instanceof Error ? err.message : "Failed to unshare library")
     } finally {
       setIsUnsharing(false)
     }
@@ -115,9 +116,6 @@ export function UnshareUserButton({
             {isUnsharing ? "Unsharing..." : showSuccess ? "Unshared!" : "Unshare Library"}
           </span>
         </button>
-        {error && (
-          <span className="text-xs text-red-400 mt-1">{error}</span>
-        )}
         <ConfirmModal
           isOpen={showConfirmModal}
           onClose={() => setShowConfirmModal(false)}
@@ -205,16 +203,6 @@ export function UnshareUserButton({
             </>
           )}
         </button>
-        {error && (
-          <span className="text-xs text-red-400 truncate" title={error}>
-            {error}
-          </span>
-        )}
-        {showSuccess && !error && (
-          <span className="text-xs text-green-400 truncate animate-pulse">
-            Unshared!
-          </span>
-        )}
       </div>
 
       <ConfirmModal

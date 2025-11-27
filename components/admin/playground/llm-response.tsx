@@ -1,5 +1,8 @@
 "use client"
 
+import { useToast } from "@/components/ui/toast"
+import { useEffect } from "react"
+
 interface LLMResponseProps {
   llmResponse: string
   onPreview: () => void
@@ -17,6 +20,20 @@ export function LLMResponse({
   saveError,
   previewError,
 }: LLMResponseProps) {
+  const toast = useToast()
+
+  useEffect(() => {
+    if (saveError) {
+      toast.showError(saveError)
+    }
+  }, [saveError, toast])
+
+  useEffect(() => {
+    if (previewError) {
+      toast.showError(previewError)
+    }
+  }, [previewError, toast])
+
   return (
     <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6 shadow-lg shadow-slate-900/20">
       <div className="mb-5 flex-shrink-0">
@@ -70,16 +87,6 @@ export function LLMResponse({
           </div>
         </div>
       </div>
-      {saveError && (
-        <div className="mb-4 bg-red-500/10 border border-red-500/50 text-red-400 px-3 py-2 rounded-lg text-xs">
-          {saveError}
-        </div>
-      )}
-      {previewError && (
-        <div className="mb-4 bg-red-500/10 border border-red-500/50 text-red-400 px-3 py-2 rounded-lg text-xs">
-          {previewError}
-        </div>
-      )}
       <div className="bg-slate-900/50 border border-slate-700/50 rounded-lg p-5 max-h-96 overflow-y-auto">
         <pre className="text-xs text-slate-300 whitespace-pre-wrap font-mono leading-relaxed">
           {llmResponse}

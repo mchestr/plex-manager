@@ -1,6 +1,7 @@
 "use client"
 
 import { updateUserAdminStatus } from "@/actions/admin"
+import { useToast } from "@/components/ui/toast"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { ConfirmModal } from "@/components/admin/shared/confirm-modal"
@@ -16,15 +17,14 @@ export function ChangeUserRoleButton({
   userName,
   currentIsAdmin,
 }: ChangeUserRoleButtonProps) {
+  const toast = useToast()
   const [isUpdating, setIsUpdating] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [showSuccess, setShowSuccess] = useState(false)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const router = useRouter()
 
   const handleRoleChange = async () => {
     setIsUpdating(true)
-    setError(null)
     setShowSuccess(false)
 
     try {
@@ -35,15 +35,16 @@ export function ChangeUserRoleButton({
 
         // Show success flash indicator
         setShowSuccess(true)
+        toast.showSuccess(`User role ${!currentIsAdmin ? "granted" : "removed"} successfully`)
         // Hide success message after 3 seconds
         setTimeout(() => {
           setShowSuccess(false)
         }, 3000)
       } else {
-        setError(result.error || "Failed to update user role")
+        toast.showError(result.error || "Failed to update user role")
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update user role")
+      toast.showError(err instanceof Error ? err.message : "Failed to update user role")
     } finally {
       setIsUpdating(false)
     }
@@ -147,9 +148,6 @@ export function ChangeUserRoleButton({
           </>
         )}
       </button>
-      {error && (
-        <span className="text-xs text-red-400 mt-1 block">{error}</span>
-      )}
 
       <ConfirmModal
         isOpen={showConfirmModal}

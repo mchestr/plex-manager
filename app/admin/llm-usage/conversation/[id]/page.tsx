@@ -3,6 +3,7 @@ import { aggregateLlmUsage } from "@/lib/utils"
 import Link from "next/link"
 import Image from "next/image"
 import { ConversationUsageRow } from "@/components/admin/llm-usage/conversation-usage-row"
+import { ExpandablePrompt } from "@/components/admin/prompts/expandable-prompt"
 
 export const dynamic = "force-dynamic"
 
@@ -101,6 +102,56 @@ export default async function LLMConversationPage({
   )
   const callsCount = records.length
 
+  // Get the latest record (most recent) which contains the full conversation prompt
+  const latestRecord = records.reduce(
+    (mostRecent, r) => (r.createdAt > mostRecent.createdAt ? r : mostRecent),
+    records[0]
+  )
+
+  // Format prompt nicely - check if it's a chat message array
+  let formattedPrompt: string = latestRecord.prompt
+  let promptIsChatMessages = false
+  try {
+    const parsedPrompt = JSON.parse(latestRecord.prompt)
+
+    // Check if it's an array of chat messages
+    if (Array.isArray(parsedPrompt) && parsedPrompt.length > 0) {
+      const firstItem = parsedPrompt[0]
+      if (typeof firstItem === 'object' && firstItem !== null && ('role' in firstItem || 'content' in firstItem)) {
+        promptIsChatMessages = true
+        // Format as readable chat messages with separator
+        formattedPrompt = parsedPrompt.map((msg: any) => {
+          const role = msg.role || 'unknown'
+          let content: string
+
+          if (typeof msg.content === 'string') {
+            // Check if the string is JSON (common for tool outputs)
+            try {
+              const parsed = JSON.parse(msg.content)
+              content = JSON.stringify(parsed, null, 2)
+            } catch {
+              // Not JSON, use as-is
+              content = msg.content
+            }
+          } else {
+            content = JSON.stringify(msg.content, null, 2)
+          }
+
+          const name = msg.name ? ` (${msg.name})` : ''
+          return `[${role.toUpperCase()}${name}]\n${content}`
+        }).join('\n\n---\n\n')
+      } else {
+        // Regular JSON array/object
+        formattedPrompt = JSON.stringify(parsedPrompt, null, 2)
+      }
+    } else {
+      // Regular JSON object
+      formattedPrompt = JSON.stringify(parsedPrompt, null, 2)
+    }
+  } catch {
+    // Not JSON, will display as text
+  }
+
   return (
     <div className="p-4 sm:p-6">
       <div className="max-w-5xl mx-auto">
@@ -179,6 +230,16 @@ export default async function LLMConversationPage({
               {summary?.completionTokens.toLocaleString() ?? "0"} completion
             </div>
           </div>
+        </div>
+
+        {/* Latest Conversation Prompt */}
+        <div className="mb-6">
+          <ExpandablePrompt
+            content={formattedPrompt}
+            title="Latest Conversation Prompt"
+            characterCount={latestRecord.prompt.length}
+            characterCountSuffix={promptIsChatMessages ? "(Chat messages)" : undefined}
+          />
         </div>
 
         {/* Per-call table */}

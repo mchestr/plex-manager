@@ -188,7 +188,6 @@ export function PlexSignInButton({
                   generate a wrapped.
                 </p>
               )}
-              <p className="text-xs sm:text-sm text-slate-400">No personal information will be saved or stored.</p>
             </div>
           )}
         </>

@@ -1,52 +1,160 @@
 "use client"
 
 import { updateWrappedSettings } from "@/actions/admin"
-import { StyledInput } from "@/components/ui/styled-input"
+import { DateRangePicker } from "@/components/ui/date-range-picker"
+import { StyledCheckbox } from "@/components/ui/styled-checkbox"
+import { useToast } from "@/components/ui/toast"
 import { useRouter } from "next/navigation"
-import { useState, useTransition } from "react"
-
-// ... existing code ...
+import { useState, useTransition, useEffect } from "react"
 
 interface WrappedSettingsFormProps {
   enabled: boolean
   year: number | null
+  startDate: Date | null
+  endDate: Date | null
 }
 
-export function WrappedSettingsForm({ enabled, year }: WrappedSettingsFormProps) {
+// Helper to extract month from date (01-12)
+function extractMonth(date: Date | null): string {
+  if (!date) return ""
+  return String(new Date(date).getMonth() + 1).padStart(2, "0")
+}
+
+// Helper to extract day from date (01-31)
+function extractDay(date: Date | null): string {
+  if (!date) return ""
+  return String(new Date(date).getDate()).padStart(2, "0")
+}
+
+// Helper to construct date from month/day using current year
+function constructDate(month: string, day: string): Date | null {
+  if (!month || !day) return null
+  const currentYear = new Date().getFullYear()
+  return new Date(currentYear, parseInt(month, 10) - 1, parseInt(day, 10))
+}
+
+// Helper to format date for display
+function formatDateForDisplay(date: Date | null): string {
+  if (!date) return "Not set"
+  return new Date(date).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  })
+}
+
+// Check if current date is within range
+function isCurrentlyWithinRange(startDate: Date | null, endDate: Date | null): boolean | null {
+  if (!startDate || !endDate) return null
+
+  const now = new Date()
+  const start = new Date(startDate)
+  const end = new Date(endDate)
+
+  // Normalize to same year for comparison
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const startNormalized = new Date(now.getFullYear(), start.getMonth(), start.getDate())
+  const endNormalized = new Date(now.getFullYear(), end.getMonth(), end.getDate())
+
+  // Handle year rollover (e.g., Nov 20 - Jan 31)
+  if (endNormalized < startNormalized) {
+    // Check if we're in next year (one year after start date's year)
+    const startYear = start.getFullYear()
+    const isInNextYear = now.getFullYear() === startYear + 1
+    if (isInNextYear) {
+      // We're in next year, check if before end date
+      const nextYearEnd = new Date(now.getFullYear(), end.getMonth(), end.getDate())
+      return today <= nextYearEnd
+    } else {
+      // We're in the same year as start date, check if after start
+      return today >= startNormalized
+    }
+  } else {
+    // Normal range within same year
+    return today >= startNormalized && today <= endNormalized
+  }
+}
+
+export function WrappedSettingsForm({ enabled, year, startDate, endDate }: WrappedSettingsFormProps) {
   const router = useRouter()
+  const toast = useToast()
   const [isEditing, setIsEditing] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
 
-  const currentYear = new Date().getFullYear()
+  // Calculate effective year from start date or use provided year
+  const effectiveYear = startDate ? new Date(startDate).getFullYear() : (year ?? new Date().getFullYear())
+
   const [formData, setFormData] = useState({
     enabled: enabled,
-    year: year ?? currentYear,
+    startMonth: extractMonth(startDate),
+    startDay: extractDay(startDate),
+    endMonth: extractMonth(endDate),
+    endDay: extractDay(endDate),
   })
+
+  // Update form data when props change
+  useEffect(() => {
+    setFormData({
+      enabled,
+      startMonth: extractMonth(startDate),
+      startDay: extractDay(startDate),
+      endMonth: extractMonth(endDate),
+      endDay: extractDay(endDate),
+    })
+  }, [enabled, startDate, endDate])
+
+  // Show status toast when settings are updated (after successful save)
+  // This is handled in handleSubmit after successful update
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
     setError(null)
-    setSuccess(null)
 
-    if (formData.year < 2000 || formData.year > 2100) {
-      setError("Year must be between 2000 and 2100")
+    // Validate date range: if one is set, both must be set
+    const hasStart = formData.startMonth && formData.startDay
+    const hasEnd = formData.endMonth && formData.endDay
+    if ((hasStart && !hasEnd) || (!hasStart && hasEnd)) {
+      const errorMsg = "Both start and end dates must be set, or both must be empty"
+      setError(errorMsg)
+      toast.showError(errorMsg)
       return
     }
+
+    // Construct dates using current year (year will be auto-determined from start date by backend)
+    const newStartDate = hasStart ? constructDate(formData.startMonth, formData.startDay) : null
+    const newEndDate = hasEnd ? constructDate(formData.endMonth, formData.endDay) : null
 
     startTransition(async () => {
       const result = await updateWrappedSettings({
         enabled: formData.enabled,
-        year: formData.year,
+        startDate: newStartDate,
+        endDate: newEndDate,
       })
 
       if (result.success) {
         setIsEditing(false)
-        setSuccess("Wrapped settings updated")
+        toast.showSuccess("Wrapped settings updated")
+
+        // Show status toast after successful update if date range is configured
+        if (newStartDate && newEndDate) {
+          const isWithinRange = isCurrentlyWithinRange(newStartDate, newEndDate)
+          const effectiveEnabled = formData.enabled && (isWithinRange ?? true)
+
+          setTimeout(() => {
+            if (effectiveEnabled) {
+              toast.showInfo("Generation is currently allowed (within date range)", 4000)
+            } else {
+              toast.showInfo("Generation is currently disabled (outside date range)", 4000)
+            }
+          }, 500) // Small delay after success toast
+        }
+
         router.refresh()
       } else {
-        setError(result.error || "Failed to update wrapped settings")
+        const errorMsg = result.error || "Failed to update wrapped settings"
+        setError(errorMsg)
+        toast.showError(errorMsg)
       }
     })
   }
@@ -57,14 +165,28 @@ export function WrappedSettingsForm({ enabled, year }: WrappedSettingsFormProps)
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <div className="text-xs font-medium text-slate-400 mb-1">Wrapped Year</div>
-            <div className="text-sm text-white font-mono">{year ?? currentYear}</div>
+            <div className="text-sm text-white font-mono">
+              {effectiveYear}
+              {startDate && (
+                <span className="text-xs text-slate-500 ml-2">
+                  (auto-determined from start date)
+                </span>
+              )}
+            </div>
+          </div>
+          <div>
+            <div className="text-xs font-medium text-slate-400 mb-1">Generation Window</div>
+            <div className="text-sm text-white">
+              {startDate && endDate ? (
+                <>
+                  {formatDateForDisplay(startDate)} - {formatDateForDisplay(endDate)}
+                </>
+              ) : (
+                <span className="text-slate-500">Not configured (always available when enabled)</span>
+              )}
+            </div>
           </div>
         </div>
-        {success && (
-          <div className="text-sm text-green-400 bg-green-500/10 border border-green-500/30 rounded-lg px-3 py-2">
-            {success}
-          </div>
-        )}
         <div className="flex justify-end">
           <button
             onClick={() => setIsEditing(true)}
@@ -79,39 +201,46 @@ export function WrappedSettingsForm({ enabled, year }: WrappedSettingsFormProps)
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={formData.enabled}
-              onChange={(e) => setFormData({ ...formData, enabled: e.target.checked })}
-              disabled={isPending}
-              className="w-4 h-4 rounded border-slate-600 bg-slate-900 text-cyan-600 focus:ring-cyan-500 focus:ring-2"
-            />
-            <span className="text-sm font-medium text-white">Enable Wrapped Feature</span>
-          </label>
-          <p className="mt-1 text-xs text-slate-400">
-            When disabled, users cannot generate new wrapped content
-          </p>
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1">
-            Wrapped Year
-          </label>
-          <StyledInput
-            type="number"
-            value={formData.year}
-            onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) || currentYear })}
-            min="2000"
-            max="2100"
-            placeholder={currentYear.toString()}
-            disabled={isPending}
-          />
-          <p className="mt-1 text-xs text-slate-400">
-            Year for wrapped generation. Leave empty to use current year ({currentYear})
-          </p>
-        </div>
+      <div className="space-y-4 p-4 bg-slate-900/30 border border-slate-700 rounded-lg">
+        <StyledCheckbox
+          id="wrapped-enabled"
+          checked={formData.enabled}
+          onChange={(e) => setFormData({ ...formData, enabled: e.target.checked })}
+          disabled={isPending}
+          label="Enable Wrapped Feature"
+          description="When disabled, users cannot generate new wrapped content"
+        />
+      </div>
+
+      <div className="border-t border-slate-700 pt-4">
+        <h4 className="text-sm font-semibold text-white mb-3">Generation Time Window (Optional)</h4>
+        <p className="text-xs text-slate-400 mb-4">
+          Set a date range when wrapped generation is allowed. If set, generation will only be available during this period.
+          Leave empty to allow generation anytime (when enabled). Supports year rollover (e.g., Nov 20 - Jan 31).
+          The year is automatically determined from the start date (e.g., Nov 20, 2024 - Jan 31, 2025 uses year 2024).
+        </p>
+        <DateRangePicker
+          startMonth={formData.startMonth}
+          startDay={formData.startDay}
+          endMonth={formData.endMonth}
+          endDay={formData.endDay}
+          onStartMonthChange={(month) => setFormData({ ...formData, startMonth: month })}
+          onStartDayChange={(day) => setFormData({ ...formData, startDay: day })}
+          onEndMonthChange={(month) => setFormData({ ...formData, endMonth: month })}
+          onEndDayChange={(day) => setFormData({ ...formData, endDay: day })}
+          disabled={isPending}
+        />
+        <p className="mt-1 text-xs text-slate-400">
+          Generation window (e.g., November 20 to January 31). Year is automatically determined from the start date each year.
+        </p>
+        <button
+          type="button"
+          onClick={() => setFormData({ ...formData, startMonth: "", startDay: "", endMonth: "", endDay: "" })}
+          disabled={isPending || (!formData.startMonth && !formData.endMonth)}
+          className="mt-2 text-xs text-slate-400 hover:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Clear date range
+        </button>
       </div>
 
       {error && (
@@ -133,8 +262,13 @@ export function WrappedSettingsForm({ enabled, year }: WrappedSettingsFormProps)
           onClick={() => {
             setIsEditing(false)
             setError(null)
-            setSuccess(null)
-            setFormData({ enabled, year: year ?? currentYear })
+            setFormData({
+              enabled,
+              startMonth: extractMonth(startDate),
+              startDay: extractDay(startDate),
+              endMonth: extractMonth(endDate),
+              endDay: extractDay(endDate),
+            })
           }}
           disabled={isPending}
           className="px-4 py-2 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-600 hover:border-slate-500 text-slate-300 hover:text-white text-sm font-medium rounded-lg transition-all disabled:opacity-50"

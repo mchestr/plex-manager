@@ -1,7 +1,15 @@
+import { generatePlexWrapped, getUserPlexWrapped } from '@/actions/users'
+import { WrappedGenerator } from '@/components/generator/wrapped-generator'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { WrappedGenerator } from '@/components/generator/wrapped-generator'
-import { generatePlexWrapped, getUserPlexWrapped } from '@/actions/users'
+
+// Mock next/navigation
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: jest.fn(),
+    refresh: jest.fn(),
+  }),
+}))
 
 // Mock the actions
 jest.mock('@/actions/users', () => ({
@@ -52,6 +60,7 @@ jest.mock('@/components/generator/wrapped-generator-prompt', () => ({
   ),
 }))
 
+// Mock useWrappedPolling to be a no-op - prevents any polling intervals from being set up
 jest.mock('@/hooks/use-wrapped-polling', () => ({
   useWrappedPolling: jest.fn(),
 }))
@@ -70,9 +79,11 @@ describe('WrappedGenerator', () => {
   describe('Loading State', () => {
     it('should show loading spinner while fetching wrapped data', async () => {
       // Mock a delayed response
-      mockGetUserPlexWrapped.mockImplementation(
-        () => new Promise((resolve) => setTimeout(() => resolve(null), 100))
-      )
+      let resolvePromise: (value: any) => void
+      const delayedPromise = new Promise((resolve) => {
+        resolvePromise = resolve
+      })
+      mockGetUserPlexWrapped.mockReturnValue(delayedPromise as any)
 
       const { container } = render(<WrappedGenerator userId={userId} />)
 
@@ -80,6 +91,9 @@ describe('WrappedGenerator', () => {
       const spinner = container.querySelector('.animate-spin')
       expect(spinner).toBeInTheDocument()
       expect(spinner).toHaveClass('animate-spin')
+
+      // Resolve the promise
+      resolvePromise!(null)
 
       // Wait for loading to complete
       await waitFor(() => {

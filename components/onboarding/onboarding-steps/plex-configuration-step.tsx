@@ -24,7 +24,7 @@ export function PlexConfigurationStep({ onComplete, onBack }: PlexConfigurationS
           </div>
         </div>
 
-        <h2 className="text-2xl font-bold text-white">
+        <h2 data-testid="onboarding-plex-config-heading" className="text-2xl font-bold text-white">
           Optimal Configuration
         </h2>
         <p className="text-slate-300 text-base">
@@ -66,12 +66,14 @@ export function PlexConfigurationStep({ onComplete, onBack }: PlexConfigurationS
       >
         <button
           onClick={onBack}
+          data-testid="onboarding-plex-config-back"
           className="px-4 py-2 text-slate-400 hover:text-white transition-colors font-medium"
         >
           Back
         </button>
         <button
           onClick={onComplete}
+          data-testid="onboarding-plex-config-continue"
           className="px-6 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-medium rounded-lg transition-colors"
         >
           Got it

@@ -11,6 +11,9 @@ import { generateWrappedPrompt } from '@/lib/wrapped/prompt-template'
 // Mock dependencies
 jest.mock('@/lib/prisma', () => ({
   prisma: {
+    config: {
+      findUnique: jest.fn(),
+    },
     lLMProvider: {
       findFirst: jest.fn(),
     },
@@ -156,7 +159,33 @@ describe('testPromptTemplate', () => {
     }
 
     beforeEach(() => {
+      mockPrisma.config.findUnique.mockResolvedValue({
+        llmDisabled: false,
+      } as any)
       mockPrisma.lLMProvider.findFirst.mockResolvedValue(mockLLMProvider as any)
+    })
+
+    it('should return error when LLM is disabled and not call OpenAI', async () => {
+      mockPrisma.config.findUnique.mockResolvedValue({
+        llmDisabled: true,
+      } as any)
+
+      const mockRenderedPrompt = 'Rendered prompt'
+      mockGenerateWrappedPrompt.mockResolvedValue(mockRenderedPrompt)
+
+      const result = await testPromptTemplate({
+        userName: 'Test User',
+        year: 2024,
+        statistics: mockStatistics,
+        sendToAI: true,
+      })
+
+      expect(result.success).toBe(false)
+      expect(result.renderedPrompt).toBe(mockRenderedPrompt)
+      expect(result.error).toContain('LLM calls are currently disabled')
+      expect(result.error).toContain('enable LLM in admin settings')
+      expect(mockCallOpenAI).not.toHaveBeenCalled()
+      expect(mockPrisma.lLMProvider.findFirst).not.toHaveBeenCalled()
     })
 
     it('should return error when no active LLM provider', async () => {
@@ -178,7 +207,7 @@ describe('testPromptTemplate', () => {
       expect(mockCallOpenAI).not.toHaveBeenCalled()
     })
 
-    it('should call OpenAI and return response', async () => {
+    it('should call OpenAI and return response when LLM is enabled', async () => {
       const mockRenderedPrompt = 'Rendered prompt'
       const mockLLMResponse = {
         success: true,
