@@ -467,6 +467,7 @@ model MaintenanceCandidate {
   @@index([scanId, reviewStatus])
   @@index([mediaType, reviewStatus])
   @@index([reviewStatus, flaggedAt])
+  @@index([mediaType, plexRatingKey])
   @@unique([scanId, plexRatingKey])
 }
 
