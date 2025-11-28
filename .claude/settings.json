@@ -11,11 +11,7 @@
       "Edit(./README.md)",
       "Edit(./e2e/**)",
       "Edit(./.claude/**)",
-      "Edit(./CLAUDE.md)",
-      "Bash(gh pr:*)",
-      "Bash(git fetch:*)",
-      "Bash(git stash:*)",
-      "Bash(git add:*)"
+      "Edit(./CLAUDE.md)"
     ],
     "deny": [
       "Edit(.env)",
