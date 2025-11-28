@@ -60,7 +60,7 @@ test.describe('Setup Wizard', () => {
 
     // Verify we're on the setup wizard
     await expect(page.getByRole('heading', { name: /Welcome to Plex Manager/i })).toBeVisible();
-    await expect(page.getByText(/Let's get your Plex Manager setup configured/i)).toBeVisible();
+    await expect(page.getByText(/Let's get your Plex Manager setup configured/i).first()).toBeVisible();
 
     // Helper function to fill and submit a form step
     const fillAndSubmitStep = async (stepName: string, fields: Record<string, string>) => {
@@ -72,6 +72,17 @@ test.describe('Setup Wizard', () => {
       // Fill all fields
       for (const [name, value] of Object.entries(fields)) {
         const input = page.locator(`input[name="${name}"], select[name="${name}"], textarea[name="${name}"]`).first();
+
+        // Check if input is hidden and skip if so
+        const isHidden = await input.evaluate((el) => {
+          return el instanceof HTMLInputElement && el.type === 'hidden';
+        }).catch(() => false);
+
+        if (isHidden) {
+          console.log(`[TEST] Skipping hidden input: ${name}`);
+          continue;
+        }
+
         await input.waitFor({ state: 'visible', timeout: 5000 });
         const tagName = await input.evaluate((el) => el.tagName);
         if (tagName === 'SELECT') {
