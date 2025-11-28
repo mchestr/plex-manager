@@ -45,7 +45,9 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    command: 'npx next dev',
+    // Use production build mode in CI (next start) for reliability
+    // Use dev mode locally (next dev) for faster iteration
+    command: process.env.CI ? 'npx next start' : 'npx next dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 30000, // 30 seconds to allow for build/startup
