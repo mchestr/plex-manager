@@ -8,7 +8,7 @@ A Next.js-based Plex management platform that combines server management tools, 
 
 - **Framework**: Next.js 14+ (App Router)
 - **Language**: TypeScript (strict mode with exhaustive checks)
-- **Database**: Prisma + SQLite (production supports PostgreSQL)
+- **Database**: Prisma v7 + PostgreSQL (SQLite no longer supported)
 - **Auth**: NextAuth.js (Plex PIN-based authentication)
 - **State**: TanStack Query (React Query) for client-side data fetching
 - **Styling**: Tailwind CSS with utility-first approach
@@ -320,6 +320,10 @@ npm run db:studio      # Open database GUI
 - **Type safety** - Leverage generated types
 - **Transactions** - Use `$transaction` for multi-step operations
 - **Relations** - Use `include` sparingly, prefer separate queries for large datasets
+- **Import from generated client** - Use `@/lib/generated/prisma/client` for imports:
+  ```typescript
+  import { PrismaClient, Prisma } from '@/lib/generated/prisma/client'
+  ```
 
 ## Environment Variables
 
@@ -333,8 +337,8 @@ NEXTAUTH_URL=https://yourdomain.com           # Auth callbacks (should match abo
 NEXTAUTH_SECRET=                               # Generate with: openssl rand -base64 32
 PLEX_CLIENT_IDENTIFIER=                        # Any unique string
 
-# Database
-DATABASE_URL=file:./prisma/production.db      # SQLite or PostgreSQL connection string
+# Database (PostgreSQL required for Prisma v7)
+DATABASE_URL=postgresql://user:password@localhost:5432/plex_manager
 ```
 
 ### Development Shortcuts
