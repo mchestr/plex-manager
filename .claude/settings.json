@@ -11,15 +11,11 @@
       "Edit(./README.md)",
       "Edit(./e2e/**)",
       "Edit(./.claude/**)",
-      "Edit(./CLAUDE.md)"
-    ],
-    "ask": [
-      "Edit(./next.config.js)",
-      "Edit(./next.config.mjs)",
-      "Edit(./tailwind.config.js)",
-      "Edit(./tailwind.config.ts)",
-      "Edit(./tsconfig.json)",
-      "Edit(./package.json)"
+      "Edit(./CLAUDE.md)",
+      "Bash(gh pr:*)",
+      "Bash(git fetch:*)",
+      "Bash(git stash:*)",
+      "Bash(git add:*)"
     ],
     "deny": [
       "Edit(.env)",
@@ -29,6 +25,14 @@
       "Edit(.git/**)",
       "Edit(node_modules/**)",
       "Edit(.next/**)"
+    ],
+    "ask": [
+      "Edit(./next.config.js)",
+      "Edit(./next.config.mjs)",
+      "Edit(./tailwind.config.js)",
+      "Edit(./tailwind.config.ts)",
+      "Edit(./tsconfig.json)",
+      "Edit(./package.json)"
     ]
   }
 }
