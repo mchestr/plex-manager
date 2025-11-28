@@ -2,6 +2,8 @@ import { Worker, Job } from "bullmq"
 import Redis from "ioredis"
 import { createLogger } from "@/lib/utils/logger"
 import type { ScanJobData, DeletionJobData } from "./queue"
+import { scanForCandidates } from "./scanner"
+import { executeDeletions } from "./deleter"
 
 const logger = createLogger("maintenance-worker")
 
@@ -9,10 +11,6 @@ const logger = createLogger("maintenance-worker")
 const connection = new Redis(process.env.REDIS_URL || "redis://localhost:6379", {
   maxRetriesPerRequest: null,
 })
-
-// TODO: Import these when implemented
-// import { scanForCandidates } from "./scanner"
-// import { executeDeletions } from "./deleter"
 
 // Maintenance worker - scans for candidates based on rules
 export const maintenanceWorker = new Worker<ScanJobData>(
@@ -29,21 +27,21 @@ export const maintenanceWorker = new Worker<ScanJobData>(
     await job.updateProgress(10)
 
     try {
-      // TODO: Implement scanForCandidates
-      // const candidates = await scanForCandidates(ruleId, (progress) => {
-      //   job.updateProgress(10 + progress * 0.9)
-      // })
+      const result = await scanForCandidates(ruleId, (progress) => {
+        job.updateProgress(10 + progress * 0.9)
+      })
 
       await job.updateProgress(100)
 
       logger.info("Maintenance scan completed", {
         jobId: job.id,
         ruleId,
-        // candidatesFound: candidates.length,
+        scanId: result.scanId,
+        itemsScanned: result.itemsScanned,
+        itemsFlagged: result.itemsFlagged,
       })
 
-      // return { candidatesFound: candidates.length }
-      return { candidatesFound: 0 } // TODO: Return actual count
+      return { candidatesFound: result.itemsFlagged }
     } catch (error) {
       logger.error("Maintenance scan failed", {
         jobId: job.id,
@@ -79,21 +77,29 @@ export const deletionWorker = new Worker<DeletionJobData>(
     await job.updateProgress(10)
 
     try {
-      // TODO: Implement executeDeletions
-      // const result = await executeDeletions(candidateIds, deleteFiles, userId, (progress) => {
-      //   job.updateProgress(10 + progress * 0.9)
-      // })
+      const result = await executeDeletions(
+        candidateIds,
+        deleteFiles,
+        userId,
+        (progress) => {
+          job.updateProgress(10 + progress * 0.9)
+        }
+      )
 
       await job.updateProgress(100)
 
       logger.info("Deletion job completed", {
         jobId: job.id,
         candidateCount: candidateIds.length,
-        // deletedCount: result.deletedCount,
+        deletedCount: result.success,
+        failedCount: result.failed,
       })
 
-      // return result
-      return { deletedCount: 0 } // TODO: Return actual result
+      return {
+        deletedCount: result.success,
+        failedCount: result.failed,
+        errors: result.errors,
+      }
     } catch (error) {
       logger.error("Deletion job failed", {
         jobId: job.id,

@@ -20,6 +20,14 @@ const logger = createLogger("MAINTENANCE")
 
 /**
  * Get all maintenance rules with scan counts (admin only)
+ *
+ * Performance Note (Issue #39):
+ * This query uses Prisma's `include` with nested relations. Performance profiling
+ * shows Prisma optimizes this into just 2 queries internally (no N+1 issue):
+ * - 100 rules, 1000 scans: ~6ms avg
+ * - 500 rules, 25000 scans: ~77ms avg
+ *
+ * Well under the 1s threshold. See scripts/profile-maintenance-query.ts for profiling.
  */
 export async function getMaintenanceRules() {
   await requireAdmin()
