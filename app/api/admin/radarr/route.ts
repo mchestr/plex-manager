@@ -4,6 +4,15 @@ import { createSafeError, ErrorCode, getStatusCode, logError } from "@/lib/secur
 import { adminRateLimiter } from "@/lib/security/rate-limit"
 import { NextRequest, NextResponse } from "next/server"
 
+/**
+ * API route for fetching Radarr servers.
+ *
+ * Uses API route instead of Server Action because this endpoint is consumed
+ * by client-side components that need to fetch server lists dynamically
+ * (e.g., for dropdowns/selectors in maintenance rule creation).
+ * API routes are preferred for GET operations that need to be called from
+ * client components with proper HTTP caching and conditional requests.
+ */
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {

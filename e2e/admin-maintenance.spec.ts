@@ -68,23 +68,20 @@ test.describe('Admin Maintenance Feature', () => {
       await expect(adminPage.getByTestId('media-type-filter')).toBeVisible();
     });
 
-    test('should show bulk actions when candidates selected', async ({ adminPage }) => {
+    test('should show bulk actions structure', async ({ adminPage }) => {
       await adminPage.goto('/admin/maintenance/candidates');
       await waitForAdminPageReady(adminPage, 30000);
 
-      // Note: Bulk actions only appear when candidates are selected
-      // This test verifies the page structure is correct
-      // Actual bulk action testing would require seeded test data
+      // Note: Bulk actions only appear when candidates are selected.
+      // This test verifies the bulk action elements exist in the DOM.
+      // Full workflow testing (selection + actions) requires seeded test data.
 
       const bulkApprove = adminPage.getByTestId('bulk-approve-button');
       const bulkReject = adminPage.getByTestId('bulk-reject-button');
 
-      // These elements should exist in the DOM even if hidden
-      const approveExists = await bulkApprove.count();
-      const rejectExists = await bulkReject.count();
-
-      // Verify buttons exist (may be hidden if no selection)
-      expect(approveExists + rejectExists).toBeGreaterThanOrEqual(0);
+      // Verify both bulk action buttons exist in the DOM (may be hidden if no selection)
+      expect(await bulkApprove.count()).toBe(1);
+      expect(await bulkReject.count()).toBe(1);
     });
   });
 
