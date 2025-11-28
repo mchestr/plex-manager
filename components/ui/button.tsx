@@ -1,6 +1,7 @@
 "use client"
 
 import { ButtonHTMLAttributes, forwardRef } from "react"
+import { cn } from "@/lib/utils"
 
 type ButtonVariant = "primary" | "success" | "danger" | "secondary" | "ghost"
 type ButtonSize = "sm" | "md" | "lg"
@@ -34,7 +35,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         disabled={disabled}
-        className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+        className={cn(baseClasses, variantClasses[variant], sizeClasses[size], className)}
         {...props}
       >
         {children}
