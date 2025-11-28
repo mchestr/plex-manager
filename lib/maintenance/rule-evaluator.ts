@@ -198,7 +198,14 @@ function evaluateCondition(item: MediaItem, condition: Condition): boolean {
 /**
  * Get field value from media item (supports nested fields like "radarr.hasFile")
  */
-function getFieldValue(item: MediaItem, fieldKey: string): any {
+function getFieldValue(item: MediaItem, fieldKey: string): unknown {
+  // Validate field key exists in FIELD_DEFINITIONS
+  const fieldDef = FIELD_DEFINITIONS.find(f => f.key === fieldKey)
+  if (!fieldDef) {
+    console.warn(`Unknown field key: ${fieldKey}`)
+    return null
+  }
+
   // Handle special cases
   if (fieldKey === 'neverWatched') {
     return item.playCount === 0
@@ -207,16 +214,16 @@ function getFieldValue(item: MediaItem, fieldKey: string): any {
   // Handle nested fields (e.g., "radarr.hasFile")
   if (fieldKey.includes('.')) {
     const parts = fieldKey.split('.')
-    let value: any = item
+    let value: unknown = item
     for (const part of parts) {
-      value = value?.[part]
+      value = (value as Record<string, unknown>)?.[part]
       if (value === undefined) return null
     }
     return value
   }
 
   // Direct field access
-  return (item as any)[fieldKey]
+  return (item as unknown as Record<string, unknown>)[fieldKey]
 }
 
 /**
