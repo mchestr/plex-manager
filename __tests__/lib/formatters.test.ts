@@ -96,18 +96,18 @@ describe('getMediaTypeLabel', () => {
     expect(getMediaTypeLabel('EPISODE')).toBe('Episode')
   })
 
-  it('should replace underscores with spaces for unknown types', () => {
-    expect(getMediaTypeLabel('UNKNOWN_TYPE')).toBe('UNKNOWN TYPE')
-    expect(getMediaTypeLabel('MUSIC_VIDEO')).toBe('MUSIC VIDEO')
-    expect(getMediaTypeLabel('SOME_OTHER_TYPE')).toBe('SOME OTHER TYPE')
+  it('should convert unknown types to title case with underscores replaced by spaces', () => {
+    expect(getMediaTypeLabel('UNKNOWN_TYPE')).toBe('Unknown Type')
+    expect(getMediaTypeLabel('MUSIC_VIDEO')).toBe('Music Video')
+    expect(getMediaTypeLabel('SOME_OTHER_TYPE')).toBe('Some Other Type')
   })
 
-  it('should return type as-is if no underscores and not in map', () => {
-    expect(getMediaTypeLabel('CUSTOM')).toBe('CUSTOM')
-    expect(getMediaTypeLabel('OTHER')).toBe('OTHER')
+  it('should convert unknown types to title case even without underscores', () => {
+    expect(getMediaTypeLabel('CUSTOM')).toBe('Custom')
+    expect(getMediaTypeLabel('OTHER')).toBe('Other')
   })
 
-  it('should handle multiple underscores', () => {
-    expect(getMediaTypeLabel('VERY_LONG_TYPE_NAME')).toBe('VERY LONG TYPE NAME')
+  it('should handle multiple underscores and convert to title case', () => {
+    expect(getMediaTypeLabel('VERY_LONG_TYPE_NAME')).toBe('Very Long Type Name')
   })
 })
