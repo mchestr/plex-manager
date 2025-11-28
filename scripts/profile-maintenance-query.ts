@@ -71,7 +71,7 @@ async function seedTestData() {
       await prisma.maintenanceScan.create({
         data: {
           ruleId: rule.id,
-          status: j === SCANS_PER_RULE - 1 ? "COMPLETED" : "COMPLETED",
+          status: "COMPLETED",
           startedAt: new Date(Date.now() - (SCANS_PER_RULE - j) * 86400000),
           completedAt: new Date(Date.now() - (SCANS_PER_RULE - j) * 86400000 + 60000),
           itemsScanned: 100 + j * 10,
@@ -149,8 +149,7 @@ async function runOptimizedQuery(): Promise<{
 
   const ruleIds = rules.map((r) => r.id)
 
-  // Fetch latest scan per rule using raw query for efficiency
-  // This avoids N+1 by getting all latest scans in one query
+  // Fetch latest scans using Prisma's distinct to avoid N+1
   const latestScans = await prisma.maintenanceScan.findMany({
     where: {
       ruleId: { in: ruleIds },
@@ -232,25 +231,17 @@ async function main() {
   console.log(`Issue #39: Investigate potential N+1 query`)
 
   try {
-    // Get current data counts
+    if (shouldSeed) {
+      await seedTestData()
+    }
+
+    // Get data counts for profiling
     const [ruleCount, scanCount] = await Promise.all([
       prisma.maintenanceRule.count(),
       prisma.maintenanceScan.count(),
     ])
 
-    console.log(`\nCurrent data: ${ruleCount} rules, ${scanCount} scans`)
-
-    if (shouldSeed) {
-      await seedTestData()
-    }
-
-    // Get updated counts
-    const [newRuleCount, newScanCount] = await Promise.all([
-      prisma.maintenanceRule.count(),
-      prisma.maintenanceScan.count(),
-    ])
-
-    console.log(`\nData for profiling: ${newRuleCount} rules, ${newScanCount} scans`)
+    console.log(`\nData for profiling: ${ruleCount} rules, ${scanCount} scans`)
 
     // Profile current implementation
     console.log("\n========================================")
