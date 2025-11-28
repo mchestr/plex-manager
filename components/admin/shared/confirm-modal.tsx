@@ -79,7 +79,7 @@ export function ConfirmModal({
 
           {/* Body */}
           <div className="px-6 py-4 max-h-[60vh] overflow-y-auto">
-            <p className="text-slate-300 text-sm leading-relaxed break-words">{message}</p>
+            <p className="text-slate-300 text-sm leading-relaxed overflow-wrap-break-word">{message}</p>
           </div>
 
           {/* Footer */}

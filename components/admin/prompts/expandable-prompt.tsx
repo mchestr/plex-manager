@@ -74,7 +74,7 @@ function formatChatMessage(
                 {role}
                 {name && <span className="text-slate-400 normal-case ml-1">({name})</span>}
               </div>
-              <pre className={`text-sm whitespace-pre-wrap font-mono ${colors.text} break-words`}>
+              <pre className={`text-sm whitespace-pre-wrap font-mono ${colors.text} overflow-wrap-break-word`}>
                 {messageContent}
               </pre>
             </div>
@@ -115,7 +115,7 @@ function formatChatMessage(
             {role}
             {name && <span className="text-slate-400 normal-case ml-1">({name})</span>}
           </div>
-          <pre className={`text-sm whitespace-pre-wrap font-mono ${colors.text} break-words`}>
+          <pre className={`text-sm whitespace-pre-wrap font-mono ${colors.text} overflow-wrap-break-word`}>
             {messageContent}
           </pre>
         </div>
@@ -130,7 +130,7 @@ function formatChatMessage(
 
   // Regular content
   return {
-    node: <pre className="text-sm text-slate-300 whitespace-pre-wrap font-mono break-words">{content}</pre>,
+    node: <pre className="text-sm text-slate-300 whitespace-pre-wrap font-mono overflow-wrap-break-word">{content}</pre>,
     messages: [],
   }
 }
