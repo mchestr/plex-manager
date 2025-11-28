@@ -64,7 +64,6 @@
     "@types/qs": "^6.14.0",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
-    "@types/uuid": "^10.0.0",
     "autoprefixer": "^10.4.0",
     "eslint": "^9.0.0",
     "eslint-config-next": "^16.0.3",
