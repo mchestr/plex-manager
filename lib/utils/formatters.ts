@@ -42,6 +42,11 @@ export function getMediaTypeLabel(mediaType: string): string {
     'EPISODE': 'Episode',
   }
 
-  // Fallback: replace underscores with spaces for any unlabeled types
-  return labels[mediaType] || mediaType.replace(/_/g, ' ')
+  if (labels[mediaType]) return labels[mediaType]
+
+  // Fallback: convert to title case for consistency with known types
+  return mediaType
+    .replace(/_/g, ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase())
 }
