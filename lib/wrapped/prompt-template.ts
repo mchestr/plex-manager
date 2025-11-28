@@ -3,49 +3,8 @@
  */
 
 import { getActivePromptTemplate } from "@/actions/prompts"
+import { formatWatchTime } from "@/lib/utils/time-formatting"
 import { WrappedStatistics } from "@/types/wrapped"
-
-/**
- * Format watch time in minutes to a human-readable string with explicit units
- */
-function formatWatchTime(minutes: number): string {
-  if (minutes === 0) return "0 minutes"
-
-  const days = Math.floor(minutes / (60 * 24))
-  const hours = Math.floor((minutes % (60 * 24)) / 60)
-  const mins = minutes % 60
-
-  const parts: string[] = []
-  if (days > 0) {
-    parts.push(`${days} ${days === 1 ? "day" : "days"}`)
-  }
-  if (hours > 0) {
-    parts.push(`${hours} ${hours === 1 ? "hour" : "hours"}`)
-  }
-  if (mins > 0 || parts.length === 0) {
-    parts.push(`${mins} ${mins === 1 ? "minute" : "minutes"}`)
-  }
-
-  return parts.join(", ")
-}
-
-/**
- * Format watch time for display in lists (shorter format but still explicit)
- */
-function formatWatchTimeShort(minutes: number): string {
-  if (minutes === 0) return "0 minutes"
-
-  const days = Math.floor(minutes / (60 * 24))
-  const hours = Math.floor((minutes % (60 * 24)) / 60)
-  const mins = minutes % 60
-
-  const parts: string[] = []
-  if (days > 0) parts.push(`${days} ${days === 1 ? "day" : "days"}`)
-  if (hours > 0) parts.push(`${hours} ${hours === 1 ? "hour" : "hours"}`)
-  if (mins > 0 || parts.length === 0) parts.push(`${mins} ${mins === 1 ? "minute" : "minutes"}`)
-
-  return parts.join(", ")
-}
 
 /**
  * Available placeholders and their replacement logic
@@ -83,12 +42,12 @@ function replacePlaceholders(template: string, context: PlaceholderContext): str
 
     // Top movies list
     "{{topMoviesList}}": statistics.topMovies.slice(0, 5).map((movie, idx) =>
-      `${idx + 1}. ${movie.title}${movie.year ? ` (${movie.year})` : ""} - ${formatWatchTimeShort(movie.watchTime)} watched (${movie.watchTime} minutes)`
+      `${idx + 1}. ${movie.title}${movie.year ? ` (${movie.year})` : ""} - ${formatWatchTime(movie.watchTime)} watched (${movie.watchTime} minutes)`
     ).join("\n"),
 
     // Top shows list
     "{{topShowsList}}": statistics.topShows.slice(0, 5).map((show, idx) =>
-      `${idx + 1}. ${show.title}${show.year ? ` (${show.year})` : ""} - ${formatWatchTimeShort(show.watchTime)} watched (${show.watchTime} minutes), ${show.episodesWatched} episodes`
+      `${idx + 1}. ${show.title}${show.year ? ` (${show.year})` : ""} - ${formatWatchTime(show.watchTime)} watched (${show.watchTime} minutes), ${show.episodesWatched} episodes`
     ).join("\n"),
 
     // Top movies JSON (for data sections)
@@ -113,7 +72,7 @@ ${statistics.leaderboards.topContent.movies.map((movie) => {
     : `watched by ${movie.totalWatchers} users`
   const topWatcher = movie.leaderboard[0]
   const topWatcherText = topWatcher && topWatcher.watchTime > 0
-    ? `The top watcher watched ${formatWatchTimeShort(topWatcher.watchTime)} (${topWatcher.watchTime} minutes)`
+    ? `The top watcher watched ${formatWatchTime(topWatcher.watchTime)} (${topWatcher.watchTime} minutes)`
     : ""
   return `- ${movie.title}: Your position: ${positionText}. ${topWatcherText}`
 }).join("\n")}
@@ -125,7 +84,7 @@ ${statistics.leaderboards.topContent.shows.map((show) => {
     : `watched by ${show.totalWatchers} users`
   const topWatcher = show.leaderboard[0]
   const topWatcherText = topWatcher && topWatcher.watchTime > 0
-    ? `The top watcher watched ${formatWatchTimeShort(topWatcher.watchTime)} (${topWatcher.watchTime} minutes, ${topWatcher.episodesWatched} episodes)`
+    ? `The top watcher watched ${formatWatchTime(topWatcher.watchTime)} (${topWatcher.watchTime} minutes, ${topWatcher.episodesWatched} episodes)`
     : ""
   return `- ${show.title}: Your position: ${positionText}. ${topWatcherText}`
 }).join("\n")}
@@ -167,12 +126,12 @@ ${statistics.leaderboards.topContent.shows.map((show) => {
     "{{watchTimeByMonthSection}}": statistics.watchTimeByMonth && statistics.watchTimeByMonth.length > 0 ? `
 **Watch Time by Month (all times in minutes):**
 ${statistics.watchTimeByMonth.map(month => {
-  const watchTimeText = `${formatWatchTimeShort(month.watchTime)} (${month.watchTime} minutes)`
+  const watchTimeText = `${formatWatchTime(month.watchTime)} (${month.watchTime} minutes)`
   const movieText = month.topMovie
-    ? ` | Top Movie: ${month.topMovie.title}${month.topMovie.year ? ` (${month.topMovie.year})` : ""} - ${formatWatchTimeShort(month.topMovie.watchTime)} (${month.topMovie.watchTime} minutes)`
+    ? ` | Top Movie: ${month.topMovie.title}${month.topMovie.year ? ` (${month.topMovie.year})` : ""} - ${formatWatchTime(month.topMovie.watchTime)} (${month.topMovie.watchTime} minutes)`
     : ""
   const showText = month.topShow
-    ? ` | Top Show: ${month.topShow.title}${month.topShow.year ? ` (${month.topShow.year})` : ""} - ${formatWatchTimeShort(month.topShow.watchTime)} (${month.topShow.watchTime} minutes), ${month.topShow.episodesWatched} episodes`
+    ? ` | Top Show: ${month.topShow.title}${month.topShow.year ? ` (${month.topShow.year})` : ""} - ${formatWatchTime(month.topShow.watchTime)} (${month.topShow.watchTime} minutes), ${month.topShow.episodesWatched} episodes`
     : ""
   return `- ${month.monthName}: ${watchTimeText}${movieText}${showText}`
 }).join("\n")}
