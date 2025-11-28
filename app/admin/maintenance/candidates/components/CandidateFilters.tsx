@@ -1,7 +1,7 @@
 "use client"
 
 import type { ReviewStatus, MediaType } from "@/lib/validations/maintenance"
-import { StyledSelect } from "@/components/ui/styled-select"
+import { StyledDropdown } from "@/components/ui/styled-dropdown"
 
 interface CandidateFiltersProps {
   reviewStatusFilter: ReviewStatus | "ALL"
@@ -20,7 +20,7 @@ export function CandidateFilters({
     <div className="flex gap-3 flex-wrap">
       <div>
         <label className="text-xs text-slate-400 mb-1 block">Review Status</label>
-        <StyledSelect
+        <StyledDropdown
           value={reviewStatusFilter}
           onChange={(value) => onReviewStatusChange(value as ReviewStatus | "ALL")}
           options={[
@@ -29,13 +29,14 @@ export function CandidateFilters({
             { value: "APPROVED", label: "Approved" },
             { value: "REJECTED", label: "Rejected" },
           ]}
+          size="md"
           data-testid="review-status-filter"
         />
       </div>
 
       <div>
         <label className="text-xs text-slate-400 mb-1 block">Media Type</label>
-        <StyledSelect
+        <StyledDropdown
           value={mediaTypeFilter}
           onChange={(value) => onMediaTypeChange(value as MediaType | "ALL")}
           options={[
@@ -44,6 +45,7 @@ export function CandidateFilters({
             { value: "TV_SERIES", label: "TV Series" },
             { value: "EPISODE", label: "Episode" },
           ]}
+          size="md"
           data-testid="media-type-filter"
         />
       </div>
