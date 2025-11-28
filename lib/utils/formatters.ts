@@ -27,7 +27,7 @@ export function formatFileSize(bytes: bigint | number | null): string {
  */
 export function formatDate(date: Date | null): string {
   if (!date) return 'Never'
-  return new Date(date).toLocaleDateString()
+  return date.toLocaleDateString()
 }
 
 /**
