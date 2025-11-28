@@ -124,7 +124,7 @@ export function SetupWizard({ currentStep: initialStep }: SetupWizardProps) {
           <h1 className="text-4xl font-bold mb-2 drop-shadow-lg bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
             Welcome to Plex Manager
           </h1>
-          <p className="text-slate-300 text-lg">
+          <p className="text-slate-300 text-lg" data-testid="setup-wizard-intro-text">
             Let's get your Plex Manager setup configured
           </p>
         </motion.div>

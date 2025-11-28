@@ -76,8 +76,10 @@ export function StyledDropdown({
   size = "md",
   id,
   name,
-  "data-testid": testId,
+  "data-testid": providedTestId,
 }: StyledDropdownProps) {
+  // Generate data-testid from name if not explicitly provided
+  const testId = providedTestId || (name ? `setup-input-${name}` : undefined)
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -132,7 +134,12 @@ export function StyledDropdown({
     <div ref={dropdownRef} className={`relative ${className}`}>
       {/* Hidden input for form submission */}
       {name && (
-        <input type="hidden" name={name} value={value} />
+        <input
+          type="hidden"
+          name={name}
+          value={value}
+          data-testid={testId ? `${testId}-hidden` : undefined}
+        />
       )}
       <button
         type="button"

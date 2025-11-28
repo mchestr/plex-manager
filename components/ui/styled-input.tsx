@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils"
 interface StyledInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "size"> {
   size?: "sm" | "md" | "lg"
   error?: boolean
+  "data-testid"?: string
 }
 
 const sizeClasses = {
@@ -15,10 +16,15 @@ const sizeClasses = {
 }
 
 export const StyledInput = forwardRef<HTMLInputElement, StyledInputProps>(
-  ({ size = "md", className, error = false, ...props }, ref) => {
+  ({ size = "md", className, error = false, name, "data-testid": providedTestId, ...props }, ref) => {
+    // Generate data-testid from name if not explicitly provided
+    const testId = providedTestId || (name ? `setup-input-${name}` : undefined)
+
     return (
       <input
         ref={ref}
+        name={name}
+        data-testid={testId}
         className={cn(
           "w-full bg-slate-800/50 border rounded-lg text-white placeholder-slate-400 shadow-sm",
           "focus:outline-none focus:border-cyan-400 focus:ring-cyan-400 focus:ring-1",
