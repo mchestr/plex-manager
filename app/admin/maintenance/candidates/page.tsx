@@ -6,32 +6,10 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import type { ReviewStatus, MediaType } from "@/lib/validations/maintenance"
+import type { MaintenanceCandidate } from "@/types/maintenance"
 import { CandidateList } from "./components/CandidateList"
 import { CandidateFilters } from "./components/CandidateFilters"
 import { CandidateActions } from "./components/CandidateActions"
-
-type MaintenanceCandidate = {
-  id: string
-  mediaType: string
-  plexRatingKey: string
-  title: string
-  year: number | null
-  poster: string | null
-  fileSize: bigint | null
-  playCount: number
-  lastWatchedAt: Date | null
-  addedAt: Date | null
-  reviewStatus: ReviewStatus
-  flaggedAt: Date
-  scan: {
-    id: string
-    rule: {
-      id: string
-      name: string
-      actionType: string
-    }
-  }
-}
 
 export default function CandidatesPage() {
   const toast = useToast()

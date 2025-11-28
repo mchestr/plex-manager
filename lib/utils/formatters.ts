@@ -1,6 +1,9 @@
 /**
+ * Formatting utilities for consistent data display across the application
+ */
+
+/**
  * Format bytes to human-readable file size
- *
  * @param bytes - File size in bytes (bigint, number, or null)
  * @returns Formatted file size string (e.g., "1.23 GB", "456.78 MB")
  */
@@ -18,10 +21,9 @@ export function formatFileSize(bytes: bigint | number | null): string {
 }
 
 /**
- * Format date to locale string or 'Never'
- *
+ * Format date to localized date string
  * @param date - Date object or null
- * @returns Formatted date string or 'Never' if date is null
+ * @returns Formatted date string (e.g., "1/15/2024") or "Never" if null
  */
 export function formatDate(date: Date | null): string {
   if (!date) return 'Never'
@@ -30,7 +32,6 @@ export function formatDate(date: Date | null): string {
 
 /**
  * Get human-readable label for media type
- *
  * @param mediaType - Media type enum value (e.g., 'MOVIE', 'TV_SERIES', 'EPISODE')
  * @returns Human-readable label
  */

@@ -1,6 +1,32 @@
 import type { MediaType, ReviewStatus, ScanStatus } from "@/lib/validations/maintenance"
 
 /**
+ * Simplified maintenance candidate type used in candidate list views
+ */
+export interface MaintenanceCandidate {
+  id: string
+  mediaType: string
+  plexRatingKey: string
+  title: string
+  year: number | null
+  poster: string | null
+  fileSize: bigint | null
+  playCount: number
+  lastWatchedAt: Date | null
+  addedAt: Date | null
+  reviewStatus: ReviewStatus
+  flaggedAt: Date
+  scan: {
+    id: string
+    rule: {
+      id: string
+      name: string
+      actionType: string
+    }
+  }
+}
+
+/**
  * Rule criteria structure matching the Zod schema
  */
 export interface RuleCriteria {

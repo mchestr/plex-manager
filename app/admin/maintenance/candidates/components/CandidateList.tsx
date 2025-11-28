@@ -1,32 +1,10 @@
 "use client"
 
-import type { ReviewStatus } from "@/lib/validations/maintenance"
+import type { MaintenanceCandidate } from "@/types/maintenance"
 import { StyledCheckbox } from "@/components/ui/styled-checkbox"
 import { formatFileSize, formatDate, getMediaTypeLabel } from "@/lib/utils/formatters"
+import { CheckCircle, Film, Check, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
-
-type MaintenanceCandidate = {
-  id: string
-  mediaType: string
-  plexRatingKey: string
-  title: string
-  year: number | null
-  poster: string | null
-  fileSize: bigint | null
-  playCount: number
-  lastWatchedAt: Date | null
-  addedAt: Date | null
-  reviewStatus: ReviewStatus
-  flaggedAt: Date
-  scan: {
-    id: string
-    rule: {
-      id: string
-      name: string
-      actionType: string
-    }
-  }
-}
 
 interface CandidateListProps {
   candidates: MaintenanceCandidate[]
@@ -50,9 +28,7 @@ export function CandidateList({
   if (candidates.length === 0) {
     return (
       <div className="text-center py-12 bg-slate-800/50 rounded-lg border border-slate-700" data-testid="candidates-empty-state">
-        <svg className="w-12 h-12 text-slate-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
+        <CheckCircle className="w-12 h-12 text-slate-500 mx-auto mb-4" />
         <h3 className="text-lg font-medium text-white mb-2">No candidates found</h3>
         <p className="text-slate-400">No media matching the current filters.</p>
       </div>
@@ -102,9 +78,7 @@ export function CandidateList({
                       />
                     ) : (
                       <div className="w-10 h-14 bg-slate-700 rounded flex items-center justify-center">
-                        <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
-                        </svg>
+                        <Film className="w-5 h-5 text-slate-500" />
                       </div>
                     )}
                     <div>
@@ -163,9 +137,7 @@ export function CandidateList({
                           aria-label="Approve"
                           data-testid={`approve-candidate-${candidate.id}`}
                         >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
+                          <Check className="w-5 h-5" />
                         </Button>
                         <Button
                           onClick={() => onReject(candidate.id)}
@@ -177,9 +149,7 @@ export function CandidateList({
                           aria-label="Reject"
                           data-testid={`reject-candidate-${candidate.id}`}
                         >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
+                          <X className="w-5 h-5" />
                         </Button>
                       </>
                     )}

@@ -2,6 +2,7 @@
 
 import type { CandidateWithDetails } from "@/types/maintenance"
 import { formatFileSize, formatDate } from "@/lib/utils/formatters"
+import { Film, Check, X } from "lucide-react"
 
 interface CandidateCardProps {
   candidate: CandidateWithDetails
@@ -23,19 +24,7 @@ export function CandidateCard({ candidate, onApprove, onReject }: CandidateCardP
             />
           ) : (
             <div className="w-24 h-36 bg-slate-700 rounded-lg flex items-center justify-center">
-              <svg
-                className="w-8 h-8 text-slate-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z"
-                />
-              </svg>
+              <Film className="w-8 h-8 text-slate-500" />
             </div>
           )}
         </div>
@@ -98,38 +87,14 @@ export function CandidateCard({ candidate, onApprove, onReject }: CandidateCardP
               onClick={() => onApprove(candidate.id)}
               className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
             >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
+              <Check className="w-4 h-4" />
               Approve for Deletion
             </button>
             <button
               onClick={() => onReject(candidate.id)}
               className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
             >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
+              <X className="w-4 h-4" />
               Reject
             </button>
           </div>
