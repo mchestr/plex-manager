@@ -1,7 +1,7 @@
 import { searchPlexMedia, markPlexItemWatched } from "@/lib/connections/plex"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
-import { MarkType, MediaType } from "@prisma/client"
+import { MarkType, MediaType } from "@/lib/generated/prisma/client"
 import { findRadarrIdByTitle, findSonarrIdByTitle } from "@/lib/utils/media-matching"
 
 const logger = createLogger("CHATBOT_MEDIA_MARKING")

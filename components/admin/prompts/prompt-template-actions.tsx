@@ -7,7 +7,7 @@ import {
   deletePromptTemplate,
   setActivePromptTemplate,
 } from "@/actions/prompts"
-import { PromptTemplate } from "@prisma/client"
+import { PromptTemplate } from "@/lib/generated/prisma/client"
 import { ConfirmModal } from "@/components/admin/shared/confirm-modal"
 
 interface PromptTemplateActionsProps {

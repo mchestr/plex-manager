@@ -7,7 +7,7 @@ import {
 } from "@/actions/prompts"
 import { getAvailablePlaceholders } from "@/lib/wrapped/prompt-template"
 import { WrappedData, WrappedStatistics } from "@/types/wrapped"
-import { PlexWrapped, PromptTemplate } from "@prisma/client"
+import { PlexWrapped, PromptTemplate } from "@/lib/generated/prisma/client"
 import { useRouter } from "next/navigation"
 import { useMemo, useState, useTransition } from "react"
 

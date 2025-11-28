@@ -7,8 +7,9 @@
  */
 
 import { expect, test } from '@playwright/test';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../lib/generated/prisma/client';
 import globalSetup from './global-setup';
+import { createE2EPrismaClient } from './helpers/prisma';
 import { navigateAndVerify, waitForLoadingGone } from './helpers/test-utils';
 
 test.describe('Setup Wizard', () => {
@@ -16,7 +17,7 @@ test.describe('Setup Wizard', () => {
   let prisma: PrismaClient;
 
   test.beforeAll(async () => {
-    prisma = new PrismaClient();
+    prisma = createE2EPrismaClient();
   });
 
   test.afterAll(async () => {
