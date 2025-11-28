@@ -27,11 +27,6 @@ interface PlexUser {
   thumb?: string | null
 }
 
-interface InviteValidationResult {
-  success: boolean
-  error?: string
-}
-
 /**
  * Generate a random invite code with unambiguous characters
  */
@@ -66,40 +61,87 @@ function calculateExpirationDate(expiresIn?: string): Date | null {
   }
 }
 
+// Types for invite with full data
+interface InviteData {
+  id: string
+  code: string
+  maxUses: number
+  useCount: number
+  expiresAt: Date | null
+  librarySectionIds: string | null
+  allowDownloads: boolean
+}
+
+interface ValidateAndUseResult {
+  success: boolean
+  error?: string
+  invite?: InviteData
+}
+
 /**
- * Validate invite within a transaction (atomic check and mark as used)
+ * Atomically validate and use an invite within a single transaction.
+ * Uses Serializable isolation level to prevent TOCTOU race conditions.
+ * This ensures that concurrent requests cannot both pass validation.
  */
-async function markInviteAsUsed(inviteId: string): Promise<InviteValidationResult> {
+async function validateAndUseInvite(code: string): Promise<ValidateAndUseResult> {
   try {
-    await prisma.$transaction(
+    const result = await prisma.$transaction(
       async (tx) => {
-        const currentInvite = await tx.invite.findUnique({
-          where: { id: inviteId },
+        // Find invite by code inside the transaction
+        const invite = await tx.invite.findUnique({
+          where: { code },
         })
 
-        if (!currentInvite) {
-          throw new Error("Invite not found")
+        if (!invite) {
+          return { success: false as const, error: "Invalid invite code" }
         }
 
-        if (currentInvite.useCount >= currentInvite.maxUses) {
-          throw new Error("Invite has reached maximum uses")
+        // Validate expiration
+        if (invite.expiresAt && invite.expiresAt < new Date()) {
+          return { success: false as const, error: "Invite has expired" }
         }
 
-        if (currentInvite.expiresAt && currentInvite.expiresAt < new Date()) {
-          throw new Error("Invite has expired")
+        // Validate max uses
+        if (invite.useCount >= invite.maxUses) {
+          return { success: false as const, error: "Invite has reached maximum uses" }
         }
 
-        await tx.invite.update({
-          where: { id: inviteId },
+        // Atomically increment the use count
+        const updatedInvite = await tx.invite.update({
+          where: { id: invite.id },
           data: { useCount: { increment: 1 } },
         })
+
+        return {
+          success: true as const,
+          invite: {
+            id: updatedInvite.id,
+            code: updatedInvite.code,
+            maxUses: updatedInvite.maxUses,
+            useCount: updatedInvite.useCount,
+            expiresAt: updatedInvite.expiresAt,
+            librarySectionIds: updatedInvite.librarySectionIds,
+            allowDownloads: updatedInvite.allowDownloads,
+          },
+        }
       },
-      { timeout: TRANSACTION_TIMEOUT_MS }
+      {
+        timeout: TRANSACTION_TIMEOUT_MS,
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      }
     )
 
-    return { success: true }
+    return result
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Failed to mark invite as used"
+    // Handle Prisma serialization failures (concurrent transactions)
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2034") {
+        // Transaction conflict due to concurrent write
+        return { success: false, error: "Please try again" }
+      }
+    }
+    const errorMessage = error instanceof Error ? error.message : "Failed to process invite"
+    logger.error("Error validating and using invite", { error: errorMessage, code })
     return { success: false, error: errorMessage }
   }
 }
@@ -367,16 +409,12 @@ async function getActivePlexServer() {
 }
 
 /**
- * Process an invite: Invite user to Plex server and accept it
+ * Process an invite: Invite user to Plex server and accept it.
+ * Uses atomic validation to prevent TOCTOU race conditions.
  */
 export async function processInvite(code: string, plexAuthToken: string) {
   try {
-    const inviteCheck = await validateInvite(code)
-    if (!inviteCheck.success || !inviteCheck.data) {
-      return inviteCheck
-    }
-    const invite = inviteCheck.data
-
+    // Get user info and server config first (before consuming the invite)
     const userInfoResult = await getPlexUserInfo(plexAuthToken)
     if (!userInfoResult.success || !userInfoResult.data) {
       return { success: false, error: userInfoResult.error || "Failed to get Plex user info" }
@@ -389,10 +427,13 @@ export async function processInvite(code: string, plexAuthToken: string) {
     }
     const plexServer = serverResult.data
 
-    const markUsedResult = await markInviteAsUsed(invite.id)
-    if (!markUsedResult.success) {
-      return { success: false, error: markUsedResult.error }
+    // Atomically validate and mark the invite as used
+    // This prevents race conditions where multiple requests could use the same invite
+    const inviteResult = await validateAndUseInvite(code)
+    if (!inviteResult.success || !inviteResult.invite) {
+      return { success: false, error: inviteResult.error }
     }
+    const invite = inviteResult.invite
 
     // Build invite settings from stored invite data
     const inviteSettings = {
@@ -402,7 +443,7 @@ export async function processInvite(code: string, plexAuthToken: string) {
       allowDownloads: invite.allowDownloads,
     }
 
-    const inviteResult = await inviteUserToPlexServer(
+    const plexInviteResult = await inviteUserToPlexServer(
       {
         url: plexServer.url,
         token: plexServer.token,
@@ -411,11 +452,11 @@ export async function processInvite(code: string, plexAuthToken: string) {
       inviteSettings
     )
 
-    if (!inviteResult.success) {
-      return { success: false, error: inviteResult.error || "Failed to invite user to Plex server" }
+    if (!plexInviteResult.success) {
+      return { success: false, error: plexInviteResult.error || "Failed to invite user to Plex server" }
     }
 
-    await acceptInviteWithPropagationDelay(plexAuthToken, inviteResult.inviteID)
+    await acceptInviteWithPropagationDelay(plexAuthToken, plexInviteResult.inviteID)
     await recordInviteUsage(invite.id, plexUser)
 
     return { success: true }
