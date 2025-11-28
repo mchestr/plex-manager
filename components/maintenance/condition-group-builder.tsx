@@ -3,7 +3,30 @@
 /**
  * Recursive Condition Group Builder
  *
- * Displays a group of conditions with AND/OR logic and allows nesting of sub-groups.
+ * A React component for building nested condition groups with AND/OR logic.
+ * This component renders a tree structure of conditions and groups, allowing
+ * users to create complex filter rules through an intuitive UI.
+ *
+ * ## Recursion Model
+ *
+ * The component uses self-referential recursion to handle nested groups:
+ * - Root group (depth=0): Primary container with cyan styling
+ * - Nested groups (depth>0): Rendered as children with purple styling
+ * - Each group can contain conditions OR other groups (not both types are required)
+ *
+ * ## Depth Handling
+ *
+ * While there's no hard-coded depth limit, the UI uses depth-based styling:
+ * - depth=0: Cyan left border (root)
+ * - depth=1: Purple left border (first-level nesting)
+ * - depth>1: Slate border (deep nesting)
+ *
+ * ## Empty Group Behavior
+ *
+ * When the last condition is removed from a non-root group, the entire group
+ * is automatically removed to prevent orphaned empty groups.
+ *
+ * @module components/maintenance/condition-group-builder
  */
 
 import type { ConditionGroup, Condition, MediaType } from "@/lib/validations/maintenance"
@@ -12,15 +35,61 @@ import { generateId } from "@/lib/maintenance/field-registry"
 import { ConditionBuilder } from "./condition-builder"
 import { cn } from "@/lib/utils"
 
+/**
+ * Props for the ConditionGroupBuilder component.
+ */
 interface ConditionGroupBuilderProps {
+  /** The condition group data to render and edit */
   group: ConditionGroup
+  /** Callback fired when the group structure or contents change */
   onChange: (group: ConditionGroup) => void
+  /** Available fields that can be used in conditions (filtered by media type) */
   availableFields: FieldDefinition[]
+  /** Current nesting depth (0 = root, used for styling and empty-group removal logic) */
   depth: number
+  /** Media type context for field filtering (MOVIE or TV_SERIES) */
   mediaType: MediaType
+  /** Optional callback to remove this group (not available at root level) */
   onRemove?: () => void
 }
 
+/**
+ * Recursive condition group builder supporting nested AND/OR logic.
+ *
+ * Renders a tree of conditions and groups with add/remove controls.
+ * Each node in the tree is either a single condition (field comparison)
+ * or a group containing multiple conditions/groups combined with AND/OR.
+ *
+ * @param props - Component props
+ * @param props.group - Current condition group to render
+ * @param props.onChange - Callback fired when group structure changes
+ * @param props.availableFields - Fields that can be used in conditions
+ * @param props.depth - Current nesting depth (0 = root, used for UI styling)
+ * @param props.mediaType - Media type (MOVIE/TV_SERIES) for field filtering
+ * @param props.onRemove - Optional callback to remove this group from parent
+ *
+ * @example
+ * ```tsx
+ * // Basic usage at root level
+ * <ConditionGroupBuilder
+ *   group={rootGroup}
+ *   onChange={handleChange}
+ *   availableFields={movieFields}
+ *   depth={0}
+ *   mediaType="MOVIE"
+ * />
+ *
+ * // Nested usage (handled internally via recursion)
+ * <ConditionGroupBuilder
+ *   group={nestedGroup}
+ *   onChange={(updated) => updateChild(index, updated)}
+ *   onRemove={() => removeChild(index)}
+ *   availableFields={movieFields}
+ *   depth={1}
+ *   mediaType="MOVIE"
+ * />
+ * ```
+ */
 export function ConditionGroupBuilder({
   group,
   onChange,
@@ -29,6 +98,10 @@ export function ConditionGroupBuilder({
   mediaType,
   onRemove,
 }: ConditionGroupBuilderProps) {
+  /**
+   * Adds a new condition to this group.
+   * Uses the first available field as the default, with its first allowed operator.
+   */
   const addCondition = () => {
     const firstField = availableFields[0]
     onChange({
@@ -46,6 +119,12 @@ export function ConditionGroupBuilder({
     })
   }
 
+  /**
+   * Adds a new nested group to this group.
+   * Creates a group with AND operator containing one default condition.
+   * This enables users to build complex nested logic like:
+   * `(A AND B) OR (C AND D)`
+   */
   const addGroup = () => {
     const firstField = availableFields[0]
     onChange({
@@ -70,6 +149,11 @@ export function ConditionGroupBuilder({
     })
   }
 
+  /**
+   * Toggles the group's logical operator between AND and OR.
+   * - AND: All conditions in this group must match
+   * - OR: At least one condition in this group must match
+   */
   const toggleOperator = () => {
     onChange({
       ...group,
@@ -77,12 +161,28 @@ export function ConditionGroupBuilder({
     })
   }
 
+  /**
+   * Updates a condition or nested group at the specified index.
+   * Called when a child component reports changes to its state.
+   *
+   * @param index - Position of the child in the conditions array
+   * @param updated - New state for the condition or group
+   */
   const updateCondition = (index: number, updated: Condition | ConditionGroup) => {
     const newConditions = [...group.conditions]
     newConditions[index] = updated
     onChange({ ...group, conditions: newConditions })
   }
 
+  /**
+   * Removes a condition or nested group at the specified index.
+   *
+   * Special behavior: If this removal would leave a non-root group empty,
+   * the entire group is removed instead (via onRemove callback) to prevent
+   * orphaned empty groups in the tree.
+   *
+   * @param index - Position of the child to remove
+   */
   const removeCondition = (index: number) => {
     const newConditions = group.conditions.filter((_, i) => i !== index)
 
@@ -94,7 +194,10 @@ export function ConditionGroupBuilder({
     }
   }
 
+  /** Whether this is the root group (depth === 0) - affects styling and removal behavior */
   const isRoot = depth === 0
+
+  /** Border color based on nesting depth for visual hierarchy */
   const borderColor = isRoot ? 'border-cyan-500' : depth === 1 ? 'border-purple-500/50' : 'border-slate-600'
 
   return (

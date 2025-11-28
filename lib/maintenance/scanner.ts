@@ -1,3 +1,38 @@
+/**
+ * Maintenance Scanner Module
+ *
+ * Scans media libraries to identify items matching maintenance rule criteria.
+ * Integrates with Tautulli for library data and the rule evaluator for matching.
+ *
+ * ## Scanning Process Flow
+ *
+ * 1. **Initialization**: Fetch rule from database, validate it's enabled
+ * 2. **Scan Record**: Create a `MaintenanceScan` record with RUNNING status
+ * 3. **Data Fetching**: Retrieve media data from Tautulli based on media type
+ * 4. **Evaluation**: Test each item against the rule criteria
+ * 5. **Candidate Creation**: Create `MaintenanceCandidate` records for matches
+ * 6. **Completion**: Update scan status and rule statistics
+ *
+ * ## Progress Reporting
+ *
+ * Progress is reported via an optional callback every N items (configurable).
+ * This enables UI updates during long-running scans.
+ *
+ * ## Error Handling Strategy
+ *
+ * - **Database errors**: Logged and re-thrown, scan marked as FAILED
+ * - **Tautulli errors**: Logged with context, scan marked as FAILED
+ * - **Rule not found**: Returns error result immediately
+ * - **Rule disabled**: Returns error result immediately
+ *
+ * ## Data Sources
+ *
+ * - **Movies**: Fetched from Tautulli via `get_library_media_info`
+ * - **TV Series**: Fetched from Tautulli via `get_library_media_info`
+ *
+ * @module lib/maintenance/scanner
+ */
+
 import { prisma } from "@/lib/prisma"
 import { evaluateRule, type MediaItem } from "./rule-evaluator"
 import { createLogger } from "@/lib/utils/logger"
@@ -13,50 +48,108 @@ const MAX_LIBRARY_ITEMS = 10000
 
 /**
  * Report scan progress every N items processed.
- * Lower values = more frequent updates, higher overhead.
+ * Lower values = more frequent updates but higher callback overhead.
  */
 const PROGRESS_REPORT_INTERVAL = 10
 
+/**
+ * Result of a maintenance scan operation.
+ */
 interface ScanResult {
+  /** Unique identifier for this scan (empty string if failed before creation) */
   scanId: string
+  /** Final status of the scan */
   status: "COMPLETED" | "FAILED"
+  /** Total number of media items evaluated */
   itemsScanned: number
+  /** Number of items that matched the rule criteria */
   itemsFlagged: number
+  /** Error message if the scan failed */
   error?: string
 }
 
+/**
+ * Movie data structure fetched from Tautulli.
+ *
+ * Extends the base media fields with movie-specific identifiers.
+ */
 interface MovieData {
+  /** Plex rating key (unique identifier) */
   plexRatingKey: string
+  /** Movie title */
   title: string
+  /** Release year */
   year?: number
+  /** Plex library section ID */
   libraryId?: string
+  /** Total play count */
   playCount: number
+  /** Last watched timestamp */
   lastWatchedAt?: Date | null
+  /** Date added to library */
   addedAt?: Date | null
+  /** Total file size in bytes */
   fileSize?: bigint | null
+  /** Path to the media file */
   filePath?: string | null
+  /** Radarr database ID (if linked) */
   radarrId?: number | null
+  /** TMDB ID for external lookups */
   tmdbId?: number | null
-  poster?: string | null
-}
-
-interface TVSeriesData {
-  plexRatingKey: string
-  title: string
-  year?: number
-  libraryId?: string
-  playCount: number
-  lastWatchedAt?: Date | null
-  addedAt?: Date | null
-  fileSize?: bigint | null
-  filePath?: string | null
-  sonarrId?: number | null
-  tvdbId?: number | null
+  /** Poster image URL/path */
   poster?: string | null
 }
 
 /**
- * Fetch movie data from Tautulli for a specific library section
+ * TV series data structure fetched from Tautulli.
+ *
+ * Extends the base media fields with TV series-specific identifiers.
+ */
+interface TVSeriesData {
+  /** Plex rating key (unique identifier) */
+  plexRatingKey: string
+  /** Series title */
+  title: string
+  /** First aired year */
+  year?: number
+  /** Plex library section ID */
+  libraryId?: string
+  /** Total play count across all episodes */
+  playCount: number
+  /** Last watched timestamp (any episode) */
+  lastWatchedAt?: Date | null
+  /** Date added to library */
+  addedAt?: Date | null
+  /** Total file size for all episodes in bytes */
+  fileSize?: bigint | null
+  /** Path to series folder */
+  filePath?: string | null
+  /** Sonarr database ID (if linked) */
+  sonarrId?: number | null
+  /** TVDB ID for external lookups */
+  tvdbId?: number | null
+  /** Poster image URL/path */
+  poster?: string | null
+}
+
+/**
+ * Fetches movie data from Tautulli for a specific library section.
+ *
+ * Retrieves playback statistics and metadata for all movies in the library.
+ * Data is fetched in a single request (up to MAX_LIBRARY_ITEMS).
+ *
+ * ## Data Transformation
+ *
+ * - Tautulli timestamps (epoch seconds) → JavaScript Date objects
+ * - File size strings → BigInt for precision
+ * - Null/undefined handling for optional fields
+ *
+ * @param sectionId - The Plex library section ID to fetch movies from
+ * @returns Array of MovieData objects with standardized fields
+ * @throws Error if no active Tautulli server is configured
+ * @throws Error if Tautulli API returns an error response
+ *
+ * @internal
  */
 async function fetchMovieData(sectionId: string): Promise<MovieData[]> {
   const startTime = Date.now()
@@ -128,7 +221,23 @@ async function fetchMovieData(sectionId: string): Promise<MovieData[]> {
 }
 
 /**
- * Fetch TV series data from Tautulli for a specific library section
+ * Fetches TV series data from Tautulli for a specific library section.
+ *
+ * Retrieves playback statistics and metadata for all TV series in the library.
+ * Data is fetched in a single request (up to MAX_LIBRARY_ITEMS).
+ *
+ * ## Data Transformation
+ *
+ * - Tautulli timestamps (epoch seconds) → JavaScript Date objects
+ * - File size strings → BigInt for precision
+ * - Null/undefined handling for optional fields
+ *
+ * @param sectionId - The Plex library section ID to fetch TV series from
+ * @returns Array of TVSeriesData objects with standardized fields
+ * @throws Error if no active Tautulli server is configured
+ * @throws Error if Tautulli API returns an error response
+ *
+ * @internal
  */
 async function fetchTVSeriesData(sectionId: string): Promise<TVSeriesData[]> {
   const startTime = Date.now()
@@ -203,7 +312,48 @@ async function fetchTVSeriesData(sectionId: string): Promise<TVSeriesData[]> {
 }
 
 /**
- * Scan for media candidates that match the rule criteria
+ * Scans media libraries for candidates matching a maintenance rule.
+ *
+ * This is the main entry point for running a maintenance scan. It orchestrates
+ * the entire scanning process from fetching data to creating candidate records.
+ *
+ * ## Process Flow
+ *
+ * 1. **Validation**: Fetch and validate the rule (exists, enabled)
+ * 2. **Scan Record**: Create a RUNNING scan record for tracking
+ * 3. **Data Fetch**: Get media items from Tautulli for specified libraries
+ * 4. **Evaluation**: Test each item against rule criteria
+ * 5. **Candidate Creation**: Store matches as MaintenanceCandidate records
+ * 6. **Cleanup**: Update scan status and rule statistics
+ *
+ * ## Progress Reporting
+ *
+ * The optional `onProgress` callback is invoked every `PROGRESS_REPORT_INTERVAL`
+ * items with the current percentage (0-100). This enables UI progress indicators.
+ *
+ * ## Error Handling
+ *
+ * - Errors during scanning update the scan record to FAILED status
+ * - The error message is stored in the scan record for debugging
+ * - Returns a ScanResult with status="FAILED" and error message
+ *
+ * @param ruleId - The ID of the maintenance rule to scan with
+ * @param onProgress - Optional callback for progress updates (0-100 percent)
+ * @returns ScanResult with scan ID, status, and counts
+ *
+ * @example
+ * ```ts
+ * // Basic scan
+ * const result = await scanForCandidates(ruleId)
+ * if (result.status === 'COMPLETED') {
+ *   console.log(`Found ${result.itemsFlagged} candidates`)
+ * }
+ *
+ * // With progress callback
+ * const result = await scanForCandidates(ruleId, (percent) => {
+ *   updateProgressBar(percent)
+ * })
+ * ```
  */
 export async function scanForCandidates(
   ruleId: string,
