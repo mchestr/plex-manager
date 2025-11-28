@@ -2,6 +2,7 @@
 
 import { requireAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/prisma"
+import { Prisma } from "@prisma/client"
 import { createLogger } from "@/lib/utils/logger"
 import {
   CreateMaintenanceRuleSchema,
@@ -72,7 +73,7 @@ export async function createMaintenanceRule(data: unknown) {
         description: validated.description,
         enabled: validated.enabled,
         mediaType: validated.mediaType,
-        criteria: validated.criteria as any, // Cast to satisfy Prisma JSON type
+        criteria: validated.criteria as unknown as Prisma.InputJsonValue,
         actionType: validated.actionType,
         schedule: validated.schedule,
       },
@@ -105,7 +106,7 @@ export async function updateMaintenanceRule(id: string, data: unknown) {
         description: validated.description,
         enabled: validated.enabled,
         mediaType: validated.mediaType,
-        criteria: validated.criteria as any, // Cast to satisfy Prisma JSON type
+        criteria: validated.criteria as unknown as Prisma.InputJsonValue | undefined,
         actionType: validated.actionType,
         schedule: validated.schedule,
       },

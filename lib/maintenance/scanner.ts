@@ -239,14 +239,14 @@ export async function scanForCandidates(
 
     try {
       // Parse criteria
-      const criteria = rule.criteria as any
+      const criteria = rule.criteria as Record<string, unknown>
 
       // Fetch media data based on media type
       let mediaItems: MediaItem[] = []
 
       if (rule.mediaType === "MOVIE") {
         // Fetch from all movie libraries or specific libraries
-        const libraryIds = criteria.libraryIds || []
+        const libraryIds = (criteria.libraryIds as string[]) || []
 
         if (libraryIds.length > 0) {
           for (const libId of libraryIds) {
@@ -262,7 +262,7 @@ export async function scanForCandidates(
         }
       } else if (rule.mediaType === "TV_SERIES") {
         // Fetch from all TV libraries or specific libraries
-        const libraryIds = criteria.libraryIds || []
+        const libraryIds = (criteria.libraryIds as string[]) || []
 
         if (libraryIds.length > 0) {
           for (const libId of libraryIds) {
