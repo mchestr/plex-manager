@@ -26,6 +26,7 @@ export function DiscordIntegrationForm({ onComplete, onBack }: DiscordIntegratio
     clientId: "",
     clientSecret: "",
     guildId: "",
+    serverInviteCode: "",
     platformName: "Plex Wrapped",
     instructions: "",
   })
