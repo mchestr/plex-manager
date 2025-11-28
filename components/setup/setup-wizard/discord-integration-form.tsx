@@ -121,6 +121,7 @@ export function DiscordIntegrationForm({ onComplete, onBack }: DiscordIntegratio
           <StyledInput
             type="text"
             name="clientId"
+            data-testid="setup-input-clientId"
             value={formData.clientId}
             onChange={handleChange}
             placeholder="Discord application client ID"
@@ -136,6 +137,7 @@ export function DiscordIntegrationForm({ onComplete, onBack }: DiscordIntegratio
           <StyledInput
             type="password"
             name="clientSecret"
+            data-testid="setup-input-clientSecret"
             value={formData.clientSecret}
             onChange={handleChange}
             placeholder="Discord application client secret"
@@ -151,6 +153,7 @@ export function DiscordIntegrationForm({ onComplete, onBack }: DiscordIntegratio
           <StyledInput
             type="text"
             name="guildId"
+            data-testid="setup-input-guildId"
             value={formData.guildId}
             onChange={handleChange}
             placeholder="Discord server/guild ID"
@@ -168,6 +171,7 @@ export function DiscordIntegrationForm({ onComplete, onBack }: DiscordIntegratio
           <StyledInput
             type="text"
             name="platformName"
+            data-testid="setup-input-platformName"
             value={formData.platformName}
             onChange={handleChange}
             placeholder="Shown in Discord profile (e.g. Plex Wrapped)"
@@ -183,6 +187,7 @@ export function DiscordIntegrationForm({ onComplete, onBack }: DiscordIntegratio
         </label>
         <StyledTextarea
           name="instructions"
+          data-testid="setup-input-instructions"
           value={formData.instructions}
           onChange={handleChange}
           placeholder="Share notes for other admins on how to deploy and test the Discord bot."

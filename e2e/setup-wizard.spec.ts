@@ -206,6 +206,8 @@ test.describe('Setup Wizard', () => {
     const discordToggle = page.getByTestId('setup-discord-toggle');
     if ((await discordToggle.getAttribute('aria-pressed')) === 'false') {
       await discordToggle.click();
+      // Wait for conditional fields to appear after toggle
+      await page.locator('input[name="clientId"]').waitFor({ state: 'visible', timeout: 5000 });
     }
     await fillAndSubmitStep('Discord Linked Roles', {
       clientId: 'discord-client-id',
