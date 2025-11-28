@@ -1,6 +1,7 @@
 "use client"
 
 import { TextareaHTMLAttributes, forwardRef } from "react"
+import { cn } from "@/lib/utils"
 
 interface StyledTextareaProps extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "size"> {
   size?: "sm" | "md" | "lg"
@@ -14,20 +15,20 @@ const sizeClasses = {
 }
 
 export const StyledTextarea = forwardRef<HTMLTextAreaElement, StyledTextareaProps>(
-  ({ size = "md", className = "", error = false, ...props }, ref) => {
-    const baseClasses =
-      "w-full bg-slate-800/50 border rounded-lg text-white placeholder-slate-400 shadow-sm focus:outline-none focus:border-cyan-400 focus:ring-cyan-400 focus:ring-1 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-
-    const borderClass = error
-      ? "border-red-500/50 focus:border-red-400 focus:ring-red-400"
-      : "border-slate-600 hover:border-slate-500"
-
-    const sizeClass = sizeClasses[size]
-
+  ({ size = "md", className, error = false, ...props }, ref) => {
     return (
       <textarea
         ref={ref}
-        className={`${baseClasses} ${borderClass} ${sizeClass} ${className}`}
+        className={cn(
+          "w-full bg-slate-800/50 border rounded-lg text-white placeholder-slate-400 shadow-sm",
+          "focus:outline-none focus:border-cyan-400 focus:ring-cyan-400 focus:ring-1",
+          "transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
+          error
+            ? "border-red-500/50 focus:border-red-400 focus:ring-red-400"
+            : "border-slate-600 hover:border-slate-500",
+          sizeClasses[size],
+          className
+        )}
         {...props}
       />
     )
