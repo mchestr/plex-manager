@@ -88,12 +88,19 @@ export async function verifyPageUnauthorized(page: Page): Promise<void> {
   const accessDeniedError = page.getByText('Access Denied');
 
   // Wait for error boundary to render by checking for any error element to be visible
-  await Promise.race([
-    unauthorizedErrorPage.waitFor({ state: 'visible', timeout: 5000 }).catch(() => null),
-    accessDeniedHeading.waitFor({ state: 'visible', timeout: 5000 }).catch(() => null),
-    unauthorizedError.waitFor({ state: 'visible', timeout: 5000 }).catch(() => null),
-    accessDeniedError.waitFor({ state: 'visible', timeout: 5000 }).catch(() => null),
+  const errorAppeared = await Promise.race([
+    unauthorizedErrorPage.waitFor({ state: 'visible', timeout: 5000 }).then(() => true).catch(() => false),
+    accessDeniedHeading.waitFor({ state: 'visible', timeout: 5000 }).then(() => true).catch(() => false),
+    unauthorizedError.waitFor({ state: 'visible', timeout: 5000 }).then(() => true).catch(() => false),
+    accessDeniedError.waitFor({ state: 'visible', timeout: 5000 }).then(() => true).catch(() => false),
   ]);
+
+  if (!errorAppeared) {
+    throw new Error(
+      `Expected error boundary to render within 5000ms, but no error element appeared. ` +
+      `URL: ${page.url()}`
+    );
+  }
 
   // Check for testid first (more reliable)
   const isUnauthorizedPageVisible = await unauthorizedErrorPage.isVisible().catch(() => false);
