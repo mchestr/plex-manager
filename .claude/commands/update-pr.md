@@ -52,11 +52,49 @@ You are tasked with updating a pull request by rebasing it and addressing review
    - Push with force-with-lease to preserve history safely: `git push origin <branch-name> --force-with-lease`
    - Verify push was successful
 
-9. **Provide summary**:
+9. **Create GitHub issue for follow-up tasks** (if applicable):
+   - Review all comments from the code review
+   - Identify any items marked as:
+     - "Optional but recommended"
+     - "Future consideration"
+     - "Separate PR"
+     - "Out of scope for this PR"
+     - Or any suggestions that weren't implemented in this update
+   - If there are follow-up tasks, create a GitHub issue using `gh issue create`:
+     - Title format: "Follow-up: [Brief description] (from PR #<number>)"
+     - Body should include:
+       - Reference to the original PR: "Follow-up tasks from PR #<number>"
+       - List of specific tasks to be addressed
+       - Context from the review comments (quote relevant parts)
+       - Link back to the PR for context
+     - Use appropriate labels (e.g., "enhancement", "refactor", "technical-debt")
+     - Example command:
+       ```bash
+       gh issue create --title "Follow-up: Extract duplicate utilities (from PR #47)" --body "$(cat <<'EOF'
+       Follow-up tasks from PR #47
+
+       ## Tasks
+       - [ ] Extract duplicate formatting functions (formatFileSize, formatDate, getMediaTypeLabel) to lib/utils/formatters.ts
+       - [ ] Create shared Icon component library or use lucide-react/heroicons
+       - [ ] Move MaintenanceCandidate type to types/maintenance.ts
+       - [ ] Add unit tests for extracted components
+
+       ## Context
+       From code review on PR #47:
+       > Functions like formatFileSize, formatDate, getMediaTypeLabel appear in multiple files. Consider extracting to lib/utils/formatters.ts for reuse.
+
+       See PR #47 for full context: #47
+       EOF
+       )" --label enhancement,technical-debt
+       ```
+   - Report the issue number to the user after creation
+
+10. **Provide summary**:
    - Summarize what review comments were addressed
    - Confirm the PR is rebased on latest main
    - List any verification steps completed
    - Note if there are any remaining issues or blockers
+   - Include link to follow-up issue if one was created
 
 **Important Notes**:
 - If the PR number is not provided as an argument, ask the user for it
@@ -67,3 +105,4 @@ You are tasked with updating a pull request by rebasing it and addressing review
 - Never skip or ignore requested changes from reviewers
 - If a review comment suggests something for "future consideration" or "separate PR", you can skip it unless the user specifically asks to implement it
 - Always verify the PR is in a good state after pushing (tests pass, builds successfully)
+- Only create a follow-up issue if there are actual follow-up tasks identified from the review
