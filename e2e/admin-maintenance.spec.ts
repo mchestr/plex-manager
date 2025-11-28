@@ -18,7 +18,7 @@ test.describe('Admin Maintenance Feature', () => {
       await waitForAdminPageReady(adminPage, 30000);
 
       // Click create rule button
-      await adminPage.getByTestId('create-rule').click();
+      await adminPage.getByTestId('maintenance-rules-create').click();
 
       // Verify we're on the create page
       await waitForAdminContent(adminPage, [
@@ -31,10 +31,10 @@ test.describe('Admin Maintenance Feature', () => {
       await waitForAdminPageReady(adminPage, 30000);
 
       // Verify form elements exist
-      await expect(adminPage.getByTestId('rule-name-input')).toBeVisible();
-      await expect(adminPage.getByTestId('rule-media-type-select')).toBeVisible();
-      await expect(adminPage.getByTestId('rule-action-type-select')).toBeVisible();
-      await expect(adminPage.getByTestId('rule-submit')).toBeVisible();
+      await expect(adminPage.getByTestId('maintenance-rule-name-input')).toBeVisible();
+      await expect(adminPage.getByTestId('maintenance-rule-media-type-select')).toBeVisible();
+      await expect(adminPage.getByTestId('maintenance-rule-action-type-select')).toBeVisible();
+      await expect(adminPage.getByTestId('maintenance-rule-submit')).toBeVisible();
     });
 
     test('should show rule builder interface', async ({ adminPage }) => {
@@ -42,9 +42,9 @@ test.describe('Admin Maintenance Feature', () => {
       await waitForAdminPageReady(adminPage, 30000);
 
       // Verify rule builder elements
-      await expect(adminPage.getByTestId('rule-add-condition')).toBeVisible();
-      await expect(adminPage.getByTestId('rule-add-group')).toBeVisible();
-      await expect(adminPage.getByTestId('rule-operator-toggle')).toBeVisible();
+      await expect(adminPage.getByTestId('maintenance-rule-add-condition')).toBeVisible();
+      await expect(adminPage.getByTestId('maintenance-rule-add-group')).toBeVisible();
+      await expect(adminPage.getByTestId('maintenance-rule-operator-toggle')).toBeVisible();
     });
   });
 
