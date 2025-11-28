@@ -45,14 +45,13 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   webServer: {
-    // Use production mode in CI (with pre-built artifacts), dev mode locally
-    command: process.env.CI ? 'npx next start' : 'npx next dev',
+    command: 'npx next dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 30000, // 30 seconds to allow for build/startup
     env: {
       ...process.env,
-      NODE_ENV: process.env.CI ? 'production' : 'test',
+      NODE_ENV: 'test',
       NEXT_PUBLIC_APP_URL: 'http://localhost:3000',
       NEXT_PUBLIC_ENABLE_TEST_AUTH: 'true',
       ENABLE_TEST_AUTH: 'true',
