@@ -1,7 +1,7 @@
 "use client"
 
 import { StyledDropdown } from "@/components/ui/styled-dropdown"
-import { PromptTemplate } from "@prisma/client"
+import { PromptTemplate } from "@/lib/generated/prisma/client"
 
 interface TemplateSelectorProps {
   templates: PromptTemplate[]

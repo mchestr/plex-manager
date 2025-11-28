@@ -1,5 +1,5 @@
 import { test as base, expect as baseExpect, Page } from '@playwright/test';
-import { PrismaClient } from '@prisma/client';
+import { createE2EPrismaClient } from '../helpers/prisma';
 
 /**
  * Test user types for different authentication scenarios
@@ -55,7 +55,7 @@ async function authenticateAs(page: Page, testToken: string, expectedUser?: Test
 
   // Ensure user has completed onboarding before authentication
   if (expectedUser) {
-    const prisma = new PrismaClient();
+    const prisma = createE2EPrismaClient();
     try {
       await prisma.user.update({
         where: { id: expectedUser.id },
