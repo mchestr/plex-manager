@@ -147,6 +147,7 @@ export default function NewRulePage() {
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g., Remove unwatched movies older than 6 months"
                   required
+                  data-testid="maintenance-rule-name-input"
                 />
               </div>
 
@@ -178,6 +179,7 @@ export default function NewRulePage() {
                       { value: "EPISODE", label: "Episode" },
                     ]}
                     size="md"
+                    data-testid="maintenance-rule-media-type-select"
                   />
                 </div>
 
@@ -197,6 +199,7 @@ export default function NewRulePage() {
                       { value: "DO_NOTHING", label: "Report Only (No Action)" },
                     ]}
                     size="md"
+                    data-testid="maintenance-rule-action-type-select"
                   />
                 </div>
               </div>
@@ -339,6 +342,7 @@ export default function NewRulePage() {
               type="button"
               onClick={() => router.back()}
               className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg font-medium transition-colors"
+              data-testid="maintenance-rule-cancel"
             >
               Cancel
             </button>
@@ -346,6 +350,7 @@ export default function NewRulePage() {
               type="submit"
               disabled={isSubmitting}
               className="flex-1 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              data-testid="maintenance-rule-submit"
             >
               {isSubmitting ? (
                 <>
