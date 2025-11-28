@@ -5,6 +5,18 @@ import { getTautulliLibraryMediaInfo } from "@/lib/connections/tautulli"
 
 const logger = createLogger("MAINTENANCE_SCANNER")
 
+/**
+ * Maximum number of items to fetch from Tautulli in a single request.
+ * Tautulli supports up to 10,000 items per page.
+ */
+const MAX_LIBRARY_ITEMS = 10000
+
+/**
+ * Report scan progress every N items processed.
+ * Lower values = more frequent updates, higher overhead.
+ */
+const PROGRESS_REPORT_INTERVAL = 10
+
 interface ScanResult {
   scanId: string
   status: "COMPLETED" | "FAILED"
@@ -69,7 +81,7 @@ async function fetchMovieData(sectionId: string): Promise<MovieData[]> {
 
     // Get library media info from Tautulli
     const response = await getTautulliLibraryMediaInfo(config, sectionId, {
-      length: 10000, // Large number to get all items
+      length: MAX_LIBRARY_ITEMS,
     })
 
     if (response.response?.result !== "success") {
@@ -141,7 +153,7 @@ async function fetchTVSeriesData(sectionId: string): Promise<TVSeriesData[]> {
 
     // Get library media info from Tautulli
     const response = await getTautulliLibraryMediaInfo(config, sectionId, {
-      length: 10000, // Large number to get all items
+      length: MAX_LIBRARY_ITEMS,
     })
 
     if (response.response?.result !== "success") {
@@ -281,7 +293,7 @@ export async function scanForCandidates(
         itemsScanned++
 
         // Report progress
-        if (onProgress && itemsScanned % 10 === 0) {
+        if (onProgress && itemsScanned % PROGRESS_REPORT_INTERVAL === 0) {
           const percent = Math.floor((itemsScanned / mediaItems.length) * 100)
           onProgress(percent)
         }
