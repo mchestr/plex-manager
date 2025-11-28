@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Edit(./app/**)",
+      "Edit(./components/**)",
+      "Edit(./lib/**)",
+      "Edit(./actions/**)",
+      "Edit(./types/**)",
+      "Edit(./prisma/schema.prisma)",
+      "Edit(./docs/**)",
+      "Edit(./README.md)",
+      "Edit(./e2e/**)",
+      "Edit(./.claude/**)",
+      "Edit(./CLAUDE.md)"
+    ],
+    "ask": [
+      "Edit(./next.config.js)",
+      "Edit(./next.config.mjs)",
+      "Edit(./tailwind.config.js)",
+      "Edit(./tailwind.config.ts)",
+      "Edit(./tsconfig.json)",
+      "Edit(./package.json)"
+    ],
+    "deny": [
+      "Edit(.env)",
+      "Edit(.env.local)",
+      "Edit(.env.production)",
+      "Edit(.env.development)",
+      "Edit(.git/**)",
+      "Edit(node_modules/**)",
+      "Edit(.next/**)"
+    ]
+  }
+}
