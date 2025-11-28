@@ -2,6 +2,7 @@
 
 import { saveDiscordIntegration } from "@/actions/setup"
 import { StyledInput } from "@/components/ui/styled-input"
+import { StyledTextarea } from "@/components/ui/styled-textarea"
 import { type DiscordIntegrationInput } from "@/lib/validations/discord"
 import { useCallback, useState, useTransition } from "react"
 
@@ -180,13 +181,15 @@ export function DiscordIntegrationForm({ onComplete, onBack }: DiscordIntegratio
         <label className="block text-sm font-medium text-cyan-400 mb-2">
           Internal Instructions <span className="text-slate-500 font-normal">(optional)</span>
         </label>
-        <textarea
+        <StyledTextarea
           name="instructions"
           value={formData.instructions}
           onChange={handleChange}
           placeholder="Share notes for other admins on how to deploy and test the Discord bot."
           disabled={isPending}
-          className="w-full min-h-[120px] rounded-lg border border-slate-600 bg-slate-900/70 px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-cyan-400 focus:border-cyan-400 resize-none"
+          resize="none"
+          className="min-h-[120px]"
+          size="md"
         />
       </div>
 

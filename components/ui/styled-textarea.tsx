@@ -7,6 +7,7 @@ interface StyledTextareaProps extends Omit<TextareaHTMLAttributes<HTMLTextAreaEl
   size?: "sm" | "md" | "lg"
   error?: boolean
   resize?: "none" | "vertical" | "horizontal" | "both"
+  "data-testid"?: string
 }
 
 const sizeClasses = {
@@ -23,10 +24,15 @@ const resizeClasses = {
 }
 
 export const StyledTextarea = forwardRef<HTMLTextAreaElement, StyledTextareaProps>(
-  ({ size = "md", className, error = false, resize = "vertical", ...props }, ref) => {
+  ({ size = "md", className, error = false, resize = "vertical", name, "data-testid": providedTestId, ...props }, ref) => {
+    // Generate data-testid from name if not explicitly provided
+    const testId = providedTestId || (name ? `setup-input-${name}` : undefined)
+
     return (
       <textarea
         ref={ref}
+        name={name}
+        data-testid={testId}
         aria-invalid={error ? "true" : undefined}
         className={cn(
           "w-full bg-slate-800/50 border rounded-lg text-white placeholder-slate-400 shadow-sm",
