@@ -117,6 +117,7 @@ export function ConditionGroupBuilder({
               ? "bg-cyan-600 hover:bg-cyan-700 text-white"
               : "bg-purple-600 hover:bg-purple-700 text-white"
           )}
+          data-testid="maintenance-rule-operator-toggle"
         >
           {group.operator}
         </button>
@@ -131,6 +132,7 @@ export function ConditionGroupBuilder({
             type="button"
             onClick={onRemove}
             className="ml-auto text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded hover:bg-red-400/10 transition-colors"
+            data-testid="maintenance-rule-remove-group"
           >
             Remove Group
           </button>
@@ -169,6 +171,7 @@ export function ConditionGroupBuilder({
           type="button"
           onClick={addCondition}
           className="text-xs text-cyan-400 hover:text-cyan-300 hover:bg-cyan-400/10 px-3 py-1.5 rounded transition-colors flex items-center gap-1"
+          data-testid="maintenance-rule-add-condition"
         >
           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -180,6 +183,7 @@ export function ConditionGroupBuilder({
           type="button"
           onClick={addGroup}
           className="text-xs text-purple-400 hover:text-purple-300 hover:bg-purple-400/10 px-3 py-1.5 rounded transition-colors flex items-center gap-1"
+          data-testid="maintenance-rule-add-group"
         >
           <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

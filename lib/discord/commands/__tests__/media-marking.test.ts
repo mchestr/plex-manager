@@ -3,7 +3,7 @@ import { handleMarkCommand, handleSelectionResponse, MARK_COMMANDS } from "../me
 import { verifyDiscordUser } from "@/lib/discord/services"
 import { searchPlexMedia, markPlexItemWatched, type PlexMediaItem } from "@/lib/connections/plex"
 import { prisma } from "@/lib/prisma"
-import { MarkType, MediaType } from "@prisma/client"
+import { MarkType, MediaType } from "@/lib/generated/prisma/client"
 
 // Mock dependencies
 jest.mock("@/lib/discord/services")

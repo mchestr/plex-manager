@@ -1,5 +1,5 @@
 import { TemplateSelector } from "@/components/admin/playground/template-selector"
-import { PromptTemplate } from "@prisma/client"
+import { PromptTemplate } from "@/lib/generated/prisma/client"
 import { fireEvent, render, screen } from "@testing-library/react"
 
 // Mock the StyledDropdown component

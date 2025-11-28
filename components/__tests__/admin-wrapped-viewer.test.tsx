@@ -1,5 +1,5 @@
 import { WrappedViewer } from '@/components/admin/wrapped/wrapped-viewer'
-import { Prisma } from '@prisma/client'
+import { Prisma } from '@/lib/generated/prisma/client'
 import { render, screen } from '@testing-library/react'
 
 type WrappedWithUser = Prisma.PlexWrappedGetPayload<{

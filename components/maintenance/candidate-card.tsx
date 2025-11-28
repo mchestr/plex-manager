@@ -12,7 +12,7 @@ interface CandidateCardProps {
 
 export function CandidateCard({ candidate, onApprove, onReject }: CandidateCardProps) {
   return (
-    <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 hover:border-slate-600 transition-colors">
+    <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 hover:border-slate-600 transition-colors" data-testid="maintenance-candidate-card">
       <div className="flex gap-4">
         {/* Poster */}
         <div className="flex-shrink-0">
@@ -86,6 +86,7 @@ export function CandidateCard({ candidate, onApprove, onReject }: CandidateCardP
             <button
               onClick={() => onApprove(candidate.id)}
               className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+              data-testid="maintenance-candidate-approve"
             >
               <Check className="w-4 h-4" />
               Approve for Deletion
@@ -93,6 +94,7 @@ export function CandidateCard({ candidate, onApprove, onReject }: CandidateCardP
             <button
               onClick={() => onReject(candidate.id)}
               className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+              data-testid="maintenance-candidate-reject"
             >
               <X className="w-4 h-4" />
               Reject
