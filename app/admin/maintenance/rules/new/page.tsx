@@ -41,6 +41,7 @@ export default function NewRulePage() {
       const data = await response.json()
       return radarrServerListSchema.parse(data)
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes - server lists don't change often
   })
 
   // Fetch Sonarr servers
@@ -52,6 +53,7 @@ export default function NewRulePage() {
       const data = await response.json()
       return sonarrServerListSchema.parse(data)
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes - server lists don't change often
   })
 
   // Handle Radarr fetch errors
@@ -219,7 +221,7 @@ export default function NewRulePage() {
 
               {/* Server instance selection */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {mediaType === "MOVIE" && (radarrLoading || radarrServers.length > 0) && (
+                {mediaType === "MOVIE" && (
                   <div>
                     <label htmlFor="radarrId" className="block text-sm font-medium text-slate-400 mb-2">
                       Radarr Server (Optional)
@@ -233,20 +235,27 @@ export default function NewRulePage() {
                         id="radarrId"
                         value={radarrId ?? ""}
                         onChange={(value) => setRadarrId(value || undefined)}
-                        options={[
-                          { value: "", label: "Use active server" },
-                          ...radarrServers.map(s => ({ value: s.id, label: s.name }))
-                        ]}
+                        options={
+                          radarrServers.length > 0
+                            ? [
+                                { value: "", label: "Use active server" },
+                                ...radarrServers.map(s => ({ value: s.id, label: s.name }))
+                              ]
+                            : [{ value: "", label: "No servers configured" }]
+                        }
                         size="md"
+                        disabled={radarrServers.length === 0}
                       />
                     )}
                     <p className="text-xs text-slate-500 mt-1">
-                      Defaults to the active Radarr instance if not specified.
+                      {radarrServers.length > 0
+                        ? "Defaults to the active Radarr instance if not specified."
+                        : "Configure a Radarr server in settings to enable this option."}
                     </p>
                   </div>
                 )}
 
-                {(mediaType === "TV_SERIES" || mediaType === "EPISODE") && (sonarrLoading || sonarrServers.length > 0) && (
+                {(mediaType === "TV_SERIES" || mediaType === "EPISODE") && (
                   <div>
                     <label htmlFor="sonarrId" className="block text-sm font-medium text-slate-400 mb-2">
                       Sonarr Server (Optional)
@@ -260,15 +269,22 @@ export default function NewRulePage() {
                         id="sonarrId"
                         value={sonarrId ?? ""}
                         onChange={(value) => setSonarrId(value || undefined)}
-                        options={[
-                          { value: "", label: "Use active server" },
-                          ...sonarrServers.map(s => ({ value: s.id, label: s.name }))
-                        ]}
+                        options={
+                          sonarrServers.length > 0
+                            ? [
+                                { value: "", label: "Use active server" },
+                                ...sonarrServers.map(s => ({ value: s.id, label: s.name }))
+                              ]
+                            : [{ value: "", label: "No servers configured" }]
+                        }
                         size="md"
+                        disabled={sonarrServers.length === 0}
                       />
                     )}
                     <p className="text-xs text-slate-500 mt-1">
-                      Defaults to the active Sonarr instance if not specified.
+                      {sonarrServers.length > 0
+                        ? "Defaults to the active Sonarr instance if not specified."
+                        : "Configure a Sonarr server in settings to enable this option."}
                     </p>
                   </div>
                 )}
