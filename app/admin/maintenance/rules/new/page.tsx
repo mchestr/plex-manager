@@ -4,6 +4,7 @@ import { createMaintenanceRule } from "@/actions/maintenance"
 import { EnhancedRuleBuilder, createDefaultCriteria } from "@/components/maintenance/enhanced-rule-builder"
 import { StyledDropdown } from "@/components/ui/styled-dropdown"
 import { StyledInput } from "@/components/ui/styled-input"
+import { StyledTextarea } from "@/components/ui/styled-textarea"
 import { useToast } from "@/components/ui/toast"
 import type { ActionType, MediaType, RuleCriteria } from "@/lib/validations/maintenance"
 import { useRouter } from "next/navigation"
@@ -139,12 +140,11 @@ export default function NewRulePage() {
                 <label htmlFor="description" className="block text-sm font-medium text-slate-400 mb-2">
                   Description
                 </label>
-                <textarea
+                <StyledTextarea
                   id="description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={3}
-                  className="w-full bg-slate-800/50 border border-slate-600 rounded-lg px-4 py-2 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400 focus:ring-cyan-400 focus:ring-1 transition-colors"
                   placeholder="Optional description of what this rule does"
                 />
               </div>
