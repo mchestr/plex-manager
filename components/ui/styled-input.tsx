@@ -25,6 +25,7 @@ export const StyledInput = forwardRef<HTMLInputElement, StyledInputProps>(
         ref={ref}
         name={name}
         data-testid={testId}
+        aria-invalid={error ? "true" : undefined}
         className={cn(
           "w-full bg-slate-800/50 border rounded-lg text-white placeholder-slate-400 shadow-sm",
           "focus:outline-none focus:border-cyan-400 focus:ring-cyan-400 focus:ring-1",
