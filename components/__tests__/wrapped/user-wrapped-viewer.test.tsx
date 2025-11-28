@@ -1,5 +1,5 @@
 import { UserWrappedViewer } from '@/components/wrapped/user-wrapped-viewer';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@/lib/generated/prisma/client';
 import { render, screen } from '@testing-library/react';
 
 // Mock the WrappedGeneratingAnimation component

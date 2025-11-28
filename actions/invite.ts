@@ -8,7 +8,7 @@ import {
 } from "@/lib/connections/plex"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
-import { Prisma } from "@prisma/client"
+import { Prisma } from "@/lib/generated/prisma/client"
 
 const logger = createLogger("INVITE")
 

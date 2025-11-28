@@ -1,5 +1,5 @@
 import { WrappedPlayground } from "@/components/admin/playground/wrapped-playground"
-import { PromptTemplate } from "@prisma/client"
+import { PromptTemplate } from "@/lib/generated/prisma/client"
 import { act, render, screen, waitFor } from "@testing-library/react"
 
 // Mock wrapped library functions

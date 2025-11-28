@@ -2,7 +2,7 @@
 
 import { requireAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/prisma"
-import { Prisma } from "@prisma/client"
+import { Prisma } from "@/lib/generated/prisma/client"
 import { createLogger } from "@/lib/utils/logger"
 import {
   CreateMaintenanceRuleSchema,

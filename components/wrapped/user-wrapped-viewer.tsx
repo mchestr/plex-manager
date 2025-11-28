@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client"
+import { Prisma } from "@/lib/generated/prisma/client"
 import Link from "next/link"
 import { WrappedGeneratingAnimation } from "@/components/generator/wrapped-generating-animation"
 import { formatWatchTime } from "@/lib/utils/time-formatting"

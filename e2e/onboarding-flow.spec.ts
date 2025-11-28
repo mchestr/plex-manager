@@ -1,10 +1,10 @@
-import { PrismaClient } from '@prisma/client';
 import { expect, test, TEST_USERS } from './fixtures/auth';
+import { createE2EPrismaClient } from './helpers/prisma';
 import { waitForLoadingGone } from './helpers/test-utils';
 
 test.describe('Onboarding Flow', () => {
   test('new user completes onboarding and is redirected to homepage', async ({ browser }) => {
-    const prisma = new PrismaClient();
+    const prisma = createE2EPrismaClient();
 
     try {
       // Set regular user's onboarding to false for this test
