@@ -131,6 +131,7 @@ jobs:
         uses: actions/download-artifact@v5
         with:
           name: build-output
+          path: .
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
