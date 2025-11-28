@@ -1,28 +1,29 @@
 ---
-description: Automatically fix failing GitHub workflow builds with log analysis
+description: Automatically fix failing status checks on a PR
 allowed-tools: [Bash, Read, Edit, Write, TodoWrite]
 model: sonnet
 ---
 
-# GitHub Workflow Fixer Agent
+# PR Status Checks Fixer Agent
 
-Automated CI/CD repair workflow that diagnoses and fixes failing GitHub Actions builds.
+Automated PR status check repair workflow that diagnoses and fixes failing GitHub Actions checks on pull requests.
 
 ## Usage
 
-- `/fix-workflow` - Fix the latest failing workflow run
-- `/fix-workflow [workflow-name]` - Fix specific workflow (e.g., "CI", "E2E Tests")
-- `/fix-workflow [run-id]` - Fix specific workflow run by ID
+- `/fix-pr-status-checks <pr-number>` - Fix all failing status checks on the specified PR
+- `/fix-pr-status-checks <pr-number> [check-name]` - Fix specific check on the PR (e.g., "build", "lint")
 
 ## Workflow
 
 This command runs an automated agent that:
 
 1. **Discovery Phase**
-   - Fetch latest workflow runs: `gh run list --limit 10`
-   - Identify failed workflow runs
-   - Download failure logs: `gh run view [run-id] --log-failed`
-   - Parse logs to identify failure types
+   - Validate PR number argument is provided
+   - Fetch PR status checks: `gh pr checks <pr-number>`
+   - Identify failing status checks
+   - Get PR branch: `gh pr view <pr-number> --json headRefName`
+   - Checkout PR branch locally: `gh pr checkout <pr-number>`
+   - For each failing check, get run details and logs
    - Create todo list tracking all failures
 
 2. **Analysis Phase**
@@ -48,18 +49,19 @@ This command runs an automated agent that:
 4. **Commit Phase**
    - Stage all fixes
    - Create descriptive commit message with all fixes
-   - Push to remote branch
-   - Link commit to workflow run in message
+   - Push to PR branch
+   - Link commit to PR in message: "Fixes failing status checks for PR #<pr-number>"
 
 5. **Verification Phase**
-   - Check if workflow can be re-run: `gh run rerun [run-id]`
-   - If applicable, offer to re-trigger workflow
-   - Monitor new run status
+   - Wait for status checks to update after push
+   - Check PR status: `gh pr checks <pr-number>`
+   - Verify which checks now pass
+   - For any checks that can be manually re-run, offer to trigger them
    - Report success or remaining failures
 
 6. **Documentation Phase**
    - Summary of all fixes applied
-   - Workflow run URL with results
+   - PR URL with current status check results
    - Any issues requiring manual intervention
    - Clear audit trail in todo list
 
@@ -111,42 +113,43 @@ This command runs an automated agent that:
 
 ### Approach
 
-1. **Fetch Logs**: Use `gh run view [run-id] --log-failed` to get detailed failure logs
-2. **Parse Errors**: Extract specific error messages and file paths
-3. **Reproduce Locally**: Run the same command that failed in CI
-4. **Fix Iteratively**: Address each error one-by-one
-5. **Verify Each Fix**: Run local verification before committing
-6. **Batch Commit**: Group related fixes in single commit
-7. **Re-run Workflow**: Use `gh run rerun` to verify fixes
+1. **Checkout PR**: Use `gh pr checkout <pr-number>` to work on the PR branch
+2. **Identify Failures**: Use `gh pr checks <pr-number>` to see failing checks
+3. **Fetch Logs**: Get run IDs from checks and use `gh run view [run-id] --log-failed` for detailed logs
+4. **Parse Errors**: Extract specific error messages and file paths
+5. **Reproduce Locally**: Run the same command that failed in CI
+6. **Fix Iteratively**: Address each error one-by-one
+7. **Verify Each Fix**: Run local verification before committing
+8. **Push to PR**: Push fixes to PR branch, triggering new check runs
 
 ## GitHub CLI Commands
 
 The agent uses these `gh` commands:
 
 ```bash
-# List recent workflow runs
-gh run list --limit 10
+# View PR status checks
+gh pr checks <pr-number>
 
-# View specific run details
+# View PR details
+gh pr view <pr-number>
+
+# Checkout PR branch locally
+gh pr checkout <pr-number>
+
+# Get PR branch name
+gh pr view <pr-number> --json headRefName
+
+# View specific run details (from check run IDs)
 gh run view [run-id]
 
 # Download failed logs
 gh run view [run-id] --log-failed
 
-# Re-run failed jobs
+# Re-run failed jobs (if available)
 gh run rerun [run-id]
-
-# Re-run only failed jobs
-gh run rerun [run-id] --failed
 
 # Watch workflow run in real-time
 gh run watch [run-id]
-
-# List workflows
-gh workflow list
-
-# View workflow file
-gh workflow view [workflow-name]
 ```
 
 ## Local Verification Commands
@@ -184,57 +187,61 @@ The agent maintains a todo list showing:
 - 🔄 Issue currently being fixed
 - ⏳ Issues pending
 - ❌ Issues needing manual intervention
-- 🔗 Workflow run URLs
+- 🔗 PR URL and check status
 
 Final report includes:
 - Total issues fixed
 - Commands run for verification
 - Commit SHA with fixes
-- Workflow run status (passed/failed)
+- PR check status (passed/failed/pending)
 - Remaining issues requiring manual review
 
 ## Arguments
 
-`$ARGUMENTS` can specify:
-- Workflow name to target (e.g., "CI", "Test")
-- Specific run ID to fix
-- If not specified, fixes latest failing run
+`$ARGUMENTS` must include:
+- **PR number** (required): The pull request number to fix checks for
+- **Check name** (optional): Specific check to fix (e.g., "build", "lint", "test")
+- If check name not specified, fixes all failing checks on the PR
 
 ## Error Handling
 
-- If workflow logs can't be fetched, guide user to authenticate: `gh auth login`
+- If PR not found, verify PR number is correct
+- If PR checks can't be fetched, guide user to authenticate: `gh auth login`
+- If PR branch can't be checked out, provide troubleshooting steps
 - If issue can't be fixed after 2 attempts, mark for manual review
 - If local verification fails after fix, document the error
-- If workflow re-run still fails, provide detailed next steps
+- If checks still fail after push, provide detailed next steps
 
 ## Safety
 
 - Always verify fixes locally before pushing
-- Create clear commit messages linking to workflow run
+- Create clear commit messages linking to PR
 - Don't force-push unless explicitly requested by user
 - Preserve workflow logs for manual debugging
 - Ask before re-triggering expensive workflows (E2E tests)
+- Ensure you're on the correct PR branch before making changes
 
 ## Example Usage
 
 ```bash
-# Fix latest failing workflow
-/fix-workflow
+# Fix all failing checks on PR #42
+/fix-pr-status-checks 42
 
-# Fix specific workflow by name
-/fix-workflow "CI"
+# Fix only the build check on PR #42
+/fix-pr-status-checks 42 build
 
-# Fix specific run by ID
-/fix-workflow 12345678
+# Fix only the lint check on PR #15
+/fix-pr-status-checks 15 lint
 ```
 
-## Multi-Job Workflows
+## Multi-Check PRs
 
-For workflows with multiple jobs:
-- Identify which jobs failed
+For PRs with multiple failing checks:
+- Identify which checks failed
 - Prioritize fixing based on dependencies
-- Fix blocking jobs first (e.g., build before test)
-- Track each job failure separately in todo list
+- Fix blocking checks first (e.g., build before test)
+- Track each check failure separately in todo list
+- Push all fixes together to avoid triggering checks multiple times
 
 ## Integration with Other Commands
 
@@ -247,6 +254,8 @@ This command works well with:
 ## Limitations
 
 - Requires `gh` CLI to be installed and authenticated
+- Requires PR number to be provided as argument
 - Can only fix issues reproducible locally
 - May not fix environment-specific issues (CI-only failures)
 - Cannot fix issues requiring secrets/credentials changes
+- Cannot fix required checks that are external or from other repositories
