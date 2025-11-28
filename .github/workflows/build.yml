@@ -81,9 +81,7 @@ jobs:
         uses: actions/upload-artifact@v5
         with:
           name: build-output
-          path: |
-            .next/
-            public/
+          path: .next/
           retention-days: 1
 
   e2e:
@@ -144,6 +142,8 @@ jobs:
           NEXTAUTH_SECRET: "test-secret-for-ci-build-at-least-32-chars-long"
           PLEX_CLIENT_IDENTIFIER: "00000000-0000-0000-0000-000000000000"
           NEXT_PUBLIC_ENABLE_TEST_AUTH: "true"
+          ENABLE_TEST_AUTH: "true"
+          SKIP_CONNECTION_TESTS: "true"
 
       - name: Upload Playwright report
         if: always()
