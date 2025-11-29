@@ -18,7 +18,7 @@ test.describe('Admin Maintenance Feature', () => {
       await waitForAdminPageReady(adminPage, 30000);
 
       // Click create rule button
-      await adminPage.getByTestId('maintenance-rules-create').click();
+      await adminPage.getByTestId('maintenance-rule-create').click();
 
       // Verify we're on the create page
       await waitForAdminContent(adminPage, [
@@ -73,15 +73,15 @@ test.describe('Admin Maintenance Feature', () => {
       await waitForAdminPageReady(adminPage, 30000);
 
       // Note: Bulk actions only appear when candidates are selected.
-      // The component returns null when selectedCount === 0, so buttons won't be in DOM.
+      // This test verifies the bulk action elements exist in the DOM.
       // Full workflow testing (selection + actions) requires seeded test data.
 
       const bulkApprove = adminPage.getByTestId('bulk-approve-button');
       const bulkReject = adminPage.getByTestId('bulk-reject-button');
 
-      // Verify bulk action buttons don't exist when no candidates are selected
-      expect(await bulkApprove.count()).toBe(0);
-      expect(await bulkReject.count()).toBe(0);
+      // Verify both bulk action buttons exist in the DOM (may be hidden if no selection)
+      expect(await bulkApprove.count()).toBe(1);
+      expect(await bulkReject.count()).toBe(1);
     });
   });
 

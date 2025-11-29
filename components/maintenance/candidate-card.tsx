@@ -3,6 +3,7 @@
 import type { CandidateWithDetails } from "@/types/maintenance"
 import { formatFileSize, formatDate } from "@/lib/utils/formatters"
 import { Film, Check, X } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 interface CandidateCardProps {
   candidate: CandidateWithDetails
@@ -83,22 +84,24 @@ export function CandidateCard({ candidate, onApprove, onReject }: CandidateCardP
 
           {/* Action Buttons */}
           <div className="flex gap-2 mt-4">
-            <button
+            <Button
+              variant="danger"
               onClick={() => onApprove(candidate.id)}
-              className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+              className="flex-1"
               data-testid="maintenance-candidate-approve"
             >
               <Check className="w-4 h-4" />
               Approve for Deletion
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="secondary"
               onClick={() => onReject(candidate.id)}
-              className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+              className="flex-1"
               data-testid="maintenance-candidate-reject"
             >
               <X className="w-4 h-4" />
               Reject
-            </button>
+            </Button>
           </div>
         </div>
       </div>

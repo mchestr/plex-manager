@@ -16,12 +16,8 @@ export function CandidateActions({
   onBulkReject,
   isPending,
 }: CandidateActionsProps) {
-  if (selectedCount === 0) {
-    return null
-  }
-
   return (
-    <div className="flex gap-2">
+    <div className={`flex gap-2 ${selectedCount === 0 ? 'hidden' : ''}`}>
       <Button
         onClick={onBulkApprove}
         disabled={isPending}

@@ -55,12 +55,15 @@ describe('CandidateActions', () => {
       expect(screen.getByText(/Reject \(3\)/)).toBeInTheDocument()
     })
 
-    it('should render nothing when selectedCount is 0', () => {
+    it('should hide buttons when selectedCount is 0', () => {
       const { container } = render(<CandidateActions {...defaultProps} selectedCount={0} />)
 
-      expect(container.firstChild).toBeNull()
-      expect(screen.queryByTestId('bulk-approve-button')).not.toBeInTheDocument()
-      expect(screen.queryByTestId('bulk-reject-button')).not.toBeInTheDocument()
+      // Buttons exist in DOM but container is hidden
+      const containerDiv = container.firstChild as HTMLElement
+      expect(containerDiv).toBeInTheDocument()
+      expect(containerDiv).toHaveClass('hidden')
+      expect(screen.getByTestId('bulk-approve-button')).toBeInTheDocument()
+      expect(screen.getByTestId('bulk-reject-button')).toBeInTheDocument()
     })
 
     it('should render icons in buttons', () => {
