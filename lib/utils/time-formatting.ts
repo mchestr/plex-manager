@@ -81,3 +81,63 @@ export function formatBytes(bytes: bigint | number | null): string {
 
   return `${parseFloat((numBytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`
 }
+
+/**
+ * Formats a date as a relative time string (e.g., "2 hours ago", "in 5 minutes")
+ * @param date - Date to format (Date object or ISO string)
+ * @param options - Options for formatting
+ * @returns Relative time string
+ *
+ * @example
+ * formatRelativeTime(new Date(Date.now() - 60000)) // "1 minute ago"
+ * formatRelativeTime(new Date(Date.now() - 3600000)) // "1 hour ago"
+ * formatRelativeTime(new Date(Date.now() + 3600000)) // "in 1 hour"
+ */
+export function formatRelativeTime(
+  date: Date | string,
+  options: { addSuffix?: boolean } = { addSuffix: true }
+): string {
+  const targetDate = typeof date === "string" ? new Date(date) : date
+  const now = new Date()
+  const diffMs = targetDate.getTime() - now.getTime()
+  const isFuture = diffMs > 0
+  const absDiffMs = Math.abs(diffMs)
+
+  const seconds = Math.floor(absDiffMs / 1000)
+  const minutes = Math.floor(seconds / 60)
+  const hours = Math.floor(minutes / 60)
+  const days = Math.floor(hours / 24)
+  const months = Math.floor(days / 30)
+  const years = Math.floor(days / 365)
+
+  let value: number
+  let unit: string
+
+  if (years >= 1) {
+    value = years
+    unit = years === 1 ? "year" : "years"
+  } else if (months >= 1) {
+    value = months
+    unit = months === 1 ? "month" : "months"
+  } else if (days >= 1) {
+    value = days
+    unit = days === 1 ? "day" : "days"
+  } else if (hours >= 1) {
+    value = hours
+    unit = hours === 1 ? "hour" : "hours"
+  } else if (minutes >= 1) {
+    value = minutes
+    unit = minutes === 1 ? "minute" : "minutes"
+  } else {
+    value = seconds
+    unit = seconds === 1 ? "second" : "seconds"
+  }
+
+  const timeStr = `${value} ${unit}`
+
+  if (!options.addSuffix) {
+    return timeStr
+  }
+
+  return isFuture ? `in ${timeStr}` : `${timeStr} ago`
+}

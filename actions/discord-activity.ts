@@ -1,0 +1,245 @@
+"use server"
+
+import { requireAdmin } from "@/lib/admin"
+import {
+  getCommandLogs,
+  getCommandStats,
+  getDailyActivity,
+  getActiveUsers,
+  getSummaryStats,
+  type GetCommandLogsParams,
+} from "@/lib/discord/audit"
+import { prisma } from "@/lib/prisma"
+import { createLogger } from "@/lib/utils/logger"
+import type { DiscordCommandType, DiscordCommandStatus } from "@/lib/generated/prisma/client"
+
+const logger = createLogger("DISCORD_ACTIVITY_ACTIONS")
+
+export interface GetActivityLogsParams {
+  limit?: number
+  offset?: number
+  discordUserId?: string
+  userId?: string
+  commandType?: DiscordCommandType
+  commandName?: string
+  status?: DiscordCommandStatus
+  startDate?: string
+  endDate?: string
+  search?: string
+}
+
+export async function getDiscordActivityLogs(params: GetActivityLogsParams = {}) {
+  await requireAdmin()
+
+  try {
+    const queryParams: GetCommandLogsParams = {
+      limit: params.limit ?? 50,
+      offset: params.offset ?? 0,
+      discordUserId: params.discordUserId,
+      userId: params.userId,
+      commandType: params.commandType,
+      commandName: params.commandName,
+      status: params.status,
+      startDate: params.startDate ? new Date(params.startDate) : undefined,
+      endDate: params.endDate ? new Date(params.endDate) : undefined,
+    }
+
+    const result = await getCommandLogs(queryParams)
+
+    // Serialize dates for client
+    const logs = result.logs.map((log) => ({
+      ...log,
+      startedAt: log.startedAt.toISOString(),
+      completedAt: log.completedAt?.toISOString() ?? null,
+      createdAt: log.createdAt.toISOString(),
+    }))
+
+    return { success: true, logs, total: result.total }
+  } catch (error) {
+    logger.error("Failed to get Discord activity logs", error instanceof Error ? error : undefined)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to get activity logs",
+      logs: [],
+      total: 0,
+    }
+  }
+}
+
+export interface GetStatsParams {
+  startDate: string
+  endDate: string
+}
+
+export async function getDiscordCommandStats(params: GetStatsParams) {
+  await requireAdmin()
+
+  try {
+    const stats = await getCommandStats(
+      new Date(params.startDate),
+      new Date(params.endDate)
+    )
+
+    return { success: true, stats }
+  } catch (error) {
+    logger.error("Failed to get Discord command stats", error instanceof Error ? error : undefined)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to get command stats",
+      stats: [],
+    }
+  }
+}
+
+export async function getDiscordDailyActivity(params: GetStatsParams) {
+  await requireAdmin()
+
+  try {
+    const activity = await getDailyActivity(
+      new Date(params.startDate),
+      new Date(params.endDate)
+    )
+
+    return { success: true, activity }
+  } catch (error) {
+    logger.error("Failed to get Discord daily activity", error instanceof Error ? error : undefined)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to get daily activity",
+      activity: [],
+    }
+  }
+}
+
+export async function getDiscordActiveUsers(params: GetStatsParams & { limit?: number }) {
+  await requireAdmin()
+
+  try {
+    const users = await getActiveUsers(
+      new Date(params.startDate),
+      new Date(params.endDate),
+      params.limit ?? 20
+    )
+
+    // Serialize dates for client
+    const serializedUsers = users.map((user) => ({
+      ...user,
+      lastActiveAt: user.lastActiveAt.toISOString(),
+    }))
+
+    return { success: true, users: serializedUsers }
+  } catch (error) {
+    logger.error("Failed to get Discord active users", error instanceof Error ? error : undefined)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to get active users",
+      users: [],
+    }
+  }
+}
+
+export async function getDiscordSummaryStats(params: GetStatsParams) {
+  await requireAdmin()
+
+  try {
+    const summary = await getSummaryStats(
+      new Date(params.startDate),
+      new Date(params.endDate)
+    )
+
+    return { success: true, summary }
+  } catch (error) {
+    logger.error("Failed to get Discord summary stats", error instanceof Error ? error : undefined)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to get summary stats",
+      summary: null,
+    }
+  }
+}
+
+export async function getDiscordBotStatus() {
+  await requireAdmin()
+
+  try {
+    // Get Discord integration settings
+    const integration = await prisma.discordIntegration.findUnique({
+      where: { id: "discord" },
+    })
+
+    // Get bot lock status
+    const lock = await prisma.discordBotLock.findUnique({
+      where: { id: "discord-bot" },
+    })
+
+    // Check if lock is still valid (not expired)
+    const isLockValid = lock != null && lock.expiresAt > new Date()
+
+    // Get recent activity count (last hour)
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
+    const recentActivityCount = await prisma.discordCommandLog.count({
+      where: {
+        createdAt: { gte: oneHourAgo },
+      },
+    })
+
+    // Get last command time
+    const lastCommand = await prisma.discordCommandLog.findFirst({
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true },
+    })
+
+    return {
+      success: true,
+      status: {
+        isEnabled: integration?.isEnabled ?? false,
+        botEnabled: integration?.botEnabled ?? false,
+        isConnected: isLockValid,
+        instanceId: lock?.instanceId ?? null,
+        lastRenewedAt: lock?.lastRenewedAt?.toISOString() ?? null,
+        expiresAt: lock?.expiresAt?.toISOString() ?? null,
+        recentActivityCount,
+        lastCommandAt: lastCommand?.createdAt?.toISOString() ?? null,
+      },
+    }
+  } catch (error) {
+    logger.error("Failed to get Discord bot status", error instanceof Error ? error : undefined)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to get bot status",
+      status: null,
+    }
+  }
+}
+
+export async function getDiscordDashboardData(params: GetStatsParams) {
+  await requireAdmin()
+
+  try {
+    const [summaryResult, activityResult, statsResult, usersResult, statusResult] = await Promise.all([
+      getDiscordSummaryStats(params),
+      getDiscordDailyActivity(params),
+      getDiscordCommandStats(params),
+      getDiscordActiveUsers({ ...params, limit: 10 }),
+      getDiscordBotStatus(),
+    ])
+
+    return {
+      success: true,
+      data: {
+        summary: summaryResult.success ? summaryResult.summary : null,
+        dailyActivity: activityResult.success ? activityResult.activity : [],
+        commandStats: statsResult.success ? statsResult.stats : [],
+        activeUsers: usersResult.success ? usersResult.users : [],
+        botStatus: statusResult.success ? statusResult.status : null,
+      },
+    }
+  } catch (error) {
+    logger.error("Failed to get Discord dashboard data", error instanceof Error ? error : undefined)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to get dashboard data",
+      data: null,
+    }
+  }
+}

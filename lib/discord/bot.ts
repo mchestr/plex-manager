@@ -2,6 +2,12 @@ import { Client, Events, GatewayIntentBits } from "discord.js"
 import winston from "winston"
 import { clearDiscordChat, handleDiscordChat, verifyDiscordUser } from "./services"
 import { MARK_COMMANDS, handleMarkCommand, handleSelectionResponse } from "./commands/media-marking"
+import {
+  createCommandLog,
+  updateCommandLog,
+  logCommandExecution,
+} from "./audit"
+import type { DiscordCommandType, DiscordCommandStatus } from "@/lib/generated/prisma/client"
 
 const REQUIRED_ENV = [
   "DISCORD_BOT_TOKEN",
@@ -153,6 +159,18 @@ export class DiscordBot {
         prefixUsed,
       })
 
+      // Helper to create base audit log params
+      const createAuditParams = (commandType: DiscordCommandType, commandName: string, commandArgs?: string) => ({
+        discordUserId: message.author.id,
+        discordUsername: message.author.tag,
+        channelId: message.channelId,
+        channelType,
+        guildId: message.guildId ?? undefined,
+        commandType,
+        commandName,
+        commandArgs,
+      })
+
       try {
         const verification = await verifyDiscordUser(message.author.id)
 
@@ -160,6 +178,13 @@ export class DiscordBot {
           this.logger.info("User not linked, sending link request", {
             discordUserId: message.author.id,
             discordUserTag: message.author.tag,
+          })
+          // Log link request
+          const startTime = Date.now()
+          await logCommandExecution({
+            ...createAuditParams("LINK_REQUEST" as DiscordCommandType, "link_request"),
+            status: "SUCCESS" as DiscordCommandStatus,
+            responseTimeMs: Date.now() - startTime,
           })
           await message.reply({
             content: `Hi <@${message.author.id}>! To talk with support, please link your account first: ${PORTAL_URL}`,
@@ -169,6 +194,7 @@ export class DiscordBot {
         }
 
         const displayName = verification.user?.name || verification.user?.email || `User ${verification.user?.id ?? "unknown"}`
+        const userId = verification.user?.id
 
         this.logger.info("User verified successfully", {
           discordUserId: message.author.id,
@@ -181,6 +207,12 @@ export class DiscordBot {
         // Check for clear context command
         const isClearCommand = CLEAR_COMMANDS.some((cmd) => normalizedContent === cmd || normalizedContent.startsWith(`${cmd} `))
         if (isClearCommand) {
+          const startTime = Date.now()
+          const commandName = CLEAR_COMMANDS.find((cmd) => normalizedContent.startsWith(cmd)) || "!clear"
+          const auditLog = await createCommandLog({
+            ...createAuditParams("CLEAR_CONTEXT" as DiscordCommandType, commandName),
+            userId,
+          })
           try {
             const clearResponse = await clearDiscordChat({
               discordUserId: message.author.id,
@@ -188,11 +220,24 @@ export class DiscordBot {
             })
 
             if (clearResponse.success) {
+              if (auditLog) {
+                await updateCommandLog(auditLog.id, {
+                  status: "SUCCESS" as DiscordCommandStatus,
+                  responseTimeMs: Date.now() - startTime,
+                })
+              }
               await message.reply({
                 content: "✅ Chat context cleared! Starting fresh.",
                 allowedMentions: { users: [message.author.id] },
               })
             } else {
+              if (auditLog) {
+                await updateCommandLog(auditLog.id, {
+                  status: "FAILED" as DiscordCommandStatus,
+                  error: "Clear response returned failure",
+                  responseTimeMs: Date.now() - startTime,
+                })
+              }
               await message.reply({
                 content: "Sorry, I couldn't clear the chat context right now. Please try again in a moment.",
                 allowedMentions: { users: [message.author.id] },
@@ -200,6 +245,13 @@ export class DiscordBot {
             }
             return
           } catch (error) {
+            if (auditLog) {
+              await updateCommandLog(auditLog.id, {
+                status: "FAILED" as DiscordCommandStatus,
+                error: error instanceof Error ? error.message : "Unknown error",
+                responseTimeMs: Date.now() - startTime,
+              })
+            }
             this.logger.error("Error clearing chat context", error, {
               discordUserId: message.author.id,
               channelId: message.channelId,
@@ -217,10 +269,28 @@ export class DiscordBot {
         const isMarkCommand = Object.keys(MARK_COMMANDS).includes(firstWord)
         if (isMarkCommand) {
           const args = message.content.trim().split(/\s+/).slice(1)
+          const startTime = Date.now()
+          const auditLog = await createCommandLog({
+            ...createAuditParams("MEDIA_MARK" as DiscordCommandType, firstWord, args.join(" ")),
+            userId,
+          })
           try {
             await handleMarkCommand(message, firstWord, args)
+            if (auditLog) {
+              await updateCommandLog(auditLog.id, {
+                status: "SUCCESS" as DiscordCommandStatus,
+                responseTimeMs: Date.now() - startTime,
+              })
+            }
             return
           } catch (error) {
+            if (auditLog) {
+              await updateCommandLog(auditLog.id, {
+                status: "FAILED" as DiscordCommandStatus,
+                error: error instanceof Error ? error.message : "Unknown error",
+                responseTimeMs: Date.now() - startTime,
+              })
+            }
             this.logger.error("Error handling mark command", error, {
               discordUserId: message.author.id,
               channelId: message.channelId,
@@ -238,13 +308,38 @@ export class DiscordBot {
         const trimmedContent = message.content.trim()
         if (/^[1-5]$/.test(trimmedContent)) {
           const selection = parseInt(trimmedContent, 10)
+          const startTime = Date.now()
+          const auditLog = await createCommandLog({
+            ...createAuditParams("SELECTION" as DiscordCommandType, "selection", trimmedContent),
+            userId,
+          })
           try {
             const handled = await handleSelectionResponse(message, selection)
             if (handled) {
+              if (auditLog) {
+                await updateCommandLog(auditLog.id, {
+                  status: "SUCCESS" as DiscordCommandStatus,
+                  responseTimeMs: Date.now() - startTime,
+                })
+              }
               return
             }
-            // If not handled, fall through to chatbot
+            // If not handled, fall through to chatbot - update log status
+            if (auditLog) {
+              await updateCommandLog(auditLog.id, {
+                status: "SUCCESS" as DiscordCommandStatus,
+                error: "No active selection context, falling through to chatbot",
+                responseTimeMs: Date.now() - startTime,
+              })
+            }
           } catch (error) {
+            if (auditLog) {
+              await updateCommandLog(auditLog.id, {
+                status: "FAILED" as DiscordCommandStatus,
+                error: error instanceof Error ? error.message : "Unknown error",
+                responseTimeMs: Date.now() - startTime,
+              })
+            }
             this.logger.error("Error handling selection response", error, {
               discordUserId: message.author.id,
               channelId: message.channelId,
@@ -273,6 +368,19 @@ export class DiscordBot {
             return
           }
 
+          const startTime = Date.now()
+          // Determine the command name based on trigger type
+          let commandName = "dm"
+          if (mentionBot) {
+            commandName = "@mention"
+          } else if (prefixUsed) {
+            commandName = CHAT_TRIGGER_PREFIXES.find((p) => normalizedContent.startsWith(p)) || "!assistant"
+          }
+          const auditLog = await createCommandLog({
+            ...createAuditParams("CHAT" as DiscordCommandType, commandName, chatInput.substring(0, 500)),
+            userId,
+          })
+
           try {
             await message.channel.sendTyping().catch(() => {})
             const chatbotResponse = await handleDiscordChat({
@@ -282,6 +390,13 @@ export class DiscordBot {
             })
 
             if (chatbotResponse.linked === false) {
+              if (auditLog) {
+                await updateCommandLog(auditLog.id, {
+                  status: "SUCCESS" as DiscordCommandStatus,
+                  error: "User not linked",
+                  responseTimeMs: Date.now() - startTime,
+                })
+              }
               await message.reply({
                 content: `Hi <@${message.author.id}>! To talk with support, please link your account first: ${PORTAL_URL}`,
                 allowedMentions: { users: [message.author.id] },
@@ -291,6 +406,13 @@ export class DiscordBot {
 
             if (!chatbotResponse.success || !chatbotResponse.message?.content) {
               throw new Error(chatbotResponse.error || "Empty chatbot response")
+            }
+
+            if (auditLog) {
+              await updateCommandLog(auditLog.id, {
+                status: "SUCCESS" as DiscordCommandStatus,
+                responseTimeMs: Date.now() - startTime,
+              })
             }
 
             const replyContent = isDm
@@ -303,6 +425,13 @@ export class DiscordBot {
             })
             return
           } catch (error) {
+            if (auditLog) {
+              await updateCommandLog(auditLog.id, {
+                status: "FAILED" as DiscordCommandStatus,
+                error: error instanceof Error ? error.message : "Unknown error",
+                responseTimeMs: Date.now() - startTime,
+              })
+            }
             this.logger.error("Error responding with chatbot", error, {
               discordUserId: message.author.id,
               channelId: message.channelId,

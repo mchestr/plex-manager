@@ -603,3 +603,59 @@ enum IntentType {
   DROPPED
   ON_HOLD
 }
+
+// Discord Command Audit Log - tracks all Discord bot interactions
+model DiscordCommandLog {
+  id              String   @id @default(cuid())
+
+  // Discord user info
+  discordUserId   String
+  discordUsername String?
+
+  // Linked Plex user (if available)
+  userId          String?
+
+  // Command details
+  commandType     DiscordCommandType
+  commandName     String              // e.g., "!finished", "!assistant", "!clear"
+  commandArgs     String?             // Arguments passed to the command
+
+  // Context
+  channelId       String
+  channelType     String              // "dm", "support-channel", "thread"
+  guildId         String?
+
+  // Execution details
+  status          DiscordCommandStatus @default(PENDING)
+  error           String?
+  responseTimeMs  Int?                // Time to process the command
+
+  // Timestamps
+  startedAt       DateTime @default(now())
+  completedAt     DateTime?
+
+  createdAt       DateTime @default(now())
+
+  @@index([discordUserId])
+  @@index([userId])
+  @@index([commandType])
+  @@index([commandName])
+  @@index([status])
+  @@index([createdAt])
+  @@index([channelId])
+}
+
+enum DiscordCommandType {
+  CHAT          // Chatbot interactions (!assistant, !bot, !support, DMs, mentions)
+  MEDIA_MARK    // Media marking commands (!finished, !not-interested, etc.)
+  CLEAR_CONTEXT // Context clear commands (!clear, !reset)
+  SELECTION     // Numeric selection responses (1-5)
+  LINK_REQUEST  // User not linked, requested to link account
+}
+
+enum DiscordCommandStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  TIMEOUT
+}
