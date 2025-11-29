@@ -65,7 +65,7 @@ describe('CandidateList', () => {
 
       expect(screen.getByText('Test Movie')).toBeInTheDocument()
       expect(screen.getByText('2023')).toBeInTheDocument()
-      expect(screen.getByText('Movie')).toBeInTheDocument() // getMediaTypeLabel returns 'Movie'
+      expect(screen.getByText('Movie')).toBeInTheDocument()
       expect(screen.getByText('5 GB')).toBeInTheDocument()
       expect(screen.getByText('3')).toBeInTheDocument()
       expect(screen.getByText('Old Unwatched Movies')).toBeInTheDocument()
