@@ -2,6 +2,30 @@
  * Formatting utilities for consistent data display across the application
  */
 
+/** Number of milliseconds in one day */
+const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000
+
+/**
+ * Convert a date string to the start of the next day for inclusive date range queries.
+ *
+ * When filtering by date range, end dates parsed as strings (e.g., "2025-01-15") become
+ * midnight UTC. Using `lte` (less than or equal) excludes records created after midnight.
+ * This function converts the end date to the start of the next day so `lt` (less than)
+ * can be used to include all records from the entire end date.
+ *
+ * @param dateStr - Date string (e.g., "2025-01-15") or undefined
+ * @returns Date object representing start of next day, or undefined if input is undefined
+ *
+ * @example
+ * // For inclusive date range queries, use with `lt`:
+ * const endDateNextDay = toEndOfDayExclusive(params.endDate)
+ * prisma.model.findMany({ where: { createdAt: { gte: startDate, lt: endDateNextDay } } })
+ */
+export function toEndOfDayExclusive(dateStr: string | undefined): Date | undefined {
+  if (!dateStr) return undefined
+  return new Date(new Date(dateStr).getTime() + MILLISECONDS_PER_DAY)
+}
+
 /**
  * Format bytes to human-readable file size
  * @param bytes - File size in bytes (bigint, number, or null)

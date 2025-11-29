@@ -156,11 +156,14 @@ describe('LLM Usage Statistics', () => {
 
       const result = await getLLMUsageStats(startDate, endDate)
 
+      // Uses `lt` (less than) instead of `lte` for end date to ensure
+      // records from the entire end date are included when the caller
+      // passes the start of the next day
       expect(mockPrisma.lLMUsage.findMany).toHaveBeenCalledWith({
         where: {
           createdAt: {
             gte: startDate,
-            lte: endDate,
+            lt: endDate,
           },
         },
         include: expect.any(Object),

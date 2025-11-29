@@ -4,6 +4,7 @@ import { CostModelChart } from "@/components/admin/cost-analysis/cost-model-char
 import { CostProviderChart } from "@/components/admin/cost-analysis/cost-provider-chart"
 import { CostTrendChart } from "@/components/admin/cost-analysis/cost-trend-chart"
 import { CostUserChart } from "@/components/admin/cost-analysis/cost-user-chart"
+import { toEndOfDayExclusive } from "@/lib/utils/formatters"
 import { Suspense } from "react"
 
 export const dynamic = 'force-dynamic'
@@ -13,14 +14,9 @@ interface CostAnalysisPageProps {
 }
 
 export default async function CostAnalysisPage({ searchParams }: CostAnalysisPageProps) {
-  // Parse date filters
-  // Convert end date to start of next day for inclusive date range queries
-  // This ensures records from any time on the end date are included
   const params = await searchParams
   const startDate = params.startDate ? new Date(params.startDate) : undefined
-  const endDate = params.endDate
-    ? new Date(new Date(params.endDate).getTime() + 24 * 60 * 60 * 1000)
-    : undefined
+  const endDate = toEndOfDayExclusive(params.endDate)
 
   // Get stats for the selected period
   const stats = await getLLMUsageStats(startDate, endDate)
