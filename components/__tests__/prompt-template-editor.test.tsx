@@ -1,6 +1,6 @@
 import { createPromptTemplate, updatePromptTemplate } from '@/actions/prompts'
 import { PromptTemplateEditor } from '@/components/admin/prompts/prompt-template-editor'
-import { PromptTemplate } from '@prisma/client'
+import { PromptTemplate } from '@/lib/generated/prisma/client'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { useRouter } from 'next/navigation'
 

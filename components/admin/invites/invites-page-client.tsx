@@ -64,7 +64,7 @@ export function InvitesPageClient() {
     } finally {
       setLoadingLibraries(false)
     }
-  }, [toast])
+  }, [])
 
   useEffect(() => {
     if (showCreateModal) {
@@ -78,9 +78,12 @@ export function InvitesPageClient() {
       if (result.success && result.data) {
         // @ts-ignore - Prisma types might be slightly off in client
         setInvites(result.data)
+      } else {
+        toast.showError(result.error || "Failed to load invites")
       }
     } catch (error) {
       console.error("Failed to load invites", error)
+      toast.showError(error instanceof Error ? error.message : "Failed to load invites")
     } finally {
       setLoading(false)
     }
@@ -116,6 +119,7 @@ export function InvitesPageClient() {
       }
     } catch (error) {
       console.error("Failed to create invite", error)
+      toast.showError(error instanceof Error ? error.message : "Failed to create invite")
     } finally {
       setCreating(false)
     }

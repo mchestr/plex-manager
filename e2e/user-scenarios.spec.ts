@@ -1,5 +1,5 @@
-import { PrismaClient } from '@prisma/client';
 import { expect, test, TEST_USERS } from './fixtures/auth';
+import { createE2EPrismaClient } from './helpers/prisma';
 import {
   verifyNoAdminAccess,
   waitForLoadingGone
@@ -37,7 +37,7 @@ test.describe('User Scenarios', () => {
 
   test.describe('Regular User Wrapped Experience', () => {
     test('regular user can access their wrapped content', async ({ regularUserPage }) => {
-      const prisma = new PrismaClient();
+      const prisma = createE2EPrismaClient();
       const currentYear = new Date().getFullYear();
 
       // Mock wrapped data matching the WrappedData type structure
@@ -130,7 +130,7 @@ test.describe('User Scenarios', () => {
     });
 
     test('anonymous user can access shared wrapped via share link', async ({ browser }) => {
-      const prisma = new PrismaClient();
+      const prisma = createE2EPrismaClient();
       const currentYear = new Date().getFullYear();
       const shareToken = `test-share-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
