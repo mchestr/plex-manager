@@ -192,6 +192,17 @@ export type UpdateMaintenanceRule = z.infer<typeof UpdateMaintenanceRuleSchema>
 export type CreateUserMediaMark = z.infer<typeof CreateUserMediaMarkSchema>
 export type CreateUserWatchIntent = z.infer<typeof CreateUserWatchIntentSchema>
 
+// Pagination schema for candidate listing
+export const CandidatePaginationSchema = z.object({
+  page: z.number().int().min(1).default(1),
+  pageSize: z.number().int().min(1).max(100).default(25),
+  reviewStatus: ReviewStatusEnum.optional(),
+  mediaType: MediaTypeEnum.optional(),
+  scanId: z.string().optional(),
+})
+
+export type CandidatePagination = z.infer<typeof CandidatePaginationSchema>
+
 /**
  * Runtime validation for rule criteria
  * Validates field/operator compatibility and media type constraints

@@ -8,10 +8,12 @@ import {
   CreateMaintenanceRuleSchema,
   UpdateMaintenanceRuleSchema,
   CreateUserMediaMarkSchema,
+  CandidatePaginationSchema,
   type ReviewStatus,
   type MediaType,
   type MarkType,
 } from "@/lib/validations/maintenance"
+import type { PaginatedCandidatesResponse } from "@/types/maintenance"
 import { maintenanceQueue, deletionQueue } from "@/lib/maintenance/queue"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
@@ -178,51 +180,85 @@ export async function toggleMaintenanceRule(id: string, enabled: boolean) {
 }
 
 /**
- * Get maintenance candidates with optional filters (admin only)
+ * Get maintenance candidates with optional filters and pagination (admin only)
  */
-export async function getMaintenanceCandidates(filters?: {
+export async function getMaintenanceCandidates(params?: {
+  page?: number
+  pageSize?: number
   reviewStatus?: ReviewStatus
   mediaType?: MediaType
   scanId?: string
-}) {
+}): Promise<{ success: true; data: PaginatedCandidatesResponse } | { success: false; error: string }> {
   await requireAdmin()
 
   try {
+    // Parse and validate pagination parameters
+    const validated = CandidatePaginationSchema.parse({
+      page: params?.page ?? 1,
+      pageSize: params?.pageSize ?? 25,
+      reviewStatus: params?.reviewStatus,
+      mediaType: params?.mediaType,
+      scanId: params?.scanId,
+    })
+
+    const { page, pageSize, reviewStatus, mediaType, scanId } = validated
+
     const where: {
       reviewStatus?: ReviewStatus
       mediaType?: MediaType
       scanId?: string
     } = {}
 
-    if (filters?.reviewStatus) {
-      where.reviewStatus = filters.reviewStatus
+    if (reviewStatus) {
+      where.reviewStatus = reviewStatus
     }
-    if (filters?.mediaType) {
-      where.mediaType = filters.mediaType
+    if (mediaType) {
+      where.mediaType = mediaType
     }
-    if (filters?.scanId) {
-      where.scanId = filters.scanId
+    if (scanId) {
+      where.scanId = scanId
     }
 
-    const candidates = await prisma.maintenanceCandidate.findMany({
-      where,
-      orderBy: { flaggedAt: "desc" },
-      include: {
-        scan: {
-          include: {
-            rule: {
-              select: {
-                id: true,
-                name: true,
-                actionType: true,
+    // Get total count and candidates in parallel
+    const [totalCount, candidates] = await Promise.all([
+      prisma.maintenanceCandidate.count({ where }),
+      prisma.maintenanceCandidate.findMany({
+        where,
+        orderBy: { flaggedAt: "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        include: {
+          scan: {
+            include: {
+              rule: {
+                select: {
+                  id: true,
+                  name: true,
+                  actionType: true,
+                },
               },
             },
           },
         },
-      },
-    })
+      }),
+    ])
 
-    return { success: true, data: candidates }
+    const totalPages = Math.ceil(totalCount / pageSize)
+
+    return {
+      success: true,
+      data: {
+        candidates,
+        pagination: {
+          page,
+          pageSize,
+          totalCount,
+          totalPages,
+          hasNextPage: page < totalPages,
+          hasPreviousPage: page > 1,
+        },
+      },
+    }
   } catch (error) {
     logger.error("Error fetching maintenance candidates", error)
     return {

@@ -419,31 +419,48 @@ describe('Maintenance Actions', () => {
   })
 
   describe('getMaintenanceCandidates', () => {
-    it('should return all candidates without filters', async () => {
-      const mockCandidates: Partial<MaintenanceCandidate>[] = [
-        {
-          id: 'candidate-1',
-          reviewStatus: 'PENDING',
-          mediaType: 'MOVIE',
-          scan: {
-            id: 'scan-1',
-            rule: { id: 'rule-1', name: 'Test Rule', actionType: 'FLAG_FOR_REVIEW' },
-          },
+    const mockCandidateData: Partial<MaintenanceCandidate>[] = [
+      {
+        id: 'candidate-1',
+        reviewStatus: 'PENDING',
+        mediaType: 'MOVIE',
+        scan: {
+          id: 'scan-1',
+          rule: { id: 'rule-1', name: 'Test Rule', actionType: 'FLAG_FOR_REVIEW' },
         },
-      ]
+      },
+    ]
 
-      mockRequireAdmin.mockResolvedValue(mockAdminSession as Session)
+    beforeEach(() => {
+      mockPrisma.maintenanceCandidate.count.mockResolvedValue(1)
       mockPrisma.maintenanceCandidate.findMany.mockResolvedValue(
-        mockCandidates as MaintenanceCandidate[]
+        mockCandidateData as MaintenanceCandidate[]
       )
+    })
+
+    it('should return paginated candidates with default parameters', async () => {
+      mockRequireAdmin.mockResolvedValue(mockAdminSession as Session)
 
       const result = await getMaintenanceCandidates()
 
       expect(result.success).toBe(true)
-      expect(result.data).toEqual(mockCandidates)
+      expect(result.data).toEqual({
+        candidates: mockCandidateData,
+        pagination: {
+          page: 1,
+          pageSize: 25,
+          totalCount: 1,
+          totalPages: 1,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        },
+      })
+      expect(mockPrisma.maintenanceCandidate.count).toHaveBeenCalledWith({ where: {} })
       expect(mockPrisma.maintenanceCandidate.findMany).toHaveBeenCalledWith({
         where: {},
         orderBy: { flaggedAt: 'desc' },
+        skip: 0,
+        take: 25,
         include: {
           scan: {
             include: {
@@ -460,22 +477,49 @@ describe('Maintenance Actions', () => {
       })
     })
 
-    it('should filter candidates by review status', async () => {
+    it('should paginate correctly with custom page and pageSize', async () => {
       mockRequireAdmin.mockResolvedValue(mockAdminSession as Session)
-      mockPrisma.maintenanceCandidate.findMany.mockResolvedValue([])
+      mockPrisma.maintenanceCandidate.count.mockResolvedValue(100)
 
-      await getMaintenanceCandidates({ reviewStatus: 'APPROVED' })
+      const result = await getMaintenanceCandidates({ page: 3, pageSize: 10 })
 
+      expect(result.success).toBe(true)
+      expect(result.data?.pagination).toEqual({
+        page: 3,
+        pageSize: 10,
+        totalCount: 100,
+        totalPages: 10,
+        hasNextPage: true,
+        hasPreviousPage: true,
+      })
+      expect(mockPrisma.maintenanceCandidate.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          skip: 20,
+          take: 10,
+        })
+      )
+    })
+
+    it('should filter candidates by review status with pagination', async () => {
+      mockRequireAdmin.mockResolvedValue(mockAdminSession as Session)
+      mockPrisma.maintenanceCandidate.count.mockResolvedValue(50)
+
+      await getMaintenanceCandidates({ reviewStatus: 'APPROVED', page: 2, pageSize: 25 })
+
+      expect(mockPrisma.maintenanceCandidate.count).toHaveBeenCalledWith({
+        where: { reviewStatus: 'APPROVED' },
+      })
       expect(mockPrisma.maintenanceCandidate.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { reviewStatus: 'APPROVED' },
+          skip: 25,
+          take: 25,
         })
       )
     })
 
     it('should filter candidates by media type', async () => {
       mockRequireAdmin.mockResolvedValue(mockAdminSession as Session)
-      mockPrisma.maintenanceCandidate.findMany.mockResolvedValue([])
 
       await getMaintenanceCandidates({ mediaType: 'TV_SERIES' })
 
@@ -488,7 +532,6 @@ describe('Maintenance Actions', () => {
 
     it('should filter candidates by scan ID', async () => {
       mockRequireAdmin.mockResolvedValue(mockAdminSession as Session)
-      mockPrisma.maintenanceCandidate.findMany.mockResolvedValue([])
 
       await getMaintenanceCandidates({ scanId: 'scan-1' })
 
@@ -499,14 +542,15 @@ describe('Maintenance Actions', () => {
       )
     })
 
-    it('should apply multiple filters', async () => {
+    it('should apply multiple filters with pagination', async () => {
       mockRequireAdmin.mockResolvedValue(mockAdminSession as Session)
-      mockPrisma.maintenanceCandidate.findMany.mockResolvedValue([])
 
       await getMaintenanceCandidates({
         reviewStatus: 'PENDING',
         mediaType: 'MOVIE',
         scanId: 'scan-1',
+        page: 1,
+        pageSize: 50,
       })
 
       expect(mockPrisma.maintenanceCandidate.findMany).toHaveBeenCalledWith(
@@ -516,8 +560,49 @@ describe('Maintenance Actions', () => {
             mediaType: 'MOVIE',
             scanId: 'scan-1',
           },
+          skip: 0,
+          take: 50,
         })
       )
+    })
+
+    it('should calculate hasNextPage and hasPreviousPage correctly', async () => {
+      mockRequireAdmin.mockResolvedValue(mockAdminSession as Session)
+      mockPrisma.maintenanceCandidate.count.mockResolvedValue(75)
+
+      // Test first page - hasNextPage true, hasPreviousPage false
+      let result = await getMaintenanceCandidates({ page: 1, pageSize: 25 })
+      expect(result.data?.pagination.hasNextPage).toBe(true)
+      expect(result.data?.pagination.hasPreviousPage).toBe(false)
+
+      // Test middle page - both true
+      result = await getMaintenanceCandidates({ page: 2, pageSize: 25 })
+      expect(result.data?.pagination.hasNextPage).toBe(true)
+      expect(result.data?.pagination.hasPreviousPage).toBe(true)
+
+      // Test last page - hasNextPage false, hasPreviousPage true
+      result = await getMaintenanceCandidates({ page: 3, pageSize: 25 })
+      expect(result.data?.pagination.hasNextPage).toBe(false)
+      expect(result.data?.pagination.hasPreviousPage).toBe(true)
+    })
+
+    it('should handle empty results', async () => {
+      mockRequireAdmin.mockResolvedValue(mockAdminSession as Session)
+      mockPrisma.maintenanceCandidate.count.mockResolvedValue(0)
+      mockPrisma.maintenanceCandidate.findMany.mockResolvedValue([])
+
+      const result = await getMaintenanceCandidates()
+
+      expect(result.success).toBe(true)
+      expect(result.data?.candidates).toEqual([])
+      expect(result.data?.pagination).toEqual({
+        page: 1,
+        pageSize: 25,
+        totalCount: 0,
+        totalPages: 0,
+        hasNextPage: false,
+        hasPreviousPage: false,
+      })
     })
 
     it('should require admin access', async () => {

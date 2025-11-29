@@ -3,13 +3,16 @@
 import { getMaintenanceCandidates, updateCandidateReviewStatus, bulkUpdateCandidates } from "@/actions/maintenance"
 import { useToast } from "@/components/ui/toast"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { Pagination } from "@/components/ui/pagination"
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import type { ReviewStatus, MediaType } from "@/lib/validations/maintenance"
-import type { MaintenanceCandidate } from "@/types/maintenance"
+import type { PaginatedCandidatesResponse } from "@/types/maintenance"
 import { CandidateList } from "./components/CandidateList"
 import { CandidateFilters } from "./components/CandidateFilters"
 import { CandidateActions } from "./components/CandidateActions"
+
+const DEFAULT_PAGE_SIZE = 25
 
 export default function CandidatesPage() {
   const toast = useToast()
@@ -17,23 +20,33 @@ export default function CandidatesPage() {
   const [selectedCandidates, setSelectedCandidates] = useState<Set<string>>(new Set())
   const [reviewStatusFilter, setReviewStatusFilter] = useState<ReviewStatus | "ALL">("PENDING")
   const [mediaTypeFilter, setMediaTypeFilter] = useState<MediaType | "ALL">("ALL")
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
 
   const { data: candidatesResult, isLoading, error } = useQuery({
-    queryKey: ['maintenance-candidates', reviewStatusFilter, mediaTypeFilter],
+    queryKey: ['maintenance-candidates', reviewStatusFilter, mediaTypeFilter, page, pageSize],
     queryFn: async () => {
-      const filters: { reviewStatus?: ReviewStatus; mediaType?: MediaType } = {}
+      const params: {
+        page: number
+        pageSize: number
+        reviewStatus?: ReviewStatus
+        mediaType?: MediaType
+      } = {
+        page,
+        pageSize,
+      }
       if (reviewStatusFilter !== "ALL") {
-        filters.reviewStatus = reviewStatusFilter
+        params.reviewStatus = reviewStatusFilter
       }
       if (mediaTypeFilter !== "ALL") {
-        filters.mediaType = mediaTypeFilter
+        params.mediaType = mediaTypeFilter
       }
 
-      const result = await getMaintenanceCandidates(filters)
+      const result = await getMaintenanceCandidates(params)
       if (!result.success) {
         throw new Error(result.error || 'Failed to fetch candidates')
       }
-      return result.data as MaintenanceCandidate[]
+      return result.data as PaginatedCandidatesResponse
     },
   })
 
@@ -72,6 +85,33 @@ export default function CandidatesPage() {
     },
   })
 
+  const candidates = candidatesResult?.candidates ?? []
+  const pagination = candidatesResult?.pagination
+
+  function handlePageChange(newPage: number) {
+    setPage(newPage)
+    setSelectedCandidates(new Set()) // Clear selection on page change
+  }
+
+  function handlePageSizeChange(newPageSize: number) {
+    setPageSize(newPageSize)
+    setPage(1) // Reset to first page when page size changes
+    setSelectedCandidates(new Set())
+  }
+
+  function handleFilterChange(
+    filterType: "reviewStatus" | "mediaType",
+    value: ReviewStatus | MediaType | "ALL"
+  ) {
+    if (filterType === "reviewStatus") {
+      setReviewStatusFilter(value as ReviewStatus | "ALL")
+    } else {
+      setMediaTypeFilter(value as MediaType | "ALL")
+    }
+    setPage(1) // Reset to first page when filters change
+    setSelectedCandidates(new Set())
+  }
+
   function toggleCandidate(id: string) {
     const newSelected = new Set(selectedCandidates)
     if (newSelected.has(id)) {
@@ -83,12 +123,10 @@ export default function CandidatesPage() {
   }
 
   function toggleAll() {
-    if (!candidatesResult) return
-
-    if (selectedCandidates.size === candidatesResult.length) {
+    if (selectedCandidates.size === candidates.length && candidates.length > 0) {
       setSelectedCandidates(new Set())
     } else {
-      setSelectedCandidates(new Set(candidatesResult.map(c => c.id)))
+      setSelectedCandidates(new Set(candidates.map(c => c.id)))
     }
   }
 
@@ -147,8 +185,8 @@ export default function CandidatesPage() {
             <CandidateFilters
               reviewStatusFilter={reviewStatusFilter}
               mediaTypeFilter={mediaTypeFilter}
-              onReviewStatusChange={setReviewStatusFilter}
-              onMediaTypeChange={setMediaTypeFilter}
+              onReviewStatusChange={(value) => handleFilterChange("reviewStatus", value)}
+              onMediaTypeChange={(value) => handleFilterChange("mediaType", value)}
             />
             <CandidateActions
               selectedCount={selectedCandidates.size}
@@ -160,7 +198,7 @@ export default function CandidatesPage() {
         </div>
 
         <CandidateList
-          candidates={candidatesResult || []}
+          candidates={candidates}
           selectedCandidates={selectedCandidates}
           onToggleCandidate={toggleCandidate}
           onToggleAll={toggleAll}
@@ -168,6 +206,22 @@ export default function CandidatesPage() {
           onReject={handleReject}
           isPending={updateStatusMutation.isPending}
         />
+
+        {pagination && pagination.totalCount > 0 && (
+          <div className="bg-slate-800/50 rounded-lg border border-slate-700 mt-4">
+            <Pagination
+              page={pagination.page}
+              pageSize={pagination.pageSize}
+              totalCount={pagination.totalCount}
+              totalPages={pagination.totalPages}
+              hasNextPage={pagination.hasNextPage}
+              hasPreviousPage={pagination.hasPreviousPage}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+              className="px-4"
+            />
+          </div>
+        )}
       </div>
     </div>
   )

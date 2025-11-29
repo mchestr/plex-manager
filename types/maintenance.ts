@@ -193,6 +193,21 @@ export interface CandidateFilters {
 }
 
 /**
+ * Paginated response for maintenance candidates
+ */
+export interface PaginatedCandidatesResponse {
+  candidates: MaintenanceCandidate[]
+  pagination: {
+    page: number
+    pageSize: number
+    totalCount: number
+    totalPages: number
+    hasNextPage: boolean
+    hasPreviousPage: boolean
+  }
+}
+
+/**
  * Maintenance rule with scan statistics
  */
 export interface RuleWithStats {
