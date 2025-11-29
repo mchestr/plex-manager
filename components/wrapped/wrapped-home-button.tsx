@@ -7,7 +7,7 @@ import { WrappedGeneratingAnimation } from "@/components/generator/wrapped-gener
 import { WrappedShareButton } from "@/components/wrapped/wrapped-share-button"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
 interface WrappedHomeButtonProps {
   userId: string
@@ -21,6 +21,7 @@ export function WrappedHomeButton({ userId, serverName }: WrappedHomeButtonProps
   const [wrapped, setWrapped] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [wrappedSettings, setWrappedSettings] = useState<{ enabled: boolean; year: number } | null>(null)
+  const pollFailureCountRef = useRef(0)
 
   const heroTitle = serverName
 
@@ -68,6 +69,7 @@ export function WrappedHomeButton({ userId, serverName }: WrappedHomeButtonProps
       try {
         const wrappedData = await getUserPlexWrapped(userId, wrappedYear)
         setWrapped(wrappedData)
+        pollFailureCountRef.current = 0 // Reset on success
 
         if (wrappedData?.status === "completed") {
           setIsGenerating(false)
@@ -81,6 +83,11 @@ export function WrappedHomeButton({ userId, serverName }: WrappedHomeButtonProps
         }
       } catch (err) {
         console.error("Error polling wrapped status:", err)
+        pollFailureCountRef.current += 1
+        // Show toast after 3 consecutive failures
+        if (pollFailureCountRef.current === 3) {
+          toast.showError("Having trouble checking status. Will keep trying...")
+        }
       }
     }, 2000) // Poll every 2 seconds
 

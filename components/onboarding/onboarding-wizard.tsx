@@ -4,6 +4,7 @@ import { completeOnboarding, getOnboardingInfo } from "@/actions/onboarding"
 import { DiscordSupportStep, FinalStep, MediaRequestStep, PlexConfigurationStep, WelcomeStep } from "@/components/onboarding/onboarding-steps"
 import { FinalSuccessAnimation } from "@/components/setup/setup-wizard/final-success-animation"
 import { SuccessAnimation } from "@/components/setup/setup-wizard/success-animation"
+import { useToast } from "@/components/ui/toast"
 import { ONBOARDING_STEPS } from "@/types/onboarding"
 import { AnimatePresence, motion } from "framer-motion"
 import { useEffect, useState } from "react"
@@ -13,6 +14,7 @@ interface OnboardingWizardProps {
 }
 
 export function OnboardingWizard({ currentStep: initialStep }: OnboardingWizardProps) {
+  const toast = useToast()
   const [currentStep, setCurrentStep] = useState(initialStep)
   const [showSuccess, setShowSuccess] = useState(false)
   const [showFinalSuccess, setShowFinalSuccess] = useState(false)
@@ -57,7 +59,8 @@ export function OnboardingWizard({ currentStep: initialStep }: OnboardingWizardP
       window.location.href = "/"
     } else {
       console.error("Failed to complete onboarding:", result.error)
-      // Could show an error message to the user here
+      setShowFinalSuccess(false)
+      toast.showError(result.error || "Failed to complete onboarding. Please try again.")
     }
   }
 
