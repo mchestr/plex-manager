@@ -1,6 +1,20 @@
 import { Page, expect } from '@playwright/test';
 import { TEST_USERS } from '../fixtures/auth';
 
+/**
+ * Standard timeout constants for E2E tests
+ * These replace hardcoded magic numbers with semantic names
+ */
+export const WAIT_TIMEOUTS = {
+  /** Timeout for error boundary to render (shorter wait) */
+  ERROR_BOUNDARY: 5000,
+  /** Timeout for step transitions in flows (e.g., onboarding) */
+  STEP_TRANSITION: 10000,
+  /** Timeout for general page content visibility */
+  PAGE_CONTENT: 15000,
+  /** Timeout for admin page operations that may involve data fetching */
+  ADMIN_CONTENT: 30000,
+} as const;
 
 /**
  * Navigate to a page and verify it loaded successfully
@@ -87,8 +101,20 @@ export async function verifyPageUnauthorized(page: Page): Promise<void> {
   const unauthorizedError = page.getByText('401', { exact: true });
   const accessDeniedError = page.getByText('Access Denied');
 
-  // Wait a bit for error boundary to render
-  await page.waitForTimeout(500);
+  // Wait for error boundary to render by checking for any error element to be visible
+  const errorAppeared = await Promise.race([
+    unauthorizedErrorPage.waitFor({ state: 'visible', timeout: WAIT_TIMEOUTS.ERROR_BOUNDARY }).then(() => true).catch(() => false),
+    accessDeniedHeading.waitFor({ state: 'visible', timeout: WAIT_TIMEOUTS.ERROR_BOUNDARY }).then(() => true).catch(() => false),
+    unauthorizedError.waitFor({ state: 'visible', timeout: WAIT_TIMEOUTS.ERROR_BOUNDARY }).then(() => true).catch(() => false),
+    accessDeniedError.waitFor({ state: 'visible', timeout: WAIT_TIMEOUTS.ERROR_BOUNDARY }).then(() => true).catch(() => false),
+  ]);
+
+  if (!errorAppeared) {
+    throw new Error(
+      `Expected error boundary to render within ${WAIT_TIMEOUTS.ERROR_BOUNDARY}ms, but no error element appeared. ` +
+      `URL: ${page.url()}`
+    );
+  }
 
   // Check for testid first (more reliable)
   const isUnauthorizedPageVisible = await unauthorizedErrorPage.isVisible().catch(() => false);

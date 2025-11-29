@@ -33,10 +33,7 @@ test.describe('Admin Functionality', () => {
     // Wait for dropdown to open and click "All" option
     await adminPage.getByTestId('users-filter-plex-access-option-all').click();
 
-    // Wait a moment for the filter to apply
-    await adminPage.waitForTimeout(500);
-
-    // Now verify all users are visible
+    // Wait for filtered results to appear - should now show all users
     await waitForAdminContent(adminPage, [
       { type: 'text', value: 'Admin User' },
       { type: 'text', value: 'admin@example.com' },

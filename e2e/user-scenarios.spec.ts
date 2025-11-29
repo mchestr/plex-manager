@@ -207,9 +207,6 @@ test.describe('User Scenarios', () => {
         await anonymousPage.waitForLoadState('networkidle');
         await waitForLoadingGone(anonymousPage);
 
-        // Wait for animations to complete (framer-motion animations)
-        await anonymousPage.waitForTimeout(2000);
-
         // Verify no 401 or 404 errors
         const unauthorizedError = anonymousPage.getByText('401', { exact: true });
         await expect(unauthorizedError).not.toBeVisible();

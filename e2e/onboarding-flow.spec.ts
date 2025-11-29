@@ -41,46 +41,35 @@ test.describe('Onboarding Flow', () => {
         await expect(letsGoButton).toBeVisible();
         await letsGoButton.click();
 
-        // Wait for success animation and next step
-        await page.waitForTimeout(2000); // Wait for animation
-
+        // Wait for next step to be visible
         // Step 2: Plex Configuration - Click "Got it" button
         await expect(page.getByTestId('onboarding-plex-config-heading')).toBeVisible({ timeout: 10000 });
         const gotItButton = page.getByTestId('onboarding-plex-config-continue');
         await expect(gotItButton).toBeVisible();
         await gotItButton.click();
 
-        // Wait for success animation and next step
-        await page.waitForTimeout(2000);
-
+        // Wait for next step to be visible
         // Step 3: Media Requests - Click "Next" button
         await expect(page.getByTestId('onboarding-media-request-heading')).toBeVisible({ timeout: 10000 });
         const nextButton = page.getByTestId('onboarding-media-request-continue');
         await expect(nextButton).toBeVisible();
         await nextButton.click();
 
-        // Wait for success animation and next step
-        await page.waitForTimeout(2000);
-
+        // Wait for next step to be visible
         // Step 4: Support & Discord - Click "Next" button
         await expect(page.getByTestId('onboarding-discord-support-heading')).toBeVisible({ timeout: 10000 });
         const supportNextButton = page.getByTestId('onboarding-discord-support-continue');
         await expect(supportNextButton).toBeVisible();
         await supportNextButton.click();
 
-        // Wait for success animation and final step
-        await page.waitForTimeout(2000);
-
+        // Wait for final step to be visible
         // Step 5: Final Step - Click "Go to Dashboard" button
         await expect(page.getByTestId('onboarding-final-heading')).toBeVisible({ timeout: 10000 });
         const goToDashboardButton = page.getByTestId('onboarding-final-complete');
         await expect(goToDashboardButton).toBeVisible();
         await goToDashboardButton.click();
 
-        // Wait for final success animation and redirect to homepage
-        await page.waitForTimeout(3000); // Wait for final animation and redirect
-
-        // Verify redirect to homepage
+        // Wait for redirect to homepage
         await page.waitForURL((url) => {
           const isHome = url.pathname === '/' || url.pathname === '';
           return isHome;
