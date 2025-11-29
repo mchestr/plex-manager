@@ -1,10 +1,11 @@
 "use client"
 
+import { getDevDefaults, type DevDefaults } from "@/actions/dev-defaults"
 import { saveDiscordIntegration } from "@/actions/setup"
 import { StyledInput } from "@/components/ui/styled-input"
 import { StyledTextarea } from "@/components/ui/styled-textarea"
 import { type DiscordIntegrationInput } from "@/lib/validations/discord"
-import { useCallback, useState, useTransition } from "react"
+import { useCallback, useEffect, useRef, useState, useTransition } from "react"
 
 interface DiscordIntegrationFormProps {
   onComplete: () => void
@@ -14,6 +15,16 @@ interface DiscordIntegrationFormProps {
 type DiscordFormState = Omit<DiscordIntegrationInput, "isEnabled"> & {
   isEnabled: boolean
   instructions?: string
+}
+
+/** Discord form auto-submits when disabled (no required fields) or when enabled with all required fields */
+function isFormComplete(data: DiscordFormState): boolean {
+  if (!data.isEnabled) {
+    // If disabled, form is always "complete" (can skip Discord)
+    return true
+  }
+  // If enabled, require clientId and clientSecret
+  return !!(data.clientId?.trim() && data.clientSecret?.trim())
 }
 
 export function DiscordIntegrationForm({ onComplete, onBack }: DiscordIntegrationFormProps) {
@@ -30,6 +41,46 @@ export function DiscordIntegrationForm({ onComplete, onBack }: DiscordIntegratio
     platformName: "Plex Wrapped",
     instructions: "",
   })
+  const [devDefaults, setDevDefaults] = useState<DevDefaults | null>(null)
+  const autoSubmitTriggered = useRef(false)
+  const formRef = useRef<HTMLFormElement>(null)
+
+  useEffect(() => {
+    // Load dev defaults on mount
+    getDevDefaults().then((defaults) => {
+      setDevDefaults(defaults)
+      if (defaults.discord) {
+        setFormData((prev) => ({
+          isEnabled: defaults.discord?.isEnabled ?? prev.isEnabled,
+          botEnabled: defaults.discord?.botEnabled ?? prev.botEnabled,
+          clientId: defaults.discord?.clientId ?? prev.clientId,
+          clientSecret: defaults.discord?.clientSecret ?? prev.clientSecret,
+          guildId: defaults.discord?.guildId ?? prev.guildId,
+          serverInviteCode: defaults.discord?.serverInviteCode ?? prev.serverInviteCode,
+          platformName: defaults.discord?.platformName ?? prev.platformName,
+          instructions: defaults.discord?.instructions ?? prev.instructions,
+        }))
+      }
+    })
+  }, [])
+
+  // Auto-submit when form is complete and auto-submit is enabled
+  useEffect(() => {
+    if (
+      devDefaults?.autoSubmit &&
+      isFormComplete(formData) &&
+      !autoSubmitTriggered.current &&
+      !isPending &&
+      !isSuccess
+    ) {
+      autoSubmitTriggered.current = true
+      const timer = setTimeout(() => {
+        formRef.current?.requestSubmit()
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+    return undefined
+  }, [devDefaults, formData, isPending, isSuccess])
 
   const handleChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -78,7 +129,7 @@ export function DiscordIntegrationForm({ onComplete, onBack }: DiscordIntegratio
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
       <div>
         <h2 className="text-2xl font-semibold text-white mb-4">Discord Linked Roles</h2>
         <p className="text-sm text-slate-300 mb-6">

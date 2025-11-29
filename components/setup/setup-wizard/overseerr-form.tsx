@@ -1,14 +1,19 @@
 "use client"
 
-import { getDevDefaults } from "@/actions/dev-defaults"
+import { getDevDefaults, type DevDefaults } from "@/actions/dev-defaults"
 import { saveOverseerr } from "@/actions/setup"
 import { StyledInput } from "@/components/ui/styled-input"
 import { type OverseerrInput } from "@/lib/validations/overseerr"
-import { useEffect, useState, useTransition } from "react"
+import { useEffect, useRef, useState, useTransition } from "react"
 
 interface OverseerrFormProps {
   onComplete: () => void
   onBack?: () => void
+}
+
+/** Check if all required fields are populated for Overseerr form */
+function isFormComplete(data: OverseerrInput): boolean {
+  return !!(data.name?.trim() && data.url?.trim() && data.apiKey?.trim())
 }
 
 export function OverseerrForm({ onComplete, onBack }: OverseerrFormProps) {
@@ -21,20 +26,42 @@ export function OverseerrForm({ onComplete, onBack }: OverseerrFormProps) {
     apiKey: "",
     publicUrl: "",
   })
+  const [devDefaults, setDevDefaults] = useState<DevDefaults | null>(null)
+  const autoSubmitTriggered = useRef(false)
+  const formRef = useRef<HTMLFormElement>(null)
 
   useEffect(() => {
     // Load dev defaults on mount
     getDevDefaults().then((defaults) => {
+      setDevDefaults(defaults)
       if (defaults.overseerr) {
         setFormData((prev) => ({
           name: defaults.overseerr?.name ?? prev.name,
           url: defaults.overseerr?.url ?? prev.url,
           apiKey: defaults.overseerr?.apiKey ?? prev.apiKey,
-          publicUrl: prev.publicUrl,
+          publicUrl: defaults.overseerr?.publicUrl ?? prev.publicUrl,
         }))
       }
     })
   }, [])
+
+  // Auto-submit when form is fully populated and auto-submit is enabled
+  useEffect(() => {
+    if (
+      devDefaults?.autoSubmit &&
+      isFormComplete(formData) &&
+      !autoSubmitTriggered.current &&
+      !isPending &&
+      !isSuccess
+    ) {
+      autoSubmitTriggered.current = true
+      const timer = setTimeout(() => {
+        formRef.current?.requestSubmit()
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+    return undefined
+  }, [devDefaults, formData, isPending, isSuccess])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -62,7 +89,7 @@ export function OverseerrForm({ onComplete, onBack }: OverseerrFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
       <div>
         <h2 className="text-2xl font-semibold text-white mb-4">
           Overseerr Configuration

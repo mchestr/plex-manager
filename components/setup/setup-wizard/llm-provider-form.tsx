@@ -1,11 +1,11 @@
 "use client"
 
-import { getDevDefaults } from "@/actions/dev-defaults"
+import { getDevDefaults, type DevDefaults } from "@/actions/dev-defaults"
 import { fetchLLMModels, saveChatLLMProvider, saveLLMProvider } from "@/actions/setup"
 import { StyledDropdown } from "@/components/ui/styled-dropdown"
 import { StyledInput } from "@/components/ui/styled-input"
 import { type LLMProviderInput } from "@/lib/validations/llm-provider"
-import { useCallback, useEffect, useState, useTransition } from "react"
+import { useCallback, useEffect, useRef, useState, useTransition } from "react"
 
 interface LLMProviderFormProps {
   purpose: "chat" | "wrapped"
@@ -32,6 +32,11 @@ const PURPOSE_CONFIG = {
   },
 } as const
 
+/** Check if all required fields are populated for LLM form */
+function isFormComplete(data: LLMProviderInput): boolean {
+  return !!(data.provider && data.apiKey?.trim())
+}
+
 export function LLMProviderForm({ purpose, onComplete, onBack }: LLMProviderFormProps) {
   const config = PURPOSE_CONFIG[purpose]
   const saveAction = purpose === "chat" ? saveChatLLMProvider : saveLLMProvider
@@ -49,22 +54,31 @@ export function LLMProviderForm({ purpose, onComplete, onBack }: LLMProviderForm
   const [isLoadingModels, setIsLoadingModels] = useState(false)
   const [modelsError, setModelsError] = useState<string | null>(null)
   const [useCustomModel, setUseCustomModel] = useState(false)
+  const [devDefaults, setDevDefaults] = useState<DevDefaults | null>(null)
+  const autoSubmitTriggered = useRef(false)
+  const formRef = useRef<HTMLFormElement>(null)
 
   useEffect(() => {
     // Load dev defaults on mount
     getDevDefaults().then((defaults) => {
-      if (defaults.llmProvider) {
-        const provider = defaults.llmProvider.provider ?? "openai"
-        const apiKey = defaults.llmProvider.apiKey ?? ""
-        const model = defaults.llmProvider.model ?? ""
+      setDevDefaults(defaults)
+      // Use purpose-specific defaults, falling back to legacy llmProvider
+      const llmDefaults = purpose === "chat"
+        ? defaults.chatLlmProvider
+        : defaults.wrappedLlmProvider
+
+      if (llmDefaults) {
+        const provider = llmDefaults.provider ?? "openai"
+        const apiKey = llmDefaults.apiKey ?? ""
+        const model = llmDefaults.model ?? ""
 
         setFormData((prev) => ({
           ...prev,
           provider,
           apiKey,
           model,
-          temperature: (defaults.llmProvider as any)?.temperature ?? prev.temperature,
-          maxTokens: (defaults.llmProvider as any)?.maxTokens ?? prev.maxTokens,
+          temperature: llmDefaults.temperature ?? prev.temperature,
+          maxTokens: llmDefaults.maxTokens ?? prev.maxTokens,
         }))
 
         // If there's a model but it's not in the available models list, use custom input
@@ -73,7 +87,25 @@ export function LLMProviderForm({ purpose, onComplete, onBack }: LLMProviderForm
         }
       }
     })
-  }, [])
+  }, [purpose])
+
+  // Auto-submit when form is fully populated and auto-submit is enabled
+  useEffect(() => {
+    if (
+      devDefaults?.autoSubmit &&
+      isFormComplete(formData) &&
+      !autoSubmitTriggered.current &&
+      !isPending &&
+      !isSuccess
+    ) {
+      autoSubmitTriggered.current = true
+      const timer = setTimeout(() => {
+        formRef.current?.requestSubmit()
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+    return undefined
+  }, [devDefaults, formData, isPending, isSuccess])
 
   const loadModels = useCallback(async (provider: "openai", apiKey: string) => {
     if (!apiKey || apiKey.trim() === "") {
@@ -168,7 +200,7 @@ export function LLMProviderForm({ purpose, onComplete, onBack }: LLMProviderForm
   const currentProvider = providerInfo[formData.provider]
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
       <div>
         <h2 className="text-2xl font-semibold text-white mb-4">
           {config.title}

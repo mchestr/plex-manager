@@ -1,14 +1,19 @@
 "use client"
 
-import { getDevDefaults } from "@/actions/dev-defaults"
+import { getDevDefaults, type DevDefaults } from "@/actions/dev-defaults"
 import { savePlexServer } from "@/actions/setup"
 import { StyledInput } from "@/components/ui/styled-input"
 import { type PlexServerInput } from "@/lib/validations/plex"
-import { memo, useCallback, useEffect, useState, useTransition } from "react"
+import { memo, useCallback, useEffect, useRef, useState, useTransition } from "react"
 
 interface PlexServerFormProps {
   onComplete: () => void
   onBack?: () => void
+}
+
+/** Check if all required fields are populated for Plex form */
+function isFormComplete(data: PlexServerInput): boolean {
+  return !!(data.name?.trim() && data.url?.trim() && data.token?.trim())
 }
 
 export const PlexServerForm = memo(function PlexServerForm({ onComplete, onBack }: PlexServerFormProps) {
@@ -21,20 +26,43 @@ export const PlexServerForm = memo(function PlexServerForm({ onComplete, onBack 
     token: "",
     publicUrl: "",
   })
+  const [devDefaults, setDevDefaults] = useState<DevDefaults | null>(null)
+  const autoSubmitTriggered = useRef(false)
+  const formRef = useRef<HTMLFormElement>(null)
 
   useEffect(() => {
     // Load dev defaults on mount
     getDevDefaults().then((defaults) => {
+      setDevDefaults(defaults)
       if (defaults.plex) {
         setFormData((prev) => ({
           name: defaults.plex?.name ?? prev.name,
           url: defaults.plex?.url ?? prev.url,
           token: defaults.plex?.token ?? prev.token,
-          publicUrl: prev.publicUrl,
+          publicUrl: defaults.plex?.publicUrl ?? prev.publicUrl,
         }))
       }
     })
   }, [])
+
+  // Auto-submit when form is fully populated and auto-submit is enabled
+  useEffect(() => {
+    if (
+      devDefaults?.autoSubmit &&
+      isFormComplete(formData) &&
+      !autoSubmitTriggered.current &&
+      !isPending &&
+      !isSuccess
+    ) {
+      autoSubmitTriggered.current = true
+      // Brief delay to show the populated form
+      const timer = setTimeout(() => {
+        formRef.current?.requestSubmit()
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+    return undefined
+  }, [devDefaults, formData, isPending, isSuccess])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -62,7 +90,7 @@ export const PlexServerForm = memo(function PlexServerForm({ onComplete, onBack 
   }, [])
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
       <div>
         <h2 className="text-2xl font-semibold text-white mb-4">
           Plex Server Configuration
