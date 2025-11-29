@@ -43,7 +43,7 @@ export async function navigateAndVerify(
 /**
  * Wait for application loading screens to disappear
  */
-export async function waitForLoadingGone(page: Page, timeout = WAIT_TIMEOUTS.PAGE_CONTENT): Promise<void> {
+export async function waitForLoadingGone(page: Page, timeout: number = WAIT_TIMEOUTS.PAGE_CONTENT): Promise<void> {
   // Wait for common loading indicators to disappear
   const loadingSelectors = [
     'text=/Loading/i',
@@ -59,7 +59,7 @@ export async function waitForLoadingGone(page: Page, timeout = WAIT_TIMEOUTS.PAG
       const count = await elements.count();
       if (count > 0) {
         // Wait for first visible element to be hidden (others will follow)
-        await expect(elements.first()).not.toBeVisible({ timeout: Math.min(timeout, 3000) }).catch(() => {
+        await expect(elements.first()).not.toBeVisible({ timeout: Math.min(timeout, WAIT_TIMEOUTS.ERROR_BOUNDARY) }).catch(() => {
           // Element may not exist or already hidden - that's fine
         });
       }
@@ -159,7 +159,7 @@ export async function waitForStablePage(page: Page, options?: { timeout?: number
 /**
  * Wait for admin page to be fully loaded with navigation and content
  */
-export async function waitForAdminPageReady(page: Page, timeout = WAIT_TIMEOUTS.ADMIN_CONTENT): Promise<void> {
+export async function waitForAdminPageReady(page: Page, timeout: number = WAIT_TIMEOUTS.ADMIN_CONTENT): Promise<void> {
   // Wait for network to be idle and loading states to disappear
   await page.waitForLoadState('networkidle', { timeout });
   await waitForLoadingGone(page, timeout);
