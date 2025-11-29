@@ -89,6 +89,15 @@ jobs:
         env:
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/test_db?schema=public"
 
+      - name: Build application
+        run: npm run build
+        env:
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/test_db?schema=public"
+          NEXT_PUBLIC_APP_URL: "http://localhost:3000"
+          NEXTAUTH_URL: "http://localhost:3000"
+          NEXTAUTH_SECRET: "test-secret-for-ci-build-at-least-32-chars-long"
+          PLEX_CLIENT_IDENTIFIER: "00000000-0000-0000-0000-000000000000"
+
   e2e:
     name: E2E Tests
     runs-on: ubuntu-latest
@@ -130,15 +139,6 @@ jobs:
         run: npx prisma migrate deploy
         env:
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/test_db?schema=public"
-
-      - name: Build application
-        run: npm run build
-        env:
-          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/test_db?schema=public"
-          NEXT_PUBLIC_APP_URL: "http://localhost:3000"
-          NEXTAUTH_URL: "http://localhost:3000"
-          NEXTAUTH_SECRET: "test-secret-for-ci-build-at-least-32-chars-long"
-          PLEX_CLIENT_IDENTIFIER: "00000000-0000-0000-0000-000000000000"
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
