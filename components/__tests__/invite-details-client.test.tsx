@@ -445,7 +445,7 @@ describe('InviteDetailsClient', () => {
         expect(screen.getByText('TEST1234')).toBeInTheDocument()
       })
 
-      const backLink = screen.getByRole('link', { name: '' })
+      const backLink = screen.getByRole('link', { name: /Back to invites/i })
       expect(backLink).toHaveAttribute('href', '/admin/invites')
     })
   })
@@ -523,7 +523,7 @@ describe('InviteDetailsClient', () => {
       render(<InviteDetailsClient id="invite-1" />)
 
       await waitFor(() => {
-        expect(screen.getByTitle('Copy Link')).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /Copy invite link/i })).toBeInTheDocument()
         expect(screen.getByText('Delete Invite')).toBeInTheDocument()
       })
     })

@@ -55,13 +55,16 @@ export function UserActionsMenu({ user }: UserActionsMenuProps) {
           setIsOpen(!isOpen)
         }}
         className="p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors group"
-        title="Actions"
+        aria-label={`Actions for ${user.name || 'user'}`}
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
       >
         <svg
           className="w-5 h-5 text-slate-400 group-hover:text-slate-200 transition-colors"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
+          aria-hidden="true"
         >
           <path
             strokeLinecap="round"
@@ -83,6 +86,8 @@ export function UserActionsMenu({ user }: UserActionsMenuProps) {
               onClick={() => setIsOpen(false)}
             />
             <div
+              role="menu"
+              aria-label={`Actions for ${user.name || 'user'}`}
               className="fixed w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 overflow-hidden"
               style={{
                 top: `${menuPosition.top}px`,
@@ -96,12 +101,14 @@ export function UserActionsMenu({ user }: UserActionsMenuProps) {
               href={`/admin/users/${user.id}/wrapped`}
               className="flex items-center gap-2 px-3 py-2 text-sm text-slate-200 hover:bg-slate-700/50 transition-colors"
               onClick={() => setIsOpen(false)}
+              role="menuitem"
             >
               <svg
                 className="w-4 h-4 text-cyan-400"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"

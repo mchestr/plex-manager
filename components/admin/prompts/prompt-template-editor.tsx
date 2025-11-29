@@ -588,9 +588,9 @@ export function PromptTemplateEditor({ template, userWrapped, userName = "User" 
                       onClick={handleUndo}
                       disabled={historyIndex === 0}
                       className="p-1.5 text-slate-400 hover:text-white disabled:text-slate-600 disabled:cursor-not-allowed transition-colors rounded hover:bg-slate-700/50"
-                      title="Undo (Ctrl+Z)"
+                      aria-label="Undo (Ctrl+Z)"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
                       </svg>
                     </button>
@@ -599,9 +599,9 @@ export function PromptTemplateEditor({ template, userWrapped, userName = "User" 
                       onClick={handleRedo}
                       disabled={historyIndex === history.length - 1}
                       className="p-1.5 text-slate-400 hover:text-white disabled:text-slate-600 disabled:cursor-not-allowed transition-colors rounded hover:bg-slate-700/50"
-                      title="Redo (Ctrl+Y)"
+                      aria-label="Redo (Ctrl+Y)"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 10h-10a8 8 0 00-8 8v2M21 10l-6 6m6-6l-6-6" />
                       </svg>
                     </button>

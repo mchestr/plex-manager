@@ -32,8 +32,8 @@ export function LLMToggle({ initialDisabled }: LLMToggleProps) {
   }
 
   return (
-    <span className="flex items-center gap-2">
-      <span className="text-slate-500">LLM:</span>
+    <span className="flex items-center gap-2" aria-busy={isSaving}>
+      <span id="llm-toggle-label" className="text-slate-500">LLM:</span>
       <label className="relative inline-flex items-center cursor-pointer">
         <input
           type="checkbox"
@@ -41,9 +41,14 @@ export function LLMToggle({ initialDisabled }: LLMToggleProps) {
           onChange={(e) => handleToggle(e.target.checked)}
           disabled={isSaving}
           className="sr-only peer"
+          role="switch"
+          aria-checked={!llmDisabled}
+          aria-labelledby="llm-toggle-label"
+          aria-describedby="llm-toggle-status"
         />
-        <div className="w-7 h-4 bg-slate-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-cyan-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-red-600 peer-checked:hover:bg-red-700 peer-checked:disabled:bg-red-600/50 peer-disabled:opacity-50 peer-disabled:cursor-not-allowed"></div>
+        <div className="w-7 h-4 bg-slate-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-cyan-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-red-600 peer-checked:hover:bg-red-700 peer-checked:disabled:bg-red-600/50 peer-disabled:opacity-50 peer-disabled:cursor-not-allowed" aria-hidden="true"></div>
         <span
+          id="llm-toggle-status"
           className={`ml-2 font-mono text-[10px] ${
             llmDisabled ? "text-red-400" : "text-green-400"
           }`}
@@ -57,6 +62,7 @@ export function LLMToggle({ initialDisabled }: LLMToggleProps) {
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
+          aria-hidden="true"
         >
           <circle
             className="opacity-25"

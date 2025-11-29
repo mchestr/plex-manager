@@ -105,7 +105,7 @@ describe('PromptTemplateEditor', () => {
     it('should render undo/redo buttons', () => {
       const { container } = render(<PromptTemplateEditor />)
 
-      const buttons = container.querySelectorAll('button[title*="Undo"], button[title*="Redo"]')
+      const buttons = container.querySelectorAll('button[aria-label*="Undo"], button[aria-label*="Redo"]')
       expect(buttons.length).toBe(2)
     })
   })
@@ -298,7 +298,7 @@ describe('PromptTemplateEditor', () => {
       const templateInput = screen.getByLabelText(/Template Content/)
       fireEvent.change(templateInput, { target: { value: 'First change' } })
 
-      const undoButton = container.querySelector('button[title*="Undo"]')
+      const undoButton = container.querySelector('button[aria-label*="Undo"]')
       expect(undoButton).not.toBeDisabled()
     })
 
@@ -310,7 +310,7 @@ describe('PromptTemplateEditor', () => {
       fireEvent.change(templateInput, { target: { value: 'First change' } })
       fireEvent.change(templateInput, { target: { value: 'Second change' } })
 
-      const undoButton = container.querySelector('button[title*="Undo"]')
+      const undoButton = container.querySelector('button[aria-label*="Undo"]')
       fireEvent.click(undoButton!)
 
       expect(templateInput).toHaveValue('First change')
@@ -322,10 +322,10 @@ describe('PromptTemplateEditor', () => {
       const templateInput = screen.getByLabelText(/Template Content/)
       fireEvent.change(templateInput, { target: { value: 'Change' } })
 
-      const undoButton = container.querySelector('button[title*="Undo"]')
+      const undoButton = container.querySelector('button[aria-label*="Undo"]')
       fireEvent.click(undoButton!)
 
-      const redoButton = container.querySelector('button[title*="Redo"]')
+      const redoButton = container.querySelector('button[aria-label*="Redo"]')
       expect(redoButton).not.toBeDisabled()
     })
 
@@ -335,10 +335,10 @@ describe('PromptTemplateEditor', () => {
       const templateInput = screen.getByLabelText(/Template Content/)
       fireEvent.change(templateInput, { target: { value: 'Change' } })
 
-      const undoButton = container.querySelector('button[title*="Undo"]')
+      const undoButton = container.querySelector('button[aria-label*="Undo"]')
       fireEvent.click(undoButton!)
 
-      const redoButton = container.querySelector('button[title*="Redo"]')
+      const redoButton = container.querySelector('button[aria-label*="Redo"]')
       fireEvent.click(redoButton!)
 
       expect(templateInput).toHaveValue('Change')

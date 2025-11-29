@@ -230,7 +230,7 @@ describe('InvitesPageClient', () => {
         expect(screen.getByText('TEST1234')).toBeInTheDocument()
       })
 
-      const deleteButtons = screen.getAllByTitle('Delete')
+      const deleteButtons = screen.getAllByRole('button', { name: /Delete invite/i })
       await user.click(deleteButtons[0])
 
       expect(screen.getByTestId('confirm-modal')).toBeInTheDocument()
@@ -245,7 +245,7 @@ describe('InvitesPageClient', () => {
         expect(screen.getByText('TEST1234')).toBeInTheDocument()
       })
 
-      const deleteButtons = screen.getAllByTitle('Delete')
+      const deleteButtons = screen.getAllByRole('button', { name: /Delete invite/i })
       await user.click(deleteButtons[0])
 
       const cancelButton = screen.getByTestId('modal-cancel')
@@ -266,7 +266,7 @@ describe('InvitesPageClient', () => {
         expect(screen.getByText('TEST1234')).toBeInTheDocument()
       })
 
-      const deleteButtons = screen.getAllByTitle('Delete')
+      const deleteButtons = screen.getAllByRole('button', { name: /Delete invite/i })
       await user.click(deleteButtons[0])
 
       const confirmButton = screen.getByTestId('modal-confirm')
@@ -289,7 +289,7 @@ describe('InvitesPageClient', () => {
         expect(screen.getByText('TEST1234')).toBeInTheDocument()
       })
 
-      const deleteButtons = screen.getAllByTitle('Delete')
+      const deleteButtons = screen.getAllByRole('button', { name: /Delete invite/i })
       await user.click(deleteButtons[0])
 
       const confirmButton = screen.getByTestId('modal-confirm')
@@ -338,7 +338,7 @@ describe('InvitesPageClient', () => {
       const generateButton = screen.getByText('Generate Invite')
       await user.click(generateButton)
 
-      const closeButton = screen.getByRole('button', { name: '' })
+      const closeButton = screen.getByRole('button', { name: /Close modal/i })
       await user.click(closeButton)
 
       await waitFor(() => {

@@ -168,12 +168,11 @@ describe('LoadingScreen', () => {
       expect(spinner).toBeInTheDocument()
     })
 
-    it('should have screen reader text in spinner', () => {
+    it('should have accessible label in spinner', () => {
       const { container } = render(<LoadingScreen />)
 
-      const srText = container.querySelector('.sr-only')
-      expect(srText).toBeInTheDocument()
-      expect(srText).toHaveTextContent('Loading...')
+      const spinner = container.querySelector('[role="status"]')
+      expect(spinner).toHaveAttribute('aria-label', 'Loading...')
     })
 
     it('should have proper text contrast', () => {

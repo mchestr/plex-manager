@@ -17,12 +17,11 @@ describe('LoadingSpinner', () => {
       expect(spinner).toBeInTheDocument()
     })
 
-    it('should render screen reader text', () => {
+    it('should have accessible label', () => {
       const { container } = render(<LoadingSpinner />)
 
-      const srText = container.querySelector('.sr-only')
-      expect(srText).toBeInTheDocument()
-      expect(srText).toHaveTextContent('Loading...')
+      const spinner = container.querySelector('[role="status"]')
+      expect(spinner).toHaveAttribute('aria-label', 'Loading...')
     })
 
     it('should render SVG element', () => {
@@ -242,12 +241,11 @@ describe('LoadingSpinner', () => {
       expect(spinner).toBeInTheDocument()
     })
 
-    it('should have screen reader only text', () => {
+    it('should have aria-label for screen readers', () => {
       const { container } = render(<LoadingSpinner />)
 
-      const srText = container.querySelector('.sr-only')
-      expect(srText).toBeInTheDocument()
-      expect(srText).toHaveTextContent('Loading...')
+      const spinner = container.querySelector('[role="status"]')
+      expect(spinner).toHaveAttribute('aria-label', 'Loading...')
     })
 
     it('should be visible to screen readers', () => {
@@ -284,16 +282,13 @@ describe('LoadingSpinner', () => {
         <LoadingSpinner
           size="xl"
           className="opacity-50"
-          aria-label="Custom loading indicator"
+          label="Custom loading indicator"
         />
       )
 
       const spinner = container.querySelector('[role="status"]')
       expect(spinner).toHaveAttribute('aria-label', 'Custom loading indicator')
       expect(spinner).toHaveClass('opacity-50')
-
-      const srText = container.querySelector('.sr-only')
-      expect(srText).toHaveTextContent('Loading...')
     })
   })
 

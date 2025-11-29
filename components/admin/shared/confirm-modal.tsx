@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useRef, useId } from "react"
 import { createPortal } from "react-dom"
 
 interface ConfirmModalProps {
@@ -24,6 +24,11 @@ export function ConfirmModal({
   cancelText = "Cancel",
   confirmButtonClass = "bg-purple-600 hover:bg-purple-700",
 }: ConfirmModalProps) {
+  const modalRef = useRef<HTMLDivElement>(null)
+  const previousActiveElement = useRef<Element | null>(null)
+  const titleId = useId()
+  const descriptionId = useId()
+
   // Handle ESC key
   useEffect(() => {
     if (!isOpen) return
@@ -50,6 +55,53 @@ export function ConfirmModal({
     }
   }, [isOpen])
 
+  // Focus management and focus trap
+  useEffect(() => {
+    if (!isOpen) return
+
+    // Store the currently focused element to restore later
+    previousActiveElement.current = document.activeElement
+
+    // Focus the modal when it opens
+    const focusableElements = modalRef.current?.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    )
+    const firstFocusable = focusableElements?.[0]
+    const lastFocusable = focusableElements?.[focusableElements.length - 1]
+
+    // Focus the first focusable element (cancel button)
+    firstFocusable?.focus()
+
+    // Handle tab key to trap focus within modal
+    const handleTab = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return
+
+      if (e.shiftKey) {
+        // Shift + Tab
+        if (document.activeElement === firstFocusable) {
+          e.preventDefault()
+          lastFocusable?.focus()
+        }
+      } else {
+        // Tab
+        if (document.activeElement === lastFocusable) {
+          e.preventDefault()
+          firstFocusable?.focus()
+        }
+      }
+    }
+
+    document.addEventListener("keydown", handleTab)
+
+    return () => {
+      document.removeEventListener("keydown", handleTab)
+      // Restore focus to previous element when modal closes
+      if (previousActiveElement.current instanceof HTMLElement) {
+        previousActiveElement.current.focus()
+      }
+    }
+  }, [isOpen])
+
   const handleConfirm = () => {
     onConfirm()
     onClose()
@@ -61,25 +113,31 @@ export function ConfirmModal({
     <div
       className="fixed inset-0 z-[9999] flex items-center justify-center p-4 overflow-y-auto"
       onClick={onClose}
+      role="presentation"
     >
       {/* Backdrop */}
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" aria-hidden="true" />
 
       {/* Modal Container */}
       <div className="relative w-full max-w-md my-auto">
         {/* Modal Content */}
         <div
+          ref={modalRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          aria-describedby={descriptionId}
           className="relative bg-slate-800 border border-slate-700 rounded-xl shadow-2xl overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
           <div className="px-6 pt-6 pb-4 border-b border-slate-700">
-            <h3 className="text-xl font-bold text-white leading-tight">{title}</h3>
+            <h3 id={titleId} className="text-xl font-bold text-white leading-tight">{title}</h3>
           </div>
 
           {/* Body */}
           <div className="px-6 py-4 max-h-[60vh] overflow-y-auto">
-            <p className="text-slate-300 text-sm leading-relaxed overflow-wrap-break-word">{message}</p>
+            <p id={descriptionId} className="text-slate-300 text-sm leading-relaxed overflow-wrap-break-word">{message}</p>
           </div>
 
           {/* Footer */}

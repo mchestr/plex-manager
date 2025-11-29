@@ -50,6 +50,8 @@ export function WrappedShareButton({
         className="relative px-6 py-3 bg-gradient-to-r from-cyan-600 via-purple-600 to-pink-600 hover:from-cyan-500 hover:via-purple-500 hover:to-pink-500 text-white rounded-xl text-sm font-semibold transition-all duration-200 flex items-center gap-2 shadow-lg"
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
+        aria-label={copied ? "Link copied to clipboard" : "Copy share link to clipboard"}
+        aria-live="polite"
       >
         <AnimatePresence mode="wait">
           {copied ? (
@@ -66,6 +68,7 @@ export function WrappedShareButton({
                 stroke="currentColor"
                 viewBox="0 0 24 24"
                 xmlns="http://www.w3.org/2000/svg"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -90,6 +93,7 @@ export function WrappedShareButton({
                 stroke="currentColor"
                 viewBox="0 0 24 24"
                 xmlns="http://www.w3.org/2000/svg"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"

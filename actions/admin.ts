@@ -3,6 +3,12 @@
 import { requireAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
+import type { Prisma } from "@/lib/generated/prisma/client"
+
+// Type for LLMUsage records with included user
+type LLMUsageWithUser = Prisma.LLMUsageGetPayload<{
+  include: { user: { select: { id: true; name: true; email: true } } }
+}>
 
 const logger = createLogger("ADMIN")
 
@@ -436,7 +442,7 @@ export async function getHistoricalWrappedVersions(wrappedId: string) {
     }
   }
 
-  return llmUsageRecords.map((record, index) => {
+  return llmUsageRecords.map((record: LLMUsageWithUser, index: number) => {
     // Check if this version matches the current wrapped data
     let isCurrent = false
 

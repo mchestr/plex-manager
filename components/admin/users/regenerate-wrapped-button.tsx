@@ -59,8 +59,9 @@ export function RegenerateWrappedButton({
         <button
           onClick={() => setShowConfirmModal(true)}
           disabled={isRegenerating}
+          aria-busy={isRegenerating}
           className="w-full flex items-center gap-2 text-sm text-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          title="Regenerate wrapped"
+          aria-label={isRegenerating ? "Regenerating wrapped" : showSuccess ? "Regeneration started" : "Regenerate wrapped"}
         >
           {isRegenerating ? (
             <svg
@@ -68,6 +69,7 @@ export function RegenerateWrappedButton({
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
+              aria-hidden="true"
             >
               <circle
                 className="opacity-25"
@@ -89,6 +91,7 @@ export function RegenerateWrappedButton({
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
+              aria-hidden="true"
             >
               <path
                 strokeLinecap="round"
@@ -103,6 +106,7 @@ export function RegenerateWrappedButton({
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
+              aria-hidden="true"
             >
               <path
                 strokeLinecap="round"
@@ -135,12 +139,13 @@ export function RegenerateWrappedButton({
         <button
           onClick={() => setShowConfirmModal(true)}
           disabled={isRegenerating}
+          aria-busy={isRegenerating}
           className={`px-2 py-1 text-white text-xs font-medium rounded transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 justify-center ${
             showSuccess
               ? "bg-green-600 hover:bg-green-700 animate-pulse"
               : "bg-purple-600 hover:bg-purple-700"
           }`}
-          title="Regenerate wrapped"
+          aria-label={isRegenerating ? "Regenerating wrapped" : showSuccess ? "Regeneration started" : "Regenerate wrapped"}
         >
           {isRegenerating ? (
             <>
@@ -149,6 +154,7 @@ export function RegenerateWrappedButton({
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
+                aria-hidden="true"
               >
                 <circle
                   className="opacity-25"
@@ -174,6 +180,7 @@ export function RegenerateWrappedButton({
                 stroke="currentColor"
                 viewBox="0 0 24 24"
                 xmlns="http://www.w3.org/2000/svg"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"
@@ -191,6 +198,7 @@ export function RegenerateWrappedButton({
                 stroke="currentColor"
                 viewBox="0 0 24 24"
                 xmlns="http://www.w3.org/2000/svg"
+                aria-hidden="true"
               >
                 <path
                   strokeLinecap="round"

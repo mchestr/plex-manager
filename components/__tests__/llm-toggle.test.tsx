@@ -38,14 +38,14 @@ describe('LLMToggle', () => {
 
   it('should render toggle with initial disabled state', () => {
     renderWithToast(<LLMToggle initialDisabled={true} />)
-    const checkbox = screen.getByRole('checkbox')
+    const checkbox = screen.getByRole('switch')
     expect(checkbox).toBeChecked()
     expect(screen.getByText('OFF')).toBeInTheDocument()
   })
 
   it('should render toggle with initial enabled state', () => {
     renderWithToast(<LLMToggle initialDisabled={false} />)
-    const checkbox = screen.getByRole('checkbox')
+    const checkbox = screen.getByRole('switch')
     expect(checkbox).not.toBeChecked()
     expect(screen.getByText('ON')).toBeInTheDocument()
   })
@@ -58,7 +58,7 @@ describe('LLMToggle', () => {
     })
 
     renderWithToast(<LLMToggle initialDisabled={false} />)
-    const checkbox = screen.getByRole('checkbox')
+    const checkbox = screen.getByRole('switch')
 
     await user.click(checkbox)
 
@@ -75,7 +75,7 @@ describe('LLMToggle', () => {
     })
 
     renderWithToast(<LLMToggle initialDisabled={false} />)
-    const checkbox = screen.getByRole('checkbox')
+    const checkbox = screen.getByRole('switch')
 
     await user.click(checkbox)
 
@@ -93,7 +93,7 @@ describe('LLMToggle', () => {
     })
 
     renderWithToast(<LLMToggle initialDisabled={false} />)
-    const checkbox = screen.getByRole('checkbox')
+    const checkbox = screen.getByRole('switch')
 
     await user.click(checkbox)
 
@@ -109,7 +109,7 @@ describe('LLMToggle', () => {
     } as any)
 
     renderWithToast(<LLMToggle initialDisabled={false} />)
-    const checkbox = screen.getByRole('checkbox')
+    const checkbox = screen.getByRole('switch')
 
     await user.click(checkbox)
 
@@ -123,7 +123,7 @@ describe('LLMToggle', () => {
     jest.spyOn(adminActions, 'setLLMDisabled').mockRejectedValue(new Error('Network error'))
 
     renderWithToast(<LLMToggle initialDisabled={false} />)
-    const checkbox = screen.getByRole('checkbox')
+    const checkbox = screen.getByRole('switch')
 
     await user.click(checkbox)
 
@@ -141,7 +141,7 @@ describe('LLMToggle', () => {
     jest.spyOn(adminActions, 'setLLMDisabled').mockReturnValue(setLLMPromise)
 
     renderWithToast(<LLMToggle initialDisabled={false} />)
-    const checkbox = screen.getByRole('checkbox')
+    const checkbox = screen.getByRole('switch')
 
     await user.click(checkbox)
 
@@ -161,7 +161,7 @@ describe('LLMToggle', () => {
     jest.spyOn(adminActions, 'setLLMDisabled').mockReturnValue(setLLMPromise)
 
     renderWithToast(<LLMToggle initialDisabled={false} />)
-    const checkbox = screen.getByRole('checkbox')
+    const checkbox = screen.getByRole('switch')
 
     await user.click(checkbox)
 

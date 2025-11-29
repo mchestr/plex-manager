@@ -55,14 +55,14 @@ describe('RegenerateWrappedButton', () => {
   describe('Default (non-inline) mode', () => {
     it('should render the regenerate button', () => {
       renderWithToast(<RegenerateWrappedButton userId="user-1" />)
-      const button = screen.getByTitle('Regenerate wrapped')
+      const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
       expect(button).toBeInTheDocument()
     })
 
     it('should show confirm modal when clicked', async () => {
       const user = userEvent.setup({ delay: null })
       renderWithToast(<RegenerateWrappedButton userId="user-1" year={2024} />)
-      const button = screen.getByTitle('Regenerate wrapped')
+      const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
 
       await user.click(button)
 
@@ -78,7 +78,7 @@ describe('RegenerateWrappedButton', () => {
     it('should close modal when cancel is clicked', async () => {
       const user = userEvent.setup({ delay: null })
       renderWithToast(<RegenerateWrappedButton userId="user-1" />)
-      const button = screen.getByTitle('Regenerate wrapped')
+      const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
 
       await user.click(button)
       expect(screen.getByTestId('confirm-modal')).toBeInTheDocument()
@@ -96,7 +96,7 @@ describe('RegenerateWrappedButton', () => {
       })
 
       renderWithToast(<RegenerateWrappedButton userId="user-1" year={2024} />)
-      const button = screen.getByTitle('Regenerate wrapped')
+      const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
 
       await user.click(button)
       const confirmButton = screen.getByText('Regenerate')
@@ -116,7 +116,7 @@ describe('RegenerateWrappedButton', () => {
       jest.spyOn(usersAction, 'generatePlexWrapped').mockReturnValue(generatePromise as any)
 
       renderWithToast(<RegenerateWrappedButton userId="user-1" />)
-      const button = screen.getByTitle('Regenerate wrapped')
+      const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
 
       await user.click(button)
       const confirmButton = screen.getByText('Regenerate')
@@ -139,7 +139,7 @@ describe('RegenerateWrappedButton', () => {
       })
 
       renderWithToast(<RegenerateWrappedButton userId="user-1" />)
-      const button = screen.getByTitle('Regenerate wrapped')
+      const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
 
       await user.click(button)
       const confirmButton = screen.getByText('Regenerate')
@@ -147,7 +147,7 @@ describe('RegenerateWrappedButton', () => {
 
       await waitFor(() => {
         // In non-inline mode, success shows green button with checkmark icon
-        const successButton = screen.getByTitle('Regenerate wrapped')
+        const successButton = screen.getByRole('button', { name: /Regenerate wrapped/i })
         expect(successButton).toHaveClass('bg-green-600')
         const checkmark = successButton.querySelector('svg')
         expect(checkmark).toBeInTheDocument()
@@ -161,7 +161,7 @@ describe('RegenerateWrappedButton', () => {
       })
 
       renderWithToast(<RegenerateWrappedButton userId="user-1" />)
-      const button = screen.getByTitle('Regenerate wrapped')
+      const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
 
       await user.click(button)
       const confirmButton = screen.getByText('Regenerate')
@@ -169,7 +169,7 @@ describe('RegenerateWrappedButton', () => {
 
       await waitFor(() => {
         // In non-inline mode, success shows green button with checkmark icon
-        const successButton = screen.getByTitle('Regenerate wrapped')
+        const successButton = screen.getByRole('button', { name: /Regenerate wrapped/i })
         expect(successButton).toHaveClass('bg-green-600')
       })
 
@@ -179,7 +179,7 @@ describe('RegenerateWrappedButton', () => {
 
       await waitFor(() => {
         // After 3 seconds, button should return to purple (non-success state)
-        const button = screen.getByTitle('Regenerate wrapped')
+        const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
         expect(button).toHaveClass('bg-purple-600')
         expect(button).not.toHaveClass('bg-green-600')
       })
@@ -192,7 +192,7 @@ describe('RegenerateWrappedButton', () => {
       })
 
       renderWithToast(<RegenerateWrappedButton userId="user-1" onSuccess={mockOnSuccess} />)
-      const button = screen.getByTitle('Regenerate wrapped')
+      const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
 
       await user.click(button)
       const confirmButton = screen.getByText('Regenerate')
@@ -210,7 +210,7 @@ describe('RegenerateWrappedButton', () => {
       })
 
       renderWithToast(<RegenerateWrappedButton userId="user-1" />)
-      const button = screen.getByTitle('Regenerate wrapped')
+      const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
 
       await user.click(button)
       const confirmButton = screen.getByText('Regenerate')
@@ -229,7 +229,7 @@ describe('RegenerateWrappedButton', () => {
       })
 
       renderWithToast(<RegenerateWrappedButton userId="user-1" />)
-      const button = screen.getByTitle('Regenerate wrapped')
+      const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
 
       await user.click(button)
       const confirmButton = screen.getByText('Regenerate')
@@ -247,7 +247,7 @@ describe('RegenerateWrappedButton', () => {
       })
 
       renderWithToast(<RegenerateWrappedButton userId="user-1" />)
-      const button = screen.getByTitle('Regenerate wrapped')
+      const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
 
       await user.click(button)
       const confirmButton = screen.getByText('Regenerate')
@@ -265,7 +265,7 @@ describe('RegenerateWrappedButton', () => {
       )
 
       renderWithToast(<RegenerateWrappedButton userId="user-1" />)
-      const button = screen.getByTitle('Regenerate wrapped')
+      const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
 
       await user.click(button)
       const confirmButton = screen.getByText('Regenerate')
@@ -281,7 +281,7 @@ describe('RegenerateWrappedButton', () => {
       jest.spyOn(usersAction, 'generatePlexWrapped').mockRejectedValue('String error')
 
       renderWithToast(<RegenerateWrappedButton userId="user-1" />)
-      const button = screen.getByTitle('Regenerate wrapped')
+      const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
 
       await user.click(button)
       const confirmButton = screen.getByText('Regenerate')
@@ -300,7 +300,7 @@ describe('RegenerateWrappedButton', () => {
       })
 
       renderWithToast(<RegenerateWrappedButton userId="user-1" />)
-      const button = screen.getByTitle('Regenerate wrapped')
+      const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
 
       await user.click(button)
 
@@ -322,7 +322,7 @@ describe('RegenerateWrappedButton', () => {
   describe('Inline mode', () => {
     it('should render inline button with correct styling', () => {
       renderWithToast(<RegenerateWrappedButton userId="user-1" inline={true} />)
-      const button = screen.getByTitle('Regenerate wrapped')
+      const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
       expect(button).toHaveClass('w-full', 'flex', 'items-center', 'gap-2', 'text-sm')
     })
 
@@ -340,7 +340,7 @@ describe('RegenerateWrappedButton', () => {
       jest.spyOn(usersAction, 'generatePlexWrapped').mockReturnValue(generatePromise as any)
 
       renderWithToast(<RegenerateWrappedButton userId="user-1" inline={true} />)
-      const button = screen.getByTitle('Regenerate wrapped')
+      const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
 
       await user.click(button)
       const confirmButton = screen.getByText('Regenerate')
@@ -360,7 +360,7 @@ describe('RegenerateWrappedButton', () => {
       })
 
       renderWithToast(<RegenerateWrappedButton userId="user-1" inline={true} />)
-      const button = screen.getByTitle('Regenerate wrapped')
+      const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
 
       await user.click(button)
       const confirmButton = screen.getByText('Regenerate')
@@ -379,7 +379,7 @@ describe('RegenerateWrappedButton', () => {
       })
 
       renderWithToast(<RegenerateWrappedButton userId="user-1" inline={true} />)
-      const button = screen.getByTitle('Regenerate wrapped')
+      const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
 
       await user.click(button)
       const confirmButton = screen.getByText('Regenerate')
@@ -402,7 +402,7 @@ describe('RegenerateWrappedButton', () => {
       let svg = container.querySelector('svg.text-purple-400')
       expect(svg).toBeInTheDocument()
 
-      const button = screen.getByTitle('Regenerate wrapped')
+      const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
       await user.click(button)
       const confirmButton = screen.getByText('Regenerate')
       await user.click(confirmButton)
@@ -419,7 +419,7 @@ describe('RegenerateWrappedButton', () => {
     it('should pass correct props to ConfirmModal', async () => {
       const user = userEvent.setup({ delay: null })
       renderWithToast(<RegenerateWrappedButton userId="user-1" year={2023} />)
-      const button = screen.getByTitle('Regenerate wrapped')
+      const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
 
       await user.click(button)
 

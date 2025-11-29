@@ -31,7 +31,7 @@ describe('UserActionsMenu', () => {
     const user = makeAdminUserWithStats({ wrappedStatus: 'completed' })
     render(<UserActionsMenu user={user} />)
 
-    const button = screen.getByTitle('Actions')
+    const button = screen.getByRole('button', { name: /Actions for/i })
     expect(button).toBeInTheDocument()
   })
 
@@ -39,7 +39,7 @@ describe('UserActionsMenu', () => {
     const user = makeAdminUserWithStats({ wrappedStatus: 'completed' })
     render(<UserActionsMenu user={user} />)
 
-    const button = screen.getByTitle('Actions')
+    const button = screen.getByRole('button', { name: /Actions for/i })
     fireEvent.click(button)
 
     expect(screen.getByText('View Wrapped')).toBeInTheDocument()
@@ -54,7 +54,7 @@ describe('UserActionsMenu', () => {
     })
     render(<UserActionsMenu user={user} />)
 
-    const button = screen.getByTitle('Actions')
+    const button = screen.getByRole('button', { name: /Actions for/i })
     fireEvent.click(button)
 
     expect(screen.getByText('Unshare Library')).toBeInTheDocument()
@@ -68,7 +68,7 @@ describe('UserActionsMenu', () => {
     })
     render(<UserActionsMenu user={user} />)
 
-    const button = screen.getByTitle('Actions')
+    const button = screen.getByRole('button', { name: /Actions for/i })
     fireEvent.click(button)
 
     expect(screen.queryByText('Unshare Library')).not.toBeInTheDocument()
@@ -78,7 +78,7 @@ describe('UserActionsMenu', () => {
     const user = makeAdminUserWithStats({ wrappedStatus: 'completed' })
     render(<UserActionsMenu user={user} />)
 
-    const button = screen.getByTitle('Actions')
+    const button = screen.getByRole('button', { name: /Actions for/i })
     fireEvent.click(button)
     expect(screen.getByText('View Wrapped')).toBeInTheDocument()
 

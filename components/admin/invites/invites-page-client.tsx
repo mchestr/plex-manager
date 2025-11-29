@@ -170,7 +170,7 @@ export function InvitesPageClient() {
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+          className="px-4 py-2 bg-cyan-700 hover:bg-cyan-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -223,7 +223,7 @@ export function InvitesPageClient() {
                         <div className="w-full sm:w-[120px] bg-slate-700 rounded-full h-2">
                           <div
                             className={`h-2 rounded-full ${
-                              invite.useCount >= invite.maxUses ? 'bg-red-500' : 'bg-cyan-500'
+                              invite.useCount >= invite.maxUses ? 'bg-red-500' : 'bg-cyan-700'
                             }`}
                             style={{ width: `${Math.min(100, (invite.useCount / invite.maxUses) * 100)}%` }}
                           ></div>
@@ -248,18 +248,18 @@ export function InvitesPageClient() {
                         <button
                           onClick={() => copyInviteLink(invite.code)}
                           className="text-slate-400 hover:text-white transition-colors"
-                          title="Copy Link"
+                          aria-label={`Copy invite link for ${invite.code}`}
                         >
-                          <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                           </svg>
                         </button>
                         <button
                           onClick={() => handleDeleteClick(invite.id)}
                           className="text-slate-400 hover:text-red-400 transition-colors"
-                          title="Delete"
+                          aria-label={`Delete invite ${invite.code}`}
                         >
-                          <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
                         </button>
@@ -275,15 +275,30 @@ export function InvitesPageClient() {
 
       {/* Create Invite Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-md shadow-2xl">
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          role="presentation"
+          onClick={() => setShowCreateModal(false)}
+        >
+          <div
+            className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-md shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="create-invite-title"
+            aria-describedby="create-invite-description"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="p-6 border-b border-slate-700 flex justify-between items-center">
-              <h2 className="text-xl font-bold text-white">Create Invite</h2>
+              <div>
+                <h2 id="create-invite-title" className="text-xl font-bold text-white">Create Invite</h2>
+                <p id="create-invite-description" className="text-sm text-slate-400 mt-1">Generate a new invite link to share with others</p>
+              </div>
               <button
                 onClick={() => setShowCreateModal(false)}
                 className="text-slate-400 hover:text-white transition-colors"
+                aria-label="Close modal"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
@@ -291,7 +306,7 @@ export function InvitesPageClient() {
             <form onSubmit={handleCreateInvite} className="p-6 space-y-4">
               <div>
                 <label htmlFor="invite-code" className="block text-sm font-medium text-slate-400 mb-1">
-                  Custom Code <span className="text-slate-500">(Optional)</span>
+                  Custom Code <span className="text-slate-400">(Optional)</span>
                 </label>
                 <input
                   id="invite-code"
@@ -301,7 +316,7 @@ export function InvitesPageClient() {
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 font-mono"
                   placeholder="Leave blank to auto-generate"
                 />
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-slate-400 mt-1">
                   Auto-generated codes use unambiguous characters (no 0, O, I, 1).
                 </p>
               </div>
@@ -359,7 +374,7 @@ export function InvitesPageClient() {
                 </button>
                 {expandedLibraries && (
                   <div className="mt-3 space-y-2">
-                    <p className="text-xs text-slate-500 mb-2">
+                    <p className="text-xs text-slate-400 mb-2">
                       Select specific libraries to share (leave empty to share all libraries)
                     </p>
                     {loadingLibraries ? (
@@ -387,7 +402,7 @@ export function InvitesPageClient() {
                               className="rounded border-slate-600 text-cyan-600 focus:ring-cyan-500"
                             />
                             <span className="text-sm text-slate-300">
-                              {lib.title} <span className="text-slate-500">({lib.type})</span>
+                              {lib.title} <span className="text-slate-400">({lib.type})</span>
                             </span>
                           </label>
                         ))}
@@ -411,7 +426,7 @@ export function InvitesPageClient() {
                     Allow Downloads
                   </span>
                 </label>
-                <p className="text-xs text-slate-500 mt-1 ml-6">
+                <p className="text-xs text-slate-400 mt-1 ml-6">
                   Allow this account to download content from your server
                 </p>
               </div>
@@ -427,11 +442,12 @@ export function InvitesPageClient() {
                 <button
                   type="submit"
                   disabled={creating}
-                  className="flex-1 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  aria-busy={creating}
+                  className="flex-1 px-4 py-2 bg-cyan-700 hover:bg-cyan-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {creating ? (
                     <>
-                      <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
