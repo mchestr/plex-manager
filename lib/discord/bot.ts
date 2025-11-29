@@ -2,6 +2,7 @@ import { Client, Events, GatewayIntentBits } from "discord.js"
 import winston from "winston"
 import { clearDiscordChat, handleDiscordChat, verifyDiscordUser } from "./services"
 import { MARK_COMMANDS, handleMarkCommand, handleSelectionResponse } from "./commands/media-marking"
+import { HELP_COMMANDS, handleHelpCommand } from "./commands/help"
 import {
   createCommandLog,
   updateCommandLog,
@@ -258,6 +259,46 @@ export class DiscordBot {
             })
             await message.reply({
               content: "Sorry, I couldn't clear the chat context right now. Please try again in a moment.",
+              allowedMentions: { users: [message.author.id] },
+            })
+            return
+          }
+        }
+
+        // Check for help command
+        const isHelpCommand = HELP_COMMANDS.some((cmd) => normalizedContent === cmd || normalizedContent.startsWith(`${cmd} `))
+        if (isHelpCommand) {
+          const args = message.content.trim().split(/\s+/).slice(1)
+          const startTime = Date.now()
+          const commandName = HELP_COMMANDS.find((cmd) => normalizedContent.startsWith(cmd)) || "!help"
+          const auditLog = await createCommandLog({
+            ...createAuditParams("HELP" as DiscordCommandType, commandName, args.join(" ")),
+            userId,
+          })
+          try {
+            await handleHelpCommand(message, args)
+            if (auditLog) {
+              await updateCommandLog(auditLog.id, {
+                status: "SUCCESS" as DiscordCommandStatus,
+                responseTimeMs: Date.now() - startTime,
+              })
+            }
+            return
+          } catch (error) {
+            if (auditLog) {
+              await updateCommandLog(auditLog.id, {
+                status: "FAILED" as DiscordCommandStatus,
+                error: error instanceof Error ? error.message : "Unknown error",
+                responseTimeMs: Date.now() - startTime,
+              })
+            }
+            this.logger.error("Error handling help command", error, {
+              discordUserId: message.author.id,
+              channelId: message.channelId,
+              command: commandName,
+            })
+            await message.reply({
+              content: "Sorry, I couldn't display the help information right now. Please try again in a moment.",
               allowedMentions: { users: [message.author.id] },
             })
             return
