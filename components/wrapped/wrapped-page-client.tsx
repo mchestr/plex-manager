@@ -49,7 +49,6 @@ export function WrappedPageClient({ userId, year, initialStatus }: WrappedPageCl
     }, 2000) // Poll every 2 seconds
 
     return () => clearInterval(pollInterval)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, year, status, router])
 
   if (status === "generating") {

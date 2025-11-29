@@ -64,7 +64,6 @@ export function InvitesPageClient() {
     } finally {
       setLoadingLibraries(false)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
