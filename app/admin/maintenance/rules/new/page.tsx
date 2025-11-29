@@ -42,6 +42,8 @@ export default function NewRulePage() {
       return radarrServerListSchema.parse(data)
     },
     staleTime: 5 * 60 * 1000, // 5 minutes - server lists don't change often
+    retry: 1, // Only retry once to avoid overwhelming the server
+    retryDelay: 1000, // Wait 1 second before retrying
   })
 
   // Fetch Sonarr servers
@@ -54,6 +56,8 @@ export default function NewRulePage() {
       return sonarrServerListSchema.parse(data)
     },
     staleTime: 5 * 60 * 1000, // 5 minutes - server lists don't change often
+    retry: 1, // Only retry once to avoid overwhelming the server
+    retryDelay: 1000, // Wait 1 second before retrying
   })
 
   // Handle Radarr fetch errors
