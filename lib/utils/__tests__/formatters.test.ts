@@ -86,18 +86,23 @@ describe('formatters', () => {
       expect(getMediaTypeLabel('EPISODE')).toBe('Episode')
     })
 
-    it('should replace all underscores with spaces for unknown media types', () => {
-      expect(getMediaTypeLabel('TV_SHOW')).toBe('TV SHOW')
-      expect(getMediaTypeLabel('AUDIO_BOOK')).toBe('AUDIO BOOK')
-      expect(getMediaTypeLabel('TV_SHOW_EPISODE')).toBe('TV SHOW EPISODE')
+    it('should convert unknown media types to title case', () => {
+      expect(getMediaTypeLabel('TV_SHOW')).toBe('Tv Show')
+      expect(getMediaTypeLabel('AUDIO_BOOK')).toBe('Audio Book')
+      expect(getMediaTypeLabel('TV_SHOW_EPISODE')).toBe('Tv Show Episode')
     })
 
     it('should handle empty string', () => {
       expect(getMediaTypeLabel('')).toBe('')
     })
 
-    it('should handle strings without underscores', () => {
-      expect(getMediaTypeLabel('Movie')).toBe('Movie')
+    it('should convert strings without underscores to title case', () => {
+      expect(getMediaTypeLabel('CUSTOM')).toBe('Custom')
+      expect(getMediaTypeLabel('OTHER')).toBe('Other')
+    })
+
+    it('should handle multiple underscores and convert to title case', () => {
+      expect(getMediaTypeLabel('VERY_LONG_TYPE_NAME')).toBe('Very Long Type Name')
     })
   })
 })
