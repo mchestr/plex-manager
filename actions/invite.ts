@@ -9,6 +9,7 @@ import {
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 import { Prisma } from "@/lib/generated/prisma/client"
+import { logAuditEvent, AuditEventType } from "@/lib/security/audit-log"
 
 const logger = createLogger("INVITE")
 
@@ -19,12 +20,76 @@ const DEFAULT_INVITE_EXPIRATION_HOURS = 48
 const PLEX_PROPAGATION_DELAY_MS = 2000
 const TRANSACTION_TIMEOUT_MS = 10000
 
+// Retry configuration for transaction conflicts
+const MAX_TRANSACTION_RETRIES = 3
+const INITIAL_RETRY_DELAY_MS = 100
+
 // Types
 interface PlexUser {
   id: string
   username: string
   email: string
   thumb?: string | null
+}
+
+/**
+ * Check if an error is a Prisma transaction conflict (P2034)
+ */
+function isTransactionConflict(error: unknown): boolean {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    return error.code === "P2034"
+  }
+  return false
+}
+
+/**
+ * Sleep for a specified duration
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+/**
+ * Execute a function with exponential backoff retry on transaction conflicts
+ */
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  options: {
+    maxRetries?: number
+    initialDelayMs?: number
+    onConflict?: (attempt: number) => void
+  } = {}
+): Promise<T> {
+  const maxRetries = options.maxRetries ?? MAX_TRANSACTION_RETRIES
+  const initialDelay = options.initialDelayMs ?? INITIAL_RETRY_DELAY_MS
+
+  let lastError: unknown
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn()
+    } catch (error) {
+      lastError = error
+
+      if (!isTransactionConflict(error) || attempt >= maxRetries) {
+        throw error
+      }
+
+      // Log transaction conflict for monitoring
+      options.onConflict?.(attempt + 1)
+
+      // Exponential backoff with jitter
+      const delay = initialDelay * Math.pow(2, attempt) * (0.5 + Math.random() * 0.5)
+      logger.warn("Transaction conflict, retrying", {
+        attempt: attempt + 1,
+        maxRetries,
+        delayMs: Math.round(delay),
+      })
+      await sleep(delay)
+    }
+  }
+
+  throw lastError
 }
 
 /**
@@ -79,9 +144,63 @@ interface ValidateAndUseResult {
 }
 
 /**
+ * Rollback invite usage by decrementing the use count
+ * Used as a compensating transaction when Plex operations fail
+ */
+async function rollbackInviteUsage(
+  inviteId: string,
+  plexUserEmail: string,
+  reason: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await prisma.$transaction(async (tx) => {
+      // Decrement the use count to restore the invite
+      await tx.invite.update({
+        where: { id: inviteId },
+        data: { useCount: { decrement: 1 } },
+      })
+    })
+
+    logger.info("Invite usage rolled back successfully", {
+      inviteId,
+      plexUserEmail,
+      reason,
+    })
+
+    // Audit log the rollback
+    logAuditEvent(AuditEventType.INVITE_ROLLBACK, "system", {
+      inviteId,
+      plexUserEmail,
+      reason,
+    })
+
+    return { success: true }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : "Unknown error"
+
+    logger.error("Failed to rollback invite usage", error, {
+      inviteId,
+      plexUserEmail,
+      reason,
+    })
+
+    // Audit log the failed rollback - this is a critical issue
+    logAuditEvent(AuditEventType.INVITE_ROLLBACK_FAILED, "system", {
+      inviteId,
+      plexUserEmail,
+      reason,
+      rollbackError: errorMessage,
+    })
+
+    return { success: false, error: errorMessage }
+  }
+}
+
+/**
  * Atomically validate and use an invite within a single transaction.
  * Uses Serializable isolation level to prevent TOCTOU race conditions.
  * This ensures that concurrent requests cannot both pass validation.
+ * Note: This function re-throws P2034 transaction conflicts for retry handling
  */
 async function validateAndUseInvite(code: string): Promise<ValidateAndUseResult> {
   try {
@@ -133,12 +252,9 @@ async function validateAndUseInvite(code: string): Promise<ValidateAndUseResult>
 
     return result
   } catch (error) {
-    // Handle Prisma serialization failures (concurrent transactions)
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      if (error.code === "P2034") {
-        // Transaction conflict due to concurrent write
-        return { success: false, error: "Please try again" }
-      }
+    // Re-throw P2034 errors for retry handling at the caller level
+    if (isTransactionConflict(error)) {
+      throw error
     }
     const errorMessage = error instanceof Error ? error.message : "Failed to process invite"
     logger.error("Error validating and using invite", { error: errorMessage, code })
@@ -415,6 +531,11 @@ async function getActivePlexServer() {
 /**
  * Process an invite: Invite user to Plex server and accept it.
  * Uses atomic validation to prevent TOCTOU race conditions.
+ *
+ * This function implements:
+ * - Retry logic with exponential backoff for transaction conflicts (P2034)
+ * - Compensating transaction (rollback) if Plex operations fail after invite is consumed
+ * - Audit logging for security-sensitive events
  */
 export async function processInvite(code: string, plexAuthToken: string) {
   try {
@@ -431,13 +552,32 @@ export async function processInvite(code: string, plexAuthToken: string) {
     }
     const plexServer = serverResult.data
 
-    // Atomically validate and mark the invite as used
+    // Atomically validate and mark the invite as used with retry logic for transaction conflicts
     // This prevents race conditions where multiple requests could use the same invite
-    const inviteResult = await validateAndUseInvite(code)
+    const inviteResult = await withRetry(
+      () => validateAndUseInvite(code),
+      {
+        onConflict: (attempt) => {
+          // Log transaction conflict for monitoring/alerting
+          logAuditEvent(AuditEventType.INVITE_TRANSACTION_CONFLICT, "system", {
+            inviteCode: code,
+            plexUserEmail: plexUser.email,
+            attempt,
+          })
+        },
+      }
+    )
     if (!inviteResult.success || !inviteResult.invite) {
       return { success: false, error: inviteResult.error }
     }
     const invite = inviteResult.invite
+
+    // Audit log that the invite was consumed
+    logAuditEvent(AuditEventType.INVITE_CONSUMED, "system", {
+      inviteId: invite.id,
+      inviteCode: invite.code,
+      plexUserEmail: plexUser.email,
+    })
 
     // Build invite settings from stored invite data
     const inviteSettings = {
@@ -447,6 +587,7 @@ export async function processInvite(code: string, plexAuthToken: string) {
       allowDownloads: invite.allowDownloads,
     }
 
+    // Attempt Plex operations - if these fail, we need to rollback the invite usage
     const plexInviteResult = await inviteUserToPlexServer(
       {
         url: plexServer.url,
@@ -457,11 +598,58 @@ export async function processInvite(code: string, plexAuthToken: string) {
     )
 
     if (!plexInviteResult.success) {
-      return { success: false, error: plexInviteResult.error || "Failed to invite user to Plex server" }
+      // Plex invite failed - rollback the invite usage
+      const failureReason = plexInviteResult.error || "Failed to invite user to Plex server"
+
+      logAuditEvent(AuditEventType.INVITE_PLEX_FAILURE, "system", {
+        inviteId: invite.id,
+        plexUserEmail: plexUser.email,
+        stage: "invite_to_server",
+        error: failureReason,
+      })
+
+      await rollbackInviteUsage(invite.id, plexUser.email, failureReason)
+      return { success: false, error: failureReason }
     }
 
-    await acceptInviteWithPropagationDelay(plexAuthToken, plexInviteResult.inviteID)
-    await recordInviteUsage(invite.id, plexUser)
+    try {
+      await acceptInviteWithPropagationDelay(plexAuthToken, plexInviteResult.inviteID)
+    } catch (acceptError) {
+      // Accept failed - rollback the invite usage
+      const failureReason = acceptError instanceof Error
+        ? acceptError.message
+        : "Failed to accept Plex invite"
+
+      logAuditEvent(AuditEventType.INVITE_PLEX_FAILURE, "system", {
+        inviteId: invite.id,
+        plexUserEmail: plexUser.email,
+        stage: "accept_invite",
+        error: failureReason,
+      })
+
+      await rollbackInviteUsage(invite.id, plexUser.email, failureReason)
+      return { success: false, error: failureReason }
+    }
+
+    try {
+      await recordInviteUsage(invite.id, plexUser)
+    } catch (recordError) {
+      // Recording usage failed - rollback the invite usage
+      // Note: The user may already be on Plex, but we should still restore the invite
+      const failureReason = recordError instanceof Error
+        ? recordError.message
+        : "Failed to record invite usage"
+
+      logAuditEvent(AuditEventType.INVITE_PLEX_FAILURE, "system", {
+        inviteId: invite.id,
+        plexUserEmail: plexUser.email,
+        stage: "record_usage",
+        error: failureReason,
+      })
+
+      await rollbackInviteUsage(invite.id, plexUser.email, failureReason)
+      return { success: false, error: failureReason }
+    }
 
     return { success: true }
   } catch (error) {

@@ -1,6 +1,12 @@
 /**
  * Tests for actions/invite.ts - invite validation and processing
- * Focus on race condition prevention with atomic transactions
+ *
+ * These tests cover:
+ * - Basic invite CRUD operations
+ * - Race condition prevention with atomic transactions
+ * - Transaction conflict retry logic (P2034)
+ * - Compensating transactions (rollback) on Plex failures
+ * - Audit logging for security-sensitive events
  */
 
 import {
@@ -17,7 +23,9 @@ import {
   inviteUserToPlexServer,
   acceptPlexInvite,
 } from '@/lib/connections/plex'
-import type { Invite, PlexServer } from '@prisma/client'
+import { logAuditEvent, AuditEventType } from '@/lib/security/audit-log'
+import { Prisma } from '@/lib/generated/prisma/client'
+import type { Invite, PlexServer } from '@/lib/generated/prisma/client'
 import type { Session } from 'next-auth'
 
 // Mock dependencies
@@ -55,6 +63,17 @@ jest.mock('@/lib/connections/plex', () => ({
   acceptPlexInvite: jest.fn(),
 }))
 
+jest.mock('@/lib/security/audit-log', () => ({
+  logAuditEvent: jest.fn(),
+  AuditEventType: {
+    INVITE_CONSUMED: 'INVITE_CONSUMED',
+    INVITE_PLEX_FAILURE: 'INVITE_PLEX_FAILURE',
+    INVITE_ROLLBACK: 'INVITE_ROLLBACK',
+    INVITE_ROLLBACK_FAILED: 'INVITE_ROLLBACK_FAILED',
+    INVITE_TRANSACTION_CONFLICT: 'INVITE_TRANSACTION_CONFLICT',
+  },
+}))
+
 const mockRequireAdmin = requireAdmin as jest.MockedFunction<typeof requireAdmin>
 const mockPrisma = prisma as jest.Mocked<typeof prisma>
 const mockGetPlexUserInfo = getPlexUserInfo as jest.MockedFunction<typeof getPlexUserInfo>
@@ -62,6 +81,7 @@ const mockInviteUserToPlexServer = inviteUserToPlexServer as jest.MockedFunction
   typeof inviteUserToPlexServer
 >
 const mockAcceptPlexInvite = acceptPlexInvite as jest.MockedFunction<typeof acceptPlexInvite>
+const mockLogAuditEvent = logAuditEvent as jest.MockedFunction<typeof logAuditEvent>
 
 describe('invite actions', () => {
   const mockSession: Session = {
@@ -196,20 +216,6 @@ describe('invite actions', () => {
       expect(capturedOptions[0]?.isolationLevel).toBe('Serializable')
     })
 
-    it('should fail gracefully on transaction conflict (P2034)', async () => {
-      const prismaError = new Error('Transaction failed') as Error & { code: string }
-      prismaError.code = 'P2034'
-      Object.setPrototypeOf(prismaError, require('@prisma/client').Prisma.PrismaClientKnownRequestError.prototype)
-
-      // Simulate transaction failure due to concurrent modification
-      mockPrisma.$transaction.mockRejectedValue(prismaError)
-
-      const result = await processInvite('TESTCODE', 'plex-auth-token')
-
-      expect(result.success).toBe(false)
-      expect(result.error).toBe('Please try again')
-    })
-
     it('should reject invite that has already been used', async () => {
       const usedInvite = { ...mockInvite, useCount: 1 }
 
@@ -275,6 +281,177 @@ describe('invite actions', () => {
     })
   })
 
+  describe('processInvite - rollback and audit logging', () => {
+    beforeEach(() => {
+      mockGetPlexUserInfo.mockResolvedValue({ success: true, data: mockPlexUser })
+      mockPrisma.plexServer.findFirst.mockResolvedValue(mockPlexServer)
+      mockAcceptPlexInvite.mockResolvedValue({ success: true })
+
+      // Mock successful transactions by default
+      mockPrisma.$transaction.mockImplementation(async (fn) => {
+        if (typeof fn === 'function') {
+          const txClient = {
+            invite: {
+              findUnique: jest.fn().mockResolvedValue(mockInvite),
+              update: jest.fn().mockResolvedValue({ ...mockInvite, useCount: 1 }),
+            },
+            user: {
+              findUnique: jest.fn().mockResolvedValue(null),
+              create: jest.fn().mockResolvedValue({ id: 'user-1' }),
+              update: jest.fn().mockResolvedValue({ id: 'user-1' }),
+            },
+            inviteUsage: {
+              create: jest.fn().mockResolvedValue({}),
+            },
+          }
+          return fn(txClient as Prisma.TransactionClient)
+        }
+        return Promise.resolve()
+      })
+    })
+
+    it('should process invite successfully and log audit event', async () => {
+      mockInviteUserToPlexServer.mockResolvedValue({ success: true, inviteID: 12345 })
+
+      const result = await processInvite('TESTCODE', 'plex-auth-token')
+
+      expect(result.success).toBe(true)
+      expect(mockLogAuditEvent).toHaveBeenCalledWith(
+        AuditEventType.INVITE_CONSUMED,
+        'system',
+        expect.objectContaining({
+          inviteId: 'invite-123',
+          inviteCode: 'TESTCODE',
+        })
+      )
+    })
+
+    it('should rollback invite when Plex invite fails', async () => {
+      mockInviteUserToPlexServer.mockResolvedValue({
+        success: false,
+        error: 'Plex server unavailable',
+      })
+
+      const result = await processInvite('TESTCODE', 'plex-auth-token')
+
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Plex server unavailable')
+
+      // Should log the failure
+      expect(mockLogAuditEvent).toHaveBeenCalledWith(
+        AuditEventType.INVITE_PLEX_FAILURE,
+        'system',
+        expect.objectContaining({
+          stage: 'invite_to_server',
+        })
+      )
+
+      // Should attempt rollback
+      expect(mockLogAuditEvent).toHaveBeenCalledWith(
+        AuditEventType.INVITE_ROLLBACK,
+        'system',
+        expect.objectContaining({
+          inviteId: 'invite-123',
+          reason: 'Plex server unavailable',
+        })
+      )
+    })
+
+    it('should rollback invite when accept invite fails', async () => {
+      mockInviteUserToPlexServer.mockResolvedValue({ success: true, inviteID: 12345 })
+      mockAcceptPlexInvite.mockRejectedValue(new Error('Accept failed'))
+
+      const result = await processInvite('TESTCODE', 'plex-auth-token')
+
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Accept failed')
+
+      expect(mockLogAuditEvent).toHaveBeenCalledWith(
+        AuditEventType.INVITE_PLEX_FAILURE,
+        'system',
+        expect.objectContaining({
+          stage: 'accept_invite',
+        })
+      )
+    })
+  })
+
+  describe('Transaction Conflict Handling (P2034)', () => {
+    beforeEach(() => {
+      mockGetPlexUserInfo.mockResolvedValue({ success: true, data: mockPlexUser })
+      mockPrisma.plexServer.findFirst.mockResolvedValue(mockPlexServer)
+      mockInviteUserToPlexServer.mockResolvedValue({ success: true, inviteID: 12345 })
+      mockAcceptPlexInvite.mockResolvedValue({ success: true })
+    })
+
+    it('should retry on transaction conflict (P2034) and succeed', async () => {
+      let callCount = 0
+
+      mockPrisma.$transaction.mockImplementation(async (fn) => {
+        callCount++
+        if (typeof fn === 'function') {
+          if (callCount === 1) {
+            // First call fails with P2034
+            const error = new Prisma.PrismaClientKnownRequestError('Transaction conflict', {
+              code: 'P2034',
+              clientVersion: '5.0.0',
+            })
+            throw error
+          }
+
+          // Subsequent calls succeed
+          const txClient = {
+            invite: {
+              findUnique: jest.fn().mockResolvedValue(mockInvite),
+              update: jest.fn().mockResolvedValue({ ...mockInvite, useCount: 1 }),
+            },
+            user: {
+              findUnique: jest.fn().mockResolvedValue(null),
+              create: jest.fn().mockResolvedValue({ id: 'user-1' }),
+              update: jest.fn().mockResolvedValue({ id: 'user-1' }),
+            },
+            inviteUsage: {
+              create: jest.fn().mockResolvedValue({}),
+            },
+          }
+          return fn(txClient as Prisma.TransactionClient)
+        }
+        return Promise.resolve()
+      })
+
+      const result = await processInvite('TESTCODE', 'plex-auth-token')
+
+      expect(result.success).toBe(true)
+      expect(callCount).toBeGreaterThanOrEqual(2) // At least 2 attempts
+
+      // Should log the transaction conflict
+      expect(mockLogAuditEvent).toHaveBeenCalledWith(
+        AuditEventType.INVITE_TRANSACTION_CONFLICT,
+        'system',
+        expect.objectContaining({
+          inviteCode: 'TESTCODE',
+          attempt: 1,
+        })
+      )
+    })
+
+    it('should fail after max retries on persistent transaction conflict', async () => {
+      const error = new Prisma.PrismaClientKnownRequestError('Transaction conflict', {
+        code: 'P2034',
+        clientVersion: '5.0.0',
+      })
+
+      // Make the transaction always fail with P2034
+      mockPrisma.$transaction.mockRejectedValue(error)
+
+      const result = await processInvite('TESTCODE', 'plex-auth-token')
+
+      expect(result.success).toBe(false)
+      // The error bubbles up through the catch block
+      expect(result.error).toBeDefined()
+    })
+  })
+
   describe('createInvite', () => {
     it('should create invite with generated code', async () => {
       mockPrisma.invite.findUnique.mockResolvedValue(null)
@@ -313,6 +490,12 @@ describe('invite actions', () => {
       expect(result.success).toBe(false)
       expect(result.error).toBe('Invite code already exists')
     })
+
+    it('should require admin access', async () => {
+      mockRequireAdmin.mockRejectedValue(new Error('Unauthorized'))
+
+      await expect(createInvite({})).rejects.toThrow('Unauthorized')
+    })
   })
 
   describe('getInvites', () => {
@@ -324,6 +507,12 @@ describe('invite actions', () => {
 
       expect(result.success).toBe(true)
       expect(result.data).toEqual(invites)
+    })
+
+    it('should require admin access', async () => {
+      mockRequireAdmin.mockRejectedValue(new Error('Unauthorized'))
+
+      await expect(getInvites()).rejects.toThrow('Unauthorized')
     })
   })
 
@@ -337,6 +526,21 @@ describe('invite actions', () => {
       expect(mockPrisma.invite.delete).toHaveBeenCalledWith({
         where: { id: 'invite-123' },
       })
+    })
+
+    it('should require admin access', async () => {
+      mockRequireAdmin.mockRejectedValue(new Error('Unauthorized'))
+
+      await expect(deleteInvite('invite-123')).rejects.toThrow('Unauthorized')
+    })
+
+    it('should handle non-existent invite', async () => {
+      mockPrisma.invite.delete.mockRejectedValue(new Error('Record not found'))
+
+      const result = await deleteInvite('nonexistent')
+
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Failed to delete invite')
     })
   })
 })
