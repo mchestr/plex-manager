@@ -166,7 +166,7 @@ export function InvitesPageClient() {
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+          className="px-4 py-2 bg-cyan-700 hover:bg-cyan-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -219,7 +219,7 @@ export function InvitesPageClient() {
                         <div className="w-full sm:w-[120px] bg-slate-700 rounded-full h-2">
                           <div
                             className={`h-2 rounded-full ${
-                              invite.useCount >= invite.maxUses ? 'bg-red-500' : 'bg-cyan-500'
+                              invite.useCount >= invite.maxUses ? 'bg-red-500' : 'bg-cyan-700'
                             }`}
                             style={{ width: `${Math.min(100, (invite.useCount / invite.maxUses) * 100)}%` }}
                           ></div>
@@ -281,10 +281,14 @@ export function InvitesPageClient() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="create-invite-title"
+            aria-describedby="create-invite-description"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6 border-b border-slate-700 flex justify-between items-center">
-              <h2 id="create-invite-title" className="text-xl font-bold text-white">Create Invite</h2>
+              <div>
+                <h2 id="create-invite-title" className="text-xl font-bold text-white">Create Invite</h2>
+                <p id="create-invite-description" className="text-sm text-slate-400 mt-1">Generate a new invite link to share with others</p>
+              </div>
               <button
                 onClick={() => setShowCreateModal(false)}
                 className="text-slate-400 hover:text-white transition-colors"
@@ -298,7 +302,7 @@ export function InvitesPageClient() {
             <form onSubmit={handleCreateInvite} className="p-6 space-y-4">
               <div>
                 <label htmlFor="invite-code" className="block text-sm font-medium text-slate-400 mb-1">
-                  Custom Code <span className="text-slate-500">(Optional)</span>
+                  Custom Code <span className="text-slate-400">(Optional)</span>
                 </label>
                 <input
                   id="invite-code"
@@ -308,7 +312,7 @@ export function InvitesPageClient() {
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 font-mono"
                   placeholder="Leave blank to auto-generate"
                 />
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-slate-400 mt-1">
                   Auto-generated codes use unambiguous characters (no 0, O, I, 1).
                 </p>
               </div>
@@ -366,7 +370,7 @@ export function InvitesPageClient() {
                 </button>
                 {expandedLibraries && (
                   <div className="mt-3 space-y-2">
-                    <p className="text-xs text-slate-500 mb-2">
+                    <p className="text-xs text-slate-400 mb-2">
                       Select specific libraries to share (leave empty to share all libraries)
                     </p>
                     {loadingLibraries ? (
@@ -394,7 +398,7 @@ export function InvitesPageClient() {
                               className="rounded border-slate-600 text-cyan-600 focus:ring-cyan-500"
                             />
                             <span className="text-sm text-slate-300">
-                              {lib.title} <span className="text-slate-500">({lib.type})</span>
+                              {lib.title} <span className="text-slate-400">({lib.type})</span>
                             </span>
                           </label>
                         ))}
@@ -418,7 +422,7 @@ export function InvitesPageClient() {
                     Allow Downloads
                   </span>
                 </label>
-                <p className="text-xs text-slate-500 mt-1 ml-6">
+                <p className="text-xs text-slate-400 mt-1 ml-6">
                   Allow this account to download content from your server
                 </p>
               </div>
@@ -435,7 +439,7 @@ export function InvitesPageClient() {
                   type="submit"
                   disabled={creating}
                   aria-busy={creating}
-                  className="flex-1 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2 bg-cyan-700 hover:bg-cyan-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {creating ? (
                     <>
