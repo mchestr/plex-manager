@@ -1,5 +1,43 @@
 "use server"
 
+// Valid LLM provider values
+const VALID_LLM_PROVIDERS = ["openai"] as const
+type ValidLLMProvider = (typeof VALID_LLM_PROVIDERS)[number]
+
+/**
+ * Safely parse a float value from string, returning undefined for invalid values.
+ * Validates that the result is a finite number within the temperature range (0-2).
+ */
+function safeParseTemperature(value: string | undefined): number | undefined {
+  if (!value) return undefined
+  const parsed = parseFloat(value)
+  if (isNaN(parsed) || !isFinite(parsed)) return undefined
+  // Clamp temperature to valid range (0-2)
+  return Math.max(0, Math.min(2, parsed))
+}
+
+/**
+ * Safely parse an integer value from string, returning undefined for invalid values.
+ * Validates that the result is a positive integer.
+ */
+function safeParseMaxTokens(value: string | undefined): number | undefined {
+  if (!value) return undefined
+  const parsed = parseInt(value, 10)
+  if (isNaN(parsed) || !isFinite(parsed) || parsed <= 0) return undefined
+  return parsed
+}
+
+/**
+ * Safely validate and return a valid LLM provider, or undefined if invalid.
+ */
+function safeParseProvider(value: string | undefined): ValidLLMProvider | undefined {
+  if (!value) return undefined
+  if (VALID_LLM_PROVIDERS.includes(value as ValidLLMProvider)) {
+    return value as ValidLLMProvider
+  }
+  return undefined
+}
+
 // Type definitions for dev defaults
 interface ServiceDefaults {
   name?: string
@@ -128,10 +166,9 @@ export async function getDevDefaults(): Promise<DevDefaults> {
   // Chat LLM defaults (separate from wrapped)
   const chatLlmDefaults: LLMDefaults = {}
   // First try chat-specific, then fall back to generic DEV_LLM_*
-  if (process.env.DEV_CHAT_LLM_PROVIDER) {
-    chatLlmDefaults.provider = process.env.DEV_CHAT_LLM_PROVIDER as "openai"
-  } else if (process.env.DEV_LLM_PROVIDER) {
-    chatLlmDefaults.provider = process.env.DEV_LLM_PROVIDER as "openai"
+  const chatProvider = safeParseProvider(process.env.DEV_CHAT_LLM_PROVIDER) ?? safeParseProvider(process.env.DEV_LLM_PROVIDER)
+  if (chatProvider) {
+    chatLlmDefaults.provider = chatProvider
   }
   if (process.env.DEV_CHAT_LLM_API_KEY) {
     chatLlmDefaults.apiKey = process.env.DEV_CHAT_LLM_API_KEY
@@ -143,20 +180,21 @@ export async function getDevDefaults(): Promise<DevDefaults> {
   } else if (process.env.DEV_LLM_MODEL) {
     chatLlmDefaults.model = process.env.DEV_LLM_MODEL
   }
-  if (process.env.DEV_CHAT_LLM_TEMPERATURE) {
-    chatLlmDefaults.temperature = parseFloat(process.env.DEV_CHAT_LLM_TEMPERATURE)
+  const chatTemperature = safeParseTemperature(process.env.DEV_CHAT_LLM_TEMPERATURE)
+  if (chatTemperature !== undefined) {
+    chatLlmDefaults.temperature = chatTemperature
   }
-  if (process.env.DEV_CHAT_LLM_MAX_TOKENS) {
-    chatLlmDefaults.maxTokens = parseInt(process.env.DEV_CHAT_LLM_MAX_TOKENS)
+  const chatMaxTokens = safeParseMaxTokens(process.env.DEV_CHAT_LLM_MAX_TOKENS)
+  if (chatMaxTokens !== undefined) {
+    chatLlmDefaults.maxTokens = chatMaxTokens
   }
 
   // Wrapped LLM defaults (separate from chat)
   const wrappedLlmDefaults: LLMDefaults = {}
   // First try wrapped-specific, then fall back to generic DEV_LLM_*
-  if (process.env.DEV_WRAPPED_LLM_PROVIDER) {
-    wrappedLlmDefaults.provider = process.env.DEV_WRAPPED_LLM_PROVIDER as "openai"
-  } else if (process.env.DEV_LLM_PROVIDER) {
-    wrappedLlmDefaults.provider = process.env.DEV_LLM_PROVIDER as "openai"
+  const wrappedProvider = safeParseProvider(process.env.DEV_WRAPPED_LLM_PROVIDER) ?? safeParseProvider(process.env.DEV_LLM_PROVIDER)
+  if (wrappedProvider) {
+    wrappedLlmDefaults.provider = wrappedProvider
   }
   if (process.env.DEV_WRAPPED_LLM_API_KEY) {
     wrappedLlmDefaults.apiKey = process.env.DEV_WRAPPED_LLM_API_KEY
@@ -168,16 +206,19 @@ export async function getDevDefaults(): Promise<DevDefaults> {
   } else if (process.env.DEV_LLM_MODEL) {
     wrappedLlmDefaults.model = process.env.DEV_LLM_MODEL
   }
-  if (process.env.DEV_WRAPPED_LLM_TEMPERATURE) {
-    wrappedLlmDefaults.temperature = parseFloat(process.env.DEV_WRAPPED_LLM_TEMPERATURE)
+  const wrappedTemperature = safeParseTemperature(process.env.DEV_WRAPPED_LLM_TEMPERATURE)
+  if (wrappedTemperature !== undefined) {
+    wrappedLlmDefaults.temperature = wrappedTemperature
   }
-  if (process.env.DEV_WRAPPED_LLM_MAX_TOKENS) {
-    wrappedLlmDefaults.maxTokens = parseInt(process.env.DEV_WRAPPED_LLM_MAX_TOKENS)
+  const wrappedMaxTokens = safeParseMaxTokens(process.env.DEV_WRAPPED_LLM_MAX_TOKENS)
+  if (wrappedMaxTokens !== undefined) {
+    wrappedLlmDefaults.maxTokens = wrappedMaxTokens
   }
 
   // Legacy llmProvider for backwards compatibility
   const llmProviderDefaults: LLMDefaults = {}
-  if (process.env.DEV_LLM_PROVIDER) llmProviderDefaults.provider = process.env.DEV_LLM_PROVIDER as "openai"
+  const legacyProvider = safeParseProvider(process.env.DEV_LLM_PROVIDER)
+  if (legacyProvider) llmProviderDefaults.provider = legacyProvider
   if (process.env.DEV_LLM_API_KEY) llmProviderDefaults.apiKey = process.env.DEV_LLM_API_KEY
   if (process.env.DEV_LLM_MODEL) llmProviderDefaults.model = process.env.DEV_LLM_MODEL
 

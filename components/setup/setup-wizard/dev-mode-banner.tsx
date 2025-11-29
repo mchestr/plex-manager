@@ -19,6 +19,8 @@ export function DevModeBanner({ devDefaults }: DevModeBannerProps) {
   return (
     <div
       data-testid="dev-mode-banner"
+      role="alert"
+      aria-live="polite"
       className="mb-6 rounded-lg border border-amber-500/50 bg-amber-900/20 p-4"
     >
       <div className="flex items-start gap-3">
