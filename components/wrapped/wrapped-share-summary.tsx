@@ -4,6 +4,7 @@ import { WrappedData } from "@/types/wrapped"
 import { motion } from "framer-motion"
 import { FormattedText } from "@/components/shared/formatted-text"
 import { SpaceBackground } from "@/components/setup/setup-wizard/space-background"
+import { formatWatchTime, formatWatchTimeHours } from "@/lib/utils/time-formatting"
 import Link from "next/link"
 
 interface WrappedShareSummaryProps {
@@ -11,37 +12,6 @@ interface WrappedShareSummaryProps {
   userName?: string
   summary?: string
   year: number
-}
-
-function formatWatchTime(minutes: number): string {
-  if (minutes === 0) return "0 minutes"
-
-  const days = Math.floor(minutes / (60 * 24))
-  const hours = Math.floor((minutes % (60 * 24)) / 60)
-  const mins = minutes % 60
-
-  const parts: string[] = []
-  if (days > 0) {
-    parts.push(`${days} ${days === 1 ? "day" : "days"}`)
-  }
-  if (hours > 0) {
-    parts.push(`${hours} ${hours === 1 ? "hour" : "hours"}`)
-  }
-  if (mins > 0 || parts.length === 0) {
-    parts.push(`${mins} ${mins === 1 ? "minute" : "minutes"}`)
-  }
-
-  return parts.join(", ")
-}
-
-function formatWatchTimeHours(minutes: number): string {
-  const hours = Math.floor(minutes / 60)
-  const days = Math.floor(hours / 24)
-
-  if (days > 0) {
-    return `${days.toLocaleString()} day${days !== 1 ? "s" : ""}`
-  }
-  return `${hours.toLocaleString()} hour${hours !== 1 ? "s" : ""}`
 }
 
 export function WrappedShareSummary({

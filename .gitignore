@@ -39,6 +39,9 @@ next-env.d.ts
 .swc/
 prisma/dev.db
 prisma/dev.db-journal
+
+# Generated Prisma client (Prisma v7+)
+/lib/generated/prisma/
 data/
 test.db
 test.db-journal

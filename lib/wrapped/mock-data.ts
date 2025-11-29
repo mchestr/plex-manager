@@ -3,19 +3,8 @@
  * This allows development/testing without making API calls
  */
 
+import { formatWatchTime } from "@/lib/utils/time-formatting"
 import { WrappedData, WrappedSection, WrappedStatistics } from "@/types/wrapped"
-
-function formatWatchTime(minutes: number): string {
-  if (minutes === 0) return "0 minutes"
-  const days = Math.floor(minutes / (60 * 24))
-  const hours = Math.floor((minutes % (60 * 24)) / 60)
-  const mins = minutes % 60
-  const parts: string[] = []
-  if (days > 0) parts.push(`${days} ${days === 1 ? "day" : "days"}`)
-  if (hours > 0) parts.push(`${hours} ${hours === 1 ? "hour" : "hours"}`)
-  if (mins > 0 || parts.length === 0) parts.push(`${mins} ${mins === 1 ? "minute" : "minutes"}`)
-  return parts.join(", ")
-}
 
 /**
  * Generate mock wrapped data when LLM is disabled

@@ -65,8 +65,8 @@ describe('CandidateList', () => {
 
       expect(screen.getByText('Test Movie')).toBeInTheDocument()
       expect(screen.getByText('2023')).toBeInTheDocument()
-      expect(screen.getByText('MOVIE')).toBeInTheDocument()
-      expect(screen.getByText('5.00 GB')).toBeInTheDocument()
+      expect(screen.getByText('Movie')).toBeInTheDocument() // getMediaTypeLabel returns 'Movie'
+      expect(screen.getByText('5 GB')).toBeInTheDocument()
       expect(screen.getByText('3')).toBeInTheDocument()
       expect(screen.getByText('Old Unwatched Movies')).toBeInTheDocument()
     })
@@ -89,16 +89,14 @@ describe('CandidateList', () => {
 
     it('should format file size correctly', () => {
       render(<CandidateList {...defaultProps} />)
-      expect(screen.getByText('5.00 GB')).toBeInTheDocument()
+      expect(screen.getByText('5 GB')).toBeInTheDocument()
     })
 
     it('should format dates correctly', () => {
       render(<CandidateList {...defaultProps} />)
 
-      // The date should be formatted - check that it's present somewhere in the table
-      // Format varies by locale, but should include some representation of the date
-      const formattedDate = mockCandidate.lastWatchedAt!.toLocaleDateString()
-      expect(screen.getByText(formattedDate)).toBeInTheDocument()
+      // formatDate returns ISO format (YYYY-MM-DD) for dates
+      expect(screen.getByText('2024-01-15')).toBeInTheDocument()
     })
 
     it('should display "Never" for null lastWatchedAt', () => {
@@ -106,6 +104,28 @@ describe('CandidateList', () => {
       render(<CandidateList {...defaultProps} candidates={[candidateNeverWatched]} />)
 
       expect(screen.getByText('Never')).toBeInTheDocument()
+    })
+
+    it('should display "Unknown" for null file size', () => {
+      const candidateNoFileSize = { ...mockCandidate, fileSize: null }
+      render(<CandidateList {...defaultProps} candidates={[candidateNoFileSize]} />)
+
+      expect(screen.getByText('Unknown')).toBeInTheDocument()
+    })
+
+    it('should not display year when null', () => {
+      const candidateNoYear = { ...mockCandidate, year: null }
+      render(<CandidateList {...defaultProps} candidates={[candidateNoYear]} />)
+
+      expect(screen.getByText('Test Movie')).toBeInTheDocument()
+      expect(screen.queryByText('2023')).not.toBeInTheDocument()
+    })
+
+    it('should display different media types correctly', () => {
+      const tvSeriesCandidate = { ...mockCandidate, mediaType: 'TV_SERIES' }
+      render(<CandidateList {...defaultProps} candidates={[tvSeriesCandidate]} />)
+
+      expect(screen.getByText('TV Series')).toBeInTheDocument()
     })
   })
 
@@ -247,6 +267,47 @@ describe('CandidateList', () => {
       expect(screen.getByText('Test Movie')).toBeInTheDocument()
       expect(screen.getByText('Test Movie 2')).toBeInTheDocument()
       expect(screen.getByText('Test Movie 3')).toBeInTheDocument()
+    })
+
+    it('should show select all unchecked when not all candidates are selected', () => {
+      const candidates = [
+        mockCandidate,
+        { ...mockCandidate, id: 'candidate-2', title: 'Test Movie 2' },
+      ]
+      const selectedCandidates = new Set(['candidate-1']) // Only 1 of 2 selected
+
+      render(<CandidateList {...defaultProps} candidates={candidates} selectedCandidates={selectedCandidates} />)
+
+      const selectAllCheckbox = screen.getByTestId('select-all-candidates')
+      expect(selectAllCheckbox).not.toBeChecked()
+    })
+  })
+
+  describe('Action Type Display', () => {
+    it('should display "Flag for Review" in yellow for FLAG_FOR_REVIEW action type', () => {
+      render(<CandidateList {...defaultProps} />)
+
+      const actionLabel = screen.getByText('Flag for Review')
+      expect(actionLabel).toBeInTheDocument()
+      expect(actionLabel).toHaveClass('text-yellow-400')
+    })
+
+    it('should display "Auto Delete" in red for AUTO_DELETE action type', () => {
+      const autoDeleteCandidate = {
+        ...mockCandidate,
+        scan: {
+          ...mockCandidate.scan,
+          rule: {
+            ...mockCandidate.scan.rule,
+            actionType: 'AUTO_DELETE',
+          },
+        },
+      }
+      render(<CandidateList {...defaultProps} candidates={[autoDeleteCandidate]} />)
+
+      const actionLabel = screen.getByText('Auto Delete')
+      expect(actionLabel).toBeInTheDocument()
+      expect(actionLabel).toHaveClass('text-red-400')
     })
   })
 })

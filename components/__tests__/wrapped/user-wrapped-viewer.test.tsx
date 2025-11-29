@@ -1,5 +1,5 @@
 import { UserWrappedViewer } from '@/components/wrapped/user-wrapped-viewer';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@/lib/generated/prisma/client';
 import { render, screen } from '@testing-library/react';
 
 // Mock the WrappedGeneratingAnimation component
@@ -286,13 +286,12 @@ describe('UserWrappedViewer', () => {
       expect(screen.getByText(/1 day, 1 hour/)).toBeInTheDocument()
     })
 
-    it('should not show minutes when days are present', () => {
+    it('should show minutes when days are present', () => {
       const wrappedData = { totalWatchTime: 1470, topMovies: [], topShows: [] } // 1 day 30 minutes
       const wrapped = createMockWrapped('completed', JSON.stringify(wrappedData))
       render(<UserWrappedViewer wrapped={wrapped} />)
 
-      const text = screen.getByText(/1 day/)
-      expect(text.textContent).not.toContain('minutes')
+      expect(screen.getByText(/1 day, 30 minutes/)).toBeInTheDocument()
     })
 
     it('should use plural forms correctly', () => {

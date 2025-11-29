@@ -6,8 +6,9 @@ import {
   updatePromptTemplate,
 } from "@/actions/prompts"
 import { getAvailablePlaceholders } from "@/lib/wrapped/prompt-template"
+import { formatWatchTime } from "@/lib/utils/time-formatting"
 import { WrappedData, WrappedStatistics } from "@/types/wrapped"
-import { PlexWrapped, PromptTemplate } from "@prisma/client"
+import { PlexWrapped, PromptTemplate } from "@/lib/generated/prisma/client"
 import { useRouter } from "next/navigation"
 import { useMemo, useState, useTransition } from "react"
 
@@ -252,31 +253,6 @@ export function PromptTemplateEditor({ template, userWrapped, userName = "User" 
     }
   }, [userWrapped])
 
-  // Helper function to format watch time (client-side version)
-  const formatWatchTime = (minutes: number): string => {
-    if (minutes === 0) return "0 minutes"
-    const days = Math.floor(minutes / (60 * 24))
-    const hours = Math.floor((minutes % (60 * 24)) / 60)
-    const mins = minutes % 60
-    const parts: string[] = []
-    if (days > 0) parts.push(`${days} ${days === 1 ? "day" : "days"}`)
-    if (hours > 0) parts.push(`${hours} ${hours === 1 ? "hour" : "hours"}`)
-    if (mins > 0 || parts.length === 0) parts.push(`${mins} ${mins === 1 ? "minute" : "minutes"}`)
-    return parts.join(", ")
-  }
-
-  const formatWatchTimeShort = (minutes: number): string => {
-    if (minutes === 0) return "0 minutes"
-    const days = Math.floor(minutes / (60 * 24))
-    const hours = Math.floor((minutes % (60 * 24)) / 60)
-    const mins = minutes % 60
-    const parts: string[] = []
-    if (days > 0) parts.push(`${days} ${days === 1 ? "day" : "days"}`)
-    if (hours > 0) parts.push(`${hours} ${hours === 1 ? "hour" : "hours"}`)
-    if (mins > 0 || parts.length === 0) parts.push(`${mins} ${mins === 1 ? "minute" : "minutes"}`)
-    return parts.join(", ")
-  }
-
   // Generate example preview with placeholders replaced (synchronous client-side version)
   const examplePreview = useMemo(() => {
     if (!formData.template || !exampleStatistics) {
@@ -302,17 +278,17 @@ export function PromptTemplateEditor({ template, userWrapped, userName = "User" 
         "{{showsWatched}}": stats.showsWatched.toString(),
         "{{episodesWatched}}": stats.episodesWatched.toString(),
         "{{topMoviesList}}": stats.topMovies.slice(0, 5).map((movie, idx) =>
-          `${idx + 1}. ${movie.title}${movie.year ? ` (${movie.year})` : ""} - ${formatWatchTimeShort(movie.watchTime)} watched (${movie.watchTime} minutes)`
+          `${idx + 1}. ${movie.title}${movie.year ? ` (${movie.year})` : ""} - ${formatWatchTime(movie.watchTime)} watched (${movie.watchTime} minutes)`
         ).join("\n"),
         "{{topShowsList}}": stats.topShows.slice(0, 5).map((show, idx) =>
-          `${idx + 1}. ${show.title}${show.year ? ` (${show.year})` : ""} - ${formatWatchTimeShort(show.watchTime)} watched (${show.watchTime} minutes), ${show.episodesWatched} episodes`
+          `${idx + 1}. ${show.title}${show.year ? ` (${show.year})` : ""} - ${formatWatchTime(show.watchTime)} watched (${show.watchTime} minutes), ${show.episodesWatched} episodes`
         ).join("\n"),
         "{{topMoviesJson}}": JSON.stringify(stats.topMovies.slice(0, 5)),
         "{{topShowsJson}}": JSON.stringify(stats.topShows.slice(0, 5)),
         "{{leaderboardSection}}": stats.leaderboards ? `\n**Leaderboard Stats:**\n\n**Your Position in Overall Watch Time Leaderboard:**\nYou ranked #${stats.leaderboards.watchTime.userPosition || 1} out of ${stats.leaderboards.watchTime.totalUsers} users\n` : "",
         "{{serverStatsSection}}": stats.serverStats ? `\n**Plex Server Statistics:**\n- Server name: ${stats.serverStats.serverName}\n- Total storage: ${stats.serverStats.totalStorageFormatted}\n` : "",
         "{{overseerrStatsSection}}": stats.overseerrStats ? `\n**Overseerr Requests:**\n- Your requests: ${stats.overseerrStats.totalRequests}\n` : "",
-        "{{watchTimeByMonthSection}}": stats.watchTimeByMonth && stats.watchTimeByMonth.length > 0 ? `\n**Watch Time by Month:**\n${stats.watchTimeByMonth.map(m => `- ${m.monthName}: ${formatWatchTimeShort(m.watchTime)}`).join("\n")}\n` : "",
+        "{{watchTimeByMonthSection}}": stats.watchTimeByMonth && stats.watchTimeByMonth.length > 0 ? `\n**Watch Time by Month:**\n${stats.watchTimeByMonth.map(m => `- ${m.monthName}: ${formatWatchTime(m.watchTime)}`).join("\n")}\n` : "",
         "{{serverName}}": stats.serverStats?.serverName || "",
         "{{bingeWatcher}}": stats.topShows.some(s => s.episodesWatched > 20) ? "true" : "false",
         "{{discoveryScore}}": Math.min(100, Math.max(0, Math.floor((stats.moviesWatched + stats.showsWatched) / 10))).toString(),

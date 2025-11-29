@@ -3,6 +3,7 @@
  */
 
 import { createLogger } from "@/lib/utils/logger"
+import { formatBytes } from "@/lib/utils/time-formatting"
 
 const logger = createLogger("STATISTICS")
 
@@ -1276,14 +1277,6 @@ export async function fetchTopContentLeaderboards(
   }
 }
 
-/**
- * Format bytes to human-readable string
- */
-export function formatBytes(bytes: number): string {
-  if (bytes === 0) return "0 Bytes"
-  const k = 1024
-  const sizes = ["Bytes", "KB", "MB", "GB", "TB", "PB"]
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i]
-}
+// Re-export formatBytes for backward compatibility with existing imports
+export { formatBytes } from "@/lib/utils/time-formatting"
 

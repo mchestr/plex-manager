@@ -3,7 +3,7 @@ import { runChatbotForUser } from "@/lib/chatbot/assistant"
 import { sanitizeDiscordResponse } from "@/lib/discord/chat-safety"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
-import { Prisma } from "@prisma/client"
+import { Prisma } from "@/lib/generated/prisma/client"
 
 const logger = createLogger("DISCORD_SERVICES")
 const HISTORY_LIMIT = 12

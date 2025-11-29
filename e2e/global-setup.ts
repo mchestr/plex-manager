@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { createE2EPrismaClient } from './helpers/prisma';
 
 /**
  * Global setup for Playwright tests
@@ -12,13 +12,7 @@ async function globalSetup() {
   console.log('[E2E Setup] Database URL:', databaseUrl?.replace(/\/\/[^:]+:[^@]+@/, '//***:***@') || 'not set');
   console.log('[E2E Setup] Test auth enabled:', process.env.NEXT_PUBLIC_ENABLE_TEST_AUTH);
 
-  const prisma = new PrismaClient({
-    datasources: {
-      db: {
-        url: databaseUrl,
-      },
-    },
-  });
+  const prisma = createE2EPrismaClient();
 
   try {
     // Test database connection

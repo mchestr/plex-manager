@@ -17,6 +17,7 @@ export default [
       "next.config.js",
       "postcss.config.js",
       "prisma/schema.prisma",
+      "lib/generated/prisma/**",
     ],
   },
   js.configs.recommended,
