@@ -39,8 +39,8 @@ jobs:
       - name: Install dependencies
         run: |
           npm ci
-          # Ensure lightningcss native binaries are installed for Linux
-          npm install --no-save lightningcss-linux-x64-gnu@1.30.2
+          # Ensure Tailwind CSS v4 native binaries are installed for Linux
+          npm install --no-save lightningcss-linux-x64-gnu@1.30.2 @tailwindcss/oxide-linux-x64-gnu@4.1.17
 
       - name: Generate Prisma Client
         run: npx prisma generate
@@ -82,8 +82,8 @@ jobs:
       - name: Install dependencies
         run: |
           npm ci
-          # Ensure lightningcss native binaries are installed for Linux
-          npm install --no-save lightningcss-linux-x64-gnu@1.30.2
+          # Ensure Tailwind CSS v4 native binaries are installed for Linux
+          npm install --no-save lightningcss-linux-x64-gnu@1.30.2 @tailwindcss/oxide-linux-x64-gnu@4.1.17
 
       - name: Generate Prisma Client
         run: npx prisma generate
@@ -136,8 +136,8 @@ jobs:
       - name: Install dependencies
         run: |
           npm ci
-          # Ensure lightningcss native binaries are installed for Linux
-          npm install --no-save lightningcss-linux-x64-gnu@1.30.2
+          # Ensure Tailwind CSS v4 native binaries are installed for Linux
+          npm install --no-save lightningcss-linux-x64-gnu@1.30.2 @tailwindcss/oxide-linux-x64-gnu@4.1.17
 
       - name: Generate Prisma Client
         run: npx prisma generate
