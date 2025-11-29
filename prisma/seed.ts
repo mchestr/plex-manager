@@ -1,6 +1,12 @@
 import { PrismaClient } from '../lib/generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 
+// Allow skipping seed via environment variable (useful for migrations)
+if (process.env.SKIP_SEED === 'true') {
+  console.log('Skipping seed (SKIP_SEED=true)')
+  process.exit(0)
+}
+
 if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL environment variable is not defined')
 }
