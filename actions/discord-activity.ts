@@ -32,6 +32,12 @@ export async function getDiscordActivityLogs(params: GetActivityLogsParams = {})
   await requireAdmin()
 
   try {
+    // Convert end date to start of next day for inclusive date range queries
+    // This ensures records from any time on the end date are included
+    const endDateNextDay = params.endDate
+      ? new Date(new Date(params.endDate).getTime() + 24 * 60 * 60 * 1000)
+      : undefined
+
     const queryParams: GetCommandLogsParams = {
       limit: params.limit ?? 50,
       offset: params.offset ?? 0,
@@ -41,7 +47,7 @@ export async function getDiscordActivityLogs(params: GetActivityLogsParams = {})
       commandName: params.commandName,
       status: params.status,
       startDate: params.startDate ? new Date(params.startDate) : undefined,
-      endDate: params.endDate ? new Date(params.endDate) : undefined,
+      endDate: endDateNextDay,
     }
 
     const result = await getCommandLogs(queryParams)
@@ -75,9 +81,11 @@ export async function getDiscordCommandStats(params: GetStatsParams) {
   await requireAdmin()
 
   try {
+    // Convert end date to start of next day for inclusive date range
+    const endDateNextDay = new Date(new Date(params.endDate).getTime() + 24 * 60 * 60 * 1000)
     const stats = await getCommandStats(
       new Date(params.startDate),
-      new Date(params.endDate)
+      endDateNextDay
     )
 
     return { success: true, stats }
@@ -95,9 +103,11 @@ export async function getDiscordDailyActivity(params: GetStatsParams) {
   await requireAdmin()
 
   try {
+    // Convert end date to start of next day for inclusive date range
+    const endDateNextDay = new Date(new Date(params.endDate).getTime() + 24 * 60 * 60 * 1000)
     const activity = await getDailyActivity(
       new Date(params.startDate),
-      new Date(params.endDate)
+      endDateNextDay
     )
 
     return { success: true, activity }
@@ -115,9 +125,11 @@ export async function getDiscordActiveUsers(params: GetStatsParams & { limit?: n
   await requireAdmin()
 
   try {
+    // Convert end date to start of next day for inclusive date range
+    const endDateNextDay = new Date(new Date(params.endDate).getTime() + 24 * 60 * 60 * 1000)
     const users = await getActiveUsers(
       new Date(params.startDate),
-      new Date(params.endDate),
+      endDateNextDay,
       params.limit ?? 20
     )
 
@@ -142,9 +154,11 @@ export async function getDiscordSummaryStats(params: GetStatsParams) {
   await requireAdmin()
 
   try {
+    // Convert end date to start of next day for inclusive date range
+    const endDateNextDay = new Date(new Date(params.endDate).getTime() + 24 * 60 * 60 * 1000)
     const summary = await getSummaryStats(
       new Date(params.startDate),
-      new Date(params.endDate)
+      endDateNextDay
     )
 
     return { success: true, summary }

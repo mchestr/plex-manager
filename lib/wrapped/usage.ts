@@ -50,7 +50,7 @@ export async function getLLMUsageStats(
   if (startDate || endDate) {
     where.createdAt = {}
     if (startDate) where.createdAt.gte = startDate
-    if (endDate) where.createdAt.lte = endDate
+    if (endDate) where.createdAt.lt = endDate
   }
 
   if (userId) {

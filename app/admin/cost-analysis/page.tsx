@@ -14,9 +14,13 @@ interface CostAnalysisPageProps {
 
 export default async function CostAnalysisPage({ searchParams }: CostAnalysisPageProps) {
   // Parse date filters
+  // Convert end date to start of next day for inclusive date range queries
+  // This ensures records from any time on the end date are included
   const params = await searchParams
   const startDate = params.startDate ? new Date(params.startDate) : undefined
-  const endDate = params.endDate ? new Date(params.endDate) : undefined
+  const endDate = params.endDate
+    ? new Date(new Date(params.endDate).getTime() + 24 * 60 * 60 * 1000)
+    : undefined
 
   // Get stats for the selected period
   const stats = await getLLMUsageStats(startDate, endDate)
