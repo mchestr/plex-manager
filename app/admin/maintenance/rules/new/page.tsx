@@ -42,6 +42,8 @@ export default function NewRulePage() {
       return radarrServerListSchema.parse(data)
     },
     staleTime: 5 * 60 * 1000, // 5 minutes - server lists don't change often
+    retry: 1, // Only retry once to avoid overwhelming the server
+    retryDelay: 1000, // Wait 1 second before retrying
   })
 
   // Fetch Sonarr servers
@@ -54,6 +56,8 @@ export default function NewRulePage() {
       return sonarrServerListSchema.parse(data)
     },
     staleTime: 5 * 60 * 1000, // 5 minutes - server lists don't change often
+    retry: 1, // Only retry once to avoid overwhelming the server
+    retryDelay: 1000, // Wait 1 second before retrying
   })
 
   // Handle Radarr fetch errors
@@ -61,14 +65,16 @@ export default function NewRulePage() {
     if (radarrError) {
       toast.showError(`Failed to load Radarr servers: ${radarrError instanceof Error ? radarrError.message : 'Unknown error'}`)
     }
-  }, [radarrError, toast])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [radarrError])
 
   // Handle Sonarr fetch errors
   useEffect(() => {
     if (sonarrError) {
       toast.showError(`Failed to load Sonarr servers: ${sonarrError instanceof Error ? sonarrError.message : 'Unknown error'}`)
     }
-  }, [sonarrError, toast])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sonarrError])
 
   const radarrServers = radarrData?.servers || []
   const sonarrServers = sonarrData?.servers || []
