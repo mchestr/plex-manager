@@ -76,6 +76,7 @@ jobs:
           NEXTAUTH_URL: "http://localhost:3000"
           NEXTAUTH_SECRET: "test-secret-for-ci-build-at-least-32-chars-long"
           PLEX_CLIENT_IDENTIFIER: "00000000-0000-0000-0000-000000000000"
+          NEXT_PUBLIC_ENABLE_TEST_AUTH: "true"
 
   e2e:
     name: E2E Tests
@@ -125,6 +126,7 @@ jobs:
           NEXTAUTH_URL: "http://localhost:3000"
           NEXTAUTH_SECRET: "test-secret-for-ci-build-at-least-32-chars-long"
           PLEX_CLIENT_IDENTIFIER: "00000000-0000-0000-0000-000000000000"
+          NEXT_PUBLIC_ENABLE_TEST_AUTH: "true"
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
