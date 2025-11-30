@@ -651,6 +651,7 @@ enum DiscordCommandType {
   CLEAR_CONTEXT // Context clear commands (!clear, !reset)
   SELECTION     // Numeric selection responses (1-5)
   LINK_REQUEST  // User not linked, requested to link account
+  HELP          // Help/command discovery (!help, !commands)
 }
 
 enum DiscordCommandStatus {
