@@ -640,9 +640,11 @@ describe('scanForCandidates', () => {
       // Execute
       const result = await scanForCandidates(mockRuleId)
 
-      // Verify error
+      // Verify error includes rule context
       expect(result.status).toBe('FAILED')
-      expect(result.error).toBe('Movie rules must specify libraryIds in criteria')
+      expect(result.error).toContain('MOVIE rules must specify libraryIds in criteria')
+      expect(result.error).toContain('Rule: "Test Rule"')
+      expect(result.error).toContain(mockRuleId)
     })
 
     it('should handle missing libraryIds for TV series rules', async () => {
@@ -666,9 +668,11 @@ describe('scanForCandidates', () => {
       // Execute
       const result = await scanForCandidates(mockRuleId)
 
-      // Verify error
+      // Verify error includes rule context
       expect(result.status).toBe('FAILED')
-      expect(result.error).toBe('TV series rules must specify libraryIds in criteria')
+      expect(result.error).toContain('TV_SERIES rules must specify libraryIds in criteria')
+      expect(result.error).toContain('Rule: "Test Rule"')
+      expect(result.error).toContain(mockRuleId)
     })
 
     it('should handle unsupported media type', async () => {
@@ -688,9 +692,12 @@ describe('scanForCandidates', () => {
       // Execute
       const result = await scanForCandidates(mockRuleId)
 
-      // Verify error
+      // Verify error includes rule context and supported types
       expect(result.status).toBe('FAILED')
-      expect(result.error).toBe('Unsupported media type: MUSIC')
+      expect(result.error).toContain('Unsupported media type: MUSIC')
+      expect(result.error).toContain('Rule: "Test Rule"')
+      expect(result.error).toContain(mockRuleId)
+      expect(result.error).toContain('Supported types: MOVIE, TV_SERIES')
     })
 
     it('should handle error during candidate creation', async () => {
