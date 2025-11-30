@@ -10,6 +10,7 @@ import {
   type GetCommandLogsParams,
 } from "@/lib/discord/audit"
 import { prisma } from "@/lib/prisma"
+import { getDiscordService } from "@/lib/services/service-helpers"
 import { toEndOfDayExclusive } from "@/lib/utils/formatters"
 import { createLogger } from "@/lib/utils/logger"
 import type { DiscordCommandType, DiscordCommandStatus } from "@/lib/generated/prisma/client"
@@ -163,10 +164,8 @@ export async function getDiscordBotStatus() {
   await requireAdmin()
 
   try {
-    // Get Discord integration settings
-    const integration = await prisma.discordIntegration.findUnique({
-      where: { id: "discord" },
-    })
+    // Get Discord service settings
+    const discordService = await getDiscordService()
 
     // Get bot lock status
     const lock = await prisma.discordBotLock.findUnique({
@@ -190,11 +189,12 @@ export async function getDiscordBotStatus() {
       select: { createdAt: true },
     })
 
+    const discordConfig = discordService?.config
     return {
       success: true,
       status: {
-        isEnabled: integration?.isEnabled ?? false,
-        botEnabled: integration?.botEnabled ?? false,
+        isEnabled: discordConfig?.isEnabled ?? false,
+        botEnabled: discordConfig?.botEnabled ?? false,
         isConnected: isLockValid,
         instanceId: lock?.instanceId ?? null,
         lastRenewedAt: lock?.lastRenewedAt?.toISOString() ?? null,

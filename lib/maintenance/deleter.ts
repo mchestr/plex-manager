@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma"
+import { getActiveRadarrService, getActiveSonarrService } from "@/lib/services/service-helpers"
 import { createLogger } from "@/lib/utils/logger"
 import { deleteRadarrMovie } from "@/lib/connections/radarr"
 import { deleteSonarrSeries } from "@/lib/connections/sonarr"
@@ -77,20 +78,18 @@ export async function executeDeletions(
             )
           }
 
-          // Get Radarr config from database
-          const radarrServer = await prisma.radarr.findFirst({
-            where: { isActive: true },
-          })
+          // Get Radarr config from unified Service table
+          const radarrService = await getActiveRadarrService()
 
-          if (!radarrServer) {
+          if (!radarrService) {
             throw new Error("No active Radarr server configured")
           }
 
           const radarrConfig = {
-            name: radarrServer.name,
-            url: radarrServer.url,
-            apiKey: radarrServer.apiKey,
-            publicUrl: radarrServer.publicUrl || undefined,
+            name: radarrService.name,
+            url: radarrService.url ?? "",
+            apiKey: radarrService.config.apiKey,
+            publicUrl: radarrService.publicUrl || undefined,
           }
 
           // Delete from Radarr
@@ -118,20 +117,18 @@ export async function executeDeletions(
             )
           }
 
-          // Get Sonarr config from database
-          const sonarrServer = await prisma.sonarr.findFirst({
-            where: { isActive: true },
-          })
+          // Get Sonarr config from unified Service table
+          const sonarrService = await getActiveSonarrService()
 
-          if (!sonarrServer) {
+          if (!sonarrService) {
             throw new Error("No active Sonarr server configured")
           }
 
           const sonarrConfig = {
-            name: sonarrServer.name,
-            url: sonarrServer.url,
-            apiKey: sonarrServer.apiKey,
-            publicUrl: sonarrServer.publicUrl || undefined,
+            name: sonarrService.name,
+            url: sonarrService.url ?? "",
+            apiKey: sonarrService.config.apiKey,
+            publicUrl: sonarrService.publicUrl || undefined,
           }
 
           // Delete from Sonarr

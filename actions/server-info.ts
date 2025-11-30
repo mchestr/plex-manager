@@ -1,6 +1,6 @@
 "use server"
 
-import { prisma } from "@/lib/prisma"
+import { getActivePlexService } from "@/lib/services/service-helpers"
 import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("SERVER_INFO")
@@ -16,10 +16,8 @@ export interface LibrarySection {
  */
 export async function getServerName(): Promise<string> {
   try {
-    const plexServer = await prisma.plexServer.findFirst({
-      where: { isActive: true },
-    })
-    return plexServer?.name || "Plex"
+    const plexService = await getActivePlexService()
+    return plexService?.name || "Plex"
   } catch (error) {
     logger.error("Error fetching server name", error)
     return "Plex"
@@ -36,16 +34,14 @@ export async function getAvailableLibraries(): Promise<{
   error?: string
 }> {
   try {
-    const plexServer = await prisma.plexServer.findFirst({
-      where: { isActive: true },
-    })
+    const plexService = await getActivePlexService()
 
-    if (!plexServer) {
+    if (!plexService) {
       return { success: false, error: "No active Plex server configured" }
     }
 
     // Fetch library sections directly from the local Plex server
-    const sectionsUrl = `${plexServer.url}/library/sections?X-Plex-Token=${plexServer.token}`
+    const sectionsUrl = `${plexService.url}/library/sections?X-Plex-Token=${plexService.config.token}`
 
     logger.debug("Fetching libraries from local server", { url: sectionsUrl })
 

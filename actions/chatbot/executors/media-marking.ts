@@ -1,5 +1,6 @@
 import { searchPlexMedia, markPlexItemWatched } from "@/lib/connections/plex"
 import { prisma } from "@/lib/prisma"
+import { getActivePlexService } from "@/lib/services/service-helpers"
 import { createLogger } from "@/lib/utils/logger"
 import { MarkType, MediaType } from "@/lib/generated/prisma/client"
 import { findRadarrIdByTitle, findSonarrIdByTitle } from "@/lib/utils/media-matching"
@@ -17,16 +18,16 @@ export async function executeMediaMarkingTool(
   }
 
   // Get Plex server config
-  const server = await prisma.plexServer.findFirst({ where: { isActive: true } })
-  if (!server) {
+  const plexService = await getActivePlexService()
+  if (!plexService) {
     return "Error: No active Plex server configured"
   }
 
   const plexConfig = {
-    name: server.name,
-    url: server.url,
-    token: server.token,
-    publicUrl: server.publicUrl || undefined,
+    name: plexService.name,
+    url: plexService.url ?? "",
+    token: plexService.config.token,
+    publicUrl: plexService.publicUrl || undefined,
   }
 
   switch (toolName) {

@@ -1,5 +1,6 @@
 import { getPlexLibrarySections, getPlexOnDeck, getPlexRecentlyAdded, getPlexServerIdentity, getPlexSessions } from "@/lib/connections/plex"
 import { prisma } from "@/lib/prisma"
+import { getActivePlexService } from "@/lib/services/service-helpers"
 import { sanitizePlexSessionsPayload } from "./plex-sanitizer"
 
 export async function executePlexTool(
@@ -8,14 +9,14 @@ export async function executePlexTool(
   userId?: string,
   context?: string
 ): Promise<string> {
-  const server = await prisma.plexServer.findFirst({ where: { isActive: true } })
-  if (!server) return "Error: No active Plex server configured."
+  const plexService = await getActivePlexService()
+  if (!plexService) return "Error: No active Plex server configured."
 
   const config = {
-    name: server.name,
-    url: server.url,
-    token: server.token,
-    publicUrl: server.publicUrl || undefined,
+    name: plexService.name,
+    url: plexService.url ?? "",
+    token: plexService.config.token,
+    publicUrl: plexService.publicUrl || undefined,
   }
 
   switch (toolName) {

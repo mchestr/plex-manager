@@ -1,4 +1,4 @@
-import { PrismaClient } from '../lib/generated/prisma/client'
+import { PrismaClient, ServiceType } from '../lib/generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 
 // Allow skipping seed via environment variable (useful for migrations)
@@ -22,11 +22,8 @@ async function main() {
   await prisma.wrappedShareVisit.deleteMany()
   await prisma.plexWrapped.deleteMany()
   await prisma.user.deleteMany()
-  await prisma.plexServer.deleteMany()
+  await prisma.service.deleteMany()
   await prisma.setup.deleteMany()
-  await prisma.lLMProvider.deleteMany()
-  await prisma.tautulli.deleteMany()
-  await prisma.overseerr.deleteMany()
 
   // Create setup completed
   await prisma.setup.create({
@@ -37,14 +34,17 @@ async function main() {
     },
   })
 
-  // Create dummy Plex server
-  await prisma.plexServer.create({
+  // Create dummy Plex service
+  await prisma.service.create({
     data: {
+      type: ServiceType.PLEX,
       name: 'Test Plex Server',
       url: 'http://localhost:32400',
-      token: 'test-token',
-      adminPlexUserId: 'admin-plex-id',
       isActive: true,
+      config: {
+        token: 'test-token',
+        adminPlexUserId: 'admin-plex-id',
+      },
     },
   })
 

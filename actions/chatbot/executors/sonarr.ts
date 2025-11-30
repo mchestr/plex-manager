@@ -1,5 +1,5 @@
 import { getSonarrCalendar, getSonarrDiskSpace, getSonarrEpisodeById, getSonarrEpisodes, getSonarrHealth, getSonarrHistory, getSonarrQualityProfiles, getSonarrQueue, getSonarrRootFolders, getSonarrSeries, getSonarrSeriesById, getSonarrSystemStatus, getSonarrWantedMissing, searchSonarrSeries } from "@/lib/connections/sonarr"
-import { prisma } from "@/lib/prisma"
+import { getActiveSonarrService } from "@/lib/services/service-helpers"
 
 export async function executeSonarrTool(
   toolName: string,
@@ -7,14 +7,14 @@ export async function executeSonarrTool(
   _userId?: string,
   _context?: string
 ): Promise<string> {
-  const server = await prisma.sonarr.findFirst({ where: { isActive: true } })
-  if (!server) return "Error: No active Sonarr server configured."
+  const sonarrService = await getActiveSonarrService()
+  if (!sonarrService) return "Error: No active Sonarr server configured."
 
   const config = {
-    name: server.name,
-    url: server.url,
-    apiKey: server.apiKey,
-    publicUrl: server.publicUrl || undefined,
+    name: sonarrService.name,
+    url: sonarrService.url ?? "",
+    apiKey: sonarrService.config.apiKey,
+    publicUrl: sonarrService.publicUrl || undefined,
   }
 
   switch (toolName) {

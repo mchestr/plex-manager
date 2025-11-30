@@ -1,7 +1,7 @@
-import { prisma } from "@/lib/prisma"
 import { requireAdminAPI } from "@/lib/security/api-helpers"
 import { createSafeError, ErrorCode, getStatusCode, logError } from "@/lib/security/error-handler"
 import { adminRateLimiter } from "@/lib/security/rate-limit"
+import { getActiveLLMProvider } from "@/lib/services/service-helpers"
 import { MODEL_PRICING } from "@/lib/llm/pricing"
 import { NextRequest, NextResponse } from "next/server"
 
@@ -25,12 +25,9 @@ export async function GET(request: NextRequest) {
     const models = Object.keys(MODEL_PRICING).sort()
 
     // Get configured model from active LLM provider
-    const llmProvider = await prisma.lLMProvider.findFirst({
-      where: { isActive: true },
-      select: { model: true },
-    })
+    const llmProviderService = await getActiveLLMProvider("chat")
 
-    const configuredModel = llmProvider?.model || null
+    const configuredModel = llmProviderService?.config.model || null
 
     return NextResponse.json({ models, configuredModel })
   } catch (error) {

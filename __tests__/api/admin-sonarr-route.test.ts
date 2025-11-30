@@ -3,18 +3,14 @@
  */
 
 import { GET } from '@/app/api/admin/sonarr/route'
-import { prisma } from '@/lib/prisma'
+import { getAllSonarrServices } from '@/lib/services/service-helpers'
 import { requireAdminAPI } from '@/lib/security/api-helpers'
 import { adminRateLimiter } from '@/lib/security/rate-limit'
 import { NextRequest } from 'next/server'
 
 // Mock dependencies
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    sonarr: {
-      findMany: jest.fn(),
-    },
-  },
+jest.mock('@/lib/services/service-helpers', () => ({
+  getAllSonarrServices: jest.fn(),
 }))
 
 jest.mock('@/lib/security/api-helpers', () => ({
@@ -66,7 +62,7 @@ describe('GET /api/admin/sonarr', () => {
   })
 
   it('should return Sonarr servers for admin user', async () => {
-    ;(prisma.sonarr.findMany as jest.Mock).mockResolvedValue(mockSonarrServers)
+    ;(getAllSonarrServices as jest.Mock).mockResolvedValue(mockSonarrServers)
 
     const { NextRequest } = await import('next/server')
     const request = new NextRequest('http://localhost/api/admin/sonarr')
@@ -76,17 +72,11 @@ describe('GET /api/admin/sonarr', () => {
 
     expect(response.status).toBe(200)
     expect(data.servers).toEqual(mockSonarrServers)
-    expect(prisma.sonarr.findMany).toHaveBeenCalledWith({
-      select: {
-        id: true,
-        name: true,
-      },
-      orderBy: { name: 'asc' },
-    })
+    expect(getAllSonarrServices).toHaveBeenCalled()
   })
 
   it('should return empty array when no servers configured', async () => {
-    ;(prisma.sonarr.findMany as jest.Mock).mockResolvedValue([])
+    ;(getAllSonarrServices as jest.Mock).mockResolvedValue([])
 
     const { NextRequest } = await import('next/server')
     const request = new NextRequest('http://localhost/api/admin/sonarr')
@@ -108,7 +98,7 @@ describe('GET /api/admin/sonarr', () => {
     const response = await GET(request)
 
     expect(response).toBe(mockResponse)
-    expect(prisma.sonarr.findMany).not.toHaveBeenCalled()
+    expect(getAllSonarrServices).not.toHaveBeenCalled()
   })
 
   it('should return 403 when user is not admin', async () => {
@@ -121,7 +111,7 @@ describe('GET /api/admin/sonarr', () => {
     const response = await GET(request)
 
     expect(response).toBe(mockResponse)
-    expect(prisma.sonarr.findMany).not.toHaveBeenCalled()
+    expect(getAllSonarrServices).not.toHaveBeenCalled()
   })
 
   it('should return 429 when rate limit is exceeded', async () => {
@@ -138,7 +128,7 @@ describe('GET /api/admin/sonarr', () => {
   })
 
   it('should handle database errors gracefully', async () => {
-    ;(prisma.sonarr.findMany as jest.Mock).mockRejectedValue(new Error('Database error'))
+    ;(getAllSonarrServices as jest.Mock).mockRejectedValue(new Error('Database error'))
 
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation()
 
@@ -160,17 +150,14 @@ describe('GET /api/admin/sonarr', () => {
       { id: 'sonarr-2', name: 'Sonarr HD' },
       { id: 'sonarr-1', name: 'Sonarr 4K' },
     ]
-    ;(prisma.sonarr.findMany as jest.Mock).mockResolvedValue(unsortedServers)
+    ;(getAllSonarrServices as jest.Mock).mockResolvedValue(unsortedServers)
 
     const { NextRequest } = await import('next/server')
     const request = new NextRequest('http://localhost/api/admin/sonarr')
 
     await GET(request)
 
-    expect(prisma.sonarr.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        orderBy: { name: 'asc' },
-      })
-    )
+    // The service helper handles sorting internally
+    expect(getAllSonarrServices).toHaveBeenCalled()
   })
 })

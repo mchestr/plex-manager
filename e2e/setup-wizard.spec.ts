@@ -11,7 +11,7 @@ import globalSetup from './global-setup';
 import { createE2EPrismaClient } from './helpers/prisma';
 import { navigateAndVerify, waitForLoadingGone } from './helpers/test-utils';
 
-import type { PrismaClient } from '../lib/generated/prisma/client';
+import { ServiceType, type PrismaClient } from '../lib/generated/prisma/client';
 
 test.describe('Setup Wizard', () => {
   test.describe.configure({ mode: 'serial' });
@@ -43,13 +43,7 @@ test.describe('Setup Wizard', () => {
     await prisma.inviteUsage.deleteMany();
     await prisma.invite.deleteMany();
     await prisma.user.deleteMany();
-    await prisma.lLMProvider.deleteMany();
-    await prisma.discordIntegration.deleteMany();
-    await prisma.radarr.deleteMany();
-    await prisma.sonarr.deleteMany();
-    await prisma.overseerr.deleteMany();
-    await prisma.tautulli.deleteMany();
-    await prisma.plexServer.deleteMany();
+    await prisma.service.deleteMany();
     await prisma.setup.deleteMany();
 
     // No route interception needed - connection tests are bypassed via SKIP_CONNECTION_TESTS=true
@@ -251,44 +245,59 @@ test.describe('Setup Wizard', () => {
     expect(setup?.completedAt).toBeTruthy();
 
     // Verify all configurations were saved
-    const plexServer = await prisma.plexServer.findFirst();
-    expect(plexServer).toBeTruthy();
-    expect(plexServer?.name).toBe('Test Plex Server');
-
-    const tautulli = await prisma.tautulli.findFirst();
-    expect(tautulli).toBeTruthy();
-    expect(tautulli?.name).toBe('Test Tautulli');
-
-    const overseerr = await prisma.overseerr.findFirst();
-    expect(overseerr).toBeTruthy();
-    expect(overseerr?.name).toBe('Test Overseerr');
-
-    const sonarr = await prisma.sonarr.findFirst();
-    expect(sonarr).toBeTruthy();
-    expect(sonarr?.name).toBe('Test Sonarr');
-
-    const radarr = await prisma.radarr.findFirst();
-    expect(radarr).toBeTruthy();
-    expect(radarr?.name).toBe('Test Radarr');
-
-    const discordIntegration = await prisma.discordIntegration.findFirst();
-    expect(discordIntegration).toBeTruthy();
-    expect(discordIntegration?.isEnabled).toBe(true);
-    expect(discordIntegration?.clientId).toBe('discord-client-id');
-
-    const chatLLMProvider = await prisma.lLMProvider.findFirst({
-      where: { purpose: 'chat' },
+    const plexService = await prisma.service.findFirst({
+      where: { type: ServiceType.PLEX },
     });
-    expect(chatLLMProvider).toBeTruthy();
-    expect(chatLLMProvider?.provider).toBe('openai');
-    expect(chatLLMProvider?.purpose).toBe('chat');
+    expect(plexService).toBeTruthy();
+    expect(plexService?.name).toBe('Test Plex Server');
 
-    const wrappedLLMProvider = await prisma.lLMProvider.findFirst({
-      where: { purpose: 'wrapped' },
+    const tautulliService = await prisma.service.findFirst({
+      where: { type: ServiceType.TAUTULLI },
     });
-    expect(wrappedLLMProvider).toBeTruthy();
-    expect(wrappedLLMProvider?.provider).toBe('openai');
-    expect(wrappedLLMProvider?.purpose).toBe('wrapped');
+    expect(tautulliService).toBeTruthy();
+    expect(tautulliService?.name).toBe('Test Tautulli');
+
+    const overseerrService = await prisma.service.findFirst({
+      where: { type: ServiceType.OVERSEERR },
+    });
+    expect(overseerrService).toBeTruthy();
+    expect(overseerrService?.name).toBe('Test Overseerr');
+
+    const sonarrService = await prisma.service.findFirst({
+      where: { type: ServiceType.SONARR },
+    });
+    expect(sonarrService).toBeTruthy();
+    expect(sonarrService?.name).toBe('Test Sonarr');
+
+    const radarrService = await prisma.service.findFirst({
+      where: { type: ServiceType.RADARR },
+    });
+    expect(radarrService).toBeTruthy();
+    expect(radarrService?.name).toBe('Test Radarr');
+
+    const discordService = await prisma.service.findFirst({
+      where: { type: ServiceType.DISCORD },
+    });
+    expect(discordService).toBeTruthy();
+    const discordConfig = discordService?.config as { isEnabled?: boolean; clientId?: string } | null;
+    expect(discordConfig?.isEnabled).toBe(true);
+    expect(discordConfig?.clientId).toBe('discord-client-id');
+
+    const chatLLMService = await prisma.service.findFirst({
+      where: { type: ServiceType.LLM, name: { contains: 'Chat' } },
+    });
+    expect(chatLLMService).toBeTruthy();
+    const chatConfig = chatLLMService?.config as { provider?: string; purpose?: string } | null;
+    expect(chatConfig?.provider).toBe('openai');
+    expect(chatConfig?.purpose).toBe('chat');
+
+    const wrappedLLMService = await prisma.service.findFirst({
+      where: { type: ServiceType.LLM, name: { contains: 'Wrapped' } },
+    });
+    expect(wrappedLLMService).toBeTruthy();
+    const wrappedConfig = wrappedLLMService?.config as { provider?: string; purpose?: string } | null;
+    expect(wrappedConfig?.provider).toBe('openai');
+    expect(wrappedConfig?.purpose).toBe('wrapped');
   });
 
   test('should handle hidden form inputs gracefully', async ({ page }) => {

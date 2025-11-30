@@ -2,6 +2,7 @@ import { type Message } from "discord.js"
 import { verifyDiscordUser } from "@/lib/discord/services"
 import { searchPlexMedia, markPlexItemWatched, type PlexMediaItem } from "@/lib/connections/plex"
 import { prisma } from "@/lib/prisma"
+import { getActivePlexService } from "@/lib/services/service-helpers"
 import { createLogger } from "@/lib/utils/logger"
 import { MarkType, MediaType } from "@/lib/generated/prisma/client"
 import { findRadarrIdByTitle, findSonarrIdByTitle } from "@/lib/utils/media-matching"
@@ -89,8 +90,8 @@ export async function handleMarkCommand(
     }
 
     // Get Plex server config
-    const server = await prisma.plexServer.findFirst({ where: { isActive: true } })
-    if (!server) {
+    const plexService = await getActivePlexService()
+    if (!plexService) {
       await message.reply({
         content: "No active Plex server configured. Please contact an admin.",
         allowedMentions: { users: [message.author.id] },
@@ -99,10 +100,10 @@ export async function handleMarkCommand(
     }
 
     const plexConfig = {
-      name: server.name,
-      url: server.url,
-      token: server.token,
-      publicUrl: server.publicUrl || undefined,
+      name: plexService.name,
+      url: plexService.url ?? "",
+      token: plexService.config.token,
+      publicUrl: plexService.publicUrl || undefined,
     }
 
     // Search for media
@@ -256,8 +257,8 @@ export async function handleSelectionResponse(
     const selectedItem = pending.results[selection - 1]
 
     // Get Plex server config
-    const server = await prisma.plexServer.findFirst({ where: { isActive: true } })
-    if (!server) {
+    const plexService = await getActivePlexService()
+    if (!plexService) {
       await message.reply({
         content: "No active Plex server configured. Please contact an admin.",
         allowedMentions: { users: [message.author.id] },
@@ -267,10 +268,10 @@ export async function handleSelectionResponse(
     }
 
     const plexConfig = {
-      name: server.name,
-      url: server.url,
-      token: server.token,
-      publicUrl: server.publicUrl || undefined,
+      name: plexService.name,
+      url: plexService.url ?? "",
+      token: plexService.config.token,
+      publicUrl: plexService.publicUrl || undefined,
     }
 
     // Process the selected item

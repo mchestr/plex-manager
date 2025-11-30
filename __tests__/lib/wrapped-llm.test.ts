@@ -4,6 +4,7 @@
 
 import { generateWrappedWithLLM } from '@/lib/wrapped/llm'
 import { prisma } from '@/lib/prisma'
+import { getActiveLLMProvider } from '@/lib/services/service-helpers'
 import { generateWrappedPrompt } from '@/lib/wrapped/prompt-template'
 import { callOpenAI } from '@/lib/wrapped/api-calls'
 import { generateMockWrappedData } from '@/lib/wrapped/mock-data'
@@ -15,13 +16,14 @@ jest.mock('@/lib/prisma', () => ({
     config: {
       findUnique: jest.fn(),
     },
-    lLMProvider: {
-      findFirst: jest.fn(),
-    },
     lLMUsage: {
       create: jest.fn(),
     },
   },
+}))
+
+jest.mock('@/lib/services/service-helpers', () => ({
+  getActiveLLMProvider: jest.fn(),
 }))
 
 jest.mock('@/actions/prompts', () => ({
@@ -111,12 +113,14 @@ describe('generateWrappedWithLLM', () => {
       llmDisabled: false,
     })
 
-    ;(prisma.lLMProvider.findFirst as jest.Mock).mockResolvedValue({
+    ;(getActiveLLMProvider as jest.Mock).mockResolvedValue({
       id: 'provider-1',
-      provider: 'openai',
-      apiKey: 'test-key',
-      model: 'gpt-4',
-      isActive: true,
+      name: 'Wrapped LLM',
+      config: {
+        provider: 'openai',
+        apiKey: 'test-key',
+        model: 'gpt-4',
+      },
     })
 
     ;(generateWrappedPrompt as jest.Mock).mockResolvedValue('test prompt')
@@ -182,7 +186,7 @@ describe('generateWrappedWithLLM', () => {
       llmDisabled: false,
     })
 
-    ;(prisma.lLMProvider.findFirst as jest.Mock).mockResolvedValue(null)
+    ;(getActiveLLMProvider as jest.Mock).mockResolvedValue(null)
 
     const result = await generateWrappedWithLLM(
       'Test User',
@@ -202,12 +206,14 @@ describe('generateWrappedWithLLM', () => {
       llmDisabled: false,
     })
 
-    ;(prisma.lLMProvider.findFirst as jest.Mock).mockResolvedValue({
+    ;(getActiveLLMProvider as jest.Mock).mockResolvedValue({
       id: 'provider-1',
-      provider: 'openai',
-      apiKey: 'test-key',
-      model: 'gpt-4',
-      isActive: true,
+      name: 'Wrapped LLM',
+      config: {
+        provider: 'openai',
+        apiKey: 'test-key',
+        model: 'gpt-4',
+      },
     })
 
     ;(generateWrappedPrompt as jest.Mock).mockResolvedValue('test prompt')
@@ -236,12 +242,14 @@ describe('generateWrappedWithLLM', () => {
       llmDisabled: false,
     })
 
-    ;(prisma.lLMProvider.findFirst as jest.Mock).mockResolvedValue({
+    ;(getActiveLLMProvider as jest.Mock).mockResolvedValue({
       id: 'provider-1',
-      provider: 'unsupported',
-      apiKey: 'test-key',
-      model: 'test-model',
-      isActive: true,
+      name: 'Wrapped LLM',
+      config: {
+        provider: 'unsupported',
+        apiKey: 'test-key',
+        model: 'test-model',
+      },
     })
 
     ;(generateWrappedPrompt as jest.Mock).mockResolvedValue('test prompt')
@@ -264,12 +272,14 @@ describe('generateWrappedWithLLM', () => {
       llmDisabled: false,
     })
 
-    ;(prisma.lLMProvider.findFirst as jest.Mock).mockResolvedValue({
+    ;(getActiveLLMProvider as jest.Mock).mockResolvedValue({
       id: 'provider-1',
-      provider: 'openai',
-      apiKey: 'test-key',
-      model: 'gpt-4',
-      isActive: true,
+      name: 'Wrapped LLM',
+      config: {
+        provider: 'openai',
+        apiKey: 'test-key',
+        model: 'gpt-4',
+      },
     })
 
     ;(generateWrappedPrompt as jest.Mock).mockResolvedValue('test prompt')
@@ -315,12 +325,14 @@ describe('generateWrappedWithLLM', () => {
       llmDisabled: false,
     })
 
-    ;(prisma.lLMProvider.findFirst as jest.Mock).mockResolvedValue({
+    ;(getActiveLLMProvider as jest.Mock).mockResolvedValue({
       id: 'provider-1',
-      provider: 'openai',
-      apiKey: 'test-key',
-      model: null,
-      isActive: true,
+      name: 'Wrapped LLM',
+      config: {
+        provider: 'openai',
+        apiKey: 'test-key',
+        model: null,
+      },
     })
 
     ;(generateWrappedPrompt as jest.Mock).mockResolvedValue('test prompt')

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma"
+import { getDiscordService } from "@/lib/services/service-helpers"
 import { createLogger } from "@/lib/utils/logger"
 import { randomBytes } from "crypto"
 
@@ -9,11 +10,8 @@ const logger = createLogger("DISCORD_BOT_LOCK")
  */
 export async function isDiscordBotEnabled(): Promise<boolean> {
   try {
-    const integration = await prisma.discordIntegration.findUnique({
-      where: { id: "discord" },
-      select: { botEnabled: true },
-    })
-    return integration?.botEnabled ?? false
+    const discordService = await getDiscordService()
+    return discordService?.config.botEnabled ?? false
   } catch (error) {
     logger.debug("Error checking if Discord bot is enabled", { error })
     return false

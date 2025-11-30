@@ -3,18 +3,14 @@
  */
 
 import { GET } from '@/app/api/admin/radarr/route'
-import { prisma } from '@/lib/prisma'
+import { getAllRadarrServices } from '@/lib/services/service-helpers'
 import { requireAdminAPI } from '@/lib/security/api-helpers'
 import { adminRateLimiter } from '@/lib/security/rate-limit'
 import { NextRequest } from 'next/server'
 
 // Mock dependencies
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    radarr: {
-      findMany: jest.fn(),
-    },
-  },
+jest.mock('@/lib/services/service-helpers', () => ({
+  getAllRadarrServices: jest.fn(),
 }))
 
 jest.mock('@/lib/security/api-helpers', () => ({
@@ -66,7 +62,7 @@ describe('GET /api/admin/radarr', () => {
   })
 
   it('should return Radarr servers for admin user', async () => {
-    ;(prisma.radarr.findMany as jest.Mock).mockResolvedValue(mockRadarrServers)
+    ;(getAllRadarrServices as jest.Mock).mockResolvedValue(mockRadarrServers)
 
     const { NextRequest } = await import('next/server')
     const request = new NextRequest('http://localhost/api/admin/radarr')
@@ -76,17 +72,11 @@ describe('GET /api/admin/radarr', () => {
 
     expect(response.status).toBe(200)
     expect(data.servers).toEqual(mockRadarrServers)
-    expect(prisma.radarr.findMany).toHaveBeenCalledWith({
-      select: {
-        id: true,
-        name: true,
-      },
-      orderBy: { name: 'asc' },
-    })
+    expect(getAllRadarrServices).toHaveBeenCalled()
   })
 
   it('should return empty array when no servers configured', async () => {
-    ;(prisma.radarr.findMany as jest.Mock).mockResolvedValue([])
+    ;(getAllRadarrServices as jest.Mock).mockResolvedValue([])
 
     const { NextRequest } = await import('next/server')
     const request = new NextRequest('http://localhost/api/admin/radarr')
@@ -108,7 +98,7 @@ describe('GET /api/admin/radarr', () => {
     const response = await GET(request)
 
     expect(response).toBe(mockResponse)
-    expect(prisma.radarr.findMany).not.toHaveBeenCalled()
+    expect(getAllRadarrServices).not.toHaveBeenCalled()
   })
 
   it('should return 403 when user is not admin', async () => {
@@ -121,7 +111,7 @@ describe('GET /api/admin/radarr', () => {
     const response = await GET(request)
 
     expect(response).toBe(mockResponse)
-    expect(prisma.radarr.findMany).not.toHaveBeenCalled()
+    expect(getAllRadarrServices).not.toHaveBeenCalled()
   })
 
   it('should return 429 when rate limit is exceeded', async () => {
@@ -138,7 +128,7 @@ describe('GET /api/admin/radarr', () => {
   })
 
   it('should handle database errors gracefully', async () => {
-    ;(prisma.radarr.findMany as jest.Mock).mockRejectedValue(new Error('Database error'))
+    ;(getAllRadarrServices as jest.Mock).mockRejectedValue(new Error('Database error'))
 
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation()
 
@@ -160,17 +150,14 @@ describe('GET /api/admin/radarr', () => {
       { id: 'radarr-2', name: 'Radarr HD' },
       { id: 'radarr-1', name: 'Radarr 4K' },
     ]
-    ;(prisma.radarr.findMany as jest.Mock).mockResolvedValue(unsortedServers)
+    ;(getAllRadarrServices as jest.Mock).mockResolvedValue(unsortedServers)
 
     const { NextRequest } = await import('next/server')
     const request = new NextRequest('http://localhost/api/admin/radarr')
 
     await GET(request)
 
-    expect(prisma.radarr.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        orderBy: { name: 'asc' },
-      })
-    )
+    // The service helper handles sorting internally
+    expect(getAllRadarrServices).toHaveBeenCalled()
   })
 })
