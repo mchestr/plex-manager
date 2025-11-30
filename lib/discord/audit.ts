@@ -171,7 +171,7 @@ export async function getCommandLogs(
       ? {
           createdAt: {
             ...(startDate && { gte: startDate }),
-            ...(endDate && { lte: endDate }),
+            ...(endDate && { lt: endDate }),
           },
         }
       : {}),
@@ -211,7 +211,7 @@ export async function getCommandStats(
     where: {
       createdAt: {
         gte: startDate,
-        lte: endDate,
+        lt: endDate,
       },
     },
     _count: {
@@ -230,7 +230,7 @@ export async function getCommandStats(
           commandName: log.commandName,
           commandType: log.commandType,
           status: "SUCCESS",
-          createdAt: { gte: startDate, lte: endDate },
+          createdAt: { gte: startDate, lt: endDate },
         },
       }),
       prisma.discordCommandLog.count({
@@ -238,7 +238,7 @@ export async function getCommandStats(
           commandName: log.commandName,
           commandType: log.commandType,
           status: "FAILED",
-          createdAt: { gte: startDate, lte: endDate },
+          createdAt: { gte: startDate, lt: endDate },
         },
       }),
     ])
@@ -275,7 +275,7 @@ export async function getDailyActivity(
     where: {
       createdAt: {
         gte: startDate,
-        lte: endDate,
+        lt: endDate,
       },
     },
     select: {
@@ -337,7 +337,7 @@ export async function getActiveUsers(
     where: {
       createdAt: {
         gte: startDate,
-        lte: endDate,
+        lt: endDate,
       },
     },
     _count: {
@@ -381,7 +381,7 @@ export async function getSummaryStats(
   const where = {
     createdAt: {
       gte: startDate,
-      lte: endDate,
+      lt: endDate,
     },
   }
 

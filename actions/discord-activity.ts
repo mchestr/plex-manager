@@ -10,6 +10,7 @@ import {
   type GetCommandLogsParams,
 } from "@/lib/discord/audit"
 import { prisma } from "@/lib/prisma"
+import { toEndOfDayExclusive } from "@/lib/utils/formatters"
 import { createLogger } from "@/lib/utils/logger"
 import type { DiscordCommandType, DiscordCommandStatus } from "@/lib/generated/prisma/client"
 
@@ -41,7 +42,7 @@ export async function getDiscordActivityLogs(params: GetActivityLogsParams = {})
       commandName: params.commandName,
       status: params.status,
       startDate: params.startDate ? new Date(params.startDate) : undefined,
-      endDate: params.endDate ? new Date(params.endDate) : undefined,
+      endDate: toEndOfDayExclusive(params.endDate),
     }
 
     const result = await getCommandLogs(queryParams)
@@ -77,7 +78,7 @@ export async function getDiscordCommandStats(params: GetStatsParams) {
   try {
     const stats = await getCommandStats(
       new Date(params.startDate),
-      new Date(params.endDate)
+      toEndOfDayExclusive(params.endDate)!
     )
 
     return { success: true, stats }
@@ -97,7 +98,7 @@ export async function getDiscordDailyActivity(params: GetStatsParams) {
   try {
     const activity = await getDailyActivity(
       new Date(params.startDate),
-      new Date(params.endDate)
+      toEndOfDayExclusive(params.endDate)!
     )
 
     return { success: true, activity }
@@ -117,7 +118,7 @@ export async function getDiscordActiveUsers(params: GetStatsParams & { limit?: n
   try {
     const users = await getActiveUsers(
       new Date(params.startDate),
-      new Date(params.endDate),
+      toEndOfDayExclusive(params.endDate)!,
       params.limit ?? 20
     )
 
@@ -144,7 +145,7 @@ export async function getDiscordSummaryStats(params: GetStatsParams) {
   try {
     const summary = await getSummaryStats(
       new Date(params.startDate),
-      new Date(params.endDate)
+      toEndOfDayExclusive(params.endDate)!
     )
 
     return { success: true, summary }
