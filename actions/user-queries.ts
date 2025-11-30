@@ -7,6 +7,10 @@ import { aggregateLlmUsage } from "@/lib/utils"
 import { createLogger } from "@/lib/utils/logger"
 import {
   AdminUserWithWrappedStats,
+  DiscordCommandActivity,
+  MediaMarkActivity,
+  UserActivityItem,
+  UserActivityTimelineData,
   UserDetails,
   WrappedSummary
 } from "@/types/admin"
@@ -423,4 +427,84 @@ export async function fetchShareStatsMap(userIds: string[]): Promise<Map<string,
   }
 
   return shareStatsMap
+}
+
+/**
+ * Get user activity timeline (Discord commands + media marks)
+ */
+export async function getUserActivityTimeline(
+  userId: string,
+  options: { page?: number; pageSize?: number } = {}
+): Promise<UserActivityTimelineData | null> {
+  await requireAdmin()
+
+  const { page = 1, pageSize = 10 } = options
+
+  try {
+    // Fetch both data sources and counts in parallel
+    const [discordLogs, mediaMarks, discordCount, mediaMarkCount] = await Promise.all([
+      prisma.discordCommandLog.findMany({
+        where: { userId },
+        orderBy: { createdAt: "desc" },
+        take: pageSize * 2, // Fetch extra to merge properly
+      }),
+      prisma.userMediaMark.findMany({
+        where: { userId },
+        orderBy: { markedAt: "desc" },
+        take: pageSize * 2,
+      }),
+      prisma.discordCommandLog.count({ where: { userId } }),
+      prisma.userMediaMark.count({ where: { userId } }),
+    ])
+
+    // Transform Discord logs to activity items
+    const discordActivities: DiscordCommandActivity[] = discordLogs.map((log) => ({
+      type: "discord_command" as const,
+      id: log.id,
+      timestamp: log.createdAt,
+      commandType: log.commandType,
+      commandName: log.commandName,
+      commandArgs: log.commandArgs,
+      status: log.status,
+      responseTimeMs: log.responseTimeMs,
+      channelType: log.channelType,
+    }))
+
+    // Transform media marks to activity items
+    const mediaMarkActivities: MediaMarkActivity[] = mediaMarks.map((mark) => ({
+      type: "media_mark" as const,
+      id: mark.id,
+      timestamp: mark.markedAt,
+      markType: mark.markType,
+      mediaType: mark.mediaType,
+      title: mark.title,
+      year: mark.year,
+      seasonNumber: mark.seasonNumber,
+      episodeNumber: mark.episodeNumber,
+      parentTitle: mark.parentTitle,
+      markedVia: mark.markedVia,
+    }))
+
+    // Merge and sort by timestamp (most recent first)
+    const allActivities: UserActivityItem[] = [...discordActivities, ...mediaMarkActivities].sort(
+      (a, b) => b.timestamp.getTime() - a.timestamp.getTime()
+    )
+
+    // Apply pagination
+    const total = discordCount + mediaMarkCount
+    const totalPages = Math.ceil(total / pageSize)
+    const offset = (page - 1) * pageSize
+    const paginatedItems = allActivities.slice(offset, offset + pageSize)
+
+    return {
+      items: paginatedItems,
+      total,
+      page,
+      pageSize,
+      totalPages,
+    }
+  } catch (error) {
+    logger.error("Error fetching user activity timeline", error, { userId })
+    return null
+  }
 }

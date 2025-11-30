@@ -75,3 +75,40 @@ export interface UserDetails {
 export interface UserQueryOptions {
   year?: number
 }
+
+// Activity Timeline Types
+export type DiscordCommandActivity = {
+  type: "discord_command"
+  id: string
+  timestamp: Date
+  commandType: string
+  commandName: string
+  commandArgs: string | null
+  status: string
+  responseTimeMs: number | null
+  channelType: string
+}
+
+export type MediaMarkActivity = {
+  type: "media_mark"
+  id: string
+  timestamp: Date
+  markType: string
+  mediaType: string
+  title: string
+  year: number | null
+  seasonNumber: number | null
+  episodeNumber: number | null
+  parentTitle: string | null
+  markedVia: string
+}
+
+export type UserActivityItem = DiscordCommandActivity | MediaMarkActivity
+
+export interface UserActivityTimelineData {
+  items: UserActivityItem[]
+  total: number
+  page: number
+  pageSize: number
+  totalPages: number
+}

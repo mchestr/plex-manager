@@ -11,7 +11,11 @@
 
 import {
   AdminUserWithWrappedStats,
+  DiscordCommandActivity,
   LlmUsageStats,
+  MediaMarkActivity,
+  UserActivityItem,
+  UserActivityTimelineData,
   WrappedSummary,
 } from '@/types/admin'
 
@@ -295,5 +299,124 @@ export const makeTautulliUser = (overrides: any = {}) => ({
   username: 'testuser',
   email: 'test@example.com',
   friendly_name: 'Test User',
+  ...overrides,
+})
+
+// ============================================================================
+// Activity Timeline Builders
+// ============================================================================
+
+/**
+ * Creates a mock Discord command activity
+ * @param overrides - Partial properties to override defaults
+ * @returns DiscordCommandActivity object
+ */
+export const makeDiscordCommandActivity = (
+  overrides: Partial<DiscordCommandActivity> = {}
+): DiscordCommandActivity => ({
+  type: 'discord_command',
+  id: 'discord-cmd-1',
+  timestamp: new Date('2024-01-15T10:00:00Z'),
+  commandType: 'CHAT',
+  commandName: '!assistant',
+  commandArgs: 'recommend a movie',
+  status: 'SUCCESS',
+  responseTimeMs: 250,
+  channelType: 'dm',
+  ...overrides,
+})
+
+/**
+ * Creates a mock Media mark activity
+ * @param overrides - Partial properties to override defaults
+ * @returns MediaMarkActivity object
+ */
+export const makeMediaMarkActivity = (
+  overrides: Partial<MediaMarkActivity> = {}
+): MediaMarkActivity => ({
+  type: 'media_mark',
+  id: 'media-mark-1',
+  timestamp: new Date('2024-01-15T09:00:00Z'),
+  markType: 'FINISHED_WATCHING',
+  mediaType: 'MOVIE',
+  title: 'The Matrix',
+  year: 1999,
+  seasonNumber: null,
+  episodeNumber: null,
+  parentTitle: null,
+  markedVia: 'discord',
+  ...overrides,
+})
+
+/**
+ * Creates a mock user activity timeline data
+ * @param overrides - Partial properties to override defaults
+ * @returns UserActivityTimelineData object
+ */
+export const makeUserActivityTimelineData = (
+  overrides: Partial<UserActivityTimelineData> = {}
+): UserActivityTimelineData => ({
+  items: [
+    makeDiscordCommandActivity(),
+    makeMediaMarkActivity(),
+  ],
+  total: 2,
+  page: 1,
+  pageSize: 10,
+  totalPages: 1,
+  ...overrides,
+})
+
+/**
+ * Creates a mock Prisma DiscordCommandLog record
+ * @param overrides - Partial properties to override defaults
+ * @returns Prisma DiscordCommandLog object
+ */
+export const makePrismaDiscordCommandLog = (overrides: any = {}) => ({
+  id: 'discord-cmd-1',
+  discordUserId: 'discord-123',
+  discordUsername: 'testuser',
+  userId: 'user-1',
+  commandType: 'CHAT',
+  commandName: '!assistant',
+  commandArgs: 'recommend a movie',
+  channelId: 'channel-123',
+  channelType: 'dm',
+  guildId: null,
+  status: 'SUCCESS',
+  error: null,
+  responseTimeMs: 250,
+  startedAt: new Date('2024-01-15T10:00:00Z'),
+  completedAt: new Date('2024-01-15T10:00:00Z'),
+  createdAt: new Date('2024-01-15T10:00:00Z'),
+  ...overrides,
+})
+
+/**
+ * Creates a mock Prisma UserMediaMark record
+ * @param overrides - Partial properties to override defaults
+ * @returns Prisma UserMediaMark object
+ */
+export const makePrismaUserMediaMark = (overrides: any = {}) => ({
+  id: 'media-mark-1',
+  userId: 'user-1',
+  mediaType: 'MOVIE',
+  plexRatingKey: 'plex-123',
+  radarrId: null,
+  radarrTitleSlug: null,
+  sonarrId: null,
+  sonarrTitleSlug: null,
+  title: 'The Matrix',
+  year: 1999,
+  seasonNumber: null,
+  episodeNumber: null,
+  parentTitle: null,
+  markType: 'FINISHED_WATCHING',
+  note: null,
+  markedAt: new Date('2024-01-15T09:00:00Z'),
+  markedVia: 'discord',
+  discordChannelId: null,
+  createdAt: new Date('2024-01-15T09:00:00Z'),
+  updatedAt: new Date('2024-01-15T09:00:00Z'),
   ...overrides,
 })

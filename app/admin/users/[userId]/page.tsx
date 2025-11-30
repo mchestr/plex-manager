@@ -1,8 +1,9 @@
-import { getUserDetails } from "@/actions/users"
+import { getUserDetails, getUserActivityTimeline } from "@/actions/users"
 import { RegenerateWrappedButton } from "@/components/admin/users/regenerate-wrapped-button"
 import { UnshareUserButton } from "@/components/admin/users/unshare-user-button"
 import { UserStatusBadge } from "@/components/admin/users/user-status-badge"
 import { ChangeUserRoleButton } from "@/components/admin/users/change-user-role-button"
+import { UserActivityTimeline } from "@/components/admin/users/user-activity-timeline"
 import Link from "next/link"
 import Image from "next/image"
 import { notFound } from "next/navigation"
@@ -11,7 +12,10 @@ export const dynamic = 'force-dynamic'
 
 export default async function UserDetailsPage({ params }: { params: Promise<{ userId: string }> }) {
   const { userId } = await params
-  const user = await getUserDetails(userId)
+  const [user, activityTimeline] = await Promise.all([
+    getUserDetails(userId),
+    getUserActivityTimeline(userId, { page: 1, pageSize: 10 }),
+  ])
 
   if (!user) {
     notFound()
@@ -353,6 +357,17 @@ export default async function UserDetailsPage({ params }: { params: Promise<{ us
               </div>
             </div>
           </div>
+
+          {/* Activity Timeline */}
+          {activityTimeline && activityTimeline.total > 0 && (
+            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg overflow-hidden mt-6">
+              <div className="px-6 py-4 border-b border-slate-700">
+                <h3 className="text-lg font-semibold text-white">Activity Timeline</h3>
+                <p className="text-sm text-slate-400">{activityTimeline.total} activities</p>
+              </div>
+              <UserActivityTimeline userId={user.id} initialData={activityTimeline} />
+            </div>
+          )}
 
           {/* LLM Usage Details */}
           {user.llmUsage && (
