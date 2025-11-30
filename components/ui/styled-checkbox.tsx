@@ -5,6 +5,7 @@ import { InputHTMLAttributes, forwardRef } from "react"
 interface StyledCheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "type"> {
   label?: string
   description?: string
+  "data-testid"?: string
 }
 
 export const StyledCheckbox = forwardRef<HTMLInputElement, StyledCheckboxProps>(
