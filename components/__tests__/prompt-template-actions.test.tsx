@@ -2,6 +2,7 @@ import { deletePromptTemplate, setActivePromptTemplate } from '@/actions/prompts
 import { PromptTemplateActions } from '@/components/admin/prompts/prompt-template-actions'
 import { PromptTemplate } from '@/lib/generated/prisma/client'
 import { fireEvent, render, screen, waitFor, act } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { useRouter } from 'next/navigation'
 
 // Mock dependencies
@@ -292,6 +293,7 @@ describe('PromptTemplateActions', () => {
 
   describe('Error Handling', () => {
     it('should clear previous error when performing new action', async () => {
+      const user = userEvent.setup()
       ;(setActivePromptTemplate as jest.Mock)
         .mockResolvedValueOnce({ success: false, error: 'First error' })
         .mockResolvedValueOnce({ success: true })
@@ -302,7 +304,7 @@ describe('PromptTemplateActions', () => {
 
       // First click - should show error
       await act(async () => {
-        fireEvent.click(setActiveButton)
+        await user.click(setActiveButton)
       })
       await waitFor(() => {
         expect(screen.getByText('First error')).toBeInTheDocument()
@@ -310,14 +312,16 @@ describe('PromptTemplateActions', () => {
 
       // Second click - error should be cleared on success
       await act(async () => {
-        fireEvent.click(setActiveButton)
+        await user.click(setActiveButton)
       })
+      // After second successful call, error should be cleared
       await waitFor(() => {
         expect(screen.queryByText('First error')).not.toBeInTheDocument()
       })
     })
 
     it('should display error with proper styling', async () => {
+      const user = userEvent.setup()
       ;(setActivePromptTemplate as jest.Mock).mockResolvedValue({
         success: false,
         error: 'Test error',
@@ -326,10 +330,12 @@ describe('PromptTemplateActions', () => {
       render(<PromptTemplateActions template={mockTemplate} />)
 
       const setActiveButton = screen.getByText('Set Active')
+
       await act(async () => {
-        fireEvent.click(setActiveButton)
+        await user.click(setActiveButton)
       })
 
+      // Error should now be visible
       await waitFor(() => {
         const errorElement = screen.getByText('Test error')
         expect(errorElement).toHaveClass('text-red-400')

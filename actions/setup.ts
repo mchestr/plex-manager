@@ -8,14 +8,33 @@ import { testPlexConnection } from "@/lib/connections/plex"
 import { testRadarrConnection } from "@/lib/connections/radarr"
 import { testSonarrConnection } from "@/lib/connections/sonarr"
 import { testTautulliConnection } from "@/lib/connections/tautulli"
+import { ServiceType as PrismaServiceType } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
-import { discordIntegrationSchema, type DiscordIntegrationInput } from "@/lib/validations/discord"
-import { llmProviderSchema, type LLMProviderInput } from "@/lib/validations/llm-provider"
-import { overseerrSchema, type OverseerrInput, type OverseerrParsed } from "@/lib/validations/overseerr"
-import { plexServerSchema, type PlexServerInput, type PlexServerParsed } from "@/lib/validations/plex"
-import { radarrSchema, type RadarrInput, type RadarrParsed } from "@/lib/validations/radarr"
-import { sonarrSchema, type SonarrInput, type SonarrParsed } from "@/lib/validations/sonarr"
-import { tautulliSchema, type TautulliInput, type TautulliParsed } from "@/lib/validations/tautulli"
+import {
+  plexServerSchema,
+  tautulliSchema,
+  overseerrSchema,
+  sonarrSchema,
+  radarrSchema,
+  llmProviderSchema,
+  discordIntegrationSchema,
+  type PlexServerInput,
+  type PlexServerParsed,
+  type TautulliInput,
+  type TautulliParsed,
+  type OverseerrInput,
+  type OverseerrParsed,
+  type SonarrInput,
+  type SonarrParsed,
+  type RadarrInput,
+  type RadarrParsed,
+  type LLMProviderInput,
+  type DiscordIntegrationInput,
+  type PlexConfig,
+  type ApiKeyConfig,
+  type LLMProviderConfig,
+  type DiscordConfig,
+} from "@/lib/validations/service"
 import { revalidatePath } from "next/cache"
 
 export async function getSetupStatus() {
@@ -75,14 +94,25 @@ export async function savePlexServer(data: PlexServerInput) {
         })
       }
 
-      // Create Plex server configuration
-      await tx.plexServer.create({
+      // Deactivate any existing active Plex services
+      await tx.service.updateMany({
+        where: { type: PrismaServiceType.PLEX, isActive: true },
+        data: { isActive: false },
+      })
+
+      // Create Plex service in unified Service table
+      const config: PlexConfig = {
+        token: validated.token,
+        adminPlexUserId,
+      }
+
+      await tx.service.create({
         data: {
+          type: PrismaServiceType.PLEX,
           name: validated.name,
           url: validated.url,
-          token: validated.token,
           publicUrl: validated.publicUrl,
-          adminPlexUserId,
+          config,
           isActive: true,
         },
       })
@@ -135,13 +165,24 @@ export async function saveTautulli(data: TautulliInput) {
         })
       }
 
-      // Create Tautulli configuration
-      await tx.tautulli.create({
+      // Deactivate any existing active Tautulli services
+      await tx.service.updateMany({
+        where: { type: PrismaServiceType.TAUTULLI, isActive: true },
+        data: { isActive: false },
+      })
+
+      // Create Tautulli service in unified Service table
+      const config: ApiKeyConfig = {
+        apiKey: validated.apiKey,
+      }
+
+      await tx.service.create({
         data: {
+          type: PrismaServiceType.TAUTULLI,
           name: validated.name,
           url: validated.url,
-          apiKey: validated.apiKey,
           publicUrl: validated.publicUrl,
+          config,
           isActive: true,
         },
       })
@@ -194,13 +235,24 @@ export async function saveOverseerr(data: OverseerrInput) {
         })
       }
 
-      // Create Overseerr configuration
-      await tx.overseerr.create({
+      // Deactivate any existing active Overseerr services
+      await tx.service.updateMany({
+        where: { type: PrismaServiceType.OVERSEERR, isActive: true },
+        data: { isActive: false },
+      })
+
+      // Create Overseerr service in unified Service table
+      const config: ApiKeyConfig = {
+        apiKey: validated.apiKey,
+      }
+
+      await tx.service.create({
         data: {
+          type: PrismaServiceType.OVERSEERR,
           name: validated.name,
           url: validated.url,
-          apiKey: validated.apiKey,
           publicUrl: validated.publicUrl,
+          config,
           isActive: true,
         },
       })
@@ -253,13 +305,24 @@ export async function saveSonarr(data: SonarrInput) {
         })
       }
 
-      // Create Sonarr configuration
-      await tx.sonarr.create({
+      // Deactivate any existing active Sonarr services
+      await tx.service.updateMany({
+        where: { type: PrismaServiceType.SONARR, isActive: true },
+        data: { isActive: false },
+      })
+
+      // Create Sonarr service in unified Service table
+      const config: ApiKeyConfig = {
+        apiKey: validated.apiKey,
+      }
+
+      await tx.service.create({
         data: {
+          type: PrismaServiceType.SONARR,
           name: validated.name,
           url: validated.url,
-          apiKey: validated.apiKey,
           publicUrl: validated.publicUrl,
+          config,
           isActive: true,
         },
       })
@@ -312,13 +375,24 @@ export async function saveRadarr(data: RadarrInput) {
         })
       }
 
-      // Create Radarr configuration
-      await tx.radarr.create({
+      // Deactivate any existing active Radarr services
+      await tx.service.updateMany({
+        where: { type: PrismaServiceType.RADARR, isActive: true },
+        data: { isActive: false },
+      })
+
+      // Create Radarr service in unified Service table
+      const config: ApiKeyConfig = {
+        apiKey: validated.apiKey,
+      }
+
+      await tx.service.create({
         data: {
+          type: PrismaServiceType.RADARR,
           name: validated.name,
           url: validated.url,
-          apiKey: validated.apiKey,
           publicUrl: validated.publicUrl,
+          config,
           isActive: true,
         },
       })
@@ -372,28 +446,31 @@ export async function saveDiscordIntegration(data: DiscordIntegrationInput) {
         })
       }
 
-      await tx.discordIntegration.upsert({
+      // Discord config for unified Service table
+      const config: DiscordConfig = {
+        clientId: validated.clientId,
+        clientSecret: validated.clientSecret,
+        guildId: validated.guildId,
+        serverInviteCode: validated.serverInviteCode,
+        platformName: validated.platformName,
+        instructions: validated.instructions,
+        isEnabled,
+        botEnabled,
+      }
+
+      // Upsert Discord service (singleton with id="discord")
+      await tx.service.upsert({
         where: { id: "discord" },
         update: {
-          isEnabled,
-          botEnabled,
-          clientId: validated.clientId,
-          clientSecret: validated.clientSecret,
-          guildId: validated.guildId,
-          serverInviteCode: validated.serverInviteCode,
-          platformName: validated.platformName,
-          instructions: validated.instructions,
+          name: validated.platformName ?? "Discord",
+          config,
         },
         create: {
           id: "discord",
-          isEnabled,
-          botEnabled,
-          clientId: validated.clientId,
-          clientSecret: validated.clientSecret,
-          guildId: validated.guildId,
-          serverInviteCode: validated.serverInviteCode,
-          platformName: validated.platformName,
-          instructions: validated.instructions,
+          type: PrismaServiceType.DISCORD,
+          name: validated.platformName ?? "Discord",
+          config,
+          isActive: true,
         },
       })
     })
@@ -448,19 +525,36 @@ async function saveLLMProviderForPurpose(
         })
       }
 
-      await tx.lLMProvider.updateMany({
-        where: { isActive: true, purpose },
-        data: { isActive: false },
+      // Deactivate existing LLM providers with the same purpose
+      const existingServices = await tx.service.findMany({
+        where: { type: PrismaServiceType.LLM_PROVIDER, isActive: true },
       })
 
-      await tx.lLMProvider.create({
+      for (const existing of existingServices) {
+        const existingConfig = existing.config as LLMProviderConfig
+        if (existingConfig.purpose === purpose) {
+          await tx.service.update({
+            where: { id: existing.id },
+            data: { isActive: false },
+          })
+        }
+      }
+
+      // Create LLM provider service in unified Service table
+      const config: LLMProviderConfig = {
+        provider: validated.provider,
+        purpose,
+        apiKey: validated.apiKey,
+        model: validated.model || "gpt-4o-mini",
+        temperature: validated.temperature ?? undefined,
+        maxTokens: validated.maxTokens ?? undefined,
+      }
+
+      await tx.service.create({
         data: {
-          provider: validated.provider,
-          purpose,
-          apiKey: validated.apiKey,
-          model: validated.model || "gpt-4o-mini",
-          temperature: validated.temperature ?? null,
-          maxTokens: validated.maxTokens ?? null,
+          type: PrismaServiceType.LLM_PROVIDER,
+          name: `${validated.provider} (${purpose})`,
+          config,
           isActive: true,
         },
       })
@@ -543,4 +637,3 @@ export async function fetchLLMModels(
     return { success: false, error: "Failed to fetch models" }
   }
 }
-

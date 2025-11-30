@@ -46,6 +46,42 @@ model Setup {
   updatedAt   DateTime  @updatedAt
 }
 
+// Unified Service model - consolidates all external service configurations
+// Each service type stores its specific configuration in the JSON config field
+model Service {
+  id        String      @id @default(cuid())
+  type      ServiceType // Service type discriminator
+  name      String      // Display name for the service
+  url       String?     // Full URL (not all services need URL, e.g., LLM, Discord)
+  publicUrl String?     // Public facing URL for reverse proxy scenarios
+  config    Json        // Service-specific configuration (validated by Zod at app level)
+  isActive  Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  // Relations for MaintenanceRule targeting
+  sonarrMaintenanceRules MaintenanceRule[] @relation("SonarrService")
+  radarrMaintenanceRules MaintenanceRule[] @relation("RadarrService")
+
+  @@index([type, isActive])
+  @@index([isActive])
+}
+
+enum ServiceType {
+  PLEX
+  TAUTULLI
+  OVERSEERR
+  SONARR
+  RADARR
+  LLM_PROVIDER
+  DISCORD
+}
+
+// ============================================
+// Legacy tables - kept for migration rollback safety
+// These will be removed after successful migration
+// ============================================
+
 model PlexServer {
   id              String   @id @default(cuid())
   name            String
@@ -97,8 +133,8 @@ model Sonarr {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relations
-  maintenanceRules MaintenanceRule[]
+  // Legacy relation - kept for migration safety
+  maintenanceRulesLegacy MaintenanceRule[] @relation("LegacySonarr")
 
   @@index([isActive])
 }
@@ -113,8 +149,8 @@ model Radarr {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relations
-  maintenanceRules MaintenanceRule[]
+  // Legacy relation - kept for migration safety
+  maintenanceRulesLegacy MaintenanceRule[] @relation("LegacyRadarr")
 
   @@index([isActive])
 }
@@ -375,11 +411,18 @@ model MaintenanceRule {
   actionType  ActionType
   actionDelayDays Int? // Optional delay before executing action (in days)
 
-  // Target server instances (optional - defaults to active server if not specified)
+  // Target server instances using unified Service table
+  // These must reference Service records of type SONARR or RADARR
+  radarrServiceId String?
+  radarrService   Service?  @relation("RadarrService", fields: [radarrServiceId], references: [id], onDelete: SetNull)
+  sonarrServiceId String?
+  sonarrService   Service?  @relation("SonarrService", fields: [sonarrServiceId], references: [id], onDelete: SetNull)
+
+  // Legacy relations - kept for migration safety, will be removed
   radarrId    String?
-  radarr      Radarr?  @relation(fields: [radarrId], references: [id], onDelete: SetNull)
+  radarr      Radarr?  @relation("LegacyRadarr", fields: [radarrId], references: [id], onDelete: SetNull)
   sonarrId    String?
-  sonarr      Sonarr?  @relation(fields: [sonarrId], references: [id], onDelete: SetNull)
+  sonarr      Sonarr?  @relation("LegacySonarr", fields: [sonarrId], references: [id], onDelete: SetNull)
 
   // Schedule (cron expression)
   schedule    String?

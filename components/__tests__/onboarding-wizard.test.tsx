@@ -11,6 +11,14 @@ jest.mock('next/navigation', () => ({
   useRouter: jest.fn(),
 }))
 
+// Mock toast
+jest.mock('@/components/ui/toast', () => ({
+  useToast: () => ({
+    showError: jest.fn(),
+    showSuccess: jest.fn(),
+  }),
+}))
+
 const mockCompleteOnboarding = jest.fn().mockResolvedValue({ success: true })
 jest.mock('@/actions/onboarding', () => ({
   completeOnboarding: (...args: any[]) => mockCompleteOnboarding(...args),

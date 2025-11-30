@@ -27,6 +27,13 @@ jest.mock('@/lib/prisma', () => ({
       create: jest.fn(),
       update: jest.fn(),
     },
+    service: {
+      updateMany: jest.fn(),
+      create: jest.fn(),
+      upsert: jest.fn(),
+      findMany: jest.fn().mockResolvedValue([]),
+    },
+    // Legacy tables kept for migration compatibility
     plexServer: {
       create: jest.fn(),
     },
@@ -49,6 +56,13 @@ jest.mock('@/lib/prisma', () => ({
         create: jest.fn(),
         update: jest.fn(),
       },
+      service: {
+        updateMany: jest.fn(),
+        create: jest.fn(),
+        upsert: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      // Legacy tables kept for migration compatibility
       plexServer: {
         create: jest.fn(),
       },
@@ -163,7 +177,8 @@ describe('Setup Actions', () => {
           findFirst: jest.fn().mockResolvedValue(null),
           create: jest.fn().mockResolvedValue({ id: 'setup-1' }),
         },
-        plexServer: {
+        service: {
+          updateMany: jest.fn(),
           create: jest.fn().mockResolvedValue({ id: 'plex-1' }),
         },
       }
@@ -182,13 +197,16 @@ describe('Setup Actions', () => {
         })
       )
       expect(mockGetPlexUserInfo).toHaveBeenCalledWith(plexInput.token)
-      expect(mockTx.plexServer.create).toHaveBeenCalledWith({
+      expect(mockTx.service.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
+          type: 'PLEX',
           name: plexInput.name,
           url: 'https://plex.example.com:32400',
-          token: plexInput.token,
           publicUrl: plexInput.publicUrl,
-          adminPlexUserId: 'plex-user-123',
+          config: expect.objectContaining({
+            token: plexInput.token,
+            adminPlexUserId: 'plex-user-123',
+          }),
           isActive: true,
         }),
       })
@@ -268,7 +286,8 @@ describe('Setup Actions', () => {
           findFirst: jest.fn().mockResolvedValue(null),
           create: jest.fn().mockResolvedValue({ id: 'setup-1' }),
         },
-        tautulli: {
+        service: {
+          updateMany: jest.fn(),
           create: jest.fn().mockResolvedValue({ id: 'tautulli-1' }),
         },
       }
@@ -281,12 +300,15 @@ describe('Setup Actions', () => {
 
       expect(result.success).toBe(true)
       expect(mockTestTautulliConnection).toHaveBeenCalled()
-      expect(mockTx.tautulli.create).toHaveBeenCalledWith({
+      expect(mockTx.service.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
+          type: 'TAUTULLI',
           name: tautulliInput.name,
           url: 'http://tautulli.example.com:8181',
-          apiKey: tautulliInput.apiKey,
           publicUrl: tautulliInput.publicUrl,
+          config: expect.objectContaining({
+            apiKey: tautulliInput.apiKey,
+          }),
           isActive: true,
         }),
       })
@@ -321,7 +343,8 @@ describe('Setup Actions', () => {
           findFirst: jest.fn().mockResolvedValue(null),
           create: jest.fn().mockResolvedValue({ id: 'setup-1' }),
         },
-        overseerr: {
+        service: {
+          updateMany: jest.fn(),
           create: jest.fn().mockResolvedValue({ id: 'overseerr-1' }),
         },
       }
@@ -334,12 +357,15 @@ describe('Setup Actions', () => {
 
       expect(result.success).toBe(true)
       expect(mockTestOverseerrConnection).toHaveBeenCalled()
-      expect(mockTx.overseerr.create).toHaveBeenCalledWith({
+      expect(mockTx.service.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
+          type: 'OVERSEERR',
           name: overseerrInput.name,
           url: 'https://overseerr.example.com:5055',
-          apiKey: overseerrInput.apiKey,
           publicUrl: overseerrInput.publicUrl,
+          config: expect.objectContaining({
+            apiKey: overseerrInput.apiKey,
+          }),
           isActive: true,
         }),
       })
@@ -361,8 +387,9 @@ describe('Setup Actions', () => {
           findFirst: jest.fn().mockResolvedValue(null),
           create: jest.fn().mockResolvedValue({ id: 'setup-1' }),
         },
-        lLMProvider: {
-          updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        service: {
+          findMany: jest.fn().mockResolvedValue([]),
+          update: jest.fn(),
           create: jest.fn().mockResolvedValue({ id: 'llm-1' }),
         },
       }
@@ -375,20 +402,18 @@ describe('Setup Actions', () => {
 
       expect(result.success).toBe(true)
       expect(mockTestLLMProviderConnection).toHaveBeenCalled()
-      expect(mockTx.lLMProvider.updateMany).toHaveBeenCalledWith({
-        where: { isActive: true, purpose: "wrapped" },
-        data: { isActive: false },
-      })
-      expect(mockTx.lLMProvider.create).toHaveBeenCalledWith({
-        data: {
-          provider: llmInput.provider,
-          purpose: "wrapped",
-          apiKey: llmInput.apiKey,
-          model: llmInput.model || null,
-          temperature: null,
-          maxTokens: null,
+      expect(mockTx.service.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          type: 'LLM_PROVIDER',
+          name: expect.stringContaining('wrapped'),
+          config: expect.objectContaining({
+            provider: llmInput.provider,
+            purpose: 'wrapped',
+            apiKey: llmInput.apiKey,
+            model: llmInput.model,
+          }),
           isActive: true,
-        },
+        }),
       })
     })
 

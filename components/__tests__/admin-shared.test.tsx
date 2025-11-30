@@ -477,8 +477,10 @@ describe('AdminNav', () => {
       const svgs = container.querySelectorAll('svg')
       svgs.forEach((svg) => {
         expect(svg).toHaveAttribute('viewBox')
-        // SVGs should have either fill or stroke (or both)
-        expect(svg.hasAttribute('fill') || svg.hasAttribute('stroke')).toBe(true)
+        // SVG icons may use fill, stroke, or both depending on the icon style
+        const hasFill = svg.hasAttribute('fill')
+        const hasStroke = svg.hasAttribute('stroke')
+        expect(hasFill || hasStroke).toBe(true)
       })
     })
 
