@@ -32,8 +32,14 @@ export async function findRadarrIdByTitle(
     }
 
     // Get all movies from Radarr
-    const movies = await getRadarrMovies(config)
+    const moviesResult = await getRadarrMovies(config)
 
+    if (!moviesResult.success) {
+      logger.warn("Failed to fetch from Radarr API", { error: moviesResult.error })
+      return null
+    }
+
+    const movies = moviesResult.data
     if (!Array.isArray(movies)) {
       logger.warn("Invalid response from Radarr API")
       return null
@@ -137,8 +143,14 @@ export async function findSonarrIdByTitle(
     }
 
     // Get all series from Sonarr
-    const series = await getSonarrSeries(config)
+    const seriesResult = await getSonarrSeries(config)
 
+    if (!seriesResult.success) {
+      logger.warn("Failed to fetch from Sonarr API", { error: seriesResult.error })
+      return null
+    }
+
+    const series = seriesResult.data
     if (!Array.isArray(series)) {
       logger.warn("Invalid response from Sonarr API")
       return null

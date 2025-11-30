@@ -19,24 +19,33 @@ export async function executeRadarrTool(
 
   switch (toolName) {
     case "get_radarr_status": {
-      const [status, queue, health, disk] = await Promise.all([
+      const [statusResult, queueResult, healthResult, diskResult] = await Promise.all([
         getRadarrSystemStatus(config),
         getRadarrQueue(config),
         getRadarrHealth(config),
         getRadarrDiskSpace(config),
       ])
-      return JSON.stringify({ status, queue, health, disk })
+      return JSON.stringify({
+        status: statusResult.success ? statusResult.data : { error: statusResult.error },
+        queue: queueResult.success ? queueResult.data : { error: queueResult.error },
+        health: healthResult.success ? healthResult.data : { error: healthResult.error },
+        disk: diskResult.success ? diskResult.data : { error: diskResult.error },
+      })
     }
     case "search_radarr_movies": {
       if (typeof args.term !== "string") {
         return "Error: 'term' parameter is required and must be a string"
       }
-      const lookupResults = await searchRadarrMovies(config, args.term)
+      const lookupResult = await searchRadarrMovies(config, args.term)
+      if (!lookupResult.success) {
+        return JSON.stringify({ error: lookupResult.error })
+      }
+      const lookupResults = lookupResult.data
 
       // Also check if any of these movies are already in the library
       // This allows us to return Radarr internal IDs when available
-      const libraryMovies = await getRadarrMovies(config)
-      const libraryArray = Array.isArray(libraryMovies) ? libraryMovies : []
+      const libraryResult = await getRadarrMovies(config)
+      const libraryArray = libraryResult.success && Array.isArray(libraryResult.data) ? libraryResult.data : []
 
       // Match lookup results with library movies by TMDB ID
       const enrichedResults = Array.isArray(lookupResults) ? lookupResults.map((lookup: any) => {
@@ -61,7 +70,11 @@ export async function executeRadarrTool(
       // If movieName is provided, search for the movie first
       if (typeof args.movieName === "string" && !movieId) {
         const movieName = args.movieName
-        const allMovies = await getRadarrMovies(config)
+        const allMoviesResult = await getRadarrMovies(config)
+        if (!allMoviesResult.success) {
+          return JSON.stringify({ error: allMoviesResult.error })
+        }
+        const allMovies = allMoviesResult.data
         const matchingMovie = Array.isArray(allMovies)
           ? allMovies.find(
               (m: { title?: string; titleSlug?: string }) =>
@@ -79,42 +92,66 @@ export async function executeRadarrTool(
         movieId = matchingMovie.id
       }
 
-      const history = await getRadarrHistory(config, pageSize, movieId)
-      return JSON.stringify(history)
+      const historyResult = await getRadarrHistory(config, pageSize, movieId)
+      if (!historyResult.success) {
+        return JSON.stringify({ error: historyResult.error })
+      }
+      return JSON.stringify(historyResult.data)
     }
     case "get_radarr_queue": {
-      const queue = await getRadarrQueue(config)
-      return JSON.stringify(queue)
+      const queueResult = await getRadarrQueue(config)
+      if (!queueResult.success) {
+        return JSON.stringify({ error: queueResult.error })
+      }
+      return JSON.stringify(queueResult.data)
     }
     case "get_radarr_movies": {
-      const movies = await getRadarrMovies(config)
-      return JSON.stringify(movies)
+      const moviesResult = await getRadarrMovies(config)
+      if (!moviesResult.success) {
+        return JSON.stringify({ error: moviesResult.error })
+      }
+      return JSON.stringify(moviesResult.data)
     }
     case "get_radarr_movie_details": {
       if (typeof args.movieId !== "number") {
         return "Error: 'movieId' parameter is required and must be a number"
       }
-      const movie = await getRadarrMovieById(config, args.movieId)
-      return JSON.stringify(movie)
+      const movieResult = await getRadarrMovieById(config, args.movieId)
+      if (!movieResult.success) {
+        return JSON.stringify({ error: movieResult.error })
+      }
+      return JSON.stringify(movieResult.data)
     }
     case "get_radarr_calendar": {
       const startDate = typeof args.startDate === "string" ? args.startDate : undefined
       const endDate = typeof args.endDate === "string" ? args.endDate : undefined
-      const calendar = await getRadarrCalendar(config, startDate, endDate)
-      return JSON.stringify(calendar)
+      const calendarResult = await getRadarrCalendar(config, startDate, endDate)
+      if (!calendarResult.success) {
+        return JSON.stringify({ error: calendarResult.error })
+      }
+      return JSON.stringify(calendarResult.data)
     }
     case "get_radarr_wanted_missing": {
       const pageSize = typeof args.pageSize === "number" ? args.pageSize : 20
-      const missing = await getRadarrWantedMissing(config, pageSize)
-      return JSON.stringify(missing)
+      const missingResult = await getRadarrWantedMissing(config, pageSize)
+      if (!missingResult.success) {
+        return JSON.stringify({ error: missingResult.error })
+      }
+      return JSON.stringify(missingResult.data)
     }
     case "get_radarr_root_folders": {
-      const folders = await getRadarrRootFolders(config)
-      return JSON.stringify(folders)
+      const foldersResult = await getRadarrRootFolders(config)
+      if (!foldersResult.success) {
+        return JSON.stringify({ error: foldersResult.error })
+      }
+      return JSON.stringify(foldersResult.data)
     }
     case "get_radarr_quality_profiles": {
-      const profiles = await getRadarrQualityProfiles(config)
-      return JSON.stringify(profiles)
+      const profilesResult = await getRadarrQualityProfiles(config)
+      if (!profilesResult.success) {
+        return JSON.stringify({ error: profilesResult.error })
+      }
+      return JSON.stringify(profilesResult.data)
     }
     default:
       return "Error: Unknown Radarr tool"
