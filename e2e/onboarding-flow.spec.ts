@@ -3,6 +3,9 @@ import { createE2EPrismaClient } from './helpers/prisma';
 import { waitForLoadingGone } from './helpers/test-utils';
 
 test.describe('Onboarding Flow', () => {
+  // This test modifies user onboarding state and must run in isolation
+  test.describe.configure({ mode: 'serial' });
+
   test('new user completes onboarding and is redirected to homepage', async ({ browser }) => {
     const prisma = createE2EPrismaClient();
 
@@ -103,8 +106,8 @@ test.describe('Onboarding Flow', () => {
       }
 
     } finally {
-      // Restore regular user's onboarding status
-      await prisma.user.update({
+      // Restore regular user's onboarding status (use updateMany to avoid error if user doesn't exist)
+      await prisma.user.updateMany({
         where: { id: TEST_USERS.REGULAR.id },
         data: { onboardingCompleted: true },
       });

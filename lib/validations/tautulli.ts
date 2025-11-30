@@ -136,3 +136,41 @@ export interface TautulliHomeStat {
   rows?: TautulliHomeStatsRow[]
 }
 
+/**
+ * Zod schema for Tautulli session from get_activity API endpoint
+ * Validates the session object structure for observability dashboard
+ */
+export const tautulliSessionSchema = z.object({
+  session_id: z.string().optional(),
+  session_key: z.string().optional(),
+  user: z.string().optional(),
+  user_thumb: z.string().optional(),
+  title: z.string().optional(),
+  grandparent_title: z.string().optional(),
+  media_type: z.string().optional(),
+  progress_percent: z.union([z.string(), z.number()]).optional(),
+  state: z.string().optional(),
+  player: z.string().optional(),
+  quality_profile: z.string().optional(),
+  stream_video_full_resolution: z.string().optional(),
+  duration: z.union([z.string(), z.number()]).optional(),
+  view_offset: z.union([z.string(), z.number()]).optional(),
+})
+
+export type TautulliSession = z.infer<typeof tautulliSessionSchema>
+
+/**
+ * Zod schema for Tautulli activity response from get_activity API endpoint
+ * Validates the full response structure including nested data
+ */
+export const tautulliActivityResponseSchema = z.object({
+  response: z.object({
+    data: z.object({
+      sessions: z.array(tautulliSessionSchema).optional(),
+      stream_count: z.number().optional(),
+    }).optional(),
+  }).optional(),
+})
+
+export type TautulliActivityResponse = z.infer<typeof tautulliActivityResponseSchema>
+

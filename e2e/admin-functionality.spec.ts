@@ -3,7 +3,8 @@ import { verifyPageAccessible, waitForAdminContent, waitForAdminPageReady } from
 
 test.describe('Admin Functionality', () => {
   test('should access admin dashboard', async ({ adminPage }) => {
-    // After authentication, adminPage starts on /admin/users (dashboard)
+    // Admin lands on observability page, navigate to users
+    await adminPage.locator('aside').getByTestId('admin-nav-users').first().click();
     await waitForAdminContent(adminPage, [
       { type: 'heading', value: /Users/i }
     ], { timeout: 30000 });
@@ -20,7 +21,8 @@ test.describe('Admin Functionality', () => {
   });
 
   test('should access admin users list', async ({ adminPage }) => {
-    // Already on /admin/users; verify heading first
+    // Navigate to users page
+    await adminPage.locator('aside').getByTestId('admin-nav-users').first().click();
     await waitForAdminContent(adminPage, [
       { type: 'heading', value: 'Users' }
     ], { timeout: 30000 });

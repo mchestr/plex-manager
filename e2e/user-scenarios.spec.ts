@@ -6,6 +6,9 @@ import {
 } from './helpers/test-utils';
 
 test.describe('User Scenarios', () => {
+  // These tests modify user data (wrapped content) and must run sequentially
+  test.describe.configure({ mode: 'serial' });
+
   test.describe('Authentication & Authorization', () => {
     test('both user types can authenticate successfully', async ({ adminPage, regularUserPage }) => {
       // Admin page should be on home after auth

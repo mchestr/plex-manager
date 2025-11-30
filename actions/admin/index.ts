@@ -42,3 +42,7 @@ export {
 
 // Combined settings
 export { getAdminSettings } from "./admin-settings"
+
+// Observability dashboard
+export { getObservabilityData } from "./admin-observability"
+export type { ObservabilityData, ServiceStatus, ActivityTrendPoint, TopUser } from "./admin-observability"

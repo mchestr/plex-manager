@@ -68,7 +68,7 @@ export default async function SettingsPage() {
       <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="mb-6">
-            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Settings</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2" data-testid="settings-page-heading">Settings</h1>
             <p className="text-sm text-slate-400">
               Manage application configuration and system settings
             </p>

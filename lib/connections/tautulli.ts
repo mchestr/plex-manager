@@ -129,6 +129,23 @@ export async function getTautulliLibraryNames(config: TautulliParsed): Promise<C
   }
 }
 
+export async function getTautulliLibraries(config: TautulliParsed): Promise<ConnectionResult<unknown>> {
+  try {
+    const url = `${config.url}/api/v2?apikey=${config.apiKey}&cmd=get_libraries`
+    const response = await fetch(url)
+    if (!response.ok) {
+      return { success: false, error: `Tautulli libraries error: ${response.statusText}` }
+    }
+    const data = await response.json()
+    return { success: true, data }
+  } catch (error) {
+    if (error instanceof Error) {
+      return { success: false, error: `Connection error: ${error.message}` }
+    }
+    return { success: false, error: "Failed to get Tautulli libraries" }
+  }
+}
+
 export async function getTautulliUsers(config: TautulliParsed): Promise<ConnectionResult<unknown>> {
   try {
     const url = `${config.url}/api/v2?apikey=${config.apiKey}&cmd=get_users`

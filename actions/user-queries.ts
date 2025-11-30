@@ -441,17 +441,24 @@ export async function getUserActivityTimeline(
   const { page = 1, pageSize = 10 } = options
 
   try {
+    // Calculate how many items to fetch from each source
+    // To support proper pagination, we need to fetch enough items to cover
+    // the requested page plus buffer. Since items are interleaved by timestamp,
+    // we need to fetch up to (page * pageSize) + buffer from each source.
+    const maxItemsNeeded = page * pageSize + pageSize
+    const fetchLimit = maxItemsNeeded
+
     // Fetch both data sources and counts in parallel
     const [discordLogs, mediaMarks, discordCount, mediaMarkCount] = await Promise.all([
       prisma.discordCommandLog.findMany({
         where: { userId },
         orderBy: { createdAt: "desc" },
-        take: pageSize * 2, // Fetch extra to merge properly
+        take: fetchLimit,
       }),
       prisma.userMediaMark.findMany({
         where: { userId },
         orderBy: { markedAt: "desc" },
-        take: pageSize * 2,
+        take: fetchLimit,
       }),
       prisma.discordCommandLog.count({ where: { userId } }),
       prisma.userMediaMark.count({ where: { userId } }),

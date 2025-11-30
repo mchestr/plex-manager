@@ -5,6 +5,7 @@ import { waitForAdminContent, WAIT_TIMEOUTS } from './helpers/test-utils';
 test.describe('Accessibility Tests', () => {
   test.describe('Admin Pages', () => {
     test('admin users page should have no critical accessibility violations', async ({ adminPage }) => {
+      await adminPage.locator('aside').getByTestId('admin-nav-users').first().click();
       await waitForAdminContent(adminPage, [
         { type: 'heading', value: 'Users' }
       ]);
@@ -178,6 +179,7 @@ test.describe('Accessibility Tests', () => {
 
   test.describe('Interactive Elements', () => {
     test('icon buttons should have accessible names', async ({ adminPage }) => {
+      await adminPage.locator('aside').getByTestId('admin-nav-users').first().click();
       await waitForAdminContent(adminPage, [
         { type: 'heading', value: 'Users' }
       ]);
