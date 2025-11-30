@@ -451,32 +451,46 @@ describe('Setup Actions', () => {
         models: mockModels,
       })
 
-      const result = await fetchLLMModels('openai', 'test-key')
+      // API key must be at least 10 characters for validation
+      const validApiKey = 'test-api-key-12345'
+      const result = await fetchLLMModels('openai', validApiKey)
 
       expect(result.success).toBe(true)
       expect(result.models).toEqual(mockModels)
-      expect(mockFetchOpenAIModels).toHaveBeenCalledWith('test-key')
+      expect(mockFetchOpenAIModels).toHaveBeenCalledWith(validApiKey)
     })
 
     it('should return error when API key is missing', async () => {
       const result = await fetchLLMModels('openai', '')
 
       expect(result.success).toBe(false)
-      expect(result.error).toBe('API key is required')
+      // With validation, empty string fails the min length check
+      expect(result.error).toBeDefined()
+      expect(mockFetchOpenAIModels).not.toHaveBeenCalled()
+    })
+
+    it('should return error when API key is too short', async () => {
+      const result = await fetchLLMModels('openai', 'short')
+
+      expect(result.success).toBe(false)
+      // With validation, short API key fails the min length check
+      expect(result.error).toBeDefined()
       expect(mockFetchOpenAIModels).not.toHaveBeenCalled()
     })
 
     it('should return error for invalid provider', async () => {
-      const result = await fetchLLMModels('invalid' as any, 'test-key')
+      const result = await fetchLLMModels('invalid' as any, 'valid-api-key-123')
 
       expect(result.success).toBe(false)
-      expect(result.error).toBe('Invalid provider')
+      // With validation, invalid provider fails the enum check
+      expect(result.error).toBeDefined()
     })
 
     it('should handle fetch errors', async () => {
       mockFetchOpenAIModels.mockRejectedValue(new Error('Network error'))
 
-      const result = await fetchLLMModels('openai', 'test-key')
+      const validApiKey = 'test-api-key-12345'
+      const result = await fetchLLMModels('openai', validApiKey)
 
       expect(result.success).toBe(false)
       expect(result.error).toBe('Network error')

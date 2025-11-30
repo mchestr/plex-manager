@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
+import { daysSchema, limitSchema } from "@/lib/validations/shared-schemas"
 
 const logger = createLogger("SHARE_ANALYTICS")
 
@@ -73,9 +74,13 @@ export async function getShareAnalyticsStats(): Promise<ShareAnalyticsStats> {
 export async function getShareTimeSeriesData(
   days: number = 30
 ): Promise<ShareTimeSeriesData[]> {
+  // Validate days parameter
+  const validatedDays = daysSchema.safeParse(days)
+  const safeDays = validatedDays.success ? validatedDays.data : 30
+
   try {
     const startDate = new Date()
-    startDate.setDate(startDate.getDate() - days)
+    startDate.setDate(startDate.getDate() - safeDays)
     startDate.setHours(0, 0, 0, 0)
 
     // Get all shares created in the time period
@@ -109,7 +114,7 @@ export async function getShareTimeSeriesData(
     const dateMap = new Map<string, { shares: number; visits: number }>()
 
     // Initialize all dates in range
-    for (let i = 0; i < days; i++) {
+    for (let i = 0; i < safeDays; i++) {
       const date = new Date(startDate)
       date.setDate(date.getDate() + i)
       const dateKey = date.toISOString().split("T")[0]
@@ -152,6 +157,10 @@ export async function getShareTimeSeriesData(
 export async function getTopSharedWraps(
   limit: number = 10
 ): Promise<TopSharedWrap[]> {
+  // Validate limit parameter
+  const validatedLimit = limitSchema.safeParse(limit)
+  const safeLimit = validatedLimit.success ? validatedLimit.data : 10
+
   try {
     const wrapsWithVisits = await prisma.plexWrapped.findMany({
       where: {
@@ -184,7 +193,7 @@ export async function getTopSharedWraps(
           _count: "desc",
         },
       },
-      take: limit,
+      take: safeLimit,
     })
 
     return wrapsWithVisits.map((wrap) => ({

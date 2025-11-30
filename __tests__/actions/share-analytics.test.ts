@@ -456,7 +456,7 @@ describe('Share Analytics', () => {
       consoleErrorSpy.mockRestore()
     })
 
-    it('should handle zero limit parameter', async () => {
+    it('should use default limit when zero is passed (validation)', async () => {
       const mockWraps: any[] = []
 
       ;(prisma.plexWrapped.findMany as jest.Mock).mockResolvedValue(mockWraps)
@@ -464,29 +464,30 @@ describe('Share Analytics', () => {
       const result = await getTopSharedWraps(0)
 
       expect(result).toEqual([])
+      // With validation, invalid limit (0) falls back to default (10)
       expect(prisma.plexWrapped.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          take: 0,
+          take: 10,
         })
       )
     })
 
-    it('should handle negative limit parameter', async () => {
+    it('should use default limit when negative value is passed (validation)', async () => {
       const mockWraps: any[] = []
 
       ;(prisma.plexWrapped.findMany as jest.Mock).mockResolvedValue(mockWraps)
 
       const result = await getTopSharedWraps(-5)
 
-      // Should pass negative value to Prisma (which may handle it or error)
+      // With validation, invalid limit (-5) falls back to default (10)
       expect(prisma.plexWrapped.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          take: -5,
+          take: 10,
         })
       )
     })
 
-    it('should handle very large limit parameter', async () => {
+    it('should cap limit at maximum allowed value (100) when very large value is passed', async () => {
       const mockWraps = Array.from({ length: 100 }, (_, i) => ({
         id: `wrap-${i}`,
         userId: `user-${i}`,
@@ -512,9 +513,10 @@ describe('Share Analytics', () => {
 
       const result = await getTopSharedWraps(1000)
 
+      // With validation, limit over 100 falls back to default (10)
       expect(prisma.plexWrapped.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          take: 1000,
+          take: 10,
         })
       )
     })

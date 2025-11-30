@@ -1,5 +1,6 @@
 "use server"
 
+import { z } from "zod"
 import { requireAdmin } from "@/lib/admin"
 import { testLLMProviderConnection } from "@/lib/connections/llm-provider"
 import { testOverseerrConnection } from "@/lib/connections/overseerr"
@@ -508,18 +509,30 @@ export async function completeSetup() {
   return { success: true }
 }
 
+// Schema for fetchLLMModels parameters
+const fetchLLMModelsParamsSchema = z.object({
+  provider: z.enum(["openai"]),
+  apiKey: z.string().min(10, "API key is too short").max(500, "API key is too long"),
+})
+
 export async function fetchLLMModels(
   provider: "openai",
   apiKey: string
 ): Promise<{ success: boolean; models?: string[]; error?: string }> {
-  if (!apiKey || apiKey.trim() === "") {
-    return { success: false, error: "API key is required" }
+  // Validate input parameters
+  const validated = fetchLLMModelsParamsSchema.safeParse({ provider, apiKey })
+
+  if (!validated.success) {
+    const firstError = validated.error.issues?.[0]?.message
+    return { success: false, error: firstError || "Invalid parameters" }
   }
 
+  const { provider: validProvider, apiKey: validApiKey } = validated.data
+
   try {
-    if (provider === "openai") {
+    if (validProvider === "openai") {
       const { fetchOpenAIModels } = await import("@/lib/connections/openai")
-      return await fetchOpenAIModels(apiKey)
+      return await fetchOpenAIModels(validApiKey)
     }
 
     return { success: false, error: "Invalid provider" }

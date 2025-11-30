@@ -5,9 +5,12 @@ import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 import {
   CandidatePaginationSchema,
+  ReviewStatusEnum,
   type ReviewStatus,
   type MediaType,
 } from "@/lib/validations/maintenance"
+import { bulkIdsSchema } from "@/lib/validations/shared-schemas"
+import { z } from "zod"
 import type { PaginatedCandidatesResponse } from "@/types/maintenance"
 import { revalidatePath } from "next/cache"
 
@@ -134,19 +137,40 @@ export async function updateCandidateReviewStatus(
   }
 }
 
+// Schema for bulkUpdateCandidates parameters
+const bulkUpdateCandidatesSchema = z.object({
+  candidateIds: bulkIdsSchema,
+  reviewStatus: ReviewStatusEnum,
+})
+
 /**
  * Bulk update candidates review status (admin only)
  */
 export async function bulkUpdateCandidates(candidateIds: string[], reviewStatus: ReviewStatus) {
   const session = await requireAdmin()
 
+  // Validate input parameters
+  const validated = bulkUpdateCandidatesSchema.safeParse({ candidateIds, reviewStatus })
+
+  if (!validated.success) {
+    logger.warn("Invalid bulkUpdateCandidates parameters", {
+      errors: validated.error.issues,
+    })
+    return {
+      success: false,
+      error: validated.error.issues[0]?.message || "Invalid parameters",
+    }
+  }
+
+  const { candidateIds: validIds, reviewStatus: validStatus } = validated.data
+
   try {
     const result = await prisma.maintenanceCandidate.updateMany({
       where: {
-        id: { in: candidateIds },
+        id: { in: validIds },
       },
       data: {
-        reviewStatus,
+        reviewStatus: validStatus,
         reviewedAt: new Date(),
         reviewedBy: session.user.id,
       },

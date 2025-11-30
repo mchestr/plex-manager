@@ -7,6 +7,8 @@
 import { getWrappedSettings } from "@/actions/admin"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { userIdSchema, yearSchema } from "@/lib/validations/shared-schemas"
+import { z } from "zod"
 import { generateWrappedWithLLM } from "@/lib/wrapped/llm"
 import {
   fetchOverseerrStatistics,
@@ -19,6 +21,12 @@ import { WrappedStatistics } from "@/types/wrapped"
 import { getServerSession } from "next-auth"
 import { revalidatePath } from "next/cache"
 
+// Schema for generatePlexWrapped parameters
+const generatePlexWrappedParamsSchema = z.object({
+  userId: userIdSchema,
+  year: yearSchema,
+})
+
 /**
  * Generate Plex Wrapped for a specific user
  * - Users can generate their own wrapped if it doesn't exist (initial generation)
@@ -28,6 +36,18 @@ export async function generatePlexWrapped(
   userId: string,
   year: number = new Date().getFullYear()
 ): Promise<{ success: boolean; error?: string; wrappedId?: string }> {
+  // Validate input parameters
+  const validated = generatePlexWrappedParamsSchema.safeParse({ userId, year })
+  if (!validated.success) {
+    const firstError = validated.error.issues?.[0]?.message
+    return {
+      success: false,
+      error: firstError || "Invalid parameters",
+    }
+  }
+
+  const { userId: validUserId, year: validYear } = validated.data
+
   try {
     // Check if wrapped feature is enabled
     const wrappedSettings = await getWrappedSettings()
@@ -51,7 +71,7 @@ export async function generatePlexWrapped(
 
     // Check if user exists
     const user = await prisma.user.findUnique({
-      where: { id: userId },
+      where: { id: validUserId },
     })
 
     if (!user) {
@@ -62,8 +82,8 @@ export async function generatePlexWrapped(
     const existingWrapped = await prisma.plexWrapped.findUnique({
       where: {
         userId_year: {
-          userId,
-          year,
+          userId: validUserId,
+          year: validYear,
         },
       },
     })
@@ -74,7 +94,7 @@ export async function generatePlexWrapped(
     // - Only admins can regenerate completed wrapped or generate for other users
     // Normalize IDs for comparison (trim whitespace and ensure they're strings)
     const normalizedCurrentUserId = String(currentUserId).trim()
-    const normalizedUserId = String(userId).trim()
+    const normalizedUserId = String(validUserId).trim()
     const isOwnWrapped = normalizedCurrentUserId === normalizedUserId
 
     if (existingWrapped) {
@@ -118,13 +138,13 @@ export async function generatePlexWrapped(
     const wrapped = await prisma.plexWrapped.upsert({
       where: {
         userId_year: {
-          userId,
-          year,
+          userId: validUserId,
+          year: validYear,
         },
       },
       create: {
-        userId,
-        year,
+        userId: validUserId,
+        year: validYear,
         status: "generating",
         data: JSON.stringify({}), // Empty data for now
         shareToken, // Generate share token immediately
@@ -160,7 +180,7 @@ export async function generatePlexWrapped(
         },
         user.plexUserId || "",
         user.email,
-        year
+        validYear
       )
 
       if (!tautulliStats.success || !tautulliStats.data) {
@@ -211,7 +231,7 @@ export async function generatePlexWrapped(
             apiKey: overseerr.apiKey,
           },
           user.email,
-          year
+          validYear
         )
         if (overseerrData.success && overseerrData.data) {
           overseerrStats = overseerrData.data
@@ -230,14 +250,14 @@ export async function generatePlexWrapped(
             tautulliStatsData.topMovies,
             tautulliStatsData.topShows,
             tautulliStatsData.tautulliUserId,
-            year
+            validYear
           ),
           fetchWatchTimeLeaderboard(
             {
               url: tautulli.url,
               apiKey: tautulli.apiKey,
             },
-            year
+            validYear
           ),
         ])
 
@@ -277,7 +297,7 @@ export async function generatePlexWrapped(
       // 5. Generate wrapped content using LLM
       const llmResult = await generateWrappedWithLLM(
         user.name || user.email || "User",
-        year,
+        validYear,
         user.id,
         wrapped.id,
         statistics
@@ -325,7 +345,7 @@ export async function generatePlexWrapped(
     // Revalidate all relevant paths
     revalidatePath("/admin")
     revalidatePath("/admin/users")
-    revalidatePath(`/admin/users/${userId}/wrapped`)
+    revalidatePath(`/admin/users/${validUserId}/wrapped`)
     revalidatePath("/wrapped")
     revalidatePath("/")
     return { success: true, wrappedId: wrapped.id }
@@ -338,8 +358,8 @@ export async function generatePlexWrapped(
       const wrapped = await prisma.plexWrapped.findUnique({
         where: {
           userId_year: {
-            userId,
-            year,
+            userId: validUserId,
+            year: validYear,
           },
         },
       })
@@ -377,6 +397,19 @@ export async function generateAllPlexWrapped(
   failed: number
   errors: string[]
 }> {
+  // Validate year parameter
+  const validatedYear = yearSchema.safeParse(year)
+  if (!validatedYear.success) {
+    return {
+      success: false,
+      generated: 0,
+      failed: 0,
+      errors: [validatedYear.error.issues[0]?.message || "Invalid year parameter"],
+    }
+  }
+
+  const validYear = validatedYear.data
+
   try {
     // Require admin for bulk generation
     const session = await getServerSession(authOptions)
@@ -399,7 +432,7 @@ export async function generateAllPlexWrapped(
     const errors: string[] = []
 
     for (const user of users) {
-      const result = await generatePlexWrapped(user.id, year)
+      const result = await generatePlexWrapped(user.id, validYear)
       if (result.success) {
         generated++
       } else {

@@ -442,16 +442,13 @@ describe('generatePlexWrapped', () => {
   })
 
   it('should handle invalid year parameter', async () => {
-    ;(getServerSession as jest.Mock).mockResolvedValue(mockSession)
-    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser)
-    ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
-
-    // Test with an invalid year (e.g., negative or far future)
+    // With validation, invalid year parameter (-1) is rejected before any database calls
+    // No need to mock session or database - validation happens first
     const result = await generatePlexWrapped('user-1', -1)
 
-    // The function should still attempt to process, but may fail during statistics fetch
-    // This tests that the function handles edge case years gracefully
-    expect(result).toBeDefined()
+    // The function should return an error for invalid year
+    expect(result.success).toBe(false)
+    expect(result.error).toBeDefined()
   })
 
   it('should handle database error during user lookup', async () => {
