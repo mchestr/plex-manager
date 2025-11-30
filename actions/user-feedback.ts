@@ -337,15 +337,18 @@ export async function getMediaMarkDetails(ratingKey: string) {
         })
 
         if (radarrServer) {
-          const movie = await getRadarrMovieById(
+          const movieResult = await getRadarrMovieById(
             { name: radarrServer.name, url: radarrServer.url, apiKey: radarrServer.apiKey },
             firstMark.radarrId
           )
-          if (movie?.movieFile) {
-            fileInfo = {
-              size: BigInt(movie.movieFile.size || 0),
-              path: movie.movieFile.path || null,
-              quality: movie.movieFile.quality?.quality?.name || null,
+          if (movieResult.success) {
+            const movie = movieResult.data as any
+            if (movie?.movieFile) {
+              fileInfo = {
+                size: BigInt(movie.movieFile.size || 0),
+                path: movie.movieFile.path || null,
+                quality: movie.movieFile.quality?.quality?.name || null,
+              }
             }
           }
         }
@@ -355,16 +358,19 @@ export async function getMediaMarkDetails(ratingKey: string) {
         })
 
         if (sonarrServer) {
-          const series = await getSonarrSeriesById(
+          const seriesResult = await getSonarrSeriesById(
             { name: sonarrServer.name, url: sonarrServer.url, apiKey: sonarrServer.apiKey },
             firstMark.sonarrId
           )
-          if (series) {
-            const totalSize = series.statistics?.sizeOnDisk || 0
-            fileInfo = {
-              size: BigInt(totalSize),
-              path: series.path || null,
-              quality: null, // Series don't have a single quality
+          if (seriesResult.success) {
+            const series = seriesResult.data as any
+            if (series) {
+              const totalSize = series.statistics?.sizeOnDisk || 0
+              fileInfo = {
+                size: BigInt(totalSize),
+                path: series.path || null,
+                quality: null, // Series don't have a single quality
+              }
             }
           }
         }

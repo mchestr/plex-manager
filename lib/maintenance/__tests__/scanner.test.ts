@@ -135,11 +135,14 @@ describe('scanForCandidates', () => {
   ]
 
   const mockTautulliResponse = {
-    response: {
-      result: 'success',
-      message: null,
-      data: {
-        data: mockMovieData,
+    success: true,
+    data: {
+      response: {
+        result: 'success',
+        message: null,
+        data: {
+          data: mockMovieData,
+        },
       },
     },
   }
@@ -309,11 +312,14 @@ describe('scanForCandidates', () => {
       }
 
       const tvTautulliResponse = {
-        response: {
-          result: 'success',
-          message: null,
-          data: {
-            data: mockTVSeriesData,
+        success: true,
+        data: {
+          response: {
+            result: 'success',
+            message: null,
+            data: {
+              data: mockTVSeriesData,
+            },
           },
         },
       }
@@ -428,11 +434,14 @@ describe('scanForCandidates', () => {
       }))
 
       const largeTautulliResponse = {
-        response: {
-          result: 'success',
-          message: null,
-          data: {
-            data: manyMovies,
+        success: true,
+        data: {
+          response: {
+            result: 'success',
+            message: null,
+            data: {
+              data: manyMovies,
+            },
           },
         },
       }
@@ -595,10 +604,13 @@ describe('scanForCandidates', () => {
 
     it('should handle Tautulli API error response', async () => {
       const errorResponse = {
-        response: {
-          result: 'error',
-          message: 'Invalid section ID',
-          data: null,
+        success: true,
+        data: {
+          response: {
+            result: 'error',
+            message: 'Invalid section ID',
+            data: null,
+          },
         },
       }
 
@@ -774,11 +786,14 @@ describe('scanForCandidates', () => {
       ]
 
       const minimalResponse = {
-        response: {
-          result: 'success',
-          message: null,
-          data: {
-            data: minimalMovieData,
+        success: true,
+        data: {
+          response: {
+            result: 'success',
+            message: null,
+            data: {
+              data: minimalMovieData,
+            },
           },
         },
       }

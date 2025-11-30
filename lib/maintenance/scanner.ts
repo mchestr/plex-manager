@@ -173,10 +173,15 @@ async function fetchMovieData(sectionId: string): Promise<MovieData[]> {
     }
 
     // Get library media info from Tautulli
-    const response = await getTautulliLibraryMediaInfo(config, sectionId, {
+    const result = await getTautulliLibraryMediaInfo(config, sectionId, {
       length: MAX_LIBRARY_ITEMS,
     })
 
+    if (!result.success) {
+      throw new Error(result.error)
+    }
+
+    const response = result.data as any
     if (response.response?.result !== "success") {
       throw new Error(
         response.response?.message || "Failed to fetch library data"
@@ -261,10 +266,15 @@ async function fetchTVSeriesData(sectionId: string): Promise<TVSeriesData[]> {
     }
 
     // Get library media info from Tautulli
-    const response = await getTautulliLibraryMediaInfo(config, sectionId, {
+    const result = await getTautulliLibraryMediaInfo(config, sectionId, {
       length: MAX_LIBRARY_ITEMS,
     })
 
+    if (!result.success) {
+      throw new Error(result.error)
+    }
+
+    const response = result.data as any
     if (response.response?.result !== "success") {
       throw new Error(
         response.response?.message || "Failed to fetch library data"
