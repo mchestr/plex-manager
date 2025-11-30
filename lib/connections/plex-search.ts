@@ -3,6 +3,7 @@
  */
 
 import { type PlexServerParsed } from "@/lib/validations/plex"
+import { fetchWithTimeout, isTimeoutError } from "@/lib/utils/fetch-with-timeout"
 import { logger, type PlexMediaItem } from "./plex-core"
 
 /**
@@ -33,18 +34,12 @@ export async function searchPlexMedia(
       url += `&type=${typeCodeMap[mediaType]}`
     }
 
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 10000)
-
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       method: "GET",
       headers: {
         "Accept": "application/json",
       },
-      signal: controller.signal,
     })
-
-    clearTimeout(timeoutId)
 
     if (!response.ok) {
       const duration = Date.now() - startTime
@@ -98,10 +93,10 @@ export async function searchPlexMedia(
   } catch (error) {
     const duration = Date.now() - startTime
     logger.error("Error searching Plex media", error, { query, mediaType, duration })
+    if (isTimeoutError(error)) {
+      return { success: false, error: "Connection timeout" }
+    }
     if (error instanceof Error) {
-      if (error.name === "AbortError") {
-        return { success: false, error: "Connection timeout" }
-      }
       return { success: false, error: `Error searching media: ${error.message}` }
     }
     return { success: false, error: "Failed to search Plex media" }

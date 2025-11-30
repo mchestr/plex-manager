@@ -3,6 +3,7 @@
  */
 
 import { XMLParser } from "fast-xml-parser"
+import { fetchWithTimeout, isTimeoutError } from "@/lib/utils/fetch-with-timeout"
 import {
   logger,
   sanitizeUrlForLogging,
@@ -40,19 +41,13 @@ export async function getPlexUserInfo(token: string): Promise<{ success: boolean
   try {
     const url = `https://plex.tv/api/v2/user`
 
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
-
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       method: "GET",
       headers: {
         "Accept": "application/json",
         "X-Plex-Token": token,
       },
-      signal: controller.signal,
     })
-
-    clearTimeout(timeoutId)
 
     if (!response.ok) {
       if (response.status === 401) {
@@ -84,10 +79,10 @@ export async function getPlexUserInfo(token: string): Promise<{ success: boolean
 
     return { success: true, data: userInfo }
   } catch (error) {
+    if (isTimeoutError(error)) {
+      return { success: false, error: "Connection timeout" }
+    }
     if (error instanceof Error) {
-      if (error.name === "AbortError") {
-        return { success: false, error: "Connection timeout" }
-      }
       return { success: false, error: `Error fetching user info: ${error.message}` }
     }
     return { success: false, error: "Failed to fetch Plex user information" }
@@ -115,23 +110,18 @@ export async function getPlexUsers(
   logger.debug("Fetching Plex users from Plex.tv API")
 
   try {
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout
-
     const requestStart = Date.now()
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       method: "GET",
       headers: {
         "Accept": "application/xml",
         "X-Plex-Token": token,
         "X-Plex-Client-Identifier": clientIdentifier,
       },
-      signal: controller.signal,
+      timeoutMs: 15000,
     })
     const requestDuration = Date.now() - requestStart
     logger.debug("Fetch request completed", { duration: requestDuration, status: response.status })
-
-    clearTimeout(timeoutId)
 
     if (response.status !== 200) {
       const errorText = await response.text()
@@ -240,11 +230,11 @@ export async function getPlexUsers(
   } catch (error) {
     const duration = Date.now() - fetchStartTime
     logger.error("Error in getPlexUsers", error, { duration })
+    if (isTimeoutError(error)) {
+      logger.error("Request timed out", undefined, { duration })
+      return { success: false, error: "Connection timeout" }
+    }
     if (error instanceof Error) {
-      if (error.name === "AbortError") {
-        logger.error("Request timed out", undefined, { duration })
-        return { success: false, error: "Connection timeout" }
-      }
       return { success: false, error: `Error fetching users: ${error.message}` }
     }
     return { success: false, error: "Failed to fetch Plex users" }
@@ -399,23 +389,18 @@ export async function getAllPlexServerUsers(
   })
 
   try {
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout
-
     const requestStart = Date.now()
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       method: "GET",
       headers: {
         "Accept": "application/xml",
         "X-Plex-Token": serverConfig.token,
         "X-Plex-Client-Identifier": clientIdentifier,
       },
-      signal: controller.signal,
+      timeoutMs: 15000,
     })
     const requestDuration = Date.now() - requestStart
     logger.debug("Fetch request completed", { duration: requestDuration, status: response.status })
-
-    clearTimeout(timeoutId)
 
     if (response.status !== 200) {
       const errorText = await response.text()
@@ -519,11 +504,11 @@ export async function getAllPlexServerUsers(
   } catch (error) {
     const duration = Date.now() - fetchStartTime
     logger.error("Error in getAllPlexServerUsers", error, { duration })
+    if (isTimeoutError(error)) {
+      logger.error("Request timed out", undefined, { duration })
+      return { success: false, error: "Connection timeout" }
+    }
     if (error instanceof Error) {
-      if (error.name === "AbortError") {
-        logger.error("Request timed out", undefined, { duration })
-        return { success: false, error: "Connection timeout" }
-      }
       return { success: false, error: `Error fetching server users: ${error.message}` }
     }
     return { success: false, error: "Failed to fetch Plex server users" }

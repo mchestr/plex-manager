@@ -4,6 +4,7 @@
  */
 
 import { calculateCost } from "@/lib/llm/pricing"
+import { fetchWithTimeout, isTimeoutError } from "@/lib/utils/fetch-with-timeout"
 import { createLogger } from "@/lib/utils/logger"
 import { parseWrappedResponse } from "@/lib/wrapped/prompt"
 import { generateSystemPrompt } from "@/lib/wrapped/prompt-template"
@@ -103,12 +104,6 @@ export async function callOpenAI(
   }
 
   try {
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => {
-      logger.warn("Request timeout", { timeoutMs: REQUEST_TIMEOUT_MS, timeoutSeconds: REQUEST_TIMEOUT_MS / 1000 })
-      controller.abort()
-    }, REQUEST_TIMEOUT_MS)
-
     logger.debug("Starting OpenAI API call", {
       timeoutMs: REQUEST_TIMEOUT_MS,
       timeoutSeconds: REQUEST_TIMEOUT_MS / 1000,
@@ -116,17 +111,16 @@ export async function callOpenAI(
     })
     const requestStartTime = Date.now()
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetchWithTimeout("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${config.apiKey}`,
       },
       body: JSON.stringify(requestBody),
-      signal: controller.signal,
+      timeoutMs: REQUEST_TIMEOUT_MS,
     })
 
-    clearTimeout(timeoutId)
     const requestDuration = Date.now() - requestStartTime
     logger.debug("OpenAI API call completed", {
       duration: requestDuration,
@@ -200,14 +194,14 @@ export async function callOpenAI(
       },
     }
   } catch (error) {
-    if (error instanceof Error) {
-      if (error.name === "AbortError") {
-        logger.error("Request aborted due to timeout", undefined, { timeoutMs: REQUEST_TIMEOUT_MS })
-        return {
-          success: false,
-          error: `Request timeout - the API call exceeded the ${REQUEST_TIMEOUT_MS / 1000}s timeout limit. LLM generation can take longer for complex prompts. Consider increasing LLM_REQUEST_TIMEOUT_MS environment variable if needed.`,
-        }
+    if (isTimeoutError(error)) {
+      logger.error("Request aborted due to timeout", undefined, { timeoutMs: REQUEST_TIMEOUT_MS })
+      return {
+        success: false,
+        error: `Request timeout - the API call exceeded the ${REQUEST_TIMEOUT_MS / 1000}s timeout limit. LLM generation can take longer for complex prompts. Consider increasing LLM_REQUEST_TIMEOUT_MS environment variable if needed.`,
       }
+    }
+    if (error instanceof Error) {
       logger.error("OpenAI API error", error)
       return {
         success: false,

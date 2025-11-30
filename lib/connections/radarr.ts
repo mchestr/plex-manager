@@ -1,4 +1,5 @@
 import { type RadarrParsed } from "@/lib/validations/radarr";
+import { fetchWithTimeout, isTimeoutError } from "@/lib/utils/fetch-with-timeout";
 
 export async function testRadarrConnection(config: RadarrParsed): Promise<{ success: boolean; error?: string }> {
   // TEST MODE BYPASS - Skip connection tests in test environment
@@ -10,19 +11,13 @@ export async function testRadarrConnection(config: RadarrParsed): Promise<{ succ
   try {
     const url = `${config.url}/api/v3/system/status`
 
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
-
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       method: "GET",
       headers: {
         "Accept": "application/json",
         "X-Api-Key": config.apiKey,
       },
-      signal: controller.signal,
     })
-
-    clearTimeout(timeoutId)
 
     if (!response.ok) {
       if (response.status === 401 || response.status === 403) {
@@ -43,10 +38,10 @@ export async function testRadarrConnection(config: RadarrParsed): Promise<{ succ
 
     return { success: true }
   } catch (error) {
+    if (isTimeoutError(error)) {
+      return { success: false, error: "Connection timeout - check your hostname and port" }
+    }
     if (error instanceof Error) {
-      if (error.name === "AbortError") {
-        return { success: false, error: "Connection timeout - check your hostname and port" }
-      }
       return { success: false, error: `Connection error: ${error.message}` }
     }
     return { success: false, error: "Failed to connect to Radarr server" }

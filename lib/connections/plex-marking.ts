@@ -3,6 +3,7 @@
  */
 
 import { type PlexServerParsed } from "@/lib/validations/plex"
+import { fetchWithTimeout, isTimeoutError } from "@/lib/utils/fetch-with-timeout"
 import { logger } from "./plex-core"
 
 /**
@@ -19,18 +20,12 @@ export async function markPlexItemWatched(
   try {
     const url = `${config.url}/:/scrobble?identifier=com.plexapp.plugins.library&key=${ratingKey}&X-Plex-Token=${config.token}`
 
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 10000)
-
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       method: "GET",
       headers: {
         "Accept": "application/json",
       },
-      signal: controller.signal,
     })
-
-    clearTimeout(timeoutId)
 
     if (!response.ok) {
       const duration = Date.now() - startTime
@@ -49,10 +44,10 @@ export async function markPlexItemWatched(
   } catch (error) {
     const duration = Date.now() - startTime
     logger.error("Error marking item as watched", error, { ratingKey, duration })
+    if (isTimeoutError(error)) {
+      return { success: false, error: "Connection timeout" }
+    }
     if (error instanceof Error) {
-      if (error.name === "AbortError") {
-        return { success: false, error: "Connection timeout" }
-      }
       return { success: false, error: `Error marking item as watched: ${error.message}` }
     }
     return { success: false, error: "Failed to mark Plex item as watched" }
@@ -73,18 +68,12 @@ export async function markPlexItemUnwatched(
   try {
     const url = `${config.url}/:/unscrobble?identifier=com.plexapp.plugins.library&key=${ratingKey}&X-Plex-Token=${config.token}`
 
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 10000)
-
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       method: "GET",
       headers: {
         "Accept": "application/json",
       },
-      signal: controller.signal,
     })
-
-    clearTimeout(timeoutId)
 
     if (!response.ok) {
       const duration = Date.now() - startTime
@@ -103,10 +92,10 @@ export async function markPlexItemUnwatched(
   } catch (error) {
     const duration = Date.now() - startTime
     logger.error("Error marking item as unwatched", error, { ratingKey, duration })
+    if (isTimeoutError(error)) {
+      return { success: false, error: "Connection timeout" }
+    }
     if (error instanceof Error) {
-      if (error.name === "AbortError") {
-        return { success: false, error: "Connection timeout" }
-      }
       return { success: false, error: `Error marking item as unwatched: ${error.message}` }
     }
     return { success: false, error: "Failed to mark Plex item as unwatched" }

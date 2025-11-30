@@ -2,6 +2,8 @@
  * Plex session and library management functions
  */
 
+import { fetchWithTimeout, isTimeoutError } from "@/lib/utils/fetch-with-timeout"
+
 /**
  * Fetches current sessions from Plex server
  * Uses the Plex server API /status/sessions endpoint
@@ -12,18 +14,12 @@ export async function getPlexSessions(
   try {
     const url = `${serverConfig.url}/status/sessions?X-Plex-Token=${serverConfig.token}`
 
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
-
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       method: "GET",
       headers: {
         "Accept": "application/json",
       },
-      signal: controller.signal,
     })
-
-    clearTimeout(timeoutId)
 
     if (!response.ok) {
       return { success: false, error: `Failed to fetch sessions: ${response.statusText}` }
@@ -32,10 +28,10 @@ export async function getPlexSessions(
     const data = await response.json()
     return { success: true, data }
   } catch (error) {
+    if (isTimeoutError(error)) {
+      return { success: false, error: "Connection timeout" }
+    }
     if (error instanceof Error) {
-      if (error.name === "AbortError") {
-        return { success: false, error: "Connection timeout" }
-      }
       return { success: false, error: `Error fetching sessions: ${error.message}` }
     }
     return { success: false, error: "Failed to fetch Plex sessions" }
@@ -51,18 +47,12 @@ export async function getPlexLibrarySections(
   try {
     const url = `${serverConfig.url}/library/sections?X-Plex-Token=${serverConfig.token}`
 
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 10000)
-
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       method: "GET",
       headers: {
         "Accept": "application/json",
       },
-      signal: controller.signal,
     })
-
-    clearTimeout(timeoutId)
 
     if (!response.ok) {
       return { success: false, error: `Failed to fetch library sections: ${response.statusText}` }
@@ -71,10 +61,10 @@ export async function getPlexLibrarySections(
     const data = await response.json()
     return { success: true, data }
   } catch (error) {
+    if (isTimeoutError(error)) {
+      return { success: false, error: "Connection timeout" }
+    }
     if (error instanceof Error) {
-      if (error.name === "AbortError") {
-        return { success: false, error: "Connection timeout" }
-      }
       return { success: false, error: `Error fetching library sections: ${error.message}` }
     }
     return { success: false, error: "Failed to fetch Plex library sections" }
@@ -91,18 +81,12 @@ export async function getPlexRecentlyAdded(
   try {
     const url = `${serverConfig.url}/library/recentlyAdded?X-Plex-Token=${serverConfig.token}&limit=${limit}`
 
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 10000)
-
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       method: "GET",
       headers: {
         "Accept": "application/json",
       },
-      signal: controller.signal,
     })
-
-    clearTimeout(timeoutId)
 
     if (!response.ok) {
       return { success: false, error: `Failed to fetch recently added: ${response.statusText}` }
@@ -111,10 +95,10 @@ export async function getPlexRecentlyAdded(
     const data = await response.json()
     return { success: true, data }
   } catch (error) {
+    if (isTimeoutError(error)) {
+      return { success: false, error: "Connection timeout" }
+    }
     if (error instanceof Error) {
-      if (error.name === "AbortError") {
-        return { success: false, error: "Connection timeout" }
-      }
       return { success: false, error: `Error fetching recently added: ${error.message}` }
     }
     return { success: false, error: "Failed to fetch Plex recently added" }
@@ -130,18 +114,12 @@ export async function getPlexOnDeck(
   try {
     const url = `${serverConfig.url}/library/onDeck?X-Plex-Token=${serverConfig.token}`
 
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 10000)
-
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       method: "GET",
       headers: {
         "Accept": "application/json",
       },
-      signal: controller.signal,
     })
-
-    clearTimeout(timeoutId)
 
     if (!response.ok) {
       return { success: false, error: `Failed to fetch on deck: ${response.statusText}` }
@@ -150,10 +128,10 @@ export async function getPlexOnDeck(
     const data = await response.json()
     return { success: true, data }
   } catch (error) {
+    if (isTimeoutError(error)) {
+      return { success: false, error: "Connection timeout" }
+    }
     if (error instanceof Error) {
-      if (error.name === "AbortError") {
-        return { success: false, error: "Connection timeout" }
-      }
       return { success: false, error: `Error fetching on deck: ${error.message}` }
     }
     return { success: false, error: "Failed to fetch Plex on deck" }
