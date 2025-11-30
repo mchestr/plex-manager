@@ -3,7 +3,6 @@
 import { requireAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
-import { maintenanceQueue, deletionQueue } from "@/lib/maintenance/queue"
 import { revalidatePath } from "next/cache"
 
 const logger = createLogger("MAINTENANCE-OPS")
@@ -27,6 +26,9 @@ export async function triggerManualScan(ruleId: string) {
     if (!rule.enabled) {
       return { success: false, error: "Maintenance rule is disabled" }
     }
+
+    // Lazy-load queue to avoid Redis connection on module import
+    const { maintenanceQueue } = await import("@/lib/maintenance/queue")
 
     // Queue the scan job
     const job = await maintenanceQueue.add(
@@ -87,6 +89,9 @@ export async function triggerDeletion(candidateIds: string[], deleteFiles: boole
         error: `${unapprovedCandidates.length} candidate(s) are not approved for deletion`,
       }
     }
+
+    // Lazy-load queue to avoid Redis connection on module import
+    const { deletionQueue } = await import("@/lib/maintenance/queue")
 
     // Queue the deletion job
     const job = await deletionQueue.add(
