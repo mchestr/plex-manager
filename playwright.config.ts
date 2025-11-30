@@ -9,12 +9,12 @@ console.log(`Running tests on ${baseURL}`);
  */
 export default defineConfig({
   testDir: './e2e',
-  fullyParallel: false,
+  fullyParallel: true, // Enable parallel test execution within files
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
-  workers: 1, // Run tests sequentially to avoid database race conditions
+  workers: process.env.CI ? 2 : 4, // Parallel workers (tests with shared state use serial mode)
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [
     ['list'], // Console output
@@ -40,16 +40,37 @@ export default defineConfig({
   /* Set up database before running tests */
   globalSetup: require.resolve('./e2e/global-setup.ts'),
 
-  /* Configure projects for major browsers */
+  /* Configure projects for different test types */
   projects: [
+    // Read-only tests can run in parallel (no shared state mutations)
     {
-      name: 'chromium',
+      name: 'readonly',
+      testMatch: [
+        /accessibility\.spec\.ts/,
+        /admin-functionality\.spec\.ts/,
+        /admin-observability\.spec\.ts/,
+        /admin-protection\.spec\.ts/,
+      ],
       use: { ...devices['Desktop Chrome'] },
-      testIgnore: /setup-wizard\.spec\.ts/,
     },
+    // Tests that mutate shared state must run sequentially
+    {
+      name: 'mutations',
+      testMatch: [
+        /admin-maintenance\.spec\.ts/,
+        /onboarding-flow\.spec\.ts/,
+        /public-flows\.spec\.ts/,
+        /user-scenarios\.spec\.ts/,
+      ],
+      fullyParallel: false,
+      workers: 1,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    // Setup wizard runs in complete isolation
     {
       name: 'setup-wizard',
       testMatch: /setup-wizard\.spec\.ts/,
+      fullyParallel: false,
       workers: 1,
       use: { ...devices['Desktop Chrome'] },
     },

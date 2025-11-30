@@ -3,6 +3,9 @@ import { createE2EPrismaClient } from './helpers/prisma';
 import { waitForLoadingGone } from './helpers/test-utils';
 
 test.describe('Onboarding Flow', () => {
+  // This test modifies user onboarding state and must run in isolation
+  test.describe.configure({ mode: 'serial' });
+
   test('new user completes onboarding and is redirected to homepage', async ({ browser }) => {
     const prisma = createE2EPrismaClient();
 

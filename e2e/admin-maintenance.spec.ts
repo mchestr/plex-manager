@@ -220,6 +220,9 @@ test.describe('Admin Maintenance Feature', () => {
     });
 
     test.describe('Candidate Review Workflow', () => {
+      // These tests share seeded data and must run sequentially
+      test.describe.configure({ mode: 'serial' });
+
       test.beforeAll(async () => {
         await seedMaintenanceData(prisma);
       });
@@ -407,6 +410,9 @@ test.describe('Admin Maintenance Feature', () => {
   });
 
   test.describe('Maintenance History', () => {
+    // These tests share seeded data and must run sequentially
+    test.describe.configure({ mode: 'serial' });
+
     test.beforeAll(async () => {
       await seedMaintenanceData(prisma);
     });
