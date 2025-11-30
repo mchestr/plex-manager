@@ -94,7 +94,7 @@ describe('generateWrappedWithLLM', () => {
     // Verify OpenAI API is NOT called
     expect(callOpenAI).not.toHaveBeenCalled()
     expect(generateWrappedPrompt).not.toHaveBeenCalled()
-    expect(prisma.lLMProvider.findFirst).not.toHaveBeenCalled()
+    expect(getActiveLLMProvider).not.toHaveBeenCalled()
     expect(prisma.lLMUsage.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({

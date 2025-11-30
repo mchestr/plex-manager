@@ -2,6 +2,7 @@ import { scanForCandidates } from '../scanner'
 import { evaluateRule } from '../rule-evaluator'
 import { getTautulliLibraryMediaInfo } from '@/lib/connections/tautulli'
 import { prisma } from '@/lib/prisma'
+import { getActiveTautulliService } from '@/lib/services/service-helpers'
 
 // Mock dependencies
 jest.mock('@/lib/prisma', () => ({
@@ -17,10 +18,11 @@ jest.mock('@/lib/prisma', () => ({
     maintenanceCandidate: {
       create: jest.fn(),
     },
-    tautulli: {
-      findFirst: jest.fn(),
-    },
   },
+}))
+
+jest.mock('@/lib/services/service-helpers', () => ({
+  getActiveTautulliService: jest.fn(),
 }))
 
 jest.mock('@/lib/connections/tautulli', () => ({
@@ -81,12 +83,14 @@ describe('scanForCandidates', () => {
     publicUrl: undefined,
   }
 
-  const mockTautulliServer = {
+  const mockTautulliService = {
+    id: 'tautulli-1',
     name: 'Tautulli',
     url: 'http://localhost:8181',
-    apiKey: 'test-api-key',
-    publicUrl: null,
     isActive: true,
+    config: {
+      apiKey: 'test-api-key',
+    },
   }
 
   const mockMovieData = [
@@ -156,7 +160,7 @@ describe('scanForCandidates', () => {
       // Setup mocks
       ;(prisma.maintenanceRule.findUnique as jest.Mock).mockResolvedValue(mockRule)
       ;(prisma.maintenanceScan.create as jest.Mock).mockResolvedValue(mockScan)
-      ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(mockTautulliServer)
+      ;(getActiveTautulliService as jest.Mock).mockResolvedValue(mockTautulliService)
       ;(getTautulliLibraryMediaInfo as jest.Mock).mockResolvedValue(mockTautulliResponse)
       ;(evaluateRule as jest.Mock).mockImplementation((item) => {
         // Only match the first movie (never watched)
@@ -192,9 +196,7 @@ describe('scanForCandidates', () => {
       })
 
       // Verify Tautulli config lookup
-      expect(prisma.tautulli.findFirst).toHaveBeenCalledWith({
-        where: { isActive: true },
-      })
+      expect(getActiveTautulliService).toHaveBeenCalled()
 
       // Verify Tautulli API call
       expect(getTautulliLibraryMediaInfo).toHaveBeenCalledWith(
@@ -263,7 +265,7 @@ describe('scanForCandidates', () => {
       // Setup mocks
       ;(prisma.maintenanceRule.findUnique as jest.Mock).mockResolvedValue(mockRule)
       ;(prisma.maintenanceScan.create as jest.Mock).mockResolvedValue(mockScan)
-      ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(mockTautulliServer)
+      ;(getActiveTautulliService as jest.Mock).mockResolvedValue(mockTautulliService)
       ;(getTautulliLibraryMediaInfo as jest.Mock).mockResolvedValue(mockTautulliResponse)
       ;(evaluateRule as jest.Mock).mockReturnValue(false) // No matches
       ;(prisma.maintenanceScan.update as jest.Mock).mockResolvedValue({
@@ -327,7 +329,7 @@ describe('scanForCandidates', () => {
       // Setup mocks
       ;(prisma.maintenanceRule.findUnique as jest.Mock).mockResolvedValue(tvRule)
       ;(prisma.maintenanceScan.create as jest.Mock).mockResolvedValue(mockScan)
-      ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(mockTautulliServer)
+      ;(getActiveTautulliService as jest.Mock).mockResolvedValue(mockTautulliService)
       ;(getTautulliLibraryMediaInfo as jest.Mock).mockResolvedValue(tvTautulliResponse)
       ;(evaluateRule as jest.Mock).mockReturnValue(true) // Match the series
       ;(prisma.maintenanceCandidate.create as jest.Mock).mockImplementation((data) =>
@@ -384,7 +386,7 @@ describe('scanForCandidates', () => {
       // Setup mocks
       ;(prisma.maintenanceRule.findUnique as jest.Mock).mockResolvedValue(multiLibraryRule)
       ;(prisma.maintenanceScan.create as jest.Mock).mockResolvedValue(mockScan)
-      ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(mockTautulliServer)
+      ;(getActiveTautulliService as jest.Mock).mockResolvedValue(mockTautulliService)
       ;(getTautulliLibraryMediaInfo as jest.Mock).mockResolvedValue(mockTautulliResponse)
       ;(evaluateRule as jest.Mock).mockReturnValue(false)
       ;(prisma.maintenanceScan.update as jest.Mock).mockResolvedValue({
@@ -449,7 +451,7 @@ describe('scanForCandidates', () => {
       // Setup mocks
       ;(prisma.maintenanceRule.findUnique as jest.Mock).mockResolvedValue(mockRule)
       ;(prisma.maintenanceScan.create as jest.Mock).mockResolvedValue(mockScan)
-      ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(mockTautulliServer)
+      ;(getActiveTautulliService as jest.Mock).mockResolvedValue(mockTautulliService)
       ;(getTautulliLibraryMediaInfo as jest.Mock).mockResolvedValue(largeTautulliResponse)
       ;(evaluateRule as jest.Mock).mockReturnValue(false)
       ;(prisma.maintenanceScan.update as jest.Mock).mockResolvedValue({
@@ -544,7 +546,7 @@ describe('scanForCandidates', () => {
       // Setup mocks
       ;(prisma.maintenanceRule.findUnique as jest.Mock).mockResolvedValue(mockRule)
       ;(prisma.maintenanceScan.create as jest.Mock).mockResolvedValue(mockScan)
-      ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(mockTautulliServer)
+      ;(getActiveTautulliService as jest.Mock).mockResolvedValue(mockTautulliService)
       ;(getTautulliLibraryMediaInfo as jest.Mock).mockRejectedValue(tautulliError)
       ;(prisma.maintenanceScan.update as jest.Mock).mockResolvedValue({
         ...mockScan,
@@ -578,7 +580,7 @@ describe('scanForCandidates', () => {
       // Setup mocks
       ;(prisma.maintenanceRule.findUnique as jest.Mock).mockResolvedValue(mockRule)
       ;(prisma.maintenanceScan.create as jest.Mock).mockResolvedValue(mockScan)
-      ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(null)
+      ;(getActiveTautulliService as jest.Mock).mockResolvedValue(null)
       ;(prisma.maintenanceScan.update as jest.Mock).mockResolvedValue({
         ...mockScan,
         status: 'FAILED',
@@ -617,7 +619,7 @@ describe('scanForCandidates', () => {
       // Setup mocks
       ;(prisma.maintenanceRule.findUnique as jest.Mock).mockResolvedValue(mockRule)
       ;(prisma.maintenanceScan.create as jest.Mock).mockResolvedValue(mockScan)
-      ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(mockTautulliServer)
+      ;(getActiveTautulliService as jest.Mock).mockResolvedValue(mockTautulliService)
       ;(getTautulliLibraryMediaInfo as jest.Mock).mockResolvedValue(errorResponse)
       ;(prisma.maintenanceScan.update as jest.Mock).mockResolvedValue({
         ...mockScan,
@@ -718,7 +720,7 @@ describe('scanForCandidates', () => {
       // Setup mocks
       ;(prisma.maintenanceRule.findUnique as jest.Mock).mockResolvedValue(mockRule)
       ;(prisma.maintenanceScan.create as jest.Mock).mockResolvedValue(mockScan)
-      ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(mockTautulliServer)
+      ;(getActiveTautulliService as jest.Mock).mockResolvedValue(mockTautulliService)
       ;(getTautulliLibraryMediaInfo as jest.Mock).mockResolvedValue(mockTautulliResponse)
       ;(evaluateRule as jest.Mock).mockReturnValue(true) // Match all items
       ;(prisma.maintenanceCandidate.create as jest.Mock).mockRejectedValue(candidateError)
@@ -741,7 +743,7 @@ describe('scanForCandidates', () => {
       // Setup mocks
       ;(prisma.maintenanceRule.findUnique as jest.Mock).mockResolvedValue(mockRule)
       ;(prisma.maintenanceScan.create as jest.Mock).mockResolvedValue(mockScan)
-      ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(mockTautulliServer)
+      ;(getActiveTautulliService as jest.Mock).mockResolvedValue(mockTautulliService)
       ;(getTautulliLibraryMediaInfo as jest.Mock).mockResolvedValue(mockTautulliResponse)
       ;(evaluateRule as jest.Mock).mockReturnValue(true)
       ;(prisma.maintenanceCandidate.create as jest.Mock).mockImplementation((data) =>
@@ -801,7 +803,7 @@ describe('scanForCandidates', () => {
       // Setup mocks
       ;(prisma.maintenanceRule.findUnique as jest.Mock).mockResolvedValue(mockRule)
       ;(prisma.maintenanceScan.create as jest.Mock).mockResolvedValue(mockScan)
-      ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(mockTautulliServer)
+      ;(getActiveTautulliService as jest.Mock).mockResolvedValue(mockTautulliService)
       ;(getTautulliLibraryMediaInfo as jest.Mock).mockResolvedValue(minimalResponse)
       ;(evaluateRule as jest.Mock).mockReturnValue(true)
       ;(prisma.maintenanceCandidate.create as jest.Mock).mockImplementation((data) =>
@@ -851,7 +853,7 @@ describe('scanForCandidates', () => {
       // Setup mocks
       ;(prisma.maintenanceRule.findUnique as jest.Mock).mockResolvedValue(mockRule)
       ;(prisma.maintenanceScan.create as jest.Mock).mockResolvedValue(mockScan)
-      ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(mockTautulliServer)
+      ;(getActiveTautulliService as jest.Mock).mockResolvedValue(mockTautulliService)
       ;(getTautulliLibraryMediaInfo as jest.Mock).mockResolvedValue(mockTautulliResponse)
       ;(evaluateRule as jest.Mock).mockImplementation((item) => {
         // Verify timestamp conversion
@@ -877,7 +879,7 @@ describe('scanForCandidates', () => {
       // Setup mocks
       ;(prisma.maintenanceRule.findUnique as jest.Mock).mockResolvedValue(mockRule)
       ;(prisma.maintenanceScan.create as jest.Mock).mockResolvedValue(mockScan)
-      ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(mockTautulliServer)
+      ;(getActiveTautulliService as jest.Mock).mockResolvedValue(mockTautulliService)
       ;(getTautulliLibraryMediaInfo as jest.Mock).mockResolvedValue(mockTautulliResponse)
       ;(evaluateRule as jest.Mock).mockReturnValue(true)
       ;(prisma.maintenanceCandidate.create as jest.Mock).mockImplementation((data) => {
