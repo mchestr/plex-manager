@@ -6,6 +6,11 @@
 import { generatePlexWrapped, generateAllPlexWrapped } from '@/actions/wrapped-generation'
 import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
+import {
+  getActivePlexService,
+  getActiveTautulliService,
+  getActiveOverseerrService,
+} from '@/lib/services/service-helpers'
 
 // Mock dependencies
 jest.mock('next-auth', () => ({
@@ -24,19 +29,16 @@ jest.mock('@/lib/prisma', () => ({
       upsert: jest.fn(),
       update: jest.fn(),
     },
-    plexServer: {
-      findFirst: jest.fn(),
-    },
-    tautulli: {
-      findFirst: jest.fn(),
-    },
-    overseerr: {
-      findFirst: jest.fn(),
-    },
     config: {
       findUnique: jest.fn(),
     },
   },
+}))
+
+jest.mock('@/lib/services/service-helpers', () => ({
+  getActivePlexService: jest.fn(),
+  getActiveTautulliService: jest.fn(),
+  getActiveOverseerrService: jest.fn(),
 }))
 
 jest.mock('@/lib/wrapped/statistics', () => ({
@@ -72,19 +74,24 @@ describe('Wrapped Regeneration Security', () => {
     isAdmin: true,
   }
 
-  const mockPlexServer = {
+  const mockPlexService = {
     id: 'server-1',
     name: 'Test Server',
     url: 'https://plex.example.com:32400',
-    token: 'server-token',
     isActive: true,
+    config: {
+      token: 'server-token',
+    },
   }
 
-  const mockTautulli = {
+  const mockTautulliService = {
     id: 'tautulli-1',
+    name: 'Tautulli',
     url: 'http://tautulli.example.com:8181',
-    apiKey: 'tautulli-key',
     isActive: true,
+    config: {
+      apiKey: 'tautulli-key',
+    },
   }
 
   const mockCompletedWrapped = {
@@ -119,11 +126,11 @@ describe('Wrapped Regeneration Security', () => {
       })
       ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser1)
       ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(mockCompletedWrapped)
-      ;(prisma.plexServer.findFirst as jest.Mock)
-        .mockResolvedValueOnce(mockPlexServer)
-        .mockResolvedValueOnce(mockPlexServer)
-      ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(mockTautulli)
-      ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue(null)
+      ;(getActivePlexService as jest.Mock)
+        .mockResolvedValueOnce(mockPlexService)
+        .mockResolvedValueOnce(mockPlexService)
+      ;(getActiveTautulliService as jest.Mock).mockResolvedValue(mockTautulliService)
+      ;(getActiveOverseerrService as jest.Mock).mockResolvedValue(null)
       ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({ llmDisabled: false })
 
       const wrappedRecord = {
@@ -211,11 +218,11 @@ describe('Wrapped Regeneration Security', () => {
       })
       ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser1)
       ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(mockFailedWrapped)
-      ;(prisma.plexServer.findFirst as jest.Mock)
-        .mockResolvedValueOnce(mockPlexServer)
-        .mockResolvedValueOnce(mockPlexServer)
-      ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(mockTautulli)
-      ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue(null)
+      ;(getActivePlexService as jest.Mock)
+        .mockResolvedValueOnce(mockPlexService)
+        .mockResolvedValueOnce(mockPlexService)
+      ;(getActiveTautulliService as jest.Mock).mockResolvedValue(mockTautulliService)
+      ;(getActiveOverseerrService as jest.Mock).mockResolvedValue(null)
       ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({ llmDisabled: false })
 
       const wrappedRecord = {
@@ -312,11 +319,11 @@ describe('Wrapped Regeneration Security', () => {
       })
       ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser1)
       ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
-      ;(prisma.plexServer.findFirst as jest.Mock)
-        .mockResolvedValueOnce(mockPlexServer)
-        .mockResolvedValueOnce(mockPlexServer)
-      ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(mockTautulli)
-      ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue(null)
+      ;(getActivePlexService as jest.Mock)
+        .mockResolvedValueOnce(mockPlexService)
+        .mockResolvedValueOnce(mockPlexService)
+      ;(getActiveTautulliService as jest.Mock).mockResolvedValue(mockTautulliService)
+      ;(getActiveOverseerrService as jest.Mock).mockResolvedValue(null)
       ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({ llmDisabled: false })
 
       const wrappedRecord = {
@@ -409,11 +416,11 @@ describe('Wrapped Regeneration Security', () => {
       ;(prisma.user.findMany as jest.Mock).mockResolvedValue([mockUser1])
       ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser1)
       ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
-      ;(prisma.plexServer.findFirst as jest.Mock)
-        .mockResolvedValueOnce(mockPlexServer)
-        .mockResolvedValueOnce(mockPlexServer)
-      ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(mockTautulli)
-      ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue(null)
+      ;(getActivePlexService as jest.Mock)
+        .mockResolvedValueOnce(mockPlexService)
+        .mockResolvedValueOnce(mockPlexService)
+      ;(getActiveTautulliService as jest.Mock).mockResolvedValue(mockTautulliService)
+      ;(getActiveOverseerrService as jest.Mock).mockResolvedValue(null)
       ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({ llmDisabled: false })
 
       const wrappedRecord = {

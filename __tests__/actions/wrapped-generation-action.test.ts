@@ -31,16 +31,13 @@ jest.mock('@/lib/prisma', () => ({
       upsert: jest.fn(),
       update: jest.fn(),
     },
-    plexServer: {
-      findFirst: jest.fn(),
-    },
-    tautulli: {
-      findFirst: jest.fn(),
-    },
-    overseerr: {
-      findFirst: jest.fn(),
-    },
   },
+}))
+
+jest.mock('@/lib/services/service-helpers', () => ({
+  getActivePlexService: jest.fn(),
+  getActiveTautulliService: jest.fn(),
+  getActiveOverseerrService: jest.fn(),
 }))
 
 jest.mock('next-auth', () => ({
@@ -71,6 +68,13 @@ jest.mock('@/lib/utils', () => ({
   generateShareToken: jest.fn(() => 'test-share-token'),
 }))
 
+// Import service helpers
+import {
+  getActivePlexService,
+  getActiveTautulliService,
+  getActiveOverseerrService,
+} from '@/lib/services/service-helpers'
+
 // Import test builders
 import {
   makePrismaUser,
@@ -79,6 +83,11 @@ import {
   makePrismaPlexServer,
   makePrismaTautulli,
 } from '../utils/test-builders'
+
+// Cast service helper mocks
+const mockGetActivePlexService = getActivePlexService as jest.MockedFunction<typeof getActivePlexService>
+const mockGetActiveTautulliService = getActiveTautulliService as jest.MockedFunction<typeof getActiveTautulliService>
+const mockGetActiveOverseerrService = getActiveOverseerrService as jest.MockedFunction<typeof getActiveOverseerrService>
 
 const mockUser = makePrismaUser({
   id: 'user-1',
@@ -113,7 +122,17 @@ describe('generatePlexWrapped', () => {
     ;(getServerSession as jest.Mock).mockResolvedValue(mockSession)
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser)
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
-    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(makePrismaPlexServer())
+    mockGetActivePlexService.mockResolvedValue({
+      id: 'server-1',
+      name: 'Test Server',
+      url: 'https://plex.example.com:32400',
+      publicUrl: null,
+      type: 'PLEX',
+      isActive: true,
+      config: { token: 'server-token', adminPlexUserId: 'admin-plex-id' },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any)
     ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue({
       id: 'wrapped-1',
       userId: 'user-1',
@@ -121,7 +140,17 @@ describe('generatePlexWrapped', () => {
       status: 'generating',
       shareToken: 'test-share-token',
     })
-    ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(makePrismaTautulli())
+    mockGetActiveTautulliService.mockResolvedValue({
+      id: 'tautulli-1',
+      name: 'Test Tautulli',
+      url: 'https://tautulli.example.com:8181',
+      publicUrl: null,
+      type: 'TAUTULLI',
+      isActive: true,
+      config: { apiKey: 'tautulli-key' },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any)
     ;(fetchTautulliStatistics as jest.Mock).mockResolvedValue({
       success: true,
       data: {
@@ -213,7 +242,17 @@ describe('generatePlexWrapped', () => {
     ;(getServerSession as jest.Mock).mockResolvedValue(mockSession)
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser)
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
-    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(makePrismaPlexServer())
+    mockGetActivePlexService.mockResolvedValue({
+      id: 'server-1',
+      name: 'Test Server',
+      url: 'https://plex.example.com:32400',
+      publicUrl: null,
+      type: 'PLEX',
+      isActive: true,
+      config: { token: 'server-token', adminPlexUserId: 'admin-plex-id' },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any)
     ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue({
       id: 'wrapped-1',
       userId: 'user-1',
@@ -252,7 +291,17 @@ describe('generatePlexWrapped', () => {
       status: 'completed',
       shareToken: 'existing-token',
     })
-    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(makePrismaPlexServer())
+    mockGetActivePlexService.mockResolvedValue({
+      id: 'server-1',
+      name: 'Test Server',
+      url: 'https://plex.example.com:32400',
+      publicUrl: null,
+      type: 'PLEX',
+      isActive: true,
+      config: { token: 'server-token', adminPlexUserId: 'admin-plex-id' },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any)
     ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue({
       id: 'wrapped-1',
       userId: 'user-1',
@@ -292,7 +341,17 @@ describe('generatePlexWrapped', () => {
       year: 2024,
       status: 'failed',
     })
-    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(makePrismaPlexServer())
+    mockGetActivePlexService.mockResolvedValue({
+      id: 'server-1',
+      name: 'Test Server',
+      url: 'https://plex.example.com:32400',
+      publicUrl: null,
+      type: 'PLEX',
+      isActive: true,
+      config: { token: 'server-token', adminPlexUserId: 'admin-plex-id' },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any)
     ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue({
       id: 'wrapped-1',
       userId: 'user-1',
@@ -311,7 +370,7 @@ describe('generatePlexWrapped', () => {
     ;(getServerSession as jest.Mock).mockResolvedValue(mockSession)
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser)
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
-    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(null)
+    mockGetActivePlexService.mockResolvedValue(null)
 
     const result = await generatePlexWrapped('user-1', 2024)
 
@@ -323,7 +382,17 @@ describe('generatePlexWrapped', () => {
     ;(getServerSession as jest.Mock).mockResolvedValue(mockSession)
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser)
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
-    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(makePrismaPlexServer())
+    mockGetActivePlexService.mockResolvedValue({
+      id: 'server-1',
+      name: 'Test Server',
+      url: 'https://plex.example.com:32400',
+      publicUrl: null,
+      type: 'PLEX',
+      isActive: true,
+      config: { token: 'server-token', adminPlexUserId: 'admin-plex-id' },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any)
     ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue({
       id: 'wrapped-1',
       userId: 'user-1',
@@ -331,7 +400,7 @@ describe('generatePlexWrapped', () => {
       status: 'generating',
       shareToken: 'test-share-token',
     })
-    ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(null)
+    mockGetActiveTautulliService.mockResolvedValue(null)
 
     const result = await generatePlexWrapped('user-1', 2024)
 
@@ -348,7 +417,17 @@ describe('generatePlexWrapped', () => {
       })
     )
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
-    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(makePrismaPlexServer())
+    mockGetActivePlexService.mockResolvedValue({
+      id: 'server-1',
+      name: 'Test Server',
+      url: 'https://plex.example.com:32400',
+      publicUrl: null,
+      type: 'PLEX',
+      isActive: true,
+      config: { token: 'server-token', adminPlexUserId: 'admin-plex-id' },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any)
     ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue({
       id: 'wrapped-1',
       userId: 'user-1',
@@ -356,7 +435,17 @@ describe('generatePlexWrapped', () => {
       status: 'generating',
       shareToken: 'test-share-token',
     })
-    ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(makePrismaTautulli())
+    mockGetActiveTautulliService.mockResolvedValue({
+      id: 'tautulli-1',
+      name: 'Test Tautulli',
+      url: 'https://tautulli.example.com:8181',
+      publicUrl: null,
+      type: 'TAUTULLI',
+      isActive: true,
+      config: { apiKey: 'tautulli-key' },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any)
 
     const result = await generatePlexWrapped('user-1', 2024)
 
@@ -368,7 +457,17 @@ describe('generatePlexWrapped', () => {
     ;(getServerSession as jest.Mock).mockResolvedValue(mockSession)
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser)
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
-    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(makePrismaPlexServer())
+    mockGetActivePlexService.mockResolvedValue({
+      id: 'server-1',
+      name: 'Test Server',
+      url: 'https://plex.example.com:32400',
+      publicUrl: null,
+      type: 'PLEX',
+      isActive: true,
+      config: { token: 'server-token', adminPlexUserId: 'admin-plex-id' },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any)
     ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue({
       id: 'wrapped-1',
       userId: 'user-1',
@@ -376,7 +475,17 @@ describe('generatePlexWrapped', () => {
       status: 'generating',
       shareToken: 'test-share-token',
     })
-    ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(makePrismaTautulli())
+    mockGetActiveTautulliService.mockResolvedValue({
+      id: 'tautulli-1',
+      name: 'Test Tautulli',
+      url: 'https://tautulli.example.com:8181',
+      publicUrl: null,
+      type: 'TAUTULLI',
+      isActive: true,
+      config: { apiKey: 'tautulli-key' },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any)
     ;(fetchTautulliStatistics as jest.Mock).mockResolvedValue({
       success: false,
       error: 'Failed to fetch statistics',
@@ -399,7 +508,17 @@ describe('generatePlexWrapped', () => {
     ;(getServerSession as jest.Mock).mockResolvedValue(mockSession)
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser)
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
-    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(makePrismaPlexServer())
+    mockGetActivePlexService.mockResolvedValue({
+      id: 'server-1',
+      name: 'Test Server',
+      url: 'https://plex.example.com:32400',
+      publicUrl: null,
+      type: 'PLEX',
+      isActive: true,
+      config: { token: 'server-token', adminPlexUserId: 'admin-plex-id' },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any)
     ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue({
       id: 'wrapped-1',
       userId: 'user-1',
@@ -407,7 +526,17 @@ describe('generatePlexWrapped', () => {
       status: 'generating',
       shareToken: 'test-share-token',
     })
-    ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(makePrismaTautulli())
+    mockGetActiveTautulliService.mockResolvedValue({
+      id: 'tautulli-1',
+      name: 'Test Tautulli',
+      url: 'https://tautulli.example.com:8181',
+      publicUrl: null,
+      type: 'TAUTULLI',
+      isActive: true,
+      config: { apiKey: 'tautulli-key' },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any)
     ;(fetchTautulliStatistics as jest.Mock).mockResolvedValue({
       success: true,
       data: {
@@ -467,13 +596,17 @@ describe('generatePlexWrapped', () => {
     ;(getServerSession as jest.Mock).mockResolvedValue(mockSession)
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser)
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
-    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue({
+    mockGetActivePlexService.mockResolvedValue({
       id: 'server-1',
-      url: 'https://plex.example.com:32400',
-      token: 'server-token',
       name: 'Test Server',
+      url: 'https://plex.example.com:32400',
+      publicUrl: null,
+      type: 'PLEX',
       isActive: true,
-    })
+      config: { token: 'server-token', adminPlexUserId: 'admin-plex-id' },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any)
     ;(prisma.plexWrapped.upsert as jest.Mock).mockRejectedValue(
       new Error('Database write failed')
     )
@@ -488,13 +621,17 @@ describe('generatePlexWrapped', () => {
     ;(getServerSession as jest.Mock).mockResolvedValue(mockSession)
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser)
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
-    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue({
+    mockGetActivePlexService.mockResolvedValue({
       id: 'server-1',
-      url: 'https://plex.example.com:32400',
-      token: 'server-token',
       name: 'Test Server',
+      url: 'https://plex.example.com:32400',
+      publicUrl: null,
+      type: 'PLEX',
       isActive: true,
-    })
+      config: { token: 'server-token', adminPlexUserId: 'admin-plex-id' },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any)
     ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue({
       id: 'wrapped-1',
       userId: 'user-1',
@@ -502,12 +639,17 @@ describe('generatePlexWrapped', () => {
       status: 'generating',
       shareToken: 'test-share-token',
     })
-    ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue({
+    mockGetActiveTautulliService.mockResolvedValue({
       id: 'tautulli-1',
+      name: 'Test Tautulli',
       url: 'https://tautulli.example.com:8181',
-      apiKey: 'tautulli-key',
+      publicUrl: null,
+      type: 'TAUTULLI',
       isActive: true,
-    })
+      config: { apiKey: 'tautulli-key' },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any)
     ;(fetchTautulliStatistics as jest.Mock).mockResolvedValue({
       success: true,
       data: {
@@ -572,13 +714,17 @@ describe('generatePlexWrapped', () => {
     ;(getServerSession as jest.Mock).mockResolvedValue(mockSession)
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser)
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
-    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue({
+    mockGetActivePlexService.mockResolvedValue({
       id: 'server-1',
-      url: 'https://plex.example.com:32400',
-      token: 'server-token',
       name: 'Test Server',
+      url: 'https://plex.example.com:32400',
+      publicUrl: null,
+      type: 'PLEX',
       isActive: true,
-    })
+      config: { token: 'server-token', adminPlexUserId: 'admin-plex-id' },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any)
     ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue({
       id: 'wrapped-1',
       userId: 'user-1',
@@ -586,18 +732,28 @@ describe('generatePlexWrapped', () => {
       status: 'generating',
       shareToken: 'test-share-token',
     })
-    ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue({
+    mockGetActiveTautulliService.mockResolvedValue({
       id: 'tautulli-1',
+      name: 'Test Tautulli',
       url: 'https://tautulli.example.com:8181',
-      apiKey: 'tautulli-key',
+      publicUrl: null,
+      type: 'TAUTULLI',
       isActive: true,
-    })
-    ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue({
+      config: { apiKey: 'tautulli-key' },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any)
+    mockGetActiveOverseerrService.mockResolvedValue({
       id: 'overseerr-1',
+      name: 'Test Overseerr',
       url: 'https://overseerr.example.com:5055',
-      apiKey: 'overseerr-key',
+      publicUrl: null,
+      type: 'OVERSEERR',
       isActive: true,
-    })
+      config: { apiKey: 'overseerr-key' },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any)
     ;(fetchTautulliStatistics as jest.Mock).mockResolvedValue({
       success: true,
       data: {
@@ -664,13 +820,17 @@ describe('generatePlexWrapped', () => {
     ;(getServerSession as jest.Mock).mockResolvedValue(mockSession)
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser)
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
-    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue({
+    mockGetActivePlexService.mockResolvedValue({
       id: 'server-1',
-      url: 'https://plex.example.com:32400',
-      token: 'server-token',
       name: 'Test Server',
+      url: 'https://plex.example.com:32400',
+      publicUrl: null,
+      type: 'PLEX',
       isActive: true,
-    })
+      config: { token: 'server-token', adminPlexUserId: 'admin-plex-id' },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any)
     ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue({
       id: 'wrapped-1',
       userId: 'user-1',
@@ -678,12 +838,17 @@ describe('generatePlexWrapped', () => {
       status: 'generating',
       shareToken: 'test-share-token',
     })
-    ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue({
+    mockGetActiveTautulliService.mockResolvedValue({
       id: 'tautulli-1',
+      name: 'Test Tautulli',
       url: 'https://tautulli.example.com:8181',
-      apiKey: 'tautulli-key',
+      publicUrl: null,
+      type: 'TAUTULLI',
       isActive: true,
-    })
+      config: { apiKey: 'tautulli-key' },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any)
     ;(fetchTautulliStatistics as jest.Mock).mockResolvedValue({
       success: true,
       data: {
@@ -759,13 +924,17 @@ describe('generatePlexWrapped', () => {
     ;(getServerSession as jest.Mock).mockResolvedValue(mockSession)
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser)
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
-    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue({
+    mockGetActivePlexService.mockResolvedValue({
       id: 'server-1',
-      url: 'https://plex.example.com:32400',
-      token: 'server-token',
       name: 'Test Server',
+      url: 'https://plex.example.com:32400',
+      publicUrl: null,
+      type: 'PLEX',
       isActive: true,
-    })
+      config: { token: 'server-token', adminPlexUserId: 'admin-plex-id' },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any)
     ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue({
       id: 'wrapped-1',
       userId: 'user-1',
@@ -773,12 +942,17 @@ describe('generatePlexWrapped', () => {
       status: 'generating',
       shareToken: 'test-share-token',
     })
-    ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue({
+    mockGetActiveTautulliService.mockResolvedValue({
       id: 'tautulli-1',
+      name: 'Test Tautulli',
       url: 'https://tautulli.example.com:8181',
-      apiKey: 'tautulli-key',
+      publicUrl: null,
+      type: 'TAUTULLI',
       isActive: true,
-    })
+      config: { apiKey: 'tautulli-key' },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any)
     ;(fetchTautulliStatistics as jest.Mock).mockResolvedValue({
       success: true,
       data: {
@@ -838,9 +1012,9 @@ describe('generateAllPlexWrapped', () => {
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockReset()
     ;(prisma.plexWrapped.upsert as jest.Mock).mockReset()
     ;(prisma.plexWrapped.update as jest.Mock).mockReset()
-    ;(prisma.plexServer.findFirst as jest.Mock).mockReset()
-    ;(prisma.tautulli.findFirst as jest.Mock).mockReset()
-    ;(prisma.overseerr.findFirst as jest.Mock).mockReset()
+    mockGetActivePlexService.mockReset()
+    mockGetActiveTautulliService.mockReset()
+    mockGetActiveOverseerrService.mockReset()
     ;(fetchTautulliStatistics as jest.Mock).mockReset()
     ;(fetchPlexServerStatistics as jest.Mock).mockReset()
     ;(fetchOverseerrStatistics as jest.Mock).mockReset()
@@ -878,19 +1052,28 @@ describe('generateAllPlexWrapped', () => {
         shareToken: 'test-token',
       })
     })
-    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue({
+    mockGetActivePlexService.mockResolvedValue({
       id: 'server-1',
-      url: 'https://plex.example.com:32400',
-      token: 'server-token',
       name: 'Test Server',
+      url: 'https://plex.example.com:32400',
+      publicUrl: null,
+      type: 'PLEX',
       isActive: true,
-    })
-    ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue({
+      config: { token: 'server-token', adminPlexUserId: 'admin-plex-id' },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any)
+    mockGetActiveTautulliService.mockResolvedValue({
       id: 'tautulli-1',
+      name: 'Test Tautulli',
       url: 'http://tautulli.example.com:8181',
-      apiKey: 'api-key',
+      publicUrl: null,
+      type: 'TAUTULLI',
       isActive: true,
-    })
+      config: { apiKey: 'api-key' },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any)
     ;(generateWrappedWithLLM as jest.Mock).mockResolvedValue({
       success: true,
       data: {
@@ -989,19 +1172,28 @@ describe('generateAllPlexWrapped', () => {
         shareToken: 'test-token',
       })
     })
-    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue({
+    mockGetActivePlexService.mockResolvedValue({
       id: 'server-1',
-      url: 'https://plex.example.com:32400',
-      token: 'server-token',
       name: 'Test Server',
+      url: 'https://plex.example.com:32400',
+      publicUrl: null,
+      type: 'PLEX',
       isActive: true,
-    })
-    ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue({
+      config: { token: 'server-token', adminPlexUserId: 'admin-plex-id' },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any)
+    mockGetActiveTautulliService.mockResolvedValue({
       id: 'tautulli-1',
+      name: 'Test Tautulli',
       url: 'http://tautulli.example.com:8181',
-      apiKey: 'api-key',
+      publicUrl: null,
+      type: 'TAUTULLI',
       isActive: true,
-    })
+      config: { apiKey: 'api-key' },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as any)
     ;(fetchTautulliStatistics as jest.Mock)
       .mockResolvedValueOnce({
         success: true,

@@ -13,6 +13,7 @@ jest.mock('next/navigation', () => ({
 
 // Mock toast
 jest.mock('@/components/ui/toast', () => ({
+  ToastProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   useToast: () => ({
     showError: jest.fn(),
     showSuccess: jest.fn(),
