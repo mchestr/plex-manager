@@ -8,6 +8,9 @@ on:
   push:
     tags:
       - 'v*'  # Also run on version tags
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 env:
@@ -18,10 +21,11 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
     # Only run if triggered by workflow_run and the build workflow succeeded,
-    # or if triggered by tags/workflow_dispatch
+    # or if triggered by tags/workflow_dispatch/pull_request
     if: |
       github.event_name == 'workflow_dispatch' ||
       github.event_name == 'push' ||
+      github.event_name == 'pull_request' ||
       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     permissions:
       contents: read
@@ -51,17 +55,18 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=ref,event=branch
+            type=ref,event=pr
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
-            type=sha,prefix={{branch}}-
+            type=sha
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
           context: .
-          push: true
+          push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha

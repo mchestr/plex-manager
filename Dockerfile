@@ -25,6 +25,8 @@ FROM base AS builder
 RUN apk add --no-cache libc6-compat python3 make g++
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
+# Placeholder DATABASE_URL for prisma generate (doesn't connect, just generates client)
+ENV DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -52,23 +54,20 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copy Prisma schema, migrations, and generated client
-RUN mkdir -p ./prisma
+# Copy Prisma schema and migrations
+RUN mkdir -p ./prisma ./lib/generated
 COPY --from=builder --chown=nextjs:nodejs /app/prisma/schema.prisma ./prisma/schema.prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma/migrations ./prisma/migrations
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 
-# Copy package.json and install Prisma CLI and Client
-# npm 7+ automatically installs peer dependencies when installing packages
+# Copy generated Prisma client (output path: lib/generated/prisma)
+COPY --from=builder --chown=nextjs:nodejs /app/lib/generated/prisma ./lib/generated/prisma
+
+# Copy package.json and install Prisma CLI for migrations
 COPY --from=builder /app/package.json ./package.json
 RUN PRISMA_VERSION=$(node -p "require('./package.json').devDependencies.prisma") && \
-    PRISMA_CLIENT_VERSION=$(node -p "require('./package.json').dependencies['@prisma/client']") && \
-    npm install --no-package-lock "prisma@${PRISMA_VERSION}" "@prisma/client@${PRISMA_CLIENT_VERSION}" && \
+    npm install --no-package-lock "prisma@${PRISMA_VERSION}" && \
     npm cache clean --force && \
     chown -R nextjs:nodejs node_modules
-
-# Copy @prisma packages from builder (includes generated client)
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 
 # Copy and set up entrypoint script
 COPY --chown=nextjs:nodejs docker-entrypoint.sh ./docker-entrypoint.sh
