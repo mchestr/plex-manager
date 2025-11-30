@@ -406,8 +406,15 @@ export async function scanForCandidates(
         } else {
           // If no specific libraries, we need to get all movie libraries
           // For now, throw an error requiring library IDs
+          logger.error("Rule validation failed", undefined, {
+            ruleId,
+            ruleName: rule.name,
+            mediaType: rule.mediaType,
+            error: "Missing libraryIds in criteria",
+          })
           throw new Error(
-            "Movie rules must specify libraryIds in criteria"
+            `${rule.mediaType} rules must specify libraryIds in criteria. ` +
+              `Rule: "${rule.name}" (${ruleId})`
           )
         }
       } else if (rule.mediaType === "TV_SERIES") {
@@ -422,12 +429,29 @@ export async function scanForCandidates(
         } else {
           // If no specific libraries, we need to get all TV libraries
           // For now, throw an error requiring library IDs
+          logger.error("Rule validation failed", undefined, {
+            ruleId,
+            ruleName: rule.name,
+            mediaType: rule.mediaType,
+            error: "Missing libraryIds in criteria",
+          })
           throw new Error(
-            "TV series rules must specify libraryIds in criteria"
+            `${rule.mediaType} rules must specify libraryIds in criteria. ` +
+              `Rule: "${rule.name}" (${ruleId})`
           )
         }
       } else {
-        throw new Error(`Unsupported media type: ${rule.mediaType}`)
+        logger.error("Rule validation failed", undefined, {
+          ruleId,
+          ruleName: rule.name,
+          mediaType: rule.mediaType,
+          error: "Unsupported media type",
+        })
+        throw new Error(
+          `Unsupported media type: ${rule.mediaType}. ` +
+            `Rule: "${rule.name}" (${ruleId}). ` +
+            `Supported types: MOVIE, TV_SERIES`
+        )
       }
 
       logger.debug("Fetched media items", {
