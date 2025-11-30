@@ -106,8 +106,8 @@ test.describe('Onboarding Flow', () => {
       }
 
     } finally {
-      // Restore regular user's onboarding status
-      await prisma.user.update({
+      // Restore regular user's onboarding status (use updateMany to avoid error if user doesn't exist)
+      await prisma.user.updateMany({
         where: { id: TEST_USERS.REGULAR.id },
         data: { onboardingCompleted: true },
       });

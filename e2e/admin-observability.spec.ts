@@ -99,7 +99,7 @@ test.describe('Admin Observability Page', () => {
     await waitForAdminPageReady(adminPage, 30000);
 
     // Verify active sessions section is present
-    await expect(adminPage.getByText('Active Streams')).toBeVisible();
+    await expect(adminPage.getByRole('heading', { name: 'Active Streams' })).toBeVisible();
     await expect(adminPage.getByText('Live Plex sessions')).toBeVisible();
 
     // Panel shows sessions, empty state, or "not configured" message
