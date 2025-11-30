@@ -7,6 +7,7 @@
 import { getWrappedSettings } from "@/actions/admin"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { getActivePlexService, getActiveTautulliService, getActiveOverseerrService } from "@/lib/services/service-helpers"
 import { userIdSchema, yearSchema } from "@/lib/validations/shared-schemas"
 import { z } from "zod"
 import { generateWrappedWithLLM } from "@/lib/wrapped/llm"
@@ -121,12 +122,10 @@ export async function generatePlexWrapped(
       }
     }
 
-    // Get Plex server config
-    const plexServer = await prisma.plexServer.findFirst({
-      where: { isActive: true },
-    })
+    // Get Plex service config
+    const plexService = await getActivePlexService()
 
-    if (!plexServer) {
+    if (!plexService) {
       return { success: false, error: "No active Plex server configured" }
     }
 
@@ -161,11 +160,9 @@ export async function generatePlexWrapped(
 
     try {
       // 1. Fetch statistics from Tautulli
-      const tautulli = await prisma.tautulli.findFirst({
-        where: { isActive: true },
-      })
+      const tautulliService = await getActiveTautulliService()
 
-      if (!tautulli) {
+      if (!tautulliService) {
         throw new Error("No active Tautulli server configured")
       }
 
@@ -175,8 +172,8 @@ export async function generatePlexWrapped(
 
       const tautulliStats = await fetchTautulliStatistics(
         {
-          url: tautulli.url,
-          apiKey: tautulli.apiKey,
+          url: tautulliService.url ?? "",
+          apiKey: tautulliService.config.apiKey,
         },
         user.plexUserId || "",
         user.email,
@@ -191,26 +188,22 @@ export async function generatePlexWrapped(
       const tautulliStatsData = tautulliStats.data
 
       // 2. Fetch server statistics on the fly from Plex API
-      const plexServer = await prisma.plexServer.findFirst({
-        where: { isActive: true },
-      })
-
       let serverStats
-      if (plexServer && tautulli) {
+      if (plexService && tautulliService) {
         const serverStatsResult = await fetchPlexServerStatistics(
           {
-            url: plexServer.url,
-            token: plexServer.token,
+            url: plexService.url ?? "",
+            token: plexService.config.token,
           },
           {
-            url: tautulli.url,
-            apiKey: tautulli.apiKey,
+            url: tautulliService.url ?? "",
+            apiKey: tautulliService.config.apiKey,
           }
         )
 
         if (serverStatsResult.success && serverStatsResult.data) {
           serverStats = {
-            serverName: plexServer.name,
+            serverName: plexService.name,
             totalStorage: serverStatsResult.data.totalStorage,
             totalStorageFormatted: serverStatsResult.data.totalStorageFormatted,
             librarySize: serverStatsResult.data.librarySize,
@@ -219,16 +212,14 @@ export async function generatePlexWrapped(
       }
 
       // 3. Fetch Overseerr statistics (optional)
-      const overseerr = await prisma.overseerr.findFirst({
-        where: { isActive: true },
-      })
+      const overseerrService = await getActiveOverseerrService()
 
       let overseerrStats
-      if (overseerr) {
+      if (overseerrService) {
         const overseerrData = await fetchOverseerrStatistics(
           {
-            url: overseerr.url,
-            apiKey: overseerr.apiKey,
+            url: overseerrService.url ?? "",
+            apiKey: overseerrService.config.apiKey,
           },
           user.email,
           validYear
@@ -240,12 +231,12 @@ export async function generatePlexWrapped(
 
       // 4. Fetch leaderboard data
       let leaderboards
-      if (tautulli && tautulliStatsData.tautulliUserId) {
+      if (tautulliService && tautulliStatsData.tautulliUserId) {
         const [topContentLeaderboards, watchTimeLeaderboard] = await Promise.all([
           fetchTopContentLeaderboards(
             {
-              url: tautulli.url,
-              apiKey: tautulli.apiKey,
+              url: tautulliService.url ?? "",
+              apiKey: tautulliService.config.apiKey,
             },
             tautulliStatsData.topMovies,
             tautulliStatsData.topShows,
@@ -254,8 +245,8 @@ export async function generatePlexWrapped(
           ),
           fetchWatchTimeLeaderboard(
             {
-              url: tautulli.url,
-              apiKey: tautulli.apiKey,
+              url: tautulliService.url ?? "",
+              apiKey: tautulliService.config.apiKey,
             },
             validYear
           ),

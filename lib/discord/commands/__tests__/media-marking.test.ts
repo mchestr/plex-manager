@@ -3,16 +3,17 @@ import { handleMarkCommand, handleSelectionResponse, MARK_COMMANDS } from "../me
 import { verifyDiscordUser } from "@/lib/discord/services"
 import { searchPlexMedia, markPlexItemWatched, type PlexMediaItem } from "@/lib/connections/plex"
 import { prisma } from "@/lib/prisma"
+import { getActivePlexService } from "@/lib/services/service-helpers"
 import { MarkType, MediaType } from "@/lib/generated/prisma/client"
 
 // Mock dependencies
 jest.mock("@/lib/discord/services")
 jest.mock("@/lib/connections/plex")
+jest.mock("@/lib/services/service-helpers", () => ({
+  getActivePlexService: jest.fn(),
+}))
 jest.mock("@/lib/prisma", () => ({
   prisma: {
-    plexServer: {
-      findFirst: jest.fn(),
-    },
     userMediaMark: {
       upsert: jest.fn(),
     },
@@ -144,7 +145,7 @@ describe("handleMarkCommand", () => {
         linked: true,
         user: { id: "user-123" },
       })
-      ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(null)
+      ;(getActivePlexService as jest.Mock).mockResolvedValue(null)
 
       await handleMarkCommand(mockMessage, "!finished", ["The Office"])
 
@@ -162,12 +163,14 @@ describe("handleMarkCommand", () => {
         linked: true,
         user: { id: "user-123" },
       })
-      ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue({
+      ;(getActivePlexService as jest.Mock).mockResolvedValue({
+        id: "plex-1",
         name: "Test Server",
         url: "http://localhost:32400",
-        token: "test-token",
-        publicUrl: null,
         isActive: true,
+        config: {
+          token: "test-token",
+        },
       })
     })
 
@@ -205,12 +208,14 @@ describe("handleMarkCommand", () => {
         linked: true,
         user: { id: "user-123" },
       })
-      ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue({
+      ;(getActivePlexService as jest.Mock).mockResolvedValue({
+        id: "plex-1",
         name: "Test Server",
         url: "http://localhost:32400",
-        token: "test-token",
-        publicUrl: null,
         isActive: true,
+        config: {
+          token: "test-token",
+        },
       })
       mockSearchPlexMedia.mockResolvedValue({
         success: true,
@@ -232,12 +237,14 @@ describe("handleMarkCommand", () => {
         linked: true,
         user: { id: "user-123" },
       })
-      ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue({
+      ;(getActivePlexService as jest.Mock).mockResolvedValue({
+        id: "plex-1",
         name: "Test Server",
         url: "http://localhost:32400",
-        token: "test-token",
-        publicUrl: null,
         isActive: true,
+        config: {
+          token: "test-token",
+        },
       })
     })
 
@@ -392,12 +399,14 @@ describe("handleMarkCommand", () => {
         linked: true,
         user: { id: "user-123" },
       })
-      ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue({
+      ;(getActivePlexService as jest.Mock).mockResolvedValue({
+        id: "plex-1",
         name: "Test Server",
         url: "http://localhost:32400",
-        token: "test-token",
-        publicUrl: null,
         isActive: true,
+        config: {
+          token: "test-token",
+        },
       })
 
       const mockResults = [
@@ -434,12 +443,14 @@ describe("handleMarkCommand", () => {
         linked: true,
         user: { id: "user-123" },
       })
-      ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue({
+      ;(getActivePlexService as jest.Mock).mockResolvedValue({
+        id: "plex-1",
         name: "Test Server",
         url: "http://localhost:32400",
-        token: "test-token",
-        publicUrl: null,
         isActive: true,
+        config: {
+          token: "test-token",
+        },
       })
 
       const mockResults = Array.from({ length: 10 }, (_, i) =>
@@ -464,12 +475,14 @@ describe("handleMarkCommand", () => {
         linked: true,
         user: { id: "user-123" },
       })
-      ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue({
+      ;(getActivePlexService as jest.Mock).mockResolvedValue({
+        id: "plex-1",
         name: "Test Server",
         url: "http://localhost:32400",
-        token: "test-token",
-        publicUrl: null,
         isActive: true,
+        config: {
+          token: "test-token",
+        },
       })
 
       const mockResults = [
@@ -516,12 +529,14 @@ describe("handleMarkCommand", () => {
         linked: true,
         user: { id: "user-123" },
       })
-      ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue({
+      ;(getActivePlexService as jest.Mock).mockResolvedValue({
+        id: "plex-1",
         name: "Test Server",
         url: "http://localhost:32400",
-        token: "test-token",
-        publicUrl: null,
         isActive: true,
+        config: {
+          token: "test-token",
+        },
       })
       ;(prisma.userMediaMark.upsert as jest.Mock).mockResolvedValue({})
     })
@@ -615,12 +630,14 @@ describe("handleMarkCommand", () => {
         linked: true,
         user: { id: "user-123" },
       })
-      ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue({
+      ;(getActivePlexService as jest.Mock).mockResolvedValue({
+        id: "plex-1",
         name: "Test Server",
         url: "http://localhost:32400",
-        token: "test-token",
-        publicUrl: null,
         isActive: true,
+        config: {
+          token: "test-token",
+        },
       })
 
       const mockUnsupported = createMockPlexItem({
@@ -649,12 +666,14 @@ describe("handleMarkCommand", () => {
         linked: true,
         user: { id: "user-123" },
       })
-      ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue({
+      ;(getActivePlexService as jest.Mock).mockResolvedValue({
+        id: "plex-1",
         name: "Test Server",
         url: "http://localhost:32400",
-        token: "test-token",
-        publicUrl: null,
         isActive: true,
+        config: {
+          token: "test-token",
+        },
       })
 
       mockSearchPlexMedia.mockResolvedValue({
@@ -676,12 +695,14 @@ describe("handleMarkCommand", () => {
         linked: true,
         user: { id: "user-123" },
       })
-      ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue({
+      ;(getActivePlexService as jest.Mock).mockResolvedValue({
+        id: "plex-1",
         name: "Test Server",
         url: "http://localhost:32400",
-        token: "test-token",
-        publicUrl: null,
         isActive: true,
+        config: {
+          token: "test-token",
+        },
       })
 
       mockSearchPlexMedia.mockResolvedValue({
@@ -713,12 +734,14 @@ describe("handleSelectionResponse", () => {
         linked: true,
         user: { id: "user-123" },
       })
-      ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue({
+      ;(getActivePlexService as jest.Mock).mockResolvedValue({
+        id: "plex-1",
         name: "Test Server",
         url: "http://localhost:32400",
-        token: "test-token",
-        publicUrl: null,
         isActive: true,
+        config: {
+          token: "test-token",
+        },
       })
 
       const mockResults = [
@@ -767,12 +790,14 @@ describe("handleSelectionResponse", () => {
         linked: true,
         user: { id: "user-123" },
       })
-      ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue({
+      ;(getActivePlexService as jest.Mock).mockResolvedValue({
+        id: "plex-1",
         name: "Test Server",
         url: "http://localhost:32400",
-        token: "test-token",
-        publicUrl: null,
         isActive: true,
+        config: {
+          token: "test-token",
+        },
       })
 
       const mockResults = [
@@ -802,12 +827,14 @@ describe("handleSelectionResponse", () => {
         linked: true,
         user: { id: "user-123" },
       })
-      ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue({
+      ;(getActivePlexService as jest.Mock).mockResolvedValue({
+        id: "plex-1",
         name: "Test Server",
         url: "http://localhost:32400",
-        token: "test-token",
-        publicUrl: null,
         isActive: true,
+        config: {
+          token: "test-token",
+        },
       })
 
       const mockResults = [
@@ -875,14 +902,15 @@ describe("handleSelectionResponse", () => {
         user: { id: "user-123" },
       })
 
-      // Mock findFirst to succeed for handleMarkCommand
-      const findFirstMock = prisma.plexServer.findFirst as jest.Mock
-      findFirstMock.mockResolvedValue({
+      // Mock getActivePlexService to succeed for handleMarkCommand
+      ;(getActivePlexService as jest.Mock).mockResolvedValue({
+        id: "plex-1",
         name: "Test Server",
         url: "http://localhost:32400",
-        token: "test-token",
-        publicUrl: null,
         isActive: true,
+        config: {
+          token: "test-token",
+        },
       })
 
       // Return multiple results to create a pending selection
@@ -900,7 +928,7 @@ describe("handleSelectionResponse", () => {
       ;(errorTestMessage.reply as jest.Mock).mockClear()
 
       // Now mock the error for the selection response
-      findFirstMock.mockRejectedValue(new Error("Database error"))
+      ;(getActivePlexService as jest.Mock).mockRejectedValue(new Error("Database error"))
 
       const result = await handleSelectionResponse(errorTestMessage, 1)
 
@@ -934,14 +962,15 @@ describe("handleSelectionResponse", () => {
         user: { id: "user-123" },
       })
 
-      // Mock findFirst to succeed for handleMarkCommand
-      const findFirstMock = prisma.plexServer.findFirst as jest.Mock
-      findFirstMock.mockResolvedValue({
+      // Mock getActivePlexService to succeed for handleMarkCommand
+      ;(getActivePlexService as jest.Mock).mockResolvedValue({
+        id: "plex-1",
         name: "Test Server",
         url: "http://localhost:32400",
-        token: "test-token",
-        publicUrl: null,
         isActive: true,
+        config: {
+          token: "test-token",
+        },
       })
 
       // Return multiple results to create a pending selection
@@ -959,7 +988,7 @@ describe("handleSelectionResponse", () => {
       ;(noServerMessage.reply as jest.Mock).mockClear()
 
       // Now mock no server for the selection response
-      findFirstMock.mockResolvedValue(null)
+      ;(getActivePlexService as jest.Mock).mockResolvedValue(null)
 
       const result = await handleSelectionResponse(noServerMessage, 1)
 
@@ -983,12 +1012,15 @@ describe("processSingleResult (via handleMarkCommand)", () => {
       linked: true,
       user: { id: "user-123" },
     })
-    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue({
+    ;(getActivePlexService as jest.Mock).mockResolvedValue({
+      id: "plex-1",
       name: "Test Server",
       url: "http://localhost:32400",
-      token: "test-token",
       publicUrl: "https://plex.example.com",
       isActive: true,
+      config: {
+        token: "test-token",
+      },
     })
     ;(prisma.userMediaMark.upsert as jest.Mock).mockResolvedValue({})
   })

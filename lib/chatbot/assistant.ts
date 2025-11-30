@@ -8,6 +8,7 @@ import {
 import { type ChatMessage, type ChatResponse } from "@/actions/chatbot/types"
 import { type ChatTool } from "@/lib/llm/chat"
 import { prisma } from "@/lib/prisma"
+import { getActiveLLMProvider } from "@/lib/services/service-helpers"
 import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("CHATBOT_ASSISTANT")
@@ -40,20 +41,19 @@ export async function runChatbotForUser(options: RunChatbotOptions): Promise<Cha
       return { success: false, error: "Invalid message history" }
     }
 
-    const [config, llmProvider] = await Promise.all([
+    const [config, llmProviderService] = await Promise.all([
       prisma.config.findUnique({
         where: { id: "config" },
         select: { llmDisabled: true },
       }),
-      prisma.lLMProvider.findFirst({
-        where: { isActive: true, purpose: "chat" },
-      }),
+      getActiveLLMProvider("chat"),
     ])
 
     const llmDisabled = config?.llmDisabled ?? false
-    const useLLM = !llmDisabled && !!llmProvider && llmProvider.provider === "openai" && !!llmProvider.model
+    const llmConfig = llmProviderService?.config
+    const useLLM = !llmDisabled && !!llmConfig && llmConfig.provider === "openai" && !!llmConfig.model
 
-    if (!useLLM || !llmProvider?.model) {
+    if (!useLLM || !llmConfig?.model) {
       return {
         success: true,
         message: {
@@ -81,10 +81,10 @@ export async function runChatbotForUser(options: RunChatbotOptions): Promise<Cha
       conversationId: activeConversationId,
       context: options.context,
       llmProvider: {
-        apiKey: llmProvider.apiKey,
-        model: llmProvider.model,
-        temperature: llmProvider.temperature,
-        maxTokens: llmProvider.maxTokens,
+        apiKey: llmConfig.apiKey,
+        model: llmConfig.model,
+        temperature: llmConfig.temperature ?? null,
+        maxTokens: llmConfig.maxTokens ?? null,
       },
       systemPrompt,
       tools: toolset,

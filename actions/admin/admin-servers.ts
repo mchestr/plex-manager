@@ -1,7 +1,17 @@
 "use server"
 
 import { requireAdmin } from "@/lib/admin"
+import { ServiceType as PrismaServiceType } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
+import {
+  plexServerSchema,
+  tautulliSchema,
+  overseerrSchema,
+  sonarrSchema,
+  radarrSchema,
+  type PlexConfig,
+  type ApiKeyConfig,
+} from "@/lib/validations/service"
 
 /**
  * Update Plex server configuration (admin only)
@@ -10,7 +20,6 @@ export async function updatePlexServer(data: { name: string; url: string; token:
   await requireAdmin()
 
   try {
-    const { plexServerSchema } = await import("@/lib/validations/plex")
     const { testPlexConnection } = await import("@/lib/connections/plex")
     const { getPlexUserInfo } = await import("@/lib/connections/plex")
     const { revalidatePath } = await import("next/cache")
@@ -33,38 +42,43 @@ export async function updatePlexServer(data: { name: string; url: string; token:
 
     await prisma.$transaction(async (tx) => {
       // Deactivate existing active server
-      await tx.plexServer.updateMany({
-        where: { isActive: true },
+      await tx.service.updateMany({
+        where: { type: PrismaServiceType.PLEX, isActive: true },
         data: { isActive: false },
       })
 
       // Update or create server
-      const existing = await tx.plexServer.findFirst({
+      const existing = await tx.service.findFirst({
         where: {
+          type: PrismaServiceType.PLEX,
           url: validated.url,
         },
       })
 
+      const config: PlexConfig = {
+        token: validated.token,
+        adminPlexUserId,
+      }
+
       if (existing) {
-        await tx.plexServer.update({
+        await tx.service.update({
           where: { id: existing.id },
           data: {
             name: validated.name,
             url: validated.url,
-            token: validated.token,
             publicUrl: validated.publicUrl,
-            adminPlexUserId,
+            config,
             isActive: true,
           },
         })
       } else {
-        await tx.plexServer.create({
+        await tx.service.create({
           data: {
+            type: PrismaServiceType.PLEX,
             name: validated.name,
             url: validated.url,
-            token: validated.token,
             publicUrl: validated.publicUrl,
-            adminPlexUserId,
+            config,
             isActive: true,
           },
         })
@@ -88,7 +102,6 @@ export async function updateTautulli(data: { name: string; url: string; apiKey: 
   await requireAdmin()
 
   try {
-    const { tautulliSchema } = await import("@/lib/validations/tautulli")
     const { testTautulliConnection } = await import("@/lib/connections/tautulli")
     const { revalidatePath } = await import("next/cache")
 
@@ -102,36 +115,42 @@ export async function updateTautulli(data: { name: string; url: string; apiKey: 
 
     await prisma.$transaction(async (tx) => {
       // Deactivate existing active server
-      await tx.tautulli.updateMany({
-        where: { isActive: true },
+      await tx.service.updateMany({
+        where: { type: PrismaServiceType.TAUTULLI, isActive: true },
         data: { isActive: false },
       })
 
       // Update or create server
-      const existing = await tx.tautulli.findFirst({
+      const existing = await tx.service.findFirst({
         where: {
+          type: PrismaServiceType.TAUTULLI,
           url: validated.url,
         },
       })
 
+      const config: ApiKeyConfig = {
+        apiKey: validated.apiKey,
+      }
+
       if (existing) {
-        await tx.tautulli.update({
+        await tx.service.update({
           where: { id: existing.id },
           data: {
             name: validated.name,
             url: validated.url,
-            apiKey: validated.apiKey,
             publicUrl: validated.publicUrl,
+            config,
             isActive: true,
           },
         })
       } else {
-        await tx.tautulli.create({
+        await tx.service.create({
           data: {
+            type: PrismaServiceType.TAUTULLI,
             name: validated.name,
             url: validated.url,
-            apiKey: validated.apiKey,
             publicUrl: validated.publicUrl,
+            config,
             isActive: true,
           },
         })
@@ -155,7 +174,6 @@ export async function updateOverseerr(data: { name: string; url: string; apiKey:
   await requireAdmin()
 
   try {
-    const { overseerrSchema } = await import("@/lib/validations/overseerr")
     const { testOverseerrConnection } = await import("@/lib/connections/overseerr")
     const { revalidatePath } = await import("next/cache")
 
@@ -169,36 +187,42 @@ export async function updateOverseerr(data: { name: string; url: string; apiKey:
 
     await prisma.$transaction(async (tx) => {
       // Deactivate existing active server
-      await tx.overseerr.updateMany({
-        where: { isActive: true },
+      await tx.service.updateMany({
+        where: { type: PrismaServiceType.OVERSEERR, isActive: true },
         data: { isActive: false },
       })
 
       // Update or create server
-      const existing = await tx.overseerr.findFirst({
+      const existing = await tx.service.findFirst({
         where: {
+          type: PrismaServiceType.OVERSEERR,
           url: validated.url,
         },
       })
 
+      const config: ApiKeyConfig = {
+        apiKey: validated.apiKey,
+      }
+
       if (existing) {
-        await tx.overseerr.update({
+        await tx.service.update({
           where: { id: existing.id },
           data: {
             name: validated.name,
             url: validated.url,
-            apiKey: validated.apiKey,
             publicUrl: validated.publicUrl,
+            config,
             isActive: true,
           },
         })
       } else {
-        await tx.overseerr.create({
+        await tx.service.create({
           data: {
+            type: PrismaServiceType.OVERSEERR,
             name: validated.name,
             url: validated.url,
-            apiKey: validated.apiKey,
             publicUrl: validated.publicUrl,
+            config,
             isActive: true,
           },
         })
@@ -222,7 +246,6 @@ export async function updateSonarr(data: { name: string; url: string; apiKey: st
   await requireAdmin()
 
   try {
-    const { sonarrSchema } = await import("@/lib/validations/sonarr")
     const { testSonarrConnection } = await import("@/lib/connections/sonarr")
     const { revalidatePath } = await import("next/cache")
 
@@ -236,36 +259,42 @@ export async function updateSonarr(data: { name: string; url: string; apiKey: st
 
     await prisma.$transaction(async (tx) => {
       // Deactivate existing active server
-      await tx.sonarr.updateMany({
-        where: { isActive: true },
+      await tx.service.updateMany({
+        where: { type: PrismaServiceType.SONARR, isActive: true },
         data: { isActive: false },
       })
 
       // Update or create server
-      const existing = await tx.sonarr.findFirst({
+      const existing = await tx.service.findFirst({
         where: {
+          type: PrismaServiceType.SONARR,
           url: validated.url,
         },
       })
 
+      const config: ApiKeyConfig = {
+        apiKey: validated.apiKey,
+      }
+
       if (existing) {
-        await tx.sonarr.update({
+        await tx.service.update({
           where: { id: existing.id },
           data: {
             name: validated.name,
             url: validated.url,
-            apiKey: validated.apiKey,
             publicUrl: validated.publicUrl,
+            config,
             isActive: true,
           },
         })
       } else {
-        await tx.sonarr.create({
+        await tx.service.create({
           data: {
+            type: PrismaServiceType.SONARR,
             name: validated.name,
             url: validated.url,
-            apiKey: validated.apiKey,
             publicUrl: validated.publicUrl,
+            config,
             isActive: true,
           },
         })
@@ -289,7 +318,6 @@ export async function updateRadarr(data: { name: string; url: string; apiKey: st
   await requireAdmin()
 
   try {
-    const { radarrSchema } = await import("@/lib/validations/radarr")
     const { testRadarrConnection } = await import("@/lib/connections/radarr")
     const { revalidatePath } = await import("next/cache")
 
@@ -303,36 +331,42 @@ export async function updateRadarr(data: { name: string; url: string; apiKey: st
 
     await prisma.$transaction(async (tx) => {
       // Deactivate existing active server
-      await tx.radarr.updateMany({
-        where: { isActive: true },
+      await tx.service.updateMany({
+        where: { type: PrismaServiceType.RADARR, isActive: true },
         data: { isActive: false },
       })
 
       // Update or create server
-      const existing = await tx.radarr.findFirst({
+      const existing = await tx.service.findFirst({
         where: {
+          type: PrismaServiceType.RADARR,
           url: validated.url,
         },
       })
 
+      const config: ApiKeyConfig = {
+        apiKey: validated.apiKey,
+      }
+
       if (existing) {
-        await tx.radarr.update({
+        await tx.service.update({
           where: { id: existing.id },
           data: {
             name: validated.name,
             url: validated.url,
-            apiKey: validated.apiKey,
             publicUrl: validated.publicUrl,
+            config,
             isActive: true,
           },
         })
       } else {
-        await tx.radarr.create({
+        await tx.service.create({
           data: {
+            type: PrismaServiceType.RADARR,
             name: validated.name,
             url: validated.url,
-            apiKey: validated.apiKey,
             publicUrl: validated.publicUrl,
+            config,
             isActive: true,
           },
         })

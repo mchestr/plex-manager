@@ -4,6 +4,11 @@
 
 import { GET } from '@/app/api/admin/playground/statistics/route'
 import { prisma } from '@/lib/prisma'
+import {
+  getActivePlexService,
+  getActiveTautulliService,
+  getActiveOverseerrService,
+} from '@/lib/services/service-helpers'
 import { requireAdminAPI } from '@/lib/security/api-helpers'
 import { adminRateLimiter } from '@/lib/security/rate-limit'
 import {
@@ -21,16 +26,13 @@ jest.mock('@/lib/prisma', () => ({
     user: {
       findFirst: jest.fn(),
     },
-    tautulli: {
-      findFirst: jest.fn(),
-    },
-    plexServer: {
-      findFirst: jest.fn(),
-    },
-    overseerr: {
-      findFirst: jest.fn(),
-    },
   },
+}))
+
+jest.mock('@/lib/services/service-helpers', () => ({
+  getActivePlexService: jest.fn(),
+  getActiveTautulliService: jest.fn(),
+  getActiveOverseerrService: jest.fn(),
 }))
 
 jest.mock('@/lib/security/api-helpers', () => ({
@@ -77,6 +79,10 @@ jest.mock('next/server', () => {
   }
 })
 
+const mockGetActivePlexService = getActivePlexService as jest.MockedFunction<typeof getActivePlexService>
+const mockGetActiveTautulliService = getActiveTautulliService as jest.MockedFunction<typeof getActiveTautulliService>
+const mockGetActiveOverseerrService = getActiveOverseerrService as jest.MockedFunction<typeof getActiveOverseerrService>
+
 describe('GET /api/admin/playground/statistics', () => {
   const mockUser = {
     id: 'user-1',
@@ -85,10 +91,14 @@ describe('GET /api/admin/playground/statistics', () => {
     plexUserId: 'plex-123',
   }
 
-  const mockTautulli = {
+  const mockTautulliService = {
+    id: 'tautulli-1',
+    name: 'Tautulli',
     url: 'http://localhost:8181',
-    apiKey: 'test-key',
     isActive: true,
+    config: {
+      apiKey: 'test-key',
+    },
   }
 
   const mockTautulliStats = {
@@ -115,10 +125,10 @@ describe('GET /api/admin/playground/statistics', () => {
 
   it('should return statistics for valid user and year', async () => {
     ;(prisma.user.findFirst as jest.Mock).mockResolvedValue(mockUser)
-    ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(mockTautulli)
+    mockGetActiveTautulliService.mockResolvedValue(mockTautulliService as any)
     ;(fetchTautulliStatistics as jest.Mock).mockResolvedValue(mockTautulliStats)
-    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(null)
-    ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue(null)
+    mockGetActivePlexService.mockResolvedValue(null)
+    mockGetActiveOverseerrService.mockResolvedValue(null)
     ;(fetchTopContentLeaderboards as jest.Mock).mockResolvedValue({ success: false })
     ;(fetchWatchTimeLeaderboard as jest.Mock).mockResolvedValue({ success: false })
 
@@ -203,7 +213,7 @@ describe('GET /api/admin/playground/statistics', () => {
 
   it('should return 404 when no active Tautulli server is configured', async () => {
     ;(prisma.user.findFirst as jest.Mock).mockResolvedValue(mockUser)
-    ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(null)
+    mockGetActiveTautulliService.mockResolvedValue(null)
 
     const { NextRequest } = await import('next/server')
     const request = new NextRequest('http://localhost/api/admin/playground/statistics?userName=Test User&year=2024')
@@ -217,7 +227,7 @@ describe('GET /api/admin/playground/statistics', () => {
 
   it('should return 500 when Tautulli statistics fetch fails', async () => {
     ;(prisma.user.findFirst as jest.Mock).mockResolvedValue(mockUser)
-    ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(mockTautulli)
+    mockGetActiveTautulliService.mockResolvedValue(mockTautulliService as any)
     ;(fetchTautulliStatistics as jest.Mock).mockResolvedValue({
       success: false,
       error: 'Failed to connect to Tautulli',
@@ -235,10 +245,10 @@ describe('GET /api/admin/playground/statistics', () => {
 
   it('should find user by email when name does not match', async () => {
     ;(prisma.user.findFirst as jest.Mock).mockResolvedValue(mockUser)
-    ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(mockTautulli)
+    mockGetActiveTautulliService.mockResolvedValue(mockTautulliService as any)
     ;(fetchTautulliStatistics as jest.Mock).mockResolvedValue(mockTautulliStats)
-    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(null)
-    ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue(null)
+    mockGetActivePlexService.mockResolvedValue(null)
+    mockGetActiveOverseerrService.mockResolvedValue(null)
     ;(fetchTopContentLeaderboards as jest.Mock).mockResolvedValue({ success: false })
     ;(fetchWatchTimeLeaderboard as jest.Mock).mockResolvedValue({ success: false })
 
@@ -259,11 +269,14 @@ describe('GET /api/admin/playground/statistics', () => {
   })
 
   it('should include server stats when Plex server is configured', async () => {
-    const mockPlexServer = {
+    const mockPlexService = {
+      id: 'plex-1',
       name: 'My Plex Server',
       url: 'http://localhost:32400',
-      token: 'test-token',
       isActive: true,
+      config: {
+        token: 'test-token',
+      },
     }
 
     const mockServerStats = {
@@ -276,11 +289,11 @@ describe('GET /api/admin/playground/statistics', () => {
     }
 
     ;(prisma.user.findFirst as jest.Mock).mockResolvedValue(mockUser)
-    ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(mockTautulli)
+    mockGetActiveTautulliService.mockResolvedValue(mockTautulliService as any)
     ;(fetchTautulliStatistics as jest.Mock).mockResolvedValue(mockTautulliStats)
-    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(mockPlexServer)
+    mockGetActivePlexService.mockResolvedValue(mockPlexService as any)
     ;(fetchPlexServerStatistics as jest.Mock).mockResolvedValue(mockServerStats)
-    ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue(null)
+    mockGetActiveOverseerrService.mockResolvedValue(null)
     ;(fetchTopContentLeaderboards as jest.Mock).mockResolvedValue({ success: false })
     ;(fetchWatchTimeLeaderboard as jest.Mock).mockResolvedValue({ success: false })
 
@@ -312,10 +325,10 @@ describe('GET /api/admin/playground/statistics', () => {
     }
 
     ;(prisma.user.findFirst as jest.Mock).mockResolvedValue(mockUser)
-    ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(mockTautulli)
+    mockGetActiveTautulliService.mockResolvedValue(mockTautulliService as any)
     ;(fetchTautulliStatistics as jest.Mock).mockResolvedValue(mockTautulliStats)
-    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(null)
-    ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue(null)
+    mockGetActivePlexService.mockResolvedValue(null)
+    mockGetActiveOverseerrService.mockResolvedValue(null)
     ;(fetchTopContentLeaderboards as jest.Mock).mockResolvedValue(mockLeaderboards)
     ;(fetchWatchTimeLeaderboard as jest.Mock).mockResolvedValue(mockWatchTimeLeaderboard)
 

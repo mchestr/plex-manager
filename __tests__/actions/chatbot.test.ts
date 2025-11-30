@@ -5,6 +5,14 @@
 import { chatWithAdminBot, type ChatMessage } from "@/actions/chatbot"
 import { callChatLLM } from "@/lib/llm/chat"
 import { prisma } from "@/lib/prisma"
+import {
+  getActiveLLMProvider,
+  getActivePlexService,
+  getActiveSonarrService,
+  getActiveRadarrService,
+  getActiveTautulliService,
+  getActiveOverseerrService,
+} from "@/lib/services/service-helpers"
 import { getServerSession } from "next-auth"
 
 // Mock dependencies
@@ -17,31 +25,22 @@ jest.mock("@/lib/prisma", () => ({
     config: {
       findUnique: jest.fn(),
     },
-    lLMProvider: {
-      findFirst: jest.fn(),
-    },
     lLMUsage: {
       create: jest.fn(),
     },
     chatConversation: {
       create: jest.fn(),
     },
-    plexServer: {
-      findFirst: jest.fn(),
-    },
-    sonarr: {
-      findFirst: jest.fn(),
-    },
-    radarr: {
-      findFirst: jest.fn(),
-    },
-    tautulli: {
-      findFirst: jest.fn(),
-    },
-    overseerr: {
-      findFirst: jest.fn(),
-    },
   },
+}))
+
+jest.mock("@/lib/services/service-helpers", () => ({
+  getActiveLLMProvider: jest.fn(),
+  getActivePlexService: jest.fn(),
+  getActiveSonarrService: jest.fn(),
+  getActiveRadarrService: jest.fn(),
+  getActiveTautulliService: jest.fn(),
+  getActiveOverseerrService: jest.fn(),
 }))
 
 jest.mock("@/lib/connections/plex", () => ({
@@ -94,6 +93,12 @@ jest.mock("next-auth", () => ({
 const mockCallChatLLM = callChatLLM as jest.MockedFunction<typeof callChatLLM>
 const mockPrisma = prisma as jest.Mocked<typeof prisma>
 const mockGetServerSession = getServerSession as jest.MockedFunction<typeof getServerSession>
+const mockGetActiveLLMProvider = getActiveLLMProvider as jest.MockedFunction<typeof getActiveLLMProvider>
+const mockGetActivePlexService = getActivePlexService as jest.MockedFunction<typeof getActivePlexService>
+const mockGetActiveSonarrService = getActiveSonarrService as jest.MockedFunction<typeof getActiveSonarrService>
+const mockGetActiveRadarrService = getActiveRadarrService as jest.MockedFunction<typeof getActiveRadarrService>
+const mockGetActiveTautulliService = getActiveTautulliService as jest.MockedFunction<typeof getActiveTautulliService>
+const mockGetActiveOverseerrService = getActiveOverseerrService as jest.MockedFunction<typeof getActiveOverseerrService>
 
 describe("chatbot sources tracking", () => {
   beforeEach(() => {
@@ -107,14 +112,17 @@ describe("chatbot sources tracking", () => {
       llmDisabled: false,
     } as any)
 
-    mockPrisma.lLMProvider.findFirst.mockResolvedValue({
+    mockGetActiveLLMProvider.mockResolvedValue({
       id: "provider-1",
-      provider: "openai",
-      apiKey: "test-key",
-      model: "gpt-4",
-      temperature: 0.7,
-      maxTokens: 1000,
+      name: "Chat LLM",
       isActive: true,
+      config: {
+        provider: "openai",
+        apiKey: "test-key",
+        model: "gpt-4",
+        temperature: 0.7,
+        maxTokens: 1000,
+      },
     } as any)
 
     // Mock chatConversation.create
@@ -170,13 +178,15 @@ describe("chatbot sources tracking", () => {
       })
 
       // Mock tool execution result
-      mockPrisma.sonarr.findFirst.mockResolvedValue({
+      mockGetActiveSonarrService.mockResolvedValue({
         id: "sonarr-1",
         name: "Sonarr",
         url: "http://localhost:8989",
-        apiKey: "test-key",
         publicUrl: null,
         isActive: true,
+        config: {
+          apiKey: "test-key",
+        },
       } as any)
 
       const { getSonarrSystemStatus, getSonarrQueue, getSonarrHealth, getSonarrDiskSpace } =
@@ -246,26 +256,30 @@ describe("chatbot sources tracking", () => {
       })
 
       // Mock Plex server
-      mockPrisma.plexServer.findFirst.mockResolvedValue({
+      mockGetActivePlexService.mockResolvedValue({
         id: "plex-1",
         name: "Plex",
         url: "http://localhost:32400",
-        token: "test-token",
         publicUrl: null,
         isActive: true,
+        config: {
+          token: "test-token",
+        },
       } as any)
 
       const { getPlexServerIdentity } = require("@/lib/connections/plex")
       ;(getPlexServerIdentity as jest.Mock).mockResolvedValue({ machineIdentifier: "test-id" })
 
       // Mock Sonarr server
-      mockPrisma.sonarr.findFirst.mockResolvedValue({
+      mockGetActiveSonarrService.mockResolvedValue({
         id: "sonarr-1",
         name: "Sonarr",
         url: "http://localhost:8989",
-        apiKey: "test-key",
         publicUrl: null,
         isActive: true,
+        config: {
+          apiKey: "test-key",
+        },
       } as any)
 
       const { getSonarrSystemStatus, getSonarrQueue, getSonarrHealth, getSonarrDiskSpace } =
@@ -354,13 +368,15 @@ describe("chatbot sources tracking", () => {
       })
 
       // Mock Sonarr server and history
-      mockPrisma.sonarr.findFirst.mockResolvedValue({
+      mockGetActiveSonarrService.mockResolvedValue({
         id: "sonarr-1",
         name: "Sonarr",
         url: "http://localhost:8989",
-        apiKey: "test-key",
         publicUrl: null,
         isActive: true,
+        config: {
+          apiKey: "test-key",
+        },
       } as any)
 
       const { getSonarrHistory, searchSonarrSeries } = require("@/lib/connections/sonarr")
@@ -439,13 +455,15 @@ describe("chatbot sources tracking", () => {
         model: "gpt-4",
       })
 
-      mockPrisma.plexServer.findFirst.mockResolvedValue({
+      mockGetActivePlexService.mockResolvedValue({
         id: "plex-1",
         name: "Plex",
         url: "http://localhost:32400",
-        token: "test-token",
         publicUrl: null,
         isActive: true,
+        config: {
+          token: "test-token",
+        },
       } as any)
 
       const { getPlexSessions } = require("@/lib/connections/plex")
@@ -500,12 +518,15 @@ describe("chatbot sources tracking", () => {
       } as any)
 
       // Even if provider exists, should not use it
-      mockPrisma.lLMProvider.findFirst.mockResolvedValue({
+      mockGetActiveLLMProvider.mockResolvedValue({
         id: "provider-1",
-        provider: "openai",
-        apiKey: "test-key",
-        model: "gpt-4",
+        name: "Chat LLM",
         isActive: true,
+        config: {
+          provider: "openai",
+          apiKey: "test-key",
+          model: "gpt-4",
+        },
       } as any)
 
       const messages: ChatMessage[] = [

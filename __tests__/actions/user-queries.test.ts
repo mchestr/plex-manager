@@ -16,10 +16,11 @@ jest.mock('@/lib/prisma', () => ({
     user: {
       findMany: jest.fn(),
     },
-    plexServer: {
-      findFirst: jest.fn(),
-    },
   },
+}))
+
+jest.mock('@/lib/services/service-helpers', () => ({
+  getActivePlexService: jest.fn(),
 }))
 
 jest.mock('@/lib/connections/plex', () => ({

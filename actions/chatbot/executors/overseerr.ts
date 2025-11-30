@@ -1,5 +1,5 @@
 import { getAllOverseerrRequests, getOverseerrDiscoverMovies, getOverseerrDiscoverTV, getOverseerrMediaDetails, getOverseerrRequests, getOverseerrStatus, getOverseerrUsers } from "@/lib/connections/overseerr"
-import { prisma } from "@/lib/prisma"
+import { getActiveOverseerrService } from "@/lib/services/service-helpers"
 
 export async function executeOverseerrTool(
   toolName: string,
@@ -7,14 +7,14 @@ export async function executeOverseerrTool(
   _userId?: string,
   _context?: string
 ): Promise<string> {
-  const server = await prisma.overseerr.findFirst({ where: { isActive: true } })
-  if (!server) return "Error: No active Overseerr server configured."
+  const overseerrService = await getActiveOverseerrService()
+  if (!overseerrService) return "Error: No active Overseerr server configured."
 
   const config = {
-    name: server.name,
-    url: server.url,
-    apiKey: server.apiKey,
-    publicUrl: server.publicUrl || undefined,
+    name: overseerrService.name,
+    url: overseerrService.url ?? "",
+    apiKey: overseerrService.config.apiKey,
+    publicUrl: overseerrService.publicUrl || undefined,
   }
 
   switch (toolName) {

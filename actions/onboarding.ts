@@ -2,6 +2,7 @@
 
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { getActiveOverseerrService, getDiscordService } from "@/lib/services/service-helpers"
 import { createLogger } from "@/lib/utils/logger"
 import { getServerSession } from "next-auth"
 
@@ -58,41 +59,28 @@ export async function completeOnboarding() {
  */
 export async function getOnboardingInfo() {
   try {
-    const [overseerr, discordIntegration] = await Promise.all([
-      prisma.overseerr.findFirst({
-        where: { isActive: true },
-        select: {
-          publicUrl: true,
-          url: true,
-        },
-      }),
-      prisma.discordIntegration.findUnique({
-        where: { id: "discord" },
-        select: {
-          isEnabled: true,
-          clientId: true,
-          clientSecret: true,
-          instructions: true,
-        },
-      }),
+    const [overseerrService, discordService] = await Promise.all([
+      getActiveOverseerrService(),
+      getDiscordService(),
     ])
 
     let overseerrUrl = null
-    if (overseerr) {
-      if (overseerr.publicUrl) {
-        overseerrUrl = overseerr.publicUrl
+    if (overseerrService) {
+      if (overseerrService.publicUrl) {
+        overseerrUrl = overseerrService.publicUrl
       } else {
         // Use internal URL if public URL is not set
         // Note: This might not be reachable from client browser if it's an internal IP/docker hostname
         // but it's better than nothing for now
-        overseerrUrl = overseerr.url
+        overseerrUrl = overseerrService.url
       }
     }
 
+    const discordConfig = discordService?.config
     return {
       overseerrUrl,
-      discordEnabled: Boolean(discordIntegration?.isEnabled && discordIntegration?.clientId && discordIntegration?.clientSecret),
-      discordInstructions: discordIntegration?.instructions ?? null,
+      discordEnabled: Boolean(discordConfig?.isEnabled && discordConfig?.clientId && discordConfig?.clientSecret),
+      discordInstructions: discordConfig?.instructions ?? null,
     }
   } catch (error) {
     logger.error("Error fetching onboarding info", error)

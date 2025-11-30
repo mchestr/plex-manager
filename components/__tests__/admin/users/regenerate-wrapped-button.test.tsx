@@ -147,6 +147,7 @@ describe('RegenerateWrappedButton', () => {
 
       await waitFor(() => {
         // In non-inline mode, success shows green button with checkmark icon
+        // The aria-label changes to "Regeneration started" in success state
         const successButton = screen.getByRole('button', { name: /Regeneration started/i })
         expect(successButton).toHaveClass('bg-green-600')
         const checkmark = successButton.querySelector('svg')
@@ -169,6 +170,7 @@ describe('RegenerateWrappedButton', () => {
 
       await waitFor(() => {
         // In non-inline mode, success shows green button with checkmark icon
+        // The aria-label changes to "Regeneration started" in success state
         const successButton = screen.getByRole('button', { name: /Regeneration started/i })
         expect(successButton).toHaveClass('bg-green-600')
       })

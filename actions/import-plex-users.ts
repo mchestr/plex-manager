@@ -3,6 +3,7 @@
 import { requireAdmin } from "@/lib/admin"
 import { getAllPlexServerUsers } from "@/lib/connections/plex"
 import { prisma } from "@/lib/prisma"
+import { getActivePlexService } from "@/lib/services/service-helpers"
 import { createLogger } from "@/lib/utils/logger"
 import { revalidatePath } from "next/cache"
 
@@ -21,12 +22,10 @@ export async function importPlexUsers(): Promise<{
   try {
     await requireAdmin()
 
-    // Get active Plex server configuration
-    const plexServer = await prisma.plexServer.findFirst({
-      where: { isActive: true },
-    })
+    // Get active Plex service configuration
+    const plexService = await getActivePlexService()
 
-    if (!plexServer) {
+    if (!plexService) {
       return {
         success: false,
         imported: 0,
@@ -37,8 +36,8 @@ export async function importPlexUsers(): Promise<{
 
     // Fetch users from Plex server
     const usersResult = await getAllPlexServerUsers({
-      url: plexServer.url,
-      token: plexServer.token,
+      url: plexService.url ?? "",
+      token: plexService.config.token,
     })
 
     if (!usersResult.success || !usersResult.data) {
@@ -69,7 +68,7 @@ export async function importPlexUsers(): Promise<{
         }
 
         // Check if this user is the admin
-        const isAdmin = plexServer.adminPlexUserId === plexUser.id
+        const isAdmin = plexService.config.adminPlexUserId === plexUser.id
 
         // Create new user
         await prisma.user.create({

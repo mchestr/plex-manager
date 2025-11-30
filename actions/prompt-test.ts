@@ -2,6 +2,7 @@
 
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { getActiveLLMProvider } from "@/lib/services/service-helpers"
 import { createLogger } from "@/lib/utils/logger"
 import { callOpenAI, LLMConfig } from "@/lib/wrapped/api-calls"
 import { generateWrappedPrompt } from "@/lib/wrapped/prompt-template"
@@ -62,11 +63,9 @@ export async function testPromptTemplate(input: TestPromptInput) {
       }
 
       // Get active LLM provider for wrapped generation
-      const llmProvider = await prisma.lLMProvider.findFirst({
-        where: { isActive: true, purpose: "wrapped" },
-      })
+      const llmProviderService = await getActiveLLMProvider("wrapped")
 
-      if (!llmProvider) {
+      if (!llmProviderService) {
         return {
           success: false,
           renderedPrompt,
@@ -74,7 +73,8 @@ export async function testPromptTemplate(input: TestPromptInput) {
         }
       }
 
-      if (!llmProvider.model && !input.model) {
+      const llmConfig = llmProviderService.config
+      if (!llmConfig.model && !input.model) {
         return {
           success: false,
           renderedPrompt,
@@ -83,11 +83,11 @@ export async function testPromptTemplate(input: TestPromptInput) {
       }
 
       const config: LLMConfig = {
-        provider: llmProvider.provider as "openai",
-        apiKey: llmProvider.apiKey,
-        model: input.model ?? llmProvider.model!,
-        temperature: input.temperature ?? llmProvider.temperature ?? undefined,
-        maxTokens: input.maxTokens ?? llmProvider.maxTokens ?? undefined,
+        provider: llmConfig.provider as "openai",
+        apiKey: llmConfig.apiKey,
+        model: input.model ?? llmConfig.model!,
+        temperature: input.temperature ?? llmConfig.temperature ?? undefined,
+        maxTokens: input.maxTokens ?? llmConfig.maxTokens ?? undefined,
       }
 
       // Currently only OpenAI is supported

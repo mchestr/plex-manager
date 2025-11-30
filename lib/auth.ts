@@ -1,5 +1,6 @@
 import { checkUserServerAccess, getPlexUserInfo } from "@/lib/connections/plex"
 import { prisma } from "@/lib/prisma"
+import { getActivePlexService } from "@/lib/services/service-helpers"
 import { createLogger } from "@/lib/utils/logger"
 import { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
@@ -114,12 +115,10 @@ export const authOptions: NextAuthOptions = {
 
           const plexUser = userInfoResult.data
 
-          // Get the configured Plex server
-          const plexServer = await prisma.plexServer.findFirst({
-            where: { isActive: true },
-          })
+          // Get the configured Plex service
+          const plexService = await getActivePlexService()
 
-          if (!plexServer) {
+          if (!plexService) {
             logger.error("No active Plex server configured")
             throw new Error("NO_SERVER_CONFIGURED")
           }
@@ -129,9 +128,9 @@ export const authOptions: NextAuthOptions = {
           // Also check if the user is the admin (admin users may not be in the user list)
           const accessCheck = await checkUserServerAccess(
             {
-              url: plexServer.url,
-              token: plexServer.token,
-              adminPlexUserId: plexServer.adminPlexUserId,
+              url: plexService.url ?? "",
+              token: plexService.config.token,
+              adminPlexUserId: plexService.config.adminPlexUserId ?? null,
             },
             plexUser.id
           )
@@ -141,14 +140,14 @@ export const authOptions: NextAuthOptions = {
               plexUserId: plexUser.id,
               username: plexUser.username,
               // Email is automatically sanitized by logger in production
-              serverUrl: plexServer.url,
+              serverUrl: plexService.url,
               reason: accessCheck.error || "No access to server",
             })
             throw new Error("ACCESS_DENIED")
           }
 
           // Check if this user is the admin by comparing Plex user IDs
-          const isAdmin = plexServer.adminPlexUserId === plexUser.id
+          const isAdmin = plexService.config.adminPlexUserId === plexUser.id
 
           // Find or create user
           let dbUser = await prisma.user.findUnique({

@@ -34,6 +34,7 @@
  */
 
 import { prisma } from "@/lib/prisma"
+import { getActiveTautulliService } from "@/lib/services/service-helpers"
 import { evaluateRule, type MediaItem } from "./rule-evaluator"
 import { createLogger } from "@/lib/utils/logger"
 import { getTautulliLibraryMediaInfo } from "@/lib/connections/tautulli"
@@ -156,20 +157,18 @@ async function fetchMovieData(sectionId: string): Promise<MovieData[]> {
   logger.debug("Fetching movie data from Tautulli", { sectionId })
 
   try {
-    // Get Tautulli config from database
-    const tautulliServer = await prisma.tautulli.findFirst({
-      where: { isActive: true },
-    })
+    // Get Tautulli config from unified Service table
+    const tautulliService = await getActiveTautulliService()
 
-    if (!tautulliServer) {
+    if (!tautulliService) {
       throw new Error("No active Tautulli server configured")
     }
 
     const config = {
-      name: tautulliServer.name,
-      url: tautulliServer.url,
-      apiKey: tautulliServer.apiKey,
-      publicUrl: tautulliServer.publicUrl || undefined,
+      name: tautulliService.name,
+      url: tautulliService.url ?? "",
+      apiKey: tautulliService.config.apiKey,
+      publicUrl: tautulliService.publicUrl || undefined,
     }
 
     // Get library media info from Tautulli
@@ -249,20 +248,18 @@ async function fetchTVSeriesData(sectionId: string): Promise<TVSeriesData[]> {
   logger.debug("Fetching TV series data from Tautulli", { sectionId })
 
   try {
-    // Get Tautulli config from database
-    const tautulliServer = await prisma.tautulli.findFirst({
-      where: { isActive: true },
-    })
+    // Get Tautulli config from unified Service table
+    const tautulliService = await getActiveTautulliService()
 
-    if (!tautulliServer) {
+    if (!tautulliService) {
       throw new Error("No active Tautulli server configured")
     }
 
     const config = {
-      name: tautulliServer.name,
-      url: tautulliServer.url,
-      apiKey: tautulliServer.apiKey,
-      publicUrl: tautulliServer.publicUrl || undefined,
+      name: tautulliService.name,
+      url: tautulliService.url ?? "",
+      apiKey: tautulliService.config.apiKey,
+      publicUrl: tautulliService.publicUrl || undefined,
     }
 
     // Get library media info from Tautulli

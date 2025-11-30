@@ -1,8 +1,8 @@
 import { getAllPlexServerUsers } from "@/lib/connections/plex"
-import { prisma } from "@/lib/prisma"
 import { requireAdminAPI } from "@/lib/security/api-helpers"
 import { createSafeError, ErrorCode, getStatusCode, logError } from "@/lib/security/error-handler"
 import { adminRateLimiter } from "@/lib/security/rate-limit"
+import { getActivePlexService } from "@/lib/services/service-helpers"
 import { NextRequest, NextResponse } from "next/server"
 
 export const dynamic = 'force-dynamic'
@@ -21,12 +21,10 @@ export async function GET(request: NextRequest) {
       return authResult.response
     }
 
-    // Get active Plex server configuration
-    const plexServer = await prisma.plexServer.findFirst({
-      where: { isActive: true },
-    })
+    // Get active Plex service configuration
+    const plexService = await getActivePlexService()
 
-    if (!plexServer) {
+    if (!plexService) {
       return NextResponse.json(
         createSafeError(ErrorCode.NOT_FOUND, "No active Plex server configured"),
         { status: getStatusCode(ErrorCode.NOT_FOUND) }
@@ -35,8 +33,8 @@ export async function GET(request: NextRequest) {
 
     // Fetch users from Plex server
     const usersResult = await getAllPlexServerUsers({
-      url: plexServer.url,
-      token: plexServer.token,
+      url: plexService.url ?? "",
+      token: plexService.config.token,
     })
 
     if (!usersResult.success) {

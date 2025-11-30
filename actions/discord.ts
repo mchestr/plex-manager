@@ -3,6 +3,7 @@
 import { requireAdmin } from "@/lib/admin"
 import { authOptions } from "@/lib/auth"
 import { clearDiscordRoleForUser, syncDiscordRoleConnection } from "@/lib/discord/integration"
+import { ServiceType } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 import { discordIntegrationSchema } from "@/lib/validations/discord"
@@ -12,7 +13,7 @@ import { revalidatePath } from "next/cache"
 const logger = createLogger("DISCORD_ACTIONS")
 
 export async function updateDiscordIntegrationSettings(data: Record<string, unknown>) {
-  const session = await requireAdmin()
+  await requireAdmin()
 
   try {
     const parsed = discordIntegrationSchema.parse(data)
@@ -26,30 +27,35 @@ export async function updateDiscordIntegrationSettings(data: Record<string, unkn
       }
     }
 
-    await prisma.discordIntegration.upsert({
+    await prisma.service.upsert({
       where: { id: "discord" },
       update: {
-        isEnabled,
-        botEnabled,
-        clientId: parsed.clientId,
-        clientSecret: parsed.clientSecret,
-        guildId: parsed.guildId,
-        serverInviteCode: parsed.serverInviteCode,
-        platformName: parsed.platformName,
-        instructions: parsed.instructions,
-        updatedBy: session.user.id,
+        config: {
+          isEnabled,
+          botEnabled,
+          clientId: parsed.clientId,
+          clientSecret: parsed.clientSecret,
+          guildId: parsed.guildId,
+          serverInviteCode: parsed.serverInviteCode,
+          platformName: parsed.platformName,
+          instructions: parsed.instructions,
+        },
       },
       create: {
         id: "discord",
-        isEnabled,
-        botEnabled,
-        clientId: parsed.clientId,
-        clientSecret: parsed.clientSecret,
-        guildId: parsed.guildId,
-        serverInviteCode: parsed.serverInviteCode,
-        platformName: parsed.platformName,
-        instructions: parsed.instructions,
-        updatedBy: session.user.id,
+        type: ServiceType.DISCORD,
+        name: "Discord",
+        isActive: true,
+        config: {
+          isEnabled,
+          botEnabled,
+          clientId: parsed.clientId,
+          clientSecret: parsed.clientSecret,
+          guildId: parsed.guildId,
+          serverInviteCode: parsed.serverInviteCode,
+          platformName: parsed.platformName,
+          instructions: parsed.instructions,
+        },
       },
     })
 

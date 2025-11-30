@@ -2,6 +2,7 @@
 
 import { requireAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/prisma"
+import { getActivePlexService, getActiveTautulliService, getActiveRadarrService, getActiveSonarrService } from "@/lib/services/service-helpers"
 import { createLogger } from "@/lib/utils/logger"
 import { MediaType, MarkType } from "@/lib/validations/maintenance"
 import { getRadarrMovieById } from "@/lib/connections/radarr"
@@ -275,22 +276,22 @@ export async function getMediaMarkDetails(ratingKey: string) {
     const uniqueUsers = new Set(marks.map((m) => m.userId))
     const deletionScore = calculateDeletionScore(markCounts, uniqueUsers.size)
 
-    // Fetch server configurations and build external links
-    const plexServer = await prisma.plexServer.findFirst({ where: { isActive: true } })
-    const tautulliServer = await prisma.tautulli.findFirst({ where: { isActive: true } })
-    const radarrServer = await prisma.radarr.findFirst({ where: { isActive: true } })
-    const sonarrServer = await prisma.sonarr.findFirst({ where: { isActive: true } })
+    // Fetch service configurations and build external links
+    const plexService = await getActivePlexService()
+    const tautulliService = await getActiveTautulliService()
+    const radarrService = await getActiveRadarrService()
+    const sonarrService = await getActiveSonarrService()
 
     // Get Plex machine identifier for web URL
     let plexUrl: string | null = null
-    if (plexServer) {
+    if (plexService) {
       const identityResult = await getPlexServerIdentity({
-        url: plexServer.url,
-        token: plexServer.token,
+        url: plexService.url ?? "",
+        token: plexService.config.token,
       })
 
       if (identityResult.success && identityResult.machineIdentifier) {
-        plexUrl = `${plexServer.publicUrl || plexServer.url}/web/index.html#!/server/${identityResult.machineIdentifier}/details?key=%2Flibrary%2Fmetadata%2F${ratingKey}`
+        plexUrl = `${plexService.publicUrl || plexService.url}/web/index.html#!/server/${identityResult.machineIdentifier}/details?key=%2Flibrary%2Fmetadata%2F${ratingKey}`
       } else {
         logger.warn("Failed to get Plex machine identifier", { error: identityResult.error })
       }
@@ -298,17 +299,17 @@ export async function getMediaMarkDetails(ratingKey: string) {
 
     const externalLinks = {
       plex: plexUrl,
-      tautulli: tautulliServer ? `${tautulliServer.url}/info?rating_key=${ratingKey}` : null,
-      radarr: firstMark.radarrTitleSlug && radarrServer ? `${radarrServer.url}/movie/${firstMark.radarrTitleSlug}` : null,
-      sonarr: firstMark.sonarrTitleSlug && sonarrServer ? `${sonarrServer.url}/series/${firstMark.sonarrTitleSlug}` : null,
+      tautulli: tautulliService ? `${tautulliService.url}/info?rating_key=${ratingKey}` : null,
+      radarr: firstMark.radarrTitleSlug && radarrService ? `${radarrService.url}/movie/${firstMark.radarrTitleSlug}` : null,
+      sonarr: firstMark.sonarrTitleSlug && sonarrService ? `${sonarrService.url}/series/${firstMark.sonarrTitleSlug}` : null,
     }
 
     // Fetch watch statistics from Tautulli if available
     let watchStats: MediaDetails["watchStats"] = null
     try {
-      if (tautulliServer) {
+      if (tautulliService) {
         // Use get_metadata for accurate play count and last watched
-        const metadataUrl = `${tautulliServer.url}/api/v2?apikey=${tautulliServer.apiKey}&cmd=get_metadata&rating_key=${ratingKey}`
+        const metadataUrl = `${tautulliService.url}/api/v2?apikey=${tautulliService.config.apiKey}&cmd=get_metadata&rating_key=${ratingKey}`
         const metadataResponse = await fetch(metadataUrl)
 
         if (metadataResponse.ok) {
@@ -331,46 +332,34 @@ export async function getMediaMarkDetails(ratingKey: string) {
     // Fetch file info from Radarr/Sonarr if available
     let fileInfo: MediaDetails["fileInfo"] = null
     try {
-      if (firstMark.mediaType === "MOVIE" && firstMark.radarrId) {
-        const radarrServer = await prisma.radarr.findFirst({
-          where: { isActive: true },
-        })
-
-        if (radarrServer) {
-          const movieResult = await getRadarrMovieById(
-            { name: radarrServer.name, url: radarrServer.url, apiKey: radarrServer.apiKey },
-            firstMark.radarrId
-          )
-          if (movieResult.success) {
-            const movie = movieResult.data as any
-            if (movie?.movieFile) {
-              fileInfo = {
-                size: BigInt(movie.movieFile.size || 0),
-                path: movie.movieFile.path || null,
-                quality: movie.movieFile.quality?.quality?.name || null,
-              }
+      if (firstMark.mediaType === "MOVIE" && firstMark.radarrId && radarrService) {
+        const movieResult = await getRadarrMovieById(
+          { name: radarrService.name, url: radarrService.url ?? "", apiKey: radarrService.config.apiKey },
+          firstMark.radarrId
+        )
+        if (movieResult.success) {
+          const movie = movieResult.data as { movieFile?: { size?: number; path?: string; quality?: { quality?: { name?: string } } } }
+          if (movie?.movieFile) {
+            fileInfo = {
+              size: BigInt(movie.movieFile.size || 0),
+              path: movie.movieFile.path || null,
+              quality: movie.movieFile.quality?.quality?.name || null,
             }
           }
         }
-      } else if (firstMark.mediaType === "TV_SERIES" && firstMark.sonarrId) {
-        const sonarrServer = await prisma.sonarr.findFirst({
-          where: { isActive: true },
-        })
-
-        if (sonarrServer) {
-          const seriesResult = await getSonarrSeriesById(
-            { name: sonarrServer.name, url: sonarrServer.url, apiKey: sonarrServer.apiKey },
-            firstMark.sonarrId
-          )
-          if (seriesResult.success) {
-            const series = seriesResult.data as any
-            if (series) {
-              const totalSize = series.statistics?.sizeOnDisk || 0
-              fileInfo = {
-                size: BigInt(totalSize),
-                path: series.path || null,
-                quality: null, // Series don't have a single quality
-              }
+      } else if (firstMark.mediaType === "TV_SERIES" && firstMark.sonarrId && sonarrService) {
+        const seriesResult = await getSonarrSeriesById(
+          { name: sonarrService.name, url: sonarrService.url ?? "", apiKey: sonarrService.config.apiKey },
+          firstMark.sonarrId
+        )
+        if (seriesResult.success) {
+          const series = seriesResult.data as { statistics?: { sizeOnDisk?: number }; path?: string }
+          if (series) {
+            const totalSize = series.statistics?.sizeOnDisk || 0
+            fileInfo = {
+              size: BigInt(totalSize),
+              path: series.path || null,
+              quality: null, // Series don't have a single quality
             }
           }
         }

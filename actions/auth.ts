@@ -1,7 +1,7 @@
 "use server"
 
 import { checkUserServerAccess, getPlexUserInfo, type PlexUserInfo } from "@/lib/connections/plex"
-import { prisma } from "@/lib/prisma"
+import { getActivePlexService } from "@/lib/services/service-helpers"
 import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("AUTH_ACTION")
@@ -41,20 +41,18 @@ function waitForDelay(ms: number): Promise<void> {
  * Get active Plex server configuration
  */
 async function getActivePlexServer(): Promise<{ success: boolean; data?: PlexServerConfig; error?: string }> {
-  const plexServer = await prisma.plexServer.findFirst({
-    where: { isActive: true },
-  })
+  const plexService = await getActivePlexService()
 
-  if (!plexServer) {
+  if (!plexService) {
     return { success: false, error: "No Plex server configured" }
   }
 
   return {
     success: true,
     data: {
-      url: plexServer.url,
-      token: plexServer.token,
-      adminPlexUserId: plexServer.adminPlexUserId,
+      url: plexService.url ?? "",
+      token: plexService.config.token,
+      adminPlexUserId: plexService.config.adminPlexUserId ?? null,
     },
   }
 }

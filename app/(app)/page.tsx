@@ -3,6 +3,7 @@ import { UserDashboard } from "@/components/dashboard/user-dashboard";
 import { AdminFooter } from "@/components/shared/admin-footer";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getActivePlexService, getDiscordService } from "@/lib/services/service-helpers";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 
@@ -10,15 +11,14 @@ export const dynamic = 'force-dynamic'
 
 export default async function Home() {
   const session = await getServerSession(authOptions);
-  const [plexServer, discordIntegration] = await Promise.all([
-    prisma.plexServer.findFirst({
-      where: { isActive: true },
-    }),
-    prisma.discordIntegration.findUnique({ where: { id: "discord" } }),
+  const [plexService, discordService] = await Promise.all([
+    getActivePlexService(),
+    getDiscordService(),
   ]);
-  const serverName = plexServer?.name || "Plex";
+  const serverName = plexService?.name || "Plex";
   const heroTitle = serverName;
-  const discordEnabled = Boolean(discordIntegration?.isEnabled && discordIntegration?.clientId && discordIntegration?.clientSecret);
+  const discordConfig = discordService?.config;
+  const discordEnabled = Boolean(discordConfig?.isEnabled && discordConfig?.clientId && discordConfig?.clientSecret);
 
   // Handle redirect logic for authenticated users
   if (session?.user?.id) {
@@ -54,7 +54,7 @@ export default async function Home() {
         isAdmin={session.user.isAdmin}
         discordEnabled={discordEnabled}
         discordConnection={discordConnectionSummary}
-        serverInviteCode={discordIntegration?.serverInviteCode ?? null}
+        serverInviteCode={discordConfig?.serverInviteCode ?? null}
       />
     );
   }

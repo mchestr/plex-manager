@@ -18,6 +18,7 @@ import {
 } from '@/actions/invite'
 import { requireAdmin } from '@/lib/admin'
 import { prisma } from '@/lib/prisma'
+import { getActivePlexService } from '@/lib/services/service-helpers'
 import {
   getPlexUserInfo,
   inviteUserToPlexServer,
@@ -25,7 +26,7 @@ import {
 } from '@/lib/connections/plex'
 import { logAuditEvent, AuditEventType } from '@/lib/security/audit-log'
 import { Prisma } from '@/lib/generated/prisma/client'
-import type { Invite, PlexServer } from '@/lib/generated/prisma/client'
+import type { Invite } from '@/lib/generated/prisma/client'
 import type { Session } from 'next-auth'
 
 // Mock dependencies
@@ -45,9 +46,6 @@ jest.mock('@/lib/prisma', () => ({
     inviteUsage: {
       create: jest.fn(),
     },
-    plexServer: {
-      findFirst: jest.fn(),
-    },
     user: {
       findUnique: jest.fn(),
       create: jest.fn(),
@@ -55,6 +53,10 @@ jest.mock('@/lib/prisma', () => ({
     },
     $transaction: jest.fn(),
   },
+}))
+
+jest.mock('@/lib/services/service-helpers', () => ({
+  getActivePlexService: jest.fn(),
 }))
 
 jest.mock('@/lib/connections/plex', () => ({
@@ -76,6 +78,7 @@ jest.mock('@/lib/security/audit-log', () => ({
 
 const mockRequireAdmin = requireAdmin as jest.MockedFunction<typeof requireAdmin>
 const mockPrisma = prisma as jest.Mocked<typeof prisma>
+const mockGetActivePlexService = getActivePlexService as jest.MockedFunction<typeof getActivePlexService>
 const mockGetPlexUserInfo = getPlexUserInfo as jest.MockedFunction<typeof getPlexUserInfo>
 const mockInviteUserToPlexServer = inviteUserToPlexServer as jest.MockedFunction<
   typeof inviteUserToPlexServer
@@ -101,15 +104,15 @@ describe('invite actions', () => {
     allowDownloads: false,
   }
 
-  const mockPlexServer: PlexServer = {
+  const mockPlexService = {
     id: 'server-123',
     name: 'Test Server',
     url: 'http://localhost:32400',
-    token: 'test-token',
-    machineIdentifier: 'machine-123',
     isActive: true,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    config: {
+      token: 'test-token',
+      machineIdentifier: 'machine-123',
+    },
   }
 
   const mockPlexUser = {
@@ -177,7 +180,7 @@ describe('invite actions', () => {
         success: true,
         data: mockPlexUser,
       })
-      mockPrisma.plexServer.findFirst.mockResolvedValue(mockPlexServer)
+      mockGetActivePlexService.mockResolvedValue(mockPlexService as any)
       mockInviteUserToPlexServer.mockResolvedValue({
         success: true,
         inviteID: 12345,
@@ -270,7 +273,7 @@ describe('invite actions', () => {
     })
 
     it('should fail if no active Plex server configured', async () => {
-      mockPrisma.plexServer.findFirst.mockResolvedValue(null)
+      mockGetActivePlexService.mockResolvedValue(null)
 
       const result = await processInvite('TESTCODE', 'plex-auth-token')
 
@@ -284,7 +287,7 @@ describe('invite actions', () => {
   describe('processInvite - rollback and audit logging', () => {
     beforeEach(() => {
       mockGetPlexUserInfo.mockResolvedValue({ success: true, data: mockPlexUser })
-      mockPrisma.plexServer.findFirst.mockResolvedValue(mockPlexServer)
+      mockGetActivePlexService.mockResolvedValue(mockPlexService as any)
       mockAcceptPlexInvite.mockResolvedValue({ success: true })
 
       // Mock successful transactions by default
@@ -379,7 +382,7 @@ describe('invite actions', () => {
   describe('Transaction Conflict Handling (P2034)', () => {
     beforeEach(() => {
       mockGetPlexUserInfo.mockResolvedValue({ success: true, data: mockPlexUser })
-      mockPrisma.plexServer.findFirst.mockResolvedValue(mockPlexServer)
+      mockGetActivePlexService.mockResolvedValue(mockPlexService as any)
       mockInviteUserToPlexServer.mockResolvedValue({ success: true, inviteID: 12345 })
       mockAcceptPlexInvite.mockResolvedValue({ success: true })
     })

@@ -3,6 +3,7 @@
 import { requireAdmin } from "@/lib/admin"
 import { checkUserServerAccess, getPlexServerIdentity, getPlexUsers, unshareUserFromPlexServer } from "@/lib/connections/plex"
 import { prisma } from "@/lib/prisma"
+import { getActivePlexService } from "@/lib/services/service-helpers"
 import { aggregateLlmUsage } from "@/lib/utils"
 import { createLogger } from "@/lib/utils/logger"
 import {
@@ -58,10 +59,8 @@ export async function getUserPlexWrapped(
  */
 export async function getUserDetails(userId: string): Promise<UserDetails | null> {
   try {
-    // Get active Plex server for access checking
-    const plexServer = await prisma.plexServer.findFirst({
-      where: { isActive: true },
-    })
+    // Get active Plex service for access checking
+    const plexService = await getActivePlexService()
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -87,12 +86,12 @@ export async function getUserDetails(userId: string): Promise<UserDetails | null
 
     // Check Plex access
     let hasPlexAccess: boolean | null = null
-    if (user.plexUserId && plexServer) {
+    if (user.plexUserId && plexService) {
       const accessResult = await checkUserServerAccess(
         {
-          url: plexServer.url,
-          token: plexServer.token,
-          adminPlexUserId: plexServer.adminPlexUserId,
+          url: plexService.url ?? "",
+          token: plexService.config.token,
+          adminPlexUserId: plexService.config.adminPlexUserId ?? null,
         },
         user.plexUserId
       )
@@ -243,20 +242,18 @@ export async function unshareUserLibrary(userId: string): Promise<{ success: boo
       return { success: false, error: "User Plex ID is required to unshare library access" }
     }
 
-    // Get active Plex server
-    const plexServer = await prisma.plexServer.findFirst({
-      where: { isActive: true },
-    })
+    // Get active Plex service
+    const plexService = await getActivePlexService()
 
-    if (!plexServer) {
+    if (!plexService) {
       return { success: false, error: "No active Plex server configured" }
     }
 
     // Unshare the user
     const result = await unshareUserFromPlexServer(
       {
-        url: plexServer.url,
-        token: plexServer.token,
+        url: plexService.url ?? "",
+        token: plexService.config.token,
       },
       user.plexUserId
     )
@@ -316,11 +313,9 @@ export async function fetchUsersWithWrappedData(year: number) {
 export async function buildPlexAccessMap(users: { id: string; plexUserId: string | null }[]): Promise<Map<string, boolean | null>> {
   const accessMap = new Map<string, boolean | null>()
 
-  const plexServer = await prisma.plexServer.findFirst({
-    where: { isActive: true },
-  })
+  const plexService = await getActivePlexService()
 
-  if (!plexServer) {
+  if (!plexService) {
     users.forEach(user => accessMap.set(user.id, null))
     return accessMap
   }
@@ -328,13 +323,13 @@ export async function buildPlexAccessMap(users: { id: string; plexUserId: string
   try {
     // Get the server's machine identifier once
     const identityResult = await getPlexServerIdentity({
-      url: plexServer.url,
-      token: plexServer.token,
+      url: plexService.url ?? "",
+      token: plexService.config.token,
     })
 
     if (identityResult.success && identityResult.machineIdentifier) {
       // Fetch all users from Plex.tv API once
-      const usersResult = await getPlexUsers(plexServer.token)
+      const usersResult = await getPlexUsers(plexService.config.token)
 
       if (usersResult.success && usersResult.data) {
         // Create a map of users by ID for efficient lookup
@@ -344,7 +339,7 @@ export async function buildPlexAccessMap(users: { id: string; plexUserId: string
         }
 
         const machineIdentifier = identityResult.machineIdentifier
-        const adminPlexUserId = plexServer.adminPlexUserId
+        const adminPlexUserId = plexService.config.adminPlexUserId
 
         // Ensure admin user has their server in their servers list
         if (adminPlexUserId && machineIdentifier) {

@@ -1,9 +1,9 @@
 import { getRadarrMovies } from "@/lib/connections/radarr"
 import { getSonarrSeries } from "@/lib/connections/sonarr"
-import { prisma } from "@/lib/prisma"
+import { getActiveRadarrService, getActiveSonarrService } from "@/lib/services/service-helpers"
 import { createLogger } from "@/lib/utils/logger"
-import { type RadarrParsed } from "@/lib/validations/radarr"
-import { type SonarrParsed } from "@/lib/validations/sonarr"
+import { type RadarrParsed } from "@/lib/validations/service"
+import { type SonarrParsed } from "@/lib/validations/service"
 
 const logger = createLogger("MEDIA_MATCHING")
 
@@ -15,20 +15,18 @@ export async function findRadarrIdByTitle(
   year?: number | null
 ): Promise<{ id: number; titleSlug: string } | null> {
   try {
-    // Get active Radarr server
-    const radarrServer = await prisma.radarr.findFirst({
-      where: { isActive: true },
-    })
+    // Get active Radarr service
+    const radarrService = await getActiveRadarrService()
 
-    if (!radarrServer) {
+    if (!radarrService) {
       logger.debug("No active Radarr server configured")
       return null
     }
 
     const config: RadarrParsed = {
-      name: radarrServer.name,
-      url: radarrServer.url,
-      apiKey: radarrServer.apiKey,
+      name: radarrService.name,
+      url: radarrService.url ?? "",
+      apiKey: radarrService.config.apiKey,
     }
 
     // Get all movies from Radarr
@@ -126,20 +124,18 @@ export async function findSonarrIdByTitle(
   year?: number | null
 ): Promise<{ id: number; titleSlug: string } | null> {
   try {
-    // Get active Sonarr server
-    const sonarrServer = await prisma.sonarr.findFirst({
-      where: { isActive: true },
-    })
+    // Get active Sonarr service
+    const sonarrService = await getActiveSonarrService()
 
-    if (!sonarrServer) {
+    if (!sonarrService) {
       logger.debug("No active Sonarr server configured")
       return null
     }
 
     const config: SonarrParsed = {
-      name: sonarrServer.name,
-      url: sonarrServer.url,
-      apiKey: sonarrServer.apiKey,
+      name: sonarrService.name,
+      url: sonarrService.url ?? "",
+      apiKey: sonarrService.config.apiKey,
     }
 
     // Get all series from Sonarr

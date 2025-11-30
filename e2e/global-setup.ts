@@ -1,3 +1,4 @@
+import { ServiceType } from '../lib/generated/prisma/client';
 import { createE2EPrismaClient } from './helpers/prisma';
 
 /**
@@ -34,20 +35,25 @@ async function globalSetup() {
       console.log('[E2E Setup] Created setup record');
     }
 
-    // Check if Plex server exists
-    const plexServer = await prisma.plexServer.findFirst({ where: { isActive: true } });
+    // Check if Plex service exists
+    const plexService = await prisma.service.findFirst({
+      where: { type: ServiceType.PLEX, isActive: true },
+    });
 
-    if (!plexServer) {
-      await prisma.plexServer.create({
+    if (!plexService) {
+      await prisma.service.create({
         data: {
+          type: ServiceType.PLEX,
           name: 'Test Server',
           url: 'http://localhost:32400',
-          token: 'test-token',
-          adminPlexUserId: 'admin-plex-id',
           isActive: true,
+          config: {
+            token: 'test-token',
+            adminPlexUserId: 'admin-plex-id',
+          },
         },
       });
-      console.log('[E2E Setup] Created Plex server');
+      console.log('[E2E Setup] Created Plex service');
     }
 
     // Check if admin user exists

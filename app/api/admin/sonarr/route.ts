@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma"
+import { ServiceType } from "@/lib/generated/prisma/client"
 import { requireAdminAPI } from "@/lib/security/api-helpers"
 import { createSafeError, ErrorCode, getStatusCode, logError } from "@/lib/security/error-handler"
 import { adminRateLimiter } from "@/lib/security/rate-limit"
@@ -29,8 +30,9 @@ export async function GET(request: NextRequest) {
       return authResult.response
     }
 
-    // Get all Sonarr servers
-    const servers = await prisma.sonarr.findMany({
+    // Get all Sonarr services from unified Service table
+    const services = await prisma.service.findMany({
+      where: { type: ServiceType.SONARR },
       select: {
         id: true,
         name: true,
@@ -38,7 +40,7 @@ export async function GET(request: NextRequest) {
       orderBy: { name: 'asc' },
     })
 
-    return NextResponse.json({ servers })
+    return NextResponse.json({ servers: services })
   } catch (error) {
     logError("ADMIN_SONARR_API", error)
     return NextResponse.json(

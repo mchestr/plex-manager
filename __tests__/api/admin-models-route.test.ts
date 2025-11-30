@@ -3,18 +3,14 @@
  */
 
 import { GET } from '@/app/api/admin/models/route'
-import { prisma } from '@/lib/prisma'
+import { getActiveLLMProvider } from '@/lib/services/service-helpers'
 import { requireAdminAPI } from '@/lib/security/api-helpers'
 import { adminRateLimiter } from '@/lib/security/rate-limit'
 import { NextRequest } from 'next/server'
 
 // Mock dependencies
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    lLMProvider: {
-      findFirst: jest.fn(),
-    },
-  },
+jest.mock('@/lib/services/service-helpers', () => ({
+  getActiveLLMProvider: jest.fn(),
 }))
 
 jest.mock('@/lib/security/api-helpers', () => ({
@@ -69,11 +65,16 @@ describe('GET /api/admin/models', () => {
   })
 
   it('should return models and configured model for admin user', async () => {
-    const mockLlmProvider = {
-      model: 'gpt-4',
+    const mockLlmService = {
+      id: 'llm-1',
+      name: 'Chat LLM',
+      config: {
+        model: 'gpt-4',
+        provider: 'openai',
+      },
     }
 
-    ;(prisma.lLMProvider.findFirst as jest.Mock).mockResolvedValue(mockLlmProvider)
+    ;(getActiveLLMProvider as jest.Mock).mockResolvedValue(mockLlmService)
 
     const { NextRequest } = await import('next/server')
     const request = new NextRequest('http://localhost/api/admin/models')
@@ -84,14 +85,11 @@ describe('GET /api/admin/models', () => {
     expect(response.status).toBe(200)
     expect(data.models).toEqual(['claude-3-opus', 'gpt-3.5-turbo', 'gpt-4'])
     expect(data.configuredModel).toBe('gpt-4')
-    expect(prisma.lLMProvider.findFirst).toHaveBeenCalledWith({
-      where: { isActive: true },
-      select: { model: true },
-    })
+    expect(getActiveLLMProvider).toHaveBeenCalledWith('chat')
   })
 
   it('should return null configured model when no active provider', async () => {
-    ;(prisma.lLMProvider.findFirst as jest.Mock).mockResolvedValue(null)
+    ;(getActiveLLMProvider as jest.Mock).mockResolvedValue(null)
 
     const { NextRequest } = await import('next/server')
     const request = new NextRequest('http://localhost/api/admin/models')
@@ -114,7 +112,7 @@ describe('GET /api/admin/models', () => {
     const response = await GET(request)
 
     expect(response).toBe(mockResponse)
-    expect(prisma.lLMProvider.findFirst).not.toHaveBeenCalled()
+    expect(getActiveLLMProvider).not.toHaveBeenCalled()
   })
 
   it('should return 403 when user is not admin', async () => {
@@ -127,7 +125,7 @@ describe('GET /api/admin/models', () => {
     const response = await GET(request)
 
     expect(response).toBe(mockResponse)
-    expect(prisma.lLMProvider.findFirst).not.toHaveBeenCalled()
+    expect(getActiveLLMProvider).not.toHaveBeenCalled()
   })
 
   it('should return 429 when rate limit is exceeded', async () => {
@@ -141,11 +139,11 @@ describe('GET /api/admin/models', () => {
 
     expect(response).toBe(mockRateLimitResponse)
     expect(requireAdminAPI).not.toHaveBeenCalled()
-    expect(prisma.lLMProvider.findFirst).not.toHaveBeenCalled()
+    expect(getActiveLLMProvider).not.toHaveBeenCalled()
   })
 
   it('should handle database errors gracefully', async () => {
-    ;(prisma.lLMProvider.findFirst as jest.Mock).mockRejectedValue(new Error('Database error'))
+    ;(getActiveLLMProvider as jest.Mock).mockRejectedValue(new Error('Database error'))
 
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation()
 

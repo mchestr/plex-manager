@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma"
 import { requireAdminAPI } from "@/lib/security/api-helpers"
 import { adminRateLimiter } from "@/lib/security/rate-limit"
 import { createSafeError, ErrorCode, getStatusCode, logError } from "@/lib/security/error-handler"
+import { getActivePlexService, getActiveTautulliService, getActiveOverseerrService } from "@/lib/services/service-helpers"
 import { NextRequest, NextResponse } from "next/server"
 import {
   fetchOverseerrStatistics,
@@ -70,12 +71,10 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get Tautulli configuration
-    const tautulli = await prisma.tautulli.findFirst({
-      where: { isActive: true },
-    })
+    // Get Tautulli service configuration
+    const tautulliService = await getActiveTautulliService()
 
-    if (!tautulli) {
+    if (!tautulliService) {
       return NextResponse.json(
         createSafeError(ErrorCode.NOT_FOUND, "No active Tautulli server configured"),
         { status: getStatusCode(ErrorCode.NOT_FOUND) }
@@ -85,8 +84,8 @@ export async function GET(request: NextRequest) {
     // Fetch statistics from Tautulli
     const tautulliStats = await fetchTautulliStatistics(
       {
-        url: tautulli.url,
-        apiKey: tautulli.apiKey,
+        url: tautulliService.url ?? "",
+        apiKey: tautulliService.config.apiKey,
       },
       user.plexUserId,
       user.email,
@@ -103,26 +102,24 @@ export async function GET(request: NextRequest) {
     const tautulliStatsData = tautulliStats.data
 
     // Fetch server statistics
-    const plexServer = await prisma.plexServer.findFirst({
-      where: { isActive: true },
-    })
+    const plexService = await getActivePlexService()
 
     let serverStats
-    if (plexServer && tautulli) {
+    if (plexService && tautulliService) {
       const serverStatsResult = await fetchPlexServerStatistics(
         {
-          url: plexServer.url,
-          token: plexServer.token,
+          url: plexService.url ?? "",
+          token: plexService.config.token,
         },
         {
-          url: tautulli.url,
-          apiKey: tautulli.apiKey,
+          url: tautulliService.url ?? "",
+          apiKey: tautulliService.config.apiKey,
         }
       )
 
       if (serverStatsResult.success && serverStatsResult.data) {
         serverStats = {
-          serverName: plexServer.name,
+          serverName: plexService.name,
           totalStorage: serverStatsResult.data.totalStorage,
           totalStorageFormatted: serverStatsResult.data.totalStorageFormatted,
           librarySize: serverStatsResult.data.librarySize,
@@ -132,15 +129,13 @@ export async function GET(request: NextRequest) {
 
     // Fetch Overseerr statistics (optional)
     let overseerrStats
-    const overseerr = await prisma.overseerr.findFirst({
-      where: { isActive: true },
-    })
+    const overseerrService = await getActiveOverseerrService()
 
-    if (overseerr) {
+    if (overseerrService) {
       const overseerrData = await fetchOverseerrStatistics(
         {
-          url: overseerr.url,
-          apiKey: overseerr.apiKey,
+          url: overseerrService.url ?? "",
+          apiKey: overseerrService.config.apiKey,
         },
         user.email,
         year
@@ -152,12 +147,12 @@ export async function GET(request: NextRequest) {
 
     // Fetch leaderboard data
     let leaderboards
-    if (tautulli && tautulliStatsData.tautulliUserId) {
+    if (tautulliService && tautulliStatsData.tautulliUserId) {
       const [topContentLeaderboards, watchTimeLeaderboard] = await Promise.all([
         fetchTopContentLeaderboards(
           {
-            url: tautulli.url,
-            apiKey: tautulli.apiKey,
+            url: tautulliService.url ?? "",
+            apiKey: tautulliService.config.apiKey,
           },
           tautulliStatsData.topMovies,
           tautulliStatsData.topShows,
@@ -166,8 +161,8 @@ export async function GET(request: NextRequest) {
         ),
         fetchWatchTimeLeaderboard(
           {
-            url: tautulli.url,
-            apiKey: tautulli.apiKey,
+            url: tautulliService.url ?? "",
+            apiKey: tautulliService.config.apiKey,
           },
           year
         ),

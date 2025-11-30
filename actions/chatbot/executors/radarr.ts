@@ -1,5 +1,5 @@
 import { getRadarrCalendar, getRadarrDiskSpace, getRadarrHealth, getRadarrHistory, getRadarrMovieById, getRadarrMovies, getRadarrQualityProfiles, getRadarrQueue, getRadarrRootFolders, getRadarrSystemStatus, getRadarrWantedMissing, searchRadarrMovies } from "@/lib/connections/radarr"
-import { prisma } from "@/lib/prisma"
+import { getActiveRadarrService } from "@/lib/services/service-helpers"
 
 export async function executeRadarrTool(
   toolName: string,
@@ -7,14 +7,14 @@ export async function executeRadarrTool(
   _userId?: string,
   _context?: string
 ): Promise<string> {
-  const server = await prisma.radarr.findFirst({ where: { isActive: true } })
-  if (!server) return "Error: No active Radarr server configured."
+  const radarrService = await getActiveRadarrService()
+  if (!radarrService) return "Error: No active Radarr server configured."
 
   const config = {
-    name: server.name,
-    url: server.url,
-    apiKey: server.apiKey,
-    publicUrl: server.publicUrl || undefined,
+    name: radarrService.name,
+    url: radarrService.url ?? "",
+    apiKey: radarrService.config.apiKey,
+    publicUrl: radarrService.publicUrl || undefined,
   }
 
   switch (toolName) {

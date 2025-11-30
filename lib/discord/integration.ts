@@ -1,6 +1,7 @@
 import { checkUserServerAccess } from "@/lib/connections/plex"
 import { exchangeDiscordCode, fetchDiscordUserProfile, refreshDiscordToken, updateDiscordRoleConnection } from "@/lib/discord/api"
 import { prisma } from "@/lib/prisma"
+import { getActivePlexService, getActiveTautulliService, getDiscordService } from "@/lib/services/service-helpers"
 import { getBaseUrl } from "@/lib/utils"
 import { createLogger } from "@/lib/utils/logger"
 import { fetchTautulliStatistics } from "@/lib/wrapped/statistics"
@@ -15,23 +16,35 @@ export function getDiscordRedirectUri(): string {
 }
 
 export async function getDiscordIntegration(includeDisabled = false) {
-  const integration = await prisma.discordIntegration.findUnique({
-    where: { id: "discord" },
-  })
+  const discordService = await getDiscordService()
 
-  if (!integration) {
+  if (!discordService) {
     return null
   }
 
-  if (!includeDisabled && !integration.isEnabled) {
+  const config = discordService.config
+  if (!includeDisabled && !config.isEnabled) {
     return null
   }
 
-  if (!integration.clientId || !integration.clientSecret) {
+  if (!config.clientId || !config.clientSecret) {
     return null
   }
 
-  return integration
+  // Return a structure matching the legacy format for backwards compatibility
+  return {
+    id: discordService.id,
+    isEnabled: config.isEnabled ?? false,
+    botEnabled: config.botEnabled ?? false,
+    clientId: config.clientId,
+    clientSecret: config.clientSecret,
+    guildId: config.guildId ?? null,
+    serverInviteCode: config.serverInviteCode ?? null,
+    platformName: config.platformName ?? "Plex Wrapped",
+    instructions: config.instructions ?? null,
+    createdAt: discordService.createdAt,
+    updatedAt: discordService.updatedAt,
+  }
 }
 
 function toBase64Url(buffer: Buffer): string {
@@ -298,16 +311,14 @@ export async function syncDiscordRoleConnection(userId: string) {
   // 1) Determine "is_subscribed" from Plex server access (same logic as admin user list)
   let resolvedSubscribed: boolean | null = null
   try {
-    const plexServer = await prisma.plexServer.findFirst({
-      where: { isActive: true },
-    })
+    const plexService = await getActivePlexService()
 
-    if (plexServer && user.plexUserId) {
+    if (plexService && user.plexUserId) {
       const accessResult = await checkUserServerAccess(
         {
-          url: plexServer.url,
-          token: plexServer.token,
-          adminPlexUserId: plexServer.adminPlexUserId,
+          url: plexService.url ?? "",
+          token: plexService.config.token,
+          adminPlexUserId: plexService.config.adminPlexUserId ?? null,
         },
         user.plexUserId
       )
@@ -328,16 +339,14 @@ export async function syncDiscordRoleConnection(userId: string) {
 
   // 2) Determine watched_hours from real Tautulli statistics (if configured)
   try {
-    const tautulli = await prisma.tautulli.findFirst({
-      where: { isActive: true },
-    })
+    const tautulliService = await getActiveTautulliService()
 
-    if (tautulli && user.plexUserId) {
+    if (tautulliService && user.plexUserId) {
       const year = new Date().getFullYear()
       const stats = await fetchTautulliStatistics(
         {
-          url: tautulli.url,
-          apiKey: tautulli.apiKey,
+          url: tautulliService.url ?? "",
+          apiKey: tautulliService.config.apiKey,
         },
         user.plexUserId,
         user.email,
@@ -447,12 +456,27 @@ export async function getDiscordLinkStatus(userId: string) {
 }
 
 export async function getDiscordStats() {
-  const [integration, linkedCount] = await Promise.all([
-    prisma.discordIntegration.findUnique({ where: { id: "discord" } }),
+  const [discordService, linkedCount] = await Promise.all([
+    getDiscordService(),
     prisma.discordConnection.count({
       where: { revokedAt: null },
     }),
   ])
+
+  // Return legacy format for backwards compatibility
+  const integration = discordService ? {
+    id: discordService.id,
+    isEnabled: discordService.config.isEnabled ?? false,
+    botEnabled: discordService.config.botEnabled ?? false,
+    clientId: discordService.config.clientId ?? null,
+    clientSecret: discordService.config.clientSecret ?? null,
+    guildId: discordService.config.guildId ?? null,
+    serverInviteCode: discordService.config.serverInviteCode ?? null,
+    platformName: discordService.config.platformName ?? "Plex Wrapped",
+    instructions: discordService.config.instructions ?? null,
+    createdAt: discordService.createdAt,
+    updatedAt: discordService.updatedAt,
+  } : null
 
   return {
     integration,

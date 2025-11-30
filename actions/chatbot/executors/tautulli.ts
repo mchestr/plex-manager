@@ -1,5 +1,6 @@
 import { getTautulliActivity, getTautulliHistory, getTautulliLibraryNames, getTautulliMostWatched, getTautulliRecentlyWatched, getTautulliServerInfo, getTautulliTopUsers, getTautulliUserWatchTimeStats, getTautulliUsers } from "@/lib/connections/tautulli"
 import { prisma } from "@/lib/prisma"
+import { getActiveTautulliService } from "@/lib/services/service-helpers"
 
 export async function executeTautulliTool(
   toolName: string,
@@ -7,14 +8,14 @@ export async function executeTautulliTool(
   userId?: string,
   context?: string
 ): Promise<string> {
-  const server = await prisma.tautulli.findFirst({ where: { isActive: true } })
-  if (!server) return "Error: No active Tautulli server configured."
+  const tautulliService = await getActiveTautulliService()
+  if (!tautulliService) return "Error: No active Tautulli server configured."
 
   const config = {
-    name: server.name,
-    url: server.url,
-    apiKey: server.apiKey,
-    publicUrl: server.publicUrl || undefined,
+    name: tautulliService.name,
+    url: tautulliService.url ?? "",
+    apiKey: tautulliService.config.apiKey,
+    publicUrl: tautulliService.publicUrl || undefined,
   }
 
   switch (toolName) {

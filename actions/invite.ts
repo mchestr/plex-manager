@@ -7,6 +7,7 @@ import {
   inviteUserToPlexServer
 } from "@/lib/connections/plex"
 import { prisma } from "@/lib/prisma"
+import { getActivePlexService } from "@/lib/services/service-helpers"
 import { createLogger } from "@/lib/utils/logger"
 import { Prisma } from "@/lib/generated/prisma/client"
 import { logAuditEvent, AuditEventType } from "@/lib/security/audit-log"
@@ -517,15 +518,20 @@ export async function validateInvite(code: string) {
  * Get active Plex server configuration
  */
 async function getActivePlexServer() {
-  const plexServer = await prisma.plexServer.findFirst({
-    where: { isActive: true },
-  })
+  const plexService = await getActivePlexService()
 
-  if (!plexServer) {
+  if (!plexService) {
     return { success: false as const, error: "No active Plex server configured" }
   }
 
-  return { success: true as const, data: plexServer }
+  // Return compatible structure for processInvite
+  return {
+    success: true as const,
+    data: {
+      url: plexService.url ?? "",
+      token: plexService.config.token,
+    },
+  }
 }
 
 /**

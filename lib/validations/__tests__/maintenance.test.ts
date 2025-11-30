@@ -26,6 +26,7 @@ describe('Maintenance Validation Schemas', () => {
       const result = MediaTypeEnum.safeParse('INVALID')
       expect(result.success).toBe(false)
       if (!result.success) {
+        // Zod uses "Invalid" in enum validation error messages
         expect(result.error.issues[0].message).toContain("Invalid")
       }
     })

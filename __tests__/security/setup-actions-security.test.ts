@@ -45,6 +45,13 @@ jest.mock('@/lib/prisma', () => ({
       create: jest.fn(),
       update: jest.fn(),
     },
+    service: {
+      updateMany: jest.fn(),
+      create: jest.fn(),
+      upsert: jest.fn(),
+      findMany: jest.fn().mockResolvedValue([]),
+    },
+    // Legacy tables - kept for backwards compatibility
     plexServer: {
       create: jest.fn(),
     },
@@ -66,6 +73,12 @@ jest.mock('@/lib/prisma', () => ({
         findFirst: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
+      },
+      service: {
+        updateMany: jest.fn(),
+        create: jest.fn(),
+        upsert: jest.fn(),
+        findMany: jest.fn().mockResolvedValue([]),
       },
       plexServer: {
         create: jest.fn(),
@@ -148,7 +161,8 @@ describe('Setup Actions Security', () => {
           findFirst: jest.fn().mockResolvedValue({ id: 'setup-1' }),
           update: jest.fn(),
         },
-        plexServer: {
+        service: {
+          updateMany: jest.fn(),
           create: jest.fn().mockResolvedValue({ id: 'plex-1' }),
         },
       }
@@ -180,7 +194,8 @@ describe('Setup Actions Security', () => {
           findFirst: jest.fn().mockResolvedValue(null),
           create: jest.fn(),
         },
-        plexServer: {
+        service: {
+          updateMany: jest.fn(),
           create: jest.fn().mockResolvedValue({ id: 'plex-1' }),
         },
       }
@@ -252,7 +267,8 @@ describe('Setup Actions Security', () => {
           findFirst: jest.fn().mockResolvedValue(null),
           create: jest.fn(),
         },
-        tautulli: {
+        service: {
+          updateMany: jest.fn(),
           create: jest.fn().mockResolvedValue({ id: 'tautulli-1' }),
         },
       }
@@ -279,7 +295,8 @@ describe('Setup Actions Security', () => {
           findFirst: jest.fn().mockResolvedValue(null),
           create: jest.fn(),
         },
-        tautulli: {
+        service: {
+          updateMany: jest.fn(),
           create: jest.fn().mockResolvedValue({ id: 'tautulli-1' }),
         },
       }
@@ -332,7 +349,8 @@ describe('Setup Actions Security', () => {
           findFirst: jest.fn().mockResolvedValue(null),
           create: jest.fn(),
         },
-        overseerr: {
+        service: {
+          updateMany: jest.fn(),
           create: jest.fn().mockResolvedValue({ id: 'overseerr-1' }),
         },
       }
@@ -359,7 +377,8 @@ describe('Setup Actions Security', () => {
           findFirst: jest.fn().mockResolvedValue(null),
           create: jest.fn(),
         },
-        overseerr: {
+        service: {
+          updateMany: jest.fn(),
           create: jest.fn().mockResolvedValue({ id: 'overseerr-1' }),
         },
       }
@@ -412,8 +431,9 @@ describe('Setup Actions Security', () => {
           findFirst: jest.fn().mockResolvedValue(null),
           create: jest.fn(),
         },
-        lLMProvider: {
-          updateMany: jest.fn(),
+        service: {
+          findMany: jest.fn().mockResolvedValue([]),
+          update: jest.fn(),
           create: jest.fn().mockResolvedValue({ id: 'llm-1' }),
         },
       }
@@ -440,8 +460,9 @@ describe('Setup Actions Security', () => {
           findFirst: jest.fn().mockResolvedValue(null),
           create: jest.fn(),
         },
-        lLMProvider: {
-          updateMany: jest.fn(),
+        service: {
+          findMany: jest.fn().mockResolvedValue([]),
+          update: jest.fn(),
           create: jest.fn().mockResolvedValue({ id: 'llm-1' }),
         },
       }

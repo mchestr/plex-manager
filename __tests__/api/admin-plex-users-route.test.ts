@@ -3,19 +3,15 @@
  */
 
 import { GET } from '@/app/api/admin/plex/users/route'
-import { prisma } from '@/lib/prisma'
+import { getActivePlexService } from '@/lib/services/service-helpers'
 import { getAllPlexServerUsers } from '@/lib/connections/plex'
 import { requireAdminAPI } from '@/lib/security/api-helpers'
 import { adminRateLimiter } from '@/lib/security/rate-limit'
 import { NextRequest } from 'next/server'
 
 // Mock dependencies
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    plexServer: {
-      findFirst: jest.fn(),
-    },
-  },
+jest.mock('@/lib/services/service-helpers', () => ({
+  getActivePlexService: jest.fn(),
 }))
 
 jest.mock('@/lib/connections/plex', () => ({
@@ -59,10 +55,14 @@ jest.mock('next/server', () => {
 })
 
 describe('GET /api/admin/plex/users', () => {
-  const mockPlexServer = {
+  const mockPlexService = {
+    id: 'plex-1',
+    name: 'Test Plex Server',
     url: 'http://localhost:32400',
-    token: 'test-token',
     isActive: true,
+    config: {
+      token: 'test-token',
+    },
   }
 
   const mockPlexUsers = [
@@ -87,7 +87,7 @@ describe('GET /api/admin/plex/users', () => {
   })
 
   it('should return Plex users for admin user', async () => {
-    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(mockPlexServer)
+    ;(getActivePlexService as jest.Mock).mockResolvedValue(mockPlexService)
     ;(getAllPlexServerUsers as jest.Mock).mockResolvedValue({
       success: true,
       data: mockPlexUsers,
@@ -108,7 +108,7 @@ describe('GET /api/admin/plex/users', () => {
   })
 
   it('should return empty array when no users found', async () => {
-    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(mockPlexServer)
+    ;(getActivePlexService as jest.Mock).mockResolvedValue(mockPlexService)
     ;(getAllPlexServerUsers as jest.Mock).mockResolvedValue({
       success: true,
       data: [],
@@ -125,7 +125,7 @@ describe('GET /api/admin/plex/users', () => {
   })
 
   it('should return 404 when no active Plex server is configured', async () => {
-    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(null)
+    ;(getActivePlexService as jest.Mock).mockResolvedValue(null)
 
     const { NextRequest } = await import('next/server')
     const request = new NextRequest('http://localhost/api/admin/plex/users')
@@ -140,7 +140,7 @@ describe('GET /api/admin/plex/users', () => {
   })
 
   it('should return 500 when Plex API call fails', async () => {
-    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(mockPlexServer)
+    ;(getActivePlexService as jest.Mock).mockResolvedValue(mockPlexService)
     ;(getAllPlexServerUsers as jest.Mock).mockResolvedValue({
       success: false,
       error: 'Failed to connect to Plex server',
@@ -167,7 +167,7 @@ describe('GET /api/admin/plex/users', () => {
     const response = await GET(request)
 
     expect(response).toBe(mockResponse)
-    expect(prisma.plexServer.findFirst).not.toHaveBeenCalled()
+    expect(getActivePlexService).not.toHaveBeenCalled()
   })
 
   it('should return 403 when user is not admin', async () => {
@@ -180,7 +180,7 @@ describe('GET /api/admin/plex/users', () => {
     const response = await GET(request)
 
     expect(response).toBe(mockResponse)
-    expect(prisma.plexServer.findFirst).not.toHaveBeenCalled()
+    expect(getActivePlexService).not.toHaveBeenCalled()
   })
 
   it('should return 429 when rate limit is exceeded', async () => {
@@ -197,7 +197,7 @@ describe('GET /api/admin/plex/users', () => {
   })
 
   it('should handle database errors gracefully', async () => {
-    ;(prisma.plexServer.findFirst as jest.Mock).mockRejectedValue(new Error('Database error'))
+    ;(getActivePlexService as jest.Mock).mockRejectedValue(new Error('Database error'))
 
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation()
 
@@ -214,7 +214,7 @@ describe('GET /api/admin/plex/users', () => {
   })
 
   it('should handle null data from Plex API', async () => {
-    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(mockPlexServer)
+    ;(getActivePlexService as jest.Mock).mockResolvedValue(mockPlexService)
     ;(getAllPlexServerUsers as jest.Mock).mockResolvedValue({
       success: true,
       data: null,

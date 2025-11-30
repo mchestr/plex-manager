@@ -1,17 +1,13 @@
 import { checkServerAccess } from '@/actions/auth'
 import { checkUserServerAccess, getPlexUserInfo } from '@/lib/connections/plex'
-import { prisma } from '@/lib/prisma'
+import { getActivePlexService } from '@/lib/services/service-helpers'
 import {
   makePlexUserInfo,
   makePrismaPlexServer,
 } from '../utils/test-builders'
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    plexServer: {
-      findFirst: jest.fn(),
-    },
-  },
+jest.mock('@/lib/services/service-helpers', () => ({
+  getActivePlexService: jest.fn(),
 }))
 
 jest.mock('@/lib/connections/plex', () => ({
@@ -19,7 +15,7 @@ jest.mock('@/lib/connections/plex', () => ({
   getPlexUserInfo: jest.fn(),
 }))
 
-const mockPrisma = prisma as jest.Mocked<typeof prisma>
+const mockGetActivePlexService = getActivePlexService as jest.MockedFunction<typeof getActivePlexService>
 const mockCheckUserServerAccess = checkUserServerAccess as jest.MockedFunction<typeof checkUserServerAccess>
 const mockGetPlexUserInfo = getPlexUserInfo as jest.MockedFunction<typeof getPlexUserInfo>
 
@@ -29,12 +25,21 @@ describe('checkServerAccess', () => {
   })
 
   it('should return success when user has access', async () => {
-    const mockPlexServer = makePrismaPlexServer()
+    const mockPlexService = {
+      id: 'plex-1',
+      name: 'Test Server',
+      url: 'https://plex.example.com:32400',
+      isActive: true,
+      config: {
+        token: 'server-token',
+        adminPlexUserId: 'admin-plex-id',
+      },
+    }
     const mockPlexUser = makePlexUserInfo({
       id: 'plex-user-1',
     })
 
-    mockPrisma.plexServer.findFirst.mockResolvedValue(mockPlexServer as any)
+    mockGetActivePlexService.mockResolvedValue(mockPlexService as any)
     mockGetPlexUserInfo.mockResolvedValue({
       success: true,
       data: mockPlexUser,
@@ -53,16 +58,16 @@ describe('checkServerAccess', () => {
     expect(mockGetPlexUserInfo).toHaveBeenCalledWith('user-token')
     expect(mockCheckUserServerAccess).toHaveBeenCalledWith(
       {
-        url: mockPlexServer.url,
-        token: mockPlexServer.token,
-        adminPlexUserId: mockPlexServer.adminPlexUserId,
+        url: mockPlexService.url,
+        token: mockPlexService.config.token,
+        adminPlexUserId: mockPlexService.config.adminPlexUserId,
       },
       'plex-user-1'
     )
   })
 
   it('should return error when no Plex server is configured', async () => {
-    mockPrisma.plexServer.findFirst.mockResolvedValue(null)
+    mockGetActivePlexService.mockResolvedValue(null)
 
     const result = await checkServerAccess('user-token')
 
@@ -75,9 +80,18 @@ describe('checkServerAccess', () => {
   })
 
   it('should return error when user info fetch fails', async () => {
-    const mockPlexServer = makePrismaPlexServer()
+    const mockPlexService = {
+      id: 'plex-1',
+      name: 'Test Server',
+      url: 'https://plex.example.com:32400',
+      isActive: true,
+      config: {
+        token: 'server-token',
+        adminPlexUserId: 'admin-plex-id',
+      },
+    }
 
-    mockPrisma.plexServer.findFirst.mockResolvedValue(mockPlexServer as any)
+    mockGetActivePlexService.mockResolvedValue(mockPlexService as any)
     mockGetPlexUserInfo.mockResolvedValue({
       success: false,
       error: 'Failed to fetch user info',
@@ -94,12 +108,15 @@ describe('checkServerAccess', () => {
   })
 
   it('should return error when user does not have access', async () => {
-    const mockPlexServer = {
-      id: 'server-1',
+    const mockPlexService = {
+      id: 'plex-1',
+      name: 'Test Server',
       url: 'https://plex.example.com:32400',
-      token: 'server-token',
-      adminPlexUserId: 'admin-plex-id',
       isActive: true,
+      config: {
+        token: 'server-token',
+        adminPlexUserId: 'admin-plex-id',
+      },
     }
 
     const mockPlexUser = {
@@ -109,7 +126,7 @@ describe('checkServerAccess', () => {
       thumb: 'https://example.com/thumb.jpg',
     }
 
-    mockPrisma.plexServer.findFirst.mockResolvedValue(mockPlexServer as any)
+    mockGetActivePlexService.mockResolvedValue(mockPlexService as any)
     mockGetPlexUserInfo.mockResolvedValue({
       success: true,
       data: mockPlexUser,
@@ -130,7 +147,7 @@ describe('checkServerAccess', () => {
   })
 
   it('should handle errors gracefully', async () => {
-    mockPrisma.plexServer.findFirst.mockRejectedValue(new Error('Database error'))
+    mockGetActivePlexService.mockRejectedValue(new Error('Database error'))
 
     const result = await checkServerAccess('user-token')
 
@@ -142,7 +159,7 @@ describe('checkServerAccess', () => {
   })
 
   it('should handle non-Error exceptions', async () => {
-    mockPrisma.plexServer.findFirst.mockRejectedValue('String error')
+    mockGetActivePlexService.mockRejectedValue('String error')
 
     const result = await checkServerAccess('user-token')
 

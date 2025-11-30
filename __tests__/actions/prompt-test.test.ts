@@ -4,6 +4,7 @@
 
 import { testPromptTemplate } from '@/actions/prompt-test'
 import { prisma } from '@/lib/prisma'
+import { getActiveLLMProvider } from '@/lib/services/service-helpers'
 import { getServerSession } from 'next-auth'
 import { callOpenAI } from '@/lib/wrapped/api-calls'
 import { generateWrappedPrompt } from '@/lib/wrapped/prompt-template'
@@ -14,13 +15,14 @@ jest.mock('@/lib/prisma', () => ({
     config: {
       findUnique: jest.fn(),
     },
-    lLMProvider: {
-      findFirst: jest.fn(),
-    },
     lLMUsage: {
       create: jest.fn(),
     },
   },
+}))
+
+jest.mock('@/lib/services/service-helpers', () => ({
+  getActiveLLMProvider: jest.fn(),
 }))
 
 jest.mock('next-auth', () => ({
@@ -39,6 +41,7 @@ const mockPrisma = prisma as jest.Mocked<typeof prisma>
 const mockGetServerSession = getServerSession as jest.MockedFunction<typeof getServerSession>
 const mockGenerateWrappedPrompt = generateWrappedPrompt as jest.MockedFunction<typeof generateWrappedPrompt>
 const mockCallOpenAI = callOpenAI as jest.MockedFunction<typeof callOpenAI>
+const mockGetActiveLLMProvider = getActiveLLMProvider as jest.MockedFunction<typeof getActiveLLMProvider>
 
 describe('testPromptTemplate', () => {
   const mockSession = {
@@ -150,19 +153,22 @@ describe('testPromptTemplate', () => {
   })
 
   describe('prompt rendering with AI (sendToAI: true)', () => {
-    const mockLLMProvider = {
+    const mockLLMProviderService = {
       id: 'provider-1',
-      provider: 'openai',
-      apiKey: 'test-api-key',
-      model: 'gpt-4',
+      name: 'Wrapped LLM',
       isActive: true,
+      config: {
+        provider: 'openai',
+        apiKey: 'test-api-key',
+        model: 'gpt-4',
+      },
     }
 
     beforeEach(() => {
       mockPrisma.config.findUnique.mockResolvedValue({
         llmDisabled: false,
       } as any)
-      mockPrisma.lLMProvider.findFirst.mockResolvedValue(mockLLMProvider as any)
+      mockGetActiveLLMProvider.mockResolvedValue(mockLLMProviderService as any)
     })
 
     it('should return error when LLM is disabled and not call OpenAI', async () => {
@@ -185,11 +191,11 @@ describe('testPromptTemplate', () => {
       expect(result.error).toContain('LLM calls are currently disabled')
       expect(result.error).toContain('enable LLM in admin settings')
       expect(mockCallOpenAI).not.toHaveBeenCalled()
-      expect(mockPrisma.lLMProvider.findFirst).not.toHaveBeenCalled()
+      expect(mockGetActiveLLMProvider).not.toHaveBeenCalled()
     })
 
     it('should return error when no active LLM provider', async () => {
-      mockPrisma.lLMProvider.findFirst.mockResolvedValue(null)
+      mockGetActiveLLMProvider.mockResolvedValue(null)
 
       const mockRenderedPrompt = 'Rendered prompt'
       mockGenerateWrappedPrompt.mockResolvedValue(mockRenderedPrompt)

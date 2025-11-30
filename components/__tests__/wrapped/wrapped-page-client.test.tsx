@@ -8,6 +8,15 @@ jest.mock('@/actions/users', () => ({
   getUserPlexWrapped: jest.fn(),
 }))
 
+// Mock toast
+jest.mock('@/components/ui/toast', () => ({
+  ToastProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useToast: () => ({
+    showError: jest.fn(),
+    showSuccess: jest.fn(),
+  }),
+}))
+
 // Mock next/navigation
 const mockRefresh = jest.fn()
 jest.mock('next/navigation', () => ({

@@ -1,21 +1,21 @@
 
 import { completeOnboarding, getOnboardingInfo, getOnboardingStatus } from '@/actions/onboarding'
 import { prisma } from '@/lib/prisma'
+import { getActiveOverseerrService, getDiscordService } from '@/lib/services/service-helpers'
 import { getServerSession } from 'next-auth'
 
 jest.mock('@/lib/prisma', () => ({
   prisma: {
-    overseerr: {
-      findFirst: jest.fn(),
-    },
-    discordIntegration: {
-      findUnique: jest.fn(),
-    },
     user: {
       findUnique: jest.fn(),
       update: jest.fn(),
     },
   },
+}))
+
+jest.mock('@/lib/services/service-helpers', () => ({
+  getActiveOverseerrService: jest.fn(),
+  getDiscordService: jest.fn(),
 }))
 
 jest.mock('next-auth', () => ({
@@ -29,6 +29,9 @@ jest.mock('@/lib/utils/logger', () => ({
   }),
 }))
 
+const mockGetActiveOverseerrService = getActiveOverseerrService as jest.MockedFunction<typeof getActiveOverseerrService>
+const mockGetDiscordService = getDiscordService as jest.MockedFunction<typeof getDiscordService>
+
 describe('Onboarding Actions', () => {
   const mockPrisma = prisma as jest.Mocked<typeof prisma>
   const mockGetServerSession = getServerSession as jest.MockedFunction<typeof getServerSession>
@@ -39,11 +42,15 @@ describe('Onboarding Actions', () => {
 
   describe('getOnboardingInfo', () => {
     it('should return publicUrl when available', async () => {
-      mockPrisma.overseerr.findFirst.mockResolvedValue({
+      mockGetActiveOverseerrService.mockResolvedValue({
+        id: 'overseerr-1',
+        name: 'Overseerr',
         publicUrl: 'https://requests.example.com',
         url: 'http://internal:5055',
+        isActive: true,
+        config: { apiKey: 'test-key' },
       } as any)
-      mockPrisma.discordIntegration.findUnique.mockResolvedValue(null)
+      mockGetDiscordService.mockResolvedValue(null)
 
       const result = await getOnboardingInfo()
 
@@ -51,11 +58,15 @@ describe('Onboarding Actions', () => {
     })
 
     it('should construct internal URL when publicUrl is missing', async () => {
-      mockPrisma.overseerr.findFirst.mockResolvedValue({
+      mockGetActiveOverseerrService.mockResolvedValue({
+        id: 'overseerr-1',
+        name: 'Overseerr',
         publicUrl: null,
         url: 'http://localhost:5055',
+        isActive: true,
+        config: { apiKey: 'test-key' },
       } as any)
-      mockPrisma.discordIntegration.findUnique.mockResolvedValue(null)
+      mockGetDiscordService.mockResolvedValue(null)
 
       const result = await getOnboardingInfo()
 
@@ -63,8 +74,8 @@ describe('Onboarding Actions', () => {
     })
 
     it('should return null when no overseerr configured', async () => {
-      mockPrisma.overseerr.findFirst.mockResolvedValue(null)
-      mockPrisma.discordIntegration.findUnique.mockResolvedValue(null)
+      mockGetActiveOverseerrService.mockResolvedValue(null)
+      mockGetDiscordService.mockResolvedValue(null)
 
       const result = await getOnboardingInfo()
 

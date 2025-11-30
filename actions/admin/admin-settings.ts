@@ -2,37 +2,61 @@
 
 import { requireAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/prisma"
+import {
+  toLegacyPlexServer,
+  toLegacyApiKeyService,
+  toLegacyLLMProvider,
+  toLegacyDiscordIntegration,
+  getActivePlexService,
+  getActiveTautulliService,
+  getActiveOverseerrService,
+  getActiveSonarrService,
+  getActiveRadarrService,
+  getActiveLLMProvider,
+  getDiscordService,
+} from "@/lib/services/service-helpers"
 import { getConfig } from "./admin-config"
 
 /**
  * Get all admin settings (admin only)
+ * Returns settings in legacy format for backwards compatibility with existing UI
  */
 export async function getAdminSettings() {
   await requireAdmin()
 
   const [
     config,
-    chatLLMProvider,
-    wrappedLLMProvider,
-    plexServer,
-    tautulli,
-    overseerr,
-    sonarr,
-    radarr,
-    discordIntegration,
+    chatLLMProviderService,
+    wrappedLLMProviderService,
+    plexService,
+    tautulliService,
+    overseerrService,
+    sonarrService,
+    radarrService,
+    discordService,
     discordLinkedCount,
   ] = await Promise.all([
     getConfig(),
-    prisma.lLMProvider.findFirst({ where: { isActive: true, purpose: "chat" } }),
-    prisma.lLMProvider.findFirst({ where: { isActive: true, purpose: "wrapped" } }),
-    prisma.plexServer.findFirst({ where: { isActive: true } }),
-    prisma.tautulli.findFirst({ where: { isActive: true } }),
-    prisma.overseerr.findFirst({ where: { isActive: true } }),
-    prisma.sonarr.findFirst({ where: { isActive: true } }),
-    prisma.radarr.findFirst({ where: { isActive: true } }),
-    prisma.discordIntegration.findUnique({ where: { id: "discord" } }),
+    getActiveLLMProvider("chat"),
+    getActiveLLMProvider("wrapped"),
+    getActivePlexService(),
+    getActiveTautulliService(),
+    getActiveOverseerrService(),
+    getActiveSonarrService(),
+    getActiveRadarrService(),
+    getDiscordService(),
     prisma.discordConnection.count({ where: { revokedAt: null } }),
   ])
+
+  // Convert to legacy format for backwards compatibility
+  const chatLLMProvider = toLegacyLLMProvider(chatLLMProviderService)
+  const wrappedLLMProvider = toLegacyLLMProvider(wrappedLLMProviderService)
+  const plexServer = toLegacyPlexServer(plexService)
+  const tautulli = toLegacyApiKeyService(tautulliService)
+  const overseerr = toLegacyApiKeyService(overseerrService)
+  const sonarr = toLegacyApiKeyService(sonarrService)
+  const radarr = toLegacyApiKeyService(radarrService)
+  const discordIntegration = toLegacyDiscordIntegration(discordService)
 
   return {
     config,
