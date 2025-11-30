@@ -8,9 +8,9 @@ import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import type { ReviewStatus, MediaType } from "@/lib/validations/maintenance"
 import type { PaginatedCandidatesResponse } from "@/types/maintenance"
-import { CandidateList } from "./components/CandidateList"
-import { CandidateFilters } from "./components/CandidateFilters"
-import { CandidateActions } from "./components/CandidateActions"
+import { CandidateList } from "@/components/admin/maintenance/candidates/CandidateList"
+import { CandidateFilters } from "@/components/admin/maintenance/candidates/CandidateFilters"
+import { CandidateActions } from "@/components/admin/maintenance/candidates/CandidateActions"
 
 const DEFAULT_PAGE_SIZE = 25
 

@@ -11,6 +11,22 @@ jest.mock('lucide-react', () => ({
   X: () => <div data-testid="x-icon" />,
 }))
 
+// Mock StyledCheckbox to return a proper input element for testing
+jest.mock('@/components/ui/styled-checkbox', () => ({
+  StyledCheckbox: ({ checked, onChange, 'data-testid': dataTestId }: {
+    checked?: boolean
+    onChange?: () => void
+    'data-testid'?: string
+  }) => (
+    <input
+      type="checkbox"
+      checked={checked}
+      onChange={onChange}
+      data-testid={dataTestId}
+    />
+  ),
+}))
+
 describe('CandidateList', () => {
   const mockCandidate: MaintenanceCandidate = {
     id: 'candidate-1',

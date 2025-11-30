@@ -6,8 +6,8 @@ import { ConfirmModal } from "@/components/admin/shared/confirm-modal"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { RuleList } from "./components/RuleList"
-import { RuleActions } from "./components/RuleActions"
+import { RuleList } from "@/components/admin/maintenance/rules/RuleList"
+import { RuleActions } from "@/components/admin/maintenance/rules/RuleActions"
 
 type MaintenanceRule = {
   id: string
