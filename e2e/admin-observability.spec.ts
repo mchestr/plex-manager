@@ -38,7 +38,7 @@ test.describe('Admin Observability Page', () => {
     // Verify summary stats cards are present
     await expect(adminPage.getByText('Configured Services')).toBeVisible();
     await expect(adminPage.getByText('Total Users')).toBeVisible();
-    await expect(adminPage.getByText('Wrapped Status')).toBeVisible();
+    await expect(adminPage.getByTestId('stat-card-wrapped-status')).toBeVisible();
     await expect(adminPage.getByText('LLM Usage (24h)')).toBeVisible();
   });
 
@@ -248,7 +248,7 @@ test.describe('Admin Observability Page', () => {
 
     // Verify we're on the settings page
     await expect(adminPage).toHaveURL(/\/admin\/settings/);
-    await expect(adminPage.getByRole('heading', { name: 'Settings' })).toBeVisible();
+    await expect(adminPage.getByTestId('settings-page-heading')).toBeVisible();
   });
 
   test('should display secondary stats row with clickable cards', async ({ adminPage }) => {

@@ -60,6 +60,7 @@ export default async function ObservabilityPage() {
           <Link
             href="/admin/users"
             className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4 hover:border-cyan-500/50 transition-colors group"
+            data-testid="stat-card-wrapped-status"
           >
             <div className="text-sm text-slate-400 mb-1">Wrapped Status</div>
             <div className="text-3xl font-bold text-green-400">
