@@ -71,7 +71,7 @@ run = [
 
 [tasks."db:reset"]
 description = "Reset the database (delete and recreate)"
-run = "npx prisma migrate reset --skip-seed"
+run = "SKIP_SEED=true npx prisma migrate reset"
 
 [tasks.ci]
 description = "Run CI checks (matches GitHub Actions workflow)"
