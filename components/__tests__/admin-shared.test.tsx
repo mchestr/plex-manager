@@ -316,9 +316,9 @@ describe('AdminNav', () => {
     it('should truncate labels in mobile view', () => {
       render(<AdminNav />)
 
-      // Mobile view shows only first word of labels
-      // Share Analytics becomes "Share"
-      const mobileLabels = screen.getAllByText('Share')
+      // Mobile view shows only first word of labels for primary items
+      // Maintenance Overview becomes "Overview" in the bottom bar
+      const mobileLabels = screen.getAllByText('Overview')
       expect(mobileLabels.length).toBeGreaterThan(0)
     })
 
@@ -497,6 +497,227 @@ describe('AdminNav', () => {
 
       const whiteText = container.querySelectorAll('.text-white')
       expect(whiteText.length).toBeGreaterThan(0)
+    })
+  })
+
+  describe('Mobile More Menu', () => {
+    it('should render More button in mobile navigation', () => {
+      render(<AdminNav />)
+
+      const moreButton = screen.getByTestId('admin-nav-more-mobile')
+      expect(moreButton).toBeInTheDocument()
+      expect(moreButton).toHaveTextContent('More')
+    })
+
+    it('should have proper ARIA attributes on More button', () => {
+      render(<AdminNav />)
+
+      const moreButton = screen.getByTestId('admin-nav-more-mobile')
+      expect(moreButton).toHaveAttribute('aria-expanded', 'false')
+      expect(moreButton).toHaveAttribute('aria-haspopup', 'true')
+      expect(moreButton).toHaveAttribute('aria-label', 'More navigation options')
+      expect(moreButton).toHaveAttribute('aria-controls', 'mobile-more-menu')
+    })
+
+    it('should toggle More menu open when clicked', async () => {
+      const user = userEvent.setup()
+      const { container } = render(<AdminNav />)
+
+      const moreButton = screen.getByTestId('admin-nav-more-mobile')
+
+      // Menu should be closed initially
+      expect(container.querySelector('#mobile-more-menu')).not.toBeInTheDocument()
+      expect(moreButton).toHaveAttribute('aria-expanded', 'false')
+
+      // Click to open
+      await user.click(moreButton)
+
+      // Menu should now be open
+      expect(container.querySelector('#mobile-more-menu')).toBeInTheDocument()
+      expect(moreButton).toHaveAttribute('aria-expanded', 'true')
+    })
+
+    it('should close More menu when clicked again', async () => {
+      const user = userEvent.setup()
+      const { container } = render(<AdminNav />)
+
+      const moreButton = screen.getByTestId('admin-nav-more-mobile')
+
+      // Open the menu
+      await user.click(moreButton)
+      expect(container.querySelector('#mobile-more-menu')).toBeInTheDocument()
+
+      // Close the menu
+      await user.click(moreButton)
+      expect(container.querySelector('#mobile-more-menu')).not.toBeInTheDocument()
+    })
+
+    it('should render secondary nav items in More menu', async () => {
+      const user = userEvent.setup()
+      render(<AdminNav />)
+
+      const moreButton = screen.getByTestId('admin-nav-more-mobile')
+      await user.click(moreButton)
+
+      // Check for secondary items in the menu
+      expect(screen.getByTestId('admin-nav-share-analytics-mobile')).toBeInTheDocument()
+      expect(screen.getByTestId('admin-nav-maintenance-rules-mobile')).toBeInTheDocument()
+      expect(screen.getByTestId('admin-nav-maintenance-candidates-mobile')).toBeInTheDocument()
+      expect(screen.getByTestId('admin-nav-llm-usage-mobile')).toBeInTheDocument()
+      expect(screen.getByTestId('admin-nav-cost-analysis-mobile')).toBeInTheDocument()
+      expect(screen.getByTestId('admin-nav-prompts-mobile')).toBeInTheDocument()
+      expect(screen.getByTestId('admin-nav-playground-mobile')).toBeInTheDocument()
+    })
+
+    it('should render Home and Sign Out in More menu', async () => {
+      const user = userEvent.setup()
+      render(<AdminNav />)
+
+      const moreButton = screen.getByTestId('admin-nav-more-mobile')
+      await user.click(moreButton)
+
+      expect(screen.getByTestId('admin-nav-home-mobile')).toBeInTheDocument()
+      expect(screen.getByTestId('admin-nav-signout-mobile')).toBeInTheDocument()
+    })
+
+    it('should have proper ARIA attributes on More menu panel', async () => {
+      const user = userEvent.setup()
+      const { container } = render(<AdminNav />)
+
+      const moreButton = screen.getByTestId('admin-nav-more-mobile')
+      await user.click(moreButton)
+
+      const moreMenu = container.querySelector('#mobile-more-menu')
+      expect(moreMenu).toHaveAttribute('role', 'menu')
+      expect(moreMenu).toHaveAttribute('aria-label', 'Additional navigation options')
+    })
+
+    it('should have menuitem role on links in More menu', async () => {
+      const user = userEvent.setup()
+      render(<AdminNav />)
+
+      const moreButton = screen.getByTestId('admin-nav-more-mobile')
+      await user.click(moreButton)
+
+      const shareAnalytics = screen.getByTestId('admin-nav-share-analytics-mobile')
+      expect(shareAnalytics).toHaveAttribute('role', 'menuitem')
+
+      const home = screen.getByTestId('admin-nav-home-mobile')
+      expect(home).toHaveAttribute('role', 'menuitem')
+
+      const signOut = screen.getByTestId('admin-nav-signout-mobile')
+      expect(signOut).toHaveAttribute('role', 'menuitem')
+    })
+
+    it('should close More menu on navigation', async () => {
+      const user = userEvent.setup()
+      mockUsePathname.mockReturnValue('/admin/users')
+      const { container, rerender } = render(<AdminNav />)
+
+      const moreButton = screen.getByTestId('admin-nav-more-mobile')
+      await user.click(moreButton)
+
+      // Menu should be open
+      expect(container.querySelector('#mobile-more-menu')).toBeInTheDocument()
+
+      // Simulate navigation by changing pathname
+      mockUsePathname.mockReturnValue('/admin/shares')
+      rerender(<AdminNav />)
+
+      // Menu should be closed after navigation
+      expect(container.querySelector('#mobile-more-menu')).not.toBeInTheDocument()
+    })
+
+    it('should highlight More button when secondary item is active', () => {
+      mockUsePathname.mockReturnValue('/admin/llm-usage')
+      render(<AdminNav />)
+
+      const moreButton = screen.getByTestId('admin-nav-more-mobile')
+      expect(moreButton).toHaveClass('text-cyan-400')
+    })
+
+    it('should show indicator dot when secondary item is active and menu is closed', () => {
+      mockUsePathname.mockReturnValue('/admin/llm-usage')
+      const { container } = render(<AdminNav />)
+
+      const moreButton = screen.getByTestId('admin-nav-more-mobile')
+      // There should be a small indicator dot
+      const indicator = moreButton.querySelector('.bg-cyan-400')
+      expect(indicator).toBeInTheDocument()
+      expect(indicator).toHaveClass('w-1', 'h-1', 'rounded-full')
+    })
+
+    it('should not show indicator dot when menu is open', async () => {
+      const user = userEvent.setup()
+      mockUsePathname.mockReturnValue('/admin/llm-usage')
+      render(<AdminNav />)
+
+      const moreButton = screen.getByTestId('admin-nav-more-mobile')
+      await user.click(moreButton)
+
+      // When menu is open, indicator should not be shown
+      const indicator = moreButton.querySelector('.w-1.h-1.rounded-full.bg-cyan-400')
+      expect(indicator).not.toBeInTheDocument()
+    })
+
+    it('should not highlight More button when primary item is active', () => {
+      mockUsePathname.mockReturnValue('/admin/users')
+      render(<AdminNav />)
+
+      const moreButton = screen.getByTestId('admin-nav-more-mobile')
+      expect(moreButton).toHaveClass('text-slate-400')
+    })
+
+    it('should render primary nav items in bottom bar', () => {
+      const { container } = render(<AdminNav />)
+
+      const mobileNav = container.querySelector('nav.md\\:hidden')
+      // Primary items should be visible in bottom bar (search within mobile nav)
+      expect(mobileNav?.querySelector('[data-testid="admin-nav-users-mobile"]')).toBeInTheDocument()
+      expect(mobileNav?.querySelector('[data-testid="admin-nav-invites-mobile"]')).toBeInTheDocument()
+      expect(mobileNav?.querySelector('[data-testid="admin-nav-maintenance-overview-mobile"]')).toBeInTheDocument()
+      expect(mobileNav?.querySelector('[data-testid="admin-nav-settings-mobile"]')).toBeInTheDocument()
+    })
+
+    it('should call signOut when Sign Out is clicked in More menu', async () => {
+      const user = userEvent.setup()
+      render(<AdminNav />)
+
+      const moreButton = screen.getByTestId('admin-nav-more-mobile')
+      await user.click(moreButton)
+
+      const signOutButton = screen.getByTestId('admin-nav-signout-mobile')
+      await user.click(signOutButton)
+
+      expect(mockSignOut).toHaveBeenCalledTimes(1)
+    })
+
+    it('should have grid layout with 3 columns in More menu', async () => {
+      const user = userEvent.setup()
+      const { container } = render(<AdminNav />)
+
+      const moreButton = screen.getByTestId('admin-nav-more-mobile')
+      await user.click(moreButton)
+
+      const grid = container.querySelector('#mobile-more-menu .grid')
+      expect(grid).toHaveClass('grid-cols-3')
+    })
+
+    it('should close More menu when clicking outside', async () => {
+      const user = userEvent.setup()
+      const { container } = render(<AdminNav />)
+
+      const moreButton = screen.getByTestId('admin-nav-more-mobile')
+      await user.click(moreButton)
+
+      // Menu should be open
+      expect(container.querySelector('#mobile-more-menu')).toBeInTheDocument()
+
+      // Click outside the menu (on the body)
+      await user.click(document.body)
+
+      // Menu should be closed
+      expect(container.querySelector('#mobile-more-menu')).not.toBeInTheDocument()
     })
   })
 
