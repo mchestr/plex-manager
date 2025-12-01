@@ -94,20 +94,16 @@ export async function getConfig() {
   await requireAdmin()
 
   try {
-    const config = await prisma.config.findUnique({
+    // Use upsert to handle race conditions when config doesn't exist
+    const config = await prisma.config.upsert({
       where: { id: "config" },
+      update: {},
+      create: {
+        id: "config",
+        llmDisabled: false,
+        wrappedEnabled: true,
+      },
     })
-
-    // If config doesn't exist, create it with defaults
-    if (!config) {
-      return await prisma.config.create({
-        data: {
-          id: "config",
-          llmDisabled: false,
-          wrappedEnabled: true,
-        },
-      })
-    }
 
     return config
   } catch (error) {
