@@ -94,18 +94,42 @@ export async function getConfig() {
   await requireAdmin()
 
   try {
-    // Use upsert to handle race conditions when config doesn't exist
-    const config = await prisma.config.upsert({
+    // First try to find existing config (fast path for most requests)
+    let config = await prisma.config.findUnique({
       where: { id: "config" },
-      update: {},
-      create: {
-        id: "config",
-        llmDisabled: false,
-        wrappedEnabled: true,
-      },
     })
 
-    return config
+    // If config exists, return it
+    if (config) {
+      return config
+    }
+
+    // Config doesn't exist, try to create it with upsert
+    try {
+      config = await prisma.config.upsert({
+        where: { id: "config" },
+        update: {},
+        create: {
+          id: "config",
+          llmDisabled: false,
+          wrappedEnabled: true,
+        },
+      })
+      return config
+    } catch (upsertError) {
+      // Handle race condition: another request created it between our check and upsert
+      // Just fetch the now-existing record
+      const existingConfig = await prisma.config.findUnique({
+        where: { id: "config" },
+      })
+
+      if (existingConfig) {
+        return existingConfig
+      }
+
+      // If we still can't find it, something is wrong
+      throw upsertError
+    }
   } catch (error) {
     logger.error("Error getting config", error)
     // Return default config if there's an error
