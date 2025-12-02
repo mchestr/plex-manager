@@ -111,8 +111,10 @@ describe('CandidateList', () => {
     it('should format dates correctly', () => {
       render(<CandidateList {...defaultProps} />)
 
-      // formatDate returns localized format (M/D/YYYY) for dates
-      expect(screen.getByText('1/15/2024')).toBeInTheDocument()
+      // formatDate returns localized format - could be M/D/YYYY or D/M/YYYY depending on locale
+      // The mock date is 2024-01-15, check that the formatted date is rendered
+      const formattedDate = new Date('2024-01-15T12:00:00Z').toLocaleDateString()
+      expect(screen.getByText(formattedDate)).toBeInTheDocument()
     })
 
     it('should display "Never" for null lastWatchedAt', () => {

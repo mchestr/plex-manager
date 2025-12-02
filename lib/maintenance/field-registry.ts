@@ -34,7 +34,7 @@ import { MediaType } from "@/lib/validations/maintenance"
 
 // Field type definitions
 export type FieldType = 'string' | 'number' | 'date' | 'boolean' | 'array' | 'enum'
-export type DataSource = 'plex' | 'tautulli' | 'radarr' | 'sonarr'
+export type DataSource = 'plex' | 'tautulli' | 'radarr' | 'sonarr' | 'overseerr'
 
 // Comparison operators by field type
 export type StringOperator = 'equals' | 'notEquals' | 'contains' | 'notContains' | 'startsWith' | 'endsWith' | 'regex' | 'in' | 'notIn'
@@ -171,6 +171,59 @@ export const FIELD_DEFINITIONS: FieldDefinition[] = [
     category: 'metadata',
   },
 
+  // Source API: Tautulli get_library_media_info → item.studio
+  // Field mapping: Production studio name
+  {
+    key: 'studio',
+    label: 'Studio',
+    description: 'Production studio',
+    type: 'string',
+    dataSource: 'plex',
+    mediaTypes: ['MOVIE', 'TV_SERIES'],
+    allowedOperators: ['equals', 'notEquals', 'contains', 'notContains', 'in', 'notIn', 'null', 'notNull'],
+    category: 'metadata',
+  },
+
+  // Source API: Plex library metadata → item.Collection
+  // Field mapping: Array of Plex collection names
+  {
+    key: 'collections',
+    label: 'Collections',
+    description: 'Plex collections the media belongs to',
+    type: 'array',
+    dataSource: 'plex',
+    mediaTypes: ['MOVIE', 'TV_SERIES'],
+    allowedOperators: ['contains', 'notContains', 'containsAny', 'containsAll', 'isEmpty', 'isNotEmpty'],
+    category: 'metadata',
+  },
+
+  // Source API: Plex /playlists endpoint
+  // Field mapping: Array of Plex playlist names containing this media
+  {
+    key: 'plex.playlists',
+    label: 'Playlists',
+    description: 'Plex playlists this media belongs to',
+    type: 'array',
+    dataSource: 'plex',
+    mediaTypes: ['MOVIE', 'TV_SERIES'],
+    allowedOperators: ['contains', 'notContains', 'containsAny', 'containsAll', 'isEmpty', 'isNotEmpty'],
+    category: 'metadata',
+  },
+
+  // Source API: Tautulli get_library_media_info → item.originally_available_at
+  // Field mapping: Original release date
+  {
+    key: 'originallyAvailableAt',
+    label: 'Original Release Date',
+    description: 'Original release/premiere date',
+    type: 'date',
+    dataSource: 'plex',
+    mediaTypes: ['MOVIE', 'TV_SERIES'],
+    allowedOperators: ['before', 'after', 'between', 'olderThan', 'newerThan', 'null', 'notNull'],
+    unit: 'days',
+    category: 'metadata',
+  },
+
   // === PLAYBACK CATEGORY ===
   // Source: Tautulli get_library_media_info endpoint
   // These fields track viewing history and activity
@@ -229,6 +282,36 @@ export const FIELD_DEFINITIONS: FieldDefinition[] = [
     category: 'playback',
   },
 
+  // Computed field: Days since added
+  // Field mapping: Computed from addedAt - current time in days
+  {
+    key: 'daysSinceAdded',
+    label: 'Days Since Added',
+    description: 'Number of days since media was added to library',
+    type: 'number',
+    dataSource: 'tautulli',
+    mediaTypes: ['MOVIE', 'TV_SERIES'],
+    allowedOperators: ['equals', 'greaterThan', 'greaterThanOrEqual', 'lessThan', 'lessThanOrEqual', 'between'],
+    unit: 'days',
+    category: 'playback',
+    min: 0,
+  },
+
+  // Computed field: Days since last watched
+  // Field mapping: Computed from lastWatchedAt - current time in days (null if never watched)
+  {
+    key: 'daysSinceWatched',
+    label: 'Days Since Watched',
+    description: 'Number of days since last playback (null if never watched)',
+    type: 'number',
+    dataSource: 'tautulli',
+    mediaTypes: ['MOVIE', 'TV_SERIES'],
+    allowedOperators: ['equals', 'greaterThan', 'greaterThanOrEqual', 'lessThan', 'lessThanOrEqual', 'between', 'null', 'notNull'],
+    unit: 'days',
+    category: 'playback',
+    min: 0,
+  },
+
   // === FILE CATEGORY ===
   // Source: Tautulli get_library_media_info endpoint
   // These fields describe the physical media file properties
@@ -247,18 +330,6 @@ export const FIELD_DEFINITIONS: FieldDefinition[] = [
     min: 0,
   },
 
-  // Source API: Tautulli get_library_media_info → item.file
-  // Field mapping: Full filesystem path to media file
-  {
-    key: 'filePath',
-    label: 'File Path',
-    type: 'string',
-    dataSource: 'tautulli',
-    mediaTypes: ['MOVIE', 'TV_SERIES'],
-    allowedOperators: ['contains', 'notContains', 'startsWith', 'regex'],
-    category: 'file',
-  },
-
   // Source API: Tautulli get_library_media_info → item.duration
   // Field mapping: Runtime in milliseconds, converted to minutes for display
   {
@@ -271,6 +342,20 @@ export const FIELD_DEFINITIONS: FieldDefinition[] = [
     unit: 'minutes',
     category: 'file',
     min: 0,
+  },
+
+  // Source API: Tautulli get_library_media_info → item.file
+  // Field mapping: Full filesystem path to media file
+  // Note: This is an advanced field - too specific for most maintenance rules
+  {
+    key: 'filePath',
+    label: 'File Path (Advanced)',
+    description: 'Full filesystem path - use for specific folder-based rules only',
+    type: 'string',
+    dataSource: 'tautulli',
+    mediaTypes: ['MOVIE', 'TV_SERIES'],
+    allowedOperators: ['contains', 'notContains', 'startsWith', 'regex'],
+    category: 'file',
   },
 
   // === QUALITY CATEGORY ===
@@ -433,6 +518,118 @@ export const FIELD_DEFINITIONS: FieldDefinition[] = [
     category: 'external',
   },
 
+  // Source API: Radarr /api/v3/movie → movie.status
+  // Field mapping: Movie download/availability status
+  // Requirements: Radarr integration configured, movie matched by TMDB ID
+  {
+    key: 'radarr.status',
+    label: 'Status (Radarr)',
+    description: 'Movie status in Radarr',
+    type: 'enum',
+    dataSource: 'radarr',
+    mediaTypes: ['MOVIE'],
+    allowedOperators: ['equals', 'notEquals', 'in', 'notIn'],
+    enumValues: [
+      { value: 'announced', label: 'Announced' },
+      { value: 'inCinemas', label: 'In Cinemas' },
+      { value: 'released', label: 'Released' },
+      { value: 'deleted', label: 'Deleted' },
+    ],
+    category: 'external',
+  },
+
+  // Source API: Radarr /api/v3/movie → movie.ratings.tmdb.value
+  // Field mapping: TMDB community rating (0-10)
+  // Requirements: Radarr integration configured, movie matched by TMDB ID
+  {
+    key: 'radarr.tmdbRating',
+    label: 'TMDB Rating (Radarr)',
+    description: 'TMDB community rating (0-10)',
+    type: 'number',
+    dataSource: 'radarr',
+    mediaTypes: ['MOVIE'],
+    allowedOperators: ['equals', 'greaterThan', 'greaterThanOrEqual', 'lessThan', 'lessThanOrEqual', 'between', 'null', 'notNull'],
+    category: 'external',
+    min: 0,
+    max: 10,
+  },
+
+  // Source API: Radarr /api/v3/movie → movie.digitalRelease
+  // Field mapping: Digital release date
+  // Requirements: Radarr integration configured, movie matched by TMDB ID
+  {
+    key: 'radarr.digitalRelease',
+    label: 'Digital Release Date (Radarr)',
+    description: 'When movie was released digitally',
+    type: 'date',
+    dataSource: 'radarr',
+    mediaTypes: ['MOVIE'],
+    allowedOperators: ['before', 'after', 'between', 'olderThan', 'newerThan', 'null', 'notNull'],
+    unit: 'days',
+    category: 'external',
+  },
+
+  // Source API: Radarr /api/v3/movie → movie.inCinemas
+  // Field mapping: Theatrical release date
+  // Requirements: Radarr integration configured, movie matched by TMDB ID
+  {
+    key: 'radarr.inCinemas',
+    label: 'In Cinemas Date (Radarr)',
+    description: 'Theatrical release date',
+    type: 'date',
+    dataSource: 'radarr',
+    mediaTypes: ['MOVIE'],
+    allowedOperators: ['before', 'after', 'between', 'olderThan', 'newerThan', 'null', 'notNull'],
+    unit: 'days',
+    category: 'external',
+  },
+
+  // Source API: Radarr /api/v3/movie → movie.runtime
+  // Field mapping: Movie runtime in minutes
+  // Requirements: Radarr integration configured, movie matched by TMDB ID
+  {
+    key: 'radarr.runtime',
+    label: 'Runtime (Radarr)',
+    description: 'Movie runtime in minutes',
+    type: 'number',
+    dataSource: 'radarr',
+    mediaTypes: ['MOVIE'],
+    allowedOperators: ['equals', 'greaterThan', 'greaterThanOrEqual', 'lessThan', 'lessThanOrEqual', 'between'],
+    unit: 'minutes',
+    category: 'external',
+    min: 0,
+  },
+
+  // Source API: Radarr /api/v3/movie → movie.tags
+  // Field mapping: Array of tag IDs assigned to movie
+  // Requirements: Radarr integration configured, movie matched by TMDB ID
+  {
+    key: 'radarr.tags',
+    label: 'Tags (Radarr)',
+    description: 'Tag IDs assigned in Radarr',
+    type: 'array',
+    dataSource: 'radarr',
+    mediaTypes: ['MOVIE'],
+    allowedOperators: ['contains', 'notContains', 'containsAny', 'containsAll', 'isEmpty', 'isNotEmpty'],
+    category: 'external',
+  },
+
+  // Source API: Radarr /api/v3/movie → movie.sizeOnDisk
+  // Field mapping: Actual file size on disk in bytes
+  // Requirements: Radarr integration configured, movie matched by TMDB ID
+  {
+    key: 'radarr.sizeOnDisk',
+    label: 'Size on Disk (Radarr)',
+    description: 'Actual file size in Radarr',
+    type: 'number',
+    dataSource: 'radarr',
+    mediaTypes: ['MOVIE'],
+    allowedOperators: ['greaterThan', 'greaterThanOrEqual', 'lessThan', 'lessThanOrEqual', 'between'],
+    unit: 'bytes',
+    category: 'external',
+    min: 0,
+  },
+
   // === SONARR FIELDS (TV only) ===
   // Source: Sonarr /api/v3/series endpoint
   // Requires: Sonarr integration must be configured
@@ -499,6 +696,242 @@ export const FIELD_DEFINITIONS: FieldDefinition[] = [
     min: 0,
     max: 100,
   },
+
+  // Source API: Sonarr /api/v3/series → series.seriesType
+  // Field mapping: Type of series (standard, daily, anime)
+  // Requirements: Sonarr integration configured, series matched by TVDB ID
+  {
+    key: 'sonarr.seriesType',
+    label: 'Series Type (Sonarr)',
+    description: 'Standard, daily, or anime series',
+    type: 'enum',
+    dataSource: 'sonarr',
+    mediaTypes: ['TV_SERIES'],
+    allowedOperators: ['equals', 'notEquals', 'in', 'notIn'],
+    enumValues: [
+      { value: 'standard', label: 'Standard' },
+      { value: 'daily', label: 'Daily' },
+      { value: 'anime', label: 'Anime' },
+    ],
+    category: 'external',
+  },
+
+  // Source API: Sonarr /api/v3/series → series.network
+  // Field mapping: Original broadcast network
+  // Requirements: Sonarr integration configured, series matched by TVDB ID
+  {
+    key: 'sonarr.network',
+    label: 'Network (Sonarr)',
+    description: 'Original broadcast network',
+    type: 'string',
+    dataSource: 'sonarr',
+    mediaTypes: ['TV_SERIES'],
+    allowedOperators: ['equals', 'notEquals', 'contains', 'notContains', 'in', 'notIn'],
+    category: 'external',
+  },
+
+  // Source API: Sonarr /api/v3/series → series.statistics.seasonCount
+  // Field mapping: Total number of seasons
+  // Requirements: Sonarr integration configured, series matched by TVDB ID
+  {
+    key: 'sonarr.seasonCount',
+    label: 'Season Count (Sonarr)',
+    description: 'Total number of seasons',
+    type: 'number',
+    dataSource: 'sonarr',
+    mediaTypes: ['TV_SERIES'],
+    allowedOperators: ['equals', 'greaterThan', 'greaterThanOrEqual', 'lessThan', 'lessThanOrEqual', 'between'],
+    category: 'external',
+    min: 0,
+  },
+
+  // Source API: Sonarr /api/v3/series → series.statistics.totalEpisodeCount
+  // Field mapping: Total episodes in the series
+  // Requirements: Sonarr integration configured, series matched by TVDB ID
+  {
+    key: 'sonarr.totalEpisodeCount',
+    label: 'Total Episodes (Sonarr)',
+    description: 'Total episodes in the series',
+    type: 'number',
+    dataSource: 'sonarr',
+    mediaTypes: ['TV_SERIES'],
+    allowedOperators: ['equals', 'greaterThan', 'greaterThanOrEqual', 'lessThan', 'lessThanOrEqual', 'between'],
+    category: 'external',
+    min: 0,
+  },
+
+  // Source API: Sonarr /api/v3/series → series.firstAired
+  // Field mapping: First episode air date
+  // Requirements: Sonarr integration configured, series matched by TVDB ID
+  {
+    key: 'sonarr.firstAired',
+    label: 'First Aired (Sonarr)',
+    description: 'First episode air date',
+    type: 'date',
+    dataSource: 'sonarr',
+    mediaTypes: ['TV_SERIES'],
+    allowedOperators: ['before', 'after', 'between', 'olderThan', 'newerThan', 'null', 'notNull'],
+    unit: 'days',
+    category: 'external',
+  },
+
+  // Source API: Sonarr /api/v3/series → series.ended
+  // Field mapping: Whether the series has ended
+  // Requirements: Sonarr integration configured, series matched by TVDB ID
+  {
+    key: 'sonarr.ended',
+    label: 'Ended (Sonarr)',
+    description: 'Whether the series has finished airing',
+    type: 'boolean',
+    dataSource: 'sonarr',
+    mediaTypes: ['TV_SERIES'],
+    allowedOperators: ['equals'],
+    category: 'external',
+  },
+
+  // Source API: Sonarr /api/v3/series → series.tags
+  // Field mapping: Array of tag IDs assigned to series
+  // Requirements: Sonarr integration configured, series matched by TVDB ID
+  {
+    key: 'sonarr.tags',
+    label: 'Tags (Sonarr)',
+    description: 'Tag IDs assigned in Sonarr',
+    type: 'array',
+    dataSource: 'sonarr',
+    mediaTypes: ['TV_SERIES'],
+    allowedOperators: ['contains', 'notContains', 'containsAny', 'containsAll', 'isEmpty', 'isNotEmpty'],
+    category: 'external',
+  },
+
+  // Source API: Sonarr /api/v3/series → series.statistics.sizeOnDisk
+  // Field mapping: Total size on disk in bytes
+  // Requirements: Sonarr integration configured, series matched by TVDB ID
+  {
+    key: 'sonarr.sizeOnDisk',
+    label: 'Size on Disk (Sonarr)',
+    description: 'Total series size on disk',
+    type: 'number',
+    dataSource: 'sonarr',
+    mediaTypes: ['TV_SERIES'],
+    allowedOperators: ['greaterThan', 'greaterThanOrEqual', 'lessThan', 'lessThanOrEqual', 'between'],
+    unit: 'bytes',
+    category: 'external',
+    min: 0,
+  },
+
+  // Source API: Sonarr /api/v3/series → series.certification
+  // Field mapping: Content rating (TV-MA, TV-14, etc.)
+  // Requirements: Sonarr integration configured, series matched by TVDB ID
+  {
+    key: 'sonarr.certification',
+    label: 'Certification (Sonarr)',
+    description: 'TV content rating (TV-MA, TV-14, etc.)',
+    type: 'string',
+    dataSource: 'sonarr',
+    mediaTypes: ['TV_SERIES'],
+    allowedOperators: ['equals', 'notEquals', 'in', 'notIn'],
+    category: 'external',
+  },
+
+  // Source API: Sonarr /api/v3/series → series.qualityProfileId
+  // Field mapping: Quality profile ID
+  // Requirements: Sonarr integration configured, series matched by TVDB ID
+  {
+    key: 'sonarr.qualityProfileId',
+    label: 'Quality Profile (Sonarr)',
+    description: 'Quality profile ID in Sonarr',
+    type: 'number',
+    dataSource: 'sonarr',
+    mediaTypes: ['TV_SERIES'],
+    allowedOperators: ['equals', 'notEquals', 'in', 'notIn'],
+    category: 'external',
+    min: 1,
+  },
+
+  // === OVERSEERR FIELDS ===
+  // Source: Overseerr /api/v1/media and /api/v1/request endpoints
+  // Requires: Overseerr integration must be configured
+  // Data refresh: Fetched on-demand during maintenance scans
+  // Note: Returns null if Overseerr integration not configured or media not found
+
+  // Source API: Overseerr /api/v1/media/{tmdbId} → mediaInfo.status
+  // Field mapping: Boolean indicating if there's an active request
+  // Requirements: Overseerr integration configured, media matched by TMDB ID
+  {
+    key: 'overseerr.isRequested',
+    label: 'Is Requested (Overseerr)',
+    description: 'Whether media has an active request',
+    type: 'boolean',
+    dataSource: 'overseerr',
+    mediaTypes: ['MOVIE', 'TV_SERIES'],
+    allowedOperators: ['equals'],
+    category: 'external',
+  },
+
+  // Source API: Overseerr /api/v1/media/{tmdbId} → mediaInfo.status
+  // Field mapping: Media request/availability status
+  // Requirements: Overseerr integration configured, media matched by TMDB ID
+  {
+    key: 'overseerr.status',
+    label: 'Request Status (Overseerr)',
+    description: 'Media request status in Overseerr',
+    type: 'enum',
+    dataSource: 'overseerr',
+    mediaTypes: ['MOVIE', 'TV_SERIES'],
+    allowedOperators: ['equals', 'notEquals', 'in', 'notIn'],
+    enumValues: [
+      { value: 'unknown', label: 'Unknown' },
+      { value: 'pending', label: 'Pending' },
+      { value: 'processing', label: 'Processing' },
+      { value: 'partially_available', label: 'Partially Available' },
+      { value: 'available', label: 'Available' },
+    ],
+    category: 'external',
+  },
+
+  // Source API: Overseerr /api/v1/request → request.requestedBy.displayName
+  // Field mapping: Username who requested the media
+  // Requirements: Overseerr integration configured, media has active request
+  {
+    key: 'overseerr.requestedBy',
+    label: 'Requested By (Overseerr)',
+    description: 'User who requested the media',
+    type: 'string',
+    dataSource: 'overseerr',
+    mediaTypes: ['MOVIE', 'TV_SERIES'],
+    allowedOperators: ['equals', 'notEquals', 'contains', 'notContains', 'in', 'notIn', 'null', 'notNull'],
+    category: 'external',
+  },
+
+  // Source API: Overseerr /api/v1/request → request.createdAt
+  // Field mapping: When the request was created
+  // Requirements: Overseerr integration configured, media has active request
+  {
+    key: 'overseerr.requestedAt',
+    label: 'Requested Date (Overseerr)',
+    description: 'When the media was requested',
+    type: 'date',
+    dataSource: 'overseerr',
+    mediaTypes: ['MOVIE', 'TV_SERIES'],
+    allowedOperators: ['before', 'after', 'between', 'olderThan', 'newerThan', 'null', 'notNull'],
+    unit: 'days',
+    category: 'external',
+  },
+
+  // Source API: Overseerr /api/v1/request → requests.length
+  // Field mapping: Total number of requests for this media
+  // Requirements: Overseerr integration configured
+  {
+    key: 'overseerr.requestCount',
+    label: 'Request Count (Overseerr)',
+    description: 'Number of times this media has been requested',
+    type: 'number',
+    dataSource: 'overseerr',
+    mediaTypes: ['MOVIE', 'TV_SERIES'],
+    allowedOperators: ['equals', 'notEquals', 'greaterThan', 'greaterThanOrEqual', 'lessThan', 'lessThanOrEqual'],
+    category: 'external',
+    min: 0,
+  },
 ]
 
 /**
@@ -538,6 +971,7 @@ export function getFieldsByDataSource(mediaType: MediaType): Record<string, Fiel
     tautulli: [],
     radarr: [],
     sonarr: [],
+    overseerr: [],
   }
 
   fields.forEach(field => {

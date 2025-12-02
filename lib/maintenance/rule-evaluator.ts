@@ -86,19 +86,23 @@ import { FIELD_DEFINITIONS } from "./field-registry"
 export interface MediaItem {
   // ─── Core Identification ───────────────────────────────────────────────
 
+  /** Internal ID (from Radarr/Sonarr) */
+  id?: string
   /** Unique Plex rating key identifying this media item */
-  plexRatingKey: string
+  plexRatingKey?: string | null
   /** Display title of the media */
   title: string
   /** Release year */
   year?: number
+  /** Media type (MOVIE, TV_SERIES, EPISODE) */
+  mediaType?: 'MOVIE' | 'TV_SERIES' | 'EPISODE'
   /** ID of the Plex library containing this item */
   libraryId?: string
 
   // ─── Playback Statistics ───────────────────────────────────────────────
 
   /** Total number of times this item has been played */
-  playCount: number
+  playCount?: number
   /** Date/time of last playback, null if never watched */
   lastWatchedAt?: Date | null
   /** Date/time when item was added to library */
@@ -106,8 +110,8 @@ export interface MediaItem {
 
   // ─── File Information ──────────────────────────────────────────────────
 
-  /** Total file size in bytes (BigInt for large files) */
-  fileSize?: bigint | null
+  /** Total file size in bytes */
+  fileSize?: number | bigint | null
   /** Full path to the media file on disk */
   filePath?: string | null
   /** Duration in seconds */
@@ -138,8 +142,42 @@ export interface MediaItem {
   genres?: string[]
   /** User-assigned labels */
   labels?: string[]
+  /** Production studio */
+  studio?: string | null
+  /** Plex collections this media belongs to */
+  collections?: string[]
+  /** Original release/premiere date */
+  originallyAvailableAt?: Date | null
 
   // ─── External Service Data ─────────────────────────────────────────────
+
+  /** Tautulli integration data (Plex playback, file info, quality) */
+  tautulli?: {
+    /** Plex rating key */
+    plexRatingKey?: string
+    /** Play count from Tautulli */
+    playCount?: number
+    /** Last watched date from Tautulli */
+    lastWatchedAt?: Date | null
+    /** Date added to Plex */
+    addedAt?: Date | null
+    /** File size in bytes */
+    fileSize?: number | null
+    /** Full file path */
+    filePath?: string | null
+    /** Duration in minutes */
+    duration?: number | null
+    /** Video codec (h264, hevc, etc.) */
+    videoCodec?: string | null
+    /** Audio codec (aac, ac3, etc.) */
+    audioCodec?: string | null
+    /** Video resolution (1080, 4k, etc.) */
+    resolution?: string | null
+    /** Video bitrate in kbps */
+    bitrate?: number | null
+    /** Container format (mkv, mp4, etc.) */
+    container?: string | null
+  } | null
 
   /** Radarr integration data for movies */
   radarr?: {
@@ -151,6 +189,22 @@ export interface MediaItem {
     qualityProfileId?: number
     /** Minimum availability setting */
     minimumAvailability?: string
+    /** Movie status (announced, inCinemas, released, deleted) */
+    status?: string
+    /** TMDB rating (0-10) */
+    tmdbRating?: number | null
+    /** Digital release date */
+    digitalRelease?: Date | null
+    /** Theatrical release date */
+    inCinemas?: Date | null
+    /** Runtime in minutes */
+    runtime?: number | null
+    /** Tag IDs assigned in Radarr */
+    tags?: number[]
+    /** Size on disk in bytes */
+    sizeOnDisk?: number
+    /** Date added to Radarr */
+    addedAt?: Date | null
   }
 
   /** Sonarr integration data for TV series */
@@ -162,8 +216,76 @@ export interface MediaItem {
     /** Number of episode files on disk */
     episodeFileCount?: number
     /** Percentage of episodes with files */
-    percentOfEpisodes?: number
+    percentOfEpisodes?: number | null
+    /** Series type (standard, daily, anime) */
+    seriesType?: string
+    /** Original broadcast network */
+    network?: string | null
+    /** Total number of seasons */
+    seasonCount?: number
+    /** Total episodes in the series */
+    totalEpisodeCount?: number
+    /** First episode air date */
+    firstAired?: Date | null
+    /** Whether the series has ended */
+    ended?: boolean
+    /** Tag IDs assigned in Sonarr */
+    tags?: number[]
+    /** Total size on disk in bytes */
+    sizeOnDisk?: number
+    /** Content rating (TV-MA, TV-14, etc.) */
+    certification?: string | null
+    /** Quality profile ID in Sonarr */
+    qualityProfileId?: number
+    /** Date added to Sonarr */
+    addedAt?: Date | null
   }
+
+  /** Plex integration data (direct from Plex server) */
+  plex?: {
+    /** Plex rating key */
+    ratingKey?: string
+    /** View count from Plex */
+    viewCount?: number
+    /** Last viewed timestamp */
+    lastViewedAt?: Date | null
+    /** Date added to Plex library */
+    addedAt?: Date | null
+    /** Poster/thumb URL */
+    thumb?: string | null
+    /** Audience rating (0-10) */
+    audienceRating?: number | null
+    /** Content rating (PG-13, R, etc.) */
+    contentRating?: string | null
+    /** Production studio */
+    studio?: string | null
+    /** Duration in milliseconds */
+    duration?: number | null
+    /** GUID for external matching */
+    guid?: string | null
+    /** Plex playlists containing this media */
+    playlists?: string[]
+  } | null
+
+  /** Overseerr integration data for request status */
+  overseerr?: {
+    /** Whether media has an active request */
+    isRequested?: boolean
+    /** Request status (unknown, pending, processing, partially_available, available) */
+    status?: string
+    /** Media status in Overseerr (UNKNOWN, PENDING, PROCESSING, PARTIALLY_AVAILABLE, AVAILABLE) */
+    mediaStatus?: number
+    /** Username who requested the media */
+    requestedBy?: string
+    /** When the request was created */
+    requestedAt?: Date | null
+    /** TMDB ID */
+    tmdbId?: number
+    /** Whether there are any open requests */
+    hasRequest?: boolean
+    /** Total number of requests for this media */
+    requestCount?: number
+  } | null
 }
 
 /**

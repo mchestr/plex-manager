@@ -60,6 +60,49 @@ export async function getMaintenanceRules() {
 }
 
 /**
+ * Get a single maintenance rule by ID (admin only)
+ */
+export async function getMaintenanceRule(id: string) {
+  await requireAdmin()
+
+  try {
+    const rule = await prisma.maintenanceRule.findUnique({
+      where: { id },
+      include: {
+        scans: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: {
+            id: true,
+            status: true,
+            itemsScanned: true,
+            itemsFlagged: true,
+            completedAt: true,
+          },
+        },
+        _count: {
+          select: {
+            scans: true,
+          },
+        },
+      },
+    })
+
+    if (!rule) {
+      return { success: false, error: "Rule not found" }
+    }
+
+    return { success: true, data: rule }
+  } catch (error) {
+    logger.error("Error fetching maintenance rule", error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to fetch maintenance rule",
+    }
+  }
+}
+
+/**
  * Create new maintenance rule (admin only)
  */
 export async function createMaintenanceRule(data: unknown) {

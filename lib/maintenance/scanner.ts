@@ -498,11 +498,15 @@ export async function scanForCandidates(
         matchedItems.map(async (item) => {
           const itemData = item as MovieData | TVSeriesData
 
+          // Generate a plexRatingKey fallback if not available
+          const plexRatingKey = item.plexRatingKey
+            ?? (item.id ? `${rule.mediaType === 'MOVIE' ? 'radarr' : 'sonarr'}_${item.id}` : `unknown_${Date.now()}_${Math.random().toString(36).slice(2)}`)
+
           return prisma.maintenanceCandidate.create({
             data: {
               scanId: scan.id,
               mediaType: rule.mediaType,
-              plexRatingKey: item.plexRatingKey,
+              plexRatingKey,
               radarrId: "radarrId" in itemData ? itemData.radarrId : null,
               sonarrId: "sonarrId" in itemData ? itemData.sonarrId : null,
               tmdbId: "tmdbId" in itemData ? itemData.tmdbId : null,

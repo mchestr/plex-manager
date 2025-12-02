@@ -106,6 +106,48 @@ export async function getPlexRecentlyAdded(
 }
 
 /**
+ * Get all items from a specific library section
+ * @param serverConfig - Plex server configuration
+ * @param sectionId - Library section ID
+ * @param type - Filter by type (1=movie, 2=show, 4=episode)
+ */
+export async function getPlexLibraryItems(
+  serverConfig: { url: string; token: string },
+  sectionId: string | number,
+  type?: number
+): Promise<{ success: boolean; data?: any; error?: string }> {
+  try {
+    let url = `${serverConfig.url}/library/sections/${sectionId}/all?X-Plex-Token=${serverConfig.token}`
+    if (type) {
+      url += `&type=${type}`
+    }
+
+    const response = await fetchWithTimeout(url, {
+      method: "GET",
+      headers: {
+        "Accept": "application/json",
+      },
+      timeoutMs: 60000, // Allow longer timeout for large libraries
+    })
+
+    if (!response.ok) {
+      return { success: false, error: `Failed to fetch library items: ${response.statusText}` }
+    }
+
+    const data = await response.json()
+    return { success: true, data }
+  } catch (error) {
+    if (isTimeoutError(error)) {
+      return { success: false, error: "Connection timeout - library may be too large" }
+    }
+    if (error instanceof Error) {
+      return { success: false, error: `Error fetching library items: ${error.message}` }
+    }
+    return { success: false, error: "Failed to fetch Plex library items" }
+  }
+}
+
+/**
  * Get on deck content from Plex server
  */
 export async function getPlexOnDeck(
@@ -135,5 +177,74 @@ export async function getPlexOnDeck(
       return { success: false, error: `Error fetching on deck: ${error.message}` }
     }
     return { success: false, error: "Failed to fetch Plex on deck" }
+  }
+}
+
+/**
+ * Get all playlists from Plex server
+ */
+export async function getPlexPlaylists(
+  serverConfig: { url: string; token: string }
+): Promise<{ success: boolean; data?: any; error?: string }> {
+  try {
+    const url = `${serverConfig.url}/playlists?X-Plex-Token=${serverConfig.token}`
+
+    const response = await fetchWithTimeout(url, {
+      method: "GET",
+      headers: {
+        "Accept": "application/json",
+      },
+    })
+
+    if (!response.ok) {
+      return { success: false, error: `Failed to fetch playlists: ${response.statusText}` }
+    }
+
+    const data = await response.json()
+    return { success: true, data }
+  } catch (error) {
+    if (isTimeoutError(error)) {
+      return { success: false, error: "Connection timeout" }
+    }
+    if (error instanceof Error) {
+      return { success: false, error: `Error fetching playlists: ${error.message}` }
+    }
+    return { success: false, error: "Failed to fetch Plex playlists" }
+  }
+}
+
+/**
+ * Get items in a specific playlist
+ * @param serverConfig - Plex server configuration
+ * @param playlistKey - The ratingKey of the playlist
+ */
+export async function getPlexPlaylistItems(
+  serverConfig: { url: string; token: string },
+  playlistKey: string
+): Promise<{ success: boolean; data?: any; error?: string }> {
+  try {
+    const url = `${serverConfig.url}/playlists/${playlistKey}/items?X-Plex-Token=${serverConfig.token}`
+
+    const response = await fetchWithTimeout(url, {
+      method: "GET",
+      headers: {
+        "Accept": "application/json",
+      },
+    })
+
+    if (!response.ok) {
+      return { success: false, error: `Failed to fetch playlist items: ${response.statusText}` }
+    }
+
+    const data = await response.json()
+    return { success: true, data }
+  } catch (error) {
+    if (isTimeoutError(error)) {
+      return { success: false, error: "Connection timeout" }
+    }
+    if (error instanceof Error) {
+      return { success: false, error: `Error fetching playlist items: ${error.message}` }
+    }
+    return { success: false, error: "Failed to fetch Plex playlist items" }
   }
 }

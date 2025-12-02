@@ -110,3 +110,107 @@ export async function getAllOverseerrRequests(config: OverseerrParsed, limit = 2
   if (!response.ok) throw new Error(`Overseerr all requests error: ${response.statusText}`)
   return response.json()
 }
+
+/**
+ * Get media status from Overseerr by TMDB ID
+ * Returns media info including request status, availability, etc.
+ */
+export async function getOverseerrMediaByTmdbId(
+  config: OverseerrParsed,
+  tmdbId: number,
+  mediaType: "movie" | "tv"
+): Promise<{
+  success: boolean
+  data?: {
+    id: number
+    tmdbId: number
+    mediaType: string
+    status: number // 1=UNKNOWN, 2=PENDING, 3=PROCESSING, 4=PARTIALLY_AVAILABLE, 5=AVAILABLE
+    requests?: Array<{
+      id: number
+      status: number
+      requestedBy: { displayName: string }
+      createdAt: string
+    }>
+  }
+  error?: string
+}> {
+  try {
+    const url = `${config.url}/api/v1/${mediaType}/${tmdbId}`
+    const response = await fetch(url, {
+      headers: { "X-Api-Key": config.apiKey },
+    })
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        // Media not found in Overseerr - this is normal for items not in the system
+        return { success: true, data: undefined }
+      }
+      return { success: false, error: `Overseerr API error: ${response.statusText}` }
+    }
+
+    const data = await response.json()
+    return {
+      success: true,
+      data: {
+        id: data.id,
+        tmdbId: data.tmdbId || tmdbId,
+        mediaType: data.mediaType || mediaType,
+        status: data.mediaInfo?.status || 1, // Default to UNKNOWN
+        requests: data.mediaInfo?.requests || [],
+      },
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      return { success: false, error: `Overseerr fetch error: ${error.message}` }
+    }
+    return { success: false, error: "Failed to fetch Overseerr media status" }
+  }
+}
+
+/**
+ * Batch fetch media status from Overseerr for multiple TMDB IDs
+ * More efficient than individual calls
+ */
+export async function batchGetOverseerrMediaStatus(
+  config: OverseerrParsed,
+  items: Array<{ tmdbId: number; mediaType: "movie" | "tv" }>
+): Promise<Map<string, {
+  status: number
+  hasRequest: boolean
+  requestedBy?: string
+  requestedAt?: Date
+  requestCount: number
+}>> {
+  const results = new Map<string, {
+    status: number
+    hasRequest: boolean
+    requestedBy?: string
+    requestedAt?: Date
+    requestCount: number
+  }>()
+
+  // Process in batches to avoid overwhelming the API
+  const batchSize = 10
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize)
+    const promises = batch.map(async (item) => {
+      const key = `${item.mediaType}_${item.tmdbId}`
+      const result = await getOverseerrMediaByTmdbId(config, item.tmdbId, item.mediaType)
+      if (result.success && result.data) {
+        const latestRequest = result.data.requests?.[0]
+        const requestCount = result.data.requests?.length || 0
+        results.set(key, {
+          status: result.data.status,
+          hasRequest: requestCount > 0,
+          requestedBy: latestRequest?.requestedBy?.displayName,
+          requestedAt: latestRequest?.createdAt ? new Date(latestRequest.createdAt) : undefined,
+          requestCount,
+        })
+      }
+    })
+    await Promise.all(promises)
+  }
+
+  return results
+}

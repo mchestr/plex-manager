@@ -501,7 +501,7 @@ describe('StyledDropdown', () => {
       const button = screen.getByText('Select an option')
       fireEvent.click(button)
 
-      const menu = container.querySelector('.max-h-64.overflow-y-auto')
+      const menu = container.querySelector('.max-h-80.overflow-y-auto')
       expect(menu).toBeInTheDocument()
     })
   })
