@@ -25,9 +25,11 @@ function isValidCronExpression(cron: string): boolean {
 }
 
 // Cron schedule schema with validation
+// Allows empty strings (treated as no schedule) or valid cron expressions
 const CronScheduleSchema = z
   .string()
-  .refine((val) => isValidCronExpression(val), {
+  .transform((val) => val.trim() || undefined) // Empty strings become undefined
+  .refine((val) => val === undefined || isValidCronExpression(val), {
     message: "Invalid cron expression. Use 5-field format: minute hour day month weekday (e.g., '0 2 * * *' for daily at 2 AM)",
   })
 
