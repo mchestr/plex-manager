@@ -25,18 +25,22 @@ function isValidCronExpression(cron: string): boolean {
 }
 
 // Cron schedule schema with validation
-// Allows undefined, null, empty strings, or valid cron expressions
-const CronScheduleSchema = z
-  .string()
-  .optional()
-  .nullable()
-  .transform((val) => {
-    if (!val || val.trim() === "") return undefined
-    return val.trim()
-  })
-  .refine((val) => val === undefined || isValidCronExpression(val), {
-    message: "Invalid cron expression. Use 5-field format: minute hour day month weekday (e.g., '0 2 * * *' for daily at 2 AM)",
-  })
+// Validates cron expression format when provided, allows empty/undefined/null
+const CronScheduleSchema = z.preprocess(
+  // First, normalize the input: undefined, null, empty string all become null
+  (val) => {
+    if (val === undefined || val === null) return null
+    if (typeof val === "string" && val.trim() === "") return null
+    return val
+  },
+  // Then validate: null is allowed, or must be valid cron
+  z.union([
+    z.null(),
+    z.string().refine((val) => isValidCronExpression(val), {
+      message: "Invalid cron expression. Use 5-field format: minute hour day month weekday (e.g., '0 2 * * *' for daily at 2 AM)",
+    }),
+  ])
+)
 
 // Enums matching Prisma schema
 export const MediaTypeEnum = z.enum(["MOVIE", "TV_SERIES", "EPISODE"])

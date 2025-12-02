@@ -305,7 +305,7 @@ describe('Maintenance Actions', () => {
           mediaType: undefined,
           criteria: undefined,
           actionType: undefined,
-          schedule: undefined,
+          schedule: null,
         },
       })
       expect(mockRevalidatePath).toHaveBeenCalledWith('/admin/maintenance')
