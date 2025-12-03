@@ -54,10 +54,11 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copy Prisma schema and migrations
+# Copy Prisma schema, migrations, and config
 RUN mkdir -p ./prisma ./lib/generated
 COPY --from=builder --chown=nextjs:nodejs /app/prisma/schema.prisma ./prisma/schema.prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma/migrations ./prisma/migrations
+COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./prisma.config.ts
 
 # Copy generated Prisma client (output path: lib/generated/prisma)
 COPY --from=builder --chown=nextjs:nodejs /app/lib/generated/prisma ./lib/generated/prisma
@@ -65,7 +66,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/lib/generated/prisma ./lib/genera
 # Copy package.json and install Prisma CLI for migrations
 COPY --from=builder /app/package.json ./package.json
 RUN PRISMA_VERSION=$(node -p "require('./package.json').devDependencies.prisma") && \
-    npm install --no-package-lock "prisma@${PRISMA_VERSION}" && \
+    DOTENV_VERSION=$(node -p "require('./package.json').dependencies.dotenv") && \
+    npm install --no-package-lock "prisma@${PRISMA_VERSION}" "dotenv@${DOTENV_VERSION}" && \
     npm cache clean --force && \
     chown -R nextjs:nodejs node_modules
 
