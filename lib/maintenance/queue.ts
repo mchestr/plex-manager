@@ -7,6 +7,11 @@ const connection = new Redis(process.env.REDIS_URL || "redis://localhost:6379", 
   maxRetriesPerRequest: null,
 })
 
+// Use hash tag prefix for Redis Cluster compatibility
+// The {plex-manager} tag ensures all queue keys land on the same hash slot
+// This prevents "script tried accessing undeclared key" errors in cluster mode
+const QUEUE_PREFIX = "{plex-manager}"
+
 // Job data interfaces
 export interface ScanJobData {
   ruleId: string
@@ -22,6 +27,7 @@ export interface DeletionJobData {
 // Maintenance queue for scanning and finding candidates
 export const maintenanceQueue = new Queue<ScanJobData>("maintenance", {
   connection,
+  prefix: QUEUE_PREFIX,
   defaultJobOptions: {
     attempts: 3,
     backoff: {
@@ -42,6 +48,7 @@ export const maintenanceQueue = new Queue<ScanJobData>("maintenance", {
 // Separate deletion queue for safety (separate concurrency control)
 export const deletionQueue = new Queue<DeletionJobData>("deletion", {
   connection,
+  prefix: QUEUE_PREFIX,
   defaultJobOptions: {
     attempts: 2,
     backoff: {

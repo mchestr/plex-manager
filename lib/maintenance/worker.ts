@@ -12,6 +12,10 @@ const connection = new Redis(process.env.REDIS_URL || "redis://localhost:6379", 
   maxRetriesPerRequest: null,
 })
 
+// Use hash tag prefix for Redis Cluster compatibility
+// Must match the prefix used in queue.ts
+const QUEUE_PREFIX = "{plex-manager}"
+
 // Maintenance worker - scans for candidates based on rules
 export const maintenanceWorker = new Worker<ScanJobData>(
   "maintenance",
@@ -53,6 +57,7 @@ export const maintenanceWorker = new Worker<ScanJobData>(
   },
   {
     connection,
+    prefix: QUEUE_PREFIX,
     concurrency: 2,
     limiter: {
       max: 10,
@@ -111,6 +116,7 @@ export const deletionWorker = new Worker<DeletionJobData>(
   },
   {
     connection,
+    prefix: QUEUE_PREFIX,
     concurrency: 1, // Safety: only one deletion job at a time
   }
 )
