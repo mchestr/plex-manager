@@ -6,16 +6,22 @@ import { TEST_USERS } from '../fixtures/auth';
  * These replace hardcoded magic numbers with semantic names
  */
 export const WAIT_TIMEOUTS = {
+  /** Timeout for quick existence checks (e.g., isVisible with short wait) */
+  SHORT_CHECK: 2000,
   /** Timeout for error boundary to render (shorter wait) */
   ERROR_BOUNDARY: 3000,
-  /** Timeout for toast/notification messages to appear */
-  TOAST: 5000,
+  /** Timeout for modal/dialog animations to complete */
+  DIALOG_APPEAR: 5000,
+  /** Timeout for toast notifications to appear */
+  TOAST_APPEAR: 5000,
   /** Timeout for step transitions in flows (e.g., onboarding) */
   STEP_TRANSITION: 8000,
   /** Timeout for general page content visibility */
   PAGE_CONTENT: 10000,
   /** Timeout for admin page operations that may involve data fetching */
   ADMIN_CONTENT: 15000,
+  /** Timeout for extended operations like data-heavy page loads or setup wizards */
+  EXTENDED_OPERATION: 30000,
 } as const;
 
 /**
@@ -220,7 +226,7 @@ export async function waitForToast(
   options?: { timeout?: number }
 ): Promise<void> {
   const toast = page.getByText(message);
-  await expect(toast).toBeVisible({ timeout: options?.timeout ?? WAIT_TIMEOUTS.TOAST });
+  await expect(toast).toBeVisible({ timeout: options?.timeout ?? WAIT_TIMEOUTS.TOAST_APPEAR });
 }
 
 /**

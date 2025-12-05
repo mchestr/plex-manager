@@ -164,7 +164,7 @@ test.describe('Admin Maintenance Feature', () => {
         await adminPage.getByTestId('maintenance-rule-submit').click();
 
         // Should show success toast
-        await waitForToast(adminPage, /created successfully/i, { timeout: 10000 });
+        await waitForToast(adminPage, /created successfully/i, { timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
 
         // Should redirect to rules list
         await waitForAdminContent(adminPage, [
@@ -176,7 +176,7 @@ test.describe('Admin Maintenance Feature', () => {
         await waitForAdminPageReady(adminPage, WAIT_TIMEOUTS.ADMIN_CONTENT);
 
         // The new rule should appear in the list
-        await expect(adminPage.getByText(uniqueRuleName)).toBeVisible({ timeout: 10000 });
+        await expect(adminPage.getByText(uniqueRuleName)).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
       });
     });
   });
@@ -264,11 +264,11 @@ test.describe('Admin Maintenance Feature', () => {
         await approveButton.click();
 
         // Should show success toast
-        await waitForToast(adminPage, /status updated|approved/i, { timeout: 5000 });
+        await waitForToast(adminPage, /status updated|approved/i, { timeout: WAIT_TIMEOUTS.TOAST_APPEAR });
 
         // The candidate status should update (may need to check the status badge)
         // After approval, the approve/reject buttons should disappear for that candidate
-        await expect(approveButton).not.toBeVisible({ timeout: 5000 });
+        await expect(approveButton).not.toBeVisible({ timeout: WAIT_TIMEOUTS.TOAST_APPEAR });
       });
 
       test('should reject individual candidate', async ({ adminPage }) => {
@@ -289,10 +289,10 @@ test.describe('Admin Maintenance Feature', () => {
         await rejectButton.click();
 
         // Should show success toast
-        await waitForToast(adminPage, /status updated|rejected/i, { timeout: 5000 });
+        await waitForToast(adminPage, /status updated|rejected/i, { timeout: WAIT_TIMEOUTS.TOAST_APPEAR });
 
         // The reject button should disappear after rejection
-        await expect(rejectButton).not.toBeVisible({ timeout: 5000 });
+        await expect(rejectButton).not.toBeVisible({ timeout: WAIT_TIMEOUTS.TOAST_APPEAR });
       });
 
       test('should select candidates using checkboxes', async ({ adminPage }) => {
@@ -314,7 +314,7 @@ test.describe('Admin Maintenance Feature', () => {
 
         // Bulk actions should now be visible
         const bulkApproveButton = adminPage.getByTestId('bulk-approve-button');
-        await expect(bulkApproveButton).toBeVisible({ timeout: 5000 });
+        await expect(bulkApproveButton).toBeVisible({ timeout: WAIT_TIMEOUTS.DIALOG_APPEAR });
 
         // Select another candidate
         const secondCheckbox = adminPage.getByTestId(`select-candidate-${MAINTENANCE_TEST_DATA.CANDIDATES[1].id}`);
@@ -347,10 +347,10 @@ test.describe('Admin Maintenance Feature', () => {
         await bulkApproveButton.click();
 
         // Should show success toast
-        await waitForToast(adminPage, /2 candidates approved/i, { timeout: 5000 });
+        await waitForToast(adminPage, /2 candidates approved/i, { timeout: WAIT_TIMEOUTS.TOAST_APPEAR });
 
         // The approve buttons for those candidates should disappear
-        await expect(adminPage.getByTestId(`approve-candidate-${MAINTENANCE_TEST_DATA.CANDIDATES[0].id}`)).not.toBeVisible({ timeout: 5000 });
+        await expect(adminPage.getByTestId(`approve-candidate-${MAINTENANCE_TEST_DATA.CANDIDATES[0].id}`)).not.toBeVisible({ timeout: WAIT_TIMEOUTS.TOAST_APPEAR });
       });
 
       test('should perform bulk reject operation', async ({ adminPage }) => {
@@ -376,7 +376,7 @@ test.describe('Admin Maintenance Feature', () => {
         await bulkRejectButton.click();
 
         // Should show success toast
-        await waitForToast(adminPage, /candidates rejected/i, { timeout: 5000 });
+        await waitForToast(adminPage, /candidates rejected/i, { timeout: WAIT_TIMEOUTS.TOAST_APPEAR });
       });
 
       test('should filter candidates by review status', async ({ adminPage }) => {

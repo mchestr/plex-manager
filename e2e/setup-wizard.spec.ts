@@ -9,7 +9,7 @@
 import { expect, test } from '@playwright/test';
 import globalSetup from './global-setup';
 import { createE2EPrismaClient } from './helpers/prisma';
-import { navigateAndVerify, waitForLoadingGone } from './helpers/test-utils';
+import { navigateAndVerify, waitForLoadingGone, WAIT_TIMEOUTS } from './helpers/test-utils';
 
 import type { PrismaClient } from '../lib/generated/prisma/client';
 
@@ -73,7 +73,7 @@ test.describe('Setup Wizard', () => {
       console.log(`[TEST] Starting step: ${stepName}`);
 
       // Wait for the step heading to be visible
-      await expect(page.getByRole('heading', { name: new RegExp(stepName, 'i') })).toBeVisible({ timeout: 10000 });
+      await expect(page.getByRole('heading', { name: new RegExp(stepName, 'i') })).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
 
       // Fill all fields
       for (const [name, value] of Object.entries(fields)) {
@@ -87,7 +87,7 @@ test.describe('Setup Wizard', () => {
         }
 
         // Wait for element to be attached to DOM first
-        await input.waitFor({ state: 'attached', timeout: 5000 });
+        await input.waitFor({ state: 'attached', timeout: WAIT_TIMEOUTS.DIALOG_APPEAR });
 
         // Enhanced hidden input detection - handles both hidden inputs and CSS-based hiding
         const isHidden = await input.evaluate((el) => {
@@ -113,7 +113,7 @@ test.describe('Setup Wizard', () => {
           continue;
         }
 
-        await input.waitFor({ state: 'visible', timeout: 5000 });
+        await input.waitFor({ state: 'visible', timeout: WAIT_TIMEOUTS.DIALOG_APPEAR });
         const tagName = await input.evaluate((el) => el.tagName);
         if (tagName === 'SELECT') {
           await input.selectOption(value);
@@ -140,7 +140,7 @@ test.describe('Setup Wizard', () => {
           const method = response.request().method();
           return method === 'POST' && (url.includes('/setup') || url.includes('/_next/'));
         },
-        { timeout: 15000 }
+        { timeout: WAIT_TIMEOUTS.ADMIN_CONTENT }
       ).catch(() => null);
 
       // Wait for the response to complete (don't use fixed timeout, wait for actual response)
@@ -154,7 +154,7 @@ test.describe('Setup Wizard', () => {
 
       // Check for error messages on the page
       const errorElement = page.locator('text=/error|Error|failed|Failed/i').first();
-      const hasError = await errorElement.isVisible({ timeout: 2000 }).catch(() => false);
+      const hasError = await errorElement.isVisible({ timeout: WAIT_TIMEOUTS.SHORT_CHECK }).catch(() => false);
       if (hasError) {
         const errorText = await errorElement.textContent();
         console.log(`[TEST] Error visible on page for ${stepName}:`, errorText);
@@ -204,12 +204,12 @@ test.describe('Setup Wizard', () => {
     });
 
     // Step 6: Discord Linked Roles
-    await expect(page.getByRole('heading', { name: /Discord Linked Roles/i })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: /Discord Linked Roles/i })).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
     const discordToggle = page.getByTestId('setup-discord-toggle');
     if ((await discordToggle.getAttribute('aria-pressed')) === 'false') {
       await discordToggle.click();
       // Wait for conditional fields to appear after toggle
-      await page.locator('input[name="clientId"]').waitFor({ state: 'visible', timeout: 5000 });
+      await page.locator('input[name="clientId"]').waitFor({ state: 'visible', timeout: WAIT_TIMEOUTS.DIALOG_APPEAR });
     }
     await fillAndSubmitStep('Discord Linked Roles', {
       clientId: 'discord-client-id',
@@ -238,7 +238,7 @@ test.describe('Setup Wizard', () => {
     });
 
     // Wait for final success animation and redirect to home
-    await page.waitForURL('**/', { timeout: 15000 });
+    await page.waitForURL('**/', { timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
     await waitForLoadingGone(page);
 
     // Verify setup is complete in database

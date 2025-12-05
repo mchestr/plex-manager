@@ -110,14 +110,14 @@ test.describe('Accessibility Tests', () => {
       const deleteButton = adminPage.locator('button[aria-label*="Delete invite"]').first();
 
       // Only test if there are invites
-      const hasInvites = await deleteButton.isVisible({ timeout: 5000 }).catch(() => false);
+      const hasInvites = await deleteButton.isVisible({ timeout: WAIT_TIMEOUTS.DIALOG_APPEAR }).catch(() => false);
 
       if (hasInvites) {
         // Click delete button to open confirmation modal
         await deleteButton.click();
 
         // Wait for modal to appear
-        await adminPage.waitForSelector('[role="dialog"]', { timeout: 5000 });
+        await adminPage.waitForSelector('[role="dialog"]', { timeout: WAIT_TIMEOUTS.DIALOG_APPEAR });
 
         // Verify modal has proper ARIA attributes
         const modal = adminPage.locator('[role="dialog"]');
@@ -153,7 +153,7 @@ test.describe('Accessibility Tests', () => {
       await createButton.click();
 
       // Wait for modal to appear
-      await adminPage.waitForSelector('[role="dialog"]', { timeout: 5000 });
+      await adminPage.waitForSelector('[role="dialog"]', { timeout: WAIT_TIMEOUTS.DIALOG_APPEAR });
 
       // Verify modal has proper ARIA attributes
       const modal = adminPage.locator('[role="dialog"]');

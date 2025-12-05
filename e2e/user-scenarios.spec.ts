@@ -2,7 +2,8 @@ import { expect, test, TEST_USERS } from './fixtures/auth';
 import { createE2EPrismaClient } from './helpers/prisma';
 import {
   verifyNoAdminAccess,
-  waitForLoadingGone
+  waitForLoadingGone,
+  WAIT_TIMEOUTS
 } from './helpers/test-utils';
 
 test.describe('User Scenarios', () => {
@@ -115,7 +116,7 @@ test.describe('User Scenarios', () => {
 
         // Verify some wrapped content is visible (check for year in heading or content)
         const wrappedContent = regularUserPage.getByText(new RegExp(`${currentYear}`, 'i'));
-        await expect(wrappedContent).toBeVisible({ timeout: 10000 });
+        await expect(wrappedContent).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
 
       } finally {
         // Cleanup: delete the mock wrapped data
@@ -216,23 +217,23 @@ test.describe('User Scenarios', () => {
 
         // Verify shared wrapped content is displayed using stable data-testid selectors
         const wrappedHeading = anonymousPage.getByTestId('wrapped-share-heading');
-        await expect(wrappedHeading).toBeVisible({ timeout: 15000 });
+        await expect(wrappedHeading).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
 
         // Verify statistics are visible using data-testid selectors
         const totalWatchTime = anonymousPage.getByTestId('wrapped-total-watch-time');
-        await expect(totalWatchTime).toBeVisible({ timeout: 15000 });
+        await expect(totalWatchTime).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
 
         // Verify "Total Watch Time" label is visible
         const totalWatchTimeLabel = anonymousPage.getByTestId('wrapped-total-watch-time-label');
-        await expect(totalWatchTimeLabel).toBeVisible({ timeout: 15000 });
+        await expect(totalWatchTimeLabel).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
 
         // Verify "Movies Watched" label is visible
         const moviesWatchedLabel = anonymousPage.getByTestId('wrapped-movies-watched-label');
-        await expect(moviesWatchedLabel).toBeVisible({ timeout: 15000 });
+        await expect(moviesWatchedLabel).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
 
         // Verify "Shows Watched" label is visible
         const showsWatchedLabel = anonymousPage.getByTestId('wrapped-shows-watched-label');
-        await expect(showsWatchedLabel).toBeVisible({ timeout: 15000 });
+        await expect(showsWatchedLabel).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
 
         // Verify we're on the share page URL
         expect(anonymousPage.url()).toContain(`/wrapped/share/${shareToken}`);

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { createE2EPrismaClient } from './helpers/prisma';
-import { navigateAndVerify, waitForLoadingGone } from './helpers/test-utils';
+import { navigateAndVerify, waitForLoadingGone, WAIT_TIMEOUTS } from './helpers/test-utils';
 
 test.describe('Public Flows', () => {
   test('home page has sign in button and initiates flow', async ({ page }) => {
@@ -8,7 +8,7 @@ test.describe('Public Flows', () => {
 
     // Check for Sign In button
     const signInButton = page.getByTestId('sign-in-with-plex');
-    await expect(signInButton).toBeVisible({ timeout: 10000 });
+    await expect(signInButton).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
     await expect(signInButton).toBeEnabled();
   });
 
@@ -18,7 +18,7 @@ test.describe('Public Flows', () => {
       waitForSelector: 'h1, h2, [role="heading"]'
     });
 
-    await expect(page.getByTestId('invalid-invite-heading')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('invalid-invite-heading')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
   });
 
   test('setup page redirects if already set up', async ({ page }) => {
@@ -148,7 +148,7 @@ test.describe('Public Flows', () => {
       await waitForLoadingGone(page);
 
       // Wait for the heading to appear (the page uses client-side rendering with animations)
-      await expect(page.getByTestId('wrapped-share-heading')).toBeVisible({ timeout: 10000 });
+      await expect(page.getByTestId('wrapped-share-heading')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
 
       // Verify total watch time is displayed (uses data-testid for stability)
       await expect(page.getByTestId('wrapped-total-watch-time')).toBeVisible();
