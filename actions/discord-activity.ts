@@ -12,7 +12,7 @@ import {
 import { prisma } from "@/lib/prisma"
 import { toEndOfDayExclusive } from "@/lib/utils/formatters"
 import { createLogger } from "@/lib/utils/logger"
-import type { DiscordCommandType, DiscordCommandStatus } from "@/lib/generated/prisma/client"
+import type { DiscordCommandType, DiscordCommandStatus } from "@/lib/generated/prisma"
 
 const logger = createLogger("DISCORD_ACTIVITY_ACTIONS")
 

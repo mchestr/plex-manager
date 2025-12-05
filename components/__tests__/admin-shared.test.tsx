@@ -1,5 +1,5 @@
 import { AdminNav } from '@/components/admin/shared/admin-nav'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 // Mock Next.js navigation
@@ -713,11 +713,135 @@ describe('AdminNav', () => {
       // Menu should be open
       expect(container.querySelector('#mobile-more-menu')).toBeInTheDocument()
 
-      // Click outside the menu (on the body)
-      await user.click(document.body)
+      // Click on the backdrop to close the menu
+      const backdrop = screen.getByTestId('mobile-more-menu-backdrop')
+      await user.click(backdrop)
+
+      // Menu should be closed (AnimatePresence handles exit animation)
+      expect(container.querySelector('#mobile-more-menu')).not.toBeInTheDocument()
+    })
+
+    it('should close More menu when pressing Escape key', async () => {
+      const user = userEvent.setup()
+      const { container } = render(<AdminNav />)
+
+      const moreButton = screen.getByTestId('admin-nav-more-mobile')
+      await user.click(moreButton)
+
+      // Menu should be open
+      expect(container.querySelector('#mobile-more-menu')).toBeInTheDocument()
+
+      // Press Escape key
+      await user.keyboard('{Escape}')
 
       // Menu should be closed
       expect(container.querySelector('#mobile-more-menu')).not.toBeInTheDocument()
+    })
+
+    it('should return focus to More button when closing menu with Escape', async () => {
+      const user = userEvent.setup()
+      render(<AdminNav />)
+
+      const moreButton = screen.getByTestId('admin-nav-more-mobile')
+      await user.click(moreButton)
+
+      // Press Escape key
+      await user.keyboard('{Escape}')
+
+      // Focus should return to More button
+      expect(moreButton).toHaveFocus()
+    })
+
+    it('should focus first menu item when menu opens', async () => {
+      const user = userEvent.setup()
+      render(<AdminNav />)
+
+      const moreButton = screen.getByTestId('admin-nav-more-mobile')
+      await user.click(moreButton)
+
+      // First menu item should be focused (wait for async focus)
+      const firstMenuItem = screen.getByTestId('admin-nav-share-analytics-mobile')
+      await waitFor(() => {
+        expect(firstMenuItem).toHaveFocus()
+      })
+    })
+
+    it('should navigate menu items with arrow keys', async () => {
+      const user = userEvent.setup()
+      render(<AdminNav />)
+
+      const moreButton = screen.getByTestId('admin-nav-more-mobile')
+      await user.click(moreButton)
+
+      // Wait for first item to be focused
+      const firstMenuItem = screen.getByTestId('admin-nav-share-analytics-mobile')
+      await waitFor(() => {
+        expect(firstMenuItem).toHaveFocus()
+      })
+
+      // Press ArrowDown to go to second item
+      await user.keyboard('{ArrowDown}')
+      const secondMenuItem = screen.getByTestId('admin-nav-maintenance-rules-mobile')
+      expect(secondMenuItem).toHaveFocus()
+
+      // Press ArrowUp to go back to first item
+      await user.keyboard('{ArrowUp}')
+      expect(firstMenuItem).toHaveFocus()
+    })
+
+    it('should wrap around when navigating past last item with ArrowDown', async () => {
+      const user = userEvent.setup()
+      render(<AdminNav />)
+
+      const moreButton = screen.getByTestId('admin-nav-more-mobile')
+      await user.click(moreButton)
+
+      // Wait for first item to be focused
+      const firstMenuItem = screen.getByTestId('admin-nav-share-analytics-mobile')
+      await waitFor(() => {
+        expect(firstMenuItem).toHaveFocus()
+      })
+
+      // Navigate to last item (Sign Out) - there are 12 items total (10 menu items + Home + Sign Out)
+      for (let i = 0; i < 11; i++) {
+        await user.keyboard('{ArrowDown}')
+      }
+
+      const signOutButton = screen.getByTestId('admin-nav-signout-mobile')
+      expect(signOutButton).toHaveFocus()
+
+      // ArrowDown should wrap to first item
+      await user.keyboard('{ArrowDown}')
+      expect(firstMenuItem).toHaveFocus()
+    })
+
+    it('should have focus-visible styles on menu items', async () => {
+      const user = userEvent.setup()
+      render(<AdminNav />)
+
+      const moreButton = screen.getByTestId('admin-nav-more-mobile')
+      await user.click(moreButton)
+
+      const firstMenuItem = screen.getByTestId('admin-nav-share-analytics-mobile')
+      expect(firstMenuItem).toHaveClass('focus-visible:ring-2')
+      expect(firstMenuItem).toHaveClass('focus-visible:ring-cyan-500')
+    })
+
+    it('should render backdrop overlay when menu is open', async () => {
+      const user = userEvent.setup()
+      render(<AdminNav />)
+
+      const moreButton = screen.getByTestId('admin-nav-more-mobile')
+
+      // Backdrop should not exist before opening
+      expect(screen.queryByTestId('mobile-more-menu-backdrop')).not.toBeInTheDocument()
+
+      await user.click(moreButton)
+
+      // Backdrop should be visible
+      const backdrop = screen.getByTestId('mobile-more-menu-backdrop')
+      expect(backdrop).toBeInTheDocument()
+      expect(backdrop).toHaveClass('bg-black/50')
     })
   })
 
