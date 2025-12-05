@@ -88,7 +88,7 @@ export function DownloadQueuesPanel() {
 
   if (isError) {
     return (
-      <div className="p-4 text-center text-red-400 text-sm">
+      <div data-testid="download-queues-panel" className="p-4 text-center text-red-400 text-sm">
         {error instanceof Error ? error.message : "Failed to load queues"}
       </div>
     )
@@ -195,7 +195,7 @@ export function DownloadQueuesPanel() {
 
 function QueuesSkeleton() {
   return (
-    <div className="divide-y divide-slate-700">
+    <div data-testid="download-queues-panel" className="divide-y divide-slate-700">
       {[...Array(3)].map((_, i) => (
         <div key={i} className="p-4 flex items-center gap-4 animate-pulse">
           <div className="w-6 h-6 bg-slate-700 rounded" />

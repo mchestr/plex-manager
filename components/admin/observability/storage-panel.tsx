@@ -69,7 +69,7 @@ export function StoragePanel() {
 
   if (isError) {
     return (
-      <div className="p-4 text-center text-red-400 text-sm">
+      <div data-testid="storage-panel" className="p-4 text-center text-red-400 text-sm">
         {error instanceof Error ? error.message : "Failed to load storage"}
       </div>
     )
@@ -173,7 +173,7 @@ function LibraryCard({ library }: { library: LibraryInfo }) {
 
 function StorageSkeleton() {
   return (
-    <div className="divide-y divide-slate-700">
+    <div data-testid="storage-panel" className="divide-y divide-slate-700">
       <div className="p-4">
         <div className="h-4 w-20 bg-slate-700 rounded mb-3" />
         <div className="space-y-4">

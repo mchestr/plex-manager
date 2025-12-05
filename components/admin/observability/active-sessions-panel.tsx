@@ -32,7 +32,7 @@ export function ActiveSessionsPanel() {
 
   if (isError) {
     return (
-      <div className="p-4 text-center text-red-400 text-sm">
+      <div data-testid="active-sessions-panel" className="p-4 text-center text-red-400 text-sm">
         {error instanceof Error ? error.message : "Failed to load sessions"}
       </div>
     )
@@ -155,7 +155,7 @@ export function ActiveSessionsPanel() {
 
 function SessionsSkeleton() {
   return (
-    <div className="divide-y divide-slate-700">
+    <div data-testid="active-sessions-panel" className="divide-y divide-slate-700">
       {[...Array(2)].map((_, i) => (
         <div key={i} className="p-4 flex items-center gap-4 animate-pulse">
           <div className="w-10 h-10 rounded-full bg-slate-700" />

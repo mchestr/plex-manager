@@ -65,7 +65,7 @@ export function RequestsPanel() {
 
   if (isError) {
     return (
-      <div className="p-4 text-center text-red-400 text-sm">
+      <div data-testid="requests-panel" className="p-4 text-center text-red-400 text-sm">
         {error instanceof Error ? error.message : "Failed to load requests"}
       </div>
     )
@@ -192,7 +192,7 @@ function RequestRow({ request, overseerrUrl }: { request: RequestItem; overseerr
 
 function RequestsSkeleton() {
   return (
-    <div className="divide-y divide-slate-700">
+    <div data-testid="requests-panel" className="divide-y divide-slate-700">
       <div className="p-4">
         <div className="grid grid-cols-4 gap-3 animate-pulse">
           {[...Array(4)].map((_, i) => (
