@@ -6,9 +6,9 @@ import { notFound } from "next/navigation"
 
 export const dynamic = 'force-dynamic'
 
-export default async function LLMUsageDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
-  const record = await getLLMUsageById(id)
+export default async function LLMUsageDetailPage({ params }: { params: Promise<{ usageId: string }> }) {
+  const { usageId } = await params
+  const record = await getLLMUsageById(usageId)
 
   if (!record) {
     notFound()

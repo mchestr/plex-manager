@@ -51,10 +51,9 @@ function getDurationLabel(start: Date, end: Date) {
 export default async function LLMConversationPage({
   params,
 }: {
-  params: Promise<{ id: string }>
+  params: Promise<{ conversationId: string }>
 }) {
-  const { id } = await params
-  const conversationId = id
+  const { conversationId } = await params
 
   // For now, fetch first page with a generous page size – chatbot conversations are short
   const { records } = await getLLMUsageRecords(1, 100, undefined, conversationId)

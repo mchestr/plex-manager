@@ -2,12 +2,12 @@ import { InviteDetailsClient } from "@/components/admin/invites/invite-details-c
 
 export const dynamic = 'force-dynamic'
 
-export default async function InviteDetailsPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
+export default async function InviteDetailsPage({ params }: { params: Promise<{ inviteId: string }> }) {
+  const { inviteId } = await params
   return (
     <div className="p-4 sm:p-6">
       <div className="max-w-7xl mx-auto">
-        <InviteDetailsClient id={id} />
+        <InviteDetailsClient id={inviteId} />
       </div>
     </div>
   )

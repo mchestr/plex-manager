@@ -9,11 +9,11 @@ export const dynamic = 'force-dynamic'
 export default async function EditRulePage({
   params,
 }: {
-  params: Promise<{ id: string }>
+  params: Promise<{ ruleId: string }>
 }) {
-  const { id } = await params
+  const { ruleId } = await params
 
-  const result = await getMaintenanceRule(id)
+  const result = await getMaintenanceRule(ruleId)
   if (!result.success || !result.data) {
     notFound()
   }
