@@ -29,13 +29,21 @@ export async function getSetupStatus() {
   }
 }
 
+/**
+ * Requires admin authentication if setup is already complete.
+ * During initial setup (before completion), anyone can access setup endpoints.
+ * After setup is complete, only admins can modify configuration.
+ */
+async function requireAdminIfSetupComplete(): Promise<void> {
+  const setupStatus = await getSetupStatus()
+  if (setupStatus.isComplete) {
+    await requireAdmin()
+  }
+}
+
 export async function savePlexServer(data: PlexServerInput) {
   try {
-    // Require admin if setup is already complete
-    const setupStatus = await getSetupStatus()
-    if (setupStatus.isComplete) {
-      await requireAdmin()
-    }
+    await requireAdminIfSetupComplete()
 
     const validated: PlexServerParsed = plexServerSchema.parse(data)
 
@@ -100,11 +108,7 @@ export async function savePlexServer(data: PlexServerInput) {
 
 export async function saveTautulli(data: TautulliInput) {
   try {
-    // Require admin if setup is already complete
-    const setupStatus = await getSetupStatus()
-    if (setupStatus.isComplete) {
-      await requireAdmin()
-    }
+    await requireAdminIfSetupComplete()
 
     const validated: TautulliParsed = tautulliSchema.parse(data)
 
@@ -159,11 +163,7 @@ export async function saveTautulli(data: TautulliInput) {
 
 export async function saveOverseerr(data: OverseerrInput) {
   try {
-    // Require admin if setup is already complete
-    const setupStatus = await getSetupStatus()
-    if (setupStatus.isComplete) {
-      await requireAdmin()
-    }
+    await requireAdminIfSetupComplete()
 
     const validated: OverseerrParsed = overseerrSchema.parse(data)
 
@@ -218,11 +218,7 @@ export async function saveOverseerr(data: OverseerrInput) {
 
 export async function saveSonarr(data: SonarrInput) {
   try {
-    // Require admin if setup is already complete
-    const setupStatus = await getSetupStatus()
-    if (setupStatus.isComplete) {
-      await requireAdmin()
-    }
+    await requireAdminIfSetupComplete()
 
     const validated: SonarrParsed = sonarrSchema.parse(data)
 
@@ -277,11 +273,7 @@ export async function saveSonarr(data: SonarrInput) {
 
 export async function saveRadarr(data: RadarrInput) {
   try {
-    // Require admin if setup is already complete
-    const setupStatus = await getSetupStatus()
-    if (setupStatus.isComplete) {
-      await requireAdmin()
-    }
+    await requireAdminIfSetupComplete()
 
     const validated: RadarrParsed = radarrSchema.parse(data)
 
@@ -336,10 +328,7 @@ export async function saveRadarr(data: RadarrInput) {
 
 export async function saveDiscordIntegration(data: DiscordIntegrationInput) {
   try {
-    const setupStatus = await getSetupStatus()
-    if (setupStatus.isComplete) {
-      await requireAdmin()
-    }
+    await requireAdminIfSetupComplete()
 
     const validated = discordIntegrationSchema.parse(data)
     const isEnabled = validated.isEnabled ?? false
@@ -416,10 +405,7 @@ async function saveLLMProviderForPurpose(
   nextStep: number
 ) {
   try {
-    const setupStatus = await getSetupStatus()
-    if (setupStatus.isComplete) {
-      await requireAdmin()
-    }
+    await requireAdminIfSetupComplete()
 
     const validated = llmProviderSchema.parse(data)
 
@@ -485,11 +471,7 @@ export async function saveLLMProvider(data: LLMProviderInput) {
 }
 
 export async function completeSetup() {
-  // Require admin if setup is already complete
-  const setupStatus = await getSetupStatus()
-  if (setupStatus.isComplete) {
-    await requireAdmin()
-  }
+  await requireAdminIfSetupComplete()
 
   const setup = await prisma.setup.findFirst({
     orderBy: { createdAt: "desc" },
