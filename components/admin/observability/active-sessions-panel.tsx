@@ -40,7 +40,7 @@ export function ActiveSessionsPanel() {
 
   if (!data?.available) {
     return (
-      <div className="p-4 text-center text-slate-500 text-sm">
+      <div data-testid="active-sessions-panel" className="p-4 text-center text-slate-500 text-sm">
         {data?.error || "Tautulli not configured"}
       </div>
     )
@@ -48,7 +48,7 @@ export function ActiveSessionsPanel() {
 
   if (data.sessions.length === 0) {
     return (
-      <div className="p-8 text-center">
+      <div data-testid="active-sessions-panel" className="p-8 text-center">
         <div className="text-slate-500 text-sm">No active streams</div>
         <div className="text-xs text-slate-600 mt-1">
           Last updated: {new Date(dataUpdatedAt).toLocaleTimeString()}

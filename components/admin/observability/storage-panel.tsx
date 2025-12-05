@@ -77,7 +77,7 @@ export function StoragePanel() {
 
   if (!data?.available) {
     return (
-      <div className="p-4 text-center text-slate-500 text-sm">
+      <div data-testid="storage-panel" className="p-4 text-center text-slate-500 text-sm">
         {data?.error || "No services configured for storage metrics"}
       </div>
     )

@@ -73,7 +73,7 @@ export function RequestsPanel() {
 
   if (!data?.configured) {
     return (
-      <div className="p-4 text-center text-slate-500 text-sm">
+      <div data-testid="requests-panel" className="p-4 text-center text-slate-500 text-sm">
         {data?.error || "Overseerr not configured"}
       </div>
     )
@@ -81,7 +81,7 @@ export function RequestsPanel() {
 
   if (!data?.available) {
     return (
-      <div className="p-4 text-center text-slate-500 text-sm">
+      <div data-testid="requests-panel" className="p-4 text-center text-slate-500 text-sm">
         {data?.error || "Unable to fetch request data"}
       </div>
     )

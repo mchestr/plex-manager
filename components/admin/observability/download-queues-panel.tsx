@@ -96,7 +96,7 @@ export function DownloadQueuesPanel() {
 
   if (!data?.available) {
     return (
-      <div className="p-4 text-center text-slate-500 text-sm">
+      <div data-testid="download-queues-panel" className="p-4 text-center text-slate-500 text-sm">
         {data?.error || "Neither Sonarr nor Radarr configured"}
       </div>
     )
@@ -104,7 +104,7 @@ export function DownloadQueuesPanel() {
 
   if (data.items.length === 0) {
     return (
-      <div className="p-8 text-center">
+      <div data-testid="download-queues-panel" className="p-8 text-center">
         <div className="text-slate-500 text-sm">No items in queue</div>
         <div className="text-xs text-slate-600 mt-1">
           Last updated: {new Date(dataUpdatedAt).toLocaleTimeString()}
