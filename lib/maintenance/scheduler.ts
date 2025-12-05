@@ -41,7 +41,7 @@ function getRuleIdFromSchedulerId(schedulerId: string): string | null {
 export async function syncRuleSchedule(
   ruleId: string,
   schedule: string | null | undefined,
-  enabled: boolean
+  enabled: boolean = true
 ): Promise<void> {
   const schedulerId = getSchedulerId(ruleId)
 
@@ -111,6 +111,7 @@ export async function removeRuleSchedule(ruleId: string): Promise<void> {
  * Sync all enabled rules with schedules to BullMQ
  *
  * Call this on worker startup to ensure all scheduled rules are registered.
+ * Uses Promise.allSettled for parallel execution to improve performance with large rule counts.
  */
 export async function syncAllRuleSchedules(): Promise<void> {
   try {
@@ -129,20 +130,27 @@ export async function syncAllRuleSchedules(): Promise<void> {
 
     logger.info(`Syncing ${rules.length} rule schedules with BullMQ`)
 
-    for (const rule of rules) {
-      try {
-        await syncRuleSchedule(rule.id, rule.schedule, rule.enabled)
-      } catch (error) {
+    // Execute all syncs in parallel for better performance
+    const results = await Promise.allSettled(
+      rules.map((rule) => syncRuleSchedule(rule.id, rule.schedule, rule.enabled))
+    )
+
+    // Log any failures
+    results.forEach((result, index) => {
+      if (result.status === "rejected") {
+        const rule = rules[index]
         logger.error("Failed to sync rule schedule", {
           ruleId: rule.id,
           ruleName: rule.name,
-          error,
+          error: result.reason,
         })
-        // Continue with other rules
       }
-    }
+    })
 
-    logger.info("Rule schedule sync complete")
+    const successCount = results.filter((r) => r.status === "fulfilled").length
+    const failCount = results.filter((r) => r.status === "rejected").length
+
+    logger.info("Rule schedule sync complete", { successCount, failCount })
   } catch (error) {
     logger.error("Failed to sync all rule schedules", { error })
     throw error

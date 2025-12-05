@@ -380,9 +380,16 @@ export function RuleForm({ mode, initialData, onSuccess }: RuleFormProps) {
               onChange={(e) => setSchedule(e.target.value)}
               placeholder="0 2 * * * (2 AM daily)"
             />
-            <p className="text-xs text-slate-500 mt-1">
-              Leave empty to disable automatic scheduling. Use cron format for scheduled scans.
-            </p>
+            <div className="mt-2 space-y-1">
+              <p className="text-xs text-slate-500">
+                Leave empty to disable automatic scheduling. Examples:
+              </p>
+              <ul className="text-xs text-slate-500 list-disc list-inside space-y-0.5 pl-1">
+                <li><code className="text-slate-400 bg-slate-800 px-1 rounded">0 2 * * *</code> — Daily at 2 AM</li>
+                <li><code className="text-slate-400 bg-slate-800 px-1 rounded">0 */6 * * *</code> — Every 6 hours</li>
+                <li><code className="text-slate-400 bg-slate-800 px-1 rounded">30 3 * * 0</code> — Weekly on Sunday at 3:30 AM</li>
+              </ul>
+            </div>
           </div>
         </div>
 

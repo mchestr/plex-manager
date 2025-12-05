@@ -187,7 +187,10 @@ describe("scheduler", () => {
 
       expect(mockUpsertJobScheduler).not.toHaveBeenCalled()
       expect(mockLoggerInfo).toHaveBeenCalledWith("Syncing 0 rule schedules with BullMQ")
-      expect(mockLoggerInfo).toHaveBeenCalledWith("Rule schedule sync complete")
+      expect(mockLoggerInfo).toHaveBeenCalledWith("Rule schedule sync complete", {
+        successCount: 0,
+        failCount: 0,
+      })
     })
 
     it("should continue syncing other rules if one fails", async () => {
