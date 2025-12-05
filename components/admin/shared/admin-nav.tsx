@@ -3,7 +3,7 @@
 import { signOut } from "next-auth/react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { type ReactNode, useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { MobileNavButton, MobileMoreMenu, type NavItem } from "./mobile-nav"
 
 // Navigation items organized by logical groups

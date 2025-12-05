@@ -8,7 +8,7 @@ import {
   updateCommandLog,
   logCommandExecution,
 } from "./audit"
-import type { DiscordCommandType, DiscordCommandStatus } from "@/lib/generated/prisma/client"
+import type { DiscordCommandType, DiscordCommandStatus } from "@/lib/generated/prisma"
 
 const REQUIRED_ENV = [
   "DISCORD_BOT_TOKEN",
