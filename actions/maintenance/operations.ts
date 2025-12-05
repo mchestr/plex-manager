@@ -30,7 +30,7 @@ export async function triggerManualScan(ruleId: string) {
     // Lazy-load queue to avoid Redis connection on module import
     const { maintenanceQueue } = await import("@/lib/maintenance/queue")
 
-    // Queue the scan job
+    // Queue the scan job (returns null if Redis is not configured)
     const job = await maintenanceQueue.add(
       `manual-scan-${ruleId}`,
       {
@@ -41,6 +41,11 @@ export async function triggerManualScan(ruleId: string) {
         priority: 1, // Higher priority for manual scans
       }
     )
+
+    if (!job) {
+      logger.warn("Manual scan skipped - Redis not configured", { ruleId })
+      return { success: false, error: "Redis is not configured. Cannot queue scan jobs." }
+    }
 
     logger.info("Manual scan queued", { ruleId, jobId: job.id })
 
@@ -93,7 +98,7 @@ export async function triggerDeletion(candidateIds: string[], deleteFiles: boole
     // Lazy-load queue to avoid Redis connection on module import
     const { deletionQueue } = await import("@/lib/maintenance/queue")
 
-    // Queue the deletion job
+    // Queue the deletion job (returns null if Redis is not configured)
     const job = await deletionQueue.add(
       `deletion-${Date.now()}`,
       {
@@ -105,6 +110,11 @@ export async function triggerDeletion(candidateIds: string[], deleteFiles: boole
         priority: 1,
       }
     )
+
+    if (!job) {
+      logger.warn("Deletion job skipped - Redis not configured", { candidateIds })
+      return { success: false, error: "Redis is not configured. Cannot queue deletion jobs." }
+    }
 
     logger.info("Deletion job queued", {
       candidateCount: candidateIds.length,

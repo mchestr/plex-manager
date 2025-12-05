@@ -4,6 +4,7 @@ import { createLogger } from "@/lib/utils/logger"
 import type { ScanJobData, DeletionJobData } from "./queue"
 import { scanForCandidates } from "./scanner"
 import { executeDeletions } from "./deleter"
+import { syncAllRuleSchedules } from "./scheduler"
 
 const logger = createLogger("maintenance-worker")
 
@@ -11,6 +12,10 @@ const logger = createLogger("maintenance-worker")
 const connection = new Redis(process.env.REDIS_URL || "redis://localhost:6379", {
   maxRetriesPerRequest: null,
 })
+
+// Use hash tag prefix for Redis Cluster compatibility
+// Must match the prefix used in queue.ts
+const QUEUE_PREFIX = "{plex-manager}"
 
 // Maintenance worker - scans for candidates based on rules
 export const maintenanceWorker = new Worker<ScanJobData>(
@@ -53,6 +58,7 @@ export const maintenanceWorker = new Worker<ScanJobData>(
   },
   {
     connection,
+    prefix: QUEUE_PREFIX,
     concurrency: 2,
     limiter: {
       max: 10,
@@ -111,6 +117,7 @@ export const deletionWorker = new Worker<DeletionJobData>(
   },
   {
     connection,
+    prefix: QUEUE_PREFIX,
     concurrency: 1, // Safety: only one deletion job at a time
   }
 )
@@ -131,6 +138,26 @@ deletionWorker.on("completed", (job) => {
 deletionWorker.on("failed", (job, err) => {
   logger.error("Deletion job failed", { jobId: job?.id, error: err })
 })
+
+// Initialize schedulers on startup with retry mechanism
+const SCHEDULER_RETRY_DELAY_MS = 30000
+
+const initializeSchedulers = async (isRetry = false): Promise<void> => {
+  try {
+    logger.info(isRetry ? "Retrying maintenance rule scheduler initialization" : "Initializing maintenance rule schedulers")
+    await syncAllRuleSchedules()
+    logger.info("Maintenance rule schedulers initialized")
+  } catch (error) {
+    logger.error("Failed to initialize maintenance rule schedulers", { error })
+    if (!isRetry) {
+      logger.info(`Will retry scheduler initialization in ${SCHEDULER_RETRY_DELAY_MS / 1000}s`)
+      setTimeout(() => initializeSchedulers(true), SCHEDULER_RETRY_DELAY_MS)
+    }
+  }
+}
+
+// Run initialization (non-blocking with retry on failure)
+initializeSchedulers()
 
 // Graceful shutdown
 const shutdown = async () => {

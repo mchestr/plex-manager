@@ -41,8 +41,11 @@ export {
 export {
   getPlexSessions,
   getPlexLibrarySections,
+  getPlexLibraryItems,
   getPlexRecentlyAdded,
   getPlexOnDeck,
+  getPlexPlaylists,
+  getPlexPlaylistItems,
 } from "./plex-sessions"
 
 // Search functionality

@@ -3,7 +3,7 @@
 import { signOut } from "next-auth/react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { type ReactNode } from "react"
+import { type ReactNode, useState, useEffect, useRef } from "react"
 
 type NavItem = {
   href: string
@@ -184,18 +184,67 @@ const systemNavItems: NavItem[] = [
   },
 ]
 
-// Flattened array for mobile navigation (no separators needed)
-const navItems: NavItem[] = [...coreNavItems, ...maintenanceNavItems, ...analyticsNavItems, ...configNavItems, ...systemNavItems]
+// Primary mobile nav items (shown directly in bottom bar)
+const primaryMobileNavItems: NavItem[] = [
+  coreNavItems[0], // Users
+  coreNavItems[1], // Invites
+  maintenanceNavItems[0], // Maintenance Overview
+  systemNavItems[0], // Settings
+]
+
+// Secondary mobile nav items (shown in "More" menu)
+const secondaryMobileNavItems: NavItem[] = [
+  coreNavItems[2], // Share Analytics
+  ...maintenanceNavItems.slice(1), // Rules, Candidates, User Feedback, Deletion History
+  ...analyticsNavItems, // LLM Usage, Cost Analysis, Discord Bot
+  ...configNavItems, // Prompts, Playground
+]
 
 export function AdminNav() {
   const pathname = usePathname()
   const router = useRouter()
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false)
+  const moreMenuRef = useRef<HTMLDivElement>(null)
+  const moreButtonRef = useRef<HTMLButtonElement>(null)
 
   const handleSignOut = async () => {
     await signOut({ redirect: false })
     router.push("/")
     router.refresh()
   }
+
+  // Close more menu when clicking outside
+  useEffect(() => {
+    if (!moreMenuOpen) return
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node
+      // Don't close if clicking on the More button itself (it toggles via onClick)
+      if (moreButtonRef.current?.contains(target)) {
+        return
+      }
+      if (moreMenuRef.current && !moreMenuRef.current.contains(target)) {
+        setMoreMenuOpen(false)
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [moreMenuOpen])
+
+  // Close more menu on navigation
+  useEffect(() => {
+    setMoreMenuOpen(false)
+  }, [pathname])
+
+  // Check if any secondary item is active (to highlight More button)
+  const isSecondaryActive = secondaryMobileNavItems.some((item) => {
+    if (!pathname) return false
+    if (item.href === "/admin/prompts") {
+      return pathname.startsWith("/admin/prompts") && !pathname.startsWith("/admin/playground")
+    }
+    return pathname.startsWith(item.href)
+  })
 
   // Check if current path matches a nav item
   const isActive = (href: string) => {
@@ -229,7 +278,7 @@ export function AdminNav() {
         <Link
           key={item.href}
           href={item.href}
-          data-testid={item.testId}
+          data-testid={`${item.testId}-mobile`}
           className={`flex flex-col items-center gap-1 px-2 py-2 rounded-lg transition-all min-w-0 flex-1 ${
             active ? "text-cyan-400" : "text-slate-400"
           }`}
@@ -354,8 +403,91 @@ export function AdminNav() {
 
       {/* Mobile Bottom Navigation */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur-sm border-t border-slate-700 z-50 pb-2">
+        {/* More Menu Slide-up Panel */}
+        {moreMenuOpen && (
+          <div
+            ref={moreMenuRef}
+            id="mobile-more-menu"
+            role="menu"
+            aria-label="Additional navigation options"
+            className="absolute bottom-full left-0 right-0 bg-slate-900/98 backdrop-blur-sm border-t border-slate-700 max-h-[60vh] overflow-y-auto"
+          >
+            <div className="p-4 grid grid-cols-3 gap-2">
+              {secondaryMobileNavItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  role="menuitem"
+                  data-testid={`${item.testId}-mobile`}
+                  className={`flex flex-col items-center gap-2 p-3 rounded-lg transition-all ${
+                    isActive(item.href)
+                      ? "bg-gradient-to-r from-cyan-600/20 to-purple-600/20 border border-cyan-500/30 text-cyan-400"
+                      : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+                  }`}
+                >
+                  <div className={`transition-colors ${isActive(item.href) ? "text-cyan-400" : "text-slate-500"}`}>
+                    {item.icon}
+                  </div>
+                  <span className="text-xs font-medium text-center leading-tight">
+                    {item.label}
+                  </span>
+                </Link>
+              ))}
+              {/* Home and Sign Out in More menu */}
+              <Link
+                href="/"
+                role="menuitem"
+                data-testid="admin-nav-home-mobile"
+                className="flex flex-col items-center gap-2 p-3 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/50 transition-all"
+              >
+                <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+                <span className="text-xs font-medium text-center leading-tight">Home</span>
+              </Link>
+              <button
+                onClick={handleSignOut}
+                role="menuitem"
+                data-testid="admin-nav-signout-mobile"
+                className="flex flex-col items-center gap-2 p-3 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
+              >
+                <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                <span className="text-xs font-medium text-center leading-tight">Sign Out</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Primary Navigation Bar */}
         <div className="flex items-center justify-around px-2 py-2">
-          {navItems.map((item) => renderNavItem(item, true))}
+          {primaryMobileNavItems.map((item) => renderNavItem(item, true))}
+          {/* More Button */}
+          <button
+            ref={moreButtonRef}
+            onClick={() => setMoreMenuOpen(!moreMenuOpen)}
+            data-testid="admin-nav-more-mobile"
+            aria-expanded={moreMenuOpen}
+            aria-haspopup="true"
+            aria-label="More navigation options"
+            aria-controls="mobile-more-menu"
+            className={`flex flex-col items-center gap-1 px-2 py-2 rounded-lg transition-all min-w-0 flex-1 ${
+              moreMenuOpen || isSecondaryActive ? "text-cyan-400" : "text-slate-400"
+            }`}
+          >
+            <div className={`transition-colors ${moreMenuOpen || isSecondaryActive ? "text-cyan-400" : "text-slate-500"}`}>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </div>
+            <span className="text-xs font-medium truncate w-full text-center">
+              More
+            </span>
+            {isSecondaryActive && !moreMenuOpen && (
+              <div className="w-1 h-1 rounded-full bg-cyan-400"></div>
+            )}
+          </button>
         </div>
       </nav>
 

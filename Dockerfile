@@ -21,12 +21,9 @@ RUN npx prisma generate
 
 # Rebuild the source code only when needed
 FROM base AS builder
-# Install build dependencies for native modules if needed during build
-RUN apk add --no-cache libc6-compat python3 make g++
 WORKDIR /app
-ENV NEXT_TELEMETRY_DISABLED=1
-# Placeholder DATABASE_URL for prisma generate (doesn't connect, just generates client)
-ENV DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
+ENV NEXT_TELEMETRY_DISABLED=1 \
+    DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -42,36 +39,32 @@ ENV NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
     HOSTNAME="0.0.0.0"
 
-# Create non-root user
+# Create non-root user and set up entrypoint
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Copy public assets
-COPY --from=builder /app/public ./public
-
-# Automatically leverage output traces to reduce image size
+# Copy public assets and Next.js standalone output
 # https://nextjs.org/docs/advanced-features/output-file-tracing
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copy Prisma schema and migrations
-RUN mkdir -p ./prisma ./lib/generated
+# Copy Prisma schema, migrations, config, and generated client
 COPY --from=builder --chown=nextjs:nodejs /app/prisma/schema.prisma ./prisma/schema.prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma/migrations ./prisma/migrations
-
-# Copy generated Prisma client (output path: lib/generated/prisma)
+COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder --chown=nextjs:nodejs /app/lib/generated/prisma ./lib/generated/prisma
 
-# Copy package.json and install Prisma CLI for migrations
+# Install Prisma CLI for runtime migrations
 COPY --from=builder /app/package.json ./package.json
 RUN PRISMA_VERSION=$(node -p "require('./package.json').devDependencies.prisma") && \
-    npm install --no-package-lock "prisma@${PRISMA_VERSION}" && \
+    DOTENV_VERSION=$(node -p "require('./package.json').dependencies.dotenv") && \
+    npm install --no-package-lock "prisma@${PRISMA_VERSION}" "dotenv@${DOTENV_VERSION}" && \
     npm cache clean --force && \
     chown -R nextjs:nodejs node_modules
 
-# Copy and set up entrypoint script
-COPY --chown=nextjs:nodejs docker-entrypoint.sh ./docker-entrypoint.sh
-RUN chmod +x ./docker-entrypoint.sh
+# Copy entrypoint script
+COPY --chmod=755 --chown=nextjs:nodejs docker-entrypoint.sh ./docker-entrypoint.sh
 
 USER nextjs
 

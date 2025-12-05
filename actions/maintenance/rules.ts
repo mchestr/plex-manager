@@ -8,6 +8,7 @@ import {
   CreateMaintenanceRuleSchema,
   UpdateMaintenanceRuleSchema,
 } from "@/lib/validations/maintenance"
+import { syncRuleSchedule, removeRuleSchedule } from "@/lib/maintenance/scheduler"
 import { revalidatePath } from "next/cache"
 
 const logger = createLogger("MAINTENANCE-RULES")
@@ -60,6 +61,49 @@ export async function getMaintenanceRules() {
 }
 
 /**
+ * Get a single maintenance rule by ID (admin only)
+ */
+export async function getMaintenanceRule(id: string) {
+  await requireAdmin()
+
+  try {
+    const rule = await prisma.maintenanceRule.findUnique({
+      where: { id },
+      include: {
+        scans: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: {
+            id: true,
+            status: true,
+            itemsScanned: true,
+            itemsFlagged: true,
+            completedAt: true,
+          },
+        },
+        _count: {
+          select: {
+            scans: true,
+          },
+        },
+      },
+    })
+
+    if (!rule) {
+      return { success: false, error: "Rule not found" }
+    }
+
+    return { success: true, data: rule }
+  } catch (error) {
+    logger.error("Error fetching maintenance rule", error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to fetch maintenance rule",
+    }
+  }
+}
+
+/**
  * Create new maintenance rule (admin only)
  */
 export async function createMaintenanceRule(data: unknown) {
@@ -79,6 +123,16 @@ export async function createMaintenanceRule(data: unknown) {
         schedule: validated.schedule,
       },
     })
+
+    // Sync schedule with BullMQ job scheduler
+    try {
+      await syncRuleSchedule(rule.id, rule.schedule, rule.enabled)
+    } catch (scheduleError) {
+      logger.warn("Failed to sync rule schedule, rule created but not scheduled", {
+        ruleId: rule.id,
+        error: scheduleError,
+      })
+    }
 
     revalidatePath("/admin/maintenance")
     return { success: true, data: rule }
@@ -113,6 +167,16 @@ export async function updateMaintenanceRule(id: string, data: unknown) {
       },
     })
 
+    // Sync schedule with BullMQ job scheduler
+    try {
+      await syncRuleSchedule(rule.id, rule.schedule, rule.enabled)
+    } catch (scheduleError) {
+      logger.warn("Failed to sync rule schedule", {
+        ruleId: rule.id,
+        error: scheduleError,
+      })
+    }
+
     revalidatePath("/admin/maintenance")
     return { success: true, data: rule }
   } catch (error) {
@@ -132,6 +196,16 @@ export async function deleteMaintenanceRule(id: string) {
   await requireAdmin()
 
   try {
+    // Remove job scheduler first
+    try {
+      await removeRuleSchedule(id)
+    } catch (scheduleError) {
+      logger.warn("Failed to remove rule schedule", {
+        ruleId: id,
+        error: scheduleError,
+      })
+    }
+
     await prisma.maintenanceRule.delete({
       where: { id },
     })
@@ -158,6 +232,16 @@ export async function toggleMaintenanceRule(id: string, enabled: boolean) {
       where: { id },
       data: { enabled },
     })
+
+    // Sync schedule with BullMQ job scheduler (enable/disable)
+    try {
+      await syncRuleSchedule(rule.id, rule.schedule, rule.enabled)
+    } catch (scheduleError) {
+      logger.warn("Failed to sync rule schedule on toggle", {
+        ruleId: rule.id,
+        error: scheduleError,
+      })
+    }
 
     revalidatePath("/admin/maintenance")
     return { success: true, data: rule }

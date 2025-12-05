@@ -96,45 +96,50 @@ export function ConditionBuilder({
   }
 
   return (
-    <div className="flex items-start gap-2 p-3 bg-slate-800/50 border border-slate-700 rounded-lg hover:border-slate-600 transition-colors">
-      {/* Field Selector */}
-      <div className="flex-1 min-w-[200px]">
-        <StyledDropdown
-          value={condition.field}
-          onChange={handleFieldChange}
-          optgroups={fieldOptgroups}
-          size="md"
-        />
+    <div className="p-4 bg-slate-800/50 border border-slate-700 rounded-lg hover:border-slate-600 transition-colors space-y-3">
+      {/* Row 1: Field selector with remove button */}
+      <div className="flex items-center gap-3">
+        <div className="flex-1">
+          <label className="block text-xs text-slate-500 mb-1.5">Field</label>
+          <StyledDropdown
+            value={condition.field}
+            onChange={handleFieldChange}
+            optgroups={fieldOptgroups}
+            size="md"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={onRemove}
+          className="text-red-400 hover:text-red-300 p-2 rounded hover:bg-red-400/10 transition-colors flex-shrink-0 mt-5"
+          title="Remove condition"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       </div>
 
-      {/* Operator Selector */}
-      <div className="min-w-[140px]">
-        <StyledDropdown
-          value={condition.operator}
-          onChange={handleOperatorChange}
-          options={operatorOptions}
-          size="md"
-        />
+      {/* Row 2: Operator and Value */}
+      <div className="flex items-end gap-3">
+        <div className="w-[180px] flex-shrink-0">
+          <label className="block text-xs text-slate-500 mb-1.5">Operator</label>
+          <StyledDropdown
+            value={condition.operator}
+            onChange={handleOperatorChange}
+            options={operatorOptions}
+            size="md"
+          />
+        </div>
+        <div className="flex-1">
+          <label className="block text-xs text-slate-500 mb-1.5">Value</label>
+          <ConditionValueInput
+            fieldDef={fieldDef}
+            condition={condition}
+            onChange={onChange}
+          />
+        </div>
       </div>
-
-      {/* Value Input (type-specific) */}
-      <ConditionValueInput
-        fieldDef={fieldDef}
-        condition={condition}
-        onChange={onChange}
-      />
-
-      {/* Remove Button */}
-      <button
-        type="button"
-        onClick={onRemove}
-        className="text-red-400 hover:text-red-300 px-2 py-2 rounded hover:bg-red-400/10 transition-colors flex-shrink-0"
-        title="Remove condition"
-      >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
     </div>
   )
 }

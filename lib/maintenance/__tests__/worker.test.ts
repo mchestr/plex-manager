@@ -12,7 +12,7 @@ jest.mock("ioredis", () => {
   }))
 })
 
-// Mock BullMQ Worker
+// Mock BullMQ Worker and Queue
 jest.mock("bullmq", () => ({
   Worker: jest.fn().mockImplementation((queueName: string, processor: (job: Job) => Promise<unknown>) => {
     if (queueName === "maintenance") {
@@ -27,6 +27,12 @@ jest.mock("bullmq", () => ({
       }),
     }
   }),
+  Queue: jest.fn().mockImplementation(() => ({
+    add: jest.fn().mockResolvedValue({ id: "test-job" }),
+    upsertJobScheduler: jest.fn().mockResolvedValue(undefined),
+    removeJobScheduler: jest.fn().mockResolvedValue(true),
+    getJobSchedulers: jest.fn().mockResolvedValue([]),
+  })),
   Job: jest.fn(),
 }))
 
@@ -40,6 +46,13 @@ jest.mock("../scanner", () => ({
 
 jest.mock("../deleter", () => ({
   executeDeletions: (...args: unknown[]) => mockExecuteDeletions(...args),
+}))
+
+// Mock scheduler
+jest.mock("../scheduler", () => ({
+  syncAllRuleSchedules: jest.fn().mockResolvedValue(undefined),
+  syncRuleSchedule: jest.fn().mockResolvedValue(undefined),
+  removeRuleSchedule: jest.fn().mockResolvedValue(undefined),
 }))
 
 // Mock logger
