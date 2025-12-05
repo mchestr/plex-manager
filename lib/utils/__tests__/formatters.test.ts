@@ -6,43 +6,55 @@ describe('formatters', () => {
       expect(formatFileSize(null)).toBe('Unknown')
     })
 
-    it('should format bytes to GB when >= 1 GB', () => {
+    it('should handle zero bytes', () => {
+      expect(formatFileSize(0)).toBe('0 B')
+    })
+
+    it('should format bytes (< 1 KB)', () => {
+      expect(formatFileSize(500)).toBe('500 B')
+      expect(formatFileSize(1023)).toBe('1023 B')
+    })
+
+    it('should format kilobytes', () => {
+      expect(formatFileSize(1024)).toBe('1 KB')
+      expect(formatFileSize(1536)).toBe('1.5 KB')
+      expect(formatFileSize(10240)).toBe('10 KB')
+    })
+
+    it('should format megabytes', () => {
+      const oneMB = 1024 ** 2
+      expect(formatFileSize(oneMB)).toBe('1 MB')
+      expect(formatFileSize(oneMB * 1.5)).toBe('1.5 MB')
+      expect(formatFileSize(oneMB * 500)).toBe('500 MB')
+    })
+
+    it('should format gigabytes', () => {
       const oneGB = 1024 ** 3
       expect(formatFileSize(oneGB)).toBe('1 GB')
       expect(formatFileSize(oneGB * 2.5)).toBe('2.5 GB')
       expect(formatFileSize(oneGB * 10)).toBe('10 GB')
     })
 
-    it('should format bytes to MB when < 1 GB', () => {
-      const oneMB = 1024 ** 2
-      expect(formatFileSize(oneMB)).toBe('1 MB')
-      expect(formatFileSize(oneMB * 500)).toBe('500 MB')
-      expect(formatFileSize(oneMB * 1.5)).toBe('1.5 MB')
+    it('should format terabytes', () => {
+      expect(formatFileSize(1099511627776)).toBe('1 TB') // 1024^4
+      expect(formatFileSize(2199023255552)).toBe('2 TB')
     })
 
     it('should handle bigint input', () => {
       const oneGB = BigInt(1024 ** 3)
       expect(formatFileSize(oneGB)).toBe('1 GB')
       expect(formatFileSize(oneGB * BigInt(5))).toBe('5 GB')
-    })
-
-    it('should handle number input', () => {
-      expect(formatFileSize(1073741824)).toBe('1 GB') // 1 GB in bytes
-      expect(formatFileSize(1048576)).toBe('1 MB') // 1 MB in bytes
+      expect(formatFileSize(BigInt(0))).toBe('0 B')
     })
 
     it('should round to 2 decimal places', () => {
-      const bytes = 1536 * 1024 * 1024 // 1.5 GB
-      expect(formatFileSize(bytes)).toBe('1.5 GB')
+      expect(formatFileSize(1234567)).toBe('1.18 MB')
+      expect(formatFileSize(1234567890)).toBe('1.15 GB')
     })
 
     it('should handle very large file sizes', () => {
       const largeSize = BigInt(1024) ** BigInt(3) * BigInt(1000) // 1000 GB
       expect(formatFileSize(largeSize)).toBe('1000 GB')
-    })
-
-    it('should handle zero bytes', () => {
-      expect(formatFileSize(0)).toBe('0 B')
     })
   })
 
@@ -87,9 +99,10 @@ describe('formatters', () => {
     })
 
     it('should convert unknown media types to title case', () => {
-      expect(getMediaTypeLabel('TV_SHOW')).toBe('Tv Show')
+      expect(getMediaTypeLabel('UNKNOWN_TYPE')).toBe('Unknown Type')
+      expect(getMediaTypeLabel('MUSIC_VIDEO')).toBe('Music Video')
       expect(getMediaTypeLabel('AUDIO_BOOK')).toBe('Audio Book')
-      expect(getMediaTypeLabel('TV_SHOW_EPISODE')).toBe('Tv Show Episode')
+      expect(getMediaTypeLabel('SOME_OTHER_TYPE')).toBe('Some Other Type')
     })
 
     it('should handle empty string', () => {
@@ -103,6 +116,13 @@ describe('formatters', () => {
 
     it('should handle multiple underscores and convert to title case', () => {
       expect(getMediaTypeLabel('VERY_LONG_TYPE_NAME')).toBe('Very Long Type Name')
+    })
+
+    it('should preserve common acronyms in uppercase', () => {
+      expect(getMediaTypeLabel('TV_SHOW')).toBe('TV Show')
+      expect(getMediaTypeLabel('DVD_COLLECTION')).toBe('DVD Collection')
+      expect(getMediaTypeLabel('HD_VIDEO')).toBe('HD Video')
+      expect(getMediaTypeLabel('TV_SHOW_EPISODE')).toBe('TV Show Episode')
     })
   })
 

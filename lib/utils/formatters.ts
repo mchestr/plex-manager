@@ -54,6 +54,27 @@ export function formatDate(date: Date | null): string {
   return date.toLocaleDateString()
 }
 
+/** Common acronyms that should remain uppercase when converting to title case */
+const COMMON_ACRONYMS = new Set(['TV', 'DVD', 'HD', 'SD', 'UHD', 'HDR', 'CD', 'VR', 'AR', 'AI'])
+
+/**
+ * Convert a string to title case while preserving common acronyms
+ * @param str - String to convert (e.g., 'TV SHOW', 'HD VIDEO')
+ * @returns Title case string with acronyms preserved (e.g., 'TV Show', 'HD Video')
+ */
+function toTitleCaseWithAcronyms(str: string): string {
+  return str
+    .split(' ')
+    .map((word) => {
+      const upperWord = word.toUpperCase()
+      if (COMMON_ACRONYMS.has(upperWord)) {
+        return upperWord
+      }
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+    })
+    .join(' ')
+}
+
 /**
  * Get human-readable label for media type
  * @param mediaType - Media type enum value (e.g., 'MOVIE', 'TV_SERIES', 'EPISODE')
@@ -69,8 +90,6 @@ export function getMediaTypeLabel(mediaType: string): string {
   if (labels[mediaType]) return labels[mediaType]
 
   // Fallback: convert to title case for consistency with known types
-  return mediaType
-    .replace(/_/g, ' ')
-    .toLowerCase()
-    .replace(/\b\w/g, (char) => char.toUpperCase())
+  const spaced = mediaType.replace(/_/g, ' ')
+  return toTitleCaseWithAcronyms(spaced)
 }
