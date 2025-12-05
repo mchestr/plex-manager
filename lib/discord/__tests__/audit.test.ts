@@ -9,7 +9,6 @@ import {
   getSummaryStats,
   type CreateCommandLogParams,
   type UpdateCommandLogParams,
-  type GetCommandLogsParams,
 } from "../audit"
 import { prisma } from "@/lib/prisma"
 import type {
@@ -31,6 +30,26 @@ jest.mock("@/lib/prisma", () => ({
     },
   },
 }))
+
+// Type-safe mock helpers using jest.MockedFunction
+const mockCreate = prisma.discordCommandLog.create as jest.MockedFunction<
+  typeof prisma.discordCommandLog.create
+>
+const mockUpdate = prisma.discordCommandLog.update as jest.MockedFunction<
+  typeof prisma.discordCommandLog.update
+>
+const mockFindMany = prisma.discordCommandLog.findMany as jest.MockedFunction<
+  typeof prisma.discordCommandLog.findMany
+>
+const mockCount = prisma.discordCommandLog.count as jest.MockedFunction<
+  typeof prisma.discordCommandLog.count
+>
+const mockGroupBy = prisma.discordCommandLog.groupBy as jest.MockedFunction<
+  typeof prisma.discordCommandLog.groupBy
+>
+const mockAggregate = prisma.discordCommandLog.aggregate as jest.MockedFunction<
+  typeof prisma.discordCommandLog.aggregate
+>
 
 jest.mock("@/lib/utils/logger", () => ({
   createLogger: () => ({
@@ -67,8 +86,6 @@ function createMockCommandLog(
 }
 
 describe("createCommandLog", () => {
-  const mockCreate = prisma.discordCommandLog.create as jest.Mock
-
   beforeEach(() => {
     jest.clearAllMocks()
   })
@@ -164,8 +181,6 @@ describe("createCommandLog", () => {
 })
 
 describe("updateCommandLog", () => {
-  const mockUpdate = prisma.discordCommandLog.update as jest.Mock
-
   beforeEach(() => {
     jest.clearAllMocks()
   })
@@ -240,8 +255,6 @@ describe("updateCommandLog", () => {
 })
 
 describe("logCommandExecution", () => {
-  const mockCreate = prisma.discordCommandLog.create as jest.Mock
-
   beforeEach(() => {
     jest.clearAllMocks()
   })
@@ -331,9 +344,6 @@ describe("logCommandExecution", () => {
 })
 
 describe("getCommandLogs", () => {
-  const mockFindMany = prisma.discordCommandLog.findMany as jest.Mock
-  const mockCount = prisma.discordCommandLog.count as jest.Mock
-
   beforeEach(() => {
     jest.clearAllMocks()
   })
@@ -372,84 +382,46 @@ describe("getCommandLogs", () => {
     })
   })
 
-  it("should filter by discordUserId", async () => {
+  // Parameterized tests for single-field filters
+  test.each([
+    {
+      filterName: "discordUserId",
+      params: { discordUserId: "discord-123" },
+      expectedWhere: { discordUserId: "discord-123" },
+    },
+    {
+      filterName: "userId",
+      params: { userId: "user-123" },
+      expectedWhere: { userId: "user-123" },
+    },
+    {
+      filterName: "commandType",
+      params: { commandType: "MEDIA_MARK" as DiscordCommandType },
+      expectedWhere: { commandType: "MEDIA_MARK" },
+    },
+    {
+      filterName: "commandName",
+      params: { commandName: "!finished" },
+      expectedWhere: { commandName: "!finished" },
+    },
+    {
+      filterName: "status",
+      params: { status: "FAILED" as DiscordCommandStatus },
+      expectedWhere: { status: "FAILED" },
+    },
+    {
+      filterName: "channelId",
+      params: { channelId: "channel-456" },
+      expectedWhere: { channelId: "channel-456" },
+    },
+  ])("should filter by $filterName", async ({ params, expectedWhere }) => {
     mockFindMany.mockResolvedValue([])
     mockCount.mockResolvedValue(0)
 
-    await getCommandLogs({ discordUserId: "discord-123" })
+    await getCommandLogs(params)
 
     expect(mockFindMany).toHaveBeenCalledWith({
-      where: { discordUserId: "discord-123" },
-      orderBy: { createdAt: "desc" },
-      take: 50,
-      skip: 0,
-    })
-  })
-
-  it("should filter by userId", async () => {
-    mockFindMany.mockResolvedValue([])
-    mockCount.mockResolvedValue(0)
-
-    await getCommandLogs({ userId: "user-123" })
-
-    expect(mockFindMany).toHaveBeenCalledWith({
-      where: { userId: "user-123" },
-      orderBy: { createdAt: "desc" },
-      take: 50,
-      skip: 0,
-    })
-  })
-
-  it("should filter by commandType", async () => {
-    mockFindMany.mockResolvedValue([])
-    mockCount.mockResolvedValue(0)
-
-    await getCommandLogs({ commandType: "MEDIA_MARK" as DiscordCommandType })
-
-    expect(mockFindMany).toHaveBeenCalledWith({
-      where: { commandType: "MEDIA_MARK" },
-      orderBy: { createdAt: "desc" },
-      take: 50,
-      skip: 0,
-    })
-  })
-
-  it("should filter by commandName", async () => {
-    mockFindMany.mockResolvedValue([])
-    mockCount.mockResolvedValue(0)
-
-    await getCommandLogs({ commandName: "!finished" })
-
-    expect(mockFindMany).toHaveBeenCalledWith({
-      where: { commandName: "!finished" },
-      orderBy: { createdAt: "desc" },
-      take: 50,
-      skip: 0,
-    })
-  })
-
-  it("should filter by status", async () => {
-    mockFindMany.mockResolvedValue([])
-    mockCount.mockResolvedValue(0)
-
-    await getCommandLogs({ status: "FAILED" as DiscordCommandStatus })
-
-    expect(mockFindMany).toHaveBeenCalledWith({
-      where: { status: "FAILED" },
-      orderBy: { createdAt: "desc" },
-      take: 50,
-      skip: 0,
-    })
-  })
-
-  it("should filter by channelId", async () => {
-    mockFindMany.mockResolvedValue([])
-    mockCount.mockResolvedValue(0)
-
-    await getCommandLogs({ channelId: "channel-456" })
-
-    expect(mockFindMany).toHaveBeenCalledWith({
-      where: { channelId: "channel-456" },
+      where: expectedWhere,
       orderBy: { createdAt: "desc" },
       take: 50,
       skip: 0,
@@ -523,9 +495,6 @@ describe("getCommandLogs", () => {
 })
 
 describe("getCommandStats", () => {
-  const mockGroupBy = prisma.discordCommandLog.groupBy as jest.Mock
-  const mockCount = prisma.discordCommandLog.count as jest.Mock
-
   beforeEach(() => {
     jest.clearAllMocks()
   })
@@ -625,8 +594,6 @@ describe("getCommandStats", () => {
 })
 
 describe("getDailyActivity", () => {
-  const mockFindMany = prisma.discordCommandLog.findMany as jest.Mock
-
   beforeEach(() => {
     jest.clearAllMocks()
   })
@@ -699,8 +666,6 @@ describe("getDailyActivity", () => {
 })
 
 describe("getActiveUsers", () => {
-  const mockGroupBy = prisma.discordCommandLog.groupBy as jest.Mock
-
   beforeEach(() => {
     jest.clearAllMocks()
   })
@@ -805,10 +770,6 @@ describe("getActiveUsers", () => {
 })
 
 describe("getSummaryStats", () => {
-  const mockCount = prisma.discordCommandLog.count as jest.Mock
-  const mockAggregate = prisma.discordCommandLog.aggregate as jest.Mock
-  const mockGroupBy = prisma.discordCommandLog.groupBy as jest.Mock
-
   beforeEach(() => {
     jest.clearAllMocks()
   })
@@ -1175,8 +1136,6 @@ describe("Edge cases and error handling", () => {
   })
 
   describe("createCommandLog edge cases", () => {
-    const mockCreate = prisma.discordCommandLog.create as jest.Mock
-
     it("should handle very long command arguments", async () => {
       const longArgs = "a".repeat(10000)
       const mockLog = createMockCommandLog({ commandArgs: longArgs })
@@ -1218,9 +1177,6 @@ describe("Edge cases and error handling", () => {
   })
 
   describe("getCommandLogs edge cases", () => {
-    const mockFindMany = prisma.discordCommandLog.findMany as jest.Mock
-    const mockCount = prisma.discordCommandLog.count as jest.Mock
-
     it("should handle large offset values", async () => {
       mockFindMany.mockResolvedValue([])
       mockCount.mockResolvedValue(100)

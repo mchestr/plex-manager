@@ -8,6 +8,8 @@ import { TEST_USERS } from '../fixtures/auth';
 export const WAIT_TIMEOUTS = {
   /** Timeout for error boundary to render (shorter wait) */
   ERROR_BOUNDARY: 3000,
+  /** Timeout for toast/notification messages to appear */
+  TOAST: 5000,
   /** Timeout for step transitions in flows (e.g., onboarding) */
   STEP_TRANSITION: 8000,
   /** Timeout for general page content visibility */
@@ -218,7 +220,7 @@ export async function waitForToast(
   options?: { timeout?: number }
 ): Promise<void> {
   const toast = page.getByText(message);
-  await expect(toast).toBeVisible({ timeout: options?.timeout ?? 5000 });
+  await expect(toast).toBeVisible({ timeout: options?.timeout ?? WAIT_TIMEOUTS.TOAST });
 }
 
 /**
