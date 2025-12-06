@@ -6,12 +6,12 @@ import {
   CreateUserMediaMarkSchema,
   type MediaType,
   type MarkType,
-} from "@/lib/validations/maintenance"
+} from "@/lib/validations/user-media"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { revalidatePath } from "next/cache"
 
-const logger = createLogger("MAINTENANCE-MARKS")
+const logger = createLogger("USER-MARKS")
 
 /**
  * Get user's media marks with optional filters
