@@ -317,8 +317,8 @@ describe('AdminNav', () => {
       render(<AdminNav />)
 
       // Mobile view shows only first word of labels for primary items
-      // Maintenance Overview becomes "Overview" in the bottom bar
-      const mobileLabels = screen.getAllByText('Overview')
+      // Share Analytics becomes "Share" in the bottom bar
+      const mobileLabels = screen.getAllByText('Share')
       expect(mobileLabels.length).toBeGreaterThan(0)
     })
 
@@ -405,7 +405,7 @@ describe('AdminNav', () => {
       const { container } = render(<AdminNav />)
 
       const sectionHeaders = container.querySelectorAll('.text-xs.font-semibold.text-slate-500')
-      expect(sectionHeaders.length).toBe(3) // Library Maintenance, Analytics, and Prompts & Testing
+      expect(sectionHeaders.length).toBe(2) // Analytics, and Prompts & Testing
     })
   })
 
@@ -559,12 +559,10 @@ describe('AdminNav', () => {
       const moreButton = screen.getByTestId('admin-nav-more-mobile')
       await user.click(moreButton)
 
-      // Check for secondary items in the menu
-      expect(screen.getByTestId('admin-nav-share-analytics-mobile')).toBeInTheDocument()
-      expect(screen.getByTestId('admin-nav-maintenance-rules-mobile')).toBeInTheDocument()
-      expect(screen.getByTestId('admin-nav-maintenance-candidates-mobile')).toBeInTheDocument()
+      // Check for secondary items in the menu (analytics + config nav items)
       expect(screen.getByTestId('admin-nav-llm-usage-mobile')).toBeInTheDocument()
       expect(screen.getByTestId('admin-nav-cost-analysis-mobile')).toBeInTheDocument()
+      expect(screen.getByTestId('admin-nav-discord-mobile')).toBeInTheDocument()
       expect(screen.getByTestId('admin-nav-prompts-mobile')).toBeInTheDocument()
       expect(screen.getByTestId('admin-nav-playground-mobile')).toBeInTheDocument()
     })
@@ -599,8 +597,8 @@ describe('AdminNav', () => {
       const moreButton = screen.getByTestId('admin-nav-more-mobile')
       await user.click(moreButton)
 
-      const shareAnalytics = screen.getByTestId('admin-nav-share-analytics-mobile')
-      expect(shareAnalytics).toHaveAttribute('role', 'menuitem')
+      const llmUsage = screen.getByTestId('admin-nav-llm-usage-mobile')
+      expect(llmUsage).toHaveAttribute('role', 'menuitem')
 
       const home = screen.getByTestId('admin-nav-home-mobile')
       expect(home).toHaveAttribute('role', 'menuitem')
@@ -675,7 +673,7 @@ describe('AdminNav', () => {
       // Primary items should be visible in bottom bar (search within mobile nav)
       expect(mobileNav?.querySelector('[data-testid="admin-nav-users-mobile"]')).toBeInTheDocument()
       expect(mobileNav?.querySelector('[data-testid="admin-nav-invites-mobile"]')).toBeInTheDocument()
-      expect(mobileNav?.querySelector('[data-testid="admin-nav-maintenance-overview-mobile"]')).toBeInTheDocument()
+      expect(mobileNav?.querySelector('[data-testid="admin-nav-share-analytics-mobile"]')).toBeInTheDocument()
       expect(mobileNav?.querySelector('[data-testid="admin-nav-settings-mobile"]')).toBeInTheDocument()
     })
 
@@ -760,7 +758,7 @@ describe('AdminNav', () => {
       await user.click(moreButton)
 
       // First menu item should be focused (wait for async focus)
-      const firstMenuItem = screen.getByTestId('admin-nav-share-analytics-mobile')
+      const firstMenuItem = screen.getByTestId('admin-nav-llm-usage-mobile')
       await waitFor(() => {
         expect(firstMenuItem).toHaveFocus()
       })
@@ -774,14 +772,14 @@ describe('AdminNav', () => {
       await user.click(moreButton)
 
       // Wait for first item to be focused
-      const firstMenuItem = screen.getByTestId('admin-nav-share-analytics-mobile')
+      const firstMenuItem = screen.getByTestId('admin-nav-llm-usage-mobile')
       await waitFor(() => {
         expect(firstMenuItem).toHaveFocus()
       })
 
       // Press ArrowDown to go to second item
       await user.keyboard('{ArrowDown}')
-      const secondMenuItem = screen.getByTestId('admin-nav-maintenance-rules-mobile')
+      const secondMenuItem = screen.getByTestId('admin-nav-cost-analysis-mobile')
       expect(secondMenuItem).toHaveFocus()
 
       // Press ArrowUp to go back to first item
@@ -797,13 +795,13 @@ describe('AdminNav', () => {
       await user.click(moreButton)
 
       // Wait for first item to be focused
-      const firstMenuItem = screen.getByTestId('admin-nav-share-analytics-mobile')
+      const firstMenuItem = screen.getByTestId('admin-nav-llm-usage-mobile')
       await waitFor(() => {
         expect(firstMenuItem).toHaveFocus()
       })
 
-      // Navigate to last item (Sign Out) - there are 12 items total (10 menu items + Home + Sign Out)
-      for (let i = 0; i < 11; i++) {
+      // Navigate to last item (Sign Out) - there are 7 items total (5 menu items + Home + Sign Out)
+      for (let i = 0; i < 6; i++) {
         await user.keyboard('{ArrowDown}')
       }
 
@@ -822,7 +820,7 @@ describe('AdminNav', () => {
       const moreButton = screen.getByTestId('admin-nav-more-mobile')
       await user.click(moreButton)
 
-      const firstMenuItem = screen.getByTestId('admin-nav-share-analytics-mobile')
+      const firstMenuItem = screen.getByTestId('admin-nav-llm-usage-mobile')
       expect(firstMenuItem).toHaveClass('focus-visible:ring-2')
       expect(firstMenuItem).toHaveClass('focus-visible:ring-cyan-500')
     })
