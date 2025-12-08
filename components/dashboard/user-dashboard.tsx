@@ -81,23 +81,21 @@ export function UserDashboard({
               <AnnouncementsCard announcements={announcements} />
             )}
 
-            {/* Quick Links - centered, responsive grid */}
-            <div className="flex flex-wrap justify-center gap-4">
-              <div className="w-full sm:w-auto sm:min-w-[280px] sm:max-w-[320px]">
-                <PlexLinkCard serverName={serverName} />
-              </div>
-              {overseerrUrl && (
-                <div className="w-full sm:w-auto sm:min-w-[280px] sm:max-w-[320px]">
-                  <RequestsCard url={overseerrUrl} />
-                </div>
+            {/* Quick Links - single row on desktop, stacked on mobile */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <PlexLinkCard serverName={serverName} />
+              {overseerrUrl ? (
+                <RequestsCard url={overseerrUrl} />
+              ) : (
+                <div className="hidden sm:block" />
               )}
-              {(serverInviteCode || discordEnabled) && (
-                <div className="w-full sm:w-auto sm:min-w-[280px] sm:max-w-[320px]">
-                  <DiscordCard
-                    connection={discordConnection}
-                    serverInviteCode={serverInviteCode}
-                  />
-                </div>
+              {(serverInviteCode || discordEnabled) ? (
+                <DiscordCard
+                  connection={discordConnection}
+                  serverInviteCode={serverInviteCode}
+                />
+              ) : (
+                <div className="hidden sm:block" />
               )}
             </div>
 
