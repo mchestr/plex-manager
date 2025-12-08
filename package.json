@@ -46,7 +46,7 @@
     "react-dom": "^19.2.1",
     "react-markdown": "^10.1.0",
     "tailwind-merge": "^3.4.0",
-    "winston": "^3.18.3",
+    "winston": "^3.19.0",
     "zlib-sync": "^0.1.10",
     "zod": "^4.1.13"
   },
