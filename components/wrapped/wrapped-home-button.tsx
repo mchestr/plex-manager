@@ -221,15 +221,9 @@ export function WrappedHomeButton({ userId, serverName }: WrappedHomeButtonProps
     )
   }
 
-  // Show only server name if wrapped is disabled or not in time range
+  // Hide entirely when wrapped is disabled or not in time range
   if (wrappedSettings && !wrappedSettings.enabled) {
-    return (
-      <div className="flex flex-col items-center gap-6">
-        <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-center mb-4 bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent px-4">
-          {heroTitle}
-        </h1>
-      </div>
-    )
+    return null
   }
 
   // No wrapped exists, show button to generate

@@ -758,7 +758,7 @@ describe('AdminNav', () => {
       await user.click(moreButton)
 
       // First menu item should be focused (wait for async focus)
-      const firstMenuItem = screen.getByTestId('admin-nav-llm-usage-mobile')
+      const firstMenuItem = screen.getByTestId('admin-nav-announcements-mobile')
       await waitFor(() => {
         expect(firstMenuItem).toHaveFocus()
       })
@@ -771,15 +771,15 @@ describe('AdminNav', () => {
       const moreButton = screen.getByTestId('admin-nav-more-mobile')
       await user.click(moreButton)
 
-      // Wait for first item to be focused
-      const firstMenuItem = screen.getByTestId('admin-nav-llm-usage-mobile')
+      // Wait for first item to be focused (Announcements)
+      const firstMenuItem = screen.getByTestId('admin-nav-announcements-mobile')
       await waitFor(() => {
         expect(firstMenuItem).toHaveFocus()
       })
 
-      // Press ArrowDown to go to second item
+      // Press ArrowDown to go to second item (LLM Usage comes after Announcements)
       await user.keyboard('{ArrowDown}')
-      const secondMenuItem = screen.getByTestId('admin-nav-cost-analysis-mobile')
+      const secondMenuItem = screen.getByTestId('admin-nav-llm-usage-mobile')
       expect(secondMenuItem).toHaveFocus()
 
       // Press ArrowUp to go back to first item
@@ -794,14 +794,14 @@ describe('AdminNav', () => {
       const moreButton = screen.getByTestId('admin-nav-more-mobile')
       await user.click(moreButton)
 
-      // Wait for first item to be focused
-      const firstMenuItem = screen.getByTestId('admin-nav-llm-usage-mobile')
+      // Wait for first item to be focused (Announcements)
+      const firstMenuItem = screen.getByTestId('admin-nav-announcements-mobile')
       await waitFor(() => {
         expect(firstMenuItem).toHaveFocus()
       })
 
-      // Navigate to last item (Sign Out) - there are 7 items total (5 menu items + Home + Sign Out)
-      for (let i = 0; i < 6; i++) {
+      // Navigate to last item (Sign Out) - there are 8 items total (6 menu items + Home + Sign Out)
+      for (let i = 0; i < 7; i++) {
         await user.keyboard('{ArrowDown}')
       }
 
@@ -820,7 +820,7 @@ describe('AdminNav', () => {
       const moreButton = screen.getByTestId('admin-nav-more-mobile')
       await user.click(moreButton)
 
-      const firstMenuItem = screen.getByTestId('admin-nav-llm-usage-mobile')
+      const firstMenuItem = screen.getByTestId('admin-nav-announcements-mobile')
       expect(firstMenuItem).toHaveClass('focus-visible:ring-2')
       expect(firstMenuItem).toHaveClass('focus-visible:ring-cyan-500')
     })

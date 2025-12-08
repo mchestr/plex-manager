@@ -155,22 +155,20 @@ describe('WrappedHomeButton', () => {
       expect(mockGetWrapped).not.toHaveBeenCalled()
     })
 
-    it('should show only server name when wrapped settings not enabled', async () => {
+    it('should render nothing when wrapped settings not enabled', async () => {
       jest.spyOn(adminActions, 'getWrappedSettings').mockResolvedValue({
         wrappedEnabled: false,
         wrappedYear: currentYear,
       })
       jest.spyOn(userActions, 'getUserPlexWrapped').mockResolvedValue(null)
 
-      renderWithToast(<WrappedHomeButton userId="user-1" serverName="My Server" />)
+      const { container } = renderWithToast(<WrappedHomeButton userId="user-1" serverName="My Server" />)
 
       await waitFor(() => {
-        // Component should show server name but no disabled message
-        expect(screen.getByText(/My Server/i)).toBeInTheDocument()
-        // Check that the disabled message is NOT present
-        expect(screen.queryByText(/Wrapped generation is currently disabled/i)).not.toBeInTheDocument()
-        // Check that wrapped generation button is NOT shown
-        expect(screen.queryByText(`Generate My ${currentYear} Wrapped`)).not.toBeInTheDocument()
+        // Component should render nothing when wrapped is disabled
+        // The only element should be the toast container
+        const mainContent = container.querySelector(':scope > div:not([class*="toast"])')
+        expect(mainContent?.children.length ?? 0).toBe(0)
       })
     })
   })
