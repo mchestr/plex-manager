@@ -41,59 +41,6 @@ const coreNavItems: NavItem[] = [
   },
 ]
 
-// Group 2: Library Maintenance
-const maintenanceNavItems: NavItem[] = [
-  {
-    href: "/admin/maintenance",
-    label: "Overview",
-    testId: "admin-nav-maintenance-overview",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-      </svg>
-    ),
-  },
-  {
-    href: "/admin/maintenance/rules",
-    label: "Rules",
-    testId: "admin-nav-maintenance-rules",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-  },
-  {
-    href: "/admin/maintenance/candidates",
-    label: "Candidates",
-    testId: "admin-nav-maintenance-candidates",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-      </svg>
-    ),
-  },
-  {
-    href: "/admin/maintenance/user-feedback",
-    label: "User Feedback",
-    testId: "admin-nav-maintenance-feedback",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-      </svg>
-    ),
-  },
-  {
-    href: "/admin/maintenance/history",
-    label: "Deletion History",
-    testId: "admin-nav-maintenance-history",
-    icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-  },
-]
 
 // Group 3: Monitoring & Analytics
 const analyticsNavItems: NavItem[] = [
@@ -172,14 +119,12 @@ const systemNavItems: NavItem[] = [
 const primaryMobileNavItems: NavItem[] = [
   coreNavItems[0], // Users
   coreNavItems[1], // Invites
-  maintenanceNavItems[0], // Maintenance Overview
+  coreNavItems[2], // Share Analytics
   systemNavItems[0], // Settings
 ]
 
 // Secondary mobile nav items (shown in "More" menu)
 const secondaryMobileNavItems: NavItem[] = [
-  coreNavItems[2], // Share Analytics
-  ...maintenanceNavItems.slice(1), // Rules, Candidates, User Feedback, Deletion History
   ...analyticsNavItems, // LLM Usage, Cost Analysis, Discord Bot
   ...configNavItems, // Prompts, Playground
 ]
@@ -228,10 +173,6 @@ export function AdminNav() {
     if (href === "/admin/prompts") {
       // Prompts is active for /admin/prompts and /admin/prompts/[id] but not /admin/playground
       return pathname.startsWith("/admin/prompts") && !pathname.startsWith("/admin/playground")
-    }
-    if (href === "/admin/maintenance") {
-      // Only match exact path for overview, not sub-pages
-      return pathname === "/admin/maintenance"
     }
     return pathname.startsWith(href)
   }
@@ -288,16 +229,6 @@ export function AdminNav() {
           {/* Core Management */}
           <div className="space-y-1">
             {coreNavItems.map((item) => renderDesktopNavItem(item))}
-          </div>
-
-          {/* Library Maintenance */}
-          <div className="space-y-1">
-            <div className="px-4 mb-2">
-              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Library Maintenance
-              </span>
-            </div>
-            {maintenanceNavItems.map((item) => renderDesktopNavItem(item))}
           </div>
 
           {/* Monitoring & Analytics */}

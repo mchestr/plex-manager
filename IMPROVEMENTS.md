@@ -46,52 +46,11 @@
 
 ### High Priority
 
-- **Fix excessive `as any` type casts bypassing type safety** → [Issue #29](https://github.com/mchestr/plex-manager/issues/29)
-  - **Files affected**:
-    - `actions/maintenance.ts:75, 108` - `criteria: validated.criteria as any`
-    - `lib/maintenance/scanner.ts:230` - `const criteria = rule.criteria as any`
-    - `lib/maintenance/rule-evaluator.ts:219` - `return (item as any)[fieldKey]`
-  - **Problem**: Prisma's JSON type doesn't recognize Zod's validated types, using `as any` defeats TypeScript's purpose
-  - **Fix**: Use proper Prisma.JsonValue casting or Record<string, unknown> for dynamic access
-  - **Impact**: Type safety violations could cause runtime errors
-  - **Reference**: TypeScript strict mode enabled in project (CLAUDE.md)
-
-- **Fix dynamic require() in production code** → [Issue #30](https://github.com/mchestr/plex-manager/issues/30)
-  - **File**: `lib/maintenance/rule-evaluator.ts:76`
-  - **Code**: `const { migrateLegacyRuleCriteria } = require('@/lib/validations/maintenance')`
-  - **Problem**: Using `require()` in ESM project causes potential tree-shaking issues and runtime errors
-  - **Fix**: Move to top-level import or make migration explicit
-  - **Impact**: Could break in production builds, prevents proper code optimization
-
-- **Fix unguarded dynamic object property access** → [Issue #31](https://github.com/mchestr/plex-manager/issues/31)
-  - **File**: `lib/maintenance/rule-evaluator.ts:219`
-  - **Code**: `return (item as any)[fieldKey]`
-  - **Problem**: Dynamic property access with `as any` bypasses type checking
-  - **Fix**: Use `Record<string, unknown>` type instead of `any`
-  - **Impact**: No type safety for field access, could access undefined properties
+-
 
 ### Medium Priority
 
-- **Complete or remove incomplete worker implementation** → [Issue #32](https://github.com/mchestr/plex-manager/issues/32)
-  - **File**: `lib/maintenance/worker.ts`
-  - **Lines**: 32-46 (scanner returns `{ candidatesFound: 0 }`), 82-96 (deleter returns `{ deletedCount: 0 }`)
-  - **Problem**: Worker file exists but functions are not implemented, just return empty results
-  - **Fix**: Either complete implementation or remove file if not needed yet
-  - **Impact**: Dead code in production, could confuse developers
-
-- **Add error context to scanner error messages** → [Issue #33](https://github.com/mchestr/plex-manager/issues/33)
-  - **File**: `lib/maintenance/scanner.ts:246-249`
-  - **Problem**: Throws generic errors without rule/library context for debugging
-  - **Fix**: Include rule name, ID, and media type in error messages
-  - **Example**: `throw new Error(\`${mediaType} rules must specify libraryIds. Rule: ${rule.name} (${ruleId})\`)`
-  - **Impact**: Harder to debug issues in production
-
-- **Replace magic numbers with named constants** → [Issue #34](https://github.com/mchestr/plex-manager/issues/34)
-  - **File**: `lib/maintenance/scanner.ts`
-  - **Lines**: 72 (`length: 10000`), 284 (`itemsScanned % 10 === 0`)
-  - **Problem**: Hardcoded pagination limits and progress intervals reduce maintainability
-  - **Fix**: Extract to named constants (e.g., `MAX_LIBRARY_ITEMS`, `PROGRESS_REPORT_INTERVAL`)
-  - **Impact**: Harder to adjust thresholds, unclear intent
+-
 
 ### Low Priority
 
@@ -125,57 +84,9 @@
   - **Why**: Ensures consistent styling, behavior, and accessibility across the app
   - **When adding new UI**: First check if a component exists in `components/ui/` before creating anything new
 
-- **Split large maintenance components exceeding file size guidelines** → [Issue #35](https://github.com/mchestr/plex-manager/issues/35)
-  - **Files affected**:
-    - `components/maintenance/condition-value-input.tsx` - 486 lines (guideline: <200-300)
-    - `app/admin/maintenance/candidates/page.tsx` - 381 lines
-    - `app/admin/maintenance/rules/page.tsx` - 318 lines
-  - **Problem**: Large components violate Single Responsibility Principle and file size guidelines
-  - **Fix for condition-value-input.tsx**: Extract individual input types (StringInput, NumberInput, DateInput, etc.) into separate files
-  - **Fix for candidates page**: Split into `CandidateList`, `CandidateFilters`, `CandidateActions` components
-  - **Fix for rules page**: Extract `RuleList`, `RuleFilters`, `RuleActions` components
-  - **Impact**: Harder to test, maintain, and understand at a glance
-  - **Reference**: CLAUDE.md Component Design Philosophy (200-300 line limit)
-
-- **Use styled UI component instead of raw textarea** → [Issue #36](https://github.com/mchestr/plex-manager/issues/36)
-  - **File**: `app/admin/maintenance/rules/new/page.tsx:142`
-  - **Problem**: Using raw `<textarea>` instead of styled component from `components/ui/`
-  - **Fix**: Create or use `<StyledTextarea>` from `components/ui/` for consistency
-  - **Impact**: Inconsistent styling and behavior across the app
-
-- **Reduce `as any` usage in test mocks** → [Issue #37](https://github.com/mchestr/plex-manager/issues/37)
-  - **File**: `actions/__tests__/maintenance.test.ts`
-  - **Problem**: 27 instances of `as any` in test mocks bypass type checking
-  - **Fix**: Create proper mock types using `Partial<MaintenanceRule>` pattern
-  - **Example**: `const mockRule: Partial<MaintenanceRule> = { ... }; mockPrisma.create.mockResolvedValue(mockRule as MaintenanceRule)`
-  - **Impact**: Tests could pass with invalid data structures
-
 ### Performance
 
-- **Add pagination for candidate listing** → [Issue #38](https://github.com/mchestr/plex-manager/issues/38)
-  - **File**: `actions/maintenance.ts:462`
-  - **Problem**: `findMany` without `take`/`skip` could return thousands of records
-  - **Fix**: Add pagination parameters (skip, take) to `getCandidates()` function
-  - **Impact**: Performance degradation with large result sets, potential memory issues
-
-- **Investigate potential N+1 query in maintenance rule fetching** → [Issue #39](https://github.com/mchestr/plex-manager/issues/39)
-  - **File**: `actions/maintenance.ts:28-48`
-  - **Problem**: Uses nested `include` with aggregations, could be slow with many rules
-  - **Fix**: Profile query performance, consider separate queries for statistics if needed
-  - **Impact**: Slow admin dashboard load times with many rules
-
-- **Add database index for common MaintenanceCandidate queries** → [Issue #40](https://github.com/mchestr/plex-manager/issues/40)
-  - **File**: `prisma/schema.prisma` (MaintenanceCandidate model)
-  - **Problem**: No composite index on `[mediaType, plexRatingKey]` for faster lookups
-  - **Fix**: Add `@@index([mediaType, plexRatingKey])` to schema
-  - **Impact**: Slower queries when filtering candidates by media type
-
-- **Add rate limiting for maintenance scan operations** → [Issue #41](https://github.com/mchestr/plex-manager/issues/41)
-  - **File**: `actions/maintenance.ts` (runMaintenanceScan action)
-  - **Problem**: No rate limiting on resource-intensive scan operations
-  - **Fix**: Use `@/lib/security/rate-limit` to limit scans (e.g., 5 per hour per admin)
-  - **Impact**: Potential DoS if malicious admin triggers many scans
-  - **Security consideration**: Scanner fetches up to 10,000 items without pagination
+-
 
 ### Architecture
 
@@ -224,28 +135,6 @@
 ---
 
 ## 📚 Documentation
-
-- **Add JSDoc comments to complex maintenance components** → [Issue #44](https://github.com/mchestr/plex-manager/issues/44)
-  - **Files needing documentation**:
-    - `components/maintenance/condition-group-builder.tsx` - Recursive group builder
-    - `components/maintenance/enhanced-rule-builder.tsx` - Main rule builder interface
-    - `lib/maintenance/rule-evaluator.ts` - Core evaluation logic
-    - `lib/maintenance/scanner.ts` - Media scanning logic
-  - **What to document**:
-    - Component purpose and behavior
-    - Parameter descriptions
-    - Return value types and meanings
-    - Complex algorithm explanations
-  - **Example**: `/** Recursive condition group builder supporting nested AND/OR logic @param group - Current condition group @param depth - Nesting depth for UI styling */`
-  - **Impact**: Harder for developers to understand complex components
-  - **Reference**: Component Design Philosophy section in this document
-
-- **Document field registry data sources** → [Issue #45](https://github.com/mchestr/plex-manager/issues/45)
-  - **File**: `lib/maintenance/field-registry.ts`
-  - **Problem**: Fields reference Tautulli but schema shows Radarr/Sonarr support, unclear which API provides each field
-  - **Fix**: Add comments explaining which service API endpoints provide each field
-  - **Example**: Add comment for `playCount` field noting it comes from Tautulli's `get_library_media_info` endpoint
-  - **Impact**: Confusion about data sources when debugging or extending fields
 
 **NOTE:** The following API documentation sections are reference material already added to `CLAUDE.md` - they do not need to be converted to GitHub issues.
 
@@ -340,31 +229,6 @@
   - When writing tests, add `data-testid` attributes to components if they don't exist
   - Test IDs should be descriptive and stable (won't change with styling/content updates)
   - Example: `<button data-testid="sonarr-series-add-button">Add Series</button>`
-
-- **Add E2E tests for maintenance feature workflows** → [Issue #42](https://github.com/mchestr/plex-manager/issues/42)
-  - **Missing tests for**:
-    - Creating and editing maintenance rules
-    - Running scans and viewing results
-    - Reviewing and approving deletion candidates
-    - Bulk operations on candidates
-  - **Requirements**:
-    - Use `data-testid` attributes following project convention
-    - Add test IDs to maintenance components where missing
-    - Test critical user flows end-to-end
-    - Use authenticated session setup (see `e2e/README.md`)
-  - **Files to add test IDs**:
-    - `components/maintenance/*.tsx` - Add descriptive test IDs
-    - `app/admin/maintenance/**/*.tsx` - Add test IDs to interactive elements
-  - **Impact**: No E2E coverage for major new feature, regressions could go undetected
-  - **Reference**: CLAUDE.md Playwright Testing Best Practices
-
-- **Replace direct fetch with TanStack Query in maintenance forms** → [Issue #43](https://github.com/mchestr/plex-manager/issues/43)
-  - **File**: `app/admin/maintenance/rules/new/page.tsx:39-56`
-  - **Problem**: Direct `fetch()` calls in `useEffect` instead of TanStack Query
-  - **Fix**: Use `useQuery` for consistency with project patterns
-  - **Example**: `const { data: servers } = useQuery({ queryKey: ['radarr-servers'], queryFn: () => fetch('/api/admin/radarr').then(r => r.json()) })`
-  - **Impact**: Inconsistent data fetching patterns, missing loading/error states
-  - **Reference**: CLAUDE.md Data Fetching - Client Components use TanStack Query
 
 ---
 
@@ -496,80 +360,7 @@
 
 ### GitHub Issues Created (November 27, 2025)
 
-#### Code Review Findings - Maintenance Feature (Issues #29-45)
-
-**Critical Type Safety Issues:**
-- [Issue #29](https://github.com/mchestr/plex-manager/issues/29): Fix excessive 'as any' type casts bypassing type safety
-  - Labels: `bug`, `refactor`
-  - Files: `actions/maintenance.ts`, `lib/maintenance/scanner.ts`, `lib/maintenance/rule-evaluator.ts`
-
-- [Issue #30](https://github.com/mchestr/plex-manager/issues/30): Fix dynamic require() in production ESM code
-  - Labels: `bug`
-  - File: `lib/maintenance/rule-evaluator.ts:76`
-
-- [Issue #31](https://github.com/mchestr/plex-manager/issues/31): Fix unguarded dynamic object property access
-  - Labels: `bug`
-  - File: `lib/maintenance/rule-evaluator.ts:219`
-
-**Code Quality & Refactoring:**
-- [Issue #32](https://github.com/mchestr/plex-manager/issues/32): Complete or remove incomplete worker implementation
-  - Labels: `bug`, `refactor`
-  - File: `lib/maintenance/worker.ts`
-
-- [Issue #33](https://github.com/mchestr/plex-manager/issues/33): Add error context to scanner error messages
-  - Labels: `enhancement`, `refactor`
-  - File: `lib/maintenance/scanner.ts`
-
-- [Issue #34](https://github.com/mchestr/plex-manager/issues/34): Replace magic numbers with named constants in scanner
-  - Labels: `refactor`
-  - File: `lib/maintenance/scanner.ts`
-
-- [Issue #35](https://github.com/mchestr/plex-manager/issues/35): Split large maintenance components exceeding file size guidelines
-  - Labels: `refactor`
-  - Files: `components/maintenance/condition-value-input.tsx` (486 lines), `app/admin/maintenance/candidates/page.tsx` (381 lines), `app/admin/maintenance/rules/page.tsx` (318 lines)
-
-- [Issue #36](https://github.com/mchestr/plex-manager/issues/36): Use styled UI component instead of raw textarea
-  - Labels: `refactor`
-  - File: `app/admin/maintenance/rules/new/page.tsx:142`
-
-- [Issue #37](https://github.com/mchestr/plex-manager/issues/37): Reduce 'as any' usage in test mocks
-  - Labels: `refactor`, `testing`
-  - File: `actions/__tests__/maintenance.test.ts`
-
-**Performance & Database:**
-- [Issue #38](https://github.com/mchestr/plex-manager/issues/38): Add pagination for candidate listing
-  - Labels: `enhancement`, `performance`
-  - File: `actions/maintenance.ts:462`
-
-- [Issue #39](https://github.com/mchestr/plex-manager/issues/39): Investigate potential N+1 query in maintenance rule fetching
-  - Labels: `performance`
-  - File: `actions/maintenance.ts:28-48`
-
-- [Issue #40](https://github.com/mchestr/plex-manager/issues/40): Add database index for MaintenanceCandidate queries
-  - Labels: `database`, `performance`
-  - File: `prisma/schema.prisma`
-
-- [Issue #41](https://github.com/mchestr/plex-manager/issues/41): Add rate limiting for maintenance scan operations
-  - Labels: `enhancement`, `security`
-  - File: `actions/maintenance.ts`
-
-**Testing:**
-- [Issue #42](https://github.com/mchestr/plex-manager/issues/42): Add E2E tests for maintenance feature workflows
-  - Labels: `testing`, `enhancement`
-  - Missing: Rule creation, scan execution, candidate review workflows
-
-- [Issue #43](https://github.com/mchestr/plex-manager/issues/43): Replace direct fetch with TanStack Query in maintenance forms
-  - Labels: `refactor`
-  - File: `app/admin/maintenance/rules/new/page.tsx:39-56`
-
-**Documentation:**
-- [Issue #44](https://github.com/mchestr/plex-manager/issues/44): Add JSDoc comments to complex maintenance components
-  - Labels: `documentation`
-  - Files: `components/maintenance/`, `lib/maintenance/`
-
-- [Issue #45](https://github.com/mchestr/plex-manager/issues/45): Document field registry data sources
-  - Labels: `documentation`
-  - File: `lib/maintenance/field-registry.ts`
+**Note:** Issues #29-45 were related to the maintenance feature which has been removed in PR #204.
 
 #### Earlier Issues
 

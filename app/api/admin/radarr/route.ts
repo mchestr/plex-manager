@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from "next/server"
  *
  * Uses API route instead of Server Action because this endpoint is consumed
  * by client-side components that need to fetch server lists dynamically
- * (e.g., for dropdowns/selectors in maintenance rule creation).
+ * (e.g., for dropdowns/selectors in admin interfaces).
  * API routes are preferred for GET operations that need to be called from
  * client components with proper HTTP caching and conditional requests.
  */
