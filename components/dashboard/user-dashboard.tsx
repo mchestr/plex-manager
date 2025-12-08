@@ -74,8 +74,8 @@ export function UserDashboard({
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 px-4 sm:px-6 lg:px-8 pb-24">
-          <div className="mx-auto max-w-4xl space-y-4">
+        <main className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 pb-24">
+          <div className="w-full max-w-4xl space-y-4">
             {/* Announcements - Only shown when there are announcements */}
             {announcements.length > 0 && (
               <AnnouncementsCard announcements={announcements} />
