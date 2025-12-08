@@ -28,7 +28,7 @@
   "dependencies": {
     "@next-auth/prisma-adapter": "^1.0.7",
     "@prisma/adapter-pg": "^7.0.1",
-    "@prisma/client": "^7.0.0",
+    "@prisma/client": "^7.1.0",
     "@tanstack/react-query": "^5.56.0",
     "chart.js": "^4.5.1",
     "clsx": "^2.1.1",
