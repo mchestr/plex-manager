@@ -500,3 +500,19 @@ enum DiscordCommandStatus {
   FAILED
   TIMEOUT
 }
+
+// Admin Announcements for home page
+model Announcement {
+  id          String    @id @default(cuid())
+  title       String
+  content     String    // Markdown content
+  priority    Int       @default(0) // Higher = more important, shown first
+  isActive    Boolean   @default(true)
+  expiresAt   DateTime? // Auto-hide after this date
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdBy   String?   // Admin user ID
+
+  @@index([isActive, expiresAt])
+  @@index([priority])
+}

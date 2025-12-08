@@ -1,3 +1,4 @@
+import { getActiveAnnouncements } from "@/actions/announcements";
 import { PlexSignInButton } from "@/components/auth/plex-sign-in-button";
 import { UserDashboard } from "@/components/dashboard/user-dashboard";
 import { AdminFooter } from "@/components/shared/admin-footer";
@@ -10,15 +11,18 @@ export const dynamic = 'force-dynamic'
 
 export default async function Home() {
   const session = await getServerSession(authOptions);
-  const [plexServer, discordIntegration] = await Promise.all([
+  const [plexServer, discordIntegration, announcements, overseerr] = await Promise.all([
     prisma.plexServer.findFirst({
       where: { isActive: true },
     }),
     prisma.discordIntegration.findUnique({ where: { id: "discord" } }),
+    getActiveAnnouncements(),
+    prisma.overseerr.findFirst({ where: { isActive: true } }),
   ]);
   const serverName = plexServer?.name || "Plex";
   const heroTitle = serverName;
   const discordEnabled = Boolean(discordIntegration?.isEnabled && discordIntegration?.clientId && discordIntegration?.clientSecret);
+  const overseerrUrl = overseerr?.publicUrl || overseerr?.url || null;
 
   // Handle redirect logic for authenticated users
   if (session?.user?.id) {
@@ -55,6 +59,8 @@ export default async function Home() {
         discordEnabled={discordEnabled}
         discordConnection={discordConnectionSummary}
         serverInviteCode={discordIntegration?.serverInviteCode ?? null}
+        announcements={announcements}
+        overseerrUrl={overseerrUrl}
       />
     );
   }
