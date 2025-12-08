@@ -73,6 +73,7 @@ export default async function Home() {
           serverName={serverName}
           showWarning={true}
           warningDelay={3000}
+          showDisclaimer={false}
           buttonText="Sign in with Plex"
           loadingText="Signing in..."
           buttonClassName="px-8 py-4 flex justify-center items-center gap-3 text-white text-lg font-semibold rounded-xl bg-gradient-to-r from-cyan-600 via-purple-600 to-pink-600 hover:from-cyan-500 hover:via-purple-500 hover:to-pink-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg"
