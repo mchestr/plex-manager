@@ -5,7 +5,7 @@ import {
   createAnnouncement,
   deleteAnnouncement,
   getAllAnnouncements,
-  toggleAnnouncementActive,
+  setAnnouncementActive,
   updateAnnouncement,
 } from "@/actions/announcements"
 import { ConfirmModal } from "@/components/admin/shared/confirm-modal"
@@ -120,9 +120,9 @@ export function AnnouncementsPageClient({ initialAnnouncements }: AnnouncementsP
     }
   }
 
-  const handleToggleActive = async (id: string) => {
+  const handleSetActive = async (id: string, isActive: boolean) => {
     try {
-      const result = await toggleAnnouncementActive(id)
+      const result = await setAnnouncementActive(id, isActive)
       if (result.success) {
         toast.showSuccess("Announcement status updated")
         loadAnnouncements()
@@ -241,9 +241,10 @@ export function AnnouncementsPageClient({ initialAnnouncements }: AnnouncementsP
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <button
-                    onClick={() => handleToggleActive(announcement.id)}
+                    onClick={() => handleSetActive(announcement.id, !announcement.isActive)}
                     className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
                     title={announcement.isActive ? "Deactivate" : "Activate"}
+                    aria-label={announcement.isActive ? "Deactivate announcement" : "Activate announcement"}
                     data-testid={`toggle-announcement-${announcement.id}`}
                   >
                     {announcement.isActive ? (
@@ -261,6 +262,7 @@ export function AnnouncementsPageClient({ initialAnnouncements }: AnnouncementsP
                     onClick={() => openEditModal(announcement)}
                     className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
                     title="Edit"
+                    aria-label="Edit announcement"
                     data-testid={`edit-announcement-${announcement.id}`}
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -271,6 +273,7 @@ export function AnnouncementsPageClient({ initialAnnouncements }: AnnouncementsP
                     onClick={() => setDeleteId(announcement.id)}
                     className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-lg transition-colors"
                     title="Delete"
+                    aria-label="Delete announcement"
                     data-testid={`delete-announcement-${announcement.id}`}
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

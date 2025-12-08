@@ -106,12 +106,23 @@ export async function getAllAnnouncements(): Promise<AnnouncementData[]> {
   }
 }
 
+/**
+ * Validates that a string is a valid ISO date/datetime string
+ */
+const isValidDateString = (val: string): boolean => {
+  const date = new Date(val)
+  return !isNaN(date.getTime())
+}
+
 const createAnnouncementSchema = z.object({
   title: z.string().min(1, "Title is required").max(200, "Title too long"),
   content: z.string().min(1, "Content is required").max(5000, "Content too long"),
   priority: z.number().int().min(0).max(100).default(0),
   isActive: z.boolean().default(true),
-  expiresAt: z.string().nullable().optional(),
+  expiresAt: z.string()
+    .refine((val) => isValidDateString(val), { message: "Invalid date format" })
+    .nullable()
+    .optional(),
 })
 
 export type CreateAnnouncementInput = z.infer<typeof createAnnouncementSchema>
@@ -172,7 +183,10 @@ const updateAnnouncementSchema = z.object({
   content: z.string().min(1, "Content is required").max(5000, "Content too long"),
   priority: z.number().int().min(0).max(100),
   isActive: z.boolean(),
-  expiresAt: z.string().nullable().optional(),
+  expiresAt: z.string()
+    .refine((val) => isValidDateString(val), { message: "Invalid date format" })
+    .nullable()
+    .optional(),
 })
 
 export type UpdateAnnouncementInput = z.infer<typeof updateAnnouncementSchema>
@@ -211,6 +225,10 @@ export async function updateAnnouncement(input: UpdateAnnouncementInput): Promis
 
     return { success: true }
   } catch (error) {
+    // Handle Prisma not found error
+    if (error && typeof error === "object" && "code" in error && error.code === "P2025") {
+      return { success: false, error: "Announcement not found" }
+    }
     logger.error("Error updating announcement", error)
     return { success: false, error: "Failed to update announcement" }
   }
@@ -236,38 +254,42 @@ export async function deleteAnnouncement(id: string): Promise<{ success: boolean
 
     return { success: true }
   } catch (error) {
+    // Handle Prisma not found error
+    if (error && typeof error === "object" && "code" in error && error.code === "P2025") {
+      return { success: false, error: "Announcement not found" }
+    }
     logger.error("Error deleting announcement", error)
     return { success: false, error: "Failed to delete announcement" }
   }
 }
 
 /**
- * Toggle announcement active status (admin only)
+ * Set announcement active status (admin only)
+ * Uses explicit isActive parameter to avoid race conditions with read-modify-write pattern
  */
-export async function toggleAnnouncementActive(id: string): Promise<{ success: boolean; error?: string }> {
+export async function setAnnouncementActive(id: string, isActive: boolean): Promise<{ success: boolean; error?: string }> {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.isAdmin) {
       return { success: false, error: "Unauthorized" }
     }
 
-    const announcement = await prisma.announcement.findUnique({ where: { id } })
-    if (!announcement) {
-      return { success: false, error: "Announcement not found" }
-    }
-
     await prisma.announcement.update({
       where: { id },
-      data: { isActive: !announcement.isActive },
+      data: { isActive },
     })
 
-    logger.info("Announcement toggled", { id, isActive: !announcement.isActive, toggledBy: session.user.id })
+    logger.info("Announcement status updated", { id, isActive, updatedBy: session.user.id })
     revalidatePath("/")
     revalidatePath("/admin/announcements")
 
     return { success: true }
   } catch (error) {
-    logger.error("Error toggling announcement", error)
-    return { success: false, error: "Failed to toggle announcement" }
+    // Handle Prisma not found error
+    if (error && typeof error === "object" && "code" in error && error.code === "P2025") {
+      return { success: false, error: "Announcement not found" }
+    }
+    logger.error("Error updating announcement status", error)
+    return { success: false, error: "Failed to update announcement status" }
   }
 }
