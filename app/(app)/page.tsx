@@ -1,5 +1,6 @@
 import { getActiveAnnouncements } from "@/actions/announcements";
 import { getPrometheusStatus } from "@/actions/prometheus-status";
+import { getUserFirstWatchDate } from "@/actions/users";
 import { PlexSignInButton } from "@/components/auth/plex-sign-in-button";
 import { UserDashboard } from "@/components/dashboard/user-dashboard";
 import { authOptions } from "@/lib/auth";
@@ -28,7 +29,7 @@ export default async function Home() {
   if (session?.user?.id) {
     const userPromise = prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { onboardingCompleted: true }
+      select: { onboardingCompleted: true, createdAt: true, plexUserId: true, email: true }
     });
     const discordConnectionPromise = discordEnabled
       ? prisma.discordConnection.findUnique({ where: { userId: session.user.id } })
@@ -38,6 +39,16 @@ export default async function Home() {
 
     if (user && !user.onboardingCompleted) {
       redirect("/onboarding");
+    }
+
+    // Get first watch date from Tautulli for accurate membership duration
+    // Falls back to account creation date if Tautulli is not available or user has no history
+    let memberSince = user?.createdAt?.toISOString() ?? new Date().toISOString();
+    if (user?.plexUserId) {
+      const firstWatchResult = await getUserFirstWatchDate(user.plexUserId, user.email);
+      if (firstWatchResult.success && firstWatchResult.firstWatchDate) {
+        memberSince = firstWatchResult.firstWatchDate;
+      }
     }
 
     const discordConnectionSummary = discordConnection
@@ -61,6 +72,7 @@ export default async function Home() {
         announcements={announcements}
         overseerrUrl={overseerrUrl}
         prometheusStatus={prometheusStatus}
+        memberSince={memberSince}
       />
     );
   }

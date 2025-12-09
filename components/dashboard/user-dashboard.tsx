@@ -23,6 +23,7 @@ interface UserDashboardProps {
   announcements: AnnouncementData[]
   overseerrUrl?: string | null
   prometheusStatus?: StatusData
+  memberSince: string // ISO date string of when user joined
 }
 
 export function UserDashboard({
@@ -35,6 +36,7 @@ export function UserDashboard({
   announcements,
   overseerrUrl,
   prometheusStatus,
+  memberSince,
 }: UserDashboardProps) {
   const router = useRouter()
 
@@ -85,7 +87,7 @@ export function UserDashboard({
           )}
 
             {/* Wrapped - Hero callout at the top */}
-            <WrappedCard userId={userId} />
+            <WrappedCard userId={userId} memberSince={memberSince} />
 
             {/* Quick Links - visually separated section */}
             <div className="space-y-3 sm:space-y-4 pt-2">

@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 
 interface WrappedCardProps {
   userId: string
+  memberSince: string // ISO date string of when user joined
 }
 
 // Floating sparkle component
@@ -36,7 +37,28 @@ function Sparkle({ className, delay = 0 }: { className?: string; delay?: number 
   )
 }
 
-export function WrappedCard({ userId }: WrappedCardProps) {
+// Minimum membership duration in months before wrapped is available
+const MIN_MEMBERSHIP_MONTHS = 6
+
+/**
+ * Check if a user has been a member long enough to generate wrapped
+ */
+function isEligibleForWrapped(memberSince: string): boolean {
+  const joinDate = new Date(memberSince)
+  const now = new Date()
+  const monthsDiff = (now.getFullYear() - joinDate.getFullYear()) * 12 + (now.getMonth() - joinDate.getMonth())
+  return monthsDiff >= MIN_MEMBERSHIP_MONTHS
+}
+
+/**
+ * Get the date when a user will become eligible for wrapped
+ */
+function getEligibilityDate(memberSince: string): Date {
+  const joinDate = new Date(memberSince)
+  return new Date(joinDate.getFullYear(), joinDate.getMonth() + MIN_MEMBERSHIP_MONTHS, joinDate.getDate())
+}
+
+export function WrappedCard({ userId, memberSince }: WrappedCardProps) {
   const toast = useToast()
   const router = useRouter()
   const [isGenerating, setIsGenerating] = useState(false)
@@ -44,6 +66,10 @@ export function WrappedCard({ userId }: WrappedCardProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [wrappedSettings, setWrappedSettings] = useState<{ enabled: boolean; year: number } | null>(null)
   const pollFailureCountRef = useRef(0)
+
+  // Check membership eligibility
+  const eligible = isEligibleForWrapped(memberSince)
+  const eligibilityDate = !eligible ? getEligibilityDate(memberSince) : null
 
   // Load wrapped settings
   useEffect(() => {
@@ -133,6 +159,36 @@ export function WrappedCard({ userId }: WrappedCardProps) {
   // Hide when disabled
   if (wrappedSettings && !wrappedSettings.enabled) {
     return null
+  }
+
+  // Not eligible yet - show message about membership requirement
+  if (!eligible && eligibilityDate) {
+    return (
+      <motion.div
+        className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-slate-700/50 bg-gradient-to-br from-slate-900 via-slate-800/50 to-slate-900 p-6 sm:p-8 shadow-xl shadow-black/20"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: "easeOut", delay: 0.15 }}
+        data-testid="wrapped-card-not-eligible"
+      >
+        <div className="relative flex flex-col items-center text-center gap-4">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-700/50">
+            <svg className="h-7 w-7 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-white">Wrapped Coming Soon</h3>
+            <p className="mt-2 text-sm text-slate-400 max-w-xs">
+              Your personalized Wrapped will be available after 6 months of membership.
+            </p>
+            <p className="mt-2 text-xs text-slate-500">
+              Eligible on {eligibilityDate.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
+            </p>
+          </div>
+        </div>
+      </motion.div>
+    )
   }
 
   // Loading state
