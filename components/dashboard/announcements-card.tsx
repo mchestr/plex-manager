@@ -14,79 +14,98 @@ interface AnnouncementsCardProps {
 
 export function AnnouncementsCard({ announcements }: AnnouncementsCardProps) {
   if (announcements.length === 0) {
-    return (
-      <motion.div
-        className="relative overflow-hidden rounded-2xl border border-slate-700/50 bg-gradient-to-br from-slate-900 via-slate-800/80 to-slate-900 p-6 shadow-xl shadow-black/20"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: "easeOut", delay: 0.1 }}
-        data-testid="announcements-card-empty"
-      >
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-700/50 text-slate-500">
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
-            </svg>
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-white">Announcements</h3>
-            <p className="text-sm text-slate-500">No announcements at this time</p>
-          </div>
-        </div>
-      </motion.div>
-    )
+    return null
   }
 
   return (
     <motion.div
-      className="relative overflow-hidden rounded-2xl border border-cyan-500/20 bg-gradient-to-br from-slate-900 via-cyan-950/20 to-slate-900 shadow-xl shadow-black/20"
-      initial={{ opacity: 0, y: 20 }}
+      className="relative overflow-hidden rounded-xl sm:rounded-2xl"
+      initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: "easeOut", delay: 0.1 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
       data-testid="announcements-card"
     >
-      {/* Header */}
-      <div className="flex items-center gap-3 border-b border-white/5 px-6 py-4">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500/20 to-cyan-600/10 text-cyan-400">
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
-          </svg>
-        </div>
-        <h3 className="text-lg font-semibold text-white">Announcements</h3>
-        {announcements.length > 1 && (
-          <span className="ml-auto rounded-full bg-cyan-500/20 px-2.5 py-0.5 text-xs font-medium text-cyan-300">
-            {announcements.length}
-          </span>
-        )}
-      </div>
+      {/* Animated gradient border */}
+      <div
+        className="absolute inset-0 rounded-xl sm:rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 opacity-80"
+        style={{
+          backgroundSize: '200% 200%',
+          animation: 'gradient-shift 3s ease infinite',
+        }}
+      />
 
-      {/* Announcements list */}
-      <div className="max-h-64 overflow-y-auto">
-        <AnimatePresence>
-          {announcements.map((announcement, index) => (
-            <motion.article
-              key={announcement.id}
-              className="border-b border-white/5 px-6 py-4 last:border-b-0"
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.05 }}
-              data-testid={`announcement-${announcement.id}`}
-            >
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-cyan-400" />
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-medium text-white">{announcement.title}</h4>
-                  <div className="mt-1 text-sm text-slate-300 prose prose-sm prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 prose-a:text-cyan-400 prose-a:no-underline hover:prose-a:underline">
-                    <ReactMarkdown>{announcement.content}</ReactMarkdown>
+      {/* Inner content */}
+      <div className="relative m-[1px] rounded-xl sm:rounded-2xl bg-gradient-to-br from-amber-950/90 via-slate-900 to-slate-900">
+        {/* Ambient glow */}
+        <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-amber-500/20 blur-3xl" />
+        <div className="pointer-events-none absolute -left-10 -bottom-10 h-24 w-24 rounded-full bg-orange-500/10 blur-2xl" />
+
+        {/* Header */}
+        <div className="relative flex items-center gap-3 border-b border-amber-500/20 px-4 sm:px-5 py-3 sm:py-4">
+          {/* Animated bell icon */}
+          <motion.div
+            className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 shadow-lg shadow-amber-500/30"
+            animate={{ rotate: [0, -10, 10, -10, 0] }}
+            transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 3 }}
+          >
+            <svg className="h-5 w-5 sm:h-5 sm:w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+          </motion.div>
+
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <h3 className="text-base sm:text-lg font-bold text-white">Announcements</h3>
+              {/* Pulsing new badge */}
+              <span className="relative flex">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-50" />
+                <span className="relative inline-flex items-center rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
+                  New
+                </span>
+              </span>
+            </div>
+            <p className="text-xs text-amber-200/70">Important updates from the server</p>
+          </div>
+
+          {announcements.length > 1 && (
+            <span className="rounded-full bg-amber-500/20 border border-amber-500/30 px-2.5 py-0.5 text-xs font-bold text-amber-300">
+              {announcements.length}
+            </span>
+          )}
+        </div>
+
+        {/* Announcements list */}
+        <div className="relative max-h-48 sm:max-h-56 overflow-y-auto">
+          <AnimatePresence>
+            {announcements.map((announcement, index) => (
+              <motion.article
+                key={announcement.id}
+                className="border-b border-white/5 px-4 sm:px-5 py-3 sm:py-4 last:border-b-0 hover:bg-white/[0.02] transition-colors"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.05 }}
+                data-testid={`announcement-${announcement.id}`}
+              >
+                <div className="flex items-start gap-3">
+                  {/* Glowing dot indicator */}
+                  <div className="relative mt-1.5 shrink-0">
+                    <span className="absolute inline-flex h-2 w-2 rounded-full bg-amber-400 opacity-50 animate-ping" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-400" />
                   </div>
-                  <p className="mt-2 text-xs text-slate-500">
-                    {formatRelativeDate(announcement.createdAt)}
-                  </p>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-sm sm:text-base font-semibold text-white">{announcement.title}</h4>
+                    <div className="mt-1.5 text-xs sm:text-sm text-slate-300 prose prose-sm prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 prose-a:text-amber-400 prose-a:no-underline hover:prose-a:underline">
+                      <ReactMarkdown>{announcement.content}</ReactMarkdown>
+                    </div>
+                    <p className="mt-2 text-xs text-amber-300/60 font-medium">
+                      {formatRelativeDate(announcement.createdAt)}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </motion.article>
-          ))}
-        </AnimatePresence>
+              </motion.article>
+            ))}
+          </AnimatePresence>
+        </div>
       </div>
     </motion.div>
   )

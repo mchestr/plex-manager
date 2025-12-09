@@ -46,10 +46,10 @@ export function UserDashboard({
 
   return (
     <ChatProvider>
-      <div className="relative min-h-screen flex flex-col bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
+      <div className="relative min-h-[100dvh] flex flex-col bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
         {/* Header */}
-        <header className="w-full px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between z-20">
-          <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+        <header className="sticky top-0 w-full px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex items-center justify-between z-20 bg-slate-900/80 backdrop-blur-sm border-b border-white/5 sm:border-transparent sm:bg-transparent sm:backdrop-blur-none">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
             {serverName}
           </h1>
           <div className="flex items-center gap-2 sm:gap-4">
@@ -74,33 +74,36 @@ export function UserDashboard({
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 pb-24">
-          <div className="w-full max-w-4xl space-y-4">
+        <main className="flex-1 flex items-start sm:items-center justify-center px-4 sm:px-6 lg:px-8 py-4 sm:py-0 pb-24 overflow-y-auto">
+          <div className="w-full max-w-4xl space-y-4 sm:space-y-6">
             {/* Announcements - Only shown when there are announcements */}
             {announcements.length > 0 && (
               <AnnouncementsCard announcements={announcements} />
             )}
 
-            {/* Quick Links - single row on desktop, stacked on mobile */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <PlexLinkCard serverName={serverName} />
-              {overseerrUrl ? (
-                <RequestsCard url={overseerrUrl} />
-              ) : (
-                <div className="hidden sm:block" />
-              )}
-              {(serverInviteCode || discordEnabled) ? (
-                <DiscordCard
-                  connection={discordConnection}
-                  serverInviteCode={serverInviteCode}
-                />
-              ) : (
-                <div className="hidden sm:block" />
-              )}
-            </div>
-
-            {/* Wrapped - Full width row */}
+            {/* Wrapped - Hero callout at the top */}
             <WrappedCard userId={userId} />
+
+            {/* Quick Links - visually separated section */}
+            <div className="space-y-3 sm:space-y-4 pt-2">
+              <h2 className="text-xs font-medium uppercase tracking-wider text-slate-500 px-1">Quick Links</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                <PlexLinkCard serverName={serverName} />
+                {overseerrUrl ? (
+                  <RequestsCard url={overseerrUrl} />
+                ) : (
+                  <div className="hidden sm:block" />
+                )}
+                {(serverInviteCode || discordEnabled) ? (
+                  <DiscordCard
+                    connection={discordConnection}
+                    serverInviteCode={serverInviteCode}
+                  />
+                ) : (
+                  <div className="hidden sm:block" />
+                )}
+              </div>
+            </div>
           </div>
         </main>
 
