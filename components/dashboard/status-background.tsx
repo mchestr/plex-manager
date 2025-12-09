@@ -64,10 +64,13 @@ export function StatusFooter({ status }: StatusFooterProps) {
 
 /**
  * Display uptime percentage
+ * Only considers segments with known status (up or down), excludes unknown
  */
 function UptimePercentage({ segments }: { segments: StatusSegment[] }) {
-  const upCount = segments.filter(s => s.status === "up").length
-  const totalCount = segments.length
+  // Only count segments with known status
+  const knownSegments = segments.filter(s => s.status !== "unknown")
+  const upCount = knownSegments.filter(s => s.status === "up").length
+  const totalCount = knownSegments.length
   const percentage = totalCount > 0 ? (upCount / totalCount) * 100 : 0
 
   // Color based on uptime

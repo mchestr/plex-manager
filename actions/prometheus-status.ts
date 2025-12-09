@@ -65,14 +65,26 @@ export async function getPrometheusStatus(): Promise<StatusData> {
       }
     }
 
-    // Build a set of timestamps that have data
-    const dataTimestamps = new Set<number>()
+    // Build a map of timestamps to their status values
+    // For each hour, we track whether we've seen an "up" (value >= 1) or "down" (value == 0)
+    const timestampStatus = new Map<number, "up" | "down">()
+
     for (const series of result.data.result) {
       if (series.values) {
-        for (const [timestamp] of series.values) {
+        for (const [timestamp, valueStr] of series.values) {
           // Round to hour boundary
           const hourTimestamp = Math.floor(timestamp / 3600) * 3600
-          dataTimestamps.add(hourTimestamp)
+          const value = parseFloat(valueStr)
+
+          // Determine status based on value (typically 1 = up, 0 = down for `up{}` queries)
+          const status: "up" | "down" = value >= 1 ? "up" : "down"
+
+          // If we already have a status for this hour, keep "up" if either is "up"
+          // This handles cases where there are multiple data points in an hour
+          const existing = timestampStatus.get(hourTimestamp)
+          if (!existing || status === "up") {
+            timestampStatus.set(hourTimestamp, status)
+          }
         }
       }
     }
@@ -83,26 +95,34 @@ export async function getPrometheusStatus(): Promise<StatusData> {
     const endHour = Math.floor(endTime / 3600) * 3600
 
     while (currentTime <= endHour) {
-      const hasData = dataTimestamps.has(currentTime)
+      const status = timestampStatus.get(currentTime)
       segments.push({
         timestamp: currentTime,
-        status: hasData ? "up" : "down",
+        // If we have data, use its status; if no data, mark as unknown (not down)
+        status: status ?? "unknown",
       })
       currentTime += 3600 // Move to next hour
     }
 
     // Calculate overall status based on last 24 hours
+    // Only consider segments with known status (up or down), ignore unknown
     const last24Hours = segments.slice(-24)
-    const upCount = last24Hours.filter((s) => s.status === "up").length
-    const upPercentage = (upCount / last24Hours.length) * 100
+    const knownSegments = last24Hours.filter((s) => s.status !== "unknown")
+    const upCount = knownSegments.filter((s) => s.status === "up").length
 
     let overallStatus: StatusData["overallStatus"]
-    if (upPercentage >= 95) {
-      overallStatus = "operational"
-    } else if (upPercentage >= 50) {
-      overallStatus = "issues"
+    if (knownSegments.length === 0) {
+      // No known data in last 24 hours
+      overallStatus = "unknown"
     } else {
-      overallStatus = "down"
+      const upPercentage = (upCount / knownSegments.length) * 100
+      if (upPercentage >= 95) {
+        overallStatus = "operational"
+      } else if (upPercentage >= 50) {
+        overallStatus = "issues"
+      } else {
+        overallStatus = "down"
+      }
     }
 
     return {
