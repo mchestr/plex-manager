@@ -3,6 +3,13 @@
 import { prisma } from "@/lib/prisma"
 import { queryPrometheusRange } from "@/lib/connections/prometheus"
 import type { PrometheusParsed } from "@/lib/validations/prometheus"
+import { createLogger } from "@/lib/utils/logger"
+import { unstable_cache } from "next/cache"
+
+const logger = createLogger("prometheus-status")
+
+// Cache revalidation time in seconds (5 minutes)
+const CACHE_REVALIDATE_SECONDS = 5 * 60
 
 /**
  * Status for a single hour segment
@@ -23,10 +30,10 @@ export interface StatusData {
 }
 
 /**
- * Fetch Prometheus status data for the dashboard background
+ * Internal function to fetch Prometheus status data
  * Queries the last 7 days with 1-hour resolution (168 data points)
  */
-export async function getPrometheusStatus(): Promise<StatusData> {
+async function fetchPrometheusStatusInternal(): Promise<StatusData> {
   try {
     // Get active Prometheus configuration
     const prometheus = await prisma.prometheus.findFirst({
@@ -132,14 +139,52 @@ export async function getPrometheusStatus(): Promise<StatusData> {
       overallStatus,
     }
   } catch (error) {
-    console.error("Error fetching Prometheus status:", error)
+    logger.error("Error fetching Prometheus status", { error })
+    // Get the prometheus config to return service name even on error
+    // Use a separate try-catch to avoid nested errors
+    let serviceName = ""
+    try {
+      const prometheus = await prisma.prometheus.findFirst({
+        where: { isActive: true },
+        select: { name: true },
+      })
+      serviceName = prometheus?.name ?? ""
+    } catch {
+      // Ignore error getting name
+    }
+    // Calculate time range for unknown segments
+    const now = new Date()
+    const endTime = Math.floor(now.getTime() / 1000)
+    const startTime = endTime - 7 * 24 * 60 * 60
     return {
-      isConfigured: false,
-      serviceName: "",
-      segments: [],
+      isConfigured: serviceName !== "",
+      serviceName,
+      segments: generateUnknownSegments(startTime, endTime),
       overallStatus: "unknown",
     }
   }
+}
+
+/**
+ * Cached version of fetchPrometheusStatusInternal
+ * Caches results for 5 minutes to reduce Prometheus API load
+ */
+const getCachedPrometheusStatus = unstable_cache(
+  fetchPrometheusStatusInternal,
+  ["prometheus-status"],
+  {
+    revalidate: CACHE_REVALIDATE_SECONDS,
+    tags: ["prometheus-status"],
+  }
+)
+
+/**
+ * Fetch Prometheus status data for the dashboard background
+ * Results are cached for 5 minutes to reduce load on Prometheus
+ * Queries the last 7 days with 1-hour resolution (168 data points)
+ */
+export async function getPrometheusStatus(): Promise<StatusData> {
+  return getCachedPrometheusStatus()
 }
 
 /**

@@ -376,7 +376,9 @@ export async function updatePrometheus(data: { name: string; url: string; query:
       return { success: false, error: queryTest.error || "Invalid PromQL query" }
     }
 
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (txClient) => {
+      // Type assertion needed for Prisma 7 with driver adapters
+      const tx = txClient as unknown as typeof prisma
       // Deactivate existing active server
       await tx.prometheus.updateMany({
         where: { isActive: true },
