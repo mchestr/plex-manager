@@ -46,39 +46,43 @@ export function UserDashboard({
 
   return (
     <div className="relative min-h-[100dvh] flex flex-col bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
-      {/* Header */}
-      <header className="sticky top-0 w-full px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex items-center justify-between z-20 bg-slate-900/80 backdrop-blur-sm border-b border-white/5 sm:border-transparent sm:bg-transparent sm:backdrop-blur-none">
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-            {serverName}
-          </h1>
-          <div className="flex items-center gap-2 sm:gap-4">
-            {isAdmin && (
-              <Link
-                href="/admin"
-                className="px-3 sm:px-4 py-2 text-sm font-medium text-cyan-400 hover:text-cyan-300 transition-colors rounded-lg hover:bg-white/5"
-                data-testid="admin-dashboard-link"
-              >
-                <span className="hidden sm:inline">Admin Dashboard</span>
-                <span className="sm:hidden">Admin</span>
-              </Link>
-            )}
-            <button
-              onClick={handleSignOut}
-              className="px-3 sm:px-4 py-2 text-sm font-medium text-red-400 hover:text-red-300 transition-colors rounded-lg hover:bg-white/5"
-              data-testid="sign-out-button"
+      {/* Header - Navigation only */}
+      <header className="sticky top-0 w-full px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex items-center justify-end z-20 bg-slate-900/80 backdrop-blur-sm border-b border-white/5 sm:border-transparent sm:bg-transparent sm:backdrop-blur-none">
+        <div className="flex items-center gap-2 sm:gap-4">
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className="px-3 sm:px-4 py-2 text-sm font-medium text-cyan-400 hover:text-cyan-300 transition-colors rounded-lg hover:bg-white/5"
+              data-testid="admin-dashboard-link"
             >
-              Sign Out
-            </button>
-          </div>
-        </header>
+              <span className="hidden sm:inline">Admin Dashboard</span>
+              <span className="sm:hidden">Admin</span>
+            </Link>
+          )}
+          <button
+            onClick={handleSignOut}
+            className="px-3 sm:px-4 py-2 text-sm font-medium text-red-400 hover:text-red-300 transition-colors rounded-lg hover:bg-white/5"
+            data-testid="sign-out-button"
+          >
+            Sign Out
+          </button>
+        </div>
+      </header>
 
-        {/* Main Content */}
-        <main className="flex-1 flex items-start sm:items-center justify-center px-4 sm:px-6 lg:px-8 py-4 sm:py-0 pb-24 overflow-y-auto">
-          <div className="w-full max-w-4xl space-y-4 sm:space-y-6">
-            {/* Announcements - Only shown when there are announcements */}
-            {announcements.length > 0 && (
-              <AnnouncementsCard announcements={announcements} />
-            )}
+      {/* Main Content */}
+      <main className="flex-1 flex items-start sm:items-center justify-center px-4 sm:px-6 lg:px-8 py-4 sm:py-0 pb-24 overflow-y-auto">
+        <div className="w-full max-w-4xl space-y-6 sm:space-y-8">
+          {/* Server Name - Front and Center */}
+          <div className="text-center">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+              {serverName}
+            </h1>
+          </div>
+
+          {/* Announcements - Only shown when there are announcements */}
+          {announcements.length > 0 && (
+            <AnnouncementsCard announcements={announcements} />
+          )}
 
             {/* Wrapped - Hero callout at the top */}
             <WrappedCard userId={userId} />
