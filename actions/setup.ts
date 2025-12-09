@@ -16,6 +16,7 @@ import { plexServerSchema, type PlexServerInput, type PlexServerParsed } from "@
 import { radarrSchema, type RadarrInput, type RadarrParsed } from "@/lib/validations/radarr"
 import { sonarrSchema, type SonarrInput, type SonarrParsed } from "@/lib/validations/sonarr"
 import { tautulliSchema, type TautulliInput, type TautulliParsed } from "@/lib/validations/tautulli"
+import { prometheusSchema, type PrometheusInput, type PrometheusParsed } from "@/lib/validations/prometheus"
 import { revalidatePath } from "next/cache"
 
 export async function getSetupStatus() {
@@ -467,7 +468,62 @@ export async function saveChatLLMProvider(data: LLMProviderInput) {
 }
 
 export async function saveLLMProvider(data: LLMProviderInput) {
-  return saveLLMProviderForPurpose(data, "wrapped", 9)
+  return saveLLMProviderForPurpose(data, "wrapped", 10)
+}
+
+export async function savePrometheus(data: PrometheusInput) {
+  try {
+    await requireAdminIfSetupComplete()
+
+    const validated: PrometheusParsed = prometheusSchema.parse(data)
+
+    // Test connection before saving
+    const { testPrometheusConnection } = await import("@/lib/connections/prometheus")
+    const connectionTest = await testPrometheusConnection(validated)
+    if (!connectionTest.success) {
+      return { success: false, error: connectionTest.error || "Failed to connect to Prometheus server" }
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // Update setup record
+      const setup = await tx.setup.findFirst({
+        orderBy: { createdAt: "desc" },
+      })
+
+      if (setup) {
+        await tx.setup.update({
+          where: { id: setup.id },
+          data: {
+            currentStep: 10,
+          },
+        })
+      } else {
+        await tx.setup.create({
+          data: {
+            currentStep: 10,
+          },
+        })
+      }
+
+      // Create Prometheus configuration
+      await tx.prometheus.create({
+        data: {
+          name: validated.name,
+          url: validated.url,
+          query: validated.query,
+          isActive: true,
+        },
+      })
+    })
+
+    revalidatePath("/setup")
+    return { success: true }
+  } catch (error) {
+    if (error instanceof Error) {
+      return { success: false, error: error.message }
+    }
+    return { success: false, error: "Failed to save Prometheus configuration" }
+  }
 }
 
 export async function completeSetup() {

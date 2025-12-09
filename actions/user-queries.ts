@@ -430,6 +430,111 @@ export async function fetchShareStatsMap(userIds: string[]): Promise<Map<string,
 }
 
 /**
+ * Get user's first watch date from Tautulli
+ * Returns the timestamp of their earliest watch history entry
+ */
+export async function getUserFirstWatchDate(
+  plexUserId: string,
+  userEmail: string | null
+): Promise<{ success: boolean; firstWatchDate?: string; error?: string }> {
+  try {
+    // Get active Tautulli configuration
+    const tautulli = await prisma.tautulli.findFirst({
+      where: { isActive: true },
+    })
+
+    if (!tautulli) {
+      logger.debug("No active Tautulli configured, cannot get first watch date")
+      return { success: false, error: "Tautulli not configured" }
+    }
+
+    const baseUrl = `${tautulli.url}/api/v2`
+    const apiKey = tautulli.apiKey
+
+    // Get all users from Tautulli
+    const usersResponse = await fetch(
+      `${baseUrl}?apikey=${apiKey}&cmd=get_users`,
+      { headers: { "Accept": "application/json" } }
+    )
+
+    if (!usersResponse.ok) {
+      return { success: false, error: "Failed to fetch users from Tautulli" }
+    }
+
+    const usersData = await usersResponse.json()
+    const users = Array.isArray(usersData.response?.data)
+      ? usersData.response.data
+      : usersData.response?.data?.users || []
+
+    // Find the user by email or Plex ID
+    interface TautulliUserResponse {
+      user_id: number
+      email?: string
+      username?: string
+      friendly_name?: string
+      plex_id?: string
+    }
+
+    let tautulliUser: TautulliUserResponse | null = null
+
+    if (userEmail) {
+      tautulliUser = users.find(
+        (u: TautulliUserResponse) => u.email?.toLowerCase() === userEmail.toLowerCase()
+      ) ?? null
+    }
+
+    if (!tautulliUser) {
+      tautulliUser = users.find(
+        (u: TautulliUserResponse) =>
+          u.plex_id?.toString() === plexUserId ||
+          u.user_id?.toString() === plexUserId
+      ) ?? null
+    }
+
+    if (!tautulliUser) {
+      logger.debug("User not found in Tautulli", { plexUserId, userEmail })
+      return { success: false, error: "User not found in Tautulli" }
+    }
+
+    // Fetch user's oldest history entry
+    // We need to get the oldest, so we'll fetch history ordered by date ascending
+    const historyResponse = await fetch(
+      `${baseUrl}?apikey=${apiKey}&cmd=get_history&user_id=${tautulliUser.user_id}&order_dir=asc&length=1`,
+      { headers: { "Accept": "application/json" } }
+    )
+
+    if (!historyResponse.ok) {
+      return { success: false, error: "Failed to fetch user history from Tautulli" }
+    }
+
+    const historyData = await historyResponse.json()
+    const historyItems = historyData.response?.data?.data || []
+
+    if (historyItems.length === 0) {
+      logger.debug("No watch history found for user", { plexUserId })
+      return { success: false, error: "No watch history found" }
+    }
+
+    // Get the first item's date (Unix timestamp)
+    const firstItem = historyItems[0]
+    const timestamp = firstItem.date || firstItem.started
+
+    if (!timestamp) {
+      return { success: false, error: "No timestamp found in history" }
+    }
+
+    // Convert Unix timestamp to ISO string
+    const firstWatchDate = new Date(timestamp * 1000).toISOString()
+
+    logger.debug("Found first watch date", { plexUserId, firstWatchDate })
+    return { success: true, firstWatchDate }
+  } catch (error) {
+    logger.error("Error getting user first watch date", error, { plexUserId })
+    return { success: false, error: "Failed to get first watch date" }
+  }
+}
+
+/**
  * Get user activity timeline (Discord commands + media marks)
  */
 export async function getUserActivityTimeline(

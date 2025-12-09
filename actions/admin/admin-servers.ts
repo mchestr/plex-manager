@@ -348,3 +348,104 @@ export async function updateRadarr(data: { name: string; url: string; apiKey: st
     return { success: false, error: "Failed to update Radarr configuration" }
   }
 }
+
+/**
+ * Update Prometheus configuration (admin only)
+ */
+export async function updatePrometheus(data: { name: string; url: string; query: string }) {
+  await requireAdmin()
+
+  try {
+    const { prometheusSchema } = await import("@/lib/validations/prometheus")
+    const { testPrometheusConnection, validatePrometheusQuery } = await import(
+      "@/lib/connections/prometheus"
+    )
+    const { revalidatePath } = await import("next/cache")
+
+    const validated = prometheusSchema.parse(data)
+
+    // Test connection before saving
+    const connectionTest = await testPrometheusConnection(validated)
+    if (!connectionTest.success) {
+      return { success: false, error: connectionTest.error || "Failed to connect to Prometheus server" }
+    }
+
+    // Validate the PromQL query
+    const queryTest = await validatePrometheusQuery(validated)
+    if (!queryTest.success) {
+      return { success: false, error: queryTest.error || "Invalid PromQL query" }
+    }
+
+    await prisma.$transaction(async (txClient) => {
+      // Type assertion needed for Prisma 7 with driver adapters
+      const tx = txClient as unknown as typeof prisma
+      // Deactivate existing active server
+      await tx.prometheus.updateMany({
+        where: { isActive: true },
+        data: { isActive: false },
+      })
+
+      // Update or create server
+      const existing = await tx.prometheus.findFirst({
+        where: {
+          url: validated.url,
+        },
+      })
+
+      if (existing) {
+        await tx.prometheus.update({
+          where: { id: existing.id },
+          data: {
+            name: validated.name,
+            url: validated.url,
+            query: validated.query,
+            isActive: true,
+          },
+        })
+      } else {
+        await tx.prometheus.create({
+          data: {
+            name: validated.name,
+            url: validated.url,
+            query: validated.query,
+            isActive: true,
+          },
+        })
+      }
+    })
+
+    revalidatePath("/admin/settings")
+    revalidatePath("/") // Revalidate homepage since status is shown there
+    return { success: true }
+  } catch (error) {
+    if (error instanceof Error) {
+      return { success: false, error: error.message }
+    }
+    return { success: false, error: "Failed to update Prometheus configuration" }
+  }
+}
+
+/**
+ * Delete Prometheus configuration (admin only)
+ */
+export async function deletePrometheus() {
+  await requireAdmin()
+
+  try {
+    const { revalidatePath } = await import("next/cache")
+
+    await prisma.prometheus.updateMany({
+      where: { isActive: true },
+      data: { isActive: false },
+    })
+
+    revalidatePath("/admin/settings")
+    revalidatePath("/")
+    return { success: true }
+  } catch (error) {
+    if (error instanceof Error) {
+      return { success: false, error: error.message }
+    }
+    return { success: false, error: "Failed to delete Prometheus configuration" }
+  }
+}

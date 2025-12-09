@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 
 interface WrappedCardProps {
   userId: string
+  memberSince: string // ISO date string of when user joined
 }
 
 // Floating sparkle component
@@ -36,7 +37,20 @@ function Sparkle({ className, delay = 0 }: { className?: string; delay?: number 
   )
 }
 
-export function WrappedCard({ userId }: WrappedCardProps) {
+// Minimum membership duration in months before wrapped is available
+const MIN_MEMBERSHIP_MONTHS = 6
+
+/**
+ * Check if a user has been a member long enough to generate wrapped
+ */
+function isEligibleForWrapped(memberSince: string): boolean {
+  const joinDate = new Date(memberSince)
+  const now = new Date()
+  const monthsDiff = (now.getFullYear() - joinDate.getFullYear()) * 12 + (now.getMonth() - joinDate.getMonth())
+  return monthsDiff >= MIN_MEMBERSHIP_MONTHS
+}
+
+export function WrappedCard({ userId, memberSince }: WrappedCardProps) {
   const toast = useToast()
   const router = useRouter()
   const [isGenerating, setIsGenerating] = useState(false)
@@ -44,6 +58,9 @@ export function WrappedCard({ userId }: WrappedCardProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [wrappedSettings, setWrappedSettings] = useState<{ enabled: boolean; year: number } | null>(null)
   const pollFailureCountRef = useRef(0)
+
+  // Check membership eligibility
+  const eligible = isEligibleForWrapped(memberSince)
 
   // Load wrapped settings
   useEffect(() => {
@@ -132,6 +149,11 @@ export function WrappedCard({ userId }: WrappedCardProps) {
 
   // Hide when disabled
   if (wrappedSettings && !wrappedSettings.enabled) {
+    return null
+  }
+
+  // Not eligible yet - don't show anything
+  if (!eligible) {
     return null
   }
 
