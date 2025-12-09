@@ -300,6 +300,26 @@ export default async function SettingsPage() {
                   </div>
                   <ServerForm type="radarr" server={settings.radarr} />
                 </div>
+
+                {/* Prometheus Status */}
+                <div className="border border-slate-700 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                      <svg className="w-4 h-4 text-orange-500" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 2.18c5.423 0 9.82 4.397 9.82 9.82 0 5.423-4.397 9.82-9.82 9.82-5.423 0-9.82-4.397-9.82-9.82 0-5.423 4.397-9.82 9.82-9.82zm0 1.64c-4.516 0-8.18 3.664-8.18 8.18 0 4.516 3.664 8.18 8.18 8.18 4.516 0 8.18-3.664 8.18-8.18 0-4.516-3.664-8.18-8.18-8.18zm0 2.454c3.163 0 5.727 2.564 5.727 5.726 0 3.163-2.564 5.727-5.727 5.727S6.273 15.163 6.273 12c0-3.162 2.564-5.726 5.727-5.726z"/>
+                      </svg>
+                      Prometheus Status
+                    </h3>
+                    <FeatureStatusBadge
+                      featureName="Prometheus status monitoring"
+                      enabled={Boolean(settings.prometheus)}
+                    />
+                  </div>
+                  <p className="text-xs text-slate-400 mb-3">
+                    Display a subtle status background on the homepage using Prometheus metrics
+                  </p>
+                  <ServerForm type="prometheus" server={settings.prometheus} />
+                </div>
               </div>
             </div>
 

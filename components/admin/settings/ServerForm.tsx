@@ -1,14 +1,14 @@
 "use client"
 
-import { updateOverseerr, updatePlexServer, updateRadarr, updateSonarr, updateTautulli } from "@/actions/admin"
+import { updateOverseerr, updatePlexServer, updatePrometheus, updateRadarr, updateSonarr, updateTautulli } from "@/actions/admin"
 import { StyledInput } from "@/components/ui/styled-input"
 import { useToast } from "@/components/ui/toast"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 
 interface ServerFormProps {
-  type: "plex" | "tautulli" | "overseerr" | "sonarr" | "radarr"
-  server: { name: string; url: string; token?: string; apiKey?: string; publicUrl?: string | null } | null
+  type: "plex" | "tautulli" | "overseerr" | "sonarr" | "radarr" | "prometheus"
+  server: { name: string; url: string; token?: string; apiKey?: string; publicUrl?: string | null; query?: string } | null
 }
 
 export function ServerForm({ type, server }: ServerFormProps) {
@@ -23,6 +23,7 @@ export function ServerForm({ type, server }: ServerFormProps) {
     publicUrl: server?.publicUrl || "",
     token: server?.token || "",
     apiKey: server?.apiKey || "",
+    query: server?.query || "",
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -58,12 +59,19 @@ export function ServerForm({ type, server }: ServerFormProps) {
           apiKey: formData.apiKey!,
           publicUrl: formData.publicUrl || undefined,
         })
-      } else {
+      } else if (type === "radarr") {
         result = await updateRadarr({
           name: formData.name,
           url: formData.url,
           apiKey: formData.apiKey!,
           publicUrl: formData.publicUrl || undefined,
+        })
+      } else {
+        // prometheus
+        result = await updatePrometheus({
+          name: formData.name,
+          url: formData.url,
+          query: formData.query!,
         })
       }
 
@@ -91,10 +99,17 @@ export function ServerForm({ type, server }: ServerFormProps) {
                 <div className="text-xs text-slate-400 mb-1">Local URL</div>
                 <div className="text-white font-mono text-xs">{server.url}</div>
               </div>
-              <div>
-                <div className="text-xs text-slate-400 mb-1">Public URL</div>
-                <div className="text-white font-mono text-xs">{server.publicUrl || "Not set"}</div>
-              </div>
+              {type === "prometheus" ? (
+                <div>
+                  <div className="text-xs text-slate-400 mb-1">Query</div>
+                  <div className="text-white font-mono text-xs truncate" title={server.query}>{server.query || "Not set"}</div>
+                </div>
+              ) : (
+                <div>
+                  <div className="text-xs text-slate-400 mb-1">Public URL</div>
+                  <div className="text-white font-mono text-xs">{server.publicUrl || "Not set"}</div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="text-sm text-slate-400">No {type} server configured</div>
@@ -130,47 +145,65 @@ export function ServerForm({ type, server }: ServerFormProps) {
             type="text"
             value={formData.url}
             onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-            placeholder={type === "plex" ? "https://example.com:32400" : type === "tautulli" ? "http://example.com:8181" : type === "overseerr" ? "http://example.com:5055" : type === "sonarr" ? "http://example.com:8989" : "http://example.com:7878"}
+            placeholder={type === "plex" ? "https://example.com:32400" : type === "tautulli" ? "http://example.com:8181" : type === "overseerr" ? "http://example.com:5055" : type === "sonarr" ? "http://example.com:8989" : type === "prometheus" ? "http://example.com:9090" : "http://example.com:7878"}
             required
             disabled={isPending}
           />
         </div>
-        <div className="md:col-span-2">
-          <label className="block text-xs font-medium text-slate-400 mb-1">
-            Public URL <span className="text-slate-500 font-normal">(optional, e.g. https://{type}.example.com)</span>
-          </label>
-          <StyledInput
-            type="text"
-            value={formData.publicUrl}
-            onChange={(e) => setFormData({ ...formData, publicUrl: e.target.value })}
-            placeholder={`https://${type}.example.com`}
-            disabled={isPending}
-          />
-        </div>
-        {type === "plex" ? (
+        {type === "prometheus" ? (
           <div className="md:col-span-2">
-            <label className="block text-xs font-medium text-slate-400 mb-1">Plex Token</label>
+            <label className="block text-xs font-medium text-slate-400 mb-1">
+              PromQL Query <span className="text-slate-500 font-normal">(e.g. up{`{job="plex"}`})</span>
+            </label>
             <StyledInput
-              type="password"
-              value={formData.token}
-              onChange={(e) => setFormData({ ...formData, token: e.target.value })}
-              placeholder="Plex authentication token"
+              type="text"
+              value={formData.query}
+              onChange={(e) => setFormData({ ...formData, query: e.target.value })}
+              placeholder='up{job="plex"}'
               required
               disabled={isPending}
             />
           </div>
         ) : (
-          <div className="md:col-span-2">
-            <label className="block text-xs font-medium text-slate-400 mb-1">API Key</label>
-            <StyledInput
-              type="password"
-              value={formData.apiKey}
-              onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
-              placeholder={`${type.charAt(0).toUpperCase() + type.slice(1)} API key`}
-              required
-              disabled={isPending}
-            />
-          </div>
+          <>
+            <div className="md:col-span-2">
+              <label className="block text-xs font-medium text-slate-400 mb-1">
+                Public URL <span className="text-slate-500 font-normal">(optional, e.g. https://{type}.example.com)</span>
+              </label>
+              <StyledInput
+                type="text"
+                value={formData.publicUrl}
+                onChange={(e) => setFormData({ ...formData, publicUrl: e.target.value })}
+                placeholder={`https://${type}.example.com`}
+                disabled={isPending}
+              />
+            </div>
+            {type === "plex" ? (
+              <div className="md:col-span-2">
+                <label className="block text-xs font-medium text-slate-400 mb-1">Plex Token</label>
+                <StyledInput
+                  type="password"
+                  value={formData.token}
+                  onChange={(e) => setFormData({ ...formData, token: e.target.value })}
+                  placeholder="Plex authentication token"
+                  required
+                  disabled={isPending}
+                />
+              </div>
+            ) : (
+              <div className="md:col-span-2">
+                <label className="block text-xs font-medium text-slate-400 mb-1">API Key</label>
+                <StyledInput
+                  type="password"
+                  value={formData.apiKey}
+                  onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
+                  placeholder={`${type.charAt(0).toUpperCase() + type.slice(1)} API key`}
+                  required
+                  disabled={isPending}
+                />
+              </div>
+            )}
+          </>
         )}
       </div>
       <div className="flex gap-2">
@@ -191,6 +224,7 @@ export function ServerForm({ type, server }: ServerFormProps) {
               publicUrl: server?.publicUrl || "",
               token: server?.token || "",
               apiKey: server?.apiKey || "",
+              query: server?.query || "",
             })
           }}
           disabled={isPending}

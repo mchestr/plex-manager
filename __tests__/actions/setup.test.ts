@@ -9,12 +9,14 @@ import {
     saveLLMProvider,
     saveOverseerr,
     savePlexServer,
+    savePrometheus,
     saveTautulli,
 } from '@/actions/setup'
 import { testLLMProviderConnection } from '@/lib/connections/llm-provider'
 import { fetchOpenAIModels } from '@/lib/connections/openai'
 import { testOverseerrConnection } from '@/lib/connections/overseerr'
 import { getPlexUserInfo, testPlexConnection } from '@/lib/connections/plex'
+import { testPrometheusConnection } from '@/lib/connections/prometheus'
 import { testTautulliConnection } from '@/lib/connections/tautulli'
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
@@ -34,6 +36,9 @@ jest.mock('@/lib/prisma', () => ({
       create: jest.fn(),
     },
     overseerr: {
+      create: jest.fn(),
+    },
+    prometheus: {
       create: jest.fn(),
     },
     lLMProvider: {
@@ -58,6 +63,9 @@ jest.mock('@/lib/prisma', () => ({
       overseerr: {
         create: jest.fn(),
       },
+      prometheus: {
+        create: jest.fn(),
+      },
       lLMProvider: {
         updateMany: jest.fn(),
         create: jest.fn(),
@@ -80,6 +88,10 @@ jest.mock('@/lib/connections/tautulli', () => ({
 
 jest.mock('@/lib/connections/overseerr', () => ({
   testOverseerrConnection: jest.fn(),
+}))
+
+jest.mock('@/lib/connections/prometheus', () => ({
+  testPrometheusConnection: jest.fn(),
 }))
 
 jest.mock('@/lib/connections/llm-provider', () => ({
@@ -107,6 +119,7 @@ const mockTestPlexConnection = testPlexConnection as jest.MockedFunction<typeof 
 const mockGetPlexUserInfo = getPlexUserInfo as jest.MockedFunction<typeof getPlexUserInfo>
 const mockTestTautulliConnection = testTautulliConnection as jest.MockedFunction<typeof testTautulliConnection>
 const mockTestOverseerrConnection = testOverseerrConnection as jest.MockedFunction<typeof testOverseerrConnection>
+const mockTestPrometheusConnection = testPrometheusConnection as jest.MockedFunction<typeof testPrometheusConnection>
 const mockTestLLMProviderConnection = testLLMProviderConnection as jest.MockedFunction<typeof testLLMProviderConnection>
 const mockFetchOpenAIModels = fetchOpenAIModels as jest.MockedFunction<typeof fetchOpenAIModels>
 const mockRevalidatePath = revalidatePath as jest.MockedFunction<typeof revalidatePath>
@@ -343,6 +356,57 @@ describe('Setup Actions', () => {
           isActive: true,
         }),
       })
+    })
+  })
+
+  describe('savePrometheus', () => {
+    const prometheusInput = {
+      name: 'Plex Server',
+      url: 'http://prometheus.example.com:9090',
+      query: 'up{job="plex"}',
+    }
+
+    it('should save Prometheus configuration successfully', async () => {
+      mockTestPrometheusConnection.mockResolvedValue({ success: true })
+
+      const mockTx = {
+        setup: {
+          findFirst: jest.fn().mockResolvedValue(null),
+          create: jest.fn().mockResolvedValue({ id: 'setup-1' }),
+        },
+        prometheus: {
+          create: jest.fn().mockResolvedValue({ id: 'prometheus-1' }),
+        },
+      }
+
+      mockPrisma.$transaction.mockImplementation(async (callback: any) => {
+        return callback(mockTx)
+      })
+
+      const result = await savePrometheus(prometheusInput)
+
+      expect(result.success).toBe(true)
+      expect(mockTestPrometheusConnection).toHaveBeenCalled()
+      expect(mockTx.prometheus.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          name: prometheusInput.name,
+          url: 'http://prometheus.example.com:9090',
+          query: prometheusInput.query,
+          isActive: true,
+        }),
+      })
+    })
+
+    it('should return error when connection test fails', async () => {
+      mockTestPrometheusConnection.mockResolvedValue({
+        success: false,
+        error: 'Connection failed',
+      })
+
+      const result = await savePrometheus(prometheusInput)
+
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('Connection failed')
     })
   })
 

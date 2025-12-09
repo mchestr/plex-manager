@@ -45,5 +45,10 @@ export const SETUP_STEPS: SetupStep[] = [
     title: "Wrapped AI Provider",
     description: "Configure OpenAI for Plex Wrapped generation",
   },
+  {
+    id: 9,
+    title: "Prometheus Status",
+    description: "Configure status monitoring with Prometheus",
+  },
 ]
 

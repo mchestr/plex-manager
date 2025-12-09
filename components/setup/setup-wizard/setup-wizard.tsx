@@ -8,6 +8,7 @@ import { FinalSuccessAnimation } from "@/components/setup/setup-wizard/final-suc
 import { LLMProviderForm } from "@/components/setup/setup-wizard/llm-provider-form"
 import { OverseerrForm } from "@/components/setup/setup-wizard/overseerr-form"
 import { PlexServerForm } from "@/components/setup/setup-wizard/plex-server-form"
+import { PrometheusForm } from "@/components/setup/setup-wizard/prometheus-form"
 import { RadarrForm } from "@/components/setup/setup-wizard/radarr-form"
 import { SonarrForm } from "@/components/setup/setup-wizard/sonarr-form"
 import { SuccessAnimation } from "@/components/setup/setup-wizard/success-animation"
@@ -105,6 +106,8 @@ export function SetupWizard({ currentStep: initialStep }: SetupWizardProps) {
         return <LLMProviderForm purpose="chat" onComplete={handleStepComplete} onBack={handleBack} />
       case 8:
         return <LLMProviderForm purpose="wrapped" onComplete={handleStepComplete} onBack={handleBack} />
+      case 9:
+        return <PrometheusForm onComplete={handleStepComplete} onBack={handleBack} />
       default:
         return <div className="text-white">Step {currentStep} - Coming soon</div>
     }

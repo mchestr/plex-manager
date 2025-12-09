@@ -19,6 +19,7 @@ export async function getAdminSettings() {
     overseerr,
     sonarr,
     radarr,
+    prometheus,
     discordIntegration,
     discordLinkedCount,
   ] = await Promise.all([
@@ -30,6 +31,7 @@ export async function getAdminSettings() {
     prisma.overseerr.findFirst({ where: { isActive: true } }),
     prisma.sonarr.findFirst({ where: { isActive: true } }),
     prisma.radarr.findFirst({ where: { isActive: true } }),
+    prisma.prometheus.findFirst({ where: { isActive: true } }),
     prisma.discordIntegration.findUnique({ where: { id: "discord" } }),
     prisma.discordConnection.count({ where: { revokedAt: null } }),
   ])
@@ -45,6 +47,7 @@ export async function getAdminSettings() {
     overseerr,
     sonarr,
     radarr,
+    prometheus,
     discordIntegration,
     discordLinkedCount,
   }

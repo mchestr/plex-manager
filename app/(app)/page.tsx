@@ -1,4 +1,5 @@
 import { getActiveAnnouncements } from "@/actions/announcements";
+import { getPrometheusStatus } from "@/actions/prometheus-status";
 import { PlexSignInButton } from "@/components/auth/plex-sign-in-button";
 import { UserDashboard } from "@/components/dashboard/user-dashboard";
 import { authOptions } from "@/lib/auth";
@@ -10,13 +11,14 @@ export const dynamic = 'force-dynamic'
 
 export default async function Home() {
   const session = await getServerSession(authOptions);
-  const [plexServer, discordIntegration, announcements, overseerr] = await Promise.all([
+  const [plexServer, discordIntegration, announcements, overseerr, prometheusStatus] = await Promise.all([
     prisma.plexServer.findFirst({
       where: { isActive: true },
     }),
     prisma.discordIntegration.findUnique({ where: { id: "discord" } }),
     getActiveAnnouncements(),
     prisma.overseerr.findFirst({ where: { isActive: true } }),
+    getPrometheusStatus(),
   ]);
   const serverName = plexServer?.name || "Plex";
   const discordEnabled = Boolean(discordIntegration?.isEnabled && discordIntegration?.clientId && discordIntegration?.clientSecret);
@@ -51,7 +53,6 @@ export default async function Home() {
     return (
       <UserDashboard
         userId={session.user.id}
-        userName={session.user.name || "User"}
         serverName={serverName}
         isAdmin={session.user.isAdmin}
         discordEnabled={discordEnabled}
@@ -59,6 +60,7 @@ export default async function Home() {
         serverInviteCode={discordIntegration?.serverInviteCode ?? null}
         announcements={announcements}
         overseerrUrl={overseerrUrl}
+        prometheusStatus={prometheusStatus}
       />
     );
   }

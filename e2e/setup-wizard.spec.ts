@@ -45,6 +45,7 @@ test.describe('Setup Wizard', () => {
     await prisma.user.deleteMany();
     await prisma.lLMProvider.deleteMany();
     await prisma.discordIntegration.deleteMany();
+    await prisma.prometheus.deleteMany();
     await prisma.radarr.deleteMany();
     await prisma.sonarr.deleteMany();
     await prisma.overseerr.deleteMany();
@@ -237,6 +238,13 @@ test.describe('Setup Wizard', () => {
       maxTokens: '6000',
     });
 
+    // Step 9: Prometheus Status Configuration
+    await fillAndSubmitStep('Prometheus', {
+      name: 'Plex Server Status',
+      url: 'http://localhost:9090',
+      query: 'up{job="plex"}',
+    });
+
     // Wait for final success animation and redirect to home
     await page.waitForURL('**/', { timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
     await waitForLoadingGone(page);
@@ -289,6 +297,11 @@ test.describe('Setup Wizard', () => {
     expect(wrappedLLMProvider).toBeTruthy();
     expect(wrappedLLMProvider?.provider).toBe('openai');
     expect(wrappedLLMProvider?.purpose).toBe('wrapped');
+
+    const prometheus = await prisma.prometheus.findFirst();
+    expect(prometheus).toBeTruthy();
+    expect(prometheus?.name).toBe('Plex Server Status');
+    expect(prometheus?.query).toBe('up{job="plex"}');
   });
 
   test('should handle hidden form inputs gracefully', async ({ page }) => {

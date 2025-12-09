@@ -1,12 +1,12 @@
 "use client"
 
 import type { AnnouncementData } from "@/actions/announcements"
-import { ChatProvider } from "@/components/admin/chatbot/chat-context"
-import { Chatbot } from "@/components/admin/chatbot/chat-window"
+import type { StatusData } from "@/actions/prometheus-status"
 import { AnnouncementsCard } from "@/components/dashboard/announcements-card"
 import { DiscordCard } from "@/components/dashboard/discord-card"
 import { PlexLinkCard } from "@/components/dashboard/plex-link-card"
 import { RequestsCard } from "@/components/dashboard/requests-card"
+import { StatusFooter } from "@/components/dashboard/status-background"
 import { WrappedCard } from "@/components/dashboard/wrapped-card"
 import type { DashboardDiscordConnection } from "@/components/discord/link-callout"
 import { signOut } from "next-auth/react"
@@ -15,7 +15,6 @@ import { useRouter } from "next/navigation"
 
 interface UserDashboardProps {
   userId: string
-  userName: string
   serverName: string
   isAdmin: boolean
   discordEnabled: boolean
@@ -23,11 +22,11 @@ interface UserDashboardProps {
   serverInviteCode?: string | null
   announcements: AnnouncementData[]
   overseerrUrl?: string | null
+  prometheusStatus?: StatusData
 }
 
 export function UserDashboard({
   userId,
-  userName,
   serverName,
   isAdmin,
   discordEnabled,
@@ -35,6 +34,7 @@ export function UserDashboard({
   serverInviteCode,
   announcements,
   overseerrUrl,
+  prometheusStatus,
 }: UserDashboardProps) {
   const router = useRouter()
 
@@ -45,10 +45,9 @@ export function UserDashboard({
   }
 
   return (
-    <ChatProvider>
-      <div className="relative min-h-[100dvh] flex flex-col bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
-        {/* Header */}
-        <header className="sticky top-0 w-full px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex items-center justify-between z-20 bg-slate-900/80 backdrop-blur-sm border-b border-white/5 sm:border-transparent sm:bg-transparent sm:backdrop-blur-none">
+    <div className="relative min-h-[100dvh] flex flex-col bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
+      {/* Header */}
+      <header className="sticky top-0 w-full px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex items-center justify-between z-20 bg-slate-900/80 backdrop-blur-sm border-b border-white/5 sm:border-transparent sm:bg-transparent sm:backdrop-blur-none">
           <h1 className="text-xl sm:text-2xl md:text-3xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
             {serverName}
           </h1>
@@ -107,8 +106,8 @@ export function UserDashboard({
           </div>
         </main>
 
-        <Chatbot userName={userName} />
-      </div>
-    </ChatProvider>
+      {/* Status Footer */}
+      {prometheusStatus && <StatusFooter status={prometheusStatus} />}
+    </div>
   )
 }

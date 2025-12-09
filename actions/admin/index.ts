@@ -32,6 +32,8 @@ export {
   updateOverseerr,
   updateSonarr,
   updateRadarr,
+  updatePrometheus,
+  deletePrometheus,
 } from "./admin-servers"
 
 // User management

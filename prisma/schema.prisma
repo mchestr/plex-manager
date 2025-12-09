@@ -113,6 +113,18 @@ model Radarr {
   @@index([isActive])
 }
 
+model Prometheus {
+  id        String   @id @default(cuid())
+  name      String   // Display name for the service being monitored (e.g. "Plex Server")
+  url       String   // Full URL including protocol, hostname, and port (e.g. http://prometheus.example.com:9090)
+  query     String   // PromQL query to determine status (e.g. up{job="plex"})
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+}
+
 model LLMProvider {
   id          String   @id @default(cuid())
   provider    String // Currently "openai", but extensible for other providers
