@@ -10,7 +10,10 @@ test.describe('Onboarding Flow', () => {
       // Set regular user's onboarding to false for this test
       await prisma.user.update({
         where: { id: TEST_USERS.REGULAR.id },
-        data: { onboardingCompleted: false },
+        data: {
+          primaryAuthService: 'plex',
+          onboardingStatus: { plex: false, jellyfin: false },
+        },
       });
 
       // Create a new browser context and page for this test
@@ -83,10 +86,11 @@ test.describe('Onboarding Flow', () => {
         // Verify onboarding was marked as complete in database
         const updatedUser = await prisma.user.findUnique({
           where: { id: TEST_USERS.REGULAR.id },
-          select: { onboardingCompleted: true },
+          select: { onboardingStatus: true },
         });
 
-        expect(updatedUser?.onboardingCompleted).toBe(true);
+        const onboardingStatus = updatedUser?.onboardingStatus as { plex: boolean; jellyfin: boolean } | null;
+        expect(onboardingStatus?.plex).toBe(true);
 
         // Verify homepage content is visible (dashboard or welcome content)
         await waitForLoadingGone(page);
@@ -106,7 +110,10 @@ test.describe('Onboarding Flow', () => {
       // Restore regular user's onboarding status
       await prisma.user.update({
         where: { id: TEST_USERS.REGULAR.id },
-        data: { onboardingCompleted: true },
+        data: {
+          primaryAuthService: 'plex',
+          onboardingStatus: { plex: true, jellyfin: false },
+        },
       });
       await prisma.$disconnect();
     }

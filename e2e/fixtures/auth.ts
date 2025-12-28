@@ -10,7 +10,8 @@ export interface TestUser {
   name: string;
   plexUserId: string;
   isAdmin: boolean;
-  onboardingCompleted: boolean;
+  primaryAuthService: string;
+  onboardingStatus: { plex: boolean; jellyfin: boolean };
 }
 
 /**
@@ -23,7 +24,8 @@ export const TEST_USERS = {
     name: 'Admin User',
     plexUserId: 'admin-plex-id',
     isAdmin: true,
-    onboardingCompleted: true,
+    primaryAuthService: 'plex',
+    onboardingStatus: { plex: true, jellyfin: false },
     testToken: 'TEST_ADMIN_TOKEN',
   },
   REGULAR: {
@@ -32,7 +34,8 @@ export const TEST_USERS = {
     name: 'Regular User',
     plexUserId: 'regular-plex-id',
     isAdmin: false,
-    onboardingCompleted: true,
+    primaryAuthService: 'plex',
+    onboardingStatus: { plex: true, jellyfin: false },
     testToken: 'TEST_REGULAR_TOKEN',
   },
 } as const;
@@ -59,7 +62,10 @@ async function authenticateAs(page: Page, testToken: string, expectedUser?: Test
     try {
       await prisma.user.update({
         where: { id: expectedUser.id },
-        data: { onboardingCompleted: true },
+        data: {
+          primaryAuthService: expectedUser.primaryAuthService,
+          onboardingStatus: expectedUser.onboardingStatus,
+        },
       });
       console.log(`[E2E Auth] Ensured onboarding is complete for user: ${expectedUser.email}`);
     } catch (err) {

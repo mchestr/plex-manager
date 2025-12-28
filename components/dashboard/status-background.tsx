@@ -5,13 +5,14 @@ import { useState } from "react"
 
 interface StatusFooterProps {
   status: StatusData
+  primaryAuthService?: string | null
 }
 
 /**
  * Footer status bar showing Prometheus status
  * Renders 168 thin vertical bars (7 days × 24 hours) in a compact footer
  */
-export function StatusFooter({ status }: StatusFooterProps) {
+export function StatusFooter({ status, primaryAuthService }: StatusFooterProps) {
   const [hoveredSegment, setHoveredSegment] = useState<StatusSegment | null>(null)
 
   // Don't render if not configured or no segments
@@ -20,6 +21,10 @@ export function StatusFooter({ status }: StatusFooterProps) {
   }
 
   const { dotColor, label } = getOverallStatusStyles(status.overallStatus)
+
+  // Format auth service name for display
+  const authServiceName = primaryAuthService === "jellyfin" ? "Jellyfin" : "Plex"
+  const authServiceColor = primaryAuthService === "jellyfin" ? "text-purple-400" : "text-cyan-400"
 
   return (
     <footer
@@ -41,6 +46,17 @@ export function StatusFooter({ status }: StatusFooterProps) {
       {/* Status label */}
       <div className="flex items-center justify-between px-4 py-2">
         <div className="flex items-center gap-3">
+          {/* Auth Service Indicator */}
+          {primaryAuthService && (
+            <>
+              <div className="flex items-center gap-1.5">
+                <span className={`text-xs font-medium ${authServiceColor}`}>
+                  {authServiceName}
+                </span>
+              </div>
+              <span className="text-xs text-slate-500">•</span>
+            </>
+          )}
           <div className="flex items-center gap-2">
             <span className={`w-2 h-2 rounded-full ${dotColor}`} />
             <span className="text-xs text-slate-400">

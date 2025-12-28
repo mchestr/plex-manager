@@ -4,7 +4,7 @@ import type { AnnouncementData } from "@/actions/announcements"
 import type { StatusData } from "@/actions/prometheus-status"
 import { AnnouncementsCard } from "@/components/dashboard/announcements-card"
 import { DiscordCard } from "@/components/dashboard/discord-card"
-import { PlexLinkCard } from "@/components/dashboard/plex-link-card"
+import { MediaServerLinkCard } from "@/components/dashboard/media-server-link-card"
 import { RequestsCard } from "@/components/dashboard/requests-card"
 import { StatusFooter } from "@/components/dashboard/status-background"
 import { WrappedCard } from "@/components/dashboard/wrapped-card"
@@ -24,6 +24,8 @@ interface UserDashboardProps {
   overseerrUrl?: string | null
   prometheusStatus?: StatusData
   memberSince: string // ISO date string of when user joined
+  primaryAuthService?: string | null // "plex" or "jellyfin"
+  mediaServerUrl?: string | null // URL to the media server
 }
 
 export function UserDashboard({
@@ -37,6 +39,8 @@ export function UserDashboard({
   overseerrUrl,
   prometheusStatus,
   memberSince,
+  primaryAuthService,
+  mediaServerUrl,
 }: UserDashboardProps) {
   const router = useRouter()
 
@@ -93,7 +97,11 @@ export function UserDashboard({
             <div className="space-y-3 sm:space-y-4 pt-2">
               <h2 className="text-xs font-medium uppercase tracking-wider text-slate-500 px-1">Quick Links</h2>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                <PlexLinkCard serverName={serverName} />
+                <MediaServerLinkCard
+                  serverName={serverName}
+                  service={primaryAuthService === "jellyfin" ? "jellyfin" : "plex"}
+                  serverUrl={mediaServerUrl}
+                />
                 {overseerrUrl ? (
                   <RequestsCard url={overseerrUrl} />
                 ) : (
@@ -113,7 +121,12 @@ export function UserDashboard({
         </main>
 
       {/* Status Footer */}
-      {prometheusStatus && <StatusFooter status={prometheusStatus} />}
+      {prometheusStatus && (
+        <StatusFooter
+          status={prometheusStatus}
+          primaryAuthService={primaryAuthService}
+        />
+      )}
     </div>
   )
 }

@@ -2,18 +2,21 @@
 
 import { completeOnboarding, getOnboardingInfo } from "@/actions/onboarding"
 import { DiscordSupportStep, FinalStep, MediaRequestStep, PlexConfigurationStep, WelcomeStep } from "@/components/onboarding/onboarding-steps"
+import { JellyfinConfigurationStep } from "@/components/onboarding/onboarding-steps/jellyfin-configuration-step"
+import { JellyfinWelcomeStep } from "@/components/onboarding/onboarding-steps/jellyfin-welcome-step"
 import { FinalSuccessAnimation } from "@/components/setup/setup-wizard/final-success-animation"
 import { SuccessAnimation } from "@/components/setup/setup-wizard/success-animation"
 import { useToast } from "@/components/ui/toast"
-import { ONBOARDING_STEPS } from "@/types/onboarding"
+import { type AuthService, getOnboardingSteps } from "@/types/onboarding"
 import { AnimatePresence, motion } from "framer-motion"
 import { useEffect, useState } from "react"
 
 interface OnboardingWizardProps {
   currentStep: number
+  service: AuthService
 }
 
-export function OnboardingWizard({ currentStep: initialStep }: OnboardingWizardProps) {
+export function OnboardingWizard({ currentStep: initialStep, service }: OnboardingWizardProps) {
   const toast = useToast()
   const [currentStep, setCurrentStep] = useState(initialStep)
   const [showSuccess, setShowSuccess] = useState(false)
@@ -21,6 +24,8 @@ export function OnboardingWizard({ currentStep: initialStep }: OnboardingWizardP
   const [overseerrUrl, setOverseerrUrl] = useState<string | null>(null)
   const [discordEnabled, setDiscordEnabled] = useState(false)
   const [discordInstructions, setDiscordInstructions] = useState<string | null>(null)
+
+  const steps = getOnboardingSteps(service)
 
   useEffect(() => {
     const fetchInfo = async () => {
@@ -33,10 +38,10 @@ export function OnboardingWizard({ currentStep: initialStep }: OnboardingWizardP
   }, [])
 
   const handleStepComplete = () => {
-    const isFinalStep = currentStep === ONBOARDING_STEPS.length
+    const isFinalStep = currentStep === steps.length
     if (isFinalStep) {
       setShowFinalSuccess(true)
-    } else if (currentStep < ONBOARDING_STEPS.length) {
+    } else if (currentStep < steps.length) {
       setShowSuccess(true)
     }
   }
@@ -47,8 +52,8 @@ export function OnboardingWizard({ currentStep: initialStep }: OnboardingWizardP
   }
 
   const handleFinalSuccessComplete = async () => {
-    // Mark onboarding as complete in the database
-    const result = await completeOnboarding()
+    // Mark onboarding as complete in the database for this service
+    const result = await completeOnboarding(service)
 
     if (result.success) {
       // Wait a moment to ensure the database update is committed
@@ -71,9 +76,10 @@ export function OnboardingWizard({ currentStep: initialStep }: OnboardingWizardP
   }
 
   const getSuccessMessage = () => {
+    const serviceName = service === "jellyfin" ? "Jellyfin" : "Plex"
     switch (currentStep) {
       case 1:
-        return { title: "Welcome!", message: "Let's configure Plex" }
+        return { title: "Welcome!", message: `Let's configure ${serviceName}` }
       case 2:
         return { title: "Great!", message: "Next: Media Requests" }
       case 3:
@@ -88,9 +94,13 @@ export function OnboardingWizard({ currentStep: initialStep }: OnboardingWizardP
   const renderStep = () => {
     switch (currentStep) {
       case 1:
-        return <WelcomeStep onComplete={handleStepComplete} />
+        return service === "jellyfin"
+          ? <JellyfinWelcomeStep onComplete={handleStepComplete} />
+          : <WelcomeStep onComplete={handleStepComplete} />
       case 2:
-        return <PlexConfigurationStep onComplete={handleStepComplete} onBack={handleBack} />
+        return service === "jellyfin"
+          ? <JellyfinConfigurationStep onComplete={handleStepComplete} onBack={handleBack} />
+          : <PlexConfigurationStep onComplete={handleStepComplete} onBack={handleBack} />
       case 3:
         return <MediaRequestStep onComplete={handleStepComplete} onBack={handleBack} overseerrUrl={overseerrUrl} />
       case 4:
@@ -151,11 +161,11 @@ export function OnboardingWizard({ currentStep: initialStep }: OnboardingWizardP
         >
           <nav aria-label="Progress">
             <ol role="list" className="flex items-center justify-between">
-              {ONBOARDING_STEPS.map((step, index) => (
+              {steps.map((step, index) => (
                 <li
                   key={step.title}
                   className={`relative ${
-                    index !== ONBOARDING_STEPS.length - 1 ? "pr-8 sm:pr-20 flex-1" : ""
+                    index !== steps.length - 1 ? "pr-8 sm:pr-20 flex-1" : ""
                   }`}
                 >
                   <div className="group flex flex-col items-center text-center">
@@ -182,7 +192,7 @@ export function OnboardingWizard({ currentStep: initialStep }: OnboardingWizardP
                       </div>
 
                       {/* Line connecting steps */}
-                      {index !== ONBOARDING_STEPS.length - 1 && (
+                      {index !== steps.length - 1 && (
                         <div className="hidden sm:block absolute left-10 w-[calc(100%+4rem)] top-1/2 -translate-y-1/2 -z-10">
                           <div className="h-1 w-full bg-slate-800 rounded-full overflow-hidden">
                             <motion.div
