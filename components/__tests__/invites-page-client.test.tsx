@@ -12,6 +12,10 @@ jest.mock('@/actions/server-info', () => ({
   getAvailableLibraries: jest.fn(),
 }))
 
+jest.mock('@/actions/admin/admin-servers', () => ({
+  getJellyfinLibraries: jest.fn(),
+}))
+
 jest.mock('next/link', () => ({
   __esModule: true,
   default: ({ children, href }: any) => <a href={href}>{children}</a>,
@@ -47,6 +51,7 @@ jest.mock('@/components/admin/shared/confirm-modal', () => ({
 // Import after mocks
 import * as inviteActions from '@/actions/invite'
 import * as serverInfo from '@/actions/server-info'
+import * as adminServers from '@/actions/admin/admin-servers'
 import { InvitesPageClient } from '@/components/admin/invites/invites-page-client'
 
 describe('InvitesPageClient', () => {
@@ -54,6 +59,7 @@ describe('InvitesPageClient', () => {
   const mockCreateInvite = inviteActions.createInvite as jest.MockedFunction<typeof inviteActions.createInvite>
   const mockDeleteInvite = inviteActions.deleteInvite as jest.MockedFunction<typeof inviteActions.deleteInvite>
   const mockGetAvailableLibraries = serverInfo.getAvailableLibraries as jest.MockedFunction<typeof serverInfo.getAvailableLibraries>
+  const mockGetJellyfinLibraries = adminServers.getJellyfinLibraries as jest.MockedFunction<typeof adminServers.getJellyfinLibraries>
   const mockInvites = [
     {
       id: 'invite-1',
@@ -95,6 +101,9 @@ describe('InvitesPageClient', () => {
       writable: true,
       configurable: true,
     })
+
+    // Mock Jellyfin libraries to return empty by default
+    mockGetJellyfinLibraries.mockResolvedValue({ success: true, data: [] })
 
     // Mock window.location
     delete (window as any).location
@@ -546,6 +555,8 @@ describe('InvitesPageClient', () => {
           maxUses: 1,
           expiresIn: '48h',
           librarySectionIds: undefined,
+          jellyfinLibraryIds: undefined,
+          serverType: 'PLEX',
           allowDownloads: false,
         })
         expect(mockShowSuccess).toHaveBeenCalledWith('Invite created successfully!')
@@ -594,6 +605,8 @@ describe('InvitesPageClient', () => {
           maxUses: 5,
           expiresIn: '7d',
           librarySectionIds: undefined,
+          jellyfinLibraryIds: undefined,
+          serverType: 'PLEX',
           allowDownloads: true,
         })
       })

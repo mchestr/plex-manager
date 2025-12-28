@@ -28,6 +28,8 @@ export {
 // Server configurations
 export {
   updatePlexServer,
+  updateJellyfinServer,
+  deleteJellyfinServer,
   updateTautulli,
   updateOverseerr,
   updateSonarr,

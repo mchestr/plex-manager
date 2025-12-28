@@ -2,14 +2,18 @@
 
 import { createInvite, deleteInvite, getInvites } from "@/actions/invite"
 import { getAvailableLibraries } from "@/actions/server-info"
+import { getJellyfinLibraries } from "@/actions/admin/admin-servers"
 import { useToast } from "@/components/ui/toast"
 import { ConfirmModal } from "@/components/admin/shared/confirm-modal"
 import Link from "next/link"
 import { useCallback, useEffect, useState } from "react"
 
+type ServerType = "PLEX" | "JELLYFIN"
+
 interface Invite {
   id: string
   code: string
+  serverType: ServerType
   maxUses: number
   useCount: number
   expiresAt: Date | null
@@ -23,44 +27,88 @@ interface Invite {
   }[]
 }
 
+interface JellyfinLibrary {
+  id: string
+  name: string
+  type: string
+}
+
 export function InvitesPageClient() {
   const toast = useToast()
   const [invites, setInvites] = useState<Invite[]>([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [libraries, setLibraries] = useState<Array<{ id: number; title: string; type: string }>>([])
+  const [plexLibraries, setPlexLibraries] = useState<Array<{ id: number; title: string; type: string }>>([])
+  const [jellyfinLibraries, setJellyfinLibraries] = useState<JellyfinLibrary[]>([])
   const [loadingLibraries, setLoadingLibraries] = useState(false)
   const [expandedLibraries, setExpandedLibraries] = useState(false)
   const [inviteIdToDelete, setInviteIdToDelete] = useState<string | null>(null)
+  const [jellyfinAvailable, setJellyfinAvailable] = useState(false)
 
   // Form state
   const [formData, setFormData] = useState({
     code: "",
+    serverType: "PLEX" as ServerType,
     maxUses: 1,
     expiresIn: "48h", // Default to 48 hours
     librarySectionIds: [] as number[],
+    jellyfinLibraryIds: [] as string[],
     allowDownloads: false,
   })
+
+  // Check if Jellyfin server is configured on mount
+  useEffect(() => {
+    async function checkJellyfinAvailability() {
+      try {
+        const result = await getJellyfinLibraries()
+        // If we get a successful response or any data, Jellyfin is configured
+        setJellyfinAvailable(result.success === true)
+      } catch {
+        setJellyfinAvailable(false)
+      }
+    }
+    checkJellyfinAvailability()
+  }, [])
 
   useEffect(() => {
     loadInvites()
   }, [])
 
-  const loadLibraries = useCallback(async () => {
+  const loadPlexLibraries = useCallback(async () => {
     setLoadingLibraries(true)
     try {
       const result = await getAvailableLibraries()
       if (result.success && result.data) {
-        console.log("[INVITES] Loaded libraries:", result.data)
-        setLibraries(result.data)
+        setPlexLibraries(result.data)
       } else {
-        console.error("[INVITES] Failed to load libraries:", result.error)
-        toast.showError(result.error || "Failed to load libraries")
+        console.error("[INVITES] Failed to load Plex libraries:", result.error)
+        toast.showError(result.error || "Failed to load Plex libraries")
       }
     } catch (error) {
-      console.error("[INVITES] Error loading libraries:", error)
-      toast.showError(error instanceof Error ? error.message : "Failed to load libraries")
+      console.error("[INVITES] Error loading Plex libraries:", error)
+      toast.showError(error instanceof Error ? error.message : "Failed to load Plex libraries")
+    } finally {
+      setLoadingLibraries(false)
+    }
+  }, [])
+
+  const loadJellyfinLibrariesFn = useCallback(async () => {
+    setLoadingLibraries(true)
+    try {
+      const result = await getJellyfinLibraries()
+      if (result.success && result.data) {
+        setJellyfinLibraries(result.data)
+      } else {
+        console.error("[INVITES] Failed to load Jellyfin libraries:", result.error)
+        // Don't show error for "no server configured" - just means Jellyfin isn't set up
+        if (result.error && !result.error.includes("No active Jellyfin server")) {
+          toast.showError(result.error || "Failed to load Jellyfin libraries")
+        }
+      }
+    } catch (error) {
+      console.error("[INVITES] Error loading Jellyfin libraries:", error)
+      toast.showError(error instanceof Error ? error.message : "Failed to load Jellyfin libraries")
     } finally {
       setLoadingLibraries(false)
     }
@@ -68,9 +116,14 @@ export function InvitesPageClient() {
 
   useEffect(() => {
     if (showCreateModal) {
-      loadLibraries()
+      // Load libraries based on selected server type
+      if (formData.serverType === "PLEX") {
+        loadPlexLibraries()
+      } else {
+        loadJellyfinLibrariesFn()
+      }
     }
-  }, [showCreateModal, loadLibraries])
+  }, [showCreateModal, formData.serverType, loadPlexLibraries, loadJellyfinLibrariesFn])
 
   async function loadInvites() {
     try {
@@ -96,10 +149,18 @@ export function InvitesPageClient() {
     try {
       const result = await createInvite({
         code: formData.code || undefined,
+        serverType: formData.serverType,
         maxUses: Number(formData.maxUses),
         expiresIn: formData.expiresIn,
-        librarySectionIds: formData.librarySectionIds.length > 0 ? formData.librarySectionIds : undefined,
+        // Plex-specific options
+        librarySectionIds: formData.serverType === "PLEX" && formData.librarySectionIds.length > 0
+          ? formData.librarySectionIds
+          : undefined,
         allowDownloads: formData.allowDownloads,
+        // Jellyfin-specific options
+        jellyfinLibraryIds: formData.serverType === "JELLYFIN" && formData.jellyfinLibraryIds.length > 0
+          ? formData.jellyfinLibraryIds
+          : undefined,
       })
 
       if (result.success) {
@@ -107,9 +168,11 @@ export function InvitesPageClient() {
         setShowCreateModal(false)
         setFormData({
           code: "",
+          serverType: "PLEX",
           maxUses: 1,
           expiresIn: "48h",
           librarySectionIds: [],
+          jellyfinLibraryIds: [],
           allowDownloads: false,
         })
         setExpandedLibraries(false)
@@ -166,10 +229,11 @@ export function InvitesPageClient() {
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-2xl font-bold text-white mb-2">Invites</h1>
-          <p className="text-slate-400">Manage invites to your Plex server</p>
+          <p className="text-slate-400">Manage invites to your media servers</p>
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
+          data-testid="generate-invite-button"
           className="px-4 py-2 bg-cyan-700 hover:bg-cyan-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -201,6 +265,7 @@ export function InvitesPageClient() {
               <thead>
                 <tr className="bg-slate-900/50 border-b border-slate-700">
                   <th className="px-3 sm:px-6 py-3 sm:py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Code</th>
+                  <th className="px-3 sm:px-6 py-3 sm:py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider hidden sm:table-cell">Server</th>
                   <th className="px-3 sm:px-6 py-3 sm:py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Usage</th>
                   <th className="px-3 sm:px-6 py-3 sm:py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider hidden sm:table-cell">Expires</th>
                   <th className="px-3 sm:px-6 py-3 sm:py-4 text-xs font-semibold text-slate-400 uppercase tracking-wider hidden md:table-cell">Created</th>
@@ -217,6 +282,15 @@ export function InvitesPageClient() {
                       >
                         {invite.code}
                       </Link>
+                    </td>
+                    <td className="px-3 sm:px-6 py-3 sm:py-4 hidden sm:table-cell">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        invite.serverType === "JELLYFIN"
+                          ? "bg-purple-500/20 text-purple-300"
+                          : "bg-amber-500/20 text-amber-300"
+                      }`}>
+                        {invite.serverType === "JELLYFIN" ? "Jellyfin" : "Plex"}
+                      </span>
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
                       <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 min-w-[80px]">
@@ -304,6 +378,57 @@ export function InvitesPageClient() {
               </button>
             </div>
             <form onSubmit={handleCreateInvite} className="p-6 space-y-4">
+              {/* Server Type Selection - only show if Jellyfin is available */}
+              {jellyfinAvailable && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-400 mb-2">
+                    Server Type
+                  </label>
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      data-testid="invite-server-type-plex"
+                      onClick={() => setFormData({
+                        ...formData,
+                        serverType: "PLEX",
+                        jellyfinLibraryIds: [] // Clear Jellyfin selections
+                      })}
+                      className={`flex-1 px-4 py-3 rounded-lg border transition-colors flex items-center justify-center gap-2 ${
+                        formData.serverType === "PLEX"
+                          ? "bg-amber-500/20 border-amber-500 text-amber-300"
+                          : "bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600"
+                      }`}
+                    >
+                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M11.643 0L4.68 12l6.963 12h2.714L7.394 12l6.963-12z" />
+                        <path d="M12.357 0l6.963 12-6.963 12h2.714L22 12 15.071 0z" />
+                      </svg>
+                      Plex
+                    </button>
+                    <button
+                      type="button"
+                      data-testid="invite-server-type-jellyfin"
+                      onClick={() => setFormData({
+                        ...formData,
+                        serverType: "JELLYFIN",
+                        librarySectionIds: [], // Clear Plex selections
+                        allowDownloads: false
+                      })}
+                      className={`flex-1 px-4 py-3 rounded-lg border transition-colors flex items-center justify-center gap-2 ${
+                        formData.serverType === "JELLYFIN"
+                          ? "bg-purple-500/20 border-purple-500 text-purple-300"
+                          : "bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600"
+                      }`}
+                    >
+                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 .002C7.524.002 3.256 2.063 1.664 5.227c-.43.856-.665 1.79-.665 2.73v8.085c0 3.983 4.925 7.956 11 7.956s11-3.973 11-7.956V7.957c0-.94-.234-1.874-.665-2.73C20.744 2.063 16.476.002 12 .002zm0 2.002c3.605 0 6.904 1.523 8.336 3.898.333.552.498 1.175.498 1.798v8.342c0 2.794-3.986 5.956-8.834 5.956S3.166 18.836 3.166 16.042V7.7c0-.623.165-1.246.498-1.798C5.096 3.527 8.395 2.004 12 2.004z" />
+                      </svg>
+                      Jellyfin
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label htmlFor="invite-code" className="block text-sm font-medium text-slate-400 mb-1">
                   Custom Code <span className="text-slate-400">(Optional)</span>
@@ -375,37 +500,78 @@ export function InvitesPageClient() {
                 {expandedLibraries && (
                   <div className="mt-3 space-y-2">
                     <p className="text-xs text-slate-400 mb-2">
-                      Select specific libraries to share (leave empty to share all libraries)
+                      {formData.serverType === "PLEX"
+                        ? "Select specific libraries to share (leave empty to share all libraries)"
+                        : "Select specific libraries to grant access (leave empty for all libraries)"
+                      }
                     </p>
                     {loadingLibraries ? (
                       <p className="text-sm text-slate-400">Loading libraries...</p>
-                    ) : (
+                    ) : formData.serverType === "PLEX" ? (
+                      // Plex libraries
                       <div className="space-y-2 max-h-48 overflow-y-auto">
-                        {libraries.map((lib) => (
-                          <label key={lib.id} className="flex items-center space-x-2 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={formData.librarySectionIds.includes(lib.id)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setFormData({
-                                    ...formData,
-                                    librarySectionIds: [...formData.librarySectionIds, lib.id],
-                                  })
-                                } else {
-                                  setFormData({
-                                    ...formData,
-                                    librarySectionIds: formData.librarySectionIds.filter((id) => id !== lib.id),
-                                  })
-                                }
-                              }}
-                              className="rounded border-slate-600 text-cyan-600 focus:ring-cyan-500"
-                            />
-                            <span className="text-sm text-slate-300">
-                              {lib.title} <span className="text-slate-400">({lib.type})</span>
-                            </span>
-                          </label>
-                        ))}
+                        {plexLibraries.length === 0 ? (
+                          <p className="text-sm text-slate-500">No Plex libraries available</p>
+                        ) : (
+                          plexLibraries.map((lib) => (
+                            <label key={lib.id} className="flex items-center space-x-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={formData.librarySectionIds.includes(lib.id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setFormData({
+                                      ...formData,
+                                      librarySectionIds: [...formData.librarySectionIds, lib.id],
+                                    })
+                                  } else {
+                                    setFormData({
+                                      ...formData,
+                                      librarySectionIds: formData.librarySectionIds.filter((id) => id !== lib.id),
+                                    })
+                                  }
+                                }}
+                                className="rounded border-slate-600 text-cyan-600 focus:ring-cyan-500"
+                              />
+                              <span className="text-sm text-slate-300">
+                                {lib.title} <span className="text-slate-400">({lib.type})</span>
+                              </span>
+                            </label>
+                          ))
+                        )}
+                      </div>
+                    ) : (
+                      // Jellyfin libraries
+                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                        {jellyfinLibraries.length === 0 ? (
+                          <p className="text-sm text-slate-500">No Jellyfin libraries available</p>
+                        ) : (
+                          jellyfinLibraries.map((lib) => (
+                            <label key={lib.id} className="flex items-center space-x-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={formData.jellyfinLibraryIds.includes(lib.id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setFormData({
+                                      ...formData,
+                                      jellyfinLibraryIds: [...formData.jellyfinLibraryIds, lib.id],
+                                    })
+                                  } else {
+                                    setFormData({
+                                      ...formData,
+                                      jellyfinLibraryIds: formData.jellyfinLibraryIds.filter((id) => id !== lib.id),
+                                    })
+                                  }
+                                }}
+                                className="rounded border-slate-600 text-purple-600 focus:ring-purple-500"
+                              />
+                              <span className="text-sm text-slate-300">
+                                {lib.name} <span className="text-slate-400">({lib.type})</span>
+                              </span>
+                            </label>
+                          ))
+                        )}
                       </div>
                     )}
                   </div>
@@ -420,7 +586,11 @@ export function InvitesPageClient() {
                     type="checkbox"
                     checked={formData.allowDownloads}
                     onChange={(e) => setFormData({ ...formData, allowDownloads: e.target.checked })}
-                    className="rounded border-slate-600 text-cyan-600 focus:ring-cyan-500"
+                    className={`rounded border-slate-600 focus:ring-offset-slate-900 ${
+                      formData.serverType === "JELLYFIN"
+                        ? "text-purple-600 focus:ring-purple-500"
+                        : "text-cyan-600 focus:ring-cyan-500"
+                    }`}
                   />
                   <span className="text-sm font-medium text-slate-400">
                     Allow Downloads
@@ -443,6 +613,7 @@ export function InvitesPageClient() {
                   type="submit"
                   disabled={creating}
                   aria-busy={creating}
+                  data-testid="create-invite-submit"
                   className="flex-1 px-4 py-2 bg-cyan-700 hover:bg-cyan-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {creating ? (

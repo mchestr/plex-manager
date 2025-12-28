@@ -233,6 +233,23 @@ export default async function SettingsPage() {
                   <ServerForm type="plex" server={settings.plexServer} />
                 </div>
 
+                {/* Jellyfin Server */}
+                <div className="border border-slate-700 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                      <svg className="w-4 h-4 text-purple-400" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 .002C7.524.002 3.256 2.063 1.664 5.227c-.43.856-.665 1.79-.665 2.73v8.085c0 3.983 4.925 7.956 11 7.956s11-3.973 11-7.956V7.957c0-.94-.234-1.874-.665-2.73C20.744 2.063 16.476.002 12 .002zm0 2.002c3.605 0 6.904 1.523 8.336 3.898.333.552.498 1.175.498 1.798v8.342c0 2.794-3.986 5.956-8.834 5.956S3.166 18.836 3.166 16.042V7.7c0-.623.165-1.246.498-1.798C5.096 3.527 8.395 2.004 12 2.004z" />
+                      </svg>
+                      Jellyfin Server
+                    </h3>
+                    <FeatureStatusBadge
+                      featureName="Jellyfin integration"
+                      enabled={Boolean(settings.jellyfinServer)}
+                    />
+                  </div>
+                  <ServerForm type="jellyfin" server={settings.jellyfinServer} />
+                </div>
+
                 {/* Tautulli */}
                 <div className="border border-slate-700 rounded-lg p-4">
                   <div className="flex items-center justify-between mb-3">

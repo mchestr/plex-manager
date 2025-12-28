@@ -6,9 +6,14 @@ import {
   getPlexUserInfo,
   inviteUserToPlexServer
 } from "@/lib/connections/plex"
+import {
+  createJellyfinUser,
+  setJellyfinUserPolicy,
+  deleteJellyfinUser,
+} from "@/lib/connections/jellyfin"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
-import { Prisma } from "@/lib/generated/prisma/client"
+import { Prisma, ServerType } from "@/lib/generated/prisma/client"
 import { logAuditEvent, AuditEventType } from "@/lib/security/audit-log"
 
 const logger = createLogger("INVITE")
@@ -130,11 +135,21 @@ function calculateExpirationDate(expiresIn?: string): Date | null {
 interface InviteData {
   id: string
   code: string
+  serverType: ServerType
   maxUses: number
   useCount: number
   expiresAt: Date | null
+  // Plex-specific
   librarySectionIds: string | null
   allowDownloads: boolean
+  // Jellyfin-specific
+  jellyfinLibraryIds: string | null
+}
+
+// Jellyfin user data for invite processing
+interface JellyfinAuthData {
+  username: string
+  password: string
 }
 
 interface ValidateAndUseResult {
@@ -236,11 +251,13 @@ async function validateAndUseInvite(code: string): Promise<ValidateAndUseResult>
           invite: {
             id: updatedInvite.id,
             code: updatedInvite.code,
+            serverType: updatedInvite.serverType,
             maxUses: updatedInvite.maxUses,
             useCount: updatedInvite.useCount,
             expiresAt: updatedInvite.expiresAt,
             librarySectionIds: updatedInvite.librarySectionIds,
             allowDownloads: updatedInvite.allowDownloads,
+            jellyfinLibraryIds: updatedInvite.jellyfinLibraryIds,
           },
         }
       },
@@ -365,10 +382,14 @@ async function acceptInviteWithPropagationDelay(
 export async function createInvite(
   options: {
     code?: string
+    serverType?: "PLEX" | "JELLYFIN" // Default: PLEX
     maxUses?: number
     expiresIn?: string // "1d", "7d", "30d", "never"
+    // Plex-specific options
     librarySectionIds?: number[] // If undefined/null, all libraries are shared
     allowDownloads?: boolean // Default: false
+    // Jellyfin-specific options
+    jellyfinLibraryIds?: string[] // If undefined/null, all libraries are granted
   } = {}
 ) {
   const session = await requireAdmin()
@@ -387,17 +408,24 @@ export async function createInvite(
     }
 
     const expiresAt = calculateExpirationDate(options.expiresIn)
+    const serverType = options.serverType === "JELLYFIN" ? ServerType.JELLYFIN : ServerType.PLEX
 
     const invite = await prisma.invite.create({
       data: {
         code,
+        serverType,
         createdBy: session.user.id,
         maxUses: options.maxUses || 1,
         expiresAt,
+        // Plex-specific fields
         librarySectionIds: options.librarySectionIds && options.librarySectionIds.length > 0
           ? JSON.stringify(options.librarySectionIds)
           : null,
         allowDownloads: options.allowDownloads ?? false,
+        // Jellyfin-specific fields
+        jellyfinLibraryIds: options.jellyfinLibraryIds && options.jellyfinLibraryIds.length > 0
+          ? JSON.stringify(options.jellyfinLibraryIds)
+          : null,
       },
     })
 
@@ -654,6 +682,237 @@ export async function processInvite(code: string, plexAuthToken: string) {
     return { success: true }
   } catch (error) {
     logger.error("Error processing invite", error)
+
+    if (error instanceof Error) {
+      const isInviteError =
+        error.message.includes("Invite") ||
+        error.message.includes("maximum uses") ||
+        error.message.includes("expired")
+
+      return { success: false, error: isInviteError ? error.message : error.message }
+    }
+
+    return { success: false, error: "An unexpected error occurred" }
+  }
+}
+
+/**
+ * Get active Jellyfin server configuration
+ */
+async function getActiveJellyfinServer() {
+  const jellyfinServer = await prisma.jellyfinServer.findFirst({
+    where: { isActive: true },
+  })
+
+  if (!jellyfinServer) {
+    return { success: false as const, error: "No active Jellyfin server configured" }
+  }
+
+  return { success: true as const, data: jellyfinServer }
+}
+
+/**
+ * Find or create user from Jellyfin user data
+ */
+async function findOrCreateJellyfinUser(
+  tx: Prisma.TransactionClient,
+  jellyfinUserId: string,
+  username: string
+): Promise<{ id: string }> {
+  let user = await tx.user.findUnique({
+    where: { jellyfinUserId },
+  })
+
+  if (user) {
+    return user
+  }
+
+  // Create new user
+  user = await tx.user.create({
+    data: {
+      name: username,
+      jellyfinUserId,
+    },
+  })
+
+  return user
+}
+
+/**
+ * Record Jellyfin invite usage and create/update user
+ */
+async function recordJellyfinInviteUsage(
+  inviteId: string,
+  jellyfinUserId: string,
+  username: string
+): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    const user = await findOrCreateJellyfinUser(tx, jellyfinUserId, username)
+
+    await tx.inviteUsage.create({
+      data: {
+        inviteId,
+        userId: user.id,
+      },
+    })
+  })
+}
+
+/**
+ * Process a Jellyfin invite: Create user on Jellyfin server with appropriate permissions.
+ * Uses atomic validation to prevent TOCTOU race conditions.
+ *
+ * This function implements:
+ * - Retry logic with exponential backoff for transaction conflicts (P2034)
+ * - Compensating transaction (rollback) if Jellyfin operations fail after invite is consumed
+ * - Audit logging for security-sensitive events
+ */
+export async function processJellyfinInvite(code: string, authData: JellyfinAuthData) {
+  try {
+    const { username, password } = authData
+
+    // Basic validation
+    if (!username || !password) {
+      return { success: false, error: "Username and password are required" }
+    }
+
+    if (username.length < 3) {
+      return { success: false, error: "Username must be at least 3 characters" }
+    }
+
+    if (password.length < 8) {
+      return { success: false, error: "Password must be at least 8 characters" }
+    }
+
+    // Get server config first (before consuming the invite)
+    const serverResult = await getActiveJellyfinServer()
+    if (!serverResult.success) {
+      return serverResult
+    }
+    const jellyfinServer = serverResult.data
+
+    // Atomically validate and mark the invite as used with retry logic for transaction conflicts
+    const inviteResult = await withRetry(
+      () => validateAndUseInvite(code),
+      {
+        onConflict: (attempt) => {
+          logAuditEvent(AuditEventType.INVITE_TRANSACTION_CONFLICT, "system", {
+            inviteCode: code,
+            jellyfinUsername: username,
+            attempt,
+          })
+        },
+      }
+    )
+
+    if (!inviteResult.success || !inviteResult.invite) {
+      return { success: false, error: inviteResult.error }
+    }
+    const invite = inviteResult.invite
+
+    // Verify this is a Jellyfin invite
+    if (invite.serverType !== ServerType.JELLYFIN) {
+      await rollbackInviteUsage(invite.id, username, "Invite is not for Jellyfin server")
+      return { success: false, error: "This invite is for Plex, not Jellyfin" }
+    }
+
+    // Audit log that the invite was consumed
+    logAuditEvent(AuditEventType.INVITE_CONSUMED, "system", {
+      inviteId: invite.id,
+      inviteCode: invite.code,
+      serverType: "JELLYFIN",
+      jellyfinUsername: username,
+    })
+
+    const jellyfinConfig = {
+      url: jellyfinServer.url,
+      apiKey: jellyfinServer.apiKey,
+    }
+
+    // Step 1: Create the Jellyfin user
+    const createResult = await createJellyfinUser(jellyfinConfig, username, password)
+
+    if (!createResult.success || !createResult.userId) {
+      const failureReason = createResult.error || "Failed to create Jellyfin user"
+
+      logAuditEvent(AuditEventType.INVITE_JELLYFIN_FAILURE, "system", {
+        inviteId: invite.id,
+        jellyfinUsername: username,
+        stage: "create_user",
+        error: failureReason,
+      })
+
+      await rollbackInviteUsage(invite.id, username, failureReason)
+      return { success: false, error: failureReason }
+    }
+
+    const jellyfinUserId = createResult.userId
+
+    // Step 2: Set library access permissions
+    const libraryIds = invite.jellyfinLibraryIds
+      ? (JSON.parse(invite.jellyfinLibraryIds) as string[])
+      : undefined
+
+    const policyResult = await setJellyfinUserPolicy(jellyfinConfig, jellyfinUserId, {
+      libraryIds,
+      allowDownloads: invite.allowDownloads,
+      enableRemoteAccess: true,
+    })
+
+    if (!policyResult.success) {
+      const failureReason = policyResult.error || "Failed to set Jellyfin user permissions"
+
+      logAuditEvent(AuditEventType.INVITE_JELLYFIN_FAILURE, "system", {
+        inviteId: invite.id,
+        jellyfinUsername: username,
+        jellyfinUserId,
+        stage: "set_policy",
+        error: failureReason,
+      })
+
+      // Compensating transaction: delete the user we just created
+      await deleteJellyfinUser(jellyfinConfig, jellyfinUserId)
+      await rollbackInviteUsage(invite.id, username, failureReason)
+      return { success: false, error: failureReason }
+    }
+
+    // Step 3: Record invite usage
+    try {
+      await recordJellyfinInviteUsage(invite.id, jellyfinUserId, username)
+    } catch (recordError) {
+      const failureReason = recordError instanceof Error
+        ? recordError.message
+        : "Failed to record invite usage"
+
+      logAuditEvent(AuditEventType.INVITE_JELLYFIN_FAILURE, "system", {
+        inviteId: invite.id,
+        jellyfinUsername: username,
+        jellyfinUserId,
+        stage: "record_usage",
+        error: failureReason,
+      })
+
+      // Note: User is already created on Jellyfin, but we should still restore the invite
+      await rollbackInviteUsage(invite.id, username, failureReason)
+      return { success: false, error: failureReason }
+    }
+
+    logger.info("Jellyfin invite processed successfully", {
+      inviteId: invite.id,
+      jellyfinUserId,
+      username,
+    })
+
+    return {
+      success: true,
+      data: {
+        jellyfinUserId,
+        username,
+        serverUrl: jellyfinServer.publicUrl || jellyfinServer.url,
+      },
+    }
+  } catch (error) {
+    logger.error("Error processing Jellyfin invite", error)
 
     if (error instanceof Error) {
       const isInviteError =

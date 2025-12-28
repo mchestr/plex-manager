@@ -256,6 +256,35 @@ export const makeOverseerrConfig = (overrides: any = {}) => ({
 })
 
 /**
+ * Creates a mock Jellyfin server configuration
+ * @param overrides - Partial properties to override defaults
+ * @returns Jellyfin server config object
+ */
+export const makeJellyfinServerConfig = (overrides: any = {}) => ({
+  url: 'https://jellyfin.example.com:8096',
+  apiKey: 'jellyfin-api-key',
+  ...overrides,
+})
+
+/**
+ * Creates a mock Prisma Jellyfin server record
+ * @param overrides - Partial properties to override defaults
+ * @returns Prisma JellyfinServer object
+ */
+export const makePrismaJellyfinServer = (overrides: any = {}) => ({
+  id: 'jellyfin-server-1',
+  url: 'https://jellyfin.example.com:8096',
+  apiKey: 'jellyfin-api-key',
+  name: 'Test Jellyfin Server',
+  isActive: true,
+  publicUrl: null,
+  adminUserId: null,
+  createdAt: new Date('2024-01-01T00:00:00Z'),
+  updatedAt: new Date('2024-01-01T00:00:00Z'),
+  ...overrides,
+})
+
+/**
  * Creates a mock Prisma Overseerr server record
  * @param overrides - Partial properties to override defaults
  * @returns Prisma Overseerr object
