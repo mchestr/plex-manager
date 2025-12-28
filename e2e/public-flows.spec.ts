@@ -14,9 +14,9 @@ test.describe('Public Flows', () => {
     // Click the button to expand and reveal sign-in options
     await signInButton.click();
 
-    // Verify Plex toggle is now visible
-    const plexToggle = page.getByTestId('toggle-plex');
-    await expect(plexToggle).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    // Verify Plex sign-in button is now visible (only Plex configured in E2E environment)
+    const plexSignInButton = page.getByTestId('sign-in-with-plex');
+    await expect(plexSignInButton).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
   });
 
   test('invite page shows invalid state for unknown code', async ({ page }) => {
@@ -37,7 +37,8 @@ test.describe('Public Flows', () => {
     // Wait for loading screen to disappear
     await waitForLoadingGone(page);
 
-    await expect(page.getByTestId('sign-in-with-plex')).toBeVisible();
+    // Verify we're redirected to home page with sign-in button
+    await expect(page.getByTestId('sign-in-button')).toBeVisible();
   });
 
   test('denied page is accessible', async ({ page }) => {
