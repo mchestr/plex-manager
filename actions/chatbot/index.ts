@@ -9,8 +9,6 @@ import { type ChatMessage, type ChatResponse } from "./types"
 
 const logger = createLogger("CHATBOT")
 
-export type { ChatMessage, ChatResponse }
-
 export async function chatWithAdminBot(
   messages: ChatMessage[],
   conversationId?: string
