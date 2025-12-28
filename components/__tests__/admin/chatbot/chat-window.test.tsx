@@ -6,7 +6,8 @@ import { Chatbot } from "@/components/admin/chatbot/chat-window"
 import { ChatProvider } from "@/components/admin/chatbot/chat-context"
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { chatWithAdminBot, type ChatMessage } from "@/actions/chatbot"
+import { chatWithAdminBot } from "@/actions/chatbot"
+import { type ChatMessage } from "@/actions/chatbot/types"
 
 // Mock the chatbot action
 jest.mock("@/actions/chatbot", () => ({

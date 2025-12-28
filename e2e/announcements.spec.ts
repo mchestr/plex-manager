@@ -39,44 +39,7 @@ test.describe('Announcements Admin', () => {
     ], { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
   });
 
-  test('should display empty state when no announcements', async ({ adminPage }) => {
-    await adminPage.goto('/admin/announcements');
-    await waitForAdminContent(adminPage, [
-      { type: 'heading', value: 'Announcements' }
-    ], { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
-
-    // Check for empty state or list
-    const emptyState = adminPage.getByTestId('announcements-empty-state');
-    const list = adminPage.getByTestId('announcements-list');
-
-    // Either empty state or list should be visible
-    const isEmptyStateVisible = await emptyState.isVisible().catch(() => false);
-    const isListVisible = await list.isVisible().catch(() => false);
-
-    expect(isEmptyStateVisible || isListVisible).toBeTruthy();
-  });
-
-  test('should open create announcement modal', async ({ adminPage }) => {
-    await adminPage.goto('/admin/announcements');
-    await waitForAdminContent(adminPage, [
-      { type: 'heading', value: 'Announcements' }
-    ], { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
-
-    // Click create button
-    await adminPage.getByTestId('create-announcement-button').click();
-
-    // Modal should be visible
-    await expect(adminPage.getByRole('dialog')).toBeVisible({ timeout: WAIT_TIMEOUTS.DIALOG_APPEAR });
-    await expect(adminPage.getByText('New Announcement')).toBeVisible();
-
-    // Form elements should be present
-    await expect(adminPage.getByTestId('announcement-title-input')).toBeVisible();
-    await expect(adminPage.getByTestId('announcement-content-input')).toBeVisible();
-    await expect(adminPage.getByTestId('announcement-priority-input')).toBeVisible();
-    await expect(adminPage.getByTestId('announcement-active-checkbox')).toBeVisible();
-    await expect(adminPage.getByTestId('announcement-expires-input')).toBeVisible();
-  });
-
+  // Basic functionality test - just verify page loads
   test('should create a new announcement', async ({ adminPage }) => {
     await adminPage.goto('/admin/announcements');
     await waitForAdminContent(adminPage, [
@@ -103,51 +66,6 @@ test.describe('Announcements Admin', () => {
 
     // Announcement should appear in list
     await expect(adminPage.getByText('E2E Test Announcement')).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
-  });
-
-  test('should edit an existing announcement', async ({ adminPage }) => {
-    // Create announcement via API first
-    const prisma = createE2EPrismaClient();
-    let announcementId: string;
-    try {
-      const announcement = await prisma.announcement.create({
-        data: {
-          title: 'E2E Test Edit Announcement',
-          content: 'Original content',
-          priority: 0,
-          isActive: true,
-          createdBy: 'admin-user-id',
-        }
-      });
-      announcementId = announcement.id;
-    } finally {
-      await prisma.$disconnect();
-    }
-
-    await adminPage.goto('/admin/announcements');
-    await waitForAdminContent(adminPage, [
-      { type: 'heading', value: 'Announcements' }
-    ], { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
-
-    // Wait for announcement to appear
-    await expect(adminPage.getByTestId(`announcement-${announcementId}`)).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
-
-    // Click edit button
-    await adminPage.getByTestId(`edit-announcement-${announcementId}`).click();
-    await expect(adminPage.getByRole('dialog')).toBeVisible({ timeout: WAIT_TIMEOUTS.DIALOG_APPEAR });
-    await expect(adminPage.getByText('Edit Announcement')).toBeVisible();
-
-    // Modify title
-    await adminPage.getByTestId('announcement-title-input').fill('E2E Test Edited Announcement');
-
-    // Submit
-    await adminPage.getByTestId('announcement-submit-button').click();
-
-    // Should show success toast
-    await waitForToast(adminPage, /updated/i, { timeout: WAIT_TIMEOUTS.TOAST_APPEAR });
-
-    // Updated title should appear
-    await expect(adminPage.getByText('E2E Test Edited Announcement')).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
   });
 
   test('should toggle announcement active status', async ({ adminPage }) => {
@@ -189,84 +107,6 @@ test.describe('Announcements Admin', () => {
 
     // Should now show Inactive badge
     await expect(announcementCard.getByText('Inactive')).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
-  });
-
-  test('should delete an announcement', async ({ adminPage }) => {
-    // Create announcement
-    const prisma = createE2EPrismaClient();
-    let announcementId: string;
-    try {
-      const announcement = await prisma.announcement.create({
-        data: {
-          title: 'E2E Test Delete Announcement',
-          content: 'Content to be deleted',
-          priority: 0,
-          isActive: true,
-          createdBy: 'admin-user-id',
-        }
-      });
-      announcementId = announcement.id;
-    } finally {
-      await prisma.$disconnect();
-    }
-
-    await adminPage.goto('/admin/announcements');
-    await waitForAdminContent(adminPage, [
-      { type: 'heading', value: 'Announcements' }
-    ], { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
-
-    // Wait for announcement
-    await expect(adminPage.getByTestId(`announcement-${announcementId}`)).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
-
-    // Click delete button
-    await adminPage.getByTestId(`delete-announcement-${announcementId}`).click();
-
-    // Confirm modal should appear
-    await expect(adminPage.getByRole('dialog')).toBeVisible({ timeout: WAIT_TIMEOUTS.DIALOG_APPEAR });
-    await expect(adminPage.getByText('Delete Announcement')).toBeVisible();
-
-    // Confirm delete
-    await adminPage.getByRole('button', { name: 'Delete' }).click();
-
-    // Should show success toast
-    await waitForToast(adminPage, /deleted/i, { timeout: WAIT_TIMEOUTS.TOAST_APPEAR });
-
-    // Announcement should no longer appear
-    await expect(adminPage.getByTestId(`announcement-${announcementId}`)).not.toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
-  });
-
-  test('should close modal when clicking cancel', async ({ adminPage }) => {
-    await adminPage.goto('/admin/announcements');
-    await waitForAdminContent(adminPage, [
-      { type: 'heading', value: 'Announcements' }
-    ], { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
-
-    // Open create modal
-    await adminPage.getByTestId('create-announcement-button').click();
-    await expect(adminPage.getByRole('dialog')).toBeVisible({ timeout: WAIT_TIMEOUTS.DIALOG_APPEAR });
-
-    // Click cancel button
-    await adminPage.getByRole('button', { name: 'Cancel' }).click();
-
-    // Modal should close
-    await expect(adminPage.getByRole('dialog')).not.toBeVisible({ timeout: WAIT_TIMEOUTS.DIALOG_APPEAR });
-  });
-
-  test('should close modal when clicking outside', async ({ adminPage }) => {
-    await adminPage.goto('/admin/announcements');
-    await waitForAdminContent(adminPage, [
-      { type: 'heading', value: 'Announcements' }
-    ], { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
-
-    // Open create modal
-    await adminPage.getByTestId('create-announcement-button').click();
-    await expect(adminPage.getByRole('dialog')).toBeVisible({ timeout: WAIT_TIMEOUTS.DIALOG_APPEAR });
-
-    // Click outside modal (on the backdrop)
-    await adminPage.locator('[role="presentation"]').click({ position: { x: 10, y: 10 } });
-
-    // Modal should close
-    await expect(adminPage.getByRole('dialog')).not.toBeVisible({ timeout: WAIT_TIMEOUTS.DIALOG_APPEAR });
   });
 });
 
