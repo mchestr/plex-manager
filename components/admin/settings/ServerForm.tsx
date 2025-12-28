@@ -1,13 +1,13 @@
 "use client"
 
-import { updateOverseerr, updatePlexServer, updatePrometheus, updateRadarr, updateSonarr, updateTautulli } from "@/actions/admin"
+import { updateOverseerr, updatePlexServer, updatePrometheus, updateRadarr, updateSonarr, updateTautulli, updateJellyfinServer } from "@/actions/admin"
 import { StyledInput } from "@/components/ui/styled-input"
 import { useToast } from "@/components/ui/toast"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 
 interface ServerFormProps {
-  type: "plex" | "tautulli" | "overseerr" | "sonarr" | "radarr" | "prometheus"
+  type: "plex" | "jellyfin" | "tautulli" | "overseerr" | "sonarr" | "radarr" | "prometheus"
   server: { name: string; url: string; token?: string; apiKey?: string; publicUrl?: string | null; query?: string } | null
 }
 
@@ -36,6 +36,13 @@ export function ServerForm({ type, server }: ServerFormProps) {
           name: formData.name,
           url: formData.url,
           token: formData.token!,
+          publicUrl: formData.publicUrl || undefined,
+        })
+      } else if (type === "jellyfin") {
+        result = await updateJellyfinServer({
+          name: formData.name,
+          url: formData.url,
+          apiKey: formData.apiKey!,
           publicUrl: formData.publicUrl || undefined,
         })
       } else if (type === "tautulli") {
@@ -145,7 +152,7 @@ export function ServerForm({ type, server }: ServerFormProps) {
             type="text"
             value={formData.url}
             onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-            placeholder={type === "plex" ? "https://example.com:32400" : type === "tautulli" ? "http://example.com:8181" : type === "overseerr" ? "http://example.com:5055" : type === "sonarr" ? "http://example.com:8989" : type === "prometheus" ? "http://example.com:9090" : "http://example.com:7878"}
+            placeholder={type === "plex" ? "https://example.com:32400" : type === "jellyfin" ? "http://example.com:8096" : type === "tautulli" ? "http://example.com:8181" : type === "overseerr" ? "http://example.com:5055" : type === "sonarr" ? "http://example.com:8989" : type === "prometheus" ? "http://example.com:9090" : "http://example.com:7878"}
             required
             disabled={isPending}
           />

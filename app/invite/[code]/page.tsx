@@ -3,9 +3,12 @@
 import { validateInvite } from "@/actions/invite"
 import { getServerName } from "@/actions/server-info"
 import { PlexSignInButton } from "@/components/auth/plex-sign-in-button"
+import { JellyfinSignInForm } from "@/components/auth/jellyfin-sign-in-form"
 import { motion } from "framer-motion"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
+
+type ServerType = "PLEX" | "JELLYFIN"
 
 export default function InvitePage() {
   const params = useParams()
@@ -16,6 +19,7 @@ export default function InvitePage() {
   const [_valid, setValid] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [serverName, setServerName] = useState<string>("Plex")
+  const [serverType, setServerType] = useState<ServerType>("PLEX")
 
   useEffect(() => {
     async function checkInvite() {
@@ -28,8 +32,9 @@ export default function InvitePage() {
 
         setServerName(serverNameResult)
 
-        if (inviteResult.success) {
+        if (inviteResult.success && inviteResult.data) {
           setValid(true)
+          setServerType(inviteResult.data.serverType as ServerType)
         } else {
           setError(inviteResult.error || "Invalid invite code")
         }
@@ -122,6 +127,15 @@ export default function InvitePage() {
     )
   }
 
+  // Determine icon and colors based on server type
+  const isPlex = serverType === "PLEX"
+  const iconGradient = isPlex
+    ? "from-amber-500 to-orange-600"
+    : "from-purple-500 to-indigo-600"
+  const iconShadow = isPlex
+    ? "shadow-amber-500/20"
+    : "shadow-purple-500/20"
+
   return (
     <div className="max-w-md w-full">
       <motion.div
@@ -135,17 +149,25 @@ export default function InvitePage() {
             initial={{ scale: 0, rotate: -180 }}
             animate={{ scale: 1, rotate: 0 }}
             transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-            className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-cyan-500 to-purple-600 rounded-2xl flex items-center justify-center mb-4 sm:mb-6 shadow-lg shadow-cyan-500/20"
+            className={`w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br ${iconGradient} rounded-2xl flex items-center justify-center mb-4 sm:mb-6 shadow-lg ${iconShadow}`}
           >
-            <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-            </svg>
+            {isPlex ? (
+              <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M11.643 0L4.68 12l6.963 12h2.714L7.394 12l6.963-12z" />
+                <path d="M12.357 0l6.963 12-6.963 12h2.714L22 12 15.071 0z" />
+              </svg>
+            ) : (
+              <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 .002C7.524.002 3.256 2.063 1.664 5.227c-.43.856-.665 1.79-.665 2.73v8.085c0 3.983 4.925 7.956 11 7.956s11-3.973 11-7.956V7.957c0-.94-.234-1.874-.665-2.73C20.744 2.063 16.476.002 12 .002zm0 2.002c3.605 0 6.904 1.523 8.336 3.898.333.552.498 1.175.498 1.798v8.342c0 2.794-3.986 5.956-8.834 5.956S3.166 18.836 3.166 16.042V7.7c0-.623.165-1.246.498-1.798C5.096 3.527 8.395 2.004 12 2.004z" />
+              </svg>
+            )}
           </motion.div>
 
           <motion.h1
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3, duration: 0.6 }}
+            data-testid="valid-invite-heading"
             className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 sm:mb-3 bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent px-2"
           >
             You're Invited!
@@ -160,7 +182,11 @@ export default function InvitePage() {
             <span className="font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
               {serverName}
             </span>
-            . Sign in with your Plex account to accept.
+            .{" "}
+            {isPlex
+              ? "Sign in with your Plex account to accept."
+              : "Create an account to get started."
+            }
           </motion.p>
 
           <motion.div
@@ -169,15 +195,27 @@ export default function InvitePage() {
             transition={{ delay: 0.5, duration: 0.6 }}
             className="w-full"
           >
-            <PlexSignInButton
-              inviteCode={code}
-              serverName={serverName}
-              showWarning={true}
-              warningDelay={3000}
-              onError={(errorMessage) => {
-                setError(errorMessage)
-              }}
-            />
+            {isPlex ? (
+              <PlexSignInButton
+                data-testid="plex-invite-sign-in"
+                inviteCode={code}
+                serverName={serverName}
+                showWarning={true}
+                warningDelay={3000}
+                onError={(errorMessage) => {
+                  setError(errorMessage)
+                }}
+              />
+            ) : (
+              <JellyfinSignInForm
+                data-testid="jellyfin-invite-form"
+                inviteCode={code}
+                serverName={serverName}
+                onError={(errorMessage) => {
+                  setError(errorMessage)
+                }}
+              />
+            )}
           </motion.div>
         </div>
       </motion.div>

@@ -18,6 +18,7 @@ model User {
   emailVerified       DateTime?
   image               String?
   plexUserId          String?       @unique
+  jellyfinUserId      String?       @unique // Jellyfin user ID (if user was created via Jellyfin invite)
   isAdmin             Boolean       @default(false)
   onboardingCompleted Boolean       @default(false)
   plexWrapped         PlexWrapped[]
@@ -32,6 +33,7 @@ model User {
   updatedAt           DateTime      @updatedAt
 
   @@index([plexUserId])
+  @@index([jellyfinUserId])
   @@index([isAdmin])
   @@index([onboardingCompleted])
 }
@@ -59,6 +61,21 @@ model PlexServer {
 
   @@index([isActive])
   @@index([adminPlexUserId])
+}
+
+model JellyfinServer {
+  id            String   @id @default(cuid())
+  name          String
+  url           String   // Full URL including protocol, hostname, and port (e.g. http://jellyfin.example.com:8096)
+  publicUrl     String?  // Public facing URL (e.g. https://jellyfin.example.com)
+  apiKey        String   // Jellyfin API key for admin operations
+  adminUserId   String?  // Jellyfin user ID of the admin who configured this server
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([adminUserId])
 }
 
 model Tautulli {
@@ -336,22 +353,27 @@ model PromptTemplate {
 // Server Statistics are now calculated on the fly - no database caching needed
 
 model Invite {
-  id        String    @id @default(cuid())
-  code      String    @unique
-  maxUses   Int       @default(1)
-  useCount  Int       @default(0)
-  expiresAt DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  createdBy String? // Admin User ID who created the invite
+  id         String     @id @default(cuid())
+  code       String     @unique
+  serverType ServerType @default(PLEX) // Which media server this invite is for
+  maxUses    Int        @default(1)
+  useCount   Int        @default(0)
+  expiresAt  DateTime?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  createdBy  String?    // Admin User ID who created the invite
 
-  // Library access settings
-  librarySectionIds String? // JSON array of library section IDs to share (null = all libraries)
-  allowDownloads    Boolean @default(false) // Allow downloads (allowSync)
+  // Plex-specific library access settings
+  librarySectionIds String?  // JSON array of Plex library section IDs to share (null = all libraries)
+  allowDownloads    Boolean  @default(false) // Allow downloads (Plex allowSync)
+
+  // Jellyfin-specific library access settings
+  jellyfinLibraryIds String? // JSON array of Jellyfin library IDs to grant access (null = all libraries)
 
   usages InviteUsage[]
 
   @@index([code])
+  @@index([serverType])
 }
 
 model InviteUsage {
@@ -437,6 +459,11 @@ enum MediaType {
   MOVIE
   TV_SERIES
   EPISODE
+}
+
+enum ServerType {
+  PLEX
+  JELLYFIN
 }
 
 enum MarkType {

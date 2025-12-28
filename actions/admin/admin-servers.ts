@@ -4,6 +4,48 @@ import { requireAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/prisma"
 
 /**
+ * Get Jellyfin libraries for invite creation
+ */
+export async function getJellyfinLibraries() {
+  await requireAdmin()
+
+  try {
+    const jellyfinServer = await prisma.jellyfinServer.findFirst({
+      where: { isActive: true },
+    })
+
+    if (!jellyfinServer) {
+      return { success: false, error: "No active Jellyfin server configured" }
+    }
+
+    const { getJellyfinLibraries: fetchLibraries } = await import("@/lib/connections/jellyfin")
+
+    const result = await fetchLibraries({
+      url: jellyfinServer.url,
+      apiKey: jellyfinServer.apiKey,
+    })
+
+    if (!result.success) {
+      return { success: false, error: result.error }
+    }
+
+    // Transform to simpler format for UI
+    const libraries = (result.data || []).map((lib) => ({
+      id: lib.ItemId,
+      name: lib.Name,
+      type: lib.CollectionType || "unknown",
+    }))
+
+    return { success: true, data: libraries }
+  } catch (error) {
+    if (error instanceof Error) {
+      return { success: false, error: error.message }
+    }
+    return { success: false, error: "Failed to fetch Jellyfin libraries" }
+  }
+}
+
+/**
  * Update Plex server configuration (admin only)
  */
 export async function updatePlexServer(data: { name: string; url: string; token: string; publicUrl?: string }) {
@@ -422,6 +464,108 @@ export async function updatePrometheus(data: { name: string; url: string; query:
       return { success: false, error: error.message }
     }
     return { success: false, error: "Failed to update Prometheus configuration" }
+  }
+}
+
+/**
+ * Update Jellyfin server configuration (admin only)
+ */
+export async function updateJellyfinServer(data: { name: string; url: string; apiKey: string; publicUrl?: string }) {
+  await requireAdmin()
+
+  try {
+    const { jellyfinServerSchema } = await import("@/lib/validations/jellyfin")
+    const { testJellyfinConnection, getJellyfinServerInfo } = await import("@/lib/connections/jellyfin")
+    const { revalidatePath } = await import("next/cache")
+
+    const validated = jellyfinServerSchema.parse(data)
+
+    // Test connection before saving
+    const connectionTest = await testJellyfinConnection(validated)
+    if (!connectionTest.success) {
+      return { success: false, error: connectionTest.error || "Failed to connect to Jellyfin server" }
+    }
+
+    // Get server info to retrieve admin user ID (optional)
+    let adminUserId: string | undefined
+    const serverInfoResult = await getJellyfinServerInfo(validated)
+    if (serverInfoResult.success && serverInfoResult.data) {
+      // The API key is associated with an admin user, but we can't easily get their ID
+      // from just the server info. This can be populated later if needed.
+      adminUserId = undefined
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // Deactivate existing active server
+      await tx.jellyfinServer.updateMany({
+        where: { isActive: true },
+        data: { isActive: false },
+      })
+
+      // Update or create server
+      const existing = await tx.jellyfinServer.findFirst({
+        where: {
+          url: validated.url,
+        },
+      })
+
+      if (existing) {
+        await tx.jellyfinServer.update({
+          where: { id: existing.id },
+          data: {
+            name: validated.name,
+            url: validated.url,
+            apiKey: validated.apiKey,
+            publicUrl: validated.publicUrl,
+            adminUserId,
+            isActive: true,
+          },
+        })
+      } else {
+        await tx.jellyfinServer.create({
+          data: {
+            name: validated.name,
+            url: validated.url,
+            apiKey: validated.apiKey,
+            publicUrl: validated.publicUrl,
+            adminUserId,
+            isActive: true,
+          },
+        })
+      }
+    })
+
+    revalidatePath("/admin/settings")
+    return { success: true }
+  } catch (error) {
+    if (error instanceof Error) {
+      return { success: false, error: error.message }
+    }
+    return { success: false, error: "Failed to update Jellyfin server configuration" }
+  }
+}
+
+/**
+ * Delete Jellyfin server configuration (admin only)
+ */
+export async function deleteJellyfinServer() {
+  await requireAdmin()
+
+  try {
+    const { revalidatePath } = await import("next/cache")
+
+    await prisma.jellyfinServer.updateMany({
+      where: { isActive: true },
+      data: { isActive: false },
+    })
+
+    revalidatePath("/admin/settings")
+    return { success: true }
+  } catch (error) {
+    if (error instanceof Error) {
+      return { success: false, error: error.message }
+    }
+    return { success: false, error: "Failed to delete Jellyfin server configuration" }
   }
 }
 

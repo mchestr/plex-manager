@@ -15,6 +15,7 @@ export async function getAdminSettings() {
     chatLLMProvider,
     wrappedLLMProvider,
     plexServer,
+    jellyfinServer,
     tautulli,
     overseerr,
     sonarr,
@@ -27,6 +28,7 @@ export async function getAdminSettings() {
     prisma.lLMProvider.findFirst({ where: { isActive: true, purpose: "chat" } }),
     prisma.lLMProvider.findFirst({ where: { isActive: true, purpose: "wrapped" } }),
     prisma.plexServer.findFirst({ where: { isActive: true } }),
+    prisma.jellyfinServer.findFirst({ where: { isActive: true } }),
     prisma.tautulli.findFirst({ where: { isActive: true } }),
     prisma.overseerr.findFirst({ where: { isActive: true } }),
     prisma.sonarr.findFirst({ where: { isActive: true } }),
@@ -43,6 +45,7 @@ export async function getAdminSettings() {
     // Keep llmProvider for backward compatibility (returns wrapped provider)
     llmProvider: wrappedLLMProvider,
     plexServer,
+    jellyfinServer,
     tautulli,
     overseerr,
     sonarr,
