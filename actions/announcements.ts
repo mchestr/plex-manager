@@ -2,6 +2,7 @@
 
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { createLogger } from "@/lib/utils/logger"
 import { getServerSession } from "next-auth"
 import { revalidatePath } from "next/cache"
@@ -156,6 +157,13 @@ export async function createAnnouncement(input: CreateAnnouncementInput): Promis
     })
 
     logger.info("Announcement created", { id: announcement.id, title, createdBy: session.user.id })
+    logAuditEvent(AuditEventType.ANNOUNCEMENT_CREATED, session.user.id, {
+      announcementId: announcement.id,
+      title,
+      priority,
+      isActive,
+      expiresAt: expiresAt ?? null,
+    })
     revalidatePath("/")
     revalidatePath("/admin/announcements")
 
@@ -220,6 +228,14 @@ export async function updateAnnouncement(input: UpdateAnnouncementInput): Promis
     })
 
     logger.info("Announcement updated", { id, updatedBy: session.user.id })
+    logAuditEvent(AuditEventType.ANNOUNCEMENT_UPDATED, session.user.id, {
+      announcementId: id,
+      title,
+      content,
+      priority,
+      isActive,
+      expiresAt: expiresAt ?? null,
+    })
     revalidatePath("/")
     revalidatePath("/admin/announcements")
 
@@ -249,6 +265,9 @@ export async function deleteAnnouncement(id: string): Promise<{ success: boolean
     })
 
     logger.info("Announcement deleted", { id, deletedBy: session.user.id })
+    logAuditEvent(AuditEventType.ANNOUNCEMENT_DELETED, session.user.id, {
+      announcementId: id,
+    })
     revalidatePath("/")
     revalidatePath("/admin/announcements")
 
@@ -280,6 +299,10 @@ export async function setAnnouncementActive(id: string, isActive: boolean): Prom
     })
 
     logger.info("Announcement status updated", { id, isActive, updatedBy: session.user.id })
+    logAuditEvent(AuditEventType.ANNOUNCEMENT_STATUS_CHANGED, session.user.id, {
+      announcementId: id,
+      isActive,
+    })
     revalidatePath("/")
     revalidatePath("/admin/announcements")
 
