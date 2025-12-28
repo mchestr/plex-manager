@@ -2,8 +2,11 @@
 
 import { Button } from "@/components/ui/button"
 import { StyledInput } from "@/components/ui/styled-input"
+import { createLogger } from "@/lib/utils/logger"
 import { signIn } from "next-auth/react"
 import { FormEvent, useState } from "react"
+
+const logger = createLogger("JELLYFIN_SIGN_IN")
 
 export interface JellyfinSignInButtonProps {
   /**
@@ -93,7 +96,7 @@ export function JellyfinSignInButton({
         setIsLoading(false)
       }
     } catch (err) {
-      console.error('Sign-in error:', err)
+      logger.error('Sign-in error', err)
       let errorMsg = "Failed to sign in. Please try again."
 
       // Provide more specific error messages based on error type

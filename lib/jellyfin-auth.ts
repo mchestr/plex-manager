@@ -44,6 +44,20 @@ const JellyfinCredentialsSchema = z.object({
 /**
  * Authenticate a Jellyfin user with username and password
  *
+ * This function validates user credentials against the Jellyfin server and returns
+ * user information if authentication is successful.
+ *
+ * ## Token Strategy
+ *
+ * The Jellyfin API returns an AccessToken upon successful authentication. However,
+ * this token is **not persisted** in the application database. Instead:
+ * - The token is used only for session validation during the authentication flow
+ * - The app uses the configured admin API key for all Jellyfin API operations
+ * - Users authenticate with username/password on each login session
+ *
+ * This approach simplifies token management and refresh logic while maintaining
+ * security through NextAuth session management.
+ *
  * @param jellyfinConfig - Server configuration (URL and API key)
  * @param username - Jellyfin username
  * @param password - User's password
