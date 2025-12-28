@@ -230,6 +230,9 @@ export default async function SettingsPage() {
                       enabled={Boolean(settings.plexServer)}
                     />
                   </div>
+                  <p className="text-xs text-slate-400 mb-3">
+                    Core media server for authentication and library access (required)
+                  </p>
                   <ServerForm type="plex" server={settings.plexServer} />
                 </div>
 
@@ -264,6 +267,9 @@ export default async function SettingsPage() {
                       enabled={Boolean(settings.tautulli)}
                     />
                   </div>
+                  <p className="text-xs text-slate-400 mb-3">
+                    Plex monitoring and analytics - provides watch history and statistics for Wrapped generation
+                  </p>
                   <ServerForm type="tautulli" server={settings.tautulli} />
                 </div>
 
@@ -281,6 +287,9 @@ export default async function SettingsPage() {
                       enabled={Boolean(settings.overseerr)}
                     />
                   </div>
+                  <p className="text-xs text-slate-400 mb-3">
+                    Media request management - displays request button on user dashboard
+                  </p>
                   <ServerForm type="overseerr" server={settings.overseerr} />
                 </div>
 
@@ -298,6 +307,9 @@ export default async function SettingsPage() {
                       enabled={Boolean(settings.sonarr)}
                     />
                   </div>
+                  <p className="text-xs text-slate-400 mb-3">
+                    TV show library management - displays series library and viewing statistics
+                  </p>
                   <ServerForm type="sonarr" server={settings.sonarr} />
                 </div>
 
@@ -315,6 +327,9 @@ export default async function SettingsPage() {
                       enabled={Boolean(settings.radarr)}
                     />
                   </div>
+                  <p className="text-xs text-slate-400 mb-3">
+                    Movie library management - displays movie library and viewing statistics
+                  </p>
                   <ServerForm type="radarr" server={settings.radarr} />
                 </div>
 
@@ -333,7 +348,7 @@ export default async function SettingsPage() {
                     />
                   </div>
                   <p className="text-xs text-slate-400 mb-3">
-                    Display a subtle status background on the homepage using Prometheus metrics
+                    Display a status footer bar showing service uptime over the last 7 days (168 hourly segments)
                   </p>
                   <ServerForm type="prometheus" server={settings.prometheus} />
                 </div>
