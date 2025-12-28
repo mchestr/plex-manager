@@ -56,7 +56,8 @@ async function main() {
       name: 'Admin User',
       email: 'admin@example.com',
       isAdmin: true,
-      onboardingCompleted: true,
+      primaryAuthService: 'plex',
+      onboardingStatus: { plex: true, jellyfin: false },
     },
   })
 
@@ -68,7 +69,8 @@ async function main() {
       name: 'Regular User',
       email: 'regular@example.com',
       isAdmin: false,
-      onboardingCompleted: true,
+      primaryAuthService: 'plex',
+      onboardingStatus: { plex: true, jellyfin: false },
     },
   })
 

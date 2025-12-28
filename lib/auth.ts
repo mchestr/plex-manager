@@ -1,4 +1,5 @@
 import { checkUserServerAccess, getPlexUserInfo } from "@/lib/connections/plex"
+import { authenticateJellyfin, isJellyfinAdmin } from "@/lib/jellyfin-auth"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 import { NextAuthOptions } from "next-auth"
@@ -217,6 +218,161 @@ export const authOptions: NextAuthOptions = {
           logger.error("Error authenticating user", error)
           // Re-throw access denied errors so they can be handled specially
           if (error instanceof Error && (error.message === "ACCESS_DENIED" || error.message === "NO_SERVER_CONFIGURED")) {
+            throw error
+          }
+          return null
+        }
+      },
+    }),
+    CredentialsProvider({
+      id: "jellyfin",
+      name: "Jellyfin",
+      credentials: {
+        username: { label: "Username", type: "text" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.username || !credentials?.password) {
+          return null
+        }
+
+        const { username, password } = credentials
+
+        try {
+          // Get the configured Jellyfin server
+          const jellyfinServer = await prisma.jellyfinServer.findFirst({
+            where: { isActive: true },
+          })
+
+          if (!jellyfinServer) {
+            logger.error("No active Jellyfin server configured")
+            throw new Error("NO_SERVER_CONFIGURED")
+          }
+
+          // Authenticate with Jellyfin API
+          const authResult = await authenticateJellyfin(
+            { url: jellyfinServer.url, apiKey: jellyfinServer.apiKey },
+            username,
+            password
+          )
+
+          if (!authResult.success || !authResult.data) {
+            logger.warn("Jellyfin authentication failed", {
+              username,
+              error: authResult.error,
+            })
+            return null
+          }
+
+          const jellyfinUser = authResult.data
+
+          // Check if this user is the admin
+          const isAdmin = await isJellyfinAdmin(
+            { url: jellyfinServer.url, apiKey: jellyfinServer.apiKey },
+            jellyfinUser.id,
+            jellyfinServer.adminUserId
+          )
+
+          // Find or create user in database
+          let dbUser = await prisma.user.findUnique({
+            where: { jellyfinUserId: jellyfinUser.id },
+          })
+
+          if (!dbUser) {
+            // Check if user with same username/email exists (for account linking)
+            // Jellyfin usernames may or may not be emails
+            const userByEmail = jellyfinUser.username.includes('@')
+              ? await prisma.user.findUnique({ where: { email: jellyfinUser.username } })
+              : null
+
+            if (userByEmail) {
+              // Link Jellyfin account to existing user
+              dbUser = await prisma.user.update({
+                where: { id: userByEmail.id },
+                data: {
+                  jellyfinUserId: jellyfinUser.id,
+                  primaryAuthService: userByEmail.primaryAuthService || "jellyfin",
+                  isAdmin: isAdmin || userByEmail.isAdmin,
+                },
+              })
+
+              logger.info("Linked Jellyfin account to existing user", {
+                userId: dbUser.id,
+                jellyfinUserId: jellyfinUser.id,
+                username: jellyfinUser.username,
+              })
+            } else {
+              // Create new user
+              dbUser = await prisma.user.create({
+                data: {
+                  jellyfinUserId: jellyfinUser.id,
+                  name: jellyfinUser.username,
+                  email: jellyfinUser.username.includes('@') ? jellyfinUser.username : null,
+                  isAdmin,
+                  primaryAuthService: "jellyfin",
+                  onboardingStatus: { plex: false, jellyfin: false },
+                },
+              })
+
+              logger.info("Created new Jellyfin user", {
+                userId: dbUser.id,
+                jellyfinUserId: jellyfinUser.id,
+                username: jellyfinUser.username,
+                isAdmin,
+              })
+
+              // Audit log: New user created
+              if (isAdmin) {
+                const { logAuditEvent, AuditEventType } = await import("@/lib/security/audit-log")
+                logAuditEvent(AuditEventType.USER_CREATED, dbUser.id, {
+                  isAdmin: true,
+                  jellyfinUserId: jellyfinUser.id,
+                  authService: "jellyfin",
+                })
+              }
+            }
+          } else {
+            // Check if admin status changed
+            const adminStatusChanged = dbUser.isAdmin !== isAdmin
+
+            // Update existing user
+            dbUser = await prisma.user.update({
+              where: { id: dbUser.id },
+              data: {
+                name: jellyfinUser.username,
+                email: jellyfinUser.username.includes('@') ? jellyfinUser.username : dbUser.email,
+                isAdmin,
+              },
+            })
+
+            // Audit log: Admin privilege change
+            if (adminStatusChanged) {
+              const { logAuditEvent, AuditEventType } = await import("@/lib/security/audit-log")
+              logAuditEvent(
+                isAdmin ? AuditEventType.ADMIN_PRIVILEGE_GRANTED : AuditEventType.ADMIN_PRIVILEGE_REVOKED,
+                dbUser.id,
+                {
+                  targetUserId: dbUser.id,
+                  previousAdminStatus: !isAdmin,
+                  newAdminStatus: isAdmin,
+                  jellyfinUserId: jellyfinUser.id,
+                  authService: "jellyfin",
+                }
+              )
+            }
+          }
+
+          return {
+            id: dbUser.id,
+            email: dbUser.email,
+            name: dbUser.name,
+            image: dbUser.image,
+            isAdmin: dbUser.isAdmin,
+          }
+        } catch (error) {
+          logger.error("Error authenticating Jellyfin user", error)
+          // Re-throw specific errors
+          if (error instanceof Error && error.message === "NO_SERVER_CONFIGURED") {
             throw error
           }
           return null

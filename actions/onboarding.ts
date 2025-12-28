@@ -3,52 +3,92 @@
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
+import type { AuthService } from "@/types/onboarding"
 import { getServerSession } from "next-auth"
 
 const logger = createLogger("ONBOARDING")
 
+interface OnboardingStatusRecord {
+  plex: boolean
+  jellyfin: boolean
+}
+
 /**
- * Check if the current user has completed onboarding
+ * Check if the current user has completed onboarding for a specific service
+ * @param service - The auth service ("plex" or "jellyfin"). If not specified, uses primaryAuthService
  */
-export async function getOnboardingStatus() {
+export async function getOnboardingStatus(service?: AuthService) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
-      return { isComplete: true } // If not logged in, assume complete to avoid blocking
+      return { isComplete: true, service: service || "plex" } // If not logged in, assume complete to avoid blocking
     }
 
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { onboardingCompleted: true },
+      select: {
+        onboardingStatus: true,
+        primaryAuthService: true,
+      },
     })
 
+    const status = (user?.onboardingStatus as unknown as OnboardingStatusRecord) || {
+      plex: false,
+      jellyfin: false,
+    }
+
+    // If no service specified, use primary auth service
+    const targetService: AuthService = service || (user?.primaryAuthService as AuthService) || "plex"
+
     return {
-      isComplete: user?.onboardingCompleted ?? false,
+      isComplete: status[targetService] || false,
+      service: targetService,
+      allStatuses: status,
     }
   } catch (error) {
-    logger.error("Error checking onboarding status", error)
-    return { isComplete: true } // On error, assume complete to avoid blocking
+    logger.error("Error checking onboarding status", error, { service })
+    return { isComplete: true, service: service || "plex" } // On error, assume complete to avoid blocking
   }
 }
 
 /**
- * Mark onboarding as complete for the current user
+ * Mark onboarding as complete for a specific service
+ * @param service - The auth service ("plex" or "jellyfin")
  */
-export async function completeOnboarding() {
+export async function completeOnboarding(service: AuthService) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
       return { success: false, error: "Not authenticated" }
     }
 
+    // Get current onboarding status
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { onboardingStatus: true },
+    })
+
+    const currentStatus = (user?.onboardingStatus as unknown as OnboardingStatusRecord) || {
+      plex: false,
+      jellyfin: false,
+    }
+
+    // Update the status for the specified service
+    const updatedStatus = {
+      ...currentStatus,
+      [service]: true,
+    }
+
     await prisma.user.update({
       where: { id: session.user.id },
-      data: { onboardingCompleted: true },
+      data: { onboardingStatus: updatedStatus },
     })
+
+    logger.info("Onboarding completed", { userId: session.user.id, service })
 
     return { success: true }
   } catch (error) {
-    logger.error("Error completing onboarding", error)
+    logger.error("Error completing onboarding", error, { service })
     return { success: false, error: "Failed to complete onboarding" }
   }
 }

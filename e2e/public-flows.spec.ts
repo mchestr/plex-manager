@@ -6,10 +6,17 @@ test.describe('Public Flows', () => {
   test('home page has sign in button and initiates flow', async ({ page }) => {
     await navigateAndVerify(page, '/');
 
-    // Check for Sign In button
-    const signInButton = page.getByTestId('sign-in-with-plex');
+    // Check for collapsed Sign In button
+    const signInButton = page.getByTestId('sign-in-button');
     await expect(signInButton).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
     await expect(signInButton).toBeEnabled();
+
+    // Click the button to expand and reveal sign-in options
+    await signInButton.click();
+
+    // Verify Plex toggle is now visible
+    const plexToggle = page.getByTestId('toggle-plex');
+    await expect(plexToggle).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
   });
 
   test('invite page shows invalid state for unknown code', async ({ page }) => {
@@ -114,7 +121,8 @@ test.describe('Public Flows', () => {
             name: 'Regular User',
             email: 'regular@example.com',
             isAdmin: false,
-            onboardingCompleted: true,
+            primaryAuthService: 'plex',
+            onboardingStatus: { plex: true, jellyfin: false },
           },
         });
       }

@@ -19,8 +19,9 @@ model User {
   image               String?
   plexUserId          String?       @unique
   jellyfinUserId      String?       @unique // Jellyfin user ID (if user was created via Jellyfin invite)
+  primaryAuthService  String?       // Track which service user authenticated with first: "plex" or "jellyfin"
   isAdmin             Boolean       @default(false)
-  onboardingCompleted Boolean       @default(false)
+  onboardingStatus    Json?         @default("{\"plex\": false, \"jellyfin\": false}") // Track onboarding completion per service
   plexWrapped         PlexWrapped[]
   llmUsage            LLMUsage[]
   chatConversations   ChatConversation[]
@@ -35,7 +36,7 @@ model User {
   @@index([plexUserId])
   @@index([jellyfinUserId])
   @@index([isAdmin])
-  @@index([onboardingCompleted])
+  @@index([primaryAuthService])
 }
 
 // Setup and Configuration models

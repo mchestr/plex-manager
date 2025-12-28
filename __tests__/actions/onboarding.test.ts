@@ -75,7 +75,10 @@ describe('Onboarding Actions', () => {
   describe('getOnboardingStatus', () => {
     it('should return status when authenticated', async () => {
       mockGetServerSession.mockResolvedValue({ user: { id: 'user-1' } } as any)
-      mockPrisma.user.findUnique.mockResolvedValue({ onboardingCompleted: false } as any)
+      mockPrisma.user.findUnique.mockResolvedValue({
+        onboardingStatus: { plex: false, jellyfin: false },
+        primaryAuthService: 'plex'
+      } as any)
 
       const result = await getOnboardingStatus()
 
@@ -92,22 +95,55 @@ describe('Onboarding Actions', () => {
   })
 
   describe('completeOnboarding', () => {
-    it('should mark user as complete', async () => {
+    it('should mark user as complete for plex service', async () => {
       mockGetServerSession.mockResolvedValue({ user: { id: 'user-1' } } as any)
+      mockPrisma.user.findUnique.mockResolvedValue({
+        onboardingStatus: { plex: false, jellyfin: false }
+      } as any)
 
-      const result = await completeOnboarding()
+      const result = await completeOnboarding('plex')
 
       expect(result.success).toBe(true)
       expect(mockPrisma.user.update).toHaveBeenCalledWith({
         where: { id: 'user-1' },
-        data: { onboardingCompleted: true },
+        data: { onboardingStatus: { plex: true, jellyfin: false } },
+      })
+    })
+
+    it('should mark user as complete for jellyfin service', async () => {
+      mockGetServerSession.mockResolvedValue({ user: { id: 'user-1' } } as any)
+      mockPrisma.user.findUnique.mockResolvedValue({
+        onboardingStatus: { plex: false, jellyfin: false }
+      } as any)
+
+      const result = await completeOnboarding('jellyfin')
+
+      expect(result.success).toBe(true)
+      expect(mockPrisma.user.update).toHaveBeenCalledWith({
+        where: { id: 'user-1' },
+        data: { onboardingStatus: { plex: false, jellyfin: true } },
+      })
+    })
+
+    it('should preserve existing service completion status', async () => {
+      mockGetServerSession.mockResolvedValue({ user: { id: 'user-1' } } as any)
+      mockPrisma.user.findUnique.mockResolvedValue({
+        onboardingStatus: { plex: true, jellyfin: false }
+      } as any)
+
+      const result = await completeOnboarding('jellyfin')
+
+      expect(result.success).toBe(true)
+      expect(mockPrisma.user.update).toHaveBeenCalledWith({
+        where: { id: 'user-1' },
+        data: { onboardingStatus: { plex: true, jellyfin: true } },
       })
     })
 
     it('should fail if unauthenticated', async () => {
       mockGetServerSession.mockResolvedValue(null)
 
-      const result = await completeOnboarding()
+      const result = await completeOnboarding('plex')
 
       expect(result.success).toBe(false)
       expect(mockPrisma.user.update).not.toHaveBeenCalled()
