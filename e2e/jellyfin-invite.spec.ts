@@ -127,7 +127,7 @@ test.describe('Jellyfin Invite Flow', () => {
       await adminPage.locator('aside').getByTestId('admin-nav-invites').first().click();
       await waitForLoadingGone(adminPage);
 
-      await expect(adminPage.getByRole('heading', { name: 'Invites' })).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
+      await expect(adminPage.getByRole('heading', { name: 'Invites', exact: true })).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
       await expect(adminPage.getByTestId('generate-invite-button')).toBeVisible();
     });
 
@@ -139,7 +139,7 @@ test.describe('Jellyfin Invite Flow', () => {
 
       // Modal should appear
       await expect(adminPage.getByRole('dialog')).toBeVisible({ timeout: WAIT_TIMEOUTS.DIALOG_APPEAR });
-      await expect(adminPage.getByText('Create Invite')).toBeVisible();
+      await expect(adminPage.getByRole('heading', { name: 'Create Invite' })).toBeVisible();
     });
 
     test('admin can create a Jellyfin invite via database', async ({ adminPage }) => {
