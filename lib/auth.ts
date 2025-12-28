@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 import { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
+import { z } from "zod"
 
 const logger = createLogger("AUTH")
 

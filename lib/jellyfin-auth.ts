@@ -57,7 +57,7 @@ export async function authenticateJellyfin(
   // Validate credentials
   const validation = JellyfinCredentialsSchema.safeParse({ username, password })
   if (!validation.success) {
-    const errors = validation.error.errors.map(e => e.message).join(", ")
+    const errors = validation.error.issues.map(e => e.message).join(", ")
     logger.warn("Invalid Jellyfin credentials format", { errors })
     return {
       success: false,
