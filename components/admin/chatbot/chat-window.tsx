@@ -1,6 +1,7 @@
 "use client"
 
-import { chatWithAdminBot, type ChatMessage } from "@/actions/chatbot"
+import { chatWithAdminBot } from "@/actions/chatbot"
+import { type ChatMessage } from "@/actions/chatbot/types"
 import { AnimatePresence, motion } from "framer-motion"
 import dynamic from "next/dynamic"
 import { useEffect, useRef, useState } from "react"

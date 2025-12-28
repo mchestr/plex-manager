@@ -2,7 +2,8 @@
  * Tests for actions/chatbot.ts - chatbot sources tracking functionality
  */
 
-import { chatWithAdminBot, type ChatMessage } from "@/actions/chatbot"
+import { chatWithAdminBot } from "@/actions/chatbot"
+import { type ChatMessage } from "@/actions/chatbot/types"
 import { callChatLLM } from "@/lib/llm/chat"
 import { prisma } from "@/lib/prisma"
 import { getServerSession } from "next-auth"
