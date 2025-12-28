@@ -6,6 +6,7 @@
 
 import { authenticateJellyfinUser, getJellyfinUserById } from "@/lib/connections/jellyfin-users"
 import { createLogger } from "@/lib/utils/logger"
+import { z } from "zod"
 
 const logger = createLogger("JELLYFIN_AUTH")
 
@@ -25,6 +26,22 @@ interface JellyfinAuthResult {
 }
 
 /**
+ * Zod schema for Jellyfin credentials
+ * Validates username and password inputs before authentication
+ */
+const JellyfinCredentialsSchema = z.object({
+  username: z
+    .string()
+    .min(1, "Username is required")
+    .max(100, "Username is too long")
+    .trim(),
+  password: z
+    .string()
+    .min(1, "Password is required")
+    .max(1000, "Password is too long"),
+})
+
+/**
  * Authenticate a Jellyfin user with username and password
  *
  * @param jellyfinConfig - Server configuration (URL and API key)
@@ -37,18 +54,31 @@ export async function authenticateJellyfin(
   username: string,
   password: string
 ): Promise<JellyfinAuthResult> {
-  logger.debug("Authenticating Jellyfin user", { username })
+  // Validate credentials
+  const validation = JellyfinCredentialsSchema.safeParse({ username, password })
+  if (!validation.success) {
+    const errors = validation.error.errors.map(e => e.message).join(", ")
+    logger.warn("Invalid Jellyfin credentials format", { errors })
+    return {
+      success: false,
+      error: errors,
+    }
+  }
+
+  const { username: validatedUsername, password: validatedPassword } = validation.data
+
+  logger.debug("Authenticating Jellyfin user", { username: validatedUsername })
 
   try {
     const authResult = await authenticateJellyfinUser(
       jellyfinConfig,
-      username,
-      password
+      validatedUsername,
+      validatedPassword
     )
 
     if (!authResult.success || !authResult.data) {
       logger.warn("Jellyfin authentication failed", {
-        username,
+        username: validatedUsername,
         error: authResult.error,
       })
       return {
@@ -73,7 +103,7 @@ export async function authenticateJellyfin(
       },
     }
   } catch (error) {
-    logger.error("Error during Jellyfin authentication", error, { username })
+    logger.error("Error during Jellyfin authentication", error, { username: validatedUsername })
     return {
       success: false,
       error: "An unexpected error occurred during authentication",

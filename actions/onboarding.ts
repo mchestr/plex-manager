@@ -5,8 +5,18 @@ import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 import type { AuthService } from "@/types/onboarding"
 import { getServerSession } from "next-auth"
+import { z } from "zod"
 
 const logger = createLogger("ONBOARDING")
+
+/**
+ * Zod schema for onboarding status
+ * Validates the onboardingStatus JSON field from the database
+ */
+const OnboardingStatusSchema = z.object({
+  plex: z.boolean(),
+  jellyfin: z.boolean(),
+})
 
 interface OnboardingStatusRecord {
   plex: boolean
@@ -32,10 +42,10 @@ export async function getOnboardingStatus(service?: AuthService) {
       },
     })
 
-    const status = (user?.onboardingStatus as unknown as OnboardingStatusRecord) || {
-      plex: false,
-      jellyfin: false,
-    }
+    const validation = OnboardingStatusSchema.safeParse(user?.onboardingStatus)
+    const status: OnboardingStatusRecord = validation.success
+      ? validation.data
+      : { plex: false, jellyfin: false }
 
     // If no service specified, use primary auth service
     const targetService: AuthService = service || (user?.primaryAuthService as AuthService) || "plex"
@@ -68,10 +78,10 @@ export async function completeOnboarding(service: AuthService) {
       select: { onboardingStatus: true },
     })
 
-    const currentStatus = (user?.onboardingStatus as unknown as OnboardingStatusRecord) || {
-      plex: false,
-      jellyfin: false,
-    }
+    const validation = OnboardingStatusSchema.safeParse(user?.onboardingStatus)
+    const currentStatus: OnboardingStatusRecord = validation.success
+      ? validation.data
+      : { plex: false, jellyfin: false }
 
     // Update the status for the specified service
     const updatedStatus = {

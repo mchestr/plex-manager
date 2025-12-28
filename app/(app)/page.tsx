@@ -8,8 +8,14 @@ import { prisma } from "@/lib/prisma";
 import type { AuthService } from "@/types/onboarding";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 
 export const dynamic = 'force-dynamic'
+
+const OnboardingStatusSchema = z.object({
+  plex: z.boolean(),
+  jellyfin: z.boolean(),
+})
 
 interface OnboardingStatusRecord {
   plex: boolean
@@ -57,7 +63,10 @@ export default async function Home() {
 
     // Check service-specific onboarding completion
     if (user) {
-      const status = (user.onboardingStatus as unknown as OnboardingStatusRecord) || { plex: false, jellyfin: false };
+      const validation = OnboardingStatusSchema.safeParse(user.onboardingStatus)
+      const status: OnboardingStatusRecord = validation.success
+        ? validation.data
+        : { plex: false, jellyfin: false };
       const primaryService: AuthService = (user.primaryAuthService as AuthService) || "plex";
 
       // Redirect to onboarding if primary service onboarding not complete

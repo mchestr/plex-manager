@@ -29,22 +29,21 @@ export const authOptions: NextAuthOptions = {
           process.env.ENABLE_TEST_AUTH === 'true'
 
         if (isTestMode && credentials?.authToken) {
-          console.log('[AUTH] Test mode active, checking test token:', credentials.authToken)
-          console.log('[AUTH] NODE_ENV:', process.env.NODE_ENV)
-          console.log('[AUTH] NEXT_PUBLIC_ENABLE_TEST_AUTH:', process.env.NEXT_PUBLIC_ENABLE_TEST_AUTH)
-          console.log('[AUTH] ENABLE_TEST_AUTH:', process.env.ENABLE_TEST_AUTH)
+          logger.debug('Test mode active', {
+            hasToken: !!credentials.authToken,
+            nodeEnv: process.env.NODE_ENV,
+          })
 
           if (credentials.authToken === 'TEST_ADMIN_TOKEN') {
              // Return the seeded admin user
-             console.log('[AUTH] Looking up admin test user')
+             logger.debug('Looking up admin test user')
              try {
                const adminUser = await prisma.user.findUnique({
                  where: { email: 'admin@example.com' }
                })
-               console.log('[AUTH] Admin user lookup result:', adminUser ? { id: adminUser.id, email: adminUser.email, isAdmin: adminUser.isAdmin } : 'not found')
 
                if (adminUser && adminUser.isAdmin) {
-                 console.log('[AUTH] Admin test user found:', adminUser.email)
+                 logger.debug('Admin test user found', { email: adminUser.email })
                  const userData = {
                    id: adminUser.id,
                    email: adminUser.email,
@@ -52,29 +51,27 @@ export const authOptions: NextAuthOptions = {
                    image: adminUser.image,
                    isAdmin: true,
                  }
-                 console.log('[AUTH] Returning user data:', userData)
                  return userData
                } else {
-                 console.error('[AUTH] Admin test user not found or not admin. User:', adminUser)
+                 logger.error('Admin test user not found or not admin', { hasUser: !!adminUser })
                  return null
                }
              } catch (error) {
-               console.error('[AUTH] Error looking up admin user:', error)
+               logger.error('Error looking up admin user', error)
                return null
              }
           }
 
           if (credentials.authToken === 'TEST_REGULAR_TOKEN') {
              // Return the seeded regular user
-             console.log('[AUTH] Looking up regular test user')
+             logger.debug('Looking up regular test user')
              try {
                const regularUser = await prisma.user.findUnique({
                  where: { email: 'regular@example.com' }
                })
-               console.log('[AUTH] Regular user lookup result:', regularUser ? { id: regularUser.id, email: regularUser.email, isAdmin: regularUser.isAdmin } : 'not found')
 
                if (regularUser) {
-                 console.log('[AUTH] Regular test user found:', regularUser.email)
+                 logger.debug('Regular test user found', { email: regularUser.email })
                  const userData = {
                    id: regularUser.id,
                    email: regularUser.email,
@@ -82,20 +79,19 @@ export const authOptions: NextAuthOptions = {
                    image: regularUser.image,
                    isAdmin: regularUser.isAdmin,
                  }
-                 console.log('[AUTH] Returning user data:', userData)
                  return userData
                } else {
-                 console.error('[AUTH] Regular test user not found')
+                 logger.error('Regular test user not found')
                  return null
                }
              } catch (error) {
-               console.error('[AUTH] Error looking up regular user:', error)
+               logger.error('Error looking up regular user', error)
                return null
              }
           }
 
           // If test mode but unrecognized token, fail
-          console.error('[AUTH] Test mode active but unrecognized test token:', credentials.authToken)
+          logger.error('Test mode active but unrecognized test token')
           return null
         }
 
@@ -280,9 +276,17 @@ export const authOptions: NextAuthOptions = {
 
           if (!dbUser) {
             // Check if user with same username/email exists (for account linking)
-            // Jellyfin usernames may or may not be emails
-            const userByEmail = jellyfinUser.username.includes('@')
-              ? await prisma.user.findUnique({ where: { email: jellyfinUser.username } })
+            // Validate if Jellyfin username is a valid email format
+            const emailSchema = z.string().email()
+            const emailValidation = emailSchema.safeParse(jellyfinUser.username)
+            const normalizedEmail = emailValidation.success
+              ? jellyfinUser.username.toLowerCase().trim()
+              : null
+
+            const userByEmail = normalizedEmail
+              ? await prisma.user.findUnique({
+                  where: { email: normalizedEmail }
+                })
               : null
 
             if (userByEmail) {
@@ -307,7 +311,7 @@ export const authOptions: NextAuthOptions = {
                 data: {
                   jellyfinUserId: jellyfinUser.id,
                   name: jellyfinUser.username,
-                  email: jellyfinUser.username.includes('@') ? jellyfinUser.username : null,
+                  email: normalizedEmail,
                   isAdmin,
                   primaryAuthService: "jellyfin",
                   onboardingStatus: { plex: false, jellyfin: false },
@@ -395,20 +399,26 @@ export const authOptions: NextAuthOptions = {
         session.user.image = token.picture as string
         session.user.isAdmin = token.isAdmin as boolean
       } else {
-        console.warn(`[AUTH] Session callback - missing token.sub or session.user: hasTokenSub=${!!token.sub} hasSessionUser=${!!session.user}`)
+        logger.warn('Session callback - missing token.sub or session.user', {
+          hasTokenSub: !!token.sub,
+          hasSessionUser: !!session.user
+        })
       }
       return session
     },
     async jwt({ token, user }) {
       if (user) {
-        console.log('[AUTH] JWT callback - user:', { id: user.id, email: user.email, isAdmin: (user as any).isAdmin })
+        logger.debug('JWT callback - user signed in', {
+          userId: user.id,
+          email: user.email,
+          isAdmin: (user as any).isAdmin
+        })
         // Store user info in JWT when user first signs in
         token.sub = user.id
         token.name = user.name
         token.email = user.email
         token.picture = user.image
         token.isAdmin = (user as any).isAdmin || false
-        console.log('[AUTH] JWT callback - token updated:', { sub: token.sub, email: token.email, isAdmin: token.isAdmin })
       }
       return token
     },

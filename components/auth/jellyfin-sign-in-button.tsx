@@ -93,7 +93,20 @@ export function JellyfinSignInButton({
         setIsLoading(false)
       }
     } catch (err) {
-      const errorMsg = "Failed to sign in. Please try again."
+      console.error('Sign-in error:', err)
+      let errorMsg = "Failed to sign in. Please try again."
+
+      // Provide more specific error messages based on error type
+      if (err instanceof Error) {
+        if (err.message.includes('fetch')) {
+          errorMsg = "Unable to reach the server. Please check your connection."
+        } else if (err.message.includes('credentials') || err.message.includes('unauthorized')) {
+          errorMsg = "Invalid username or password."
+        } else if (err.message) {
+          errorMsg = `Failed to sign in: ${err.message}`
+        }
+      }
+
       setError(errorMsg)
       onError?.(errorMsg)
       setIsLoading(false)
