@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test } from './fixtures/auth';
+import { expect, test } from './fixtures/test-setup';
 import { waitForAdminContent, WAIT_TIMEOUTS } from './helpers/test-utils';
 
 test.describe('Accessibility Tests', () => {

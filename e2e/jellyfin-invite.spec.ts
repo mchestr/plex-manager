@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures/auth';
+import { expect, test } from './fixtures/test-setup';
 import { createE2EPrismaClient } from './helpers/prisma';
 import { navigateAndVerify, waitForLoadingGone, WAIT_TIMEOUTS } from './helpers/test-utils';
 
@@ -169,8 +169,8 @@ test.describe('Jellyfin Invite Flow', () => {
         // The invite should appear in the list
         await expect(adminPage.getByText(inviteCode)).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
 
-        // Check for Jellyfin badge
-        await expect(adminPage.getByText('Jellyfin')).toBeVisible();
+        // Check for Jellyfin badge (use first() for multiple matches)
+        await expect(adminPage.getByText('Jellyfin').first()).toBeVisible();
 
       } finally {
         await prisma.invite.deleteMany({

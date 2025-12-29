@@ -1,5 +1,6 @@
-import { expect, test, TEST_USERS } from './fixtures/auth';
+import { expect, test, TEST_USERS } from './fixtures/test-setup';
 import { createE2EPrismaClient } from './helpers/prisma';
+import { createWrappedData } from './fixtures/factories';
 import {
   verifyNoAdminAccess,
   waitForLoadingGone,
@@ -41,45 +42,26 @@ test.describe('User Scenarios', () => {
       const prisma = createE2EPrismaClient();
       const currentYear = new Date().getFullYear();
 
-      // Mock wrapped data matching the WrappedData type structure
-      const mockWrappedData = {
+      // Use factory to create wrapped data
+      const wrappedData = createWrappedData({
         year: currentYear,
         userId: TEST_USERS.REGULAR.id,
         userName: TEST_USERS.REGULAR.name,
-        generatedAt: new Date().toISOString(),
-        statistics: {
-          totalWatchTime: { total: 1000, movies: 600, shows: 400 },
-          moviesWatched: 10,
-          showsWatched: 5,
-          episodesWatched: 20,
-          topMovies: [{ title: 'Test Movie', watchTime: 120, playCount: 1 }],
-          topShows: [{ title: 'Test Show', watchTime: 200, playCount: 2, episodesWatched: 4 }]
-        },
-        sections: [
-          {
-            id: 'hero',
-            type: 'hero',
-            title: `Your ${currentYear} Wrapped`,
-            content: 'Welcome to your wrapped!',
-            data: { prominentStat: { value: '1000', label: 'Minutes', description: 'Total Watch Time' } }
-          }
-        ],
-        insights: {
-          personality: 'Movie Buff',
-          topGenre: 'Action',
-          bingeWatcher: false,
-          discoveryScore: 80,
-          funFacts: ['You watched a lot!']
-        },
-        metadata: {
-          totalSections: 1,
-          generationTime: 5
-        }
-      };
+      });
 
       try {
-        // Create or update mock wrapped data for the regular user
-        // Using upsert to handle existing records (ensures test isolation)
+        // Ensure regular user has completed onboarding
+        await prisma.user.update({
+          where: { id: TEST_USERS.REGULAR.id },
+          data: {
+            onboardingStatus: {
+              plex: true,
+              jellyfin: true,
+              completed: true,
+            },
+          },
+        });
+        // Create or update wrapped data for the regular user
         await prisma.plexWrapped.upsert({
           where: {
             userId_year: {
@@ -91,12 +73,12 @@ test.describe('User Scenarios', () => {
             userId: TEST_USERS.REGULAR.id,
             year: currentYear,
             status: 'completed',
-            data: JSON.stringify(mockWrappedData),
+            data: JSON.stringify(wrappedData),
             generatedAt: new Date(),
           },
           update: {
             status: 'completed',
-            data: JSON.stringify(mockWrappedData),
+            data: JSON.stringify(wrappedData),
             generatedAt: new Date(),
           },
         });
@@ -135,49 +117,19 @@ test.describe('User Scenarios', () => {
       const currentYear = new Date().getFullYear();
       const shareToken = `test-share-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
-      // Mock wrapped data matching the WrappedData type structure
-      const mockWrappedData = {
+      // Use factory to create wrapped data
+      const wrappedData = createWrappedData({
         year: currentYear,
         userId: TEST_USERS.REGULAR.id,
         userName: TEST_USERS.REGULAR.name,
-        generatedAt: new Date().toISOString(),
-        statistics: {
-          totalWatchTime: { total: 1000, movies: 600, shows: 400 },
-          moviesWatched: 10,
-          showsWatched: 5,
-          episodesWatched: 20,
-          topMovies: [{ title: 'Test Movie', watchTime: 120, playCount: 1 }],
-          topShows: [{ title: 'Test Show', watchTime: 200, playCount: 2, episodesWatched: 4 }]
-        },
-        sections: [
-          {
-            id: 'hero',
-            type: 'hero',
-            title: `Your ${currentYear} Wrapped`,
-            content: 'Welcome to your wrapped!',
-            data: { prominentStat: { value: '1000', label: 'Minutes', description: 'Total Watch Time' } }
-          }
-        ],
-        insights: {
-          personality: 'Movie Buff',
-          topGenre: 'Action',
-          bingeWatcher: false,
-          discoveryScore: 80,
-          funFacts: ['You watched a lot!']
-        },
-        metadata: {
-          totalSections: 1,
-          generationTime: 5
-        }
-      };
+      });
 
       // Create an anonymous (unauthenticated) page context
       const context = await browser.newContext();
       const anonymousPage = await context.newPage();
 
       try {
-        // Create or update mock wrapped data with shareToken for the regular user
-        // Using upsert to handle existing records (ensures test isolation)
+        // Create or update wrapped data with shareToken for the regular user
         await prisma.plexWrapped.upsert({
           where: {
             userId_year: {
@@ -189,14 +141,14 @@ test.describe('User Scenarios', () => {
             userId: TEST_USERS.REGULAR.id,
             year: currentYear,
             status: 'completed',
-            data: JSON.stringify(mockWrappedData),
+            data: JSON.stringify(wrappedData),
             shareToken: shareToken,
             summary: `Check out ${TEST_USERS.REGULAR.name}'s ${currentYear} Plex Wrapped!`,
             generatedAt: new Date(),
           },
           update: {
             status: 'completed',
-            data: JSON.stringify(mockWrappedData),
+            data: JSON.stringify(wrappedData),
             shareToken: shareToken,
             summary: `Check out ${TEST_USERS.REGULAR.name}'s ${currentYear} Plex Wrapped!`,
             generatedAt: new Date(),

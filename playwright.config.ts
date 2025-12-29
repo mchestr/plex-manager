@@ -9,12 +9,14 @@ console.log(`Running tests on ${baseURL}`);
  */
 export default defineConfig({
   testDir: './e2e',
+  // Sequential execution: tests share database and auth sessions
+  // Parallel execution requires isolated databases per worker (not implemented)
   fullyParallel: false,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
-  workers: 1, // Run tests sequentially to avoid database race conditions
+  workers: 1,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: [
     ['list'], // Console output

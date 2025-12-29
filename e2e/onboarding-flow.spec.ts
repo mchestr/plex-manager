@@ -1,4 +1,4 @@
-import { expect, test, TEST_USERS } from './fixtures/auth';
+import { expect, test, TEST_USERS } from './fixtures/test-setup';
 import { createE2EPrismaClient } from './helpers/prisma';
 import { waitForLoadingGone, WAIT_TIMEOUTS } from './helpers/test-utils';
 
@@ -35,40 +35,43 @@ test.describe('Onboarding Flow', () => {
         expect(page.url()).toContain('/onboarding');
         await waitForLoadingGone(page);
 
-        // Verify the welcome step is visible
-        await expect(page.getByTestId('onboarding-welcome-heading')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
-        await expect(page.getByTestId('onboarding-wizard-subheading')).toBeVisible();
+        // Wait for the wizard to load - check for main heading first (use .first() for responsive layouts)
+        await expect(page.getByTestId('onboarding-wizard-heading').first()).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+        await expect(page.getByTestId('onboarding-wizard-subheading').first()).toBeVisible();
+
+        // Wait for the welcome step to be visible (it may take a moment to render)
+        await expect(page.getByTestId('onboarding-welcome-heading').first()).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
 
         // Step 1: Welcome - Click "Let's Go" button
-        const letsGoButton = page.getByTestId('onboarding-welcome-continue');
+        const letsGoButton = page.getByTestId('onboarding-welcome-continue').first();
         await expect(letsGoButton).toBeVisible();
         await letsGoButton.click();
 
         // Wait for next step to be visible
         // Step 2: Plex Configuration - Click "Got it" button
-        await expect(page.getByTestId('onboarding-plex-config-heading')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
-        const gotItButton = page.getByTestId('onboarding-plex-config-continue');
+        await expect(page.getByTestId('onboarding-plex-config-heading').first()).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+        const gotItButton = page.getByTestId('onboarding-plex-config-continue').first();
         await expect(gotItButton).toBeVisible();
         await gotItButton.click();
 
         // Wait for next step to be visible
         // Step 3: Media Requests - Click "Next" button
-        await expect(page.getByTestId('onboarding-media-request-heading')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
-        const nextButton = page.getByTestId('onboarding-media-request-continue');
+        await expect(page.getByTestId('onboarding-media-request-heading').first()).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+        const nextButton = page.getByTestId('onboarding-media-request-continue').first();
         await expect(nextButton).toBeVisible();
         await nextButton.click();
 
         // Wait for next step to be visible
         // Step 4: Support & Discord - Click "Next" button
-        await expect(page.getByTestId('onboarding-discord-support-heading')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
-        const supportNextButton = page.getByTestId('onboarding-discord-support-continue');
+        await expect(page.getByTestId('onboarding-discord-support-heading').first()).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+        const supportNextButton = page.getByTestId('onboarding-discord-support-continue').first();
         await expect(supportNextButton).toBeVisible();
         await supportNextButton.click();
 
         // Wait for final step to be visible
         // Step 5: Final Step - Click "Go to Dashboard" button
-        await expect(page.getByTestId('onboarding-final-heading')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
-        const goToDashboardButton = page.getByTestId('onboarding-final-complete');
+        await expect(page.getByTestId('onboarding-final-heading').first()).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+        const goToDashboardButton = page.getByTestId('onboarding-final-complete').first();
         await expect(goToDashboardButton).toBeVisible();
         await goToDashboardButton.click();
 

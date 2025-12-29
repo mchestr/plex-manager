@@ -1,5 +1,5 @@
 import { test as base } from '@playwright/test';
-import { test } from './fixtures/auth';
+import { test } from './fixtures/test-setup';
 import { verifyPageUnauthorized } from './helpers/test-utils';
 
 test.describe('Admin Protection - Unauthenticated Users', () => {

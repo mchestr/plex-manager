@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures/auth';
+import { expect, test } from './fixtures/test-setup';
 import { verifyPageAccessible, waitForAdminContent, waitForAdminPageReady, WAIT_TIMEOUTS } from './helpers/test-utils';
 
 test.describe('Admin Functionality', () => {

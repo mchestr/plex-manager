@@ -1,4 +1,4 @@
-import { expect, test } from './fixtures/auth';
+import { expect, test } from './fixtures/test-setup';
 import { waitForAdminContent, waitForToast, WAIT_TIMEOUTS } from './helpers/test-utils';
 import { createE2EPrismaClient } from './helpers/prisma';
 
@@ -41,6 +41,8 @@ test.describe('Announcements Admin', () => {
 
   // Basic functionality test - just verify page loads
   test('should create a new announcement', async ({ adminPage }) => {
+    // Wait for page to be stable before navigating
+    await adminPage.waitForLoadState('networkidle');
     await adminPage.goto('/admin/announcements');
     await waitForAdminContent(adminPage, [
       { type: 'heading', value: 'Announcements' }
@@ -120,6 +122,18 @@ test.describe('Announcements User Dashboard', () => {
           title: { contains: 'E2E Dashboard' }
         }
       });
+
+      // Ensure regular user has completed onboarding
+      await prisma.user.update({
+        where: { id: 'regular-user-id' },
+        data: {
+          onboardingStatus: {
+            plex: true,
+            jellyfin: true,
+            completed: true,
+          },
+        },
+      });
     } finally {
       await prisma.$disconnect();
     }
@@ -139,9 +153,21 @@ test.describe('Announcements User Dashboard', () => {
   });
 
   test('should display active announcements on home page', async ({ regularUserPage }) => {
-    // Create active announcement
+    // Create active announcement and ensure user has completed onboarding
     const prisma = createE2EPrismaClient();
     try {
+      // Ensure regular user has completed onboarding first
+      await prisma.user.update({
+        where: { id: 'regular-user-id' },
+        data: {
+          onboardingStatus: {
+            plex: true,
+            jellyfin: true,
+            completed: true,
+          },
+        },
+      });
+
       await prisma.announcement.create({
         data: {
           title: 'E2E Dashboard Active Announcement',
@@ -155,12 +181,12 @@ test.describe('Announcements User Dashboard', () => {
       await prisma.$disconnect();
     }
 
-    // Go to home page
+    // Go to home page and wait for content
     await regularUserPage.goto('/');
     await regularUserPage.waitForLoadState('networkidle');
 
-    // Announcement card should be visible
-    await expect(regularUserPage.getByTestId('announcements-card')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    // Announcement card should be visible (use extended timeout for data fetching)
+    await expect(regularUserPage.getByTestId('announcements-card')).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
     await expect(regularUserPage.getByText('E2E Dashboard Active Announcement')).toBeVisible();
   });
 
@@ -222,6 +248,18 @@ test.describe('Announcements User Dashboard', () => {
     // Create announcements with different priorities
     const prisma = createE2EPrismaClient();
     try {
+      // Ensure regular user has completed onboarding first
+      await prisma.user.update({
+        where: { id: 'regular-user-id' },
+        data: {
+          onboardingStatus: {
+            plex: true,
+            jellyfin: true,
+            completed: true,
+          },
+        },
+      });
+
       await prisma.announcement.create({
         data: {
           title: 'E2E Dashboard Low Priority',
@@ -253,12 +291,12 @@ test.describe('Announcements User Dashboard', () => {
       await prisma.$disconnect();
     }
 
-    // Go to home page
+    // Go to home page and wait for content
     await regularUserPage.goto('/');
     await regularUserPage.waitForLoadState('networkidle');
 
-    // Wait for announcements to be visible
-    await expect(regularUserPage.getByTestId('announcements-card')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    // Wait for announcements to be visible (use extended timeout for data fetching)
+    await expect(regularUserPage.getByTestId('announcements-card')).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
 
     // Get all announcement titles in order
     const announcementsCard = regularUserPage.getByTestId('announcements-card');

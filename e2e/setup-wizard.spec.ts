@@ -6,7 +6,7 @@
  * which causes all connection test functions to return success immediately.
  */
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures/test-setup';
 import globalSetup from './global-setup';
 import { createE2EPrismaClient } from './helpers/prisma';
 import { navigateAndVerify, waitForLoadingGone, WAIT_TIMEOUTS } from './helpers/test-utils';
@@ -61,29 +61,45 @@ test.describe('Setup Wizard', () => {
     await navigateAndVerify(page, '/setup');
     await waitForLoadingGone(page);
 
-    // Verify we're on the setup wizard
-    await expect(page.getByRole('heading', { name: /Welcome to Plex Manager/i })).toBeVisible();
-    await expect(page.getByTestId('setup-wizard-intro-text')).toBeVisible();
+    // Verify we're on the setup wizard (use .first() for responsive layouts with duplicate elements)
+    await expect(page.getByRole('heading', { name: /Welcome to Plex Manager/i }).first()).toBeVisible();
+    await expect(page.getByTestId('setup-wizard-intro-text').first()).toBeVisible();
 
     // Known hidden fields that are auto-populated by form logic
     // These fields have hidden inputs for form submission but are managed by custom UI components
     const HIDDEN_FIELDS = ['provider']; // Dropdown with hidden input for form submission
 
+    // Fields that use custom button-based dropdowns (ComboboxField)
+    const COMBOBOX_FIELDS = ['model']; // Model selector uses button-based combobox
+
     // Helper function to fill and submit a form step
     const fillAndSubmitStep = async (stepName: string, fields: Record<string, string>) => {
       console.log(`[TEST] Starting step: ${stepName}`);
 
-      // Wait for the step heading to be visible
-      await expect(page.getByRole('heading', { name: new RegExp(stepName, 'i') })).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+      // Wait for the step heading to be visible (use .first() for responsive layouts)
+      await expect(page.getByRole('heading', { name: new RegExp(stepName, 'i') }).first()).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
 
       // Fill all fields
       for (const [name, value] of Object.entries(fields)) {
         // Use data-testid selector pattern for better test stability
-        const input = page.getByTestId(`setup-input-${name}`);
+        // Use .first() for responsive layouts that may have duplicate elements
+        const input = page.getByTestId(`setup-input-${name}`).first();
 
         // Check if this is a known hidden field (dropdown with hidden input)
         if (HIDDEN_FIELDS.includes(name)) {
           console.log(`[TEST] Skipping known hidden field: ${name} (uses custom UI component)`);
+          continue;
+        }
+
+        // Handle combobox fields (button-based dropdowns)
+        if (COMBOBOX_FIELDS.includes(name)) {
+          console.log(`[TEST] Handling combobox field: ${name}`);
+          await input.waitFor({ state: 'visible', timeout: WAIT_TIMEOUTS.DIALOG_APPEAR });
+          await input.click();
+          // Wait for dropdown to open and select the option using data-testid pattern
+          const option = page.getByTestId(`setup-input-${name}-option-${value}`);
+          await option.waitFor({ state: 'visible', timeout: WAIT_TIMEOUTS.DIALOG_APPEAR });
+          await option.click();
           continue;
         }
 
@@ -123,8 +139,8 @@ test.describe('Setup Wizard', () => {
         }
       }
 
-      // Submit form
-      const submitButton = page.getByTestId('setup-form-submit');
+      // Submit form (use .first() for responsive layouts)
+      const submitButton = page.getByTestId('setup-form-submit').first();
 
       console.log(`[TEST] Clicking submit button for ${stepName}`);
 
@@ -204,13 +220,13 @@ test.describe('Setup Wizard', () => {
       publicUrl: 'http://localhost:7878',
     });
 
-    // Step 6: Discord Linked Roles
-    await expect(page.getByRole('heading', { name: /Discord Linked Roles/i })).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
-    const discordToggle = page.getByTestId('setup-discord-toggle');
+    // Step 6: Discord Linked Roles (use .first() for responsive layouts)
+    await expect(page.getByRole('heading', { name: /Discord Linked Roles/i }).first()).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    const discordToggle = page.getByTestId('setup-discord-toggle').first();
     if ((await discordToggle.getAttribute('aria-pressed')) === 'false') {
       await discordToggle.click();
-      // Wait for conditional fields to appear after toggle
-      await page.locator('input[name="clientId"]').waitFor({ state: 'visible', timeout: WAIT_TIMEOUTS.DIALOG_APPEAR });
+      // Wait for conditional fields to appear after toggle (use .first() for responsive layouts)
+      await page.locator('input[name="clientId"]').first().waitFor({ state: 'visible', timeout: WAIT_TIMEOUTS.DIALOG_APPEAR });
     }
     await fillAndSubmitStep('Discord Linked Roles', {
       clientId: 'discord-client-id',
@@ -321,11 +337,11 @@ test.describe('Setup Wizard', () => {
     await page.goto('/setup');
     await waitForLoadingGone(page);
 
-    // Verify the hidden input exists and has correct data-testid
-    const providerHiddenInput = page.getByTestId('setup-input-provider-hidden');
+    // Verify the hidden input exists and has correct data-testid (use .first() for responsive layouts)
+    const providerHiddenInput = page.getByTestId('setup-input-provider-hidden').first();
 
     // The hidden input should exist but not be visible
-    const exists = await providerHiddenInput.count();
+    const exists = await page.getByTestId('setup-input-provider-hidden').count();
 
     if (exists > 0) {
       // Hidden input should have display: none or visibility: hidden

@@ -1,5 +1,5 @@
 import { Page, expect } from '@playwright/test';
-import { TEST_USERS } from '../fixtures/auth';
+import { TEST_USERS } from '../fixtures/factories';
 
 /**
  * Standard timeout constants for E2E tests
