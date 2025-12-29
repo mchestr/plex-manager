@@ -5,8 +5,6 @@
 import { http, HttpResponse } from 'msw'
 import {
   TEST_USERS,
-  createUser,
-  createAnnouncement,
   type AnnouncementData,
   type TestUser,
 } from '../../fixtures/factories'

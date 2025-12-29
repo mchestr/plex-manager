@@ -5,12 +5,6 @@
 import { http, HttpResponse } from 'msw'
 import { TEST_USERS, toSessionUser, type TestUser } from '../../fixtures/factories'
 
-// Track current session state per test
-type SessionState = {
-  user: ReturnType<typeof toSessionUser> | null
-  expires: string
-}
-
 // Default session expires in 24 hours
 const getDefaultExpiry = () => new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
 

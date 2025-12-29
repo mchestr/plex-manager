@@ -23,11 +23,10 @@
  * ```
  */
 
-import { test as base, expect as baseExpect, type Page, type BrowserContext, type Browser } from '@playwright/test'
+import { test as base, expect as baseExpect, type Page } from '@playwright/test'
 import { createNetworkFixture, type NetworkFixture } from '@msw/playwright'
-import { http, HttpResponse } from 'msw'
 import { handlers } from '../mocks/handlers'
-import { TEST_USERS, toSessionUser } from './factories'
+import { TEST_USERS } from './factories'
 
 /**
  * Custom fixtures for E2E tests
