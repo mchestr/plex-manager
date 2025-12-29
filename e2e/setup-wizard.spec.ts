@@ -69,8 +69,9 @@ test.describe('Setup Wizard', () => {
     // These fields have hidden inputs for form submission but are managed by custom UI components
     const HIDDEN_FIELDS = ['provider']; // Dropdown with hidden input for form submission
 
-    // Fields that use custom button-based dropdowns (ComboboxField)
-    const COMBOBOX_FIELDS = ['model']; // Model selector uses button-based combobox
+    // Fields that use custom button-based dropdowns (StyledDropdown)
+    // The model dropdown appears after API key is entered and models are loaded from the API
+    const DROPDOWN_FIELDS = ['model'];
 
     // Helper function to fill and submit a form step
     const fillAndSubmitStep = async (stepName: string, fields: Record<string, string>) => {
@@ -91,16 +92,24 @@ test.describe('Setup Wizard', () => {
           continue;
         }
 
-        // Handle combobox fields (button-based dropdowns)
-        if (COMBOBOX_FIELDS.includes(name)) {
-          console.log(`[TEST] Handling combobox field: ${name}`);
-          await input.waitFor({ state: 'visible', timeout: WAIT_TIMEOUTS.DIALOG_APPEAR });
-          await input.click();
-          // Wait for dropdown to open and select the option using data-testid pattern
-          const option = page.getByTestId(`setup-input-${name}-option-${value}`);
-          await option.waitFor({ state: 'visible', timeout: WAIT_TIMEOUTS.DIALOG_APPEAR });
-          await option.click();
-          continue;
+        // Handle StyledDropdown fields (button-based dropdowns)
+        if (DROPDOWN_FIELDS.includes(name)) {
+          console.log(`[TEST] Handling dropdown field: ${name}`);
+          // Wait for the dropdown button to be visible (models may need to load first)
+          await input.waitFor({ state: 'visible', timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
+
+          // Check if it's actually a button (StyledDropdown) or an input
+          const tagName = await input.evaluate((el) => el.tagName);
+          if (tagName === 'BUTTON') {
+            // Click to open dropdown
+            await input.click();
+            // Wait for dropdown to open and select the option
+            const option = page.getByTestId(`setup-input-${name}-option-${value}`);
+            await option.waitFor({ state: 'visible', timeout: WAIT_TIMEOUTS.DIALOG_APPEAR });
+            await option.click();
+            continue;
+          }
+          // If it's an INPUT, fall through to regular handling below
         }
 
         // Wait for element to be attached to DOM first
