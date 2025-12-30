@@ -80,4 +80,33 @@ test.describe('Admin Functionality', () => {
     // Wait for page content to be visible (not just accessible)
     await expect(adminPage.locator('main')).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
   });
+
+  test('should toggle Jellyfin login visibility in settings', async ({ adminPage }) => {
+    // Navigate to settings
+    await adminPage.locator('aside').getByTestId('admin-nav-settings').first().click();
+    await waitForAdminContent(adminPage, [
+      { type: 'heading', value: 'Settings' }
+    ], { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+
+    // Look for the Jellyfin login toggle - it should only be visible if Jellyfin is configured
+    const jellyfinToggle = adminPage.getByTestId('jellyfin-login-toggle');
+
+    // If Jellyfin is configured, test the toggle functionality
+    if (await jellyfinToggle.isVisible({ timeout: 5000 }).catch(() => false)) {
+      // Get current button text
+      const buttonText = await jellyfinToggle.textContent();
+
+      // Click the toggle
+      await jellyfinToggle.click();
+
+      // Wait for the toggle to update (button text should change)
+      await expect(jellyfinToggle).not.toHaveText(buttonText!, { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+
+      // Click again to restore original state
+      await jellyfinToggle.click();
+
+      // Verify it changed back
+      await expect(jellyfinToggle).toHaveText(buttonText!, { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+    }
+  });
 });

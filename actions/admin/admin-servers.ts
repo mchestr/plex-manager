@@ -2,6 +2,7 @@
 
 import { requireAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/prisma"
+import { z } from "zod"
 
 /**
  * Get Jellyfin libraries for invite creation
@@ -569,6 +570,8 @@ export async function deleteJellyfinServer() {
   }
 }
 
+const toggleJellyfinLoginSchema = z.boolean()
+
 /**
  * Toggle Jellyfin login visibility (admin only)
  * When disabled, Jellyfin won't appear as a login option on the home page
@@ -576,12 +579,17 @@ export async function deleteJellyfinServer() {
 export async function toggleJellyfinLogin(enabled: boolean) {
   await requireAdmin()
 
+  const validated = toggleJellyfinLoginSchema.safeParse(enabled)
+  if (!validated.success) {
+    return { success: false, error: "Invalid input: enabled must be a boolean" }
+  }
+
   try {
     const { revalidatePath } = await import("next/cache")
 
     await prisma.jellyfinServer.updateMany({
       where: { isActive: true },
-      data: { enabledForLogin: enabled },
+      data: { enabledForLogin: validated.data },
     })
 
     revalidatePath("/admin/settings")
