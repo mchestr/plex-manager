@@ -1,7 +1,7 @@
 "use client"
 
 import { disconnectDiscordAccount, resyncDiscordRole } from "@/actions/discord"
-import { useToast } from "@/components/ui/toast"
+import { useToast } from "@/components/ui/sonner"
 import { cn } from "@/lib/utils"
 import { useEffect, useRef, useTransition } from "react"
 

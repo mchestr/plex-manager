@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { usePathname, useRouter } from "next/navigation"
-import { StyledDropdown } from "@/components/ui/styled-dropdown"
+import { StyledDropdown } from "@/components/ui/select"
 
 interface HistoricalVersion {
   id: string

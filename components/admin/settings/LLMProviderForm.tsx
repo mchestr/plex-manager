@@ -1,9 +1,9 @@
 "use client"
 
 import { updateChatLLMProvider, updateWrappedLLMProvider } from "@/actions/admin"
-import { StyledDropdown } from "@/components/ui/styled-dropdown"
-import { StyledInput } from "@/components/ui/styled-input"
-import { useToast } from "@/components/ui/toast"
+import { StyledDropdown } from "@/components/ui/select"
+import { StyledInput } from "@/components/ui/input"
+import { useToast } from "@/components/ui/sonner"
 import { useRouter } from "next/navigation"
 import { useEffect, useState, useTransition } from "react"
 

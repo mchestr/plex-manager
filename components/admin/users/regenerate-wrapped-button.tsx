@@ -1,10 +1,10 @@
 "use client"
 
 import { generatePlexWrapped } from "@/actions/users"
-import { useToast } from "@/components/ui/toast"
+import { useToast } from "@/components/ui/sonner"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { ConfirmModal } from "@/components/admin/shared/confirm-modal"
+import { ConfirmModal } from "@/components/ui/alert-dialog"
 
 interface RegenerateWrappedButtonProps {
   userId: string

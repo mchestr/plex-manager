@@ -1,9 +1,9 @@
 "use client"
 
 import { updateDiscordIntegrationSettings } from "@/actions/discord"
-import { StyledCheckbox } from "@/components/ui/styled-checkbox"
-import { StyledInput } from "@/components/ui/styled-input"
-import { useToast } from "@/components/ui/toast"
+import { StyledCheckbox } from "@/components/ui/checkbox"
+import { StyledInput } from "@/components/ui/input"
+import { useToast } from "@/components/ui/sonner"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 

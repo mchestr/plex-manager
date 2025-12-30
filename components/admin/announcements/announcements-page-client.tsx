@@ -8,8 +8,8 @@ import {
   setAnnouncementActive,
   updateAnnouncement,
 } from "@/actions/announcements"
-import { ConfirmModal } from "@/components/admin/shared/confirm-modal"
-import { useToast } from "@/components/ui/toast"
+import { ConfirmModal } from "@/components/ui/alert-dialog"
+import { useToast } from "@/components/ui/sonner"
 import { useCallback, useState } from "react"
 import { AnnouncementFormModal, type AnnouncementFormData } from "./announcement-form-modal"
 import { AnnouncementListItem } from "./announcement-list-item"

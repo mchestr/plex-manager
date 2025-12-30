@@ -1,7 +1,7 @@
 "use client"
 
 import { importPlexUsers } from "@/actions/import-plex-users"
-import { useToast } from "@/components/ui/toast"
+import { useToast } from "@/components/ui/sonner"
 import { useTransition } from "react"
 
 export function ImportPlexUsersButton() {

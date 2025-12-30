@@ -8,7 +8,7 @@ import {
   setActivePromptTemplate,
 } from "@/actions/prompts"
 import { PromptTemplate } from "@/lib/generated/prisma/client"
-import { ConfirmModal } from "@/components/admin/shared/confirm-modal"
+import { ConfirmModal } from "@/components/ui/alert-dialog"
 
 interface PromptTemplateActionsProps {
   template: PromptTemplate

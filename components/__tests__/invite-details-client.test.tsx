@@ -26,7 +26,7 @@ jest.mock('next/image', () => ({
 // Mock toast
 const mockShowSuccess = jest.fn()
 const mockShowError = jest.fn()
-jest.mock('@/components/ui/toast', () => ({
+jest.mock('@/components/ui/sonner', () => ({
   useToast: () => ({
     showSuccess: mockShowSuccess,
     showError: mockShowError,
@@ -34,7 +34,7 @@ jest.mock('@/components/ui/toast', () => ({
 }))
 
 // Mock ConfirmModal
-jest.mock('@/components/admin/shared/confirm-modal', () => ({
+jest.mock('@/components/ui/alert-dialog', () => ({
   ConfirmModal: ({ isOpen, onConfirm, onClose, title, message }: any) =>
     isOpen ? (
       <div data-testid="confirm-modal">

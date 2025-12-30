@@ -1,7 +1,7 @@
 "use client"
 
 import { setLLMDisabled } from "@/actions/admin"
-import { useToast } from "@/components/ui/toast"
+import { useToast } from "@/components/ui/sonner"
 import { useRouter } from "next/navigation"
 import { useTransition } from "react"
 

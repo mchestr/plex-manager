@@ -2,8 +2,8 @@
 
 import { getDevDefaults, type DevDefaults } from "@/actions/dev-defaults"
 import { fetchLLMModels, saveChatLLMProvider, saveLLMProvider } from "@/actions/setup"
-import { StyledDropdown } from "@/components/ui/styled-dropdown"
-import { StyledInput } from "@/components/ui/styled-input"
+import { StyledDropdown } from "@/components/ui/select"
+import { StyledInput } from "@/components/ui/input"
 import { type LLMProviderInput } from "@/lib/validations/llm-provider"
 import { useCallback, useEffect, useRef, useState, useTransition } from "react"
 

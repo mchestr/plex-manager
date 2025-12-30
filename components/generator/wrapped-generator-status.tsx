@@ -1,6 +1,6 @@
 "use client"
 
-import { useToast } from "@/components/ui/toast"
+import { useToast } from "@/components/ui/sonner"
 import Link from "next/link"
 import { useEffect } from "react"
 

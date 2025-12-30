@@ -1,6 +1,6 @@
 "use client"
 
-import { StyledDropdown, DropdownOption } from "./styled-dropdown"
+import { StyledDropdown, DropdownOption } from "./select"
 
 interface MonthDayPickerProps {
   month: string // "01" to "12"

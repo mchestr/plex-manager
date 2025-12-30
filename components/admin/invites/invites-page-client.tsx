@@ -3,8 +3,8 @@
 import { createInvite, deleteInvite, getInvites } from "@/actions/invite"
 import { getAvailableLibraries } from "@/actions/server-info"
 import { getJellyfinLibraries } from "@/actions/admin/admin-servers"
-import { useToast } from "@/components/ui/toast"
-import { ConfirmModal } from "@/components/admin/shared/confirm-modal"
+import { useToast } from "@/components/ui/sonner"
+import { ConfirmModal } from "@/components/ui/alert-dialog"
 import Link from "next/link"
 import { useCallback, useEffect, useState } from "react"
 

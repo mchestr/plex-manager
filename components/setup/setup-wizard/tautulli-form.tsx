@@ -2,7 +2,7 @@
 
 import { getDevDefaults, type DevDefaults } from "@/actions/dev-defaults"
 import { saveTautulli } from "@/actions/setup"
-import { StyledInput } from "@/components/ui/styled-input"
+import { StyledInput } from "@/components/ui/input"
 import { type TautulliInput } from "@/lib/validations/tautulli"
 import { useEffect, useRef, useState, useTransition } from "react"
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { StyledInput } from "@/components/ui/styled-input"
+import { StyledInput } from "@/components/ui/input"
 
 export interface AnnouncementFormData {
   title: string

@@ -1,7 +1,7 @@
 "use client"
 
 import { setLLMDisabled } from "@/actions/admin"
-import { useToast } from "@/components/ui/toast"
+import { useToast } from "@/components/ui/sonner"
 import { useState } from "react"
 
 interface LLMToggleProps {

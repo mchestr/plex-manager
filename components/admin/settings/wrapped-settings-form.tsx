@@ -2,8 +2,8 @@
 
 import { updateWrappedSettings } from "@/actions/admin"
 import { DateRangePicker } from "@/components/ui/date-range-picker"
-import { StyledCheckbox } from "@/components/ui/styled-checkbox"
-import { useToast } from "@/components/ui/toast"
+import { StyledCheckbox } from "@/components/ui/checkbox"
+import { useToast } from "@/components/ui/sonner"
 import { useRouter } from "next/navigation"
 import { useState, useTransition, useEffect } from "react"
 

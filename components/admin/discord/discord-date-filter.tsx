@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation"
 import { useCallback } from "react"
-import { StyledInput } from "@/components/ui/styled-input"
+import { StyledInput } from "@/components/ui/input"
 
 export function DiscordDateFilter() {
   const router = useRouter()

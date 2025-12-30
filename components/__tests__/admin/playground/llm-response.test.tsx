@@ -8,8 +8,8 @@ const mockShowSuccess = jest.fn()
 const mockShowInfo = jest.fn()
 const mockShowToast = jest.fn()
 
-jest.mock('@/components/ui/toast', () => {
-  const actual = jest.requireActual('@/components/ui/toast')
+jest.mock('@/components/ui/sonner', () => {
+  const actual = jest.requireActual('@/components/ui/sonner')
   return {
     ...actual,
     useToast: () => ({

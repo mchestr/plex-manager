@@ -2,7 +2,7 @@
 
 import { savePlaygroundWrapped } from "@/actions/playground-wrapped"
 import { testPromptTemplate } from "@/actions/prompt-test"
-import { useToast } from "@/components/ui/toast"
+import { useToast } from "@/components/ui/sonner"
 import { usePlaygroundState } from "@/hooks/use-playground-state"
 import { estimateCost } from "@/lib/llm/pricing"
 import { parseWrappedResponse } from "@/lib/wrapped/prompt"

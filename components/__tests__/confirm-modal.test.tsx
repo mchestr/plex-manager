@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { ConfirmModal } from '@/components/admin/shared/confirm-modal'
+import { ConfirmModal } from '@/components/ui/alert-dialog'
 
 describe('ConfirmModal', () => {
   const defaultProps = {
@@ -13,13 +13,6 @@ describe('ConfirmModal', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    // Mock document.body.style.overflow
-    Object.defineProperty(document.body, 'style', {
-      value: {
-        overflow: '',
-      },
-      writable: true,
-    })
   })
 
   it('should not render when isOpen is false', () => {
@@ -35,8 +28,8 @@ describe('ConfirmModal', () => {
 
   it('should render default button texts', () => {
     render(<ConfirmModal {...defaultProps} />)
-    expect(screen.getByText('Confirm')).toBeInTheDocument()
-    expect(screen.getByText('Cancel')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Confirm' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
   })
 
   it('should render custom button texts', () => {
@@ -47,22 +40,24 @@ describe('ConfirmModal', () => {
         cancelText="Keep"
       />
     )
-    expect(screen.getByText('Delete')).toBeInTheDocument()
-    expect(screen.getByText('Keep')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Keep' })).toBeInTheDocument()
   })
 
-  it('should call onConfirm when confirm button is clicked', async () => {
+  it('should call onConfirm and onClose when confirm button is clicked', async () => {
     const user = userEvent.setup()
     const onConfirm = jest.fn()
     const onClose = jest.fn()
 
     render(<ConfirmModal {...defaultProps} onConfirm={onConfirm} onClose={onClose} />)
 
-    const confirmButton = screen.getByText('Confirm')
+    const confirmButton = screen.getByRole('button', { name: 'Confirm' })
     await user.click(confirmButton)
 
-    expect(onConfirm).toHaveBeenCalledTimes(1)
-    expect(onClose).toHaveBeenCalledTimes(1)
+    await waitFor(() => {
+      expect(onConfirm).toHaveBeenCalledTimes(1)
+      expect(onClose).toHaveBeenCalledTimes(1)
+    })
   })
 
   it('should call onClose when cancel button is clicked', async () => {
@@ -71,34 +66,12 @@ describe('ConfirmModal', () => {
 
     render(<ConfirmModal {...defaultProps} onClose={onClose} />)
 
-    const cancelButton = screen.getByText('Cancel')
+    const cancelButton = screen.getByRole('button', { name: 'Cancel' })
     await user.click(cancelButton)
 
-    expect(onClose).toHaveBeenCalledTimes(1)
-  })
-
-  it('should call onClose when backdrop is clicked', async () => {
-    const user = userEvent.setup()
-    const onClose = jest.fn()
-
-    render(<ConfirmModal {...defaultProps} onClose={onClose} />)
-
-    const backdrop = document.querySelector('.fixed.inset-0')
-    await user.click(backdrop!)
-
-    expect(onClose).toHaveBeenCalledTimes(1)
-  })
-
-  it('should not call onClose when modal content is clicked', async () => {
-    const user = userEvent.setup()
-    const onClose = jest.fn()
-
-    render(<ConfirmModal {...defaultProps} onClose={onClose} />)
-
-    const modalContent = screen.getByText('Test Message')
-    await user.click(modalContent)
-
-    expect(onClose).not.toHaveBeenCalled()
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalledTimes(1)
+    })
   })
 
   it('should call onClose when ESC key is pressed', async () => {
@@ -109,25 +82,14 @@ describe('ConfirmModal', () => {
 
     await user.keyboard('{Escape}')
 
-    expect(onClose).toHaveBeenCalledTimes(1)
-  })
-
-  it('should prevent body scroll when modal is open', () => {
-    render(<ConfirmModal {...defaultProps} />)
-    expect(document.body.style.overflow).toBe('hidden')
-  })
-
-  it('should restore body scroll when modal is closed', () => {
-    const { rerender } = render(<ConfirmModal {...defaultProps} />)
-    expect(document.body.style.overflow).toBe('hidden')
-
-    rerender(<ConfirmModal {...defaultProps} isOpen={false} />)
-    expect(document.body.style.overflow).toBe('')
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalledTimes(1)
+    })
   })
 
   it('should apply custom confirm button class', () => {
     render(<ConfirmModal {...defaultProps} confirmButtonClass="bg-red-600 hover:bg-red-700" />)
-    const confirmButton = screen.getByText('Confirm')
+    const confirmButton = screen.getByRole('button', { name: 'Confirm' })
     expect(confirmButton).toHaveClass('bg-red-600', 'hover:bg-red-700')
   })
 
@@ -137,5 +99,15 @@ describe('ConfirmModal', () => {
     const messageContainer = screen.getByText(longMessage).closest('.max-h-\\[60vh\\]')
     expect(messageContainer).toHaveClass('overflow-y-auto')
   })
-})
 
+  it('should have proper accessibility attributes', () => {
+    render(<ConfirmModal {...defaultProps} />)
+
+    // AlertDialog should have proper role
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument()
+
+    // Title and description should be accessible
+    expect(screen.getByText('Test Title')).toBeInTheDocument()
+    expect(screen.getByText('Test Message')).toBeInTheDocument()
+  })
+})

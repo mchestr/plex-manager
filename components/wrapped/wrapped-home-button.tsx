@@ -2,7 +2,7 @@
 
 import { getWrappedSettings } from "@/actions/admin"
 import { generatePlexWrapped, getUserPlexWrapped } from "@/actions/users"
-import { useToast } from "@/components/ui/toast"
+import { useToast } from "@/components/ui/sonner"
 import { WrappedGeneratingAnimation } from "@/components/generator/wrapped-generating-animation"
 import { WrappedShareButton } from "@/components/wrapped/wrapped-share-button"
 import Link from "next/link"

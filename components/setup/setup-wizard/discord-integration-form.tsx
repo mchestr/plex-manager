@@ -2,8 +2,8 @@
 
 import { getDevDefaults, type DevDefaults } from "@/actions/dev-defaults"
 import { saveDiscordIntegration } from "@/actions/setup"
-import { StyledInput } from "@/components/ui/styled-input"
-import { StyledTextarea } from "@/components/ui/styled-textarea"
+import { StyledInput } from "@/components/ui/input"
+import { StyledTextarea } from "@/components/ui/textarea"
 import { type DiscordIntegrationInput } from "@/lib/validations/discord"
 import { useCallback, useEffect, useRef, useState, useTransition } from "react"
 

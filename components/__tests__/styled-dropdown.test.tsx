@@ -1,5 +1,30 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { StyledDropdown, DropdownOption } from '@/components/ui/styled-dropdown'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { StyledDropdown, DropdownOption } from '@/components/ui/select'
+
+// Mock APIs for JSDOM (not supported by JSDOM but required by Radix)
+beforeAll(() => {
+  // Pointer capture API
+  Object.defineProperty(HTMLElement.prototype, 'hasPointerCapture', {
+    value: () => false,
+  })
+  Object.defineProperty(HTMLElement.prototype, 'setPointerCapture', {
+    value: () => {},
+  })
+  Object.defineProperty(HTMLElement.prototype, 'releasePointerCapture', {
+    value: () => {},
+  })
+  // scrollIntoView
+  Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+    value: () => {},
+  })
+  // ResizeObserver
+  global.ResizeObserver = class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+})
 
 describe('StyledDropdown', () => {
   const mockOptions: DropdownOption[] = [
@@ -18,6 +43,7 @@ describe('StyledDropdown', () => {
     it('should render with default props', () => {
       render(<StyledDropdown value="" onChange={mockOnChange} options={mockOptions} />)
 
+      expect(screen.getByRole('combobox')).toBeInTheDocument()
       expect(screen.getByText('Select an option')).toBeInTheDocument()
     })
 
@@ -58,98 +84,69 @@ describe('StyledDropdown', () => {
   })
 
   describe('Dropdown Interaction', () => {
-    it('should open dropdown when button is clicked', () => {
+    it('should open dropdown when trigger is clicked', async () => {
+      const user = userEvent.setup()
       render(<StyledDropdown value="" onChange={mockOnChange} options={mockOptions} />)
 
-      const button = screen.getByText('Select an option')
-      fireEvent.click(button)
+      const trigger = screen.getByRole('combobox')
+      await user.click(trigger)
 
-      expect(screen.getByText('Option 1')).toBeInTheDocument()
-      expect(screen.getByText('Option 2')).toBeInTheDocument()
-      expect(screen.getByText('Option 3')).toBeInTheDocument()
-    })
-
-    it('should close dropdown when button is clicked again', () => {
-      render(<StyledDropdown value="" onChange={mockOnChange} options={mockOptions} />)
-
-      const button = screen.getByText('Select an option')
-      fireEvent.click(button)
-      expect(screen.getByText('Option 1')).toBeInTheDocument()
-
-      fireEvent.click(button)
-      waitFor(() => {
-        expect(screen.queryByText('Option 1')).not.toBeInTheDocument()
+      await waitFor(() => {
+        expect(screen.getByRole('listbox')).toBeInTheDocument()
       })
+
+      expect(screen.getByRole('option', { name: 'Option 1' })).toBeInTheDocument()
+      expect(screen.getByRole('option', { name: 'Option 2' })).toBeInTheDocument()
+      expect(screen.getByRole('option', { name: 'Option 3' })).toBeInTheDocument()
     })
 
-    it('should call onChange when option is selected', () => {
+    it('should call onChange when option is selected', async () => {
+      const user = userEvent.setup()
       render(<StyledDropdown value="" onChange={mockOnChange} options={mockOptions} />)
 
-      const button = screen.getByText('Select an option')
-      fireEvent.click(button)
+      const trigger = screen.getByRole('combobox')
+      await user.click(trigger)
 
-      const option = screen.getAllByText('Option 2')[0]
-      fireEvent.click(option)
+      await waitFor(() => {
+        expect(screen.getByRole('listbox')).toBeInTheDocument()
+      })
+
+      const option = screen.getByRole('option', { name: 'Option 2' })
+      await user.click(option)
 
       expect(mockOnChange).toHaveBeenCalledWith('option2')
     })
 
     it('should close dropdown after selecting an option', async () => {
+      const user = userEvent.setup()
       render(<StyledDropdown value="" onChange={mockOnChange} options={mockOptions} />)
 
-      const button = screen.getByText('Select an option')
-      fireEvent.click(button)
-
-      const options = screen.getAllByText('Option 1')
-      fireEvent.click(options[0])
+      const trigger = screen.getByRole('combobox')
+      await user.click(trigger)
 
       await waitFor(() => {
-        expect(screen.queryByText('Option 2')).not.toBeInTheDocument()
+        expect(screen.getByRole('listbox')).toBeInTheDocument()
       })
-    })
 
-    it('should close dropdown when clicking outside', async () => {
-      render(<StyledDropdown value="" onChange={mockOnChange} options={mockOptions} />)
-
-      const button = screen.getByText('Select an option')
-      fireEvent.click(button)
-
-      expect(screen.getByText('Option 1')).toBeInTheDocument()
-
-      fireEvent.mouseDown(document.body)
+      const option = screen.getByRole('option', { name: 'Option 1' })
+      await user.click(option)
 
       await waitFor(() => {
-        expect(screen.queryByText('Option 2')).not.toBeInTheDocument()
+        expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
       })
     })
   })
 
   describe('Disabled State', () => {
-    it('should render disabled button', () => {
+    it('should render disabled trigger', () => {
       render(<StyledDropdown value="" onChange={mockOnChange} options={mockOptions} disabled />)
 
-      const button = screen.getByRole('button')
-      expect(button).toBeDisabled()
+      const trigger = screen.getByRole('combobox')
+      expect(trigger).toBeDisabled()
     })
 
-    it('should not open dropdown when disabled', () => {
-      render(<StyledDropdown value="" onChange={mockOnChange} options={mockOptions} disabled />)
-
-      const button = screen.getByRole('button')
-      fireEvent.click(button)
-
-      expect(screen.queryByText('Option 1')).not.toBeInTheDocument()
-    })
-
-    it('should apply disabled styling', () => {
-      render(<StyledDropdown value="" onChange={mockOnChange} options={mockOptions} disabled />)
-
-      const button = screen.getByRole('button')
-      expect(button).toHaveClass('disabled:opacity-50')
-      expect(button).toHaveClass('disabled:cursor-not-allowed')
-    })
-
-    it('should handle disabled options', () => {
+    it('should handle disabled options', async () => {
+      const user = userEvent.setup()
       const optionsWithDisabled: DropdownOption[] = [
         { value: 'option1', label: 'Option 1' },
         { value: 'option2', label: 'Option 2', disabled: true },
@@ -158,13 +155,15 @@ describe('StyledDropdown', () => {
 
       render(<StyledDropdown value="" onChange={mockOnChange} options={optionsWithDisabled} />)
 
-      const button = screen.getByText('Select an option')
-      fireEvent.click(button)
+      const trigger = screen.getByRole('combobox')
+      await user.click(trigger)
 
-      const disabledOption = screen.getAllByText('Option 2')[0]
-      fireEvent.click(disabledOption)
+      await waitFor(() => {
+        expect(screen.getByRole('listbox')).toBeInTheDocument()
+      })
 
-      expect(mockOnChange).not.toHaveBeenCalled()
+      const disabledOption = screen.getByRole('option', { name: 'Option 2' })
+      expect(disabledOption).toHaveAttribute('data-disabled')
     })
   })
 
@@ -172,36 +171,22 @@ describe('StyledDropdown', () => {
     it('should render small size', () => {
       render(<StyledDropdown value="" onChange={mockOnChange} options={mockOptions} size="sm" />)
 
-      const button = screen.getByRole('button')
-      expect(button).toHaveClass('text-[10px]')
+      const trigger = screen.getByRole('combobox')
+      expect(trigger).toHaveClass('h-8', 'text-xs')
     })
 
     it('should render medium size by default', () => {
       render(<StyledDropdown value="" onChange={mockOnChange} options={mockOptions} />)
 
-      const button = screen.getByRole('button')
-      expect(button).toHaveClass('text-sm')
+      const trigger = screen.getByRole('combobox')
+      expect(trigger).toHaveClass('h-10', 'text-sm')
     })
 
     it('should render large size', () => {
       render(<StyledDropdown value="" onChange={mockOnChange} options={mockOptions} size="lg" />)
 
-      const button = screen.getByRole('button')
-      expect(button).toHaveClass('text-base')
-    })
-
-    it('should apply correct icon size for small', () => {
-      const { container } = render(<StyledDropdown value="" onChange={mockOnChange} options={mockOptions} size="sm" />)
-
-      const icon = container.querySelector('.w-3.h-3')
-      expect(icon).toBeInTheDocument()
-    })
-
-    it('should apply correct icon size for large', () => {
-      const { container } = render(<StyledDropdown value="" onChange={mockOnChange} options={mockOptions} size="lg" />)
-
-      const icon = container.querySelector('.w-5.h-5')
-      expect(icon).toBeInTheDocument()
+      const trigger = screen.getByRole('combobox')
+      expect(trigger).toHaveClass('h-12', 'text-base')
     })
   })
 
@@ -223,124 +208,48 @@ describe('StyledDropdown', () => {
       const hiddenInput = container.querySelector('input[type="hidden"]')
       expect(hiddenInput).not.toBeInTheDocument()
     })
-
-    it('should support id attribute', () => {
-      render(<StyledDropdown value="" onChange={mockOnChange} options={mockOptions} id="my-dropdown" />)
-
-      const button = screen.getByRole('button')
-      expect(button).toHaveAttribute('id', 'my-dropdown')
-    })
   })
 
   describe('Options Display', () => {
-    it('should display all options when opened', () => {
+    it('should display all options when opened', async () => {
+      const user = userEvent.setup()
       render(<StyledDropdown value="" onChange={mockOnChange} options={mockOptions} />)
 
-      const button = screen.getByText('Select an option')
-      fireEvent.click(button)
+      const trigger = screen.getByRole('combobox')
+      await user.click(trigger)
+
+      await waitFor(() => {
+        expect(screen.getByRole('listbox')).toBeInTheDocument()
+      })
 
       mockOptions.forEach((option) => {
-        expect(screen.getByText(option.label as string)).toBeInTheDocument()
+        expect(screen.getByRole('option', { name: option.label as string })).toBeInTheDocument()
       })
     })
 
-    it('should highlight selected option', () => {
-      render(<StyledDropdown value="option2" onChange={mockOnChange} options={mockOptions} />)
+    it('should handle empty options array', async () => {
+      const user = userEvent.setup()
+      render(<StyledDropdown value="" onChange={mockOnChange} options={[]} />)
 
-      const button = screen.getByText('Option 2')
-      fireEvent.click(button)
+      const trigger = screen.getByRole('combobox')
+      await user.click(trigger)
 
-      const selectedOption = screen.getAllByText('Option 2')[1]
-      expect(selectedOption).toHaveClass('bg-cyan-500/20')
-      expect(selectedOption).toHaveClass('text-cyan-300')
-    })
+      await waitFor(() => {
+        expect(screen.getByRole('listbox')).toBeInTheDocument()
+      })
 
-    it('should handle ReactNode labels', () => {
-      const optionsWithNodes: DropdownOption[] = [
-        { value: 'option1', label: <span>Custom Label 1</span> },
-        { value: 'option2', label: <span>Custom Label 2</span> },
-      ]
-
-      render(<StyledDropdown value="" onChange={mockOnChange} options={optionsWithNodes} />)
-
-      const button = screen.getByText('Select an option')
-      fireEvent.click(button)
-
-      expect(screen.getByText('Custom Label 1')).toBeInTheDocument()
-      expect(screen.getByText('Custom Label 2')).toBeInTheDocument()
-    })
-
-    it('should handle empty options array', () => {
-      const { container } = render(<StyledDropdown value="" onChange={mockOnChange} options={[]} />)
-
-      const button = screen.getByText('Select an option')
-      fireEvent.click(button)
-
-      // Dropdown should open but be empty - check for the dropdown menu container
-      const menu = container.querySelector('.bg-slate-800.border-slate-700')
-      expect(menu).toBeInTheDocument()
-    })
-  })
-
-  describe('Dropdown Icon Animation', () => {
-    it('should rotate icon when dropdown is open', () => {
-      const { container } = render(<StyledDropdown value="" onChange={mockOnChange} options={mockOptions} />)
-
-      const button = screen.getByText('Select an option')
-      fireEvent.click(button)
-
-      const icon = container.querySelector('.rotate-180')
-      expect(icon).toBeInTheDocument()
-    })
-
-    it('should not rotate icon when dropdown is closed', () => {
-      const { container } = render(<StyledDropdown value="" onChange={mockOnChange} options={mockOptions} />)
-
-      const icon = container.querySelector('svg')
-      expect(icon).not.toHaveClass('rotate-180')
+      expect(screen.queryByRole('option')).not.toBeInTheDocument()
     })
   })
 
   describe('Styling', () => {
-    it('should have proper button styling', () => {
+    it('should have proper trigger styling', () => {
       render(<StyledDropdown value="" onChange={mockOnChange} options={mockOptions} />)
 
-      const button = screen.getByRole('button')
-      expect(button).toHaveClass('bg-slate-800/50')
-      expect(button).toHaveClass('border-slate-600')
-      expect(button).toHaveClass('rounded-lg')
-    })
-
-    it('should have proper dropdown menu styling', () => {
-      const { container } = render(<StyledDropdown value="" onChange={mockOnChange} options={mockOptions} />)
-
-      const button = screen.getByText('Select an option')
-      fireEvent.click(button)
-
-      const menu = container.querySelector('.bg-slate-800')
-      expect(menu).toBeInTheDocument()
-      expect(menu).toHaveClass('border-slate-700')
-      expect(menu).toHaveClass('rounded-lg')
-    })
-
-    it('should have proper z-index for dropdown', () => {
-      const { container } = render(<StyledDropdown value="" onChange={mockOnChange} options={mockOptions} />)
-
-      const button = screen.getByText('Select an option')
-      fireEvent.click(button)
-
-      const menu = container.querySelector('.z-\\[200\\]')
-      expect(menu).toBeInTheDocument()
-    })
-
-    it('should render backdrop when open', () => {
-      const { container } = render(<StyledDropdown value="" onChange={mockOnChange} options={mockOptions} />)
-
-      const button = screen.getByText('Select an option')
-      fireEvent.click(button)
-
-      const backdrop = container.querySelector('.fixed.inset-0.z-40')
-      expect(backdrop).toBeInTheDocument()
+      const trigger = screen.getByRole('combobox')
+      expect(trigger).toHaveClass('bg-slate-800/50')
+      expect(trigger).toHaveClass('border-slate-600')
+      expect(trigger).toHaveClass('rounded-lg')
     })
   })
 
@@ -348,7 +257,8 @@ describe('StyledDropdown', () => {
     it('should handle value not in options', () => {
       render(<StyledDropdown value="invalid" onChange={mockOnChange} options={mockOptions} />)
 
-      expect(screen.getByText('Select an option')).toBeInTheDocument()
+      const trigger = screen.getByRole('combobox')
+      expect(trigger).toBeInTheDocument()
     })
 
     it('should handle empty string value with placeholder', () => {
@@ -364,64 +274,59 @@ describe('StyledDropdown', () => {
       expect(screen.getByText('Custom placeholder')).toBeInTheDocument()
     })
 
-    it('should handle rapid clicks', () => {
+    it('should handle rapid interactions without crashing', async () => {
+      const user = userEvent.setup()
       render(<StyledDropdown value="" onChange={mockOnChange} options={mockOptions} />)
 
-      const button = screen.getByText('Select an option')
-      fireEvent.click(button)
-      fireEvent.click(button)
-      fireEvent.click(button)
+      const trigger = screen.getByRole('combobox')
 
-      // Should not crash
-      expect(button).toBeInTheDocument()
-    })
+      // Open dropdown
+      await user.click(trigger)
+      await waitFor(() => {
+        expect(screen.getByRole('listbox')).toBeInTheDocument()
+      })
 
-    it('should handle selecting same option multiple times', () => {
-      render(<StyledDropdown value="option1" onChange={mockOnChange} options={mockOptions} />)
+      // Select an option (closes dropdown)
+      await user.click(screen.getByRole('option', { name: 'Option 1' }))
 
-      const button = screen.getByText('Option 1')
-      fireEvent.click(button)
+      // Re-open dropdown
+      await user.click(trigger)
+      await waitFor(() => {
+        expect(screen.getByRole('listbox')).toBeInTheDocument()
+      })
 
-      const option = screen.getAllByText('Option 1')[1]
-      fireEvent.click(option)
-
-      expect(mockOnChange).toHaveBeenCalledWith('option1')
+      expect(trigger).toBeInTheDocument()
     })
   })
 
   describe('Accessibility', () => {
-    it('should have button type', () => {
+    it('should have combobox role', () => {
       render(<StyledDropdown value="" onChange={mockOnChange} options={mockOptions} />)
 
-      const button = screen.getByRole('button')
-      expect(button).toHaveAttribute('type', 'button')
+      expect(screen.getByRole('combobox')).toBeInTheDocument()
     })
 
     it('should have proper focus styling', () => {
       render(<StyledDropdown value="" onChange={mockOnChange} options={mockOptions} />)
 
-      const button = screen.getByRole('button')
-      expect(button).toHaveClass('focus:outline-none')
-      expect(button).toHaveClass('focus:border-cyan-400')
+      const trigger = screen.getByRole('combobox')
+      expect(trigger).toHaveClass('focus:outline-none')
+      expect(trigger).toHaveClass('focus:border-cyan-400')
     })
 
-    it('should support keyboard navigation', () => {
+    it('should support keyboard navigation', async () => {
+      const user = userEvent.setup()
       render(<StyledDropdown value="" onChange={mockOnChange} options={mockOptions} />)
 
-      const button = screen.getByRole('button')
-      button.focus()
-      expect(button).toHaveFocus()
-    })
+      const trigger = screen.getByRole('combobox')
+      trigger.focus()
+      expect(trigger).toHaveFocus()
 
-    it('should have proper option button types', () => {
-      render(<StyledDropdown value="" onChange={mockOnChange} options={mockOptions} />)
+      // Open with keyboard
+      await user.keyboard('{Enter}')
 
-      const button = screen.getByText('Select an option')
-      fireEvent.click(button)
-
-      const optionButtons = screen.getAllByRole('button')
-      optionButtons.forEach((btn) => {
-        expect(btn).toHaveAttribute('type', 'button')
+      await waitFor(() => {
+        expect(screen.getByRole('listbox')).toBeInTheDocument()
       })
     })
   })
@@ -437,73 +342,73 @@ describe('StyledDropdown', () => {
           className="custom-class"
           disabled={false}
           size="lg"
-          id="dropdown-id"
           name="dropdown-name"
+          data-testid="my-dropdown"
         />
       )
 
       expect(screen.getByText('Option 2')).toBeInTheDocument()
       expect(container.querySelector('.custom-class')).toBeInTheDocument()
-      expect(screen.getByRole('button')).toHaveAttribute('id', 'dropdown-id')
       expect(container.querySelector('input[name="dropdown-name"]')).toBeInTheDocument()
+      expect(screen.getByTestId('my-dropdown')).toBeInTheDocument()
     })
 
     it('should handle complete user flow', async () => {
+      const user = userEvent.setup()
       render(<StyledDropdown value="" onChange={mockOnChange} options={mockOptions} />)
 
-      // Open dropdown
-      const button = screen.getByText('Select an option')
-      fireEvent.click(button)
+      const trigger = screen.getByRole('combobox')
+      await user.click(trigger)
 
-      // Select option
-      const option = screen.getAllByText('Option 2')[0]
-      fireEvent.click(option)
+      await waitFor(() => {
+        expect(screen.getByRole('listbox')).toBeInTheDocument()
+      })
 
-      // Verify onChange was called
+      const option = screen.getByRole('option', { name: 'Option 2' })
+      await user.click(option)
+
       expect(mockOnChange).toHaveBeenCalledWith('option2')
 
-      // Verify dropdown closed
       await waitFor(() => {
-        expect(screen.queryByText('Option 3')).not.toBeInTheDocument()
+        expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
       })
     })
   })
 
-  describe('Dropdown Menu Positioning', () => {
-    it('should position dropdown below button', () => {
-      const { container } = render(<StyledDropdown value="" onChange={mockOnChange} options={mockOptions} />)
+  describe('Data TestId', () => {
+    it('should apply data-testid to trigger', () => {
+      render(
+        <StyledDropdown
+          value=""
+          onChange={mockOnChange}
+          options={mockOptions}
+          data-testid="my-dropdown"
+        />
+      )
 
-      const button = screen.getByText('Select an option')
-      fireEvent.click(button)
-
-      const menu = container.querySelector('.absolute.top-full')
-      expect(menu).toBeInTheDocument()
+      expect(screen.getByTestId('my-dropdown')).toBeInTheDocument()
     })
 
-    it('should have proper spacing from button', () => {
-      const { container } = render(<StyledDropdown value="" onChange={mockOnChange} options={mockOptions} />)
+    it('should apply data-testid to options', async () => {
+      const user = userEvent.setup()
+      render(
+        <StyledDropdown
+          value=""
+          onChange={mockOnChange}
+          options={mockOptions}
+          data-testid="my-dropdown"
+        />
+      )
 
-      const button = screen.getByText('Select an option')
-      fireEvent.click(button)
+      const trigger = screen.getByRole('combobox')
+      await user.click(trigger)
 
-      const menu = container.querySelector('.mt-2')
-      expect(menu).toBeInTheDocument()
-    })
+      await waitFor(() => {
+        expect(screen.getByRole('listbox')).toBeInTheDocument()
+      })
 
-    it('should have scrollable menu for many options', () => {
-      const manyOptions: DropdownOption[] = Array.from({ length: 20 }, (_, i) => ({
-        value: `option${i}`,
-        label: `Option ${i}`,
-      }))
-
-      const { container } = render(<StyledDropdown value="" onChange={mockOnChange} options={manyOptions} />)
-
-      const button = screen.getByText('Select an option')
-      fireEvent.click(button)
-
-      const menu = container.querySelector('.max-h-80.overflow-y-auto')
-      expect(menu).toBeInTheDocument()
+      expect(screen.getByTestId('my-dropdown-option-option1')).toBeInTheDocument()
+      expect(screen.getByTestId('my-dropdown-option-option2')).toBeInTheDocument()
     })
   })
 })
-

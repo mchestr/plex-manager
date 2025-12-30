@@ -15,7 +15,7 @@ jest.mock('@/actions/prompts', () => ({
 }))
 
 // Mock ConfirmModal
-jest.mock('@/components/admin/shared/confirm-modal', () => ({
+jest.mock('@/components/ui/alert-dialog', () => ({
   ConfirmModal: ({ isOpen, onClose, onConfirm, title, message, confirmText, cancelText }: any) => {
     if (!isOpen) return null
     return (

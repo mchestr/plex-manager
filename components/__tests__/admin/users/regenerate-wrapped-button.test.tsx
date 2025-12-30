@@ -1,6 +1,6 @@
 import * as usersAction from '@/actions/users'
 import { RegenerateWrappedButton } from '@/components/admin/users/regenerate-wrapped-button'
-import { ToastProvider } from '@/components/ui/toast'
+import { ToastProvider } from '@/components/ui/sonner'
 import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useRouter } from 'next/navigation'
@@ -17,7 +17,7 @@ jest.mock('next/navigation', () => ({
 }))
 
 // Mock ConfirmModal
-jest.mock('@/components/admin/shared/confirm-modal', () => ({
+jest.mock('@/components/ui/alert-dialog', () => ({
   ConfirmModal: ({ isOpen, onClose, onConfirm, title, message, confirmText, cancelText }: any) => {
     if (!isOpen) return null
     return (

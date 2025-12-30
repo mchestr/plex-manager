@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { WrappedPageClient } from '@/components/wrapped/wrapped-page-client'
-import { ToastProvider } from '@/components/ui/toast'
+import { ToastProvider } from '@/components/ui/sonner'
 import * as userActions from '@/actions/users'
 
 // Mock the user actions

@@ -1,8 +1,8 @@
 "use client"
 
 import { deleteInvite, getInviteDetails } from "@/actions/invite"
-import { useToast } from "@/components/ui/toast"
-import { ConfirmModal } from "@/components/admin/shared/confirm-modal"
+import { useToast } from "@/components/ui/sonner"
+import { ConfirmModal } from "@/components/ui/alert-dialog"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"

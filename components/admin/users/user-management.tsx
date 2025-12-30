@@ -1,7 +1,7 @@
 "use client"
 
 import { generateAllPlexWrapped } from "@/actions/users"
-import { useToast } from "@/components/ui/toast"
+import { useToast } from "@/components/ui/sonner"
 import Link from "next/link"
 import { useState } from "react"
 

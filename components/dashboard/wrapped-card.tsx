@@ -2,7 +2,7 @@
 
 import { getWrappedSettings } from "@/actions/admin"
 import { generatePlexWrapped, getUserPlexWrapped } from "@/actions/users"
-import { useToast } from "@/components/ui/toast"
+import { useToast } from "@/components/ui/sonner"
 import { motion } from "framer-motion"
 import Link from "next/link"
 import { useRouter } from "next/navigation"

@@ -1,7 +1,7 @@
 "use client"
 
-import { StyledDropdown } from "@/components/ui/styled-dropdown"
-import { StyledInput } from "@/components/ui/styled-input"
+import { StyledDropdown } from "@/components/ui/select"
+import { StyledInput } from "@/components/ui/input"
 import { WrappedStatistics } from "@/types/wrapped"
 import { StatisticsViewer } from "@/components/admin/playground/statistics-viewer"
 

@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { LLMToggle } from '@/components/admin/settings/llm-toggle'
 import * as adminActions from '@/actions/admin'
-import { ToastProvider } from '@/components/ui/toast'
+import { ToastProvider } from '@/components/ui/sonner'
 
 // Mock the admin actions
 jest.mock('@/actions/admin', () => ({
@@ -14,8 +14,8 @@ jest.mock('@/actions/admin', () => ({
 const mockShowError = jest.fn()
 const mockShowSuccess = jest.fn()
 
-jest.mock('@/components/ui/toast', () => {
-  const actual = jest.requireActual('@/components/ui/toast')
+jest.mock('@/components/ui/sonner', () => {
+  const actual = jest.requireActual('@/components/ui/sonner')
   return {
     ...actual,
     useToast: () => ({

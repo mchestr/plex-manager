@@ -2,7 +2,7 @@
 
 import { getUserPlexWrapped } from "@/actions/users"
 import { WrappedGeneratingAnimation } from "@/components/generator/wrapped-generating-animation"
-import { useToast } from "@/components/ui/toast"
+import { useToast } from "@/components/ui/sonner"
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 

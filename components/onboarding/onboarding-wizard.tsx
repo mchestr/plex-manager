@@ -6,7 +6,7 @@ import { JellyfinConfigurationStep } from "@/components/onboarding/onboarding-st
 import { JellyfinWelcomeStep } from "@/components/onboarding/onboarding-steps/jellyfin-welcome-step"
 import { FinalSuccessAnimation } from "@/components/setup/setup-wizard/final-success-animation"
 import { SuccessAnimation } from "@/components/setup/setup-wizard/success-animation"
-import { useToast } from "@/components/ui/toast"
+import { useToast } from "@/components/ui/sonner"
 import { type AuthService, getOnboardingSteps } from "@/types/onboarding"
 import { AnimatePresence, motion } from "framer-motion"
 import { useEffect, useState } from "react"

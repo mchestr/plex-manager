@@ -2,7 +2,7 @@
 
 import { getDevDefaults, type DevDefaults } from "@/actions/dev-defaults"
 import { saveRadarr } from "@/actions/setup"
-import { StyledInput } from "@/components/ui/styled-input"
+import { StyledInput } from "@/components/ui/input"
 import { type RadarrInput } from "@/lib/validations/radarr"
 import { useEffect, useRef, useState, useTransition } from "react"
 

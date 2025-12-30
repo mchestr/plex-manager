@@ -1,8 +1,8 @@
 "use client"
 
 import { updateOverseerr, updatePlexServer, updatePrometheus, updateRadarr, updateSonarr, updateTautulli, updateJellyfinServer } from "@/actions/admin"
-import { StyledInput } from "@/components/ui/styled-input"
-import { useToast } from "@/components/ui/toast"
+import { StyledInput } from "@/components/ui/input"
+import { useToast } from "@/components/ui/sonner"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 

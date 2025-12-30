@@ -2,7 +2,7 @@
 
 import { getDevDefaults, type DevDefaults } from "@/actions/dev-defaults"
 import { savePlexServer } from "@/actions/setup"
-import { StyledInput } from "@/components/ui/styled-input"
+import { StyledInput } from "@/components/ui/input"
 import { type PlexServerInput } from "@/lib/validations/plex"
 import { memo, useCallback, useEffect, useRef, useState, useTransition } from "react"
 

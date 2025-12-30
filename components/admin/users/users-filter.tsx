@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { StyledDropdown } from "@/components/ui/styled-dropdown"
+import { StyledDropdown } from "@/components/ui/select"
 
 export interface UsersFilter {
   plexAccess: "all" | "yes" | "no" | "unknown"

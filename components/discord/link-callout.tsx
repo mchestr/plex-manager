@@ -1,8 +1,8 @@
 "use client"
 
 import { disconnectDiscordAccount } from "@/actions/discord"
-import { ConfirmModal } from "@/components/admin/shared/confirm-modal"
-import { useToast } from "@/components/ui/toast"
+import { ConfirmModal } from "@/components/ui/alert-dialog"
+import { useToast } from "@/components/ui/sonner"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
