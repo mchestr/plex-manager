@@ -202,6 +202,7 @@ export function WatchlistSyncCard() {
             `}
             role="switch"
             aria-checked={isEnabled}
+            aria-label={isEnabled ? "Disable watchlist sync" : "Enable watchlist sync"}
             data-testid="watchlist-sync-toggle"
           >
             <span

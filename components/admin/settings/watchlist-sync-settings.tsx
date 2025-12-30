@@ -157,6 +157,7 @@ export function WatchlistSyncSettings() {
             `}
             role="switch"
             aria-checked={settings.watchlistSyncEnabled}
+            aria-label={settings.watchlistSyncEnabled ? "Disable watchlist sync" : "Enable watchlist sync"}
             data-testid="watchlist-sync-global-toggle"
           >
             <span

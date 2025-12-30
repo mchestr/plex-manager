@@ -3,9 +3,12 @@
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { requireAdmin } from "@/lib/admin"
+import { createLogger } from "@/lib/utils/logger"
 import { globalWatchlistSyncSettingsSchema } from "@/lib/validations/watchlist"
 import { syncUserWatchlist } from "@/lib/watchlist/sync-service"
 import { getServerSession } from "next-auth"
+
+const logger = createLogger("ADMIN_WATCHLIST_ACTIONS")
 
 /**
  * Get global watchlist sync settings (admin only)
@@ -33,7 +36,7 @@ export async function getGlobalWatchlistSyncSettings() {
       },
     }
   } catch (error) {
-    console.error("Error fetching global watchlist sync settings:", error)
+    logger.error("Error fetching global watchlist sync settings", error)
     return { success: false as const, error: "Failed to fetch settings" }
   }
 }
@@ -86,7 +89,7 @@ export async function updateGlobalWatchlistSyncSettings(data: unknown) {
 
     return { success: true as const }
   } catch (error) {
-    console.error("Error updating global watchlist sync settings:", error)
+    logger.error("Error updating global watchlist sync settings", error)
     return { success: false as const, error: "Failed to update settings" }
   }
 }
@@ -136,7 +139,7 @@ export async function getWatchlistSyncStats() {
       },
     }
   } catch (error) {
-    console.error("Error fetching watchlist sync stats:", error)
+    logger.error("Error fetching watchlist sync stats", error)
     return { success: false as const, error: "Failed to fetch stats" }
   }
 }
@@ -173,7 +176,7 @@ export async function forceUserWatchlistSync(userId: string) {
       data: result.data,
     }
   } catch (error) {
-    console.error("Error forcing user watchlist sync:", error)
+    logger.error("Error forcing user watchlist sync", error)
     return { success: false as const, error: "Failed to sync" }
   }
 }

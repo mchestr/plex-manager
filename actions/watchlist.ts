@@ -2,10 +2,13 @@
 
 import { WatchlistSyncStatus } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
+import { createLogger } from "@/lib/utils/logger"
 import { updateWatchlistSyncSettingsSchema } from "@/lib/validations/watchlist"
 import { syncUserWatchlist } from "@/lib/watchlist/sync-service"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
+
+const logger = createLogger("WATCHLIST_ACTIONS")
 
 /**
  * Get current user's watchlist sync settings and status
@@ -86,7 +89,7 @@ export async function getWatchlistSyncSettings() {
       },
     }
   } catch (error) {
-    console.error("Error fetching watchlist sync settings:", error)
+    logger.error("Error fetching watchlist sync settings", error)
     return { success: false as const, error: "Failed to fetch settings" }
   }
 }
@@ -159,7 +162,7 @@ export async function updateWatchlistSyncSettings(data: unknown) {
 
     return { success: true as const }
   } catch (error) {
-    console.error("Error updating watchlist sync settings:", error)
+    logger.error("Error updating watchlist sync settings", error)
     return { success: false as const, error: "Failed to update settings" }
   }
 }
@@ -195,7 +198,7 @@ export async function triggerWatchlistSync() {
       data: result.data,
     }
   } catch (error) {
-    console.error("Error triggering watchlist sync:", error)
+    logger.error("Error triggering watchlist sync", error)
     return { success: false as const, error: "Failed to trigger sync" }
   }
 }
@@ -251,7 +254,7 @@ export async function getWatchlistSyncHistory(options?: {
       },
     }
   } catch (error) {
-    console.error("Error fetching watchlist sync history:", error)
+    logger.error("Error fetching watchlist sync history", error)
     return { success: false as const, error: "Failed to fetch history" }
   }
 }
