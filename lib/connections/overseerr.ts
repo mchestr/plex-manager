@@ -231,3 +231,143 @@ export async function batchGetOverseerrMediaStatus(
 
   return results
 }
+
+// Overseerr media status codes
+export const OverseerrMediaStatus = {
+  UNKNOWN: 1,
+  PENDING: 2,
+  PROCESSING: 3,
+  PARTIALLY_AVAILABLE: 4,
+  AVAILABLE: 5,
+} as const
+
+export interface SubmitOverseerrRequestPayload {
+  mediaType: "movie" | "tv"
+  mediaId: number // TMDB ID
+  seasons?: number[] // For TV shows, which seasons to request
+  is4k?: boolean
+}
+
+export interface SubmitOverseerrRequestResult {
+  success: boolean
+  requestId?: number
+  error?: string
+  status: "created" | "already_requested" | "already_available" | "failed"
+}
+
+/**
+ * Submit a media request to Overseerr
+ * @param config Overseerr configuration
+ * @param payload Request details (mediaType, mediaId, optional seasons)
+ */
+export async function submitOverseerrRequest(
+  config: OverseerrParsed,
+  payload: SubmitOverseerrRequestPayload
+): Promise<SubmitOverseerrRequestResult> {
+  try {
+    // First check if media already exists/is requested
+    const existingStatus = await getOverseerrMediaByTmdbId(config, payload.mediaId, payload.mediaType)
+
+    if (existingStatus.success && existingStatus.data) {
+      const status = existingStatus.data.status
+
+      // Check if already available
+      if (status === OverseerrMediaStatus.AVAILABLE || status === OverseerrMediaStatus.PARTIALLY_AVAILABLE) {
+        logger.debug("Media already available in Overseerr", {
+          tmdbId: payload.mediaId,
+          mediaType: payload.mediaType,
+          status,
+        })
+        return {
+          success: true,
+          status: "already_available",
+        }
+      }
+
+      // Check if already requested (pending or processing)
+      if (status === OverseerrMediaStatus.PENDING || status === OverseerrMediaStatus.PROCESSING) {
+        logger.debug("Media already requested in Overseerr", {
+          tmdbId: payload.mediaId,
+          mediaType: payload.mediaType,
+          status,
+        })
+        return {
+          success: true,
+          requestId: existingStatus.data.requests?.[0]?.id,
+          status: "already_requested",
+        }
+      }
+    }
+
+    // Submit the request
+    const url = `${config.url}/api/v1/request`
+    const body: Record<string, unknown> = {
+      mediaType: payload.mediaType,
+      mediaId: payload.mediaId,
+    }
+
+    if (payload.seasons && payload.seasons.length > 0) {
+      body.seasons = payload.seasons
+    }
+
+    if (payload.is4k !== undefined) {
+      body.is4k = payload.is4k
+    }
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Api-Key": config.apiKey,
+      },
+      body: JSON.stringify(body),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      const errorMessage = errorData.message || response.statusText
+
+      // Check for specific error cases
+      if (response.status === 409 || errorMessage.includes("already")) {
+        return {
+          success: true,
+          status: "already_requested",
+        }
+      }
+
+      logger.error("Overseerr request submission failed", undefined, {
+        status: response.status,
+        error: errorMessage,
+        tmdbId: payload.mediaId,
+        mediaType: payload.mediaType,
+      })
+
+      return {
+        success: false,
+        error: errorMessage,
+        status: "failed",
+      }
+    }
+
+    const data = await response.json()
+
+    logger.info("Overseerr request submitted successfully", {
+      requestId: data.id,
+      tmdbId: payload.mediaId,
+      mediaType: payload.mediaType,
+    })
+
+    return {
+      success: true,
+      requestId: data.id,
+      status: "created",
+    }
+  } catch (error) {
+    logger.error("Error submitting Overseerr request", error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+      status: "failed",
+    }
+  }
+}
