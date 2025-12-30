@@ -422,3 +422,440 @@ export async function getSummaryStats(
     })),
   }
 }
+
+/**
+ * Get help command statistics
+ */
+export interface HelpCommandStats {
+  totalHelpRequests: number
+  helpByTopic: { topic: string; count: number }[]
+  generalHelpCount: number
+  specificHelpCount: number
+}
+
+export async function getHelpCommandStats(
+  startDate: Date,
+  endDate: Date
+): Promise<HelpCommandStats> {
+  const where = {
+    commandType: "HELP" as DiscordCommandType,
+    createdAt: {
+      gte: startDate,
+      lt: endDate,
+    },
+  }
+
+  const logs = await prisma.discordCommandLog.findMany({
+    where,
+    select: {
+      commandArgs: true,
+    },
+  })
+
+  // Count by topic (commandArgs contains the help topic)
+  const topicCounts = new Map<string, number>()
+  let generalHelpCount = 0
+  let specificHelpCount = 0
+
+  for (const log of logs) {
+    const topic = log.commandArgs?.trim() || "general"
+    if (topic === "general" || topic === "") {
+      generalHelpCount++
+    } else {
+      specificHelpCount++
+    }
+    topicCounts.set(topic, (topicCounts.get(topic) || 0) + 1)
+  }
+
+  // Convert to sorted array
+  const helpByTopic = Array.from(topicCounts.entries())
+    .map(([topic, count]) => ({ topic: topic || "general", count }))
+    .sort((a, b) => b.count - a.count)
+
+  return {
+    totalHelpRequests: logs.length,
+    helpByTopic,
+    generalHelpCount,
+    specificHelpCount,
+  }
+}
+
+/**
+ * Get account linking metrics
+ */
+export interface AccountLinkingMetrics {
+  totalLinkRequests: number
+  uniqueUnlinkedUsers: number
+  linkRequestsByDay: { date: string; count: number }[]
+  repeatRequestUsers: {
+    discordUserId: string
+    discordUsername: string | null
+    requestCount: number
+  }[]
+}
+
+export async function getAccountLinkingMetrics(
+  startDate: Date,
+  endDate: Date
+): Promise<AccountLinkingMetrics> {
+  const where = {
+    commandType: "LINK_REQUEST" as DiscordCommandType,
+    createdAt: {
+      gte: startDate,
+      lt: endDate,
+    },
+  }
+
+  const [totalLinkRequests, userGroups, logs] = await Promise.all([
+    prisma.discordCommandLog.count({ where }),
+    prisma.discordCommandLog.groupBy({
+      by: ["discordUserId", "discordUsername"],
+      where,
+      _count: true,
+    }),
+    prisma.discordCommandLog.findMany({
+      where,
+      select: { createdAt: true },
+      orderBy: { createdAt: "asc" },
+    }),
+  ])
+
+  // Group by date for trend
+  const requestsByDate = new Map<string, number>()
+  for (const log of logs) {
+    const dateKey = log.createdAt.toISOString().split("T")[0]
+    requestsByDate.set(dateKey, (requestsByDate.get(dateKey) || 0) + 1)
+  }
+
+  const linkRequestsByDay = Array.from(requestsByDate.entries()).map(
+    ([date, count]) => ({ date, count })
+  )
+
+  // Find users with multiple requests (repeat requesters)
+  const repeatRequestUsers = userGroups
+    .filter((u) => u._count > 1)
+    .sort((a, b) => b._count - a._count)
+    .map((u) => ({
+      discordUserId: u.discordUserId,
+      discordUsername: u.discordUsername,
+      requestCount: u._count,
+    }))
+
+  return {
+    totalLinkRequests,
+    uniqueUnlinkedUsers: userGroups.length,
+    linkRequestsByDay,
+    repeatRequestUsers,
+  }
+}
+
+/**
+ * Get media marking breakdown by command
+ */
+export interface MediaMarkingBreakdown {
+  byCommand: {
+    commandName: string
+    count: number
+    successCount: number
+    failedCount: number
+  }[]
+  topMediaMarked: { title: string; count: number }[]
+}
+
+export async function getMediaMarkingBreakdown(
+  startDate: Date,
+  endDate: Date
+): Promise<MediaMarkingBreakdown> {
+  const where = {
+    commandType: "MEDIA_MARK" as DiscordCommandType,
+    createdAt: {
+      gte: startDate,
+      lt: endDate,
+    },
+  }
+
+  const [commandGroups, logs] = await Promise.all([
+    prisma.discordCommandLog.groupBy({
+      by: ["commandName"],
+      where,
+      _count: true,
+    }),
+    prisma.discordCommandLog.findMany({
+      where,
+      select: {
+        commandName: true,
+        commandArgs: true,
+        status: true,
+      },
+    }),
+  ])
+
+  // Calculate success/failed per command
+  const commandStats = new Map<
+    string,
+    { count: number; successCount: number; failedCount: number }
+  >()
+
+  for (const log of logs) {
+    const existing = commandStats.get(log.commandName) || {
+      count: 0,
+      successCount: 0,
+      failedCount: 0,
+    }
+    existing.count++
+    if (log.status === "SUCCESS") {
+      existing.successCount++
+    } else if (log.status === "FAILED") {
+      existing.failedCount++
+    }
+    commandStats.set(log.commandName, existing)
+  }
+
+  const byCommand = commandGroups
+    .sort((a, b) => b._count - a._count)
+    .map((g) => {
+      const stats = commandStats.get(g.commandName) || {
+        count: 0,
+        successCount: 0,
+        failedCount: 0,
+      }
+      return {
+        commandName: g.commandName,
+        count: g._count,
+        successCount: stats.successCount,
+        failedCount: stats.failedCount,
+      }
+    })
+
+  // Extract media titles from commandArgs (top 10)
+  const titleCounts = new Map<string, number>()
+  for (const log of logs) {
+    if (log.commandArgs && log.status === "SUCCESS") {
+      const title = log.commandArgs.trim()
+      if (title) {
+        titleCounts.set(title, (titleCounts.get(title) || 0) + 1)
+      }
+    }
+  }
+
+  const topMediaMarked = Array.from(titleCounts.entries())
+    .map(([title, count]) => ({ title, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10)
+
+  return {
+    byCommand,
+    topMediaMarked,
+  }
+}
+
+/**
+ * Get context clear metrics
+ */
+export interface ContextMetrics {
+  totalClears: number
+  clearsByCommand: { commandName: string; count: number }[]
+  topClearUsers: {
+    discordUserId: string
+    discordUsername: string | null
+    clearCount: number
+  }[]
+}
+
+export async function getContextMetrics(
+  startDate: Date,
+  endDate: Date
+): Promise<ContextMetrics> {
+  const where = {
+    commandType: "CLEAR_CONTEXT" as DiscordCommandType,
+    createdAt: {
+      gte: startDate,
+      lt: endDate,
+    },
+  }
+
+  const [totalClears, commandGroups, userGroups] = await Promise.all([
+    prisma.discordCommandLog.count({ where }),
+    prisma.discordCommandLog.groupBy({
+      by: ["commandName"],
+      where,
+      _count: true,
+    }),
+    prisma.discordCommandLog.groupBy({
+      by: ["discordUserId", "discordUsername"],
+      where,
+      _count: true,
+    }),
+  ])
+
+  return {
+    totalClears,
+    clearsByCommand: commandGroups
+      .sort((a, b) => b._count - a._count)
+      .map((g) => ({
+        commandName: g.commandName,
+        count: g._count,
+      })),
+    topClearUsers: userGroups
+      .sort((a, b) => b._count - a._count)
+      .slice(0, 10)
+      .map((u) => ({
+        discordUserId: u.discordUserId,
+        discordUsername: u.discordUsername,
+        clearCount: u._count,
+      })),
+  }
+}
+
+/**
+ * Get error analysis
+ */
+export interface ErrorAnalysis {
+  totalErrors: number
+  errorsByType: { commandType: string; count: number }[]
+  errorsByCommand: {
+    commandName: string
+    count: number
+    sampleErrors: string[]
+  }[]
+  errorTrend: { date: string; count: number }[]
+}
+
+export async function getErrorAnalysis(
+  startDate: Date,
+  endDate: Date
+): Promise<ErrorAnalysis> {
+  const where = {
+    status: { in: ["FAILED", "TIMEOUT"] as DiscordCommandStatus[] },
+    createdAt: {
+      gte: startDate,
+      lt: endDate,
+    },
+  }
+
+  const [totalErrors, typeGroups, commandGroups, logs] = await Promise.all([
+    prisma.discordCommandLog.count({ where }),
+    prisma.discordCommandLog.groupBy({
+      by: ["commandType"],
+      where,
+      _count: true,
+    }),
+    prisma.discordCommandLog.groupBy({
+      by: ["commandName"],
+      where,
+      _count: true,
+    }),
+    prisma.discordCommandLog.findMany({
+      where,
+      select: {
+        commandName: true,
+        error: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "asc" },
+    }),
+  ])
+
+  // Collect sample errors per command (up to 3 samples)
+  const errorSamples = new Map<string, string[]>()
+  for (const log of logs) {
+    if (log.error) {
+      const samples = errorSamples.get(log.commandName) || []
+      if (samples.length < 3) {
+        samples.push(log.error)
+        errorSamples.set(log.commandName, samples)
+      }
+    }
+  }
+
+  // Group by date for trend
+  const errorsByDate = new Map<string, number>()
+  for (const log of logs) {
+    const dateKey = log.createdAt.toISOString().split("T")[0]
+    errorsByDate.set(dateKey, (errorsByDate.get(dateKey) || 0) + 1)
+  }
+
+  return {
+    totalErrors,
+    errorsByType: typeGroups
+      .sort((a, b) => b._count - a._count)
+      .map((g) => ({
+        commandType: g.commandType,
+        count: g._count,
+      })),
+    errorsByCommand: commandGroups
+      .sort((a, b) => b._count - a._count)
+      .slice(0, 10)
+      .map((g) => ({
+        commandName: g.commandName,
+        count: g._count,
+        sampleErrors: errorSamples.get(g.commandName) || [],
+      })),
+    errorTrend: Array.from(errorsByDate.entries()).map(([date, count]) => ({
+      date,
+      count,
+    })),
+  }
+}
+
+/**
+ * Get selection menu statistics
+ */
+export interface SelectionMenuStats {
+  totalSelections: number
+  selectionsByNumber: { selection: string; count: number }[]
+  successRate: number
+  avgResponseTimeMs: number | null
+}
+
+export async function getSelectionMenuStats(
+  startDate: Date,
+  endDate: Date
+): Promise<SelectionMenuStats> {
+  const where = {
+    commandType: "SELECTION" as DiscordCommandType,
+    createdAt: {
+      gte: startDate,
+      lt: endDate,
+    },
+  }
+
+  const [totalSelections, successCount, avgResponse, logs] = await Promise.all([
+    prisma.discordCommandLog.count({ where }),
+    prisma.discordCommandLog.count({ where: { ...where, status: "SUCCESS" } }),
+    prisma.discordCommandLog.aggregate({
+      where,
+      _avg: { responseTimeMs: true },
+    }),
+    prisma.discordCommandLog.findMany({
+      where,
+      select: { commandArgs: true },
+    }),
+  ])
+
+  // Count selections by number (1-5)
+  const selectionCounts = new Map<string, number>()
+  for (const log of logs) {
+    const selection = log.commandArgs?.trim() || "unknown"
+    selectionCounts.set(selection, (selectionCounts.get(selection) || 0) + 1)
+  }
+
+  const selectionsByNumber = Array.from(selectionCounts.entries())
+    .map(([selection, count]) => ({ selection, count }))
+    .sort((a, b) => {
+      // Sort numerically if possible
+      const aNum = parseInt(a.selection, 10)
+      const bNum = parseInt(b.selection, 10)
+      if (!isNaN(aNum) && !isNaN(bNum)) {
+        return aNum - bNum
+      }
+      return a.selection.localeCompare(b.selection)
+    })
+
+  return {
+    totalSelections,
+    selectionsByNumber,
+    successRate: totalSelections > 0 ? (successCount / totalSelections) * 100 : 0,
+    avgResponseTimeMs: avgResponse._avg.responseTimeMs,
+  }
+}

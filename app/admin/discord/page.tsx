@@ -1,10 +1,20 @@
-import { getDiscordDashboardData, getDiscordActivityLogs } from "@/actions/discord-activity"
+import {
+  getDiscordDashboardData,
+  getDiscordActivityLogs,
+  getDiscordDetailedStats,
+} from "@/actions/discord-activity"
 import { DiscordActivityTable } from "@/components/admin/discord/discord-activity-table"
 import { DiscordBotStatus } from "@/components/admin/discord/discord-bot-status"
 import { DiscordDateFilter } from "@/components/admin/discord/discord-date-filter"
 import { DiscordCommandChart } from "@/components/admin/discord/discord-command-chart"
 import { DiscordTrendChart } from "@/components/admin/discord/discord-trend-chart"
 import { DiscordActiveUsers } from "@/components/admin/discord/discord-active-users"
+import { DiscordHelpStats } from "@/components/admin/discord/discord-help-stats"
+import { DiscordLinkingMetrics } from "@/components/admin/discord/discord-linking-metrics"
+import { DiscordMediaMarkingBreakdown } from "@/components/admin/discord/discord-media-marking-breakdown"
+import { DiscordContextMetrics } from "@/components/admin/discord/discord-context-metrics"
+import { DiscordErrorAnalysis } from "@/components/admin/discord/discord-error-analysis"
+import { DiscordSelectionStats } from "@/components/admin/discord/discord-selection-stats"
 import { Suspense } from "react"
 
 export const dynamic = "force-dynamic"
@@ -25,14 +35,16 @@ export default async function DiscordDashboardPage({
   const startDate = params.startDate || defaultStartDate.toISOString().split("T")[0]
 
   // Fetch dashboard data
-  const [dashboardResult, logsResult] = await Promise.all([
+  const [dashboardResult, logsResult, detailedResult] = await Promise.all([
     getDiscordDashboardData({ startDate, endDate }),
     getDiscordActivityLogs({ limit: 20 }),
+    getDiscordDetailedStats({ startDate, endDate }),
   ])
 
   const dashboard = dashboardResult.success ? dashboardResult.data : null
   const logs = logsResult.success ? logsResult.logs : []
   const logsTotal = logsResult.success ? logsResult.total : 0
+  const detailed = detailedResult.success ? detailedResult.data : null
 
   // Format date range display
   const formatDateRange = () => {
@@ -214,6 +226,63 @@ export default async function DiscordDashboardPage({
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
+
+        {/* Detailed Analytics Section */}
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold text-white mb-4">
+            Detailed Analytics
+          </h2>
+
+          {/* Help Stats and Linking Metrics */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-white mb-4">
+                Help Command Usage
+              </h3>
+              <DiscordHelpStats data={detailed?.helpStats ?? null} />
+            </div>
+            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-white mb-4">
+                Account Linking
+              </h3>
+              <DiscordLinkingMetrics data={detailed?.linkingMetrics ?? null} />
+            </div>
+          </div>
+
+          {/* Media Marking Breakdown */}
+          <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6 mb-6">
+            <h3 className="text-lg font-semibold text-white mb-4">
+              Media Marking Breakdown
+            </h3>
+            <DiscordMediaMarkingBreakdown
+              data={detailed?.mediaMarkingBreakdown ?? null}
+            />
+          </div>
+
+          {/* Context Metrics and Selection Stats */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-white mb-4">
+                Context Management
+              </h3>
+              <DiscordContextMetrics data={detailed?.contextMetrics ?? null} />
+            </div>
+            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-white mb-4">
+                Selection Menu
+              </h3>
+              <DiscordSelectionStats data={detailed?.selectionStats ?? null} />
+            </div>
+          </div>
+
+          {/* Error Analysis */}
+          <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6 mb-6">
+            <h3 className="text-lg font-semibold text-white mb-4">
+              Error Analysis
+            </h3>
+            <DiscordErrorAnalysis data={detailed?.errorAnalysis ?? null} />
           </div>
         </div>
 
