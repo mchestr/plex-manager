@@ -511,8 +511,7 @@ export async function getAccountLinkingMetrics(
     prisma.discordCommandLog.groupBy({
       by: ["discordUserId", "discordUsername"],
       where,
-      _count: { _all: true },
-      orderBy: { _count: { discordUserId: "desc" } },
+      _count: true,
     }),
     prisma.discordCommandLog.findMany({
       where,
@@ -534,11 +533,12 @@ export async function getAccountLinkingMetrics(
 
   // Find users with multiple requests (repeat requesters)
   const repeatRequestUsers = userGroups
-    .filter((u) => u._count._all > 1)
+    .filter((u) => u._count > 1)
+    .sort((a, b) => b._count - a._count)
     .map((u) => ({
       discordUserId: u.discordUserId,
       discordUsername: u.discordUsername,
-      requestCount: u._count._all,
+      requestCount: u._count,
     }))
 
   return {
@@ -578,8 +578,7 @@ export async function getMediaMarkingBreakdown(
     prisma.discordCommandLog.groupBy({
       by: ["commandName"],
       where,
-      _count: { _all: true },
-      orderBy: { _count: { _all: "desc" } },
+      _count: true,
     }),
     prisma.discordCommandLog.findMany({
       where,
@@ -612,19 +611,21 @@ export async function getMediaMarkingBreakdown(
     commandStats.set(log.commandName, existing)
   }
 
-  const byCommand = commandGroups.map((g) => {
-    const stats = commandStats.get(g.commandName) || {
-      count: 0,
-      successCount: 0,
-      failedCount: 0,
-    }
-    return {
-      commandName: g.commandName,
-      count: g._count._all,
-      successCount: stats.successCount,
-      failedCount: stats.failedCount,
-    }
-  })
+  const byCommand = commandGroups
+    .sort((a, b) => b._count - a._count)
+    .map((g) => {
+      const stats = commandStats.get(g.commandName) || {
+        count: 0,
+        successCount: 0,
+        failedCount: 0,
+      }
+      return {
+        commandName: g.commandName,
+        count: g._count,
+        successCount: stats.successCount,
+        failedCount: stats.failedCount,
+      }
+    })
 
   // Extract media titles from commandArgs (top 10)
   const titleCounts = new Map<string, number>()
@@ -678,29 +679,31 @@ export async function getContextMetrics(
     prisma.discordCommandLog.groupBy({
       by: ["commandName"],
       where,
-      _count: { _all: true },
-      orderBy: { _count: { _all: "desc" } },
+      _count: true,
     }),
     prisma.discordCommandLog.groupBy({
       by: ["discordUserId", "discordUsername"],
       where,
-      _count: { _all: true },
-      orderBy: { _count: { discordUserId: "desc" } },
-      take: 10,
+      _count: true,
     }),
   ])
 
   return {
     totalClears,
-    clearsByCommand: commandGroups.map((g) => ({
-      commandName: g.commandName,
-      count: g._count._all,
-    })),
-    topClearUsers: userGroups.map((u) => ({
-      discordUserId: u.discordUserId,
-      discordUsername: u.discordUsername,
-      clearCount: u._count._all,
-    })),
+    clearsByCommand: commandGroups
+      .sort((a, b) => b._count - a._count)
+      .map((g) => ({
+        commandName: g.commandName,
+        count: g._count,
+      })),
+    topClearUsers: userGroups
+      .sort((a, b) => b._count - a._count)
+      .slice(0, 10)
+      .map((u) => ({
+        discordUserId: u.discordUserId,
+        discordUsername: u.discordUsername,
+        clearCount: u._count,
+      })),
   }
 }
 
@@ -735,15 +738,12 @@ export async function getErrorAnalysis(
     prisma.discordCommandLog.groupBy({
       by: ["commandType"],
       where,
-      _count: { _all: true },
-      orderBy: { _count: { _all: "desc" } },
+      _count: true,
     }),
     prisma.discordCommandLog.groupBy({
       by: ["commandName"],
       where,
-      _count: { _all: true },
-      orderBy: { _count: { _all: "desc" } },
-      take: 10,
+      _count: true,
     }),
     prisma.discordCommandLog.findMany({
       where,
@@ -777,15 +777,20 @@ export async function getErrorAnalysis(
 
   return {
     totalErrors,
-    errorsByType: typeGroups.map((g) => ({
-      commandType: g.commandType,
-      count: g._count._all,
-    })),
-    errorsByCommand: commandGroups.map((g) => ({
-      commandName: g.commandName,
-      count: g._count._all,
-      sampleErrors: errorSamples.get(g.commandName) || [],
-    })),
+    errorsByType: typeGroups
+      .sort((a, b) => b._count - a._count)
+      .map((g) => ({
+        commandType: g.commandType,
+        count: g._count,
+      })),
+    errorsByCommand: commandGroups
+      .sort((a, b) => b._count - a._count)
+      .slice(0, 10)
+      .map((g) => ({
+        commandName: g.commandName,
+        count: g._count,
+        sampleErrors: errorSamples.get(g.commandName) || [],
+      })),
     errorTrend: Array.from(errorsByDate.entries()).map(([date, count]) => ({
       date,
       count,
