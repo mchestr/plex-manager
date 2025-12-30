@@ -800,8 +800,8 @@ describe('AdminNav', () => {
         expect(firstMenuItem).toHaveFocus()
       })
 
-      // Navigate to last item (Sign Out) - there are 8 items total (6 menu items + Home + Sign Out)
-      for (let i = 0; i < 7; i++) {
+      // Navigate to last item (Sign Out) - there are 9 items total (7 menu items + Home + Sign Out)
+      for (let i = 0; i < 8; i++) {
         await user.keyboard('{ArrowDown}')
       }
 

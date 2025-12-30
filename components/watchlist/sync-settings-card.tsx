@@ -71,15 +71,28 @@ export function WatchlistSyncCard() {
     try {
       const result = await triggerWatchlistSync()
       if (result.success && result.data) {
-        const { itemsSynced, itemsRequested, itemsFailed } = result.data
-        if (itemsRequested > 0) {
+        // Handle queued response (when Redis is configured)
+        if ("queued" in result.data && result.data.queued) {
+          showSuccess(result.data.message || "Sync job queued")
+          await loadSettings()
+          return
+        }
+
+        // Handle direct sync response (when Redis is not configured)
+        const data = result.data as {
+          itemsSynced?: number
+          itemsRequested?: number
+          itemsFailed?: number
+        }
+        const { itemsSynced, itemsRequested, itemsFailed } = data
+        if (itemsRequested && itemsRequested > 0) {
           showSuccess(`Synced ${itemsSynced} items, requested ${itemsRequested} new items`)
-        } else if (itemsSynced > 0) {
+        } else if (itemsSynced && itemsSynced > 0) {
           showInfo(`Synced ${itemsSynced} items (all already available or requested)`)
         } else {
           showInfo("Watchlist is up to date")
         }
-        if (itemsFailed > 0) {
+        if (itemsFailed && itemsFailed > 0) {
           showError(`${itemsFailed} items failed to sync`)
         }
         await loadSettings()

@@ -169,6 +169,7 @@ export async function updateWatchlistSyncSettings(data: unknown) {
 
 /**
  * Trigger a manual sync for the current user
+ * Uses the job queue if Redis is configured, otherwise falls back to direct execution
  */
 export async function triggerWatchlistSync() {
   const session = await getServerSession(authOptions)
@@ -186,7 +187,33 @@ export async function triggerWatchlistSync() {
       return { success: false as const, error: "Watchlist sync is not enabled" }
     }
 
-    // Perform sync
+    // Check if queue is available (Redis configured)
+    const { isRedisConfigured } = await import("@/lib/queue/connection")
+
+    if (isRedisConfigured()) {
+      // Use job queue
+      const { addJob } = await import("@/lib/queue/client")
+      const { JOB_TYPES } = await import("@/lib/queue/types")
+
+      const jobId = await addJob(JOB_TYPES.WATCHLIST_SYNC_USER, {
+        userId: session.user.id,
+        triggeredBy: "manual",
+        triggeredByUserId: session.user.id,
+      })
+
+      logger.info("Watchlist sync job queued", { userId: session.user.id, jobId })
+
+      return {
+        success: true as const,
+        data: {
+          queued: true,
+          jobId,
+          message: "Sync job has been queued and will be processed shortly",
+        },
+      }
+    }
+
+    // Fallback: Direct execution when Redis is not configured
     const result = await syncUserWatchlist(session.user.id)
 
     if (!result.success) {
@@ -195,7 +222,10 @@ export async function triggerWatchlistSync() {
 
     return {
       success: true as const,
-      data: result.data,
+      data: {
+        queued: false,
+        ...result.data,
+      },
     }
   } catch (error) {
     logger.error("Error triggering watchlist sync", error)
