@@ -51,20 +51,31 @@ test.describe('Public Flows', () => {
   });
 
   test('onboarding page accessibility check', async ({ page }) => {
-
     await page.goto('/onboarding');
 
-    const isHome = page.url().endsWith('/');
-    const isSignin = page.url().includes('signin');
-    const isOnboarding = page.url().includes('/onboarding');
+    // Unauthenticated users should be redirected to home
+    // Wait for either the sign-in button (home page) or the onboarding wizard
+    // Using waitForSelector with a race condition to handle either outcome
+    const signInButton = page.getByTestId('sign-in-button');
+    const onboardingHeading = page.getByTestId('onboarding-wizard-heading');
 
-    if (isOnboarding) {
-      // If we stay on onboarding, verify the wizard is visible
-      await expect(page.getByTestId('onboarding-wizard-heading')).toBeVisible();
-      await expect(page.getByTestId('onboarding-wizard-subheading')).toBeVisible();
-    } else {
-      // If redirected, ensure we are on a safe page
-      expect(isHome || isSignin).toBeTruthy();
+    // Wait for either element to appear (whichever comes first)
+    await Promise.race([
+      signInButton.waitFor({ state: 'visible', timeout: WAIT_TIMEOUTS.PAGE_CONTENT }),
+      onboardingHeading.waitFor({ state: 'visible', timeout: WAIT_TIMEOUTS.PAGE_CONTENT }),
+    ]);
+
+    // After one element is visible, check which state we're in
+    const isOnHome = await signInButton.isVisible();
+    const isOnOnboarding = await onboardingHeading.isVisible();
+
+    // For unauthenticated users (the default in this test), we expect redirect to home
+    // For authenticated users with incomplete onboarding, we'd see the wizard
+    expect(isOnHome || isOnOnboarding).toBeTruthy();
+
+    if (isOnOnboarding) {
+      // Verify the subheading as well
+      await expect(page.getByTestId('onboarding-wizard-subheading')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
     }
   });
 
