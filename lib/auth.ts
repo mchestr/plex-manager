@@ -158,6 +158,7 @@ export const authOptions: NextAuthOptions = {
             dbUser = await prisma.user.create({
               data: {
                 plexUserId: plexUser.id,
+                plexAuthToken: authToken, // Store for watchlist sync
                 name: plexUser.username,
                 email: plexUser.email,
                 image: plexUser.thumb,
@@ -181,6 +182,7 @@ export const authOptions: NextAuthOptions = {
             dbUser = await prisma.user.update({
               where: { id: dbUser.id },
               data: {
+                plexAuthToken: authToken, // Update token on each login for watchlist sync
                 name: plexUser.username,
                 email: plexUser.email,
                 image: plexUser.thumb,
