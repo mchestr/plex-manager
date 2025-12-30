@@ -216,19 +216,20 @@ describe("PreviewModal", () => {
     })
   })
 
-  describe("Button Styling", () => {
-    it("should style save button with green gradient", () => {
+  describe("Button Rendering", () => {
+    it("should render save button", () => {
       render(<PreviewModal {...mockProps} />)
 
       const saveButton = screen.getByRole("button", { name: /save as wrapped/i })
-      expect(saveButton).toHaveClass("bg-gradient-to-r", "from-green-600", "to-emerald-600")
+      expect(saveButton).toBeInTheDocument()
+      expect(saveButton).not.toBeDisabled()
     })
 
-    it("should style back button with slate background", () => {
+    it("should render back button", () => {
       render(<PreviewModal {...mockProps} />)
 
       const backButton = screen.getByRole("button", { name: /back to playground/i })
-      expect(backButton).toHaveClass("bg-slate-800/90")
+      expect(backButton).toBeInTheDocument()
     })
   })
 

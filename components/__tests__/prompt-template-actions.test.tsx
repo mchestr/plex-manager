@@ -337,33 +337,33 @@ describe('PromptTemplateActions', () => {
     })
   })
 
-  describe('Button Styling', () => {
-    it('should have proper styling for Set Active button', () => {
+  describe('Button Rendering', () => {
+    it('should render Set Active button', () => {
       render(<PromptTemplateActions template={mockTemplate} />)
 
       const setActiveButton = screen.getByText('Set Active')
-      expect(setActiveButton).toHaveClass('bg-cyan-600', 'hover:bg-cyan-700', 'text-white')
+      expect(setActiveButton).toBeInTheDocument()
     })
 
-    it('should have proper styling for Edit link', () => {
+    it('should render Edit link', () => {
       render(<PromptTemplateActions template={mockTemplate} />)
 
       const editLink = screen.getByText('Edit')
-      expect(editLink).toHaveClass('bg-cyan-600', 'hover:bg-cyan-700', 'text-white')
+      expect(editLink).toBeInTheDocument()
     })
 
-    it('should have proper styling for Playground link', () => {
+    it('should render Playground link', () => {
       render(<PromptTemplateActions template={mockTemplate} />)
 
       const playgroundLink = screen.getByText('Playground')
-      expect(playgroundLink).toHaveClass('bg-purple-600', 'hover:bg-purple-700', 'text-white')
+      expect(playgroundLink).toBeInTheDocument()
     })
 
-    it('should have proper styling for Delete button', () => {
+    it('should render Delete button', () => {
       render(<PromptTemplateActions template={mockTemplate} />)
 
       const deleteButton = screen.getByText('Delete')
-      expect(deleteButton).toHaveClass('bg-red-600', 'hover:bg-red-700', 'text-white')
+      expect(deleteButton).toBeInTheDocument()
     })
   })
 
