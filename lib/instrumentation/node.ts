@@ -5,13 +5,104 @@
  */
 
 export async function startNodeInstrumentation() {
-  // Start watchlist sync polling
-  await startWatchlistSyncPolling()
+  // Start queue worker (for watchlist sync and other background jobs)
+  await startQueueWorker()
 
   // Start Discord bot polling
   await startDiscordBotPolling()
 }
 
+/**
+ * Starts the BullMQ queue worker for processing background jobs
+ * This replaces the previous polling-based watchlist sync system
+ */
+async function startQueueWorker() {
+  // Check if queue worker should be enabled
+  const envQueueEnabled = process.env.ENABLE_QUEUE_WORKER !== "false"
+
+  if (!envQueueEnabled) {
+    if (process.env.NODE_ENV === "development") {
+      console.log("Queue worker disabled via ENABLE_QUEUE_WORKER=false")
+    }
+    return
+  }
+
+  // Check if Redis is configured
+  if (!process.env.REDIS_URL) {
+    if (process.env.NODE_ENV === "development") {
+      console.log("Queue worker disabled: REDIS_URL not configured")
+    }
+    // Fall back to legacy polling system if Redis is not configured
+    await startWatchlistSyncPolling()
+    return
+  }
+
+  try {
+    const { startWorker, stopWorker } = await import("@/lib/queue/worker")
+    const { scheduleRepeatingJob, removeScheduledJob, closeQueue } = await import("@/lib/queue/client")
+    const { closeRedisConnection, isRedisConfigured } = await import("@/lib/queue/connection")
+    const { JOB_TYPES } = await import("@/lib/queue/types")
+    const { isWatchlistSyncEnabled, getWatchlistSyncInterval } = await import("@/lib/watchlist/lock")
+
+    if (!isRedisConfigured()) {
+      console.log("Queue worker disabled: Redis not configured")
+      return
+    }
+
+    // Start the worker
+    await startWorker()
+    console.log("Queue worker started")
+
+    // Schedule watchlist sync if enabled
+    const syncEnabled = await isWatchlistSyncEnabled()
+    if (syncEnabled) {
+      const intervalMinutes = await getWatchlistSyncInterval()
+      const intervalMs = intervalMinutes * 60 * 1000
+
+      await scheduleRepeatingJob(
+        "watchlist-sync-scheduled",
+        JOB_TYPES.WATCHLIST_SYNC_ALL,
+        { triggeredBy: "scheduled" },
+        intervalMs
+      )
+      console.log(`Watchlist sync scheduled every ${intervalMinutes} minutes`)
+    } else {
+      // Remove any existing scheduled job if sync is disabled
+      await removeScheduledJob("watchlist-sync-scheduled")
+      console.log("Watchlist sync disabled - scheduler removed")
+    }
+
+    // Graceful shutdown handlers
+    if (process.env.NODE_ENV !== "test") {
+      const shutdown = async () => {
+        try {
+          console.log("Shutting down queue worker...")
+          await stopWorker()
+          await closeQueue()
+          await closeRedisConnection()
+          console.log("Queue worker shutdown complete")
+        } catch (error) {
+          console.error("Error during queue worker shutdown:", error)
+        }
+      }
+
+      process.on("SIGINT", shutdown)
+      process.on("SIGTERM", shutdown)
+    }
+  } catch (error) {
+    if (process.env.NODE_ENV === "development") {
+      console.warn("Queue worker could not be started:", error)
+    }
+    // Fall back to legacy polling system
+    console.log("Falling back to legacy polling system")
+    await startWatchlistSyncPolling()
+  }
+}
+
+/**
+ * Legacy: Polling-based watchlist sync
+ * Only used when Redis is not configured
+ */
 async function startWatchlistSyncPolling() {
   // Check if watchlist sync should attempt to start
   const envSyncEnabled = process.env.ENABLE_WATCHLIST_SYNC !== "false"
