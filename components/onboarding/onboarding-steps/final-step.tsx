@@ -1,5 +1,6 @@
 "use client"
 
+import { Button } from "@/components/ui/button"
 import { motion } from "framer-motion"
 
 interface FinalStepProps {
@@ -71,20 +72,21 @@ export function FinalStep({ onComplete, onBack }: FinalStepProps) {
         transition={{ duration: 0.5, delay: 0.5 }}
         className="flex justify-between pt-4"
       >
-        <button
+        <Button
           onClick={onBack}
           data-testid="onboarding-final-back"
-          className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white font-medium rounded-lg transition-colors"
+          variant="secondary"
+          size="lg"
         >
           Back
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={onComplete}
           data-testid="onboarding-final-complete"
-          className="px-6 py-3 bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-700 hover:to-purple-700 text-white font-medium rounded-lg transition-all shadow-lg shadow-cyan-500/20"
+          size="lg"
         >
           Go to Dashboard
-        </button>
+        </Button>
       </motion.div>
     </div>
   )

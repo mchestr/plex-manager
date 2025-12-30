@@ -1,6 +1,7 @@
 "use client"
 
 import { processJellyfinInvite } from "@/actions/invite"
+import { Button } from "@/components/ui/button"
 import { motion } from "framer-motion"
 import { useState } from "react"
 
@@ -178,10 +179,10 @@ export function JellyfinSignInForm({
         />
       </div>
 
-      <button
+      <Button
         type="submit"
         disabled={isSubmitting}
-        className="w-full py-3 px-4 bg-purple-600 hover:bg-purple-500 disabled:bg-purple-600/50 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+        className="w-full py-3"
         data-testid="jellyfin-submit-button"
       >
         {isSubmitting ? (
@@ -216,7 +217,7 @@ export function JellyfinSignInForm({
             Create Account
           </>
         )}
-      </button>
+      </Button>
 
       <p className="text-xs text-slate-400 text-center mt-4">
         You'll use this username and password to sign in to {serverName}

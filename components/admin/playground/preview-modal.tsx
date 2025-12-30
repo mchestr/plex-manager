@@ -1,5 +1,6 @@
 "use client"
 
+import { Button } from "@/components/ui/button"
 import { WrappedViewerWrapper } from "@/components/wrapped/wrapped-viewer-wrapper"
 import { WrappedData } from "@/types/wrapped"
 import { createPortal } from "react-dom"
@@ -51,11 +52,12 @@ export function PreviewModal({
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <button
+            <Button
               onClick={onSave}
               disabled={isSaving || !canSave}
               aria-busy={isSaving}
-              className="px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 backdrop-blur-sm"
+              variant="success"
+              className="backdrop-blur-sm"
             >
               {isSaving ? (
                 <>
@@ -73,17 +75,18 @@ export function PreviewModal({
                   Save as Wrapped
                 </>
               )}
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={onClose}
-              className="px-4 py-2 bg-slate-800/90 hover:bg-slate-700 border border-slate-600 text-white rounded-lg font-medium transition-all flex items-center gap-2 backdrop-blur-sm"
+              variant="secondary"
+              className="backdrop-blur-sm"
               aria-label="Back to playground"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
               Back to Playground
-            </button>
+            </Button>
           </div>
         </div>
         {saveError && (

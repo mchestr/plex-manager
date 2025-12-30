@@ -1,6 +1,7 @@
 "use client"
 
 import { getWatchlistSyncHistory } from "@/actions/watchlist"
+import { Button } from "@/components/ui/button"
 import { WatchlistSyncStatus } from "@/lib/generated/prisma/client"
 import { useCallback, useEffect, useState } from "react"
 
@@ -160,29 +161,25 @@ export function SyncHistoryTable({ limit = 10 }: SyncHistoryTableProps) {
       {/* Pagination */}
       {(data.hasMore || offset > 0) && (
         <div className="flex items-center justify-between">
-          <button
+          <Button
             onClick={() => setOffset(Math.max(0, offset - limit))}
             disabled={offset === 0}
-            className={`
-              rounded-lg bg-slate-800 px-3 py-1.5 text-sm font-medium text-white transition-colors
-              ${offset === 0 ? "opacity-50 cursor-not-allowed" : "hover:bg-slate-700"}
-            `}
+            variant="secondary"
+            size="sm"
           >
             Previous
-          </button>
+          </Button>
           <span className="text-xs text-slate-500">
             Showing {offset + 1}-{Math.min(offset + data.items.length, data.total)} of {data.total}
           </span>
-          <button
+          <Button
             onClick={() => setOffset(offset + limit)}
             disabled={!data.hasMore}
-            className={`
-              rounded-lg bg-slate-800 px-3 py-1.5 text-sm font-medium text-white transition-colors
-              ${!data.hasMore ? "opacity-50 cursor-not-allowed" : "hover:bg-slate-700"}
-            `}
+            variant="secondary"
+            size="sm"
           >
             Next
-          </button>
+          </Button>
         </div>
       )}
     </div>

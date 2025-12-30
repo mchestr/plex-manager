@@ -1,5 +1,6 @@
 "use client"
 
+import { Button } from "@/components/ui/button"
 import { StyledInput } from "@/components/ui/input"
 
 export interface AnnouncementFormData {
@@ -49,15 +50,16 @@ export function AnnouncementFormModal({
           <h2 id="modal-title" className="text-lg font-semibold text-white">
             {isEditing ? "Edit Announcement" : "New Announcement"}
           </h2>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onClose}
-            className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
             data-testid="announcement-modal-close"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
-          </button>
+          </Button>
         </div>
 
         {/* Modal Body */}
@@ -147,17 +149,16 @@ export function AnnouncementFormModal({
 
           {/* Modal Footer */}
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-700">
-            <button
+            <Button
               type="button"
+              variant="secondary"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg transition-colors"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
               disabled={submitting}
-              className="px-4 py-2 text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
               data-testid="announcement-submit-button"
             >
               {submitting && (
@@ -167,7 +168,7 @@ export function AnnouncementFormModal({
                 </svg>
               )}
               {isEditing ? "Save Changes" : "Create"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

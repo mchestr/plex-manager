@@ -237,7 +237,7 @@ Located in `components/ui/`:
 
 | Component | Import | Description |
 |-----------|--------|-------------|
-| `Button` | `@/components/ui/button` | Primary, secondary, ghost, danger variants |
+| `Button` | `@/components/ui/button` | Primary, secondary, ghost, danger, success, outline, link variants |
 | `Input` | `@/components/ui/input` | Text input with error state support |
 | `Textarea` | `@/components/ui/textarea` | Multi-line input with resize options |
 | `Checkbox` | `@/components/ui/checkbox` | Radix checkbox, includes `CheckboxField` composite |
@@ -345,6 +345,38 @@ All components use CSS variables defined in `app/globals.css`:
 3. Place in `components/ui/`
 4. Customize colors to match theme (replace zinc/gray with slate, ring colors with cyan)
 5. Add `"use client"` directive if component uses hooks/interactivity
+
+### Auto-Generated Test IDs
+
+Input and Textarea components auto-generate `data-testid` from the `name` prop if not explicitly provided:
+
+```typescript
+// With name="email", auto-generates data-testid="setup-input-email"
+<Input name="email" />
+
+// Explicit data-testid takes precedence
+<Input name="email" data-testid="custom-id" />
+```
+
+This pattern maintains backward compatibility with existing E2E tests that use `setup-input-*` selectors.
+
+### Toast Duration Conventions
+
+The `useToast` hook applies different default durations by type:
+
+| Toast Type | Default Duration | Reason |
+|------------|-----------------|--------|
+| `showError` | 5000ms (5s) | Errors need more read time |
+| `showSuccess` | Sonner default | Quick acknowledgment |
+| `showInfo` | Sonner default | Quick acknowledgment |
+
+```typescript
+const { showSuccess, showError, showInfo } = useToast()
+
+showError('Failed to save')        // Stays 5s by default
+showSuccess('Saved!')              // Sonner default (~4s)
+showError('Custom', 10000)         // Override to 10s
+```
 
 ## Testing Strategy
 

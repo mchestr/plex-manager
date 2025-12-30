@@ -1,7 +1,8 @@
 "use client"
 
 import { getWatchlistSyncSettings, triggerWatchlistSync, updateWatchlistSyncSettings } from "@/actions/watchlist"
-import { useToast } from "@/components/ui/toast"
+import { Button } from "@/components/ui/button"
+import { useToast } from "@/components/ui/sonner"
 import { motion } from "framer-motion"
 import { useCallback, useEffect, useState, useTransition } from "react"
 
@@ -312,14 +313,11 @@ export function WatchlistSyncCard() {
             )}
 
             {/* Manual sync button */}
-            <button
+            <Button
               onClick={handleManualSync}
               disabled={isSyncing}
-              className={`
-                flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-2 text-sm font-medium text-white
-                transition-all hover:bg-slate-700
-                ${isSyncing ? "opacity-50 cursor-not-allowed" : ""}
-              `}
+              variant="secondary"
+              size="sm"
               data-testid="watchlist-sync-now-button"
             >
               {isSyncing ? (
@@ -354,7 +352,7 @@ export function WatchlistSyncCard() {
                   <span>Sync Now</span>
                 </>
               )}
-            </button>
+            </Button>
           </div>
         )}
       </div>

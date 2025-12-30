@@ -1,5 +1,6 @@
 "use client"
 
+import { Button } from "@/components/ui/button"
 import { motion } from "framer-motion"
 import Link from "next/link"
 
@@ -150,13 +151,13 @@ export function DiscordSupportStep({ onComplete, onBack, discordEnabled, instruc
                   </svg>
                 </Link>
               ) : (
-                <button
+                <Button
                   type="button"
                   disabled
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-slate-700 text-slate-400 rounded-lg font-medium cursor-not-allowed"
+                  variant="secondary"
                 >
                   Portal Unavailable
-                </button>
+                </Button>
               )}
             </div>
           </div>
@@ -169,20 +170,19 @@ export function DiscordSupportStep({ onComplete, onBack, discordEnabled, instruc
         transition={{ duration: 0.5, delay: 0.4 }}
         className="flex justify-between pt-4"
       >
-        <button
+        <Button
           onClick={onBack}
           data-testid="onboarding-discord-support-back"
-          className="px-4 py-2 text-slate-400 hover:text-white transition-colors font-medium"
+          variant="ghost"
         >
           Back
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={onComplete}
           data-testid="onboarding-discord-support-continue"
-          className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors"
         >
           Next
-        </button>
+        </Button>
       </motion.div>
     </div>
   )

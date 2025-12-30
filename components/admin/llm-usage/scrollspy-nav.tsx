@@ -1,5 +1,6 @@
 "use client"
 
+import { Button } from "@/components/ui/button"
 import { useEffect, useState } from "react"
 
 interface ScrollspyNavProps {
@@ -88,17 +89,15 @@ export function ScrollspyNav({ sections }: ScrollspyNavProps) {
           {sections.map((section) => {
             const isActive = activeSection === section.id
             return (
-              <button
+              <Button
                 key={section.id}
+                variant={isActive ? "primary" : "secondary"}
+                size="sm"
                 onClick={() => scrollToSection(section.id)}
-                className={`whitespace-nowrap px-4 py-2 text-sm rounded transition-colors ${
-                  isActive
-                    ? "bg-cyan-600 text-white font-medium"
-                    : "bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700"
-                }`}
+                className="whitespace-nowrap"
               >
                 {section.label}
-              </button>
+              </Button>
             )
           })}
         </div>
@@ -112,17 +111,15 @@ export function ScrollspyNav({ sections }: ScrollspyNavProps) {
               {sections.map((section) => {
                 const isActive = activeSection === section.id
                 return (
-                  <button
+                  <Button
                     key={section.id}
+                    variant={isActive ? "primary" : "ghost"}
+                    size="sm"
                     onClick={() => scrollToSection(section.id)}
-                    className={`block w-full text-left px-3 py-2 text-sm rounded transition-colors ${
-                      isActive
-                        ? "bg-cyan-600 text-white font-medium"
-                        : "text-slate-300 hover:text-white hover:bg-slate-700/50"
-                    }`}
+                    className="w-full justify-start"
                   >
                     {section.label}
-                  </button>
+                  </Button>
                 )
               })}
             </div>

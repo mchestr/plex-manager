@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { Button } from "@/components/ui/button"
 import { StyledDropdown } from "@/components/ui/select"
 
 export interface UsersFilter {
@@ -62,15 +63,16 @@ export function UsersFilter({ onFilterChange, defaultFilter }: UsersFilterProps)
               <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-xs font-medium rounded-full border border-cyan-500/30">
                 {activeFilterCount} active
               </span>
-              <button
+              <Button
                 onClick={handleClear}
-                className="px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-white bg-slate-700/50 hover:bg-slate-700/80 border border-slate-600 hover:border-slate-500 rounded-lg transition-all duration-200 flex items-center gap-1.5"
+                variant="secondary"
+                size="sm"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
                 Reset
-              </button>
+              </Button>
             </div>
           )}
         </div>

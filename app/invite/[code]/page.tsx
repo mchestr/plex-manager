@@ -4,6 +4,7 @@ import { validateInvite } from "@/actions/invite"
 import { getServerName } from "@/actions/server-info"
 import { PlexSignInButton } from "@/components/auth/plex-sign-in-button"
 import { JellyfinSignInForm } from "@/components/auth/jellyfin-sign-in-form"
+import { Button } from "@/components/ui/button"
 import { motion } from "framer-motion"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
@@ -115,12 +116,12 @@ export default function InvitePage() {
             </motion.div>
             <h1 data-testid="invalid-invite-heading" className="text-xl sm:text-2xl font-bold text-white mb-2">Invalid Invite</h1>
             <p className="text-slate-300 mb-6 text-sm sm:text-base px-2">{error}</p>
-            <button
+            <Button
               onClick={() => router.push("/")}
-              className="w-full py-2.5 sm:py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-colors"
+              className="w-full"
             >
               Go Home
-            </button>
+            </Button>
           </div>
         </motion.div>
       </div>

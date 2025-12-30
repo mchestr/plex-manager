@@ -1,5 +1,6 @@
 "use client"
 
+import { Button } from "@/components/ui/button"
 import { WrappedStatistics } from "@/types/wrapped"
 
 interface StatisticsViewerProps {
@@ -19,28 +20,24 @@ export function StatisticsViewer({
       <div className="flex items-center justify-between mb-3">
         <h4 className="text-sm font-semibold text-white">Statistics Data</h4>
         <div className="flex items-center gap-2">
-          <button
+          <Button
             type="button"
             onClick={() => onViewModeChange("formatted")}
-            className={`px-2 py-1 text-xs rounded transition-colors ${
-              viewMode === "formatted"
-                ? "bg-cyan-600 text-white"
-                : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-            }`}
+            variant={viewMode === "formatted" ? "primary" : "secondary"}
+            size="sm"
+            className="px-2 py-1 text-xs h-auto"
           >
             Formatted
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             onClick={() => onViewModeChange("json")}
-            className={`px-2 py-1 text-xs rounded transition-colors ${
-              viewMode === "json"
-                ? "bg-cyan-600 text-white"
-                : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-            }`}
+            variant={viewMode === "json" ? "primary" : "secondary"}
+            size="sm"
+            className="px-2 py-1 text-xs h-auto"
           >
             JSON
-          </button>
+          </Button>
         </div>
       </div>
 

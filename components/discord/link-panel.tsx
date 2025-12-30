@@ -1,6 +1,7 @@
 "use client"
 
 import { disconnectDiscordAccount, resyncDiscordRole } from "@/actions/discord"
+import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/sonner"
 import { cn } from "@/lib/utils"
 import { useEffect, useRef, useTransition } from "react"
@@ -116,13 +117,15 @@ export function DiscordLinkPanel({ connection, instructions, connectUrl, isEnabl
                 {connection.discriminator ? `#${connection.discriminator}` : ""}
               </p>
             </div>
-            <button
+            <Button
               onClick={handleResync}
               disabled={isPending}
-              className="inline-flex items-center justify-center rounded-xl border border-emerald-400/40 px-4 py-2 text-sm font-medium text-emerald-100 transition hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+              variant="ghost"
+              size="sm"
+              className="border border-emerald-400/40 text-emerald-100 hover:bg-emerald-500/10"
             >
-              {isPending ? "Syncing…" : "Force resync"}
-            </button>
+              {isPending ? "Syncing..." : "Force resync"}
+            </Button>
           </div>
           <dl className="mt-4 grid gap-3 text-xs text-slate-300 sm:grid-cols-2">
             <div>
@@ -182,13 +185,15 @@ export function DiscordLinkPanel({ connection, instructions, connectUrl, isEnabl
           >
             Review Discord link
           </a>
-          <button
+          <Button
             onClick={handleDisconnect}
             disabled={isPending}
-            className="inline-flex min-w-[160px] items-center justify-center rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-2 text-sm font-semibold text-rose-100 transition hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+            variant="danger"
+            size="sm"
+            className="min-w-[160px] bg-rose-500/10 border border-rose-500/40 text-rose-100 hover:bg-rose-500/20"
           >
             Disconnect
-          </button>
+          </Button>
         </div>
       )}
 

@@ -1,11 +1,12 @@
 "use client"
 
+import { LLMToggle } from "@/components/admin/settings/llm-toggle"
+import { Button } from "@/components/ui/button"
 import { Session } from "next-auth"
 import { signOut } from "next-auth/react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { LLMToggle } from "@/components/admin/settings/llm-toggle"
 
 interface AdminFooterClientProps {
   session: Session | null
@@ -181,12 +182,14 @@ export function AdminFooterClient({
                 Dashboard →
               </Link>
               <span className="text-slate-600 hidden sm:inline">|</span>
-              <button
+              <Button
                 onClick={handleSignOut}
-                className="text-red-400 hover:text-red-300 transition-colors font-medium text-sm py-1"
+                variant="ghost"
+                size="sm"
+                className="text-red-400 hover:text-red-300 py-1"
               >
                 Logout
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -292,12 +295,14 @@ export function AdminFooterClient({
             >
               Dashboard →
             </Link>
-            <button
+            <Button
               onClick={handleSignOut}
-              className="text-red-400 hover:text-red-300 transition-colors font-medium"
+              variant="ghost"
+              size="sm"
+              className="text-red-400 hover:text-red-300"
             >
               Logout
-            </button>
+            </Button>
           </div>
         </div>
       </div>

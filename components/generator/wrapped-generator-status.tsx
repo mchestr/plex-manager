@@ -1,5 +1,6 @@
 "use client"
 
+import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/sonner"
 import Link from "next/link"
 import { useEffect } from "react"
@@ -40,12 +41,11 @@ export function WrappedGeneratorStatus({
         <p className="text-slate-400 mb-4">
           Your Plex Wrapped for {year} has been generated!
         </p>
-        <Link
-          href="/wrapped"
-          className="inline-block px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-md text-sm font-medium transition-colors"
-        >
-          View Your Wrapped
-        </Link>
+        <Button asChild>
+          <Link href="/wrapped">
+            View Your Wrapped
+          </Link>
+        </Button>
       </div>
     )
   }
@@ -59,10 +59,9 @@ export function WrappedGeneratorStatus({
             Failed
           </span>
         </div>
-        <button
+        <Button
           onClick={onRegenerate}
           disabled={isRegenerating}
-          className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-md text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
         >
           {isRegenerating ? (
             <>
@@ -91,7 +90,7 @@ export function WrappedGeneratorStatus({
           ) : (
             "Try Again"
           )}
-        </button>
+        </Button>
       </div>
     )
   }

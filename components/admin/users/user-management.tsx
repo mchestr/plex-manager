@@ -1,6 +1,7 @@
 "use client"
 
 import { generateAllPlexWrapped } from "@/actions/users"
+import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/sonner"
 import Link from "next/link"
 import { useState } from "react"
@@ -56,10 +57,10 @@ export function UserManagement() {
           Generate Plex Wrapped for all users who have signed in. This will create wrapped reports
           for the current year. Users can also generate their own wrapped from the homepage.
         </p>
-        <button
+        <Button
           onClick={handleGenerateAllWrapped}
           disabled={isGenerating}
-          className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+          variant="primary"
         >
           {isGenerating ? (
             <>
@@ -88,7 +89,7 @@ export function UserManagement() {
           ) : (
             "Generate All Wrapped"
           )}
-        </button>
+        </Button>
       </div>
     </div>
   )

@@ -1,7 +1,8 @@
 "use client"
 
 import { toggleJellyfinLogin } from "@/actions/admin/admin-servers"
-import { useToast } from "@/components/ui/toast"
+import { Button } from "@/components/ui/button"
+import { useToast } from "@/components/ui/sonner"
 import { useRouter } from "next/navigation"
 import { useTransition } from "react"
 
@@ -39,18 +40,19 @@ export function JellyfinLoginToggle({ enabledForLogin }: JellyfinLoginToggleProp
               : "Jellyfin is hidden from the login page"}
           </p>
         </div>
-        <button
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={handleToggle}
           disabled={isPending}
           data-testid="jellyfin-login-toggle"
-          className="px-3 py-1 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-600 hover:border-cyan-500/50 text-slate-300 hover:text-white text-xs font-medium rounded transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center whitespace-nowrap"
         >
           {isPending
             ? "Updating..."
             : enabledForLogin
               ? "Hide from Login"
               : "Show on Login"}
-        </button>
+        </Button>
       </div>
     </div>
   )

@@ -2,6 +2,7 @@
 
 import { getWrappedSettings } from "@/actions/admin"
 import { generatePlexWrapped, getUserPlexWrapped } from "@/actions/users"
+import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/sonner"
 import { WrappedGeneratingAnimation } from "@/components/generator/wrapped-generating-animation"
 import { WrappedShareButton } from "@/components/wrapped/wrapped-share-button"
@@ -196,10 +197,11 @@ export function WrappedHomeButton({ userId, serverName }: WrappedHomeButtonProps
             <p className="text-sm text-red-300 text-center">{wrapped.error}</p>
           </div>
         )}
-        <button
+        <Button
           onClick={handleGenerate}
           disabled={isGenerating}
-          className="px-12 py-6 flex items-center justify-center gap-3 text-white text-xl font-semibold rounded-xl bg-gradient-to-r from-cyan-600 via-purple-600 to-pink-600 hover:from-cyan-500 hover:via-purple-500 hover:to-pink-500 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+          size="lg"
+          className="px-12 py-6 text-xl rounded-xl bg-gradient-to-r from-cyan-600 via-purple-600 to-pink-600 hover:from-cyan-500 hover:via-purple-500 hover:to-pink-500 shadow-lg"
         >
           <svg
             className="w-6 h-6"
@@ -216,7 +218,7 @@ export function WrappedHomeButton({ userId, serverName }: WrappedHomeButtonProps
             />
           </svg>
           Try Again
-        </button>
+        </Button>
       </div>
     )
   }
@@ -235,10 +237,11 @@ export function WrappedHomeButton({ userId, serverName }: WrappedHomeButtonProps
       <p className="text-sm text-slate-400 text-center max-w-xl">
         Your personalized year-end summary of movies and shows you watched
       </p>
-      <button
+      <Button
         onClick={handleGenerate}
         disabled={isGenerating || !wrappedSettings?.enabled}
-        className="px-12 py-6 flex items-center justify-center gap-3 text-white text-xl font-semibold rounded-xl bg-gradient-to-r from-cyan-600 via-purple-600 to-pink-600 hover:from-cyan-500 hover:via-purple-500 hover:to-pink-500 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+        size="lg"
+        className="px-12 py-6 text-xl rounded-xl bg-gradient-to-r from-cyan-600 via-purple-600 to-pink-600 hover:from-cyan-500 hover:via-purple-500 hover:to-pink-500 shadow-lg"
       >
         <svg
           className="w-6 h-6"
@@ -255,7 +258,7 @@ export function WrappedHomeButton({ userId, serverName }: WrappedHomeButtonProps
           />
         </svg>
         Generate My {wrappedYear} Wrapped
-      </button>
+      </Button>
     </div>
   )
 }

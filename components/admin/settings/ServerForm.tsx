@@ -1,6 +1,7 @@
 "use client"
 
 import { updateOverseerr, updatePlexServer, updatePrometheus, updateRadarr, updateSonarr, updateTautulli, updateJellyfinServer } from "@/actions/admin"
+import { Button } from "@/components/ui/button"
 import { StyledInput } from "@/components/ui/input"
 import { useToast } from "@/components/ui/sonner"
 import { useRouter } from "next/navigation"
@@ -122,12 +123,14 @@ export function ServerForm({ type, server }: ServerFormProps) {
             <div className="text-sm text-slate-400">No {type} server configured</div>
           )}
         </div>
-        <button
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={() => setIsEditing(true)}
-          className="ml-4 px-3 py-1 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-600 hover:border-cyan-500/50 text-slate-300 hover:text-white text-xs font-medium rounded transition-all whitespace-nowrap flex items-center"
+          className="ml-4"
         >
           Edit
-        </button>
+        </Button>
       </div>
     )
   }
@@ -214,14 +217,14 @@ export function ServerForm({ type, server }: ServerFormProps) {
         )}
       </div>
       <div className="flex gap-2">
-        <button
+        <Button
           type="submit"
           disabled={isPending}
-          className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500 text-white text-sm font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isPending ? "Saving..." : "Save"}
-        </button>
-          <button
+        </Button>
+        <Button
+          variant="secondary"
           type="button"
           onClick={() => {
             setIsEditing(false)
@@ -235,10 +238,9 @@ export function ServerForm({ type, server }: ServerFormProps) {
             })
           }}
           disabled={isPending}
-          className="px-4 py-2 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-600 hover:border-slate-500 text-slate-300 hover:text-white text-sm font-medium rounded-lg transition-all disabled:opacity-50"
         >
           Cancel
-        </button>
+        </Button>
       </div>
     </form>
   )

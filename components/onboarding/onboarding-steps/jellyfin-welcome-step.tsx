@@ -1,5 +1,6 @@
 "use client"
 
+import { Button } from "@/components/ui/button"
 import { motion } from "framer-motion"
 
 interface JellyfinWelcomeStepProps {
@@ -87,13 +88,13 @@ export function JellyfinWelcomeStep({ onComplete }: JellyfinWelcomeStepProps) {
         transition={{ duration: 0.5, delay: 0.6 }}
         className="flex justify-end pt-4"
       >
-        <button
+        <Button
           onClick={onComplete}
-          className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-purple-600 text-white font-medium rounded-lg hover:shadow-lg hover:shadow-purple-500/50 transition-all duration-300"
           data-testid="onboarding-welcome-continue"
+          size="lg"
         >
           Let's Go
-        </button>
+        </Button>
       </motion.div>
     </div>
   )

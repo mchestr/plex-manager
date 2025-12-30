@@ -1,6 +1,7 @@
 "use client"
 
 import { importPlexUsers } from "@/actions/import-plex-users"
+import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/sonner"
 import { useTransition } from "react"
 
@@ -39,13 +40,14 @@ export function ImportPlexUsersButton() {
   }
 
   return (
-    <button
+    <Button
       onClick={handleImport}
       disabled={isPending}
-      className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500 text-white rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+      variant="primary"
+      size="sm"
     >
       {isPending ? "Importing..." : "Import Plex Users"}
-    </button>
+    </Button>
   )
 }
 

@@ -13,6 +13,7 @@ import { RadarrForm } from "@/components/setup/setup-wizard/radarr-form"
 import { SonarrForm } from "@/components/setup/setup-wizard/sonarr-form"
 import { SuccessAnimation } from "@/components/setup/setup-wizard/success-animation"
 import { TautulliForm } from "@/components/setup/setup-wizard/tautulli-form"
+import { Button } from "@/components/ui/button"
 import { SETUP_STEPS } from "@/types/setup"
 import { AnimatePresence, motion } from "framer-motion"
 import { useRouter } from "next/navigation"
@@ -78,13 +79,12 @@ export function SetupWizard({ currentStep: initialStep }: SetupWizardProps) {
             All configuration steps are complete. Launch the final animation to mark setup as
             finished and start using Plex Manager.
           </p>
-          <button
+          <Button
             type="button"
             onClick={() => setShowFinalSuccess(true)}
-            className="inline-flex justify-center rounded-md py-2 px-6 text-sm font-medium text-white shadow-lg focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:ring-offset-2 focus:ring-offset-slate-900 transition-all duration-200 bg-gradient-to-r from-cyan-600 via-purple-600 to-pink-600 hover:from-cyan-500 hover:via-purple-500 hover:to-pink-500"
           >
             Finish setup
-          </button>
+          </Button>
         </div>
       )
     }

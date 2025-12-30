@@ -1,6 +1,7 @@
 "use client"
 
 import { checkServerAccess } from "@/actions/auth"
+import { Button } from "@/components/ui/button"
 import { getPlexAuthToken } from "@/lib/plex-auth"
 import { getSession, signIn } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -211,12 +212,12 @@ export function PlexCallbackPageClient() {
             {errorTitle}
           </h1>
           <p className="text-center text-slate-300 mb-6">{error}</p>
-          <button
+          <Button
             onClick={() => router.push("/")}
-            className="w-full py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-colors"
+            className="w-full"
           >
             {isInviteError ? "Go Home" : "Try Again"}
-          </button>
+          </Button>
         </div>
       </div>
     )
