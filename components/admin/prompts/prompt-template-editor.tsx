@@ -11,6 +11,7 @@ import { WrappedData, WrappedStatistics } from "@/types/wrapped"
 import { PlexWrapped, PromptTemplate } from "@/lib/generated/prisma/client"
 import { useRouter } from "next/navigation"
 import { useMemo, useState, useTransition } from "react"
+import { Button } from "@/components/ui/button"
 
 interface PromptTemplateEditorProps {
   template?: PromptTemplate
@@ -583,28 +584,32 @@ export function PromptTemplateEditor({ template, userWrapped, userName = "User" 
                     Template Content <span className="text-red-400">*</span>
                   </label>
                   <div className="flex items-center gap-1">
-                    <button
+                    <Button
                       type="button"
                       onClick={handleUndo}
                       disabled={historyIndex === 0}
-                      className="p-1.5 text-slate-400 hover:text-white disabled:text-slate-600 disabled:cursor-not-allowed transition-colors rounded hover:bg-slate-700/50"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
                       aria-label="Undo (Ctrl+Z)"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
                       </svg>
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
                       onClick={handleRedo}
                       disabled={historyIndex === history.length - 1}
-                      className="p-1.5 text-slate-400 hover:text-white disabled:text-slate-600 disabled:cursor-not-allowed transition-colors rounded hover:bg-slate-700/50"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
                       aria-label="Redo (Ctrl+Y)"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 10h-10a8 8 0 00-8 8v2M21 10l-6 6m6-6l-6-6" />
                       </svg>
-                    </button>
+                    </Button>
                   </div>
                 </div>
                 <p className="text-xs text-slate-400 leading-relaxed">
@@ -612,16 +617,18 @@ export function PromptTemplateEditor({ template, userWrapped, userName = "User" 
                   to insert dynamic data. Click chips below or use the search button for all placeholders.
                 </p>
               </div>
-              <button
+              <Button
                 type="button"
                 onClick={() => setShowPlaceholderModal(true)}
-                className="px-4 py-2 bg-slate-700/50 hover:bg-slate-700 border border-slate-600/50 hover:border-cyan-500/50 text-slate-300 hover:text-white rounded-lg text-sm font-medium transition-all flex items-center gap-2 flex-shrink-0"
+                variant="secondary"
+                size="sm"
+                className="flex-shrink-0"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
                 Search All
-              </button>
+              </Button>
             </div>
 
             {/* Quick Access Placeholder Chips */}
@@ -631,11 +638,13 @@ export function PromptTemplateEditor({ template, userWrapped, userName = "User" 
                 if (!placeholderInfo) return null
                 const isRecent = index === 0 && placeholder === recentPlaceholder
                 return (
-                  <button
+                  <Button
                     key={placeholder}
                     type="button"
                     onClick={() => insertPlaceholder(placeholder)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-mono transition-all active:scale-95 flex items-center gap-1.5 group relative ${
+                    variant="ghost"
+                    size="sm"
+                    className={`font-mono active:scale-95 group relative ${
                       isRecent
                         ? "bg-cyan-500/20 hover:bg-cyan-500/30 border-2 border-cyan-500/50 text-cyan-300 hover:text-cyan-200"
                         : "bg-slate-800/50 hover:bg-cyan-500/20 border border-slate-700/50 hover:border-cyan-500/50 text-cyan-400 hover:text-cyan-300"
@@ -651,7 +660,7 @@ export function PromptTemplateEditor({ template, userWrapped, userName = "User" 
                     <svg className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
-                  </button>
+                  </Button>
                 )
               })}
             </div>
@@ -684,17 +693,19 @@ export function PromptTemplateEditor({ template, userWrapped, userName = "User" 
                     </svg>
                     All Placeholders
                   </h3>
-                  <button
+                  <Button
                     onClick={() => {
                       setShowPlaceholderModal(false)
                       setPlaceholderSearch("")
                     }}
-                    className="text-slate-400 hover:text-white transition-colors"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
-                  </button>
+                  </Button>
                 </div>
                 <div className="relative">
                   <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -718,17 +729,20 @@ export function PromptTemplateEditor({ template, userWrapped, userName = "User" 
                   <div className="space-y-3">
                     {filteredPlaceholders.length > 0 ? (
                       filteredPlaceholders.map(({ placeholder, description }) => (
-                        <button
+                        <Button
                           key={placeholder}
                           type="button"
                           onClick={() => insertPlaceholder(placeholder)}
-                          className="w-full text-left p-4 bg-slate-900/50 hover:bg-slate-800/80 border border-slate-700/50 hover:border-cyan-500/30 rounded-lg transition-all group"
+                          variant="ghost"
+                          className="w-full h-auto justify-start text-left p-4 bg-slate-900/50 hover:bg-slate-800/80 border border-slate-700/50 hover:border-cyan-500/30 group"
                         >
-                          <code className="text-cyan-400 text-sm font-mono group-hover:text-cyan-300 transition-colors block mb-1.5 font-semibold">
-                            {placeholder}
-                          </code>
-                          <p className="text-xs text-slate-400 group-hover:text-slate-300 leading-relaxed">{description}</p>
-                        </button>
+                          <div className="flex flex-col items-start">
+                            <code className="text-cyan-400 text-sm font-mono group-hover:text-cyan-300 transition-colors block mb-1.5 font-semibold">
+                              {placeholder}
+                            </code>
+                            <p className="text-xs text-slate-400 group-hover:text-slate-300 leading-relaxed">{description}</p>
+                          </div>
+                        </Button>
                       ))
                     ) : (
                       <div className="text-center py-12 text-slate-400">
@@ -748,17 +762,20 @@ export function PromptTemplateEditor({ template, userWrapped, userName = "User" 
                           </h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             {items.map(({ placeholder, description }) => (
-                              <button
+                              <Button
                                 key={placeholder}
                                 type="button"
                                 onClick={() => insertPlaceholder(placeholder)}
-                                className="text-left p-3 bg-slate-900/50 hover:bg-slate-800/80 border border-slate-700/50 hover:border-cyan-500/30 rounded-lg transition-all group"
+                                variant="ghost"
+                                className="h-auto justify-start text-left p-3 bg-slate-900/50 hover:bg-slate-800/80 border border-slate-700/50 hover:border-cyan-500/30 group"
                               >
-                                <code className="text-cyan-400 text-xs font-mono group-hover:text-cyan-300 transition-colors block mb-1 font-semibold">
-                                  {placeholder}
-                                </code>
-                                <p className="text-xs text-slate-400 group-hover:text-slate-300 leading-snug">{description}</p>
-                              </button>
+                                <div className="flex flex-col items-start">
+                                  <code className="text-cyan-400 text-xs font-mono group-hover:text-cyan-300 transition-colors block mb-1 font-semibold">
+                                    {placeholder}
+                                  </code>
+                                  <p className="text-xs text-slate-400 group-hover:text-slate-300 leading-snug">{description}</p>
+                                </div>
+                              </Button>
                             ))}
                           </div>
                         </div>
@@ -801,17 +818,17 @@ export function PromptTemplateEditor({ template, userWrapped, userName = "User" 
 
         {/* Action Buttons */}
         <div className="flex items-center justify-between pt-6 border-t border-slate-700/50">
-          <button
+          <Button
             type="button"
             onClick={() => router.back()}
-            className="px-5 py-2.5 bg-slate-700/50 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg font-medium transition-all border border-slate-600/50 hover:border-slate-600"
+            variant="secondary"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
             disabled={isPending}
-            className="px-6 py-2.5 bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500 text-white rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/30 flex items-center gap-2"
+            variant="primary"
           >
             {isPending ? (
               <>
@@ -829,7 +846,7 @@ export function PromptTemplateEditor({ template, userWrapped, userName = "User" 
                 </svg>
               </>
             )}
-          </button>
+          </Button>
         </div>
       </form>
     </div>

@@ -2,7 +2,8 @@
 
 import { useRouter, useSearchParams } from "next/navigation"
 import { useCallback } from "react"
-import { StyledInput } from "@/components/ui/styled-input"
+import { Button } from "@/components/ui/button"
+import { StyledInput } from "@/components/ui/input"
 
 export function CostDateFilter() {
   const router = useRouter()
@@ -79,31 +80,36 @@ export function CostDateFilter() {
         </div>
         <div className="flex flex-wrap items-end gap-2">
           <div className="text-xs text-slate-400 mb-1 w-full sm:w-auto sm:mb-0">Quick Filters:</div>
-          <button
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={() => handleQuickFilter(7)}
-            className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium rounded transition-colors"
           >
             7 Days
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={() => handleQuickFilter(30)}
-            className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium rounded transition-colors"
           >
             30 Days
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={() => handleQuickFilter(90)}
-            className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium rounded transition-colors"
           >
             90 Days
-          </button>
+          </Button>
           {(startDate || endDate) && (
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={handleClear}
-              className="px-3 py-1.5 bg-red-600/20 hover:bg-red-600/30 text-red-400 text-xs font-medium rounded transition-colors"
+              className="text-red-400 hover:text-red-300 hover:bg-red-600/30"
             >
               Clear
-            </button>
+            </Button>
           )}
         </div>
       </div>

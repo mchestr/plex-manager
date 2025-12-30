@@ -1,7 +1,8 @@
 "use client"
 
-import { useEffect } from "react"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { useEffect } from "react"
 
 interface ErrorStateProps {
   error?: Error & { digest?: string }
@@ -47,12 +48,12 @@ export function ErrorState({
         {message || error?.message || "An unexpected error occurred. Please try again later."}
       </p>
       {reset && (
-        <button
+        <Button
           onClick={reset}
-          className="px-6 py-2 bg-amber-500 hover:bg-amber-600 text-black font-bold rounded-full transition-colors"
+          className="bg-amber-500 hover:bg-amber-600 text-black font-bold rounded-full"
         >
           Try again
-        </button>
+        </Button>
       )}
     </div>
   )

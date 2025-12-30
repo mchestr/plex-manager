@@ -12,6 +12,7 @@ A Next.js-based Plex management platform that combines server management tools, 
 - **Auth**: NextAuth.js (Plex PIN-based authentication)
 - **State**: TanStack Query (React Query) for client-side data fetching
 - **Styling**: Tailwind CSS with utility-first approach
+- **UI Components**: shadcn/ui (Radix primitives + CVA variants)
 - **Animation**: Framer Motion
 - **Validation**: Zod schemas for all inputs/responses
 - **Testing**: Jest + Testing Library + Playwright (E2E)
@@ -219,29 +220,163 @@ if (result.error) {
 - **Shared UI** → Presentational components (e.g., `<Card>`, `<Badge>`)
 - **Business logic** → Pure functions (easy to test)
 
-## UI Component Guidelines
+## UI Component Guidelines (shadcn/ui)
 
-### Always Use Existing UI Components
+### Always Use shadcn/ui Components
 
-**⚠️ DO NOT create new dropdowns, selectors, checkboxes, buttons, etc.**
+**⚠️ DO NOT create custom UI primitives**
 
 - ✅ **CORRECT**: Import and use components from `components/ui/`
 - ❌ **WRONG**: Creating custom `<select>`, raw `<input type="checkbox">`, or custom dropdown implementations
 
 **Why**: Ensures consistent styling, behavior, and accessibility across the app
 
-**Before creating new UI**: Always check if a component exists in `components/ui/` first
-
-### Common UI Components Available
+### Available Components
 
 Located in `components/ui/`:
-- Form inputs and controls
-- Buttons and interactive elements
-- Layout components
-- Data display components
-- Feedback components (toasts, alerts)
 
-Check the directory for the complete list before implementing custom UI elements.
+| Component | Import | Description |
+|-----------|--------|-------------|
+| `Button` | `@/components/ui/button` | Primary, secondary, ghost, danger, success, outline, link variants |
+| `Input` | `@/components/ui/input` | Text input with error state support |
+| `Textarea` | `@/components/ui/textarea` | Multi-line input with resize options |
+| `Checkbox` | `@/components/ui/checkbox` | Radix checkbox, includes `CheckboxField` composite |
+| `Select` | `@/components/ui/select` | Radix select with full keyboard navigation |
+| `Dialog` | `@/components/ui/dialog` | Modal dialogs |
+| `AlertDialog` | `@/components/ui/alert-dialog` | Confirmation modals (`ConfirmModal`) |
+| `Card` | `@/components/ui/card` | Content containers |
+| `Alert` | `@/components/ui/alert` | Inline alerts and notices |
+| `Badge` | `@/components/ui/badge` | Status indicators |
+| `Tabs` | `@/components/ui/tabs` | Tab navigation |
+| `Tooltip` | `@/components/ui/tooltip` | Hover tooltips |
+| `Table` | `@/components/ui/table` | Data tables |
+| `Label` | `@/components/ui/label` | Form labels |
+
+### Usage Examples
+
+```typescript
+// Button with variants
+import { Button } from '@/components/ui/button'
+
+<Button variant="primary">Save</Button>
+<Button variant="danger">Delete</Button>
+<Button variant="ghost" size="sm">Cancel</Button>
+
+// Form inputs with error state
+import { Input } from '@/components/ui/input'
+
+<Input
+  name="email"
+  error={!!errors.email}
+  placeholder="Enter email"
+/>
+
+// Checkbox with label
+import { CheckboxField } from '@/components/ui/checkbox'
+
+<CheckboxField
+  label="Enable notifications"
+  description="Receive email updates"
+  checked={enabled}
+  onCheckedChange={setEnabled}
+/>
+
+// Select dropdown
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+
+<Select value={value} onValueChange={setValue}>
+  <SelectTrigger>
+    <SelectValue placeholder="Select option" />
+  </SelectTrigger>
+  <SelectContent>
+    <SelectItem value="a">Option A</SelectItem>
+    <SelectItem value="b">Option B</SelectItem>
+  </SelectContent>
+</Select>
+
+// Toast notifications
+import { useToast } from '@/components/ui/sonner'
+
+const { showSuccess, showError } = useToast()
+showSuccess('Changes saved')
+showError('Failed to save')
+
+// Confirmation modal
+import { ConfirmModal } from '@/components/ui/alert-dialog'
+
+<ConfirmModal
+  isOpen={showModal}
+  onClose={() => setShowModal(false)}
+  onConfirm={handleDelete}
+  title="Delete Item"
+  message="Are you sure?"
+  confirmText="Delete"
+  confirmButtonClass="bg-red-600 hover:bg-red-700"
+/>
+```
+
+### Component Variants (CVA)
+
+Components use `class-variance-authority` for type-safe variants:
+
+```typescript
+// Button variants: primary | secondary | ghost | danger | success | outline | link
+// Button sizes: sm | md | lg | icon
+
+// Input/Textarea sizes: sm | md | lg
+// Input/Textarea error: boolean (shows red border)
+
+// Badge variants: default | secondary | success | warning | destructive | outline
+```
+
+### Theme (Dark Mode)
+
+All components use CSS variables defined in `app/globals.css`:
+- Background: slate-900
+- Foreground: white
+- Primary: cyan-500 (with purple gradient accents)
+- Destructive: red-500
+- Border: slate-600
+
+### Adding New shadcn Components
+
+1. Check [ui.shadcn.com](https://ui.shadcn.com) for available components
+2. Copy the component code (don't use `npx shadcn` - customize manually)
+3. Place in `components/ui/`
+4. Customize colors to match theme (replace zinc/gray with slate, ring colors with cyan)
+5. Add `"use client"` directive if component uses hooks/interactivity
+
+### Auto-Generated Test IDs
+
+Input and Textarea components auto-generate `data-testid` from the `name` prop if not explicitly provided:
+
+```typescript
+// With name="email", auto-generates data-testid="setup-input-email"
+<Input name="email" />
+
+// Explicit data-testid takes precedence
+<Input name="email" data-testid="custom-id" />
+```
+
+This pattern maintains backward compatibility with existing E2E tests that use `setup-input-*` selectors.
+
+### Toast Duration Conventions
+
+The `useToast` hook applies different default durations by type:
+
+| Toast Type | Default Duration | Reason |
+|------------|-----------------|--------|
+| `showError` | 5000ms (5s) | Errors need more read time |
+| `showSuccess` | Sonner default | Quick acknowledgment |
+| `showInfo` | Sonner default | Quick acknowledgment |
+
+```typescript
+const { showSuccess, showError, showInfo } = useToast()
+
+showError('Failed to save')        // Stays 5s by default
+showSuccess('Saved!')              // Sonner default (~4s)
+showError('Custom', 10000)         // Override to 10s
+```
 
 ## Testing Strategy
 

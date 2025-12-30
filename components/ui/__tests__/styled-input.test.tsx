@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { StyledInput } from '@/components/ui/styled-input'
+import { StyledInput } from '@/components/ui/input'
 import { createRef } from 'react'
 
 describe('StyledInput', () => {
@@ -28,7 +28,7 @@ describe('StyledInput', () => {
     it('should apply error styling when error={true}', () => {
       render(<StyledInput error={true} data-testid="input-error" />)
       const input = screen.getByTestId('input-error')
-      expect(input).toHaveClass('border-red-500/50', 'focus:border-red-400', 'focus:ring-red-400')
+      expect(input).toHaveClass('border-red-500/50', 'focus-visible:border-red-400', 'focus-visible:ring-red-400')
     })
 
     it('should not apply error styling when error={false}', () => {

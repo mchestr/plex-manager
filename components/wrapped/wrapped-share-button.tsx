@@ -1,5 +1,6 @@
 "use client"
 
+import { Button } from "@/components/ui/button"
 import { AnimatePresence, motion } from "framer-motion"
 import { useState } from "react"
 
@@ -43,16 +44,19 @@ export function WrappedShareButton({
 
   return (
     <div className="relative">
-      <motion.button
-        onClick={handleCopy}
-        onMouseEnter={() => setShowTooltip(true)}
-        onMouseLeave={() => setShowTooltip(false)}
-        className="relative px-6 py-3 bg-gradient-to-r from-cyan-600 via-purple-600 to-pink-600 hover:from-cyan-500 hover:via-purple-500 hover:to-pink-500 text-white rounded-xl text-sm font-semibold transition-all duration-200 flex items-center gap-2 shadow-lg"
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        aria-label={copied ? "Link copied to clipboard" : "Copy share link to clipboard"}
-        aria-live="polite"
+      <Button
+        asChild
+        className="px-6 py-3 bg-gradient-to-r from-cyan-600 via-purple-600 to-pink-600 hover:from-cyan-500 hover:via-purple-500 hover:to-pink-500 rounded-xl shadow-lg"
       >
+        <motion.button
+          onClick={handleCopy}
+          onMouseEnter={() => setShowTooltip(true)}
+          onMouseLeave={() => setShowTooltip(false)}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          aria-label={copied ? "Link copied to clipboard" : "Copy share link to clipboard"}
+          aria-live="polite"
+        >
         <AnimatePresence mode="wait">
           {copied ? (
             <motion.div
@@ -112,7 +116,8 @@ export function WrappedShareButton({
             </motion.div>
           )}
         </AnimatePresence>
-      </motion.button>
+        </motion.button>
+      </Button>
 
       <AnimatePresence>
         {showTooltip && !copied && (

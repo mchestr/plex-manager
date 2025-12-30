@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { StyledTextarea } from '@/components/ui/styled-textarea'
+import { StyledTextarea } from '@/components/ui/textarea'
 import { createRef } from 'react'
 
 describe('StyledTextarea', () => {
@@ -28,7 +28,7 @@ describe('StyledTextarea', () => {
     it('should apply error styling when error={true}', () => {
       render(<StyledTextarea error={true} data-testid="textarea-error" />)
       const textarea = screen.getByTestId('textarea-error')
-      expect(textarea).toHaveClass('border-red-500/50', 'focus:border-red-400', 'focus:ring-red-400')
+      expect(textarea).toHaveClass('border-red-500/50', 'focus-visible:border-red-400', 'focus-visible:ring-red-400')
     })
 
     it('should not apply error styling when error={false}', () => {

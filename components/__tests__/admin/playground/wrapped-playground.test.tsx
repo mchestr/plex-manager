@@ -75,7 +75,7 @@ jest.mock("@/hooks/use-playground-state", () => ({
   }),
 }))
 
-jest.mock("@/components/ui/toast", () => ({
+jest.mock("@/components/ui/sonner", () => ({
   useToast: () => ({
     showSuccess: jest.fn(),
     showError: jest.fn(),

@@ -1,9 +1,10 @@
 "use client"
 
 import { updateWrappedSettings } from "@/actions/admin"
+import { Button } from "@/components/ui/button"
 import { DateRangePicker } from "@/components/ui/date-range-picker"
-import { StyledCheckbox } from "@/components/ui/styled-checkbox"
-import { useToast } from "@/components/ui/toast"
+import { StyledCheckbox } from "@/components/ui/checkbox"
+import { useToast } from "@/components/ui/sonner"
 import { useRouter } from "next/navigation"
 import { useState, useTransition, useEffect } from "react"
 
@@ -184,12 +185,13 @@ export function WrappedSettingsForm({ enabled, year, startDate, endDate }: Wrapp
           </div>
         </div>
         <div className="flex justify-end">
-          <button
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={() => setIsEditing(true)}
-            className="px-3 py-1 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-600 hover:border-cyan-500/50 text-slate-300 hover:text-white text-xs font-medium rounded transition-all"
           >
             Edit
-          </button>
+          </Button>
         </div>
       </div>
     )
@@ -229,25 +231,27 @@ export function WrappedSettingsForm({ enabled, year, startDate, endDate }: Wrapp
         <p className="mt-1 text-xs text-slate-400">
           Generation window (e.g., November 20 to January 31). Year is automatically determined from the start date each year.
         </p>
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           type="button"
           onClick={() => setFormData({ ...formData, startMonth: "", startDay: "", endMonth: "", endDay: "" })}
           disabled={isPending || (!formData.startMonth && !formData.endMonth)}
-          className="mt-2 text-xs text-slate-400 hover:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="mt-2"
         >
           Clear date range
-        </button>
+        </Button>
       </div>
 
       <div className="flex gap-2">
-        <button
+        <Button
           type="submit"
           disabled={isPending}
-          className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500 text-white text-sm font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isPending ? "Saving..." : "Save"}
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="secondary"
           type="button"
           onClick={() => {
             setIsEditing(false)
@@ -260,10 +264,9 @@ export function WrappedSettingsForm({ enabled, year, startDate, endDate }: Wrapp
             })
           }}
           disabled={isPending}
-          className="px-4 py-2 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-600 hover:border-slate-500 text-slate-300 hover:text-white text-sm font-medium rounded-lg transition-all disabled:opacity-50"
         >
           Cancel
-        </button>
+        </Button>
       </div>
     </form>
   )

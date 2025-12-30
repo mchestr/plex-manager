@@ -1,5 +1,6 @@
 "use client"
 
+import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { useEffect, useRef, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -214,13 +215,14 @@ export function MobileMoreMenu({
                 <span className="text-xs font-medium text-center leading-tight">Home</span>
               </Link>
               {/* Sign Out */}
-              <button
+              <Button
                 ref={setMenuItemRef(menuItems.length + 1) as React.Ref<HTMLButtonElement>}
+                variant="ghost"
                 onClick={onSignOut}
                 role="menuitem"
                 tabIndex={0}
                 data-testid="admin-nav-signout-mobile"
-                className="flex flex-col items-center gap-2 p-3 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+                className="flex flex-col items-center gap-2 p-3 h-auto text-slate-400 hover:text-red-400 hover:bg-red-500/10"
               >
                 <svg
                   className="w-5 h-5 text-slate-500"
@@ -236,7 +238,7 @@ export function MobileMoreMenu({
                   />
                 </svg>
                 <span className="text-xs font-medium text-center leading-tight">Sign Out</span>
-              </button>
+              </Button>
             </div>
           </motion.div>
         </>

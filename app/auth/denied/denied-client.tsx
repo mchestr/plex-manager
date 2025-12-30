@@ -1,5 +1,6 @@
 "use client"
 
+import { Button } from "@/components/ui/button"
 import { motion } from "framer-motion"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
@@ -176,19 +177,23 @@ export function DeniedAccessPageClient() {
             transition={{ delay: 0.8 }}
             className="flex flex-col gap-3"
           >
-            <Link
-              href="/"
-              className="w-full py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors text-center"
+            <Button
+              asChild
+              variant="danger"
+              className="w-full"
             >
-              Try Again
-            </Link>
-            <button
+              <Link href="/">
+                Try Again
+              </Link>
+            </Button>
+            <Button
               onClick={() => router.push("/")}
               data-testid="return-home-button"
-              className="w-full py-3 px-4 border border-slate-600 rounded-md shadow-sm text-sm font-medium text-slate-300 bg-slate-700/50 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-colors"
+              variant="secondary"
+              className="w-full"
             >
               Return Home
-            </button>
+            </Button>
           </motion.div>
         </motion.div>
       </div>

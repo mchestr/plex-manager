@@ -2,7 +2,8 @@
 
 import { getWrappedSettings } from "@/actions/admin"
 import { generatePlexWrapped, getUserPlexWrapped } from "@/actions/users"
-import { useToast } from "@/components/ui/toast"
+import { Button } from "@/components/ui/button"
+import { useToast } from "@/components/ui/sonner"
 import { motion } from "framer-motion"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -303,16 +304,18 @@ export function WrappedCard({ userId, memberSince }: WrappedCardProps) {
             <h3 className="text-xl font-bold text-white">{wrappedYear} Wrapped</h3>
             <p className="mt-1 text-sm text-red-400">Something went wrong. Let&apos;s try again!</p>
           </div>
-          <button
+          <Button
             onClick={handleGenerate}
             disabled={isGenerating}
-            className="inline-flex items-center gap-2 rounded-xl bg-red-500/20 border border-red-500/30 px-5 py-2.5 text-sm font-semibold text-red-300 transition hover:bg-red-500/30 disabled:opacity-50"
+            variant="danger"
+            size="sm"
+            className="bg-red-500/20 border border-red-500/30 text-red-300 hover:bg-red-500/30"
           >
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
             Retry Generation
-          </button>
+          </Button>
         </div>
       </motion.div>
     )
@@ -369,16 +372,17 @@ export function WrappedCard({ userId, memberSince }: WrappedCardProps) {
           </p>
 
           {/* CTA Button */}
-          <button
+          <Button
             onClick={handleGenerate}
             disabled={isGenerating}
-            className="group/btn relative inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-pink-500 via-purple-500 to-pink-500 bg-[length:200%_100%] px-6 sm:px-8 py-3 sm:py-3.5 text-base sm:text-lg font-bold text-white shadow-lg shadow-pink-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-pink-500/40 hover:bg-right disabled:opacity-50 disabled:cursor-not-allowed"
+            size="lg"
+            className="group/btn bg-gradient-to-r from-pink-500 via-purple-500 to-pink-500 bg-[length:200%_100%] shadow-lg shadow-pink-500/25 hover:shadow-xl hover:shadow-pink-500/40 hover:bg-right"
           >
             Generate My Wrapped
             <svg className="h-5 w-5 transition-transform duration-200 group-hover/btn:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
-          </button>
+          </Button>
         </div>
       </div>
     </motion.div>

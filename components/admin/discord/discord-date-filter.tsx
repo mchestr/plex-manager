@@ -2,7 +2,8 @@
 
 import { useRouter, useSearchParams } from "next/navigation"
 import { useCallback } from "react"
-import { StyledInput } from "@/components/ui/styled-input"
+import { Button } from "@/components/ui/button"
+import { StyledInput } from "@/components/ui/input"
 
 export function DiscordDateFilter() {
   const router = useRouter()
@@ -95,27 +96,30 @@ export function DiscordDateFilter() {
           <div className="text-xs text-slate-400 mb-1 w-full sm:w-auto sm:mb-0">
             Quick Filters:
           </div>
-          <button
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={() => handleQuickFilter(7)}
-            className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium rounded transition-colors"
             data-testid="discord-filter-7-days"
           >
             7 Days
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={() => handleQuickFilter(30)}
-            className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium rounded transition-colors"
             data-testid="discord-filter-30-days"
           >
             30 Days
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={() => handleQuickFilter(90)}
-            className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium rounded transition-colors"
             data-testid="discord-filter-90-days"
           >
             90 Days
-          </button>
+          </Button>
         </div>
       </div>
     </div>

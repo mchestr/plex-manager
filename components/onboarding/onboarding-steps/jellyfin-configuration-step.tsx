@@ -1,5 +1,6 @@
 "use client"
 
+import { Button } from "@/components/ui/button"
 import { motion } from "framer-motion"
 
 interface JellyfinConfigurationStepProps {
@@ -70,20 +71,19 @@ export function JellyfinConfigurationStep({ onComplete, onBack }: JellyfinConfig
         transition={{ duration: 0.5, delay: 0.4 }}
         className="flex justify-between pt-4"
       >
-        <button
+        <Button
           onClick={onBack}
           data-testid="onboarding-jellyfin-config-back"
-          className="px-4 py-2 text-slate-400 hover:text-white transition-colors font-medium"
+          variant="ghost"
         >
           Back
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={onComplete}
           data-testid="onboarding-jellyfin-config-continue"
-          className="px-6 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-medium rounded-lg transition-colors"
         >
           Got it
-        </button>
+        </Button>
       </motion.div>
     </div>
   )

@@ -1,5 +1,6 @@
 "use client"
 
+import { Button } from "@/components/ui/button"
 import { motion } from "framer-motion"
 import { WrappedShareButton } from "@/components/wrapped/wrapped-share-button"
 
@@ -27,12 +28,13 @@ export function WrappedViewerNavigation({
   return (
     <div className="mt-6 sm:mt-8 flex justify-between items-center gap-3">
       {currentSectionIndex > 0 ? (
-        <button
+        <Button
           onClick={onPrevious}
-          className="px-3 sm:px-4 py-2 bg-slate-800/50 border border-slate-600 rounded-md text-white hover:border-cyan-500 transition-colors text-sm sm:text-base"
+          variant="secondary"
+          className="px-3 sm:px-4 bg-slate-800/50 hover:border-cyan-500 text-sm sm:text-base"
         >
           Previous
-        </button>
+        </Button>
       ) : (
         <div />
       )}
@@ -55,19 +57,20 @@ export function WrappedViewerNavigation({
         </motion.div>
       )}
       {currentSectionIndex < totalSections - 1 ? (
-        <button
+        <Button
           onClick={onNext}
-          className="px-3 sm:px-4 py-2 bg-slate-800/50 border border-slate-600 rounded-md text-white hover:border-cyan-500 transition-colors text-sm sm:text-base"
+          variant="secondary"
+          className="px-3 sm:px-4 bg-slate-800/50 hover:border-cyan-500 text-sm sm:text-base"
         >
           Next
-        </button>
+        </Button>
       ) : (
-        <button
+        <Button
           onClick={onShowAll}
-          className="px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500 text-white rounded-lg text-sm sm:text-base font-semibold transition-all shadow-lg border border-white/10"
+          className="px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base shadow-lg border border-white/10"
         >
           Show All
-        </button>
+        </Button>
       )}
     </div>
   )

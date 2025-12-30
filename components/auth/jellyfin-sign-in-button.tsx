@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { StyledInput } from "@/components/ui/styled-input"
+import { StyledInput } from "@/components/ui/input"
 import { createLogger } from "@/lib/utils/logger"
 import { signIn } from "next-auth/react"
 import { FormEvent, useState } from "react"

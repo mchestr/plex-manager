@@ -3,7 +3,7 @@ import { PromptTemplate } from "@/lib/generated/prisma/client"
 import { fireEvent, render, screen } from "@testing-library/react"
 
 // Mock the StyledDropdown component
-jest.mock("@/components/ui/styled-dropdown", () => ({
+jest.mock("@/components/ui/select", () => ({
   StyledDropdown: ({
     value,
     onChange,

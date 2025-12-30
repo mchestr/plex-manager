@@ -9,7 +9,7 @@ jest.mock('next/navigation', () => ({
 }))
 
 // Mock StyledDropdown
-jest.mock('@/components/ui/styled-dropdown', () => ({
+jest.mock('@/components/ui/select', () => ({
   StyledDropdown: ({ value, onChange, options, className }: any) => (
     <select
       data-testid="styled-dropdown"

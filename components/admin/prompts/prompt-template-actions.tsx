@@ -8,7 +8,8 @@ import {
   setActivePromptTemplate,
 } from "@/actions/prompts"
 import { PromptTemplate } from "@/lib/generated/prisma/client"
-import { ConfirmModal } from "@/components/admin/shared/confirm-modal"
+import { ConfirmModal } from "@/components/ui/alert-dialog"
+import { Button } from "@/components/ui/button"
 
 interface PromptTemplateActionsProps {
   template: PromptTemplate
@@ -59,34 +60,34 @@ export function PromptTemplateActions({ template }: PromptTemplateActionsProps) 
       )}
       <div className="flex flex-wrap gap-2">
         {!template.isActive && (
-          <button
+          <Button
             onClick={handleSetActive}
             disabled={isPending}
-            className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-medium rounded transition-colors disabled:opacity-50"
+            variant="primary"
+            size="sm"
           >
             Set Active
-          </button>
+          </Button>
         )}
-        <Link
-          href={`/admin/prompts/${template.id}/edit`}
-          className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-medium rounded transition-colors"
-        >
-          Edit
-        </Link>
-        <Link
-          href={`/admin/playground?templateId=${template.id}`}
-          className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded transition-colors"
-        >
-          Playground
-        </Link>
+        <Button asChild variant="primary" size="sm">
+          <Link href={`/admin/prompts/${template.id}/edit`}>
+            Edit
+          </Link>
+        </Button>
+        <Button asChild variant="primary" size="sm">
+          <Link href={`/admin/playground?templateId=${template.id}`}>
+            Playground
+          </Link>
+        </Button>
         {!template.isActive && (
-          <button
+          <Button
             onClick={handleDeleteClick}
             disabled={isPending}
-            className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded transition-colors disabled:opacity-50"
+            variant="danger"
+            size="sm"
           >
             Delete
-          </button>
+          </Button>
         )}
       </div>
 

@@ -1,8 +1,9 @@
 "use client"
 
 import { deleteInvite, getInviteDetails } from "@/actions/invite"
-import { useToast } from "@/components/ui/toast"
-import { ConfirmModal } from "@/components/admin/shared/confirm-modal"
+import { Button } from "@/components/ui/button"
+import { useToast } from "@/components/ui/sonner"
+import { ConfirmModal } from "@/components/ui/alert-dialog"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -114,15 +115,15 @@ export function InviteDetailsClient({ id }: { id: string }) {
           <p className="text-slate-400">View usage history and configuration</p>
         </div>
         <div className="ml-auto">
-          <button
+          <Button
+            variant="danger"
             onClick={handleDeleteClick}
-            className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-lg font-medium transition-colors flex items-center gap-2"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
             </svg>
             Delete Invite
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -134,18 +135,20 @@ export function InviteDetailsClient({ id }: { id: string }) {
               <h3 className="text-sm font-medium text-slate-400 uppercase tracking-wider mb-1">Invite Code</h3>
               <div className="text-4xl font-mono font-bold text-white tracking-wider">{invite.code}</div>
             </div>
-            <button
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => {
                 navigator.clipboard.writeText(`${window.location.origin}/invite/${invite.code}`)
                 toast.showSuccess("Copied to clipboard!")
               }}
-              className="p-2 text-cyan-400 hover:bg-cyan-500/10 rounded-lg transition-colors"
+              className="text-cyan-400"
               aria-label={`Copy invite link for ${invite.code}`}
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
               </svg>
-            </button>
+            </Button>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

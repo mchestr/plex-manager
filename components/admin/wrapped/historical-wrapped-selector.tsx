@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
+import { Button } from "@/components/ui/button"
 
 interface HistoricalVersion {
   id: string
@@ -134,9 +135,11 @@ export function HistoricalWrappedSelector({
                 {selectedVersion === "current" ? "Current" : formatDate(selectedVersionData.createdAt)}
               </span>
             )}
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setIsExpanded(!isExpanded)}
-              className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors px-2 py-1 rounded hover:bg-slate-800/50"
+              className="gap-1.5"
             >
               <span>{versions.length} version{versions.length !== 1 ? "s" : ""}</span>
               <svg
@@ -152,7 +155,7 @@ export function HistoricalWrappedSelector({
                   d="M19 9l-7 7-7-7"
                 />
               </svg>
-            </button>
+            </Button>
           </div>
         </div>
         {isExpanded && (
@@ -163,16 +166,18 @@ export function HistoricalWrappedSelector({
                 (selectedVersion === "current" && version.isCurrent)
 
               return (
-                <button
+                <Button
                   key={version.id}
+                  variant="secondary"
+                  size="sm"
                   onClick={() => {
                     handleVersionChange(version.isCurrent ? "current" : version.id)
                     setIsExpanded(false)
                   }}
-                  className={`flex-shrink-0 border rounded-md px-3 py-2 text-xs transition-colors min-w-[200px] ${
+                  className={`flex-shrink-0 min-w-[200px] ${
                     isSelected
                       ? "bg-cyan-500/20 border-cyan-500/50 text-cyan-300"
-                      : "bg-slate-800/50 border-slate-600 hover:bg-slate-800 hover:border-cyan-500/50 text-white"
+                      : ""
                   }`}
                 >
                   <div className="text-white">
@@ -191,7 +196,7 @@ export function HistoricalWrappedSelector({
                       {formatCost(version.cost)} • {version.totalTokens.toLocaleString()} tokens
                     </div>
                   </div>
-                </button>
+                </Button>
               )
             })}
           </div>

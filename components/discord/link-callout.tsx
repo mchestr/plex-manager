@@ -1,8 +1,9 @@
 "use client"
 
 import { disconnectDiscordAccount } from "@/actions/discord"
-import { ConfirmModal } from "@/components/admin/shared/confirm-modal"
-import { useToast } from "@/components/ui/toast"
+import { ConfirmModal } from "@/components/ui/alert-dialog"
+import { Button } from "@/components/ui/button"
+import { useToast } from "@/components/ui/sonner"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
@@ -97,14 +98,16 @@ export function DiscordLinkCallout({ connection, isEnabled, connectUrl = default
                 Re-link
               </Link>
             )}
-            <button
+            <Button
               onClick={handleDisconnectClick}
               disabled={isPending}
-              className="px-4 py-2 text-sm font-medium text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 hover:border-red-500/50 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:ring-offset-2 focus:ring-offset-slate-900"
+              variant="danger"
+              size="sm"
+              className="bg-red-500/10 border border-red-500/30 text-red-400 hover:text-red-300 hover:bg-red-500/20 hover:border-red-500/50 whitespace-nowrap"
               title="Disconnect Discord account"
             >
               {isPending ? "Disconnecting..." : "Disconnect"}
-            </button>
+            </Button>
           </div>
         )}
       </div>

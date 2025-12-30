@@ -1,7 +1,8 @@
 "use client"
 
 import { setLLMDisabled } from "@/actions/admin"
-import { useToast } from "@/components/ui/toast"
+import { Button } from "@/components/ui/button"
+import { useToast } from "@/components/ui/sonner"
 import { useRouter } from "next/navigation"
 import { useTransition } from "react"
 
@@ -28,13 +29,14 @@ export function LLMToggle({ disabled }: LLMToggleProps) {
 
   return (
     <div>
-      <button
+      <Button
+        variant="secondary"
+        size="sm"
         onClick={handleToggle}
         disabled={isPending}
-        className="px-3 py-1 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-600 hover:border-cyan-500/50 text-slate-300 hover:text-white text-xs font-medium rounded transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center whitespace-nowrap"
       >
         {isPending ? "Updating..." : disabled ? "Enable LLM" : "Disable LLM"}
-      </button>
+      </Button>
     </div>
   )
 }

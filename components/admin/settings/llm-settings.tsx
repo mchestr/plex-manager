@@ -1,7 +1,7 @@
 "use client"
 
 import { getConfig, setLLMDisabled } from "@/actions/admin"
-import { useToast } from "@/components/ui/toast"
+import { useToast } from "@/components/ui/sonner"
 import { useEffect, useState } from "react"
 
 export function LLMSettings() {

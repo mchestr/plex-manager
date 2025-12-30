@@ -1,5 +1,6 @@
 "use client"
 
+import { Button } from "@/components/ui/button"
 import { signOut } from "next-auth/react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -284,15 +285,16 @@ export function AdminNav() {
             </svg>
             <span className="font-medium text-sm">Back to Home</span>
           </Link>
-          <button
+          <Button
+            variant="ghost"
             onClick={handleSignOut}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all group"
+            className="w-full justify-start gap-3 text-slate-400 hover:text-red-400 hover:bg-red-500/10"
           >
             <svg className="w-5 h-5 text-slate-500 group-hover:text-red-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
             <span className="font-medium text-sm">Sign Out</span>
-          </button>
+          </Button>
         </div>
       </aside>
 
@@ -314,15 +316,16 @@ export function AdminNav() {
             <MobileNavButton key={item.href} item={item} isActive={isActive(item.href)} />
           ))}
           {/* More Button */}
-          <button
+          <Button
             ref={moreButtonRef}
+            variant="ghost"
             onClick={() => setMoreMenuOpen(!moreMenuOpen)}
             data-testid="admin-nav-more-mobile"
             aria-expanded={moreMenuOpen}
             aria-haspopup="true"
             aria-label="More navigation options"
             aria-controls="mobile-more-menu"
-            className={`flex flex-col items-center gap-1 px-2 py-2 rounded-lg transition-all min-w-0 flex-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 ${
+            className={`flex flex-col items-center gap-1 px-2 py-2 min-w-0 flex-1 h-auto ${
               moreMenuOpen || isSecondaryActive ? "text-cyan-400" : "text-slate-400"
             }`}
           >
@@ -337,7 +340,7 @@ export function AdminNav() {
             {isSecondaryActive && !moreMenuOpen && (
               <div className="w-1 h-1 rounded-full bg-cyan-400"></div>
             )}
-          </button>
+          </Button>
         </div>
       </nav>
 

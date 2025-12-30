@@ -1,5 +1,5 @@
 import * as userActions from '@/actions/users'
-import { ToastProvider } from '@/components/ui/toast'
+import { ToastProvider } from '@/components/ui/sonner'
 import { render, screen, waitFor } from '@testing-library/react'
 import React from 'react'
 

@@ -1,10 +1,11 @@
 "use client"
 
 import { generatePlexWrapped } from "@/actions/users"
-import { useToast } from "@/components/ui/toast"
+import { Button } from "@/components/ui/button"
+import { useToast } from "@/components/ui/sonner"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { ConfirmModal } from "@/components/admin/shared/confirm-modal"
+import { ConfirmModal } from "@/components/ui/alert-dialog"
 
 interface RegenerateWrappedButtonProps {
   userId: string
@@ -56,11 +57,12 @@ export function RegenerateWrappedButton({
   if (inline) {
     return (
       <>
-        <button
+        <Button
           onClick={() => setShowConfirmModal(true)}
           disabled={isRegenerating}
           aria-busy={isRegenerating}
-          className="w-full flex items-center gap-2 text-sm text-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          variant="ghost"
+          className="w-full justify-start"
           aria-label={isRegenerating ? "Regenerating wrapped" : showSuccess ? "Regeneration started" : "Regenerate wrapped"}
         >
           {isRegenerating ? (
@@ -119,7 +121,7 @@ export function RegenerateWrappedButton({
           <span>
             {isRegenerating ? "Regenerating..." : showSuccess ? "Started!" : "Regenerate Wrapped"}
           </span>
-        </button>
+        </Button>
         <ConfirmModal
           isOpen={showConfirmModal}
           onClose={() => setShowConfirmModal(false)}
@@ -136,15 +138,13 @@ export function RegenerateWrappedButton({
   return (
     <>
       <div className="flex flex-col gap-0.5">
-        <button
+        <Button
           onClick={() => setShowConfirmModal(true)}
           disabled={isRegenerating}
           aria-busy={isRegenerating}
-          className={`px-2 py-1 text-white text-xs font-medium rounded transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 justify-center ${
-            showSuccess
-              ? "bg-green-600 hover:bg-green-700 animate-pulse"
-              : "bg-purple-600 hover:bg-purple-700"
-          }`}
+          variant={showSuccess ? "success" : "primary"}
+          size="icon"
+          className={showSuccess ? "animate-pulse" : ""}
           aria-label={isRegenerating ? "Regenerating wrapped" : showSuccess ? "Regeneration started" : "Regenerate wrapped"}
         >
           {isRegenerating ? (
@@ -209,7 +209,7 @@ export function RegenerateWrappedButton({
               </svg>
             </>
           )}
-        </button>
+        </Button>
       </div>
 
       <ConfirmModal

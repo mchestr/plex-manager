@@ -1,5 +1,6 @@
 "use client"
 
+import { Button } from "@/components/ui/button"
 import { createPlexAuthUrl, createPlexPin } from "@/lib/plex-auth"
 import { useEffect, useState } from "react"
 
@@ -115,8 +116,8 @@ export function PlexSignInButton({
     }
   }, [])
 
-  const defaultButtonClassName =
-    "w-full py-2.5 sm:py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+  // Note: buttonClassName prop allows overriding default Button styles for special cases
+  const useCustomClassName = Boolean(buttonClassName)
 
   // Different warning messages based on context
   const getDefaultWarningMessage = () => {
@@ -139,40 +140,77 @@ export function PlexSignInButton({
     <div className="flex flex-col items-center gap-4 sm:gap-6 w-full max-w-md">
       {!showWarningState && (
         <>
-          <button
-            onClick={handleSignIn}
-            disabled={isLoading}
-            data-testid="sign-in-with-plex"
-            className={buttonClassName || defaultButtonClassName}
-          >
-            {isLoading ? (
-              <>
-                <svg
-                  className="animate-spin h-5 w-5 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-                {loadingText}
-              </>
-            ) : (
-              buttonText
-            )}
-          </button>
+          {useCustomClassName ? (
+            <button
+              onClick={handleSignIn}
+              disabled={isLoading}
+              data-testid="sign-in-with-plex"
+              className={buttonClassName}
+            >
+              {isLoading ? (
+                <>
+                  <svg
+                    className="animate-spin h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  {loadingText}
+                </>
+              ) : (
+                buttonText
+              )}
+            </button>
+          ) : (
+            <Button
+              onClick={handleSignIn}
+              disabled={isLoading}
+              data-testid="sign-in-with-plex"
+              className="w-full"
+            >
+              {isLoading ? (
+                <>
+                  <svg
+                    className="animate-spin h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  {loadingText}
+                </>
+              ) : (
+                buttonText
+              )}
+            </Button>
+          )}
 
           {error && (
             <div className="w-full max-w-md rounded-lg bg-red-900/30 border border-red-500/50 p-3 sm:p-4">

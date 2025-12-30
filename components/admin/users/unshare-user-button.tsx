@@ -1,10 +1,11 @@
 "use client"
 
 import { unshareUserLibrary } from "@/actions/users"
-import { useToast } from "@/components/ui/toast"
+import { Button } from "@/components/ui/button"
+import { useToast } from "@/components/ui/sonner"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { ConfirmModal } from "@/components/admin/shared/confirm-modal"
+import { ConfirmModal } from "@/components/ui/alert-dialog"
 
 interface UnshareUserButtonProps {
   userId: string
@@ -56,10 +57,11 @@ export function UnshareUserButton({
   if (inline) {
     return (
       <>
-        <button
+        <Button
           onClick={() => setShowConfirmModal(true)}
           disabled={isUnsharing}
-          className="w-full flex items-center gap-2 text-sm text-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          variant="ghost"
+          className="w-full justify-start"
           title="Unshare library access"
         >
           {isUnsharing ? (
@@ -115,7 +117,7 @@ export function UnshareUserButton({
           <span>
             {isUnsharing ? "Unsharing..." : showSuccess ? "Unshared!" : "Unshare Library"}
           </span>
-        </button>
+        </Button>
         <ConfirmModal
           isOpen={showConfirmModal}
           onClose={() => setShowConfirmModal(false)}
@@ -133,14 +135,12 @@ export function UnshareUserButton({
   return (
     <>
       <div className="flex flex-col gap-0.5">
-        <button
+        <Button
           onClick={() => setShowConfirmModal(true)}
           disabled={isUnsharing}
-          className={`px-2 py-1 text-white text-xs font-medium rounded transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 justify-center ${
-            showSuccess
-              ? "bg-green-600 hover:bg-green-700 animate-pulse"
-              : "bg-red-600 hover:bg-red-700"
-          }`}
+          variant={showSuccess ? "success" : "danger"}
+          size="icon"
+          className={showSuccess ? "animate-pulse" : ""}
           title="Unshare library access"
         >
           {isUnsharing ? (
@@ -202,7 +202,7 @@ export function UnshareUserButton({
               </svg>
             </>
           )}
-        </button>
+        </Button>
       </div>
 
       <ConfirmModal

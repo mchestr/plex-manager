@@ -1,5 +1,6 @@
 "use client"
 
+import { Button } from "@/components/ui/button"
 import { motion } from "framer-motion"
 
 interface MediaRequestStepProps {
@@ -78,20 +79,19 @@ export function MediaRequestStep({ onComplete, onBack, overseerrUrl }: MediaRequ
         transition={{ duration: 0.5, delay: 0.4 }}
         className="flex justify-between pt-4"
       >
-        <button
+        <Button
           onClick={onBack}
           data-testid="onboarding-media-request-back"
-          className="px-4 py-2 text-slate-400 hover:text-white transition-colors font-medium"
+          variant="ghost"
         >
           Back
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={onComplete}
           data-testid="onboarding-media-request-continue"
-          className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors"
         >
           Next
-        </button>
+        </Button>
       </motion.div>
     </div>
   )

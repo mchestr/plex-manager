@@ -1,10 +1,11 @@
 "use client"
 
 import { updateUserAdminStatus } from "@/actions/admin"
-import { useToast } from "@/components/ui/toast"
+import { Button } from "@/components/ui/button"
+import { useToast } from "@/components/ui/sonner"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import { ConfirmModal } from "@/components/admin/shared/confirm-modal"
+import { ConfirmModal } from "@/components/ui/alert-dialog"
 
 interface ChangeUserRoleButtonProps {
   userId: string
@@ -57,16 +58,12 @@ export function ChangeUserRoleButton({
 
   return (
     <>
-      <button
+      <Button
         onClick={() => setShowConfirmModal(true)}
         disabled={isUpdating}
-        className={`px-3 py-1.5 text-white text-sm font-medium rounded transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 ${
-          showSuccess
-            ? "bg-green-600 hover:bg-green-700 animate-pulse"
-            : currentIsAdmin
-            ? "bg-red-600 hover:bg-red-700"
-            : "bg-purple-600 hover:bg-purple-700"
-        }`}
+        variant={showSuccess ? "success" : currentIsAdmin ? "danger" : "primary"}
+        size="sm"
+        className={showSuccess ? "animate-pulse" : ""}
         title={actionText}
       >
         {isUpdating ? (
@@ -147,7 +144,7 @@ export function ChangeUserRoleButton({
             <span>{actionText}</span>
           </>
         )}
-      </button>
+      </Button>
 
       <ConfirmModal
         isOpen={showConfirmModal}

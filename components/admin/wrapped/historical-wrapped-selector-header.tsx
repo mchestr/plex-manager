@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
+import { Button } from "@/components/ui/button"
 
 interface HistoricalVersion {
   id: string
@@ -111,9 +112,11 @@ export function HistoricalWrappedSelectorHeader({
 
   return (
     <div className="relative">
-      <button
+      <Button
+        variant="secondary"
+        size="sm"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center gap-2 px-3 py-1.5 text-xs bg-slate-800/50 hover:bg-slate-800 border border-slate-600 hover:border-cyan-500/50 rounded-md transition-colors text-slate-300 hover:text-white"
+        className="gap-2"
       >
         <svg
           className="w-4 h-4"
@@ -145,7 +148,7 @@ export function HistoricalWrappedSelectorHeader({
             d="M19 9l-7 7-7-7"
           />
         </svg>
-      </button>
+      </Button>
 
       {isExpanded && (
         <>
@@ -162,13 +165,15 @@ export function HistoricalWrappedSelectorHeader({
                   (selectedVersion === "current" && version.isCurrent)
 
                 return (
-                  <button
+                  <Button
                     key={version.id}
+                    variant="ghost"
+                    size="sm"
                     onClick={() => handleVersionChange(version.isCurrent ? "current" : version.id)}
-                    className={`w-full text-left px-3 py-2 rounded-md text-xs transition-colors ${
+                    className={`w-full justify-start ${
                       isSelected
                         ? "bg-cyan-500/20 border border-cyan-500/50 text-cyan-300"
-                        : "hover:bg-slate-700/50 text-slate-300 hover:text-white"
+                        : ""
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -206,7 +211,7 @@ export function HistoricalWrappedSelectorHeader({
                         </svg>
                       )}
                     </div>
-                  </button>
+                  </Button>
                 )
               })}
             </div>

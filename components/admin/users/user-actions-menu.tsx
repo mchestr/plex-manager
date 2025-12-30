@@ -2,6 +2,7 @@
 
 import { RegenerateWrappedButton } from "@/components/admin/users/regenerate-wrapped-button"
 import { UnshareUserButton } from "@/components/admin/users/unshare-user-button"
+import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
@@ -48,19 +49,21 @@ export function UserActionsMenu({ user }: UserActionsMenuProps) {
   return (
     <>
       {/* Menu Button */}
-      <button
+      <Button
         ref={buttonRef}
         onClick={(e) => {
           e.stopPropagation()
           setIsOpen(!isOpen)
         }}
-        className="p-1.5 rounded-lg hover:bg-slate-700/50 transition-colors group"
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8"
         aria-label={`Actions for ${user.name || 'user'}`}
         aria-haspopup="menu"
         aria-expanded={isOpen}
       >
         <svg
-          className="w-5 h-5 text-slate-400 group-hover:text-slate-200 transition-colors"
+          className="w-5 h-5"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -73,7 +76,7 @@ export function UserActionsMenu({ user }: UserActionsMenuProps) {
             d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
           />
         </svg>
-      </button>
+      </Button>
 
       {/* Dropdown Menu - rendered via portal to escape table overflow */}
       {isOpen &&

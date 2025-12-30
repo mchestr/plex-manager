@@ -2,6 +2,7 @@
 
 import { JellyfinSignInButton } from "@/components/auth/jellyfin-sign-in-button"
 import { PlexSignInButton } from "@/components/auth/plex-sign-in-button"
+import { Button } from "@/components/ui/button"
 import { motion } from "framer-motion"
 import { useState } from "react"
 
@@ -107,28 +108,24 @@ export function ServiceSignInToggle({
     >
       {/* Toggle Tabs */}
       <div className="flex gap-2 p-1 bg-slate-800/50 rounded-lg border border-slate-700">
-        <button
+        <Button
           onClick={() => setSelectedService("plex")}
           data-testid="toggle-plex"
-          className={`flex-1 px-4 py-2 rounded-md font-medium text-sm transition-all duration-200 ${
-            selectedService === "plex"
-              ? "bg-gradient-to-r from-cyan-600 via-purple-600 to-pink-600 text-white shadow-lg"
-              : "text-slate-400 hover:text-white hover:bg-slate-700/50"
-          }`}
+          variant={selectedService === "plex" ? "primary" : "ghost"}
+          size="sm"
+          className={`flex-1 ${selectedService === "plex" ? "shadow-lg" : ""}`}
         >
           Plex
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={() => setSelectedService("jellyfin")}
           data-testid="toggle-jellyfin"
-          className={`flex-1 px-4 py-2 rounded-md font-medium text-sm transition-all duration-200 ${
-            selectedService === "jellyfin"
-              ? "bg-gradient-to-r from-cyan-600 via-purple-600 to-pink-600 text-white shadow-lg"
-              : "text-slate-400 hover:text-white hover:bg-slate-700/50"
-          }`}
+          variant={selectedService === "jellyfin" ? "primary" : "ghost"}
+          size="sm"
+          className={`flex-1 ${selectedService === "jellyfin" ? "shadow-lg" : ""}`}
         >
           Jellyfin
-        </button>
+        </Button>
       </div>
 
       {/* Sign-in Form - Fixed height container to prevent jumping */}

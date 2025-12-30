@@ -2,6 +2,7 @@
 
 import React, { useId, useMemo, useState } from "react"
 import { PromptScrollspy } from "./prompt-scrollspy"
+import { Button } from "@/components/ui/button"
 
 interface ExpandablePromptProps {
   content: string
@@ -147,13 +148,15 @@ export function ExpandablePrompt({ content, title, characterCount, characterCoun
     <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6 mb-6">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-white">{title}</h2>
-        <button
+        <Button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors flex items-center gap-1"
+          variant="ghost"
+          size="sm"
+          className="text-cyan-400 hover:text-cyan-300"
         >
           <span>{isExpanded ? "Collapse" : "Expand"}</span>
           <span className="text-xs">{isExpanded ? "↑" : "↓"}</span>
-        </button>
+        </Button>
       </div>
       {hasMultipleMessages && isExpanded && (
         <PromptScrollspy messages={messages} containerId={containerId} />

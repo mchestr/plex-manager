@@ -1,7 +1,7 @@
 import { OnboardingWizard } from '@/components/onboarding/onboarding-wizard'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { useRouter } from 'next/navigation'
-import { ToastProvider } from '@/components/ui/toast'
+import { ToastProvider } from '@/components/ui/sonner'
 
 // Store original window.location
 const originalLocation = window.location

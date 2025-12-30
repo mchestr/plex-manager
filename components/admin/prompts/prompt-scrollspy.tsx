@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { Button } from "@/components/ui/button"
 
 interface PromptMessage {
   id: string
@@ -107,17 +108,19 @@ export function PromptScrollspy({ messages, containerId }: PromptScrollspyProps)
           const label = message.name ? `${message.role} (${message.name})` : message.role
 
           return (
-            <button
+            <Button
               key={message.id}
               onClick={() => scrollToMessage(message.id)}
-              className={`whitespace-nowrap px-3 py-1.5 text-xs rounded transition-colors ${
+              variant="ghost"
+              size="sm"
+              className={`whitespace-nowrap ${
                 isActive
                   ? `${colors.bg} ${colors.text} font-medium`
                   : "bg-slate-800 text-slate-400 hover:text-slate-300 hover:bg-slate-700/50"
               }`}
             >
               {label}
-            </button>
+            </Button>
           )
         })}
       </div>

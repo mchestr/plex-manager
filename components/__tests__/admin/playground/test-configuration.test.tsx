@@ -11,7 +11,7 @@ jest.mock("@/components/admin/playground/statistics-viewer", () => ({
   ),
 }))
 
-jest.mock("@/components/ui/styled-dropdown", () => ({
+jest.mock("@/components/ui/select", () => ({
   StyledDropdown: ({
     value,
     onChange,
@@ -39,7 +39,7 @@ jest.mock("@/components/ui/styled-dropdown", () => ({
   ),
 }))
 
-jest.mock("@/components/ui/styled-input", () => ({
+jest.mock("@/components/ui/input", () => ({
   StyledInput: ({
     type,
     value,
