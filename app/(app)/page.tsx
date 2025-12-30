@@ -29,7 +29,7 @@ export default async function Home() {
       where: { isActive: true },
     }),
     prisma.jellyfinServer.findFirst({
-      where: { isActive: true },
+      where: { isActive: true, enabledForLogin: true },
     }),
     prisma.discordIntegration.findUnique({ where: { id: "discord" } }),
     getActiveAnnouncements(),

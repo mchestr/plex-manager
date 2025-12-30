@@ -68,15 +68,16 @@ model PlexServer {
 }
 
 model JellyfinServer {
-  id            String   @id @default(cuid())
-  name          String
-  url           String   // Full URL including protocol, hostname, and port (e.g. http://jellyfin.example.com:8096)
-  publicUrl     String?  // Public facing URL (e.g. https://jellyfin.example.com)
-  apiKey        String   // Jellyfin API key for admin operations
-  adminUserId   String?  // Jellyfin user ID of the admin who configured this server
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id              String   @id @default(cuid())
+  name            String
+  url             String   // Full URL including protocol, hostname, and port (e.g. http://jellyfin.example.com:8096)
+  publicUrl       String?  // Public facing URL (e.g. https://jellyfin.example.com)
+  apiKey          String   // Jellyfin API key for admin operations
+  adminUserId     String?  // Jellyfin user ID of the admin who configured this server
+  isActive        Boolean  @default(true)
+  enabledForLogin Boolean  @default(true) // When false, hides Jellyfin from the login page
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([isActive])
   @@index([adminUserId])
