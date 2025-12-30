@@ -9,6 +9,7 @@ import { RequestsCard } from "@/components/dashboard/requests-card"
 import { StatusFooter } from "@/components/dashboard/status-background"
 import { WrappedCard } from "@/components/dashboard/wrapped-card"
 import type { DashboardDiscordConnection } from "@/components/discord/link-callout"
+import { WatchlistSyncCard } from "@/components/watchlist/sync-settings-card"
 import { signOut } from "next-auth/react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -115,6 +116,14 @@ export function UserDashboard({
                 ) : (
                   <div className="hidden sm:block" />
                 )}
+              </div>
+            </div>
+
+            {/* Features section */}
+            <div className="space-y-3 sm:space-y-4 pt-2">
+              <h2 className="text-xs font-medium uppercase tracking-wider text-slate-500 px-1">Features</h2>
+              <div className="grid grid-cols-1 gap-3 sm:gap-4">
+                <WatchlistSyncCard />
               </div>
             </div>
           </div>

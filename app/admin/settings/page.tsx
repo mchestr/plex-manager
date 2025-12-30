@@ -1,5 +1,6 @@
 import { getAdminSettings } from "@/actions/admin"
 import { DiscordIntegrationForm, LLMProviderForm, LLMToggle, ServerForm } from "@/components/admin/settings/settings-edit-forms"
+import { WatchlistSyncSettings } from "@/components/admin/settings/watchlist-sync-settings"
 import { WrappedSettingsForm } from "@/components/admin/settings/wrapped-settings-form"
 import { getBaseUrl } from "@/lib/utils"
 
@@ -354,6 +355,9 @@ export default async function SettingsPage() {
                 </div>
               </div>
             </div>
+
+            {/* Watchlist Sync Settings */}
+            <WatchlistSyncSettings />
 
             {/* System Information */}
             <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg overflow-hidden">

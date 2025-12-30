@@ -12,26 +12,29 @@ datasource db {
 
 // User model
 model User {
-  id                  String        @id @default(cuid())
-  name                String?
-  email               String?       @unique
-  emailVerified       DateTime?
-  image               String?
-  plexUserId          String?       @unique
-  jellyfinUserId      String?       @unique // Jellyfin user ID (if user was created via Jellyfin invite)
-  primaryAuthService  String?       // Track which service user authenticated with first: "plex" or "jellyfin"
-  isAdmin             Boolean       @default(false)
-  onboardingStatus    Json?         @default("{\"plex\": false, \"jellyfin\": false}") // Track onboarding completion per service
-  plexWrapped         PlexWrapped[]
-  llmUsage            LLMUsage[]
-  chatConversations   ChatConversation[]
-  inviteUsages        InviteUsage[]
-  discordConnection   DiscordConnection?
-  discordOAuthStates  DiscordOAuthState[]
-  userMediaMarks      UserMediaMark[]
-  userWatchIntents    UserWatchIntent[]
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
+  id                    String        @id @default(cuid())
+  name                  String?
+  email                 String?       @unique
+  emailVerified         DateTime?
+  image                 String?
+  plexUserId            String?       @unique
+  plexAuthToken         String?       // Plex auth token (stored during login for watchlist API access)
+  jellyfinUserId        String?       @unique // Jellyfin user ID (if user was created via Jellyfin invite)
+  primaryAuthService    String?       // Track which service user authenticated with first: "plex" or "jellyfin"
+  isAdmin               Boolean       @default(false)
+  onboardingStatus      Json?         @default("{\"plex\": false, \"jellyfin\": false}") // Track onboarding completion per service
+  plexWrapped           PlexWrapped[]
+  llmUsage              LLMUsage[]
+  chatConversations     ChatConversation[]
+  inviteUsages          InviteUsage[]
+  discordConnection     DiscordConnection?
+  discordOAuthStates    DiscordOAuthState[]
+  userMediaMarks        UserMediaMark[]
+  userWatchIntents      UserWatchIntent[]
+  watchlistSyncSettings WatchlistSyncSettings?
+  watchlistSyncHistory  WatchlistSyncHistory[]
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
 
   @@index([plexUserId])
   @@index([jellyfinUserId])
@@ -241,13 +244,15 @@ model LLMUsage {
 
 // Application Configuration (singleton pattern)
 model Config {
-  id                        String    @id @default("config")
-  llmDisabled               Boolean   @default(false) // When true, LLM calls are disabled and mock data is returned
-  wrappedEnabled            Boolean   @default(true) // When false, wrapped generation is disabled
-  wrappedGenerationStartDate DateTime? // Optional start date for when generation is allowed (e.g., Nov 20). Year is auto-determined from this date.
-  wrappedGenerationEndDate   DateTime? // Optional end date for when generation is allowed (e.g., Jan 31)
-  updatedAt                DateTime  @updatedAt
-  updatedBy                 String?   // User ID who last updated this config
+  id                          String    @id @default("config")
+  llmDisabled                 Boolean   @default(false) // When true, LLM calls are disabled and mock data is returned
+  wrappedEnabled              Boolean   @default(true) // When false, wrapped generation is disabled
+  wrappedGenerationStartDate  DateTime? // Optional start date for when generation is allowed (e.g., Nov 20). Year is auto-determined from this date.
+  wrappedGenerationEndDate    DateTime? // Optional end date for when generation is allowed (e.g., Jan 31)
+  watchlistSyncEnabled        Boolean   @default(false) // Global toggle for watchlist sync feature
+  watchlistSyncIntervalMinutes Int      @default(60) // Default sync interval in minutes (minimum 15)
+  updatedAt                   DateTime  @updatedAt
+  updatedBy                   String?   // User ID who last updated this config
 }
 
 model DiscordIntegration {
@@ -555,4 +560,68 @@ model Announcement {
 
   @@index([isActive, expiresAt])
   @@index([priority])
+}
+
+// Watchlist Sync - Per-user sync settings
+model WatchlistSyncSettings {
+  id                  String    @id @default(cuid())
+  userId              String    @unique
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  syncEnabled         Boolean   @default(false)
+  lastSyncAt          DateTime?
+  lastSyncStatus      String?   // "success", "partial", "failed"
+  lastSyncError       String?
+  itemsSynced         Int       @default(0) // Items processed in last sync
+  itemsRequested      Int       @default(0) // Items requested in last sync
+  totalItemsSynced    Int       @default(0) // Cumulative total items synced
+  totalItemsRequested Int       @default(0) // Cumulative total requests created
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([syncEnabled])
+}
+
+// Watchlist Sync - Track synced items to avoid duplicates
+model WatchlistSyncHistory {
+  id                 String              @id @default(cuid())
+  userId             String
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plexRatingKey      String              // Plex discover rating key
+  guid               String              // GUID string (e.g., "tmdb://12345")
+  mediaType          MediaType
+  title              String
+  year               Int?
+  tmdbId             Int?
+  tvdbId             Int?
+  imdbId             String?
+  syncedAt           DateTime            @default(now())
+  requestedAt        DateTime?           // When submitted to Overseerr
+  overseerrRequestId Int?                // Overseerr request ID if submitted
+  status             WatchlistSyncStatus @default(SYNCED)
+
+  @@unique([userId, plexRatingKey])
+  @@index([userId, syncedAt])
+  @@index([status])
+}
+
+// Watchlist Sync - Distributed lock (mirrors DiscordBotLock)
+model WatchlistSyncLock {
+  id            String   @id @default("watchlist-sync")
+  instanceId    String   // Unique identifier for this pod/instance
+  acquiredAt    DateTime @default(now())
+  expiresAt     DateTime // Lock expires if not renewed (handles crashed pods)
+  lastRenewedAt DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([expiresAt])
+}
+
+enum WatchlistSyncStatus {
+  SYNCED               // Item tracked but not requested
+  REQUESTED            // Submitted to Overseerr
+  ALREADY_AVAILABLE    // Already in library
+  ALREADY_REQUESTED    // Already has pending request
+  FAILED               // Request submission failed
+  REMOVED_FROM_WATCHLIST // Removed from Plex watchlist
 }
