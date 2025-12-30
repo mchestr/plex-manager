@@ -18,11 +18,50 @@ import {
 } from "@/lib/queue/client"
 import { isRedisConfigured, isRedisHealthy } from "@/lib/queue/connection"
 import { JOB_TYPES, JobStatus, JobMetadata, QueueStats, QueueHealth } from "@/lib/queue/types"
+import { isRegisteredJobType } from "@/lib/queue/jobs"
 import { isWorkerRunning } from "@/lib/queue/worker"
 import { isWatchlistSyncEnabled, getWatchlistSyncInterval } from "@/lib/watchlist/lock"
+import { logAuditEvent, AuditEventType } from "@/lib/security/audit-log"
 import { z } from "zod"
 
 const logger = createLogger("ADMIN_QUEUE_ACTIONS")
+
+// =============================================================================
+// Rate Limiting for Server Actions
+// =============================================================================
+
+interface RateLimitEntry {
+  count: number
+  resetTime: number
+}
+
+const actionRateLimitStore = new Map<string, RateLimitEntry>()
+
+// Rate limit config: 30 actions per minute per admin user
+const RATE_LIMIT_WINDOW_MS = 60000
+const RATE_LIMIT_MAX = 30
+
+/**
+ * Check if an admin action is rate limited
+ * Returns true if rate limit exceeded
+ */
+function isRateLimited(adminId: string): boolean {
+  const now = Date.now()
+  const key = `queue:${adminId}`
+  const entry = actionRateLimitStore.get(key)
+
+  if (!entry || now > entry.resetTime) {
+    actionRateLimitStore.set(key, { count: 1, resetTime: now + RATE_LIMIT_WINDOW_MS })
+    return false
+  }
+
+  entry.count++
+  if (entry.count > RATE_LIMIT_MAX) {
+    return true
+  }
+
+  return false
+}
 
 // =============================================================================
 // Validation Schemas
@@ -125,7 +164,7 @@ export async function getQueueDashboardData(): Promise<
     logger.error("Error fetching queue dashboard data", error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to fetch queue data",
+      error: "Failed to load queue dashboard. Please try again.",
     }
   }
 }
@@ -183,7 +222,7 @@ export async function getQueueHealth(): Promise<
     logger.error("Error fetching queue health", error)
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Failed to fetch health",
+      error: "Failed to load queue health. Please try again.",
     }
   }
 }
@@ -219,9 +258,12 @@ export async function getQueueJobs(
     const start = (page - 1) * limit
     const end = start + limit - 1
 
+    // Validate jobType if provided
+    const validJobType = jobType && isRegisteredJobType(jobType) ? jobType : undefined
+
     const jobs = await getJobs({
       status: status as JobStatus | undefined,
-      jobType: jobType as (typeof JOB_TYPES)[keyof typeof JOB_TYPES] | undefined,
+      jobType: validJobType as (typeof JOB_TYPES)[keyof typeof JOB_TYPES] | undefined,
       start,
       end,
     })
@@ -280,10 +322,16 @@ export async function getQueueJob(
 export async function retryQueueJob(
   input: unknown
 ): Promise<{ success: true } | { success: false; error: string }> {
+  let session: Awaited<ReturnType<typeof requireAdmin>>
   try {
-    await requireAdmin()
+    session = await requireAdmin()
   } catch {
     return { success: false, error: "Unauthorized" }
+  }
+
+  const adminId = session.user.id
+  if (isRateLimited(adminId)) {
+    return { success: false, error: "Too many requests. Please try again later." }
   }
 
   const validated = jobIdSchema.safeParse(input)
@@ -297,11 +345,16 @@ export async function retryQueueJob(
 
   try {
     await retryJob(validated.data.jobId)
-    logger.info("Job retried by admin", { jobId: validated.data.jobId })
+
+    logAuditEvent(AuditEventType.QUEUE_JOB_RETRIED, adminId, {
+      jobId: validated.data.jobId,
+    })
+    logger.info("Job retried by admin", { jobId: validated.data.jobId, adminId })
+
     return { success: true }
   } catch (error) {
     logger.error("Error retrying job", error, { jobId: validated.data.jobId })
-    return { success: false, error: "Failed to retry job" }
+    return { success: false, error: "Failed to retry job. Please try again." }
   }
 }
 
@@ -311,10 +364,16 @@ export async function retryQueueJob(
 export async function removeQueueJob(
   input: unknown
 ): Promise<{ success: true } | { success: false; error: string }> {
+  let session: Awaited<ReturnType<typeof requireAdmin>>
   try {
-    await requireAdmin()
+    session = await requireAdmin()
   } catch {
     return { success: false, error: "Unauthorized" }
+  }
+
+  const adminId = session.user.id
+  if (isRateLimited(adminId)) {
+    return { success: false, error: "Too many requests. Please try again later." }
   }
 
   const validated = jobIdSchema.safeParse(input)
@@ -328,11 +387,16 @@ export async function removeQueueJob(
 
   try {
     await removeJob(validated.data.jobId)
-    logger.info("Job removed by admin", { jobId: validated.data.jobId })
+
+    logAuditEvent(AuditEventType.QUEUE_JOB_REMOVED, adminId, {
+      jobId: validated.data.jobId,
+    })
+    logger.info("Job removed by admin", { jobId: validated.data.jobId, adminId })
+
     return { success: true }
   } catch (error) {
     logger.error("Error removing job", error, { jobId: validated.data.jobId })
-    return { success: false, error: "Failed to remove job" }
+    return { success: false, error: "Failed to remove job. Please try again." }
   }
 }
 
@@ -346,10 +410,16 @@ export async function removeQueueJob(
 export async function pauseJobQueue(): Promise<
   { success: true } | { success: false; error: string }
 > {
+  let session: Awaited<ReturnType<typeof requireAdmin>>
   try {
-    await requireAdmin()
+    session = await requireAdmin()
   } catch {
     return { success: false, error: "Unauthorized" }
+  }
+
+  const adminId = session.user.id
+  if (isRateLimited(adminId)) {
+    return { success: false, error: "Too many requests. Please try again later." }
   }
 
   if (!isRedisConfigured()) {
@@ -358,11 +428,14 @@ export async function pauseJobQueue(): Promise<
 
   try {
     await pauseQueue()
-    logger.info("Queue paused by admin")
+
+    logAuditEvent(AuditEventType.QUEUE_PAUSED, adminId)
+    logger.info("Queue paused by admin", { adminId })
+
     return { success: true }
   } catch (error) {
     logger.error("Error pausing queue", error)
-    return { success: false, error: "Failed to pause queue" }
+    return { success: false, error: "Failed to pause queue. Please try again." }
   }
 }
 
@@ -372,10 +445,16 @@ export async function pauseJobQueue(): Promise<
 export async function resumeJobQueue(): Promise<
   { success: true } | { success: false; error: string }
 > {
+  let session: Awaited<ReturnType<typeof requireAdmin>>
   try {
-    await requireAdmin()
+    session = await requireAdmin()
   } catch {
     return { success: false, error: "Unauthorized" }
+  }
+
+  const adminId = session.user.id
+  if (isRateLimited(adminId)) {
+    return { success: false, error: "Too many requests. Please try again later." }
   }
 
   if (!isRedisConfigured()) {
@@ -384,11 +463,14 @@ export async function resumeJobQueue(): Promise<
 
   try {
     await resumeQueue()
-    logger.info("Queue resumed by admin")
+
+    logAuditEvent(AuditEventType.QUEUE_RESUMED, adminId)
+    logger.info("Queue resumed by admin", { adminId })
+
     return { success: true }
   } catch (error) {
     logger.error("Error resuming queue", error)
-    return { success: false, error: "Failed to resume queue" }
+    return { success: false, error: "Failed to resume queue. Please try again." }
   }
 }
 
@@ -402,10 +484,16 @@ export async function resumeJobQueue(): Promise<
 export async function triggerWatchlistSyncJob(
   input: unknown
 ): Promise<{ success: true; data: { jobId: string } } | { success: false; error: string }> {
+  let session: Awaited<ReturnType<typeof requireAdmin>>
   try {
-    await requireAdmin()
+    session = await requireAdmin()
   } catch {
     return { success: false, error: "Unauthorized" }
+  }
+
+  const adminId = session.user.id
+  if (isRateLimited(adminId)) {
+    return { success: false, error: "Too many requests. Please try again later." }
   }
 
   const validated = triggerSyncSchema.safeParse(input)
@@ -426,19 +514,32 @@ export async function triggerWatchlistSyncJob(
         userId,
         triggeredBy: "admin",
       })
-      logger.info("User watchlist sync job triggered by admin", { userId, jobId })
+
+      logAuditEvent(AuditEventType.QUEUE_SYNC_TRIGGERED, adminId, {
+        targetUserId: userId,
+        syncType: "user",
+        jobId,
+      })
+      logger.info("User watchlist sync job triggered by admin", { userId, jobId, adminId })
+
       return { success: true, data: { jobId } }
     } else {
       // Sync all enabled users
       const jobId = await addJob(JOB_TYPES.WATCHLIST_SYNC_ALL, {
         triggeredBy: "admin",
       })
-      logger.info("Batch watchlist sync job triggered by admin", { jobId })
+
+      logAuditEvent(AuditEventType.QUEUE_SYNC_TRIGGERED, adminId, {
+        syncType: "all",
+        jobId,
+      })
+      logger.info("Batch watchlist sync job triggered by admin", { jobId, adminId })
+
       return { success: true, data: { jobId } }
     }
   } catch (error) {
     logger.error("Error triggering sync job", error)
-    return { success: false, error: "Failed to trigger sync" }
+    return { success: false, error: "Failed to trigger sync. Please try again." }
   }
 }
 
@@ -448,10 +549,16 @@ export async function triggerWatchlistSyncJob(
 export async function updateWatchlistSyncSchedule(
   input: unknown
 ): Promise<{ success: true } | { success: false; error: string }> {
+  let session: Awaited<ReturnType<typeof requireAdmin>>
   try {
-    await requireAdmin()
+    session = await requireAdmin()
   } catch {
     return { success: false, error: "Unauthorized" }
+  }
+
+  const adminId = session.user.id
+  if (isRateLimited(adminId)) {
+    return { success: false, error: "Too many requests. Please try again later." }
   }
 
   const validated = updateScheduleSchema.safeParse(input)
@@ -478,17 +585,27 @@ export async function updateWatchlistSyncSchedule(
         { triggeredBy: "scheduled" },
         intervalMs
       )
-      logger.info("Watchlist sync schedule updated", { intervalMinutes })
+
+      logAuditEvent(AuditEventType.QUEUE_SCHEDULE_UPDATED, adminId, {
+        intervalMinutes,
+        action: "updated",
+      })
+      logger.info("Watchlist sync schedule updated", { intervalMinutes, adminId })
     } else {
       // Remove the scheduler if sync is disabled
       await removeScheduledJob("watchlist-sync-scheduled")
-      logger.info("Watchlist sync schedule removed (sync disabled)")
+
+      logAuditEvent(AuditEventType.QUEUE_SCHEDULE_UPDATED, adminId, {
+        action: "removed",
+        reason: "sync_disabled",
+      })
+      logger.info("Watchlist sync schedule removed (sync disabled)", { adminId })
     }
 
     return { success: true }
   } catch (error) {
     logger.error("Error updating sync schedule", error)
-    return { success: false, error: "Failed to update schedule" }
+    return { success: false, error: "Failed to update schedule. Please try again." }
   }
 }
 

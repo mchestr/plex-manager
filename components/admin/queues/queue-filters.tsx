@@ -87,6 +87,7 @@ export function QueueFilters() {
           <button
             onClick={() => router.push("?")}
             className="px-3 py-2 text-sm text-slate-400 hover:text-white transition-colors"
+            data-testid="queue-filter-clear"
           >
             Clear Filters
           </button>

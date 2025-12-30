@@ -169,9 +169,10 @@ export async function stopWorker(): Promise<void> {
 
 /**
  * Check if the worker is running
+ * Note: worker.closing is a Promise when close is in progress, undefined otherwise
  */
 export function isWorkerRunning(): boolean {
-  return worker !== null && !worker.closing
+  return worker !== null && worker.closing === undefined
 }
 
 /**

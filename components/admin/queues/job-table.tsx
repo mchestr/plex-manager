@@ -191,6 +191,7 @@ export function JobTable({ jobs, page, hasMore, disabled = false }: JobTableProp
                         disabled={disabled || (isPending && pendingJobId === job.jobId)}
                         className="p-1 text-cyan-400 hover:text-cyan-300 disabled:opacity-50 disabled:cursor-not-allowed"
                         title="Retry job"
+                        data-testid={`job-retry-${job.jobId}`}
                       >
                         {isPending && pendingJobId === job.jobId ? (
                           <svg
@@ -238,6 +239,7 @@ export function JobTable({ jobs, page, hasMore, disabled = false }: JobTableProp
                       }
                       className="p-1 text-red-400 hover:text-red-300 disabled:opacity-50 disabled:cursor-not-allowed"
                       title="Remove job"
+                      data-testid={`job-remove-${job.jobId}`}
                     >
                       <svg
                         className="w-4 h-4"
@@ -267,6 +269,7 @@ export function JobTable({ jobs, page, hasMore, disabled = false }: JobTableProp
           onClick={() => handlePageChange(page - 1)}
           disabled={page <= 1}
           className="px-3 py-1 text-sm text-slate-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+          data-testid="job-table-prev"
         >
           Previous
         </button>
@@ -275,6 +278,7 @@ export function JobTable({ jobs, page, hasMore, disabled = false }: JobTableProp
           onClick={() => handlePageChange(page + 1)}
           disabled={!hasMore}
           className="px-3 py-1 text-sm text-slate-400 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+          data-testid="job-table-next"
         >
           Next
         </button>

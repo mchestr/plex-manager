@@ -83,10 +83,13 @@ export async function addJob<T extends JobType>(
     jobId,
   })
 
+  // Log only safe fields to avoid exposing sensitive data
+  const dataRecord = data as unknown as Record<string, unknown>
   logger.info("Job added to queue", {
     jobId: job.id,
     jobType,
-    data,
+    userId: typeof dataRecord.userId === "string" ? dataRecord.userId : undefined,
+    triggeredBy: typeof dataRecord.triggeredBy === "string" ? dataRecord.triggeredBy : undefined,
   })
 
   return job.id!
