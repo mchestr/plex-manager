@@ -7,6 +7,12 @@ import {
   getDailyActivity,
   getActiveUsers,
   getSummaryStats,
+  getHelpCommandStats,
+  getAccountLinkingMetrics,
+  getMediaMarkingBreakdown,
+  getContextMetrics,
+  getErrorAnalysis,
+  getSelectionMenuStats,
   type GetCommandLogsParams,
 } from "@/lib/discord/audit"
 import { prisma } from "@/lib/prisma"
@@ -240,6 +246,161 @@ export async function getDiscordDashboardData(params: GetStatsParams) {
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to get dashboard data",
+      data: null,
+    }
+  }
+}
+
+export async function getDiscordHelpStats(params: GetStatsParams) {
+  await requireAdmin()
+
+  try {
+    const stats = await getHelpCommandStats(
+      new Date(params.startDate),
+      toEndOfDayExclusive(params.endDate)!
+    )
+
+    return { success: true, stats }
+  } catch (error) {
+    logger.error("Failed to get Discord help stats", error instanceof Error ? error : undefined)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to get help stats",
+      stats: null,
+    }
+  }
+}
+
+export async function getDiscordLinkingMetrics(params: GetStatsParams) {
+  await requireAdmin()
+
+  try {
+    const metrics = await getAccountLinkingMetrics(
+      new Date(params.startDate),
+      toEndOfDayExclusive(params.endDate)!
+    )
+
+    return { success: true, metrics }
+  } catch (error) {
+    logger.error("Failed to get Discord linking metrics", error instanceof Error ? error : undefined)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to get linking metrics",
+      metrics: null,
+    }
+  }
+}
+
+export async function getDiscordMediaMarkingBreakdown(params: GetStatsParams) {
+  await requireAdmin()
+
+  try {
+    const breakdown = await getMediaMarkingBreakdown(
+      new Date(params.startDate),
+      toEndOfDayExclusive(params.endDate)!
+    )
+
+    return { success: true, breakdown }
+  } catch (error) {
+    logger.error("Failed to get Discord media marking breakdown", error instanceof Error ? error : undefined)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to get media marking breakdown",
+      breakdown: null,
+    }
+  }
+}
+
+export async function getDiscordContextMetrics(params: GetStatsParams) {
+  await requireAdmin()
+
+  try {
+    const metrics = await getContextMetrics(
+      new Date(params.startDate),
+      toEndOfDayExclusive(params.endDate)!
+    )
+
+    return { success: true, metrics }
+  } catch (error) {
+    logger.error("Failed to get Discord context metrics", error instanceof Error ? error : undefined)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to get context metrics",
+      metrics: null,
+    }
+  }
+}
+
+export async function getDiscordErrorAnalysis(params: GetStatsParams) {
+  await requireAdmin()
+
+  try {
+    const analysis = await getErrorAnalysis(
+      new Date(params.startDate),
+      toEndOfDayExclusive(params.endDate)!
+    )
+
+    return { success: true, analysis }
+  } catch (error) {
+    logger.error("Failed to get Discord error analysis", error instanceof Error ? error : undefined)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to get error analysis",
+      analysis: null,
+    }
+  }
+}
+
+export async function getDiscordSelectionStats(params: GetStatsParams) {
+  await requireAdmin()
+
+  try {
+    const stats = await getSelectionMenuStats(
+      new Date(params.startDate),
+      toEndOfDayExclusive(params.endDate)!
+    )
+
+    return { success: true, stats }
+  } catch (error) {
+    logger.error("Failed to get Discord selection stats", error instanceof Error ? error : undefined)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to get selection stats",
+      stats: null,
+    }
+  }
+}
+
+export async function getDiscordDetailedStats(params: GetStatsParams) {
+  await requireAdmin()
+
+  try {
+    const [helpResult, linkingResult, mediaResult, contextResult, errorResult, selectionResult] =
+      await Promise.all([
+        getDiscordHelpStats(params),
+        getDiscordLinkingMetrics(params),
+        getDiscordMediaMarkingBreakdown(params),
+        getDiscordContextMetrics(params),
+        getDiscordErrorAnalysis(params),
+        getDiscordSelectionStats(params),
+      ])
+
+    return {
+      success: true,
+      data: {
+        helpStats: helpResult.success ? helpResult.stats : null,
+        linkingMetrics: linkingResult.success ? linkingResult.metrics : null,
+        mediaMarkingBreakdown: mediaResult.success ? mediaResult.breakdown : null,
+        contextMetrics: contextResult.success ? contextResult.metrics : null,
+        errorAnalysis: errorResult.success ? errorResult.analysis : null,
+        selectionStats: selectionResult.success ? selectionResult.stats : null,
+      },
+    }
+  } catch (error) {
+    logger.error("Failed to get Discord detailed stats", error instanceof Error ? error : undefined)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to get detailed stats",
       data: null,
     }
   }
