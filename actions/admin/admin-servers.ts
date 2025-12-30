@@ -570,6 +570,32 @@ export async function deleteJellyfinServer() {
 }
 
 /**
+ * Toggle Jellyfin login visibility (admin only)
+ * When disabled, Jellyfin won't appear as a login option on the home page
+ */
+export async function toggleJellyfinLogin(enabled: boolean) {
+  await requireAdmin()
+
+  try {
+    const { revalidatePath } = await import("next/cache")
+
+    await prisma.jellyfinServer.updateMany({
+      where: { isActive: true },
+      data: { enabledForLogin: enabled },
+    })
+
+    revalidatePath("/admin/settings")
+    revalidatePath("/")
+    return { success: true }
+  } catch (error) {
+    if (error instanceof Error) {
+      return { success: false, error: error.message }
+    }
+    return { success: false, error: "Failed to toggle Jellyfin login setting" }
+  }
+}
+
+/**
  * Delete Prometheus configuration (admin only)
  */
 export async function deletePrometheus() {

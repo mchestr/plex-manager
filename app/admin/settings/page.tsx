@@ -1,5 +1,5 @@
 import { getAdminSettings } from "@/actions/admin"
-import { DiscordIntegrationForm, LLMProviderForm, LLMToggle, ServerForm } from "@/components/admin/settings/settings-edit-forms"
+import { DiscordIntegrationForm, JellyfinLoginToggle, LLMProviderForm, LLMToggle, ServerForm } from "@/components/admin/settings/settings-edit-forms"
 import { WatchlistSyncSettings } from "@/components/admin/settings/watchlist-sync-settings"
 import { WrappedSettingsForm } from "@/components/admin/settings/wrapped-settings-form"
 import { getBaseUrl } from "@/lib/utils"
@@ -252,6 +252,11 @@ export default async function SettingsPage() {
                     />
                   </div>
                   <ServerForm type="jellyfin" server={settings.jellyfinServer} />
+                  {settings.jellyfinServer && (
+                    <JellyfinLoginToggle
+                      enabledForLogin={settings.jellyfinServer.enabledForLogin}
+                    />
+                  )}
                 </div>
 
                 {/* Tautulli */}
