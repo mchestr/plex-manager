@@ -1,5 +1,6 @@
 import { type SonarrParsed } from "@/lib/validations/sonarr";
 import { fetchWithTimeout, isTimeoutError } from "@/lib/utils/fetch-with-timeout";
+import { arrGet } from "@/lib/connections/arr-client";
 import { type ConnectionResult } from "@/types/connection";
 
 export async function testSonarrConnection(config: SonarrParsed): Promise<{ success: boolean; error?: string }> {
@@ -50,98 +51,23 @@ export async function testSonarrConnection(config: SonarrParsed): Promise<{ succ
 }
 
 export async function getSonarrSystemStatus(config: SonarrParsed): Promise<ConnectionResult<unknown>> {
-  try {
-    const url = `${config.url}/api/v3/system/status`
-    const response = await fetch(url, {
-      headers: { "X-Api-Key": config.apiKey },
-    })
-    if (!response.ok) {
-      return { success: false, error: `Sonarr status error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Sonarr system status" }
-  }
+  return arrGet(config, "/api/v3/system/status", "Sonarr status error", "Failed to get Sonarr system status")
 }
 
 export async function getSonarrQueue(config: SonarrParsed): Promise<ConnectionResult<unknown>> {
-  try {
-    const url = `${config.url}/api/v3/queue`
-    const response = await fetch(url, {
-      headers: { "X-Api-Key": config.apiKey },
-    })
-    if (!response.ok) {
-      return { success: false, error: `Sonarr queue error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Sonarr queue" }
-  }
+  return arrGet(config, "/api/v3/queue", "Sonarr queue error", "Failed to get Sonarr queue")
 }
 
 export async function getSonarrHealth(config: SonarrParsed): Promise<ConnectionResult<unknown>> {
-  try {
-    const url = `${config.url}/api/v3/health`
-    const response = await fetch(url, {
-      headers: { "X-Api-Key": config.apiKey },
-    })
-    if (!response.ok) {
-      return { success: false, error: `Sonarr health error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Sonarr health" }
-  }
+  return arrGet(config, "/api/v3/health", "Sonarr health error", "Failed to get Sonarr health")
 }
 
 export async function getSonarrDiskSpace(config: SonarrParsed): Promise<ConnectionResult<unknown>> {
-  try {
-    const url = `${config.url}/api/v3/diskspace`
-    const response = await fetch(url, {
-      headers: { "X-Api-Key": config.apiKey },
-    })
-    if (!response.ok) {
-      return { success: false, error: `Sonarr diskspace error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Sonarr disk space" }
-  }
+  return arrGet(config, "/api/v3/diskspace", "Sonarr diskspace error", "Failed to get Sonarr disk space")
 }
 
 export async function searchSonarrSeries(config: SonarrParsed, term: string): Promise<ConnectionResult<unknown>> {
-  try {
-    const url = `${config.url}/api/v3/series/lookup?term=${encodeURIComponent(term)}`
-    const response = await fetch(url, {
-      headers: { "X-Api-Key": config.apiKey },
-    })
-    if (!response.ok) {
-      return { success: false, error: `Sonarr search error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to search Sonarr series" }
-  }
+  return arrGet(config, `/api/v3/series/lookup?term=${encodeURIComponent(term)}`, "Sonarr search error", "Failed to search Sonarr series")
 }
 
 export async function getSonarrHistory(
@@ -150,189 +76,55 @@ export async function getSonarrHistory(
   seriesId?: number,
   episodeId?: number
 ): Promise<ConnectionResult<unknown>> {
-  try {
-    const params = new URLSearchParams({
-      pageSize: pageSize.toString(),
-      sortKey: "date",
-      sortDir: "desc",
-    })
-    if (seriesId !== undefined) {
-      params.append("seriesId", seriesId.toString())
-    }
-    if (episodeId !== undefined) {
-      params.append("episodeId", episodeId.toString())
-    }
-    const url = `${config.url}/api/v3/history?${params.toString()}`
-    const response = await fetch(url, {
-      headers: { "X-Api-Key": config.apiKey },
-    })
-    if (!response.ok) {
-      return { success: false, error: `Sonarr history error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Sonarr history" }
+  const params = new URLSearchParams({
+    pageSize: pageSize.toString(),
+    sortKey: "date",
+    sortDir: "desc",
+  })
+  if (seriesId !== undefined) {
+    params.append("seriesId", seriesId.toString())
   }
+  if (episodeId !== undefined) {
+    params.append("episodeId", episodeId.toString())
+  }
+  return arrGet(config, `/api/v3/history?${params.toString()}`, "Sonarr history error", "Failed to get Sonarr history")
 }
 
 export async function getSonarrSeries(config: SonarrParsed): Promise<ConnectionResult<unknown>> {
-  try {
-    const url = `${config.url}/api/v3/series`
-    const response = await fetch(url, {
-      headers: { "X-Api-Key": config.apiKey },
-    })
-    if (!response.ok) {
-      return { success: false, error: `Sonarr series error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Sonarr series" }
-  }
+  return arrGet(config, "/api/v3/series", "Sonarr series error", "Failed to get Sonarr series")
 }
 
 export async function getSonarrSeriesById(config: SonarrParsed, seriesId: number): Promise<ConnectionResult<unknown>> {
-  try {
-    const url = `${config.url}/api/v3/series/${seriesId}`
-    const response = await fetch(url, {
-      headers: { "X-Api-Key": config.apiKey },
-    })
-    if (!response.ok) {
-      return { success: false, error: `Sonarr series detail error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Sonarr series by ID" }
-  }
+  return arrGet(config, `/api/v3/series/${seriesId}`, "Sonarr series detail error", "Failed to get Sonarr series by ID")
 }
 
 export async function getSonarrCalendar(config: SonarrParsed, startDate?: string, endDate?: string): Promise<ConnectionResult<unknown>> {
-  try {
-    let url = `${config.url}/api/v3/calendar`
-    const params = new URLSearchParams()
-    if (startDate) params.append("start", startDate)
-    if (endDate) params.append("end", endDate)
-    if (params.toString()) url += `?${params.toString()}`
-    const response = await fetch(url, {
-      headers: { "X-Api-Key": config.apiKey },
-    })
-    if (!response.ok) {
-      return { success: false, error: `Sonarr calendar error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Sonarr calendar" }
-  }
+  let path = "/api/v3/calendar"
+  const params = new URLSearchParams()
+  if (startDate) params.append("start", startDate)
+  if (endDate) params.append("end", endDate)
+  if (params.toString()) path += `?${params.toString()}`
+  return arrGet(config, path, "Sonarr calendar error", "Failed to get Sonarr calendar")
 }
 
 export async function getSonarrWantedMissing(config: SonarrParsed, pageSize = 20): Promise<ConnectionResult<unknown>> {
-  try {
-    const url = `${config.url}/api/v3/wanted/missing?pageSize=${pageSize}&sortKey=airDateUtc&sortDir=desc`
-    const response = await fetch(url, {
-      headers: { "X-Api-Key": config.apiKey },
-    })
-    if (!response.ok) {
-      return { success: false, error: `Sonarr wanted missing error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Sonarr wanted missing" }
-  }
+  return arrGet(config, `/api/v3/wanted/missing?pageSize=${pageSize}&sortKey=airDateUtc&sortDir=desc`, "Sonarr wanted missing error", "Failed to get Sonarr wanted missing")
 }
 
 export async function getSonarrRootFolders(config: SonarrParsed): Promise<ConnectionResult<unknown>> {
-  try {
-    const url = `${config.url}/api/v3/rootFolder`
-    const response = await fetch(url, {
-      headers: { "X-Api-Key": config.apiKey },
-    })
-    if (!response.ok) {
-      return { success: false, error: `Sonarr root folders error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Sonarr root folders" }
-  }
+  return arrGet(config, "/api/v3/rootFolder", "Sonarr root folders error", "Failed to get Sonarr root folders")
 }
 
 export async function getSonarrQualityProfiles(config: SonarrParsed): Promise<ConnectionResult<unknown>> {
-  try {
-    const url = `${config.url}/api/v3/qualityProfile`
-    const response = await fetch(url, {
-      headers: { "X-Api-Key": config.apiKey },
-    })
-    if (!response.ok) {
-      return { success: false, error: `Sonarr quality profiles error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Sonarr quality profiles" }
-  }
+  return arrGet(config, "/api/v3/qualityProfile", "Sonarr quality profiles error", "Failed to get Sonarr quality profiles")
 }
 
 export async function getSonarrEpisodes(config: SonarrParsed, seriesId: number): Promise<ConnectionResult<unknown>> {
-  try {
-    const url = `${config.url}/api/v3/episode?seriesId=${seriesId}`
-    const response = await fetch(url, {
-      headers: { "X-Api-Key": config.apiKey },
-    })
-    if (!response.ok) {
-      return { success: false, error: `Sonarr episodes error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Sonarr episodes" }
-  }
+  return arrGet(config, `/api/v3/episode?seriesId=${seriesId}`, "Sonarr episodes error", "Failed to get Sonarr episodes")
 }
 
 export async function getSonarrEpisodeById(config: SonarrParsed, episodeId: number): Promise<ConnectionResult<unknown>> {
-  try {
-    const url = `${config.url}/api/v3/episode/${episodeId}`
-    const response = await fetch(url, {
-      headers: { "X-Api-Key": config.apiKey },
-    })
-    if (!response.ok) {
-      return { success: false, error: `Sonarr episode detail error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Sonarr episode by ID" }
-  }
+  return arrGet(config, `/api/v3/episode/${episodeId}`, "Sonarr episode detail error", "Failed to get Sonarr episode by ID")
 }
 
 export async function deleteSonarrSeries(
@@ -406,20 +198,5 @@ export async function bulkDeleteSonarrEpisodeFiles(
 }
 
 export async function getSonarrSeriesStatistics(config: SonarrParsed, seriesId: number): Promise<ConnectionResult<unknown>> {
-  try {
-    const url = `${config.url}/api/v3/series/${seriesId}`
-    const response = await fetch(url, {
-      headers: { "X-Api-Key": config.apiKey },
-    })
-    if (!response.ok) {
-      return { success: false, error: `Sonarr series statistics error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Sonarr series statistics" }
-  }
+  return arrGet(config, `/api/v3/series/${seriesId}`, "Sonarr series statistics error", "Failed to get Sonarr series statistics")
 }

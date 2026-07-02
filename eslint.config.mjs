@@ -25,13 +25,27 @@ export default [
   {
     files: ["**/*.js", "**/*.jsx", "**/*.ts", "**/*.tsx"],
     rules: {
-      "@typescript-eslint/no-explicit-any": "off",
-      "@typescript-eslint/no-require-imports": "off",
+      // Surface new `any` and `@ts-ignore` usages without failing the build,
+      // per CLAUDE.md's strict/no-`any` stance. Existing violations become
+      // warnings to be burned down over time.
+      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/ban-ts-comment": "warn",
+      // Unused locals/params are already caught by tsconfig's
+      // noUnusedLocals/noUnusedParameters, so leave the ESLint rule off to
+      // avoid duplicate noise.
       "@typescript-eslint/no-unused-vars": "off",
-      "@typescript-eslint/ban-ts-comment": "off",
       "@typescript-eslint/no-this-alias": "off",
       "prefer-const": "off",
       "react/no-unescaped-entities": "off",
+    },
+  },
+  {
+    // The centralized logger conditionally requires Winston/Chalk at runtime
+    // (Node-only), which legitimately needs CommonJS require(). Scope the
+    // require-imports exception to that file rather than disabling it globally.
+    files: ["lib/utils/logger.ts"],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
     },
   },
 ];

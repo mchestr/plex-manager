@@ -684,12 +684,7 @@ export async function processInvite(code: string, plexAuthToken: string) {
     logger.error("Error processing invite", error)
 
     if (error instanceof Error) {
-      const isInviteError =
-        error.message.includes("Invite") ||
-        error.message.includes("maximum uses") ||
-        error.message.includes("expired")
-
-      return { success: false, error: isInviteError ? error.message : error.message }
+      return { success: false, error: error.message }
     }
 
     return { success: false, error: "An unexpected error occurred" }
@@ -915,12 +910,7 @@ export async function processJellyfinInvite(code: string, authData: JellyfinAuth
     logger.error("Error processing Jellyfin invite", error)
 
     if (error instanceof Error) {
-      const isInviteError =
-        error.message.includes("Invite") ||
-        error.message.includes("maximum uses") ||
-        error.message.includes("expired")
-
-      return { success: false, error: isInviteError ? error.message : error.message }
+      return { success: false, error: error.message }
     }
 
     return { success: false, error: "An unexpected error occurred" }

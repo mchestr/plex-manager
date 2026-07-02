@@ -4,6 +4,8 @@ import { createInvite, deleteInvite, getInvites } from "@/actions/invite"
 import { getAvailableLibraries } from "@/actions/server-info"
 import { getJellyfinLibraries } from "@/actions/admin/admin-servers"
 import { useToast } from "@/components/ui/toast"
+import { ModalShell } from "@/components/ui/modal-shell"
+import { StyledDropdown } from "@/components/ui/styled-dropdown"
 import { ConfirmModal } from "@/components/admin/shared/confirm-modal"
 import Link from "next/link"
 import { useCallback, useEffect, useState } from "react"
@@ -349,19 +351,13 @@ export function InvitesPageClient() {
 
       {/* Create Invite Modal */}
       {showCreateModal && (
-        <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-          role="presentation"
-          onClick={() => setShowCreateModal(false)}
+        <ModalShell
+          isOpen={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          maxWidth="md"
+          labelledBy="create-invite-title"
+          describedBy="create-invite-description"
         >
-          <div
-            className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-md shadow-2xl"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="create-invite-title"
-            aria-describedby="create-invite-description"
-            onClick={(e) => e.stopPropagation()}
-          >
             <div className="p-6 border-b border-slate-700 flex justify-between items-center">
               <div>
                 <h2 id="create-invite-title" className="text-xl font-bold text-white">Create Invite</h2>
@@ -464,18 +460,18 @@ export function InvitesPageClient() {
                 <label htmlFor="expiration" className="block text-sm font-medium text-slate-400 mb-1">
                   Expiration
                 </label>
-                <select
+                <StyledDropdown
                   id="expiration"
                   value={formData.expiresIn}
-                  onChange={(e) => setFormData({ ...formData, expiresIn: e.target.value })}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                >
-                  <option value="1d">24 Hours</option>
-                  <option value="48h">48 Hours</option>
-                  <option value="7d">7 Days</option>
-                  <option value="30d">30 Days</option>
-                  <option value="never">Never</option>
-                </select>
+                  onChange={(value) => setFormData({ ...formData, expiresIn: value })}
+                  options={[
+                    { value: "1d", label: "24 Hours" },
+                    { value: "48h", label: "48 Hours" },
+                    { value: "7d", label: "7 Days" },
+                    { value: "30d", label: "30 Days" },
+                    { value: "never", label: "Never" },
+                  ]}
+                />
               </div>
 
               {/* Library Selection */}
@@ -630,8 +626,7 @@ export function InvitesPageClient() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+        </ModalShell>
       )}
 
       {/* Delete Confirmation Modal */}
