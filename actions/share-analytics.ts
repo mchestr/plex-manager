@@ -1,5 +1,6 @@
 "use server"
 
+import { requireAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 import { daysSchema, limitSchema } from "@/lib/validations/shared-schemas"
@@ -35,6 +36,10 @@ export interface TopSharedWrap {
  * Get overall share analytics statistics
  */
 export async function getShareAnalyticsStats(): Promise<ShareAnalyticsStats> {
+  // Admin-only analytics. Guard before the try so the auth error propagates
+  // instead of being swallowed into the zeroed fallback below.
+  await requireAdmin()
+
   try {
     const totalShares = await prisma.plexWrapped.count({
       where: {
@@ -74,6 +79,9 @@ export async function getShareAnalyticsStats(): Promise<ShareAnalyticsStats> {
 export async function getShareTimeSeriesData(
   days: number = 30
 ): Promise<ShareTimeSeriesData[]> {
+  // Admin-only analytics.
+  await requireAdmin()
+
   // Validate days parameter
   const validatedDays = daysSchema.safeParse(days)
   const safeDays = validatedDays.success ? validatedDays.data : 30
@@ -157,6 +165,9 @@ export async function getShareTimeSeriesData(
 export async function getTopSharedWraps(
   limit: number = 10
 ): Promise<TopSharedWrap[]> {
+  // Admin-only analytics: exposes user emails and share tokens.
+  await requireAdmin()
+
   // Validate limit parameter
   const validatedLimit = limitSchema.safeParse(limit)
   const safeLimit = validatedLimit.success ? validatedLimit.data : 10

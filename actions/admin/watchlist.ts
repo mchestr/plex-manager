@@ -1,12 +1,10 @@
 "use server"
 
-import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { requireAdmin } from "@/lib/admin"
 import { createLogger } from "@/lib/utils/logger"
 import { globalWatchlistSyncSettingsSchema } from "@/lib/validations/watchlist"
 import { syncUserWatchlist } from "@/lib/watchlist/sync-service"
-import { getServerSession } from "next-auth"
 
 const logger = createLogger("ADMIN_WATCHLIST_ACTIONS")
 
@@ -14,10 +12,8 @@ const logger = createLogger("ADMIN_WATCHLIST_ACTIONS")
  * Get global watchlist sync settings (admin only)
  */
 export async function getGlobalWatchlistSyncSettings() {
-  const isAdmin = await requireAdmin()
-  if (!isAdmin) {
-    return { success: false as const, error: "Unauthorized" }
-  }
+  // requireAdmin() throws (caught by the error boundary) for non-admins.
+  await requireAdmin()
 
   try {
     const config = await prisma.config.findUnique({
@@ -45,11 +41,7 @@ export async function getGlobalWatchlistSyncSettings() {
  * Update global watchlist sync settings (admin only)
  */
 export async function updateGlobalWatchlistSyncSettings(data: unknown) {
-  const session = await getServerSession(authOptions)
-  const isAdmin = await requireAdmin()
-  if (!isAdmin) {
-    return { success: false as const, error: "Unauthorized" }
-  }
+  const session = await requireAdmin()
 
   // Validate input
   const validated = globalWatchlistSyncSettingsSchema.safeParse(data)
@@ -98,10 +90,7 @@ export async function updateGlobalWatchlistSyncSettings(data: unknown) {
  * Get watchlist sync statistics (admin only)
  */
 export async function getWatchlistSyncStats() {
-  const isAdmin = await requireAdmin()
-  if (!isAdmin) {
-    return { success: false as const, error: "Unauthorized" }
-  }
+  await requireAdmin()
 
   try {
     const [usersWithSyncEnabled, totalItemsSynced, totalItemsRequested, recentHistory] =
@@ -149,11 +138,7 @@ export async function getWatchlistSyncStats() {
  * Uses the job queue if Redis is configured, otherwise falls back to direct execution
  */
 export async function forceUserWatchlistSync(userId: string) {
-  const session = await getServerSession(authOptions)
-  const isAdmin = await requireAdmin()
-  if (!isAdmin) {
-    return { success: false as const, error: "Unauthorized" }
-  }
+  const session = await requireAdmin()
 
   try {
     // Verify user exists

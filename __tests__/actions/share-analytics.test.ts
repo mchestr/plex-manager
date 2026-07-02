@@ -9,6 +9,11 @@ import {
 } from '@/actions/share-analytics'
 import { prisma } from '@/lib/prisma'
 
+// These are admin-only analytics; requireAdmin() is a no-op success in tests.
+jest.mock('@/lib/admin', () => ({
+  requireAdmin: jest.fn().mockResolvedValue({ user: { id: 'admin-1', isAdmin: true } }),
+}))
+
 // Mock dependencies
 jest.mock('@/lib/prisma', () => ({
   prisma: {
