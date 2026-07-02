@@ -119,3 +119,23 @@ function createPrismaClient() {
 export const prisma = globalForPrisma.prisma ?? createPrismaClient()
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+
+/**
+ * The extended Prisma client type (with the encryption query extension applied).
+ */
+export type ExtendedPrismaClient = ReturnType<typeof createPrismaClient>
+
+/**
+ * Interactive-transaction client type for the extended client. Because `$extends`
+ * changes the client type, the `tx` passed to `prisma.$transaction(async (tx) => ...)`
+ * is NOT assignable to the base `Prisma.TransactionClient`. Helper functions that
+ * receive a transaction client should type their parameter as this instead.
+ *
+ * Derived by removing the top-level-only client methods (the same shape Prisma's
+ * own transaction client has), which avoids relying on `$transaction`'s
+ * overloaded signature.
+ */
+export type PrismaTransactionClient = Omit<
+  ExtendedPrismaClient,
+  '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
+>

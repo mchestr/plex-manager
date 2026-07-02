@@ -5,7 +5,6 @@ import { getAvailableLibraries } from "@/actions/server-info"
 import { getJellyfinLibraries } from "@/actions/admin/admin-servers"
 import { useToast } from "@/components/ui/toast"
 import { ModalShell } from "@/components/ui/modal-shell"
-import { StyledDropdown } from "@/components/ui/styled-dropdown"
 import { ConfirmModal } from "@/components/admin/shared/confirm-modal"
 import Link from "next/link"
 import { useCallback, useEffect, useState } from "react"
@@ -460,18 +459,18 @@ export function InvitesPageClient() {
                 <label htmlFor="expiration" className="block text-sm font-medium text-slate-400 mb-1">
                   Expiration
                 </label>
-                <StyledDropdown
+                <select
                   id="expiration"
                   value={formData.expiresIn}
-                  onChange={(value) => setFormData({ ...formData, expiresIn: value })}
-                  options={[
-                    { value: "1d", label: "24 Hours" },
-                    { value: "48h", label: "48 Hours" },
-                    { value: "7d", label: "7 Days" },
-                    { value: "30d", label: "30 Days" },
-                    { value: "never", label: "Never" },
-                  ]}
-                />
+                  onChange={(e) => setFormData({ ...formData, expiresIn: e.target.value })}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                >
+                  <option value="1d">24 Hours</option>
+                  <option value="48h">48 Hours</option>
+                  <option value="7d">7 Days</option>
+                  <option value="30d">30 Days</option>
+                  <option value="never">Never</option>
+                </select>
               </div>
 
               {/* Library Selection */}
