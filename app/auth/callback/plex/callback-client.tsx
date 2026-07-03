@@ -1,6 +1,7 @@
 "use client"
 
 import { checkServerAccess } from "@/actions/auth"
+import { Button } from "@/components/ui/button"
 import { getPlexAuthToken } from "@/lib/plex-auth"
 import { getSession, signIn } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -25,14 +26,16 @@ export function PlexCallbackPageClient() {
       const testToken = searchParams.get("testToken")
 
       // TEST MODE BYPASS
-      // Check for test token - only works when explicitly enabled via env var
-      // Note: NEXT_PUBLIC_ prefix is required for client-side runtime access
-      const isTestMode = process.env.NEXT_PUBLIC_ENABLE_TEST_AUTH === 'true'
-      console.log('[AUTH] Callback - Test mode:', isTestMode, 'Has testToken:', !!testToken, 'Env var value:', process.env.NEXT_PUBLIC_ENABLE_TEST_AUTH)
+      // Check for test token - only works when explicitly enabled via env var and
+      // never in production. Mirrors the server-side guard in lib/auth.ts so a
+      // client bundle built for production can never present the test flow.
+      // Note: NEXT_PUBLIC_ prefix is required for client-side runtime access.
+      const isTestMode =
+        process.env.NODE_ENV !== 'production' &&
+        process.env.NEXT_PUBLIC_ENABLE_TEST_AUTH === 'true'
 
       if (testToken) {
         if (!isTestMode) {
-          console.error('[AUTH] Test token provided but test mode is not enabled!')
           setError('Test authentication is not enabled on this server')
           return
         }
@@ -41,7 +44,6 @@ export function PlexCallbackPageClient() {
       if (testToken && isTestMode) {
         isProcessingRef.current = true
         setStatus("Using test token...")
-        console.log('[AUTH] Attempting test token authentication')
 
         try {
           const result = await signIn("plex", {
@@ -49,32 +51,21 @@ export function PlexCallbackPageClient() {
             redirect: false,
           })
 
-          console.log('[AUTH] signIn result:', result)
-
           if (result?.ok) {
-            console.log("[AUTH] Test token authentication successful, waiting for session...")
-
             // Wait a moment for the session cookie to be set server-side
             await new Promise(resolve => setTimeout(resolve, 1500))
 
             // Verify session is available before redirecting
             try {
-              const session = await getSession()
-              if (session && session.user) {
-                console.log('[AUTH] Session verified:', session.user.email)
-              } else {
-                console.warn('[AUTH] Session not yet available, but proceeding with redirect')
-              }
-            } catch (err) {
-              console.warn('[AUTH] Could not verify session, but proceeding with redirect:', err)
+              await getSession()
+            } catch {
+              // Proceed with the redirect even if session verification fails;
+              // the full page load below will re-establish it.
             }
 
             // Check if user needs to complete onboarding
             const { getOnboardingStatus } = await import("@/actions/onboarding")
             const { isComplete } = await getOnboardingStatus()
-
-            console.log('[AUTH] Onboarding status:', isComplete ? 'complete' : 'incomplete')
-            console.log('[AUTH] Navigating to', isComplete ? 'home' : 'onboarding...')
 
             // Use window.location for a full page reload to ensure session cookie is sent
             // The test fixture will wait for the redirect and verify the session
@@ -211,12 +202,13 @@ export function PlexCallbackPageClient() {
             {errorTitle}
           </h1>
           <p className="text-center text-slate-300 mb-6">{error}</p>
-          <button
+          <Button
             onClick={() => router.push("/")}
-            className="w-full py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 transition-colors"
+            size="lg"
+            className="w-full border border-transparent shadow-sm"
           >
             {isInviteError ? "Go Home" : "Try Again"}
-          </button>
+          </Button>
         </div>
       </div>
     )

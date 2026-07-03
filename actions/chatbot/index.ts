@@ -18,6 +18,11 @@ export async function chatWithAdminBot(
     if (!session?.user?.id) {
       return { success: false, error: "Unauthorized" }
     }
+    // Admin-only: the default (non-Discord) tool set grants cross-user data
+    // access (Tautulli/Overseerr/Sonarr/Radarr) and spends the admin LLM budget.
+    if (!session.user.isAdmin) {
+      return { success: false, error: "Unauthorized" }
+    }
     const userId = session.user.id
 
     const lastMessage = messages[messages.length - 1]

@@ -1,7 +1,16 @@
 import { getUserPlexWrapped, getAllUsersWithWrapped } from '@/actions/user-queries'
 import { prisma } from '@/lib/prisma'
 import { aggregateLlmUsage } from '@/lib/utils'
+import { getServerSession } from 'next-auth'
 import { makePrismaUser, makePrismaWrapped, makePrismaLlmUsage } from '../utils/test-builders'
+
+jest.mock('next-auth', () => ({
+  getServerSession: jest.fn(),
+}))
+
+jest.mock('@/lib/auth', () => ({
+  authOptions: {},
+}))
 
 jest.mock('@/lib/admin', () => ({
   requireAdmin: jest.fn(),
@@ -36,6 +45,11 @@ describe('getUserPlexWrapped', () => {
     jest.useFakeTimers()
     jest.setSystemTime(new Date('2024-06-01T12:00:00Z'))
     jest.clearAllMocks()
+    // These tests request user-1's own wrapped; mock the owning session so the
+    // ownership check inside getUserPlexWrapped passes.
+    ;(getServerSession as jest.Mock).mockResolvedValue({
+      user: { id: 'user-1', isAdmin: false },
+    })
   })
 
   afterEach(() => {
