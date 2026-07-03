@@ -8,6 +8,14 @@ import { z } from "zod"
 
 const logger = createLogger("AUTH")
 
+/**
+ * How often the JWT callback re-reads a user's admin status from the database.
+ * Bounds how long a revoked (or newly granted) admin privilege can lag behind
+ * the DB for an already-signed-in session. 5 minutes balances freshness against
+ * per-request DB load (only one query per user per interval).
+ */
+const ADMIN_RECHECK_INTERVAL_MS = 5 * 60 * 1000
+
 export const authOptions: NextAuthOptions = {
   // NOTE: PrismaAdapter is not compatible with CredentialsProvider
   // We use JWT strategy instead for Plex authentication
@@ -23,11 +31,16 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         // TEST MODE BYPASS
-        // Only active if explicitly enabled via env var
+        // Only active if explicitly enabled via a SERVER-ONLY env var AND never
+        // in production. Server auth intentionally does NOT read
+        // NEXT_PUBLIC_ENABLE_TEST_AUTH (that flag is bundled into client JS, so
+        // gating server-side auth on it would be a footgun); the E2E flow sets
+        // the server-only ENABLE_TEST_AUTH alongside it. The NODE_ENV !==
+        // 'production' check is a hard backstop against any misconfiguration.
         const isTestMode =
-          process.env.NODE_ENV === 'test' ||
-          process.env.NEXT_PUBLIC_ENABLE_TEST_AUTH === 'true' ||
-          process.env.ENABLE_TEST_AUTH === 'true'
+          process.env.NODE_ENV !== 'production' &&
+          (process.env.NODE_ENV === 'test' ||
+            process.env.ENABLE_TEST_AUTH === 'true')
 
         if (isTestMode && credentials?.authToken) {
           logger.debug('Test mode active', {
@@ -392,6 +405,10 @@ export const authOptions: NextAuthOptions = {
   },
   session: {
     strategy: "jwt",
+    // Cap session lifetime at 7 days instead of NextAuth's 30-day default, so a
+    // stale token (e.g. a revoked admin) cannot persist for a month even in the
+    // worst case. The jwt callback below refreshes admin status far sooner.
+    maxAge: 7 * 24 * 60 * 60,
   },
   callbacks: {
     async session({ session, token }) {
@@ -409,20 +426,55 @@ export const authOptions: NextAuthOptions = {
       }
       return session
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
+        // The NextAuth `User` type is augmented with `isAdmin` in
+        // types/next-auth.d.ts, so no cast is needed. Email is omitted from the
+        // log to avoid writing PII to logs.
         logger.debug('JWT callback - user signed in', {
           userId: user.id,
-          email: user.email,
-          isAdmin: (user as any).isAdmin
+          isAdmin: user.isAdmin
         })
         // Store user info in JWT when user first signs in
         token.sub = user.id
         token.name = user.name
         token.email = user.email
         token.picture = user.image
-        token.isAdmin = (user as any).isAdmin || false
+        token.isAdmin = user.isAdmin || false
+        token.checkedAt = Date.now()
+        return token
       }
+
+      // On subsequent requests the JWT is stateless, so isAdmin would otherwise
+      // never update. Periodically (or when the client calls session.update())
+      // re-read the DB so privilege changes take effect within a bounded window
+      // rather than at token expiry.
+      const isStale =
+        !token.checkedAt || Date.now() - token.checkedAt > ADMIN_RECHECK_INTERVAL_MS
+      if (token.sub && (trigger === "update" || isStale)) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.sub },
+            select: { isAdmin: true },
+          })
+          if (dbUser) {
+            if (dbUser.isAdmin !== token.isAdmin) {
+              logger.info("Refreshed admin status from database", {
+                userId: token.sub,
+                previousAdminStatus: token.isAdmin,
+                newAdminStatus: dbUser.isAdmin,
+              })
+            }
+            token.isAdmin = dbUser.isAdmin
+          }
+          token.checkedAt = Date.now()
+        } catch (error) {
+          // On DB error, keep the existing token rather than logging the user
+          // out; the next request will retry the refresh.
+          logger.warn("Failed to refresh admin status in JWT callback", { error })
+        }
+      }
+
       return token
     },
   },

@@ -79,10 +79,35 @@
   - ✅ CORRECT: Import and use components from `components/ui/`
   - ❌ WRONG: Creating custom `<select>`, raw `<input type="checkbox">`, or custom dropdown implementations
   - **Available UI Components** (located in `components/ui/`):
-    - TODO: List specific components after reviewing the directory
-    - Examples might include: `<Dropdown>`, `<Select>`, `<Checkbox>`, `<Button>`, `<Input>`, etc.
+    - Forms/controls: `<Button>` (button.tsx), `<StyledInput>`, `<StyledTextarea>`, `<StyledCheckbox>`, `<StyledDropdown>` (preferred), `<StyledSelect>` (legacy), `<DateRangePicker>`
+    - Layout/display: `<Card>` (card.tsx), `<Badge>` (badge.tsx), `<Pagination>`, service icons (service-icons.tsx)
+    - Feedback: `<LoadingScreen>`, `<LoadingSpinner>`, `<ErrorState>`, toast (`useToast` in toast.tsx)
   - **Why**: Ensures consistent styling, behavior, and accessibility across the app
   - **When adding new UI**: First check if a component exists in `components/ui/` before creating anything new
+
+- **Theme consistency: finish migrating raw elements to `components/ui/` primitives** _(partially done — audit 2026-07-02)_
+  - New shared primitives added: `components/ui/card.tsx` (`<Card>`) and `components/ui/badge.tsx` (`<Badge>`). Adopt them app-wide.
+  - Remaining raw `<button>` usages: ~86 files / ~186 occurrences. Migrate to `<Button variant=...>`. Map: gradient primary→`primary`, solid slate cancel→`secondary`, icon-only→`ghost`, red destructive→`danger`. Preserve `data-testid`, icons, `aria-*`, and layout classes (e.g. `flex-1`). Highest count: `components/admin/prompts/prompt-template-editor.tsx`, `components/admin/invites/invites-page-client.tsx` (9 each).
+  - Remaining raw `<textarea>`: `prompt-template-editor.tsx:661`, `DiscordIntegrationForm.tsx:239` → `<StyledTextarea>`.
+  - Remaining raw checkboxes: `prompt-template-editor.tsx:546`, `invites-page-client.tsx` (519/552/586 — note these color cyan for Plex vs purple for Jellyfin; `StyledCheckbox` hardcodes a cyan→purple gradient, so migrating changes that visual semantics — decide intentionally).
+  - Card container `bg-slate-800/50 ... rounded-lg p-6` duplicated ~50 files → migrate to `<Card>`, standardizing padding/radius (one `rounded-xl` case in `invite-details-client.tsx`).
+  - Pill/badge markup (drifting `px-2`/`px-2.5`, `py-0.5`/`py-1`) → `<Badge tone=...>`.
+  - Extract `<WizardFormActions onBack isPending isSuccess>` from the 7 setup-wizard step forms (Back + Continue buttons duplicated verbatim; note their 3-color `from-cyan-600 via-purple-600 to-pink-600` gradient + purple focus ring + `rounded-md` differ from the `<Button>` primitive — either keep exact classes or add a named variant).
+  - Extract a `<ModalShell>` (overlay + backdrop + centered dialog + focus-trap) from `components/admin/shared/confirm-modal.tsx`; reuse in `announcement-form-modal`, `invites-page-client`, `prompt-template-editor`, `playground/preview-modal` (standardize z-index/backdrop opacity).
+  - Standardize the "primary" button treatment: 4 divergent styles exist (2-color gradient, solid `bg-cyan-600`, reversed `bg-cyan-700`, 3-color pink gradient). Route through `<Button variant="primary">`.
+  - **Requires build + visual verification** — do incrementally, not as a blind sweep.
+
+- **Re-enable ESLint safety rules as warnings** _(audit 2026-07-02)_
+  - `eslint.config.mjs` disables `no-explicit-any`, `no-unused-vars`, `prefer-const`, `ban-ts-comment` — contradicts CLAUDE.md's strict/no-`any` stance. Set `no-explicit-any` and `ban-ts-comment` to `"warn"` (the `no-unused-vars` gap is largely covered by tsconfig `noUnusedLocals`/`noUnusedParameters`). ~47 non-test `any` occurrences would surface. Scope the `no-require-imports` override to `lib/utils/logger.ts` only.
+
+- **Encrypt external-service secrets at rest** _(audit 2026-07-02)_
+  - Plex/Jellyfin/Tautulli/Overseerr/Sonarr/Radarr/LLM keys + per-user Plex tokens + Discord OAuth tokens are stored as plaintext columns (`prisma/schema.prisma`). Add AES-256-GCM at-rest encryption via a dedicated `ENCRYPTION_KEY` (not reused `NEXTAUTH_SECRET`), wrapping all read/write paths + a re-encrypt migration. Defense-in-depth (admin-only, never returned to clients today).
+
+- **JWT does not re-check `isAdmin` after sign-in** _(audit 2026-07-02)_
+  - `lib/auth.ts` jwt callback only sets `token.isAdmin` on initial sign-in; a revoked admin keeps admin for up to the 30-day default token life. Re-query admin status periodically (e.g. on `trigger==='update'` or a staleness window) and set an explicit shorter `session.maxAge`.
+
+- **Remove `NEXT_PUBLIC_ENABLE_TEST_AUTH` from server-side auth gating** _(audit 2026-07-02)_
+  - The production hard-guard is now in place (`lib/auth.ts`), but server auth still reads a `NEXT_PUBLIC_` (client-exposed) flag. Longer term, gate the test flow on a non-public var and have the E2E flow set that instead (touches `callback-client.tsx`, `e2e/`, `playwright.config.ts`). Also guard `prisma/seed.ts` so the hardcoded `admin@example.com` isn't created when `NODE_ENV==='production'`.
 
 ### Performance
 
@@ -234,11 +259,6 @@
 
 ## 🚀 DevOps & Infrastructure
 
-- **Add Puppeteer MCP** for Claude Code to enable browser-based automation and screenshots for testing/debugging
-  - Can be added to `.mcp.json` file in repo so all team members have access
-  - Use `claude --mcp-debug` flag to help identify configuration issues
-  - **NOTE**: Consider if this is needed - Playwright is already integrated and working well for E2E testing
-
 - ✅ **Establish new Claude Code workflow** (implemented)
   - Brainstorm ideas in chat first
   - Create GitHub issue with implementation plan before coding (provides rollback point if things go wrong)
@@ -269,46 +289,6 @@
 ## 💡 Ideas to Explore
 
 *Ideas that need more thought or research*
-
-- **Evaluate MCP Servers for Project Integration**
-  - **Question**: Should we add MCP servers for our services, or is direct API access better?
-  - **Available MCP Servers Found**:
-    - **Radarr/Sonarr MCP** (berrykuipers): Natural language querying/filtering of collections
-    - **Redis MCP** (Official + community): Database operations, key management
-    - **PostgreSQL MCP** (Multiple options): Query execution, schema inspection, read/write ops
-    - **Multi-Database MCP** (@nam088): Unified interface for MySQL, Postgres, MongoDB, Redis, SQL Server
-  - **MCP Benefits**:
-    - Natural language interface to services
-    - Standardized protocol across all integrations
-    - Can expose data as "resources" Claude can reference
-    - Built-in tool discovery
-  - **Potential Drawbacks**:
-    - Another layer of abstraction to maintain
-    - MCP servers need to run alongside app
-    - May be overkill for services with simple, well-documented APIs
-    - Adds complexity to deployment
-  - **Recommendation to Explore**:
-    - **Skip for Plex/Sonarr/Radarr/Overseerr/Tautulli**:
-      - APIs are well-documented and straightforward
-      - Adding API conventions to CLAUDE.md is simpler
-      - Direct API calls are more debuggable
-      - Don't need natural language interface for structured queries
-    - **Consider for Redis** (if using heavily):
-      - Official Redis MCP server available
-      - Could be useful if Claude needs to inspect cache/session data
-      - Helpful for debugging Redis-related issues
-      - But: Direct redis-cli might be just as effective
-    - **Consider for Postgres** (if doing complex DB operations):
-      - Could help with schema exploration
-      - Query optimization suggestions
-      - Database health monitoring
-      - But: Prisma Studio + direct SQL might be sufficient
-  - **Decision**: Probably **NOT worth it** for this project
-    - Keep it simple with direct API calls
-    - API documentation in CLAUDE.md is clearer and more maintainable
-    - MCPs add deployment complexity without clear benefit for our use case
-    - Agents can interact with well-documented REST APIs just fine
-  - **Exception**: If building admin observability dashboard, a Postgres MCP could be useful for natural language database queries
 
 - **Admin UI: Unified Observability Dashboard (High-Level Overview)**
   - Currently have individual dashboards: LLM usage, LLM cost, user management, share analytics
