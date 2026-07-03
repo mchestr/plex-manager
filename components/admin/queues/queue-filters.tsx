@@ -2,6 +2,8 @@
 
 import { useRouter, useSearchParams } from "next/navigation"
 import { useCallback } from "react"
+import { Button } from "@/components/ui/button"
+import { StyledDropdown } from "@/components/ui/styled-dropdown"
 import { JOB_TYPES } from "@/lib/queue/types"
 
 const STATUS_OPTIONS = [
@@ -48,18 +50,12 @@ export function QueueFilters() {
         <label className="block text-xs font-medium text-slate-400 mb-1">
           Status
         </label>
-        <select
+        <StyledDropdown
           value={currentStatus}
-          onChange={(e) => updateParams("status", e.target.value)}
-          className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+          onChange={(value) => updateParams("status", value)}
+          options={STATUS_OPTIONS}
           data-testid="queue-filter-status"
-        >
-          {STATUS_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+        />
       </div>
 
       {/* Job Type Filter */}
@@ -67,30 +63,25 @@ export function QueueFilters() {
         <label className="block text-xs font-medium text-slate-400 mb-1">
           Job Type
         </label>
-        <select
+        <StyledDropdown
           value={currentJobType}
-          onChange={(e) => updateParams("jobType", e.target.value)}
-          className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500"
+          onChange={(value) => updateParams("jobType", value)}
+          options={JOB_TYPE_OPTIONS}
           data-testid="queue-filter-job-type"
-        >
-          {JOB_TYPE_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+        />
       </div>
 
       {/* Clear Filters */}
       {(currentStatus || currentJobType) && (
         <div className="flex items-end">
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => router.push("?")}
-            className="px-3 py-2 text-sm text-slate-400 hover:text-white transition-colors"
             data-testid="queue-filter-clear"
           >
             Clear Filters
-          </button>
+          </Button>
         </div>
       )}
     </div>

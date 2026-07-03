@@ -7,6 +7,14 @@ if (process.env.SKIP_SEED === 'true') {
   process.exit(0)
 }
 
+// Never seed in production: this script wipes all data and creates a hardcoded
+// admin@example.com / isAdmin:true user, which would be both a data-loss and an
+// authentication-bypass risk against a real database.
+if (process.env.NODE_ENV === 'production') {
+  console.error('Refusing to run seed in production (NODE_ENV=production)')
+  process.exit(1)
+}
+
 if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL environment variable is not defined')
 }

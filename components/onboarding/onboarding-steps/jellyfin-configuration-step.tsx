@@ -2,6 +2,8 @@
 
 import { motion } from "framer-motion"
 
+import { Button } from "@/components/ui/button"
+
 interface JellyfinConfigurationStepProps {
   onComplete: () => void
   onBack: () => void
@@ -77,13 +79,13 @@ export function JellyfinConfigurationStep({ onComplete, onBack }: JellyfinConfig
         >
           Back
         </button>
-        <button
+        <Button
           onClick={onComplete}
           data-testid="onboarding-jellyfin-config-continue"
-          className="px-6 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-medium rounded-lg transition-colors"
+          variant="primary"
         >
           Got it
-        </button>
+        </Button>
       </motion.div>
     </div>
   )

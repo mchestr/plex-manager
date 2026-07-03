@@ -435,8 +435,9 @@ describe('WrappedGeneratorStatus', () => {
         />
       )
 
+      // Now the shared <Button> (default "primary" variant: cyan→purple gradient).
       const button = screen.getByRole('button')
-      expect(button).toHaveClass('bg-cyan-600', 'hover:bg-cyan-700')
+      expect(button).toHaveClass('bg-gradient-to-r', 'from-cyan-600', 'to-purple-600')
       expect(button).not.toBeDisabled()
     })
 
