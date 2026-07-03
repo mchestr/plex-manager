@@ -311,6 +311,9 @@ describe('User Wrapped Generation Security', () => {
 
   describe('getUserPlexWrapped', () => {
     it('should allow user to get their own wrapped', async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValue({
+        user: { id: 'user-1', isAdmin: false },
+      })
       const mockWrapped = {
         id: 'wrapped-1',
         userId: 'user-1',
@@ -352,6 +355,9 @@ describe('User Wrapped Generation Security', () => {
     })
 
     it('should return null if wrapped does not exist', async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValue({
+        user: { id: 'user-1', isAdmin: false },
+      })
       ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
 
       const result = await getUserPlexWrapped('user-1', 2024)
@@ -359,11 +365,45 @@ describe('User Wrapped Generation Security', () => {
       expect(result).toBeNull()
     })
 
-    // Note: Authorization checks for getUserPlexWrapped should happen at the
-    // application level (e.g., in the component/page that calls this).
-    // This function itself doesn't check authorization - it's a data access function.
-    // The security is enforced by ensuring only authenticated users can call
-    // server actions, and components should only pass the current user's ID.
+    // Authorization is enforced inside getUserPlexWrapped itself: a user may only
+    // read their own Wrapped, and admins may read any. Because a "use server"
+    // export is a directly-invocable endpoint, the ownership check cannot be left
+    // to the calling component.
+    it('should return null when a non-owner (non-admin) requests another user wrapped', async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValue({
+        user: { id: 'attacker', isAdmin: false },
+      })
+
+      const result = await getUserPlexWrapped('victim', 2024)
+
+      expect(result).toBeNull()
+      expect(prisma.plexWrapped.findUnique).not.toHaveBeenCalled()
+    })
+
+    it('should return null when unauthenticated', async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValue(null)
+
+      const result = await getUserPlexWrapped('user-1', 2024)
+
+      expect(result).toBeNull()
+      expect(prisma.plexWrapped.findUnique).not.toHaveBeenCalled()
+    })
+
+    it('should allow an admin to read any user wrapped', async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValue({
+        user: { id: 'admin-1', isAdmin: true },
+      })
+      ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue({
+        id: 'wrapped-2',
+        userId: 'user-1',
+        year: 2024,
+      })
+
+      const result = await getUserPlexWrapped('user-1', 2024)
+
+      expect(result).toBeTruthy()
+      expect(prisma.plexWrapped.findUnique).toHaveBeenCalled()
+    })
   })
 })
 

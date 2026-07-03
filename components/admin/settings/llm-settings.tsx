@@ -1,8 +1,12 @@
 "use client"
 
 import { getConfig, setLLMDisabled } from "@/actions/admin"
+import { Card } from "@/components/ui/card"
 import { useToast } from "@/components/ui/toast"
+import { createLogger } from "@/lib/utils/logger"
 import { useEffect, useState } from "react"
+
+const logger = createLogger("LLM_SETTINGS")
 
 export function LLMSettings() {
   const toast = useToast()
@@ -19,7 +23,7 @@ export function LLMSettings() {
         setLastUpdated(config.updatedAt)
         setIsLoading(false)
       } catch (error) {
-        console.error("Failed to load config:", error)
+        logger.error("Failed to load config", error)
         setIsLoading(false)
       }
     }
@@ -38,7 +42,7 @@ export function LLMSettings() {
         toast.showError(result.error || "Failed to update setting")
       }
     } catch (error) {
-      console.error("Failed to update config:", error)
+      logger.error("Failed to update config", error)
       toast.showError("Failed to update setting")
     } finally {
       setIsSaving(false)
@@ -47,17 +51,17 @@ export function LLMSettings() {
 
   if (isLoading) {
     return (
-      <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6">
+      <Card>
         <div className="animate-pulse">
           <div className="h-4 bg-slate-700 rounded w-1/3 mb-4"></div>
           <div className="h-10 bg-slate-700 rounded w-24"></div>
         </div>
-      </div>
+      </Card>
     )
   }
 
   return (
-    <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6">
+    <Card>
       <div className="flex items-start justify-between mb-4">
         <div>
           <h2 className="text-lg font-semibold text-white mb-2">LLM Settings</h2>
@@ -124,7 +128,7 @@ export function LLMSettings() {
           </p>
         </div>
       )}
-    </div>
+    </Card>
   )
 }
 

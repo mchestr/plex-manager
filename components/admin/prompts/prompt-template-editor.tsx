@@ -5,6 +5,7 @@ import {
   PromptTemplateInput,
   updatePromptTemplate,
 } from "@/actions/prompts"
+import { ModalShell } from "@/components/ui/modal-shell"
 import { getAvailablePlaceholders } from "@/lib/wrapped/prompt-template"
 import { formatWatchTime } from "@/lib/utils/time-formatting"
 import { WrappedData, WrappedStatistics } from "@/types/wrapped"
@@ -673,8 +674,12 @@ export function PromptTemplateEditor({ template, userWrapped, userName = "User" 
 
         {/* Placeholder Search Modal */}
         {showPlaceholderModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowPlaceholderModal(false)}>
-            <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+          <ModalShell
+            isOpen={showPlaceholderModal}
+            onClose={() => setShowPlaceholderModal(false)}
+            maxWidth="3xl"
+            className="bg-slate-800 max-h-[80vh] flex flex-col"
+          >
               {/* Modal Header */}
               <div className="p-6 border-b border-slate-700/50 flex-shrink-0">
                 <div className="flex items-center justify-between mb-4">
@@ -767,8 +772,7 @@ export function PromptTemplateEditor({ template, userWrapped, userName = "User" 
                   </div>
                 )}
               </div>
-            </div>
-          </div>
+          </ModalShell>
         )}
 
         {/* Preview Section */}

@@ -2,6 +2,8 @@
 
 import { motion } from "framer-motion"
 
+import { Button } from "@/components/ui/button"
+
 interface WelcomeStepProps {
   onComplete: () => void
 }
@@ -87,13 +89,14 @@ export function WelcomeStep({ onComplete }: WelcomeStepProps) {
         transition={{ duration: 0.5, delay: 0.5 }}
         className="flex justify-end pt-4"
       >
-        <button
+        <Button
           onClick={onComplete}
           data-testid="onboarding-welcome-continue"
-          className="px-6 py-3 bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-700 hover:to-purple-700 text-white font-medium rounded-lg transition-all shadow-lg shadow-cyan-500/20"
+          size="lg"
+          className="shadow-lg shadow-cyan-500/20"
         >
           Let's Go
-        </button>
+        </Button>
       </motion.div>
     </div>
   )

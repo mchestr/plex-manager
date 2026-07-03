@@ -4,6 +4,7 @@ import { getDevDefaults, type DevDefaults } from "@/actions/dev-defaults"
 import { fetchLLMModels, saveChatLLMProvider, saveLLMProvider } from "@/actions/setup"
 import { StyledDropdown } from "@/components/ui/styled-dropdown"
 import { StyledInput } from "@/components/ui/styled-input"
+import { WizardFormActions } from "@/components/setup/setup-wizard/wizard-form-actions"
 import { type LLMProviderInput } from "@/lib/validations/llm-provider"
 import { useCallback, useEffect, useRef, useState, useTransition } from "react"
 
@@ -397,28 +398,7 @@ export function LLMProviderForm({ purpose, onComplete, onBack }: LLMProviderForm
         </div>
       )}
 
-      <div className="flex justify-between pt-4">
-        {onBack && (
-          <button
-            type="button"
-            onClick={onBack}
-            disabled={isPending || isSuccess}
-            className="inline-flex justify-center rounded-md border border-slate-600 bg-slate-800/80 hover:bg-slate-700/80 py-2 px-6 text-sm font-medium text-slate-200 shadow-lg hover:text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 hover:border-slate-500"
-          >
-            Back
-          </button>
-        )}
-        <div className={onBack ? "ml-auto" : "ml-auto"}>
-          <button
-            type="submit"
-            data-testid="setup-form-submit"
-            disabled={isPending || isSuccess}
-            className="inline-flex justify-center rounded-md py-2 px-6 text-sm font-medium text-white shadow-lg focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 bg-gradient-to-r from-cyan-600 via-purple-600 to-pink-600 hover:from-cyan-500 hover:via-purple-500 hover:to-pink-500"
-          >
-            {isPending ? "Testing connection..." : isSuccess ? "Success!" : "Continue"}
-          </button>
-        </div>
-      </div>
+      <WizardFormActions onBack={onBack} isPending={isPending} isSuccess={isSuccess} />
     </form>
   )
 }

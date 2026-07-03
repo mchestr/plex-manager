@@ -7,6 +7,7 @@ import {
   triggerWatchlistSyncJob,
 } from "@/actions/admin/queue"
 import { useToast } from "@/components/ui/toast"
+import { Button } from "@/components/ui/button"
 
 interface QueueControlsProps {
   isPaused: boolean
@@ -113,10 +114,9 @@ export function QueueControls({ isPaused, disabled = false }: QueueControlsProps
         </button>
 
         {/* Trigger Sync Button */}
-        <button
+        <Button
           onClick={handleTriggerSync}
           disabled={disabled || syncPending || isPaused}
-          className="px-4 py-2 rounded-lg text-sm font-medium bg-cyan-600 hover:bg-cyan-700 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           data-testid="queue-trigger-sync-btn"
         >
           {syncPending ? (
@@ -150,7 +150,7 @@ export function QueueControls({ isPaused, disabled = false }: QueueControlsProps
             </svg>
           )}
           Trigger Watchlist Sync
-        </button>
+        </Button>
       </div>
     </div>
   )
