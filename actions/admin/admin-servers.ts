@@ -5,6 +5,25 @@ import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 
 /**
+ * Resolves a secret (server token/API key) for a "leave blank to keep current
+ * value" update. Secrets are never sent to the client, so an empty submission
+ * means "keep the stored value": in that case the currently-stored (decrypted)
+ * secret is fetched and reused. When no secret was submitted and none is stored,
+ * returns an empty string so the schema's `min(1)` check surfaces the usual
+ * "required" error.
+ *
+ * @internal
+ */
+async function resolveSecret(
+  submitted: string | undefined,
+  fetchStored: () => Promise<string | null | undefined>,
+): Promise<string> {
+  const trimmed = submitted?.trim()
+  if (trimmed) return trimmed
+  return (await fetchStored()) ?? ""
+}
+
+/**
  * Get Jellyfin libraries for invite creation
  */
 export async function getJellyfinLibraries() {
@@ -49,7 +68,7 @@ export async function getJellyfinLibraries() {
 /**
  * Update Plex server configuration (admin only)
  */
-export async function updatePlexServer(data: { name: string; url: string; token: string; publicUrl?: string }) {
+export async function updatePlexServer(data: { name: string; url: string; token?: string; publicUrl?: string }) {
   await requireAdmin()
 
   try {
@@ -58,7 +77,13 @@ export async function updatePlexServer(data: { name: string; url: string; token:
     const { getPlexUserInfo } = await import("@/lib/connections/plex")
     const { revalidatePath } = await import("next/cache")
 
-    const validated = plexServerSchema.parse(data)
+    // Secrets are never sent to the client; a blank token means "keep current".
+    const token = await resolveSecret(data.token, async () => {
+      const active = await prisma.plexServer.findFirst({ where: { isActive: true } })
+      return active?.token
+    })
+
+    const validated = plexServerSchema.parse({ ...data, token })
 
     // Test connection before saving
     const connectionTest = await testPlexConnection(validated)
@@ -127,7 +152,7 @@ export async function updatePlexServer(data: { name: string; url: string; token:
 /**
  * Update Tautulli configuration (admin only)
  */
-export async function updateTautulli(data: { name: string; url: string; apiKey: string; publicUrl?: string }) {
+export async function updateTautulli(data: { name: string; url: string; apiKey?: string; publicUrl?: string }) {
   await requireAdmin()
 
   try {
@@ -135,7 +160,13 @@ export async function updateTautulli(data: { name: string; url: string; apiKey: 
     const { testTautulliConnection } = await import("@/lib/connections/tautulli")
     const { revalidatePath } = await import("next/cache")
 
-    const validated = tautulliSchema.parse(data)
+    // Secrets are never sent to the client; a blank API key means "keep current".
+    const apiKey = await resolveSecret(data.apiKey, async () => {
+      const existing = await prisma.tautulli.findFirst({ where: { url: data.url } })
+      return existing?.apiKey ?? (await prisma.tautulli.findFirst({ where: { isActive: true } }))?.apiKey
+    })
+
+    const validated = tautulliSchema.parse({ ...data, apiKey })
 
     // Test connection before saving
     const connectionTest = await testTautulliConnection(validated)
@@ -194,7 +225,7 @@ export async function updateTautulli(data: { name: string; url: string; apiKey: 
 /**
  * Update Overseerr configuration (admin only)
  */
-export async function updateOverseerr(data: { name: string; url: string; apiKey: string; publicUrl?: string }) {
+export async function updateOverseerr(data: { name: string; url: string; apiKey?: string; publicUrl?: string }) {
   await requireAdmin()
 
   try {
@@ -202,7 +233,13 @@ export async function updateOverseerr(data: { name: string; url: string; apiKey:
     const { testOverseerrConnection } = await import("@/lib/connections/overseerr")
     const { revalidatePath } = await import("next/cache")
 
-    const validated = overseerrSchema.parse(data)
+    // Secrets are never sent to the client; a blank API key means "keep current".
+    const apiKey = await resolveSecret(data.apiKey, async () => {
+      const existing = await prisma.overseerr.findFirst({ where: { url: data.url } })
+      return existing?.apiKey ?? (await prisma.overseerr.findFirst({ where: { isActive: true } }))?.apiKey
+    })
+
+    const validated = overseerrSchema.parse({ ...data, apiKey })
 
     // Test connection before saving
     const connectionTest = await testOverseerrConnection(validated)
@@ -261,7 +298,7 @@ export async function updateOverseerr(data: { name: string; url: string; apiKey:
 /**
  * Update Sonarr configuration (admin only)
  */
-export async function updateSonarr(data: { name: string; url: string; apiKey: string; publicUrl?: string }) {
+export async function updateSonarr(data: { name: string; url: string; apiKey?: string; publicUrl?: string }) {
   await requireAdmin()
 
   try {
@@ -269,7 +306,13 @@ export async function updateSonarr(data: { name: string; url: string; apiKey: st
     const { testSonarrConnection } = await import("@/lib/connections/sonarr")
     const { revalidatePath } = await import("next/cache")
 
-    const validated = sonarrSchema.parse(data)
+    // Secrets are never sent to the client; a blank API key means "keep current".
+    const apiKey = await resolveSecret(data.apiKey, async () => {
+      const existing = await prisma.sonarr.findFirst({ where: { url: data.url } })
+      return existing?.apiKey ?? (await prisma.sonarr.findFirst({ where: { isActive: true } }))?.apiKey
+    })
+
+    const validated = sonarrSchema.parse({ ...data, apiKey })
 
     // Test connection before saving
     const connectionTest = await testSonarrConnection(validated)
@@ -328,7 +371,7 @@ export async function updateSonarr(data: { name: string; url: string; apiKey: st
 /**
  * Update Radarr configuration (admin only)
  */
-export async function updateRadarr(data: { name: string; url: string; apiKey: string; publicUrl?: string }) {
+export async function updateRadarr(data: { name: string; url: string; apiKey?: string; publicUrl?: string }) {
   await requireAdmin()
 
   try {
@@ -336,7 +379,13 @@ export async function updateRadarr(data: { name: string; url: string; apiKey: st
     const { testRadarrConnection } = await import("@/lib/connections/radarr")
     const { revalidatePath } = await import("next/cache")
 
-    const validated = radarrSchema.parse(data)
+    // Secrets are never sent to the client; a blank API key means "keep current".
+    const apiKey = await resolveSecret(data.apiKey, async () => {
+      const existing = await prisma.radarr.findFirst({ where: { url: data.url } })
+      return existing?.apiKey ?? (await prisma.radarr.findFirst({ where: { isActive: true } }))?.apiKey
+    })
+
+    const validated = radarrSchema.parse({ ...data, apiKey })
 
     // Test connection before saving
     const connectionTest = await testRadarrConnection(validated)
@@ -471,7 +520,7 @@ export async function updatePrometheus(data: { name: string; url: string; query:
 /**
  * Update Jellyfin server configuration (admin only)
  */
-export async function updateJellyfinServer(data: { name: string; url: string; apiKey: string; publicUrl?: string }) {
+export async function updateJellyfinServer(data: { name: string; url: string; apiKey?: string; publicUrl?: string }) {
   await requireAdmin()
 
   try {
@@ -479,7 +528,13 @@ export async function updateJellyfinServer(data: { name: string; url: string; ap
     const { testJellyfinConnection, getJellyfinServerInfo } = await import("@/lib/connections/jellyfin")
     const { revalidatePath } = await import("next/cache")
 
-    const validated = jellyfinServerSchema.parse(data)
+    // Secrets are never sent to the client; a blank API key means "keep current".
+    const apiKey = await resolveSecret(data.apiKey, async () => {
+      const existing = await prisma.jellyfinServer.findFirst({ where: { url: data.url } })
+      return existing?.apiKey ?? (await prisma.jellyfinServer.findFirst({ where: { isActive: true } }))?.apiKey
+    })
+
+    const validated = jellyfinServerSchema.parse({ ...data, apiKey })
 
     // Test connection before saving
     const connectionTest = await testJellyfinConnection(validated)

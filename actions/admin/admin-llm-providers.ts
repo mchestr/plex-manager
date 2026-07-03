@@ -13,7 +13,7 @@ type LLMProviderPurpose = "chat" | "wrapped"
 
 type LLMProviderInput = {
   provider: string
-  apiKey: string
+  apiKey?: string
   model: string
   temperature?: number
   maxTokens?: number
@@ -38,7 +38,16 @@ async function updateLLMProviderForPurpose(purpose: LLMProviderPurpose, data: LL
       return { success: false, error: "Model is required" }
     }
 
-    const validated = llmProviderSchema.parse({ ...data, model: data.model })
+    // The API key is never sent to the client; a blank key means "keep the
+    // currently-stored key". Fall back to the active provider's (decrypted) key
+    // so the connection test and save below still work. If none is stored, leave
+    // it blank so the schema's "API key is required" error surfaces as usual.
+    const submittedApiKey = data.apiKey?.trim()
+    const apiKey = submittedApiKey
+      ? submittedApiKey
+      : (await prisma.lLMProvider.findFirst({ where: { isActive: true, purpose } }))?.apiKey ?? ""
+
+    const validated = llmProviderSchema.parse({ ...data, apiKey, model: data.model })
 
     // Test connection before saving
     const connectionTest = await testLLMProviderConnection(validated)

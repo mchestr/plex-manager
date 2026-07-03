@@ -9,7 +9,12 @@ import { useRouter } from "next/navigation"
 import { useEffect, useState, useTransition } from "react"
 
 interface LLMProviderFormProps {
-  provider: { provider: string; model: string | null; apiKey: string; temperature: number | null; maxTokens: number | null } | null
+  /**
+   * The active provider config, with the API key stripped. `hasApiKey` indicates
+   * a key is stored (never the value itself) so the form can offer "leave blank
+   * to keep current value" without exposing the key.
+   */
+  provider: { provider: string; model: string | null; hasApiKey: boolean; temperature: number | null; maxTokens: number | null } | null
   purpose: "chat" | "wrapped"
 }
 
@@ -19,9 +24,13 @@ export function LLMProviderForm({ provider, purpose }: LLMProviderFormProps) {
   const router = useRouter()
   const toast = useToast()
 
+  // Whether an API key is already stored (drives leave-blank-to-keep).
+  const hasStoredApiKey = Boolean(provider?.hasApiKey)
+
+  // The API key is never sent to the client. Empty means "keep existing".
   const [formData, setFormData] = useState({
     provider: provider?.provider || "openai",
-    apiKey: provider?.apiKey || "",
+    apiKey: "",
     model: provider?.model || "",
     temperature: provider?.temperature ?? (purpose === "chat" ? 0.7 : 0.8),
     maxTokens: provider?.maxTokens ?? (purpose === "chat" ? 1000 : 6000),
@@ -90,7 +99,8 @@ export function LLMProviderForm({ provider, purpose }: LLMProviderFormProps) {
       const updateFn = purpose === "chat" ? updateChatLLMProvider : updateWrappedLLMProvider
       const result = await updateFn({
         provider: formData.provider,
-        apiKey: formData.apiKey,
+        // Blank key is sent as undefined so the action keeps the stored key.
+        apiKey: formData.apiKey.trim() || undefined,
         model: formData.model!,
         temperature: formData.temperature,
         maxTokens: formData.maxTokens,
@@ -190,7 +200,7 @@ export function LLMProviderForm({ provider, purpose }: LLMProviderFormProps) {
               ]}
               size="md"
             />
-          ) : useCustomModel || (formData.apiKey && availableModels.length === 0 && !isLoadingModels) ? (
+          ) : useCustomModel || ((hasStoredApiKey || formData.apiKey) && availableModels.length === 0 && !isLoadingModels) ? (
             <StyledInput
               type="text"
               value={formData.model}
@@ -216,9 +226,10 @@ export function LLMProviderForm({ provider, purpose }: LLMProviderFormProps) {
             type="password"
             value={formData.apiKey}
             onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
-            placeholder="sk-..."
-            required
+            placeholder={hasStoredApiKey ? "Leave blank to keep current key" : "sk-..."}
+            required={!hasStoredApiKey}
             disabled={isPending}
+            autoComplete="off"
           />
         </div>
         <div>
@@ -275,7 +286,7 @@ export function LLMProviderForm({ provider, purpose }: LLMProviderFormProps) {
             setIsEditing(false)
             setFormData({
               provider: provider?.provider || "openai",
-              apiKey: provider?.apiKey || "",
+              apiKey: "",
               model: provider?.model || "",
               temperature: provider?.temperature ?? (purpose === "chat" ? 0.7 : 0.8),
               maxTokens: provider?.maxTokens ?? (purpose === "chat" ? 1000 : 6000),

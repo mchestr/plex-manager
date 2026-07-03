@@ -19,7 +19,14 @@ export async function updateDiscordIntegrationSettings(data: Record<string, unkn
     const isEnabled = parsed.isEnabled ?? false
     const botEnabled = parsed.botEnabled ?? false
 
-    if (isEnabled && (!parsed.clientId || !parsed.clientSecret)) {
+    // The client secret is never sent to the client; a blank value means "keep
+    // the currently-stored secret". Resolve it against the stored (decrypted)
+    // value so re-enabling without re-typing the secret works and the stored
+    // secret is preserved on write.
+    const existing = await prisma.discordIntegration.findUnique({ where: { id: "discord" } })
+    const clientSecret = parsed.clientSecret ?? existing?.clientSecret ?? undefined
+
+    if (isEnabled && (!parsed.clientId || !clientSecret)) {
       return {
         success: false,
         error: "Client ID and Client Secret are required when enabling Discord integration",
@@ -32,7 +39,7 @@ export async function updateDiscordIntegrationSettings(data: Record<string, unkn
         isEnabled,
         botEnabled,
         clientId: parsed.clientId,
-        clientSecret: parsed.clientSecret,
+        clientSecret,
         guildId: parsed.guildId,
         serverInviteCode: parsed.serverInviteCode,
         platformName: parsed.platformName,
@@ -44,7 +51,7 @@ export async function updateDiscordIntegrationSettings(data: Record<string, unkn
         isEnabled,
         botEnabled,
         clientId: parsed.clientId,
-        clientSecret: parsed.clientSecret,
+        clientSecret,
         guildId: parsed.guildId,
         serverInviteCode: parsed.serverInviteCode,
         platformName: parsed.platformName,
