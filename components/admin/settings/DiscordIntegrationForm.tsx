@@ -1,8 +1,10 @@
 "use client"
 
 import { updateDiscordIntegrationSettings } from "@/actions/discord"
+import { Button } from "@/components/ui/button"
 import { StyledCheckbox } from "@/components/ui/styled-checkbox"
 import { StyledInput } from "@/components/ui/styled-input"
+import { StyledTextarea } from "@/components/ui/styled-textarea"
 import { useToast } from "@/components/ui/toast"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
@@ -125,14 +127,16 @@ export function DiscordIntegrationForm({ integration, linkedCount, portalUrl }: 
             </div>
           )}
         </div>
-        <button
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={() => {
             setIsEditing(true)
           }}
-          className="ml-4 px-3 py-1 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-600 hover:border-cyan-500/50 text-slate-300 hover:text-white text-xs font-medium rounded transition-all flex items-center whitespace-nowrap"
+          className="ml-4 whitespace-nowrap"
         >
           Edit
-        </button>
+        </Button>
       </div>
     )
   }
@@ -236,34 +240,30 @@ export function DiscordIntegrationForm({ integration, linkedCount, portalUrl }: 
         <p className="text-xs text-slate-500 mb-2">
           Custom notes displayed to users during the onboarding guide's Discord support step. Use this to provide server-specific instructions or important information.
         </p>
-        <textarea
+        <StyledTextarea
           value={formData.instructions}
           onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
           placeholder="e.g., Join our Discord server and mention your username in #support for faster help..."
           disabled={isPending}
-          className="w-full min-h-[120px] bg-slate-900 text-white border border-slate-600 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+          className="w-full min-h-[120px]"
         />
       </div>
 
       <div className="flex gap-2">
-        <button
-          type="submit"
-          disabled={isPending}
-          className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500 text-white text-sm font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-        >
+        <Button type="submit" disabled={isPending}>
           {isPending ? "Saving..." : "Save"}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="secondary"
           onClick={() => {
             setIsEditing(false)
             setFormData(initialState)
           }}
           disabled={isPending}
-          className="px-4 py-2 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-600 hover:border-slate-500 text-slate-300 hover:text-white text-sm font-medium rounded-lg transition-all disabled:opacity-50"
         >
           Cancel
-        </button>
+        </Button>
       </div>
     </form>
   )

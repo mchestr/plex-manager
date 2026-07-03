@@ -14,7 +14,6 @@ export {
 
 // LLM provider configuration management
 export {
-  updateLLMProvider,
   updateChatLLMProvider,
   updateWrappedLLMProvider,
 } from "./admin-llm-providers"

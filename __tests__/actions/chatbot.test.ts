@@ -76,10 +76,6 @@ jest.mock("@/lib/connections/overseerr", () => ({
   getOverseerrRequests: jest.fn(),
 }))
 
-jest.mock("@/lib/wrapped/pricing", () => ({
-  calculateCost: jest.fn(() => 0.001),
-}))
-
 jest.mock("@/lib/utils/logger", () => ({
   createLogger: jest.fn(() => ({
     debug: jest.fn(),
@@ -101,7 +97,7 @@ describe("chatbot sources tracking", () => {
     jest.clearAllMocks()
 
     mockGetServerSession.mockResolvedValue({
-      user: { id: "user-1", name: "Test User", email: "test@example.com" },
+      user: { id: "user-1", name: "Test User", email: "test@example.com", isAdmin: true },
     } as any)
 
     mockPrisma.config.findUnique.mockResolvedValue({
