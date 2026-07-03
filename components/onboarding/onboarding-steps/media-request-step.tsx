@@ -2,6 +2,8 @@
 
 import { motion } from "framer-motion"
 
+import { Button } from "@/components/ui/button"
+
 interface MediaRequestStepProps {
   onComplete: () => void
   onBack: () => void
@@ -85,13 +87,13 @@ export function MediaRequestStep({ onComplete, onBack, overseerrUrl }: MediaRequ
         >
           Back
         </button>
-        <button
+        <Button
           onClick={onComplete}
           data-testid="onboarding-media-request-continue"
-          className="px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors"
+          className="px-6"
         >
           Next
-        </button>
+        </Button>
       </motion.div>
     </div>
   )

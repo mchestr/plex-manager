@@ -1,6 +1,7 @@
 "use client"
 
 import { updateOverseerr, updatePlexServer, updatePrometheus, updateRadarr, updateSonarr, updateTautulli, updateJellyfinServer } from "@/actions/admin"
+import { Button } from "@/components/ui/button"
 import { StyledInput } from "@/components/ui/styled-input"
 import { useToast } from "@/components/ui/toast"
 import { useRouter } from "next/navigation"
@@ -214,15 +215,15 @@ export function ServerForm({ type, server }: ServerFormProps) {
         )}
       </div>
       <div className="flex gap-2">
-        <button
+        <Button
           type="submit"
           disabled={isPending}
-          className="px-4 py-2 bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500 text-white text-sm font-medium rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isPending ? "Saving..." : "Save"}
-        </button>
-          <button
+        </Button>
+          <Button
           type="button"
+          variant="secondary"
           onClick={() => {
             setIsEditing(false)
             setFormData({
@@ -235,10 +236,9 @@ export function ServerForm({ type, server }: ServerFormProps) {
             })
           }}
           disabled={isPending}
-          className="px-4 py-2 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-600 hover:border-slate-500 text-slate-300 hover:text-white text-sm font-medium rounded-lg transition-all disabled:opacity-50"
         >
           Cancel
-        </button>
+        </Button>
       </div>
     </form>
   )
