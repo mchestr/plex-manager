@@ -1,3 +1,4 @@
+import { SubscriptionStatus } from "@/lib/generated/prisma/client"
 
 export interface LlmUsageStats {
   totalTokens: number
@@ -31,6 +32,12 @@ export interface AdminUserWithWrappedStats {
   hasPlexAccess: boolean | null
   llmUsage: LlmUsageStats | null
   totalLlmUsage: LlmUsageStats | null
+  subscriptionStatus: SubscriptionStatus | null
+  currentPeriodEnd: Date | null
+  cancelAtPeriodEnd: boolean
+  isExempt: boolean
+  exemptReason: string | null
+  stripeCustomerId: string | null
 }
 
 export interface WrappedSummary {

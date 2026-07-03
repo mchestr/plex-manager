@@ -1,6 +1,7 @@
 "use client"
 
 import { UserActionsMenu } from "@/components/admin/users/user-actions-menu"
+import { Badge } from "@/components/ui/badge"
 import { AdminUserWithWrappedStats } from "@/types/admin"
 import Link from "next/link"
 import Image from "next/image"
@@ -9,14 +10,56 @@ import { useRouter } from "next/navigation"
 interface UserTableRowProps {
   user: AdminUserWithWrappedStats
   currentYear: number
+  /** Stripe dashboard base URL (test/live aware), or null when unconfigured. */
+  stripeDashboardBaseUrl?: string | null
 }
 
-export function UserTableRow({ user }: UserTableRowProps) {
+/**
+ * Maps a subscription status to the {@link Badge} tone + label used in the
+ * admin users table. Returns `null` for statuses that are not surfaced as an
+ * active-looking pill (so the caller can fall back to the exempt marker or a
+ * neutral dash).
+ */
+function subscriptionBadge(
+  status: AdminUserWithWrappedStats["subscriptionStatus"]
+): { tone: "success" | "warning" | "danger"; label: string } | null {
+  switch (status) {
+    case "ACTIVE":
+      return { tone: "success", label: "Active" }
+    case "PAST_DUE":
+    case "UNPAID":
+      return { tone: "warning", label: "Past due" }
+    case "CANCELED":
+      return { tone: "danger", label: "Canceled" }
+    default:
+      // INCOMPLETE or null: treated as "no subscription".
+      return null
+  }
+}
+
+/**
+ * Renders a human label for an exempt user based on `exemptReason`
+ * (e.g. "grandfathered" → "Grandfathered", "comp" → "Comp").
+ */
+function exemptLabel(exemptReason: string | null): string {
+  switch (exemptReason) {
+    case "comp":
+      return "Comp"
+    case "grandfathered":
+      return "Grandfathered"
+    default:
+      return "Exempt"
+  }
+}
+
+export function UserTableRow({ user, stripeDashboardBaseUrl }: UserTableRowProps) {
   const router = useRouter()
 
   const handleRowClick = () => {
     router.push(`/admin/users/${user.id}`)
   }
+
+  const badge = subscriptionBadge(user.subscriptionStatus)
 
   return (
     <tr
@@ -80,6 +123,29 @@ export function UserTableRow({ user }: UserTableRowProps) {
         </div>
       </td>
       <td className="px-2 py-2">
+        <div className="text-xs">
+          {badge ? (
+            <>
+              <Badge tone={badge.tone}>{badge.label}</Badge>
+              {badge.tone !== "danger" && user.currentPeriodEnd && (
+                <div className="text-xs text-slate-400 mt-0.5">
+                  {user.cancelAtPeriodEnd ? "Ends" : "Renews"}{" "}
+                  {new Date(user.currentPeriodEnd).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "2-digit",
+                  })}
+                </div>
+              )}
+            </>
+          ) : user.isExempt ? (
+            <Badge tone="info">{exemptLabel(user.exemptReason)}</Badge>
+          ) : (
+            <span className="text-slate-500">—</span>
+          )}
+        </div>
+      </td>
+      <td className="px-2 py-2">
         {user.totalLlmUsage ? (
           <div className="text-xs">
             <Link
@@ -106,7 +172,7 @@ export function UserTableRow({ user }: UserTableRowProps) {
       </td>
       <td className="px-2 py-2">
         <div onClick={(e) => e.stopPropagation()}>
-          <UserActionsMenu user={user} />
+          <UserActionsMenu user={user} stripeDashboardBaseUrl={stripeDashboardBaseUrl} />
         </div>
       </td>
     </tr>

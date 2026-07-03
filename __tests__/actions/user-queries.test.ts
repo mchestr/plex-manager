@@ -28,6 +28,9 @@ jest.mock('@/lib/prisma', () => ({
     plexServer: {
       findFirst: jest.fn(),
     },
+    subscription: {
+      findMany: jest.fn(),
+    },
   },
 }))
 
@@ -141,6 +144,9 @@ describe('getAllUsersWithWrapped', () => {
     jest.useFakeTimers()
     jest.setSystemTime(new Date('2024-06-01T12:00:00Z'))
     jest.clearAllMocks()
+    // No subscriptions by default; fetchSubscriptionMap returns an empty map so
+    // the existing (non-subscription) assertions are unaffected.
+    mockPrisma.subscription.findMany.mockResolvedValue([])
   })
 
   afterEach(() => {

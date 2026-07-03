@@ -2,6 +2,9 @@
   "name": "plex-wrapped",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "^20.19 || ^22.12 || >=24.0"
+  },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"
   },
@@ -47,6 +50,7 @@
     "react-countup": "^6.5.3",
     "react-dom": "^19.2.3",
     "react-markdown": "^10.1.0",
+    "stripe": "^22.3.0",
     "tailwind-merge": "^3.4.0",
     "winston": "^3.19.0",
     "zlib-sync": "^0.1.10",

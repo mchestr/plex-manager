@@ -1,6 +1,9 @@
 import { render, screen } from '@testing-library/react'
 import { UserTableRow } from '@/components/admin/users/user-table-row'
-import { makeAdminUserWithStats } from '../../__tests__/utils/test-builders'
+import {
+  makeAdminUserWithStats,
+  makeAdminUserWithSubscription,
+} from '../../__tests__/utils/test-builders'
 
 // Mock UserActionsMenu
 jest.mock('../admin/users/user-actions-menu', () => ({
@@ -132,5 +135,93 @@ describe('UserTableRow', () => {
 
     const allDashes = screen.getAllByText('—')
     expect(allDashes.length).toBeGreaterThanOrEqual(1) // At least one for LLM usage
+  })
+
+  describe('subscription column', () => {
+    it('should render an Active badge for active subscriptions', () => {
+      const user = makeAdminUserWithSubscription({ subscriptionStatus: 'ACTIVE' })
+      renderInTable(<UserTableRow user={user} currentYear={2024} />)
+
+      expect(screen.getByText('Active')).toBeInTheDocument()
+    })
+
+    it('should render a Past due badge for past_due subscriptions', () => {
+      const user = makeAdminUserWithSubscription({ subscriptionStatus: 'PAST_DUE' })
+      renderInTable(<UserTableRow user={user} currentYear={2024} />)
+
+      expect(screen.getByText('Past due')).toBeInTheDocument()
+    })
+
+    it('should render a Past due badge for unpaid subscriptions', () => {
+      const user = makeAdminUserWithSubscription({ subscriptionStatus: 'UNPAID' })
+      renderInTable(<UserTableRow user={user} currentYear={2024} />)
+
+      expect(screen.getByText('Past due')).toBeInTheDocument()
+    })
+
+    it('should render a Canceled badge for canceled subscriptions', () => {
+      const user = makeAdminUserWithSubscription({ subscriptionStatus: 'CANCELED' })
+      renderInTable(<UserTableRow user={user} currentYear={2024} />)
+
+      expect(screen.getByText('Canceled')).toBeInTheDocument()
+    })
+
+    it('should render the renewal date for active subscriptions', () => {
+      const user = makeAdminUserWithSubscription({
+        subscriptionStatus: 'ACTIVE',
+        cancelAtPeriodEnd: false,
+        currentPeriodEnd: new Date('2024-02-01T00:00:00Z'),
+      })
+      renderInTable(<UserTableRow user={user} currentYear={2024} />)
+
+      expect(screen.getByText(/Renews/)).toBeInTheDocument()
+    })
+
+    it('should render an end date when the subscription cancels at period end', () => {
+      const user = makeAdminUserWithSubscription({
+        subscriptionStatus: 'ACTIVE',
+        cancelAtPeriodEnd: true,
+        currentPeriodEnd: new Date('2024-02-01T00:00:00Z'),
+      })
+      renderInTable(<UserTableRow user={user} currentYear={2024} />)
+
+      expect(screen.getByText(/Ends/)).toBeInTheDocument()
+    })
+
+    it('should render an exempt marker for exempt users with no subscription', () => {
+      const user = makeAdminUserWithSubscription({
+        subscriptionStatus: null,
+        isExempt: true,
+        exemptReason: 'grandfathered',
+      })
+      renderInTable(<UserTableRow user={user} currentYear={2024} />)
+
+      expect(screen.getByText('Grandfathered')).toBeInTheDocument()
+    })
+
+    it('should render a Comp marker for comped exempt users', () => {
+      const user = makeAdminUserWithSubscription({
+        subscriptionStatus: null,
+        isExempt: true,
+        exemptReason: 'comp',
+      })
+      renderInTable(<UserTableRow user={user} currentYear={2024} />)
+
+      expect(screen.getByText('Comp')).toBeInTheDocument()
+    })
+
+    it('should render a dash for users with no subscription and no exemption', () => {
+      const user = makeAdminUserWithSubscription({
+        subscriptionStatus: null,
+        isExempt: false,
+        exemptReason: null,
+        totalLlmUsage: null,
+        llmUsage: null,
+      })
+      renderInTable(<UserTableRow user={user} currentYear={2024} />)
+
+      // Both the subscription column and the LLM cost column render a dash.
+      expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(1)
+    })
   })
 })

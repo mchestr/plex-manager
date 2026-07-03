@@ -147,15 +147,46 @@ export const authOptions: NextAuthOptions = {
             plexUser.id
           )
 
-          if (!accessCheck.success || !accessCheck.hasAccess) {
-            logger.warn("Plex user denied access", {
+          if (!accessCheck.success) {
+            // A failed access check (Plex/API error) is always fatal, regardless
+            // of the Stripe flag — we must not silently admit a user when we could
+            // not actually determine their access.
+            logger.warn("Plex user access check failed", {
               plexUserId: plexUser.id,
               username: plexUser.username,
               // Email is automatically sanitized by logger in production
               serverUrl: plexServer.url,
-              reason: accessCheck.error || "No access to server",
+              reason: accessCheck.error || "Access check failed",
             })
             throw new Error("ACCESS_DENIED")
+          }
+
+          if (!accessCheck.hasAccess) {
+            // Clean "no access" result. Only relax the deny when the Stripe
+            // subscription flow is enabled — then the user is allowed to create a
+            // session and is gated to /subscribe by the (app) layout guard.
+            // When disabled (the default) behavior is identical to today.
+            const config = await prisma.config.findUnique({
+              where: { id: "config" },
+              select: { stripeEnabled: true },
+            })
+
+            if (!config?.stripeEnabled) {
+              logger.warn("Plex user denied access", {
+                plexUserId: plexUser.id,
+                username: plexUser.username,
+                // Email is automatically sanitized by logger in production
+                serverUrl: plexServer.url,
+                reason: accessCheck.error || "No access to server",
+              })
+              throw new Error("ACCESS_DENIED")
+            }
+
+            logger.info("Plex non-member allowed session (Stripe gating enabled)", {
+              plexUserId: plexUser.id,
+              username: plexUser.username,
+              serverUrl: plexServer.url,
+            })
           }
 
           // Check if this user is the admin by comparing Plex user IDs

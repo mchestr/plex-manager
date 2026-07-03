@@ -20,7 +20,7 @@ const globalForPrisma = globalThis as unknown as {
  * an encrypted column can never match. Never filter these fields in a `where`;
  * match on non-secret columns and compare the decrypted value in application code.
  */
-const ENCRYPTED_FIELDS: Record<string, readonly string[]> = {
+export const ENCRYPTED_FIELDS: Record<string, readonly string[]> = {
   User: ['plexAuthToken'],
   PlexServer: ['token'],
   JellyfinServer: ['apiKey'],
@@ -31,6 +31,7 @@ const ENCRYPTED_FIELDS: Record<string, readonly string[]> = {
   LLMProvider: ['apiKey'],
   DiscordIntegration: ['clientSecret'],
   DiscordConnection: ['accessToken', 'refreshToken'],
+  Config: ['stripeSecretKey', 'stripeWebhookSecret'],
 }
 
 /** Encrypt any configured secret fields present on a write-args `data` object. */

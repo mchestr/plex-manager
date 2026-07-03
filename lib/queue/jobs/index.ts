@@ -8,6 +8,7 @@
 import { Job } from "bullmq"
 import { JobType, JOB_TYPES } from "../types"
 import { getWatchlistProcessor } from "./watchlist-sync"
+import { getStripeProcessor } from "./stripe"
 
 /**
  * Job processor function type
@@ -25,6 +26,12 @@ export function getJobProcessor(jobType: string): JobProcessor | null {
   const watchlistProcessor = getWatchlistProcessor(jobType)
   if (watchlistProcessor) {
     return watchlistProcessor
+  }
+
+  // Check Stripe processors
+  const stripeProcessor = getStripeProcessor(jobType)
+  if (stripeProcessor) {
+    return stripeProcessor
   }
 
   // Add more processor lookups here as new job types are added

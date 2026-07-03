@@ -86,6 +86,29 @@ export const makeAdminUserWithStats = (
   ...overrides,
 })
 
+/**
+ * Creates a mock admin user row including subscription/exempt fields.
+ *
+ * Builds on {@link makeAdminUserWithStats} and layers the subscription-related
+ * columns the Stripe feature adds to the admin user list (`subscriptionStatus`,
+ * `currentPeriodEnd`, `cancelAtPeriodEnd`, `isExempt`, `exemptReason`,
+ * `stripeCustomerId`). Loosely typed because the admin type does not yet declare
+ * these fields; overrides are applied last so callers can set any value.
+ *
+ * @param overrides - Partial properties to override defaults
+ * @returns Admin user object with subscription fields
+ */
+export const makeAdminUserWithSubscription = (overrides: any = {}) => ({
+  ...makeAdminUserWithStats(),
+  subscriptionStatus: 'ACTIVE',
+  currentPeriodEnd: new Date('2024-02-01T00:00:00Z'),
+  cancelAtPeriodEnd: false,
+  isExempt: false,
+  exemptReason: null,
+  stripeCustomerId: 'cus_test123',
+  ...overrides,
+})
+
 // ============================================================================
 // Prisma Mock Builders (for database entities)
 // ============================================================================
@@ -144,6 +167,61 @@ export const makePrismaUser = (overrides: any = {}) => ({
   },
   ...overrides,
 })
+
+/**
+ * Creates a mock Prisma Subscription record.
+ *
+ * Defaults to a coherent, active subscription (valid ids, ACTIVE status, not set
+ * to cancel, with a future period end). Override any field for other scenarios,
+ * e.g. `makePrismaSubscription({ status: 'PAST_DUE', cancelAtPeriodEnd: true })`.
+ *
+ * @param overrides - Partial properties to override defaults
+ * @returns Prisma Subscription object with sensible defaults
+ */
+export const makePrismaSubscription = (overrides: any = {}) => ({
+  id: 'sub-1',
+  userId: 'user-1',
+  stripeCustomerId: 'cus_test123',
+  stripeSubscriptionId: 'sub_test123',
+  status: 'ACTIVE',
+  priceId: 'price_test123',
+  currentPeriodEnd: new Date('2024-02-01T00:00:00Z'),
+  cancelAtPeriodEnd: false,
+  canceledAt: null,
+  plexInviteStatus: null,
+  createdAt: new Date('2024-01-01T00:00:00Z'),
+  updatedAt: new Date('2024-01-01T00:00:00Z'),
+  ...overrides,
+})
+
+/**
+ * Creates a minimal object shaped like a Stripe.Event for webhook/job tests.
+ *
+ * The `stripe` SDK types may not be installed until a later step, so this is
+ * typed loosely; tighten to `Stripe.Event` once the SDK is available. The
+ * `data.object` defaults to an empty object — pass an override to supply a
+ * realistic subscription/customer payload for the given event type.
+ *
+ * @param type - The Stripe event type (e.g. "customer.subscription.deleted")
+ * @param overrides - Partial properties to override defaults (merged shallowly)
+ * @returns An object with `id`, `type`, and `data.object`
+ */
+export const makeStripeEvent = (type: string, overrides: any = {}) => {
+  const { data: dataOverride, ...rest } = overrides
+  return {
+    id: 'evt_test123',
+    object: 'event',
+    type,
+    api_version: '2024-06-20',
+    created: 1704067200,
+    livemode: false,
+    ...rest,
+    data: {
+      object: {},
+      ...dataOverride,
+    },
+  }
+}
 
 // ============================================================================
 // NextAuth Session Builders

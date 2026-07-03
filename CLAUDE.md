@@ -594,6 +594,63 @@ const provider = await getLLMProvider()
 const response = await provider.chat({ messages })
 ```
 
+### Stripe Subscriptions (Optional)
+
+Optional, admin-controlled subscription gating. When the master toggle
+`Config.stripeEnabled` is **off** (the default), the app behaves exactly as it
+did before the feature existed — non-members are rejected at login and there is
+no `/subscribe` flow. See `docs/stripe.md` for operator setup.
+
+```typescript
+import { getStripe } from '@/lib/stripe/client'
+
+// Returns a configured Stripe client, or null when unconfigured — callers
+// degrade gracefully (never throw for the "not configured" path).
+const stripe = await getStripe()
+if (!stripe) return { error: 'Stripe is not configured' }
+```
+
+**Official Documentation**: [docs.stripe.com/api](https://docs.stripe.com/api)
+(OpenAPI) — SDK reference at [github.com/stripe/stripe-node](https://github.com/stripe/stripe-node).
+
+**API Conventions**:
+- **Authentication (server → Stripe)**: secret key (`sk_live_…`/`sk_test_…`),
+  stored encrypted in the `Config` singleton and read via `getStripe()`. Never
+  hardcode; never send to client components.
+- **Authentication (Stripe → app)**: the webhook is authenticated by the Stripe
+  **signature** verified against the raw request body (no admin auth).
+- **Config**: `stripeEnabled`, `stripeSecretKey` (ENCRYPTED), `stripeWebhookSecret`
+  (ENCRYPTED), and `stripePriceIds` (JSON array) live on `Config`. Secrets are
+  registered in `ENCRYPTED_FIELDS` (`lib/prisma.ts`).
+- **Hosted UI**: no in-app card handling — Checkout (subscribe) and Billing
+  Portal (manage/cancel) are Stripe-hosted.
+- **API version**: `apiVersion` is intentionally NOT hard-pinned in
+  `lib/stripe/client.ts` (target `2026-06-24.dahlia`) to avoid SDK type
+  mismatches; verify against the installed SDK — see `docs/stripe.md` open items.
+
+**Key Modules / Endpoints**:
+- `lib/stripe/client.ts` — `getStripe(): Promise<Stripe | null>`.
+- `lib/stripe/prices.ts` — `getOfferedPrices()` (live price display for `/subscribe`).
+- `lib/stripe/events.ts` — `mapStripeStatus`, `getCurrentPeriodEnd` (version-safe).
+- `actions/subscription.ts` — `startCheckout(priceId)`, `openBillingPortal()`.
+- `actions/admin/subscriptions.ts` — admin cancel/grant/toggle-exempt.
+- `app/api/stripe/webhook/route.ts` — **the only** Stripe API route: verifies the
+  signature, dedupes on `StripeEvent(event.id)`, enqueues a BullMQ job, returns
+  200 (400 on bad signature, never 5xx).
+- `lib/queue/jobs/stripe.ts` — BullMQ processors (`STRIPE_WEBHOOK`,
+  `PLEX_ACCESS_GRANT`, `PLEX_ACCESS_REVOKE`).
+
+**Handled webhook events**: `checkout.session.completed`,
+`customer.subscription.updated`, `customer.subscription.deleted`,
+`invoice.payment_failed`.
+
+**⚠️ CRITICAL — disabled-state safety**: the webhook still verifies signatures and
+records subscription **status** while disabled, but performs **no** Plex
+grant/revoke side effects (FR-29). Disabling the toggle never cancels Stripe
+subscriptions or removes Plex access (FR-4). Automatic Plex removal never
+unshares an admin, an exempt user, a non-Stripe-managed user, or a `PAST_DUE`
+subscriber (FR-19, `evaluateRevokeGuard`).
+
 ## Avoid Over-Engineering
 
 - **Don't add features not requested** - Implement exactly what's asked

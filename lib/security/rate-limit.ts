@@ -90,6 +90,36 @@ export function rateLimit(options: RateLimitOptions) {
 }
 
 /**
+ * Rate limit a Server Action by an arbitrary key (e.g. a user id).
+ *
+ * Server Actions don't receive a `NextRequest`, so the request-based
+ * {@link rateLimit} doesn't apply. This shares the same in-memory store and
+ * returns `true` when the caller is within the limit, `false` when exceeded.
+ *
+ * Note: the store is per-instance (not global across replicas) — adequate as a
+ * basic abuse guard, matching the existing request limiters.
+ *
+ * @param key - Stable identifier for the caller (namespaced, e.g. `checkout:<userId>`).
+ * @param options - `windowMs` and `max` for the window.
+ * @returns `true` if allowed, `false` if the limit is exceeded.
+ */
+export function checkRateLimit(
+  key: string,
+  options: { windowMs: number; max: number }
+): boolean {
+  const now = Date.now()
+  const entry = rateLimitStore.get(key)
+
+  if (!entry || now > entry.resetTime) {
+    rateLimitStore.set(key, { count: 1, resetTime: now + options.windowMs })
+    return true
+  }
+
+  entry.count++
+  return entry.count <= options.max
+}
+
+/**
  * Pre-configured rate limiters
  */
 export const shareRateLimiter = rateLimit({

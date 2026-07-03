@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/admin"
 import { checkUserServerAccess, getPlexServerIdentity, getPlexUsers, unshareUserFromPlexServer } from "@/lib/connections/plex"
 import { prisma } from "@/lib/prisma"
 import { getServerSession } from "next-auth"
+import { SubscriptionStatus } from "@/lib/generated/prisma/client"
 import { aggregateLlmUsage } from "@/lib/utils"
 import { createLogger } from "@/lib/utils/logger"
 import {
@@ -199,7 +200,10 @@ export async function getAllUsersWithWrapped(year?: number): Promise<AdminUserWi
     // 3. Fetch share statistics for all users
     const shareStatsMap = await fetchShareStatsMap(users.map(u => u.id))
 
-    // 4. Map users to DTO
+    // 4. Batch-load subscriptions for all users (single query; no N+1)
+    const subscriptionMap = await fetchSubscriptionMap(users.map(u => u.id))
+
+    // 5. Map users to DTO
     return users.map((user) => {
       const wrapped = user.plexWrapped[0]
       const currentYearLlmUsageRecords = wrapped?.llmUsage || []
@@ -212,6 +216,7 @@ export async function getAllUsersWithWrapped(year?: number): Promise<AdminUserWi
 
       const hasPlexAccess = accessMap.get(user.id) ?? null
       const shareStatsForUser = shareStatsMap.get(user.id) || { totalShares: 0, totalVisits: 0 }
+      const subscription = subscriptionMap.get(user.id) ?? null
 
       return {
         id: user.id,
@@ -230,6 +235,12 @@ export async function getAllUsersWithWrapped(year?: number): Promise<AdminUserWi
         hasPlexAccess,
         llmUsage: currentYearUsage, // Current year's usage
         totalLlmUsage: totalUsage, // Total usage across all years
+        subscriptionStatus: subscription?.status ?? null,
+        currentPeriodEnd: subscription?.currentPeriodEnd ?? null,
+        cancelAtPeriodEnd: subscription?.cancelAtPeriodEnd ?? false,
+        isExempt: user.isExempt,
+        exemptReason: user.exemptReason,
+        stripeCustomerId: subscription?.stripeCustomerId ?? null,
       }
     })
   } catch (error) {
@@ -317,6 +328,9 @@ export async function unshareUserLibrary(userId: string): Promise<{ success: boo
 // (which is admin-gated), so they must not be independently callable.
 
 async function fetchUsersWithWrappedData(year: number) {
+  // Uses `include` (not `select`), so every scalar User column — including
+  // `isExempt` and `exemptReason` used by the subscription column — is returned
+  // by default alongside the related wrapped/llmUsage records below.
   return prisma.user.findMany({
     orderBy: [
       { isAdmin: "desc" },
@@ -456,6 +470,53 @@ async function fetchShareStatsMap(userIds: string[]): Promise<Map<string, { tota
   }
 
   return shareStatsMap
+}
+
+/**
+ * Batch-load subscriptions for the given users, keyed by user id.
+ *
+ * Mirrors the {@link fetchShareStatsMap} pattern: a single `findMany` with a
+ * `userId in (...)` filter avoids per-user (N+1) queries. Each user has at most
+ * one subscription (`Subscription.userId` is unique), so the map holds one row
+ * per user. Users without a subscription are simply absent from the map.
+ */
+async function fetchSubscriptionMap(userIds: string[]): Promise<Map<string, {
+  status: SubscriptionStatus
+  currentPeriodEnd: Date | null
+  cancelAtPeriodEnd: boolean
+  stripeCustomerId: string | null
+}>> {
+  const subscriptions = await prisma.subscription.findMany({
+    where: {
+      userId: {
+        in: userIds,
+      },
+    },
+    select: {
+      userId: true,
+      status: true,
+      currentPeriodEnd: true,
+      cancelAtPeriodEnd: true,
+      stripeCustomerId: true,
+    },
+  })
+
+  const subscriptionMap = new Map<string, {
+    status: SubscriptionStatus
+    currentPeriodEnd: Date | null
+    cancelAtPeriodEnd: boolean
+    stripeCustomerId: string | null
+  }>()
+  for (const subscription of subscriptions) {
+    subscriptionMap.set(subscription.userId, {
+      status: subscription.status,
+      currentPeriodEnd: subscription.currentPeriodEnd,
+      cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+      stripeCustomerId: subscription.stripeCustomerId,
+    })
+  }
+
+  return subscriptionMap
 }
 
 /**
