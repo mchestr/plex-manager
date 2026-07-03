@@ -7,6 +7,7 @@ import { StyledDropdown } from "@/components/ui/styled-dropdown"
 export interface UsersFilter {
   plexAccess: "all" | "yes" | "no" | "unknown"
   role: "all" | "admin" | "user"
+  subscription: "all" | "active" | "past_due" | "canceled" | "none"
 }
 
 interface UsersFilterProps {
@@ -18,6 +19,7 @@ export function UsersFilter({ onFilterChange, defaultFilter }: UsersFilterProps)
   const [filter, setFilter] = useState<UsersFilter>({
     plexAccess: defaultFilter?.plexAccess ?? "yes",
     role: defaultFilter?.role ?? "all",
+    subscription: defaultFilter?.subscription ?? "all",
   })
 
   const updateFilter = (updates: Partial<UsersFilter>) => {
@@ -30,6 +32,7 @@ export function UsersFilter({ onFilterChange, defaultFilter }: UsersFilterProps)
     const clearedFilter: UsersFilter = {
       plexAccess: "yes",
       role: "all",
+      subscription: "all",
     }
     setFilter(clearedFilter)
     onFilterChange(clearedFilter)
@@ -39,6 +42,7 @@ export function UsersFilter({ onFilterChange, defaultFilter }: UsersFilterProps)
     let count = 0
     if (filter.plexAccess !== "yes") count++
     if (filter.role !== "all") count++
+    if (filter.subscription !== "all") count++
     return count
   }, [filter])
 
@@ -80,7 +84,7 @@ export function UsersFilter({ onFilterChange, defaultFilter }: UsersFilterProps)
 
       {/* Filter controls */}
       <div className="p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="relative z-30 space-y-1.5">
             <label className="flex items-center gap-1.5 text-xs font-medium text-slate-300">
               <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -122,6 +126,29 @@ export function UsersFilter({ onFilterChange, defaultFilter }: UsersFilterProps)
               id="users-filter-role"
               name="role"
               data-testid="users-filter-role"
+            />
+          </div>
+          <div className="relative z-30 space-y-1.5">
+            <label className="flex items-center gap-1.5 text-xs font-medium text-slate-300">
+              <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+              </svg>
+              Subscription
+            </label>
+            <StyledDropdown
+              value={filter.subscription}
+              onChange={(value) => updateFilter({ subscription: value as UsersFilter["subscription"] })}
+              options={[
+                { value: "all", label: "All" },
+                { value: "active", label: "Active" },
+                { value: "past_due", label: "Past due" },
+                { value: "canceled", label: "Canceled" },
+                { value: "none", label: "None" },
+              ]}
+              size="sm"
+              id="users-filter-subscription"
+              name="subscription"
+              data-testid="users-filter-subscription"
             />
           </div>
         </div>

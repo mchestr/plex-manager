@@ -2,12 +2,16 @@ import { getAllUsersWithWrapped } from "@/actions/users"
 import { ImportPlexUsersButton } from "@/components/admin/users/import-plex-users-button"
 import { UsersList } from "@/components/admin/users/users-list"
 import { UsersStatsSummary } from "@/components/admin/users/users-stats-summary"
+import { getStripeDashboardBaseUrl } from "@/lib/stripe/client"
 
 export const dynamic = 'force-dynamic'
 
 export default async function UsersPage() {
   const currentYear = new Date().getFullYear()
-  const allUsers = await getAllUsersWithWrapped(currentYear)
+  const [allUsers, stripeDashboardBaseUrl] = await Promise.all([
+    getAllUsersWithWrapped(currentYear),
+    getStripeDashboardBaseUrl(),
+  ])
 
   return (
     <div className="p-4 sm:p-6">
@@ -24,7 +28,11 @@ export default async function UsersPage() {
           </div>
         </div>
 
-        <UsersList users={allUsers} currentYear={currentYear} />
+        <UsersList
+          users={allUsers}
+          currentYear={currentYear}
+          stripeDashboardBaseUrl={stripeDashboardBaseUrl}
+        />
 
         <UsersStatsSummary users={allUsers} />
       </div>

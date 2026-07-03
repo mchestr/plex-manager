@@ -2,7 +2,9 @@
 
 import { requireAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/prisma"
+import { clearOfferedPricesCache } from "@/lib/stripe/prices"
 import { createLogger } from "@/lib/utils/logger"
+import { z } from "zod"
 
 const logger = createLogger("ADMIN")
 
@@ -88,7 +90,31 @@ export async function getWrappedSettings() {
 }
 
 /**
- * Get the current application configuration (admin only)
+ * Non-secret Config columns. Explicitly excludes `stripeSecretKey` and
+ * `stripeWebhookSecret`: the Prisma extension decrypts those on read, so
+ * selecting them would return plaintext secrets to callers (some of which pass
+ * the result to client components). Secrets are read only via narrowly-scoped
+ * selects within this module.
+ */
+const NON_SECRET_CONFIG_SELECT = {
+  id: true,
+  llmDisabled: true,
+  wrappedEnabled: true,
+  wrappedGenerationStartDate: true,
+  wrappedGenerationEndDate: true,
+  watchlistSyncEnabled: true,
+  watchlistSyncIntervalMinutes: true,
+  stripeEnabled: true,
+  stripePriceIds: true,
+  updatedAt: true,
+  updatedBy: true,
+} as const
+
+/**
+ * Get the current application configuration (admin only).
+ *
+ * Never returns the Stripe secret key or webhook secret (see
+ * {@link NON_SECRET_CONFIG_SELECT}).
  */
 export async function getConfig() {
   await requireAdmin()
@@ -96,6 +122,7 @@ export async function getConfig() {
   try {
     const config = await prisma.config.findUnique({
       where: { id: "config" },
+      select: NON_SECRET_CONFIG_SELECT,
     })
 
     // If config doesn't exist, create it with defaults
@@ -106,6 +133,7 @@ export async function getConfig() {
           llmDisabled: false,
           wrappedEnabled: true,
         },
+        select: NON_SECRET_CONFIG_SELECT,
       })
     }
 
@@ -119,6 +147,10 @@ export async function getConfig() {
       wrappedEnabled: true,
       wrappedGenerationStartDate: null,
       wrappedGenerationEndDate: null,
+      watchlistSyncEnabled: false,
+      watchlistSyncIntervalMinutes: 60,
+      stripeEnabled: false,
+      stripePriceIds: null,
       updatedAt: new Date(),
       updatedBy: null,
     }
@@ -233,6 +265,244 @@ export async function updateWrappedSettings(data: {
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to update wrapped settings",
+    }
+  }
+}
+
+/**
+ * Non-secret view of the Stripe configuration used to determine whether the
+ * feature can be enabled. Never contains raw secret values.
+ */
+export interface StripeConfigStatus {
+  enabled: boolean
+  hasSecretKey: boolean
+  hasWebhookSecret: boolean
+  priceIds: string[]
+}
+
+/**
+ * Parses the stored `stripePriceIds` JSON value into a clean array of strings.
+ * @internal
+ */
+function parseStripePriceIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return value.filter((id): id is string => typeof id === "string" && id.trim().length > 0)
+}
+
+/**
+ * Determines whether Stripe is fully configured (secret key, webhook secret, and
+ * at least one price id present). Centralized so `setStripeEnabled` and the UI
+ * agree on the requirement (FR-3).
+ * @internal
+ */
+function getMissingStripeConfig(status: {
+  hasSecretKey: boolean
+  hasWebhookSecret: boolean
+  priceIds: string[]
+}): string[] {
+  const missing: string[] = []
+  if (!status.hasSecretKey) missing.push("secret key")
+  if (!status.hasWebhookSecret) missing.push("webhook secret")
+  if (status.priceIds.length === 0) missing.push("at least one price ID")
+  return missing
+}
+
+const updateStripeSettingsSchema = z.object({
+  secretKey: z.string().trim().min(1).optional(),
+  webhookSecret: z.string().trim().min(1).optional(),
+  priceIds: z.array(z.string().trim().min(1)),
+})
+
+/**
+ * Get the non-secret Stripe configuration status for the UI (admin only).
+ *
+ * Returns only booleans and the list of configured price ids — never the raw
+ * secret key or webhook secret — so client components cannot receive secrets.
+ */
+export async function getStripeConfig(): Promise<StripeConfigStatus> {
+  await requireAdmin()
+
+  try {
+    const config = await prisma.config.findUnique({
+      where: { id: "config" },
+      select: {
+        stripeEnabled: true,
+        stripeSecretKey: true,
+        stripeWebhookSecret: true,
+        stripePriceIds: true,
+      },
+    })
+
+    if (!config) {
+      return {
+        enabled: false,
+        hasSecretKey: false,
+        hasWebhookSecret: false,
+        priceIds: [],
+      }
+    }
+
+    return {
+      enabled: config.stripeEnabled,
+      hasSecretKey: Boolean(config.stripeSecretKey),
+      hasWebhookSecret: Boolean(config.stripeWebhookSecret),
+      priceIds: parseStripePriceIds(config.stripePriceIds),
+    }
+  } catch (error) {
+    logger.error("Error getting Stripe config", error)
+    return {
+      enabled: false,
+      hasSecretKey: false,
+      hasWebhookSecret: false,
+      priceIds: [],
+    }
+  }
+}
+
+/**
+ * Save Stripe credentials and price ids (admin only).
+ *
+ * Secrets are encrypted at rest by the Prisma extension. `secretKey` and
+ * `webhookSecret` are optional so admins can update price ids without
+ * re-entering secrets (leave blank to keep the existing value). `priceIds` is
+ * always persisted as a JSON array of strings.
+ */
+export async function updateStripeSettings(data: {
+  secretKey?: string
+  webhookSecret?: string
+  priceIds: string[]
+}) {
+  const session = await requireAdmin()
+
+  const validated = updateStripeSettingsSchema.safeParse(data)
+  if (!validated.success) {
+    return { success: false, error: "Invalid Stripe settings input" }
+  }
+
+  const { secretKey, webhookSecret, priceIds } = validated.data
+
+  try {
+    const updateData: {
+      stripePriceIds: string[]
+      stripeSecretKey?: string
+      stripeWebhookSecret?: string
+      updatedBy: string
+    } = {
+      stripePriceIds: priceIds,
+      updatedBy: session.user.id,
+    }
+
+    // Only overwrite secrets when a new value is provided (leave-blank-to-keep)
+    if (secretKey !== undefined) {
+      updateData.stripeSecretKey = secretKey
+    }
+    if (webhookSecret !== undefined) {
+      updateData.stripeWebhookSecret = webhookSecret
+    }
+
+    // Do NOT return the upserted row: the Prisma extension decrypts the Stripe
+    // secret fields on read, so returning it would leak the plaintext secret key
+    // and webhook secret into the Server Action's RSC response to the client.
+    await prisma.config.upsert({
+      where: { id: "config" },
+      update: updateData,
+      create: {
+        id: "config",
+        stripePriceIds: priceIds,
+        stripeSecretKey: secretKey,
+        stripeWebhookSecret: webhookSecret,
+        updatedBy: session.user.id,
+      },
+    })
+
+    // Invalidate the offered-prices cache so a price-id change is reflected on
+    // /subscribe immediately rather than after the TTL.
+    clearOfferedPricesCache()
+
+    const { revalidatePath } = await import("next/cache")
+    revalidatePath("/admin/settings")
+
+    return { success: true }
+  } catch (error) {
+    logger.error("Error updating Stripe settings", error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to update Stripe settings",
+    }
+  }
+}
+
+/**
+ * Flip the master Stripe toggle (admin only).
+ *
+ * Enabling is blocked (FR-3) unless Stripe is fully configured: a secret key, a
+ * webhook secret, and at least one price id must all be present. When any are
+ * missing, returns `{error}` naming what is missing and does NOT set
+ * `stripeEnabled = true`. Disabling is always allowed.
+ */
+export async function setStripeEnabled(enabled: boolean) {
+  const session = await requireAdmin()
+
+  if (typeof enabled !== "boolean") {
+    return { success: false, error: "Invalid input: enabled must be a boolean" }
+  }
+
+  try {
+    if (enabled) {
+      const config = await prisma.config.findUnique({
+        where: { id: "config" },
+        select: {
+          stripeSecretKey: true,
+          stripeWebhookSecret: true,
+          stripePriceIds: true,
+        },
+      })
+
+      const missing = getMissingStripeConfig({
+        hasSecretKey: Boolean(config?.stripeSecretKey),
+        hasWebhookSecret: Boolean(config?.stripeWebhookSecret),
+        priceIds: parseStripePriceIds(config?.stripePriceIds),
+      })
+
+      if (missing.length > 0) {
+        return {
+          success: false,
+          error: `Stripe cannot be enabled until it is fully configured. Missing: ${missing.join(", ")}.`,
+        }
+      }
+    }
+
+    // Do NOT return the upserted row: the Prisma extension decrypts the Stripe
+    // secret fields on read, which would leak them to the client via the Server
+    // Action response.
+    await prisma.config.upsert({
+      where: { id: "config" },
+      update: {
+        stripeEnabled: enabled,
+        updatedBy: session.user.id,
+      },
+      create: {
+        id: "config",
+        stripeEnabled: enabled,
+        updatedBy: session.user.id,
+      },
+    })
+
+    // Invalidate the offered-prices cache so enabling/disabling takes effect on
+    // /subscribe immediately (a stale cache could otherwise offer prices for up
+    // to the TTL after disabling).
+    clearOfferedPricesCache()
+
+    const { revalidatePath } = await import("next/cache")
+    revalidatePath("/admin/settings")
+    revalidatePath("/")
+
+    return { success: true }
+  } catch (error) {
+    logger.error("Error updating Stripe enabled setting", error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to update Stripe configuration",
     }
   }
 }

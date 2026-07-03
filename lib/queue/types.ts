@@ -14,6 +14,9 @@ import { Job } from "bullmq"
 export const JOB_TYPES = {
   WATCHLIST_SYNC_USER: "watchlist:sync:user",
   WATCHLIST_SYNC_ALL: "watchlist:sync:all",
+  STRIPE_WEBHOOK: "stripe:webhook",
+  PLEX_ACCESS_GRANT: "plex:access:grant",
+  PLEX_ACCESS_REVOKE: "plex:access:revoke",
 } as const
 
 export type JobType = (typeof JOB_TYPES)[keyof typeof JOB_TYPES]
@@ -66,6 +69,65 @@ export interface WatchlistSyncAllResult {
 }
 
 // =============================================================================
+// Stripe Subscription Job Types
+// =============================================================================
+
+/**
+ * Payload for processing a Stripe webhook event.
+ *
+ * Only the Stripe `event.id` is carried on the queue; the processor re-fetches
+ * the full event from Stripe so it acts on Stripe's current truth and the queue
+ * payload stays tiny.
+ */
+export interface StripeWebhookPayload {
+  eventId: string
+}
+
+/**
+ * Payload for granting a user Plex server access after a successful checkout.
+ *
+ * Keyed by the app user id; the processor loads the active Plex server and the
+ * user's email at run time. (Plex effects are implemented in a later step.)
+ */
+export interface PlexAccessGrantPayload {
+  userId: string
+}
+
+/**
+ * Payload for revoking a user's Plex server access after cancellation.
+ *
+ * (Plex effects are implemented in a later step.)
+ */
+export interface PlexAccessRevokePayload {
+  userId: string
+}
+
+/**
+ * Result from processing a Stripe webhook event.
+ */
+export interface StripeWebhookResult {
+  eventId: string
+  eventType: string
+  handled: boolean
+}
+
+/**
+ * Result from a Plex access grant job.
+ */
+export interface PlexAccessGrantResult {
+  userId: string
+  granted: boolean
+}
+
+/**
+ * Result from a Plex access revoke job.
+ */
+export interface PlexAccessRevokeResult {
+  userId: string
+  revoked: boolean
+}
+
+// =============================================================================
 // Type Mapping
 // =============================================================================
 
@@ -75,6 +137,9 @@ export interface WatchlistSyncAllResult {
 export interface JobPayloadMap {
   [JOB_TYPES.WATCHLIST_SYNC_USER]: WatchlistSyncUserPayload
   [JOB_TYPES.WATCHLIST_SYNC_ALL]: WatchlistSyncAllPayload
+  [JOB_TYPES.STRIPE_WEBHOOK]: StripeWebhookPayload
+  [JOB_TYPES.PLEX_ACCESS_GRANT]: PlexAccessGrantPayload
+  [JOB_TYPES.PLEX_ACCESS_REVOKE]: PlexAccessRevokePayload
 }
 
 /**
@@ -83,6 +148,9 @@ export interface JobPayloadMap {
 export interface JobResultMap {
   [JOB_TYPES.WATCHLIST_SYNC_USER]: WatchlistSyncUserResult
   [JOB_TYPES.WATCHLIST_SYNC_ALL]: WatchlistSyncAllResult
+  [JOB_TYPES.STRIPE_WEBHOOK]: StripeWebhookResult
+  [JOB_TYPES.PLEX_ACCESS_GRANT]: PlexAccessGrantResult
+  [JOB_TYPES.PLEX_ACCESS_REVOKE]: PlexAccessRevokeResult
 }
 
 /**

@@ -103,12 +103,18 @@ describe('Admin Actions Security', () => {
       const result = await getConfig()
 
       expect(requireAdmin).toHaveBeenCalled()
+      // getConfig selects only non-secret columns so decrypted Stripe secrets
+      // are never returned to callers.
       expect(prisma.config.create).toHaveBeenCalledWith({
         data: {
           id: 'config',
           llmDisabled: false,
           wrappedEnabled: true,
         },
+        select: expect.objectContaining({
+          stripeEnabled: true,
+          stripePriceIds: true,
+        }),
       })
       expect(result.id).toBe('config')
     })

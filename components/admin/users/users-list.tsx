@@ -8,12 +8,15 @@ import { UsersFilter as UsersFilterComponent, UsersFilter } from "./users-filter
 interface UsersListProps {
   users: AdminUserWithWrappedStats[]
   currentYear: number
+  /** Stripe dashboard base URL (test/live aware), or null when unconfigured. */
+  stripeDashboardBaseUrl?: string | null
 }
 
-export function UsersList({ users, currentYear }: UsersListProps) {
+export function UsersList({ users, currentYear, stripeDashboardBaseUrl }: UsersListProps) {
   const [filter, setFilter] = useState<UsersFilter>({
     plexAccess: "yes",
     role: "all",
+    subscription: "all",
   })
 
   const filteredUsers = useMemo(() => {
@@ -40,6 +43,30 @@ export function UsersList({ users, currentYear }: UsersListProps) {
         return false
       }
 
+      // Filter by subscription state
+      if (filter.subscription === "active" && user.subscriptionStatus !== "ACTIVE") {
+        return false
+      }
+      if (
+        filter.subscription === "past_due" &&
+        user.subscriptionStatus !== "PAST_DUE" &&
+        user.subscriptionStatus !== "UNPAID"
+      ) {
+        return false
+      }
+      if (filter.subscription === "canceled" && user.subscriptionStatus !== "CANCELED") {
+        return false
+      }
+      if (
+        filter.subscription === "none" &&
+        (user.subscriptionStatus === "ACTIVE" ||
+          user.subscriptionStatus === "PAST_DUE" ||
+          user.subscriptionStatus === "UNPAID" ||
+          user.subscriptionStatus === "CANCELED")
+      ) {
+        return false
+      }
+
       return true
     })
   }, [users, filter])
@@ -55,6 +82,7 @@ export function UsersList({ users, currentYear }: UsersListProps) {
                 <th className="px-2 py-2">User</th>
                 <th className="px-2 py-2">Role</th>
                 <th className="px-2 py-2">Access</th>
+                <th className="px-2 py-2">Subscription</th>
                 <th className="px-2 py-2">LLM Cost</th>
                 <th className="px-2 py-2">Joined</th>
                 <th className="px-2 py-2">Actions</th>
@@ -63,13 +91,18 @@ export function UsersList({ users, currentYear }: UsersListProps) {
             <tbody className="divide-y divide-slate-700/50">
               {filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-slate-400 text-sm">
+                  <td colSpan={7} className="px-4 py-8 text-center text-slate-400 text-sm">
                     No users found
                   </td>
                 </tr>
               ) : (
                 filteredUsers.map((user) => (
-                  <UserTableRow key={user.id} user={user} currentYear={currentYear} />
+                  <UserTableRow
+                    key={user.id}
+                    user={user}
+                    currentYear={currentYear}
+                    stripeDashboardBaseUrl={stripeDashboardBaseUrl}
+                  />
                 ))
               )}
             </tbody>

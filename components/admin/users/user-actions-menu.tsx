@@ -1,7 +1,11 @@
 "use client"
 
+import { CancelSubscriptionButton } from "@/components/admin/users/cancel-subscription-button"
+import { GrantAccessButton } from "@/components/admin/users/grant-access-button"
 import { RegenerateWrappedButton } from "@/components/admin/users/regenerate-wrapped-button"
+import { ToggleExemptButton } from "@/components/admin/users/toggle-exempt-button"
 import { UnshareUserButton } from "@/components/admin/users/unshare-user-button"
+import { SubscriptionStatus } from "@/lib/generated/prisma/client"
 import Link from "next/link"
 import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
@@ -13,18 +17,35 @@ interface UserActionsMenuProps {
     isAdmin: boolean
     hasPlexAccess: boolean | null
     wrappedStatus: string | null
+    subscriptionStatus: SubscriptionStatus | null
+    isExempt: boolean
+    stripeCustomerId: string | null
   }
+  /** Stripe dashboard base URL (test/live aware), or null when unconfigured. */
+  stripeDashboardBaseUrl?: string | null
 }
 
-export function UserActionsMenu({ user }: UserActionsMenuProps) {
+export function UserActionsMenu({ user, stripeDashboardBaseUrl }: UserActionsMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0 })
   const buttonRef = useRef<HTMLButtonElement>(null)
 
+  // A subscription can only be canceled while it is actively billing.
+  const canCancelSubscription =
+    user.subscriptionStatus === "ACTIVE" || user.subscriptionStatus === "PAST_DUE"
+  // Grant comp only makes sense for a non-admin that is not already exempt.
+  const canGrantAccess = !user.isAdmin && !user.isExempt
+  // Only link to Stripe when we have both a customer and a (mode-aware) base URL.
+  const hasStripeLink = Boolean(user.stripeCustomerId && stripeDashboardBaseUrl)
+
   const hasActions = user.wrappedStatus === "completed" ||
                      user.wrappedStatus === "failed" ||
                      !user.wrappedStatus ||
-                     (!user.isAdmin && user.hasPlexAccess === true)
+                     (!user.isAdmin && user.hasPlexAccess === true) ||
+                     canCancelSubscription ||
+                     canGrantAccess ||
+                     !user.isAdmin ||
+                     hasStripeLink
 
   // Calculate menu position when opening
   useEffect(() => {
@@ -150,6 +171,69 @@ export function UserActionsMenu({ user }: UserActionsMenuProps) {
                 onSuccess={() => setIsOpen(false)}
               />
             </div>
+          )}
+
+          {/* Cancel Subscription */}
+          {canCancelSubscription && (
+            <div className="px-3 py-2 hover:bg-slate-700/50 transition-colors border-t border-slate-700">
+              <CancelSubscriptionButton
+                userId={user.id}
+                userName={user.name}
+                onSuccess={() => setIsOpen(false)}
+              />
+            </div>
+          )}
+
+          {/* Grant Access (Comp) */}
+          {canGrantAccess && (
+            <div className="px-3 py-2 hover:bg-slate-700/50 transition-colors border-t border-slate-700">
+              <GrantAccessButton
+                userId={user.id}
+                userName={user.name}
+                onSuccess={() => setIsOpen(false)}
+              />
+            </div>
+          )}
+
+          {/* Toggle Exempt */}
+          {!user.isAdmin && (
+            <div className="px-3 py-2 hover:bg-slate-700/50 transition-colors border-t border-slate-700">
+              <ToggleExemptButton
+                userId={user.id}
+                userName={user.name}
+                isExempt={user.isExempt}
+                onSuccess={() => setIsOpen(false)}
+              />
+            </div>
+          )}
+
+          {/* View in Stripe */}
+          {hasStripeLink && (
+            <a
+              href={`${stripeDashboardBaseUrl}/customers/${user.stripeCustomerId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-3 py-2 text-sm text-slate-200 hover:bg-slate-700/50 transition-colors border-t border-slate-700"
+              onClick={() => setIsOpen(false)}
+              role="menuitem"
+              data-testid="view-in-stripe-link"
+            >
+              <svg
+                className="w-4 h-4 text-indigo-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                />
+              </svg>
+              View in Stripe
+            </a>
           )}
         </div>
           </>,
