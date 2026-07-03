@@ -9,7 +9,21 @@ import { useState, useTransition } from "react"
 
 interface ServerFormProps {
   type: "plex" | "jellyfin" | "tautulli" | "overseerr" | "sonarr" | "radarr" | "prometheus"
-  server: { name: string; url: string; token?: string; apiKey?: string; publicUrl?: string | null; query?: string } | null
+  /**
+   * The active server config, with secrets stripped. `hasToken`/`hasApiKey`
+   * indicate a secret is stored (never the value itself) so the form can offer
+   * "leave blank to keep current value" without exposing the secret.
+   */
+  server:
+    | {
+        name: string
+        url: string
+        publicUrl?: string | null
+        query?: string
+        hasToken?: boolean
+        hasApiKey?: boolean
+      }
+    | null
 }
 
 export function ServerForm({ type, server }: ServerFormProps) {
@@ -18,17 +32,25 @@ export function ServerForm({ type, server }: ServerFormProps) {
   const router = useRouter()
   const toast = useToast()
 
+  // Whether a secret is already stored for this server (drives leave-blank-to-keep).
+  const hasStoredSecret = type === "plex" ? Boolean(server?.hasToken) : Boolean(server?.hasApiKey)
+
+  // Secrets are never sent to the client. Empty fields mean "keep existing".
   const [formData, setFormData] = useState({
     name: server?.name || "",
     url: server?.url || "",
     publicUrl: server?.publicUrl || "",
-    token: server?.token || "",
-    apiKey: server?.apiKey || "",
+    token: "",
+    apiKey: "",
     query: server?.query || "",
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Blank secret fields are sent as undefined so the action keeps the stored value.
+    const token = formData.token.trim() || undefined
+    const apiKey = formData.apiKey.trim() || undefined
 
     startTransition(async () => {
       let result
@@ -36,42 +58,42 @@ export function ServerForm({ type, server }: ServerFormProps) {
         result = await updatePlexServer({
           name: formData.name,
           url: formData.url,
-          token: formData.token!,
+          token,
           publicUrl: formData.publicUrl || undefined,
         })
       } else if (type === "jellyfin") {
         result = await updateJellyfinServer({
           name: formData.name,
           url: formData.url,
-          apiKey: formData.apiKey!,
+          apiKey,
           publicUrl: formData.publicUrl || undefined,
         })
       } else if (type === "tautulli") {
         result = await updateTautulli({
           name: formData.name,
           url: formData.url,
-          apiKey: formData.apiKey!,
+          apiKey,
           publicUrl: formData.publicUrl || undefined,
         })
       } else if (type === "overseerr") {
         result = await updateOverseerr({
           name: formData.name,
           url: formData.url,
-          apiKey: formData.apiKey!,
+          apiKey,
           publicUrl: formData.publicUrl || undefined,
         })
       } else if (type === "sonarr") {
         result = await updateSonarr({
           name: formData.name,
           url: formData.url,
-          apiKey: formData.apiKey!,
+          apiKey,
           publicUrl: formData.publicUrl || undefined,
         })
       } else if (type === "radarr") {
         result = await updateRadarr({
           name: formData.name,
           url: formData.url,
-          apiKey: formData.apiKey!,
+          apiKey,
           publicUrl: formData.publicUrl || undefined,
         })
       } else {
@@ -193,9 +215,10 @@ export function ServerForm({ type, server }: ServerFormProps) {
                   type="password"
                   value={formData.token}
                   onChange={(e) => setFormData({ ...formData, token: e.target.value })}
-                  placeholder="Plex authentication token"
-                  required
+                  placeholder={hasStoredSecret ? "Leave blank to keep current token" : "Plex authentication token"}
+                  required={!hasStoredSecret}
                   disabled={isPending}
+                  autoComplete="off"
                 />
               </div>
             ) : (
@@ -205,9 +228,10 @@ export function ServerForm({ type, server }: ServerFormProps) {
                   type="password"
                   value={formData.apiKey}
                   onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
-                  placeholder={`${type.charAt(0).toUpperCase() + type.slice(1)} API key`}
-                  required
+                  placeholder={hasStoredSecret ? "Leave blank to keep current API key" : `${type.charAt(0).toUpperCase() + type.slice(1)} API key`}
+                  required={!hasStoredSecret}
                   disabled={isPending}
+                  autoComplete="off"
                 />
               </div>
             )}
@@ -230,8 +254,8 @@ export function ServerForm({ type, server }: ServerFormProps) {
               name: server?.name || "",
               url: server?.url || "",
               publicUrl: server?.publicUrl || "",
-              token: server?.token || "",
-              apiKey: server?.apiKey || "",
+              token: "",
+              apiKey: "",
               query: server?.query || "",
             })
           }}

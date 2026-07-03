@@ -10,11 +10,16 @@ import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 
 interface DiscordIntegrationFormProps {
+  /**
+   * The Discord integration config, with the client secret stripped.
+   * `hasClientSecret` indicates a secret is stored (never the value itself) so
+   * the form can offer "leave blank to keep current value" without exposing it.
+   */
   integration: {
     isEnabled: boolean
     botEnabled?: boolean | null
     clientId?: string | null
-    clientSecret?: string | null
+    hasClientSecret?: boolean
     guildId?: string | null
     serverInviteCode?: string | null
     platformName?: string | null
@@ -53,11 +58,15 @@ export function DiscordIntegrationForm({ integration, linkedCount, portalUrl }: 
   const [isEditing, setIsEditing] = useState(false)
   const [isPending, startTransition] = useTransition()
 
+  // Whether a client secret is already stored (drives leave-blank-to-keep).
+  const hasStoredClientSecret = Boolean(integration?.hasClientSecret)
+
+  // The client secret is never sent to the client. Empty means "keep existing".
   const initialState = {
     isEnabled: integration?.isEnabled ?? false,
     botEnabled: integration?.botEnabled ?? false,
     clientId: integration?.clientId ?? "",
-    clientSecret: integration?.clientSecret ?? "",
+    clientSecret: "",
     guildId: integration?.guildId ?? "",
     serverInviteCode: integration?.serverInviteCode ?? "",
     platformName: integration?.platformName ?? "Plex Wrapped",
@@ -72,6 +81,8 @@ export function DiscordIntegrationForm({ integration, linkedCount, portalUrl }: 
     startTransition(async () => {
       const result = await updateDiscordIntegrationSettings({
         ...formData,
+        // Blank secret is omitted so the action keeps the stored value.
+        clientSecret: formData.clientSecret.trim() || undefined,
       })
 
       if (result.success) {
@@ -178,15 +189,16 @@ export function DiscordIntegrationForm({ integration, linkedCount, portalUrl }: 
         </div>
         <div>
           <label className="block text-xs font-medium text-slate-400 mb-1">
-            Client Secret {formData.isEnabled && <span className="text-red-400">*</span>}
+            Client Secret {formData.isEnabled && !hasStoredClientSecret && <span className="text-red-400">*</span>}
           </label>
           <StyledInput
             type="password"
             value={formData.clientSecret}
             onChange={(e) => setFormData({ ...formData, clientSecret: e.target.value })}
-            placeholder="Discord application client secret"
-            required={formData.isEnabled}
+            placeholder={hasStoredClientSecret ? "Leave blank to keep current secret" : "Discord application client secret"}
+            required={formData.isEnabled && !hasStoredClientSecret}
             disabled={isPending}
+            autoComplete="off"
           />
         </div>
         <div>
