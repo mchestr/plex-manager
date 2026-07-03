@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation"
 import { useCallback } from "react"
+import { Button } from "@/components/ui/button"
 import { StyledInput } from "@/components/ui/styled-input"
 
 export function CostDateFilter() {
@@ -79,24 +80,15 @@ export function CostDateFilter() {
         </div>
         <div className="flex flex-wrap items-end gap-2">
           <div className="text-xs text-slate-400 mb-1 w-full sm:w-auto sm:mb-0">Quick Filters:</div>
-          <button
-            onClick={() => handleQuickFilter(7)}
-            className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium rounded transition-colors"
-          >
+          <Button variant="secondary" size="sm" onClick={() => handleQuickFilter(7)}>
             7 Days
-          </button>
-          <button
-            onClick={() => handleQuickFilter(30)}
-            className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium rounded transition-colors"
-          >
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => handleQuickFilter(30)}>
             30 Days
-          </button>
-          <button
-            onClick={() => handleQuickFilter(90)}
-            className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium rounded transition-colors"
-          >
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => handleQuickFilter(90)}>
             90 Days
-          </button>
+          </Button>
           {(startDate || endDate) && (
             <button
               onClick={handleClear}

@@ -4,6 +4,10 @@
  * to prevent Edge Runtime from analyzing Node.js-only dependencies
  */
 
+import { createLogger } from "@/lib/utils/logger"
+
+const logger = createLogger("INSTRUMENTATION")
+
 export async function startNodeInstrumentation() {
   // Start queue worker (for watchlist sync and other background jobs)
   await startQueueWorker()
@@ -21,17 +25,13 @@ async function startQueueWorker() {
   const envQueueEnabled = process.env.ENABLE_QUEUE_WORKER !== "false"
 
   if (!envQueueEnabled) {
-    if (process.env.NODE_ENV === "development") {
-      console.log("Queue worker disabled via ENABLE_QUEUE_WORKER=false")
-    }
+    logger.debug("Queue worker disabled via ENABLE_QUEUE_WORKER=false")
     return
   }
 
   // Check if Redis is configured
   if (!process.env.REDIS_URL) {
-    if (process.env.NODE_ENV === "development") {
-      console.log("Queue worker disabled: REDIS_URL not configured")
-    }
+    logger.debug("Queue worker disabled: REDIS_URL not configured")
     // Fall back to legacy polling system if Redis is not configured
     await startWatchlistSyncPolling()
     return
@@ -45,13 +45,13 @@ async function startQueueWorker() {
     const { isWatchlistSyncEnabled, getWatchlistSyncInterval } = await import("@/lib/watchlist/lock")
 
     if (!isRedisConfigured()) {
-      console.log("Queue worker disabled: Redis not configured")
+      logger.info("Queue worker disabled: Redis not configured")
       return
     }
 
     // Start the worker
     await startWorker()
-    console.log("Queue worker started")
+    logger.info("Queue worker started")
 
     // Schedule watchlist sync if enabled
     const syncEnabled = await isWatchlistSyncEnabled()
@@ -65,24 +65,24 @@ async function startQueueWorker() {
         { triggeredBy: "scheduled" },
         intervalMs
       )
-      console.log(`Watchlist sync scheduled every ${intervalMinutes} minutes`)
+      logger.info(`Watchlist sync scheduled every ${intervalMinutes} minutes`)
     } else {
       // Remove any existing scheduled job if sync is disabled
       await removeScheduledJob("watchlist-sync-scheduled")
-      console.log("Watchlist sync disabled - scheduler removed")
+      logger.info("Watchlist sync disabled - scheduler removed")
     }
 
     // Graceful shutdown handlers
     if (process.env.NODE_ENV !== "test") {
       const shutdown = async () => {
         try {
-          console.log("Shutting down queue worker...")
+          logger.info("Shutting down queue worker...")
           await stopWorker()
           await closeQueue()
           await closeRedisConnection()
-          console.log("Queue worker shutdown complete")
+          logger.info("Queue worker shutdown complete")
         } catch (error) {
-          console.error("Error during queue worker shutdown:", error)
+          logger.error("Error during queue worker shutdown", error)
         }
       }
 
@@ -90,11 +90,9 @@ async function startQueueWorker() {
       process.on("SIGTERM", shutdown)
     }
   } catch (error) {
-    if (process.env.NODE_ENV === "development") {
-      console.warn("Queue worker could not be started:", error)
-    }
+    logger.warn("Queue worker could not be started", { error })
     // Fall back to legacy polling system
-    console.log("Falling back to legacy polling system")
+    logger.info("Falling back to legacy polling system")
     await startWatchlistSyncPolling()
   }
 }
@@ -108,9 +106,7 @@ async function startWatchlistSyncPolling() {
   const envSyncEnabled = process.env.ENABLE_WATCHLIST_SYNC !== "false"
 
   if (!envSyncEnabled) {
-    if (process.env.NODE_ENV === "development") {
-      console.log("Watchlist sync disabled via ENABLE_WATCHLIST_SYNC=false")
-    }
+    logger.debug("Watchlist sync disabled via ENABLE_WATCHLIST_SYNC=false")
     return
   }
 
@@ -121,9 +117,7 @@ async function startWatchlistSyncPolling() {
     // Check database setting
     const syncEnabled = await isWatchlistSyncEnabled()
     if (!syncEnabled) {
-      if (process.env.NODE_ENV === "development") {
-        console.log("Watchlist sync disabled in database settings")
-      }
+      logger.debug("Watchlist sync disabled in database settings")
       return
     }
 
@@ -135,21 +129,21 @@ async function startWatchlistSyncPolling() {
       // onLockAcquired - called when we successfully acquire the lock
       async () => {
         try {
-          console.log("Watchlist sync lock acquired - running sync")
+          logger.info("Watchlist sync lock acquired - running sync")
           const result = await syncAllEnabledUsers()
-          console.log(`Watchlist sync completed: ${result.usersProcessed} users processed, ${result.usersSucceeded} succeeded, ${result.usersFailed} failed`)
+          logger.info(`Watchlist sync completed: ${result.usersProcessed} users processed, ${result.usersSucceeded} succeeded, ${result.usersFailed} failed`)
         } catch (error) {
-          console.error("Failed to run watchlist sync:", error)
+          logger.error("Failed to run watchlist sync", error)
         }
       },
       // onLockLost - called if we lose the lock
       async () => {
-        console.log("Watchlist sync lock lost")
+        logger.info("Watchlist sync lock lost")
       },
       pollIntervalMs
     )
 
-    console.log(`Watchlist sync polling started (checking every ${pollIntervalMs / 1000} seconds)`)
+    logger.info(`Watchlist sync polling started (checking every ${pollIntervalMs / 1000} seconds)`)
 
     // Graceful shutdown handlers
     if (process.env.NODE_ENV !== "test") {
@@ -157,7 +151,7 @@ async function startWatchlistSyncPolling() {
         try {
           await stopWatchlistSyncPolling()
         } catch (error) {
-          console.error("Error during watchlist sync shutdown:", error)
+          logger.error("Error during watchlist sync shutdown", error)
         }
       }
 
@@ -165,9 +159,7 @@ async function startWatchlistSyncPolling() {
       process.on("SIGTERM", shutdown)
     }
   } catch (error) {
-    if (process.env.NODE_ENV === "development") {
-      console.warn("Watchlist sync module could not be loaded:", error)
-    }
+    logger.warn("Watchlist sync module could not be loaded", { error })
   }
 }
 
@@ -176,9 +168,7 @@ async function startDiscordBotPolling() {
   const envBotEnabled = process.env.ENABLE_DISCORD_BOT !== "false"
 
   if (!envBotEnabled) {
-    if (process.env.NODE_ENV === "development") {
-      console.log("Discord bot disabled via ENABLE_DISCORD_BOT=false")
-    }
+    logger.debug("Discord bot disabled via ENABLE_DISCORD_BOT=false")
     return
   }
 
@@ -187,17 +177,13 @@ async function startDiscordBotPolling() {
     const { isDiscordBotEnabled } = await import("@/lib/discord/lock")
     const botEnabled = await isDiscordBotEnabled()
     if (!botEnabled) {
-      if (process.env.NODE_ENV === "development") {
-        console.log("Discord bot disabled in database settings")
-      }
+      logger.debug("Discord bot disabled in database settings")
       return
     }
   } catch (error) {
     // If we can't check the database, proceed anyway (database might not be ready yet)
     // The polling loop will check the setting periodically
-    if (process.env.NODE_ENV === "development") {
-      console.warn("Could not check Discord bot enabled status:", error)
-    }
+    logger.warn("Could not check Discord bot enabled status", { error })
   }
 
   // Use dynamic import with a string to prevent Next.js from analyzing the dependency tree
@@ -221,9 +207,9 @@ async function startDiscordBotPolling() {
         try {
           await bot.initialize()
           botInstance = bot
-          console.log("Discord bot initialized successfully (holding distributed lock)")
+          logger.info("Discord bot initialized successfully (holding distributed lock)")
         } catch (error) {
-          console.error("Failed to initialize Discord bot:", error)
+          logger.error("Failed to initialize Discord bot", error)
           // Release lock if initialization fails
           await releaseDiscordBotLock()
         }
@@ -231,19 +217,19 @@ async function startDiscordBotPolling() {
       // onLockLost - called if we lose the lock (e.g., another instance took it)
       async () => {
         try {
-          console.log("Discord bot lock lost - shutting down bot")
+          logger.info("Discord bot lock lost - shutting down bot")
           if (botInstance) {
             await botInstance.destroy()
             botInstance = null
           }
         } catch (error) {
-          console.error("Error shutting down bot after lock loss:", error)
+          logger.error("Error shutting down bot after lock loss", error)
         }
       },
       pollIntervalMs
     )
 
-    console.log(`Discord bot lock polling started (checking every ${pollIntervalMs / 1000} seconds)`)
+    logger.info(`Discord bot lock polling started (checking every ${pollIntervalMs / 1000} seconds)`)
 
     // Graceful shutdown handlers - only register if we're in Node.js runtime
     // Skip in test environments (Playwright) to avoid interference
@@ -259,7 +245,7 @@ async function startDiscordBotPolling() {
             // Ignore errors if bot wasn't initialized
           }
         } catch (error) {
-          console.error("Error during Discord bot shutdown:", error)
+          logger.error("Error during Discord bot shutdown", error)
         }
       }
 
@@ -269,8 +255,6 @@ async function startDiscordBotPolling() {
   } catch (error) {
     // Silently fail if Discord.js can't be loaded (e.g., missing native dependencies)
     // This allows the app to start even if the bot can't be initialized
-    if (process.env.NODE_ENV === "development") {
-      console.warn("Discord bot module could not be loaded:", error)
-    }
+    logger.warn("Discord bot module could not be loaded", { error })
   }
 }

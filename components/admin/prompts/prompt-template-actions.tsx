@@ -9,6 +9,7 @@ import {
 } from "@/actions/prompts"
 import { PromptTemplate } from "@/lib/generated/prisma/client"
 import { ConfirmModal } from "@/components/admin/shared/confirm-modal"
+import { Button } from "@/components/ui/button"
 
 interface PromptTemplateActionsProps {
   template: PromptTemplate
@@ -59,13 +60,14 @@ export function PromptTemplateActions({ template }: PromptTemplateActionsProps) 
       )}
       <div className="flex flex-wrap gap-2">
         {!template.isActive && (
-          <button
+          <Button
+            variant="primary"
+            size="sm"
             onClick={handleSetActive}
             disabled={isPending}
-            className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-medium rounded transition-colors disabled:opacity-50"
           >
             Set Active
-          </button>
+          </Button>
         )}
         <Link
           href={`/admin/prompts/${template.id}/edit`}
@@ -80,13 +82,14 @@ export function PromptTemplateActions({ template }: PromptTemplateActionsProps) 
           Playground
         </Link>
         {!template.isActive && (
-          <button
+          <Button
+            variant="danger"
+            size="sm"
             onClick={handleDeleteClick}
             disabled={isPending}
-            className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded transition-colors disabled:opacity-50"
           >
             Delete
-          </button>
+          </Button>
         )}
       </div>
 
