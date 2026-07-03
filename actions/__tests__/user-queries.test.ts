@@ -17,6 +17,17 @@ import {
 } from '@/__tests__/utils/test-builders'
 
 // Mock dependencies
+// user-queries.ts now imports getServerSession/authOptions; mock them so the
+// module doesn't pull in the full NextAuth (ESM `jose`) chain, which Jest can't
+// parse without transformation.
+jest.mock('next-auth', () => ({
+  getServerSession: jest.fn(),
+}))
+
+jest.mock('@/lib/auth', () => ({
+  authOptions: {},
+}))
+
 jest.mock('@/lib/admin', () => ({
   requireAdmin: jest.fn(),
 }))

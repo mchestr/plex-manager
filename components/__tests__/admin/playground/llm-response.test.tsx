@@ -218,11 +218,12 @@ describe("LLMResponse", () => {
       expect(previewButton).toHaveClass("bg-gradient-to-r", "from-cyan-600", "to-purple-600")
     })
 
-    it("should style save button with green-emerald gradient", () => {
+    it("should style save button with the success variant", () => {
       renderWithToast(<LLMResponse {...mockProps} />)
 
+      // Save now uses the shared <Button variant="success"> (solid green).
       const saveButton = screen.getByRole("button", { name: /save as wrapped/i })
-      expect(saveButton).toHaveClass("bg-gradient-to-r", "from-green-600", "to-emerald-600")
+      expect(saveButton).toHaveClass("bg-green-600", "hover:bg-green-500", "text-white")
     })
 
     it("should apply disabled styling when saving", () => {

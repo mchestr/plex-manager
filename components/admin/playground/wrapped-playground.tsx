@@ -13,7 +13,6 @@ import { useEffect, useMemo, useState } from "react"
 import { LLMResponse } from "@/components/admin/playground/llm-response"
 import { PreviewModal } from "@/components/admin/playground/preview-modal"
 import { RenderedPrompt } from "@/components/admin/playground/rendered-prompt"
-import { StatisticsViewer } from "@/components/admin/playground/statistics-viewer"
 import { TemplateSelector } from "@/components/admin/playground/template-selector"
 import { TestConfiguration } from "@/components/admin/playground/test-configuration"
 
@@ -340,15 +339,6 @@ export function WrappedPlayground({ templates, initialTemplateId }: WrappedPlayg
           window.location.reload()
         }}
       />
-
-      {/* Statistics Viewer */}
-      {showStatistics && statistics && (
-        <StatisticsViewer
-          statistics={statistics}
-          viewMode={statisticsViewMode}
-          onViewModeChange={setStatisticsViewMode}
-        />
-      )}
 
       {/* Rendered Prompt */}
       {result?.renderedPrompt && showRenderedPrompt && (
