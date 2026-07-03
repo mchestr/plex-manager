@@ -82,6 +82,14 @@ Plex Management System transforms your Plex experience by combining powerful man
 - **Share analytics** to see what's popular
 - **Audit logging** for security and compliance
 - **Centralized configuration** for all integrations
+- **Subscription management** - Cancel, comp/grant access, and mark users exempt (when Stripe is enabled)
+
+### 💳 Subscriptions & Access (Optional)
+- **Stripe-powered access gating** - Non-members can subscribe to auto-provision Plex access
+- **Stripe Checkout & Billing Portal** - No in-app card handling; payment is fully hosted by Stripe
+- **Webhook-driven provisioning** - Automatic Plex invite on subscribe and removal on cancellation
+- **Off by default** - When disabled, the app behaves exactly as if the feature didn't exist
+- See the [Stripe Subscriptions guide](docs/stripe.md) for setup
 
 ---
 
@@ -89,15 +97,17 @@ Plex Management System transforms your Plex experience by combining powerful man
 
 ### Prerequisites
 
-- **Node.js** 18+ (LTS recommended)
+- **Node.js** 20.19+, 22.12+, or 24+ (LTS recommended)
 - **npm** or **yarn**
 - **PostgreSQL** database (SQLite is no longer supported as of Prisma v7)
+- **Redis** (optional, for the background job queue — required for Stripe subscriptions)
 - Access to:
   - A **Plex server** (with admin token)
   - **Tautulli** instance (for viewing statistics)
   - **Overseerr** (optional, for request stats)
   - **Sonarr/Radarr** (optional, for media management features)
   - **OpenAI** API key (optional, for AI insights)
+  - A **Stripe** account (optional, for subscription-based access gating)
 
 ### Installation
 
@@ -235,7 +245,7 @@ The CLAUDE.md file contains detailed information about:
 
 **Logging**
 - Use the `createLogger` utility from `@/lib/utils/logger`
-- See [Logging Guide](docs/logging.md) for details on log levels, metadata, and best practices
+- See the JSDoc in [`lib/utils/logger.ts`](lib/utils/logger.ts) for log levels, metadata, and best practices
 
 ### Database Management
 
@@ -260,8 +270,12 @@ See `example.env` for all available configuration options. Key variables:
 - **Database**: `DATABASE_URL`
 - **Application URLs**: `NEXT_PUBLIC_APP_URL` (preferred, used for public URLs), `NEXTAUTH_URL` (required by NextAuth, should match `NEXT_PUBLIC_APP_URL` in production)
 - **Authentication**: `NEXTAUTH_SECRET`, `PLEX_CLIENT_IDENTIFIER`
+- **Encryption**: `ENCRYPTION_KEY` (optional but strongly recommended in production) — encrypts external-service secrets/tokens at rest. Use a dedicated value (do **not** reuse `NEXTAUTH_SECRET`); generate with `openssl rand -hex 32`. Rollout is non-destructive; rotating it makes previously-encrypted secrets undecryptable until re-saved.
+- **Job Queue**: `REDIS_URL` (optional) — enables the Redis-backed BullMQ worker. Without it, background jobs fall back to PostgreSQL polling. Required for Stripe subscriptions.
 - **Development**: `DEV_*` variables for setup wizard defaults
   - Use URL format: `DEV_PLEX_URL="https://localhost:32400"` (includes protocol and port)
+
+> **Stripe**: There are intentionally **no** `STRIPE_*` environment variables. The secret key, webhook signing secret, and price IDs are stored (encrypted) in the app config and managed entirely from **Admin → Settings → Stripe Subscriptions**. See [docs/stripe.md](docs/stripe.md).
 
 ---
 
@@ -315,6 +329,8 @@ The project includes a `Dockerfile` for containerized deployments. When deployin
 | **Styling** | Tailwind CSS |
 | **Animations** | Framer Motion |
 | **Validation** | Zod |
+| **Job Queue** | BullMQ + Redis (optional) |
+| **Payments** | Stripe (optional) |
 | **Testing** | Jest + Testing Library + Playwright |
 
 ---
@@ -343,6 +359,8 @@ The platform integrates with multiple services to provide a comprehensive Plex m
 - **Radarr** - Movie management and monitoring
 - **Discord** - Bot integration for server announcements and community features
 - **OpenAI/LLM Providers** - AI-powered insights for Wrapped summaries
+- **Stripe** - Subscription-based access gating with auto-provisioned Plex access (see [docs/stripe.md](docs/stripe.md))
+- **Redis** - Backing store for the BullMQ background job queue
 
 All integrations are configured through the setup wizard or admin panel, with validation and connection testing built-in.
 
@@ -360,6 +378,8 @@ All integrations are configured through the setup wizard or admin panel, with va
 - **CSRF protection** - Built into Next.js Server Actions
 - **Rate limiting** - Protection for sensitive endpoints
 - **Audit logging** - Tracking of admin actions and security events
+- **Encryption at rest** - External-service API keys/tokens are AES-256-GCM encrypted when `ENCRYPTION_KEY` is set
+- **Signed webhooks** - Stripe webhooks are verified against the raw request body (no admin auth needed)
 
 See [CLAUDE.md](CLAUDE.md) for detailed security best practices.
 

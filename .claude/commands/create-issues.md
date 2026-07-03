@@ -1,5 +1,5 @@
 ---
-description: Convert improvement ideas from IMPROVEMENTS.md to GitHub issues
+description: Convert improvement ideas from a tracking doc (e.g. IMPROVEMENTS.md) to GitHub issues
 allowed-tools: [Read, Edit, Bash, AskUserQuestion]
 model: sonnet
 ---

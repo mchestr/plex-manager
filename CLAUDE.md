@@ -375,7 +375,7 @@ logger.error('Operation failed', { error, context })
 logger.warn('Deprecation warning', { feature })
 ```
 
-See `docs/logging.md` for log levels, metadata, and best practices.
+See the JSDoc in `lib/utils/logger.ts` for log levels, metadata, and best practices.
 
 ## Database
 
@@ -740,6 +740,8 @@ The project includes custom slash commands in `.claude/commands/`:
 ## Additional Resources
 
 - E2E Testing: See `e2e/README.md`
-- Logging: See `docs/logging.md`
+- Logging: See the JSDoc in `lib/utils/logger.ts`
 - Discord Bot: See `docs/discord-bot.md`
+- Stripe Subscriptions: See `docs/stripe.md`
+- Performance Testing: See `docs/performance-testing.md`
 - Project README: See `README.md`
