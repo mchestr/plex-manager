@@ -1,5 +1,7 @@
 "use client"
 
+import { Button } from "@/components/ui/button"
+
 interface WrappedGeneratorPromptProps {
   year: number
   onGenerate: () => void
@@ -25,11 +27,7 @@ export function WrappedGeneratorPrompt({
           <p className="text-sm text-red-300">{error}</p>
         </div>
       )}
-      <button
-        onClick={onGenerate}
-        disabled={isGenerating}
-        className="px-6 py-3 bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-700 hover:to-purple-700 text-white rounded-md text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-      >
+      <Button onClick={onGenerate} disabled={isGenerating} size="lg">
         <svg
           className="w-5 h-5"
           fill="none"
@@ -45,7 +43,7 @@ export function WrappedGeneratorPrompt({
           />
         </svg>
         Generate My Wrapped
-      </button>
+      </Button>
     </div>
   )
 }

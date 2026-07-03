@@ -1,6 +1,10 @@
 "use client"
 
+import { Button } from "@/components/ui/button"
+import { ModalShell } from "@/components/ui/modal-shell"
+import { StyledCheckbox } from "@/components/ui/styled-checkbox"
 import { StyledInput } from "@/components/ui/styled-input"
+import { StyledTextarea } from "@/components/ui/styled-textarea"
 
 export interface AnnouncementFormData {
   title: string
@@ -29,21 +33,14 @@ export function AnnouncementFormModal({
   onSubmit,
   onClose,
 }: AnnouncementFormModalProps) {
-  if (!isOpen) return null
-
   return (
-    <div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-      role="presentation"
-      onClick={onClose}
+    <ModalShell
+      isOpen={isOpen}
+      onClose={onClose}
+      maxWidth="lg"
+      labelledBy="modal-title"
+      className="max-h-[90vh] overflow-y-auto"
     >
-      <div
-        className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="modal-title"
-        onClick={(e) => e.stopPropagation()}
-      >
         {/* Modal Header */}
         <div className="flex items-center justify-between p-4 border-b border-slate-700">
           <h2 id="modal-title" className="text-lg font-semibold text-white">
@@ -83,7 +80,7 @@ export function AnnouncementFormModal({
             <label htmlFor="content" className="block text-sm font-medium text-slate-300 mb-1">
               Content (Markdown supported)
             </label>
-            <textarea
+            <StyledTextarea
               id="content"
               name="content"
               value={formData.content}
@@ -91,7 +88,7 @@ export function AnnouncementFormModal({
               placeholder="Announcement content... You can use **bold**, *italic*, and [links](url)"
               required
               rows={5}
-              className="w-full bg-slate-800/50 border border-slate-600 hover:border-slate-500 rounded-lg px-4 py-2 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400 focus:ring-cyan-400 focus:ring-1 transition-colors resize-none"
+              resize="none"
               data-testid="announcement-content-input"
             />
           </div>
@@ -116,16 +113,14 @@ export function AnnouncementFormModal({
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1">Status</label>
-              <label className="flex items-center gap-2 cursor-pointer mt-2">
-                <input
-                  type="checkbox"
+              <div className="mt-2">
+                <StyledCheckbox
+                  label="Active"
                   checked={formData.isActive}
                   onChange={(e) => onFormChange({ ...formData, isActive: e.target.checked })}
-                  className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0"
                   data-testid="announcement-active-checkbox"
                 />
-                <span className="text-sm text-slate-300">Active</span>
-              </label>
+              </div>
             </div>
           </div>
 
@@ -147,17 +142,13 @@ export function AnnouncementFormModal({
 
           {/* Modal Footer */}
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-700">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg transition-colors"
-            >
+            <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
+              variant="primary"
               disabled={submitting}
-              className="px-4 py-2 text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-2"
               data-testid="announcement-submit-button"
             >
               {submitting && (
@@ -167,10 +158,9 @@ export function AnnouncementFormModal({
                 </svg>
               )}
               {isEditing ? "Save Changes" : "Create"}
-            </button>
+            </Button>
           </div>
         </form>
-      </div>
-    </div>
+    </ModalShell>
   )
 }

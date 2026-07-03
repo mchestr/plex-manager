@@ -1,8 +1,10 @@
 "use server"
 
+import { authOptions } from "@/lib/auth"
 import { requireAdmin } from "@/lib/admin"
 import { checkUserServerAccess, getPlexServerIdentity, getPlexUsers, unshareUserFromPlexServer } from "@/lib/connections/plex"
 import { prisma } from "@/lib/prisma"
+import { getServerSession } from "next-auth"
 import { aggregateLlmUsage } from "@/lib/utils"
 import { createLogger } from "@/lib/utils/logger"
 import {
@@ -26,6 +28,21 @@ export async function getUserPlexWrapped(
   userId: string,
   year: number = new Date().getFullYear()
 ) {
+  // Authorization: a user may only read their own Wrapped; admins may read any.
+  // This action is exposed as a public endpoint, so the check must live here —
+  // there is no middleware gating direct Server Action invocation.
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) {
+    return null
+  }
+  if (session.user.id !== userId && !session.user.isAdmin) {
+    logger.warn("Unauthorized attempt to read another user's wrapped", {
+      requesterId: session.user.id,
+      targetUserId: userId,
+    })
+    return null
+  }
+
   try {
     const wrapped = await prisma.plexWrapped.findUnique({
       where: {
@@ -57,6 +74,11 @@ export async function getUserPlexWrapped(
  * Get detailed user information including all wrapped, shares, visits, and LLM usage
  */
 export async function getUserDetails(userId: string): Promise<UserDetails | null> {
+  // Admin-only: returns another user's full PII. Placed before the try so the
+  // thrown auth error propagates to the error boundary instead of being
+  // swallowed into a null return by the catch below.
+  await requireAdmin()
+
   try {
     // Get active Plex server for access checking
     const plexServer = await prisma.plexServer.findFirst({
@@ -161,6 +183,10 @@ export async function getUserDetails(userId: string): Promise<UserDetails | null
  * Get all users with their wrapped status
  */
 export async function getAllUsersWithWrapped(year?: number): Promise<AdminUserWithWrappedStats[]> {
+  // Admin-only: enumerates every user's PII. Placed before the try so the auth
+  // error propagates rather than being swallowed into an empty array.
+  await requireAdmin()
+
   try {
     const currentYear = year || new Date().getFullYear()
 
@@ -285,9 +311,12 @@ export async function unshareUserLibrary(userId: string): Promise<{ success: boo
   }
 }
 
-// --- Internal Helpers (Exported for testing) ---
+// --- Internal Helpers ---
+// NOT exported: every export in a "use server" module is a directly-invocable
+// endpoint. These return user PII and are only consumed by getAllUsersWithWrapped
+// (which is admin-gated), so they must not be independently callable.
 
-export async function fetchUsersWithWrappedData(year: number) {
+async function fetchUsersWithWrappedData(year: number) {
   return prisma.user.findMany({
     orderBy: [
       { isAdmin: "desc" },
@@ -313,7 +342,7 @@ export async function fetchUsersWithWrappedData(year: number) {
   })
 }
 
-export async function buildPlexAccessMap(users: { id: string; plexUserId: string | null }[]): Promise<Map<string, boolean | null>> {
+async function buildPlexAccessMap(users: { id: string; plexUserId: string | null }[]): Promise<Map<string, boolean | null>> {
   const accessMap = new Map<string, boolean | null>()
 
   const plexServer = await prisma.plexServer.findFirst({
@@ -398,7 +427,7 @@ export async function buildPlexAccessMap(users: { id: string; plexUserId: string
   return accessMap
 }
 
-export async function fetchShareStatsMap(userIds: string[]): Promise<Map<string, { totalShares: number; totalVisits: number }>> {
+async function fetchShareStatsMap(userIds: string[]): Promise<Map<string, { totalShares: number; totalVisits: number }>> {
   const shareStats = await prisma.plexWrapped.findMany({
     where: {
       userId: {
@@ -437,6 +466,13 @@ export async function getUserFirstWatchDate(
   plexUserId: string,
   userEmail: string | null
 ): Promise<{ success: boolean; firstWatchDate?: string; error?: string }> {
+  // Require an authenticated session; this action queries Tautulli by identifier
+  // and must not be callable anonymously.
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) {
+    return { success: false, error: "Unauthorized" }
+  }
+
   try {
     // Get active Tautulli configuration
     const tautulli = await prisma.tautulli.findFirst({

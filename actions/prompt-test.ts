@@ -34,6 +34,14 @@ export async function testPromptTemplate(input: TestPromptInput) {
         error: "Authentication required",
       }
     }
+    // Admin-only: loads the configured LLM provider's API key and issues a
+    // billable request, so it must not be callable by non-admin users.
+    if (!session.user.isAdmin) {
+      return {
+        success: false,
+        error: "Only admins can test prompt templates",
+      }
+    }
 
     const userId = session.user.id
 
