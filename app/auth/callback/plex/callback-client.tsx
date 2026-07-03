@@ -3,6 +3,7 @@
 import { checkServerAccess } from "@/actions/auth"
 import { Button } from "@/components/ui/button"
 import { getPlexAuthToken } from "@/lib/plex-auth"
+import { redirectTo } from "@/lib/utils/navigation"
 import { getSession, signIn } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
@@ -67,9 +68,9 @@ export function PlexCallbackPageClient() {
             const { getOnboardingStatus } = await import("@/actions/onboarding")
             const { isComplete } = await getOnboardingStatus()
 
-            // Use window.location for a full page reload to ensure session cookie is sent
-            // The test fixture will wait for the redirect and verify the session
-            window.location.href = isComplete ? '/' : '/onboarding'
+            // Full page reload (via redirectTo) to ensure the session cookie is sent.
+            // The test fixture will wait for the redirect and verify the session.
+            redirectTo(isComplete ? '/' : '/onboarding')
             return
           } else {
             console.error("[AUTH] Test token sign in failed:", result?.error)
@@ -136,9 +137,25 @@ export function PlexCallbackPageClient() {
                 })
               : await checkServerAccess(authToken) // No retry options for regular flows
 
+            // A user without Plex server access is normally denied here, before
+            // sign-in ever happens. When the Stripe subscription gate is enabled,
+            // a clean "no access" result is instead relaxed: the non-member is
+            // allowed to sign in and routed to /subscribe (the (app) layout guard
+            // enforces the gate). This mirrors lib/auth.ts, which relaxes
+            // ACCESS_DENIED under the same flag and ONLY for the clean-no-access
+            // case — a failed access check (success === false) is always fatal, so
+            // we never admit a user whose access we could not actually determine.
+            let gatedNonMember = false
             if (!accessCheck.hasAccess) {
-              router.push("/auth/denied")
-              return
+              if (accessCheck.success) {
+                const { isSubscriptionGatingEnabled } = await import("@/actions/auth")
+                gatedNonMember = await isSubscriptionGatingEnabled()
+              }
+
+              if (!gatedNonMember) {
+                router.push("/auth/denied")
+                return
+              }
             }
 
             setStatus("Signing you in...")
@@ -153,18 +170,27 @@ export function PlexCallbackPageClient() {
               // Wait a moment for the session cookie to be set server-side
               await new Promise(resolve => setTimeout(resolve, 500))
 
+              // A gated non-member has no app access yet — send them straight to
+              // /subscribe rather than onboarding/home, neither of which they can
+              // use until they subscribe (and /onboarding lives outside the (app)
+              // guard, so it would not redirect them there itself).
+              if (gatedNonMember) {
+                redirectTo("/subscribe")
+                return
+              }
+
               // Check if user needs to complete onboarding (for all users, not just invite flows)
               const { getOnboardingStatus } = await import("@/actions/onboarding")
               const { isComplete } = await getOnboardingStatus()
 
               if (!isComplete) {
-                // Use window.location for a full page reload to ensure session is properly set
-                window.location.href = "/onboarding"
+                // Full page reload (via redirectTo) to ensure the session is properly set
+                redirectTo("/onboarding")
                 return
               }
 
-              // Use window.location for a full page reload to ensure session is properly set
-              window.location.href = "/"
+              // Full page reload (via redirectTo) to ensure the session is properly set
+              redirectTo("/")
             } else {
               setError(result?.error || "Failed to sign in")
               isProcessingRef.current = false
