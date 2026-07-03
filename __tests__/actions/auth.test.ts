@@ -1,4 +1,4 @@
-import { checkServerAccess } from '@/actions/auth'
+import { checkServerAccess, isSubscriptionGatingEnabled } from '@/actions/auth'
 import { checkUserServerAccess, getPlexUserInfo } from '@/lib/connections/plex'
 import { prisma } from '@/lib/prisma'
 import {
@@ -10,6 +10,9 @@ jest.mock('@/lib/prisma', () => ({
   prisma: {
     plexServer: {
       findFirst: jest.fn(),
+    },
+    config: {
+      findUnique: jest.fn(),
     },
   },
 }))
@@ -151,6 +154,40 @@ describe('checkServerAccess', () => {
       hasAccess: false,
       error: 'Failed to check server access',
     })
+  })
+})
+
+describe('isSubscriptionGatingEnabled', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('returns true when Stripe gating is enabled', async () => {
+    mockPrisma.config.findUnique.mockResolvedValue({ stripeEnabled: true } as any)
+
+    await expect(isSubscriptionGatingEnabled()).resolves.toBe(true)
+    expect(mockPrisma.config.findUnique).toHaveBeenCalledWith({
+      where: { id: 'config' },
+      select: { stripeEnabled: true },
+    })
+  })
+
+  it('returns false when Stripe gating is disabled', async () => {
+    mockPrisma.config.findUnique.mockResolvedValue({ stripeEnabled: false } as any)
+
+    await expect(isSubscriptionGatingEnabled()).resolves.toBe(false)
+  })
+
+  it('returns false when there is no config row', async () => {
+    mockPrisma.config.findUnique.mockResolvedValue(null)
+
+    await expect(isSubscriptionGatingEnabled()).resolves.toBe(false)
+  })
+
+  it('fails closed (returns false) on a database error', async () => {
+    mockPrisma.config.findUnique.mockRejectedValue(new Error('Database error'))
+
+    await expect(isSubscriptionGatingEnabled()).resolves.toBe(false)
   })
 })
 

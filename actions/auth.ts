@@ -319,3 +319,31 @@ export async function checkServerAccess(
   }
 }
 
+/**
+ * Whether the Stripe subscription gate is enabled (`Config.stripeEnabled`).
+ *
+ * Client-safe and intentionally unauthenticated: the Plex sign-in callback runs
+ * this for a user who has NOT been admitted yet (a non-member), so it cannot use
+ * the admin-only `getStripeConfig()`. It leaks only a single boolean — no
+ * secrets — so it is safe to expose to any caller.
+ *
+ * When this returns `true`, a Plex user who lacks server access should still be
+ * allowed to sign in and be routed to `/subscribe` (the `(app)` layout guard
+ * enforces the gate). When `false`, no-access users are denied exactly as before
+ * the Stripe feature existed. Fails closed (returns `false`) on any error so a DB
+ * hiccup can never accidentally admit a non-member.
+ */
+export async function isSubscriptionGatingEnabled(): Promise<boolean> {
+  try {
+    const config = await prisma.config.findUnique({
+      where: { id: "config" },
+      select: { stripeEnabled: true },
+    })
+
+    return Boolean(config?.stripeEnabled)
+  } catch (error) {
+    logger.error("Error reading subscription gating flag", error)
+    return false
+  }
+}
+
