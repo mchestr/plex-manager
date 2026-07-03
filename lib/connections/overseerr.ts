@@ -70,7 +70,9 @@ export async function getOverseerrStatus(config: OverseerrParsed) {
 }
 
 export async function getOverseerrDiscoverMovies(config: OverseerrParsed, page = 1, sortBy = "popularity.desc") {
-  const url = `${config.url}/api/v1/discover/movies?page=${page}&sortBy=${sortBy}`
+  // sortBy originates from LLM tool-call args; encode it so reserved characters
+  // cannot inject additional query parameters into the outbound request.
+  const url = `${config.url}/api/v1/discover/movies?page=${page}&sortBy=${encodeURIComponent(sortBy)}`
   const response = await fetch(url, {
     headers: { "X-Api-Key": config.apiKey },
   })
@@ -79,7 +81,8 @@ export async function getOverseerrDiscoverMovies(config: OverseerrParsed, page =
 }
 
 export async function getOverseerrDiscoverTV(config: OverseerrParsed, page = 1, sortBy = "popularity.desc") {
-  const url = `${config.url}/api/v1/discover/tv?page=${page}&sortBy=${sortBy}`
+  // See getOverseerrDiscoverMovies: encode caller-supplied sortBy.
+  const url = `${config.url}/api/v1/discover/tv?page=${page}&sortBy=${encodeURIComponent(sortBy)}`
   const response = await fetch(url, {
     headers: { "X-Api-Key": config.apiKey },
   })
