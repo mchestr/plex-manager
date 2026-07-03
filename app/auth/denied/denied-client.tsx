@@ -4,6 +4,7 @@ import { motion } from "framer-motion"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { Button } from "@/components/ui/button"
 
 export function DeniedAccessPageClient() {
   const router = useRouter()
@@ -182,13 +183,14 @@ export function DeniedAccessPageClient() {
             >
               Try Again
             </Link>
-            <button
+            <Button
+              variant="secondary"
               onClick={() => router.push("/")}
               data-testid="return-home-button"
-              className="w-full py-3 px-4 border border-slate-600 rounded-md shadow-sm text-sm font-medium text-slate-300 bg-slate-700/50 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-colors"
+              className="w-full py-3 shadow-sm"
             >
               Return Home
-            </button>
+            </Button>
           </motion.div>
         </motion.div>
       </div>

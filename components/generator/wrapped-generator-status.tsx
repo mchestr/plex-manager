@@ -1,5 +1,6 @@
 "use client"
 
+import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
 import Link from "next/link"
 import { useEffect } from "react"
@@ -59,10 +60,9 @@ export function WrappedGeneratorStatus({
             Failed
           </span>
         </div>
-        <button
+        <Button
           onClick={onRegenerate}
           disabled={isRegenerating}
-          className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-md text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
         >
           {isRegenerating ? (
             <>
@@ -91,7 +91,7 @@ export function WrappedGeneratorStatus({
           ) : (
             "Try Again"
           )}
-        </button>
+        </Button>
       </div>
     )
   }

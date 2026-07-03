@@ -158,9 +158,10 @@ describe('InviteDetailsClient', () => {
       render(<InviteDetailsClient id="invite-1" />)
 
       await waitFor(() => {
-        // Check for dates in the format they're actually rendered
+        // createdAt renders as a literal date; expiresAt (2025-12-31) is in the
+        // past, so the component renders "Expired" instead of the date.
         expect(screen.getByText(new Date('2025-01-01').toLocaleDateString())).toBeInTheDocument()
-        expect(screen.getByText(new Date('2025-12-31').toLocaleDateString())).toBeInTheDocument()
+        expect(screen.getByText('Expired')).toBeInTheDocument()
       })
     })
 

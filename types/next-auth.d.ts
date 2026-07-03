@@ -21,6 +21,8 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     isAdmin: boolean
+    /** Epoch ms of the last time isAdmin was refreshed from the database. */
+    checkedAt?: number
   }
 }
 

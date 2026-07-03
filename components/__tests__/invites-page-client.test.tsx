@@ -175,8 +175,11 @@ describe('InvitesPageClient', () => {
       render(<InvitesPageClient />)
 
       await waitFor(() => {
-        const expirationDates = screen.getAllByText(new Date('2025-12-31').toLocaleDateString())
-        expect(expirationDates.length).toBeGreaterThan(0)
+        // The mock invite's expiresAt (2025-12-31) is in the past, so the
+        // component renders "Expired" rather than the literal date; a
+        // never-expiring invite renders "Never".
+        const expiredTexts = screen.getAllByText('Expired')
+        expect(expiredTexts.length).toBeGreaterThan(0)
         const neverTexts = screen.getAllByText('Never')
         expect(neverTexts.length).toBeGreaterThan(0)
       })

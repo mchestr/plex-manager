@@ -18,7 +18,6 @@ export {
   getLLMUsageRecords,
   getLLMUsageById,
   getLLMUsageStats,
-  updateLLMProvider,
   updateChatLLMProvider,
   updateWrappedLLMProvider,
   getHistoricalWrappedVersions,

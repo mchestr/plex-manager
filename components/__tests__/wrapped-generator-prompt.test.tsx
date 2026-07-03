@@ -468,8 +468,9 @@ describe('WrappedGeneratorPrompt', () => {
         />
       )
 
+      // Shared <Button> primary variant hover gradient.
       const button = screen.getByRole('button')
-      expect(button).toHaveClass('hover:from-cyan-700', 'hover:to-purple-700')
+      expect(button).toHaveClass('hover:from-cyan-500', 'hover:to-purple-500')
     })
   })
 
@@ -608,8 +609,9 @@ describe('WrappedGeneratorPrompt', () => {
         />
       )
 
+      // Shared <Button> lays out icon + text via inline-flex items-center gap-2.
       const button = screen.getByRole('button')
-      expect(button).toHaveClass('flex', 'items-center', 'gap-2')
+      expect(button).toHaveClass('inline-flex', 'items-center', 'gap-2')
     })
   })
 })

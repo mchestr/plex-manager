@@ -11,7 +11,7 @@ import {
   setJellyfinUserPolicy,
   deleteJellyfinUser,
 } from "@/lib/connections/jellyfin"
-import { prisma } from "@/lib/prisma"
+import { prisma, type PrismaTransactionClient } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 import { Prisma, ServerType } from "@/lib/generated/prisma/client"
 import { logAuditEvent, AuditEventType } from "@/lib/security/audit-log"
@@ -283,7 +283,7 @@ async function validateAndUseInvite(code: string): Promise<ValidateAndUseResult>
  * Find or create user from Plex user data
  */
 async function findOrCreateUser(
-  tx: Prisma.TransactionClient,
+  tx: PrismaTransactionClient,
   plexUser: PlexUser
 ): Promise<{ id: string }> {
   let user = await tx.user.findUnique({
@@ -684,12 +684,7 @@ export async function processInvite(code: string, plexAuthToken: string) {
     logger.error("Error processing invite", error)
 
     if (error instanceof Error) {
-      const isInviteError =
-        error.message.includes("Invite") ||
-        error.message.includes("maximum uses") ||
-        error.message.includes("expired")
-
-      return { success: false, error: isInviteError ? error.message : error.message }
+      return { success: false, error: error.message }
     }
 
     return { success: false, error: "An unexpected error occurred" }
@@ -715,7 +710,7 @@ async function getActiveJellyfinServer() {
  * Find or create user from Jellyfin user data
  */
 async function findOrCreateJellyfinUser(
-  tx: Prisma.TransactionClient,
+  tx: PrismaTransactionClient,
   jellyfinUserId: string,
   username: string
 ): Promise<{ id: string }> {
@@ -915,12 +910,7 @@ export async function processJellyfinInvite(code: string, authData: JellyfinAuth
     logger.error("Error processing Jellyfin invite", error)
 
     if (error instanceof Error) {
-      const isInviteError =
-        error.message.includes("Invite") ||
-        error.message.includes("maximum uses") ||
-        error.message.includes("expired")
-
-      return { success: false, error: isInviteError ? error.message : error.message }
+      return { success: false, error: error.message }
     }
 
     return { success: false, error: "An unexpected error occurred" }
