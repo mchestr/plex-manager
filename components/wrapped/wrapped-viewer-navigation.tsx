@@ -1,6 +1,7 @@
 "use client"
 
 import { motion } from "framer-motion"
+import { Button } from "@/components/ui/button"
 import { WrappedShareButton } from "@/components/wrapped/wrapped-share-button"
 
 interface WrappedViewerNavigationProps {
@@ -62,12 +63,12 @@ export function WrappedViewerNavigation({
           Next
         </button>
       ) : (
-        <button
+        <Button
           onClick={onShowAll}
-          className="px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500 text-white rounded-lg text-sm sm:text-base font-semibold transition-all shadow-lg border border-white/10"
+          className="px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base font-semibold shadow-lg border border-white/10"
         >
           Show All
-        </button>
+        </Button>
       )}
     </div>
   )
