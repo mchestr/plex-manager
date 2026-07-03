@@ -18,6 +18,13 @@ const OnboardingStatusSchema = z.object({
   jellyfin: z.boolean(),
 })
 
+/**
+ * Valid auth services. Used to validate the `service` argument before it is
+ * used as an object key written to the DB, since the AuthService TypeScript
+ * type is erased at runtime.
+ */
+const AuthServiceSchema = z.enum(["plex", "jellyfin"])
+
 interface OnboardingStatusRecord {
   plex: boolean
   jellyfin: boolean
@@ -72,6 +79,13 @@ export async function completeOnboarding(service: AuthService) {
       return { success: false, error: "Not authenticated" }
     }
 
+    // Validate the service before using it as a persisted object key.
+    const parsedService = AuthServiceSchema.safeParse(service)
+    if (!parsedService.success) {
+      return { success: false, error: "Invalid service" }
+    }
+    const validService = parsedService.data
+
     // Get current onboarding status
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
@@ -86,7 +100,7 @@ export async function completeOnboarding(service: AuthService) {
     // Update the status for the specified service
     const updatedStatus = {
       ...currentStatus,
-      [service]: true,
+      [validService]: true,
     }
 
     await prisma.user.update({
@@ -94,7 +108,7 @@ export async function completeOnboarding(service: AuthService) {
       data: { onboardingStatus: updatedStatus },
     })
 
-    logger.info("Onboarding completed", { userId: session.user.id, service })
+    logger.info("Onboarding completed", { userId: session.user.id, service: validService })
 
     return { success: true }
   } catch (error) {
