@@ -3,15 +3,6 @@ import { PromptTemplate } from "@/lib/generated/prisma/client"
 import { act, render, screen, waitFor } from "@testing-library/react"
 
 // Mock wrapped library functions
-jest.mock("@/lib/wrapped/pricing", () => ({
-  estimateCost: jest.fn(() => ({
-    promptTokens: 1000,
-    estimatedCompletionTokens: 500,
-    totalTokens: 1500,
-    cost: 0.0234,
-  })),
-}))
-
 jest.mock("@/lib/wrapped/prompt", () => ({
   parseWrappedResponse: jest.fn(),
 }))
