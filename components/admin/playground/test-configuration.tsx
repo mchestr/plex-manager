@@ -1,5 +1,6 @@
 "use client"
 
+import { Button } from "@/components/ui/button"
 import { StyledDropdown } from "@/components/ui/styled-dropdown"
 import { StyledInput } from "@/components/ui/styled-input"
 import { WrappedStatistics } from "@/types/wrapped"
@@ -384,10 +385,11 @@ export function TestConfiguration({
       {/* Action Buttons */}
       <div className="mt-6 pt-6 border-t border-slate-700/50">
         <div className="flex flex-col sm:flex-row gap-2">
-          <button
+          <Button
+            variant="secondary"
             onClick={onRenderTemplate}
             disabled={isPending || !testConfig.userName || !statistics || loadingStatistics}
-            className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1"
           >
             {isPending
               ? "Rendering..."
@@ -396,11 +398,12 @@ export function TestConfiguration({
               : !statistics
               ? "Waiting for statistics..."
               : "Render Template"}
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="primary"
             onClick={onGenerateResponse}
             disabled={isPending || !testConfig.userName || !statistics || loadingStatistics}
-            className="flex-1 px-4 py-2 bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500 text-white rounded-lg text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="flex-1"
           >
             <svg
               className="w-4 h-4"
@@ -418,7 +421,7 @@ export function TestConfiguration({
               : !statistics
               ? "Waiting for statistics..."
               : "Generate Response"}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

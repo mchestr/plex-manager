@@ -4,6 +4,7 @@ import { createInvite, deleteInvite, getInvites } from "@/actions/invite"
 import { getAvailableLibraries } from "@/actions/server-info"
 import { getJellyfinLibraries } from "@/actions/admin/admin-servers"
 import { useToast } from "@/components/ui/toast"
+import { ModalShell } from "@/components/ui/modal-shell"
 import { ConfirmModal } from "@/components/admin/shared/confirm-modal"
 import Link from "next/link"
 import { useCallback, useEffect, useState } from "react"
@@ -349,19 +350,13 @@ export function InvitesPageClient() {
 
       {/* Create Invite Modal */}
       {showCreateModal && (
-        <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-          role="presentation"
-          onClick={() => setShowCreateModal(false)}
+        <ModalShell
+          isOpen={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          maxWidth="md"
+          labelledBy="create-invite-title"
+          describedBy="create-invite-description"
         >
-          <div
-            className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-md shadow-2xl"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="create-invite-title"
-            aria-describedby="create-invite-description"
-            onClick={(e) => e.stopPropagation()}
-          >
             <div className="p-6 border-b border-slate-700 flex justify-between items-center">
               <div>
                 <h2 id="create-invite-title" className="text-xl font-bold text-white">Create Invite</h2>
@@ -630,8 +625,7 @@ export function InvitesPageClient() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+        </ModalShell>
       )}
 
       {/* Delete Confirmation Modal */}

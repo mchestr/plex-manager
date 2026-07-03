@@ -5,6 +5,7 @@ import {
   getWatchlistSyncStats,
   updateGlobalWatchlistSyncSettings,
 } from "@/actions/admin/watchlist"
+import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
 import { useCallback, useEffect, useState } from "react"
 
@@ -194,19 +195,14 @@ export function WatchlistSyncSettings() {
                 className="w-24 rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                 data-testid="watchlist-sync-interval-input"
               />
-              <button
+              <Button
+                variant="primary"
                 onClick={handleIntervalChange}
                 disabled={isSaving || intervalInput === settings.watchlistSyncIntervalMinutes.toString()}
-                className={`
-                  rounded-lg bg-cyan-600 px-3 py-2 text-sm font-medium text-white transition-colors
-                  ${isSaving || intervalInput === settings.watchlistSyncIntervalMinutes.toString()
-                    ? "opacity-50 cursor-not-allowed"
-                    : "hover:bg-cyan-500"}
-                `}
                 data-testid="watchlist-sync-interval-save"
               >
                 Save
-              </button>
+              </Button>
             </div>
             <p className="text-xs text-slate-500">
               How often to check for new items in users&apos; watchlists (15-1440 minutes)

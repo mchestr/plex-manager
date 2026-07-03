@@ -1,5 +1,6 @@
 import { type RadarrParsed } from "@/lib/validations/radarr";
 import { fetchWithTimeout, isTimeoutError } from "@/lib/utils/fetch-with-timeout";
+import { arrGet } from "@/lib/connections/arr-client";
 import { type ConnectionResult } from "@/types/connection";
 
 export async function testRadarrConnection(config: RadarrParsed): Promise<{ success: boolean; error?: string }> {
@@ -50,98 +51,23 @@ export async function testRadarrConnection(config: RadarrParsed): Promise<{ succ
 }
 
 export async function getRadarrSystemStatus(config: RadarrParsed): Promise<ConnectionResult<unknown>> {
-  try {
-    const url = `${config.url}/api/v3/system/status`
-    const response = await fetch(url, {
-      headers: { "X-Api-Key": config.apiKey },
-    })
-    if (!response.ok) {
-      return { success: false, error: `Radarr status error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Radarr system status" }
-  }
+  return arrGet(config, "/api/v3/system/status", "Radarr status error", "Failed to get Radarr system status")
 }
 
 export async function getRadarrQueue(config: RadarrParsed): Promise<ConnectionResult<unknown>> {
-  try {
-    const url = `${config.url}/api/v3/queue`
-    const response = await fetch(url, {
-      headers: { "X-Api-Key": config.apiKey },
-    })
-    if (!response.ok) {
-      return { success: false, error: `Radarr queue error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Radarr queue" }
-  }
+  return arrGet(config, "/api/v3/queue", "Radarr queue error", "Failed to get Radarr queue")
 }
 
 export async function getRadarrHealth(config: RadarrParsed): Promise<ConnectionResult<unknown>> {
-  try {
-    const url = `${config.url}/api/v3/health`
-    const response = await fetch(url, {
-      headers: { "X-Api-Key": config.apiKey },
-    })
-    if (!response.ok) {
-      return { success: false, error: `Radarr health error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Radarr health" }
-  }
+  return arrGet(config, "/api/v3/health", "Radarr health error", "Failed to get Radarr health")
 }
 
 export async function getRadarrDiskSpace(config: RadarrParsed): Promise<ConnectionResult<unknown>> {
-  try {
-    const url = `${config.url}/api/v3/diskspace`
-    const response = await fetch(url, {
-      headers: { "X-Api-Key": config.apiKey },
-    })
-    if (!response.ok) {
-      return { success: false, error: `Radarr diskspace error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Radarr disk space" }
-  }
+  return arrGet(config, "/api/v3/diskspace", "Radarr diskspace error", "Failed to get Radarr disk space")
 }
 
 export async function searchRadarrMovies(config: RadarrParsed, term: string): Promise<ConnectionResult<unknown>> {
-  try {
-    const url = `${config.url}/api/v3/movie/lookup?term=${encodeURIComponent(term)}`
-    const response = await fetch(url, {
-      headers: { "X-Api-Key": config.apiKey },
-    })
-    if (!response.ok) {
-      return { success: false, error: `Radarr search error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to search Radarr movies" }
-  }
+  return arrGet(config, `/api/v3/movie/lookup?term=${encodeURIComponent(term)}`, "Radarr search error", "Failed to search Radarr movies")
 }
 
 export async function getRadarrHistory(
@@ -149,167 +75,48 @@ export async function getRadarrHistory(
   pageSize = 20,
   movieId?: number
 ): Promise<ConnectionResult<unknown>> {
-  try {
-    const params = new URLSearchParams({
-      pageSize: pageSize.toString(),
-      sortKey: "date",
-      sortDir: "desc",
-    })
-    if (movieId !== undefined) {
-      params.append("movieId", movieId.toString())
-    }
-    const url = `${config.url}/api/v3/history?${params.toString()}`
-    const response = await fetch(url, {
-      headers: { "X-Api-Key": config.apiKey },
-    })
-    if (!response.ok) {
-      return { success: false, error: `Radarr history error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Radarr history" }
+  const params = new URLSearchParams({
+    pageSize: pageSize.toString(),
+    sortKey: "date",
+    sortDir: "desc",
+  })
+  if (movieId !== undefined) {
+    params.append("movieId", movieId.toString())
   }
+  return arrGet(config, `/api/v3/history?${params.toString()}`, "Radarr history error", "Failed to get Radarr history")
 }
 
 export async function getRadarrMovies(config: RadarrParsed): Promise<ConnectionResult<unknown>> {
-  try {
-    const url = `${config.url}/api/v3/movie`
-    const response = await fetch(url, {
-      headers: { "X-Api-Key": config.apiKey },
-    })
-    if (!response.ok) {
-      return { success: false, error: `Radarr movies error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Radarr movies" }
-  }
+  return arrGet(config, "/api/v3/movie", "Radarr movies error", "Failed to get Radarr movies")
 }
 
 export async function getRadarrMovieById(config: RadarrParsed, movieId: number): Promise<ConnectionResult<unknown>> {
-  try {
-    const url = `${config.url}/api/v3/movie/${movieId}`
-    const response = await fetch(url, {
-      headers: { "X-Api-Key": config.apiKey },
-    })
-    if (!response.ok) {
-      return { success: false, error: `Radarr movie detail error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Radarr movie by ID" }
-  }
+  return arrGet(config, `/api/v3/movie/${movieId}`, "Radarr movie detail error", "Failed to get Radarr movie by ID")
 }
 
 export async function getRadarrCalendar(config: RadarrParsed, startDate?: string, endDate?: string): Promise<ConnectionResult<unknown>> {
-  try {
-    let url = `${config.url}/api/v3/calendar`
-    const params = new URLSearchParams()
-    if (startDate) params.append("start", startDate)
-    if (endDate) params.append("end", endDate)
-    if (params.toString()) url += `?${params.toString()}`
-    const response = await fetch(url, {
-      headers: { "X-Api-Key": config.apiKey },
-    })
-    if (!response.ok) {
-      return { success: false, error: `Radarr calendar error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Radarr calendar" }
-  }
+  let path = "/api/v3/calendar"
+  const params = new URLSearchParams()
+  if (startDate) params.append("start", startDate)
+  if (endDate) params.append("end", endDate)
+  if (params.toString()) path += `?${params.toString()}`
+  return arrGet(config, path, "Radarr calendar error", "Failed to get Radarr calendar")
 }
 
 export async function getRadarrWantedMissing(config: RadarrParsed, pageSize = 20): Promise<ConnectionResult<unknown>> {
-  try {
-    const url = `${config.url}/api/v3/wanted/missing?pageSize=${pageSize}&sortKey=physicalRelease&sortDir=desc`
-    const response = await fetch(url, {
-      headers: { "X-Api-Key": config.apiKey },
-    })
-    if (!response.ok) {
-      return { success: false, error: `Radarr wanted missing error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Radarr wanted missing" }
-  }
+  return arrGet(config, `/api/v3/wanted/missing?pageSize=${pageSize}&sortKey=physicalRelease&sortDir=desc`, "Radarr wanted missing error", "Failed to get Radarr wanted missing")
 }
 
 export async function getRadarrRootFolders(config: RadarrParsed): Promise<ConnectionResult<unknown>> {
-  try {
-    const url = `${config.url}/api/v3/rootFolder`
-    const response = await fetch(url, {
-      headers: { "X-Api-Key": config.apiKey },
-    })
-    if (!response.ok) {
-      return { success: false, error: `Radarr root folders error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Radarr root folders" }
-  }
+  return arrGet(config, "/api/v3/rootFolder", "Radarr root folders error", "Failed to get Radarr root folders")
 }
 
 export async function getRadarrQualityProfiles(config: RadarrParsed): Promise<ConnectionResult<unknown>> {
-  try {
-    const url = `${config.url}/api/v3/qualityProfile`
-    const response = await fetch(url, {
-      headers: { "X-Api-Key": config.apiKey },
-    })
-    if (!response.ok) {
-      return { success: false, error: `Radarr quality profiles error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Radarr quality profiles" }
-  }
+  return arrGet(config, "/api/v3/qualityProfile", "Radarr quality profiles error", "Failed to get Radarr quality profiles")
 }
 
 export async function getRadarrMovieFile(config: RadarrParsed, movieId: number): Promise<ConnectionResult<unknown>> {
-  try {
-    const url = `${config.url}/api/v3/moviefile?movieId=${movieId}`
-    const response = await fetch(url, {
-      headers: { "X-Api-Key": config.apiKey },
-    })
-    if (!response.ok) {
-      return { success: false, error: `Radarr movie file error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Radarr movie file" }
-  }
+  return arrGet(config, `/api/v3/moviefile?movieId=${movieId}`, "Radarr movie file error", "Failed to get Radarr movie file")
 }
 
 export async function deleteRadarrMovie(
