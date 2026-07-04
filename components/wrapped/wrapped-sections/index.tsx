@@ -12,6 +12,7 @@ import { OverseerrStatsSection } from "@/components/wrapped/wrapped-sections/ove
 import { InsightsSection } from "@/components/wrapped/wrapped-sections/insights-section"
 import { FunFactsSection } from "@/components/wrapped/wrapped-sections/fun-facts-section"
 import { FormattedText } from "@/components/shared/formatted-text"
+import { CinematicSectionRenderer } from "@/components/wrapped/wrapped-sections/cinematic"
 
 interface SectionRendererProps {
   section: WrappedSection | undefined
@@ -19,6 +20,10 @@ interface SectionRendererProps {
   sectionIndex: number
 }
 
+/**
+ * Version dispatcher: v2 data (2026 revamp) renders the Cinematic Premiere
+ * slides; stored v1 wrappeds keep the original space-theme components.
+ */
 export function SectionRenderer({ section, wrappedData, sectionIndex }: SectionRendererProps) {
   if (!section || !section.type) {
     return (
@@ -28,6 +33,20 @@ export function SectionRenderer({ section, wrappedData, sectionIndex }: SectionR
     )
   }
 
+  if (wrappedData.version === 2) {
+    return <CinematicSectionRenderer section={section} wrappedData={wrappedData} />
+  }
+
+  return <LegacySectionRenderer section={section} wrappedData={wrappedData} sectionIndex={sectionIndex} />
+}
+
+interface LegacySectionRendererProps {
+  section: WrappedSection
+  wrappedData: WrappedData
+  sectionIndex: number
+}
+
+function LegacySectionRenderer({ section, wrappedData, sectionIndex }: LegacySectionRendererProps) {
   switch (section.type) {
     case "hero":
       return <HeroSection section={section} sectionIndex={sectionIndex} />
