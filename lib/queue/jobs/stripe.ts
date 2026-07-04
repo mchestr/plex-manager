@@ -30,6 +30,7 @@ import {
 } from "../types"
 import { addJob } from "../client"
 import { getStripe } from "@/lib/stripe/client"
+import { parseStripeLibrarySectionIds } from "@/lib/stripe/config"
 import { mapStripeStatus, getCurrentPeriodEnd } from "@/lib/stripe/events"
 import { prisma } from "@/lib/prisma"
 import { SubscriptionStatus } from "@/lib/generated/prisma/client"
@@ -50,20 +51,6 @@ const logger = createLogger("STRIPE_WEBHOOK_JOB")
  */
 function resolveAppUserId(session: Stripe.Checkout.Session): string | null {
   return session.client_reference_id ?? session.metadata?.appUserId ?? null
-}
-
-/**
- * Parses the stored `Config.stripeLibrarySectionIds` JSON value into a clean
- * array of Plex library section keys. Returns [] for missing/malformed values,
- * which callers treat as "share all libraries".
- *
- * @internal
- */
-function parseStripeLibrarySectionIds(value: unknown): number[] {
-  if (!Array.isArray(value)) return []
-  return value.filter(
-    (id): id is number => typeof id === "number" && Number.isFinite(id)
-  )
 }
 
 /**
