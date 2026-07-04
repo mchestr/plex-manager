@@ -22,9 +22,11 @@ import { CinematicTotalWatchTimeSection } from "./total-watch-time-section"
 interface CinematicSectionRendererProps {
   section: WrappedSection
   wrappedData: WrappedData
+  /** Share token for poster access on public shared wraps */
+  shareToken?: string
 }
 
-export function CinematicSectionRenderer({ section, wrappedData }: CinematicSectionRendererProps) {
+export function CinematicSectionRenderer({ section, wrappedData, shareToken }: CinematicSectionRendererProps) {
   switch (section.type) {
     case "hero":
       return <CinematicHeroSection section={section} />
@@ -35,9 +37,9 @@ export function CinematicSectionRenderer({ section, wrappedData }: CinematicSect
     case "shows-breakdown":
       return <CinematicShowsBreakdownSection section={section} />
     case "top-movies":
-      return <CinematicTopMoviesSection section={section} />
+      return <CinematicTopMoviesSection section={section} shareToken={shareToken} />
     case "top-shows":
-      return <CinematicTopShowsSection section={section} />
+      return <CinematicTopShowsSection section={section} shareToken={shareToken} />
     case "streaks-patterns":
       return <CinematicStreaksPatternsSection section={section} />
     case "monthly-journey":

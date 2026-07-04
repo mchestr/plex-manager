@@ -18,13 +18,15 @@ interface SectionRendererProps {
   section: WrappedSection | undefined
   wrappedData: WrappedData
   sectionIndex: number
+  /** Share token for poster access on public shared wraps (v2 only) */
+  shareToken?: string
 }
 
 /**
  * Version dispatcher: v2 data (2026 revamp) renders the Cinematic Premiere
  * slides; stored v1 wrappeds keep the original space-theme components.
  */
-export function SectionRenderer({ section, wrappedData, sectionIndex }: SectionRendererProps) {
+export function SectionRenderer({ section, wrappedData, sectionIndex, shareToken }: SectionRendererProps) {
   if (!section || !section.type) {
     return (
       <div className="text-center">
@@ -34,7 +36,7 @@ export function SectionRenderer({ section, wrappedData, sectionIndex }: SectionR
   }
 
   if (wrappedData.version === 2) {
-    return <CinematicSectionRenderer section={section} wrappedData={wrappedData} />
+    return <CinematicSectionRenderer section={section} wrappedData={wrappedData} shareToken={shareToken} />
   }
 
   return <LegacySectionRenderer section={section} wrappedData={wrappedData} sectionIndex={sectionIndex} />

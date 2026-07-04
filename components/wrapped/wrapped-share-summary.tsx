@@ -5,6 +5,7 @@ import { motion } from "framer-motion"
 import { FormattedText } from "@/components/shared/formatted-text"
 import { SpaceBackground } from "@/components/setup/setup-wizard/space-background"
 import { formatWatchTime, formatWatchTimeHours } from "@/lib/utils/time-formatting"
+import { PosterImage } from "@/components/wrapped/cinematic/poster-image"
 import Link from "next/link"
 
 interface WrappedShareSummaryProps {
@@ -12,6 +13,8 @@ interface WrappedShareSummaryProps {
   userName?: string
   summary?: string
   year: number
+  /** Share token for poster access (viewers of shared wraps are logged out) */
+  shareToken?: string
 }
 
 export function WrappedShareSummary({
@@ -19,6 +22,7 @@ export function WrappedShareSummary({
   userName,
   summary,
   year,
+  shareToken,
 }: WrappedShareSummaryProps) {
   const stats = wrappedData.statistics
   const displayName = userName || wrappedData.userName || "User"
@@ -105,6 +109,15 @@ export function WrappedShareSummary({
                     <div className="text-2xl font-bold text-slate-500 w-8">
                       #{index + 1}
                     </div>
+                    {movie.ratingKey && (
+                      <PosterImage
+                        ratingKey={movie.ratingKey}
+                        alt={`${movie.title} poster`}
+                        shareToken={shareToken}
+                        className="w-10 flex-shrink-0"
+                        sizes="40px"
+                      />
+                    )}
                     <div>
                       <div className="text-xl font-semibold text-white">
                         {movie.title}
@@ -145,6 +158,15 @@ export function WrappedShareSummary({
                     <div className="text-2xl font-bold text-slate-500 w-8">
                       #{index + 1}
                     </div>
+                    {show.ratingKey && (
+                      <PosterImage
+                        ratingKey={show.ratingKey}
+                        alt={`${show.title} poster`}
+                        shareToken={shareToken}
+                        className="w-10 flex-shrink-0"
+                        sizes="40px"
+                      />
+                    )}
                     <div>
                       <div className="text-xl font-semibold text-white">
                         {show.title}

@@ -3,6 +3,7 @@
 import { motion } from "framer-motion"
 
 import { formatWatchTime } from "@/lib/utils/time-formatting"
+import { PosterImage } from "@/components/wrapped/cinematic/poster-image"
 
 export interface BillingEntry {
   title: string
@@ -10,17 +11,20 @@ export interface BillingEntry {
   watchTime: number
   playCount?: number
   episodesWatched?: number
+  ratingKey?: string
 }
 
 interface TopBillingListProps {
   entries: BillingEntry[]
+  /** Share token for poster access on public shared wraps */
+  shareToken?: string
 }
 
 /**
  * A marquee-style ranked list: the #1 title gets top billing in large gold
  * serif; the rest follow as a quiet playbill.
  */
-export function TopBillingList({ entries }: TopBillingListProps) {
+export function TopBillingList({ entries, shareToken }: TopBillingListProps) {
   if (entries.length === 0) return null
   const [headliner, ...rest] = entries
 
@@ -35,6 +39,15 @@ export function TopBillingList({ entries }: TopBillingListProps) {
         <p className="text-[10px] sm:text-xs uppercase tracking-[0.4em] text-taupe mb-2">
           Headlining
         </p>
+        {headliner.ratingKey && (
+          <PosterImage
+            ratingKey={headliner.ratingKey}
+            alt={`${headliner.title} poster`}
+            shareToken={shareToken}
+            className="w-24 sm:w-32 mx-auto mb-4"
+            sizes="(min-width: 640px) 128px, 96px"
+          />
+        )}
         <p className="font-serif text-2xl sm:text-4xl text-gold-bright uppercase tracking-wide">
           {headliner.title}
         </p>
@@ -59,6 +72,15 @@ export function TopBillingList({ entries }: TopBillingListProps) {
               <span className="font-serif text-gold text-lg sm:text-xl tabular-nums w-6 text-right">
                 {idx + 2}
               </span>
+              {entry.ratingKey && (
+                <PosterImage
+                  ratingKey={entry.ratingKey}
+                  alt={`${entry.title} poster`}
+                  shareToken={shareToken}
+                  className="w-8 flex-shrink-0 self-center"
+                  sizes="32px"
+                />
+              )}
               <span className="flex-1 text-ivory text-base sm:text-lg truncate">
                 {entry.title}
                 {entry.year ? <span className="text-taupe text-sm"> ({entry.year})</span> : null}

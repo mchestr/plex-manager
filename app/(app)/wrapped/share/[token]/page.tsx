@@ -113,6 +113,7 @@ export default async function SharedWrappedPage({
       year={sharedWrapped.year}
       userName={sharedWrapped.userName}
       summary={sharedWrapped.summary}
+      shareToken={token}
     />
   )
 }

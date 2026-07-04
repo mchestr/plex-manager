@@ -174,7 +174,7 @@ export function WrappedViewer({
                 : "bg-slate-900/90 border border-cyan-500/20 shadow-2xl rounded-lg p-8"}
               style={{ backdropFilter: "blur(8px)" }}
             >
-              <SectionRenderer section={section} wrappedData={wrappedData} sectionIndex={idx} />
+              <SectionRenderer section={section} wrappedData={wrappedData} sectionIndex={idx} shareToken={shareToken} />
             </motion.div>
           ))}
         </div>
@@ -252,7 +252,7 @@ export function WrappedViewer({
               : "bg-slate-900/90 border border-cyan-500/20 shadow-2xl rounded-lg p-6 sm:p-8 md:p-12"}
             style={isCinematic ? { minHeight: "60vh" } : { backdropFilter: "blur(8px)", minHeight: "50vh" }}
           >
-            <SectionRenderer section={currentSection} wrappedData={wrappedData} sectionIndex={currentSectionIndex} />
+            <SectionRenderer section={currentSection} wrappedData={wrappedData} sectionIndex={currentSectionIndex} shareToken={shareToken} />
           </motion.div>
         </AnimatePresence>
 
