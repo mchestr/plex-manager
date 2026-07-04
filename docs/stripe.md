@@ -85,6 +85,7 @@ Go to **Admin → Settings → Stripe Subscriptions** and fill in:
 | **Secret Key** | Stripe Dashboard → Developers → API keys → *Secret key* (`sk_live_…` / `sk_test_…`) | Stored **encrypted**. Leave blank on later saves to keep the existing value. |
 | **Webhook Signing Secret** | Created when you register the webhook endpoint (`whsec_…`) — see below | Stored **encrypted**. Leave blank to keep existing. |
 | **Price IDs** | Stripe Dashboard → Products → your recurring price(s) (`price_…`) | One per line or comma-separated. At least one required. |
+| **Subscriber Library Access** | Checkbox list of your Plex libraries | Libraries shared with subscribers when access is granted. Leave all unchecked to share every library. |
 
 Click **Save**. Secrets are never sent back to the browser; the form only shows
 whether a value is stored.

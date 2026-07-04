@@ -278,6 +278,7 @@ export interface StripeConfigStatus {
   hasSecretKey: boolean
   hasWebhookSecret: boolean
   priceIds: string[]
+  librarySectionIds: number[]
 }
 
 /**
@@ -287,6 +288,16 @@ export interface StripeConfigStatus {
 function parseStripePriceIds(value: unknown): string[] {
   if (!Array.isArray(value)) return []
   return value.filter((id): id is string => typeof id === "string" && id.trim().length > 0)
+}
+
+/**
+ * Parses the stored `stripeLibrarySectionIds` JSON value into a clean array of
+ * Plex library section keys. Empty array means "share all libraries".
+ * @internal
+ */
+function parseStripeLibrarySectionIds(value: unknown): number[] {
+  if (!Array.isArray(value)) return []
+  return value.filter((id): id is number => typeof id === "number" && Number.isFinite(id))
 }
 
 /**
@@ -311,6 +322,7 @@ const updateStripeSettingsSchema = z.object({
   secretKey: z.string().trim().min(1).optional(),
   webhookSecret: z.string().trim().min(1).optional(),
   priceIds: z.array(z.string().trim().min(1)),
+  librarySectionIds: z.array(z.number().int().nonnegative()),
 })
 
 /**
@@ -330,6 +342,7 @@ export async function getStripeConfig(): Promise<StripeConfigStatus> {
         stripeSecretKey: true,
         stripeWebhookSecret: true,
         stripePriceIds: true,
+        stripeLibrarySectionIds: true,
       },
     })
 
@@ -339,6 +352,7 @@ export async function getStripeConfig(): Promise<StripeConfigStatus> {
         hasSecretKey: false,
         hasWebhookSecret: false,
         priceIds: [],
+        librarySectionIds: [],
       }
     }
 
@@ -347,6 +361,7 @@ export async function getStripeConfig(): Promise<StripeConfigStatus> {
       hasSecretKey: Boolean(config.stripeSecretKey),
       hasWebhookSecret: Boolean(config.stripeWebhookSecret),
       priceIds: parseStripePriceIds(config.stripePriceIds),
+      librarySectionIds: parseStripeLibrarySectionIds(config.stripeLibrarySectionIds),
     }
   } catch (error) {
     logger.error("Error getting Stripe config", error)
@@ -355,6 +370,7 @@ export async function getStripeConfig(): Promise<StripeConfigStatus> {
       hasSecretKey: false,
       hasWebhookSecret: false,
       priceIds: [],
+      librarySectionIds: [],
     }
   }
 }
@@ -371,6 +387,7 @@ export async function updateStripeSettings(data: {
   secretKey?: string
   webhookSecret?: string
   priceIds: string[]
+  librarySectionIds: number[]
 }) {
   const session = await requireAdmin()
 
@@ -379,16 +396,18 @@ export async function updateStripeSettings(data: {
     return { success: false, error: "Invalid Stripe settings input" }
   }
 
-  const { secretKey, webhookSecret, priceIds } = validated.data
+  const { secretKey, webhookSecret, priceIds, librarySectionIds } = validated.data
 
   try {
     const updateData: {
       stripePriceIds: string[]
+      stripeLibrarySectionIds: number[]
       stripeSecretKey?: string
       stripeWebhookSecret?: string
       updatedBy: string
     } = {
       stripePriceIds: priceIds,
+      stripeLibrarySectionIds: librarySectionIds,
       updatedBy: session.user.id,
     }
 
@@ -409,6 +428,7 @@ export async function updateStripeSettings(data: {
       create: {
         id: "config",
         stripePriceIds: priceIds,
+        stripeLibrarySectionIds: librarySectionIds,
         stripeSecretKey: secretKey,
         stripeWebhookSecret: webhookSecret,
         updatedBy: session.user.id,

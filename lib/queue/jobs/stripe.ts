@@ -53,6 +53,20 @@ function resolveAppUserId(session: Stripe.Checkout.Session): string | null {
 }
 
 /**
+ * Parses the stored `Config.stripeLibrarySectionIds` JSON value into a clean
+ * array of Plex library section keys. Returns [] for missing/malformed values,
+ * which callers treat as "share all libraries".
+ *
+ * @internal
+ */
+function parseStripeLibrarySectionIds(value: unknown): number[] {
+  if (!Array.isArray(value)) return []
+  return value.filter(
+    (id): id is number => typeof id === "number" && Number.isFinite(id)
+  )
+}
+
+/**
  * Handles `checkout.session.completed`: upserts the user's `Subscription` as
  * ACTIVE and stores the Stripe/customer ids, price, and period end.
  *
@@ -431,9 +445,20 @@ export async function processPlexAccessGrant(
     throw new Error(`User ${userId} has no email; cannot grant Plex access`)
   }
 
+  // Restrict the share to the admin-configured subscriber libraries. A missing
+  // or empty selection falls back to sharing all libraries.
+  const config = await prisma.config.findUnique({
+    where: { id: "config" },
+    select: { stripeLibrarySectionIds: true },
+  })
+  const librarySectionIds = parseStripeLibrarySectionIds(
+    config?.stripeLibrarySectionIds
+  )
+
   const inviteResult = await inviteUserToPlexServer(
     { url: plexServer.url, token: plexServer.token },
-    user.email
+    user.email,
+    librarySectionIds.length > 0 ? { librarySectionIds } : undefined
   )
 
   if (!inviteResult.success) {

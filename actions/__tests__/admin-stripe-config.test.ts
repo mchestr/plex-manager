@@ -73,6 +73,7 @@ describe('admin Stripe config actions', () => {
         secretKey: 'sk_test_123',
         webhookSecret: 'whsec_123',
         priceIds: ['price_1', 'price_2'],
+        librarySectionIds: [1, 2],
       })
 
       expect(result.success).toBe(true)
@@ -83,6 +84,7 @@ describe('admin Stripe config actions', () => {
             stripeSecretKey: 'sk_test_123',
             stripeWebhookSecret: 'whsec_123',
             stripePriceIds: ['price_1', 'price_2'],
+            stripeLibrarySectionIds: [1, 2],
             updatedBy: 'admin-123',
           }),
         })
@@ -96,7 +98,7 @@ describe('admin Stripe config actions', () => {
       mockGetServerSession.mockResolvedValue(mockAdminSession)
       ;(mockPrisma.config.upsert as jest.Mock).mockResolvedValue({ id: 'config' })
 
-      await updateStripeSettings({ priceIds: ['price_1'] })
+      await updateStripeSettings({ priceIds: ['price_1'], librarySectionIds: [] })
 
       const call = (mockPrisma.config.upsert as jest.Mock).mock.calls[0][0]
       expect(call.update).not.toHaveProperty('stripeSecretKey')
@@ -108,7 +110,7 @@ describe('admin Stripe config actions', () => {
       mockGetServerSession.mockResolvedValue(mockNonAdminSession)
 
       await expect(
-        updateStripeSettings({ priceIds: ['price_1'] })
+        updateStripeSettings({ priceIds: ['price_1'], librarySectionIds: [] })
       ).rejects.toThrow()
       expect(mockPrisma.config.upsert).not.toHaveBeenCalled()
     })
@@ -118,7 +120,7 @@ describe('admin Stripe config actions', () => {
 
       const result = await updateStripeSettings({
         priceIds: 'not-an-array',
-      } as unknown as { priceIds: string[] })
+      } as unknown as { priceIds: string[]; librarySectionIds: number[] })
 
       expect(result).toEqual({ success: false, error: 'Invalid Stripe settings input' })
       expect(mockPrisma.config.upsert).not.toHaveBeenCalled()
@@ -128,7 +130,7 @@ describe('admin Stripe config actions', () => {
       mockGetServerSession.mockResolvedValue(mockAdminSession)
       ;(mockPrisma.config.upsert as jest.Mock).mockRejectedValue(new Error('DB down'))
 
-      const result = await updateStripeSettings({ priceIds: ['price_1'] })
+      const result = await updateStripeSettings({ priceIds: ['price_1'], librarySectionIds: [] })
 
       expect(result).toEqual({ success: false, error: 'DB down' })
     })
@@ -222,6 +224,7 @@ describe('admin Stripe config actions', () => {
         stripeSecretKey: 'sk_test_super_secret',
         stripeWebhookSecret: 'whsec_super_secret',
         stripePriceIds: ['price_1', 'price_2'],
+        stripeLibrarySectionIds: [1, 2],
       })
 
       const result = await getStripeConfig()
@@ -231,6 +234,7 @@ describe('admin Stripe config actions', () => {
         hasSecretKey: true,
         hasWebhookSecret: true,
         priceIds: ['price_1', 'price_2'],
+        librarySectionIds: [1, 2],
       })
 
       const serialized = JSON.stringify(result)
@@ -245,6 +249,7 @@ describe('admin Stripe config actions', () => {
         stripeSecretKey: null,
         stripeWebhookSecret: null,
         stripePriceIds: null,
+        stripeLibrarySectionIds: null,
       })
 
       const result = await getStripeConfig()
@@ -254,6 +259,7 @@ describe('admin Stripe config actions', () => {
         hasSecretKey: false,
         hasWebhookSecret: false,
         priceIds: [],
+        librarySectionIds: [],
       })
     })
 
@@ -268,6 +274,7 @@ describe('admin Stripe config actions', () => {
         hasSecretKey: false,
         hasWebhookSecret: false,
         priceIds: [],
+        librarySectionIds: [],
       })
     })
 

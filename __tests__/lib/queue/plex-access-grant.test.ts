@@ -25,6 +25,9 @@ jest.mock('@/lib/prisma', () => ({
     user: {
       findUnique: jest.fn(),
     },
+    config: {
+      findUnique: jest.fn(),
+    },
     subscription: {
       updateMany: jest.fn(),
     },
@@ -76,6 +79,7 @@ describe('processPlexAccessGrant', () => {
     jest.clearAllMocks()
     ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(PLEX_SERVER)
     ;(prisma.subscription.updateMany as jest.Mock).mockResolvedValue({ count: 1 })
+    ;(prisma.config.findUnique as jest.Mock).mockResolvedValue(null)
   })
 
   it('invites and auto-accepts when the user has a Plex token', async () => {
@@ -92,9 +96,11 @@ describe('processPlexAccessGrant', () => {
 
     const result = await processPlexAccessGrant(makeJob('user-1'))
 
+    // No configured subscriber libraries → all libraries are shared.
     expect(inviteUserToPlexServer).toHaveBeenCalledWith(
       { url: PLEX_SERVER.url, token: PLEX_SERVER.token },
-      'user@example.com'
+      'user@example.com',
+      undefined
     )
     expect(acceptPlexInvite).toHaveBeenCalledWith('user-token', 42)
     expect(prisma.subscription.updateMany).toHaveBeenCalledWith({
@@ -102,6 +108,54 @@ describe('processPlexAccessGrant', () => {
       data: { plexInviteStatus: 'accepted' },
     })
     expect(result).toEqual({ userId: 'user-1', granted: true })
+  })
+
+  it('restricts the invite to the configured subscriber libraries', async () => {
+    ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({
+      stripeLibrarySectionIds: [1, 2],
+    })
+    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
+      id: 'user-1',
+      email: 'user@example.com',
+      plexAuthToken: 'user-token',
+    })
+    ;(inviteUserToPlexServer as jest.Mock).mockResolvedValue({
+      success: true,
+      inviteID: 42,
+    })
+    ;(acceptPlexInvite as jest.Mock).mockResolvedValue({ success: true })
+
+    await processPlexAccessGrant(makeJob('user-1'))
+
+    expect(inviteUserToPlexServer).toHaveBeenCalledWith(
+      { url: PLEX_SERVER.url, token: PLEX_SERVER.token },
+      'user@example.com',
+      { librarySectionIds: [1, 2] }
+    )
+  })
+
+  it('shares all libraries when the stored selection is malformed', async () => {
+    ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({
+      stripeLibrarySectionIds: ['not-a-number'],
+    })
+    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
+      id: 'user-1',
+      email: 'user@example.com',
+      plexAuthToken: 'user-token',
+    })
+    ;(inviteUserToPlexServer as jest.Mock).mockResolvedValue({
+      success: true,
+      inviteID: 42,
+    })
+    ;(acceptPlexInvite as jest.Mock).mockResolvedValue({ success: true })
+
+    await processPlexAccessGrant(makeJob('user-1'))
+
+    expect(inviteUserToPlexServer).toHaveBeenCalledWith(
+      { url: PLEX_SERVER.url, token: PLEX_SERVER.token },
+      'user@example.com',
+      undefined
+    )
   })
 
   it('leaves the invite pending (no throw) when auto-accept fails', async () => {
