@@ -3,6 +3,7 @@ import { getPrometheusStatus } from "@/actions/prometheus-status";
 import { getUserFirstWatchDate } from "@/actions/users";
 import { ServiceSignInToggle } from "@/components/auth/service-sign-in-toggle";
 import { UserDashboard } from "@/components/dashboard/user-dashboard";
+import { SubscriptionStatusView } from "@/components/subscription/subscription-status-view";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { AuthService } from "@/types/onboarding";
@@ -24,7 +25,7 @@ interface OnboardingStatusRecord {
 
 export default async function Home() {
   const session = await getServerSession(authOptions);
-  const [plexServer, jellyfinServer, discordIntegration, announcements, overseerr, prometheusStatus] = await Promise.all([
+  const [plexServer, jellyfinServer, discordIntegration, announcements, overseerr, prometheusStatus, config] = await Promise.all([
     prisma.plexServer.findFirst({
       where: { isActive: true },
     }),
@@ -35,6 +36,7 @@ export default async function Home() {
     getActiveAnnouncements(),
     prisma.overseerr.findFirst({ where: { isActive: true } }),
     getPrometheusStatus(),
+    prisma.config.findUnique({ where: { id: "config" }, select: { stripeEnabled: true } }),
   ]);
 
   // Determine server name based on what's configured
@@ -58,8 +60,11 @@ export default async function Home() {
     const discordConnectionPromise = discordEnabled
       ? prisma.discordConnection.findUnique({ where: { userId: session.user.id } })
       : Promise.resolve(null);
+    const subscriptionPromise = config?.stripeEnabled
+      ? prisma.subscription.findUnique({ where: { userId: session.user.id }, select: { id: true } })
+      : Promise.resolve(null);
 
-    const [user, discordConnection] = await Promise.all([userPromise, discordConnectionPromise]);
+    const [user, discordConnection, subscription] = await Promise.all([userPromise, discordConnectionPromise, subscriptionPromise]);
 
     // Check service-specific onboarding completion
     if (user) {
@@ -114,6 +119,7 @@ export default async function Home() {
         memberSince={memberSince}
         primaryAuthService={user?.primaryAuthService}
         mediaServerUrl={mediaServerUrl}
+        subscriptionSlot={subscription ? <SubscriptionStatusView /> : null}
       />
     );
   }

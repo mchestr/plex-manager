@@ -46,7 +46,33 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    return NextResponse.json({ users: usersResult.data || [] })
+    const users = usersResult.data || []
+
+    // The Plex.tv /api/users endpoint only returns shared users, so the
+    // server owner (the local admin) may be missing. Prepend them so the
+    // playground can always test against the current admin account.
+    const sessionUser = authResult.session?.user
+    if (
+      sessionUser?.name &&
+      !users.some(
+        (user) =>
+          user.name === sessionUser.name ||
+          (user.email && sessionUser.email && user.email === sessionUser.email)
+      )
+    ) {
+      users.unshift({
+        id: sessionUser.id,
+        name: sessionUser.name,
+        email: sessionUser.email ?? undefined,
+        thumb: sessionUser.image ?? undefined,
+        restricted: false,
+        // App-admin flag, not necessarily the Plex server owner — only
+        // drives the [Admin] label in the playground picker.
+        serverAdmin: sessionUser.isAdmin,
+      })
+    }
+
+    return NextResponse.json({ users })
   } catch (error) {
     logError("ADMIN_PLEX_USERS_API", error)
     return NextResponse.json(

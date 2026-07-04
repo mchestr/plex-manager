@@ -178,10 +178,6 @@ export function StatisticsViewer({
                   <span className="text-slate-200">{statistics.overseerrStats.totalRequests}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Approved:</span>
-                  <span className="text-slate-200">{statistics.overseerrStats.approvedRequests}</span>
-                </div>
-                <div className="flex justify-between">
                   <span className="text-slate-400">Pending:</span>
                   <span className="text-slate-200">{statistics.overseerrStats.pendingRequests}</span>
                 </div>

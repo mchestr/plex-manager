@@ -67,6 +67,52 @@ describe("assembleWrappedData", () => {
     expect(reveal?.content).toContain("200 nights")
   })
 
+  it("replaces a too-short dedication with deterministic fallback copy", () => {
+    const output = buildValidOutput()
+    output.archetype.dedication = "You watch a lot."
+
+    const data = assembleWrappedData({
+      output,
+      statistics: buildStatistics(),
+      ...BASE_ARGS,
+    })
+
+    // Fallback = motif + real numbers (1008 hours, 85 films, 412 episodes)
+    expect(data.archetype.dedication).toContain("one more episode always wins")
+    expect(data.archetype.dedication).toContain("<highlight>1008 hours</highlight>")
+    expect(data.archetype.dedication).toContain("<highlight>85 films</highlight>")
+    expect(data.archetype.dedication).toContain("<highlight>412 episodes</highlight>")
+
+    const reveal = data.sections.find((s) => s.type === "archetype-reveal")
+    expect(reveal?.content).toBe(data.archetype.dedication)
+  })
+
+  it("replaces a dedication that merely echoes the tagline", () => {
+    const output = buildValidOutput()
+    output.archetype.dedication = "  The night belongs to YOU. And your library missed you when you slept. "
+    output.archetype.tagline = "The night belongs to YOU. And your library missed you when you slept."
+
+    const data = assembleWrappedData({
+      output,
+      statistics: buildStatistics(),
+      ...BASE_ARGS,
+    })
+
+    expect(data.archetype.dedication).toContain("one more episode always wins")
+  })
+
+  it("keeps a substantive dedication untouched", () => {
+    const output = buildValidOutput()
+
+    const data = assembleWrappedData({
+      output,
+      statistics: buildStatistics(),
+      ...BASE_ARGS,
+    })
+
+    expect(data.archetype.dedication).toBe(output.archetype.dedication)
+  })
+
   it("omits percentile section when statistics lack percentile data", () => {
     const statistics = buildStatistics({ percentile: undefined })
     const data = assembleWrappedData({

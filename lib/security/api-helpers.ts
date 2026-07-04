@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
+import { getServerSession, type Session } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { createSafeError, ErrorCode, getStatusCode, logError } from "@/lib/security/error-handler"
 
@@ -9,7 +9,7 @@ import { createSafeError, ErrorCode, getStatusCode, logError } from "@/lib/secur
  */
 export async function requireAdminAPI(
   _request: NextRequest
-): Promise<{ session: Awaited<ReturnType<typeof getServerSession>>; response: null } | { session: null; response: NextResponse }> {
+): Promise<{ session: Session; response: null } | { session: null; response: NextResponse }> {
   try {
     const session = await getServerSession(authOptions)
 

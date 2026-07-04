@@ -52,6 +52,7 @@ describe('AdminFooterClient', () => {
     totalUsers: 100,
     shareStats: mockShareStats,
     llmDisabled: false,
+    appVersion: '1.2.3',
   }
 
   beforeEach(() => {
@@ -150,6 +151,15 @@ describe('AdminFooterClient', () => {
       expect(screen.getAllByText('320').length).toBeGreaterThan(0) // Visits
     })
 
+    it('renders the app version in expanded mobile view', () => {
+      render(<AdminFooterClient {...defaultProps} />)
+
+      const toggleButton = screen.getByRole('button', { name: /1,500,000/i })
+      fireEvent.click(toggleButton)
+
+      expect(screen.getByTestId('admin-footer-version')).toHaveTextContent('v1.2.3')
+    })
+
     it('renders LLM toggle in expanded mobile view', () => {
       render(<AdminFooterClient {...defaultProps} />)
 
@@ -215,6 +225,12 @@ describe('AdminFooterClient', () => {
       expect(screen.getAllByText('150').length).toBeGreaterThan(0)
       expect(screen.getAllByText('45').length).toBeGreaterThan(0)
       expect(screen.getAllByText('320').length).toBeGreaterThan(0)
+    })
+
+    it('renders the app version in desktop view', () => {
+      render(<AdminFooterClient {...defaultProps} />)
+
+      expect(screen.getByTestId('admin-footer-version-desktop')).toHaveTextContent('v1.2.3')
     })
 
     it('renders LLM toggle in desktop view', () => {

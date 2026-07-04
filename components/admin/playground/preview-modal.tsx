@@ -33,7 +33,7 @@ export function PreviewModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-sm overflow-y-auto"
+      className="fixed inset-0 z-[9999] bg-black/95 overflow-y-auto"
       role="dialog"
       aria-modal="true"
       aria-labelledby="preview-modal-title"
@@ -100,6 +100,7 @@ export function PreviewModal({
           year={year}
           isShared={false}
           userName={userName}
+          isPreview
         />
       </div>
     </div>,

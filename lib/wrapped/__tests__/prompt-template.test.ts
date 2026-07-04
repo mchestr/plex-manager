@@ -8,7 +8,7 @@ import {
   getAvailablePlaceholders,
   getDefaultPromptTemplate,
 } from "@/lib/wrapped/prompt-template"
-import { ARCHETYPES } from "@/lib/wrapped/llm-output-schema"
+import { suggestArchetypes } from "@/lib/wrapped/archetype-scoring"
 
 import { buildStatistics } from "./fixtures"
 
@@ -24,12 +24,16 @@ describe("generateWrappedPrompt", () => {
     expect(prompt).not.toContain("{{")
   })
 
-  it("includes every archetype candidate", async () => {
-    const prompt = await generateWrappedPrompt("Mike", 2026, buildStatistics())
+  it("includes the data-ranked archetype shortlist with evidence", async () => {
+    const statistics = buildStatistics()
+    const prompt = await generateWrappedPrompt("Mike", 2026, statistics)
 
-    for (const archetype of ARCHETYPES) {
-      expect(prompt).toContain(archetype.id)
-      expect(prompt).toContain(archetype.name)
+    const shortlist = suggestArchetypes(statistics)
+    expect(shortlist.length).toBeGreaterThanOrEqual(3)
+    for (const candidate of shortlist) {
+      expect(prompt).toContain(candidate.id)
+      expect(prompt).toContain(candidate.name)
+      expect(prompt).toContain(candidate.evidence)
     }
   })
 

@@ -19,7 +19,6 @@ export function CinematicOverseerrStatsSection({ section }: Props) {
         <div className="space-y-6 pt-2">
           <div className="flex flex-wrap items-baseline justify-center gap-x-12 gap-y-6">
             <GoldCountUp value={stats.totalRequests} className="text-5xl sm:text-7xl" suffix="requests" />
-            <GoldCountUp value={stats.approvedRequests} className="text-5xl sm:text-7xl" suffix="approved" />
           </div>
           {stats.topRequestedGenres.length > 0 && (
             <p className="text-xs sm:text-sm text-taupe uppercase tracking-[0.25em]">

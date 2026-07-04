@@ -197,7 +197,7 @@ describe("PreviewModal", () => {
 
       const overlay = document.body.querySelector(".fixed.inset-0")
       expect(overlay).toBeInTheDocument()
-      expect(overlay).toHaveClass("bg-black/90", "backdrop-blur-sm")
+      expect(overlay).toHaveClass("bg-black/95")
     })
 
     it("should render header with sticky positioning", () => {

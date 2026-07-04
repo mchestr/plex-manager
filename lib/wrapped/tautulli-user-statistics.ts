@@ -332,9 +332,11 @@ export async function fetchTautulliStatistics(
       }
     }
 
-    // Convert maps to sorted arrays
+    // Convert maps to sorted arrays. Movies rank by play count first: pure
+    // watch-time ordering made single-watch movies rank by runtime, so a
+    // 3-hour epic seen once beat a favorite watched three times.
     const topMovies = Array.from(moviesMap.values())
-      .sort((a, b) => b.watchTime - a.watchTime)
+      .sort((a, b) => b.playCount - a.playCount || b.watchTime - a.watchTime)
       .slice(0, 10)
 
     const topShows = Array.from(showsMap.values())

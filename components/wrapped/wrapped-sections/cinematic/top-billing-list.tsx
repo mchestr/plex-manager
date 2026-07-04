@@ -8,6 +8,7 @@ export interface BillingEntry {
   title: string
   year?: number
   watchTime: number
+  playCount?: number
   episodesWatched?: number
 }
 
@@ -40,6 +41,7 @@ export function TopBillingList({ entries }: TopBillingListProps) {
         <p className="text-xs sm:text-sm text-taupe mt-2 uppercase tracking-[0.2em]">
           {headliner.year ? `${headliner.year} · ` : ""}
           {formatWatchTime(headliner.watchTime)}
+          {headliner.playCount && headliner.playCount > 1 ? ` · ${headliner.playCount} screenings` : ""}
           {headliner.episodesWatched ? ` · ${headliner.episodesWatched} episodes` : ""}
         </p>
       </motion.div>
@@ -63,6 +65,7 @@ export function TopBillingList({ entries }: TopBillingListProps) {
               </span>
               <span className="text-taupe text-xs sm:text-sm whitespace-nowrap">
                 {formatWatchTime(entry.watchTime)}
+                {entry.playCount && entry.playCount > 1 ? ` · ×${entry.playCount}` : ""}
                 {entry.episodesWatched ? ` · ${entry.episodesWatched} ep` : ""}
               </span>
             </motion.li>
