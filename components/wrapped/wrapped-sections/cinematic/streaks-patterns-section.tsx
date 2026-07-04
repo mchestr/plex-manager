@@ -17,6 +17,9 @@ export function CinematicStreaksPatternsSection({ section }: Props) {
   ) as DerivedStatistics | undefined
 
   const maxHourMinutes = derived ? Math.max(...derived.hourHistogram, 1) : 1
+  const maxDayMinutes = derived
+    ? Math.max(...derived.dayOfWeekHistogram.map((d) => d.watchTime), 1)
+    : 1
 
   return (
     <SlideFrame eyebrow="Act III — The Rituals" title={section.title} narrative={section.content}>
@@ -65,6 +68,39 @@ export function CinematicStreaksPatternsSection({ section }: Props) {
               <span>Midnight</span>
               <span>Noon</span>
               <span>11 PM</span>
+            </div>
+          </div>
+
+          {/* Weekly rhythm: minutes per day of week, peak day in gold */}
+          <div className="max-w-sm mx-auto">
+            <div className="flex items-end justify-between gap-1.5 h-14 sm:h-16">
+              {derived.dayOfWeekHistogram.map((day, idx) => (
+                <motion.div
+                  key={day.day}
+                  className={
+                    day.watchTime === maxDayMinutes
+                      ? "flex-1 rounded-t-sm bg-gradient-to-t from-gold to-gold-bright"
+                      : "flex-1 rounded-t-sm bg-ivory/20"
+                  }
+                  initial={{ height: 0 }}
+                  animate={{ height: `${Math.max((day.watchTime / maxDayMinutes) * 100, 3)}%` }}
+                  transition={{ duration: 0.7, delay: 2.2 + idx * 0.08, ease: "easeOut" }}
+                />
+              ))}
+            </div>
+            <div className="flex justify-between gap-1.5 mt-2">
+              {derived.dayOfWeekHistogram.map((day) => (
+                <span
+                  key={day.day}
+                  className={
+                    day.watchTime === maxDayMinutes
+                      ? "flex-1 text-center text-[10px] uppercase tracking-widest text-gold-bright"
+                      : "flex-1 text-center text-[10px] uppercase tracking-widest text-taupe"
+                  }
+                >
+                  {day.day.slice(0, 3)}
+                </span>
+              ))}
             </div>
           </div>
 
