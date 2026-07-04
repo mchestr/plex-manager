@@ -20,6 +20,22 @@ body {
   --animate-blink: blink 3s ease-in-out infinite;
   --animate-twinkle: twinkle 3s ease-in-out infinite;
   --animate-fade-in: fade-in 0.6s ease-out;
+
+  /* Cinematic Premiere theme (wrapped v2) */
+  --color-stage: #0a0908;
+  --color-stage-panel: #16120e;
+  --color-gold: #d4af37;
+  --color-gold-bright: #f5d67b;
+  --color-ivory: #ece5d8;
+  --color-taupe: #9a9082;
+  --animate-grain: grain 0.9s steps(4) infinite;
+}
+
+@keyframes grain {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-2%, 1%); }
+  50% { transform: translate(1%, -2%); }
+  75% { transform: translate(-1%, 2%); }
 }
 
 @keyframes float {

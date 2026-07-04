@@ -9,6 +9,8 @@ import type {
   TautulliHistoryItem,
   TautulliUser,
 } from "@/lib/validations/tautulli"
+
+import { computeDerivedStatistics } from "./derived-statistics"
 import type {
   TautulliConfig,
   TautulliStatisticsData,
@@ -394,6 +396,7 @@ export async function fetchTautulliStatistics(
         topMovies,
         topShows,
         watchTimeByMonth,
+        derived: computeDerivedStatistics(history, year),
       },
     }
   } catch (error) {

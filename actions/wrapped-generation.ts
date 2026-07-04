@@ -17,6 +17,7 @@ import {
   fetchTopContentLeaderboards,
   fetchWatchTimeLeaderboard,
 } from "@/lib/wrapped/statistics"
+import { computePercentile } from "@/lib/wrapped/derived-statistics"
 import { WrappedStatistics } from "@/types/wrapped"
 import { getServerSession } from "next-auth"
 import { revalidatePath } from "next/cache"
@@ -289,9 +290,16 @@ export async function generatePlexWrapped(
         topMovies: tautulliStatsData.topMovies,
         topShows: tautulliStatsData.topShows,
         watchTimeByMonth: tautulliStatsData.watchTimeByMonth,
+        derived: tautulliStatsData.derived,
         ...(serverStats && { serverStats }),
         ...(overseerrStats && { overseerrStats }),
         ...(leaderboards && { leaderboards }),
+        ...(leaderboards?.watchTime.userPosition && {
+          percentile: computePercentile(
+            leaderboards.watchTime.userPosition,
+            leaderboards.watchTime.totalUsers
+          ),
+        }),
       }
 
       // 5. Generate wrapped content using LLM
@@ -327,6 +335,7 @@ export async function generatePlexWrapped(
           data: JSON.stringify(wrappedData),
           shareToken,
           summary: wrappedData.summary || null,
+          archetype: wrappedData.archetype?.name || null,
           generatedAt: new Date(),
         },
       })

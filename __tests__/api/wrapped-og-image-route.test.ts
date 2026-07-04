@@ -1,11 +1,13 @@
 /**
- * Tests for app/api/wrapped/og-image/route.ts - wrapped OG image API route
+ * Tests for app/api/wrapped/og-image/route.tsx - wrapped OG image API route
+ *
+ * ImageResponse (satori) can't render in jsdom, so next/og is mocked and the
+ * tests assert the element tree passed to it plus the route's guard behavior.
  */
 
 import { GET } from '@/app/api/wrapped/og-image/route'
 import { prisma } from '@/lib/prisma'
 import { shareRateLimiter } from '@/lib/security/rate-limit'
-import { stripHighlightTags } from '@/lib/wrapped/text-processor'
 import { NextRequest } from 'next/server'
 
 // Mock dependencies
@@ -21,11 +23,23 @@ jest.mock('@/lib/security/rate-limit', () => ({
   shareRateLimiter: jest.fn(),
 }))
 
-jest.mock('@/lib/wrapped/text-processor', () => ({
-  stripHighlightTags: jest.fn((text) => text),
+interface MockImageCall {
+  element: unknown
+  options: { width: number; height: number }
+}
+
+const imageCalls: MockImageCall[] = []
+
+jest.mock('next/og', () => ({
+  ImageResponse: class MockImageResponse {
+    status = 200
+    headers = new Map<string, string>()
+    constructor(element: unknown, options: { width: number; height: number }) {
+      imageCalls.push({ element, options })
+    }
+  },
 }))
 
-// Mock NextRequest and NextResponse
 jest.mock('next/server', () => {
   const actual = jest.requireActual('next/server')
   return {
@@ -45,37 +59,46 @@ jest.mock('next/server', () => {
       }
     },
     NextResponse: class MockNextResponse {
-      body: any
+      body: unknown
       status: number
       headers: Map<string, string>
 
-      constructor(body: any, init?: { status?: number; headers?: Record<string, string> }) {
+      constructor(body: unknown, init?: { status?: number; headers?: Record<string, string> }) {
         this.body = body
         this.status = init?.status || 200
         this.headers = new Map(Object.entries(init?.headers || {}))
-      }
-
-      static json(data: any, init?: { status?: number; headers?: Record<string, string> }) {
-        return {
-          json: () => Promise.resolve(data),
-          status: init?.status || 200,
-          headers: init?.headers || {},
-        }
       }
     },
   }
 })
 
+/** Flatten the mocked JSX element tree into a searchable string */
+function elementText(node: unknown): string {
+  if (node == null) return ''
+  if (typeof node === 'string' || typeof node === 'number') return String(node)
+  if (Array.isArray(node)) return node.map(elementText).join(' ')
+  if (typeof node === 'object') {
+    const el = node as { props?: { children?: unknown } & Record<string, unknown> }
+    return elementText(el.props?.children) + ' ' + JSON.stringify(el.props ?? {})
+  }
+  return ''
+}
+
+function buildRequest(url: string): NextRequest {
+  return new NextRequest(url)
+}
+
 describe('GET /api/wrapped/og-image', () => {
   const mockWrapped = {
     id: 'wrapped-1',
-    year: 2024,
+    year: 2026,
     shareToken: 'test-token',
     status: 'completed',
     summary: 'Test summary',
+    archetype: 'The Midnight Marathoner',
     data: JSON.stringify({
       statistics: {
-        totalWatchTime: { total: 1440 },
+        totalWatchTime: { total: 2880 }, // 48 hours = 2 days
         moviesWatched: 10,
         showsWatched: 5,
       },
@@ -88,260 +111,136 @@ describe('GET /api/wrapped/og-image', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    imageCalls.length = 0
     ;(shareRateLimiter as jest.Mock).mockResolvedValue(null)
-    ;(stripHighlightTags as jest.Mock).mockImplementation((text) => text)
   })
 
-  it('should return SVG image for valid token', async () => {
+  it('renders a 1200x630 OG image with archetype and stats', async () => {
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(mockWrapped)
 
-    const { NextRequest } = await import('next/server')
-    const request = new NextRequest('http://localhost/api/wrapped/og-image?token=test-token')
-
-    const response = await GET(request)
+    const response = await GET(buildRequest('http://localhost/api/wrapped/og-image?token=test-token'))
 
     expect(response.status).toBe(200)
-    expect(response.headers.get('Content-Type')).toBe('image/svg+xml')
-    expect(response.headers.get('Cache-Control')).toBe('public, max-age=3600, s-maxage=3600')
-    expect(response.body).toContain('<?xml version="1.0" encoding="UTF-8"?>')
-    expect(response.body).toContain('Test User')
-    expect(response.body).toContain('2024')
+    expect(imageCalls).toHaveLength(1)
+    expect(imageCalls[0].options).toEqual({ width: 1200, height: 630 })
+    const text = elementText(imageCalls[0].element)
+    expect(text).toContain('Test User')
+    expect(text).toContain('2026')
+    expect(text).toContain('The Midnight Marathoner')
+    expect(text).toContain('2 days')
   })
 
-  it('should return 400 when token is missing', async () => {
-    const { NextRequest } = await import('next/server')
-    const request = new NextRequest('http://localhost/api/wrapped/og-image')
+  it('renders a 1080x1920 story card when format=card', async () => {
+    ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(mockWrapped)
 
-    const response = await GET(request)
-    const data = JSON.parse(response.body)
+    const response = await GET(
+      buildRequest('http://localhost/api/wrapped/og-image?token=test-token&format=card')
+    )
+
+    expect(response.status).toBe(200)
+    expect(imageCalls[0].options).toEqual({ width: 1080, height: 1920 })
+    expect(elementText(imageCalls[0].element)).toContain('The Midnight Marathoner')
+  })
+
+  it('omits archetype billing when column is null (v1 wrappeds)', async () => {
+    ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue({
+      ...mockWrapped,
+      archetype: null,
+    })
+
+    const response = await GET(buildRequest('http://localhost/api/wrapped/og-image?token=test-token'))
+
+    expect(response.status).toBe(200)
+    expect(elementText(imageCalls[0].element)).not.toContain('Midnight Marathoner')
+  })
+
+  it('returns 400 when token is missing', async () => {
+    const response = await GET(buildRequest('http://localhost/api/wrapped/og-image'))
+    const data = JSON.parse(response.body as string)
 
     expect(response.status).toBe(400)
-    expect(data.error).toBe('Token is required')
     expect(data.code).toBe('VALIDATION_ERROR')
+    expect(imageCalls).toHaveLength(0)
   })
 
-  it('should return 404 when wrapped is not found', async () => {
+  it('returns 404 when wrapped is not found', async () => {
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
 
-    const { NextRequest } = await import('next/server')
-    const request = new NextRequest('http://localhost/api/wrapped/og-image?token=invalid-token')
-
-    const response = await GET(request)
+    const response = await GET(buildRequest('http://localhost/api/wrapped/og-image?token=nope'))
 
     expect(response.status).toBe(404)
     expect(response.body).toBe('Wrapped not found')
   })
 
-  it('should return 404 when wrapped is not completed', async () => {
-    const incompleteWrapped = { ...mockWrapped, status: 'generating' }
-    ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(incompleteWrapped)
-
-    const { NextRequest } = await import('next/server')
-    const request = new NextRequest('http://localhost/api/wrapped/og-image?token=test-token')
-
-    const response = await GET(request)
-
-    expect(response.status).toBe(404)
-    expect(response.body).toBe('Wrapped not found')
-  })
-
-  it('should use email as fallback when name is null', async () => {
-    const wrappedWithoutName = {
+  it('returns 404 when wrapped is not completed (same message, no enumeration)', async () => {
+    ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue({
       ...mockWrapped,
-      user: { name: null, email: 'test@example.com' },
-    }
-    ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(wrappedWithoutName)
+      status: 'generating',
+    })
 
-    const { NextRequest } = await import('next/server')
-    const request = new NextRequest('http://localhost/api/wrapped/og-image?token=test-token')
+    const response = await GET(buildRequest('http://localhost/api/wrapped/og-image?token=test-token'))
 
-    const response = await GET(request)
-
-    expect(response.status).toBe(200)
-    expect(response.body).toContain('test@example.com')
+    expect(response.status).toBe(404)
+    expect(response.body).toBe('Wrapped not found')
   })
 
-  it('should use "Someone" as fallback when name and email are null', async () => {
-    const wrappedWithoutUser = {
+  it('falls back to email then "Someone" for the display name', async () => {
+    ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue({
       ...mockWrapped,
       user: { name: null, email: null },
-    }
-    ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(wrappedWithoutUser)
+    })
 
-    const { NextRequest } = await import('next/server')
-    const request = new NextRequest('http://localhost/api/wrapped/og-image?token=test-token')
-
-    const response = await GET(request)
+    const response = await GET(buildRequest('http://localhost/api/wrapped/og-image?token=test-token'))
 
     expect(response.status).toBe(200)
-    expect(response.body).toContain('Someone')
+    expect(elementText(imageCalls[0].element)).toContain('Someone')
   })
 
-  it('should strip highlight tags from summary', async () => {
-    const wrappedWithHighlights = {
-      ...mockWrapped,
-      summary: 'Test <highlight>summary</highlight>',
-    }
-    ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(wrappedWithHighlights)
-    ;(stripHighlightTags as jest.Mock).mockReturnValue('Test summary')
-
-    const { NextRequest } = await import('next/server')
-    const request = new NextRequest('http://localhost/api/wrapped/og-image?token=test-token')
-
-    const response = await GET(request)
-
-    expect(stripHighlightTags).toHaveBeenCalledWith('Test <highlight>summary</highlight>')
-    expect(response.body).toContain('Test summary')
-  })
-
-  it('should format watch time as days when over 24 hours', async () => {
-    const wrappedWithLongWatchTime = {
+  it('formats short watch times in hours', async () => {
+    ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue({
       ...mockWrapped,
       data: JSON.stringify({
-        statistics: {
-          totalWatchTime: { total: 2880 }, // 48 hours = 2 days
-          moviesWatched: 10,
-          showsWatched: 5,
-        },
+        statistics: { totalWatchTime: { total: 120 }, moviesWatched: 1, showsWatched: 1 },
       }),
-    }
-    ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(wrappedWithLongWatchTime)
+    })
 
-    const { NextRequest } = await import('next/server')
-    const request = new NextRequest('http://localhost/api/wrapped/og-image?token=test-token')
+    await GET(buildRequest('http://localhost/api/wrapped/og-image?token=test-token'))
 
-    const response = await GET(request)
-
-    expect(response.status).toBe(200)
-    expect(response.body).toContain('2 days')
+    expect(elementText(imageCalls[0].element)).toContain('2 hours')
   })
 
-  it('should format watch time as hours when under 24 hours', async () => {
-    const wrappedWithShortWatchTime = {
-      ...mockWrapped,
-      data: JSON.stringify({
-        statistics: {
-          totalWatchTime: { total: 120 }, // 2 hours
-          moviesWatched: 10,
-          showsWatched: 5,
-        },
-      }),
-    }
-    ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(wrappedWithShortWatchTime)
-
-    const { NextRequest } = await import('next/server')
-    const request = new NextRequest('http://localhost/api/wrapped/og-image?token=test-token')
-
-    const response = await GET(request)
-
-    expect(response.status).toBe(200)
-    expect(response.body).toContain('2 hours')
-  })
-
-  it('should handle missing statistics gracefully', async () => {
-    const wrappedWithoutStats = {
+  it('handles missing statistics gracefully', async () => {
+    ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue({
       ...mockWrapped,
       data: JSON.stringify({}),
-    }
-    ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(wrappedWithoutStats)
+    })
 
-    const { NextRequest } = await import('next/server')
-    const request = new NextRequest('http://localhost/api/wrapped/og-image?token=test-token')
-
-    const response = await GET(request)
+    const response = await GET(buildRequest('http://localhost/api/wrapped/og-image?token=test-token'))
 
     expect(response.status).toBe(200)
-    expect(response.body).toContain('0 hours')
-    expect(response.body).toContain('0') // For movies and shows
+    expect(elementText(imageCalls[0].element)).toContain('0 hours')
   })
 
-  it('should truncate long summaries', async () => {
-    const longSummary = 'A'.repeat(150)
-    const wrappedWithLongSummary = {
-      ...mockWrapped,
-      summary: longSummary,
-    }
-    ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(wrappedWithLongSummary)
-    ;(stripHighlightTags as jest.Mock).mockReturnValue(longSummary)
-
-    const { NextRequest } = await import('next/server')
-    const request = new NextRequest('http://localhost/api/wrapped/og-image?token=test-token')
-
-    const response = await GET(request)
-
-    expect(response.status).toBe(200)
-    expect(response.body).toContain('...')
-  })
-
-  it('should escape XML special characters', async () => {
-    const wrappedWithSpecialChars = {
-      ...mockWrapped,
-      user: { name: 'Test & User <script>', email: 'test@example.com' },
-      summary: 'Summary with & < > " \' characters',
-    }
-    ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(wrappedWithSpecialChars)
-    ;(stripHighlightTags as jest.Mock).mockImplementation((text) => text)
-
-    const { NextRequest } = await import('next/server')
-    const request = new NextRequest('http://localhost/api/wrapped/og-image?token=test-token')
-
-    const response = await GET(request)
-
-    expect(response.status).toBe(200)
-    expect(response.body).toContain('&amp;')
-    expect(response.body).toContain('&lt;')
-    expect(response.body).toContain('&gt;')
-  })
-
-  it('should return 429 when rate limit is exceeded', async () => {
-    const mockRateLimitResponse = {
-      status: 429,
-      body: JSON.stringify({ error: 'Too many requests' }),
-    }
+  it('short-circuits on rate limit', async () => {
+    const mockRateLimitResponse = { status: 429 }
     ;(shareRateLimiter as jest.Mock).mockResolvedValue(mockRateLimitResponse)
 
-    const { NextRequest } = await import('next/server')
-    const request = new NextRequest('http://localhost/api/wrapped/og-image?token=test-token')
-
-    const response = await GET(request)
+    const response = await GET(buildRequest('http://localhost/api/wrapped/og-image?token=test-token'))
 
     expect(response).toBe(mockRateLimitResponse)
     expect(prisma.plexWrapped.findUnique).not.toHaveBeenCalled()
   })
 
-  it('should handle database errors gracefully', async () => {
+  it('handles database errors gracefully', async () => {
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockRejectedValue(new Error('Database error'))
-
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation()
 
-    const { NextRequest } = await import('next/server')
-    const request = new NextRequest('http://localhost/api/wrapped/og-image?token=test-token')
-
-    const response = await GET(request)
-    const data = JSON.parse(response.body)
+    const response = await GET(buildRequest('http://localhost/api/wrapped/og-image?token=test-token'))
+    const data = JSON.parse(response.body as string)
 
     expect(response.status).toBe(500)
     expect(data.error).toContain('Failed to generate image')
     expect(consoleErrorSpy).toHaveBeenCalled()
     consoleErrorSpy.mockRestore()
   })
-
-  it('should use default summary when summary is null', async () => {
-    const wrappedWithoutSummary = {
-      ...mockWrapped,
-      summary: null,
-    }
-    ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(wrappedWithoutSummary)
-
-    const { NextRequest } = await import('next/server')
-    const request = new NextRequest('http://localhost/api/wrapped/og-image?token=test-token')
-
-    const response = await GET(request)
-
-    expect(response.status).toBe(200)
-    expect(response.body).toContain('Test User')
-    expect(response.body).toContain('2024')
-    expect(response.body).toContain('Plex Wrapped')
-  })
 })
-

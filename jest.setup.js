@@ -18,12 +18,14 @@ jest.mock('framer-motion', () => ({
     h2: ({ children, ...props }) => <h2 {...props}>{children}</h2>,
     p: ({ children, ...props }) => <p {...props}>{children}</p>,
     span: ({ children, ...props }) => <span {...props}>{children}</span>,
+    li: ({ children, ...props }) => <li {...props}>{children}</li>,
   },
   AnimatePresence: ({ children }) => <>{children}</>,
   useAnimation: () => ({
     start: jest.fn(),
     stop: jest.fn(),
   }),
+  useReducedMotion: () => false,
 }))
 
 // Mock react-countup

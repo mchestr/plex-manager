@@ -99,16 +99,9 @@ export async function testPromptTemplate(input: TestPromptInput) {
       }
 
       // Currently only OpenAI is supported
-      const llmResult = await callOpenAI(
-        config,
-        renderedPrompt,
-        input.statistics,
-        input.year,
-        userId,
-        input.userName
-      )
+      const llmResult = await callOpenAI(config, renderedPrompt)
 
-      if (llmResult.success && llmResult.data) {
+      if (llmResult.success && llmResult.output) {
         // Record LLM usage for cost analysis
         // wrappedId is null since this is a playground test, not an actual wrapped generation
         if (llmResult.tokenUsage) {
@@ -120,7 +113,7 @@ export async function testPromptTemplate(input: TestPromptInput) {
                 provider: config.provider,
                 model: config.model || "gpt-4",
                 prompt: renderedPrompt,
-                response: llmResult.rawResponse || JSON.stringify(llmResult.data, null, 2),
+                response: llmResult.rawResponse || JSON.stringify(llmResult.output, null, 2),
                 promptTokens: llmResult.tokenUsage.promptTokens,
                 completionTokens: llmResult.tokenUsage.completionTokens,
                 totalTokens: llmResult.tokenUsage.totalTokens,
@@ -136,7 +129,7 @@ export async function testPromptTemplate(input: TestPromptInput) {
         return {
           success: true,
           renderedPrompt,
-          llmResponse: llmResult.rawResponse || JSON.stringify(llmResult.data, null, 2),
+          llmResponse: llmResult.rawResponse || JSON.stringify(llmResult.output, null, 2),
           tokenUsage: llmResult.tokenUsage,
         }
       } else {

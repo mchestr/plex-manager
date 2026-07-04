@@ -4,7 +4,8 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { generateShareToken } from "@/lib/utils"
 import { createLogger } from "@/lib/utils/logger"
-import { parseWrappedResponse } from "@/lib/wrapped/prompt"
+import { assembleWrappedData } from "@/lib/wrapped/assemble-wrapped"
+import { parseWrappedLLMOutput } from "@/lib/wrapped/parse-llm-output"
 import { WrappedStatistics } from "@/types/wrapped"
 import { getServerSession } from "next-auth"
 import { revalidatePath } from "next/cache"
@@ -72,14 +73,22 @@ export async function savePlaygroundWrapped(input: SavePlaygroundWrappedInput): 
       }
     }
 
-    // Parse the LLM response to get wrapped data
-    const wrappedData = parseWrappedResponse(
-      input.llmResponse,
-      input.statistics,
-      input.year,
-      user.id,
-      input.userName
-    )
+    // Parse and validate the LLM response, then assemble the wrapped data
+    const parseResult = parseWrappedLLMOutput(input.llmResponse)
+    if (!parseResult.success) {
+      return {
+        success: false,
+        error: parseResult.error,
+      }
+    }
+
+    const wrappedData = assembleWrappedData({
+      output: parseResult.output,
+      statistics: input.statistics,
+      userId: user.id,
+      userName: input.userName,
+      year: input.year,
+    })
 
     // Check if wrapped already exists for this user/year
     const existingWrapped = await prisma.plexWrapped.findUnique({
@@ -109,12 +118,14 @@ export async function savePlaygroundWrapped(input: SavePlaygroundWrappedInput): 
         data: JSON.stringify(wrappedData),
         shareToken,
         summary: wrappedData.summary || null,
+        archetype: wrappedData.archetype?.name || null,
         generatedAt: new Date(),
       },
       update: {
         status: "completed",
         data: JSON.stringify(wrappedData),
         summary: wrappedData.summary || null,
+        archetype: wrappedData.archetype?.name || null,
         generatedAt: new Date(),
         // Preserve existing share token if it exists
         ...(existingWrapped?.shareToken ? {} : { shareToken }),

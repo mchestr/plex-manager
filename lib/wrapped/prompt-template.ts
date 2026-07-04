@@ -1,9 +1,15 @@
 /**
- * Prompt template system with placeholder replacement
+ * Prompt template system with placeholder replacement (Wrapped v2).
+ *
+ * The system prompt defines the cinematic narrator voice and explains each
+ * creative field the LLM must fill. The output *shape* is enforced by the
+ * API (structured outputs) and Zod — the prompt only guides content quality.
+ * The user prompt is a data-only template with `{{placeholder}}` values.
  */
 
 import { getActivePromptTemplate } from "@/actions/prompts"
 import { formatWatchTime } from "@/lib/utils/time-formatting"
+import { ARCHETYPES } from "@/lib/wrapped/llm-output-schema"
 import { WrappedStatistics } from "@/types/wrapped"
 
 /**
@@ -20,6 +26,7 @@ interface PlaceholderContext {
  */
 function replacePlaceholders(template: string, context: PlaceholderContext): string {
   const { userName, year, statistics } = context
+  const derived = statistics.derived
 
   // Build replacement map
   const replacements: Record<string, string> = {
@@ -55,6 +62,36 @@ function replacePlaceholders(template: string, context: PlaceholderContext): str
 
     // Top shows JSON (for data sections)
     "{{topShowsJson}}": JSON.stringify(statistics.topShows.slice(0, 5)),
+
+    // Derived viewing patterns (v2)
+    "{{longestStreak}}": derived?.longestStreak
+      ? `${derived.longestStreak.days} consecutive days (${derived.longestStreak.start} to ${derived.longestStreak.end})`
+      : "No streak data available",
+    "{{peakHour}}": derived?.peakHour
+      ? `${derived.peakHour.label} (${derived.peakHour.plays} plays started in this hour)`
+      : "No peak hour data available",
+    "{{peakDayOfWeek}}": derived
+      ? [...derived.dayOfWeekHistogram].sort((a, b) => b.watchTime - a.watchTime)[0]?.day || "Unknown"
+      : "Unknown",
+    "{{derivedStatsSection}}": derived ? `
+**Viewing Patterns:**
+- Longest streak: ${derived.longestStreak ? `${derived.longestStreak.days} consecutive days (${derived.longestStreak.start} to ${derived.longestStreak.end})` : "none"}
+- Peak viewing hour: ${derived.peakHour ? `${derived.peakHour.label} (${derived.peakHour.plays} plays)` : "unknown"}
+- Watch time by day of week: ${derived.dayOfWeekHistogram.map(d => `${d.day}: ${formatWatchTime(d.watchTime)}`).join(", ")}
+- Weekend share of watch time: ${derived.weekendVsWeekday.weekendPct}%
+- Most active single day: ${derived.mostActiveDay ? `${derived.mostActiveDay.date} (${formatWatchTime(derived.mostActiveDay.watchTime)})` : "unknown"}
+` : "",
+
+    // Server percentile (v2, conditional)
+    "{{percentileSection}}": statistics.percentile ? `
+**Server Standing:**
+- You are in the ${statistics.percentile.topPercentLabel} of viewers on this server by watch time${statistics.leaderboards?.watchTime.userPosition ? ` (ranked #${statistics.leaderboards.watchTime.userPosition} of ${statistics.leaderboards.watchTime.totalUsers})` : ""}
+` : "",
+
+    // Archetype candidates (v2)
+    "{{archetypeCandidates}}": ARCHETYPES.map(
+      (a) => `- ${a.id}: "${a.name}" — ${a.motif}`
+    ).join("\n"),
 
     // Leaderboard section (conditional)
     "{{leaderboardSection}}": statistics.leaderboards ? `
@@ -111,17 +148,6 @@ ${statistics.leaderboards.topContent.shows.map((show) => {
 - Top genres: ${statistics.overseerrStats.topRequestedGenres.map(g => g.genre).join(", ")}
 ` : "",
 
-    // Overseerr section JSON (for JSON output format)
-    "{{overseerrSectionJson}}": statistics.overseerrStats ? `,
-    {
-      "id": "overseerr-stats",
-      "type": "overseerr-stats",
-      "title": "Your Requests",
-      "subtitle": "Building your perfect library",
-      "content": "[EXAMPLE - REPLACE WITH REAL CONTENT] A fun, playful message about your Overseerr request habits. Celebrate your contribution to building the library! Use <highlight>tags</highlight> around all numbers to make them visually pop!",
-      "animationDelay": ${statistics.serverStats ? 12000 : 10000}
-    }` : "",
-
     // Watch time by month section (conditional)
     "{{watchTimeByMonthSection}}": statistics.watchTimeByMonth && statistics.watchTimeByMonth.length > 0 ? `
 **Watch Time by Month (all times in minutes):**
@@ -144,18 +170,14 @@ ${statistics.watchTimeByMonth.map(month => {
     "{{bingeWatcher}}": statistics.topShows.some(s => s.episodesWatched > 20) ? "true" : "false",
     "{{discoveryScore}}": Math.min(100, Math.max(0, Math.floor((statistics.moviesWatched + statistics.showsWatched) / 10))).toString(),
 
-    // Animation delay calculations (for conditional sections)
-    "{{overseerrAnimationDelay}}": statistics.overseerrStats ? (statistics.serverStats ? "12000" : "10000") : "",
-    "{{insightsAnimationDelay}}": statistics.overseerrStats ? "14000" : (statistics.serverStats ? "12000" : "10000"),
-    "{{funFactsAnimationDelay}}": statistics.overseerrStats ? "16000" : (statistics.serverStats ? "14000" : "12000"),
-
-    // Server stats facts (for fun-facts section)
-    "{{serverStatsFacts}}": statistics.serverStats ? `,
-          "[EXAMPLE - REPLACE] Fun fact about {{serverName}}'s library size - mention the <highlight>${statistics.serverStats.librarySize.movies.toLocaleString()}</highlight> movies available (use <highlight>tags</highlight> around numbers)",
-          "[EXAMPLE - REPLACE] Fun fact about {{serverName}}'s storage - mention the <highlight>${statistics.serverStats.totalStorageFormatted}</highlight> total storage (use <highlight>tags</highlight> around numbers)"` : "",
-
-    // Server stats content (for fun-facts section)
-    "{{serverStatsContent}}": statistics.serverStats ? `A fun, engaging introductory message combining interesting facts about your viewing habits with information about {{serverName}}. IMPORTANT: Reference the server by name only (e.g., '{{serverName}}'), NOT as 'Your Plex server' or 'Your server' - the user does not own the server. Use phrases like '{{serverName}} is a treasure trove with...' or '{{serverName}} has enough content to watch for <highlight>X</highlight> years!'` : "A fun, engaging introductory message about interesting facts from your viewing habits.",
+    // Deprecated placeholders (v1 JSON-format era) — resolve to empty so
+    // existing custom DB templates keep rendering without stale scaffolding
+    "{{overseerrSectionJson}}": "",
+    "{{overseerrAnimationDelay}}": "",
+    "{{insightsAnimationDelay}}": "",
+    "{{funFactsAnimationDelay}}": "",
+    "{{serverStatsFacts}}": "",
+    "{{serverStatsContent}}": "",
   }
 
   // Replace all placeholders
@@ -177,233 +199,54 @@ ${statistics.watchTimeByMonth.map(month => {
 }
 
 /**
- * Generate the system prompt with instructions, guidelines, and output format requirements
- * This should contain all static instructions that don't change per user
+ * Generate the system prompt: narrator voice, field meanings, and archetype
+ * selection guidance. Output shape is enforced by the API schema, so this
+ * prompt contains no JSON scaffolding or format examples.
  */
 export function generateSystemPrompt(): string {
-  return `You are a creative assistant that generates personalized, fun, and engaging content for Plex Wrapped experiences, similar to Spotify Wrapped.
+  return `You are the narrator of a cinematic year-in-review — a "Plex Wrapped" presented as an awards-night premiere. You write in the register of a great awards-show host: warm, witty, a little grand, never cheesy. Think opening monologue at a film festival, written personally for tonight's honoree.
 
-Your task is to generate engaging, fun, and personalized content based on viewing statistics. Be creative, use emojis sparingly, and make it feel celebratory and personal.
+=== VOICE ===
 
-=== STYLE GUIDELINES ===
+1. PERSON: Always 2nd person ("you", "your") — never 3rd person.
+2. TONE: Cinematic and celebratory. Draw on the language of film: premieres, marquees, screenings, double features, closing credits. Restraint over exclamation — one sharp image beats three exclamation points. No emoji.
+3. HIGHLIGHT TAGS: Wrap ALL numbers, times, and stats in <highlight>tags</highlight> for visual impact.
+4. WATCH TIME: Convert minutes to readable units (days, hours, minutes) — never show raw minutes.
+5. SERVER REFERENCES: Use the server name only (e.g., "MikeFlix") — never say "Your Plex server" or "Your server"; the viewer does not own the server.
+6. ACCURACY: Use only the real statistics provided. Never invent numbers, titles, or events.
 
-1. PERSON: Always use 2nd person ("you", "your") - never 3rd person ("they", "their")
+=== WHAT YOU WRITE ===
 
-2. TONE: Fun, energetic, celebratory - use creative comparisons and metaphors
+You return a JSON object with four parts (the exact shape is enforced automatically — focus on the writing):
 
-3. HIGHLIGHT TAGS: Wrap ALL numbers, times, and stats in <highlight>tags</highlight> for visual impact
+**archetype** — Choose the one viewer archetype from the provided candidate list whose motif is best supported by the data (viewing hours, streaks, rewatch behavior, breadth vs. depth, weekend share). Set "id" to its exact id. Write:
+- "tagline": one marquee-worthy line that captures why this is them (no more than ~10 words).
+- "dedication": 2-3 sentences in the style of an award citation, grounded in their actual numbers. This is the emotional peak of the experience — make it land.
 
-4. WATCH TIME: Convert minutes to readable units (days, hours, minutes) - never show raw minutes
+**narratives** — One short passage (1-3 sentences each) that accompanies a stat-filled slide. The numbers are displayed separately; your text provides the story around them:
+- "opening": the curtain-raiser. Welcome them to their year-in-review premiere.
+- "totalWatchTime": their total hours on screen this year.
+- "movies": their film count and film watch time.
+- "shows": their series, episode count, and series watch time.
+- "topMovies": introduces their most-watched films ("top billing").
+- "topShows": introduces their most-watched series.
+- "streaksAndPatterns": their longest daily streak, peak viewing hour, and weekly rhythm.
+- "monthlyJourney": their year traced month by month — name an arc, a peak, or a quiet stretch.
+- "percentile": their standing among the server's audience (null if no percentile data was provided).
+- "serverStats": a nod to the server behind the curtain — its library and storage (null if no server data was provided).
+- "overseerr": their media requests — what they brought to the library (null if no request data was provided).
+- "finale": the closing credits. Thank them, land one last image, and hint at next year's sequel.
 
-5. SERVER REFERENCES: Use server name only (e.g., the server name provided) - never say "Your Plex server" or "Your server"
+**insights** —
+- "personality": a one-line viewing personality description.
+- "topGenre": your best inference of their most-watched genre from the titles and request data provided.
+- "bingeWatcher": true if any show has episodesWatched > 20, else false.
+- "discoveryScore": min(100, max(0, floor((moviesWatched + showsWatched) / 10))).
+- "funFacts": 3-7 standalone facts, each a single sentence, 2nd person, with <highlight>tags</highlight> around every number. Mix viewing-habit facts with server-library facts when server data is available.
 
-=== SECTION REQUIREMENTS ===
+**summary** — 2-3 shareable sentences capturing the most impressive stats of their year, written to be posted publicly. Include <highlight>tags</highlight> around numbers.
 
-HERO SECTION:
-- Content: 2-3 exciting sentences with bold statements or engaging questions
-- Style: Energetic, celebratory, use creative comparisons/metaphors
-- Highlight tags: Wrap ALL numbers and stats (use 3-5+ highlights)
-- Prominent Stat: REQUIRED in data object:
-  * "value": Most impressive number (watch time in days, movies watched, etc.)
-  * "label": Short label ("days", "movies", "hours", "episodes")
-  * "description": Brief context ("Total viewing time", "Movies completed", etc.)
-
-ANIMATION DELAY RULES:
-- Hero section: Always use "animationDelay": 0 (appears first)
-- Other sections: Calculate delays based on content length to pace the reading experience
-- Simple formula: Estimate reading time (words ÷ 200 × 60 × 1000ms) × 1.5, then add to previous section's delay
-- Minimum delay between sections: 2000ms (2 seconds)
-- For list sections (top-movies, top-shows, fun-facts): Add extra 2000-3000ms for scanning
-
-FUN-FACTS SECTION:
-- MUST be the last section
-- Combine viewing habit facts with server library info (if available)
-- Reference server by name only, NOT "Your Plex server"
-
-=== OUTPUT FORMAT ===
-
-Generate a JSON response with the following structure. Make it fun, engaging, and personalized:
-
-**IMPORTANT: The JSON structure below shows the REQUIRED FORMAT. DO NOT copy example values - use YOUR actual statistics!**
-
-**Key Requirements:**
-- Hero section first (animationDelay: 0), fun-facts section last
-- Include only relevant sections (e.g., overseerr-stats only if overseerrStats data exists)
-- Use actual movie/show objects from statistics in data.movies and data.shows arrays
-- Calculate bingeWatcher: true if any show has episodesWatched > 20, else false
-- Calculate discoveryScore: min(100, max(0, floor((moviesWatched + showsWatched) / 10)))
-- Calculate animation delays based on content length (not example values)
-
-**TOP MOVIES/TV SHOWS FORMATTING:**
-- For "top-movies" section, the "data.movies" array must contain objects with:
-  * "title" (string, required): The movie title exactly as provided in statistics
-  * "year" (number, optional): Release year if available
-  * "watchTime" (number, required): Watch time in MINUTES (use the exact value from statistics.topMovies)
-  * Optional fields: "playCount", "rating", "ratingKey" (include if available in statistics)
-
-- For "top-shows" section, the "data.shows" array must contain objects with:
-  * "title" (string, required): The show title exactly as provided in statistics
-  * "year" (number, optional): Release year if available
-  * "watchTime" (number, required): Watch time in MINUTES (use the exact value from statistics.topShows)
-  * "episodesWatched" (number, required): Number of episodes watched (use the exact value from statistics.topShows)
-  * Optional fields: "playCount", "rating", "ratingKey" (include if available in statistics)
-
-- IMPORTANT: Use the EXACT objects from statistics.topMovies and statistics.topShows arrays - do not modify titles, watch times, or episode counts. Include all top 5 items (or fewer if less than 5 available).
-
-**FUN FACTS FORMATTING:**
-- For "fun-facts" section, the "data.facts" array must contain an array of strings (string[])
-- Each fact should be:
-  * A single, complete sentence (or short phrase) that's fun and engaging
-  * Written in 2nd person ("you", "your") - never 3rd person
-  * Use <highlight>tags</highlight> around ALL numbers, times, and stats for visual impact
-  * Be celebratory and playful - make it feel like a fun discovery
-  * Include 3-7 facts total (more if serverStats are available)
-  * Mix viewing habit facts (movies watched, watch time, top content) with server library facts (if serverStats available)
-  * When referencing server stats, use the server name only (e.g., "{{serverName}} has <highlight>10,000</highlight> movies") - never say "Your Plex server"
-  * Convert watch times to readable units (days, hours, minutes) - never show raw minutes
-  * Examples:
-    - "You watched <highlight>150</highlight> movies and <highlight>25</highlight> shows this year!"
-    - "Your total watch time was <highlight>67 days, 3 hours</highlight> - that's more than 2 months!"
-    - "Your most watched movie was <highlight>The Matrix</highlight> with <highlight>5</highlight> viewings"
-    - "{{serverName}} has <highlight>10,000</highlight> movies in its library - and you've watched <highlight>150</highlight> of them!"
-
-**INSIGHTS.FUNFACTS FORMATTING:**
-- The "insights.funFacts" array must contain an array of strings (string[])
-- Each fact should follow the same formatting rules as "data.facts" in the fun-facts section:
-  * A single, complete sentence (or short phrase) that's fun and engaging
-  * Written in 2nd person ("you", "your") - never 3rd person
-  * Use <highlight>tags</highlight> around ALL numbers, times, and stats for visual impact
-  * Be celebratory and playful - make it feel like a fun discovery
-  * Include 2-5 facts total (shorter than the fun-facts section)
-  * Focus on viewing habit facts (movies watched, watch time, top content)
-  * Convert watch times to readable units (days, hours, minutes) - never show raw minutes
-  * Examples:
-    - "You watched <highlight>150</highlight> movies and <highlight>25</highlight> shows this year!"
-    - "Your total watch time was <highlight>67 days, 3 hours</highlight> - that's more than 2 months!"
-    - "Your most watched movie was <highlight>The Matrix</highlight> with <highlight>5</highlight> viewings"
-
-{
-  "sections": [
-    {
-      "id": "hero",
-      "type": "hero",
-      "title": "Your [YEAR] Plex Year",
-      "subtitle": "A personalized look at your viewing habits",
-      "content": "Your 2-3 exciting, high-impact sentences with highlights go here. Make them energetic and celebratory!",
-      "data": {
-        "prominentStat": {
-          "value": 67,
-          "label": "days",
-          "description": "Total viewing time"
-        }
-      },
-      "animationDelay": 0
-    },
-    {
-      "id": "total-watch-time",
-      "type": "total-watch-time",
-      "title": "You watched...",
-      "subtitle": "Total viewing time",
-      "content": "A fun, engaging description of your total watch time with exciting comparisons. Be playful and celebratory! Always include explicit units (days, hours, minutes) when mentioning watch times. Use <highlight>tags</highlight> around ALL numbers!",
-      "animationDelay": 2000
-    },
-    {
-      "id": "movies-breakdown",
-      "type": "movies-breakdown",
-      "title": "Movie Marathon",
-      "subtitle": "Your movie viewing stats",
-      "content": "A fun, playful message about your movie watching habits. Celebrate your cinematic journey! Use <highlight>tags</highlight> around all numbers!",
-      "animationDelay": 4000
-    },
-    {
-      "id": "shows-breakdown",
-      "type": "shows-breakdown",
-      "title": "Binge Watcher",
-      "subtitle": "Your show viewing stats",
-      "content": "A fun, playful message about your show watching habits. Celebrate your binge-watching achievements! Use <highlight>tags</highlight> around all numbers!",
-      "animationDelay": 6000
-    },
-    {
-      "id": "top-movies",
-      "type": "top-movies",
-      "title": "Your Top Movies",
-      "subtitle": "The films you couldn't stop watching",
-      "content": "A fun, energetic description of your top movies with playful insights. Make it exciting! Use <highlight>tags</highlight> around all numbers!",
-      "data": {
-        "movies": [
-          {
-            "title": "Movie Title",
-            "year": 2023,
-            "watchTime": 180
-          }
-        ]
-      },
-      "animationDelay": 8000
-    },
-    {
-      "id": "top-shows",
-      "type": "top-shows",
-      "title": "Your Top Shows",
-      "subtitle": "The series that kept you coming back",
-      "content": "A fun, energetic description of your top shows with playful insights. Celebrate your binge-watching! Use <highlight>tags</highlight> around all numbers!",
-      "data": {
-        "shows": [
-          {
-            "title": "Show Title",
-            "year": 2023,
-            "watchTime": 1200,
-            "episodesWatched": 10
-          }
-        ]
-      },
-      "animationDelay": 10000
-    },
-    {
-      "id": "insights",
-      "type": "insights",
-      "title": "Your Viewing Personality",
-      "subtitle": "What your stats say about you",
-      "content": "A fun, personalized insight paragraph (3-4 sentences) about your viewing personality. Be playful and celebratory! Use <highlight>tags</highlight> around all numbers!",
-      "animationDelay": 12000
-    },
-    {
-      "id": "fun-facts",
-      "type": "fun-facts",
-      "title": "Fun Facts & Server Stats",
-      "subtitle": "Did you know?",
-      "content": "A fun, engaging introductory message about interesting facts from your viewing habits. Make it exciting and playful! Use <highlight>tags</highlight> around all numbers!",
-      "data": {
-        "facts": [
-          "You watched <highlight>150</highlight> movies this year!",
-          "Your total watch time was <highlight>67 days</highlight> - that's more than 2 months!",
-          "Your most watched movie was <highlight>The Matrix</highlight> with <highlight>5</highlight> viewings"
-        ]
-      },
-      "animationDelay": 14000
-    }
-  ],
-  "insights": {
-    "personality": "A short personality description",
-    "topGenre": "Your most watched genre",
-    "bingeWatcher": false,
-    "discoveryScore": 0,
-    "funFacts": [
-      "You watched <highlight>150</highlight> movies this year!",
-      "Your total watch time was <highlight>67 days</highlight>!"
-    ]
-  },
-  "summary": "A concise, shareable summary (2-3 sentences) highlighting the most impressive or interesting stats from your year. This will be used for social sharing, so make it engaging, fun, and celebratory! Include key numbers like total watch time, top movie/show, or interesting comparisons. Use <highlight>tags</highlight> around all numbers!"
-}
-
-=== OUTPUT REQUIREMENTS ===
-
-**CRITICAL:**
-- Use REAL statistics from the data provided - NOT example values
-- Write personalized content - NOT placeholder text
-- Calculate animation delays based on content length - NOT example delays
-- Include actual movie/show objects in data arrays - NOT empty arrays
-- Return ONLY valid JSON - no markdown, no comments, no explanatory text
-- Always respond with valid JSON only`
+If a narrative's underlying data was not provided in the statistics, set that narrative to null rather than inventing content.`
 }
 
 /**
@@ -431,6 +274,10 @@ Here are the viewing statistics for {{userName}}:
 **Top Shows (by watch time - all times in minutes):**
 {{topShowsList}}
 
+{{derivedStatsSection}}
+
+{{percentileSection}}
+
 {{leaderboardSection}}
 
 {{serverStatsSection}}
@@ -443,6 +290,9 @@ Here are the viewing statistics for {{userName}}:
 - Server name: {{serverName}}
 - Binge watcher calculation: {{bingeWatcher}} (true if any show has episodesWatched > 20)
 - Discovery score: {{discoveryScore}} (calculated as min(100, max(0, floor((moviesWatched + showsWatched) / 10))))
+
+**Archetype Candidates (choose exactly one id):**
+{{archetypeCandidates}}
 
 Generate the personalized Plex Wrapped content based on these statistics.`
 }
@@ -489,6 +339,12 @@ export function getAvailablePlaceholders(): Array<{ placeholder: string; descrip
     { placeholder: "{{topShowsList}}", description: "Formatted list of top 5 shows" },
     { placeholder: "{{topMoviesJson}}", description: "JSON array of top 5 movies" },
     { placeholder: "{{topShowsJson}}", description: "JSON array of top 5 shows" },
+    { placeholder: "{{longestStreak}}", description: "Longest consecutive-day watch streak" },
+    { placeholder: "{{peakHour}}", description: "Hour of day with the most plays" },
+    { placeholder: "{{peakDayOfWeek}}", description: "Day of week with the most watch time" },
+    { placeholder: "{{derivedStatsSection}}", description: "Viewing patterns section: streaks, peak hour, weekly rhythm (empty if not available)" },
+    { placeholder: "{{percentileSection}}", description: "Server watch-time percentile section (empty if not available)" },
+    { placeholder: "{{archetypeCandidates}}", description: "The curated archetype list the LLM chooses from" },
     { placeholder: "{{leaderboardSection}}", description: "Leaderboard statistics section (empty if not available)" },
     { placeholder: "{{serverStatsSection}}", description: "Server statistics section (empty if not available)" },
     { placeholder: "{{overseerrStatsSection}}", description: "Overseerr statistics section (empty if not available)" },
@@ -496,6 +352,11 @@ export function getAvailablePlaceholders(): Array<{ placeholder: string; descrip
     { placeholder: "{{serverName}}", description: "Server name (empty if not available)" },
     { placeholder: "{{bingeWatcher}}", description: "'true' or 'false' based on viewing habits" },
     { placeholder: "{{discoveryScore}}", description: "Discovery score (0-100)" },
+    { placeholder: "{{overseerrSectionJson}}", description: "DEPRECATED — resolves to empty (output format is now schema-enforced)" },
+    { placeholder: "{{overseerrAnimationDelay}}", description: "DEPRECATED — resolves to empty (pacing is viewer-owned)" },
+    { placeholder: "{{insightsAnimationDelay}}", description: "DEPRECATED — resolves to empty (pacing is viewer-owned)" },
+    { placeholder: "{{funFactsAnimationDelay}}", description: "DEPRECATED — resolves to empty (pacing is viewer-owned)" },
+    { placeholder: "{{serverStatsFacts}}", description: "DEPRECATED — resolves to empty (output format is now schema-enforced)" },
+    { placeholder: "{{serverStatsContent}}", description: "DEPRECATED — resolves to empty (output format is now schema-enforced)" },
   ]
 }
-

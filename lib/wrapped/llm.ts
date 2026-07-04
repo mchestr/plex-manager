@@ -5,6 +5,7 @@
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 import { callOpenAI, LLMConfig } from "@/lib/wrapped/api-calls"
+import { assembleWrappedData } from "@/lib/wrapped/assemble-wrapped"
 import { generateMockWrappedData } from "@/lib/wrapped/mock-data"
 import { generateWrappedPrompt } from "@/lib/wrapped/prompt-template"
 import { WrappedData, WrappedStatistics } from "@/types/wrapped"
@@ -103,14 +104,23 @@ export async function generateWrappedWithLLM(
     // Currently only OpenAI is supported, but the structure allows for easy extension
     let llmResult
     if (config.provider === "openai") {
-      llmResult = await callOpenAI(config, prompt, statistics, year, userId, userName)
+      llmResult = await callOpenAI(config, prompt)
     } else {
       return { success: false, error: "Unsupported LLM provider" }
     }
 
-    if (!llmResult.success || !llmResult.data) {
-      return llmResult
+    if (!llmResult.success || !llmResult.output) {
+      return { success: false, error: llmResult.error }
     }
+
+    // Merge the LLM's creative output with code-computed statistics
+    const wrappedData = assembleWrappedData({
+      output: llmResult.output,
+      statistics,
+      userId,
+      userName,
+      year,
+    })
 
     // Save token usage to database for cost tracking
     // Always create a new record to track all usage, including regenerations
@@ -123,7 +133,7 @@ export async function generateWrappedWithLLM(
             provider: config.provider,
             model: config.model || "gpt-4",
             prompt,
-            response: llmResult.rawResponse || JSON.stringify(llmResult.data),
+            response: llmResult.rawResponse || JSON.stringify(wrappedData),
             promptTokens: llmResult.tokenUsage.promptTokens,
             completionTokens: llmResult.tokenUsage.completionTokens,
             totalTokens: llmResult.tokenUsage.totalTokens,
@@ -136,7 +146,11 @@ export async function generateWrappedWithLLM(
       }
     }
 
-    return llmResult
+    return {
+      success: true,
+      data: wrappedData,
+      tokenUsage: llmResult.tokenUsage,
+    }
   } catch (error) {
     logger.error("Error generating wrapped content", error)
     return {

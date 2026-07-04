@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
+import { ShareCardDownload } from "@/components/wrapped/share-card-download"
 import { WrappedShareButton } from "@/components/wrapped/wrapped-share-button"
 
 interface WrappedViewerNavigationProps {
@@ -47,12 +48,13 @@ export function WrappedViewerNavigation({
             stiffness: 200,
             damping: 15,
           }}
-          className="flex-1 flex justify-center"
+          className="flex-1 flex flex-wrap justify-center gap-3"
         >
           <WrappedShareButton
             shareToken={shareToken}
             year={year}
           />
+          <ShareCardDownload shareToken={shareToken} year={year} />
         </motion.div>
       )}
       {currentSectionIndex < totalSections - 1 ? (

@@ -212,7 +212,7 @@ describe('testPromptTemplate', () => {
       const mockRenderedPrompt = 'Rendered prompt'
       const mockLLMResponse = {
         success: true,
-        data: { sections: [] },
+        output: { archetype: { id: 'curator' } },
         rawResponse: 'Raw response',
         tokenUsage: {
           promptTokens: 100,
@@ -241,12 +241,10 @@ describe('testPromptTemplate', () => {
           provider: 'openai',
           apiKey: 'test-api-key',
           model: 'gpt-4',
+          temperature: undefined,
+          maxTokens: undefined,
         },
-        mockRenderedPrompt,
-        mockStatistics,
-        2024,
-        'user-1',
-        'Test User'
+        mockRenderedPrompt
       )
     })
 
@@ -254,7 +252,7 @@ describe('testPromptTemplate', () => {
       const mockRenderedPrompt = 'Rendered prompt'
       const mockLLMResponse = {
         success: true,
-        data: { sections: [] },
+        output: { archetype: { id: 'curator' } },
         rawResponse: 'Raw response',
         tokenUsage: {
           promptTokens: 100,
@@ -279,10 +277,6 @@ describe('testPromptTemplate', () => {
         expect.objectContaining({
           model: 'gpt-3.5-turbo',
         }),
-        expect.any(String),
-        expect.any(Object),
-        expect.any(Number),
-        expect.any(String),
         expect.any(String)
       )
     })
@@ -291,7 +285,7 @@ describe('testPromptTemplate', () => {
       const mockRenderedPrompt = 'Rendered prompt'
       const mockLLMResponse = {
         success: true,
-        data: { sections: [] },
+        output: { archetype: { id: 'curator' } },
         rawResponse: 'Raw response',
         tokenUsage: {
           promptTokens: 100,
@@ -332,7 +326,7 @@ describe('testPromptTemplate', () => {
       const mockRenderedPrompt = 'Rendered prompt'
       const mockLLMResponse = {
         success: true,
-        data: { sections: [] },
+        output: { archetype: { id: 'curator' } },
         rawResponse: 'Raw response',
         tokenUsage: {
           promptTokens: 100,
@@ -392,10 +386,10 @@ describe('testPromptTemplate', () => {
 
     it('should use JSON.stringify when rawResponse is missing', async () => {
       const mockRenderedPrompt = 'Rendered prompt'
-      const mockData = { sections: [{ id: 'hero' }] }
+      const mockData = { archetype: { id: 'curator' } }
       const mockLLMResponse = {
         success: true,
-        data: mockData,
+        output: mockData,
         tokenUsage: {
           promptTokens: 100,
           completionTokens: 50,

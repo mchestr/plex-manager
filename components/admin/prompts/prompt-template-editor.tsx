@@ -488,6 +488,17 @@ export function PromptTemplateEditor({ template, userWrapped, userName = "User" 
         </div>
       )}
 
+      <div className="bg-cyan-500/10 border-l-4 border-cyan-500/50 text-cyan-300 px-4 py-3 rounded-r-lg flex items-start gap-3">
+        <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <p className="text-sm">
+          The output format is now enforced automatically by the system — templates
+          should contain only statistics data and tone guidance. JSON structure
+          instructions and animation delays in templates are ignored.
+        </p>
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Basic Info Section */}
         <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6 shadow-lg shadow-slate-900/20">

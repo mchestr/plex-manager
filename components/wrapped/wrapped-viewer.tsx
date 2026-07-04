@@ -4,6 +4,8 @@ import { WrappedData, WrappedSection } from "@/types/wrapped"
 import { AnimatePresence, motion } from "framer-motion"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { SpaceBackground } from "@/components/setup/setup-wizard/space-background"
+import { CinematicBackground } from "@/components/wrapped/cinematic/cinematic-background"
+import { getSlideDuration } from "@/components/wrapped/cinematic/theme"
 import { filterSections } from "@/components/wrapped/wrapped-section-filter"
 import { SectionRenderer } from "@/components/wrapped/wrapped-sections"
 import { WrappedViewerNavigation } from "@/components/wrapped/wrapped-viewer-navigation"
@@ -60,17 +62,22 @@ export function WrappedViewer({
   }
 
   const sections = sectionsDataRef.current
+  const isCinematic = wrappedData.version === 2
 
-  // Calculate delay for current section
+  // Calculate delay for current section. v2: pacing is owned by the viewer,
+  // derived from slide type. v1: honor the stored animationDelay.
   const getSectionDelay = useCallback((index: number) => {
     if (index >= sections.length - 1) return 0
     const currentSection = sections[index]
     if (!currentSection) return 8000
+    if (isCinematic) {
+      return getSlideDuration(currentSection.type)
+    }
     const baseDelay = currentSection.animationDelay || 8000
     return index === 0
       ? baseDelay + 2000  // First section: 10s total (8s base + 2s buffer)
       : baseDelay + 4000   // Subsequent sections: 12s total (8s base + 4s buffer)
-  }, [sections])
+  }, [sections, isCinematic])
 
   // Update progress bar based on elapsed time
   useEffect(() => {
@@ -151,7 +158,7 @@ export function WrappedViewer({
   if (showAll) {
     return (
       <div className="min-h-screen relative py-12 px-4 sm:px-6 lg:px-8">
-        <SpaceBackground />
+        {isCinematic ? <CinematicBackground /> : <SpaceBackground />}
         <div className="max-w-6xl mx-auto relative z-10 space-y-12">
           {sections.map((section, idx) => (
             <motion.div
@@ -159,7 +166,9 @@ export function WrappedViewer({
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: idx * 0.1 }}
-              className="bg-slate-900/90 border border-cyan-500/20 shadow-2xl rounded-lg p-8"
+              className={isCinematic
+                ? "bg-stage-panel/60 border border-gold/15 shadow-2xl rounded-lg p-8"
+                : "bg-slate-900/90 border border-cyan-500/20 shadow-2xl rounded-lg p-8"}
               style={{ backdropFilter: "blur(8px)" }}
             >
               <SectionRenderer section={section} wrappedData={wrappedData} sectionIndex={idx} />
@@ -184,7 +193,7 @@ export function WrappedViewer({
     }
     return (
       <div className="min-h-screen relative py-12 px-4 sm:px-6 lg:px-8">
-        <SpaceBackground />
+        {isCinematic ? <CinematicBackground /> : <SpaceBackground />}
         <div className="max-w-4xl mx-auto relative z-10">
           <div className="bg-slate-900/90 border border-cyan-500/20 shadow-2xl rounded-lg p-8 md:p-12 text-center">
             <p className="text-lg text-slate-300">No sections available to display</p>
@@ -202,7 +211,7 @@ export function WrappedViewer({
   if (!currentSection) {
     return (
       <div className="min-h-screen relative py-12 px-4 sm:px-6 lg:px-8">
-        <SpaceBackground />
+        {isCinematic ? <CinematicBackground /> : <SpaceBackground />}
         <div className="max-w-4xl mx-auto relative z-10">
           <div className="bg-slate-900/90 border border-cyan-500/20 shadow-2xl rounded-lg p-8 md:p-12 text-center">
             <p className="text-lg text-slate-300">Current section unavailable</p>
@@ -214,7 +223,7 @@ export function WrappedViewer({
 
   return (
     <div className="min-h-screen relative py-8 sm:py-12 px-4 sm:px-6 lg:px-8 pb-24 md:pb-12">
-      <SpaceBackground />
+      {isCinematic ? <CinematicBackground /> : <SpaceBackground />}
       <div className="max-w-4xl mx-auto relative z-10">
         <WrappedViewerProgress
           progress={progress}
@@ -235,8 +244,10 @@ export function WrappedViewer({
               stiffness: 100,
               damping: 20
             }}
-            className="bg-slate-900/90 border border-cyan-500/20 shadow-2xl rounded-lg p-6 sm:p-8 md:p-12"
-            style={{ backdropFilter: "blur(8px)", minHeight: "50vh" }}
+            className={isCinematic
+              ? "bg-transparent rounded-lg p-6 sm:p-8 md:p-12 flex flex-col justify-center"
+              : "bg-slate-900/90 border border-cyan-500/20 shadow-2xl rounded-lg p-6 sm:p-8 md:p-12"}
+            style={isCinematic ? { minHeight: "60vh" } : { backdropFilter: "blur(8px)", minHeight: "50vh" }}
           >
             <SectionRenderer section={currentSection} wrappedData={wrappedData} sectionIndex={currentSectionIndex} />
           </motion.div>
