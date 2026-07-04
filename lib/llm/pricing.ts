@@ -10,7 +10,16 @@
  * Format: { input: price per 1M tokens, output: price per 1M tokens, cachedInput?: price per 1M tokens }
  */
 export const MODEL_PRICING: Record<string, { input: number; output: number; cachedInput?: number }> = {
-  // GPT-5 models (Standard tier)
+  // GPT-5.5 / GPT-5.4 models (Standard tier, current catalog as of July 2026)
+  "gpt-5.5": { input: 5.0, output: 30.0, cachedInput: 0.5 },
+  "gpt-5.5-pro": { input: 30.0, output: 180.0 },
+  "gpt-5.4": { input: 2.5, output: 15.0, cachedInput: 0.25 },
+  "gpt-5.4-mini": { input: 0.75, output: 4.5, cachedInput: 0.075 },
+  "gpt-5.4-nano": { input: 0.2, output: 1.25, cachedInput: 0.02 },
+  "gpt-5.4-pro": { input: 30.0, output: 180.0 },
+  "gpt-5.3-codex": { input: 1.75, output: 14.0, cachedInput: 0.175 },
+
+  // GPT-5 models (legacy pricing kept for historical LLMUsage cost math)
   "gpt-5": { input: 1.25, output: 10.0, cachedInput: 0.125 },
   "gpt-5-mini": { input: 0.25, output: 2.0, cachedInput: 0.025 },
   "gpt-5-nano": { input: 0.05, output: 0.4, cachedInput: 0.005 },
