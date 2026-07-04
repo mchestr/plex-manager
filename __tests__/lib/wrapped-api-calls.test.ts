@@ -11,31 +11,27 @@ jest.mock('@/lib/admin', () => ({
   requireAdmin: jest.fn(),
 }))
 
-import { callOpenAI } from '@/lib/wrapped/api-calls'
-import { WrappedStatistics } from '@/types/wrapped'
-import { parseWrappedResponse } from '@/lib/wrapped/prompt'
-
-// Mock dependencies
-jest.mock('@/lib/wrapped/prompt', () => ({
-  parseWrappedResponse: jest.fn(),
-}))
-
 jest.mock('@/lib/utils', () => ({
   getBaseUrl: jest.fn(() => 'https://example.com'),
 }))
 
-const mockStatistics: WrappedStatistics = {
-  totalWatchTime: {
-    total: 1000,
-    movies: 500,
-    shows: 500,
-  },
-  moviesWatched: 10,
-  showsWatched: 5,
-  episodesWatched: 50,
-  topMovies: [],
-  topShows: [],
-  watchTimeByMonth: [],
+import { callOpenAI, supportsStructuredOutputs } from '@/lib/wrapped/api-calls'
+import { buildValidOutput } from '@/lib/wrapped/__tests__/fixtures'
+
+const validContent = () => JSON.stringify(buildValidOutput())
+
+function mockFetchResponse(content: string, finishReason = 'stop') {
+  ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+    ok: true,
+    json: async () => ({
+      choices: [{ message: { content }, finish_reason: finishReason }],
+      usage: {
+        prompt_tokens: 1000,
+        completion_tokens: 500,
+        total_tokens: 1500,
+      },
+    }),
+  })
 }
 
 describe('LLM API Calls', () => {
@@ -45,78 +41,45 @@ describe('LLM API Calls', () => {
   })
 
   describe('callOpenAI', () => {
-    it('should successfully call OpenAI API and parse response', async () => {
-      const mockResponse = {
-        choices: [
-          {
-            message: {
-              content: JSON.stringify({ sections: [], summary: 'Test summary' }),
-            },
-            finish_reason: 'stop',
-          },
-        ],
-        usage: {
-          prompt_tokens: 1000,
-          completion_tokens: 500,
-          total_tokens: 1500,
-        },
-      }
-
-      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
-      })
-
-      ;(parseWrappedResponse as jest.Mock).mockReturnValue({
-        sections: [],
-        summary: 'Test summary',
-      })
+    it('should successfully call OpenAI API and validate the response', async () => {
+      mockFetchResponse(validContent())
 
       const result = await callOpenAI(
-        {
-          provider: 'openai',
-          apiKey: 'test-key',
-          model: 'gpt-4',
-        },
-        'test prompt',
-        mockStatistics,
-        2024,
-        'user-1',
-        'Test User'
+        { provider: 'openai', apiKey: 'test-key', model: 'gpt-4' },
+        'test prompt'
       )
 
       expect(result.success).toBe(true)
-      expect(result.data).toBeDefined()
-      expect(result.tokenUsage).toBeDefined()
+      expect(result.output?.archetype.id).toBe('midnight-marathoner')
       expect(result.tokenUsage?.promptTokens).toBe(1000)
       expect(result.tokenUsage?.completionTokens).toBe(500)
       expect(result.tokenUsage?.totalTokens).toBe(1500)
-      expect(result.rawResponse).toBe(mockResponse.choices[0].message.content)
-      expect(parseWrappedResponse).toHaveBeenCalled()
+      expect(result.rawResponse).toBe(validContent())
+    })
+
+    it('should fail loudly when the response violates the schema', async () => {
+      mockFetchResponse(JSON.stringify({ sections: [], summary: 'old format' }))
+
+      const result = await callOpenAI(
+        { provider: 'openai', apiKey: 'test-key', model: 'gpt-4' },
+        'test prompt'
+      )
+
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('schema validation')
+      expect(result.rawResponse).toBeDefined()
     })
 
     it('should handle API errors', async () => {
       ;(global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: false,
         statusText: 'Unauthorized',
-        json: async () => ({
-          error: {
-            message: 'Invalid API key',
-          },
-        }),
+        json: async () => ({ error: { message: 'Invalid API key' } }),
       })
 
       const result = await callOpenAI(
-        {
-          provider: 'openai',
-          apiKey: 'invalid-key',
-          model: 'gpt-4',
-        },
-        'test prompt',
-        mockStatistics,
-        2024,
-        'user-1',
-        'Test User'
+        { provider: 'openai', apiKey: 'invalid-key', model: 'gpt-4' },
+        'test prompt'
       )
 
       expect(result.success).toBe(false)
@@ -124,38 +87,11 @@ describe('LLM API Calls', () => {
     })
 
     it('should handle truncated responses', async () => {
-      const mockResponse = {
-        choices: [
-          {
-            message: {
-              content: JSON.stringify({ sections: [] }).slice(0, -10), // Incomplete JSON
-            },
-            finish_reason: 'length',
-          },
-        ],
-        usage: {
-          prompt_tokens: 1000,
-          completion_tokens: 500,
-          total_tokens: 1500,
-        },
-      }
-
-      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
-      })
+      mockFetchResponse(validContent().slice(0, -10), 'length')
 
       const result = await callOpenAI(
-        {
-          provider: 'openai',
-          apiKey: 'test-key',
-          model: 'gpt-4',
-        },
-        'test prompt',
-        mockStatistics,
-        2024,
-        'user-1',
-        'Test User'
+        { provider: 'openai', apiKey: 'test-key', model: 'gpt-4' },
+        'test prompt'
       )
 
       expect(result.success).toBe(false)
@@ -163,38 +99,11 @@ describe('LLM API Calls', () => {
     })
 
     it('should handle incomplete JSON responses', async () => {
-      const mockResponse = {
-        choices: [
-          {
-            message: {
-              content: '{"sections": [', // Incomplete JSON
-            },
-            finish_reason: 'stop',
-          },
-        ],
-        usage: {
-          prompt_tokens: 1000,
-          completion_tokens: 500,
-          total_tokens: 1500,
-        },
-      }
-
-      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
-      })
+      mockFetchResponse('{"archetype": {')
 
       const result = await callOpenAI(
-        {
-          provider: 'openai',
-          apiKey: 'test-key',
-          model: 'gpt-4',
-        },
-        'test prompt',
-        mockStatistics,
-        2024,
-        'user-1',
-        'Test User'
+        { provider: 'openai', apiKey: 'test-key', model: 'gpt-4' },
+        'test prompt'
       )
 
       expect(result.success).toBe(false)
@@ -202,36 +111,17 @@ describe('LLM API Calls', () => {
     })
 
     it('should handle missing content in response', async () => {
-      const mockResponse = {
-        choices: [
-          {
-            message: {},
-            finish_reason: 'stop',
-          },
-        ],
-        usage: {
-          prompt_tokens: 1000,
-          completion_tokens: 500,
-          total_tokens: 1500,
-        },
-      }
-
       ;(global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
-        json: async () => mockResponse,
+        json: async () => ({
+          choices: [{ message: {}, finish_reason: 'stop' }],
+          usage: {},
+        }),
       })
 
       const result = await callOpenAI(
-        {
-          provider: 'openai',
-          apiKey: 'test-key',
-          model: 'gpt-4',
-        },
-        'test prompt',
-        mockStatistics,
-        2024,
-        'user-1',
-        'Test User'
+        { provider: 'openai', apiKey: 'test-key', model: 'gpt-4' },
+        'test prompt'
       )
 
       expect(result.success).toBe(false)
@@ -243,12 +133,8 @@ describe('LLM API Calls', () => {
         {
           provider: 'openai',
           apiKey: 'test-key',
-        } as any, // TypeScript will complain, but we're testing runtime behavior
-        'test prompt',
-        mockStatistics,
-        2024,
-        'user-1',
-        'Test User'
+        } as never, // testing runtime behavior without a model
+        'test prompt'
       )
 
       expect(result.success).toBe(false)
@@ -257,42 +143,11 @@ describe('LLM API Calls', () => {
     })
 
     it('should send correct request format', async () => {
-      const mockResponse = {
-        choices: [
-          {
-            message: {
-              content: JSON.stringify({ sections: [] }),
-            },
-            finish_reason: 'stop',
-          },
-        ],
-        usage: {
-          prompt_tokens: 1000,
-          completion_tokens: 500,
-          total_tokens: 1500,
-        },
-      }
-
-      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
-      })
-
-      ;(parseWrappedResponse as jest.Mock).mockReturnValue({
-        sections: [],
-      })
+      mockFetchResponse(validContent())
 
       await callOpenAI(
-        {
-          provider: 'openai',
-          apiKey: 'test-key',
-          model: 'gpt-4',
-        },
-        'test prompt',
-        mockStatistics,
-        2024,
-        'user-1',
-        'Test User'
+        { provider: 'openai', apiKey: 'test-key', model: 'gpt-4' },
+        'test prompt'
       )
 
       const fetchCall = (global.fetch as jest.Mock).mock.calls[0]
@@ -306,33 +161,29 @@ describe('LLM API Calls', () => {
       expect(body.messages[0].role).toBe('system')
       expect(body.messages[1].role).toBe('user')
       expect(body.messages[1].content).toBe('test prompt')
+      // gpt-4 does not support structured outputs → plain JSON mode
+      expect(body.response_format).toEqual({ type: 'json_object' })
+    })
+
+    it('should request strict structured outputs for supporting models', async () => {
+      mockFetchResponse(validContent())
+
+      await callOpenAI(
+        { provider: 'openai', apiKey: 'test-key', model: 'gpt-5-mini' },
+        'test prompt'
+      )
+
+      const fetchCall = (global.fetch as jest.Mock).mock.calls[0]
+      const body = JSON.parse(fetchCall[1].body)
+
+      expect(body.response_format.type).toBe('json_schema')
+      expect(body.response_format.json_schema.name).toBe('plex_wrapped')
+      expect(body.response_format.json_schema.strict).toBe(true)
+      expect(body.response_format.json_schema.schema).toBeDefined()
     })
 
     it('should use configured temperature and maxTokens', async () => {
-      const mockResponse = {
-        choices: [
-          {
-            message: {
-              content: JSON.stringify({ sections: [] }),
-            },
-            finish_reason: 'stop',
-          },
-        ],
-        usage: {
-          prompt_tokens: 1000,
-          completion_tokens: 500,
-          total_tokens: 1500,
-        },
-      }
-
-      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
-      })
-
-      ;(parseWrappedResponse as jest.Mock).mockReturnValue({
-        sections: [],
-      })
+      mockFetchResponse(validContent())
 
       await callOpenAI(
         {
@@ -342,11 +193,7 @@ describe('LLM API Calls', () => {
           temperature: 0.9,
           maxTokens: 8000,
         },
-        'test prompt',
-        mockStatistics,
-        2024,
-        'user-1',
-        'Test User'
+        'test prompt'
       )
 
       const fetchCall = (global.fetch as jest.Mock).mock.calls[0]
@@ -357,30 +204,7 @@ describe('LLM API Calls', () => {
     })
 
     it('should use max_completion_tokens for newer models', async () => {
-      const mockResponse = {
-        choices: [
-          {
-            message: {
-              content: JSON.stringify({ sections: [] }),
-            },
-            finish_reason: 'stop',
-          },
-        ],
-        usage: {
-          prompt_tokens: 1000,
-          completion_tokens: 500,
-          total_tokens: 1500,
-        },
-      }
-
-      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
-      })
-
-      ;(parseWrappedResponse as jest.Mock).mockReturnValue({
-        sections: [],
-      })
+      mockFetchResponse(validContent())
 
       await callOpenAI(
         {
@@ -389,11 +213,7 @@ describe('LLM API Calls', () => {
           model: 'gpt-5',
           maxTokens: 5000,
         },
-        'test prompt',
-        mockStatistics,
-        2024,
-        'user-1',
-        'Test User'
+        'test prompt'
       )
 
       const fetchCall = (global.fetch as jest.Mock).mock.calls[0]
@@ -403,5 +223,22 @@ describe('LLM API Calls', () => {
       expect(body.max_tokens).toBeUndefined()
     })
   })
-})
 
+  describe('supportsStructuredOutputs', () => {
+    it.each([
+      ['gpt-4o', true],
+      ['gpt-4o-mini-2024-07-18', true],
+      ['gpt-4.1', true],
+      ['gpt-5', true],
+      ['gpt-5.2-mini', true],
+      ['o3', true],
+      ['o4-mini', true],
+      ['gpt-4', false],
+      ['gpt-4-turbo', false],
+      ['gpt-3.5-turbo', false],
+      ['o1', false],
+    ])('%s → %s', (model, expected) => {
+      expect(supportsStructuredOutputs(model)).toBe(expected)
+    })
+  })
+})

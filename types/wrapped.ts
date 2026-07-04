@@ -2,6 +2,11 @@
  * Type definitions for Plex Wrapped data structure
  */
 
+import type {
+  DerivedStatistics,
+  PercentileResult,
+} from "@/lib/wrapped/derived-statistics"
+
 export interface WrappedStatistics {
   // User watch statistics
   totalWatchTime: {
@@ -125,6 +130,12 @@ export interface WrappedStatistics {
     }
   }>
 
+  // Derived viewing patterns (v2; absent on wrappeds stored before the revamp)
+  derived?: DerivedStatistics
+
+  // Server watch-time percentile (v2; requires leaderboard data)
+  percentile?: PercentileResult
+
   // Additional insights
   longestBinge?: {
     title: string
@@ -169,32 +180,54 @@ export type WrappedSectionData =
   | { facts: string[] } // fun-facts section
   | Record<string, unknown> // other sections may have various data structures
 
+export type WrappedSectionType =
+  // v1 + v2 sections
+  | "hero"
+  | "total-watch-time"
+  | "movies-breakdown"
+  | "shows-breakdown"
+  | "top-movies"
+  | "top-shows"
+  | "server-stats"
+  | "service-stats"
+  | "overseerr-stats"
+  | "insights"
+  | "fun-facts"
+  // v2-only sections
+  | "streaks-patterns"
+  | "monthly-journey"
+  | "percentile"
+  | "archetype-reveal"
+  | "finale"
+
 export interface WrappedSection {
   id: string
-  type:
-    | "hero"
-    | "total-watch-time"
-    | "movies-breakdown"
-    | "shows-breakdown"
-    | "top-movies"
-    | "top-shows"
-    | "server-stats"
-    | "service-stats"
-    | "overseerr-stats"
-    | "insights"
-    | "fun-facts"
+  type: WrappedSectionType
   title: string
   subtitle?: string
   content: string // LLM-generated narrative text
   data?: WrappedSectionData // Section-specific data
-  animationDelay?: number // Delay before showing this section
+  animationDelay?: number // v1 only — v2 pacing is owned by the viewer
+}
+
+export interface WrappedArchetype {
+  id: string
+  name: string
+  tagline: string
+  dedication: string
 }
 
 export interface WrappedData {
+  // Data format version; undefined = v1 (pre-2026 revamp)
+  version?: number
+
   year: number
   userId: string
   userName: string
   generatedAt: string
+
+  // Viewer personality archetype (v2)
+  archetype?: WrappedArchetype
 
   // Raw statistics
   statistics: WrappedStatistics

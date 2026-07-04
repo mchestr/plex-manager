@@ -5,7 +5,8 @@ import { testPromptTemplate } from "@/actions/prompt-test"
 import { useToast } from "@/components/ui/toast"
 import { usePlaygroundState } from "@/hooks/use-playground-state"
 import { estimateCost } from "@/lib/llm/pricing"
-import { parseWrappedResponse } from "@/lib/wrapped/prompt"
+import { assembleWrappedData } from "@/lib/wrapped/assemble-wrapped"
+import { parseWrappedLLMOutput } from "@/lib/wrapped/parse-llm-output"
 import { generateSystemPrompt } from "@/lib/wrapped/prompt-template"
 import { WrappedData, WrappedStatistics } from "@/types/wrapped"
 import { PromptTemplate } from "@/lib/generated/prisma/client"
@@ -243,13 +244,23 @@ export function WrappedPlayground({ templates, initialTemplateId }: WrappedPlayg
 
     try {
       const user = plexUsers.find((u) => u.name === testConfig.userName)
-      const wrappedData = parseWrappedResponse(
-        result.llmResponse,
+      const parseResult = parseWrappedLLMOutput(result.llmResponse)
+      if (!parseResult.success) {
+        // Surface schema issues to the admin for prompt debugging
+        setPreviewError(
+          parseResult.issues?.length
+            ? `${parseResult.error}\n\nAll issues:\n${parseResult.issues.join("\n")}`
+            : parseResult.error
+        )
+        return
+      }
+      const wrappedData = assembleWrappedData({
+        output: parseResult.output,
         statistics,
-        testConfig.year,
-        user?.id || "",
-        testConfig.userName
-      )
+        userId: user?.id || "",
+        userName: testConfig.userName,
+        year: testConfig.year,
+      })
       setPreviewData(wrappedData)
       setShowPreview(true)
       setPreviewError(null)

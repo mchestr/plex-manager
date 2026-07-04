@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma'
 import { generateWrappedPrompt } from '@/lib/wrapped/prompt-template'
 import { callOpenAI } from '@/lib/wrapped/api-calls'
 import { generateMockWrappedData } from '@/lib/wrapped/mock-data'
+import { buildValidOutput } from '@/lib/wrapped/__tests__/fixtures'
 import { WrappedStatistics } from '@/types/wrapped'
 
 // Mock dependencies
@@ -121,13 +122,11 @@ describe('generateWrappedWithLLM', () => {
 
     ;(generateWrappedPrompt as jest.Mock).mockResolvedValue('test prompt')
 
+    const mockOutput = buildValidOutput()
     const mockLLMResponse = {
       success: true,
-      data: {
-        sections: [],
-        summary: 'Test summary',
-      },
-      rawResponse: JSON.stringify({ sections: [], summary: 'Test summary' }),
+      output: mockOutput,
+      rawResponse: JSON.stringify(mockOutput),
       tokenUsage: {
         promptTokens: 1000,
         completionTokens: 500,
@@ -148,18 +147,18 @@ describe('generateWrappedWithLLM', () => {
     )
 
     expect(result.success).toBe(true)
-    expect(result.data).toEqual(mockLLMResponse.data)
+    expect(result.data?.version).toBe(2)
+    expect(result.data?.archetype?.name).toBe('The Midnight Marathoner')
+    expect(result.data?.summary).toBe(mockOutput.summary)
     expect(callOpenAI).toHaveBeenCalledWith(
       {
         provider: 'openai',
         apiKey: 'test-key',
         model: 'gpt-4',
+        temperature: undefined,
+        maxTokens: undefined,
       },
-      'test prompt',
-      mockStatistics,
-      2024,
-      'user-1',
-      'Test User'
+      'test prompt'
     )
     expect(prisma.lLMUsage.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -274,13 +273,11 @@ describe('generateWrappedWithLLM', () => {
 
     ;(generateWrappedPrompt as jest.Mock).mockResolvedValue('test prompt')
 
+    const mockOutput = buildValidOutput()
     const mockLLMResponse = {
       success: true,
-      data: {
-        sections: [],
-        summary: 'Test summary',
-      },
-      rawResponse: JSON.stringify({ sections: [], summary: 'Test summary' }),
+      output: mockOutput,
+      rawResponse: JSON.stringify(mockOutput),
       tokenUsage: {
         promptTokens: 1000,
         completionTokens: 500,

@@ -6,9 +6,12 @@
 import { calculateCost } from "@/lib/llm/pricing"
 import { fetchWithTimeout, isTimeoutError } from "@/lib/utils/fetch-with-timeout"
 import { createLogger } from "@/lib/utils/logger"
-import { parseWrappedResponse } from "@/lib/wrapped/prompt"
+import {
+  WrappedLLMOutput,
+  wrappedOutputJsonSchema,
+} from "@/lib/wrapped/llm-output-schema"
+import { parseWrappedLLMOutput } from "@/lib/wrapped/parse-llm-output"
 import { generateSystemPrompt } from "@/lib/wrapped/prompt-template"
-import { WrappedData, WrappedStatistics } from "@/types/wrapped"
 
 const logger = createLogger("LLM")
 
@@ -28,7 +31,7 @@ export interface LLMConfig {
 
 export interface LLMResponse {
   success: boolean
-  data?: WrappedData
+  output?: WrappedLLMOutput
   error?: string
   rawResponse?: string // Raw response content for database storage
   tokenUsage?: {
@@ -54,15 +57,30 @@ function requiresMaxCompletionTokens(model: string): boolean {
 }
 
 /**
- * Call OpenAI API to generate wrapped content
+ * Determine if a model supports strict structured outputs
+ * (response_format: json_schema). Prefix checks tolerate versioned names.
+ */
+export function supportsStructuredOutputs(model: string): boolean {
+  const modelLower = model.toLowerCase()
+  return (
+    modelLower.startsWith("gpt-4o") ||
+    modelLower.startsWith("gpt-4.1") ||
+    modelLower.startsWith("gpt-5") ||
+    modelLower.startsWith("o3") ||
+    modelLower.startsWith("o4")
+  )
+}
+
+/**
+ * Call OpenAI API to generate the wrapped creative content.
+ *
+ * The response is schema-enforced via structured outputs where the model
+ * supports it, and always Zod-validated. Returns the validated creative
+ * output only — merging with statistics happens in `assembleWrappedData`.
  */
 export async function callOpenAI(
   config: LLMConfig,
-  prompt: string,
-  statistics: WrappedStatistics,
-  year: number,
-  userId: string,
-  userName: string
+  prompt: string
 ): Promise<LLMResponse> {
   if (!config.model) {
     return {
@@ -86,6 +104,21 @@ export async function callOpenAI(
         content: prompt,
       },
     ],
+  }
+
+  // Enforce the output schema at the API level where supported; fall back to
+  // plain JSON mode otherwise. Zod validation happens regardless.
+  if (supportsStructuredOutputs(model)) {
+    requestBody.response_format = {
+      type: "json_schema",
+      json_schema: {
+        name: "plex_wrapped",
+        strict: true,
+        schema: wrappedOutputJsonSchema(),
+      },
+    }
+  } else {
+    requestBody.response_format = { type: "json_object" }
   }
 
   // Only set temperature if provided
@@ -171,7 +204,18 @@ export async function callOpenAI(
       }
     }
 
-    const wrappedData = parseWrappedResponse(content, statistics, year, userId, userName)
+    const parseResult = parseWrappedLLMOutput(content)
+    if (!parseResult.success) {
+      logger.error("LLM response failed validation", undefined, {
+        error: parseResult.error,
+        issues: parseResult.issues,
+      })
+      return {
+        success: false,
+        error: parseResult.error,
+        rawResponse: content,
+      }
+    }
 
     // Calculate token usage
     const usage = responseData.usage ?? {}
@@ -184,7 +228,7 @@ export async function callOpenAI(
 
     return {
       success: true,
-      data: wrappedData,
+      output: parseResult.output,
       rawResponse: content,
       tokenUsage: {
         promptTokens,
@@ -215,4 +259,3 @@ export async function callOpenAI(
     }
   }
 }
-

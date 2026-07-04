@@ -2,6 +2,8 @@
  * Type definitions for statistics functions
  */
 
+import type { DerivedStatistics } from "./derived-statistics"
+
 export interface TautulliConfig {
   url: string
   apiKey: string
@@ -62,6 +64,7 @@ export interface TautulliStatisticsData {
   topMovies: TopMedia[]
   topShows: TopShow[]
   watchTimeByMonth: MonthlyWatchTime[]
+  derived: DerivedStatistics
 }
 
 export interface LibrarySize {
