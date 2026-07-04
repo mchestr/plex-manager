@@ -3,12 +3,17 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { StripeSettingsForm } from '@/components/admin/settings/StripeSettingsForm'
 import * as configActions from '@/actions/admin/admin-config'
+import { getAvailableLibraries } from '@/actions/server-info'
 import { useRouter } from 'next/navigation'
 import { ToastProvider } from '@/components/ui/toast'
 
 jest.mock('@/actions/admin/admin-config', () => ({
   updateStripeSettings: jest.fn(),
   setStripeEnabled: jest.fn(),
+}))
+
+jest.mock('@/actions/server-info', () => ({
+  getAvailableLibraries: jest.fn(),
 }))
 
 jest.mock('next/navigation', () => ({
@@ -41,6 +46,7 @@ const renderForm = (props?: Partial<React.ComponentProps<typeof StripeSettingsFo
         hasSecretKey={false}
         hasWebhookSecret={false}
         priceIds={[]}
+        librarySectionIds={[]}
         {...props}
       />
     </ToastProvider>
@@ -51,6 +57,14 @@ describe('StripeSettingsForm', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     ;(useRouter as jest.Mock).mockReturnValue({ refresh: mockRefresh })
+    ;(getAvailableLibraries as jest.Mock).mockResolvedValue({
+      success: true,
+      data: [
+        { id: 1, title: 'Movies', type: 'movie' },
+        { id: 2, title: 'TV Shows', type: 'show' },
+        { id: 3, title: '4K Movies', type: 'movie' },
+      ],
+    })
   })
 
   it('renders secret/webhook/price inputs and the master toggle', () => {
@@ -108,6 +122,7 @@ describe('StripeSettingsForm', () => {
         secretKey: 'sk_test_123',
         webhookSecret: 'whsec_123',
         priceIds: ['price_1', 'price_2'],
+        librarySectionIds: [],
       })
     })
     expect(mockShowSuccess).toHaveBeenCalledWith('Stripe settings saved successfully')
@@ -127,8 +142,37 @@ describe('StripeSettingsForm', () => {
         secretKey: undefined,
         webhookSecret: undefined,
         priceIds: ['price_1'],
+        librarySectionIds: [],
       })
     })
+  })
+
+  it('saves the selected subscriber libraries', async () => {
+    const user = userEvent.setup()
+    ;(configActions.updateStripeSettings as jest.Mock).mockResolvedValue({ success: true })
+
+    renderForm({ hasSecretKey: true, hasWebhookSecret: true, priceIds: ['price_1'] })
+
+    await user.click(await screen.findByTestId('stripe-library-checkbox-1'))
+    await user.click(screen.getByTestId('stripe-library-checkbox-2'))
+    await user.click(screen.getByTestId('stripe-save-button'))
+
+    await waitFor(() => {
+      expect(configActions.updateStripeSettings).toHaveBeenCalledWith({
+        secretKey: undefined,
+        webhookSecret: undefined,
+        priceIds: ['price_1'],
+        librarySectionIds: [1, 2],
+      })
+    })
+  })
+
+  it('pre-checks the stored subscriber library selection', async () => {
+    renderForm({ librarySectionIds: [2] })
+
+    expect(await screen.findByTestId('stripe-library-checkbox-2')).toBeChecked()
+    expect(screen.getByTestId('stripe-library-checkbox-1')).not.toBeChecked()
+    expect(screen.getByTestId('stripe-library-checkbox-3')).not.toBeChecked()
   })
 
   it('surfaces save errors via error toast', async () => {

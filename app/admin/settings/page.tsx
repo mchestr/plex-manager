@@ -391,6 +391,7 @@ export default async function SettingsPage() {
                   hasSecretKey={stripeConfig.hasSecretKey}
                   hasWebhookSecret={stripeConfig.hasWebhookSecret}
                   priceIds={stripeConfig.priceIds}
+                  librarySectionIds={stripeConfig.librarySectionIds}
                 />
               </div>
             </div>

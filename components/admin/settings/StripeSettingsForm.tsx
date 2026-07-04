@@ -1,12 +1,13 @@
 "use client"
 
 import { setStripeEnabled, updateStripeSettings } from "@/actions/admin/admin-config"
+import { getAvailableLibraries } from "@/actions/server-info"
 import { Button } from "@/components/ui/button"
 import { StyledInput } from "@/components/ui/styled-input"
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/components/ui/toast"
 import { useRouter } from "next/navigation"
-import { useState, useTransition } from "react"
+import { useEffect, useState, useTransition } from "react"
 
 interface StripeSettingsFormProps {
   /** Master toggle state */
@@ -17,6 +18,8 @@ interface StripeSettingsFormProps {
   hasWebhookSecret: boolean
   /** Configured Stripe price ids */
   priceIds: string[]
+  /** Plex library section keys shared with subscribers (empty = all libraries) */
+  librarySectionIds: number[]
 }
 
 /**
@@ -35,6 +38,7 @@ export function StripeSettingsForm({
   hasSecretKey,
   hasWebhookSecret,
   priceIds,
+  librarySectionIds,
 }: StripeSettingsFormProps) {
   const router = useRouter()
   const toast = useToast()
@@ -45,6 +49,25 @@ export function StripeSettingsForm({
   const [secretKey, setSecretKey] = useState("")
   const [webhookSecret, setWebhookSecret] = useState("")
   const [priceIdsInput, setPriceIdsInput] = useState(priceIds.join("\n"))
+  const [selectedLibraryIds, setSelectedLibraryIds] = useState<number[]>(librarySectionIds)
+  const [libraries, setLibraries] = useState<Array<{ id: number; title: string; type: string }>>([])
+  const [loadingLibraries, setLoadingLibraries] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    getAvailableLibraries()
+      .then((result) => {
+        if (!cancelled && result.success && result.data) {
+          setLibraries(result.data)
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingLibraries(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const parsedPriceIds = parsePriceIds(priceIdsInput)
 
@@ -62,6 +85,12 @@ export function StripeSettingsForm({
   const canEnable = missing.length === 0
   const toggleDisabled = isToggling || (!enabled && !canEnable)
 
+  const toggleLibrary = (id: number, checked: boolean) => {
+    setSelectedLibraryIds((prev) =>
+      checked ? [...prev, id] : prev.filter((existing) => existing !== id)
+    )
+  }
+
   const handleSave = (event: React.FormEvent) => {
     event.preventDefault()
 
@@ -70,6 +99,7 @@ export function StripeSettingsForm({
         secretKey: secretKey.trim() || undefined,
         webhookSecret: webhookSecret.trim() || undefined,
         priceIds: parsedPriceIds,
+        librarySectionIds: selectedLibraryIds,
       })
 
       if (result.success) {
@@ -172,6 +202,38 @@ export function StripeSettingsForm({
           <p className="text-xs text-slate-500 mt-1">
             The Stripe price IDs offered on the subscribe page. At least one is required to enable Stripe.
           </p>
+        </div>
+
+        <div data-testid="stripe-library-access">
+          <label className="block text-xs font-medium text-slate-400 mb-1">
+            Subscriber Library Access
+          </label>
+          <p className="text-xs text-slate-500 mb-2">
+            Libraries shared with subscribers when access is granted. Leave all unchecked to share every library.
+          </p>
+          {loadingLibraries ? (
+            <p className="text-sm text-slate-400">Loading libraries...</p>
+          ) : libraries.length === 0 ? (
+            <p className="text-sm text-slate-500">No Plex libraries available</p>
+          ) : (
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {libraries.map((lib) => (
+                <label key={lib.id} className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedLibraryIds.includes(lib.id)}
+                    onChange={(e) => toggleLibrary(lib.id, e.target.checked)}
+                    disabled={isSaving}
+                    className="rounded border-slate-600 text-cyan-600 focus:ring-cyan-500"
+                    data-testid={`stripe-library-checkbox-${lib.id}`}
+                  />
+                  <span className="text-sm text-slate-300">
+                    {lib.title} <span className="text-slate-400">({lib.type})</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="flex gap-2">

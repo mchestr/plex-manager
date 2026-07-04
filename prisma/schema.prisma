@@ -260,6 +260,7 @@ model Config {
   stripeSecretKey             String?   // Stripe secret API key (encrypted at rest)
   stripeWebhookSecret         String?   // Stripe webhook signing secret (encrypted at rest)
   stripePriceIds              Json?     // JSON array of allowed Stripe price-id strings
+  stripeLibrarySectionIds     Json?     // JSON array of Plex library section keys granted to subscribers (null = all libraries)
   updatedAt                   DateTime  @updatedAt
   updatedBy                   String?   // User ID who last updated this config
 }
