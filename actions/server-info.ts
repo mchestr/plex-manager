@@ -1,5 +1,7 @@
 "use server"
 
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 
@@ -35,6 +37,11 @@ export async function getAvailableLibraries(): Promise<{
   data?: LibrarySection[]
   error?: string
 }> {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.isAdmin) {
+    return { success: false, error: "Unauthorized" }
+  }
+
   try {
     const plexServer = await prisma.plexServer.findFirst({
       where: { isActive: true },

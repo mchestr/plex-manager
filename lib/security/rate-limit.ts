@@ -25,19 +25,21 @@ setInterval(() => {
 }, 5 * 60 * 1000)
 
 /**
- * Get client identifier from request
+ * Get client identifier from request.
+ *
+ * Keyed on IP only — the key must not include client-controlled values like
+ * User-Agent, since rotating such a value per request would yield a fresh
+ * rate-limit bucket every time and bypass the limit entirely.
+ *
+ * Note: x-forwarded-for is only trustworthy when the app runs behind a
+ * reverse proxy that overwrites it; deploy accordingly.
  */
 function getClientId(request: NextRequest): string {
   // Try to get IP from headers (works with proxies)
   const forwarded = request.headers.get("x-forwarded-for")
-  const ip = forwarded?.split(",")[0]?.trim() ||
-             request.headers.get("x-real-ip") ||
-             "unknown"
-
-  // Include user agent for additional uniqueness
-  const userAgent = request.headers.get("user-agent") || "unknown"
-
-  return `${ip}:${userAgent}`
+  return forwarded?.split(",")[0]?.trim() ||
+         request.headers.get("x-real-ip") ||
+         "unknown"
 }
 
 /**
