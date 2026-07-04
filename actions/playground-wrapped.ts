@@ -118,12 +118,14 @@ export async function savePlaygroundWrapped(input: SavePlaygroundWrappedInput): 
         data: JSON.stringify(wrappedData),
         shareToken,
         summary: wrappedData.summary || null,
+        archetype: wrappedData.archetype?.name || null,
         generatedAt: new Date(),
       },
       update: {
         status: "completed",
         data: JSON.stringify(wrappedData),
         summary: wrappedData.summary || null,
+        archetype: wrappedData.archetype?.name || null,
         generatedAt: new Date(),
         // Preserve existing share token if it exists
         ...(existingWrapped?.shareToken ? {} : { shareToken }),

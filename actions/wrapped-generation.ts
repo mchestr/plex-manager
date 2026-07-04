@@ -335,6 +335,7 @@ export async function generatePlexWrapped(
           data: JSON.stringify(wrappedData),
           shareToken,
           summary: wrappedData.summary || null,
+          archetype: wrappedData.archetype?.name || null,
           generatedAt: new Date(),
         },
       })
