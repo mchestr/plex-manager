@@ -39,14 +39,15 @@ function subscriptionBadge(
 
 /**
  * Renders a human label for an exempt user based on `exemptReason`
- * (e.g. "grandfathered" → "Legacy Access", "comp" → "Comp").
+ * (e.g. "comp" → "Comp"). "Grandfathered" users get no badge — most users
+ * predate subscriptions, so labeling them all would just be noise.
  */
-function exemptLabel(exemptReason: string | null): string {
+function exemptLabel(exemptReason: string | null): string | null {
   switch (exemptReason) {
     case "comp":
       return "Comp"
     case "grandfathered":
-      return "Legacy Access"
+      return null
     default:
       return "Exempt"
   }
@@ -138,7 +139,7 @@ export function UserTableRow({ user, stripeDashboardBaseUrl }: UserTableRowProps
                 </div>
               )}
             </>
-          ) : user.isExempt ? (
+          ) : user.isExempt && exemptLabel(user.exemptReason) ? (
             <Badge tone="info">{exemptLabel(user.exemptReason)}</Badge>
           ) : (
             <span className="text-slate-500">—</span>

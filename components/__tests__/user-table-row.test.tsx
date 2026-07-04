@@ -188,7 +188,7 @@ describe('UserTableRow', () => {
       expect(screen.getByText(/Ends/)).toBeInTheDocument()
     })
 
-    it('should render an exempt marker for exempt users with no subscription', () => {
+    it('should render no badge for grandfathered users (most users predate subscriptions)', () => {
       const user = makeAdminUserWithSubscription({
         subscriptionStatus: null,
         isExempt: true,
@@ -196,7 +196,7 @@ describe('UserTableRow', () => {
       })
       renderInTable(<UserTableRow user={user} currentYear={2024} />)
 
-      expect(screen.getByText('Legacy Access')).toBeInTheDocument()
+      expect(screen.getByText('—')).toBeInTheDocument()
     })
 
     it('should render a Comp marker for comped exempt users', () => {
