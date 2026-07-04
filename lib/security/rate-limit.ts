@@ -129,6 +129,13 @@ export const shareRateLimiter = rateLimit({
   max: 100, // 100 requests per window
 })
 
+// Poster image proxy: a single wrapped view loads ~10-20 images, so the
+// ceiling is higher than the JSON share endpoint.
+export const posterRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 500,
+})
+
 export const adminRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 50, // Stricter limit for admin
