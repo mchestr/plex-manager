@@ -7,6 +7,7 @@
 
 import { Queue, QueueEvents, JobsOptions } from "bullmq"
 import { getRedisConnection } from "./connection"
+import { sanitizeJobId } from "./job-id"
 import { JobType, JobPayloadMap, JobMetadata, QueueStats, JobStatus } from "./types"
 import { createLogger } from "@/lib/utils/logger"
 
@@ -77,7 +78,7 @@ export async function addJob<T extends JobType>(
 ): Promise<string> {
   const q = getQueue()
 
-  const jobId = options?.jobId ?? `${jobType}:${Date.now()}`
+  const jobId = sanitizeJobId(options?.jobId ?? `${jobType}:${Date.now()}`)
   const job = await q.add(jobType, data, {
     ...options,
     jobId,
