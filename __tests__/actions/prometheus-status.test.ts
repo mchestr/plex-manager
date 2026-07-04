@@ -5,8 +5,17 @@
 import { getPrometheusStatus } from '@/actions/prometheus-status'
 import { queryPrometheusRange } from '@/lib/connections/prometheus'
 import { prisma } from '@/lib/prisma'
+import { getServerSession } from 'next-auth'
 
 // Mock dependencies
+jest.mock('next-auth', () => ({
+  getServerSession: jest.fn(),
+}))
+
+jest.mock('@/lib/auth', () => ({
+  authOptions: {},
+}))
+
 jest.mock('@/lib/prisma', () => ({
   prisma: {
     prometheus: {
@@ -34,10 +43,13 @@ jest.mock('@/lib/utils/logger', () => ({
 
 const mockPrisma = prisma as jest.Mocked<typeof prisma>
 const mockQueryPrometheusRange = queryPrometheusRange as jest.MockedFunction<typeof queryPrometheusRange>
+const mockGetServerSession = getServerSession as jest.MockedFunction<typeof getServerSession>
 
 describe('Prometheus Status Actions', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    // Authenticated by default; individual tests override for the unauthenticated case
+    mockGetServerSession.mockResolvedValue({ user: { id: 'user-1' } })
     // Reset date mocks
     jest.useFakeTimers()
     jest.setSystemTime(new Date('2024-01-15T12:00:00Z'))
@@ -48,6 +60,21 @@ describe('Prometheus Status Actions', () => {
   })
 
   describe('getPrometheusStatus', () => {
+    it('should return safe defaults without querying when unauthenticated', async () => {
+      mockGetServerSession.mockResolvedValue(null)
+
+      const result = await getPrometheusStatus()
+
+      expect(result).toEqual({
+        isConfigured: false,
+        serviceName: '',
+        segments: [],
+        overallStatus: 'unknown',
+      })
+      expect(mockPrisma.prometheus.findFirst).not.toHaveBeenCalled()
+      expect(mockQueryPrometheusRange).not.toHaveBeenCalled()
+    })
+
     it('should return not configured when no Prometheus config exists', async () => {
       mockPrisma.prometheus.findFirst.mockResolvedValue(null)
 

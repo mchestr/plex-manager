@@ -1,5 +1,6 @@
 "use server"
 
+import { randomInt } from "crypto"
 import { requireAdmin } from "@/lib/admin"
 import {
   acceptPlexInvite,
@@ -98,12 +99,14 @@ async function withRetry<T>(
 }
 
 /**
- * Generate a random invite code with unambiguous characters
+ * Generate a random invite code with unambiguous characters.
+ * Uses crypto.randomInt — invite codes grant server access, so they must not
+ * be predictable from previously observed codes.
  */
 function generateInviteCode(length = INVITE_CODE_LENGTH): string {
   let result = ""
   for (let i = 0; i < length; i++) {
-    result += INVITE_CODE_CHARS.charAt(Math.floor(Math.random() * INVITE_CODE_CHARS.length))
+    result += INVITE_CODE_CHARS.charAt(randomInt(INVITE_CODE_CHARS.length))
   }
   return result
 }

@@ -47,7 +47,7 @@ describe("Rate Limiting", () => {
 
       const request = new NextRequest("http://localhost:3000/api/test", {
         headers: {
-          "x-forwarded-for": "192.168.1.1",
+          "x-forwarded-for": "10.9.0.1",
           "user-agent": "Test Browser",
         },
       })
@@ -89,7 +89,7 @@ describe("Rate Limiting", () => {
 
       const request = new NextRequest("http://localhost:3000/api/test", {
         headers: {
-          "x-forwarded-for": "192.168.1.1",
+          "x-forwarded-for": "10.9.0.2",
           "user-agent": "Test Browser",
         },
       })
@@ -116,7 +116,7 @@ describe("Rate Limiting", () => {
 
       const request = new NextRequest("http://localhost:3000/api/test", {
         headers: {
-          "x-forwarded-for": "192.168.1.1",
+          "x-forwarded-for": "10.9.0.3",
           "user-agent": "Test Browser",
         },
       })
@@ -143,7 +143,7 @@ describe("Rate Limiting", () => {
 
       const request = new NextRequest("http://localhost:3000/api/test", {
         headers: {
-          "x-forwarded-for": "192.168.1.1",
+          "x-forwarded-for": "10.9.0.4",
           "user-agent": "Test Browser",
         },
       })
@@ -172,7 +172,7 @@ describe("Rate Limiting", () => {
 
       const request1 = new NextRequest("http://localhost:3000/api/test", {
         headers: {
-          "x-forwarded-for": "192.168.1.1",
+          "x-forwarded-for": "10.9.0.5",
           "user-agent": "Browser A",
         },
       })
@@ -204,7 +204,7 @@ describe("Rate Limiting", () => {
 
       const request = new NextRequest("http://localhost:3000/api/test", {
         headers: {
-          "x-forwarded-for": "192.168.1.1",
+          "x-forwarded-for": "10.9.0.6",
         },
       })
 
@@ -270,7 +270,7 @@ describe("Rate Limiting", () => {
 
       const request = new NextRequest("http://localhost:3000/api/test", {
         headers: {
-          "x-forwarded-for": "192.168.1.1",
+          "x-forwarded-for": "10.9.0.7",
         },
       })
 
