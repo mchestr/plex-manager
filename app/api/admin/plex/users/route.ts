@@ -3,7 +3,6 @@ import { prisma } from "@/lib/prisma"
 import { requireAdminAPI } from "@/lib/security/api-helpers"
 import { createSafeError, ErrorCode, getStatusCode, logError } from "@/lib/security/error-handler"
 import { adminRateLimiter } from "@/lib/security/rate-limit"
-import type { Session } from "next-auth"
 import { NextRequest, NextResponse } from "next/server"
 
 export const dynamic = 'force-dynamic'
@@ -52,7 +51,7 @@ export async function GET(request: NextRequest) {
     // The Plex.tv /api/users endpoint only returns shared users, so the
     // server owner (the local admin) may be missing. Prepend them so the
     // playground can always test against the current admin account.
-    const sessionUser = (authResult.session as Session | null)?.user
+    const sessionUser = authResult.session?.user
     if (
       sessionUser?.name &&
       !users.some(
@@ -67,7 +66,9 @@ export async function GET(request: NextRequest) {
         email: sessionUser.email ?? undefined,
         thumb: sessionUser.image ?? undefined,
         restricted: false,
-        serverAdmin: true,
+        // App-admin flag, not necessarily the Plex server owner — only
+        // drives the [Admin] label in the playground picker.
+        serverAdmin: sessionUser.isAdmin,
       })
     }
 
