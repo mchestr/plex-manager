@@ -18,6 +18,8 @@ interface WrappedViewerProps {
   userName?: string
   summary?: string
   shareToken?: string
+  /** Playground preview: letterbox bars are disabled inside the scrollable modal. */
+  isPreview?: boolean
 }
 
 export function WrappedViewer({
@@ -25,6 +27,7 @@ export function WrappedViewer({
   onComplete,
   isShared = false,
   shareToken,
+  isPreview = false,
 }: WrappedViewerProps) {
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0)
   const [isAutoAdvancing, setIsAutoAdvancing] = useState(true)
@@ -158,7 +161,7 @@ export function WrappedViewer({
   if (showAll) {
     return (
       <div className="min-h-screen relative py-12 px-4 sm:px-6 lg:px-8">
-        {isCinematic ? <CinematicBackground /> : <SpaceBackground />}
+        {isCinematic ? <CinematicBackground letterbox={false} /> : <SpaceBackground />}
         <div className="max-w-6xl mx-auto relative z-10 space-y-12">
           {sections.map((section, idx) => (
             <motion.div
@@ -223,7 +226,7 @@ export function WrappedViewer({
 
   return (
     <div className="min-h-screen relative py-8 sm:py-12 px-4 sm:px-6 lg:px-8 pb-24 md:pb-12">
-      {isCinematic ? <CinematicBackground /> : <SpaceBackground />}
+      {isCinematic ? <CinematicBackground letterbox={!isPreview} /> : <SpaceBackground />}
       <div className="max-w-4xl mx-auto relative z-10">
         <WrappedViewerProgress
           progress={progress}

@@ -205,8 +205,9 @@ describe("StatisticsViewer", () => {
 
       expect(overseerrSection).toBeInTheDocument()
       expect(overseerrSection).toHaveTextContent("100")
-      expect(overseerrSection).toHaveTextContent("80")
       expect(overseerrSection).toHaveTextContent("20")
+      // Approved stat intentionally removed (untrusted Overseerr data)
+      expect(overseerrSection).not.toHaveTextContent("Approved")
     })
 
     it("should limit top movies to 5", () => {

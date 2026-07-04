@@ -39,14 +39,14 @@ function subscriptionBadge(
 
 /**
  * Renders a human label for an exempt user based on `exemptReason`
- * (e.g. "grandfathered" → "Grandfathered", "comp" → "Comp").
+ * (e.g. "grandfathered" → "Legacy Access", "comp" → "Comp").
  */
 function exemptLabel(exemptReason: string | null): string {
   switch (exemptReason) {
     case "comp":
       return "Comp"
     case "grandfathered":
-      return "Grandfathered"
+      return "Legacy Access"
     default:
       return "Exempt"
   }

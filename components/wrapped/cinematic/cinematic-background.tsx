@@ -6,8 +6,11 @@ import { Letterbox } from "./letterbox"
 /**
  * The premiere stage: near-black backdrop with a faint warm vignette,
  * film grain, and letterbox bars. Replaces SpaceBackground for wrapped v2.
+ *
+ * Letterbox bars are fixed overlays, so they must be disabled in scrollable
+ * contexts (full summary, playground preview) where they would cover content.
  */
-export function CinematicBackground() {
+export function CinematicBackground({ letterbox = true }: { letterbox?: boolean }) {
   return (
     <>
       <div aria-hidden className="fixed inset-0 bg-stage">
@@ -29,7 +32,7 @@ export function CinematicBackground() {
         />
       </div>
       <FilmGrain />
-      <Letterbox />
+      {letterbox && <Letterbox />}
     </>
   )
 }

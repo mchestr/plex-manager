@@ -13,6 +13,8 @@ interface WrappedViewerWrapperProps {
   userName?: string
   summary?: string
   shareToken?: string
+  /** Playground preview: skip the intro transition and letterbox overlays. */
+  isPreview?: boolean
 }
 
 export function WrappedViewerWrapper({
@@ -22,8 +24,10 @@ export function WrappedViewerWrapper({
   userName,
   summary,
   shareToken,
+  isPreview = false,
 }: WrappedViewerWrapperProps) {
-  const [showTransition, setShowTransition] = useState(!isShared) // Skip transition for shared wraps
+  // Skip transition for shared wraps and playground previews
+  const [showTransition, setShowTransition] = useState(!isShared && !isPreview)
 
   const handleTransitionComplete = () => {
     setShowTransition(false)
@@ -47,6 +51,7 @@ export function WrappedViewerWrapper({
               userName={userName}
               summary={summary}
               shareToken={shareToken}
+              isPreview={isPreview}
             />
           </motion.div>
         )}

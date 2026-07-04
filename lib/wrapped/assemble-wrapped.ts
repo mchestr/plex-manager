@@ -29,6 +29,35 @@ import {
 
 export const WRAPPED_DATA_VERSION = 2
 
+/**
+ * Guard the archetype-reveal slide against weak LLM copy: the dedication is
+ * the emotional peak, so when the model returns something too short (or just
+ * echoes the tagline), fall back to deterministic copy built from the
+ * archetype motif and the user's real numbers.
+ */
+function resolveDedication(args: {
+  dedication: string
+  tagline: string
+  motif: string
+  statistics: WrappedStatistics
+  year: number
+}): string {
+  const dedication = args.dedication.trim()
+  const tagline = args.tagline.trim()
+  const isWeak =
+    dedication.length < 40 ||
+    dedication.toLowerCase() === tagline.toLowerCase()
+
+  if (!isWeak) return dedication
+
+  const hours = Math.floor(args.statistics.totalWatchTime.total / 60)
+  return (
+    `${args.motif}. In ${args.year} you gave <highlight>${hours} hours</highlight> to the screen — ` +
+    `<highlight>${args.statistics.moviesWatched} films</highlight> and ` +
+    `<highlight>${args.statistics.episodesWatched} episodes</highlight>. A performance worthy of the title.`
+  )
+}
+
 export function assembleWrappedData(args: {
   output: WrappedLLMOutput
   statistics: WrappedStatistics
@@ -38,6 +67,13 @@ export function assembleWrappedData(args: {
 }): WrappedData {
   const { output, statistics, userId, userName, year } = args
   const archetypeInfo = getArchetype(output.archetype.id)
+  const dedication = resolveDedication({
+    dedication: output.archetype.dedication,
+    tagline: output.archetype.tagline,
+    motif: archetypeInfo.motif,
+    statistics,
+    year,
+  })
 
   const sections: WrappedSection[] = [
     {
@@ -142,7 +178,7 @@ export function assembleWrappedData(args: {
     type: "archetype-reveal",
     title: "And the Award Goes To…",
     subtitle: output.archetype.tagline,
-    content: output.archetype.dedication,
+    content: dedication,
     data: { archetype: { ...archetypeInfo } },
   })
 
@@ -196,7 +232,7 @@ export function assembleWrappedData(args: {
       id: archetypeInfo.id,
       name: archetypeInfo.name,
       tagline: output.archetype.tagline,
-      dedication: output.archetype.dedication,
+      dedication,
     },
     statistics,
     sections,

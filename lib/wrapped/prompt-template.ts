@@ -9,7 +9,7 @@
 
 import { getActivePromptTemplate } from "@/actions/prompts"
 import { formatWatchTime } from "@/lib/utils/time-formatting"
-import { ARCHETYPES } from "@/lib/wrapped/llm-output-schema"
+import { suggestArchetypes } from "@/lib/wrapped/archetype-scoring"
 import { WrappedStatistics } from "@/types/wrapped"
 
 /**
@@ -88,10 +88,14 @@ function replacePlaceholders(template: string, context: PlaceholderContext): str
 - You are in the ${statistics.percentile.topPercentLabel} of viewers on this server by watch time${statistics.leaderboards?.watchTime.userPosition ? ` (ranked #${statistics.leaderboards.watchTime.userPosition} of ${statistics.leaderboards.watchTime.totalUsers})` : ""}
 ` : "",
 
-    // Archetype candidates (v2)
-    "{{archetypeCandidates}}": ARCHETYPES.map(
-      (a) => `- ${a.id}: "${a.name}" — ${a.motif}`
-    ).join("\n"),
+    // Archetype candidates (v2): deterministic shortlist, best data fit
+    // first, so the LLM cannot converge on the same pick for every user.
+    "{{archetypeCandidates}}": suggestArchetypes(statistics)
+      .map(
+        (a, idx) =>
+          `${idx + 1}. ${a.id}: "${a.name}" — ${a.motif} (evidence: ${a.evidence})`
+      )
+      .join("\n"),
 
     // Leaderboard section (conditional)
     "{{leaderboardSection}}": statistics.leaderboards ? `
@@ -143,7 +147,6 @@ ${statistics.leaderboards.topContent.shows.map((show) => {
 **Overseerr Requests:**
 - Your requests: ${statistics.overseerrStats.totalRequests}
 - Total server requests: ${statistics.overseerrStats.totalServerRequests}
-- Approved: ${statistics.overseerrStats.approvedRequests}
 - Pending: ${statistics.overseerrStats.pendingRequests}
 - Top genres: ${statistics.overseerrStats.topRequestedGenres.map(g => g.genre).join(", ")}
 ` : "",
@@ -219,9 +222,9 @@ export function generateSystemPrompt(): string {
 
 You return a JSON object with four parts (the exact shape is enforced automatically — focus on the writing):
 
-**archetype** — Choose the one viewer archetype from the provided candidate list whose motif is best supported by the data (viewing hours, streaks, rewatch behavior, breadth vs. depth, weekend share). Set "id" to its exact id. Write:
+**archetype** — The candidate list is a data-ranked shortlist: each entry includes the statistical evidence that earned its place, best fit first. Choose the candidate whose motif and evidence tell the strongest story — default to the first unless a later candidate's evidence is clearly more distinctive for this viewer. Set "id" to its exact id. Write:
 - "tagline": one marquee-worthy line that captures why this is them (no more than ~10 words).
-- "dedication": 2-3 sentences in the style of an award citation, grounded in their actual numbers. This is the emotional peak of the experience — make it land.
+- "dedication": 2-3 full sentences in the style of an award citation, grounded in their actual numbers (cite at least one specific stat inside <highlight>tags</highlight>). This is the emotional peak of the experience — make it land. It must say more than the tagline does.
 
 **narratives** — One short passage (1-3 sentences each) that accompanies a stat-filled slide. The numbers are displayed separately; your text provides the story around them:
 - "opening": the curtain-raiser. Welcome them to their year-in-review premiere.
@@ -344,7 +347,7 @@ export function getAvailablePlaceholders(): Array<{ placeholder: string; descrip
     { placeholder: "{{peakDayOfWeek}}", description: "Day of week with the most watch time" },
     { placeholder: "{{derivedStatsSection}}", description: "Viewing patterns section: streaks, peak hour, weekly rhythm (empty if not available)" },
     { placeholder: "{{percentileSection}}", description: "Server watch-time percentile section (empty if not available)" },
-    { placeholder: "{{archetypeCandidates}}", description: "The curated archetype list the LLM chooses from" },
+    { placeholder: "{{archetypeCandidates}}", description: "Data-ranked archetype shortlist (best fit first, with evidence) the LLM chooses from" },
     { placeholder: "{{leaderboardSection}}", description: "Leaderboard statistics section (empty if not available)" },
     { placeholder: "{{serverStatsSection}}", description: "Server statistics section (empty if not available)" },
     { placeholder: "{{overseerrStatsSection}}", description: "Overseerr statistics section (empty if not available)" },

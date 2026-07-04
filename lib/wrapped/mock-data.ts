@@ -58,7 +58,7 @@ export function generateMockWrappedData(
         ? `Behind the scenes, ${statistics.serverStats.serverName} carried <highlight>${statistics.serverStats.totalStorageFormatted}</highlight> of stories.`
         : null,
       overseerr: statistics.overseerrStats
-        ? `You made <highlight>${statistics.overseerrStats.totalRequests} requests</highlight> this year, with ${statistics.overseerrStats.approvedRequests} approved.`
+        ? `You made <highlight>${statistics.overseerrStats.totalRequests} requests</highlight> this year — the programming department thanks you.`
         : null,
       finale: `That's a wrap on <highlight>${year}</highlight>. Thank you for a remarkable year at the movies — see you at next year's premiere.`,
     },

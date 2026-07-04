@@ -58,9 +58,9 @@ export function CinematicFinaleSection({ section, userName }: Props) {
           }}
         >
           <motion.div
-            initial={{ y: "100%" }}
+            initial={{ y: "70%" }}
             animate={{ y: "-100%" }}
-            transition={{ duration: Math.max(credits.length * 1.6, 8), delay: 1.2, ease: "linear" }}
+            transition={{ duration: Math.max(credits.length * 1.6, 8), delay: 0.5, ease: "linear" }}
             className="space-y-4"
           >
             {credits.map((credit, idx) => (

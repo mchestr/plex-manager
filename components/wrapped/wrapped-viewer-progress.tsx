@@ -27,11 +27,11 @@ export function WrappedViewerProgress({
         >
           {/* Animated progress fill */}
           <motion.div
-            className="absolute top-0 left-0 h-full bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 rounded-full"
+            className="absolute top-0 left-0 h-full bg-gradient-to-r from-gold via-gold-bright to-gold rounded-full"
             initial={{ width: "0%" }}
             animate={{ width: `${progress}%` }}
             transition={{ duration: 0.1, ease: "linear" }}
-            style={{ boxShadow: "0 0 10px rgba(34, 211, 238, 0.5)" }}
+            style={{ boxShadow: "0 0 10px rgba(212, 175, 55, 0.5)" }}
             aria-hidden="true"
           />
           {/* Glow effect */}
@@ -54,9 +54,9 @@ export function WrappedViewerProgress({
               transition={{ delay: idx * 0.1 }}
               className={`h-1.5 w-1.5 rounded-full transition-all ${
                 idx < currentSectionIndex
-                  ? "bg-cyan-400 scale-125"
+                  ? "bg-gold scale-125"
                   : idx === currentSectionIndex
-                  ? "bg-cyan-400 scale-150 ring-2 ring-cyan-400/50"
+                  ? "bg-gold-bright scale-150 ring-2 ring-gold/50"
                   : "bg-slate-600"
               }`}
             />

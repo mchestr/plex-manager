@@ -196,7 +196,7 @@ describe('UserTableRow', () => {
       })
       renderInTable(<UserTableRow user={user} currentYear={2024} />)
 
-      expect(screen.getByText('Grandfathered')).toBeInTheDocument()
+      expect(screen.getByText('Legacy Access')).toBeInTheDocument()
     })
 
     it('should render a Comp marker for comped exempt users', () => {

@@ -20,6 +20,7 @@ interface AdminFooterClientProps {
     totalVisits: number
   }
   llmDisabled: boolean
+  appVersion: string
 }
 
 export function AdminFooterClient({
@@ -28,6 +29,7 @@ export function AdminFooterClient({
   totalUsers,
   shareStats,
   llmDisabled,
+  appVersion,
 }: AdminFooterClientProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const router = useRouter()
@@ -160,6 +162,14 @@ export function AdminFooterClient({
               </div>
             </div>
 
+            {/* Version */}
+            <div className="text-xs">
+              <span className="text-slate-500">Version:</span>{" "}
+              <span className="text-slate-300 font-mono" data-testid="admin-footer-version">
+                v{appVersion}
+              </span>
+            </div>
+
             {/* LLM Toggle */}
             <div className="pt-1 border-t border-slate-700">
               <LLMToggle initialDisabled={llmDisabled} />
@@ -274,6 +284,13 @@ export function AdminFooterClient({
                     {shareStats.totalVisits.toLocaleString()}
                   </span>
                 </Link>
+                <span className="text-slate-600">|</span>
+                <span>
+                  <span className="text-slate-500">Version:</span>{" "}
+                  <span className="text-slate-300 font-mono" data-testid="admin-footer-version-desktop">
+                    v{appVersion}
+                  </span>
+                </span>
                 <span className="text-slate-600">|</span>
                 <LLMToggle initialDisabled={llmDisabled} />
               </>

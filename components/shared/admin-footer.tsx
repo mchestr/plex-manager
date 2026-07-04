@@ -6,6 +6,7 @@ import { getLLMUsageStats } from "@/lib/wrapped/usage"
 import { getServerSession } from "next-auth"
 import _Link from "next/link"
 import { AdminFooterClient } from "@/components/shared/admin-footer-client"
+import packageJson from "@/package.json"
 
 export async function AdminFooter() {
   const session = await getServerSession(authOptions)
@@ -30,6 +31,7 @@ export async function AdminFooter() {
       totalUsers={totalUsers}
       shareStats={shareStats}
       llmDisabled={config.llmDisabled}
+      appVersion={packageJson.version}
     />
   )
 }
