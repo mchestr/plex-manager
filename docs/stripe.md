@@ -87,6 +87,12 @@ Go to **Admin → Settings → Stripe Subscriptions** and fill in:
 | **Price IDs** | Stripe Dashboard → Products → your recurring price(s) (`price_…`) | One per line or comma-separated. At least one required. |
 | **Subscriber Library Access** | Checkbox list of your Plex libraries | Libraries shared with subscribers when access is granted. Leave all unchecked to share every library. |
 
+> **If a configured library is later deleted** (or recreated with a new section
+> id), grants continue with the libraries that still exist and a warning is
+> logged. If **none** of the configured libraries exist anymore, grant jobs fail
+> (and retry) until you update the selection here — access is never silently
+> widened to all libraries.
+
 Click **Save**. Secrets are never sent back to the browser; the form only shows
 whether a value is stored.
 

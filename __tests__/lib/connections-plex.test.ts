@@ -778,7 +778,47 @@ describe('Plex Connection', () => {
       })
 
       expect(result.success).toBe(false)
-      expect(result.error).toContain('Invalid library section IDs')
+      expect(result.error).toContain('None of the configured library section IDs exist')
+    })
+
+    it('should share the valid subset when some configured library IDs are stale', async () => {
+      // Mock identity response (XML)
+      const identityXml = `<?xml version="1.0" encoding="UTF-8"?>
+<MediaContainer machineIdentifier="test-machine-id" />
+`
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        text: async () => identityXml,
+      })
+
+      // Mock Plex.tv API response
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          librarySections: [
+            { id: 1001, key: 1, title: 'Movies', type: 'movie' },
+            { id: 1002, key: 2, title: 'TV Shows', type: 'show' },
+          ],
+        }),
+      })
+
+      // Mock invite response
+      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ id: 12345 }),
+      })
+
+      const result = await inviteUserToPlexServer(mockServerConfig, 'user@example.com', {
+        librarySectionIds: [1, 999], // 999 was deleted from the server
+      })
+
+      expect(result.success).toBe(true)
+      expect(result.inviteID).toBe(12345)
+
+      // Only the still-existing library is shared — never a fall back to all
+      const inviteCall = (global.fetch as jest.Mock).mock.calls[2]
+      const invitePayload = JSON.parse(inviteCall[1].body)
+      expect(invitePayload.librarySectionIds).toEqual([1001])
     })
 
     it('should handle invite API error response', async () => {

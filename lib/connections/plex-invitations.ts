@@ -82,18 +82,23 @@ export async function inviteUserToPlexServer(
         )
       })
 
-      if (invalidIds.length > 0) {
-        return {
-          success: false,
-          error: `Invalid library section IDs: ${invalidIds.join(", ")}. These libraries may have been deleted or don't exist on this server.`,
-        }
-      }
-
+      // Stale IDs (e.g. a configured library was deleted/recreated) must not
+      // hard-fail the whole invite: background grant jobs retry on failure, so
+      // one stale ID would block every new grant until an admin fixes the
+      // config. Share the libraries that still exist and warn about the rest.
+      // Never fall back to sharing everything — that would over-grant access.
       if (requestedPlexTvIds.length === 0) {
         return {
           success: false,
-          error: "Failed to find matching Plex.tv library section IDs for the specified libraries.",
+          error: `None of the configured library section IDs exist on this server: ${invalidIds.join(", ")}. The libraries may have been deleted; update the configured library selection.`,
         }
+      }
+
+      if (invalidIds.length > 0) {
+        logger.warn("Some configured library section IDs no longer exist on the server; sharing the remaining libraries", {
+          invalidIds,
+          sharedCount: requestedPlexTvIds.length,
+        })
       }
 
       librarySectionIds = requestedPlexTvIds

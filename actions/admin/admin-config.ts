@@ -2,6 +2,7 @@
 
 import { requireAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/prisma"
+import { parseStripeLibrarySectionIds } from "@/lib/stripe/config"
 import { clearOfferedPricesCache } from "@/lib/stripe/prices"
 import { createLogger } from "@/lib/utils/logger"
 import { z } from "zod"
@@ -288,16 +289,6 @@ export interface StripeConfigStatus {
 function parseStripePriceIds(value: unknown): string[] {
   if (!Array.isArray(value)) return []
   return value.filter((id): id is string => typeof id === "string" && id.trim().length > 0)
-}
-
-/**
- * Parses the stored `stripeLibrarySectionIds` JSON value into a clean array of
- * Plex library section keys. Empty array means "share all libraries".
- * @internal
- */
-function parseStripeLibrarySectionIds(value: unknown): number[] {
-  if (!Array.isArray(value)) return []
-  return value.filter((id): id is number => typeof id === "number" && Number.isFinite(id))
 }
 
 /**
