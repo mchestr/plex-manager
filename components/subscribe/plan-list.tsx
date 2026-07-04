@@ -3,6 +3,7 @@
 import { useState } from "react"
 
 import { startCheckout } from "@/actions/subscription"
+import { cn } from "@/lib/utils"
 import { redirectTo } from "@/lib/utils/navigation"
 import type { OfferedPrice } from "@/lib/stripe/prices"
 import { Button } from "@/components/ui/button"
@@ -71,9 +72,17 @@ export function PlanList({ plans }: PlanListProps) {
     }
   }
 
+  // A single plan is centered in a constrained column; multiple plans flow into
+  // a responsive two-column grid. Using `sm:grid-cols-2` unconditionally would
+  // leave a lone plan stranded in the left column.
+  const isSingle = plans.length === 1
+
   return (
     <div
-      className="grid w-full max-w-3xl gap-4 sm:grid-cols-2"
+      className={cn(
+        "grid w-full gap-4",
+        isSingle ? "max-w-sm" : "max-w-3xl sm:grid-cols-2"
+      )}
       data-testid="subscribe-plan-list"
     >
       {plans.map((plan) => {
