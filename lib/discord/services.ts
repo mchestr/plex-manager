@@ -1,13 +1,11 @@
 import { type ChatMessage } from "@/actions/chatbot/types"
 import { runChatbotForUser } from "@/lib/chatbot/assistant"
+import { appendTurn, getOrCreateSession } from "@/lib/discord/chat-session"
 import { sanitizeDiscordResponse } from "@/lib/discord/chat-safety"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
-import { Prisma } from "@/lib/generated/prisma/client"
 
 const logger = createLogger("DISCORD_SERVICES")
-const HISTORY_LIMIT = 12
-const SESSION_IDLE_TIMEOUT_MS = 30 * 60 * 1000 // 30 minutes
 
 export interface VerifyDiscordUserResult {
   linked: boolean
@@ -35,43 +33,6 @@ export interface ClearChatResult {
   linked: boolean
   conversationId?: string
   error?: string
-}
-
-function coerceHistory(value: Prisma.JsonValue | null | undefined): ChatMessage[] {
-  if (!Array.isArray(value)) {
-    return []
-  }
-
-  const result: ChatMessage[] = []
-  for (const entry of value) {
-    if (!entry || typeof entry !== "object") {
-      continue
-    }
-    const record = entry as Record<string, unknown>
-    if (record.role !== "user" && record.role !== "assistant") {
-      continue
-    }
-    if (typeof record.content !== "string") {
-      continue
-    }
-    result.push({
-      role: record.role,
-      content: record.content,
-      timestamp: typeof record.timestamp === "number" ? record.timestamp : Date.now(),
-      sources: Array.isArray(record.sources)
-        ? (record.sources as Array<{ tool: string; description: string }>)
-        : undefined,
-    })
-  }
-  return result
-}
-
-function trimHistory(messages: ChatMessage[]): ChatMessage[] {
-  if (messages.length <= HISTORY_LIMIT) {
-    return messages
-  }
-
-  return messages.slice(messages.length - HISTORY_LIMIT)
 }
 
 /**
@@ -113,8 +74,13 @@ export async function verifyDiscordUser(discordUserId: string): Promise<VerifyDi
 }
 
 /**
- * Handle a Discord chatbot message
- * Direct function call - no HTTP overhead
+ * Handle a Discord chatbot message.
+ *
+ * Orchestration only: session resolution and history persistence are delegated
+ * to `chat-session` (which makes both concurrency-safe), and history coercion to
+ * `chat-history`. This function owns the LLM call and response sanitization.
+ *
+ * Direct function call - no HTTP overhead.
  */
 export async function handleDiscordChat({
   discordUserId,
@@ -140,68 +106,25 @@ export async function handleDiscordChat({
     return { success: false, linked: false, error: "Discord account is not linked" }
   }
 
-  const now = Date.now()
-  const sessionKey = {
+  const session = await getOrCreateSession({
     discordUserId,
-    discordChannelId: channelId,
-  }
-
-  let session = await prisma.discordChatSession.findUnique({
-    where: {
-      discordUserId_discordChannelId: sessionKey,
-    },
+    channelId,
+    userId: connection.userId,
   })
 
-  const sessionExpired =
-    !session ||
-    !session.isActive ||
-    Math.abs(now - session.lastMessageAt.getTime()) > SESSION_IDLE_TIMEOUT_MS
-
-  if (sessionExpired) {
-    const conversation = await prisma.chatConversation.create({
-      data: { userId: connection.userId },
-    })
-
-    session = await prisma.discordChatSession.upsert({
-      where: {
-        discordUserId_discordChannelId: sessionKey,
-      },
-      update: {
-        chatConversationId: conversation.id,
-        messages: [],
-        isActive: true,
-        lastMessageAt: new Date(now),
-      },
-      create: {
-        discordUserId,
-        discordChannelId: channelId,
-        chatConversationId: conversation.id,
-        messages: [],
-      },
-    })
-  }
-
-  if (!session) {
-    logger.error("Failed to initialize Discord chat session", undefined, {
-      discordUserId,
-      channelId,
-    })
-    return { success: false, linked: true, error: "Unable to initialize chat session" }
-  }
-
-  const history = trimHistory(coerceHistory(session?.messages))
+  const now = Date.now()
   const userMessage: ChatMessage = {
     role: "user",
     content: message,
     timestamp: now,
   }
 
-  const conversationMessages = [...history, userMessage]
+  const conversationMessages = [...session.history, userMessage]
 
   const chatbotResponse = await runChatbotForUser({
     userId: connection.userId,
     messages: conversationMessages,
-    conversationId: session?.chatConversationId,
+    conversationId: session.chatConversationId,
     context: "discord",
   })
 
@@ -233,29 +156,26 @@ export async function handleDiscordChat({
     content: safeContent,
   }
 
-  const updatedHistory = trimHistory([...history, userMessage, safeMessage])
+  const conversationId = chatbotResponse.conversationId ?? session.chatConversationId
 
-  await prisma.discordChatSession.update({
-    where: { id: session.id },
-    data: {
-      messages: updatedHistory as unknown as Prisma.JsonArray,
-      lastMessageAt: new Date(),
-      isActive: true,
-      chatConversationId: chatbotResponse.conversationId ?? session.chatConversationId,
-    },
+  await appendTurn({
+    sessionId: session.id,
+    userMessage,
+    assistantMessage: safeMessage,
+    chatConversationId: conversationId,
   })
 
   logger.info("Discord chatbot response delivered", {
     discordUserId,
     channelId,
-    conversationId: chatbotResponse.conversationId ?? session?.chatConversationId,
+    conversationId,
   })
 
   return {
     success: true,
     linked: true,
     message: safeMessage,
-    conversationId: chatbotResponse.conversationId ?? session?.chatConversationId,
+    conversationId,
   }
 }
 
@@ -329,4 +249,3 @@ export async function clearDiscordChat({
     conversationId: conversation.id,
   }
 }
-
