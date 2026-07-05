@@ -187,58 +187,73 @@ async function startDiscordBotPolling() {
   }
 
   // Use dynamic import with a string to prevent Next.js from analyzing the dependency tree
-  // This ensures Discord.js and its native dependencies aren't bundled
+  // This ensures Discord.js and its native dependencies aren't bundled.
+  //
+  // This is the ONE legitimate place that owns the DiscordBot and BotLockPoller
+  // instances for the process lifecycle. The bot and lock singletons were removed
+  // in favor of constructing (and wiring) them here.
   try {
-    const { startDiscordBotLockPolling, stopDiscordBotLockPolling, releaseDiscordBotLock } = await import("@/lib/discord/lock")
-    const botModule = await import("@/lib/discord/bot")
-    const bot = botModule.getDiscordBot()
+    const { DistributedLock } = await import("@/lib/discord/lock/lease")
+    const { BotLockPoller } = await import("@/lib/discord/lock/poller")
+    const { isDiscordBotEnabled } = await import("@/lib/discord/lock")
+    const { DiscordBot } = await import("@/lib/discord/bot")
+
+    // Construct the process-lifecycle instances here (injecting a real Client via
+    // the bot's default factory).
+    const bot = new DiscordBot()
+    const lock = new DistributedLock()
 
     // Poll interval in milliseconds (default: 60 seconds)
     const pollIntervalMs = parseInt(process.env.DISCORD_BOT_POLL_INTERVAL_MS || "60000", 10)
 
-    // Store bot instance for cleanup
-    let botInstance: ReturnType<typeof botModule.getDiscordBot> | null = null
-
-    // Start background polling - this doesn't block server startup
-    // The bot will initialize automatically when the lock is acquired
-    startDiscordBotLockPolling(
-      // onLockAcquired - called when we successfully acquire the lock
-      async () => {
-        try {
-          await bot.initialize()
-          botInstance = bot
-          logger.info("Discord bot initialized successfully (holding distributed lock)")
-        } catch (error) {
-          logger.error("Failed to initialize Discord bot", error)
-          // Release lock if initialization fails
-          await releaseDiscordBotLock()
-        }
-      },
-      // onLockLost - called if we lose the lock (e.g., another instance took it)
-      async () => {
-        try {
-          logger.info("Discord bot lock lost - shutting down bot")
-          if (botInstance) {
-            await botInstance.destroy()
-            botInstance = null
+    // The poller drives acquire/renew off a single lock (single source of truth)
+    // and calls these lifecycle hooks. onLockAcquired -> initialize the bot;
+    // onLockLost -> destroy it.
+    //
+    // NOTE (Step 18 extension point): when config-change / token-rotation bounce
+    // is implemented, the config-hash check lives inside BotLockPoller.tick();
+    // onLockLost here already tears the bot down, so a bounce reuses this exact
+    // wiring (stop -> destroy -> next tick re-acquires + re-initializes).
+    const poller = new BotLockPoller(
+      lock,
+      {
+        onLockAcquired: async () => {
+          try {
+            await bot.initialize()
+            logger.info("Discord bot initialized successfully (holding distributed lock)")
+          } catch (error) {
+            logger.error("Failed to initialize Discord bot", error)
+            // Release lock if initialization fails so another instance can take over.
+            await lock.release()
           }
-        } catch (error) {
-          logger.error("Error shutting down bot after lock loss", error)
-        }
+        },
+        onLockLost: async () => {
+          try {
+            logger.info("Discord bot lock lost - shutting down bot")
+            await bot.destroy()
+          } catch (error) {
+            logger.error("Error shutting down bot after lock loss", error)
+          }
+        },
+        isEnabled: isDiscordBotEnabled,
       },
-      pollIntervalMs
+      { pollIntervalMs }
     )
+
+    // Start background polling - this doesn't block server startup.
+    // The bot initializes automatically when the lock is acquired.
+    await poller.start()
 
     logger.info(`Discord bot lock polling started (checking every ${pollIntervalMs / 1000} seconds)`)
 
-    // Graceful shutdown handlers - only register if we're in Node.js runtime
-    // Skip in test environments (Playwright) to avoid interference
+    // Graceful shutdown handlers - only register if we're in Node.js runtime.
+    // Skip in test environments (Playwright) to avoid interference.
     if (process.env.NODE_ENV !== "test") {
       const shutdown = async () => {
         try {
-          await stopDiscordBotLockPolling()
-          // Bot instance will be destroyed by stopDiscordBotLockPolling if it exists
-          // But also try to destroy it here as a fallback
+          // stop() fires onLockLost (which destroys the bot) and releases the lock.
+          await poller.stop()
+          // Fallback destroy in case the bot was never running.
           try {
             await bot.destroy()
           } catch {

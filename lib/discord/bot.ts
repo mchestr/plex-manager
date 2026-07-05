@@ -18,12 +18,30 @@ const REQUIRED_ENV = [
 const CHAT_TRIGGER_PREFIXES = ["!assistant", "!bot", "!support"]
 const CLEAR_COMMANDS = ["!clear", "!reset", "!clearcontext"]
 
+/**
+ * Factory for the discord.js gateway client. Injectable so tests can supply a
+ * fake client without a live gateway connection. The default preserves the
+ * original intents exactly.
+ */
+export type DiscordClientFactory = () => Client
+
+const defaultClientFactory: DiscordClientFactory = () =>
+  new Client({
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
+  })
+
 export class DiscordBot {
   private client: Client | null = null
   private logger: winston.Logger
   private isInitialized = false
+  private readonly createClient: DiscordClientFactory
 
-  constructor() {
+  /**
+   * @param createClient - Factory that builds the discord.js Client. Defaults to
+   *   a real client with the bot's gateway intents; inject a fake in tests.
+   */
+  constructor(createClient: DiscordClientFactory = defaultClientFactory) {
+    this.createClient = createClient
     const isDevelopment = process.env.NODE_ENV === "development" || !process.env.NODE_ENV
 
     this.logger = winston.createLogger({
@@ -84,9 +102,7 @@ export class DiscordBot {
       hasBotToken: !!BOT_TOKEN,
     })
 
-    this.client = new Client({
-      intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
-    })
+    this.client = this.createClient()
 
     // Set up event handlers
     this.setupEventHandlers(SUPPORT_CHANNEL_ID, LISTEN_THREAD_IDS, PORTAL_URL)
@@ -594,15 +610,5 @@ export class DiscordBot {
       this.logger.info("Discord client destroyed")
     }
   }
-}
-
-// Singleton instance
-let botInstance: DiscordBot | null = null
-
-export function getDiscordBot(): DiscordBot {
-  if (!botInstance) {
-    botInstance = new DiscordBot()
-  }
-  return botInstance
 }
 
