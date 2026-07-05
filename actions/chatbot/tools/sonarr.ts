@@ -4,7 +4,25 @@ export const SONARR_TOOLS: RegisteredTool[] = [
   {
     type: "function",
     discordSafe: true,
-    discordFields: ["version", "queueSize", "healthWarnings", "diskSpace"],
+    // Executor returns { status, queue, health, disk }. Allowlist the safe leaf
+    // keys of each raw sub-payload: version/app info, queue totals, health
+    // warnings (source/type/message/wikiUrl), and disk capacity. No paths beyond
+    // the human "label" (drive paths can be considered sensitive infra detail).
+    discordFields: [
+      "version",
+      "appName",
+      "instanceName",
+      "totalRecords",
+      "page",
+      "pageSize",
+      "source",
+      "type",
+      "message",
+      "wikiUrl",
+      "label",
+      "freeSpace",
+      "totalSpace",
+    ],
     function: {
       name: "get_sonarr_status",
       description: "Get Sonarr server version, queue size, health warnings, and disk space",
@@ -32,6 +50,23 @@ export const SONARR_TOOLS: RegisteredTool[] = [
   {
     type: "function",
     discordSafe: true,
+    // Paged history: keep event/title/quality/date leaf fields. Exclude
+    // downloadId, download client, indexer, and file paths (infra/tracker detail).
+    discordFields: [
+      "totalRecords",
+      "page",
+      "pageSize",
+      "records",
+      "eventType",
+      "sourceTitle",
+      "date",
+      "quality",
+      "quality_profile",
+      "series",
+      "title",
+      "seasonNumber",
+      "episodeNumber",
+    ],
     function: {
       name: "get_sonarr_history",
       description:
@@ -62,6 +97,26 @@ export const SONARR_TOOLS: RegisteredTool[] = [
   {
     type: "function",
     discordSafe: true,
+    // Paged queue: keep title/status/progress/size + quality. Exclude
+    // downloadId, download client, indexer, and output/file paths.
+    discordFields: [
+      "totalRecords",
+      "page",
+      "pageSize",
+      "records",
+      "title",
+      "status",
+      "trackedDownloadStatus",
+      "trackedDownloadState",
+      "estimatedCompletionTime",
+      "timeleft",
+      "size",
+      "sizeleft",
+      "errorMessage",
+      "quality",
+      "seasonNumber",
+      "episodeNumber",
+    ],
     function: {
       name: "get_sonarr_queue",
       description: "Get the current download queue from Sonarr showing TV series being downloaded",

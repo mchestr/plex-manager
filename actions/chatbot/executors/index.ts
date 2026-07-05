@@ -6,6 +6,7 @@ import { executeRadarrTool } from "./radarr"
 import { executeSonarrTool } from "./sonarr"
 import { executeTautulliTool } from "./tautulli"
 import { executeMediaMarkingTool } from "./media-marking"
+import { scrubForDiscord } from "./scrub"
 
 const logger = createLogger("CHATBOT_EXECUTOR")
 
@@ -112,6 +113,13 @@ export async function executeToolCall(
       toolName,
       toolCallId: toolCall.id,
     })
+
+    // Discord context: scrub tool output to the per-tool safe-field allowlist
+    // BEFORE it becomes the tool message the LLM sees (design §4.4, FR-8).
+    // Admin (default) context is unchanged.
+    if (context === "discord") {
+      return scrubForDiscord(toolName, result)
+    }
 
     return result
   } catch (error) {

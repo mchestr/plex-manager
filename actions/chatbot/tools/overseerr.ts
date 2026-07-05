@@ -4,7 +4,8 @@ export const OVERSEERR_TOOLS: RegisteredTool[] = [
   {
     type: "function",
     discordSafe: true,
-    discordFields: ["version", "totalRequests"],
+    // /settings/about exposes only aggregate server info — no per-user data.
+    discordFields: ["version", "totalRequests", "totalMediaItems"],
     function: {
       name: "get_overseerr_status",
       description: "Get Overseerr server version and total requests count",

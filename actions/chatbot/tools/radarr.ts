@@ -4,7 +4,23 @@ export const RADARR_TOOLS: RegisteredTool[] = [
   {
     type: "function",
     discordSafe: true,
-    discordFields: ["version", "queueSize", "healthWarnings", "diskSpace"],
+    // Executor returns { status, queue, health, disk }; mirror the Sonarr
+    // allowlist (raw arr v3 shapes are identical).
+    discordFields: [
+      "version",
+      "appName",
+      "instanceName",
+      "totalRecords",
+      "page",
+      "pageSize",
+      "source",
+      "type",
+      "message",
+      "wikiUrl",
+      "label",
+      "freeSpace",
+      "totalSpace",
+    ],
     function: {
       name: "get_radarr_status",
       description: "Get Radarr server version, queue size, health warnings, and disk space",
@@ -32,6 +48,21 @@ export const RADARR_TOOLS: RegisteredTool[] = [
   {
     type: "function",
     discordSafe: true,
+    // Paged history: keep event/title/quality/date leaf fields. Exclude
+    // downloadId, download client, indexer, and file paths.
+    discordFields: [
+      "totalRecords",
+      "page",
+      "pageSize",
+      "records",
+      "eventType",
+      "sourceTitle",
+      "date",
+      "quality",
+      "quality_profile",
+      "movie",
+      "title",
+    ],
     function: {
       name: "get_radarr_history",
       description:
@@ -58,6 +89,24 @@ export const RADARR_TOOLS: RegisteredTool[] = [
   {
     type: "function",
     discordSafe: true,
+    // Paged queue: keep title/status/progress/size + quality. Exclude
+    // downloadId, download client, indexer, and output/file paths.
+    discordFields: [
+      "totalRecords",
+      "page",
+      "pageSize",
+      "records",
+      "title",
+      "status",
+      "trackedDownloadStatus",
+      "trackedDownloadState",
+      "estimatedCompletionTime",
+      "timeleft",
+      "size",
+      "sizeleft",
+      "errorMessage",
+      "quality",
+    ],
     function: {
       name: "get_radarr_queue",
       description: "Get the current download queue from Radarr showing movies being downloaded",

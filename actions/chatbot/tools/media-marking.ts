@@ -5,6 +5,7 @@ export const MEDIA_MARKING_TOOLS: RegisteredTool[] = [
     type: "function",
     discordSafe: true,
     userScoped: true,
+    discordPlaintext: true,
     function: {
       name: "mark_media_finished",
       description:
@@ -25,6 +26,7 @@ export const MEDIA_MARKING_TOOLS: RegisteredTool[] = [
     type: "function",
     discordSafe: true,
     userScoped: true,
+    discordPlaintext: true,
     function: {
       name: "mark_media_keep",
       description:
@@ -45,6 +47,7 @@ export const MEDIA_MARKING_TOOLS: RegisteredTool[] = [
     type: "function",
     discordSafe: true,
     userScoped: true,
+    discordPlaintext: true,
     function: {
       name: "get_my_marks",
       description: "Get the current user's media marks (finished watching, keep forever, etc.)",

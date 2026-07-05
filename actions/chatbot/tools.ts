@@ -13,5 +13,6 @@ export {
   TOOLS,
   generateDiscordSystemPrompt,
   generateSystemPrompt,
+  getRegisteredTool,
   type RegisteredTool,
 } from "./tools/index"

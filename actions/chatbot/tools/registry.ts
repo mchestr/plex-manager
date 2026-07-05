@@ -104,3 +104,12 @@ export const DISCORD_SAFE_TOOLS: ChatTool[] = ALL_TOOLS.filter((tool) => tool.di
 export const DISCORD_SAFE_TOOL_NAMES = new Set<string>(
   DISCORD_SAFE_TOOLS.map((tool) => tool.function.name)
 )
+
+/**
+ * Look up a registered tool (with its Discord metadata) by name. Returns
+ * `undefined` for unknown tools. Consumed by the Discord output scrubber to
+ * resolve a tool's `discordSafe` flag and `discordFields` allowlist.
+ */
+export function getRegisteredTool(name: string): RegisteredTool | undefined {
+  return TOOLS_BY_NAME.get(name)
+}

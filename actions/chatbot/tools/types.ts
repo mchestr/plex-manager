@@ -23,9 +23,22 @@ export interface RegisteredTool extends ChatTool {
    */
   userScoped?: boolean
   /**
-   * Best-effort allowlist of output fields considered safe to surface in the
-   * Discord context. Consumed by a later phase for output scrubbing; may be
-   * left undefined where the safe field set is not yet determined.
+   * Allowlist of output field names considered safe to surface in the Discord
+   * context. The Discord output scrubber (`scrubForDiscord`) projects a tool's
+   * JSON result down to ONLY these leaf keys (recursively) before the LLM sees
+   * it. A `discordSafe` tool with no `discordFields` FAILS CLOSED (redacted).
+   *
+   * Not applicable to tools flagged `discordPlaintext` (their output is not
+   * JSON) — see below.
    */
   discordFields?: string[]
+  /**
+   * True for `discordSafe` tools whose executor returns an already-safe,
+   * caller-scoped human-readable STRING (not JSON) — e.g. the media-marking
+   * tools, which only ever reference the requesting user's own media. Such
+   * output has no field structure to allowlist, so the scrubber passes it
+   * through unchanged. The Discord denylist backstop (`sanitizeDiscordResponse`)
+   * still runs over the final assistant text.
+   */
+  discordPlaintext?: boolean
 }
