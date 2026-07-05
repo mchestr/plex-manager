@@ -26,7 +26,8 @@
     "db:migrate": "SKIP_SEED=true prisma migrate dev",
     "db:studio": "prisma studio",
     "db:seed": "prisma db seed",
-    "register-discord-metadata": "ts-node --project tsconfig.scripts.json -r tsconfig-paths/register scripts/register-discord-metadata.ts"
+    "register-discord-metadata": "ts-node --project tsconfig.scripts.json -r tsconfig-paths/register scripts/register-discord-metadata.ts",
+    "register-discord-commands": "ts-node --project tsconfig.scripts.json -r tsconfig-paths/register scripts/register-discord-commands.ts"
   },
   "dependencies": {
     "@next-auth/prisma-adapter": "^1.0.7",

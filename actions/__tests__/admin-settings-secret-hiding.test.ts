@@ -125,13 +125,16 @@ describe('getAdminSettings secret hiding', () => {
     expect(serialized).not.toContain('sonarr-secret')
   })
 
-  it('strips the Discord client secret and exposes hasClientSecret', async () => {
+  it('strips the Discord client secret and bot token, exposing has* booleans', async () => {
     mockPrisma.discordIntegration.findUnique.mockResolvedValue({
       id: 'discord',
       isEnabled: true,
       botEnabled: false,
       clientId: 'client-id-public',
       clientSecret: 'discord-secret-value',
+      botToken: 'discord-bot-token-value',
+      supportChannelId: 'channel-123',
+      supportThreadIds: ['thread-1', 'thread-2'],
       guildId: null,
       serverInviteCode: null,
       platformName: 'Plex Wrapped',
@@ -141,8 +144,18 @@ describe('getAdminSettings secret hiding', () => {
     const settings = await getAdminSettings()
 
     expect(settings.discordIntegration).not.toHaveProperty('clientSecret')
-    expect(settings.discordIntegration).toMatchObject({ hasClientSecret: true, clientId: 'client-id-public' })
-    expect(JSON.stringify(settings)).not.toContain('discord-secret-value')
+    expect(settings.discordIntegration).not.toHaveProperty('botToken')
+    expect(settings.discordIntegration).toMatchObject({
+      hasClientSecret: true,
+      hasBotToken: true,
+      clientId: 'client-id-public',
+      // Non-secret fields pass through.
+      supportChannelId: 'channel-123',
+      supportThreadIds: ['thread-1', 'thread-2'],
+    })
+    const serialized = JSON.stringify(settings)
+    expect(serialized).not.toContain('discord-secret-value')
+    expect(serialized).not.toContain('discord-bot-token-value')
   })
 
   it('reports has* as false when a secret column is empty', async () => {

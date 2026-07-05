@@ -1,8 +1,10 @@
-import { searchPlexMedia, markPlexItemWatched } from "@/lib/connections/plex"
+import { searchPlexMedia } from "@/lib/connections/plex"
+import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
-import { MarkType, MediaType } from "@/lib/generated/prisma/client"
-import { findRadarrIdByTitle, findSonarrIdByTitle } from "@/lib/utils/media-matching"
+import { MarkType } from "@/lib/generated/prisma/client"
+import { applyMark } from "@/lib/discord/media/mark-media"
+import { getMarkTypeLabel } from "@/lib/discord/media/mark-labels"
 
 const logger = createLogger("CHATBOT_MEDIA_MARKING")
 
@@ -17,16 +19,9 @@ export async function executeMediaMarkingTool(
   }
 
   // Get Plex server config
-  const server = await prisma.plexServer.findFirst({ where: { isActive: true } })
-  if (!server) {
+  const plexConfig = await getActivePlexServerConfig()
+  if (!plexConfig) {
     return "Error: No active Plex server configured"
-  }
-
-  const plexConfig = {
-    name: server.name,
-    url: server.url,
-    token: server.token,
-    publicUrl: server.publicUrl || undefined,
   }
 
   switch (toolName) {
@@ -50,76 +45,16 @@ export async function executeMediaMarkingTool(
         // Use first result
         const item = searchResult.data[0]
 
-        // Determine media type
-        let mediaType: MediaType
-        if (item.type === "movie") {
-          mediaType = MediaType.MOVIE
-        } else if (item.type === "show") {
-          mediaType = MediaType.TV_SERIES
-        } else if (item.type === "episode") {
-          mediaType = MediaType.EPISODE
-        } else {
-          return `Error: Unsupported media type "${item.type}". Only movies, TV shows, and episodes are supported.`
-        }
-
-        // Find Radarr/Sonarr IDs
-        let radarrId: number | null = null
-        let radarrTitleSlug: string | null = null
-        let sonarrId: number | null = null
-        let sonarrTitleSlug: string | null = null
-
-        if (mediaType === MediaType.MOVIE) {
-          const radarrMatch = await findRadarrIdByTitle(item.title, item.year)
-          if (radarrMatch) {
-            radarrId = radarrMatch.id
-            radarrTitleSlug = radarrMatch.titleSlug
-          }
-        } else if (mediaType === MediaType.TV_SERIES || mediaType === MediaType.EPISODE) {
-          const showTitle = item.grandparentTitle || item.title
-          const sonarrMatch = await findSonarrIdByTitle(showTitle, item.year)
-          if (sonarrMatch) {
-            sonarrId = sonarrMatch.id
-            sonarrTitleSlug = sonarrMatch.titleSlug
-          }
-        }
-
-        // Create or update the mark
-        await prisma.userMediaMark.upsert({
-          where: {
-            userId_plexRatingKey_markType: {
-              userId,
-              plexRatingKey: item.ratingKey,
-              markType: MarkType.FINISHED_WATCHING,
-            },
-          },
-          create: {
-            userId,
-            mediaType,
-            plexRatingKey: item.ratingKey,
-            markType: MarkType.FINISHED_WATCHING,
-            title: item.title,
-            year: item.year,
-            seasonNumber: item.parentIndex,
-            episodeNumber: item.index,
-            parentTitle: item.parentTitle || item.grandparentTitle,
-            radarrId,
-            radarrTitleSlug,
-            sonarrId,
-            sonarrTitleSlug,
-            markedVia: context || "chatbot",
-          },
-          update: {
-            markedAt: new Date(),
-          },
+        const result = await applyMark({
+          userId,
+          item,
+          markType: MarkType.FINISHED_WATCHING,
+          markedVia: context || "chatbot",
+          plexConfig,
         })
 
-        // Mark as watched in Plex
-        const watchedResult = await markPlexItemWatched(plexConfig, item.ratingKey)
-        if (!watchedResult.success) {
-          logger.warn("Failed to mark item as watched in Plex", {
-            ratingKey: item.ratingKey,
-            error: watchedResult.error,
-          })
+        if (!result.ok) {
+          return `Error: Unsupported media type "${result.mediaType}". Only movies, TV shows, and episodes are supported.`
         }
 
         const titleDisplay = item.grandparentTitle
@@ -128,14 +63,6 @@ export async function executeMediaMarkingTool(
             ? `${item.parentTitle} - ${item.title}`
             : item.title
         const yearDisplay = item.year ? ` (${item.year})` : ""
-
-        logger.info("Media marked as finished", {
-          userId,
-          context,
-          mediaType,
-          plexRatingKey: item.ratingKey,
-          title: item.title,
-        })
 
         return `Successfully marked "${titleDisplay}${yearDisplay}" as finished watching and updated Plex watch status.`
       } catch (error) {
@@ -164,68 +91,17 @@ export async function executeMediaMarkingTool(
         // Use first result
         const item = searchResult.data[0]
 
-        // Determine media type
-        let mediaType: MediaType
-        if (item.type === "movie") {
-          mediaType = MediaType.MOVIE
-        } else if (item.type === "show") {
-          mediaType = MediaType.TV_SERIES
-        } else if (item.type === "episode") {
-          mediaType = MediaType.EPISODE
-        } else {
-          return `Error: Unsupported media type "${item.type}". Only movies, TV shows, and episodes are supported.`
-        }
-
-        // Find Radarr/Sonarr IDs
-        let radarrId: number | null = null
-        let radarrTitleSlug: string | null = null
-        let sonarrId: number | null = null
-        let sonarrTitleSlug: string | null = null
-
-        if (mediaType === MediaType.MOVIE) {
-          const radarrMatch = await findRadarrIdByTitle(item.title, item.year)
-          if (radarrMatch) {
-            radarrId = radarrMatch.id
-            radarrTitleSlug = radarrMatch.titleSlug
-          }
-        } else if (mediaType === MediaType.TV_SERIES || mediaType === MediaType.EPISODE) {
-          const showTitle = item.grandparentTitle || item.title
-          const sonarrMatch = await findSonarrIdByTitle(showTitle, item.year)
-          if (sonarrMatch) {
-            sonarrId = sonarrMatch.id
-            sonarrTitleSlug = sonarrMatch.titleSlug
-          }
-        }
-
-        // Create or update the mark
-        await prisma.userMediaMark.upsert({
-          where: {
-            userId_plexRatingKey_markType: {
-              userId,
-              plexRatingKey: item.ratingKey,
-              markType: MarkType.KEEP_FOREVER,
-            },
-          },
-          create: {
-            userId,
-            mediaType,
-            plexRatingKey: item.ratingKey,
-            markType: MarkType.KEEP_FOREVER,
-            title: item.title,
-            year: item.year,
-            seasonNumber: item.parentIndex,
-            episodeNumber: item.index,
-            parentTitle: item.parentTitle || item.grandparentTitle,
-            radarrId,
-            radarrTitleSlug,
-            sonarrId,
-            sonarrTitleSlug,
-            markedVia: context || "chatbot",
-          },
-          update: {
-            markedAt: new Date(),
-          },
+        const result = await applyMark({
+          userId,
+          item,
+          markType: MarkType.KEEP_FOREVER,
+          markedVia: context || "chatbot",
+          plexConfig,
         })
+
+        if (!result.ok) {
+          return `Error: Unsupported media type "${result.mediaType}". Only movies, TV shows, and episodes are supported.`
+        }
 
         const titleDisplay = item.grandparentTitle
           ? `${item.grandparentTitle} - ${item.title}`
@@ -233,14 +109,6 @@ export async function executeMediaMarkingTool(
             ? `${item.parentTitle} - ${item.title}`
             : item.title
         const yearDisplay = item.year ? ` (${item.year})` : ""
-
-        logger.info("Media marked as keep forever", {
-          userId,
-          context,
-          mediaType,
-          plexRatingKey: item.ratingKey,
-          title: item.title,
-        })
 
         return `Successfully marked "${titleDisplay}${yearDisplay}" to keep forever.`
       } catch (error) {
@@ -296,14 +164,14 @@ export async function executeMediaMarkingTool(
             mark.seasonNumber && mark.episodeNumber
               ? ` S${mark.seasonNumber}E${mark.episodeNumber}`
               : ""
-          const markTypeLabel = formatMarkType(mark.markType)
+          const markTypeLabel = getMarkTypeLabel(mark.markType)
           const markedDate = new Date(mark.markedAt).toLocaleDateString()
 
           return `- ${titleDisplay}${yearDisplay}${seasonEp} - ${markTypeLabel} (${markedDate})`
         })
 
         const header = markType
-          ? `Your "${formatMarkType(markType)}" marks (${marks.length}):`
+          ? `Your "${getMarkTypeLabel(markType)}" marks (${marks.length}):`
           : `Your media marks (${marks.length}):`
 
         logger.info("Retrieved user marks", {
@@ -322,27 +190,5 @@ export async function executeMediaMarkingTool(
 
     default:
       return "Error: Unknown media marking tool"
-  }
-}
-
-/**
- * Format mark type for display
- */
-function formatMarkType(markType: MarkType): string {
-  switch (markType) {
-    case MarkType.FINISHED_WATCHING:
-      return "Finished Watching"
-    case MarkType.NOT_INTERESTED:
-      return "Not Interested"
-    case MarkType.KEEP_FOREVER:
-      return "Keep Forever"
-    case MarkType.REWATCH_CANDIDATE:
-      return "Rewatch Candidate"
-    case MarkType.POOR_QUALITY:
-      return "Poor Quality"
-    case MarkType.WRONG_VERSION:
-      return "Wrong Version"
-    default:
-      return markType
   }
 }

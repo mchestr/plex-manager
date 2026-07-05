@@ -1,0 +1,252 @@
+/**
+ * Discord Command Audit — command-level metrics
+ *
+ * Per-command rollups: usage statistics, media-marking breakdown, and
+ * context-clear metrics.
+ */
+
+import { prisma } from "@/lib/prisma"
+import type { DiscordCommandType } from "@/lib/generated/prisma/client"
+import { dateRangeWhere } from "../query-helpers"
+
+export interface CommandStats {
+  commandName: string
+  commandType: DiscordCommandType
+  totalCount: number
+  successCount: number
+  failedCount: number
+  avgResponseTimeMs: number | null
+}
+
+/**
+ * Get command usage statistics for a date range.
+ *
+ * Uses a single `groupBy(["commandName", "commandType", "status"])` and folds
+ * the status dimension client-side. This produces the same per-command output
+ * as the previous implementation (which issued a `groupBy` plus a pair of
+ * `count()` queries per group — an N+1) without the extra round trips.
+ *
+ * Command groups are emitted in first-seen order of the grouped rows, matching
+ * the previous implementation's (unordered) group iteration.
+ */
+export async function getCommandStats(
+  startDate: Date,
+  endDate: Date
+): Promise<CommandStats[]> {
+  const rows = await prisma.discordCommandLog.groupBy({
+    by: ["commandName", "commandType", "status"],
+    where: dateRangeWhere(startDate, endDate),
+    _count: {
+      _all: true,
+      responseTimeMs: true,
+    },
+    _sum: {
+      responseTimeMs: true,
+    },
+  })
+
+  // Fold the status dimension: accumulate totals, success/failed counts, and
+  // response-time sum/count per (commandName, commandType) so we can compute
+  // the average the same way _avg would have.
+  const statsByCommand = new Map<
+    string,
+    CommandStats & { responseTimeSum: number; responseTimeCount: number }
+  >()
+
+  for (const row of rows) {
+    const key = `${row.commandName}:${row.commandType}`
+    const count = row._count._all
+    let entry = statsByCommand.get(key)
+    if (!entry) {
+      entry = {
+        commandName: row.commandName,
+        commandType: row.commandType,
+        totalCount: 0,
+        successCount: 0,
+        failedCount: 0,
+        avgResponseTimeMs: null,
+        responseTimeSum: 0,
+        responseTimeCount: 0,
+      }
+      statsByCommand.set(key, entry)
+    }
+
+    entry.totalCount += count
+    if (row.status === "SUCCESS") {
+      entry.successCount += count
+    } else if (row.status === "FAILED") {
+      entry.failedCount += count
+    }
+
+    // _sum/_count(responseTimeMs) both omit null response times, so this
+    // reproduces _avg's non-null semantics exactly.
+    if (row._sum.responseTimeMs != null) {
+      entry.responseTimeSum += row._sum.responseTimeMs
+      entry.responseTimeCount += row._count.responseTimeMs
+    }
+  }
+
+  return Array.from(statsByCommand.values()).map((entry) => ({
+    commandName: entry.commandName,
+    commandType: entry.commandType,
+    totalCount: entry.totalCount,
+    successCount: entry.successCount,
+    failedCount: entry.failedCount,
+    avgResponseTimeMs:
+      entry.responseTimeCount > 0
+        ? entry.responseTimeSum / entry.responseTimeCount
+        : null,
+  }))
+}
+
+export interface MediaMarkingBreakdown {
+  byCommand: {
+    commandName: string
+    count: number
+    successCount: number
+    failedCount: number
+  }[]
+  topMediaMarked: { title: string; count: number }[]
+}
+
+/**
+ * Get media marking breakdown by command
+ */
+export async function getMediaMarkingBreakdown(
+  startDate: Date,
+  endDate: Date
+): Promise<MediaMarkingBreakdown> {
+  const where = {
+    commandType: "MEDIA_MARK" as DiscordCommandType,
+    ...dateRangeWhere(startDate, endDate),
+  }
+
+  const [commandGroups, logs] = await Promise.all([
+    prisma.discordCommandLog.groupBy({
+      by: ["commandName"],
+      where,
+      _count: true,
+    }),
+    prisma.discordCommandLog.findMany({
+      where,
+      select: {
+        commandName: true,
+        commandArgs: true,
+        status: true,
+      },
+    }),
+  ])
+
+  // Calculate success/failed per command
+  const commandStats = new Map<
+    string,
+    { count: number; successCount: number; failedCount: number }
+  >()
+
+  for (const log of logs) {
+    const existing = commandStats.get(log.commandName) || {
+      count: 0,
+      successCount: 0,
+      failedCount: 0,
+    }
+    existing.count++
+    if (log.status === "SUCCESS") {
+      existing.successCount++
+    } else if (log.status === "FAILED") {
+      existing.failedCount++
+    }
+    commandStats.set(log.commandName, existing)
+  }
+
+  const byCommand = commandGroups
+    .sort((a, b) => b._count - a._count)
+    .map((g) => {
+      const stats = commandStats.get(g.commandName) || {
+        count: 0,
+        successCount: 0,
+        failedCount: 0,
+      }
+      return {
+        commandName: g.commandName,
+        count: g._count,
+        successCount: stats.successCount,
+        failedCount: stats.failedCount,
+      }
+    })
+
+  // Extract media titles from commandArgs (top 10)
+  const titleCounts = new Map<string, number>()
+  for (const log of logs) {
+    if (log.commandArgs && log.status === "SUCCESS") {
+      const title = log.commandArgs.trim()
+      if (title) {
+        titleCounts.set(title, (titleCounts.get(title) || 0) + 1)
+      }
+    }
+  }
+
+  const topMediaMarked = Array.from(titleCounts.entries())
+    .map(([title, count]) => ({ title, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10)
+
+  return {
+    byCommand,
+    topMediaMarked,
+  }
+}
+
+export interface ContextMetrics {
+  totalClears: number
+  clearsByCommand: { commandName: string; count: number }[]
+  topClearUsers: {
+    discordUserId: string
+    discordUsername: string | null
+    clearCount: number
+  }[]
+}
+
+/**
+ * Get context clear metrics
+ */
+export async function getContextMetrics(
+  startDate: Date,
+  endDate: Date
+): Promise<ContextMetrics> {
+  const where = {
+    commandType: "CLEAR_CONTEXT" as DiscordCommandType,
+    ...dateRangeWhere(startDate, endDate),
+  }
+
+  const [totalClears, commandGroups, userGroups] = await Promise.all([
+    prisma.discordCommandLog.count({ where }),
+    prisma.discordCommandLog.groupBy({
+      by: ["commandName"],
+      where,
+      _count: true,
+    }),
+    prisma.discordCommandLog.groupBy({
+      by: ["discordUserId", "discordUsername"],
+      where,
+      _count: true,
+    }),
+  ])
+
+  return {
+    totalClears,
+    clearsByCommand: commandGroups
+      .sort((a, b) => b._count - a._count)
+      .map((g) => ({
+        commandName: g.commandName,
+        count: g._count,
+      })),
+    topClearUsers: userGroups
+      .sort((a, b) => b._count - a._count)
+      .slice(0, 10)
+      .map((u) => ({
+        discordUserId: u.discordUserId,
+        discordUsername: u.discordUsername,
+        clearCount: u._count,
+      })),
+  }
+}

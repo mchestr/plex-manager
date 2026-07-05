@@ -68,6 +68,21 @@ export async function getAdminSettings() {
   const sanitizedChatLLMProvider = omitSecret(chatLLMProvider, "apiKey", "hasApiKey")
   const sanitizedWrappedLLMProvider = omitSecret(wrappedLLMProvider, "apiKey", "hasApiKey")
 
+  // Strip both Discord secrets (client secret + bot token) in one pass, exposing
+  // only has* booleans. supportChannelId / supportThreadIds are non-secret and
+  // pass through unchanged. Done explicitly (rather than nesting omitSecret) so
+  // the returned type stays flat and readable.
+  const sanitizedDiscordIntegration = discordIntegration
+    ? (() => {
+        const { clientSecret, botToken, ...rest } = discordIntegration
+        return {
+          ...rest,
+          hasClientSecret: Boolean(clientSecret),
+          hasBotToken: Boolean(botToken),
+        }
+      })()
+    : null
+
   return {
     config,
     chatLLMProvider: sanitizedChatLLMProvider,
@@ -81,7 +96,7 @@ export async function getAdminSettings() {
     sonarr: omitSecret(sonarr, "apiKey", "hasApiKey"),
     radarr: omitSecret(radarr, "apiKey", "hasApiKey"),
     prometheus,
-    discordIntegration: omitSecret(discordIntegration, "clientSecret", "hasClientSecret"),
+    discordIntegration: sanitizedDiscordIntegration,
     discordLinkedCount,
   }
 }

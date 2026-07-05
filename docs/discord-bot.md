@@ -1,79 +1,158 @@
-# Discord Support Bot
+# Discord Bot
 
-This repository ships with a lightweight Discord bot that **automatically runs with the Next.js process** to monitor a support channel, verify that users have linked roles, and gently remind unverified members to link their account.
+This repository ships with a Discord bot that **runs automatically with the
+Next.js process**. It serves users through native **slash commands** and a
+**DM-based AI assistant** — it does **not** monitor or read channel messages.
+
+> **Migration note:** the bot was migrated from `!`-prefix text commands to
+> native slash commands. As a result it **no longer requires the `Message
+> Content` privileged intent** — a deliberate privacy improvement (the bot no
+> longer receives the text of arbitrary channel messages). The legacy
+> `!assistant` / `!finished` / etc. text commands have been removed (clean
+> break). Re-run the command registration script after upgrading (below).
+
+## Commands
+
+All commands are slash commands. Personal commands reply **ephemerally** (only
+the invoking user sees them) and are hard-scoped to that user.
+
+| Command | Description |
+|---|---|
+| `/help [command]` | List commands, or details for one. |
+| `/mark finished\|keep\|notinterested\|rewatch\|badquality title:<name>` | Mark media; disambiguates multiple matches with a select menu. `finished` also marks it watched in Plex. |
+| `/assistant ask prompt:<text>` | Ask the AI assistant (answers ephemerally; DM the bot to continue a multi-turn conversation). |
+| `/assistant reset` | Clear your assistant conversation context (a `reset`/`clear` DM also works). |
+| `/mystats` | Your personal watch statistics. |
+| `/mymarks [type]` | The media you've marked, optionally filtered by type. |
+| `/watching` | What you're currently watching. |
+
+The **AI assistant** is DM-based: DM the bot for a full multi-turn conversation.
+DM content is delivered **without** the Message Content privileged intent.
 
 ## Prerequisites
 
 1. **Discord Application**
-   - Enable *Privileged Gateway Intents* for **Message Content** (you must toggle this on the "Bot" tab).
-   - In the **OAuth2** section, enable the `role_connections.write` scope (required for Linked Roles).
-   - Add your callback URL to **Redirects**: `https://yourdomain.com/api/discord/callback`
-   - Invite the bot to your server with the `Send Messages`, `Read Message History`, and `Manage Threads` permissions for the support channel.
-2. **Linked Roles**
-   - Follow the admin UI instructions to configure Discord Linked Roles and set a *Bot Shared Secret* in `Admin → Settings → Discord Linked Roles`.
-3. **Environment**
-   - Copy the variables from `example.env` and set:
-     ```
-     # Optional: Set to "false" to disable bot attempts (default: enabled)
-     # The bot uses a distributed database lock, so only one pod will run it automatically
-     ENABLE_DISCORD_BOT="true"
+   - **No privileged intents required.** The bot uses only the (non-privileged)
+     `Guilds` and `Direct Messages` gateway intents.
+   - In the **OAuth2** section, enable the `role_connections.write` scope
+     (required for Linked Roles).
+   - Add your callback URL to **Redirects**:
+     `https://yourdomain.com/api/discord/callback`
+   - Invite the bot with the `applications.commands` scope (for slash commands)
+     and `Send Messages` permission.
+2. **Linked Roles** — configure Discord Linked Roles in the admin UI. The bot
+   exposes two role-connection metadata fields, `is_subscribed` (Plex access) and
+   `watched_hours` (from Tautulli). Register them with
+   `npm run register-discord-metadata`.
+3. **Configuration** — the bot token and support channel/thread IDs are now
+   **managed in the admin UI** (`Admin → Settings → Discord`) and stored
+   **encrypted** in the database. Environment variables act as a **fallback**
+   when the corresponding DB fields are unset, so existing deployments keep
+   working:
+   ```
+   # Optional: set to "false" to disable bot attempts (default: enabled).
+   # The bot uses a distributed DB lock, so only one pod runs it.
+   ENABLE_DISCORD_BOT="true"
 
-     DISCORD_BOT_TOKEN=...
-     DISCORD_SUPPORT_CHANNEL_ID=...   # Channel ID the bot should watch
-     DISCORD_SUPPORT_THREAD_IDS=...   # Optional comma-delimited list of thread IDs
-     DISCORD_PORTAL_URL=https://yourdomain.com/discord/link  # Optional: defaults to NEXT_PUBLIC_APP_URL/discord/link
-     ```
+   # Fallbacks only — prefer setting these in Admin → Settings → Discord.
+   DISCORD_BOT_TOKEN=...
+   DISCORD_SUPPORT_CHANNEL_ID=...   # optional; informational (pinned-post/portal)
+   DISCORD_SUPPORT_THREAD_IDS=...   # optional, comma-delimited
+   DISCORD_PORTAL_URL=https://yourdomain.com/discord/link  # optional
+   ```
+   Only the **bot token** is required for the bot to start. Setting/rotating the
+   token in the admin UI takes effect **without a redeploy** (see *Token
+   rotation* below).
 
-> **Tip:** Grab IDs by enabling *Developer Mode* in Discord → Advanced → right-click the channel → “Copy ID”.
+> **Tip:** Grab IDs by enabling *Developer Mode* in Discord → Advanced →
+> right-click → "Copy ID".
 
-## Running the Bot
+## Registering slash commands
 
-The Discord bot **only starts** when `ENABLE_DISCORD_BOT="true"` is set in your environment:
+Slash commands must be registered with Discord once per deploy (and whenever the
+command set changes):
 
 ```bash
-npm run dev      # Development mode
-npm run start    # Production mode
+# Global registration (eventually consistent across all guilds):
+DISCORD_BOT_TOKEN=... DISCORD_CLIENT_ID=... npm run register-discord-commands
+
+# Instant registration to a single guild (recommended for development):
+DISCORD_BOT_TOKEN=... DISCORD_CLIENT_ID=... DISCORD_GUILD_ID=... \
+  npm run register-discord-commands
 ```
 
-**Automatic Distributed Locking for Horizontal Scaling**: The bot uses a **database-based distributed lock** to ensure only one instance runs the bot, even when scaling horizontally (Kubernetes, Docker Swarm, etc.).
+The script performs an idempotent bulk overwrite of the application's commands.
 
-- All pods attempt to acquire the lock on startup
-- Only one pod successfully acquires the lock and runs the bot
-- The lock is automatically renewed every 10 seconds
-- If a pod crashes, the lock expires after 30 seconds and another pod can take over
-- No manual configuration needed - works automatically across all pods
+## Running the bot
 
-To disable bot attempts entirely, set `ENABLE_DISCORD_BOT="false"` (useful for maintenance or debugging).
+The bot **only starts** when `ENABLE_DISCORD_BOT="true"`:
 
-The bot will initialize automatically if all required environment variables are set and the lock is acquired. If the lock cannot be acquired, the pod will start normally but skip bot initialization.
+```bash
+npm run dev      # Development
+npm run start    # Production
+```
 
-The bot:
+**Distributed locking for horizontal scaling:** the bot uses a **database-backed
+distributed lock** so exactly one instance runs it, even when scaled
+horizontally (Kubernetes, Docker Swarm, etc.).
 
-- Listens for new messages in `DISCORD_SUPPORT_CHANNEL_ID` (and optional threads).
-- Verifies users directly via database queries (no HTTP API calls needed).
-- Replies with a link reminder if the user is missing the Linked Role and now answers verified members over **DMs** using the in-app troubleshooting chatbot.
-- Logs verified messages to stdout so you can pipe them into your own tooling.
-- Responds in monitored channels when someone mentions the bot or starts a message with `!assistant` / `!bot` / `!support`, forwarding the request to the chatbot assistant.
+- All pods attempt to acquire the lock on startup; only one succeeds.
+- The lock is renewed on a short interval; if the holder crashes, the lease
+  expires (~30s) and another pod takes over.
+- No manual configuration needed.
 
-## Customizing Behavior
+### Token rotation
 
-- Update `lib/discord/bot.ts` to add slash commands, forward messages into your ticketing system, or integrate observational tooling.
-- Use different channel IDs or add logic for multiple channels by extending the listener.
-- The bot uses direct function calls (`lib/discord/services.ts`) instead of HTTP APIs for better security and performance.
-- Adjust the `CHAT_TRIGGER_PREFIXES` array if you want additional text commands to wake the chatbot, or remove the mention check to restrict responses to direct mentions only.
+Because only the lock holder runs the bot, config changes are applied there. The
+lock poller watches a `configVersion` counter on the `DiscordIntegration` row
+(bumped on every settings save). When it changes, the holding pod **bounces** the
+bot — `destroy()` then `initialize()` — so it reconnects with the fresh token,
+**without a redeploy**. If the re-initialization fails, the pod releases the lease
+so another pod can take over.
 
-## Chatbot Integration
+## Support flow
 
-- The bot calls `handleDiscordChat()` directly (no HTTP overhead) for verified users, reusing the same OpenAI configuration stored in the database.
-- Conversation history is persisted per Discord channel, so DMs and support threads maintain context between messages.
-- All LLM usage triggered from Discord continues to flow into the existing `LLMUsage` table for cost tracking and admin reports.
-- If LLM access is disabled (or misconfigured), the bot replies with the same fallback message shown in the Plex Wrapped UI.
-- Responses are scrubbed for emails, phone numbers, IPs, or user identifiers, and the system prompt enforces that Discord answers only cover general system status or media issues—anything else is politely declined.
-- Discord chats intentionally use a reduced toolset (`get_plex_status`, `get_plex_sessions`, `get_tautulli_status`, `get_tautulli_activity`, `get_overseerr_status`, `get_sonarr_status`, `get_sonarr_queue`, `get_radarr_status`, `get_radarr_queue`). Requests that need other tools are politely declined.
+There is **no passive channel monitoring**. Users get help by:
+
+- Running `/help` (or `/help command:<name>`).
+- DMing the bot for the AI assistant.
+
+Pin a message in your support channel pointing members at these. The support
+channel/thread IDs remain configurable (informational only).
+
+## Chatbot integration & privacy
+
+- The bot calls `handleDiscordChat()` directly (no HTTP overhead) for verified
+  users, reusing the OpenAI configuration stored in the database.
+- Conversation history is persisted per Discord DM/channel, so multi-turn context
+  is maintained. Session creation and history append are transactional (safe
+  under concurrent messages).
+- All LLM usage from Discord flows into the `LLMUsage` table for cost tracking.
+- **Data-leak prevention (defense in depth):**
+  1. **Single tool registry** — each chatbot tool declares `discordSafe`,
+     `userScoped`, and an output-field allowlist (`discordFields`).
+  2. **Allowlist scrubbing before the LLM** — in the Discord context, every tool
+     result is projected to its `discordFields` allowlist *before* the model sees
+     it, so user-identifying fields (email, username, IPs, IDs) never enter the
+     context. Undeclared/unknown tools **fail closed**.
+  3. **Fail-closed execution** — a tool not in the Discord-safe set cannot run in
+     the Discord context (blocks prompt injection); denials are audit-logged.
+  4. **Authorization tiers** — server-wide diagnostic tools (queue/history) are
+     restricted to app admins in Discord; members get self-scoped tools.
+  5. **Denylist backstop** — the final assistant text is still scrubbed for
+     emails, phones, IPv4/IPv6, and long/structural IDs.
+- Discord link/unlink, config changes, and token rotation are recorded as audit
+  events (never the secret values).
 
 ## Troubleshooting
 
-- **Bot won't start** → ensure all required env vars are set and the token is correct.
-- **Bot doesn't respond** → double-check the channel IDs, and confirm Message Content intent is enabled in the Discord Developer Portal.
-- **Verification errors** → check database connectivity and ensure Discord connections are properly linked in the admin UI.
-
+- **Slash commands don't appear** → run `npm run register-discord-commands`
+  (use `DISCORD_GUILD_ID` for instant dev registration).
+- **Bot won't start** → ensure a bot token is set (admin UI or `DISCORD_BOT_TOKEN`)
+  and `ENABLE_DISCORD_BOT="true"`.
+- **Token change not taking effect** → the holding pod bounces within one poll
+  interval; check logs for the bounce, and that the lock is held.
+- **Assistant doesn't reply in a channel** → the assistant is DM-based; DM the
+  bot, or use `/assistant ask`.
+- **Verification errors** → check database connectivity and that the Discord
+  account is linked in the admin UI.

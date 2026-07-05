@@ -12,6 +12,12 @@ interface ConversationConfig {
   userId: string
   conversationId: string
   context?: string
+  /**
+   * Whether the acting user is an app admin. Threaded through to the executor's
+   * Discord admin-tier guard (Step 19, FR-14). Undefined → treated as non-admin
+   * (fail-closed) in the Discord context; inert in the admin web context.
+   */
+  isAdmin?: boolean
   llmProvider: {
     apiKey: string
     model: string | null
@@ -133,7 +139,7 @@ export async function runConversationLoop(
       // Execute tools in parallel
       const toolResults = await Promise.all(
         response.toolCalls.map(async (toolCall) => {
-          const result = await executeToolCall(toolCall, config.userId, config.context)
+          const result = await executeToolCall(toolCall, config.userId, config.context, config.isAdmin)
           return {
             role: "tool" as const,
             tool_call_id: toolCall.id,

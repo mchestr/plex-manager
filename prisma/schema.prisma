@@ -272,6 +272,10 @@ model DiscordIntegration {
   botEnabled       Boolean  @default(false)
   clientId         String?
   clientSecret     String?
+  botToken         String?  // Discord bot token (encrypted at rest, like clientSecret)
+  supportChannelId String?  // Channel the bot monitors for support (plaintext)
+  supportThreadIds Json?    // JSON array of support thread ID strings (plaintext)
+  configVersion    Int      @default(0) // Bumped on every config change; drives Step 18's rotation-bounce
   guildId          String?
   serverInviteCode String?
   platformName     String   @default("Plex Wrapped")
@@ -348,6 +352,23 @@ model DiscordOAuthState {
 
   @@index([state])
   @@index([userId])
+  @@index([expiresAt])
+}
+
+// Short-lived parked media-mark selections for the Discord mark flow.
+// Replaces the previous in-memory Map + setInterval sweeper: rows are cleaned
+// up opportunistically on read (see lib/discord/commands/mark/pending-store.ts).
+model DiscordPendingSelection {
+  id            String   @id @default(cuid())
+  discordUserId String
+  channelId     String
+  customId      String   @unique
+  markType      MarkType
+  results       Json
+  createdAt     DateTime @default(now())
+  expiresAt     DateTime
+
+  @@index([discordUserId, channelId])
   @@index([expiresAt])
 }
 

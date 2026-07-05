@@ -33,6 +33,24 @@ export enum AuditEventType {
   SUBSCRIPTION_CANCELED = "SUBSCRIPTION_CANCELED",
   SUBSCRIPTION_ACCESS_GRANTED = "SUBSCRIPTION_ACCESS_GRANTED",
   SUBSCRIPTION_EXEMPT_CHANGED = "SUBSCRIPTION_EXEMPT_CHANGED",
+  // Discord events
+  // Emitted when a chatbot tool call is refused in the public Discord context
+  // because the requested tool is not in the resolved Discord-safe set (or the
+  // acting Discord user lacks the admin tier a server-wide tool requires). Blocks
+  // prompt-injection that hallucinates an unsafe/unknown tool name and privilege
+  // escalation by a non-admin member.
+  DISCORD_COMMAND_DENIED = "DISCORD_COMMAND_DENIED",
+  // Emitted when the Discord integration config is changed by an admin. Details
+  // carry a REDACTED diff (which fields changed + whether secrets were touched),
+  // never the secret values themselves.
+  DISCORD_INTEGRATION_CONFIG_CHANGED = "DISCORD_INTEGRATION_CONFIG_CHANGED",
+  // Emitted when a user completes the Discord OAuth link (account connected).
+  DISCORD_ACCOUNT_LINKED = "DISCORD_ACCOUNT_LINKED",
+  // Emitted when a Discord account is disconnected / role cleared for a user.
+  DISCORD_ACCOUNT_UNLINKED = "DISCORD_ACCOUNT_UNLINKED",
+  // Emitted when the Discord bot token / config version is rotated on a config
+  // change. Details never carry the token value.
+  DISCORD_TOKEN_ROTATED = "DISCORD_TOKEN_ROTATED",
 }
 
 export interface AuditLogEntry {

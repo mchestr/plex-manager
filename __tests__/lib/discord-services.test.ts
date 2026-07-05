@@ -4,6 +4,7 @@
 
 import { handleDiscordChat } from "@/lib/discord/services"
 import { runChatbotForUser } from "@/lib/chatbot/assistant"
+import { getOrCreateSession, appendTurn } from "@/lib/discord/chat-session"
 import { prisma } from "@/lib/prisma"
 
 // Mock dependencies
@@ -11,18 +12,18 @@ jest.mock("@/lib/chatbot/assistant", () => ({
   runChatbotForUser: jest.fn(),
 }))
 
+// Session resolution + history persistence are delegated to chat-session
+// (unit-tested separately in lib/discord/__tests__/chat-session.test.ts). Here
+// we mock it so these remain orchestration-level tests of handleDiscordChat.
+jest.mock("@/lib/discord/chat-session", () => ({
+  getOrCreateSession: jest.fn(),
+  appendTurn: jest.fn(),
+}))
+
 jest.mock("@/lib/prisma", () => ({
   prisma: {
     discordConnection: {
       findUnique: jest.fn(),
-    },
-    discordChatSession: {
-      findUnique: jest.fn(),
-      upsert: jest.fn(),
-      update: jest.fn(),
-    },
-    chatConversation: {
-      create: jest.fn(),
     },
   },
 }))
@@ -44,6 +45,8 @@ jest.mock("@/lib/utils/logger", () => ({
 }))
 
 const mockRunChatbotForUser = runChatbotForUser as jest.MockedFunction<typeof runChatbotForUser>
+const mockGetOrCreateSession = getOrCreateSession as jest.MockedFunction<typeof getOrCreateSession>
+const mockAppendTurn = appendTurn as jest.MockedFunction<typeof appendTurn>
 const mockPrisma = prisma as jest.Mocked<typeof prisma>
 
 describe("handleDiscordChat", () => {
@@ -55,23 +58,21 @@ describe("handleDiscordChat", () => {
     revokedAt: null,
     user: {
       id: "user-1",
+      isAdmin: false,
     },
   }
 
-  const mockSession = {
+  const mockResolvedSession = {
     id: "session-1",
-    discordUserId: "discord-123",
-    discordChannelId: "channel-123",
     chatConversationId: "conversation-1",
-    messages: [],
-    isActive: true,
-    lastMessageAt: new Date(),
+    history: [],
   }
 
   beforeEach(() => {
     jest.clearAllMocks()
     mockPrisma.discordConnection.findUnique.mockResolvedValue(mockConnection as any)
-    mockPrisma.discordChatSession.findUnique.mockResolvedValue(mockSession as any)
+    mockGetOrCreateSession.mockResolvedValue(mockResolvedSession)
+    mockAppendTurn.mockResolvedValue(undefined)
   })
 
   describe("LLM disabled scenarios", () => {
@@ -105,27 +106,18 @@ describe("handleDiscordChat", () => {
         ]),
         conversationId: "conversation-1",
         context: "discord",
+        isAdmin: false,
       })
     })
 
     it("should handle expired session when LLM is disabled", async () => {
-      const expiredSession = {
-        ...mockSession,
-        isActive: false,
-        lastMessageAt: new Date(Date.now() - 1000000), // Very old
-      }
-
-      mockPrisma.discordChatSession.findUnique.mockResolvedValue(expiredSession as any)
-      mockPrisma.chatConversation.create.mockResolvedValue({
-        id: "new-conversation-1",
-        userId: "user-1",
-        createdAt: new Date(),
-      } as any)
-
-      mockPrisma.discordChatSession.upsert.mockResolvedValue({
-        ...mockSession,
+      // An idle-expired session resolves (inside getOrCreateSession) to a fresh
+      // conversation with empty history.
+      mockGetOrCreateSession.mockResolvedValue({
+        id: "session-1",
         chatConversationId: "new-conversation-1",
-      } as any)
+        history: [],
+      })
 
       mockRunChatbotForUser.mockResolvedValue({
         success: true,
@@ -147,7 +139,52 @@ describe("handleDiscordChat", () => {
       expect(result.success).toBe(true)
       expect(result.linked).toBe(true)
       expect(result.message?.content).toContain("AI features are currently disabled")
-      expect(mockPrisma.chatConversation.create).toHaveBeenCalled()
+      expect(result.conversationId).toBe("new-conversation-1")
+      expect(mockGetOrCreateSession).toHaveBeenCalledWith({
+        discordUserId: "discord-123",
+        channelId: "channel-123",
+        userId: "user-1",
+      })
+    })
+  })
+
+  describe("admin tier threading (Step 19, FR-14)", () => {
+    it("threads the linked user's isAdmin=false into runChatbotForUser", async () => {
+      mockRunChatbotForUser.mockResolvedValue({
+        success: true,
+        message: { role: "assistant", content: "ok", timestamp: Date.now() },
+      })
+
+      await handleDiscordChat({
+        discordUserId: "discord-123",
+        channelId: "channel-123",
+        message: "queue status?",
+      })
+
+      expect(mockRunChatbotForUser).toHaveBeenCalledWith(
+        expect.objectContaining({ context: "discord", isAdmin: false })
+      )
+    })
+
+    it("threads isAdmin=true when the linked user is an admin", async () => {
+      mockPrisma.discordConnection.findUnique.mockResolvedValue({
+        ...mockConnection,
+        user: { id: "user-1", isAdmin: true },
+      } as any)
+      mockRunChatbotForUser.mockResolvedValue({
+        success: true,
+        message: { role: "assistant", content: "ok", timestamp: Date.now() },
+      })
+
+      await handleDiscordChat({
+        discordUserId: "discord-123",
+        channelId: "channel-123",
+        message: "queue status?",
+      })
+
+      expect(mockRunChatbotForUser).toHaveBeenCalledWith(
+        expect.objectContaining({ context: "discord", isAdmin: true })
+      )
     })
   })
 

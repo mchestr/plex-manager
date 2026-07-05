@@ -1,9 +1,10 @@
-import { checkUserServerAccess } from "@/lib/connections/plex"
 import { exchangeDiscordCode, fetchDiscordUserProfile, refreshDiscordToken, updateDiscordRoleConnection } from "@/lib/discord/api"
+import { getDiscordBotToken } from "@/lib/discord/config"
+import { computeRoleMetadata } from "@/lib/discord/role-metadata"
 import { prisma } from "@/lib/prisma"
+import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { getBaseUrl } from "@/lib/utils"
 import { createLogger } from "@/lib/utils/logger"
-import { fetchTautulliStatistics } from "@/lib/wrapped/statistics"
 import { randomBytes } from "crypto"
 
 const logger = createLogger("DISCORD_INTEGRATION")
@@ -86,6 +87,17 @@ export async function createDiscordAuthorizationUrl(userId: string, redirectTo?:
         expiresAt: {
           lt: new Date(Date.now() - 60 * 60 * 1000),
         },
+      },
+    })
+
+    // Cap pending states per user: a fresh link attempt supersedes any of this
+    // user's dangling un-consumed states, so they can't accumulate (each row is
+    // one-shot and consumed on callback). Keeps the table bounded and prevents a
+    // single user from piling up valid states.
+    await tx.discordOAuthState.deleteMany({
+      where: {
+        userId,
+        consumedAt: null,
       },
     })
 
@@ -213,6 +225,10 @@ export async function completeDiscordLink(code: string, state: string) {
     })
   }
 
+  logAuditEvent(AuditEventType.DISCORD_ACCOUNT_LINKED, oauthState.userId, {
+    discordUserId: profile.id,
+  })
+
   return {
     redirectTo: oauthState.redirectTo ?? "/",
   }
@@ -291,71 +307,7 @@ export async function syncDiscordRoleConnection(userId: string) {
   const platformName = integration.platformName || "Plex Wrapped"
   const platformUsername = user.name || user.email || user.plexUserId || "Plex User"
 
-  // --- Compute real subscription + watch time metadata ---
-  const metadataKey = "is_subscribed" // Hardcoded metadata key (metadataKey field was removed from schema)
-  const metadata: Record<string, boolean | number> = {}
-
-  // 1) Determine "is_subscribed" from Plex server access (same logic as admin user list)
-  let resolvedSubscribed: boolean | null = null
-  try {
-    const plexServer = await prisma.plexServer.findFirst({
-      where: { isActive: true },
-    })
-
-    if (plexServer && user.plexUserId) {
-      const accessResult = await checkUserServerAccess(
-        {
-          url: plexServer.url,
-          token: plexServer.token,
-          adminPlexUserId: plexServer.adminPlexUserId,
-        },
-        user.plexUserId
-      )
-
-      if (accessResult.success) {
-        resolvedSubscribed = accessResult.hasAccess
-      }
-    }
-  } catch (error) {
-    logger.warn("Failed to determine Plex access for Discord metadata", {
-      userId,
-      error: error instanceof Error ? error.message : "unknown",
-    })
-  }
-
-  // If we can't determine access from Plex, treat as not subscribed
-  metadata[metadataKey] = resolvedSubscribed ?? false
-
-  // 2) Determine watched_hours from real Tautulli statistics (if configured)
-  try {
-    const tautulli = await prisma.tautulli.findFirst({
-      where: { isActive: true },
-    })
-
-    if (tautulli && user.plexUserId) {
-      const year = new Date().getFullYear()
-      const stats = await fetchTautulliStatistics(
-        {
-          url: tautulli.url,
-          apiKey: tautulli.apiKey,
-        },
-        user.plexUserId,
-        user.email,
-        year
-      )
-
-      if (stats.success && stats.data) {
-        // totalWatchTime is in MINUTES – convert to integer hours
-        const watchedHours = Math.floor(stats.data.totalWatchTime / 60)
-        metadata["watched_hours"] = watchedHours
-      }
-    }
-  } catch (error) {
-    logger.warn("Failed to determine Tautulli watch time for Discord metadata", {
-      userId,
-      error: error instanceof Error ? error.message : "unknown",
-    })
-  }
+  const metadata = await computeRoleMetadata(user)
 
   await updateDiscordRoleConnection({
     accessToken: connection.accessToken,
@@ -398,6 +350,9 @@ export async function clearDiscordRoleForUser(userId: string) {
     await prisma.discordConnection.deleteMany({
       where: { userId },
     })
+    logAuditEvent(AuditEventType.DISCORD_ACCOUNT_UNLINKED, userId, {
+      source: "clear_role",
+    })
   }
 }
 
@@ -411,14 +366,20 @@ export async function getDiscordLinkStatus(userId: string) {
 
   let isOnServer: boolean | null = null
 
-  // Check if user is on the Discord server (if we have bot token and guild ID)
-  if (connection && integration?.guildId && process.env.DISCORD_BOT_TOKEN) {
+  // Check if user is on the Discord server (if enabled, and we have bot token +
+  // guild ID). Gate on integration.isEnabled so disabling the integration in the
+  // admin UI also stops this outbound Discord call (least privilege).
+  // The bot token resolves from the DB row first, then env (see lib/discord/config).
+  const canCheckMembership = Boolean(connection && integration?.isEnabled && integration?.guildId)
+  const botToken = canCheckMembership ? await getDiscordBotToken() : undefined
+  if (canCheckMembership && botToken) {
     try {
       const { checkGuildMembership } = await import("./api")
+      // canCheckMembership guarantees connection + integration.guildId are set.
       isOnServer = await checkGuildMembership(
-        process.env.DISCORD_BOT_TOKEN,
-        integration.guildId,
-        connection.discordUserId
+        botToken,
+        integration!.guildId!,
+        connection!.discordUserId
       )
     } catch (error) {
       logger.warn("Failed to check Discord server membership", {
@@ -454,8 +415,28 @@ export async function getDiscordStats() {
     }),
   ])
 
+  // The Prisma extension DECRYPTS `clientSecret` and `botToken` on read (see
+  // ENCRYPTED_FIELDS in lib/prisma.ts), so returning the row verbatim would leak
+  // the plaintext secrets to any caller. Strip both and expose only
+  // `hasClientSecret` / `hasBotToken` booleans — the established
+  // secret-omission pattern (see admin-settings omitSecret).
+  let sanitizedIntegration:
+    | (Omit<NonNullable<typeof integration>, "clientSecret" | "botToken"> & {
+        hasClientSecret: boolean
+        hasBotToken: boolean
+      })
+    | null = null
+  if (integration) {
+    const { clientSecret, botToken, ...rest } = integration
+    sanitizedIntegration = {
+      ...rest,
+      hasClientSecret: Boolean(clientSecret),
+      hasBotToken: Boolean(botToken),
+    }
+  }
+
   return {
-    integration,
+    integration: sanitizedIntegration,
     linkedCount,
   }
 }
