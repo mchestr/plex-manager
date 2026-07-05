@@ -14,40 +14,59 @@ point into the design's Detailed Requirements.
 ## Progress Checklist
 
 **Phase 0 — Bug fixes (independent, ship immediately)**
-- [ ] Step 1: Fix misrouted `get_tautulli_library_stats`
-- [ ] Step 2: Gate/scope `get_tautulli_users` for Discord + prompt cleanup
+- [x] Step 1: Fix misrouted `get_tautulli_library_stats`
+- [x] Step 2: Gate/scope `get_tautulli_users` for Discord + prompt cleanup
 
 **Phase 1 — Refactor foundation**
-- [ ] Step 3: Shared `getActivePlexServerConfig()` + `resolvePlexAccess()`
-- [ ] Step 4: Single chatbot tool registry (`discordSafe`/`userScoped`/`discordFields`)
-- [ ] Step 5: Split `audit.ts` into modules + fix `getCommandStats` N+1
-- [ ] Step 6: Extract chat-history + atomic chat-session (race fix)
-- [ ] Step 7: Extract `computeRoleMetadata` from `integration.ts`
-- [ ] Step 8: Refactor lock into `DistributedLock` + `BotLockPoller`; inject bot
+- [x] Step 3: Shared `getActivePlexServerConfig()` + `resolvePlexAccess()`
+- [x] Step 4: Single chatbot tool registry (`discordSafe`/`userScoped`/`discordFields`)
+- [x] Step 5: Split `audit.ts` into modules + fix `getCommandStats` N+1
+- [x] Step 6: Extract chat-history + atomic chat-session (race fix)
+- [x] Step 7: Extract `computeRoleMetadata` from `integration.ts`
+- [x] Step 8: Refactor lock into `DistributedLock` + `BotLockPoller`; inject bot
 
 **Phase 2 — Slash + component migration (drops MessageContent)**
-- [ ] Step 9: Command registry + interaction router scaffold
-- [ ] Step 10: `/help` slash command (first end-to-end interaction)
-- [ ] Step 11: `DiscordPendingSelection` model + DB pending store + shared `applyMark`
-- [ ] Step 12: `/mark` subcommands with component select-menu picker
-- [ ] Step 13: DM router + `/assistant` (+ `/assistant reset`)
-- [ ] Step 14: Command registration script + **remove MessageContent intent**
+- [x] Step 9: Command registry + interaction router scaffold
+- [x] Step 10: `/help` slash command (first end-to-end interaction)
+- [x] Step 11: `DiscordPendingSelection` model + DB pending store + shared `applyMark`
+- [x] Step 12: `/mark` subcommands with component select-menu picker
+- [x] Step 13: DM router + `/assistant` (+ `/assistant reset`)
+- [x] Step 14: Command registration script + **remove MessageContent intent**
 
 **Phase 3 — Security**
-- [ ] Step 15: Per-tool allowlist scrubbing (before LLM) + hardened denylist backstop
-- [ ] Step 16: Fail-closed Discord tool execution + `getDiscordStats` leak fix
-- [ ] Step 17: Bot token + channel IDs → encrypted DB + admin UI (blank-means-keep)
-- [ ] Step 18: Token-rotation bounce via poller (`configVersion`) + env fallback
-- [ ] Step 19: Discord audit events + OAuth rate limiting + `isAdmin` authz tiers
+- [x] Step 15: Per-tool allowlist scrubbing (before LLM) + hardened denylist backstop
+- [x] Step 16: Fail-closed Discord tool execution + `getDiscordStats` leak fix
+- [x] Step 17: Bot token + channel IDs → encrypted DB + admin UI (blank-means-keep)
+- [x] Step 18: Token-rotation bounce via poller (`configVersion`) + env fallback
+- [x] Step 19: Discord audit events + OAuth rate limiting + `isAdmin` authz tiers
 
 **Phase 4 — In-Discord visibility (self-service)**
-- [ ] Step 20: `/mymarks` (self-scoped marks embed)
-- [ ] Step 21: `/mystats` (self-scoped watch-stats embed)
-- [ ] Step 22: `/watching` (self-scoped current sessions)
-- [ ] Step 23: `/help` refresh + pinned-post copy; retire support-channel monitoring
+- [x] Step 20: `/mymarks` (self-scoped marks embed)
+- [x] Step 21: `/mystats` (self-scoped watch-stats embed)
+- [x] Step 22: `/watching` (self-scoped current sessions)
+- [x] Step 23: `/help` refresh + pinned-post copy; retire support-channel monitoring
 
 **Wrap-up**
-- [ ] Step 24: Docs (`docs/discord-bot.md`), release notes, final regression pass
+- [x] Step 24: Docs (`docs/discord-bot.md`), release notes, final regression pass
+
+---
+
+## Implementation status: COMPLETE (2026-07-05)
+
+All 24 steps implemented on branch `feat/discord-enhancements`, one commit per
+step/phase. Verification: full Discord/chatbot surface **361 tests green**; the
+5 failing suites in the whole-repo run (`config-encryption`, `admin-pages`,
+`wrapped-api-calls`, `queue/job-registry`, `admin`) are **pre-existing
+`DATABASE_URL`/Prisma-init env failures — identical on `main`**, not regressions.
+
+**Environment caveat:** `prisma generate` cannot run here (Node 20.10.0 vs
+required ^20.19). Schema + migrations for `DiscordPendingSelection` and the new
+`DiscordIntegration` columns (`botToken`, `supportChannelId`, `supportThreadIds`,
+`configVersion`) are written but the generated client is stale, so a handful of
+"field/model not on PrismaClient" `tsc` errors remain until `npm run db:generate`
+is run on a compatible Node. **Before deploy:** run `npm run db:generate`,
+`npm run db:migrate`, then `npm run register-discord-commands`, and disable the
+Message Content intent in the Discord Developer Portal.
 
 ---
 
