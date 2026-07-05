@@ -351,6 +351,23 @@ model DiscordOAuthState {
   @@index([expiresAt])
 }
 
+// Short-lived parked media-mark selections for the Discord mark flow.
+// Replaces the previous in-memory Map + setInterval sweeper: rows are cleaned
+// up opportunistically on read (see lib/discord/commands/mark/pending-store.ts).
+model DiscordPendingSelection {
+  id            String   @id @default(cuid())
+  discordUserId String
+  channelId     String
+  customId      String   @unique
+  markType      MarkType
+  results       Json
+  createdAt     DateTime @default(now())
+  expiresAt     DateTime
+
+  @@index([discordUserId, channelId])
+  @@index([expiresAt])
+}
+
 // Prompt Template for LLM generation
 model PromptTemplate {
   id          String   @id @default(cuid())

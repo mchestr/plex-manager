@@ -1,11 +1,11 @@
 import { type Message } from "discord.js"
 import { verifyDiscordUser } from "@/lib/discord/services"
-import { searchPlexMedia, markPlexItemWatched, type PlexMediaItem } from "@/lib/connections/plex"
+import { searchPlexMedia, type PlexMediaItem } from "@/lib/connections/plex"
 import { getActivePlexServerConfig, type PlexServerConfig } from "@/lib/connections/plex-config"
-import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
-import { MarkType, MediaType } from "@/lib/generated/prisma/client"
-import { findRadarrIdByTitle, findSonarrIdByTitle } from "@/lib/utils/media-matching"
+import { MarkType } from "@/lib/generated/prisma/client"
+import { applyMark } from "@/lib/discord/media/mark-media"
+import { getMarkTypeLabel } from "@/lib/discord/media/mark-labels"
 
 const logger = createLogger("DISCORD_MEDIA_MARKING")
 
@@ -300,85 +300,21 @@ async function processSingleResult(
   plexConfig: PlexServerConfig
 ): Promise<void> {
   try {
-    // Determine media type
-    let mediaType: MediaType
-    if (item.type === "movie") {
-      mediaType = MediaType.MOVIE
-    } else if (item.type === "show") {
-      mediaType = MediaType.TV_SERIES
-    } else if (item.type === "episode") {
-      mediaType = MediaType.EPISODE
-    } else {
+    const result = await applyMark({
+      userId,
+      item,
+      markType,
+      markedVia: "discord",
+      plexConfig,
+      channelId: message.channelId,
+    })
+
+    if (!result.ok) {
       await message.reply({
-        content: `Unsupported media type: ${item.type}. Only movies, TV shows, and episodes are supported.`,
+        content: `Unsupported media type: ${result.mediaType}. Only movies, TV shows, and episodes are supported.`,
         allowedMentions: { users: [discordUserId] },
       })
       return
-    }
-
-    // Find Radarr/Sonarr IDs
-    let radarrId: number | null = null
-    let radarrTitleSlug: string | null = null
-    let sonarrId: number | null = null
-    let sonarrTitleSlug: string | null = null
-
-    if (mediaType === MediaType.MOVIE) {
-      const radarrMatch = await findRadarrIdByTitle(item.title, item.year)
-      if (radarrMatch) {
-        radarrId = radarrMatch.id
-        radarrTitleSlug = radarrMatch.titleSlug
-      }
-    } else if (mediaType === MediaType.TV_SERIES || mediaType === MediaType.EPISODE) {
-      // For episodes, use grandparentTitle (show title) for matching
-      const showTitle = item.grandparentTitle || item.title
-      const sonarrMatch = await findSonarrIdByTitle(showTitle, item.year)
-      if (sonarrMatch) {
-        sonarrId = sonarrMatch.id
-        sonarrTitleSlug = sonarrMatch.titleSlug
-      }
-    }
-
-    // Create or update the mark
-    await prisma.userMediaMark.upsert({
-      where: {
-        userId_plexRatingKey_markType: {
-          userId,
-          plexRatingKey: item.ratingKey,
-          markType,
-        },
-      },
-      create: {
-        userId,
-        mediaType,
-        plexRatingKey: item.ratingKey,
-        markType,
-        title: item.title,
-        year: item.year,
-        seasonNumber: item.parentIndex,
-        episodeNumber: item.index,
-        parentTitle: item.parentTitle || item.grandparentTitle,
-        radarrId,
-        radarrTitleSlug,
-        sonarrId,
-        sonarrTitleSlug,
-        markedVia: "discord",
-        discordChannelId: message.channelId,
-      },
-      update: {
-        markedAt: new Date(),
-        discordChannelId: message.channelId,
-      },
-    })
-
-    // If marking as FINISHED_WATCHING, also mark as watched in Plex
-    if (markType === MarkType.FINISHED_WATCHING) {
-      const watchedResult = await markPlexItemWatched(plexConfig, item.ratingKey)
-      if (!watchedResult.success) {
-        logger.warn("Failed to mark item as watched in Plex", {
-          ratingKey: item.ratingKey,
-          error: watchedResult.error,
-        })
-      }
     }
 
     // Build confirmation message
@@ -399,15 +335,6 @@ async function processSingleResult(
       content: `✅ Marked "${titleDisplay}${yearDisplay}" as **${markTypeLabel}**${watchedNote}.`,
       allowedMentions: { users: [discordUserId] },
     })
-
-    logger.info("Media marked successfully", {
-      userId,
-      discordUserId,
-      mediaType,
-      plexRatingKey: item.ratingKey,
-      markType,
-      title: item.title,
-    })
   } catch (error) {
     logger.error("Error processing media mark", error, {
       userId,
@@ -419,27 +346,5 @@ async function processSingleResult(
       content: "Sorry, something went wrong while marking the media. Please try again.",
       allowedMentions: { users: [discordUserId] },
     })
-  }
-}
-
-/**
- * Get a human-readable label for a mark type
- */
-function getMarkTypeLabel(markType: MarkType): string {
-  switch (markType) {
-    case MarkType.FINISHED_WATCHING:
-      return "Finished Watching"
-    case MarkType.NOT_INTERESTED:
-      return "Not Interested"
-    case MarkType.KEEP_FOREVER:
-      return "Keep Forever"
-    case MarkType.REWATCH_CANDIDATE:
-      return "Rewatch Candidate"
-    case MarkType.POOR_QUALITY:
-      return "Poor Quality"
-    case MarkType.WRONG_VERSION:
-      return "Wrong Version"
-    default:
-      return markType
   }
 }
