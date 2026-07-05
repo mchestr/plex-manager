@@ -1,4 +1,12 @@
-import type { Message } from "discord.js"
+import {
+  EmbedBuilder,
+  MessageFlags,
+  SlashCommandBuilder,
+  type AutocompleteInteraction,
+  type Message,
+} from "discord.js"
+import type { DiscordCommandType } from "@/lib/generated/prisma"
+import type { InteractionContext, SlashCommand } from "./registry"
 
 /**
  * Command category for grouping related commands
@@ -253,3 +261,142 @@ export async function handleHelpCommand(message: Message, args: string[]): Promi
  * Help command triggers
  */
 export const HELP_COMMANDS = ["!help", "!commands"]
+
+// ---------------------------------------------------------------------------
+// Slash-command surface (`/help`)
+// ---------------------------------------------------------------------------
+
+/** Discord embed field-value limit. */
+const EMBED_FIELD_VALUE_LIMIT = 1024
+/** Discord per-message autocomplete choice limit. */
+const AUTOCOMPLETE_CHOICE_LIMIT = 25
+
+/**
+ * Build the full-help embed grouping every registered command by category.
+ *
+ * One embed field per non-empty category, so the layout stays well under
+ * Discord's structural limits (≤25 fields, ≤1024 chars/field, ≤6000 total): the
+ * registry has four categories and a handful of commands each.
+ *
+ * @internal
+ */
+function buildFullHelpEmbed(): EmbedBuilder {
+  const embed = new EmbedBuilder()
+    .setTitle("Available Commands")
+    .setDescription(
+      "Use `/help command:<name>` for details on a specific command."
+    )
+
+  const categories: CommandCategory[] = ["utility", "chat", "context", "media"]
+
+  for (const category of categories) {
+    const commands = COMMAND_REGISTRY.filter((cmd) => cmd.category === category)
+    if (commands.length === 0) continue
+
+    const value = commands
+      .map((cmd) => {
+        const aliasText =
+          cmd.aliases.length > 0 ? ` (or ${cmd.aliases.join(", ")})` : ""
+        return `\`${cmd.syntax}\`${aliasText}\n${cmd.description}`
+      })
+      .join("\n\n")
+      .slice(0, EMBED_FIELD_VALUE_LIMIT)
+
+    embed.addFields({
+      name: `${getCategoryEmoji(category)} ${getCategoryLabel(category)}`,
+      value,
+    })
+  }
+
+  return embed
+}
+
+/**
+ * Build a detailed embed for a single command.
+ *
+ * @internal
+ */
+function buildCommandHelpEmbed(command: CommandDefinition): EmbedBuilder {
+  const embed = new EmbedBuilder()
+    .setTitle(`Command: ${command.name}`)
+    .setDescription(command.description)
+    .addFields(
+      { name: "Syntax", value: `\`${command.syntax}\`` },
+      {
+        name: "Examples",
+        value: command.examples.map((e) => `\`${e}\``).join("\n"),
+      },
+      {
+        name: "Category",
+        value: `${getCategoryEmoji(command.category)} ${getCategoryLabel(command.category)}`,
+      }
+    )
+
+  if (command.aliases.length > 0) {
+    embed.addFields({
+      name: "Aliases",
+      value: command.aliases.map((a) => `\`${a}\``).join(", "),
+    })
+  }
+
+  return embed
+}
+
+/**
+ * The `/help [command]` slash command.
+ *
+ * With no `command` option it renders the full catalogue grouped by category;
+ * with one it renders a detailed embed for the matching command (or an
+ * ephemeral "not found" message). Replies are always ephemeral. The `command`
+ * option autocompletes against registered command names.
+ */
+export const helpCommand: SlashCommand = {
+  data: new SlashCommandBuilder()
+    .setName("help")
+    .setDescription("Show available commands and how to use them")
+    .addStringOption((option) =>
+      option
+        .setName("command")
+        .setDescription("Get detailed help for a specific command")
+        .setAutocomplete(true)
+    ) as SlashCommandBuilder,
+  commandType: "HELP" as DiscordCommandType,
+  async handle(ctx: InteractionContext): Promise<void> {
+    const search = ctx.interaction.options.getString("command")
+
+    if (search) {
+      const command = findCommand(search)
+      if (!command) {
+        await ctx.interaction.reply({
+          content: `Command not found: \`${search}\`. Use \`/help\` to see all available commands.`,
+          flags: MessageFlags.Ephemeral,
+        })
+        return
+      }
+      await ctx.interaction.reply({
+        embeds: [buildCommandHelpEmbed(command)],
+        flags: MessageFlags.Ephemeral,
+      })
+      return
+    }
+
+    await ctx.interaction.reply({
+      embeds: [buildFullHelpEmbed()],
+      flags: MessageFlags.Ephemeral,
+    })
+  },
+  async autocomplete(interaction: AutocompleteInteraction): Promise<void> {
+    const focused = interaction.options.getFocused().toLowerCase().replace(/^!/, "")
+
+    const choices = COMMAND_REGISTRY.filter((cmd) =>
+      cmd.name.toLowerCase().replace(/^!/, "").startsWith(focused)
+    )
+      .slice(0, AUTOCOMPLETE_CHOICE_LIMIT)
+      .map((cmd) => {
+        const name = cmd.name.replace(/^!/, "")
+        return { name, value: name }
+      })
+
+    await interaction.respond(choices)
+  },
+}

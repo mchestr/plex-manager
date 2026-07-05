@@ -18,6 +18,12 @@
  * so the router is unit-testable without a live gateway client or database.
  * Defaults wire up the real implementations.
  *
+ * ## Autocomplete
+ *
+ * `isAutocomplete()` interactions are dispatched to the matching command's
+ * optional `autocomplete` method. These are option-suggestion callbacks (not
+ * command invocations), so they are not audit-logged and never verify the user.
+ *
  * ## Component routing seam (Step 12)
  *
  * Button / select-menu interactions are recognised but not yet dispatched.
@@ -28,6 +34,7 @@
 import {
   MessageFlags,
   type Interaction,
+  type AutocompleteInteraction,
   type ButtonInteraction,
   type StringSelectMenuInteraction,
 } from "discord.js"
@@ -66,10 +73,29 @@ export async function routeInteraction(
     return
   }
 
+  if (interaction.isAutocomplete()) {
+    await routeAutocomplete(interaction, deps)
+    return
+  }
+
   if (interaction.isButton() || interaction.isStringSelectMenu()) {
     await routeComponent(interaction)
     return
   }
+}
+
+/**
+ * @internal Dispatch an autocomplete interaction to the matching command's
+ * optional `autocomplete` handler. Silently ignored when no command matches or
+ * the command declares no autocomplete handler.
+ */
+async function routeAutocomplete(
+  interaction: AutocompleteInteraction,
+  deps: RouteDeps
+): Promise<void> {
+  const command = deps.getCommand(interaction.commandName)
+  if (!command?.autocomplete) return
+  await command.autocomplete(interaction)
 }
 
 /**

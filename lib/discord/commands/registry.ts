@@ -5,19 +5,25 @@
  *
  * Central catalogue of the bot's slash (`/`) commands. Introduced in Step 9 as
  * the infrastructure the interaction router dispatches against; real commands
- * are migrated in later steps. For now it carries a single temporary `/ping`
- * command so the pipeline is demoable end-to-end.
+ * are migrated in later steps. `/help` (Step 10) is the first migrated command;
+ * more follow (`/mark`, `/assistant`, `/mystats`, `/mymarks`, `/watching`).
  *
  * Each entry pairs the discord.js registration payload (`data`) with an audit
  * `commandType` and an async `handle` that receives a resolved
- * {@link InteractionContext}. The `data` builders are consumed at registration
- * time (Step 14); the router only needs `commandType` and `handle`.
+ * {@link InteractionContext}. Commands with an autocompleting option also expose
+ * an `autocomplete` method the router routes `isAutocomplete()` interactions to.
+ * The `data` builders are consumed at registration time (Step 14); the router
+ * only needs `commandType`, `handle`, and (optionally) `autocomplete`.
  */
 
-import { SlashCommandBuilder, type ChatInputCommandInteraction } from "discord.js"
+import {
+  SlashCommandBuilder,
+  type AutocompleteInteraction,
+  type ChatInputCommandInteraction,
+} from "discord.js"
 import type { VerifyDiscordUserResult } from "../services"
 import type { DiscordCommandType } from "@/lib/generated/prisma"
-import { pingCommand } from "./ping"
+import { helpCommand } from "./help"
 
 /**
  * Context handed to a slash-command handler after the router has resolved the
@@ -46,13 +52,19 @@ export interface SlashCommand {
   commandType: DiscordCommandType
   /** Execute the command against a resolved interaction context. */
   handle(ctx: InteractionContext): Promise<void>
+  /**
+   * Respond to an autocomplete interaction for one of this command's options.
+   * Only present on commands that declare an autocompleting option. The router
+   * dispatches `isAutocomplete()` interactions here; not audit-logged.
+   */
+  autocomplete?(interaction: AutocompleteInteraction): Promise<void>
 }
 
 /**
  * All registered slash commands. Router dispatch is keyed off
  * `data.name` (see {@link getCommand}).
  */
-export const COMMANDS: SlashCommand[] = [pingCommand]
+export const COMMANDS: SlashCommand[] = [helpCommand]
 
 const COMMAND_BY_NAME: ReadonlyMap<string, SlashCommand> = new Map(
   COMMANDS.map((command) => [command.data.name, command])

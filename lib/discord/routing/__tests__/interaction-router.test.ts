@@ -3,6 +3,17 @@
 // Only MessageFlags is consumed at runtime by the router; everything else is a
 // type-only import that is erased at compile time.
 jest.mock("discord.js", () => {
+  class SlashCommandStringOption {
+    setName() {
+      return this
+    }
+    setDescription() {
+      return this
+    }
+    setAutocomplete() {
+      return this
+    }
+  }
   class SlashCommandBuilder {
     name = ""
     description = ""
@@ -14,10 +25,26 @@ jest.mock("discord.js", () => {
       this.description = description
       return this
     }
+    addStringOption(fn: (o: SlashCommandStringOption) => SlashCommandStringOption) {
+      fn(new SlashCommandStringOption())
+      return this
+    }
+  }
+  class EmbedBuilder {
+    setTitle() {
+      return this
+    }
+    setDescription() {
+      return this
+    }
+    addFields() {
+      return this
+    }
   }
   return {
     MessageFlags: { Ephemeral: 64 },
     SlashCommandBuilder,
+    EmbedBuilder,
   }
 })
 
@@ -78,6 +105,7 @@ const linkedUser: VerifyDiscordUserResult = {
 
 interface MockInteractionOptions {
   isChatInputCommand?: boolean
+  isAutocomplete?: boolean
   isButton?: boolean
   isStringSelectMenu?: boolean
   commandName?: string
@@ -102,11 +130,25 @@ function createMockChatInputInteraction(options: MockInteractionOptions = {}) {
     followUp,
     deferReply,
     isChatInputCommand: () => options.isChatInputCommand ?? true,
+    isAutocomplete: () => options.isAutocomplete ?? false,
     isButton: () => options.isButton ?? false,
     isStringSelectMenu: () => options.isStringSelectMenu ?? false,
   }
 
   return { interaction: interaction as unknown as Interaction, reply, followUp, deferReply }
+}
+
+function createMockAutocompleteInteraction(commandName = "help") {
+  const respond = jest.fn().mockResolvedValue(undefined)
+  const interaction = {
+    commandName,
+    isChatInputCommand: () => false,
+    isAutocomplete: () => true,
+    isButton: () => false,
+    isStringSelectMenu: () => false,
+    respond,
+  }
+  return { interaction: interaction as unknown as Interaction, respond }
 }
 
 function createStubCommand(handle = jest.fn().mockResolvedValue(undefined)): SlashCommand {
@@ -244,5 +286,43 @@ describe("routeInteraction", () => {
     expect(deps.getCommand).not.toHaveBeenCalled()
     // The Step 12 component seam is a no-op today.
     expect(reply).not.toHaveBeenCalled()
+  })
+
+  it("routes autocomplete interactions to the matching command's autocomplete handler", async () => {
+    const autocomplete = jest.fn().mockResolvedValue(undefined)
+    const command: SlashCommand = { ...createStubCommand(), autocomplete }
+    const getCommand = jest.fn().mockReturnValue(command)
+    const deps = makeDeps({ getCommand })
+    const { interaction } = createMockAutocompleteInteraction("help")
+
+    await routeInteraction(interaction, deps)
+
+    expect(getCommand).toHaveBeenCalledWith("help")
+    expect(autocomplete).toHaveBeenCalledTimes(1)
+    expect(autocomplete).toHaveBeenCalledWith(interaction)
+    // Autocomplete is not a command invocation → no audit log, no verify.
+    expect(mockCreate).not.toHaveBeenCalled()
+    expect(deps.verifyDiscordUser).not.toHaveBeenCalled()
+  })
+
+  it("ignores an autocomplete interaction whose command has no autocomplete handler", async () => {
+    const getCommand = jest.fn().mockReturnValue(createStubCommand())
+    const deps = makeDeps({ getCommand })
+    const { interaction, respond } = createMockAutocompleteInteraction("ping")
+
+    await routeInteraction(interaction, deps)
+
+    expect(getCommand).toHaveBeenCalledWith("ping")
+    expect(respond).not.toHaveBeenCalled()
+  })
+
+  it("ignores an autocomplete interaction for an unknown command", async () => {
+    const getCommand = jest.fn().mockReturnValue(undefined)
+    const deps = makeDeps({ getCommand })
+    const { interaction, respond } = createMockAutocompleteInteraction("nope")
+
+    await routeInteraction(interaction, deps)
+
+    expect(respond).not.toHaveBeenCalled()
   })
 })
