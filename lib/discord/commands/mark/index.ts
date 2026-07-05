@@ -282,6 +282,19 @@ async function handleSelect(interaction: MessageComponentInteraction): Promise<v
     return
   }
 
+  // Verify ownership BEFORE touching the pending selection (index lookup /
+  // deleteById), so a non-owner interaction can never mutate another user's
+  // pending state. Defence in depth — the picker is ephemeral, but ordering the
+  // authorization check first removes the gap entirely.
+  const verification = await verifyPendingOwner(pending.discordUserId, select.user.id)
+  if (!verification.ok) {
+    await select.update({
+      content: verification.message,
+      components: [],
+    })
+    return
+  }
+
   const index = Number(select.values[0])
   const item = pending.results[index]
   if (!item) {
@@ -290,15 +303,6 @@ async function handleSelect(interaction: MessageComponentInteraction): Promise<v
       components: [],
     })
     await deleteById(pending.id)
-    return
-  }
-
-  const verification = await verifyPendingOwner(pending.discordUserId, select.user.id)
-  if (!verification.ok) {
-    await select.update({
-      content: verification.message,
-      components: [],
-    })
     return
   }
 

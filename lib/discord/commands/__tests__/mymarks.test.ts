@@ -78,6 +78,7 @@ jest.mock("@/lib/prisma", () => ({
   prisma: {
     userMediaMark: {
       findMany: jest.fn(),
+      count: jest.fn(),
     },
   },
 }))
@@ -92,6 +93,7 @@ import type { InteractionContext } from "../registry"
 import type { VerifyDiscordUserResult } from "@/lib/discord/services"
 
 const findMany = prisma.userMediaMark.findMany as jest.Mock
+const count = prisma.userMediaMark.count as jest.Mock
 
 const RESOLVED_USER_ID = "resolved-user-1"
 
@@ -184,6 +186,7 @@ function firstEmbedData(mock: jest.Mock): {
 beforeEach(() => {
   jest.clearAllMocks()
   findMany.mockResolvedValue([])
+  count.mockResolvedValue(0)
 })
 
 describe("myMarksCommand.data", () => {
@@ -270,6 +273,7 @@ describe("myMarksCommand.handle — rendering", () => {
       makeMark({ title: "Seinfeld", year: 1989, markType: MarkType.KEEP_FOREVER }),
       makeMark({ title: "Friends", year: 1994, markType: MarkType.FINISHED_WATCHING }),
     ])
+    count.mockResolvedValue(3)
     const { ctx, deferReply, editReply } = createMockContext()
 
     await myMarksCommand.handle(ctx)
@@ -313,7 +317,10 @@ describe("myMarksCommand.handle — rendering", () => {
     const many = Array.from({ length: 500 }, (_, i) =>
       makeMark({ id: `m-${i}`, title: `Title ${i}`, year: 2000 + (i % 20) })
     )
-    findMany.mockResolvedValue(many)
+    // The query is bounded (take: 100) but count reports the true total, so the
+    // "showing N of M" note reflects the real 500.
+    findMany.mockResolvedValue(many.slice(0, 100))
+    count.mockResolvedValue(500)
     const { ctx, editReply } = createMockContext()
 
     await myMarksCommand.handle(ctx)
@@ -345,6 +352,7 @@ describe("myMarksCommand.handle — rendering", () => {
         markType: MarkType.FINISHED_WATCHING,
       }),
     ])
+    count.mockResolvedValue(1)
     const { ctx, editReply } = createMockContext()
 
     await myMarksCommand.handle(ctx)

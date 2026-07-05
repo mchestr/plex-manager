@@ -36,11 +36,16 @@ describe("sanitizeDiscordResponse", () => {
     expect(content).toContain("[redacted]")
   })
 
-  it("redacts compressed IPv6 addresses", () => {
+  it("redacts compressed IPv6 addresses entirely (no trailing groups leak)", () => {
     const { content, redacted } = sanitizeDiscordResponse("Address 2001:db8::8a2e:370:7334 seen")
     expect(redacted).toBe(true)
+    // The whole address must be gone — not just the leading groups. JS regex
+    // alternation is first-match-wins, so a too-narrow tail would leave
+    // ":370:7334" dangling next to the redaction marker.
     expect(content).not.toContain("2001:db8")
-    expect(content).toContain("[redacted]")
+    expect(content).not.toContain("8a2e")
+    expect(content).not.toContain("370:7334")
+    expect(content).toBe("Address [redacted] seen")
   })
 
   it("redacts loopback IPv6 (::1)", () => {

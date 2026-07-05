@@ -366,16 +366,20 @@ export async function getDiscordLinkStatus(userId: string) {
 
   let isOnServer: boolean | null = null
 
-  // Check if user is on the Discord server (if we have bot token and guild ID).
+  // Check if user is on the Discord server (if enabled, and we have bot token +
+  // guild ID). Gate on integration.isEnabled so disabling the integration in the
+  // admin UI also stops this outbound Discord call (least privilege).
   // The bot token resolves from the DB row first, then env (see lib/discord/config).
-  const botToken = connection && integration?.guildId ? await getDiscordBotToken() : undefined
-  if (connection && integration?.guildId && botToken) {
+  const canCheckMembership = Boolean(connection && integration?.isEnabled && integration?.guildId)
+  const botToken = canCheckMembership ? await getDiscordBotToken() : undefined
+  if (canCheckMembership && botToken) {
     try {
       const { checkGuildMembership } = await import("./api")
+      // canCheckMembership guarantees connection + integration.guildId are set.
       isOnServer = await checkGuildMembership(
         botToken,
-        integration.guildId,
-        connection.discordUserId
+        integration!.guildId!,
+        connection!.discordUserId
       )
     } catch (error) {
       logger.warn("Failed to check Discord server membership", {

@@ -22,8 +22,11 @@ const IPV6_REGEX = new RegExp(
   [
     // full / mid-compressed: at least two colon-separated hex groups
     "\\b(?:[0-9A-F]{1,4}:){2,7}[0-9A-F]{1,4}\\b",
-    // trailing "::" compression: groups then "::" then optional tail
-    "\\b(?:[0-9A-F]{1,4}:){1,7}:(?:[0-9A-F]{1,4})?",
+    // mid/trailing "::" compression: groups then "::" then optional multi-group
+    // tail. The tail must allow repeated ":hex" groups — JS alternation is
+    // first-match-wins (not longest), so a single-group tail would leave the
+    // remainder of e.g. 2001:db8::8a2e:370:7334 unredacted.
+    "\\b(?:[0-9A-F]{1,4}:){1,7}:(?:[0-9A-F]{1,4}(?::[0-9A-F]{1,4})*)?",
     // leading "::" compression (e.g. ::1, ::ffff:1.2.3.4-style tails)
     "(?<![0-9A-F:])::(?:[0-9A-F]{1,4}(?::[0-9A-F]{1,4})*)?",
   ].join("|"),

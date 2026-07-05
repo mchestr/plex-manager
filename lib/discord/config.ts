@@ -16,6 +16,9 @@
  */
 
 import { prisma } from "@/lib/prisma"
+import { createLogger } from "@/lib/utils/logger"
+
+const logger = createLogger("discord-config")
 
 /**
  * Loads the DiscordIntegration row (or null). Kept private so the getters share
@@ -59,7 +62,14 @@ function normalizeThreadIdJson(value: unknown): string[] {
  */
 export async function getDiscordBotToken(): Promise<string | undefined> {
   const row = await getRow()
-  return row?.botToken ?? process.env.DISCORD_BOT_TOKEN ?? undefined
+  if (row?.botToken) return row.botToken
+  if (process.env.DISCORD_BOT_TOKEN) {
+    // Surface the env fallback so a stray/rotated-away-from env var silently
+    // reactivating the bot (e.g. after a bad restore) is easy to spot in logs.
+    logger.warn("Using DISCORD_BOT_TOKEN from env fallback; no botToken on the DiscordIntegration row")
+    return process.env.DISCORD_BOT_TOKEN
+  }
+  return undefined
 }
 
 /**

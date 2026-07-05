@@ -121,8 +121,13 @@ function groupByType(marks: MarkRow[]): Map<MarkType, MarkRow[]> {
  * note to the description when the fetched set was larger than what is shown.
  * @internal
  */
-function buildMarksEmbed(marks: MarkRow[], filterType: MarkType | null): EmbedBuilder {
-  const total = marks.length
+function buildMarksEmbed(
+  marks: MarkRow[],
+  filterType: MarkType | null,
+  total: number
+): EmbedBuilder {
+  // `marks` is already bounded to MAX_MARKS_RENDERED by the query; `total` is
+  // the true count for the "showing N of M" note.
   const rendered = marks.slice(0, MAX_MARKS_RENDERED)
 
   const embed = new EmbedBuilder().setTitle(
@@ -187,10 +192,17 @@ async function handleMyMarks(ctx: InteractionContext): Promise<void> {
       where.markType = filterType
     }
 
-    const marks = (await prisma.userMediaMark.findMany({
-      where,
-      orderBy: { markedAt: "desc" },
-    })) as MarkRow[]
+    // Bound the query at the DB level (indexed on userId) instead of fetching
+    // the whole history and slicing client-side; a separate count gives the
+    // accurate total for the "showing N of M" note.
+    const [marks, total] = (await Promise.all([
+      prisma.userMediaMark.findMany({
+        where,
+        orderBy: { markedAt: "desc" },
+        take: MAX_MARKS_RENDERED,
+      }),
+      prisma.userMediaMark.count({ where }),
+    ])) as [MarkRow[], number]
 
     if (marks.length === 0) {
       await interaction.editReply({
@@ -202,7 +214,7 @@ async function handleMyMarks(ctx: InteractionContext): Promise<void> {
     }
 
     await interaction.editReply({
-      embeds: [buildMarksEmbed(marks, filterType)],
+      embeds: [buildMarksEmbed(marks, filterType, total)],
     })
   } catch (error) {
     logger.error("Failed to fetch user marks", error, { userId })

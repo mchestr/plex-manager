@@ -114,7 +114,12 @@ export class DistributedLock {
           })
         }
 
-        // Lock exists - check if it's expired or if we own it
+        // Lock exists - take it over if we already own it, or (belt-and-braces)
+        // if it is somehow still expired. Safe here — unlike renew()'s bare
+        // updateMany, this whole block runs in one Serializable transaction that
+        // already deleted expired rows above, so a competing acquirer cannot
+        // interleave: the expired branch is effectively unreachable (read-your-
+        // writes) and only a genuine self-owned or race-free takeover updates.
         if (existing.expiresAt < now || existing.instanceId === this.instanceId) {
           return await tx.discordBotLock.update({
             where: { id: DISCORD_BOT_LOCK_ID },

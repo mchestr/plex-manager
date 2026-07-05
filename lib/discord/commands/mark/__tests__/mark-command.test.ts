@@ -446,4 +446,28 @@ describe("select-menu component handler", () => {
     )
     expect(mockApplyMark).not.toHaveBeenCalled()
   })
+
+  it("checks ownership before the index path (non-owner cannot delete another user's pending)", async () => {
+    mockFindByCustomId.mockResolvedValue({
+      id: "pending-1",
+      discordUserId: "someone-else",
+      channelId: "channel-1",
+      customId: `${MARK_SELECT_PREFIX}uuid-1234`,
+      markType: MarkType.KEEP_FOREVER,
+      results: [makeItem()],
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 60_000),
+    })
+    // Out-of-range index: if the index lookup ran first it would delete the
+    // pending row. Ownership must be checked first, so deleteById never runs.
+    const { interaction, update } = createMockSelectInteraction({ values: ["99"] })
+
+    await handleSelect()(interaction)
+
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({ content: expect.stringContaining("someone else") })
+    )
+    expect(mockApplyMark).not.toHaveBeenCalled()
+    expect(mockDeleteById).not.toHaveBeenCalled()
+  })
 })
