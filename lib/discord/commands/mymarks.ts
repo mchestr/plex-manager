@@ -180,7 +180,13 @@ async function handleMyMarks(ctx: InteractionContext): Promise<void> {
   if (!user) return
 
   const userId = user.id
-  const filterType = interaction.options.getString("type") as MarkType | null
+  // Validate the option value against known MarkTypes rather than casting the
+  // raw string straight into the Prisma where clause. Discord enforces the
+  // choice list, but an unexpected value falls back to "no filter" instead of
+  // reaching the query unchecked.
+  const rawType = interaction.options.getString("type")
+  const filterType: MarkType | null =
+    rawType && MARK_TYPE_ORDER.includes(rawType as MarkType) ? (rawType as MarkType) : null
 
   await interaction.deferReply({ flags: MessageFlags.Ephemeral })
 

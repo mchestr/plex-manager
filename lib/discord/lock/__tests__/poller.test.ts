@@ -181,6 +181,47 @@ describe("BotLockPoller renewal (single source of truth)", () => {
 
     await poller.stop()
   })
+
+  it("skips overlapping ticks when a tick's work outlasts the poll interval", async () => {
+    const lock = makeMockLock()
+    // First renew never resolves, simulating a tick whose async work outlasts
+    // the poll interval; subsequent interval fires must be skipped, not overlap.
+    let resolveFirstRenew: (() => void) | undefined
+    lock.renew
+      .mockImplementationOnce(
+        () =>
+          new Promise<boolean>((resolve) => {
+            resolveFirstRenew = () => resolve(true)
+          })
+      )
+      .mockResolvedValue(true)
+    const cb = makeCallbacks(true)
+    const poller = new BotLockPoller(lock as unknown as DistributedLock, cb, {
+      pollIntervalMs: POLL_MS,
+      getConfigVersion: makeGetConfigVersion(0),
+    })
+
+    await poller.start() // acquires, running = true
+
+    // Tick 1 starts renew (hangs). Two more interval fires happen while it's
+    // in flight — the reentrancy guard must skip them.
+    await advanceOneTick()
+    await advanceOneTick()
+    await advanceOneTick()
+
+    expect(lock.renew).toHaveBeenCalledTimes(1)
+
+    // Once the hung renew settles, let the first tick's finally clear the guard
+    // (flush microtasks) before the next interval fires.
+    resolveFirstRenew?.()
+    for (let i = 0; i < 8; i++) {
+      await Promise.resolve()
+    }
+    await advanceOneTick()
+    expect(lock.renew).toHaveBeenCalledTimes(2)
+
+    await poller.stop()
+  })
 })
 
 describe("BotLockPoller enabled-flag handling", () => {

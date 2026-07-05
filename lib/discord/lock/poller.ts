@@ -90,6 +90,12 @@ export class BotLockPoller {
 
   private timer?: ReturnType<typeof setInterval>
   private polling = false
+  /**
+   * Guards against overlapping ticks: if a tick's async work (acquire / renew /
+   * bounce) outlasts the poll interval, the next interval fire is skipped rather
+   * than running concurrently against the same lock/bot state.
+   */
+  private ticking = false
   /** True once onLockAcquired has fired and not yet been undone by onLockLost. */
   private running = false
   /**
@@ -162,6 +168,14 @@ export class BotLockPoller {
       return
     }
 
+    // Skip if a previous tick is still in flight (its awaits outlasted the poll
+    // interval); overlapping ticks would race on the shared lock/bot state.
+    if (this.ticking) {
+      logger.debug("Previous lock tick still in progress - skipping this tick")
+      return
+    }
+    this.ticking = true
+
     try {
       const enabled = await this.callbacks.isEnabled()
 
@@ -226,6 +240,8 @@ export class BotLockPoller {
       }
     } catch (error) {
       logger.debug("Error during lock polling", { error })
+    } finally {
+      this.ticking = false
     }
   }
 
