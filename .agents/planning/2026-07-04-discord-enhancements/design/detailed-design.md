@@ -53,8 +53,10 @@ implementation plan.
     `!help`/`!commands`.
   - `/mark <finished|keep|notinterested|rewatch|badquality> title:<text>` — one
     command with **subcommands** (A13), replaces the five `!`-mark commands.
-  - `/assistant [prompt]` — deferred inline answer, points to DM for multi-turn
-    (FR-5); `/assistant reset` clears context (A14).
+  - `/assistant ask prompt:<text>` + `/assistant reset` — deferred inline answer,
+    points to DM for multi-turn (FR-5); reset clears context (A14). Implemented as
+    subcommands because Discord forbids mixing a top-level option with subcommands
+    on one command.
   - `/mystats`, `/mymarks [type]`, `/watching` — new self-service (FR-15).
 - **FR-3** Replace the "reply with 1–5" media-selection flow with **message
   components** (string select menu or buttons) using the interaction response

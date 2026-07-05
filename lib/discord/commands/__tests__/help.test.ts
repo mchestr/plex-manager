@@ -64,44 +64,16 @@ jest.mock("discord.js", () => {
   }
 })
 
-import { type AutocompleteInteraction, type Message } from "discord.js"
+import { type AutocompleteInteraction } from "discord.js"
 import {
   COMMAND_REGISTRY,
-  HELP_COMMANDS,
   findCommand,
   buildFullHelpMessage,
   buildCommandHelpMessage,
-  handleHelpCommand,
   helpCommand,
   type CommandDefinition,
 } from "../help"
 import type { InteractionContext } from "../registry"
-
-// Mock Discord.js Message
-function createMockMessage(overrides: Partial<Message> = {}): Message {
-  const mockReply = jest.fn().mockResolvedValue({})
-
-  return {
-    author: {
-      id: "test-user-id",
-      username: "testuser",
-      discriminator: "1234",
-      bot: false,
-      system: false,
-      tag: "testuser#1234",
-    },
-    channelId: "test-channel-id",
-    reply: mockReply,
-    ...overrides,
-  } as unknown as Message
-}
-
-describe("HELP_COMMANDS", () => {
-  it("should include !help and !commands", () => {
-    expect(HELP_COMMANDS).toContain("!help")
-    expect(HELP_COMMANDS).toContain("!commands")
-  })
-})
 
 describe("COMMAND_REGISTRY", () => {
   it("should contain help command definition", () => {
@@ -329,191 +301,6 @@ describe("buildCommandHelpMessage", () => {
   })
 })
 
-describe("handleHelpCommand", () => {
-  let mockMessage: Message
-
-  beforeEach(() => {
-    jest.clearAllMocks()
-    mockMessage = createMockMessage()
-  })
-
-  describe("full help (no arguments)", () => {
-    it("should reply with full help message when no args provided", async () => {
-      await handleHelpCommand(mockMessage, [])
-
-      expect(mockMessage.reply).toHaveBeenCalledTimes(1)
-      expect(mockMessage.reply).toHaveBeenCalledWith({
-        content: expect.stringContaining("**Available Commands**"),
-        allowedMentions: { users: ["test-user-id"] },
-      })
-    })
-
-    it("should include all category sections in reply", async () => {
-      await handleHelpCommand(mockMessage, [])
-
-      const replyCall = (mockMessage.reply as jest.Mock).mock.calls[0][0]
-      expect(replyCall.content).toContain("**Utility**")
-      expect(replyCall.content).toContain("**Chat & Assistant**")
-      expect(replyCall.content).toContain("**Context Management**")
-      expect(replyCall.content).toContain("**Media Marking**")
-    })
-  })
-
-  describe("command-specific help", () => {
-    it("should reply with specific command help when valid command provided", async () => {
-      await handleHelpCommand(mockMessage, ["finished"])
-
-      expect(mockMessage.reply).toHaveBeenCalledTimes(1)
-      expect(mockMessage.reply).toHaveBeenCalledWith({
-        content: expect.stringContaining("**Command: !finished**"),
-        allowedMentions: { users: ["test-user-id"] },
-      })
-    })
-
-    it("should find command with ! prefix", async () => {
-      await handleHelpCommand(mockMessage, ["!finished"])
-
-      expect(mockMessage.reply).toHaveBeenCalledWith({
-        content: expect.stringContaining("**Command: !finished**"),
-        allowedMentions: { users: ["test-user-id"] },
-      })
-    })
-
-    it("should find command by alias", async () => {
-      await handleHelpCommand(mockMessage, ["done"])
-
-      expect(mockMessage.reply).toHaveBeenCalledWith({
-        content: expect.stringContaining("**Command: !finished**"),
-        allowedMentions: { users: ["test-user-id"] },
-      })
-    })
-
-    it("should be case insensitive", async () => {
-      await handleHelpCommand(mockMessage, ["FINISHED"])
-
-      expect(mockMessage.reply).toHaveBeenCalledWith({
-        content: expect.stringContaining("**Command: !finished**"),
-        allowedMentions: { users: ["test-user-id"] },
-      })
-    })
-
-    it("should reply with not found message for unknown command", async () => {
-      await handleHelpCommand(mockMessage, ["unknowncommand"])
-
-      expect(mockMessage.reply).toHaveBeenCalledWith({
-        content: "Command not found: `unknowncommand`. Use `!help` to see all available commands.",
-        allowedMentions: { users: ["test-user-id"] },
-      })
-    })
-
-    it("should include examples in specific command help", async () => {
-      await handleHelpCommand(mockMessage, ["assistant"])
-
-      const replyCall = (mockMessage.reply as jest.Mock).mock.calls[0][0]
-      expect(replyCall.content).toContain("**Examples:**")
-      expect(replyCall.content).toContain("`!assistant How do I request a movie?`")
-    })
-
-    it("should include syntax in specific command help", async () => {
-      await handleHelpCommand(mockMessage, ["keep"])
-
-      const replyCall = (mockMessage.reply as jest.Mock).mock.calls[0][0]
-      expect(replyCall.content).toContain("**Syntax:** `!keep <title>`")
-    })
-
-    it("should include aliases in specific command help", async () => {
-      await handleHelpCommand(mockMessage, ["notinterested"])
-
-      const replyCall = (mockMessage.reply as jest.Mock).mock.calls[0][0]
-      expect(replyCall.content).toContain("**Aliases:** `!skip`, `!pass`")
-    })
-  })
-
-  describe("help command variations", () => {
-    it("should work with help command itself", async () => {
-      await handleHelpCommand(mockMessage, ["help"])
-
-      expect(mockMessage.reply).toHaveBeenCalledWith({
-        content: expect.stringContaining("**Command: !help**"),
-        allowedMentions: { users: ["test-user-id"] },
-      })
-    })
-
-    it("should work with commands alias", async () => {
-      await handleHelpCommand(mockMessage, ["commands"])
-
-      expect(mockMessage.reply).toHaveBeenCalledWith({
-        content: expect.stringContaining("**Command: !help**"),
-        allowedMentions: { users: ["test-user-id"] },
-      })
-    })
-  })
-
-  describe("all registered commands", () => {
-    it("should be able to get help for every command in registry", async () => {
-      for (const command of COMMAND_REGISTRY) {
-        jest.clearAllMocks()
-        mockMessage = createMockMessage()
-
-        // Test with command name
-        const nameWithoutPrefix = command.name.replace(/^!/, "")
-        await handleHelpCommand(mockMessage, [nameWithoutPrefix])
-
-        expect(mockMessage.reply).toHaveBeenCalledWith({
-          content: expect.stringContaining(`**Command: ${command.name}**`),
-          allowedMentions: { users: ["test-user-id"] },
-        })
-      }
-    })
-
-    it("should be able to find help via any alias", async () => {
-      for (const command of COMMAND_REGISTRY) {
-        for (const alias of command.aliases) {
-          jest.clearAllMocks()
-          mockMessage = createMockMessage()
-
-          const aliasWithoutPrefix = alias.replace(/^!/, "")
-          await handleHelpCommand(mockMessage, [aliasWithoutPrefix])
-
-          expect(mockMessage.reply).toHaveBeenCalledWith({
-            content: expect.stringContaining(`**Command: ${command.name}**`),
-            allowedMentions: { users: ["test-user-id"] },
-          })
-        }
-      }
-    })
-  })
-
-  describe("edge cases", () => {
-    it("should handle empty string in args array", async () => {
-      await handleHelpCommand(mockMessage, [""])
-
-      expect(mockMessage.reply).toHaveBeenCalledWith({
-        content: expect.stringContaining("Command not found"),
-        allowedMentions: { users: ["test-user-id"] },
-      })
-    })
-
-    it("should only use first argument for command lookup", async () => {
-      await handleHelpCommand(mockMessage, ["finished", "extra", "args"])
-
-      expect(mockMessage.reply).toHaveBeenCalledWith({
-        content: expect.stringContaining("**Command: !finished**"),
-        allowedMentions: { users: ["test-user-id"] },
-      })
-    })
-
-    it("should handle whitespace in argument", async () => {
-      await handleHelpCommand(mockMessage, ["  finished  ".trim()])
-
-      expect(mockMessage.reply).toHaveBeenCalledWith({
-        content: expect.stringContaining("**Command: !finished**"),
-        allowedMentions: { users: ["test-user-id"] },
-      })
-    })
-  })
-})
-
 describe("command registry consistency with bot commands", () => {
   it("should document all chat trigger prefixes", () => {
     // These are from bot.ts: CHAT_TRIGGER_PREFIXES = ["!assistant", "!bot", "!support"]
@@ -532,7 +319,7 @@ describe("command registry consistency with bot commands", () => {
   })
 
   it("should document all media marking commands", () => {
-    // These are from media-marking.ts MARK_COMMANDS
+    // The legacy `!`-prefixed media aliases the registry documents for /help.
     const expectedMediaCommands = [
       "!finished",
       "!done",

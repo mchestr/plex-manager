@@ -3,7 +3,6 @@ import {
   MessageFlags,
   SlashCommandBuilder,
   type AutocompleteInteraction,
-  type Message,
 } from "discord.js"
 import type { DiscordCommandType } from "@/lib/generated/prisma"
 import type { InteractionContext, SlashCommand } from "./registry"
@@ -226,41 +225,6 @@ export function buildCommandHelpMessage(command: CommandDefinition): string {
 
   return lines.join("\n")
 }
-
-/**
- * Handle the help command
- */
-export async function handleHelpCommand(message: Message, args: string[]): Promise<void> {
-  // Check if asking for help on a specific command
-  if (args.length > 0) {
-    const searchTerm = args[0]
-    const command = findCommand(searchTerm)
-
-    if (command) {
-      await message.reply({
-        content: buildCommandHelpMessage(command),
-        allowedMentions: { users: [message.author.id] },
-      })
-    } else {
-      await message.reply({
-        content: `Command not found: \`${searchTerm}\`. Use \`!help\` to see all available commands.`,
-        allowedMentions: { users: [message.author.id] },
-      })
-    }
-    return
-  }
-
-  // Show full help message
-  await message.reply({
-    content: buildFullHelpMessage(),
-    allowedMentions: { users: [message.author.id] },
-  })
-}
-
-/**
- * Help command triggers
- */
-export const HELP_COMMANDS = ["!help", "!commands"]
 
 // ---------------------------------------------------------------------------
 // Slash-command surface (`/help`)
