@@ -18,6 +18,30 @@ export interface BotLockPollerCallbacks {
 export interface BotLockPollerOptions {
   /** How often to run the poll loop. Defaults to {@link DEFAULT_POLL_INTERVAL_MS}. */
   pollIntervalMs?: number
+  /**
+   * Reads the current bot config version (bumped whenever the token / support
+   * config changes). Injectable for tests. Defaults to a resolver that reads
+   * `DiscordIntegration.configVersion` (0 when no row exists). See {@link tick}
+   * for how a version change triggers a re-init bounce (Step 18 / FR-13).
+   */
+  getConfigVersion?: () => Promise<number>
+}
+
+/**
+ * Default {@link BotLockPollerOptions.getConfigVersion} resolver: reads
+ * `DiscordIntegration.configVersion` from the DB, defaulting to 0 when the row
+ * is absent. Imported lazily inside the closure so the poller module stays free
+ * of a hard prisma dependency for tests that inject their own resolver.
+ *
+ * @internal
+ */
+async function defaultGetConfigVersion(): Promise<number> {
+  const { prisma } = await import("@/lib/prisma")
+  const row = await prisma.discordIntegration.findUnique({
+    where: { id: "discord" },
+    select: { configVersion: true },
+  })
+  return row?.configVersion ?? 0
 }
 
 /**
@@ -46,27 +70,34 @@ export interface BotLockPollerOptions {
  *       if running -> onLockLost(); release(); running = false
  *       return
  *
- *   # --- Step 18 extension point ---
- *   # A future config-hash check goes HERE: if the bot config/token changed
- *   # while running, treat it like a lock-loss (stop) so the next tick
- *   # re-acquires and re-initializes with fresh config. See wiring in
- *   # instrumentation/node.ts.
- *
  *   if running:
- *       if !(await lock.renew()) -> onLockLost(); running = false   # lost it
+ *       # --- Step 18: config-change / token-rotation bounce (FR-13) ---
+ *       # Only the holder reaches here, so only the holder bounces.
+ *       if getConfigVersion() != lastConfigVersion:
+ *           onLockLost(); onLockAcquired(); lastConfigVersion = current  # in-place re-init
+ *           on failure -> release(); running = false                    # let next tick re-acquire
+ *           return
+ *       if !(await lock.renew()) -> onLockLost(); running = false        # lost it
  *   else:
- *       if await lock.acquire() -> onLockAcquired(); running = true
+ *       if await lock.acquire() -> onLockAcquired(); running = true; snapshot version
  * ```
  */
 export class BotLockPoller {
   private readonly lock: DistributedLock
   private readonly callbacks: BotLockPollerCallbacks
   private readonly pollIntervalMs: number
+  private readonly getConfigVersion: () => Promise<number>
 
   private timer?: ReturnType<typeof setInterval>
   private polling = false
   /** True once onLockAcquired has fired and not yet been undone by onLockLost. */
   private running = false
+  /**
+   * The `configVersion` the currently-initialized bot was started with. Captured
+   * whenever the bot is (re-)initialized while running; a later tick observing a
+   * different version bounces the bot to pick up fresh config.
+   */
+  private lastConfigVersion = 0
 
   constructor(
     lock: DistributedLock,
@@ -76,6 +107,7 @@ export class BotLockPoller {
     this.lock = lock
     this.callbacks = callbacks
     this.pollIntervalMs = options.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS
+    this.getConfigVersion = options.getConfigVersion ?? defaultGetConfigVersion
   }
 
   /**
@@ -100,6 +132,9 @@ export class BotLockPoller {
         if (acquired) {
           logger.debug("Lock acquired immediately on startup")
           this.running = true
+          // Snapshot the config version we're initializing against so a later
+          // tick can detect a rotation and bounce (Step 18).
+          this.lastConfigVersion = await this.getConfigVersion()
           await this.callbacks.onLockAcquired()
         } else {
           logger.debug("Lock not available on startup, will poll periodically")
@@ -141,14 +176,35 @@ export class BotLockPoller {
         return
       }
 
-      // --- Step 18 extension point (config-change / token-rotation bounce) ---
-      // A future config-hash comparison belongs here: when the tracked config
-      // changes while `this.running`, stop the bot (onLockLost + release) so the
-      // next tick re-acquires and re-initializes with the new config. Not
-      // implemented yet; the loop is structured so it slots in without touching
-      // the acquire/renew branches below.
-
       if (this.running) {
+        // --- Step 18: config-change / token-rotation bounce (FR-13) ---
+        // Only the lock HOLDER runs this branch, so only the holder bounces
+        // (the guarantee the design relies on). If the tracked config version
+        // changed since we initialized, re-initialize in place so the client
+        // logs in with the fresh token. We keep the lock across the bounce.
+        const currentConfigVersion = await this.getConfigVersion()
+        if (currentConfigVersion !== this.lastConfigVersion) {
+          logger.info("Discord config changed - bouncing bot to apply new config", {
+            from: this.lastConfigVersion,
+            to: currentConfigVersion,
+          })
+          try {
+            // Lost-then-re-acquired path: tear down, then re-init with fresh config.
+            await this.callbacks.onLockLost()
+            await this.callbacks.onLockAcquired()
+            // Only mark applied once the re-init succeeded, so a failed bounce
+            // is retried rather than silently skipped.
+            this.lastConfigVersion = currentConfigVersion
+          } catch (error) {
+            // Never leave a half-initialized client: release the lease so
+            // another pod can take over, and let the next tick re-acquire.
+            logger.error("Failed to re-initialize Discord bot after config change - releasing lock", { error })
+            this.running = false
+            await this.lock.release()
+          }
+          return
+        }
+
         // We hold the lock; keep the lease alive off the SAME lock object.
         const renewed = await this.lock.renew()
         if (!renewed) {
@@ -164,6 +220,8 @@ export class BotLockPoller {
       if (acquired) {
         logger.debug("Lock acquired during polling - initializing bot")
         this.running = true
+        // Snapshot the config version for the freshly-initialized bot.
+        this.lastConfigVersion = await this.getConfigVersion()
         await this.callbacks.onLockAcquired()
       }
     } catch (error) {

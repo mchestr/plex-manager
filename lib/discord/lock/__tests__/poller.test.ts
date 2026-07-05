@@ -39,16 +39,25 @@ function makeCallbacks(enabled = true) {
 }
 
 /**
+ * A getConfigVersion stub resolving a fixed version by default; individual tests
+ * override return values per tick to simulate a config/token rotation.
+ */
+function makeGetConfigVersion(version = 0) {
+  return jest.fn<Promise<number>, []>().mockResolvedValue(version)
+}
+
+/**
  * Advances fake timers by one poll interval and flushes microtasks so the
  * async tick body settles before assertions run.
  */
 async function advanceOneTick() {
   jest.advanceTimersByTime(POLL_MS)
-  // Flush the promise chain started inside the (sync) interval callback.
-  await Promise.resolve()
-  await Promise.resolve()
-  await Promise.resolve()
-  await Promise.resolve()
+  // Flush the promise chain started inside the (sync) interval callback. The
+  // running branch awaits isEnabled -> getConfigVersion -> renew (or the
+  // bounce's onLockLost -> onLockAcquired), so flush generously.
+  for (let i = 0; i < 8; i++) {
+    await Promise.resolve()
+  }
 }
 
 beforeEach(() => {
@@ -64,7 +73,10 @@ describe("BotLockPoller.start", () => {
   it("acquires immediately and fires onLockAcquired when enabled", async () => {
     const lock = makeMockLock()
     const cb = makeCallbacks(true)
-    const poller = new BotLockPoller(lock as unknown as DistributedLock, cb, { pollIntervalMs: POLL_MS })
+    const poller = new BotLockPoller(lock as unknown as DistributedLock, cb, {
+      pollIntervalMs: POLL_MS,
+      getConfigVersion: makeGetConfigVersion(0),
+    })
 
     await poller.start()
 
@@ -92,7 +104,10 @@ describe("BotLockPoller.start", () => {
     const lock = makeMockLock()
     lock.acquire.mockResolvedValueOnce(false) // busy at startup
     const cb = makeCallbacks(true)
-    const poller = new BotLockPoller(lock as unknown as DistributedLock, cb, { pollIntervalMs: POLL_MS })
+    const poller = new BotLockPoller(lock as unknown as DistributedLock, cb, {
+      pollIntervalMs: POLL_MS,
+      getConfigVersion: makeGetConfigVersion(0),
+    })
 
     await poller.start()
     expect(cb.onLockAcquired).not.toHaveBeenCalled()
@@ -109,7 +124,10 @@ describe("BotLockPoller.start", () => {
   it("is idempotent - second start does nothing", async () => {
     const lock = makeMockLock()
     const cb = makeCallbacks(true)
-    const poller = new BotLockPoller(lock as unknown as DistributedLock, cb, { pollIntervalMs: POLL_MS })
+    const poller = new BotLockPoller(lock as unknown as DistributedLock, cb, {
+      pollIntervalMs: POLL_MS,
+      getConfigVersion: makeGetConfigVersion(0),
+    })
 
     await poller.start()
     await poller.start()
@@ -124,7 +142,10 @@ describe("BotLockPoller renewal (single source of truth)", () => {
   it("renews the SAME lock object on subsequent ticks while running", async () => {
     const lock = makeMockLock()
     const cb = makeCallbacks(true)
-    const poller = new BotLockPoller(lock as unknown as DistributedLock, cb, { pollIntervalMs: POLL_MS })
+    const poller = new BotLockPoller(lock as unknown as DistributedLock, cb, {
+      pollIntervalMs: POLL_MS,
+      getConfigVersion: makeGetConfigVersion(0),
+    })
 
     await poller.start() // acquires, running = true
 
@@ -143,7 +164,10 @@ describe("BotLockPoller renewal (single source of truth)", () => {
     const lock = makeMockLock()
     lock.renew.mockResolvedValue(false) // renewal fails => lost
     const cb = makeCallbacks(true)
-    const poller = new BotLockPoller(lock as unknown as DistributedLock, cb, { pollIntervalMs: POLL_MS })
+    const poller = new BotLockPoller(lock as unknown as DistributedLock, cb, {
+      pollIntervalMs: POLL_MS,
+      getConfigVersion: makeGetConfigVersion(0),
+    })
 
     await poller.start()
     await advanceOneTick()
@@ -163,7 +187,10 @@ describe("BotLockPoller enabled-flag handling", () => {
   it("shuts down the bot when it becomes disabled mid-run", async () => {
     const lock = makeMockLock()
     const cb = makeCallbacks(true)
-    const poller = new BotLockPoller(lock as unknown as DistributedLock, cb, { pollIntervalMs: POLL_MS })
+    const poller = new BotLockPoller(lock as unknown as DistributedLock, cb, {
+      pollIntervalMs: POLL_MS,
+      getConfigVersion: makeGetConfigVersion(0),
+    })
 
     await poller.start() // running
 
@@ -182,7 +209,10 @@ describe("BotLockPoller.stop", () => {
   it("clears the timer so no further ticks run", async () => {
     const lock = makeMockLock()
     const cb = makeCallbacks(true)
-    const poller = new BotLockPoller(lock as unknown as DistributedLock, cb, { pollIntervalMs: POLL_MS })
+    const poller = new BotLockPoller(lock as unknown as DistributedLock, cb, {
+      pollIntervalMs: POLL_MS,
+      getConfigVersion: makeGetConfigVersion(0),
+    })
 
     await poller.start()
     await poller.stop()
@@ -195,7 +225,10 @@ describe("BotLockPoller.stop", () => {
   it("fires onLockLost and releases when stopped while running", async () => {
     const lock = makeMockLock()
     const cb = makeCallbacks(true)
-    const poller = new BotLockPoller(lock as unknown as DistributedLock, cb, { pollIntervalMs: POLL_MS })
+    const poller = new BotLockPoller(lock as unknown as DistributedLock, cb, {
+      pollIntervalMs: POLL_MS,
+      getConfigVersion: makeGetConfigVersion(0),
+    })
 
     await poller.start()
     await poller.stop()
@@ -224,5 +257,133 @@ describe("BotLockPoller.stop", () => {
     await poller.stop()
 
     expect(cb.onLockLost).not.toHaveBeenCalled()
+  })
+})
+
+describe("BotLockPoller config-change bounce (Step 18)", () => {
+  it("bounces (destroy + re-init) when configVersion changes while running", async () => {
+    const lock = makeMockLock()
+    const cb = makeCallbacks(true)
+    // Startup applies version 1; the next tick sees version 2 -> bounce.
+    const getConfigVersion = jest
+      .fn<Promise<number>, []>()
+      .mockResolvedValueOnce(1) // consumed by the immediate startup acquire
+      .mockResolvedValue(2) // every subsequent tick sees the new version
+    const poller = new BotLockPoller(lock as unknown as DistributedLock, cb, {
+      pollIntervalMs: POLL_MS,
+      getConfigVersion,
+    })
+
+    await poller.start()
+    expect(cb.onLockAcquired).toHaveBeenCalledTimes(1)
+
+    await advanceOneTick()
+
+    // Bounce = lost then re-acquired on the same tick.
+    expect(cb.onLockLost).toHaveBeenCalledTimes(1)
+    expect(cb.onLockAcquired).toHaveBeenCalledTimes(2)
+    // Bounce takes the place of renewal for that tick (no renew when we bounce).
+    expect(lock.renew).not.toHaveBeenCalled()
+
+    await poller.stop()
+  })
+
+  it("does NOT bounce when configVersion is unchanged - just renews", async () => {
+    const lock = makeMockLock()
+    const cb = makeCallbacks(true)
+    const getConfigVersion = makeGetConfigVersion(5)
+    const poller = new BotLockPoller(lock as unknown as DistributedLock, cb, {
+      pollIntervalMs: POLL_MS,
+      getConfigVersion,
+    })
+
+    await poller.start()
+    await advanceOneTick()
+    await advanceOneTick()
+
+    // No version change -> normal renewal path, no bounce.
+    expect(lock.renew).toHaveBeenCalledTimes(2)
+    expect(cb.onLockLost).not.toHaveBeenCalled()
+    expect(cb.onLockAcquired).toHaveBeenCalledTimes(1)
+
+    await poller.stop()
+  })
+
+  it("only bounces once per config change (tracks last-applied version)", async () => {
+    const lock = makeMockLock()
+    const cb = makeCallbacks(true)
+    const getConfigVersion = jest
+      .fn<Promise<number>, []>()
+      .mockResolvedValueOnce(1) // startup applies version 1
+      .mockResolvedValue(2) // stays at 2 for all later ticks
+    const poller = new BotLockPoller(lock as unknown as DistributedLock, cb, {
+      pollIntervalMs: POLL_MS,
+      getConfigVersion,
+    })
+
+    await poller.start()
+
+    await advanceOneTick() // sees 2 != 1 -> bounce, applies 2
+    await advanceOneTick() // sees 2 == 2 -> no bounce, renew
+    await advanceOneTick() // sees 2 == 2 -> no bounce, renew
+
+    expect(cb.onLockLost).toHaveBeenCalledTimes(1) // exactly one bounce
+    expect(cb.onLockAcquired).toHaveBeenCalledTimes(2) // startup + one re-init
+    expect(lock.renew).toHaveBeenCalledTimes(2) // the two post-bounce ticks
+
+    await poller.stop()
+  })
+
+  it("releases the lease and does not crash when re-init fails during a bounce", async () => {
+    const lock = makeMockLock()
+    const cb = makeCallbacks(true)
+    // The bounce's re-init (second onLockAcquired) throws.
+    cb.onLockAcquired
+      .mockResolvedValueOnce(undefined) // startup init succeeds
+      .mockRejectedValueOnce(new Error("login failed")) // bounce re-init fails
+    const getConfigVersion = jest
+      .fn<Promise<number>, []>()
+      .mockResolvedValueOnce(1)
+      .mockResolvedValue(2)
+    const poller = new BotLockPoller(lock as unknown as DistributedLock, cb, {
+      pollIntervalMs: POLL_MS,
+      getConfigVersion,
+    })
+
+    await poller.start()
+
+    // Bounce tick: destroy fires, re-init throws -> lease released, no throw.
+    await advanceOneTick()
+    expect(cb.onLockLost).toHaveBeenCalledTimes(1)
+    expect(cb.onLockAcquired).toHaveBeenCalledTimes(2)
+    expect(lock.release).toHaveBeenCalledTimes(1)
+
+    // Next tick re-acquires cleanly (poller is no longer running).
+    await advanceOneTick()
+    expect(lock.acquire).toHaveBeenCalledTimes(2) // startup + post-failure re-acquire
+
+    await poller.stop()
+  })
+
+  it("bounces off the SAME lock without re-acquiring (holder-only path)", async () => {
+    const lock = makeMockLock()
+    const cb = makeCallbacks(true)
+    const getConfigVersion = jest
+      .fn<Promise<number>, []>()
+      .mockResolvedValueOnce(0)
+      .mockResolvedValue(1)
+    const poller = new BotLockPoller(lock as unknown as DistributedLock, cb, {
+      pollIntervalMs: POLL_MS,
+      getConfigVersion,
+    })
+
+    await poller.start()
+    await advanceOneTick() // bounce
+
+    // A successful bounce does not release or re-acquire the lock - we keep it.
+    expect(lock.release).not.toHaveBeenCalled()
+    expect(lock.acquire).toHaveBeenCalledTimes(1) // only the startup acquire
+
+    await poller.stop()
   })
 })

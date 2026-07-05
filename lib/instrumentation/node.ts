@@ -197,6 +197,7 @@ async function startDiscordBotPolling() {
     const { BotLockPoller } = await import("@/lib/discord/lock/poller")
     const { isDiscordBotEnabled } = await import("@/lib/discord/lock")
     const { DiscordBot } = await import("@/lib/discord/bot")
+    const { prisma } = await import("@/lib/prisma")
 
     // Construct the process-lifecycle instances here (injecting a real Client via
     // the bot's default factory).
@@ -210,10 +211,11 @@ async function startDiscordBotPolling() {
     // and calls these lifecycle hooks. onLockAcquired -> initialize the bot;
     // onLockLost -> destroy it.
     //
-    // NOTE (Step 18 extension point): when config-change / token-rotation bounce
-    // is implemented, the config-hash check lives inside BotLockPoller.tick();
-    // onLockLost here already tears the bot down, so a bounce reuses this exact
-    // wiring (stop -> destroy -> next tick re-acquires + re-initializes).
+    // Step 18 (FR-13): getConfigVersion feeds the poller's config-change bounce.
+    // When DiscordIntegration.configVersion changes while the holder is running,
+    // the poller runs onLockLost (destroy) then onLockAcquired (re-initialize),
+    // so bot.initialize() re-reads the fresh token via lib/discord/config.ts —
+    // no redeploy required.
     const poller = new BotLockPoller(
       lock,
       {
@@ -237,7 +239,16 @@ async function startDiscordBotPolling() {
         },
         isEnabled: isDiscordBotEnabled,
       },
-      { pollIntervalMs }
+      {
+        pollIntervalMs,
+        getConfigVersion: async () => {
+          const row = await prisma.discordIntegration.findUnique({
+            where: { id: "discord" },
+            select: { configVersion: true },
+          })
+          return row?.configVersion ?? 0
+        },
+      }
     )
 
     // Start background polling - this doesn't block server startup.
