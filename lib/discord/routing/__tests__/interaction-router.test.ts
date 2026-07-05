@@ -16,6 +16,9 @@ jest.mock("discord.js", () => {
     setRequired() {
       return this
     }
+    addChoices() {
+      return this
+    }
   }
   class SlashCommandSubcommandBuilder {
     setName() {
@@ -73,6 +76,18 @@ jest.mock("discord.js", () => {
       return this
     }
     addFields() {
+      return this
+    }
+    setColor() {
+      return this
+    }
+    setFooter() {
+      return this
+    }
+    setTimestamp() {
+      return this
+    }
+    setThumbnail() {
       return this
     }
   }
