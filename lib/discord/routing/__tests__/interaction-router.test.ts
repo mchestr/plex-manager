@@ -480,6 +480,36 @@ describe("routeInteraction", () => {
     )
   })
 
+  it("refuses a not-linked user's component with a link nudge and does not dispatch", async () => {
+    const handle = jest.fn().mockResolvedValue(undefined)
+    const handler = {
+      customIdPrefix: "mark:select:",
+      commandType: "SELECTION" as DiscordCommandType,
+      handle,
+    }
+    const verifiedUser = jest.fn().mockResolvedValue({
+      linked: false,
+      entitled: false,
+    } satisfies VerifyDiscordUserResult)
+    const deps = makeDeps({
+      getComponentHandler: jest.fn().mockReturnValue(handler),
+      verifyDiscordUser: verifiedUser,
+    })
+    const { interaction, reply } = createMockComponentInteraction({ isStringSelectMenu: true })
+
+    await routeInteraction(interaction, deps)
+
+    // Gated before the handler runs: no dispatch, no audit log; link nudge shown.
+    expect(handle).not.toHaveBeenCalled()
+    expect(mockCreate).not.toHaveBeenCalled()
+    expect(reply).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: expect.stringContaining("link your account"),
+        flags: 64,
+      })
+    )
+  })
+
   it("routes autocomplete interactions to the matching command's autocomplete handler", async () => {
     const autocomplete = jest.fn().mockResolvedValue(undefined)
     const command: SlashCommand = { ...createStubCommand(), autocomplete }

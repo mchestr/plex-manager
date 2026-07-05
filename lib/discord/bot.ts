@@ -1,6 +1,6 @@
 import { Client, Events, GatewayIntentBits, Partials } from "discord.js"
 import winston from "winston"
-import { getDiscordBotToken, getSupportChannelId } from "./config"
+import { getDiscordBotToken, getDiscordPortalUrl, getSupportChannelId } from "./config"
 import { routeInteraction } from "./routing/interaction-router"
 import { routeDirectMessage, defaultDmRouteDeps } from "./routing/dm-router"
 
@@ -94,8 +94,7 @@ export class DiscordBot {
       return
     }
     const SUPPORT_CHANNEL_ID = await getSupportChannelId()
-    const BASE_URL = process.env.PLEX_WRAPPED_BASE_URL?.replace(/\/$/, "") || process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || "http://localhost:3000"
-    const PORTAL_URL = process.env.DISCORD_PORTAL_URL || `${BASE_URL}/discord/link`
+    const PORTAL_URL = getDiscordPortalUrl()
 
     this.logger.info("Starting Discord bot", {
       supportChannelId: SUPPORT_CHANNEL_ID ?? null,

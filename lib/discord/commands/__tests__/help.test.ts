@@ -64,6 +64,12 @@ jest.mock("discord.js", () => {
   }
 })
 
+// help.ts now gates via requireLinkedUser, which imports lib/discord/config →
+// lib/prisma. Stub the portal-URL helper so the module graph loads under jsdom.
+jest.mock("@/lib/discord/config", () => ({
+  getDiscordPortalUrl: () => "https://example.com/discord/link",
+}))
+
 import { type AutocompleteInteraction } from "discord.js"
 import {
   COMMAND_REGISTRY,
@@ -331,15 +337,35 @@ function getEmbedData(reply: jest.Mock): EmbedData {
   return (call.embeds[0] as { data: EmbedData }).data
 }
 
-function createMockChatInteraction(commandOption: string | null) {
+function createMockChatInteraction(
+  commandOption: string | null,
+  opts: { linked?: boolean; entitled?: boolean } = {}
+) {
   const reply = jest.fn().mockResolvedValue(undefined)
   const interaction = {
     options: { getString: jest.fn().mockReturnValue(commandOption) },
     reply,
   }
+  // Default to a linked + entitled user so the help-rendering tests exercise the
+  // real output; the gate itself is covered by a dedicated test below.
+  const linked = opts.linked ?? true
+  const entitled = opts.entitled ?? true
+  const verifiedUser = linked
+    ? {
+        linked: true,
+        entitled,
+        user: {
+          id: "user-1",
+          name: "Test User",
+          email: "t@example.com",
+          plexUserId: "plex-1",
+          isAdmin: false,
+        },
+      }
+    : { linked: false, entitled: false }
   const ctx = {
     interaction,
-    verifiedUser: { linked: false },
+    verifiedUser,
     discordUserId: "discord-user-id",
     channelId: "channel-id",
   } as unknown as InteractionContext
@@ -366,6 +392,33 @@ describe("helpCommand (slash)", () => {
     expect(option.name).toBe("command")
     expect(option.autocomplete).toBe(true)
     expect(typeof helpCommand.autocomplete).toBe("function")
+  })
+
+  describe("handle - entitlement gate", () => {
+    it("nudges an unlinked user with the portal link and renders no help embed", async () => {
+      const { ctx, reply } = createMockChatInteraction(null, { linked: false })
+
+      await helpCommand.handle(ctx)
+
+      expect(reply).toHaveBeenCalledTimes(1)
+      const call = reply.mock.calls[0][0]
+      expect(call.flags).toBe(64) // ephemeral
+      expect(call.content).toContain("link your account")
+      expect(call.embeds).toBeUndefined()
+    })
+
+    it("nudges a linked-but-unentitled user about membership", async () => {
+      const { ctx, reply } = createMockChatInteraction(null, {
+        linked: true,
+        entitled: false,
+      })
+
+      await helpCommand.handle(ctx)
+
+      expect(reply).toHaveBeenCalledTimes(1)
+      expect(reply.mock.calls[0][0].content).toContain("active membership")
+      expect(reply.mock.calls[0][0].embeds).toBeUndefined()
+    })
   })
 
   describe("handle - no command argument", () => {

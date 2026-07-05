@@ -232,8 +232,14 @@ export async function handleDiscordChat({
 }
 
 /**
- * Clear Discord chat context for a user/channel
- * Direct function call - no HTTP overhead
+ * Clear Discord chat context for a user/channel.
+ * Direct function call - no HTTP overhead.
+ *
+ * INVARIANT: this only clears the caller's own conversation and discloses no
+ * server data, so it does NOT perform an entitlement check itself — it relies on
+ * callers to gate first (the `/assistant reset` subcommand via `requireLinkedUser`
+ * and the DM `reset`/`clear` keyword via the DM router's entitlement check). Any
+ * new caller must gate entitlement before invoking this.
  */
 export async function clearDiscordChat({
   discordUserId,

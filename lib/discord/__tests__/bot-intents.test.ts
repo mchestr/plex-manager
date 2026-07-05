@@ -29,6 +29,7 @@ jest.mock("../config", () => ({
   getDiscordBotToken: jest.fn(),
   getSupportChannelId: jest.fn(),
   getSupportThreadIds: jest.fn(),
+  getDiscordPortalUrl: jest.fn(() => "https://example.com/discord/link"),
 }))
 
 import { GatewayIntentBits, Partials } from "discord.js"
