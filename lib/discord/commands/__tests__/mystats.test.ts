@@ -93,6 +93,7 @@ const mockSanitize = sanitizeDiscordResponse as jest.MockedFunction<
 
 const linkedUser: VerifyDiscordUserResult = {
   linked: true,
+  entitled: true,
   user: {
     id: "user-1",
     name: "Test User",
@@ -168,7 +169,7 @@ function createMockContext(options: { linked?: boolean } = {}): {
   const interaction = { channelId: "channel-1", reply, deferReply, editReply }
 
   const verifiedUser: VerifyDiscordUserResult =
-    options.linked === false ? { linked: false } : linkedUser
+    options.linked === false ? { linked: false, entitled: false } : linkedUser
 
   return {
     ctx: {

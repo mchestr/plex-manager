@@ -76,6 +76,17 @@ function buildLinkNudge(discordUserId: string, portalUrl: string): {
   }
 }
 
+/** Build the "subscription required" nudge for a linked-but-unentitled DM author. */
+function buildNotEntitledNudge(discordUserId: string, portalUrl: string): {
+  content: string
+  allowedMentions: { users: string[] }
+} {
+  return {
+    content: `Hi <@${discordUserId}>! Your account is linked but doesn't have an active membership, so the assistant is unavailable. Manage your account here: ${portalUrl}`,
+    allowedMentions: { users: [discordUserId] },
+  }
+}
+
 /**
  * Route a single direct-message `messageCreate` event to the assistant.
  *
@@ -98,6 +109,12 @@ export async function routeDirectMessage(
   const verification = await deps.verifyDiscordUser(discordUserId)
   if (!verification.linked) {
     await message.reply(buildLinkNudge(discordUserId, deps.portalUrl))
+    return
+  }
+  // Entitlement gate: a linked but non-subscribed user must not reach the
+  // assistant (data-disclosure safety). Point them at the portal to subscribe.
+  if (!verification.entitled) {
+    await message.reply(buildNotEntitledNudge(discordUserId, deps.portalUrl))
     return
   }
 
@@ -169,6 +186,10 @@ export async function routeDirectMessage(
 
       if (response.linked === false) {
         await message.reply(buildLinkNudge(discordUserId, deps.portalUrl))
+        return
+      }
+      if (response.entitled === false) {
+        await message.reply(buildNotEntitledNudge(discordUserId, deps.portalUrl))
         return
       }
 

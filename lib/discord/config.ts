@@ -92,3 +92,16 @@ export async function getSupportThreadIds(): Promise<string[]> {
   if (fromDb.length > 0) return fromDb
   return parseThreadIdCsv(process.env.DISCORD_SUPPORT_THREAD_IDS)
 }
+
+/**
+ * The account-linking portal URL shown in "link your account" nudges. Mirrors the
+ * resolution `bot.ts` uses at startup: `DISCORD_PORTAL_URL` if set, else
+ * `<base>/discord/link`. Synchronous (env-only) so nudges can build it cheaply.
+ */
+export function getDiscordPortalUrl(): string {
+  const base =
+    process.env.PLEX_WRAPPED_BASE_URL?.replace(/\/$/, "") ||
+    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
+    "http://localhost:3000"
+  return process.env.DISCORD_PORTAL_URL || `${base}/discord/link`
+}

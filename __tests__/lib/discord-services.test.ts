@@ -25,6 +25,9 @@ jest.mock("@/lib/prisma", () => ({
     discordConnection: {
       findUnique: jest.fn(),
     },
+    config: {
+      findUnique: jest.fn(),
+    },
   },
 }))
 
@@ -59,6 +62,8 @@ describe("handleDiscordChat", () => {
     user: {
       id: "user-1",
       isAdmin: false,
+      isExempt: false,
+      subscription: null,
     },
   }
 
@@ -71,6 +76,8 @@ describe("handleDiscordChat", () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockPrisma.discordConnection.findUnique.mockResolvedValue(mockConnection as any)
+    // Default: Stripe gating OFF → every linked user is entitled (today's behavior).
+    mockPrisma.config.findUnique.mockResolvedValue({ stripeEnabled: false } as any)
     mockGetOrCreateSession.mockResolvedValue(mockResolvedSession)
     mockAppendTurn.mockResolvedValue(undefined)
   })
@@ -237,6 +244,76 @@ describe("handleDiscordChat", () => {
       expect(result.success).toBe(false)
       expect(result.linked).toBe(true)
       expect(result.error).toBe("Chatbot error")
+    })
+  })
+
+  describe("subscription entitlement gate", () => {
+    it("blocks a linked but non-subscribed user when Stripe gating is on", async () => {
+      mockPrisma.config.findUnique.mockResolvedValue({ stripeEnabled: true } as any)
+      mockPrisma.discordConnection.findUnique.mockResolvedValue({
+        ...mockConnection,
+        user: { id: "user-1", isAdmin: false, isExempt: false, subscription: null },
+      } as any)
+
+      const result = await handleDiscordChat({
+        discordUserId: "discord-123",
+        channelId: "channel-123",
+        message: "Check Plex status",
+      })
+
+      expect(result.success).toBe(false)
+      expect(result.linked).toBe(true)
+      expect(result.entitled).toBe(false)
+      // Critically: the assistant / its tools are never invoked for a non-sub.
+      expect(mockRunChatbotForUser).not.toHaveBeenCalled()
+      expect(mockGetOrCreateSession).not.toHaveBeenCalled()
+    })
+
+    it("allows an ACTIVE subscriber when Stripe gating is on", async () => {
+      mockPrisma.config.findUnique.mockResolvedValue({ stripeEnabled: true } as any)
+      mockPrisma.discordConnection.findUnique.mockResolvedValue({
+        ...mockConnection,
+        user: {
+          id: "user-1",
+          isAdmin: false,
+          isExempt: false,
+          subscription: { status: "ACTIVE" },
+        },
+      } as any)
+      mockRunChatbotForUser.mockResolvedValue({
+        success: true,
+        message: { role: "assistant", content: "ok", timestamp: Date.now() },
+      })
+
+      const result = await handleDiscordChat({
+        discordUserId: "discord-123",
+        channelId: "channel-123",
+        message: "Check Plex status",
+      })
+
+      expect(result.success).toBe(true)
+      expect(mockRunChatbotForUser).toHaveBeenCalled()
+    })
+
+    it("allows an exempt user with no subscription when gating is on", async () => {
+      mockPrisma.config.findUnique.mockResolvedValue({ stripeEnabled: true } as any)
+      mockPrisma.discordConnection.findUnique.mockResolvedValue({
+        ...mockConnection,
+        user: { id: "user-1", isAdmin: false, isExempt: true, subscription: null },
+      } as any)
+      mockRunChatbotForUser.mockResolvedValue({
+        success: true,
+        message: { role: "assistant", content: "ok", timestamp: Date.now() },
+      })
+
+      const result = await handleDiscordChat({
+        discordUserId: "discord-123",
+        channelId: "channel-123",
+        message: "hi",
+      })
+
+      expect(result.success).toBe(true)
+      expect(mockRunChatbotForUser).toHaveBeenCalled()
     })
   })
 })

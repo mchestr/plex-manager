@@ -6,6 +6,7 @@ import {
 } from "discord.js"
 import type { DiscordCommandType } from "@/lib/generated/prisma"
 import type { InteractionContext, SlashCommand } from "./registry"
+import { requireLinkedUser } from "./require-linked-user"
 
 /**
  * Command category for grouping related commands
@@ -349,6 +350,14 @@ export const helpCommand: SlashCommand = {
     ) as SlashCommandBuilder,
   commandType: "HELP" as DiscordCommandType,
   async handle(ctx: InteractionContext): Promise<void> {
+    // Gate on entitlement like every other command (data-disclosure policy: no
+    // command is usable by a non-entitled user). `/help` exposes no per-user data,
+    // but gating keeps the surface uniform and the nudge points unlinked users at
+    // the portal so they still learn how to link. (Autocomplete stays ungated — it
+    // is a typeahead callback, not an invocation, and surfaces only command names.)
+    const user = await requireLinkedUser(ctx, { action: "using the bot" })
+    if (!user) return
+
     const search = ctx.interaction.options.getString("command")
 
     if (search) {

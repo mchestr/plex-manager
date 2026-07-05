@@ -44,9 +44,6 @@ import { requireLinkedUser } from "./require-linked-user"
 
 const logger = createLogger("DISCORD_MYSTATS_COMMAND")
 
-const LINK_NUDGE =
-  "You need to link your account before viewing your stats. Use the link provided earlier."
-
 const NO_TAUTULLI =
   "Watch statistics are unavailable right now — no Tautulli server is configured. Please contact an admin."
 
@@ -126,7 +123,7 @@ function buildStatsEmbed(stats: TautulliStatisticsData): EmbedBuilder {
 async function handleMyStats(ctx: InteractionContext): Promise<void> {
   const { interaction } = ctx
 
-  const user = await requireLinkedUser(ctx, { message: LINK_NUDGE })
+  const user = await requireLinkedUser(ctx, { action: "viewing your stats" })
   if (!user) return
 
   const { plexUserId, email } = user

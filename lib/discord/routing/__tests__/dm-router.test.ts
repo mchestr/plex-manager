@@ -63,6 +63,7 @@ function createMockLog(): DiscordCommandLog {
 
 const linkedUser: VerifyDiscordUserResult = {
   linked: true,
+  entitled: true,
   user: {
     id: "user-1",
     name: "Test User",
@@ -152,7 +153,7 @@ describe("routeDirectMessage", () => {
 
   it("nudges an unlinked user with the portal link and never chats", async () => {
     const deps = makeDeps({
-      verifyDiscordUser: jest.fn().mockResolvedValue({ linked: false }),
+      verifyDiscordUser: jest.fn().mockResolvedValue({ linked: false, entitled: false }),
     })
     const { message, reply } = createMockMessage({ content: "help me" })
 
@@ -161,6 +162,27 @@ describe("routeDirectMessage", () => {
     expect(reply).toHaveBeenCalledWith(
       expect.objectContaining({
         content: expect.stringContaining("https://example.com/discord/link"),
+      })
+    )
+    expect(deps.handleDiscordChat).not.toHaveBeenCalled()
+    expect(deps.clearDiscordChat).not.toHaveBeenCalled()
+  })
+
+  it("nudges a linked-but-unentitled author with the subscription message and never chats", async () => {
+    const deps = makeDeps({
+      verifyDiscordUser: jest.fn().mockResolvedValue({
+        linked: true,
+        entitled: false,
+        user: linkedUser.user,
+      } satisfies VerifyDiscordUserResult),
+    })
+    const { message, reply } = createMockMessage({ content: "help me" })
+
+    await routeDirectMessage(message, deps)
+
+    expect(reply).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: expect.stringContaining("active membership"),
       })
     )
     expect(deps.handleDiscordChat).not.toHaveBeenCalled()

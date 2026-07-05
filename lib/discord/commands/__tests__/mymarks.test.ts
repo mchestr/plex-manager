@@ -99,6 +99,7 @@ const RESOLVED_USER_ID = "resolved-user-1"
 
 const linkedUser: VerifyDiscordUserResult = {
   linked: true,
+  entitled: true,
   user: {
     id: RESOLVED_USER_ID,
     name: "Test User",
@@ -159,7 +160,7 @@ function createMockContext(options: MockCtxOptions = {}): {
   }
 
   const verifiedUser: VerifyDiscordUserResult =
-    options.linked === false ? { linked: false } : linkedUser
+    options.linked === false ? { linked: false, entitled: false } : linkedUser
 
   return {
     ctx: {

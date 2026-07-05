@@ -173,10 +173,7 @@ function buildMarksEmbed(
 async function handleMyMarks(ctx: InteractionContext): Promise<void> {
   const { interaction } = ctx
 
-  const user = await requireLinkedUser(ctx, {
-    message:
-      "You need to link your account before viewing your marks. Use the link provided earlier.",
-  })
+  const user = await requireLinkedUser(ctx, { action: "viewing your marks" })
   if (!user) return
 
   const userId = user.id

@@ -48,6 +48,10 @@ import {
   type SlashCommand,
 } from "../commands/registry"
 import { verifyDiscordUser as defaultVerifyDiscordUser } from "../services"
+import {
+  buildNotEntitledMessage,
+  buildNotLinkedMessage,
+} from "../commands/require-linked-user"
 import { withAuditLog } from "./audit-wrapper"
 import type { CreateCommandLogParams } from "../audit"
 
@@ -187,6 +191,20 @@ async function routeComponent(
   }
 
   const verifiedUser = await deps.verifyDiscordUser(interaction.user.id)
+
+  // Entitlement gate (data-disclosure safety): components (e.g. the /mark select
+  // menu) carry no requireLinkedUser gate of their own, so enforce it here. A
+  // non-linked / non-subscribed user cannot complete a component action.
+  if (!verifiedUser.entitled) {
+    await interaction.reply({
+      content:
+        verifiedUser.linked && !verifiedUser.entitled
+          ? buildNotEntitledMessage()
+          : buildNotLinkedMessage(),
+      flags: MessageFlags.Ephemeral,
+    })
+    return
+  }
 
   const auditParams: CreateCommandLogParams = {
     discordUserId: interaction.user.id,
