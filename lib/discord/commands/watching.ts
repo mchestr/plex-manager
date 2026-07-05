@@ -225,8 +225,7 @@ async function handleWatching(ctx: InteractionContext): Promise<void> {
   const { interaction } = ctx
 
   const user = await requireLinkedUser(ctx, {
-    message:
-      "You need to link your account before I can show what you're watching. Use the link provided earlier.",
+    action: "I can show what you're watching",
   })
   if (!user) return
 

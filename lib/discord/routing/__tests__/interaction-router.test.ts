@@ -151,6 +151,7 @@ function createMockLog(): DiscordCommandLog {
 
 const linkedUser: VerifyDiscordUserResult = {
   linked: true,
+  entitled: true,
   user: {
     id: "user-123",
     name: "Test User",
@@ -444,6 +445,38 @@ describe("routeInteraction", () => {
     )
     expect(reply).toHaveBeenCalledWith(
       expect.objectContaining({ content: expect.stringContaining("something went wrong") })
+    )
+  })
+
+  it("refuses a linked-but-unentitled user's component with an ephemeral nudge and does not dispatch", async () => {
+    const handle = jest.fn().mockResolvedValue(undefined)
+    const handler = {
+      customIdPrefix: "mark:select:",
+      commandType: "SELECTION" as DiscordCommandType,
+      handle,
+    }
+    const verifiedUser = jest.fn().mockResolvedValue({
+      linked: true,
+      entitled: false,
+      user: linkedUser.user,
+    } satisfies VerifyDiscordUserResult)
+    const deps = makeDeps({
+      getComponentHandler: jest.fn().mockReturnValue(handler),
+      verifyDiscordUser: verifiedUser,
+    })
+    const { interaction, reply } = createMockComponentInteraction({ isStringSelectMenu: true })
+
+    await routeInteraction(interaction, deps)
+
+    expect(verifiedUser).toHaveBeenCalledWith("discord-user-123")
+    // Gated before the handler runs: no dispatch, no audit log.
+    expect(handle).not.toHaveBeenCalled()
+    expect(mockCreate).not.toHaveBeenCalled()
+    expect(reply).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: expect.stringContaining("active membership"),
+        flags: 64,
+      })
     )
   })
 

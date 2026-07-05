@@ -1,4 +1,5 @@
 import { type ChatMessage } from "@/actions/chatbot/types"
+import { isAccessAllowed } from "@/lib/access"
 import { runChatbotForUser } from "@/lib/chatbot/assistant"
 import { appendTurn, getOrCreateSession } from "@/lib/discord/chat-session"
 import { sanitizeDiscordResponse } from "@/lib/discord/chat-safety"
@@ -9,6 +10,14 @@ const logger = createLogger("DISCORD_SERVICES")
 
 export interface VerifyDiscordUserResult {
   linked: boolean
+  /**
+   * Whether the linked user is an *entitled member* — allowed to invoke bot
+   * commands. Follows the app's canonical rule (see `lib/access.ts`): when Stripe
+   * gating is disabled this is `true` for any linked user (today's behavior);
+   * when enabled it requires admin, exempt, or an ACTIVE/PAST_DUE subscription.
+   * `false` when not linked or not entitled.
+   */
+  entitled: boolean
   user?: {
     id: string
     name: string | null
@@ -23,6 +32,8 @@ export interface VerifyDiscordUserResult {
 export interface DiscordChatResult {
   success: boolean
   linked: boolean
+  /** `false` when the linked user is not an entitled member (see verifyDiscordUser). */
+  entitled?: boolean
   message?: ChatMessage
   conversationId?: string
   error?: string
@@ -40,27 +51,43 @@ export interface ClearChatResult {
  * Direct function call - no HTTP overhead
  */
 export async function verifyDiscordUser(discordUserId: string): Promise<VerifyDiscordUserResult> {
-  const connection = await prisma.discordConnection.findUnique({
-    where: { discordUserId },
-    include: {
-      user: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          plexUserId: true,
-          isAdmin: true,
+  const [connection, config] = await Promise.all([
+    prisma.discordConnection.findUnique({
+      where: { discordUserId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            plexUserId: true,
+            isAdmin: true,
+            isExempt: true,
+            subscription: { select: { status: true } },
+          },
         },
       },
-    },
-  })
+    }),
+    prisma.config.findUnique({
+      where: { id: "config" },
+      select: { stripeEnabled: true },
+    }),
+  ])
 
   if (!connection || connection.revokedAt) {
-    return { linked: false }
+    return { linked: false, entitled: false }
   }
+
+  const entitled = isAccessAllowed({
+    stripeEnabled: config?.stripeEnabled ?? false,
+    isAdmin: connection.user.isAdmin,
+    isExempt: connection.user.isExempt,
+    subscriptionStatus: connection.user.subscription?.status ?? null,
+  })
 
   return {
     linked: true,
+    entitled,
     user: {
       id: connection.userId,
       name: connection.user.name,
@@ -91,20 +118,41 @@ export async function handleDiscordChat({
   channelId: string
   message: string
 }): Promise<DiscordChatResult> {
-  const connection = await prisma.discordConnection.findUnique({
-    where: { discordUserId },
-    include: {
-      user: {
-        select: {
-          id: true,
-          isAdmin: true,
+  const [connection, config] = await Promise.all([
+    prisma.discordConnection.findUnique({
+      where: { discordUserId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            isAdmin: true,
+            isExempt: true,
+            subscription: { select: { status: true } },
+          },
         },
       },
-    },
-  })
+    }),
+    prisma.config.findUnique({
+      where: { id: "config" },
+      select: { stripeEnabled: true },
+    }),
+  ])
 
   if (!connection || connection.revokedAt) {
-    return { success: false, linked: false, error: "Discord account is not linked" }
+    return { success: false, linked: false, entitled: false, error: "Discord account is not linked" }
+  }
+
+  // Entitlement gate (data-disclosure safety): a linked but non-subscribed user
+  // must not reach the assistant / its tools. The router surfaces the nudge; this
+  // is the authoritative chokepoint where tool data would otherwise be accessed.
+  const entitled = isAccessAllowed({
+    stripeEnabled: config?.stripeEnabled ?? false,
+    isAdmin: connection.user.isAdmin,
+    isExempt: connection.user.isExempt,
+    subscriptionStatus: connection.user.subscription?.status ?? null,
+  })
+  if (!entitled) {
+    return { success: false, linked: true, entitled: false, error: "Subscription required" }
   }
 
   const session = await getOrCreateSession({

@@ -45,12 +45,15 @@ import type { DiscordCommandType } from "@/lib/generated/prisma"
 import { clearDiscordChat, handleDiscordChat } from "@/lib/discord/services"
 import { createLogger } from "@/lib/utils/logger"
 import type { InteractionContext, SlashCommand } from "./registry"
-import { requireLinkedUser } from "./require-linked-user"
+import {
+  buildNotEntitledMessage,
+  buildNotLinkedMessage,
+  requireLinkedUser,
+} from "./require-linked-user"
 
 const logger = createLogger("DISCORD_ASSISTANT_COMMAND")
 
-const LINK_NUDGE =
-  "You need to link your account before using the assistant. Use the link provided earlier."
+const LINK_NUDGE = buildNotLinkedMessage("using the assistant")
 
 /** Appended to `/assistant ask` answers so users know where to continue. */
 const CONTINUE_IN_DM_NOTE =
@@ -67,7 +70,7 @@ const CONTINUE_IN_DM_NOTE =
 async function handleAsk(ctx: InteractionContext): Promise<void> {
   const { interaction, discordUserId, channelId } = ctx
 
-  const user = await requireLinkedUser(ctx, { message: LINK_NUDGE })
+  const user = await requireLinkedUser(ctx)
   if (!user) return
 
   const prompt = interaction.options.getString("prompt", true).trim()
@@ -80,8 +83,14 @@ async function handleAsk(ctx: InteractionContext): Promise<void> {
     message: prompt,
   })
 
+  // Guard the (rare) case where entitlement lapsed between the gate above and the
+  // chat call — handleDiscordChat re-checks and refuses non-linked/unentitled.
   if (response.linked === false) {
     await interaction.editReply({ content: LINK_NUDGE })
+    return
+  }
+  if (response.entitled === false) {
+    await interaction.editReply({ content: buildNotEntitledMessage() })
     return
   }
 
@@ -110,7 +119,7 @@ async function handleAsk(ctx: InteractionContext): Promise<void> {
 async function handleReset(ctx: InteractionContext): Promise<void> {
   const { interaction, discordUserId, channelId } = ctx
 
-  const user = await requireLinkedUser(ctx, { message: LINK_NUDGE })
+  const user = await requireLinkedUser(ctx, { action: "using the assistant" })
   if (!user) return
 
   const result = await clearDiscordChat({ discordUserId, channelId })

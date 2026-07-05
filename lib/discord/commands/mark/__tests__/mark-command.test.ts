@@ -113,6 +113,12 @@ jest.mock("@/lib/discord/services", () => ({
 jest.mock("@/lib/utils/logger", () => ({
   createLogger: () => ({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }),
 }))
+// require-linked-user (imported by the command) pulls in lib/discord/config →
+// lib/prisma, which needs DATABASE_URL. Stub the portal-URL helper so the module
+// graph loads under jsdom without a live database.
+jest.mock("@/lib/discord/config", () => ({
+  getDiscordPortalUrl: () => "https://example.com/discord/link",
+}))
 
 import { markCommand, MARK_SUBCOMMANDS, MARK_SELECT_PREFIX } from "../index"
 import { searchPlexMedia, type PlexMediaItem } from "@/lib/connections/plex"
@@ -145,6 +151,7 @@ const plexConfig: PlexServerConfig = {
 
 const linkedUser: VerifyDiscordUserResult = {
   linked: true,
+  entitled: true,
   user: {
     id: "user-1",
     name: "Test User",
@@ -186,7 +193,7 @@ function createMockContext(options: MockChatOptions = {}): {
   }
 
   const verifiedUser: VerifyDiscordUserResult =
-    options.linked === false ? { linked: false } : linkedUser
+    options.linked === false ? { linked: false, entitled: false } : linkedUser
 
   return {
     ctx: {

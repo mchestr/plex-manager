@@ -172,10 +172,7 @@ async function markAndConfirm(
 async function handleMark(ctx: InteractionContext): Promise<void> {
   const { interaction } = ctx
 
-  const user = await requireLinkedUser(ctx, {
-    message:
-      "You need to link your account before marking media. Use the link provided earlier.",
-  })
+  const user = await requireLinkedUser(ctx, { action: "marking media" })
   if (!user) return
 
   const subcommand = interaction.options.getSubcommand()
