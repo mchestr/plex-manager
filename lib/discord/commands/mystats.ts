@@ -40,6 +40,7 @@ import { formatWatchTime } from "@/lib/utils/time-formatting"
 import { fetchTautulliStatistics } from "@/lib/wrapped/statistics"
 import type { TautulliStatisticsData } from "@/lib/wrapped/statistics-types"
 import type { InteractionContext, SlashCommand } from "./registry"
+import { requireLinkedUser } from "./require-linked-user"
 
 const logger = createLogger("DISCORD_MYSTATS_COMMAND")
 
@@ -123,14 +124,12 @@ function buildStatsEmbed(stats: TautulliStatisticsData): EmbedBuilder {
  * @internal
  */
 async function handleMyStats(ctx: InteractionContext): Promise<void> {
-  const { interaction, verifiedUser } = ctx
+  const { interaction } = ctx
 
-  if (!verifiedUser.linked || !verifiedUser.user) {
-    await interaction.reply({ content: LINK_NUDGE, flags: MessageFlags.Ephemeral })
-    return
-  }
+  const user = await requireLinkedUser(ctx, { message: LINK_NUDGE })
+  if (!user) return
 
-  const { plexUserId, email } = verifiedUser.user
+  const { plexUserId, email } = user
 
   // Tautulli fetch is slow; ack now (ephemerally) so we stay under Discord's 3s
   // window, then edit the reply with the result.
@@ -159,7 +158,7 @@ async function handleMyStats(ctx: InteractionContext): Promise<void> {
     if (!result.success || !result.data) {
       // Log the raw internal error, but never surface it to the user.
       logger.error("Failed to fetch Tautulli stats for /mystats", undefined, {
-        userId: verifiedUser.user.id,
+        userId: user.id,
         error: result.error,
       })
       await interaction.editReply({ content: GENERIC_ERROR })
@@ -168,7 +167,7 @@ async function handleMyStats(ctx: InteractionContext): Promise<void> {
     stats = result.data
   } catch (error) {
     logger.error("Error fetching Tautulli stats for /mystats", error, {
-      userId: verifiedUser.user.id,
+      userId: user.id,
     })
     await interaction.editReply({ content: GENERIC_ERROR })
     return

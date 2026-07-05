@@ -38,6 +38,7 @@ import { prisma } from "@/lib/prisma"
 import { getMarkTypeLabel } from "@/lib/discord/media/mark-labels"
 import { createLogger } from "@/lib/utils/logger"
 import type { InteractionContext, SlashCommand } from "./registry"
+import { requireLinkedUser } from "./require-linked-user"
 
 const logger = createLogger("DISCORD_MYMARKS_COMMAND")
 
@@ -170,18 +171,15 @@ function buildMarksEmbed(
  * @internal
  */
 async function handleMyMarks(ctx: InteractionContext): Promise<void> {
-  const { interaction, verifiedUser } = ctx
+  const { interaction } = ctx
 
-  if (!verifiedUser.linked || !verifiedUser.user) {
-    await interaction.reply({
-      content:
-        "You need to link your account before viewing your marks. Use the link provided earlier.",
-      flags: MessageFlags.Ephemeral,
-    })
-    return
-  }
+  const user = await requireLinkedUser(ctx, {
+    message:
+      "You need to link your account before viewing your marks. Use the link provided earlier.",
+  })
+  if (!user) return
 
-  const userId = verifiedUser.user.id
+  const userId = user.id
   const filterType = interaction.options.getString("type") as MarkType | null
 
   await interaction.deferReply({ flags: MessageFlags.Ephemeral })

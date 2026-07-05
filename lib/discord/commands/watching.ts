@@ -36,6 +36,7 @@ import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
 import { sanitizeDiscordResponse } from "@/lib/discord/chat-safety"
 import { createLogger } from "@/lib/utils/logger"
 import type { InteractionContext, SlashCommand } from "./registry"
+import { requireLinkedUser } from "./require-linked-user"
 
 const logger = createLogger("DISCORD_WATCHING_COMMAND")
 
@@ -221,21 +222,18 @@ function safeText(text: string): string {
  * @internal
  */
 async function handleWatching(ctx: InteractionContext): Promise<void> {
-  const { interaction, verifiedUser } = ctx
+  const { interaction } = ctx
 
-  if (!verifiedUser.linked || !verifiedUser.user) {
-    await interaction.reply({
-      content:
-        "You need to link your account before I can show what you're watching. Use the link provided earlier.",
-      flags: MessageFlags.Ephemeral,
-    })
-    return
-  }
+  const user = await requireLinkedUser(ctx, {
+    message:
+      "You need to link your account before I can show what you're watching. Use the link provided earlier.",
+  })
+  if (!user) return
 
   // Plex calls are slow; ack now (ephemerally) to stay under Discord's 3s window.
   await interaction.deferReply({ flags: MessageFlags.Ephemeral })
 
-  const plexUserId = verifiedUser.user.plexUserId
+  const plexUserId = user.plexUserId
   if (!plexUserId) {
     await interaction.editReply({ content: EMPTY_STATE })
     return

@@ -45,6 +45,7 @@ import type { DiscordCommandType } from "@/lib/generated/prisma"
 import { clearDiscordChat, handleDiscordChat } from "@/lib/discord/services"
 import { createLogger } from "@/lib/utils/logger"
 import type { InteractionContext, SlashCommand } from "./registry"
+import { requireLinkedUser } from "./require-linked-user"
 
 const logger = createLogger("DISCORD_ASSISTANT_COMMAND")
 
@@ -64,12 +65,10 @@ const CONTINUE_IN_DM_NOTE =
  * @internal
  */
 async function handleAsk(ctx: InteractionContext): Promise<void> {
-  const { interaction, verifiedUser, discordUserId, channelId } = ctx
+  const { interaction, discordUserId, channelId } = ctx
 
-  if (!verifiedUser.linked || !verifiedUser.user) {
-    await interaction.reply({ content: LINK_NUDGE, flags: MessageFlags.Ephemeral })
-    return
-  }
+  const user = await requireLinkedUser(ctx, { message: LINK_NUDGE })
+  if (!user) return
 
   const prompt = interaction.options.getString("prompt", true).trim()
 
@@ -109,12 +108,10 @@ async function handleAsk(ctx: InteractionContext): Promise<void> {
  * @internal
  */
 async function handleReset(ctx: InteractionContext): Promise<void> {
-  const { interaction, verifiedUser, discordUserId, channelId } = ctx
+  const { interaction, discordUserId, channelId } = ctx
 
-  if (!verifiedUser.linked || !verifiedUser.user) {
-    await interaction.reply({ content: LINK_NUDGE, flags: MessageFlags.Ephemeral })
-    return
-  }
+  const user = await requireLinkedUser(ctx, { message: LINK_NUDGE })
+  if (!user) return
 
   const result = await clearDiscordChat({ discordUserId, channelId })
 

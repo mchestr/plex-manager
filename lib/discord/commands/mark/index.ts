@@ -65,6 +65,7 @@ import type {
   InteractionContext,
   SlashCommand,
 } from "../registry"
+import { requireLinkedUser } from "../require-linked-user"
 import {
   createPendingSelection,
   deleteById,
@@ -169,16 +170,13 @@ async function markAndConfirm(
  * @internal
  */
 async function handleMark(ctx: InteractionContext): Promise<void> {
-  const { interaction, verifiedUser } = ctx
+  const { interaction } = ctx
 
-  if (!verifiedUser.linked || !verifiedUser.user) {
-    await interaction.reply({
-      content:
-        "You need to link your account before marking media. Use the link provided earlier.",
-      flags: MessageFlags.Ephemeral,
-    })
-    return
-  }
+  const user = await requireLinkedUser(ctx, {
+    message:
+      "You need to link your account before marking media. Use the link provided earlier.",
+  })
+  if (!user) return
 
   const subcommand = interaction.options.getSubcommand()
   const markType = MARK_SUBCOMMANDS[subcommand]
@@ -223,7 +221,7 @@ async function handleMark(ctx: InteractionContext): Promise<void> {
   }
 
   if (results.length === 1) {
-    await markAndConfirm(interaction, verifiedUser.user.id, results[0], markType, plexConfig)
+    await markAndConfirm(interaction, user.id, results[0], markType, plexConfig)
     return
   }
 
