@@ -180,4 +180,99 @@ describe('updateDiscordIntegrationSettings leave-blank-to-keep', () => {
       })
     )
   })
+
+  it('bumps configVersion on every update', async () => {
+    mockPrisma.discordIntegration.findUnique.mockResolvedValue({
+      id: 'discord',
+      clientSecret: 'stored-discord-secret',
+      configVersion: 4,
+    })
+    mockPrisma.discordIntegration.upsert.mockResolvedValue({})
+
+    await updateDiscordIntegrationSettings({
+      isEnabled: true,
+      clientId: 'client-id',
+      clientSecret: '',
+    })
+
+    expect(mockPrisma.discordIntegration.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        update: expect.objectContaining({ configVersion: 5 }),
+        create: expect.objectContaining({ configVersion: 5 }),
+      })
+    )
+  })
+})
+
+describe('updateDiscordIntegrationSettings botToken leave-blank-to-keep', () => {
+  it('keeps the stored bot token when the submitted token is blank', async () => {
+    mockPrisma.discordIntegration.findUnique.mockResolvedValue({
+      id: 'discord',
+      clientSecret: 'stored-discord-secret',
+      botToken: 'stored-bot-token',
+    })
+    mockPrisma.discordIntegration.upsert.mockResolvedValue({})
+
+    const result = await updateDiscordIntegrationSettings({
+      isEnabled: true,
+      clientId: 'client-id',
+      clientSecret: '',
+      botToken: '',
+    })
+
+    expect(result).toEqual({ success: true })
+    expect(mockPrisma.discordIntegration.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        update: expect.objectContaining({ botToken: 'stored-bot-token' }),
+      })
+    )
+  })
+
+  it('overwrites the bot token when a new value is provided', async () => {
+    mockPrisma.discordIntegration.findUnique.mockResolvedValue({
+      id: 'discord',
+      clientSecret: 'stored-discord-secret',
+      botToken: 'stored-bot-token',
+    })
+    mockPrisma.discordIntegration.upsert.mockResolvedValue({})
+
+    await updateDiscordIntegrationSettings({
+      isEnabled: true,
+      clientId: 'client-id',
+      clientSecret: '',
+      botToken: 'new-bot-token',
+    })
+
+    expect(mockPrisma.discordIntegration.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        update: expect.objectContaining({ botToken: 'new-bot-token' }),
+      })
+    )
+  })
+
+  it('persists support channel and thread ids', async () => {
+    mockPrisma.discordIntegration.findUnique.mockResolvedValue({
+      id: 'discord',
+      clientSecret: 'stored-discord-secret',
+      botToken: 'stored-bot-token',
+    })
+    mockPrisma.discordIntegration.upsert.mockResolvedValue({})
+
+    await updateDiscordIntegrationSettings({
+      isEnabled: true,
+      clientId: 'client-id',
+      clientSecret: '',
+      supportChannelId: '999',
+      supportThreadIds: '111, 222 ,, 333',
+    })
+
+    expect(mockPrisma.discordIntegration.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        update: expect.objectContaining({
+          supportChannelId: '999',
+          supportThreadIds: ['111', '222', '333'],
+        }),
+      })
+    )
+  })
 })

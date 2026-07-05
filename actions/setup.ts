@@ -9,7 +9,7 @@ import { testRadarrConnection } from "@/lib/connections/radarr"
 import { testSonarrConnection } from "@/lib/connections/sonarr"
 import { testTautulliConnection } from "@/lib/connections/tautulli"
 import { prisma } from "@/lib/prisma"
-import { discordIntegrationSchema, type DiscordIntegrationInput } from "@/lib/validations/discord"
+import { discordIntegrationSchema, type DiscordIntegrationInputData } from "@/lib/validations/discord"
 import { llmProviderSchema, type LLMProviderInput } from "@/lib/validations/llm-provider"
 import { overseerrSchema, type OverseerrInput, type OverseerrParsed } from "@/lib/validations/overseerr"
 import { plexServerSchema, type PlexServerInput, type PlexServerParsed } from "@/lib/validations/plex"
@@ -327,7 +327,7 @@ export async function saveRadarr(data: RadarrInput) {
   }
 }
 
-export async function saveDiscordIntegration(data: DiscordIntegrationInput) {
+export async function saveDiscordIntegration(data: DiscordIntegrationInputData) {
   try {
     await requireAdminIfSetupComplete()
 

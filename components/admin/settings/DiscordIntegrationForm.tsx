@@ -20,6 +20,9 @@ interface DiscordIntegrationFormProps {
     botEnabled?: boolean | null
     clientId?: string | null
     hasClientSecret?: boolean
+    hasBotToken?: boolean
+    supportChannelId?: string | null
+    supportThreadIds?: unknown
     guildId?: string | null
     serverInviteCode?: string | null
     platformName?: string | null
@@ -58,15 +61,28 @@ export function DiscordIntegrationForm({ integration, linkedCount, portalUrl }: 
   const [isEditing, setIsEditing] = useState(false)
   const [isPending, startTransition] = useTransition()
 
-  // Whether a client secret is already stored (drives leave-blank-to-keep).
+  // Whether a client secret / bot token is already stored (leave-blank-to-keep).
   const hasStoredClientSecret = Boolean(integration?.hasClientSecret)
+  const hasStoredBotToken = Boolean(integration?.hasBotToken)
 
-  // The client secret is never sent to the client. Empty means "keep existing".
+  // Normalize the stored (non-secret) support thread IDs into a comma-separated
+  // string for the text input.
+  const initialSupportThreadIds = Array.isArray(integration?.supportThreadIds)
+    ? (integration.supportThreadIds as unknown[])
+        .filter((id): id is string => typeof id === "string")
+        .join(", ")
+    : ""
+
+  // Secrets (client secret + bot token) are never sent to the client. Empty
+  // means "keep existing".
   const initialState = {
     isEnabled: integration?.isEnabled ?? false,
     botEnabled: integration?.botEnabled ?? false,
     clientId: integration?.clientId ?? "",
     clientSecret: "",
+    botToken: "",
+    supportChannelId: integration?.supportChannelId ?? "",
+    supportThreadIds: initialSupportThreadIds,
     guildId: integration?.guildId ?? "",
     serverInviteCode: integration?.serverInviteCode ?? "",
     platformName: integration?.platformName ?? "Plex Wrapped",
@@ -81,8 +97,9 @@ export function DiscordIntegrationForm({ integration, linkedCount, portalUrl }: 
     startTransition(async () => {
       const result = await updateDiscordIntegrationSettings({
         ...formData,
-        // Blank secret is omitted so the action keeps the stored value.
+        // Blank secrets are omitted so the action keeps the stored values.
         clientSecret: formData.clientSecret.trim() || undefined,
+        botToken: formData.botToken.trim() || undefined,
       })
 
       if (result.success) {
@@ -240,6 +257,46 @@ export function DiscordIntegrationForm({ integration, linkedCount, portalUrl }: 
             value={formData.platformName}
             onChange={(e) => setFormData({ ...formData, platformName: e.target.value })}
             placeholder="Displayed in Discord profile"
+            disabled={isPending}
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-400 mb-1">
+            Bot Token <span className="text-slate-500 font-normal">(optional)</span>
+          </label>
+          <StyledInput
+            type="password"
+            value={formData.botToken}
+            onChange={(e) => setFormData({ ...formData, botToken: e.target.value })}
+            placeholder={hasStoredBotToken ? "Leave blank to keep current token" : "Discord bot token"}
+            disabled={isPending}
+            autoComplete="off"
+          />
+          <p className="text-xs text-slate-500 mt-1">
+            Used by the Discord bot. Falls back to the DISCORD_BOT_TOKEN environment variable when blank.
+          </p>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-400 mb-1">
+            Support Channel ID <span className="text-slate-500 font-normal">(optional)</span>
+          </label>
+          <StyledInput
+            type="text"
+            value={formData.supportChannelId}
+            onChange={(e) => setFormData({ ...formData, supportChannelId: e.target.value })}
+            placeholder="Channel the bot monitors for support"
+            disabled={isPending}
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-slate-400 mb-1">
+            Support Thread IDs <span className="text-slate-500 font-normal">(optional)</span>
+          </label>
+          <StyledInput
+            type="text"
+            value={formData.supportThreadIds}
+            onChange={(e) => setFormData({ ...formData, supportThreadIds: e.target.value })}
+            placeholder="Comma-separated thread IDs (e.g. 123, 456)"
             disabled={isPending}
           />
         </div>

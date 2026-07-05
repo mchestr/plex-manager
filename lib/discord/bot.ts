@@ -1,12 +1,8 @@
 import { Client, Events, GatewayIntentBits, Partials } from "discord.js"
 import winston from "winston"
+import { getDiscordBotToken, getSupportChannelId } from "./config"
 import { routeInteraction } from "./routing/interaction-router"
 import { routeDirectMessage, defaultDmRouteDeps } from "./routing/dm-router"
-
-const REQUIRED_ENV = [
-  "DISCORD_BOT_TOKEN",
-  "DISCORD_SUPPORT_CHANNEL_ID",
-]
 
 /**
  * Factory for the discord.js gateway client. Injectable so tests can supply a
@@ -85,15 +81,18 @@ export class DiscordBot {
       return
     }
 
-    // Check required environment variables
-    const missing = REQUIRED_ENV.filter((key) => !process.env[key])
+    // Resolve required config, preferring the DB row and falling back to env
+    // (see lib/discord/config.ts). Missing values mean the bot cannot start.
+    const BOT_TOKEN = await getDiscordBotToken()
+    const SUPPORT_CHANNEL_ID = await getSupportChannelId()
+    const missing = [
+      !BOT_TOKEN && "botToken",
+      !SUPPORT_CHANNEL_ID && "supportChannelId",
+    ].filter((v): v is string => Boolean(v))
     if (missing.length > 0) {
-      this.logger.warn("Missing required environment variables, Discord bot will not start", { missing })
+      this.logger.warn("Missing required Discord configuration, Discord bot will not start", { missing })
       return
     }
-
-    const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN!
-    const SUPPORT_CHANNEL_ID = process.env.DISCORD_SUPPORT_CHANNEL_ID!
     const BASE_URL = process.env.PLEX_WRAPPED_BASE_URL?.replace(/\/$/, "") || process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || "http://localhost:3000"
     const PORTAL_URL = process.env.DISCORD_PORTAL_URL || `${BASE_URL}/discord/link`
 
@@ -104,12 +103,13 @@ export class DiscordBot {
 
     this.client = this.createClient()
 
-    // Set up event handlers
-    this.setupEventHandlers(SUPPORT_CHANNEL_ID, PORTAL_URL)
+    // Set up event handlers (SUPPORT_CHANNEL_ID / BOT_TOKEN are guaranteed
+    // non-null by the `missing` check above).
+    this.setupEventHandlers(SUPPORT_CHANNEL_ID!, PORTAL_URL)
 
     // Login to Discord
     try {
-      await this.client.login(BOT_TOKEN)
+      await this.client.login(BOT_TOKEN!)
       this.isInitialized = true
       this.logger.info("Discord bot initialized successfully")
     } catch (error) {

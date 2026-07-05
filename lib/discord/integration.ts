@@ -1,4 +1,5 @@
 import { exchangeDiscordCode, fetchDiscordUserProfile, refreshDiscordToken, updateDiscordRoleConnection } from "@/lib/discord/api"
+import { getDiscordBotToken } from "@/lib/discord/config"
 import { computeRoleMetadata } from "@/lib/discord/role-metadata"
 import { prisma } from "@/lib/prisma"
 import { getBaseUrl } from "@/lib/utils"
@@ -346,12 +347,14 @@ export async function getDiscordLinkStatus(userId: string) {
 
   let isOnServer: boolean | null = null
 
-  // Check if user is on the Discord server (if we have bot token and guild ID)
-  if (connection && integration?.guildId && process.env.DISCORD_BOT_TOKEN) {
+  // Check if user is on the Discord server (if we have bot token and guild ID).
+  // The bot token resolves from the DB row first, then env (see lib/discord/config).
+  const botToken = connection && integration?.guildId ? await getDiscordBotToken() : undefined
+  if (connection && integration?.guildId && botToken) {
     try {
       const { checkGuildMembership } = await import("./api")
       isOnServer = await checkGuildMembership(
-        process.env.DISCORD_BOT_TOKEN,
+        botToken,
         integration.guildId,
         connection.discordUserId
       )
@@ -389,15 +392,24 @@ export async function getDiscordStats() {
     }),
   ])
 
-  // The Prisma extension DECRYPTS `clientSecret` on read (see ENCRYPTED_FIELDS
-  // in lib/prisma.ts), so returning the row verbatim would leak the plaintext
-  // client secret to any caller. Strip it and expose only a `hasClientSecret`
-  // boolean — the established secret-omission pattern (see admin-settings
-  // omitSecret). botToken is handled in Step 17.
-  let sanitizedIntegration: (Omit<NonNullable<typeof integration>, "clientSecret"> & { hasClientSecret: boolean }) | null = null
+  // The Prisma extension DECRYPTS `clientSecret` and `botToken` on read (see
+  // ENCRYPTED_FIELDS in lib/prisma.ts), so returning the row verbatim would leak
+  // the plaintext secrets to any caller. Strip both and expose only
+  // `hasClientSecret` / `hasBotToken` booleans — the established
+  // secret-omission pattern (see admin-settings omitSecret).
+  let sanitizedIntegration:
+    | (Omit<NonNullable<typeof integration>, "clientSecret" | "botToken"> & {
+        hasClientSecret: boolean
+        hasBotToken: boolean
+      })
+    | null = null
   if (integration) {
-    const { clientSecret, ...rest } = integration
-    sanitizedIntegration = { ...rest, hasClientSecret: Boolean(clientSecret) }
+    const { clientSecret, botToken, ...rest } = integration
+    sanitizedIntegration = {
+      ...rest,
+      hasClientSecret: Boolean(clientSecret),
+      hasBotToken: Boolean(botToken),
+    }
   }
 
   return {

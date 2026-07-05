@@ -19,12 +19,13 @@ export async function updateDiscordIntegrationSettings(data: Record<string, unkn
     const isEnabled = parsed.isEnabled ?? false
     const botEnabled = parsed.botEnabled ?? false
 
-    // The client secret is never sent to the client; a blank value means "keep
-    // the currently-stored secret". Resolve it against the stored (decrypted)
-    // value so re-enabling without re-typing the secret works and the stored
-    // secret is preserved on write.
+    // Secrets (client secret + bot token) are never sent to the client; a blank
+    // value means "keep the currently-stored secret". Resolve each against the
+    // stored (decrypted) value so re-enabling without re-typing the secret works
+    // and the stored secret is preserved on write.
     const existing = await prisma.discordIntegration.findUnique({ where: { id: "discord" } })
     const clientSecret = parsed.clientSecret ?? existing?.clientSecret ?? undefined
+    const botToken = parsed.botToken ?? existing?.botToken ?? undefined
 
     if (isEnabled && (!parsed.clientId || !clientSecret)) {
       return {
@@ -33,6 +34,10 @@ export async function updateDiscordIntegrationSettings(data: Record<string, unkn
       }
     }
 
+    // Bump configVersion on every update so Step 18's rotation-bounce can detect
+    // that config (including a rotated bot token) changed and cycle the bot.
+    const nextConfigVersion = (existing?.configVersion ?? 0) + 1
+
     await prisma.discordIntegration.upsert({
       where: { id: "discord" },
       update: {
@@ -40,6 +45,10 @@ export async function updateDiscordIntegrationSettings(data: Record<string, unkn
         botEnabled,
         clientId: parsed.clientId,
         clientSecret,
+        botToken,
+        supportChannelId: parsed.supportChannelId,
+        supportThreadIds: parsed.supportThreadIds ?? [],
+        configVersion: nextConfigVersion,
         guildId: parsed.guildId,
         serverInviteCode: parsed.serverInviteCode,
         platformName: parsed.platformName,
@@ -52,6 +61,10 @@ export async function updateDiscordIntegrationSettings(data: Record<string, unkn
         botEnabled,
         clientId: parsed.clientId,
         clientSecret,
+        botToken,
+        supportChannelId: parsed.supportChannelId,
+        supportThreadIds: parsed.supportThreadIds ?? [],
+        configVersion: nextConfigVersion,
         guildId: parsed.guildId,
         serverInviteCode: parsed.serverInviteCode,
         platformName: parsed.platformName,

@@ -36,12 +36,15 @@ describe("getDiscordStats - clientSecret leak (FR-11)", () => {
     mockCount.mockResolvedValue(7)
   })
 
-  it("never returns the decrypted clientSecret and exposes hasClientSecret=true instead", async () => {
+  const BOT_TOKEN_VALUE = "super-secret-bot-token"
+
+  it("never returns the decrypted clientSecret/botToken and exposes has* booleans instead", async () => {
     mockFindUnique.mockResolvedValue({
       id: "discord",
       isEnabled: true,
       clientId: "client-123",
       clientSecret: SECRET_VALUE,
+      botToken: BOT_TOKEN_VALUE,
       guildId: "guild-1",
       platformName: "Plex Wrapped",
     })
@@ -49,28 +52,33 @@ describe("getDiscordStats - clientSecret leak (FR-11)", () => {
     const { integration, linkedCount } = await getDiscordStats()
 
     expect(integration).not.toBeNull()
-    // The raw secret must be gone entirely.
+    // The raw secrets must be gone entirely.
     expect(integration).not.toHaveProperty("clientSecret")
-    expect(JSON.stringify(integration)).not.toContain(SECRET_VALUE)
-    // Replaced by a boolean presence flag.
-    expect(integration).toMatchObject({ hasClientSecret: true, clientId: "client-123" })
+    expect(integration).not.toHaveProperty("botToken")
+    const serialized = JSON.stringify(integration)
+    expect(serialized).not.toContain(SECRET_VALUE)
+    expect(serialized).not.toContain(BOT_TOKEN_VALUE)
+    // Replaced by boolean presence flags.
+    expect(integration).toMatchObject({ hasClientSecret: true, hasBotToken: true, clientId: "client-123" })
     // Non-secret fields are preserved.
     expect(integration).toMatchObject({ id: "discord", isEnabled: true, guildId: "guild-1" })
     expect(linkedCount).toBe(7)
   })
 
-  it("reports hasClientSecret=false when no secret is set", async () => {
+  it("reports has* booleans false when no secrets are set", async () => {
     mockFindUnique.mockResolvedValue({
       id: "discord",
       isEnabled: false,
       clientId: null,
       clientSecret: null,
+      botToken: null,
     })
 
     const { integration } = await getDiscordStats()
 
     expect(integration).not.toHaveProperty("clientSecret")
-    expect(integration).toMatchObject({ hasClientSecret: false })
+    expect(integration).not.toHaveProperty("botToken")
+    expect(integration).toMatchObject({ hasClientSecret: false, hasBotToken: false })
   })
 
   it("returns integration=null when no row exists", async () => {

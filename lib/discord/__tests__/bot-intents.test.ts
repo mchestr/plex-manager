@@ -17,12 +17,18 @@
  */
 
 // bot.ts transitively imports the routers → command registry → prisma-backed
-// modules, which we don't exercise here. Stub the routers so importing bot.ts
-// only builds the discord.js client factory under test.
+// modules, and the config resolver (which eagerly instantiates prisma at import
+// time), none of which we exercise here. Stub them so importing bot.ts only
+// builds the discord.js client factory under test.
 jest.mock("../routing/interaction-router", () => ({ routeInteraction: jest.fn() }))
 jest.mock("../routing/dm-router", () => ({
   routeDirectMessage: jest.fn(),
   defaultDmRouteDeps: jest.fn(),
+}))
+jest.mock("../config", () => ({
+  getDiscordBotToken: jest.fn(),
+  getSupportChannelId: jest.fn(),
+  getSupportThreadIds: jest.fn(),
 }))
 
 import { GatewayIntentBits, Partials } from "discord.js"

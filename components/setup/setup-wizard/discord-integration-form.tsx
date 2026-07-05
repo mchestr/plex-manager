@@ -13,7 +13,13 @@ interface DiscordIntegrationFormProps {
   onBack?: () => void
 }
 
-type DiscordFormState = Omit<DiscordIntegrationInput, "isEnabled"> & {
+// The setup wizard only collects the basic OAuth fields; the bot token and
+// support channel/thread settings are managed later from admin settings, so
+// omit them from the wizard's local form state.
+type DiscordFormState = Omit<
+  DiscordIntegrationInput,
+  "isEnabled" | "botToken" | "supportChannelId" | "supportThreadIds"
+> & {
   isEnabled: boolean
   instructions?: string
 }

@@ -29,7 +29,7 @@ export const ENCRYPTED_FIELDS: Record<string, readonly string[]> = {
   Sonarr: ['apiKey'],
   Radarr: ['apiKey'],
   LLMProvider: ['apiKey'],
-  DiscordIntegration: ['clientSecret'],
+  DiscordIntegration: ['clientSecret', 'botToken'],
   DiscordConnection: ['accessToken', 'refreshToken'],
   Config: ['stripeSecretKey', 'stripeWebhookSecret'],
 }

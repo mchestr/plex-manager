@@ -272,6 +272,10 @@ model DiscordIntegration {
   botEnabled       Boolean  @default(false)
   clientId         String?
   clientSecret     String?
+  botToken         String?  // Discord bot token (encrypted at rest, like clientSecret)
+  supportChannelId String?  // Channel the bot monitors for support (plaintext)
+  supportThreadIds Json?    // JSON array of support thread ID strings (plaintext)
+  configVersion    Int      @default(0) // Bumped on every config change; drives Step 18's rotation-bounce
   guildId          String?
   serverInviteCode String?
   platformName     String   @default("Plex Wrapped")
