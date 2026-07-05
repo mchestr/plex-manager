@@ -1,5 +1,7 @@
 import { type ChatToolCall } from "@/lib/llm/chat"
+import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { createLogger } from "@/lib/utils/logger"
+import { DISCORD_SAFE_TOOL_NAMES } from "../tools/registry"
 import { executeOverseerrTool } from "./overseerr"
 import { executePlexTool } from "./plex"
 import { executeRadarrTool } from "./radarr"
@@ -9,6 +11,13 @@ import { executeMediaMarkingTool } from "./media-marking"
 import { scrubForDiscord } from "./scrub"
 
 const logger = createLogger("CHATBOT_EXECUTOR")
+
+/**
+ * Emitted (as a JSON string) when a tool call is refused in the Discord context
+ * because the tool is not in the resolved Discord-safe set. Terse so it reads
+ * sensibly if the LLM echoes it back to the user.
+ */
+const DISCORD_TOOL_NOT_PERMITTED = JSON.stringify({ error: "tool not permitted" })
 
 // Map tool names to their service executors
 const TOOL_SERVICE_MAP: Record<string, (toolName: string, args: Record<string, unknown>, userId?: string, context?: string) => Promise<string>> = {
@@ -86,6 +95,25 @@ export async function executeToolCall(
       rawArgsSnippet: rawArgs.slice(0, 500),
     })
     return "Error: Invalid tool arguments"
+  }
+
+  // Fail closed in the public Discord context: a tool that is NOT in the
+  // resolved Discord-safe set must be REFUSED before the executor is ever
+  // reached (FR-9). This blocks prompt-injection that hallucinates an unsafe or
+  // unknown tool name. The refusal is audited. Admin/default context is
+  // unaffected — it may call any registered tool.
+  if (context === "discord" && !DISCORD_SAFE_TOOL_NAMES.has(toolName)) {
+    logger.warn("Refusing non-Discord-safe tool call in Discord context", {
+      toolName,
+      toolCallId: toolCall.id,
+      userId,
+    })
+    logAuditEvent(AuditEventType.DISCORD_COMMAND_DENIED, userId ?? "unknown", {
+      toolName,
+      toolCallId: toolCall.id,
+      context,
+    })
+    return DISCORD_TOOL_NOT_PERMITTED
   }
 
   // Find the appropriate executor for this tool

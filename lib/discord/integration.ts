@@ -389,8 +389,19 @@ export async function getDiscordStats() {
     }),
   ])
 
+  // The Prisma extension DECRYPTS `clientSecret` on read (see ENCRYPTED_FIELDS
+  // in lib/prisma.ts), so returning the row verbatim would leak the plaintext
+  // client secret to any caller. Strip it and expose only a `hasClientSecret`
+  // boolean — the established secret-omission pattern (see admin-settings
+  // omitSecret). botToken is handled in Step 17.
+  let sanitizedIntegration: (Omit<NonNullable<typeof integration>, "clientSecret"> & { hasClientSecret: boolean }) | null = null
+  if (integration) {
+    const { clientSecret, ...rest } = integration
+    sanitizedIntegration = { ...rest, hasClientSecret: Boolean(clientSecret) }
+  }
+
   return {
-    integration,
+    integration: sanitizedIntegration,
     linkedCount,
   }
 }

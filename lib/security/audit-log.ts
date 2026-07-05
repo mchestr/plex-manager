@@ -33,6 +33,11 @@ export enum AuditEventType {
   SUBSCRIPTION_CANCELED = "SUBSCRIPTION_CANCELED",
   SUBSCRIPTION_ACCESS_GRANTED = "SUBSCRIPTION_ACCESS_GRANTED",
   SUBSCRIPTION_EXEMPT_CHANGED = "SUBSCRIPTION_EXEMPT_CHANGED",
+  // Discord events
+  // Emitted when a chatbot tool call is refused in the public Discord context
+  // because the requested tool is not in the resolved Discord-safe set. Blocks
+  // prompt-injection that hallucinates an unsafe/unknown tool name.
+  DISCORD_COMMAND_DENIED = "DISCORD_COMMAND_DENIED",
 }
 
 export interface AuditLogEntry {
