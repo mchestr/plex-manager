@@ -10,19 +10,23 @@ import type { InteractionContext, SlashCommand } from "./registry"
 /**
  * Command category for grouping related commands
  */
-export type CommandCategory = "chat" | "media" | "context" | "utility"
+export type CommandCategory = "chat" | "media" | "utility"
 
 /**
- * Command definition with metadata for help display
+ * Command definition with metadata for help display.
+ *
+ * These describe the bot's slash-command surface. Slash commands have no
+ * aliases, so `aliases` is retained (for the embed/help renderers) but is
+ * always empty.
  */
 export interface CommandDefinition {
-  /** Primary command name (e.g., "!help") */
+  /** Primary command name (e.g., "/help", "/mark finished") */
   name: string
-  /** Alternative command names/aliases */
+  /** Alternative command names/aliases (always empty for slash commands) */
   aliases: string[]
   /** Short description of what the command does */
   description: string
-  /** Syntax template (e.g., "!help [command]") */
+  /** Syntax template (e.g., "/help [command]") */
   syntax: string
   /** Usage examples */
   examples: string[]
@@ -31,86 +35,106 @@ export interface CommandDefinition {
 }
 
 /**
- * Registry of all available Discord bot commands
+ * Registry of all available Discord bot slash commands, used to render `/help`.
  */
 export const COMMAND_REGISTRY: CommandDefinition[] = [
   // Utility commands
   {
-    name: "!help",
-    aliases: ["!commands"],
-    description: "Display available commands and usage information",
-    syntax: "!help [command]",
-    examples: ["!help", "!help finished"],
+    name: "/help",
+    aliases: [],
+    description: "Show available commands and how to use them",
+    syntax: "/help [command]",
+    examples: ["/help", "/help mark finished"],
     category: "utility",
   },
 
   // Chat/assistant commands
   {
-    name: "!assistant",
-    aliases: ["!bot", "!support"],
-    description: "Start a conversation with the AI assistant",
-    syntax: "!assistant <message>",
-    examples: ["!assistant How do I request a movie?", "!bot What shows are new this week?"],
+    name: "/assistant",
+    aliases: [],
+    description:
+      "Ask the AI assistant a question (`ask prompt:<text>`), or start over with `reset`",
+    syntax: "/assistant ask prompt:<text> | /assistant reset",
+    examples: [
+      "/assistant ask prompt:How do I request a movie?",
+      "/assistant reset",
+    ],
+    category: "chat",
+  },
+  {
+    name: "/mystats",
+    aliases: [],
+    description: "See your own Plex watch stats for this year (only visible to you)",
+    syntax: "/mystats",
+    examples: ["/mystats"],
+    category: "chat",
+  },
+  {
+    name: "/watching",
+    aliases: [],
+    description: "See what you're currently watching",
+    syntax: "/watching",
+    examples: ["/watching"],
     category: "chat",
   },
 
-  // Context management
+  // Media commands - viewing your marks
   {
-    name: "!clear",
-    aliases: ["!reset", "!clearcontext"],
-    description: "Clear your conversation context and start fresh",
-    syntax: "!clear",
-    examples: ["!clear"],
-    category: "context",
+    name: "/mymarks",
+    aliases: [],
+    description: "Show the media you've marked (optionally filtered by type)",
+    syntax: "/mymarks [type]",
+    examples: ["/mymarks", "/mymarks type:keep"],
+    category: "media",
   },
 
   // Media marking commands - Finished Watching
   {
-    name: "!finished",
-    aliases: ["!done", "!watched"],
+    name: "/mark finished",
+    aliases: [],
     description: "Mark media as finished watching (also marks as watched in Plex)",
-    syntax: "!finished <title>",
-    examples: ["!finished The Office", "!done Breaking Bad", "!watched Inception"],
-    category: "media",
-  },
-
-  // Media marking commands - Not Interested
-  {
-    name: "!notinterested",
-    aliases: ["!skip", "!pass"],
-    description: "Mark media as not interested (won't be recommended)",
-    syntax: "!notinterested <title>",
-    examples: ["!notinterested Reality Show", "!skip Documentary", "!pass Horror Movie"],
+    syntax: "/mark finished title:<name>",
+    examples: ["/mark finished title:The Office"],
     category: "media",
   },
 
   // Media marking commands - Keep Forever
   {
-    name: "!keep",
-    aliases: ["!favorite", "!fav"],
+    name: "/mark keep",
+    aliases: [],
     description: "Mark media as keep forever (protected from auto-deletion)",
-    syntax: "!keep <title>",
-    examples: ["!keep The Godfather", "!favorite Seinfeld", "!fav Lord of the Rings"],
+    syntax: "/mark keep title:<name>",
+    examples: ["/mark keep title:The Godfather"],
+    category: "media",
+  },
+
+  // Media marking commands - Not Interested
+  {
+    name: "/mark notinterested",
+    aliases: [],
+    description: "Mark media as not interested (won't be recommended)",
+    syntax: "/mark notinterested title:<name>",
+    examples: ["/mark notinterested title:Reality Show"],
     category: "media",
   },
 
   // Media marking commands - Rewatch Candidate
   {
-    name: "!rewatch",
+    name: "/mark rewatch",
     aliases: [],
     description: "Mark media as a rewatch candidate",
-    syntax: "!rewatch <title>",
-    examples: ["!rewatch Friends"],
+    syntax: "/mark rewatch title:<name>",
+    examples: ["/mark rewatch title:Friends"],
     category: "media",
   },
 
   // Media marking commands - Poor Quality
   {
-    name: "!badquality",
-    aliases: ["!lowquality"],
+    name: "/mark badquality",
+    aliases: [],
     description: "Report media as poor quality (may be re-downloaded)",
-    syntax: "!badquality <title>",
-    examples: ["!badquality Blurry Movie", "!lowquality Bad Audio Film"],
+    syntax: "/mark badquality title:<name>",
+    examples: ["/mark badquality title:Blurry Movie"],
     category: "media",
   },
 ]
@@ -123,9 +147,7 @@ function getCategoryLabel(category: CommandCategory): string {
     case "chat":
       return "Chat & Assistant"
     case "media":
-      return "Media Marking"
-    case "context":
-      return "Context Management"
+      return "Media"
     case "utility":
       return "Utility"
     default:
@@ -142,8 +164,6 @@ function getCategoryEmoji(category: CommandCategory): string {
       return "💬"
     case "media":
       return "🎬"
-    case "context":
-      return "🔄"
     case "utility":
       return "🛠️"
     default:
@@ -152,14 +172,17 @@ function getCategoryEmoji(category: CommandCategory): string {
 }
 
 /**
- * Find a command by name or alias
+ * Find a command by name (or, if present, alias).
+ *
+ * The leading `/` is optional and case is ignored, so `mark finished`,
+ * `/mark finished`, and `/MARK FINISHED` all resolve the same entry.
  */
 export function findCommand(searchTerm: string): CommandDefinition | undefined {
-  const normalizedSearch = searchTerm.toLowerCase().replace(/^!/, "")
+  const normalizedSearch = searchTerm.toLowerCase().replace(/^\//, "")
 
   return COMMAND_REGISTRY.find((cmd) => {
-    const cmdName = cmd.name.toLowerCase().replace(/^!/, "")
-    const cmdAliases = cmd.aliases.map((a) => a.toLowerCase().replace(/^!/, ""))
+    const cmdName = cmd.name.toLowerCase().replace(/^\//, "")
+    const cmdAliases = cmd.aliases.map((a) => a.toLowerCase().replace(/^\//, ""))
     return cmdName === normalizedSearch || cmdAliases.includes(normalizedSearch)
   })
 }
@@ -174,7 +197,7 @@ export function buildFullHelpMessage(): string {
   ]
 
   // Group commands by category
-  const categories: CommandCategory[] = ["utility", "chat", "context", "media"]
+  const categories: CommandCategory[] = ["utility", "chat", "media"]
 
   for (const category of categories) {
     const commands = COMMAND_REGISTRY.filter((cmd) => cmd.category === category)
@@ -191,8 +214,8 @@ export function buildFullHelpMessage(): string {
   }
 
   lines.push("**Tips:**")
-  lines.push("• Use `!help <command>` for detailed info on a specific command")
-  lines.push("• You can also DM me directly or @mention me to chat")
+  lines.push("• Use `/help command:<name>` for detailed info on a specific command")
+  lines.push("• You can also DM me directly to chat with the assistant")
   lines.push("• Media commands search your Plex library by title")
 
   return lines.join("\n")
@@ -240,7 +263,7 @@ const AUTOCOMPLETE_CHOICE_LIMIT = 25
  *
  * One embed field per non-empty category, so the layout stays well under
  * Discord's structural limits (≤25 fields, ≤1024 chars/field, ≤6000 total): the
- * registry has four categories and a handful of commands each.
+ * registry has three categories and a handful of commands each.
  *
  * @internal
  */
@@ -251,7 +274,7 @@ function buildFullHelpEmbed(): EmbedBuilder {
       "Use `/help command:<name>` for details on a specific command."
     )
 
-  const categories: CommandCategory[] = ["utility", "chat", "context", "media"]
+  const categories: CommandCategory[] = ["utility", "chat", "media"]
 
   for (const category of categories) {
     const commands = COMMAND_REGISTRY.filter((cmd) => cmd.category === category)
@@ -350,14 +373,14 @@ export const helpCommand: SlashCommand = {
     })
   },
   async autocomplete(interaction: AutocompleteInteraction): Promise<void> {
-    const focused = interaction.options.getFocused().toLowerCase().replace(/^!/, "")
+    const focused = interaction.options.getFocused().toLowerCase().replace(/^\//, "")
 
     const choices = COMMAND_REGISTRY.filter((cmd) =>
-      cmd.name.toLowerCase().replace(/^!/, "").startsWith(focused)
+      cmd.name.toLowerCase().replace(/^\//, "").startsWith(focused)
     )
       .slice(0, AUTOCOMPLETE_CHOICE_LIMIT)
       .map((cmd) => {
-        const name = cmd.name.replace(/^!/, "")
+        const name = cmd.name.replace(/^\//, "")
         return { name, value: name }
       })
 

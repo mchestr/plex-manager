@@ -76,117 +76,104 @@ import {
 import type { InteractionContext } from "../registry"
 
 describe("COMMAND_REGISTRY", () => {
-  it("should contain help command definition", () => {
-    const helpCommand = COMMAND_REGISTRY.find((cmd) => cmd.name === "!help")
-    expect(helpCommand).toBeDefined()
-    expect(helpCommand?.aliases).toContain("!commands")
-    expect(helpCommand?.category).toBe("utility")
+  it("should contain the /help command definition", () => {
+    const helpEntry = COMMAND_REGISTRY.find((cmd) => cmd.name === "/help")
+    expect(helpEntry).toBeDefined()
+    expect(helpEntry?.category).toBe("utility")
+    expect(helpEntry?.syntax).toBe("/help [command]")
   })
 
-  it("should contain assistant command definition", () => {
-    const assistantCommand = COMMAND_REGISTRY.find((cmd) => cmd.name === "!assistant")
+  it("should contain the /assistant command definition (ask + reset)", () => {
+    const assistantCommand = COMMAND_REGISTRY.find((cmd) => cmd.name === "/assistant")
     expect(assistantCommand).toBeDefined()
-    expect(assistantCommand?.aliases).toEqual(["!bot", "!support"])
     expect(assistantCommand?.category).toBe("chat")
+    // Reset is folded into the assistant entry (there is no standalone /clear).
+    expect(assistantCommand?.syntax).toContain("/assistant ask prompt:")
+    expect(assistantCommand?.syntax).toContain("/assistant reset")
   })
 
-  it("should contain clear command definition", () => {
-    const clearCommand = COMMAND_REGISTRY.find((cmd) => cmd.name === "!clear")
-    expect(clearCommand).toBeDefined()
-    expect(clearCommand?.aliases).toEqual(["!reset", "!clearcontext"])
-    expect(clearCommand?.category).toBe("context")
+  it("should contain the /mystats and /watching chat commands", () => {
+    const myStats = COMMAND_REGISTRY.find((cmd) => cmd.name === "/mystats")
+    expect(myStats).toBeDefined()
+    expect(myStats?.category).toBe("chat")
+
+    const watching = COMMAND_REGISTRY.find((cmd) => cmd.name === "/watching")
+    expect(watching).toBeDefined()
+    expect(watching?.category).toBe("chat")
   })
 
-  it("should contain all media marking commands", () => {
+  it("should NOT contain a standalone context/clear command", () => {
+    expect(COMMAND_REGISTRY.find((cmd) => cmd.name === "/clear")).toBeUndefined()
+    expect(COMMAND_REGISTRY.some((cmd) => cmd.category === ("context" as never))).toBe(false)
+  })
+
+  it("should contain /mymarks and all /mark subcommands", () => {
     const mediaCommands = COMMAND_REGISTRY.filter((cmd) => cmd.category === "media")
     expect(mediaCommands.length).toBeGreaterThan(0)
 
-    // Check for specific media commands
-    const finishedCommand = mediaCommands.find((cmd) => cmd.name === "!finished")
-    expect(finishedCommand).toBeDefined()
-    expect(finishedCommand?.aliases).toContain("!done")
-    expect(finishedCommand?.aliases).toContain("!watched")
+    const myMarks = mediaCommands.find((cmd) => cmd.name === "/mymarks")
+    expect(myMarks).toBeDefined()
+    expect(myMarks?.syntax).toBe("/mymarks [type]")
 
-    const notInterestedCommand = mediaCommands.find((cmd) => cmd.name === "!notinterested")
-    expect(notInterestedCommand).toBeDefined()
-    expect(notInterestedCommand?.aliases).toContain("!skip")
-    expect(notInterestedCommand?.aliases).toContain("!pass")
-
-    const keepCommand = mediaCommands.find((cmd) => cmd.name === "!keep")
-    expect(keepCommand).toBeDefined()
-    expect(keepCommand?.aliases).toContain("!favorite")
-    expect(keepCommand?.aliases).toContain("!fav")
-
-    const rewatchCommand = mediaCommands.find((cmd) => cmd.name === "!rewatch")
-    expect(rewatchCommand).toBeDefined()
-
-    const badQualityCommand = mediaCommands.find((cmd) => cmd.name === "!badquality")
-    expect(badQualityCommand).toBeDefined()
-    expect(badQualityCommand?.aliases).toContain("!lowquality")
+    for (const sub of [
+      "/mark finished",
+      "/mark keep",
+      "/mark notinterested",
+      "/mark rewatch",
+      "/mark badquality",
+    ]) {
+      const entry = mediaCommands.find((cmd) => cmd.name === sub)
+      expect(entry).toBeDefined()
+      expect(entry?.syntax).toContain("title:<name>")
+    }
   })
 
   it("should have valid structure for all commands", () => {
     for (const command of COMMAND_REGISTRY) {
       expect(command.name).toBeTruthy()
-      expect(command.name.startsWith("!")).toBe(true)
+      expect(command.name.startsWith("/")).toBe(true)
       expect(command.description).toBeTruthy()
       expect(command.syntax).toBeTruthy()
       expect(command.examples.length).toBeGreaterThan(0)
-      expect(["chat", "media", "context", "utility"]).toContain(command.category)
-      expect(Array.isArray(command.aliases)).toBe(true)
+      expect(["chat", "media", "utility"]).toContain(command.category)
+      // Slash commands have no aliases; the field is retained but always empty.
+      expect(command.aliases).toEqual([])
     }
   })
 })
 
 describe("findCommand", () => {
-  it("should find command by exact name", () => {
-    const command = findCommand("!help")
+  it("should find command by exact name (with leading slash)", () => {
+    const command = findCommand("/help")
     expect(command).toBeDefined()
-    expect(command?.name).toBe("!help")
+    expect(command?.name).toBe("/help")
   })
 
-  it("should find command by name without prefix", () => {
+  it("should find command by name without the leading slash", () => {
     const command = findCommand("help")
     expect(command).toBeDefined()
-    expect(command?.name).toBe("!help")
+    expect(command?.name).toBe("/help")
   })
 
-  it("should find command by alias", () => {
-    const command = findCommand("!commands")
+  it("should find a /mark subcommand by its full name", () => {
+    const command = findCommand("mark finished")
     expect(command).toBeDefined()
-    expect(command?.name).toBe("!help")
-  })
+    expect(command?.name).toBe("/mark finished")
 
-  it("should find command by alias without prefix", () => {
-    const command = findCommand("commands")
-    expect(command).toBeDefined()
-    expect(command?.name).toBe("!help")
+    const withSlash = findCommand("/mark keep")
+    expect(withSlash?.name).toBe("/mark keep")
   })
 
   it("should be case insensitive", () => {
     const command1 = findCommand("HELP")
-    const command2 = findCommand("!HELP")
+    const command2 = findCommand("/HELP")
     const command3 = findCommand("Help")
-    expect(command1).toBeDefined()
-    expect(command2).toBeDefined()
-    expect(command3).toBeDefined()
-    expect(command1?.name).toBe("!help")
-    expect(command2?.name).toBe("!help")
-    expect(command3?.name).toBe("!help")
-  })
+    expect(command1?.name).toBe("/help")
+    expect(command2?.name).toBe("/help")
+    expect(command3?.name).toBe("/help")
 
-  it("should find media commands by alias", () => {
-    const doneCommand = findCommand("done")
-    expect(doneCommand).toBeDefined()
-    expect(doneCommand?.name).toBe("!finished")
-
-    const skipCommand = findCommand("skip")
-    expect(skipCommand).toBeDefined()
-    expect(skipCommand?.name).toBe("!notinterested")
-
-    const favCommand = findCommand("fav")
-    expect(favCommand).toBeDefined()
-    expect(favCommand?.name).toBe("!keep")
+    const markCmd = findCommand("MARK FINISHED")
+    expect(markCmd?.name).toBe("/mark finished")
   })
 
   it("should return undefined for unknown commands", () => {
@@ -211,38 +198,31 @@ describe("buildFullHelpMessage", () => {
     expect(helpMessage).toContain("**Available Commands**")
   })
 
-  it("should include all category headers", () => {
+  it("should include all non-empty category headers", () => {
     expect(helpMessage).toContain("**Utility**")
     expect(helpMessage).toContain("**Chat & Assistant**")
-    expect(helpMessage).toContain("**Context Management**")
-    expect(helpMessage).toContain("**Media Marking**")
+    expect(helpMessage).toContain("**Media**")
+    // The context/clear category is gone.
+    expect(helpMessage).not.toContain("Context Management")
   })
 
   it("should include command syntax in code blocks", () => {
-    expect(helpMessage).toContain("`!help [command]`")
-    expect(helpMessage).toContain("`!assistant <message>`")
-    expect(helpMessage).toContain("`!clear`")
-    expect(helpMessage).toContain("`!finished <title>`")
-  })
-
-  it("should include aliases for commands with aliases", () => {
-    expect(helpMessage).toContain("(or !commands)")
-    expect(helpMessage).toContain("(or !bot, !support)")
-    expect(helpMessage).toContain("(or !done, !watched)")
+    expect(helpMessage).toContain("`/help [command]`")
+    expect(helpMessage).toContain("`/assistant ask prompt:<text> | /assistant reset`")
+    expect(helpMessage).toContain("`/mymarks [type]`")
+    expect(helpMessage).toContain("`/mark finished title:<name>`")
   })
 
   it("should include command descriptions", () => {
-    expect(helpMessage).toContain("Display available commands and usage information")
-    expect(helpMessage).toContain("Start a conversation with the AI assistant")
-    expect(helpMessage).toContain("Clear your conversation context and start fresh")
+    expect(helpMessage).toContain("Show available commands and how to use them")
+    expect(helpMessage).toContain("Ask the AI assistant a question")
     expect(helpMessage).toContain("Mark media as finished watching")
   })
 
   it("should include tips section", () => {
     expect(helpMessage).toContain("**Tips:**")
-    expect(helpMessage).toContain("Use `!help <command>` for detailed info")
+    expect(helpMessage).toContain("Use `/help command:<name>` for detailed info")
     expect(helpMessage).toContain("DM me directly")
-    expect(helpMessage).toContain("@mention")
     expect(helpMessage).toContain("Media commands search your Plex library")
   })
 
@@ -253,35 +233,36 @@ describe("buildFullHelpMessage", () => {
 })
 
 describe("buildCommandHelpMessage", () => {
-  it("should build detailed help for a command with aliases", () => {
-    const helpCommand = COMMAND_REGISTRY.find((cmd) => cmd.name === "!help")!
-    const message = buildCommandHelpMessage(helpCommand)
+  it("should build detailed help for the /help command", () => {
+    const helpEntry = COMMAND_REGISTRY.find((cmd) => cmd.name === "/help")!
+    const message = buildCommandHelpMessage(helpEntry)
 
-    expect(message).toContain("**Command: !help**")
-    expect(message).toContain("Display available commands and usage information")
-    expect(message).toContain("**Syntax:** `!help [command]`")
-    expect(message).toContain("**Aliases:** `!commands`")
+    expect(message).toContain("**Command: /help**")
+    expect(message).toContain("Show available commands and how to use them")
+    expect(message).toContain("**Syntax:** `/help [command]`")
+    // Slash commands have no aliases.
+    expect(message).not.toContain("**Aliases:**")
     expect(message).toContain("**Examples:**")
-    expect(message).toContain("`!help`")
-    expect(message).toContain("`!help finished`")
+    expect(message).toContain("`/help`")
+    expect(message).toContain("`/help mark finished`")
     expect(message).toContain("**Category:**")
     expect(message).toContain("Utility")
   })
 
-  it("should build detailed help for a command without aliases", () => {
-    const rewatchCommand = COMMAND_REGISTRY.find((cmd) => cmd.name === "!rewatch")!
+  it("should build detailed help for a /mark subcommand", () => {
+    const rewatchCommand = COMMAND_REGISTRY.find((cmd) => cmd.name === "/mark rewatch")!
     const message = buildCommandHelpMessage(rewatchCommand)
 
-    expect(message).toContain("**Command: !rewatch**")
+    expect(message).toContain("**Command: /mark rewatch**")
     expect(message).toContain("Mark media as a rewatch candidate")
-    expect(message).toContain("**Syntax:** `!rewatch <title>`")
+    expect(message).toContain("**Syntax:** `/mark rewatch title:<name>`")
     expect(message).not.toContain("**Aliases:**")
-    expect(message).toContain("`!rewatch Friends`")
-    expect(message).toContain("Media Marking")
+    expect(message).toContain("`/mark rewatch title:Friends`")
+    expect(message).toContain("Media")
   })
 
   it("should include all examples for a command", () => {
-    const finishedCommand = COMMAND_REGISTRY.find((cmd) => cmd.name === "!finished")!
+    const finishedCommand = COMMAND_REGISTRY.find((cmd) => cmd.name === "/mark finished")!
     const message = buildCommandHelpMessage(finishedCommand)
 
     for (const example of finishedCommand.examples) {
@@ -290,55 +271,48 @@ describe("buildCommandHelpMessage", () => {
   })
 
   it("should use category emoji", () => {
-    const mediaCommand = COMMAND_REGISTRY.find((cmd) => cmd.category === "media")!
-    const chatCommand = COMMAND_REGISTRY.find((cmd) => cmd.category === "chat")!
-    const contextCommand = COMMAND_REGISTRY.find((cmd) => cmd.category === "context")!
-    const utilityCommand = COMMAND_REGISTRY.find((cmd) => cmd.category === "utility")!
-
     // Category emojis should appear in the full help message with category labels
     const fullHelpMessage = buildFullHelpMessage()
-    expect(fullHelpMessage).toMatch(/[🎬💬🔄🛠️]/)
+    expect(fullHelpMessage).toMatch(/[🎬💬🛠️]/)
   })
 })
 
-describe("command registry consistency with bot commands", () => {
-  it("should document all chat trigger prefixes", () => {
-    // These are from bot.ts: CHAT_TRIGGER_PREFIXES = ["!assistant", "!bot", "!support"]
-    const assistantCommand = COMMAND_REGISTRY.find((cmd) => cmd.name === "!assistant")
-    expect(assistantCommand).toBeDefined()
-    expect(assistantCommand?.aliases).toContain("!bot")
-    expect(assistantCommand?.aliases).toContain("!support")
-  })
-
-  it("should document all clear commands", () => {
-    // These are from bot.ts: CLEAR_COMMANDS = ["!clear", "!reset", "!clearcontext"]
-    const clearCommand = COMMAND_REGISTRY.find((cmd) => cmd.name === "!clear")
-    expect(clearCommand).toBeDefined()
-    expect(clearCommand?.aliases).toContain("!reset")
-    expect(clearCommand?.aliases).toContain("!clearcontext")
-  })
-
-  it("should document all media marking commands", () => {
-    // The legacy `!`-prefixed media aliases the registry documents for /help.
-    const expectedMediaCommands = [
-      "!finished",
-      "!done",
-      "!watched",
-      "!notinterested",
-      "!skip",
-      "!pass",
-      "!keep",
-      "!favorite",
-      "!fav",
-      "!rewatch",
-      "!badquality",
-      "!lowquality",
+describe("command registry consistency with the slash-command surface", () => {
+  it("should document every top-level slash command", () => {
+    // The final slash surface (see the mark/assistant/mystats/mymarks/watching
+    // command modules). Each must be discoverable via /help.
+    const expectedTopLevel = [
+      "/help",
+      "/assistant",
+      "/mystats",
+      "/mymarks",
+      "/watching",
     ]
 
-    for (const expectedCmd of expectedMediaCommands) {
-      const found = findCommand(expectedCmd)
-      expect(found).toBeDefined()
+    for (const name of expectedTopLevel) {
+      expect(findCommand(name)).toBeDefined()
     }
+  })
+
+  it("should document every /mark subcommand", () => {
+    // Mirrors MARK_SUBCOMMANDS in commands/mark/index.ts.
+    const expectedMarkSubcommands = [
+      "/mark finished",
+      "/mark keep",
+      "/mark notinterested",
+      "/mark rewatch",
+      "/mark badquality",
+    ]
+
+    for (const name of expectedMarkSubcommands) {
+      expect(findCommand(name)).toBeDefined()
+    }
+  })
+
+  it("should fold assistant reset into the /assistant entry (no standalone /clear)", () => {
+    expect(findCommand("/clear")).toBeUndefined()
+    const assistant = findCommand("/assistant")
+    expect(assistant?.description).toMatch(/reset/i)
   })
 })
 
@@ -409,13 +383,13 @@ describe("helpCommand (slash)", () => {
       const fieldNames = embed.fields.map((f) => f.name).join(" ")
       expect(fieldNames).toContain("Utility")
       expect(fieldNames).toContain("Chat & Assistant")
-      expect(fieldNames).toContain("Context Management")
-      expect(fieldNames).toContain("Media Marking")
+      expect(fieldNames).toContain("Media")
+      expect(fieldNames).not.toContain("Context Management")
 
       const allValues = embed.fields.map((f) => f.value).join("\n")
-      expect(allValues).toContain("!help [command]")
-      expect(allValues).toContain("Display available commands and usage information")
-      expect(allValues).toContain("(or !done, !watched)")
+      expect(allValues).toContain("/help [command]")
+      expect(allValues).toContain("Show available commands and how to use them")
+      expect(allValues).toContain("/mark finished title:<name>")
     })
 
     it("respects Discord embed structural limits", async () => {
@@ -436,7 +410,7 @@ describe("helpCommand (slash)", () => {
 
   describe("handle - specific command argument", () => {
     it("replies ephemerally with a detailed embed for a known command", async () => {
-      const { ctx, reply } = createMockChatInteraction("finished")
+      const { ctx, reply } = createMockChatInteraction("mark finished")
 
       await helpCommand.handle(ctx)
 
@@ -444,32 +418,31 @@ describe("helpCommand (slash)", () => {
       const call = reply.mock.calls[0][0]
       expect(call.flags).toBe(64)
       const embed = getEmbedData(reply)
-      expect(embed.title).toBe("Command: !finished")
+      expect(embed.title).toBe("Command: /mark finished")
       expect(embed.description).toContain("Mark media as finished watching")
 
       const byName = Object.fromEntries(embed.fields.map((f) => [f.name, f.value]))
-      expect(byName["Syntax"]).toBe("`!finished <title>`")
-      expect(byName["Examples"]).toContain("`!finished The Office`")
-      expect(byName["Aliases"]).toContain("`!done`")
-      expect(byName["Category"]).toContain("Media Marking")
+      expect(byName["Syntax"]).toBe("`/mark finished title:<name>`")
+      expect(byName["Examples"]).toContain("`/mark finished title:The Office`")
+      expect(byName["Category"]).toContain("Media")
     })
 
-    it("resolves a command by alias", async () => {
-      const { ctx, reply } = createMockChatInteraction("done")
+    it("resolves a command without its leading slash", async () => {
+      const { ctx, reply } = createMockChatInteraction("mystats")
 
       await helpCommand.handle(ctx)
 
       const embed = getEmbedData(reply)
-      expect(embed.title).toBe("Command: !finished")
+      expect(embed.title).toBe("Command: /mystats")
     })
 
-    it("omits the Aliases field for a command without aliases", async () => {
-      const { ctx, reply } = createMockChatInteraction("rewatch")
+    it("omits the Aliases field (slash commands have no aliases)", async () => {
+      const { ctx, reply } = createMockChatInteraction("mark rewatch")
 
       await helpCommand.handle(ctx)
 
       const embed = getEmbedData(reply)
-      expect(embed.title).toBe("Command: !rewatch")
+      expect(embed.title).toBe("Command: /mark rewatch")
       expect(embed.fields.map((f) => f.name)).not.toContain("Aliases")
     })
 
@@ -487,23 +460,33 @@ describe("helpCommand (slash)", () => {
 
   describe("autocomplete", () => {
     it("returns command-name matches filtered by the typed prefix", async () => {
-      const { interaction, respond } = createMockAutocompleteInteraction("fin")
+      const { interaction, respond } = createMockAutocompleteInteraction("my")
 
       await helpCommand.autocomplete!(interaction)
 
       expect(respond).toHaveBeenCalledTimes(1)
       const choices = respond.mock.calls[0][0] as { name: string; value: string }[]
-      expect(choices).toContainEqual({ name: "finished", value: "finished" })
-      expect(choices.every((c) => c.name.startsWith("fin"))).toBe(true)
+      expect(choices).toContainEqual({ name: "mystats", value: "mystats" })
+      expect(choices).toContainEqual({ name: "mymarks", value: "mymarks" })
+      expect(choices.every((c) => c.name.startsWith("my"))).toBe(true)
     })
 
-    it("ignores a leading ! in the typed value", async () => {
-      const { interaction, respond } = createMockAutocompleteInteraction("!kee")
+    it("matches /mark subcommands by their full (space-separated) name", async () => {
+      const { interaction, respond } = createMockAutocompleteInteraction("mark f")
 
       await helpCommand.autocomplete!(interaction)
 
       const choices = respond.mock.calls[0][0] as { name: string; value: string }[]
-      expect(choices).toContainEqual({ name: "keep", value: "keep" })
+      expect(choices).toContainEqual({ name: "mark finished", value: "mark finished" })
+    })
+
+    it("ignores a leading / in the typed value", async () => {
+      const { interaction, respond } = createMockAutocompleteInteraction("/help")
+
+      await helpCommand.autocomplete!(interaction)
+
+      const choices = respond.mock.calls[0][0] as { name: string; value: string }[]
+      expect(choices).toContainEqual({ name: "help", value: "help" })
     })
 
     it("returns every command (no prefix) but never more than 25 choices", async () => {

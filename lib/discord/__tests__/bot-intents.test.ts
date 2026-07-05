@@ -32,8 +32,12 @@ jest.mock("../config", () => ({
 }))
 
 import { GatewayIntentBits, Partials } from "discord.js"
-import { defaultClientFactory } from "../bot"
+import { DiscordBot, defaultClientFactory } from "../bot"
+import * as config from "../config"
 import * as helpModule from "../commands/help"
+
+const mockGetDiscordBotToken = config.getDiscordBotToken as jest.Mock
+const mockGetSupportChannelId = config.getSupportChannelId as jest.Mock
 
 describe("defaultClientFactory intents (Step 14 cut-over)", () => {
   const client = defaultClientFactory()
@@ -61,6 +65,61 @@ describe("defaultClientFactory intents (Step 14 cut-over)", () => {
 
   it("registers the Channel partial so DM messageCreate events are emitted", () => {
     expect(client.options.partials).toContain(Partials.Channel)
+  })
+})
+
+describe("required configuration (token-only startup)", () => {
+  // A minimal fake discord.js Client: records login, no-ops the event wiring.
+  function makeFakeClient() {
+    const login = jest.fn().mockResolvedValue("token")
+    const client = {
+      once: jest.fn(),
+      on: jest.fn(),
+      login,
+      destroy: jest.fn().mockResolvedValue(undefined),
+    }
+    return { client: client as unknown as import("discord.js").Client, login }
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it("initializes with only a bot token (no support channel)", async () => {
+    mockGetDiscordBotToken.mockResolvedValue("bot-token")
+    mockGetSupportChannelId.mockResolvedValue(undefined)
+
+    const { client, login } = makeFakeClient()
+    const bot = new DiscordBot(() => client)
+
+    await bot.initialize()
+
+    expect(login).toHaveBeenCalledWith("bot-token")
+  })
+
+  it("still initializes when a support channel is present", async () => {
+    mockGetDiscordBotToken.mockResolvedValue("bot-token")
+    mockGetSupportChannelId.mockResolvedValue("support-channel-id")
+
+    const { client, login } = makeFakeClient()
+    const bot = new DiscordBot(() => client)
+
+    await bot.initialize()
+
+    expect(login).toHaveBeenCalledWith("bot-token")
+  })
+
+  it("does NOT initialize without a bot token", async () => {
+    mockGetDiscordBotToken.mockResolvedValue(undefined)
+    mockGetSupportChannelId.mockResolvedValue("support-channel-id")
+
+    const factory = jest.fn(() => makeFakeClient().client)
+    const bot = new DiscordBot(factory)
+
+    await bot.initialize()
+
+    // No client is ever built when the token is missing.
+    expect(factory).not.toHaveBeenCalled()
   })
 })
 

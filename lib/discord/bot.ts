@@ -81,31 +81,32 @@ export class DiscordBot {
       return
     }
 
-    // Resolve required config, preferring the DB row and falling back to env
-    // (see lib/discord/config.ts). Missing values mean the bot cannot start.
+    // Resolve config, preferring the DB row and falling back to env (see
+    // lib/discord/config.ts). Only the bot token is required to start: support
+    // is now DM-the-assistant + `/help` (FR-18), so the support channel is no
+    // longer monitored and no longer gates startup. We still resolve it purely
+    // for informational logging (it may inform a pinned post / link portal).
     const BOT_TOKEN = await getDiscordBotToken()
-    const SUPPORT_CHANNEL_ID = await getSupportChannelId()
-    const missing = [
-      !BOT_TOKEN && "botToken",
-      !SUPPORT_CHANNEL_ID && "supportChannelId",
-    ].filter((v): v is string => Boolean(v))
-    if (missing.length > 0) {
-      this.logger.warn("Missing required Discord configuration, Discord bot will not start", { missing })
+    if (!BOT_TOKEN) {
+      this.logger.warn("Missing required Discord configuration, Discord bot will not start", {
+        missing: ["botToken"],
+      })
       return
     }
+    const SUPPORT_CHANNEL_ID = await getSupportChannelId()
     const BASE_URL = process.env.PLEX_WRAPPED_BASE_URL?.replace(/\/$/, "") || process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") || "http://localhost:3000"
     const PORTAL_URL = process.env.DISCORD_PORTAL_URL || `${BASE_URL}/discord/link`
 
     this.logger.info("Starting Discord bot", {
-      supportChannelId: SUPPORT_CHANNEL_ID,
+      supportChannelId: SUPPORT_CHANNEL_ID ?? null,
       hasBotToken: !!BOT_TOKEN,
     })
 
     this.client = this.createClient()
 
-    // Set up event handlers (SUPPORT_CHANNEL_ID / BOT_TOKEN are guaranteed
-    // non-null by the `missing` check above).
-    this.setupEventHandlers(SUPPORT_CHANNEL_ID!, PORTAL_URL)
+    // Set up event handlers (BOT_TOKEN is guaranteed non-null by the check
+    // above).
+    this.setupEventHandlers(PORTAL_URL)
 
     // Login to Discord
     try {
@@ -120,14 +121,13 @@ export class DiscordBot {
     }
   }
 
-  private setupEventHandlers(SUPPORT_CHANNEL_ID: string, PORTAL_URL: string) {
+  private setupEventHandlers(PORTAL_URL: string) {
     if (!this.client) return
 
     this.client.once(Events.ClientReady, (readyClient) => {
       this.logger.info("Bot connected and ready", {
         botTag: readyClient.user.tag,
         botId: readyClient.user.id,
-        supportChannelId: SUPPORT_CHANNEL_ID,
         guildCount: readyClient.guilds.cache.size,
       })
     })
