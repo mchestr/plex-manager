@@ -97,6 +97,7 @@ export async function handleDiscordChat({
       user: {
         select: {
           id: true,
+          isAdmin: true,
         },
       },
     },
@@ -126,6 +127,9 @@ export async function handleDiscordChat({
     messages: conversationMessages,
     conversationId: session.chatConversationId,
     context: "discord",
+    // Thread the linked user's admin status so the executor's Discord admin-tier
+    // guard can gate server-wide tools (Step 19, FR-14).
+    isAdmin: connection.user.isAdmin,
   })
 
   if (!chatbotResponse.success || !chatbotResponse.message) {

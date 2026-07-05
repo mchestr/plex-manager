@@ -2,6 +2,7 @@ import { exchangeDiscordCode, fetchDiscordUserProfile, refreshDiscordToken, upda
 import { getDiscordBotToken } from "@/lib/discord/config"
 import { computeRoleMetadata } from "@/lib/discord/role-metadata"
 import { prisma } from "@/lib/prisma"
+import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { getBaseUrl } from "@/lib/utils"
 import { createLogger } from "@/lib/utils/logger"
 import { randomBytes } from "crypto"
@@ -86,6 +87,17 @@ export async function createDiscordAuthorizationUrl(userId: string, redirectTo?:
         expiresAt: {
           lt: new Date(Date.now() - 60 * 60 * 1000),
         },
+      },
+    })
+
+    // Cap pending states per user: a fresh link attempt supersedes any of this
+    // user's dangling un-consumed states, so they can't accumulate (each row is
+    // one-shot and consumed on callback). Keeps the table bounded and prevents a
+    // single user from piling up valid states.
+    await tx.discordOAuthState.deleteMany({
+      where: {
+        userId,
+        consumedAt: null,
       },
     })
 
@@ -213,6 +225,10 @@ export async function completeDiscordLink(code: string, state: string) {
     })
   }
 
+  logAuditEvent(AuditEventType.DISCORD_ACCOUNT_LINKED, oauthState.userId, {
+    discordUserId: profile.id,
+  })
+
   return {
     redirectTo: oauthState.redirectTo ?? "/",
   }
@@ -333,6 +349,9 @@ export async function clearDiscordRoleForUser(userId: string) {
   } finally {
     await prisma.discordConnection.deleteMany({
       where: { userId },
+    })
+    logAuditEvent(AuditEventType.DISCORD_ACCOUNT_UNLINKED, userId, {
+      source: "clear_role",
     })
   }
 }

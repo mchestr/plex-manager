@@ -41,4 +41,21 @@ export interface RegisteredTool extends ChatTool {
    * still runs over the final assistant text.
    */
   discordPlaintext?: boolean
+  /**
+   * True for `discordSafe` tools that expose whole-server operational state and
+   * are therefore restricted to app admins WHEN invoked from the Discord context
+   * (Step 19, FR-14). These are the download queue/history tools: they reflect
+   * what everyone on the server requested and is downloading, not the acting
+   * user's own data.
+   *
+   * The tier split (Discord only):
+   * - member-ok  = every other `discordSafe` tool — `userScoped` self tools
+   *   (sessions / activity / marks) plus the lightweight aggregate `*_status`
+   *   tools. Available to all linked members.
+   * - admin-only = tools flagged here. A non-admin Discord user is refused
+   *   (fail-closed) and the refusal is audited (`DISCORD_COMMAND_DENIED`).
+   *
+   * Inert outside Discord: the admin web assistant may call any registered tool.
+   */
+  discordAdminOnly?: boolean
 }

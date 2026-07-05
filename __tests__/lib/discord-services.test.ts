@@ -58,6 +58,7 @@ describe("handleDiscordChat", () => {
     revokedAt: null,
     user: {
       id: "user-1",
+      isAdmin: false,
     },
   }
 
@@ -105,6 +106,7 @@ describe("handleDiscordChat", () => {
         ]),
         conversationId: "conversation-1",
         context: "discord",
+        isAdmin: false,
       })
     })
 
@@ -143,6 +145,46 @@ describe("handleDiscordChat", () => {
         channelId: "channel-123",
         userId: "user-1",
       })
+    })
+  })
+
+  describe("admin tier threading (Step 19, FR-14)", () => {
+    it("threads the linked user's isAdmin=false into runChatbotForUser", async () => {
+      mockRunChatbotForUser.mockResolvedValue({
+        success: true,
+        message: { role: "assistant", content: "ok", timestamp: Date.now() },
+      })
+
+      await handleDiscordChat({
+        discordUserId: "discord-123",
+        channelId: "channel-123",
+        message: "queue status?",
+      })
+
+      expect(mockRunChatbotForUser).toHaveBeenCalledWith(
+        expect.objectContaining({ context: "discord", isAdmin: false })
+      )
+    })
+
+    it("threads isAdmin=true when the linked user is an admin", async () => {
+      mockPrisma.discordConnection.findUnique.mockResolvedValue({
+        ...mockConnection,
+        user: { id: "user-1", isAdmin: true },
+      } as any)
+      mockRunChatbotForUser.mockResolvedValue({
+        success: true,
+        message: { role: "assistant", content: "ok", timestamp: Date.now() },
+      })
+
+      await handleDiscordChat({
+        discordUserId: "discord-123",
+        channelId: "channel-123",
+        message: "queue status?",
+      })
+
+      expect(mockRunChatbotForUser).toHaveBeenCalledWith(
+        expect.objectContaining({ context: "discord", isAdmin: true })
+      )
     })
   })
 

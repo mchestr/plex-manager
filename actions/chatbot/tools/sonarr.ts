@@ -50,6 +50,9 @@ export const SONARR_TOOLS: RegisteredTool[] = [
   {
     type: "function",
     discordSafe: true,
+    // Server-wide download history reflects what everyone on the server is
+    // downloading — admin-only in the Discord context (Step 19).
+    discordAdminOnly: true,
     // Paged history: keep event/title/quality/date leaf fields. Exclude
     // downloadId, download client, indexer, and file paths (infra/tracker detail).
     discordFields: [
@@ -97,6 +100,9 @@ export const SONARR_TOOLS: RegisteredTool[] = [
   {
     type: "function",
     discordSafe: true,
+    // Server-wide download queue reflects what everyone on the server is
+    // downloading — admin-only in the Discord context (Step 19).
+    discordAdminOnly: true,
     // Paged queue: keep title/status/progress/size + quality. Exclude
     // downloadId, download client, indexer, and output/file paths.
     discordFields: [

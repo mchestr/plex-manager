@@ -106,6 +106,16 @@ export const DISCORD_SAFE_TOOL_NAMES = new Set<string>(
 )
 
 /**
+ * Discord-safe tools that require the acting Discord user to be an app admin
+ * (Step 19, FR-14). DERIVED from the `discordAdminOnly` metadata flag — these
+ * are the whole-server download queue/history tools. Non-admin members are
+ * refused (fail-closed) at the executor guard. Inert outside Discord.
+ */
+export const DISCORD_ADMIN_ONLY_TOOL_NAMES = new Set<string>(
+  ALL_TOOLS.filter((tool) => tool.discordAdminOnly).map((tool) => tool.function.name)
+)
+
+/**
  * Look up a registered tool (with its Discord metadata) by name. Returns
  * `undefined` for unknown tools. Consumed by the Discord output scrubber to
  * resolve a tool's `discordSafe` flag and `discordFields` allowlist.

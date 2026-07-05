@@ -7,7 +7,12 @@
  * that let us trust the derived set.
  */
 
-import { ALL_TOOLS, DISCORD_SAFE_TOOLS, DISCORD_SAFE_TOOL_NAMES } from "@/actions/chatbot/tools/registry"
+import {
+  ALL_TOOLS,
+  DISCORD_ADMIN_ONLY_TOOL_NAMES,
+  DISCORD_SAFE_TOOLS,
+  DISCORD_SAFE_TOOL_NAMES,
+} from "@/actions/chatbot/tools/registry"
 
 /**
  * The exact 14-tool Discord safe set as it existed before the registry
@@ -83,5 +88,32 @@ describe("chatbot tool registry drift guard", () => {
   it("ALL_TOOLS names are unique", () => {
     const names = ALL_TOOLS.map((tool) => tool.function.name)
     expect(new Set(names).size).toBe(names.length)
+  })
+
+  // Step 19 (FR-14): the Discord admin-only tier is the whole-server download
+  // queue/history tools, DERIVED from the `discordAdminOnly` flag. Pin the exact
+  // set so it can't silently grow (which would over-restrict members) or shrink
+  // (which would leak server-wide data to non-admins).
+  it("DISCORD_ADMIN_ONLY_TOOL_NAMES is exactly the server-wide queue/history tools", () => {
+    expect([...DISCORD_ADMIN_ONLY_TOOL_NAMES].sort()).toEqual(
+      ["get_radarr_history", "get_radarr_queue", "get_sonarr_history", "get_sonarr_queue"].sort()
+    )
+  })
+
+  it("every admin-only tool is also Discord-safe (the tier is a subset)", () => {
+    for (const name of DISCORD_ADMIN_ONLY_TOOL_NAMES) {
+      expect(DISCORD_SAFE_TOOL_NAMES.has(name)).toBe(true)
+    }
+  })
+
+  it("member-ok safe tools (userScoped or *_status) are NOT admin-only", () => {
+    const byName = new Map(ALL_TOOLS.map((tool) => [tool.function.name, tool]))
+    for (const name of DISCORD_SAFE_TOOL_NAMES) {
+      const tool = byName.get(name)
+      const isMemberOk = Boolean(tool?.userScoped) || name.endsWith("_status")
+      if (isMemberOk) {
+        expect(DISCORD_ADMIN_ONLY_TOOL_NAMES.has(name)).toBe(false)
+      }
+    }
   })
 })

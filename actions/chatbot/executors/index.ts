@@ -1,7 +1,7 @@
 import { type ChatToolCall } from "@/lib/llm/chat"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { createLogger } from "@/lib/utils/logger"
-import { DISCORD_SAFE_TOOL_NAMES } from "../tools/registry"
+import { DISCORD_ADMIN_ONLY_TOOL_NAMES, DISCORD_SAFE_TOOL_NAMES } from "../tools/registry"
 import { executeOverseerrTool } from "./overseerr"
 import { executePlexTool } from "./plex"
 import { executeRadarrTool } from "./radarr"
@@ -79,7 +79,8 @@ const TOOL_SERVICE_MAP: Record<string, (toolName: string, args: Record<string, u
 export async function executeToolCall(
   toolCall: ChatToolCall,
   userId?: string,
-  context?: string
+  context?: string,
+  isAdmin?: boolean
 ): Promise<string> {
   const toolName = toolCall.function.name
   const rawArgs = toolCall.function.arguments || "{}"
@@ -112,6 +113,26 @@ export async function executeToolCall(
       toolName,
       toolCallId: toolCall.id,
       context,
+    })
+    return DISCORD_TOOL_NOT_PERMITTED
+  }
+
+  // Admin authorization tier (Step 19, FR-14): server-wide queue/history tools
+  // are `discordAdminOnly`. In the Discord context they require the acting user
+  // to be an app admin — a non-admin member is refused (fail-closed; `isAdmin`
+  // defaults to non-admin) and the refusal is audited. The admin web (default)
+  // context is unaffected — it may call any registered tool.
+  if (context === "discord" && DISCORD_ADMIN_ONLY_TOOL_NAMES.has(toolName) && !isAdmin) {
+    logger.warn("Refusing admin-only tool call for non-admin Discord user", {
+      toolName,
+      toolCallId: toolCall.id,
+      userId,
+    })
+    logAuditEvent(AuditEventType.DISCORD_COMMAND_DENIED, userId ?? "unknown", {
+      toolName,
+      toolCallId: toolCall.id,
+      context,
+      reason: "admin_only",
     })
     return DISCORD_TOOL_NOT_PERMITTED
   }
