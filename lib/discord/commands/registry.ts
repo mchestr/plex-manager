@@ -5,8 +5,9 @@
  *
  * Central catalogue of the bot's slash (`/`) commands. Introduced in Step 9 as
  * the infrastructure the interaction router dispatches against; real commands
- * are migrated in later steps. `/help` (Step 10) is the first migrated command;
- * more follow (`/mark`, `/assistant`, `/mystats`, `/mymarks`, `/watching`).
+ * are migrated in later steps. `/help` (Step 10), `/mark` (Step 12), and
+ * `/assistant` (Step 13) are migrated; more follow (`/mystats`, `/mymarks`,
+ * `/watching`).
  *
  * Each entry pairs the discord.js registration payload (`data`) with an audit
  * `commandType` and an async `handle` that receives a resolved
@@ -26,6 +27,7 @@ import type { VerifyDiscordUserResult } from "../services"
 import type { DiscordCommandType } from "@/lib/generated/prisma"
 import { helpCommand } from "./help"
 import { markCommand } from "./mark"
+import { assistantCommand } from "./assistant"
 
 /**
  * Context handed to a slash-command handler after the router has resolved the
@@ -91,7 +93,7 @@ export interface SlashCommand {
  * All registered slash commands. Router dispatch is keyed off
  * `data.name` (see {@link getCommand}).
  */
-export const COMMANDS: SlashCommand[] = [helpCommand, markCommand]
+export const COMMANDS: SlashCommand[] = [helpCommand, markCommand, assistantCommand]
 
 const COMMAND_BY_NAME: ReadonlyMap<string, SlashCommand> = new Map(
   COMMANDS.map((command) => [command.data.name, command])

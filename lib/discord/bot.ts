@@ -1,7 +1,8 @@
-import { Client, Events, GatewayIntentBits, type Attachment } from "discord.js"
+import { Client, Events, GatewayIntentBits, Partials, type Attachment } from "discord.js"
 import winston from "winston"
 import { clearDiscordChat, handleDiscordChat, verifyDiscordUser } from "./services"
 import { routeInteraction } from "./routing/interaction-router"
+import { routeDirectMessage, defaultDmRouteDeps } from "./routing/dm-router"
 import { MARK_COMMANDS, handleMarkCommand, handleSelectionResponse } from "./commands/media-marking"
 import { HELP_COMMANDS, handleHelpCommand } from "./commands/help"
 import {
@@ -21,14 +22,26 @@ const CLEAR_COMMANDS = ["!clear", "!reset", "!clearcontext"]
 
 /**
  * Factory for the discord.js gateway client. Injectable so tests can supply a
- * fake client without a live gateway connection. The default preserves the
- * original intents exactly.
+ * fake client without a live gateway connection.
+ *
+ * `DirectMessages` + `Partials.Channel` are required to receive DM
+ * `messageCreate` events (discord.js needs the partial channel to emit them for
+ * DMs). DM message *content* is exempt from the `MessageContent` privileged
+ * intent, so once that intent is dropped (Step 14) DM-based chat still works;
+ * `MessageContent` stays for now while the legacy channel/support handling
+ * remains.
  */
 export type DiscordClientFactory = () => Client
 
 const defaultClientFactory: DiscordClientFactory = () =>
   new Client({
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
+    intents: [
+      GatewayIntentBits.Guilds,
+      GatewayIntentBits.GuildMessages,
+      GatewayIntentBits.MessageContent,
+      GatewayIntentBits.DirectMessages,
+    ],
+    partials: [Partials.Channel],
   })
 
 export class DiscordBot {
@@ -144,6 +157,21 @@ export class DiscordBot {
           authorId: message.author.id,
           authorTag: message.author.tag,
         })
+        return
+      }
+
+      // DMs are handled by the DM-based assistant router. The legacy
+      // channel/support handling below continues to serve guild support
+      // channels, threads, and @mentions until Step 14 removes it.
+      if (!message.guildId) {
+        try {
+          await routeDirectMessage(message, defaultDmRouteDeps(PORTAL_URL))
+        } catch (error) {
+          this.logger.error("Error routing direct message", error, {
+            discordUserId: message.author.id,
+            channelId: message.channelId,
+          })
+        }
         return
       }
 
