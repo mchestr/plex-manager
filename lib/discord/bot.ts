@@ -1,6 +1,7 @@
 import { Client, Events, GatewayIntentBits, type Attachment } from "discord.js"
 import winston from "winston"
 import { clearDiscordChat, handleDiscordChat, verifyDiscordUser } from "./services"
+import { routeInteraction } from "./routing/interaction-router"
 import { MARK_COMMANDS, handleMarkCommand, handleSelectionResponse } from "./commands/media-marking"
 import { HELP_COMMANDS, handleHelpCommand } from "./commands/help"
 import {
@@ -517,6 +518,20 @@ export class DiscordBot {
           channelType,
         })
         await message.reply("Sorry, I couldn't verify your access right now. Please try again in a moment.")
+      }
+    })
+
+    // Handle slash-command / component interactions (runs side by side with the
+    // legacy MessageCreate/!-prefix handler above). Needs no extra gateway
+    // intent beyond Guilds, which is already present.
+    this.client.on(Events.InteractionCreate, async (interaction) => {
+      try {
+        await routeInteraction(interaction)
+      } catch (error) {
+        this.logger.error("Error routing interaction", error, {
+          interactionId: interaction.id,
+          userId: interaction.user.id,
+        })
       }
     })
 
