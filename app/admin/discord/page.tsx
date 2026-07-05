@@ -2,6 +2,7 @@ import {
   getDiscordDashboardData,
   getDiscordActivityLogs,
   getDiscordDetailedStats,
+  getDiscordMarkedMedia,
 } from "@/actions/discord-activity"
 import { DiscordActivityTable } from "@/components/admin/discord/discord-activity-table"
 import { DiscordBotStatus } from "@/components/admin/discord/discord-bot-status"
@@ -15,12 +16,22 @@ import { DiscordMediaMarkingBreakdown } from "@/components/admin/discord/discord
 import { DiscordContextMetrics } from "@/components/admin/discord/discord-context-metrics"
 import { DiscordErrorAnalysis } from "@/components/admin/discord/discord-error-analysis"
 import { DiscordSelectionStats } from "@/components/admin/discord/discord-selection-stats"
+import { DiscordMarkedMedia } from "@/components/admin/discord/discord-marked-media"
 import { Suspense } from "react"
+
+const MARKED_MEDIA_PAGE_SIZE = 25
 
 export const dynamic = "force-dynamic"
 
 interface DiscordDashboardPageProps {
-  searchParams: Promise<{ startDate?: string; endDate?: string }>
+  searchParams: Promise<{
+    startDate?: string
+    endDate?: string
+    markType?: string
+    source?: string
+    marksSearch?: string
+    marksOffset?: string
+  }>
 }
 
 export default async function DiscordDashboardPage({
@@ -34,17 +45,34 @@ export default async function DiscordDashboardPage({
   defaultStartDate.setDate(defaultStartDate.getDate() - 30)
   const startDate = params.startDate || defaultStartDate.toISOString().split("T")[0]
 
+  // Marked-media filters (from search params).
+  const markType = params.markType
+  const source = params.source
+  const marksSearch = params.marksSearch ?? ""
+  const marksOffset = Math.max(0, parseInt(params.marksOffset ?? "0", 10) || 0)
+
   // Fetch dashboard data
-  const [dashboardResult, logsResult, detailedResult] = await Promise.all([
-    getDiscordDashboardData({ startDate, endDate }),
-    getDiscordActivityLogs({ limit: 20 }),
-    getDiscordDetailedStats({ startDate, endDate }),
-  ])
+  const [dashboardResult, logsResult, detailedResult, markedMediaResult] =
+    await Promise.all([
+      getDiscordDashboardData({ startDate, endDate }),
+      getDiscordActivityLogs({ limit: 20 }),
+      getDiscordDetailedStats({ startDate, endDate }),
+      getDiscordMarkedMedia({
+        startDate,
+        endDate,
+        markType: markType as never,
+        source,
+        search: marksSearch,
+        limit: MARKED_MEDIA_PAGE_SIZE,
+        offset: marksOffset,
+      }),
+    ])
 
   const dashboard = dashboardResult.success ? dashboardResult.data : null
   const logs = logsResult.success ? logsResult.logs : []
   const logsTotal = logsResult.success ? logsResult.total : 0
   const detailed = detailedResult.success ? detailedResult.data : null
+  const markedMedia = markedMediaResult.success ? markedMediaResult : null
 
   // Format date range display
   const formatDateRange = () => {
@@ -251,13 +279,39 @@ export default async function DiscordDashboardPage({
             </div>
           </div>
 
-          {/* Media Marking Breakdown */}
+          {/* Media Marking Breakdown (command-log derived) */}
           <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6 mb-6">
             <h3 className="text-lg font-semibold text-white mb-4">
               Media Marking Breakdown
             </h3>
             <DiscordMediaMarkingBreakdown
               data={detailed?.mediaMarkingBreakdown ?? null}
+            />
+          </div>
+
+          {/* Marked Media — the actual UserMediaMark records (what people marked) */}
+          <div
+            id="marked-media"
+            className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6 mb-6 scroll-mt-6"
+          >
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-white">Marked Media</h3>
+              <p className="text-sm text-slate-400">
+                Exactly what users have marked (via Discord or the web) in this
+                period. Filter by mark type or search a title.
+              </p>
+            </div>
+            <DiscordMarkedMedia
+              marks={markedMedia?.marks ?? []}
+              total={markedMedia?.total ?? 0}
+              summary={markedMedia?.summary ?? []}
+              filters={{
+                markType: markType ?? "all",
+                source: source ?? "all",
+                search: marksSearch,
+              }}
+              offset={marksOffset}
+              limit={MARKED_MEDIA_PAGE_SIZE}
             />
           </div>
 

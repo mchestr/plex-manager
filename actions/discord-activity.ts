@@ -18,7 +18,12 @@ import {
 import { prisma } from "@/lib/prisma"
 import { toEndOfDayExclusive } from "@/lib/utils/formatters"
 import { createLogger } from "@/lib/utils/logger"
-import type { DiscordCommandType, DiscordCommandStatus } from "@/lib/generated/prisma"
+import type {
+  DiscordCommandType,
+  DiscordCommandStatus,
+  MarkType,
+  Prisma,
+} from "@/lib/generated/prisma"
 
 const logger = createLogger("DISCORD_ACTIVITY_ACTIONS")
 
@@ -402,6 +407,121 @@ export async function getDiscordDetailedStats(params: GetStatsParams) {
       success: false,
       error: error instanceof Error ? error.message : "Failed to get detailed stats",
       data: null,
+    }
+  }
+}
+
+const ALL_MARK_TYPES: MarkType[] = [
+  "FINISHED_WATCHING",
+  "NOT_INTERESTED",
+  "KEEP_FOREVER",
+  "REWATCH_CANDIDATE",
+  "POOR_QUALITY",
+  "WRONG_VERSION",
+]
+
+export interface GetMarkedMediaParams {
+  markType?: MarkType
+  /** "discord" | "web" | undefined (all sources). Matched against markedVia. */
+  source?: string
+  search?: string
+  startDate?: string
+  endDate?: string
+  limit?: number
+  offset?: number
+}
+
+/**
+ * Admin view of the ACTUAL media people have marked, sourced from the
+ * `UserMediaMark` table (the source of truth) rather than inferred from command
+ * log args. Answers "what did people mark as X?" with a per-type summary plus a
+ * filterable, paginated list. Includes marks from every source (Discord + web)
+ * with a `markedVia` badge.
+ */
+export async function getDiscordMarkedMedia(params: GetMarkedMediaParams = {}) {
+  await requireAdmin()
+
+  try {
+    const startDate = params.startDate ? new Date(params.startDate) : undefined
+    const endDate = toEndOfDayExclusive(params.endDate)
+
+    // Date range applies to when the mark was made.
+    const markedAtFilter: Prisma.DateTimeFilter = {}
+    if (startDate) markedAtFilter.gte = startDate
+    if (endDate) markedAtFilter.lt = endDate
+    const hasDateFilter = startDate != null || endDate != null
+
+    const baseWhere: Prisma.UserMediaMarkWhereInput = {}
+    if (hasDateFilter) baseWhere.markedAt = markedAtFilter
+    if (params.source === "discord") baseWhere.markedVia = "discord"
+    else if (params.source && params.source !== "all") baseWhere.markedVia = params.source
+
+    // Full filter also narrows by type + title search (summary ignores those so
+    // the per-type counts always reflect the same date/source scope).
+    const listWhere: Prisma.UserMediaMarkWhereInput = { ...baseWhere }
+    if (params.markType) listWhere.markType = params.markType
+    if (params.search && params.search.trim()) {
+      listWhere.title = { contains: params.search.trim(), mode: "insensitive" }
+    }
+
+    const limit = params.limit ?? 25
+    const offset = params.offset ?? 0
+
+    const [rows, total, byTypeGroups] = await Promise.all([
+      prisma.userMediaMark.findMany({
+        where: listWhere,
+        orderBy: { markedAt: "desc" },
+        take: limit,
+        skip: offset,
+        include: {
+          user: { select: { id: true, name: true, email: true, image: true } },
+        },
+      }),
+      prisma.userMediaMark.count({ where: listWhere }),
+      prisma.userMediaMark.groupBy({
+        by: ["markType"],
+        where: baseWhere,
+        _count: { _all: true },
+      }),
+    ])
+
+    const countByType = new Map(byTypeGroups.map((g) => [g.markType, g._count._all]))
+    const summary = ALL_MARK_TYPES.map((markType) => ({
+      markType,
+      count: countByType.get(markType) ?? 0,
+    }))
+
+    const marks = rows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      year: row.year,
+      mediaType: row.mediaType,
+      markType: row.markType,
+      seasonNumber: row.seasonNumber,
+      episodeNumber: row.episodeNumber,
+      parentTitle: row.parentTitle,
+      note: row.note,
+      markedVia: row.markedVia,
+      markedAt: row.markedAt.toISOString(),
+      radarrTitleSlug: row.radarrTitleSlug,
+      sonarrTitleSlug: row.sonarrTitleSlug,
+      user: {
+        id: row.user.id,
+        name: row.user.name,
+        email: row.user.email,
+        image: row.user.image,
+      },
+    }))
+
+    return { success: true, marks, total, summary }
+  } catch (error) {
+    logger.error("Failed to get Discord marked media", error instanceof Error ? error : undefined)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to get marked media",
+      marks: [],
+      total: 0,
+      summary: [],
     }
   }
 }
