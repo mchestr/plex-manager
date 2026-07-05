@@ -13,6 +13,21 @@ jest.mock("discord.js", () => {
     setAutocomplete() {
       return this
     }
+    setRequired() {
+      return this
+    }
+  }
+  class SlashCommandSubcommandBuilder {
+    setName() {
+      return this
+    }
+    setDescription() {
+      return this
+    }
+    addStringOption(fn: (o: SlashCommandStringOption) => SlashCommandStringOption) {
+      fn(new SlashCommandStringOption())
+      return this
+    }
   }
   class SlashCommandBuilder {
     name = ""
@@ -27,6 +42,26 @@ jest.mock("discord.js", () => {
     }
     addStringOption(fn: (o: SlashCommandStringOption) => SlashCommandStringOption) {
       fn(new SlashCommandStringOption())
+      return this
+    }
+    addSubcommand(fn: (s: SlashCommandSubcommandBuilder) => SlashCommandSubcommandBuilder) {
+      fn(new SlashCommandSubcommandBuilder())
+      return this
+    }
+  }
+  class StringSelectMenuBuilder {
+    setCustomId() {
+      return this
+    }
+    setPlaceholder() {
+      return this
+    }
+    addOptions() {
+      return this
+    }
+  }
+  class ActionRowBuilder {
+    addComponents() {
       return this
     }
   }
@@ -44,6 +79,8 @@ jest.mock("discord.js", () => {
   return {
     MessageFlags: { Ephemeral: 64 },
     SlashCommandBuilder,
+    StringSelectMenuBuilder,
+    ActionRowBuilder,
     EmbedBuilder,
   }
 })
@@ -67,6 +104,11 @@ jest.mock("../../audit", () => ({
 jest.mock("../../services", () => ({
   verifyDiscordUser: jest.fn(),
 }))
+
+// registry → mark/index → plex-config → lib/prisma (needs DATABASE_URL) at import
+// time. Stub prisma so the module graph loads under jsdom; the router only reads
+// injected deps, so the real registry defaults are never exercised here.
+jest.mock("@/lib/prisma", () => ({ prisma: {} }))
 
 const mockCreate = createCommandLog as jest.MockedFunction<typeof createCommandLog>
 const mockUpdate = updateCommandLog as jest.MockedFunction<typeof updateCommandLog>
@@ -164,8 +206,41 @@ function makeDeps(overrides: Partial<RouteDeps> = {}): RouteDeps {
   return {
     verifyDiscordUser: jest.fn().mockResolvedValue(linkedUser),
     getCommand: jest.fn().mockReturnValue(createStubCommand()),
+    getComponentHandler: jest.fn().mockReturnValue(undefined),
     ...overrides,
   }
+}
+
+function createMockComponentInteraction(
+  options: {
+    customId?: string
+    isButton?: boolean
+    isStringSelectMenu?: boolean
+    replied?: boolean
+    deferred?: boolean
+  } = {}
+) {
+  const reply = jest.fn().mockResolvedValue(undefined)
+  const followUp = jest.fn().mockResolvedValue(undefined)
+  const update = jest.fn().mockResolvedValue(undefined)
+
+  const interaction = {
+    customId: options.customId ?? "mark:select:abc",
+    channelId: "channel-123",
+    guildId: "guild-123",
+    user: { id: "discord-user-123", tag: "testuser#1234" },
+    replied: options.replied ?? false,
+    deferred: options.deferred ?? false,
+    reply,
+    followUp,
+    update,
+    isChatInputCommand: () => false,
+    isAutocomplete: () => false,
+    isButton: () => options.isButton ?? false,
+    isStringSelectMenu: () => options.isStringSelectMenu ?? true,
+  }
+
+  return { interaction: interaction as unknown as Interaction, reply, followUp, update }
 }
 
 describe("routeInteraction", () => {
@@ -274,18 +349,87 @@ describe("routeInteraction", () => {
     expect(reply).not.toHaveBeenCalled()
   })
 
-  it("routes button interactions to the component stub without dispatching a slash command", async () => {
-    const deps = makeDeps()
-    const { interaction, reply } = createMockChatInputInteraction({
-      isChatInputCommand: false,
-      isButton: true,
+  it("dispatches a select-menu component to the matching handler by custom_id prefix", async () => {
+    const handle = jest.fn().mockResolvedValue(undefined)
+    const handler = {
+      customIdPrefix: "mark:select:",
+      commandType: "SELECTION" as DiscordCommandType,
+      handle,
+    }
+    const getComponentHandler = jest.fn().mockReturnValue(handler)
+    const deps = makeDeps({ getComponentHandler })
+    const { interaction } = createMockComponentInteraction({
+      isStringSelectMenu: true,
+      customId: "mark:select:abc123",
     })
 
     await routeInteraction(interaction, deps)
 
+    expect(getComponentHandler).toHaveBeenCalledWith("mark:select:abc123")
     expect(deps.getCommand).not.toHaveBeenCalled()
-    // The Step 12 component seam is a no-op today.
-    expect(reply).not.toHaveBeenCalled()
+    expect(handle).toHaveBeenCalledTimes(1)
+    expect(handle).toHaveBeenCalledWith(interaction)
+  })
+
+  it("records a SELECTION audit log for a dispatched component", async () => {
+    const handler = {
+      customIdPrefix: "mark:select:",
+      commandType: "SELECTION" as DiscordCommandType,
+      handle: jest.fn().mockResolvedValue(undefined),
+    }
+    const deps = makeDeps({ getComponentHandler: jest.fn().mockReturnValue(handler) })
+    const { interaction } = createMockComponentInteraction({ isStringSelectMenu: true })
+
+    await routeInteraction(interaction, deps)
+
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        discordUserId: "discord-user-123",
+        commandType: "SELECTION",
+        channelType: "guild",
+      })
+    )
+    expect(mockUpdate).toHaveBeenCalledWith(
+      "log-123",
+      expect.objectContaining({ status: "SUCCESS" })
+    )
+  })
+
+  it("replies with an ephemeral notice for an unknown component and does not audit", async () => {
+    const deps = makeDeps({ getComponentHandler: jest.fn().mockReturnValue(undefined) })
+    const { interaction, reply } = createMockComponentInteraction({
+      isButton: true,
+      isStringSelectMenu: false,
+      customId: "orphan:custom:id",
+    })
+
+    await routeInteraction(interaction, deps)
+
+    expect(reply).toHaveBeenCalledWith(
+      expect.objectContaining({ content: expect.stringContaining("expired") })
+    )
+    expect(deps.verifyDiscordUser).not.toHaveBeenCalled()
+    expect(mockCreate).not.toHaveBeenCalled()
+  })
+
+  it("records a FAILED audit log and replies generically when a component handler throws", async () => {
+    const handler = {
+      customIdPrefix: "mark:select:",
+      commandType: "SELECTION" as DiscordCommandType,
+      handle: jest.fn().mockRejectedValue(new Error("kaboom")),
+    }
+    const deps = makeDeps({ getComponentHandler: jest.fn().mockReturnValue(handler) })
+    const { interaction, reply } = createMockComponentInteraction({ isStringSelectMenu: true })
+
+    await routeInteraction(interaction, deps)
+
+    expect(mockUpdate).toHaveBeenCalledWith(
+      "log-123",
+      expect.objectContaining({ status: "FAILED", error: "kaboom" })
+    )
+    expect(reply).toHaveBeenCalledWith(
+      expect.objectContaining({ content: expect.stringContaining("something went wrong") })
+    )
   })
 
   it("routes autocomplete interactions to the matching command's autocomplete handler", async () => {

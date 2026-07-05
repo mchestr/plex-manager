@@ -20,10 +20,12 @@ import {
   SlashCommandBuilder,
   type AutocompleteInteraction,
   type ChatInputCommandInteraction,
+  type MessageComponentInteraction,
 } from "discord.js"
 import type { VerifyDiscordUserResult } from "../services"
 import type { DiscordCommandType } from "@/lib/generated/prisma"
 import { helpCommand } from "./help"
+import { markCommand } from "./mark"
 
 /**
  * Context handed to a slash-command handler after the router has resolved the
@@ -43,6 +45,25 @@ export interface InteractionContext {
 }
 
 /**
+ * A message-component (button / select-menu) handler owned by a slash command.
+ *
+ * The router matches an incoming component interaction to the first handler
+ * whose {@link customIdPrefix} the interaction's `customId` starts with, wraps
+ * the dispatch in the audit lifecycle under {@link commandType}, and invokes
+ * {@link handle}. This lets a command (e.g. `/mark`) own the follow-up
+ * interaction from a select menu it created earlier, keyed by `custom_id` prefix
+ * rather than command name (components carry no command name).
+ */
+export interface ComponentHandler {
+  /** `customId` prefix this handler claims (e.g. `"mark:select:"`). */
+  customIdPrefix: string
+  /** Audit command type recorded for each component interaction. */
+  commandType: DiscordCommandType
+  /** Handle the matched component interaction. */
+  handle(interaction: MessageComponentInteraction): Promise<void>
+}
+
+/**
  * A registered slash command.
  */
 export interface SlashCommand {
@@ -58,16 +79,30 @@ export interface SlashCommand {
    * dispatches `isAutocomplete()` interactions here; not audit-logged.
    */
   autocomplete?(interaction: AutocompleteInteraction): Promise<void>
+  /**
+   * Message-component handlers this command owns (button / select-menu). The
+   * router routes component interactions to the matching handler by
+   * `custom_id` prefix. Only present on commands that emit components.
+   */
+  components?: ComponentHandler[]
 }
 
 /**
  * All registered slash commands. Router dispatch is keyed off
  * `data.name` (see {@link getCommand}).
  */
-export const COMMANDS: SlashCommand[] = [helpCommand]
+export const COMMANDS: SlashCommand[] = [helpCommand, markCommand]
 
 const COMMAND_BY_NAME: ReadonlyMap<string, SlashCommand> = new Map(
   COMMANDS.map((command) => [command.data.name, command])
+)
+
+/**
+ * Flattened list of every registered {@link ComponentHandler} across all
+ * commands, in registration order. Consulted by {@link getComponentHandler}.
+ */
+const COMPONENT_HANDLERS: readonly ComponentHandler[] = COMMANDS.flatMap(
+  (command) => command.components ?? []
 )
 
 /**
@@ -78,6 +113,21 @@ const COMMAND_BY_NAME: ReadonlyMap<string, SlashCommand> = new Map(
  */
 export function getCommand(name: string): SlashCommand | undefined {
   return COMMAND_BY_NAME.get(name)
+}
+
+/**
+ * Resolve the {@link ComponentHandler} that owns a component `custom_id`.
+ *
+ * Matches the first handler whose {@link ComponentHandler.customIdPrefix} is a
+ * prefix of `customId`. Component interactions carry no command name, so this
+ * prefix match is how the router attributes a button / select-menu response back
+ * to the command that created it.
+ *
+ * @param customId - The interaction's `custom_id`.
+ * @returns The owning handler, or `undefined` when none claims the prefix.
+ */
+export function getComponentHandler(customId: string): ComponentHandler | undefined {
+  return COMPONENT_HANDLERS.find((handler) => customId.startsWith(handler.customIdPrefix))
 }
 
 export { SlashCommandBuilder }

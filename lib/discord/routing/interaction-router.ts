@@ -24,11 +24,13 @@
  * optional `autocomplete` method. These are option-suggestion callbacks (not
  * command invocations), so they are not audit-logged and never verify the user.
  *
- * ## Component routing seam (Step 12)
+ * ## Component routing (Step 12)
  *
- * Button / select-menu interactions are recognised but not yet dispatched.
- * `routeComponent` is a clearly-marked stub that later steps fill in; today it
- * simply acknowledges nothing so unknown components fall through harmlessly.
+ * Button / select-menu interactions are attributed to the {@link ComponentHandler}
+ * whose `customIdPrefix` matches the interaction's `custom_id` (components carry
+ * no command name). The matched handler is dispatched through {@link withAuditLog}
+ * under its own `commandType` (e.g. `SELECTION` for `/mark`'s disambiguation
+ * menu). Unknown components are acknowledged with an ephemeral notice.
  */
 
 import {
@@ -36,9 +38,15 @@ import {
   type Interaction,
   type AutocompleteInteraction,
   type ButtonInteraction,
+  type MessageComponentInteraction,
   type StringSelectMenuInteraction,
 } from "discord.js"
-import { getCommand as defaultGetCommand, type SlashCommand } from "../commands/registry"
+import {
+  getCommand as defaultGetCommand,
+  getComponentHandler as defaultGetComponentHandler,
+  type ComponentHandler,
+  type SlashCommand,
+} from "../commands/registry"
 import { verifyDiscordUser as defaultVerifyDiscordUser } from "../services"
 import { withAuditLog } from "./audit-wrapper"
 import type { CreateCommandLogParams } from "../audit"
@@ -51,11 +59,14 @@ export interface RouteDeps {
   verifyDiscordUser: typeof defaultVerifyDiscordUser
   /** Look up a registered slash command by name. */
   getCommand: (name: string) => SlashCommand | undefined
+  /** Resolve the component handler owning a `custom_id`. */
+  getComponentHandler: (customId: string) => ComponentHandler | undefined
 }
 
 const defaultDeps: RouteDeps = {
   verifyDiscordUser: defaultVerifyDiscordUser,
   getCommand: defaultGetCommand,
+  getComponentHandler: defaultGetComponentHandler,
 }
 
 /**
@@ -79,7 +90,7 @@ export async function routeInteraction(
   }
 
   if (interaction.isButton() || interaction.isStringSelectMenu()) {
-    await routeComponent(interaction)
+    await routeComponent(interaction, deps)
     return
   }
 }
@@ -155,15 +166,54 @@ async function routeChatInputCommand(
 }
 
 /**
- * @internal
- * TODO(Step 12): Route button / select-menu component interactions to their
- * handlers. This is intentionally a no-op stub for Step 9 — the slash-command
- * pipeline is the deliverable, and component handlers are migrated later. The
- * signature is kept narrow so the eventual implementation has a clear seam.
+ * @internal Route a button / select-menu interaction to its owning
+ * {@link ComponentHandler}, matched by `custom_id` prefix, through the audit
+ * lifecycle. Unknown components (no handler claims the prefix) get an ephemeral
+ * notice; handler failures surface the same generic ephemeral error as slash
+ * commands, guarding against a double reply.
  */
 async function routeComponent(
-  _interaction: ButtonInteraction | StringSelectMenuInteraction
+  interaction: ButtonInteraction | StringSelectMenuInteraction,
+  deps: RouteDeps
 ): Promise<void> {
-  // No component handlers are registered yet. Later steps will look up a
-  // component handler by customId here and dispatch through withAuditLog.
+  const handler = deps.getComponentHandler(interaction.customId)
+
+  if (!handler) {
+    await interaction.reply({
+      content: "This control has expired or is no longer available.",
+      flags: MessageFlags.Ephemeral,
+    })
+    return
+  }
+
+  const verifiedUser = await deps.verifyDiscordUser(interaction.user.id)
+
+  const auditParams: CreateCommandLogParams = {
+    discordUserId: interaction.user.id,
+    discordUsername: interaction.user.tag,
+    userId: verifiedUser.user?.id,
+    commandType: handler.commandType,
+    commandName: interaction.customId,
+    channelId: interaction.channelId,
+    channelType: interaction.guildId ? "guild" : "dm",
+    guildId: interaction.guildId ?? undefined,
+  }
+
+  try {
+    await withAuditLog(auditParams, () =>
+      handler.handle(interaction as MessageComponentInteraction)
+    )
+  } catch {
+    if (!interaction.replied && !interaction.deferred) {
+      await interaction.reply({
+        content: "Sorry, something went wrong handling that action. Please try again in a moment.",
+        flags: MessageFlags.Ephemeral,
+      })
+    } else {
+      await interaction.followUp({
+        content: "Sorry, something went wrong handling that action. Please try again in a moment.",
+        flags: MessageFlags.Ephemeral,
+      })
+    }
+  }
 }
