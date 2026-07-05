@@ -1,4 +1,5 @@
 import { searchPlexMedia, markPlexItemWatched } from "@/lib/connections/plex"
+import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 import { MarkType, MediaType } from "@/lib/generated/prisma/client"
@@ -17,16 +18,9 @@ export async function executeMediaMarkingTool(
   }
 
   // Get Plex server config
-  const server = await prisma.plexServer.findFirst({ where: { isActive: true } })
-  if (!server) {
+  const plexConfig = await getActivePlexServerConfig()
+  if (!plexConfig) {
     return "Error: No active Plex server configured"
-  }
-
-  const plexConfig = {
-    name: server.name,
-    url: server.url,
-    token: server.token,
-    publicUrl: server.publicUrl || undefined,
   }
 
   switch (toolName) {

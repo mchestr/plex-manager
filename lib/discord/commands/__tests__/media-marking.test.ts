@@ -1285,6 +1285,7 @@ describe("processSingleResult (via handleMarkCommand)", () => {
           url: "http://localhost:32400",
           token: "test-token",
           publicUrl: "https://plex.example.com",
+          adminPlexUserId: null,
         },
         "movie-123"
       )

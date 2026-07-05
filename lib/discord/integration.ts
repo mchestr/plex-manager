@@ -1,4 +1,5 @@
 import { checkUserServerAccess } from "@/lib/connections/plex"
+import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
 import { exchangeDiscordCode, fetchDiscordUserProfile, refreshDiscordToken, updateDiscordRoleConnection } from "@/lib/discord/api"
 import { prisma } from "@/lib/prisma"
 import { getBaseUrl } from "@/lib/utils"
@@ -298,9 +299,7 @@ export async function syncDiscordRoleConnection(userId: string) {
   // 1) Determine "is_subscribed" from Plex server access (same logic as admin user list)
   let resolvedSubscribed: boolean | null = null
   try {
-    const plexServer = await prisma.plexServer.findFirst({
-      where: { isActive: true },
-    })
+    const plexServer = await getActivePlexServerConfig()
 
     if (plexServer && user.plexUserId) {
       const accessResult = await checkUserServerAccess(

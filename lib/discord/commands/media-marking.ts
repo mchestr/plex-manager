@@ -1,6 +1,7 @@
 import { type Message } from "discord.js"
 import { verifyDiscordUser } from "@/lib/discord/services"
 import { searchPlexMedia, markPlexItemWatched, type PlexMediaItem } from "@/lib/connections/plex"
+import { getActivePlexServerConfig, type PlexServerConfig } from "@/lib/connections/plex-config"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 import { MarkType, MediaType } from "@/lib/generated/prisma/client"
@@ -89,20 +90,13 @@ export async function handleMarkCommand(
     }
 
     // Get Plex server config
-    const server = await prisma.plexServer.findFirst({ where: { isActive: true } })
-    if (!server) {
+    const plexConfig = await getActivePlexServerConfig()
+    if (!plexConfig) {
       await message.reply({
         content: "No active Plex server configured. Please contact an admin.",
         allowedMentions: { users: [message.author.id] },
       })
       return
-    }
-
-    const plexConfig = {
-      name: server.name,
-      url: server.url,
-      token: server.token,
-      publicUrl: server.publicUrl || undefined,
     }
 
     // Search for media
@@ -256,21 +250,14 @@ export async function handleSelectionResponse(
     const selectedItem = pending.results[selection - 1]
 
     // Get Plex server config
-    const server = await prisma.plexServer.findFirst({ where: { isActive: true } })
-    if (!server) {
+    const plexConfig = await getActivePlexServerConfig()
+    if (!plexConfig) {
       await message.reply({
         content: "No active Plex server configured. Please contact an admin.",
         allowedMentions: { users: [message.author.id] },
       })
       pendingSelections.delete(selectionKey)
       return true
-    }
-
-    const plexConfig = {
-      name: server.name,
-      url: server.url,
-      token: server.token,
-      publicUrl: server.publicUrl || undefined,
     }
 
     // Process the selected item
@@ -310,7 +297,7 @@ async function processSingleResult(
   discordUserId: string,
   item: PlexMediaItem,
   markType: MarkType,
-  plexConfig: { name: string; url: string; token: string; publicUrl?: string }
+  plexConfig: PlexServerConfig
 ): Promise<void> {
   try {
     // Determine media type
