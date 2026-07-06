@@ -52,7 +52,7 @@
     "react-dom": "^19.2.3",
     "react-markdown": "^10.1.0",
     "stripe": "^22.3.0",
-    "tailwind-merge": "^3.4.0",
+    "tailwind-merge": "^3.6.0",
     "winston": "^3.19.0",
     "zlib-sync": "^0.1.10",
     "zod": "^4.3.5"
