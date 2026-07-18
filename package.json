@@ -38,7 +38,7 @@
     "chart.js": "^4.5.1",
     "clsx": "^2.1.1",
     "discord.js": "^14.16.3",
-    "dotenv": "^17.2.3",
+    "dotenv": "^17.4.2",
     "fast-xml-parser": "^5.3.3",
     "framer-motion": "^12.26.0",
     "ioredis": "^5.8.2",
