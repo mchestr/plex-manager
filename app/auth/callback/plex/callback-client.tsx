@@ -145,17 +145,26 @@ export function PlexCallbackPageClient() {
             // ACCESS_DENIED under the same flag and ONLY for the clean-no-access
             // case — a failed access check (success === false) is always fatal, so
             // we never admit a user whose access we could not actually determine.
+            //
+            // Invite flows are the exception: reaching this point means
+            // processInvite already invited + auto-accepted this user and marked
+            // them exempt from the gate, so a clean "no access" here is just
+            // plex.tv propagation lag — they continue as a normal member instead
+            // of being gated to /subscribe.
             let gatedNonMember = false
             if (!accessCheck.hasAccess) {
+              let gatingEnabled = false
               if (accessCheck.success) {
                 const { isSubscriptionGatingEnabled } = await import("@/actions/auth")
-                gatedNonMember = await isSubscriptionGatingEnabled()
+                gatingEnabled = await isSubscriptionGatingEnabled()
               }
 
-              if (!gatedNonMember) {
+              if (!gatingEnabled) {
                 router.push("/auth/denied")
                 return
               }
+
+              gatedNonMember = !inviteCode
             }
 
             setStatus("Signing you in...")

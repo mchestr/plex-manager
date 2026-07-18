@@ -147,6 +147,15 @@ Plex server-access check at login. New users created after the migration default
 to `isExempt = false` and are subject to the gate. There is no runtime backfill
 and no Plex token is needed at gate time — the gate is a pure DB read.
 
+**Invite codes are comped membership.** Redeeming an admin-created invite code
+(Plex or Jellyfin) marks the user `isExempt = true` with
+`exemptReason = 'invite'` — the same semantics as the admin "Grant access" comp
+action, since the invite already grants server access outside of Stripe. An
+invited user therefore never lands on `/subscribe`. An existing exemption
+(e.g. `grandfathered`, `comp`) is never overwritten. Admins can revoke the
+exemption per-user from the admin users page if an invited user should later be
+subject to the gate.
+
 ## Subscription Lifecycle
 
 | Stripe event | App effect | Plex effect (when enabled) |

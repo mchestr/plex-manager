@@ -30,6 +30,12 @@ const TRANSACTION_TIMEOUT_MS = 10000
 const MAX_TRANSACTION_RETRIES = 3
 const INITIAL_RETRY_DELAY_MS = 100
 
+// Redeeming an invite is admin-granted membership, so the user is marked exempt
+// from the Stripe subscription gate — same semantics as the admin "Grant access"
+// comp action. Applied only when the user is not already exempt, so an existing
+// exemptReason (e.g. "grandfathered", "comp") is never overwritten.
+const INVITE_EXEMPTION = { isExempt: true, exemptReason: "invite" }
+
 // Types
 interface PlexUser {
   id: string
@@ -300,6 +306,7 @@ async function findOrCreateUser(
         email: plexUser.email,
         image: plexUser.thumb,
         emailVerified: new Date(),
+        ...(user.isExempt ? {} : INVITE_EXEMPTION),
       },
     })
     return user
@@ -316,6 +323,7 @@ async function findOrCreateUser(
         plexUserId: plexUser.id,
         image: plexUser.thumb,
         emailVerified: new Date(),
+        ...(userByEmail.isExempt ? {} : INVITE_EXEMPTION),
       },
     })
     return user
@@ -328,6 +336,7 @@ async function findOrCreateUser(
       plexUserId: plexUser.id,
       image: plexUser.thumb,
       emailVerified: new Date(),
+      ...INVITE_EXEMPTION,
     },
   })
 
@@ -722,6 +731,12 @@ async function findOrCreateJellyfinUser(
   })
 
   if (user) {
+    if (!user.isExempt) {
+      user = await tx.user.update({
+        where: { id: user.id },
+        data: INVITE_EXEMPTION,
+      })
+    }
     return user
   }
 
@@ -730,6 +745,7 @@ async function findOrCreateJellyfinUser(
     data: {
       name: username,
       jellyfinUserId,
+      ...INVITE_EXEMPTION,
     },
   })
 
