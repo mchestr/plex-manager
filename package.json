@@ -39,7 +39,7 @@
     "clsx": "^2.1.1",
     "discord.js": "^14.16.3",
     "dotenv": "^17.4.2",
-    "fast-xml-parser": "^5.3.3",
+    "fast-xml-parser": "^5.10.1",
     "framer-motion": "^12.42.2",
     "ioredis": "^5.8.2",
     "lucide-react": "^1.23.0",
