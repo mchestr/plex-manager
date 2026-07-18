@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 
 import { PlexCallbackPageClient } from '@/app/auth/callback/plex/callback-client'
 import { checkServerAccess, isSubscriptionGatingEnabled } from '@/actions/auth'
+import { processInvite } from '@/actions/invite'
 import { getOnboardingStatus } from '@/actions/onboarding'
 import { getPlexAuthToken } from '@/lib/plex-auth'
 import { redirectTo } from '@/lib/utils/navigation'
@@ -11,6 +12,10 @@ import { useRouter, useSearchParams } from 'next/navigation'
 jest.mock('@/actions/auth', () => ({
   checkServerAccess: jest.fn(),
   isSubscriptionGatingEnabled: jest.fn(),
+}))
+
+jest.mock('@/actions/invite', () => ({
+  processInvite: jest.fn(),
 }))
 
 jest.mock('@/actions/onboarding', () => ({
@@ -39,6 +44,7 @@ jest.mock('next/navigation', () => ({
 
 const mockCheckServerAccess = checkServerAccess as jest.Mock
 const mockIsSubscriptionGatingEnabled = isSubscriptionGatingEnabled as jest.Mock
+const mockProcessInvite = processInvite as jest.Mock
 const mockGetOnboardingStatus = getOnboardingStatus as jest.Mock
 const mockGetPlexAuthToken = getPlexAuthToken as jest.Mock
 const mockRedirectTo = redirectTo as jest.Mock
@@ -165,6 +171,46 @@ describe('PlexCallbackPageClient — Stripe subscription gating', () => {
     )
 
     expect(mockIsSubscriptionGatingEnabled).not.toHaveBeenCalled()
+  })
+
+  it('lets an invite redeemer proceed as a member when gating is on and access has not propagated', async () => {
+    // processInvite already invited + auto-accepted the user and marked them
+    // exempt, so a clean "no access" (plex.tv propagation lag) must not gate
+    // them to /subscribe — they follow the normal member flow.
+    setSearchParams({ inviteCode: 'ABCD2345' })
+    mockProcessInvite.mockResolvedValue({ success: true })
+    mockCheckServerAccess.mockResolvedValue({ success: true, hasAccess: false })
+    mockIsSubscriptionGatingEnabled.mockResolvedValue(true)
+    mockSignIn.mockResolvedValue({ ok: true })
+    mockGetOnboardingStatus.mockResolvedValue({ isComplete: false })
+
+    render(<PlexCallbackPageClient />)
+
+    await waitFor(
+      () => {
+        expect(mockRedirectTo).toHaveBeenCalledWith('/onboarding')
+      },
+      { timeout: 3000 }
+    )
+
+    expect(mockProcessInvite).toHaveBeenCalledWith('ABCD2345', 'user-token')
+    expect(mockRedirectTo).not.toHaveBeenCalledWith('/subscribe')
+    expect(mockPush).not.toHaveBeenCalledWith('/auth/denied')
+  })
+
+  it('still denies an invite redeemer without access when gating is disabled', async () => {
+    setSearchParams({ inviteCode: 'ABCD2345' })
+    mockProcessInvite.mockResolvedValue({ success: true })
+    mockCheckServerAccess.mockResolvedValue({ success: true, hasAccess: false })
+    mockIsSubscriptionGatingEnabled.mockResolvedValue(false)
+
+    render(<PlexCallbackPageClient />)
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith('/auth/denied')
+    })
+
+    expect(mockSignIn).not.toHaveBeenCalled()
   })
 
   it('shows an error and does not redirect when the gated sign-in fails', async () => {

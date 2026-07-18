@@ -12,6 +12,7 @@
 import {
   validateInvite,
   processInvite,
+  processJellyfinInvite,
   createInvite,
   getInvites,
   deleteInvite,
@@ -23,6 +24,7 @@ import {
   inviteUserToPlexServer,
   acceptPlexInvite,
 } from '@/lib/connections/plex'
+import { createJellyfinUser, setJellyfinUserPolicy } from '@/lib/connections/jellyfin'
 import { logAuditEvent, AuditEventType } from '@/lib/security/audit-log'
 import { Prisma } from '@/lib/generated/prisma/client'
 import type { Invite, PlexServer } from '@/lib/generated/prisma/client'
@@ -48,6 +50,9 @@ jest.mock('@/lib/prisma', () => ({
     plexServer: {
       findFirst: jest.fn(),
     },
+    jellyfinServer: {
+      findFirst: jest.fn(),
+    },
     user: {
       findUnique: jest.fn(),
       create: jest.fn(),
@@ -63,11 +68,18 @@ jest.mock('@/lib/connections/plex', () => ({
   acceptPlexInvite: jest.fn(),
 }))
 
+jest.mock('@/lib/connections/jellyfin', () => ({
+  createJellyfinUser: jest.fn(),
+  setJellyfinUserPolicy: jest.fn(),
+  deleteJellyfinUser: jest.fn(),
+}))
+
 jest.mock('@/lib/security/audit-log', () => ({
   logAuditEvent: jest.fn(),
   AuditEventType: {
     INVITE_CONSUMED: 'INVITE_CONSUMED',
     INVITE_PLEX_FAILURE: 'INVITE_PLEX_FAILURE',
+    INVITE_JELLYFIN_FAILURE: 'INVITE_JELLYFIN_FAILURE',
     INVITE_ROLLBACK: 'INVITE_ROLLBACK',
     INVITE_ROLLBACK_FAILED: 'INVITE_ROLLBACK_FAILED',
     INVITE_TRANSACTION_CONFLICT: 'INVITE_TRANSACTION_CONFLICT',
@@ -81,6 +93,10 @@ const mockInviteUserToPlexServer = inviteUserToPlexServer as jest.MockedFunction
   typeof inviteUserToPlexServer
 >
 const mockAcceptPlexInvite = acceptPlexInvite as jest.MockedFunction<typeof acceptPlexInvite>
+const mockCreateJellyfinUser = createJellyfinUser as jest.MockedFunction<typeof createJellyfinUser>
+const mockSetJellyfinUserPolicy = setJellyfinUserPolicy as jest.MockedFunction<
+  typeof setJellyfinUserPolicy
+>
 const mockLogAuditEvent = logAuditEvent as jest.MockedFunction<typeof logAuditEvent>
 
 describe('invite actions', () => {
@@ -373,6 +389,135 @@ describe('invite actions', () => {
           stage: 'accept_invite',
         })
       )
+    })
+  })
+
+  describe('invite redemption exempts the user from the subscription gate', () => {
+    // Transaction-scoped client shared by every prisma.$transaction callback so
+    // the user create/update calls can be asserted on.
+    const tx = {
+      invite: {
+        findUnique: jest.fn(),
+        update: jest.fn(),
+      },
+      user: {
+        findUnique: jest.fn(),
+        create: jest.fn(),
+        update: jest.fn(),
+      },
+      inviteUsage: {
+        create: jest.fn(),
+      },
+    }
+
+    /**
+     * Run processInvite under fake timers so the 2s Plex propagation delay
+     * resolves immediately instead of slowing the suite down.
+     */
+    async function runProcessInvite(code: string, token: string) {
+      jest.useFakeTimers()
+      try {
+        const promise = processInvite(code, token)
+        await jest.runAllTimersAsync()
+        return await promise
+      } finally {
+        jest.useRealTimers()
+      }
+    }
+
+    beforeEach(() => {
+      mockPrisma.$transaction.mockImplementation(async (fn) =>
+        typeof fn === 'function' ? fn(tx as unknown as Prisma.TransactionClient) : Promise.resolve()
+      )
+      mockGetPlexUserInfo.mockResolvedValue({ success: true, data: mockPlexUser })
+      mockPrisma.plexServer.findFirst.mockResolvedValue(mockPlexServer)
+      mockInviteUserToPlexServer.mockResolvedValue({ success: true, inviteID: 12345 })
+      mockAcceptPlexInvite.mockResolvedValue({ success: true })
+      tx.invite.findUnique.mockResolvedValue(mockInvite)
+      tx.invite.update.mockResolvedValue({ ...mockInvite, useCount: 1 })
+      tx.inviteUsage.create.mockResolvedValue({})
+    })
+
+    it('marks a newly created user exempt', async () => {
+      tx.user.findUnique.mockResolvedValue(null)
+      tx.user.create.mockResolvedValue({ id: 'user-1' })
+
+      const result = await runProcessInvite('TESTCODE', 'plex-auth-token')
+
+      expect(result).toEqual({ success: true })
+      expect(tx.user.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          plexUserId: mockPlexUser.id,
+          isExempt: true,
+          exemptReason: 'invite',
+        }),
+      })
+    })
+
+    it('marks an existing non-exempt user exempt on redemption', async () => {
+      tx.user.findUnique.mockResolvedValueOnce({
+        id: 'user-1',
+        isExempt: false,
+        exemptReason: null,
+      })
+      tx.user.update.mockResolvedValue({ id: 'user-1' })
+
+      const result = await runProcessInvite('TESTCODE', 'plex-auth-token')
+
+      expect(result).toEqual({ success: true })
+      expect(tx.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ isExempt: true, exemptReason: 'invite' }),
+        })
+      )
+    })
+
+    it('does not overwrite an existing exemption reason', async () => {
+      tx.user.findUnique.mockResolvedValueOnce({
+        id: 'user-1',
+        isExempt: true,
+        exemptReason: 'grandfathered',
+      })
+      tx.user.update.mockResolvedValue({ id: 'user-1' })
+
+      const result = await runProcessInvite('TESTCODE', 'plex-auth-token')
+
+      expect(result).toEqual({ success: true })
+      const updateData = tx.user.update.mock.calls[0][0].data
+      expect(updateData).not.toHaveProperty('isExempt')
+      expect(updateData).not.toHaveProperty('exemptReason')
+    })
+
+    it('marks a newly created Jellyfin user exempt', async () => {
+      const jellyfinInvite = { ...mockInvite, serverType: 'JELLYFIN' }
+      tx.invite.findUnique.mockResolvedValue(jellyfinInvite)
+      tx.invite.update.mockResolvedValue({ ...jellyfinInvite, useCount: 1 })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ;(mockPrisma as any).jellyfinServer.findFirst.mockResolvedValue({
+        id: 'jf-server-1',
+        url: 'https://jellyfin.example.com',
+        apiKey: 'jf-api-key',
+        publicUrl: null,
+        isActive: true,
+      })
+      mockCreateJellyfinUser.mockResolvedValue({ success: true, userId: 'jf-user-1' })
+      mockSetJellyfinUserPolicy.mockResolvedValue({ success: true })
+      tx.user.findUnique.mockResolvedValue(null)
+      tx.user.create.mockResolvedValue({ id: 'user-1' })
+
+      const result = await processJellyfinInvite('TESTCODE', {
+        username: 'newuser',
+        password: 'password123',
+      })
+
+      expect(result.success).toBe(true)
+      expect(tx.user.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          jellyfinUserId: 'jf-user-1',
+          isExempt: true,
+          exemptReason: 'invite',
+        }),
+      })
     })
   })
 
