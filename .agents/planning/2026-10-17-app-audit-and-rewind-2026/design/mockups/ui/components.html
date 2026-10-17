@@ -1,0 +1,940 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Design system reference – Plex Manager</title>
+<script>if (/theme=light/.test(location.search)) document.documentElement.setAttribute('data-theme','light')</script>
+<style>
+/* ===== Plex Manager design system: mockup stylesheet (tokens + component recipes) =====
+   Mockup convenience: dark values on :root, light on [data-theme="light"].
+   Production follows the shadcn convention instead (light on :root, dark on .dark). */
+@font-face { font-family: "IBM Plex Sans"; font-style: normal; font-weight: 100 700; font-stretch: 75% 100%; font-display: swap;
+  src: url("fonts/IBMPlexSans-Variable-wght-wdth-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: "IBM Plex Sans"; font-style: normal; font-weight: 100 700; font-stretch: 75% 100%; font-display: swap;
+  src: url("fonts/IBMPlexSans-Variable-wght-wdth-greek.woff2") format("woff2");
+  unicode-range: U+0370-0377,U+037A-037F,U+0384-038A,U+038C,U+038E-03A1,U+03A3-03FF; }
+@font-face { font-family: "IBM Plex Mono"; font-weight: 400; src: url("fonts/IBMPlexMono-400-latin.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Mono"; font-weight: 500; src: url("fonts/IBMPlexMono-500-latin.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Mono"; font-weight: 600; src: url("fonts/IBMPlexMono-600-latin.woff2") format("woff2"); }
+
+:root {
+  --background: oklch(22.5% 0.005 255);
+  --foreground: oklch(96.5% 0.003 255);
+  --card: oklch(25.2% 0.005 255);
+  --card-foreground: oklch(96.5% 0.003 255);
+  --popover: oklch(28% 0.006 255);
+  --popover-foreground: oklch(96.5% 0.003 255);
+  --primary: oklch(79% 0.155 75);
+  --primary-hover: oklch(83% 0.145 77);
+  --primary-foreground: oklch(20% 0.03 65);
+  --secondary: oklch(30.5% 0.006 255);
+  --secondary-hover: oklch(34% 0.006 255);
+  --secondary-foreground: oklch(96.5% 0.003 255);
+  --muted: oklch(27.5% 0.005 255);
+  --muted-foreground: oklch(76% 0.01 255);
+  --accent: oklch(31.5% 0.006 255);
+  --accent-foreground: oklch(96.5% 0.003 255);
+  --destructive: oklch(74% 0.15 25);
+  --destructive-foreground: oklch(20% 0.04 25);
+  --success: oklch(77% 0.15 155);
+  --success-foreground: oklch(20% 0.04 155);
+  --warning: oklch(88% 0.13 102);
+  --warning-foreground: oklch(22% 0.04 95);
+  --info: oklch(77% 0.11 240);
+  --info-foreground: oklch(20% 0.04 240);
+  --border: oklch(35% 0.006 255);
+  --border-strong: oklch(44% 0.006 255);
+  --input: oklch(56% 0.008 255);
+  --ring: oklch(79% 0.155 75);
+  --chart-1: oklch(67% 0.14 70);
+  --chart-2: oklch(62% 0.14 250);
+  --chart-3: oklch(66% 0.12 175);
+  --chart-4: oklch(60% 0.16 305);
+  --chart-5: oklch(66% 0.17 355);
+  --sidebar: oklch(20.5% 0.005 255);
+  --sidebar-foreground: oklch(82% 0.006 255);
+  --sidebar-primary: oklch(79% 0.155 75);
+  --sidebar-primary-foreground: oklch(20% 0.03 65);
+  --sidebar-accent: oklch(27.5% 0.006 255);
+  --sidebar-accent-foreground: oklch(96.5% 0.003 255);
+  --sidebar-border: oklch(30% 0.006 255);
+  --sidebar-ring: oklch(79% 0.155 75);
+}
+[data-theme="light"] {
+  --background: oklch(98.5% 0.002 255);
+  --foreground: oklch(20% 0.006 255);
+  --card: oklch(100% 0 0);
+  --card-foreground: oklch(20% 0.006 255);
+  --popover: oklch(100% 0 0);
+  --popover-foreground: oklch(20% 0.006 255);
+  --primary: oklch(79% 0.155 75);
+  --primary-hover: oklch(75% 0.155 72);
+  --primary-foreground: oklch(20% 0.03 65);
+  --secondary: oklch(95.5% 0.003 255);
+  --secondary-hover: oklch(92.5% 0.004 255);
+  --secondary-foreground: oklch(20% 0.006 255);
+  --muted: oklch(96.5% 0.003 255);
+  --muted-foreground: oklch(47% 0.012 255);
+  --accent: oklch(94.5% 0.004 255);
+  --accent-foreground: oklch(20% 0.006 255);
+  --destructive: oklch(49% 0.19 27);
+  --destructive-foreground: oklch(98.5% 0 0);
+  --success: oklch(46% 0.12 155);
+  --success-foreground: oklch(98.5% 0 0);
+  --warning: oklch(47% 0.1 85);
+  --warning-foreground: oklch(98.5% 0 0);
+  --info: oklch(47% 0.13 250);
+  --info-foreground: oklch(98.5% 0 0);
+  --border: oklch(90% 0.004 255);
+  --border-strong: oklch(84% 0.005 255);
+  --input: oklch(62% 0.008 255);
+  --ring: oklch(55% 0.12 62);
+  --chart-1: oklch(64% 0.135 62);
+  --chart-2: oklch(55% 0.15 250);
+  --chart-3: oklch(60% 0.11 175);
+  --chart-4: oklch(55% 0.18 305);
+  --chart-5: oklch(60% 0.19 355);
+  --sidebar: oklch(97% 0.003 255);
+  --sidebar-foreground: oklch(35% 0.008 255);
+  --sidebar-primary: oklch(55% 0.12 62);
+  --sidebar-primary-foreground: oklch(98.5% 0 0);
+  --sidebar-accent: oklch(93% 0.004 255);
+  --sidebar-accent-foreground: oklch(20% 0.006 255);
+  --sidebar-border: oklch(90% 0.004 255);
+  --sidebar-ring: oklch(55% 0.12 62);
+}
+[data-theme="rewind"] {
+  --background: oklch(27% 0.055 28);
+  --foreground: oklch(97% 0.012 85);
+  --card: oklch(31% 0.055 28);
+  --card-foreground: oklch(97% 0.012 85);
+  --popover: oklch(25% 0.02 40);
+  --popover-foreground: oklch(97% 0.012 85);
+  --primary: oklch(80% 0.15 75);
+  --primary-hover: oklch(84% 0.14 77);
+  --primary-foreground: oklch(20% 0.03 65);
+  --secondary: oklch(35% 0.05 28);
+  --secondary-hover: oklch(39% 0.05 28);
+  --secondary-foreground: oklch(97% 0.012 85);
+  --muted: oklch(31% 0.05 28);
+  --muted-foreground: oklch(86% 0.03 70);
+  --accent: oklch(37% 0.05 28);
+  --accent-foreground: oklch(97% 0.012 85);
+  --border: oklch(42% 0.05 30);
+  --border-strong: oklch(52% 0.045 32);
+  --input: oklch(62% 0.04 40);
+  --ring: oklch(80% 0.15 75);
+  --chart-1: oklch(80% 0.15 75);
+  --chart-2: oklch(72% 0.12 230);
+  --chart-3: oklch(74% 0.12 170);
+  --chart-4: oklch(72% 0.13 300);
+  --chart-5: oklch(74% 0.14 0);
+  --destructive: oklch(74% 0.15 25);
+  --destructive-foreground: oklch(20% 0.04 25);
+  --success: oklch(77% 0.15 155);
+  --success-foreground: oklch(20% 0.04 155);
+  --warning: oklch(88% 0.13 102);
+  --warning-foreground: oklch(22% 0.04 95);
+  --info: oklch(77% 0.11 240);
+  --info-foreground: oklch(20% 0.04 240);
+}
+
+
+:root {
+  color-scheme: dark;
+  --overlay: oklch(14% 0.005 255 / 0.72);
+  --tint: 14%;
+  --radius: 0.5rem;
+  --radius-sm: 4px; --radius-md: 6px; --radius-lg: 8px; --radius-xl: 12px;
+  --shadow-popover: 0 1px 0 oklch(100% 0 0 / 0.04) inset, 0 12px 32px -8px oklch(0% 0 0 / 0.55), 0 2px 6px oklch(0% 0 0 / 0.3);
+  --shadow-dialog: 0 24px 64px -16px oklch(0% 0 0 / 0.7);
+  --shadow-poster: 0 1px 2px oklch(0% 0 0 / 0.35), 0 6px 16px -6px oklch(0% 0 0 / 0.5);
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --dur-1: 120ms; --dur-2: 180ms; --dur-3: 240ms;
+}
+[data-theme="light"] {
+  color-scheme: light;
+  --overlay: oklch(20% 0.006 255 / 0.4);
+  --tint: 10%;
+  --shadow-popover: 0 12px 32px -8px oklch(20% 0.01 255 / 0.18), 0 2px 6px oklch(20% 0.01 255 / 0.08);
+  --shadow-dialog: 0 24px 64px -16px oklch(20% 0.01 255 / 0.3);
+  --shadow-poster: 0 1px 2px oklch(20% 0.01 255 / 0.18), 0 6px 16px -6px oklch(20% 0.01 255 / 0.25);
+}
+[data-theme="rewind"] { color-scheme: dark; --tint: 16%; color: var(--foreground); }
+
+/* ---------- Base ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--background); color: var(--foreground);
+  font-family: var(--font-sans); font-size: 15px; line-height: 24px; font-weight: 400;
+  -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+}
+h1, h2, h3, h4, p, figure, dl, dd { margin: 0; }
+h1, h2, h3, .t-display, .t-h1, .t-h2 { text-wrap: balance; }
+p, li, dd { text-wrap: pretty; }
+a { color: inherit; text-decoration: none; }
+ul, ol { margin: 0; padding: 0; }
+button { font: inherit; color: inherit; }
+svg.i { width: 16px; height: 16px; flex: none; stroke-width: 1.75; }
+svg.i-20 { width: 20px; height: 20px; }
+svg.i-14 { width: 14px; height: 14px; }
+svg.i-12 { width: 12px; height: 12px; }
+.num { font-variant-numeric: tabular-nums; }
+.mono { font-family: var(--font-mono); font-size: 13px; line-height: 20px; }
+.muted { color: var(--muted-foreground); }
+.fg { color: var(--foreground); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.row { display: flex; align-items: center; gap: 8px; }
+.stack { display: flex; flex-direction: column; }
+.grow { flex: 1; min-width: 0; }
+
+/* ---------- Type scale ---------- */
+.t-display { font-size: 40px; line-height: 48px; font-weight: 600; letter-spacing: -0.022em; font-stretch: 92%; }
+.t-h1 { font-size: 28px; line-height: 36px; font-weight: 600; letter-spacing: -0.015em; }
+.t-h2 { font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em; }
+.t-h3 { font-size: 16px; line-height: 24px; font-weight: 600; letter-spacing: -0.005em; }
+.t-lead { font-size: 17px; line-height: 28px; }
+.t-body { font-size: 15px; line-height: 24px; }
+.t-sm { font-size: 14px; line-height: 20px; }
+.t-xs { font-size: 13px; line-height: 18px; }
+.t-2xs { font-size: 12px; line-height: 16px; }
+.t-label { font-size: 13px; line-height: 18px; font-weight: 500; color: var(--muted-foreground); }
+.t-stat { font-size: 28px; line-height: 36px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+
+/* ---------- Brand ---------- */
+.pip { display: inline-block; width: 8px; height: 8px; border-radius: 2px; background: var(--primary); flex: none; }
+.wordmark { display: inline-flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; letter-spacing: -0.01em; white-space: nowrap; min-width: 0; }
+.wordmark .wm-name { overflow: hidden; text-overflow: ellipsis; }
+.wordmark.is-long .wm-name { font-stretch: 85%; }
+.monogram { width: 32px; height: 32px; border-radius: var(--radius-md); background: var(--secondary); border: 1px solid var(--border-strong); display: inline-flex; align-items: center; justify-content: center; position: relative; font-weight: 600; font-size: 15px; flex: none; }
+.monogram::after { content: ""; position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; border-radius: 1.5px; background: var(--primary); }
+.monogram-48 { width: 48px; height: 48px; border-radius: 10px; font-size: 22px; }
+.monogram-48::after { top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 2px; }
+
+/* ---------- Buttons ---------- */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 36px; padding: 0 14px;
+  border-radius: var(--radius-md); border: 1px solid transparent; font-size: 14px; line-height: 20px; font-weight: 500;
+  white-space: nowrap; cursor: pointer; background: transparent; color: var(--foreground);
+  transition: background-color var(--dur-1) var(--ease-out), border-color var(--dur-1) var(--ease-out); }
+.btn-sm { height: 32px; padding: 0 10px; font-size: 13px; gap: 6px; }
+.btn-lg { height: 44px; padding: 0 18px; font-size: 15px; }
+.btn-icon { width: 36px; padding: 0; }
+.btn-icon.btn-sm { width: 32px; }
+.btn-primary { background: var(--primary); color: var(--primary-foreground); font-weight: 600; }
+.btn-primary:hover, .btn-primary.is-hover { background: var(--primary-hover); }
+.btn-secondary { background: var(--secondary); color: var(--secondary-foreground); border-color: var(--border-strong); }
+.btn-secondary:hover, .btn-secondary.is-hover { background: var(--secondary-hover); }
+.btn-outline { border-color: var(--border-strong); }
+.btn-outline:hover, .btn-outline.is-hover { background: var(--accent); }
+.btn-ghost:hover, .btn-ghost.is-hover { background: var(--accent); }
+.btn-ghost.muted { color: var(--muted-foreground); }
+.btn-destructive { background: color-mix(in srgb, var(--destructive) 12%, transparent); color: var(--destructive); border-color: color-mix(in srgb, var(--destructive) 40%, transparent); }
+.btn-destructive-solid { background: var(--destructive); color: var(--destructive-foreground); font-weight: 600; }
+.btn[disabled], .btn.is-disabled { background: var(--muted); color: var(--muted-foreground); border-color: var(--border); font-weight: 500; cursor: not-allowed; }
+.btn-ghost[disabled], .btn-ghost.is-disabled { background: transparent; border-color: transparent; }
+.is-focus, .focus-demo { outline: 2px solid var(--ring); outline-offset: 2px; }
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.link { color: var(--foreground); text-decoration: underline; text-decoration-color: var(--border-strong); text-underline-offset: 3px; }
+.full { width: 100%; }
+
+/* ---------- Form controls ---------- */
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.label { font-size: 14px; line-height: 20px; font-weight: 500; color: var(--foreground); }
+.label .opt { color: var(--muted-foreground); font-weight: 400; }
+.hint { font-size: 13px; line-height: 18px; color: var(--muted-foreground); }
+.error-text { font-size: 13px; line-height: 18px; color: var(--destructive); display: flex; gap: 6px; align-items: flex-start; }
+.error-text svg.i { width: 14px; height: 14px; margin-top: 2px; }
+.input { height: 36px; width: 100%; border: 1px solid var(--input); border-radius: var(--radius-md); background: var(--background);
+  color: var(--foreground); padding: 0 12px; font: inherit; font-size: 14px; line-height: 20px; display: flex; align-items: center; gap: 8px; min-width: 0; white-space: nowrap; overflow: hidden; }
+.input.mono { font-family: var(--font-mono); font-size: 13px; }
+.input .ph { color: var(--muted-foreground); }
+.input.is-focus { border-color: var(--ring); outline: 2px solid var(--ring); outline-offset: -1px; }
+.input.is-invalid { border-color: var(--destructive); }
+.input.is-disabled { background: var(--muted); color: var(--muted-foreground); border-color: var(--border); }
+.input .lead { color: var(--muted-foreground); display: flex; }
+.input .trail { margin-left: auto; color: var(--muted-foreground); display: flex; align-items: center; gap: 6px; font-family: var(--font-sans); }
+.saved { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; line-height: 16px; font-weight: 500; color: var(--success); }
+.input-lg { height: 44px; font-size: 16px; }
+.select { justify-content: space-between; cursor: pointer; }
+.textarea { height: auto; min-height: 76px; padding: 8px 12px; align-items: flex-start; white-space: normal; }
+.switch { position: relative; width: 36px; height: 20px; border-radius: 999px; background: var(--secondary); border: 1px solid var(--input); flex: none; display: inline-block; }
+.switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 999px; background: var(--muted-foreground); transition: transform var(--dur-2) var(--ease-out); }
+.switch.on { background: var(--primary); border-color: var(--primary); }
+[data-theme="light"] .switch.on, [data-theme="light"] .checkbox.on { border-color: var(--ring); }
+.switch.on::after { transform: translateX(16px); background: var(--primary-foreground); }
+.switch.disabled { background: var(--muted); border-color: var(--border); }
+.switch.disabled::after { background: var(--border-strong); }
+.switch-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.checkbox { width: 16px; height: 16px; border-radius: var(--radius-sm); border: 1px solid var(--input); background: var(--background); flex: none; display: inline-flex; align-items: center; justify-content: center; }
+.checkbox.on { background: var(--primary); border-color: var(--primary); color: var(--primary-foreground); }
+.checkbox.on svg.i { width: 12px; height: 12px; stroke-width: 3; }
+.check-row { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+
+/* ---------- Surfaces ---------- */
+.card { background: var(--card); color: var(--card-foreground); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.card-header { padding: 20px 20px 0; display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; }
+.card-title { font-size: 16px; line-height: 24px; font-weight: 600; letter-spacing: -0.005em; }
+.card-desc { font-size: 14px; line-height: 20px; color: var(--muted-foreground); margin-top: 2px; }
+.card-content { padding: 16px 20px 20px; }
+.card-footer { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+.divider { height: 1px; background: var(--border); border: 0; margin: 0; }
+.tile { width: 40px; height: 40px; border-radius: var(--radius-md); background: var(--muted); border: 1px solid var(--border); display: inline-flex; align-items: center; justify-content: center; color: var(--foreground); flex: none; }
+.tile-sm { width: 32px; height: 32px; }
+.well { background: var(--background); border: 1px solid var(--border); border-radius: var(--radius-md); }
+
+/* ---------- Media: poster, media card ---------- */
+.poster { position: relative; aspect-ratio: 2 / 3; border-radius: var(--radius-sm); overflow: hidden; background: var(--muted); box-shadow: var(--shadow-poster); flex: none; }
+.poster::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px oklch(100% 0 0 / 0.08); pointer-events: none; }
+[data-theme="light"] .poster::after { box-shadow: inset 0 0 0 1px oklch(0% 0 0 / 0.08); }
+.poster svg { display: block; width: 100%; height: 100%; }
+.poster-cap { margin-top: 8px; font-size: 13px; line-height: 18px; }
+.poster-cap .pt { font-weight: 500; color: var(--foreground); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.poster-cap .pm { color: var(--muted-foreground); display: block; }
+.media-card { border-radius: var(--radius-xl); overflow: hidden; background: var(--background); position: relative; }
+
+/* ---------- Badges, dots, meta ---------- */
+.badge { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px; border-radius: var(--radius-sm); font-size: 12px; line-height: 16px; font-weight: 500; white-space: nowrap; border: 1px solid var(--border-strong); color: var(--foreground); background: transparent; }
+.badge .dot { width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
+.badge svg.i { width: 12px; height: 12px; stroke-width: 2; }
+.badge-neutral { background: var(--secondary); color: var(--muted-foreground); border-color: var(--border); }
+.badge-success { color: var(--success); background: color-mix(in srgb, var(--success) var(--tint), transparent); border-color: color-mix(in srgb, var(--success) 30%, transparent); }
+.badge-warning { color: var(--warning); background: color-mix(in srgb, var(--warning) var(--tint), transparent); border-color: color-mix(in srgb, var(--warning) 30%, transparent); }
+.badge-info { color: var(--info); background: color-mix(in srgb, var(--info) var(--tint), transparent); border-color: color-mix(in srgb, var(--info) 30%, transparent); }
+.badge-destructive { color: var(--destructive); background: color-mix(in srgb, var(--destructive) var(--tint), transparent); border-color: color-mix(in srgb, var(--destructive) 30%, transparent); }
+.status { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; line-height: 20px; }
+.status .dot { width: 8px; height: 8px; border-radius: 999px; flex: none; }
+.dot-success { background: var(--success); } .dot-warning { background: var(--warning); } .dot-destructive { background: var(--destructive); } .dot-info { background: var(--info); }
+.dot-off { background: transparent; box-shadow: inset 0 0 0 1.5px var(--input); }
+.kbd { display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); font-family: var(--font-mono); font-size: 12px; line-height: 16px; color: var(--muted-foreground); background: var(--background); }
+.meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; font-size: 13px; line-height: 18px; color: var(--muted-foreground); }
+.meta > span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.chip { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 4px 0 10px; border-radius: 999px; background: var(--secondary); border: 1px solid var(--border-strong); font-size: 13px; }
+.chip .x { width: 18px; height: 18px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; color: var(--muted-foreground); }
+
+/* ---------- Alerts ---------- */
+.alert { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: var(--radius-lg); border: 1px solid var(--border); background: var(--card); font-size: 14px; line-height: 20px; }
+.alert > svg.i { margin-top: 2px; }
+.alert .alert-title { font-weight: 600; }
+.alert .alert-body { color: var(--muted-foreground); }
+.alert .alert-actions { margin-left: auto; display: flex; gap: 8px; flex: none; align-self: center; }
+.alert-warning { border-color: color-mix(in srgb, var(--warning) 32%, transparent); background: color-mix(in srgb, var(--warning) 8%, var(--card)); }
+.alert-warning > svg.i { color: var(--warning); }
+.alert-destructive { border-color: color-mix(in srgb, var(--destructive) 34%, transparent); background: color-mix(in srgb, var(--destructive) 8%, var(--card)); }
+.alert-destructive > svg.i { color: var(--destructive); }
+.alert-success { border-color: color-mix(in srgb, var(--success) 30%, transparent); background: color-mix(in srgb, var(--success) 7%, var(--card)); }
+.alert-success > svg.i { color: var(--success); }
+.alert-info { border-color: color-mix(in srgb, var(--info) 30%, transparent); background: color-mix(in srgb, var(--info) 7%, var(--card)); }
+.alert-info > svg.i { color: var(--info); }
+
+/* ---------- Table ---------- */
+.table-wrap { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--card); overflow: hidden; }
+table.table { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 20px; }
+.table th { text-align: left; font-size: 13px; line-height: 18px; font-weight: 500; color: var(--muted-foreground); padding: 10px 16px; background: var(--muted); border-bottom: 1px solid var(--border); white-space: nowrap; }
+.table th .sort { display: inline-flex; align-items: center; gap: 4px; }
+.table td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.table tr:last-child td { border-bottom: 0; }
+.table tr.is-hover td { background: color-mix(in srgb, var(--accent) 55%, transparent); }
+.table .r { text-align: right; }
+.table .sub { font-size: 13px; line-height: 18px; color: var(--muted-foreground); }
+.avatar { width: 32px; height: 32px; border-radius: 999px; background: var(--secondary); border: 1px solid var(--border-strong); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: var(--foreground); flex: none; letter-spacing: 0.02em; }
+.avatar-sm { width: 28px; height: 28px; font-size: 12px; letter-spacing: 0; }
+.user-cell { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.user-cell .name { font-weight: 500; color: var(--foreground); }
+.table-foot { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted-foreground); }
+
+/* ---------- Menu / popover / dialog / toast ---------- */
+.menu { position: absolute; z-index: 40; min-width: 220px; background: var(--popover); color: var(--popover-foreground); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); box-shadow: var(--shadow-popover); padding: 4px; }
+.menu-item { display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 8px; border-radius: var(--radius-sm); font-size: 14px; color: var(--foreground); white-space: nowrap; }
+.menu-item svg.i { color: var(--muted-foreground); }
+.menu-item.is-active { background: var(--accent); }
+.menu-item.danger, .menu-item.danger svg.i { color: var(--destructive); }
+.menu-item .trail { margin-left: auto; color: var(--muted-foreground); }
+.menu-sep { height: 1px; background: var(--border); margin: 4px -4px; }
+.menu-label { font-size: 12px; line-height: 16px; color: var(--muted-foreground); padding: 6px 8px 4px; font-weight: 500; }
+.dialog { background: var(--popover); border: 1px solid var(--border-strong); border-radius: var(--radius-xl); box-shadow: var(--shadow-dialog); padding: 24px; }
+.dialog h3 { font-size: 18px; line-height: 26px; font-weight: 600; }
+.dialog .d-desc { margin-top: 6px; color: var(--muted-foreground); font-size: 14px; line-height: 20px; }
+.dialog .d-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px; }
+.toast { display: flex; gap: 12px; padding: 14px 14px 14px 16px; background: var(--popover); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); box-shadow: var(--shadow-popover); font-size: 14px; line-height: 20px; width: 360px; max-width: 100%; }
+.toast > svg.i { margin-top: 2px; }
+.toast .t-title { font-weight: 600; }
+.toast .t-desc { color: var(--muted-foreground); margin-top: 2px; }
+
+/* ---------- Tabs, stepper ---------- */
+.tabs { display: flex; gap: 20px; border-bottom: 1px solid var(--border); }
+.tab { height: 40px; display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; color: var(--muted-foreground); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tab.on { color: var(--foreground); border-bottom-color: var(--ring); }
+.stepper { display: grid; gap: 4px; }
+.stepper .seg { height: 4px; border-radius: 2px; background: var(--secondary); }
+.stepper .seg.done { background: color-mix(in srgb, var(--primary) 55%, var(--secondary)); }
+.stepper .seg.cur { background: var(--primary); }
+.stepper .lbl { font-size: 12px; line-height: 16px; color: var(--muted-foreground); margin-top: 6px; }
+.stepper .lbl.cur { color: var(--foreground); font-weight: 500; }
+.vstep { display: flex; flex-direction: column; }
+.vstep-group { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--muted-foreground); padding: 14px 0 6px 0; }
+.vstep-item { display: flex; align-items: center; gap: 12px; height: 40px; font-size: 14px; color: var(--muted-foreground); position: relative; }
+.vstep-item .n { width: 24px; height: 24px; border-radius: 999px; border: 1px solid var(--border-strong); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: var(--muted-foreground); flex: none; background: var(--background); font-variant-numeric: tabular-nums; }
+.vstep-item.done { color: var(--foreground); }
+.vstep-item.done .n { background: var(--secondary); color: var(--foreground); }
+.vstep-item.cur { color: var(--foreground); font-weight: 600; }
+.vstep-item.cur .n { background: var(--primary); border-color: var(--primary); color: var(--primary-foreground); }
+.vstep-item .opt { margin-left: auto; font-size: 12px; font-weight: 400; color: var(--muted-foreground); }
+
+/* ---------- Stat tile ---------- */
+.stat { padding: 16px 20px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.stat .s-label { font-size: 13px; line-height: 18px; font-weight: 500; color: var(--muted-foreground); display: flex; align-items: center; gap: 6px; }
+.stat .s-value { font-size: 28px; line-height: 36px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.stat .s-value small { font-size: 15px; font-weight: 500; color: var(--muted-foreground); letter-spacing: 0; margin-left: 4px; }
+.stat .s-meta { font-size: 13px; line-height: 18px; color: var(--muted-foreground); display: flex; align-items: center; gap: 6px; }
+.meter { display: flex; gap: 2px; height: 6px; margin-top: 8px; }
+.meter span { border-radius: 2px; height: 100%; }
+
+/* ---------- Empty state, skeleton ---------- */
+.empty { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 40px 24px; }
+.empty .tile { margin-bottom: 16px; }
+.empty h3 { font-size: 16px; line-height: 24px; font-weight: 600; }
+.empty p { margin-top: 4px; color: var(--muted-foreground); font-size: 14px; line-height: 20px; max-width: 44ch; }
+.empty .e-actions { display: flex; gap: 8px; margin-top: 16px; }
+.sk { background: var(--muted); border-radius: var(--radius-md); }
+.sk-line { height: 12px; border-radius: 4px; background: var(--muted); }
+
+/* ---------- Page header ---------- */
+.crumbs { display: flex; align-items: center; gap: 6px; font-size: 13px; line-height: 18px; color: var(--muted-foreground); }
+.crumbs svg.i { width: 14px; height: 14px; }
+.crumbs .here { color: var(--foreground); }
+.page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
+.page-header .ph-desc { font-size: 15px; line-height: 24px; color: var(--muted-foreground); margin-top: 4px; }
+.page-header .ph-actions { display: flex; gap: 8px; flex: none; }
+
+/* ---------- Admin shell ---------- */
+.shell { display: grid; grid-template-columns: 248px 1fr; min-height: 100vh;
+  /* mockup-only: paints the sidebar column below the sticky sidebar in full-page captures */
+  background: linear-gradient(90deg, var(--sidebar) 0 247px, var(--sidebar-border) 247px 248px, var(--background) 248px); }
+.sidebar { background: var(--sidebar); color: var(--sidebar-foreground); border-right: 1px solid var(--sidebar-border); display: flex; flex-direction: column; padding: 16px 12px; gap: 4px; position: sticky; top: 0; height: 100vh; }
+.sb-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 8px 12px; gap: 8px; }
+.sb-search { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 8px 0 10px; border: 1px solid var(--sidebar-border); border-radius: var(--radius-md); background: var(--background); color: var(--muted-foreground); font-size: 13px; margin: 0 0 8px; }
+.sb-search .kbd { margin-left: auto; }
+.sb-group { margin-top: 14px; }
+.sb-group-label { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--muted-foreground); padding: 0 10px 6px; }
+.nav-item { position: relative; display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; border-radius: var(--radius-md); font-size: 14px; line-height: 20px; color: var(--sidebar-foreground); }
+.nav-item svg.i { color: var(--muted-foreground); }
+.nav-item.on { background: var(--sidebar-accent); color: var(--sidebar-accent-foreground); font-weight: 500; }
+.nav-item.on svg.i { color: var(--sidebar-accent-foreground); }
+.nav-item.on::before { content: ""; position: absolute; left: -12px; top: 8px; bottom: 8px; width: 3px; border-radius: 0 2px 2px 0; background: var(--sidebar-primary); }
+.nav-item .trail { margin-left: auto; }
+.sb-foot { margin-top: auto; border-top: 1px solid var(--sidebar-border); padding-top: 12px; display: flex; flex-direction: column; gap: 4px; }
+.me { display: flex; align-items: center; gap: 10px; padding: 6px 8px; }
+.main { min-width: 0; }
+.main-inner { max-width: 1160px; padding: 24px 40px 48px; }
+.m-topbar { display: none; }
+.tabbar { display: none; }
+
+/* ---------- Member top bar ---------- */
+.topbar { height: 60px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 28px; padding: 0 32px; background: var(--background); position: sticky; top: 0; z-index: 10; }
+.topnav { display: flex; gap: 4px; }
+.topnav a { height: 32px; display: inline-flex; align-items: center; padding: 0 10px; border-radius: var(--radius-md); font-size: 14px; color: var(--muted-foreground); font-weight: 500; position: relative; }
+.topnav a.on { color: var(--foreground); }
+.topnav a.on::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: -14px; height: 2px; background: var(--ring); border-radius: 2px; }
+.topbar .right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+
+/* ---------- Section heading ---------- */
+.section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.section-head h2 { font-size: 16px; line-height: 24px; font-weight: 600; }
+
+/* ---------- Pass (invite ticket) ---------- */
+.pass { display: grid; grid-template-columns: minmax(0, 1fr) 208px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-xl); position: relative; overflow: hidden; }
+.pass-main { padding: 28px; }
+.pass-stub { padding: 24px 22px; border-left: 1px dashed var(--border-strong); display: flex; flex-direction: column; gap: 14px; background: var(--muted); position: relative; }
+.pass::before, .pass::after { content: ""; position: absolute; width: 20px; height: 20px; border-radius: 999px; background: var(--background); right: 198px; z-index: 1; }
+.pass::before { top: -11px; box-shadow: inset 0 -1px 0 var(--border); }
+.pass::after { bottom: -11px; box-shadow: inset 0 1px 0 var(--border); }
+.pass .code { font-family: var(--font-mono); font-size: 18px; line-height: 24px; font-weight: 600; letter-spacing: 0.06em; }
+.pass-stub .stub-foot { margin-top: auto; display: flex; align-items: center; gap: 10px; padding-top: 12px; }
+.pass.is-void .pass-stub { background: var(--card); }
+.pass.is-void .code { color: var(--muted-foreground); text-decoration: line-through; text-decoration-thickness: 1.5px; }
+@media (max-width: 767px) {
+  .pass { grid-template-columns: 1fr; }
+  .pass-main { padding: 22px 20px; }
+  .pass-stub { border-left: 0; border-top: 1px dashed var(--border-strong); padding: 18px 20px; }
+  .pass::before, .pass::after { top: auto; bottom: calc(var(--stub-h, 168px) - 10px); }
+  .pass::before { left: -11px; right: auto; box-shadow: inset -1px 0 0 var(--border); }
+  .pass::after { right: -11px; left: auto; box-shadow: inset 1px 0 0 var(--border); }
+}
+/* the same stacked layout, forced (used by the mobile frames on the screens board) */
+.pass.is-stacked { grid-template-columns: 1fr; }
+.pass.is-stacked .pass-main { padding: 22px 20px; }
+.pass.is-stacked .pass-stub { border-left: 0; border-top: 1px dashed var(--border-strong); padding: 18px 20px; }
+.pass.is-stacked::before, .pass.is-stacked::after { top: auto; bottom: calc(var(--stub-h, 168px) - 10px); }
+.pass.is-stacked::before { left: -11px; right: auto; box-shadow: inset -1px 0 0 var(--border); }
+.pass.is-stacked::after { right: -11px; left: auto; box-shadow: inset 1px 0 0 var(--border); }
+
+@media (max-width: 767px) { .hide-sm { display: none !important; } }
+@media (min-width: 768px) { .show-sm { display: none !important; } }
+
+/* ---------- Rewind scope: badges sit on an opaque popover chip so the scene field never shows through ---------- */
+[data-theme="rewind"] .badge-success { background: color-mix(in srgb, var(--success) var(--tint), var(--popover)); }
+[data-theme="rewind"] .badge-info { background: color-mix(in srgb, var(--info) var(--tint), var(--popover)); }
+[data-theme="rewind"] .badge-warning { background: color-mix(in srgb, var(--warning) var(--tint), var(--popover)); }
+[data-theme="rewind"] .badge-destructive { background: color-mix(in srgb, var(--destructive) var(--tint), var(--popover)); }
+[data-theme="rewind"] .badge-neutral { background: var(--popover); }
+
+/* ---------- Admin shell below md: top bar + bottom tab bar ---------- */
+@media (max-width: 767px) {
+  .shell { grid-template-columns: 1fr; background: var(--background); }
+  .shell > .sidebar { display: none; }
+  .m-topbar { display: flex; align-items: center; gap: 8px; height: 56px; padding: 0 8px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--background); z-index: 10; }
+  .main-inner { padding: 20px 16px 32px; }
+  /* production: position fixed, bottom 0, safe-area padding, and main gets pb-20. Static here so full-page captures show it once, at the end */
+  .tabbar { display: grid; grid-template-columns: repeat(5, 1fr); position: relative; height: 64px; background: var(--sidebar); border-top: 1px solid var(--sidebar-border); z-index: 20; }
+  .tabbar a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; line-height: 16px; color: var(--muted-foreground); position: relative; }
+  .tabbar a.on { color: var(--foreground); font-weight: 500; }
+  .tabbar a.on::before { content: ""; position: absolute; top: -1px; left: calc(50% - 14px); width: 28px; height: 3px; border-radius: 0 0 2px 2px; background: var(--sidebar-primary); }
+  .tabbar .tb-dot { position: absolute; top: 10px; left: calc(50% + 6px); width: 8px; height: 8px; border-radius: 999px; background: var(--destructive); box-shadow: 0 0 0 2px var(--sidebar); }
+  .page-header { flex-direction: column; align-items: stretch; gap: 16px; }
+  .page-header .ph-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .t-h1 { font-size: 24px; line-height: 32px; }
+}
+
+
+/* ---- reference sheet ---- */
+body { font-size: 14px; line-height: 20px; }
+.sheet { max-width: 1296px; margin: 0 auto; padding: 48px 32px 72px; }
+.sheet-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
+.sheet-head h1 { font-size: 28px; line-height: 36px; font-weight: 600; letter-spacing: -0.015em; }
+.sheet-head p { color: var(--muted-foreground); margin-top: 4px; font-size: 15px; line-height: 24px; max-width: 80ch; }
+.panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin-top: 32px; }
+.panel { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px; min-width: 0; }
+.panel.wide { grid-column: 1 / -1; }
+.panel > h2 { font-size: 16px; line-height: 24px; font-weight: 600; }
+.panel > .pd { color: var(--muted-foreground); font-size: 13px; line-height: 18px; margin-top: 2px; }
+.pbody { margin-top: 20px; }
+.sub-h { font-size: 13px; line-height: 18px; font-weight: 500; color: var(--muted-foreground); margin: 20px 0 10px; }
+.sub-h:first-child { margin-top: 0; }
+.ladder { display: grid; gap: 6px; }
+.rung { display: grid; grid-template-columns: 132px 1fr 76px 64px; align-items: center; gap: 12px; height: 34px; padding: 0 12px; border-radius: var(--radius-md); border: 1px solid var(--border); font-size: 13px; }
+.rung .mono { font-size: 12px; color: var(--muted-foreground); }
+.rung .r { text-align: right; font-variant-numeric: tabular-nums; }
+.cx { display: grid; grid-template-columns: 18px 1fr auto auto; gap: 12px; align-items: center; padding: 8px 0; border-top: 1px solid var(--border); font-size: 13px; }
+.cx:first-child { border-top: 0; }
+.cx .sw { width: 14px; height: 14px; border-radius: 3px; }
+.cx .r { font-variant-numeric: tabular-nums; font-weight: 500; text-align: right; min-width: 52px; }
+.lines { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.lines .ln { height: 64px; border-radius: var(--radius-md); background: var(--background); display: flex; align-items: flex-end; padding: 10px; font-size: 12px; color: var(--muted-foreground); }
+.spec { display: grid; grid-template-columns: 160px 1fr; gap: 14px 24px; align-items: baseline; }
+.spec .k { font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+.spec .k b { color: var(--foreground); font-weight: 500; display: block; font-size: 13px; }
+.btn-grid { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.state-grid { display: grid; grid-template-columns: 96px repeat(5, minmax(0, 1fr)); gap: 10px 10px; align-items: center; }
+.state-grid .h { font-size: 12px; color: var(--muted-foreground); }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 20px; }
+.vocab { width: 100%; border-collapse: collapse; font-size: 13px; }
+.vocab th { text-align: left; font-weight: 500; color: var(--muted-foreground); font-size: 12px; padding: 0 0 8px; }
+.vocab td { padding: 7px 12px 7px 0; border-top: 1px solid var(--border); vertical-align: middle; }
+.vocab td:first-child { color: var(--muted-foreground); width: 110px; }
+.vocab .cell { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.stack-12 { display: grid; gap: 12px; }
+.overlay-demo { background: var(--overlay); border-radius: var(--radius-lg); padding: 28px; display: flex; align-items: center; justify-content: center; background-image: linear-gradient(var(--overlay), var(--overlay)), repeating-linear-gradient(0deg, var(--card) 0 18px, var(--muted) 18px 36px); }
+.empties { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.empties .card .empty { padding: 28px 20px; }
+.toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.filter-btn { height: 32px; display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: transparent; font-size: 13px; color: var(--foreground); white-space: nowrap; }
+.filter-btn .k { color: var(--muted-foreground); }
+.filter-btn.active { border-color: var(--input); background: var(--secondary); }
+.filter-btn svg.i { color: var(--muted-foreground); width: 14px; height: 14px; }
+.rw-states { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.rwm { border-radius: var(--radius-xl); overflow: hidden; background: var(--rw-field, var(--background)); padding: 18px; display: grid; grid-template-columns: minmax(0, 1fr) 86px; gap: 14px; min-height: 196px; }
+.rwm h3 { font-size: 17px; line-height: 22px; font-weight: 600; letter-spacing: -0.01em; margin-top: 10px; }
+.rwm p { font-size: 13px; line-height: 18px; color: var(--muted-foreground); margin-top: 4px; }
+.rwm .acts { margin-top: 14px; display: flex; gap: 6px; flex-wrap: wrap; }
+.rwm .art { display: grid; gap: 6px; align-content: start; }
+.rwm .art .poster { box-shadow: var(--shadow-poster); }
+.rwm .art.dim .poster { opacity: 0.45; }
+.rwm .frame-empty { aspect-ratio: 2 / 3; border-radius: var(--radius-sm); border: 1px dashed var(--border-strong); display: flex; align-items: center; justify-content: center; color: var(--muted-foreground); }
+.archive { display: flex; gap: 16px; align-items: center; margin-top: 16px; padding: 14px 16px; border-radius: var(--radius-lg); border: 1px solid var(--border); background: var(--background); }
+.archive .yr { display: flex; align-items: center; gap: 10px; padding-right: 16px; border-right: 1px solid var(--border); }
+.archive .yr:last-of-type { border-right: 0; }
+.archive .yr .poster { width: 30px; box-shadow: none; }
+.wm-tests { display: grid; gap: 10px; }
+.wm-tests .t { display: flex; align-items: center; gap: 14px; height: 48px; padding: 0 14px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--background); }
+.wm-tests .t .note { margin-left: auto; font-size: 12px; color: var(--muted-foreground); white-space: nowrap; }
+.wm-tests .wordmark { max-width: 220px; }
+.icons { display: flex; gap: 12px; align-items: flex-end; margin-top: 14px; }
+.fav { display: inline-flex; align-items: center; justify-content: center; background: oklch(25.2% 0.005 255); color: oklch(96.5% 0.003 255); font-weight: 600; position: relative; border-radius: 22%; }
+.fav::after { content: ""; position: absolute; top: 14%; right: 14%; width: 20%; height: 20%; border-radius: 2px; background: oklch(79% 0.155 75); }
+.chips { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.chips .c { height: 44px; border-radius: var(--radius-md); }
+.chips .l { font-size: 12px; color: var(--muted-foreground); margin-top: 6px; font-variant-numeric: tabular-nums; }
+.light-panel { border-radius: var(--radius-lg); background: var(--background); color: var(--foreground); border: 1px solid var(--border); padding: 20px; }
+.viewer-ctl { display: flex; align-items: center; gap: 8px; padding: 12px; border-radius: var(--radius-lg); background: var(--popover); border: 1px solid var(--border); }
+.contract { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; font-size: 13px; line-height: 18px; }
+.contract h4 { font-size: 13px; font-weight: 600; margin: 0 0 6px; }
+.contract .mono { font-size: 12px; line-height: 18px; color: var(--muted-foreground); }
+</style>
+</head>
+<body>
+<main class="sheet" id="main">
+  <div class="sheet-head">
+    <div>
+      <h1>Design system reference</h1>
+      <p>Tokens and components for every Plex Manager surface. Dark is the default theme, light is specified and ships behind a flag, and Rewind is a scoped theme over the same token names. This sheet is the Playwright visual-regression target for <span class="mono" style="font-size:13px">components/ui</span>.</p>
+    </div>
+    <span class="wordmark"><span class="pip"></span><span class="wm-name">Northfield Plex</span></span>
+  </div>
+
+  <div class="panels">
+    <!-- Surfaces -->
+    <section class="panel">
+      <h2>Surfaces, darkest to lightest</h2>
+      <p class="pd">Graphite at hue 255, chroma 0.006 or less. Each layer steps up about 3 points of lightness. Ratios are foreground / muted-foreground.</p>
+      <div class="pbody ladder">
+        <div class="rung" style="background:var(--sidebar)"><span>sidebar</span><span class="mono">oklch(20.5% 0.005 255)</span><span class="r">16.18</span><span class="r muted">8.35</span></div>
+        <div class="rung" style="background:var(--background)"><span>background</span><span class="mono">oklch(22.5% 0.005 255)</span><span class="r">15.45</span><span class="r muted">7.97</span></div>
+        <div class="rung" style="background:var(--card)"><span>card</span><span class="mono">oklch(25.2% 0.005 255)</span><span class="r">14.37</span><span class="r muted">7.41</span></div>
+        <div class="rung" style="background:var(--muted)"><span>muted</span><span class="mono">oklch(27.5% 0.005 255)</span><span class="r">13.40</span><span class="r muted">6.91</span></div>
+        <div class="rung" style="background:var(--popover)"><span>popover</span><span class="mono">oklch(28% 0.006 255)</span><span class="r">13.18</span><span class="r muted">6.80</span></div>
+        <div class="rung" style="background:var(--secondary)"><span>secondary</span><span class="mono">oklch(30.5% 0.006 255)</span><span class="r">12.10</span><span class="r muted">6.24</span></div>
+        <div class="rung" style="background:var(--accent)"><span>accent</span><span class="mono">oklch(31.5% 0.006 255)</span><span class="r">11.67</span><span class="r muted">6.02</span></div>
+      </div>
+      <div class="sub-h">Three line weights</div>
+      <div class="lines">
+        <div class="ln" style="border:1px solid var(--border)">border, 1.41:1, dividers</div>
+        <div class="ln" style="border:1px solid var(--border-strong)">border-strong, 2.05:1, buttons and popovers</div>
+        <div class="ln" style="border:1px solid var(--input)">input, 3.42:1, every control</div>
+      </div>
+    </section>
+
+    <!-- Contrast -->
+    <section class="panel">
+      <h2>Text and signals on card, measured</h2>
+      <p class="pd">WCAG 2.x ratios computed from the OKLCH values. Badges are measured on every surface they can sit on; the worst case is shown.</p>
+      <div class="pbody">
+        <div class="cx"><span class="sw" style="background:var(--foreground)"></span><span>foreground</span><span class="muted">Body, headings, values</span><span class="r">14.37</span></div>
+        <div class="cx"><span class="sw" style="background:var(--muted-foreground)"></span><span>muted-foreground</span><span class="muted">The dimmest text allowed</span><span class="r">7.41</span></div>
+        <div class="cx"><span class="sw" style="background:var(--primary)"></span><span>primary-foreground on primary</span><span class="muted">The one amber action</span><span class="r">9.19</span></div>
+        <div class="cx"><span class="sw" style="background:var(--success)"></span><span style="color:var(--success)">success</span><span class="muted">Badge, worst case on popover</span><span class="r">5.62</span></div>
+        <div class="cx"><span class="sw" style="background:var(--warning)"></span><span style="color:var(--warning)">warning</span><span class="muted">Badge, worst case on popover</span><span class="r">7.17</span></div>
+        <div class="cx"><span class="sw" style="background:var(--info)"></span><span style="color:var(--info)">info</span><span class="muted">Badge, worst case on popover</span><span class="r">5.39</span></div>
+        <div class="cx"><span class="sw" style="background:var(--destructive)"></span><span style="color:var(--destructive)">destructive</span><span class="muted">Badge, worst case on popover</span><span class="r">4.69</span></div>
+        <div class="cx"><span class="sw" style="background:var(--ring)"></span><span>ring</span><span class="muted">Focus outline, non-text</span><span class="r">8.05</span></div>
+      </div>
+      <div class="sub-h">Amber is not warning</div>
+      <div class="row" style="gap:12px; flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm">Save changes</button>
+        <span class="badge badge-warning"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>Past due</span>
+        <span class="t-xs muted" style="max-width:40ch">Primary is always a solid fill with dark text. Warning is never a fill and always carries a triangle and a word. Separation under deuteranopia: dE 9.0.</span>
+      </div>
+    </section>
+
+    <!-- Type -->
+    <section class="panel wide">
+      <h2>Type</h2>
+      <p class="pd">IBM Plex Sans (variable, wght 100 to 700, wdth 75 to 100) for everything you read; IBM Plex Mono for URLs, keys, IDs and codes. Weights 400, 500 and 600 only. Display sizes run at 92% width.</p>
+      <div class="pbody spec">
+        <div class="k"><b>display</b>40/48, 600, -0.022em, wdth 92</div><div class="t-display">Good evening, Morgan</div>
+        <div class="k"><b>h1</b>28/36, 600, -0.015em</div><div class="t-h1">Users</div>
+        <div class="k"><b>h2</b>20/28, 600, -0.01em</div><div class="t-h2">Connect Overseerr</div>
+        <div class="k"><b>h3</b>16/24, 600</div><div class="t-h3">Watchlist Sync</div>
+        <div class="k"><b>lead</b>17/28, 400</div><div class="t-lead">A private Plex server shared by a group of friends.</div>
+        <div class="k"><b>body</b>15/24, 400 (member pages)</div><div class="t-body">The server will be offline Sunday from 2am to 4am for a storage upgrade.</div>
+        <div class="k"><b>ui</b>14/20, 400 or 500 (admin)</div><div class="t-sm">Everyone with an account on Northfield Plex, with their access and billing.</div>
+        <div class="k"><b>label</b>13/18, 500</div><div class="t-label">Plex access</div>
+        <div class="k"><b>caption</b>12/16, 500, the floor</div><div class="t-2xs" style="font-weight:500">Checked 2 minutes ago</div>
+        <div class="k"><b>stat</b>28/36, 600, tabular</div><div class="t-stat">$0.087 <span class="t-sm muted" style="font-weight:400">21,338 tokens</span></div>
+        <div class="k"><b>mono</b>13/20, 400</div><div class="mono">http://192.168.1.20:32400</div>
+      </div>
+    </section>
+
+    <!-- Buttons -->
+    <section class="panel">
+      <h2>Button</h2>
+      <p class="pd">Six variants, all flat. One primary per view. Disabled is neutral, never faded amber. No trailing arrows; external links get arrow-up-right.</p>
+      <div class="pbody">
+        <div class="btn-grid">
+          <button class="btn btn-primary">Save changes</button>
+          <button class="btn btn-secondary">Test connection</button>
+          <button class="btn btn-outline">Previous</button>
+          <button class="btn btn-ghost">Discard</button>
+          <button class="btn btn-destructive">Remove access</button>
+          <a class="btn btn-ghost" href="#"><span class="link">Setup guide</span><svg class="i i-14" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg></a>
+        </div>
+        <div class="sub-h">Sizes</div>
+        <div class="btn-grid">
+          <button class="btn btn-primary btn-lg"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg>Open Rewind</button>
+          <button class="btn btn-secondary">Default 36</button>
+          <button class="btn btn-secondary btn-sm">Small 32</button>
+          <button class="btn btn-secondary btn-icon" aria-label="Refresh"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg></button>
+          <button class="btn btn-ghost btn-icon btn-sm muted" aria-label="Actions"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg></button>
+        </div>
+        <div class="sub-h">States</div>
+        <div class="state-grid">
+          <span></span><span class="h">Rest</span><span class="h">Hover</span><span class="h">Focus visible</span><span class="h">Loading</span><span class="h">Disabled</span>
+          <span class="h">primary</span><button class="btn btn-primary btn-sm">Save</button><button class="btn btn-primary btn-sm is-hover">Save</button><button class="btn btn-primary btn-sm is-focus">Save</button><button class="btn btn-primary btn-sm" aria-busy="true"><svg class="i spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>Saving</button><button class="btn btn-primary btn-sm is-disabled" disabled>Save</button>
+          <span class="h">secondary</span><button class="btn btn-secondary btn-sm">Test</button><button class="btn btn-secondary btn-sm is-hover">Test</button><button class="btn btn-secondary btn-sm is-focus">Test</button><button class="btn btn-secondary btn-sm" aria-busy="true"><svg class="i spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>Testing</button><button class="btn btn-secondary btn-sm is-disabled" disabled>Test</button>
+          <span class="h">ghost</span><button class="btn btn-ghost btn-sm">Discard</button><button class="btn btn-ghost btn-sm is-hover">Discard</button><button class="btn btn-ghost btn-sm is-focus">Discard</button><button class="btn btn-ghost btn-sm" aria-busy="true"><svg class="i spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>Working</button><button class="btn btn-ghost btn-sm is-disabled" disabled>Discard</button>
+        </div>
+        <div class="sub-h">Confirm dialogs only</div>
+        <div class="btn-grid"><button class="btn btn-destructive-solid">Remove access</button><span class="t-xs muted">Solid destructive, 7.44:1, never outside an AlertDialog.</span></div>
+      </div>
+    </section>
+
+    <!-- Forms -->
+    <section class="panel">
+      <h2>Field, Input, Select, Switch, Checkbox</h2>
+      <p class="pd">36px controls (40px and 16px text below md, so iOS doesn't zoom). Label, description and error are wired by Field.</p>
+      <div class="pbody form-grid">
+        <div class="field"><label class="label">Server name</label><div class="input">Northfield Plex</div><span class="hint">Shown to members everywhere.</span></div>
+        <div class="field"><label class="label">Local URL</label><div class="input mono is-focus">http://192.168.1.20:5055</div><span class="hint">Focused: border and 2px ring.</span></div>
+        <div class="field"><label class="label">Webhook signing secret</label><div class="input mono is-invalid"><span class="ph">whsec_…</span></div><span class="error-text"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>Required before subscriptions can be turned on.</span></div>
+        <div class="field"><label class="label">API key</label><div class="input mono"><span>••••••••••••0be4</span><span class="trail"><span class="saved"><svg class="i i-12" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Saved</span><button class="btn btn-ghost btn-sm" style="height:24px; padding:0 6px; font-size:12px">Show</button></span></div><span class="hint">Stored secrets show the last four characters.</span></div>
+        <div class="field" style="position:relative"><label class="label">Provider</label><div class="input select is-focus" aria-expanded="true"><span>OpenAI</span><span class="trail"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg></span></div>
+          <div class="menu" role="listbox" style="position:relative; margin-top:4px; width:100%">
+            <div class="menu-item is-active" style="justify-content:space-between">OpenAI<svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></div>
+            <div class="menu-item">Anthropic</div>
+            <div class="menu-item">OpenRouter</div>
+          </div>
+        </div>
+        <div class="field"><label class="label">Disabled</label><div class="input is-disabled">Locked while a job runs</div>
+          <div class="stack-12" style="margin-top:12px">
+            <label class="switch-row"><span class="t-sm">Watchlist Sync</span><span class="row"><span class="t-xs muted">On</span><span class="switch on" role="switch" aria-checked="true"></span></span></label>
+            <label class="switch-row"><span class="t-sm">Support bot</span><span class="row"><span class="t-xs muted">Off</span><span class="switch" role="switch" aria-checked="false"></span></span></label>
+            <label class="switch-row"><span class="t-sm muted">Subscriptions</span><span class="row"><span class="t-xs muted">Off</span><span class="switch disabled" role="switch" aria-disabled="true"></span></span></label>
+            <span class="row" style="gap:18px"><span class="check-row"><span class="checkbox on"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span>Movies</span><span class="check-row"><span class="checkbox"></span>4K Movies</span></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Status vocabulary -->
+    <section class="panel wide">
+      <h2>Status vocabulary (<span class="mono" style="font-size:14px">lib/ui/status.ts</span>)</h2>
+      <p class="pd">One word and one tone per domain state, everywhere. Badges are for states; categories are plain text; live health is a dot and a word. Sub-lines carry the date.</p>
+      <div class="pbody" style="display:grid; grid-template-columns: 1fr 1fr; gap: 0 40px">
+        <table class="vocab">
+          <tr><th>Domain</th><th>Values</th></tr>
+          <tr><td>Subscription</td><td><div class="cell"><span class="badge badge-success"><span class="dot"></span>Active</span><span class="badge badge-warning"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>Past due</span><span class="badge badge-destructive"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>Canceled</span><span class="badge badge-neutral">Incomplete</span><span class="muted">None</span></div></td></tr>
+          <tr><td>Exemption</td><td><div class="cell"><span class="badge badge-info">Comp</span><span class="badge badge-neutral">Exempt</span><span class="muted">Grandfathered</span><span class="muted">Not required</span></div></td></tr>
+          <tr><td>Plex access</td><td><div class="cell"><span class="status t-xs"><span class="dot dot-success"></span>Shared</span><span class="status t-xs"><span class="dot dot-off"></span>Not shared</span><span class="status t-xs"><span class="dot dot-warning"></span>Unknown</span></div></td></tr>
+          <tr><td>Role</td><td><div class="cell"><span class="badge"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg>Owner</span><span class="badge">Admin</span><span>Member</span></div></td></tr>
+          <tr><td>Rewind</td><td><div class="cell"><span class="badge badge-success"><span class="dot"></span>Ready</span><span class="badge badge-info"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>Generating</span><span class="badge badge-destructive"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>Failed</span><span class="badge badge-neutral">Opens Dec 1</span><span class="muted">Not started</span><span class="muted">Not eligible yet</span></div></td></tr>
+        </table>
+        <table class="vocab">
+          <tr><th>Domain</th><th>Values</th></tr>
+          <tr><td>Connection</td><td><div class="cell"><span class="badge badge-success"><span class="dot"></span>Connected</span><span class="badge badge-destructive"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>Can't connect</span><span class="badge badge-warning"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>Needs setup</span><span class="badge badge-neutral">Not checked</span><span class="badge badge-neutral">Off</span><span class="badge">Not set up</span></div></td></tr>
+          <tr><td>Queue job</td><td><div class="cell"><span class="badge badge-info"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>Running</span><span class="badge badge-neutral">Waiting</span><span class="badge badge-success"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Done</span><span class="badge badge-destructive"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>Failed</span><span class="badge badge-warning"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="14" y="3" width="5" height="18" rx="1"/><rect x="5" y="3" width="5" height="18" rx="1"/></svg>Paused</span></div></td></tr>
+          <tr><td>Worker</td><td><div class="cell"><span class="status t-xs"><span class="dot dot-success"></span>Worker running</span><span class="status t-xs"><span class="dot dot-destructive"></span>Worker stopped</span></div></td></tr>
+          <tr><td>Invite</td><td><div class="cell"><span class="badge badge-success"><span class="dot"></span>Active</span><span class="badge badge-neutral">Expired</span><span class="badge badge-neutral">Used up</span><span class="badge badge-neutral">Revoked</span></div></td></tr>
+          <tr><td>Request</td><td><div class="cell"><span class="badge badge-neutral">Waiting for approval</span><span class="badge badge-info"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Requested</span><span class="badge badge-success"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Available</span><span class="badge badge-destructive">Declined</span></div></td></tr>
+        </table>
+      </div>
+    </section>
+
+    <!-- Alerts and toasts -->
+    <section class="panel">
+      <h2>Alert and Toast</h2>
+      <p class="pd">Alerts sit in the page (8% tint). Toasts float at z 80, above dialogs, as live regions; errors stay until dismissed.</p>
+      <div class="pbody stack-12">
+        <div class="alert alert-success" role="status"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg><div><span class="alert-title">Connected to Overseerr 1.33.2.</span> <span class="alert-body">It answered in 48 ms.</span></div></div>
+        <div class="alert alert-info" role="status"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg><div><span class="alert-title">Rewind 2026 opens December 1.</span> <span class="alert-body">Members can start watching theirs then.</span></div></div>
+        <div class="alert alert-warning" role="status"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg><div class="grow"><span class="alert-title">Plex didn't respond.</span> <span class="alert-body">Access shows as Unknown until it answers.</span></div><div class="alert-actions"><button class="btn btn-secondary btn-sm">Check again</button></div></div>
+        <div class="alert alert-destructive" role="alert"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg><div><span class="alert-title">The connection to localhost:8181 was refused.</span> <span class="alert-body">Check that Tautulli is running.</span></div></div>
+        <div class="row" style="gap:12px; align-items:flex-start; margin-top:4px">
+          <div class="toast" role="status"><svg class="i i" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg><div class="grow"><div class="t-title">Overseerr settings saved</div><div class="t-desc">Requests use the new address.</div></div><button class="btn btn-ghost btn-icon btn-sm muted" aria-label="Dismiss"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div>
+        </div>
+        <div class="toast" role="alert" style="width:100%"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg><div class="grow"><div class="t-title">Couldn't start the sync</div><div class="t-desc">Overseerr didn't answer. Try again in a minute.</div></div><button class="btn btn-secondary btn-sm">Retry</button><button class="btn btn-ghost btn-icon btn-sm muted" aria-label="Dismiss"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div>
+      </div>
+    </section>
+
+    <!-- Dialog -->
+    <section class="panel">
+      <h2>ConfirmDialog</h2>
+      <p class="pd">Names the object and the consequence. The confirm stays pending in place; errors show inside the dialog. Below md it becomes a bottom sheet.</p>
+      <div class="pbody overlay-demo">
+        <div class="dialog" role="alertdialog" aria-labelledby="dlg-h" style="max-width:420px">
+          <h3 id="dlg-h">Remove Plex access for Sam Rivera?</h3>
+          <p class="d-desc">Sam will lose access to all 6 libraries right away. Their account, Rewinds and subscription history stay.</p>
+          <div class="field" style="margin-top:16px"><label class="label">Type <span class="mono" style="font-size:13px">sam rivera</span> to confirm</label><div class="input"><span>sam rivera</span></div></div>
+          <div class="d-actions"><button class="btn btn-ghost">Cancel</button><button class="btn btn-destructive-solid" aria-busy="true"><svg class="i spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>Removing</button></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Filter toolbar -->
+    <section class="panel wide">
+      <h2>FilterBar</h2>
+      <p class="pd">Defaults are always All. A changed filter turns its button into the active style, adds a removable chip and shows Reset. The count is a polite live region. State lives in the URL.</p>
+      <div class="pbody">
+        <div class="toolbar">
+          <div class="input" style="width:280px"><span class="lead"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg></span><span class="ph">Search name or email</span><span class="trail"><span class="kbd">/</span></span></div>
+          <button class="filter-btn"><span class="k">Role</span>All<svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+          <button class="filter-btn active"><span class="k">Plex access</span>Unknown<svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+          <button class="filter-btn active"><span class="k">Subscription</span>Past due<svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+          <button class="btn btn-ghost btn-sm">Reset</button>
+          <span style="flex:1"></span>
+          <span class="t-xs muted num" aria-live="polite">1 of 7 members</span>
+          <button class="filter-btn"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/></svg><span class="k">Sort</span>Joined, newest</button>
+        </div>
+        <div class="row" style="gap:8px; margin-top:10px">
+          <span class="chip">Plex access: Unknown<span class="x" aria-label="Remove filter"><svg class="i i-12" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span></span>
+          <span class="chip">Subscription: Past due<span class="x" aria-label="Remove filter"><svg class="i i-12" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span></span>
+          <button class="btn btn-ghost btn-sm">Clear filters</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Empty states -->
+    <section class="panel wide">
+      <h2>EmptyState, three kinds</h2>
+      <p class="pd">Never a bare "No X found". First use explains and offers the create action; filtered offers Clear filters; unavailable says which service and offers Retry.</p>
+      <div class="pbody empties">
+        <div class="card"><div class="empty"><span class="tile"><svg class="i i-20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/></svg></span><h3>No invites yet</h3><p>Create an invite to bring someone onto Northfield Plex. You choose the libraries and how long it lasts.</p><div class="e-actions"><button class="btn btn-primary btn-sm"><svg class="i i-14" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>Create invite</button></div></div></div>
+        <div class="card"><div class="empty"><span class="tile"><svg class="i i-20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 5h20"/><path d="M6 12h12"/><path d="M9 19h6"/></svg></span><h3>No users match these filters</h3><p>7 members are hidden by Plex access: Shared and Subscription: Past due.</p><div class="e-actions"><button class="btn btn-secondary btn-sm">Clear filters</button></div></div></div>
+        <div class="card"><div class="empty"><span class="tile" style="color:var(--warning)"><svg class="i i-20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span><h3>Tautulli isn't answering</h3><p>Watch history can't load until it reconnects. Nothing is lost; it was last seen 4 minutes ago.</p><div class="e-actions"><button class="btn btn-secondary btn-sm"><svg class="i i-14" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>Retry</button><button class="btn btn-ghost btn-sm">Open settings</button></div></div></div>
+      </div>
+    </section>
+
+    <!-- Stat, table row, skeleton -->
+    <section class="panel">
+      <h2>StatTile, DataTable row, Skeleton</h2>
+      <p class="pd">Values are always foreground; colour appears only with a word. Two tiles per row on phones.</p>
+      <div class="pbody" style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
+        <div class="card stat"><div class="s-label">Rewind 2026</div><div class="s-value">2<small>of 7 ready</small></div><div class="meter" role="img" aria-label="2 ready, 1 generating, 1 failed, 3 not started"><span style="flex:2; background:var(--success)"></span><span style="flex:1; background:var(--info)"></span><span style="flex:1; background:var(--destructive)"></span><span style="flex:3; background:var(--border-strong)"></span></div><div class="s-meta" style="margin-top:6px">1 generating, 1 failed, 3 not started</div></div>
+        <div class="card stat"><div class="s-label">Job queues</div><div class="s-value">2<small>failed</small></div><div class="s-meta"><span class="status"><span class="dot dot-success" style="width:7px;height:7px"></span></span>Worker running, updated 3s ago</div></div>
+        <div class="table-wrap" style="grid-column:1/-1">
+          <table class="table"><thead><tr><th scope="col">User</th><th scope="col">Subscription</th><th scope="col" class="r">LLM cost</th></tr></thead>
+          <tbody><tr><td><div class="user-cell"><span class="avatar">ML</span><div><a class="name" href="#">Morgan Lee</a><div class="sub">morgan.lee@mail.example</div></div></div></td><td><span class="badge badge-success"><span class="dot"></span>Active</span><div class="sub" style="margin-top:4px">Renews Nov 6, 2026</div></td><td class="r num">$0.019</td></tr></tbody></table>
+        </div>
+        <div class="card" style="grid-column:1/-1; padding:16px; display:grid; grid-template-columns: 32px 1fr 80px; gap:12px; align-items:center" aria-busy="true"><span class="sk" style="width:32px; height:32px; border-radius:999px"></span><span><span class="sk-line" style="display:block; width:46%"></span><span class="sk-line" style="display:block; width:70%; margin-top:8px"></span></span><span class="sk-line"></span></div>
+      </div>
+    </section>
+
+    <!-- Brand -->
+    <section class="panel">
+      <h2>Wordmark and monogram</h2>
+      <p class="pd">The server name is the brand, preceded by the amber pip. Long names condense to 85% width before truncating. The monogram is the first grapheme (Intl.Segmenter) plus the pip; scripts Plex Sans doesn't cover fall back to system-ui.</p>
+      <div class="pbody wm-tests">
+        <div class="t"><span class="wordmark"><span class="pip"></span><span class="wm-name">Northfield Plex</span></span><span class="note">Typical</span></div>
+        <div class="t"><span class="wordmark"><span class="pip"></span><span class="wm-name">Test Plex Server</span></span><span class="note">Seed data</span></div>
+        <div class="t"><span class="wordmark is-long"><span class="pip"></span><span class="wm-name">The Basement Screening Room and Archive</span></span><span class="note">Over 22 characters: wdth 85, then ellipsis</span></div>
+        <div class="t"><span class="wordmark"><span class="pip"></span><span class="wm-name">Σινεμά Αθήνας</span></span><span class="note">Greek subset loaded</span></div>
+      </div>
+      <div class="icons" aria-label="Generated icons">
+        <span class="fav" style="width:64px; height:64px; font-size:30px">N</span>
+        <span class="fav" style="width:32px; height:32px; font-size:16px">N</span>
+        <span class="fav" style="width:32px; height:32px; font-size:16px">T</span>
+        <span class="fav" style="width:32px; height:32px; font-size:16px">Σ</span>
+        <span class="fav" style="width:16px; height:16px; font-size:9px; border-radius:3px">N</span>
+        <span class="t-xs muted" style="margin-left:8px">app/icon.tsx and app/apple-icon.tsx render these with next/og</span>
+      </div>
+    </section>
+
+    <!-- Rewind card states -->
+    <section class="panel wide">
+      <h2>Rewind card states (home)</h2>
+      <p class="pd">The whole card renders under <span class="mono" style="font-size:12px">data-theme="rewind"</span>. Its field colour comes from the member's grade (from their top title), so cards differ per member while buttons, badges and type stay the app's.</p>
+      <div class="pbody rw-states">
+        <div class="rwm" data-theme="rewind" style="--rw-field: oklch(27% 0.055 28)">
+          <div><span class="badge badge-success"><span class="dot"></span>Ready to watch</span><h3>Your Rewind 2026 is ready</h3><p>Fourteen chapters, about four minutes. Only you can see it.</p><div class="acts"><button class="btn btn-primary btn-sm"><svg class="i i-14" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg>Open Rewind</button><button class="btn btn-ghost btn-sm"><svg class="i i-14" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Copy link</button></div></div>
+          <div class="art"><div class="poster"><svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="200" height="300" fill="#6f241b"/><circle cx="100" cy="128" r="62" fill="#e0673a"/><path d="M100 70 C125 110 132 140 100 190 C68 140 75 110 100 70Z" fill="#2b0f0b"/><rect y="214" width="200" height="86" fill="#4a160f"/><text x="16" y="246.68" font-family="IBM Plex Sans" font-size="34" font-weight="650" letter-spacing="-0.5" style="font-stretch:78%" fill="#f6dcc4" text-anchor="start">Ember</text><text x="16" y="280" font-family="IBM Plex Sans" font-size="34" font-weight="650" letter-spacing="-0.5" style="font-stretch:78%" fill="#f6dcc4" text-anchor="start">Hours</text></svg></div></div>
+        </div>
+        <div class="rwm" data-theme="rewind" style="--rw-field: oklch(30% 0.05 220)">
+          <div><span class="badge badge-info"><svg class="i spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>Generating</span><h3>Putting your year together</h3><p>Usually a minute or two. You can leave this page; we'll keep going.</p><div class="meter" style="margin-top:14px" role="progressbar" aria-valuenow="60" aria-label="Generating Rewind"><span style="flex:3; background:var(--primary)"></span><span style="flex:2; background:var(--border-strong)"></span></div></div>
+          <div class="art dim"><div class="poster"><svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="200" height="300" fill="#174148"/><circle cx="100" cy="150" r="54" fill="#e9a94b"/><rect y="150" width="200" height="150" fill="#0f2f35"/><rect x="40" y="162" width="120" height="3" fill="#e9a94b" opacity="0.8"/><rect x="46" y="174" width="108" height="3" fill="#e9a94b" opacity="0.66"/><rect x="52" y="186" width="96" height="3" fill="#e9a94b" opacity="0.52"/><rect x="58" y="198" width="84" height="3" fill="#e9a94b" opacity="0.38"/><rect x="64" y="210" width="72" height="3" fill="#e9a94b" opacity="0.24"/><text x="16" y="34.56" font-family="IBM Plex Sans" font-size="28" font-weight="650" letter-spacing="-0.5" style="font-stretch:78%" fill="#f3e6cf" text-anchor="start">The Long</text><text x="16" y="62" font-family="IBM Plex Sans" font-size="28" font-weight="650" letter-spacing="-0.5" style="font-stretch:78%" fill="#f3e6cf" text-anchor="start">Tide</text></svg></div></div>
+        </div>
+        <div class="rwm" data-theme="rewind" style="--rw-field: oklch(28% 0.07 330)">
+          <div><span class="badge badge-destructive"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>Couldn't finish</span><h3>Your Rewind hit a snag</h3><p>The watch history service didn't answer. Your year is safe; try again in a few minutes.</p><div class="acts"><button class="btn btn-secondary btn-sm"><svg class="i i-14" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>Try again</button></div></div>
+          <div class="art dim"><div class="poster"><svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="200" height="300" fill="#3a2446"/><circle cx="62" cy="120" r="30" fill="#f1e4c8"/><circle cx="128" cy="96" r="18" fill="#f1e4c8" opacity=".7"/><circle cx="140" cy="172" r="40" fill="#f1e4c8" opacity=".9"/><circle cx="128" cy="166" r="40" fill="#3a2446"/><text x="16" y="252.6" font-family="IBM Plex Sans" font-size="30" font-weight="650" letter-spacing="-0.5" style="font-stretch:78%" fill="#f1e4c8" text-anchor="start">Paper</text><text x="16" y="282" font-family="IBM Plex Sans" font-size="30" font-weight="650" letter-spacing="-0.5" style="font-stretch:78%" fill="#f1e4c8" text-anchor="start">Moons</text></svg></div></div>
+        </div>
+        <div class="rwm" data-theme="rewind" style="--rw-field: oklch(30% 0.05 160)">
+          <div><span class="badge badge-neutral"><svg class="i i-12" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>Opens Dec 1</span><h3>Rewind 2026 opens December 1</h3><p>Keep watching; everything until then counts. Last year's is ready below.</p><div class="acts"><button class="btn btn-secondary btn-sm">Open Rewind 2025</button></div></div>
+          <div class="art"><div class="frame-empty"><svg class="i i-20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12.296 3.464 3.02 3.956"/><path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3z"/><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="m6.18 5.276 3.1 3.899"/></svg></div></div>
+        </div>
+        <div class="rwm" data-theme="rewind" style="--rw-field: oklch(22% 0.03 40)">
+          <div><span class="badge badge-neutral">Not yet</span><h3>Your first Rewind comes next year</h3><p>Rewind needs six months of watching. You joined in August, so yours arrives December 2027.</p></div>
+          <div class="art"><div class="frame-empty"><svg class="i i-20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/></svg></div></div>
+        </div>
+        <div class="rwm" data-theme="rewind" style="--rw-field: oklch(32% 0.12 270)">
+          <div><span class="badge badge-success"><span class="dot"></span>Ready to watch</span><h3>Window closed, still yours</h3><p>Rewind 2026 closed on January 31. You can watch it any time from Your Rewinds.</p><div class="acts"><button class="btn btn-primary btn-sm"><svg class="i i-14" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg>Open Rewind 2026</button></div></div>
+          <div class="art"><div class="poster"><svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="200" height="300" fill="#191c38"/><rect x="24" y="126" width="18" height="120" fill="#cf4f8f"/><rect x="52" y="162" width="18" height="84" fill="#3fb5c4"/><rect x="80" y="106" width="18" height="140" fill="#7a5fd0"/><rect x="108" y="150" width="18" height="96" fill="#cf4f8f"/><rect x="136" y="176" width="18" height="70" fill="#3fb5c4"/><rect x="164" y="128" width="18" height="118" fill="#7a5fd0"/><rect y="246" width="200" height="54" fill="#11132a"/><text x="16" y="56" font-family="IBM Plex Sans" font-size="30" font-weight="650" letter-spacing="-0.5" style="font-stretch:78%" fill="#ece9ff" text-anchor="start">Night Shift</text></svg></div></div>
+        </div>
+      </div>
+      <div class="archive" aria-label="Your Rewinds">
+        <span class="t-sm" style="font-weight:600; padding-right:6px">Your Rewinds</span>
+        <a class="yr" href="#"><span class="poster"><svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="200" height="300" fill="#6f241b"/><circle cx="100" cy="128" r="62" fill="#e0673a"/><path d="M100 70 C125 110 132 140 100 190 C68 140 75 110 100 70Z" fill="#2b0f0b"/><rect y="214" width="200" height="86" fill="#4a160f"/><text x="16" y="246.68" font-family="IBM Plex Sans" font-size="34" font-weight="650" letter-spacing="-0.5" style="font-stretch:78%" fill="#f6dcc4" text-anchor="start">Ember</text><text x="16" y="280" font-family="IBM Plex Sans" font-size="34" font-weight="650" letter-spacing="-0.5" style="font-stretch:78%" fill="#f6dcc4" text-anchor="start">Hours</text></svg></span><span><span class="t-sm fg" style="font-weight:500; display:block">2026</span><span class="t-2xs muted">Ready</span></span></a>
+        <a class="yr" href="#"><span class="poster"><svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="200" height="300" fill="#132029"/><rect x="30" y="150" width="3" height="110" fill="#e7a84a" opacity="0.5"/><rect x="54" y="160" width="3" height="92" fill="#e7a84a" opacity="0.9"/><rect x="80" y="170" width="3" height="74" fill="#e7a84a" opacity="0.5"/><rect x="112" y="150" width="3" height="110" fill="#e7a84a" opacity="0.9"/><rect x="140" y="160" width="3" height="92" fill="#e7a84a" opacity="0.5"/><rect x="168" y="170" width="3" height="74" fill="#e7a84a" opacity="0.9"/><rect y="250" width="200" height="50" fill="#0c151c"/><text x="16" y="52.6" font-family="IBM Plex Sans" font-size="30" font-weight="650" letter-spacing="-0.5" style="font-stretch:78%" fill="#f4e2c2" text-anchor="start">Harbor</text><text x="16" y="82" font-family="IBM Plex Sans" font-size="30" font-weight="650" letter-spacing="-0.5" style="font-stretch:78%" fill="#f4e2c2" text-anchor="start">Lights</text></svg></span><span><span class="t-sm fg" style="font-weight:500; display:block">2025</span><span class="t-2xs muted">Watched</span></span></a>
+        <a class="yr" href="#"><span class="poster"><svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="200" height="300" fill="#86a173"/><path d="M0 200 Q60 150 120 190 T200 170 L200 300 L0 300Z" fill="#5d7a4c"/><path d="M0 240 Q80 200 200 236 L200 300 L0 300Z" fill="#3f5a33"/><circle cx="40" cy="170" r="9" fill="#2f4526"/><circle cx="72" cy="160" r="9" fill="#2f4526"/><circle cx="150" cy="166" r="9" fill="#2f4526"/><circle cx="176" cy="158" r="9" fill="#2f4526"/><circle cx="110" cy="182" r="9" fill="#2f4526"/><text x="16" y="52.6" font-family="IBM Plex Sans" font-size="30" font-weight="650" letter-spacing="-0.5" style="font-stretch:78%" fill="#f4f1df" text-anchor="start">Orchard</text><text x="16" y="82" font-family="IBM Plex Sans" font-size="30" font-weight="650" letter-spacing="-0.5" style="font-stretch:78%" fill="#f4f1df" text-anchor="start">Road</text></svg></span><span><span class="t-sm fg" style="font-weight:500; display:block">2024</span><span class="t-2xs muted">Watched</span></span></a>
+        <span class="t-xs muted" style="margin-left:auto">Each year lives at <span class="mono" style="font-size:12px">/rewind/[year]</span></span>
+      </div>
+    </section>
+
+    <!-- Charts -->
+    <section class="panel">
+      <h2>Chart series, fixed order</h2>
+      <p class="pd">Validated with the dataviz validator. Status colours are never series colours; values and labels use text tokens.</p>
+      <div class="pbody">
+        <div class="sub-h">Dark, on card: CVD worst adjacent dE 10.1, normal 15.3, all 3:1 or more</div>
+        <div class="chips">
+          <div><div class="c" style="background:var(--chart-1)"></div><div class="l">chart-1 amber</div></div>
+          <div><div class="c" style="background:var(--chart-2)"></div><div class="l">chart-2 blue</div></div>
+          <div><div class="c" style="background:var(--chart-3)"></div><div class="l">chart-3 teal</div></div>
+          <div><div class="c" style="background:var(--chart-4)"></div><div class="l">chart-4 violet</div></div>
+          <div><div class="c" style="background:var(--chart-5)"></div><div class="l">chart-5 magenta</div></div>
+        </div>
+        <div class="sub-h">Light, on white: CVD worst adjacent dE 11.4, normal 16.4</div>
+        <div class="chips">
+          <div><div class="c" style="background:#c57722"></div><div class="l">#c57722</div></div>
+          <div><div class="c" style="background:#0f74c5"></div><div class="l">#0f74c5</div></div>
+          <div><div class="c" style="background:#11957c"></div><div class="l">#11957c</div></div>
+          <div><div class="c" style="background:#8b4ec4"></div><div class="l">#8b4ec4</div></div>
+          <div><div class="c" style="background:#d14186"></div><div class="l">#d14186</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Light -->
+    <section class="panel">
+      <h2>Light theme (behind a flag)</h2>
+      <p class="pd">Same names, inverted ladder. Status tokens are 3 points darker than the first draft and tints drop to 10%, so every badge passes on background and sidebar.</p>
+      <div class="pbody">
+        <div class="light-panel" data-theme="light">
+          <div class="row" style="justify-content:space-between"><span class="t-h3">Invites</span><span class="row"><button class="btn btn-secondary btn-sm">Copy link</button><button class="btn btn-primary btn-sm"><svg class="i i-14" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>Create invite</button></span></div>
+          <div class="row" style="gap:6px; margin-top:14px; flex-wrap:wrap"><span class="badge badge-success"><span class="dot"></span>Active</span><span class="badge badge-warning"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>Past due</span><span class="badge badge-destructive"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>Failed</span><span class="badge badge-info"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Requested</span><span class="badge badge-neutral">Expired</span></div>
+          <div class="field" style="margin-top:14px"><label class="label">Invite code</label><div class="input mono is-focus">NORTH-7Q2K</div></div>
+          <label class="switch-row" style="margin-top:14px"><span class="t-sm">Require approval</span><span class="switch on" role="switch" aria-checked="true"></span></label>
+        </div>
+      </div>
+    </section>
+
+    <!-- Rewind contract -->
+    <section class="panel wide" style="padding-bottom:28px">
+      <h2>Rewind scope contract</h2>
+      <p class="pd">Rewind 2026 is designed separately. This is what it may change, what it inherits, and what it adds. The token-contrast test runs on every allowed field.</p>
+      <div class="pbody" style="display:grid; grid-template-columns: 360px 1fr; gap: 28px; align-items:start">
+        <div data-theme="rewind" style="--rw-field: oklch(30% 0.05 220); background: var(--rw-field); border-radius: var(--radius-xl); padding: 18px">
+          <div class="t-xs muted">Viewer controls are the app's Buttons under the scope</div>
+          <div class="viewer-ctl" style="margin-top:12px">
+            <button class="btn btn-ghost btn-icon btn-sm" aria-label="Close Rewind"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+            <span style="flex:1"></span>
+            <button class="btn btn-secondary btn-icon btn-sm" aria-label="Previous chapter"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
+            <button class="btn btn-secondary btn-icon btn-sm" aria-label="Pause"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="14" y="3" width="5" height="18" rx="1"/><rect x="5" y="3" width="5" height="18" rx="1"/></svg></button>
+            <button class="btn btn-secondary btn-icon btn-sm" aria-label="Next chapter"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+            <button class="btn btn-primary btn-sm"><svg class="i i-14" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>Share</button>
+          </div>
+          <div class="row" style="gap:6px; margin-top:12px"><span class="badge badge-success"><span class="dot"></span>Ready</span><span class="badge badge-info">Chapter 3 of 14</span></div>
+        </div>
+        <div class="contract">
+          <div><h4>Rewind must define</h4><div class="mono">background, foreground, card, card-foreground, popover, popover-foreground, primary, primary-hover, primary-foreground, secondary, secondary-hover, secondary-foreground, muted, muted-foreground, accent, accent-foreground, border, border-strong, input, ring, chart-1..5</div></div>
+          <div><h4>Inherited unchanged</h4><div class="mono">success, warning, info, destructive (re-declared at their dark values), font-sans, font-mono, radius scale, spacing, focus rule, control sizes, z-index scale, reduced-motion rules</div></div>
+          <div><h4>Rewind adds</h4><div class="mono">--rw-field, --rw-ink, --rw-spot (per member or scene), --font-display, --rw-* motion and texture tokens. Fields: dark L 0.22 to 0.34 with chroma 0.03 or more; primary stays in the amber family.</div></div>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+</body>
+</html>
