@@ -234,6 +234,9 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
     it('serves an admin any key with private caching', async () => {
       ;(getServerSession as jest.Mock).mockResolvedValue(ADMIN_SESSION)
       mockUpstreamImage()
+      // The upstream timeout is what is left of the 3 s deadline, so hold the
+      // clock still for an exact value (restored by restoreAllMocks).
+      jest.spyOn(Date, 'now').mockReturnValue(1_760_000_000_000)
 
       const response = await callRoute(posterUrl('123'), '123')
 
