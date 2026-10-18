@@ -3,7 +3,7 @@
  * test-token login.
  *
  * This is a plain module with no `@/` imports, so Jest, the Playwright config
- * and `prisma/seed.ts` (run by ts-node without path aliases) can all import it.
+ * and `prisma/seed.ts` (run by tsx) can all import it without path aliases.
  *
  * @module lib/security/test-mode
  */
@@ -15,7 +15,7 @@ const POSTGRES_URL_PREFIX = /^postgres(ql)?:\/\//
 
 /**
  * The environment the guards read (`NODE_ENV`, `E2E_TEST_MODE`, `DATABASE_URL`).
- * An index signature, so `process.env` fits under both Next's types and ts-node's.
+ * An index signature, so `process.env` fits under both Next's types and plain `@types/node`.
  */
 type TestModeEnv = Readonly<Record<string, string | undefined>>
 
