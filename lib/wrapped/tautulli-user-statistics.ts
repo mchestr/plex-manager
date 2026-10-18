@@ -23,9 +23,10 @@ const logger = createLogger("STATISTICS")
  * Fetch user watch statistics from Tautulli.
  *
  * The member is found in Tautulli's user list with the shared
- * {@link findTautulliUser} lookup (plex.tv account ID, then username). When
- * they are not in the list, the result carries `code: "TAUTULLI_USER_NOT_FOUND"`
- * and fixed member copy, never the list itself.
+ * {@link findTautulliUser} lookup, by plex.tv account ID only. When they are
+ * not in the list, the result carries `code: "TAUTULLI_USER_NOT_FOUND"` and
+ * fixed member copy, never the list itself, and the miss is logged at warn
+ * with a candidate count only.
  */
 export async function fetchTautulliStatistics(
   config: TautulliConfig,
@@ -44,6 +45,7 @@ export async function fetchTautulliStatistics(
     const lookup = await findTautulliUser(config, identity)
     if (!lookup.ok) {
       if (lookup.code === "TAUTULLI_USER_NOT_FOUND") {
+        logger.warn("Tautulli user not found", { plexUserId: identity.plexUserId, candidates: lookup.candidates })
         return { success: false, code: lookup.code, error: memberErrorCopy(lookup.code) }
       }
       return { success: false, error: "Failed to fetch users from Tautulli" }

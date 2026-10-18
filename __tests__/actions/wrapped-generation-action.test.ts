@@ -464,12 +464,50 @@ describe('generatePlexWrapped', () => {
 
       expect(fetchTautulliStatistics).toHaveBeenCalledWith(
         { url: 'https://tautulli.example.com:8181', apiKey: 'tautulli-key' },
-        { plexUserId: 'plex-user-123', plexUsername: 'Test User' },
+        { plexUserId: 'plex-user-123' },
         2024
       )
       expect(result.code).toBe('TAUTULLI_USER_NOT_FOUND')
       expect(global.fetch).toHaveBeenCalledTimes(1)
     })
+
+    // Tautulli's user_id is the plex.tv account ID, so when no row carries the
+    // member's ID, a row that matches their name belongs to someone else: a
+    // managed user's plex.tv title, the built-in Local user, a stale row after
+    // a rename, or a Jellyfin username that User.name was set from.
+    it.each(['Kids', 'local', 'HANK_PLEX'])(
+      "never builds a Rewind from another account whose username is the member's name (%s)",
+      async (name) => {
+        ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(
+          makePrismaUser({ ...mockUser, name, email: null })
+        )
+        global.fetch = jest.fn().mockResolvedValue({
+          ok: true,
+          json: async () => ({
+            response: {
+              result: 'success',
+              data: [
+                { user_id: 0, username: 'Local', email: null, friendly_name: 'Local' },
+                { user_id: 401, username: 'Kids', email: null, friendly_name: 'Kids' },
+                ...roster,
+              ],
+            },
+          }),
+        })
+
+        const result = await generatePlexWrapped('user-1', 2024)
+
+        expect(result.code).toBe('TAUTULLI_USER_NOT_FOUND')
+        expect(prisma.plexWrapped.update).toHaveBeenCalledWith({
+          where: { id: 'wrapped-1' },
+          data: { status: 'failed', error: '{"code":"TAUTULLI_USER_NOT_FOUND"}' },
+        })
+        // Only get_users ran: no other account's history was fetched.
+        expect(global.fetch).toHaveBeenCalledTimes(1)
+        expect(String((global.fetch as jest.Mock).mock.calls[0][0])).toContain('cmd=get_users')
+        expect(generateWrappedWithLLM).not.toHaveBeenCalled()
+      }
+    )
   })
 
   it('should handle LLM generation failure', async () => {
@@ -1205,6 +1243,35 @@ describe('generateAllPlexWrapped', () => {
     expect(result.errors).toHaveLength(2)
 
     consoleErrorSpy.mockRestore()
+  })
+
+  it('lists the admin hint, not the member copy, for a member missing from Tautulli', async () => {
+    const member = { ...mockUser, id: 'user-1', plexUserId: 'plex-1', name: 'User 1', email: 'user1@test.com' }
+    ;(getServerSession as jest.Mock).mockImplementation(async () => mockAdminSession)
+    ;(prisma.user.findMany as jest.Mock).mockResolvedValue([member])
+    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(member)
+    ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
+    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(makePrismaPlexServer())
+    ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue({
+      id: 'wrapped-1',
+      userId: 'user-1',
+      year: 2024,
+      status: 'generating',
+      shareToken: 'test-token',
+    })
+    ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(makePrismaTautulli())
+    ;(fetchTautulliStatistics as jest.Mock).mockResolvedValue({
+      success: false,
+      code: 'TAUTULLI_USER_NOT_FOUND',
+      error: memberErrorCopy('TAUTULLI_USER_NOT_FOUND'),
+    })
+
+    const result = await generateAllPlexWrapped(2024)
+
+    expect(result.failed).toBe(1)
+    expect(result.errors).toEqual([
+      "User 1: Plex user plex-1 is not in Tautulli's user list. Refresh users in Tautulli.",
+    ])
   })
 
   it('should handle empty user list', async () => {

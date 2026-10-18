@@ -4,7 +4,8 @@
  *
  * A member missing from Tautulli used to get an error string listing every
  * Tautulli username and email. The result now carries a code and fixed copy,
- * and nothing from the roster.
+ * and nothing from the roster. The member is matched by plex.tv account ID
+ * only, so no other account's history can be fetched for them.
  */
 
 import { fetchTautulliStatistics } from '../tautulli-user-statistics'
@@ -50,11 +51,7 @@ describe('fetchTautulliStatistics user match', () => {
   it('returns a code and member copy, and no roster strings, on a miss', async () => {
     respond(usersResponse)
 
-    const result = await fetchTautulliStatistics(
-      config,
-      { plexUserId: '999', plexUsername: 'newcomer' },
-      2025
-    )
+    const result = await fetchTautulliStatistics(config, { plexUserId: '999' }, 2025)
 
     expect(result).toEqual({
       success: false,
@@ -62,6 +59,7 @@ describe('fetchTautulliStatistics user match', () => {
       error: memberErrorCopy('TAUTULLI_USER_NOT_FOUND'),
     })
     expect(mockFetch).toHaveBeenCalledTimes(1)
+    expect(mockWarn).toHaveBeenCalledWith('Tautulli user not found', { plexUserId: '999', candidates: 3 })
 
     const output = JSON.stringify({ result, logs: mockWarn.mock.calls })
     for (const value of rosterStrings) {
@@ -69,68 +67,41 @@ describe('fetchTautulliStatistics user match', () => {
     }
   })
 
-  it("does not match a member through another member's email", async () => {
-    respond(usersResponse)
+  it('never matches the Local user or a managed user for an account Tautulli does not know', async () => {
+    // Tautulli's built-in Local user and a Plex Home managed user titled "Kids".
+    respond({
+      response: {
+        result: 'success',
+        data: [
+          { user_id: 0, username: 'Local', email: null, friendly_name: 'Local' },
+          { user_id: 301, username: 'Kids', email: null, friendly_name: 'Kids' },
+          ...roster,
+        ],
+      },
+    })
 
-    const result = await fetchTautulliStatistics(
-      config,
-      { plexUserId: '999', plexUsername: 'erik.private@example.com' },
-      2025
-    )
+    const result = await fetchTautulliStatistics(config, { plexUserId: '999' }, 2025)
 
     expect(result.code).toBe('TAUTULLI_USER_NOT_FOUND')
+    // No get_history call: nobody's history is read for an unmatched member.
     expect(mockFetch).toHaveBeenCalledTimes(1)
-  })
-
-  it("does not match a member through another member's friendly_name", async () => {
-    respond(usersResponse)
-
-    const result = await fetchTautulliStatistics(
-      config,
-      { plexUserId: '999', plexUsername: 'Fran F' },
-      2025
-    )
-
-    expect(result.code).toBe('TAUTULLI_USER_NOT_FOUND')
   })
 
   it('fetches history for the member matched by account ID', async () => {
     respond(usersResponse)
     respond(emptyHistory)
 
-    const result = await fetchTautulliStatistics(
-      config,
-      { plexUserId: '202', plexUsername: 'someone-else' },
-      2025
-    )
+    const result = await fetchTautulliStatistics(config, { plexUserId: '202' }, 2025)
 
     expect(result.success).toBe(true)
     expect(result.data?.tautulliUserId).toBe('202')
     expect(String(mockFetch.mock.calls[1][0])).toContain('cmd=get_history&user_id=202&')
   })
 
-  it('falls back to the username in any case', async () => {
-    respond(usersResponse)
-    respond(emptyHistory)
-
-    const result = await fetchTautulliStatistics(
-      config,
-      { plexUserId: '999', plexUsername: 'FRAN_PLEX' },
-      2025
-    )
-
-    expect(result.success).toBe(true)
-    expect(result.data?.tautulliUserId).toBe('203')
-  })
-
   it('returns a generic error without a code when Tautulli fails', async () => {
     respond({ response: { result: 'error', message: 'Invalid apikey' } })
 
-    const result = await fetchTautulliStatistics(
-      config,
-      { plexUserId: '202', plexUsername: null },
-      2025
-    )
+    const result = await fetchTautulliStatistics(config, { plexUserId: '202' }, 2025)
 
     expect(result).toEqual({ success: false, error: 'Failed to fetch users from Tautulli' })
   })

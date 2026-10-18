@@ -165,7 +165,7 @@ describe("executeTautulliTool - Discord activity scoping", () => {
       isActive: true,
     } as never)
     mockGetTautulliActivity.mockResolvedValue({ success: true, data: activity })
-    mockUserFindUnique.mockResolvedValue({ plexUserId: "501", name: "lena_plex" })
+    mockUserFindUnique.mockResolvedValue({ plexUserId: "501" })
   })
 
   it("maps the caller through the shared lookup and keeps only their sessions", async () => {
@@ -177,11 +177,11 @@ describe("executeTautulliTool - Discord activity scoping", () => {
 
     expect(mockUserFindUnique).toHaveBeenCalledWith({
       where: { id: "user-1" },
-      select: { plexUserId: true, name: true },
+      select: { plexUserId: true },
     })
     expect(mockFindTautulliUser).toHaveBeenCalledWith(
       expect.objectContaining({ url: "http://localhost:8181", apiKey: "test-key" }),
-      { plexUserId: "501", plexUsername: "lena_plex" }
+      { plexUserId: "501" }
     )
     expect(result.response.data.session_count).toBe(1)
     expect(result.response.data.sessions).toEqual([{ user_id: 501, title: "Mine" }])

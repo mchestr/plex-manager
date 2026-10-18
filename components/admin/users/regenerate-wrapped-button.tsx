@@ -2,12 +2,15 @@
 
 import { generatePlexWrapped } from "@/actions/users"
 import { useToast } from "@/components/ui/toast"
+import { adminErrorHint } from "@/lib/wrapped/generation-errors"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { ConfirmModal } from "@/components/admin/shared/confirm-modal"
 
 interface RegenerateWrappedButtonProps {
   userId: string
+  /** The member's plex.tv account ID, named in the admin hint for a typed failure. */
+  plexUserId: string | null
   year?: number
   onSuccess?: () => void
   inline?: boolean
@@ -15,6 +18,7 @@ interface RegenerateWrappedButtonProps {
 
 export function RegenerateWrappedButton({
   userId,
+  plexUserId,
   year = new Date().getFullYear(),
   onSuccess,
   inline = false,
@@ -43,6 +47,9 @@ export function RegenerateWrappedButton({
         setTimeout(() => {
           setShowSuccess(false)
         }, 3000)
+      } else if (result.code) {
+        // A typed failure: show the admin hint (or the code), not the member copy.
+        toast.showError(adminErrorHint(result.code, plexUserId) ?? result.code)
       } else {
         toast.showError(result.error || "Failed to regenerate wrapped")
       }

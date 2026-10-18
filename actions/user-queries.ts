@@ -9,6 +9,7 @@ import { getServerSession } from "next-auth"
 import { SubscriptionStatus } from "@/lib/generated/prisma/client"
 import { aggregateLlmUsage } from "@/lib/utils"
 import { createLogger } from "@/lib/utils/logger"
+import { readStoredError, toStoredError } from "@/lib/wrapped/generation-errors"
 import {
   AdminUserWithWrappedStats,
   DiscordCommandActivity,
@@ -24,7 +25,12 @@ const logger = createLogger("USER_QUERIES")
 // --- Exported Actions ---
 
 /**
- * Get user's Plex Wrapped
+ * Get user's Plex Wrapped.
+ *
+ * A non-admin caller gets `error` normalised to a stored code
+ * (`{"code":"..."}`), so legacy free text, such as a pre-P0.9 row listing
+ * Tautulli's users, never reaches a member's browser. Admins get the stored
+ * text as is.
  */
 export async function getUserPlexWrapped(
   userId: string,
@@ -65,7 +71,10 @@ export async function getUserPlexWrapped(
       },
     })
 
-    return wrapped
+    if (!wrapped?.error || session.user.isAdmin) {
+      return wrapped
+    }
+    return { ...wrapped, error: toStoredError(readStoredError(wrapped.error)) }
   } catch (error) {
     logger.error("Error getting user wrapped", error)
     return null
@@ -525,8 +534,7 @@ async function fetchSubscriptionMap(userIds: string[]): Promise<Map<string, {
  * Returns the timestamp of their earliest watch history entry
  */
 export async function getUserFirstWatchDate(
-  plexUserId: string,
-  plexUsername: string | null
+  plexUserId: string
 ): Promise<{ success: boolean; firstWatchDate?: string; error?: string }> {
   // Require an authenticated session; this action queries Tautulli by identifier
   // and must not be callable anonymously.
@@ -551,7 +559,7 @@ export async function getUserFirstWatchDate(
 
     const lookup = await findTautulliUser(
       { url: tautulli.url, apiKey: tautulli.apiKey },
-      { plexUserId, plexUsername }
+      { plexUserId }
     )
 
     if (!lookup.ok) {

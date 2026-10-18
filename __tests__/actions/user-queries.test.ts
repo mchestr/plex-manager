@@ -140,6 +140,56 @@ describe('getUserPlexWrapped', () => {
 
     expect(result).toBeNull()
   })
+
+  describe('stored error (P0.9)', () => {
+    // A row written before P0.9 still holds the Tautulli roster.
+    const LEGACY_ROSTER_ERROR =
+      'User not found in Tautulli. Plex User ID: 1, Email: me@example.com. Available users: olga_plex (olga.private@example.com), piet_plex (piet.private@example.com)'
+
+    it('gives a member a stored code, not the legacy roster text', async () => {
+      mockPrisma.plexWrapped.findUnique.mockResolvedValue(
+        makePrismaWrapped({ status: 'failed', error: LEGACY_ROSTER_ERROR }) as any
+      )
+
+      const result = await getUserPlexWrapped('user-1', 2024)
+
+      expect(result?.error).toBe('{"code":"GENERATION_FAILED"}')
+      const output = JSON.stringify(result)
+      for (const value of ['olga_plex', 'olga.private@example.com', 'piet_plex', 'piet.private@example.com', 'Available users']) {
+        expect(output).not.toContain(value)
+      }
+    })
+
+    it('passes a stored code through to a member unchanged', async () => {
+      mockPrisma.plexWrapped.findUnique.mockResolvedValue(
+        makePrismaWrapped({ status: 'failed', error: '{"code":"TAUTULLI_USER_NOT_FOUND"}' }) as any
+      )
+
+      const result = await getUserPlexWrapped('user-1', 2024)
+
+      expect(result?.error).toBe('{"code":"TAUTULLI_USER_NOT_FOUND"}')
+    })
+
+    it('leaves a row without an error untouched', async () => {
+      const row = makePrismaWrapped({ status: 'completed', error: null })
+      mockPrisma.plexWrapped.findUnique.mockResolvedValue(row as any)
+
+      const result = await getUserPlexWrapped('user-1', 2024)
+
+      expect(result).toEqual(row)
+    })
+
+    it('gives an admin the stored text as is', async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValue({ user: { id: 'admin-1', isAdmin: true } })
+      mockPrisma.plexWrapped.findUnique.mockResolvedValue(
+        makePrismaWrapped({ status: 'failed', error: LEGACY_ROSTER_ERROR }) as any
+      )
+
+      const result = await getUserPlexWrapped('user-1', 2024)
+
+      expect(result?.error).toBe(LEGACY_ROSTER_ERROR)
+    })
+  })
 })
 
 describe('getAllUsersWithWrapped', () => {
@@ -477,39 +527,37 @@ describe('getUserFirstWatchDate', () => {
     respond({ response: { result: 'success', data: roster } })
     respond({ response: { result: 'success', data: { data: [{ date: firstWatch }] } } })
 
-    const result = await getUserFirstWatchDate('402', null)
+    const result = await getUserFirstWatchDate('402')
 
     expect(result).toEqual({ success: true, firstWatchDate: '2023-03-04T05:06:07.000Z' })
     expect(String(mockFetch.mock.calls[1][0])).toContain('cmd=get_history&user_id=402&')
   })
 
-  it('falls back to the Plex username in any case', async () => {
-    respond({ response: { result: 'success', data: roster } })
-    respond({ response: { result: 'success', data: { data: [{ date: firstWatch }] } } })
+  it('never reads another account when no row carries the member\'s ID', async () => {
+    // Tautulli's built-in Local user and a managed user titled "Kids" sit next
+    // to the roster; the member's plex.tv ID is on none of the rows.
+    respond({
+      response: {
+        result: 'success',
+        data: [
+          { user_id: 0, username: 'Local', email: null, friendly_name: 'Local' },
+          { user_id: 301, username: 'Kids', email: null, friendly_name: 'Kids' },
+          ...roster,
+        ],
+      },
+    })
 
-    const result = await getUserFirstWatchDate('999', 'JADE_PLEX')
+    const result = await getUserFirstWatchDate('999')
 
-    expect(result.success).toBe(true)
-    expect(String(mockFetch.mock.calls[1][0])).toContain('user_id=401')
-  })
-
-  it("does not match through another member's email or friendly_name", async () => {
-    respond({ response: { result: 'success', data: roster } })
-    const byEmail = await getUserFirstWatchDate('999', 'kurt.private@example.com')
-
-    respond({ response: { result: 'success', data: roster } })
-    const byFriendlyName = await getUserFirstWatchDate('999', 'Kurt K')
-
-    expect(byEmail).toEqual({ success: false, error: 'User not found in Tautulli' })
-    expect(byFriendlyName).toEqual({ success: false, error: 'User not found in Tautulli' })
-    // Only the two get_users calls ran; no other member's history was read.
-    expect(mockFetch).toHaveBeenCalledTimes(2)
+    expect(result).toEqual({ success: false, error: 'User not found in Tautulli' })
+    // Only the get_users call ran; no other account's history was read.
+    expect(mockFetch).toHaveBeenCalledTimes(1)
   })
 
   it('reports a Tautulli failure without a history request', async () => {
     respond({ response: { result: 'error', message: 'Invalid apikey' } })
 
-    const result = await getUserFirstWatchDate('402', null)
+    const result = await getUserFirstWatchDate('402')
 
     expect(result).toEqual({ success: false, error: 'Failed to fetch users from Tautulli' })
     expect(mockFetch).toHaveBeenCalledTimes(1)
@@ -518,7 +566,7 @@ describe('getUserFirstWatchDate', () => {
   it('requires a session', async () => {
     ;(getServerSession as jest.Mock).mockResolvedValue(null)
 
-    const result = await getUserFirstWatchDate('402', null)
+    const result = await getUserFirstWatchDate('402')
 
     expect(result).toEqual({ success: false, error: 'Unauthorized' })
     expect(mockFetch).not.toHaveBeenCalled()

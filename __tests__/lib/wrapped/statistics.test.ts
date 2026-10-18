@@ -95,7 +95,7 @@ describe('Statistics Functions', () => {
 
       const result = await fetchTautulliStatistics(
         config,
-        { plexUserId: '123', plexUsername: 'testuser' },
+        { plexUserId: '123' },
         2024
       )
 
@@ -126,7 +126,7 @@ describe('Statistics Functions', () => {
 
       const result = await fetchTautulliStatistics(
         config,
-        { plexUserId: '123', plexUsername: 'testuser' },
+        { plexUserId: '123' },
         2024
       )
 
@@ -151,7 +151,7 @@ describe('Statistics Functions', () => {
 
       const result = await fetchTautulliStatistics(
         config,
-        { plexUserId: '123', plexUsername: 'testuser' },
+        { plexUserId: '123' },
         2024
       )
 
@@ -201,7 +201,7 @@ describe('Statistics Functions', () => {
 
       const result = await fetchTautulliStatistics(
         config,
-        { plexUserId: '123', plexUsername: 'testuser' },
+        { plexUserId: '123' },
         year
       )
 
@@ -242,7 +242,7 @@ describe('Statistics Functions', () => {
 
       const result = await fetchTautulliStatistics(
         config,
-        { plexUserId: '123', plexUsername: 'testuser' },
+        { plexUserId: '123' },
         2024
       )
 
@@ -297,7 +297,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          { plexUserId: '123', plexUsername: 'testuser' },
+          { plexUserId: '123' },
           2024
         )
 
@@ -347,7 +347,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          { plexUserId: '123', plexUsername: 'testuser' },
+          { plexUserId: '123' },
           2024
         )
 
@@ -402,7 +402,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          { plexUserId: '123', plexUsername: 'testuser' },
+          { plexUserId: '123' },
           2024
         )
 
@@ -482,7 +482,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          { plexUserId: '123', plexUsername: 'testuser' },
+          { plexUserId: '123' },
           2024
         )
 
@@ -552,7 +552,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          { plexUserId: '123', plexUsername: 'testuser' },
+          { plexUserId: '123' },
           2024
         )
 
@@ -613,7 +613,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          { plexUserId: '123', plexUsername: 'testuser' },
+          { plexUserId: '123' },
           2024
         )
 
@@ -669,7 +669,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          { plexUserId: '123', plexUsername: 'testuser' },
+          { plexUserId: '123' },
           2024
         )
 
@@ -752,7 +752,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          { plexUserId: '123', plexUsername: 'testuser' },
+          { plexUserId: '123' },
           2024
         )
 
@@ -834,7 +834,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          { plexUserId: '123', plexUsername: 'testuser' },
+          { plexUserId: '123' },
           2024
         )
 
@@ -909,7 +909,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          { plexUserId: '123', plexUsername: 'testuser' },
+          { plexUserId: '123' },
           2024
         )
 
@@ -958,7 +958,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          { plexUserId: '123', plexUsername: 'testuser' },
+          { plexUserId: '123' },
           2024
         )
 
@@ -1012,7 +1012,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          { plexUserId: '123', plexUsername: 'testuser' },
+          { plexUserId: '123' },
           2024
         )
 
@@ -1073,7 +1073,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          { plexUserId: '123', plexUsername: 'testuser' },
+          { plexUserId: '123' },
           2024
         )
 
@@ -1141,7 +1141,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          { plexUserId: '123', plexUsername: 'testuser' },
+          { plexUserId: '123' },
           2024
         )
 
@@ -1602,7 +1602,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          { plexUserId: '123', plexUsername: 'testuser' },
+          { plexUserId: '123' },
           2024
         )
 
@@ -1654,7 +1654,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          { plexUserId: '123', plexUsername: 'testuser' },
+          { plexUserId: '123' },
           2024
         )
 
@@ -1736,7 +1736,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          { plexUserId: '123', plexUsername: 'testuser' },
+          { plexUserId: '123' },
           2024
         )
 
@@ -1797,7 +1797,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          { plexUserId: '123', plexUsername: 'testuser' },
+          { plexUserId: '123' },
           2024
         )
 
@@ -1859,7 +1859,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          { plexUserId: '123', plexUsername: 'testuser' },
+          { plexUserId: '123' },
           2024
         )
 
@@ -1910,7 +1910,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          { plexUserId: '123', plexUsername: 'testuser' },
+          { plexUserId: '123' },
           2024
         )
 

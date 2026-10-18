@@ -174,8 +174,6 @@ export async function getTautulliUsers(config: TautulliEndpoint): Promise<Connec
 export interface TautulliUserIdentity {
   /** The plex.tv account ID (`User.plexUserId`). */
   plexUserId: string
-  /** The Plex username (`User.name`), compared case-insensitively. */
-  plexUsername: string | null
 }
 
 const tautulliUserRowSchema = z.object({
@@ -193,38 +191,37 @@ const getUsersResponseSchema = z.object({
   ]),
 })
 
+/** On a miss, `candidates` is the size of Tautulli's user list, for count-only logging. */
 export type FindTautulliUserResult =
   | { ok: true; user: TautulliUserRow }
-  | { ok: false; code: "TAUTULLI_USER_NOT_FOUND" | "TAUTULLI_ERROR" }
+  | { ok: false; code: "TAUTULLI_USER_NOT_FOUND"; candidates: number }
+  | { ok: false; code: "TAUTULLI_ERROR" }
 
 /**
- * Find a member in Tautulli's `get_users` rows.
+ * Find a member in Tautulli's `get_users` rows by plex.tv account ID.
  *
- * Tautulli's `user_id` is the plex.tv account ID, so `user_id === plexUserId`
- * is tried first. A case-insensitive `username` match is the fallback. Email
- * and `friendly_name` are never compared: both are free text another member
- * can share, and matching on them could hand one member another's history.
+ * Tautulli's `user_id` is the plex.tv account ID on every row, so
+ * `user_id === plexUserId` is the only match. There is deliberately no
+ * fallback on `username`, `email` or `friendly_name`: when no row carries the
+ * member's own ID, any row a name matches belongs to a different plex.tv
+ * account (a managed user titled "Kids", Tautulli's built-in "Local" user, or
+ * a stale row after a rename), and matching it would hand that person's watch
+ * history to the member.
  *
  * @returns The matching row, or `null` when none matches.
  *
  * @example
  * ```ts
  * const users = [{ user_id: 1, username: "alice" }, { user_id: 2, username: "Bob" }]
- * matchTautulliUser(users, { plexUserId: "2", plexUsername: null })?.user_id  // 2
- * matchTautulliUser(users, { plexUserId: "9", plexUsername: "ALICE" })?.user_id // 1
- * matchTautulliUser(users, { plexUserId: "9", plexUsername: "carol" })          // null
+ * matchTautulliUser(users, { plexUserId: "2" })?.user_id // 2
+ * matchTautulliUser(users, { plexUserId: "9" })          // null
  * ```
  */
 export function matchTautulliUser<T extends TautulliUserRow>(
   users: readonly T[],
   identity: TautulliUserIdentity
 ): T | null {
-  const byId = users.find((u) => String(u.user_id) === identity.plexUserId)
-  if (byId) return byId
-
-  const username = identity.plexUsername?.toLowerCase()
-  if (!username) return null
-  return users.find((u) => u.username?.toLowerCase() === username) ?? null
+  return users.find((u) => String(u.user_id) === identity.plexUserId) ?? null
 }
 
 /**
@@ -233,7 +230,9 @@ export function matchTautulliUser<T extends TautulliUserRow>(
  *
  * The rows are validated with Zod, and only `user_id` and `username` survive
  * the parse, so no other member's email or name can leak through the result.
- * A miss logs a candidate count, never the candidates.
+ * A miss is logged at debug with a candidate count, never the candidates: this
+ * runs on every home-page render and Discord activity call, so callers that
+ * treat a miss as a failure log it themselves.
  */
 export async function findTautulliUser(
   config: TautulliEndpoint,
@@ -262,8 +261,8 @@ export async function findTautulliUser(
 
   const user = matchTautulliUser(users, identity)
   if (!user) {
-    logger.warn("Tautulli user not found", { plexUserId: identity.plexUserId, candidates: users.length })
-    return { ok: false, code: "TAUTULLI_USER_NOT_FOUND" }
+    logger.debug("Tautulli user not found", { plexUserId: identity.plexUserId, candidates: users.length })
+    return { ok: false, code: "TAUTULLI_USER_NOT_FOUND", candidates: users.length }
   }
   return { ok: true, user }
 }

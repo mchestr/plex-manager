@@ -3,7 +3,7 @@
  * never the stored error text (P0.9: RWP-02, SEC-17, DUP-01).
  */
 
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
 
 import { getWrappedSettings } from '@/actions/admin'
@@ -49,20 +49,33 @@ function pollEndsWith(error: string) {
     .mockResolvedValue({ status: 'failed', error })
 }
 
+/** Render the card and run its 2 s status poll once, on fake timers. */
+async function renderAndPollOnce() {
+  render(<WrappedCard userId="user-1" memberSince="2020-01-01T00:00:00.000Z" />)
+  expect(await screen.findByTestId('wrapped-card-generating')).toBeInTheDocument()
+  await act(async () => {
+    await jest.advanceTimersByTimeAsync(2000)
+  })
+}
+
 describe('WrappedCard poll toast', () => {
   beforeEach(() => {
+    jest.useFakeTimers()
     jest.clearAllMocks()
     ;(useToast as jest.Mock).mockReturnValue(toast)
     ;(getWrappedSettings as jest.Mock).mockResolvedValue({ wrappedEnabled: true, wrappedYear: 2025 })
   })
 
+  afterEach(() => {
+    jest.useRealTimers()
+  })
+
   it('toasts the fixed copy for a missing Tautulli account', async () => {
     pollEndsWith('{"code":"TAUTULLI_USER_NOT_FOUND"}')
 
-    render(<WrappedCard userId="user-1" memberSince="2020-01-01T00:00:00.000Z" />)
+    await renderAndPollOnce()
 
-    expect(await screen.findByTestId('wrapped-card-generating')).toBeInTheDocument()
-    await waitFor(() => expect(mockShowError).toHaveBeenCalled(), { timeout: 4000 })
+    expect(mockShowError).toHaveBeenCalledTimes(1)
     expect(mockShowError).toHaveBeenCalledWith(
       "We couldn't find your account in Tautulli yet. Ask the server admin to refresh Tautulli's user list."
     )
@@ -71,9 +84,9 @@ describe('WrappedCard poll toast', () => {
   it('toasts generic copy for a legacy row and none of the stored roster', async () => {
     pollEndsWith(LEGACY_ROSTER_ERROR)
 
-    render(<WrappedCard userId="user-1" memberSince="2020-01-01T00:00:00.000Z" />)
+    await renderAndPollOnce()
 
-    await waitFor(() => expect(mockShowError).toHaveBeenCalled(), { timeout: 4000 })
+    expect(mockShowError).toHaveBeenCalledTimes(1)
     expect(mockShowError).toHaveBeenCalledWith(
       'Something went wrong while generating your Wrapped. Please try again.'
     )

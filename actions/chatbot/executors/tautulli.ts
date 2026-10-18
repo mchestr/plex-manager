@@ -36,15 +36,12 @@ export async function executeTautulliTool(
       if (context === "discord" && userId) {
         const user = await prisma.user.findUnique({
           where: { id: userId },
-          select: { plexUserId: true, name: true },
+          select: { plexUserId: true },
         })
 
         if (user?.plexUserId) {
           // Map the Plex user ID to the Tautulli user ID
-          const lookup = await findTautulliUser(config, {
-            plexUserId: user.plexUserId,
-            plexUsername: user.name,
-          })
+          const lookup = await findTautulliUser(config, { plexUserId: user.plexUserId })
           if (lookup.ok) {
             const tautulliUserId = lookup.user.user_id
 

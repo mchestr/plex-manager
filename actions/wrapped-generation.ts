@@ -18,7 +18,7 @@ import {
   fetchWatchTimeLeaderboard,
 } from "@/lib/wrapped/statistics"
 import { computePercentile } from "@/lib/wrapped/derived-statistics"
-import { memberErrorCopy, type RewindErrorCode, toStoredError } from "@/lib/wrapped/generation-errors"
+import { adminErrorHint, memberErrorCopy, type RewindErrorCode, toStoredError } from "@/lib/wrapped/generation-errors"
 import { WrappedStatistics } from "@/types/wrapped"
 import { getServerSession } from "next-auth"
 import { revalidatePath } from "next/cache"
@@ -180,7 +180,7 @@ export async function generatePlexWrapped(
           url: tautulli.url,
           apiKey: tautulli.apiKey,
         },
-        { plexUserId: user.plexUserId, plexUsername: user.name },
+        { plexUserId: user.plexUserId },
         validYear
       )
 
@@ -455,7 +455,11 @@ export async function generateAllPlexWrapped(
         generated++
       } else {
         failed++
-        errors.push(`${user.name || user.email || user.id}: ${result.error || "Unknown error"}`)
+        // A typed failure gets the admin hint (or the code), not the member copy.
+        const detail = result.code
+          ? adminErrorHint(result.code, user.plexUserId) ?? result.code
+          : result.error || "Unknown error"
+        errors.push(`${user.name || user.email || user.id}: ${detail}`)
       }
     }
 

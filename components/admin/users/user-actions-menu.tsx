@@ -14,6 +14,7 @@ interface UserActionsMenuProps {
   user: {
     id: string
     name: string | null
+    plexUserId: string | null
     isAdmin: boolean
     hasPlexAccess: boolean | null
     wrappedStatus: string | null
@@ -155,6 +156,7 @@ export function UserActionsMenu({ user, stripeDashboardBaseUrl }: UserActionsMen
             <div className="px-3 py-2 hover:bg-slate-700/50 transition-colors">
               <RegenerateWrappedButton
                 userId={user.id}
+                plexUserId={user.plexUserId}
                 inline={true}
                 onSuccess={() => setIsOpen(false)}
               />

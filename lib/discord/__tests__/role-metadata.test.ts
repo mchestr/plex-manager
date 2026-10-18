@@ -69,7 +69,7 @@ const TAUTULLI_SERVER = {
   isActive: true,
 }
 
-const USER = { plexUserId: "user-42", name: "user42" }
+const USER = { plexUserId: "user-42" }
 
 beforeEach(() => {
   jest.clearAllMocks()
@@ -126,7 +126,7 @@ describe("computeRoleMetadata - is_subscribed", () => {
   it("treats a user without a plexUserId as not subscribed", async () => {
     mockGetPlexConfig.mockResolvedValue(PLEX_SERVER)
 
-    const metadata = await computeRoleMetadata({ plexUserId: null, name: "nobody" })
+    const metadata = await computeRoleMetadata({ plexUserId: null })
 
     expect(metadata[IS_SUBSCRIBED_KEY]).toBe(false)
     expect(mockCheckAccess).not.toHaveBeenCalled()
@@ -161,7 +161,7 @@ describe("computeRoleMetadata - watched_hours", () => {
     expect(metadata[WATCHED_HOURS_KEY]).toBe(3)
     expect(mockFetchStats).toHaveBeenCalledWith(
       { url: TAUTULLI_SERVER.url, apiKey: TAUTULLI_SERVER.apiKey },
-      { plexUserId: USER.plexUserId, plexUsername: USER.name },
+      { plexUserId: USER.plexUserId },
       new Date().getFullYear()
     )
   })
@@ -178,7 +178,7 @@ describe("computeRoleMetadata - watched_hours", () => {
   it("omits watched_hours when the user has no plexUserId", async () => {
     mockTautulliFindFirst.mockResolvedValue(TAUTULLI_SERVER)
 
-    const metadata = await computeRoleMetadata({ plexUserId: null, name: "nobody" })
+    const metadata = await computeRoleMetadata({ plexUserId: null })
 
     expect(WATCHED_HOURS_KEY in metadata).toBe(false)
     expect(mockFetchStats).not.toHaveBeenCalled()

@@ -242,7 +242,7 @@ export default async function UserDetailsPage({ params }: { params: Promise<{ us
                       View
                     </Link>
                   )}
-                  <RegenerateWrappedButton userId={user.id} />
+                  <RegenerateWrappedButton userId={user.id} plexUserId={user.plexUserId} />
                 </div>
               </div>
               {currentYearWrapped.generatedAt && (
