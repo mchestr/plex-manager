@@ -12,7 +12,8 @@ interface ConversationUsageRowProps {
     promptTokens: number
     completionTokens: number
     cost: number
-    prompt: string
+    /** Nullable since the October 2026 privacy clean-up (P0.20); chat calls keep their text. */
+    prompt: string | null
   }
   index: number
 }
@@ -27,7 +28,8 @@ function formatDateTime(date: Date): string {
   })
 }
 
-function getLastUserSnippet(prompt: string, maxLength: number = 80): string | null {
+function getLastUserSnippet(prompt: string | null, maxLength: number = 80): string | null {
+  if (prompt === null) return null
   try {
     const parsed = JSON.parse(prompt) as Array<{ role?: string; content?: unknown }>
     if (!Array.isArray(parsed)) return null

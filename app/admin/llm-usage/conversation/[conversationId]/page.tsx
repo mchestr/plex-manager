@@ -3,6 +3,7 @@ import { aggregateLlmUsage } from "@/lib/utils"
 import Link from "next/link"
 import Image from "next/image"
 import { ConversationUsageRow } from "@/components/admin/llm-usage/conversation-usage-row"
+import { LlmTextRemovedNotice } from "@/components/admin/llm-usage/llm-text-removed-notice"
 import { ExpandablePrompt } from "@/components/admin/prompts/expandable-prompt"
 
 export const dynamic = "force-dynamic"
@@ -108,10 +109,12 @@ export default async function LLMConversationPage({
   )
 
   // Format prompt nicely - check if it's a chat message array
-  let formattedPrompt: string = latestRecord.prompt
+  // The column is nullable since the October 2026 privacy clean-up (P0.20),
+  // which strips non-chat rows; chat calls keep their text.
+  let formattedPrompt = latestRecord.prompt ?? ""
   let promptIsChatMessages = false
   try {
-    const parsedPrompt = JSON.parse(latestRecord.prompt)
+    const parsedPrompt = JSON.parse(formattedPrompt)
 
     // Check if it's an array of chat messages
     if (Array.isArray(parsedPrompt) && parsedPrompt.length > 0) {
@@ -233,12 +236,16 @@ export default async function LLMConversationPage({
 
         {/* Latest Conversation Prompt */}
         <div className="mb-6">
-          <ExpandablePrompt
-            content={formattedPrompt}
-            title="Latest Conversation Prompt"
-            characterCount={latestRecord.prompt.length}
-            characterCountSuffix={promptIsChatMessages ? "(Chat messages)" : undefined}
-          />
+          {latestRecord.prompt === null ? (
+            <LlmTextRemovedNotice title="Latest Conversation Prompt" />
+          ) : (
+            <ExpandablePrompt
+              content={formattedPrompt}
+              title="Latest Conversation Prompt"
+              characterCount={latestRecord.prompt.length}
+              characterCountSuffix={promptIsChatMessages ? "(Chat messages)" : undefined}
+            />
+          )}
         </div>
 
         {/* Per-call table */}

@@ -1,4 +1,5 @@
 import { getHistoricalWrappedData } from "@/actions/admin"
+import { LlmTextRemovedNotice } from "@/components/admin/llm-usage/llm-text-removed-notice"
 import { HistoricalWrappedSelectorHeader } from "@/components/admin/wrapped/historical-wrapped-selector-header"
 import { WrappedViewerWrapper } from "@/components/wrapped/wrapped-viewer-wrapper"
 import { requireAdmin } from "@/lib/admin"
@@ -76,7 +77,7 @@ export default async function HistoricalWrappedPage({
     )
   }
 
-  const { wrappedData, llmUsage } = historicalData
+  const { wrappedData, llmUsage, userId, userName, year } = historicalData
 
   const formatDate = (date: Date | string) => {
     return new Date(date).toLocaleString(undefined, {
@@ -115,7 +116,7 @@ export default async function HistoricalWrappedPage({
               </Link>
               <div className="flex-1 min-w-0">
                 <h1 className="text-xl font-bold text-white truncate">
-                  {wrappedData.userName}&apos;s {wrappedData.year} Wrapped
+                  {userName}&apos;s {year} Wrapped
                 </h1>
                 <p className="text-xs text-slate-400 mt-0.5">
                   Historical Version • {formatDate(llmUsage.createdAt)} • {llmUsage.provider}/{llmUsage.model || "unknown"}
@@ -123,14 +124,18 @@ export default async function HistoricalWrappedPage({
               </div>
             </div>
             <div className="flex items-center gap-3 flex-shrink-0">
-              <HistoricalWrappedSelectorHeader wrappedId={wrappedId} userId={wrappedData.userId} />
+              <HistoricalWrappedSelectorHeader wrappedId={wrappedId} userId={userId} />
             </div>
           </div>
         </div>
       </div>
       <div className="pt-20">
         <div className="max-w-7xl mx-auto px-6 pb-8">
-          <WrappedViewerWrapper wrappedData={wrappedData as WrappedData} year={wrappedData.year} />
+          {wrappedData ? (
+            <WrappedViewerWrapper wrappedData={wrappedData as WrappedData} year={year} />
+          ) : (
+            <LlmTextRemovedNotice title="Historical version" />
+          )}
         </div>
       </div>
     </main>

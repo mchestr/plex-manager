@@ -233,8 +233,8 @@ model LLMUsage {
   user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   provider         String // Currently "openai", but extensible for other providers
   model            String? // Model used (e.g., "gpt-4", "openai/gpt-4")
-  prompt           String // The prompt sent to the LLM
-  response         String // The full response from the LLM
+  prompt           String? // The prompt sent to the LLM; null once removed by the October 2026 privacy clean-up (P0.20)
+  response         String? // The full response from the LLM; null once removed by the October 2026 privacy clean-up (P0.20)
   promptTokens     Int // Number of tokens in the prompt
   completionTokens Int // Number of tokens in the completion
   totalTokens      Int // Total tokens used

@@ -27,7 +27,8 @@
     "db:studio": "prisma studio",
     "db:seed": "prisma db seed",
     "register-discord-metadata": "ts-node --project tsconfig.scripts.json -r tsconfig-paths/register scripts/register-discord-metadata.ts",
-    "register-discord-commands": "ts-node --project tsconfig.scripts.json -r tsconfig-paths/register scripts/register-discord-commands.ts"
+    "register-discord-commands": "ts-node --project tsconfig.scripts.json -r tsconfig-paths/register scripts/register-discord-commands.ts",
+    "rewind:strip-leaderboards": "tsx --tsconfig tsconfig.scripts.json scripts/rewind-strip-leaderboards.ts"
   },
   "dependencies": {
     "@next-auth/prisma-adapter": "^1.0.7",
