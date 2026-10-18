@@ -7,19 +7,12 @@ import { z } from "zod"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
-import { checkRateLimit } from "@/lib/security/rate-limit"
+import { consume } from "@/lib/security/rate-limit"
 import { generateShareToken, getBaseUrl } from "@/lib/utils"
 import { createLogger } from "@/lib/utils/logger"
 import { yearSchema } from "@/lib/validations/shared-schemas"
 
 const logger = createLogger("WRAPPED_SHARE_LINK")
-
-/**
- * Ten share-link creations per member per hour. Only
- * {@link enableWrappedShareLink} is charged: stopping a link is never refused
- * (see {@link disableWrappedShareLink}).
- */
-const SHARE_ACTION_RATE_LIMIT = { windowMs: 60 * 60 * 1000, max: 10 }
 
 const shareLinkInputSchema = z.object({ year: yearSchema })
 
@@ -71,8 +64,9 @@ function revalidateSharePaths() {
  * calls cannot replace each other's token: the one that loses reads back the
  * winner's.
  *
- * Every call counts against the limit of ten an hour on
- * `rw:share-actions:<userId>`.
+ * Every call spends a point of the `rw:share-actions` limit (ten an hour per
+ * member, keyed `rw:share-actions:<userId>`). Only this action is charged:
+ * stopping a link is never refused (see {@link disableWrappedShareLink}).
  *
  * @param input - `{ year }` of the member's Rewind.
  * @returns `{ success: true, shareToken, url }`, or `{ success: false, error }`.
@@ -83,7 +77,7 @@ export async function enableWrappedShareLink(input: { year: number }): Promise<E
     return { success: false, error: caller.error }
   }
 
-  if (!checkRateLimit(`rw:share-actions:${caller.userId}`, SHARE_ACTION_RATE_LIMIT)) {
+  if (!(await consume("rw:share-actions", caller.userId)).ok) {
     return { success: false, error: "Too many share links created. Please try again later." }
   }
 

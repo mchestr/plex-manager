@@ -4,7 +4,7 @@
 
 import { GET } from '@/app/api/wrapped/share/[token]/route'
 import { prisma } from '@/lib/prisma'
-import { shareRateLimiter } from '@/lib/security/rate-limit'
+import { limitRequest } from '@/lib/security/rate-limit'
 import { NextRequest } from 'next/server'
 
 // Mock dependencies
@@ -20,7 +20,7 @@ jest.mock('@/lib/prisma', () => ({
 }))
 
 jest.mock('@/lib/security/rate-limit', () => ({
-  shareRateLimiter: jest.fn(),
+  limitRequest: jest.fn(),
 }))
 
 // Mock NextRequest and NextResponse to avoid URL property issues
@@ -93,7 +93,7 @@ function buildRequest(headers: Record<string, string> = {}) {
 describe('GET /api/wrapped/share/[token]', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    ;(shareRateLimiter as jest.Mock).mockResolvedValue(null)
+    ;(limitRequest as jest.Mock).mockResolvedValue(null)
     ;(prisma.wrappedShareVisit.create as jest.Mock).mockResolvedValue({})
   })
 
@@ -232,12 +232,14 @@ describe('GET /api/wrapped/share/[token]', () => {
 
   it('short-circuits on rate limit, with noindex', async () => {
     const rateLimited = { status: 429, headers: new Headers() }
-    ;(shareRateLimiter as jest.Mock).mockResolvedValue(rateLimited)
+    ;(limitRequest as jest.Mock).mockResolvedValue(rateLimited)
 
-    const response = await GET(buildRequest(), { params: Promise.resolve({ token: 'test-token' }) })
+    const request = buildRequest()
+    const response = await GET(request, { params: Promise.resolve({ token: 'test-token' }) })
 
     expect(response).toBe(rateLimited)
     expect(response.headers.get('X-Robots-Tag')).toBe('noindex')
+    expect(limitRequest).toHaveBeenCalledWith('share', request)
     expect(prisma.plexWrapped.findUnique).not.toHaveBeenCalled()
   })
 

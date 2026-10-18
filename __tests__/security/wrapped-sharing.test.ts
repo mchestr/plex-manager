@@ -6,7 +6,7 @@
 
 import { GET as getSharedWrapped } from '@/app/api/wrapped/share/[token]/route'
 import { prisma } from '@/lib/prisma'
-import { shareRateLimiter } from '@/lib/security/rate-limit'
+import { limitRequest } from '@/lib/security/rate-limit'
 
 // Mock dependencies
 jest.mock('next/server', () => ({
@@ -32,7 +32,7 @@ jest.mock('next/server', () => ({
 }))
 
 jest.mock('@/lib/security/rate-limit', () => ({
-  shareRateLimiter: jest.fn(),
+  limitRequest: jest.fn(),
 }))
 
 jest.mock('@/lib/prisma', () => ({
@@ -119,7 +119,7 @@ describe('Wrapped Sharing Security', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    ;(shareRateLimiter as jest.Mock).mockResolvedValue(null)
+    ;(limitRequest as jest.Mock).mockResolvedValue(null)
   })
 
   describe('GET /api/wrapped/share/[token]', () => {
