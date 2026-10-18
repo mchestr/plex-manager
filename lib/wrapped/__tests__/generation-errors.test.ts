@@ -1,12 +1,14 @@
 /**
  * Tests for lib/wrapped/generation-errors.ts (P0.9): the stored error format
- * and the fixed copy members and admins see.
+ * and the fixed copy members and admins see, and (P0.12) the refusal codes.
  */
 
 import {
   adminErrorHint,
+  isGenerationRefusal,
   memberErrorCopy,
   readStoredError,
+  refusalCopy,
   toStoredError,
 } from '../generation-errors'
 
@@ -69,5 +71,41 @@ describe('adminErrorHint', () => {
 
   it('has no hint for a generic failure', () => {
     expect(adminErrorHint('GENERATION_FAILED', '12345')).toBeNull()
+  })
+})
+
+describe('refusal codes (P0.12)', () => {
+  it('tells refusals apart from stored failure codes', () => {
+    for (const code of ['ALREADY_GENERATING', 'RATE_LIMITED', 'NOT_ENTITLED']) {
+      expect(isGenerationRefusal(code)).toBe(true)
+    }
+    for (const code of ['TAUTULLI_USER_NOT_FOUND', 'GENERATION_FAILED', undefined]) {
+      expect(isGenerationRefusal(code)).toBe(false)
+    }
+  })
+
+  it('never reads a refusal back as a stored code', () => {
+    expect(readStoredError('{"code":"ALREADY_GENERATING"}')).toBe('GENERATION_FAILED')
+  })
+
+  it('matches the documented examples', () => {
+    expect(refusalCopy('ALREADY_GENERATING')).toBe('Your Rewind is already being made.')
+    expect(refusalCopy('RATE_LIMITED', 540)).toBe('You can try again in 9 minutes.')
+    expect(refusalCopy('RATE_LIMITED', 7200)).toBe('You can try again in 2 hours.')
+  })
+
+  it('rounds the wait up and never says zero', () => {
+    expect(refusalCopy('RATE_LIMITED', 1)).toBe('You can try again in 1 minute.')
+    expect(refusalCopy('RATE_LIMITED', 600)).toBe('You can try again in 10 minutes.')
+    expect(refusalCopy('RATE_LIMITED', 601)).toBe('You can try again in 11 minutes.')
+    expect(refusalCopy('RATE_LIMITED', 3540)).toBe('You can try again in 59 minutes.')
+    expect(refusalCopy('RATE_LIMITED', 3600)).toBe('You can try again in 1 hour.')
+    expect(refusalCopy('RATE_LIMITED', 86_399)).toBe('You can try again in 24 hours.')
+  })
+
+  it('explains a missing entitlement without naming the member', () => {
+    expect(refusalCopy('NOT_ENTITLED')).toBe(
+      'Rewind is part of an active membership. Renew your subscription to make yours.'
+    )
   })
 })

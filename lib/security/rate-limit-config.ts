@@ -14,6 +14,7 @@
  */
 
 const MINUTE = 60
+const DAY = 24 * 60 * MINUTE
 
 interface LimitConfig {
   /** Requests allowed per window. */
@@ -38,6 +39,8 @@ export const LIMITS = {
   "plex:pin:poll": { points: 300, duration: 10 * MINUTE },
   "rw:share-actions": { points: 10, duration: 60 * MINUTE },
   "rw:share-page": { points: 60, duration: MINUTE },
+  "rw:gen:burst": { points: 1, duration: 10 * MINUTE },
+  "rw:gen:daily": { points: 3, duration: DAY },
 } as const satisfies Record<string, LimitConfig>
 
 export type LimitName = keyof typeof LIMITS

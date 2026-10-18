@@ -2,10 +2,13 @@
 
 import { generatePlexWrapped } from "@/actions/users"
 import { useToast } from "@/components/ui/toast"
-import { adminErrorHint } from "@/lib/wrapped/generation-errors"
+import { adminErrorHint, isGenerationRefusal } from "@/lib/wrapped/generation-errors"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { ConfirmModal } from "@/components/admin/shared/confirm-modal"
+
+/** Shown when a run for this member and year is already in progress. */
+const ALREADY_GENERATING_COPY = "This member's Rewind is already being made. Try again when it finishes."
 
 interface RegenerateWrappedButtonProps {
   userId: string
@@ -48,7 +51,9 @@ export function RegenerateWrappedButton({
         setTimeout(() => {
           setShowSuccess(false)
         }, 3000)
-      } else if (result.code) {
+      } else if (result.code === "ALREADY_GENERATING") {
+        toast.showError(ALREADY_GENERATING_COPY)
+      } else if (result.code && !isGenerationRefusal(result.code)) {
         // A typed failure: show the admin hint (or the code), not the member copy.
         toast.showError(adminErrorHint(result.code, plexUserId) ?? result.code)
       } else {

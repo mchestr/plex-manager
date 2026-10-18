@@ -91,3 +91,49 @@ export function adminErrorHint(code: RewindErrorCode, plexUserId: string | null)
   }
   return null
 }
+
+/**
+ * Codes for a run `generatePlexWrapped` refused to start (SEC-22, RWP-12).
+ * They are returned to the caller and never stored.
+ */
+export const GENERATION_REFUSAL_CODES = ["ALREADY_GENERATING", "RATE_LIMITED", "NOT_ENTITLED"] as const
+
+export type GenerationRefusalCode = (typeof GENERATION_REFUSAL_CODES)[number]
+
+/** True for a refusal code, false for a stored failure code or none. */
+export function isGenerationRefusal(code: string | undefined): code is GenerationRefusalCode {
+  return GENERATION_REFUSAL_CODES.some((refusal) => refusal === code)
+}
+
+/** "in 1 minute", "in 10 minutes", "in 3 hours": rounded up, never "in 0". */
+function retryAfterPhrase(seconds: number): string {
+  const minutes = Math.max(1, Math.ceil(seconds / 60))
+  if (minutes < 60) {
+    return minutes === 1 ? "in 1 minute" : `in ${minutes} minutes`
+  }
+  const hours = Math.ceil(minutes / 60)
+  return hours === 1 ? "in 1 hour" : `in ${hours} hours`
+}
+
+/**
+ * Fixed, member-facing copy for a refused run.
+ *
+ * @param retryAfterSec - for `RATE_LIMITED`, the seconds until the next run is allowed
+ *
+ * @example
+ * ```ts
+ * refusalCopy("ALREADY_GENERATING") // "Your Rewind is already being made."
+ * refusalCopy("RATE_LIMITED", 540)  // "You can try again in 9 minutes."
+ * refusalCopy("RATE_LIMITED", 7200) // "You can try again in 2 hours."
+ * ```
+ */
+export function refusalCopy(code: GenerationRefusalCode, retryAfterSec = 60): string {
+  switch (code) {
+    case "ALREADY_GENERATING":
+      return "Your Rewind is already being made."
+    case "RATE_LIMITED":
+      return `You can try again ${retryAfterPhrase(retryAfterSec)}.`
+    case "NOT_ENTITLED":
+      return "Rewind is part of an active membership. Renew your subscription to make yours."
+  }
+}

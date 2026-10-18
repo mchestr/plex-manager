@@ -278,6 +278,44 @@ describe('RegenerateWrappedButton', () => {
       expect(screen.queryByText(/We couldn't find your account/)).not.toBeInTheDocument()
     })
 
+    it('says a run is already in progress, in admin terms (P0.12)', async () => {
+      const user = userEvent.setup({ delay: null })
+      jest.spyOn(usersAction, 'generatePlexWrapped').mockResolvedValue({
+        success: false,
+        code: 'ALREADY_GENERATING',
+        error: 'Your Rewind is already being made.',
+      })
+
+      renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} />)
+      await user.click(screen.getByRole('button', { name: /Regenerate wrapped/i }))
+      await user.click(screen.getByText('Regenerate'))
+
+      await waitFor(() => {
+        expect(
+          screen.getByText("This member's Rewind is already being made. Try again when it finishes.")
+        ).toBeInTheDocument()
+      })
+      expect(screen.queryByText('Your Rewind is already being made.')).not.toBeInTheDocument()
+      expect(screen.queryByText('ALREADY_GENERATING')).not.toBeInTheDocument()
+    })
+
+    it.each([
+      ['RATE_LIMITED', 'You can try again in 9 minutes.'],
+      ['NOT_ENTITLED', 'Rewind is part of an active membership. Renew your subscription to make yours.'],
+    ])('shows the copy, not the code, for a %s refusal (P0.12)', async (code, copy) => {
+      const user = userEvent.setup({ delay: null })
+      jest.spyOn(usersAction, 'generatePlexWrapped').mockResolvedValue({ success: false, code, error: copy } as never)
+
+      renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} />)
+      await user.click(screen.getByRole('button', { name: /Regenerate wrapped/i }))
+      await user.click(screen.getByText('Regenerate'))
+
+      await waitFor(() => {
+        expect(screen.getByText(copy)).toBeInTheDocument()
+      })
+      expect(screen.queryByText(code)).not.toBeInTheDocument()
+    })
+
     it('should handle exception during regeneration', async () => {
       const user = userEvent.setup({ delay: null })
       jest.spyOn(usersAction, 'generatePlexWrapped').mockRejectedValue(

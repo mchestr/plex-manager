@@ -4,7 +4,7 @@ import { getWrappedSettings } from "@/actions/admin"
 import { generatePlexWrapped, getUserPlexWrapped } from "@/actions/users"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
-import { memberErrorCopy, readStoredError } from "@/lib/wrapped/generation-errors"
+import { isGenerationRefusal, memberErrorCopy, readStoredError, refusalCopy } from "@/lib/wrapped/generation-errors"
 import { motion } from "framer-motion"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -153,8 +153,16 @@ export function WrappedCard({ userId, memberSince }: WrappedCardProps) {
       const result = await generatePlexWrapped(userId, wrappedYear)
       if (result.success) {
         await loadWrapped()
+      } else if (result.code === "ALREADY_GENERATING") {
+        // Another tab (or a double click) already started it: keep polling for that run.
+        toast.showInfo(refusalCopy(result.code))
+        await loadWrapped()
       } else {
-        toast.showError(result.error || "Failed to generate wrapped")
+        toast.showError(
+          isGenerationRefusal(result.code)
+            ? refusalCopy(result.code, result.retryAfterSec)
+            : result.error || "Failed to generate wrapped"
+        )
         setIsGenerating(false)
       }
     } catch (err) {
@@ -343,6 +351,7 @@ export function WrappedCard({ userId, memberSince }: WrappedCardProps) {
           <button
             onClick={handleGenerate}
             disabled={isGenerating}
+            data-testid="wrapped-card-retry"
             className="inline-flex items-center gap-2 rounded-xl bg-red-500/20 border border-red-500/30 px-5 py-2.5 text-sm font-semibold text-red-300 transition hover:bg-red-500/30 disabled:opacity-50"
           >
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -409,6 +418,7 @@ export function WrappedCard({ userId, memberSince }: WrappedCardProps) {
           <button
             onClick={handleGenerate}
             disabled={isGenerating}
+            data-testid="wrapped-card-generate"
             className="group/btn relative inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-pink-500 via-purple-500 to-pink-500 bg-[length:200%_100%] px-6 sm:px-8 py-3 sm:py-3.5 text-base sm:text-lg font-bold text-white shadow-lg shadow-pink-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-pink-500/40 hover:bg-right disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Generate My Wrapped

@@ -1,5 +1,7 @@
 /**
- * Tests for actions/wrapped-generation.ts - wrapped generation logic
+ * Tests for actions/wrapped-generation.ts - wrapped generation logic, and the
+ * P0.12 guardrails (SEC-22, RWP-12): the season year, single flight, stale
+ * takeover, compare-and-set writes and the member limits.
  */
 
 import {
@@ -19,6 +21,8 @@ import {
 } from '@/lib/wrapped/statistics'
 import { revalidatePath } from 'next/cache'
 import { generateShareToken } from '@/lib/utils'
+import { getWrappedSettings } from '@/actions/admin'
+import { consume, reward } from '@/lib/security/rate-limit'
 import { memberErrorCopy } from '@/lib/wrapped/generation-errors'
 import { assembleWrappedData } from '@/lib/wrapped/assemble-wrapped'
 import {
@@ -36,8 +40,9 @@ jest.mock('@/lib/prisma', () => ({
     },
     plexWrapped: {
       findUnique: jest.fn(),
-      upsert: jest.fn(),
-      update: jest.fn(),
+      findUniqueOrThrow: jest.fn(),
+      createMany: jest.fn(),
+      updateMany: jest.fn(),
     },
     plexServer: {
       findFirst: jest.fn(),
@@ -48,7 +53,21 @@ jest.mock('@/lib/prisma', () => ({
     overseerr: {
       findFirst: jest.fn(),
     },
+    config: {
+      findUnique: jest.fn(),
+    },
   },
+}))
+
+jest.mock('@/actions/admin', () => ({
+  getWrappedSettings: jest.fn(),
+}))
+
+// The limiter is a pass-through by default; the rate-limit tests below
+// switch these to the real in-process limiter.
+jest.mock('@/lib/security/rate-limit', () => ({
+  consume: jest.fn(),
+  reward: jest.fn(),
 }))
 
 jest.mock('next-auth', () => ({
@@ -88,6 +107,46 @@ import {
   makePrismaTautulli,
 } from '../utils/test-builders'
 
+const SEASON_YEAR = 2026
+
+/**
+ * The defaults every test starts from: the season is 2026, Stripe is off,
+ * the limiter allows, and the run claims row wrapped-1 and keeps its claim.
+ */
+function setGenerationDefaults() {
+  ;(getWrappedSettings as jest.Mock).mockResolvedValue({ wrappedEnabled: true, wrappedYear: SEASON_YEAR })
+  ;(prisma.config.findUnique as jest.Mock).mockResolvedValue(null)
+  ;(consume as jest.Mock).mockResolvedValue({ ok: true })
+  ;(reward as jest.Mock).mockResolvedValue(undefined)
+  ;(prisma.plexWrapped.createMany as jest.Mock).mockResolvedValue({ count: 1 })
+  ;(prisma.plexWrapped.updateMany as jest.Mock).mockResolvedValue({ count: 1 })
+  ;(prisma.plexWrapped.findUniqueOrThrow as jest.Mock).mockResolvedValue({ id: 'wrapped-1' })
+}
+
+/** The claim's updateMany calls (by member and year). */
+function claimCalls() {
+  return (prisma.plexWrapped.updateMany as jest.Mock).mock.calls.map(([args]) => args).filter((args) => !args.where.id)
+}
+
+/** The compare-and-set writes of a run's outcome (by row id). */
+function outcomeWrites() {
+  return (prisma.plexWrapped.updateMany as jest.Mock).mock.calls.map(([args]) => args).filter((args) => args.where.id)
+}
+
+/** The where clause of an outcome write for the claim made at `claimedAt`. */
+function claimedRow(claimedAt: Date, id = 'wrapped-1') {
+  return {
+    id,
+    status: 'generating',
+    updatedAt: { gte: claimedAt, lt: new Date(claimedAt.getTime() + 15 * 60 * 1000) },
+  }
+}
+
+/** The time the first claim was made. */
+function firstClaimedAt(): Date {
+  return claimCalls()[0].data.updatedAt
+}
+
 const mockUser = makePrismaUser({
   id: 'user-1',
   name: 'Test User',
@@ -115,6 +174,7 @@ const mockAdminSession = makeAdminSession({
 describe('generatePlexWrapped', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    setGenerationDefaults()
   })
 
   it('should successfully generate wrapped for user', async () => {
@@ -122,13 +182,6 @@ describe('generatePlexWrapped', () => {
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser)
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
     ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(makePrismaPlexServer())
-    ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue({
-      id: 'wrapped-1',
-      userId: 'user-1',
-      year: 2024,
-      status: 'generating',
-      shareToken: 'test-share-token',
-    })
     ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(makePrismaTautulli())
     ;(fetchTautulliStatistics as jest.Mock).mockResolvedValue({
       success: true,
@@ -189,9 +242,8 @@ describe('generatePlexWrapped', () => {
         },
       },
     })
-    ;(prisma.plexWrapped.update as jest.Mock).mockResolvedValue({})
 
-    const result = await generatePlexWrapped('user-1', 2024)
+    const result = await generatePlexWrapped('user-1', 2026)
 
     expect(result.success).toBe(true)
     expect(result.wrappedId).toBe('wrapped-1')
@@ -201,7 +253,7 @@ describe('generatePlexWrapped', () => {
   it('should return error when user is not authenticated', async () => {
     ;(getServerSession as jest.Mock).mockResolvedValue(null)
 
-    const result = await generatePlexWrapped('user-1', 2024)
+    const result = await generatePlexWrapped('user-1', 2026)
 
     expect(result.success).toBe(false)
     expect(result.error).toContain('Unauthorized')
@@ -211,7 +263,7 @@ describe('generatePlexWrapped', () => {
     ;(getServerSession as jest.Mock).mockResolvedValue(mockSession)
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(null)
 
-    const result = await generatePlexWrapped('user-1', 2024)
+    const result = await generatePlexWrapped('user-1', 2026)
 
     expect(result.success).toBe(false)
     expect(result.error).toContain('User not found')
@@ -222,15 +274,8 @@ describe('generatePlexWrapped', () => {
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser)
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
     ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(makePrismaPlexServer())
-    ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue({
-      id: 'wrapped-1',
-      userId: 'user-1',
-      year: 2024,
-      status: 'generating',
-      shareToken: 'test-share-token',
-    })
 
-    const result = await generatePlexWrapped('user-1', 2024)
+    const result = await generatePlexWrapped('user-1', 2026)
 
     // Should proceed (will fail later in the process, but authorization check passes)
     expect(result).toBeDefined()
@@ -244,7 +289,7 @@ describe('generatePlexWrapped', () => {
     })
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
 
-    const result = await generatePlexWrapped('user-2', 2024)
+    const result = await generatePlexWrapped('user-2', 2026)
 
     expect(result.success).toBe(false)
     expect(result.error).toContain('Unauthorized')
@@ -256,20 +301,13 @@ describe('generatePlexWrapped', () => {
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue({
       id: 'wrapped-1',
       userId: 'user-1',
-      year: 2024,
+      year: 2026,
       status: 'completed',
       shareToken: 'existing-token',
     })
     ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(makePrismaPlexServer())
-    ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue({
-      id: 'wrapped-1',
-      userId: 'user-1',
-      year: 2024,
-      status: 'generating',
-      shareToken: 'existing-token',
-    })
 
-    const result = await generatePlexWrapped('user-1', 2024)
+    const result = await generatePlexWrapped('user-1', 2026)
 
     // Should proceed (admin can regenerate)
     expect(result).toBeDefined()
@@ -281,11 +319,11 @@ describe('generatePlexWrapped', () => {
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue({
       id: 'wrapped-1',
       userId: 'user-1',
-      year: 2024,
+      year: 2026,
       status: 'completed',
     })
 
-    const result = await generatePlexWrapped('user-1', 2024)
+    const result = await generatePlexWrapped('user-1', 2026)
 
     expect(result.success).toBe(false)
     expect(result.error).toContain('Only admins can regenerate')
@@ -297,19 +335,12 @@ describe('generatePlexWrapped', () => {
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue({
       id: 'wrapped-1',
       userId: 'user-1',
-      year: 2024,
+      year: 2026,
       status: 'failed',
     })
     ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(makePrismaPlexServer())
-    ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue({
-      id: 'wrapped-1',
-      userId: 'user-1',
-      year: 2024,
-      status: 'generating',
-      shareToken: 'test-share-token',
-    })
 
-    const result = await generatePlexWrapped('user-1', 2024)
+    const result = await generatePlexWrapped('user-1', 2026)
 
     // Should proceed (user can retry failed wrapped)
     expect(result).toBeDefined()
@@ -321,7 +352,7 @@ describe('generatePlexWrapped', () => {
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
     ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(null)
 
-    const result = await generatePlexWrapped('user-1', 2024)
+    const result = await generatePlexWrapped('user-1', 2026)
 
     expect(result.success).toBe(false)
     expect(result.error).toContain('No active Plex server')
@@ -332,16 +363,9 @@ describe('generatePlexWrapped', () => {
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser)
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
     ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(makePrismaPlexServer())
-    ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue({
-      id: 'wrapped-1',
-      userId: 'user-1',
-      year: 2024,
-      status: 'generating',
-      shareToken: 'test-share-token',
-    })
     ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(null)
 
-    const result = await generatePlexWrapped('user-1', 2024)
+    const result = await generatePlexWrapped('user-1', 2026)
 
     expect(result.success).toBe(false)
     expect(result.error).toContain('No active Tautulli server')
@@ -357,16 +381,9 @@ describe('generatePlexWrapped', () => {
     )
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
     ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(makePrismaPlexServer())
-    ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue({
-      id: 'wrapped-1',
-      userId: 'user-1',
-      year: 2024,
-      status: 'generating',
-      shareToken: 'test-share-token',
-    })
     ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(makePrismaTautulli())
 
-    const result = await generatePlexWrapped('user-1', 2024)
+    const result = await generatePlexWrapped('user-1', 2026)
 
     expect(result.success).toBe(false)
     expect(result.error).toContain('does not have a Plex user ID')
@@ -377,30 +394,23 @@ describe('generatePlexWrapped', () => {
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser)
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
     ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(makePrismaPlexServer())
-    ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue({
-      id: 'wrapped-1',
-      userId: 'user-1',
-      year: 2024,
-      status: 'generating',
-      shareToken: 'test-share-token',
-    })
     ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(makePrismaTautulli())
     ;(fetchTautulliStatistics as jest.Mock).mockResolvedValue({
       success: false,
       error: 'Failed to fetch statistics',
     })
 
-    const result = await generatePlexWrapped('user-1', 2024)
+    const result = await generatePlexWrapped('user-1', 2026)
 
     expect(result.success).toBe(false)
-    expect(prisma.plexWrapped.update).toHaveBeenCalledWith(
+    expect(outcomeWrites()).toEqual([
       expect.objectContaining({
-        where: { id: 'wrapped-1' },
+        where: claimedRow(firstClaimedAt()),
         data: expect.objectContaining({
           status: 'failed',
         }),
-      })
-    )
+      }),
+    ])
   })
 
   describe('when the member is missing from Tautulli', () => {
@@ -417,13 +427,6 @@ describe('generatePlexWrapped', () => {
       ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser)
       ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
       ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(makePrismaPlexServer())
-      ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue({
-        id: 'wrapped-1',
-        userId: 'user-1',
-        year: 2024,
-        status: 'generating',
-        shareToken: 'test-share-token',
-      })
       ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(makePrismaTautulli())
       // Run the real lookup against a Tautulli roster that lacks the member.
       const actual = jest.requireActual('@/lib/wrapped/tautulli-user-statistics')
@@ -439,23 +442,24 @@ describe('generatePlexWrapped', () => {
     })
 
     it('stores the code, returns the member copy and leaks no roster strings', async () => {
-      const result = await generatePlexWrapped('user-1', 2024)
+      const result = await generatePlexWrapped('user-1', 2026)
 
       expect(result).toEqual({
         success: false,
         code: 'TAUTULLI_USER_NOT_FOUND',
         error: memberErrorCopy('TAUTULLI_USER_NOT_FOUND'),
       })
-      expect(prisma.plexWrapped.update).toHaveBeenCalledTimes(1)
-      expect(prisma.plexWrapped.update).toHaveBeenCalledWith({
-        where: { id: 'wrapped-1' },
-        data: { status: 'failed', error: '{"code":"TAUTULLI_USER_NOT_FOUND"}' },
-      })
+      expect(outcomeWrites()).toEqual([
+        {
+          where: claimedRow(firstClaimedAt()),
+          data: { status: 'failed', error: '{"code":"TAUTULLI_USER_NOT_FOUND"}' },
+        },
+      ])
       expect(generateWrappedWithLLM).not.toHaveBeenCalled()
 
       const output = JSON.stringify({
         result,
-        writes: (prisma.plexWrapped.update as jest.Mock).mock.calls,
+        writes: (prisma.plexWrapped.updateMany as jest.Mock).mock.calls,
       })
       for (const value of rosterStrings) {
         expect(output).not.toContain(value)
@@ -467,12 +471,12 @@ describe('generatePlexWrapped', () => {
         makePrismaUser({ ...mockUser, email: 'hank.private@example.com' })
       )
 
-      const result = await generatePlexWrapped('user-1', 2024)
+      const result = await generatePlexWrapped('user-1', 2026)
 
       expect(fetchTautulliStatistics).toHaveBeenCalledWith(
         { url: 'https://tautulli.example.com:8181', apiKey: 'tautulli-key' },
         { plexUserId: 'plex-user-123' },
-        2024
+        2026
       )
       expect(result.code).toBe('TAUTULLI_USER_NOT_FOUND')
       expect(global.fetch).toHaveBeenCalledTimes(1)
@@ -502,13 +506,15 @@ describe('generatePlexWrapped', () => {
           }),
         })
 
-        const result = await generatePlexWrapped('user-1', 2024)
+        const result = await generatePlexWrapped('user-1', 2026)
 
         expect(result.code).toBe('TAUTULLI_USER_NOT_FOUND')
-        expect(prisma.plexWrapped.update).toHaveBeenCalledWith({
-          where: { id: 'wrapped-1' },
-          data: { status: 'failed', error: '{"code":"TAUTULLI_USER_NOT_FOUND"}' },
-        })
+        expect(outcomeWrites()).toEqual([
+          {
+            where: claimedRow(firstClaimedAt()),
+            data: { status: 'failed', error: '{"code":"TAUTULLI_USER_NOT_FOUND"}' },
+          },
+        ])
         // Only get_users ran: no other account's history was fetched.
         expect(global.fetch).toHaveBeenCalledTimes(1)
         expect(String((global.fetch as jest.Mock).mock.calls[0][0])).toContain('cmd=get_users')
@@ -525,13 +531,6 @@ describe('generatePlexWrapped', () => {
       ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(user)
       ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
       ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(makePrismaPlexServer())
-      ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue({
-        id: 'wrapped-1',
-        userId: 'user-1',
-        year: 2024,
-        status: 'generating',
-        shareToken: 'test-share-token',
-      })
       ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(makePrismaTautulli())
       ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue({
         id: 'overseerr-1',
@@ -565,7 +564,6 @@ describe('generatePlexWrapped', () => {
         success: true,
         data: { sections: [], summary: 'Test summary', metadata: { totalSections: 0, generationTime: 0 } },
       })
-      ;(prisma.plexWrapped.update as jest.Mock).mockResolvedValue({})
     }
 
     function promptInput() {
@@ -576,7 +574,7 @@ describe('generatePlexWrapped', () => {
     it('sends the member name, never the email', async () => {
       setUpSuccessfulRun(makePrismaUser({ id: 'user-1', name: '  Test User ', email, plexUserId: 'plex-user-123' }))
 
-      const result = await generatePlexWrapped('user-1', 2024)
+      const result = await generatePlexWrapped('user-1', 2026)
 
       expect(result.success).toBe(true)
       expect(promptInput().promptName).toBe('Test User')
@@ -585,7 +583,7 @@ describe('generatePlexWrapped', () => {
       expect(fetchOverseerrStatistics).toHaveBeenCalledWith(
         expect.anything(),
         { plexUserId: 'plex-user-123', email },
-        2024
+        2026
       )
     })
 
@@ -596,7 +594,7 @@ describe('generatePlexWrapped', () => {
     ])('sends "there" for %s', async (_label, name) => {
       setUpSuccessfulRun(makePrismaUser({ id: 'user-1', name, email, plexUserId: 'plex-user-123' }))
 
-      const result = await generatePlexWrapped('user-1', 2024)
+      const result = await generatePlexWrapped('user-1', 2026)
 
       expect(result.success).toBe(true)
       expect(promptInput().promptName).toBe('there')
@@ -613,13 +611,6 @@ describe('generatePlexWrapped', () => {
       ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(user)
       ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
       ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(makePrismaPlexServer())
-      ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue({
-        id: 'wrapped-1',
-        userId: 'user-1',
-        year: 2024,
-        status: 'generating',
-        shareToken: 'test-share-token',
-      })
       ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(makePrismaTautulli())
       ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue(null)
       ;(fetchTautulliStatistics as jest.Mock).mockResolvedValue({
@@ -655,12 +646,11 @@ describe('generatePlexWrapped', () => {
           year: args.year,
         }),
       }))
-      ;(prisma.plexWrapped.update as jest.Mock).mockResolvedValue({})
     }
 
     function storedData() {
-      const completed = (prisma.plexWrapped.update as jest.Mock).mock.calls
-        .map(([args]) => args.data)
+      const completed = outcomeWrites()
+        .map((args) => args.data)
         .find((data) => data.status === 'completed')
       return { raw: completed.data as string, parsed: JSON.parse(completed.data) }
     }
@@ -668,7 +658,7 @@ describe('generatePlexWrapped', () => {
     it('gives the prompt the leaderboards but stores no roster', async () => {
       setUpRunWithLeaderboards(makePrismaUser({ id: 'user-1', name: 'Test User', email, plexUserId: 'plex-user-123' }))
 
-      const result = await generatePlexWrapped('user-1', 2024)
+      const result = await generatePlexWrapped('user-1', 2026)
 
       expect(result.success).toBe(true)
       const promptStatistics = (generateWrappedWithLLM as jest.Mock).mock.calls[0][0].statistics
@@ -689,7 +679,7 @@ describe('generatePlexWrapped', () => {
     ])('stores "Viewer" as the name for %s', async (_label, name) => {
       setUpRunWithLeaderboards(makePrismaUser({ id: 'user-1', name, email, plexUserId: 'plex-user-123' }))
 
-      const result = await generatePlexWrapped('user-1', 2024)
+      const result = await generatePlexWrapped('user-1', 2026)
 
       expect(result.success).toBe(true)
       expect((generateWrappedWithLLM as jest.Mock).mock.calls[0][0].displayName).toBe('Viewer')
@@ -704,13 +694,6 @@ describe('generatePlexWrapped', () => {
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser)
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
     ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(makePrismaPlexServer())
-    ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue({
-      id: 'wrapped-1',
-      userId: 'user-1',
-      year: 2024,
-      status: 'generating',
-      shareToken: 'test-share-token',
-    })
     ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(makePrismaTautulli())
     ;(fetchTautulliStatistics as jest.Mock).mockResolvedValue({
       success: true,
@@ -732,27 +715,27 @@ describe('generatePlexWrapped', () => {
       error: 'LLM generation failed',
     })
 
-    const result = await generatePlexWrapped('user-1', 2024)
+    const result = await generatePlexWrapped('user-1', 2026)
 
     expect(result.success).toBe(false)
-    expect(prisma.plexWrapped.update).toHaveBeenCalledWith(
+    expect(outcomeWrites()).toEqual([
       expect.objectContaining({
-        where: { id: 'wrapped-1' },
+        where: claimedRow(firstClaimedAt()),
         data: expect.objectContaining({
           status: 'failed',
         }),
-      })
-    )
+      }),
+    ])
   })
 
   it('should handle invalid year parameter', async () => {
-    // With validation, invalid year parameter (-1) is rejected before any database calls
-    // No need to mock session or database - validation happens first
+    // An invalid year is rejected after the session check, before any database call
+    ;(getServerSession as jest.Mock).mockResolvedValue(mockSession)
+
     const result = await generatePlexWrapped('user-1', -1)
 
-    // The function should return an error for invalid year
-    expect(result.success).toBe(false)
-    expect(result.error).toBeDefined()
+    expect(result).toEqual({ success: false, error: 'Rewind is only available for 2026' })
+    expect(prisma.user.findUnique).not.toHaveBeenCalled()
   })
 
   it('should handle database error during user lookup', async () => {
@@ -761,13 +744,13 @@ describe('generatePlexWrapped', () => {
       new Error('Database connection failed')
     )
 
-    const result = await generatePlexWrapped('user-1', 2024)
+    const result = await generatePlexWrapped('user-1', 2026)
 
     expect(result.success).toBe(false)
     expect(result.error).toContain('Database connection failed')
   })
 
-  it('should handle database error during wrapped upsert', async () => {
+  it('should handle database error while claiming the row', async () => {
     ;(getServerSession as jest.Mock).mockResolvedValue(mockSession)
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser)
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
@@ -778,14 +761,15 @@ describe('generatePlexWrapped', () => {
       name: 'Test Server',
       isActive: true,
     })
-    ;(prisma.plexWrapped.upsert as jest.Mock).mockRejectedValue(
+    ;(prisma.plexWrapped.createMany as jest.Mock).mockRejectedValue(
       new Error('Database write failed')
     )
 
-    const result = await generatePlexWrapped('user-1', 2024)
+    const result = await generatePlexWrapped('user-1', 2026)
 
     expect(result.success).toBe(false)
     expect(result.error).toContain('Database write failed')
+    expect(prisma.plexWrapped.updateMany).not.toHaveBeenCalled()
   })
 
   it('should handle Plex server statistics fetch failure gracefully', async () => {
@@ -798,13 +782,6 @@ describe('generatePlexWrapped', () => {
       token: 'server-token',
       name: 'Test Server',
       isActive: true,
-    })
-    ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue({
-      id: 'wrapped-1',
-      userId: 'user-1',
-      year: 2024,
-      status: 'generating',
-      shareToken: 'test-share-token',
     })
     ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue({
       id: 'tautulli-1',
@@ -863,9 +840,8 @@ describe('generatePlexWrapped', () => {
         },
       },
     })
-    ;(prisma.plexWrapped.update as jest.Mock).mockResolvedValue({})
 
-    const result = await generatePlexWrapped('user-1', 2024)
+    const result = await generatePlexWrapped('user-1', 2026)
 
     // Should succeed even if Plex server stats fail (non-critical)
     expect(result.success).toBe(true)
@@ -882,13 +858,6 @@ describe('generatePlexWrapped', () => {
       token: 'server-token',
       name: 'Test Server',
       isActive: true,
-    })
-    ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue({
-      id: 'wrapped-1',
-      userId: 'user-1',
-      year: 2024,
-      status: 'generating',
-      shareToken: 'test-share-token',
     })
     ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue({
       id: 'tautulli-1',
@@ -955,9 +924,8 @@ describe('generatePlexWrapped', () => {
         },
       },
     })
-    ;(prisma.plexWrapped.update as jest.Mock).mockResolvedValue({})
 
-    const result = await generatePlexWrapped('user-1', 2024)
+    const result = await generatePlexWrapped('user-1', 2026)
 
     // Should succeed even if Overseerr stats fail (non-critical)
     expect(result.success).toBe(true)
@@ -974,13 +942,6 @@ describe('generatePlexWrapped', () => {
       token: 'server-token',
       name: 'Test Server',
       isActive: true,
-    })
-    ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue({
-      id: 'wrapped-1',
-      userId: 'user-1',
-      year: 2024,
-      status: 'generating',
-      shareToken: 'test-share-token',
     })
     ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue({
       id: 'tautulli-1',
@@ -1034,9 +995,8 @@ describe('generatePlexWrapped', () => {
         },
       },
     })
-    ;(prisma.plexWrapped.update as jest.Mock).mockResolvedValue({})
 
-    const result = await generatePlexWrapped('user-1', 2024)
+    const result = await generatePlexWrapped('user-1', 2026)
 
     // Should succeed even if leaderboards fail (non-critical)
     expect(result.success).toBe(true)
@@ -1053,7 +1013,7 @@ describe('generatePlexWrapped', () => {
       },
     })
 
-    const result = await generatePlexWrapped('user-1', 2024)
+    const result = await generatePlexWrapped('user-1', 2026)
 
     expect(result.success).toBe(false)
     expect(result.error).toContain('Invalid session')
@@ -1069,13 +1029,6 @@ describe('generatePlexWrapped', () => {
       token: 'server-token',
       name: 'Test Server',
       isActive: true,
-    })
-    ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue({
-      id: 'wrapped-1',
-      userId: 'user-1',
-      year: 2024,
-      status: 'generating',
-      shareToken: 'test-share-token',
     })
     ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue({
       id: 'tautulli-1',
@@ -1121,11 +1074,12 @@ describe('generatePlexWrapped', () => {
         },
       },
     })
-    ;(prisma.plexWrapped.update as jest.Mock).mockRejectedValue(
-      new Error('Database update failed')
-    )
+    // The claim succeeds; storing the result (and then the failure) does not.
+    ;(prisma.plexWrapped.updateMany as jest.Mock)
+      .mockResolvedValueOnce({ count: 1 })
+      .mockRejectedValue(new Error('Database update failed'))
 
-    const result = await generatePlexWrapped('user-1', 2024)
+    const result = await generatePlexWrapped('user-1', 2026)
 
     expect(result.success).toBe(false)
     expect(result.error).toContain('Database update failed')
@@ -1137,13 +1091,6 @@ describe('generatePlexWrapped', () => {
       ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser)
       ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(existing)
       ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(makePrismaPlexServer())
-      ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue({
-        id: 'wrapped-1',
-        userId: 'user-1',
-        year: 2024,
-        status: 'generating',
-        shareToken: (existing?.shareToken as string | null | undefined) ?? null,
-      })
       ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(makePrismaTautulli())
       ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue(null)
       ;(fetchTautulliStatistics as jest.Mock).mockResolvedValue({
@@ -1168,14 +1115,13 @@ describe('generatePlexWrapped', () => {
         success: true,
         data: { sections: [], summary: 'Test summary', metadata: { totalSections: 0, generationTime: 0 } },
       })
-      ;(prisma.plexWrapped.update as jest.Mock).mockResolvedValue({})
     }
 
-    /** Every payload generation wrote to PlexWrapped: the upsert's create and update, and each update's data. */
+    /** Every payload generation wrote to PlexWrapped: the created row, the claim and the outcome. */
     function writtenPayloads(): Record<string, unknown>[] {
-      const upserts = (prisma.plexWrapped.upsert as jest.Mock).mock.calls.flatMap(([args]) => [args.create, args.update])
-      const updates = (prisma.plexWrapped.update as jest.Mock).mock.calls.map(([args]) => args.data)
-      return [...upserts, ...updates]
+      const created = (prisma.plexWrapped.createMany as jest.Mock).mock.calls.flatMap(([args]) => args.data)
+      const updates = (prisma.plexWrapped.updateMany as jest.Mock).mock.calls.map(([args]) => args.data)
+      return [...created, ...updates]
     }
 
     function expectNoShareTokenWrites() {
@@ -1190,19 +1136,20 @@ describe('generatePlexWrapped', () => {
     it('creates a new Rewind without a share token', async () => {
       setUpCompletedRun(mockSession, null)
 
-      const result = await generatePlexWrapped('user-1', 2024)
+      const result = await generatePlexWrapped('user-1', 2026)
 
       expect(result.success).toBe(true)
-      expect((prisma.plexWrapped.upsert as jest.Mock).mock.calls[0][0].create).toEqual(
-        expect.objectContaining({ userId: 'user-1', year: 2024, status: 'generating' })
-      )
+      expect((prisma.plexWrapped.createMany as jest.Mock).mock.calls[0][0].data).toEqual([
+        expect.objectContaining({ userId: 'user-1', year: 2026, status: 'pending' }),
+      ])
+      expect(claimCalls()[0].data).toEqual(expect.objectContaining({ status: 'generating' }))
       expectNoShareTokenWrites()
     })
 
     it('retries a failed Rewind without minting a token', async () => {
-      setUpCompletedRun(mockSession, { id: 'wrapped-1', userId: 'user-1', year: 2024, status: 'failed', shareToken: null })
+      setUpCompletedRun(mockSession, { id: 'wrapped-1', userId: 'user-1', year: 2026, status: 'failed', shareToken: null })
 
-      const result = await generatePlexWrapped('user-1', 2024)
+      const result = await generatePlexWrapped('user-1', 2026)
 
       expect(result.success).toBe(true)
       expectNoShareTokenWrites()
@@ -1212,15 +1159,294 @@ describe('generatePlexWrapped', () => {
       setUpCompletedRun(mockAdminSession, {
         id: 'wrapped-1',
         userId: 'user-1',
-        year: 2024,
+        year: 2026,
         status: 'completed',
         shareToken: 'member-chose-to-share',
       })
 
-      const result = await generatePlexWrapped('user-1', 2024)
+      const result = await generatePlexWrapped('user-1', 2026)
 
       expect(result.success).toBe(true)
       expectNoShareTokenWrites()
+    })
+  })
+})
+
+describe('generation guardrails (P0.12)', () => {
+  const MINUTE = 60 * 1000
+  const ALREADY = { success: false, code: 'ALREADY_GENERATING', error: 'Your Rewind is already being made.' }
+
+  function memberSession(id: string) {
+    return makeSession({ user: { id, email: `${id}@example.com`, name: 'Member', isAdmin: false } })
+  }
+
+  function setUpRun({
+    session = mockSession,
+    user = mockUser,
+    existing = null,
+  }: {
+    session?: ReturnType<typeof makeSession>
+    user?: ReturnType<typeof makePrismaUser>
+    existing?: { status: string; updatedAt: Date } | null
+  } = {}) {
+    ;(getServerSession as jest.Mock).mockResolvedValue(session)
+    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(user)
+    ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(existing)
+    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(makePrismaPlexServer())
+    ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(makePrismaTautulli())
+    ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue(null)
+    ;(fetchTautulliStatistics as jest.Mock).mockResolvedValue({
+      success: true,
+      data: {
+        tautulliUserId: '7',
+        totalWatchTime: 1000,
+        moviesWatchTime: 500,
+        showsWatchTime: 500,
+        moviesWatched: 10,
+        showsWatched: 5,
+        episodesWatched: 50,
+        topMovies: [],
+        topShows: [],
+        watchTimeByMonth: [],
+      },
+    })
+    ;(fetchPlexServerStatistics as jest.Mock).mockResolvedValue({ success: false })
+    ;(fetchTopContentLeaderboards as jest.Mock).mockResolvedValue({ success: false })
+    ;(fetchWatchTimeLeaderboard as jest.Mock).mockResolvedValue({ success: false })
+    ;(generateWrappedWithLLM as jest.Mock).mockResolvedValue({
+      success: true,
+      data: { sections: [], summary: 'Test summary', metadata: { totalSections: 0, generationTime: 0 } },
+    })
+  }
+
+  function expectNothingWritten() {
+    expect(prisma.plexWrapped.createMany).not.toHaveBeenCalled()
+    expect(prisma.plexWrapped.updateMany).not.toHaveBeenCalled()
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    setGenerationDefaults()
+  })
+
+  describe('the season year', () => {
+    it.each([2025, 2027, 2100])('refuses %i for a member with no write and no LLM call', async (year) => {
+      setUpRun()
+
+      const result = await generatePlexWrapped('user-1', year)
+
+      expect(result).toEqual({ success: false, error: 'Rewind is only available for 2026' })
+      expect(prisma.user.findUnique).not.toHaveBeenCalled()
+      expect(consume).not.toHaveBeenCalled()
+      expectNothingWritten()
+      expect(generateWrappedWithLLM).not.toHaveBeenCalled()
+    })
+
+    it('refuses the year as a string', async () => {
+      setUpRun()
+
+      const result = await generatePlexWrapped('user-1', '2026' as unknown as number)
+
+      expect(result).toEqual({ success: false, error: 'Rewind is only available for 2026' })
+      expectNothingWritten()
+    })
+
+    it('follows the configured season, not the calendar', async () => {
+      ;(getWrappedSettings as jest.Mock).mockResolvedValue({ wrappedEnabled: true, wrappedYear: 2025 })
+      setUpRun()
+
+      expect(await generatePlexWrapped('user-1', 2026)).toEqual({
+        success: false,
+        error: 'Rewind is only available for 2025',
+      })
+      expect(await generatePlexWrapped('user-1', 2025)).toEqual({ success: true, wrappedId: 'wrapped-1' })
+      expect(generateWrappedWithLLM).toHaveBeenCalledWith(expect.objectContaining({ year: 2025 }))
+    })
+  })
+
+  describe('one run at a time', () => {
+    it('makes one LLM call for five parallel calls; the others are refused and refunded', async () => {
+      setUpRun()
+      let claims = 0
+      ;(prisma.plexWrapped.updateMany as jest.Mock).mockImplementation(async (args) => ({
+        // The first claim wins and the rest find the row taken; outcome writes keep their claim.
+        count: args.where.id ? 1 : claims++ === 0 ? 1 : 0,
+      }))
+
+      const results = await Promise.all(
+        Array.from({ length: 5 }, () => generatePlexWrapped('user-1', SEASON_YEAR))
+      )
+
+      expect(generateWrappedWithLLM).toHaveBeenCalledTimes(1)
+      expect(results.filter((result) => result.success)).toEqual([{ success: true, wrappedId: 'wrapped-1' }])
+      expect(results.filter((result) => !result.success)).toEqual([ALREADY, ALREADY, ALREADY, ALREADY])
+      expect(claimCalls()).toHaveLength(5)
+      expect(outcomeWrites()).toHaveLength(1)
+      // Every call spent both points; each of the four losers got both back.
+      expect(consume).toHaveBeenCalledTimes(10)
+      expect(reward).toHaveBeenCalledTimes(8)
+      expect((reward as jest.Mock).mock.calls.filter(([name]) => name === 'rw:gen:burst')).toHaveLength(4)
+      expect((reward as jest.Mock).mock.calls.filter(([name]) => name === 'rw:gen:daily')).toHaveLength(4)
+      expect(reward).toHaveBeenCalledWith('rw:gen:burst', 'user-1')
+    })
+
+    it('refuses while a live run holds the row, before spending any points', async () => {
+      setUpRun({ existing: { status: 'generating', updatedAt: new Date(Date.now() - 14 * MINUTE) } })
+
+      const result = await generatePlexWrapped('user-1', SEASON_YEAR)
+
+      expect(result).toEqual(ALREADY)
+      expect(consume).not.toHaveBeenCalled()
+      expectNothingWritten()
+      expect(generateWrappedWithLLM).not.toHaveBeenCalled()
+    })
+
+    it('reclaims a generating row whose claim is 16 minutes old', async () => {
+      const staleClaim = new Date(Date.now() - 16 * MINUTE)
+      setUpRun({ existing: { status: 'generating', updatedAt: staleClaim } })
+
+      const result = await generatePlexWrapped('user-1', SEASON_YEAR)
+
+      expect(result).toEqual({ success: true, wrappedId: 'wrapped-1' })
+      expect(generateWrappedWithLLM).toHaveBeenCalledTimes(1)
+      const [claim] = claimCalls()
+      const cutoff = new Date(claim.data.updatedAt.getTime() - 15 * MINUTE)
+      expect(claim.where.OR).toContainEqual({ status: 'generating', updatedAt: { lt: cutoff } })
+      expect(staleClaim.getTime()).toBeLessThan(cutoff.getTime())
+      expect(claim.data).toEqual({ status: 'generating', error: null, updatedAt: expect.any(Date) })
+    })
+  })
+
+  describe('compare-and-set outcome writes', () => {
+    it('discards a result whose final write matches no row, and writes nothing else', async () => {
+      setUpRun()
+      ;(prisma.plexWrapped.updateMany as jest.Mock).mockImplementation(async (args) => ({
+        count: args.where.id ? 0 : 1,
+      }))
+
+      const result = await generatePlexWrapped('user-1', SEASON_YEAR)
+
+      expect(result).toEqual(ALREADY)
+      expect(outcomeWrites()).toEqual([
+        { where: claimedRow(firstClaimedAt()), data: expect.objectContaining({ status: 'completed' }) },
+      ])
+      expect(revalidatePath).not.toHaveBeenCalled()
+    })
+
+    it('marks only its own claim failed when the run fails', async () => {
+      setUpRun()
+      ;(generateWrappedWithLLM as jest.Mock).mockResolvedValue({ success: false, error: 'LLM timed out' })
+      ;(prisma.plexWrapped.updateMany as jest.Mock).mockImplementation(async (args) => ({
+        count: args.where.id ? 0 : 1,
+      }))
+
+      const result = await generatePlexWrapped('user-1', SEASON_YEAR)
+
+      expect(result).toEqual({ success: false, error: 'LLM timed out' })
+      expect(outcomeWrites()).toEqual([
+        { where: claimedRow(firstClaimedAt()), data: { status: 'failed', error: 'LLM timed out' } },
+      ])
+    })
+
+    it('never marks an existing Rewind failed when an error comes before the claim', async () => {
+      setUpRun({ session: mockAdminSession, existing: { status: 'completed', updatedAt: new Date() } })
+      ;(prisma.plexServer.findFirst as jest.Mock).mockRejectedValue(new Error('Database connection lost'))
+
+      const result = await generatePlexWrapped('user-1', SEASON_YEAR)
+
+      expect(result).toEqual({ success: false, error: 'Database connection lost' })
+      expectNothingWritten()
+    })
+  })
+
+  describe('member limits (the real in-process limiter)', () => {
+    const actualLimiter = jest.requireActual('@/lib/security/rate-limit')
+    const START = Date.parse('2026-12-01T12:00:00.000Z')
+    let clock = START
+    let nowSpy: jest.SpyInstance
+
+    function runAs(memberId: string) {
+      setUpRun({
+        session: memberSession(memberId),
+        user: makePrismaUser({ ...mockUser, id: memberId }),
+      })
+      return generatePlexWrapped(memberId, SEASON_YEAR)
+    }
+
+    beforeEach(() => {
+      clock = START
+      nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => clock)
+      ;(consume as jest.Mock).mockImplementation(actualLimiter.consume)
+      ;(reward as jest.Mock).mockImplementation(actualLimiter.reward)
+    })
+
+    afterEach(() => {
+      nowSpy.mockRestore()
+    })
+
+    it('refuses a second run within 10 minutes and allows one after', async () => {
+      expect((await runAs('member-burst')).success).toBe(true)
+
+      clock += 9 * MINUTE
+      expect(await runAs('member-burst')).toEqual({
+        success: false,
+        code: 'RATE_LIMITED',
+        retryAfterSec: 60,
+        error: 'You can try again in 1 minute.',
+      })
+      expect(claimCalls()).toHaveLength(1)
+
+      clock += MINUTE + 1000
+      expect((await runAs('member-burst')).success).toBe(true)
+      expect(generateWrappedWithLLM).toHaveBeenCalledTimes(2)
+    })
+
+    it('refuses a fourth run in one day', async () => {
+      for (let run = 0; run < 3; run++) {
+        expect((await runAs('member-daily')).success).toBe(true)
+        clock += 11 * MINUTE
+      }
+
+      const fourth = await runAs('member-daily')
+
+      expect(fourth).toEqual({
+        success: false,
+        code: 'RATE_LIMITED',
+        retryAfterSec: 24 * 60 * 60 - 33 * 60,
+        error: 'You can try again in 24 hours.',
+      })
+      expect(generateWrappedWithLLM).toHaveBeenCalledTimes(3)
+
+      // The refused daily point gave the burst point back: a minute later the
+      // wait is still the daily one, not a fresh 10 minutes.
+      clock += MINUTE
+      expect((await runAs('member-daily')).retryAfterSec).toBe(24 * 60 * 60 - 34 * 60)
+
+      clock = START + 24 * 60 * MINUTE + 1000
+      expect((await runAs('member-daily')).success).toBe(true)
+    })
+
+    it('refunds a lost claim, so the member can try again at once', async () => {
+      ;(prisma.plexWrapped.updateMany as jest.Mock).mockResolvedValueOnce({ count: 0 })
+
+      expect(await runAs('member-refund')).toEqual(ALREADY)
+      expect((await runAs('member-refund')).success).toBe(true)
+    })
+
+    it('keeps each member to their own limit', async () => {
+      expect((await runAs('member-one')).success).toBe(true)
+      expect((await runAs('member-two')).success).toBe(true)
+    })
+
+    it('exempts admins', async () => {
+      setUpRun({ session: mockAdminSession })
+
+      for (let run = 0; run < 5; run++) {
+        expect(await generatePlexWrapped('user-1', SEASON_YEAR)).toEqual({ success: true, wrappedId: 'wrapped-1' })
+      }
+
+      expect(consume).not.toHaveBeenCalled()
+      expect(generateWrappedWithLLM).toHaveBeenCalledTimes(5)
     })
   })
 })
@@ -1233,8 +1459,9 @@ describe('generateAllPlexWrapped', () => {
     ;(prisma.user.findMany as jest.Mock).mockReset()
     ;(prisma.user.findUnique as jest.Mock).mockReset()
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockReset()
-    ;(prisma.plexWrapped.upsert as jest.Mock).mockReset()
-    ;(prisma.plexWrapped.update as jest.Mock).mockReset()
+    ;(prisma.plexWrapped.createMany as jest.Mock).mockReset()
+    ;(prisma.plexWrapped.updateMany as jest.Mock).mockReset()
+    ;(prisma.plexWrapped.findUniqueOrThrow as jest.Mock).mockReset()
     ;(prisma.plexServer.findFirst as jest.Mock).mockReset()
     ;(prisma.tautulli.findFirst as jest.Mock).mockReset()
     ;(prisma.overseerr.findFirst as jest.Mock).mockReset()
@@ -1245,6 +1472,10 @@ describe('generateAllPlexWrapped', () => {
     ;(fetchWatchTimeLeaderboard as jest.Mock).mockReset()
     ;(generateWrappedWithLLM as jest.Mock).mockReset()
     ;(getServerSession as jest.Mock).mockReset()
+    setGenerationDefaults()
+    ;(prisma.plexWrapped.findUniqueOrThrow as jest.Mock).mockImplementation(async (args) => ({
+      id: `wrapped-${args.where.userId_year.userId}`,
+    }))
   })
 
   it('should generate wrapped for all users when admin', async () => {
@@ -1266,15 +1497,6 @@ describe('generateAllPlexWrapped', () => {
       return Promise.resolve(null)
     })
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
-    ;(prisma.plexWrapped.upsert as jest.Mock).mockImplementation((args) => {
-      return Promise.resolve({
-        id: `wrapped-${args.where.userId_year.userId}`,
-        userId: args.where.userId_year.userId,
-        year: 2024,
-        status: 'generating',
-        shareToken: 'test-token',
-      })
-    })
     ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue({
       id: 'server-1',
       url: 'https://plex.example.com:32400',
@@ -1337,12 +1559,7 @@ describe('generateAllPlexWrapped', () => {
       success: true,
       data: [],
     })
-    ;(prisma.plexWrapped.update as jest.Mock).mockResolvedValue({
-      id: 'wrapped-1',
-      status: 'completed',
-    })
-
-    const result = await generateAllPlexWrapped(2024)
+    const result = await generateAllPlexWrapped(2026)
 
     expect(result.success).toBe(true)
     expect(result.generated).toBe(2)
@@ -1352,7 +1569,7 @@ describe('generateAllPlexWrapped', () => {
   it('should reject non-admin users', async () => {
     ;(getServerSession as jest.Mock).mockResolvedValue(mockSession)
 
-    const result = await generateAllPlexWrapped(2024)
+    const result = await generateAllPlexWrapped(2026)
 
     expect(result.success).toBe(false)
     expect(result.errors).toContain('Unauthorized: Only admins can generate wrapped for all users')
@@ -1377,15 +1594,6 @@ describe('generateAllPlexWrapped', () => {
       return Promise.resolve(null)
     })
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
-    ;(prisma.plexWrapped.upsert as jest.Mock).mockImplementation((args) => {
-      return Promise.resolve({
-        id: `wrapped-${args.where.userId_year.userId}`,
-        userId: args.where.userId_year.userId,
-        year: 2024,
-        status: 'generating',
-        shareToken: 'test-token',
-      })
-    })
     ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue({
       id: 'server-1',
       url: 'https://plex.example.com:32400',
@@ -1453,18 +1661,7 @@ describe('generateAllPlexWrapped', () => {
         },
       },
     })
-    ;(prisma.plexWrapped.update as jest.Mock)
-      .mockResolvedValueOnce({
-        id: 'wrapped-1',
-        status: 'completed',
-      })
-      .mockResolvedValueOnce({
-        id: 'wrapped-2',
-        status: 'failed',
-        error: 'Failed to fetch statistics',
-      })
-
-    const result = await generateAllPlexWrapped(2024)
+    const result = await generateAllPlexWrapped(2026)
 
     expect(result.success).toBe(true)
     expect(result.generated).toBe(1)
@@ -1476,7 +1673,7 @@ describe('generateAllPlexWrapped', () => {
     ;(getServerSession as jest.Mock).mockImplementation(async () => mockAdminSession)
     ;(prisma.user.findMany as jest.Mock).mockResolvedValue([])
 
-    const result = await generateAllPlexWrapped(2024)
+    const result = await generateAllPlexWrapped(2026)
 
     // Should successfully call the function with admin session
     expect(result.success).toBe(true)
@@ -1496,7 +1693,7 @@ describe('generateAllPlexWrapped', () => {
 
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation()
 
-    const result = await generateAllPlexWrapped(2024)
+    const result = await generateAllPlexWrapped(2026)
 
     expect(result.success).toBe(false)
     expect(result.generated).toBe(0)
@@ -1517,7 +1714,7 @@ describe('generateAllPlexWrapped', () => {
 
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation()
 
-    const result = await generateAllPlexWrapped(2024)
+    const result = await generateAllPlexWrapped(2026)
 
     expect(result.success).toBe(true)
     expect(result.generated).toBe(0)
@@ -1534,13 +1731,6 @@ describe('generateAllPlexWrapped', () => {
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(member)
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
     ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(makePrismaPlexServer())
-    ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue({
-      id: 'wrapped-1',
-      userId: 'user-1',
-      year: 2024,
-      status: 'generating',
-      shareToken: 'test-token',
-    })
     ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(makePrismaTautulli())
     ;(fetchTautulliStatistics as jest.Mock).mockResolvedValue({
       success: false,
@@ -1548,7 +1738,7 @@ describe('generateAllPlexWrapped', () => {
       error: memberErrorCopy('TAUTULLI_USER_NOT_FOUND'),
     })
 
-    const result = await generateAllPlexWrapped(2024)
+    const result = await generateAllPlexWrapped(2026)
 
     expect(result.failed).toBe(1)
     expect(result.errors).toEqual([
@@ -1563,17 +1753,10 @@ describe('generateAllPlexWrapped', () => {
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(member)
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
     ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(makePrismaPlexServer())
-    ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue({
-      id: 'wrapped-1',
-      userId: 'user-1',
-      year: 2024,
-      status: 'generating',
-      shareToken: 'test-token',
-    })
     ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(makePrismaTautulli())
     ;(fetchTautulliStatistics as jest.Mock).mockResolvedValue({ success: false, error: 'Tautulli is down' })
 
-    const result = await generateAllPlexWrapped(2024)
+    const result = await generateAllPlexWrapped(2026)
 
     expect(result.errors).toEqual(['user-1: Tautulli is down'])
   })
@@ -1582,7 +1765,7 @@ describe('generateAllPlexWrapped', () => {
     ;(getServerSession as jest.Mock).mockImplementation(async () => mockAdminSession)
     ;(prisma.user.findMany as jest.Mock).mockResolvedValue([])
 
-    const result = await generateAllPlexWrapped(2024)
+    const result = await generateAllPlexWrapped(2026)
 
     expect(result.success).toBe(true)
     expect(result.generated).toBe(0)
@@ -1593,7 +1776,7 @@ describe('generateAllPlexWrapped', () => {
   it('should reject unauthenticated requests', async () => {
     ;(getServerSession as jest.Mock).mockResolvedValue(null)
 
-    const result = await generateAllPlexWrapped(2024)
+    const result = await generateAllPlexWrapped(2026)
 
     expect(result.success).toBe(false)
     expect(result.errors).toContain('Unauthorized: Only admins can generate wrapped for all users')

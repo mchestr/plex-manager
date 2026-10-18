@@ -7,7 +7,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
 
 import { getWrappedSettings } from '@/actions/admin'
-import { getUserPlexWrapped } from '@/actions/users'
+import { generatePlexWrapped, getUserPlexWrapped } from '@/actions/users'
 import { WrappedCard } from '@/components/dashboard/wrapped-card'
 import { useToast } from '@/components/ui/toast'
 
@@ -38,7 +38,8 @@ jest.mock('framer-motion', () => ({
 }))
 
 const mockShowError = jest.fn()
-const toast = { showError: mockShowError }
+const mockShowInfo = jest.fn()
+const toast = { showError: mockShowError, showInfo: mockShowInfo }
 
 const LEGACY_ROSTER_ERROR =
   'User not found in Tautulli. Plex User ID: 1, Email: me@example.com. Available users: olga_plex (olga.private@example.com), piet_plex (piet.private@example.com)'
@@ -166,5 +167,85 @@ describe('WrappedCard season year', () => {
     } finally {
       consoleError.mockRestore()
     }
+  })
+})
+
+/**
+ * A refused generation shows the fixed copy for its code (never the server's
+ * text), and a run that another tab already started is followed rather than
+ * reported as an error (P0.12: SEC-22, RWP-12).
+ */
+describe('WrappedCard refused generation', () => {
+  beforeEach(() => {
+    jest.useFakeTimers()
+    jest.clearAllMocks()
+    ;(useToast as jest.Mock).mockReturnValue(toast)
+    ;(getWrappedSettings as jest.Mock).mockResolvedValue({ wrappedEnabled: true, wrappedYear: 2026 })
+  })
+
+  afterEach(() => {
+    jest.useRealTimers()
+  })
+
+  async function clickGenerate() {
+    render(<WrappedCard userId="user-1" memberSince="2020-01-01T00:00:00.000Z" />)
+    fireEvent.click(await screen.findByTestId('wrapped-card-generate'))
+  }
+
+  it('follows the run another tab started, then opens it', async () => {
+    ;(getUserPlexWrapped as jest.Mock)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ status: 'generating', error: null })
+      .mockResolvedValue({ status: 'completed', error: null })
+    ;(generatePlexWrapped as jest.Mock).mockResolvedValue({
+      success: false,
+      code: 'ALREADY_GENERATING',
+      error: 'server text',
+    })
+
+    await clickGenerate()
+
+    expect(await screen.findByTestId('wrapped-card-generating')).toBeInTheDocument()
+    expect(mockShowInfo).toHaveBeenCalledWith('Your Rewind is already being made.')
+    expect(mockShowError).not.toHaveBeenCalled()
+    expect(generatePlexWrapped).toHaveBeenCalledWith('user-1', 2026)
+
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(2000)
+    })
+
+    expect(mockRouter.push).toHaveBeenCalledWith('/wrapped/2026')
+  })
+
+  it('says when the member can try again, and offers the button again', async () => {
+    ;(getUserPlexWrapped as jest.Mock).mockResolvedValue(null)
+    ;(generatePlexWrapped as jest.Mock).mockResolvedValue({
+      success: false,
+      code: 'RATE_LIMITED',
+      retryAfterSec: 540,
+      error: 'server text',
+    })
+
+    await clickGenerate()
+
+    expect(await screen.findByTestId('wrapped-card-generate')).toBeEnabled()
+    expect(mockShowError).toHaveBeenCalledWith('You can try again in 9 minutes.')
+    expect(screen.queryByTestId('wrapped-card-generating')).not.toBeInTheDocument()
+  })
+
+  it('explains a missing entitlement', async () => {
+    ;(getUserPlexWrapped as jest.Mock).mockResolvedValue(null)
+    ;(generatePlexWrapped as jest.Mock).mockResolvedValue({
+      success: false,
+      code: 'NOT_ENTITLED',
+      error: 'server text',
+    })
+
+    await clickGenerate()
+
+    expect(await screen.findByTestId('wrapped-card-generate')).toBeEnabled()
+    expect(mockShowError).toHaveBeenCalledWith(
+      'Rewind is part of an active membership. Renew your subscription to make yours.'
+    )
   })
 })
