@@ -229,6 +229,23 @@ describe("toShareSafeV2", () => {
     expect(shared.topShows).toHaveLength(5)
   })
 
+  it("keeps the first entry per month when a stored list repeats months", () => {
+    const months = [
+      ...Array.from({ length: 12 }, (_, i) => ({ month: i + 1, monthName: "m", watchTime: 100 + i })),
+      { month: 3, monthName: "March", watchTime: 9999 },
+      { month: 12, monthName: "December", watchTime: 9999 },
+    ]
+    const shared = toShareSafeV2(
+      { year: 2026, summary: null, archetype: null, data: JSON.stringify({ statistics: { watchTimeByMonth: months } }) },
+      { name: "Mike" }
+    )
+
+    expect(shared.months).toHaveLength(12)
+    expect(shared.months.map((month) => month.month)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+    expect(shared.months.find((month) => month.month === 3)).toEqual({ month: 3, minutes: 102 })
+    expect(keyPaths(shared).filter((path) => FORBIDDEN_KEY.test(path))).toEqual([])
+  })
+
   it("reads missing or malformed statistics as zeros and drops bad titles", () => {
     const shared = toShareSafeV2(
       {

@@ -39,6 +39,7 @@ export async function GET(request: NextRequest) {
     // Apply rate limiting
     const rateLimitResponse = await shareRateLimiter(request)
     if (rateLimitResponse) {
+      rateLimitResponse.headers.set("X-Robots-Tag", NOINDEX)
       return rateLimitResponse
     }
 
@@ -51,7 +52,7 @@ export async function GET(request: NextRequest) {
         JSON.stringify(createSafeError(ErrorCode.VALIDATION_ERROR, "Token is required")),
         {
           status: getStatusCode(ErrorCode.VALIDATION_ERROR),
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "X-Robots-Tag": NOINDEX },
         }
       )
     }
@@ -102,7 +103,7 @@ export async function GET(request: NextRequest) {
       JSON.stringify(createSafeError(ErrorCode.INTERNAL_ERROR, "Failed to generate image")),
       {
         status: getStatusCode(ErrorCode.INTERNAL_ERROR),
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-Robots-Tag": NOINDEX },
       }
     )
   }

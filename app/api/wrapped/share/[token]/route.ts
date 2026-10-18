@@ -21,6 +21,7 @@ export async function GET(
     // Apply rate limiting
     const rateLimitResponse = await shareRateLimiter(request)
     if (rateLimitResponse) {
+      rateLimitResponse.headers.set("X-Robots-Tag", NOINDEX["X-Robots-Tag"])
       return rateLimitResponse
     }
 

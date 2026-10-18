@@ -230,13 +230,14 @@ describe('GET /api/wrapped/share/[token]', () => {
     consoleErrorSpy.mockRestore()
   })
 
-  it('short-circuits on rate limit', async () => {
-    const rateLimited = { status: 429 }
+  it('short-circuits on rate limit, with noindex', async () => {
+    const rateLimited = { status: 429, headers: new Headers() }
     ;(shareRateLimiter as jest.Mock).mockResolvedValue(rateLimited)
 
     const response = await GET(buildRequest(), { params: Promise.resolve({ token: 'test-token' }) })
 
     expect(response).toBe(rateLimited)
+    expect(response.headers.get('X-Robots-Tag')).toBe('noindex')
     expect(prisma.plexWrapped.findUnique).not.toHaveBeenCalled()
   })
 

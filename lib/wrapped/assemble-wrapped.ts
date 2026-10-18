@@ -66,11 +66,19 @@ function resolveDedication(args: {
 }
 
 /**
- * The statistics a stored Rewind keeps: every key except `leaderboards`,
- * listed explicitly so a key added to `WrappedStatistics` is not stored until
- * it is listed here.
+ * Every `WrappedStatistics` key except `leaderboards`, each one required.
+ * A key added to `WrappedStatistics` fails to compile in
+ * `toStoredStatistics` until someone lists it there or excludes it here.
  */
-function toStoredStatistics(statistics: WrappedStatistics): Omit<WrappedStatistics, "leaderboards"> {
+type StoredStatistics = {
+  [K in Exclude<keyof WrappedStatistics, "leaderboards">]-?: WrappedStatistics[K]
+}
+
+/**
+ * The statistics a stored Rewind keeps: every key except `leaderboards`,
+ * listed explicitly so no new key is stored without a decision.
+ */
+function toStoredStatistics(statistics: WrappedStatistics): StoredStatistics {
   return {
     totalWatchTime: statistics.totalWatchTime,
     moviesWatched: statistics.moviesWatched,

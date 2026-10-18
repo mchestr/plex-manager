@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma"
 import { createSafeError, ErrorCode, getStatusCode, logError } from "@/lib/security/error-handler"
 import { posterRateLimiter } from "@/lib/security/rate-limit"
 import { fetchWithTimeout } from "@/lib/utils/fetch-with-timeout"
-import type { WrappedData } from "@/types/wrapped"
+import { toShareSafeV2 } from "@/lib/wrapped/data/share-safe-v2"
 
 export const dynamic = "force-dynamic"
 
@@ -16,9 +16,11 @@ const POSTER_HEIGHT = 600
 
 /**
  * Check whether a share token grants access to this poster: the token must
- * belong to a completed wrapped whose top movies/shows include the rating
- * key. This keeps the Plex token server-side while preventing library
- * enumeration through a leaked share link.
+ * belong to a completed wrapped whose share-safe projection lists the rating
+ * key among its top movies or shows. Using the projection keeps a share link
+ * from confirming titles the share page hides (the stored lists hold up to
+ * 10, the projection 5), and keeps the Plex token server-side while
+ * preventing library enumeration through a leaked share link.
  */
 async function shareTokenAllowsRatingKey(
   token: string,
@@ -26,19 +28,15 @@ async function shareTokenAllowsRatingKey(
 ): Promise<boolean> {
   const wrapped = await prisma.plexWrapped.findUnique({
     where: { shareToken: token },
-    select: { status: true, data: true },
+    select: { year: true, status: true, summary: true, archetype: true, data: true },
   })
   if (!wrapped || wrapped.status !== "completed") {
     return false
   }
 
   try {
-    const data = JSON.parse(wrapped.data) as WrappedData
-    const keys = [
-      ...(data.statistics?.topMovies ?? []),
-      ...(data.statistics?.topShows ?? []),
-    ].map((item) => item.ratingKey)
-    return keys.includes(ratingKey)
+    const { topMovies, topShows } = toShareSafeV2(wrapped, { name: null })
+    return [...topMovies, ...topShows].some((title) => title.ratingKey === ratingKey)
   } catch {
     return false
   }
@@ -50,7 +48,9 @@ async function shareTokenAllowsRatingKey(
  * Proxies poster art from the active Plex server so the Plex token never
  * reaches the client. Access requires either an authenticated session or a
  * valid share token covering the rating key (for public shared wraps).
- * Responses are cacheable — poster art is effectively immutable per key.
+ * Responses are cacheable — poster art is effectively immutable per key —
+ * and carry noindex, since art reached through a share link is public but not
+ * meant for search results.
  */
 export async function GET(
   request: NextRequest,
@@ -119,6 +119,7 @@ export async function GET(
       headers: {
         "Content-Type": upstream.headers.get("content-type") || "image/jpeg",
         "Cache-Control": "public, max-age=86400, s-maxage=86400",
+        "X-Robots-Tag": "noindex",
       },
     })
   } catch (error) {

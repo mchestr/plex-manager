@@ -17,7 +17,8 @@
  * 1. Parse the stored JSON loosely (v1 and v2 rows share `statistics`); a
  *    missing or malformed value becomes 0 or an empty list.
  * 2. Copy only the allow-listed fields into a new object, keeping at most
- *    five titles per list and dropping per-month top titles.
+ *    five titles per list, the first entry for each month and no per-month
+ *    top titles.
  * 3. Take the owner's name from the `User` row via `memberName()`, never from
  *    the stored `userName`, and fall back to "Someone".
  * 4. `ShareSafeRewindV2.parse()` the result.
@@ -89,6 +90,7 @@ const storedMonth = z.object({
 })
 
 type StoredTitle = z.infer<typeof storedTitle>
+type StoredMonth = z.infer<typeof storedMonth>
 
 /** Keep the entries that parse; one bad entry does not empty the list. */
 function listOf<T>(schema: z.ZodType<T>) {
@@ -116,6 +118,19 @@ const storedStatistics = z.object({
 const storedRewind = z.object({
   statistics: storedStatistics.catch(() => storedStatistics.parse({})),
 })
+
+/**
+ * Keep the first entry for each month. Generation writes one per month, but
+ * the playground stores admin-supplied statistics unvalidated, and a
+ * duplicated month would otherwise break the 12-entry schema limit.
+ */
+function firstPerMonth(months: StoredMonth[]): StoredMonth[] {
+  const byMonth = new Map<number, StoredMonth>()
+  for (const month of months) {
+    if (!byMonth.has(month.month)) byMonth.set(month.month, month)
+  }
+  return [...byMonth.values()]
+}
 
 function toMovie(title: StoredTitle): ShareSafeMovie {
   const movie: ShareSafeMovie = { title: title.title, minutes: title.watchTime, plays: title.playCount }
@@ -172,7 +187,7 @@ export function toShareSafeV2(
       shows: statistics.showsWatched,
       episodes: statistics.episodesWatched,
     },
-    months: statistics.watchTimeByMonth.map((month) => ({ month: month.month, minutes: month.watchTime })),
+    months: firstPerMonth(statistics.watchTimeByMonth).map((month) => ({ month: month.month, minutes: month.watchTime })),
     topMovies: statistics.topMovies.slice(0, MAX_TOP_TITLES).map(toMovie),
     topShows: statistics.topShows.slice(0, MAX_TOP_TITLES).map(toShow),
   })

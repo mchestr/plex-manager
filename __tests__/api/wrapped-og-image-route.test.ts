@@ -149,8 +149,12 @@ describe('GET /api/wrapped/og-image', () => {
   })
 
   it('renders only share-safe values from a row with a roster and an email name', async () => {
+    // The owner has no name, and the row carries the email as Prisma returned
+    // it under the old `user: { name, email }` select: the old card fell back
+    // to the email.
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue({
       ...mockWrapped,
+      user: { name: null, email: 'owner@example.com' },
       data: JSON.stringify({
         userName: 'owner@example.com',
         statistics: {
@@ -168,6 +172,8 @@ describe('GET /api/wrapped/og-image', () => {
     await GET(buildRequest('http://localhost/api/wrapped/og-image?token=test-token'))
 
     const text = elementText(imageCalls[0].element)
+    expect(text).toContain('Someone')
+    expect(text).not.toContain('@')
     for (const leaked of ['owner@example.com', 'Private Server', 'jsnow', 'Jon Snow']) {
       expect(text).not.toContain(leaked)
     }
@@ -203,6 +209,7 @@ describe('GET /api/wrapped/og-image', () => {
 
     expect(response.status).toBe(400)
     expect(data.code).toBe('VALIDATION_ERROR')
+    expect(response.headers.get('X-Robots-Tag')).toBe('noindex')
     expect(imageCalls).toHaveLength(0)
   })
 
@@ -270,13 +277,14 @@ describe('GET /api/wrapped/og-image', () => {
     expect(elementText(imageCalls[0].element)).toContain('0 hours')
   })
 
-  it('short-circuits on rate limit', async () => {
-    const mockRateLimitResponse = { status: 429 }
+  it('short-circuits on rate limit, with noindex', async () => {
+    const mockRateLimitResponse = { status: 429, headers: new Headers() }
     ;(shareRateLimiter as jest.Mock).mockResolvedValue(mockRateLimitResponse)
 
     const response = await GET(buildRequest('http://localhost/api/wrapped/og-image?token=test-token'))
 
     expect(response).toBe(mockRateLimitResponse)
+    expect(response.headers.get('X-Robots-Tag')).toBe('noindex')
     expect(prisma.plexWrapped.findUnique).not.toHaveBeenCalled()
   })
 
@@ -289,6 +297,7 @@ describe('GET /api/wrapped/og-image', () => {
 
     expect(response.status).toBe(500)
     expect(data.error).toContain('Failed to generate image')
+    expect(response.headers.get('X-Robots-Tag')).toBe('noindex')
     expect(consoleErrorSpy).toHaveBeenCalled()
     consoleErrorSpy.mockRestore()
   })
