@@ -37,6 +37,7 @@ export const LIMITS = {
   "plex:pin:create": { points: 30, duration: 10 * MINUTE },
   "plex:pin:poll": { points: 300, duration: 10 * MINUTE },
   "rw:share-actions": { points: 10, duration: 60 * MINUTE },
+  "rw:share-page": { points: 60, duration: MINUTE },
 } as const satisfies Record<string, LimitConfig>
 
 export type LimitName = keyof typeof LIMITS

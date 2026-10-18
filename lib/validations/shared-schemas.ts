@@ -40,6 +40,12 @@ export const yearSchema = z.number().int().min(YEAR_MIN).max(YEAR_MAX)
 export const yearParamSchema = z.string().regex(/^\d{4}$/).pipe(z.coerce.number<string>().pipe(yearSchema))
 
 /**
+ * A Rewind share token as a URL segment: 43 base64url characters, the 32
+ * random bytes `generateShareToken` encodes.
+ */
+export const shareTokenSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/)
+
+/**
  * Schema for API keys
  * Basic format validation - actual validity is tested by connection tests
  */

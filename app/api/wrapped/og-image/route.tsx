@@ -1,10 +1,9 @@
 import { ImageResponse } from "next/og"
 import { NextRequest, NextResponse } from "next/server"
 
-import { prisma } from "@/lib/prisma"
 import { createSafeError, ErrorCode, getStatusCode, logError } from "@/lib/security/error-handler"
 import { limitRequest } from "@/lib/security/rate-limit"
-import { toShareSafeV2 } from "@/lib/wrapped/data/share-safe-v2"
+import { getShareSafeRewind } from "@/lib/wrapped/data/get-share-safe"
 
 // Force dynamic rendering since we use request.headers for rate limiting
 export const dynamic = "force-dynamic"
@@ -57,25 +56,14 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Find wrapped by share token
-    const wrapped = await prisma.plexWrapped.findUnique({
-      where: { shareToken: token },
-      select: {
-        year: true,
-        status: true,
-        summary: true,
-        archetype: true,
-        data: true,
-        user: { select: { name: true } },
-      },
-    })
+    const found = await getShareSafeRewind(token)
 
     // Security: Use same error message to prevent token enumeration
-    if (!wrapped || wrapped.status !== "completed") {
+    if (!found) {
       return new NextResponse("Wrapped not found", { status: 404, headers: { "X-Robots-Tag": NOINDEX } })
     }
 
-    const shared = toShareSafeV2(wrapped, wrapped.user)
+    const shared = found.share
     const hours = Math.floor(shared.totals.minutes / 60)
     const days = Math.floor(hours / 24)
 

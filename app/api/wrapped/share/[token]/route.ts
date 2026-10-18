@@ -1,8 +1,7 @@
-import { prisma } from "@/lib/prisma"
 import { NextRequest, NextResponse } from "next/server"
 import { limitRequest } from "@/lib/security/rate-limit"
 import { createSafeError, ErrorCode, getStatusCode, logError } from "@/lib/security/error-handler"
-import { toShareSafeV2 } from "@/lib/wrapped/data/share-safe-v2"
+import { getShareSafeRewind } from "@/lib/wrapped/data/get-share-safe"
 
 // Share links are public but not meant for search results.
 const NOINDEX = { "X-Robots-Tag": "noindex" }
@@ -11,6 +10,9 @@ const NOINDEX = { "X-Robots-Tag": "noindex" }
  * GET /api/wrapped/share/[token]
  * Fetch a shared wrapped by its share token. The response carries only the
  * share-safe projection, never the stored data blob (RWP-01, SEC-16).
+ *
+ * Visits are recorded by the share page alone, so a view counts once
+ * (RWP-09).
  */
 export async function GET(
   request: NextRequest,
@@ -32,43 +34,18 @@ export async function GET(
       )
     }
 
-    // Find wrapped by share token
-    const wrapped = await prisma.plexWrapped.findUnique({
-      where: { shareToken: token },
-      select: {
-        id: true,
-        year: true,
-        status: true,
-        summary: true,
-        archetype: true,
-        data: true,
-        user: { select: { name: true } },
-      },
-    })
+    const found = await getShareSafeRewind(token)
 
-    // Security: Use same error message for both not found and not available
-    // to prevent token enumeration attacks
-    if (!wrapped || wrapped.status !== "completed") {
+    // Security: Use same error message for malformed, unknown, revoked and
+    // unfinished shares to prevent token enumeration attacks
+    if (!found) {
       return NextResponse.json(
         createSafeError(ErrorCode.NOT_FOUND, "Wrapped not found"),
         { status: getStatusCode(ErrorCode.NOT_FOUND), headers: NOINDEX }
       )
     }
 
-    // Track the visit by wrapped id only (non-blocking - don't fail if tracking fails)
-    try {
-      await prisma.wrappedShareVisit.create({
-        data: { wrappedId: wrapped.id },
-      })
-    } catch (error) {
-      // Log but don't fail the request if tracking fails
-      logError("SHARE_VISIT_TRACKING", error)
-    }
-
-    return NextResponse.json(
-      { success: true, wrapped: toShareSafeV2(wrapped, wrapped.user) },
-      { headers: NOINDEX }
-    )
+    return NextResponse.json({ success: true, wrapped: found.share }, { headers: NOINDEX })
   } catch (error) {
     logError("SHARE_API", error)
     return NextResponse.json(

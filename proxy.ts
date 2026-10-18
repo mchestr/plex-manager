@@ -9,7 +9,7 @@ import {
   runWithRequestContext,
   sanitizeUrlForLogging,
 } from "@/lib/utils/logger"
-import { yearParamSchema } from "@/lib/validations/shared-schemas"
+import { shareTokenSchema, yearParamSchema } from "@/lib/validations/shared-schemas"
 import type { NextRequest } from "next/server"
 import { NextResponse } from "next/server"
 
@@ -28,6 +28,21 @@ const WRAPPED_YEAR_PATH = /^\/wrapped\/([^/]+)$/
 function isInvalidWrappedYearPath(pathname: string): boolean {
   const segment = WRAPPED_YEAR_PATH.exec(pathname)?.[1]
   return segment !== undefined && !yearParamSchema.safeParse(segment).success
+}
+
+/** `/wrapped/share/<token>` */
+const WRAPPED_SHARE_PATH = /^\/wrapped\/share\/([^/]+)$/
+
+/**
+ * Whether the path is `/wrapped/share/<token>` with a token that cannot exist
+ * (not the 43 base64url characters of a share token). The page renders its
+ * not-found page for it, streamed with status 200 for the same reason as
+ * above, so the 404 status is set here (P0.11). Unknown and revoked tokens
+ * of the right shape need the database and keep the streamed status.
+ */
+function isMalformedSharePath(pathname: string): boolean {
+  const segment = WRAPPED_SHARE_PATH.exec(pathname)?.[1]
+  return segment !== undefined && !shareTokenSchema.safeParse(segment).success
 }
 
 /**
@@ -59,8 +74,10 @@ export function proxy(request: NextRequest) {
       searchParams: Object.fromEntries(request.nextUrl.searchParams),
     })
 
-    // Create response: the same page, with a 404 status for an invalid Rewind year
-    const response = isInvalidWrappedYearPath(request.nextUrl.pathname)
+    // Create response: the same page, with a 404 status for an invalid Rewind
+    // year or share token
+    const { pathname } = request.nextUrl
+    const response = isInvalidWrappedYearPath(pathname) || isMalformedSharePath(pathname)
       ? NextResponse.rewrite(request.nextUrl, { status: 404 })
       : NextResponse.next()
 

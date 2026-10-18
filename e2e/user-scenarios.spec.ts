@@ -1,3 +1,5 @@
+import { randomBytes } from 'node:crypto';
+
 import { expect, test, TEST_USERS } from './fixtures/auth';
 import { createE2EPrismaClient } from './helpers/prisma';
 import {
@@ -134,7 +136,8 @@ test.describe('User Scenarios', () => {
     test('anonymous user can access shared wrapped via share link', async ({ browser }) => {
       const prisma = createE2EPrismaClient();
       const currentYear = new Date().getFullYear();
-      const shareToken = `test-share-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+      // A real share token's shape: 32 random bytes in base64url.
+      const shareToken = randomBytes(32).toString('base64url');
 
       // Mock wrapped data matching the WrappedData type structure
       const mockWrappedData = {

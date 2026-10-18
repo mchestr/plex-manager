@@ -84,6 +84,9 @@ function elementText(node: unknown): string {
   return ''
 }
 
+const TOKEN = 'Kf-qkQFsJ4E6X_vMSKq1PiT624JyrVJtTNbepCgWYl8'
+const UNKNOWN_TOKEN = 'vZ2bLJpJkqoegfJ4-9rodbBNhGs3XZ-sdNzNXJC96wI'
+
 function buildRequest(url: string): NextRequest {
   return new NextRequest(url)
 }
@@ -92,7 +95,7 @@ describe('GET /api/wrapped/og-image', () => {
   const mockWrapped = {
     id: 'wrapped-1',
     year: 2026,
-    shareToken: 'test-token',
+    shareToken: TOKEN,
     status: 'completed',
     summary: 'Test summary',
     archetype: 'The Midnight Marathoner',
@@ -117,7 +120,7 @@ describe('GET /api/wrapped/og-image', () => {
   it('renders a 1200x630 OG image with archetype and stats', async () => {
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(mockWrapped)
 
-    const response = await GET(buildRequest('http://localhost/api/wrapped/og-image?token=test-token'))
+    const response = await GET(buildRequest(`http://localhost/api/wrapped/og-image?token=${TOKEN}`))
 
     expect(response.status).toBe(200)
     expect(imageCalls).toHaveLength(1)
@@ -133,11 +136,12 @@ describe('GET /api/wrapped/og-image', () => {
   it('selects only the owner name from the user', async () => {
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(mockWrapped)
 
-    await GET(buildRequest('http://localhost/api/wrapped/og-image?token=test-token'))
+    await GET(buildRequest(`http://localhost/api/wrapped/og-image?token=${TOKEN}`))
 
     expect(prisma.plexWrapped.findUnique).toHaveBeenCalledWith({
-      where: { shareToken: 'test-token' },
+      where: { shareToken: TOKEN },
       select: {
+        id: true,
         year: true,
         status: true,
         summary: true,
@@ -169,7 +173,7 @@ describe('GET /api/wrapped/og-image', () => {
       }),
     })
 
-    await GET(buildRequest('http://localhost/api/wrapped/og-image?token=test-token'))
+    await GET(buildRequest(`http://localhost/api/wrapped/og-image?token=${TOKEN}`))
 
     const text = elementText(imageCalls[0].element)
     expect(text).toContain('Someone')
@@ -183,7 +187,7 @@ describe('GET /api/wrapped/og-image', () => {
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(mockWrapped)
 
     const response = await GET(
-      buildRequest('http://localhost/api/wrapped/og-image?token=test-token&format=card')
+      buildRequest(`http://localhost/api/wrapped/og-image?token=${TOKEN}&format=card`)
     )
 
     expect(response.status).toBe(200)
@@ -197,7 +201,7 @@ describe('GET /api/wrapped/og-image', () => {
       archetype: null,
     })
 
-    const response = await GET(buildRequest('http://localhost/api/wrapped/og-image?token=test-token'))
+    const response = await GET(buildRequest(`http://localhost/api/wrapped/og-image?token=${TOKEN}`))
 
     expect(response.status).toBe(200)
     expect(elementText(imageCalls[0].element)).not.toContain('Midnight Marathoner')
@@ -216,11 +220,20 @@ describe('GET /api/wrapped/og-image', () => {
   it('returns 404 when wrapped is not found', async () => {
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
 
-    const response = await GET(buildRequest('http://localhost/api/wrapped/og-image?token=nope'))
+    const response = await GET(buildRequest(`http://localhost/api/wrapped/og-image?token=${UNKNOWN_TOKEN}`))
 
     expect(response.status).toBe(404)
     expect(response.body).toBe('Wrapped not found')
     expect(response.headers.get('X-Robots-Tag')).toBe('noindex')
+  })
+
+  it('returns the same 404 for a malformed token without a database call', async () => {
+    const response = await GET(buildRequest('http://localhost/api/wrapped/og-image?token=nope'))
+
+    expect(response.status).toBe(404)
+    expect(response.body).toBe('Wrapped not found')
+    expect(prisma.plexWrapped.findUnique).not.toHaveBeenCalled()
+    expect(imageCalls).toHaveLength(0)
   })
 
   it('returns 404 when wrapped is not completed (same message, no enumeration)', async () => {
@@ -229,7 +242,7 @@ describe('GET /api/wrapped/og-image', () => {
       status: 'generating',
     })
 
-    const response = await GET(buildRequest('http://localhost/api/wrapped/og-image?token=test-token'))
+    const response = await GET(buildRequest(`http://localhost/api/wrapped/og-image?token=${TOKEN}`))
 
     expect(response.status).toBe(404)
     expect(response.body).toBe('Wrapped not found')
@@ -244,7 +257,7 @@ describe('GET /api/wrapped/og-image', () => {
       user: { name },
     })
 
-    const response = await GET(buildRequest('http://localhost/api/wrapped/og-image?token=test-token'))
+    const response = await GET(buildRequest(`http://localhost/api/wrapped/og-image?token=${TOKEN}`))
 
     expect(response.status).toBe(200)
     const text = elementText(imageCalls[0].element)
@@ -260,7 +273,7 @@ describe('GET /api/wrapped/og-image', () => {
       }),
     })
 
-    await GET(buildRequest('http://localhost/api/wrapped/og-image?token=test-token'))
+    await GET(buildRequest(`http://localhost/api/wrapped/og-image?token=${TOKEN}`))
 
     expect(elementText(imageCalls[0].element)).toContain('2 hours')
   })
@@ -271,7 +284,7 @@ describe('GET /api/wrapped/og-image', () => {
       data: JSON.stringify({}),
     })
 
-    const response = await GET(buildRequest('http://localhost/api/wrapped/og-image?token=test-token'))
+    const response = await GET(buildRequest(`http://localhost/api/wrapped/og-image?token=${TOKEN}`))
 
     expect(response.status).toBe(200)
     expect(elementText(imageCalls[0].element)).toContain('0 hours')
@@ -281,7 +294,7 @@ describe('GET /api/wrapped/og-image', () => {
     const mockRateLimitResponse = { status: 429, headers: new Headers() }
     ;(limitRequest as jest.Mock).mockResolvedValue(mockRateLimitResponse)
 
-    const request = buildRequest('http://localhost/api/wrapped/og-image?token=test-token')
+    const request = buildRequest(`http://localhost/api/wrapped/og-image?token=${TOKEN}`)
     const response = await GET(request)
 
     expect(response).toBe(mockRateLimitResponse)
@@ -294,7 +307,7 @@ describe('GET /api/wrapped/og-image', () => {
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockRejectedValue(new Error('Database error'))
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation()
 
-    const response = await GET(buildRequest('http://localhost/api/wrapped/og-image?token=test-token'))
+    const response = await GET(buildRequest(`http://localhost/api/wrapped/og-image?token=${TOKEN}`))
     const data = JSON.parse(response.body as string)
 
     expect(response.status).toBe(500)

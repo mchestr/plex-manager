@@ -50,6 +50,12 @@ const createMockRewind = (overrides?: Partial<ShareSafeRewindV2>): ShareSafeRewi
 })
 
 describe('WrappedShareSummary', () => {
+  it('marks its root with the wrapped-share-summary test ID', () => {
+    const { container } = render(<WrappedShareSummary rewind={createMockRewind()} />)
+
+    expect(container.firstElementChild).toBe(screen.getByTestId('wrapped-share-summary'))
+  })
+
   it('should render space background', () => {
     render(<WrappedShareSummary rewind={createMockRewind()} />)
 

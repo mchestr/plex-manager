@@ -105,6 +105,7 @@ describe("rate-limit", () => {
         "plex:pin:create": { points: 30, duration: 600 },
         "plex:pin:poll": { points: 300, duration: 600 },
         "rw:share-actions": { points: 10, duration: 3600 },
+        "rw:share-page": { points: 60, duration: 60 },
       })
     })
   })

@@ -52,6 +52,8 @@ jest.mock('next/server', () => {
 })
 
 const OWNER_EMAIL = 'test@example.com'
+const TOKEN = 'Kf-qkQFsJ4E6X_vMSKq1PiT624JyrVJtTNbepCgWYl8'
+const UNKNOWN_TOKEN = 'vZ2bLJpJkqoegfJ4-9rodbBNhGs3XZ-sdNzNXJC96wI'
 
 function makeWrapped(overrides: Record<string, unknown> = {}) {
   return {
@@ -87,7 +89,7 @@ function makeWrapped(overrides: Record<string, unknown> = {}) {
 }
 
 function buildRequest(headers: Record<string, string> = {}) {
-  return new NextRequest('http://localhost/api/wrapped/share/test-token', { headers })
+  return new NextRequest(`http://localhost/api/wrapped/share/${TOKEN}`, { headers })
 }
 
 describe('GET /api/wrapped/share/[token]', () => {
@@ -100,7 +102,7 @@ describe('GET /api/wrapped/share/[token]', () => {
   it('returns only the share-safe projection for a valid token', async () => {
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(makeWrapped())
 
-    const response = await GET(buildRequest(), { params: Promise.resolve({ token: 'test-token' }) })
+    const response = await GET(buildRequest(), { params: Promise.resolve({ token: TOKEN }) })
     const data = await response.json()
 
     expect(response.status).toBe(200)
@@ -125,7 +127,7 @@ describe('GET /api/wrapped/share/[token]', () => {
   it('sends X-Robots-Tag: noindex', async () => {
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(makeWrapped())
 
-    const response = await GET(buildRequest(), { params: Promise.resolve({ token: 'test-token' }) })
+    const response = await GET(buildRequest(), { params: Promise.resolve({ token: TOKEN }) })
 
     expect(response.headers.get('X-Robots-Tag')).toBe('noindex')
   })
@@ -133,10 +135,10 @@ describe('GET /api/wrapped/share/[token]', () => {
   it('selects only the columns the projection needs and the owner name', async () => {
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(makeWrapped())
 
-    await GET(buildRequest(), { params: Promise.resolve({ token: 'test-token' }) })
+    await GET(buildRequest(), { params: Promise.resolve({ token: TOKEN }) })
 
     expect(prisma.plexWrapped.findUnique).toHaveBeenCalledWith({
-      where: { shareToken: 'test-token' },
+      where: { shareToken: TOKEN },
       select: {
         id: true,
         year: true,
@@ -161,7 +163,7 @@ describe('GET /api/wrapped/share/[token]', () => {
   it('should return 404 when wrapped not found', async () => {
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
 
-    const response = await GET(buildRequest(), { params: Promise.resolve({ token: 'invalid-token' }) })
+    const response = await GET(buildRequest(), { params: Promise.resolve({ token: UNKNOWN_TOKEN }) })
     const data = await response.json()
 
     expect(response.status).toBe(404)
@@ -170,10 +172,19 @@ describe('GET /api/wrapped/share/[token]', () => {
     expect(response.headers.get('X-Robots-Tag')).toBe('noindex')
   })
 
+  it('returns the same 404 for a malformed token without a database call', async () => {
+    const response = await GET(buildRequest(), { params: Promise.resolve({ token: 'invalid-token' }) })
+    const data = await response.json()
+
+    expect(response.status).toBe(404)
+    expect(data.error).toBe('Wrapped not found')
+    expect(prisma.plexWrapped.findUnique).not.toHaveBeenCalled()
+  })
+
   it('should return 404 when wrapped is not completed', async () => {
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(makeWrapped({ status: 'generating' }))
 
-    const response = await GET(buildRequest(), { params: Promise.resolve({ token: 'test-token' }) })
+    const response = await GET(buildRequest(), { params: Promise.resolve({ token: TOKEN }) })
     const data = await response.json()
 
     // Security: Use 404 to prevent token enumeration
@@ -182,38 +193,15 @@ describe('GET /api/wrapped/share/[token]', () => {
     expect(prisma.wrappedShareVisit.create).not.toHaveBeenCalled()
   })
 
-  it('records the visit with the wrapped id only', async () => {
+  it('records no visit: only the share page does, so a view counts once', async () => {
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(makeWrapped())
 
-    await GET(
-      buildRequest({
-        'x-forwarded-for': '192.168.1.1, 10.0.0.1',
-        'x-real-ip': '192.168.1.2',
-        'user-agent': 'Mozilla/5.0',
-        referer: 'https://example.com',
-      }),
-      { params: Promise.resolve({ token: 'test-token' }) }
-    )
-
-    expect(prisma.wrappedShareVisit.create).toHaveBeenCalledWith({
-      data: { wrappedId: 'wrapped-1' },
+    const response = await GET(buildRequest({ 'x-forwarded-for': '192.168.1.1' }), {
+      params: Promise.resolve({ token: TOKEN }),
     })
-  })
 
-  it('should handle visit tracking failure gracefully', async () => {
-    ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(makeWrapped())
-    ;(prisma.wrappedShareVisit.create as jest.Mock).mockRejectedValue(new Error('Database error'))
-
-    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation()
-
-    const response = await GET(buildRequest(), { params: Promise.resolve({ token: 'test-token' }) })
-    const data = await response.json()
-
-    // Should still return success even if tracking fails
     expect(response.status).toBe(200)
-    expect(data.success).toBe(true)
-    expect(consoleErrorSpy).toHaveBeenCalled()
-    consoleErrorSpy.mockRestore()
+    expect(prisma.wrappedShareVisit.create).not.toHaveBeenCalled()
   })
 
   it('should handle database errors', async () => {
@@ -221,7 +209,7 @@ describe('GET /api/wrapped/share/[token]', () => {
 
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation()
 
-    const response = await GET(buildRequest(), { params: Promise.resolve({ token: 'test-token' }) })
+    const response = await GET(buildRequest(), { params: Promise.resolve({ token: TOKEN }) })
     const data = await response.json()
 
     expect(response.status).toBe(500)
@@ -235,7 +223,7 @@ describe('GET /api/wrapped/share/[token]', () => {
     ;(limitRequest as jest.Mock).mockResolvedValue(rateLimited)
 
     const request = buildRequest()
-    const response = await GET(request, { params: Promise.resolve({ token: 'test-token' }) })
+    const response = await GET(request, { params: Promise.resolve({ token: TOKEN }) })
 
     expect(response).toBe(rateLimited)
     expect(response.headers.get('X-Robots-Tag')).toBe('noindex')
@@ -249,7 +237,7 @@ describe('GET /api/wrapped/share/[token]', () => {
   ])('names the owner "Someone" for %s, never the email', async (_label, name) => {
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(makeWrapped({ user: { name } }))
 
-    const response = await GET(buildRequest(), { params: Promise.resolve({ token: 'test-token' }) })
+    const response = await GET(buildRequest(), { params: Promise.resolve({ token: TOKEN }) })
     const data = await response.json()
 
     expect(data.wrapped.ownerName).toBe('Someone')
