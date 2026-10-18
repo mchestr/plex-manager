@@ -30,6 +30,10 @@ const logger = createLogger("USER_QUERIES")
  * (`{"code":"..."}`), so legacy free text, such as a pre-P0.9 row listing
  * Tautulli's users, never reaches a member's browser. Admins get the stored
  * text as is.
+ *
+ * `data` never carries `statistics.leaderboards`: rows written before P0.8
+ * hold every member's name and yearly watch minutes there until P0.20's
+ * clean-up runs, and no viewer reads them.
  */
 export async function getUserPlexWrapped(userId: string, year: number) {
   // Authorization: a user may only read their own Wrapped; admins may read any.
@@ -67,10 +71,14 @@ export async function getUserPlexWrapped(userId: string, year: number) {
       },
     })
 
-    if (!wrapped?.error || session.user.isAdmin) {
-      return wrapped
+    if (!wrapped) {
+      return null
     }
-    return { ...wrapped, error: toStoredError(readStoredError(wrapped.error)) }
+    const visible = { ...wrapped, data: withoutLeaderboards(wrapped.data) }
+    if (!visible.error || session.user.isAdmin) {
+      return visible
+    }
+    return { ...visible, error: toStoredError(readStoredError(visible.error)) }
   } catch (error) {
     logger.error("Error getting user wrapped", error)
     return null
@@ -331,6 +339,22 @@ export async function unshareUserLibrary(userId: string): Promise<{ success: boo
 // NOT exported: every export in a "use server" module is a directly-invocable
 // endpoint. These return user PII and are only consumed by getAllUsersWithWrapped
 // (which is admin-gated), so they must not be independently callable.
+
+/** A stored `PlexWrapped.data` string without `statistics.leaderboards`. */
+function withoutLeaderboards(data: string): string {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(data)
+  } catch {
+    return data
+  }
+  const statistics = typeof parsed === "object" && parsed !== null ? (parsed as { statistics?: unknown }).statistics : undefined
+  if (typeof statistics !== "object" || statistics === null || !("leaderboards" in statistics)) {
+    return data
+  }
+  delete (statistics as { leaderboards?: unknown }).leaderboards
+  return JSON.stringify(parsed)
+}
 
 async function fetchUsersWithWrappedData(year: number) {
   // Uses `include` (not `select`), so every scalar User column — including

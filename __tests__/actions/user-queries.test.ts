@@ -99,6 +99,25 @@ describe('getUserPlexWrapped', () => {
     })
   })
 
+  it("drops a legacy row's leaderboards before the data leaves the server", async () => {
+    const data = {
+      version: 2,
+      userName: 'Test User',
+      statistics: {
+        moviesWatched: 3,
+        leaderboards: { watchTime: { leaderboard: [{ friendly_name: 'Someone Else', total_minutes: 900 }] } },
+      },
+    }
+    mockPrisma.plexWrapped.findUnique.mockResolvedValue(
+      makePrismaWrapped({ userId: 'user-1', year: 2024, data: JSON.stringify(data) }) as any
+    )
+
+    const result = await getUserPlexWrapped('user-1', 2024)
+
+    expect(JSON.parse(result!.data)).toEqual({ version: 2, userName: 'Test User', statistics: { moviesWatched: 3 } })
+    expect(result!.data).not.toContain('Someone Else')
+  })
+
   // P0.14: no calendar default. In January the caller's season year (2026)
   // is looked up, not the new calendar year.
   it('looks up the year it is given, not the calendar year', async () => {
