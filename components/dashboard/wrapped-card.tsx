@@ -164,6 +164,10 @@ export function WrappedCard({ userId, memberSince }: WrappedCardProps) {
             : result.error || "Failed to generate wrapped"
         )
         setIsGenerating(false)
+        if (result.code === "RATE_LIMITED") {
+          // A run this member started elsewhere may hold the row: follow it if so.
+          await loadWrapped()
+        }
       }
     } catch (err) {
       toast.showError(err instanceof Error ? err.message : "Failed to generate wrapped")

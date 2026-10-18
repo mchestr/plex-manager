@@ -14,6 +14,7 @@
  * project with one worker, or give each suite its own schema).
  *
  *   TEST_DATABASE_URL=postgresql://.../plex_manager_test npx jest scripts/__tests__/rewind-strip-leaderboards.pg.test.ts
+ *   TEST_DATABASE_URL=postgresql://.../plex_manager_test npx jest --runInBand --testPathPatterns '\.pg\.test\.ts$'
  */
 
 import { PrismaPg } from "@prisma/adapter-pg"

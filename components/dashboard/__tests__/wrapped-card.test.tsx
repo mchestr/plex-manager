@@ -3,7 +3,7 @@
  * never the stored error text (P0.9: RWP-02, SEC-17, DUP-01).
  */
 
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 
 import { getWrappedSettings } from '@/actions/admin'
@@ -179,6 +179,8 @@ describe('WrappedCard refused generation', () => {
   beforeEach(() => {
     jest.useFakeTimers()
     jest.clearAllMocks()
+    // Drop queued once-values, so one failing test cannot feed the next.
+    ;(getUserPlexWrapped as jest.Mock).mockReset()
     ;(useToast as jest.Mock).mockReturnValue(toast)
     ;(getWrappedSettings as jest.Mock).mockResolvedValue({ wrappedEnabled: true, wrappedYear: 2026 })
   })
@@ -231,6 +233,33 @@ describe('WrappedCard refused generation', () => {
     expect(await screen.findByTestId('wrapped-card-generate')).toBeEnabled()
     expect(mockShowError).toHaveBeenCalledWith('You can try again in 9 minutes.')
     expect(screen.queryByTestId('wrapped-card-generating')).not.toBeInTheDocument()
+  })
+
+  it('follows the run that holds the row when the limit refuses this tab', async () => {
+    // Two tabs at the same instant: this one was refused by the limit, and by
+    // the time it reloads, the other tab's run holds the row.
+    ;(getUserPlexWrapped as jest.Mock)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ status: 'generating', error: null })
+      .mockResolvedValue({ status: 'completed', error: null })
+    ;(generatePlexWrapped as jest.Mock).mockResolvedValue({
+      success: false,
+      code: 'RATE_LIMITED',
+      retryAfterSec: 600,
+      error: 'server text',
+    })
+
+    await clickGenerate()
+
+    await waitFor(() => expect(getUserPlexWrapped).toHaveBeenCalledTimes(2))
+    expect(mockShowError).toHaveBeenCalledWith('You can try again in 10 minutes.')
+    expect(await screen.findByTestId('wrapped-card-generating')).toBeInTheDocument()
+
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(2000)
+    })
+
+    expect(mockRouter.push).toHaveBeenCalledWith('/wrapped/2026')
   })
 
   it('explains a missing entitlement', async () => {

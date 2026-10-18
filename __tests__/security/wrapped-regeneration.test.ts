@@ -25,9 +25,9 @@ jest.mock('@/lib/prisma', () => ({
     },
     plexWrapped: {
       findUnique: jest.fn(),
-      findUniqueOrThrow: jest.fn(),
       createMany: jest.fn(),
       updateMany: jest.fn(),
+      updateManyAndReturn: jest.fn(),
     },
     plexServer: {
       findFirst: jest.fn(),
@@ -124,8 +124,8 @@ describe('Wrapped Regeneration Security', () => {
     ;(getWrappedSettings as jest.Mock).mockResolvedValue({ wrappedEnabled: true, wrappedYear: 2026 })
     ;(consume as jest.Mock).mockResolvedValue({ ok: true })
     ;(prisma.plexWrapped.createMany as jest.Mock).mockResolvedValue({ count: 1 })
+    ;(prisma.plexWrapped.updateManyAndReturn as jest.Mock).mockResolvedValue([{ id: 'wrapped-1' }])
     ;(prisma.plexWrapped.updateMany as jest.Mock).mockResolvedValue({ count: 1 })
-    ;(prisma.plexWrapped.findUniqueOrThrow as jest.Mock).mockResolvedValue({ id: 'wrapped-1' })
   })
 
   describe('generatePlexWrapped - Regeneration Security', () => {
@@ -432,8 +432,8 @@ describe('Wrapped Regeneration Security', () => {
 
     /** The status filter of the claim's first branch. */
     function claimedStatuses() {
-      const claim = (prisma.plexWrapped.updateMany as jest.Mock).mock.calls.find(([args]) => !args.where.id)
-      return claim[0].where.OR[0].status
+      const [[claim]] = (prisma.plexWrapped.updateManyAndReturn as jest.Mock).mock.calls
+      return claim.where.OR[0].status
     }
 
     it('lets an admin regenerate a completed Rewind, spending no member points', async () => {
@@ -474,7 +474,7 @@ describe('Wrapped Regeneration Security', () => {
       const result = await generatePlexWrapped('user-1', 2025)
 
       expect(result).toEqual({ success: false, error: 'Rewind is only available for 2026' })
-      expect(prisma.plexWrapped.updateMany).not.toHaveBeenCalled()
+      expect(prisma.plexWrapped.updateManyAndReturn).not.toHaveBeenCalled()
       expect(llm).not.toHaveBeenCalled()
     })
 
@@ -488,14 +488,14 @@ describe('Wrapped Regeneration Security', () => {
         code: 'ALREADY_GENERATING',
         error: 'Your Rewind is already being made.',
       })
-      expect(prisma.plexWrapped.updateMany).not.toHaveBeenCalled()
+      expect(prisma.plexWrapped.updateManyAndReturn).not.toHaveBeenCalled()
       expect(llm).not.toHaveBeenCalled()
     })
 
     it("never lets a member's claim take a row that completed after the check", async () => {
       // The action read "failed", but the row completed before the claim ran.
       const llm = await setUpRun(memberSession, mockFailedWrapped)
-      ;(prisma.plexWrapped.updateMany as jest.Mock).mockResolvedValue({ count: 0 })
+      ;(prisma.plexWrapped.updateManyAndReturn as jest.Mock).mockResolvedValue([])
 
       const result = await generatePlexWrapped('user-1', 2026)
 
@@ -567,7 +567,7 @@ describe('Wrapped Regeneration Security', () => {
         },
       })
 
-      const result = await generateAllPlexWrapped(2026)
+      const result = await generateAllPlexWrapped()
 
       expect(result.success).toBe(true)
       expect(result.generated).toBe(1)
@@ -582,7 +582,7 @@ describe('Wrapped Regeneration Security', () => {
         },
       })
 
-      const result = await generateAllPlexWrapped(2026)
+      const result = await generateAllPlexWrapped()
 
       expect(result.success).toBe(false)
       expect(result.errors).toContain('Unauthorized: Only admins can generate wrapped for all users')
@@ -592,7 +592,7 @@ describe('Wrapped Regeneration Security', () => {
     it('should reject unauthenticated user', async () => {
       ;(getServerSession as jest.Mock).mockResolvedValue(null)
 
-      const result = await generateAllPlexWrapped(2026)
+      const result = await generateAllPlexWrapped()
 
       expect(result.success).toBe(false)
       expect(result.errors).toContain('Unauthorized: Only admins can generate wrapped for all users')

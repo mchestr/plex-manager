@@ -11,10 +11,13 @@
  * end in `_test` fails the suite before any connection is made (P0.4's
  * `assertTestDatabaseUrl`). The database needs the app's migrations applied.
  * The suite only touches rows of a `User` whose id starts with its own run
- * prefix, but it must not run alongside a suite that empties PlexWrapped
- * (scripts/__tests__/rewind-strip-leaderboards.pg.test.ts) on the same database.
+ * prefix. scripts/__tests__/rewind-strip-leaderboards.pg.test.ts empties
+ * PlexWrapped and counts every row, so the two must not run at the same time
+ * on one database: run the Postgres suites together in one worker (P1.5's
+ * integration project takes this over).
  *
  *   TEST_DATABASE_URL=postgresql://.../plex_manager_test npx jest actions/__tests__/wrapped-generation-claim.pg.test.ts
+ *   TEST_DATABASE_URL=postgresql://.../plex_manager_test npx jest --runInBand --testPathPatterns '\.pg\.test\.ts$'
  */
 
 import { randomUUID } from 'node:crypto'

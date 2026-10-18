@@ -11,8 +11,9 @@
  *
  * ```
  * claimGeneration ─► createMany(skipDuplicates)        the row exists ("pending" if new)
- *                 ─► updateMany(not generating,         ┬ count 1: claimed, updatedAt = claimedAt
- *                      or generating for 15+ minutes)   └ count 0: a live run holds it ─► null
+ *                 ─► updateManyAndReturn(               ┬ 1 row: claimed, updatedAt = claimedAt
+ *                      not generating, or generating    └ 0 rows: a live run holds it ─► null
+ *                      for 15+ minutes)
  *   … statistics, LLM …
  * writeIfClaimed  ─► updateMany(id, generating,         ┬ count 1: this run's outcome is stored
  *                      updatedAt in the claim window)   └ count 0: discarded and logged
@@ -84,7 +85,9 @@ export async function claimGeneration(
   })
 
   const claimedAt = new Date()
-  const { count } = await prisma.plexWrapped.updateMany({
+  // The claim statement returns the row's id, so no second query can fail
+  // after the row is already marked "generating".
+  const claimed = await prisma.plexWrapped.updateManyAndReturn({
     where: {
       userId,
       year,
@@ -94,16 +97,12 @@ export async function claimGeneration(
       ],
     },
     data: { status: "generating", error: null, updatedAt: claimedAt },
-  })
-  if (count === 0) {
-    return null
-  }
-
-  const { id } = await prisma.plexWrapped.findUniqueOrThrow({
-    where: { userId_year: { userId, year } },
     select: { id: true },
   })
-  return { wrappedId: id, claimedAt }
+  if (claimed.length === 0) {
+    return null
+  }
+  return { wrappedId: claimed[0].id, claimedAt }
 }
 
 /**

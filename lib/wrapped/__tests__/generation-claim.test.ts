@@ -13,7 +13,7 @@ jest.mock('@/lib/prisma', () => ({
     plexWrapped: {
       createMany: jest.fn(),
       updateMany: jest.fn(),
-      findUniqueOrThrow: jest.fn(),
+      updateManyAndReturn: jest.fn(),
     },
   },
 }))
@@ -31,7 +31,7 @@ beforeEach(() => {
   jest.useFakeTimers({ now: NOW })
   ;(prisma.plexWrapped.createMany as jest.Mock).mockResolvedValue({ count: 0 })
   ;(prisma.plexWrapped.updateMany as jest.Mock).mockResolvedValue({ count: 1 })
-  ;(prisma.plexWrapped.findUniqueOrThrow as jest.Mock).mockResolvedValue({ id: 'wrapped-1' })
+  ;(prisma.plexWrapped.updateManyAndReturn as jest.Mock).mockResolvedValue([{ id: 'wrapped-1' }])
 })
 
 afterEach(() => {
@@ -57,7 +57,7 @@ describe('isLiveClaim', () => {
 })
 
 describe('claimGeneration', () => {
-  it('makes sure the row exists, then claims it with an explicit updatedAt', async () => {
+  it('makes sure the row exists, then claims it with an explicit updatedAt in one statement', async () => {
     const claim = await claimGeneration('user-1', 2026, { regenerate: false })
 
     expect(claim).toEqual({ wrappedId: 'wrapped-1', claimedAt: NOW })
@@ -65,7 +65,7 @@ describe('claimGeneration', () => {
       data: [{ userId: 'user-1', year: 2026, status: 'pending', data: '{}' }],
       skipDuplicates: true,
     })
-    expect(prisma.plexWrapped.updateMany).toHaveBeenCalledWith({
+    expect(prisma.plexWrapped.updateManyAndReturn).toHaveBeenCalledWith({
       where: {
         userId: 'user-1',
         year: 2026,
@@ -75,25 +75,32 @@ describe('claimGeneration', () => {
         ],
       },
       data: { status: 'generating', error: null, updatedAt: NOW },
+      select: { id: true },
     })
-    // The row is created before it is claimed.
+    // The row is created before it is claimed, and nothing else is queried.
     const createOrder = (prisma.plexWrapped.createMany as jest.Mock).mock.invocationCallOrder[0]
-    const claimOrder = (prisma.plexWrapped.updateMany as jest.Mock).mock.invocationCallOrder[0]
+    const claimOrder = (prisma.plexWrapped.updateManyAndReturn as jest.Mock).mock.invocationCallOrder[0]
     expect(createOrder).toBeLessThan(claimOrder)
+    expect(prisma.plexWrapped.updateMany).not.toHaveBeenCalled()
   })
 
   it('lets an admin claim a completed row', async () => {
     await claimGeneration('user-1', 2026, { regenerate: true })
 
-    const { where } = (prisma.plexWrapped.updateMany as jest.Mock).mock.calls[0][0]
+    const { where } = (prisma.plexWrapped.updateManyAndReturn as jest.Mock).mock.calls[0][0]
     expect(where.OR[0]).toEqual({ status: { not: 'generating' } })
   })
 
-  it('returns null without reading the row when another live run holds it', async () => {
-    ;(prisma.plexWrapped.updateMany as jest.Mock).mockResolvedValue({ count: 0 })
+  it('returns null when another live run holds the row', async () => {
+    ;(prisma.plexWrapped.updateManyAndReturn as jest.Mock).mockResolvedValue([])
 
     await expect(claimGeneration('user-1', 2026, { regenerate: true })).resolves.toBeNull()
-    expect(prisma.plexWrapped.findUniqueOrThrow).not.toHaveBeenCalled()
+  })
+
+  it('passes a failed claim statement to the caller', async () => {
+    ;(prisma.plexWrapped.updateManyAndReturn as jest.Mock).mockRejectedValue(new Error('connection reset'))
+
+    await expect(claimGeneration('user-1', 2026, { regenerate: false })).rejects.toThrow('connection reset')
   })
 })
 

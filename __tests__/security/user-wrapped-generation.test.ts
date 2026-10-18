@@ -24,9 +24,9 @@ jest.mock('@/lib/prisma', () => ({
     },
     plexWrapped: {
       findUnique: jest.fn(),
-      findUniqueOrThrow: jest.fn(),
       createMany: jest.fn(),
       updateMany: jest.fn(),
+      updateManyAndReturn: jest.fn(),
     },
     plexServer: {
       findFirst: jest.fn(),
@@ -105,8 +105,8 @@ describe('User Wrapped Generation Security', () => {
     ;(getWrappedSettings as jest.Mock).mockResolvedValue({ wrappedEnabled: true, wrappedYear: 2026 })
     ;(consume as jest.Mock).mockResolvedValue({ ok: true })
     ;(prisma.plexWrapped.createMany as jest.Mock).mockResolvedValue({ count: 1 })
+    ;(prisma.plexWrapped.updateManyAndReturn as jest.Mock).mockResolvedValue([{ id: 'wrapped-1' }])
     ;(prisma.plexWrapped.updateMany as jest.Mock).mockResolvedValue({ count: 1 })
-    ;(prisma.plexWrapped.findUniqueOrThrow as jest.Mock).mockResolvedValue({ id: 'wrapped-1' })
   })
 
   describe('generatePlexWrapped', () => {
@@ -181,7 +181,22 @@ describe('User Wrapped Generation Security', () => {
       })
     })
 
-    it('should fail if user does not exist', async () => {
+    it("should fail if the member's own account no longer exists", async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValue({
+        user: {
+          id: 'user-1',
+          isAdmin: false,
+        },
+      })
+      ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(null)
+
+      const result = await generatePlexWrapped('user-1', 2026)
+
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('User not found')
+    })
+
+    it('should not tell a member whether another user id exists', async () => {
       ;(getServerSession as jest.Mock).mockResolvedValue({
         user: {
           id: 'user-1',
@@ -192,8 +207,8 @@ describe('User Wrapped Generation Security', () => {
 
       const result = await generatePlexWrapped('non-existent-user', 2026)
 
-      expect(result.success).toBe(false)
-      expect(result.error).toBe('User not found')
+      expect(result).toEqual({ success: false, error: 'Unauthorized: You can only generate your own wrapped' })
+      expect(prisma.user.findUnique).not.toHaveBeenCalled()
     })
 
     it('should fail if user does not have plexUserId', async () => {
@@ -211,15 +226,13 @@ describe('User Wrapped Generation Security', () => {
       ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(mockPlexServer)
       ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(mockTautulli)
 
-      const { fetchTautulliStatistics } = await import('@/lib/wrapped/statistics')
-      ;(fetchTautulliStatistics as jest.Mock).mockRejectedValue(
-        new Error('User does not have a Plex user ID')
-      )
-
       const result = await generatePlexWrapped('user-1', 2026)
 
-      expect(result.success).toBe(false)
-      expect(result.error).toContain('Plex user ID')
+      // Refused before any point is spent or the row is claimed.
+      expect(result).toEqual({ success: false, error: 'User does not have a Plex user ID' })
+      expect(consume).not.toHaveBeenCalled()
+      expect(prisma.plexWrapped.createMany).not.toHaveBeenCalled()
+      expect(prisma.plexWrapped.updateManyAndReturn).not.toHaveBeenCalled()
     })
 
     it('should preserve existing share token when regenerating', async () => {
@@ -291,6 +304,7 @@ describe('User Wrapped Generation Security', () => {
       expect(result.success).toBe(true)
       const writes = [
         ...(prisma.plexWrapped.createMany as jest.Mock).mock.calls.flatMap(([args]) => args.data),
+        ...(prisma.plexWrapped.updateManyAndReturn as jest.Mock).mock.calls.map(([args]) => args.data),
         ...(prisma.plexWrapped.updateMany as jest.Mock).mock.calls.map(([args]) => args.data),
       ]
       expect(writes.length).toBeGreaterThanOrEqual(3)
@@ -344,6 +358,7 @@ describe('User Wrapped Generation Security', () => {
 
       function expectNoClaim() {
         expect(prisma.plexWrapped.createMany).not.toHaveBeenCalled()
+        expect(prisma.plexWrapped.updateManyAndReturn).not.toHaveBeenCalled()
         expect(prisma.plexWrapped.updateMany).not.toHaveBeenCalled()
       }
 
@@ -365,6 +380,7 @@ describe('User Wrapped Generation Security', () => {
         const result = await generatePlexWrapped('user-2', 2026)
 
         expect(result).toEqual({ success: false, error: 'Unauthorized: You can only generate your own wrapped' })
+        expect(prisma.user.findUnique).not.toHaveBeenCalled()
         expectNoClaim()
         expect(consume).not.toHaveBeenCalled()
         expect(llm).not.toHaveBeenCalled()

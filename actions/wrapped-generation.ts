@@ -10,9 +10,14 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { consume, reward, type ConsumeResult } from "@/lib/security/rate-limit"
 import { createLogger } from "@/lib/utils/logger"
-import { userIdSchema, yearSchema } from "@/lib/validations/shared-schemas"
+import { userIdSchema } from "@/lib/validations/shared-schemas"
 import { z } from "zod"
-import { claimGeneration, isLiveClaim, writeIfClaimed } from "@/lib/wrapped/generation-claim"
+import {
+  claimGeneration,
+  type GenerationClaim,
+  isLiveClaim,
+  writeIfClaimed,
+} from "@/lib/wrapped/generation-claim"
 import { generateWrappedWithLLM } from "@/lib/wrapped/llm"
 import { memberName } from "@/lib/wrapped/member-name"
 import {
@@ -78,6 +83,20 @@ async function refundGenerationPoints(userId: string): Promise<void> {
 }
 
 /**
+ * Re-read after a refused limit: true when another run, such as one a second
+ * tab started a moment earlier, holds the row or is claiming it (`pending` is
+ * the row `claimGeneration` has just created). A member is then told the Rewind
+ * is being made rather than to wait.
+ */
+async function runInFlight(userId: string, year: number): Promise<boolean> {
+  const row = await prisma.plexWrapped.findUnique({
+    where: { userId_year: { userId, year } },
+    select: { status: true, updatedAt: true },
+  })
+  return row !== null && (row.status === "pending" || isLiveClaim(row, new Date()))
+}
+
+/**
  * Generate the Rewind for one member and the season year.
  *
  * ## Guardrails (SEC-22, RWP-12), in order
@@ -85,18 +104,25 @@ async function refundGenerationPoints(userId: string): Promise<void> {
  * 1. A session, then `getWrappedSettings()`: generation is enabled, and
  *    `wrappedYear` is the season year.
  * 2. Zod: `year` must be exactly the season year.
- * 3. The member exists, and a non-admin acts only on their own row.
+ * 3. A non-admin acts only on their own row, checked before the member is
+ *    read so another id gets the same answer whether or not it exists; then
+ *    the member exists.
  * 4. Entitlement through `getAccessGateStatus` (a no-op while Stripe is off;
  *    admins are entitled): `NOT_ENTITLED`.
  * 5. Only admins regenerate a completed Rewind, and a live run already making
- *    this Rewind returns `ALREADY_GENERATING` before any limit is spent.
+ *    this Rewind returns `ALREADY_GENERATING` before any limit is spent. The
+ *    configuration a run needs (Plex, Tautulli, the member's Plex user ID) is
+ *    checked here too, so a failure that a retry cannot fix costs nothing.
  * 6. Non-admins spend a point of `rw:gen:burst` (1 per 10 minutes) and
- *    `rw:gen:daily` (3 per day): `RATE_LIMITED` with `retryAfterSec`.
- * 7. The single-flight claim (`lib/wrapped/generation-claim.ts`). Losing it
- *    returns `ALREADY_GENERATING` and refunds the points.
+ *    `rw:gen:daily` (3 per day): `RATE_LIMITED` with `retryAfterSec`, unless
+ *    a run that started since check 5 now holds the row (`ALREADY_GENERATING`).
+ * 7. The single-flight claim (`lib/wrapped/generation-claim.ts`). Losing it,
+ *    or an error while claiming, refunds the points; losing it returns
+ *    `ALREADY_GENERATING`.
  *
  * The run's outcome is written only while it holds the claim, so a run that
- * was taken over after 15 minutes cannot overwrite the newer one.
+ * was taken over after 15 minutes cannot overwrite the newer one; such a run
+ * returns `ALREADY_GENERATING`, whatever its own outcome.
  */
 export async function generatePlexWrapped(userId: string, year: number): Promise<GeneratePlexWrappedResult> {
   try {
@@ -130,17 +156,17 @@ export async function generatePlexWrapped(userId: string, year: number): Promise
 
     const { userId: validUserId, year: validYear } = validated.data
 
-    // Check 3: the member exists; non-admins act only on their own row
+    // Check 3: non-admins act only on their own row; then the member exists
+    if (!isAdmin && currentUserId !== validUserId) {
+      return { success: false, error: "Unauthorized: You can only generate your own wrapped" }
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: validUserId },
     })
 
     if (!user) {
       return { success: false, error: "User not found" }
-    }
-
-    if (!isAdmin && currentUserId !== validUserId) {
-      return { success: false, error: "Unauthorized: You can only generate your own wrapped" }
     }
 
     // Check 4: entitlement (always true while Stripe is off, and for admins)
@@ -171,10 +197,27 @@ export async function generatePlexWrapped(userId: string, year: number): Promise
       return { success: false, error: "No active Plex server configured" }
     }
 
+    const tautulli = await prisma.tautulli.findFirst({
+      where: { isActive: true },
+    })
+
+    if (!tautulli) {
+      return { success: false, error: "No active Tautulli server configured" }
+    }
+
+    const { plexUserId } = user
+    if (!plexUserId) {
+      return { success: false, error: "User does not have a Plex user ID" }
+    }
+
     // Check 6: member limits; admins are exempt
     if (!isAdmin) {
       const limit = await consumeGenerationPoints(validUserId)
       if (!limit.ok) {
+        // A second tab that passed check 5 just before the first one claimed.
+        if (await runInFlight(validUserId, validYear)) {
+          return refused("ALREADY_GENERATING")
+        }
         return refused("RATE_LIMITED", limit.retryAfterSec)
       }
     }
@@ -182,11 +225,16 @@ export async function generatePlexWrapped(userId: string, year: number): Promise
     // Check 7: one run at a time. Generation never touches shareToken: sharing is
     // opt-in through enableWrappedShareLink, and a regeneration keeps a link
     // the member already turned on (SEC-16).
-    const claim = await claimGeneration(validUserId, validYear, { regenerate: isAdmin })
-    if (!claim) {
-      if (!isAdmin) {
+    let claim: GenerationClaim | null = null
+    try {
+      claim = await claimGeneration(validUserId, validYear, { regenerate: isAdmin })
+    } finally {
+      // A lost claim or a failed claim query gives the member their points back.
+      if (!claim && !isAdmin) {
         await refundGenerationPoints(validUserId)
       }
+    }
+    if (!claim) {
       return refused("ALREADY_GENERATING")
     }
 
@@ -194,30 +242,20 @@ export async function generatePlexWrapped(userId: string, year: number): Promise
 
     try {
       // 1. Fetch statistics from Tautulli
-      const tautulli = await prisma.tautulli.findFirst({
-        where: { isActive: true },
-      })
-
-      if (!tautulli) {
-        throw new Error("No active Tautulli server configured")
-      }
-
-      if (!user.plexUserId) {
-        throw new Error("User does not have a Plex user ID")
-      }
-
       const tautulliStats = await fetchTautulliStatistics(
         {
           url: tautulli.url,
           apiKey: tautulli.apiKey,
         },
-        { plexUserId: user.plexUserId },
+        { plexUserId },
         validYear
       )
 
       // A known cause is stored as a code, and the member gets fixed copy.
       if (tautulliStats.code) {
-        await writeIfClaimed(claim, { status: "failed", error: toStoredError(tautulliStats.code) })
+        if (!(await writeIfClaimed(claim, { status: "failed", error: toStoredError(tautulliStats.code) }))) {
+          return refused("ALREADY_GENERATING")
+        }
         return { success: false, code: tautulliStats.code, error: memberErrorCopy(tautulliStats.code) }
       }
 
@@ -234,7 +272,7 @@ export async function generatePlexWrapped(userId: string, year: number): Promise
       })
 
       let serverStats
-      if (plexServer && tautulli) {
+      if (plexServer) {
         const serverStatsResult = await fetchPlexServerStatistics(
           {
             url: plexServer.url,
@@ -268,7 +306,7 @@ export async function generatePlexWrapped(userId: string, year: number): Promise
             url: overseerr.url,
             apiKey: overseerr.apiKey,
           },
-          { plexUserId: user.plexUserId, email: user.email },
+          { plexUserId, email: user.email },
           validYear
         )
         if (overseerrData.success && overseerrData.data) {
@@ -278,7 +316,7 @@ export async function generatePlexWrapped(userId: string, year: number): Promise
 
       // 4. Fetch leaderboard data
       let leaderboards
-      if (tautulli && tautulliStatsData.tautulliUserId) {
+      if (tautulliStatsData.tautulliUserId) {
         const [topContentLeaderboards, watchTimeLeaderboard] = await Promise.all([
           fetchTopContentLeaderboards(
             {
@@ -372,10 +410,15 @@ export async function generatePlexWrapped(userId: string, year: number): Promise
         return refused("ALREADY_GENERATING")
       }
     } catch (error) {
-      await writeIfClaimed(claim, {
+      const recorded = await writeIfClaimed(claim, {
         status: "failed",
         error: error instanceof Error ? error.message : "Failed to generate wrapped",
       })
+      if (!recorded) {
+        // A newer run holds the row: this failure is not the member's outcome.
+        logger.error("Rewind run failed after losing its claim", error)
+        return refused("ALREADY_GENERATING")
+      }
       throw error
     }
 
@@ -399,30 +442,15 @@ export async function generatePlexWrapped(userId: string, year: number): Promise
 }
 
 /**
- * Generate Plex Wrapped for all users
+ * Generate the season's Rewind for every member with a Plex account.
  * Admin-only function
  */
-export async function generateAllPlexWrapped(
-  year: number = new Date().getFullYear()
-): Promise<{
+export async function generateAllPlexWrapped(): Promise<{
   success: boolean
   generated: number
   failed: number
   errors: string[]
 }> {
-  // Validate year parameter
-  const validatedYear = yearSchema.safeParse(year)
-  if (!validatedYear.success) {
-    return {
-      success: false,
-      generated: 0,
-      failed: 0,
-      errors: [validatedYear.error.issues[0]?.message || "Invalid year parameter"],
-    }
-  }
-
-  const validYear = validatedYear.data
-
   try {
     // Require admin for bulk generation
     const session = await getServerSession(authOptions)
@@ -434,6 +462,8 @@ export async function generateAllPlexWrapped(
         errors: ["Unauthorized: Only admins can generate wrapped for all users"],
       }
     }
+    // The season year, not the calendar year: they differ in January.
+    const { wrappedYear } = await getWrappedSettings()
     const users = await prisma.user.findMany({
       where: {
         plexUserId: { not: null }, // Only users with Plex accounts
@@ -445,7 +475,7 @@ export async function generateAllPlexWrapped(
     const errors: string[] = []
 
     for (const user of users) {
-      const result = await generatePlexWrapped(user.id, validYear)
+      const result = await generatePlexWrapped(user.id, wrappedYear)
       if (result.success) {
         generated++
       } else {
