@@ -13,6 +13,8 @@ interface WrappedViewerWrapperProps {
   userName?: string
   summary?: string
   shareToken?: string
+  /** The member's own Rewind: offer the share-link controls. */
+  canManageShare?: boolean
   /** Playground preview: skip the intro transition and letterbox overlays. */
   isPreview?: boolean
 }
@@ -24,6 +26,7 @@ export function WrappedViewerWrapper({
   userName,
   summary,
   shareToken,
+  canManageShare = false,
   isPreview = false,
 }: WrappedViewerWrapperProps) {
   // Skip transition for shared wraps and playground previews
@@ -51,6 +54,7 @@ export function WrappedViewerWrapper({
               userName={userName}
               summary={summary}
               shareToken={shareToken}
+              canManageShare={canManageShare}
               isPreview={isPreview}
             />
           </motion.div>

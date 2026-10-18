@@ -18,6 +18,8 @@ interface WrappedViewerProps {
   userName?: string
   summary?: string
   shareToken?: string
+  /** The member's own Rewind: offer the share-link controls. */
+  canManageShare?: boolean
   /** Playground preview: letterbox bars are disabled inside the scrollable modal. */
   isPreview?: boolean
 }
@@ -27,6 +29,7 @@ export function WrappedViewer({
   onComplete,
   isShared = false,
   shareToken,
+  canManageShare = false,
   isPreview = false,
 }: WrappedViewerProps) {
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0)
@@ -263,6 +266,7 @@ export function WrappedViewer({
           onNext={handleNext}
           onShowAll={handleShowAll}
           isShared={isShared}
+          canManageShare={canManageShare}
           shareToken={shareToken}
           year={wrappedData.year}
         />

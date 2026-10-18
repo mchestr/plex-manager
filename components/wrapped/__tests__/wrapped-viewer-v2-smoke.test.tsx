@@ -4,6 +4,11 @@ import { WrappedViewer } from "@/components/wrapped/wrapped-viewer"
 import { generateMockWrappedData } from "@/lib/wrapped/mock-data"
 import { buildStatistics } from "@/lib/wrapped/__tests__/fixtures"
 
+jest.mock("@/actions/wrapped-share-link", () => ({
+  enableWrappedShareLink: jest.fn(),
+  disableWrappedShareLink: jest.fn(),
+}))
+
 describe("WrappedViewer v2 smoke test", () => {
   it("renders mock v2 data through the cinematic path", () => {
     const wrappedData = generateMockWrappedData({

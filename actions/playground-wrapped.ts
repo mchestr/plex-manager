@@ -2,7 +2,6 @@
 
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { generateShareToken } from "@/lib/utils"
 import { createLogger } from "@/lib/utils/logger"
 import { assembleWrappedData } from "@/lib/wrapped/assemble-wrapped"
 import { memberName } from "@/lib/wrapped/member-name"
@@ -93,20 +92,9 @@ export async function savePlaygroundWrapped(input: SavePlaygroundWrappedInput): 
       year: input.year,
     })
 
-    // Check if wrapped already exists for this user/year
-    const existingWrapped = await prisma.plexWrapped.findUnique({
-      where: {
-        userId_year: {
-          userId: user.id,
-          year: input.year,
-        },
-      },
-    })
-
-    // Generate share token if needed
-    const shareToken = existingWrapped?.shareToken || generateShareToken()
-
-    // Create or update wrapped record
+    // Create or update wrapped record. A playground save never creates a
+    // share token and keeps an existing one: sharing is the member's choice
+    // (enableWrappedShareLink, SEC-16).
     const wrapped = await prisma.plexWrapped.upsert({
       where: {
         userId_year: {
@@ -119,7 +107,6 @@ export async function savePlaygroundWrapped(input: SavePlaygroundWrappedInput): 
         year: input.year,
         status: "completed",
         data: JSON.stringify(wrappedData),
-        shareToken,
         summary: wrappedData.summary || null,
         archetype: wrappedData.archetype?.name || null,
         generatedAt: new Date(),
@@ -130,8 +117,6 @@ export async function savePlaygroundWrapped(input: SavePlaygroundWrappedInput): 
         summary: wrappedData.summary || null,
         archetype: wrappedData.archetype?.name || null,
         generatedAt: new Date(),
-        // Preserve existing share token if it exists
-        ...(existingWrapped?.shareToken ? {} : { shareToken }),
       },
     })
 

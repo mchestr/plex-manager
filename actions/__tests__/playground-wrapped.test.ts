@@ -15,7 +15,7 @@ import { getServerSession } from 'next-auth'
 jest.mock('@/lib/prisma', () => ({
   prisma: {
     user: { findFirst: jest.fn() },
-    plexWrapped: { findUnique: jest.fn(), upsert: jest.fn() },
+    plexWrapped: { upsert: jest.fn() },
   },
 }))
 
@@ -47,7 +47,6 @@ describe('savePlaygroundWrapped', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     ;(getServerSession as jest.Mock).mockResolvedValue(adminSession)
-    ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
     ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue({ id: 'wrapped-1' })
   })
 
@@ -85,5 +84,60 @@ describe('savePlaygroundWrapped', () => {
     const { raw, parsed } = storedData()
     expect(parsed.userName).toBe('Viewer')
     expect(raw).not.toContain(MEMBER_EMAIL)
+  })
+
+  describe('share tokens (opt-in sharing, SEC-16)', () => {
+    type StoredRow = { id: string; status: string; shareToken: string | null }
+
+    /** Applies the upsert the way Prisma would to a member's row, or creates one. */
+    function upsertInto(existing: StoredRow | null) {
+      let stored: StoredRow | null = existing
+      ;(prisma.plexWrapped.upsert as jest.Mock).mockImplementation(
+        async ({ create, update }: { create: Partial<StoredRow>; update: Partial<StoredRow> }) => {
+          stored = stored
+            ? { ...stored, ...update }
+            : { id: 'wrapped-new', status: 'pending', shareToken: null, ...create }
+          return stored
+        }
+      )
+      return () => stored
+    }
+
+    beforeEach(() => {
+      ;(prisma.user.findFirst as jest.Mock).mockResolvedValue({ id: 'user-1', name: 'Mike', email: MEMBER_EMAIL })
+    })
+
+    function save() {
+      return savePlaygroundWrapped({
+        llmResponse: JSON.stringify(buildValidOutput()),
+        statistics: buildStatistics(),
+        userName: 'Mike',
+        year: 2026,
+      })
+    }
+
+    it.each([
+      ['a new row', null],
+      ['an existing row without a token', { id: 'wrapped-1', status: 'completed', shareToken: null }],
+    ])('leaves shareToken null on %s', async (_label, existing) => {
+      const storedRow = upsertInto(existing)
+
+      const result = await save()
+
+      expect(result.success).toBe(true)
+      expect(storedRow()).toEqual(expect.objectContaining({ status: 'completed', shareToken: null }))
+      const args = (prisma.plexWrapped.upsert as jest.Mock).mock.calls[0][0]
+      expect(args.create).not.toHaveProperty('shareToken')
+      expect(args.update).not.toHaveProperty('shareToken')
+    })
+
+    it('keeps an existing token unchanged', async () => {
+      const storedRow = upsertInto({ id: 'wrapped-1', status: 'completed', shareToken: 'member-chose-to-share' })
+
+      const result = await save()
+
+      expect(result.success).toBe(true)
+      expect(storedRow()?.shareToken).toBe('member-chose-to-share')
+    })
   })
 })

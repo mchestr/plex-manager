@@ -28,12 +28,14 @@ jest.mock('@/components/wrapped/wrapped-viewer', () => ({
     userName,
     summary,
     shareToken,
+    canManageShare,
   }: {
     wrappedData: WrappedData
     isShared?: boolean
     userName?: string
     summary?: string
     shareToken?: string
+    canManageShare?: boolean
   }) => (
     <div data-testid="wrapped-viewer">
       <div>Wrapped Viewer</div>
@@ -42,6 +44,7 @@ jest.mock('@/components/wrapped/wrapped-viewer', () => ({
       {isShared && <div>Shared View</div>}
       {summary && <div>Summary: {summary}</div>}
       {shareToken && <div>Token: {shareToken}</div>}
+      <div>Can manage share: {String(canManageShare)}</div>
     </div>
   ),
 }))
@@ -179,6 +182,15 @@ describe('WrappedViewerWrapper', () => {
     )
 
     expect(screen.getByText('Token: abc123')).toBeInTheDocument()
+  })
+
+  it('should offer the share controls only when the page asks for them', () => {
+    const wrappedData = createMockWrappedData()
+    const { rerender } = render(<WrappedViewerWrapper wrappedData={wrappedData} year={2024} isShared />)
+    expect(screen.getByText('Can manage share: false')).toBeInTheDocument()
+
+    rerender(<WrappedViewerWrapper wrappedData={wrappedData} year={2024} isShared canManageShare />)
+    expect(screen.getByText('Can manage share: true')).toBeInTheDocument()
   })
 
   it('should handle transition completion callback', async () => {

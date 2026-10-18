@@ -1,6 +1,7 @@
 /**
  * The member /wrapped page renders fixed copy for a failed generation, never
- * the stored error text (P0.9: RWP-02, SEC-17, DUP-01).
+ * the stored error text (P0.9: RWP-02, SEC-17, DUP-01), and offers the owner
+ * the share-link controls on a completed Rewind (P0.19: SEC-16).
  */
 
 import { render, screen } from '@testing-library/react'
@@ -8,6 +9,7 @@ import { getServerSession } from 'next-auth'
 
 import WrappedPage from '@/app/(app)/wrapped/page'
 import { getUserPlexWrapped } from '@/actions/users'
+import { WrappedViewerWrapper } from '@/components/wrapped/wrapped-viewer-wrapper'
 
 jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),
@@ -26,7 +28,7 @@ jest.mock('@/actions/users', () => ({
 }))
 
 jest.mock('@/components/wrapped/wrapped-viewer-wrapper', () => ({
-  WrappedViewerWrapper: () => null,
+  WrappedViewerWrapper: jest.fn(() => null),
 }))
 
 jest.mock('@/components/wrapped/wrapped-page-client', () => ({
@@ -75,5 +77,29 @@ describe('WrappedPage failed state', () => {
     for (const value of ['mona_plex', 'mona.private@example.com', 'nils_plex', 'nils.private@example.com', 'Available users']) {
       expect(document.body).not.toHaveTextContent(value)
     }
+  })
+})
+
+describe('WrappedPage completed state', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    ;(getServerSession as jest.Mock).mockResolvedValue({ user: { id: 'user-1', isAdmin: false } })
+  })
+
+  function completedWrapped(shareToken: string | null) {
+    return { id: 'wrapped-1', status: 'completed', error: null, data: '{"year":2026}', shareToken, user: {} }
+  }
+
+  it.each([
+    ['without a link', null, undefined],
+    ['with a surviving link', 'v2-token', 'v2-token'],
+  ])('offers the owner the share controls %s', async (_label, shareToken, passedToken) => {
+    mockGetUserPlexWrapped.mockResolvedValue(completedWrapped(shareToken))
+
+    await renderPage()
+
+    const props = (WrappedViewerWrapper as jest.Mock).mock.calls[0][0]
+    expect(props.canManageShare).toBe(true)
+    expect(props.shareToken).toBe(passedToken)
   })
 })

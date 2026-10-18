@@ -2,8 +2,7 @@
 
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
-import { ShareCardDownload } from "@/components/wrapped/share-card-download"
-import { WrappedShareButton } from "@/components/wrapped/wrapped-share-button"
+import { WrappedShareControls } from "@/components/wrapped/wrapped-share-controls"
 
 interface WrappedViewerNavigationProps {
   currentSectionIndex: number
@@ -12,6 +11,8 @@ interface WrappedViewerNavigationProps {
   onNext: () => void
   onShowAll: () => void
   isShared?: boolean
+  /** The member's own Rewind: show the share-link controls on the last slide. */
+  canManageShare?: boolean
   shareToken?: string
   year: number
 }
@@ -23,6 +24,7 @@ export function WrappedViewerNavigation({
   onNext,
   onShowAll,
   isShared,
+  canManageShare,
   shareToken,
   year,
 }: WrappedViewerNavigationProps) {
@@ -38,7 +40,7 @@ export function WrappedViewerNavigation({
       ) : (
         <div />
       )}
-      {!isShared && shareToken && currentSectionIndex === totalSections - 1 && (
+      {!isShared && canManageShare && currentSectionIndex === totalSections - 1 && (
         <motion.div
           initial={{ opacity: 0, scale: 0.8, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -50,11 +52,7 @@ export function WrappedViewerNavigation({
           }}
           className="flex-1 flex flex-wrap justify-center gap-3"
         >
-          <WrappedShareButton
-            shareToken={shareToken}
-            year={year}
-          />
-          <ShareCardDownload shareToken={shareToken} year={year} />
+          <WrappedShareControls year={year} shareToken={shareToken ?? null} />
         </motion.div>
       )}
       {currentSectionIndex < totalSections - 1 ? (

@@ -18,6 +18,7 @@ import {
   fetchWatchTimeLeaderboard,
 } from '@/lib/wrapped/statistics'
 import { revalidatePath } from 'next/cache'
+import { generateShareToken } from '@/lib/utils'
 import { memberErrorCopy } from '@/lib/wrapped/generation-errors'
 import { assembleWrappedData } from '@/lib/wrapped/assemble-wrapped'
 import {
@@ -1124,6 +1125,99 @@ describe('generatePlexWrapped', () => {
 
     expect(result.success).toBe(false)
     expect(result.error).toContain('Database update failed')
+  })
+
+  describe('share tokens (opt-in sharing, SEC-16)', () => {
+    function setUpCompletedRun(session: typeof mockSession, existing: Record<string, unknown> | null) {
+      ;(getServerSession as jest.Mock).mockResolvedValue(session)
+      ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser)
+      ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(existing)
+      ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(makePrismaPlexServer())
+      ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue({
+        id: 'wrapped-1',
+        userId: 'user-1',
+        year: 2024,
+        status: 'generating',
+        shareToken: (existing?.shareToken as string | null | undefined) ?? null,
+      })
+      ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(makePrismaTautulli())
+      ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue(null)
+      ;(fetchTautulliStatistics as jest.Mock).mockResolvedValue({
+        success: true,
+        data: {
+          tautulliUserId: '7',
+          totalWatchTime: 1000,
+          moviesWatchTime: 500,
+          showsWatchTime: 500,
+          moviesWatched: 10,
+          showsWatched: 5,
+          episodesWatched: 50,
+          topMovies: [],
+          topShows: [],
+          watchTimeByMonth: [],
+        },
+      })
+      ;(fetchPlexServerStatistics as jest.Mock).mockResolvedValue({ success: false })
+      ;(fetchTopContentLeaderboards as jest.Mock).mockResolvedValue({ success: false })
+      ;(fetchWatchTimeLeaderboard as jest.Mock).mockResolvedValue({ success: false })
+      ;(generateWrappedWithLLM as jest.Mock).mockResolvedValue({
+        success: true,
+        data: { sections: [], summary: 'Test summary', metadata: { totalSections: 0, generationTime: 0 } },
+      })
+      ;(prisma.plexWrapped.update as jest.Mock).mockResolvedValue({})
+    }
+
+    /** Every payload generation wrote to PlexWrapped: the upsert's create and update, and each update's data. */
+    function writtenPayloads(): Record<string, unknown>[] {
+      const upserts = (prisma.plexWrapped.upsert as jest.Mock).mock.calls.flatMap(([args]) => [args.create, args.update])
+      const updates = (prisma.plexWrapped.update as jest.Mock).mock.calls.map(([args]) => args.data)
+      return [...upserts, ...updates]
+    }
+
+    function expectNoShareTokenWrites() {
+      const payloads = writtenPayloads()
+      expect(payloads.length).toBeGreaterThanOrEqual(3)
+      for (const payload of payloads) {
+        expect(payload).not.toHaveProperty('shareToken')
+      }
+      expect(generateShareToken).not.toHaveBeenCalled()
+    }
+
+    it('creates a new Rewind without a share token', async () => {
+      setUpCompletedRun(mockSession, null)
+
+      const result = await generatePlexWrapped('user-1', 2024)
+
+      expect(result.success).toBe(true)
+      expect((prisma.plexWrapped.upsert as jest.Mock).mock.calls[0][0].create).toEqual(
+        expect.objectContaining({ userId: 'user-1', year: 2024, status: 'generating' })
+      )
+      expectNoShareTokenWrites()
+    })
+
+    it('retries a failed Rewind without minting a token', async () => {
+      setUpCompletedRun(mockSession, { id: 'wrapped-1', userId: 'user-1', year: 2024, status: 'failed', shareToken: null })
+
+      const result = await generatePlexWrapped('user-1', 2024)
+
+      expect(result.success).toBe(true)
+      expectNoShareTokenWrites()
+    })
+
+    it('regenerates a shared Rewind without touching the existing token', async () => {
+      setUpCompletedRun(mockAdminSession, {
+        id: 'wrapped-1',
+        userId: 'user-1',
+        year: 2024,
+        status: 'completed',
+        shareToken: 'member-chose-to-share',
+      })
+
+      const result = await generatePlexWrapped('user-1', 2024)
+
+      expect(result.success).toBe(true)
+      expectNoShareTokenWrites()
+    })
   })
 })
 

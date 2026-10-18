@@ -31,6 +31,7 @@ export default async function WrappedPage() {
                   wrappedData={wrappedData}
                   year={currentYear}
                   shareToken={wrapped.shareToken || undefined}
+                  canManageShare
                 />
               )
             } catch (error) {

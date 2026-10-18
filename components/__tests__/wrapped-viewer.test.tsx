@@ -15,6 +15,11 @@ jest.mock('../wrapped/wrapped-share-button', () => ({
   WrappedShareButton: () => <div data-testid="share-button">Share</div>,
 }))
 
+jest.mock('@/actions/wrapped-share-link', () => ({
+  enableWrappedShareLink: jest.fn(),
+  disableWrappedShareLink: jest.fn(),
+}))
+
 describe('WrappedViewer', () => {
   const createMockWrappedData = (overrides?: Partial<WrappedData>): WrappedData => ({
     year: 2024,

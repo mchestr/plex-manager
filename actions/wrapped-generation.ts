@@ -133,11 +133,9 @@ export async function generatePlexWrapped(
       return { success: false, error: "No active Plex server configured" }
     }
 
-    // Generate share token upfront so it's always available (only if doesn't exist)
-    const { generateShareToken } = await import("@/lib/utils")
-    const shareToken = existingWrapped?.shareToken || generateShareToken()
-
-    // Create or update wrapped record with "generating" status
+    // Create or update wrapped record with "generating" status. Generation never
+    // touches shareToken: sharing is opt-in through enableWrappedShareLink, and
+    // a regeneration keeps a link the member already turned on (SEC-16).
     const wrapped = await prisma.plexWrapped.upsert({
       where: {
         userId_year: {
@@ -150,13 +148,10 @@ export async function generatePlexWrapped(
         year: validYear,
         status: "generating",
         data: JSON.stringify({}), // Empty data for now
-        shareToken, // Generate share token immediately
       },
       update: {
         status: "generating",
         error: null,
-        // Only set shareToken if it doesn't exist (preserve existing shares)
-        ...(existingWrapped?.shareToken ? {} : { shareToken }),
       },
     })
 
@@ -333,21 +328,12 @@ export async function generatePlexWrapped(
       const generationTime = Math.floor((Date.now() - startTime) / 1000)
       wrappedData.metadata.generationTime = generationTime
 
-      // 6. Generate share token if not exists
-      let shareToken = wrapped.shareToken
-      if (!shareToken) {
-        // Generate a secure random token
-        const { generateShareToken } = await import("@/lib/utils")
-        shareToken = generateShareToken()
-      }
-
-      // 7. Update wrapped with completed status, share token, and summary
+      // 6. Update wrapped with completed status and summary
       await prisma.plexWrapped.update({
         where: { id: wrapped.id },
         data: {
           status: "completed",
           data: JSON.stringify(wrappedData),
-          shareToken,
           summary: wrappedData.summary || null,
           archetype: wrappedData.archetype?.name || null,
           generatedAt: new Date(),

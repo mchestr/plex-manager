@@ -2,10 +2,12 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { WrappedViewerNavigation } from '@/components/wrapped/wrapped-viewer-navigation'
 
-// Mock WrappedShareButton
-jest.mock('../wrapped/wrapped-share-button', () => ({
-  WrappedShareButton: ({ shareToken }: { shareToken: string }) => (
-    <div data-testid="share-button">Share Button {shareToken}</div>
+// Mock the share-link controls (they call Server Actions)
+jest.mock('@/components/wrapped/wrapped-share-controls', () => ({
+  WrappedShareControls: ({ shareToken, year }: { shareToken: string | null; year: number }) => (
+    <div data-testid="share-controls">
+      Share Controls {year} {shareToken ?? 'no-link'}
+    </div>
   ),
 }))
 
@@ -75,48 +77,64 @@ describe('WrappedViewerNavigation', () => {
     expect(onShowAll).toHaveBeenCalledTimes(1)
   })
 
-  it('should render share button on last section when not shared', () => {
+  it('should render the share controls on the last section of the member\'s own Rewind', () => {
     render(
       <WrappedViewerNavigation
         {...defaultProps}
         currentSectionIndex={4}
+        canManageShare
         shareToken="test-token"
       />
     )
-    expect(screen.getByTestId('share-button')).toBeInTheDocument()
+    expect(screen.getByTestId('share-controls')).toHaveTextContent('Share Controls 2024 test-token')
   })
 
-  it('should not render share button when isShared is true', () => {
+  it('should offer the controls without a link, so the member can create one', () => {
+    render(
+      <WrappedViewerNavigation
+        {...defaultProps}
+        currentSectionIndex={4}
+        canManageShare
+      />
+    )
+    expect(screen.getByTestId('share-controls')).toHaveTextContent('Share Controls 2024 no-link')
+  })
+
+  it('should not render the share controls when isShared is true', () => {
     render(
       <WrappedViewerNavigation
         {...defaultProps}
         currentSectionIndex={4}
         isShared={true}
+        canManageShare
         shareToken="test-token"
       />
     )
-    expect(screen.queryByTestId('share-button')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('share-controls')).not.toBeInTheDocument()
   })
 
-  it('should not render share button when not on last section', () => {
+  it('should not render the share controls when not on last section', () => {
     render(
       <WrappedViewerNavigation
         {...defaultProps}
         currentSectionIndex={2}
+        canManageShare
         shareToken="test-token"
       />
     )
-    expect(screen.queryByTestId('share-button')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('share-controls')).not.toBeInTheDocument()
   })
 
-  it('should not render share button when shareToken is not provided', () => {
+  it('should not render the share controls outside the member\'s own Rewind, even with a token', () => {
+    // Admin views and the playground preview do not pass canManageShare
     render(
       <WrappedViewerNavigation
         {...defaultProps}
         currentSectionIndex={4}
+        shareToken="test-token"
       />
     )
-    expect(screen.queryByTestId('share-button')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('share-controls')).not.toBeInTheDocument()
   })
 
   it('should render placeholder div when on first section', () => {
@@ -124,19 +142,6 @@ describe('WrappedViewerNavigation', () => {
     const divs = container.querySelectorAll('div')
     // Should have a placeholder div on the left side
     expect(divs.length).toBeGreaterThan(0)
-  })
-
-  it('should pass correct props to share button', () => {
-    render(
-      <WrappedViewerNavigation
-        {...defaultProps}
-        currentSectionIndex={4}
-        shareToken="test-token-123"
-        year={2023}
-      />
-    )
-    const shareButton = screen.getByTestId('share-button')
-    expect(shareButton).toHaveTextContent('Share Button test-token-123')
   })
 })
 
