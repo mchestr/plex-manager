@@ -25,7 +25,7 @@ const customJestConfig = {
     '!**/node_modules/**',
   ],
   transformIgnorePatterns: [
-    '/node_modules/(?!jose|@panva|openid-client|oauth4webapi|next-auth|@next-auth)/',
+    '/node_modules/(?!jose|@panva|openid-client|oauth4webapi|next-auth)/',
   ],
   moduleDirectories: ['node_modules', '<rootDir>/'],
 }

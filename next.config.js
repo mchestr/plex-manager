@@ -1,26 +1,39 @@
-// React Refresh in `next dev` needs 'unsafe-eval'. E2E also runs on `next dev`
-// (with NODE_ENV=test), so only production builds drop it.
-const isProduction = process.env.NODE_ENV === 'production'
+const { PHASE_DEVELOPMENT_SERVER } = require('next/constants')
 
-const scriptSrc = ["'self'", "'unsafe-inline'", ...(isProduction ? [] : ["'unsafe-eval'"])]
+// React Refresh in `next dev` needs 'unsafe-eval' (E2E also runs on `next dev`
+// until P1.5). Keyed to the Next phase rather than NODE_ENV, so a build or
+// `next start` never ships it whatever NODE_ENV the shell exports.
+function contentSecurityPolicy(phase) {
+  const scriptSrc = [
+    "'self'",
+    "'unsafe-inline'",
+    ...(phase === PHASE_DEVELOPMENT_SERVER ? ["'unsafe-eval'"] : []),
+  ]
 
-const contentSecurityPolicy = [
-  "default-src 'self'",
-  `script-src ${scriptSrc.join(' ')}`,
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: https:",
-  "font-src 'self' data:",
-  "connect-src 'self' https:",
-  "object-src 'none'",
-  "base-uri 'self'",
-  "frame-ancestors 'self'",
-].join('; ')
+  return [
+    "default-src 'self'",
+    `script-src ${scriptSrc.join(' ')}`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: https:",
+    "font-src 'self' data:",
+    "connect-src 'self' https:",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "frame-ancestors 'self'",
+  ].join('; ')
+}
 
-/** @type {import('next').NextConfig} */
-const nextConfig = {
+/**
+ * @param {string} phase
+ * @returns {import('next').NextConfig}
+ */
+module.exports = (phase) => ({
   reactStrictMode: true,
   output: 'standalone',
   poweredByHeader: false,
+  // Stops `next dev` from writing AGENTS.md into the repo; CLAUDE.md already
+  // holds the agent guidance.
+  agentRules: false,
   serverExternalPackages: ['discord.js', '@discordjs/ws', 'zlib-sync', 'bufferutil', 'utf-8-validate'],
   // The optimizer would fetch and decode any URL an anonymous caller passes to
   // /_next/image. With it off, Next answers that route with a 404.
@@ -62,12 +75,10 @@ const nextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: contentSecurityPolicy
+            value: contentSecurityPolicy(phase)
           }
         ],
       },
     ]
   },
-}
-
-module.exports = nextConfig
+})
