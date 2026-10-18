@@ -4,9 +4,16 @@
 
 /**
  * Pins the plex.tv auth URL built by `createPlexAuthUrl` in lib/plex-auth.ts.
- * The expected strings were captured from the `qs.stringify` implementation
- * before `qs` was replaced with `URLSearchParams`, so any change in encoding
- * (for example `+` instead of `%20` for spaces) fails here.
+ * The expected strings in the "matches the qs" cases were captured from the
+ * `qs.stringify` implementation before `qs` was replaced with
+ * `URLSearchParams`, so any change in encoding (for example `+` instead of
+ * `%20` for spaces) fails here.
+ *
+ * The URL is byte-identical to the qs output except for two characters, which
+ * can only come from an operator-chosen PLEX_CLIENT_IDENTIFIER or base URL:
+ * `URLSearchParams` writes `~` as `%7E` (qs left it as is) and leaves `*` as
+ * is (qs wrote `%2A`). Both forms decode to the same characters; the last
+ * encoding case pins that known difference.
  */
 
 import { createPlexAuthUrl } from '@/lib/plex-auth'
@@ -61,6 +68,23 @@ describe('createPlexAuthUrl', () => {
         '&forwardUrl=https%3A%2F%2Fplex.example.com%2Fmanager%2Fauth%2Fcallback%2Fplex%3FplexPinId%3D123%26inviteCode%3DINVITE1' +
         '&context%5Bdevice%5D%5Bproduct%5D=Plex%20Manager'
     )
+  })
+
+  it('encodes ~ as %7E and leaves * as is, unlike qs, with the same decoded values', async () => {
+    process.env.NEXT_PUBLIC_APP_URL = 'https://plex.example.com/~admin'
+    process.env.PLEX_CLIENT_IDENTIFIER = 'plex~manager*1'
+
+    // qs wrote clientID=plex~manager%2A1 and ...example.com%2F~admin%2F...
+    const url = await createPlexAuthUrl(123, 'ABCD')
+    expect(url).toBe(
+      'https://app.plex.tv/auth#?clientID=plex%7Emanager*1&code=ABCD' +
+        '&forwardUrl=https%3A%2F%2Fplex.example.com%2F%7Eadmin%2Fauth%2Fcallback%2Fplex%3FplexPinId%3D123' +
+        '&context%5Bdevice%5D%5Bproduct%5D=Plex%20Manager'
+    )
+
+    const params = new URLSearchParams(url.slice(AUTH_PREFIX.length))
+    expect(params.get('clientID')).toBe('plex~manager*1')
+    expect(params.get('forwardUrl')).toBe('https://plex.example.com/~admin/auth/callback/plex?plexPinId=123')
   })
 
   it('decodes back to the original parameters with decodeURIComponent', async () => {
