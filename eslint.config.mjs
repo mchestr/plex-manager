@@ -11,6 +11,8 @@ export default [
       "test-results/**",
       "**/__tests__/**",
       "e2e/**",
+      // Planning notes and their mockup tooling are not app code.
+      ".agents/**",
       "jest.config.js",
       "jest.setup.js",
       "playwright.config.ts",
