@@ -99,17 +99,19 @@ describe('getUserPlexWrapped', () => {
     })
   })
 
-  it('should use current year as default', async () => {
-    const currentYear = 2024
+  // P0.14: no calendar default. In January the caller's season year (2026)
+  // is looked up, not the new calendar year.
+  it('looks up the year it is given, not the calendar year', async () => {
+    jest.setSystemTime(new Date('2027-01-02T12:00:00Z'))
     mockPrisma.plexWrapped.findUnique.mockResolvedValue(null)
 
-    await getUserPlexWrapped('user-1')
+    await getUserPlexWrapped('user-1', 2026)
 
     expect(mockPrisma.plexWrapped.findUnique).toHaveBeenCalledWith({
       where: {
         userId_year: {
           userId: 'user-1',
-          year: currentYear,
+          year: 2026,
         },
       },
       include: {

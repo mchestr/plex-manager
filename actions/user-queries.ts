@@ -32,10 +32,7 @@ const logger = createLogger("USER_QUERIES")
  * Tautulli's users, never reaches a member's browser. Admins get the stored
  * text as is.
  */
-export async function getUserPlexWrapped(
-  userId: string,
-  year: number = new Date().getFullYear()
-) {
+export async function getUserPlexWrapped(userId: string, year: number) {
   // Authorization: a user may only read their own Wrapped; admins may read any.
   // This action is exposed as a public endpoint, so the check must live here —
   // there is no middleware gating direct Server Action invocation.

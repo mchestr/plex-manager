@@ -96,3 +96,52 @@ describe('WrappedCard poll toast', () => {
     }
   })
 })
+
+/**
+ * The card opens the season year's route, never plain /wrapped and never the
+ * calendar year (P0.14: RWP-04, RWV-02, UI-02).
+ */
+describe('WrappedCard season year', () => {
+  beforeEach(() => {
+    jest.useFakeTimers().setSystemTime(new Date('2027-01-02T12:00:00Z'))
+    jest.clearAllMocks()
+    ;(useToast as jest.Mock).mockReturnValue(toast)
+    ;(getWrappedSettings as jest.Mock).mockResolvedValue({ wrappedEnabled: true, wrappedYear: 2026 })
+  })
+
+  afterEach(() => {
+    jest.useRealTimers()
+  })
+
+  it('links a completed Rewind to /wrapped/<season year> in January', async () => {
+    ;(getUserPlexWrapped as jest.Mock).mockResolvedValue({ status: 'completed', error: null })
+
+    render(<WrappedCard userId="user-1" memberSince="2020-01-01T00:00:00.000Z" />)
+
+    expect(await screen.findByTestId('wrapped-card-view-link')).toHaveAttribute('href', '/wrapped/2026')
+    expect(getUserPlexWrapped).toHaveBeenCalledWith('user-1', 2026)
+    expect(getUserPlexWrapped).not.toHaveBeenCalledWith('user-1', 2027)
+  })
+
+  it('opens /wrapped/<season year> when a polled generation completes', async () => {
+    ;(getUserPlexWrapped as jest.Mock)
+      .mockResolvedValueOnce({ status: 'generating', error: null })
+      .mockResolvedValue({ status: 'completed', error: null })
+
+    await renderAndPollOnce()
+
+    expect(mockRouter.push).toHaveBeenCalledWith('/wrapped/2026')
+  })
+
+  it('stays loading and reads nothing until the season year is known', async () => {
+    ;(getWrappedSettings as jest.Mock).mockReturnValue(new Promise(() => {}))
+
+    render(<WrappedCard userId="user-1" memberSince="2020-01-01T00:00:00.000Z" />)
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(2000)
+    })
+
+    expect(screen.getByTestId('wrapped-card-loading')).toBeInTheDocument()
+    expect(getUserPlexWrapped).not.toHaveBeenCalled()
+  })
+})

@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation"
 
 interface UserTableRowProps {
   user: AdminUserWithWrappedStats
+  /** The season year (`getSeasonYear()`) the row's Rewind status is for. */
   currentYear: number
   /** Stripe dashboard base URL (test/live aware), or null when unconfigured. */
   stripeDashboardBaseUrl?: string | null
@@ -53,7 +54,7 @@ function exemptLabel(exemptReason: string | null): string | null {
   }
 }
 
-export function UserTableRow({ user, stripeDashboardBaseUrl }: UserTableRowProps) {
+export function UserTableRow({ user, currentYear, stripeDashboardBaseUrl }: UserTableRowProps) {
   const router = useRouter()
 
   const handleRowClick = () => {
@@ -173,7 +174,7 @@ export function UserTableRow({ user, stripeDashboardBaseUrl }: UserTableRowProps
       </td>
       <td className="px-2 py-2">
         <div onClick={(e) => e.stopPropagation()}>
-          <UserActionsMenu user={user} stripeDashboardBaseUrl={stripeDashboardBaseUrl} />
+          <UserActionsMenu user={user} year={currentYear} stripeDashboardBaseUrl={stripeDashboardBaseUrl} />
         </div>
       </td>
     </tr>

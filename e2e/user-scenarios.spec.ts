@@ -114,9 +114,10 @@ test.describe('User Scenarios', () => {
         const noWrappedFound = regularUserPage.getByTestId('no-wrapped-found');
         await expect(noWrappedFound).not.toBeVisible();
 
-        // Verify some wrapped content is visible (check for year in heading or content)
-        const wrappedContent = regularUserPage.getByText(new RegExp(`${currentYear}`, 'i'));
-        await expect(wrappedContent).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+        // /wrapped resolves to the latest completed year, and the viewer shows it
+        await expect(regularUserPage).toHaveURL(new RegExp(`/wrapped/${currentYear}$`));
+        // after the ~6.5 s intro transition
+        await expect(regularUserPage.getByTestId('wrapped-viewer')).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
 
       } finally {
         // Cleanup: delete the mock wrapped data

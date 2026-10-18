@@ -18,6 +18,9 @@ jest.mock('@/lib/prisma', () => ({
     user: {
       findUnique: jest.fn(),
     },
+    config: {
+      findUnique: jest.fn(),
+    },
   },
 }))
 
@@ -89,5 +92,39 @@ describe('Admin user wrapped page failed state', () => {
     expect(screen.getByTestId('admin-wrapped-error-detail')).toHaveTextContent('LLM provider timed out')
     expect(screen.queryByTestId('admin-wrapped-error-hint')).not.toBeInTheDocument()
     expect(mockUserFindUnique).not.toHaveBeenCalled()
+  })
+})
+
+describe('Admin user wrapped page year', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockGetUserPlexWrapped.mockResolvedValue(null)
+  })
+
+  afterEach(() => {
+    jest.useRealTimers()
+  })
+
+  // P0.14: without ?year= the page opens the season year, not the calendar year.
+  it('opens the season year on 2027-01-02 when no year is given', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2027-01-02T12:00:00Z'))
+    ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({
+      wrappedGenerationStartDate: new Date('2026-12-01T12:00:00Z'),
+    })
+
+    const ui = await UserWrappedPage({
+      params: Promise.resolve({ userId: 'user-1' }),
+      searchParams: Promise.resolve({}),
+    })
+    render(<>{ui}</>)
+
+    expect(mockGetUserPlexWrapped).toHaveBeenCalledWith('user-1', 2026)
+  })
+
+  it('opens the year in ?year=', async () => {
+    await renderPage()
+
+    expect(mockGetUserPlexWrapped).toHaveBeenCalledWith('user-1', 2025)
+    expect(prisma.config.findUnique).not.toHaveBeenCalled()
   })
 })

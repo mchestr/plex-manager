@@ -167,7 +167,7 @@ export function WrappedViewer({
 
   if (showAll) {
     return (
-      <div className="min-h-screen relative py-12 px-4 sm:px-6 lg:px-8">
+      <div data-testid="wrapped-viewer" className="min-h-screen relative py-12 px-4 sm:px-6 lg:px-8">
         {isCinematic ? <CinematicBackground letterbox={false} /> : <SpaceBackground />}
         <div className="max-w-6xl mx-auto relative z-10 space-y-12">
           {sections.map((section, idx) => (
@@ -205,7 +205,7 @@ export function WrappedViewer({
       })
     }
     return (
-      <div className="min-h-screen relative py-12 px-4 sm:px-6 lg:px-8">
+      <div data-testid="wrapped-viewer" className="min-h-screen relative py-12 px-4 sm:px-6 lg:px-8">
         {isCinematic ? <CinematicBackground /> : <SpaceBackground />}
         <div className="max-w-4xl mx-auto relative z-10">
           <div className="bg-slate-900/90 border border-cyan-500/20 shadow-2xl rounded-lg p-8 md:p-12 text-center">
@@ -223,7 +223,7 @@ export function WrappedViewer({
 
   if (!currentSection) {
     return (
-      <div className="min-h-screen relative py-12 px-4 sm:px-6 lg:px-8">
+      <div data-testid="wrapped-viewer" className="min-h-screen relative py-12 px-4 sm:px-6 lg:px-8">
         {isCinematic ? <CinematicBackground /> : <SpaceBackground />}
         <div className="max-w-4xl mx-auto relative z-10">
           <div className="bg-slate-900/90 border border-cyan-500/20 shadow-2xl rounded-lg p-8 md:p-12 text-center">
@@ -235,7 +235,7 @@ export function WrappedViewer({
   }
 
   return (
-    <div className="min-h-screen relative py-8 sm:py-12 px-4 sm:px-6 lg:px-8 pb-24 md:pb-12">
+    <div data-testid="wrapped-viewer" className="min-h-screen relative py-8 sm:py-12 px-4 sm:px-6 lg:px-8 pb-24 md:pb-12">
       {isCinematic ? <CinematicBackground letterbox={!isPreview} /> : <SpaceBackground />}
       <div className="max-w-4xl mx-auto relative z-10">
         <WrappedViewerProgress

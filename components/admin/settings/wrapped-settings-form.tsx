@@ -10,7 +10,8 @@ import { useState, useTransition, useEffect } from "react"
 
 interface WrappedSettingsFormProps {
   enabled: boolean
-  year: number | null
+  /** The season year (`getSeasonYear()`). */
+  year: number
   startDate: Date | null
   endDate: Date | null
 }
@@ -81,9 +82,6 @@ export function WrappedSettingsForm({ enabled, year, startDate, endDate }: Wrapp
   const toast = useToast()
   const [isEditing, setIsEditing] = useState(false)
   const [isPending, startTransition] = useTransition()
-
-  // Calculate effective year from start date or use provided year
-  const effectiveYear = startDate ? new Date(startDate).getFullYear() : (year ?? new Date().getFullYear())
 
   const [formData, setFormData] = useState({
     enabled: enabled,
@@ -163,7 +161,7 @@ export function WrappedSettingsForm({ enabled, year, startDate, endDate }: Wrapp
           <div>
             <div className="text-xs font-medium text-slate-400 mb-1">Wrapped Year</div>
             <div className="text-sm text-white font-mono">
-              {effectiveYear}
+              {year}
               {startDate && (
                 <span className="text-xs text-slate-500 ml-2">
                   (auto-determined from start date)
@@ -212,10 +210,15 @@ export function WrappedSettingsForm({ enabled, year, startDate, endDate }: Wrapp
 
       <div className="border-t border-slate-700 pt-4">
         <h4 className="text-sm font-semibold text-white mb-3">Generation Time Window (Optional)</h4>
-        <p className="text-xs text-slate-400 mb-4">
+        <p className="text-xs text-slate-400 mb-2">
           Set a date range when wrapped generation is allowed. If set, generation will only be available during this period.
           Leave empty to allow generation anytime (when enabled). Supports year rollover (e.g., Nov 20 - Jan 31).
           The year is automatically determined from the start date (e.g., Nov 20, 2024 - Jan 31, 2025 uses year 2024).
+        </p>
+        <p data-testid="wrapped-settings-year-note" className="text-xs text-amber-300/80 mb-4">
+          The start date keeps the year it was saved in, and that year stays the Wrapped year until the window
+          is saved again, so a window saved last year keeps last year&apos;s Wrapped. Save the window again each
+          season, before January. With no window, the Wrapped year is the current year, or last year during January.
         </p>
         <DateRangePicker
           startMonth={formData.startMonth}
@@ -229,7 +232,7 @@ export function WrappedSettingsForm({ enabled, year, startDate, endDate }: Wrapp
           disabled={isPending}
         />
         <p className="mt-1 text-xs text-slate-400">
-          Generation window (e.g., November 20 to January 31). Year is automatically determined from the start date each year.
+          Generation window (e.g., November 20 to January 31). The year comes from the start date as saved.
         </p>
         <button
           type="button"

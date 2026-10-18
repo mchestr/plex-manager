@@ -11,7 +11,8 @@ interface RegenerateWrappedButtonProps {
   userId: string
   /** The member's plex.tv account ID, named in the admin hint for a typed failure. */
   plexUserId: string | null
-  year?: number
+  /** The season year (`getSeasonYear()`), never the calendar year. */
+  year: number
   onSuccess?: () => void
   inline?: boolean
 }
@@ -19,7 +20,7 @@ interface RegenerateWrappedButtonProps {
 export function RegenerateWrappedButton({
   userId,
   plexUserId,
-  year = new Date().getFullYear(),
+  year,
   onSuccess,
   inline = false,
 }: RegenerateWrappedButtonProps) {

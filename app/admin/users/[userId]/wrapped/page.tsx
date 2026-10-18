@@ -4,6 +4,7 @@ import { WrappedPageClient } from "@/components/wrapped/wrapped-page-client"
 import { WrappedViewerWrapper } from "@/components/wrapped/wrapped-viewer-wrapper"
 import { requireAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/prisma"
+import { getSeasonYear } from "@/lib/wrapped/season"
 import { adminErrorHint, readStoredError } from "@/lib/wrapped/generation-errors"
 import { WrappedData } from "@/types/wrapped"
 import Link from "next/link"
@@ -22,7 +23,7 @@ export default async function UserWrappedPage({
 
   const { userId } = await params
   const resolvedSearchParams = await searchParams
-  const year = resolvedSearchParams.year ? parseInt(resolvedSearchParams.year, 10) : new Date().getFullYear()
+  const year = resolvedSearchParams.year ? parseInt(resolvedSearchParams.year, 10) : await getSeasonYear()
   const wrapped = await getUserPlexWrapped(userId, year)
 
   const errorCode = wrapped?.status === "failed" ? readStoredError(wrapped.error) : null

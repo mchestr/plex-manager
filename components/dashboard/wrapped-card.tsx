@@ -73,10 +73,11 @@ export function WrappedCard({ userId, memberSince }: WrappedCardProps) {
     })
   }, [])
 
-  const wrappedYear = wrappedSettings?.year ?? new Date().getFullYear()
+  // The season year from getWrappedSettings(); null until the settings load.
+  const wrappedYear = wrappedSettings?.year ?? null
 
   const loadWrapped = useCallback(async () => {
-    if (!userId || !wrappedSettings) return
+    if (!userId || wrappedYear === null) return
 
     setIsLoading(true)
     try {
@@ -87,19 +88,15 @@ export function WrappedCard({ userId, memberSince }: WrappedCardProps) {
     } finally {
       setIsLoading(false)
     }
-  }, [userId, wrappedYear, wrappedSettings, toast])
+  }, [userId, wrappedYear, toast])
 
   useEffect(() => {
-    if (userId && wrappedSettings) {
-      loadWrapped()
-    } else if (!wrappedSettings) {
-      setIsLoading(false)
-    }
-  }, [userId, wrappedSettings, loadWrapped])
+    loadWrapped()
+  }, [loadWrapped])
 
   // Poll for wrapped completion when generating
   useEffect(() => {
-    if (!userId || (!isGenerating && wrapped?.status !== "generating")) {
+    if (!userId || wrappedYear === null || (!isGenerating && wrapped?.status !== "generating")) {
       return
     }
 
@@ -112,7 +109,7 @@ export function WrappedCard({ userId, memberSince }: WrappedCardProps) {
         if (wrappedData?.status === "completed") {
           setIsGenerating(false)
           clearInterval(pollInterval)
-          router.push("/wrapped")
+          router.push(`/wrapped/${wrappedYear}`)
         } else if (wrappedData?.status === "failed") {
           setIsGenerating(false)
           clearInterval(pollInterval)
@@ -131,7 +128,7 @@ export function WrappedCard({ userId, memberSince }: WrappedCardProps) {
   }, [userId, isGenerating, wrapped?.status, wrappedYear, router, toast])
 
   const handleGenerate = async () => {
-    if (!userId) return
+    if (!userId || wrappedYear === null) return
 
     setIsGenerating(true)
     try {
@@ -158,8 +155,8 @@ export function WrappedCard({ userId, memberSince }: WrappedCardProps) {
     return null
   }
 
-  // Loading state
-  if (isLoading) {
+  // Loading state (also while the season year is unknown)
+  if (isLoading || wrappedYear === null) {
     return (
       <motion.div
         className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-purple-500/30 bg-gradient-to-br from-purple-950/50 via-pink-950/30 to-slate-900 p-6 sm:p-8 shadow-2xl shadow-purple-500/10"
@@ -270,7 +267,8 @@ export function WrappedCard({ userId, memberSince }: WrappedCardProps) {
 
             {/* CTA Button */}
             <Link
-              href="/wrapped"
+              href={`/wrapped/${wrappedYear}`}
+              data-testid="wrapped-card-view-link"
               className="group/btn relative inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-pink-500 via-purple-500 to-pink-500 bg-[length:200%_100%] px-6 sm:px-8 py-3 sm:py-3.5 text-base sm:text-lg font-bold text-white shadow-lg shadow-pink-500/30 transition-all duration-300 hover:shadow-xl hover:shadow-pink-500/40 hover:bg-right"
             >
               View Your Wrapped
