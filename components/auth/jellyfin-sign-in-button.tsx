@@ -79,11 +79,9 @@ export function JellyfinSignInButton({
       })
 
       if (result?.error) {
-        const errorMsg = result.error === "NO_SERVER_CONFIGURED"
-          ? "Jellyfin server is not configured. Please contact your administrator."
-          : isRateLimitedSignInError(result.error)
-            ? RATE_LIMITED_MESSAGE
-            : "Invalid username or password. Please try again."
+        const errorMsg = isRateLimitedSignInError(result.error)
+          ? RATE_LIMITED_MESSAGE
+          : "Invalid username or password. Please try again."
 
         setError(errorMsg)
         onError?.(errorMsg)

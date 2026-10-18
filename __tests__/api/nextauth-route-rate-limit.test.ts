@@ -43,6 +43,7 @@ jest.mock("@/lib/prisma", () => ({
 }))
 
 jest.mock("@/lib/jellyfin-auth", () => ({
+  ...jest.requireActual("@/lib/jellyfin-auth"),
   authenticateJellyfin: jest.fn(),
   isJellyfinAdmin: jest.fn(),
 }))
@@ -108,9 +109,9 @@ function acceptPassword(goodPassword: string) {
   const dbUser = { id: "user-1", email: null, name: "carol", image: null, isAdmin: false }
   mockUserFindUnique.mockResolvedValue(dbUser)
   mockUserUpdate.mockResolvedValue(dbUser)
-  mockAuthenticateJellyfin.mockImplementation(async (_server, username, password) =>
+  mockAuthenticateJellyfin.mockImplementation(async (username, password) =>
     password === goodPassword
-      ? { success: true, data: { id: "jellyfin-user-1", username, isAdmin: false } }
+      ? { success: true, data: { id: "jellyfin-user-1", username } }
       : { success: false, error: "Invalid username or password" }
   )
 }

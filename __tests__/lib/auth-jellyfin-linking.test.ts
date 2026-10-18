@@ -22,7 +22,10 @@ jest.mock('@/lib/prisma', () => ({
   },
 }))
 
+// The real getJellyfinLoginServer, so the toggle check runs against the
+// mocked prisma; only the calls that would reach Jellyfin are stubbed.
 jest.mock('@/lib/jellyfin-auth', () => ({
+  ...jest.requireActual('@/lib/jellyfin-auth'),
   authenticateJellyfin: jest.fn(),
   isJellyfinAdmin: jest.fn(),
 }))
@@ -115,7 +118,7 @@ function givenRows(rows: Row[]) {
 function signInAs(jellyfinUser: { id: string; username: string }, isAdmin = false) {
   mockAuthenticateJellyfin.mockResolvedValue({
     success: true,
-    data: { ...jellyfinUser, accessToken: 'jellyfin-access-token' },
+    data: jellyfinUser,
   })
   mockIsJellyfinAdmin.mockResolvedValue(isAdmin)
   return getJellyfinAuthorize()({ username: jellyfinUser.username, password: 'correct-password' })
@@ -159,6 +162,7 @@ describe('Jellyfin authorize: no email-based account linking', () => {
       image: null,
       isAdmin: false,
     })
+    expect(mockIsJellyfinAdmin).toHaveBeenCalledWith('jf-mallory')
     expect(mockUserFindUnique).toHaveBeenCalledWith({ where: { jellyfinUserId: 'jf-mallory' } })
     expect(lookedUpByEmail()).toBe(false)
     expect(mockUserUpdate).not.toHaveBeenCalled()
@@ -217,17 +221,23 @@ describe('Jellyfin authorize: "Allow Jellyfin sign-in"', () => {
     expect(mockWarn).toHaveBeenCalledWith('jellyfin.login.disabled', { serverId: 'jf-server-1' })
   })
 
-  it('contacts Jellyfin when sign-in is allowed', async () => {
+  it('returns null without contacting Jellyfin when no server is active', async () => {
+    mockJellyfinServerFindFirst.mockResolvedValue(null)
+
+    const result = await getJellyfinAuthorize()({ username: 'alice', password: 'correct-password' })
+
+    expect(result).toBeNull()
+    expect(mockAuthenticateJellyfin).not.toHaveBeenCalled()
+    expect(mockUserFindUnique).not.toHaveBeenCalled()
+  })
+
+  it('contacts Jellyfin when sign-in is allowed, passing only the credentials', async () => {
     mockJellyfinServerFindFirst.mockResolvedValue(JELLYFIN_SERVER)
     mockAuthenticateJellyfin.mockResolvedValue({ success: false, error: 'Invalid username or password' })
 
     const result = await getJellyfinAuthorize()({ username: 'alice', password: 'wrong-password' })
 
     expect(result).toBeNull()
-    expect(mockAuthenticateJellyfin).toHaveBeenCalledWith(
-      { url: JELLYFIN_SERVER.url, apiKey: JELLYFIN_SERVER.apiKey },
-      'alice',
-      'wrong-password'
-    )
+    expect(mockAuthenticateJellyfin).toHaveBeenCalledWith('alice', 'wrong-password')
   })
 })
