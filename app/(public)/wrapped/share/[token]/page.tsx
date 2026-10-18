@@ -4,10 +4,10 @@ import { after } from "next/server"
 
 import { WrappedShareSummary } from "@/components/wrapped/wrapped-share-summary"
 import { prisma } from "@/lib/prisma"
-import { actionClientIp, consume } from "@/lib/security/rate-limit"
 import { getBaseUrl } from "@/lib/utils"
 import { createLogger } from "@/lib/utils/logger"
 import { getShareSafeRewind } from "@/lib/wrapped/data/get-share-safe"
+import { isShareBusy } from "@/lib/wrapped/share-page-limit"
 import { stripHighlightTags } from "@/lib/wrapped/text-processor"
 
 export const dynamic = "force-dynamic"
@@ -20,6 +20,10 @@ const NO_INDEX = { index: false, follow: false }
 type ShareParams = { params: Promise<{ token: string }> }
 
 export async function generateMetadata({ params }: ShareParams): Promise<Metadata> {
+  if (await isShareBusy()) {
+    return { title: "Plex Wrapped", robots: NO_INDEX }
+  }
+
   const { token } = await params
   const found = await getShareSafeRewind(token)
 
@@ -78,14 +82,15 @@ function ShareBusy() {
  * friend with unfinished onboarding or no subscription can open it too
  * (RWV-05).
  *
- * The page body, not `generateMetadata`, spends the visitor's own
- * `rw:share-page` point and records the visit, so each view counts once.
+ * proxy.ts spends the visitor's own `rw:share-page` point before any database
+ * read and marks a visitor over the limit busy (lib/wrapped/share-page-limit.ts).
+ * The page body, not `generateMetadata`, records the visit, so each view
+ * counts once.
  */
 export default async function SharedWrappedPage({ params }: ShareParams) {
   const { token } = await params
 
-  const limit = await consume("rw:share-page", await actionClientIp())
-  if (!limit.ok) {
+  if (await isShareBusy()) {
     return (
       <main className="min-h-screen">
         <ShareBusy />

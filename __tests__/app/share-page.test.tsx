@@ -1,12 +1,12 @@
 /**
  * The public share page reads the database directly (P0.11: RWP-09, SEC-26,
- * RWV-05, BP-23). Visitors spend their own `rw:share-page` point, a limited
- * visitor sees a busy state instead of a 404, and each view records exactly
- * one visit with nothing but the Rewind id.
+ * RWV-05, BP-23). A visitor the proxy marked over `rw:share-page` sees a busy
+ * state instead of a 404, without a lookup (the limit itself is spent in
+ * proxy.ts; see __tests__/proxy.test.ts), and each view records exactly one
+ * visit with nothing but the Rewind id.
  *
- * The real limiter runs on its in-process store (jest.setup.js clears
- * REDIS_URL), and the real `getShareSafeRewind` runs against a mocked Prisma.
- * `headers()`, `after()` (run at once) and `notFound()` are mocked.
+ * The real `getShareSafeRewind` runs against a mocked Prisma. `headers()`,
+ * `after()` (run at once) and `notFound()` are mocked.
  */
 
 import { render, screen } from '@testing-library/react'
@@ -108,9 +108,9 @@ const storedRow = {
 
 const params = (token: string) => ({ params: Promise.resolve({ token }) })
 
-/** Renders the page as the client at `ip`, the address the trusted proxy appended. */
-async function renderPage(ip: string, token = TOKEN) {
-  currentHeaders = new Headers({ 'x-forwarded-for': ip })
+/** Renders the page; `busy` is the proxy's over-the-limit mark. */
+async function renderPage(token = TOKEN, { busy = false } = {}) {
+  currentHeaders = new Headers(busy ? { 'x-rewind-share-busy': '1' } : {})
   return render(await SharedWrappedPage(params(token)))
 }
 
@@ -129,7 +129,7 @@ describe('shared wrapped page', () => {
   })
 
   it('renders the projection inside <main>, never the row id', async () => {
-    const { container } = await renderPage('203.0.113.1')
+    const { container } = await renderPage()
 
     expect(container.firstElementChild?.tagName).toBe('MAIN')
     expect(screen.getByTestId('wrapped-share-summary')).toBeInTheDocument()
@@ -137,64 +137,30 @@ describe('shared wrapped page', () => {
     expect(mockSummary.mock.calls[0][0]).toEqual({ rewind: projection, shareToken: TOKEN })
   })
 
-  it("renders the busy state on IP A's 61st view while IP B still renders", async () => {
-    for (let view = 1; view <= 60; view++) {
-      const { unmount } = await renderPage('203.0.113.2')
-      expect(screen.getByTestId('wrapped-share-summary')).toBeInTheDocument()
-      unmount()
-    }
-    await settleAfterTasks()
-    mockVisitCreate.mockClear()
+  it('renders the busy state without a lookup or a visit when the proxy marks the visitor busy', async () => {
+    const limited = await renderPage(TOKEN, { busy: true })
 
-    const limited = await renderPage('203.0.113.2')
     expect(screen.getByTestId('wrapped-share-busy')).toHaveTextContent('This page is busy. Try again in a minute.')
     expect(screen.queryByTestId('wrapped-share-summary')).not.toBeInTheDocument()
     expect(limited.container.firstElementChild?.tagName).toBe('MAIN')
     expect(notFound).not.toHaveBeenCalled()
-    limited.unmount()
-
-    await renderPage('198.51.100.7')
-    expect(screen.getByTestId('wrapped-share-summary')).toBeInTheDocument()
-
+    expect(mockFindUnique).not.toHaveBeenCalled()
     await settleAfterTasks()
-    // The busy view records nothing; IP B's view records one visit.
-    expect(mockVisitCreate).toHaveBeenCalledTimes(1)
+    expect(mockVisitCreate).not.toHaveBeenCalled()
   })
 
-  it('keys the limit on the address the trusted proxy appended, not the client-sent entries', async () => {
-    const savedHops = process.env.TRUSTED_PROXY_HOPS
-    delete process.env.TRUSTED_PROXY_HOPS
-    try {
-      // A client that rotates the leftmost X-Forwarded-For entry on every view
-      // is still one visitor to the default single trusted proxy.
-      const viewWithSpoofedEntry = (view: number) => {
-        currentHeaders = new Headers({ 'x-forwarded-for': `10.${view >> 8}.${view & 255}.1, 203.0.113.9` })
-        return SharedWrappedPage(params(TOKEN))
-      }
+  it('ignores any other value of the busy header', async () => {
+    currentHeaders = new Headers({ 'x-rewind-share-busy': 'yes' })
+    render(await SharedWrappedPage(params(TOKEN)))
 
-      for (let view = 1; view <= 60; view++) {
-        const { unmount } = render(await viewWithSpoofedEntry(view))
-        expect(screen.getByTestId('wrapped-share-summary')).toBeInTheDocument()
-        unmount()
-      }
-
-      render(await viewWithSpoofedEntry(61))
-      expect(screen.getByTestId('wrapped-share-busy')).toBeInTheDocument()
-      expect(screen.queryByTestId('wrapped-share-summary')).not.toBeInTheDocument()
-    } finally {
-      if (savedHops === undefined) {
-        delete process.env.TRUSTED_PROXY_HOPS
-      } else {
-        process.env.TRUSTED_PROXY_HOPS = savedHops
-      }
-    }
+    expect(screen.getByTestId('wrapped-share-summary')).toBeInTheDocument()
   })
 
   it('creates exactly one visit per render, with the Rewind id only', async () => {
     for (let view = 1; view <= 3; view++) {
-      currentHeaders = new Headers({ 'x-forwarded-for': '203.0.113.3' })
+      currentHeaders = new Headers()
       await generateMetadata(params(TOKEN))
-      const { unmount } = await renderPage('203.0.113.3')
+      const { unmount } = await renderPage()
       unmount()
     }
     await settleAfterTasks()
@@ -206,20 +172,17 @@ describe('shared wrapped page', () => {
     }
   })
 
-  it('never spends the page limit or records a visit in generateMetadata', async () => {
-    currentHeaders = new Headers({ 'x-forwarded-for': '203.0.113.4' })
-    for (let call = 1; call <= 70; call++) {
+  it('never records a visit in generateMetadata', async () => {
+    currentHeaders = new Headers()
+    for (let call = 1; call <= 3; call++) {
       await generateMetadata(params(TOKEN))
     }
     await settleAfterTasks()
     expect(mockVisitCreate).not.toHaveBeenCalled()
-
-    await renderPage('203.0.113.4')
-    expect(screen.getByTestId('wrapped-share-summary')).toBeInTheDocument()
   })
 
   it('calls notFound for an unknown token and records nothing', async () => {
-    await expect(renderPage('203.0.113.5', UNKNOWN_TOKEN)).rejects.toThrow('NEXT_NOT_FOUND')
+    await expect(renderPage(UNKNOWN_TOKEN)).rejects.toThrow('NEXT_NOT_FOUND')
 
     expect(notFound).toHaveBeenCalledTimes(1)
     expect(mockFindUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { shareToken: UNKNOWN_TOKEN } }))
@@ -227,7 +190,7 @@ describe('shared wrapped page', () => {
   })
 
   it('calls notFound for a malformed token without a database call', async () => {
-    await expect(renderPage('203.0.113.6', 'bad-token')).rejects.toThrow('NEXT_NOT_FOUND')
+    await expect(renderPage('bad-token')).rejects.toThrow('NEXT_NOT_FOUND')
 
     expect(mockFindUnique).not.toHaveBeenCalled()
     expect(after).not.toHaveBeenCalled()
@@ -236,7 +199,7 @@ describe('shared wrapped page', () => {
   it('logs a failed visit write instead of failing the page', async () => {
     mockVisitCreate.mockRejectedValue(new Error('Database error'))
 
-    await renderPage('203.0.113.8')
+    await renderPage()
     await settleAfterTasks()
 
     expect(screen.getByTestId('wrapped-share-summary')).toBeInTheDocument()
@@ -244,6 +207,10 @@ describe('shared wrapped page', () => {
   })
 
   describe('generateMetadata', () => {
+    beforeEach(() => {
+      currentHeaders = new Headers()
+    })
+
     it('sets noindex and names the owner from the projection', async () => {
       const metadata = await generateMetadata(params(TOKEN))
 
@@ -251,6 +218,15 @@ describe('shared wrapped page', () => {
       expect(metadata.title).toBe("Mike's 2026 Plex Wrapped")
       expect(metadata.description).toBe('A big year.')
       expect(metadata.alternates?.canonical).toBe(`https://plex.example.com/wrapped/share/${TOKEN}`)
+    })
+
+    it('returns a neutral title with noindex and no lookup for a busy visitor', async () => {
+      currentHeaders = new Headers({ 'x-rewind-share-busy': '1' })
+
+      const metadata = await generateMetadata(params(TOKEN))
+
+      expect(metadata).toEqual({ title: 'Plex Wrapped', robots: { index: false, follow: false } })
+      expect(mockFindUnique).not.toHaveBeenCalled()
     })
 
     it('returns a neutral title with noindex for a missing share', async () => {

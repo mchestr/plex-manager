@@ -8,11 +8,15 @@
  * real 404 status. The routes render their own not-found pages, but
  * `app/loading.tsx` streams every page, so by then the status has already
  * gone out as 200.
+ *
+ * The proxy also spends the share-page visitor's `rw:share-page` point before
+ * its lookup, and marks a visitor over the limit busy for the page.
  */
 
 import { NextRequest } from 'next/server'
 
 import { prisma } from '@/lib/prisma'
+import { consume } from '@/lib/security/rate-limit'
 import { proxy } from '@/proxy'
 
 const mockLogError = jest.fn()
@@ -32,13 +36,23 @@ jest.mock('@/lib/prisma', () => ({
   prisma: { plexWrapped: { findUnique: jest.fn() } },
 }))
 
+jest.mock('@/lib/security/rate-limit', () => ({
+  consume: jest.fn(),
+}))
+
 const mockFindUnique = prisma.plexWrapped.findUnique as jest.Mock
+const mockConsume = consume as jest.Mock
 
 /** A token of the shape `generateShareToken` makes. */
 const TOKEN = 'Kf-qkQFsJ4E6X_vMSKq1PiT624JyrVJtTNbepCgWYl8'
 
-function request(path: string) {
-  return new NextRequest(new URL(path, 'http://localhost:3000'))
+function request(path: string, headers: Record<string, string> = {}) {
+  return new NextRequest(new URL(path, 'http://localhost:3000'), { headers })
+}
+
+/** The value of request header `name` the proxy hands to the page, if it overrides headers. */
+function forwardedHeader(response: Response, name: string): string | null {
+  return response.headers.get(`x-middleware-request-${name}`)
 }
 
 function expectNotFoundRewrite(response: Response, path: string) {
@@ -55,6 +69,7 @@ function expectPassedThrough(response: Response) {
 
 beforeEach(() => {
   jest.clearAllMocks()
+  mockConsume.mockResolvedValue({ ok: true })
   mockFindUnique.mockImplementation(async ({ where }: { where: { shareToken: string } }) =>
     where.shareToken === TOKEN ? { status: 'completed' } : null
   )
@@ -73,6 +88,7 @@ describe('proxy /wrapped/<year> status', () => {
     async (path) => {
       expectPassedThrough(await proxy(request(path)))
       expect(mockFindUnique).not.toHaveBeenCalled()
+      expect(mockConsume).not.toHaveBeenCalled()
     }
   )
 })
@@ -90,6 +106,7 @@ describe('proxy /wrapped/share/<token> status (P0.11)', () => {
   ])('answers the malformed share path %s with a 404 and no database call', async (path) => {
     expectNotFoundRewrite(await proxy(request(path)), path)
     expect(mockFindUnique).not.toHaveBeenCalled()
+    expect(mockConsume).not.toHaveBeenCalled()
   })
 
   it('passes a token that shares a completed Rewind through, after reading only its status', async () => {
@@ -119,6 +136,44 @@ describe('proxy /wrapped/share/<token> status (P0.11)', () => {
     const path = `/wrapped/share/${TOKEN}`
 
     expectNotFoundRewrite(await proxy(request(path)), path)
+  })
+
+  it("spends the visitor's rw:share-page point, keyed by the trusted proxy's entry, before the lookup", async () => {
+    const response = await proxy(
+      request(`/wrapped/share/${TOKEN}`, { 'x-forwarded-for': '10.0.0.1, 203.0.113.7' })
+    )
+
+    expectPassedThrough(response)
+    expect(mockConsume).toHaveBeenCalledWith('rw:share-page', '203.0.113.7')
+    expect(mockConsume.mock.invocationCallOrder[0]).toBeLessThan(mockFindUnique.mock.invocationCallOrder[0])
+    expect(forwardedHeader(response, 'x-rewind-share-busy')).toBeNull()
+  })
+
+  it('marks a visitor over the limit busy for the page, without a lookup', async () => {
+    mockConsume.mockResolvedValue({ ok: false, retryAfterSec: 30 })
+
+    const response = await proxy(request('/wrapped/share/vZ2bLJpJkqoegfJ4-9rodbBNhGs3XZ-sdNzNXJC96wI'))
+
+    expectPassedThrough(response)
+    expect(forwardedHeader(response, 'x-rewind-share-busy')).toBe('1')
+    expect(mockFindUnique).not.toHaveBeenCalled()
+  })
+
+  it('drops a busy header the client sent', async () => {
+    const response = await proxy(request(`/wrapped/share/${TOKEN}`, { 'x-rewind-share-busy': '1' }))
+
+    expectPassedThrough(response)
+    expect(response.headers.get('x-middleware-override-headers')).not.toContain('x-rewind-share-busy')
+    expect(forwardedHeader(response, 'x-rewind-share-busy')).toBeNull()
+  })
+
+  it('looks the token up when the limiter fails', async () => {
+    const error = new Error('limiter down')
+    mockConsume.mockRejectedValue(error)
+
+    expectPassedThrough(await proxy(request(`/wrapped/share/${TOKEN}`)))
+    expect(mockFindUnique).toHaveBeenCalledTimes(1)
+    expect(mockLogError).toHaveBeenCalledWith('Share page rate limit failed', error)
   })
 
   it('lets the request through when the lookup fails, so the page reports the error', async () => {
