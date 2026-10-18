@@ -73,6 +73,8 @@ export interface LoadingCache<K, V> {
    * to `load`, which then replaces the cached one.
    */
   get(key: K, load: () => Promise<V>, options?: { maxAgeMs?: number }): Promise<V>
+  /** Drops one entry, so the next `get` loads again. */
+  delete(key: K): void
   /** Drops every entry. */
   clear(): void
 }
@@ -110,6 +112,9 @@ export function createLoadingCache<K, V>({
         if (!keep(value)) drop()
       }, drop)
       return entry.value
+    },
+    delete(key) {
+      entries.delete(key)
     },
     clear() {
       entries.clear()

@@ -13,6 +13,7 @@ import {
 import { prisma } from '@/lib/prisma'
 import { AuditEventType, logAuditEvent } from '@/lib/security/audit-log'
 import { generateShareToken } from '@/lib/utils'
+import { forgetShareToken } from '@/lib/wrapped/poster-keys'
 import { getServerSession } from 'next-auth'
 import { revalidatePath } from 'next/cache'
 
@@ -46,6 +47,10 @@ jest.mock('@/lib/security/audit-log', () => ({
 jest.mock('@/lib/utils', () => ({
   ...jest.requireActual('@/lib/utils'),
   generateShareToken: jest.fn(),
+}))
+
+jest.mock('@/lib/wrapped/poster-keys', () => ({
+  forgetShareToken: jest.fn(),
 }))
 
 jest.mock('@/lib/utils/logger', () => ({
@@ -318,6 +323,8 @@ describe('disableWrappedShareLink', () => {
     })
     expect(JSON.stringify((logAuditEvent as jest.Mock).mock.calls)).not.toContain('live-token')
     expect(revalidatePath).toHaveBeenCalledWith('/wrapped')
+    // The poster proxy stops serving the old token at once, not after its cache TTL.
+    expect(forgetShareToken).toHaveBeenCalledWith('live-token')
   })
 
   it('makes a later enable mint a new token rather than revive the old one', async () => {

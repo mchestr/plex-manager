@@ -121,6 +121,17 @@ describe('createLoadingCache', () => {
     expect(load).toHaveBeenCalledTimes(1)
   })
 
+  it('drops one entry on delete, so the next call loads again', async () => {
+    const cache = createLoadingCache<string, string>({ ttlMs: 60_000, maxEntries: 10 })
+    await cache.get('k', async () => 'old')
+    await cache.get('other', async () => 'kept')
+
+    cache.delete('k')
+
+    await expect(cache.get('k', async () => 'new')).resolves.toBe('new')
+    await expect(cache.get('other', async () => 'reloaded')).resolves.toBe('kept')
+  })
+
   it('drops a load that rejects, so the next call loads again', async () => {
     const cache = createLoadingCache<string, string>({ ttlMs: 60_000, maxEntries: 10 })
     const failing = jest.fn(async (): Promise<string> => {

@@ -82,7 +82,8 @@ export async function GET(request: NextRequest) {
         ? new ImageResponse(<StoryCard {...cardStats} />, { width: 1080, height: 1920 })
         : new ImageResponse(<OgCard {...cardStats} />, { width: 1200, height: 630 })
 
-    image.headers.set("Cache-Control", "public, max-age=3600, s-maxage=3600")
+    // Short, so a stopped share link stops serving its card within 5 minutes.
+    image.headers.set("Cache-Control", "public, max-age=300")
     image.headers.set("X-Robots-Tag", NOINDEX)
     return image
   } catch (error) {

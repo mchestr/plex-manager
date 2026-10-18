@@ -33,8 +33,11 @@ const MIN_MISS_TIMEOUT_MS = 2000
 
 /** Session responses: the browser may keep them, a shared cache must not. */
 const SESSION_CACHE_CONTROL = "private, max-age=86400"
-/** Share-token responses: the URL carries the token, so any cache may keep them. */
-const SHARE_CACHE_CONTROL = "public, max-age=86400, s-maxage=86400"
+/**
+ * Share-token responses: the URL carries the token, so any cache may keep them,
+ * but only for 5 minutes, so a stopped link stops serving posters soon after.
+ */
+const SHARE_CACHE_CONTROL = "public, max-age=300"
 const NOT_FOUND_CACHE_CONTROL = "private, max-age=60"
 /** Errors (400, 401, 500): never stored, so a shared cache cannot replay one to other viewers. */
 const ERROR_CACHE_CONTROL = "private, no-store"

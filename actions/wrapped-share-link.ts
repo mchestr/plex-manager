@@ -10,6 +10,7 @@ import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { consume } from "@/lib/security/rate-limit"
 import { generateShareToken, getBaseUrl } from "@/lib/utils"
 import { createLogger } from "@/lib/utils/logger"
+import { forgetShareToken } from "@/lib/wrapped/poster-keys"
 import { yearSchema } from "@/lib/validations/shared-schemas"
 
 const logger = createLogger("WRAPPED_SHARE_LINK")
@@ -131,8 +132,9 @@ export async function enableWrappedShareLink(input: { year: number }): Promise<E
 
 /**
  * Turns off the public share link for the signed-in member's own Rewind. The
- * old URL returns 404 at once, and a later {@link enableWrappedShareLink}
- * mints a new token rather than reviving it.
+ * old URL returns 404 at once, its posters stop being served by this process,
+ * and caches may keep its card and posters for at most 5 minutes. A later
+ * {@link enableWrappedShareLink} mints a new token rather than reviving it.
  *
  * Unlike enabling, this works whatever the row's status, so a member can
  * withdraw a link while an admin regenerates their Rewind or after a failed
@@ -166,6 +168,7 @@ export async function disableWrappedShareLink(input: { year: number }): Promise<
         where: { id: wrapped.id },
         data: { shareToken: null },
       })
+      forgetShareToken(wrapped.shareToken)
       logAuditEvent(AuditEventType.SHARE_LINK_REVOKED, caller.userId, {
         wrappedId: wrapped.id,
         year: caller.year,

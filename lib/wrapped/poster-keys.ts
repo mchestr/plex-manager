@@ -11,7 +11,8 @@
  *
  * A key missing from a set loaded more than a minute ago triggers one reload,
  * so a regenerated Rewind's new posters load within a minute instead of
- * waiting out the TTL.
+ * waiting out the TTL. Stopping a share link drops that token's set
+ * ({@link forgetShareToken}).
  *
  * ## Parsing
  *
@@ -143,6 +144,14 @@ export async function shareTokenAllowsRatingKey(
   if (keys.has(ratingKey)) return true
   const reloaded = await shareKeysCache.get(token, load, { maxAgeMs: KEYS_RECHECK_MS })
   return reloaded?.has(ratingKey) ?? false
+}
+
+/**
+ * Drops a share token's cached key set, so a stopped link stops serving
+ * posters from this process at once instead of after the 5-minute TTL.
+ */
+export function forgetShareToken(token: string): void {
+  shareKeysCache.delete(token)
 }
 
 /** Drops both key caches. For tests. */

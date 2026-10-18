@@ -16,6 +16,7 @@ import { prisma } from '@/lib/prisma'
 import { limitRequest } from '@/lib/security/rate-limit'
 import { fetchWithTimeout } from '@/lib/utils/fetch-with-timeout'
 import { clearPosterAccessCaches } from '@/lib/wrapped/poster-access'
+import { forgetShareToken } from '@/lib/wrapped/poster-keys'
 import { getServerSession } from 'next-auth'
 
 jest.mock('@/lib/prisma', () => ({
@@ -625,8 +626,7 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
       const response = await callRoute(posterUrl('123', 'tok'), '123')
 
       expect(response.status).toBe(200)
-      expect(response.headers.get('Cache-Control')).toContain('public')
-      expect(response.headers.get('Cache-Control')).toContain('max-age=86400')
+      expect(response.headers.get('Cache-Control')).toBe('public, max-age=300')
       expect(response.headers.get('X-Robots-Tag')).toBe('noindex')
       expect(prisma.plexWrapped.findUnique).toHaveBeenCalledWith(
         expect.objectContaining({ where: { shareToken: 'tok' } })
@@ -645,6 +645,21 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
       ;(fetchWithTimeout as jest.Mock).mockClear()
       expect((await callRoute(posterUrl('506', 'tok'), '506')).status).toBe(401)
       expect(fetchWithTimeout).not.toHaveBeenCalled()
+    })
+
+    it('stops serving a token as soon as its link is stopped', async () => {
+      ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue({
+        ...SHARED_ROW,
+        data: wrappedJson(['123']),
+      })
+      mockUpstreamImage()
+      expect((await callRoute(posterUrl('123', 'tok'), '123')).status).toBe(200)
+
+      // disableWrappedShareLink nulls the token, then forgets its cached keys.
+      ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
+      forgetShareToken('tok')
+
+      expect((await callRoute(posterUrl('123', 'tok'), '123')).status).toBe(401)
     })
 
     it('refuses a token that matches no Rewind', async () => {
