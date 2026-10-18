@@ -9,145 +9,95 @@
  *
  * 1. {@link getSharedSectionKeys} reads the owner's share list from plex.tv
  *    (`GET https://plex.tv/api/servers/<machineIdentifier>/shared_servers`,
- *    owner token) and returns the local section keys shared with one Plex
- *    user, or `'all'` when the share covers every library.
+ *    owner token; parsed by `./plex-shared-servers-xml`).
  * 2. {@link getItemSectionKey} asks the Plex server for an item's metadata
- *    (`GET <url>/library/metadata/<ratingKey>`) and returns its
- *    `librarySectionID`.
+ *    (`GET <url>/library/metadata/<ratingKey>`).
  *
- * Both responses are validated with Zod. Every failure (timeout, network
- * error, non-2xx, unexpected shape) returns `null`, never throws, so callers
- * deny access when plex.tv or the server cannot be reached.
+ * Responses are validated with Zod. Failures (timeout, network error,
+ * unexpected status or shape) are reported, never thrown, so callers deny
+ * access when plex.tv or the server cannot be read. Each call takes a
+ * `timeoutMs` (default 3 s) that covers the whole lookup, body included.
  *
  * ## Caching
  *
- * - The parsed share list is cached per server for 10 minutes, so one
- *   plex.tv call answers every member during that window.
- * - An item's section key is cached for 24 hours; items rarely move between
- *   libraries.
+ * - The share list is cached per server for 10 minutes; concurrent callers
+ *   share one plex.tv load (and the timeout of the caller that started it).
+ * - An item's section key is cached for 24 hours.
  * - Failures are not cached, so a recovered plex.tv is used on the next call.
- *
- * ## Response shape (plex.tv)
- *
- * ```xml
- * <MediaContainer machineIdentifier="..." size="2">
- *   <SharedServer userID="1001" allLibraries="0" ...>
- *     <Section key="1" shared="1" ... />
- *     <Section key="2" shared="0" ... />
- *   </SharedServer>
- *   <SharedServer userID="1002" allLibraries="1" ... />
- * </MediaContainer>
- * ```
- *
- * Entries without a `userID` (invites not yet tied to an account) are skipped.
  *
  * @module
  */
 
 import "server-only"
 
-import { XMLParser } from "fast-xml-parser"
 import { z } from "zod"
 
 import { fetchWithTimeout } from "@/lib/utils/fetch-with-timeout"
-import { createTtlCache } from "@/lib/utils/ttl-cache"
+import { createLoadingCache, createTtlCache } from "@/lib/utils/ttl-cache"
 
 import { getPlexServerIdentity } from "./plex-connection"
 import { getClientIdentifier, logger } from "./plex-core"
+import { parseSharedServersXml, type SharedSectionKeys } from "./plex-shared-servers-xml"
 
-/** Upstream timeout for both lookups; the poster route must answer within 3 s. */
+export type { SharedSectionKeys } from "./plex-shared-servers-xml"
+
 const LOOKUP_TIMEOUT_MS = 3000
 const SHARED_SERVERS_TTL_MS = 10 * 60 * 1000
 const ITEM_SECTION_TTL_MS = 24 * 60 * 60 * 1000
 
-/** Section keys a member may browse: every library, or a set of local section keys. */
-export type SharedSectionKeys = "all" | ReadonlySet<string>
-
 interface PlexServerConfig {
   url: string
   token: string
+  /** The owner's Plex account ID, who is never in the share list. */
+  adminPlexUserId?: string | null
 }
 
-const sharedServersSchema = z.object({
-  MediaContainer: z.object({
-    SharedServer: z
-      .array(
-        z.object({
-          "@_userID": z.string().optional(),
-          "@_allLibraries": z.string().optional(),
-          Section: z
-            .array(
-              z.object({
-                "@_key": z.string(),
-                "@_shared": z.string().optional(),
-              })
-            )
-            .optional(),
-        })
-      )
-      .optional(),
-  }),
+interface LookupOptions {
+  /** Time allowed for the whole lookup (default 3000 ms). */
+  timeoutMs?: number
+}
+
+/**
+ * What the server says about an item's library section: `missing` when it
+ * answered 404 (there is no such item), `unknown` when it could not be read
+ * or answered something unexpected.
+ */
+export type ItemSectionLookup =
+  | { status: "found"; sectionKey: string }
+  | { status: "missing" }
+  | { status: "unknown" }
+
+const sectionIdSchema = z.object({
+  librarySectionID: z
+    .union([z.number().int().nonnegative(), z.string().regex(/^\d+$/)])
+    .transform(String),
 })
 
 const itemMetadataSchema = z.object({
-  MediaContainer: z.object({
-    librarySectionID: z
-      .union([z.number().int().nonnegative(), z.string().regex(/^\d+$/)])
-      .transform(String),
-  }),
+  MediaContainer: z.object({ Metadata: z.array(z.unknown()).optional() }).loose(),
 })
 
-const xmlParser = new XMLParser({
-  ignoreAttributes: false,
-  attributeNamePrefix: "@_",
-  parseAttributeValue: false,
-  isArray: (name) => name === "SharedServer" || name === "Section",
-})
+type SharedServers = ReadonlyMap<string, SharedSectionKeys>
 
-const sharedServersCache = createTtlCache<string, ReadonlyMap<string, SharedSectionKeys>>({
+const sharedServersCache = createLoadingCache<string, SharedServers | null>({
   ttlMs: SHARED_SERVERS_TTL_MS,
   maxEntries: 8,
+  keep: (byUser) => byUser !== null,
 })
 const itemSectionCache = createTtlCache<string, string>({
   ttlMs: ITEM_SECTION_TTL_MS,
   maxEntries: 10_000,
 })
 
-/**
- * Parses a plex.tv `shared_servers` document into Plex user ID → shared
- * section keys. Returns `null` when the document does not have the expected
- * shape.
- *
- * @internal Exported for tests.
- */
-export function parseSharedServersXml(xml: string): Map<string, SharedSectionKeys> | null {
-  const parsed = sharedServersSchema.safeParse(xmlParser.parse(xml))
-  if (!parsed.success) return null
-
-  const byUser = new Map<string, SharedSectionKeys>()
-  for (const server of parsed.data.MediaContainer.SharedServer ?? []) {
-    const userId = server["@_userID"]
-    if (!userId || userId === "0") continue
-    if (server["@_allLibraries"] === "1") {
-      byUser.set(userId, "all")
-      continue
-    }
-    const keys = (server.Section ?? [])
-      .filter((section) => section["@_shared"] === "1")
-      .map((section) => section["@_key"])
-    byUser.set(userId, new Set(keys))
-  }
-  return byUser
-}
+const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error))
 
 async function loadSharedServers(
-  server: PlexServerConfig
-): Promise<ReadonlyMap<string, SharedSectionKeys> | null> {
-  const cached = sharedServersCache.get(server.url)
-  if (cached) return cached
-
+  server: PlexServerConfig,
+  timeoutMs: number
+): Promise<SharedServers | null> {
+  const deadline = Date.now() + timeoutMs
   try {
-    const identity = await getPlexServerIdentity(server, { timeoutMs: LOOKUP_TIMEOUT_MS })
+    const identity = await getPlexServerIdentity(server, { timeoutMs })
     if (!identity.success || !identity.machineIdentifier) {
       logger.warn("Shared sections: could not read the server's machine identifier", {
         error: identity.error,
@@ -163,7 +113,8 @@ async function loadSharedServers(
         "X-Plex-Token": server.token,
         "X-Plex-Client-Identifier": getClientIdentifier(),
       },
-      timeoutMs: LOOKUP_TIMEOUT_MS,
+      timeoutMs: Math.max(0, deadline - Date.now()),
+      timeoutCoversBody: true,
     })
     if (!response.ok) {
       logger.warn("Shared sections: plex.tv request failed", { status: response.status })
@@ -171,17 +122,10 @@ async function loadSharedServers(
     }
 
     const byUser = parseSharedServersXml(await response.text())
-    if (!byUser) {
-      logger.warn("Shared sections: unexpected plex.tv response shape")
-      return null
-    }
-
-    sharedServersCache.set(server.url, byUser)
+    if (!byUser) logger.warn("Shared sections: unexpected plex.tv response shape")
     return byUser
   } catch (error) {
-    logger.warn("Shared sections: plex.tv lookup failed", {
-      error: error instanceof Error ? error.message : String(error),
-    })
+    logger.warn("Shared sections: plex.tv lookup failed", { error: errorMessage(error) })
     return null
   }
 }
@@ -189,19 +133,39 @@ async function loadSharedServers(
 /**
  * The library section keys the server shares with a Plex user.
  *
- * @param server - The active Plex server (URL and owner token)
+ * Returns `'all'` for the server owner. Admins of this app who are not the
+ * owner are not known here: callers that grant admins everything check that
+ * themselves.
+ *
+ * @param server - The active Plex server (URL, owner token, owner's Plex ID)
  * @param plexUserId - The member's Plex account ID
- * @returns `'all'` for a share covering every library, the set of shared
- *   local section keys (empty when the user has no share), or `null` when
- *   plex.tv could not be read
+ * @returns `'all'` for the owner or a share covering every unfiltered
+ *   library, the set of shared local section keys (empty when the user has no
+ *   share), or `null` when plex.tv could not be read
  */
 export async function getSharedSectionKeys(
   server: PlexServerConfig,
-  plexUserId: string
+  plexUserId: string,
+  { timeoutMs = LOOKUP_TIMEOUT_MS }: LookupOptions = {}
 ): Promise<SharedSectionKeys | null> {
-  const byUser = await loadSharedServers(server)
+  if (server.adminPlexUserId && plexUserId === server.adminPlexUserId) return "all"
+  const byUser = await sharedServersCache.get(server.url, () =>
+    loadSharedServers(server, timeoutMs)
+  )
   if (!byUser) return null
   return byUser.get(plexUserId) ?? new Set<string>()
+}
+
+/** Reads `MediaContainer.librarySectionID`, falling back to the first item's. */
+function readSectionKey(body: unknown): string | null {
+  const parsed = itemMetadataSchema.safeParse(body)
+  if (!parsed.success) return null
+  const container = parsed.data.MediaContainer
+  for (const candidate of [container, container.Metadata?.[0]]) {
+    const section = sectionIdSchema.safeParse(candidate)
+    if (section.success) return section.data.librarySectionID
+  }
+  return null
 }
 
 /**
@@ -209,16 +173,15 @@ export async function getSharedSectionKeys(
  *
  * @param server - The active Plex server (URL and owner token)
  * @param ratingKey - The item's rating key (digits only; the caller validates it)
- * @returns The section key, or `null` when the item is missing or the server
- *   could not be read
  */
 export async function getItemSectionKey(
   server: PlexServerConfig,
-  ratingKey: string
-): Promise<string | null> {
+  ratingKey: string,
+  { timeoutMs = LOOKUP_TIMEOUT_MS }: LookupOptions = {}
+): Promise<ItemSectionLookup> {
   const cacheKey = `${server.url}|${ratingKey}`
   const cached = itemSectionCache.get(cacheKey)
-  if (cached) return cached
+  if (cached) return { status: "found", sectionKey: cached }
 
   try {
     const response = await fetchWithTimeout(`${server.url}/library/metadata/${ratingKey}`, {
@@ -227,22 +190,20 @@ export async function getItemSectionKey(
         Accept: "application/json",
         "X-Plex-Token": server.token,
       },
-      timeoutMs: LOOKUP_TIMEOUT_MS,
+      timeoutMs,
+      timeoutCoversBody: true,
     })
-    if (!response.ok) return null
+    if (response.status === 404) return { status: "missing" }
+    if (!response.ok) return { status: "unknown" }
 
-    const parsed = itemMetadataSchema.safeParse(await response.json())
-    if (!parsed.success) return null
+    const sectionKey = readSectionKey(await response.json())
+    if (sectionKey === null) return { status: "unknown" }
 
-    const sectionKey = parsed.data.MediaContainer.librarySectionID
     itemSectionCache.set(cacheKey, sectionKey)
-    return sectionKey
+    return { status: "found", sectionKey }
   } catch (error) {
-    logger.debug("Item section lookup failed", {
-      ratingKey,
-      error: error instanceof Error ? error.message : String(error),
-    })
-    return null
+    logger.debug("Item section lookup failed", { ratingKey, error: errorMessage(error) })
+    return { status: "unknown" }
   }
 }
 

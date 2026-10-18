@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<MediaContainer friendlyName="myPlex" identifier="com.plexapp.plugins.myplex" machineIdentifier="abc123machine" size="4">
+<!--
+  Hand-written in the documented shape of
+  GET https://plex.tv/api/servers/<machineIdentifier>/shared_servers.
+  Not yet recorded from a live server: replace it with a redacted recording
+  (operator step for P0.16).
+-->
+<MediaContainer friendlyName="myPlex" identifier="com.plexapp.plugins.myplex" machineIdentifier="abc123machine" size="5">
   <SharedServer id="9000001" username="alice" email="alice@example.test" userID="1001" accessToken="redacted-alice" name="Home Server" acceptedAt="1700000000" invitedAt="1699990000" allowSync="0" allowCameraUpload="0" allowChannels="0" allowTuners="0" allowSubtitleAdmin="0" owned="0" allLibraries="0" filterAll="" filterMovies="" filterMusic="" filterPhotos="" filterTelevision="">
     <Section id="5000001" key="1" title="Movies" type="movie" shared="1"/>
     <Section id="5000002" key="2" title="TV Shows" type="show" shared="0"/>
@@ -14,6 +20,10 @@
     <Section id="5000001" key="1" title="Movies" type="movie" shared="1"/>
     <Section id="5000002" key="2" title="TV Shows" type="show" shared="1"/>
     <Section id="5000003" key="3" title="Kids" type="movie" shared="1"/>
+  </SharedServer>
+  <SharedServer id="9000005" username="dana" email="dana@example.test" userID="1004" accessToken="redacted-dana" name="Home Server" acceptedAt="1700000300" invitedAt="1699990300" allowSync="0" allowCameraUpload="0" allowChannels="0" allowTuners="0" allowSubtitleAdmin="0" owned="0" allLibraries="0" filterAll="" filterMovies="contentRating=G" filterMusic="" filterPhotos="" filterTelevision="">
+    <Section id="5000001" key="1" title="Movies" type="movie" shared="1"/>
+    <Section id="5000002" key="2" title="TV Shows" type="show" shared="1"/>
   </SharedServer>
   <SharedServer id="9000004" username="" email="pending@example.test" userID="0" name="Home Server" acceptedAt="0" invitedAt="1699990300" allLibraries="0">
     <Section id="5000001" key="1" title="Movies" type="movie" shared="1"/>

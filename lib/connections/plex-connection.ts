@@ -47,7 +47,8 @@ export async function testPlexConnection(config: PlexServerParsed): Promise<{ su
 }
 
 /**
- * Get the machine identifier from a Plex server
+ * Get the machine identifier from a Plex server. The timeout (default 5 s)
+ * covers the whole call, body included.
  */
 export async function getPlexServerIdentity(
   serverConfig: { url: string; token: string },
@@ -62,6 +63,7 @@ export async function getPlexServerIdentity(
         "Accept": "application/xml",
       },
       timeoutMs: options.timeoutMs ?? 5000,
+      timeoutCoversBody: true,
     })
 
     if (!response.ok) {

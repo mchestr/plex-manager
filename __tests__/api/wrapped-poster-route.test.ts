@@ -2,8 +2,9 @@
  * Tests for app/api/wrapped/poster/[ratingKey]/route.ts - poster proxy route
  *
  * Covers SEC-21: private caching for sessions, public + noindex only for
- * share tokens, per-viewer access checks that answer 404, and fast 404s with
- * a negative cache.
+ * share tokens, per-viewer access checks that answer 404, one 3 s deadline
+ * per request, fast 404s with a negative cache, and one load per Rewind for a
+ * burst of parallel posters.
  */
 
 import { GET } from '@/app/api/wrapped/poster/[ratingKey]/route'
@@ -102,6 +103,7 @@ const MEMBER_SESSION = { user: { id: 'member-1', isAdmin: false } }
 
 const SESSION_CACHE = 'private, max-age=86400'
 const NOT_FOUND_CACHE = 'private, max-age=60'
+const ERROR_CACHE = 'private, no-store'
 
 function wrappedJson(movieKeys: string[], showKeys: string[] = []) {
   return JSON.stringify({
@@ -112,13 +114,23 @@ function wrappedJson(movieKeys: string[], showKeys: string[] = []) {
   })
 }
 
+function memberRow(plexUserId: string | null, data: string) {
+  return { plexUserId, plexWrapped: [{ data }] }
+}
+
 /** The member's own user row: Plex ID plus one Rewind with movie 111 and show 222. */
 function mockMember(plexUserId: string | null = 'member-plex-id') {
-  ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
-    plexUserId,
-    plexWrapped: [{ data: wrappedJson(['111'], ['222']) }],
-  })
+  ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(
+    memberRow(plexUserId, wrappedJson(['111'], ['222']))
+  )
 }
+
+/** Resolves after a real delay, so parallel requests overlap. */
+function later<T>(value: T, ms = 10): Promise<T> {
+  return new Promise((resolve) => setTimeout(() => resolve(value), ms))
+}
+
+const found = (sectionKey: string) => ({ status: 'found', sectionKey })
 
 async function callRoute(url: string, ratingKey: string) {
   const { NextRequest } = await import('next/server')
@@ -152,7 +164,7 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
     clearPosterAccessCaches()
     ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(PLEX_SERVER)
     ;(getSharedSectionKeys as jest.Mock).mockResolvedValue(new Set<string>())
-    ;(getItemSectionKey as jest.Mock).mockResolvedValue(null)
+    ;(getItemSectionKey as jest.Mock).mockResolvedValue({ status: 'unknown' })
   })
 
   afterEach(() => {
@@ -166,6 +178,7 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
       const response = await callRoute(posterUrl('abc'), '../secrets')
 
       expect(response.status).toBe(400)
+      expect(response.headers.get('Cache-Control')).toBe(ERROR_CACHE)
       expect(fetchWithTimeout).not.toHaveBeenCalled()
     })
 
@@ -187,7 +200,20 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
       const response = await callRoute(posterUrl('123'), '123')
 
       expect(response.status).toBe(401)
+      // Never stored, so a shared cache cannot replay it to signed-in viewers
+      expect(response.headers.get('Cache-Control')).toBe(ERROR_CACHE)
       expect(fetchWithTimeout).not.toHaveBeenCalled()
+    })
+
+    it('answers an unexpected error with an unstored 500', async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValue(ADMIN_SESSION)
+      ;(prisma.plexServer.findFirst as jest.Mock).mockRejectedValue(new Error('db down'))
+      jest.spyOn(console, 'error').mockImplementation(() => {})
+
+      const response = await callRoute(posterUrl('123'), '123')
+
+      expect(response.status).toBe(500)
+      expect(response.headers.get('Cache-Control')).toBe(ERROR_CACHE)
     })
 
     it('returns 404 when no Plex server is configured', async () => {
@@ -222,6 +248,7 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
       expect(url).not.toContain('server-token')
       expect(init.headers['X-Plex-Token']).toBe('server-token')
       expect(init.timeoutMs).toBe(3000)
+      expect(init.timeoutCoversBody).toBe(true)
     })
 
     it('serves the server owner any key without asking plex.tv', async () => {
@@ -259,7 +286,7 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
       ;(getServerSession as jest.Mock).mockResolvedValue(MEMBER_SESSION)
       mockMember()
       ;(getSharedSectionKeys as jest.Mock).mockResolvedValue(new Set(['1', '3']))
-      ;(getItemSectionKey as jest.Mock).mockResolvedValue('3')
+      ;(getItemSectionKey as jest.Mock).mockResolvedValue(found('3'))
       mockUpstreamImage()
 
       const response = await callRoute(posterUrl('555'), '555')
@@ -268,11 +295,13 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
       expect(response.headers.get('Cache-Control')).toBe(SESSION_CACHE)
       expect(getSharedSectionKeys).toHaveBeenCalledWith(
         expect.objectContaining({ url: PLEX_SERVER.url, token: PLEX_SERVER.token }),
-        'member-plex-id'
+        'member-plex-id',
+        expect.anything()
       )
       expect(getItemSectionKey).toHaveBeenCalledWith(
         expect.objectContaining({ url: PLEX_SERVER.url }),
-        '555'
+        '555',
+        expect.anything()
       )
     })
 
@@ -292,7 +321,7 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
       ;(getServerSession as jest.Mock).mockResolvedValue(MEMBER_SESSION)
       mockMember()
       ;(getSharedSectionKeys as jest.Mock).mockResolvedValue(new Set(['1']))
-      ;(getItemSectionKey as jest.Mock).mockResolvedValue('2')
+      ;(getItemSectionKey as jest.Mock).mockResolvedValue(found('2'))
 
       const response = await callRoute(posterUrl('555'), '555')
 
@@ -301,16 +330,47 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
       expect(fetchWithTimeout).not.toHaveBeenCalled()
     })
 
+    it('never puts a denied key in the negative cache', async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValue(MEMBER_SESSION)
+      mockMember()
+      ;(getSharedSectionKeys as jest.Mock).mockResolvedValue(new Set(['1']))
+      ;(getItemSectionKey as jest.Mock).mockResolvedValue(found('2'))
+      expect((await callRoute(posterUrl('555'), '555')).status).toBe(404)
+
+      // An admin may still fetch it: the member's denial must not block them
+      ;(getServerSession as jest.Mock).mockResolvedValue(ADMIN_SESSION)
+      mockUpstreamImage()
+      const response = await callRoute(posterUrl('555'), '555')
+
+      expect(response.status).toBe(200)
+      expect(fetchWithTimeout).toHaveBeenCalledTimes(1)
+    })
+
     it('answers 404 when the item section cannot be read', async () => {
       ;(getServerSession as jest.Mock).mockResolvedValue(MEMBER_SESSION)
       mockMember()
       ;(getSharedSectionKeys as jest.Mock).mockResolvedValue(new Set(['1']))
-      ;(getItemSectionKey as jest.Mock).mockResolvedValue(null)
+      ;(getItemSectionKey as jest.Mock).mockResolvedValue({ status: 'unknown' })
 
       const response = await callRoute(posterUrl('555'), '555')
 
       expect(response.status).toBe(404)
       expect(fetchWithTimeout).not.toHaveBeenCalled()
+    })
+
+    it('remembers a key the server says does not exist, for every viewer', async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValue(MEMBER_SESSION)
+      mockMember()
+      ;(getSharedSectionKeys as jest.Mock).mockResolvedValue(new Set(['1']))
+      ;(getItemSectionKey as jest.Mock).mockResolvedValue({ status: 'missing' })
+      expect((await callRoute(posterUrl('555'), '555')).status).toBe(404)
+
+      ;(getServerSession as jest.Mock).mockResolvedValue(ADMIN_SESSION)
+      const response = await callRoute(posterUrl('555'), '555')
+
+      expect(response.status).toBe(404)
+      expect(fetchWithTimeout).not.toHaveBeenCalled()
+      expect(prisma.plexServer.findFirst).toHaveBeenCalledTimes(1)
     })
 
     it('denies non-own keys when plex.tv fails, while own keys still load', async () => {
@@ -368,6 +428,72 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
       expect(prisma.user.findUnique).toHaveBeenCalledTimes(1)
     })
 
+    it("loads the viewer's keys once for a burst of parallel posters", async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValue(MEMBER_SESSION)
+      ;(prisma.user.findUnique as jest.Mock).mockImplementation(() =>
+        later(memberRow('member-plex-id', wrappedJson(['111', '112', '113'], ['222', '223'])))
+      )
+      mockUpstreamImage()
+      const parse = jest.spyOn(JSON, 'parse')
+
+      const responses = await Promise.all(
+        ['111', '112', '113', '222', '223'].map((key) => callRoute(posterUrl(key), key))
+      )
+
+      expect(responses.map((response) => response.status)).toEqual([200, 200, 200, 200, 200])
+      expect(prisma.user.findUnique).toHaveBeenCalledTimes(1)
+      expect(parse).toHaveBeenCalledTimes(1)
+      expect(getSharedSectionKeys).not.toHaveBeenCalled()
+    })
+
+    it('keeps the rest of the own keys when one stored item is malformed', async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValue(MEMBER_SESSION)
+      ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(
+        memberRow(
+          'member-plex-id',
+          JSON.stringify({
+            statistics: {
+              topMovies: [{ ratingKey: '111' }, { ratingKey: { id: 1 } }, { title: 'no key' }, 'junk'],
+              topShows: [{ ratingKey: 333 }],
+            },
+          })
+        )
+      )
+      ;(getSharedSectionKeys as jest.Mock).mockResolvedValue(null)
+      mockUpstreamImage()
+
+      expect((await callRoute(posterUrl('111'), '111')).status).toBe(200)
+      expect((await callRoute(posterUrl('333'), '333')).status).toBe(200)
+      expect(getSharedSectionKeys).not.toHaveBeenCalled()
+    })
+
+    it('reloads the own keys once for a missing key after a minute (a regenerated Rewind)', async () => {
+      const now = Date.now()
+      const clock = jest.spyOn(Date, 'now').mockReturnValue(now)
+      ;(getServerSession as jest.Mock).mockResolvedValue(MEMBER_SESSION)
+      mockMember()
+      ;(getSharedSectionKeys as jest.Mock).mockResolvedValue(null)
+      mockUpstreamImage()
+      await callRoute(posterUrl('111'), '111')
+
+      // Within a minute, a non-own key costs no query
+      clock.mockReturnValue(now + 30 * 1000)
+      expect((await callRoute(posterUrl('555'), '555')).status).toBe(404)
+      expect(prisma.user.findUnique).toHaveBeenCalledTimes(1)
+
+      // After a minute, the regenerated Rewind's new key is picked up
+      clock.mockReturnValue(now + 61 * 1000)
+      ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(
+        memberRow('member-plex-id', wrappedJson(['111', '333']))
+      )
+      const response = await callRoute(posterUrl('333'), '333')
+
+      expect(response.status).toBe(200)
+      expect(response.headers.get('Cache-Control')).toBe(SESSION_CACHE)
+      expect(prisma.user.findUnique).toHaveBeenCalledTimes(2)
+      expect(getSharedSectionKeys).toHaveBeenCalledTimes(1) // only for 555
+    })
+
     it("reloads the viewer's own keys after 10 minutes", async () => {
       const now = Date.now()
       const clock = jest.spyOn(Date, 'now').mockReturnValue(now)
@@ -380,6 +506,101 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
       await callRoute(posterUrl('111'), '111')
 
       expect(prisma.user.findUnique).toHaveBeenCalledTimes(2)
+    })
+  })
+
+  describe('one 3 s deadline per request', () => {
+    let now: number
+    let clock: jest.SpyInstance<number, []>
+
+    beforeEach(() => {
+      now = Date.now()
+      clock = jest.spyOn(Date, 'now').mockReturnValue(now)
+      ;(getServerSession as jest.Mock).mockResolvedValue(MEMBER_SESSION)
+      mockMember()
+    })
+
+    /** Makes a mocked lookup take `ms` of the request's time. */
+    function takes<T>(ms: number, value: T) {
+      return () => {
+        clock.mockReturnValue(Date.now() + ms)
+        return Promise.resolve(value)
+      }
+    }
+
+    it('gives the lookups the full 3 s budget', async () => {
+      ;(getSharedSectionKeys as jest.Mock).mockResolvedValue(new Set(['3']))
+      ;(getItemSectionKey as jest.Mock).mockResolvedValue(found('3'))
+      mockUpstreamImage()
+
+      await callRoute(posterUrl('555'), '555')
+
+      expect(getSharedSectionKeys).toHaveBeenCalledWith(expect.anything(), 'member-plex-id', {
+        timeoutMs: 3000,
+      })
+      expect(getItemSectionKey).toHaveBeenCalledWith(expect.anything(), '555', { timeoutMs: 3000 })
+      expect((fetchWithTimeout as jest.Mock).mock.calls[0][1].timeoutMs).toBe(3000)
+    })
+
+    it('gives each later step only what is left', async () => {
+      ;(getSharedSectionKeys as jest.Mock).mockImplementation(takes(1000, new Set(['3'])))
+      ;(getItemSectionKey as jest.Mock).mockImplementation(takes(1500, found('3')))
+      mockUpstreamImage()
+
+      const response = await callRoute(posterUrl('555'), '555')
+
+      expect(response.status).toBe(200)
+      expect(getItemSectionKey).toHaveBeenCalledWith(expect.anything(), '555', { timeoutMs: 2000 })
+      expect((fetchWithTimeout as jest.Mock).mock.calls[0][1].timeoutMs).toBe(500)
+    })
+
+    it('answers 404 without fetching once the lookups use up the deadline', async () => {
+      ;(getSharedSectionKeys as jest.Mock).mockImplementation(takes(3000, 'all'))
+
+      const response = await callRoute(posterUrl('555'), '555')
+
+      expect(response.status).toBe(404)
+      expect(fetchWithTimeout).not.toHaveBeenCalled()
+    })
+
+    it('skips the plex.tv lookup when the database used up the deadline', async () => {
+      ;(prisma.user.findUnique as jest.Mock).mockImplementation(
+        takes(3000, memberRow('member-plex-id', wrappedJson(['111'])))
+      )
+
+      expect((await callRoute(posterUrl('555'), '555')).status).toBe(404)
+      expect(getSharedSectionKeys).not.toHaveBeenCalled()
+      expect(fetchWithTimeout).not.toHaveBeenCalled()
+    })
+
+    it('skips the item lookup once the share list used up the deadline', async () => {
+      ;(getSharedSectionKeys as jest.Mock).mockImplementation(takes(3000, new Set(['3'])))
+
+      expect((await callRoute(posterUrl('555'), '555')).status).toBe(404)
+      expect(getItemSectionKey).not.toHaveBeenCalled()
+    })
+
+    it('does not remember a poster timeout cut short by slow lookups', async () => {
+      ;(getSharedSectionKeys as jest.Mock).mockImplementation(takes(1500, 'all'))
+      ;(fetchWithTimeout as jest.Mock).mockRejectedValueOnce(abortError())
+      expect((await callRoute(posterUrl('555'), '555')).status).toBe(404)
+
+      ;(getServerSession as jest.Mock).mockResolvedValue(ADMIN_SESSION)
+      mockUpstreamImage()
+      const response = await callRoute(posterUrl('555'), '555')
+
+      expect(response.status).toBe(200)
+      expect(fetchWithTimeout).toHaveBeenCalledTimes(2)
+    })
+
+    it('remembers a Plex 404 for the poster even after slow lookups', async () => {
+      ;(getSharedSectionKeys as jest.Mock).mockImplementation(takes(2500, 'all'))
+      ;(fetchWithTimeout as jest.Mock).mockResolvedValue({ ok: false, status: 404 })
+      await callRoute(posterUrl('555'), '555')
+
+      ;(getServerSession as jest.Mock).mockResolvedValue(ADMIN_SESSION)
+      expect((await callRoute(posterUrl('555'), '555')).status).toBe(404)
+      expect(fetchWithTimeout).toHaveBeenCalledTimes(1)
     })
   })
 
@@ -451,6 +672,63 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
 
       expect(prisma.plexWrapped.findUnique).toHaveBeenCalledTimes(1)
       expect(parse).toHaveBeenCalledTimes(1)
+    })
+
+    it("loads and parses a token's Rewind once for a burst of parallel posters", async () => {
+      const keys = ['121', '122', '123', '124', '125']
+      ;(prisma.plexWrapped.findUnique as jest.Mock).mockImplementation(() =>
+        later({ status: 'completed', data: wrappedJson(keys) })
+      )
+      mockUpstreamImage()
+      const parse = jest.spyOn(JSON, 'parse')
+
+      const responses = await Promise.all(keys.map((key) => callRoute(posterUrl(key, 'tok'), key)))
+
+      expect(responses.map((response) => response.status)).toEqual([200, 200, 200, 200, 200])
+      expect(prisma.plexWrapped.findUnique).toHaveBeenCalledTimes(1)
+      expect(parse).toHaveBeenCalledTimes(1)
+    })
+
+    it('shares one lookup for parallel requests with an invalid token and caches nothing', async () => {
+      ;(prisma.plexWrapped.findUnique as jest.Mock).mockImplementation(() => later(null))
+
+      const responses = await Promise.all(
+        ['121', '122', '123'].map((key) => callRoute(posterUrl(key, 'tok'), key))
+      )
+      expect(responses.map((response) => response.status)).toEqual([401, 401, 401])
+      expect(prisma.plexWrapped.findUnique).toHaveBeenCalledTimes(1)
+
+      // The token becomes valid (its Rewind completed): the next request sees it
+      ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue({
+        status: 'completed',
+        data: wrappedJson(['123']),
+      })
+      mockUpstreamImage()
+      expect((await callRoute(posterUrl('123', 'tok'), '123')).status).toBe(200)
+      expect(prisma.plexWrapped.findUnique).toHaveBeenCalledTimes(2)
+    })
+
+    it("reloads a token's keys once for a missing key after a minute (a regenerated Rewind)", async () => {
+      const now = Date.now()
+      const clock = jest.spyOn(Date, 'now').mockReturnValue(now)
+      ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue({
+        status: 'completed',
+        data: wrappedJson(['123']),
+      })
+      mockUpstreamImage()
+      await callRoute(posterUrl('123', 'tok'), '123')
+
+      clock.mockReturnValue(now + 30 * 1000)
+      expect((await callRoute(posterUrl('999', 'tok'), '999')).status).toBe(401)
+      expect(prisma.plexWrapped.findUnique).toHaveBeenCalledTimes(1)
+
+      clock.mockReturnValue(now + 61 * 1000)
+      ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue({
+        status: 'completed',
+        data: wrappedJson(['123', '999']),
+      })
+      expect((await callRoute(posterUrl('999', 'tok'), '999')).status).toBe(200)
+      expect(prisma.plexWrapped.findUnique).toHaveBeenCalledTimes(2)
     })
   })
 
