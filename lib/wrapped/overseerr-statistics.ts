@@ -6,18 +6,26 @@
  * 1. Find the member's Overseerr account by paging `/api/v1/user?take=100`
  *    (at most 50 pages). Overseerr's numeric `plexId` must equal the member's
  *    `plexUserId`; failing that, the email must match in any case. A member
- *    with no match gets zeros: requests are never credited by a loose rule.
- * 2. Page through every server request (`take=100`, newest first) until a
- *    page comes back short, and keep the ones created in the year (UTC).
+ *    who has a Plex id matches by email only a local account (no `plexId`),
+ *    because a different `plexId` is a different Plex identity. A blank
+ *    email or Plex id is no identity. A member with no match gets zeros:
+ *    requests are never credited by a loose rule.
+ * 2. Page through every server request (`take=100`, newest first, at most
+ *    200 pages) until `pageInfo` says the last page was read. `skip` advances
+ *    by the rows received and rows are kept once by id, so a request added
+ *    between two fetches is not counted twice. Keep the requests created in
+ *    the year (UTC, end exclusive).
  * 3. Count the member's requests with the API's own status values:
  *    - pending: request status PENDING;
  *    - approved: APPROVED or COMPLETED (DECLINED and FAILED never count);
- *    - available: an approved or pending request whose media is AVAILABLE,
- *      or PARTIALLY_AVAILABLE for TV. Any other media status, including
- *      Seerr's 6 and 7, is not available.
+ *    - available: an approved request whose media is AVAILABLE, or
+ *      PARTIALLY_AVAILABLE for TV, read from `media.status4k` for a 4K
+ *      request. Pending requests never count, and neither does any other
+ *      media status, including Seerr's 6 and 7.
  *
- * Every response is checked with Zod; an error status or an unexpected shape
- * returns `success: false`, so a partial count is never reported.
+ * Every response is checked with Zod; an error status, an unexpected shape or
+ * hitting the request page cap returns `success: false`, so a partial count
+ * is never reported.
  *
  * Requests carry no genres, so `topRequestedGenres` is empty until the genre
  * lookup by `tmdbId` exists.
@@ -41,6 +49,7 @@ const logger = createLogger("STATISTICS")
 
 const PAGE_SIZE = 100
 const MAX_USER_PAGES = 50
+const MAX_REQUEST_PAGES = 200
 
 /** Who the member is, as stored on their `User` row. */
 export interface OverseerrMemberIdentity {
@@ -84,8 +93,9 @@ async function findOverseerrUserId(
   config: OverseerrConfig,
   identity: OverseerrMemberIdentity
 ): Promise<number | null> {
-  const plexId = identity.plexUserId ? Number(identity.plexUserId) : null
-  const email = identity.email?.toLowerCase() ?? null
+  const plexIdText = identity.plexUserId?.trim()
+  const plexId = plexIdText && Number.isSafeInteger(Number(plexIdText)) ? Number(plexIdText) : null
+  const email = identity.email?.trim().toLowerCase() || null
   if (plexId === null && email === null) return null
 
   let emailMatch: number | null = null
@@ -99,10 +109,9 @@ async function findOverseerrUserId(
 
     for (const user of users.results) {
       if (plexId !== null && user.plexId === plexId) return user.id
-      if (emailMatch === null && email !== null && user.email?.toLowerCase() === email) {
-        if (plexId === null) return user.id
-        emailMatch = user.id
-      }
+      if (emailMatch !== null || email === null || user.email?.trim().toLowerCase() !== email) continue
+      if (plexId === null) return user.id
+      if (user.plexId == null) emailMatch = user.id
     }
 
     if (users.pageInfo.page >= users.pageInfo.pages) return emailMatch
@@ -114,27 +123,37 @@ async function findOverseerrUserId(
 
 /** @internal */
 async function fetchAllRequests(config: OverseerrConfig): Promise<OverseerrRequest[]> {
-  const requests: OverseerrRequest[] = []
+  const requests = new Map<number, OverseerrRequest>()
+  let skip = 0
 
-  for (let skip = 0; ; skip += PAGE_SIZE) {
+  for (let pageCount = 0; pageCount < MAX_REQUEST_PAGES; pageCount++) {
     const page = await getOverseerrPage(
       config,
       `/request?take=${PAGE_SIZE}&skip=${skip}&sort=added&filter=all`,
       overseerrRequestPageSchema
     )
-    requests.push(...page.results)
-    if (page.results.length < PAGE_SIZE) return requests
+    for (const request of page.results) requests.set(request.id, request)
+    if (page.results.length === 0 || page.pageInfo.page >= page.pageInfo.pages) {
+      return [...requests.values()]
+    }
+    skip += page.results.length
   }
+
+  throw new Error(`Overseerr /request has more than ${MAX_REQUEST_PAGES} pages`)
+}
+
+/** @internal */
+function isApproved(request: OverseerrRequest): boolean {
+  return request.status === MediaRequestStatus.APPROVED || request.status === MediaRequestStatus.COMPLETED
 }
 
 /** @internal */
 function isAvailable(request: OverseerrRequest): boolean {
-  if (request.status === MediaRequestStatus.DECLINED || request.status === MediaRequestStatus.FAILED) {
-    return false
-  }
+  if (!isApproved(request)) return false
+  const mediaStatus = request.is4k ? request.media.status4k : request.media.status
   return (
-    request.media.status === MediaStatus.AVAILABLE ||
-    (request.type === "tv" && request.media.status === MediaStatus.PARTIALLY_AVAILABLE)
+    mediaStatus === MediaStatus.AVAILABLE ||
+    (request.type === "tv" && mediaStatus === MediaStatus.PARTIALLY_AVAILABLE)
   )
 }
 
@@ -180,11 +199,7 @@ export async function fetchOverseerrStatistics(
       data: {
         totalRequests: memberRequests.length,
         totalServerRequests: yearRequests.length,
-        approvedRequests: countWhere(
-          (request) =>
-            request.status === MediaRequestStatus.APPROVED ||
-            request.status === MediaRequestStatus.COMPLETED
-        ),
+        approvedRequests: countWhere(isApproved),
         pendingRequests: countWhere((request) => request.status === MediaRequestStatus.PENDING),
         availableRequests: countWhere(isAvailable),
         topRequestedGenres: [],

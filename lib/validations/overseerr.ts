@@ -53,7 +53,7 @@ export const overseerrUserPageSchema = z.looseObject({
   results: z.array(
     z.looseObject({
       id: z.number().int(),
-      email: z.string().optional(),
+      email: z.string().nullish(),
       plexId: z.number().int().nullable().optional(),
     })
   ),
@@ -61,15 +61,21 @@ export const overseerrUserPageSchema = z.looseObject({
 
 /** One page of `GET /api/v1/request?take=&skip=&sort=added&filter=all`. */
 export const overseerrRequestPageSchema = z.looseObject({
+  pageInfo: z.looseObject({
+    pages: z.number().int().nonnegative(),
+    page: z.number().int().positive(),
+  }),
   results: z.array(
     z.looseObject({
       id: z.number().int(),
       status: z.enum(MediaRequestStatus),
       type: z.enum(["movie", "tv"]),
+      is4k: z.boolean().optional(),
       createdAt: z.string(),
       requestedBy: z.looseObject({ id: z.number().int() }).nullable(),
       media: z.looseObject({
         status: z.number().int(),
+        status4k: z.number().int().optional(),
         tmdbId: z.number().int().optional(),
       }),
     })
