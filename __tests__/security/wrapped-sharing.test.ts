@@ -1,10 +1,12 @@
 /**
  * Security tests for wrapped sharing
- * Tests that anonymous users can access shared wraps, but only completed ones
+ * Tests that anonymous users can access shared wraps, but only completed ones,
+ * and that a share response carries only the share-safe projection.
  */
 
 import { GET as getSharedWrapped } from '@/app/api/wrapped/share/[token]/route'
 import { prisma } from '@/lib/prisma'
+import { shareRateLimiter } from '@/lib/security/rate-limit'
 
 // Mock dependencies
 jest.mock('next/server', () => ({
@@ -24,9 +26,13 @@ jest.mock('next/server', () => ({
     json: jest.fn((data, init) => ({
       json: () => Promise.resolve(data),
       status: init?.status || 200,
-      ...init,
+      headers: new Headers(init?.headers || {}),
     })),
   },
+}))
+
+jest.mock('@/lib/security/rate-limit', () => ({
+  shareRateLimiter: jest.fn(),
 }))
 
 jest.mock('@/lib/prisma', () => ({
@@ -49,15 +55,32 @@ describe('Wrapped Sharing Security', () => {
     shareToken: 'valid-share-token',
     summary: 'Test summary',
     generatedAt: new Date('2024-01-01'),
+    archetype: null,
     data: JSON.stringify({
+      userId: 'user-1',
+      userName: 'user@example.com',
       sections: [{ id: 'hero-1', type: 'hero', title: 'Welcome' }],
       summary: 'Test summary',
+      statistics: {
+        totalWatchTime: { total: 100, movies: 50, shows: 50 },
+        moviesWatched: 1,
+        showsWatched: 1,
+        episodesWatched: 2,
+        topMovies: [],
+        topShows: [],
+        serverStats: { serverName: 'Private Server', totalStorage: 1, totalStorageFormatted: '1 B', librarySize: { movies: 1, shows: 1, episodes: 1 } },
+        overseerrStats: { totalRequests: 1, totalServerRequests: 50, approvedRequests: 1, pendingRequests: 0, topRequestedGenres: [] },
+        leaderboards: {
+          topContent: { movies: [], shows: [] },
+          watchTime: {
+            leaderboard: [{ userId: '9', username: 'jsnow', friendlyName: 'Jon Snow', totalWatchTime: 5000, moviesWatchTime: 0, showsWatchTime: 5000 }],
+            totalUsers: 1,
+          },
+        },
+      },
     }),
     user: {
-      id: 'user-1',
       name: 'Test User',
-      email: 'user@example.com',
-      image: 'https://example.com/image.jpg',
     },
   }
 
@@ -96,6 +119,7 @@ describe('Wrapped Sharing Security', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    ;(shareRateLimiter as jest.Mock).mockResolvedValue(null)
   })
 
   describe('GET /api/wrapped/share/[token]', () => {
@@ -114,21 +138,13 @@ describe('Wrapped Sharing Security', () => {
       expect(response.status).toBe(200)
       expect(data.success).toBe(true)
       expect(data.wrapped).toBeTruthy()
-      expect(data.wrapped.id).toBe('wrapped-1')
-      expect(data.wrapped.shareToken).toBe('valid-share-token')
-      expect(data.wrapped.userName).toBe('Test User')
+      expect(data.wrapped.ownerName).toBe('Test User')
+      expect(response.headers.get('X-Robots-Tag')).toBe('noindex')
       expect(prisma.plexWrapped.findUnique).toHaveBeenCalledWith({
         where: { shareToken: 'valid-share-token' },
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              image: true,
-            },
-          },
-        },
+        select: expect.objectContaining({
+          user: { select: { name: true } },
+        }),
       })
     })
 
@@ -205,17 +221,10 @@ describe('Wrapped Sharing Security', () => {
       const response = await getSharedWrapped(request, { params: { token: 'valid-share-token' } })
 
       expect(response.status).toBe(200)
-      // IP address should be hashed
-      expect(prisma.wrappedShareVisit.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            wrappedId: 'wrapped-1',
-            ipAddress: expect.stringMatching(/^[a-f0-9]{64}$/), // SHA-256 hash (64 hex chars)
-            userAgent: 'Mozilla/5.0',
-            referer: 'https://example.com',
-          }),
-        })
-      )
+      // No IP pseudonym, user agent or referer is stored (GAP-37)
+      expect(prisma.wrappedShareVisit.create).toHaveBeenCalledWith({
+        data: { wrappedId: 'wrapped-1' },
+      })
     })
 
     it('should handle visit tracking failure gracefully', async () => {
@@ -245,99 +254,27 @@ describe('Wrapped Sharing Security', () => {
       const data = await response.json()
 
       expect(response.status).toBe(200)
-      // Should not include user ID in response
-      expect(data.wrapped.user).toBeUndefined()
-      expect(data.wrapped.userId).toBeUndefined()
-      // Should only include safe user info
-      expect(data.wrapped.userName).toBe('Test User')
-      expect(data.wrapped.userImage).toBe('https://example.com/image.jpg')
-    })
-
-    it('should handle missing IP address gracefully', async () => {
-      ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(mockCompletedWrapped)
-      ;(prisma.wrappedShareVisit.create as jest.Mock).mockResolvedValue({
-        id: 'visit-1',
-        wrappedId: 'wrapped-1',
-        createdAt: new Date(),
-      })
-
-      const request = createMockRequest({
-        'x-forwarded-for': '',
-        'x-real-ip': '',
-      })
-
-      const response = await getSharedWrapped(request, { params: { token: 'valid-share-token' } })
-
-      expect(response.status).toBe(200)
-      expect(prisma.wrappedShareVisit.create).toHaveBeenCalledWith({
-        data: {
-          wrappedId: 'wrapped-1',
-          ipAddress: null,
-          userAgent: 'Mozilla/5.0',
-          referer: null,
-        },
-      })
-    })
-
-    it('should parse wrapped data correctly', async () => {
-      const wrappedWithData = {
-        ...mockCompletedWrapped,
-        data: JSON.stringify({
-          sections: [
-            { id: 'hero-1', type: 'hero', title: 'Welcome', content: 'Hello' },
-            { id: 'stats-1', type: 'total-watch-time', title: 'Watch Time', content: '100 hours' },
-          ],
-          summary: 'Test summary',
-          statistics: {
-            totalWatchTime: { total: 100 },
-          },
-        }),
+      // No internal IDs or stored data blob in the response
+      expect(data.wrapped).not.toHaveProperty('id')
+      expect(data.wrapped).not.toHaveProperty('data')
+      expect(data.wrapped).not.toHaveProperty('userId')
+      expect(data.wrapped).not.toHaveProperty('shareToken')
+      expect(data.wrapped).not.toHaveProperty('userImage')
+      // Only the owner's own numbers: no roster, server stats or email
+      const body = JSON.stringify(data)
+      for (const leaked of ['leaderboard', 'Jon Snow', 'jsnow', 'Private Server', 'totalServerRequests', 'serverStats', 'user@example.com', 'user-1']) {
+        expect(body).not.toContain(leaked)
       }
-
-      ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(wrappedWithData)
-      ;(prisma.wrappedShareVisit.create as jest.Mock).mockResolvedValue({
-        id: 'visit-1',
-        wrappedId: 'wrapped-1',
-        createdAt: new Date(),
-      })
-
-      const request = createMockRequest()
-      const response = await getSharedWrapped(request, { params: { token: 'valid-share-token' } })
-      const data = await response.json()
-
-      expect(response.status).toBe(200)
-      expect(data.wrapped.data).toBeTruthy()
-      expect(data.wrapped.data.sections).toHaveLength(2)
-      expect(data.wrapped.data.summary).toBe('Test summary')
+      expect(data.wrapped.totals).toEqual({ minutes: 100, movies: 1, shows: 1, episodes: 2 })
     })
 
-    it('should handle x-forwarded-for with multiple IPs', async () => {
-      ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(mockCompletedWrapped)
-      ;(prisma.wrappedShareVisit.create as jest.Mock).mockResolvedValue({
-        id: 'visit-1',
-        wrappedId: 'wrapped-1',
-        createdAt: new Date(),
-      })
+    it('sends noindex on not-found responses too', async () => {
+      ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
 
-      const request = createMockRequest({
-        'x-forwarded-for': '192.168.1.1, 10.0.0.1, 172.16.0.1',
-        'user-agent': 'Mozilla/5.0',
-      })
+      const response = await getSharedWrapped(createMockRequest(), { params: { token: 'invalid-token' } })
 
-      const response = await getSharedWrapped(request, { params: { token: 'valid-share-token' } })
-
-      expect(response.status).toBe(200)
-      // Should use the first IP from x-forwarded-for and hash it
-      expect(prisma.wrappedShareVisit.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            wrappedId: 'wrapped-1',
-            ipAddress: expect.stringMatching(/^[a-f0-9]{64}$/), // SHA-256 hash (64 hex chars)
-            userAgent: 'Mozilla/5.0',
-            referer: null,
-          }),
-        })
-      )
+      expect(response.status).toBe(404)
+      expect(response.headers.get('X-Robots-Tag')).toBe('noindex')
     })
   })
 })

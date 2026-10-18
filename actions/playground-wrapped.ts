@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma"
 import { generateShareToken } from "@/lib/utils"
 import { createLogger } from "@/lib/utils/logger"
 import { assembleWrappedData } from "@/lib/wrapped/assemble-wrapped"
+import { memberName } from "@/lib/wrapped/member-name"
 import { parseWrappedLLMOutput } from "@/lib/wrapped/parse-llm-output"
 import { WrappedStatistics } from "@/types/wrapped"
 import { getServerSession } from "next-auth"
@@ -82,11 +83,13 @@ export async function savePlaygroundWrapped(input: SavePlaygroundWrappedInput): 
       }
     }
 
+    // The lookup above may have matched the email, so the stored name comes
+    // from the user row, as in generation.
     const wrappedData = assembleWrappedData({
       output: parseResult.output,
       statistics: input.statistics,
       userId: user.id,
-      userName: input.userName,
+      userName: memberName(user) ?? "Viewer",
       year: input.year,
     })
 

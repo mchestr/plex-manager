@@ -19,6 +19,12 @@ import {
 } from '@/lib/wrapped/statistics'
 import { revalidatePath } from 'next/cache'
 import { memberErrorCopy } from '@/lib/wrapped/generation-errors'
+import { assembleWrappedData } from '@/lib/wrapped/assemble-wrapped'
+import {
+  buildLeaderboards,
+  buildValidOutput,
+  LEADERBOARD_MEMBER_EMAIL,
+} from '@/lib/wrapped/__tests__/fixtures'
 
 // Mock dependencies
 jest.mock('@/lib/prisma', () => ({
@@ -591,6 +597,100 @@ describe('generatePlexWrapped', () => {
       expect(promptInput().promptName).toBe('there')
       expect(JSON.stringify(promptInput())).not.toContain(email)
       expect(JSON.stringify(promptInput())).not.toContain('@')
+    })
+  })
+
+  describe('what a completed generation stores', () => {
+    const email = 'member.private@example.com'
+
+    function setUpRunWithLeaderboards(user: ReturnType<typeof makePrismaUser>) {
+      ;(getServerSession as jest.Mock).mockResolvedValue(mockSession)
+      ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(user)
+      ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
+      ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(makePrismaPlexServer())
+      ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue({
+        id: 'wrapped-1',
+        userId: 'user-1',
+        year: 2024,
+        status: 'generating',
+        shareToken: 'test-share-token',
+      })
+      ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(makePrismaTautulli())
+      ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue(null)
+      ;(fetchTautulliStatistics as jest.Mock).mockResolvedValue({
+        success: true,
+        data: {
+          tautulliUserId: '7',
+          totalWatchTime: 60480,
+          moviesWatchTime: 20160,
+          showsWatchTime: 40320,
+          moviesWatched: 85,
+          showsWatched: 23,
+          episodesWatched: 412,
+          topMovies: [{ title: 'Dune: Part Three', watchTime: 165, playCount: 1, ratingKey: '101' }],
+          topShows: [{ title: 'Severance', watchTime: 900, playCount: 18, episodesWatched: 18, ratingKey: '202' }],
+          watchTimeByMonth: [],
+        },
+      })
+      ;(fetchPlexServerStatistics as jest.Mock).mockResolvedValue({ success: false })
+      const leaderboards = buildLeaderboards()
+      ;(fetchTopContentLeaderboards as jest.Mock).mockResolvedValue({ success: true, data: leaderboards.topContent })
+      ;(fetchWatchTimeLeaderboard as jest.Mock).mockResolvedValue({
+        success: true,
+        data: leaderboards.watchTime.leaderboard,
+      })
+      // The real assembly step, so the test sees exactly what would be stored
+      ;(generateWrappedWithLLM as jest.Mock).mockImplementation(async (args) => ({
+        success: true,
+        data: assembleWrappedData({
+          output: buildValidOutput(),
+          statistics: args.statistics,
+          userId: args.userId,
+          userName: args.displayName,
+          year: args.year,
+        }),
+      }))
+      ;(prisma.plexWrapped.update as jest.Mock).mockResolvedValue({})
+    }
+
+    function storedData() {
+      const completed = (prisma.plexWrapped.update as jest.Mock).mock.calls
+        .map(([args]) => args.data)
+        .find((data) => data.status === 'completed')
+      return { raw: completed.data as string, parsed: JSON.parse(completed.data) }
+    }
+
+    it('gives the prompt the leaderboards but stores no roster', async () => {
+      setUpRunWithLeaderboards(makePrismaUser({ id: 'user-1', name: 'Test User', email, plexUserId: 'plex-user-123' }))
+
+      const result = await generatePlexWrapped('user-1', 2024)
+
+      expect(result.success).toBe(true)
+      const promptStatistics = (generateWrappedWithLLM as jest.Mock).mock.calls[0][0].statistics
+      expect(promptStatistics.leaderboards.watchTime.userPosition).toBe(2)
+
+      const { raw, parsed } = storedData()
+      expect(parsed.statistics).not.toHaveProperty('leaderboards')
+      for (const leaked of ['leaderboard', LEADERBOARD_MEMBER_EMAIL, 'Jon Snow', 'Alice Smith', 'asmith']) {
+        expect(raw).not.toContain(leaked)
+      }
+      expect(parsed.statistics.percentile).toEqual({ percentile: 100, topPercentLabel: 'Top 100%' })
+      expect(parsed.userName).toBe('Test User')
+    })
+
+    it.each([
+      ['an email used as the name', email],
+      ['a null name', null],
+    ])('stores "Viewer" as the name for %s', async (_label, name) => {
+      setUpRunWithLeaderboards(makePrismaUser({ id: 'user-1', name, email, plexUserId: 'plex-user-123' }))
+
+      const result = await generatePlexWrapped('user-1', 2024)
+
+      expect(result.success).toBe(true)
+      expect((generateWrappedWithLLM as jest.Mock).mock.calls[0][0].displayName).toBe('Viewer')
+      const { raw, parsed } = storedData()
+      expect(parsed.userName).toBe('Viewer')
+      expect(raw).not.toContain(email)
     })
   })
 
@@ -1356,6 +1456,28 @@ describe('generateAllPlexWrapped', () => {
     expect(result.errors).toEqual([
       "User 1: Plex user plex-1 is not in Tautulli's user list. Refresh users in Tautulli.",
     ])
+  })
+
+  it('labels a failed member without a name by id, never by email', async () => {
+    const member = { ...mockUser, id: 'user-1', plexUserId: 'plex-1', name: null, email: 'user1@test.com' }
+    ;(getServerSession as jest.Mock).mockImplementation(async () => mockAdminSession)
+    ;(prisma.user.findMany as jest.Mock).mockResolvedValue([member])
+    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(member)
+    ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
+    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(makePrismaPlexServer())
+    ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue({
+      id: 'wrapped-1',
+      userId: 'user-1',
+      year: 2024,
+      status: 'generating',
+      shareToken: 'test-token',
+    })
+    ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(makePrismaTautulli())
+    ;(fetchTautulliStatistics as jest.Mock).mockResolvedValue({ success: false, error: 'Tautulli is down' })
+
+    const result = await generateAllPlexWrapped(2024)
+
+    expect(result.errors).toEqual(['user-1: Tautulli is down'])
   })
 
   it('should handle empty user list', async () => {

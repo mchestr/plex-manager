@@ -105,7 +105,6 @@ describe('GET /api/wrapped/og-image', () => {
     }),
     user: {
       name: 'Test User',
-      email: 'test@example.com',
     },
   }
 
@@ -128,6 +127,50 @@ describe('GET /api/wrapped/og-image', () => {
     expect(text).toContain('2026')
     expect(text).toContain('The Midnight Marathoner')
     expect(text).toContain('2 days')
+    expect(response.headers.get('X-Robots-Tag')).toBe('noindex')
+  })
+
+  it('selects only the owner name from the user', async () => {
+    ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(mockWrapped)
+
+    await GET(buildRequest('http://localhost/api/wrapped/og-image?token=test-token'))
+
+    expect(prisma.plexWrapped.findUnique).toHaveBeenCalledWith({
+      where: { shareToken: 'test-token' },
+      select: {
+        year: true,
+        status: true,
+        summary: true,
+        archetype: true,
+        data: true,
+        user: { select: { name: true } },
+      },
+    })
+  })
+
+  it('renders only share-safe values from a row with a roster and an email name', async () => {
+    ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue({
+      ...mockWrapped,
+      data: JSON.stringify({
+        userName: 'owner@example.com',
+        statistics: {
+          totalWatchTime: { total: 2880 },
+          moviesWatched: 10,
+          showsWatched: 5,
+          serverStats: { serverName: 'Private Server' },
+          leaderboards: {
+            watchTime: { leaderboard: [{ username: 'jsnow', friendlyName: 'Jon Snow', totalWatchTime: 9000 }] },
+          },
+        },
+      }),
+    })
+
+    await GET(buildRequest('http://localhost/api/wrapped/og-image?token=test-token'))
+
+    const text = elementText(imageCalls[0].element)
+    for (const leaked of ['owner@example.com', 'Private Server', 'jsnow', 'Jon Snow']) {
+      expect(text).not.toContain(leaked)
+    }
   })
 
   it('renders a 1080x1920 story card when format=card', async () => {
@@ -170,6 +213,7 @@ describe('GET /api/wrapped/og-image', () => {
 
     expect(response.status).toBe(404)
     expect(response.body).toBe('Wrapped not found')
+    expect(response.headers.get('X-Robots-Tag')).toBe('noindex')
   })
 
   it('returns 404 when wrapped is not completed (same message, no enumeration)', async () => {
@@ -184,16 +228,21 @@ describe('GET /api/wrapped/og-image', () => {
     expect(response.body).toBe('Wrapped not found')
   })
 
-  it('falls back to email then "Someone" for the display name', async () => {
+  it.each([
+    ['a null name', null],
+    ['an email used as the name', 'test@example.com'],
+  ])('renders "Someone" for %s, never an email', async (_label, name) => {
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue({
       ...mockWrapped,
-      user: { name: null, email: null },
+      user: { name },
     })
 
     const response = await GET(buildRequest('http://localhost/api/wrapped/og-image?token=test-token'))
 
     expect(response.status).toBe(200)
-    expect(elementText(imageCalls[0].element)).toContain('Someone')
+    const text = elementText(imageCalls[0].element)
+    expect(text).toContain('Someone')
+    expect(text).not.toContain('@')
   })
 
   it('formats short watch times in hours', async () => {

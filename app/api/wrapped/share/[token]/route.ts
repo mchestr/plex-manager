@@ -1,12 +1,16 @@
 import { prisma } from "@/lib/prisma"
 import { NextRequest, NextResponse } from "next/server"
 import { shareRateLimiter } from "@/lib/security/rate-limit"
-import { getHashedIP } from "@/lib/security/ip-hash"
 import { createSafeError, ErrorCode, getStatusCode, logError } from "@/lib/security/error-handler"
+import { toShareSafeV2 } from "@/lib/wrapped/data/share-safe-v2"
+
+// Share links are public but not meant for search results.
+const NOINDEX = { "X-Robots-Tag": "noindex" }
 
 /**
  * GET /api/wrapped/share/[token]
- * Fetch a shared wrapped by its share token
+ * Fetch a shared wrapped by its share token. The response carries only the
+ * share-safe projection, never the stored data blob (RWP-01, SEC-16).
  */
 export async function GET(
   request: NextRequest,
@@ -23,22 +27,21 @@ export async function GET(
     if (!token) {
       return NextResponse.json(
         createSafeError(ErrorCode.VALIDATION_ERROR, "Share token is required"),
-        { status: getStatusCode(ErrorCode.VALIDATION_ERROR) }
+        { status: getStatusCode(ErrorCode.VALIDATION_ERROR), headers: NOINDEX }
       )
     }
 
     // Find wrapped by share token
     const wrapped = await prisma.plexWrapped.findUnique({
       where: { shareToken: token },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            image: true,
-          },
-        },
+      select: {
+        id: true,
+        year: true,
+        status: true,
+        summary: true,
+        archetype: true,
+        data: true,
+        user: { select: { name: true } },
       },
     })
 
@@ -47,52 +50,29 @@ export async function GET(
     if (!wrapped || wrapped.status !== "completed") {
       return NextResponse.json(
         createSafeError(ErrorCode.NOT_FOUND, "Wrapped not found"),
-        { status: getStatusCode(ErrorCode.NOT_FOUND) }
+        { status: getStatusCode(ErrorCode.NOT_FOUND), headers: NOINDEX }
       )
     }
 
-    // Track visit (non-blocking - don't fail if tracking fails)
+    // Track the visit by wrapped id only (non-blocking - don't fail if tracking fails)
     try {
-      const hashedIP = getHashedIP(request)
-      const userAgent = request.headers.get("user-agent") || null
-      const referer = request.headers.get("referer") || null
-
       await prisma.wrappedShareVisit.create({
-        data: {
-          wrappedId: wrapped.id,
-          ipAddress: hashedIP, // Store hashed IP for privacy
-          userAgent,
-          referer,
-        },
+        data: { wrappedId: wrapped.id },
       })
     } catch (error) {
       // Log but don't fail the request if tracking fails
       logError("SHARE_VISIT_TRACKING", error)
     }
 
-    // Parse wrapped data
-    const wrappedData = JSON.parse(wrapped.data)
-
-    // Return wrapped data with user info (but hide sensitive user ID)
-    return NextResponse.json({
-      success: true,
-      wrapped: {
-        id: wrapped.id,
-        year: wrapped.year,
-        shareToken: wrapped.shareToken,
-        summary: wrapped.summary,
-        generatedAt: wrapped.generatedAt,
-        userName: wrapped.user.name || wrapped.user.email || "User",
-        userImage: wrapped.user.image,
-        data: wrappedData,
-      },
-    })
+    return NextResponse.json(
+      { success: true, wrapped: toShareSafeV2(wrapped, wrapped.user) },
+      { headers: NOINDEX }
+    )
   } catch (error) {
     logError("SHARE_API", error)
     return NextResponse.json(
       createSafeError(ErrorCode.INTERNAL_ERROR, "Failed to fetch shared wrapped"),
-      { status: getStatusCode(ErrorCode.INTERNAL_ERROR) }
+      { status: getStatusCode(ErrorCode.INTERNAL_ERROR), headers: NOINDEX }
     )
   }
 }
-

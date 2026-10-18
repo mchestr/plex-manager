@@ -15,6 +15,13 @@
  * → top-shows → streaks-patterns → monthly-journey → percentile* →
  * archetype-reveal → server-stats* → overseerr-stats* → fun-facts → finale
  * (* = omitted when the underlying data or narrative is missing)
+ *
+ * ## Stored statistics
+ *
+ * The statistics the caller passes may carry `leaderboards`: every member's
+ * name and watch time, which only the prompt uses. The returned data keeps an
+ * explicit allow-list of statistics keys instead, so no roster is stored or
+ * shown (RWP-01). `percentile` stays.
  */
 
 import {
@@ -56,6 +63,29 @@ function resolveDedication(args: {
     `<highlight>${args.statistics.moviesWatched} films</highlight> and ` +
     `<highlight>${args.statistics.episodesWatched} episodes</highlight>. A performance worthy of the title.`
   )
+}
+
+/**
+ * The statistics a stored Rewind keeps: every key except `leaderboards`,
+ * listed explicitly so a key added to `WrappedStatistics` is not stored until
+ * it is listed here.
+ */
+function toStoredStatistics(statistics: WrappedStatistics): Omit<WrappedStatistics, "leaderboards"> {
+  return {
+    totalWatchTime: statistics.totalWatchTime,
+    moviesWatched: statistics.moviesWatched,
+    showsWatched: statistics.showsWatched,
+    episodesWatched: statistics.episodesWatched,
+    topMovies: statistics.topMovies,
+    topShows: statistics.topShows,
+    serverStats: statistics.serverStats,
+    overseerrStats: statistics.overseerrStats,
+    watchTimeByMonth: statistics.watchTimeByMonth,
+    derived: statistics.derived,
+    percentile: statistics.percentile,
+    longestBinge: statistics.longestBinge,
+    mostActiveDay: statistics.mostActiveDay,
+  }
 }
 
 export function assembleWrappedData(args: {
@@ -234,7 +264,7 @@ export function assembleWrappedData(args: {
       tagline: output.archetype.tagline,
       dedication,
     },
-    statistics,
+    statistics: toStoredStatistics(statistics),
     sections,
     insights: output.insights,
     summary: output.summary,

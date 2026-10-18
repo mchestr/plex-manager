@@ -1,13 +1,19 @@
 import { notFound } from "next/navigation"
 import { Metadata } from "next"
 import { WrappedShareSummary } from "@/components/wrapped/wrapped-share-summary"
-import { WrappedData } from "@/types/wrapped"
 import { getBaseUrl } from "@/lib/utils"
+import { createLogger } from "@/lib/utils/logger"
+import { ShareSafeRewindV2 } from "@/lib/wrapped/data/share-safe-v2"
 import { stripHighlightTags } from "@/lib/wrapped/text-processor"
 
 export const dynamic = 'force-dynamic'
 
-async function getSharedWrapped(token: string) {
+const logger = createLogger("WRAPPED_SHARE_PAGE")
+
+// Share links are public but not meant for search results.
+const NO_INDEX = { index: false, follow: false }
+
+async function getSharedWrapped(token: string): Promise<ShareSafeRewindV2 | null> {
   try {
     const baseUrl = getBaseUrl()
     const response = await fetch(`${baseUrl}/api/wrapped/share/${token}`, {
@@ -21,10 +27,10 @@ async function getSharedWrapped(token: string) {
       throw new Error(`Failed to fetch shared wrapped: ${response.statusText}`)
     }
 
-    const data = await response.json()
-    return data.wrapped
+    const body: { wrapped?: unknown } = await response.json()
+    return ShareSafeRewindV2.parse(body.wrapped)
   } catch (error) {
-    console.error("Error fetching shared wrapped:", error)
+    logger.error("Error fetching shared wrapped", error)
     return null
   }
 }
@@ -45,15 +51,15 @@ export async function generateMetadata({
     return {
       title: "Plex Wrapped - Share Not Found",
       description: "This wrapped share link is not available.",
+      robots: NO_INDEX,
     }
   }
 
-  const userName = wrapped.userName || "Someone"
-  const year = wrapped.year
-  const rawSummary = wrapped.summary || `Check out ${userName}'s ${year} Plex Wrapped!`
+  const { ownerName, year } = wrapped
+  const rawSummary = wrapped.summary || `Check out ${ownerName}'s ${year} Plex Wrapped!`
   // Strip highlight tags for social media sharing (they look ugly in previews)
   const summary = stripHighlightTags(rawSummary)
-  const title = `${userName}'s ${year} Plex Wrapped`
+  const title = `${ownerName}'s ${year} Plex Wrapped`
 
   // Create a default OG image URL (you can replace this with a dynamic image generator later)
   const ogImageUrl = `${baseUrl}/api/wrapped/og-image?token=${token}`
@@ -61,6 +67,7 @@ export async function generateMetadata({
   return {
     title,
     description: summary,
+    robots: NO_INDEX,
     openGraph: {
       title,
       description: summary,
@@ -72,7 +79,7 @@ export async function generateMetadata({
           url: ogImageUrl,
           width: 1200,
           height: 630,
-          alt: `${userName}'s ${year} Plex Wrapped`,
+          alt: `${ownerName}'s ${year} Plex Wrapped`,
         },
       ],
     },
@@ -105,15 +112,5 @@ export default async function SharedWrappedPage({
     notFound()
   }
 
-  const wrappedData: WrappedData = sharedWrapped.data
-
-  return (
-    <WrappedShareSummary
-      wrappedData={wrappedData}
-      year={sharedWrapped.year}
-      userName={sharedWrapped.userName}
-      summary={sharedWrapped.summary}
-      shareToken={token}
-    />
-  )
+  return <WrappedShareSummary rewind={sharedWrapped} shareToken={token} />
 }

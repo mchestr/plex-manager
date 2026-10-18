@@ -313,10 +313,12 @@ export async function generatePlexWrapped(
       }
 
       // 5. Generate wrapped content using LLM. The model only ever sees the
-      // member's real name or "there", never their email.
+      // member's real name or "there", and the stored Rewind their name or
+      // "Viewer", never their email. The leaderboards above reach the prompt
+      // only; assembleWrappedData leaves them out of the stored statistics.
       const llmResult = await generateWrappedWithLLM({
         promptName: memberName(user) ?? "there",
-        displayName: user.name || user.email || "User",
+        displayName: memberName(user) ?? "Viewer",
         year: validYear,
         userId: user.id,
         wrappedId: wrapped.id,
@@ -462,7 +464,7 @@ export async function generateAllPlexWrapped(
         const detail = result.code
           ? adminErrorHint(result.code, user.plexUserId) ?? result.code
           : result.error || "Unknown error"
-        errors.push(`${user.name || user.email || user.id}: ${detail}`)
+        errors.push(`${user.name || user.id}: ${detail}`)
       }
     }
 
