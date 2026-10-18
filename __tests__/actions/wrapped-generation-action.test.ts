@@ -510,6 +510,90 @@ describe('generatePlexWrapped', () => {
     )
   })
 
+  describe('the name sent to the model', () => {
+    const email = 'member.private@example.com'
+
+    function setUpSuccessfulRun(user: ReturnType<typeof makePrismaUser>) {
+      ;(getServerSession as jest.Mock).mockResolvedValue(mockSession)
+      ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(user)
+      ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
+      ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(makePrismaPlexServer())
+      ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue({
+        id: 'wrapped-1',
+        userId: 'user-1',
+        year: 2024,
+        status: 'generating',
+        shareToken: 'test-share-token',
+      })
+      ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(makePrismaTautulli())
+      ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue({
+        id: 'overseerr-1',
+        url: 'http://localhost:5055',
+        apiKey: 'overseerr-key',
+        isActive: true,
+      })
+      ;(fetchTautulliStatistics as jest.Mock).mockResolvedValue({
+        success: true,
+        data: {
+          tautulliUserId: 'tautulli-user-123',
+          totalWatchTime: 1000,
+          moviesWatchTime: 500,
+          showsWatchTime: 500,
+          moviesWatched: 10,
+          showsWatched: 5,
+          episodesWatched: 50,
+          topMovies: [],
+          topShows: [],
+          watchTimeByMonth: [],
+        },
+      })
+      ;(fetchPlexServerStatistics as jest.Mock).mockResolvedValue({ success: false })
+      ;(fetchOverseerrStatistics as jest.Mock).mockResolvedValue({
+        success: true,
+        data: { totalRequests: 3, totalServerRequests: 9, approvedRequests: 2, pendingRequests: 1, topRequestedGenres: [] },
+      })
+      ;(fetchTopContentLeaderboards as jest.Mock).mockResolvedValue({ success: false })
+      ;(fetchWatchTimeLeaderboard as jest.Mock).mockResolvedValue({ success: false })
+      ;(generateWrappedWithLLM as jest.Mock).mockResolvedValue({
+        success: true,
+        data: { sections: [], summary: 'Test summary', metadata: { totalSections: 0, generationTime: 0 } },
+      })
+      ;(prisma.plexWrapped.update as jest.Mock).mockResolvedValue({})
+    }
+
+    function promptInput() {
+      const args = (generateWrappedWithLLM as jest.Mock).mock.calls[0][0]
+      return { promptName: args.promptName, year: args.year, statistics: args.statistics }
+    }
+
+    it('sends the member name, never the email', async () => {
+      setUpSuccessfulRun(makePrismaUser({ id: 'user-1', name: '  Test User ', email, plexUserId: 'plex-user-123' }))
+
+      const result = await generatePlexWrapped('user-1', 2024)
+
+      expect(result.success).toBe(true)
+      expect(promptInput().promptName).toBe('Test User')
+      expect(JSON.stringify(promptInput())).not.toContain(email)
+      // Overseerr is still looked up by email; that lookup is not the prompt
+      expect(fetchOverseerrStatistics).toHaveBeenCalledWith(expect.anything(), email, 2024)
+    })
+
+    it.each([
+      ['a null name', null],
+      ['an empty name', '   '],
+      ['an email used as the name', email],
+    ])('sends "there" for %s', async (_label, name) => {
+      setUpSuccessfulRun(makePrismaUser({ id: 'user-1', name, email, plexUserId: 'plex-user-123' }))
+
+      const result = await generatePlexWrapped('user-1', 2024)
+
+      expect(result.success).toBe(true)
+      expect(promptInput().promptName).toBe('there')
+      expect(JSON.stringify(promptInput())).not.toContain(email)
+      expect(JSON.stringify(promptInput())).not.toContain('@')
+    })
+  })
+
   it('should handle LLM generation failure', async () => {
     ;(getServerSession as jest.Mock).mockResolvedValue(mockSession)
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser)

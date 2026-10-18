@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { StyledDropdown } from "@/components/ui/styled-dropdown"
 import { StyledInput } from "@/components/ui/styled-input"
+import { DEFAULT_OPENAI_MODEL } from "@/lib/llm/openai-params"
 import { WrappedStatistics } from "@/types/wrapped"
 import { StatisticsViewer } from "@/components/admin/playground/statistics-viewer"
 
@@ -347,7 +348,7 @@ export function TestConfiguration({
                   {tokenUsage ? "Actual Cost" : "Estimated Cost"}
                 </span>
                 <span className="text-xs text-slate-400">
-                  ({tokenUsage ? (selectedModel || configuredModel || "gpt-4") : costEstimate?.model})
+                  ({tokenUsage ? (selectedModel || configuredModel || DEFAULT_OPENAI_MODEL) : costEstimate?.model})
                 </span>
               </div>
               <div className={`text-base font-bold ${tokenUsage ? 'text-green-400' : 'text-purple-400'}`}>

@@ -6,12 +6,13 @@ import { buildStatistics } from "@/lib/wrapped/__tests__/fixtures"
 
 describe("WrappedViewer v2 smoke test", () => {
   it("renders mock v2 data through the cinematic path", () => {
-    const wrappedData = generateMockWrappedData(
-      "Mike",
-      2026,
-      "user-1",
-      buildStatistics()
-    )
+    const wrappedData = generateMockWrappedData({
+      promptName: "Mike",
+      displayName: "Mike",
+      year: 2026,
+      userId: "user-1",
+      statistics: buildStatistics(),
+    })
 
     expect(wrappedData.version).toBe(2)
 
@@ -22,12 +23,13 @@ describe("WrappedViewer v2 smoke test", () => {
   })
 
   it("renders every v2 section in show-all mode without crashing", () => {
-    const wrappedData = generateMockWrappedData(
-      "Mike",
-      2026,
-      "user-1",
-      buildStatistics()
-    )
+    const wrappedData = generateMockWrappedData({
+      promptName: "Mike",
+      displayName: "Mike",
+      year: 2026,
+      userId: "user-1",
+      statistics: buildStatistics(),
+    })
 
     render(<WrappedViewer wrappedData={wrappedData} />)
 

@@ -111,7 +111,7 @@ export async function testPromptTemplate(input: TestPromptInput) {
                 wrappedId: null, // Playground tests don't have a wrapped ID
                 userId,
                 provider: config.provider,
-                model: config.model || "gpt-4",
+                model: llmResult.model ?? config.model,
                 prompt: renderedPrompt,
                 response: llmResult.rawResponse || JSON.stringify(llmResult.output, null, 2),
                 promptTokens: llmResult.tokenUsage.promptTokens,

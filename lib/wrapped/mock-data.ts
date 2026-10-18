@@ -13,14 +13,18 @@ import { WrappedLLMOutput } from "@/lib/wrapped/llm-output-schema"
 import { WrappedData, WrappedStatistics } from "@/types/wrapped"
 
 /**
- * Generate mock wrapped data when LLM is disabled
+ * Generate mock wrapped data when LLM is disabled.
+ * `promptName` goes into the copy (as the prompt name does for the LLM), and
+ * `displayName` is stored as the Rewind's name.
  */
-export function generateMockWrappedData(
-  userName: string,
-  year: number,
-  userId: string,
+export function generateMockWrappedData(args: {
+  promptName: string
+  displayName: string
+  year: number
+  userId: string
   statistics: WrappedStatistics
-): WrappedData {
+}): WrappedData {
+  const { promptName, displayName, year, userId, statistics } = args
   const totalWatchTime = formatWatchTime(statistics.totalWatchTime.total)
   const topMovie = statistics.topMovies[0]
   const topShow = statistics.topShows[0]
@@ -34,7 +38,7 @@ export function generateMockWrappedData(
           ? "series-devourer"
           : "festival-juror",
       tagline: "A year of dedicated viewing",
-      dedication: `For a year of showing up, night after night, ${userName} earns a place in the spotlight. The screen never went dark for long.`,
+      dedication: `Hey ${promptName}: a year of showing up, night after night, earns you a place in the spotlight. The screen never went dark for long.`,
     },
     narratives: {
       opening: `Welcome to your <highlight>${year}</highlight> premiere. Tonight, we look back at your year in film and television.`,
@@ -86,5 +90,5 @@ export function generateMockWrappedData(
     summary: `In ${year}, I watched ${totalWatchTime} of content! ${topMovie ? `My top movie was ${topMovie.title}` : "I explored many amazing films"} and I binged ${statistics.showsWatched} shows with ${statistics.episodesWatched} episodes. What a year!`,
   }
 
-  return assembleWrappedData({ output, statistics, userId, userName, year })
+  return assembleWrappedData({ output, statistics, userId, userName: displayName, year })
 }

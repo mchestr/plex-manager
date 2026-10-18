@@ -3,6 +3,11 @@
  * Supports OpenAI and designed to be extensible for other providers
  */
 
+import { normalizeOpenAIModelId } from "@/lib/llm/openai-params"
+import { createLogger } from "@/lib/utils/logger"
+
+const logger = createLogger("LLM_PRICING")
+
 /**
  * Model pricing per 1M tokens (input, output)
  * Based on OpenAI pricing: https://platform.openai.com/docs/pricing
@@ -10,6 +15,12 @@
  * Format: { input: price per 1M tokens, output: price per 1M tokens, cachedInput?: price per 1M tokens }
  */
 export const MODEL_PRICING: Record<string, { input: number; output: number; cachedInput?: number }> = {
+  // GPT-6 models (Standard tier, as of 2026-10-17)
+  "gpt-6-astra": { input: 10.0, output: 50.0, cachedInput: 1.0 },
+  "gpt-6.1-sol": { input: 2.0, output: 10.0, cachedInput: 0.1 },
+  "gpt-6-sol": { input: 2.0, output: 10.0, cachedInput: 0.2 },
+  "gpt-6-luna": { input: 0.1, output: 0.5, cachedInput: 0.01 },
+
   // GPT-5.5 / GPT-5.4 models (Standard tier, current catalog as of July 2026)
   "gpt-5.5": { input: 5.0, output: 30.0, cachedInput: 0.5 },
   "gpt-5.5-pro": { input: 30.0, output: 180.0 },
@@ -74,49 +85,36 @@ export function estimateTokens(text: string): number {
 }
 
 /**
- * Normalize model name by stripping version suffixes (e.g., "gpt-4o-mini-2024-07-18" -> "gpt-4o-mini")
- * OpenAI uses versioned model names, but pricing is typically the same for all versions of a model
- */
-function normalizeModelName(model: string): string {
-  // Remove version suffixes like "-2024-07-18" or "-2024-08-06"
-  // Pattern: model name followed by optional version date (YYYY-MM-DD)
-  return model.replace(/-\d{4}-\d{2}-\d{2}$/, "")
-}
-
-/**
- * Calculate cost based on model, prompt tokens, and completion tokens
- * Prices in MODEL_PRICING are per 1M tokens, so we divide by 1,000,000 to get cost
- * Currently supports OpenAI pricing, but designed to be extensible for other providers
+ * Calculate cost based on model and token counts.
+ * Prices in MODEL_PRICING are per 1M tokens. `cachedTokens` is the part of
+ * `promptTokens` served from the prompt cache (OpenAI's
+ * `usage.prompt_tokens_details.cached_tokens`) and is priced at `cachedInput`.
+ * An unknown or missing model costs 0 and logs a warning, so cost views never
+ * show a guessed price.
  */
 export function calculateCost(
   model: string | null | undefined,
   promptTokens: number,
   completionTokens: number,
-  _provider: "openai" = "openai"
+  cachedTokens = 0
 ): number {
-  if (!model) {
-    // Fallback to GPT-4 pricing if model not found
-    console.warn(`[LLM] No model specified, using GPT-4 pricing as fallback`)
-    return (promptTokens / 1000000) * 30.0 + (completionTokens / 1000000) * 60.0
-  }
+  // Exact match first (e.g. "gpt-4-0613-batch"), then the normalized ID
+  // without an "openai/" prefix or a date snapshot suffix
+  const pricing = model
+    ? MODEL_PRICING[model] ?? MODEL_PRICING[normalizeOpenAIModelId(model)]
+    : undefined
 
-  // Try exact match first
-  let pricing = MODEL_PRICING[model]
-
-  // If no exact match, try normalized model name (strip version suffix)
   if (!pricing) {
-    const normalizedModel = normalizeModelName(model)
-    pricing = MODEL_PRICING[normalizedModel]
+    logger.warn("Unknown model price", { model })
+    return 0
   }
 
-  if (pricing) {
-    // Prices are per 1M tokens, so divide by 1,000,000
-    return (promptTokens / 1000000) * pricing.input + (completionTokens / 1000000) * pricing.output
-  }
-
-  // Fallback to GPT-4 pricing if model not found
-  console.warn(`[LLM] Unknown model "${model}", using GPT-4 pricing as fallback`)
-  return (promptTokens / 1000000) * 30.0 + (completionTokens / 1000000) * 60.0
+  const cachedPrice = pricing.cachedInput ?? pricing.input
+  return (
+    ((promptTokens - cachedTokens) / 1000000) * pricing.input +
+    (cachedTokens / 1000000) * cachedPrice +
+    (completionTokens / 1000000) * pricing.output
+  )
 }
 
 /**
@@ -125,14 +123,12 @@ export function calculateCost(
  * @param model The model to use for pricing
  * @param estimatedCompletionTokens Estimated completion tokens (defaults to maxTokens or 6000)
  * @param systemPrompt Optional system prompt to include in token count
- * @param provider The LLM provider (defaults to "openai")
  */
 export function estimateCost(
   prompt: string,
   model: string | null | undefined,
   estimatedCompletionTokens?: number,
-  systemPrompt?: string,
-  provider: "openai" = "openai"
+  systemPrompt?: string
 ): {
   promptTokens: number
   estimatedCompletionTokens: number
@@ -147,7 +143,7 @@ export function estimateCost(
   const completionTokens = estimatedCompletionTokens ?? 6000
   const totalTokens = promptTokens + completionTokens
 
-  const cost = calculateCost(model, promptTokens, completionTokens, provider)
+  const cost = calculateCost(model, promptTokens, completionTokens)
 
   return {
     promptTokens,

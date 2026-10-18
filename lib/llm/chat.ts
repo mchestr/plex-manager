@@ -1,3 +1,4 @@
+import { buildOpenAIParams, openAIModelCaps } from "@/lib/llm/openai-params"
 import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("CHAT_LLM")
@@ -43,6 +44,9 @@ export interface ChatCompletionUsage {
   prompt_tokens: number
   completion_tokens: number
   total_tokens: number
+  prompt_tokens_details?: {
+    cached_tokens?: number
+  }
 }
 
 export interface ChatCompletionResponse {
@@ -50,23 +54,14 @@ export interface ChatCompletionResponse {
   content?: string | null
   toolCalls?: ChatToolCall[]
   error?: string
+  /** The error is the admin's model choice, so its message is safe to show as is. */
+  configurationError?: boolean
   usage?: ChatCompletionUsage
   model?: string
 }
 
-/**
- * Determine if a model requires max_completion_tokens instead of max_tokens
- * Newer models like GPT-5, o1, o3 use max_completion_tokens
- */
-function requiresMaxCompletionTokens(model: string): boolean {
-  const modelLower = model.toLowerCase()
-  // Newer models that use max_completion_tokens
-  return (
-    modelLower.startsWith("gpt-5") ||
-    modelLower.startsWith("o1") ||
-    modelLower.startsWith("o3")
-  )
-}
+export const RESPONSES_API_TOOLS_ERROR =
+  "This model needs the Responses API for tools; choose gpt-6-sol, gpt-6-luna or a GPT-5 model for the assistant."
 
 /**
  * Call OpenAI API for chat completions
@@ -84,30 +79,24 @@ export async function callChatLLM(
   }
 
   const model = config.model
+  const hasTools = !!tools && tools.length > 0
 
-  // Build request body
+  // Chat Completions cannot carry tools for these models, so the API call would only fail
+  if (hasTools && openAIModelCaps(model).chatTools === "responses-only") {
+    logger.warn("Chat model needs the Responses API for tools", { model })
+    return { success: false, error: RESPONSES_API_TOOLS_ERROR, configurationError: true }
+  }
+
   const requestBody: Record<string, unknown> = {
     model,
     messages,
-  }
-
-  // Only set temperature if provided
-  if (config.temperature !== undefined) {
-    requestBody.temperature = config.temperature
-  }
-
-  if (tools && tools.length > 0) {
-    requestBody.tools = tools
-  }
-
-  // Use max_completion_tokens for newer models, max_tokens for older models
-  // Only set if provided
-  if (config.maxTokens !== undefined) {
-    if (requiresMaxCompletionTokens(model)) {
-      requestBody.max_completion_tokens = config.maxTokens
-    } else {
-      requestBody.max_tokens = config.maxTokens
-    }
+    ...(hasTools && { tools }),
+    // The token-limit name, temperature support and tool settings depend on the model
+    ...buildOpenAIParams(model, {
+      temperature: config.temperature,
+      maxTokens: config.maxTokens,
+      hasTools,
+    }),
   }
 
   try {
@@ -161,7 +150,8 @@ export async function callChatLLM(
       usage: usage ? {
         prompt_tokens: usage.prompt_tokens,
         completion_tokens: usage.completion_tokens,
-        total_tokens: usage.total_tokens
+        total_tokens: usage.total_tokens,
+        prompt_tokens_details: usage.prompt_tokens_details,
       } : undefined,
       model: responseData.model || model
     }

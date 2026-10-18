@@ -10,6 +10,7 @@ import { prisma } from "@/lib/prisma"
 import { userIdSchema, yearSchema } from "@/lib/validations/shared-schemas"
 import { z } from "zod"
 import { generateWrappedWithLLM } from "@/lib/wrapped/llm"
+import { memberName } from "@/lib/wrapped/member-name"
 import {
   fetchOverseerrStatistics,
   fetchPlexServerStatistics,
@@ -311,14 +312,16 @@ export async function generatePlexWrapped(
         }),
       }
 
-      // 5. Generate wrapped content using LLM
-      const llmResult = await generateWrappedWithLLM(
-        user.name || user.email || "User",
-        validYear,
-        user.id,
-        wrapped.id,
-        statistics
-      )
+      // 5. Generate wrapped content using LLM. The model only ever sees the
+      // member's real name or "there", never their email.
+      const llmResult = await generateWrappedWithLLM({
+        promptName: memberName(user) ?? "there",
+        displayName: user.name || user.email || "User",
+        year: validYear,
+        userId: user.id,
+        wrappedId: wrapped.id,
+        statistics,
+      })
 
       if (!llmResult.success || !llmResult.data) {
         throw new Error(llmResult.error || "Failed to generate wrapped content with LLM")

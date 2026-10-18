@@ -68,7 +68,7 @@ export async function fetchOpenAIModels(apiKey: string): Promise<{ success: bool
   if (isTestMode) {
     return {
       success: true,
-      models: ['gpt-4o-mini', 'gpt-4', 'gpt-3.5-turbo'],
+      models: ['gpt-5.4-mini', 'gpt-6-sol', 'gpt-6-luna'],
     }
   }
 

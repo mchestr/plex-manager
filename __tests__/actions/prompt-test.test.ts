@@ -322,6 +322,30 @@ describe('testPromptTemplate', () => {
       })
     })
 
+    it('should record the model the API served', async () => {
+      mockGenerateWrappedPrompt.mockResolvedValue('Rendered prompt')
+      mockCallOpenAI.mockResolvedValue({
+        success: true,
+        output: { archetype: { id: 'curator' } },
+        rawResponse: 'Raw response',
+        model: 'gpt-6-luna-2026-09-22',
+        tokenUsage: { promptTokens: 100, completionTokens: 50, totalTokens: 150, cost: 0.000035 },
+      } as any)
+      mockPrisma.lLMUsage.create.mockResolvedValue({} as any)
+
+      await testPromptTemplate({
+        userName: 'Test User',
+        year: 2024,
+        statistics: mockStatistics,
+        sendToAI: true,
+        model: 'gpt-6-luna',
+      })
+
+      expect(mockPrisma.lLMUsage.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ model: 'gpt-6-luna-2026-09-22', cost: 0.000035 }),
+      })
+    })
+
     it('should handle LLM usage logging failure gracefully', async () => {
       const mockRenderedPrompt = 'Rendered prompt'
       const mockLLMResponse = {
