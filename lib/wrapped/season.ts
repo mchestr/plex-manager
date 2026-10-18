@@ -3,10 +3,10 @@
  * `getWrappedSettings()`), the `/wrapped` resolver and the admin screens
  * (RWP-04, RWV-02, UI-02).
  *
- * `server-only` is resolved by Next's own alias (and an empty mock under
- * next/jest), not an npm package, so tsx scripts (`scripts/`, the Prisma
- * seed) must not import this module. Installing the package would not help
- * them: outside the `react-server` condition it throws by design.
+ * The module imports `server-only`. The package is installed, but its default
+ * export throws outside the `react-server` condition (Next resolves it for
+ * server code, and next/jest maps it to an empty module), so tsx scripts
+ * (`scripts/`, the Prisma seed) must not import this module.
  *
  * ## Rule
  *
