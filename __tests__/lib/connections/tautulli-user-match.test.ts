@@ -100,9 +100,10 @@ describe('findTautulliUser', () => {
     const result = await findTautulliUser(config, { plexUserId: '102' })
 
     expect(result).toEqual({ ok: true, user: { user_id: 102, username: 'BobTheBuilder' } })
-    expect(mockFetch).toHaveBeenCalledWith(
-      'http://tautulli.local:8181/api/v2?apikey=key&cmd=get_users'
-    )
+    // Bounded by fetchWithTimeout's signal (P0.17), not undici's 300 s default.
+    expect(mockFetch).toHaveBeenCalledWith('http://tautulli.local:8181/api/v2?apikey=key&cmd=get_users', {
+      signal: expect.any(AbortSignal),
+    })
   })
 
   it('returns TAUTULLI_USER_NOT_FOUND and logs a candidate count only, at debug', async () => {

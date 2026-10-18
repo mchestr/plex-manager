@@ -25,7 +25,7 @@ import { generateShareToken } from '@/lib/utils'
 import { getWrappedSettings } from '@/actions/admin'
 import { consume, reward } from '@/lib/security/rate-limit'
 import { memberErrorCopy } from '@/lib/wrapped/generation-errors'
-import { getRewindEligibility } from '@/lib/wrapped/eligibility'
+import { checkRewindEligibility } from '@/lib/wrapped/eligibility'
 import { assembleWrappedData } from '@/lib/wrapped/assemble-wrapped'
 import {
   buildLeaderboards,
@@ -79,7 +79,7 @@ jest.mock('next-auth', () => ({
 // Every member is eligible by default; the eligibility tests below switch to
 // ineligible answers or to the real module.
 jest.mock('@/lib/wrapped/eligibility', () => ({
-  getRewindEligibility: jest.fn(),
+  checkRewindEligibility: jest.fn(),
 }))
 
 jest.mock('@/lib/auth', () => ({
@@ -123,7 +123,7 @@ const SEASON_YEAR = 2026
  */
 function setGenerationDefaults() {
   ;(getWrappedSettings as jest.Mock).mockResolvedValue({ wrappedEnabled: true, wrappedYear: SEASON_YEAR })
-  ;(getRewindEligibility as jest.Mock).mockResolvedValue({ eligible: true })
+  ;(checkRewindEligibility as jest.Mock).mockResolvedValue({ eligible: true, tautulliUser: null })
   ;(prisma.config.findUnique as jest.Mock).mockResolvedValue(null)
   ;(consume as jest.Mock).mockResolvedValue({ ok: true })
   ;(reward as jest.Mock).mockResolvedValue(undefined)
@@ -446,24 +446,38 @@ describe('generatePlexWrapped', () => {
 
     it('refuses a Plex member with no Tautulli match before any row is created or claimed', async () => {
       setUpEligibilityRun(mockUser)
-      ;(getRewindEligibility as jest.Mock).mockResolvedValue({ eligible: false, reason: 'NO_TAUTULLI_MATCH' })
+      ;(checkRewindEligibility as jest.Mock).mockResolvedValue({ eligible: false, reason: 'NO_TAUTULLI_MATCH' })
 
       const result = await generatePlexWrapped('user-1', 2026)
 
       expect(result).toEqual(NOT_ELIGIBLE)
-      expect(getRewindEligibility).toHaveBeenCalledWith(mockUser)
+      expect(checkRewindEligibility).toHaveBeenCalledWith({ id: 'user-1', plexUserId: 'plex-user-123' })
       expectNoRowAndNoPoint()
     })
 
     it("checks ownership before eligibility, so another member's id reveals nothing", async () => {
       setUpEligibilityRun(mockUser)
       ;(getServerSession as jest.Mock).mockResolvedValue(mockSession)
-      ;(getRewindEligibility as jest.Mock).mockResolvedValue({ eligible: false, reason: 'NO_TAUTULLI_MATCH' })
+      ;(checkRewindEligibility as jest.Mock).mockResolvedValue({ eligible: false, reason: 'NO_TAUTULLI_MATCH' })
 
       const result = await generatePlexWrapped('user-2', 2026)
 
       expect(result).toEqual({ success: false, error: 'Unauthorized: You can only generate your own wrapped' })
-      expect(getRewindEligibility).not.toHaveBeenCalled()
+      expect(checkRewindEligibility).not.toHaveBeenCalled()
+    })
+
+    it('refuses a Jellyfin-only member on a server with no Plex configured, revealing no configuration', async () => {
+      setUpEligibilityRun(makePrismaUser({ ...mockUser, primaryAuthService: 'jellyfin', plexUserId: null }))
+      ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(null)
+      ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(null)
+
+      const result = await generatePlexWrapped('user-1', 2026)
+
+      expect(result).toEqual(NOT_ELIGIBLE)
+      expect(prisma.plexServer.findFirst).not.toHaveBeenCalled()
+      expect(prisma.tautulli.findFirst).not.toHaveBeenCalled()
+      expect(checkRewindEligibility).not.toHaveBeenCalled()
+      expectNoRowAndNoPoint()
     })
 
     describe('with the real eligibility check and Tautulli roster', () => {
@@ -471,7 +485,7 @@ describe('generatePlexWrapped', () => {
       const actualEligibility = jest.requireActual('@/lib/wrapped/eligibility')
 
       beforeEach(() => {
-        ;(getRewindEligibility as jest.Mock).mockImplementation(actualEligibility.getRewindEligibility)
+        ;(checkRewindEligibility as jest.Mock).mockImplementation(actualEligibility.checkRewindEligibility)
         global.fetch = jest.fn().mockResolvedValue({
           ok: true,
           json: async () => ({
@@ -495,6 +509,8 @@ describe('generatePlexWrapped', () => {
           },
         })
         ;(fetchPlexServerStatistics as jest.Mock).mockResolvedValue({ success: false })
+        ;(fetchTopContentLeaderboards as jest.Mock).mockResolvedValue({ success: false })
+        ;(fetchWatchTimeLeaderboard as jest.Mock).mockResolvedValue({ success: false })
         ;(generateWrappedWithLLM as jest.Mock).mockResolvedValue({
           success: true,
           data: { sections: [], summary: 'Test summary', metadata: { totalSections: 0, generationTime: 0 } },
@@ -530,11 +546,36 @@ describe('generatePlexWrapped', () => {
         const result = await generatePlexWrapped('member-jellyfin-linked', 2026)
 
         expect(result).toEqual({ success: true, wrappedId: 'wrapped-1' })
+        // The row the eligibility check just fetched: no second get_users.
         expect(fetchTautulliStatistics).toHaveBeenCalledWith(
           { url: 'https://tautulli.example.com:8181', apiKey: 'tautulli-key' },
           { plexUserId: '4242' },
-          2026
+          2026,
+          { user_id: 4242, username: 'linked_plex' }
         )
+        expect(global.fetch).toHaveBeenCalledTimes(1)
+      })
+
+      it('reads get_users once for a run whose eligibility check asked Tautulli', async () => {
+        // The real statistics fetch, against a roster that has the member and
+        // an empty history: only get_users and get_history reach Tautulli.
+        const actualStatistics = jest.requireActual('@/lib/wrapped/tautulli-user-statistics')
+        ;(fetchTautulliStatistics as jest.Mock).mockImplementation(actualStatistics.fetchTautulliStatistics)
+        global.fetch = jest.fn().mockImplementation(async (url: string) => ({
+          ok: true,
+          json: async () =>
+            url.includes('cmd=get_users')
+              ? { response: { result: 'success', data: [{ user_id: 4242, username: 'linked_plex' }] } }
+              : { response: { result: 'success', data: { data: [], recordsTotal: 0 } } },
+        }))
+        setUpEligibilityRun(makePrismaUser({ ...mockUser, id: 'member-one-roster-read', plexUserId: '4242' }))
+
+        const result = await generatePlexWrapped('member-one-roster-read', 2026)
+
+        expect(result).toEqual({ success: true, wrappedId: 'wrapped-1' })
+        const commands = (global.fetch as jest.Mock).mock.calls.map(([url]) => new URL(url).searchParams.get('cmd'))
+        expect(commands.filter((cmd) => cmd === 'get_users')).toHaveLength(1)
+        expect(commands).toContain('get_history')
       })
     })
   })
@@ -626,7 +667,8 @@ describe('generatePlexWrapped', () => {
       expect(fetchTautulliStatistics).toHaveBeenCalledWith(
         { url: 'https://tautulli.example.com:8181', apiKey: 'tautulli-key' },
         { plexUserId: 'plex-user-123' },
-        2026
+        2026,
+        null
       )
       expect(result.code).toBe('TAUTULLI_USER_NOT_FOUND')
       expect(global.fetch).toHaveBeenCalledTimes(1)
@@ -1860,7 +1902,7 @@ describe('generateAllPlexWrapped', () => {
     const result = await generateAllPlexWrapped()
 
     expect(result.errors).toEqual(['User 1: Tautulli is down'])
-    expect(fetchTautulliStatistics).toHaveBeenCalledWith(expect.anything(), { plexUserId: 'plex-1' }, 2025)
+    expect(fetchTautulliStatistics).toHaveBeenCalledWith(expect.anything(), { plexUserId: 'plex-1' }, 2025, null)
     expect(claimCalls()[0].where).toEqual(expect.objectContaining({ userId: 'user-1', year: 2025 }))
   })
 
@@ -2052,7 +2094,7 @@ describe('generateAllPlexWrapped', () => {
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
     ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(makePrismaPlexServer())
     ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(makePrismaTautulli())
-    ;(getRewindEligibility as jest.Mock).mockResolvedValue({ eligible: false, reason: 'NO_TAUTULLI_MATCH' })
+    ;(checkRewindEligibility as jest.Mock).mockResolvedValue({ eligible: false, reason: 'NO_TAUTULLI_MATCH' })
 
     const result = await generateAllPlexWrapped()
 

@@ -345,6 +345,28 @@ describe('WrappedCard eligibility', () => {
     expect(screen.queryByText(COPY)).not.toBeInTheDocument()
   })
 
+  it('explains Rewind once the action finds a member the page rendered as eligible ineligible', async () => {
+    // Tautulli failed open when the page rendered, and has answered since.
+    ;(getUserPlexWrapped as jest.Mock).mockResolvedValue(null)
+    ;(generatePlexWrapped as jest.Mock).mockResolvedValue({
+      success: false,
+      code: 'REWIND_NOT_ELIGIBLE',
+      error: 'server text',
+    })
+
+    render(<WrappedCard userId="user-1" memberSince="2020-01-01T00:00:00.000Z" rewindEligibility={ELIGIBLE} />)
+    fireEvent.click(await screen.findByTestId('wrapped-card-generate'))
+
+    const card = await screen.findByTestId('wrapped-card-not-eligible')
+    expect(card).toHaveTextContent('Rewind 2026')
+    expect(card).toHaveTextContent(COPY)
+    expect(screen.queryByTestId('wrapped-card-generate')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('wrapped-card-generating')).not.toBeInTheDocument()
+    expect(mockShowError).not.toHaveBeenCalled()
+    expect(generatePlexWrapped).toHaveBeenCalledTimes(1)
+  })
+
   it('offers an eligible member the Generate button', async () => {
     ;(getUserPlexWrapped as jest.Mock).mockResolvedValue(null)
 

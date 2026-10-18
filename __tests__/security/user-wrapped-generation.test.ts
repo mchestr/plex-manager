@@ -11,7 +11,7 @@ import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
 import { getWrappedSettings } from '@/actions/admin'
 import { consume } from '@/lib/security/rate-limit'
-import { getRewindEligibility } from '@/lib/wrapped/eligibility'
+import { checkRewindEligibility } from '@/lib/wrapped/eligibility'
 
 // Mock dependencies
 jest.mock('next-auth', () => ({
@@ -71,7 +71,7 @@ jest.mock('@/lib/security/rate-limit', () => ({
 }))
 
 jest.mock('@/lib/wrapped/eligibility', () => ({
-  getRewindEligibility: jest.fn(),
+  checkRewindEligibility: jest.fn(),
 }))
 
 describe('User Wrapped Generation Security', () => {
@@ -109,7 +109,7 @@ describe('User Wrapped Generation Security', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     ;(getWrappedSettings as jest.Mock).mockResolvedValue({ wrappedEnabled: true, wrappedYear: 2026 })
-    ;(getRewindEligibility as jest.Mock).mockResolvedValue({ eligible: true })
+    ;(checkRewindEligibility as jest.Mock).mockResolvedValue({ eligible: true, tautulliUser: null })
     ;(consume as jest.Mock).mockResolvedValue({ ok: true })
     ;(prisma.plexWrapped.createMany as jest.Mock).mockResolvedValue({ count: 1 })
     ;(prisma.plexWrapped.updateManyAndReturn as jest.Mock).mockResolvedValue([{ id: 'wrapped-1' }])
@@ -258,7 +258,7 @@ describe('User Wrapped Generation Security', () => {
       ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
       ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(mockPlexServer)
       ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(mockTautulli)
-      ;(getRewindEligibility as jest.Mock).mockResolvedValue({ eligible: false, reason: 'NO_TAUTULLI_MATCH' })
+      ;(checkRewindEligibility as jest.Mock).mockResolvedValue({ eligible: false, reason: 'NO_TAUTULLI_MATCH' })
 
       const result = await generatePlexWrapped('user-1', 2026)
 

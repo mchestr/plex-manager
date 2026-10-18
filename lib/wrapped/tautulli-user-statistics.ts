@@ -4,7 +4,12 @@
  * Fetches individual user watch statistics from Tautulli
  */
 
-import { findTautulliUser, type TautulliUserIdentity } from "@/lib/connections/tautulli"
+import {
+  findTautulliUser,
+  type FindTautulliUserResult,
+  type TautulliUserIdentity,
+  type TautulliUserRow,
+} from "@/lib/connections/tautulli"
 import { createLogger } from "@/lib/utils/logger"
 import type { TautulliHistoryItem } from "@/lib/validations/tautulli"
 
@@ -27,11 +32,16 @@ const logger = createLogger("STATISTICS")
  * not in the list, the result carries `code: "TAUTULLI_USER_NOT_FOUND"` and
  * fixed member copy, never the list itself, and the miss is logged at warn
  * with a candidate count only.
+ *
+ * `matchedUser` is the member's row when the caller has just found it with
+ * that lookup (`generatePlexWrapped`'s eligibility check), so `get_users` is
+ * not fetched a second time for the same run.
  */
 export async function fetchTautulliStatistics(
   config: TautulliConfig,
   identity: TautulliUserIdentity,
-  year: number
+  year: number,
+  matchedUser: TautulliUserRow | null = null
 ): Promise<{
   success: boolean
   data?: TautulliStatisticsData
@@ -42,7 +52,9 @@ export async function fetchTautulliStatistics(
     const baseUrl = `${config.url}/api/v2`
     const apiKey = config.apiKey
 
-    const lookup = await findTautulliUser(config, identity)
+    const lookup: FindTautulliUserResult = matchedUser
+      ? { ok: true, user: matchedUser }
+      : await findTautulliUser(config, identity)
     if (!lookup.ok) {
       if (lookup.code === "TAUTULLI_USER_NOT_FOUND") {
         logger.warn("Tautulli user not found", { plexUserId: identity.plexUserId, candidates: lookup.candidates })

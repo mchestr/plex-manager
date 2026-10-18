@@ -18,7 +18,7 @@ import {
   isLiveClaim,
   writeIfClaimed,
 } from "@/lib/wrapped/generation-claim"
-import { getRewindEligibility } from "@/lib/wrapped/eligibility"
+import { checkRewindEligibility } from "@/lib/wrapped/eligibility"
 import { generateWrappedWithLLM } from "@/lib/wrapped/llm"
 import { memberName } from "@/lib/wrapped/member-name"
 import {
@@ -111,11 +111,14 @@ async function runInFlight(userId: string, year: number): Promise<boolean> {
  * 4. Entitlement through `getAccessGateStatus` (a no-op while Stripe is off;
  *    admins are entitled): `NOT_ENTITLED`.
  * 5. Only admins regenerate a completed Rewind, and a live run already making
- *    this Rewind returns `ALREADY_GENERATING` before any limit is spent. The
- *    configuration a run needs (Plex, Tautulli) is checked here too, and so is
- *    the member's eligibility (`lib/wrapped/eligibility.ts`): a member with no
- *    Plex identity or no Tautulli match gets `REWIND_NOT_ELIGIBLE` (FR-48,
- *    RWP-08). A failure that a retry cannot fix costs nothing and writes no row.
+ *    this Rewind returns `ALREADY_GENERATING` before any limit is spent. A
+ *    member with no Plex identity then gets `REWIND_NOT_ELIGIBLE` before the
+ *    configuration is read, so a direct call on a Jellyfin-only server gets
+ *    the same answer as the card. The configuration a run needs (Plex,
+ *    Tautulli) is checked next, and then the Tautulli match
+ *    (`lib/wrapped/eligibility.ts`): no match is `REWIND_NOT_ELIGIBLE` too
+ *    (FR-48, RWP-08). A failure that a retry cannot fix costs nothing and
+ *    writes no row.
  * 6. Non-admins spend a point of `rw:gen:burst` (1 per 10 minutes) and
  *    `rw:gen:daily` (3 per day): `RATE_LIMITED` with `retryAfterSec`, unless
  *    a run that started since check 5 now holds the row (`ALREADY_GENERATING`).
@@ -191,6 +194,12 @@ export async function generatePlexWrapped(userId: string, year: number): Promise
       return refused("ALREADY_GENERATING")
     }
 
+    // No Plex identity, so no Plex watch history: refuse before any lookup (FR-48).
+    const { plexUserId } = user
+    if (!plexUserId) {
+      return refused("REWIND_NOT_ELIGIBLE")
+    }
+
     // Get Plex server config
     const plexServer = await prisma.plexServer.findFirst({
       where: { isActive: true },
@@ -208,9 +217,10 @@ export async function generatePlexWrapped(userId: string, year: number): Promise
       return { success: false, error: "No active Tautulli server configured" }
     }
 
-    // No Plex watch history to read: refuse before any row or point (FR-48).
-    const { plexUserId } = user
-    if (!plexUserId || !(await getRewindEligibility(user)).eligible) {
+    // No Tautulli match, so no Plex watch history to read: refuse before any
+    // row or point (FR-48). A fresh match is handed to the statistics fetch.
+    const eligibility = await checkRewindEligibility({ id: user.id, plexUserId })
+    if (!eligibility.eligible) {
       return refused("REWIND_NOT_ELIGIBLE")
     }
 
@@ -252,7 +262,8 @@ export async function generatePlexWrapped(userId: string, year: number): Promise
           apiKey: tautulli.apiKey,
         },
         { plexUserId },
-        validYear
+        validYear,
+        eligibility.tautulliUser
       )
 
       // A known cause is stored as a code, and the member gets fixed copy.

@@ -64,11 +64,14 @@ export function WrappedCard({ userId, memberSince, rewindEligibility }: WrappedC
   const [isLoading, setIsLoading] = useState(true)
   const [wrappedSettings, setWrappedSettings] = useState<{ enabled: boolean; year: number } | null>(null)
   const [settingsFailed, setSettingsFailed] = useState(false)
+  // The action can refuse a member the page rendered as eligible (Tautulli
+  // failed open, or the cached match expired since): the card then explains.
+  const [refusedAsIneligible, setRefusedAsIneligible] = useState(false)
   const pollFailureCountRef = useRef(0)
 
   // Check membership duration; a member without Plex history is ineligible regardless
   const memberLongEnough = isEligibleForWrapped(memberSince)
-  const canHaveRewind = rewindEligibility.eligible
+  const canHaveRewind = rewindEligibility.eligible && !refusedAsIneligible
 
   // Load wrapped settings. Without them the season year is unknown, so a
   // failure (e.g. a stale client after a redeploy) shows a retry, not an
@@ -162,6 +165,9 @@ export function WrappedCard({ userId, memberSince, rewindEligibility }: WrappedC
         // Another tab (or a double click) already started it: keep polling for that run.
         toast.showInfo(refusalCopy(result.code))
         await loadWrapped()
+      } else if (result.code === "REWIND_NOT_ELIGIBLE") {
+        setIsGenerating(false)
+        setRefusedAsIneligible(true)
       } else {
         toast.showError(
           isGenerationRefusal(result.code)

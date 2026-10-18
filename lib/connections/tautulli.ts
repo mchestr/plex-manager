@@ -154,16 +154,25 @@ export async function getTautulliLibraryStats(config: TautulliParsed): Promise<C
   }
 }
 
+/**
+ * Tautulli's user list. The request is bounded by `fetchWithTimeout`'s default
+ * 10 seconds: the home page and `generatePlexWrapped` wait on it (through
+ * {@link findTautulliUser}) before a member's rate limit is checked, so a hung
+ * Tautulli must not hold them for undici's 300-second default.
+ */
 export async function getTautulliUsers(config: TautulliEndpoint): Promise<ConnectionResult<unknown>> {
   try {
     const url = `${config.url}/api/v2?apikey=${config.apiKey}&cmd=get_users`
-    const response = await fetch(url)
+    const response = await fetchWithTimeout(url)
     if (!response.ok) {
       return { success: false, error: `Tautulli users error: ${response.statusText}` }
     }
     const data = await response.json()
     return { success: true, data }
   } catch (error) {
+    if (isTimeoutError(error)) {
+      return { success: false, error: "Tautulli users request timed out" }
+    }
     if (error instanceof Error) {
       return { success: false, error: `Connection error: ${error.message}` }
     }
