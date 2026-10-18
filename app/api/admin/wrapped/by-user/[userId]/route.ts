@@ -1,7 +1,7 @@
 import { getUserPlexWrapped } from "@/actions/users"
 import { NextRequest, NextResponse } from "next/server"
 import { requireAdminAPI, validateYear } from "@/lib/security/api-helpers"
-import { adminRateLimiter } from "@/lib/security/rate-limit"
+import { limitRequest } from "@/lib/security/rate-limit"
 import { createSafeError, ErrorCode, getStatusCode, logError } from "@/lib/security/error-handler"
 
 export async function GET(
@@ -11,7 +11,7 @@ export async function GET(
   try {
     const { userId } = await context.params
     // Apply rate limiting
-    const rateLimitResponse = await adminRateLimiter(request)
+    const rateLimitResponse = await limitRequest("admin", request)
     if (rateLimitResponse) {
       return rateLimitResponse
     }

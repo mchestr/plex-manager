@@ -1,4 +1,5 @@
 import { createE2EPrismaClient } from './helpers/prisma';
+import { clearRateLimits } from './helpers/rate-limits';
 
 /**
  * Global setup for Playwright tests
@@ -97,6 +98,15 @@ async function globalSetup() {
     const adminCount = await prisma.user.count({ where: { email: 'admin@example.com' } });
     const regularCount = await prisma.user.count({ where: { email: 'regular@example.com' } });
     console.log(`[E2E Setup] Admin users: ${adminCount}, Regular users: ${regularCount}`);
+
+    // The web server inherits REDIS_URL from .env, so limiter counts from an
+    // earlier run would otherwise carry over into this one.
+    if (process.env.REDIS_URL) {
+      const deleted = await clearRateLimits(process.env.REDIS_URL);
+      if (deleted !== null) {
+        console.log(`[E2E Setup] Cleared ${deleted} rate-limit counters from Redis`);
+      }
+    }
 
   } catch (error) {
     console.error('[E2E Setup] Error setting up database:', error);

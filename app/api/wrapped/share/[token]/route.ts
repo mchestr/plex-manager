@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma"
 import { NextRequest, NextResponse } from "next/server"
-import { shareRateLimiter } from "@/lib/security/rate-limit"
+import { limitRequest } from "@/lib/security/rate-limit"
 import { createSafeError, ErrorCode, getStatusCode, logError } from "@/lib/security/error-handler"
 import { toShareSafeV2 } from "@/lib/wrapped/data/share-safe-v2"
 
@@ -19,7 +19,7 @@ export async function GET(
   try {
     const { token } = await context.params
     // Apply rate limiting
-    const rateLimitResponse = await shareRateLimiter(request)
+    const rateLimitResponse = await limitRequest("share", request)
     if (rateLimitResponse) {
       rateLimitResponse.headers.set("X-Robots-Tag", NOINDEX["X-Robots-Tag"])
       return rateLimitResponse

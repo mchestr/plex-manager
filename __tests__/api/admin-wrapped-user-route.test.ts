@@ -5,7 +5,7 @@
 import { GET } from '@/app/api/admin/wrapped/[wrappedId]/user/route'
 import { prisma } from '@/lib/prisma'
 import { requireAdminAPI } from '@/lib/security/api-helpers'
-import { adminRateLimiter } from '@/lib/security/rate-limit'
+import { limitRequest } from '@/lib/security/rate-limit'
 import { NextRequest } from 'next/server'
 
 // Mock dependencies
@@ -22,7 +22,7 @@ jest.mock('@/lib/security/api-helpers', () => ({
 }))
 
 jest.mock('@/lib/security/rate-limit', () => ({
-  adminRateLimiter: jest.fn(),
+  limitRequest: jest.fn(),
 }))
 
 // Mock NextRequest
@@ -56,7 +56,7 @@ jest.mock('next/server', () => {
 describe('GET /api/admin/wrapped/[wrappedId]/user', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    ;(adminRateLimiter as jest.Mock).mockResolvedValue(null)
+    ;(limitRequest as jest.Mock).mockResolvedValue(null)
     ;(requireAdminAPI as jest.Mock).mockResolvedValue({ session: { user: { isAdmin: true } }, response: null })
   })
 
@@ -123,7 +123,7 @@ describe('GET /api/admin/wrapped/[wrappedId]/user', () => {
 
   it('should return 429 when rate limit is exceeded', async () => {
     const mockRateLimitResponse = { status: 429, json: () => Promise.resolve({ error: 'Too many requests' }) }
-    ;(adminRateLimiter as jest.Mock).mockResolvedValue(mockRateLimitResponse)
+    ;(limitRequest as jest.Mock).mockResolvedValue(mockRateLimitResponse)
 
     const { NextRequest } = await import('next/server')
     const request = new NextRequest('http://localhost/api/admin/wrapped/wrapped-1/user')
@@ -131,6 +131,7 @@ describe('GET /api/admin/wrapped/[wrappedId]/user', () => {
     const response = await GET(request, { params: { wrappedId: 'wrapped-1' } })
 
     expect(response).toBe(mockRateLimitResponse)
+    expect(limitRequest).toHaveBeenCalledWith('admin', request)
     expect(requireAdminAPI).not.toHaveBeenCalled()
   })
 

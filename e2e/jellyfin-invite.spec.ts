@@ -73,8 +73,10 @@ test.describe('Jellyfin Invite Flow', () => {
         // Try to submit empty form
         await page.getByTestId('jellyfin-submit-button').click();
 
-        // Should show error for missing username
-        await expect(page.getByTestId('invalid-invite-heading')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+        // The username error shows on the form, which stays usable
+        await expect(page.getByTestId('jellyfin-form-error')).toContainText('letters, numbers, dots, dashes or underscores');
+        await expect(page.getByTestId('jellyfin-invite-form')).toBeVisible();
+        await expect(page.getByTestId('invalid-invite-heading')).toHaveCount(0);
 
       } finally {
         await prisma.invite.deleteMany({
@@ -109,9 +111,50 @@ test.describe('Jellyfin Invite Flow', () => {
         await page.getByTestId('jellyfin-confirm-password-input').fill('differentpassword');
         await page.getByTestId('jellyfin-submit-button').click();
 
-        // Should show error for password mismatch (shows as invalid invite due to error callback)
-        await expect(page.getByTestId('invalid-invite-heading')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
-        await expect(page.getByText('Passwords do not match')).toBeVisible();
+        // The mismatch shows on the form, which stays usable
+        await expect(page.getByTestId('jellyfin-form-error')).toHaveText('Passwords do not match');
+        await expect(page.getByTestId('jellyfin-invite-form')).toBeVisible();
+        await expect(page.getByTestId('invalid-invite-heading')).toHaveCount(0);
+
+      } finally {
+        await prisma.invite.deleteMany({
+          where: { code: inviteCode }
+        });
+        await prisma.$disconnect();
+      }
+    });
+
+    test('rejects an email-shaped username without consuming the invite', async ({ page }) => {
+      const prisma = createE2EPrismaClient();
+      const inviteCode = `JMAIL${Date.now()}`.substring(0, 8).toUpperCase();
+
+      try {
+        await prisma.invite.create({
+          data: {
+            code: inviteCode,
+            serverType: 'JELLYFIN',
+            maxUses: 1,
+            useCount: 0,
+          }
+        });
+
+        await page.goto(`/invite/${inviteCode}`);
+        await waitForLoadingGone(page);
+        await expect(page.getByTestId('jellyfin-invite-form')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+
+        await page.getByTestId('jellyfin-username-input').fill('owner@example.com');
+        await page.getByTestId('jellyfin-password-input').fill('password123');
+        await page.getByTestId('jellyfin-confirm-password-input').fill('password123');
+        await page.getByTestId('jellyfin-submit-button').click();
+
+        // Rejected on the form, so the member can pick another name on the same page
+        await expect(page.getByTestId('jellyfin-form-error')).toContainText('letters, numbers, dots, dashes or underscores');
+        await expect(page.getByTestId('jellyfin-invite-form')).toBeVisible();
+        await expect(page.getByTestId('invalid-invite-heading')).toHaveCount(0);
+        await expect(page.getByTestId('jellyfin-username-input')).toHaveValue('owner@example.com');
+
+        const invite = await prisma.invite.findUnique({ where: { code: inviteCode } });
+        expect(invite?.useCount).toBe(0);
 
       } finally {
         await prisma.invite.deleteMany({

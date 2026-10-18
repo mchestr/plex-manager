@@ -10,7 +10,7 @@
 import { GET } from "@/app/(app)/discord/connect/route"
 import { getServerSession } from "next-auth"
 import { createDiscordAuthorizationUrl } from "@/lib/discord/integration"
-import { checkRateLimit } from "@/lib/security/rate-limit"
+import { consume } from "@/lib/security/rate-limit"
 
 jest.mock("next-auth", () => ({ getServerSession: jest.fn() }))
 jest.mock("@/lib/auth", () => ({ authOptions: {} }))
@@ -18,14 +18,14 @@ jest.mock("@/lib/discord/integration", () => ({
   createDiscordAuthorizationUrl: jest.fn(),
 }))
 jest.mock("@/lib/security/rate-limit", () => ({
-  checkRateLimit: jest.fn(),
+  consume: jest.fn(),
 }))
 
 const mockGetServerSession = getServerSession as jest.MockedFunction<typeof getServerSession>
 const mockCreateUrl = createDiscordAuthorizationUrl as jest.MockedFunction<
   typeof createDiscordAuthorizationUrl
 >
-const mockCheckRateLimit = checkRateLimit as jest.MockedFunction<typeof checkRateLimit>
+const mockConsume = consume as jest.MockedFunction<typeof consume>
 
 function makeRequest(url = "http://localhost:3000/discord/connect") {
   return { url, nextUrl: new URL(url) } as never
@@ -44,26 +44,23 @@ describe("discord connect route rate limiting", () => {
     const res = await GET(makeRequest())
 
     expect(res.status).toBe(307)
-    expect(mockCheckRateLimit).not.toHaveBeenCalled()
+    expect(mockConsume).not.toHaveBeenCalled()
     expect(mockCreateUrl).not.toHaveBeenCalled()
   })
 
-  it("checks the per-user rate limit keyed by discord-link:<userId> and proceeds when allowed", async () => {
-    mockCheckRateLimit.mockReturnValue(true)
+  it("spends the per-user discord-link limit for the user id and proceeds when allowed", async () => {
+    mockConsume.mockResolvedValue({ ok: true })
 
     const res = await GET(makeRequest())
 
-    expect(mockCheckRateLimit).toHaveBeenCalledWith(
-      "discord-link:user-1",
-      expect.objectContaining({ windowMs: expect.any(Number), max: expect.any(Number) })
-    )
+    expect(mockConsume).toHaveBeenCalledWith("discord-link", "user-1")
     expect(mockCreateUrl).toHaveBeenCalledTimes(1)
     // Redirect to the Discord authorize URL.
     expect(res.headers.get("location")).toContain("discord.com/oauth2/authorize")
   })
 
   it("blocks and redirects with an error when the rate limit is exceeded (URL not built)", async () => {
-    mockCheckRateLimit.mockReturnValue(false)
+    mockConsume.mockResolvedValue({ ok: false, retryAfterSec: 120 })
 
     const res = await GET(makeRequest())
 

@@ -7,7 +7,7 @@
 
 import { GET } from '@/app/api/wrapped/og-image/route'
 import { prisma } from '@/lib/prisma'
-import { shareRateLimiter } from '@/lib/security/rate-limit'
+import { limitRequest } from '@/lib/security/rate-limit'
 import { NextRequest } from 'next/server'
 
 // Mock dependencies
@@ -20,7 +20,7 @@ jest.mock('@/lib/prisma', () => ({
 }))
 
 jest.mock('@/lib/security/rate-limit', () => ({
-  shareRateLimiter: jest.fn(),
+  limitRequest: jest.fn(),
 }))
 
 interface MockImageCall {
@@ -111,7 +111,7 @@ describe('GET /api/wrapped/og-image', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     imageCalls.length = 0
-    ;(shareRateLimiter as jest.Mock).mockResolvedValue(null)
+    ;(limitRequest as jest.Mock).mockResolvedValue(null)
   })
 
   it('renders a 1200x630 OG image with archetype and stats', async () => {
@@ -279,12 +279,14 @@ describe('GET /api/wrapped/og-image', () => {
 
   it('short-circuits on rate limit, with noindex', async () => {
     const mockRateLimitResponse = { status: 429, headers: new Headers() }
-    ;(shareRateLimiter as jest.Mock).mockResolvedValue(mockRateLimitResponse)
+    ;(limitRequest as jest.Mock).mockResolvedValue(mockRateLimitResponse)
 
-    const response = await GET(buildRequest('http://localhost/api/wrapped/og-image?token=test-token'))
+    const request = buildRequest('http://localhost/api/wrapped/og-image?token=test-token')
+    const response = await GET(request)
 
     expect(response).toBe(mockRateLimitResponse)
     expect(response.headers.get('X-Robots-Tag')).toBe('noindex')
+    expect(limitRequest).toHaveBeenCalledWith('share', request)
     expect(prisma.plexWrapped.findUnique).not.toHaveBeenCalled()
   })
 

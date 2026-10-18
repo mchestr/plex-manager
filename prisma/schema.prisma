@@ -79,7 +79,7 @@ model JellyfinServer {
   apiKey          String   // Jellyfin API key for admin operations
   adminUserId     String?  // Jellyfin user ID of the admin who configured this server
   isActive        Boolean  @default(true)
-  enabledForLogin Boolean  @default(true) // When false, hides Jellyfin from the login page
+  enabledForLogin Boolean  @default(true) // "Allow Jellyfin sign-in": when false, Jellyfin sign-in is refused and hidden from the login page
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

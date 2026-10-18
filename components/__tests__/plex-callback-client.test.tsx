@@ -5,6 +5,7 @@ import { checkServerAccess, isSubscriptionGatingEnabled } from '@/actions/auth'
 import { processInvite } from '@/actions/invite'
 import { getOnboardingStatus } from '@/actions/onboarding'
 import { getPlexAuthToken } from '@/lib/plex-auth'
+import { RATE_LIMITED_MESSAGE } from '@/lib/security/rate-limit-messages'
 import { redirectTo } from '@/lib/utils/navigation'
 import { signIn } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -74,7 +75,7 @@ describe('PlexCallbackPageClient — Stripe subscription gating', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     mockUseRouter.mockReturnValue({ push: mockPush })
-    mockGetPlexAuthToken.mockResolvedValue('user-token')
+    mockGetPlexAuthToken.mockResolvedValue({ success: true, authToken: 'user-token' })
     setSearchParams()
   })
 
@@ -226,4 +227,41 @@ describe('PlexCallbackPageClient — Stripe subscription gating', () => {
 
     expect(mockRedirectTo).not.toHaveBeenCalled()
   })
+})
+
+describe('PlexCallbackPageClient — rate limits', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockUseRouter.mockReturnValue({ push: mockPush })
+    setSearchParams()
+  })
+
+  it('stops polling and shows the rate-limit message when the PIN poll is limited', async () => {
+    mockGetPlexAuthToken.mockResolvedValue({
+      success: false,
+      code: 'RATE_LIMITED',
+      error: RATE_LIMITED_MESSAGE,
+    })
+
+    render(<PlexCallbackPageClient />)
+
+    expect(await screen.findByText(RATE_LIMITED_MESSAGE)).toBeInTheDocument()
+    expect(mockGetPlexAuthToken).toHaveBeenCalledTimes(1)
+    expect(mockCheckServerAccess).not.toHaveBeenCalled()
+    expect(mockSignIn).not.toHaveBeenCalled()
+  })
+
+  it.each(['RateLimited', 'RATE_LIMITED'])(
+    'shows the rate-limit message when sign-in returns %s',
+    async (code) => {
+      mockGetPlexAuthToken.mockResolvedValue({ success: true, authToken: 'user-token' })
+      mockCheckServerAccess.mockResolvedValue({ success: true, hasAccess: true })
+      mockSignIn.mockResolvedValue({ ok: false, status: 429, error: code, url: null })
+
+      render(<PlexCallbackPageClient />)
+
+      expect(await screen.findByText(RATE_LIMITED_MESSAGE)).toBeInTheDocument()
+      expect(mockRedirectTo).not.toHaveBeenCalled()
+    }
+  )
 })

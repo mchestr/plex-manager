@@ -5,7 +5,7 @@
 import { GET } from '@/app/api/admin/playground/statistics/route'
 import { prisma } from '@/lib/prisma'
 import { requireAdminAPI } from '@/lib/security/api-helpers'
-import { adminRateLimiter } from '@/lib/security/rate-limit'
+import { limitRequest } from '@/lib/security/rate-limit'
 import {
   fetchTautulliStatistics,
   fetchPlexServerStatistics,
@@ -38,7 +38,7 @@ jest.mock('@/lib/security/api-helpers', () => ({
 }))
 
 jest.mock('@/lib/security/rate-limit', () => ({
-  adminRateLimiter: jest.fn(),
+  limitRequest: jest.fn(),
 }))
 
 jest.mock('@/lib/wrapped/statistics', () => ({
@@ -109,7 +109,7 @@ describe('GET /api/admin/playground/statistics', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    ;(adminRateLimiter as jest.Mock).mockResolvedValue(null)
+    ;(limitRequest as jest.Mock).mockResolvedValue(null)
     ;(requireAdminAPI as jest.Mock).mockResolvedValue({ session: { user: { isAdmin: true } }, response: null })
   })
 
@@ -381,7 +381,7 @@ describe('GET /api/admin/playground/statistics', () => {
 
   it('should return 429 when rate limit is exceeded', async () => {
     const mockRateLimitResponse = { status: 429, json: () => Promise.resolve({ error: 'Too many requests' }) }
-    ;(adminRateLimiter as jest.Mock).mockResolvedValue(mockRateLimitResponse)
+    ;(limitRequest as jest.Mock).mockResolvedValue(mockRateLimitResponse)
 
     const { NextRequest } = await import('next/server')
     const request = new NextRequest('http://localhost/api/admin/playground/statistics?userName=Test User&year=2024')
@@ -389,6 +389,7 @@ describe('GET /api/admin/playground/statistics', () => {
     const response = await GET(request)
 
     expect(response).toBe(mockRateLimitResponse)
+    expect(limitRequest).toHaveBeenCalledWith('admin', request)
   })
 
   it('should handle database errors gracefully', async () => {

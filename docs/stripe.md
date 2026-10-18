@@ -113,9 +113,12 @@ whether a value is stored.
 4. Save, then copy the endpoint's **Signing secret** (`whsec_…`) into the
    **Webhook Signing Secret** field in the admin settings and Save.
 
-The route (`app/api/stripe/webhook/route.ts`) is `force-dynamic`, verifies the
-signature against the raw request body, and is rate-limited. It requires **no**
-admin auth — the Stripe signature is the authentication. Bad signatures return
+The route (`app/api/stripe/webhook/route.ts`) is `force-dynamic` and verifies the
+signature against the raw request body. It requires **no** admin auth — the
+Stripe signature is the authentication. It has no IP rate limit, because anyone
+who spoofs Stripe's addresses could otherwise get genuine deliveries rejected.
+Bodies over 1 MiB are refused with `413` before the signature check, so an
+unsigned request cannot make the app buffer an unbounded body. Bad signatures return
 `400` (never `5xx`, so Stripe does not retry a forged request); a duplicate event
 returns `200` with no re-enqueue.
 
