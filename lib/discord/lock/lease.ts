@@ -75,6 +75,11 @@ export class DistributedLock {
     return this.instanceId
   }
 
+  /** How long an acquired or renewed lease stays valid, in milliseconds. */
+  getLeaseDurationMs(): number {
+    return this.leaseDurationMs
+  }
+
   /**
    * Attempts to acquire (or, if already ours, re-acquire) the lock atomically.
    * Uses a transaction so expired-lock cleanup and take-over are race-free.

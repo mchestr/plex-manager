@@ -97,8 +97,15 @@ distributed lock** so exactly one instance runs it, even when scaled
 horizontally (Kubernetes, Docker Swarm, etc.).
 
 - All pods attempt to acquire the lock on startup; only one succeeds.
-- The lock is renewed on a short interval; if the holder crashes, the lease
-  expires (~30s) and another pod takes over.
+- The lease lasts **30 s**. The holder renews it every **10 s** (a third of the
+  lease) on its own timer, starting the moment it takes the lock, before the bot
+  logs in. If the holder crashes, the lease expires within 30 s and another pod
+  takes it at its next poll.
+- Every pod also runs a **poll** every `DISCORD_BOT_POLL_INTERVAL_MS`
+  (default `10000`, 10 s). The poll tries for the lock when this pod does not
+  hold it, re-checks the "bot enabled" switch, and applies config changes (see
+  *Token rotation*). The poll never renews the lease, so a longer poll interval
+  only slows takeover and settings changes; it cannot take the bot offline.
 - No manual configuration needed.
 
 ### Token rotation
@@ -152,6 +159,11 @@ channel/thread IDs remain configurable (informational only).
   and `ENABLE_DISCORD_BOT="true"`.
 - **Token change not taking effect** → the holding pod bounces within one poll
   interval; check logs for the bounce, and that the lock is held.
+- **Bot keeps going offline or logging in again** → while it runs,
+  `SELECT "instanceId", "lastRenewedAt", "expiresAt" FROM "DiscordBotLock"`
+  should show `lastRenewedAt` advancing every 10 s for one instance. If it
+  stops, check database connectivity: a failed renewal shuts the bot down
+  until the next poll takes the lock again.
 - **Assistant doesn't reply in a channel** → the assistant is DM-based; DM the
   bot, or use `/assistant ask`.
 - **Verification errors** → check database connectivity and that the Discord
