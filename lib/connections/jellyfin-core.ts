@@ -6,7 +6,6 @@ import { createHash } from "node:crypto"
 
 import packageJson from "@/package.json"
 import { createLogger, sanitizeUrlForLogging } from "@/lib/utils/logger"
-import { getClientIdentifier } from "./plex-core"
 
 export const logger = createLogger("JELLYFIN_CONNECTION")
 export { sanitizeUrlForLogging }
@@ -42,18 +41,34 @@ export function getJellyfinHeaders(apiKey: string): HeadersInit {
   }
 }
 
+/** The DeviceId sent when neither JELLYFIN_DEVICE_ID nor PLEX_CLIENT_IDENTIFIER is set. */
+const FALLBACK_DEVICE_ID = "plex-manager-server"
+let warnedDeviceIdFallback = false
+
 /**
  * The DeviceId Jellyfin records for this install's sign-ins:
  * `JELLYFIN_DEVICE_ID` when set, otherwise `plex-manager-` plus the first 16
  * hex characters of the SHA-256 of `PLEX_CLIENT_IDENTIFIER`, so it is stable
  * across restarts and differs between installs.
+ *
+ * With neither variable set, Jellyfin sign-in still works with the fixed
+ * `plex-manager-server`, and the first sign-in logs
+ * `jellyfin.auth.device_id_fallback` at warn.
  */
 function getJellyfinDeviceId(): string {
   const configured = process.env.JELLYFIN_DEVICE_ID
   if (configured) {
     return configured
   }
-  const digest = createHash("sha256").update(getClientIdentifier()).digest("hex")
+  const clientIdentifier = process.env.PLEX_CLIENT_IDENTIFIER
+  if (!clientIdentifier) {
+    if (!warnedDeviceIdFallback) {
+      warnedDeviceIdFallback = true
+      logger.warn("jellyfin.auth.device_id_fallback", { deviceId: FALLBACK_DEVICE_ID })
+    }
+    return FALLBACK_DEVICE_ID
+  }
+  const digest = createHash("sha256").update(clientIdentifier).digest("hex")
   return `plex-manager-${digest.slice(0, 16)}`
 }
 

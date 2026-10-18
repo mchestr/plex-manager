@@ -19,6 +19,15 @@ const globalForPrisma = globalThis as unknown as {
  * write (GCM), so ciphertext is non-deterministic — a plaintext equality filter on
  * an encrypted column can never match. Never filter these fields in a `where`;
  * match on non-secret columns and compare the decrypted value in application code.
+ *
+ * Nested relation reads and writes bypass the extension, which only sees the
+ * top-level model. Nested rows (`include`/`select` of a related model) are
+ * neither decrypted nor stripped of secret columns, so `include: { user: true }`
+ * returns `plexAuthToken` exactly as stored. Nested `create`/`update` payloads
+ * (e.g. `user: { create: { plexAuthToken } }` under another model) are not
+ * encrypted. Select explicit fields for nested reads (e.g. `publicUserSelect`
+ * in lib/dto/user.ts), and write secret columns only through a top-level query
+ * on their own model.
  */
 export const ENCRYPTED_FIELDS: Record<string, readonly string[]> = {
   User: ['plexAuthToken'],

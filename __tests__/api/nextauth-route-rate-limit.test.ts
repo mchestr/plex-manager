@@ -36,16 +36,13 @@ jest.mock("next/headers", () => ({
 
 jest.mock("@/lib/prisma", () => ({
   prisma: {
-    jellyfinServer: { findFirst: jest.fn() },
     plexServer: { findFirst: jest.fn() },
     user: { findUnique: jest.fn(), update: jest.fn() },
   },
 }))
 
 jest.mock("@/lib/jellyfin-auth", () => ({
-  ...jest.requireActual("@/lib/jellyfin-auth"),
   authenticateJellyfin: jest.fn(),
-  isJellyfinAdmin: jest.fn(),
 }))
 
 jest.mock("@/lib/connections/plex", () => ({
@@ -65,7 +62,6 @@ jest.mock("@/lib/utils/logger", () => ({
 
 const mockAuthenticateJellyfin = authenticateJellyfin as jest.MockedFunction<typeof authenticateJellyfin>
 const mockGetPlexUserInfo = getPlexUserInfo as jest.MockedFunction<typeof getPlexUserInfo>
-const mockJellyfinServerFindFirst = prisma.jellyfinServer.findFirst as jest.Mock
 const mockUserFindUnique = prisma.user.findUnique as jest.Mock
 const mockUserUpdate = prisma.user.update as jest.Mock
 const mockConsume = consume as jest.MockedFunction<typeof consume>
@@ -111,7 +107,7 @@ function acceptPassword(goodPassword: string) {
   mockUserUpdate.mockResolvedValue(dbUser)
   mockAuthenticateJellyfin.mockImplementation(async (username, password) =>
     password === goodPassword
-      ? { success: true, data: { id: "jellyfin-user-1", username } }
+      ? { success: true, data: { id: "jellyfin-user-1", username, isAdmin: false } }
       : { success: false, error: "Invalid username or password" }
   )
 }
@@ -128,13 +124,6 @@ describe("NextAuth credential callback rate limits", () => {
   beforeEach(() => {
     jest.clearAllMocks()
     delete env.E2E_TEST_MODE
-    mockJellyfinServerFindFirst.mockResolvedValue({
-      url: "http://jellyfin.local:8096",
-      apiKey: "api-key",
-      adminUserId: "admin-id",
-      isActive: true,
-      enabledForLogin: true,
-    })
     mockAuthenticateJellyfin.mockResolvedValue({ success: false, error: "Invalid username or password" })
     mockGetPlexUserInfo.mockResolvedValue({ success: false, error: "Invalid token" })
   })

@@ -12,7 +12,7 @@
  */
 
 import { authOptions } from '@/lib/auth'
-import { authenticateJellyfin, isJellyfinAdmin } from '@/lib/jellyfin-auth'
+import { authenticateJellyfinUser, getJellyfinUserById } from '@/lib/connections/jellyfin-users'
 import { prisma } from '@/lib/prisma'
 
 jest.mock('@/lib/prisma', () => ({
@@ -22,12 +22,12 @@ jest.mock('@/lib/prisma', () => ({
   },
 }))
 
-// The real getJellyfinLoginServer, so the toggle check runs against the
-// mocked prisma; only the calls that would reach Jellyfin are stubbed.
-jest.mock('@/lib/jellyfin-auth', () => ({
-  ...jest.requireActual('@/lib/jellyfin-auth'),
-  authenticateJellyfin: jest.fn(),
-  isJellyfinAdmin: jest.fn(),
+// The real lib/jellyfin-auth, so the toggle check and the admin check run
+// against the mocked prisma; only the requests that would reach Jellyfin are
+// stubbed.
+jest.mock('@/lib/connections/jellyfin-users', () => ({
+  authenticateJellyfinUser: jest.fn(),
+  getJellyfinUserById: jest.fn(),
 }))
 
 jest.mock('@/lib/connections/plex', () => ({
@@ -59,8 +59,8 @@ jest.mock('@/lib/utils/logger', () => ({
   }),
 }))
 
-const mockAuthenticateJellyfin = authenticateJellyfin as jest.MockedFunction<typeof authenticateJellyfin>
-const mockIsJellyfinAdmin = isJellyfinAdmin as jest.MockedFunction<typeof isJellyfinAdmin>
+const mockAuthenticateJellyfinUser = authenticateJellyfinUser as jest.MockedFunction<typeof authenticateJellyfinUser>
+const mockGetJellyfinUserById = getJellyfinUserById as jest.MockedFunction<typeof getJellyfinUserById>
 const mockJellyfinServerFindFirst = prisma.jellyfinServer.findFirst as jest.Mock
 const mockUserFindUnique = prisma.user.findUnique as jest.Mock
 const mockUserCreate = prisma.user.create as jest.Mock
@@ -116,11 +116,20 @@ function givenRows(rows: Row[]) {
 
 /** Signs in through the provider as `jellyfinUser`, whom Jellyfin accepts. */
 function signInAs(jellyfinUser: { id: string; username: string }, isAdmin = false) {
-  mockAuthenticateJellyfin.mockResolvedValue({
+  mockAuthenticateJellyfinUser.mockResolvedValue({
     success: true,
-    data: jellyfinUser,
+    data: { User: { Id: jellyfinUser.id, Name: jellyfinUser.username }, AccessToken: 'logged-out-token' },
   })
-  mockIsJellyfinAdmin.mockResolvedValue(isAdmin)
+  mockGetJellyfinUserById.mockResolvedValue({
+    success: true,
+    data: {
+      Id: jellyfinUser.id,
+      Name: jellyfinUser.username,
+      HasPassword: true,
+      HasConfiguredPassword: true,
+      Policy: { IsAdministrator: isAdmin, IsDisabled: false },
+    },
+  })
   return getJellyfinAuthorize()({ username: jellyfinUser.username, password: 'correct-password' })
 }
 
@@ -162,7 +171,10 @@ describe('Jellyfin authorize: no email-based account linking', () => {
       image: null,
       isAdmin: false,
     })
-    expect(mockIsJellyfinAdmin).toHaveBeenCalledWith('jf-mallory')
+    expect(mockGetJellyfinUserById).toHaveBeenCalledWith(
+      { url: JELLYFIN_SERVER.url, apiKey: JELLYFIN_SERVER.apiKey },
+      'jf-mallory'
+    )
     expect(mockUserFindUnique).toHaveBeenCalledWith({ where: { jellyfinUserId: 'jf-mallory' } })
     expect(lookedUpByEmail()).toBe(false)
     expect(mockUserUpdate).not.toHaveBeenCalled()
@@ -215,8 +227,8 @@ describe('Jellyfin authorize: "Allow Jellyfin sign-in"', () => {
     const result = await getJellyfinAuthorize()({ username: 'alice', password: 'correct-password' })
 
     expect(result).toBeNull()
-    expect(mockAuthenticateJellyfin).not.toHaveBeenCalled()
-    expect(mockIsJellyfinAdmin).not.toHaveBeenCalled()
+    expect(mockAuthenticateJellyfinUser).not.toHaveBeenCalled()
+    expect(mockGetJellyfinUserById).not.toHaveBeenCalled()
     expect(mockUserFindUnique).not.toHaveBeenCalled()
     expect(mockWarn).toHaveBeenCalledWith('jellyfin.login.disabled', { serverId: 'jf-server-1' })
   })
@@ -227,17 +239,43 @@ describe('Jellyfin authorize: "Allow Jellyfin sign-in"', () => {
     const result = await getJellyfinAuthorize()({ username: 'alice', password: 'correct-password' })
 
     expect(result).toBeNull()
-    expect(mockAuthenticateJellyfin).not.toHaveBeenCalled()
+    expect(mockAuthenticateJellyfinUser).not.toHaveBeenCalled()
     expect(mockUserFindUnique).not.toHaveBeenCalled()
   })
 
-  it('contacts Jellyfin when sign-in is allowed, passing only the credentials', async () => {
+  it('contacts the stored server when sign-in is allowed', async () => {
     mockJellyfinServerFindFirst.mockResolvedValue(JELLYFIN_SERVER)
-    mockAuthenticateJellyfin.mockResolvedValue({ success: false, error: 'Invalid username or password' })
+    mockAuthenticateJellyfinUser.mockResolvedValue({ success: false, error: 'Invalid username or password' })
 
     const result = await getJellyfinAuthorize()({ username: 'alice', password: 'wrong-password' })
 
     expect(result).toBeNull()
-    expect(mockAuthenticateJellyfin).toHaveBeenCalledWith('alice', 'wrong-password')
+    expect(mockAuthenticateJellyfinUser).toHaveBeenCalledWith(
+      { url: JELLYFIN_SERVER.url, apiKey: JELLYFIN_SERVER.apiKey },
+      'alice',
+      'wrong-password'
+    )
+    expect(mockGetJellyfinUserById).not.toHaveBeenCalled()
+  })
+
+  it('reads the server once per sign-in, so the admin check uses the row the password was checked on', async () => {
+    const otherServer = { ...JELLYFIN_SERVER, id: 'jf-server-2', url: 'http://other.local:8096', adminUserId: 'jf-zed' }
+    mockJellyfinServerFindFirst.mockResolvedValueOnce(JELLYFIN_SERVER).mockResolvedValue(otherServer)
+    givenRows([])
+    mockUserCreate.mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({
+      id: 'new-row',
+      email: null,
+      image: null,
+      ...data,
+    }))
+
+    const result = await signInAs({ id: 'jf-zed', username: 'zed' })
+
+    expect(result).toMatchObject({ id: 'new-row', isAdmin: false })
+    expect(mockJellyfinServerFindFirst).toHaveBeenCalledTimes(1)
+    expect(mockGetJellyfinUserById).toHaveBeenCalledWith(
+      { url: JELLYFIN_SERVER.url, apiKey: JELLYFIN_SERVER.apiKey },
+      'jf-zed'
+    )
   })
 })

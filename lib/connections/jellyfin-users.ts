@@ -3,6 +3,7 @@
  */
 
 import {
+  jellyfinAuthResultSchema,
   type JellyfinUser,
   type JellyfinAuthResult,
   type JellyfinUpdateUserPolicyRequest,
@@ -269,7 +270,8 @@ export async function getJellyfinUserById(
 /**
  * Ends the Jellyfin session a sign-in just opened. The app keeps only the user
  * ID, so the access token would otherwise stay valid on the server. Best
- * effort: a failure is logged at debug and ignored.
+ * effort: a failure is logged at warn, without the token, and ignored, so
+ * operators can see sessions being left behind.
  */
 async function logoutJellyfinSession(baseUrl: string, headers: HeadersInit): Promise<void> {
   try {
@@ -279,11 +281,15 @@ async function logoutJellyfinSession(baseUrl: string, headers: HeadersInit): Pro
       timeoutMs: 3000,
     })
     if (!response.ok) {
-      logger.debug("jellyfin.auth.logout_failed", { status: response.status })
+      logger.warn("jellyfin.auth.logout_failed", {
+        url: sanitizeUrlForLogging(baseUrl),
+        status: response.status,
+      })
     }
   } catch (error) {
-    logger.debug("jellyfin.auth.logout_failed", {
-      error: error instanceof Error ? error.message : String(error),
+    logger.warn("jellyfin.auth.logout_failed", {
+      url: sanitizeUrlForLogging(baseUrl),
+      error: error instanceof Error ? error.name : typeof error,
     })
   }
 }
@@ -294,8 +300,9 @@ async function logoutJellyfinSession(baseUrl: string, headers: HeadersInit): Pro
  * Sends the client description in the `Authorization` header and, only when
  * the server answers 400, retries once with the legacy `X-Emby-Authorization`
  * header (for servers or proxies that do not pass `Authorization` through).
- * The session the sign-in opens is logged out straight away, so the returned
- * `AccessToken` is no longer valid. Errors never carry Jellyfin's status text.
+ * The response is validated with `jellyfinAuthResultSchema`. The session the
+ * sign-in opens is logged out straight away, so the returned `AccessToken` is
+ * no longer valid. Errors never carry Jellyfin's status text.
  */
 export async function authenticateJellyfinUser(
   config: JellyfinConfig,
@@ -351,24 +358,31 @@ export async function authenticateJellyfinUser(
       return { success: false, error: "Jellyfin rejected the sign-in request" }
     }
 
-    const data: JellyfinAuthResult = await response.json()
+    const result: unknown = await response.json().catch(() => null)
 
-    if (data.AccessToken) {
-      await logoutJellyfinSession(config.url, getHeaders(data.AccessToken))
+    // Log out any token Jellyfin issued, even when the rest of the response
+    // is unusable.
+    const token = jellyfinAuthResultSchema.pick({ AccessToken: true }).safeParse(result)
+    if (token.success) {
+      await logoutJellyfinSession(config.url, getHeaders(token.data.AccessToken))
     }
 
-    if (!data.User?.Id || !data.AccessToken) {
+    const parsed = jellyfinAuthResultSchema.safeParse(result)
+    if (!parsed.success) {
+      logger.warn("jellyfin.auth.invalid_response", {
+        fields: parsed.error.issues.map((issue) => issue.path.map(String).join(".")),
+      })
       return { success: false, error: "Invalid authentication response" }
     }
 
     const duration = Date.now() - startTime
     logger.info("Successfully authenticated Jellyfin user", {
-      userId: data.User.Id,
-      username: data.User.Name,
+      userId: parsed.data.User.Id,
+      username: parsed.data.User.Name,
       duration,
     })
 
-    return { success: true, data }
+    return { success: true, data: parsed.data }
   } catch (error) {
     const duration = Date.now() - startTime
     logger.error("Error authenticating Jellyfin user", error, { duration, username })

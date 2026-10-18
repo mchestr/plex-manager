@@ -19,6 +19,7 @@ import { logAuditEvent, AuditEventType } from "@/lib/security/audit-log"
 import { actionClientIp, consume, type LimitName } from "@/lib/security/rate-limit"
 import { RATE_LIMITED_MESSAGE } from "@/lib/security/rate-limit-messages"
 import { jellyfinInviteCredentialsSchema } from "@/lib/validations/jellyfin"
+import { publicUserSelect, type InviteWithUsages } from "@/lib/dto/user"
 import { isUniqueEmailConflict } from "@/lib/prisma-errors"
 
 const logger = createLogger("INVITE")
@@ -478,7 +479,9 @@ export async function createInvite(
 /**
  * Get all invites (admin only)
  */
-export async function getInvites() {
+export async function getInvites(): Promise<
+  { success: true; data: InviteWithUsages[] } | { success: false; error: string }
+> {
   await requireAdmin()
 
   try {
@@ -487,8 +490,8 @@ export async function getInvites() {
       include: {
         usages: {
           include: {
-            user: true
-          }
+            user: { select: publicUserSelect },
+          },
         },
       },
     })
@@ -503,7 +506,9 @@ export async function getInvites() {
 /**
  * Get a single invite by ID with details (admin only)
  */
-export async function getInviteDetails(id: string) {
+export async function getInviteDetails(id: string): Promise<
+  { success: true; data: InviteWithUsages } | { success: false; error: string }
+> {
   await requireAdmin()
 
   try {
@@ -512,9 +517,9 @@ export async function getInviteDetails(id: string) {
       include: {
         usages: {
           include: {
-            user: true
+            user: { select: publicUserSelect },
           },
-          orderBy: { usedAt: "desc" }
+          orderBy: { usedAt: "desc" },
         },
       },
     })

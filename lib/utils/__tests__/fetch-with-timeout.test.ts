@@ -159,6 +159,50 @@ describe('fetch-with-timeout', () => {
     })
   })
 
+  describe('timeoutCoversBody', () => {
+    it('keeps the timeout armed after the headers arrive, so it aborts a slow body', async () => {
+      const abortSpy = jest.spyOn(AbortController.prototype, 'abort')
+      mockFetch.mockResolvedValueOnce(new Response('ok', { status: 200 }))
+
+      const promise = fetchWithTimeout('https://api.example.com/data', {
+        timeoutMs: 3000,
+        timeoutCoversBody: true,
+      })
+      await promise
+      const [, init] = mockFetch.mock.calls[0]
+      expect(init).not.toHaveProperty('timeoutCoversBody')
+
+      jest.advanceTimersByTime(2999)
+      expect(init.signal.aborted).toBe(false)
+      jest.advanceTimersByTime(1)
+      expect(abortSpy).toHaveBeenCalled()
+      expect(init.signal.aborted).toBe(true)
+
+      abortSpy.mockRestore()
+    })
+
+    it('stops the timer once the response starts by default', async () => {
+      mockFetch.mockResolvedValueOnce(new Response('ok', { status: 200 }))
+
+      await fetchWithTimeout('https://api.example.com/data', { timeoutMs: 3000 })
+      const [, init] = mockFetch.mock.calls[0]
+      jest.advanceTimersByTime(5000)
+
+      expect(init.signal.aborted).toBe(false)
+    })
+
+    it('clears the timer when the request itself fails', async () => {
+      const clearTimeoutSpy = jest.spyOn(global, 'clearTimeout')
+      mockFetch.mockRejectedValueOnce(new Error('Network error'))
+
+      await expect(
+        fetchWithTimeout('https://api.example.com/data', { timeoutCoversBody: true })
+      ).rejects.toThrow('Network error')
+      expect(clearTimeoutSpy).toHaveBeenCalled()
+      clearTimeoutSpy.mockRestore()
+    })
+  })
+
   describe('isTimeoutError', () => {
     it('should return true for AbortError', () => {
       const error = new Error('Aborted')

@@ -9,6 +9,11 @@
 export interface FetchWithTimeoutOptions extends Omit<RequestInit, 'signal'> {
   /** Timeout in milliseconds (default: 10000ms / 10 seconds) */
   timeoutMs?: number
+  /**
+   * Keep the timeout armed after the headers arrive, so it also bounds reading
+   * the body (default: false, the timeout stops once the response starts)
+   */
+  timeoutCoversBody?: boolean
 }
 
 /**
@@ -17,7 +22,8 @@ export interface FetchWithTimeoutOptions extends Omit<RequestInit, 'signal'> {
  * @param url - The URL to fetch
  * @param options - Fetch options including optional timeout
  * @returns The fetch Response object
- * @throws Error with name "AbortError" if timeout is exceeded
+ * @throws Error with name "AbortError" if timeout is exceeded (with
+ *   `timeoutCoversBody`, reading the body rejects the same way)
  *
  * @example
  * ```ts
@@ -32,18 +38,23 @@ export async function fetchWithTimeout(
   url: string,
   options: FetchWithTimeoutOptions = {}
 ): Promise<Response> {
-  const { timeoutMs = 10000, ...fetchOptions } = options
+  const { timeoutMs = 10000, timeoutCoversBody = false, ...fetchOptions } = options
 
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
   try {
-    return await fetch(url, {
+    const response = await fetch(url, {
       ...fetchOptions,
       signal: controller.signal,
     })
-  } finally {
+    // Left armed, the timer aborts a body read that is still running when it
+    // fires; after the body is read, the abort does nothing
+    if (!timeoutCoversBody) clearTimeout(timeoutId)
+    return response
+  } catch (error) {
     clearTimeout(timeoutId)
+    throw error
   }
 }
 

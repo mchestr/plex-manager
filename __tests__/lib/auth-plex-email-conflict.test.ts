@@ -31,7 +31,6 @@ jest.mock('@/lib/connections/plex', () => ({
 
 jest.mock('@/lib/jellyfin-auth', () => ({
   authenticateJellyfin: jest.fn(),
-  isJellyfinAdmin: jest.fn(),
 }))
 
 jest.mock('@/lib/security/rate-limit', () => ({
