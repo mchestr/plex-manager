@@ -54,7 +54,7 @@ export default async function Home() {
         createdAt: true,
         plexUserId: true,
         jellyfinUserId: true,
-        email: true,
+        name: true,
       }
     });
     const discordConnectionPromise = discordEnabled
@@ -84,7 +84,7 @@ export default async function Home() {
     // Falls back to account creation date if Tautulli is not available or user has no history
     let memberSince = user?.createdAt?.toISOString() ?? new Date().toISOString();
     if (user?.plexUserId) {
-      const firstWatchResult = await getUserFirstWatchDate(user.plexUserId, user.email);
+      const firstWatchResult = await getUserFirstWatchDate(user.plexUserId, user.name);
       if (firstWatchResult.success && firstWatchResult.firstWatchDate) {
         memberSince = firstWatchResult.firstWatchDate;
       }

@@ -3,6 +3,8 @@ import { HistoricalWrappedSelectorHeader } from "@/components/admin/wrapped/hist
 import { WrappedPageClient } from "@/components/wrapped/wrapped-page-client"
 import { WrappedViewerWrapper } from "@/components/wrapped/wrapped-viewer-wrapper"
 import { requireAdmin } from "@/lib/admin"
+import { prisma } from "@/lib/prisma"
+import { adminErrorHint, readStoredError } from "@/lib/wrapped/generation-errors"
 import { WrappedData } from "@/types/wrapped"
 import Link from "next/link"
 
@@ -22,6 +24,13 @@ export default async function UserWrappedPage({
   const resolvedSearchParams = await searchParams
   const year = resolvedSearchParams.year ? parseInt(resolvedSearchParams.year, 10) : new Date().getFullYear()
   const wrapped = await getUserPlexWrapped(userId, year)
+
+  const errorCode = wrapped?.status === "failed" ? readStoredError(wrapped.error) : null
+  let errorHint: string | null = null
+  if (errorCode === "TAUTULLI_USER_NOT_FOUND") {
+    const target = await prisma.user.findUnique({ where: { id: userId }, select: { plexUserId: true } })
+    errorHint = adminErrorHint(errorCode, target?.plexUserId ?? null)
+  }
 
   // Admin header component
   const AdminHeader = ({ userName, wrappedId, userId, year: headerYear }: { userName?: string | null; wrappedId?: string; userId: string; year: number }) => (
@@ -141,8 +150,13 @@ export default async function UserWrappedPage({
                 />
               </svg>
               <h2 className="text-2xl font-bold text-white mb-2">Generation Failed</h2>
-              {wrapped.error && (
-                <p className="text-red-300 mb-4">{wrapped.error}</p>
+              <p data-testid="admin-wrapped-error-code" className="font-mono text-sm text-red-200 mb-2">
+                {errorCode}
+              </p>
+              {errorHint ? (
+                <p data-testid="admin-wrapped-error-hint" className="text-red-300 mb-4">{errorHint}</p>
+              ) : wrapped.error && (
+                <p data-testid="admin-wrapped-error-detail" className="text-red-300 mb-4">{wrapped.error}</p>
               )}
               <p className="text-slate-400 mb-6">
                 The wrapped generation failed for this user.

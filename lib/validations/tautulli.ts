@@ -57,31 +57,6 @@ export interface TautulliHistoryItem {
 }
 
 /**
- * Tautulli user from get_users API endpoint
- * Represents a user account tracked by Tautulli
- */
-export interface TautulliUser {
-  /** Tautulli's internal user ID */
-  user_id: number
-  /** Username displayed in Tautulli */
-  username?: string
-  /** User's email address (if available from Plex) */
-  email?: string
-  /** Plex user ID (may differ from Tautulli user_id) */
-  plex_id?: string
-  /** User-friendly display name */
-  friendly_name?: string
-  /** User's avatar/thumb URL */
-  thumb?: string
-  /** Whether the user is currently active */
-  is_active?: boolean
-  /** Whether the user is allowed to sync media */
-  do_notify?: boolean
-  /** Whether the user is allowed to filter content */
-  allow_guest?: boolean
-}
-
-/**
  * Tautulli item user stats from get_item_user_stats API endpoint
  * Represents user statistics for a specific media item
  */

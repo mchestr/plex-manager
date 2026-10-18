@@ -4,13 +4,12 @@
  * Fetches individual user watch statistics from Tautulli
  */
 
+import { findTautulliUser, type TautulliUserIdentity } from "@/lib/connections/tautulli"
 import { createLogger } from "@/lib/utils/logger"
-import type {
-  TautulliHistoryItem,
-  TautulliUser,
-} from "@/lib/validations/tautulli"
+import type { TautulliHistoryItem } from "@/lib/validations/tautulli"
 
 import { computeDerivedStatistics } from "./derived-statistics"
+import { memberErrorCopy } from "./generation-errors"
 import type {
   TautulliConfig,
   TautulliStatisticsData,
@@ -21,98 +20,36 @@ import type {
 const logger = createLogger("STATISTICS")
 
 /**
- * Fetch user watch statistics from Tautulli
- * Note: Tautulli uses its own user IDs, so we match users by email address
+ * Fetch user watch statistics from Tautulli.
+ *
+ * The member is found in Tautulli's user list with the shared
+ * {@link findTautulliUser} lookup (plex.tv account ID, then username). When
+ * they are not in the list, the result carries `code: "TAUTULLI_USER_NOT_FOUND"`
+ * and fixed member copy, never the list itself.
  */
 export async function fetchTautulliStatistics(
   config: TautulliConfig,
-  plexUserId: string,
-  userEmail: string | null,
+  identity: TautulliUserIdentity,
   year: number
 ): Promise<{
   success: boolean
   data?: TautulliStatisticsData
   error?: string
+  code?: "TAUTULLI_USER_NOT_FOUND"
 }> {
   try {
     const baseUrl = `${config.url}/api/v2`
     const apiKey = config.apiKey
 
-    // Get user ID from Tautulli (we need to match by Plex user ID)
-    // First, get all users and find the one matching our Plex user ID
-    const usersUrl = `${baseUrl}?apikey=${apiKey}&cmd=get_users`
-    const usersResponse = await fetch(
-      usersUrl,
-      {
-        headers: {
-          "Accept": "application/json",
-        },
+    const lookup = await findTautulliUser(config, identity)
+    if (!lookup.ok) {
+      if (lookup.code === "TAUTULLI_USER_NOT_FOUND") {
+        return { success: false, code: lookup.code, error: memberErrorCopy(lookup.code) }
       }
-    )
-
-    if (!usersResponse.ok) {
-      return {
-        success: false,
-        error: `Failed to fetch users from Tautulli: ${usersResponse.statusText}`
-      }
+      return { success: false, error: "Failed to fetch users from Tautulli" }
     }
 
-    const usersData = await usersResponse.json()
-
-    // Check for API errors
-    if (usersData.response?.result === "error") {
-      return {
-        success: false,
-        error: usersData.response?.message || "Tautulli API error"
-      }
-    }
-
-    // Tautulli API returns users in response.data (array), not response.data.users
-    const users = Array.isArray(usersData.response?.data)
-      ? usersData.response.data
-      : usersData.response?.data?.users || []
-
-    // Find user by email (most reliable) or username
-    let tautulliUser: TautulliUser | null = null
-
-    if (userEmail) {
-      // Try to match by email first (most reliable)
-      tautulliUser = users.find(
-        (u: TautulliUser) => u.email?.toLowerCase() === userEmail.toLowerCase()
-      ) ?? null
-    }
-
-    // If no email match, try matching by username or friendly_name
-    if (!tautulliUser) {
-      // Try to get username from Plex user info if available
-      tautulliUser = users.find(
-        (u: TautulliUser) =>
-          u.username?.toLowerCase() === userEmail?.toLowerCase() ||
-          u.friendly_name?.toLowerCase() === userEmail?.toLowerCase()
-      ) ?? null
-    }
-
-    // Last resort: try matching by Plex user ID if it's stored in Tautulli
-    if (!tautulliUser) {
-      tautulliUser = users.find(
-        (u: TautulliUser) =>
-          u.plex_id?.toString() === plexUserId ||
-          u.user_id?.toString() === plexUserId
-      ) ?? null
-    }
-
-    if (!tautulliUser) {
-      const availableUsers = users.map((u: TautulliUser) =>
-        `${u.username || u.friendly_name || "Unknown"} (${u.email || "no email"})`
-      ).join(", ")
-
-      return {
-        success: false,
-        error: `User not found in Tautulli. Plex User ID: ${plexUserId}, Email: ${userEmail || "none"}. Available users: ${availableUsers || "none"}`
-      }
-    }
-
-    const userId = tautulliUser.user_id
+    const userId = lookup.user.user_id
 
     // Use Unix timestamps for date filtering (more reliable)
     // For the current year, cap the end date to today; for past years, use Dec 31

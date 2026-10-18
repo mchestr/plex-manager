@@ -3,6 +3,7 @@
 import { authOptions } from "@/lib/auth"
 import { requireAdmin } from "@/lib/admin"
 import { checkUserServerAccess, getPlexServerIdentity, getPlexUsers, unshareUserFromPlexServer } from "@/lib/connections/plex"
+import { findTautulliUser } from "@/lib/connections/tautulli"
 import { prisma } from "@/lib/prisma"
 import { getServerSession } from "next-auth"
 import { SubscriptionStatus } from "@/lib/generated/prisma/client"
@@ -525,7 +526,7 @@ async function fetchSubscriptionMap(userIds: string[]): Promise<Map<string, {
  */
 export async function getUserFirstWatchDate(
   plexUserId: string,
-  userEmail: string | null
+  plexUsername: string | null
 ): Promise<{ success: boolean; firstWatchDate?: string; error?: string }> {
   // Require an authenticated session; this action queries Tautulli by identifier
   // and must not be callable anonymously.
@@ -548,50 +549,21 @@ export async function getUserFirstWatchDate(
     const baseUrl = `${tautulli.url}/api/v2`
     const apiKey = tautulli.apiKey
 
-    // Get all users from Tautulli
-    const usersResponse = await fetch(
-      `${baseUrl}?apikey=${apiKey}&cmd=get_users`,
-      { headers: { "Accept": "application/json" } }
+    const lookup = await findTautulliUser(
+      { url: tautulli.url, apiKey: tautulli.apiKey },
+      { plexUserId, plexUsername }
     )
 
-    if (!usersResponse.ok) {
-      return { success: false, error: "Failed to fetch users from Tautulli" }
+    if (!lookup.ok) {
+      return {
+        success: false,
+        error: lookup.code === "TAUTULLI_USER_NOT_FOUND"
+          ? "User not found in Tautulli"
+          : "Failed to fetch users from Tautulli",
+      }
     }
 
-    const usersData = await usersResponse.json()
-    const users = Array.isArray(usersData.response?.data)
-      ? usersData.response.data
-      : usersData.response?.data?.users || []
-
-    // Find the user by email or Plex ID
-    interface TautulliUserResponse {
-      user_id: number
-      email?: string
-      username?: string
-      friendly_name?: string
-      plex_id?: string
-    }
-
-    let tautulliUser: TautulliUserResponse | null = null
-
-    if (userEmail) {
-      tautulliUser = users.find(
-        (u: TautulliUserResponse) => u.email?.toLowerCase() === userEmail.toLowerCase()
-      ) ?? null
-    }
-
-    if (!tautulliUser) {
-      tautulliUser = users.find(
-        (u: TautulliUserResponse) =>
-          u.plex_id?.toString() === plexUserId ||
-          u.user_id?.toString() === plexUserId
-      ) ?? null
-    }
-
-    if (!tautulliUser) {
-      logger.debug("User not found in Tautulli", { plexUserId, userEmail })
-      return { success: false, error: "User not found in Tautulli" }
-    }
+    const tautulliUser = lookup.user
 
     // Fetch user's oldest history entry
     // We need to get the oldest, so we'll fetch history ordered by date ascending

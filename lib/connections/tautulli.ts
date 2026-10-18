@@ -1,6 +1,13 @@
+import { z } from "zod";
 import { type TautulliParsed } from "@/lib/validations/tautulli";
 import { fetchWithTimeout, isTimeoutError } from "@/lib/utils/fetch-with-timeout";
+import { createLogger } from "@/lib/utils/logger";
 import { type ConnectionResult } from "@/types/connection";
+
+const logger = createLogger("TAUTULLI");
+
+/** The URL and API key needed to call Tautulli. */
+type TautulliEndpoint = Pick<TautulliParsed, "url" | "apiKey">
 
 export async function testTautulliConnection(config: TautulliParsed): Promise<{ success: boolean; error?: string }> {
   // TEST MODE BYPASS - Skip connection tests in test environment
@@ -146,7 +153,7 @@ export async function getTautulliLibraryStats(config: TautulliParsed): Promise<C
   }
 }
 
-export async function getTautulliUsers(config: TautulliParsed): Promise<ConnectionResult<unknown>> {
+export async function getTautulliUsers(config: TautulliEndpoint): Promise<ConnectionResult<unknown>> {
   try {
     const url = `${config.url}/api/v2?apikey=${config.apiKey}&cmd=get_users`
     const response = await fetch(url)
@@ -161,6 +168,104 @@ export async function getTautulliUsers(config: TautulliParsed): Promise<Connecti
     }
     return { success: false, error: "Failed to get Tautulli users" }
   }
+}
+
+/** The Plex identity used to find a member in Tautulli's user list. */
+export interface TautulliUserIdentity {
+  /** The plex.tv account ID (`User.plexUserId`). */
+  plexUserId: string
+  /** The Plex username (`User.name`), compared case-insensitively. */
+  plexUsername: string | null
+}
+
+const tautulliUserRowSchema = z.object({
+  user_id: z.number().int(),
+  username: z.string().nullish(),
+})
+
+/** The `get_users` fields the lookup relies on. Other fields are stripped. */
+export type TautulliUserRow = z.infer<typeof tautulliUserRowSchema>
+
+const getUsersResponseSchema = z.object({
+  response: z.discriminatedUnion("result", [
+    z.object({ result: z.literal("success"), data: z.array(z.unknown()) }),
+    z.object({ result: z.literal("error"), message: z.string().nullish() }),
+  ]),
+})
+
+export type FindTautulliUserResult =
+  | { ok: true; user: TautulliUserRow }
+  | { ok: false; code: "TAUTULLI_USER_NOT_FOUND" | "TAUTULLI_ERROR" }
+
+/**
+ * Find a member in Tautulli's `get_users` rows.
+ *
+ * Tautulli's `user_id` is the plex.tv account ID, so `user_id === plexUserId`
+ * is tried first. A case-insensitive `username` match is the fallback. Email
+ * and `friendly_name` are never compared: both are free text another member
+ * can share, and matching on them could hand one member another's history.
+ *
+ * @returns The matching row, or `null` when none matches.
+ *
+ * @example
+ * ```ts
+ * const users = [{ user_id: 1, username: "alice" }, { user_id: 2, username: "Bob" }]
+ * matchTautulliUser(users, { plexUserId: "2", plexUsername: null })?.user_id  // 2
+ * matchTautulliUser(users, { plexUserId: "9", plexUsername: "ALICE" })?.user_id // 1
+ * matchTautulliUser(users, { plexUserId: "9", plexUsername: "carol" })          // null
+ * ```
+ */
+export function matchTautulliUser<T extends TautulliUserRow>(
+  users: readonly T[],
+  identity: TautulliUserIdentity
+): T | null {
+  const byId = users.find((u) => String(u.user_id) === identity.plexUserId)
+  if (byId) return byId
+
+  const username = identity.plexUsername?.toLowerCase()
+  if (!username) return null
+  return users.find((u) => u.username?.toLowerCase() === username) ?? null
+}
+
+/**
+ * Fetch Tautulli's user list and find the member in it with
+ * {@link matchTautulliUser}.
+ *
+ * The rows are validated with Zod, and only `user_id` and `username` survive
+ * the parse, so no other member's email or name can leak through the result.
+ * A miss logs a candidate count, never the candidates.
+ */
+export async function findTautulliUser(
+  config: TautulliEndpoint,
+  identity: TautulliUserIdentity
+): Promise<FindTautulliUserResult> {
+  const result = await getTautulliUsers(config)
+  if (!result.success) {
+    logger.warn("Tautulli get_users request failed", { error: result.error })
+    return { ok: false, code: "TAUTULLI_ERROR" }
+  }
+
+  const parsed = getUsersResponseSchema.safeParse(result.data)
+  if (!parsed.success) {
+    logger.warn("Unexpected Tautulli get_users response shape")
+    return { ok: false, code: "TAUTULLI_ERROR" }
+  }
+  if (parsed.data.response.result === "error") {
+    logger.warn("Tautulli get_users returned an error", { message: parsed.data.response.message })
+    return { ok: false, code: "TAUTULLI_ERROR" }
+  }
+
+  const users = parsed.data.response.data.flatMap((row) => {
+    const user = tautulliUserRowSchema.safeParse(row)
+    return user.success ? [user.data] : []
+  })
+
+  const user = matchTautulliUser(users, identity)
+  if (!user) {
+    logger.warn("Tautulli user not found", { plexUserId: identity.plexUserId, candidates: users.length })
+    return { ok: false, code: "TAUTULLI_USER_NOT_FOUND" }
+  }
+  return { ok: true, user }
 }
 
 export async function getTautulliHistory(config: TautulliParsed, userId?: number, limit = 20): Promise<ConnectionResult<unknown>> {

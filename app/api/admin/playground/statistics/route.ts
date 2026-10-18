@@ -88,8 +88,7 @@ export async function GET(request: NextRequest) {
         url: tautulli.url,
         apiKey: tautulli.apiKey,
       },
-      user.plexUserId,
-      user.email,
+      { plexUserId: user.plexUserId, plexUsername: user.name },
       year
     )
 

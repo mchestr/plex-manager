@@ -1,4 +1,4 @@
-import { getUserPlexWrapped, getAllUsersWithWrapped } from '@/actions/user-queries'
+import { getUserPlexWrapped, getAllUsersWithWrapped, getUserFirstWatchDate } from '@/actions/user-queries'
 import { prisma } from '@/lib/prisma'
 import { aggregateLlmUsage } from '@/lib/utils'
 import { getServerSession } from 'next-auth'
@@ -30,6 +30,9 @@ jest.mock('@/lib/prisma', () => ({
     },
     subscription: {
       findMany: jest.fn(),
+    },
+    tautulli: {
+      findFirst: jest.fn(),
     },
   },
 }))
@@ -439,5 +442,85 @@ describe('aggregateLlmUsage', () => {
       model: 'claude-3',
       count: 2,
     })
+  })
+})
+
+describe('getUserFirstWatchDate', () => {
+  const roster = [
+    { user_id: 401, username: 'jade_plex', email: 'jade.private@example.com', friendly_name: 'Jade J' },
+    { user_id: 402, username: 'kurt_plex', email: 'kurt.private@example.com', friendly_name: 'Kurt K' },
+  ]
+  const firstWatch = Math.floor(new Date('2023-03-04T05:06:07Z').getTime() / 1000)
+  const originalFetch = global.fetch
+  const mockFetch = jest.fn()
+
+  function respond(body: unknown) {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => body })
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockFetch.mockReset()
+    global.fetch = mockFetch as unknown as typeof fetch
+    ;(getServerSession as jest.Mock).mockResolvedValue({ user: { id: 'user-1', isAdmin: false } })
+    ;(mockPrisma.tautulli.findFirst as jest.Mock).mockResolvedValue({
+      url: 'http://tautulli.local:8181',
+      apiKey: 'key',
+    })
+  })
+
+  afterEach(() => {
+    global.fetch = originalFetch
+  })
+
+  it('finds the member by Plex account ID and reads their first watch', async () => {
+    respond({ response: { result: 'success', data: roster } })
+    respond({ response: { result: 'success', data: { data: [{ date: firstWatch }] } } })
+
+    const result = await getUserFirstWatchDate('402', null)
+
+    expect(result).toEqual({ success: true, firstWatchDate: '2023-03-04T05:06:07.000Z' })
+    expect(String(mockFetch.mock.calls[1][0])).toContain('cmd=get_history&user_id=402&')
+  })
+
+  it('falls back to the Plex username in any case', async () => {
+    respond({ response: { result: 'success', data: roster } })
+    respond({ response: { result: 'success', data: { data: [{ date: firstWatch }] } } })
+
+    const result = await getUserFirstWatchDate('999', 'JADE_PLEX')
+
+    expect(result.success).toBe(true)
+    expect(String(mockFetch.mock.calls[1][0])).toContain('user_id=401')
+  })
+
+  it("does not match through another member's email or friendly_name", async () => {
+    respond({ response: { result: 'success', data: roster } })
+    const byEmail = await getUserFirstWatchDate('999', 'kurt.private@example.com')
+
+    respond({ response: { result: 'success', data: roster } })
+    const byFriendlyName = await getUserFirstWatchDate('999', 'Kurt K')
+
+    expect(byEmail).toEqual({ success: false, error: 'User not found in Tautulli' })
+    expect(byFriendlyName).toEqual({ success: false, error: 'User not found in Tautulli' })
+    // Only the two get_users calls ran; no other member's history was read.
+    expect(mockFetch).toHaveBeenCalledTimes(2)
+  })
+
+  it('reports a Tautulli failure without a history request', async () => {
+    respond({ response: { result: 'error', message: 'Invalid apikey' } })
+
+    const result = await getUserFirstWatchDate('402', null)
+
+    expect(result).toEqual({ success: false, error: 'Failed to fetch users from Tautulli' })
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('requires a session', async () => {
+    ;(getServerSession as jest.Mock).mockResolvedValue(null)
+
+    const result = await getUserFirstWatchDate('402', null)
+
+    expect(result).toEqual({ success: false, error: 'Unauthorized' })
+    expect(mockFetch).not.toHaveBeenCalled()
   })
 })

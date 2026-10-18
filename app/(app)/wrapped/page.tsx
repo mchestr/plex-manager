@@ -6,6 +6,7 @@ import Link from "next/link"
 import { WrappedViewerWrapper } from "@/components/wrapped/wrapped-viewer-wrapper"
 import { WrappedData } from "@/types/wrapped"
 import { WrappedPageClient } from "@/components/wrapped/wrapped-page-client"
+import { memberErrorCopy, readStoredError } from "@/lib/wrapped/generation-errors"
 
 export const dynamic = 'force-dynamic'
 
@@ -72,11 +73,8 @@ export default async function WrappedPage() {
                 />
               </svg>
               <h2 className="text-2xl font-bold text-white mb-2">Generation Failed</h2>
-              {wrapped.error && (
-                <p className="text-red-300 mb-4">{wrapped.error}</p>
-              )}
-              <p className="text-slate-400 mb-6">
-                There was an error generating your wrapped. Please try again.
+              <p data-testid="wrapped-failed-message" className="text-red-300 mb-6">
+                {memberErrorCopy(readStoredError(wrapped.error))}
               </p>
               <Link
                 href="/"

@@ -18,6 +18,7 @@ import {
   fetchWatchTimeLeaderboard,
 } from '@/lib/wrapped/statistics'
 import { revalidatePath } from 'next/cache'
+import { memberErrorCopy } from '@/lib/wrapped/generation-errors'
 
 // Mock dependencies
 jest.mock('@/lib/prisma', () => ({
@@ -393,6 +394,82 @@ describe('generatePlexWrapped', () => {
         }),
       })
     )
+  })
+
+  describe('when the member is missing from Tautulli', () => {
+    const roster = [
+      { user_id: 301, username: 'gina_plex', email: 'gina.private@example.com', friendly_name: 'Gina G' },
+      { user_id: 302, username: 'hank_plex', email: 'hank.private@example.com', friendly_name: 'Hank H' },
+      { user_id: 303, username: 'iris_plex', email: 'iris.private@example.com', friendly_name: 'Iris I' },
+    ]
+    const rosterStrings = roster.flatMap((u) => [u.username, u.email, u.friendly_name])
+    const originalFetch = global.fetch
+
+    beforeEach(() => {
+      ;(getServerSession as jest.Mock).mockResolvedValue(mockSession)
+      ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser)
+      ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
+      ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(makePrismaPlexServer())
+      ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue({
+        id: 'wrapped-1',
+        userId: 'user-1',
+        year: 2024,
+        status: 'generating',
+        shareToken: 'test-share-token',
+      })
+      ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(makePrismaTautulli())
+      // Run the real lookup against a Tautulli roster that lacks the member.
+      const actual = jest.requireActual('@/lib/wrapped/tautulli-user-statistics')
+      ;(fetchTautulliStatistics as jest.Mock).mockImplementation(actual.fetchTautulliStatistics)
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ response: { result: 'success', data: roster } }),
+      })
+    })
+
+    afterEach(() => {
+      global.fetch = originalFetch
+    })
+
+    it('stores the code, returns the member copy and leaks no roster strings', async () => {
+      const result = await generatePlexWrapped('user-1', 2024)
+
+      expect(result).toEqual({
+        success: false,
+        code: 'TAUTULLI_USER_NOT_FOUND',
+        error: memberErrorCopy('TAUTULLI_USER_NOT_FOUND'),
+      })
+      expect(prisma.plexWrapped.update).toHaveBeenCalledTimes(1)
+      expect(prisma.plexWrapped.update).toHaveBeenCalledWith({
+        where: { id: 'wrapped-1' },
+        data: { status: 'failed', error: '{"code":"TAUTULLI_USER_NOT_FOUND"}' },
+      })
+      expect(generateWrappedWithLLM).not.toHaveBeenCalled()
+
+      const output = JSON.stringify({
+        result,
+        writes: (prisma.plexWrapped.update as jest.Mock).mock.calls,
+      })
+      for (const value of rosterStrings) {
+        expect(output).not.toContain(value)
+      }
+    })
+
+    it("does not match the member through another member's email", async () => {
+      ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(
+        makePrismaUser({ ...mockUser, email: 'hank.private@example.com' })
+      )
+
+      const result = await generatePlexWrapped('user-1', 2024)
+
+      expect(fetchTautulliStatistics).toHaveBeenCalledWith(
+        { url: 'https://tautulli.example.com:8181', apiKey: 'tautulli-key' },
+        { plexUserId: 'plex-user-123', plexUsername: 'Test User' },
+        2024
+      )
+      expect(result.code).toBe('TAUTULLI_USER_NOT_FOUND')
+      expect(global.fetch).toHaveBeenCalledTimes(1)
+    })
   })
 
   it('should handle LLM generation failure', async () => {

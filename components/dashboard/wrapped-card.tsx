@@ -3,6 +3,7 @@
 import { getWrappedSettings } from "@/actions/admin"
 import { generatePlexWrapped, getUserPlexWrapped } from "@/actions/users"
 import { useToast } from "@/components/ui/toast"
+import { memberErrorCopy, readStoredError } from "@/lib/wrapped/generation-errors"
 import { motion } from "framer-motion"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -115,7 +116,7 @@ export function WrappedCard({ userId, memberSince }: WrappedCardProps) {
         } else if (wrappedData?.status === "failed") {
           setIsGenerating(false)
           clearInterval(pollInterval)
-          toast.showError(wrappedData.error || "Failed to generate wrapped")
+          toast.showError(memberErrorCopy(readStoredError(wrappedData.error)))
         }
       } catch (err) {
         console.error("Error polling wrapped status:", err)

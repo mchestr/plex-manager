@@ -54,7 +54,7 @@ describe('Statistics Functions', () => {
         result: 'success',
         data: [
           {
-            user_id: '123',
+            user_id: 123,
             username: 'testuser',
             email: 'test@example.com',
             friendly_name: 'Test User',
@@ -95,8 +95,7 @@ describe('Statistics Functions', () => {
 
       const result = await fetchTautulliStatistics(
         config,
-        'plex-user-123',
-        'test@example.com',
+        { plexUserId: '123', plexUsername: 'testuser' },
         2024
       )
 
@@ -112,7 +111,7 @@ describe('Statistics Functions', () => {
           result: 'success',
           data: [
             {
-              user_id: '999',
+              user_id: 999,
               username: 'otheruser',
               email: 'other@example.com',
             },
@@ -127,13 +126,14 @@ describe('Statistics Functions', () => {
 
       const result = await fetchTautulliStatistics(
         config,
-        'plex-user-123',
-        'test@example.com',
+        { plexUserId: '123', plexUsername: 'testuser' },
         2024
       )
 
       expect(result.success).toBe(false)
-      expect(result.error).toContain('User not found')
+      expect(result.code).toBe('TAUTULLI_USER_NOT_FOUND')
+      expect(JSON.stringify(result)).not.toContain('otheruser')
+      expect(JSON.stringify(result)).not.toContain('other@example.com')
     })
 
     it('should handle API errors', async () => {
@@ -151,13 +151,13 @@ describe('Statistics Functions', () => {
 
       const result = await fetchTautulliStatistics(
         config,
-        'plex-user-123',
-        'test@example.com',
+        { plexUserId: '123', plexUsername: 'testuser' },
         2024
       )
 
       expect(result.success).toBe(false)
-      expect(result.error).toContain('Invalid API key')
+      expect(result.code).toBeUndefined()
+      expect(result.error).toBe('Failed to fetch users from Tautulli')
     })
 
     it('should filter history by date range', async () => {
@@ -201,8 +201,7 @@ describe('Statistics Functions', () => {
 
       const result = await fetchTautulliStatistics(
         config,
-        'plex-user-123',
-        'test@example.com',
+        { plexUserId: '123', plexUsername: 'testuser' },
         year
       )
 
@@ -243,8 +242,7 @@ describe('Statistics Functions', () => {
 
       const result = await fetchTautulliStatistics(
         config,
-        'plex-user-123',
-        'test@example.com',
+        { plexUserId: '123', plexUsername: 'testuser' },
         2024
       )
 
@@ -267,7 +265,7 @@ describe('Statistics Functions', () => {
           result: 'success',
           data: [
             {
-              user_id: '123',
+              user_id: 123,
               username: 'testuser',
               email: 'test@example.com',
               friendly_name: 'Test User',
@@ -299,8 +297,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123', plexUsername: 'testuser' },
           2024
         )
 
@@ -350,8 +347,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123', plexUsername: 'testuser' },
           2024
         )
 
@@ -406,8 +402,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123', plexUsername: 'testuser' },
           2024
         )
 
@@ -487,8 +482,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123', plexUsername: 'testuser' },
           2024
         )
 
@@ -558,8 +552,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123', plexUsername: 'testuser' },
           2024
         )
 
@@ -620,8 +613,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123', plexUsername: 'testuser' },
           2024
         )
 
@@ -677,8 +669,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123', plexUsername: 'testuser' },
           2024
         )
 
@@ -706,7 +697,7 @@ describe('Statistics Functions', () => {
           result: 'success',
           data: [
             {
-              user_id: '123',
+              user_id: 123,
               username: 'testuser',
               email: 'test@example.com',
               friendly_name: 'Test User',
@@ -761,8 +752,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123', plexUsername: 'testuser' },
           2024
         )
 
@@ -844,8 +834,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123', plexUsername: 'testuser' },
           2024
         )
 
@@ -920,8 +909,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123', plexUsername: 'testuser' },
           2024
         )
 
@@ -970,8 +958,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123', plexUsername: 'testuser' },
           2024
         )
 
@@ -1025,8 +1012,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123', plexUsername: 'testuser' },
           2024
         )
 
@@ -1087,8 +1073,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123', plexUsername: 'testuser' },
           2024
         )
 
@@ -1156,8 +1141,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123', plexUsername: 'testuser' },
           2024
         )
 
@@ -1586,7 +1570,7 @@ describe('Statistics Functions', () => {
           result: 'success',
           data: [
             {
-              user_id: '123',
+              user_id: 123,
               username: 'testuser',
               email: 'test@example.com',
               friendly_name: 'Test User',
@@ -1618,8 +1602,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123', plexUsername: 'testuser' },
           2024
         )
 
@@ -1671,8 +1654,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123', plexUsername: 'testuser' },
           2024
         )
 
@@ -1754,8 +1736,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123', plexUsername: 'testuser' },
           2024
         )
 
@@ -1816,8 +1797,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123', plexUsername: 'testuser' },
           2024
         )
 
@@ -1879,8 +1859,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123', plexUsername: 'testuser' },
           2024
         )
 
@@ -1931,8 +1910,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123', plexUsername: 'testuser' },
           2024
         )
 

@@ -18,6 +18,7 @@ import {
   fetchWatchTimeLeaderboard,
 } from "@/lib/wrapped/statistics"
 import { computePercentile } from "@/lib/wrapped/derived-statistics"
+import { memberErrorCopy, type RewindErrorCode, toStoredError } from "@/lib/wrapped/generation-errors"
 import { WrappedStatistics } from "@/types/wrapped"
 import { getServerSession } from "next-auth"
 import { revalidatePath } from "next/cache"
@@ -36,7 +37,7 @@ const generatePlexWrappedParamsSchema = z.object({
 export async function generatePlexWrapped(
   userId: string,
   year: number = new Date().getFullYear()
-): Promise<{ success: boolean; error?: string; wrappedId?: string }> {
+): Promise<{ success: boolean; error?: string; code?: RewindErrorCode; wrappedId?: string }> {
   // Validate input parameters
   const validated = generatePlexWrappedParamsSchema.safeParse({ userId, year })
   if (!validated.success) {
@@ -179,10 +180,18 @@ export async function generatePlexWrapped(
           url: tautulli.url,
           apiKey: tautulli.apiKey,
         },
-        user.plexUserId || "",
-        user.email,
+        { plexUserId: user.plexUserId, plexUsername: user.name },
         validYear
       )
+
+      // A known cause is stored as a code, and the member gets fixed copy.
+      if (tautulliStats.code) {
+        await prisma.plexWrapped.update({
+          where: { id: wrapped.id },
+          data: { status: "failed", error: toStoredError(tautulliStats.code) },
+        })
+        return { success: false, code: tautulliStats.code, error: memberErrorCopy(tautulliStats.code) }
+      }
 
       if (!tautulliStats.success || !tautulliStats.data) {
         throw new Error(tautulliStats.error || "Failed to fetch Tautulli statistics")
