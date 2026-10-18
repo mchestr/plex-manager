@@ -198,6 +198,31 @@ describe("executeTautulliTool - Discord activity scoping", () => {
     expect(result.response.data.sessions).toEqual([])
   })
 
+  it.each([
+    ["the lookup finds no Tautulli user", { ok: false, code: "TAUTULLI_USER_NOT_FOUND", candidates: 2 }],
+    ["the lookup fails or times out", { ok: false, code: "TAUTULLI_ERROR" }],
+  ])("returns no sessions when %s", async (_case, lookup) => {
+    mockFindTautulliUser.mockResolvedValue(lookup as never)
+
+    const result = JSON.parse(
+      await executeTautulliTool("get_tautulli_activity", {}, "user-1", "discord")
+    )
+
+    expect(result.response.data.session_count).toBe(0)
+    expect(result.response.data.sessions).toEqual([])
+  })
+
+  it("returns no sessions to a caller without a Plex user ID", async () => {
+    mockUserFindUnique.mockResolvedValue({ plexUserId: null })
+
+    const result = JSON.parse(
+      await executeTautulliTool("get_tautulli_activity", {}, "user-1", "discord")
+    )
+
+    expect(mockFindTautulliUser).not.toHaveBeenCalled()
+    expect(result.response.data.sessions).toEqual([])
+  })
+
   it("does not look the caller up outside the Discord context", async () => {
     await executeTautulliTool("get_tautulli_activity", {}, "user-1", "admin")
 
