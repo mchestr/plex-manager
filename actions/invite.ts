@@ -18,6 +18,8 @@ import { Prisma, ServerType } from "@/lib/generated/prisma/client"
 import { logAuditEvent, AuditEventType } from "@/lib/security/audit-log"
 import { actionClientIp, consume, type LimitName } from "@/lib/security/rate-limit"
 import { RATE_LIMITED_MESSAGE } from "@/lib/security/rate-limit-messages"
+import { jellyfinInviteCredentialsSchema } from "@/lib/validations/jellyfin"
+import { z } from "zod"
 
 const logger = createLogger("INVITE")
 
@@ -67,6 +69,37 @@ function isTransactionConflict(error: unknown): boolean {
     return error.code === "P2034"
   }
   return false
+}
+
+/**
+ * Where the pg driver adapter reports a unique-constraint violation (P2002):
+ * `{ index: "User_email_key" }`, or `{ fields: ["email"] }` when PostgreSQL
+ * names no constraint. There is no `meta.target` with driver adapters.
+ */
+const uniqueViolationMetaSchema = z.object({
+  driverAdapterError: z.object({
+    cause: z.object({
+      constraint: z.object({
+        index: z.string().optional(),
+        fields: z.array(z.string()).optional(),
+      }),
+    }),
+  }),
+})
+
+/**
+ * Check if an error is a unique-constraint violation on `User.email` (P2002)
+ */
+function isUniqueEmailConflict(error: unknown): boolean {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") {
+    return false
+  }
+  const meta = uniqueViolationMetaSchema.safeParse(error.meta)
+  if (!meta.success) {
+    return false
+  }
+  const { index, fields } = meta.data.driverAdapterError.cause.constraint
+  return index === "User_email_key" || fields?.includes("email") === true
 }
 
 /**
@@ -304,74 +337,84 @@ async function validateAndUseInvite(code: string): Promise<ValidateAndUseResult>
 }
 
 /**
- * Find or create user from Plex user data
+ * Find or create the user for a Plex identity, matched by `plexUserId` only.
+ *
+ * Matching by email would let a row that claimed the address first (a
+ * Jellyfin user can rename themselves to any address) absorb this Plex
+ * identity. `email` is the address to store, or null when another row already
+ * holds it: a new row is then created without one, and an existing row keeps
+ * the email it has.
  */
 async function findOrCreateUser(
   tx: PrismaTransactionClient,
-  plexUser: PlexUser
+  plexUser: PlexUser,
+  email: string | null
 ): Promise<{ id: string }> {
-  let user = await tx.user.findUnique({
+  const user = await tx.user.findUnique({
     where: { plexUserId: plexUser.id },
   })
 
   if (user) {
-    user = await tx.user.update({
+    return tx.user.update({
       where: { id: user.id },
       data: {
-        email: plexUser.email,
+        ...(email === null ? {} : { email, emailVerified: new Date() }),
         image: plexUser.thumb,
-        emailVerified: new Date(),
         ...(user.isExempt ? {} : INVITE_EXEMPTION),
       },
     })
-    return user
   }
 
-  const userByEmail = await tx.user.findUnique({
-    where: { email: plexUser.email },
-  })
-
-  if (userByEmail) {
-    user = await tx.user.update({
-      where: { id: userByEmail.id },
-      data: {
-        plexUserId: plexUser.id,
-        image: plexUser.thumb,
-        emailVerified: new Date(),
-        ...(userByEmail.isExempt ? {} : INVITE_EXEMPTION),
-      },
-    })
-    return user
-  }
-
-  user = await tx.user.create({
+  return tx.user.create({
     data: {
       name: plexUser.username,
-      email: plexUser.email,
+      email,
       plexUserId: plexUser.id,
       image: plexUser.thumb,
-      emailVerified: new Date(),
+      emailVerified: email === null ? null : new Date(),
       ...INVITE_EXEMPTION,
     },
   })
-
-  return user
 }
 
 /**
- * Record invite usage and create/update user
+ * Record invite usage and create/update user.
+ *
+ * If another row already holds the Plex email, the write is retried once
+ * without it, so that row can neither absorb nor block the redeeming user. The
+ * retry runs in a new transaction because PostgreSQL aborts a transaction once
+ * a statement in it fails.
  */
 async function recordInviteUsage(inviteId: string, plexUser: PlexUser): Promise<void> {
-  await prisma.$transaction(async (tx) => {
-    const user = await findOrCreateUser(tx, plexUser)
+  const record = (email: string | null) =>
+    prisma.$transaction(async (tx) => {
+      const user = await findOrCreateUser(tx, plexUser, email)
 
-    await tx.inviteUsage.create({
-      data: {
-        inviteId,
-        userId: user.id,
-      },
+      await tx.inviteUsage.create({
+        data: {
+          inviteId,
+          userId: user.id,
+        },
+      })
     })
-  })
+
+  try {
+    await record(plexUser.email)
+  } catch (error) {
+    if (!isUniqueEmailConflict(error)) {
+      throw error
+    }
+
+    const existingUser = await prisma.user.findUnique({
+      where: { email: plexUser.email },
+      select: { id: true },
+    })
+    logger.warn("invite.email_conflict", {
+      existingUserId: existingUser?.id ?? null,
+      plexUserId: plexUser.id,
+    })
+    await record(null)
+  }
 }
 
 /**
@@ -813,20 +856,12 @@ export async function processJellyfinInvite(code: string, authData: JellyfinAuth
   }
 
   try {
-    const { username, password } = authData
-
-    // Basic validation
-    if (!username || !password) {
-      return { success: false, error: "Username and password are required" }
+    // Validated before the invite is consumed, so a rejected name costs no use
+    const credentials = jellyfinInviteCredentialsSchema.safeParse(authData)
+    if (!credentials.success) {
+      return { success: false, error: credentials.error.issues[0].message }
     }
-
-    if (username.length < 3) {
-      return { success: false, error: "Username must be at least 3 characters" }
-    }
-
-    if (password.length < 8) {
-      return { success: false, error: "Password must be at least 8 characters" }
-    }
+    const { username, password } = credentials.data
 
     // Get server config first (before consuming the invite)
     const serverResult = await getActiveJellyfinServer()

@@ -120,6 +120,44 @@ test.describe('Jellyfin Invite Flow', () => {
         await prisma.$disconnect();
       }
     });
+
+    test('rejects an email-shaped username without consuming the invite', async ({ page }) => {
+      const prisma = createE2EPrismaClient();
+      const inviteCode = `JMAIL${Date.now()}`.substring(0, 8).toUpperCase();
+
+      try {
+        await prisma.invite.create({
+          data: {
+            code: inviteCode,
+            serverType: 'JELLYFIN',
+            maxUses: 1,
+            useCount: 0,
+          }
+        });
+
+        await page.goto(`/invite/${inviteCode}`);
+        await waitForLoadingGone(page);
+        await expect(page.getByTestId('jellyfin-invite-form')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+
+        // Passes the form's own checks, so the server action decides
+        await page.getByTestId('jellyfin-username-input').fill('owner@example.com');
+        await page.getByTestId('jellyfin-password-input').fill('password123');
+        await page.getByTestId('jellyfin-confirm-password-input').fill('password123');
+        await page.getByTestId('jellyfin-submit-button').click();
+
+        await expect(page.getByTestId('invalid-invite-heading')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+        await expect(page.getByTestId('invalid-invite-message')).toContainText('letters, numbers, dots, dashes or underscores');
+
+        const invite = await prisma.invite.findUnique({ where: { code: inviteCode } });
+        expect(invite?.useCount).toBe(0);
+
+      } finally {
+        await prisma.invite.deleteMany({
+          where: { code: inviteCode }
+        });
+        await prisma.$disconnect();
+      }
+    });
   });
 
   test.describe('Admin Invite Management', () => {

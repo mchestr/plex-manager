@@ -8,7 +8,6 @@ import { isE2ETestMode } from "@/lib/security/test-mode"
 import { createLogger } from "@/lib/utils/logger"
 import { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
-import { z } from "zod"
 
 const logger = createLogger("AUTH")
 
@@ -316,6 +315,13 @@ export const authOptions: NextAuthOptions = {
             throw new Error("NO_SERVER_CONFIGURED")
           }
 
+          // "Allow Jellyfin sign-in" is off: refuse before Jellyfin sees the
+          // password. Hiding the button alone would leave this callback open.
+          if (!jellyfinServer.enabledForLogin) {
+            logger.warn("jellyfin.login.disabled", { serverId: jellyfinServer.id })
+            return null
+          }
+
           // Authenticate with Jellyfin API
           const authResult = await authenticateJellyfin(
             { url: jellyfinServer.url, apiKey: jellyfinServer.apiKey },
@@ -342,71 +348,39 @@ export const authOptions: NextAuthOptions = {
             jellyfinServer.adminUserId
           )
 
-          // Find or create user in database
+          // Match only by Jellyfin user ID. Jellyfin users can rename
+          // themselves to any string, an email address included, so the
+          // username never links to, or is stored as the email of, any row.
           let dbUser = await prisma.user.findUnique({
             where: { jellyfinUserId: jellyfinUser.id },
           })
 
           if (!dbUser) {
-            // Check if user with same username/email exists (for account linking)
-            // Validate if Jellyfin username is a valid email format
-            const emailSchema = z.string().email()
-            const emailValidation = emailSchema.safeParse(jellyfinUser.username)
-            const normalizedEmail = emailValidation.success
-              ? jellyfinUser.username.toLowerCase().trim()
-              : null
-
-            const userByEmail = normalizedEmail
-              ? await prisma.user.findUnique({
-                  where: { email: normalizedEmail }
-                })
-              : null
-
-            if (userByEmail) {
-              // Link Jellyfin account to existing user
-              dbUser = await prisma.user.update({
-                where: { id: userByEmail.id },
-                data: {
-                  jellyfinUserId: jellyfinUser.id,
-                  primaryAuthService: userByEmail.primaryAuthService || "jellyfin",
-                  isAdmin: isAdmin || userByEmail.isAdmin,
-                },
-              })
-
-              logger.info("Linked Jellyfin account to existing user", {
-                userId: dbUser.id,
+            dbUser = await prisma.user.create({
+              data: {
                 jellyfinUserId: jellyfinUser.id,
-                username: jellyfinUser.username,
-              })
-            } else {
-              // Create new user
-              dbUser = await prisma.user.create({
-                data: {
-                  jellyfinUserId: jellyfinUser.id,
-                  name: jellyfinUser.username,
-                  email: normalizedEmail,
-                  isAdmin,
-                  primaryAuthService: "jellyfin",
-                  onboardingStatus: { plex: false, jellyfin: false },
-                },
-              })
-
-              logger.info("Created new Jellyfin user", {
-                userId: dbUser.id,
-                jellyfinUserId: jellyfinUser.id,
-                username: jellyfinUser.username,
+                name: jellyfinUser.username,
                 isAdmin,
-              })
+                primaryAuthService: "jellyfin",
+                onboardingStatus: { plex: false, jellyfin: false },
+              },
+            })
 
-              // Audit log: New user created
-              if (isAdmin) {
-                const { logAuditEvent, AuditEventType } = await import("@/lib/security/audit-log")
-                logAuditEvent(AuditEventType.USER_CREATED, dbUser.id, {
-                  isAdmin: true,
-                  jellyfinUserId: jellyfinUser.id,
-                  authService: "jellyfin",
-                })
-              }
+            logger.info("Created new Jellyfin user", {
+              userId: dbUser.id,
+              jellyfinUserId: jellyfinUser.id,
+              username: jellyfinUser.username,
+              isAdmin,
+            })
+
+            // Audit log: New user created
+            if (isAdmin) {
+              const { logAuditEvent, AuditEventType } = await import("@/lib/security/audit-log")
+              logAuditEvent(AuditEventType.USER_CREATED, dbUser.id, {
+                isAdmin: true,
+                jellyfinUserId: jellyfinUser.id,
+                authService: "jellyfin",
+              })
             }
           } else {
             // Check if admin status changed
@@ -417,7 +391,6 @@ export const authOptions: NextAuthOptions = {
               where: { id: dbUser.id },
               data: {
                 name: jellyfinUser.username,
-                email: jellyfinUser.username.includes('@') ? jellyfinUser.username : dbUser.email,
                 isAdmin,
               },
             })

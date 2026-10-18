@@ -132,6 +132,7 @@ describe("NextAuth credential callback rate limits", () => {
       apiKey: "api-key",
       adminUserId: "admin-id",
       isActive: true,
+      enabledForLogin: true,
     })
     mockAuthenticateJellyfin.mockResolvedValue({ success: false, error: "Invalid username or password" })
     mockGetPlexUserInfo.mockResolvedValue({ success: false, error: "Invalid token" })

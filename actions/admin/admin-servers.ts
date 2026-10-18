@@ -628,8 +628,9 @@ export async function deleteJellyfinServer() {
 const toggleJellyfinLoginSchema = z.boolean()
 
 /**
- * Toggle Jellyfin login visibility (admin only)
- * When disabled, Jellyfin won't appear as a login option on the home page
+ * Allow Jellyfin sign-in, or turn it off (admin only)
+ * When off, the Jellyfin provider refuses every sign-in and the home page
+ * shows no Jellyfin login option
  */
 export async function toggleJellyfinLogin(enabled: boolean) {
   await requireAdmin()

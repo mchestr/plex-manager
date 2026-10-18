@@ -7,6 +7,8 @@
  * - Transaction conflict retry logic (P2034)
  * - Compensating transactions (rollback) on Plex failures
  * - Audit logging for security-sensitive events
+ * - Matching Plex redemptions by plexUserId only, never by email (SEC-08)
+ * - Zod validation of Jellyfin invite credentials
  */
 
 import {
@@ -93,6 +95,16 @@ jest.mock('@/lib/security/rate-limit', () => ({
   actionClientIp: jest.fn(),
 }))
 
+const mockWarn = jest.fn()
+jest.mock('@/lib/utils/logger', () => ({
+  createLogger: () => ({
+    debug: jest.fn(),
+    info: jest.fn(),
+    error: jest.fn(),
+    warn: (...args: unknown[]) => mockWarn(...args),
+  }),
+}))
+
 const mockRequireAdmin = requireAdmin as jest.MockedFunction<typeof requireAdmin>
 const mockConsume = consume as jest.MockedFunction<typeof consume>
 const mockActionClientIp = actionClientIp as jest.MockedFunction<typeof actionClientIp>
@@ -153,6 +165,21 @@ describe('invite actions', () => {
     mockActionClientIp.mockResolvedValue(CLIENT_IP)
     mockConsume.mockResolvedValue({ ok: true })
   })
+
+  /**
+   * Run processInvite under fake timers so the 2s Plex propagation delay
+   * resolves immediately instead of slowing the suite down.
+   */
+  async function runProcessInvite(code: string, token: string) {
+    jest.useFakeTimers()
+    try {
+      const promise = processInvite(code, token)
+      await jest.runAllTimersAsync()
+      return await promise
+    } finally {
+      jest.useRealTimers()
+    }
+  }
 
   describe('rate limits (invite:validate, invite:redeem)', () => {
     function limitTo(limited: string) {
@@ -481,21 +508,6 @@ describe('invite actions', () => {
       },
     }
 
-    /**
-     * Run processInvite under fake timers so the 2s Plex propagation delay
-     * resolves immediately instead of slowing the suite down.
-     */
-    async function runProcessInvite(code: string, token: string) {
-      jest.useFakeTimers()
-      try {
-        const promise = processInvite(code, token)
-        await jest.runAllTimersAsync()
-        return await promise
-      } finally {
-        jest.useRealTimers()
-      }
-    }
-
     beforeEach(() => {
       mockPrisma.$transaction.mockImplementation(async (fn) =>
         typeof fn === 'function' ? fn(tx as unknown as Prisma.TransactionClient) : Promise.resolve()
@@ -588,6 +600,223 @@ describe('invite actions', () => {
           isExempt: true,
           exemptReason: 'invite',
         }),
+      })
+    })
+  })
+
+  describe('Plex redemption never links by email (SEC-08)', () => {
+    const tx = {
+      invite: { findUnique: jest.fn(), update: jest.fn() },
+      user: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn() },
+      inviteUsage: { create: jest.fn() },
+    }
+
+    const victim = { id: 'plex-victim', username: 'victim', email: 'victim@example.com', thumb: null }
+
+    /** A row created by the old Jellyfin sign-in, which stored the username as its email. */
+    const preClaimedRow = {
+      id: 'jellyfin-row',
+      email: 'victim@example.com',
+      jellyfinUserId: 'jf-eve',
+      plexUserId: null,
+      isExempt: false,
+    }
+
+    /** The P2002 that the pg driver adapter raises for a duplicate value. */
+    function uniqueViolation(constraint: { index: string } | { fields: string[] }) {
+      return new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
+        code: 'P2002',
+        clientVersion: '7.10.1',
+        meta: {
+          modelName: 'User',
+          driverAdapterError: {
+            name: 'DriverAdapterError',
+            cause: { originalCode: '23505', kind: 'UniqueConstraintViolation', constraint, table: 'User' },
+          },
+        },
+      })
+    }
+
+    function lookedUpByEmail() {
+      return tx.user.findUnique.mock.calls.some(
+        ([args]: [{ where: Record<string, unknown> }]) => 'email' in args.where
+      )
+    }
+
+    beforeEach(() => {
+      mockPrisma.$transaction.mockImplementation(async (fn) =>
+        typeof fn === 'function' ? fn(tx as unknown as Prisma.TransactionClient) : Promise.resolve()
+      )
+      mockGetPlexUserInfo.mockResolvedValue({ success: true, data: victim })
+      mockPrisma.plexServer.findFirst.mockResolvedValue(mockPlexServer)
+      mockInviteUserToPlexServer.mockResolvedValue({ success: true, inviteID: 12345 })
+      mockAcceptPlexInvite.mockResolvedValue({ success: true })
+      tx.invite.findUnique.mockResolvedValue(mockInvite)
+      tx.invite.update.mockResolvedValue({ ...mockInvite, useCount: 1 })
+      tx.inviteUsage.create.mockResolvedValue({})
+      tx.user.findUnique.mockImplementation(async ({ where }: { where: Record<string, unknown> }) =>
+        where.email === preClaimedRow.email ? preClaimedRow : null
+      )
+    })
+
+    it('creates a separate row while a Jellyfin row holds the same email', async () => {
+      tx.user.create.mockResolvedValue({ id: 'victim-row' })
+
+      const result = await runProcessInvite('TESTCODE', 'plex-auth-token')
+
+      expect(result).toEqual({ success: true })
+      expect(tx.user.findUnique).toHaveBeenCalledWith({ where: { plexUserId: 'plex-victim' } })
+      expect(lookedUpByEmail()).toBe(false)
+      expect(tx.user.update).not.toHaveBeenCalled()
+      expect(tx.user.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ plexUserId: 'plex-victim', email: 'victim@example.com' }),
+      })
+      expect(tx.inviteUsage.create).toHaveBeenCalledWith({
+        data: { inviteId: 'invite-123', userId: 'victim-row' },
+      })
+    })
+
+    it.each([
+      ['the constraint name', { index: 'User_email_key' }],
+      ['the column', { fields: ['email'] }],
+    ])('retries once with email: null when the create conflicts on email (reported by %s)', async (_label, constraint) => {
+      tx.user.create
+        .mockRejectedValueOnce(uniqueViolation(constraint))
+        .mockResolvedValueOnce({ id: 'victim-row' })
+      ;(mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({ id: preClaimedRow.id })
+
+      const result = await runProcessInvite('TESTCODE', 'plex-auth-token')
+
+      expect(result).toEqual({ success: true })
+      expect(tx.user.create).toHaveBeenCalledTimes(2)
+      expect(tx.user.create.mock.calls[1][0].data).toMatchObject({
+        plexUserId: 'plex-victim',
+        email: null,
+        emailVerified: null,
+      })
+      // Claiming the invite, the failed write and the retry each get a transaction.
+      expect(mockPrisma.$transaction).toHaveBeenCalledTimes(3)
+      expect(tx.inviteUsage.create).toHaveBeenCalledTimes(1)
+      expect(tx.inviteUsage.create).toHaveBeenCalledWith({
+        data: { inviteId: 'invite-123', userId: 'victim-row' },
+      })
+      expect(mockWarn).toHaveBeenCalledWith('invite.email_conflict', {
+        existingUserId: 'jellyfin-row',
+        plexUserId: 'plex-victim',
+      })
+      expect(mockLogAuditEvent).not.toHaveBeenCalledWith(
+        AuditEventType.INVITE_ROLLBACK,
+        expect.anything(),
+        expect.anything()
+      )
+    })
+
+    it("keeps an existing Plex row's email when updating it to the new address conflicts", async () => {
+      tx.user.findUnique.mockImplementation(async ({ where }: { where: Record<string, unknown> }) =>
+        where.plexUserId === 'plex-victim' ? { id: 'victim-row', isExempt: true } : null
+      )
+      tx.user.update
+        .mockRejectedValueOnce(uniqueViolation({ index: 'User_email_key' }))
+        .mockResolvedValueOnce({ id: 'victim-row' })
+      ;(mockPrisma.user.findUnique as jest.Mock).mockResolvedValue({ id: preClaimedRow.id })
+
+      const result = await runProcessInvite('TESTCODE', 'plex-auth-token')
+
+      expect(result).toEqual({ success: true })
+      expect(tx.user.update.mock.calls[0][0].data).toMatchObject({ email: 'victim@example.com' })
+      const retryData = tx.user.update.mock.calls[1][0].data
+      expect(retryData).not.toHaveProperty('email')
+      expect(retryData).not.toHaveProperty('emailVerified')
+      expect(tx.user.create).not.toHaveBeenCalled()
+    })
+
+    it('does not retry a conflict on another unique column', async () => {
+      tx.user.create.mockRejectedValue(uniqueViolation({ index: 'User_plexUserId_key' }))
+
+      const result = await runProcessInvite('TESTCODE', 'plex-auth-token')
+
+      expect(result.success).toBe(false)
+      expect(tx.user.create).toHaveBeenCalledTimes(1)
+      expect(mockWarn).not.toHaveBeenCalledWith('invite.email_conflict', expect.anything())
+      expect(mockLogAuditEvent).toHaveBeenCalledWith(
+        AuditEventType.INVITE_ROLLBACK,
+        'system',
+        expect.objectContaining({ inviteId: 'invite-123' })
+      )
+    })
+  })
+
+  describe('processJellyfinInvite - credential validation', () => {
+    const tx = {
+      invite: { findUnique: jest.fn(), update: jest.fn() },
+      user: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn() },
+      inviteUsage: { create: jest.fn() },
+    }
+    const jellyfinInvite = { ...mockInvite, serverType: 'JELLYFIN' }
+
+    beforeEach(() => {
+      mockPrisma.$transaction.mockImplementation(async (fn) =>
+        typeof fn === 'function' ? fn(tx as unknown as Prisma.TransactionClient) : Promise.resolve()
+      )
+      ;(mockPrisma.jellyfinServer.findFirst as jest.Mock).mockResolvedValue({
+        id: 'jf-server-1',
+        url: 'https://jellyfin.example.com',
+        apiKey: 'jf-api-key',
+        publicUrl: null,
+        isActive: true,
+      })
+      tx.invite.findUnique.mockResolvedValue(jellyfinInvite)
+      tx.invite.update.mockResolvedValue({ ...jellyfinInvite, useCount: 1 })
+      tx.user.findUnique.mockResolvedValue(null)
+      tx.user.create.mockResolvedValue({ id: 'user-1' })
+      tx.inviteUsage.create.mockResolvedValue({})
+      mockCreateJellyfinUser.mockResolvedValue({ success: true, userId: 'jf-user-1' })
+      mockSetJellyfinUserPolicy.mockResolvedValue({ success: true })
+    })
+
+    it.each(['a@b.com', 'ab', 'has space', 'a'.repeat(33)])(
+      'rejects the username %p without consuming the invite',
+      async (username) => {
+        const result = await processJellyfinInvite('TESTCODE', { username, password: 'password123' })
+
+        expect(result).toEqual({
+          success: false,
+          error: 'Username must be 3 to 32 characters: letters, numbers, dots, dashes or underscores',
+        })
+        expect(mockPrisma.jellyfinServer.findFirst).not.toHaveBeenCalled()
+        expect(mockPrisma.$transaction).not.toHaveBeenCalled()
+        expect(mockCreateJellyfinUser).not.toHaveBeenCalled()
+      }
+    )
+
+    it.each([
+      ['shorter than 8 characters', 'short12', 'Password must be at least 8 characters'],
+      ['longer than 256 characters', 'p'.repeat(257), 'Password must be at most 256 characters'],
+    ])('rejects a password %s without consuming the invite', async (_label, password, error) => {
+      const result = await processJellyfinInvite('TESTCODE', { username: 'jane.doe-2', password })
+
+      expect(result).toEqual({ success: false, error })
+      expect(mockPrisma.$transaction).not.toHaveBeenCalled()
+      expect(mockCreateJellyfinUser).not.toHaveBeenCalled()
+    })
+
+    it('accepts jane.doe-2 and creates the account under the trimmed name', async () => {
+      const result = await processJellyfinInvite('TESTCODE', {
+        username: '  jane.doe-2 ',
+        password: 'password123',
+      })
+
+      expect(result).toEqual({
+        success: true,
+        data: { jellyfinUserId: 'jf-user-1', username: 'jane.doe-2', serverUrl: 'https://jellyfin.example.com' },
+      })
+      expect(mockCreateJellyfinUser).toHaveBeenCalledWith(
+        { url: 'https://jellyfin.example.com', apiKey: 'jf-api-key' },
+        'jane.doe-2',
+        'password123'
+      )
+      expect(tx.user.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ name: 'jane.doe-2', jellyfinUserId: 'jf-user-1' }),
       })
     })
   })
