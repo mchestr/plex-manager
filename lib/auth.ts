@@ -17,10 +17,6 @@ const logger = createLogger("AUTH")
  */
 const ADMIN_RECHECK_INTERVAL_MS = 5 * 60 * 1000
 
-if (isE2ETestMode()) {
-  logger.warn('E2E test login is enabled')
-}
-
 export const authOptions: NextAuthOptions = {
   // NOTE: PrismaAdapter is not compatible with CredentialsProvider
   // We use JWT strategy instead for Plex authentication
@@ -37,9 +33,11 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         // TEST MODE BYPASS
         // Only active with the server-only E2E_TEST_MODE=true, and never in
-        // production. NODE_ENV=test alone does not enable it. Server auth does
-        // NOT read NEXT_PUBLIC_ENABLE_TEST_AUTH: that flag is bundled into
-        // client JS and only lets the callback page present the test token.
+        // production. NODE_ENV=test alone does not enable it. The server logs
+        // a warning at startup when it is on (lib/instrumentation/node.ts).
+        // Server auth does NOT read NEXT_PUBLIC_ENABLE_TEST_AUTH: that flag is
+        // bundled into client JS and only lets the callback page present the
+        // test token.
         const isTestMode = isE2ETestMode()
 
         if (isTestMode && credentials?.authToken) {

@@ -257,36 +257,23 @@ describe('Plex authorize test-token login', () => {
 })
 
 describe('E2E test login warning', () => {
-  async function loadAuthWithLoggerSpy() {
-    const warn = jest.fn()
-    await jest.isolateModulesAsync(async () => {
-      jest.doMock('@/lib/utils/logger', () => ({
-        createLogger: () => ({ warn, info: jest.fn(), error: jest.fn(), debug: jest.fn() }),
-      }))
-      await import('@/lib/auth')
-    })
-    return warn
-  }
-
   afterEach(() => {
     jest.dontMock('@/lib/utils/logger')
   })
 
-  it('logs one warning at load when E2E_TEST_MODE=true', async () => {
+  // The warning is logged once at server startup (lib/instrumentation/node.ts).
+  // Next compiles lib/auth.ts into several bundles, so a load-time warning
+  // would repeat, and it would break test files whose logger mocks have no warn.
+  it('does not log when lib/auth loads with E2E_TEST_MODE=true', async () => {
     disableTestLogin()
     env.E2E_TEST_MODE = 'true'
+    const createLogger = jest.fn(() => ({ info: jest.fn(), error: jest.fn(), debug: jest.fn() }))
 
-    const warn = await loadAuthWithLoggerSpy()
+    await jest.isolateModulesAsync(async () => {
+      jest.doMock('@/lib/utils/logger', () => ({ createLogger }))
+      await expect(import('@/lib/auth')).resolves.toHaveProperty('authOptions')
+    })
 
-    expect(warn).toHaveBeenCalledTimes(1)
-    expect(warn).toHaveBeenCalledWith('E2E test login is enabled')
-  })
-
-  it('does not warn when the flag is unset', async () => {
-    disableTestLogin()
-
-    const warn = await loadAuthWithLoggerSpy()
-
-    expect(warn).not.toHaveBeenCalled()
+    expect(createLogger).toHaveBeenCalled()
   })
 })

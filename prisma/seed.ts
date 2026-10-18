@@ -1,27 +1,17 @@
 import { PrismaClient } from '../lib/generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
-import { assertSeedTarget, isE2ETestMode } from '../lib/security/test-mode'
+import { resolveSeedTarget } from '../lib/security/test-mode'
 
 /**
  * The seed wipes users, Rewinds and service configuration, then creates a
- * hardcoded admin@example.com admin. It runs only with the explicit
- * E2E_TEST_MODE=true flag (never in production) and only against a local host
- * or a database whose name ends in _test.
+ * hardcoded admin@example.com admin. resolveSeedTarget() refuses unless
+ * E2E_TEST_MODE=true is set (never in production) and the database is on a
+ * local host or has a name ending in _test.
  */
-function resolveSeedTarget(): string {
-  if (!isE2ETestMode()) {
-    throw new Error(
-      'Refusing to seed: set E2E_TEST_MODE=true (never in production) to confirm this is a disposable database.'
-    )
-  }
-  const target = assertSeedTarget(process.env.DATABASE_URL)
-  console.log(`Seeding database "${target.database}" on host "${target.host}"`)
-  return target.url
-}
-
 async function main() {
-  const connectionString = resolveSeedTarget()
-  const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString }) })
+  const target = resolveSeedTarget(process.env)
+  console.log(`Seeding database "${target.database}" on host "${target.host}"`)
+  const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: target.url }) })
   try {
     await seed(prisma)
   } finally {

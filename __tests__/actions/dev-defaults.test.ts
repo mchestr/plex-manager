@@ -31,9 +31,9 @@ describe('getDevDefaults', () => {
     process.env = { ...originalEnv }
     // Clear all DEV_* variables for clean test state
     clearDevEnvVars()
-    // Defaults need the explicit flag and an incomplete setup; the cases below
-    // that check the gate override these.
-    process.env.E2E_TEST_MODE = 'true'
+    // Defaults need the explicit prefill flag and an incomplete setup; the cases
+    // below that check the gate override these.
+    process.env.DEV_SETUP_PREFILL = 'true'
     mockGetSetupStatus.mockReset()
     mockGetSetupStatus.mockResolvedValue({ isComplete: false, currentStep: 1 })
   })
@@ -86,8 +86,8 @@ describe('getDevDefaults', () => {
       process.env.DEV_TAUTULLI_API_KEY = 'dev-tautulli-key'
     })
 
-    it('should return empty defaults in development without E2E_TEST_MODE', async () => {
-      delete process.env.E2E_TEST_MODE
+    it('should return empty defaults in development without DEV_SETUP_PREFILL', async () => {
+      delete process.env.DEV_SETUP_PREFILL
 
       const { getDevDefaults } = await import('@/actions/dev-defaults')
       const result = await getDevDefaults()
@@ -98,8 +98,8 @@ describe('getDevDefaults', () => {
       expect(mockGetSetupStatus).not.toHaveBeenCalled()
     })
 
-    it('should return empty defaults when E2E_TEST_MODE has a value other than true', async () => {
-      process.env.E2E_TEST_MODE = '1'
+    it('should return empty defaults when DEV_SETUP_PREFILL has a value other than true', async () => {
+      process.env.DEV_SETUP_PREFILL = '1'
 
       const { getDevDefaults } = await import('@/actions/dev-defaults')
       const result = await getDevDefaults()
@@ -117,6 +117,20 @@ describe('getDevDefaults', () => {
       expect(mockGetSetupStatus).toHaveBeenCalledTimes(1)
       expect(result.isDevMode).toBe(false)
       expect(result.autoSubmit).toBe(false)
+      expect(result.plex).toBeNull()
+      expect(result.tautulli).toBeNull()
+    })
+
+    it('should not treat E2E_TEST_MODE as the prefill flag', async () => {
+      // Test-token login and the seed use E2E_TEST_MODE; turning it on must not
+      // also expose the DEV_* tokens and keys, and vice versa.
+      delete process.env.DEV_SETUP_PREFILL
+      process.env.E2E_TEST_MODE = 'true'
+
+      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const result = await getDevDefaults()
+
+      expect(result.isDevMode).toBe(false)
       expect(result.plex).toBeNull()
       expect(result.tautulli).toBeNull()
     })

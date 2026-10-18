@@ -4,11 +4,17 @@
  * to prevent Edge Runtime from analyzing Node.js-only dependencies
  */
 
+import { isE2ETestMode } from "@/lib/security/test-mode"
 import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("INSTRUMENTATION")
 
 export async function startNodeInstrumentation() {
+  // Runs once per server process, so the warning is logged once, at startup.
+  if (isE2ETestMode()) {
+    logger.warn("E2E test login is enabled")
+  }
+
   // Start queue worker (for watchlist sync and other background jobs)
   await startQueueWorker()
 

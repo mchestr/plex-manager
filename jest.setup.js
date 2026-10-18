@@ -4,6 +4,10 @@ import '@testing-library/jest-dom'
 // Set test environment variables
 process.env.NEXTAUTH_SECRET = 'test-secret-key-for-hashing-ip-addresses-min-32-chars'
 process.env.NODE_ENV = 'test'
+// next/jest loads .env, where a developer may have set the test-login flags.
+// Unit tests never inherit them; the tests that need a flag set it themselves.
+delete process.env.E2E_TEST_MODE
+delete process.env.ENABLE_TEST_AUTH
 
 // Polyfill TextEncoder/TextDecoder for Node.js test environment
 const { TextEncoder, TextDecoder } = require('util')
