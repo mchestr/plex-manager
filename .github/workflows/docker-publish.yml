@@ -3,7 +3,8 @@ name: Docker Build and Publish
 # Publishes images only from trusted refs: pushes to main and v* tags.
 # Pull requests get a no-push smoke build in build.yml (the docker-build job).
 # Publishing does not wait for Build, so main must only accept commits that
-# passed Build (branch protection).
+# passed Build (branch protection), and only the owner may push v* tags
+# (tag ruleset).
 on:
   push:
     branches:
@@ -12,6 +13,12 @@ on:
       - 'v*'
 
 permissions: {}
+
+# One publish per ref at a time; a newer queued run replaces an older pending
+# one, so back-to-back merges cannot leave :latest on an older commit.
+concurrency:
+  group: docker-publish-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   REGISTRY: ghcr.io
@@ -44,13 +51,17 @@ jobs:
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          # latest=auto would also tag every non-prerelease semver tag as
+          # latest; latest and sha-<short> come only from pushes to main.
+          flavor: |
+            latest=false
           tags: |
             type=ref,event=branch
             type=ref,event=pr
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
-            type=sha
+            type=sha,enable={{is_default_branch}}
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Docker image

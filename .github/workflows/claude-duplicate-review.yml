@@ -7,6 +7,9 @@ on:
 
 jobs:
   deduplicate:
+    # claude-code-action refuses actors without write access, so skip other
+    # authors instead of failing a run for every external issue.
+    if: contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
