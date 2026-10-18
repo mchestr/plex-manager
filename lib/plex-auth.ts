@@ -4,7 +4,6 @@ import { actionClientIp, consume, type LimitName } from "@/lib/security/rate-lim
 import { RATE_LIMITED_MESSAGE } from "@/lib/security/rate-limit-messages"
 import { createLogger } from "@/lib/utils/logger"
 import { getBaseUrl } from "@/lib/utils"
-import qs from "qs"
 
 const logger = createLogger("PLEX_AUTH")
 
@@ -172,17 +171,17 @@ export async function createPlexAuthUrl(pinId: number, pinCode: string, inviteCo
 
   const clientIdentifier = getClientIdentifier()
 
-  // Use qs.stringify to properly handle nested objects in query string
-  const queryString = qs.stringify({
+  // URLSearchParams writes spaces as "+" (form encoding); plex.tv has always
+  // received "%20". A literal "+" is already escaped as "%2B", so every "+"
+  // left in the string is a space.
+  const queryString = new URLSearchParams({
     clientID: clientIdentifier,
     code: pinCode,
     forwardUrl,
-    context: {
-      device: {
-        product: PLEX_PRODUCT_NAME,
-      },
-    },
+    "context[device][product]": PLEX_PRODUCT_NAME,
   })
+    .toString()
+    .replace(/\+/g, "%20")
 
   return `https://app.plex.tv/auth#?${queryString}`
 }
