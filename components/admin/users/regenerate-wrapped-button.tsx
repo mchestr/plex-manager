@@ -53,8 +53,8 @@ export function RegenerateWrappedButton({
         }, 3000)
       } else if (result.code === "ALREADY_GENERATING") {
         toast.showError(ALREADY_GENERATING_COPY)
-      } else if (result.code && !isGenerationRefusal(result.code)) {
-        // A typed failure: show the admin hint (or the code), not the member copy.
+      } else if (result.code === "REWIND_NOT_ELIGIBLE" || (result.code && !isGenerationRefusal(result.code))) {
+        // A typed failure or an ineligible member: show the admin hint (or the code), not the member copy.
         toast.showError(adminErrorHint(result.code, plexUserId) ?? result.code)
       } else {
         toast.showError(result.error || "Failed to regenerate wrapped")

@@ -2,8 +2,10 @@
 
 import { getWrappedSettings } from "@/actions/admin"
 import { generatePlexWrapped, getUserPlexWrapped } from "@/actions/users"
+import { RewindNotEligibleCard } from "@/components/dashboard/rewind-not-eligible-card"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
+import type { RewindEligibility } from "@/lib/wrapped/eligibility"
 import { isGenerationRefusal, memberErrorCopy, readStoredError, refusalCopy } from "@/lib/wrapped/generation-errors"
 import { motion } from "framer-motion"
 import Link from "next/link"
@@ -13,6 +15,8 @@ import { useCallback, useEffect, useRef, useState } from "react"
 interface WrappedCardProps {
   userId: string
   memberSince: string // ISO date string of when user joined
+  /** Decided on the server from `plexUserId` and the Tautulli match (FR-48). */
+  rewindEligibility: RewindEligibility
 }
 
 // Floating sparkle component
@@ -52,7 +56,7 @@ function isEligibleForWrapped(memberSince: string): boolean {
   return monthsDiff >= MIN_MEMBERSHIP_MONTHS
 }
 
-export function WrappedCard({ userId, memberSince }: WrappedCardProps) {
+export function WrappedCard({ userId, memberSince, rewindEligibility }: WrappedCardProps) {
   const toast = useToast()
   const router = useRouter()
   const [isGenerating, setIsGenerating] = useState(false)
@@ -62,8 +66,9 @@ export function WrappedCard({ userId, memberSince }: WrappedCardProps) {
   const [settingsFailed, setSettingsFailed] = useState(false)
   const pollFailureCountRef = useRef(0)
 
-  // Check membership eligibility
-  const eligible = isEligibleForWrapped(memberSince)
+  // Check membership duration; a member without Plex history is ineligible regardless
+  const memberLongEnough = isEligibleForWrapped(memberSince)
+  const canHaveRewind = rewindEligibility.eligible
 
   // Load wrapped settings. Without them the season year is unknown, so a
   // failure (e.g. a stale client after a redeploy) shows a retry, not an
@@ -95,7 +100,7 @@ export function WrappedCard({ userId, memberSince }: WrappedCardProps) {
   const wrappedYear = wrappedSettings?.year ?? null
 
   const loadWrapped = useCallback(async () => {
-    if (!userId || wrappedYear === null) return
+    if (!userId || wrappedYear === null || !canHaveRewind) return
 
     setIsLoading(true)
     try {
@@ -106,7 +111,7 @@ export function WrappedCard({ userId, memberSince }: WrappedCardProps) {
     } finally {
       setIsLoading(false)
     }
-  }, [userId, wrappedYear, toast])
+  }, [userId, wrappedYear, canHaveRewind, toast])
 
   useEffect(() => {
     loadWrapped()
@@ -180,8 +185,8 @@ export function WrappedCard({ userId, memberSince }: WrappedCardProps) {
     return null
   }
 
-  // Not eligible yet - don't show anything
-  if (!eligible) {
+  // Joined too recently - don't show anything (the explanation below shows regardless)
+  if (canHaveRewind && !memberLongEnough) {
     return null
   }
 
@@ -203,6 +208,11 @@ export function WrappedCard({ userId, memberSince }: WrappedCardProps) {
         </div>
       </motion.div>
     )
+  }
+
+  // No Plex watch history: explain, with no Generate or View action (FR-48)
+  if (!canHaveRewind && wrappedYear !== null) {
+    return <RewindNotEligibleCard year={wrappedYear} />
   }
 
   // Loading state (also while the season year is unknown)

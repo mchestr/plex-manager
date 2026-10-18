@@ -77,26 +77,48 @@ export function memberErrorCopy(code: RewindErrorCode): string {
 }
 
 /**
- * Admin-only hint for a code, or `null` when the code has no specific action.
+ * Admin-only hint for a stored code or an ineligible member, or `null` when
+ * the code has no specific action.
+ *
+ * A member with a `plexUserId` is ineligible only when Tautulli has no row for
+ * them. That answer is cached for 10 minutes (`lib/wrapped/eligibility.ts`),
+ * so the hint says when to try again.
  *
  * @example
  * ```ts
  * adminErrorHint("TAUTULLI_USER_NOT_FOUND", "12345")
  * // "Plex user 12345 is not in Tautulli's user list. Refresh users in Tautulli."
+ * adminErrorHint("REWIND_NOT_ELIGIBLE", null)
+ * // "This member has no linked Plex account, so there is no watch history for a Rewind."
  * ```
  */
-export function adminErrorHint(code: RewindErrorCode, plexUserId: string | null): string | null {
-  if (code === "TAUTULLI_USER_NOT_FOUND") {
-    return `Plex user ${plexUserId ?? "(none)"} is not in Tautulli's user list. Refresh users in Tautulli.`
+export function adminErrorHint(
+  code: RewindErrorCode | "REWIND_NOT_ELIGIBLE",
+  plexUserId: string | null
+): string | null {
+  switch (code) {
+    case "TAUTULLI_USER_NOT_FOUND":
+      return `Plex user ${plexUserId ?? "(none)"} is not in Tautulli's user list. Refresh users in Tautulli.`
+    case "REWIND_NOT_ELIGIBLE":
+      return plexUserId
+        ? `Plex user ${plexUserId} is not in Tautulli's user list. Refresh users in Tautulli, then try again in 10 minutes.`
+        : "This member has no linked Plex account, so there is no watch history for a Rewind."
+    case "GENERATION_FAILED":
+      return null
   }
-  return null
 }
 
 /**
- * Codes for a run `generatePlexWrapped` refused to start (SEC-22, RWP-12).
- * They are returned to the caller and never stored.
+ * Codes for a run `generatePlexWrapped` refused to start (SEC-22, RWP-12), or
+ * for a member who cannot have a Rewind (FR-48, RWP-08). They are returned to
+ * the caller and never stored.
  */
-export const GENERATION_REFUSAL_CODES = ["ALREADY_GENERATING", "RATE_LIMITED", "NOT_ENTITLED"] as const
+export const GENERATION_REFUSAL_CODES = [
+  "ALREADY_GENERATING",
+  "RATE_LIMITED",
+  "NOT_ENTITLED",
+  "REWIND_NOT_ELIGIBLE",
+] as const
 
 export type GenerationRefusalCode = (typeof GENERATION_REFUSAL_CODES)[number]
 
@@ -125,6 +147,7 @@ function retryAfterPhrase(seconds: number): string {
  * refusalCopy("ALREADY_GENERATING") // "Your Rewind is already being made."
  * refusalCopy("RATE_LIMITED", 540)  // "You can try again in 9 minutes."
  * refusalCopy("RATE_LIMITED", 7200) // "You can try again in 2 hours."
+ * refusalCopy("REWIND_NOT_ELIGIBLE") // "Rewind needs Plex watch history. Jellyfin support is planned."
  * ```
  */
 export function refusalCopy(code: GenerationRefusalCode, retryAfterSec = 60): string {
@@ -135,5 +158,7 @@ export function refusalCopy(code: GenerationRefusalCode, retryAfterSec = 60): st
       return `You can try again ${retryAfterPhrase(retryAfterSec)}.`
     case "NOT_ENTITLED":
       return "Rewind is part of an active membership. Renew your subscription to make yours."
+    case "REWIND_NOT_ELIGIBLE":
+      return "Rewind needs Plex watch history. Jellyfin support is planned."
   }
 }

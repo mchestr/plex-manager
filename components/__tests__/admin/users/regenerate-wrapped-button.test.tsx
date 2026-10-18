@@ -278,6 +278,27 @@ describe('RegenerateWrappedButton', () => {
       expect(screen.queryByText(/We couldn't find your account/)).not.toBeInTheDocument()
     })
 
+    it.each([
+      ['plex-1', "Plex user plex-1 is not in Tautulli's user list. Refresh users in Tautulli, then try again in 10 minutes."],
+      [null, 'This member has no linked Plex account, so there is no watch history for a Rewind.'],
+    ])('explains an ineligible member (Plex user %s) in admin terms (P0.17)', async (plexUserId, hint) => {
+      const user = userEvent.setup({ delay: null })
+      jest.spyOn(usersAction, 'generatePlexWrapped').mockResolvedValue({
+        success: false,
+        code: 'REWIND_NOT_ELIGIBLE',
+        error: 'Rewind needs Plex watch history. Jellyfin support is planned.',
+      })
+
+      renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId={plexUserId} year={2026} />)
+      await user.click(screen.getByRole('button', { name: /Regenerate wrapped/i }))
+      await user.click(screen.getByText('Regenerate'))
+
+      await waitFor(() => {
+        expect(screen.getByText(hint)).toBeInTheDocument()
+      })
+      expect(screen.queryByText(/Jellyfin support is planned/)).not.toBeInTheDocument()
+    })
+
     it('says a run is already in progress, in admin terms (P0.12)', async () => {
       const user = userEvent.setup({ delay: null })
       jest.spyOn(usersAction, 'generatePlexWrapped').mockResolvedValue({

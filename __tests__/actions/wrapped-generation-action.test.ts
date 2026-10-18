@@ -1,7 +1,8 @@
 /**
- * Tests for actions/wrapped-generation.ts - wrapped generation logic, and the
+ * Tests for actions/wrapped-generation.ts - wrapped generation logic, the
  * P0.12 guardrails (SEC-22, RWP-12): the season year, single flight, stale
- * takeover, compare-and-set writes and the member limits.
+ * takeover, compare-and-set writes and the member limits, and the P0.17
+ * eligibility gate (RWP-08, FR-48).
  */
 
 import {
@@ -24,6 +25,7 @@ import { generateShareToken } from '@/lib/utils'
 import { getWrappedSettings } from '@/actions/admin'
 import { consume, reward } from '@/lib/security/rate-limit'
 import { memberErrorCopy } from '@/lib/wrapped/generation-errors'
+import { getRewindEligibility } from '@/lib/wrapped/eligibility'
 import { assembleWrappedData } from '@/lib/wrapped/assemble-wrapped'
 import {
   buildLeaderboards,
@@ -74,6 +76,12 @@ jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),
 }))
 
+// Every member is eligible by default; the eligibility tests below switch to
+// ineligible answers or to the real module.
+jest.mock('@/lib/wrapped/eligibility', () => ({
+  getRewindEligibility: jest.fn(),
+}))
+
 jest.mock('@/lib/auth', () => ({
   authOptions: {},
 }))
@@ -115,6 +123,7 @@ const SEASON_YEAR = 2026
  */
 function setGenerationDefaults() {
   ;(getWrappedSettings as jest.Mock).mockResolvedValue({ wrappedEnabled: true, wrappedYear: SEASON_YEAR })
+  ;(getRewindEligibility as jest.Mock).mockResolvedValue({ eligible: true })
   ;(prisma.config.findUnique as jest.Mock).mockResolvedValue(null)
   ;(consume as jest.Mock).mockResolvedValue({ ok: true })
   ;(reward as jest.Mock).mockResolvedValue(undefined)
@@ -394,27 +403,140 @@ describe('generatePlexWrapped', () => {
     expect(prisma.plexWrapped.updateMany).not.toHaveBeenCalled()
   })
 
-  it('should return error when user has no Plex user ID', async () => {
-    ;(getServerSession as jest.Mock).mockResolvedValue(mockSession)
-    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(
-      makePrismaUser({
+  describe('Rewind eligibility (P0.17)', () => {
+    const NOT_ELIGIBLE = {
+      success: false,
+      code: 'REWIND_NOT_ELIGIBLE',
+      error: 'Rewind needs Plex watch history. Jellyfin support is planned.',
+    }
+
+    function setUpEligibilityRun(user: ReturnType<typeof makePrismaUser>) {
+      ;(getServerSession as jest.Mock).mockResolvedValue(
+        makeSession({ user: { id: user.id, email: user.email, name: user.name, isAdmin: false } })
+      )
+      ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(user)
+      ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
+      ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(makePrismaPlexServer())
+      ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(makePrismaTautulli())
+    }
+
+    function expectNoRowAndNoPoint() {
+      expect(consume).not.toHaveBeenCalled()
+      expect(prisma.plexWrapped.createMany).not.toHaveBeenCalled()
+      expect(prisma.plexWrapped.updateManyAndReturn).not.toHaveBeenCalled()
+      expect(prisma.plexWrapped.updateMany).not.toHaveBeenCalled()
+      expect(fetchTautulliStatistics).not.toHaveBeenCalled()
+      expect(generateWrappedWithLLM).not.toHaveBeenCalled()
+    }
+
+    it('refuses a Jellyfin-only member before any row is created or claimed', async () => {
+      const jellyfinOnly = makePrismaUser({
         ...mockUser,
+        primaryAuthService: 'jellyfin',
+        jellyfinUserId: 'jf-1',
         plexUserId: null,
       })
-    )
-    ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
-    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(makePrismaPlexServer())
-    ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(makePrismaTautulli())
+      setUpEligibilityRun(jellyfinOnly)
 
-    const result = await generatePlexWrapped('user-1', 2026)
+      const result = await generatePlexWrapped('user-1', 2026)
 
-    // A Jellyfin-only member: no point is spent and nothing is written.
-    expect(result).toEqual({ success: false, error: 'User does not have a Plex user ID' })
-    expect(consume).not.toHaveBeenCalled()
-    expect(prisma.plexWrapped.createMany).not.toHaveBeenCalled()
-    expect(prisma.plexWrapped.updateManyAndReturn).not.toHaveBeenCalled()
-    expect(prisma.plexWrapped.updateMany).not.toHaveBeenCalled()
-    expect(fetchTautulliStatistics).not.toHaveBeenCalled()
+      expect(result).toEqual(NOT_ELIGIBLE)
+      expectNoRowAndNoPoint()
+    })
+
+    it('refuses a Plex member with no Tautulli match before any row is created or claimed', async () => {
+      setUpEligibilityRun(mockUser)
+      ;(getRewindEligibility as jest.Mock).mockResolvedValue({ eligible: false, reason: 'NO_TAUTULLI_MATCH' })
+
+      const result = await generatePlexWrapped('user-1', 2026)
+
+      expect(result).toEqual(NOT_ELIGIBLE)
+      expect(getRewindEligibility).toHaveBeenCalledWith(mockUser)
+      expectNoRowAndNoPoint()
+    })
+
+    it("checks ownership before eligibility, so another member's id reveals nothing", async () => {
+      setUpEligibilityRun(mockUser)
+      ;(getServerSession as jest.Mock).mockResolvedValue(mockSession)
+      ;(getRewindEligibility as jest.Mock).mockResolvedValue({ eligible: false, reason: 'NO_TAUTULLI_MATCH' })
+
+      const result = await generatePlexWrapped('user-2', 2026)
+
+      expect(result).toEqual({ success: false, error: 'Unauthorized: You can only generate your own wrapped' })
+      expect(getRewindEligibility).not.toHaveBeenCalled()
+    })
+
+    describe('with the real eligibility check and Tautulli roster', () => {
+      const originalFetch = global.fetch
+      const actualEligibility = jest.requireActual('@/lib/wrapped/eligibility')
+
+      beforeEach(() => {
+        ;(getRewindEligibility as jest.Mock).mockImplementation(actualEligibility.getRewindEligibility)
+        global.fetch = jest.fn().mockResolvedValue({
+          ok: true,
+          json: async () => ({
+            response: { result: 'success', data: [{ user_id: 4242, username: 'linked_plex' }] },
+          }),
+        })
+        ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue(null)
+        ;(fetchTautulliStatistics as jest.Mock).mockResolvedValue({
+          success: true,
+          data: {
+            tautulliUserId: '4242',
+            totalWatchTime: 1000,
+            moviesWatchTime: 500,
+            showsWatchTime: 500,
+            moviesWatched: 10,
+            showsWatched: 5,
+            episodesWatched: 50,
+            topMovies: [],
+            topShows: [],
+            watchTimeByMonth: [],
+          },
+        })
+        ;(fetchPlexServerStatistics as jest.Mock).mockResolvedValue({ success: false })
+        ;(generateWrappedWithLLM as jest.Mock).mockResolvedValue({
+          success: true,
+          data: { sections: [], summary: 'Test summary', metadata: { totalSections: 0, generationTime: 0 } },
+        })
+      })
+
+      afterEach(() => {
+        global.fetch = originalFetch
+      })
+
+      it('refuses a member missing from Tautulli without creating a failed row', async () => {
+        // The member id is unique to this test: the module caches each answer.
+        setUpEligibilityRun(makePrismaUser({ ...mockUser, id: 'member-missing', plexUserId: '999' }))
+
+        const result = await generatePlexWrapped('member-missing', 2026)
+
+        expect(result).toEqual(NOT_ELIGIBLE)
+        expect(String((global.fetch as jest.Mock).mock.calls[0][0])).toContain('cmd=get_users')
+        expectNoRowAndNoPoint()
+      })
+
+      it('generates for a Jellyfin-primary member with a linked Plex identity', async () => {
+        setUpEligibilityRun(
+          makePrismaUser({
+            ...mockUser,
+            id: 'member-jellyfin-linked',
+            primaryAuthService: 'jellyfin',
+            jellyfinUserId: 'jf-2',
+            plexUserId: '4242',
+          })
+        )
+
+        const result = await generatePlexWrapped('member-jellyfin-linked', 2026)
+
+        expect(result).toEqual({ success: true, wrappedId: 'wrapped-1' })
+        expect(fetchTautulliStatistics).toHaveBeenCalledWith(
+          { url: 'https://tautulli.example.com:8181', apiKey: 'tautulli-key' },
+          { plexUserId: '4242' },
+          2026
+        )
+      })
+    })
   })
 
   it('should handle Tautulli statistics fetch failure', async () => {
@@ -1533,7 +1655,8 @@ describe('generation guardrails (P0.12)', () => {
         })
         expect(await generatePlexWrapped('member-jellyfin', SEASON_YEAR)).toEqual({
           success: false,
-          error: 'User does not have a Plex user ID',
+          code: 'REWIND_NOT_ELIGIBLE',
+          error: 'Rewind needs Plex watch history. Jellyfin support is planned.',
         })
       }
 
@@ -1919,6 +2042,26 @@ describe('generateAllPlexWrapped', () => {
     expect(result.errors).toEqual([
       "User 1: Plex user plex-1 is not in Tautulli's user list. Refresh users in Tautulli.",
     ])
+  })
+
+  it('lists the admin hint for a member the eligibility check refused (P0.17)', async () => {
+    const member = { ...mockUser, id: 'user-1', plexUserId: 'plex-1', name: 'User 1', email: 'user1@test.com' }
+    ;(getServerSession as jest.Mock).mockImplementation(async () => mockAdminSession)
+    ;(prisma.user.findMany as jest.Mock).mockResolvedValue([member])
+    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(member)
+    ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
+    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(makePrismaPlexServer())
+    ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(makePrismaTautulli())
+    ;(getRewindEligibility as jest.Mock).mockResolvedValue({ eligible: false, reason: 'NO_TAUTULLI_MATCH' })
+
+    const result = await generateAllPlexWrapped()
+
+    expect(result.failed).toBe(1)
+    expect(result.errors).toEqual([
+      "User 1: Plex user plex-1 is not in Tautulli's user list. Refresh users in Tautulli, then try again in 10 minutes.",
+    ])
+    expect(prisma.plexWrapped.createMany).not.toHaveBeenCalled()
+    expect(prisma.plexWrapped.updateMany).not.toHaveBeenCalled()
   })
 
   it('labels a failed member without a name by id, never by email', async () => {

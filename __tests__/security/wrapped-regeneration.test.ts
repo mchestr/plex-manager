@@ -10,6 +10,7 @@ import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
 import { getWrappedSettings } from '@/actions/admin'
 import { consume } from '@/lib/security/rate-limit'
+import { getRewindEligibility } from '@/lib/wrapped/eligibility'
 
 // Mock dependencies
 jest.mock('next-auth', () => ({
@@ -69,6 +70,12 @@ jest.mock('@/lib/security/rate-limit', () => ({
   reward: jest.fn(),
 }))
 
+// Every member here has Plex history; the eligibility gate is tested in
+// user-wrapped-generation.test.ts and wrapped-generation-action.test.ts.
+jest.mock('@/lib/wrapped/eligibility', () => ({
+  getRewindEligibility: jest.fn(),
+}))
+
 describe('Wrapped Regeneration Security', () => {
   const mockUser1 = {
     id: 'user-1',
@@ -122,6 +129,7 @@ describe('Wrapped Regeneration Security', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     ;(getWrappedSettings as jest.Mock).mockResolvedValue({ wrappedEnabled: true, wrappedYear: 2026 })
+    ;(getRewindEligibility as jest.Mock).mockResolvedValue({ eligible: true })
     ;(consume as jest.Mock).mockResolvedValue({ ok: true })
     ;(prisma.plexWrapped.createMany as jest.Mock).mockResolvedValue({ count: 1 })
     ;(prisma.plexWrapped.updateManyAndReturn as jest.Mock).mockResolvedValue([{ id: 'wrapped-1' }])

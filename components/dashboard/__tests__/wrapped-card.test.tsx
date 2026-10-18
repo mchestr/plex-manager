@@ -37,6 +37,8 @@ jest.mock('framer-motion', () => ({
   },
 }))
 
+const ELIGIBLE = { eligible: true } as const
+
 const mockShowError = jest.fn()
 const mockShowInfo = jest.fn()
 const toast = { showError: mockShowError, showInfo: mockShowInfo }
@@ -52,7 +54,7 @@ function pollEndsWith(error: string) {
 
 /** Render the card and run its 2 s status poll once, on fake timers. */
 async function renderAndPollOnce() {
-  render(<WrappedCard userId="user-1" memberSince="2020-01-01T00:00:00.000Z" />)
+  render(<WrappedCard userId="user-1" memberSince="2020-01-01T00:00:00.000Z" rewindEligibility={ELIGIBLE} />)
   expect(await screen.findByTestId('wrapped-card-generating')).toBeInTheDocument()
   await act(async () => {
     await jest.advanceTimersByTimeAsync(2000)
@@ -117,7 +119,7 @@ describe('WrappedCard season year', () => {
   it('links a completed Rewind to /wrapped/<season year> in January', async () => {
     ;(getUserPlexWrapped as jest.Mock).mockResolvedValue({ status: 'completed', error: null })
 
-    render(<WrappedCard userId="user-1" memberSince="2020-01-01T00:00:00.000Z" />)
+    render(<WrappedCard userId="user-1" memberSince="2020-01-01T00:00:00.000Z" rewindEligibility={ELIGIBLE} />)
 
     expect(await screen.findByTestId('wrapped-card-view-link')).toHaveAttribute('href', '/wrapped/2026')
     expect(getUserPlexWrapped).toHaveBeenCalledWith('user-1', 2026)
@@ -137,7 +139,7 @@ describe('WrappedCard season year', () => {
   it('stays loading and reads nothing until the season year is known', async () => {
     ;(getWrappedSettings as jest.Mock).mockReturnValue(new Promise(() => {}))
 
-    render(<WrappedCard userId="user-1" memberSince="2020-01-01T00:00:00.000Z" />)
+    render(<WrappedCard userId="user-1" memberSince="2020-01-01T00:00:00.000Z" rewindEligibility={ELIGIBLE} />)
     await act(async () => {
       await jest.advanceTimersByTimeAsync(2000)
     })
@@ -154,7 +156,7 @@ describe('WrappedCard season year', () => {
     ;(getUserPlexWrapped as jest.Mock).mockResolvedValue({ status: 'completed', error: null })
 
     try {
-      render(<WrappedCard userId="user-1" memberSince="2020-01-01T00:00:00.000Z" />)
+      render(<WrappedCard userId="user-1" memberSince="2020-01-01T00:00:00.000Z" rewindEligibility={ELIGIBLE} />)
 
       expect(await screen.findByTestId('wrapped-card-error')).toBeInTheDocument()
       expect(screen.queryByTestId('wrapped-card-loading')).not.toBeInTheDocument()
@@ -190,7 +192,7 @@ describe('WrappedCard refused generation', () => {
   })
 
   async function clickGenerate() {
-    render(<WrappedCard userId="user-1" memberSince="2020-01-01T00:00:00.000Z" />)
+    render(<WrappedCard userId="user-1" memberSince="2020-01-01T00:00:00.000Z" rewindEligibility={ELIGIBLE} />)
     fireEvent.click(await screen.findByTestId('wrapped-card-generate'))
   }
 
@@ -276,5 +278,80 @@ describe('WrappedCard refused generation', () => {
     expect(mockShowError).toHaveBeenCalledWith(
       'Rewind is part of an active membership. Renew your subscription to make yours.'
     )
+  })
+})
+
+/**
+ * A member without Plex watch history sees an explanation, not a Generate
+ * button that always fails (P0.17: RWP-08, FR-48).
+ */
+describe('WrappedCard eligibility', () => {
+  const COPY = 'Rewind needs Plex watch history. Jellyfin support is planned.'
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    ;(getUserPlexWrapped as jest.Mock).mockReset()
+    ;(useToast as jest.Mock).mockReturnValue(toast)
+    ;(getWrappedSettings as jest.Mock).mockResolvedValue({ wrappedEnabled: true, wrappedYear: 2026 })
+  })
+
+  it.each([
+    ['NO_PLEX_IDENTITY', '2020-01-01T00:00:00.000Z'],
+    ['NO_TAUTULLI_MATCH', '2020-01-01T00:00:00.000Z'],
+    // Joined last month: the explanation shows regardless of the six-month rule.
+    ['NO_PLEX_IDENTITY', new Date().toISOString()],
+  ] as const)('explains Rewind to an ineligible member (%s, joined %s), with no action', async (reason, memberSince) => {
+    render(
+      <WrappedCard userId="user-1" memberSince={memberSince} rewindEligibility={{ eligible: false, reason }} />
+    )
+
+    const card = await screen.findByTestId('wrapped-card-not-eligible')
+    expect(card).toHaveTextContent('Rewind 2026')
+    expect(card).toHaveTextContent(COPY)
+    expect(screen.queryByRole('button', { name: /generate/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link')).not.toBeInTheDocument()
+    expect(getUserPlexWrapped).not.toHaveBeenCalled()
+    expect(generatePlexWrapped).not.toHaveBeenCalled()
+  })
+
+  it('explains Rewind even when a failed row is left from before', async () => {
+    ;(getUserPlexWrapped as jest.Mock).mockResolvedValue({ status: 'failed', error: null })
+
+    render(
+      <WrappedCard
+        userId="user-1"
+        memberSince="2020-01-01T00:00:00.000Z"
+        rewindEligibility={{ eligible: false, reason: 'NO_PLEX_IDENTITY' }}
+      />
+    )
+
+    expect(await screen.findByTestId('wrapped-card-not-eligible')).toBeInTheDocument()
+    expect(screen.queryByTestId('wrapped-card-retry')).not.toBeInTheDocument()
+  })
+
+  it('shows nothing to an ineligible member while Rewind is disabled', async () => {
+    ;(getWrappedSettings as jest.Mock).mockResolvedValue({ wrappedEnabled: false, wrappedYear: 2026 })
+
+    const { container } = render(
+      <WrappedCard
+        userId="user-1"
+        memberSince="2020-01-01T00:00:00.000Z"
+        rewindEligibility={{ eligible: false, reason: 'NO_PLEX_IDENTITY' }}
+      />
+    )
+
+    await waitFor(() => expect(container).toBeEmptyDOMElement())
+    expect(screen.queryByText(COPY)).not.toBeInTheDocument()
+  })
+
+  it('offers an eligible member the Generate button', async () => {
+    ;(getUserPlexWrapped as jest.Mock).mockResolvedValue(null)
+
+    render(<WrappedCard userId="user-1" memberSince="2020-01-01T00:00:00.000Z" rewindEligibility={ELIGIBLE} />)
+
+    expect(await screen.findByRole('button', { name: /generate/i })).toBeEnabled()
+    expect(screen.queryByTestId('wrapped-card-not-eligible')).not.toBeInTheDocument()
+    expect(screen.queryByText(COPY)).not.toBeInTheDocument()
   })
 })

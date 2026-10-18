@@ -72,11 +72,20 @@ describe('adminErrorHint', () => {
   it('has no hint for a generic failure', () => {
     expect(adminErrorHint('GENERATION_FAILED', '12345')).toBeNull()
   })
+
+  it('explains an ineligible member by whether they have a Plex identity (P0.17)', () => {
+    expect(adminErrorHint('REWIND_NOT_ELIGIBLE', '12345')).toBe(
+      "Plex user 12345 is not in Tautulli's user list. Refresh users in Tautulli, then try again in 10 minutes."
+    )
+    expect(adminErrorHint('REWIND_NOT_ELIGIBLE', null)).toBe(
+      'This member has no linked Plex account, so there is no watch history for a Rewind.'
+    )
+  })
 })
 
 describe('refusal codes (P0.12)', () => {
   it('tells refusals apart from stored failure codes', () => {
-    for (const code of ['ALREADY_GENERATING', 'RATE_LIMITED', 'NOT_ENTITLED']) {
+    for (const code of ['ALREADY_GENERATING', 'RATE_LIMITED', 'NOT_ENTITLED', 'REWIND_NOT_ELIGIBLE']) {
       expect(isGenerationRefusal(code)).toBe(true)
     }
     for (const code of ['TAUTULLI_USER_NOT_FOUND', 'GENERATION_FAILED', undefined]) {
@@ -92,6 +101,7 @@ describe('refusal codes (P0.12)', () => {
     expect(refusalCopy('ALREADY_GENERATING')).toBe('Your Rewind is already being made.')
     expect(refusalCopy('RATE_LIMITED', 540)).toBe('You can try again in 9 minutes.')
     expect(refusalCopy('RATE_LIMITED', 7200)).toBe('You can try again in 2 hours.')
+    expect(refusalCopy('REWIND_NOT_ELIGIBLE')).toBe('Rewind needs Plex watch history. Jellyfin support is planned.')
   })
 
   it('rounds the wait up and never says zero', () => {

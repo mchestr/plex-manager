@@ -1,7 +1,8 @@
 /**
  * Security tests for user wrapped generation
  * Tests that users can only generate their own wrapped, only for the season
- * year, and (with Stripe on) only while entitled (P0.12: SEC-22, RWP-12)
+ * year, (with Stripe on) only while entitled (P0.12: SEC-22, RWP-12), and only
+ * with Plex watch history (P0.17: RWP-08, FR-48)
  */
 
 import { generatePlexWrapped } from '@/actions/wrapped-generation'
@@ -10,6 +11,7 @@ import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
 import { getWrappedSettings } from '@/actions/admin'
 import { consume } from '@/lib/security/rate-limit'
+import { getRewindEligibility } from '@/lib/wrapped/eligibility'
 
 // Mock dependencies
 jest.mock('next-auth', () => ({
@@ -68,6 +70,10 @@ jest.mock('@/lib/security/rate-limit', () => ({
   reward: jest.fn(),
 }))
 
+jest.mock('@/lib/wrapped/eligibility', () => ({
+  getRewindEligibility: jest.fn(),
+}))
+
 describe('User Wrapped Generation Security', () => {
   const mockUser1 = {
     id: 'user-1',
@@ -103,6 +109,7 @@ describe('User Wrapped Generation Security', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     ;(getWrappedSettings as jest.Mock).mockResolvedValue({ wrappedEnabled: true, wrappedYear: 2026 })
+    ;(getRewindEligibility as jest.Mock).mockResolvedValue({ eligible: true })
     ;(consume as jest.Mock).mockResolvedValue({ ok: true })
     ;(prisma.plexWrapped.createMany as jest.Mock).mockResolvedValue({ count: 1 })
     ;(prisma.plexWrapped.updateManyAndReturn as jest.Mock).mockResolvedValue([{ id: 'wrapped-1' }])
@@ -228,11 +235,38 @@ describe('User Wrapped Generation Security', () => {
 
       const result = await generatePlexWrapped('user-1', 2026)
 
-      // Refused before any point is spent or the row is claimed.
-      expect(result).toEqual({ success: false, error: 'User does not have a Plex user ID' })
+      // Refused before any point is spent or the row is created or claimed.
+      expect(result).toEqual({
+        success: false,
+        code: 'REWIND_NOT_ELIGIBLE',
+        error: 'Rewind needs Plex watch history. Jellyfin support is planned.',
+      })
       expect(consume).not.toHaveBeenCalled()
       expect(prisma.plexWrapped.createMany).not.toHaveBeenCalled()
       expect(prisma.plexWrapped.updateManyAndReturn).not.toHaveBeenCalled()
+      expect(prisma.plexWrapped.updateMany).not.toHaveBeenCalled()
+    })
+
+    it('should fail before any write if the member has no Tautulli match', async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValue({
+        user: {
+          id: 'user-1',
+          isAdmin: false,
+        },
+      })
+      ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser1)
+      ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
+      ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(mockPlexServer)
+      ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(mockTautulli)
+      ;(getRewindEligibility as jest.Mock).mockResolvedValue({ eligible: false, reason: 'NO_TAUTULLI_MATCH' })
+
+      const result = await generatePlexWrapped('user-1', 2026)
+
+      expect(result.code).toBe('REWIND_NOT_ELIGIBLE')
+      expect(consume).not.toHaveBeenCalled()
+      expect(prisma.plexWrapped.createMany).not.toHaveBeenCalled()
+      expect(prisma.plexWrapped.updateManyAndReturn).not.toHaveBeenCalled()
+      expect(prisma.plexWrapped.updateMany).not.toHaveBeenCalled()
     })
 
     it('should preserve existing share token when regenerating', async () => {

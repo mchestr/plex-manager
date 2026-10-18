@@ -18,6 +18,7 @@ import {
   isLiveClaim,
   writeIfClaimed,
 } from "@/lib/wrapped/generation-claim"
+import { getRewindEligibility } from "@/lib/wrapped/eligibility"
 import { generateWrappedWithLLM } from "@/lib/wrapped/llm"
 import { memberName } from "@/lib/wrapped/member-name"
 import {
@@ -111,8 +112,10 @@ async function runInFlight(userId: string, year: number): Promise<boolean> {
  *    admins are entitled): `NOT_ENTITLED`.
  * 5. Only admins regenerate a completed Rewind, and a live run already making
  *    this Rewind returns `ALREADY_GENERATING` before any limit is spent. The
- *    configuration a run needs (Plex, Tautulli, the member's Plex user ID) is
- *    checked here too, so a failure that a retry cannot fix costs nothing.
+ *    configuration a run needs (Plex, Tautulli) is checked here too, and so is
+ *    the member's eligibility (`lib/wrapped/eligibility.ts`): a member with no
+ *    Plex identity or no Tautulli match gets `REWIND_NOT_ELIGIBLE` (FR-48,
+ *    RWP-08). A failure that a retry cannot fix costs nothing and writes no row.
  * 6. Non-admins spend a point of `rw:gen:burst` (1 per 10 minutes) and
  *    `rw:gen:daily` (3 per day): `RATE_LIMITED` with `retryAfterSec`, unless
  *    a run that started since check 5 now holds the row (`ALREADY_GENERATING`).
@@ -205,9 +208,10 @@ export async function generatePlexWrapped(userId: string, year: number): Promise
       return { success: false, error: "No active Tautulli server configured" }
     }
 
+    // No Plex watch history to read: refuse before any row or point (FR-48).
     const { plexUserId } = user
-    if (!plexUserId) {
-      return { success: false, error: "User does not have a Plex user ID" }
+    if (!plexUserId || !(await getRewindEligibility(user)).eligible) {
+      return refused("REWIND_NOT_ELIGIBLE")
     }
 
     // Check 6: member limits; admins are exempt
@@ -480,9 +484,12 @@ export async function generateAllPlexWrapped(): Promise<{
         generated++
       } else {
         failed++
-        // A typed failure gets the admin hint (or the code), not the member copy.
+        // A typed failure or an ineligible member gets the admin hint (or the
+        // code), not the member copy.
         const hint =
-          result.code && !isGenerationRefusal(result.code) ? adminErrorHint(result.code, user.plexUserId) : null
+          result.code === "REWIND_NOT_ELIGIBLE" || (result.code && !isGenerationRefusal(result.code))
+            ? adminErrorHint(result.code, user.plexUserId)
+            : null
         const detail = hint ?? (result.code || result.error || "Unknown error")
         errors.push(`${user.name || user.id}: ${detail}`)
       }

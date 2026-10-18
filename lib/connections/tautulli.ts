@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { z } from "zod";
 import { type TautulliParsed } from "@/lib/validations/tautulli";
 import { fetchWithTimeout, isTimeoutError } from "@/lib/utils/fetch-with-timeout";
@@ -191,6 +192,15 @@ const getUsersResponseSchema = z.object({
   ]),
 })
 
+/**
+ * `get_users` at most once per server render for one Tautulli. The home page
+ * checks Rewind eligibility and reads the first-watch date, and both find the
+ * member through {@link findTautulliUser} (P0.17). The URL and API key are the
+ * key, as strings, because `cache` compares object arguments by identity.
+ * Outside a React render it calls straight through.
+ */
+const getTautulliUsersOncePerRender = cache((url: string, apiKey: string) => getTautulliUsers({ url, apiKey }))
+
 /** On a miss, `candidates` is the size of Tautulli's user list, for count-only logging. */
 export type FindTautulliUserResult =
   | { ok: true; user: TautulliUserRow }
@@ -238,7 +248,7 @@ export async function findTautulliUser(
   config: TautulliEndpoint,
   identity: TautulliUserIdentity
 ): Promise<FindTautulliUserResult> {
-  const result = await getTautulliUsers(config)
+  const result = await getTautulliUsersOncePerRender(config.url, config.apiKey)
   if (!result.success) {
     logger.warn("Tautulli get_users request failed", { error: result.error })
     return { ok: false, code: "TAUTULLI_ERROR" }
