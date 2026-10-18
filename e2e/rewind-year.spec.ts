@@ -152,3 +152,69 @@ test.describe('Rewind year from data', () => {
     });
   }
 });
+
+/**
+ * Without a window the season year is the calendar year, so a member whose
+ * only Rewind is 2025 tells the two rules apart while the server's clock is in
+ * 2026 or later: redirecting to the calendar year would open /wrapped/2026,
+ * and the data rule opens 2025. The server clock is real here.
+ */
+test.describe('Rewind year from data, without a window', () => {
+  let previousStart: Date | null = null;
+
+  test.beforeAll(async () => {
+    const prisma = createE2EPrismaClient();
+    try {
+      const config = await prisma.config.findUnique({
+        where: { id: 'config' },
+        select: { wrappedGenerationStartDate: true },
+      });
+      previousStart = config?.wrappedGenerationStartDate ?? null;
+      if (config) {
+        await prisma.config.update({ where: { id: 'config' }, data: { wrappedGenerationStartDate: null } });
+      }
+
+      await prisma.plexWrapped.deleteMany({
+        where: { userId: TEST_USERS.REGULAR.id, year: { in: TOUCHED_YEARS } },
+      });
+      await prisma.plexWrapped.create({
+        data: {
+          userId: TEST_USERS.REGULAR.id,
+          year: 2025,
+          status: 'completed',
+          data: JSON.stringify(rewindData(2025)),
+          generatedAt: new Date('2025-12-05T12:00:00Z'),
+        },
+      });
+    } finally {
+      await prisma.$disconnect();
+    }
+  });
+
+  test.afterAll(async () => {
+    const prisma = createE2EPrismaClient();
+    try {
+      await prisma.plexWrapped.deleteMany({
+        where: { userId: TEST_USERS.REGULAR.id, year: { in: TOUCHED_YEARS } },
+      });
+      if (previousStart) {
+        await prisma.config.update({
+          where: { id: 'config' },
+          data: { wrappedGenerationStartDate: previousStart },
+        });
+      }
+    } finally {
+      await prisma.$disconnect();
+    }
+  });
+
+  test('/wrapped opens the only completed year, not the calendar year', async ({ regularUserPage }) => {
+    test.skip(new Date().getFullYear() <= 2025, 'the two rules agree until the calendar reaches 2026');
+
+    await regularUserPage.goto('/wrapped');
+
+    await expect(regularUserPage).toHaveURL(/\/wrapped\/2025$/);
+    await expect(regularUserPage.getByTestId('wrapped-viewer')).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+    await expect(regularUserPage.getByTestId('wrapped-year-link-2025')).toHaveAttribute('aria-current', 'page');
+  });
+});
