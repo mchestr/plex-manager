@@ -11,9 +11,9 @@
 import { render, screen } from '@testing-library/react'
 import { getServerSession } from 'next-auth'
 
-import { getUserFirstWatchDate } from '@/actions/users'
 import Home from '@/app/(app)/page'
 import { WrappedCard } from '@/components/dashboard/wrapped-card'
+import { getFirstWatchDate } from '@/lib/connections/tautulli-first-watch'
 import { prisma } from '@/lib/prisma'
 import { getRewindEligibility } from '@/lib/wrapped/eligibility'
 
@@ -57,8 +57,8 @@ jest.mock('@/actions/prometheus-status', () => ({
   getPrometheusStatus: jest.fn(async () => undefined),
 }))
 
-jest.mock('@/actions/users', () => ({
-  getUserFirstWatchDate: jest.fn(),
+jest.mock('@/lib/connections/tautulli-first-watch', () => ({
+  getFirstWatchDate: jest.fn(),
 }))
 
 jest.mock('@/lib/wrapped/eligibility', () => ({
@@ -109,7 +109,7 @@ describe('Home page Rewind eligibility', () => {
 
   it("asks with the member's id and plexUserId and hands the answer to the Rewind card", async () => {
     signInWith({ plexUserId: '4242', primaryAuthService: 'plex' })
-    ;(getUserFirstWatchDate as jest.Mock).mockResolvedValue({
+    ;(getFirstWatchDate as jest.Mock).mockResolvedValue({
       success: true,
       firstWatchDate: '2021-03-04T00:00:00.000Z',
     })
@@ -119,7 +119,7 @@ describe('Home page Rewind eligibility', () => {
 
     expect(getRewindEligibility).toHaveBeenCalledTimes(1)
     expect(getRewindEligibility).toHaveBeenCalledWith({ id: 'user-1', plexUserId: '4242' })
-    expect(getUserFirstWatchDate).toHaveBeenCalledWith('4242')
+    expect(getFirstWatchDate).toHaveBeenCalledWith('4242')
     expect(screen.getByTestId('wrapped-card-stub')).toBeInTheDocument()
     expect(wrappedCardProps()).toEqual({
       userId: 'user-1',
@@ -135,7 +135,7 @@ describe('Home page Rewind eligibility', () => {
     render(await Home())
 
     expect(getRewindEligibility).toHaveBeenCalledWith({ id: 'user-1', plexUserId: null })
-    expect(getUserFirstWatchDate).not.toHaveBeenCalled()
+    expect(getFirstWatchDate).not.toHaveBeenCalled()
     expect(wrappedCardProps()).toEqual({
       userId: 'user-1',
       memberSince: CREATED_AT.toISOString(),
@@ -145,7 +145,7 @@ describe('Home page Rewind eligibility', () => {
 
   it('hands an eligible answer through for a Jellyfin sign-in with a linked Plex identity', async () => {
     signInWith({ plexUserId: '4242', primaryAuthService: 'jellyfin' })
-    ;(getUserFirstWatchDate as jest.Mock).mockResolvedValue({ success: false })
+    ;(getFirstWatchDate as jest.Mock).mockResolvedValue({ success: false })
     ;(getRewindEligibility as jest.Mock).mockResolvedValue({ eligible: true })
 
     render(await Home())

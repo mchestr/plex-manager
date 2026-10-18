@@ -3,7 +3,6 @@
 import { authOptions } from "@/lib/auth"
 import { requireAdmin } from "@/lib/admin"
 import { checkUserServerAccess, getPlexServerIdentity, getPlexUsers, unshareUserFromPlexServer } from "@/lib/connections/plex"
-import { findTautulliUser } from "@/lib/connections/tautulli"
 import { prisma } from "@/lib/prisma"
 import { getServerSession } from "next-auth"
 import { SubscriptionStatus } from "@/lib/generated/prisma/client"
@@ -523,88 +522,6 @@ async function fetchSubscriptionMap(userIds: string[]): Promise<Map<string, {
   }
 
   return subscriptionMap
-}
-
-/**
- * Get user's first watch date from Tautulli
- * Returns the timestamp of their earliest watch history entry
- */
-export async function getUserFirstWatchDate(
-  plexUserId: string
-): Promise<{ success: boolean; firstWatchDate?: string; error?: string }> {
-  // Require an authenticated session; this action queries Tautulli by identifier
-  // and must not be callable anonymously.
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) {
-    return { success: false, error: "Unauthorized" }
-  }
-
-  try {
-    // Get active Tautulli configuration
-    const tautulli = await prisma.tautulli.findFirst({
-      where: { isActive: true },
-    })
-
-    if (!tautulli) {
-      logger.debug("No active Tautulli configured, cannot get first watch date")
-      return { success: false, error: "Tautulli not configured" }
-    }
-
-    const baseUrl = `${tautulli.url}/api/v2`
-    const apiKey = tautulli.apiKey
-
-    const lookup = await findTautulliUser(
-      { url: tautulli.url, apiKey: tautulli.apiKey },
-      { plexUserId }
-    )
-
-    if (!lookup.ok) {
-      return {
-        success: false,
-        error: lookup.code === "TAUTULLI_USER_NOT_FOUND"
-          ? "User not found in Tautulli"
-          : "Failed to fetch users from Tautulli",
-      }
-    }
-
-    const tautulliUser = lookup.user
-
-    // Fetch user's oldest history entry
-    // We need to get the oldest, so we'll fetch history ordered by date ascending
-    const historyResponse = await fetch(
-      `${baseUrl}?apikey=${apiKey}&cmd=get_history&user_id=${tautulliUser.user_id}&order_dir=asc&length=1`,
-      { headers: { "Accept": "application/json" } }
-    )
-
-    if (!historyResponse.ok) {
-      return { success: false, error: "Failed to fetch user history from Tautulli" }
-    }
-
-    const historyData = await historyResponse.json()
-    const historyItems = historyData.response?.data?.data || []
-
-    if (historyItems.length === 0) {
-      logger.debug("No watch history found for user", { plexUserId })
-      return { success: false, error: "No watch history found" }
-    }
-
-    // Get the first item's date (Unix timestamp)
-    const firstItem = historyItems[0]
-    const timestamp = firstItem.date || firstItem.started
-
-    if (!timestamp) {
-      return { success: false, error: "No timestamp found in history" }
-    }
-
-    // Convert Unix timestamp to ISO string
-    const firstWatchDate = new Date(timestamp * 1000).toISOString()
-
-    logger.debug("Found first watch date", { plexUserId, firstWatchDate })
-    return { success: true, firstWatchDate }
-  } catch (error) {
-    logger.error("Error getting user first watch date", error, { plexUserId })
-    return { success: false, error: "Failed to get first watch date" }
-  }
 }
 
 /**

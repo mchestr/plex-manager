@@ -1,10 +1,10 @@
 import { getActiveAnnouncements } from "@/actions/announcements";
 import { getPrometheusStatus } from "@/actions/prometheus-status";
-import { getUserFirstWatchDate } from "@/actions/users";
 import { ServiceSignInToggle } from "@/components/auth/service-sign-in-toggle";
 import { UserDashboard } from "@/components/dashboard/user-dashboard";
 import { SubscriptionStatusView } from "@/components/subscription/subscription-status-view";
 import { authOptions } from "@/lib/auth";
+import { getFirstWatchDate } from "@/lib/connections/tautulli-first-watch";
 import { prisma } from "@/lib/prisma";
 import { getRewindEligibility } from "@/lib/wrapped/eligibility";
 import type { AuthService } from "@/types/onboarding";
@@ -86,7 +86,7 @@ export default async function Home() {
     // get_users once per render.
     const plexUserId = user?.plexUserId ?? null;
     const [firstWatchResult, rewindEligibility] = await Promise.all([
-      plexUserId ? getUserFirstWatchDate(plexUserId) : null,
+      plexUserId ? getFirstWatchDate(plexUserId) : null,
       getRewindEligibility({ id: session.user.id, plexUserId }),
     ]);
 

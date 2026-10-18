@@ -3628,7 +3628,7 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
     - `validateInvite` returns only `{ serverType, expiresAt }`, since the invite page reads only `serverType`;
     - `processInvite` and `processJellyfinInvite` validate the code with `inviteCodeSchema` and keep P0.5's credentials schema.
   - `lib/plex-auth.ts`: `createPlexAuthUrl` builds `forwardUrl` with `new URL('/auth/callback/plex', getBaseUrl())` and `searchParams.set`, and `getPlexAuthToken` validates `pinId` as a positive integer. P4.8 then replaces both flows.
-  - `actions/user-queries.ts`: `getUserFirstWatchDate()` takes no arguments and reads the identity from the session (the IDOR in SEC-19). `getUserPlexWrapped` uses `{ userId, year }` with an ownership check.
+  - `actions/user-queries.ts`: the `getUserFirstWatchDate` IDOR (SEC-19) is already closed: Phase 0's review moved it out of the Server Action module as `getFirstWatchDate(plexUserId)` in `lib/connections/tautulli-first-watch.ts`, which only the home page calls, with the member's own row. `getUserPlexWrapped` uses `{ userId, year }` with an ownership check.
   - `getAccessGateStatus` leaves the `'use server'` file `lib/guards.ts`; callers import it from `lib/access.ts`. `getActivePromptTemplate` moves from `actions/prompts.ts` into `lib/wrapped/prompt-template.ts`, its only caller, as a server-only read.
   - Non-admins get only public URLs. `getOnboardingInfo` drops the internal Overseerr fallback (`actions/onboarding.ts:146-154`), and `app/(app)/page.tsx:104-106` passes `publicUrl`, or null when it is unset.
   - Move the remaining modules too: `actions/onboarding.ts`, `actions/watchlist.ts`, `actions/subscription.ts`, the member exports of `actions/discord.ts`, `getActiveAnnouncements` and `actions/server-info.ts`. `getAvailableLibraries` stops echoing `statusText` and stops logging the token URL (`:55-57`).
@@ -3687,7 +3687,7 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
   - `actions/watchlist.ts`: `updateWatchlistSyncSettings` (when enabling) and `triggerWatchlistSync` need `full`, and `getWatchlistSyncHistory` needs `read`.
   - Jobs: `syncAllEnabledUsers` (`lib/watchlist/sync-service.ts:289`) selects only entitled users in its query (admin, exempt, or a subscription that is ACTIVE or PAST_DUE). The `WATCHLIST_SYNC_USER` processor re-checks and finishes as skipped with `NOT_ENTITLED`, without a retry.
   - `resyncDiscordRole` (`actions/discord.ts:171`) and `app/(app)/discord/connect/route.ts` need `full`. `disconnectDiscordAccount` needs only a session, because unlinking protects privacy.
-  - The session path of `app/api/wrapped/poster/[ratingKey]` and `getUserFirstWatchDate` need `read`, so lapsed members still see their own Rewind.
+  - The session path of `app/api/wrapped/poster/[ratingKey]` and the home page's `getFirstWatchDate` call need `read`, so lapsed members still see their own Rewind.
   - The v2 generation action moves P0.12's check onto `entitlement: 'full'`.
   - Later Rewind paths call the same helper: P2.17's `requestRewindGeneration`, P5.9's eligibility, P5.10's owner card route, P5.11's share actions (`disableRewindShare` and `rotateRewindShare` use `read`) and P7.14's notifications.
   - The bot already checks `isAccessAllowed` (`lib/discord/services.ts:148`), and the billing actions need only a session.

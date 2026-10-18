@@ -9,11 +9,10 @@
  * render.
  */
 
-import { getUserFirstWatchDate } from '@/actions/user-queries'
+import { getFirstWatchDate } from '@/lib/connections/tautulli-first-watch'
 import { findTautulliUser } from '@/lib/connections/tautulli'
 import { prisma } from '@/lib/prisma'
 import { getRewindEligibility } from '@/lib/wrapped/eligibility'
-import { getServerSession } from 'next-auth'
 
 const mockRender: { memo: Map<unknown, unknown> | null } = { memo: null }
 
@@ -47,25 +46,6 @@ jest.mock('react', () => {
       },
   }
 })
-
-jest.mock('next-auth', () => ({
-  getServerSession: jest.fn(),
-}))
-
-jest.mock('@/lib/auth', () => ({
-  authOptions: {},
-}))
-
-jest.mock('@/lib/admin', () => ({
-  requireAdmin: jest.fn(),
-}))
-
-jest.mock('@/lib/connections/plex', () => ({
-  checkUserServerAccess: jest.fn(),
-  getPlexServerIdentity: jest.fn(),
-  getPlexUsers: jest.fn(),
-  unshareUserFromPlexServer: jest.fn(),
-}))
 
 jest.mock('@/lib/prisma', () => ({
   prisma: {
@@ -107,7 +87,7 @@ async function inRender<T>(work: () => Promise<T>): Promise<T> {
 /** What the home page asks for one member. */
 function homePageLookups(memberId: string) {
   return Promise.all([
-    getUserFirstWatchDate('402'),
+    getFirstWatchDate('402'),
     getRewindEligibility({ id: memberId, plexUserId: '402' }),
   ])
 }
@@ -117,7 +97,6 @@ describe('Tautulli get_users per render', () => {
     jest.clearAllMocks()
     mockFetch.mockReset()
     serveTautulli()
-    ;(getServerSession as jest.Mock).mockResolvedValue({ user: { id: 'user-1', isAdmin: false } })
     // A fresh object per query, as Prisma returns.
     ;(prisma.tautulli.findFirst as jest.Mock).mockImplementation(async () => ({
       url: 'http://tautulli.local:8181',
