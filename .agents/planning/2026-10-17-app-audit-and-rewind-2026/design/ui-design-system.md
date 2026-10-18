@@ -1,7 +1,7 @@
 # Plex Manager UI design system and app-wide refresh
 
 - **Date:** 2026-10-17
-- **Status:** Final design for the app-wide refresh, revised after review ([Review notes](#review-notes)). Rewind 2026 is designed in [`rewind-2026-design.md`](rewind-2026-design.md) and plugs into this system through the ink-and-field contract in [section 4.4](#44-the-rewind-scope-contract), which both documents share.
+- **Status:** Final design for the app-wide refresh, revised after review ([Review notes](#review-notes)) and reconciled with the Rewind design on 2026-10-18 ([Reconciliation notes](#reconciliation-notes-2026-10-18)). Rewind 2026 is designed in [`rewind-2026-design.md`](rewind-2026-design.md) and plugs into this system through the ink-and-field contract in [section 4.4](#44-the-rewind-scope-contract), which both documents share.
 - **Direction:** Quiet Precision (judge-panel winner, totals 228 against 226 and 214), with grafts from Media-forward and Unified Signature and a fix for every weakness the judges raised.
 - **Inputs:** `research/ui-ux-audit.md` (finding IDs `UI-01` to `UI-46`), `research/code-duplication.md` (`DUP-09`, `DUP-12`, `DUP-13`, `DUP-14`), `research/security-audit.md` (`SEC-16`, `SEC-20`, `SEC-21`, `SEC-30`, `SEC-31`, `SEC-42`, `SEC-53`, `SEC-55`, `SEC-57`), `research/best-practices-and-ops.md` (`BP-05`), `research/modern-ui-stack-2026.md`, `research/visual-generation-skills.md`, `design/rewind-2026-design.md` (FR-1, FR-19 to FR-25, FR-36, FR-48 and sections 4.4, 5.2, 5.3, 6.3, 7.7, 9.7, 10, 11.1), the 152 screenshots of today's app, and the three candidate concepts and mockups.
 - **Mockups:** self-contained HTML in [`mockups/ui/`](mockups/ui/) rendered to [`mockups/ui/png/`](mockups/ui/png/) at device scale 1. The full list is in [section 11](#11-final-mockups).
@@ -108,7 +108,7 @@ The judges split. Two of three named Media-forward the winner on identity and me
 | No mobile settings layout (946px at 390) | Designed: 56px top bar, a "Jump to" select replaces the section nav, single-column fields, full-width footers. Measured `scrollWidth` 390. |
 | `chart-5` was red and read as destructive | `chart-5` is magenta `oklch(66% 0.17 355)`. The palette passes the dataviz validator in both themes ([3.5](#35-chart-palette)). |
 | Didn't say to delete the `html, body` overflow rule | Step 1 of the migration ([9.2](#92-order-of-work)). |
-| Rewind card states unspecified (Generating, Failed, not open yet, not eligible) | Seven states specified ([5.5](#55-new-composites-and-their-props) `RewindCard`), six of them mocked on the real inks in `components.html` with the year archive. |
+| Rewind card states unspecified (Generating, Failed, not open yet, not eligible) | Eight states specified ([5.5](#55-new-composites-and-their-props) `RewindCard`), six of them mocked on the real inks in `components.html` with the year archive. |
 | Mobile admin dropped the bottom tab bar the audit recommended (`UI-32`) | Bottom tab bar: Overview, Users, Rewind, Settings, More (grouped sheet). |
 | Arrow-suffixed CTAs ("Open Rewind ->") and middle-dot meta strings | Banned in the content rules ([7.3](#73-banned-patterns)) and by the CI copy check. Meta lines are separate items with gaps and icons. |
 | Setup, sign-in, invite, subscribe, Discord linking and status screens were described but not mocked | Mocked: `setup.html` (claim, Plex at 1440 and 390, Overseerr), `invite.html`, and nine 390px frames in `screens.html` (sign-in, invite, invite expired, Discord link, subscribe, subscribe success, 404, onboarding Requests step, loading). |
@@ -358,7 +358,7 @@ export const plexMono = IBM_Plex_Mono({
 // app/layout.tsx: <html lang="en" className={cn('dark', plexSans.variable, plexMono.variable)}>
 ```
 
-`next/font` self-hosts the files at build time, which fits CSP `font-src 'self'`. For Satori and `next/og` (the icons and any app-side image), commit subset static TTF instances under `lib/og/fonts/` with the OFL text; [7.5](#75-brand-devices) has the subset, size budget and fallback rules. Rewind's own display and text faces (Archivo and Newsreader, Rewind 5.4) load only inside the Rewind layout.
+`next/font` self-hosts the files at build time, which fits CSP `font-src 'self'`. For Satori and `next/og` (the icons and any app-side image), commit subset static TTF instances under `lib/og/fonts/` with the OFL text; [7.5](#75-brand-devices) has the subset, size budget and fallback rules. Rewind's own display and text faces (Archivo and Newsreader, Rewind 5.4) load only where story pages render: the member Rewind layout, the share page layout and the admin preview page all import `app/(app)/rewind/fonts.ts`. The playground preview is an iframe on the Rewind route, and the home RewindCard strip sets no Rewind type, so home never loads them.
 
 **Scale.** Single-size steps are Tailwind v4 `--text-*` theme tokens with line-height, tracking and weight sub-tokens. Theme tokens can't change at a breakpoint or set `font-stretch`, so the three responsive steps (`text-display`, `text-h1`, `text-stat`) are `@utility` rules in `app/globals.css` with an `@variant md` block ([4.1](#41-appglobalscss)). `PageHeader` renders `text-h1`, `StatTile` renders `text-stat`, and the home greeting, sign-in, invite and status titles render `text-display`; nobody pairs `text-*` and `md:text-*` by hand. Weights are 400, 500 and 600 only.
 
@@ -415,7 +415,7 @@ Breakpoints are Tailwind's defaults: `sm` 640, `md` 768, `lg` 1024, `xl` 1280. R
 | `rounded-xl` | 12px | Dialogs, sheets, the invite and member pass |
 | `rounded-full` | | Avatars, switches, dots, filter chips |
 
-No 16 or 24px bubbly radii and no pill buttons in the app theme. The Button size `pill` (44px, `rounded-full`) and the variants `ink` and `ink-outline` exist for the Rewind scope only, where the print chrome uses them (Rewind 4.6); ESLint restricts them to `components/rewind/**` ([9.6](#96-guardrails)). Inside the scope `--radius` is 0.375rem, so the role scale becomes 2, 4, 6 and 10px.
+No 16 or 24px bubbly radii and no pill buttons in the app theme. The Button sizes `pill` (44px, `rounded-full`) and `icon-pill` (a 38px circle in a 44px hit area) and the variants `ink` and `ink-outline` exist for the Rewind scope only, where the print chrome uses them (Rewind 4.6); ESLint restricts them to `components/rewind/**` ([9.6](#96-guardrails)). Inside the scope `--radius` is 0.375rem, so the role scale becomes 2, 4, 6 and 10px.
 
 **Borders.** Every in-page surface has a 1px border; borders do the separating that blur and shadow do today. Cards use `border`; popovers, badges, avatars and secondary buttons use `border-strong`; inputs use `input`. 2px appears only as the focus ring and the active-tab or top-nav underline.
 
@@ -444,8 +444,8 @@ Source variables are `--elevation-*` (defined per theme) and map to the `shadow-
 | `--ease-in-quiet` | `cubic-bezier(0.4, 0, 1, 1)` | Exits |
 
 - **No infinite decorative animation in the app theme**: no starfields, twinkles, floating icons, wiggles or gradient shifts (delete `animate-twinkle`, `animate-float`, `animate-wiggle`, `gradient-shift`). The only loops are the skeleton pulse (opacity 1 to 0.6, 1.6s) and spinners inside loading buttons.
-- **Page transitions:** none by default. React 19.3 `<ViewTransition>` is used only for the RewindCard to cover handoff: the card's field strip (`view-transition-name: rewind-field`) expands to fill the viewport and becomes the cover in 420ms on `--rw-ease-ink`, and Done plays it in reverse (Rewind 4.4). Owned by the Rewind phase.
-- **Reduced motion:** a global base-layer rule sets every animation and transition to 0.01ms, except on `[data-slot="spinner"]`, and removes scroll smoothing under `prefers-reduced-motion: reduce`; `<MotionConfig reducedMotion="user">` wraps the app in `lib/providers.tsx`; view transitions are skipped. Spinners keep rotating (they convey state, alongside `aria-busy` and their label); the skeleton pulse stops.
+- **Page transitions:** none by default. React 19.3 `<ViewTransition>` is used only for Rewind's two route handoffs (Rewind 5.6). One is the RewindCard to cover handoff: the card's field strip (`view-transition-name: rewind-field`) expands to fill the viewport and becomes the cover in 420ms on `--rw-ease-ink`, and Done plays it in reverse (Rewind 4.4). The other is story to article mode. The transition pseudo-elements hang off `<html>`, outside the scope, so the Rewind block states that duration and curve literally ([4.1](#41-appglobalscss)). Owned by the Rewind phase.
+- **Reduced motion:** a global base-layer rule sets every animation and transition to 0.01ms, except on `[data-slot="spinner"]` and inside the Rewind scope, and removes scroll smoothing under `prefers-reduced-motion: reduce`; `<MotionConfig reducedMotion="user">` wraps the app in `lib/providers.tsx`; view transitions are skipped. Spinners keep rotating (they convey state, alongside `aria-busy` and their label); the skeleton pulse stops. Inside `[data-theme="rewind"]`, Rewind applies the same policy with its own rule (Rewind 5.6): no movement, opacity crossfades of at most 120ms, and the progress segment keeps the timing of a story the member chose to play. The 0.01ms clamp would otherwise turn every page at once.
 - **No timed interstitials.** The forced 1.5s "Great!" screens in setup and onboarding go (`UI-33`). Step changes are instant and move focus to the new step's h1.
 - Rewind owns its own motion budget inside its scope.
 
@@ -478,12 +478,12 @@ If real brand marks are wanted on sign-in buttons, use monochrome Simple Icons (
 ### 3.11 Imagery
 
 - **One poster route.** Posters come from Plex metadata through `app/api/rewind/poster/[ratingKey]/route.ts`, which replaces `app/api/wrapped/poster/...` (Rewind 5.8) and is owned jointly by both designs. The app requests `tone=none`; Rewind also requests duotones. Before the "New on" row ships, the route must:
-  - send `Cache-Control: private` for session requests and `public` only for share-token requests (`SEC-21`);
-  - check that the item's library section is shared with the session user, so no session can fetch any `ratingKey` (the user's shared sections come from their Plex share, cached for 10 minutes; the owner and admins see every section); filtering the "New on" list alone doesn't close `SEC-21`;
-  - accept a share token only for that share's published keys (Rewind 5.8);
-  - resize through the Plex photo transcoder for `?w=96|160|240|480`, and return 404 within 3s when Plex or the art is missing.
-- **`Poster` primitive** (`components/ui/poster.tsx`, props in [5.5](#55-new-composites-and-their-props)): 2:3, `rounded-sm`, `shadow-poster`, a 1px inset hairline. It renders a plain `<img>` with explicit `width` and `height`, `loading="lazy"` and `decoding="async"` below the fold, and a `src` on the proxy with the `w` for its size at 2x. `next/image` would add nothing here: phase 0 of the research sets `images.unoptimized: true`, so `sizes` produces no `srcset`, and the resizing has to come from the proxy. The title is always in HTML under or beside the image, never only inside the artwork. In the "New on" row each poster links to the item in the server's Plex web app (`{plexWebUrl}/web/index.html#!/server/{machineIdentifier}/details?key=%2Flibrary%2Fmetadata%2F{ratingKey}`), matching "Browse in Plex".
-- **Fallback.** When the image fails or Plex is down, a deterministic title card renders at the same size. Its palette is a fixed list of 8 pairs taken from the Rewind inks (field and ink of coral, marigold, rose, sky, mint, ultramarine, forest and oxblood, measured at 7.02 to 12.14:1 by `rwcheck.js`), chosen by `hash(ratingKey) % 8`, with the title set in Plex Sans 600 at `font-stretch-85%` in the pair's ink. `lib/ui/poster-palette.ts` holds the list, and its test asserts 4.5:1 or better for every pair. No gradient blobs.
+  - send `Cache-Control: private` on every response, for sessions and shares alike (Rewind 5.8 sets `private, max-age=31536000, immutable`), never `public`, so no shared cache keeps serving a poster after a link is revoked (`SEC-21`);
+  - let a session fetch only a key that appears in the viewer's own Rewind or a key whose library section is shared with the session user, so no session can fetch any `ratingKey`. The user's shared sections come from their Plex share, cached for 10 minutes; the owner and admins see every section, which also covers the admin preview. Filtering the "New on" list alone doesn't close `SEC-21`;
+  - accept a share's asset key (`?s=<assetKey>`, never the share token) only for the art keys of that share's published pages (Rewind 5.8, 6.2);
+  - resize through the Plex photo transcoder for `?w=96|160|240|480` under a 10s upstream timeout, and return 404 (never 500) when Plex or the art is missing, within 3s once the miss is cached (Rewind 5.8).
+- **`Poster` primitive** (`components/ui/poster.tsx`, props in [5.5](#55-new-composites-and-their-props)): 2:3, `rounded-sm`, `shadow-poster`, a 1px inset hairline. It renders a plain `<img>` with explicit `width` and `height`, `loading="lazy"` and `decoding="async"` below the fold, and a `src` on the proxy with the smallest allowed `w` that covers its width at 2x. `next/image` would add nothing here: phase 0 of the research sets `images.unoptimized: true`, so `sizes` produces no `srcset`, and the resizing has to come from the proxy. The title is always in HTML under or beside the image, never only inside the artwork. In the "New on" row each poster links to the item in the server's Plex web app (`{plexWebUrl}/web/index.html#!/server/{machineIdentifier}/details?key=%2Flibrary%2Fmetadata%2F{ratingKey}`), matching "Browse in Plex".
+- **Fallback.** When the image fails or Plex is down, a deterministic title card renders at the same size. Its palette is a fixed list of 8 pairs taken from the Rewind inks (field and ink of coral, marigold, rose, sky, mint, ultramarine, forest and oxblood, measured at 7.04 to 12.15:1 with the WCAG formula on their hex, as in Rewind 5.2), chosen by `hash(ratingKey) % 8`, with the title set in Plex Sans 600 at `font-stretch-85%` in the pair's ink. `lib/ui/poster-palette.ts` holds the list, and its test asserts 4.5:1 or better for every pair. No gradient blobs.
 - **Where imagery appears:** member home ("New on" row, watchlist rows), the onboarding Requests step, setup's Plex-connected confirmation, and Rewind. The RewindCard carries no posters (they would spoil the Top shows and Top films pages). Admin pages have no artwork. Public pages (sign-in, invite) show no library artwork by default for privacy; the pass carries their identity instead.
 - **Placeholders in mockups** are original flat SVG posters with invented titles.
 
@@ -561,6 +561,10 @@ Production follows shadcn's convention: light values on `:root`, dark values on 
   --rw-ease-ui: var(--ease-out-quiet);
   font-family: var(--font-text);
 }
+/* the member's archetype, on the root through data-archetype (12 rules generated from Rewind 5.3) */
+[data-theme="rewind"][data-archetype="midnight-marathoner"] {
+  --arch-field: var(--rw-ultramarine); --arch-spot: var(--rw-marigold); --arch-deep: var(--rw-ultramarine);
+}
 [data-field]:where([data-theme="rewind"], [data-theme="rewind"] *) {
   /* from Rewind 5.2 */
   --background: var(--field);     --foreground: var(--ink);
@@ -591,7 +595,14 @@ Production follows shadcn's convention: light values on `:root`, dark values on 
 /* ...marigold, rose, sky, peach, lilac and mint likewise: spot = their own ink, color-scheme: light */
 [data-field="ultramarine"] { --field: var(--rw-ultramarine); --ink: var(--rw-on-ultramarine); --deep: var(--rw-ultramarine); --spot: var(--rw-marigold); color-scheme: dark; }
 /* ...forest, oxblood and petrol likewise: spot = their own ink, color-scheme: dark */
+/* Rewind additions (4.4 "Rewind may add"), set through inkProps options: the archetype pages and the back cover */
+[data-field][data-spot="arch"] { --spot: var(--arch-spot, var(--ink)); }
+[data-field="paper"][data-ink="arch-deep"] { --ink: var(--arch-deep); --deep: var(--arch-deep); --spot: var(--arch-deep); }
 [data-theme="rewind"] [data-slot="button"]:disabled { border-style: dashed; opacity: 0.6; }   /* disabled has no fill in print */
+@utility font-display { font-family: var(--font-display); }   /* Rewind chrome and controls (Rewind 5.1) */
+@utility font-text { font-family: var(--font-text); }
+/* the card-to-cover handoff runs on <html>, outside the scope, so it states --rw-dur-m and --rw-ease-ink literally */
+::view-transition-group(rewind-field) { animation-duration: 420ms; animation-timing-function: cubic-bezier(.65, 0, .35, 1); }
 
 /* ---------- 4. Tailwind mapping ---------- */
 @theme inline {
@@ -698,7 +709,10 @@ Production follows shadcn's convention: light values on `:root`, dark values on 
   p, li, dd { text-wrap: pretty; }
   :focus-visible { outline: var(--focus-width) solid var(--ring); outline-offset: var(--focus-offset); }
   @media (prefers-reduced-motion: reduce) {
-    *:not([data-slot="spinner"]), *::before, *::after {
+    /* the Rewind scope applies the same policy with its own rule (Rewind 5.6) */
+    :not([data-slot="spinner"], [data-theme="rewind"], [data-theme="rewind"] *),
+    :not([data-theme="rewind"], [data-theme="rewind"] *)::before,
+    :not([data-theme="rewind"], [data-theme="rewind"] *)::after {
       animation-duration: 0.01ms !important; animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important; scroll-behavior: auto !important;
     }
@@ -739,7 +753,7 @@ export const viewport: Viewport = {
 | `shadow-popover`, `shadow-dialog`, `shadow-poster` | One shadow per floating layer |
 | `--focus-width`, `--focus-offset` | 2px at 2px in the app, 3px at 3px in Rewind (Rewind 11.1) |
 | `--z-*` | Z-index scale |
-| Reserved for the Rewind scope: `--rw-*`, `--field`, `--ink`, `--spot`, `--deep`, `--arch-*`, `--font-display`, `--font-text` | Set only inside the scope; the app theme never reads or defines these names (guardrail in [9.6](#96-guardrails)) |
+| Reserved for the Rewind scope: `--rw-*`, `--field`, `--ink`, `--spot`, `--deep`, `--arch-*`, `--font-display`, `--font-text`, and the `font-display` and `font-text` utilities | Set only inside the scope; the app theme never reads or defines these names (guardrail in [9.6](#96-guardrails)) |
 
 `accent` keeps shadcn's meaning (neutral hover and highlighted item). It is never the brand colour. Recipes that fill with `accent` also set `text-accent-foreground`, as shadcn's do; in the app that is `foreground`, and in Rewind it is the field, so hovers reverse out.
 
@@ -768,8 +782,10 @@ export const rewindInks = {
   /* ...the other ten, as in the 4.4 table... */
 } as const satisfies Record<InkName, RewindInk>
 
-/** Props for an element that prints in an ink: <section {...inkProps('coral')}>. */
-export function inkProps(ink: InkName): { 'data-field': InkName; className: 'light' | 'dark' }
+/** Props for an element that prints in an ink: <section {...inkProps('coral')}>. The options add Rewind 5.3's
+ *  attributes: { spot: 'arch' } on the cover and centrefold, { ink: 'arch-deep' } on the back cover. */
+export function inkProps(ink: InkName, opts?: { spot?: 'arch'; ink?: 'arch-deep' }):
+  { 'data-field': InkName; 'data-spot'?: 'arch'; 'data-ink'?: 'arch-deep'; className: 'light' | 'dark' }
 
 export const radius = { sm: 4, md: 6, lg: 8, xl: 12 } as const
 export const fonts = { sans: 'IBM Plex Sans', mono: 'IBM Plex Mono' } as const
@@ -790,7 +806,7 @@ Rewind 2026 is designed in `rewind-2026-design.md`. This contract is the one bot
 
 **Mechanism.**
 
-- The Rewind root (`app/(app)/rewind/layout.tsx`, the share page layout `app/rewind/s/[token]/layout.tsx`) carries `data-theme="rewind"` and also `data-field` plus the scheme class of the current page, so the chrome (progress segments, folio, Pause, Close) prints in the page's ink. Each page carries its own `data-field`. Components get both attributes from `inkProps(ink)` in `lib/design/tokens.ts`; no Rewind component writes a colour.
+- The Rewind root (`app/(app)/rewind/layout.tsx`, the share page layout `app/rewind/s/[token]/layout.tsx`) carries `data-theme="rewind"` and also `data-field` plus the scheme class of the current page, so the chrome (progress segments, folio, Pause, Close) prints in the page's ink. Each page carries its own `data-field`. Components get both attributes (and `data-spot` or `data-ink` where Rewind 5.3 needs them) from `inkProps(ink, opts)` in `lib/design/tokens.ts`; no Rewind component writes a colour.
 - `.dark` and `color-scheme: dark` go only on the four dark inks (ultramarine, forest, oxblood, petrol); the eight light inks (paper, coral, marigold, rose, sky, peach, lilac, mint) carry `.light` and `color-scheme: light`. With the bounded variant ([4.1](#41-appglobalscss)), shadcn's `dark:` classes fire on dark inks only, even under `<html class="dark">`.
 - **Popups print on paper.** Sheet, Popover, Tooltip and Toast popups inside Rewind carry `data-field="paper"` and `.light` on their popup element, and portal into the Rewind root: `components/ui` popups read a `PortalContainer` context (default `document.body`) that the Rewind layout provides. A portal to `body` would leave the scope and render graphite.
 - Embedded uses follow the same rule on a single element: the home RewindCard strip is `<div data-theme="rewind" {...inkProps(ink)}>`, and the admin preview wraps the story in one scope root.
@@ -808,31 +824,31 @@ Rewind 2026 is designed in `rewind-2026-design.md`. This contract is the one bot
 
 - **From Rewind 5.2:** `background`, `foreground`, `card`, `card-foreground` (field and ink); `popover`, `popover-foreground` (paper and its ink); `primary` (ink), `primary-foreground` (field); `secondary` (transparent), `secondary-foreground` (ink); `muted-foreground` (ink; secondary text is italic Newsreader, not a tint); `border`, `input`, `ring` (ink); `--radius: 0.375rem`.
 - **Closing set (this contract):** `primary-hover` (ink; ink buttons underline on hover instead of lightening); `secondary-hover`, `accent` (ink) with `accent-foreground` (field), so hovers and highlighted menu items reverse out; `muted` (transparent; disabled buttons go dashed at 60% opacity); `border-strong` (ink); `primary-indicator` (ink) and `primary-indicator-foreground` (field); the four tones (ink), their foregrounds (field) and subtle tints (transparent); `chart-1` (ink), `chart-2` (spot), `chart-3..5` (ink; series differ by solid, hatched and outlined marks); `overlay` (`oklch(19% 0.012 70 / 0.55)`); `elevation-*` (none; print uses 1.5px ink keylines); `--focus-width` and `--focus-offset` (3px).
-- **Inherited unchanged:** the spacing scale, control heights (Rewind raises targets to 44px), breakpoints, the z-index scale, `--duration-*`, `--ease-out-quiet` and `--ease-in-quiet` (Rewind maps `--rw-ease-ui` to `--ease-out-quiet`), the reduced-motion rule, toast placement, and `font-mono`. `sidebar-*` tokens never render inside the scope.
-- **Rewind may add:** `--rw-<ink>`, `--rw-on-<ink>` and `--rw-<ink>-deep` for the twelve inks; `--field`, `--ink`, `--spot` and `--deep` per element; `--arch-deep` (from the member's archetype, set on the root through `data-archetype`); `--font-display` and `--font-text` (Archivo and Newsreader); `--rw-dur-*` and `--rw-ease-*`; the artboard unit `--u`; texture tokens. The app theme never reads or defines these names.
+- **Inherited unchanged:** the spacing scale, control heights (Rewind raises targets to 44px), breakpoints, the z-index scale, `--duration-*`, `--ease-out-quiet` and `--ease-in-quiet` (Rewind maps `--rw-ease-ui` to `--ease-out-quiet`), toast placement, and `font-mono`. The reduced-motion policy holds too, but the base-layer clamp skips the scope and Rewind applies the policy with its own rule ([3.9](#39-motion), Rewind 5.6). `sidebar-*` tokens never render inside the scope.
+- **Rewind may add:** `--rw-<ink>`, `--rw-on-<ink>` and `--rw-<ink>-deep` for the twelve inks; `--field`, `--ink`, `--spot` and `--deep` per element; `--arch-field`, `--arch-spot` and `--arch-deep` (from the member's archetype, set on the root through `data-archetype`), with the `data-spot="arch"` and `data-ink="arch-deep"` rules that read them; `--font-display` and `--font-text` (Archivo and Newsreader) with the `font-display` and `font-text` utilities; `--rw-dur-*` and `--rw-ease-*`, plus the literal `rewind-field` view-transition rule; the artboard unit `--u`; texture tokens. The app theme never reads or defines these names.
 
-**Measured on the twelve inks** (`rwcheck.js`, values from Rewind 5.2). "Ink on field" covers body text, `ink` and reversed `ink-outline` buttons, segmented and toggle selections, status chips, the focus ring, input boundaries, switch tracks and thumbs, and the checkbox fill, because inside the scope all of them are the ink on the field or the field on the ink. The paper popover (sheets, toasts, tooltips) measures 15.50 on every page.
+**Measured on the twelve inks** (the WCAG 2.2 formula on the `rewindInks` hex, as the token test and Rewind 5.2 compute them; `rwcheck.js` worked from unquantised OKLCH and read up to 0.07 higher). "Ink on field" covers body text, `ink` and reversed `ink-outline` buttons, segmented and toggle selections, status chips, the focus ring, input boundaries, switch tracks and thumbs, and the checkbox fill, because inside the scope all of them are the ink on the field or the field on the ink. The paper popover (sheets, toasts, tooltips) measures 15.44 on every page.
 
 | Ink | Scheme | Field | Ink | Ink on field (7:1) | Spot vs field (3:1) | Deep on paper (7:1) | Minor rule, 40% ink (decorative) |
 |---|---|---|---|---|---|---|---|
-| paper | light | `#f1eadc` | `#17130e` | 15.50 | 7.33 worst archetype deep | 15.50 | 2.52 |
-| coral | light | `#f6795c` | `#1f0b08` | 7.02 | 7.02 (own ink) | 7.33 | 2.16 |
-| marigold | light | `#feb644` | `#1f1306` | 10.37 | 10.37 | 7.41 | 2.32 |
-| rose | light | `#f69ac3` | `#230e1a` | 8.96 | 8.96 | 7.72 | 2.25 |
-| sky | light | `#9ad3f5` | `#031c30` | 10.72 | 10.72 | 7.36 | 2.30 |
-| peach | light | `#f7bda4` | `#26120c` | 10.87 | 10.87 | 7.45 | 2.33 |
-| lilac | light | `#b6adf0` | `#141030` | 8.93 | 8.93 | 7.56 | 2.26 |
-| mint | light | `#9be3c3` | `#071a13` | 12.14 | 12.14 | 7.42 | 2.38 |
-| ultramarine | dark | `#2238b8` | `#f1eadc` | 7.59 | 5.17 (marigold) | 7.59 | 2.42 |
-| forest | dark | `#13543d` | `#f1eadc` | 7.43 | 7.43 | 7.43 | 2.51 |
-| oxblood | dark | `#5e1921` | `#f8e4d4` | 10.36 | 10.36 | 10.73 | 2.85 |
-| petrol | dark | `#11525f` | `#f1eadc` | 7.38 | 7.38 | 7.38 | 2.49 |
+| paper | light | `#f1eadc` | `#17130e` | 15.44 | 7.30 worst archetype deep | 15.44 | 2.51 |
+| coral | light | `#f6795c` | `#1f0b08` | 7.04 | 7.04 (own ink) | 7.30 | 2.16 |
+| marigold | light | `#feb644` | `#1f1306` | 10.39 | 10.39 | 7.35 | 2.31 |
+| rose | light | `#f69ac3` | `#230e1a` | 8.99 | 8.99 | 7.69 | 2.25 |
+| sky | light | `#9ad3f5` | `#031c30` | 10.73 | 10.73 | 7.34 | 2.30 |
+| peach | light | `#f7bda4` | `#26120c` | 10.88 | 10.88 | 7.44 | 2.33 |
+| lilac | light | `#b6adf0` | `#141030` | 8.92 | 8.92 | 7.54 | 2.26 |
+| mint | light | `#9be3c3` | `#071a13` | 12.15 | 12.15 | 7.35 | 2.37 |
+| ultramarine | dark | `#2238b8` | `#f1eadc` | 7.54 | 5.15 (marigold) | 7.54 | 2.41 |
+| forest | dark | `#13543d` | `#f1eadc` | 7.42 | 7.42 | 7.42 | 2.51 |
+| oxblood | dark | `#5e1921` | `#f8e4d4` | 10.41 | 10.41 | 10.72 | 2.86 |
+| petrol | dark | `#11525f` | `#f1eadc` | 7.32 | 7.32 | 7.32 | 2.49 |
 
-Archetype field and spot pairs (Rewind 5.3), all 3:1 or better: ultramarine and marigold 5.17, forest and mint 5.99, peach and oxblood 7.80, mint and ultramarine 6.12, rose and ultramarine 4.43, paper and ultramarine deep 7.59, petrol and marigold 5.02, oxblood and peach 7.80, marigold and oxblood 7.31, lilac and forest 4.33, sky and ultramarine 5.61.
+Archetype field and spot pairs (Rewind 5.3), all 3:1 or better: ultramarine and marigold 5.15, forest and mint 6.00, peach and oxblood 7.80, mint and ultramarine 6.09, rose and ultramarine 4.44, paper and ultramarine deep 7.54, petrol and marigold 5.00, oxblood and peach 7.80, marigold and oxblood 7.32, lilac and forest 4.33, sky and ultramarine 5.59.
 
 For the record, the placeholder contract this replaces failed on the real inks: its fixed foreground `oklch(97% 0.012 85)` measured 1.09 to 1.61:1 on paper, marigold, mint and sky, its amber ring 1.09 to 1.60:1, and dark-value warning, success, info and destructive on paper 1.19, 1.64, 1.71 and 2.06:1.
 
-**Primitives in the scope.** `Button` has two Rewind-only variants and one size, restricted to `components/rewind/**` ([5.4](#54-primitive-recipes)): `ink` (solid ink, underline on hover), `ink-outline` (1.5px ink border, reverses out on hover) and `pill` (44px, `rounded-full`). The share sheet is `Sheet side="bottom" grabber` printed on paper, not a `ModalShell` variant. Format and stat pickers are `SegmentedControl` and `Toggle`; the race scrubber is `Slider`.
+**Primitives in the scope.** `Button` has two Rewind-only variants and two sizes, restricted to `components/rewind/**` ([5.4](#54-primitive-recipes)): `ink` (solid ink, underline on hover), `ink-outline` (1.5px ink border, reverses out on hover), `pill` (44px, `rounded-full`) and `icon-pill` (a 38px circle in a 44px hit area, for the viewer's Settings, Pause/Play and Close). The share sheet is `Sheet side="bottom" grabber` printed on paper, not a `ModalShell` variant. Format and stat pickers are `SegmentedControl` and `Toggle`; the race scrubber is `Slider`.
 
 **Migration from today's Cinematic Premiere theme** (`components/wrapped/cinematic/theme.ts`, the `@theme` block in `app/globals.css`):
 
@@ -844,10 +860,10 @@ For the record, the placeholder contract this replaces failed on the real inks: 
 | `GOLD_HIGHLIGHT_CLASS` (gradient text) | A fact token in Archivo 760 in the same ink; no gradient, no highlight colour |
 | `EYEBROW_CLASS` (caps, 0.35em tracking) | The folio ("05/18 Top shows"), the only place a page name appears |
 | `DISPLAY_CLASS` (OS `font-serif`, uppercase, tracked) | `font-display` (Archivo), mixed case |
-| Viewer Previous / Next / Pause / Share / Download / Show all | Standard `Button`s under the scope: `ink-outline` 38px circles in 44px hit areas, an `ink-outline pill` "Share this page", the solid `ink pill` "Share the poster" |
+| Viewer Previous / Next / Pause / Share / Download / Show all | Standard `Button`s under the scope: `ink-outline` `icon-pill` buttons (38px circles in 44px hit areas), an `ink-outline pill` "Share this page", the solid `ink pill` "Share the poster" |
 | Hex constants in `app/api/wrapped/og-image/route.tsx` | `rewindInks` from `lib/design/tokens.ts`, in the card route |
 
-**Surfaces that render the scope:** the home `RewindCard` strip (the card body is app theme); `/rewind/[year]` and `/rewind/[year]/read` with their loading and error states; the public share page `/rewind/s/[token]` (which today falls back to the neon starfield); the admin preview `/admin/users/[userId]/rewind/[year]` and the playground preview iframe; and the card route `app/api/rewind/card/[rewindId]/[page]` (story, square and OG sizes), which reads `rewindInks`.
+**Surfaces that render the scope:** the home `RewindCard` strip (the card body is app theme); `/rewind/[year]` and `/rewind/[year]/read` with their loading and error states; the public share page `/rewind/s/[token]` (which today falls back to the neon starfield); the admin preview `/admin/users/[userId]/rewind/[year]` and the playground preview iframe; and the card routes `app/api/rewind/card/[rewindId]/[page]` (owner session) and `app/api/rewind/card/s/[assetKey]/[page]` (a share's asset key), in story, square and OG sizes, which read `rewindInks`.
 
 ---
 
@@ -864,7 +880,7 @@ For the record, the placeholder contract this replaces failed on the real inks: 
 
 | Today (`components/ui/`) | Target | Notes |
 |---|---|---|
-| `button.tsx` (variants primary, success, danger, secondary, ghost; cyan-purple gradient primary) | shadcn `button.tsx` | Variants `primary`, `secondary`, `outline`, `ghost`, `destructive`, `link`; sizes `sm` 32, `default` 36, `lg` 44, `icon` 36, `icon-sm` 32; `render` prop for links; `loading`. Rewind-scope only (lint-restricted to `components/rewind/**`): variants `ink` and `ink-outline`, size `pill` 44. Adapter maps `danger` to `destructive`, `success` to `secondary` (one call site, reviewed by hand), `md` to `default`. |
+| `button.tsx` (variants primary, success, danger, secondary, ghost; cyan-purple gradient primary) | shadcn `button.tsx` | Variants `primary`, `secondary`, `outline`, `ghost`, `destructive`, `link`; sizes `sm` 32, `default` 36, `lg` 44, `icon` 36, `icon-sm` 32; `render` prop for links; `loading`. Rewind-scope only (lint-restricted to `components/rewind/**`): variants `ink` and `ink-outline`, sizes `pill` 44 and `icon-pill` 38 (44px hit area). Adapter maps `danger` to `destructive`, `success` to `secondary` (one call site, reviewed by hand), `md` to `default`. |
 | `card.tsx` (`padding` prop, hard-coded slate + blur) | shadcn `card.tsx` | `Card`, `CardHeader`, `CardTitle`, `CardDescription`, `CardAction`, `CardContent`, `CardFooter`. Adapter keeps `padding`. |
 | `badge.tsx` (`tone`) | `badge.tsx` + `status-badge.tsx` | Variants `neutral`, `outline`, `success`, `warning`, `info`, `destructive`. Adapter keeps `tone`. |
 | `alert.tsx` (`tone` info/warning/danger/success, `title`, `icon`, `action`) | shadcn `alert.tsx` | Same API; `danger` aliases `destructive`. Role `alert` for destructive/warning, `status` otherwise. |
@@ -927,6 +943,7 @@ For the record, the placeholder contract this replaces failed on the real inks: 
 | `ink` (Rewind scope only) | `bg-primary text-primary-foreground border-[1.5px] border-primary font-semibold hover:underline underline-offset-4 decoration-[1.5px]` (solid ink never lightens) |
 | `ink-outline` (Rewind scope only) | `bg-transparent text-primary border-[1.5px] border-primary font-semibold hover:bg-primary hover:text-primary-foreground` (reverses out) |
 | size `pill` (Rewind scope only) | `h-11 px-5 rounded-full`; the Rewind chrome sets Archivo 600 on its labels (Rewind 5.4) |
+| size `icon-pill` (Rewind scope only) | `size-[38px] p-0 rounded-full relative before:absolute before:-inset-[3px]` (a 44px hit area); the viewer's Settings, Pause/Play and Close (Rewind 4.6) |
 | any, disabled | `bg-muted text-muted-foreground border-border` (never faded amber); ghost stays transparent |
 | any, loading | Spinner replaces the leading icon, label changes to the progressive ("Saving"), `aria-busy`, width kept |
 
@@ -1125,17 +1142,20 @@ interface StatusBadgeProps<D extends StatusDomain> { domain: D; value: StatusVal
 // components/ui/poster.tsx (one API for the app and Rewind, owned jointly; section 3.11)
 interface PosterProps {
   ratingKey: string; title: string; year?: number; genre?: string
-  size: 'xs' | 'sm' | 'md' | 'lg'             // 48 / 96 / 160 / 240px wide; requests ?w= at 2x
-  tone?: 'none' | InkName                     // 'none' (default) full colour; an ink requests Rewind's duotone
+  size: 'xs' | 'sm' | 'md' | 'lg'             // 48 / 96 / 160 / 240px wide; requests the smallest proxy w covering 2x: 96 / 240 / 480 / 480
+  w?: 96 | 160 | 240 | 480                    // overrides the size's w; Rewind's wrapper sizes the box in artboard units
+  tone?: 'none' | { spot: InkName; field: InkName }   // 'none' (default) full colour; a pair requests Rewind's duotone (&tone=<spot>.<field>, Rewind 5.8)
   href?: string                               // "New on" row: the item in the server's Plex web app
   priority?: boolean                          // eager load, no lazy
+  fallback?: ReactNode                        // default: the poster-palette title card; Rewind passes its halftone title card (Rewind 5.8)
 }
 // <img src="/api/rewind/poster/{ratingKey}?w=…&tone=…" width height loading decoding>; fallback title card from
-// lib/ui/poster-palette.ts (8 ink pairs, 4.5:1 or better, tested).
+// lib/ui/poster-palette.ts (8 ink pairs, 4.5:1 or better, tested). Rewind uses it through
+// components/rewind/media/poster.tsx, a wrapper that adds the 1.5px ink keyline, the page's duotone pair and its title card.
 
 // components/dashboard/rewind-card.tsx: an app-theme Card with a field strip (Rewind 4.4)
 type RewindCardState =
-  | { kind: 'ready'; year: number; pages: number; minutes: number; edition: 'full' | 'pocket' | 'postcard'; ink: InkName;
+  | { kind: 'ready'; year: number; pages: number; readSeconds: number; edition: 'full' | 'pocket' | 'postcard'; ink: InkName;
       soundtrack: SoundtrackGeometry; share: { state: 'off' } | { state: 'on'; pages: number; expiresOn: Date | null }; unread: boolean }
   | { kind: 'generating'; year: number; progress?: number }
   | { kind: 'failed'; year: number; code: RewindFailureCode }   // copy from a code map, never the stored message
@@ -1143,20 +1163,25 @@ type RewindCardState =
   | { kind: 'not-eligible'; reason: 'jellyfin-only' | 'joined-late'; firstYear?: number }
   | { kind: 'closed'; year: number; closedOn: Date; ink: InkName }
   | { kind: 'not-started'; year: number }
+  | { kind: 'unavailable'; year: number; viewerIsAdmin: boolean }   // no Redis (Rewind FR-50)
+// No card renders while Config.rewindEnabled is off, the member is outside rewindAudience, or the member is a
+// managed account the admin has not included (Rewind 13.2, FR-45).
 interface RewindCardProps { state: RewindCardState; archive: Array<{ year: number; ink: InkName; status: 'ready' | 'watched' }> }
 // Strip: 112px (80 below md), <div data-theme="rewind" {...inkProps(ink)} style={{ viewTransitionName: 'rewind-field' }}>.
 //   ready and closed: the archetype ink with the member's soundtrack (lib/rewind/viz/soundtrack.ts) printed in ink;
 //   every other state: paper, with a dotted centre line (before the season) or the printing progress strip (generating).
 // No title posters: they would spoil the Top shows and Top films pages.
 // Body (Plex Sans, app theme): unread pip + "Your Northfield Plex Rewind 2026 is ready", one lead line,
-//   meta "18 pages, about 4 minutes" and the share state: lock "Private. Server admins can view it." (FR-36) while
+//   meta "18 pages, about 2 min 20 s" (pages and readSeconds from the registry, the cover's cut-button string, Rewind 4.3)
+//   and the share state: lock "Private. Server admins can view it." (FR-36) while
 //   no link exists, globe "Public link on until Jan 31, 2027" once one does. Actions: primary "Open Rewind";
 //   secondary "Share", a link to /rewind/{year}?sheet=share that opens Rewind's share sheet (FR-19, FR-20).
 //   The card never creates a link itself. Footer: past years and "Data through November 30" (FR-34).
 // Copy: generating "Setting your pages"; failed "Your Rewind couldn't be finished"; before-season
-//   "Your Rewind arrives on {formatDate(opensOn, 'day-month')}" (Rewind 4.4); jellyfin-only "Rewind needs Plex watch
-//   history" (FR-48); joined-late "Your first Rewind arrives next year" (Rewind 4.5); closed "Rewind 2026 is still yours";
-//   not-started "Your Rewind 2026 is on its way".
+//   "Your Rewind arrives on {formatDate(opensOn, 'day-month')}" (from 20 November, Rewind 4.4); jellyfin-only "Rewind needs
+//   Plex watch history" with "Jellyfin support is planned." (FR-48); joined-late "Your first Rewind arrives next year"
+//   (Rewind 4.5); closed "Rewind 2026 is still yours"; not-started "Your Rewind 2026 is on its way"; unavailable
+//   "Rewind isn't available on this server yet" (admins: "Rewind needs Redis (REDIS_URL)", FR-50).
 
 // components/ui/wordmark.tsx and app/icon.tsx
 interface WordmarkProps { serverName: string; size?: 'sm' | 'md' }  // pip + name; wdth 85 past 22 chars, then ellipsis; full name in title
@@ -1190,7 +1215,8 @@ interface UptimeStripProps { segments: Array<{ start: Date; status: 'up' | 'degr
 // text ("2 minutes ago", refreshed each minute) and the viewer-local absolute date in title. Server output
 // otherwise formats in Config.timezone (section 7.4).
 // components/ui/chart-card.tsx: Card + title + aria summary + "View as table" toggle around a Chart.js chart themed by lib/charts/theme.ts
-// components/rewind/rewind-status-panel.tsx: generating | failed | parse-error | not-found, with a back-link prop;
+// components/rewind/rewind-status-panel.tsx: generating | failed | parse-error | not-found | unavailable (no Redis,
+// Rewind FR-50), with a back-link prop;
 // printed on paper inside the scope, copy from codes (never the stored message)
 ```
 
@@ -1273,7 +1299,7 @@ A section with several features (Discord) takes the worst category among its ena
 
 - **Desktop:** a 60px top bar (`bg-background border-b`, sticky): Wordmark; nav **Home**, **Rewind 2026**, **Membership** (only when Stripe is enabled or the member has a subscription), **Help**; an "Admin" ghost link for admins; the account menu (avatar plus first name). The active link gets a 2px `ring` underline aligned to the bar's bottom border and `aria-current="page"`.
 - **Account menu:** name and email header, "Discord: linked as morgan.lee" (or "Link Discord", fixing `UI-01`), Membership (when it exists), Account settings, Appearance (Dark, Light; only behind the light-theme flag), Admin (admins), Sign out (no more red text link).
-- **Account page** (`app/(app)/account/page.tsx`, new). Rewind 2026 brings the content `UI-30` was waiting for, so there is now a minimal page: one 560px column of `SettingsSection`-style cards for Discord (linked as, or Link Discord), Notifications ("Tell me when my Rewind is ready", a Switch; by Discord DM when linked, otherwise only on home; Rewind 9.7), Time zone (a Select pre-filled from the browser, default "Server time zone (America/Chicago)", stored in `User.timezone`; Rewind 7.7) and Appearance (behind the flag).
+- **Account page** (`app/(app)/account/page.tsx`, new). Rewind 2026 brings the content `UI-30` was waiting for, so there is now a minimal page: one 560px column of `SettingsSection`-style cards for Discord (linked as, or Link Discord), Notifications ("Tell me when my Rewind is ready", a Switch stored as the current year's `RewindPrefs.notify`; it governs the Discord DM, when linked, and the notice slot on other member pages, while the home RewindCard shows its ready state either way; Rewind 9.7), Time zone (a Select pre-filled from the browser, default "Server time zone (America/Chicago)", stored in `User.timezone`; Rewind 7.7) and Appearance (behind the flag).
 - **Notice slot.** `AppShell` renders one page-wide `Alert` slot under the top bar on every member page, for at most one notice, in priority order: payment past due, a service outage, then "Your Rewind 2026 is ready" (Rewind 9.7, with an "Open Rewind" secondary action). On home the Rewind notice is not shown, because the RewindCard's ready state is first in reading order and carries the unread pip until the member opens it; that card is the dashboard banner.
 - **Mobile:** a 56px bar with the Wordmark, avatar and a menu button opening a right Sheet with the same links. No bottom bar for four destinations (`UI-30`).
 - **Help** is a real page that re-hosts the onboarding guides (playback quality, requests, Discord support) and links the support channel. Onboarding ends with "You can find this guide again under Help".
@@ -1336,14 +1362,15 @@ System
 
 ### 6.4 Settings layout (`admin-settings.html`)
 
-- **One page with an in-page section nav** (sticky 200px column, `max-w-[760px]` content): groups Media (Plex server, Tautulli, Overseerr), Features (AI provider, Discord, Stripe billing) and More (Other integrations, System information). Each nav item carries a 12px tone glyph mapped from its section's status ([5.6](#56-status-vocabulary-libuistatusts)), plus the pip when the section is dirty; the legend under the nav uses the same glyphs (Working, Needs attention, Not working, Off or not set up or not checked, Unsaved changes).
+- **One page with an in-page section nav** (sticky 200px column, `max-w-[760px]` content): groups Media (Plex server, Tautulli, Overseerr), Features (AI provider, Discord, Stripe billing, Rewind) and More (Other integrations, System information). Each nav item carries a 12px tone glyph mapped from its section's status ([5.6](#56-status-vocabulary-libuistatusts)), plus the pip when the section is dirty; the legend under the nav uses the same glyphs (Working, Needs attention, Not working, Off or not set up or not checked, Unsaved changes).
 - **Page actions:** "Test all connections" (secondary) and the Assistant button.
 - **Every section is a `SettingsSection`:** status badge from `lib/ui/status.ts` with "Checked ..." under it; fields in a 2-column `FormField` grid; stored secrets as `SecretInput` with the "Saved" lock; field-level errors ("Nothing answered at this address") plus an inline `Alert` with the concrete failure and fix; a footer with meta on the left and Test connection plus Save changes on the right. **Save is disabled until the section is dirty**; a dirty section shows an "Unsaved changes" pip and Discard. Each section saves on its own. One editing pattern everywhere: always-open forms (no read-only/Edit toggle, `UI-31`).
 - **A changed address never reuses a stored secret** (`SEC-31`). When a URL field's origin differs from the origin the secret was saved with, every `SecretInput` in that section switches to "Re-enter to use with the new address": the saved marker becomes an empty required field, and Test connection and Save stay disabled until a value is entered. The server actions enforce it too: `resolveSecret` reuses a stored secret only when the submitted URL's origin equals the stored row's, in settings and in setup alike. The dirty Overseerr section in `admin-settings.html` shows this state.
 - **Every save is audited** (`SEC-55`): URL and credential changes emit `CONFIG_CHANGED` with a redacted diff (field names, a `secretChanged` boolean, old and new origins) into the persisted audit log. E2E `e2e/admin/settings-secret-origin.spec.ts`: change Overseerr's host, see the key field empty and required with Test and Save disabled, enter a key and see them enable; a crafted request with a blank key and a new origin is rejected.
-- **AI provider:** the master switch ("AI features", with the consequence "Rewind then uses template copy"), Tabs for Admin assistant and Rewind generation, Provider and Model Selects (the model list includes "Enter a custom model..."), optional fields showing their defaults.
+- **AI provider:** the master switch ("AI features", with the consequence "Rewind then uses template copy"; it is `Config.llmDisabled`, which forces Rewind's `rewindLlmMode` to `off`, Rewind 8.7), Tabs for Admin assistant and Rewind generation, Provider and Model Selects (the model list includes "Enter a custom model..."), optional fields showing their defaults.
 - **Discord:** two status rows, Linked roles and Support bot, each with its own badge beside its switch ([5.6](#56-status-vocabulary-libuistatusts)); no section-level badge.
 - **Stripe billing:** the Subscriptions switch is disabled until required secrets exist. The prerequisite is stated once in a warning Alert and in each field's description; fields turn to the error state only after a save is attempted.
+- **Rewind** (Rewind 10.4): the season, audience, LLM mode and budget, sharing, exclusion and notification fields in one `SettingsSection`, whose status comes from its Redis and Tautulli version checks. The server name it prints is the app-wide `Config.serverName` ([7.1](#71-naming)), not a Rewind field.
 - **Other integrations** (Sonarr, Radarr, Jellyfin, Prometheus) collapse into one list card with status badges and Edit or Set up buttons that open their form in a Sheet.
 - **Mobile:** the section nav becomes a sticky "Jump to" Select under the top bar; fields go single column; footers stack full width (primary last); badges sit inline under the title. Measured `scrollWidth` 390.
 - If settings keeps growing, the same nav becomes sub-routes under `app/admin/settings/layout.tsx` without visual change.
@@ -1406,13 +1433,13 @@ All public pages use `PublicShell`: the Wordmark top-left on `bg-background`, a 
 
 | Thing | Name | Never |
 |---|---|---|
-| The brand members see | The owner's server name (`Config.serverName`, for example "Northfield Plex"), with the pip | "Plex Manager" on member pages |
-| The annual recap | "Rewind", in full "{Server name} Rewind 2026" (titles, share cards, OG); "Your Rewind 2026" in member copy; "Rewind 2026" in nav | "Plex Rewind" (Plex's own product name), "Wrapped", "Plex Wrapped" |
+| The brand members see | The owner's server name (`Config.serverName`, new and nullable, falling back to the active `PlexServer.name`; for example "Northfield Plex"), with the pip | "Plex Manager" on member pages |
+| The annual recap | "Rewind", in full "{Server name} Rewind 2026" (titles, share cards, OG; public cards say "Rewind 2026" alone when `Config.rewindShowServerNameOnCards` is off, Rewind 6.1); "Your Rewind 2026" in member copy; "Rewind 2026" in nav | "Plex Rewind" (Plex's own product name), "Wrapped", "Plex Wrapped" |
 | The product | "Plex Manager" only in setup, the admin footer, `<title>` fallbacks and docs | |
 | Admin area | "Admin" | "Dashboard" for the admin |
 | Requests | "Requests" (the Overseerr instance), "Request a title" | "Overseerr" on member pages |
 
-All product strings live in `lib/brand.ts` (`serverName()`, `rewindName(year)`, `productName`, `plexProduct` for the `X-Plex-Product` header and the Jellyfin client name), so renames are one-line changes (`UI-39`). URLs rename now: `/wrapped` becomes `/rewind` with permanent redirects (Rewind FR-1). Internal identifiers (`PlexWrapped`, `lib/wrapped/`) can stay until a later rename. Page titles follow `"{Page} - {Server name}"` ("Users - Admin - Northfield Plex"), every `page.tsx` exports `metadata` or `generateMetadata`, the root layout sets `metadataBase` from `NEXT_PUBLIC_APP_URL`, and `app/manifest.ts` plus a default `app/opengraph-image.tsx` (the monogram and server name) cover installs and unfurls (`UI-39`).
+All product strings live in `lib/brand.ts` (`serverName()`, `rewindName(year)`, `productName`, `plexProduct` for the `X-Plex-Product` header and the Jellyfin client name), so renames are one-line changes (`UI-39`). `serverName()` is the only reader of `Config.serverName`, which the owner edits in the Plex server settings section; Rewind's masthead, titles and cards use it too, so there is no separate Rewind brand field (Rewind 4.3, 7.10). URLs rename now: `/wrapped` becomes `/rewind` with permanent redirects (Rewind FR-1). Internal identifiers (`PlexWrapped`, `lib/wrapped/`) can stay until a later rename. Page titles follow `"{Page} - {Server name}"` ("Users - Admin - Northfield Plex"), every `page.tsx` exports `metadata` or `generateMetadata`, the root layout sets `metadataBase` from `NEXT_PUBLIC_APP_URL`, and `app/manifest.ts` plus a default `app/opengraph-image.tsx` (the monogram and server name) cover installs and unfurls (`UI-39`).
 
 ### 7.2 Voice
 
@@ -1445,7 +1472,7 @@ The CI copy check ([9.6](#96-guardrails)) catches the first two and the Wrapped 
 
 `lib/utils/format.ts` is the one formatter module, following CLAUDE.md's `lib/utils/` convention (`DUP-09`, `UI-28`). It replaces `lib/utils/formatters.ts` (its live `toEndOfDayExclusive` moves here), `lib/utils/time-formatting.ts`, the 9 local `formatDate` copies, the 2 `formatCost` copies, the 2 `formatResolution` copies, the compat shims, and about 33 ad-hoc `toFixed` and 33 date calls. `lib/rewind/format.ts` imports from it and adds only Rewind's typesetting rules (non-breaking spaces between numbers and units, "under 1%", plural rules).
 
-- **Zone and locale.** Almost every page is a Server Component, which can't know the viewer's zone, so server output formats in `Config.timezone` (an IANA name, set by setup from the owner's browser; Rewind 7.7), falling back to the `TZ` environment variable, then UTC. That also fixes the UTC day shift in charts (`UI-24`). The locale is `Config.locale` (BCP 47, default `en-US`, set alongside the zone), shared with Rewind, so "December 1" and "1 December" are one setting rather than two formatters.
+- **Zone and locale.** Almost every page is a Server Component, which can't know the viewer's zone, so server output formats in `Config.timezone` (an IANA name, nullable, set by setup from the owner's browser; Rewind 7.7), falling back to the `TZ` environment variable, then UTC. One function in this module, `serverZone()`, resolves that chain, and Rewind's `resolveZone()` uses it for the server part of `User.timezone ?? serverZone()`. That also fixes the UTC day shift in charts (`UI-24`). The locale is `Config.locale` (BCP 47, default `en-US`, set alongside the zone), shared with Rewind, so "December 1" and "1 December" are one setting rather than two formatters.
 - `<Time value={iso} />` (`components/ui/time.tsx`, a small client island) shows relative time ("2 minutes ago", refreshed each minute) with the viewer-local absolute date and time in `title`.
 - `formatMoney(usd)`: 2 decimals at $1 and above; below $1, 3 decimals in tables ("$0.087") and 2 significant digits in prose ("about 9 cents").
 - `formatTokens(n)`: "21,338 tokens".
@@ -1483,12 +1510,12 @@ The CI copy check ([9.6](#96-guardrails)) catches the first two and the Wrapped 
 | 2.1.1 Keyboard | Every row is reachable through its first-cell link (no `tr onClick`); menus, selects, tabs and dialogs come from Base UI with arrow keys, Home/End, typeahead and Escape (`UI-14`). Rewind viewer keyboard rules belong to the Rewind design (`UI-09`). |
 | 2.2.1 Timing adjustable | Only toasts without an action auto-dismiss (5s, paused on hover and focus); a toast with an action ("Retry", "View job") stays until dismissed. |
 | 2.2.2 Pause, stop, hide | No infinite decorative motion in the app theme; errors persist. |
-| 2.3.3 Animation from interactions | Global reduced-motion rule and `MotionConfig reducedMotion="user"`. |
+| 2.3.3 Animation from interactions | Global reduced-motion rule and `MotionConfig reducedMotion="user"`. Inside the Rewind scope, Rewind's own rule applies the same policy: no movement, crossfades of at most 120ms (Rewind 5.6, 11.1). |
 | 2.4.1 Bypass blocks | "Skip to content" link in every shell; `<main id="main">` in every layout, including onboarding and setup. |
 | 2.4.2 Page titled | Every page exports metadata (`UI-39`). |
 | 2.4.3 Focus order, 3.2.2 | Wizards move focus to the new step's h1; dialogs restore focus to their trigger. |
 | 2.4.6 Headings and labels | One h1 per page that equals the nav label or entity name. |
-| 2.4.7 Focus visible, 2.4.11 Focus not obscured | 2px `ring` outline at 2px offset on `:focus-visible` (no `focus:` styles, no white halo, `UI-27`); `scroll-padding-top` clears sticky bars; the assistant no longer floats over content. |
+| 2.4.7 Focus visible, 2.4.11 Focus not obscured | 2px `ring` outline at 2px offset on `:focus-visible`, 3px at 3px inside the Rewind scope through `--focus-width` and `--focus-offset` (no `focus:` styles, no white halo, `UI-27`); `scroll-padding-top` clears sticky bars; the assistant no longer floats over content. |
 | 2.5.3 Label in name | Visible labels start the accessible name ("Actions for Sam Rivera" on the row button is the exception, where there is no visible text). |
 | 2.5.7 Dragging movements | No drag-only interactions. |
 | 2.5.8 Target size (minimum) | Interactive targets 24x24 or more; icon buttons 32px; table row actions 32px; switches inside a 44px hit area on touch; mobile tab items at least 64x64. |
@@ -1507,7 +1534,7 @@ The CI copy check ([9.6](#96-guardrails)) catches the first two and the Wrapped 
 
 ### 9.1 Approach
 
-Foundations first, then shells, then pages in order of reach. Each phase is a series of small PRs that keep the app shippable. Old and new primitives coexist through adapters, and a ratchet stops new debt while the old debt burns down. The schedule follows `modern-ui-stack-2026.md` so Rewind 2026 can freeze around 2026-12-10.
+Foundations first, then shells, then pages in order of reach. Each phase is a series of small PRs that keep the app shippable. Old and new primitives coexist through adapters, and a ratchet stops new debt while the old debt burns down. The schedule follows `modern-ui-stack-2026.md` so Rewind 2026 reaches its feature freeze on 2026-12-10 and its code freeze on 2026-12-14 (Rewind 13.1).
 
 ### 9.2 Order of work
 
@@ -1524,7 +1551,7 @@ Foundations first, then shells, then pages in order of reach. Each phase is a se
 1. `app/globals.css`: tokens, `@theme inline`, the `@utility` type steps, base layer, and the Rewind ink contract exactly as in 4.1 and 4.4 (both design docs agree on it before this PR merges). **Delete** `html, body { height: 100%; overflow-x: hidden }`, the cinematic `@theme` colours (with temporary aliases `--color-gold: var(--primary)` and so on, so today's viewer keeps rendering until the Rewind phase replaces it) and the decorative keyframes.
 2. `app/fonts.ts` and `app/layout.tsx`: fonts, `className="dark"`, viewport without zoom locks, skip link, `bg-background` body, `metadataBase` and the title template.
 3. `lib/design/tokens.ts` (`themes`, `rewindInks`, `inkProps`) and its test; port the contrast scripts.
-4. `components.json`; generate the Base UI primitives with `--diff`; keep current exports through adapters (9.4). Build `sheet.tsx`, `toggle.tsx`, `slider.tsx` and `segmented-control.tsx`, plus the `ink`, `ink-outline` and `pill` Button entries, by 2026-11-08, before the Rewind story work needs them.
+4. `components.json`; generate the Base UI primitives with `--diff`; keep current exports through adapters (9.4). Build `sheet.tsx`, `toggle.tsx`, `slider.tsx` and `segmented-control.tsx`, plus the `ink`, `ink-outline`, `pill` and `icon-pill` Button entries, by 2026-11-08, before the Rewind story work needs them.
 5. `lib/ui/status.ts`, `lib/ui/icons.ts`, `lib/ui/markdown.ts`, `lib/ui/error-copy.ts`, `lib/ui/poster-palette.ts`, `lib/utils/format.ts` (deleting `formatters.ts` and `time-formatting.ts`), `lib/brand.ts`, `lib/charts/theme.ts`; add `components/shell/`, `lib/design/`, `lib/ui/` and `lib/brand.ts` to the CLAUDE.md file tree.
 6. Run the token codemod (9.3) in slices by directory, each slice one PR with its screenshot diffs.
 
@@ -1536,13 +1563,13 @@ Foundations first, then shells, then pages in order of reach. Each phase is a se
 **Phase 3: pages in order of reach (2026-11-09 to 2026-12-04)**
 
 1. Admin users (`UI-05`) and settings (`UI-31`, with the `SEC-31` secret rule and `SEC-55` audit events): the worst defects.
-2. Home with `RewindCard` and its field strip (the scope contract is already in `globals.css`) and the poster row (after the proxy's `SEC-21` checks).
+2. Home with `RewindCard` and its field strip (the scope contract is already in `globals.css`) and the poster row (after the proxy's `SEC-21` checks). The RewindCard merges by 2026-11-20, when its before-season state starts (Rewind 4.4), a week before the 27 November soft launch to admins; the poster row may follow.
 3. Onboarding, setup (claim step `SEC-30`, Plex PIN step and Skip, `UI-03`), invite, sign-in, subscribe, Discord link, `/account`, `/announcements`.
 4. Remaining admin pages: invites, shares, LLM usage, cost, queues, prompts, playground, announcements, Discord, user detail, history.
 
-**Phase 4: Rewind integration (owned by the Rewind plan, freeze about 2026-12-10)**
+**Phase 4: Rewind integration (owned by the Rewind plan, Rewind 13.1: 2026-10-26 to the 2026-12-10 feature freeze, code freeze 2026-12-14)**
 
-The Rewind routes move to `/rewind` with permanent redirects from `/wrapped` (Rewind FR-1); the Rewind layout sets the scope with `inkProps`; viewer controls become `ink` and `ink-outline` Buttons; the admin Rewind group (Season, Playground, Gallery, Evals) ships; temporary cinematic aliases are deleted; the `framer-motion` to `motion` rename happens here.
+The Rewind routes move to `/rewind` with permanent redirects from `/wrapped` (Rewind FR-1); the Rewind layout sets the scope with `inkProps`; viewer controls become `ink` and `ink-outline` Buttons; the admin Rewind group (Season, Playground, Gallery, Evals) ships; temporary cinematic aliases are deleted once the legacy viewer is gone (Rewind Phase 3, 16 to 27 November). The `framer-motion` to `motion` rename comes first, in Rewind Phase 1 (26 October to 6 November).
 
 **Phase 5: after Rewind ships (January 2027)**
 
@@ -1632,11 +1659,11 @@ A page is done when all of these hold:
 | Blur | `/\bbackdrop-blur/` (allowlist: member top bar) |
 | Caps eyebrows | `/\buppercase\b[^"']*\btracking-/` |
 | Infinite motion | `/repeat:\s*Infinity\|animate-(?:bounce\|ping\|pulse)\b/` outside `components/rewind/**` (`animate-skeleton` and `animate-spin` stay allowed) |
-| Rewind-only names | `/--(?:rw-\|field\b\|ink\b\|spot\b\|deep\b\|arch-)\|variant="ink(?:-outline)?"\|size="pill"/` outside `components/rewind/**`, `lib/rewind/**` and the Rewind block of `app/globals.css` |
+| Rewind-only names | `/--(?:rw-\|field\b\|ink\b\|spot\b\|deep\b\|arch-)\|\bfont-(?:display\|text)\b\|variant="ink(?:-outline)?"\|size="(?:icon-)?pill"/` outside `components/rewind/**`, `lib/rewind/**` and the Rewind block of `app/globals.css` |
 | Copy | JSX text matching `/\s(?:->\|→)\s*$\|\s·\s\|\bWrapped\b\|Plex Rewind/` |
 | Zoom lock | `/maximumScale\|userScalable/` |
 
-- **ESLint** (`eslint.config.mjs`): `no-restricted-syntax` banning JSX `button`, `input`, `select`, `textarea` and inline `svg` outside `components/ui/**` (allowlist for chart and Rewind art), and the Button `ink`, `ink-outline` and `pill` props outside `components/rewind/**`; `no-restricted-imports` banning `@/components/ui/styled-*` and `modal-shell` in new code once their adapters exist; `jsx-a11y` recommended rules.
+- **ESLint** (`eslint.config.mjs`): `no-restricted-syntax` banning JSX `button`, `input`, `select`, `textarea` and inline `svg` outside `components/ui/**` (allowlist for chart and Rewind art), and the Button `ink`, `ink-outline`, `pill` and `icon-pill` props outside `components/rewind/**`; `no-restricted-imports` banning `@/components/ui/styled-*` and `modal-shell` in new code once their adapters exist; `jsx-a11y` recommended rules.
 - **knip:** `knip --production` in CI, with files imported only by tests reported as unused (`DUP-12`).
 - **Jest:** the token test (section 4.3) and component tests for every primitive (today 9 of 18 are untested, `UI-27`).
 - **Playwright:** the visual project (screens plus a dev-only `/dev/ui` route that renders `components.html`'s content from the real components, the regression target for `components/ui`), and axe on every route.
@@ -1661,7 +1688,7 @@ Every route under `app/`, with its target pattern and the audit findings it clos
 | `app/global-error.tsx` (new) | Minimal `StatusScreen` with inline styles from `tokens.ts` | `UI-19` |
 | `app/icon.tsx`, `app/apple-icon.tsx`, `app/opengraph-image.tsx`, `app/manifest.ts` (new) | Monogram and default OG card via `next/og` with subset fonts and no network fetch; web manifest from `lib/brand.ts` | `UI-39` |
 | `lib/utils/format.ts` (new), `lib/utils/formatters.ts` and `time-formatting.ts` (deleted) | One formatter module in `Config.timezone` and `Config.locale` ([7.4](#74-numbers-money-and-dates)) | `DUP-09`, `UI-24`, `UI-28` |
-| `next.config.js` | Permanent redirects `/wrapped/:path*` to `/rewind/:path*` and `/wrapped/share/:token` to `/rewind/s/:token` | Rewind FR-1 |
+| `next.config.js` | Permanent redirects `/wrapped/share/:token` to `/rewind/s/:token` (listed first, so the catch-all can't turn it into `/rewind/share/:token`), then `/wrapped/:path*` to `/rewind/:path*`; the share page still resolves the v2 tokens these links carry (Rewind 6.6) | Rewind FR-1 |
 
 **Member**
 
@@ -1682,7 +1709,7 @@ Every route under `app/`, with its target pattern and the audit findings it clos
 | `app/(app)/rewind/[year]/loading.tsx`, `error.tsx` | Skeleton and `RewindStatusPanel` on paper inside the scope | `UI-16`, `UI-44`, `DUP-14` |
 | `app/rewind/s/[token]/page.tsx` (moved from `wrapped/share/[token]`, outside `(app)`) | Public share page in the scope (not the neon starfield), only the published cards, `noindex`, 404 for revoked or expired tokens; OG from the card route | `UI-16`, `UI-39`, `SEC-16`, Rewind FR-25 |
 | `app/api/rewind/poster/[ratingKey]/route.ts` (replaces `api/wrapped/poster`) | One poster proxy for the app and Rewind: private caching for sessions, library-access check, share-token key scope, `?w=` and `&tone=`, fast 404 ([3.11](#311-imagery)) | `SEC-21` |
-| `app/api/rewind/card/[rewindId]/[page]/route.tsx` (replaces `api/wrapped/og-image`) | Share and OG cards (`size` story, square or og) with colours from `rewindInks` and fonts from the Rewind design | `UI-20`, `UI-39`, Rewind FR-26 |
+| `app/api/rewind/card/[rewindId]/[page]/route.tsx` and `app/api/rewind/card/s/[assetKey]/[page]/route.tsx` (replace `api/wrapped/og-image`) | Share and OG cards (`size` story, square or og) for the owner's session and for a share's asset key, with colours from `rewindInks` and fonts from the Rewind design | `UI-20`, `UI-39`, Rewind FR-26 |
 | `app/subscribe/page.tsx` | "You already have access" with Manage billing when entitled; otherwise plan cards with names and prices, one primary, Sign out escape, unavailable EmptyState | `UI-37`, `UI-10`, `UI-40` |
 | `app/subscribe/success/page.tsx` | "You're in" with live checklist and stub | `UI-37`, `UI-40` |
 | `app/onboarding/layout.tsx` | Minimal member shell with `<main>`; no space background | `UI-10`, `UI-15`, `UI-16` |
@@ -1721,7 +1748,7 @@ Every route under `app/`, with its target pattern and the audit findings it clos
 | `app/api/admin/search/route.ts` (new) | GET search for the command menu (`requireAdminAPI`, Zod), called through TanStack Query with a debounce | `UI-41` |
 | `app/admin/users/page.tsx` | Reference list page: StatGrid, Plex-down Alert, FilterBar defaulting to All, DataTable, ConfirmDialogs, pagination only past one page, `admin-users-*` test ids | `UI-05`, `UI-12`, `UI-21`, `UI-22`, `UI-23`, `UI-28`, `UI-42`, `UI-46` |
 | `app/admin/users/[userId]/page.tsx` | Detail page: name as h1, status badges, Tabs (Overview, Rewind, Usage, Billing), keyboard-reachable tables, Regenerate for stuck rows | `UI-12`, `UI-21`, `UI-22`, `UI-23`, `UI-28`, `UI-29`, `UI-42` |
-| `app/admin/users/[userId]/rewind/[year]/page.tsx` (moved from `[userId]/wrapped`, which redirects) | Admin Rewind preview inside the scope, in the admin shell (not the full-screen generation screen), with the "viewing as an admin" banner and an audit read entry; `RewindStatusPanel` | `UI-06`, `UI-29`, `DUP-14`, Rewind 10.1 |
+| `app/admin/users/[userId]/rewind/[year]/page.tsx` (moved from `[userId]/wrapped`, which redirects) | Admin Rewind preview inside the scope with the Rewind fonts, in the admin shell (not the full-screen generation screen), with the "viewing as an admin" banner and an audit read entry; `RewindStatusPanel` | `UI-06`, `UI-29`, `DUP-14`, Rewind 10.1 |
 | `app/admin/wrapped/[wrappedId]/history/[llmUsageId]/page.tsx` | Detail page with breadcrumbs (Users / name / Rewind history) | `UI-06`, `UI-21` |
 | `app/admin/rewind/page.tsx` (new, Rewind phase) | Season console (Rewind 10.1): StatGrid (ready, generating, failed, stuck, not started), "Prepare season", "Generate all", "Retry failed", "Run final cut" with cost confirms, per-member DataTable | `UI-29` |
 | `app/admin/rewind/playground/page.tsx` (moved from `admin/playground`, which redirects) | Two-column form + preview running the production pipeline in dry-run (Rewind 10.2); split state machine into hooks; `FormField`s; preview in a Dialog | `UI-13`, `UI-43` |
@@ -1905,3 +1932,20 @@ Changes made on 2026-10-17 in response to the design review. Every blocking and 
 7. **7.7 and 9.7:** the member's time zone and notification toggle live on the new `/account` page.
 8. **10:** the admin preview route is `/admin/users/[userId]/rewind/[year]`, and `/admin/playground` redirects to `/admin/rewind/playground`.
 9. **5.8:** the poster proxy also checks that the item's library section is shared with the session user (`SEC-21`), and serves the app's `tone=none` posters through the shared `components/ui/poster.tsx`.
+
+### Reconciliation notes (2026-10-18)
+
+Both design documents were compared on every shared contract and edited to agree. Where they differed, this document decided app-wide tokens, primitives, branding, formatting and shells, and the Rewind design decided Rewind behaviour. Changes here:
+
+- **Ink measurements** (3.11, 4.4): the twelve-ink table, the archetype pairs, the paper popover (15.44) and the poster-fallback range (7.04 to 12.15) now come from the WCAG formula on the `rewindInks` hex, as Rewind 5.2 and 5.3 report them. Every pair still passes.
+- **Scope block** (4.1 to 4.4): added Rewind's `[data-archetype]`, `data-spot="arch"` and `data-ink="arch-deep"` rules, with `inkProps` options to set them. Added `font-display` and `font-text` utilities, because Rewind's chrome uses the class and nothing generated it. Added a literal `::view-transition-group(rewind-field)` rule, because `--rw-ease-ink` is not defined on `<html>`, where the handoff runs. Neither document had the last two.
+- **Reduced motion** (3.9, 4.1, 4.4, 8): the base-layer clamp skips the Rewind scope, which applies the same policy with its own rule. Otherwise the clamp would remove Rewind's 120ms crossfades and end the progress segment's dwell at once.
+- **Motion and fonts** (3.6, 3.9): story to article mode is the second allowed view transition. Archivo and Newsreader also load on the admin preview page.
+- **Button** (3.8, 4.4, 5.2, 5.4, 9.2, 9.6): a new Rewind-only size, `icon-pill`, for the viewer's 38px chrome circles, which no size covered.
+- **RewindCard** (2.3, 5.5): the meta line comes from the registry ("18 pages, about 2 min 20 s", `readSeconds`). An eighth state, `unavailable`, covers FR-50 (no Redis), and `RewindStatusPanel` gains the same case. The card shows the full FR-48 copy and lists the cases where no card renders.
+- **Poster** (3.11, 5.5): `private` caching for shares too; asset keys, never tokens; the viewer's own Rewind keys are allowed. Widths snap to the proxy's four, `tone` is a spot and field pair as the proxy takes it, and new `w` and `fallback` props serve Rewind's wrapper `components/rewind/media/poster.tsx`.
+- **Branding and Config** (6.4, 7.1, 7.4): `Config.serverName` is new and nullable, falls back to `PlexServer.name` and is read only through `serverName()`. It replaces Rewind's proposed `rewindBrandName`, and public cards may say "Rewind 2026" alone. `Config.timezone` is nullable, and `serverZone()` resolves it for both documents. The "AI features" switch (`llmDisabled`) forces `rewindLlmMode` off. Settings gain the Rewind section of Rewind 10.4.
+- **Account, routes and accessibility** (6.1, 4.4, 8, 10): the notification switch is the current year's `RewindPrefs.notify` and also governs the notice slot. The share card route is listed, and the `/wrapped/share/:token` redirect comes before the catch-all. The focus row names Rewind's 3px ring.
+- **Timeline** (9.1, 9.2): "freeze about 2026-12-10" now reads feature freeze 2026-12-10 and code freeze 2026-12-14. The RewindCard merges by 2026-11-20, and the `motion` rename sits in Rewind Phase 1, not phase 4.
+
+The four follow-ups in Rewind 18.4 are applied here. The nine items in the list above are now all in the Rewind design: items 1 to 5 were already there, and items 6 to 9 were completed in the same pass (Rewind 18.6).
