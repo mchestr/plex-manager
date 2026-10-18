@@ -1,19 +1,44 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {
+const { PHASE_DEVELOPMENT_SERVER } = require('next/constants')
+
+// React Refresh in `next dev` needs 'unsafe-eval' (E2E also runs on `next dev`
+// until P1.5). Keyed to the Next phase rather than NODE_ENV, so a build or
+// `next start` never ships it whatever NODE_ENV the shell exports.
+function contentSecurityPolicy(phase) {
+  const scriptSrc = [
+    "'self'",
+    "'unsafe-inline'",
+    ...(phase === PHASE_DEVELOPMENT_SERVER ? ["'unsafe-eval'"] : []),
+  ]
+
+  return [
+    "default-src 'self'",
+    `script-src ${scriptSrc.join(' ')}`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: https:",
+    "font-src 'self' data:",
+    "connect-src 'self' https:",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "frame-ancestors 'self'",
+  ].join('; ')
+}
+
+/**
+ * @param {string} phase
+ * @returns {import('next').NextConfig}
+ */
+module.exports = (phase) => ({
   reactStrictMode: true,
   output: 'standalone',
+  poweredByHeader: false,
+  // Stops `next dev` from writing AGENTS.md into the repo; CLAUDE.md already
+  // holds the agent guidance.
+  agentRules: false,
   serverExternalPackages: ['discord.js', '@discordjs/ws', 'zlib-sync', 'bufferutil', 'utf-8-validate'],
+  // The optimizer would fetch and decode any URL an anonymous caller passes to
+  // /_next/image. With it off, Next answers that route with a 404.
   images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: '**',
-      },
-      {
-        protocol: 'http',
-        hostname: '**',
-      },
-    ],
+    unoptimized: true,
   },
   async headers() {
     return [
@@ -50,44 +75,10 @@ const nextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:;"
+            value: contentSecurityPolicy(phase)
           }
         ],
       },
     ]
   },
-  // Turbopack configuration
-  // The serverExternalPackages option handles Discord.js externals in Turbopack
-  turbopack: {},
-
-  // Keep webpack config for compatibility when explicitly using --webpack flag
-  webpack: (config, { isServer }) => {
-    // Exclude Discord.js and native dependencies from bundling
-    // These are server-only modules that shouldn't be bundled
-    if (isServer) {
-      const existingExternals = config.externals || []
-      config.externals = [
-        ...(Array.isArray(existingExternals) ? existingExternals : [existingExternals]),
-        // Mark Discord.js packages as external to prevent bundling
-        ({ request }, callback) => {
-          if (
-            request === 'discord.js' ||
-            request === '@discordjs/ws' ||
-            request === 'zlib-sync' ||
-            request === 'bufferutil' ||
-            request === 'utf-8-validate' ||
-            request?.startsWith('discord.js/') ||
-            request?.startsWith('@discordjs/')
-          ) {
-            return callback(null, `commonjs ${request}`)
-          }
-          callback()
-        },
-      ]
-    }
-    return config
-  },
-}
-
-module.exports = nextConfig
-
+})

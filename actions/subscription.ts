@@ -7,19 +7,12 @@ import { prisma } from "@/lib/prisma"
 import { getStripe } from "@/lib/stripe/client"
 import { createCheckoutSession } from "@/lib/stripe/checkout"
 import { getOfferedPrices } from "@/lib/stripe/prices"
-import { checkRateLimit } from "@/lib/security/rate-limit"
+import { consume } from "@/lib/security/rate-limit"
 import { getBaseUrl } from "@/lib/utils"
 import { createLogger } from "@/lib/utils/logger"
 import { getServerSession } from "next-auth"
 
 const logger = createLogger("SUBSCRIPTION")
-
-/**
- * Per-user rate limit for the Stripe-adjacent self-service actions. These are
- * authenticated Server Actions that create Stripe sessions, so they're keyed by
- * user id to prevent a logged-in user from hammering Stripe.
- */
-const STRIPE_ACTION_RATE_LIMIT = { windowMs: 60 * 1000, max: 10 }
 
 type StartCheckoutResult = { url: string } | { error: string }
 
@@ -49,7 +42,9 @@ const PORTAL_RETURN_PATH = "/"
  * 2. Validates `priceId` against {@link getOfferedPrices} so a client cannot
  *    check out against an arbitrary/un-offered price. This also returns an empty
  *    list (→ `{error}`) when Stripe is disabled/unconfigured.
- * 3. Builds the Checkout session and returns its `url`, or `{error}` when Stripe
+ * 3. Returns `{error}` when the user has no stored email: the Plex access grant
+ *    invites by email, so the payment could never grant access.
+ * 4. Builds the Checkout session and returns its `url`, or `{error}` when Stripe
  *    is unconfigured or the session has no URL.
  *
  * Never throws for the expected failure paths — callers get `{error}` and can
@@ -64,7 +59,8 @@ export async function startCheckout(priceId: string): Promise<StartCheckoutResul
     return { error: "You must be signed in to subscribe." }
   }
 
-  if (!checkRateLimit(`checkout:${session.user.id}`, STRIPE_ACTION_RATE_LIMIT)) {
+  // Keyed by user id so a signed-in user cannot hammer Stripe.
+  if (!(await consume("checkout", session.user.id)).ok) {
     return { error: "Too many attempts. Please wait a moment and try again." }
   }
 
@@ -86,6 +82,21 @@ export async function startCheckout(priceId: string): Promise<StartCheckoutResul
         priceId,
       })
       return { error: "Invalid plan selected." }
+    }
+
+    // The Plex access grant invites by email, so a member without one would pay
+    // and never get access. A Plex sign-in whose email another account already
+    // holds stores none (lib/auth.ts, auth.email_conflict).
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { email: true },
+    })
+    if (!user?.email) {
+      logger.warn("Rejected checkout for a user with no email", { userId: session.user.id })
+      return {
+        error:
+          "Your account has no email address, which Plex access needs. Sign out and sign in with Plex again; if this message stays, ask the server admin.",
+      }
     }
 
     const checkoutSession = await createCheckoutSession(session.user.id, priceId)
@@ -137,7 +148,7 @@ export async function openBillingPortal(): Promise<OpenBillingPortalResult> {
     return { error: "You must be signed in to manage your subscription." }
   }
 
-  if (!checkRateLimit(`portal:${session.user.id}`, STRIPE_ACTION_RATE_LIMIT)) {
+  if (!(await consume("portal", session.user.id)).ok) {
     return { error: "Too many attempts. Please wait a moment and try again." }
   }
 

@@ -101,7 +101,7 @@ describe("CostDisplay", () => {
       expect(screen.getByText("gpt-3.5-turbo")).toBeInTheDocument()
     })
 
-    it("should default to gpt-4 when no model is provided", () => {
+    it("should default to the current default model when no model is provided", () => {
       render(
         <CostDisplay
           tokenUsage={mockTokenUsage}
@@ -110,7 +110,7 @@ describe("CostDisplay", () => {
         />
       )
 
-      expect(screen.getByText("gpt-4")).toBeInTheDocument()
+      expect(screen.getByText("gpt-5.4-mini")).toBeInTheDocument()
     })
   })
 

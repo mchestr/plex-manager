@@ -60,16 +60,17 @@ describe('Wrapped Settings Date Range', () => {
 
   describe('getWrappedSettings', () => {
     it('should return defaults when config does not exist', async () => {
+      jest.setSystemTime(new Date('2026-10-18T12:00:00Z'))
       ;(mockPrisma.config.findUnique as jest.Mock).mockResolvedValue(null)
 
       const result = await getWrappedSettings()
 
       expect(result.wrappedEnabled).toBe(true)
-      expect(result.wrappedYear).toBe(new Date().getFullYear())
+      expect(result.wrappedYear).toBe(2026)
     })
 
     it('should return enabled when no date range is set', async () => {
-      const currentYear = new Date().getFullYear()
+      jest.setSystemTime(new Date('2026-10-18T12:00:00Z'))
       ;(mockPrisma.config.findUnique as jest.Mock).mockResolvedValue({
         wrappedEnabled: true,
         wrappedGenerationStartDate: null,
@@ -79,7 +80,35 @@ describe('Wrapped Settings Date Range', () => {
       const result = await getWrappedSettings()
 
       expect(result.wrappedEnabled).toBe(true)
-      expect(result.wrappedYear).toBe(currentYear) // Year defaults to current year when no date range
+      expect(result.wrappedYear).toBe(2026) // Year defaults to current year when no date range
+    })
+
+    // P0.14: the season year, not the calendar year, so the card and
+    // /wrapped agree in January (RWP-04, RWV-02).
+    it('keeps last year as the year in January when no date range is set', async () => {
+      jest.setSystemTime(new Date('2027-01-02T12:00:00Z'))
+      ;(mockPrisma.config.findUnique as jest.Mock).mockResolvedValue({
+        wrappedEnabled: true,
+        wrappedGenerationStartDate: null,
+        wrappedGenerationEndDate: null,
+      })
+
+      const result = await getWrappedSettings()
+
+      expect(result.wrappedYear).toBe(2026)
+    })
+
+    it('keeps the start date year in January for a Dec 1 - Jan 31 window', async () => {
+      jest.setSystemTime(new Date('2027-01-02T12:00:00Z'))
+      ;(mockPrisma.config.findUnique as jest.Mock).mockResolvedValue({
+        wrappedEnabled: true,
+        wrappedGenerationStartDate: new Date('2026-12-01T12:00:00Z'),
+        wrappedGenerationEndDate: new Date('2026-01-31T12:00:00Z'),
+      })
+
+      const result = await getWrappedSettings()
+
+      expect(result).toEqual({ wrappedEnabled: true, wrappedYear: 2026 })
     })
 
     it('should return disabled when wrappedEnabled is false, regardless of date range', async () => {
@@ -269,12 +298,13 @@ describe('Wrapped Settings Date Range', () => {
     })
 
     it('should handle errors gracefully and return defaults', async () => {
+      jest.setSystemTime(new Date('2027-01-02T12:00:00Z'))
       ;(mockPrisma.config.findUnique as jest.Mock).mockRejectedValue(new Error('Database error'))
 
       const result = await getWrappedSettings()
 
       expect(result.wrappedEnabled).toBe(true)
-      expect(result.wrappedYear).toBe(new Date().getFullYear())
+      expect(result.wrappedYear).toBe(2026)
     })
   })
 

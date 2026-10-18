@@ -1,11 +1,12 @@
 import { getActiveAnnouncements } from "@/actions/announcements";
 import { getPrometheusStatus } from "@/actions/prometheus-status";
-import { getUserFirstWatchDate } from "@/actions/users";
 import { ServiceSignInToggle } from "@/components/auth/service-sign-in-toggle";
 import { UserDashboard } from "@/components/dashboard/user-dashboard";
 import { SubscriptionStatusView } from "@/components/subscription/subscription-status-view";
 import { authOptions } from "@/lib/auth";
+import { getFirstWatchDate } from "@/lib/connections/tautulli-first-watch";
 import { prisma } from "@/lib/prisma";
+import { getRewindEligibility } from "@/lib/wrapped/eligibility";
 import type { AuthService } from "@/types/onboarding";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
@@ -54,7 +55,6 @@ export default async function Home() {
         createdAt: true,
         plexUserId: true,
         jellyfinUserId: true,
-        email: true,
       }
     });
     const discordConnectionPromise = discordEnabled
@@ -80,14 +80,20 @@ export default async function Home() {
       }
     }
 
-    // Get first watch date from Tautulli for accurate membership duration
+    // The first watch date from Tautulli gives the membership duration, and
+    // eligibility decides whether the Rewind card offers a Rewind (FR-48).
+    // Both find the member through findTautulliUser, which calls Tautulli's
+    // get_users once per render.
+    const plexUserId = user?.plexUserId ?? null;
+    const [firstWatchResult, rewindEligibility] = await Promise.all([
+      plexUserId ? getFirstWatchDate(plexUserId) : null,
+      getRewindEligibility({ id: session.user.id, plexUserId }),
+    ]);
+
     // Falls back to account creation date if Tautulli is not available or user has no history
     let memberSince = user?.createdAt?.toISOString() ?? new Date().toISOString();
-    if (user?.plexUserId) {
-      const firstWatchResult = await getUserFirstWatchDate(user.plexUserId, user.email);
-      if (firstWatchResult.success && firstWatchResult.firstWatchDate) {
-        memberSince = firstWatchResult.firstWatchDate;
-      }
+    if (firstWatchResult?.success && firstWatchResult.firstWatchDate) {
+      memberSince = firstWatchResult.firstWatchDate;
     }
 
     const discordConnectionSummary = discordConnection
@@ -117,6 +123,7 @@ export default async function Home() {
         overseerrUrl={overseerrUrl}
         prometheusStatus={prometheusStatus}
         memberSince={memberSince}
+        rewindEligibility={rewindEligibility}
         primaryAuthService={user?.primaryAuthService}
         mediaServerUrl={mediaServerUrl}
         subscriptionSlot={subscription ? <SubscriptionStatusView /> : null}

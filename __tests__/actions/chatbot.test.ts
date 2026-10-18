@@ -4,12 +4,13 @@
 
 import { chatWithAdminBot } from "@/actions/chatbot"
 import { type ChatMessage } from "@/actions/chatbot/types"
-import { callChatLLM } from "@/lib/llm/chat"
+import { callChatLLM, RESPONSES_API_TOOLS_ERROR } from "@/lib/llm/chat"
 import { prisma } from "@/lib/prisma"
 import { getServerSession } from "next-auth"
 
 // Mock dependencies
 jest.mock("@/lib/llm/chat", () => ({
+  ...jest.requireActual("@/lib/llm/chat"),
   callChatLLM: jest.fn(),
 }))
 
@@ -81,6 +82,7 @@ jest.mock("@/lib/utils/logger", () => ({
     debug: jest.fn(),
     error: jest.fn(),
     info: jest.fn(),
+    warn: jest.fn(),
   })),
 }))
 
@@ -520,5 +522,119 @@ describe("chatbot sources tracking", () => {
       expect(mockCallChatLLM).not.toHaveBeenCalled()
     })
   })
-})
 
+  describe("model-dependent tool calls (real OpenAI client, mocked fetch)", () => {
+    const { callChatLLM: realCallChatLLM } =
+      jest.requireActual<typeof import("@/lib/llm/chat")>("@/lib/llm/chat")
+    const fetchMock = jest.fn()
+    const originalFetch = global.fetch
+
+    const messages: ChatMessage[] = [
+      { role: "user", content: "Check Sonarr status", timestamp: Date.now() },
+    ]
+
+    function useChatModel(model: string) {
+      mockPrisma.lLMProvider.findFirst.mockResolvedValue({
+        id: "provider-1",
+        provider: "openai",
+        apiKey: "test-key",
+        model,
+        temperature: 0.7,
+        maxTokens: 1000,
+        isActive: true,
+      } as any)
+    }
+
+    beforeEach(() => {
+      mockCallChatLLM.mockImplementation(realCallChatLLM)
+      fetchMock.mockReset()
+      global.fetch = fetchMock
+    })
+
+    afterAll(() => {
+      mockCallChatLLM.mockReset()
+      global.fetch = originalFetch
+    })
+
+    it("returns the Responses API error for tools on gpt-6.1-sol without calling the API", async () => {
+      useChatModel("gpt-6.1-sol")
+
+      const response = await chatWithAdminBot(messages)
+
+      expect(response.success).toBe(false)
+      expect(response.error).toBe(RESPONSES_API_TOOLS_ERROR)
+      expect(response.error).toContain("Responses API")
+      expect(fetchMock).not.toHaveBeenCalled()
+      expect(mockPrisma.lLMUsage.create).not.toHaveBeenCalled()
+    })
+
+    it("sends reasoning_effort none with tools on gpt-6-luna, and no temperature", async () => {
+      useChatModel("gpt-6-luna")
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          model: "gpt-6-luna-2026-09-22",
+          choices: [{ message: { content: "All services are healthy" }, finish_reason: "stop" }],
+          usage: {
+            prompt_tokens: 1000,
+            completion_tokens: 100,
+            total_tokens: 1100,
+            prompt_tokens_details: { cached_tokens: 400 },
+          },
+        }),
+      })
+
+      const response = await chatWithAdminBot(messages)
+
+      expect(response.success).toBe(true)
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      const body = JSON.parse(fetchMock.mock.calls[0][1].body)
+      expect(body.model).toBe("gpt-6-luna")
+      expect(body.tools.length).toBeGreaterThan(0)
+      expect(body.reasoning_effort).toBe("none")
+      expect(body.max_completion_tokens).toBe(1000)
+      expect(body).not.toHaveProperty("temperature")
+      expect(body).not.toHaveProperty("max_tokens")
+
+      // The served model is recorded, and cached tokens are priced at the cached rate:
+      // 600 at $0.10/1M + 400 at $0.01/1M + 100 at $0.50/1M
+      const usage = (mockPrisma.lLMUsage.create as jest.Mock).mock.calls[0][0].data
+      expect(usage.model).toBe("gpt-6-luna-2026-09-22")
+      expect(usage.cost).toBeCloseTo(0.00006 + 0.000004 + 0.00005, 12)
+    })
+
+    it("keeps temperature and max_tokens with tools on gpt-4o", async () => {
+      useChatModel("gpt-4o")
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          choices: [{ message: { content: "Done" }, finish_reason: "stop" }],
+          usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 },
+        }),
+      })
+
+      const response = await chatWithAdminBot(messages)
+
+      expect(response.success).toBe(true)
+      const body = JSON.parse(fetchMock.mock.calls[0][1].body)
+      expect(body.temperature).toBe(0.7)
+      expect(body.max_tokens).toBe(1000)
+      expect(body).not.toHaveProperty("reasoning_effort")
+    })
+
+    it("keeps other API failures generic", async () => {
+      useChatModel("gpt-5.4-mini")
+      fetchMock.mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        statusText: "Bad Request",
+        json: async () => ({ error: { message: "Internal upstream detail" } }),
+      })
+
+      const response = await chatWithAdminBot(messages)
+
+      expect(response.success).toBe(false)
+      expect(response.error).toBe("Failed to communicate with AI provider")
+    })
+  })
+})

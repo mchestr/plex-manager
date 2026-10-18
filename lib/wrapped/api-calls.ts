@@ -3,6 +3,7 @@
  * Currently supports OpenAI, but designed to be extensible for other providers
  */
 
+import { buildOpenAIParams, openAIModelCaps } from "@/lib/llm/openai-params"
 import { calculateCost } from "@/lib/llm/pricing"
 import { fetchWithTimeout, isTimeoutError } from "@/lib/utils/fetch-with-timeout"
 import { createLogger } from "@/lib/utils/logger"
@@ -34,41 +35,13 @@ export interface LLMResponse {
   output?: WrappedLLMOutput
   error?: string
   rawResponse?: string // Raw response content for database storage
+  model?: string // The model the API reports serving, for LLMUsage
   tokenUsage?: {
     promptTokens: number
     completionTokens: number
     totalTokens: number
     cost: number
   }
-}
-
-/**
- * Determine if a model requires max_completion_tokens instead of max_tokens
- * Newer models like GPT-5, o1, o3 use max_completion_tokens
- */
-function requiresMaxCompletionTokens(model: string): boolean {
-  const modelLower = model.toLowerCase()
-  // Newer models that use max_completion_tokens
-  return (
-    modelLower.startsWith("gpt-5") ||
-    modelLower.startsWith("o1") ||
-    modelLower.startsWith("o3")
-  )
-}
-
-/**
- * Determine if a model supports strict structured outputs
- * (response_format: json_schema). Prefix checks tolerate versioned names.
- */
-export function supportsStructuredOutputs(model: string): boolean {
-  const modelLower = model.toLowerCase()
-  return (
-    modelLower.startsWith("gpt-4o") ||
-    modelLower.startsWith("gpt-4.1") ||
-    modelLower.startsWith("gpt-5") ||
-    modelLower.startsWith("o3") ||
-    modelLower.startsWith("o4")
-  )
 }
 
 /**
@@ -91,7 +64,6 @@ export async function callOpenAI(
 
   const model = config.model
 
-  // Build request body with appropriate token limit parameter
   const requestBody: Record<string, unknown> = {
     model,
     messages: [
@@ -104,11 +76,16 @@ export async function callOpenAI(
         content: prompt,
       },
     ],
+    // The token-limit name and temperature support depend on the model
+    ...buildOpenAIParams(model, {
+      temperature: config.temperature,
+      maxTokens: config.maxTokens,
+    }),
   }
 
   // Enforce the output schema at the API level where supported; fall back to
   // plain JSON mode otherwise. Zod validation happens regardless.
-  if (supportsStructuredOutputs(model)) {
+  if (openAIModelCaps(model).structuredOutputs) {
     requestBody.response_format = {
       type: "json_schema",
       json_schema: {
@@ -119,21 +96,6 @@ export async function callOpenAI(
     }
   } else {
     requestBody.response_format = { type: "json_object" }
-  }
-
-  // Only set temperature if provided
-  if (config.temperature !== undefined) {
-    requestBody.temperature = config.temperature
-  }
-
-  // Use max_completion_tokens for newer models, max_tokens for older models
-  // Only set if provided
-  if (config.maxTokens !== undefined) {
-    if (requiresMaxCompletionTokens(model)) {
-      requestBody.max_completion_tokens = config.maxTokens
-    } else {
-      requestBody.max_tokens = config.maxTokens
-    }
   }
 
   try {
@@ -222,14 +184,17 @@ export async function callOpenAI(
     const promptTokens = usage.prompt_tokens ?? 0
     const completionTokens = usage.completion_tokens ?? 0
     const totalTokens = usage.total_tokens ?? 0
+    const cachedTokens = usage.prompt_tokens_details?.cached_tokens ?? 0
 
-    // Calculate cost based on model-specific pricing
-    const cost = calculateCost(model, promptTokens, completionTokens, "openai")
+    // Price and record the model the API reports serving (e.g. a dated snapshot)
+    const servedModel: string = responseData.model ?? model
+    const cost = calculateCost(servedModel, promptTokens, completionTokens, cachedTokens)
 
     return {
       success: true,
       output: parseResult.output,
       rawResponse: content,
+      model: servedModel,
       tokenUsage: {
         promptTokens,
         completionTokens,

@@ -79,7 +79,7 @@ model JellyfinServer {
   apiKey          String   // Jellyfin API key for admin operations
   adminUserId     String?  // Jellyfin user ID of the admin who configured this server
   isActive        Boolean  @default(true)
-  enabledForLogin Boolean  @default(true) // When false, hides Jellyfin from the login page
+  enabledForLogin Boolean  @default(true) // "Allow Jellyfin sign-in": when false, Jellyfin sign-in is refused and hidden from the login page
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -233,8 +233,8 @@ model LLMUsage {
   user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   provider         String // Currently "openai", but extensible for other providers
   model            String? // Model used (e.g., "gpt-4", "openai/gpt-4")
-  prompt           String // The prompt sent to the LLM
-  response         String // The full response from the LLM
+  prompt           String? // The prompt sent to the LLM; null once removed by the October 2026 privacy clean-up (P0.20)
+  response         String? // The full response from the LLM; null once removed by the October 2026 privacy clean-up (P0.20)
   promptTokens     Int // Number of tokens in the prompt
   completionTokens Int // Number of tokens in the completion
   totalTokens      Int // Total tokens used

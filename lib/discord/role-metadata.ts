@@ -57,7 +57,6 @@ export const WATCHED_HOURS_KEY = "watched_hours"
 /** The subset of the {@link User} record required to compute role metadata. */
 export interface RoleMetadataUser {
   plexUserId: string | null
-  email: string | null
 }
 
 /**
@@ -107,7 +106,7 @@ async function resolvePlexAccess(user: RoleMetadataUser): Promise<boolean> {
 /**
  * Resolves the user's total watched hours for the current year from Tautulli.
  *
- * @param user - The user's Plex identity (matched to Tautulli by email/ID).
+ * @param user - The user's Plex identity (matched to Tautulli by account ID).
  * @returns The integer hour count, or `undefined` when Tautulli is not
  *   configured, the user has no `plexUserId`, or the lookup fails.
  *
@@ -126,8 +125,7 @@ async function resolveWatchedHours(user: RoleMetadataUser): Promise<number | und
           url: tautulli.url,
           apiKey: tautulli.apiKey,
         },
-        user.plexUserId,
-        user.email,
+        { plexUserId: user.plexUserId },
         year
       )
 
@@ -156,7 +154,7 @@ async function resolveWatchedHours(user: RoleMetadataUser): Promise<number | und
  *
  * @example
  * ```ts
- * const metadata = await computeRoleMetadata({ plexUserId: "123", email: "a@b.c" })
+ * const metadata = await computeRoleMetadata({ plexUserId: "123" })
  * // { is_subscribed: true, watched_hours: 42 }
  * ```
  */

@@ -14,6 +14,7 @@ interface UserActionsMenuProps {
   user: {
     id: string
     name: string | null
+    plexUserId: string | null
     isAdmin: boolean
     hasPlexAccess: boolean | null
     wrappedStatus: string | null
@@ -21,11 +22,13 @@ interface UserActionsMenuProps {
     isExempt: boolean
     stripeCustomerId: string | null
   }
+  /** The season year whose Rewind status the row shows; View and Regenerate act on it. */
+  year: number
   /** Stripe dashboard base URL (test/live aware), or null when unconfigured. */
   stripeDashboardBaseUrl?: string | null
 }
 
-export function UserActionsMenu({ user, stripeDashboardBaseUrl }: UserActionsMenuProps) {
+export function UserActionsMenu({ user, year, stripeDashboardBaseUrl }: UserActionsMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0 })
   const buttonRef = useRef<HTMLButtonElement>(null)
@@ -119,7 +122,7 @@ export function UserActionsMenu({ user, stripeDashboardBaseUrl }: UserActionsMen
           {/* View Wrapped */}
           {user.wrappedStatus === "completed" && (
             <Link
-              href={`/admin/users/${user.id}/wrapped`}
+              href={`/admin/users/${user.id}/wrapped?year=${year}`}
               className="flex items-center gap-2 px-3 py-2 text-sm text-slate-200 hover:bg-slate-700/50 transition-colors"
               onClick={() => setIsOpen(false)}
               role="menuitem"
@@ -155,6 +158,8 @@ export function UserActionsMenu({ user, stripeDashboardBaseUrl }: UserActionsMen
             <div className="px-3 py-2 hover:bg-slate-700/50 transition-colors">
               <RegenerateWrappedButton
                 userId={user.id}
+                plexUserId={user.plexUserId}
+                year={year}
                 inline={true}
                 onSuccess={() => setIsOpen(false)}
               />

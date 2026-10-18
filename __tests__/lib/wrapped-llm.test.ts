@@ -55,6 +55,15 @@ const mockStatistics: WrappedStatistics = {
   watchTimeByMonth: [],
 }
 
+const baseArgs = {
+  promptName: 'Test User',
+  displayName: 'Test User',
+  year: 2024,
+  userId: 'user-1',
+  wrappedId: 'wrapped-1',
+  statistics: mockStatistics,
+}
+
 describe('generateWrappedWithLLM', () => {
   beforeEach(() => {
     jest.clearAllMocks()
@@ -73,23 +82,18 @@ describe('generateWrappedWithLLM', () => {
     ;(generateMockWrappedData as jest.Mock).mockReturnValue(mockData)
     ;(prisma.lLMUsage.create as jest.Mock).mockResolvedValue({})
 
-    const result = await generateWrappedWithLLM(
-      'Test User',
-      2024,
-      'user-1',
-      'wrapped-1',
-      mockStatistics
-    )
+    const result = await generateWrappedWithLLM(baseArgs)
 
     expect(result.success).toBe(true)
     expect(result.data).toEqual(mockData)
     expect(result.tokenUsage?.cost).toBe(0)
-    expect(generateMockWrappedData).toHaveBeenCalledWith(
-      'Test User',
-      2024,
-      'user-1',
-      mockStatistics
-    )
+    expect(generateMockWrappedData).toHaveBeenCalledWith({
+      promptName: 'Test User',
+      displayName: 'Test User',
+      year: 2024,
+      userId: 'user-1',
+      statistics: mockStatistics,
+    })
     // Verify OpenAI API is NOT called
     expect(callOpenAI).not.toHaveBeenCalled()
     expect(generateWrappedPrompt).not.toHaveBeenCalled()
@@ -138,13 +142,7 @@ describe('generateWrappedWithLLM', () => {
     ;(callOpenAI as jest.Mock).mockResolvedValue(mockLLMResponse)
     ;(prisma.lLMUsage.create as jest.Mock).mockResolvedValue({})
 
-    const result = await generateWrappedWithLLM(
-      'Test User',
-      2024,
-      'user-1',
-      'wrapped-1',
-      mockStatistics
-    )
+    const result = await generateWrappedWithLLM(baseArgs)
 
     expect(result.success).toBe(true)
     expect(result.data?.version).toBe(2)
@@ -174,6 +172,60 @@ describe('generateWrappedWithLLM', () => {
     )
   })
 
+  it('should send only the prompt name to the model and store the display name', async () => {
+    ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({ id: 'config', llmDisabled: false })
+    ;(prisma.lLMProvider.findFirst as jest.Mock).mockResolvedValue({
+      id: 'provider-1',
+      provider: 'openai',
+      apiKey: 'test-key',
+      model: 'gpt-6-luna',
+      isActive: true,
+    })
+    ;(generateWrappedPrompt as jest.Mock).mockResolvedValue('test prompt')
+    const mockOutput = buildValidOutput()
+    ;(callOpenAI as jest.Mock).mockResolvedValue({
+      success: true,
+      output: mockOutput,
+      rawResponse: JSON.stringify(mockOutput),
+      model: 'gpt-6-luna-2026-09-22',
+      tokenUsage: { promptTokens: 1000, completionTokens: 500, totalTokens: 1500, cost: 0.00035 },
+    })
+    ;(prisma.lLMUsage.create as jest.Mock).mockResolvedValue({})
+
+    const result = await generateWrappedWithLLM({
+      ...baseArgs,
+      promptName: 'there',
+      displayName: 'member@example.com',
+    })
+
+    expect(result.success).toBe(true)
+    expect(generateWrappedPrompt).toHaveBeenCalledWith('there', 2024, mockStatistics)
+    expect(result.data?.userName).toBe('member@example.com')
+    // The usage row records the model the API served, not a fallback
+    expect(prisma.lLMUsage.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ model: 'gpt-6-luna-2026-09-22', cost: 0.00035 }),
+      })
+    )
+  })
+
+  it('should give the mock the prompt name for its copy and the display name to store', async () => {
+    ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({ id: 'config', llmDisabled: true })
+    const { generateMockWrappedData: realMock } =
+      jest.requireActual<typeof import('@/lib/wrapped/mock-data')>('@/lib/wrapped/mock-data')
+    ;(generateMockWrappedData as jest.Mock).mockImplementation(realMock)
+    ;(prisma.lLMUsage.create as jest.Mock).mockResolvedValue({})
+
+    const result = await generateWrappedWithLLM({
+      ...baseArgs,
+      promptName: 'there',
+      displayName: 'Stored Name',
+    })
+
+    expect(result.data?.userName).toBe('Stored Name')
+    expect(result.data?.archetype?.dedication).toContain('Hey there')
+    expect(JSON.stringify(result.data?.sections)).not.toContain('Stored Name')
+  })
 
   it('should return error when no active LLM provider is configured', async () => {
     ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({
@@ -183,13 +235,7 @@ describe('generateWrappedWithLLM', () => {
 
     ;(prisma.lLMProvider.findFirst as jest.Mock).mockResolvedValue(null)
 
-    const result = await generateWrappedWithLLM(
-      'Test User',
-      2024,
-      'user-1',
-      'wrapped-1',
-      mockStatistics
-    )
+    const result = await generateWrappedWithLLM(baseArgs)
 
     expect(result.success).toBe(false)
     expect(result.error).toContain('No active LLM provider')
@@ -216,13 +262,7 @@ describe('generateWrappedWithLLM', () => {
       error: 'API error',
     })
 
-    const result = await generateWrappedWithLLM(
-      'Test User',
-      2024,
-      'user-1',
-      'wrapped-1',
-      mockStatistics
-    )
+    const result = await generateWrappedWithLLM(baseArgs)
 
     expect(result.success).toBe(false)
     expect(result.error).toBe('API error')
@@ -245,13 +285,7 @@ describe('generateWrappedWithLLM', () => {
 
     ;(generateWrappedPrompt as jest.Mock).mockResolvedValue('test prompt')
 
-    const result = await generateWrappedWithLLM(
-      'Test User',
-      2024,
-      'user-1',
-      'wrapped-1',
-      mockStatistics
-    )
+    const result = await generateWrappedWithLLM(baseArgs)
 
     expect(result.success).toBe(false)
     expect(result.error).toContain('Unsupported LLM provider')
@@ -293,13 +327,7 @@ describe('generateWrappedWithLLM', () => {
 
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation()
 
-    const result = await generateWrappedWithLLM(
-      'Test User',
-      2024,
-      'user-1',
-      'wrapped-1',
-      mockStatistics
-    )
+    const result = await generateWrappedWithLLM(baseArgs)
 
     expect(result.success).toBe(true) // Should still succeed even if logging fails
     expect(consoleErrorSpy).toHaveBeenCalled()
@@ -322,7 +350,7 @@ describe('generateWrappedWithLLM', () => {
 
     ;(generateWrappedPrompt as jest.Mock).mockResolvedValue('test prompt')
 
-    const result = await generateWrappedWithLLM('Test User', 2024, 'user-1', 'wrapped-1', mockStatistics)
+    const result = await generateWrappedWithLLM(baseArgs)
 
     expect(result.success).toBe(false)
     expect(result.error).toContain('No model configured')
@@ -334,13 +362,7 @@ describe('generateWrappedWithLLM', () => {
       new Error('Database error')
     )
 
-    const result = await generateWrappedWithLLM(
-      'Test User',
-      2024,
-      'user-1',
-      'wrapped-1',
-      mockStatistics
-    )
+    const result = await generateWrappedWithLLM(baseArgs)
 
     expect(result.success).toBe(false)
     expect(result.error).toBeDefined()

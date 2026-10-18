@@ -13,6 +13,26 @@ export type JellyfinServerInput = z.input<typeof jellyfinServerSchema>
 export type JellyfinServerParsed = z.output<typeof jellyfinServerSchema>
 
 /**
+ * Username and password chosen when redeeming a Jellyfin invite.
+ *
+ * The username allows no `@` and no spaces, so an invite can never create a
+ * Jellyfin account named like an email address.
+ */
+export const jellyfinInviteCredentialsSchema = z.object({
+  username: z
+    .string()
+    .trim()
+    .regex(
+      /^[A-Za-z0-9._-]{3,32}$/,
+      "Username must be 3 to 32 characters: letters, numbers, dots, dashes or underscores"
+    ),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .max(256, "Password must be at most 256 characters"),
+})
+
+/**
  * Jellyfin API response types
  * Based on Jellyfin API documentation
  */
@@ -126,25 +146,19 @@ export interface JellyfinUserPolicy {
 }
 
 /**
- * Jellyfin authentication result from /Users/AuthenticateByName endpoint
+ * The fields the app reads from the `/Users/AuthenticateByName` response:
+ * the session's access token (logged out straight away) and the user's ID
+ * and name. Other fields are stripped.
  */
-export interface JellyfinAuthResult {
-  /** User info */
-  User: JellyfinUser
-  /** Session info */
-  SessionInfo?: {
-    /** Session ID */
-    Id: string
-    /** User ID */
-    UserId: string
-    /** User name */
-    UserName: string
-  }
-  /** Access token for this session */
-  AccessToken: string
-  /** Server ID */
-  ServerId: string
-}
+export const jellyfinAuthResultSchema = z.object({
+  AccessToken: z.string().min(1),
+  User: z.object({
+    Id: z.string().min(1),
+    Name: z.string(),
+  }),
+})
+
+export type JellyfinAuthResult = z.infer<typeof jellyfinAuthResultSchema>
 
 /**
  * Request body for creating a new Jellyfin user

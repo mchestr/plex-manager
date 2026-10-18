@@ -2,7 +2,7 @@
  * Tests for actions/admin/admin-servers.ts - Jellyfin login toggle
  *
  * These tests cover:
- * - toggleJellyfinLogin: enable/disable Jellyfin visibility on login page
+ * - toggleJellyfinLogin: allow Jellyfin sign-in or turn it off
  * - Admin authorization
  * - Input validation with Zod
  */

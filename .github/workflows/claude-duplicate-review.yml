@@ -7,6 +7,9 @@ on:
 
 jobs:
   deduplicate:
+    # claude-code-action refuses actors without write access, so skip other
+    # authors instead of failing a run for every external issue.
+    if: contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -21,7 +24,7 @@ jobs:
           fetch-depth: 1
 
       - name: Check for duplicate issues
-        uses: anthropics/claude-code-action@v1
+        uses: anthropics/claude-code-action@f27be6b65a4652f08a2ba3cff79114829b588967 # v1.0.252
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |

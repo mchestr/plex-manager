@@ -13,15 +13,19 @@ import { WrappedData, WrappedStatistics } from "@/types/wrapped"
 const logger = createLogger("LLM")
 
 /**
- * Call LLM to generate wrapped content
+ * Call LLM to generate wrapped content.
+ *
+ * `promptName` is the only name the model (or the mock copy) sees, so it must
+ * never be an email; `displayName` is what the stored Rewind shows.
  */
-export async function generateWrappedWithLLM(
-  userName: string,
-  year: number,
-  userId: string,
-  wrappedId: string,
+export async function generateWrappedWithLLM(args: {
+  promptName: string
+  displayName: string
+  year: number
+  userId: string
+  wrappedId: string
   statistics: WrappedStatistics
-): Promise<{
+}): Promise<{
   success: boolean
   data?: WrappedData
   error?: string
@@ -32,6 +36,8 @@ export async function generateWrappedWithLLM(
     cost: number
   }
 }> {
+  const { promptName, displayName, year, userId, wrappedId, statistics } = args
+
   try {
     // Check if LLM is disabled in config
     const appConfig = await prisma.config.findUnique({
@@ -40,7 +46,7 @@ export async function generateWrappedWithLLM(
 
     if (appConfig?.llmDisabled) {
       logger.info("LLM calls are disabled - returning mock data")
-      const mockData = generateMockWrappedData(userName, year, userId, statistics)
+      const mockData = generateMockWrappedData({ promptName, displayName, year, userId, statistics })
 
       // Still save a record that this was generated with mock data (no cost)
       // Always create a new record to track all usage, including regenerations
@@ -98,7 +104,7 @@ export async function generateWrappedWithLLM(
     }
 
     // Generate prompt using template system
-    const prompt = await generateWrappedPrompt(userName, year, statistics)
+    const prompt = await generateWrappedPrompt(promptName, year, statistics)
 
     // Call appropriate LLM provider
     // Currently only OpenAI is supported, but the structure allows for easy extension
@@ -118,7 +124,7 @@ export async function generateWrappedWithLLM(
       output: llmResult.output,
       statistics,
       userId,
-      userName,
+      userName: displayName,
       year,
     })
 
@@ -131,7 +137,7 @@ export async function generateWrappedWithLLM(
             wrappedId,
             userId,
             provider: config.provider,
-            model: config.model || "gpt-4",
+            model: llmResult.model ?? config.model,
             prompt,
             response: llmResult.rawResponse || JSON.stringify(wrappedData),
             promptTokens: llmResult.tokenUsage.promptTokens,

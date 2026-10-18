@@ -1,30 +1,25 @@
 import { PrismaClient } from '../lib/generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
+import { resolveSeedTarget } from '../lib/security/test-mode'
 
-// Allow skipping seed via environment variable (useful for migrations)
-if (process.env.SKIP_SEED === 'true') {
-  console.log('Skipping seed (SKIP_SEED=true)')
-  process.exit(0)
-}
-
-// Never seed in production: this script wipes all data and creates a hardcoded
-// admin@example.com / isAdmin:true user, which would be both a data-loss and an
-// authentication-bypass risk against a real database.
-if (process.env.NODE_ENV === 'production') {
-  console.error('Refusing to run seed in production (NODE_ENV=production)')
-  process.exit(1)
-}
-
-if (!process.env.DATABASE_URL) {
-  throw new Error('DATABASE_URL environment variable is not defined')
-}
-
-const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL,
-})
-const prisma = new PrismaClient({ adapter })
-
+/**
+ * The seed wipes users, Rewinds and service configuration, then creates a
+ * hardcoded admin@example.com admin. resolveSeedTarget() refuses unless
+ * E2E_TEST_MODE=true is set (never in production) and the database is on a
+ * local host or has a name ending in _test.
+ */
 async function main() {
+  const target = resolveSeedTarget(process.env)
+  console.log(`Seeding database "${target.database}" on host "${target.host}"`)
+  const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: target.url }) })
+  try {
+    await seed(prisma)
+  } finally {
+    await prisma.$disconnect()
+  }
+}
+
+async function seed(prisma: PrismaClient) {
   // Cleanup existing data
   await prisma.lLMUsage.deleteMany()
   await prisma.wrappedShareVisit.deleteMany()
@@ -85,11 +80,7 @@ async function main() {
   console.log('Database seeded!')
 }
 
-main()
-  .catch((e) => {
-    console.error(e)
-    process.exit(1)
-  })
-  .finally(async () => {
-    await prisma.$disconnect()
-  })
+main().catch((e) => {
+  console.error(e)
+  process.exit(1)
+})

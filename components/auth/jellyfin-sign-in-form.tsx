@@ -1,7 +1,9 @@
 "use client"
 
 import { processJellyfinInvite } from "@/actions/invite"
+import { Alert } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
+import { jellyfinInviteCredentialsSchema } from "@/lib/validations/jellyfin"
 import { motion } from "framer-motion"
 import { useState } from "react"
 
@@ -24,44 +26,30 @@ export function JellyfinSignInForm({
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
   const [showSuccess, setShowSuccess] = useState(false)
   const [jellyfinUrl, setJellyfinUrl] = useState<string | null>(null)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
 
-    // Validate inputs
-    if (!username.trim()) {
-      onError("Username is required")
-      return
-    }
-
-    if (username.length < 3) {
-      onError("Username must be at least 3 characters")
-      return
-    }
-
-    if (!password) {
-      onError("Password is required")
-      return
-    }
-
-    if (password.length < 8) {
-      onError("Password must be at least 8 characters")
+    // The server action applies the same schema. Checking here keeps the member
+    // on the form: onError replaces the whole page, though nothing was used up.
+    const credentials = jellyfinInviteCredentialsSchema.safeParse({ username, password })
+    if (!credentials.success) {
+      setFormError(credentials.error.issues[0].message)
       return
     }
 
     if (password !== confirmPassword) {
-      onError("Passwords do not match")
+      setFormError("Passwords do not match")
       return
     }
 
+    setFormError(null)
     setIsSubmitting(true)
     try {
-      const result = await processJellyfinInvite(inviteCode, {
-        username: username.trim(),
-        password,
-      })
+      const result = await processJellyfinInvite(inviteCode, credentials.data)
 
       if (result.success && result.data) {
         setShowSuccess(true)
@@ -141,8 +129,12 @@ export function JellyfinSignInForm({
           disabled={isSubmitting}
           autoComplete="username"
           autoFocus
+          aria-describedby="jellyfin-username-hint"
           data-testid="jellyfin-username-input"
         />
+        <p id="jellyfin-username-hint" className="text-xs text-slate-400 mt-1">
+          3 to 32 letters, numbers, dots, dashes or underscores
+        </p>
       </div>
 
       <div>
@@ -178,6 +170,12 @@ export function JellyfinSignInForm({
           data-testid="jellyfin-confirm-password-input"
         />
       </div>
+
+      {formError && (
+        <Alert tone="danger" data-testid="jellyfin-form-error">
+          {formError}
+        </Alert>
+      )}
 
       <Button
         type="submit"

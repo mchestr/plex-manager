@@ -2,6 +2,7 @@ import * as plexAuth from '@/lib/plex-auth'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { PlexSignInButton } from '@/components/auth/plex-sign-in-button'
+import { RATE_LIMITED_MESSAGE } from '@/lib/security/rate-limit-messages'
 
 // Mock the plex-auth module
 jest.mock('@/lib/plex-auth', () => ({
@@ -43,8 +44,8 @@ describe('PlexSignInButton', () => {
   it('should show loading state when clicked', async () => {
     const user = userEvent.setup()
     const mockCreatePin = jest.spyOn(plexAuth, 'createPlexPin').mockResolvedValue({
-      id: 123,
-      code: 'ABC123',
+      success: true,
+      data: { id: 123, code: 'ABC123' },
     })
     const mockCreateAuthUrl = jest.spyOn(plexAuth, 'createPlexAuthUrl').mockResolvedValue('https://app.plex.tv/auth#?code=ABC123')
 
@@ -64,8 +65,8 @@ describe('PlexSignInButton', () => {
   it('should redirect to auth URL on successful pin creation', async () => {
     const user = userEvent.setup()
     const mockCreatePin = jest.spyOn(plexAuth, 'createPlexPin').mockResolvedValue({
-      id: 123,
-      code: 'ABC123',
+      success: true,
+      data: { id: 123, code: 'ABC123' },
     })
     const authUrl = 'https://app.plex.tv/auth#?code=ABC123'
     const mockCreateAuthUrl = jest.spyOn(plexAuth, 'createPlexAuthUrl').mockResolvedValue(authUrl)
@@ -117,8 +118,8 @@ describe('PlexSignInButton', () => {
 
   it('should disable button while loading', async () => {
     const user = userEvent.setup()
-    let resolvePin: (value: { id: number; code: string }) => void
-    const pinPromise = new Promise<{ id: number; code: string }>((resolve) => {
+    let resolvePin: (value: plexAuth.CreatePlexPinResult) => void
+    const pinPromise = new Promise<plexAuth.CreatePlexPinResult>((resolve) => {
       resolvePin = resolve
     })
     jest.spyOn(plexAuth, 'createPlexPin').mockReturnValue(pinPromise)
@@ -133,14 +134,37 @@ describe('PlexSignInButton', () => {
       expect(button).toBeDisabled()
     })
 
-    resolvePin!({ id: 123, code: 'ABC123' })
+    resolvePin!({ success: true, data: { id: 123, code: 'ABC123' } })
+  })
+
+  it('shows the rate-limit message and does not go to Plex when PIN creation is limited', async () => {
+    const user = userEvent.setup()
+    const onError = jest.fn()
+    jest.spyOn(plexAuth, 'createPlexPin').mockResolvedValue({
+      success: false,
+      code: 'RATE_LIMITED',
+      error: RATE_LIMITED_MESSAGE,
+    })
+    const mockCreateAuthUrl = jest.spyOn(plexAuth, 'createPlexAuthUrl')
+
+    render(<PlexSignInButton serverName="Test Server" onError={onError} />)
+    const button = screen.getByTestId('sign-in-with-plex')
+
+    await user.click(button)
+
+    await waitFor(() => {
+      expect(screen.getByText(RATE_LIMITED_MESSAGE)).toBeInTheDocument()
+    })
+    expect(onError).toHaveBeenCalledWith(RATE_LIMITED_MESSAGE)
+    expect(mockCreateAuthUrl).not.toHaveBeenCalled()
+    expect(button).not.toBeDisabled()
   })
 
   it('should handle auth URL creation failure', async () => {
     const user = userEvent.setup()
     jest.spyOn(plexAuth, 'createPlexPin').mockResolvedValue({
-      id: 123,
-      code: 'ABC123',
+      success: true,
+      data: { id: 123, code: 'ABC123' },
     })
     jest.spyOn(plexAuth, 'createPlexAuthUrl').mockRejectedValue(new Error('Failed to create URL'))
 

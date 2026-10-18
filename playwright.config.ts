@@ -1,7 +1,14 @@
 import 'dotenv/config';
 import { defineConfig, devices } from '@playwright/test';
+import { assertTestDatabaseUrl } from './lib/security/test-mode';
 
-const port = process.env.E2E_PORT || '3000';
+// The specs delete users, Rewinds and service configs. Refuse anything but a
+// dedicated *_test database, and point every process (global setup, helpers,
+// specs and the web server) at it so `.env`'s DATABASE_URL is never used.
+const databaseUrl = assertTestDatabaseUrl(process.env.E2E_DATABASE_URL);
+process.env.DATABASE_URL = databaseUrl;
+
+const port = process.env.E2E_PORT || '3100';
 const baseURL = `http://localhost:${port}`;
 console.log(`Running tests on ${baseURL}`);
 /**
@@ -59,14 +66,18 @@ export default defineConfig({
   webServer: {
     command: `npx next dev -p ${port}`,
     url: baseURL,
-    reuseExistingServer: !process.env.CI,
+    // A running `npm run dev` points at the dev database, so only reuse a
+    // server when asked to explicitly.
+    reuseExistingServer: process.env.E2E_REUSE_SERVER === '1',
     timeout: 30000, // 30 seconds to allow for build/startup
     env: {
       ...process.env,
+      DATABASE_URL: databaseUrl,
       NODE_ENV: 'test',
       NEXT_PUBLIC_APP_URL: baseURL,
+      NEXTAUTH_URL: baseURL,
       NEXT_PUBLIC_ENABLE_TEST_AUTH: 'true',
-      ENABLE_TEST_AUTH: 'true',
+      E2E_TEST_MODE: 'true',
       SKIP_CONNECTION_TESTS: 'true',
       FAST_REFRESH: 'false',
     },

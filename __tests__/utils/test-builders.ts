@@ -168,6 +168,61 @@ export const makePrismaUser = (overrides: any = {}) => ({
   ...overrides,
 })
 
+/** An invitee's plex.tv account token, which must never reach the browser (SEC-18). */
+export const INVITEE_PLEX_AUTH_TOKEN = 'invitee-plex-account-token'
+
+/**
+ * Creates a full Prisma Invite row with one redemption whose user carries
+ * every User scalar column, `plexAuthToken` included. The Json column
+ * `onboardingStatus` is null: `applyPrismaShape` reads any object value as a
+ * relation, so a Json object here would be shaped like one. Run it through
+ * `applyPrismaShape` (`__tests__/utils/prisma-shape.ts`) with a query's
+ * arguments to see exactly what that query would return.
+ *
+ * @param overrides - Invite columns to override
+ * @returns Invite row with `usages[].user` relations
+ */
+export const makePrismaInviteWithUsages = (overrides: Record<string, unknown> = {}) => ({
+  id: 'invite-1',
+  code: 'TESTCODE',
+  serverType: 'PLEX',
+  maxUses: 5,
+  useCount: 1,
+  expiresAt: new Date('2099-12-31T00:00:00Z'),
+  createdAt: new Date('2026-10-01T00:00:00Z'),
+  updatedAt: new Date('2026-10-01T00:00:00Z'),
+  createdBy: 'admin-1',
+  librarySectionIds: null,
+  allowDownloads: false,
+  jellyfinLibraryIds: null,
+  usages: [
+    {
+      id: 'usage-1',
+      inviteId: 'invite-1',
+      userId: 'user-1',
+      usedAt: new Date('2026-10-02T00:00:00Z'),
+      user: {
+        id: 'user-1',
+        name: 'Invited Member',
+        email: 'member@example.com',
+        emailVerified: null,
+        image: 'https://plex.tv/users/member/avatar',
+        plexUserId: 'plex-1',
+        plexAuthToken: INVITEE_PLEX_AUTH_TOKEN,
+        jellyfinUserId: null,
+        primaryAuthService: 'plex',
+        isAdmin: false,
+        onboardingStatus: null,
+        isExempt: true,
+        exemptReason: 'invite',
+        createdAt: new Date('2026-10-02T00:00:00Z'),
+        updatedAt: new Date('2026-10-02T00:00:00Z'),
+      },
+    },
+  ],
+  ...overrides,
+})
+
 /**
  * Creates a mock Prisma Subscription record.
  *

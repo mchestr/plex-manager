@@ -1,10 +1,14 @@
+import { createHash } from "node:crypto"
+
 import { checkUserServerAccess, getPlexUserInfo } from "@/lib/connections/plex"
-import { authenticateJellyfin, isJellyfinAdmin } from "@/lib/jellyfin-auth"
+import { authenticateJellyfin } from "@/lib/jellyfin-auth"
 import { prisma } from "@/lib/prisma"
+import { isUniqueEmailConflict } from "@/lib/prisma-errors"
+import { consume, reward } from "@/lib/security/rate-limit"
+import { isE2ETestMode } from "@/lib/security/test-mode"
 import { createLogger } from "@/lib/utils/logger"
 import { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
-import { z } from "zod"
 
 const logger = createLogger("AUTH")
 
@@ -15,6 +19,54 @@ const logger = createLogger("AUTH")
  * per-request DB load (only one query per user per interval).
  */
 const ADMIN_RECHECK_INTERVAL_MS = 5 * 60 * 1000
+
+/**
+ * The `auth:jellyfin:user` subject for a submitted username.
+ *
+ * Jellyfin matches usernames case-insensitively by upper-casing them (.NET
+ * `OrdinalIgnoreCase`), so the name is upper-cased before it is lower-cased:
+ * "admın" (dotless i) and "ſam" (long s) reach the same accounts as "admin"
+ * and "sam" and must share their budget. The hash keeps the Redis key short
+ * however long the submitted name is.
+ */
+function jellyfinUsernameSubject(username: string): string {
+  return createHash("sha256").update(username.trim().toUpperCase().toLowerCase()).digest("hex")
+}
+
+/**
+ * Runs a Plex sign-in's `User` write with the member's Plex email, and once
+ * more without it when another row already holds that address (SEC-08).
+ *
+ * Rows are matched by `plexUserId`, so a row holding the address is someone
+ * else's: an old release stored Jellyfin usernames as emails, and a Plex email
+ * can go stale after a change on plex.tv. Without the retry the unique email
+ * would refuse the sign-in every time. On the retry a new row gets no email and
+ * an existing row keeps the one it has.
+ *
+ * `write` builds a new data object on each call, because the encryption
+ * extension in lib/prisma.ts rewrites `plexAuthToken` in the object it is given.
+ */
+async function writeWithPlexEmail<T>(
+  plexUser: { id: string; email: string },
+  write: (email: { email?: string }) => Promise<T>
+): Promise<T> {
+  try {
+    return await write({ email: plexUser.email })
+  } catch (error) {
+    if (!isUniqueEmailConflict(error)) {
+      throw error
+    }
+    const existingUser = await prisma.user.findUnique({
+      where: { email: plexUser.email },
+      select: { id: true },
+    })
+    logger.warn("auth.email_conflict", {
+      existingUserId: existingUser?.id ?? null,
+      plexUserId: plexUser.id,
+    })
+    return write({})
+  }
+}
 
 export const authOptions: NextAuthOptions = {
   // NOTE: PrismaAdapter is not compatible with CredentialsProvider
@@ -31,16 +83,13 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         // TEST MODE BYPASS
-        // Only active if explicitly enabled via a SERVER-ONLY env var AND never
-        // in production. Server auth intentionally does NOT read
-        // NEXT_PUBLIC_ENABLE_TEST_AUTH (that flag is bundled into client JS, so
-        // gating server-side auth on it would be a footgun); the E2E flow sets
-        // the server-only ENABLE_TEST_AUTH alongside it. The NODE_ENV !==
-        // 'production' check is a hard backstop against any misconfiguration.
-        const isTestMode =
-          process.env.NODE_ENV !== 'production' &&
-          (process.env.NODE_ENV === 'test' ||
-            process.env.ENABLE_TEST_AUTH === 'true')
+        // Only active with the server-only E2E_TEST_MODE=true, and never in
+        // production. NODE_ENV=test alone does not enable it. The server logs
+        // a warning at startup when it is on (lib/instrumentation/node.ts).
+        // Server auth does NOT read NEXT_PUBLIC_ENABLE_TEST_AUTH: that flag is
+        // bundled into client JS and only lets the callback page present the
+        // test token.
+        const isTestMode = isE2ETestMode()
 
         if (isTestMode && credentials?.authToken) {
           logger.debug('Test mode active', {
@@ -199,16 +248,18 @@ export const authOptions: NextAuthOptions = {
 
           if (!dbUser) {
             // Create new user
-            dbUser = await prisma.user.create({
-              data: {
-                plexUserId: plexUser.id,
-                plexAuthToken: authToken, // Store for watchlist sync
-                name: plexUser.username,
-                email: plexUser.email,
-                image: plexUser.thumb,
-                isAdmin,
-              },
-            })
+            dbUser = await writeWithPlexEmail(plexUser, (email) =>
+              prisma.user.create({
+                data: {
+                  plexUserId: plexUser.id,
+                  plexAuthToken: authToken, // Store for watchlist sync
+                  name: plexUser.username,
+                  ...email,
+                  image: plexUser.thumb,
+                  isAdmin,
+                },
+              })
+            )
 
             // Audit log: New user created
             if (isAdmin) {
@@ -223,16 +274,19 @@ export const authOptions: NextAuthOptions = {
             const adminStatusChanged = dbUser.isAdmin !== isAdmin
 
             // Update existing user info and admin status
-            dbUser = await prisma.user.update({
-              where: { id: dbUser.id },
-              data: {
-                plexAuthToken: authToken, // Update token on each login for watchlist sync
-                name: plexUser.username,
-                email: plexUser.email,
-                image: plexUser.thumb,
-                isAdmin,
-              },
-            })
+            const userId = dbUser.id
+            dbUser = await writeWithPlexEmail(plexUser, (email) =>
+              prisma.user.update({
+                where: { id: userId },
+                data: {
+                  plexAuthToken: authToken, // Update token on each login for watchlist sync
+                  name: plexUser.username,
+                  ...email,
+                  image: plexUser.thumb,
+                  isAdmin,
+                },
+              })
+            )
 
             // Audit log: Admin privilege change
             if (adminStatusChanged) {
@@ -281,23 +335,23 @@ export const authOptions: NextAuthOptions = {
 
         const { username, password } = credentials
 
+        // Per-username limit, checked before Jellyfin sees the attempt, so
+        // password guessing spread over many addresses still stops here. A
+        // correct password refunds its point, so only failures count.
+        const usernameSubject = jellyfinUsernameSubject(username)
+        const limit = await consume("auth:jellyfin:user", usernameSubject)
+        if (!limit.ok) {
+          logger.warn("Jellyfin sign-in rate-limited", { username })
+          throw new Error("RATE_LIMITED")
+        }
+
         try {
-          // Get the configured Jellyfin server
-          const jellyfinServer = await prisma.jellyfinServer.findFirst({
-            where: { isActive: true },
-          })
-
-          if (!jellyfinServer) {
-            logger.error("No active Jellyfin server configured")
-            throw new Error("NO_SERVER_CONFIGURED")
-          }
-
-          // Authenticate with Jellyfin API
-          const authResult = await authenticateJellyfin(
-            { url: jellyfinServer.url, apiKey: jellyfinServer.apiKey },
-            username,
-            password
-          )
+          // authenticateJellyfin refuses before Jellyfin sees the password
+          // when no server is active or "Allow Jellyfin sign-in" is off
+          // (hiding the button alone would leave this callback open), and
+          // checks the password and the admin status against one read of the
+          // stored server.
+          const authResult = await authenticateJellyfin(username, password)
 
           if (!authResult.success || !authResult.data) {
             logger.warn("Jellyfin authentication failed", {
@@ -307,80 +361,44 @@ export const authOptions: NextAuthOptions = {
             return null
           }
 
+          await reward("auth:jellyfin:user", usernameSubject)
+
           const jellyfinUser = authResult.data
+          const { isAdmin } = jellyfinUser
 
-          // Check if this user is the admin
-          const isAdmin = await isJellyfinAdmin(
-            { url: jellyfinServer.url, apiKey: jellyfinServer.apiKey },
-            jellyfinUser.id,
-            jellyfinServer.adminUserId
-          )
-
-          // Find or create user in database
+          // Match only by Jellyfin user ID. Jellyfin users can rename
+          // themselves to any string, an email address included, so the
+          // username never links to, or is stored as the email of, any row.
           let dbUser = await prisma.user.findUnique({
             where: { jellyfinUserId: jellyfinUser.id },
           })
 
           if (!dbUser) {
-            // Check if user with same username/email exists (for account linking)
-            // Validate if Jellyfin username is a valid email format
-            const emailSchema = z.string().email()
-            const emailValidation = emailSchema.safeParse(jellyfinUser.username)
-            const normalizedEmail = emailValidation.success
-              ? jellyfinUser.username.toLowerCase().trim()
-              : null
-
-            const userByEmail = normalizedEmail
-              ? await prisma.user.findUnique({
-                  where: { email: normalizedEmail }
-                })
-              : null
-
-            if (userByEmail) {
-              // Link Jellyfin account to existing user
-              dbUser = await prisma.user.update({
-                where: { id: userByEmail.id },
-                data: {
-                  jellyfinUserId: jellyfinUser.id,
-                  primaryAuthService: userByEmail.primaryAuthService || "jellyfin",
-                  isAdmin: isAdmin || userByEmail.isAdmin,
-                },
-              })
-
-              logger.info("Linked Jellyfin account to existing user", {
-                userId: dbUser.id,
+            dbUser = await prisma.user.create({
+              data: {
                 jellyfinUserId: jellyfinUser.id,
-                username: jellyfinUser.username,
-              })
-            } else {
-              // Create new user
-              dbUser = await prisma.user.create({
-                data: {
-                  jellyfinUserId: jellyfinUser.id,
-                  name: jellyfinUser.username,
-                  email: normalizedEmail,
-                  isAdmin,
-                  primaryAuthService: "jellyfin",
-                  onboardingStatus: { plex: false, jellyfin: false },
-                },
-              })
-
-              logger.info("Created new Jellyfin user", {
-                userId: dbUser.id,
-                jellyfinUserId: jellyfinUser.id,
-                username: jellyfinUser.username,
+                name: jellyfinUser.username,
                 isAdmin,
-              })
+                primaryAuthService: "jellyfin",
+                onboardingStatus: { plex: false, jellyfin: false },
+              },
+            })
 
-              // Audit log: New user created
-              if (isAdmin) {
-                const { logAuditEvent, AuditEventType } = await import("@/lib/security/audit-log")
-                logAuditEvent(AuditEventType.USER_CREATED, dbUser.id, {
-                  isAdmin: true,
-                  jellyfinUserId: jellyfinUser.id,
-                  authService: "jellyfin",
-                })
-              }
+            logger.info("Created new Jellyfin user", {
+              userId: dbUser.id,
+              jellyfinUserId: jellyfinUser.id,
+              username: jellyfinUser.username,
+              isAdmin,
+            })
+
+            // Audit log: New user created
+            if (isAdmin) {
+              const { logAuditEvent, AuditEventType } = await import("@/lib/security/audit-log")
+              logAuditEvent(AuditEventType.USER_CREATED, dbUser.id, {
+                isAdmin: true,
+                jellyfinUserId: jellyfinUser.id,
+                authService: "jellyfin",
+              })
             }
           } else {
             // Check if admin status changed
@@ -391,7 +409,6 @@ export const authOptions: NextAuthOptions = {
               where: { id: dbUser.id },
               data: {
                 name: jellyfinUser.username,
-                email: jellyfinUser.username.includes('@') ? jellyfinUser.username : dbUser.email,
                 isAdmin,
               },
             })
@@ -422,10 +439,6 @@ export const authOptions: NextAuthOptions = {
           }
         } catch (error) {
           logger.error("Error authenticating Jellyfin user", error)
-          // Re-throw specific errors
-          if (error instanceof Error && error.message === "NO_SERVER_CONFIGURED") {
-            throw error
-          }
           return null
         }
       },

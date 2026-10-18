@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Design system reference – Plex Manager</title>
+<script>if (/theme=light/.test(location.search)) document.documentElement.setAttribute('data-theme','light')</script>
+<style>
+/*BASE_CSS*/
+
+/* ---- reference sheet ---- */
+body { font-size: 14px; line-height: 20px; }
+.sheet { max-width: 1296px; margin: 0 auto; padding: 48px 32px 72px; }
+.sheet-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
+.sheet-head h1 { font-size: 28px; line-height: 36px; font-weight: 600; letter-spacing: -0.015em; }
+.sheet-head p { color: var(--muted-foreground); margin-top: 4px; font-size: 15px; line-height: 24px; max-width: 80ch; }
+.panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin-top: 32px; }
+.panel { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px; min-width: 0; }
+.panel.wide { grid-column: 1 / -1; }
+.panel > h2 { font-size: 16px; line-height: 24px; font-weight: 600; }
+.panel > .pd { color: var(--muted-foreground); font-size: 13px; line-height: 18px; margin-top: 2px; }
+.pbody { margin-top: 20px; }
+.sub-h { font-size: 13px; line-height: 18px; font-weight: 500; color: var(--muted-foreground); margin: 20px 0 10px; }
+.sub-h:first-child { margin-top: 0; }
+.ladder { display: grid; gap: 6px; }
+.rung { display: grid; grid-template-columns: 132px 1fr 76px 64px; align-items: center; gap: 12px; height: 34px; padding: 0 12px; border-radius: var(--radius-md); border: 1px solid var(--border); font-size: 13px; }
+.rung .mono { font-size: 12px; color: var(--muted-foreground); }
+.rung .r { text-align: right; font-variant-numeric: tabular-nums; }
+.cx { display: grid; grid-template-columns: 18px 1fr auto auto; gap: 12px; align-items: center; padding: 8px 0; border-top: 1px solid var(--border); font-size: 13px; }
+.cx:first-child { border-top: 0; }
+.cx .sw { width: 14px; height: 14px; border-radius: 3px; }
+.cx .r { font-variant-numeric: tabular-nums; font-weight: 500; text-align: right; min-width: 52px; }
+.lines { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.lines .ln { height: 64px; border-radius: var(--radius-md); background: var(--background); display: flex; align-items: flex-end; padding: 10px; font-size: 12px; color: var(--muted-foreground); }
+.spec { display: grid; grid-template-columns: 160px 1fr; gap: 14px 24px; align-items: baseline; }
+.spec .k { font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
+.spec .k b { color: var(--foreground); font-weight: 500; display: block; font-size: 13px; }
+.btn-grid { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.state-scroll { overflow-x: auto; padding: 4px; margin: -4px; }
+.state-grid { display: grid; grid-template-columns: 96px repeat(5, minmax(72px, 1fr)); gap: 10px 10px; align-items: center; min-width: 520px; }
+.state-grid .h { font-size: 12px; color: var(--muted-foreground); }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 20px; }
+.vocab { width: 100%; border-collapse: collapse; font-size: 13px; }
+.vocab th { text-align: left; font-weight: 500; color: var(--muted-foreground); font-size: 12px; padding: 0 0 8px; }
+.vocab td { padding: 7px 12px 7px 0; border-top: 1px solid var(--border); vertical-align: middle; }
+.vocab td:first-child { color: var(--muted-foreground); width: 110px; }
+.vocab .cell { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.stack-12 { display: grid; gap: 12px; }
+.overlay-demo { background: var(--overlay); border-radius: var(--radius-lg); padding: 28px; display: flex; align-items: center; justify-content: center; background-image: linear-gradient(var(--overlay), var(--overlay)), repeating-linear-gradient(0deg, var(--card) 0 18px, var(--muted) 18px 36px); }
+.empties { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.empties .card .empty { padding: 28px 20px; }
+.toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.filter-btn { height: 32px; display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: transparent; font-size: 13px; color: var(--foreground); white-space: nowrap; }
+.filter-btn .k { color: var(--muted-foreground); }
+.filter-btn.active { border-color: var(--input); background: var(--secondary); }
+.filter-btn svg.i { color: var(--muted-foreground); width: 14px; height: 14px; }
+.rw-states { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.rws { overflow: hidden; display: flex; flex-direction: column; }
+.rws .rw-strip { height: 64px; padding: 10px 16px; }
+.rws .b { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+.rws h3 { font-size: 16px; line-height: 22px; font-weight: 600; letter-spacing: -0.005em; display: flex; align-items: center; gap: 8px; }
+.rws p { font-size: 13px; line-height: 18px; color: var(--muted-foreground); }
+.rws .meta { font-size: 12px; line-height: 16px; }
+.rws .acts { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+.rw-prog { position: relative; height: 100%; }
+.rw-prog::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 1.5px dotted var(--ink); }
+.rw-prog i { position: absolute; left: 0; top: calc(50% - 2px); height: 4px; width: 60%; background: var(--ink); border-radius: 1px; }
+.ink-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+.ink { border-radius: var(--radius-md); padding: 10px 12px; min-height: 76px; display: flex; flex-direction: column; justify-content: space-between; background: var(--field); color: var(--ink); }
+.ink .n { font-size: 13px; line-height: 18px; font-weight: 600; }
+.ink .r { font-size: 12px; line-height: 16px; font-variant-numeric: tabular-nums; }
+.samples { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 20px; }
+.sample { border-radius: var(--radius-lg); padding: 16px; background: var(--field); color: var(--ink); min-height: 212px; display: flex; flex-direction: column; gap: 12px; }
+.sample .folio { font-size: 13px; line-height: 18px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.sample .ctl { display: flex; gap: 8px; margin-left: auto; }
+.sample .circ { width: 38px; height: 38px; border-radius: 999px; padding: 0; }
+.sample .chip { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px; border-radius: var(--radius-sm); border: 1px solid var(--ink); font-size: 12px; font-weight: 500; }
+.sample .sw-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; }
+.sheet-demo { margin-top: auto; border-radius: 10px 10px 0 0; padding: 10px 14px 14px; background: var(--field); color: var(--ink); display: flex; flex-direction: column; gap: 10px; }
+.sheet-demo .grab { width: 36px; height: 4px; border-radius: 2px; background: var(--ink); opacity: .5; align-self: center; }
+.contract { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; font-size: 13px; line-height: 18px; margin-top: 20px; }
+.contract h4 { font-size: 13px; font-weight: 600; margin: 0 0 6px; }
+.contract .mono { font-size: 12px; line-height: 18px; color: var(--muted-foreground); }
+.snav { display: grid; gap: 2px; width: 220px; }
+.snav a { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px; border-radius: var(--radius-md); color: var(--muted-foreground); font-size: 14px; }
+.snav a .st { margin-left: auto; display: inline-flex; }
+.tone-success { color: var(--success); } .tone-warning { color: var(--warning); } .tone-destructive { color: var(--destructive); } .tone-muted { color: var(--muted-foreground); }
+.prims { display: grid; grid-template-columns: 110px 1fr; gap: 14px 16px; align-items: center; }
+.prims .k { font-size: 12px; color: var(--muted-foreground); }
+.sheet-demo .row { flex-wrap: wrap; }
+@media (max-width: 1023px) {
+  .ink-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .samples, .contract, .rw-states { grid-template-columns: minmax(0, 1fr); }
+}
+.archive { display: flex; gap: 16px; align-items: center; margin-top: 16px; padding: 14px 16px; border-radius: var(--radius-lg); border: 1px solid var(--border); background: var(--background); }
+.archive .yr { display: flex; align-items: center; gap: 10px; padding-right: 16px; border-right: 1px solid var(--border); }
+.archive .yr:last-of-type { border-right: 0; }
+.archive .yr .sw { width: 22px; height: 30px; border-radius: 2px; background: var(--field); }
+.wm-tests { display: grid; gap: 10px; }
+.wm-tests .t { display: flex; align-items: center; gap: 14px; height: 48px; padding: 0 14px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--background); }
+.wm-tests .t .note { margin-left: auto; font-size: 12px; color: var(--muted-foreground); white-space: nowrap; }
+.wm-tests .wordmark { max-width: 220px; }
+.icons { display: flex; gap: 12px; align-items: flex-end; margin-top: 14px; }
+.fav { display: inline-flex; align-items: center; justify-content: center; background: oklch(25.2% 0.005 255); color: oklch(96.5% 0.003 255); font-weight: 600; position: relative; border-radius: 22%; }
+.fav::after { content: ""; position: absolute; top: 14%; right: 14%; width: 20%; height: 20%; border-radius: 2px; background: oklch(79% 0.155 75); }
+.chips { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.chips .c { height: 44px; border-radius: var(--radius-md); }
+.chips .l { font-size: 12px; color: var(--muted-foreground); margin-top: 6px; font-variant-numeric: tabular-nums; }
+.light-panel { border-radius: var(--radius-lg); background: var(--background); color: var(--foreground); border: 1px solid var(--border); padding: 20px; }
+</style>
+</head>
+<body>
+<main class="sheet" id="main">
+  <div class="sheet-head">
+    <div>
+      <h1>Design system reference</h1>
+      <p>Tokens and components for every Plex Manager surface. Dark is the default theme, light is specified and ships behind a flag, and Rewind is a scoped theme over the same token names. This sheet is the Playwright visual-regression target for <span class="mono" style="font-size:13px">components/ui</span>.</p>
+    </div>
+    <span class="wordmark"><span class="pip"></span><span class="wm-name">Northfield Plex</span></span>
+  </div>
+
+  <div class="panels">
+    <!-- Surfaces -->
+    <section class="panel">
+      <h2>Surfaces, darkest to lightest</h2>
+      <p class="pd">Graphite at hue 255, chroma 0.006 or less. Each layer steps up about 3 points of lightness. Ratios are foreground / muted-foreground.</p>
+      <div class="pbody ladder">
+        <div class="rung" style="background:var(--sidebar)"><span>sidebar</span><span class="mono">oklch(20.5% 0.005 255)</span><span class="r">16.18</span><span class="r muted">8.35</span></div>
+        <div class="rung" style="background:var(--background)"><span>background</span><span class="mono">oklch(22.5% 0.005 255)</span><span class="r">15.45</span><span class="r muted">7.97</span></div>
+        <div class="rung" style="background:var(--card)"><span>card</span><span class="mono">oklch(25.2% 0.005 255)</span><span class="r">14.37</span><span class="r muted">7.41</span></div>
+        <div class="rung" style="background:var(--muted)"><span>muted</span><span class="mono">oklch(27.5% 0.005 255)</span><span class="r">13.40</span><span class="r muted">6.91</span></div>
+        <div class="rung" style="background:var(--popover)"><span>popover</span><span class="mono">oklch(28% 0.006 255)</span><span class="r">13.18</span><span class="r muted">6.80</span></div>
+        <div class="rung" style="background:var(--secondary)"><span>secondary</span><span class="mono">oklch(30.5% 0.006 255)</span><span class="r">12.10</span><span class="r muted">6.24</span></div>
+        <div class="rung" style="background:var(--accent)"><span>accent</span><span class="mono">oklch(31.5% 0.006 255)</span><span class="r">11.67</span><span class="r muted">6.02</span></div>
+      </div>
+      <div class="sub-h">Three line weights</div>
+      <div class="lines">
+        <div class="ln" style="border:1px solid var(--border)">border, 1.41:1, dividers</div>
+        <div class="ln" style="border:1px solid var(--border-strong)">border-strong, 2.05:1, buttons and popovers</div>
+        <div class="ln" style="border:1px solid var(--input)">input, 3.42:1, every control</div>
+      </div>
+    </section>
+
+    <!-- Contrast -->
+    <section class="panel">
+      <h2>Text and signals on card, measured</h2>
+      <p class="pd">WCAG 2.x ratios computed from the OKLCH values. Badges are measured on every surface they can sit on; the worst case is shown.</p>
+      <div class="pbody">
+        <div class="cx"><span class="sw" style="background:var(--foreground)"></span><span>foreground</span><span class="muted">Body, headings, values</span><span class="r">14.37</span></div>
+        <div class="cx"><span class="sw" style="background:var(--muted-foreground)"></span><span>muted-foreground</span><span class="muted">The dimmest text allowed</span><span class="r">7.41</span></div>
+        <div class="cx"><span class="sw" style="background:var(--primary)"></span><span>primary-foreground on primary</span><span class="muted">The one amber action</span><span class="r">9.19</span></div>
+        <div class="cx"><span class="sw" style="background:var(--success)"></span><span style="color:var(--success)">success</span><span class="muted">Badge, worst case on popover</span><span class="r">5.62</span></div>
+        <div class="cx"><span class="sw" style="background:var(--warning)"></span><span style="color:var(--warning)">warning</span><span class="muted">Badge, worst case on popover</span><span class="r">7.17</span></div>
+        <div class="cx"><span class="sw" style="background:var(--info)"></span><span style="color:var(--info)">info</span><span class="muted">Badge, worst case on popover</span><span class="r">5.39</span></div>
+        <div class="cx"><span class="sw" style="background:var(--destructive)"></span><span style="color:var(--destructive)">destructive</span><span class="muted">Badge, worst case on popover</span><span class="r">4.69</span></div>
+        <div class="cx"><span class="sw" style="background:var(--ring)"></span><span>ring</span><span class="muted">Focus outline, non-text</span><span class="r">8.05</span></div>
+      </div>
+      <div class="sub-h">Amber is not warning</div>
+      <div class="row" style="gap:12px; flex-wrap:wrap">
+        <button class="btn btn-primary btn-sm">Save changes</button>
+        <span class="badge badge-warning">{{i:triangle-alert}}Past due</span>
+        <span class="t-xs muted" style="max-width:40ch">Primary is always a solid fill with dark text. Warning is never a fill and always carries a triangle and a word. Separation under deuteranopia: dE 9.0.</span>
+      </div>
+    </section>
+
+    <!-- Type -->
+    <section class="panel wide">
+      <h2>Type</h2>
+      <p class="pd">IBM Plex Sans (variable, wght 100 to 700, wdth 75 to 100) for everything you read; IBM Plex Mono for URLs, keys, IDs and codes. Weights 400, 500 and 600 only. Display sizes run at 92% width.</p>
+      <div class="pbody spec">
+        <div class="k"><b>display</b>40/48, 600, -0.022em, wdth 92</div><div class="t-display">Good evening, Morgan</div>
+        <div class="k"><b>h1</b>28/36, 600, -0.015em</div><div class="t-h1">Users</div>
+        <div class="k"><b>h2</b>20/28, 600, -0.01em</div><div class="t-h2">Connect Overseerr</div>
+        <div class="k"><b>h3</b>16/24, 600</div><div class="t-h3">Watchlist Sync</div>
+        <div class="k"><b>lead</b>17/28, 400</div><div class="t-lead">A private Plex server shared by a group of friends.</div>
+        <div class="k"><b>body</b>15/24, 400 (member pages)</div><div class="t-body">The server will be offline Sunday from 2am to 4am for a storage upgrade.</div>
+        <div class="k"><b>ui</b>14/20, 400 or 500 (admin)</div><div class="t-sm">Everyone with an account on Northfield Plex, with their access and billing.</div>
+        <div class="k"><b>label</b>13/18, 500</div><div class="t-label">Plex access</div>
+        <div class="k"><b>caption</b>12/16, 500, the floor</div><div class="t-2xs" style="font-weight:500">Checked 2 minutes ago</div>
+        <div class="k"><b>stat</b>28/36, 600, tabular</div><div class="t-stat">$0.087 <span class="t-sm muted" style="font-weight:400">21,338 tokens</span></div>
+        <div class="k"><b>mono</b>13/20, 400</div><div class="mono">http://192.168.1.20:32400</div>
+      </div>
+    </section>
+
+    <!-- Buttons -->
+    <section class="panel">
+      <h2>Button</h2>
+      <p class="pd">Six variants, all flat. One primary per view. Disabled is neutral, never faded amber. No trailing arrows; external links get arrow-up-right.</p>
+      <div class="pbody">
+        <div class="btn-grid">
+          <button class="btn btn-primary">Save changes</button>
+          <button class="btn btn-secondary">Test connection</button>
+          <button class="btn btn-outline">Previous</button>
+          <button class="btn btn-ghost">Discard</button>
+          <button class="btn btn-destructive">Remove access</button>
+          <a class="btn btn-ghost" href="#"><span class="link">Setup guide</span>{{i:arrow-up-right:i-14}}</a>
+        </div>
+        <div class="sub-h">Sizes</div>
+        <div class="btn-grid">
+          <button class="btn btn-primary btn-lg">{{i:play}}Open Rewind</button>
+          <button class="btn btn-secondary">Default 36</button>
+          <button class="btn btn-secondary btn-sm">Small 32</button>
+          <button class="btn btn-secondary btn-icon" aria-label="Refresh">{{i:refresh-cw}}</button>
+          <button class="btn btn-ghost btn-icon btn-sm muted" aria-label="Actions">{{i:ellipsis}}</button>
+        </div>
+        <div class="sub-h">States</div>
+        <div class="state-scroll" role="region" aria-label="Button states" tabindex="0"><div class="state-grid">
+          <span></span><span class="h">Rest</span><span class="h">Hover</span><span class="h">Focus visible</span><span class="h">Loading</span><span class="h">Disabled</span>
+          <span class="h">primary</span><button class="btn btn-primary btn-sm">Save</button><button class="btn btn-primary btn-sm is-hover">Save</button><button class="btn btn-primary btn-sm is-focus">Save</button><button class="btn btn-primary btn-sm" aria-busy="true">{{i:loader-circle:spin}}Saving</button><button class="btn btn-primary btn-sm is-disabled" disabled>Save</button>
+          <span class="h">secondary</span><button class="btn btn-secondary btn-sm">Test</button><button class="btn btn-secondary btn-sm is-hover">Test</button><button class="btn btn-secondary btn-sm is-focus">Test</button><button class="btn btn-secondary btn-sm" aria-busy="true">{{i:loader-circle:spin}}Testing</button><button class="btn btn-secondary btn-sm is-disabled" disabled>Test</button>
+          <span class="h">ghost</span><button class="btn btn-ghost btn-sm">Discard</button><button class="btn btn-ghost btn-sm is-hover">Discard</button><button class="btn btn-ghost btn-sm is-focus">Discard</button><button class="btn btn-ghost btn-sm" aria-busy="true">{{i:loader-circle:spin}}Working</button><button class="btn btn-ghost btn-sm is-disabled" disabled>Discard</button>
+        </div></div>
+        <div class="sub-h">Confirm dialogs only</div>
+        <div class="btn-grid"><button class="btn btn-destructive-solid">Remove access</button><span class="t-xs muted">Solid destructive, 7.44:1, never outside an AlertDialog.</span></div>
+      </div>
+    </section>
+
+    <!-- Forms -->
+    <section class="panel">
+      <h2>Field, Input, Select, Switch, Checkbox</h2>
+      <p class="pd">36px controls (40px and 16px text below md, so iOS doesn't zoom). Label, description and error are wired by Field.</p>
+      <div class="pbody form-grid">
+        <div class="field"><label class="label">Server name</label><div class="input">Northfield Plex</div><span class="hint">Shown to members everywhere.</span></div>
+        <div class="field"><label class="label">Local URL</label><div class="input mono is-focus">http://192.168.1.20:5055</div><span class="hint">Focused: border and 2px ring.</span></div>
+        <div class="field"><label class="label">Webhook signing secret</label><div class="input mono is-invalid"><span class="ph">whsec_…</span></div><span class="error-text">{{i:circle-alert}}Enter the signing secret to turn on subscriptions.</span></div>
+        <div class="field"><label class="label">API key (address changed)</label><div class="input mono"><span class="ph">Required</span></div><span class="hint">{{i:key-round:i-12}} Re-enter to use with the new address. Test and Save stay off until you do.</span></div>
+        <div class="field"><label class="label">API key</label><div class="input mono"><span>••••••••••••0be4</span><span class="trail"><span class="saved">{{i:lock:i-12}}Saved</span><button class="btn btn-ghost btn-sm" style="height:24px; padding:0 6px; font-size:12px">Show</button></span></div><span class="hint">Stored secrets show the last four characters.</span></div>
+        <div class="field" style="position:relative"><label class="label">Provider</label><div class="input select is-focus" role="combobox" aria-label="Provider" aria-controls="c-prov-list" aria-expanded="true" aria-haspopup="listbox"><span>OpenAI</span><span class="trail">{{i:chevrons-up-down}}</span></div>
+          <div class="menu" id="c-prov-list" role="listbox" aria-label="Provider" style="position:relative; margin-top:4px; width:100%">
+            <div class="menu-item is-active" role="option" aria-selected="true" style="justify-content:space-between">OpenAI{{i:check}}</div>
+            <div class="menu-item" role="option" aria-selected="false">Anthropic</div>
+            <div class="menu-item" role="option" aria-selected="false">OpenRouter</div>
+          </div>
+        </div>
+        <div class="field"><label class="label">Disabled</label><div class="input is-disabled">Locked while a job runs</div>
+          <div class="stack-12" style="margin-top:12px">
+            <label class="switch-row"><span class="t-sm">Watchlist Sync</span><span class="row"><span class="t-xs muted">On</span><span class="switch on" role="switch" aria-checked="true" aria-label="Watchlist Sync"></span></span></label>
+            <label class="switch-row"><span class="t-sm">Support bot</span><span class="row"><span class="t-xs muted">Off</span><span class="switch" role="switch" aria-checked="false" aria-label="Support bot"></span></span></label>
+            <label class="switch-row"><span class="t-sm muted">Subscriptions</span><span class="row"><span class="t-xs muted">Off</span><span class="switch disabled" role="switch" aria-checked="false" aria-disabled="true" aria-label="Subscriptions"></span></span></label>
+            <span class="row" style="gap:18px"><span class="check-row"><span class="checkbox on">{{i:check}}</span>Movies</span><span class="check-row"><span class="checkbox"></span>4K Movies</span></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- New primitives -->
+    <section class="panel">
+      <h2>Toggle, SegmentedControl, Slider, Sheet</h2>
+      <p class="pd">Added to <span class="mono" style="font-size:12px">components/ui</span> in phase 1 because Rewind needs them. Selected and pressed states invert (foreground fill, background text), which is solid ink inside Rewind. The slider's range and thumb edge use the indicator token.</p>
+      <div class="pbody prims">
+        <span class="k">toggle.tsx</span><span class="row" style="gap:8px"><span class="toggle" role="button" aria-pressed="false">{{i:eye-off:i-14}}Hide this title</span><span class="toggle" role="button" aria-pressed="true">{{i:check:i-14}}Hours</span></span>
+        <span class="k">segmented-control.tsx</span><span class="seg-ctl" role="radiogroup" aria-label="Range"><span role="radio" aria-checked="false">7 days</span><span role="radio" aria-checked="true">30 days</span><span role="radio" aria-checked="false">This year</span></span>
+        <span class="k">slider.tsx</span><span class="slider" role="slider" aria-label="Month" aria-valuenow="8" aria-valuemin="1" aria-valuemax="11" aria-valuetext="August" style="max-width:260px"><span class="tr"></span><span class="fl" style="width:70%"></span><span class="th" style="left:70%"></span></span>
+        <span class="k">sheet.tsx side="bottom"</span><div class="sheet-demo" style="background:var(--popover); color:var(--popover-foreground); border:1px solid var(--border-strong); border-bottom:0; --ink: var(--foreground)"><span class="grab" aria-hidden="true"></span><span class="t-sm" style="font-weight:600">Filters</span><span class="t-xs muted">Bottom sheets take an optional grabber; side="right" is the 420px assistant.</span></div>
+      </div>
+    </section>
+
+    <!-- Settings section status -->
+    <section class="panel">
+      <h2>Settings section status</h2>
+      <p class="pd">The section nav shows a 12px tone glyph, never a bare colour dot, so each state differs by shape. The same glyphs make the legend. A dirty section adds the indicator pip.</p>
+      <div class="pbody" style="display:grid; grid-template-columns: 220px 1fr; gap: 20px; align-items:start">
+        <nav class="snav" aria-label="Example section nav">
+          <a href="#">Plex server<span class="st tone-success" role="img" aria-label="Working">{{i:circle-check:i-12}}</span></a>
+          <a href="#">Tautulli<span class="st tone-destructive" role="img" aria-label="Not working">{{i:circle-x:i-12}}</span></a>
+          <a href="#">Overseerr<span class="pip pip-state" role="img" aria-label="Unsaved changes" style="margin-left:auto"></span><span class="st tone-warning" role="img" aria-label="Needs attention" style="margin-left:0">{{i:triangle-alert:i-12}}</span></a>
+          <a href="#">Stripe billing<span class="st tone-muted" role="img" aria-label="Off, not set up or not checked">{{i:circle-dashed:i-12}}</span></a>
+        </nav>
+        <table class="vocab"><tr><th>ConnectionStatus</th><th>Nav category</th></tr>
+          <tr><td>ok</td><td>Working</td></tr>
+          <tr><td>degraded, incomplete</td><td>Needs attention</td></tr>
+          <tr><td>unreachable</td><td>Not working</td></tr>
+          <tr><td>never tested, disabled, not configured</td><td>Off, not set up or not checked</td></tr>
+          <tr><td>dirty (any status)</td><td>Category kept, plus the pip</td></tr>
+        </table>
+      </div>
+    </section>
+
+    <!-- Status vocabulary -->
+    <section class="panel wide">
+      <h2>Status vocabulary (<span class="mono" style="font-size:14px">lib/ui/status.ts</span>)</h2>
+      <p class="pd">One word and one tone per domain state, everywhere. Badges are for states; categories are plain text; live health is a dot and a word. Sub-lines carry the date.</p>
+      <div class="pbody" style="display:grid; grid-template-columns: 1fr 1fr; gap: 0 40px">
+        <table class="vocab">
+          <tr><th>Domain</th><th>Values</th></tr>
+          <tr><td>Subscription</td><td><div class="cell"><span class="badge badge-success"><span class="dot"></span>Active</span><span class="badge badge-warning">{{i:triangle-alert}}Past due</span><span class="badge badge-destructive">{{i:circle-x}}Canceled</span><span class="badge badge-neutral">Incomplete</span><span class="muted">None</span></div></td></tr>
+          <tr><td>Exemption</td><td><div class="cell"><span class="badge badge-info">Comp</span><span class="badge badge-neutral">Exempt</span><span class="muted">Grandfathered</span><span class="muted">Not required</span></div></td></tr>
+          <tr><td>Plex access</td><td><div class="cell"><span class="status t-xs"><span class="dot dot-success"></span>Shared</span><span class="status t-xs"><span class="dot dot-off"></span>Not shared</span><span class="status t-xs"><span class="dot dot-warning"></span>Unknown</span></div></td></tr>
+          <tr><td>Role</td><td><div class="cell"><span class="badge">{{i:shield}}Owner</span><span class="badge">Admin</span><span>Member</span></div></td></tr>
+          <tr><td>Rewind</td><td><div class="cell"><span class="badge badge-success"><span class="dot"></span>Ready</span><span class="badge badge-info">{{i:loader-circle}}Generating</span><span class="badge badge-destructive">{{i:circle-x}}Failed</span><span class="badge badge-neutral">Opens Dec 1</span><span class="muted">Not started</span><span class="muted">Not eligible yet</span></div></td></tr>
+        </table>
+        <table class="vocab">
+          <tr><th>Domain</th><th>Values</th></tr>
+          <tr><td>Connection</td><td><div class="cell"><span class="badge badge-success"><span class="dot"></span>Connected</span><span class="badge badge-destructive">{{i:circle-x}}Can't connect</span><span class="badge badge-warning">{{i:triangle-alert}}Needs setup</span><span class="badge badge-neutral">Not checked</span><span class="badge badge-neutral">Off</span><span class="badge">Not set up</span></div></td></tr>
+          <tr><td>Queue job</td><td><div class="cell"><span class="badge badge-info">{{i:loader-circle}}Running</span><span class="badge badge-neutral">Waiting</span><span class="badge badge-success">{{i:check}}Done</span><span class="badge badge-destructive">{{i:circle-x}}Failed</span><span class="badge badge-warning">{{i:pause}}Paused</span></div></td></tr>
+          <tr><td>Worker</td><td><div class="cell"><span class="status t-xs"><span class="dot dot-success"></span>Worker running</span><span class="status t-xs"><span class="dot dot-destructive"></span>Worker stopped</span></div></td></tr>
+          <tr><td>Invite</td><td><div class="cell"><span class="badge badge-success"><span class="dot"></span>Active</span><span class="badge badge-neutral">Expired</span><span class="badge badge-neutral">Used up</span><span class="badge badge-neutral">Revoked</span></div></td></tr>
+          <tr><td>Request</td><td><div class="cell"><span class="badge badge-neutral">Waiting for approval</span><span class="badge badge-info">{{i:clock}}Requested</span><span class="badge badge-success">{{i:check}}Available</span><span class="badge badge-destructive">Declined</span></div></td></tr>
+        </table>
+      </div>
+    </section>
+
+    <!-- Alerts and toasts -->
+    <section class="panel">
+      <h2>Alert and Toast</h2>
+      <p class="pd">Alerts sit in the page (8% tint). Toasts are live regions at z 80 (F6 reaches them). Errors and any toast with an action stay until dismissed; errors from an open dialog render inside it instead.</p>
+      <div class="pbody stack-12">
+        <div class="alert alert-success" role="status">{{i:circle-check}}<div><span class="alert-title">Connected to Overseerr 1.33.2.</span> <span class="alert-body">It answered in 48 ms.</span></div></div>
+        <div class="alert alert-info" role="status">{{i:info}}<div><span class="alert-title">Rewind 2026 opens December 1.</span> <span class="alert-body">Members can start watching theirs then.</span></div></div>
+        <div class="alert alert-warning" role="status">{{i:triangle-alert}}<div class="grow"><span class="alert-title">Plex didn't respond.</span> <span class="alert-body">Access shows as Unknown until it answers.</span></div><div class="alert-actions"><button class="btn btn-secondary btn-sm">Check again</button></div></div>
+        <div class="alert alert-destructive" role="alert">{{i:circle-x}}<div><span class="alert-title">The connection to localhost:8181 was refused.</span> <span class="alert-body">Check that Tautulli is running.</span></div></div>
+        <div class="row" style="gap:12px; align-items:flex-start; margin-top:4px">
+          <div class="toast" role="status">{{i:circle-check:i}}<div class="grow"><div class="t-title">Overseerr settings saved</div><div class="t-desc">Requests use the new address.</div></div><button class="btn btn-ghost btn-icon btn-sm muted" aria-label="Dismiss">{{i:x}}</button></div>
+        </div>
+        <div class="toast" role="alert" style="width:100%">{{i:circle-x}}<div class="grow"><div class="t-title">Couldn't start the sync</div><div class="t-desc">Overseerr didn't answer. Try again in a minute.</div></div><button class="btn btn-secondary btn-sm">Retry</button><button class="btn btn-ghost btn-icon btn-sm muted" aria-label="Dismiss">{{i:x}}</button></div>
+      </div>
+    </section>
+
+    <!-- Dialog -->
+    <section class="panel">
+      <h2>ConfirmDialog</h2>
+      <p class="pd">Names the object and the consequence. The confirm stays pending in place; errors show inside the dialog. Below md it becomes a bottom sheet.</p>
+      <div class="pbody overlay-demo">
+        <div class="dialog" role="alertdialog" aria-labelledby="dlg-h" style="max-width:420px">
+          <h3 id="dlg-h">Remove Plex access for Sam Rivera?</h3>
+          <p class="d-desc">Sam will lose access to all 6 libraries right away. Their account, Rewinds and subscription history stay.</p>
+          <div class="field" style="margin-top:16px"><label class="label">Type <span class="mono" style="font-size:13px">sam rivera</span> to confirm</label><div class="input"><span>sam rivera</span></div></div>
+          <div class="d-actions"><button class="btn btn-ghost">Cancel</button><button class="btn btn-destructive-solid" aria-busy="true">{{i:loader-circle:spin}}Removing</button></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Filter toolbar -->
+    <section class="panel wide">
+      <h2>FilterBar</h2>
+      <p class="pd">Defaults are always All. A changed filter turns its button into the active style, adds a removable chip and shows Reset. The count is a polite live region. State lives in the URL.</p>
+      <div class="pbody">
+        <div class="toolbar">
+          <div class="input" style="width:280px"><span class="lead">{{i:search}}</span><span class="ph">Search name or email</span><span class="trail"><span class="kbd">/</span></span></div>
+          <button class="filter-btn"><span class="k">Role</span>All{{i:chevron-down}}</button>
+          <button class="filter-btn active"><span class="k">Plex access</span>Unknown{{i:chevron-down}}</button>
+          <button class="filter-btn active"><span class="k">Subscription</span>Past due{{i:chevron-down}}</button>
+          <button class="btn btn-ghost btn-sm">Reset</button>
+          <span style="flex:1"></span>
+          <span class="t-xs muted num" aria-live="polite">1 of 7 members</span>
+          <button class="filter-btn">{{i:arrow-up-down}}<span class="k">Sort</span>Joined, newest</button>
+        </div>
+        <div class="row" style="gap:8px; margin-top:10px">
+          <span class="chip">Plex access: Unknown<button class="x" type="button" aria-label="Remove filter" style="border:0;background:none;padding:0;cursor:pointer">{{i:x:i-12}}</button></span>
+          <span class="chip">Subscription: Past due<button class="x" type="button" aria-label="Remove filter" style="border:0;background:none;padding:0;cursor:pointer">{{i:x:i-12}}</button></span>
+          <button class="btn btn-ghost btn-sm">Clear filters</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Empty states -->
+    <section class="panel wide">
+      <h2>EmptyState, three kinds</h2>
+      <p class="pd">Never a bare "No X found". First use explains and offers the create action; filtered offers Clear filters; unavailable says which service and offers Retry.</p>
+      <div class="pbody empties">
+        <div class="card"><div class="empty"><span class="tile">{{i:ticket:i-20}}</span><h3>No invites yet</h3><p>Create an invite to bring someone onto Northfield Plex. You choose the libraries and how long it lasts.</p><div class="e-actions"><button class="btn btn-primary btn-sm">{{i:plus:i-14}}Create invite</button></div></div></div>
+        <div class="card"><div class="empty"><span class="tile">{{i:list-filter:i-20}}</span><h3>No users match these filters</h3><p>7 members are hidden by Plex access: Shared and Subscription: Past due.</p><div class="e-actions"><button class="btn btn-secondary btn-sm">Clear filters</button></div></div></div>
+        <div class="card"><div class="empty"><span class="tile" style="color:var(--warning)">{{i:triangle-alert:i-20}}</span><h3>Tautulli isn't answering</h3><p>Watch history can't load until it reconnects. Nothing is lost; it was last seen 4 minutes ago.</p><div class="e-actions"><button class="btn btn-secondary btn-sm">{{i:refresh-cw:i-14}}Retry</button><button class="btn btn-ghost btn-sm">Open settings</button></div></div></div>
+      </div>
+    </section>
+
+    <!-- Stat, table row, skeleton -->
+    <section class="panel">
+      <h2>StatTile, DataTable row, Skeleton</h2>
+      <p class="pd">Values are always foreground; colour appears only with a word. Two tiles per row on phones.</p>
+      <div class="pbody" style="display:grid; grid-template-columns:1fr 1fr; gap:12px">
+        <div class="card stat"><div class="s-label">Rewind 2026</div><div class="s-value">2<small>of 7 ready</small></div><div class="meter" role="img" aria-label="2 ready, 1 generating, 1 failed, 3 not started"><span style="flex:2; background:var(--success)"></span><span style="flex:1; background:var(--info)"></span><span style="flex:1; background:var(--destructive)"></span><span style="flex:3; background:var(--border-strong)"></span></div><div class="s-meta" style="margin-top:6px">1 generating, 1 failed, 3 not started</div></div>
+        <div class="card stat"><div class="s-label">Job queues</div><div class="s-value">2<small>failed</small></div><div class="s-meta"><span class="status"><span class="dot dot-success" style="width:7px;height:7px"></span></span>Worker running, updated 3s ago</div></div>
+        <div class="table-wrap" style="grid-column:1/-1">
+          <table class="table"><thead><tr><th scope="col">User</th><th scope="col">Subscription</th><th scope="col" class="r">LLM cost</th></tr></thead>
+          <tbody><tr><td><div class="user-cell"><span class="avatar">ML</span><div><a class="name" href="#">Morgan Lee</a><div class="sub">morgan.lee@mail.example</div></div></div></td><td><span class="badge badge-success"><span class="dot"></span>Active</span><div class="sub" style="margin-top:4px">Renews Nov 6, 2026</div></td><td class="r num">$0.019</td></tr></tbody></table>
+        </div>
+        <div class="card" style="grid-column:1/-1; padding:16px; display:grid; grid-template-columns: 32px 1fr 80px; gap:12px; align-items:center" aria-busy="true"><span class="sk" style="width:32px; height:32px; border-radius:999px"></span><span><span class="sk-line" style="display:block; width:46%"></span><span class="sk-line" style="display:block; width:70%; margin-top:8px"></span></span><span class="sk-line"></span></div>
+      </div>
+    </section>
+
+    <!-- Brand -->
+    <section class="panel">
+      <h2>Wordmark and monogram</h2>
+      <p class="pd">The server name is the brand, preceded by the amber pip. Long names condense to 85% width before truncating. The monogram is the first grapheme (Intl.Segmenter) plus the pip; scripts Plex Sans doesn't cover fall back to system-ui.</p>
+      <div class="pbody wm-tests">
+        <div class="t"><span class="wordmark"><span class="pip"></span><span class="wm-name">Northfield Plex</span></span><span class="note">Typical</span></div>
+        <div class="t"><span class="wordmark"><span class="pip"></span><span class="wm-name">Test Plex Server</span></span><span class="note">Seed data</span></div>
+        <div class="t"><span class="wordmark is-long"><span class="pip"></span><span class="wm-name">The Basement Screening Room and Archive</span></span><span class="note">Over 22 characters: wdth 85, then ellipsis</span></div>
+        <div class="t"><span class="wordmark"><span class="pip"></span><span class="wm-name">Σινεμά Αθήνας</span></span><span class="note">Greek subset loaded</span></div>
+      </div>
+      <div class="icons" aria-label="Generated icons">
+        <span class="fav" style="width:64px; height:64px; font-size:30px">N</span>
+        <span class="fav" style="width:32px; height:32px; font-size:16px">N</span>
+        <span class="fav" style="width:32px; height:32px; font-size:16px">T</span>
+        <span class="fav" style="width:32px; height:32px; font-size:16px">Σ</span>
+        <span class="fav" role="img" aria-label="16 pixel favicon" data-illustration style="width:16px; height:16px; font-size:9px; border-radius:3px">N</span>
+        <span class="t-xs muted" style="margin-left:8px">app/icon.tsx and app/apple-icon.tsx render these with next/og</span>
+      </div>
+    </section>
+
+    <!-- Rewind card states -->
+    <section class="panel wide">
+      <h2>Rewind card states (home)</h2>
+      <p class="pd">An app-theme Card with a strip of the member's archetype field (Rewind 4.4). Only the strip is in the Rewind scope; it shows the member's soundtrack, never title posters, so the Top shows and Top films pages stay a surprise. Before the season, and in every state that isn't ready, the strip is neutral paper. The strip is the view-transition source for the cover.</p>
+      <div class="pbody rw-states">
+        <div class="card rws">
+          <div class="rw-strip" data-theme="rewind" data-field="ultramarine" aria-hidden="true">{{soundtrack:daily}}</div>
+          <div class="b"><h3><span class="pip pip-state" role="img" aria-label="New"></span>Your Rewind 2026 is ready</h3><p>18 pages, about 4 minutes. Data through November 30.</p><div class="meta muted"><span>{{i:lock:i-12}}Private. Server admins can view it.</span></div><div class="acts"><button class="btn btn-primary btn-sm">{{i:play:i-14}}Open Rewind</button><button class="btn btn-secondary btn-sm">{{i:share-2:i-14}}Share</button></div></div>
+        </div>
+        <div class="card rws">
+          <div class="rw-strip" data-theme="rewind" data-field="coral" aria-hidden="true">{{soundtrack:daily}}</div>
+          <div class="b"><h3>Your Rewind 2026 is ready</h3><p>18 pages, about 4 minutes. You shared 5 pages.</p><div class="meta muted"><span>{{i:globe:i-12}}Public link on until Jan 31, 2027</span></div><div class="acts"><button class="btn btn-primary btn-sm">{{i:play:i-14}}Open Rewind</button><button class="btn btn-secondary btn-sm">Manage sharing</button></div></div>
+        </div>
+        <div class="card rws">
+          <div class="rw-strip" data-theme="rewind" data-field="paper" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100" aria-label="Setting your pages"><div class="rw-prog"><i></i></div></div>
+          <div class="b"><span class="badge badge-info" style="align-self:flex-start">{{i:loader-circle:spin}}Generating</span><h3>Setting your pages</h3><p>Usually a minute or two. You can leave this page; it keeps going.</p></div>
+        </div>
+        <div class="card rws">
+          <div class="rw-strip" data-theme="rewind" data-field="paper" aria-hidden="true">{{soundtrack:empty}}</div>
+          <div class="b"><span class="badge badge-destructive" style="align-self:flex-start">{{i:circle-x}}Couldn't finish</span><h3>Your Rewind couldn't be finished</h3><p>The watch history service didn't answer. It tries again tonight, and the server admin can see what happened.</p></div>
+        </div>
+        <div class="card rws">
+          <div class="rw-strip" data-theme="rewind" data-field="paper" aria-hidden="true">{{soundtrack:empty}}</div>
+          <div class="b"><span class="badge badge-neutral" style="align-self:flex-start">{{i:calendar:i-12}}Opens Dec 1</span><h3>Your Rewind arrives on December 1</h3><p>Everything you watch until November 30 counts.</p><div class="acts"><button class="btn btn-secondary btn-sm">Open Rewind 2025</button></div></div>
+        </div>
+        <div class="card rws">
+          <div class="rw-strip" data-theme="rewind" data-field="paper" aria-hidden="true">{{soundtrack:empty}}</div>
+          <div class="b"><span class="t-xs muted">Not eligible yet</span><h3>Rewind needs Plex watch history</h3><p>You watch on Jellyfin, which Rewind can't read yet. Jellyfin support is planned.</p></div>
+        </div>
+      </div>
+      <div class="archive" aria-label="Your Rewinds">
+        <span class="t-sm" style="font-weight:600; padding-right:6px">Your Rewinds</span>
+        <a class="yr" href="#"><span class="sw" data-theme="rewind" data-field="ultramarine"></span><span><span class="t-sm fg" style="font-weight:500; display:block">2026</span><span class="t-2xs muted">Ready</span></span></a>
+        <a class="yr" href="#"><span class="sw" data-theme="rewind" data-field="marigold"></span><span><span class="t-sm fg" style="font-weight:500; display:block">2025</span><span class="t-2xs muted">Watched</span></span></a>
+        <a class="yr" href="#"><span class="sw" data-theme="rewind" data-field="paper"></span><span><span class="t-sm fg" style="font-weight:500; display:block">2024</span><span class="t-2xs muted">Watched</span></span></a>
+        <span class="t-xs muted" style="margin-left:auto">Each year lives at <span class="mono" style="font-size:12px">/rewind/[year]</span>. Not shown: closed ("Rewind 2026 is still yours") and not started.</span>
+      </div>
+    </section>
+
+    <!-- Charts -->
+    <section class="panel">
+      <h2>Chart series, fixed order</h2>
+      <p class="pd">Validated with the dataviz validator. Status colours are never series colours; values and labels use text tokens.</p>
+      <div class="pbody">
+        <div class="sub-h">Dark, on card: CVD worst adjacent dE 10.1, normal 15.3, all 3:1 or more</div>
+        <div class="chips">
+          <div><div class="c" style="background:var(--chart-1)"></div><div class="l">chart-1 amber</div></div>
+          <div><div class="c" style="background:var(--chart-2)"></div><div class="l">chart-2 blue</div></div>
+          <div><div class="c" style="background:var(--chart-3)"></div><div class="l">chart-3 teal</div></div>
+          <div><div class="c" style="background:var(--chart-4)"></div><div class="l">chart-4 violet</div></div>
+          <div><div class="c" style="background:var(--chart-5)"></div><div class="l">chart-5 magenta</div></div>
+        </div>
+        <div class="sub-h">Light, on white: CVD worst adjacent dE 11.4, normal 16.4</div>
+        <div class="chips">
+          <div><div class="c" style="background:#c57722"></div><div class="l">#c57722</div></div>
+          <div><div class="c" style="background:#0f74c5"></div><div class="l">#0f74c5</div></div>
+          <div><div class="c" style="background:#11957c"></div><div class="l">#11957c</div></div>
+          <div><div class="c" style="background:#8b4ec4"></div><div class="l">#8b4ec4</div></div>
+          <div><div class="c" style="background:#d14186"></div><div class="l">#d14186</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Light -->
+    <section class="panel">
+      <h2>Light theme (behind a flag)</h2>
+      <p class="pd">Same names, inverted ladder. Status tokens are 3 points darker than the first draft and tints drop to 10%, so every badge passes on background and sidebar.</p>
+      <div class="pbody">
+        <div class="light-panel" data-theme="light">
+          <div class="row" style="justify-content:space-between"><span class="t-h3">Invites</span><span class="row"><button class="btn btn-secondary btn-sm">Copy link</button><button class="btn btn-primary btn-sm">{{i:plus:i-14}}Create invite</button></span></div>
+          <div class="row" style="gap:6px; margin-top:14px; flex-wrap:wrap"><span class="badge badge-success"><span class="dot"></span>Active</span><span class="badge badge-warning">{{i:triangle-alert}}Past due</span><span class="badge badge-destructive">{{i:circle-x}}Failed</span><span class="badge badge-info">{{i:clock}}Requested</span><span class="badge badge-neutral">Expired</span></div>
+          <div class="field" style="margin-top:14px"><label class="label">Invite code</label><div class="input mono is-focus">NORTH-7Q2K</div></div>
+          <label class="switch-row" style="margin-top:14px"><span class="t-sm">Require approval</span><span class="switch on" role="switch" aria-checked="true" aria-label="Require approval"></span></label>
+        </div>
+      </div>
+    </section>
+
+    <!-- Rewind contract -->
+    <section class="panel wide" style="padding-bottom:28px">
+      <h2>Rewind scope contract</h2>
+      <p class="pd">The twelve print inks from the Rewind design, each with the text ratio of its ink on the field (7:1 required) and its spot or deep ink (3:1 required for marks). Every element that carries <span class="mono" style="font-size:12px">data-field</span> remaps the shared tokens, so the app's primitives print in ink. Only ultramarine, forest, oxblood and petrol add <span class="mono" style="font-size:12px">.dark</span>.</p>
+      <div class="pbody">
+        <div class="ink-grid">
+          <div class="ink" data-theme="rewind" data-field="paper"><span class="n">Paper</span><span class="r">15.50 text, light</span></div>
+          <div class="ink" data-theme="rewind" data-field="coral"><span class="n">Coral</span><span class="r">7.02 text, light</span></div>
+          <div class="ink" data-theme="rewind" data-field="marigold"><span class="n">Marigold</span><span class="r">10.37 text, light</span></div>
+          <div class="ink" data-theme="rewind" data-field="rose"><span class="n">Rose</span><span class="r">8.96 text, light</span></div>
+          <div class="ink" data-theme="rewind" data-field="sky"><span class="n">Sky</span><span class="r">10.72 text, light</span></div>
+          <div class="ink" data-theme="rewind" data-field="peach"><span class="n">Peach</span><span class="r">10.87 text, light</span></div>
+          <div class="ink" data-theme="rewind" data-field="lilac"><span class="n">Lilac</span><span class="r">8.93 text, light</span></div>
+          <div class="ink" data-theme="rewind" data-field="mint"><span class="n">Mint</span><span class="r">12.14 text, light</span></div>
+          <div class="ink" data-theme="rewind" data-field="ultramarine"><span class="n">Ultramarine</span><span class="r">7.59 text, spot 5.17, dark</span></div>
+          <div class="ink" data-theme="rewind" data-field="forest"><span class="n">Forest</span><span class="r">7.43 text, dark</span></div>
+          <div class="ink" data-theme="rewind" data-field="oxblood"><span class="n">Oxblood</span><span class="r">10.36 text, dark</span></div>
+          <div class="ink" data-theme="rewind" data-field="petrol"><span class="n">Petrol</span><span class="r">7.38 text, dark</span></div>
+        </div>
+        <div class="samples">
+          <div class="sample dark" data-theme="rewind" data-field="ultramarine">
+            <div class="folio"><span>05/18 Top shows</span><span class="ctl"><button class="btn btn-ink-outline btn-icon circ" aria-label="Pause">{{i:pause}}</button><button class="btn btn-ink-outline btn-icon circ" aria-label="Close Rewind">{{i:x}}</button></span></div>
+            <div class="sw-line"><span>Slower pacing</span><span class="switch on" role="switch" aria-checked="true" aria-label="Slower pacing"></span></div>
+            <div class="row" style="gap:8px"><span class="chip">{{i:globe:i-12}}Public link on</span><span class="t-xs">Status is ink, a word and an icon</span></div>
+            <button class="btn btn-ink-outline btn-pill" style="margin-top:auto">{{i:share-2}}Share this page</button>
+          </div>
+          <div class="sample light" data-theme="rewind" data-field="coral">
+            <div class="folio"><span>16/18 Centrefold</span></div>
+            <div class="seg-ctl" role="radiogroup" aria-label="Card format"><span role="radio" aria-checked="true">Story 9:16</span><span role="radio" aria-checked="false">Square 1:1</span></div>
+            <div class="row" style="gap:8px"><span class="toggle" role="button" aria-pressed="true">{{i:check:i-14}}Hours</span><span class="toggle" role="button" aria-pressed="false">Peak hour</span><span class="btn btn-ink-outline btn-sm is-hover">Hover reverses</span></div>
+            <button class="btn btn-ink btn-pill" style="margin-top:auto">{{i:share-2}}Share the poster</button>
+          </div>
+          <div class="sample dark" data-theme="rewind" data-field="ultramarine" style="padding-bottom:0">
+            <div class="folio"><span>Share sheet, printed on paper</span></div>
+            <div class="sheet-demo light" data-field="paper" role="dialog" aria-label="Share this page">
+              <span class="grab" aria-hidden="true"></span>
+              <div class="sw-line"><span>Sign with my name</span><span class="switch" role="switch" aria-checked="false" aria-label="Sign with my name"></span></div>
+              <div class="sw-line"><span>Include artwork</span><span class="switch on" role="switch" aria-checked="true" aria-label="Include artwork"></span></div>
+              <div class="row" style="gap:8px"><button class="btn btn-ink btn-sm">Share image</button><button class="btn btn-ink-outline btn-sm">Save image</button><button class="btn btn-ghost btn-sm">Copy link</button></div>
+            </div>
+          </div>
+        </div>
+        <div class="contract">
+          <div><h4>Rewind 5.2 sets</h4><div class="mono">background, foreground, card, card-foreground = field and ink; popover = paper; primary = ink, primary-foreground = field; secondary = transparent; muted-foreground = ink; border, input, ring = ink; radius 0.375rem</div></div>
+          <div><h4>Closing set (this contract)</h4><div class="mono">primary-hover, secondary-hover, accent = ink, accent-foreground = field (hovers reverse out); muted = transparent; border-strong, primary-indicator = ink; success, warning, info, destructive = ink, subtle tints transparent; chart-1 ink, chart-2 spot; overlay; no elevation; focus 3px at 3px</div></div>
+          <div><h4>Inherited unchanged</h4><div class="mono">spacing, control heights (Rewind raises targets to 44px), z-index scale, --duration-*, --ease-out-quiet, --ease-in-quiet, the reduced-motion rule, toast placement, font-mono</div></div>
+          <div><h4>Rewind adds</h4><div class="mono">--rw-&lt;ink&gt;, --rw-on-&lt;ink&gt;, --rw-&lt;ink&gt;-deep, --field, --ink, --spot, --deep, --arch-deep, --font-display, --font-text, --rw-dur-*, --rw-ease-*. The app never reads or defines them.</div></div>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+</body>
+</html>

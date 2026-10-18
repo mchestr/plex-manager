@@ -1,6 +1,6 @@
 import { createPromptTemplate, updatePromptTemplate } from '@/actions/prompts'
 import { PromptTemplateEditor } from '@/components/admin/prompts/prompt-template-editor'
-import { PromptTemplate } from '@/lib/generated/prisma/client'
+import { PlexWrapped, PromptTemplate } from '@/lib/generated/prisma/client'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { useRouter } from 'next/navigation'
 
@@ -390,6 +390,51 @@ describe('PromptTemplateEditor', () => {
       // The preview section should contain a pre element with the preview
       const preElements = container.querySelectorAll('pre')
       expect(preElements.length).toBeGreaterThan(0)
+    })
+
+    it('previews the example leaderboard when no Rewind is selected', () => {
+      const { container } = render(<PromptTemplateEditor />)
+
+      fireEvent.change(screen.getByLabelText(/Template Content/), {
+        target: { value: '{{leaderboardSection}}' },
+      })
+
+      expect(container.querySelector('pre')).toHaveTextContent('You ranked #2 out of 15 users')
+    })
+
+    it('says leaderboards are not stored when the selected Rewind has none', () => {
+      const storedStatistics = {
+        totalWatchTime: { total: 600, movies: 300, shows: 300 },
+        moviesWatched: 2,
+        showsWatched: 1,
+        episodesWatched: 6,
+        topMovies: [],
+        topShows: [],
+        percentile: { percentile: 10, topPercentLabel: 'Top 10%' },
+      }
+      const userWrapped: PlexWrapped = {
+        id: 'wrapped-1',
+        userId: 'user-1',
+        data: JSON.stringify({ statistics: storedStatistics }),
+        year: 2026,
+        status: 'completed',
+        error: null,
+        shareToken: null,
+        summary: null,
+        archetype: null,
+        generatedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+      const { container } = render(<PromptTemplateEditor userWrapped={userWrapped} />)
+
+      fireEvent.change(screen.getByLabelText(/Template Content/), {
+        target: { value: 'Stats: {{leaderboardSection}}' },
+      })
+
+      const preview = container.querySelector('pre')
+      expect(preview).toHaveTextContent('not stored with the Rewind')
+      expect(preview).not.toHaveTextContent('You ranked')
     })
 
     it('should update preview when template changes', () => {

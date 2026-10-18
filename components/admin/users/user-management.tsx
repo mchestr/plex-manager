@@ -13,8 +13,7 @@ export function UserManagement() {
   const handleGenerateAllWrapped = async () => {
     setIsGenerating(true)
     try {
-      const currentYear = new Date().getFullYear()
-      const result = await generateAllPlexWrapped(currentYear)
+      const result = await generateAllPlexWrapped()
       if (result.success) {
         const message = `Generation complete! Generated: ${result.generated}, Failed: ${result.failed}`
         if (result.errors.length > 0) {

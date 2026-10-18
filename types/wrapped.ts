@@ -102,6 +102,7 @@ export interface WrappedStatistics {
     totalServerRequests: number
     approvedRequests: number
     pendingRequests: number
+    availableRequests?: number // available, or partially available for TV
     topRequestedGenres: Array<{
       genre: string
       count: number

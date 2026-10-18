@@ -249,8 +249,7 @@ describe("myStatsCommand.handle", () => {
     )
     expect(mockFetch).toHaveBeenCalledWith(
       { url: "http://tautulli", apiKey: "key" },
-      "plex-1",
-      "t@example.com",
+      { plexUserId: "plex-1" },
       expect.any(Number)
     )
 

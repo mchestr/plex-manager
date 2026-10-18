@@ -1,4 +1,4 @@
-import { getTautulliActivity, getTautulliHistory, getTautulliLibraryNames, getTautulliLibraryStats, getTautulliMostWatched, getTautulliRecentlyWatched, getTautulliServerInfo, getTautulliTopUsers, getTautulliUserWatchTimeStats, getTautulliUsers } from "@/lib/connections/tautulli"
+import { findTautulliUser, getTautulliActivity, getTautulliHistory, getTautulliLibraryNames, getTautulliLibraryStats, getTautulliMostWatched, getTautulliRecentlyWatched, getTautulliServerInfo, getTautulliTopUsers, getTautulliUserWatchTimeStats, getTautulliUsers } from "@/lib/connections/tautulli"
 import { prisma } from "@/lib/prisma"
 
 export async function executeTautulliTool(
@@ -32,79 +32,33 @@ export async function executeTautulliTool(
       }
       const activity = activityResult.data as any
 
-      // In Discord context, scope activity to the requesting user
-      if (context === "discord" && userId) {
-        const user = await prisma.user.findUnique({
-          where: { id: userId },
-          select: { plexUserId: true },
-        })
+      // In Discord context, scope activity to the requesting user. Fail closed:
+      // a caller with no Plex user ID, no Tautulli match or a failed lookup
+      // sees no sessions rather than everyone's.
+      if (context === "discord") {
+        const user = userId
+          ? await prisma.user.findUnique({ where: { id: userId }, select: { plexUserId: true } })
+          : null
+        const lookup = user?.plexUserId
+          ? await findTautulliUser(config, { plexUserId: user.plexUserId })
+          : null
+        const tautulliUserId = lookup?.ok ? lookup.user.user_id : null
+        const raw = activity?.response?.data?.sessions
+        const all = raw === undefined || raw === null ? [] : Array.isArray(raw) ? raw : [raw]
+        const sessions =
+          tautulliUserId === null ? [] : all.filter((session: any) => session.user_id === tautulliUserId)
 
-        if (user?.plexUserId) {
-          // Get Tautulli users to map Plex user ID to Tautulli user ID
-          const tautulliUsersResult = await getTautulliUsers(config)
-          if (tautulliUsersResult.success) {
-            const tautulliUsers = tautulliUsersResult.data as any
-            if (tautulliUsers?.response?.data) {
-              const users = Array.isArray(tautulliUsers.response.data)
-                ? tautulliUsers.response.data
-                : [tautulliUsers.response.data]
-
-              // Find Tautulli user ID matching the Plex user ID
-              const tautulliUser = users.find(
-                (u: any) => u.plex_id === user.plexUserId || u.user_id?.toString() === user.plexUserId
-              )
-
-              if (tautulliUser?.user_id && activity?.response?.data?.sessions) {
-                // Filter activity sessions to only include those belonging to the user
-                const sessions = Array.isArray(activity.response.data.sessions)
-                  ? activity.response.data.sessions.filter(
-                      (session: any) => session.user_id === tautulliUser.user_id
-                    )
-                  : activity.response.data.sessions.user_id === tautulliUser.user_id
-                    ? [activity.response.data.sessions]
-                    : []
-
-                return JSON.stringify({
-                  ...activity,
-                  response: {
-                    ...activity.response,
-                    data: {
-                      ...activity.response.data,
-                      session_count: sessions.length,
-                      sessions,
-                    },
-                  },
-                })
-              } else if (tautulliUser?.user_id) {
-                // No sessions found for user, return empty activity
-                return JSON.stringify({
-                  ...activity,
-                  response: {
-                    ...activity.response,
-                    data: {
-                      ...activity.response.data,
-                      session_count: 0,
-                      sessions: [],
-                    },
-                  },
-                })
-              }
-            }
-          }
-        } else {
-          // User doesn't have a Plex user ID, return empty activity
-          return JSON.stringify({
-            ...activity,
-            response: {
-              ...activity.response,
-              data: {
-                ...activity.response.data,
-                session_count: 0,
-                sessions: [],
-              },
+        return JSON.stringify({
+          ...activity,
+          response: {
+            ...activity.response,
+            data: {
+              ...activity.response.data,
+              session_count: sessions.length,
+              sessions,
             },
-          })
-        }
+          },
+        })
       }
 
       return JSON.stringify(activity)

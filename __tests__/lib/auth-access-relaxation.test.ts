@@ -82,23 +82,34 @@ const NON_MEMBER = {
   thumb: 'https://example.com/thumb.jpg',
 }
 
+const env = process.env as Record<string, string | undefined>
+const originalNodeEnv = env.NODE_ENV
+
+/**
+ * The authorize() TEST MODE BYPASS runs only with E2E_TEST_MODE=true outside
+ * production. Clearing the flag (and the retired ENABLE_TEST_AUTH) keeps the
+ * real Plex access-check path under Jest's default NODE_ENV=test.
+ */
+function disableTestLogin() {
+  delete env.E2E_TEST_MODE
+  delete env.ENABLE_TEST_AUTH
+  env.NODE_ENV = 'test'
+}
+
+afterEach(() => {
+  env.NODE_ENV = originalNodeEnv
+  delete env.E2E_TEST_MODE
+  delete env.ENABLE_TEST_AUTH
+})
+
 describe('Plex authorize access relaxation', () => {
   const authorize = getPlexAuthorize()
-  const originalNodeEnv = process.env.NODE_ENV
 
   beforeEach(() => {
     jest.clearAllMocks()
-    // Disable the authorize() TEST MODE BYPASS so the real Plex access-check /
-    // ACCESS_DENIED path runs. The bypass triggers when NODE_ENV === 'test'
-    // (jest's default) OR ENABLE_TEST_AUTH === 'true', so both must be cleared.
-    delete process.env.ENABLE_TEST_AUTH
-    ;(process.env as { NODE_ENV?: string }).NODE_ENV = 'development'
+    disableTestLogin()
     mockPrisma.plexServer.findFirst.mockResolvedValue(PLEX_SERVER as never)
     mockGetPlexUserInfo.mockResolvedValue({ success: true, data: NON_MEMBER } as never)
-  })
-
-  afterEach(() => {
-    ;(process.env as { NODE_ENV?: string }).NODE_ENV = originalNodeEnv
   })
 
   it('throws ACCESS_DENIED for a non-member when stripe is disabled', async () => {
@@ -168,5 +179,101 @@ describe('Plex authorize access relaxation', () => {
 
     expect(result).toMatchObject({ id: 'db-user-1' })
     expect(mockPrisma.config.findUnique).not.toHaveBeenCalled()
+  })
+})
+
+describe('Plex authorize test-token login', () => {
+  const authorize = getPlexAuthorize()
+  const SEEDED_ADMIN = {
+    id: 'admin-user-id',
+    email: 'admin@example.com',
+    name: 'Admin User',
+    image: null,
+    isAdmin: true,
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    disableTestLogin()
+    mockPrisma.plexServer.findFirst.mockResolvedValue(PLEX_SERVER as never)
+    mockPrisma.user.findUnique.mockResolvedValue(SEEDED_ADMIN as never)
+    // A real Plex would reject the literal test token.
+    mockGetPlexUserInfo.mockResolvedValue({ success: false, error: 'Unauthorized' } as never)
+  })
+
+  it('rejects TEST_ADMIN_TOKEN when NODE_ENV is test and E2E_TEST_MODE is unset', async () => {
+    const result = await authorize({ authToken: 'TEST_ADMIN_TOKEN' })
+
+    expect(result).toBeNull()
+    // The token went down the real Plex path instead of the seeded-user lookup.
+    expect(mockGetPlexUserInfo).toHaveBeenCalledWith('TEST_ADMIN_TOKEN')
+    expect(mockPrisma.user.findUnique).not.toHaveBeenCalledWith({
+      where: { email: 'admin@example.com' },
+    })
+  })
+
+  it('rejects TEST_ADMIN_TOKEN when only the retired ENABLE_TEST_AUTH is set', async () => {
+    env.ENABLE_TEST_AUTH = 'true'
+
+    const result = await authorize({ authToken: 'TEST_ADMIN_TOKEN' })
+
+    expect(result).toBeNull()
+    expect(mockGetPlexUserInfo).toHaveBeenCalledWith('TEST_ADMIN_TOKEN')
+  })
+
+  it('rejects TEST_ADMIN_TOKEN in production even with E2E_TEST_MODE set', async () => {
+    env.NODE_ENV = 'production'
+    env.E2E_TEST_MODE = 'true'
+
+    const result = await authorize({ authToken: 'TEST_ADMIN_TOKEN' })
+
+    expect(result).toBeNull()
+    expect(mockGetPlexUserInfo).toHaveBeenCalledWith('TEST_ADMIN_TOKEN')
+    expect(mockPrisma.user.findUnique).not.toHaveBeenCalledWith({
+      where: { email: 'admin@example.com' },
+    })
+  })
+
+  it('signs in the seeded admin with TEST_ADMIN_TOKEN when E2E_TEST_MODE=true', async () => {
+    env.E2E_TEST_MODE = 'true'
+
+    const result = await authorize({ authToken: 'TEST_ADMIN_TOKEN' })
+
+    expect(result).toMatchObject({ id: 'admin-user-id', isAdmin: true })
+    expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
+      where: { email: 'admin@example.com' },
+    })
+    expect(mockGetPlexUserInfo).not.toHaveBeenCalled()
+  })
+
+  it('rejects an unrecognised token in E2E test mode without calling Plex', async () => {
+    env.E2E_TEST_MODE = 'true'
+
+    const result = await authorize({ authToken: 'real-looking-token' })
+
+    expect(result).toBeNull()
+    expect(mockGetPlexUserInfo).not.toHaveBeenCalled()
+  })
+})
+
+describe('E2E test login warning', () => {
+  afterEach(() => {
+    jest.dontMock('@/lib/utils/logger')
+  })
+
+  // The warning is logged once at server startup (lib/instrumentation/node.ts).
+  // Next compiles lib/auth.ts into several bundles, so a load-time warning
+  // would repeat, and it would break test files whose logger mocks have no warn.
+  it('does not log when lib/auth loads with E2E_TEST_MODE=true', async () => {
+    disableTestLogin()
+    env.E2E_TEST_MODE = 'true'
+    const createLogger = jest.fn(() => ({ info: jest.fn(), error: jest.fn(), debug: jest.fn() }))
+
+    await jest.isolateModulesAsync(async () => {
+      jest.doMock('@/lib/utils/logger', () => ({ createLogger }))
+      await expect(import('@/lib/auth')).resolves.toHaveProperty('authOptions')
+    })
+
+    expect(createLogger).toHaveBeenCalled()
   })
 })

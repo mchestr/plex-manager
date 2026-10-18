@@ -207,7 +207,7 @@ plex-wrapped/
 | `npm run db:push` | Push schema changes to database |
 | `npm run db:migrate` | Run database migrations |
 | `npm run db:studio` | Open Prisma Studio (database GUI) |
-| `npm run db:seed` | Seed database with test data |
+| `npm run db:seed` | Deletes all users, Rewinds and service configs, then creates test users. Local or `_test` databases only; needs `E2E_TEST_MODE=true`. Never run it on a host that serves production |
 
 ### Development Guidelines
 
@@ -270,9 +270,10 @@ See `example.env` for all available configuration options. Key variables:
 - **Database**: `DATABASE_URL`
 - **Application URLs**: `NEXT_PUBLIC_APP_URL` (preferred, used for public URLs), `NEXTAUTH_URL` (required by NextAuth, should match `NEXT_PUBLIC_APP_URL` in production)
 - **Authentication**: `NEXTAUTH_SECRET`, `PLEX_CLIENT_IDENTIFIER`
+- **Jellyfin**: `JELLYFIN_DEVICE_ID` (optional) — the DeviceId reported to Jellyfin at sign-in. By default it is derived from `PLEX_CLIENT_IDENTIFIER`, so leave it unset unless you want your own value. If neither is set, Jellyfin sign-in uses the fixed `plex-manager-server` and logs `jellyfin.auth.device_id_fallback` at warn.
 - **Encryption**: `ENCRYPTION_KEY` (optional but strongly recommended in production) — encrypts external-service secrets/tokens at rest. Use a dedicated value (do **not** reuse `NEXTAUTH_SECRET`); generate with `openssl rand -hex 32`. Rollout is non-destructive; rotating it makes previously-encrypted secrets undecryptable until re-saved.
 - **Job Queue**: `REDIS_URL` (optional) — enables the Redis-backed BullMQ worker. Without it, background jobs fall back to PostgreSQL polling. Required for Stripe subscriptions.
-- **Development**: `DEV_*` variables for setup wizard defaults
+- **Development**: `DEV_*` variables for setup wizard defaults (read only with `NODE_ENV=development` and `DEV_SETUP_PREFILL=true`, until setup is complete)
   - Use URL format: `DEV_PLEX_URL="https://localhost:32400"` (includes protocol and port)
 
 > **Stripe**: There are intentionally **no** `STRIPE_*` environment variables. The secret key, webhook signing secret, and price IDs are stored (encrypted) in the app config and managed entirely from **Admin → Settings → Stripe Subscriptions**. See [docs/stripe.md](docs/stripe.md).
@@ -306,6 +307,27 @@ When deploying to production, ensure the following environment variables are set
 - **No hardcoded localhost**: The application will throw an error in production if neither `NEXT_PUBLIC_APP_URL` nor `NEXTAUTH_URL` is set
 - **HTTPS required**: In production, always use HTTPS URLs for both environment variables
 - **Domain consistency**: Both URL variables should point to the same domain to avoid authentication issues
+- **Reverse proxy and rate limits**: Rate limits key on the client IP (IPv6 clients by their /64), read from `X-Forwarded-For`. Run the app behind a reverse proxy that adds the client address to `X-Forwarded-For` (Traefik and Caddy do by default, nginx with `proxy_add_x_forwarded_for`), and set `TRUSTED_PROXY_HOPS` to the number of proxies that append to it: `1` (the default) for one proxy. Keep the app port off the public internet so every request passes through the proxy; a client that reaches the app directly can choose its own address. Set `REDIS_URL` so limits hold across processes and restarts. The server logs a warning once if `TRUSTED_PROXY_HOPS` is invalid or no client address can be found, because such requests share one bucket.
+- **CDN in front of the proxy** (`TRUSTED_PROXY_HOPS=2`): this is only correct when the inner proxy keeps the CDN's `X-Forwarded-For` and appends to it. Traefik and Caddy drop an incoming `X-Forwarded-For` from senders they do not trust, so add the CDN's address ranges to Traefik's `forwardedHeaders.trustedIPs` or Caddy's `trusted_proxies`; otherwise the header has a single entry and every visitor is keyed by a CDN edge address. Let the origin accept traffic only from the CDN (a firewall rule on the CDN's published ranges, or a tunnel), because a request sent straight to the proxy can choose the entry the app reads.
+- **Upgrading to a release with `TRUSTED_PROXY_HOPS`**: earlier releases keyed rate limits on the leftmost `X-Forwarded-For` entry, which the client controls; the app now reads the entry the outermost trusted proxy wrote. Check `TRUSTED_PROXY_HOPS` against your proxy chain when you upgrade (see `example.env`). Behind a CDN and a proxy, leaving it at `1` keys every visitor by the CDN's edge address, so visitors who share an edge share the sign-in, invite, share-page and poster limits and get false "Too many attempts" errors.
+- **Jellyfin sign-in limits**: the app allows 10 Jellyfin sign-in attempts per 15 minutes from one client address and 5 failed attempts per 15 minutes for one username. Jellyfin's own lockout still applies, and the app's limits do not prevent it: by default Jellyfin disables a user after 3 failed sign-ins (5 for administrators), configurable per user as "Failed login tries before user is locked out". Anyone who knows a username can still lock that account through the sign-in page; the app's limits only slow password guessing. An administrator re-enables a locked user in the Jellyfin dashboard.
+- **Jellyfin sign-in on Jellyfin 12**: the app identifies itself in the `Authorization` header, which Jellyfin 12.0 and later require (they ignore the legacy `X-Emby-Authorization` header unless legacy authorization is turned on), and it retries once with the legacy header only if the server answers 400. Each sign-in's Jellyfin session is logged out straight away, because the app keeps only the Jellyfin user ID; a logout that fails or takes longer than 3 seconds is logged as `jellyfin.auth.logout_failed` at warn and leaves that session on the server. Earlier releases left one session per member on the Jellyfin server, listed under the client "Plex Wrapped" and the device ID `plex-wrapped-server` (or your `JELLYFIN_DEVICE_ID`); a Jellyfin administrator can delete them in Dashboard → Devices.
+- **Jellyfin accounts are never linked by email**: a Jellyfin sign-in matches only the Jellyfin user ID, and the Jellyfin username is never stored as an email address, because any Jellyfin user can rename themselves to someone else's address. A new member who signs in with both Plex and Jellyfin gets two separate accounts. A Plex sign-in or Plex invite whose email another account already holds still goes ahead, without storing the email. "Allow Jellyfin sign-in" in Admin → Settings turns the Jellyfin provider off, not just the button on the login page; members already signed in with Jellyfin stay signed in until their session expires (at most 7 days).
+- **Upgrading to the release that stops email linking**: earlier releases linked a Jellyfin sign-in to any account whose email matched the Jellyfin username, so a Jellyfin user could take over an account, the admin's included, by renaming themselves to its email. The upgrade keeps those links, and the sessions they produced, so every server that allowed Jellyfin sign-in should check them:
+  1. Take a database dump before deploying, and store it encrypted. The release runs a migration that clears data and cannot be undone.
+  2. Before deploying, list the accounts that hold both a Plex and a Jellyfin ID, and keep the output. Each row is a link an earlier release made by email: either a Jellyfin sign-in onto a Plex account, which the server logs record as "Linked Jellyfin account to existing user" with the Jellyfin username, or a Plex invite redeemed onto a Jellyfin account, which was not logged.
+     ```sql
+     SELECT id, name, email, "isAdmin", "plexUserId", "jellyfinUserId" FROM "User" WHERE "jellyfinUserId" IS NOT NULL AND "plexUserId" IS NOT NULL;
+     ```
+  3. For each row whose Jellyfin account you do not recognise as that member's own, remove the link and the email it may have written: `UPDATE "User" SET "jellyfinUserId" = NULL, "email" = NULL WHERE id = '...';`. For each other row whose email is not that member's own address (an earlier release wrote the Jellyfin username there at every Jellyfin sign-in), clear the email only: `UPDATE "User" SET "email" = NULL WHERE id = '...';`. The migration leaves these rows alone, so this review is the only step that removes such an email. The member's Plex email comes back on their next Plex sign-in.
+  4. If you removed any link, rotate `NEXTAUTH_SECRET` and restart the app. Everyone has to sign in again, which ends the sessions the Jellyfin user still holds on that account: they last up to 7 days and keep the account's admin rights. Then search the server logs for `ADMIN_PRIVILEGE_GRANTED` and `ADMIN_PRIVILEGE_REVOKED` audit events on those accounts, and review the settings, invites and users changed while the link existed.
+
+  The migration then clears the stored email of every account that has a Jellyfin ID and no Plex ID, because such an email can only have come from a Jellyfin username. Accounts with a Plex ID keep their email unless you cleared it in step 3. An account whose email is cleared finds only the Overseerr requests of an Overseerr user with its Plex ID (none for an account without a Plex ID), cannot start Stripe Checkout, and cannot be invited to Plex by the Stripe grant, until a Plex sign-in stores its Plex email again.
+- **Upgrading to the release where the share page reads the database**: a Rewind share link now opens only when its token is exactly 43 URL-safe characters (`A-Z`, `a-z`, `0-9`, `-` and `_`), the shape the app's link generator makes. A link with any other token answers 404 without a database lookup, and nothing is logged. Before deploying, count the shared Rewinds whose token has another shape:
+  ```sql
+  SELECT count(*) FROM "PlexWrapped" WHERE "shareToken" IS NOT NULL AND "shareToken" !~ '^[A-Za-z0-9_-]{43}$';
+  ```
+  If the count is not 0, those links stop working after the upgrade. Clear their tokens (`UPDATE "PlexWrapped" SET "shareToken" = NULL WHERE "shareToken" IS NOT NULL AND "shareToken" !~ '^[A-Za-z0-9_-]{43}$';`) and tell the owners to turn sharing on again for a new link, or keep the release back until those links can lapse.
 
 ### Docker Deployment
 
@@ -314,6 +336,7 @@ The project includes a `Dockerfile` for containerized deployments. When deployin
 1. Set environment variables in your deployment platform or `.env` file
 2. Ensure `NEXT_PUBLIC_APP_URL` and `NEXTAUTH_URL` are set to your production domain
 3. The application will fail to start in production mode if these are not configured
+4. Publish the app port on loopback or an internal network only, with your reverse proxy in front: `127.0.0.1:3000:3000` under compose `ports:`, `-p 127.0.0.1:3000:3000` with `docker run`, or no published port when the proxy shares a Docker network with the app. Rate limits trust `X-Forwarded-For` (see "Reverse proxy and rate limits" above), so a client that reaches the app port directly gets a fresh limit on every request.
 
 ---
 
@@ -376,7 +399,7 @@ All integrations are configured through the setup wizard or admin panel, with va
 - **SQL injection protection** via Prisma parameterized queries
 - **XSS prevention** - React escapes by default, no unsafe HTML rendering
 - **CSRF protection** - Built into Next.js Server Actions
-- **Rate limiting** - Protection for sensitive endpoints
+- **Rate limiting** - Redis-backed limits on sign-in, invite, PIN, share and admin endpoints, keyed by the client IP behind `TRUSTED_PROXY_HOPS` proxies
 - **Audit logging** - Tracking of admin actions and security events
 - **Encryption at rest** - External-service API keys/tokens are AES-256-GCM encrypted when `ENCRYPTION_KEY` is set
 - **Signed webhooks** - Stripe webhooks are verified against the raw request body (no admin auth needed)

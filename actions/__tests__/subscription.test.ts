@@ -7,7 +7,8 @@
  *   allow_promotion_codes, success/cancel URLs, customer_email prefill), and the
  *   null-when-unconfigured path.
  * - actions/subscription.ts `startCheckout`: auth required, offered-price
- *   validation, disabled/unconfigured handling, and URL return.
+ *   validation, the no-email refusal, disabled/unconfigured handling, and URL
+ *   return.
  * - actions/subscription.ts `openBillingPortal`: auth required, missing-customer,
  *   unconfigured handling, and portal URL return.
  */
@@ -199,6 +200,21 @@ describe('startCheckout', () => {
     expect(result).toEqual({ error: expect.any(String) })
     // No session attempt when nothing is offered.
     expect(mockGetStripe).not.toHaveBeenCalled()
+  })
+
+  it('refuses checkout for a user with no email, because the Plex grant could not invite them', async () => {
+    mockGetServerSession.mockResolvedValue(userSession)
+    mockGetOfferedPrices.mockResolvedValue([
+      { priceId: 'price_month', amount: 500, currency: 'usd', interval: 'month', productName: 'Plex' },
+    ])
+    const stripe = makeStripeMock()
+    mockGetStripe.mockResolvedValue(stripe)
+    mockUserFindUnique.mockResolvedValue({ email: null })
+
+    const result = await startCheckout('price_month')
+
+    expect(result).toEqual({ error: expect.stringContaining('no email address') })
+    expect(stripe.checkout.sessions.create).not.toHaveBeenCalled()
   })
 
   it('returns an error when the created session has no URL', async () => {

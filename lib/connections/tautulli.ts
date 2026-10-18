@@ -1,6 +1,14 @@
+import { cache } from "react";
+import { z } from "zod";
 import { type TautulliParsed } from "@/lib/validations/tautulli";
 import { fetchWithTimeout, isTimeoutError } from "@/lib/utils/fetch-with-timeout";
+import { createLogger } from "@/lib/utils/logger";
 import { type ConnectionResult } from "@/types/connection";
+
+const logger = createLogger("TAUTULLI");
+
+/** The URL and API key needed to call Tautulli. */
+type TautulliEndpoint = Pick<TautulliParsed, "url" | "apiKey">
 
 export async function testTautulliConnection(config: TautulliParsed): Promise<{ success: boolean; error?: string }> {
   // TEST MODE BYPASS - Skip connection tests in test environment
@@ -146,21 +154,136 @@ export async function getTautulliLibraryStats(config: TautulliParsed): Promise<C
   }
 }
 
-export async function getTautulliUsers(config: TautulliParsed): Promise<ConnectionResult<unknown>> {
+/**
+ * Tautulli's user list. The request is bounded by `fetchWithTimeout`'s default
+ * 10 seconds: the home page and `generatePlexWrapped` wait on it (through
+ * {@link findTautulliUser}) before a member's rate limit is checked, so a hung
+ * Tautulli must not hold them for undici's 300-second default.
+ */
+export async function getTautulliUsers(config: TautulliEndpoint): Promise<ConnectionResult<unknown>> {
   try {
     const url = `${config.url}/api/v2?apikey=${config.apiKey}&cmd=get_users`
-    const response = await fetch(url)
+    const response = await fetchWithTimeout(url)
     if (!response.ok) {
       return { success: false, error: `Tautulli users error: ${response.statusText}` }
     }
     const data = await response.json()
     return { success: true, data }
   } catch (error) {
+    if (isTimeoutError(error)) {
+      return { success: false, error: "Tautulli users request timed out" }
+    }
     if (error instanceof Error) {
       return { success: false, error: `Connection error: ${error.message}` }
     }
     return { success: false, error: "Failed to get Tautulli users" }
   }
+}
+
+/** The Plex identity used to find a member in Tautulli's user list. */
+export interface TautulliUserIdentity {
+  /** The plex.tv account ID (`User.plexUserId`). */
+  plexUserId: string
+}
+
+const tautulliUserRowSchema = z.object({
+  user_id: z.number().int(),
+  username: z.string().nullish(),
+})
+
+/** The `get_users` fields the lookup relies on. Other fields are stripped. */
+export type TautulliUserRow = z.infer<typeof tautulliUserRowSchema>
+
+const getUsersResponseSchema = z.object({
+  response: z.discriminatedUnion("result", [
+    z.object({ result: z.literal("success"), data: z.array(z.unknown()) }),
+    z.object({ result: z.literal("error"), message: z.string().nullish() }),
+  ]),
+})
+
+/**
+ * `get_users` at most once per server render for one Tautulli. The home page
+ * checks Rewind eligibility and reads the first-watch date, and both find the
+ * member through {@link findTautulliUser} (P0.17). The URL and API key are the
+ * key, as strings, because `cache` compares object arguments by identity.
+ * Outside a React render it calls straight through.
+ */
+const getTautulliUsersOncePerRender = cache((url: string, apiKey: string) => getTautulliUsers({ url, apiKey }))
+
+/** On a miss, `candidates` is the size of Tautulli's user list, for count-only logging. */
+export type FindTautulliUserResult =
+  | { ok: true; user: TautulliUserRow }
+  | { ok: false; code: "TAUTULLI_USER_NOT_FOUND"; candidates: number }
+  | { ok: false; code: "TAUTULLI_ERROR" }
+
+/**
+ * Find a member in Tautulli's `get_users` rows by plex.tv account ID.
+ *
+ * Tautulli's `user_id` is the plex.tv account ID on every row, so
+ * `user_id === plexUserId` is the only match. There is deliberately no
+ * fallback on `username`, `email` or `friendly_name`: when no row carries the
+ * member's own ID, any row a name matches belongs to a different plex.tv
+ * account (a managed user titled "Kids", Tautulli's built-in "Local" user, or
+ * a stale row after a rename), and matching it would hand that person's watch
+ * history to the member.
+ *
+ * @returns The matching row, or `null` when none matches.
+ *
+ * @example
+ * ```ts
+ * const users = [{ user_id: 1, username: "alice" }, { user_id: 2, username: "Bob" }]
+ * matchTautulliUser(users, { plexUserId: "2" })?.user_id // 2
+ * matchTautulliUser(users, { plexUserId: "9" })          // null
+ * ```
+ */
+export function matchTautulliUser<T extends TautulliUserRow>(
+  users: readonly T[],
+  identity: TautulliUserIdentity
+): T | null {
+  return users.find((u) => String(u.user_id) === identity.plexUserId) ?? null
+}
+
+/**
+ * Fetch Tautulli's user list and find the member in it with
+ * {@link matchTautulliUser}.
+ *
+ * The rows are validated with Zod, and only `user_id` and `username` survive
+ * the parse, so no other member's email or name can leak through the result.
+ * A miss is logged at debug with a candidate count, never the candidates: this
+ * runs on every home-page render and Discord activity call, so callers that
+ * treat a miss as a failure log it themselves.
+ */
+export async function findTautulliUser(
+  config: TautulliEndpoint,
+  identity: TautulliUserIdentity
+): Promise<FindTautulliUserResult> {
+  const result = await getTautulliUsersOncePerRender(config.url, config.apiKey)
+  if (!result.success) {
+    logger.warn("Tautulli get_users request failed", { error: result.error })
+    return { ok: false, code: "TAUTULLI_ERROR" }
+  }
+
+  const parsed = getUsersResponseSchema.safeParse(result.data)
+  if (!parsed.success) {
+    logger.warn("Unexpected Tautulli get_users response shape")
+    return { ok: false, code: "TAUTULLI_ERROR" }
+  }
+  if (parsed.data.response.result === "error") {
+    logger.warn("Tautulli get_users returned an error", { message: parsed.data.response.message })
+    return { ok: false, code: "TAUTULLI_ERROR" }
+  }
+
+  const users = parsed.data.response.data.flatMap((row) => {
+    const user = tautulliUserRowSchema.safeParse(row)
+    return user.success ? [user.data] : []
+  })
+
+  const user = matchTautulliUser(users, identity)
+  if (!user) {
+    logger.debug("Tautulli user not found", { plexUserId: identity.plexUserId, candidates: users.length })
+    return { ok: false, code: "TAUTULLI_USER_NOT_FOUND", candidates: users.length }
+  }
+  return { ok: true, user }
 }
 
 export async function getTautulliHistory(config: TautulliParsed, userId?: number, limit = 20): Promise<ConnectionResult<unknown>> {

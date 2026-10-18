@@ -6,27 +6,11 @@ import { getJellyfinLibraries } from "@/actions/admin/admin-servers"
 import { useToast } from "@/components/ui/toast"
 import { ModalShell } from "@/components/ui/modal-shell"
 import { ConfirmModal } from "@/components/admin/shared/confirm-modal"
+import type { InviteWithUsages } from "@/lib/dto/user"
 import Link from "next/link"
 import { useCallback, useEffect, useState } from "react"
 
 type ServerType = "PLEX" | "JELLYFIN"
-
-interface Invite {
-  id: string
-  code: string
-  serverType: ServerType
-  maxUses: number
-  useCount: number
-  expiresAt: Date | null
-  createdAt: Date
-  usages: {
-    user: {
-      name: string | null
-      email: string | null
-      image: string | null
-    }
-  }[]
-}
 
 interface JellyfinLibrary {
   id: string
@@ -36,7 +20,7 @@ interface JellyfinLibrary {
 
 export function InvitesPageClient() {
   const toast = useToast()
-  const [invites, setInvites] = useState<Invite[]>([])
+  const [invites, setInvites] = useState<InviteWithUsages[]>([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -129,8 +113,7 @@ export function InvitesPageClient() {
   async function loadInvites() {
     try {
       const result = await getInvites()
-      if (result.success && result.data) {
-        // @ts-ignore - Prisma types might be slightly off in client
+      if (result.success) {
         setInvites(result.data)
       } else {
         toast.showError(result.error || "Failed to load invites")

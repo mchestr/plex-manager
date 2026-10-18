@@ -54,14 +54,14 @@ describe('RegenerateWrappedButton', () => {
 
   describe('Default (non-inline) mode', () => {
     it('should render the regenerate button', () => {
-      renderWithToast(<RegenerateWrappedButton userId="user-1" />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} />)
       const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
       expect(button).toBeInTheDocument()
     })
 
     it('should show confirm modal when clicked', async () => {
       const user = userEvent.setup({ delay: null })
-      renderWithToast(<RegenerateWrappedButton userId="user-1" year={2024} />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2024} />)
       const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
 
       await user.click(button)
@@ -77,7 +77,7 @@ describe('RegenerateWrappedButton', () => {
 
     it('should close modal when cancel is clicked', async () => {
       const user = userEvent.setup({ delay: null })
-      renderWithToast(<RegenerateWrappedButton userId="user-1" />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} />)
       const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
 
       await user.click(button)
@@ -95,7 +95,7 @@ describe('RegenerateWrappedButton', () => {
         success: true,
       })
 
-      renderWithToast(<RegenerateWrappedButton userId="user-1" year={2024} />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2024} />)
       const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
 
       await user.click(button)
@@ -115,7 +115,7 @@ describe('RegenerateWrappedButton', () => {
       })
       jest.spyOn(usersAction, 'generatePlexWrapped').mockReturnValue(generatePromise as any)
 
-      renderWithToast(<RegenerateWrappedButton userId="user-1" />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} />)
       const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
 
       await user.click(button)
@@ -138,7 +138,7 @@ describe('RegenerateWrappedButton', () => {
         success: true,
       })
 
-      renderWithToast(<RegenerateWrappedButton userId="user-1" />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} />)
       const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
 
       await user.click(button)
@@ -160,7 +160,7 @@ describe('RegenerateWrappedButton', () => {
         success: true,
       })
 
-      renderWithToast(<RegenerateWrappedButton userId="user-1" />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} />)
       const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
 
       await user.click(button)
@@ -191,7 +191,7 @@ describe('RegenerateWrappedButton', () => {
         success: true,
       })
 
-      renderWithToast(<RegenerateWrappedButton userId="user-1" onSuccess={mockOnSuccess} />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} onSuccess={mockOnSuccess} />)
       const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
 
       await user.click(button)
@@ -209,7 +209,7 @@ describe('RegenerateWrappedButton', () => {
         success: true,
       })
 
-      renderWithToast(<RegenerateWrappedButton userId="user-1" />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} />)
       const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
 
       await user.click(button)
@@ -228,7 +228,7 @@ describe('RegenerateWrappedButton', () => {
         error: 'Failed to generate wrapped',
       })
 
-      renderWithToast(<RegenerateWrappedButton userId="user-1" />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} />)
       const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
 
       await user.click(button)
@@ -246,7 +246,7 @@ describe('RegenerateWrappedButton', () => {
         success: false,
       })
 
-      renderWithToast(<RegenerateWrappedButton userId="user-1" />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} />)
       const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
 
       await user.click(button)
@@ -258,13 +258,92 @@ describe('RegenerateWrappedButton', () => {
       })
     })
 
+    it('shows the admin hint, not the member copy, for a typed failure (P0.9)', async () => {
+      const user = userEvent.setup({ delay: null })
+      jest.spyOn(usersAction, 'generatePlexWrapped').mockResolvedValue({
+        success: false,
+        code: 'TAUTULLI_USER_NOT_FOUND',
+        error: "We couldn't find your account in Tautulli yet. Ask the server admin to refresh Tautulli's user list.",
+      })
+
+      renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} />)
+      await user.click(screen.getByRole('button', { name: /Regenerate wrapped/i }))
+      await user.click(screen.getByText('Regenerate'))
+
+      await waitFor(() => {
+        expect(
+          screen.getByText("Plex user plex-1 is not in Tautulli's user list. Refresh users in Tautulli.")
+        ).toBeInTheDocument()
+      })
+      expect(screen.queryByText(/We couldn't find your account/)).not.toBeInTheDocument()
+    })
+
+    it.each([
+      ['plex-1', "Plex user plex-1 is not in Tautulli's user list. Refresh users in Tautulli, then try again in 10 minutes."],
+      [null, 'This member has no linked Plex account, so there is no watch history for a Rewind.'],
+    ])('explains an ineligible member (Plex user %s) in admin terms (P0.17)', async (plexUserId, hint) => {
+      const user = userEvent.setup({ delay: null })
+      jest.spyOn(usersAction, 'generatePlexWrapped').mockResolvedValue({
+        success: false,
+        code: 'REWIND_NOT_ELIGIBLE',
+        error: 'Rewind needs Plex watch history. Jellyfin support is planned.',
+      })
+
+      renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId={plexUserId} year={2026} />)
+      await user.click(screen.getByRole('button', { name: /Regenerate wrapped/i }))
+      await user.click(screen.getByText('Regenerate'))
+
+      await waitFor(() => {
+        expect(screen.getByText(hint)).toBeInTheDocument()
+      })
+      expect(screen.queryByText(/Jellyfin support is planned/)).not.toBeInTheDocument()
+    })
+
+    it('says a run is already in progress, in admin terms (P0.12)', async () => {
+      const user = userEvent.setup({ delay: null })
+      jest.spyOn(usersAction, 'generatePlexWrapped').mockResolvedValue({
+        success: false,
+        code: 'ALREADY_GENERATING',
+        error: 'Your Rewind is already being made.',
+      })
+
+      renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} />)
+      await user.click(screen.getByRole('button', { name: /Regenerate wrapped/i }))
+      await user.click(screen.getByText('Regenerate'))
+
+      await waitFor(() => {
+        expect(
+          screen.getByText("This member's Rewind is already being made. Try again when it finishes.")
+        ).toBeInTheDocument()
+      })
+      expect(screen.queryByText('Your Rewind is already being made.')).not.toBeInTheDocument()
+      expect(screen.queryByText('ALREADY_GENERATING')).not.toBeInTheDocument()
+    })
+
+    it.each([
+      ['RATE_LIMITED', 'You can try again in 9 minutes.'],
+      ['NOT_ENTITLED', 'Rewind is part of an active membership. Renew your subscription to make yours.'],
+    ])('shows the copy, not the code, for a %s refusal (P0.12)', async (code, copy) => {
+      const user = userEvent.setup({ delay: null })
+      jest.spyOn(usersAction, 'generatePlexWrapped').mockResolvedValue({ success: false, code, error: copy } as never)
+
+      renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} />)
+      await user.click(screen.getByRole('button', { name: /Regenerate wrapped/i }))
+      await user.click(screen.getByText('Regenerate'))
+
+      await waitFor(() => {
+        expect(screen.getByText(copy)).toBeInTheDocument()
+      })
+      expect(screen.queryByText(code)).not.toBeInTheDocument()
+    })
+
     it('should handle exception during regeneration', async () => {
       const user = userEvent.setup({ delay: null })
       jest.spyOn(usersAction, 'generatePlexWrapped').mockRejectedValue(
         new Error('Network error')
       )
 
-      renderWithToast(<RegenerateWrappedButton userId="user-1" />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} />)
       const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
 
       await user.click(button)
@@ -280,7 +359,7 @@ describe('RegenerateWrappedButton', () => {
       const user = userEvent.setup({ delay: null })
       jest.spyOn(usersAction, 'generatePlexWrapped').mockRejectedValue('String error')
 
-      renderWithToast(<RegenerateWrappedButton userId="user-1" />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} />)
       const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
 
       await user.click(button)
@@ -299,7 +378,7 @@ describe('RegenerateWrappedButton', () => {
         success: true,
       })
 
-      renderWithToast(<RegenerateWrappedButton userId="user-1" />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} />)
       const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
 
       await user.click(button)
@@ -321,13 +400,13 @@ describe('RegenerateWrappedButton', () => {
 
   describe('Inline mode', () => {
     it('should render inline button with correct styling', () => {
-      renderWithToast(<RegenerateWrappedButton userId="user-1" inline={true} />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} inline={true} />)
       const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
       expect(button).toHaveClass('w-full', 'flex', 'items-center', 'gap-2', 'text-sm')
     })
 
     it('should show "Regenerate Wrapped" text in inline mode', () => {
-      renderWithToast(<RegenerateWrappedButton userId="user-1" inline={true} />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} inline={true} />)
       expect(screen.getByText('Regenerate Wrapped')).toBeInTheDocument()
     })
 
@@ -339,7 +418,7 @@ describe('RegenerateWrappedButton', () => {
       })
       jest.spyOn(usersAction, 'generatePlexWrapped').mockReturnValue(generatePromise as any)
 
-      renderWithToast(<RegenerateWrappedButton userId="user-1" inline={true} />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} inline={true} />)
       const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
 
       await user.click(button)
@@ -353,13 +432,30 @@ describe('RegenerateWrappedButton', () => {
       resolveGenerate!({ success: true })
     })
 
+    // P0.14: the menu passes the season year; there is no calendar default,
+    // so January regenerates the season's Rewind, not a near-empty new one.
+    it('regenerates the season year it is given, also in January', async () => {
+      jest.setSystemTime(new Date('2027-01-02T12:00:00Z'))
+      const user = userEvent.setup({ delay: null })
+      jest.spyOn(usersAction, 'generatePlexWrapped').mockResolvedValue({ success: true })
+
+      renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} inline={true} />)
+      await user.click(screen.getByRole('button', { name: /Regenerate wrapped/i }))
+      expect(screen.getByText(/regenerate the 2026 wrapped/)).toBeInTheDocument()
+      await user.click(screen.getByText('Regenerate'))
+
+      await waitFor(() => {
+        expect(usersAction.generatePlexWrapped).toHaveBeenCalledWith('user-1', 2026)
+      })
+    })
+
     it('should show "Started!" text after success in inline mode', async () => {
       const user = userEvent.setup({ delay: null })
       jest.spyOn(usersAction, 'generatePlexWrapped').mockResolvedValue({
         success: true,
       })
 
-      renderWithToast(<RegenerateWrappedButton userId="user-1" inline={true} />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} inline={true} />)
       const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
 
       await user.click(button)
@@ -378,7 +474,7 @@ describe('RegenerateWrappedButton', () => {
         error: 'Inline error',
       })
 
-      renderWithToast(<RegenerateWrappedButton userId="user-1" inline={true} />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} inline={true} />)
       const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
 
       await user.click(button)
@@ -396,7 +492,7 @@ describe('RegenerateWrappedButton', () => {
         success: true,
       })
 
-      const { container } = renderWithToast(<RegenerateWrappedButton userId="user-1" inline={true} />)
+      const { container } = renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} inline={true} />)
 
       // Initial state - refresh icon
       let svg = container.querySelector('svg.text-purple-400')
@@ -418,7 +514,7 @@ describe('RegenerateWrappedButton', () => {
   describe('Confirm modal integration', () => {
     it('should pass correct props to ConfirmModal', async () => {
       const user = userEvent.setup({ delay: null })
-      renderWithToast(<RegenerateWrappedButton userId="user-1" year={2023} />)
+      renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2023} />)
       const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
 
       await user.click(button)

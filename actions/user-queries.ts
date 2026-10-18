@@ -8,6 +8,7 @@ import { getServerSession } from "next-auth"
 import { SubscriptionStatus } from "@/lib/generated/prisma/client"
 import { aggregateLlmUsage } from "@/lib/utils"
 import { createLogger } from "@/lib/utils/logger"
+import { readStoredError, toStoredError } from "@/lib/wrapped/generation-errors"
 import {
   AdminUserWithWrappedStats,
   DiscordCommandActivity,
@@ -23,12 +24,18 @@ const logger = createLogger("USER_QUERIES")
 // --- Exported Actions ---
 
 /**
- * Get user's Plex Wrapped
+ * Get user's Plex Wrapped.
+ *
+ * A non-admin caller gets `error` normalised to a stored code
+ * (`{"code":"..."}`), so legacy free text, such as a pre-P0.9 row listing
+ * Tautulli's users, never reaches a member's browser. Admins get the stored
+ * text as is.
+ *
+ * `data` never carries `statistics.leaderboards`: rows written before P0.8
+ * hold every member's name and yearly watch minutes there until P0.20's
+ * clean-up runs, and no viewer reads them.
  */
-export async function getUserPlexWrapped(
-  userId: string,
-  year: number = new Date().getFullYear()
-) {
+export async function getUserPlexWrapped(userId: string, year: number) {
   // Authorization: a user may only read their own Wrapped; admins may read any.
   // This action is exposed as a public endpoint, so the check must live here —
   // there is no middleware gating direct Server Action invocation.
@@ -64,7 +71,14 @@ export async function getUserPlexWrapped(
       },
     })
 
-    return wrapped
+    if (!wrapped) {
+      return null
+    }
+    const visible = { ...wrapped, data: withoutLeaderboards(wrapped.data) }
+    if (!visible.error || session.user.isAdmin) {
+      return visible
+    }
+    return { ...visible, error: toStoredError(readStoredError(visible.error)) }
   } catch (error) {
     logger.error("Error getting user wrapped", error)
     return null
@@ -181,18 +195,17 @@ export async function getUserDetails(userId: string): Promise<UserDetails | null
 }
 
 /**
- * Get all users with their wrapped status
+ * Get all users with their wrapped status for `year` (the caller passes the
+ * season year; there is no calendar default).
  */
-export async function getAllUsersWithWrapped(year?: number): Promise<AdminUserWithWrappedStats[]> {
+export async function getAllUsersWithWrapped(year: number): Promise<AdminUserWithWrappedStats[]> {
   // Admin-only: enumerates every user's PII. Placed before the try so the auth
   // error propagates rather than being swallowed into an empty array.
   await requireAdmin()
 
   try {
-    const currentYear = year || new Date().getFullYear()
-
     // 1. Fetch users and their wrapped data
-    const users = await fetchUsersWithWrappedData(currentYear)
+    const users = await fetchUsersWithWrappedData(year)
 
     // 2. Build Plex access map
     const accessMap = await buildPlexAccessMap(users)
@@ -326,6 +339,22 @@ export async function unshareUserLibrary(userId: string): Promise<{ success: boo
 // NOT exported: every export in a "use server" module is a directly-invocable
 // endpoint. These return user PII and are only consumed by getAllUsersWithWrapped
 // (which is admin-gated), so they must not be independently callable.
+
+/** A stored `PlexWrapped.data` string without `statistics.leaderboards`. */
+function withoutLeaderboards(data: string): string {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(data)
+  } catch {
+    return data
+  }
+  const statistics = typeof parsed === "object" && parsed !== null ? (parsed as { statistics?: unknown }).statistics : undefined
+  if (typeof statistics !== "object" || statistics === null || !("leaderboards" in statistics)) {
+    return data
+  }
+  delete (statistics as { leaderboards?: unknown }).leaderboards
+  return JSON.stringify(parsed)
+}
 
 async function fetchUsersWithWrappedData(year: number) {
   // Uses `include` (not `select`), so every scalar User column — including
@@ -517,118 +546,6 @@ async function fetchSubscriptionMap(userIds: string[]): Promise<Map<string, {
   }
 
   return subscriptionMap
-}
-
-/**
- * Get user's first watch date from Tautulli
- * Returns the timestamp of their earliest watch history entry
- */
-export async function getUserFirstWatchDate(
-  plexUserId: string,
-  userEmail: string | null
-): Promise<{ success: boolean; firstWatchDate?: string; error?: string }> {
-  // Require an authenticated session; this action queries Tautulli by identifier
-  // and must not be callable anonymously.
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) {
-    return { success: false, error: "Unauthorized" }
-  }
-
-  try {
-    // Get active Tautulli configuration
-    const tautulli = await prisma.tautulli.findFirst({
-      where: { isActive: true },
-    })
-
-    if (!tautulli) {
-      logger.debug("No active Tautulli configured, cannot get first watch date")
-      return { success: false, error: "Tautulli not configured" }
-    }
-
-    const baseUrl = `${tautulli.url}/api/v2`
-    const apiKey = tautulli.apiKey
-
-    // Get all users from Tautulli
-    const usersResponse = await fetch(
-      `${baseUrl}?apikey=${apiKey}&cmd=get_users`,
-      { headers: { "Accept": "application/json" } }
-    )
-
-    if (!usersResponse.ok) {
-      return { success: false, error: "Failed to fetch users from Tautulli" }
-    }
-
-    const usersData = await usersResponse.json()
-    const users = Array.isArray(usersData.response?.data)
-      ? usersData.response.data
-      : usersData.response?.data?.users || []
-
-    // Find the user by email or Plex ID
-    interface TautulliUserResponse {
-      user_id: number
-      email?: string
-      username?: string
-      friendly_name?: string
-      plex_id?: string
-    }
-
-    let tautulliUser: TautulliUserResponse | null = null
-
-    if (userEmail) {
-      tautulliUser = users.find(
-        (u: TautulliUserResponse) => u.email?.toLowerCase() === userEmail.toLowerCase()
-      ) ?? null
-    }
-
-    if (!tautulliUser) {
-      tautulliUser = users.find(
-        (u: TautulliUserResponse) =>
-          u.plex_id?.toString() === plexUserId ||
-          u.user_id?.toString() === plexUserId
-      ) ?? null
-    }
-
-    if (!tautulliUser) {
-      logger.debug("User not found in Tautulli", { plexUserId, userEmail })
-      return { success: false, error: "User not found in Tautulli" }
-    }
-
-    // Fetch user's oldest history entry
-    // We need to get the oldest, so we'll fetch history ordered by date ascending
-    const historyResponse = await fetch(
-      `${baseUrl}?apikey=${apiKey}&cmd=get_history&user_id=${tautulliUser.user_id}&order_dir=asc&length=1`,
-      { headers: { "Accept": "application/json" } }
-    )
-
-    if (!historyResponse.ok) {
-      return { success: false, error: "Failed to fetch user history from Tautulli" }
-    }
-
-    const historyData = await historyResponse.json()
-    const historyItems = historyData.response?.data?.data || []
-
-    if (historyItems.length === 0) {
-      logger.debug("No watch history found for user", { plexUserId })
-      return { success: false, error: "No watch history found" }
-    }
-
-    // Get the first item's date (Unix timestamp)
-    const firstItem = historyItems[0]
-    const timestamp = firstItem.date || firstItem.started
-
-    if (!timestamp) {
-      return { success: false, error: "No timestamp found in history" }
-    }
-
-    // Convert Unix timestamp to ISO string
-    const firstWatchDate = new Date(timestamp * 1000).toISOString()
-
-    logger.debug("Found first watch date", { plexUserId, firstWatchDate })
-    return { success: true, firstWatchDate }
-  } catch (error) {
-    logger.error("Error getting user first watch date", error, { plexUserId })
-    return { success: false, error: "Failed to get first watch date" }
-  }
 }
 
 /**

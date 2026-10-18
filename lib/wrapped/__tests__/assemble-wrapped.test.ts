@@ -3,7 +3,7 @@ import {
   WRAPPED_DATA_VERSION,
 } from "@/lib/wrapped/assemble-wrapped"
 
-import { buildStatistics, buildValidOutput } from "./fixtures"
+import { buildLeaderboards, buildStatistics, buildValidOutput } from "./fixtures"
 
 const BASE_ARGS = {
   userId: "user-1",
@@ -207,5 +207,28 @@ describe("assembleWrappedData", () => {
     expect(data.summary).toBe(output.summary)
     const funFacts = data.sections.find((s) => s.type === "fun-facts")
     expect(funFacts?.data).toEqual({ facts: output.insights.funFacts })
+  })
+
+  it("stores no leaderboards but keeps the percentile and every other statistic", () => {
+    const statistics = buildStatistics({
+      leaderboards: buildLeaderboards(),
+      serverStats: {
+        serverName: "Mike's Plex",
+        totalStorage: 1e12,
+        totalStorageFormatted: "1 TB",
+        librarySize: { movies: 100, shows: 50, episodes: 500 },
+      },
+      longestBinge: { title: "Severance", duration: 300, date: "2026-03-07" },
+    })
+
+    const data = assembleWrappedData({ output: buildValidOutput(), statistics, ...BASE_ARGS })
+    const stored = JSON.parse(JSON.stringify(data))
+
+    expect(stored.statistics).not.toHaveProperty("leaderboards")
+    expect(JSON.stringify(stored)).not.toMatch(/leaderboard|jsnow|Alice Smith/i)
+    const { leaderboards, ...rest } = statistics
+    expect(leaderboards).toBeDefined()
+    expect(stored.statistics).toEqual(rest)
+    expect(stored.statistics.percentile).toEqual({ percentile: 5, topPercentLabel: "Top 5%" })
   })
 })

@@ -19,12 +19,10 @@ export function JellyfinLoginToggle({ enabledForLogin }: JellyfinLoginToggleProp
     startTransition(async () => {
       const result = await toggleJellyfinLogin(!enabledForLogin)
       if (result.success) {
-        toast.showSuccess(
-          `Jellyfin login ${!enabledForLogin ? "enabled" : "disabled"} successfully`
-        )
+        toast.showSuccess(`Jellyfin sign-in turned ${!enabledForLogin ? "on" : "off"}`)
         router.refresh()
       } else {
-        toast.showError(result.error || "Failed to update Jellyfin login setting")
+        toast.showError(result.error || "Failed to update the Jellyfin sign-in setting")
       }
     })
   }
@@ -33,11 +31,11 @@ export function JellyfinLoginToggle({ enabledForLogin }: JellyfinLoginToggleProp
     <div className="mt-4 pt-4 border-t border-slate-700">
       <div className="flex items-center justify-between">
         <div>
-          <h4 className="text-xs font-medium text-slate-300">Login Settings</h4>
+          <h4 className="text-xs font-medium text-slate-300">Allow Jellyfin sign-in</h4>
           <p className="text-xs text-slate-500 mt-0.5">
             {enabledForLogin
-              ? "Jellyfin is visible on the login page"
-              : "Jellyfin is hidden from the login page"}
+              ? "Members can sign in with their Jellyfin account"
+              : "Jellyfin sign-in is off and hidden from the login page"}
           </p>
         </div>
         <Button
@@ -45,14 +43,21 @@ export function JellyfinLoginToggle({ enabledForLogin }: JellyfinLoginToggleProp
           size="sm"
           onClick={handleToggle}
           disabled={isPending}
+          aria-label={
+            isPending
+              ? undefined
+              : enabledForLogin
+                ? "Turn off Jellyfin sign-in"
+                : "Turn on Jellyfin sign-in"
+          }
           data-testid="jellyfin-login-toggle"
           className="hover:border-cyan-500/50 hover:text-white whitespace-nowrap"
         >
           {isPending
             ? "Updating..."
             : enabledForLogin
-              ? "Hide from Login"
-              : "Show on Login"}
+              ? "Turn off"
+              : "Turn on"}
         </Button>
       </div>
     </div>

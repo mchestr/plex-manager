@@ -4,11 +4,17 @@
  * to prevent Edge Runtime from analyzing Node.js-only dependencies
  */
 
+import { isE2ETestMode } from "@/lib/security/test-mode"
 import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("INSTRUMENTATION")
 
 export async function startNodeInstrumentation() {
+  // Runs once per server process, so the warning is logged once, at startup.
+  if (isE2ETestMode()) {
+    logger.warn("E2E test login is enabled")
+  }
+
   // Start queue worker (for watchlist sync and other background jobs)
   await startQueueWorker()
 
@@ -194,7 +200,7 @@ async function startDiscordBotPolling() {
   // in favor of constructing (and wiring) them here.
   try {
     const { DistributedLock } = await import("@/lib/discord/lock/lease")
-    const { BotLockPoller } = await import("@/lib/discord/lock/poller")
+    const { BotLockPoller, DEFAULT_POLL_INTERVAL_MS } = await import("@/lib/discord/lock/poller")
     const { isDiscordBotEnabled } = await import("@/lib/discord/lock")
     const { DiscordBot } = await import("@/lib/discord/bot")
     const { prisma } = await import("@/lib/prisma")
@@ -204,8 +210,13 @@ async function startDiscordBotPolling() {
     const bot = new DiscordBot()
     const lock = new DistributedLock()
 
-    // Poll interval in milliseconds (default: 60 seconds)
-    const pollIntervalMs = parseInt(process.env.DISCORD_BOT_POLL_INTERVAL_MS || "60000", 10)
+    // Poll interval in milliseconds (default: 10 seconds). It only paces
+    // acquisition, the enabled check and the config bounce: the poller renews
+    // the 30 s lease on its own timer every 10 s, whatever this is set to.
+    const pollIntervalMs = parseInt(
+      process.env.DISCORD_BOT_POLL_INTERVAL_MS || String(DEFAULT_POLL_INTERVAL_MS),
+      10
+    )
 
     // The poller drives acquire/renew off a single lock (single source of truth)
     // and calls these lifecycle hooks. onLockAcquired -> initialize the bot;

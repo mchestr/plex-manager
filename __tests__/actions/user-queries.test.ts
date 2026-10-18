@@ -31,6 +31,9 @@ jest.mock('@/lib/prisma', () => ({
     subscription: {
       findMany: jest.fn(),
     },
+    tautulli: {
+      findFirst: jest.fn(),
+    },
   },
 }))
 
@@ -96,17 +99,38 @@ describe('getUserPlexWrapped', () => {
     })
   })
 
-  it('should use current year as default', async () => {
-    const currentYear = 2024
+  it("drops a legacy row's leaderboards before the data leaves the server", async () => {
+    const data = {
+      version: 2,
+      userName: 'Test User',
+      statistics: {
+        moviesWatched: 3,
+        leaderboards: { watchTime: { leaderboard: [{ friendly_name: 'Someone Else', total_minutes: 900 }] } },
+      },
+    }
+    mockPrisma.plexWrapped.findUnique.mockResolvedValue(
+      makePrismaWrapped({ userId: 'user-1', year: 2024, data: JSON.stringify(data) }) as any
+    )
+
+    const result = await getUserPlexWrapped('user-1', 2024)
+
+    expect(JSON.parse(result!.data)).toEqual({ version: 2, userName: 'Test User', statistics: { moviesWatched: 3 } })
+    expect(result!.data).not.toContain('Someone Else')
+  })
+
+  // P0.14: no calendar default. In January the caller's season year (2026)
+  // is looked up, not the new calendar year.
+  it('looks up the year it is given, not the calendar year', async () => {
+    jest.setSystemTime(new Date('2027-01-02T12:00:00Z'))
     mockPrisma.plexWrapped.findUnique.mockResolvedValue(null)
 
-    await getUserPlexWrapped('user-1')
+    await getUserPlexWrapped('user-1', 2026)
 
     expect(mockPrisma.plexWrapped.findUnique).toHaveBeenCalledWith({
       where: {
         userId_year: {
           userId: 'user-1',
-          year: currentYear,
+          year: 2026,
         },
       },
       include: {
@@ -136,6 +160,56 @@ describe('getUserPlexWrapped', () => {
     const result = await getUserPlexWrapped('user-1', 2024)
 
     expect(result).toBeNull()
+  })
+
+  describe('stored error (P0.9)', () => {
+    // A row written before P0.9 still holds the Tautulli roster.
+    const LEGACY_ROSTER_ERROR =
+      'User not found in Tautulli. Plex User ID: 1, Email: me@example.com. Available users: olga_plex (olga.private@example.com), piet_plex (piet.private@example.com)'
+
+    it('gives a member a stored code, not the legacy roster text', async () => {
+      mockPrisma.plexWrapped.findUnique.mockResolvedValue(
+        makePrismaWrapped({ status: 'failed', error: LEGACY_ROSTER_ERROR }) as any
+      )
+
+      const result = await getUserPlexWrapped('user-1', 2024)
+
+      expect(result?.error).toBe('{"code":"GENERATION_FAILED"}')
+      const output = JSON.stringify(result)
+      for (const value of ['olga_plex', 'olga.private@example.com', 'piet_plex', 'piet.private@example.com', 'Available users']) {
+        expect(output).not.toContain(value)
+      }
+    })
+
+    it('passes a stored code through to a member unchanged', async () => {
+      mockPrisma.plexWrapped.findUnique.mockResolvedValue(
+        makePrismaWrapped({ status: 'failed', error: '{"code":"TAUTULLI_USER_NOT_FOUND"}' }) as any
+      )
+
+      const result = await getUserPlexWrapped('user-1', 2024)
+
+      expect(result?.error).toBe('{"code":"TAUTULLI_USER_NOT_FOUND"}')
+    })
+
+    it('leaves a row without an error untouched', async () => {
+      const row = makePrismaWrapped({ status: 'completed', error: null })
+      mockPrisma.plexWrapped.findUnique.mockResolvedValue(row as any)
+
+      const result = await getUserPlexWrapped('user-1', 2024)
+
+      expect(result).toEqual(row)
+    })
+
+    it('gives an admin the stored text as is', async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValue({ user: { id: 'admin-1', isAdmin: true } })
+      mockPrisma.plexWrapped.findUnique.mockResolvedValue(
+        makePrismaWrapped({ status: 'failed', error: LEGACY_ROSTER_ERROR }) as any
+      )
+
+      const result = await getUserPlexWrapped('user-1', 2024)
+
+      expect(result?.error).toBe(LEGACY_ROSTER_ERROR)
+    })
   })
 })
 
@@ -220,12 +294,14 @@ describe('getAllUsersWithWrapped', () => {
     })
   })
 
-  it('should use current year as default', async () => {
-    const currentYear = 2024
+  // P0.14: the year comes from the caller (the season year), never the calendar.
+  it('reads the year it is given, not the calendar year', async () => {
+    jest.setSystemTime(new Date('2027-01-02T12:00:00Z'))
+    const seasonYear = 2026
     mockPrisma.user.findMany.mockResolvedValue([])
     mockPrisma.plexWrapped.findMany.mockResolvedValue([])
 
-    await getAllUsersWithWrapped()
+    await getAllUsersWithWrapped(seasonYear)
 
     expect(mockPrisma.user.findMany).toHaveBeenCalledWith({
       orderBy: [
@@ -235,7 +311,7 @@ describe('getAllUsersWithWrapped', () => {
       include: {
         plexWrapped: {
           where: {
-            year: currentYear,
+            year: seasonYear,
           },
           take: 1,
           include: {

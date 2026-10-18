@@ -1,3 +1,5 @@
+import { randomBytes } from 'node:crypto';
+
 import { expect, test, TEST_USERS } from './fixtures/auth';
 import { createE2EPrismaClient } from './helpers/prisma';
 import {
@@ -114,9 +116,10 @@ test.describe('User Scenarios', () => {
         const noWrappedFound = regularUserPage.getByTestId('no-wrapped-found');
         await expect(noWrappedFound).not.toBeVisible();
 
-        // Verify some wrapped content is visible (check for year in heading or content)
-        const wrappedContent = regularUserPage.getByText(new RegExp(`${currentYear}`, 'i'));
-        await expect(wrappedContent).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+        // /wrapped resolves to the latest completed year, and the viewer shows it
+        await expect(regularUserPage).toHaveURL(new RegExp(`/wrapped/${currentYear}$`));
+        // after the ~6.5 s intro transition
+        await expect(regularUserPage.getByTestId('wrapped-viewer')).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
 
       } finally {
         // Cleanup: delete the mock wrapped data
@@ -133,7 +136,8 @@ test.describe('User Scenarios', () => {
     test('anonymous user can access shared wrapped via share link', async ({ browser }) => {
       const prisma = createE2EPrismaClient();
       const currentYear = new Date().getFullYear();
-      const shareToken = `test-share-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+      // A real share token's shape: 32 random bytes in base64url.
+      const shareToken = randomBytes(32).toString('base64url');
 
       // Mock wrapped data matching the WrappedData type structure
       const mockWrappedData = {

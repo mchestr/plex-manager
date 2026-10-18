@@ -49,6 +49,14 @@ type AuthFixtures = {
   regularUserPage: Page;
 };
 
+/** Sign-in attempts through the callback page before the fixture gives up. */
+const SIGN_IN_ATTEMPTS = 2;
+
+/** What `/api/auth/session` returns: `{}` without a session. */
+interface SessionResponse {
+  user?: { email?: string | null; isAdmin?: boolean };
+}
+
 /**
  * Authenticate a page by navigating to the callback URL with a test token
  * This simulates a successful OAuth callback in test mode
@@ -82,6 +90,48 @@ async function authenticateAs(page: Page, testToken: string, expectedUser?: Test
     }
   });
 
+  // next-auth mints a CSRF cookie for every /api/auth request that arrives
+  // without one. On the callback page, SessionProvider's /api/auth/session and
+  // signIn()'s /api/auth/csrf can be in flight together (under next dev the
+  // first compile of the route makes that likely), so each mints its own
+  // cookie. When the session response's cookie lands after the token signIn()
+  // read, the POST fails the CSRF check, yet signIn() reports ok because
+  // next-auth answers with a redirect URL that has no error. The page then
+  // redirects without a session. Setting the cookie here first, which also
+  // compiles the route, means no request on the page mints another.
+  // page.request shares the context's cookies.
+  await page.request.get('/api/auth/csrf');
+
+  for (let attempt = 1; ; attempt++) {
+    await signInThroughCallback(page, testToken);
+
+    const session = await waitForSession(page);
+    if (session?.user) {
+      console.log(`[E2E Auth] Successfully authenticated as: ${session.user.email} (isAdmin: ${session.user.isAdmin})`);
+      return;
+    }
+
+    if (attempt === SIGN_IN_ATTEMPTS) {
+      // Get cookies for debugging
+      const cookies = await page.context().cookies();
+      const authCookies = cookies.filter(c => c.name.includes('next-auth'));
+
+      throw new Error(
+        `Failed to create session for test token: ${testToken}.\n` +
+        `Session: ${JSON.stringify(session)}\n` +
+        `Auth cookies: ${JSON.stringify(authCookies.map(c => c.name))}\n` +
+        `Sign-in attempts: ${attempt}/${SIGN_IN_ATTEMPTS}`
+      );
+    }
+    console.warn(`[E2E Auth] No session after sign-in attempt ${attempt}/${SIGN_IN_ATTEMPTS}, retrying`);
+  }
+}
+
+/**
+ * Opens the Plex callback page with the test token and waits for it to
+ * redirect home or to onboarding, the page's signal that signIn() returned.
+ */
+async function signInThroughCallback(page: Page, testToken: string): Promise<void> {
   // Navigate to the callback URL with the test token
   await page.goto(`/auth/callback/plex?testToken=${testToken}`, { waitUntil: 'load' });
   console.log(`[E2E Auth] Callback page loaded`);
@@ -121,45 +171,34 @@ async function authenticateAs(page: Page, testToken: string, expectedUser?: Test
 
   // Wait for the page to be fully loaded after the redirect
   await page.waitForLoadState('domcontentloaded', { timeout: 10000 });
+}
 
-  // Verify session was created by checking the session API
-  // Poll for session with retries since it might take a moment to be established
-  let session: any = null;
-  let attempts = 0;
+/**
+ * Polls the session API until it returns a user, for at most 10 seconds,
+ * and returns the last session it read.
+ */
+async function waitForSession(page: Page): Promise<SessionResponse | null> {
+  let session: SessionResponse | null = null;
   const maxAttempts = 20; // 10 seconds max wait (20 attempts * 500ms)
 
-  while (attempts < maxAttempts) {
-    attempts++;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       const sessionResponse = await page.request.get('/api/auth/session');
-      session = await sessionResponse.json();
+      session = (await sessionResponse.json()) as SessionResponse | null;
 
-      if (session && session.user) {
-        console.log(`[E2E Auth] Session established on attempt ${attempts}: ${JSON.stringify(session)}`);
-        break;
+      if (session?.user) {
+        console.log(`[E2E Auth] Session established on attempt ${attempt}: ${JSON.stringify(session)}`);
+        return session;
       }
     } catch (err) {
-      console.log(`[E2E Auth] Session check failed on attempt ${attempts}, retrying...`);
+      console.log(`[E2E Auth] Session check failed on attempt ${attempt}, retrying...`);
     }
 
     // Wait 500ms before next attempt
     await new Promise(resolve => setTimeout(resolve, 500));
   }
 
-  if (!session || !session.user) {
-    // Get cookies for debugging
-    const cookies = await page.context().cookies();
-    const authCookies = cookies.filter(c => c.name.includes('next-auth'));
-
-    throw new Error(
-      `Failed to create session for test token: ${testToken}.\n` +
-      `Session: ${JSON.stringify(session)}\n` +
-      `Auth cookies: ${JSON.stringify(authCookies.map(c => c.name))}\n` +
-      `Attempts: ${attempts}/${maxAttempts}`
-    );
-  }
-
-  console.log(`[E2E Auth] Successfully authenticated as: ${session.user.email} (isAdmin: ${session.user.isAdmin})`);
+  return session;
 }
 
 /**

@@ -7,6 +7,9 @@
  *    (getTautulliLibraryStats), NOT the names client (getTautulliLibraryNames).
  * 2. get_tautulli_users must be excluded from the Discord safe-tool set and
  *    never advertised in the generated Discord system prompt.
+ *
+ * It also covers the Discord activity scoping, which maps the caller to their
+ * Tautulli user through the shared findTautulliUser lookup (P0.9).
  */
 
 import { executeTautulliTool } from "../tautulli"
@@ -16,6 +19,8 @@ import {
   generateDiscordSystemPrompt,
 } from "@/actions/chatbot/tools"
 import {
+  findTautulliUser,
+  getTautulliActivity,
   getTautulliLibraryNames,
   getTautulliLibraryStats,
 } from "@/lib/connections/tautulli"
@@ -33,6 +38,8 @@ jest.mock("@/lib/prisma", () => ({
 }))
 
 jest.mock("@/lib/connections/tautulli", () => ({
+  findTautulliUser: jest.fn(),
+  getTautulliActivity: jest.fn(),
   getTautulliLibraryNames: jest.fn(),
   getTautulliLibraryStats: jest.fn(),
   getTautulliUsers: jest.fn(),
@@ -56,6 +63,9 @@ const mockGetTautulliLibraryStats = getTautulliLibraryStats as jest.MockedFuncti
 const mockTautulliFindFirst = prisma.tautulli.findFirst as jest.MockedFunction<
   typeof prisma.tautulli.findFirst
 >
+const mockFindTautulliUser = findTautulliUser as jest.MockedFunction<typeof findTautulliUser>
+const mockGetTautulliActivity = getTautulliActivity as jest.MockedFunction<typeof getTautulliActivity>
+const mockUserFindUnique = prisma.user.findUnique as jest.Mock
 
 describe("executeTautulliTool - library stats routing", () => {
   beforeEach(() => {
@@ -127,6 +137,96 @@ describe("executeTautulliTool - library stats routing", () => {
     expect(mockGetTautulliLibraryStats).toHaveBeenCalledTimes(1)
     expect(mockGetTautulliLibraryNames).not.toHaveBeenCalled()
     expect(result).toBe(JSON.stringify({ error: "Tautulli library stats error: Bad Gateway" }))
+  })
+})
+
+describe("executeTautulliTool - Discord activity scoping", () => {
+  const activity = {
+    response: {
+      result: "success",
+      data: {
+        stream_count: "2",
+        sessions: [
+          { user_id: 501, title: "Mine" },
+          { user_id: 502, title: "Someone else's" },
+        ],
+      },
+    },
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockTautulliFindFirst.mockResolvedValue({
+      id: "tautulli-1",
+      name: "Tautulli",
+      url: "http://localhost:8181",
+      apiKey: "test-key",
+      publicUrl: null,
+      isActive: true,
+    } as never)
+    mockGetTautulliActivity.mockResolvedValue({ success: true, data: activity })
+    mockUserFindUnique.mockResolvedValue({ plexUserId: "501" })
+  })
+
+  it("maps the caller through the shared lookup and keeps only their sessions", async () => {
+    mockFindTautulliUser.mockResolvedValue({ ok: true, user: { user_id: 501, username: "lena_plex" } })
+
+    const result = JSON.parse(
+      await executeTautulliTool("get_tautulli_activity", {}, "user-1", "discord")
+    )
+
+    expect(mockUserFindUnique).toHaveBeenCalledWith({
+      where: { id: "user-1" },
+      select: { plexUserId: true },
+    })
+    expect(mockFindTautulliUser).toHaveBeenCalledWith(
+      expect.objectContaining({ url: "http://localhost:8181", apiKey: "test-key" }),
+      { plexUserId: "501" }
+    )
+    expect(result.response.data.session_count).toBe(1)
+    expect(result.response.data.sessions).toEqual([{ user_id: 501, title: "Mine" }])
+  })
+
+  it("returns no sessions when the matched user is not streaming", async () => {
+    mockFindTautulliUser.mockResolvedValue({ ok: true, user: { user_id: 503, username: "lena_plex" } })
+
+    const result = JSON.parse(
+      await executeTautulliTool("get_tautulli_activity", {}, "user-1", "discord")
+    )
+
+    expect(result.response.data.session_count).toBe(0)
+    expect(result.response.data.sessions).toEqual([])
+  })
+
+  it.each([
+    ["the lookup finds no Tautulli user", { ok: false, code: "TAUTULLI_USER_NOT_FOUND", candidates: 2 }],
+    ["the lookup fails or times out", { ok: false, code: "TAUTULLI_ERROR" }],
+  ])("returns no sessions when %s", async (_case, lookup) => {
+    mockFindTautulliUser.mockResolvedValue(lookup as never)
+
+    const result = JSON.parse(
+      await executeTautulliTool("get_tautulli_activity", {}, "user-1", "discord")
+    )
+
+    expect(result.response.data.session_count).toBe(0)
+    expect(result.response.data.sessions).toEqual([])
+  })
+
+  it("returns no sessions to a caller without a Plex user ID", async () => {
+    mockUserFindUnique.mockResolvedValue({ plexUserId: null })
+
+    const result = JSON.parse(
+      await executeTautulliTool("get_tautulli_activity", {}, "user-1", "discord")
+    )
+
+    expect(mockFindTautulliUser).not.toHaveBeenCalled()
+    expect(result.response.data.sessions).toEqual([])
+  })
+
+  it("does not look the caller up outside the Discord context", async () => {
+    await executeTautulliTool("get_tautulli_activity", {}, "user-1", "admin")
+
+    expect(mockFindTautulliUser).not.toHaveBeenCalled()
   })
 })
 

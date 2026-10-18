@@ -1,0 +1,769 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Setup – Plex Manager</title>
+<script>if (/theme=light/.test(location.search)) document.documentElement.setAttribute('data-theme','light')
+// Mockup states: ?step=claim (step 0), ?step=plex-start, ?step=plex (server picker), default overseerr (step 3)
+document.documentElement.dataset.step = new URLSearchParams(location.search).get('step') || 'overseerr'</script>
+<style>
+/* ===== Plex Manager design system: mockup stylesheet (tokens + component recipes) =====
+   Mockup convenience: dark values on :root, light on [data-theme="light"].
+   Production follows the shadcn convention instead (light on :root, dark on .dark). */
+@font-face { font-family: "IBM Plex Sans"; font-style: normal; font-weight: 100 700; font-stretch: 75% 100%; font-display: swap;
+  src: url("fonts/IBMPlexSans-Variable-wght-wdth-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: "IBM Plex Sans"; font-style: normal; font-weight: 100 700; font-stretch: 75% 100%; font-display: swap;
+  src: url("fonts/IBMPlexSans-Variable-wght-wdth-greek.woff2") format("woff2");
+  unicode-range: U+0370-0377,U+037A-037F,U+0384-038A,U+038C,U+038E-03A1,U+03A3-03FF; }
+@font-face { font-family: "IBM Plex Mono"; font-weight: 400; src: url("fonts/IBMPlexMono-400-latin.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Mono"; font-weight: 500; src: url("fonts/IBMPlexMono-500-latin.woff2") format("woff2"); }
+@font-face { font-family: "IBM Plex Mono"; font-weight: 600; src: url("fonts/IBMPlexMono-600-latin.woff2") format("woff2"); }
+
+:root {
+  --background: oklch(22.5% 0.005 255);
+  --foreground: oklch(96.5% 0.003 255);
+  --card: oklch(25.2% 0.005 255);
+  --card-foreground: oklch(96.5% 0.003 255);
+  --popover: oklch(28% 0.006 255);
+  --popover-foreground: oklch(96.5% 0.003 255);
+  --primary: oklch(79% 0.155 75);
+  --primary-hover: oklch(83% 0.145 77);
+  --primary-foreground: oklch(20% 0.03 65);
+  --primary-indicator: oklch(79% 0.155 75);
+  --primary-indicator-foreground: oklch(20% 0.03 65);
+  --secondary: oklch(30.5% 0.006 255);
+  --secondary-hover: oklch(34% 0.006 255);
+  --secondary-foreground: oklch(96.5% 0.003 255);
+  --muted: oklch(27.5% 0.005 255);
+  --muted-foreground: oklch(76% 0.01 255);
+  --accent: oklch(31.5% 0.006 255);
+  --accent-foreground: oklch(96.5% 0.003 255);
+  --destructive: oklch(74% 0.15 25);
+  --destructive-foreground: oklch(20% 0.04 25);
+  --success: oklch(77% 0.15 155);
+  --success-foreground: oklch(20% 0.04 155);
+  --warning: oklch(88% 0.13 102);
+  --warning-foreground: oklch(22% 0.04 95);
+  --info: oklch(77% 0.11 240);
+  --info-foreground: oklch(20% 0.04 240);
+  --border: oklch(35% 0.006 255);
+  --border-strong: oklch(44% 0.006 255);
+  --input: oklch(56% 0.008 255);
+  --ring: oklch(79% 0.155 75);
+  --chart-1: oklch(67% 0.14 70);
+  --chart-2: oklch(62% 0.14 250);
+  --chart-3: oklch(66% 0.12 175);
+  --chart-4: oklch(60% 0.16 305);
+  --chart-5: oklch(66% 0.17 355);
+  --sidebar: oklch(20.5% 0.005 255);
+  --sidebar-foreground: oklch(82% 0.006 255);
+  --sidebar-primary: oklch(79% 0.155 75);
+  --sidebar-primary-foreground: oklch(20% 0.03 65);
+  --sidebar-accent: oklch(27.5% 0.006 255);
+  --sidebar-accent-foreground: oklch(96.5% 0.003 255);
+  --sidebar-border: oklch(30% 0.006 255);
+  --sidebar-ring: oklch(79% 0.155 75);
+}
+[data-theme="light"] {
+  --background: oklch(98.5% 0.002 255);
+  --foreground: oklch(20% 0.006 255);
+  --card: oklch(100% 0 0);
+  --card-foreground: oklch(20% 0.006 255);
+  --popover: oklch(100% 0 0);
+  --popover-foreground: oklch(20% 0.006 255);
+  --primary: oklch(79% 0.155 75);
+  --primary-hover: oklch(75% 0.155 72);
+  --primary-foreground: oklch(20% 0.03 65);
+  --primary-indicator: oklch(55% 0.12 62);
+  --primary-indicator-foreground: oklch(98.5% 0 0);
+  --secondary: oklch(95.5% 0.003 255);
+  --secondary-hover: oklch(92.5% 0.004 255);
+  --secondary-foreground: oklch(20% 0.006 255);
+  --muted: oklch(96.5% 0.003 255);
+  --muted-foreground: oklch(47% 0.012 255);
+  --accent: oklch(94.5% 0.004 255);
+  --accent-foreground: oklch(20% 0.006 255);
+  --destructive: oklch(49% 0.19 27);
+  --destructive-foreground: oklch(98.5% 0 0);
+  --success: oklch(46% 0.12 155);
+  --success-foreground: oklch(98.5% 0 0);
+  --warning: oklch(47% 0.1 85);
+  --warning-foreground: oklch(98.5% 0 0);
+  --info: oklch(47% 0.13 250);
+  --info-foreground: oklch(98.5% 0 0);
+  --border: oklch(90% 0.004 255);
+  --border-strong: oklch(84% 0.005 255);
+  --input: oklch(62% 0.008 255);
+  --ring: oklch(55% 0.12 62);
+  --chart-1: oklch(64% 0.135 62);
+  --chart-2: oklch(55% 0.15 250);
+  --chart-3: oklch(60% 0.11 175);
+  --chart-4: oklch(55% 0.18 305);
+  --chart-5: oklch(60% 0.19 355);
+  --sidebar: oklch(97% 0.003 255);
+  --sidebar-foreground: oklch(35% 0.008 255);
+  --sidebar-primary: oklch(55% 0.12 62);
+  --sidebar-primary-foreground: oklch(98.5% 0 0);
+  --sidebar-accent: oklch(93% 0.004 255);
+  --sidebar-accent-foreground: oklch(20% 0.006 255);
+  --sidebar-border: oklch(90% 0.004 255);
+  --sidebar-ring: oklch(55% 0.12 62);
+}
+/* ---- Rewind scope (ui-design-system.md 4.4; ink values from rewind-2026-design.md 5.2) ----
+   The root carries data-theme="rewind"; every element that carries data-field gets the semantic remap,
+   because var() inside a custom property resolves where it is declared. */
+[data-theme="rewind"] {
+  --rw-paper: oklch(94% 0.02 85);        --rw-on-paper: oklch(19% 0.012 70);       --rw-paper-deep: oklch(19% 0.012 70);
+  --rw-coral: oklch(71.5% 0.16 34);      --rw-on-coral: oklch(18% 0.035 30);       --rw-coral-deep: oklch(43% 0.15 30);
+  --rw-marigold: oklch(82.5% 0.15 75);   --rw-on-marigold: oklch(20% 0.03 70);     --rw-marigold-deep: oklch(41.5% 0.085 65);
+  --rw-rose: oklch(79% 0.12 352);        --rw-on-rose: oklch(20% 0.04 345);        --rw-rose-deep: oklch(42% 0.15 355);
+  --rw-sky: oklch(84% 0.075 235);        --rw-on-sky: oklch(22% 0.05 245);         --rw-sky-deep: oklch(41% 0.1 245);
+  --rw-peach: oklch(84.5% 0.075 45);     --rw-on-peach: oklch(21% 0.035 40);       --rw-peach-deep: oklch(42% 0.11 40);
+  --rw-lilac: oklch(78% 0.095 290);      --rw-on-lilac: oklch(20% 0.06 285);       --rw-lilac-deep: oklch(42% 0.15 290);
+  --rw-mint: oklch(86% 0.085 165);       --rw-on-mint: oklch(20% 0.03 165);        --rw-mint-deep: oklch(40% 0.08 160);
+  --rw-ultramarine: oklch(42% 0.2 268);  --rw-on-ultramarine: oklch(94% 0.02 85);  --rw-ultramarine-deep: oklch(42% 0.2 268);
+  --rw-forest: oklch(40% 0.075 165);     --rw-on-forest: oklch(94% 0.02 85);       --rw-forest-deep: oklch(40% 0.075 165);
+  --rw-oxblood: oklch(33% 0.1 18);       --rw-on-oxblood: oklch(93% 0.03 60);      --rw-oxblood-deep: oklch(33% 0.1 18);
+  --rw-petrol: oklch(40.5% 0.065 215);   --rw-on-petrol: oklch(94% 0.02 85);       --rw-petrol-deep: oklch(40.5% 0.065 215);
+}
+[data-field]:where([data-theme="rewind"], [data-theme="rewind"] *) {
+  /* from Rewind 5.2 */
+  --background: var(--field); --foreground: var(--ink);
+  --card: var(--field); --card-foreground: var(--ink);
+  --popover: var(--rw-paper); --popover-foreground: var(--rw-on-paper);
+  --primary: var(--ink); --primary-foreground: var(--field);
+  --secondary: transparent; --secondary-foreground: var(--ink);
+  --muted-foreground: var(--ink);
+  --border: var(--ink); --input: var(--ink); --ring: var(--ink);
+  --radius: 0.375rem;
+  /* closing set (this contract): every other token a shared primitive reads */
+  --primary-hover: var(--ink);
+  --secondary-hover: var(--ink); --accent: var(--ink); --accent-foreground: var(--field);
+  --muted: transparent; --border-strong: var(--ink);
+  --primary-indicator: var(--ink); --primary-indicator-foreground: var(--field);
+  --success: var(--ink); --warning: var(--ink); --info: var(--ink); --destructive: var(--ink);
+  --success-foreground: var(--field); --warning-foreground: var(--field); --info-foreground: var(--field); --destructive-foreground: var(--field);
+  --chart-1: var(--ink); --chart-2: var(--spot); --chart-3: var(--ink); --chart-4: var(--ink); --chart-5: var(--ink);
+  color: var(--ink);
+}
+[data-field="paper"] { --field: var(--rw-paper); --ink: var(--rw-on-paper); --spot: var(--rw-ultramarine-deep); --deep: var(--rw-paper-deep); color-scheme: light; }
+[data-field="coral"] { --field: var(--rw-coral); --ink: var(--rw-on-coral); --spot: var(--rw-on-coral); --deep: var(--rw-coral-deep); color-scheme: light; }
+[data-field="marigold"] { --field: var(--rw-marigold); --ink: var(--rw-on-marigold); --spot: var(--rw-on-marigold); --deep: var(--rw-marigold-deep); color-scheme: light; }
+[data-field="rose"] { --field: var(--rw-rose); --ink: var(--rw-on-rose); --spot: var(--rw-on-rose); --deep: var(--rw-rose-deep); color-scheme: light; }
+[data-field="sky"] { --field: var(--rw-sky); --ink: var(--rw-on-sky); --spot: var(--rw-on-sky); --deep: var(--rw-sky-deep); color-scheme: light; }
+[data-field="peach"] { --field: var(--rw-peach); --ink: var(--rw-on-peach); --spot: var(--rw-on-peach); --deep: var(--rw-peach-deep); color-scheme: light; }
+[data-field="lilac"] { --field: var(--rw-lilac); --ink: var(--rw-on-lilac); --spot: var(--rw-on-lilac); --deep: var(--rw-lilac-deep); color-scheme: light; }
+[data-field="mint"] { --field: var(--rw-mint); --ink: var(--rw-on-mint); --spot: var(--rw-on-mint); --deep: var(--rw-mint-deep); color-scheme: light; }
+[data-field="ultramarine"] { --field: var(--rw-ultramarine); --ink: var(--rw-on-ultramarine); --spot: var(--rw-marigold); --deep: var(--rw-ultramarine-deep); color-scheme: dark; }
+[data-field="forest"] { --field: var(--rw-forest); --ink: var(--rw-on-forest); --spot: var(--rw-on-forest); --deep: var(--rw-forest-deep); color-scheme: dark; }
+[data-field="oxblood"] { --field: var(--rw-oxblood); --ink: var(--rw-on-oxblood); --spot: var(--rw-on-oxblood); --deep: var(--rw-oxblood-deep); color-scheme: dark; }
+[data-field="petrol"] { --field: var(--rw-petrol); --ink: var(--rw-on-petrol); --spot: var(--rw-on-petrol); --deep: var(--rw-petrol-deep); color-scheme: dark; }
+
+
+:root {
+  color-scheme: dark;
+  --overlay: oklch(14% 0.005 255 / 0.72);
+  --tint: 14%;
+  --radius: 0.5rem;
+  --radius-sm: 4px; --radius-md: 6px; --radius-lg: 8px; --radius-xl: 12px;
+  --shadow-popover: 0 1px 0 oklch(100% 0 0 / 0.04) inset, 0 12px 32px -8px oklch(0% 0 0 / 0.55), 0 2px 6px oklch(0% 0 0 / 0.3);
+  --shadow-dialog: 0 24px 64px -16px oklch(0% 0 0 / 0.7);
+  --shadow-poster: 0 1px 2px oklch(0% 0 0 / 0.35), 0 6px 16px -6px oklch(0% 0 0 / 0.5);
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --dur-1: 120ms; --dur-2: 180ms; --dur-3: 240ms;
+}
+[data-theme="light"] {
+  color-scheme: light;
+  --overlay: oklch(20% 0.006 255 / 0.4);
+  --tint: 10%;
+  --shadow-popover: 0 12px 32px -8px oklch(20% 0.01 255 / 0.18), 0 2px 6px oklch(20% 0.01 255 / 0.08);
+  --shadow-dialog: 0 24px 64px -16px oklch(20% 0.01 255 / 0.3);
+  --shadow-poster: 0 1px 2px oklch(20% 0.01 255 / 0.18), 0 6px 16px -6px oklch(20% 0.01 255 / 0.25);
+}
+/* Rewind scope extras the mockup stylesheet needs (radius 0.375rem, no shadows, paper scrim, 3px focus, no status tints) */
+[data-field]:where([data-theme="rewind"], [data-theme="rewind"] *) { --tint: 0%; --overlay: oklch(19% 0.012 70 / 0.55);
+  --shadow-popover: none; --shadow-dialog: none; --shadow-poster: none; --focus-w: 3px;
+  --radius-sm: 2px; --radius-md: 4px; --radius-lg: 6px; --radius-xl: 10px; }
+
+/* ---------- Base ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--background); color: var(--foreground);
+  font-family: var(--font-sans); font-size: 15px; line-height: 24px; font-weight: 400;
+  -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+}
+h1, h2, h3, h4, p, figure, dl, dd { margin: 0; }
+h1, h2, h3, .t-display, .t-h1, .t-h2 { text-wrap: balance; }
+p, li, dd { text-wrap: pretty; }
+a { color: inherit; text-decoration: none; }
+ul, ol { margin: 0; padding: 0; }
+button { font: inherit; color: inherit; }
+svg.i { width: 16px; height: 16px; flex: none; stroke-width: 1.75; }
+svg.i-20 { width: 20px; height: 20px; }
+svg.i-14 { width: 14px; height: 14px; }
+svg.i-12 { width: 12px; height: 12px; }
+.num { font-variant-numeric: tabular-nums; }
+.mono { font-family: var(--font-mono); font-size: 13px; line-height: 20px; }
+.muted { color: var(--muted-foreground); }
+.fg { color: var(--foreground); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.row { display: flex; align-items: center; gap: 8px; }
+.stack { display: flex; flex-direction: column; }
+.grow { flex: 1; min-width: 0; }
+
+/* ---------- Type scale ---------- */
+.t-display { font-size: 40px; line-height: 48px; font-weight: 600; letter-spacing: -0.022em; font-stretch: 92%; }
+.t-h1 { font-size: 28px; line-height: 36px; font-weight: 600; letter-spacing: -0.015em; }
+.t-h2 { font-size: 20px; line-height: 28px; font-weight: 600; letter-spacing: -0.01em; }
+.t-h3 { font-size: 16px; line-height: 24px; font-weight: 600; letter-spacing: -0.005em; }
+.t-lead { font-size: 17px; line-height: 28px; }
+.t-body { font-size: 15px; line-height: 24px; }
+.t-sm { font-size: 14px; line-height: 20px; }
+.t-xs { font-size: 13px; line-height: 18px; }
+.t-2xs { font-size: 12px; line-height: 16px; }
+.t-label { font-size: 13px; line-height: 18px; font-weight: 500; color: var(--muted-foreground); }
+.t-stat { font-size: 28px; line-height: 36px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+
+/* ---------- Brand ---------- */
+.pip { display: inline-block; width: 8px; height: 8px; border-radius: 2px; background: var(--primary); flex: none; }
+.pip.pip-state { background: var(--primary-indicator); } /* unread and unsaved: a state indicator, 3:1 in both themes */
+.wordmark { display: inline-flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; letter-spacing: -0.01em; white-space: nowrap; min-width: 0; }
+.wordmark .wm-name { overflow: hidden; text-overflow: ellipsis; }
+.wordmark.is-long .wm-name { font-stretch: 85%; }
+.monogram { width: 32px; height: 32px; border-radius: var(--radius-md); background: var(--secondary); border: 1px solid var(--border-strong); display: inline-flex; align-items: center; justify-content: center; position: relative; font-weight: 600; font-size: 15px; flex: none; }
+.monogram::after { content: ""; position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; border-radius: 1.5px; background: var(--primary); }
+.monogram-48 { width: 48px; height: 48px; border-radius: 10px; font-size: 22px; }
+.monogram-48::after { top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 2px; }
+
+/* ---------- Buttons ---------- */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 36px; padding: 0 14px;
+  border-radius: var(--radius-md); border: 1px solid transparent; font-size: 14px; line-height: 20px; font-weight: 500;
+  white-space: nowrap; cursor: pointer; background: transparent; color: var(--foreground);
+  transition: background-color var(--dur-1) var(--ease-out), border-color var(--dur-1) var(--ease-out); }
+.btn-sm { height: 32px; padding: 0 10px; font-size: 13px; gap: 6px; }
+.btn-lg { height: 44px; padding: 0 18px; font-size: 15px; }
+.btn-icon { width: 36px; padding: 0; }
+.btn-icon.btn-sm { width: 32px; }
+.btn-primary { background: var(--primary); color: var(--primary-foreground); font-weight: 600; }
+.btn-primary:hover, .btn-primary.is-hover { background: var(--primary-hover); }
+.btn-secondary { background: var(--secondary); color: var(--secondary-foreground); border-color: var(--border-strong); }
+.btn-secondary:hover, .btn-secondary.is-hover { background: var(--secondary-hover); }
+.btn-outline { border-color: var(--border-strong); }
+.btn-outline:hover, .btn-outline.is-hover { background: var(--accent); }
+.btn-ghost:hover, .btn-ghost.is-hover { background: var(--accent); }
+.btn-ghost.muted { color: var(--muted-foreground); }
+.btn-destructive { background: color-mix(in srgb, var(--destructive) 12%, transparent); color: var(--destructive); border-color: color-mix(in srgb, var(--destructive) 40%, transparent); }
+.btn-destructive-solid { background: var(--destructive); color: var(--destructive-foreground); font-weight: 600; }
+.btn[disabled], .btn.is-disabled { background: var(--muted); color: var(--muted-foreground); border-color: var(--border); font-weight: 500; cursor: not-allowed; }
+.btn-ghost[disabled], .btn-ghost.is-disabled { background: transparent; border-color: transparent; }
+.is-focus, .focus-demo { outline: var(--focus-w, 2px) solid var(--ring); outline-offset: var(--focus-w, 2px); }
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.link { color: var(--foreground); text-decoration: underline; text-decoration-color: var(--border-strong); text-underline-offset: 3px; }
+.full { width: 100%; }
+
+/* ---------- Form controls ---------- */
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.label { font-size: 14px; line-height: 20px; font-weight: 500; color: var(--foreground); }
+.label .opt { color: var(--muted-foreground); font-weight: 400; }
+.hint { font-size: 13px; line-height: 18px; color: var(--muted-foreground); }
+.error-text { font-size: 13px; line-height: 18px; color: var(--destructive); display: flex; gap: 6px; align-items: flex-start; }
+.error-text svg.i { width: 14px; height: 14px; margin-top: 2px; }
+.input { height: 36px; width: 100%; border: 1px solid var(--input); border-radius: var(--radius-md); background: var(--background);
+  color: var(--foreground); padding: 0 12px; font: inherit; font-size: 14px; line-height: 20px; display: flex; align-items: center; gap: 8px; min-width: 0; white-space: nowrap; overflow: hidden; }
+.input.mono { font-family: var(--font-mono); font-size: 13px; }
+.input .ph { color: var(--muted-foreground); }
+.input.is-focus { border-color: var(--ring); outline: 2px solid var(--ring); outline-offset: -1px; }
+.input.is-invalid { border-color: var(--destructive); }
+.input.is-disabled { background: var(--muted); color: var(--muted-foreground); border-color: var(--border); }
+.input .lead { color: var(--muted-foreground); display: flex; }
+.input .trail { margin-left: auto; color: var(--muted-foreground); display: flex; align-items: center; gap: 6px; font-family: var(--font-sans); }
+.saved { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; line-height: 16px; font-weight: 500; color: var(--success); }
+.input-lg { height: 44px; font-size: 16px; }
+.select { justify-content: space-between; cursor: pointer; }
+.textarea { height: auto; min-height: 76px; padding: 8px 12px; align-items: flex-start; white-space: normal; }
+.switch { position: relative; width: 36px; height: 20px; border-radius: 999px; background: var(--secondary); border: 1px solid var(--input); flex: none; display: inline-block; }
+.switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 999px; background: var(--muted-foreground); transition: transform var(--dur-2) var(--ease-out); }
+.switch.on { background: var(--primary-indicator); border-color: var(--primary-indicator); }
+.switch.on::after { transform: translateX(16px); background: var(--primary-indicator-foreground); }
+.switch.disabled { background: var(--muted); border-color: var(--border); }
+.switch.disabled::after { background: var(--border-strong); }
+.switch-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.checkbox { width: 16px; height: 16px; border-radius: var(--radius-sm); border: 1px solid var(--input); background: var(--background); flex: none; display: inline-flex; align-items: center; justify-content: center; }
+.checkbox.on { background: var(--primary-indicator); border-color: var(--primary-indicator); color: var(--primary-indicator-foreground); }
+.checkbox.on svg.i { width: 12px; height: 12px; stroke-width: 3; }
+.check-row { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+
+/* ---------- Surfaces ---------- */
+.card { background: var(--card); color: var(--card-foreground); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.card-header { padding: 20px 20px 0; display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; }
+.card-title { font-size: 16px; line-height: 24px; font-weight: 600; letter-spacing: -0.005em; }
+.card-desc { font-size: 14px; line-height: 20px; color: var(--muted-foreground); margin-top: 2px; }
+.card-content { padding: 16px 20px 20px; }
+.card-footer { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+.divider { height: 1px; background: var(--border); border: 0; margin: 0; }
+.tile { width: 40px; height: 40px; border-radius: var(--radius-md); background: var(--muted); border: 1px solid var(--border); display: inline-flex; align-items: center; justify-content: center; color: var(--foreground); flex: none; }
+.tile-sm { width: 32px; height: 32px; }
+.well { background: var(--background); border: 1px solid var(--border); border-radius: var(--radius-md); }
+
+/* ---------- Media: poster, media card ---------- */
+.poster { position: relative; aspect-ratio: 2 / 3; border-radius: var(--radius-sm); overflow: hidden; background: var(--muted); box-shadow: var(--shadow-poster); flex: none; }
+.poster::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px oklch(100% 0 0 / 0.08); pointer-events: none; }
+[data-theme="light"] .poster::after { box-shadow: inset 0 0 0 1px oklch(0% 0 0 / 0.08); }
+.poster svg { display: block; width: 100%; height: 100%; }
+.poster-cap { margin-top: 8px; font-size: 13px; line-height: 18px; }
+.poster-cap .pt { font-weight: 500; color: var(--foreground); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.poster-cap .pm { color: var(--muted-foreground); display: block; }
+.media-card { border-radius: var(--radius-xl); overflow: hidden; background: var(--background); position: relative; }
+
+/* ---------- Badges, dots, meta ---------- */
+.badge { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px; border-radius: var(--radius-sm); font-size: 12px; line-height: 16px; font-weight: 500; white-space: nowrap; border: 1px solid var(--border-strong); color: var(--foreground); background: transparent; }
+.badge .dot { width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
+.badge svg.i { width: 12px; height: 12px; stroke-width: 2; }
+.badge-neutral { background: var(--secondary); color: var(--muted-foreground); border-color: var(--border); }
+.badge-success { color: var(--success); background: color-mix(in srgb, var(--success) var(--tint), transparent); border-color: color-mix(in srgb, var(--success) 30%, transparent); }
+.badge-warning { color: var(--warning); background: color-mix(in srgb, var(--warning) var(--tint), transparent); border-color: color-mix(in srgb, var(--warning) 30%, transparent); }
+.badge-info { color: var(--info); background: color-mix(in srgb, var(--info) var(--tint), transparent); border-color: color-mix(in srgb, var(--info) 30%, transparent); }
+.badge-destructive { color: var(--destructive); background: color-mix(in srgb, var(--destructive) var(--tint), transparent); border-color: color-mix(in srgb, var(--destructive) 30%, transparent); }
+.status { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; line-height: 20px; }
+.status .dot { width: 8px; height: 8px; border-radius: 999px; flex: none; }
+.dot-success { background: var(--success); } .dot-warning { background: var(--warning); } .dot-destructive { background: var(--destructive); } .dot-info { background: var(--info); }
+.dot-off { background: transparent; box-shadow: inset 0 0 0 1.5px var(--input); }
+.kbd { display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border-radius: var(--radius-sm); border: 1px solid var(--border-strong); font-family: var(--font-mono); font-size: 12px; line-height: 16px; color: var(--muted-foreground); background: var(--background); }
+.meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; font-size: 13px; line-height: 18px; color: var(--muted-foreground); }
+.meta > span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.chip { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 4px 0 10px; border-radius: 999px; background: var(--secondary); border: 1px solid var(--border-strong); font-size: 13px; }
+.chip .x { width: 18px; height: 18px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; color: var(--muted-foreground); }
+
+/* ---------- Alerts ---------- */
+.alert { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: var(--radius-lg); border: 1px solid var(--border); background: var(--card); font-size: 14px; line-height: 20px; }
+.alert > svg.i { margin-top: 2px; }
+.alert .alert-title { font-weight: 600; }
+.alert .alert-body { color: var(--muted-foreground); }
+.alert .alert-actions { margin-left: auto; display: flex; gap: 8px; flex: none; align-self: center; }
+.alert-warning { border-color: color-mix(in srgb, var(--warning) 32%, transparent); background: color-mix(in srgb, var(--warning) 8%, var(--card)); }
+.alert-warning > svg.i { color: var(--warning); }
+.alert-destructive { border-color: color-mix(in srgb, var(--destructive) 34%, transparent); background: color-mix(in srgb, var(--destructive) 8%, var(--card)); }
+.alert-destructive > svg.i { color: var(--destructive); }
+.alert-success { border-color: color-mix(in srgb, var(--success) 30%, transparent); background: color-mix(in srgb, var(--success) 7%, var(--card)); }
+.alert-success > svg.i { color: var(--success); }
+.alert-info { border-color: color-mix(in srgb, var(--info) 30%, transparent); background: color-mix(in srgb, var(--info) 7%, var(--card)); }
+.alert-info > svg.i { color: var(--info); }
+
+/* ---------- Table ---------- */
+.table-wrap { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--card); overflow: hidden; }
+table.table { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 20px; }
+.table th { text-align: left; font-size: 13px; line-height: 18px; font-weight: 500; color: var(--muted-foreground); padding: 10px 16px; background: var(--muted); border-bottom: 1px solid var(--border); white-space: nowrap; }
+.table th .sort { display: inline-flex; align-items: center; gap: 4px; }
+.table td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.table tr:last-child td { border-bottom: 0; }
+.table tr.is-hover td { background: color-mix(in srgb, var(--accent) 55%, transparent); }
+.table .r { text-align: right; }
+.table .sub { font-size: 13px; line-height: 18px; color: var(--muted-foreground); }
+.avatar { width: 32px; height: 32px; border-radius: 999px; background: var(--secondary); border: 1px solid var(--border-strong); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: var(--foreground); flex: none; letter-spacing: 0.02em; }
+.avatar-sm { width: 28px; height: 28px; font-size: 12px; letter-spacing: 0; }
+.user-cell { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.user-cell .name { font-weight: 500; color: var(--foreground); }
+.table-foot { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted-foreground); }
+
+/* ---------- Menu / popover / dialog / toast ---------- */
+.menu { position: absolute; z-index: 40; min-width: 220px; background: var(--popover); color: var(--popover-foreground); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); box-shadow: var(--shadow-popover); padding: 4px; }
+.menu-item { display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 8px; border-radius: var(--radius-sm); font-size: 14px; color: var(--foreground); white-space: nowrap; }
+.menu-item svg.i { color: var(--muted-foreground); }
+.menu-item.is-active { background: var(--accent); }
+.menu-item.danger, .menu-item.danger svg.i { color: var(--destructive); }
+.menu-item .trail { margin-left: auto; color: var(--muted-foreground); }
+.menu-sep { height: 1px; background: var(--border); margin: 4px -4px; }
+.menu-label { font-size: 12px; line-height: 16px; color: var(--muted-foreground); padding: 6px 8px 4px; font-weight: 500; }
+.dialog { background: var(--popover); border: 1px solid var(--border-strong); border-radius: var(--radius-xl); box-shadow: var(--shadow-dialog); padding: 24px; }
+.dialog h3 { font-size: 18px; line-height: 26px; font-weight: 600; }
+.dialog .d-desc { margin-top: 6px; color: var(--muted-foreground); font-size: 14px; line-height: 20px; }
+.dialog .d-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px; }
+.toast { display: flex; gap: 12px; padding: 14px 14px 14px 16px; background: var(--popover); border: 1px solid var(--border-strong); border-radius: var(--radius-lg); box-shadow: var(--shadow-popover); font-size: 14px; line-height: 20px; width: 360px; max-width: 100%; }
+.toast > svg.i { margin-top: 2px; }
+.toast .t-title { font-weight: 600; }
+.toast .t-desc { color: var(--muted-foreground); margin-top: 2px; }
+
+/* ---------- Tabs, stepper ---------- */
+.tabs { display: flex; gap: 20px; border-bottom: 1px solid var(--border); }
+.tab { height: 40px; display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; color: var(--muted-foreground); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tab.on { color: var(--foreground); border-bottom-color: var(--ring); }
+.stepper { display: grid; gap: 4px; }
+.stepper .seg { height: 4px; border-radius: 2px; background: var(--secondary); }
+.stepper .seg.done { background: var(--muted-foreground); }
+.stepper .seg.cur { background: var(--primary-indicator); }
+.stepper .lbl { font-size: 12px; line-height: 16px; color: var(--muted-foreground); margin-top: 6px; }
+.stepper .lbl.cur { color: var(--foreground); font-weight: 500; }
+.vstep { display: flex; flex-direction: column; }
+.vstep-group { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--muted-foreground); padding: 14px 0 6px 0; }
+.vstep-item { display: flex; align-items: center; gap: 12px; height: 40px; font-size: 14px; color: var(--muted-foreground); position: relative; }
+.vstep-item .n { width: 24px; height: 24px; border-radius: 999px; border: 1px solid var(--border-strong); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: var(--muted-foreground); flex: none; background: var(--background); font-variant-numeric: tabular-nums; }
+.vstep-item.done { color: var(--foreground); }
+.vstep-item.done .n { background: var(--secondary); color: var(--foreground); }
+.vstep-item.cur { color: var(--foreground); font-weight: 600; }
+.vstep-item.cur .n { background: var(--primary-indicator); border-color: var(--primary-indicator); color: var(--primary-indicator-foreground); }
+.vstep-item .opt { margin-left: auto; font-size: 12px; font-weight: 400; color: var(--muted-foreground); }
+
+/* ---------- Stat tile ---------- */
+.stat { padding: 16px 20px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.stat .s-label { font-size: 13px; line-height: 18px; font-weight: 500; color: var(--muted-foreground); display: flex; align-items: center; gap: 6px; }
+.stat .s-value { font-size: 28px; line-height: 36px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.stat .s-value small { font-size: 15px; font-weight: 500; color: var(--muted-foreground); letter-spacing: 0; margin-left: 4px; }
+.stat .s-meta { font-size: 13px; line-height: 18px; color: var(--muted-foreground); display: flex; align-items: center; gap: 6px; }
+.meter { display: flex; gap: 2px; height: 6px; margin-top: 8px; }
+.meter span { border-radius: 2px; height: 100%; }
+
+/* ---------- Empty state, skeleton ---------- */
+.empty { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 40px 24px; }
+.empty .tile { margin-bottom: 16px; }
+.empty h3 { font-size: 16px; line-height: 24px; font-weight: 600; }
+.empty p { margin-top: 4px; color: var(--muted-foreground); font-size: 14px; line-height: 20px; max-width: 44ch; }
+.empty .e-actions { display: flex; gap: 8px; margin-top: 16px; }
+.sk { background: var(--muted); border-radius: var(--radius-md); }
+.sk-line { height: 12px; border-radius: 4px; background: var(--muted); }
+
+/* ---------- Page header ---------- */
+.crumbs { display: flex; align-items: center; gap: 6px; font-size: 13px; line-height: 18px; color: var(--muted-foreground); }
+.crumbs svg.i { width: 14px; height: 14px; }
+.crumbs .here { color: var(--foreground); }
+.page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
+.page-header .ph-desc { font-size: 15px; line-height: 24px; color: var(--muted-foreground); margin-top: 4px; }
+.page-header .ph-actions { display: flex; gap: 8px; flex: none; }
+
+/* ---------- Admin shell ---------- */
+.shell { display: grid; grid-template-columns: 248px 1fr; min-height: 100vh;
+  /* mockup-only: paints the sidebar column below the sticky sidebar in full-page captures */
+  background: linear-gradient(90deg, var(--sidebar) 0 247px, var(--sidebar-border) 247px 248px, var(--background) 248px); }
+.sidebar { background: var(--sidebar); color: var(--sidebar-foreground); border-right: 1px solid var(--sidebar-border); display: flex; flex-direction: column; padding: 16px 12px; gap: 4px; position: sticky; top: 0; height: 100vh; }
+.sb-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 8px 12px; gap: 8px; }
+.sb-search { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 8px 0 10px; border: 1px solid var(--sidebar-border); border-radius: var(--radius-md); background: var(--background); color: var(--muted-foreground); font-size: 13px; margin: 0 0 8px; }
+.sb-search .kbd { margin-left: auto; }
+.sb-group { margin-top: 14px; }
+.sb-group-label { font-size: 12px; line-height: 16px; font-weight: 500; color: var(--muted-foreground); padding: 0 10px 6px; }
+.nav-item { position: relative; display: flex; align-items: center; gap: 10px; height: 32px; padding: 0 10px; border-radius: var(--radius-md); font-size: 14px; line-height: 20px; color: var(--sidebar-foreground); }
+.nav-item svg.i { color: var(--muted-foreground); }
+.nav-item.on { background: var(--sidebar-accent); color: var(--sidebar-accent-foreground); font-weight: 500; }
+.nav-item.on svg.i { color: var(--sidebar-accent-foreground); }
+.nav-item.on::before { content: ""; position: absolute; left: -12px; top: 8px; bottom: 8px; width: 3px; border-radius: 0 2px 2px 0; background: var(--sidebar-primary); }
+.nav-item .trail { margin-left: auto; }
+.sb-foot { margin-top: auto; border-top: 1px solid var(--sidebar-border); padding-top: 12px; display: flex; flex-direction: column; gap: 4px; }
+.me { display: flex; align-items: center; gap: 10px; padding: 6px 8px; }
+.main { min-width: 0; background: var(--background); }
+.main-inner { max-width: 1160px; padding: 24px 40px 48px; }
+.m-topbar { display: none; }
+.tabbar { display: none; }
+
+/* ---------- Member top bar ---------- */
+.topbar { height: 60px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 28px; padding: 0 32px; background: var(--background); position: sticky; top: 0; z-index: 10; }
+.topnav { display: flex; gap: 4px; }
+.topnav a { height: 32px; display: inline-flex; align-items: center; padding: 0 10px; border-radius: var(--radius-md); font-size: 14px; color: var(--muted-foreground); font-weight: 500; position: relative; }
+.topnav a.on { color: var(--foreground); }
+.topnav a.on::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: -14px; height: 2px; background: var(--ring); border-radius: 2px; }
+.topbar .right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+
+/* ---------- Section heading ---------- */
+.section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.section-head h2 { font-size: 16px; line-height: 24px; font-weight: 600; }
+
+/* ---------- Pass (invite ticket) ---------- */
+.pass { display: grid; grid-template-columns: minmax(0, 1fr) 208px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-xl); position: relative; overflow: hidden; }
+.pass-main { padding: 28px; }
+.pass-stub { padding: 24px 22px; border-left: 1px dashed var(--border-strong); display: flex; flex-direction: column; gap: 14px; background: var(--muted); position: relative; }
+.pass::before, .pass::after { content: ""; position: absolute; width: 20px; height: 20px; border-radius: 999px; background: var(--background); right: 198px; z-index: 1; }
+.pass::before { top: -11px; box-shadow: inset 0 -1px 0 var(--border); }
+.pass::after { bottom: -11px; box-shadow: inset 0 1px 0 var(--border); }
+.pass .code { font-family: var(--font-mono); font-size: 18px; line-height: 24px; font-weight: 600; letter-spacing: 0.06em; }
+.pass-stub .stub-foot { margin-top: auto; display: flex; align-items: center; gap: 10px; padding-top: 12px; }
+.pass.is-void .pass-stub { background: var(--card); }
+.pass.is-void .code { color: var(--muted-foreground); text-decoration: line-through; text-decoration-thickness: 1.5px; }
+@media (max-width: 767px) {
+  .pass { grid-template-columns: 1fr; }
+  .pass-main { padding: 22px 20px; }
+  .pass-stub { border-left: 0; border-top: 1px dashed var(--border-strong); padding: 18px 20px; }
+  .pass::before, .pass::after { top: auto; bottom: calc(var(--stub-h, 168px) - 10px); }
+  .pass::before { left: -11px; right: auto; box-shadow: inset -1px 0 0 var(--border); }
+  .pass::after { right: -11px; left: auto; box-shadow: inset 1px 0 0 var(--border); }
+}
+/* the same stacked layout, forced (used by the mobile frames on the screens board) */
+.pass.is-stacked { grid-template-columns: 1fr; }
+.pass.is-stacked .pass-main { padding: 22px 20px; }
+.pass.is-stacked .pass-stub { border-left: 0; border-top: 1px dashed var(--border-strong); padding: 18px 20px; }
+.pass.is-stacked::before, .pass.is-stacked::after { top: auto; bottom: calc(var(--stub-h, 168px) - 10px); }
+.pass.is-stacked::before { left: -11px; right: auto; box-shadow: inset -1px 0 0 var(--border); }
+.pass.is-stacked::after { right: -11px; left: auto; box-shadow: inset 1px 0 0 var(--border); }
+
+@media (max-width: 767px) { .hide-sm { display: none !important; } }
+@media (min-width: 768px) { .show-sm { display: none !important; } }
+
+/* ---------- Rewind scope: shared primitives in ink (ui-design-system.md 4.4) ---------- */
+/* hover and highlight read accent-foreground too (the app: foreground; Rewind: the field, so hovers reverse out) */
+.btn-ghost:hover, .btn-ghost.is-hover, .btn-outline:hover, .btn-outline.is-hover, .btn-secondary:hover, .btn-secondary.is-hover { color: var(--accent-foreground); }
+.btn-ink { background: var(--primary); color: var(--primary-foreground); border: 1.5px solid var(--primary); font-weight: 600; }
+.btn-ink:hover, .btn-ink.is-hover { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1.5px; }
+.btn-ink-outline { background: transparent; color: var(--primary); border: 1.5px solid var(--primary); font-weight: 600; }
+.btn-ink-outline:hover, .btn-ink-outline.is-hover { background: var(--primary); color: var(--primary-foreground); }
+.btn-pill { height: 44px; padding: 0 20px; border-radius: 999px; font-size: 15px; }
+.seg-ctl { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--border); border-radius: var(--radius-md); }
+.seg-ctl span { height: 28px; padding: 0 12px; display: inline-flex; align-items: center; border-radius: calc(var(--radius-md) - 2px); font-size: 13px; font-weight: 500; color: var(--muted-foreground); }
+.seg-ctl span[aria-checked="true"] { background: var(--foreground); color: var(--background); }
+.toggle { height: 32px; padding: 0 10px; display: inline-flex; align-items: center; gap: 6px; border-radius: var(--radius-md); border: 1px solid var(--border-strong); font-size: 13px; font-weight: 500; }
+.toggle[aria-pressed="true"] { background: var(--foreground); color: var(--background); border-color: var(--foreground); }
+.slider { position: relative; height: 18px; display: flex; align-items: center; min-width: 140px; }
+.slider .tr { position: absolute; left: 0; right: 0; height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--input) 45%, transparent); }
+.slider .fl { position: absolute; left: 0; height: 4px; border-radius: 2px; background: var(--primary-indicator); }
+.slider .th { position: absolute; width: 18px; height: 18px; border-radius: 999px; background: var(--background); border: 2px solid var(--primary-indicator); transform: translateX(-50%); }
+.rw-strip { position: relative; display: block; background: var(--field); color: var(--ink); overflow: hidden; }
+.rw-strip svg.st { display: block; width: 100%; height: 100%; }
+/* ---------- Admin shell below md: top bar + bottom tab bar ---------- */
+@media (max-width: 767px) {
+  .shell { grid-template-columns: 1fr; background: var(--background); }
+  .shell > .sidebar { display: none; }
+  .m-topbar { display: flex; align-items: center; gap: 8px; height: 56px; padding: 0 8px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--background); z-index: 10; }
+  .main-inner { padding: 20px 16px 32px; }
+  /* production: position fixed, bottom 0, safe-area padding, and main gets pb-20. Static here so full-page captures show it once, at the end */
+  .tabbar { display: grid; grid-template-columns: repeat(5, 1fr); position: relative; height: 64px; background: var(--sidebar); border-top: 1px solid var(--sidebar-border); z-index: 20; }
+  .tabbar a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 12px; line-height: 16px; color: var(--muted-foreground); position: relative; }
+  .tabbar a.on { color: var(--foreground); font-weight: 500; }
+  .tabbar a.on::before { content: ""; position: absolute; top: -1px; left: calc(50% - 14px); width: 28px; height: 3px; border-radius: 0 0 2px 2px; background: var(--sidebar-primary); }
+  .tabbar .tb-dot { position: absolute; top: 10px; left: calc(50% + 6px); width: 8px; height: 8px; border-radius: 999px; background: var(--destructive); box-shadow: 0 0 0 2px var(--sidebar); }
+  .page-header { flex-direction: column; align-items: stretch; gap: 16px; }
+  .page-header .ph-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .t-h1 { font-size: 24px; line-height: 32px; }
+}
+
+
+/* ---- page: first-run setup wizard (owner only) ---- */
+.su-top { height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 32px; border-bottom: 1px solid var(--border); }
+.su-wrap { max-width: 1040px; margin: 0 auto; padding: 40px 32px 56px; display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 48px; align-items: start; }
+.rail { position: sticky; top: 24px; }
+.rail h2 { font-size: 14px; line-height: 20px; font-weight: 600; }
+.rail .vstep { margin-top: 4px; }
+.lib { margin-top: 24px; padding: 14px; }
+.lib .posters { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; margin-top: 12px; }
+.lib .poster { box-shadow: none; }
+.form-card .card-header { padding: 24px 28px 0; }
+.form-card .card-content { padding: 24px 28px 28px; }
+.form-card .card-footer { padding: 16px 28px; }
+.fields { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.fields .full { grid-column: 1 / -1; }
+.why { margin-top: 20px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.why .item { display: flex; gap: 10px; font-size: 13px; line-height: 18px; color: var(--muted-foreground); }
+.why .item svg.i { color: var(--foreground); margin-top: 1px; }
+.why .item b { color: var(--foreground); font-weight: 500; display: block; font-size: 14px; line-height: 20px; }
+
+/* states */
+[data-step="claim"] [data-show]:not([data-show~="claim"]),
+[data-step="plex"] [data-show]:not([data-show~="plex"]),
+[data-step="plex-start"] [data-show]:not([data-show~="plex-start"]),
+[data-step="overseerr"] [data-show]:not([data-show~="overseerr"]) { display: none !important; }
+[data-step="claim"] .su-wrap { display: none; }
+.claim { max-width: 520px; margin: 0 auto; padding: 56px 32px 64px; }
+.claim .card-content { padding: 24px 28px 28px; }
+.next { list-style: none; margin-top: 4px; }
+.next li { display: flex; gap: 12px; padding: 10px 0; border-top: 1px solid var(--border); font-size: 14px; line-height: 20px; }
+.next li:first-child { border-top: 0; }
+.next .n { width: 24px; height: 24px; border-radius: 999px; border: 1px solid var(--border-strong); background: var(--secondary); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex: none; }
+.signed { display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+#pl-addr > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.servers { display: grid; gap: 8px; margin-top: 10px; }
+.srv { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--background); }
+.srv.on { border-color: var(--primary-indicator); box-shadow: inset 0 0 0 1px var(--primary-indicator); }
+.srv.off { opacity: 1; }
+.srv .radio { width: 16px; height: 16px; border-radius: 999px; border: 1px solid var(--input); margin-top: 2px; display: inline-flex; align-items: center; justify-content: center; }
+.srv.on .radio { border-color: var(--primary-indicator); }
+.srv.on .radio::after { content: ""; width: 8px; height: 8px; border-radius: 999px; background: var(--primary-indicator); }
+.srv.off .radio { border-color: var(--border); background: var(--muted); }
+.srv .nm { font-weight: 600; font-size: 14px; line-height: 20px; }
+.srv .mt { font-size: 13px; line-height: 18px; color: var(--muted-foreground); margin-top: 2px; }
+.srv.off .nm { color: var(--muted-foreground); }
+.disclosure { margin-top: 20px; border-top: 1px solid var(--border); padding-top: 14px; }
+.disclosure .dh { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 500; }
+.disclosure .dh svg.i { color: var(--muted-foreground); }
+.disclosure .dd { margin-top: 4px; font-size: 13px; line-height: 18px; color: var(--muted-foreground); padding-left: 24px; }
+.m-steps { display: none; }
+@media (max-width: 767px) {
+  .su-top { padding: 0 16px; height: 56px; }
+  .su-top .t-xs { display: none; }
+  .su-wrap { grid-template-columns: 1fr; padding: 16px 16px 0; gap: 0; }
+  .rail { display: none; }
+  .m-steps { display: block; margin-bottom: 14px; }
+  .m-steps .stepper { grid-template-columns: repeat(9, 1fr); }
+  .m-steps .cap { font-size: 13px; line-height: 18px; color: var(--muted-foreground); margin-top: 8px; }
+  .m-steps .cap b { color: var(--foreground); font-weight: 500; }
+  main > p.t-xs { display: none; }
+  .form-card { margin-top: 0 !important; }
+  .form-card .card-header { padding: 18px 16px 0; }
+  .form-card .card-content { padding: 18px 16px 20px; }
+  .form-card .card-header .tile { display: none; }
+  .fields { grid-template-columns: 1fr; gap: 16px; }
+  .why { grid-template-columns: 1fr; }
+  .input { height: 40px; font-size: 16px; }
+  .input.mono { font-size: 15px; }
+  .form-card .card-footer { position: relative; margin: 0 -1px -1px; padding: 12px 16px 16px; display: grid; grid-template-columns: auto 1fr; gap: 8px; }
+  .form-card .card-footer > span { display: none; }
+  .form-card .card-footer .btn-primary { grid-column: 2; height: 44px; }
+  .form-card .card-footer .solo { grid-column: 1 / -1; }
+  .srv { grid-template-columns: 18px minmax(0, 1fr); }
+  .srv .badge { grid-column: 2; justify-self: start; }
+  .signed { flex-wrap: wrap; }
+  .signed .btn { margin-left: 32px; }
+  #pl-addr .muted { display: none; }
+  .claim { padding: 28px 16px 40px; }
+  .claim .card-content { padding: 20px 16px; }
+}
+</style>
+</head>
+<body>
+<a class="sr-only" href="#main">Skip to content</a>
+<header class="su-top">
+  <span class="wordmark"><span class="pip"></span><span class="wm-name">Plex Manager</span><span class="muted" style="font-weight:400">Setup</span></span>
+  <span class="t-xs muted">Your progress is saved after each step</span>
+</header>
+
+<div class="claim" data-show="claim">
+  <main id="main-claim">
+    <p class="t-xs muted">Before step 1</p>
+    <section class="card" style="margin-top:8px" aria-labelledby="cl-h">
+      <div class="card-content">
+        <span class="tile"><svg class="i i-20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></svg></span>
+        <h1 id="cl-h" class="t-h2" style="margin-top:16px" tabindex="-1">Claim this server</h1>
+        <p class="t-sm muted" style="margin-top:6px">This proves you're the owner before anything is connected. Paste the setup code printed in the server log at startup, or the value of <span class="mono" style="font-size:12.5px">SETUP_TOKEN</span> if you set one.</p>
+        <div class="field" style="margin-top:20px"><label class="label" for="cl-code">Setup code</label><div class="input mono is-focus" id="cl-code">K7QM-4WZD-P2HX</div><span class="hint">Find it with <span class="mono" style="font-size:12.5px">docker logs plex-manager</span>. It works once and expires when setup finishes.</span></div>
+        <button class="btn btn-primary btn-lg" style="margin-top:20px; width:100%">Claim and continue</button>
+      </div>
+    </section>
+    <section class="card" style="margin-top:16px" aria-labelledby="cl-n">
+      <div class="card-content" style="padding-top:18px; padding-bottom:18px">
+        <h2 id="cl-n" class="t-h3">What happens next</h2>
+        <ol class="next" style="margin-top:8px">
+          <li><span class="n">1</span><span>Connect your Plex server by signing in with Plex. <span class="muted">Required</span></span></li>
+          <li><span class="n">2</span><span>Connect Tautulli for watch history. <span class="muted">Required</span></span></li>
+          <li><span class="n">3</span><span>Requests, automation, AI, Discord and monitoring. <span class="muted">Each can wait</span></span></li>
+        </ol>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="su-wrap">
+  <aside class="rail" aria-label="Setup steps">
+    <h2>Set up your server</h2>
+    <p class="t-xs muted" style="margin-top:2px">Two steps are required. Everything else can wait.</p>
+    <ol class="vstep" style="list-style:none">
+      <li class="vstep-group">Core</li>
+      <li class="vstep-item done" data-show="overseerr"><span class="n"><svg class="i i-12" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span>Plex server</li>
+      <li class="vstep-item cur" aria-current="step" data-show="plex plex-start"><span class="n">1</span>Plex server</li>
+      <li class="vstep-item done" data-show="overseerr"><span class="n"><svg class="i i-12" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></span>Tautulli</li>
+      <li class="vstep-item" data-show="plex plex-start"><span class="n">2</span>Tautulli</li>
+      <li class="vstep-group">Requests</li>
+      <li class="vstep-item cur" aria-current="step" data-show="overseerr"><span class="n">3</span>Overseerr<span class="opt">Optional</span></li>
+      <li class="vstep-item" data-show="plex plex-start"><span class="n">3</span>Overseerr<span class="opt">Optional</span></li>
+      <li class="vstep-group">Automation</li>
+      <li class="vstep-item"><span class="n">4</span>Sonarr<span class="opt">Optional</span></li>
+      <li class="vstep-item"><span class="n">5</span>Radarr<span class="opt">Optional</span></li>
+      <li class="vstep-group">AI</li>
+      <li class="vstep-item"><span class="n">6</span>Rewind writer<span class="opt">Optional</span></li>
+      <li class="vstep-item"><span class="n">7</span>Admin assistant<span class="opt">Optional</span></li>
+      <li class="vstep-group">Community and monitoring</li>
+      <li class="vstep-item"><span class="n">8</span>Discord<span class="opt">Optional</span></li>
+      <li class="vstep-item"><span class="n">9</span>Prometheus<span class="opt">Optional</span></li>
+    </ol>
+    <div class="card lib" data-show="overseerr">
+      <div class="status t-sm"><span class="dot dot-success"></span><span class="fg" style="font-weight:500">Northfield Plex is connected</span></div>
+      <p class="t-xs muted" style="margin-top:4px">6 libraries and 2,418 titles. Members will see these on their home page.</p>
+      <div class="posters" aria-hidden="true">
+        <div class="poster"><svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="200" height="300" fill="#6f241b"/><circle cx="100" cy="128" r="62" fill="#e0673a"/><path d="M100 70 C125 110 132 140 100 190 C68 140 75 110 100 70Z" fill="#2b0f0b"/><rect y="214" width="200" height="86" fill="#4a160f"/><text x="16" y="246.68" font-family="IBM Plex Sans" font-size="34" font-weight="650" letter-spacing="-0.5" style="font-stretch:78%" fill="#f6dcc4" text-anchor="start">Ember</text><text x="16" y="280" font-family="IBM Plex Sans" font-size="34" font-weight="650" letter-spacing="-0.5" style="font-stretch:78%" fill="#f6dcc4" text-anchor="start">Hours</text></svg></div><div class="poster"><svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="200" height="300" fill="#143429"/><g stroke="#4f8a6e" stroke-width="2" fill="none"><path d="M30 250 L30 140 L100 90 L170 140 L170 250Z"/><path d="M30 175 L170 175 M30 212 L170 212 M65 115 L65 250 M100 90 L100 250 M135 115 L135 250"/></g><ellipse cx="100" cy="196" rx="20" ry="36" fill="#7fc39b" transform="rotate(-24 100 196)"/><text x="16" y="282" font-family="IBM Plex Sans" font-size="26" font-weight="650" letter-spacing="-0.5" style="font-stretch:78%" fill="#d9efe1" text-anchor="start">Glasshouse</text></svg></div><div class="poster"><svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="200" height="300" fill="#f2b9a1"/><rect y="170" width="200" height="40" fill="#5aa7b4"/><rect y="210" width="200" height="90" fill="#efd9a8"/><path d="M60 196 A44 30 0 0 1 148 196Z" fill="#d6463a"/><rect x="103" y="196" width="3" height="58" fill="#4a2b22"/><text x="16" y="44.64" font-family="IBM Plex Sans" font-size="32" font-weight="650" letter-spacing="-0.5" style="font-stretch:78%" fill="#3a1e18" text-anchor="start">Low</text><text x="16" y="76" font-family="IBM Plex Sans" font-size="32" font-weight="650" letter-spacing="-0.5" style="font-stretch:78%" fill="#3a1e18" text-anchor="start">Season</text></svg></div><div class="poster"><svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="200" height="300" fill="#c7962c"/><path d="M28 170 L100 128 L172 170 L100 150Z" fill="#1d1a14"/><path d="M92 146 L100 196 L108 146Z" fill="#1d1a14"/><text x="100" y="70" font-family="IBM Plex Sans" font-size="34" font-weight="650" letter-spacing="3" style="font-stretch:75%" fill="#1d1a14" text-anchor="middle">KESTREL</text></svg></div><div class="poster"><svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="200" height="300" fill="#3a2446"/><circle cx="62" cy="120" r="30" fill="#f1e4c8"/><circle cx="128" cy="96" r="18" fill="#f1e4c8" opacity=".7"/><circle cx="140" cy="172" r="40" fill="#f1e4c8" opacity=".9"/><circle cx="128" cy="166" r="40" fill="#3a2446"/><text x="16" y="252.6" font-family="IBM Plex Sans" font-size="30" font-weight="650" letter-spacing="-0.5" style="font-stretch:78%" fill="#f1e4c8" text-anchor="start">Paper</text><text x="16" y="282" font-family="IBM Plex Sans" font-size="30" font-weight="650" letter-spacing="-0.5" style="font-stretch:78%" fill="#f1e4c8" text-anchor="start">Moons</text></svg></div><div class="poster"><svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="200" height="300" fill="#132029"/><rect x="30" y="150" width="3" height="110" fill="#e7a84a" opacity="0.5"/><rect x="54" y="160" width="3" height="92" fill="#e7a84a" opacity="0.9"/><rect x="80" y="170" width="3" height="74" fill="#e7a84a" opacity="0.5"/><rect x="112" y="150" width="3" height="110" fill="#e7a84a" opacity="0.9"/><rect x="140" y="160" width="3" height="92" fill="#e7a84a" opacity="0.5"/><rect x="168" y="170" width="3" height="74" fill="#e7a84a" opacity="0.9"/><rect y="250" width="200" height="50" fill="#0c151c"/><text x="16" y="52.6" font-family="IBM Plex Sans" font-size="30" font-weight="650" letter-spacing="-0.5" style="font-stretch:78%" fill="#f4e2c2" text-anchor="start">Harbor</text><text x="16" y="82" font-family="IBM Plex Sans" font-size="30" font-weight="650" letter-spacing="-0.5" style="font-stretch:78%" fill="#f4e2c2" text-anchor="start">Lights</text></svg></div>
+      </div>
+    </div>
+  </aside>
+
+  <main id="main">
+    <div class="m-steps" data-show="plex plex-start" aria-hidden="true"><ol class="stepper" style="list-style:none"><li><div class="seg cur"></div></li><li><div class="seg"></div></li><li><div class="seg"></div></li><li><div class="seg"></div></li><li><div class="seg"></div></li><li><div class="seg"></div></li><li><div class="seg"></div></li><li><div class="seg"></div></li><li><div class="seg"></div></li></ol><p class="cap"><b>Step 1 of 9</b>, Plex server</p></div>
+    <p class="t-xs muted" data-show="plex plex-start">Step 1 of 9</p>
+    <section class="card form-card" style="margin-top:8px" aria-labelledby="pl-h" data-show="plex plex-start">
+      <div class="card-header">
+        <div style="display:flex; gap:14px">
+          <span class="tile"><svg class="i i-20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m17 2-5 5-5-5"/><rect width="20" height="15" x="2" y="7" rx="2"/></svg></span>
+          <div>
+            <div class="row"><h1 id="pl-h" tabindex="-1" class="t-h2">Connect your Plex server</h1><span class="badge">Required</span></div>
+            <p class="card-desc" style="max-width:56ch">Sign in with the Plex account that owns the server. Plex Manager lists your servers, so there's no token to look up.</p>
+          </div>
+        </div>
+      </div>
+      <div class="card-content">
+        <div data-show="plex-start">
+          <button class="btn btn-primary btn-lg"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10 17 5-5-5-5"/><path d="M15 12H3"/><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/></svg>Connect with Plex</button>
+          <p class="t-xs muted" style="margin-top:10px; max-width:52ch">A plex.tv window opens. Approve Plex Manager there, and your servers appear here.</p>
+          <div class="disclosure">
+            <div class="dh"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18 15-6-6-6 6"/></svg>Enter a token instead</div>
+            <p class="dd">For a server that doesn't show up, or if you can't sign in to plex.tv from this browser.</p>
+            <div class="fields" style="margin-top:14px; padding-left:24px">
+              <div class="field full"><label class="label" for="pt-url">Server URL</label><div class="input mono" id="pt-url"><span class="ph">http://192.168.1.20:32400</span></div><span class="hint">Include the protocol and the port.</span></div>
+              <div class="field full"><label class="label" for="pt-tok">Plex token</label><div class="input mono" id="pt-tok"><span class="ph">X-Plex-Token</span></div><a class="hint link" href="#" style="align-self:flex-start">How to find your token<svg class="i i-12" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg></a></div>
+            </div>
+          </div>
+        </div>
+        <div data-show="plex">
+          <div class="well signed"><span class="avatar avatar-sm">DW</span><div class="grow"><div class="t-sm fg" style="font-weight:500">Signed in to Plex as dana.whitfield</div><div class="t-xs muted">These are the servers on that account.</div></div><button class="btn btn-ghost btn-sm">Use a different account</button></div>
+          <div class="label" style="margin-top:20px" id="srv-l">Choose your server</div>
+          <div class="servers" role="radiogroup" aria-labelledby="srv-l">
+            <div class="srv on" role="radio" aria-checked="true"><span class="radio"></span><div><div class="nm">Northfield Plex</div><div class="mt">Plex Media Server 1.41.3 on Linux, 6 libraries</div></div><span class="badge badge-success"><span class="dot"></span>Online</span></div>
+            <div class="srv off" role="radio" aria-checked="false" aria-disabled="true"><span class="radio"></span><div><div class="nm">Dana's laptop</div><div class="mt">Not reachable since Oct 14. Start it to choose it.</div></div><span class="badge badge-neutral">Offline</span></div>
+            <div class="srv off" role="radio" aria-checked="false" aria-disabled="true"><span class="radio"></span><div><div class="nm">Theo's Plex</div><div class="mt">Shared with you. Only its owner can set it up.</div></div><span class="badge">Shared</span></div>
+          </div>
+          <div class="fields" style="margin-top:20px">
+            <div class="field full"><label class="label" for="pl-addr">Address Plex Manager uses</label><div class="input select" id="pl-addr"><span><span class="mono">http://192.168.1.20:32400</span><span class="muted">&nbsp; Local, fastest</span></span><span class="trail"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg></span></div><span class="hint">From the server's connections on plex.tv. Members never see this address.</span></div>
+          </div>
+          <div class="alert alert-success" role="status" style="margin-top:20px"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg><div style="flex:1"><span class="alert-title">Northfield Plex answered in 31 ms.</span> <span class="alert-body">You're its owner, so you'll be its admin here.</span></div></div>
+          <div class="disclosure"><div class="dh"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>Enter a token instead</div></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <span style="margin-left:auto"></span>
+        <button class="btn btn-primary solo" data-show="plex">Save and continue</button>
+        <button class="btn btn-primary is-disabled solo" disabled data-show="plex-start">Save and continue</button>
+      </div>
+    </section>
+
+    <p class="t-xs muted" data-show="overseerr">Step 3 of 9</p>
+    <section class="card form-card" style="margin-top:8px" aria-labelledby="su-h" data-show="overseerr">
+      <div class="card-header">
+        <div style="display:flex; gap:14px">
+          <span class="tile"><svg class="i i-20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg></span>
+          <div>
+            <div class="row"><h1 id="su-h" tabindex="-1" class="t-h2">Connect Overseerr</h1><span class="badge badge-neutral">Optional</span></div>
+            <p class="card-desc" style="max-width:56ch">Overseerr lets members ask for films and series that aren't on the server yet. Skip this if you don't run it; you can add it later in Admin settings.</p>
+          </div>
+        </div>
+      </div>
+      <div class="card-content">
+        <div class="fields">
+          <div class="field"><label class="label" for="s-url">Local URL</label><div class="input mono" id="s-url">http://192.168.1.20:5055</div><span class="hint">Include the protocol and the port.</span></div>
+          <div class="field"><label class="label" for="s-key">API key</label><div class="input mono" id="s-key"><span>••••••••••••0be4</span><span class="trail"><button class="btn btn-ghost btn-sm reveal" style="height:24px; padding:0 6px; font-size:12px">Show</button></span></div><span class="hint">In Overseerr, open Settings, then General.</span></div>
+          <div class="field full"><label class="label" for="s-pub">Public URL <span class="opt">(optional)</span></label><div class="input mono" id="s-pub"><span class="ph">https://requests.example.com</span></div><span class="hint">Where members are sent to make requests. Leave it empty to use the local URL.</span></div>
+        </div>
+        <div class="alert alert-success" role="status" style="margin-top:20px">
+          <svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+          <div style="flex:1"><span class="alert-title">Connected to Overseerr 1.33.2.</span> <span class="alert-body">It answered in 48 ms and has 412 requests on record.</span></div>
+          <div class="alert-actions"><button class="btn btn-ghost btn-sm"><svg class="i i-14" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>Test again</button></div>
+        </div>
+        <div class="why">
+          <div class="item"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg><div><b>Request a title</b>A home page link for members to ask for something.</div></div>
+          <div class="item"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z"/></svg><div><b>Watchlist Sync</b>Requests whatever members add to their Plex watchlist.</div></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <button class="btn btn-ghost"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>Back</button>
+        <span style="margin-left:auto"></span>
+        <button class="btn btn-ghost">Skip for now</button>
+        <button class="btn btn-primary">Save and continue</button>
+      </div>
+    </section>
+  </main>
+</div>
+</body>
+</html>

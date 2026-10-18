@@ -42,7 +42,8 @@ prisma/dev.db-journal
 
 # Generated Prisma client (Prisma v7+)
 /lib/generated/prisma/
-data/
+# Docker volume for ./data (docker-compose.yml); anchored so lib/wrapped/data/ is tracked
+/data/
 test.db
 test.db-journal
 test-results/

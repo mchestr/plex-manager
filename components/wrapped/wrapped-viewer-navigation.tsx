@@ -1,9 +1,8 @@
 "use client"
 
+import { ReactNode } from "react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
-import { ShareCardDownload } from "@/components/wrapped/share-card-download"
-import { WrappedShareButton } from "@/components/wrapped/wrapped-share-button"
 
 interface WrappedViewerNavigationProps {
   currentSectionIndex: number
@@ -11,9 +10,8 @@ interface WrappedViewerNavigationProps {
   onPrevious: () => void
   onNext: () => void
   onShowAll: () => void
-  isShared?: boolean
-  shareToken?: string
-  year: number
+  /** The owner's share-link controls, shown on the last slide. */
+  shareControls?: ReactNode
 }
 
 export function WrappedViewerNavigation({
@@ -22,9 +20,7 @@ export function WrappedViewerNavigation({
   onPrevious,
   onNext,
   onShowAll,
-  isShared,
-  shareToken,
-  year,
+  shareControls,
 }: WrappedViewerNavigationProps) {
   return (
     <div className="mt-6 sm:mt-8 flex justify-between items-center gap-3">
@@ -38,7 +34,7 @@ export function WrappedViewerNavigation({
       ) : (
         <div />
       )}
-      {!isShared && shareToken && currentSectionIndex === totalSections - 1 && (
+      {shareControls && currentSectionIndex === totalSections - 1 && (
         <motion.div
           initial={{ opacity: 0, scale: 0.8, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -50,11 +46,7 @@ export function WrappedViewerNavigation({
           }}
           className="flex-1 flex flex-wrap justify-center gap-3"
         >
-          <WrappedShareButton
-            shareToken={shareToken}
-            year={year}
-          />
-          <ShareCardDownload shareToken={shareToken} year={year} />
+          {shareControls}
         </motion.div>
       )}
       {currentSectionIndex < totalSections - 1 ? (
