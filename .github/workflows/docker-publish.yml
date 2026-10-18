@@ -1,17 +1,17 @@
 name: Docker Build and Publish
 
+# Publishes images only from trusted refs: pushes to main and v* tags.
+# Pull requests get a no-push smoke build in build.yml (the docker-build job).
+# Publishing does not wait for Build, so main must only accept commits that
+# passed Build (branch protection).
 on:
-  workflow_run:
-    workflows: ["Build"]
-    types:
-      - completed
   push:
-    tags:
-      - 'v*'  # Also run on version tags
-  pull_request:
     branches:
       - main
-  workflow_dispatch:
+    tags:
+      - 'v*'
+
+permissions: {}
 
 env:
   REGISTRY: ghcr.io
@@ -20,13 +20,7 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    # Only run if triggered by workflow_run and the build workflow succeeded,
-    # or if triggered by tags/workflow_dispatch/pull_request
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      github.event_name == 'push' ||
-      github.event_name == 'pull_request' ||
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: read
       packages: write
@@ -34,15 +28,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
-        with:
-          # When triggered by workflow_run, checkout the commit from the triggering workflow
-          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       - name: Log in to Container Registry
-        uses: docker/login-action@v4
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -50,7 +41,7 @@ jobs:
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
-        uses: docker/metadata-action@v6
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
@@ -63,12 +54,11 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
-          push: ${{ github.event_name != 'pull_request' }}
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
