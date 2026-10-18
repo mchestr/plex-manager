@@ -119,6 +119,19 @@ describe('POST /api/stripe/webhook', () => {
     expect(prisma.stripeEvent.findUnique).not.toHaveBeenCalled()
   })
 
+  it('applies no IP rate limit, so spoofed Stripe addresses cannot get deliveries rejected', async () => {
+    mockConstructEvent.mockImplementation(() => ({ id: `evt_${Math.random()}`, type: 'invoice.payment_failed' }))
+
+    // The old limiter allowed 120 per minute per X-Forwarded-For value.
+    for (let i = 0; i < 150; i++) {
+      const response = await POST(
+        makeRequest('{"raw":true}', { 'stripe-signature': 'sig', 'x-forwarded-for': '3.18.12.63' })
+      )
+      expect(response.status).toBe(200)
+    }
+    expect(addJob).toHaveBeenCalledTimes(150)
+  })
+
   it('returns 200 without re-enqueuing when the event id was already seen', async () => {
     mockConstructEvent.mockReturnValue({ id: 'evt_dup', type: 'invoice.payment_failed' })
     ;(prisma.stripeEvent.findUnique as jest.Mock).mockResolvedValue({ id: 'evt_dup' })

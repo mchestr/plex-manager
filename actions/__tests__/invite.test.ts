@@ -26,6 +26,8 @@ import {
 } from '@/lib/connections/plex'
 import { createJellyfinUser, setJellyfinUserPolicy } from '@/lib/connections/jellyfin'
 import { logAuditEvent, AuditEventType } from '@/lib/security/audit-log'
+import { actionClientIp, consume } from '@/lib/security/rate-limit'
+import { RATE_LIMITED_MESSAGE } from '@/lib/security/rate-limit-messages'
 import { Prisma } from '@/lib/generated/prisma/client'
 import type { Invite, PlexServer } from '@/lib/generated/prisma/client'
 import type { Session } from 'next-auth'
@@ -86,7 +88,14 @@ jest.mock('@/lib/security/audit-log', () => ({
   },
 }))
 
+jest.mock('@/lib/security/rate-limit', () => ({
+  consume: jest.fn(),
+  actionClientIp: jest.fn(),
+}))
+
 const mockRequireAdmin = requireAdmin as jest.MockedFunction<typeof requireAdmin>
+const mockConsume = consume as jest.MockedFunction<typeof consume>
+const mockActionClientIp = actionClientIp as jest.MockedFunction<typeof actionClientIp>
 const mockPrisma = prisma as jest.Mocked<typeof prisma>
 const mockGetPlexUserInfo = getPlexUserInfo as jest.MockedFunction<typeof getPlexUserInfo>
 const mockInviteUserToPlexServer = inviteUserToPlexServer as jest.MockedFunction<
@@ -135,9 +144,71 @@ describe('invite actions', () => {
     thumb: null,
   }
 
+  const CLIENT_IP = '203.0.113.7'
+  const RATE_LIMITED_RESULT = { success: false, code: 'RATE_LIMITED', error: RATE_LIMITED_MESSAGE }
+
   beforeEach(() => {
     jest.clearAllMocks()
     mockRequireAdmin.mockResolvedValue(mockSession)
+    mockActionClientIp.mockResolvedValue(CLIENT_IP)
+    mockConsume.mockResolvedValue({ ok: true })
+  })
+
+  describe('rate limits (invite:validate, invite:redeem)', () => {
+    function limitTo(limited: string) {
+      mockConsume.mockImplementation(async (name) =>
+        name === limited ? { ok: false, retryAfterSec: 600 } : { ok: true }
+      )
+    }
+
+    it('spends invite:validate for the client IP on each lookup', async () => {
+      mockPrisma.invite.findUnique.mockResolvedValue(mockInvite)
+
+      await validateInvite('TESTCODE')
+
+      expect(mockConsume).toHaveBeenCalledWith('invite:validate', CLIENT_IP)
+    })
+
+    it('refuses a rate-limited lookup before reading the invite', async () => {
+      limitTo('invite:validate')
+
+      const result = await validateInvite('FRIENDS')
+
+      expect(result).toEqual(RATE_LIMITED_RESULT)
+      expect(mockPrisma.invite.findUnique).not.toHaveBeenCalled()
+    })
+
+    it('refuses a rate-limited Plex redemption before contacting Plex or consuming the invite', async () => {
+      limitTo('invite:redeem')
+
+      const result = await processInvite('TESTCODE', 'plex-token')
+
+      expect(result).toEqual(RATE_LIMITED_RESULT)
+      expect(mockConsume).toHaveBeenCalledWith('invite:redeem', CLIENT_IP)
+      expect(mockGetPlexUserInfo).not.toHaveBeenCalled()
+      expect(mockPrisma.$transaction).not.toHaveBeenCalled()
+    })
+
+    it('refuses a rate-limited Jellyfin redemption before contacting Jellyfin or consuming the invite', async () => {
+      limitTo('invite:redeem')
+
+      const result = await processJellyfinInvite('TESTCODE', { username: 'newuser', password: 'password123' })
+
+      expect(result).toEqual(RATE_LIMITED_RESULT)
+      expect(mockConsume).toHaveBeenCalledWith('invite:redeem', CLIENT_IP)
+      expect(mockPrisma.jellyfinServer.findFirst).not.toHaveBeenCalled()
+      expect(mockPrisma.$transaction).not.toHaveBeenCalled()
+      expect(mockCreateJellyfinUser).not.toHaveBeenCalled()
+    })
+
+    it('does not spend the redemption limit on a lookup', async () => {
+      limitTo('invite:redeem')
+      mockPrisma.invite.findUnique.mockResolvedValue(mockInvite)
+
+      const result = await validateInvite('TESTCODE')
+
+      expect(result.success).toBe(true)
+    })
   })
 
   describe('validateInvite', () => {

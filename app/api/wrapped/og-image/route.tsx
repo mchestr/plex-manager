@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server"
 
 import { prisma } from "@/lib/prisma"
 import { createSafeError, ErrorCode, getStatusCode, logError } from "@/lib/security/error-handler"
-import { shareRateLimiter } from "@/lib/security/rate-limit"
+import { limitRequest } from "@/lib/security/rate-limit"
 import { stripHighlightTags } from "@/lib/wrapped/text-processor"
 
 // Force dynamic rendering since we use request.headers for rate limiting
@@ -34,7 +34,7 @@ interface CardStats {
 export async function GET(request: NextRequest) {
   try {
     // Apply rate limiting
-    const rateLimitResponse = await shareRateLimiter(request)
+    const rateLimitResponse = await limitRequest("share", request)
     if (rateLimitResponse) {
       return rateLimitResponse
     }

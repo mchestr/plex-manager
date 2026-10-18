@@ -4,6 +4,7 @@
 
 import { GET } from '@/app/api/wrapped/poster/[ratingKey]/route'
 import { prisma } from '@/lib/prisma'
+import { limitRequest } from '@/lib/security/rate-limit'
 import { fetchWithTimeout } from '@/lib/utils/fetch-with-timeout'
 import { getServerSession } from 'next-auth'
 
@@ -27,7 +28,7 @@ jest.mock('@/lib/auth', () => ({
 }))
 
 jest.mock('@/lib/security/rate-limit', () => ({
-  posterRateLimiter: jest.fn().mockResolvedValue(null),
+  limitRequest: jest.fn().mockResolvedValue(null),
 }))
 
 jest.mock('@/lib/utils/fetch-with-timeout', () => ({
@@ -197,6 +198,18 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
     const response = await callRoute('http://localhost/api/wrapped/poster/123', '123')
 
     expect(response.status).toBe(404)
+  })
+
+  it('short-circuits on the poster rate limit before any lookup', async () => {
+    const limited = { status: 429 }
+    ;(limitRequest as jest.Mock).mockResolvedValueOnce(limited)
+
+    const response = await callRoute('http://localhost/api/wrapped/poster/123', '123')
+
+    expect(response).toBe(limited)
+    expect(limitRequest).toHaveBeenCalledWith('poster', expect.anything())
+    expect(getServerSession).not.toHaveBeenCalled()
+    expect(fetchWithTimeout).not.toHaveBeenCalled()
   })
 
   it('returns 404 when Plex cannot produce the image', async () => {

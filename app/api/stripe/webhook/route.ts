@@ -4,7 +4,6 @@ import { getStripe } from "@/lib/stripe/client"
 import { prisma } from "@/lib/prisma"
 import { addJob } from "@/lib/queue/client"
 import { JOB_TYPES } from "@/lib/queue/types"
-import { rateLimit } from "@/lib/security/rate-limit"
 import { createLogger } from "@/lib/utils/logger"
 
 /**
@@ -16,15 +15,6 @@ export const dynamic = "force-dynamic"
 const logger = createLogger("STRIPE_WEBHOOK")
 
 /**
- * Rate limiter for the Stripe webhook endpoint. The endpoint is authenticated by
- * the Stripe signature (no admin auth), but is rate-limited to blunt abuse.
- */
-const webhookRateLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 120, // Generous — Stripe can burst-deliver
-})
-
-/**
  * POST /api/stripe/webhook
  *
  * Verifies the Stripe signature against the raw body, deduplicates events on
@@ -34,13 +24,12 @@ const webhookRateLimiter = rateLimit({
  * - 400 on signature verification failure (never 5xx — Stripe would retry).
  * - 200 without re-enqueue when the event id was already seen (idempotency).
  * - 200 + enqueue for a valid, previously-unseen event.
+ *
+ * There is no IP rate limit: the signature is the gate, and an IP limit in
+ * front of it would let anyone who spoofs Stripe's addresses get genuine
+ * deliveries rejected with 429.
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  const rateLimitResponse = await webhookRateLimiter(request)
-  if (rateLimitResponse) {
-    return rateLimitResponse
-  }
-
   const stripe = await getStripe()
   if (!stripe) {
     logger.warn("Received Stripe webhook but Stripe is not configured")

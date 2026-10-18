@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { StyledInput } from "@/components/ui/styled-input"
+import { isRateLimitedSignInError, RATE_LIMITED_MESSAGE } from "@/lib/security/rate-limit-messages"
 import { createLogger } from "@/lib/utils/logger"
 import { signIn } from "next-auth/react"
 import { FormEvent, useState } from "react"
@@ -80,7 +81,9 @@ export function JellyfinSignInButton({
       if (result?.error) {
         const errorMsg = result.error === "NO_SERVER_CONFIGURED"
           ? "Jellyfin server is not configured. Please contact your administrator."
-          : "Invalid username or password. Please try again."
+          : isRateLimitedSignInError(result.error)
+            ? RATE_LIMITED_MESSAGE
+            : "Invalid username or password. Please try again."
 
         setError(errorMsg)
         onError?.(errorMsg)

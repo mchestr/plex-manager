@@ -80,7 +80,14 @@ export function PlexSignInButton({
 
     try {
       // Create a Plex PIN
-      const { id, code } = await createPlexPin()
+      const pin = await createPlexPin()
+      if (!pin.success) {
+        setError(pin.error)
+        setIsLoading(false)
+        onError?.(pin.error)
+        return
+      }
+      const { id, code } = pin.data
 
       // Create the authorization URL (with optional invite code)
       const url = await createPlexAuthUrl(id, code, inviteCode)

@@ -7,19 +7,12 @@ import { prisma } from "@/lib/prisma"
 import { getStripe } from "@/lib/stripe/client"
 import { createCheckoutSession } from "@/lib/stripe/checkout"
 import { getOfferedPrices } from "@/lib/stripe/prices"
-import { checkRateLimit } from "@/lib/security/rate-limit"
+import { consume } from "@/lib/security/rate-limit"
 import { getBaseUrl } from "@/lib/utils"
 import { createLogger } from "@/lib/utils/logger"
 import { getServerSession } from "next-auth"
 
 const logger = createLogger("SUBSCRIPTION")
-
-/**
- * Per-user rate limit for the Stripe-adjacent self-service actions. These are
- * authenticated Server Actions that create Stripe sessions, so they're keyed by
- * user id to prevent a logged-in user from hammering Stripe.
- */
-const STRIPE_ACTION_RATE_LIMIT = { windowMs: 60 * 1000, max: 10 }
 
 type StartCheckoutResult = { url: string } | { error: string }
 
@@ -64,7 +57,8 @@ export async function startCheckout(priceId: string): Promise<StartCheckoutResul
     return { error: "You must be signed in to subscribe." }
   }
 
-  if (!checkRateLimit(`checkout:${session.user.id}`, STRIPE_ACTION_RATE_LIMIT)) {
+  // Keyed by user id so a signed-in user cannot hammer Stripe.
+  if (!(await consume("checkout", session.user.id)).ok) {
     return { error: "Too many attempts. Please wait a moment and try again." }
   }
 
@@ -137,7 +131,7 @@ export async function openBillingPortal(): Promise<OpenBillingPortalResult> {
     return { error: "You must be signed in to manage your subscription." }
   }
 
-  if (!checkRateLimit(`portal:${session.user.id}`, STRIPE_ACTION_RATE_LIMIT)) {
+  if (!(await consume("portal", session.user.id)).ok) {
     return { error: "Too many attempts. Please wait a moment and try again." }
   }
 

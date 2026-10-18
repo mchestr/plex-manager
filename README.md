@@ -306,6 +306,7 @@ When deploying to production, ensure the following environment variables are set
 - **No hardcoded localhost**: The application will throw an error in production if neither `NEXT_PUBLIC_APP_URL` nor `NEXTAUTH_URL` is set
 - **HTTPS required**: In production, always use HTTPS URLs for both environment variables
 - **Domain consistency**: Both URL variables should point to the same domain to avoid authentication issues
+- **Reverse proxy and rate limits**: Rate limits key on the client IP, read from `X-Forwarded-For`. Run the app behind a reverse proxy that adds the client address to `X-Forwarded-For` (Traefik and Caddy do by default, nginx with `proxy_add_x_forwarded_for`), and set `TRUSTED_PROXY_HOPS` to the number of proxies in front of the app: `1` (the default) for one proxy, `2` with a CDN such as Cloudflare in front of it. Keep the app port off the public internet so every request passes through the proxy; a client that reaches the app directly can choose its own address. Set `REDIS_URL` so limits hold across processes and restarts.
 
 ### Docker Deployment
 
@@ -376,7 +377,7 @@ All integrations are configured through the setup wizard or admin panel, with va
 - **SQL injection protection** via Prisma parameterized queries
 - **XSS prevention** - React escapes by default, no unsafe HTML rendering
 - **CSRF protection** - Built into Next.js Server Actions
-- **Rate limiting** - Protection for sensitive endpoints
+- **Rate limiting** - Redis-backed limits on sign-in, invite, PIN, share and admin endpoints, keyed by the client IP behind `TRUSTED_PROXY_HOPS` proxies
 - **Audit logging** - Tracking of admin actions and security events
 - **Encryption at rest** - External-service API keys/tokens are AES-256-GCM encrypted when `ENCRYPTION_KEY` is set
 - **Signed webhooks** - Stripe webhooks are verified against the raw request body (no admin auth needed)

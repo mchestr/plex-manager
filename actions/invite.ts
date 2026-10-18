@@ -16,6 +16,8 @@ import { prisma, type PrismaTransactionClient } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 import { Prisma, ServerType } from "@/lib/generated/prisma/client"
 import { logAuditEvent, AuditEventType } from "@/lib/security/audit-log"
+import { actionClientIp, consume, type LimitName } from "@/lib/security/rate-limit"
+import { RATE_LIMITED_MESSAGE } from "@/lib/security/rate-limit-messages"
 
 const logger = createLogger("INVITE")
 
@@ -35,6 +37,19 @@ const INITIAL_RETRY_DELAY_MS = 100
 // comp action. Applied only when the user is not already exempt, so an existing
 // exemptReason (e.g. "grandfathered", "comp") is never overwritten.
 const INVITE_EXEMPTION = { isExempt: true, exemptReason: "invite" }
+
+/**
+ * Spends one point of an IP-keyed invite limit. Returns the action's
+ * rate-limited result when the caller is over it, otherwise `null`.
+ */
+async function rateLimitInvite(name: LimitName) {
+  const limit = await consume(name, await actionClientIp())
+  if (limit.ok) {
+    return null
+  }
+  logger.warn("Invite action rate-limited", { limit: name })
+  return { success: false as const, code: "RATE_LIMITED" as const, error: RATE_LIMITED_MESSAGE }
+}
 
 // Types
 interface PlexUser {
@@ -529,6 +544,11 @@ export async function deleteInvite(id: string) {
  * validation via validateAndUseInvite() to prevent TOCTOU race conditions.
  */
 export async function validateInvite(code: string) {
+  const rateLimited = await rateLimitInvite("invite:validate")
+  if (rateLimited) {
+    return rateLimited
+  }
+
   try {
     const invite = await prisma.invite.findUnique({
       where: { code },
@@ -578,6 +598,11 @@ async function getActivePlexServer() {
  * - Audit logging for security-sensitive events
  */
 export async function processInvite(code: string, plexAuthToken: string) {
+  const rateLimited = await rateLimitInvite("invite:redeem")
+  if (rateLimited) {
+    return rateLimited
+  }
+
   try {
     // Get user info and server config first (before consuming the invite)
     const userInfoResult = await getPlexUserInfo(plexAuthToken)
@@ -782,6 +807,11 @@ async function recordJellyfinInviteUsage(
  * - Audit logging for security-sensitive events
  */
 export async function processJellyfinInvite(code: string, authData: JellyfinAuthData) {
+  const rateLimited = await rateLimitInvite("invite:redeem")
+  if (rateLimited) {
+    return rateLimited
+  }
+
   try {
     const { username, password } = authData
 

@@ -8,6 +8,11 @@ process.env.NODE_ENV = 'test'
 // Unit tests never inherit them; the tests that need a flag set it themselves.
 delete process.env.E2E_TEST_MODE
 delete process.env.ENABLE_TEST_AUTH
+// Nor do they reach a developer's Redis through the rate limiter: without
+// REDIS_URL it uses its in-process store. The Redis-backed tests read
+// TEST_REDIS_URL instead.
+delete process.env.REDIS_URL
+delete process.env.TRUSTED_PROXY_HOPS
 
 // Polyfill TextEncoder/TextDecoder for Node.js test environment
 const { TextEncoder, TextDecoder } = require('util')

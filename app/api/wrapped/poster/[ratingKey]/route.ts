@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { createSafeError, ErrorCode, getStatusCode, logError } from "@/lib/security/error-handler"
-import { posterRateLimiter } from "@/lib/security/rate-limit"
+import { limitRequest } from "@/lib/security/rate-limit"
 import { fetchWithTimeout } from "@/lib/utils/fetch-with-timeout"
 import type { WrappedData } from "@/types/wrapped"
 
@@ -57,7 +57,7 @@ export async function GET(
   context: { params: Promise<{ ratingKey: string }> }
 ) {
   try {
-    const rateLimitResponse = await posterRateLimiter(request)
+    const rateLimitResponse = await limitRequest("poster", request)
     if (rateLimitResponse) {
       return rateLimitResponse
     }

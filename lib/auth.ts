@@ -1,6 +1,7 @@
 import { checkUserServerAccess, getPlexUserInfo } from "@/lib/connections/plex"
 import { authenticateJellyfin, isJellyfinAdmin } from "@/lib/jellyfin-auth"
 import { prisma } from "@/lib/prisma"
+import { consume } from "@/lib/security/rate-limit"
 import { isE2ETestMode } from "@/lib/security/test-mode"
 import { createLogger } from "@/lib/utils/logger"
 import { NextAuthOptions } from "next-auth"
@@ -278,6 +279,14 @@ export const authOptions: NextAuthOptions = {
         }
 
         const { username, password } = credentials
+
+        // Per-username limit, checked before Jellyfin sees the attempt, so
+        // password guessing spread over many addresses still stops here.
+        const limit = await consume("auth:jellyfin:user", username.trim().toLowerCase())
+        if (!limit.ok) {
+          logger.warn("Jellyfin sign-in rate-limited", { username })
+          throw new Error("RATE_LIMITED")
+        }
 
         try {
           // Get the configured Jellyfin server

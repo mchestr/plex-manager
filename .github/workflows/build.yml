@@ -142,6 +142,16 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
+      # For the Redis-backed suites (*.redis.test.ts), which read TEST_REDIS_URL.
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
 
     steps:
       - name: Checkout code
@@ -165,6 +175,7 @@ jobs:
         run: npm run test:coverage -- --ci --reporters=default --reporters=github-actions
         env:
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/plex_manager_test?schema=public"
+          TEST_REDIS_URL: "redis://localhost:6379/0"
 
       - name: Upload coverage report
         if: always()
