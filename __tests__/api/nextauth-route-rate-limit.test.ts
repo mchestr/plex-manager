@@ -17,6 +17,7 @@ import { POST } from "@/app/api/auth/[...nextauth]/route"
 import { authenticateJellyfin } from "@/lib/jellyfin-auth"
 import { getPlexUserInfo } from "@/lib/connections/plex"
 import { prisma } from "@/lib/prisma"
+import { consume } from "@/lib/security/rate-limit"
 import { NextRequest } from "next/server"
 
 const CSRF_TOKEN = "csrf-token-for-tests"
@@ -37,6 +38,7 @@ jest.mock("@/lib/prisma", () => ({
   prisma: {
     jellyfinServer: { findFirst: jest.fn() },
     plexServer: { findFirst: jest.fn() },
+    user: { findUnique: jest.fn(), update: jest.fn() },
   },
 }))
 
@@ -50,6 +52,12 @@ jest.mock("@/lib/connections/plex", () => ({
   getPlexUserInfo: jest.fn(),
 }))
 
+// The real limiter, wrapped so a test can read the subjects it was given.
+jest.mock("@/lib/security/rate-limit", () => {
+  const actual = jest.requireActual<typeof import("@/lib/security/rate-limit")>("@/lib/security/rate-limit")
+  return { ...actual, consume: jest.fn(actual.consume) }
+})
+
 jest.mock("@/lib/utils/logger", () => ({
   createLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
 }))
@@ -57,6 +65,9 @@ jest.mock("@/lib/utils/logger", () => ({
 const mockAuthenticateJellyfin = authenticateJellyfin as jest.MockedFunction<typeof authenticateJellyfin>
 const mockGetPlexUserInfo = getPlexUserInfo as jest.MockedFunction<typeof getPlexUserInfo>
 const mockJellyfinServerFindFirst = prisma.jellyfinServer.findFirst as jest.Mock
+const mockUserFindUnique = prisma.user.findUnique as jest.Mock
+const mockUserUpdate = prisma.user.update as jest.Mock
+const mockConsume = consume as jest.MockedFunction<typeof consume>
 
 const env = process.env as Record<string, string | undefined>
 const originalNextAuthUrl = env.NEXTAUTH_URL
@@ -88,8 +99,20 @@ async function callback(
   return { status: response.status, error: new URL(body.url).searchParams.get("error"), response, body }
 }
 
-function jellyfin(ip: string, username: string) {
-  return callback("jellyfin", ip, { username, password: "wrong-password" })
+function jellyfin(ip: string, username: string, password = "wrong-password") {
+  return callback("jellyfin", ip, { username, password })
+}
+
+/** Makes Jellyfin accept `goodPassword` for any username and reject everything else. */
+function acceptPassword(goodPassword: string) {
+  const dbUser = { id: "user-1", email: null, name: "carol", image: null, isAdmin: false }
+  mockUserFindUnique.mockResolvedValue(dbUser)
+  mockUserUpdate.mockResolvedValue(dbUser)
+  mockAuthenticateJellyfin.mockImplementation(async (_server, username, password) =>
+    password === goodPassword
+      ? { success: true, data: { id: "jellyfin-user-1", username, isAdmin: false } }
+      : { success: false, error: "Invalid username or password" }
+  )
 }
 
 describe("NextAuth credential callback rate limits", () => {
@@ -164,6 +187,45 @@ describe("NextAuth credential callback rate limits", () => {
 
       const otherUser = await jellyfin("198.51.100.7", "bob")
       expect(otherUser).toMatchObject({ status: 401, error: "CredentialsSignin" })
+    })
+
+    it("counts only failures: 5 successful sign-ins and then a failure are not refused", async () => {
+      acceptPassword("correct-password")
+
+      for (let i = 0; i < 5; i++) {
+        const signIn = await jellyfin(`198.51.100.${20 + i}`, "carol", "correct-password")
+        expect(signIn).toMatchObject({ status: 200, error: null })
+      }
+
+      const failure = await jellyfin("198.51.100.25", "carol")
+      expect(failure).toMatchObject({ status: 401, error: "CredentialsSignin" })
+      expect(mockAuthenticateJellyfin).toHaveBeenCalledTimes(6)
+    })
+
+    it("folds case the way Jellyfin does, so 'Admin' and 'admın' (dotless i) share one bucket", async () => {
+      const variants = ["Admin", "admın", "ADMIN", "admın", "aDmIn"]
+      for (const [i, username] of variants.entries()) {
+        const attempt = await jellyfin(`198.51.100.${40 + i}`, username)
+        expect(attempt).toMatchObject({ status: 401, error: "CredentialsSignin" })
+      }
+
+      expect(await jellyfin("198.51.100.45", "admın")).toMatchObject({ status: 401, error: "RATE_LIMITED" })
+      expect(mockAuthenticateJellyfin).toHaveBeenCalledTimes(5)
+    })
+
+    it("keys a username by a fixed-length hash, however long the name, and still limits it", async () => {
+      const longName = "x".repeat(10_000)
+      for (let i = 0; i < 5; i++) {
+        await jellyfin(`198.51.100.${60 + i}`, longName)
+      }
+
+      expect(await jellyfin("198.51.100.65", longName.toUpperCase())).toMatchObject({ error: "RATE_LIMITED" })
+      const subjects = mockConsume.mock.calls
+        .filter(([name]) => name === "auth:jellyfin:user")
+        .map(([, subject]) => subject)
+      expect(subjects).toHaveLength(6)
+      expect(new Set(subjects).size).toBe(1)
+      expect(subjects[0]).toMatch(/^[0-9a-f]{64}$/)
     })
   })
 

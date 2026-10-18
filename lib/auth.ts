@@ -1,7 +1,9 @@
+import { createHash } from "node:crypto"
+
 import { checkUserServerAccess, getPlexUserInfo } from "@/lib/connections/plex"
 import { authenticateJellyfin, isJellyfinAdmin } from "@/lib/jellyfin-auth"
 import { prisma } from "@/lib/prisma"
-import { consume } from "@/lib/security/rate-limit"
+import { consume, reward } from "@/lib/security/rate-limit"
 import { isE2ETestMode } from "@/lib/security/test-mode"
 import { createLogger } from "@/lib/utils/logger"
 import { NextAuthOptions } from "next-auth"
@@ -17,6 +19,19 @@ const logger = createLogger("AUTH")
  * per-request DB load (only one query per user per interval).
  */
 const ADMIN_RECHECK_INTERVAL_MS = 5 * 60 * 1000
+
+/**
+ * The `auth:jellyfin:user` subject for a submitted username.
+ *
+ * Jellyfin matches usernames case-insensitively by upper-casing them (.NET
+ * `OrdinalIgnoreCase`), so the name is upper-cased before it is lower-cased:
+ * "admın" (dotless i) and "ſam" (long s) reach the same accounts as "admin"
+ * and "sam" and must share their budget. The hash keeps the Redis key short
+ * however long the submitted name is.
+ */
+function jellyfinUsernameSubject(username: string): string {
+  return createHash("sha256").update(username.trim().toUpperCase().toLowerCase()).digest("hex")
+}
 
 export const authOptions: NextAuthOptions = {
   // NOTE: PrismaAdapter is not compatible with CredentialsProvider
@@ -281,8 +296,10 @@ export const authOptions: NextAuthOptions = {
         const { username, password } = credentials
 
         // Per-username limit, checked before Jellyfin sees the attempt, so
-        // password guessing spread over many addresses still stops here.
-        const limit = await consume("auth:jellyfin:user", username.trim().toLowerCase())
+        // password guessing spread over many addresses still stops here. A
+        // correct password refunds its point, so only failures count.
+        const usernameSubject = jellyfinUsernameSubject(username)
+        const limit = await consume("auth:jellyfin:user", usernameSubject)
         if (!limit.ok) {
           logger.warn("Jellyfin sign-in rate-limited", { username })
           throw new Error("RATE_LIMITED")
@@ -313,6 +330,8 @@ export const authOptions: NextAuthOptions = {
             })
             return null
           }
+
+          await reward("auth:jellyfin:user", usernameSubject)
 
           const jellyfinUser = authResult.data
 

@@ -1,5 +1,7 @@
 import { createHash } from "crypto"
 
+import { clientIp } from "@/lib/security/client-ip"
+
 /**
  * Hash IP address for privacy compliance
  * Uses SHA-256 with a salt to prevent rainbow table attacks
@@ -28,14 +30,15 @@ export function hashIP(ip: string | null): string | null {
 }
 
 /**
- * Extract and hash IP address from request headers
+ * Hashes the client address that {@link clientIp} finds behind
+ * `TRUSTED_PROXY_HOPS` proxies, so a client cannot choose the stored value by
+ * sending its own `X-Forwarded-For` entries.
  */
 export function getHashedIP(request: Request): string | null {
-  // Try to get IP from headers (works with proxies)
-  const forwarded = request.headers.get("x-forwarded-for")
-  const ip = forwarded?.split(",")[0]?.trim() ||
-             request.headers.get("x-real-ip") ||
-             null
+  const ip = clientIp(request.headers)
+  if (ip === "unknown") {
+    return null
+  }
 
   return hashIP(ip)
 }

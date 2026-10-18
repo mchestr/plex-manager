@@ -14,6 +14,38 @@ export const dynamic = "force-dynamic"
 
 const logger = createLogger("STRIPE_WEBHOOK")
 
+/** Stripe event payloads are far smaller than this; a body near 1 MiB is not from Stripe. */
+const MAX_BODY_BYTES = 1024 * 1024
+
+/**
+ * Reads the raw body as text, or returns `null` once it is larger than
+ * {@link MAX_BODY_BYTES}. A declared `Content-Length` over the cap is refused
+ * before anything is read, and a body without one is read in chunks and
+ * abandoned at the cap, so an unsigned request cannot make the route buffer an
+ * arbitrary amount before the signature check.
+ */
+async function readCappedBody(request: Request): Promise<string | null> {
+  if (Number(request.headers.get("content-length")) > MAX_BODY_BYTES) {
+    return null
+  }
+  if (!request.body) {
+    return ""
+  }
+
+  const reader = request.body.getReader()
+  const chunks: Uint8Array[] = []
+  let size = 0
+  for (let chunk = await reader.read(); !chunk.done; chunk = await reader.read()) {
+    size += chunk.value.byteLength
+    if (size > MAX_BODY_BYTES) {
+      await reader.cancel()
+      return null
+    }
+    chunks.push(chunk.value)
+  }
+  return new TextDecoder().decode(Buffer.concat(chunks))
+}
+
 /**
  * POST /api/stripe/webhook
  *
@@ -22,6 +54,7 @@ const logger = createLogger("STRIPE_WEBHOOK")
  * processing, and returns 200 quickly. All side effects happen in the job.
  *
  * - 400 on signature verification failure (never 5xx — Stripe would retry).
+ * - 413 when the body is over 1 MiB, before the signature is checked.
  * - 200 without re-enqueue when the event id was already seen (idempotency).
  * - 200 + enqueue for a valid, previously-unseen event.
  *
@@ -53,7 +86,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   // Raw body is required for HMAC signature verification — never parse JSON first.
-  const rawBody = await request.text()
+  const rawBody = await readCappedBody(request)
+  if (rawBody === null) {
+    logger.warn("Stripe webhook body over the size cap", { maxBytes: MAX_BODY_BYTES })
+    return NextResponse.json({ error: "Payload too large" }, { status: 413 })
+  }
   const signature = request.headers.get("stripe-signature")
 
   let event

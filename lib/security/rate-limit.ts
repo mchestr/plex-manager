@@ -3,10 +3,10 @@
  *
  * ## Overview
  *
- * Every limit has a name in {@link LIMITS}. The name is also the key prefix,
- * so the counters of different features never mix: a share-page visitor and
- * an admin on the same address have separate `share:<ip>` and `admin:<ip>`
- * buckets.
+ * Every limit has a name in {@link LIMITS} (`lib/security/rate-limit-config.ts`).
+ * The name is also the key prefix, so the counters of different features never
+ * mix: a share-page visitor and an admin on the same address have separate
+ * `share:<ip>` and `admin:<ip>` buckets.
  *
  * ## Store
  *
@@ -23,12 +23,8 @@
  * instead: no offline queue, one retry, and one-second connect and command
  * timeouts. The first limited request waits for the first connection attempt
  * to settle, so it is counted in Redis when Redis is up; after that no request
- * waits for Redis.
- *
- * ## Naming
- *
- * Names are `feature` or `feature:scope`, such as `auth:jellyfin:user`.
- * Rewind limits start with `rw:`.
+ * waits for Redis. In development the client is kept on `globalThis`, so
+ * `next dev` reloading this module does not open another connection.
  *
  * @module lib/security/rate-limit
  */
@@ -45,55 +41,32 @@ import {
   type RateLimiterAbstract,
 } from "rate-limiter-flexible"
 
-import { clientIp } from "@/lib/security/client-ip"
+import { clientIp, trustedProxyHops } from "@/lib/security/client-ip"
+import { LIMITS, type LimitName } from "@/lib/security/rate-limit-config"
 import { createLogger } from "@/lib/utils/logger"
+
+export { LIMITS, type LimitName }
 
 const logger = createLogger("RATE_LIMIT")
 
-const MINUTE = 60
-
-interface LimitConfig {
-  /** Requests allowed per window. */
-  points: number
-  /** Window length in seconds. */
-  duration: number
-}
-
-export const LIMITS = {
-  share: { points: 100, duration: 15 * MINUTE },
-  poster: { points: 500, duration: 15 * MINUTE },
-  admin: { points: 50, duration: 15 * MINUTE },
-  checkout: { points: 10, duration: MINUTE },
-  portal: { points: 10, duration: MINUTE },
-  "discord-link": { points: 5, duration: 5 * MINUTE },
-  "auth:plex": { points: 20, duration: 15 * MINUTE },
-  "auth:jellyfin:ip": { points: 10, duration: 15 * MINUTE },
-  "auth:jellyfin:user": { points: 5, duration: 15 * MINUTE },
-  "invite:validate": { points: 20, duration: 15 * MINUTE },
-  "invite:redeem": { points: 10, duration: 15 * MINUTE },
-  "plex:pin:create": { points: 30, duration: 10 * MINUTE },
-  "plex:pin:poll": { points: 300, duration: 10 * MINUTE },
-} as const satisfies Record<string, LimitConfig>
-
-export type LimitName = keyof typeof LIMITS
-
 export type ConsumeResult = { ok: true } | { ok: false; retryAfterSec: number }
 
-/** `undefined` until the first limiter is built, then the client or `null` without `REDIS_URL`. */
-let redisClient: Redis | null | undefined
-/** Settles once the client's first connection attempt has succeeded or failed. */
-let firstConnection: Promise<void> = Promise.resolve()
+interface RedisState {
+  /** The limiters' client, or `null` without `REDIS_URL`. */
+  client: Redis | null
+  /** Settles once the client's first connection attempt has succeeded or failed. */
+  firstConnection: Promise<void>
+}
+
+const globalForRateLimit = globalThis as typeof globalThis & { rateLimitRedis?: RedisState }
+
+let redisState: RedisState | undefined
 const limiters = new Map<LimitName, RateLimiterAbstract>()
 
-function getRedisClient(): Redis | null {
-  if (redisClient !== undefined) {
-    return redisClient
-  }
-
+function connectRedis(): RedisState {
   const url = process.env.REDIS_URL
   if (!url) {
-    redisClient = null
-    return redisClient
+    return { client: null, firstConnection: Promise.resolve() }
   }
 
   const client = new Redis(url, {
@@ -116,30 +89,41 @@ function getRedisClient(): Redis | null {
   })
   // A failed attempt is reported by the error listener, and ioredis keeps
   // reconnecting; until then commands fail and the insurance store counts.
-  firstConnection = client.connect().catch(() => undefined)
+  return { client, firstConnection: client.connect().catch(() => undefined) }
+}
 
-  redisClient = client
-  return client
+function getRedis(): RedisState {
+  if (!redisState) {
+    const isDevelopment = process.env.NODE_ENV === "development"
+    redisState = (isDevelopment ? globalForRateLimit.rateLimitRedis : undefined) ?? connectRedis()
+    if (isDevelopment) {
+      globalForRateLimit.rateLimitRedis = redisState
+    }
+  }
+  return redisState
 }
 
 async function getLimiter(name: LimitName): Promise<RateLimiterAbstract> {
   let limiter = limiters.get(name)
   if (!limiter) {
+    const { client } = getRedis()
+    if (limiters.size === 0) {
+      logger.info("Rate limits ready", { store: client ? "redis" : "memory", trustedProxyHops: trustedProxyHops() })
+    }
     const options = { ...LIMITS[name], keyPrefix: name }
-    const client = getRedisClient()
     limiter = client
       ? new RateLimiterRedis({ ...options, storeClient: client, insuranceLimiter: new RateLimiterMemory(options) })
       : new RateLimiterMemory(options)
     limiters.set(name, limiter)
   }
 
-  await firstConnection
+  await getRedis().firstConnection
   return limiter
 }
 
 /**
- * Spends one point of `name` for `subject` (an IP address, user id or
- * lowercased username).
+ * Spends one point of `name` for `subject`: a {@link clientIp} address, a user
+ * id or a username hash.
  *
  * @returns `{ ok: true }` while within the limit, otherwise `{ ok: false }`
  * with the whole seconds until the next point frees up
@@ -185,7 +169,10 @@ export async function limitRequest(name: LimitName, request: Request): Promise<N
   )
 }
 
-/** The calling client's address inside a Server Action or Server Component. */
+/**
+ * The calling client's {@link clientIp} address (IPv4, or an IPv6 /64) inside
+ * a Server Action or Server Component.
+ */
 export async function actionClientIp(): Promise<string> {
   return clientIp(await headers())
 }

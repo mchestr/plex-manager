@@ -41,9 +41,18 @@ jest.mock("next/headers", () => ({
   headers: jest.fn(),
 }))
 
+const mockLogInfo = jest.fn()
+
 jest.mock("@/lib/utils/logger", () => ({
-  createLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
+  createLogger: () => ({
+    debug: jest.fn(),
+    info: (...args: unknown[]) => mockLogInfo(...args),
+    warn: jest.fn(),
+    error: jest.fn(),
+  }),
 }))
+
+const env = process.env as Record<string, string | undefined>
 
 /** Loads a fresh copy of the module, so each test starts with empty counters. */
 async function loadRateLimit(): Promise<RateLimitModule> {
@@ -95,7 +104,25 @@ describe("rate-limit", () => {
         "invite:redeem": { points: 10, duration: 900 },
         "plex:pin:create": { points: 30, duration: 600 },
         "plex:pin:poll": { points: 300, duration: 600 },
+        "rw:share-actions": { points: 10, duration: 3600 },
       })
+    })
+  })
+
+  describe("startup log", () => {
+    it("logs the store and the hop count once, at the first limiter build", async () => {
+      env.TRUSTED_PROXY_HOPS = "2"
+      try {
+        const mod = await loadRateLimit()
+
+        await mod.consume("share", "203.0.113.7")
+        await mod.consume("admin", "203.0.113.7")
+
+        expect(mockLogInfo).toHaveBeenCalledTimes(1)
+        expect(mockLogInfo).toHaveBeenCalledWith("Rate limits ready", { store: "memory", trustedProxyHops: 2 })
+      } finally {
+        delete env.TRUSTED_PROXY_HOPS
+      }
     })
   })
 
@@ -199,6 +226,28 @@ describe("rate-limit", () => {
       expect((await mod.limitRequest("admin", request("6.6.6.6, 203.0.113.7")))?.status).toBe(429)
       expect(await mod.limitRequest("admin", request("203.0.113.8"))).toBeNull()
     })
+
+    it("keys IPv6 clients by their /64, so rotating addresses inside it hits 429", async () => {
+      const mod = await loadRateLimit()
+
+      for (let i = 1; i <= 50; i++) {
+        expect(await mod.limitRequest("admin", request(`2001:db8:1:2::${i.toString(16)}`))).toBeNull()
+      }
+
+      expect((await mod.limitRequest("admin", request("2001:db8:1:2:dead:beef:0:1")))?.status).toBe(429)
+      expect(await mod.limitRequest("admin", request("2001:db8:1:3::1"))).toBeNull()
+    })
+
+    it("counts an IPv4-mapped address against the IPv4 address", async () => {
+      const mod = await loadRateLimit()
+
+      for (let i = 0; i < 25; i++) {
+        expect(await mod.limitRequest("admin", request("203.0.113.9"))).toBeNull()
+        expect(await mod.limitRequest("admin", request("::ffff:203.0.113.9"))).toBeNull()
+      }
+
+      expect((await mod.limitRequest("admin", request("::ffff:203.0.113.9")))?.status).toBe(429)
+    })
   })
 
   describe("actionClientIp", () => {
@@ -254,6 +303,31 @@ describe("rate-limit", () => {
       const mod = await loadRateLimit()
 
       await expect(mod.consume("share", "203.0.113.7")).resolves.toEqual({ ok: true })
+    })
+
+    it("opens a new client for each fresh copy of the module outside development", async () => {
+      process.env.REDIS_URL = "redis://redis.test:6379/0"
+
+      await (await loadRateLimit()).consume("share", "203.0.113.7")
+      await (await loadRateLimit()).consume("share", "203.0.113.7")
+
+      expect(mockRedisConstructor).toHaveBeenCalledTimes(2)
+    })
+
+    it("keeps one client on globalThis across module reloads in development", async () => {
+      process.env.REDIS_URL = "redis://redis.test:6379/0"
+      const originalNodeEnv = env.NODE_ENV
+      env.NODE_ENV = "development"
+      try {
+        await (await loadRateLimit()).consume("share", "203.0.113.7")
+        await (await loadRateLimit()).consume("admin", "203.0.113.7")
+
+        expect(mockRedisConstructor).toHaveBeenCalledTimes(1)
+        expect(mockRedisConnect).toHaveBeenCalledTimes(1)
+      } finally {
+        env.NODE_ENV = originalNodeEnv
+        delete (globalThis as { rateLimitRedis?: unknown }).rateLimitRedis
+      }
     })
 
     it("falls back to the insurance store without throwing when Redis commands reject", async () => {
