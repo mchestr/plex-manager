@@ -161,6 +161,35 @@ describe('shared wrapped page', () => {
     expect(mockVisitCreate).toHaveBeenCalledTimes(1)
   })
 
+  it('keys the limit on the address the trusted proxy appended, not the client-sent entries', async () => {
+    const savedHops = process.env.TRUSTED_PROXY_HOPS
+    delete process.env.TRUSTED_PROXY_HOPS
+    try {
+      // A client that rotates the leftmost X-Forwarded-For entry on every view
+      // is still one visitor to the default single trusted proxy.
+      const viewWithSpoofedEntry = (view: number) => {
+        currentHeaders = new Headers({ 'x-forwarded-for': `10.${view >> 8}.${view & 255}.1, 203.0.113.9` })
+        return SharedWrappedPage(params(TOKEN))
+      }
+
+      for (let view = 1; view <= 60; view++) {
+        const { unmount } = render(await viewWithSpoofedEntry(view))
+        expect(screen.getByTestId('wrapped-share-summary')).toBeInTheDocument()
+        unmount()
+      }
+
+      render(await viewWithSpoofedEntry(61))
+      expect(screen.getByTestId('wrapped-share-busy')).toBeInTheDocument()
+      expect(screen.queryByTestId('wrapped-share-summary')).not.toBeInTheDocument()
+    } finally {
+      if (savedHops === undefined) {
+        delete process.env.TRUSTED_PROXY_HOPS
+      } else {
+        process.env.TRUSTED_PROXY_HOPS = savedHops
+      }
+    }
+  })
+
   it('creates exactly one visit per render, with the Rewind id only', async () => {
     for (let view = 1; view <= 3; view++) {
       currentHeaders = new Headers({ 'x-forwarded-for': '203.0.113.3' })

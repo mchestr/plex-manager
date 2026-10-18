@@ -323,6 +323,11 @@ When deploying to production, ensure the following environment variables are set
   4. If you removed any link, rotate `NEXTAUTH_SECRET` and restart the app. Everyone has to sign in again, which ends the sessions the Jellyfin user still holds on that account: they last up to 7 days and keep the account's admin rights. Then search the server logs for `ADMIN_PRIVILEGE_GRANTED` and `ADMIN_PRIVILEGE_REVOKED` audit events on those accounts, and review the settings, invites and users changed while the link existed.
 
   The migration then clears the stored email of every account that has a Jellyfin ID, linked accounts included, because an earlier release may have written a Jellyfin username there. An account with a Plex ID gets its Plex email back on its next Plex sign-in. Until then, Rewind matches its Tautulli history by Plex user ID instead of email and finds none of its Overseerr requests, and the Stripe grant cannot invite it to Plex.
+- **Upgrading to the release where the share page reads the database**: a Rewind share link now opens only when its token is exactly 43 URL-safe characters (`A-Z`, `a-z`, `0-9`, `-` and `_`), the shape the app's link generator makes. A link with any other token answers 404 without a database lookup, and nothing is logged. Before deploying, count the shared Rewinds whose token has another shape:
+  ```sql
+  SELECT count(*) FROM "PlexWrapped" WHERE "shareToken" IS NOT NULL AND "shareToken" !~ '^[A-Za-z0-9_-]{43}$';
+  ```
+  If the count is not 0, those links stop working after the upgrade. Clear their tokens (`UPDATE "PlexWrapped" SET "shareToken" = NULL WHERE "shareToken" IS NOT NULL AND "shareToken" !~ '^[A-Za-z0-9_-]{43}$';`) and tell the owners to turn sharing on again for a new link, or keep the release back until those links can lapse.
 
 ### Docker Deployment
 

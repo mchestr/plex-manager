@@ -208,23 +208,26 @@ test.describe('Shared Rewind page', () => {
     await expect(page.getByTestId('wrapped-share-not-found')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
   });
 
-  // Tokens of the right shape need the database, so their not-found page is
-  // streamed after app/loading.tsx and keeps the 200 status (see proxy.ts).
-  test('an unknown or revoked token shows the not-found page', async ({ page }) => {
+  // The page's notFound() streams after app/loading.tsx with status 200, so
+  // proxy.ts looks the token up and sets the 404 itself.
+  test('an unknown or revoked token is a 404', async ({ page }) => {
     const revokedToken = newToken();
     await seedShare(SHARE_YEARS[3], revokedToken);
     const prisma = createE2EPrismaClient();
     try {
-      await openShare(page, newToken());
+      const unknown = await openShare(page, newToken());
+      expect(unknown?.status()).toBe(404);
       await expect(page.getByTestId('wrapped-share-not-found')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
 
-      await openShare(page, revokedToken);
+      const shared = await openShare(page, revokedToken);
+      expect(shared?.status()).toBe(200);
       await expect(page.getByTestId('wrapped-share-summary')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
 
       await prisma.plexWrapped.update({ where: { shareToken: revokedToken }, data: { shareToken: null } });
       // A fresh visit, not a reload of the page on screen.
       await page.goto('about:blank');
-      await openShare(page, revokedToken);
+      const revoked = await openShare(page, revokedToken);
+      expect(revoked?.status()).toBe(404);
       await expect(page.getByTestId('wrapped-share-not-found')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
       await expect(page.getByTestId('wrapped-share-summary')).toHaveCount(0);
     } finally {

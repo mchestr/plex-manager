@@ -3,6 +3,7 @@
  * Logs incoming HTTP requests and sets up request context for async operations
  */
 
+import { prisma } from "@/lib/prisma"
 import {
   createLogger,
   generateRequestId,
@@ -34,28 +35,62 @@ function isInvalidWrappedYearPath(pathname: string): boolean {
 const WRAPPED_SHARE_PATH = /^\/wrapped\/share\/([^/]+)$/
 
 /**
- * Whether the path is `/wrapped/share/<token>` with a token that cannot exist
- * (not the 43 base64url characters of a share token). The page renders its
- * not-found page for it, streamed with status 200 for the same reason as
- * above, so the 404 status is set here (P0.11). Unknown and revoked tokens
- * of the right shape need the database and keep the streamed status.
+ * Whether the path is `/wrapped/share/<token>` with a token that shares
+ * nothing. The page renders its not-found page for these, streamed with
+ * status 200 for the same reason as above, so the 404 status is set here
+ * (P0.11):
+ *
+ * - a token that cannot exist (not the 43 base64url characters of a share
+ *   token, or not valid percent-encoding) is answered without a database call;
+ * - an unknown or revoked token, or one whose Rewind is not `completed`, is
+ *   found with one indexed read of the status, the same rule as
+ *   `getShareSafeRewind`.
+ *
+ * The segment is decoded first, as the page's `params.token` is, so a token
+ * with a percent-encoded character is the same token in both places.
+ *
+ * A failed lookup lets the request through: the page's own lookup then
+ * throws and renders the error page rather than a 404.
  */
-function isMalformedSharePath(pathname: string): boolean {
+async function isMissingSharePath(pathname: string): Promise<boolean> {
   const segment = WRAPPED_SHARE_PATH.exec(pathname)?.[1]
-  return segment !== undefined && !shareTokenSchema.safeParse(segment).success
+  if (segment === undefined) {
+    return false
+  }
+
+  let token: string
+  try {
+    token = decodeURIComponent(segment)
+  } catch {
+    return true
+  }
+  if (!shareTokenSchema.safeParse(token).success) {
+    return true
+  }
+
+  try {
+    const wrapped = await prisma.plexWrapped.findUnique({
+      where: { shareToken: token },
+      select: { status: true },
+    })
+    return wrapped?.status !== "completed"
+  } catch (error) {
+    logger.error("Share token lookup failed", error)
+    return false
+  }
 }
 
 /**
  * Proxy handler to log HTTP requests and set up request context
  */
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const requestId = generateRequestId()
 
   // Extract user ID from session if available (set by auth callbacks)
   let userId: string | undefined
 
   // Run the request within a context
-  return runWithRequestContext(requestId, userId, () => {
+  return runWithRequestContext(requestId, userId, async () => {
     const url = sanitizeUrlForLogging(request.url)
     const method = request.method
     const userAgent = request.headers.get("user-agent") || "unknown"
@@ -75,9 +110,10 @@ export function proxy(request: NextRequest) {
     })
 
     // Create response: the same page, with a 404 status for an invalid Rewind
-    // year or share token
+    // year or a share token that shares nothing
     const { pathname } = request.nextUrl
-    const response = isInvalidWrappedYearPath(pathname) || isMalformedSharePath(pathname)
+    const notFound = isInvalidWrappedYearPath(pathname) || (await isMissingSharePath(pathname))
+    const response = notFound
       ? NextResponse.rewrite(request.nextUrl, { status: 404 })
       : NextResponse.next()
 
