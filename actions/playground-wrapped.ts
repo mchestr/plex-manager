@@ -3,6 +3,7 @@
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
+import { YEAR_MAX, YEAR_MIN, yearSchema } from "@/lib/validations/shared-schemas"
 import { assembleWrappedData } from "@/lib/wrapped/assemble-wrapped"
 import { memberName } from "@/lib/wrapped/member-name"
 import { parseWrappedLLMOutput } from "@/lib/wrapped/parse-llm-output"
@@ -45,6 +46,15 @@ export async function savePlaygroundWrapped(input: SavePlaygroundWrappedInput): 
       return {
         success: false,
         error: "Only admins can save wrappeds from the playground",
+      }
+    }
+
+    // The year field is free-typed; a completed row outside the range
+    // /wrapped/<year> accepts would send the member to a 404 (P0.14).
+    if (!yearSchema.safeParse(input.year).success) {
+      return {
+        success: false,
+        error: `Year must be a whole number from ${YEAR_MIN} to ${YEAR_MAX}`,
       }
     }
 

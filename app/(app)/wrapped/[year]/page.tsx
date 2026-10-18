@@ -1,6 +1,5 @@
 import { notFound, redirect } from "next/navigation"
 import { getServerSession } from "next-auth"
-import { z } from "zod"
 import { authOptions } from "@/lib/auth"
 import { getUserPlexWrapped } from "@/actions/users"
 import { WrappedSharedYearsNotice } from "@/components/wrapped/wrapped-shared-years-notice"
@@ -8,18 +7,13 @@ import { WrappedYearLinks } from "@/components/wrapped/wrapped-year-links"
 import { WrappedYearView } from "@/components/wrapped/wrapped-year-view"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
+import { yearParamSchema } from "@/lib/validations/shared-schemas"
 import { getSeasonYear, listCompletedRewindYears } from "@/lib/wrapped/season"
 import { WrappedData } from "@/types/wrapped"
 
 export const dynamic = 'force-dynamic'
 
 const logger = createLogger("WRAPPED_PAGE")
-
-/** Four digits only, so `/wrapped/0x7EA` or `/wrapped/2026.0` is a 404, not a second URL for 2026. */
-const yearParamSchema = z
-  .string()
-  .regex(/^\d{4}$/)
-  .pipe(z.coerce.number<string>().int().min(2010).max(2100))
 
 function parseWrappedData(data: string): WrappedData | null {
   try {
@@ -38,6 +32,7 @@ export default async function WrappedYearPage({ params }: { params: Promise<{ ye
     redirect("/")
   }
 
+  // proxy.ts answers the same years with a 404 status (app/loading.tsx streams the page)
   const parsedYear = yearParamSchema.safeParse((await params).year)
   if (!parsedYear.success) {
     notFound()
@@ -74,7 +69,7 @@ export default async function WrappedYearPage({ params }: { params: Promise<{ ye
         wrapped={wrapped}
         wrappedData={wrappedData}
         seasonYear={seasonYear}
-        latestYear={completedYears[0] ?? seasonYear}
+        latestYear={completedYears[0] ?? null}
       />
     </>
   )

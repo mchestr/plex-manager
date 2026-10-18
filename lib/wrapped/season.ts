@@ -3,6 +3,11 @@
  * `getWrappedSettings()`), the `/wrapped` resolver and the admin screens
  * (RWP-04, RWV-02, UI-02).
  *
+ * `server-only` is resolved by Next's own alias (and an empty mock under
+ * next/jest), not an npm package, so tsx scripts (`scripts/`, the Prisma
+ * seed) must not import this module. Installing the package would not help
+ * them: outside the `react-server` condition it throws by design.
+ *
  * ## Rule
  *
  * 1. When `Config.wrappedGenerationStartDate` is set, the season year is the
@@ -24,6 +29,13 @@
 import "server-only"
 
 import { prisma } from "@/lib/prisma"
+import { YEAR_MAX, YEAR_MIN } from "@/lib/validations/shared-schemas"
+
+/**
+ * Completed rows in the range `/wrapped/<year>` accepts: a playground save
+ * for 2005 or 9999 would otherwise send the member to a 404.
+ */
+const OPENABLE_YEARS = { gte: YEAR_MIN, lte: YEAR_MAX }
 
 /**
  * The season year for a configured start date (or none) at `now`.
@@ -52,7 +64,7 @@ export async function getSeasonYear(now: Date = new Date()): Promise<number> {
 /** The member's most recent year with a completed Rewind, or null. */
 export async function getLatestCompletedRewindYear(userId: string): Promise<number | null> {
   const latest = await prisma.plexWrapped.findFirst({
-    where: { userId, status: "completed" },
+    where: { userId, status: "completed", year: OPENABLE_YEARS },
     orderBy: { year: "desc" },
     select: { year: true },
   })
@@ -62,9 +74,27 @@ export async function getLatestCompletedRewindYear(userId: string): Promise<numb
 /** Every year in which the member has a completed Rewind, newest first. */
 export async function listCompletedRewindYears(userId: string): Promise<number[]> {
   const rows = await prisma.plexWrapped.findMany({
-    where: { userId, status: "completed" },
+    where: { userId, status: "completed", year: OPENABLE_YEARS },
     orderBy: { year: "desc" },
     select: { year: true },
   })
   return rows.map((row) => row.year)
+}
+
+/**
+ * The year `/wrapped` opens for a member:
+ *
+ * 1. the season year when the member has a row for it in any state, so a
+ *    generating or failed Rewind still shows its progress or failure;
+ * 2. else the latest completed year;
+ * 3. else the season year.
+ */
+export async function resolveRewindYear(userId: string, now: Date = new Date()): Promise<number> {
+  const seasonYear = await getSeasonYear(now)
+  const seasonRow = await prisma.plexWrapped.findUnique({
+    where: { userId_year: { userId, year: seasonYear } },
+    select: { id: true },
+  })
+  if (seasonRow) return seasonYear
+  return (await getLatestCompletedRewindYear(userId)) ?? seasonYear
 }

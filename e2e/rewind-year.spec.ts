@@ -139,11 +139,13 @@ test.describe('Rewind year from data', () => {
   });
 
   // The plan's /wrapped/1999 is outside the accepted 2010-2100 range, so it
-  // is a 404; 2019 above covers an in-range year with no Rewind.
+  // is a 404; 2019 above covers an in-range year with no Rewind. The status
+  // comes from proxy.ts, because app/loading.tsx streams every page.
   for (const year of ['1999', 'abc']) {
     test(`/wrapped/${year} is not found`, async ({ regularUserPage }) => {
-      await regularUserPage.goto(`/wrapped/${year}`);
+      const response = await regularUserPage.goto(`/wrapped/${year}`);
 
+      expect(response?.status()).toBe(404);
       await expect(regularUserPage.getByTestId('wrapped-year-not-found')).toBeVisible();
       await expect(regularUserPage.getByTestId('no-wrapped-found')).toHaveCount(0);
       await expect(regularUserPage.getByTestId('wrapped-viewer')).toHaveCount(0);

@@ -124,7 +124,7 @@ export default async function HistoricalWrappedPage({
               </div>
             </div>
             <div className="flex items-center gap-3 flex-shrink-0">
-              <HistoricalWrappedSelectorHeader wrappedId={wrappedId} userId={userId} />
+              <HistoricalWrappedSelectorHeader wrappedId={wrappedId} userId={userId} year={year} />
             </div>
           </div>
         </div>

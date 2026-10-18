@@ -275,12 +275,14 @@ describe('getAllUsersWithWrapped', () => {
     })
   })
 
-  it('should use current year as default', async () => {
-    const currentYear = 2024
+  // P0.14: the year comes from the caller (the season year), never the calendar.
+  it('reads the year it is given, not the calendar year', async () => {
+    jest.setSystemTime(new Date('2027-01-02T12:00:00Z'))
+    const seasonYear = 2026
     mockPrisma.user.findMany.mockResolvedValue([])
     mockPrisma.plexWrapped.findMany.mockResolvedValue([])
 
-    await getAllUsersWithWrapped()
+    await getAllUsersWithWrapped(seasonYear)
 
     expect(mockPrisma.user.findMany).toHaveBeenCalledWith({
       orderBy: [
@@ -290,7 +292,7 @@ describe('getAllUsersWithWrapped', () => {
       include: {
         plexWrapped: {
           where: {
-            year: currentYear,
+            year: seasonYear,
           },
           take: 1,
           include: {

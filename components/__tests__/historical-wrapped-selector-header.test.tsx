@@ -12,6 +12,8 @@ describe('HistoricalWrappedSelectorHeader', () => {
   const mockPush = jest.fn()
   const mockWrappedId = 'wrapped-123'
   const mockUserId = 'user-456'
+  // A past year, so the test shows "current" keeps it rather than the season year
+  const mockYear = 2025
 
   beforeEach(() => {
     jest.clearAllMocks()
@@ -52,7 +54,7 @@ describe('HistoricalWrappedSelectorHeader', () => {
       ;(global.fetch as jest.Mock).mockReturnValue(new Promise(() => {}))
 
       const { container } = render(
-        <HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} />
+        <HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} year={mockYear} />
       )
 
       expect(container.firstChild).toBeNull()
@@ -65,7 +67,7 @@ describe('HistoricalWrappedSelectorHeader', () => {
       })
 
       const { container } = render(
-        <HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} />
+        <HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} year={mockYear} />
       )
 
       await waitFor(() => {
@@ -79,7 +81,7 @@ describe('HistoricalWrappedSelectorHeader', () => {
         json: async () => ({ versions: mockVersions }),
       })
 
-      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} />)
+      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} year={mockYear} />)
 
       await waitFor(() => {
         expect(screen.getByRole('button')).toBeInTheDocument()
@@ -94,7 +96,7 @@ describe('HistoricalWrappedSelectorHeader', () => {
         json: async () => ({ versions: mockVersions }),
       })
 
-      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} />)
+      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} year={mockYear} />)
 
       await waitFor(() => {
         expect(global.fetch).toHaveBeenCalledWith(`/api/admin/wrapped/${mockWrappedId}/versions`)
@@ -106,7 +108,7 @@ describe('HistoricalWrappedSelectorHeader', () => {
       ;(global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'))
 
       const { container } = render(
-        <HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} />
+        <HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} year={mockYear} />
       )
 
       await waitFor(() => {
@@ -126,7 +128,7 @@ describe('HistoricalWrappedSelectorHeader', () => {
       })
 
       const { container } = render(
-        <HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} />
+        <HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} year={mockYear} />
       )
 
       await waitFor(() => {
@@ -144,7 +146,7 @@ describe('HistoricalWrappedSelectorHeader', () => {
     })
 
     it('should display current version text', async () => {
-      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} />)
+      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} year={mockYear} />)
 
       await waitFor(() => {
         expect(screen.getByText('Current')).toBeInTheDocument()
@@ -152,7 +154,7 @@ describe('HistoricalWrappedSelectorHeader', () => {
     })
 
     it('should display version count', async () => {
-      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} />)
+      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} year={mockYear} />)
 
       await waitFor(() => {
         expect(screen.getByText(`(${mockVersions.length})`)).toBeInTheDocument()
@@ -161,7 +163,7 @@ describe('HistoricalWrappedSelectorHeader', () => {
 
     it('should display clock icon', async () => {
       const { container } = render(
-        <HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} />
+        <HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} year={mockYear} />
       )
 
       await waitFor(() => {
@@ -172,7 +174,7 @@ describe('HistoricalWrappedSelectorHeader', () => {
 
     it('should display chevron icon', async () => {
       const { container } = render(
-        <HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} />
+        <HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} year={mockYear} />
       )
 
       await waitFor(() => {
@@ -191,7 +193,7 @@ describe('HistoricalWrappedSelectorHeader', () => {
     })
 
     it('should expand dropdown when button is clicked', async () => {
-      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} />)
+      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} year={mockYear} />)
 
       await waitFor(() => {
         expect(screen.getByRole('button')).toBeInTheDocument()
@@ -206,7 +208,7 @@ describe('HistoricalWrappedSelectorHeader', () => {
     })
 
     it('should collapse dropdown when button is clicked again', async () => {
-      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} />)
+      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} year={mockYear} />)
 
       await waitFor(() => {
         expect(screen.getByRole('button')).toBeInTheDocument()
@@ -227,7 +229,7 @@ describe('HistoricalWrappedSelectorHeader', () => {
     })
 
     it('should close dropdown when backdrop is clicked', async () => {
-      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} />)
+      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} year={mockYear} />)
 
       await waitFor(() => {
         expect(screen.getByRole('button')).toBeInTheDocument()
@@ -251,7 +253,7 @@ describe('HistoricalWrappedSelectorHeader', () => {
 
     it('should rotate chevron when expanded', async () => {
       const { container } = render(
-        <HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} />
+        <HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} year={mockYear} />
       )
 
       await waitFor(() => {
@@ -280,7 +282,7 @@ describe('HistoricalWrappedSelectorHeader', () => {
     })
 
     it('should navigate to current version when current version is clicked', async () => {
-      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} />)
+      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} year={mockYear} />)
 
       await waitFor(() => {
         expect(screen.getByRole('button')).toBeInTheDocument()
@@ -296,12 +298,12 @@ describe('HistoricalWrappedSelectorHeader', () => {
       fireEvent.click(currentVersionButton)
 
       await waitFor(() => {
-        expect(mockPush).toHaveBeenCalledWith(`/admin/users/${mockUserId}/wrapped`)
+        expect(mockPush).toHaveBeenCalledWith(`/admin/users/${mockUserId}/wrapped?year=2025`)
       })
     })
 
     it('should navigate to historical version when clicked', async () => {
-      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} />)
+      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} year={mockYear} />)
 
       await waitFor(() => {
         expect(screen.getByRole('button')).toBeInTheDocument()
@@ -322,7 +324,7 @@ describe('HistoricalWrappedSelectorHeader', () => {
     })
 
     it('should close dropdown after version selection', async () => {
-      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} />)
+      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} year={mockYear} />)
 
       await waitFor(() => {
         expect(screen.getByRole('button')).toBeInTheDocument()
@@ -348,7 +350,7 @@ describe('HistoricalWrappedSelectorHeader', () => {
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation()
       mockPush.mockRejectedValueOnce(new Error('Navigation error'))
 
-      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} />)
+      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} year={mockYear} />)
 
       await waitFor(() => {
         expect(screen.getByRole('button')).toBeInTheDocument()
@@ -383,7 +385,7 @@ describe('HistoricalWrappedSelectorHeader', () => {
     })
 
     it('should display formatted date for each version', async () => {
-      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} />)
+      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} year={mockYear} />)
 
       await waitFor(() => {
         expect(screen.getByRole('button')).toBeInTheDocument()
@@ -398,7 +400,7 @@ describe('HistoricalWrappedSelectorHeader', () => {
     })
 
     it('should display provider and model for each version', async () => {
-      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} />)
+      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} year={mockYear} />)
 
       await waitFor(() => {
         expect(screen.getByRole('button')).toBeInTheDocument()
@@ -413,7 +415,7 @@ describe('HistoricalWrappedSelectorHeader', () => {
     })
 
     it('should display cost and tokens for each version', async () => {
-      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} />)
+      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} year={mockYear} />)
 
       await waitFor(() => {
         expect(screen.getByRole('button')).toBeInTheDocument()
@@ -428,7 +430,7 @@ describe('HistoricalWrappedSelectorHeader', () => {
     })
 
     it('should display "Current" badge for current version', async () => {
-      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} />)
+      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} year={mockYear} />)
 
       await waitFor(() => {
         expect(screen.getByRole('button')).toBeInTheDocument()
@@ -443,7 +445,7 @@ describe('HistoricalWrappedSelectorHeader', () => {
     })
 
     it('should display checkmark for selected version', async () => {
-      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} />)
+      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} year={mockYear} />)
 
       await waitFor(() => {
         expect(screen.getByRole('button')).toBeInTheDocument()
@@ -471,7 +473,7 @@ describe('HistoricalWrappedSelectorHeader', () => {
         }),
       })
 
-      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} />)
+      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} year={mockYear} />)
 
       await waitFor(() => {
         expect(screen.getByRole('button')).toBeInTheDocument()
@@ -496,7 +498,7 @@ describe('HistoricalWrappedSelectorHeader', () => {
         json: async () => ({ versions: mockVersions }),
       })
 
-      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} />)
+      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} year={mockYear} />)
 
       await waitFor(() => {
         expect(screen.getByText('Current')).toBeInTheDocument()
@@ -512,7 +514,7 @@ describe('HistoricalWrappedSelectorHeader', () => {
         json: async () => ({ versions: mockVersions }),
       })
 
-      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} />)
+      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} year={mockYear} />)
 
       await waitFor(() => {
         expect(screen.getByRole('button')).toBeInTheDocument()
@@ -534,7 +536,7 @@ describe('HistoricalWrappedSelectorHeader', () => {
       })
 
       const { rerender } = render(
-        <HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} />
+        <HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} year={mockYear} />
       )
 
       await waitFor(() => {
@@ -545,7 +547,7 @@ describe('HistoricalWrappedSelectorHeader', () => {
         `/admin/wrapped/${mockWrappedId}/history/version-2`
       )
 
-      rerender(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} />)
+      rerender(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} year={mockYear} />)
 
       // Selection should update based on new pathname
       await waitFor(() => {
@@ -563,7 +565,7 @@ describe('HistoricalWrappedSelectorHeader', () => {
     })
 
     it('should apply hover styles to button', async () => {
-      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} />)
+      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} year={mockYear} />)
 
       await waitFor(() => {
         const button = screen.getByRole('button')
@@ -573,7 +575,7 @@ describe('HistoricalWrappedSelectorHeader', () => {
     })
 
     it('should highlight selected version', async () => {
-      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} />)
+      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} year={mockYear} />)
 
       await waitFor(() => {
         expect(screen.getByRole('button')).toBeInTheDocument()
@@ -591,7 +593,7 @@ describe('HistoricalWrappedSelectorHeader', () => {
 
     it('should apply correct dropdown positioning', async () => {
       const { container } = render(
-        <HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} />
+        <HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} year={mockYear} />
       )
 
       await waitFor(() => {
@@ -615,7 +617,7 @@ describe('HistoricalWrappedSelectorHeader', () => {
       })
 
       const { container } = render(
-        <HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} />
+        <HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} year={mockYear} />
       )
 
       await waitFor(() => {
@@ -640,7 +642,7 @@ describe('HistoricalWrappedSelectorHeader', () => {
         json: async () => ({ versions: versionsWithoutCurrent }),
       })
 
-      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} />)
+      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} year={mockYear} />)
 
       await waitFor(() => {
         expect(screen.getByRole('button')).toBeInTheDocument()
@@ -653,7 +655,7 @@ describe('HistoricalWrappedSelectorHeader', () => {
         json: async () => ({ versions: mockVersions }),
       })
 
-      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} />)
+      render(<HistoricalWrappedSelectorHeader wrappedId={mockWrappedId} userId={mockUserId} year={mockYear} />)
 
       await waitFor(() => {
         expect(screen.getByRole('button')).toBeInTheDocument()

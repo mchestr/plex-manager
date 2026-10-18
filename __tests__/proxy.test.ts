@@ -1,0 +1,47 @@
+/**
+ * @jest-environment node
+ */
+
+/**
+ * `/wrapped/<year>` with a year the route rejects gets a real 404 status.
+ * The route renders its own not-found page, but `app/loading.tsx` streams
+ * every page, so by then the status has already gone out as 200 (P0.14).
+ */
+
+import { NextRequest } from 'next/server'
+
+import { proxy } from '@/proxy'
+
+// Keep the request context helpers; silence the per-request log line.
+jest.mock('@/lib/utils/logger', () => ({
+  ...jest.requireActual('@/lib/utils/logger'),
+  createLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
+}))
+
+function request(path: string) {
+  return new NextRequest(new URL(path, 'http://localhost:3000'))
+}
+
+describe('proxy /wrapped/<year> status', () => {
+  it.each(['/wrapped/abc', '/wrapped/1999', '/wrapped/2101', '/wrapped/0x7EA', '/wrapped/2026.0', '/wrapped/20260', '/wrapped/share'])(
+    'answers %s with a 404 and the same page',
+    async (path) => {
+      const response = await proxy(request(path))
+
+      expect(response.status).toBe(404)
+      expect(new URL(response.headers.get('x-middleware-rewrite') ?? '').pathname).toBe(path)
+      expect(response.headers.get('X-Request-ID')).toBeTruthy()
+    }
+  )
+
+  it.each(['/wrapped/2026', '/wrapped/2010', '/wrapped/2100', '/wrapped', '/wrapped/share/some-token', '/', '/admin/users'])(
+    'passes %s through',
+    async (path) => {
+      const response = await proxy(request(path))
+
+      expect(response.status).toBe(200)
+      expect(response.headers.get('x-middleware-next')).toBe('1')
+      expect(response.headers.get('x-middleware-rewrite')).toBeNull()
+    }
+  )
+})

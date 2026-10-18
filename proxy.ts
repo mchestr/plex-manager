@@ -9,10 +9,26 @@ import {
   runWithRequestContext,
   sanitizeUrlForLogging,
 } from "@/lib/utils/logger"
+import { yearParamSchema } from "@/lib/validations/shared-schemas"
 import type { NextRequest } from "next/server"
 import { NextResponse } from "next/server"
 
 const logger = createLogger("HTTP")
+
+/** `/wrapped/<segment>`: one segment, so `/wrapped/share/<token>` never matches. */
+const WRAPPED_YEAR_PATH = /^\/wrapped\/([^/]+)$/
+
+/**
+ * Whether the path is `/wrapped/<year>` with a year the route rejects.
+ *
+ * The route renders its not-found page itself, but `app/loading.tsx` streams
+ * every page, so the status is already sent as 200 by then. Answering here
+ * gives the same page with a real 404 (P0.14).
+ */
+function isInvalidWrappedYearPath(pathname: string): boolean {
+  const segment = WRAPPED_YEAR_PATH.exec(pathname)?.[1]
+  return segment !== undefined && !yearParamSchema.safeParse(segment).success
+}
 
 /**
  * Proxy handler to log HTTP requests and set up request context
@@ -43,8 +59,10 @@ export function proxy(request: NextRequest) {
       searchParams: Object.fromEntries(request.nextUrl.searchParams),
     })
 
-    // Create response
-    const response = NextResponse.next()
+    // Create response: the same page, with a 404 status for an invalid Rewind year
+    const response = isInvalidWrappedYearPath(request.nextUrl.pathname)
+      ? NextResponse.rewrite(request.nextUrl, { status: 404 })
+      : NextResponse.next()
 
     // Add request ID to response headers for tracing
     response.headers.set("X-Request-ID", requestId)

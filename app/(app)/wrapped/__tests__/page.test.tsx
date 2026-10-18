@@ -1,7 +1,9 @@
 /**
- * `/wrapped` resolves to a year from data: the member's latest completed
- * Rewind, else the season year. In January it no longer looks up the new
- * calendar year, which has no Rewind (P0.14: RWP-04, RWV-02, UI-02).
+ * `/wrapped` resolves to a year from data: the season year when the member
+ * has a row for it (so a generating or failed Rewind shows its status), else
+ * the latest completed Rewind, else the season year. In January it no longer
+ * looks up the new calendar year, which has no Rewind (P0.14: RWP-04,
+ * RWV-02, UI-02).
  */
 
 import { getServerSession } from 'next-auth'
@@ -42,6 +44,11 @@ jest.mock('@/lib/prisma', () => ({
           .filter((row) => row.userId === where.userId && row.status === where.status)
           .sort((a, b) => b.year - a.year)
         return latest ? { year: latest.year } : null
+      }),
+      findUnique: jest.fn(async ({ where }: { where: { userId_year: { userId: string; year: number } } }) => {
+        const { userId, year } = where.userId_year
+        const found = mockRows.find((row) => row.userId === userId && row.year === year)
+        return found ? { id: `${userId}-${year}` } : null
       }),
     },
   },
@@ -86,6 +93,24 @@ describe('/wrapped resolver', () => {
     )
 
     await expect(WrappedResolverPage()).rejects.toThrow('NEXT_REDIRECT /wrapped/2026')
+  })
+
+  it.each(['generating', 'failed'])(
+    'opens the season year while its Rewind is %s, not an older completed year',
+    async (status) => {
+      seed(
+        { userId: 'user-1', year: 2025, status: 'completed' },
+        { userId: 'user-1', year: 2026, status }
+      )
+
+      await expect(WrappedResolverPage()).rejects.toThrow('NEXT_REDIRECT /wrapped/2026')
+    }
+  )
+
+  it('opens the latest completed year when the season year has no row', async () => {
+    seed({ userId: 'user-1', year: 2025, status: 'completed' })
+
+    await expect(WrappedResolverPage()).rejects.toThrow('NEXT_REDIRECT /wrapped/2025')
   })
 
   it('falls back to the season year when the member has no completed Rewind', async () => {

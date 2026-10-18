@@ -195,10 +195,12 @@ describe('WrappedYearPage route year', () => {
     expect(screen.getByTestId('wrapped-latest-year-link')).toHaveAttribute('href', '/wrapped/2026')
   })
 
-  it('links an empty past year to the season year when nothing is completed', async () => {
+  it('offers the season year on the dashboard, not a Rewind that does not exist, when nothing is completed', async () => {
     await renderPage('2019')
 
-    expect(screen.getByTestId('wrapped-latest-year-link')).toHaveAttribute('href', `/wrapped/${SEASON_YEAR}`)
+    expect(screen.getByTestId('wrapped-generate-season-link')).toHaveAttribute('href', '/')
+    expect(screen.getByTestId('wrapped-generate-season-link')).toHaveTextContent(`Generate your ${SEASON_YEAR} Rewind`)
+    expect(screen.queryByTestId('wrapped-latest-year-link')).not.toBeInTheDocument()
   })
 
   it('offers generation for the season year', async () => {
@@ -242,6 +244,55 @@ describe('WrappedYearPage "Your Rewinds"', () => {
     await renderPage(String(SEASON_YEAR))
 
     expect(screen.queryByTestId('wrapped-year-links')).not.toBeInTheDocument()
+  })
+})
+
+/**
+ * The dashboard card generates and retries only the season year, so a past
+ * year's failed or unreadable Rewind never points back to it.
+ */
+describe('WrappedYearPage past year that cannot be shown', () => {
+  it.each([
+    ['a failed', { status: 'failed', data: null, error: '{"code":"TAUTULLI_USER_NOT_FOUND"}' }],
+    ['an unparseable', { data: '{not json' }],
+  ])('sends %s past year to the latest Rewind and the admin', async (_label, overrides) => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {})
+    seed(row(2025, overrides), row(2026))
+
+    try {
+      await renderPage('2025')
+    } finally {
+      consoleError.mockRestore()
+    }
+
+    expect(WrappedViewerWrapper).not.toHaveBeenCalled()
+    expect(screen.getByTestId('wrapped-ask-admin')).toHaveTextContent('Ask your server admin to regenerate your 2025 Rewind.')
+    expect(screen.getByTestId('wrapped-latest-year-link')).toHaveAttribute('href', '/wrapped/2026')
+    expect(screen.queryByRole('link', { name: /try again|generate your wrapped/i })).not.toBeInTheDocument()
+  })
+
+  it('offers the season year when an unparseable past year is the only completed one', async () => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {})
+    seed(row(2025, { data: '{not json' }))
+
+    try {
+      await renderPage('2025')
+    } finally {
+      consoleError.mockRestore()
+    }
+
+    expect(screen.getByTestId('wrapped-ask-admin')).toBeInTheDocument()
+    expect(screen.getByTestId('wrapped-generate-season-link')).toHaveAttribute('href', '/')
+    expect(screen.queryByTestId('wrapped-latest-year-link')).not.toBeInTheDocument()
+  })
+
+  it('keeps "Try Again" for a failed season year', async () => {
+    seed(row(SEASON_YEAR, { status: 'failed', data: null }))
+
+    await renderPage(String(SEASON_YEAR))
+
+    expect(screen.getByRole('link', { name: 'Try Again' })).toHaveAttribute('href', '/')
+    expect(screen.queryByTestId('wrapped-ask-admin')).not.toBeInTheDocument()
   })
 })
 

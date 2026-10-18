@@ -2,6 +2,7 @@
 
 import { getWrappedSettings } from "@/actions/admin"
 import { generatePlexWrapped, getUserPlexWrapped } from "@/actions/users"
+import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
 import { memberErrorCopy, readStoredError } from "@/lib/wrapped/generation-errors"
 import { motion } from "framer-motion"
@@ -58,20 +59,37 @@ export function WrappedCard({ userId, memberSince }: WrappedCardProps) {
   const [wrapped, setWrapped] = useState<{ status: string; error?: string | null; shareToken?: string | null } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [wrappedSettings, setWrappedSettings] = useState<{ enabled: boolean; year: number } | null>(null)
+  const [settingsFailed, setSettingsFailed] = useState(false)
   const pollFailureCountRef = useRef(0)
 
   // Check membership eligibility
   const eligible = isEligibleForWrapped(memberSince)
 
-  // Load wrapped settings
-  useEffect(() => {
-    getWrappedSettings().then((settings) => {
-      setWrappedSettings({
-        enabled: settings.wrappedEnabled,
-        year: settings.wrappedYear,
+  // Load wrapped settings. Without them the season year is unknown, so a
+  // failure (e.g. a stale client after a redeploy) shows a retry, not an
+  // endless spinner.
+  const loadSettings = useCallback(() => {
+    getWrappedSettings()
+      .then((settings) => {
+        setWrappedSettings({
+          enabled: settings.wrappedEnabled,
+          year: settings.wrappedYear,
+        })
       })
-    })
+      .catch((err) => {
+        console.error("Error loading Wrapped settings:", err)
+        setSettingsFailed(true)
+      })
   }, [])
+
+  useEffect(() => {
+    loadSettings()
+  }, [loadSettings])
+
+  const retrySettings = () => {
+    setSettingsFailed(false)
+    loadSettings()
+  }
 
   // The season year from getWrappedSettings(); null until the settings load.
   const wrappedYear = wrappedSettings?.year ?? null
@@ -153,6 +171,26 @@ export function WrappedCard({ userId, memberSince }: WrappedCardProps) {
   // Not eligible yet - don't show anything
   if (!eligible) {
     return null
+  }
+
+  // Settings failed to load: the season year is unknown
+  if (settingsFailed) {
+    return (
+      <motion.div
+        className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-red-500/30 bg-gradient-to-br from-red-950/30 via-slate-900 to-slate-900 p-6 sm:p-8 shadow-xl shadow-black/30"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: "easeOut", delay: 0.15 }}
+        data-testid="wrapped-card-error"
+      >
+        <div className="flex flex-col items-center text-center gap-4">
+          <p className="text-sm text-red-400">We couldn&apos;t load your Wrapped.</p>
+          <Button variant="danger" size="sm" onClick={retrySettings} data-testid="wrapped-card-error-retry">
+            Try again
+          </Button>
+        </div>
+      </motion.div>
+    )
   }
 
   // Loading state (also while the season year is unknown)

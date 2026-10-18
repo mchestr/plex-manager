@@ -3,7 +3,7 @@
  * never the stored error text (P0.9: RWP-02, SEC-17, DUP-01).
  */
 
-import { act, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
 
 import { getWrappedSettings } from '@/actions/admin'
@@ -143,5 +143,28 @@ describe('WrappedCard season year', () => {
 
     expect(screen.getByTestId('wrapped-card-loading')).toBeInTheDocument()
     expect(getUserPlexWrapped).not.toHaveBeenCalled()
+  })
+
+  it('offers a retry instead of loading forever when the settings fail to load', async () => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {})
+    ;(getWrappedSettings as jest.Mock)
+      .mockRejectedValueOnce(new Error('Failed to find Server Action'))
+      .mockResolvedValue({ wrappedEnabled: true, wrappedYear: 2026 })
+    ;(getUserPlexWrapped as jest.Mock).mockResolvedValue({ status: 'completed', error: null })
+
+    try {
+      render(<WrappedCard userId="user-1" memberSince="2020-01-01T00:00:00.000Z" />)
+
+      expect(await screen.findByTestId('wrapped-card-error')).toBeInTheDocument()
+      expect(screen.queryByTestId('wrapped-card-loading')).not.toBeInTheDocument()
+      expect(getUserPlexWrapped).not.toHaveBeenCalled()
+
+      fireEvent.click(screen.getByTestId('wrapped-card-error-retry'))
+
+      expect(await screen.findByTestId('wrapped-card-view-link')).toHaveAttribute('href', '/wrapped/2026')
+      expect(getWrappedSettings).toHaveBeenCalledTimes(2)
+    } finally {
+      consoleError.mockRestore()
+    }
   })
 })

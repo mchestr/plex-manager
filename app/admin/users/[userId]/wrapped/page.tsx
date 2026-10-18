@@ -69,7 +69,7 @@ export default async function UserWrappedPage({
           </div>
           <div className="flex items-center gap-3 flex-shrink-0">
             {wrappedId && (
-              <HistoricalWrappedSelectorHeader wrappedId={wrappedId} userId={userId} />
+              <HistoricalWrappedSelectorHeader wrappedId={wrappedId} userId={userId} year={headerYear} />
             )}
           </div>
         </div>

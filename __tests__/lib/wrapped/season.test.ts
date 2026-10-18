@@ -9,19 +9,24 @@ import {
   getLatestCompletedRewindYear,
   getSeasonYear,
   listCompletedRewindYears,
+  resolveRewindYear,
   seasonYearFor,
 } from '@/lib/wrapped/season'
 
 jest.mock('@/lib/prisma', () => ({
   prisma: {
     config: { findUnique: jest.fn() },
-    plexWrapped: { findFirst: jest.fn(), findMany: jest.fn() },
+    plexWrapped: { findFirst: jest.fn(), findMany: jest.fn(), findUnique: jest.fn() },
   },
 }))
 
 const mockConfigFindUnique = prisma.config.findUnique as jest.Mock
 const mockWrappedFindFirst = prisma.plexWrapped.findFirst as jest.Mock
 const mockWrappedFindMany = prisma.plexWrapped.findMany as jest.Mock
+const mockWrappedFindUnique = prisma.plexWrapped.findUnique as jest.Mock
+
+// Only years /wrapped/<year> opens: a playground save for 2005 or 9999 would 404.
+const OPENABLE_YEARS = { gte: 2010, lte: 2100 }
 
 function startDate(value: string | null) {
   mockConfigFindUnique.mockResolvedValue({ wrappedGenerationStartDate: value ? new Date(value) : null })
@@ -113,7 +118,7 @@ describe('getLatestCompletedRewindYear', () => {
 
     await expect(getLatestCompletedRewindYear('user-1')).resolves.toBe(2026)
     expect(mockWrappedFindFirst).toHaveBeenCalledWith({
-      where: { userId: 'user-1', status: 'completed' },
+      where: { userId: 'user-1', status: 'completed', year: OPENABLE_YEARS },
       orderBy: { year: 'desc' },
       select: { year: true },
     })
@@ -132,9 +137,44 @@ describe('listCompletedRewindYears', () => {
 
     await expect(listCompletedRewindYears('user-1')).resolves.toEqual([2026, 2025])
     expect(mockWrappedFindMany).toHaveBeenCalledWith({
-      where: { userId: 'user-1', status: 'completed' },
+      where: { userId: 'user-1', status: 'completed', year: OPENABLE_YEARS },
       orderBy: { year: 'desc' },
       select: { year: true },
     })
+  })
+})
+
+describe('resolveRewindYear', () => {
+  const JAN_2027 = new Date('2027-01-02T12:00:00Z')
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    startDate('2026-12-01T12:00:00Z')
+  })
+
+  it('opens the season year when the member has a row for it in any state', async () => {
+    mockWrappedFindUnique.mockResolvedValue({ id: 'wrapped-2026' })
+    mockWrappedFindFirst.mockResolvedValue({ year: 2025 })
+
+    await expect(resolveRewindYear('user-1', JAN_2027)).resolves.toBe(2026)
+    expect(mockWrappedFindUnique).toHaveBeenCalledWith({
+      where: { userId_year: { userId: 'user-1', year: 2026 } },
+      select: { id: true },
+    })
+    expect(mockWrappedFindFirst).not.toHaveBeenCalled()
+  })
+
+  it('opens the latest completed year when the season year has no row', async () => {
+    mockWrappedFindUnique.mockResolvedValue(null)
+    mockWrappedFindFirst.mockResolvedValue({ year: 2025 })
+
+    await expect(resolveRewindYear('user-1', JAN_2027)).resolves.toBe(2025)
+  })
+
+  it('opens the season year when the member has no Rewind at all', async () => {
+    mockWrappedFindUnique.mockResolvedValue(null)
+    mockWrappedFindFirst.mockResolvedValue(null)
+
+    await expect(resolveRewindYear('user-1', JAN_2027)).resolves.toBe(2026)
   })
 })

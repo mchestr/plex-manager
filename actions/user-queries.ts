@@ -188,18 +188,17 @@ export async function getUserDetails(userId: string): Promise<UserDetails | null
 }
 
 /**
- * Get all users with their wrapped status
+ * Get all users with their wrapped status for `year` (the caller passes the
+ * season year; there is no calendar default).
  */
-export async function getAllUsersWithWrapped(year?: number): Promise<AdminUserWithWrappedStats[]> {
+export async function getAllUsersWithWrapped(year: number): Promise<AdminUserWithWrappedStats[]> {
   // Admin-only: enumerates every user's PII. Placed before the try so the auth
   // error propagates rather than being swallowed into an empty array.
   await requireAdmin()
 
   try {
-    const currentYear = year || new Date().getFullYear()
-
     // 1. Fetch users and their wrapped data
-    const users = await fetchUsersWithWrappedData(currentYear)
+    const users = await fetchUsersWithWrappedData(year)
 
     // 2. Build Plex access map
     const accessMap = await buildPlexAccessMap(users)

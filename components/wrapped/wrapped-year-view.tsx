@@ -12,14 +12,48 @@ interface WrappedYearViewProps {
   wrapped: { status: string; data: string | null; error: string | null; shareToken: string | null } | null
   /** The parsed `wrapped.data` of a completed row, or null when it does not parse. */
   wrappedData: WrappedData | null
-  /** The season year: an empty state for it offers generation. */
+  /** The season year: the dashboard card generates and retries only this year. */
   seasonYear: number
-  /** Where an empty past year points: the latest completed year, else the season year. */
-  latestYear: number
+  /** The member's latest completed year, or null when they have none. */
+  latestYear: number | null
 }
+
+type OtherYearProps = Pick<WrappedYearViewProps, "year" | "seasonYear" | "latestYear">
 
 const primaryLinkClass =
   "inline-block px-6 py-3 bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-700 hover:to-purple-700 text-white rounded-md text-sm font-medium transition-colors"
+
+/**
+ * Where a year other than the season year points, since the card at `/`
+ * cannot generate it: the latest completed Rewind, or generating the season
+ * year when the member has none (or the latest is the year on screen).
+ */
+function OtherYearLink({ year, seasonYear, latestYear }: OtherYearProps) {
+  if (latestYear !== null && latestYear !== year) {
+    return (
+      <Link href={`/wrapped/${latestYear}`} data-testid="wrapped-latest-year-link" className={primaryLinkClass}>
+        Go to your {latestYear} Rewind
+      </Link>
+    )
+  }
+  return (
+    <Link href="/" data-testid="wrapped-generate-season-link" className={primaryLinkClass}>
+      Generate your {seasonYear} Rewind
+    </Link>
+  )
+}
+
+/** A failed or unreadable Rewind for another year: only an admin can regenerate it. */
+function OtherYearRecovery(props: OtherYearProps) {
+  return (
+    <>
+      <p data-testid="wrapped-ask-admin" className="text-slate-400 mb-6">
+        Ask your server admin to regenerate your {props.year} Rewind.
+      </p>
+      <OtherYearLink {...props} />
+    </>
+  )
+}
 
 /**
  * The member's Rewind for one year, in whichever state its row is in:
@@ -41,12 +75,21 @@ export function WrappedYearView({ userId, year, wrapped, wrappedData, seasonYear
       <div className="bg-slate-800/50 backdrop-blur-sm border border-red-500/50 rounded-lg p-12 text-center">
         <div className="max-w-md mx-auto">
           <h2 className="text-2xl font-bold text-white mb-2">Error Loading Wrapped</h2>
-          <p className="text-slate-400 mb-6">
-            There was an error parsing your wrapped data. Please try generating it again.
-          </p>
-          <Link href="/" className={primaryLinkClass}>
-            Generate Your Wrapped
-          </Link>
+          {year === seasonYear ? (
+            <>
+              <p className="text-slate-400 mb-6">
+                There was an error parsing your wrapped data. Please try generating it again.
+              </p>
+              <Link href="/" className={primaryLinkClass}>
+                Generate Your Wrapped
+              </Link>
+            </>
+          ) : (
+            <>
+              <p className="text-slate-400 mb-2">There was an error parsing your wrapped data.</p>
+              <OtherYearRecovery year={year} seasonYear={seasonYear} latestYear={latestYear} />
+            </>
+          )}
         </div>
       </div>
     )
@@ -78,12 +121,16 @@ export function WrappedYearView({ userId, year, wrapped, wrappedData, seasonYear
           <p data-testid="wrapped-failed-message" className="text-red-300 mb-6">
             {memberErrorCopy(readStoredError(wrapped.error))}
           </p>
-          <Link
-            href="/"
-            className="inline-block px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm font-medium transition-colors"
-          >
-            Try Again
-          </Link>
+          {year === seasonYear ? (
+            <Link
+              href="/"
+              className="inline-block px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm font-medium transition-colors"
+            >
+              Try Again
+            </Link>
+          ) : (
+            <OtherYearRecovery year={year} seasonYear={seasonYear} latestYear={latestYear} />
+          )}
         </div>
       </div>
     )
@@ -119,9 +166,7 @@ export function WrappedYearView({ userId, year, wrapped, wrappedData, seasonYear
             <p data-testid="wrapped-year-missing" className="text-slate-400 mb-6">
               You don&apos;t have a Rewind for {year}.
             </p>
-            <Link href={`/wrapped/${latestYear}`} data-testid="wrapped-latest-year-link" className={primaryLinkClass}>
-              Go to your {latestYear} Rewind
-            </Link>
+            <OtherYearLink year={year} seasonYear={seasonYear} latestYear={latestYear} />
           </>
         )}
       </div>

@@ -86,6 +86,21 @@ describe('savePlaygroundWrapped', () => {
     expect(raw).not.toContain(MEMBER_EMAIL)
   })
 
+  // P0.14: /wrapped/<year> opens 2010-2100 only, so a row outside it would be a 404.
+  it.each([2005, 9999, 2026.5])('rejects the year %s and stores nothing', async (year) => {
+    ;(prisma.user.findFirst as jest.Mock).mockResolvedValue({ id: 'user-1', name: 'Mike', email: MEMBER_EMAIL })
+
+    const result = await savePlaygroundWrapped({
+      llmResponse: JSON.stringify(buildValidOutput()),
+      statistics: buildStatistics(),
+      userName: 'Mike',
+      year,
+    })
+
+    expect(result).toEqual({ success: false, error: 'Year must be a whole number from 2010 to 2100' })
+    expect(prisma.plexWrapped.upsert).not.toHaveBeenCalled()
+  })
+
   describe('share tokens (opt-in sharing, SEC-16)', () => {
     type StoredRow = { id: string; status: string; shareToken: string | null }
 
