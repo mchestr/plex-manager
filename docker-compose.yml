@@ -12,8 +12,11 @@ services:
       # - /app/node_modules
       # - /app/.next
       - ./data:/data
+    # Loopback only: rate limits trust X-Forwarded-For, so a client that
+    # reaches the app port directly could choose its own address. Put the
+    # reverse proxy in front, on this host or an internal network.
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     env_file:
       - .env
     environment:

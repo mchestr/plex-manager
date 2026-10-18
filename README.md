@@ -336,6 +336,7 @@ The project includes a `Dockerfile` for containerized deployments. When deployin
 1. Set environment variables in your deployment platform or `.env` file
 2. Ensure `NEXT_PUBLIC_APP_URL` and `NEXTAUTH_URL` are set to your production domain
 3. The application will fail to start in production mode if these are not configured
+4. Publish the app port on loopback or an internal network only, with your reverse proxy in front: `127.0.0.1:3000:3000` under compose `ports:`, `-p 127.0.0.1:3000:3000` with `docker run`, or no published port when the proxy shares a Docker network with the app. Rate limits trust `X-Forwarded-For` (see "Reverse proxy and rate limits" above), so a client that reaches the app port directly gets a fresh limit on every request.
 
 ---
 
