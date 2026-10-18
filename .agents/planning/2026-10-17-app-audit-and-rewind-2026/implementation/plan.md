@@ -581,7 +581,7 @@ gantt
 - Refresh the lockfile with `npm install`. Use `npm ls next react react-dom next-auth sharp` to confirm that Next pulled in the patched `sharp`, which carries the libvips, libheif and librsvg fixes in SEC-01.
 - In `next.config.js`:
   - Replace the `images` block with `images: { unoptimized: true }`, deleting both `**` wildcards in `remotePatterns`. Six of the eight `next/image` call sites already pass `unoptimized`. The other two, the avatars in `components/admin/users/user-table-row.tsx:75` and `components/admin/invites/invite-details-client.tsx:273`, become unoptimized globally. Never set `dangerouslyAllowLocalIP`.
-  - Build `script-src` from `process.env.NODE_ENV`, so that `'unsafe-eval'` appears only in development, where React Refresh in `next dev` needs it. E2E still runs on `next dev` until P1.5.
+  - Build `script-src` from the Next phase that `next.config.js` receives, so that `'unsafe-eval'` appears only under `PHASE_DEVELOPMENT_SERVER` (`next dev`), where React Refresh needs it. E2E still runs on `next dev` until P1.5. (As merged: keyed to the phase rather than `NODE_ENV`, so a build or `next start` with a stray `NODE_ENV=development` never gets `'unsafe-eval'`.)
   - Add `object-src 'none'; base-uri 'self'; frame-ancestors 'self'` and `poweredByHeader: false`. These are the zero-risk parts of SEC-53. Leave out `form-action`, because a Server Action that redirects to Stripe Checkout would be blocked. The nonce CSP, HSTS and the deprecated headers stay with P11.20.
   - Delete the `webpack` callback (lines 61-91) and the empty `turbopack: {}`. `serverExternalPackages` already externalises discord.js, `zlib-sync` and the ws native helpers under Turbopack.
 - Remove `@next-auth/prisma-adapter`. It is never imported, and `lib/auth.ts:20` says it is incompatible with CredentialsProvider.
@@ -597,10 +597,10 @@ gantt
 
 **Tests.**
 - `npm run build`, `npm test` and `npm run test:e2e` pass. Paste the summaries into the PR.
-- New `__tests__/config/next-config.test.ts`, which loads `next.config.js` under `jest.isolateModules` with `NODE_ENV` set to production and to development, asserts:
+- New `__tests__/config/next-config.test.ts`, which calls the `next.config.js` function with the production-server and development-server phases, asserts:
   - `images.unoptimized === true`, and no `remotePatterns`, `webpack` or `turbopack` key;
   - `poweredByHeader === false`;
-  - the production CSP has no `'unsafe-eval'` and includes `object-src 'none'`, while the development CSP keeps `'unsafe-eval'`.
+  - the production-phase CSP has no `'unsafe-eval'` and includes `object-src 'none'`, while the development-server CSP keeps `'unsafe-eval'`.
 - New `e2e/security-headers.spec.ts` uses `request.get('/_next/image?url=https%3A%2F%2Fexample.com%2Fa.png&w=64&q=75')` and expects a 4xx status. It is an API request, so it needs no selectors.
 - `__tests__/api/wrapped-og-image-route.test.ts` still passes on the new `next/og`.
 
@@ -932,7 +932,7 @@ gantt
 - `__tests__/actions/wrapped-generation-action.test.ts`: the persisted JSON has no `leaderboards`, and an email-like name is stored as "Viewer".
 
 **Integration.**
-- The admin Shares visit counts restart from zero; note this in the release notes.
+- The admin Shares visit counts are kept: P0.20 scrubs the legacy visits' IP hash, user agent and referer instead of deleting the rows (as merged), and new visits record only the Rewind id.
 - P0.11 builds `getShareSafeRewind` on this projection. P2.1 and P5.10 reuse the key-snapshot test, P7.5 serves the surviving v2 tokens, and P11.18 drops them at season close.
 
 **Demo.**
@@ -978,17 +978,18 @@ gantt
 - **Track:** rewind. **Lane:** Rewind. **Effort:** M. **Window:** 2026-10-21 to 2026-10-22. **Depends on:** P0.9.
 - **Findings addressed:** RWP-01, GAP-37
 
-**Objective.** Remove every other member's name and watch time from the rows already stored, null the pre-v3 Rewind LLM text that holds rosters, revoke unvisited v2 tokens and delete the reversible visitor pseudonyms, with a script that is safe to run twice.
+**Objective.** Remove every other member's name and watch time from the rows already stored, null the pre-v3 Rewind LLM text that holds rosters, revoke unvisited v2 tokens and scrub the reversible visitor pseudonyms, with a script that is safe to run twice.
 
 **Guidance.**
 - **Script.** The pure transforms and the runner live in `lib/wrapped/maintenance/strip-rosters.ts`. The CLI is `scripts/rewind-strip-leaderboards.ts`, run as `npm run rewind:strip-leaderboards` (tsx, `tsconfig.scripts.json`). It is a dry run unless `--apply` is passed, and prints scanned and changed counts per step (`design/rewind-2026-design.md` 6.1):
   1. **Stored data.** Process `PlexWrapped` rows in id-cursor batches of 200. Delete `statistics.leaderboards`, replace a `userName` that is the owner's email or contains `@`, and replace the owner's email in every string value and in the `summary` column. Write only rows that changed, and count unparsable rows.
   2. **LLM text.** Set `prompt` and `response` to null on `LLMUsage` rows with no `chatConversationId`: the Rewind runs, the playground and the prompt tests. Assistant rows keep their text until P11.14. Migration `20261021000000_llmusage_text_nullable` drops NOT NULL on both columns. Make the readers null-safe: `app/admin/llm-usage/[usageId]/page.tsx`, `components/admin/llm-usage/conversation-usage-row.tsx`, `app/api/admin/wrapped/[wrappedId]/versions/route.ts`, and `actions/admin/admin-llm-history.ts`, which shows "Text removed in the October 2026 privacy clean-up".
   3. **Errors.** Any `error` containing "Available users" becomes P0.9's `{"code":"TAUTULLI_USER_NOT_FOUND"}`.
-  4. **Tokens.** Legacy visit rows are those with `ipAddress`, `userAgent` or `referer` set, which is every row written before P0.8. While any legacy rows exist, set `shareToken` to null on rows that have no legacy visit.
-  5. **Visits.** Delete the legacy visit rows. Steps 4 and 5 share one `$transaction`, with step 4 first. New visits carry none of those fields, so a second run reports 0 for both, which makes the script idempotent without a marker.
+  4. **Tokens.** Legacy visit rows are those with `ipAddress`, `userAgent` or `referer` set, which is every row written before P0.8. While any legacy rows exist, set `shareToken` to null on Rewinds that have no recorded visit and were last written before `--opt-in-since` (when the P0.19 release went live), so a link a member turned on after that is kept even before its first visit.
+  5. **Visits.** Clear `ipAddress`, `userAgent` and `referer` on the legacy visit rows and keep the rows (as merged; the plan first said delete them). That meets GAP-37, keeps the admin visit counts, and lets a later run still see those links as visited. Steps 4 and 5 share one `$transaction`, with step 4 first, and run before steps 1 and 3, whose writes would move `updatedAt` past the cutoff. New visits carry none of those fields, so a second run reports 0 for both, which makes the script idempotent without a marker.
 - **Operator path** (an owner calendar item on 2026-10-23).
   - Run it only after the release that carries P0.8 and P0.19 is deployed. Before that, the old code keeps writing leaderboards and legacy visit rows and keeps minting tokens, so step 4 would revoke tokens again on every later run.
+  - Run `--apply` soon after that release, with its go-live time as `--opt-in-since`, before admins regenerate Rewinds. Nothing records which tokens a member turned on, so step 4 keeps an auto-minted, never-visited token on any row written after that time: an admin regeneration, a failed-row retry through the claim, or a playground save. Before `--apply`, list such rows (`SELECT id, "userId", year, "updatedAt" FROM "PlexWrapped" WHERE "shareToken" IS NOT NULL AND "updatedAt" >= '<opt-in-since>' AND NOT EXISTS (SELECT 1 FROM "WrappedShareVisit" v WHERE v."wrappedId" = "PlexWrapped".id);`) and compare them with the `SHARE_LINK_CREATED` audit lines in the server logs; null any token without one by hand. A `shareTokenCreatedAt` that only `enableWrappedShareLink` sets would close this, and is not built.
   - Run two dry runs a few minutes apart. The counts must be stable, which shows that no running code still writes rosters, legacy visits or tokens.
   - Take the dump (Phase 0 day-0 rule 3). It holds the rosters being purged, so it is encrypted, kept off the host and deleted after 30 days.
   - Run from a checkout, or from the Dockerfile `dev` target, against the production `DATABASE_URL`; the runtime image has no `scripts/` and no tsx. Paste the dry-run counts into the PR, run `--apply`, then run once more to show zeros.
@@ -1007,7 +1008,7 @@ gantt
 - [ ] The script is a dry run by default and reports counts per step, and the Postgres test proves a second run is a no-op.
 - [ ] It ran in production after the P0.8 and P0.19 release, with stable dry-run counts recorded in the PR.
 - [ ] No stored row has leaderboards or an email as a name, pre-v3 Rewind LLMUsage text is null, and no "Available users" error remains.
-- [ ] Unvisited v2 tokens are revoked, and legacy visit rows are deleted.
+- [ ] Unvisited v2 tokens on Rewinds last written before `--opt-in-since` are revoked, any later auto-minted token was checked by hand, and legacy visits are scrubbed of IP hash, user agent and referer and kept.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
 
 ### Step P0.9: Typed error when the Tautulli match fails
@@ -1019,9 +1020,8 @@ gantt
 
 **Guidance.**
 - In `lib/connections/tautulli.ts`, next to the existing `getTautulliUsers`:
-  - `matchTautulliUser(users, identity: { plexUserId: string; plexUsername: string | null })` is pure. It matches `String(u.user_id) === plexUserId` first, because Tautulli's `user_id` is the plex.tv account ID, then a case-insensitive `u.username` equal to `plexUsername`. It never matches on email or `friendly_name`.
+  - `matchTautulliUser(users, identity: { plexUserId: string })` is pure. It matches `String(u.user_id) === plexUserId` only, because Tautulli's `user_id` is the plex.tv account ID. It never matches on username, email or `friendly_name` (as merged: the planned case-insensitive `plexUsername` fallback was dropped, because a username can be a stale row after a rename or someone else's, and matching it would hand that person's watch history to the member).
   - `findTautulliUser(config, identity)` returns `{ ok: true, user } | { ok: false, code: 'TAUTULLI_USER_NOT_FOUND' | 'TAUTULLI_ERROR' }`. It parses the `get_users` rows with a small Zod schema (`user_id` number, `username` optional). On a miss it logs `logger.warn('Tautulli user not found', { plexUserId, candidates: users.length })`, a count only.
-- The Plex username is `User.name`, which Plex sign-in and import set from `plexUser.username` (`lib/auth.ts:206`, `actions/import-plex-users.ts:77`).
 - `fetchTautulliStatistics` (`lib/wrapped/tautulli-user-statistics.ts:25`):
   - The new signature is `(config, identity, year)`.
   - Delete the email and `friendly_name` matching (lines 75-101) and the "Available users" string (103-112).
@@ -1040,7 +1040,7 @@ gantt
 
 **Tests.**
 - New `__tests__/lib/connections/tautulli-user-match.test.ts`:
-  - matches by `user_id`, then by username in any case;
+  - matches by `user_id` only, and a row whose username equals the member's never matches;
   - never matches when only another member's email or `friendly_name` equals the identity;
   - returns null on a miss.
 - New `lib/wrapped/__tests__/tautulli-user-statistics.test.ts` takes a three-member roster fixture with usernames and emails. On a miss, `JSON.stringify(result)` contains none of the roster's usernames or emails.
@@ -1295,7 +1295,8 @@ gantt
   - Seed completed 2025 and 2026 rows for the regular user, none for 2027, and `Config.wrappedGenerationStartDate = 2026-12-01`.
   - Call `page.clock.setFixedTime(new Date('2027-01-02T12:00:00Z'))` and sign in.
   - `/wrapped` lands on `/wrapped/2026` with `getByTestId('wrapped-viewer')` visible; add the test ID to the viewer root if it is missing.
-  - `/wrapped/2025` opens, and `/wrapped/1999` shows `no-wrapped-found`.
+  - `/wrapped/2025` opens; `/wrapped/2019` shows `no-wrapped-found` with a link to the latest year; and `/wrapped/1999`, outside the accepted 2010-2100 range, answers 404 with `wrapped-year-not-found` (as merged; the status comes from `proxy.ts`, because `app/loading.tsx` streams every page).
+  - With no window and only a completed 2025 row, `/wrapped` lands on `/wrapped/2025` while the server's calendar year is 2026, which a redirect to the calendar year would fail (added in Phase 0's review).
   - Pitfall: `page.clock` moves only the browser clock. The server picks the year from data, which is what the test proves, and the Jest test covers the server's January fallback.
 
 **Integration.**
@@ -1418,7 +1419,7 @@ gantt
 **Guidance.**
 - New `lib/wrapped/eligibility.ts` (`server-only`) exports `getRewindEligibility(user: { id, plexUserId, name })`, which returns `{ eligible: true } | { eligible: false; reason: 'NO_PLEX_IDENTITY' | 'NO_TAUTULLI_MATCH' }`:
   - no `plexUserId` returns `NO_PLEX_IDENTITY` without a network call;
-  - otherwise it calls P0.9's `findTautulliUser` with `{ plexUserId, plexUsername: name }`, and a miss returns `NO_TAUTULLI_MATCH`;
+  - otherwise it calls P0.9's `findTautulliUser` with `{ plexUserId }` (user_id only, as merged), and a miss returns `NO_TAUTULLI_MATCH`;
   - a Tautulli error or a missing Tautulli config fails open as eligible, and generation then reports its own error;
   - results are cached per user for 10 minutes in process.
 
@@ -5723,7 +5724,7 @@ The ten core pages (Bookends included), sharing, privacy and accessibility are n
 - **States.**
   - Unknown, revoked, rotated or expired tokens call `notFound()`, which renders a new `app/rewind/s/[token]/not-found.tsx` on paper: "This Rewind is no longer shared", revealing nothing else (BP-35; P10.17 adds the app-wide `not-found.tsx`).
   - A page cannot set 429 or 503, so `proxy.ts` handles both for `/rewind/s/:path*`. It applies P0.11's `rw:share-page:<ip>` limit (60 per minute, moved out of the page body) and a 2 s `SELECT 1` probe, cached for 5 s. It answers with the static branded page in new `lib/rewind/share/status-html.ts` ("This Rewind couldn't load. Try again in a moment.", with a Try again link): 429 when limited, and 503 with `Retry-After: 30` when the probe fails. An error during render reaches `error.tsx`, which uses the same copy.
-  - The page cannot set the 404 status either (open item from P0.11's review). `app/loading.tsx` streams every page, and P10.17 keeps a root loader, so `notFound()` goes out with status 200. P0.11 therefore looks the token up in `proxy.ts`: a well-formed `/wrapped/share/<token>` whose row is missing or not `completed` is rewritten to the same page with status 404 (one indexed read of `status`; a failed read lets the request through to the page's own lookup and `error.tsx`). Move that check to `/rewind/s/:token` with the same rule as `getShareSafeRewind` (the hashed v3 lookup, refused when revoked, rotated or expired, and the v2 fallback). Run it after the `rw:share-page` limit and the probe, so a limited visitor gets the 429 and costs no lookup: neither this check nor `generateMetadata` nor the page runs for them. The revoked-link 404 in the E2E below depends on this check, not on `notFound()`.
+  - The page cannot set the 404 status either (open item from P0.11's review). `app/loading.tsx` streams every page, and P10.17 keeps a root loader, so `notFound()` goes out with status 200. P0.11 therefore looks the token up in `proxy.ts`: a well-formed `/wrapped/share/<token>` whose row is missing or not `completed` is rewritten to the same page with status 404 (one indexed read of `status`; a failed read lets the request through to the page's own lookup and `error.tsx`). Move that check to `/rewind/s/:token` with the same rule as `getShareSafeRewind` (the hashed v3 lookup, refused when revoked, rotated or expired, and the v2 fallback). Run it after the `rw:share-page` limit and the probe, so a limited visitor gets the 429 and costs no lookup: neither this check nor `generateMetadata` nor the page runs for them. (Phase 0's review already moved the `rw:share-page` point into `proxy.ts`, before the lookup; a limited visitor gets the busy page through the `x-rewind-share-busy` request header, `lib/wrapped/share-page-limit.ts`.) The revoked-link 404 in the E2E below depends on this check, not on `notFound()`.
 - **Headers and metadata** (UI-39). `next.config.js` `headers()` adds `X-Robots-Tag: noindex, nofollow` and `Referrer-Policy: no-referrer` for `/rewind/s/:path*`. `generateMetadata` sets `robots: { index: false, follow: false }`, a title without the owner's name unless signed, `ogText` as the description, and `openGraph` and `twitter` (`summary_large_image`) images at `/api/rewind/card/s/{assetKey}/{firstPage}?size=og`. A v2 share uses P3.9's default `app/opengraph-image`, so no image URL ever carries a token.
 - **OG card** (design 6.7). New `lib/rewind/cards/og.tsx` serves `size=og` (1200x630) on both card routes; the share route takes only `size` from its query.
   - When page 16 or 18 is published, it uses the centrefold layout of `card-og.png`.
@@ -6917,7 +6918,7 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
   - ChartCards: daily cost (bars), cost by model and by user (ranked bars), and provider (a StatTile while there is one).
   - Totals come from P7.8's `groupBy` queries (BP-28). The daily series selects only `createdAt` and `cost` and buckets with `dayKey`, because Prisma can't truncate dates in a zone and CLAUDE.md rules out raw SQL.
 - Shares (`app/admin/shares/page.tsx`): new `lib/admin/analytics/shares.ts` (`server-only`) replaces `actions/share-analytics.ts` and reads `RewindShare` and `RewindShareVisitDay` (Rewind 6.2, 7.10).
-  - v2 tokens have had no visit rows since P0.8, so they appear only as a count in a tile hint until P11.18 removes them.
+  - v2 tokens keep their `WrappedShareVisit` rows (P0.11 writes one per view with only the Rewind id, and P0.20 scrubbed the older ones), but they appear only as a count in a tile hint until P11.18 removes them.
   - StatGrid: public links on, visits in the period, links created in the period, and average visits per link.
   - One ChartCard: links created and visits per day, zero-filled through today.
   - DataTable of links: member (the first-cell link goes to `userRewind(userId, year)`, keeping the year, UI-06), year, pages published, created, expires, status (Active, Expired or Stopped) and visits. No token or URL is ever shown.

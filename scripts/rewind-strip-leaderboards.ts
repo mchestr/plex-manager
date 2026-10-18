@@ -24,6 +24,11 @@
  *   and response nullable.
  * - Run two dry runs a few minutes apart. The changed counts must match
  *   (scanned visits grow as people open links).
+ * - Run --apply soon after the release, before admins regenerate Rewinds:
+ *   nothing records which tokens a member turned on, so an auto-minted token
+ *   on a Rewind written after --opt-in-since (an admin regeneration, a retry
+ *   of a failed row, a playground save) is kept. The P0.20 operator path in
+ *   the plan has the query that lists them for a hand check.
  * - Take an encrypted dump (it holds the rosters being purged), run --apply,
  *   then a dry run that shows zeros.
  *
