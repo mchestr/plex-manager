@@ -146,25 +146,19 @@ export interface JellyfinUserPolicy {
 }
 
 /**
- * Jellyfin authentication result from /Users/AuthenticateByName endpoint
+ * The fields the app reads from the `/Users/AuthenticateByName` response:
+ * the session's access token (logged out straight away) and the user's ID
+ * and name. Other fields are stripped.
  */
-export interface JellyfinAuthResult {
-  /** User info */
-  User: JellyfinUser
-  /** Session info */
-  SessionInfo?: {
-    /** Session ID */
-    Id: string
-    /** User ID */
-    UserId: string
-    /** User name */
-    UserName: string
-  }
-  /** Access token for this session */
-  AccessToken: string
-  /** Server ID */
-  ServerId: string
-}
+export const jellyfinAuthResultSchema = z.object({
+  AccessToken: z.string().min(1),
+  User: z.object({
+    Id: z.string().min(1),
+    Name: z.string(),
+  }),
+})
+
+export type JellyfinAuthResult = z.infer<typeof jellyfinAuthResultSchema>
 
 /**
  * Request body for creating a new Jellyfin user

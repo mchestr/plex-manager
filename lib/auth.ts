@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto"
 
 import { checkUserServerAccess, getPlexUserInfo } from "@/lib/connections/plex"
-import { authenticateJellyfin, getJellyfinLoginServer, isJellyfinAdmin } from "@/lib/jellyfin-auth"
+import { authenticateJellyfin } from "@/lib/jellyfin-auth"
 import { prisma } from "@/lib/prisma"
 import { isUniqueEmailConflict } from "@/lib/prisma-errors"
 import { consume, reward } from "@/lib/security/rate-limit"
@@ -346,13 +346,11 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
-          // No active server, or "Allow Jellyfin sign-in" is off: refuse
-          // before Jellyfin sees the password. Hiding the button alone would
-          // leave this callback open.
-          if (!(await getJellyfinLoginServer())) {
-            return null
-          }
-
+          // authenticateJellyfin refuses before Jellyfin sees the password
+          // when no server is active or "Allow Jellyfin sign-in" is off
+          // (hiding the button alone would leave this callback open), and
+          // checks the password and the admin status against one read of the
+          // stored server.
           const authResult = await authenticateJellyfin(username, password)
 
           if (!authResult.success || !authResult.data) {
@@ -366,9 +364,7 @@ export const authOptions: NextAuthOptions = {
           await reward("auth:jellyfin:user", usernameSubject)
 
           const jellyfinUser = authResult.data
-
-          // Check if this user is the admin
-          const isAdmin = await isJellyfinAdmin(jellyfinUser.id)
+          const { isAdmin } = jellyfinUser
 
           // Match only by Jellyfin user ID. Jellyfin users can rename
           // themselves to any string, an email address included, so the

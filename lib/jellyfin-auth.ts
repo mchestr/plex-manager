@@ -1,14 +1,16 @@
 /**
  * Jellyfin sign-in helpers for the NextAuth Jellyfin provider in lib/auth.ts.
  *
- * Server-only, and deliberately not Server Actions: each helper reads the
- * stored Jellyfin server itself, so no caller can choose the URL or API key
- * a request goes to (SEC-35).
+ * Server-only, and deliberately not Server Actions: the helpers read the
+ * stored Jellyfin server themselves, so no caller can choose the URL or API
+ * key a request goes to (SEC-35). A sign-in reads the server once and checks
+ * the password and the admin status against that same row.
  */
 
 import "server-only"
 
 import { authenticateJellyfinUser, getJellyfinUserById } from "@/lib/connections/jellyfin-users"
+import type { JellyfinServer } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 import { z } from "zod"
@@ -20,6 +22,7 @@ interface JellyfinAuthResult {
   data?: {
     id: string
     username: string
+    isAdmin: boolean
   }
   error?: string
 }
@@ -67,15 +70,17 @@ export async function getJellyfinLoginServer() {
 
 /**
  * Authenticate a Jellyfin user with username and password against the
- * stored sign-in server.
+ * stored sign-in server, and check whether they administer it.
  *
- * Jellyfin returns an access token, which `authenticateJellyfinUser` logs out
- * straight away: the app keeps only the Jellyfin user ID, uses the stored API
- * key for every later Jellyfin call, and relies on its own NextAuth session.
+ * Refuses without contacting Jellyfin when no server is active or "Allow
+ * Jellyfin sign-in" is off (`getJellyfinLoginServer`). Jellyfin returns an
+ * access token, which `authenticateJellyfinUser` logs out straight away: the
+ * app keeps only the Jellyfin user ID, uses the stored API key for every later
+ * Jellyfin call, and relies on its own NextAuth session.
  *
  * @param username - Jellyfin username
  * @param password - User's password
- * @returns Authentication result with the Jellyfin user ID and name, or an error
+ * @returns The Jellyfin user ID, name and admin status, or an error
  */
 export async function authenticateJellyfin(
   username: string,
@@ -120,10 +125,12 @@ export async function authenticateJellyfin(
     }
 
     const { User } = authResult.data
+    const isAdmin = await isJellyfinAdmin(server, User.Id)
 
     logger.info("Jellyfin user authenticated successfully", {
       userId: User.Id,
       username: User.Name,
+      isAdmin,
     })
 
     return {
@@ -131,6 +138,7 @@ export async function authenticateJellyfin(
       data: {
         id: User.Id,
         username: User.Name,
+        isAdmin,
       },
     }
   } catch (error) {
@@ -143,24 +151,20 @@ export async function authenticateJellyfin(
 }
 
 /**
- * Whether a Jellyfin user is an administrator of the active Jellyfin server:
- * either the admin user recorded for the server, or a user whose Jellyfin
- * policy has IsAdministrator.
+ * Whether a Jellyfin user is an administrator of `server`, the row the
+ * password was just checked against: either the admin user recorded for the
+ * server, or a user whose Jellyfin policy has IsAdministrator.
  *
+ * @internal
+ * @param server - The sign-in server from `getJellyfinLoginServer`
  * @param jellyfinUserId - Jellyfin user ID
- * @returns True if user is admin; false when no server is active or the check fails
+ * @returns True if user is admin; false when the check fails
  */
-export async function isJellyfinAdmin(jellyfinUserId: string): Promise<boolean> {
+async function isJellyfinAdmin(
+  server: Pick<JellyfinServer, "url" | "apiKey" | "adminUserId">,
+  jellyfinUserId: string
+): Promise<boolean> {
   try {
-    const server = await prisma.jellyfinServer.findFirst({
-      where: { isActive: true },
-    })
-
-    if (!server) {
-      logger.warn("No active Jellyfin server for admin check", { userId: jellyfinUserId })
-      return false
-    }
-
     // First check: Does the user ID match the server's admin user ID?
     if (server.adminUserId && jellyfinUserId === server.adminUserId) {
       logger.debug("User is admin (matches server admin ID)", { userId: jellyfinUserId })

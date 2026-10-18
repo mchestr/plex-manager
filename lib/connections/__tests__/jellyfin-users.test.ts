@@ -16,6 +16,17 @@ import { createHash } from 'node:crypto'
 
 import { makeJellyfinServerConfig } from '../../../__tests__/utils/test-builders'
 
+const mockWarn = jest.fn()
+jest.mock('@/lib/utils/logger', () => ({
+  ...jest.requireActual('@/lib/utils/logger'),
+  createLogger: () => ({
+    debug: jest.fn(),
+    info: jest.fn(),
+    error: jest.fn(),
+    warn: (...args: unknown[]) => mockWarn(...args),
+  }),
+}))
+
 describe('Jellyfin Users', () => {
   beforeEach(() => {
     jest.clearAllMocks()
@@ -547,13 +558,18 @@ describe('Jellyfin Users', () => {
       env.JELLYFIN_DEVICE_ID = originalDeviceId
     })
 
-    it('should successfully authenticate user', async () => {
+    const warnings = (event: string) => mockWarn.mock.calls.filter(([message]) => message === event)
+
+    it('should successfully authenticate user, keeping only the fields the app reads', async () => {
       respondWith(ok(authResult()))
 
       const result = await authenticateJellyfinUser(config, username, password)
 
       expect(result.success).toBe(true)
-      expect(result.data).toEqual(authResult())
+      expect(result.data).toEqual({
+        User: { Id: 'user-id-123', Name: username },
+        AccessToken: 'access-token-abc',
+      })
     })
 
     it('should construct correct URL and request body', async () => {
@@ -579,6 +595,7 @@ describe('Jellyfin Users', () => {
       const headers = headersOf(0)
       expect(headers.Authorization).toMatch(AUTHORIZATION_SHAPE)
       expect(headers).not.toHaveProperty('X-Emby-Authorization')
+      expect(warnings('jellyfin.auth.legacy_header_fallback')).toHaveLength(0)
     })
 
     it('derives a stable DeviceId from PLEX_CLIENT_IDENTIFIER', async () => {
@@ -591,6 +608,22 @@ describe('Jellyfin Users', () => {
 
       expect(headersOf(0).Authorization).toContain(`DeviceId="${expected}"`)
       expect(headersOf(2).Authorization).toBe(headersOf(0).Authorization)
+    })
+
+    it('falls back to a fixed DeviceId, warning once, when neither variable is set', async () => {
+      delete env.PLEX_CLIENT_IDENTIFIER
+      respondWith(ok(authResult()), ok(authResult()))
+
+      const first = await authenticateJellyfinUser(config, username, password)
+      const second = await authenticateJellyfinUser(config, username, password)
+
+      expect(first.success).toBe(true)
+      expect(second.success).toBe(true)
+      expect(headersOf(0).Authorization).toContain('DeviceId="plex-manager-server"')
+      expect(headersOf(0).Authorization).toMatch(AUTHORIZATION_SHAPE)
+      expect(warnings('jellyfin.auth.device_id_fallback')).toEqual([
+        ['jellyfin.auth.device_id_fallback', { deviceId: 'plex-manager-server' }],
+      ])
     })
 
     it('uses JELLYFIN_DEVICE_ID when it is set, URL-encoded', async () => {
@@ -618,6 +651,8 @@ describe('Jellyfin Users', () => {
         method: 'POST',
         body: JSON.stringify({ Username: username, Pw: password }),
       })
+      expect(mockWarn).toHaveBeenCalledWith('jellyfin.auth.legacy_header_fallback', expect.any(Object))
+      expect(warnings('jellyfin.auth.legacy_header_fallback')).toHaveLength(1)
     })
 
     it('stops after the legacy retry also fails', async () => {
@@ -680,10 +715,10 @@ describe('Jellyfin Users', () => {
       expect(logout).not.toHaveProperty('Authorization')
     })
 
-    it('still succeeds when the logout fails', async () => {
+    it('still succeeds when the logout throws, warning without the token', async () => {
       mockFetch().mockImplementation(async (url: string) => {
         if (url.endsWith('/Sessions/Logout')) {
-          throw new Error('socket hang up')
+          throw new TypeError('fetch failed: access-token-abc')
         }
         return ok(authResult())
       })
@@ -691,6 +726,54 @@ describe('Jellyfin Users', () => {
       const result = await authenticateJellyfinUser(config, username, password)
 
       expect(result.success).toBe(true)
+      expect(warnings('jellyfin.auth.logout_failed')).toEqual([
+        ['jellyfin.auth.logout_failed', expect.objectContaining({ error: 'TypeError' })],
+      ])
+      expect(JSON.stringify(mockWarn.mock.calls)).not.toContain('access-token-abc')
+    })
+
+    it('warns with the status when Jellyfin refuses the logout', async () => {
+      mockFetch().mockImplementation(async (url: string) =>
+        url.endsWith('/Sessions/Logout') ? { ok: false, status: 500 } : ok(authResult())
+      )
+
+      const result = await authenticateJellyfinUser(config, username, password)
+
+      expect(result.success).toBe(true)
+      expect(warnings('jellyfin.auth.logout_failed')).toEqual([
+        ['jellyfin.auth.logout_failed', expect.objectContaining({ status: 500 })],
+      ])
+    })
+
+    it('gives up on a logout that does not answer within 3 s', async () => {
+      jest.useFakeTimers()
+      try {
+        mockFetch().mockImplementation((url: string, init: { signal: AbortSignal }) => {
+          if (!url.endsWith('/Sessions/Logout')) {
+            return Promise.resolve(ok(authResult()))
+          }
+          return new Promise((_resolve, reject) => {
+            init.signal.addEventListener('abort', () => {
+              reject(Object.assign(new Error('This operation was aborted'), { name: 'AbortError' }))
+            })
+          })
+        })
+        let settled = false
+        const signIn = authenticateJellyfinUser(config, username, password).finally(() => {
+          settled = true
+        })
+
+        await jest.advanceTimersByTimeAsync(2999)
+        expect(settled).toBe(false)
+        await jest.advanceTimersByTimeAsync(1)
+
+        await expect(signIn).resolves.toMatchObject({ success: true })
+        expect(warnings('jellyfin.auth.logout_failed')).toEqual([
+          ['jellyfin.auth.logout_failed', expect.objectContaining({ error: 'AbortError' })],
+        ])
+      } finally {
+        jest.useRealTimers()
+      }
     })
 
     it('should handle invalid response (missing User.Id), logging the token out', async () => {
@@ -710,6 +793,53 @@ describe('Jellyfin Users', () => {
 
       expect(result.success).toBe(false)
       expect(result.error).toBe('Invalid authentication response')
+      expect(global.fetch).toHaveBeenCalledTimes(1)
+    })
+
+    it.each([
+      ['a non-string AccessToken', authResult({ AccessToken: 12345 })],
+      ['a non-string User.Id', authResult({ User: { Id: 42, Name: username } })],
+      ['an empty User.Id', authResult({ User: { Id: '', Name: username } })],
+      ['a missing User.Name', authResult({ User: { Id: 'user-id-123' } })],
+      ['a non-object body', 'not-an-object'],
+    ])('rejects a response with %s', async (_label, body) => {
+      respondWith(ok(body))
+
+      const result = await authenticateJellyfinUser(config, username, password)
+
+      expect(result).toEqual({ success: false, error: 'Invalid authentication response' })
+      expect(warnings('jellyfin.auth.invalid_response')).toHaveLength(1)
+    })
+
+    it('logs out a string token even when the rest of the response is invalid', async () => {
+      respondWith(ok(authResult({ User: { Id: 42, Name: username } })))
+
+      await authenticateJellyfinUser(config, username, password)
+
+      expect(mockFetch().mock.calls[1][0]).toBe(`${config.url}/Sessions/Logout`)
+      expect(headersOf(1).Authorization).toMatch(/, Token="access-token-abc"$/)
+    })
+
+    it('does not log out a token that is not a string', async () => {
+      respondWith(ok(authResult({ AccessToken: 12345 })))
+
+      await authenticateJellyfinUser(config, username, password)
+
+      expect(global.fetch).toHaveBeenCalledTimes(1)
+    })
+
+    it('treats a body that is not JSON as an invalid response', async () => {
+      respondWith({
+        ok: true,
+        status: 200,
+        json: async () => {
+          throw new SyntaxError('Unexpected token < in JSON at position 0')
+        },
+      })
+
+      const result = await authenticateJellyfinUser(config, username, password)
+
+      expect(result).toEqual({ success: false, error: 'Invalid authentication response' })
       expect(global.fetch).toHaveBeenCalledTimes(1)
     })
 
