@@ -197,14 +197,34 @@ await waitForStablePage(page);
 
 ### Prerequisites
 
-Before running E2E tests, make sure:
-1. Your database is set up (`npm run db:push` or `npm run db:migrate`)
-2. You have a `.env` file with proper configuration
+The suite deletes users, Rewinds and service configs, so it only runs against a
+dedicated test database. Start it and apply the migrations first:
+
+```bash
+docker compose up -d db-playwright
+DATABASE_URL=$E2E_DATABASE_URL npx prisma migrate deploy
+```
+
+1. Set `E2E_DATABASE_URL` in `.env` (see `example.env`):
+   `postgresql://postgres:postgres@localhost:5433/plex_manager_test?schema=public`.
+   Its database name must end in `_test`. `playwright.config.ts`,
+   `createE2EPrismaClient()` and the setup-wizard spec each refuse any other
+   database, and the suite never uses `.env`'s `DATABASE_URL`.
+   The `migrate deploy` line reads `E2E_DATABASE_URL` from your shell, so export
+   it there too. If it is empty, Prisma stops instead of falling back to `.env`.
+2. If your `db-playwright` volume was created before the database was renamed,
+   create the new database once:
+   `docker compose exec db-playwright createdb -U postgres plex_manager_test`.
 
 The test suite will automatically:
+- Point `DATABASE_URL` at `E2E_DATABASE_URL` for global setup, the helpers, the specs and the web server
 - Seed the database with test users (admin and regular user)
-- Start the development server (if not already running)
+- Start its own development server on `E2E_PORT` (default 3100) with `E2E_TEST_MODE=true`
 - Create necessary test data
+
+It does not reuse a running `npm run dev`, because that server points at your
+development database. Set `E2E_REUSE_SERVER=1` only for a server you started
+against `E2E_DATABASE_URL` with `E2E_TEST_MODE=true`.
 
 ### Run All Tests
 
@@ -402,13 +422,17 @@ test('create and delete item', async ({ adminPage }) => {
 
 If you see errors about Plex API calls failing during tests:
 
-1. **Ensure the database is seeded**: Run `npm run db:seed` or let the global setup handle it
-2. **Check test users exist**: Verify that `admin@example.com` and `regular@example.com` users exist in your database
+1. **Ensure the database is seeded**: Let the global setup handle it, or run
+   `DATABASE_URL=$E2E_DATABASE_URL E2E_TEST_MODE=true npm run db:seed`
+2. **Check test users exist**: Verify that `admin@example.com` and `regular@example.com` users exist in the test database
 3. **Verify environment**: The test token authentication only works when:
-   - `NODE_ENV` is not `'production'`, OR
-   - `NEXT_PUBLIC_ENABLE_TEST_AUTH` is set to `'true'`
-4. **Check server restart**: If you're reusing an existing dev server, make sure it was started with test auth enabled
-5. **Database connection**: Ensure your `DATABASE_URL` is correctly set in `.env`
+   - `NODE_ENV` is not `'production'`, AND
+   - the server has `E2E_TEST_MODE=true` (server side), AND
+   - the client bundle has `NEXT_PUBLIC_ENABLE_TEST_AUTH=true` (callback page)
+
+   Playwright's web server sets both flags. `NODE_ENV=test` alone does not enable test login.
+4. **Check server restart**: If you're reusing an existing server (`E2E_REUSE_SERVER=1`), make sure it was started with both flags and `DATABASE_URL=$E2E_DATABASE_URL`
+5. **Database connection**: Ensure `E2E_DATABASE_URL` is set in `.env` and names a database ending in `_test`
 
 The test authentication bypasses normal Plex OAuth by using special test tokens:
 - `TEST_ADMIN_TOKEN` - Authenticates as admin@example.com

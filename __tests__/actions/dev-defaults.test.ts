@@ -2,6 +2,13 @@
  * Tests for actions/dev-defaults.ts - development defaults for setup wizard
  */
 
+// getDevDefaults checks Setup.isComplete; the factory reads the shared mock lazily
+// so it survives jest.resetModules().
+const mockGetSetupStatus = jest.fn()
+jest.mock('@/actions/setup', () => ({
+  getSetupStatus: () => mockGetSetupStatus(),
+}))
+
 // Store original environment to restore after tests
 const originalEnv = process.env
 
@@ -24,6 +31,11 @@ describe('getDevDefaults', () => {
     process.env = { ...originalEnv }
     // Clear all DEV_* variables for clean test state
     clearDevEnvVars()
+    // Defaults need the explicit flag and an incomplete setup; the cases below
+    // that check the gate override these.
+    process.env.E2E_TEST_MODE = 'true'
+    mockGetSetupStatus.mockReset()
+    mockGetSetupStatus.mockResolvedValue({ isComplete: false, currentStep: 1 })
   })
 
   afterAll(() => {
@@ -63,6 +75,59 @@ describe('getDevDefaults', () => {
 
       // test is not development, so should return empty
       expect(result.isDevMode).toBe(false)
+    })
+  })
+
+  describe('Explicit flag and setup state', () => {
+    beforeEach(() => {
+      ;(process.env as Record<string, string | undefined>).NODE_ENV = 'development'
+      process.env.DEV_PLEX_NAME = 'My Plex'
+      process.env.DEV_PLEX_TOKEN = 'dev-plex-token'
+      process.env.DEV_TAUTULLI_API_KEY = 'dev-tautulli-key'
+    })
+
+    it('should return empty defaults in development without E2E_TEST_MODE', async () => {
+      delete process.env.E2E_TEST_MODE
+
+      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const result = await getDevDefaults()
+
+      expect(result.isDevMode).toBe(false)
+      expect(result.plex).toBeNull()
+      expect(result.tautulli).toBeNull()
+      expect(mockGetSetupStatus).not.toHaveBeenCalled()
+    })
+
+    it('should return empty defaults when E2E_TEST_MODE has a value other than true', async () => {
+      process.env.E2E_TEST_MODE = '1'
+
+      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const result = await getDevDefaults()
+
+      expect(result.isDevMode).toBe(false)
+      expect(result.plex).toBeNull()
+    })
+
+    it('should return empty defaults once setup is complete', async () => {
+      mockGetSetupStatus.mockResolvedValue({ isComplete: true, currentStep: 5 })
+
+      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const result = await getDevDefaults()
+
+      expect(mockGetSetupStatus).toHaveBeenCalledTimes(1)
+      expect(result.isDevMode).toBe(false)
+      expect(result.autoSubmit).toBe(false)
+      expect(result.plex).toBeNull()
+      expect(result.tautulli).toBeNull()
+    })
+
+    it('should return defaults with the flag set before setup is complete', async () => {
+      const { getDevDefaults } = await import('@/actions/dev-defaults')
+      const result = await getDevDefaults()
+
+      expect(result.isDevMode).toBe(true)
+      expect(result.plex).toEqual({ name: 'My Plex', token: 'dev-plex-token' })
+      expect(result.tautulli).toEqual({ apiKey: 'dev-tautulli-key' })
     })
   })
 

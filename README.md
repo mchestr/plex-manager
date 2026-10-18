@@ -207,7 +207,7 @@ plex-wrapped/
 | `npm run db:push` | Push schema changes to database |
 | `npm run db:migrate` | Run database migrations |
 | `npm run db:studio` | Open Prisma Studio (database GUI) |
-| `npm run db:seed` | Seed database with test data |
+| `npm run db:seed` | Seed a local or `_test` database with test data (needs `E2E_TEST_MODE=true`) |
 
 ### Development Guidelines
 
@@ -272,7 +272,7 @@ See `example.env` for all available configuration options. Key variables:
 - **Authentication**: `NEXTAUTH_SECRET`, `PLEX_CLIENT_IDENTIFIER`
 - **Encryption**: `ENCRYPTION_KEY` (optional but strongly recommended in production) — encrypts external-service secrets/tokens at rest. Use a dedicated value (do **not** reuse `NEXTAUTH_SECRET`); generate with `openssl rand -hex 32`. Rollout is non-destructive; rotating it makes previously-encrypted secrets undecryptable until re-saved.
 - **Job Queue**: `REDIS_URL` (optional) — enables the Redis-backed BullMQ worker. Without it, background jobs fall back to PostgreSQL polling. Required for Stripe subscriptions.
-- **Development**: `DEV_*` variables for setup wizard defaults
+- **Development**: `DEV_*` variables for setup wizard defaults (read only with `NODE_ENV=development` and `E2E_TEST_MODE=true`, until setup is complete)
   - Use URL format: `DEV_PLEX_URL="https://localhost:32400"` (includes protocol and port)
 
 > **Stripe**: There are intentionally **no** `STRIPE_*` environment variables. The secret key, webhook signing secret, and price IDs are stored (encrypted) in the app config and managed entirely from **Admin → Settings → Stripe Subscriptions**. See [docs/stripe.md](docs/stripe.md).

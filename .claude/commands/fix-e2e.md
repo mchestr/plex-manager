@@ -18,6 +18,16 @@ Automated E2E test repair workflow that systematically fixes failing Playwright 
 
 This command runs an automated agent that:
 
+0. **Test Database**
+   - The suite wipes users, Rewinds and service configs, so it runs only against
+     the dedicated `_test` database named by `E2E_DATABASE_URL` (see `example.env`).
+   - Start it and apply migrations before anything else:
+     `docker compose up -d db-playwright`, then
+     `DATABASE_URL=$E2E_DATABASE_URL npx prisma migrate deploy`
+     (with `E2E_DATABASE_URL` exported in the shell)
+   - If Playwright stops with "Refusing to use database", fix `E2E_DATABASE_URL`;
+     never point it at the development or production database.
+
 1. **Discovery Phase**
    - Run all E2E tests: `npm run test:e2e`
    - Capture failures with screenshots and traces

@@ -20,7 +20,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: test_db
+          POSTGRES_DB: plex_manager_test
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -45,7 +45,7 @@ jobs:
       - name: Generate Prisma Client
         run: npx prisma generate
         env:
-          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/test_db?schema=public"
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/plex_manager_test?schema=public"
 
       - name: Run linter
         run: npm run lint
@@ -60,7 +60,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: test_db
+          POSTGRES_DB: plex_manager_test
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -85,17 +85,17 @@ jobs:
       - name: Generate Prisma Client
         run: npx prisma generate
         env:
-          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/test_db?schema=public"
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/plex_manager_test?schema=public"
 
       - name: Run Prisma migrations
         run: npx prisma migrate deploy
         env:
-          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/test_db?schema=public"
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/plex_manager_test?schema=public"
 
       - name: Build application
         run: npm run build
         env:
-          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/test_db?schema=public"
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/plex_manager_test?schema=public"
           NEXT_PUBLIC_APP_URL: "http://localhost:3000"
           NEXTAUTH_URL: "http://localhost:3000"
           NEXTAUTH_SECRET: "test-secret-for-ci-build-at-least-32-chars-long"
@@ -134,7 +134,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: test_db
+          POSTGRES_DB: plex_manager_test
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -159,12 +159,12 @@ jobs:
       - name: Generate Prisma Client
         run: npx prisma generate
         env:
-          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/test_db?schema=public"
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/plex_manager_test?schema=public"
 
       - name: Run unit tests with coverage
         run: npm run test:coverage -- --ci --reporters=default --reporters=github-actions
         env:
-          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/test_db?schema=public"
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/plex_manager_test?schema=public"
 
       - name: Upload coverage report
         if: always()
@@ -184,7 +184,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: test_db
+          POSTGRES_DB: plex_manager_test
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -209,12 +209,12 @@ jobs:
       - name: Generate Prisma Client
         run: npx prisma generate
         env:
-          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/test_db?schema=public"
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/plex_manager_test?schema=public"
 
       - name: Run Prisma migrations
         run: npx prisma migrate deploy
         env:
-          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/test_db?schema=public"
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/plex_manager_test?schema=public"
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
@@ -222,13 +222,14 @@ jobs:
       - name: Run Playwright E2E tests
         run: npm run test:e2e
         env:
-          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/test_db?schema=public"
-          NEXT_PUBLIC_APP_URL: "http://localhost:3000"
-          NEXTAUTH_URL: "http://localhost:3000"
+          E2E_DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/plex_manager_test?schema=public"
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/plex_manager_test?schema=public"
+          NEXT_PUBLIC_APP_URL: "http://localhost:3100"
+          NEXTAUTH_URL: "http://localhost:3100"
           NEXTAUTH_SECRET: "test-secret-for-ci-build-at-least-32-chars-long"
           PLEX_CLIENT_IDENTIFIER: "00000000-0000-0000-0000-000000000000"
           NEXT_PUBLIC_ENABLE_TEST_AUTH: "true"
-          ENABLE_TEST_AUTH: "true"
+          E2E_TEST_MODE: "true"
           SKIP_CONNECTION_TESTS: "true"
 
       - name: Upload Playwright report

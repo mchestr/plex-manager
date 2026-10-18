@@ -1,6 +1,7 @@
 import { checkUserServerAccess, getPlexUserInfo } from "@/lib/connections/plex"
 import { authenticateJellyfin, isJellyfinAdmin } from "@/lib/jellyfin-auth"
 import { prisma } from "@/lib/prisma"
+import { isE2ETestMode } from "@/lib/security/test-mode"
 import { createLogger } from "@/lib/utils/logger"
 import { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
@@ -15,6 +16,10 @@ const logger = createLogger("AUTH")
  * per-request DB load (only one query per user per interval).
  */
 const ADMIN_RECHECK_INTERVAL_MS = 5 * 60 * 1000
+
+if (isE2ETestMode()) {
+  logger.warn('E2E test login is enabled')
+}
 
 export const authOptions: NextAuthOptions = {
   // NOTE: PrismaAdapter is not compatible with CredentialsProvider
@@ -31,16 +36,11 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         // TEST MODE BYPASS
-        // Only active if explicitly enabled via a SERVER-ONLY env var AND never
-        // in production. Server auth intentionally does NOT read
-        // NEXT_PUBLIC_ENABLE_TEST_AUTH (that flag is bundled into client JS, so
-        // gating server-side auth on it would be a footgun); the E2E flow sets
-        // the server-only ENABLE_TEST_AUTH alongside it. The NODE_ENV !==
-        // 'production' check is a hard backstop against any misconfiguration.
-        const isTestMode =
-          process.env.NODE_ENV !== 'production' &&
-          (process.env.NODE_ENV === 'test' ||
-            process.env.ENABLE_TEST_AUTH === 'true')
+        // Only active with the server-only E2E_TEST_MODE=true, and never in
+        // production. NODE_ENV=test alone does not enable it. Server auth does
+        // NOT read NEXT_PUBLIC_ENABLE_TEST_AUTH: that flag is bundled into
+        // client JS and only lets the callback page present the test token.
+        const isTestMode = isE2ETestMode()
 
         if (isTestMode && credentials?.authToken) {
           logger.debug('Test mode active', {

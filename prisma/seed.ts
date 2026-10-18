@@ -1,30 +1,35 @@
 import { PrismaClient } from '../lib/generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
+import { assertSeedTarget, isE2ETestMode } from '../lib/security/test-mode'
 
-// Allow skipping seed via environment variable (useful for migrations)
-if (process.env.SKIP_SEED === 'true') {
-  console.log('Skipping seed (SKIP_SEED=true)')
-  process.exit(0)
+/**
+ * The seed wipes users, Rewinds and service configuration, then creates a
+ * hardcoded admin@example.com admin. It runs only with the explicit
+ * E2E_TEST_MODE=true flag (never in production) and only against a local host
+ * or a database whose name ends in _test.
+ */
+function resolveSeedTarget(): string {
+  if (!isE2ETestMode()) {
+    throw new Error(
+      'Refusing to seed: set E2E_TEST_MODE=true (never in production) to confirm this is a disposable database.'
+    )
+  }
+  const target = assertSeedTarget(process.env.DATABASE_URL)
+  console.log(`Seeding database "${target.database}" on host "${target.host}"`)
+  return target.url
 }
-
-// Never seed in production: this script wipes all data and creates a hardcoded
-// admin@example.com / isAdmin:true user, which would be both a data-loss and an
-// authentication-bypass risk against a real database.
-if (process.env.NODE_ENV === 'production') {
-  console.error('Refusing to run seed in production (NODE_ENV=production)')
-  process.exit(1)
-}
-
-if (!process.env.DATABASE_URL) {
-  throw new Error('DATABASE_URL environment variable is not defined')
-}
-
-const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL,
-})
-const prisma = new PrismaClient({ adapter })
 
 async function main() {
+  const connectionString = resolveSeedTarget()
+  const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString }) })
+  try {
+    await seed(prisma)
+  } finally {
+    await prisma.$disconnect()
+  }
+}
+
+async function seed(prisma: PrismaClient) {
   // Cleanup existing data
   await prisma.lLMUsage.deleteMany()
   await prisma.wrappedShareVisit.deleteMany()
@@ -85,11 +90,7 @@ async function main() {
   console.log('Database seeded!')
 }
 
-main()
-  .catch((e) => {
-    console.error(e)
-    process.exit(1)
-  })
-  .finally(async () => {
-    await prisma.$disconnect()
-  })
+main().catch((e) => {
+  console.error(e)
+  process.exit(1)
+})
