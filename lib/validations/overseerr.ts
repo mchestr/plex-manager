@@ -21,7 +21,11 @@ export type OverseerrParsed = z.output<typeof overseerrSchema>
  * we read and keep everything else.
  */
 
-/** `MediaRequest.status`: the state of one request. */
+/**
+ * `MediaRequest.status`: the state of one request. The schema accepts any
+ * integer, so a status a later release adds does not fail the whole page; it
+ * counts as neither pending nor approved.
+ */
 export enum MediaRequestStatus {
   PENDING = 1,
   APPROVED = 2,
@@ -68,7 +72,7 @@ export const overseerrRequestPageSchema = z.looseObject({
   results: z.array(
     z.looseObject({
       id: z.number().int(),
-      status: z.enum(MediaRequestStatus),
+      status: z.number().int(),
       type: z.enum(["movie", "tv"]),
       is4k: z.boolean().optional(),
       createdAt: z.string(),

@@ -254,6 +254,21 @@ describe('fetchOverseerrStatistics', () => {
       })
     })
 
+    it('counts a request with an unknown status as neither pending nor approved, and keeps the page', async () => {
+      const unknown = { ...fixtureRequest(111), id: 900, status: 9 }
+      serve({ requests: [{ ...requestsPage, results: [unknown, fixtureRequest(112)] }] })
+
+      const result = await fetchOverseerrStatistics(config, member, 2025)
+
+      expect(result).toMatchObject({ success: true })
+      expect(result.data).toMatchObject({
+        totalRequests: 2,
+        approvedRequests: 0,
+        pendingRequests: 1,
+        availableRequests: 0,
+      })
+    })
+
     it.each([
       ['tv', 4, 1],
       ['movie', 4, 0],
