@@ -9,6 +9,7 @@
  * - Audit logging for security-sensitive events
  * - Matching Plex redemptions by plexUserId only, never by email (SEC-08)
  * - Zod validation of Jellyfin invite credentials
+ * - Invite listings carry only public user fields, never plexAuthToken (SEC-18)
  */
 
 import {
@@ -17,6 +18,7 @@ import {
   processJellyfinInvite,
   createInvite,
   getInvites,
+  getInviteDetails,
   deleteInvite,
 } from '@/actions/invite'
 import { requireAdmin } from '@/lib/admin'
@@ -33,6 +35,10 @@ import { RATE_LIMITED_MESSAGE } from '@/lib/security/rate-limit-messages'
 import { Prisma } from '@/lib/generated/prisma/client'
 import type { Invite, PlexServer } from '@/lib/generated/prisma/client'
 import type { Session } from 'next-auth'
+import { publicUserSelect } from '@/lib/dto/user'
+import { assertNoSecretKeys } from '@/__tests__/utils/assert-no-secret-keys'
+import { applyPrismaShape } from '@/__tests__/utils/prisma-shape'
+import { makePrismaInviteWithUsages, INVITEE_PLEX_AUTH_TOKEN } from '@/__tests__/utils/test-builders'
 
 // Mock dependencies
 jest.mock('@/lib/admin', () => ({
@@ -958,6 +964,84 @@ describe('invite actions', () => {
       mockRequireAdmin.mockRejectedValue(new Error('Unauthorized'))
 
       await expect(getInvites()).rejects.toThrow('Unauthorized')
+    })
+  })
+
+  describe('invite queries send only public user fields (SEC-18)', () => {
+    const publicUsagesInclude = { usages: { include: { user: { select: publicUserSelect } } } }
+
+    /** Answer each query by applying its own select/include to rows holding plexAuthToken. */
+    function serveInviteRowsWithSecrets() {
+      const rows = [makePrismaInviteWithUsages(), makePrismaInviteWithUsages({ id: 'invite-2', code: 'OTHER' })]
+      mockPrisma.invite.findMany.mockImplementation(((args: Parameters<typeof applyPrismaShape>[1]) =>
+        Promise.resolve(rows.map((row) => applyPrismaShape(row, args)))) as never)
+      mockPrisma.invite.findUnique.mockImplementation(((args: Parameters<typeof applyPrismaShape>[1]) =>
+        Promise.resolve(applyPrismaShape(rows[0], args))) as never)
+    }
+
+    function expectNoSecrets(result: unknown) {
+      const serialised = JSON.stringify(result)
+      expect(serialised).not.toContain('plexAuthToken')
+      expect(serialised).not.toContain(INVITEE_PLEX_AUTH_TOKEN)
+      assertNoSecretKeys(JSON.parse(serialised))
+    }
+
+    it('getInvites selects publicUserSelect for usages.user', async () => {
+      serveInviteRowsWithSecrets()
+
+      await getInvites()
+
+      expect(mockPrisma.invite.findMany).toHaveBeenCalledWith({
+        orderBy: { createdAt: 'desc' },
+        include: publicUsagesInclude,
+      })
+    })
+
+    it('getInviteDetails selects publicUserSelect for usages.user and keeps the usage order', async () => {
+      serveInviteRowsWithSecrets()
+
+      await getInviteDetails('invite-1')
+
+      expect(mockPrisma.invite.findUnique).toHaveBeenCalledWith({
+        where: { id: 'invite-1' },
+        include: {
+          usages: { include: { user: { select: publicUserSelect } }, orderBy: { usedAt: 'desc' } },
+        },
+      })
+    })
+
+    it('getInvites returns no token field and only id, name, email and image per user', async () => {
+      serveInviteRowsWithSecrets()
+
+      const result = await getInvites()
+
+      expect(result.success).toBe(true)
+      expectNoSecrets(result)
+      if (!result.success) throw new Error(result.error)
+      expect(result.data).toHaveLength(2)
+      expect(result.data[0].usages[0].user).toEqual({
+        id: 'user-1',
+        name: 'Invited Member',
+        email: 'member@example.com',
+        image: 'https://plex.tv/users/member/avatar',
+      })
+    })
+
+    it('getInviteDetails returns no token field and only id, name, email and image per user', async () => {
+      serveInviteRowsWithSecrets()
+
+      const result = await getInviteDetails('invite-1')
+
+      expect(result.success).toBe(true)
+      expectNoSecrets(result)
+      if (!result.success) throw new Error(result.error)
+      expect(Object.keys(result.data.usages[0].user).sort()).toEqual(['email', 'id', 'image', 'name'])
+    })
+
+    it('getInviteDetails reports a missing invite', async () => {
+      mockPrisma.invite.findUnique.mockResolvedValue(null)
+
+      await expect(getInviteDetails('missing')).resolves.toEqual({ success: false, error: 'Invite not found' })
     })
   })
 

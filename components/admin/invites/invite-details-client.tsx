@@ -3,35 +3,15 @@
 import { deleteInvite, getInviteDetails } from "@/actions/invite"
 import { useToast } from "@/components/ui/toast"
 import { ConfirmModal } from "@/components/admin/shared/confirm-modal"
+import type { InviteWithUsages } from "@/lib/dto/user"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 
-interface InviteDetails {
-  id: string
-  code: string
-  maxUses: number
-  useCount: number
-  expiresAt: Date | null
-  createdAt: Date
-  allowDownloads: boolean
-  librarySectionIds: string | null
-  usages: {
-    id: string
-    usedAt: Date
-    user: {
-      id: string
-      name: string | null
-      email: string | null
-      image: string | null
-    }
-  }[]
-}
-
 export function InviteDetailsClient({ id }: { id: string }) {
   const toast = useToast()
-  const [invite, setInvite] = useState<InviteDetails | null>(null)
+  const [invite, setInvite] = useState<InviteWithUsages | null>(null)
   const [loading, setLoading] = useState(true)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const router = useRouter()
@@ -39,8 +19,7 @@ export function InviteDetailsClient({ id }: { id: string }) {
   const loadInvite = useCallback(async () => {
     try {
       const result = await getInviteDetails(id)
-      if (result.success && result.data) {
-        // @ts-ignore - Prisma types might be slightly off in client
+      if (result.success) {
         setInvite(result.data)
       } else {
         router.push("/admin/invites")

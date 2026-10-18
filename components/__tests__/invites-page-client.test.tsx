@@ -16,6 +16,22 @@ jest.mock('@/actions/admin/admin-servers', () => ({
   getJellyfinLibraries: jest.fn(),
 }))
 
+// The SEC-18 test runs the real getInvites behind the mock, so the modules it
+// imports are faked: Prisma answers from fixture rows, and nothing reaches
+// Plex, Jellyfin or Redis.
+jest.mock('@/lib/admin', () => ({
+  requireAdmin: jest.fn(),
+}))
+
+jest.mock('@/lib/prisma', () => ({
+  prisma: { invite: { findMany: jest.fn() } },
+}))
+
+jest.mock('@/lib/connections/plex', () => ({}))
+jest.mock('@/lib/connections/jellyfin', () => ({}))
+jest.mock('@/lib/security/audit-log', () => ({ logAuditEvent: jest.fn(), AuditEventType: {} }))
+jest.mock('@/lib/security/rate-limit', () => ({ consume: jest.fn(), actionClientIp: jest.fn() }))
+
 jest.mock('next/link', () => ({
   __esModule: true,
   default: ({ children, href }: any) => <a href={href}>{children}</a>,
@@ -50,6 +66,11 @@ jest.mock('@/components/admin/shared/confirm-modal', () => ({
 
 // Import after mocks
 import * as inviteActions from '@/actions/invite'
+import { requireAdmin } from '@/lib/admin'
+import { prisma } from '@/lib/prisma'
+import { assertNoSecretKeys } from '@/__tests__/utils/assert-no-secret-keys'
+import { applyPrismaShape } from '@/__tests__/utils/prisma-shape'
+import { makePrismaInviteWithUsages, INVITEE_PLEX_AUTH_TOKEN } from '@/__tests__/utils/test-builders'
 import * as serverInfo from '@/actions/server-info'
 import * as adminServers from '@/actions/admin/admin-servers'
 import { InvitesPageClient } from '@/components/admin/invites/invites-page-client'
@@ -776,6 +797,37 @@ describe('InvitesPageClient', () => {
         const table = screen.getByRole('table')
         expect(table.parentElement).toHaveClass('overflow-x-auto')
       })
+    })
+  })
+
+  describe('No invitee secrets reach the page (SEC-18)', () => {
+    afterEach(() => {
+      mockGetInvites.mockReset()
+    })
+
+    it('stores and renders invites from the real getInvites without any token field', async () => {
+      const actual = jest.requireActual<typeof import('@/actions/invite')>('@/actions/invite')
+      jest.mocked(requireAdmin).mockResolvedValue({ user: { id: 'admin-1', isAdmin: true }, expires: '' } as never)
+      // Prisma answers with rows whose users hold plexAuthToken, shaped by the query's own select.
+      jest.mocked(prisma.invite.findMany).mockImplementation(((args: Parameters<typeof applyPrismaShape>[1]) =>
+        Promise.resolve([applyPrismaShape(makePrismaInviteWithUsages(), args)])) as never)
+      mockGetInvites.mockImplementation(actual.getInvites)
+
+      const { container } = render(<InvitesPageClient />)
+
+      expect(await screen.findByText('TESTCODE')).toBeInTheDocument()
+      // What the page put in its `invites` state: the action's resolved result.
+      const stored = await mockGetInvites.mock.results[0].value
+      expect(stored.success).toBe(true)
+      expect(stored.data[0].usages[0].user).toEqual({
+        id: 'user-1',
+        name: 'Invited Member',
+        email: 'member@example.com',
+        image: 'https://plex.tv/users/member/avatar',
+      })
+      assertNoSecretKeys(stored)
+      expect(JSON.stringify(stored)).not.toContain(INVITEE_PLEX_AUTH_TOKEN)
+      expect(container.innerHTML).not.toContain(INVITEE_PLEX_AUTH_TOKEN)
     })
   })
 })
