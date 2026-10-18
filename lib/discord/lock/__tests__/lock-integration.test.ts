@@ -176,6 +176,28 @@ describe("BotLockPoller with a real DistributedLock (BP-12)", () => {
     await pod.poller.stop()
   })
 
+  it("logs in at the next poll when the config-version read fails on startup", async () => {
+    const store = createLockStore()
+    const getConfigVersion = jest
+      .fn<Promise<number>, []>()
+      .mockRejectedValueOnce(new Error("db blip"))
+      .mockResolvedValue(0)
+    const pod = createPod(store, "pod-a", 2_000, { pollIntervalMs: 60_000, getConfigVersion })
+
+    await pod.poller.start()
+    // Nothing was taken, so another pod is free to run the bot meanwhile.
+    expect(store.getRow()).toBeNull()
+
+    const lapses = await runOneHourAndFindLapses(store, "pod-a")
+
+    // The first poll, at 60 s, takes the lock; from then on it never lapses.
+    expect(lapses).toEqual(Array.from({ length: 59 }, (_, i) => i + 1))
+    expect(pod.callbacks.onLockAcquired).toHaveBeenCalledTimes(1)
+    expect(pod.callbacks.onLockLost).not.toHaveBeenCalled()
+
+    await pod.poller.stop()
+  })
+
   it("never lets a second pod take the lease while the holder runs", async () => {
     const store = createLockStore()
     const podA = createPod(store, "pod-a", 2_000, { pollIntervalMs: 60_000 })

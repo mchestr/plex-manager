@@ -93,7 +93,13 @@ afterEach(() => {
 describe("BotLockPoller constructor", () => {
   it("throws when the renewal interval is half the lease", () => {
     expect(() => makePoller(makeMockLock(), makeCallbacks(), { renewIntervalMs: 15_000 })).toThrow(
-      "renewal interval (15000 ms) must be less than half the lease (30000 ms)"
+      "renewal interval (15000 ms) must be above 0 and less than half the lease (30000 ms)"
+    )
+  })
+
+  it.each([0, -1, NaN, Infinity])("throws for a renewal interval of %p", (renewIntervalMs) => {
+    expect(() => makePoller(makeMockLock(), makeCallbacks(), { renewIntervalMs })).toThrow(
+      "must be above 0 and less than half the lease"
     )
   })
 
@@ -178,6 +184,83 @@ describe("BotLockPoller.start", () => {
 
     expect(lock.acquire).toHaveBeenCalledTimes(1)
     expect(jest.getTimerCount()).toBe(2) // one poll, one renewal
+
+    await poller.stop()
+  })
+})
+
+describe("BotLockPoller config-version read failures", () => {
+  it("takes nothing when the read fails on startup, then starts the bot on the next tick", async () => {
+    const lock = makeMockLock()
+    const cb = makeCallbacks(true)
+    const getConfigVersion = jest
+      .fn<Promise<number>, []>()
+      .mockRejectedValueOnce(new Error("db blip"))
+      .mockResolvedValue(0)
+    const poller = makePoller(lock, cb, { getConfigVersion })
+
+    await poller.start()
+    // No lease held and nothing renewing without a bot.
+    expect(lock.acquire).not.toHaveBeenCalled()
+    expect(cb.onLockAcquired).not.toHaveBeenCalled()
+    expect(jest.getTimerCount()).toBe(1) // the poll only
+
+    await advance(POLL_MS)
+    expect(lock.acquire).toHaveBeenCalledTimes(1)
+    expect(cb.onLockAcquired).toHaveBeenCalledTimes(1)
+    expect(jest.getTimerCount()).toBe(2)
+
+    await poller.stop()
+  })
+
+  it("takes nothing when the read fails on a tick, then starts the bot on the tick after", async () => {
+    const lock = makeMockLock()
+    lock.acquire.mockResolvedValueOnce(false) // busy at startup
+    const cb = makeCallbacks(true)
+    const getConfigVersion = jest
+      .fn<Promise<number>, []>()
+      .mockResolvedValueOnce(0) // startup
+      .mockRejectedValueOnce(new Error("db blip")) // first tick
+      .mockResolvedValue(0)
+    const poller = makePoller(lock, cb, { getConfigVersion })
+
+    await poller.start()
+    await advance(POLL_MS)
+    expect(lock.acquire).toHaveBeenCalledTimes(1) // the startup attempt only
+    expect(cb.onLockAcquired).not.toHaveBeenCalled()
+    expect(jest.getTimerCount()).toBe(1)
+
+    await advance(POLL_MS)
+    expect(lock.acquire).toHaveBeenCalledTimes(2)
+    expect(cb.onLockAcquired).toHaveBeenCalledTimes(1)
+    expect(jest.getTimerCount()).toBe(2)
+
+    await poller.stop()
+  })
+
+  it("starts the bot again after a lost renewal even when the first re-acquire read fails", async () => {
+    const lock = makeMockLock()
+    lock.renew.mockResolvedValueOnce(false) // the 10 s renewal loses the lease
+    const cb = makeCallbacks(true)
+    const getConfigVersion = jest
+      .fn<Promise<number>, []>()
+      .mockResolvedValueOnce(0) // startup
+      .mockRejectedValueOnce(new Error("db blip")) // 60 s tick
+      .mockResolvedValue(0)
+    const poller = makePoller(lock, cb, { getConfigVersion })
+
+    await poller.start()
+    await advance(RENEW_MS)
+    expect(cb.onLockLost).toHaveBeenCalledTimes(1)
+
+    await advance(POLL_MS - RENEW_MS) // 60 s: the read fails
+    expect(lock.acquire).toHaveBeenCalledTimes(1)
+    expect(jest.getTimerCount()).toBe(1)
+
+    await advance(POLL_MS) // 120 s: back up
+    expect(lock.acquire).toHaveBeenCalledTimes(2)
+    expect(cb.onLockAcquired).toHaveBeenCalledTimes(2)
+    expect(jest.getTimerCount()).toBe(2)
 
     await poller.stop()
   })
@@ -420,6 +503,72 @@ describe("BotLockPoller overlapping ticks", () => {
 })
 
 describe("BotLockPoller.stop", () => {
+  it("releases and leaves no timers when stopped while the startup acquire is in flight", async () => {
+    const lock = makeMockLock()
+    const pending = deferred<boolean>()
+    lock.acquire.mockReturnValueOnce(pending.promise)
+    const cb = makeCallbacks(true)
+    const poller = makePoller(lock, cb)
+
+    const started = poller.start()
+    await advance(0)
+    expect(lock.acquire).toHaveBeenCalledTimes(1)
+    await poller.stop()
+
+    pending.resolve(true)
+    await started
+
+    expect(cb.onLockAcquired).not.toHaveBeenCalled()
+    expect(lock.release).toHaveBeenCalledTimes(1)
+    expect(jest.getTimerCount()).toBe(0)
+  })
+
+  it("releases and leaves no timers when stopped while a tick's acquire is in flight", async () => {
+    const lock = makeMockLock()
+    const pending = deferred<boolean>()
+    lock.acquire.mockResolvedValueOnce(false).mockReturnValueOnce(pending.promise)
+    const cb = makeCallbacks(true)
+    const poller = makePoller(lock, cb)
+
+    await poller.start()
+    await advance(POLL_MS) // the tick waits on acquire
+    expect(lock.acquire).toHaveBeenCalledTimes(2)
+    await poller.stop()
+
+    pending.resolve(true)
+    await advance(0)
+
+    expect(cb.onLockAcquired).not.toHaveBeenCalled()
+    expect(lock.release).toHaveBeenCalledTimes(1)
+    expect(jest.getTimerCount()).toBe(0)
+
+    await advance(5 * POLL_MS)
+    expect(lock.renew).not.toHaveBeenCalled()
+  })
+
+  it("skips a login that was queued behind a slow teardown when stopped", async () => {
+    const lock = makeMockLock()
+    lock.renew.mockResolvedValueOnce(false) // the 10 s renewal loses the lease
+    const cb = makeCallbacks(true)
+    const slowTeardown = deferred<void>()
+    cb.onLockLost.mockReturnValueOnce(slowTeardown.promise)
+    const poller = makePoller(lock, cb)
+
+    await poller.start()
+    await advance(RENEW_MS) // the teardown hangs
+    await advance(POLL_MS - RENEW_MS) // 60 s: re-acquired; the login waits behind the teardown
+    expect(lock.acquire).toHaveBeenCalledTimes(2)
+    expect(cb.onLockAcquired).toHaveBeenCalledTimes(1)
+
+    await poller.stop()
+    slowTeardown.resolve()
+    await advance(0)
+
+    // The bot must not log in after stop(), with no lease.
+    expect(cb.onLockAcquired).toHaveBeenCalledTimes(1)
+    expect(jest.getTimerCount()).toBe(0)
+  })
+
   it("clears both timers so no further ticks or renewals run", async () => {
     const lock = makeMockLock()
     const cb = makeCallbacks(true)
@@ -596,6 +745,91 @@ describe("BotLockPoller config-change bounce (Step 18)", () => {
     expect(lock.acquire).toHaveBeenCalledTimes(2) // startup + post-failure re-acquire
 
     await poller.stop()
+  })
+
+  it("does not re-init when a renewal loses the lease while the tick reads the version", async () => {
+    const lock = makeMockLock()
+    const events: string[] = []
+    const cb = makeCallbacks(true)
+    cb.onLockAcquired.mockImplementation(async () => {
+      events.push("init")
+    })
+    cb.onLockLost.mockImplementation(async () => {
+      events.push("destroy")
+    })
+    const versionRead = deferred<number>()
+    const getConfigVersion = jest
+      .fn<Promise<number>, []>()
+      .mockResolvedValueOnce(1) // startup
+      .mockReturnValueOnce(versionRead.promise) // the 60 s tick's read hangs
+      .mockResolvedValue(2)
+    const poller = makePoller(lock, cb, { getConfigVersion })
+
+    await poller.start()
+    await advance(POLL_MS) // the tick waits on the read
+    expect(getConfigVersion).toHaveBeenCalledTimes(2)
+
+    // Another pod takes the lease: the 70 s renewal fails, and this pod can no
+    // longer acquire.
+    lock.renew.mockResolvedValue(false)
+    lock.acquire.mockResolvedValue(false)
+    await advance(RENEW_MS)
+    expect(events).toEqual(["init", "destroy"])
+
+    // An admin saved settings: the read now returns a new version.
+    versionRead.resolve(2)
+    await advance(2 * POLL_MS)
+
+    expect(cb.onLockAcquired).toHaveBeenCalledTimes(1)
+    expect(events).toEqual(["init", "destroy"])
+
+    await poller.stop()
+    expect(events).toEqual(["init", "destroy"])
+  })
+
+  it("skips the re-init when a renewal loses the lease during the bounce's teardown", async () => {
+    const lock = makeMockLock()
+    const cb = makeCallbacks(true)
+    const teardown = deferred<void>()
+    cb.onLockLost.mockReturnValueOnce(teardown.promise)
+    const getConfigVersion = jest.fn<Promise<number>, []>().mockResolvedValueOnce(1).mockResolvedValue(2)
+    const poller = makePoller(lock, cb, { getConfigVersion })
+
+    await poller.start()
+    await advance(POLL_MS) // the bounce starts; its teardown hangs
+    expect(cb.onLockLost).toHaveBeenCalledTimes(1)
+
+    lock.renew.mockResolvedValue(false)
+    lock.acquire.mockResolvedValue(false)
+    await advance(RENEW_MS) // the 70 s renewal fails and queues its teardown
+    teardown.resolve()
+    await advance(0)
+
+    expect(cb.onLockAcquired).toHaveBeenCalledTimes(1) // startup only
+    expect(cb.onLockLost).toHaveBeenCalledTimes(2) // the bounce's, then the lost renewal's
+    expect(jest.getTimerCount()).toBe(1) // the poll only
+
+    await poller.stop()
+  })
+
+  it("skips the re-init when stop() runs during the bounce's teardown", async () => {
+    const lock = makeMockLock()
+    const cb = makeCallbacks(true)
+    const teardown = deferred<void>()
+    cb.onLockLost.mockReturnValueOnce(teardown.promise)
+    const getConfigVersion = jest.fn<Promise<number>, []>().mockResolvedValueOnce(1).mockResolvedValue(2)
+    const poller = makePoller(lock, cb, { getConfigVersion })
+
+    await poller.start()
+    await advance(POLL_MS) // the bounce starts; its teardown hangs
+    await poller.stop()
+    teardown.resolve()
+    await advance(0)
+
+    // The bot must not log in again after stop(), with no lease.
+    expect(cb.onLockAcquired).toHaveBeenCalledTimes(1)
+    expect(lock.release).toHaveBeenCalledTimes(1)
+    expect(jest.getTimerCount()).toBe(0)
   })
 
   it("bounces off the SAME lock without re-acquiring (holder-only path)", async () => {
