@@ -5,8 +5,16 @@ const createJestConfig = nextJest({
   dir: './',
 })
 
+// The Postgres-backed suites (*.pg.test.ts) share one TEST_DATABASE_URL, and
+// some of them empty and count whole tables, so they must run one at a time and
+// apart from the other suites. `npm run test:pg` sets JEST_PG=1, which loads
+// them and makes the run serial; every other run leaves them out. See
+// test/helpers/integration.ts for how a missing TEST_DATABASE_URL is handled.
+const pgRun = process.env.JEST_PG === '1'
+
 // Add any custom config to be passed to Jest
 const customJestConfig = {
+  ...(pgRun ? { maxWorkers: 1 } : {}),
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   testEnvironment: 'jest-environment-jsdom',
   moduleNameMapper: {
@@ -21,6 +29,7 @@ const customJestConfig = {
   testPathIgnorePatterns: [
     '<rootDir>/e2e/',
     ...(process.env.TEST_REDIS_URL || process.env.CI ? [] : ['\\.redis\\.test\\.ts$']),
+    ...(pgRun ? [] : ['\\.pg\\.test\\.ts$']),
   ],
   collectCoverageFrom: [
     'components/**/*.{ts,tsx}',

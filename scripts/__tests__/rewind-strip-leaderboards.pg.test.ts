@@ -5,28 +5,24 @@
 /**
  * The roster clean-up CLI against a real PostgreSQL database (P0.20).
  *
- * Runs only when TEST_DATABASE_URL is set; a URL whose database name does not
- * end in `_test` fails the suite before any connection is made (P0.4's
- * `assertTestDatabaseUrl`). The suite empties the PlexWrapped, LLMUsage,
+ * Gated by `describePg` (test/helpers/integration.ts) and run only by
+ * `npm run test:pg`. The suite empties the PlexWrapped, LLMUsage,
  * ChatConversation and WrappedShareVisit tables of that database and asserts
- * whole-table counts, because the script scans every row. It must not run in
- * parallel with another suite on the same database (P1.5: run the integration
- * project with one worker, or give each suite its own schema).
+ * whole-table counts, because the script scans every row, so it must not run
+ * in parallel with another suite on the same database; `npm run test:pg` runs
+ * the Postgres suites one at a time.
  *
- *   TEST_DATABASE_URL=postgresql://.../plex_manager_test npx jest scripts/__tests__/rewind-strip-leaderboards.pg.test.ts
- *   TEST_DATABASE_URL=postgresql://.../plex_manager_test npx jest --runInBand --testPathPatterns '\.pg\.test\.ts$'
+ *   TEST_DATABASE_URL=postgresql://.../plex_manager_test npm run test:pg
  */
 
 import { PrismaPg } from "@prisma/adapter-pg"
 
 import { PrismaClient } from "@/lib/generated/prisma/client"
-import { assertTestDatabaseUrl, maskDatabaseUrl } from "@/lib/security/test-mode"
+import { maskDatabaseUrl } from "@/lib/security/test-mode"
 import { buildLeaderboards, buildStatistics, LEADERBOARD_MEMBER_EMAIL } from "@/lib/wrapped/__tests__/fixtures"
 import { toShareSafeV2 } from "@/lib/wrapped/data/share-safe-v2"
 import { main } from "@/scripts/rewind-strip-leaderboards"
-
-const testDatabaseUrl = process.env.TEST_DATABASE_URL === undefined ? undefined : assertTestDatabaseUrl(process.env.TEST_DATABASE_URL)
-const describePg = testDatabaseUrl === undefined ? describe.skip : describe
+import { describePg } from "@/test/helpers/integration"
 
 const ID = "p020"
 const OWNER_EMAIL = "mike@example.com"
@@ -119,18 +115,18 @@ async function snapshot(db: PrismaClient) {
   }
 }
 
-async function run(db: PrismaClient, argv: string[]) {
+async function run(db: PrismaClient, databaseUrl: string, argv: string[]) {
   const lines: string[] = []
-  const code = await main(argv, { db, databaseUrl: testDatabaseUrl!, print: (line) => lines.push(line) })
+  const code = await main(argv, { db, databaseUrl, print: (line) => lines.push(line) })
   return { code, lines }
 }
 
 const APPLY = ["--apply", `--opt-in-since=${OPT_IN_SINCE}`]
 
-const header = (apply: boolean) => [
+const header = (databaseUrl: string, apply: boolean) => [
   apply
-    ? `Rewind roster clean-up: applying to ${maskDatabaseUrl(testDatabaseUrl!)}.`
-    : `Rewind roster clean-up: dry run against ${maskDatabaseUrl(testDatabaseUrl!)}, nothing is written (pass --apply to write).`,
+    ? `Rewind roster clean-up: applying to ${maskDatabaseUrl(databaseUrl)}.`
+    : `Rewind roster clean-up: dry run against ${maskDatabaseUrl(databaseUrl)}, nothing is written (pass --apply to write).`,
   "Opt-in since 2026-01-01T00:00:00.000Z: share links on Rewinds written since then are kept.",
 ]
 
@@ -142,13 +138,13 @@ const EXPECTED_COUNTS = [
   "5. Legacy visits   scanned 2, changed 1",
 ]
 
-describePg("rewind:strip-leaderboards against PostgreSQL", () => {
+describePg("rewind:strip-leaderboards against PostgreSQL", (databaseUrl) => {
   jest.setTimeout(60_000)
 
   let db: PrismaClient
 
   beforeAll(async () => {
-    db = new PrismaClient({ adapter: new PrismaPg({ connectionString: testDatabaseUrl }) })
+    db = new PrismaClient({ adapter: new PrismaPg({ connectionString: databaseUrl }) })
     await emptyTables(db)
     await seed(db)
   })
@@ -161,19 +157,19 @@ describePg("rewind:strip-leaderboards against PostgreSQL", () => {
   it("reports the same counts in two dry runs and changes nothing", async () => {
     const before = await snapshot(db)
 
-    const first = await run(db, [`--opt-in-since=${OPT_IN_SINCE}`])
-    const second = await run(db, [`--opt-in-since=${OPT_IN_SINCE}`])
+    const first = await run(db, databaseUrl, [`--opt-in-since=${OPT_IN_SINCE}`])
+    const second = await run(db, databaseUrl, [`--opt-in-since=${OPT_IN_SINCE}`])
 
-    expect(first).toEqual({ code: 0, lines: [...header(false), ...EXPECTED_COUNTS] })
+    expect(first).toEqual({ code: 0, lines: [...header(databaseUrl, false), ...EXPECTED_COUNTS] })
     expect(second).toEqual(first)
     expect(await snapshot(db)).toEqual(before)
   })
 
   it("applies the same counts with --apply", async () => {
-    const { code, lines } = await run(db, APPLY)
+    const { code, lines } = await run(db, databaseUrl, APPLY)
 
     expect(code).toBe(0)
-    expect(lines).toEqual([...header(true), `${EXPECTED_COUNTS[0]}, skipped 0`, ...EXPECTED_COUNTS.slice(1)])
+    expect(lines).toEqual([...header(databaseUrl, true), `${EXPECTED_COUNTS[0]}, skipped 0`, ...EXPECTED_COUNTS.slice(1)])
   })
 
   it("leaves no roster, no owner email as a name and no roster error in stored rows", async () => {
@@ -237,12 +233,12 @@ describePg("rewind:strip-leaderboards against PostgreSQL", () => {
   it("reports zeros on a second --apply and leaves every row byte-identical", async () => {
     const before = await snapshot(db)
 
-    const { code, lines } = await run(db, APPLY)
+    const { code, lines } = await run(db, databaseUrl, APPLY)
 
     expect(code).toBe(0)
     // Step 1 rewrote w1 and w3, so no token is on a row last written before the cutoff any more.
     expect(lines).toEqual([
-      ...header(true),
+      ...header(databaseUrl, true),
       "1. Stored data     scanned 7, changed 0, unparsable 1, skipped 0",
       "2. LLM text        scanned 2, changed 0",
       "3. Errors          scanned 2, changed 0",

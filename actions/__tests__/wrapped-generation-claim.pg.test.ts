@@ -7,24 +7,21 @@
  * SEC-22, RWP-12): concurrent claims, the stale takeover and the
  * compare-and-set outcome writes that `generatePlexWrapped` relies on.
  *
- * Runs only when TEST_DATABASE_URL is set; a URL whose database name does not
- * end in `_test` fails the suite before any connection is made (P0.4's
- * `assertTestDatabaseUrl`). The database needs the app's migrations applied.
- * The suite only touches rows of a `User` whose id starts with its own run
- * prefix. scripts/__tests__/rewind-strip-leaderboards.pg.test.ts empties
- * PlexWrapped and counts every row, so the two must not run at the same time
- * on one database: run the Postgres suites together in one worker (P1.5's
- * integration project takes this over).
+ * Gated by `describePg` (test/helpers/integration.ts) and run only by
+ * `npm run test:pg`. The database needs the app's migrations applied. The suite
+ * only touches rows of a `User` whose id starts with its own run prefix, but
+ * scripts/__tests__/rewind-strip-leaderboards.pg.test.ts empties PlexWrapped
+ * and counts every row, so the two must not run at the same time on one
+ * database; `npm run test:pg` runs the Postgres suites one at a time.
  *
- *   TEST_DATABASE_URL=postgresql://.../plex_manager_test npx jest actions/__tests__/wrapped-generation-claim.pg.test.ts
- *   TEST_DATABASE_URL=postgresql://.../plex_manager_test npx jest --runInBand --testPathPatterns '\.pg\.test\.ts$'
+ *   TEST_DATABASE_URL=postgresql://.../plex_manager_test npm run test:pg
  */
 
 import { randomUUID } from 'node:crypto'
 
 import { prisma } from '@/lib/prisma'
-import { assertTestDatabaseUrl } from '@/lib/security/test-mode'
 import { claimGeneration, type GenerationClaim, writeIfClaimed } from '@/lib/wrapped/generation-claim'
+import { describePg } from '@/test/helpers/integration'
 
 // The claim module uses the app's client; point it at the test database.
 jest.mock('@/lib/prisma', () => {
@@ -41,10 +38,6 @@ jest.mock('@/lib/prisma', () => {
 jest.mock('@/lib/utils/logger', () => ({
   createLogger: () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }),
 }))
-
-const testDatabaseUrl =
-  process.env.TEST_DATABASE_URL === undefined ? undefined : assertTestDatabaseUrl(process.env.TEST_DATABASE_URL)
-const describePg = testDatabaseUrl === undefined ? describe.skip : describe
 
 const RUN = `p012-${randomUUID()}`
 const MEMBER = `${RUN}-member`

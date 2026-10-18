@@ -8,12 +8,11 @@
  * catches a Prisma or adapter upgrade that moves it (the Plex sign-in and
  * invite retries would otherwise stop firing without notice).
  *
- * Runs only when TEST_DATABASE_URL is set; a URL whose database name does not
- * end in `_test` fails the suite before any connection is made (P0.4's
- * `assertTestDatabaseUrl`). The database needs the app's migrations applied.
- * The suite only touches `User` rows whose id starts with its own run prefix.
+ * Gated by `describePg` (test/helpers/integration.ts) and run only by
+ * `npm run test:pg`. The database needs the app's migrations applied. The
+ * suite only touches `User` rows whose id starts with its own run prefix.
  *
- *   TEST_DATABASE_URL=postgresql://.../plex_manager_test npx jest __tests__/lib/prisma-errors.pg.test.ts
+ *   TEST_DATABASE_URL=postgresql://.../plex_manager_test npm run test:pg
  */
 
 import { randomUUID } from 'node:crypto'
@@ -21,11 +20,7 @@ import { PrismaPg } from '@prisma/adapter-pg'
 
 import { PrismaClient } from '@/lib/generated/prisma/client'
 import { isUniqueEmailConflict } from '@/lib/prisma-errors'
-import { assertTestDatabaseUrl } from '@/lib/security/test-mode'
-
-const testDatabaseUrl =
-  process.env.TEST_DATABASE_URL === undefined ? undefined : assertTestDatabaseUrl(process.env.TEST_DATABASE_URL)
-const describePg = testDatabaseUrl === undefined ? describe.skip : describe
+import { describePg } from '@/test/helpers/integration'
 
 const RUN = `p05-${randomUUID()}`
 
@@ -39,11 +34,11 @@ async function thrownBy(write: () => Promise<unknown>): Promise<unknown> {
   throw new Error('Expected the write to fail')
 }
 
-describePg('isUniqueEmailConflict on PostgreSQL', () => {
+describePg('isUniqueEmailConflict on PostgreSQL', (databaseUrl) => {
   let db: PrismaClient
 
   beforeAll(async () => {
-    db = new PrismaClient({ adapter: new PrismaPg({ connectionString: testDatabaseUrl }) })
+    db = new PrismaClient({ adapter: new PrismaPg({ connectionString: databaseUrl }) })
     await db.user.create({
       data: { id: `${RUN}-holder`, email: `${RUN}@example.com`, plexUserId: `${RUN}-plex` },
     })

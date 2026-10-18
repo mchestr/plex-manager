@@ -171,11 +171,26 @@ jobs:
         env:
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/plex_manager_test?schema=public"
 
+      # Leaves out the Postgres-backed suites (*.pg.test.ts); see jest.config.js.
       - name: Run unit tests with coverage
         run: npm run test:coverage -- --ci --reporters=default --reporters=github-actions
         env:
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/plex_manager_test?schema=public"
           TEST_REDIS_URL: "redis://localhost:6379/0"
+
+      - name: Run Prisma migrations
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/plex_manager_test?schema=public"
+
+      # The Postgres-backed suites share this database, so they run one at a
+      # time. Under CI a missing TEST_DATABASE_URL fails them instead of
+      # skipping them (test/helpers/integration.ts).
+      - name: Run Postgres integration tests
+        run: npm run test:pg -- --ci --reporters=default --reporters=github-actions
+        env:
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/plex_manager_test?schema=public"
+          TEST_DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/plex_manager_test?schema=public"
 
       - name: Upload coverage report
         if: always()
