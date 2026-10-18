@@ -1,11 +1,16 @@
 /**
  * Security tests for wrapped regeneration
- * Tests that only admins can regenerate completed wrapped data
+ * Tests that only admins can regenerate completed wrapped data, and that the
+ * P0.12 guardrails hold for admins (season year, single flight) while the
+ * member limits do not apply to them (SEC-22, RWP-12)
  */
 
 import { generatePlexWrapped, generateAllPlexWrapped } from '@/actions/wrapped-generation'
 import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
+import { getWrappedSettings } from '@/actions/admin'
+import { consume } from '@/lib/security/rate-limit'
+import { checkRewindEligibility } from '@/lib/wrapped/eligibility'
 
 // Mock dependencies
 jest.mock('next-auth', () => ({
@@ -21,8 +26,9 @@ jest.mock('@/lib/prisma', () => ({
     },
     plexWrapped: {
       findUnique: jest.fn(),
-      upsert: jest.fn(),
-      update: jest.fn(),
+      createMany: jest.fn(),
+      updateMany: jest.fn(),
+      updateManyAndReturn: jest.fn(),
     },
     plexServer: {
       findFirst: jest.fn(),
@@ -53,6 +59,21 @@ jest.mock('@/lib/wrapped/llm', () => ({
 
 jest.mock('next/cache', () => ({
   revalidatePath: jest.fn(),
+}))
+
+jest.mock('@/actions/admin', () => ({
+  getWrappedSettings: jest.fn(),
+}))
+
+jest.mock('@/lib/security/rate-limit', () => ({
+  consume: jest.fn(),
+  reward: jest.fn(),
+}))
+
+// Every member here has Plex history; the eligibility gate is tested in
+// user-wrapped-generation.test.ts and wrapped-generation-action.test.ts.
+jest.mock('@/lib/wrapped/eligibility', () => ({
+  checkRewindEligibility: jest.fn(),
 }))
 
 describe('Wrapped Regeneration Security', () => {
@@ -90,7 +111,7 @@ describe('Wrapped Regeneration Security', () => {
   const mockCompletedWrapped = {
     id: 'wrapped-1',
     userId: 'user-1',
-    year: 2024,
+    year: 2026,
     status: 'completed',
     shareToken: 'test-token',
     data: JSON.stringify({ sections: [] }),
@@ -99,7 +120,7 @@ describe('Wrapped Regeneration Security', () => {
   const mockFailedWrapped = {
     id: 'wrapped-1',
     userId: 'user-1',
-    year: 2024,
+    year: 2026,
     status: 'failed',
     shareToken: 'test-token',
     error: 'Generation failed',
@@ -107,6 +128,12 @@ describe('Wrapped Regeneration Security', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    ;(getWrappedSettings as jest.Mock).mockResolvedValue({ wrappedEnabled: true, wrappedYear: 2026 })
+    ;(checkRewindEligibility as jest.Mock).mockResolvedValue({ eligible: true, tautulliUser: null })
+    ;(consume as jest.Mock).mockResolvedValue({ ok: true })
+    ;(prisma.plexWrapped.createMany as jest.Mock).mockResolvedValue({ count: 1 })
+    ;(prisma.plexWrapped.updateManyAndReturn as jest.Mock).mockResolvedValue([{ id: 'wrapped-1' }])
+    ;(prisma.plexWrapped.updateMany as jest.Mock).mockResolvedValue({ count: 1 })
   })
 
   describe('generatePlexWrapped - Regeneration Security', () => {
@@ -126,15 +153,6 @@ describe('Wrapped Regeneration Security', () => {
       ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue(null)
       ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({ llmDisabled: false })
 
-      const wrappedRecord = {
-        ...mockCompletedWrapped,
-        status: 'generating',
-      }
-      ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue(wrappedRecord)
-      ;(prisma.plexWrapped.update as jest.Mock).mockResolvedValue({
-        ...wrappedRecord,
-        status: 'completed',
-      })
 
       const statsModule = await import('@/lib/wrapped/statistics')
       ;(statsModule.fetchTautulliStatistics as jest.Mock).mockResolvedValue({
@@ -179,7 +197,7 @@ describe('Wrapped Regeneration Security', () => {
         },
       })
 
-      const result = await generatePlexWrapped('user-1', 2024)
+      const result = await generatePlexWrapped('user-1', 2026)
 
       expect(result.success).toBe(true)
       expect(getServerSession).toHaveBeenCalled()
@@ -195,11 +213,11 @@ describe('Wrapped Regeneration Security', () => {
       ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser1)
       ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(mockCompletedWrapped)
 
-      const result = await generatePlexWrapped('user-1', 2024)
+      const result = await generatePlexWrapped('user-1', 2026)
 
       expect(result.success).toBe(false)
       expect(result.error).toBe('Only admins can regenerate wrapped data')
-      expect(prisma.plexWrapped.upsert).not.toHaveBeenCalled()
+      expect(prisma.plexWrapped.createMany).not.toHaveBeenCalled()
     })
 
     it('should allow user to retry their own failed wrapped', async () => {
@@ -218,15 +236,6 @@ describe('Wrapped Regeneration Security', () => {
       ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue(null)
       ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({ llmDisabled: false })
 
-      const wrappedRecord = {
-        ...mockFailedWrapped,
-        status: 'generating',
-      }
-      ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue(wrappedRecord)
-      ;(prisma.plexWrapped.update as jest.Mock).mockResolvedValue({
-        ...wrappedRecord,
-        status: 'completed',
-      })
 
       const statsModule = await import('@/lib/wrapped/statistics')
       ;(statsModule.fetchTautulliStatistics as jest.Mock).mockResolvedValue({
@@ -271,7 +280,7 @@ describe('Wrapped Regeneration Security', () => {
         },
       })
 
-      const result = await generatePlexWrapped('user-1', 2024)
+      const result = await generatePlexWrapped('user-1', 2026)
 
       expect(result.success).toBe(true)
     })
@@ -286,17 +295,17 @@ describe('Wrapped Regeneration Security', () => {
       ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser1)
       ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(mockFailedWrapped)
 
-      const result = await generatePlexWrapped('user-1', 2024)
+      const result = await generatePlexWrapped('user-1', 2026)
 
       expect(result.success).toBe(false)
-      expect(result.error).toBe('Unauthorized: You can only retry your own wrapped')
-      expect(prisma.plexWrapped.upsert).not.toHaveBeenCalled()
+      expect(result.error).toBe('Unauthorized: You can only generate your own wrapped')
+      expect(prisma.plexWrapped.createMany).not.toHaveBeenCalled()
     })
 
     it('should reject unauthenticated user', async () => {
       ;(getServerSession as jest.Mock).mockResolvedValue(null)
 
-      const result = await generatePlexWrapped('user-1', 2024)
+      const result = await generatePlexWrapped('user-1', 2026)
 
       expect(result.success).toBe(false)
       expect(result.error).toBe('Unauthorized')
@@ -319,18 +328,6 @@ describe('Wrapped Regeneration Security', () => {
       ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue(null)
       ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({ llmDisabled: false })
 
-      const wrappedRecord = {
-        id: 'wrapped-1',
-        userId: 'user-1',
-        year: 2024,
-        status: 'generating',
-        shareToken: 'test-token',
-      }
-      ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue(wrappedRecord)
-      ;(prisma.plexWrapped.update as jest.Mock).mockResolvedValue({
-        ...wrappedRecord,
-        status: 'completed',
-      })
 
       const statsModule = await import('@/lib/wrapped/statistics')
       ;(statsModule.fetchTautulliStatistics as jest.Mock).mockResolvedValue({
@@ -375,7 +372,7 @@ describe('Wrapped Regeneration Security', () => {
         },
       })
 
-      const result = await generatePlexWrapped('user-1', 2024)
+      const result = await generatePlexWrapped('user-1', 2026)
 
       expect(result.success).toBe(true)
     })
@@ -390,11 +387,129 @@ describe('Wrapped Regeneration Security', () => {
       ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser1)
       ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
 
-      const result = await generatePlexWrapped('user-1', 2024)
+      const result = await generatePlexWrapped('user-1', 2026)
 
       expect(result.success).toBe(false)
       expect(result.error).toBe('Unauthorized: You can only generate your own wrapped')
-      expect(prisma.plexWrapped.upsert).not.toHaveBeenCalled()
+      expect(prisma.plexWrapped.createMany).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('guardrails for admins and members (P0.12)', () => {
+    const adminSession = { user: { id: 'admin-1', isAdmin: true } }
+    const memberSession = { user: { id: 'user-1', isAdmin: false } }
+
+    async function setUpRun(session: typeof adminSession, existing: Record<string, unknown> | null) {
+      ;(getServerSession as jest.Mock).mockResolvedValue(session)
+      ;(prisma.user.findUnique as jest.Mock).mockImplementation(async ({ where }) =>
+        where.id === 'admin-1' ? { ...mockAdminUser, isExempt: false, subscription: null } : { ...mockUser1, isExempt: false, subscription: null }
+      )
+      ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(existing)
+      ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(mockPlexServer)
+      ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(mockTautulli)
+      ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue(null)
+      ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({ stripeEnabled: false })
+
+      const statsModule = await import('@/lib/wrapped/statistics')
+      ;(statsModule.fetchTautulliStatistics as jest.Mock).mockResolvedValue({
+        success: true,
+        data: {
+          totalWatchTime: 1000,
+          moviesWatchTime: 500,
+          showsWatchTime: 500,
+          moviesWatched: 10,
+          showsWatched: 5,
+          episodesWatched: 50,
+          topMovies: [],
+          topShows: [],
+          watchTimeByMonth: [],
+          tautulliUserId: 'tautulli-user-1',
+        },
+      })
+      ;(statsModule.fetchPlexServerStatistics as jest.Mock).mockResolvedValue({ success: false })
+      ;(statsModule.fetchTopContentLeaderboards as jest.Mock).mockResolvedValue({ success: false })
+      ;(statsModule.fetchWatchTimeLeaderboard as jest.Mock).mockResolvedValue({ success: false })
+
+      const { generateWrappedWithLLM } = await import('@/lib/wrapped/llm')
+      ;(generateWrappedWithLLM as jest.Mock).mockResolvedValue({
+        success: true,
+        data: { sections: [], summary: 'Test summary', metadata: { totalSections: 0, generationTime: 0 } },
+      })
+      return generateWrappedWithLLM as jest.Mock
+    }
+
+    /** The status filter of the claim's first branch. */
+    function claimedStatuses() {
+      const [[claim]] = (prisma.plexWrapped.updateManyAndReturn as jest.Mock).mock.calls
+      return claim.where.OR[0].status
+    }
+
+    it('lets an admin regenerate a completed Rewind, spending no member points', async () => {
+      const llm = await setUpRun(adminSession, mockCompletedWrapped)
+
+      const result = await generatePlexWrapped('user-1', 2026)
+
+      expect(result).toEqual({ success: true, wrappedId: 'wrapped-1' })
+      expect(claimedStatuses()).toEqual({ not: 'generating' })
+      expect(consume).not.toHaveBeenCalled()
+      expect(llm).toHaveBeenCalledTimes(1)
+    })
+
+    it('exempts admins from the member limits on back-to-back runs', async () => {
+      const llm = await setUpRun(adminSession, mockCompletedWrapped)
+
+      for (let run = 0; run < 4; run++) {
+        expect((await generatePlexWrapped('user-1', 2026)).success).toBe(true)
+      }
+
+      expect(consume).not.toHaveBeenCalled()
+      expect(llm).toHaveBeenCalledTimes(4)
+    })
+
+    it('lets an admin run while Stripe is on, even for a member with no subscription', async () => {
+      const llm = await setUpRun(adminSession, null)
+      ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({ stripeEnabled: true })
+
+      const result = await generatePlexWrapped('user-1', 2026)
+
+      expect(result).toEqual({ success: true, wrappedId: 'wrapped-1' })
+      expect(llm).toHaveBeenCalledTimes(1)
+    })
+
+    it('still holds admins to the season year', async () => {
+      const llm = await setUpRun(adminSession, mockCompletedWrapped)
+
+      const result = await generatePlexWrapped('user-1', 2025)
+
+      expect(result).toEqual({ success: false, error: 'Rewind is only available for 2026' })
+      expect(prisma.plexWrapped.updateManyAndReturn).not.toHaveBeenCalled()
+      expect(llm).not.toHaveBeenCalled()
+    })
+
+    it('does not start a second run for an admin while one is live', async () => {
+      const llm = await setUpRun(adminSession, { ...mockCompletedWrapped, status: 'generating', updatedAt: new Date() })
+
+      const result = await generatePlexWrapped('user-1', 2026)
+
+      expect(result).toEqual({
+        success: false,
+        code: 'ALREADY_GENERATING',
+        error: 'Your Rewind is already being made.',
+      })
+      expect(prisma.plexWrapped.updateManyAndReturn).not.toHaveBeenCalled()
+      expect(llm).not.toHaveBeenCalled()
+    })
+
+    it("never lets a member's claim take a row that completed after the check", async () => {
+      // The action read "failed", but the row completed before the claim ran.
+      const llm = await setUpRun(memberSession, mockFailedWrapped)
+      ;(prisma.plexWrapped.updateManyAndReturn as jest.Mock).mockResolvedValue([])
+
+      const result = await generatePlexWrapped('user-1', 2026)
+
+      expect(claimedStatuses()).toEqual({ notIn: ['generating', 'completed'] })
+      expect(result.code).toBe('ALREADY_GENERATING')
+      expect(llm).not.toHaveBeenCalled()
     })
   })
 
@@ -416,18 +531,6 @@ describe('Wrapped Regeneration Security', () => {
       ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue(null)
       ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({ llmDisabled: false })
 
-      const wrappedRecord = {
-        id: 'wrapped-1',
-        userId: 'user-1',
-        year: 2024,
-        status: 'generating',
-        shareToken: 'test-token',
-      }
-      ;(prisma.plexWrapped.upsert as jest.Mock).mockResolvedValue(wrappedRecord)
-      ;(prisma.plexWrapped.update as jest.Mock).mockResolvedValue({
-        ...wrappedRecord,
-        status: 'completed',
-      })
 
       const statsModule = await import('@/lib/wrapped/statistics')
       ;(statsModule.fetchTautulliStatistics as jest.Mock).mockResolvedValue({
@@ -472,7 +575,7 @@ describe('Wrapped Regeneration Security', () => {
         },
       })
 
-      const result = await generateAllPlexWrapped(2024)
+      const result = await generateAllPlexWrapped()
 
       expect(result.success).toBe(true)
       expect(result.generated).toBe(1)
@@ -487,7 +590,7 @@ describe('Wrapped Regeneration Security', () => {
         },
       })
 
-      const result = await generateAllPlexWrapped(2024)
+      const result = await generateAllPlexWrapped()
 
       expect(result.success).toBe(false)
       expect(result.errors).toContain('Unauthorized: Only admins can generate wrapped for all users')
@@ -497,7 +600,7 @@ describe('Wrapped Regeneration Security', () => {
     it('should reject unauthenticated user', async () => {
       ;(getServerSession as jest.Mock).mockResolvedValue(null)
 
-      const result = await generateAllPlexWrapped(2024)
+      const result = await generateAllPlexWrapped()
 
       expect(result.success).toBe(false)
       expect(result.errors).toContain('Unauthorized: Only admins can generate wrapped for all users')

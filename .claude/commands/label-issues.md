@@ -9,8 +9,7 @@ IMPORTANT: Don't post any comments or messages to the issue. Your only action sh
 
 Issue Information:
 
-- REPO: ${{ github.repository }}
-- ISSUE_NUMBER: ${{ github.event.issue.number }}
+Arguments: $ARGUMENTS (contains REPO and ISSUE_NUMBER)
 
 TASK OVERVIEW:
 
@@ -18,7 +17,7 @@ TASK OVERVIEW:
 
 2. Next, use gh commands to get context about the issue:
 
-   - Use `gh issue view ${{ github.event.issue.number }}` to retrieve the current issue's details
+   - Use `gh issue view <ISSUE_NUMBER> --repo <REPO>` to retrieve the current issue's details
    - Use `gh search issues` to find similar issues that might provide context for proper categorization
    - You have access to these Bash commands:
      - Bash(gh label list:\*) - to get available labels

@@ -23,11 +23,27 @@ export const daysSchema = z.number().int().min(1).max(365)
  */
 export const limitSchema = z.number().int().min(1).max(100)
 
+/** The first and last years a Rewind can be generated or opened for. */
+export const YEAR_MIN = 2010
+export const YEAR_MAX = 2100
+
 /**
  * Schema for year parameter
- * Restricts to reasonable year range (2010-2100)
+ * Restricts to reasonable year range (YEAR_MIN-YEAR_MAX)
  */
-export const yearSchema = z.number().int().min(2010).max(2100)
+export const yearSchema = z.number().int().min(YEAR_MIN).max(YEAR_MAX)
+
+/**
+ * A year as a URL segment (`/wrapped/<year>`): four digits in the yearSchema
+ * range, so `/wrapped/0x7EA` or `/wrapped/2026.0` is not a second URL for 2026.
+ */
+export const yearParamSchema = z.string().regex(/^\d{4}$/).pipe(z.coerce.number<string>().pipe(yearSchema))
+
+/**
+ * A Rewind share token as a URL segment: 43 base64url characters, the 32
+ * random bytes `generateShareToken` encodes.
+ */
+export const shareTokenSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/)
 
 /**
  * Schema for API keys

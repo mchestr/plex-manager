@@ -3,6 +3,7 @@
 import { checkServerAccess } from "@/actions/auth"
 import { Button } from "@/components/ui/button"
 import { getPlexAuthToken } from "@/lib/plex-auth"
+import { isRateLimitedSignInError, RATE_LIMITED_MESSAGE } from "@/lib/security/rate-limit-messages"
 import { redirectTo } from "@/lib/utils/navigation"
 import { getSession, signIn } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -104,7 +105,13 @@ export function PlexCallbackPageClient() {
         attempts++
 
         try {
-          const authToken = await getPlexAuthToken(pinId)
+          const poll = await getPlexAuthToken(pinId)
+          if (!poll.success) {
+            setError(poll.error)
+            isProcessingRef.current = false
+            return
+          }
+          const { authToken } = poll
 
           if (authToken) {
             // If we have an invite code, process it
@@ -201,7 +208,11 @@ export function PlexCallbackPageClient() {
               // Full page reload (via redirectTo) to ensure the session is properly set
               redirectTo("/")
             } else {
-              setError(result?.error || "Failed to sign in")
+              setError(
+                isRateLimitedSignInError(result?.error)
+                  ? RATE_LIMITED_MESSAGE
+                  : result?.error || "Failed to sign in"
+              )
               isProcessingRef.current = false
             }
           } else if (attempts < maxAttempts) {

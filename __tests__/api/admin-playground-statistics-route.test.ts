@@ -5,7 +5,7 @@
 import { GET } from '@/app/api/admin/playground/statistics/route'
 import { prisma } from '@/lib/prisma'
 import { requireAdminAPI } from '@/lib/security/api-helpers'
-import { adminRateLimiter } from '@/lib/security/rate-limit'
+import { limitRequest } from '@/lib/security/rate-limit'
 import {
   fetchTautulliStatistics,
   fetchPlexServerStatistics,
@@ -38,7 +38,7 @@ jest.mock('@/lib/security/api-helpers', () => ({
 }))
 
 jest.mock('@/lib/security/rate-limit', () => ({
-  adminRateLimiter: jest.fn(),
+  limitRequest: jest.fn(),
 }))
 
 jest.mock('@/lib/wrapped/statistics', () => ({
@@ -109,7 +109,7 @@ describe('GET /api/admin/playground/statistics', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    ;(adminRateLimiter as jest.Mock).mockResolvedValue(null)
+    ;(limitRequest as jest.Mock).mockResolvedValue(null)
     ;(requireAdminAPI as jest.Mock).mockResolvedValue({ session: { user: { isAdmin: true } }, response: null })
   })
 
@@ -137,6 +137,43 @@ describe('GET /api/admin/playground/statistics', () => {
     })
     expect(data.statistics.moviesWatched).toBe(10)
     expect(data.statistics.showsWatched).toBe(5)
+  })
+
+  it('looks the member up in Overseerr by plexUserId and email and reports the request counts', async () => {
+    const overseerrStats = {
+      totalRequests: 4,
+      totalServerRequests: 30,
+      pendingRequests: 1,
+      approvedRequests: 2,
+      availableRequests: 1,
+      topRequestedGenres: [],
+    }
+    ;(prisma.user.findFirst as jest.Mock).mockResolvedValue(mockUser)
+    ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(mockTautulli)
+    ;(fetchTautulliStatistics as jest.Mock).mockResolvedValue(mockTautulliStats)
+    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(null)
+    ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue({
+      url: 'http://localhost:5055',
+      apiKey: 'overseerr-key',
+      isActive: true,
+    })
+    ;(fetchOverseerrStatistics as jest.Mock).mockResolvedValue({ success: true, data: overseerrStats })
+    ;(fetchTopContentLeaderboards as jest.Mock).mockResolvedValue({ success: false })
+    ;(fetchWatchTimeLeaderboard as jest.Mock).mockResolvedValue({ success: false })
+
+    const { NextRequest } = await import('next/server')
+    const request = new NextRequest('http://localhost/api/admin/playground/statistics?userName=Test User&year=2024')
+
+    const response = await GET(request)
+    const data = await response.json()
+
+    expect(fetchOverseerrStatistics).toHaveBeenCalledWith(
+      { url: 'http://localhost:5055', apiKey: 'overseerr-key' },
+      { plexUserId: 'plex-123', email: 'test@example.com' },
+      2024
+    )
+    expect(response.status).toBe(200)
+    expect(data.statistics.overseerrStats).toEqual(overseerrStats)
   })
 
   it('should return 400 when userName is missing', async () => {
@@ -344,7 +381,7 @@ describe('GET /api/admin/playground/statistics', () => {
 
   it('should return 429 when rate limit is exceeded', async () => {
     const mockRateLimitResponse = { status: 429, json: () => Promise.resolve({ error: 'Too many requests' }) }
-    ;(adminRateLimiter as jest.Mock).mockResolvedValue(mockRateLimitResponse)
+    ;(limitRequest as jest.Mock).mockResolvedValue(mockRateLimitResponse)
 
     const { NextRequest } = await import('next/server')
     const request = new NextRequest('http://localhost/api/admin/playground/statistics?userName=Test User&year=2024')
@@ -352,6 +389,7 @@ describe('GET /api/admin/playground/statistics', () => {
     const response = await GET(request)
 
     expect(response).toBe(mockRateLimitResponse)
+    expect(limitRequest).toHaveBeenCalledWith('admin', request)
   })
 
   it('should handle database errors gracefully', async () => {

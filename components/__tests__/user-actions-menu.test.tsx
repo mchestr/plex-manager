@@ -4,7 +4,9 @@ import { makeAdminUserWithStats, makeAdminUserWithSubscription } from '../../__t
 
 // Mock child components
 jest.mock('@/components/admin/users/regenerate-wrapped-button', () => ({
-  RegenerateWrappedButton: () => <button>Regenerate Wrapped</button>,
+  RegenerateWrappedButton: ({ year }: { year: number }) => (
+    <button data-testid="regenerate-year">Regenerate Wrapped {year}</button>
+  ),
 }))
 
 jest.mock('@/components/admin/users/unshare-user-button', () => ({
@@ -45,30 +47,44 @@ const openMenu = () => {
 describe('UserActionsMenu', () => {
   it('should render "Generating..." when status is generating for an admin with no other actions', () => {
     const user = makeRow({ wrappedStatus: 'generating', isAdmin: true, hasPlexAccess: false })
-    render(<UserActionsMenu user={user} />)
+    render(<UserActionsMenu user={user} year={2026} />)
     expect(screen.getByText('Generating...')).toBeInTheDocument()
   })
 
   it('should render actions menu button when actions available', () => {
     const user = makeRow({ wrappedStatus: 'completed' })
-    render(<UserActionsMenu user={user} />)
+    render(<UserActionsMenu user={user} year={2026} />)
 
     expect(screen.getByRole('button', { name: /Actions for/i })).toBeInTheDocument()
   })
 
   it('should show wrapped menu items when clicked', () => {
     const user = makeRow({ wrappedStatus: 'completed' })
-    render(<UserActionsMenu user={user} />)
+    render(<UserActionsMenu user={user} year={2026} />)
 
     openMenu()
 
     expect(screen.getByText('View Wrapped')).toBeInTheDocument()
-    expect(screen.getByText('Regenerate Wrapped')).toBeInTheDocument()
+    expect(screen.getByText(/Regenerate Wrapped/)).toBeInTheDocument()
+  })
+
+  // P0.14: View and Regenerate act on the season year the row shows.
+  it('points View and Regenerate at the season year', () => {
+    const user = makeRow({ id: 'user-9', wrappedStatus: 'completed' })
+    render(<UserActionsMenu user={user} year={2026} />)
+
+    openMenu()
+
+    expect(screen.getByRole('menuitem', { name: /View Wrapped/ })).toHaveAttribute(
+      'href',
+      '/admin/users/user-9/wrapped?year=2026'
+    )
+    expect(screen.getByTestId('regenerate-year')).toHaveTextContent('Regenerate Wrapped 2026')
   })
 
   it('should show unshare button for non-admin users with plex access', () => {
     const user = makeRow({ wrappedStatus: 'completed', isAdmin: false, hasPlexAccess: true })
-    render(<UserActionsMenu user={user} />)
+    render(<UserActionsMenu user={user} year={2026} />)
 
     openMenu()
 
@@ -77,7 +93,7 @@ describe('UserActionsMenu', () => {
 
   it('should NOT show unshare button for admin users', () => {
     const user = makeRow({ wrappedStatus: 'completed', isAdmin: true, hasPlexAccess: true })
-    render(<UserActionsMenu user={user} />)
+    render(<UserActionsMenu user={user} year={2026} />)
 
     openMenu()
 
@@ -86,41 +102,41 @@ describe('UserActionsMenu', () => {
 
   it('should show Cancel Subscription only for active/past-due subscriptions', () => {
     const active = makeRow({ subscriptionStatus: 'ACTIVE' })
-    const { rerender } = render(<UserActionsMenu user={active} />)
+    const { rerender } = render(<UserActionsMenu user={active} year={2026} />)
     openMenu()
     expect(screen.getByText('Cancel Subscription')).toBeInTheDocument()
 
     // Canceled subscription: no cancel action.
     fireEvent.click(document.querySelector('.fixed.inset-0')!)
     const canceled = makeRow({ subscriptionStatus: 'CANCELED' })
-    rerender(<UserActionsMenu user={canceled} />)
+    rerender(<UserActionsMenu user={canceled} year={2026} />)
     openMenu()
     expect(screen.queryByText('Cancel Subscription')).not.toBeInTheDocument()
   })
 
   it('should show Grant Access for a non-exempt non-admin and hide it once exempt', () => {
     const notExempt = makeRow({ isExempt: false, isAdmin: false })
-    const { rerender } = render(<UserActionsMenu user={notExempt} />)
+    const { rerender } = render(<UserActionsMenu user={notExempt} year={2026} />)
     openMenu()
     expect(screen.getByText('Grant Access (Comp)')).toBeInTheDocument()
 
     fireEvent.click(document.querySelector('.fixed.inset-0')!)
     const exempt = makeRow({ isExempt: true, isAdmin: false })
-    rerender(<UserActionsMenu user={exempt} />)
+    rerender(<UserActionsMenu user={exempt} year={2026} />)
     openMenu()
     expect(screen.queryByText('Grant Access (Comp)')).not.toBeInTheDocument()
   })
 
   it('should show the toggle-exempt item reflecting current exempt state', () => {
     const exempt = makeRow({ isExempt: true, isAdmin: false })
-    render(<UserActionsMenu user={exempt} />)
+    render(<UserActionsMenu user={exempt} year={2026} />)
     openMenu()
     expect(screen.getByText('Remove Exempt')).toBeInTheDocument()
   })
 
   it('should NOT show toggle-exempt for admin users', () => {
     const admin = makeRow({ isAdmin: true, wrappedStatus: 'completed' })
-    render(<UserActionsMenu user={admin} />)
+    render(<UserActionsMenu user={admin} year={2026} />)
     openMenu()
     expect(screen.queryByText('Mark Exempt')).not.toBeInTheDocument()
     expect(screen.queryByText('Remove Exempt')).not.toBeInTheDocument()
@@ -131,6 +147,7 @@ describe('UserActionsMenu', () => {
     render(
       <UserActionsMenu
         user={user}
+        year={2026}
         stripeDashboardBaseUrl="https://dashboard.stripe.com/test"
       />
     )
@@ -148,7 +165,7 @@ describe('UserActionsMenu', () => {
   it('should NOT show a "View in Stripe" link when stripeCustomerId is absent', () => {
     const user = makeRow({ stripeCustomerId: null, wrappedStatus: 'completed' })
     render(
-      <UserActionsMenu user={user} stripeDashboardBaseUrl="https://dashboard.stripe.com" />
+      <UserActionsMenu user={user} year={2026} stripeDashboardBaseUrl="https://dashboard.stripe.com" />
     )
     openMenu()
     expect(screen.queryByTestId('view-in-stripe-link')).not.toBeInTheDocument()
@@ -156,14 +173,14 @@ describe('UserActionsMenu', () => {
 
   it('should NOT show a "View in Stripe" link when no dashboard base URL is available', () => {
     const user = makeRow({ stripeCustomerId: 'cus_abc123' })
-    render(<UserActionsMenu user={user} stripeDashboardBaseUrl={null} />)
+    render(<UserActionsMenu user={user} year={2026} stripeDashboardBaseUrl={null} />)
     openMenu()
     expect(screen.queryByTestId('view-in-stripe-link')).not.toBeInTheDocument()
   })
 
   it('should close menu when clicking outside', () => {
     const user = makeRow({ wrappedStatus: 'completed' })
-    render(<UserActionsMenu user={user} />)
+    render(<UserActionsMenu user={user} year={2026} />)
 
     openMenu()
     expect(screen.getByText('View Wrapped')).toBeInTheDocument()
@@ -178,7 +195,7 @@ describe('UserActionsMenu', () => {
     // makeAdminUserWithStats does not include subscription fields; the menu must
     // still render safely (no subscription/exempt actions, no Stripe link).
     const user = makeAdminUserWithStats({ wrappedStatus: 'completed', isAdmin: true, hasPlexAccess: true }) as any
-    render(<UserActionsMenu user={user} />)
+    render(<UserActionsMenu user={user} year={2026} />)
     openMenu()
     expect(screen.getByText('View Wrapped')).toBeInTheDocument()
     expect(screen.queryByText('Cancel Subscription')).not.toBeInTheDocument()

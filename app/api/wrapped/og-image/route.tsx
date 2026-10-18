@@ -1,10 +1,9 @@
 import { ImageResponse } from "next/og"
 import { NextRequest, NextResponse } from "next/server"
 
-import { prisma } from "@/lib/prisma"
 import { createSafeError, ErrorCode, getStatusCode, logError } from "@/lib/security/error-handler"
-import { shareRateLimiter } from "@/lib/security/rate-limit"
-import { stripHighlightTags } from "@/lib/wrapped/text-processor"
+import { limitRequest } from "@/lib/security/rate-limit"
+import { getShareSafeRewind } from "@/lib/wrapped/data/get-share-safe"
 
 // Force dynamic rendering since we use request.headers for rate limiting
 export const dynamic = "force-dynamic"
@@ -15,11 +14,13 @@ const IVORY = "#ece5d8"
 const TAUPE = "#9a9082"
 const STAGE = "#0a0908"
 
+// Share images are public but not meant for search results.
+const NOINDEX = "noindex"
+
 interface CardStats {
   userName: string
   year: number
   archetype: string | null
-  summary: string
   watchTimeText: string
   moviesWatched: number
   showsWatched: number
@@ -30,12 +31,14 @@ interface CardStats {
  * GET /api/wrapped/og-image?token=[token]&format=card  (1080x1920 story card)
  *
  * Cinematic Premiere share images: gold on deep black, archetype billing.
+ * They read only the share-safe projection (RWP-01, SEC-16).
  */
 export async function GET(request: NextRequest) {
   try {
     // Apply rate limiting
-    const rateLimitResponse = await shareRateLimiter(request)
+    const rateLimitResponse = await limitRequest("share", request)
     if (rateLimitResponse) {
+      rateLimitResponse.headers.set("X-Robots-Tag", NOINDEX)
       return rateLimitResponse
     }
 
@@ -48,46 +51,30 @@ export async function GET(request: NextRequest) {
         JSON.stringify(createSafeError(ErrorCode.VALIDATION_ERROR, "Token is required")),
         {
           status: getStatusCode(ErrorCode.VALIDATION_ERROR),
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "X-Robots-Tag": NOINDEX },
         }
       )
     }
 
-    // Find wrapped by share token
-    const wrapped = await prisma.plexWrapped.findUnique({
-      where: { shareToken: token },
-      include: {
-        user: {
-          select: {
-            name: true,
-            email: true,
-          },
-        },
-      },
-    })
+    const found = await getShareSafeRewind(token)
 
     // Security: Use same error message to prevent token enumeration
-    if (!wrapped || wrapped.status !== "completed") {
-      return new NextResponse("Wrapped not found", { status: 404 })
+    if (!found) {
+      return new NextResponse("Wrapped not found", { status: 404, headers: { "X-Robots-Tag": NOINDEX } })
     }
 
-    const wrappedData = JSON.parse(wrapped.data)
-    const userName = wrapped.user.name || wrapped.user.email || "Someone"
-    const rawSummary = wrapped.summary || `${userName}'s ${wrapped.year} in review`
-    const stats = wrappedData.statistics || {}
-    const totalWatchTime = stats.totalWatchTime?.total || 0
-    const hours = Math.floor(totalWatchTime / 60)
+    const shared = found.share
+    const hours = Math.floor(shared.totals.minutes / 60)
     const days = Math.floor(hours / 24)
 
     const cardStats: CardStats = {
-      userName,
-      year: wrapped.year,
-      archetype: wrapped.archetype,
-      summary: stripHighlightTags(rawSummary),
+      userName: shared.ownerName,
+      year: shared.year,
+      archetype: shared.archetypeName,
       watchTimeText:
         days > 0 ? `${days} day${days !== 1 ? "s" : ""}` : `${hours} hour${hours !== 1 ? "s" : ""}`,
-      moviesWatched: stats.moviesWatched || 0,
-      showsWatched: stats.showsWatched || 0,
+      moviesWatched: shared.totals.movies,
+      showsWatched: shared.totals.shows,
     }
 
     const image =
@@ -96,6 +83,7 @@ export async function GET(request: NextRequest) {
         : new ImageResponse(<OgCard {...cardStats} />, { width: 1200, height: 630 })
 
     image.headers.set("Cache-Control", "public, max-age=3600, s-maxage=3600")
+    image.headers.set("X-Robots-Tag", NOINDEX)
     return image
   } catch (error) {
     logError("OG_IMAGE_API", error)
@@ -103,7 +91,7 @@ export async function GET(request: NextRequest) {
       JSON.stringify(createSafeError(ErrorCode.INTERNAL_ERROR, "Failed to generate image")),
       {
         status: getStatusCode(ErrorCode.INTERNAL_ERROR),
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-Robots-Tag": NOINDEX },
       }
     )
   }

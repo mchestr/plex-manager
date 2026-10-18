@@ -5,11 +5,22 @@
 // and can be configured via LLM_REQUEST_TIMEOUT_MS environment variable
 
 import { getWrappedSettings } from "@/actions/admin"
+import { getAccessGateStatus } from "@/lib/access"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { userIdSchema, yearSchema } from "@/lib/validations/shared-schemas"
+import { consume, reward, type ConsumeResult } from "@/lib/security/rate-limit"
+import { createLogger } from "@/lib/utils/logger"
+import { userIdSchema } from "@/lib/validations/shared-schemas"
 import { z } from "zod"
+import {
+  claimGeneration,
+  type GenerationClaim,
+  isLiveClaim,
+  writeIfClaimed,
+} from "@/lib/wrapped/generation-claim"
+import { checkRewindEligibility } from "@/lib/wrapped/eligibility"
 import { generateWrappedWithLLM } from "@/lib/wrapped/llm"
+import { memberName } from "@/lib/wrapped/member-name"
 import {
   fetchOverseerrStatistics,
   fetchPlexServerStatistics,
@@ -18,59 +29,144 @@ import {
   fetchWatchTimeLeaderboard,
 } from "@/lib/wrapped/statistics"
 import { computePercentile } from "@/lib/wrapped/derived-statistics"
+import {
+  adminErrorHint,
+  type GenerationRefusalCode,
+  isGenerationRefusal,
+  memberErrorCopy,
+  refusalCopy,
+  type RewindErrorCode,
+  toStoredError,
+} from "@/lib/wrapped/generation-errors"
 import { WrappedStatistics } from "@/types/wrapped"
 import { getServerSession } from "next-auth"
 import { revalidatePath } from "next/cache"
 
-// Schema for generatePlexWrapped parameters
-const generatePlexWrappedParamsSchema = z.object({
-  userId: userIdSchema,
-  year: yearSchema,
-})
+const logger = createLogger("USERS_ACTION")
+
+export interface GeneratePlexWrappedResult {
+  success: boolean
+  error?: string
+  code?: RewindErrorCode | GenerationRefusalCode
+  /** For `RATE_LIMITED`: the seconds until the member may run again. */
+  retryAfterSec?: number
+  wrappedId?: string
+}
+
+function refused(code: GenerationRefusalCode, retryAfterSec?: number): GeneratePlexWrappedResult {
+  return {
+    success: false,
+    code,
+    error: refusalCopy(code, retryAfterSec),
+    ...(retryAfterSec === undefined ? {} : { retryAfterSec }),
+  }
+}
 
 /**
- * Generate Plex Wrapped for a specific user
- * - Users can generate their own wrapped if it doesn't exist (initial generation)
- * - Only admins can regenerate existing wrapped or generate for other users
+ * Spends one point of each member generation limit: 1 run per 10 minutes and
+ * 3 per day (design 9.3, 9.4). A refused daily point refunds the burst point.
  */
-export async function generatePlexWrapped(
-  userId: string,
-  year: number = new Date().getFullYear()
-): Promise<{ success: boolean; error?: string; wrappedId?: string }> {
-  // Validate input parameters
-  const validated = generatePlexWrappedParamsSchema.safeParse({ userId, year })
-  if (!validated.success) {
-    const firstError = validated.error.issues?.[0]?.message
-    return {
-      success: false,
-      error: firstError || "Invalid parameters",
-    }
+async function consumeGenerationPoints(userId: string): Promise<ConsumeResult> {
+  const burst = await consume("rw:gen:burst", userId)
+  if (!burst.ok) {
+    return burst
   }
+  const daily = await consume("rw:gen:daily", userId)
+  if (!daily.ok) {
+    await reward("rw:gen:burst", userId)
+  }
+  return daily
+}
 
-  const { userId: validUserId, year: validYear } = validated.data
+async function refundGenerationPoints(userId: string): Promise<void> {
+  await reward("rw:gen:burst", userId)
+  await reward("rw:gen:daily", userId)
+}
 
+/**
+ * Re-read after a refused limit: true when another run, such as one a second
+ * tab started a moment earlier, holds the row or is claiming it (`pending` is
+ * the row `claimGeneration` has just created). A member is then told the Rewind
+ * is being made rather than to wait.
+ */
+async function runInFlight(userId: string, year: number): Promise<boolean> {
+  const row = await prisma.plexWrapped.findUnique({
+    where: { userId_year: { userId, year } },
+    select: { status: true, updatedAt: true },
+  })
+  return row !== null && (row.status === "pending" || isLiveClaim(row, new Date()))
+}
+
+/**
+ * Generate the Rewind for one member and the season year.
+ *
+ * ## Guardrails (SEC-22, RWP-12), in order
+ *
+ * 1. A session, then `getWrappedSettings()`: generation is enabled, and
+ *    `wrappedYear` is the season year.
+ * 2. Zod: `year` must be exactly the season year.
+ * 3. A non-admin acts only on their own row, checked before the member is
+ *    read so another id gets the same answer whether or not it exists; then
+ *    the member exists.
+ * 4. Entitlement through `getAccessGateStatus` (a no-op while Stripe is off;
+ *    admins are entitled): `NOT_ENTITLED`.
+ * 5. Only admins regenerate a completed Rewind, and a live run already making
+ *    this Rewind returns `ALREADY_GENERATING` before any limit is spent. A
+ *    member with no Plex identity then gets `REWIND_NOT_ELIGIBLE` before the
+ *    configuration is read, so a direct call on a Jellyfin-only server gets
+ *    the same answer as the card. The configuration a run needs (Plex,
+ *    Tautulli) is checked next, and then the Tautulli match
+ *    (`lib/wrapped/eligibility.ts`): no match is `REWIND_NOT_ELIGIBLE` too
+ *    (FR-48, RWP-08). A failure that a retry cannot fix costs nothing and
+ *    writes no row.
+ * 6. Non-admins spend a point of `rw:gen:burst` (1 per 10 minutes) and
+ *    `rw:gen:daily` (3 per day): `RATE_LIMITED` with `retryAfterSec`, unless
+ *    a run that started since check 5 now holds the row (`ALREADY_GENERATING`).
+ * 7. The single-flight claim (`lib/wrapped/generation-claim.ts`). Losing it,
+ *    or an error while claiming, refunds the points; losing it returns
+ *    `ALREADY_GENERATING`.
+ *
+ * The run's outcome is written only while it holds the claim, so a run that
+ * was taken over after 15 minutes cannot overwrite the newer one; such a run
+ * returns `ALREADY_GENERATING`, whatever its own outcome.
+ */
+export async function generatePlexWrapped(userId: string, year: number): Promise<GeneratePlexWrappedResult> {
   try {
-    // Check if wrapped feature is enabled
-    const wrappedSettings = await getWrappedSettings()
-    if (!wrappedSettings.wrappedEnabled) {
-      return { success: false, error: "Wrapped generation is currently disabled" }
-    }
-
-    // Get current session
+    // Check 1: session, then the season settings
     const session = await getServerSession(authOptions)
     if (!session) {
       return { success: false, error: "Unauthorized" }
     }
 
-    const currentUserId = session.user.id
+    const currentUserId = session.user.id?.trim()
     const isAdmin = session.user.isAdmin
-
-    // Validate that session has a valid user ID
-    if (!currentUserId || currentUserId.trim() === "") {
+    if (!currentUserId) {
       return { success: false, error: "Unauthorized: Invalid session" }
     }
 
-    // Check if user exists
+    const { wrappedEnabled, wrappedYear } = await getWrappedSettings()
+    if (!wrappedEnabled) {
+      return { success: false, error: "Wrapped generation is currently disabled" }
+    }
+
+    // Check 2: input, with the year bound to the season
+    const validated = z
+      .object({
+        userId: userIdSchema,
+        year: z.literal(wrappedYear, { error: `Rewind is only available for ${wrappedYear}` }),
+      })
+      .safeParse({ userId, year })
+    if (!validated.success) {
+      return { success: false, error: validated.error.issues[0]?.message ?? "Invalid parameters" }
+    }
+
+    const { userId: validUserId, year: validYear } = validated.data
+
+    // Check 3: non-admins act only on their own row; then the member exists
+    if (!isAdmin && currentUserId !== validUserId) {
+      return { success: false, error: "Unauthorized: You can only generate your own wrapped" }
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: validUserId },
     })
@@ -79,47 +175,29 @@ export async function generatePlexWrapped(
       return { success: false, error: "User not found" }
     }
 
-    // Check if wrapped already exists for this year
+    // Check 4: entitlement (always true while Stripe is off, and for admins)
+    if (!(await getAccessGateStatus(currentUserId))) {
+      return refused("NOT_ENTITLED")
+    }
+
+    // Check 5: only admins regenerate a completed Rewind; a live run is not doubled
     const existingWrapped = await prisma.plexWrapped.findUnique({
-      where: {
-        userId_year: {
-          userId: validUserId,
-          year: validYear,
-        },
-      },
+      where: { userId_year: { userId: validUserId, year: validYear } },
+      select: { status: true, updatedAt: true },
     })
 
-    // Security check:
-    // - Users can generate their own wrapped if it doesn't exist (initial generation)
-    // - Users can retry their own wrapped if it failed (status === "failed")
-    // - Only admins can regenerate completed wrapped or generate for other users
-    // Normalize IDs for comparison (trim whitespace and ensure they're strings)
-    const normalizedCurrentUserId = String(currentUserId).trim()
-    const normalizedUserId = String(validUserId).trim()
-    const isOwnWrapped = normalizedCurrentUserId === normalizedUserId
+    if (existingWrapped?.status === "completed" && !isAdmin) {
+      return { success: false, error: "Only admins can regenerate wrapped data" }
+    }
 
-    if (existingWrapped) {
-      if (existingWrapped.status === "completed") {
-        // Completed wrapped exists - this is a regeneration, require admin
-        if (!isAdmin) {
-          return { success: false, error: "Only admins can regenerate wrapped data" }
-        }
-      } else if (existingWrapped.status === "failed") {
-        // Failed wrapped - allow user to retry their own, or admin for any user
-        if (!isOwnWrapped && !isAdmin) {
-          return { success: false, error: "Unauthorized: You can only retry your own wrapped" }
-        }
-      } else {
-        // Generating status - allow user to retry their own, or admin for any user
-        if (!isOwnWrapped && !isAdmin) {
-          return { success: false, error: "Unauthorized: You can only generate your own wrapped" }
-        }
-      }
-    } else {
-      // Wrapped doesn't exist - allow if user is generating their own, or if admin
-      if (!isOwnWrapped && !isAdmin) {
-        return { success: false, error: "Unauthorized: You can only generate your own wrapped" }
-      }
+    if (existingWrapped && isLiveClaim(existingWrapped, new Date())) {
+      return refused("ALREADY_GENERATING")
+    }
+
+    // No Plex identity, so no Plex watch history: refuse before any lookup (FR-48).
+    const { plexUserId } = user
+    if (!plexUserId) {
+      return refused("REWIND_NOT_ELIGIBLE")
     }
 
     // Get Plex server config
@@ -131,58 +209,70 @@ export async function generatePlexWrapped(
       return { success: false, error: "No active Plex server configured" }
     }
 
-    // Generate share token upfront so it's always available (only if doesn't exist)
-    const { generateShareToken } = await import("@/lib/utils")
-    const shareToken = existingWrapped?.shareToken || generateShareToken()
-
-    // Create or update wrapped record with "generating" status
-    const wrapped = await prisma.plexWrapped.upsert({
-      where: {
-        userId_year: {
-          userId: validUserId,
-          year: validYear,
-        },
-      },
-      create: {
-        userId: validUserId,
-        year: validYear,
-        status: "generating",
-        data: JSON.stringify({}), // Empty data for now
-        shareToken, // Generate share token immediately
-      },
-      update: {
-        status: "generating",
-        error: null,
-        // Only set shareToken if it doesn't exist (preserve existing shares)
-        ...(existingWrapped?.shareToken ? {} : { shareToken }),
-      },
+    const tautulli = await prisma.tautulli.findFirst({
+      where: { isActive: true },
     })
+
+    if (!tautulli) {
+      return { success: false, error: "No active Tautulli server configured" }
+    }
+
+    // No Tautulli match, so no Plex watch history to read: refuse before any
+    // row or point (FR-48). A fresh match is handed to the statistics fetch.
+    const eligibility = await checkRewindEligibility({ id: user.id, plexUserId })
+    if (!eligibility.eligible) {
+      return refused("REWIND_NOT_ELIGIBLE")
+    }
+
+    // Check 6: member limits; admins are exempt
+    if (!isAdmin) {
+      const limit = await consumeGenerationPoints(validUserId)
+      if (!limit.ok) {
+        // A second tab that passed check 5 just before the first one claimed.
+        if (await runInFlight(validUserId, validYear)) {
+          return refused("ALREADY_GENERATING")
+        }
+        return refused("RATE_LIMITED", limit.retryAfterSec)
+      }
+    }
+
+    // Check 7: one run at a time. Generation never touches shareToken: sharing is
+    // opt-in through enableWrappedShareLink, and a regeneration keeps a link
+    // the member already turned on (SEC-16).
+    let claim: GenerationClaim | null = null
+    try {
+      claim = await claimGeneration(validUserId, validYear, { regenerate: isAdmin })
+    } finally {
+      // A lost claim or a failed claim query gives the member their points back.
+      if (!claim && !isAdmin) {
+        await refundGenerationPoints(validUserId)
+      }
+    }
+    if (!claim) {
+      return refused("ALREADY_GENERATING")
+    }
 
     const startTime = Date.now()
 
     try {
       // 1. Fetch statistics from Tautulli
-      const tautulli = await prisma.tautulli.findFirst({
-        where: { isActive: true },
-      })
-
-      if (!tautulli) {
-        throw new Error("No active Tautulli server configured")
-      }
-
-      if (!user.plexUserId) {
-        throw new Error("User does not have a Plex user ID")
-      }
-
       const tautulliStats = await fetchTautulliStatistics(
         {
           url: tautulli.url,
           apiKey: tautulli.apiKey,
         },
-        user.plexUserId || "",
-        user.email,
-        validYear
+        { plexUserId },
+        validYear,
+        eligibility.tautulliUser
       )
+
+      // A known cause is stored as a code, and the member gets fixed copy.
+      if (tautulliStats.code) {
+        if (!(await writeIfClaimed(claim, { status: "failed", error: toStoredError(tautulliStats.code) }))) {
+          return refused("ALREADY_GENERATING")
+        }
+        return { success: false, code: tautulliStats.code, error: memberErrorCopy(tautulliStats.code) }
+      }
 
       if (!tautulliStats.success || !tautulliStats.data) {
         throw new Error(tautulliStats.error || "Failed to fetch Tautulli statistics")
@@ -197,7 +287,7 @@ export async function generatePlexWrapped(
       })
 
       let serverStats
-      if (plexServer && tautulli) {
+      if (plexServer) {
         const serverStatsResult = await fetchPlexServerStatistics(
           {
             url: plexServer.url,
@@ -231,7 +321,7 @@ export async function generatePlexWrapped(
             url: overseerr.url,
             apiKey: overseerr.apiKey,
           },
-          user.email,
+          { plexUserId, email: user.email },
           validYear
         )
         if (overseerrData.success && overseerrData.data) {
@@ -241,7 +331,7 @@ export async function generatePlexWrapped(
 
       // 4. Fetch leaderboard data
       let leaderboards
-      if (tautulli && tautulliStatsData.tautulliUserId) {
+      if (tautulliStatsData.tautulliUserId) {
         const [topContentLeaderboards, watchTimeLeaderboard] = await Promise.all([
           fetchTopContentLeaderboards(
             {
@@ -302,14 +392,18 @@ export async function generatePlexWrapped(
         }),
       }
 
-      // 5. Generate wrapped content using LLM
-      const llmResult = await generateWrappedWithLLM(
-        user.name || user.email || "User",
-        validYear,
-        user.id,
-        wrapped.id,
-        statistics
-      )
+      // 5. Generate wrapped content using LLM. The model only ever sees the
+      // member's real name or "there", and the stored Rewind their name or
+      // "Viewer", never their email. The leaderboards above reach the prompt
+      // only; assembleWrappedData leaves them out of the stored statistics.
+      const llmResult = await generateWrappedWithLLM({
+        promptName: memberName(user) ?? "there",
+        displayName: memberName(user) ?? "Viewer",
+        year: validYear,
+        userId: user.id,
+        wrappedId: claim.wrappedId,
+        statistics,
+      })
 
       if (!llmResult.success || !llmResult.data) {
         throw new Error(llmResult.error || "Failed to generate wrapped content with LLM")
@@ -319,35 +413,27 @@ export async function generatePlexWrapped(
       const generationTime = Math.floor((Date.now() - startTime) / 1000)
       wrappedData.metadata.generationTime = generationTime
 
-      // 6. Generate share token if not exists
-      let shareToken = wrapped.shareToken
-      if (!shareToken) {
-        // Generate a secure random token
-        const { generateShareToken } = await import("@/lib/utils")
-        shareToken = generateShareToken()
+      // 6. Store the result, unless a newer run took the row over
+      const stored = await writeIfClaimed(claim, {
+        status: "completed",
+        data: JSON.stringify(wrappedData),
+        summary: wrappedData.summary || null,
+        archetype: wrappedData.archetype?.name || null,
+        generatedAt: new Date(),
+      })
+      if (!stored) {
+        return refused("ALREADY_GENERATING")
       }
-
-      // 7. Update wrapped with completed status, share token, and summary
-      await prisma.plexWrapped.update({
-        where: { id: wrapped.id },
-        data: {
-          status: "completed",
-          data: JSON.stringify(wrappedData),
-          shareToken,
-          summary: wrappedData.summary || null,
-          archetype: wrappedData.archetype?.name || null,
-          generatedAt: new Date(),
-        },
-      })
     } catch (error) {
-      // Update wrapped status to failed
-      await prisma.plexWrapped.update({
-        where: { id: wrapped.id },
-        data: {
-          status: "failed",
-          error: error instanceof Error ? error.message : "Failed to generate wrapped",
-        },
+      const recorded = await writeIfClaimed(claim, {
+        status: "failed",
+        error: error instanceof Error ? error.message : "Failed to generate wrapped",
       })
+      if (!recorded) {
+        // A newer run holds the row: this failure is not the member's outcome.
+        logger.error("Rewind run failed after losing its claim", error)
+        return refused("ALREADY_GENERATING")
+      }
       throw error
     }
 
@@ -357,35 +443,11 @@ export async function generatePlexWrapped(
     revalidatePath(`/admin/users/${validUserId}/wrapped`)
     revalidatePath("/wrapped")
     revalidatePath("/")
-    return { success: true, wrappedId: wrapped.id }
+    return { success: true, wrappedId: claim.wrappedId }
   } catch (error) {
-    const logger = (await import("@/lib/utils/logger")).createLogger("USERS_ACTION")
+    // A failed run has already marked its own claimed row. Nothing else is
+    // written here: without a claim, a write could overwrite another run.
     logger.error("Error generating wrapped", error)
-
-    // Update wrapped status to failed if it exists
-    try {
-      const wrapped = await prisma.plexWrapped.findUnique({
-        where: {
-          userId_year: {
-            userId: validUserId,
-            year: validYear,
-          },
-        },
-      })
-
-      if (wrapped) {
-        await prisma.plexWrapped.update({
-          where: { id: wrapped.id },
-          data: {
-            status: "failed",
-            error: error instanceof Error ? error.message : "Failed to generate wrapped",
-          },
-        })
-      }
-    } catch (updateError) {
-      const logger = (await import("@/lib/utils/logger")).createLogger("USERS_ACTION")
-      logger.error("Error updating wrapped status", updateError)
-    }
 
     return {
       success: false,
@@ -395,30 +457,15 @@ export async function generatePlexWrapped(
 }
 
 /**
- * Generate Plex Wrapped for all users
+ * Generate the season's Rewind for every member with a Plex account.
  * Admin-only function
  */
-export async function generateAllPlexWrapped(
-  year: number = new Date().getFullYear()
-): Promise<{
+export async function generateAllPlexWrapped(): Promise<{
   success: boolean
   generated: number
   failed: number
   errors: string[]
 }> {
-  // Validate year parameter
-  const validatedYear = yearSchema.safeParse(year)
-  if (!validatedYear.success) {
-    return {
-      success: false,
-      generated: 0,
-      failed: 0,
-      errors: [validatedYear.error.issues[0]?.message || "Invalid year parameter"],
-    }
-  }
-
-  const validYear = validatedYear.data
-
   try {
     // Require admin for bulk generation
     const session = await getServerSession(authOptions)
@@ -430,6 +477,8 @@ export async function generateAllPlexWrapped(
         errors: ["Unauthorized: Only admins can generate wrapped for all users"],
       }
     }
+    // The season year, not the calendar year: they differ in January.
+    const { wrappedYear } = await getWrappedSettings()
     const users = await prisma.user.findMany({
       where: {
         plexUserId: { not: null }, // Only users with Plex accounts
@@ -441,12 +490,19 @@ export async function generateAllPlexWrapped(
     const errors: string[] = []
 
     for (const user of users) {
-      const result = await generatePlexWrapped(user.id, validYear)
+      const result = await generatePlexWrapped(user.id, wrappedYear)
       if (result.success) {
         generated++
       } else {
         failed++
-        errors.push(`${user.name || user.email || user.id}: ${result.error || "Unknown error"}`)
+        // A typed failure or an ineligible member gets the admin hint (or the
+        // code), not the member copy.
+        const hint =
+          result.code === "REWIND_NOT_ELIGIBLE" || (result.code && !isGenerationRefusal(result.code))
+            ? adminErrorHint(result.code, user.plexUserId)
+            : null
+        const detail = hint ?? (result.code || result.error || "Unknown error")
+        errors.push(`${user.name || user.id}: ${detail}`)
       }
     }
 

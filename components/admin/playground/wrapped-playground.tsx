@@ -4,6 +4,7 @@ import { savePlaygroundWrapped } from "@/actions/playground-wrapped"
 import { testPromptTemplate } from "@/actions/prompt-test"
 import { useToast } from "@/components/ui/toast"
 import { usePlaygroundState } from "@/hooks/use-playground-state"
+import { DEFAULT_OPENAI_MODEL } from "@/lib/llm/openai-params"
 import { estimateCost } from "@/lib/llm/pricing"
 import { assembleWrappedData } from "@/lib/wrapped/assemble-wrapped"
 import { parseWrappedLLMOutput } from "@/lib/wrapped/parse-llm-output"
@@ -154,7 +155,7 @@ export function WrappedPlayground({ templates, initialTemplateId }: WrappedPlayg
   const costEstimate = useMemo(() => {
     if (!result?.renderedPrompt) return undefined
 
-    const model = testConfig.model || configuredModel || "gpt-4"
+    const model = testConfig.model || configuredModel || DEFAULT_OPENAI_MODEL
     const systemPrompt = generateSystemPrompt()
     const estimate = estimateCost(
       result.renderedPrompt,

@@ -48,10 +48,10 @@ export async function getHistoricalWrappedVersions(wrappedId: string) {
   const llmUsageRecords = await prisma.lLMUsage.findMany({
     where: {
       wrappedId,
-      // Only include records that have a response (exclude mock/empty responses)
-      response: {
-        not: "",
-      },
+      // Exclude empty responses. A null response is a version whose text the
+      // October 2026 privacy clean-up removed (P0.20); it stays listed so the
+      // admin sees the clean-up notice instead of a missing version.
+      OR: [{ response: null }, { response: { not: "" } }],
     },
     include: {
       user: {
@@ -85,8 +85,11 @@ export async function getHistoricalWrappedVersions(wrappedId: string) {
     // Try multiple comparison methods
     if (index === 0) {
       // The most recent version is typically the current one
-      // Try comparing summary first (most reliable)
-      if (currentSummary) {
+      if (record.response === null) {
+        // Text removed by the clean-up: nothing to compare
+        isCurrent = true
+      } else if (currentSummary) {
+        // Try comparing summary first (most reliable)
         try {
           let cleaned = record.response.trim()
           if (cleaned.startsWith("```json")) {
@@ -154,7 +157,10 @@ export async function getHistoricalWrappedVersions(wrappedId: string) {
 }
 
 /**
- * Get a historical wrapped data from an LLM usage record (admin only)
+ * Get a historical wrapped data from an LLM usage record (admin only).
+ *
+ * `wrappedData` is null when the October 2026 privacy clean-up removed the
+ * record's response (P0.20); the page then shows the clean-up notice.
  */
 export async function getHistoricalWrappedData(llmUsageId: string, _wrappedId: string) {
   await requireAdmin()
@@ -184,6 +190,24 @@ export async function getHistoricalWrappedData(llmUsageId: string, _wrappedId: s
     return null
   }
 
+  const version = {
+    year: llmUsage.wrapped.year,
+    userId: llmUsage.userId,
+    userName: llmUsage.user.name || llmUsage.user.email || "User",
+    llmUsage: {
+      id: llmUsage.id,
+      createdAt: llmUsage.createdAt,
+      provider: llmUsage.provider,
+      model: llmUsage.model,
+      cost: llmUsage.cost,
+      totalTokens: llmUsage.totalTokens,
+    },
+  }
+
+  if (llmUsage.response === null) {
+    return { ...version, wrappedData: null }
+  }
+
   // Get the current wrapped data to extract statistics (they don't change between regenerations)
   let statistics = null
   try {
@@ -208,9 +232,9 @@ export async function getHistoricalWrappedData(llmUsageId: string, _wrappedId: s
     // Build wrapped data using statistics from current wrapped (if available)
     // or create minimal statistics if not available
     const wrappedData = {
-      year: llmUsage.wrapped.year,
-      userId: llmUsage.userId,
-      userName: llmUsage.user.name || llmUsage.user.email || "User",
+      year: version.year,
+      userId: version.userId,
+      userName: version.userName,
       generatedAt: llmUsage.createdAt.toISOString(),
       statistics: statistics || {
         totalWatchTime: { total: 0, movies: 0, shows: 0 },
@@ -235,17 +259,7 @@ export async function getHistoricalWrappedData(llmUsageId: string, _wrappedId: s
       },
     }
 
-    return {
-      wrappedData,
-      llmUsage: {
-        id: llmUsage.id,
-        createdAt: llmUsage.createdAt,
-        provider: llmUsage.provider,
-        model: llmUsage.model,
-        cost: llmUsage.cost,
-        totalTokens: llmUsage.totalTokens,
-      },
-    }
+    return { ...version, wrappedData }
   } catch (error) {
     logger.error("Failed to parse historical wrapped data", error)
     return null

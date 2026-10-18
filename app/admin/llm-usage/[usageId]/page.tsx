@@ -1,4 +1,5 @@
 import { getLLMUsageById } from "@/actions/admin"
+import { LlmTextRemovedNotice } from "@/components/admin/llm-usage/llm-text-removed-notice"
 import { ExpandablePrompt } from "@/components/admin/prompts/expandable-prompt"
 import Link from "next/link"
 import Image from "next/image"
@@ -37,11 +38,12 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
     )
   }
 
-  // Try to parse response as JSON for better display
-  let formattedResponse: string = record.response
+  // Try to parse response as JSON for better display. Prompt and response are
+  // null on rows the October 2026 privacy clean-up stripped (P0.20).
+  let formattedResponse = record.response ?? ""
   let isJson = false
   try {
-    const parsedResponse = JSON.parse(record.response)
+    const parsedResponse = JSON.parse(formattedResponse)
     formattedResponse = JSON.stringify(parsedResponse, null, 2)
     isJson = true
   } catch {
@@ -49,11 +51,11 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
   }
 
   // Format prompt nicely - check if it's a chat message array
-  let formattedPrompt: string = record.prompt
+  let formattedPrompt = record.prompt ?? ""
   let promptIsJson = false
   let promptIsChatMessages = false
   try {
-    const parsedPrompt = JSON.parse(record.prompt)
+    const parsedPrompt = JSON.parse(formattedPrompt)
     promptIsJson = true
 
     // Check if it's an array of chat messages
@@ -261,20 +263,28 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
         </div>
 
         {/* Prompt */}
-        <ExpandablePrompt
-          content={formattedPrompt}
-          title="Prompt"
-          characterCount={record.prompt.length}
-          characterCountSuffix={promptIsChatMessages ? "(Chat messages)" : promptIsJson ? "(JSON formatted)" : undefined}
-        />
+        {record.prompt === null ? (
+          <LlmTextRemovedNotice title="Prompt" />
+        ) : (
+          <ExpandablePrompt
+            content={formattedPrompt}
+            title="Prompt"
+            characterCount={record.prompt.length}
+            characterCountSuffix={promptIsChatMessages ? "(Chat messages)" : promptIsJson ? "(JSON formatted)" : undefined}
+          />
+        )}
 
         {/* Response */}
-        <ExpandablePrompt
-          content={formattedResponse}
-          title="Response"
-          characterCount={record.response.length}
-          characterCountSuffix={isJson ? "(JSON formatted)" : undefined}
-        />
+        {record.response === null ? (
+          <LlmTextRemovedNotice title="Response" />
+        ) : (
+          <ExpandablePrompt
+            content={formattedResponse}
+            title="Response"
+            characterCount={record.response.length}
+            characterCountSuffix={isJson ? "(JSON formatted)" : undefined}
+          />
+        )}
       </div>
     </div>
   )

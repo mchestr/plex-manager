@@ -2,9 +2,10 @@
 
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { generateShareToken } from "@/lib/utils"
 import { createLogger } from "@/lib/utils/logger"
+import { YEAR_MAX, YEAR_MIN, yearSchema } from "@/lib/validations/shared-schemas"
 import { assembleWrappedData } from "@/lib/wrapped/assemble-wrapped"
+import { memberName } from "@/lib/wrapped/member-name"
 import { parseWrappedLLMOutput } from "@/lib/wrapped/parse-llm-output"
 import { WrappedStatistics } from "@/types/wrapped"
 import { getServerSession } from "next-auth"
@@ -48,6 +49,15 @@ export async function savePlaygroundWrapped(input: SavePlaygroundWrappedInput): 
       }
     }
 
+    // The year field is free-typed; a completed row outside the range
+    // /wrapped/<year> accepts would send the member to a 404 (P0.14).
+    if (!yearSchema.safeParse(input.year).success) {
+      return {
+        success: false,
+        error: `Year must be a whole number from ${YEAR_MIN} to ${YEAR_MAX}`,
+      }
+    }
+
     // Find user by Plex username (name field)
     // First try to find by name (which matches Plex username)
     let user = await prisma.user.findFirst({
@@ -82,28 +92,19 @@ export async function savePlaygroundWrapped(input: SavePlaygroundWrappedInput): 
       }
     }
 
+    // The lookup above may have matched the email, so the stored name comes
+    // from the user row, as in generation.
     const wrappedData = assembleWrappedData({
       output: parseResult.output,
       statistics: input.statistics,
       userId: user.id,
-      userName: input.userName,
+      userName: memberName(user) ?? "Viewer",
       year: input.year,
     })
 
-    // Check if wrapped already exists for this user/year
-    const existingWrapped = await prisma.plexWrapped.findUnique({
-      where: {
-        userId_year: {
-          userId: user.id,
-          year: input.year,
-        },
-      },
-    })
-
-    // Generate share token if needed
-    const shareToken = existingWrapped?.shareToken || generateShareToken()
-
-    // Create or update wrapped record
+    // Create or update wrapped record. A playground save never creates a
+    // share token and keeps an existing one: sharing is the member's choice
+    // (enableWrappedShareLink, SEC-16).
     const wrapped = await prisma.plexWrapped.upsert({
       where: {
         userId_year: {
@@ -116,7 +117,6 @@ export async function savePlaygroundWrapped(input: SavePlaygroundWrappedInput): 
         year: input.year,
         status: "completed",
         data: JSON.stringify(wrappedData),
-        shareToken,
         summary: wrappedData.summary || null,
         archetype: wrappedData.archetype?.name || null,
         generatedAt: new Date(),
@@ -127,8 +127,6 @@ export async function savePlaygroundWrapped(input: SavePlaygroundWrappedInput): 
         summary: wrappedData.summary || null,
         archetype: wrappedData.archetype?.name || null,
         generatedAt: new Date(),
-        // Preserve existing share token if it exists
-        ...(existingWrapped?.shareToken ? {} : { shareToken }),
       },
     })
 

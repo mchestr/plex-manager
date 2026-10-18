@@ -2,7 +2,11 @@
 
 import { getWrappedSettings } from "@/actions/admin"
 import { generatePlexWrapped, getUserPlexWrapped } from "@/actions/users"
+import { RewindNotEligibleCard } from "@/components/dashboard/rewind-not-eligible-card"
+import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
+import type { RewindEligibility } from "@/lib/wrapped/eligibility"
+import { isGenerationRefusal, memberErrorCopy, readStoredError, refusalCopy } from "@/lib/wrapped/generation-errors"
 import { motion } from "framer-motion"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -11,6 +15,8 @@ import { useCallback, useEffect, useRef, useState } from "react"
 interface WrappedCardProps {
   userId: string
   memberSince: string // ISO date string of when user joined
+  /** Decided on the server from `plexUserId` and the Tautulli match (FR-48). */
+  rewindEligibility: RewindEligibility
 }
 
 // Floating sparkle component
@@ -50,32 +56,54 @@ function isEligibleForWrapped(memberSince: string): boolean {
   return monthsDiff >= MIN_MEMBERSHIP_MONTHS
 }
 
-export function WrappedCard({ userId, memberSince }: WrappedCardProps) {
+export function WrappedCard({ userId, memberSince, rewindEligibility }: WrappedCardProps) {
   const toast = useToast()
   const router = useRouter()
   const [isGenerating, setIsGenerating] = useState(false)
   const [wrapped, setWrapped] = useState<{ status: string; error?: string | null; shareToken?: string | null } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [wrappedSettings, setWrappedSettings] = useState<{ enabled: boolean; year: number } | null>(null)
+  const [settingsFailed, setSettingsFailed] = useState(false)
+  // The action can refuse a member the page rendered as eligible (Tautulli
+  // failed open, or the cached match expired since): the card then explains.
+  const [refusedAsIneligible, setRefusedAsIneligible] = useState(false)
   const pollFailureCountRef = useRef(0)
 
-  // Check membership eligibility
-  const eligible = isEligibleForWrapped(memberSince)
+  // Check membership duration; a member without Plex history is ineligible regardless
+  const memberLongEnough = isEligibleForWrapped(memberSince)
+  const canHaveRewind = rewindEligibility.eligible && !refusedAsIneligible
 
-  // Load wrapped settings
-  useEffect(() => {
-    getWrappedSettings().then((settings) => {
-      setWrappedSettings({
-        enabled: settings.wrappedEnabled,
-        year: settings.wrappedYear,
+  // Load wrapped settings. Without them the season year is unknown, so a
+  // failure (e.g. a stale client after a redeploy) shows a retry, not an
+  // endless spinner.
+  const loadSettings = useCallback(() => {
+    getWrappedSettings()
+      .then((settings) => {
+        setWrappedSettings({
+          enabled: settings.wrappedEnabled,
+          year: settings.wrappedYear,
+        })
       })
-    })
+      .catch((err) => {
+        console.error("Error loading Wrapped settings:", err)
+        setSettingsFailed(true)
+      })
   }, [])
 
-  const wrappedYear = wrappedSettings?.year ?? new Date().getFullYear()
+  useEffect(() => {
+    loadSettings()
+  }, [loadSettings])
+
+  const retrySettings = () => {
+    setSettingsFailed(false)
+    loadSettings()
+  }
+
+  // The season year from getWrappedSettings(); null until the settings load.
+  const wrappedYear = wrappedSettings?.year ?? null
 
   const loadWrapped = useCallback(async () => {
-    if (!userId || !wrappedSettings) return
+    if (!userId || wrappedYear === null || !canHaveRewind) return
 
     setIsLoading(true)
     try {
@@ -86,19 +114,15 @@ export function WrappedCard({ userId, memberSince }: WrappedCardProps) {
     } finally {
       setIsLoading(false)
     }
-  }, [userId, wrappedYear, wrappedSettings, toast])
+  }, [userId, wrappedYear, canHaveRewind, toast])
 
   useEffect(() => {
-    if (userId && wrappedSettings) {
-      loadWrapped()
-    } else if (!wrappedSettings) {
-      setIsLoading(false)
-    }
-  }, [userId, wrappedSettings, loadWrapped])
+    loadWrapped()
+  }, [loadWrapped])
 
   // Poll for wrapped completion when generating
   useEffect(() => {
-    if (!userId || (!isGenerating && wrapped?.status !== "generating")) {
+    if (!userId || wrappedYear === null || (!isGenerating && wrapped?.status !== "generating")) {
       return
     }
 
@@ -111,11 +135,11 @@ export function WrappedCard({ userId, memberSince }: WrappedCardProps) {
         if (wrappedData?.status === "completed") {
           setIsGenerating(false)
           clearInterval(pollInterval)
-          router.push("/wrapped")
+          router.push(`/wrapped/${wrappedYear}`)
         } else if (wrappedData?.status === "failed") {
           setIsGenerating(false)
           clearInterval(pollInterval)
-          toast.showError(wrappedData.error || "Failed to generate wrapped")
+          toast.showError(memberErrorCopy(readStoredError(wrappedData.error)))
         }
       } catch (err) {
         console.error("Error polling wrapped status:", err)
@@ -130,16 +154,31 @@ export function WrappedCard({ userId, memberSince }: WrappedCardProps) {
   }, [userId, isGenerating, wrapped?.status, wrappedYear, router, toast])
 
   const handleGenerate = async () => {
-    if (!userId) return
+    if (!userId || wrappedYear === null) return
 
     setIsGenerating(true)
     try {
       const result = await generatePlexWrapped(userId, wrappedYear)
       if (result.success) {
         await loadWrapped()
-      } else {
-        toast.showError(result.error || "Failed to generate wrapped")
+      } else if (result.code === "ALREADY_GENERATING") {
+        // Another tab (or a double click) already started it: keep polling for that run.
+        toast.showInfo(refusalCopy(result.code))
+        await loadWrapped()
+      } else if (result.code === "REWIND_NOT_ELIGIBLE") {
         setIsGenerating(false)
+        setRefusedAsIneligible(true)
+      } else {
+        toast.showError(
+          isGenerationRefusal(result.code)
+            ? refusalCopy(result.code, result.retryAfterSec)
+            : result.error || "Failed to generate wrapped"
+        )
+        setIsGenerating(false)
+        if (result.code === "RATE_LIMITED") {
+          // A run this member started elsewhere may hold the row: follow it if so.
+          await loadWrapped()
+        }
       }
     } catch (err) {
       toast.showError(err instanceof Error ? err.message : "Failed to generate wrapped")
@@ -152,13 +191,38 @@ export function WrappedCard({ userId, memberSince }: WrappedCardProps) {
     return null
   }
 
-  // Not eligible yet - don't show anything
-  if (!eligible) {
+  // Joined too recently - don't show anything (the explanation below shows regardless)
+  if (canHaveRewind && !memberLongEnough) {
     return null
   }
 
-  // Loading state
-  if (isLoading) {
+  // Settings failed to load: the season year is unknown
+  if (settingsFailed) {
+    return (
+      <motion.div
+        className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-red-500/30 bg-gradient-to-br from-red-950/30 via-slate-900 to-slate-900 p-6 sm:p-8 shadow-xl shadow-black/30"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: "easeOut", delay: 0.15 }}
+        data-testid="wrapped-card-error"
+      >
+        <div className="flex flex-col items-center text-center gap-4">
+          <p className="text-sm text-red-400">We couldn&apos;t load your Wrapped.</p>
+          <Button variant="danger" size="sm" onClick={retrySettings} data-testid="wrapped-card-error-retry">
+            Try again
+          </Button>
+        </div>
+      </motion.div>
+    )
+  }
+
+  // No Plex watch history: explain, with no Generate or View action (FR-48)
+  if (!canHaveRewind && wrappedYear !== null) {
+    return <RewindNotEligibleCard year={wrappedYear} />
+  }
+
+  // Loading state (also while the season year is unknown)
+  if (isLoading || wrappedYear === null) {
     return (
       <motion.div
         className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-purple-500/30 bg-gradient-to-br from-purple-950/50 via-pink-950/30 to-slate-900 p-6 sm:p-8 shadow-2xl shadow-purple-500/10"
@@ -269,7 +333,8 @@ export function WrappedCard({ userId, memberSince }: WrappedCardProps) {
 
             {/* CTA Button */}
             <Link
-              href="/wrapped"
+              href={`/wrapped/${wrappedYear}`}
+              data-testid="wrapped-card-view-link"
               className="group/btn relative inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-pink-500 via-purple-500 to-pink-500 bg-[length:200%_100%] px-6 sm:px-8 py-3 sm:py-3.5 text-base sm:text-lg font-bold text-white shadow-lg shadow-pink-500/30 transition-all duration-300 hover:shadow-xl hover:shadow-pink-500/40 hover:bg-right"
             >
               View Your Wrapped
@@ -306,6 +371,7 @@ export function WrappedCard({ userId, memberSince }: WrappedCardProps) {
           <button
             onClick={handleGenerate}
             disabled={isGenerating}
+            data-testid="wrapped-card-retry"
             className="inline-flex items-center gap-2 rounded-xl bg-red-500/20 border border-red-500/30 px-5 py-2.5 text-sm font-semibold text-red-300 transition hover:bg-red-500/30 disabled:opacity-50"
           >
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -372,6 +438,7 @@ export function WrappedCard({ userId, memberSince }: WrappedCardProps) {
           <button
             onClick={handleGenerate}
             disabled={isGenerating}
+            data-testid="wrapped-card-generate"
             className="group/btn relative inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-pink-500 via-purple-500 to-pink-500 bg-[length:200%_100%] px-6 sm:px-8 py-3 sm:py-3.5 text-base sm:text-lg font-bold text-white shadow-lg shadow-pink-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-pink-500/40 hover:bg-right disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Generate My Wrapped

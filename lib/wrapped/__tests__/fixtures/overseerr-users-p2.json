@@ -1,0 +1,8 @@
+{
+  "pageInfo": {"pages":2,"pageSize":100,"results":103,"page":2},
+  "results": [
+    {"permissions":32,"id":101,"email":"member101@example.com","plexUsername":"member101","username":null,"recoveryLinkExpirationDate":null,"userType":1,"plexId":1000101,"avatar":"https://plex.tv/users/f42a5/avatar?c=1700000000","movieQuotaLimit":null,"movieQuotaDays":null,"tvQuotaLimit":null,"tvQuotaDays":null,"createdAt":"2023-04-12T00:00:00.000Z","updatedAt":"2025-09-10T00:00:00.000Z","requestCount":0,"displayName":"member101"},
+    {"permissions":32,"id":102,"email":"dana.plex@example.com","plexUsername":"danaplex","username":null,"recoveryLinkExpirationDate":null,"userType":1,"plexId":9000123,"avatar":"https://plex.tv/users/9000123/avatar?c=1700000000","movieQuotaLimit":null,"movieQuotaDays":null,"tvQuotaLimit":null,"tvQuotaDays":null,"createdAt":"2023-04-13T00:00:00.000Z","updatedAt":"2025-09-11T00:00:00.000Z","requestCount":6,"displayName":"danaplex"},
+    {"permissions":32,"id":103,"email":"member103@example.com","plexUsername":"member103","username":null,"recoveryLinkExpirationDate":null,"userType":1,"plexId":1000103,"avatar":"https://plex.tv/users/f42a7/avatar?c=1700000000","movieQuotaLimit":null,"movieQuotaDays":null,"tvQuotaLimit":null,"tvQuotaDays":null,"createdAt":"2023-04-14T00:00:00.000Z","updatedAt":"2025-09-12T00:00:00.000Z","requestCount":0,"displayName":"member103"}
+  ]
+}

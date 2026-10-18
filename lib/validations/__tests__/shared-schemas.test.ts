@@ -1,4 +1,8 @@
-import { createServerUrlSchema, createPublicUrlSchema } from "../shared-schemas"
+import { randomBytes } from "crypto"
+
+import { generateShareToken } from "@/lib/utils"
+
+import { createServerUrlSchema, createPublicUrlSchema, shareTokenSchema } from "../shared-schemas"
 
 describe("shared-schemas", () => {
   describe("createServerUrlSchema", () => {
@@ -141,6 +145,25 @@ describe("shared-schemas", () => {
           "Invalid URL format. Expected format: https://example.com"
         )
       })
+    })
+  })
+
+  describe("shareTokenSchema", () => {
+    it("accepts every token generateShareToken makes", () => {
+      for (let i = 0; i < 50; i++) {
+        expect(shareTokenSchema.safeParse(generateShareToken()).success).toBe(true)
+      }
+    })
+
+    it.each([
+      ["31 bytes", randomBytes(31).toString("base64url")],
+      ["33 bytes", randomBytes(33).toString("base64url")],
+      ["standard base64 with padding", randomBytes(32).toString("base64")],
+      ["a slash", `${"a".repeat(42)}/`],
+      ["a dot", `${"a".repeat(42)}.`],
+      ["empty", ""],
+    ])("rejects %s", (_label, token) => {
+      expect(shareTokenSchema.safeParse(token).success).toBe(false)
     })
   })
 })

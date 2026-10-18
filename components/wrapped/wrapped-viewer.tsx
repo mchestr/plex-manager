@@ -2,7 +2,7 @@
 
 import { WrappedData, WrappedSection } from "@/types/wrapped"
 import { AnimatePresence, motion } from "framer-motion"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { ReactNode, useCallback, useEffect, useRef, useState } from "react"
 import { SpaceBackground } from "@/components/setup/setup-wizard/space-background"
 import { CinematicBackground } from "@/components/wrapped/cinematic/cinematic-background"
 import { getSlideDuration } from "@/components/wrapped/cinematic/theme"
@@ -18,6 +18,11 @@ interface WrappedViewerProps {
   userName?: string
   summary?: string
   shareToken?: string
+  /**
+   * The owner's share-link controls, shown on the last slide and under
+   * "Show all". Never shown in a shared view.
+   */
+  shareControls?: ReactNode
   /** Playground preview: letterbox bars are disabled inside the scrollable modal. */
   isPreview?: boolean
 }
@@ -27,8 +32,10 @@ export function WrappedViewer({
   onComplete,
   isShared = false,
   shareToken,
+  shareControls,
   isPreview = false,
 }: WrappedViewerProps) {
+  const ownerShareControls = isShared ? undefined : shareControls
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0)
   const [isAutoAdvancing, setIsAutoAdvancing] = useState(true)
   const [showAll, setShowAll] = useState(false)
@@ -160,7 +167,7 @@ export function WrappedViewer({
 
   if (showAll) {
     return (
-      <div className="min-h-screen relative py-12 px-4 sm:px-6 lg:px-8">
+      <div data-testid="wrapped-viewer" className="min-h-screen relative py-12 px-4 sm:px-6 lg:px-8">
         {isCinematic ? <CinematicBackground letterbox={false} /> : <SpaceBackground />}
         <div className="max-w-6xl mx-auto relative z-10 space-y-12">
           {sections.map((section, idx) => (
@@ -177,6 +184,9 @@ export function WrappedViewer({
               <SectionRenderer section={section} wrappedData={wrappedData} sectionIndex={idx} shareToken={shareToken} />
             </motion.div>
           ))}
+          {ownerShareControls && (
+            <div className="flex flex-wrap justify-center gap-3">{ownerShareControls}</div>
+          )}
         </div>
       </div>
     )
@@ -195,7 +205,7 @@ export function WrappedViewer({
       })
     }
     return (
-      <div className="min-h-screen relative py-12 px-4 sm:px-6 lg:px-8">
+      <div data-testid="wrapped-viewer" className="min-h-screen relative py-12 px-4 sm:px-6 lg:px-8">
         {isCinematic ? <CinematicBackground /> : <SpaceBackground />}
         <div className="max-w-4xl mx-auto relative z-10">
           <div className="bg-slate-900/90 border border-cyan-500/20 shadow-2xl rounded-lg p-8 md:p-12 text-center">
@@ -213,7 +223,7 @@ export function WrappedViewer({
 
   if (!currentSection) {
     return (
-      <div className="min-h-screen relative py-12 px-4 sm:px-6 lg:px-8">
+      <div data-testid="wrapped-viewer" className="min-h-screen relative py-12 px-4 sm:px-6 lg:px-8">
         {isCinematic ? <CinematicBackground /> : <SpaceBackground />}
         <div className="max-w-4xl mx-auto relative z-10">
           <div className="bg-slate-900/90 border border-cyan-500/20 shadow-2xl rounded-lg p-8 md:p-12 text-center">
@@ -225,7 +235,7 @@ export function WrappedViewer({
   }
 
   return (
-    <div className="min-h-screen relative py-8 sm:py-12 px-4 sm:px-6 lg:px-8 pb-24 md:pb-12">
+    <div data-testid="wrapped-viewer" className="min-h-screen relative py-8 sm:py-12 px-4 sm:px-6 lg:px-8 pb-24 md:pb-12">
       {isCinematic ? <CinematicBackground letterbox={!isPreview} /> : <SpaceBackground />}
       <div className="max-w-4xl mx-auto relative z-10">
         <WrappedViewerProgress
@@ -262,9 +272,7 @@ export function WrappedViewer({
           onPrevious={handlePrevious}
           onNext={handleNext}
           onShowAll={handleShowAll}
-          isShared={isShared}
-          shareToken={shareToken}
-          year={wrappedData.year}
+          shareControls={ownerShareControls}
         />
       </div>
     </div>

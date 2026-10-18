@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma"
 import { parseStripeLibrarySectionIds } from "@/lib/stripe/config"
 import { clearOfferedPricesCache } from "@/lib/stripe/prices"
 import { createLogger } from "@/lib/utils/logger"
+import { seasonYearFor } from "@/lib/wrapped/season"
 import { z } from "zod"
 
 const logger = createLogger("ADMIN")
@@ -28,7 +29,7 @@ export async function getWrappedSettings() {
     if (!config) {
       return {
         wrappedEnabled: true,
-        wrappedYear: new Date().getFullYear(),
+        wrappedYear: seasonYearFor(null, new Date()),
       }
     }
 
@@ -70,22 +71,17 @@ export async function getWrappedSettings() {
       }
     }
 
-    // Determine year: use year from start date if available, otherwise use current year
-    let wrappedYear = new Date().getFullYear()
-    if (config.wrappedGenerationStartDate) {
-      wrappedYear = new Date(config.wrappedGenerationStartDate).getFullYear()
-    }
-
     return {
       wrappedEnabled: isEnabled,
-      wrappedYear,
+      // The season year, the same one the /wrapped resolver and admin screens use
+      wrappedYear: seasonYearFor(config.wrappedGenerationStartDate, new Date()),
     }
   } catch (error) {
     logger.error("Error getting wrapped settings", error)
     // Return defaults on error
     return {
       wrappedEnabled: true,
-      wrappedYear: new Date().getFullYear(),
+      wrappedYear: seasonYearFor(null, new Date()),
     }
   }
 }

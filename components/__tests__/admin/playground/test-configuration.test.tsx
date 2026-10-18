@@ -257,7 +257,7 @@ describe("TestConfiguration", () => {
     it("should show custom model input when using custom model", () => {
       render(<TestConfiguration {...mockProps} showAIParameters={true} useCustomModel={true} />)
 
-      expect(screen.getByPlaceholderText(/Enter custom model name/)).toBeInTheDocument()
+      expect(screen.getByPlaceholderText("Enter custom model name (e.g., gpt-5.4-mini)")).toBeInTheDocument()
     })
 
     it("should switch to custom model input when __custom__ is selected", () => {

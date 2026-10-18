@@ -6,7 +6,6 @@
 import {
   fetchTautulliStatistics,
   fetchPlexServerStatistics,
-  fetchOverseerrStatistics,
   fetchTopContentLeaderboards,
   fetchWatchTimeLeaderboard,
   formatBytes,
@@ -54,7 +53,7 @@ describe('Statistics Functions', () => {
         result: 'success',
         data: [
           {
-            user_id: '123',
+            user_id: 123,
             username: 'testuser',
             email: 'test@example.com',
             friendly_name: 'Test User',
@@ -95,8 +94,7 @@ describe('Statistics Functions', () => {
 
       const result = await fetchTautulliStatistics(
         config,
-        'plex-user-123',
-        'test@example.com',
+        { plexUserId: '123' },
         2024
       )
 
@@ -112,7 +110,7 @@ describe('Statistics Functions', () => {
           result: 'success',
           data: [
             {
-              user_id: '999',
+              user_id: 999,
               username: 'otheruser',
               email: 'other@example.com',
             },
@@ -127,13 +125,14 @@ describe('Statistics Functions', () => {
 
       const result = await fetchTautulliStatistics(
         config,
-        'plex-user-123',
-        'test@example.com',
+        { plexUserId: '123' },
         2024
       )
 
       expect(result.success).toBe(false)
-      expect(result.error).toContain('User not found')
+      expect(result.code).toBe('TAUTULLI_USER_NOT_FOUND')
+      expect(JSON.stringify(result)).not.toContain('otheruser')
+      expect(JSON.stringify(result)).not.toContain('other@example.com')
     })
 
     it('should handle API errors', async () => {
@@ -151,13 +150,13 @@ describe('Statistics Functions', () => {
 
       const result = await fetchTautulliStatistics(
         config,
-        'plex-user-123',
-        'test@example.com',
+        { plexUserId: '123' },
         2024
       )
 
       expect(result.success).toBe(false)
-      expect(result.error).toContain('Invalid API key')
+      expect(result.code).toBeUndefined()
+      expect(result.error).toBe('Failed to fetch users from Tautulli')
     })
 
     it('should filter history by date range', async () => {
@@ -201,8 +200,7 @@ describe('Statistics Functions', () => {
 
       const result = await fetchTautulliStatistics(
         config,
-        'plex-user-123',
-        'test@example.com',
+        { plexUserId: '123' },
         year
       )
 
@@ -243,8 +241,7 @@ describe('Statistics Functions', () => {
 
       const result = await fetchTautulliStatistics(
         config,
-        'plex-user-123',
-        'test@example.com',
+        { plexUserId: '123' },
         2024
       )
 
@@ -267,7 +264,7 @@ describe('Statistics Functions', () => {
           result: 'success',
           data: [
             {
-              user_id: '123',
+              user_id: 123,
               username: 'testuser',
               email: 'test@example.com',
               friendly_name: 'Test User',
@@ -299,8 +296,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123' },
           2024
         )
 
@@ -350,8 +346,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123' },
           2024
         )
 
@@ -406,8 +401,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123' },
           2024
         )
 
@@ -487,8 +481,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123' },
           2024
         )
 
@@ -558,8 +551,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123' },
           2024
         )
 
@@ -620,8 +612,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123' },
           2024
         )
 
@@ -677,8 +668,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123' },
           2024
         )
 
@@ -706,7 +696,7 @@ describe('Statistics Functions', () => {
           result: 'success',
           data: [
             {
-              user_id: '123',
+              user_id: 123,
               username: 'testuser',
               email: 'test@example.com',
               friendly_name: 'Test User',
@@ -761,8 +751,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123' },
           2024
         )
 
@@ -844,8 +833,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123' },
           2024
         )
 
@@ -920,8 +908,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123' },
           2024
         )
 
@@ -970,8 +957,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123' },
           2024
         )
 
@@ -1025,8 +1011,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123' },
           2024
         )
 
@@ -1087,8 +1072,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123' },
           2024
         )
 
@@ -1156,8 +1140,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123' },
           2024
         )
 
@@ -1345,158 +1328,6 @@ describe('Statistics Functions', () => {
     })
   })
 
-  describe('fetchOverseerrStatistics', () => {
-    const config = {
-      url: 'https://overseerr.example.com:5055',
-      apiKey: 'test-key',
-    }
-
-    it('should fetch Overseerr statistics successfully', async () => {
-      const mockUsersResponse = {
-        results: [
-          {
-            id: 1,
-            email: 'test@example.com',
-          },
-        ],
-      }
-
-      const mockRequestsResponse = {
-        results: [
-          {
-            id: 1,
-            requestedBy: { id: 1, email: 'test@example.com' },
-            createdAt: '2024-06-15T00:00:00Z',
-            status: 2, // Approved
-            media: {
-              genres: [{ name: 'Action' }, { name: 'Drama' }],
-            },
-          },
-          {
-            id: 2,
-            requestedBy: { id: 1, email: 'test@example.com' },
-            createdAt: '2024-07-15T00:00:00Z',
-            status: 1, // Pending
-            media: {
-              genres: [{ name: 'Action' }],
-            },
-          },
-        ],
-      }
-
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => mockUsersResponse,
-        } as Response)
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => mockRequestsResponse,
-        } as Response)
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ results: [] }),
-        } as Response)
-
-      const result = await fetchOverseerrStatistics(
-        config,
-        'test@example.com',
-        2024
-      )
-
-      expect(result.success).toBe(true)
-      expect(result.data).toBeDefined()
-      expect(result.data?.totalRequests).toBe(2)
-      expect(result.data?.approvedRequests).toBe(1)
-      expect(result.data?.pendingRequests).toBe(1)
-      expect(result.data?.topRequestedGenres).toHaveLength(2)
-      expect(result.data?.topRequestedGenres[0].genre).toBe('Action')
-    })
-
-    it('should handle user not found', async () => {
-      const mockUsersResponse = {
-        results: [],
-      }
-
-      const mockRequestsResponse = {
-        results: [],
-        pageInfo: {
-          pages: 1,
-          pageSize: 100,
-          results: 0,
-        },
-      }
-
-      // Mock both users and requests calls
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => mockUsersResponse,
-        } as Response)
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => mockRequestsResponse,
-        } as Response)
-
-      const result = await fetchOverseerrStatistics(
-        config,
-        'test@example.com',
-        2024
-      )
-
-      expect(result.success).toBe(true)
-      expect(result.data?.totalRequests).toBe(0)
-    })
-
-    it('should filter requests by year', async () => {
-      const mockUsersResponse = {
-        results: [{ id: 1, email: 'test@example.com' }],
-      }
-
-      const mockRequestsResponse = {
-        results: [
-          {
-            id: 1,
-            requestedBy: { id: 1 },
-            createdAt: '2024-06-15T00:00:00Z',
-            status: 2,
-            media: { genres: [] },
-          },
-          {
-            id: 2,
-            requestedBy: { id: 1 },
-            createdAt: '2023-06-15T00:00:00Z', // Previous year
-            status: 2,
-            media: { genres: [] },
-          },
-        ],
-      }
-
-      mockFetch
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => mockUsersResponse,
-        } as Response)
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => mockRequestsResponse,
-        } as Response)
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ results: [] }),
-        } as Response)
-
-      const result = await fetchOverseerrStatistics(
-        config,
-        'test@example.com',
-        2024
-      )
-
-      expect(result.success).toBe(true)
-      expect(result.data?.totalRequests).toBe(1) // Only 2024 request
-    })
-  })
-
   describe('fetchWatchTimeLeaderboard', () => {
     const config = {
       url: 'https://tautulli.example.com:8181',
@@ -1586,7 +1417,7 @@ describe('Statistics Functions', () => {
           result: 'success',
           data: [
             {
-              user_id: '123',
+              user_id: 123,
               username: 'testuser',
               email: 'test@example.com',
               friendly_name: 'Test User',
@@ -1618,8 +1449,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123' },
           2024
         )
 
@@ -1671,8 +1501,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123' },
           2024
         )
 
@@ -1754,8 +1583,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123' },
           2024
         )
 
@@ -1816,8 +1644,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123' },
           2024
         )
 
@@ -1879,8 +1706,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123' },
           2024
         )
 
@@ -1931,8 +1757,7 @@ describe('Statistics Functions', () => {
 
         const result = await fetchTautulliStatistics(
           config,
-          'plex-user-123',
-          'test@example.com',
+          { plexUserId: '123' },
           2024
         )
 
@@ -1943,148 +1768,6 @@ describe('Statistics Functions', () => {
         expect(result.data?.moviesWatched).toBe(1)
         expect(result.data?.totalWatchTime).toBe(60)
         expect(result.data?.topMovies[0].title).toBe('Movie with Date')
-      })
-    })
-
-    describe('fetchOverseerrStatistics - empty and minimal data', () => {
-      const config = {
-        hostname: 'overseerr.example.com',
-        port: 5055,
-        protocol: 'https',
-        apiKey: 'test-key',
-      }
-
-      it('should handle no requests for the year', async () => {
-        const mockUsersResponse = {
-          results: [{ id: 1, email: 'test@example.com' }],
-        }
-
-        const mockEmptyRequestsResponse = {
-          results: [],
-        }
-
-        mockFetch
-          .mockResolvedValueOnce({
-            ok: true,
-            json: async () => mockUsersResponse,
-          } as Response)
-          .mockResolvedValueOnce({
-            ok: true,
-            json: async () => mockEmptyRequestsResponse,
-          } as Response)
-
-        const result = await fetchOverseerrStatistics(
-          config,
-          'test@example.com',
-          2024
-        )
-
-        expect(result.success).toBe(true)
-        expect(result.data).toBeDefined()
-        expect(result.data?.totalRequests).toBe(0)
-        expect(result.data?.totalServerRequests).toBe(0)
-        expect(result.data?.approvedRequests).toBe(0)
-        expect(result.data?.pendingRequests).toBe(0)
-        expect(result.data?.topRequestedGenres).toEqual([])
-      })
-
-      it('should handle single request', async () => {
-        const mockUsersResponse = {
-          results: [{ id: 1, email: 'test@example.com' }],
-        }
-
-        const mockSingleRequestResponse = {
-          results: [
-            {
-              id: 1,
-              requestedBy: { id: 1, email: 'test@example.com' },
-              createdAt: '2024-06-15T00:00:00Z',
-              status: 2, // Approved
-              media: {
-                genres: [{ name: 'Sci-Fi' }],
-              },
-            },
-          ],
-        }
-
-        mockFetch
-          .mockResolvedValueOnce({
-            ok: true,
-            json: async () => mockUsersResponse,
-          } as Response)
-          .mockResolvedValueOnce({
-            ok: true,
-            json: async () => mockSingleRequestResponse,
-          } as Response)
-          .mockResolvedValueOnce({
-            ok: true,
-            json: async () => ({ results: [] }),
-          } as Response)
-
-        const result = await fetchOverseerrStatistics(
-          config,
-          'test@example.com',
-          2024
-        )
-
-        expect(result.success).toBe(true)
-        expect(result.data).toBeDefined()
-        expect(result.data?.totalRequests).toBe(1)
-        expect(result.data?.approvedRequests).toBe(1)
-        expect(result.data?.pendingRequests).toBe(0)
-        expect(result.data?.topRequestedGenres).toHaveLength(1)
-        expect(result.data?.topRequestedGenres[0].genre).toBe('Sci-Fi')
-        expect(result.data?.topRequestedGenres[0].count).toBe(1)
-      })
-
-      it('should handle requests without genre information', async () => {
-        const mockUsersResponse = {
-          results: [{ id: 1, email: 'test@example.com' }],
-        }
-
-        const mockRequestsWithoutGenres = {
-          results: [
-            {
-              id: 1,
-              requestedBy: { id: 1, email: 'test@example.com' },
-              createdAt: '2024-06-15T00:00:00Z',
-              status: 2,
-              media: {}, // No genres
-            },
-            {
-              id: 2,
-              requestedBy: { id: 1, email: 'test@example.com' },
-              createdAt: '2024-07-15T00:00:00Z',
-              status: 1,
-              // No media field
-            },
-          ],
-        }
-
-        mockFetch
-          .mockResolvedValueOnce({
-            ok: true,
-            json: async () => mockUsersResponse,
-          } as Response)
-          .mockResolvedValueOnce({
-            ok: true,
-            json: async () => mockRequestsWithoutGenres,
-          } as Response)
-          .mockResolvedValueOnce({
-            ok: true,
-            json: async () => ({ results: [] }),
-          } as Response)
-
-        const result = await fetchOverseerrStatistics(
-          config,
-          'test@example.com',
-          2024
-        )
-
-        expect(result.success).toBe(true)
-        expect(result.data).toBeDefined()
-        expect(result.data?.totalRequests).toBe(2)
-        expect(result.data?.topRequestedGenres).toEqual([])
       })
     })
 

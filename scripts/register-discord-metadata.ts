@@ -1,4 +1,3 @@
-#!/usr/bin/env ts-node
 /**
  * Script to register Discord role connection metadata schema.
  *

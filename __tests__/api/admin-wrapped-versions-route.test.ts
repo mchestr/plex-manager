@@ -5,7 +5,7 @@
 import { GET } from '@/app/api/admin/wrapped/[wrappedId]/versions/route'
 import { getHistoricalWrappedVersions } from '@/actions/admin'
 import { requireAdminAPI } from '@/lib/security/api-helpers'
-import { adminRateLimiter } from '@/lib/security/rate-limit'
+import { limitRequest } from '@/lib/security/rate-limit'
 import { NextRequest } from 'next/server'
 
 // Mock dependencies
@@ -18,7 +18,7 @@ jest.mock('@/lib/security/api-helpers', () => ({
 }))
 
 jest.mock('@/lib/security/rate-limit', () => ({
-  adminRateLimiter: jest.fn(),
+  limitRequest: jest.fn(),
 }))
 
 // Mock NextRequest
@@ -69,7 +69,7 @@ describe('GET /api/admin/wrapped/[wrappedId]/versions', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    ;(adminRateLimiter as jest.Mock).mockResolvedValue(null)
+    ;(limitRequest as jest.Mock).mockResolvedValue(null)
     ;(requireAdminAPI as jest.Mock).mockResolvedValue({ session: { user: { isAdmin: true } }, response: null })
   })
 
@@ -128,7 +128,7 @@ describe('GET /api/admin/wrapped/[wrappedId]/versions', () => {
 
   it('should return 429 when rate limit is exceeded', async () => {
     const mockRateLimitResponse = { status: 429, json: () => Promise.resolve({ error: 'Too many requests' }) }
-    ;(adminRateLimiter as jest.Mock).mockResolvedValue(mockRateLimitResponse)
+    ;(limitRequest as jest.Mock).mockResolvedValue(mockRateLimitResponse)
 
     const { NextRequest } = await import('next/server')
     const request = new NextRequest('http://localhost/api/admin/wrapped/wrapped-1/versions')
@@ -136,6 +136,7 @@ describe('GET /api/admin/wrapped/[wrappedId]/versions', () => {
     const response = await GET(request, { params: { wrappedId: 'wrapped-1' } })
 
     expect(response).toBe(mockRateLimitResponse)
+    expect(limitRequest).toHaveBeenCalledWith('admin', request)
     expect(requireAdminAPI).not.toHaveBeenCalled()
   })
 

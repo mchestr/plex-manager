@@ -15,23 +15,36 @@ jest.mock('@/lib/utils', () => ({
   getBaseUrl: jest.fn(() => 'https://example.com'),
 }))
 
-import { callOpenAI, supportsStructuredOutputs } from '@/lib/wrapped/api-calls'
+import { callOpenAI } from '@/lib/wrapped/api-calls'
 import { buildValidOutput } from '@/lib/wrapped/__tests__/fixtures'
 
 const validContent = () => JSON.stringify(buildValidOutput())
 
-function mockFetchResponse(content: string, finishReason = 'stop') {
+function mockFetchResponse(
+  content: string,
+  finishReason = 'stop',
+  extra: { model?: string; cachedTokens?: number } = {}
+) {
   ;(global.fetch as jest.Mock).mockResolvedValueOnce({
     ok: true,
     json: async () => ({
+      ...(extra.model && { model: extra.model }),
       choices: [{ message: { content }, finish_reason: finishReason }],
       usage: {
         prompt_tokens: 1000,
         completion_tokens: 500,
         total_tokens: 1500,
+        ...(extra.cachedTokens !== undefined && {
+          prompt_tokens_details: { cached_tokens: extra.cachedTokens },
+        }),
       },
     }),
   })
+}
+
+function sentBody() {
+  const fetchCall = (global.fetch as jest.Mock).mock.calls[0]
+  return JSON.parse(fetchCall[1].body)
 }
 
 describe('LLM API Calls', () => {
@@ -224,21 +237,100 @@ describe('LLM API Calls', () => {
     })
   })
 
-  describe('supportsStructuredOutputs', () => {
+  describe('model-dependent request fields', () => {
+    it('sends gpt-6.1-sol max_completion_tokens and a json_schema, but no temperature', async () => {
+      mockFetchResponse(validContent())
+
+      await callOpenAI(
+        { provider: 'openai', apiKey: 'test-key', model: 'gpt-6.1-sol', temperature: 0.8, maxTokens: 6000 },
+        'test prompt'
+      )
+
+      const body = sentBody()
+      expect(body.max_completion_tokens).toBe(6000)
+      expect(body.max_tokens).toBeUndefined()
+      expect(body.response_format.type).toBe('json_schema')
+      expect(body).not.toHaveProperty('temperature')
+    })
+
+    it('keeps temperature and max_tokens for gpt-4o', async () => {
+      mockFetchResponse(validContent())
+
+      await callOpenAI(
+        { provider: 'openai', apiKey: 'test-key', model: 'gpt-4o', temperature: 0.8, maxTokens: 6000 },
+        'test prompt'
+      )
+
+      const body = sentBody()
+      expect(body.temperature).toBe(0.8)
+      expect(body.max_tokens).toBe(6000)
+      expect(body.max_completion_tokens).toBeUndefined()
+      expect(body.response_format.type).toBe('json_schema')
+    })
+
     it.each([
-      ['gpt-4o', true],
-      ['gpt-4o-mini-2024-07-18', true],
-      ['gpt-4.1', true],
-      ['gpt-5', true],
-      ['gpt-5.2-mini', true],
-      ['o3', true],
-      ['o4-mini', true],
-      ['gpt-4', false],
-      ['gpt-4-turbo', false],
-      ['gpt-3.5-turbo', false],
-      ['o1', false],
-    ])('%s → %s', (model, expected) => {
-      expect(supportsStructuredOutputs(model)).toBe(expected)
+      ['gpt-6-luna', 'json_schema'],
+      ['gpt-6-astra', 'json_schema'],
+      ['o4-mini', 'json_schema'],
+      ['gpt-4', 'json_object'],
+      ['o1', 'json_object'],
+    ])('%s gets response_format %s', async (model, type) => {
+      mockFetchResponse(validContent())
+
+      await callOpenAI({ provider: 'openai', apiKey: 'test-key', model }, 'test prompt')
+
+      expect(sentBody().response_format.type).toBe(type)
+    })
+
+    it('sends no temperature to o-series models', async () => {
+      mockFetchResponse(validContent())
+
+      await callOpenAI(
+        { provider: 'openai', apiKey: 'test-key', model: 'o4-mini', temperature: 0.7, maxTokens: 4000 },
+        'test prompt'
+      )
+
+      const body = sentBody()
+      expect(body).not.toHaveProperty('temperature')
+      expect(body.max_completion_tokens).toBe(4000)
+    })
+  })
+
+  describe('usage', () => {
+    it('reports and prices the model the API served', async () => {
+      mockFetchResponse(validContent(), 'stop', { model: 'gpt-6-luna-2026-09-22' })
+
+      const result = await callOpenAI(
+        { provider: 'openai', apiKey: 'test-key', model: 'gpt-6-luna' },
+        'test prompt'
+      )
+
+      expect(result.model).toBe('gpt-6-luna-2026-09-22')
+      // 1000 input at $0.10/1M + 500 output at $0.50/1M
+      expect(result.tokenUsage?.cost).toBeCloseTo(0.00035, 10)
+    })
+
+    it('falls back to the configured model when the API names none', async () => {
+      mockFetchResponse(validContent())
+
+      const result = await callOpenAI(
+        { provider: 'openai', apiKey: 'test-key', model: 'gpt-5.4-mini' },
+        'test prompt'
+      )
+
+      expect(result.model).toBe('gpt-5.4-mini')
+    })
+
+    it('prices cached prompt tokens at the cached rate', async () => {
+      mockFetchResponse(validContent(), 'stop', { model: 'gpt-6-sol', cachedTokens: 400 })
+
+      const result = await callOpenAI(
+        { provider: 'openai', apiKey: 'test-key', model: 'gpt-6-sol' },
+        'test prompt'
+      )
+
+      // 600 uncached at $2/1M + 400 cached at $0.20/1M + 500 output at $10/1M
+      expect(result.tokenUsage?.cost).toBeCloseTo(0.0012 + 0.00008 + 0.005, 10)
     })
   })
 })

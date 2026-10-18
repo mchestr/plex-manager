@@ -16,7 +16,12 @@ const customJestConfig = {
     '**/__tests__/**/*.test.[jt]s?(x)',
     '**/?(*.)+(spec|test).[jt]s?(x)',
   ],
-  testPathIgnorePatterns: ['<rootDir>/e2e/'],
+  // The Redis-backed suites need a server: they run when TEST_REDIS_URL is
+  // set, and always in CI, where a missing URL fails them.
+  testPathIgnorePatterns: [
+    '<rootDir>/e2e/',
+    ...(process.env.TEST_REDIS_URL || process.env.CI ? [] : ['\\.redis\\.test\\.ts$']),
+  ],
   collectCoverageFrom: [
     'components/**/*.{ts,tsx}',
     'lib/**/*.{ts,tsx}',
@@ -25,7 +30,7 @@ const customJestConfig = {
     '!**/node_modules/**',
   ],
   transformIgnorePatterns: [
-    '/node_modules/(?!jose|@panva|openid-client|oauth4webapi|next-auth|@next-auth)/',
+    '/node_modules/(?!jose|@panva|openid-client|oauth4webapi|next-auth)/',
   ],
   moduleDirectories: ['node_modules', '<rootDir>/'],
 }

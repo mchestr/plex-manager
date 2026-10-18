@@ -1,4 +1,3 @@
-#!/usr/bin/env ts-node
 /**
  * Script to register the bot's slash commands with Discord (deploy-time).
  *
@@ -22,11 +21,11 @@
  *   npm run register-discord-commands
  */
 
+// Load .env before the registry: its import chain reaches lib/prisma, which
+// reads DATABASE_URL as soon as it is imported.
+import "dotenv/config"
 import { REST, Routes } from "discord.js"
-import dotenv from "dotenv"
 import { COMMANDS } from "@/lib/discord/commands/registry"
-
-dotenv.config()
 
 const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN
 const CLIENT_ID = process.env.DISCORD_CLIENT_ID || process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID

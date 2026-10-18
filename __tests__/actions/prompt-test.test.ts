@@ -248,6 +248,37 @@ describe('testPromptTemplate', () => {
       )
     })
 
+    it('should send "there" instead of an email-like Plex username', async () => {
+      mockGenerateWrappedPrompt.mockResolvedValue('Rendered prompt for there')
+      mockCallOpenAI.mockResolvedValue({ success: false, error: 'API error' } as any)
+
+      const result = await testPromptTemplate({
+        userName: 'invited.member@example.com',
+        year: 2024,
+        statistics: mockStatistics,
+        sendToAI: true,
+      })
+
+      expect(mockGenerateWrappedPrompt).toHaveBeenCalledWith('there', 2024, mockStatistics, undefined)
+      expect(mockCallOpenAI).toHaveBeenCalledWith(expect.any(Object), 'Rendered prompt for there')
+      expect(JSON.stringify(mockGenerateWrappedPrompt.mock.calls)).not.toContain('@example.com')
+      expect(result.renderedPrompt).toBe('Rendered prompt for there')
+    })
+
+    it('should send the trimmed member name when it is not an email', async () => {
+      mockGenerateWrappedPrompt.mockResolvedValue('Rendered prompt')
+      mockCallOpenAI.mockResolvedValue({ success: false, error: 'API error' } as any)
+
+      await testPromptTemplate({
+        userName: '  Mike  ',
+        year: 2024,
+        statistics: mockStatistics,
+        sendToAI: true,
+      })
+
+      expect(mockGenerateWrappedPrompt).toHaveBeenCalledWith('Mike', 2024, mockStatistics, undefined)
+    })
+
     it('should use custom model when provided', async () => {
       const mockRenderedPrompt = 'Rendered prompt'
       const mockLLMResponse = {
@@ -319,6 +350,30 @@ describe('testPromptTemplate', () => {
           totalTokens: 150,
           cost: 0.001,
         },
+      })
+    })
+
+    it('should record the model the API served', async () => {
+      mockGenerateWrappedPrompt.mockResolvedValue('Rendered prompt')
+      mockCallOpenAI.mockResolvedValue({
+        success: true,
+        output: { archetype: { id: 'curator' } },
+        rawResponse: 'Raw response',
+        model: 'gpt-6-luna-2026-09-22',
+        tokenUsage: { promptTokens: 100, completionTokens: 50, totalTokens: 150, cost: 0.000035 },
+      } as any)
+      mockPrisma.lLMUsage.create.mockResolvedValue({} as any)
+
+      await testPromptTemplate({
+        userName: 'Test User',
+        year: 2024,
+        statistics: mockStatistics,
+        sendToAI: true,
+        model: 'gpt-6-luna',
+      })
+
+      expect(mockPrisma.lLMUsage.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ model: 'gpt-6-luna-2026-09-22', cost: 0.000035 }),
       })
     })
 

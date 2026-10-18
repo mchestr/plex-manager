@@ -2,12 +2,8 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { WrappedViewerNavigation } from '@/components/wrapped/wrapped-viewer-navigation'
 
-// Mock WrappedShareButton
-jest.mock('../wrapped/wrapped-share-button', () => ({
-  WrappedShareButton: ({ shareToken }: { shareToken: string }) => (
-    <div data-testid="share-button">Share Button {shareToken}</div>
-  ),
-}))
+// The owner's share-link controls arrive as a slot from the viewer wrapper.
+const shareControls = <div data-testid="share-controls">Share Controls</div>
 
 describe('WrappedViewerNavigation', () => {
   const defaultProps = {
@@ -16,7 +12,6 @@ describe('WrappedViewerNavigation', () => {
     onPrevious: jest.fn(),
     onNext: jest.fn(),
     onShowAll: jest.fn(),
-    year: 2024,
   }
 
   beforeEach(() => {
@@ -75,48 +70,21 @@ describe('WrappedViewerNavigation', () => {
     expect(onShowAll).toHaveBeenCalledTimes(1)
   })
 
-  it('should render share button on last section when not shared', () => {
-    render(
-      <WrappedViewerNavigation
-        {...defaultProps}
-        currentSectionIndex={4}
-        shareToken="test-token"
-      />
-    )
-    expect(screen.getByTestId('share-button')).toBeInTheDocument()
+  it('should render the share controls on the last section', () => {
+    render(<WrappedViewerNavigation {...defaultProps} currentSectionIndex={4} shareControls={shareControls} />)
+    expect(screen.getByTestId('share-controls')).toBeInTheDocument()
+    expect(screen.getByText('Show All')).toBeInTheDocument()
   })
 
-  it('should not render share button when isShared is true', () => {
-    render(
-      <WrappedViewerNavigation
-        {...defaultProps}
-        currentSectionIndex={4}
-        isShared={true}
-        shareToken="test-token"
-      />
-    )
-    expect(screen.queryByTestId('share-button')).not.toBeInTheDocument()
+  it('should not render the share controls when not on last section', () => {
+    render(<WrappedViewerNavigation {...defaultProps} currentSectionIndex={2} shareControls={shareControls} />)
+    expect(screen.queryByTestId('share-controls')).not.toBeInTheDocument()
   })
 
-  it('should not render share button when not on last section', () => {
-    render(
-      <WrappedViewerNavigation
-        {...defaultProps}
-        currentSectionIndex={2}
-        shareToken="test-token"
-      />
-    )
-    expect(screen.queryByTestId('share-button')).not.toBeInTheDocument()
-  })
-
-  it('should not render share button when shareToken is not provided', () => {
-    render(
-      <WrappedViewerNavigation
-        {...defaultProps}
-        currentSectionIndex={4}
-      />
-    )
-    expect(screen.queryByTestId('share-button')).not.toBeInTheDocument()
+  it('should render no share controls when none are given', () => {
+    // Admin views and the playground preview pass none
+    render(<WrappedViewerNavigation {...defaultProps} currentSectionIndex={4} />)
+    expect(screen.queryByTestId('share-controls')).not.toBeInTheDocument()
   })
 
   it('should render placeholder div when on first section', () => {
@@ -124,19 +92,6 @@ describe('WrappedViewerNavigation', () => {
     const divs = container.querySelectorAll('div')
     // Should have a placeholder div on the left side
     expect(divs.length).toBeGreaterThan(0)
-  })
-
-  it('should pass correct props to share button', () => {
-    render(
-      <WrappedViewerNavigation
-        {...defaultProps}
-        currentSectionIndex={4}
-        shareToken="test-token-123"
-        year={2023}
-      />
-    )
-    const shareButton = screen.getByTestId('share-button')
-    expect(shareButton).toHaveTextContent('Share Button test-token-123')
   })
 })
 

@@ -1,4 +1,4 @@
-import { getUserPlexWrapped, getAllUsersWithWrapped } from '@/actions/user-queries'
+import { getUserPlexWrapped, getAllUsersWithWrapped, getUserFirstWatchDate } from '@/actions/user-queries'
 import { prisma } from '@/lib/prisma'
 import { aggregateLlmUsage } from '@/lib/utils'
 import { getServerSession } from 'next-auth'
@@ -30,6 +30,9 @@ jest.mock('@/lib/prisma', () => ({
     },
     subscription: {
       findMany: jest.fn(),
+    },
+    tautulli: {
+      findFirst: jest.fn(),
     },
   },
 }))
@@ -96,17 +99,19 @@ describe('getUserPlexWrapped', () => {
     })
   })
 
-  it('should use current year as default', async () => {
-    const currentYear = 2024
+  // P0.14: no calendar default. In January the caller's season year (2026)
+  // is looked up, not the new calendar year.
+  it('looks up the year it is given, not the calendar year', async () => {
+    jest.setSystemTime(new Date('2027-01-02T12:00:00Z'))
     mockPrisma.plexWrapped.findUnique.mockResolvedValue(null)
 
-    await getUserPlexWrapped('user-1')
+    await getUserPlexWrapped('user-1', 2026)
 
     expect(mockPrisma.plexWrapped.findUnique).toHaveBeenCalledWith({
       where: {
         userId_year: {
           userId: 'user-1',
-          year: currentYear,
+          year: 2026,
         },
       },
       include: {
@@ -136,6 +141,56 @@ describe('getUserPlexWrapped', () => {
     const result = await getUserPlexWrapped('user-1', 2024)
 
     expect(result).toBeNull()
+  })
+
+  describe('stored error (P0.9)', () => {
+    // A row written before P0.9 still holds the Tautulli roster.
+    const LEGACY_ROSTER_ERROR =
+      'User not found in Tautulli. Plex User ID: 1, Email: me@example.com. Available users: olga_plex (olga.private@example.com), piet_plex (piet.private@example.com)'
+
+    it('gives a member a stored code, not the legacy roster text', async () => {
+      mockPrisma.plexWrapped.findUnique.mockResolvedValue(
+        makePrismaWrapped({ status: 'failed', error: LEGACY_ROSTER_ERROR }) as any
+      )
+
+      const result = await getUserPlexWrapped('user-1', 2024)
+
+      expect(result?.error).toBe('{"code":"GENERATION_FAILED"}')
+      const output = JSON.stringify(result)
+      for (const value of ['olga_plex', 'olga.private@example.com', 'piet_plex', 'piet.private@example.com', 'Available users']) {
+        expect(output).not.toContain(value)
+      }
+    })
+
+    it('passes a stored code through to a member unchanged', async () => {
+      mockPrisma.plexWrapped.findUnique.mockResolvedValue(
+        makePrismaWrapped({ status: 'failed', error: '{"code":"TAUTULLI_USER_NOT_FOUND"}' }) as any
+      )
+
+      const result = await getUserPlexWrapped('user-1', 2024)
+
+      expect(result?.error).toBe('{"code":"TAUTULLI_USER_NOT_FOUND"}')
+    })
+
+    it('leaves a row without an error untouched', async () => {
+      const row = makePrismaWrapped({ status: 'completed', error: null })
+      mockPrisma.plexWrapped.findUnique.mockResolvedValue(row as any)
+
+      const result = await getUserPlexWrapped('user-1', 2024)
+
+      expect(result).toEqual(row)
+    })
+
+    it('gives an admin the stored text as is', async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValue({ user: { id: 'admin-1', isAdmin: true } })
+      mockPrisma.plexWrapped.findUnique.mockResolvedValue(
+        makePrismaWrapped({ status: 'failed', error: LEGACY_ROSTER_ERROR }) as any
+      )
+
+      const result = await getUserPlexWrapped('user-1', 2024)
+
+      expect(result?.error).toBe(LEGACY_ROSTER_ERROR)
+    })
   })
 })
 
@@ -220,12 +275,14 @@ describe('getAllUsersWithWrapped', () => {
     })
   })
 
-  it('should use current year as default', async () => {
-    const currentYear = 2024
+  // P0.14: the year comes from the caller (the season year), never the calendar.
+  it('reads the year it is given, not the calendar year', async () => {
+    jest.setSystemTime(new Date('2027-01-02T12:00:00Z'))
+    const seasonYear = 2026
     mockPrisma.user.findMany.mockResolvedValue([])
     mockPrisma.plexWrapped.findMany.mockResolvedValue([])
 
-    await getAllUsersWithWrapped()
+    await getAllUsersWithWrapped(seasonYear)
 
     expect(mockPrisma.user.findMany).toHaveBeenCalledWith({
       orderBy: [
@@ -235,7 +292,7 @@ describe('getAllUsersWithWrapped', () => {
       include: {
         plexWrapped: {
           where: {
-            year: currentYear,
+            year: seasonYear,
           },
           take: 1,
           include: {
@@ -439,5 +496,83 @@ describe('aggregateLlmUsage', () => {
       model: 'claude-3',
       count: 2,
     })
+  })
+})
+
+describe('getUserFirstWatchDate', () => {
+  const roster = [
+    { user_id: 401, username: 'jade_plex', email: 'jade.private@example.com', friendly_name: 'Jade J' },
+    { user_id: 402, username: 'kurt_plex', email: 'kurt.private@example.com', friendly_name: 'Kurt K' },
+  ]
+  const firstWatch = Math.floor(new Date('2023-03-04T05:06:07Z').getTime() / 1000)
+  const originalFetch = global.fetch
+  const mockFetch = jest.fn()
+
+  function respond(body: unknown) {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => body })
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockFetch.mockReset()
+    global.fetch = mockFetch as unknown as typeof fetch
+    ;(getServerSession as jest.Mock).mockResolvedValue({ user: { id: 'user-1', isAdmin: false } })
+    ;(mockPrisma.tautulli.findFirst as jest.Mock).mockResolvedValue({
+      url: 'http://tautulli.local:8181',
+      apiKey: 'key',
+    })
+  })
+
+  afterEach(() => {
+    global.fetch = originalFetch
+  })
+
+  it('finds the member by Plex account ID and reads their first watch', async () => {
+    respond({ response: { result: 'success', data: roster } })
+    respond({ response: { result: 'success', data: { data: [{ date: firstWatch }] } } })
+
+    const result = await getUserFirstWatchDate('402')
+
+    expect(result).toEqual({ success: true, firstWatchDate: '2023-03-04T05:06:07.000Z' })
+    expect(String(mockFetch.mock.calls[1][0])).toContain('cmd=get_history&user_id=402&')
+  })
+
+  it('never reads another account when no row carries the member\'s ID', async () => {
+    // Tautulli's built-in Local user and a managed user titled "Kids" sit next
+    // to the roster; the member's plex.tv ID is on none of the rows.
+    respond({
+      response: {
+        result: 'success',
+        data: [
+          { user_id: 0, username: 'Local', email: null, friendly_name: 'Local' },
+          { user_id: 301, username: 'Kids', email: null, friendly_name: 'Kids' },
+          ...roster,
+        ],
+      },
+    })
+
+    const result = await getUserFirstWatchDate('999')
+
+    expect(result).toEqual({ success: false, error: 'User not found in Tautulli' })
+    // Only the get_users call ran; no other account's history was read.
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('reports a Tautulli failure without a history request', async () => {
+    respond({ response: { result: 'error', message: 'Invalid apikey' } })
+
+    const result = await getUserFirstWatchDate('402')
+
+    expect(result).toEqual({ success: false, error: 'Failed to fetch users from Tautulli' })
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('requires a session', async () => {
+    ;(getServerSession as jest.Mock).mockResolvedValue(null)
+
+    const result = await getUserFirstWatchDate('402')
+
+    expect(result).toEqual({ success: false, error: 'Unauthorized' })
+    expect(mockFetch).not.toHaveBeenCalled()
   })
 })

@@ -5,6 +5,7 @@ import { StripeSettingsForm } from "@/components/admin/settings/StripeSettingsFo
 import { WatchlistSyncSettings } from "@/components/admin/settings/watchlist-sync-settings"
 import { WrappedSettingsForm } from "@/components/admin/settings/wrapped-settings-form"
 import { getBaseUrl } from "@/lib/utils"
+import { getSeasonYear } from "@/lib/wrapped/season"
 
 export const dynamic = 'force-dynamic'
 
@@ -55,6 +56,7 @@ function FeatureStatusBadge({ featureName, enabled }: FeatureStatusBadgeProps) {
 export default async function SettingsPage() {
   const settings = await getAdminSettings()
   const stripeConfig = await getStripeConfig()
+  const seasonYear = await getSeasonYear()
   const baseUrl = getBaseUrl()
   const discordPortalUrl = `${baseUrl}/discord/link`
   const nodeVersion = process.version
@@ -170,9 +172,7 @@ export default async function SettingsPage() {
                   <div className="space-y-4">
                     <WrappedSettingsForm
                       enabled={settings.config.wrappedEnabled ?? true}
-                      year={settings.config.wrappedGenerationStartDate
-                        ? new Date(settings.config.wrappedGenerationStartDate).getFullYear()
-                        : new Date().getFullYear()}
+                      year={seasonYear}
                       startDate={settings.config.wrappedGenerationStartDate}
                       endDate={settings.config.wrappedGenerationEndDate}
                     />

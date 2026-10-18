@@ -10,6 +10,7 @@ import { StatusFooter } from "@/components/dashboard/status-background"
 import { WrappedCard } from "@/components/dashboard/wrapped-card"
 import type { DashboardDiscordConnection } from "@/components/discord/link-callout"
 import { WatchlistSyncCard } from "@/components/watchlist/sync-settings-card"
+import type { RewindEligibility } from "@/lib/wrapped/eligibility"
 import { signOut } from "next-auth/react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -25,6 +26,7 @@ interface UserDashboardProps {
   overseerrUrl?: string | null
   prometheusStatus?: StatusData
   memberSince: string // ISO date string of when user joined
+  rewindEligibility: RewindEligibility // decided on the server (FR-48)
   primaryAuthService?: string | null // "plex" or "jellyfin"
   mediaServerUrl?: string | null // URL to the media server
   subscriptionSlot?: React.ReactNode // server-rendered SubscriptionStatusView
@@ -41,6 +43,7 @@ export function UserDashboard({
   overseerrUrl,
   prometheusStatus,
   memberSince,
+  rewindEligibility,
   primaryAuthService,
   mediaServerUrl,
   subscriptionSlot,
@@ -94,7 +97,7 @@ export function UserDashboard({
           )}
 
             {/* Wrapped - Hero callout at the top */}
-            <WrappedCard userId={userId} memberSince={memberSince} />
+            <WrappedCard userId={userId} memberSince={memberSince} rewindEligibility={rewindEligibility} />
 
             {/* Quick Links - visually separated section */}
             <div className="space-y-3 sm:space-y-4 pt-2">

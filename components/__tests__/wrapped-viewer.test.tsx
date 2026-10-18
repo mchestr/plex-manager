@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { WrappedViewer } from '@/components/wrapped/wrapped-viewer'
 import { WrappedData } from '@/types/wrapped'
 
@@ -722,6 +723,59 @@ describe('WrappedViewer', () => {
       )
 
       expect(screen.getByText('Welcome')).toBeInTheDocument()
+    })
+  })
+
+  describe('Owner share controls', () => {
+    const shareControls = <div data-testid="owner-share-controls">Owner share controls</div>
+    const twoSections = () =>
+      createMockWrappedData({
+        sections: [
+          { id: 'hero-1', type: 'hero', title: 'Section 1', content: 'Content 1' },
+          { id: 'stats-1', type: 'total-watch-time', title: 'Section 2', content: 'Content 2' },
+        ],
+      })
+
+    it('shows the controls on the last slide only', async () => {
+      const user = userEvent.setup()
+      render(<WrappedViewer wrappedData={twoSections()} shareControls={shareControls} />)
+      expect(screen.queryByTestId('owner-share-controls')).not.toBeInTheDocument()
+
+      await user.click(screen.getByText('Next'))
+
+      expect(await screen.findByTestId('owner-share-controls')).toBeInTheDocument()
+    })
+
+    it('keeps the controls under "Show all"', async () => {
+      const user = userEvent.setup()
+      render(<WrappedViewer wrappedData={createMockWrappedData()} shareControls={shareControls} />)
+      expect(screen.getByTestId('owner-share-controls')).toBeInTheDocument()
+
+      await user.click(screen.getByText('Show All'))
+
+      expect(screen.queryByText('Show All')).not.toBeInTheDocument()
+      expect(screen.getByText('Welcome')).toBeInTheDocument()
+      expect(screen.getByTestId('owner-share-controls')).toBeInTheDocument()
+    })
+
+    it('never shows the controls in a shared view', async () => {
+      const user = userEvent.setup()
+      render(<WrappedViewer wrappedData={createMockWrappedData()} isShared shareControls={shareControls} />)
+      expect(screen.queryByTestId('owner-share-controls')).not.toBeInTheDocument()
+
+      await user.click(screen.getByText('Show All'))
+
+      expect(screen.queryByTestId('owner-share-controls')).not.toBeInTheDocument()
+    })
+
+    it('shows no controls under "Show all" when none are given', async () => {
+      const user = userEvent.setup()
+      render(<WrappedViewer wrappedData={createMockWrappedData()} />)
+
+      await user.click(screen.getByText('Show All'))
+
+      expect(screen.getByText('Welcome')).toBeInTheDocument()
+      expect(screen.queryByTestId('owner-share-controls')).not.toBeInTheDocument()
     })
   })
 

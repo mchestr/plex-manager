@@ -8,6 +8,7 @@ import { testPlexConnection } from "@/lib/connections/plex"
 import { testRadarrConnection } from "@/lib/connections/radarr"
 import { testSonarrConnection } from "@/lib/connections/sonarr"
 import { testTautulliConnection } from "@/lib/connections/tautulli"
+import { DEFAULT_OPENAI_MODEL } from "@/lib/llm/openai-params"
 import { prisma } from "@/lib/prisma"
 import { discordIntegrationSchema, type DiscordIntegrationInputData } from "@/lib/validations/discord"
 import { llmProviderSchema, type LLMProviderInput } from "@/lib/validations/llm-provider"
@@ -445,7 +446,7 @@ async function saveLLMProviderForPurpose(
           provider: validated.provider,
           purpose,
           apiKey: validated.apiKey,
-          model: validated.model || "gpt-4o-mini",
+          model: validated.model || DEFAULT_OPENAI_MODEL,
           temperature: validated.temperature ?? null,
           maxTokens: validated.maxTokens ?? null,
           isActive: true,

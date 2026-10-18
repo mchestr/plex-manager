@@ -4,6 +4,7 @@
 
 import { GET } from '@/app/api/wrapped/poster/[ratingKey]/route'
 import { prisma } from '@/lib/prisma'
+import { limitRequest } from '@/lib/security/rate-limit'
 import { fetchWithTimeout } from '@/lib/utils/fetch-with-timeout'
 import { getServerSession } from 'next-auth'
 
@@ -27,7 +28,7 @@ jest.mock('@/lib/auth', () => ({
 }))
 
 jest.mock('@/lib/security/rate-limit', () => ({
-  posterRateLimiter: jest.fn().mockResolvedValue(null),
+  limitRequest: jest.fn().mockResolvedValue(null),
 }))
 
 jest.mock('@/lib/utils/fetch-with-timeout', () => ({
@@ -73,6 +74,9 @@ jest.mock('next/server', () => {
 })
 
 const PLEX_SERVER = { url: 'http://plex.local:32400', token: 'server-token', isActive: true }
+
+/** The columns the route selects for a share token, minus `data`. */
+const SHARED_ROW = { year: 2026, status: 'completed', summary: null, archetype: null }
 
 async function callRoute(url: string, ratingKey: string) {
   const { NextRequest } = await import('next/server')
@@ -133,7 +137,7 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
   it('allows a share token whose wrapped includes the rating key', async () => {
     ;(getServerSession as jest.Mock).mockResolvedValue(null)
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue({
-      status: 'completed',
+      ...SHARED_ROW,
       data: JSON.stringify({
         statistics: {
           topMovies: [{ title: 'Dune', ratingKey: '123' }],
@@ -149,15 +153,39 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
     )
 
     expect(response.status).toBe(200)
+    expect(response.headers.get('X-Robots-Tag')).toBe('noindex')
     expect(prisma.plexWrapped.findUnique).toHaveBeenCalledWith(
       expect.objectContaining({ where: { shareToken: 'tok' } })
     )
   })
 
+  it('allows a share token only for titles the share page shows (top five per list)', async () => {
+    ;(getServerSession as jest.Mock).mockResolvedValue(null)
+    const movies = Array.from({ length: 6 }, (_, i) => ({
+      title: `Movie ${i + 1}`,
+      watchTime: 100 - i,
+      playCount: 1,
+      ratingKey: String(501 + i),
+    }))
+    ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue({
+      ...SHARED_ROW,
+      data: JSON.stringify({ statistics: { topMovies: movies, topShows: [] } }),
+    })
+    mockUpstreamImage()
+
+    const fifth = await callRoute('http://localhost/api/wrapped/poster/505?share=tok', '505')
+    expect(fifth.status).toBe(200)
+
+    ;(fetchWithTimeout as jest.Mock).mockClear()
+    const sixth = await callRoute('http://localhost/api/wrapped/poster/506?share=tok', '506')
+    expect(sixth.status).toBe(401)
+    expect(fetchWithTimeout).not.toHaveBeenCalled()
+  })
+
   it('rejects a share token for a rating key outside the wrapped (no library enumeration)', async () => {
     ;(getServerSession as jest.Mock).mockResolvedValue(null)
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue({
-      status: 'completed',
+      ...SHARED_ROW,
       data: JSON.stringify({
         statistics: {
           topMovies: [{ title: 'Dune', ratingKey: '123' }],
@@ -178,6 +206,7 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
   it('rejects a share token for an incomplete wrapped', async () => {
     ;(getServerSession as jest.Mock).mockResolvedValue(null)
     ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue({
+      ...SHARED_ROW,
       status: 'generating',
       data: '{}',
     })
@@ -197,6 +226,18 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
     const response = await callRoute('http://localhost/api/wrapped/poster/123', '123')
 
     expect(response.status).toBe(404)
+  })
+
+  it('short-circuits on the poster rate limit before any lookup', async () => {
+    const limited = { status: 429 }
+    ;(limitRequest as jest.Mock).mockResolvedValueOnce(limited)
+
+    const response = await callRoute('http://localhost/api/wrapped/poster/123', '123')
+
+    expect(response).toBe(limited)
+    expect(limitRequest).toHaveBeenCalledWith('poster', expect.anything())
+    expect(getServerSession).not.toHaveBeenCalled()
+    expect(fetchWithTimeout).not.toHaveBeenCalled()
   })
 
   it('returns 404 when Plex cannot produce the image', async () => {

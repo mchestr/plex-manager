@@ -2,7 +2,7 @@ import { getAllPlexServerUsers } from "@/lib/connections/plex"
 import { prisma } from "@/lib/prisma"
 import { requireAdminAPI } from "@/lib/security/api-helpers"
 import { createSafeError, ErrorCode, getStatusCode, logError } from "@/lib/security/error-handler"
-import { adminRateLimiter } from "@/lib/security/rate-limit"
+import { limitRequest } from "@/lib/security/rate-limit"
 import { NextRequest, NextResponse } from "next/server"
 
 export const dynamic = 'force-dynamic'
@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: NextRequest) {
   try {
     // Apply rate limiting
-    const rateLimitResponse = await adminRateLimiter(request)
+    const rateLimitResponse = await limitRequest("admin", request)
     if (rateLimitResponse) {
       return rateLimitResponse
     }

@@ -1,5 +1,7 @@
 "use client"
 
+import { DEFAULT_OPENAI_MODEL } from "@/lib/llm/openai-params"
+
 interface CostDisplayProps {
   tokenUsage?: {
     promptTokens: number
@@ -21,7 +23,7 @@ export function CostDisplay({
     return null
   }
 
-  const model = selectedModel || configuredModel || "gpt-4"
+  const model = selectedModel || configuredModel || DEFAULT_OPENAI_MODEL
 
   return (
     <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/30 rounded-xl p-6 shadow-lg shadow-slate-900/20 mt-8">

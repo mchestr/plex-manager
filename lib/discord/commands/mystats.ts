@@ -126,7 +126,7 @@ async function handleMyStats(ctx: InteractionContext): Promise<void> {
   const user = await requireLinkedUser(ctx, { action: "viewing your stats" })
   if (!user) return
 
-  const { plexUserId, email } = user
+  const { plexUserId } = user
 
   // Tautulli fetch is slow; ack now (ephemerally) so we stay under Discord's 3s
   // window, then edit the reply with the result.
@@ -147,8 +147,7 @@ async function handleMyStats(ctx: InteractionContext): Promise<void> {
   try {
     const result = await fetchTautulliStatistics(
       { url: tautulli.url, apiKey: tautulli.apiKey },
-      plexUserId,
-      email,
+      { plexUserId },
       new Date().getFullYear()
     )
 

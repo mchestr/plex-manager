@@ -1,5 +1,7 @@
 "use server"
 
+import { getSetupStatus } from "@/actions/setup"
+
 // Valid LLM provider values
 const VALID_LLM_PROVIDERS = ["openai"] as const
 type ValidLLMProvider = (typeof VALID_LLM_PROVIDERS)[number]
@@ -93,8 +95,10 @@ export interface DevDefaults {
 /**
  * Returns development defaults for the setup wizard.
  *
- * SECURITY NOTE: These values are ONLY available in development mode (NODE_ENV=development).
- * In production, all values return null regardless of environment variables.
+ * SECURITY NOTE: These values are ONLY returned when NODE_ENV=development, the explicit
+ * DEV_SETUP_PREFILL=true flag is set, and setup is not yet complete. Otherwise every value
+ * is null regardless of the DEV_* environment variables. The flag is separate from
+ * E2E_TEST_MODE so that turning on the prefill never enables test-token login or the seed.
  *
  * Auto-submit behavior:
  * - When DEV_SETUP_AUTO_SUBMIT=true and all required fields for a form are populated,
@@ -117,8 +121,13 @@ export async function getDevDefaults(): Promise<DevDefaults> {
     autoSubmit: false,
   }
 
-  // Only expose in development - this is a critical security boundary
-  if (process.env.NODE_ENV !== "development") {
+  // Only expose in development, behind the explicit flag, before setup completes -
+  // this is a critical security boundary
+  if (process.env.NODE_ENV !== "development" || process.env.DEV_SETUP_PREFILL !== "true") {
+    return emptyDefaults
+  }
+  const { isComplete } = await getSetupStatus()
+  if (isComplete) {
     return emptyDefaults
   }
 

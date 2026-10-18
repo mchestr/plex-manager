@@ -1,6 +1,6 @@
 "use client"
 
-import { WrappedData } from "@/types/wrapped"
+import type { ShareSafeRewindV2 } from "@/lib/wrapped/data/share-safe-v2"
 import { motion } from "framer-motion"
 import { FormattedText } from "@/components/shared/formatted-text"
 import { SpaceBackground } from "@/components/setup/setup-wizard/space-background"
@@ -9,30 +9,25 @@ import { PosterImage } from "@/components/wrapped/cinematic/poster-image"
 import Link from "next/link"
 
 interface WrappedShareSummaryProps {
-  wrappedData: WrappedData
-  userName?: string
-  summary?: string
-  year: number
+  /** The share-safe projection; nothing else of the stored Rewind reaches the client */
+  rewind: ShareSafeRewindV2
   /** Share token for poster access (viewers of shared wraps are logged out) */
   shareToken?: string
 }
 
-export function WrappedShareSummary({
-  wrappedData,
-  userName,
-  summary,
-  year,
-  shareToken,
-}: WrappedShareSummaryProps) {
-  const stats = wrappedData.statistics
-  const displayName = userName || wrappedData.userName || "User"
+function monthName(month: number): string {
+  return new Date(Date.UTC(2000, month - 1, 1)).toLocaleString("en-US", { month: "long", timeZone: "UTC" })
+}
 
-  // Get top 5 movies and shows
-  const topMovies = stats.topMovies?.slice(0, 5) || []
-  const topShows = stats.topShows?.slice(0, 5) || []
+export function WrappedShareSummary({ rewind, shareToken }: WrappedShareSummaryProps) {
+  const { ownerName, year, summary, totals, months, topMovies, topShows } = rewind
+  const busiestMonth = months.reduce<(typeof months)[number] | null>(
+    (max, month) => (!max || month.minutes > max.minutes ? month : max),
+    null
+  )
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
+    <div data-testid="wrapped-share-summary" className="relative min-h-screen overflow-hidden">
       <SpaceBackground />
 
       <div className="relative z-10 container mx-auto px-4 py-12 max-w-4xl">
@@ -44,7 +39,7 @@ export function WrappedShareSummary({
           className="text-center mb-12"
         >
           <h1 data-testid="wrapped-share-heading" className="text-5xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-            {displayName}'s {year} Plex Wrapped
+            {ownerName}'s {year} Plex Wrapped
           </h1>
           {summary && (
             <motion.div
@@ -67,21 +62,21 @@ export function WrappedShareSummary({
         >
           <div data-testid="wrapped-total-watch-time" className="bg-slate-800/60 backdrop-blur-sm border border-slate-700 rounded-lg p-6 text-center">
             <div className="text-3xl font-bold text-cyan-400 mb-2">
-              {formatWatchTimeHours(stats.totalWatchTime.total)}
+              {formatWatchTimeHours(totals.minutes)}
             </div>
             <div data-testid="wrapped-total-watch-time-label" className="text-slate-400 text-sm">Total Watch Time</div>
           </div>
 
           <div data-testid="wrapped-movies-watched" className="bg-slate-800/60 backdrop-blur-sm border border-slate-700 rounded-lg p-6 text-center">
             <div className="text-3xl font-bold text-purple-400 mb-2">
-              {stats.moviesWatched.toLocaleString()}
+              {totals.movies.toLocaleString()}
             </div>
             <div data-testid="wrapped-movies-watched-label" className="text-slate-400 text-sm">Movies Watched</div>
           </div>
 
           <div data-testid="wrapped-shows-watched" className="bg-slate-800/60 backdrop-blur-sm border border-slate-700 rounded-lg p-6 text-center">
             <div className="text-3xl font-bold text-pink-400 mb-2">
-              {stats.showsWatched.toLocaleString()}
+              {totals.shows.toLocaleString()}
             </div>
             <div data-testid="wrapped-shows-watched-label" className="text-slate-400 text-sm">Shows Watched</div>
           </div>
@@ -126,7 +121,7 @@ export function WrappedShareSummary({
                         )}
                       </div>
                       <div className="text-sm text-slate-400">
-                        {formatWatchTime(movie.watchTime)} • {movie.playCount} play{movie.playCount !== 1 ? "s" : ""}
+                        {formatWatchTime(movie.minutes)} • {movie.plays} play{movie.plays !== 1 ? "s" : ""}
                       </div>
                     </div>
                   </div>
@@ -175,7 +170,7 @@ export function WrappedShareSummary({
                         )}
                       </div>
                       <div className="text-sm text-slate-400">
-                        {formatWatchTime(show.watchTime)} • {show.episodesWatched} episode{show.episodesWatched !== 1 ? "s" : ""}
+                        {formatWatchTime(show.minutes)} • {show.episodes} episode{show.episodes !== 1 ? "s" : ""}
                       </div>
                     </div>
                   </div>
@@ -192,21 +187,19 @@ export function WrappedShareSummary({
           transition={{ delay: 0.9, duration: 0.6 }}
           className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12"
         >
-          {stats.episodesWatched > 0 && (
+          {totals.episodes > 0 && (
             <div className="bg-slate-800/60 backdrop-blur-sm border border-slate-700 rounded-lg p-6">
               <div className="text-2xl font-bold text-pink-400 mb-2">
-                {stats.episodesWatched.toLocaleString()}
+                {totals.episodes.toLocaleString()}
               </div>
               <div className="text-slate-400 text-sm">Episodes Watched</div>
             </div>
           )}
 
-          {stats.watchTimeByMonth && stats.watchTimeByMonth.length > 0 && (
+          {busiestMonth && (
             <div className="bg-slate-800/60 backdrop-blur-sm border border-slate-700 rounded-lg p-6">
               <div className="text-2xl font-bold text-cyan-400 mb-2">
-                {stats.watchTimeByMonth.reduce((max, month) =>
-                  month.watchTime > max.watchTime ? month : max
-                ).monthName}
+                {monthName(busiestMonth.month)}
               </div>
               <div className="text-slate-400 text-sm">Most Active Month</div>
             </div>

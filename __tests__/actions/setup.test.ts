@@ -456,6 +456,29 @@ describe('Setup Actions', () => {
       })
     })
 
+    it('should default to the current default model when none is given', async () => {
+      mockTestLLMProviderConnection.mockResolvedValue({ success: true })
+
+      const mockTx = {
+        setup: {
+          findFirst: jest.fn().mockResolvedValue(null),
+          create: jest.fn().mockResolvedValue({ id: 'setup-1' }),
+        },
+        lLMProvider: {
+          updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+          create: jest.fn().mockResolvedValue({ id: 'llm-1' }),
+        },
+      }
+      mockPrisma.$transaction.mockImplementation(async (callback: any) => callback(mockTx))
+
+      const result = await saveLLMProvider({ provider: 'openai', apiKey: 'openai-key' })
+
+      expect(result.success).toBe(true)
+      expect(mockTx.lLMProvider.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ model: 'gpt-5.4-mini' }),
+      })
+    })
+
     it('should return error when connection test fails', async () => {
       mockTestLLMProviderConnection.mockResolvedValue({
         success: false,

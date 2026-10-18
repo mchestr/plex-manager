@@ -4,6 +4,7 @@ import { UnshareUserButton } from "@/components/admin/users/unshare-user-button"
 import { UserStatusBadge } from "@/components/admin/users/user-status-badge"
 import { ChangeUserRoleButton } from "@/components/admin/users/change-user-role-button"
 import { UserActivityTimeline } from "@/components/admin/users/user-activity-timeline"
+import { getSeasonYear } from "@/lib/wrapped/season"
 import Link from "next/link"
 import Image from "next/image"
 import { notFound } from "next/navigation"
@@ -12,9 +13,10 @@ export const dynamic = 'force-dynamic'
 
 export default async function UserDetailsPage({ params }: { params: Promise<{ userId: string }> }) {
   const { userId } = await params
-  const [user, activityTimeline] = await Promise.all([
+  const [user, activityTimeline, seasonYear] = await Promise.all([
     getUserDetails(userId),
     getUserActivityTimeline(userId, { page: 1, pageSize: 10 }),
+    getSeasonYear(),
   ])
 
   if (!user) {
@@ -31,8 +33,7 @@ export default async function UserDetailsPage({ params }: { params: Promise<{ us
     })
   }
 
-  const currentYear = new Date().getFullYear()
-  const currentYearWrapped = user.wrapped.find((w) => w.year === currentYear)
+  const seasonWrapped = user.wrapped.find((w) => w.year === seasonYear)
 
   return (
     <div className="p-4 sm:p-6">
@@ -225,29 +226,30 @@ export default async function UserDetailsPage({ params }: { params: Promise<{ us
             </div>
           </div>
 
-          {/* Current Year Wrapped */}
-          {currentYearWrapped && (
+          {/* Season Year Wrapped */}
+          {seasonWrapped && (
             <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6 mb-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-white">
-                  {currentYear} Wrapped
+                  {seasonYear} Wrapped
                 </h3>
                 <div className="flex items-center gap-3">
-                  <UserStatusBadge status={currentYearWrapped.status} />
-                  {currentYearWrapped.status === "completed" && (
+                  <UserStatusBadge status={seasonWrapped.status} />
+                  {seasonWrapped.status === "completed" && (
                     <Link
-                      href={`/admin/users/${user.id}/wrapped`}
+                      href={`/admin/users/${user.id}/wrapped?year=${seasonYear}`}
+                      data-testid="admin-user-season-wrapped-view"
                       className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-medium rounded transition-colors"
                     >
                       View
                     </Link>
                   )}
-                  <RegenerateWrappedButton userId={user.id} />
+                  <RegenerateWrappedButton userId={user.id} plexUserId={user.plexUserId} year={seasonYear} />
                 </div>
               </div>
-              {currentYearWrapped.generatedAt && (
+              {seasonWrapped.generatedAt && (
                 <p className="text-sm text-slate-400">
-                  Generated: {formatDate(currentYearWrapped.generatedAt)}
+                  Generated: {formatDate(seasonWrapped.generatedAt)}
                 </p>
               )}
             </div>

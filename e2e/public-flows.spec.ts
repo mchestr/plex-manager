@@ -1,4 +1,7 @@
-import { expect, test } from '@playwright/test';
+import { randomBytes } from 'node:crypto';
+
+import type { Page } from '@playwright/test';
+import { expect, test, TEST_USERS } from './fixtures/auth';
 import { createE2EPrismaClient } from './helpers/prisma';
 import { navigateAndVerify, waitForLoadingGone, WAIT_TIMEOUTS } from './helpers/test-utils';
 
@@ -78,106 +81,156 @@ test.describe('Public Flows', () => {
       await expect(page.getByTestId('onboarding-wizard-subheading')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
     }
   });
+});
 
-  test('shared wrapped page loads for unauthenticated user', async ({ page }) => {
+/**
+ * P0.11 (RWP-09, SEC-26, RWV-05, BP-23): the share page reads the database
+ * directly and sits outside the (app) guards.
+ */
+test.describe('Shared Rewind page', () => {
+  // Each test that views a share gets its own row, so a late visit write
+  // from one test never lands in another's count.
+  const SHARE_YEARS = [2021, 2022, 2023, 2024];
+  const newToken = () => randomBytes(32).toString('base64url');
+
+  /** A completed Rewind of the regular user, shared with `token`. */
+  async function seedShare(year: number, token: string) {
     const prisma = createE2EPrismaClient();
-    const shareToken = `test-share-${Date.now()}`;
-
-    // Mock wrapped data
-    const mockWrappedData = {
-      year: 2024,
-      userId: 'regular-user-id',
-      userName: 'Regular User',
-      generatedAt: new Date().toISOString(),
-      statistics: {
-        totalWatchTime: { total: 1000, movies: 600, shows: 400 },
-        moviesWatched: 10,
-        showsWatched: 5,
-        episodesWatched: 20,
-        topMovies: [{ title: 'Test Movie', watchTime: 120, playCount: 1 }],
-        topShows: [{ title: 'Test Show', watchTime: 200, playCount: 2, episodesWatched: 4 }]
-      },
-      sections: [
-        {
-          id: 'hero',
-          type: 'hero',
-          title: 'Your 2024 Wrapped',
-          content: 'Welcome to your wrapped!',
-          data: { prominentStat: { value: '1000', label: 'Minutes', description: 'Total Watch Time' } }
-        }
-      ],
-      insights: {
-        personality: 'Movie Buff',
-        topGenre: 'Action',
-        bingeWatcher: false,
-        discoveryScore: 80,
-        funFacts: ['You watched a lot!']
-      },
-      metadata: {
-        totalSections: 1,
-        generationTime: 5
-      }
-    };
-
     try {
-      // Ensure regular user exists (should be created by global setup, but verify)
-      const user = await prisma.user.findUnique({
-        where: { id: 'regular-user-id' }
-      });
-
-      if (!user) {
-        await prisma.user.create({
-          data: {
-            id: 'regular-user-id',
-            plexUserId: 'regular-plex-id',
-            name: 'Regular User',
-            email: 'regular@example.com',
-            isAdmin: false,
-            primaryAuthService: 'plex',
-            onboardingStatus: { plex: true, jellyfin: false },
-          },
-        });
-      }
-
-      // Create wrapped with share token
+      await prisma.plexWrapped.deleteMany({ where: { userId: TEST_USERS.REGULAR.id, year } });
       await prisma.plexWrapped.create({
         data: {
-          userId: 'regular-user-id',
-          year: 2024,
+          userId: TEST_USERS.REGULAR.id,
+          year,
           status: 'completed',
-          data: JSON.stringify(mockWrappedData),
-          shareToken: shareToken,
-        }
+          shareToken: token,
+          data: JSON.stringify({
+            year,
+            statistics: {
+              totalWatchTime: { total: 1000, movies: 600, shows: 400 },
+              moviesWatched: 10,
+              showsWatched: 5,
+              episodesWatched: 20,
+              topMovies: [{ title: 'Test Movie', watchTime: 120, playCount: 1 }],
+              topShows: [{ title: 'Test Show', watchTime: 200, playCount: 2, episodesWatched: 4 }],
+            },
+          }),
+        },
+      });
+    } finally {
+      await prisma.$disconnect();
+    }
+  }
+
+  /**
+   * Opens a share link and waits for the streamed page to settle: the root
+   * loading screen streams first, and next dev may still be compiling.
+   */
+  async function openShare(page: Page, token: string) {
+    const response = await page.goto(`/wrapped/share/${token}`);
+    await page.waitForLoadState('networkidle');
+    await waitForLoadingGone(page);
+    return response;
+  }
+
+  test.afterAll(async () => {
+    const prisma = createE2EPrismaClient();
+    try {
+      await prisma.plexWrapped.deleteMany({ where: { userId: TEST_USERS.REGULAR.id, year: { in: SHARE_YEARS } } });
+    } finally {
+      await prisma.$disconnect();
+    }
+  });
+
+  test('renders for a logged-out visitor', async ({ page }) => {
+    const shareToken = newToken();
+    await seedShare(SHARE_YEARS[0], shareToken);
+
+    const response = await openShare(page, shareToken);
+
+    expect(response?.status()).toBe(200);
+    await expect(page.getByTestId('wrapped-share-summary')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    await expect(page.getByTestId('wrapped-total-watch-time')).toBeVisible();
+  });
+
+  test('renders for a signed-in member who has not finished onboarding', async ({ regularUserPage }) => {
+    const shareToken = newToken();
+    await seedShare(SHARE_YEARS[1], shareToken);
+    const prisma = createE2EPrismaClient();
+    try {
+      await prisma.user.update({
+        where: { id: TEST_USERS.REGULAR.id },
+        data: { onboardingStatus: { plex: false, jellyfin: false } },
       });
 
-      // Verify the wrapped exists in the database before navigating
-      // This ensures the transaction is committed and visible to the API route
-      const createdWrapped = await prisma.plexWrapped.findUnique({
-        where: { shareToken: shareToken },
-      });
+      // The (app) guards now send this member to onboarding...
+      await regularUserPage.goto('/');
+      await expect(regularUserPage).toHaveURL(/\/onboarding$/);
 
-      if (!createdWrapped) {
-        throw new Error('Failed to create wrapped in database');
+      // ...but the share page is outside them.
+      await openShare(regularUserPage, shareToken);
+      await expect(regularUserPage.getByTestId('wrapped-share-summary')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+      await expect(regularUserPage).toHaveURL(new RegExp(`/wrapped/share/${shareToken}$`));
+    } finally {
+      await prisma.user.update({
+        where: { id: TEST_USERS.REGULAR.id },
+        data: { onboardingStatus: TEST_USERS.REGULAR.onboardingStatus },
+      });
+      await prisma.$disconnect();
+    }
+  });
+
+  test('records one visit per view', async ({ page }) => {
+    const shareToken = newToken();
+    await seedShare(SHARE_YEARS[2], shareToken);
+    const prisma = createE2EPrismaClient();
+    try {
+      const where = { wrapped: { shareToken } };
+
+      for (let view = 0; view < 3; view++) {
+        await openShare(page, shareToken);
+        await expect(page.getByTestId('wrapped-share-summary')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
       }
 
-      // Navigate to share page
-      await page.goto(`/wrapped/share/${shareToken}`);
-
-      // Wait for page to load and any network requests to complete
-      await page.waitForLoadState('networkidle');
-      await waitForLoadingGone(page);
-
-      // Wait for the heading to appear (the page uses client-side rendering with animations)
-      await expect(page.getByTestId('wrapped-share-heading')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
-
-      // Verify total watch time is displayed (uses data-testid for stability)
-      await expect(page.getByTestId('wrapped-total-watch-time')).toBeVisible();
-
+      // after() writes the row once the response is done.
+      await expect.poll(() => prisma.wrappedShareVisit.count({ where })).toBe(3);
+      const visits = await prisma.wrappedShareVisit.findMany({ where, select: { ipAddress: true, userAgent: true, referer: true } });
+      expect(visits.every((visit) => !visit.ipAddress && !visit.userAgent && !visit.referer)).toBe(true);
     } finally {
-      // Cleanup
-      await prisma.plexWrapped.deleteMany({
-        where: { shareToken: shareToken }
-      });
+      await prisma.$disconnect();
+    }
+  });
+
+  test('a bad token is a 404', async ({ page }) => {
+    const response = await openShare(page, 'bad-token');
+
+    expect(response?.status()).toBe(404);
+    await expect(page.getByTestId('wrapped-share-not-found')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+  });
+
+  // The page's notFound() streams after app/loading.tsx with status 200, so
+  // proxy.ts looks the token up and sets the 404 itself.
+  test('an unknown or revoked token is a 404', async ({ page }) => {
+    const revokedToken = newToken();
+    await seedShare(SHARE_YEARS[3], revokedToken);
+    const prisma = createE2EPrismaClient();
+    try {
+      const unknown = await openShare(page, newToken());
+      expect(unknown?.status()).toBe(404);
+      await expect(page.getByTestId('wrapped-share-not-found')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+
+      const shared = await openShare(page, revokedToken);
+      expect(shared?.status()).toBe(200);
+      await expect(page.getByTestId('wrapped-share-summary')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+
+      await prisma.plexWrapped.update({ where: { shareToken: revokedToken }, data: { shareToken: null } });
+      // A fresh visit, not a reload of the page on screen.
+      await page.goto('about:blank');
+      const revoked = await openShare(page, revokedToken);
+      expect(revoked?.status()).toBe(404);
+      await expect(page.getByTestId('wrapped-share-not-found')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+      await expect(page.getByTestId('wrapped-share-summary')).toHaveCount(0);
+    } finally {
       await prisma.$disconnect();
     }
   });

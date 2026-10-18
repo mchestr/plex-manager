@@ -71,7 +71,11 @@ export async function runConversationLoop(
 
     if (!response.success) {
       logger.error("LLM call failed", undefined, { error: response.error })
-      return { success: false, error: "Failed to communicate with AI provider" }
+      // A model-choice problem tells the admin what to change; anything else stays generic
+      return {
+        success: false,
+        error: response.configurationError ? response.error : "Failed to communicate with AI provider",
+      }
     }
 
     // Log usage if available
@@ -80,7 +84,7 @@ export async function runConversationLoop(
         response.model,
         response.usage.prompt_tokens,
         response.usage.completion_tokens,
-        "openai"
+        response.usage.prompt_tokens_details?.cached_tokens ?? 0
       )
 
       await prisma.lLMUsage.create({

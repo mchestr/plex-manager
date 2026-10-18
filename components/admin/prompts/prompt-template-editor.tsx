@@ -286,7 +286,11 @@ export function PromptTemplateEditor({ template, userWrapped, userName = "User" 
         ).join("\n"),
         "{{topMoviesJson}}": JSON.stringify(stats.topMovies.slice(0, 5)),
         "{{topShowsJson}}": JSON.stringify(stats.topShows.slice(0, 5)),
-        "{{leaderboardSection}}": stats.leaderboards ? `\n**Leaderboard Stats:**\n\n**Your Position in Overall Watch Time Leaderboard:**\nYou ranked #${stats.leaderboards.watchTime.userPosition || 1} out of ${stats.leaderboards.watchTime.totalUsers} users\n` : "",
+        // Rewinds no longer store leaderboards (RWP-01); the real prompt still
+        // gets them from live data, so say so instead of previewing nothing.
+        "{{leaderboardSection}}": stats.leaderboards
+          ? `\n**Leaderboard Stats:**\n\n**Your Position in Overall Watch Time Leaderboard:**\nYou ranked #${stats.leaderboards.watchTime.userPosition || 1} out of ${stats.leaderboards.watchTime.totalUsers} users\n`
+          : "\n[Leaderboard stats come from live data at generation time and are not stored with the Rewind, so this preview cannot show them]\n",
         "{{serverStatsSection}}": stats.serverStats ? `\n**Plex Server Statistics:**\n- Server name: ${stats.serverStats.serverName}\n- Total storage: ${stats.serverStats.totalStorageFormatted}\n` : "",
         "{{overseerrStatsSection}}": stats.overseerrStats ? `\n**Overseerr Requests:**\n- Your requests: ${stats.overseerrStats.totalRequests}\n` : "",
         "{{watchTimeByMonthSection}}": stats.watchTimeByMonth && stats.watchTimeByMonth.length > 0 ? `\n**Watch Time by Month:**\n${stats.watchTimeByMonth.map(m => `- ${m.monthName}: ${formatWatchTime(m.watchTime)}`).join("\n")}\n` : "",

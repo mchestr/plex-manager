@@ -7,6 +7,7 @@
  */
 
 import { expect, test } from '@playwright/test';
+import { assertTestDatabaseUrl } from '../lib/security/test-mode';
 import globalSetup from './global-setup';
 import { createE2EPrismaClient } from './helpers/prisma';
 import { navigateAndVerify, waitForLoadingGone, WAIT_TIMEOUTS } from './helpers/test-utils';
@@ -18,6 +19,9 @@ test.describe('Setup Wizard', () => {
   let prisma: PrismaClient;
 
   test.beforeAll(async () => {
+    // This spec wipes every user and service config below: check the target
+    // again here so the deleteMany block can never run against a real database.
+    assertTestDatabaseUrl(process.env.DATABASE_URL);
     prisma = createE2EPrismaClient();
   });
 

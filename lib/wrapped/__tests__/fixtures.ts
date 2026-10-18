@@ -88,3 +88,47 @@ export function buildStatistics(
     ...overrides,
   }
 }
+
+/**
+ * Leaderboards as generation computes them for the prompt: other members'
+ * usernames, names and watch time. One username is an email, as Plex allows.
+ */
+export const LEADERBOARD_MEMBER_EMAIL = "jsnow@example.com"
+
+export function buildLeaderboards(): NonNullable<WrappedStatistics["leaderboards"]> {
+  return {
+    topContent: {
+      movies: [
+        {
+          title: "Dune: Part Three",
+          ratingKey: "101",
+          leaderboard: [
+            { userId: "42", username: LEADERBOARD_MEMBER_EMAIL, friendlyName: "Jon Snow", watchTime: 412, playCount: 3 },
+            { userId: "7", username: "asmith", friendlyName: "Alice Smith", watchTime: 165, playCount: 1 },
+          ],
+          userPosition: 2,
+          totalWatchers: 2,
+        },
+      ],
+      shows: [
+        {
+          title: "Severance",
+          ratingKey: "202",
+          leaderboard: [
+            { userId: "7", username: "asmith", friendlyName: "Alice Smith", watchTime: 900, playCount: 18, episodesWatched: 18 },
+          ],
+          userPosition: 1,
+          totalWatchers: 1,
+        },
+      ],
+    },
+    watchTime: {
+      leaderboard: [
+        { userId: "42", username: LEADERBOARD_MEMBER_EMAIL, friendlyName: "Jon Snow", totalWatchTime: 90000, moviesWatchTime: 30000, showsWatchTime: 60000 },
+        { userId: "7", username: "asmith", friendlyName: "Alice Smith", totalWatchTime: 60480, moviesWatchTime: 20160, showsWatchTime: 40320 },
+      ],
+      userPosition: 2,
+      totalUsers: 2,
+    },
+  }
+}

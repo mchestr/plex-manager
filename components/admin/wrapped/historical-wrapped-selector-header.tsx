@@ -16,11 +16,14 @@ interface HistoricalVersion {
 interface HistoricalWrappedSelectorHeaderProps {
   wrappedId: string
   userId: string
+  /** The Rewind's year: "current" opens that year, not the season year. */
+  year: number
 }
 
 export function HistoricalWrappedSelectorHeader({
   wrappedId,
   userId,
+  year,
 }: HistoricalWrappedSelectorHeaderProps) {
   const [versions, setVersions] = useState<HistoricalVersion[]>([])
   const [loading, setLoading] = useState(true)
@@ -63,12 +66,12 @@ export function HistoricalWrappedSelectorHeader({
     try {
       if (versionId === "current") {
         setSelectedVersion("current")
-        await router.push(`/admin/users/${userId}/wrapped`)
+        await router.push(`/admin/users/${userId}/wrapped?year=${year}`)
       } else {
         const version = versions.find(v => v.id === versionId)
         if (version?.isCurrent) {
           setSelectedVersion("current")
-          await router.push(`/admin/users/${userId}/wrapped`)
+          await router.push(`/admin/users/${userId}/wrapped?year=${year}`)
         } else {
           setSelectedVersion(versionId)
           await router.push(`/admin/wrapped/${wrappedId}/history/${versionId}`)
