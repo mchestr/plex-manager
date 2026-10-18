@@ -2,14 +2,8 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { WrappedViewerNavigation } from '@/components/wrapped/wrapped-viewer-navigation'
 
-// Mock the share-link controls (they call Server Actions)
-jest.mock('@/components/wrapped/wrapped-share-controls', () => ({
-  WrappedShareControls: ({ shareToken, year }: { shareToken: string | null; year: number }) => (
-    <div data-testid="share-controls">
-      Share Controls {year} {shareToken ?? 'no-link'}
-    </div>
-  ),
-}))
+// The owner's share-link controls arrive as a slot from the viewer wrapper.
+const shareControls = <div data-testid="share-controls">Share Controls</div>
 
 describe('WrappedViewerNavigation', () => {
   const defaultProps = {
@@ -18,7 +12,6 @@ describe('WrappedViewerNavigation', () => {
     onPrevious: jest.fn(),
     onNext: jest.fn(),
     onShowAll: jest.fn(),
-    year: 2024,
   }
 
   beforeEach(() => {
@@ -77,63 +70,20 @@ describe('WrappedViewerNavigation', () => {
     expect(onShowAll).toHaveBeenCalledTimes(1)
   })
 
-  it('should render the share controls on the last section of the member\'s own Rewind', () => {
-    render(
-      <WrappedViewerNavigation
-        {...defaultProps}
-        currentSectionIndex={4}
-        canManageShare
-        shareToken="test-token"
-      />
-    )
-    expect(screen.getByTestId('share-controls')).toHaveTextContent('Share Controls 2024 test-token')
-  })
-
-  it('should offer the controls without a link, so the member can create one', () => {
-    render(
-      <WrappedViewerNavigation
-        {...defaultProps}
-        currentSectionIndex={4}
-        canManageShare
-      />
-    )
-    expect(screen.getByTestId('share-controls')).toHaveTextContent('Share Controls 2024 no-link')
-  })
-
-  it('should not render the share controls when isShared is true', () => {
-    render(
-      <WrappedViewerNavigation
-        {...defaultProps}
-        currentSectionIndex={4}
-        isShared={true}
-        canManageShare
-        shareToken="test-token"
-      />
-    )
-    expect(screen.queryByTestId('share-controls')).not.toBeInTheDocument()
+  it('should render the share controls on the last section', () => {
+    render(<WrappedViewerNavigation {...defaultProps} currentSectionIndex={4} shareControls={shareControls} />)
+    expect(screen.getByTestId('share-controls')).toBeInTheDocument()
+    expect(screen.getByText('Show All')).toBeInTheDocument()
   })
 
   it('should not render the share controls when not on last section', () => {
-    render(
-      <WrappedViewerNavigation
-        {...defaultProps}
-        currentSectionIndex={2}
-        canManageShare
-        shareToken="test-token"
-      />
-    )
+    render(<WrappedViewerNavigation {...defaultProps} currentSectionIndex={2} shareControls={shareControls} />)
     expect(screen.queryByTestId('share-controls')).not.toBeInTheDocument()
   })
 
-  it('should not render the share controls outside the member\'s own Rewind, even with a token', () => {
-    // Admin views and the playground preview do not pass canManageShare
-    render(
-      <WrappedViewerNavigation
-        {...defaultProps}
-        currentSectionIndex={4}
-        shareToken="test-token"
-      />
-    )
+  it('should render no share controls when none are given', () => {
+    // Admin views and the playground preview pass none
+    render(<WrappedViewerNavigation {...defaultProps} currentSectionIndex={4} />)
     expect(screen.queryByTestId('share-controls')).not.toBeInTheDocument()
   })
 

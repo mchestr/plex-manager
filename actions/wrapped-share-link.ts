@@ -14,7 +14,11 @@ import { yearSchema } from "@/lib/validations/shared-schemas"
 
 const logger = createLogger("WRAPPED_SHARE_LINK")
 
-/** Ten share-link changes per member per hour, shared by both actions. */
+/**
+ * Ten share-link creations per member per hour. Only
+ * {@link enableWrappedShareLink} is charged: stopping a link is never refused
+ * (see {@link disableWrappedShareLink}).
+ */
 const SHARE_ACTION_RATE_LIMIT = { windowMs: 60 * 60 * 1000, max: 10 }
 
 const shareLinkInputSchema = z.object({ year: yearSchema })
@@ -28,8 +32,7 @@ export type DisableWrappedShareLinkResult = { success: true } | { success: false
 type ShareActionCaller = { ok: true; userId: string; year: number } | { ok: false; error: string }
 
 /**
- * The checks both share actions run first: Zod input, a signed-in session and
- * the per-member rate limit.
+ * The checks both share actions run first: Zod input and a signed-in session.
  *
  * @internal
  */
@@ -42,10 +45,6 @@ async function authorizeShareAction(input: unknown): Promise<ShareActionCaller> 
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
     return { ok: false, error: "Unauthorized" }
-  }
-
-  if (!checkRateLimit(`rw:share-actions:${session.user.id}`, SHARE_ACTION_RATE_LIMIT)) {
-    return { ok: false, error: "Too many share link changes. Please try again later." }
   }
 
   return { ok: true, userId: session.user.id, year: parsed.data.year }
@@ -72,6 +71,9 @@ function revalidateSharePaths() {
  * calls cannot replace each other's token: the one that loses reads back the
  * winner's.
  *
+ * Every call counts against the limit of ten an hour on
+ * `rw:share-actions:<userId>`.
+ *
  * @param input - `{ year }` of the member's Rewind.
  * @returns `{ success: true, shareToken, url }`, or `{ success: false, error }`.
  */
@@ -81,7 +83,16 @@ export async function enableWrappedShareLink(input: { year: number }): Promise<E
     return { success: false, error: caller.error }
   }
 
+  if (!checkRateLimit(`rw:share-actions:${caller.userId}`, SHARE_ACTION_RATE_LIMIT)) {
+    return { success: false, error: "Too many share links created. Please try again later." }
+  }
+
   try {
+    // getBaseUrl() throws when no app URL is configured. Resolving it before
+    // the write means that failure cannot leave a live link the member was
+    // told was not created.
+    const baseUrl = getBaseUrl()
+
     const wrapped = await prisma.plexWrapped.findUnique({
       where: { userId_year: { userId: caller.userId, year: caller.year } },
       select: { id: true, status: true, shareToken: true },
@@ -117,7 +128,7 @@ export async function enableWrappedShareLink(input: { year: number }): Promise<E
     }
 
     revalidateSharePaths()
-    return { success: true, shareToken, url: `${getBaseUrl()}/wrapped/share/${shareToken}` }
+    return { success: true, shareToken, url: `${baseUrl}/wrapped/share/${shareToken}` }
   } catch (error) {
     logger.error("Error creating share link", error, { userId: caller.userId, year: caller.year })
     return { success: false, error: "Failed to create share link" }
@@ -133,6 +144,10 @@ export async function enableWrappedShareLink(input: { year: number }): Promise<E
  * withdraw a link while an admin regenerates their Rewind or after a failed
  * regeneration. Owners of v2 links minted before sharing became opt-in use it
  * too (design 6.2).
+ *
+ * It is not rate-limited. It only ever clears the caller's own token, and each
+ * token it clears took a counted enable or predates opt-in, so refusing it
+ * would only keep a public link alive.
  *
  * @param input - `{ year }` of the member's Rewind.
  * @returns `{ success: true }` (also when no link was on), or `{ success: false, error }`.

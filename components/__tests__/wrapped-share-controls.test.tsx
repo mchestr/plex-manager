@@ -5,6 +5,7 @@
 
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { useState } from 'react'
 
 import { disableWrappedShareLink, enableWrappedShareLink } from '@/actions/wrapped-share-link'
 import { ToastProvider } from '@/components/ui/toast'
@@ -24,11 +25,27 @@ jest.mock('@/components/wrapped/wrapped-share-button', () => ({
 
 const mockEnable = enableWrappedShareLink as jest.Mock
 const mockDisable = disableWrappedShareLink as jest.Mock
+const onShareTokenChange = jest.fn()
+
+/** The controls are controlled; the harness holds the token like the viewer wrapper does. */
+function Harness({ initialShareToken }: { initialShareToken: string | null }) {
+  const [shareToken, setShareToken] = useState(initialShareToken)
+  return (
+    <WrappedShareControls
+      year={2026}
+      shareToken={shareToken}
+      onShareTokenChange={(token) => {
+        onShareTokenChange(token)
+        setShareToken(token)
+      }}
+    />
+  )
+}
 
 function renderControls(shareToken: string | null) {
   return render(
     <ToastProvider>
-      <WrappedShareControls year={2026} shareToken={shareToken} />
+      <Harness initialShareToken={shareToken} />
     </ToastProvider>
   )
 }
@@ -72,6 +89,7 @@ describe('WrappedShareControls', () => {
     await waitFor(() => expectSharedState('new-token'))
     expect(mockEnable).toHaveBeenCalledWith({ year: 2026 })
     expect(mockDisable).not.toHaveBeenCalled()
+    expect(onShareTokenChange).toHaveBeenCalledWith('new-token')
   })
 
   it('disables the button while the link is being created', async () => {
@@ -91,13 +109,14 @@ describe('WrappedShareControls', () => {
 
   it('shows the error and stays unshared when creating fails', async () => {
     const user = userEvent.setup()
-    mockEnable.mockResolvedValue({ success: false, error: 'Too many share link changes. Please try again later.' })
+    mockEnable.mockResolvedValue({ success: false, error: 'Too many share links created. Please try again later.' })
     renderControls(null)
 
     await user.click(screen.getByTestId('wrapped-share-create'))
 
-    expect(await screen.findByText('Too many share link changes. Please try again later.')).toBeInTheDocument()
+    expect(await screen.findByText('Too many share links created. Please try again later.')).toBeInTheDocument()
     expectNoLinkState()
+    expect(onShareTokenChange).not.toHaveBeenCalled()
   })
 
   it('lets the owner of a surviving link stop sharing', async () => {
@@ -111,6 +130,8 @@ describe('WrappedShareControls', () => {
     await waitFor(() => expectNoLinkState())
     expect(mockDisable).toHaveBeenCalledWith({ year: 2026 })
     expect(mockEnable).not.toHaveBeenCalled()
+    expect(onShareTokenChange).toHaveBeenCalledWith(null)
+    expect(screen.getByText(/Sharing stopped\. The link no longer opens/)).toBeInTheDocument()
   })
 
   it('keeps the link and shows the error when stopping fails', async () => {
@@ -122,5 +143,6 @@ describe('WrappedShareControls', () => {
 
     expect(await screen.findByText('Failed to stop sharing')).toBeInTheDocument()
     expectSharedState('surviving-v2-token')
+    expect(onShareTokenChange).not.toHaveBeenCalled()
   })
 })

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useTransition } from "react"
 import { disableWrappedShareLink, enableWrappedShareLink } from "@/actions/wrapped-share-link"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
@@ -8,8 +8,11 @@ import { ShareCardDownload } from "@/components/wrapped/share-card-download"
 import { WrappedShareButton } from "@/components/wrapped/wrapped-share-button"
 
 interface WrappedShareControlsProps {
+  /** The year of the stored Rewind row the controls act on. */
   year: number
   shareToken: string | null
+  /** Called with the new token after a link is created, and with null after it is stopped. */
+  onShareTokenChange: (shareToken: string | null) => void
 }
 
 /**
@@ -17,9 +20,11 @@ interface WrappedShareControlsProps {
  * link the member sees "Create share link"; with one, including a v2 link that
  * was minted before sharing became opt-in, they can copy it, download the
  * card or stop sharing (SEC-16).
+ *
+ * The token is held by the parent, so the controls on the last slide and under
+ * "Show all" stay in step.
  */
-export function WrappedShareControls({ year, shareToken: initialShareToken }: WrappedShareControlsProps) {
-  const [shareToken, setShareToken] = useState(initialShareToken)
+export function WrappedShareControls({ year, shareToken, onShareTokenChange }: WrappedShareControlsProps) {
   const [isPending, startTransition] = useTransition()
   const toast = useToast()
 
@@ -30,7 +35,7 @@ export function WrappedShareControls({ year, shareToken: initialShareToken }: Wr
         toast.showError(result.error)
         return
       }
-      setShareToken(result.shareToken)
+      onShareTokenChange(result.shareToken)
       toast.showSuccess("Share link created")
     })
   }
@@ -42,8 +47,8 @@ export function WrappedShareControls({ year, shareToken: initialShareToken }: Wr
         toast.showError(result.error)
         return
       }
-      setShareToken(null)
-      toast.showSuccess("Sharing stopped. The old link no longer works.")
+      onShareTokenChange(null)
+      toast.showSuccess("Sharing stopped. The link no longer opens, but previews already posted elsewhere may linger.")
     })
   }
 

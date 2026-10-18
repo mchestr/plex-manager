@@ -251,7 +251,7 @@ describe('enableWrappedShareLink', () => {
     expect(prisma.plexWrapped.findUnique).not.toHaveBeenCalled()
   })
 
-  it('allows ten share-link changes an hour and refuses the eleventh', async () => {
+  it('allows ten share-link creations an hour and refuses the eleventh', async () => {
     seed({ userId: memberId })
 
     for (let i = 0; i < 10; i++) {
@@ -262,26 +262,45 @@ describe('enableWrappedShareLink', () => {
 
     const limited = await enableWrappedShareLink({ year: YEAR })
 
-    expect(limited).toEqual({ success: false, error: 'Too many share link changes. Please try again later.' })
+    expect(limited).toEqual({ success: false, error: 'Too many share links created. Please try again later.' })
     expect(prisma.plexWrapped.findUnique).not.toHaveBeenCalled()
   })
 
-  it('counts enabling and disabling against the same limit', async () => {
+  it('does not count stopping a link against the limit', async () => {
     seed({ userId: memberId })
 
     for (let i = 0; i < 5; i++) {
       expect((await enableWrappedShareLink({ year: YEAR })).success).toBe(true)
       expect((await disableWrappedShareLink({ year: YEAR })).success).toBe(true)
     }
+    for (let i = 0; i < 5; i++) {
+      expect((await enableWrappedShareLink({ year: YEAR })).success).toBe(true)
+    }
 
-    expect(await disableWrappedShareLink({ year: YEAR })).toEqual({
-      success: false,
-      error: 'Too many share link changes. Please try again later.',
-    })
     expect(await enableWrappedShareLink({ year: YEAR })).toEqual({
       success: false,
-      error: 'Too many share link changes. Please try again later.',
+      error: 'Too many share links created. Please try again later.',
     })
+  })
+
+  it('creates no link when the public URL cannot be built', async () => {
+    seed({ userId: memberId })
+    const saved = { app: process.env.NEXT_PUBLIC_APP_URL, auth: process.env.NEXTAUTH_URL }
+    delete process.env.NEXT_PUBLIC_APP_URL
+    delete process.env.NEXTAUTH_URL
+
+    try {
+      const result = await enableWrappedShareLink({ year: YEAR })
+
+      expect(result).toEqual({ success: false, error: 'Failed to create share link' })
+    } finally {
+      process.env.NEXT_PUBLIC_APP_URL = saved.app
+      if (saved.auth !== undefined) process.env.NEXTAUTH_URL = saved.auth
+    }
+    expect(rowOf(memberId).shareToken).toBeNull()
+    expect(generateShareToken).not.toHaveBeenCalled()
+    expect(prisma.plexWrapped.updateMany).not.toHaveBeenCalled()
+    expect(logAuditEvent).not.toHaveBeenCalled()
   })
 })
 
@@ -347,6 +366,31 @@ describe('disableWrappedShareLink', () => {
 
     expect(result).toEqual({ success: false, error: 'Unauthorized' })
     expect(rowOf(memberId).shareToken).toBe('live-token')
+  })
+
+  it('stops a live link for a member who has used up the creation limit', async () => {
+    seed({ userId: memberId })
+    for (let i = 0; i < 10; i++) {
+      expect((await enableWrappedShareLink({ year: YEAR })).success).toBe(true)
+    }
+    expect((await enableWrappedShareLink({ year: YEAR })).success).toBe(false)
+    expect(rowOf(memberId).shareToken).toBe('token-1')
+
+    const result = await disableWrappedShareLink({ year: YEAR })
+
+    expect(result).toEqual({ success: true })
+    expect(rowOf(memberId).shareToken).toBeNull()
+  })
+
+  it('stops a link for another year than the one on screen', async () => {
+    seed({ userId: memberId, year: 2025, shareToken: 'old-season-token' })
+    seed({ userId: memberId, id: 'wrapped-current', shareToken: 'current-token' })
+
+    const result = await disableWrappedShareLink({ year: 2025 })
+
+    expect(result).toEqual({ success: true })
+    expect(rows.find((r) => r.year === 2025)?.shareToken).toBeNull()
+    expect(rowOf(memberId).shareToken).toBe('current-token')
   })
 
   it('returns an error instead of throwing when the database fails', async () => {

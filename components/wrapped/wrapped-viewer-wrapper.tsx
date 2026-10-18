@@ -2,12 +2,14 @@
 
 import { useState } from "react"
 import { AnimatePresence, motion } from "framer-motion"
+import { WrappedShareControls } from "@/components/wrapped/wrapped-share-controls"
 import { WrappedViewer } from "@/components/wrapped/wrapped-viewer"
 import { WrappedTransition } from "@/components/wrapped/wrapped-transition"
 import { WrappedData } from "@/types/wrapped"
 
 interface WrappedViewerWrapperProps {
   wrappedData: WrappedData
+  /** The year of the stored row; the share controls act on this year, not on the JSON's. */
   year: number
   isShared?: boolean
   userName?: string
@@ -31,6 +33,12 @@ export function WrappedViewerWrapper({
 }: WrappedViewerWrapperProps) {
   // Skip transition for shared wraps and playground previews
   const [showTransition, setShowTransition] = useState(!isShared && !isPreview)
+  // The owner's link state lives here so every place the controls show agrees.
+  const [ownShareToken, setOwnShareToken] = useState<string | null>(shareToken ?? null)
+
+  const shareControls = canManageShare ? (
+    <WrappedShareControls year={year} shareToken={ownShareToken} onShareTokenChange={setOwnShareToken} />
+  ) : undefined
 
   const handleTransitionComplete = () => {
     setShowTransition(false)
@@ -54,7 +62,7 @@ export function WrappedViewerWrapper({
               userName={userName}
               summary={summary}
               shareToken={shareToken}
-              canManageShare={canManageShare}
+              shareControls={shareControls}
               isPreview={isPreview}
             />
           </motion.div>

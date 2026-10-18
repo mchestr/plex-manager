@@ -6,9 +6,20 @@ import Link from "next/link"
 import { WrappedViewerWrapper } from "@/components/wrapped/wrapped-viewer-wrapper"
 import { WrappedData } from "@/types/wrapped"
 import { WrappedPageClient } from "@/components/wrapped/wrapped-page-client"
+import { WrappedSharedYearsNotice } from "@/components/wrapped/wrapped-shared-years-notice"
+import { prisma } from "@/lib/prisma"
 import { memberErrorCopy, readStoredError } from "@/lib/wrapped/generation-errors"
 
 export const dynamic = 'force-dynamic'
+
+function parseWrappedData(data: string): WrappedData | null {
+  try {
+    return JSON.parse(data) as WrappedData
+  } catch (error) {
+    console.error("Failed to parse wrapped data:", error)
+    return null
+  }
+}
 
 export default async function WrappedPage() {
   const session = await getServerSession(authOptions)
@@ -18,42 +29,49 @@ export default async function WrappedPage() {
   }
 
   const currentYear = new Date().getFullYear()
-  const wrapped = await getUserPlexWrapped(session.user.id, currentYear)
+  const [wrapped, sharedRows] = await Promise.all([
+    getUserPlexWrapped(session.user.id, currentYear),
+    // Every year of the member's own with a live public link, so links on
+    // years the viewer does not show can still be stopped (SEC-16).
+    prisma.plexWrapped.findMany({
+      where: { userId: session.user.id, shareToken: { not: null } },
+      select: { year: true },
+      orderBy: { year: "desc" },
+    }),
+  ])
+
+  const wrappedData =
+    wrapped && wrapped.status === "completed" && wrapped.data ? parseWrappedData(wrapped.data) : null
+  // The viewer has its own controls for the year it shows.
+  const otherSharedYears = sharedRows.map((row) => row.year).filter((year) => !(wrappedData && year === currentYear))
 
   return (
     <>
+      <WrappedSharedYearsNotice years={otherSharedYears} />
       {wrapped && wrapped.status === "completed" && wrapped.data ? (
-          (() => {
-            try {
-              const wrappedData: WrappedData = JSON.parse(wrapped.data)
-              return (
-                <WrappedViewerWrapper
-                  wrappedData={wrappedData}
-                  year={currentYear}
-                  shareToken={wrapped.shareToken || undefined}
-                  canManageShare
-                />
-              )
-            } catch (error) {
-              console.error("Failed to parse wrapped data:", error)
-              return (
-                <div className="bg-slate-800/50 backdrop-blur-sm border border-red-500/50 rounded-lg p-12 text-center">
-                  <div className="max-w-md mx-auto">
-                    <h2 className="text-2xl font-bold text-white mb-2">Error Loading Wrapped</h2>
-                    <p className="text-slate-400 mb-6">
-                      There was an error parsing your wrapped data. Please try generating it again.
-                    </p>
-                    <Link
-                      href="/"
-                      className="inline-block px-6 py-3 bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-700 hover:to-purple-700 text-white rounded-md text-sm font-medium transition-colors"
-                    >
-                      Generate Your Wrapped
-                    </Link>
-                  </div>
-                </div>
-              )
-            }
-          })()
+          wrappedData ? (
+            <WrappedViewerWrapper
+              wrappedData={wrappedData}
+              year={currentYear}
+              shareToken={wrapped.shareToken || undefined}
+              canManageShare
+            />
+          ) : (
+            <div className="bg-slate-800/50 backdrop-blur-sm border border-red-500/50 rounded-lg p-12 text-center">
+              <div className="max-w-md mx-auto">
+                <h2 className="text-2xl font-bold text-white mb-2">Error Loading Wrapped</h2>
+                <p className="text-slate-400 mb-6">
+                  There was an error parsing your wrapped data. Please try generating it again.
+                </p>
+                <Link
+                  href="/"
+                  className="inline-block px-6 py-3 bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-700 hover:to-purple-700 text-white rounded-md text-sm font-medium transition-colors"
+                >
+                  Generate Your Wrapped
+                </Link>
+              </div>
+            </div>
+          )
         ) : wrapped && wrapped.status === "generating" ? (
           <WrappedPageClient userId={session.user.id} year={currentYear} initialStatus="generating" />
         ) : wrapped && wrapped.status === "failed" ? (

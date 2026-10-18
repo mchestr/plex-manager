@@ -1,8 +1,8 @@
 "use client"
 
+import { ReactNode } from "react"
 import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
-import { WrappedShareControls } from "@/components/wrapped/wrapped-share-controls"
 
 interface WrappedViewerNavigationProps {
   currentSectionIndex: number
@@ -10,11 +10,8 @@ interface WrappedViewerNavigationProps {
   onPrevious: () => void
   onNext: () => void
   onShowAll: () => void
-  isShared?: boolean
-  /** The member's own Rewind: show the share-link controls on the last slide. */
-  canManageShare?: boolean
-  shareToken?: string
-  year: number
+  /** The owner's share-link controls, shown on the last slide. */
+  shareControls?: ReactNode
 }
 
 export function WrappedViewerNavigation({
@@ -23,10 +20,7 @@ export function WrappedViewerNavigation({
   onPrevious,
   onNext,
   onShowAll,
-  isShared,
-  canManageShare,
-  shareToken,
-  year,
+  shareControls,
 }: WrappedViewerNavigationProps) {
   return (
     <div className="mt-6 sm:mt-8 flex justify-between items-center gap-3">
@@ -40,7 +34,7 @@ export function WrappedViewerNavigation({
       ) : (
         <div />
       )}
-      {!isShared && canManageShare && currentSectionIndex === totalSections - 1 && (
+      {shareControls && currentSectionIndex === totalSections - 1 && (
         <motion.div
           initial={{ opacity: 0, scale: 0.8, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -52,7 +46,7 @@ export function WrappedViewerNavigation({
           }}
           className="flex-1 flex flex-wrap justify-center gap-3"
         >
-          <WrappedShareControls year={year} shareToken={shareToken ?? null} />
+          {shareControls}
         </motion.div>
       )}
       {currentSectionIndex < totalSections - 1 ? (

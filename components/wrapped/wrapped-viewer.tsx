@@ -2,7 +2,7 @@
 
 import { WrappedData, WrappedSection } from "@/types/wrapped"
 import { AnimatePresence, motion } from "framer-motion"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { ReactNode, useCallback, useEffect, useRef, useState } from "react"
 import { SpaceBackground } from "@/components/setup/setup-wizard/space-background"
 import { CinematicBackground } from "@/components/wrapped/cinematic/cinematic-background"
 import { getSlideDuration } from "@/components/wrapped/cinematic/theme"
@@ -18,8 +18,11 @@ interface WrappedViewerProps {
   userName?: string
   summary?: string
   shareToken?: string
-  /** The member's own Rewind: offer the share-link controls. */
-  canManageShare?: boolean
+  /**
+   * The owner's share-link controls, shown on the last slide and under
+   * "Show all". Never shown in a shared view.
+   */
+  shareControls?: ReactNode
   /** Playground preview: letterbox bars are disabled inside the scrollable modal. */
   isPreview?: boolean
 }
@@ -29,9 +32,10 @@ export function WrappedViewer({
   onComplete,
   isShared = false,
   shareToken,
-  canManageShare = false,
+  shareControls,
   isPreview = false,
 }: WrappedViewerProps) {
+  const ownerShareControls = isShared ? undefined : shareControls
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0)
   const [isAutoAdvancing, setIsAutoAdvancing] = useState(true)
   const [showAll, setShowAll] = useState(false)
@@ -180,6 +184,9 @@ export function WrappedViewer({
               <SectionRenderer section={section} wrappedData={wrappedData} sectionIndex={idx} shareToken={shareToken} />
             </motion.div>
           ))}
+          {ownerShareControls && (
+            <div className="flex flex-wrap justify-center gap-3">{ownerShareControls}</div>
+          )}
         </div>
       </div>
     )
@@ -265,10 +272,7 @@ export function WrappedViewer({
           onPrevious={handlePrevious}
           onNext={handleNext}
           onShowAll={handleShowAll}
-          isShared={isShared}
-          canManageShare={canManageShare}
-          shareToken={shareToken}
-          year={wrappedData.year}
+          shareControls={ownerShareControls}
         />
       </div>
     </div>

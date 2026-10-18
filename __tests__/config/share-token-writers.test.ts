@@ -13,11 +13,13 @@
  * 1. `generateShareToken` is mentioned only where it is defined
  *    (`lib/utils.ts`) and in `actions/wrapped-share-link.ts`, the only caller.
  * 2. A `shareToken` key in a Prisma write payload (`data`, or an upsert's
- *    `create` and `update`, followed through spreads, conditionals and
- *    same-file variables), an assignment to a `.shareToken` property, or a raw
- *    query naming the column appears only in `actions/wrapped-share-link.ts`
- *    and in P0.20's `lib/wrapped/maintenance/strip-rosters.ts`, which may only
- *    write `null`.
+ *    `create` and `update`, followed through spreads, conditionals, arrays,
+ *    same-file variables and destructuring, property reads, `Object.assign`,
+ *    and the returns of same-file helpers and callbacks such as
+ *    `rows.map((r) => ({ ... }))`), an assignment to a `.shareToken` property,
+ *    an `Object.assign` that sets the key, or a raw query naming the column
+ *    appears only in `actions/wrapped-share-link.ts` and in P0.20's
+ *    `lib/wrapped/maintenance/strip-rosters.ts`, which may only write `null`.
  *
  * P7.13 deletes `enableWrappedShareLink`; this test then asserts that no code
  * sets a non-null `shareToken` at all.
@@ -53,6 +55,9 @@ interface Finding {
   /** The written value as source text, e.g. `null` or `minted`. */
   value: string
 }
+
+/** What a same-file name is bound to: a value, or a property of one (`const { data } = args`). */
+type Binding = { value: ts.Expression | ts.FunctionDeclaration } | { member: ts.Expression; key: string }
 
 interface ScanResult {
   tokenMentions: Finding[]
@@ -94,23 +99,130 @@ function scanSource(file: string, text: string): ScanResult {
   const lineOf = (node: ts.Node) => sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1
   const finding = (node: ts.Node, value: string): Finding => ({ file, line: lineOf(node), value })
 
-  // Same-file variables, so `data: payload` and `...payload` are followed.
-  const initializers = new Map<string, ts.Expression[]>()
-  const collectInitializers = (node: ts.Node) => {
-    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) {
-      initializers.set(node.name.text, [...(initializers.get(node.name.text) ?? []), node.initializer])
+  // Same-file bindings, so `data: payload`, `...payload`, `const { data } = args`
+  // and calls to same-file helpers such as `payloadFor(t)` are followed.
+  const bindings = new Map<string, Binding[]>()
+  const bind = (name: string, binding: Binding) => bindings.set(name, [...(bindings.get(name) ?? []), binding])
+  const collectBindings = (node: ts.Node) => {
+    if (ts.isVariableDeclaration(node) && node.initializer) {
+      if (ts.isIdentifier(node.name)) {
+        bind(node.name.text, { value: node.initializer })
+      } else if (ts.isObjectBindingPattern(node.name)) {
+        for (const element of node.name.elements) {
+          const key = element.propertyName ? propertyNameText(element.propertyName) : undefined
+          if (ts.isIdentifier(element.name)) {
+            bind(element.name.text, { member: node.initializer, key: key ?? element.name.text })
+          }
+        }
+      }
+    } else if (ts.isFunctionDeclaration(node) && node.name) {
+      bind(node.name.text, { value: node })
     }
-    ts.forEachChild(node, collectInitializers)
+    ts.forEachChild(node, collectBindings)
   }
-  collectInitializers(sourceFile)
+  collectBindings(sourceFile)
 
-  const seenPayloads = new Set<ts.Node>()
+  /** The expressions a function may return, not counting nested functions. */
+  const returnedExpressions = (fn: ts.FunctionLikeDeclaration): ts.Expression[] => {
+    if (!fn.body) return []
+    if (!ts.isBlock(fn.body)) return [fn.body]
+    const returned: ts.Expression[] = []
+    const walk = (node: ts.Node) => {
+      if (ts.isReturnStatement(node)) {
+        if (node.expression) returned.push(node.expression)
+      } else if (!ts.isFunctionLike(node)) {
+        ts.forEachChild(node, walk)
+      }
+    }
+    ts.forEachChild(fn.body, walk)
+    return returned
+  }
+
+  const isFunctionNode = (node: ts.Node): node is ts.FunctionLikeDeclaration =>
+    ts.isArrowFunction(node) || ts.isFunctionExpression(node) || ts.isFunctionDeclaration(node)
+
+  /** Same-file functions an expression names, e.g. the `toRow` in `rows.map(toRow)`. */
+  const functionsNamedBy = (node: ts.Expression): ts.FunctionLikeDeclaration[] => {
+    if (isFunctionNode(node)) return [node]
+    if (!ts.isIdentifier(node)) return []
+    return (bindings.get(node.text) ?? []).flatMap((binding) =>
+      'value' in binding && isFunctionNode(binding.value) ? [binding.value] : []
+    )
+  }
+
+  /**
+   * Every object literal an expression may evaluate to, through casts,
+   * conditionals, arrays, same-file bindings, property reads, `Object.assign`
+   * and the returns of same-file helpers and callbacks (`rows.map((r) => ({ ... }))`).
+   */
+  const resolving = new Set<ts.Node>()
+  const objectLiterals = (node: ts.Expression): ts.ObjectLiteralExpression[] => {
+    if (resolving.has(node)) return []
+    resolving.add(node)
+    try {
+      if (ts.isObjectLiteralExpression(node)) return [node]
+      if (ts.isArrayLiteralExpression(node)) {
+        return node.elements.flatMap((element) => objectLiterals(ts.isSpreadElement(element) ? element.expression : element))
+      }
+      if (ts.isConditionalExpression(node)) return [...objectLiterals(node.whenTrue), ...objectLiterals(node.whenFalse)]
+      if (ts.isBinaryExpression(node)) return [...objectLiterals(node.left), ...objectLiterals(node.right)]
+      if (
+        ts.isParenthesizedExpression(node) ||
+        ts.isAsExpression(node) ||
+        ts.isSatisfiesExpression(node) ||
+        ts.isNonNullExpression(node) ||
+        ts.isAwaitExpression(node)
+      ) {
+        return objectLiterals(node.expression)
+      }
+      if (ts.isIdentifier(node)) {
+        return (bindings.get(node.text) ?? []).flatMap((binding) =>
+          'member' in binding
+            ? memberValues(binding.member, binding.key).flatMap(objectLiterals)
+            : ts.isFunctionDeclaration(binding.value)
+              ? []
+              : objectLiterals(binding.value)
+        )
+      }
+      if (ts.isPropertyAccessExpression(node)) {
+        return memberValues(node.expression, node.name.text).flatMap(objectLiterals)
+      }
+      if (ts.isCallExpression(node)) {
+        const callee = node.expression
+        const isObjectAssign =
+          ts.isPropertyAccessExpression(callee) &&
+          ts.isIdentifier(callee.expression) &&
+          callee.expression.text === 'Object' &&
+          callee.name.text === 'assign'
+        return [
+          ...(isObjectAssign ? node.arguments.flatMap(objectLiterals) : []),
+          ...functionsNamedBy(callee).flatMap(returnedExpressions).flatMap(objectLiterals),
+          ...node.arguments.flatMap(functionsNamedBy).flatMap(returnedExpressions).flatMap(objectLiterals),
+        ]
+      }
+      return []
+    } finally {
+      resolving.delete(node)
+    }
+  }
+
+  /** The values a `key` property may take on the objects an expression evaluates to. */
+  const memberValues = (node: ts.Expression, key: string): ts.Expression[] =>
+    objectLiterals(node).flatMap((object) =>
+      object.properties.flatMap((property): ts.Expression[] => {
+        if (ts.isPropertyAssignment(property) && propertyNameText(property.name) === key) return [property.initializer]
+        if (ts.isShorthandPropertyAssignment(property) && property.name.text === key) return [property.name]
+        if (ts.isSpreadAssignment(property)) return memberValues(property.expression, key)
+        return []
+      })
+    )
+
+  const recordedObjects = new Set<ts.Node>()
   const recordPayloadWrites = (node: ts.Expression) => {
-    if (seenPayloads.has(node)) return
-    seenPayloads.add(node)
-
-    if (ts.isObjectLiteralExpression(node)) {
-      for (const property of node.properties) {
+    for (const object of objectLiterals(node)) {
+      if (recordedObjects.has(object)) continue
+      recordedObjects.add(object)
+      for (const property of object.properties) {
         if (ts.isShorthandPropertyAssignment(property) && property.name.text === 'shareToken') {
           result.shareTokenWrites.push(finding(property, property.name.text))
         } else if (ts.isPropertyAssignment(property)) {
@@ -124,38 +236,16 @@ function scanSource(file: string, text: string): ScanResult {
           recordPayloadWrites(property.expression)
         }
       }
-    } else if (ts.isConditionalExpression(node)) {
-      recordPayloadWrites(node.whenTrue)
-      recordPayloadWrites(node.whenFalse)
-    } else if (ts.isBinaryExpression(node)) {
-      recordPayloadWrites(node.left)
-      recordPayloadWrites(node.right)
-    } else if (
-      ts.isParenthesizedExpression(node) ||
-      ts.isAsExpression(node) ||
-      ts.isSatisfiesExpression(node) ||
-      ts.isNonNullExpression(node)
-    ) {
-      recordPayloadWrites(node.expression)
-    } else if (ts.isIdentifier(node)) {
-      for (const initializer of initializers.get(node.text) ?? []) {
-        recordPayloadWrites(initializer)
-      }
     }
   }
 
   const recordWriteCall = (call: ts.CallExpression, method: string) => {
+    const args = call.arguments[0]
+    if (!args) return
     const payloadKeys = method === 'upsert' ? ['create', 'update'] : ['data']
-    let args: ts.Expression | undefined = call.arguments[0]
-    if (args && ts.isIdentifier(args)) {
-      args = initializers.get(args.text)?.find(ts.isObjectLiteralExpression)
-    }
-    if (!args || !ts.isObjectLiteralExpression(args)) return
-    for (const property of args.properties) {
-      if (ts.isPropertyAssignment(property) && payloadKeys.includes(propertyNameText(property.name) ?? '')) {
-        recordPayloadWrites(property.initializer)
-      } else if (ts.isShorthandPropertyAssignment(property) && payloadKeys.includes(property.name.text)) {
-        recordPayloadWrites(property.name)
+    for (const key of payloadKeys) {
+      for (const payload of memberValues(args, key)) {
+        recordPayloadWrites(payload)
       }
     }
   }
@@ -177,6 +267,15 @@ function scanSource(file: string, text: string): ScanResult {
       }
       if (ts.isPropertyAccessExpression(callee) && PRISMA_WRITE_METHODS.has(callee.name.text)) {
         recordWriteCall(node, callee.name.text)
+      }
+      // `Object.assign(data, { shareToken: t })` sets the key like an assignment does.
+      if (
+        ts.isPropertyAccessExpression(callee) &&
+        ts.isIdentifier(callee.expression) &&
+        callee.expression.text === 'Object' &&
+        callee.name.text === 'assign'
+      ) {
+        node.arguments.slice(1).forEach(recordPayloadWrites)
       }
       if (calleeName && RAW_QUERY_METHODS.has(calleeName) && /share_?token/i.test(node.getText(sourceFile))) {
         result.shareTokenWrites.push(finding(node, 'raw query'))
@@ -264,12 +363,49 @@ describe('the scanner', () => {
     expect(writesIn('prisma.$executeRaw`UPDATE "PlexWrapped" SET "shareToken" = ${t}`')).toEqual(['raw query'])
   })
 
+  it('finds writes in createMany arrays and in rows built by a callback', () => {
+    expect(writesIn('prisma.plexWrapped.createMany({ data: [{ userId, year, shareToken: t }] })')).toEqual(['t'])
+    expect(writesIn('prisma.plexWrapped.createMany({ data: [...rows, { userId, shareToken: t }] })')).toEqual(['t'])
+    expect(writesIn('prisma.plexWrapped.createMany({ data: rows.map((r) => ({ ...r, shareToken: t })) })')).toEqual(['t'])
+    expect(
+      writesIn('prisma.plexWrapped.createMany({ data: rows.map(function (r) { return { ...r, shareToken: t } }) })')
+    ).toEqual(['t'])
+    expect(
+      writesIn('const toRow = (r) => ({ id: r.id, shareToken: r.token })\nprisma.plexWrapped.createMany({ data: rows.map(toRow) })')
+    ).toEqual(['r.token'])
+  })
+
+  it('finds writes built by same-file helpers, destructuring and Object.assign', () => {
+    expect(
+      writesIn('function buildArgs(t) { return { where: { id }, data: { shareToken: t } } }\nprisma.plexWrapped.update(buildArgs(t))')
+    ).toEqual(['t'])
+    expect(
+      writesIn('const payloadFor = (t) => ({ shareToken: t })\nprisma.plexWrapped.update({ where, data: payloadFor(t) })')
+    ).toEqual(['t'])
+    expect(
+      writesIn('const { data } = { data: { shareToken: t } }\nprisma.plexWrapped.update({ where, data })')
+    ).toEqual(['t'])
+    expect(
+      writesIn('const { data: payload } = buildArgs()\nfunction buildArgs() { return { data: { shareToken: t } } }\nprisma.plexWrapped.update({ where, data: payload })')
+    ).toEqual(['t'])
+    expect(writesIn('const args = { where, data: { shareToken: t } }\nprisma.plexWrapped.update({ where, data: args.data })')).toEqual(['t'])
+    expect(writesIn('Object.assign(data, { shareToken: t })')).toEqual(['t'])
+    expect(writesIn('prisma.plexWrapped.update({ where, data: Object.assign({}, base, { shareToken: t }) })')).toEqual(['t'])
+  })
+
   it('ignores reads, filters and DTO fields', () => {
     expect(writesIn('prisma.plexWrapped.findUnique({ where: { shareToken: token } })')).toEqual([])
     expect(writesIn('prisma.plexWrapped.updateMany({ where: { shareToken: null }, data: { status: "x" } })')).toEqual([])
     expect(writesIn('prisma.plexWrapped.findMany({ select: { shareToken: true } })')).toEqual([])
     expect(writesIn('return { id: w.id, shareToken: w.shareToken }')).toEqual([])
     expect(writesIn('if (row.shareToken === t) {}')).toEqual([])
+    expect(writesIn('prisma.plexWrapped.update({ where: { shareToken: t }, data: rows.map((r) => r.id) })')).toEqual([])
+    expect(writesIn('const toDto = (w) => ({ shareToken: w.shareToken })\nreturn rows.map(toDto)')).toEqual([])
+  })
+
+  it('stops on self-referencing bindings', () => {
+    expect(writesIn('const data = data\nprisma.plexWrapped.update({ where, data })')).toEqual([])
+    expect(writesIn('function f() { return f() }\nprisma.plexWrapped.update({ where, data: f() })')).toEqual([])
   })
 })
 
