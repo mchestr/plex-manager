@@ -8,8 +8,10 @@
  * Runs only when TEST_DATABASE_URL is set; a URL whose database name does not
  * end in `_test` fails the suite before any connection is made (P0.4's
  * `assertTestDatabaseUrl`). The suite empties the PlexWrapped, LLMUsage,
- * ChatConversation and WrappedShareVisit tables of that database, because the
- * script scans every row.
+ * ChatConversation and WrappedShareVisit tables of that database and asserts
+ * whole-table counts, because the script scans every row. It must not run in
+ * parallel with another suite on the same database (P1.5: run the integration
+ * project with one worker, or give each suite its own schema).
  *
  *   TEST_DATABASE_URL=postgresql://.../plex_manager_test npx jest scripts/__tests__/rewind-strip-leaderboards.pg.test.ts
  */
@@ -17,7 +19,7 @@
 import { PrismaPg } from "@prisma/adapter-pg"
 
 import { PrismaClient } from "@/lib/generated/prisma/client"
-import { assertTestDatabaseUrl } from "@/lib/security/test-mode"
+import { assertTestDatabaseUrl, maskDatabaseUrl } from "@/lib/security/test-mode"
 import { buildLeaderboards, buildStatistics, LEADERBOARD_MEMBER_EMAIL } from "@/lib/wrapped/__tests__/fixtures"
 import { toShareSafeV2 } from "@/lib/wrapped/data/share-safe-v2"
 import { main } from "@/scripts/rewind-strip-leaderboards"
@@ -27,6 +29,11 @@ const describePg = testDatabaseUrl === undefined ? describe.skip : describe
 
 const ID = "p020"
 const OWNER_EMAIL = "mike@example.com"
+/** Jane's Plex username is an address that differs from her account email. */
+const JANE_USERNAME = "jane.plex@example.com"
+/** When the opt-in release went live: every seeded row was last written before it. */
+const OPT_IN_SINCE = "2026-01-01T00:00:00Z"
+const SEEDED_AT = new Date("2025-12-01T00:00:00Z")
 const LEGACY_ERROR = `User not found in Tautulli. Plex User ID: 7, Email: jane@example.com. Available users: jsnow (${LEADERBOARD_MEMBER_EMAIL}), asmith (no email)`
 
 const { derived: _derived, percentile: _percentile, ...v1Statistics } = buildStatistics()
@@ -62,24 +69,29 @@ async function seed(db: PrismaClient) {
   await db.user.createMany({
     data: [
       { id: `${ID}-mike`, name: "Mike", email: OWNER_EMAIL },
-      { id: `${ID}-jane`, name: "jane@example.com", email: "jane@example.com" },
+      { id: `${ID}-jane`, name: JANE_USERNAME, email: "jane@work.example" },
       { id: `${ID}-jelly`, name: "Jelly", email: null },
     ],
   })
-  const completed = { status: "completed", generatedAt: new Date("2025-12-01T00:00:00Z") }
+  const completed = { status: "completed", generatedAt: SEEDED_AT }
+  const seeded = { updatedAt: SEEDED_AT }
   await db.plexWrapped.createMany({
     data: [
       // v1 with a roster, the owner's email as its name and in its text, and a visited token
-      { id: `${ID}-w1`, userId: `${ID}-mike`, year: 2024, ...completed, data: JSON.stringify(v1Data), summary: `${OWNER_EMAIL} watched 85 films`, shareToken: `${ID}-visited` },
-      // v2 with a roster and a token nobody visited
-      { id: `${ID}-w2`, userId: `${ID}-mike`, year: 2025, ...completed, data: JSON.stringify(v2Data("Mike", true)), summary: "Mike's 2025", archetype: "Midnight Marathoner", shareToken: `${ID}-unvisited` },
-      // v2 whose stored name is an email, with a token visited only since P0.8
-      { id: `${ID}-w3`, userId: `${ID}-jane`, year: 2025, ...completed, data: JSON.stringify(v2Data("jane@example.com", false)), shareToken: `${ID}-new-visit` },
-      { id: `${ID}-w4`, userId: `${ID}-jane`, year: 2024, status: "failed", data: "{}", error: LEGACY_ERROR },
-      { id: `${ID}-w5`, userId: `${ID}-jelly`, year: 2025, status: "failed", data: "not json", error: "LLM provider timed out" },
-      { id: `${ID}-w6`, userId: `${ID}-jelly`, year: 2024, ...completed, data: JSON.stringify(v2Data("Jelly", false)) },
+      { id: `${ID}-w1`, userId: `${ID}-mike`, year: 2024, ...completed, ...seeded, data: JSON.stringify(v1Data), summary: `${OWNER_EMAIL} watched 85 films`, shareToken: `${ID}-visited` },
+      // v2 with a roster and an auto-minted token nobody visited
+      { id: `${ID}-w2`, userId: `${ID}-mike`, year: 2025, ...completed, ...seeded, data: JSON.stringify(v2Data("Mike", true)), summary: "Mike's 2025", archetype: "Midnight Marathoner", shareToken: `${ID}-unvisited` },
+      // v2 whose stored name is the Plex username, an address, with a token visited only since P0.8
+      { id: `${ID}-w3`, userId: `${ID}-jane`, year: 2025, ...completed, ...seeded, data: JSON.stringify(v2Data(JANE_USERNAME, false)), summary: `${JANE_USERNAME} watched 85 films`, shareToken: `${ID}-new-visit` },
+      { id: `${ID}-w4`, userId: `${ID}-jane`, year: 2024, status: "failed", ...seeded, data: "{}", error: LEGACY_ERROR },
+      { id: `${ID}-w5`, userId: `${ID}-jelly`, year: 2025, status: "failed", ...seeded, data: "not json", error: "LLM provider timed out" },
+      { id: `${ID}-w6`, userId: `${ID}-jelly`, year: 2024, ...completed, ...seeded, data: JSON.stringify(v2Data("Jelly", false)) },
+      // Its member turns sharing on after the opt-in release (below), and nobody has opened the link yet
+      { id: `${ID}-w7`, userId: `${ID}-jelly`, year: 2023, ...completed, ...seeded, data: JSON.stringify(v2Data("Jelly", false)) },
     ],
   })
+  // The write enableWrappedShareLink makes; Prisma sets updatedAt to now, after the cutoff.
+  await db.plexWrapped.updateMany({ where: { id: `${ID}-w7`, shareToken: null }, data: { shareToken: `${ID}-opted-in` } })
   await db.wrappedShareVisit.createMany({
     data: [
       { id: `${ID}-legacy-visit`, wrappedId: `${ID}-w1`, ipAddress: "3f2a9c", userAgent: "Mozilla/5.0", referer: "https://chat.example" },
@@ -108,12 +120,21 @@ async function snapshot(db: PrismaClient) {
 
 async function run(db: PrismaClient, argv: string[]) {
   const lines: string[] = []
-  const code = await main(argv, db, (line) => lines.push(line))
+  const code = await main(argv, { db, databaseUrl: testDatabaseUrl!, print: (line) => lines.push(line) })
   return { code, lines }
 }
 
+const APPLY = ["--apply", `--opt-in-since=${OPT_IN_SINCE}`]
+
+const header = (apply: boolean) => [
+  apply
+    ? `Rewind roster clean-up: applying to ${maskDatabaseUrl(testDatabaseUrl!)}.`
+    : `Rewind roster clean-up: dry run against ${maskDatabaseUrl(testDatabaseUrl!)}, nothing is written (pass --apply to write).`,
+  "Opt-in since 2026-01-01T00:00:00.000Z: share links on Rewinds written since then are kept.",
+]
+
 const EXPECTED_COUNTS = [
-  "1. Stored data     scanned 6, changed 3, unparsable 1",
+  "1. Stored data     scanned 7, changed 3, unparsable 1",
   "2. LLM text        scanned 2, changed 2",
   "3. Errors          scanned 2, changed 1",
   "4. Share tokens    scanned 3, changed 1",
@@ -136,28 +157,22 @@ describePg("rewind:strip-leaderboards against PostgreSQL", () => {
     await db.$disconnect()
   })
 
-  it("reports the counts in a dry run and changes nothing", async () => {
+  it("reports the same counts in two dry runs and changes nothing", async () => {
     const before = await snapshot(db)
 
-    const { code, lines } = await run(db, [])
+    const first = await run(db, [`--opt-in-since=${OPT_IN_SINCE}`])
+    const second = await run(db, [`--opt-in-since=${OPT_IN_SINCE}`])
 
-    expect(code).toBe(0)
-    expect(lines).toEqual([
-      "Rewind roster clean-up: dry run, nothing written (pass --apply to write).",
-      ...EXPECTED_COUNTS,
-    ])
+    expect(first).toEqual({ code: 0, lines: [...header(false), ...EXPECTED_COUNTS] })
+    expect(second).toEqual(first)
     expect(await snapshot(db)).toEqual(before)
   })
 
   it("applies the same counts with --apply", async () => {
-    const { code, lines } = await run(db, ["--apply"])
+    const { code, lines } = await run(db, APPLY)
 
     expect(code).toBe(0)
-    expect(lines).toEqual([
-      "Rewind roster clean-up: applied.",
-      `${EXPECTED_COUNTS[0]}, skipped 0`,
-      ...EXPECTED_COUNTS.slice(1),
-    ])
+    expect(lines).toEqual([...header(true), `${EXPECTED_COUNTS[0]}, skipped 0`, ...EXPECTED_COUNTS.slice(1)])
   })
 
   it("leaves no roster, no owner email as a name and no roster error in stored rows", async () => {
@@ -165,7 +180,7 @@ describePg("rewind:strip-leaderboards against PostgreSQL", () => {
     const w1 = rows.get(`${ID}-w1`)!
     const w1Data = JSON.parse(w1.data)
 
-    for (const id of ["w1", "w2", "w3", "w6"]) {
+    for (const id of ["w1", "w2", "w3", "w6", "w7"]) {
       const row = rows.get(`${ID}-${id}`)!
       expect(JSON.parse(row.data).statistics).not.toHaveProperty("leaderboards")
       expect(row.data).not.toContain(LEADERBOARD_MEMBER_EMAIL)
@@ -178,6 +193,7 @@ describePg("rewind:strip-leaderboards against PostgreSQL", () => {
     expect(w1.summary).toBe("Mike watched 85 films")
     expect(JSON.parse(rows.get(`${ID}-w2`)!.data).statistics.percentile).toEqual({ percentile: 5, topPercentLabel: "Top 5%" })
     expect(JSON.parse(rows.get(`${ID}-w3`)!.data).userName).toBe("Viewer")
+    expect(rows.get(`${ID}-w3`)!.summary).toBe("Viewer watched 85 films")
 
     expect(rows.get(`${ID}-w4`)!.error).toBe('{"code":"TAUTULLI_USER_NOT_FOUND"}')
     expect(rows.get(`${ID}-w5`)!.data).toBe("not json")
@@ -198,30 +214,39 @@ describePg("rewind:strip-leaderboards against PostgreSQL", () => {
     expect(usage.get(`${ID}-chat-call`)).toMatchObject({ prompt: '[{"role":"user","content":"hi"}]', response: "Hello!" })
   })
 
-  it("revokes only the unvisited token and deletes only the legacy visit", async () => {
+  it("revokes only the auto-minted unvisited token, and keeps the link a member turned on after the release", async () => {
     const tokens = await db.plexWrapped.findMany({ where: { shareToken: { not: null } }, orderBy: { id: "asc" }, select: { id: true, shareToken: true } })
-    const visits = await db.wrappedShareVisit.findMany({ select: { id: true } })
 
     expect(tokens).toEqual([
       { id: `${ID}-w1`, shareToken: `${ID}-visited` },
       { id: `${ID}-w3`, shareToken: `${ID}-new-visit` },
+      { id: `${ID}-w7`, shareToken: `${ID}-opted-in` },
     ])
-    expect(visits).toEqual([{ id: `${ID}-new-visit` }])
+  })
+
+  it("clears the legacy visit's IP hash, user agent and referer and keeps the visit", async () => {
+    const visits = await db.wrappedShareVisit.findMany({ orderBy: { id: "asc" } })
+
+    expect(visits).toEqual([
+      expect.objectContaining({ id: `${ID}-legacy-visit`, wrappedId: `${ID}-w1`, ipAddress: null, userAgent: null, referer: null }),
+      expect.objectContaining({ id: `${ID}-new-visit`, wrappedId: `${ID}-w3`, ipAddress: null, userAgent: null, referer: null }),
+    ])
   })
 
   it("reports zeros on a second --apply and leaves every row byte-identical", async () => {
     const before = await snapshot(db)
 
-    const { code, lines } = await run(db, ["--apply"])
+    const { code, lines } = await run(db, APPLY)
 
     expect(code).toBe(0)
+    // Step 1 rewrote w1 and w3, so no token is on a row last written before the cutoff any more.
     expect(lines).toEqual([
-      "Rewind roster clean-up: applied.",
-      "1. Stored data     scanned 6, changed 0, unparsable 1, skipped 0",
+      ...header(true),
+      "1. Stored data     scanned 7, changed 0, unparsable 1, skipped 0",
       "2. LLM text        scanned 2, changed 0",
       "3. Errors          scanned 2, changed 0",
-      "4. Share tokens    scanned 2, changed 0",
-      "5. Legacy visits   scanned 1, changed 0",
+      "4. Share tokens    scanned 0, changed 0",
+      "5. Legacy visits   scanned 2, changed 0",
     ])
     expect(await snapshot(db)).toEqual(before)
   })

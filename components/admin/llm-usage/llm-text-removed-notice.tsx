@@ -1,4 +1,4 @@
-import { LLM_TEXT_REMOVED_NOTICE } from "@/lib/wrapped/maintenance/strip-rosters"
+const LLM_TEXT_REMOVED_NOTICE = "Text removed in the October 2026 privacy clean-up"
 
 /** Stands in for LLM prompt or response text that the October 2026 clean-up removed (P0.20). */
 export function LlmTextRemovedNotice({ title }: { title: string }) {

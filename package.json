@@ -21,14 +21,14 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:headed": "playwright test --headed",
+    "rewind:strip-leaderboards": "tsx --tsconfig tsconfig.scripts.json scripts/rewind-strip-leaderboards.ts",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "SKIP_SEED=true prisma migrate dev",
     "db:studio": "prisma studio",
     "db:seed": "prisma db seed",
     "register-discord-metadata": "ts-node --project tsconfig.scripts.json -r tsconfig-paths/register scripts/register-discord-metadata.ts",
-    "register-discord-commands": "ts-node --project tsconfig.scripts.json -r tsconfig-paths/register scripts/register-discord-commands.ts",
-    "rewind:strip-leaderboards": "tsx --tsconfig tsconfig.scripts.json scripts/rewind-strip-leaderboards.ts"
+    "register-discord-commands": "ts-node --project tsconfig.scripts.json -r tsconfig-paths/register scripts/register-discord-commands.ts"
   },
   "dependencies": {
     "@next-auth/prisma-adapter": "^1.0.7",

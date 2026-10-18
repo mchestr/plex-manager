@@ -4,22 +4,17 @@
 
 /**
  * The pure transforms of the October 2026 roster clean-up (P0.20), and the
- * runner's write discipline against a mocked client. The Postgres-backed run
- * is scripts/__tests__/rewind-strip-leaderboards.pg.test.ts.
+ * runner's write discipline against a mocked client. The CLI's arguments and
+ * output are tested in scripts/__tests__/rewind-strip-leaderboards.test.ts,
+ * and the Postgres-backed run in rewind-strip-leaderboards.pg.test.ts beside it.
  */
 
 import type { PrismaClient } from "@/lib/generated/prisma/client"
 import { buildLeaderboards, buildStatistics, LEADERBOARD_MEMBER_EMAIL } from "@/lib/wrapped/__tests__/fixtures"
-import {
-  formatStripReport,
-  parseStripArgs,
-  scrubOwnerEmail,
-  stripLegacyError,
-  stripRosters,
-  stripStoredRewind,
-} from "@/lib/wrapped/maintenance/strip-rosters"
+import { scrubOwnerEmail, stripRosters, stripStoredRewind } from "@/lib/wrapped/maintenance/strip-rosters"
 
 const OWNER = { name: "Mike", email: "Mike.Owner@example.com" }
+const OPT_IN_SINCE = new Date("2026-10-22T18:00:00Z")
 
 function storedRewind(overrides: Record<string, unknown> = {}) {
   return {
@@ -98,6 +93,33 @@ describe("stripStoredRewind", () => {
     expect(strip(row, owner).summary).toBe("Hi Mo $& $1, not aab@x.io or a+b@xxio")
   })
 
+  it("replaces a name that is itself an address, when it differs from the account email", () => {
+    // Pre-P0.13 prompts used `name || email`, so the Plex username reached the LLM text.
+    const owner = { name: "jsnow.plex@gmail.com", email: "jon@work.example" }
+    const row = storedRewind({
+      userName: "Viewer",
+      statistics: buildStatistics(),
+      sections: [{ id: "hero", content: "jsnow.plex@gmail.com watched 85 films" }],
+      summary: "JSnow.Plex@gmail.com's year, sent to jon@work.example",
+    })
+
+    const stripped = strip(row, owner)
+
+    expect(stripped.sections[0].content).toBe("Viewer watched 85 films")
+    expect(stripped.summary).toBe("Viewer's year, sent to Viewer")
+    expect(JSON.stringify(stripped)).not.toContain("@")
+  })
+
+  it("replaces only whole addresses, not one inside a longer address", () => {
+    const owner = { name: "Jo", email: "jo@x.io" }
+    const row = storedRewind({
+      statistics: buildStatistics(),
+      summary: "banjo@x.io, jo@x.iox, jo@x.io.uk and mail.jo@x.io stay; jo@x.io, (jo@x.io) and JO@X.IO. go",
+    })
+
+    expect(strip(row, owner).summary).toBe("banjo@x.io, jo@x.iox, jo@x.io.uk and mail.jo@x.io stay; Jo, (Jo) and Jo. go")
+  })
+
   it("leaves a clean row unchanged, and a stripped row is clean, so a second pass is a no-op", () => {
     const row = storedRewind({ userName: "mike.owner@example.com", summary: "mike.owner@example.com's year" })
     const once = stripStoredRewind(JSON.stringify(row), OWNER)
@@ -121,67 +143,12 @@ describe("scrubOwnerEmail", () => {
     expect(scrubOwnerEmail("mike.owner@example.com watched 85 films", OWNER)).toBe("Mike watched 85 films")
   })
 
-  it("returns null, text without the email, and text for an owner with no email unchanged", () => {
+  it("returns null, text without the email, and text for an owner with no address unchanged", () => {
     expect(scrubOwnerEmail(null, OWNER)).toBeNull()
     expect(scrubOwnerEmail("Mike watched 85 films", OWNER)).toBe("Mike watched 85 films")
     expect(scrubOwnerEmail("x@y.example watched", { name: "Mike", email: null })).toBe("x@y.example watched")
-  })
-})
-
-describe("stripLegacyError", () => {
-  it("replaces the roster error with the TAUTULLI_USER_NOT_FOUND code", () => {
-    const legacy =
-      "User not found in Tautulli. Plex User ID: 1, Email: mike@example.com. Available users: jsnow (jsnow@example.com)"
-
-    expect(stripLegacyError(legacy)).toBe('{"code":"TAUTULLI_USER_NOT_FOUND"}')
-  })
-
-  it("leaves other errors, stored codes and null unchanged", () => {
-    expect(stripLegacyError("LLM provider timed out")).toBe("LLM provider timed out")
-    expect(stripLegacyError('{"code":"TAUTULLI_USER_NOT_FOUND"}')).toBe('{"code":"TAUTULLI_USER_NOT_FOUND"}')
-    expect(stripLegacyError(null)).toBeNull()
-  })
-})
-
-describe("parseStripArgs", () => {
-  it("is a dry run without arguments and applies only with --apply", () => {
-    expect(parseStripArgs([])).toEqual({ ok: true, apply: false })
-    expect(parseStripArgs(["--apply"])).toEqual({ ok: true, apply: true })
-  })
-
-  it("refuses anything else, and recognises --help", () => {
-    expect(parseStripArgs(["--aply"])).toEqual({ ok: false, help: false })
-    expect(parseStripArgs(["--apply", "--force"])).toEqual({ ok: false, help: false })
-    expect(parseStripArgs(["--help"])).toEqual({ ok: false, help: true })
-  })
-})
-
-describe("formatStripReport", () => {
-  const report = {
-    apply: false,
-    storedData: { scanned: 12, changed: 3, unparsable: 1, skipped: 0 },
-    llmText: { scanned: 40, changed: 38 },
-    errors: { scanned: 2, changed: 1 },
-    tokens: { scanned: 9, changed: 7 },
-    visits: { scanned: 30, changed: 30 },
-  }
-
-  it("prints a header and scanned and changed counts for each step", () => {
-    expect(formatStripReport(report)).toEqual([
-      "Rewind roster clean-up: dry run, nothing written (pass --apply to write).",
-      "1. Stored data     scanned 12, changed 3, unparsable 1",
-      "2. LLM text        scanned 40, changed 38",
-      "3. Errors          scanned 2, changed 1",
-      "4. Share tokens    scanned 9, changed 7",
-      "5. Legacy visits   scanned 30, changed 30",
-    ])
-  })
-
-  it("adds the skipped count when applied", () => {
-    const lines = formatStripReport({ ...report, apply: true })
-
-    expect(lines[0]).toBe("Rewind roster clean-up: applied.")
-    expect(lines[1]).toBe("1. Stored data     scanned 12, changed 3, unparsable 1, skipped 0")
+    // A name with an @ that is not an address is not a pattern, so stray @ signs stay.
+    expect(scrubOwnerEmail("Mail me @ home", { name: "@", email: null })).toBe("Mail me @ home")
   })
 })
 
@@ -196,7 +163,8 @@ describe("stripRosters against a mocked client", () => {
     const tx = {
       wrappedShareVisit: {
         count: jest.fn().mockResolvedValue(legacyVisits),
-        deleteMany: jest.fn().mockResolvedValue({ count: legacyVisits }),
+        updateMany: jest.fn().mockResolvedValue({ count: legacyVisits }),
+        deleteMany: jest.fn(),
       },
       plexWrapped: {
         count: jest.fn().mockResolvedValue(4),
@@ -232,7 +200,7 @@ describe("stripRosters against a mocked client", () => {
   it("writes nothing in a dry run and counts what an apply would change", async () => {
     const { db, tx, client } = mockDb(rows, 3)
 
-    const report = await stripRosters(client, { apply: false })
+    const report = await stripRosters(client, { apply: false, optInSince: OPT_IN_SINCE })
 
     expect(report.storedData).toEqual({ scanned: 201, changed: 5, unparsable: 0, skipped: 0 })
     expect(report.tokens.changed).toBe(4)
@@ -241,12 +209,23 @@ describe("stripRosters against a mocked client", () => {
     expect(db.lLMUsage.updateMany).not.toHaveBeenCalled()
     expect(db.$transaction).not.toHaveBeenCalled()
     expect(tx.plexWrapped.updateMany).not.toHaveBeenCalled()
+    expect(db.plexWrapped.count).toHaveBeenCalledWith({
+      where: { shareToken: { not: null }, updatedAt: { lt: OPT_IN_SINCE }, shareVisits: { none: {} } },
+    })
+  })
+
+  it("counts every unvisited token in a dry run without a cutoff", async () => {
+    const { db, client } = mockDb([], 3)
+
+    await stripRosters(client, { apply: false, optInSince: null })
+
+    expect(db.plexWrapped.count).toHaveBeenCalledWith({ where: { shareToken: { not: null }, shareVisits: { none: {} } } })
   })
 
   it("reads stored rows in id-cursor batches of 200", async () => {
     const { db, client } = mockDb(rows, 0)
 
-    await stripRosters(client, { apply: false })
+    await stripRosters(client, { apply: false, optInSince: null })
 
     expect(db.plexWrapped.findMany).toHaveBeenCalledTimes(2)
     expect(db.plexWrapped.findMany.mock.calls[0][0]).toMatchObject({ where: {}, orderBy: { id: "asc" }, take: 200 })
@@ -257,7 +236,7 @@ describe("stripRosters against a mocked client", () => {
     const { db, client } = mockDb(rows, 0)
     db.plexWrapped.updateMany.mockResolvedValueOnce({ count: 0 })
 
-    const report = await stripRosters(client, { apply: true })
+    const report = await stripRosters(client, { apply: true, optInSince: OPT_IN_SINCE })
 
     const rowWrites = db.plexWrapped.updateMany.mock.calls
       .map(([args]) => args)
@@ -270,25 +249,36 @@ describe("stripRosters against a mocked client", () => {
     expect(report.storedData).toEqual({ scanned: 201, changed: 5, unparsable: 0, skipped: 1 })
   })
 
-  it("revokes tokens and deletes visits in one transaction, and only while legacy visits exist", async () => {
-    const withLegacy = mockDb([], 3)
-    await stripRosters(withLegacy.client, { apply: true })
+  it("revokes pre-opt-in tokens and scrubs legacy visits in one transaction, before any other write", async () => {
+    const { db, tx, client } = mockDb(rows, 3)
 
-    expect(withLegacy.db.$transaction).toHaveBeenCalledTimes(1)
-    expect(withLegacy.tx.plexWrapped.updateMany).toHaveBeenCalledWith({
-      where: { shareToken: { not: null }, shareVisits: { none: {} } },
+    await stripRosters(client, { apply: true, optInSince: OPT_IN_SINCE })
+
+    expect(db.$transaction).toHaveBeenCalledTimes(1)
+    expect(tx.plexWrapped.updateMany).toHaveBeenCalledWith({
+      where: { shareToken: { not: null }, updatedAt: { lt: OPT_IN_SINCE }, shareVisits: { none: {} } },
       data: { shareToken: null },
     })
-    expect(withLegacy.tx.wrappedShareVisit.deleteMany).toHaveBeenCalledTimes(1)
-    expect(withLegacy.tx.plexWrapped.updateMany.mock.invocationCallOrder[0]).toBeLessThan(
-      withLegacy.tx.wrappedShareVisit.deleteMany.mock.invocationCallOrder[0]
-    )
+    expect(tx.wrappedShareVisit.updateMany).toHaveBeenCalledWith({
+      where: { OR: [{ ipAddress: { not: null } }, { userAgent: { not: null } }, { referer: { not: null } }] },
+      data: { ipAddress: null, userAgent: null, referer: null },
+    })
+    expect(tx.wrappedShareVisit.deleteMany).not.toHaveBeenCalled()
 
-    const withoutLegacy = mockDb([], 0)
-    const report = await stripRosters(withoutLegacy.client, { apply: true })
+    const order = (fn: jest.Mock) => fn.mock.invocationCallOrder[0]
+    expect(order(tx.plexWrapped.updateMany)).toBeLessThan(order(tx.wrappedShareVisit.updateMany))
+    // Steps 1 and 3 bump updatedAt, which would move an auto-minted token past the cutoff.
+    expect(order(tx.wrappedShareVisit.updateMany)).toBeLessThan(order(db.plexWrapped.updateMany))
+    expect(order(tx.wrappedShareVisit.updateMany)).toBeLessThan(order(db.lLMUsage.updateMany))
+  })
 
-    expect(withoutLegacy.tx.plexWrapped.updateMany).not.toHaveBeenCalled()
-    expect(withoutLegacy.tx.wrappedShareVisit.deleteMany).not.toHaveBeenCalled()
+  it("revokes and scrubs nothing once no legacy visit is left", async () => {
+    const { tx, client } = mockDb([], 0)
+
+    const report = await stripRosters(client, { apply: true, optInSince: OPT_IN_SINCE })
+
+    expect(tx.plexWrapped.updateMany).not.toHaveBeenCalled()
+    expect(tx.wrappedShareVisit.updateMany).not.toHaveBeenCalled()
     expect(report.tokens.changed).toBe(0)
     expect(report.visits.changed).toBe(0)
   })
@@ -296,7 +286,7 @@ describe("stripRosters against a mocked client", () => {
   it("nulls LLM text only on rows without a chat conversation", async () => {
     const { db, client } = mockDb([], 0)
 
-    await stripRosters(client, { apply: true })
+    await stripRosters(client, { apply: true, optInSince: OPT_IN_SINCE })
 
     expect(db.lLMUsage.updateMany).toHaveBeenCalledWith({
       where: { chatConversationId: null, OR: [{ prompt: { not: null } }, { response: { not: null } }] },
