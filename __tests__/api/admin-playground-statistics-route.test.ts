@@ -139,6 +139,43 @@ describe('GET /api/admin/playground/statistics', () => {
     expect(data.statistics.showsWatched).toBe(5)
   })
 
+  it('looks the member up in Overseerr by plexUserId and email and reports the request counts', async () => {
+    const overseerrStats = {
+      totalRequests: 4,
+      totalServerRequests: 30,
+      pendingRequests: 1,
+      approvedRequests: 2,
+      availableRequests: 1,
+      topRequestedGenres: [],
+    }
+    ;(prisma.user.findFirst as jest.Mock).mockResolvedValue(mockUser)
+    ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(mockTautulli)
+    ;(fetchTautulliStatistics as jest.Mock).mockResolvedValue(mockTautulliStats)
+    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(null)
+    ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue({
+      url: 'http://localhost:5055',
+      apiKey: 'overseerr-key',
+      isActive: true,
+    })
+    ;(fetchOverseerrStatistics as jest.Mock).mockResolvedValue({ success: true, data: overseerrStats })
+    ;(fetchTopContentLeaderboards as jest.Mock).mockResolvedValue({ success: false })
+    ;(fetchWatchTimeLeaderboard as jest.Mock).mockResolvedValue({ success: false })
+
+    const { NextRequest } = await import('next/server')
+    const request = new NextRequest('http://localhost/api/admin/playground/statistics?userName=Test User&year=2024')
+
+    const response = await GET(request)
+    const data = await response.json()
+
+    expect(fetchOverseerrStatistics).toHaveBeenCalledWith(
+      { url: 'http://localhost:5055', apiKey: 'overseerr-key' },
+      { plexUserId: 'plex-123', email: 'test@example.com' },
+      2024
+    )
+    expect(response.status).toBe(200)
+    expect(data.statistics.overseerrStats).toEqual(overseerrStats)
+  })
+
   it('should return 400 when userName is missing', async () => {
     const { NextRequest } = await import('next/server')
     const request = new NextRequest('http://localhost/api/admin/playground/statistics?year=2024')

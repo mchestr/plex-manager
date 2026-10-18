@@ -84,6 +84,8 @@ export interface OverseerrStatisticsData {
   totalServerRequests: number
   approvedRequests: number
   pendingRequests: number
+  /** Requests whose title is available (partially available counts for TV). */
+  availableRequests?: number
   topRequestedGenres: Array<{
     genre: string
     count: number

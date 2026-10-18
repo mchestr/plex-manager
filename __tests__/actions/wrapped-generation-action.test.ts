@@ -581,8 +581,12 @@ describe('generatePlexWrapped', () => {
       expect(result.success).toBe(true)
       expect(promptInput().promptName).toBe('Test User')
       expect(JSON.stringify(promptInput())).not.toContain(email)
-      // Overseerr is still looked up by email; that lookup is not the prompt
-      expect(fetchOverseerrStatistics).toHaveBeenCalledWith(expect.anything(), email, 2024)
+      // Overseerr is looked up by plexId, then email; that lookup is not the prompt
+      expect(fetchOverseerrStatistics).toHaveBeenCalledWith(
+        expect.anything(),
+        { plexUserId: 'plex-user-123', email },
+        2024
+      )
     })
 
     it.each([

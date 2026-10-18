@@ -141,7 +141,7 @@ export async function GET(request: NextRequest) {
           url: overseerr.url,
           apiKey: overseerr.apiKey,
         },
-        user.email,
+        { plexUserId: user.plexUserId, email: user.email },
         year
       )
       if (overseerrData.success && overseerrData.data) {

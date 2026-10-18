@@ -236,7 +236,7 @@ export async function generatePlexWrapped(
             url: overseerr.url,
             apiKey: overseerr.apiKey,
           },
-          user.email,
+          { plexUserId: user.plexUserId, email: user.email },
           validYear
         )
         if (overseerrData.success && overseerrData.data) {
