@@ -1,0 +1,44 @@
+  <aside class="sidebar" aria-label="Admin navigation">
+    <div class="sb-head">
+      <a class="wordmark" href="#"><span class="pip"></span><span class="wm-name">Northfield Plex</span></a>
+      <span class="badge badge-neutral" style="height:20px">Admin</span>
+    </div>
+    <button class="sb-search" aria-label="Search or jump to (Control K)">{{i:search:i-14}}Search or jump to<span class="kbd">Ctrl K</span></button>
+    <nav>
+      <a class="nav-item" href="#" style="margin-top:2px">{{i:layout-dashboard}}Overview</a>
+      <div class="sb-group">
+        <div class="sb-group-label">Community</div>
+        <a class="nav-item %USERS%" href="#" %USERS_CUR%>{{i:users}}Users<span class="trail t-2xs muted num">7</span></a>
+        <a class="nav-item %INVITES%" href="#" %INVITES_CUR%>{{i:ticket}}Invites<span class="trail t-2xs muted num">3 active</span></a>
+        <a class="nav-item" href="#">{{i:megaphone}}Announcements</a>
+        <a class="nav-item" href="#">{{i:bot}}Discord bot</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-group-label">Rewind</div>
+        <a class="nav-item" href="#">{{i:rewind}}Season<span class="trail t-2xs muted num">2 of 7</span></a>
+        <a class="nav-item" href="#">{{i:flask-conical}}Playground</a>
+        <a class="nav-item" href="#">{{i:file-text}}Prompts</a>
+        <a class="nav-item" href="#">{{i:images}}Gallery</a>
+        <a class="nav-item" href="#">{{i:clipboard-check}}Evals</a>
+        <a class="nav-item" href="#">{{i:share-2}}Share analytics</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-group-label">Usage and cost</div>
+        <a class="nav-item" href="#">{{i:activity}}LLM usage</a>
+        <a class="nav-item" href="#">{{i:coins}}Cost analysis</a>
+      </div>
+      <div class="sb-group">
+        <div class="sb-group-label">System</div>
+        <a class="nav-item" href="#">{{i:layers}}Job queues<span class="trail badge badge-destructive" style="height:20px; padding:0 6px" aria-label="2 failed jobs">2 failed</span></a>
+        <a class="nav-item %SETTINGS%" href="#" %SETTINGS_CUR%>{{i:settings}}Settings</a>
+      </div>
+    </nav>
+    <div class="sb-foot">
+      <a class="nav-item" href="#">{{i:house}}Back to home</a>
+      <div class="me">
+        <span class="avatar avatar-sm">DW</span>
+        <div style="min-width:0; flex:1"><div class="t-sm" style="font-weight:500; color:var(--foreground)">Dana Whitfield</div><div class="t-2xs muted">Owner</div></div>
+        <button class="btn btn-ghost btn-icon btn-sm muted" aria-label="Sign out">{{i:log-out}}</button>
+      </div>
+    </div>
+  </aside>

@@ -1,0 +1,22 @@
+      <section class="pass" aria-labelledby="inv-h">
+        <div class="pass-main">
+          <div class="row" style="gap:10px"><span class="avatar avatar-sm">DW</span><span class="t-sm muted">Dana Whitfield invited you</span></div>
+          <h1 id="inv-h" class="t-display" style="margin-top:18px">You're invited to Northfield Plex</h1>
+          <p class="t-body muted" style="margin-top:10px; max-width:46ch">A private Plex server shared by a group of friends. Accept to watch its libraries, request titles and get your own Rewind every December.</p>
+          <div class="row" style="flex-wrap:wrap; gap:6px; margin-top:16px" aria-label="Libraries this invite gives you">
+            <span class="badge">{{i:film}}Movies</span><span class="badge">{{i:tv}}TV shows</span><span class="badge">{{i:sparkles}}Anime</span>
+          </div>
+          <div style="margin-top:24px">
+            <button class="btn btn-primary btn-lg pass-cta">Accept with Plex</button>
+            <p class="t-xs muted" style="margin-top:10px">You'll approve access on plex.tv, then come straight back.</p>
+          </div>
+        </div>
+        <div class="pass-stub">
+          <div><div class="t-label">Invite code</div><div class="code" style="margin-top:4px">NORTH-7Q2K</div></div>
+          <dl style="display:grid; gap:10px; font-size:13px; line-height:18px">
+            <div><dt class="muted">Uses left</dt><dd class="num fg" style="font-weight:500">3 of 5</dd></div>
+            <div><dt class="muted">Expires</dt><dd class="num fg" style="font-weight:500">October 31, 2026</dd></div>
+          </dl>
+          <div class="stub-foot"><span class="monogram" aria-hidden="true">N</span><span class="t-xs muted">Good for one Plex account</span></div>
+        </div>
+      </section>

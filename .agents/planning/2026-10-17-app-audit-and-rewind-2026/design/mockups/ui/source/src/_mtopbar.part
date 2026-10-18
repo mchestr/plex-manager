@@ -1,0 +1,9 @@
+  <header class="m-topbar">
+    <button class="btn btn-ghost btn-icon btn-sm" aria-label="Open admin navigation">{{i:menu}}</button>
+    <a class="wordmark" href="#"><span class="pip"></span><span class="wm-name">Northfield Plex</span></a>
+    <span class="badge badge-neutral" style="height:20px">Admin</span>
+    <span style="margin-left:auto; display:flex; gap:4px">
+      <button class="btn btn-ghost btn-icon btn-sm" aria-label="Ask the assistant">{{i:bot-message-square}}</button>
+      <button class="btn btn-ghost btn-icon btn-sm" aria-label="Search or jump to">{{i:search}}</button>
+    </span>
+  </header>

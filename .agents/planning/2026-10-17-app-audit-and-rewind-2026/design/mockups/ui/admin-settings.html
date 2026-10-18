@@ -29,6 +29,8 @@
   --primary: oklch(79% 0.155 75);
   --primary-hover: oklch(83% 0.145 77);
   --primary-foreground: oklch(20% 0.03 65);
+  --primary-indicator: oklch(79% 0.155 75);
+  --primary-indicator-foreground: oklch(20% 0.03 65);
   --secondary: oklch(30.5% 0.006 255);
   --secondary-hover: oklch(34% 0.006 255);
   --secondary-foreground: oklch(96.5% 0.003 255);
@@ -72,6 +74,8 @@
   --primary: oklch(79% 0.155 75);
   --primary-hover: oklch(75% 0.155 72);
   --primary-foreground: oklch(20% 0.03 65);
+  --primary-indicator: oklch(55% 0.12 62);
+  --primary-indicator-foreground: oklch(98.5% 0 0);
   --secondary: oklch(95.5% 0.003 255);
   --secondary-hover: oklch(92.5% 0.004 255);
   --secondary-foreground: oklch(20% 0.006 255);
@@ -105,41 +109,55 @@
   --sidebar-border: oklch(90% 0.004 255);
   --sidebar-ring: oklch(55% 0.12 62);
 }
+/* ---- Rewind scope (ui-design-system.md 4.4; ink values from rewind-2026-design.md 5.2) ----
+   The root carries data-theme="rewind"; every element that carries data-field gets the semantic remap,
+   because var() inside a custom property resolves where it is declared. */
 [data-theme="rewind"] {
-  --background: oklch(27% 0.055 28);
-  --foreground: oklch(97% 0.012 85);
-  --card: oklch(31% 0.055 28);
-  --card-foreground: oklch(97% 0.012 85);
-  --popover: oklch(25% 0.02 40);
-  --popover-foreground: oklch(97% 0.012 85);
-  --primary: oklch(80% 0.15 75);
-  --primary-hover: oklch(84% 0.14 77);
-  --primary-foreground: oklch(20% 0.03 65);
-  --secondary: oklch(35% 0.05 28);
-  --secondary-hover: oklch(39% 0.05 28);
-  --secondary-foreground: oklch(97% 0.012 85);
-  --muted: oklch(31% 0.05 28);
-  --muted-foreground: oklch(86% 0.03 70);
-  --accent: oklch(37% 0.05 28);
-  --accent-foreground: oklch(97% 0.012 85);
-  --border: oklch(42% 0.05 30);
-  --border-strong: oklch(52% 0.045 32);
-  --input: oklch(62% 0.04 40);
-  --ring: oklch(80% 0.15 75);
-  --chart-1: oklch(80% 0.15 75);
-  --chart-2: oklch(72% 0.12 230);
-  --chart-3: oklch(74% 0.12 170);
-  --chart-4: oklch(72% 0.13 300);
-  --chart-5: oklch(74% 0.14 0);
-  --destructive: oklch(74% 0.15 25);
-  --destructive-foreground: oklch(20% 0.04 25);
-  --success: oklch(77% 0.15 155);
-  --success-foreground: oklch(20% 0.04 155);
-  --warning: oklch(88% 0.13 102);
-  --warning-foreground: oklch(22% 0.04 95);
-  --info: oklch(77% 0.11 240);
-  --info-foreground: oklch(20% 0.04 240);
+  --rw-paper: oklch(94% 0.02 85);        --rw-on-paper: oklch(19% 0.012 70);       --rw-paper-deep: oklch(19% 0.012 70);
+  --rw-coral: oklch(71.5% 0.16 34);      --rw-on-coral: oklch(18% 0.035 30);       --rw-coral-deep: oklch(43% 0.15 30);
+  --rw-marigold: oklch(82.5% 0.15 75);   --rw-on-marigold: oklch(20% 0.03 70);     --rw-marigold-deep: oklch(41.5% 0.085 65);
+  --rw-rose: oklch(79% 0.12 352);        --rw-on-rose: oklch(20% 0.04 345);        --rw-rose-deep: oklch(42% 0.15 355);
+  --rw-sky: oklch(84% 0.075 235);        --rw-on-sky: oklch(22% 0.05 245);         --rw-sky-deep: oklch(41% 0.1 245);
+  --rw-peach: oklch(84.5% 0.075 45);     --rw-on-peach: oklch(21% 0.035 40);       --rw-peach-deep: oklch(42% 0.11 40);
+  --rw-lilac: oklch(78% 0.095 290);      --rw-on-lilac: oklch(20% 0.06 285);       --rw-lilac-deep: oklch(42% 0.15 290);
+  --rw-mint: oklch(86% 0.085 165);       --rw-on-mint: oklch(20% 0.03 165);        --rw-mint-deep: oklch(40% 0.08 160);
+  --rw-ultramarine: oklch(42% 0.2 268);  --rw-on-ultramarine: oklch(94% 0.02 85);  --rw-ultramarine-deep: oklch(42% 0.2 268);
+  --rw-forest: oklch(40% 0.075 165);     --rw-on-forest: oklch(94% 0.02 85);       --rw-forest-deep: oklch(40% 0.075 165);
+  --rw-oxblood: oklch(33% 0.1 18);       --rw-on-oxblood: oklch(93% 0.03 60);      --rw-oxblood-deep: oklch(33% 0.1 18);
+  --rw-petrol: oklch(40.5% 0.065 215);   --rw-on-petrol: oklch(94% 0.02 85);       --rw-petrol-deep: oklch(40.5% 0.065 215);
 }
+[data-field]:where([data-theme="rewind"], [data-theme="rewind"] *) {
+  /* from Rewind 5.2 */
+  --background: var(--field); --foreground: var(--ink);
+  --card: var(--field); --card-foreground: var(--ink);
+  --popover: var(--rw-paper); --popover-foreground: var(--rw-on-paper);
+  --primary: var(--ink); --primary-foreground: var(--field);
+  --secondary: transparent; --secondary-foreground: var(--ink);
+  --muted-foreground: var(--ink);
+  --border: var(--ink); --input: var(--ink); --ring: var(--ink);
+  --radius: 0.375rem;
+  /* closing set (this contract): every other token a shared primitive reads */
+  --primary-hover: var(--ink);
+  --secondary-hover: var(--ink); --accent: var(--ink); --accent-foreground: var(--field);
+  --muted: transparent; --border-strong: var(--ink);
+  --primary-indicator: var(--ink); --primary-indicator-foreground: var(--field);
+  --success: var(--ink); --warning: var(--ink); --info: var(--ink); --destructive: var(--ink);
+  --success-foreground: var(--field); --warning-foreground: var(--field); --info-foreground: var(--field); --destructive-foreground: var(--field);
+  --chart-1: var(--ink); --chart-2: var(--spot); --chart-3: var(--ink); --chart-4: var(--ink); --chart-5: var(--ink);
+  color: var(--ink);
+}
+[data-field="paper"] { --field: var(--rw-paper); --ink: var(--rw-on-paper); --spot: var(--rw-ultramarine-deep); --deep: var(--rw-paper-deep); color-scheme: light; }
+[data-field="coral"] { --field: var(--rw-coral); --ink: var(--rw-on-coral); --spot: var(--rw-on-coral); --deep: var(--rw-coral-deep); color-scheme: light; }
+[data-field="marigold"] { --field: var(--rw-marigold); --ink: var(--rw-on-marigold); --spot: var(--rw-on-marigold); --deep: var(--rw-marigold-deep); color-scheme: light; }
+[data-field="rose"] { --field: var(--rw-rose); --ink: var(--rw-on-rose); --spot: var(--rw-on-rose); --deep: var(--rw-rose-deep); color-scheme: light; }
+[data-field="sky"] { --field: var(--rw-sky); --ink: var(--rw-on-sky); --spot: var(--rw-on-sky); --deep: var(--rw-sky-deep); color-scheme: light; }
+[data-field="peach"] { --field: var(--rw-peach); --ink: var(--rw-on-peach); --spot: var(--rw-on-peach); --deep: var(--rw-peach-deep); color-scheme: light; }
+[data-field="lilac"] { --field: var(--rw-lilac); --ink: var(--rw-on-lilac); --spot: var(--rw-on-lilac); --deep: var(--rw-lilac-deep); color-scheme: light; }
+[data-field="mint"] { --field: var(--rw-mint); --ink: var(--rw-on-mint); --spot: var(--rw-on-mint); --deep: var(--rw-mint-deep); color-scheme: light; }
+[data-field="ultramarine"] { --field: var(--rw-ultramarine); --ink: var(--rw-on-ultramarine); --spot: var(--rw-marigold); --deep: var(--rw-ultramarine-deep); color-scheme: dark; }
+[data-field="forest"] { --field: var(--rw-forest); --ink: var(--rw-on-forest); --spot: var(--rw-on-forest); --deep: var(--rw-forest-deep); color-scheme: dark; }
+[data-field="oxblood"] { --field: var(--rw-oxblood); --ink: var(--rw-on-oxblood); --spot: var(--rw-on-oxblood); --deep: var(--rw-oxblood-deep); color-scheme: dark; }
+[data-field="petrol"] { --field: var(--rw-petrol); --ink: var(--rw-on-petrol); --spot: var(--rw-on-petrol); --deep: var(--rw-petrol-deep); color-scheme: dark; }
 
 
 :root {
@@ -164,7 +182,10 @@
   --shadow-dialog: 0 24px 64px -16px oklch(20% 0.01 255 / 0.3);
   --shadow-poster: 0 1px 2px oklch(20% 0.01 255 / 0.18), 0 6px 16px -6px oklch(20% 0.01 255 / 0.25);
 }
-[data-theme="rewind"] { color-scheme: dark; --tint: 16%; color: var(--foreground); }
+/* Rewind scope extras the mockup stylesheet needs (radius 0.375rem, no shadows, paper scrim, 3px focus, no status tints) */
+[data-field]:where([data-theme="rewind"], [data-theme="rewind"] *) { --tint: 0%; --overlay: oklch(19% 0.012 70 / 0.55);
+  --shadow-popover: none; --shadow-dialog: none; --shadow-poster: none; --focus-w: 3px;
+  --radius-sm: 2px; --radius-md: 4px; --radius-lg: 6px; --radius-xl: 10px; }
 
 /* ---------- Base ---------- */
 *, *::before, *::after { box-sizing: border-box; }
@@ -208,6 +229,7 @@ svg.i-12 { width: 12px; height: 12px; }
 
 /* ---------- Brand ---------- */
 .pip { display: inline-block; width: 8px; height: 8px; border-radius: 2px; background: var(--primary); flex: none; }
+.pip.pip-state { background: var(--primary-indicator); } /* unread and unsaved: a state indicator, 3:1 in both themes */
 .wordmark { display: inline-flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; letter-spacing: -0.01em; white-space: nowrap; min-width: 0; }
 .wordmark .wm-name { overflow: hidden; text-overflow: ellipsis; }
 .wordmark.is-long .wm-name { font-stretch: 85%; }
@@ -237,7 +259,7 @@ svg.i-12 { width: 12px; height: 12px; }
 .btn-destructive-solid { background: var(--destructive); color: var(--destructive-foreground); font-weight: 600; }
 .btn[disabled], .btn.is-disabled { background: var(--muted); color: var(--muted-foreground); border-color: var(--border); font-weight: 500; cursor: not-allowed; }
 .btn-ghost[disabled], .btn-ghost.is-disabled { background: transparent; border-color: transparent; }
-.is-focus, .focus-demo { outline: 2px solid var(--ring); outline-offset: 2px; }
+.is-focus, .focus-demo { outline: var(--focus-w, 2px) solid var(--ring); outline-offset: var(--focus-w, 2px); }
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .link { color: var(--foreground); text-decoration: underline; text-decoration-color: var(--border-strong); text-underline-offset: 3px; }
@@ -265,14 +287,13 @@ svg.i-12 { width: 12px; height: 12px; }
 .textarea { height: auto; min-height: 76px; padding: 8px 12px; align-items: flex-start; white-space: normal; }
 .switch { position: relative; width: 36px; height: 20px; border-radius: 999px; background: var(--secondary); border: 1px solid var(--input); flex: none; display: inline-block; }
 .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 999px; background: var(--muted-foreground); transition: transform var(--dur-2) var(--ease-out); }
-.switch.on { background: var(--primary); border-color: var(--primary); }
-[data-theme="light"] .switch.on, [data-theme="light"] .checkbox.on { border-color: var(--ring); }
-.switch.on::after { transform: translateX(16px); background: var(--primary-foreground); }
+.switch.on { background: var(--primary-indicator); border-color: var(--primary-indicator); }
+.switch.on::after { transform: translateX(16px); background: var(--primary-indicator-foreground); }
 .switch.disabled { background: var(--muted); border-color: var(--border); }
 .switch.disabled::after { background: var(--border-strong); }
 .switch-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
 .checkbox { width: 16px; height: 16px; border-radius: var(--radius-sm); border: 1px solid var(--input); background: var(--background); flex: none; display: inline-flex; align-items: center; justify-content: center; }
-.checkbox.on { background: var(--primary); border-color: var(--primary); color: var(--primary-foreground); }
+.checkbox.on { background: var(--primary-indicator); border-color: var(--primary-indicator); color: var(--primary-indicator-foreground); }
 .checkbox.on svg.i { width: 12px; height: 12px; stroke-width: 3; }
 .check-row { display: flex; align-items: center; gap: 10px; font-size: 14px; }
 
@@ -372,8 +393,8 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; line-heig
 .tab.on { color: var(--foreground); border-bottom-color: var(--ring); }
 .stepper { display: grid; gap: 4px; }
 .stepper .seg { height: 4px; border-radius: 2px; background: var(--secondary); }
-.stepper .seg.done { background: color-mix(in srgb, var(--primary) 55%, var(--secondary)); }
-.stepper .seg.cur { background: var(--primary); }
+.stepper .seg.done { background: var(--muted-foreground); }
+.stepper .seg.cur { background: var(--primary-indicator); }
 .stepper .lbl { font-size: 12px; line-height: 16px; color: var(--muted-foreground); margin-top: 6px; }
 .stepper .lbl.cur { color: var(--foreground); font-weight: 500; }
 .vstep { display: flex; flex-direction: column; }
@@ -383,7 +404,7 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; line-heig
 .vstep-item.done { color: var(--foreground); }
 .vstep-item.done .n { background: var(--secondary); color: var(--foreground); }
 .vstep-item.cur { color: var(--foreground); font-weight: 600; }
-.vstep-item.cur .n { background: var(--primary); border-color: var(--primary); color: var(--primary-foreground); }
+.vstep-item.cur .n { background: var(--primary-indicator); border-color: var(--primary-indicator); color: var(--primary-indicator-foreground); }
 .vstep-item .opt { margin-left: auto; font-size: 12px; font-weight: 400; color: var(--muted-foreground); }
 
 /* ---------- Stat tile ---------- */
@@ -430,7 +451,7 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; line-heig
 .nav-item .trail { margin-left: auto; }
 .sb-foot { margin-top: auto; border-top: 1px solid var(--sidebar-border); padding-top: 12px; display: flex; flex-direction: column; gap: 4px; }
 .me { display: flex; align-items: center; gap: 10px; padding: 6px 8px; }
-.main { min-width: 0; }
+.main { min-width: 0; background: var(--background); }
 .main-inner { max-width: 1160px; padding: 24px 40px 48px; }
 .m-topbar { display: none; }
 .tabbar { display: none; }
@@ -455,27 +476,47 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14px; line-heig
 .pass::before { top: -11px; box-shadow: inset 0 -1px 0 var(--border); }
 .pass::after { bottom: -11px; box-shadow: inset 0 1px 0 var(--border); }
 .pass .code { font-family: var(--font-mono); font-size: 18px; line-height: 24px; font-weight: 600; letter-spacing: 0.06em; }
+.pass-stub .stub-foot { margin-top: auto; display: flex; align-items: center; gap: 10px; padding-top: 12px; }
 .pass.is-void .pass-stub { background: var(--card); }
 .pass.is-void .code { color: var(--muted-foreground); text-decoration: line-through; text-decoration-thickness: 1.5px; }
 @media (max-width: 767px) {
   .pass { grid-template-columns: 1fr; }
   .pass-main { padding: 22px 20px; }
   .pass-stub { border-left: 0; border-top: 1px dashed var(--border-strong); padding: 18px 20px; }
-  .pass::before, .pass::after { right: auto; top: auto; bottom: var(--stub-h, 148px); box-shadow: none; }
-  .pass::before { left: -11px; box-shadow: inset -1px 0 0 var(--border); }
+  .pass::before, .pass::after { top: auto; bottom: calc(var(--stub-h, 168px) - 10px); }
+  .pass::before { left: -11px; right: auto; box-shadow: inset -1px 0 0 var(--border); }
   .pass::after { right: -11px; left: auto; box-shadow: inset 1px 0 0 var(--border); }
 }
+/* the same stacked layout, forced (used by the mobile frames on the screens board) */
+.pass.is-stacked { grid-template-columns: 1fr; }
+.pass.is-stacked .pass-main { padding: 22px 20px; }
+.pass.is-stacked .pass-stub { border-left: 0; border-top: 1px dashed var(--border-strong); padding: 18px 20px; }
+.pass.is-stacked::before, .pass.is-stacked::after { top: auto; bottom: calc(var(--stub-h, 168px) - 10px); }
+.pass.is-stacked::before { left: -11px; right: auto; box-shadow: inset -1px 0 0 var(--border); }
+.pass.is-stacked::after { right: -11px; left: auto; box-shadow: inset 1px 0 0 var(--border); }
 
 @media (max-width: 767px) { .hide-sm { display: none !important; } }
 @media (min-width: 768px) { .show-sm { display: none !important; } }
 
-/* ---------- Rewind scope: badges sit on an opaque popover chip so the scene field never shows through ---------- */
-[data-theme="rewind"] .badge-success { background: color-mix(in srgb, var(--success) var(--tint), var(--popover)); }
-[data-theme="rewind"] .badge-info { background: color-mix(in srgb, var(--info) var(--tint), var(--popover)); }
-[data-theme="rewind"] .badge-warning { background: color-mix(in srgb, var(--warning) var(--tint), var(--popover)); }
-[data-theme="rewind"] .badge-destructive { background: color-mix(in srgb, var(--destructive) var(--tint), var(--popover)); }
-[data-theme="rewind"] .badge-neutral { background: var(--popover); }
-
+/* ---------- Rewind scope: shared primitives in ink (ui-design-system.md 4.4) ---------- */
+/* hover and highlight read accent-foreground too (the app: foreground; Rewind: the field, so hovers reverse out) */
+.btn-ghost:hover, .btn-ghost.is-hover, .btn-outline:hover, .btn-outline.is-hover, .btn-secondary:hover, .btn-secondary.is-hover { color: var(--accent-foreground); }
+.btn-ink { background: var(--primary); color: var(--primary-foreground); border: 1.5px solid var(--primary); font-weight: 600; }
+.btn-ink:hover, .btn-ink.is-hover { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1.5px; }
+.btn-ink-outline { background: transparent; color: var(--primary); border: 1.5px solid var(--primary); font-weight: 600; }
+.btn-ink-outline:hover, .btn-ink-outline.is-hover { background: var(--primary); color: var(--primary-foreground); }
+.btn-pill { height: 44px; padding: 0 20px; border-radius: 999px; font-size: 15px; }
+.seg-ctl { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--border); border-radius: var(--radius-md); }
+.seg-ctl span { height: 28px; padding: 0 12px; display: inline-flex; align-items: center; border-radius: calc(var(--radius-md) - 2px); font-size: 13px; font-weight: 500; color: var(--muted-foreground); }
+.seg-ctl span[aria-checked="true"] { background: var(--foreground); color: var(--background); }
+.toggle { height: 32px; padding: 0 10px; display: inline-flex; align-items: center; gap: 6px; border-radius: var(--radius-md); border: 1px solid var(--border-strong); font-size: 13px; font-weight: 500; }
+.toggle[aria-pressed="true"] { background: var(--foreground); color: var(--background); border-color: var(--foreground); }
+.slider { position: relative; height: 18px; display: flex; align-items: center; min-width: 140px; }
+.slider .tr { position: absolute; left: 0; right: 0; height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--input) 45%, transparent); }
+.slider .fl { position: absolute; left: 0; height: 4px; border-radius: 2px; background: var(--primary-indicator); }
+.slider .th { position: absolute; width: 18px; height: 18px; border-radius: 999px; background: var(--background); border: 2px solid var(--primary-indicator); transform: translateX(-50%); }
+.rw-strip { position: relative; display: block; background: var(--field); color: var(--ink); overflow: hidden; }
+.rw-strip svg.st { display: block; width: 100%; height: 100%; }
 /* ---------- Admin shell below md: top bar + bottom tab bar ---------- */
 @media (max-width: 767px) {
   .shell { grid-template-columns: 1fr; background: var(--background); }
@@ -503,10 +544,13 @@ body { font-size: 14px; line-height: 20px; }
 .secnav .g:first-child { padding-top: 0; }
 .secnav a { display: flex; align-items: center; gap: 10px; height: 30px; padding: 0 10px; border-radius: var(--radius-md); color: var(--muted-foreground); font-size: 14px; }
 .secnav a.on { background: var(--accent); color: var(--foreground); font-weight: 500; }
-.secnav a .dot { width: 7px; height: 7px; border-radius: 999px; margin-left: auto; flex: none; }
+.secnav a .st { margin-left: auto; display: inline-flex; flex: none; }
+.secnav a .pip + .st { margin-left: 0; }
+.secnav a .pip { margin-left: auto; }
+.tone-success { color: var(--success); } .tone-warning { color: var(--warning); } .tone-destructive { color: var(--destructive); } .tone-muted { color: var(--muted-foreground); }
 .legend { margin: 16px 10px 0; padding-top: 14px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
 .legend span { display: inline-flex; align-items: center; gap: 8px; }
-.legend .dot { width: 7px; height: 7px; border-radius: 999px; }
+.legend .st { display: inline-flex; }
 .jump { display: none; }
 .sections { display: flex; flex-direction: column; gap: 24px; }
 .set .card-header { padding: 20px 24px 0; }
@@ -517,7 +561,8 @@ body { font-size: 14px; line-height: 20px; }
 .set h2 { font-size: 16px; line-height: 24px; font-weight: 600; }
 .badge-stack { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex: none; }
 .badge-stack .when { font-size: 12px; line-height: 16px; color: var(--muted-foreground); }
-.fields { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
+.input > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .fields .full { grid-column: 1 / -1; }
 .sw-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; padding: 14px 0; border-bottom: 1px solid var(--border); }
 .sw-row:first-child { padding-top: 0; }
@@ -546,7 +591,9 @@ body { font-size: 14px; line-height: 20px; }
   .set .card-content { padding: 16px; }
   .set .card-footer { padding: 12px 16px 16px; flex-direction: column; align-items: stretch; gap: 8px; }
   .set .card-footer .result { margin: 0 0 4px; }
-  .fields { grid-template-columns: 1fr; gap: 16px; }
+  .fields { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .listbox { display: none; }
+  #a-model.is-focus { outline: 0; border-color: var(--input); }
   .input { height: 40px; font-size: 16px; }
   .input.mono { font-size: 15px; }
   .other .card-header { padding: 16px 16px 10px !important; }
@@ -566,7 +613,8 @@ body { font-size: 14px; line-height: 20px; }
     </div>
     <button class="sb-search" aria-label="Search or jump to (Control K)"><svg class="i i-14" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>Search or jump to<span class="kbd">Ctrl K</span></button>
     <nav>
-      <div class="sb-group" style="margin-top:6px">
+      <a class="nav-item" href="#" style="margin-top:2px"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>Overview</a>
+      <div class="sb-group">
         <div class="sb-group-label">Community</div>
         <a class="nav-item " href="#" ><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M16 3.128a4 4 0 0 1 0 7.744"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/></svg>Users<span class="trail t-2xs muted num">7</span></a>
         <a class="nav-item " href="#" ><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/></svg>Invites<span class="trail t-2xs muted num">3 active</span></a>
@@ -575,8 +623,11 @@ body { font-size: 14px; line-height: 20px; }
       </div>
       <div class="sb-group">
         <div class="sb-group-label">Rewind</div>
-        <a class="nav-item" href="#"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>Prompts</a>
+        <a class="nav-item" href="#"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6a2 2 0 0 0-3.414-1.414l-6 6a2 2 0 0 0 0 2.828l6 6A2 2 0 0 0 12 18z"/><path d="M22 6a2 2 0 0 0-3.414-1.414l-6 6a2 2 0 0 0 0 2.828l6 6A2 2 0 0 0 22 18z"/></svg>Season<span class="trail t-2xs muted num">2 of 7</span></a>
         <a class="nav-item" href="#"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2"/><path d="M6.453 15h11.094"/><path d="M8.5 2h7"/></svg>Playground</a>
+        <a class="nav-item" href="#"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>Prompts</a>
+        <a class="nav-item" href="#"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 11-1.296-1.296a2.4 2.4 0 0 0-3.408 0L11 16"/><path d="M4 8a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2"/><circle cx="13" cy="7" r="1" fill="currentColor"/><rect x="8" y="2" width="14" height="14" rx="2"/></svg>Gallery</a>
+        <a class="nav-item" href="#"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg>Evals</a>
         <a class="nav-item" href="#"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>Share analytics</a>
       </div>
       <div class="sb-group">
@@ -629,21 +680,22 @@ body { font-size: 14px; line-height: 20px; }
       <div class="set-layout">
         <nav class="secnav" aria-label="Settings sections">
           <div class="g">Media</div>
-          <a class="on" href="#plex" aria-current="true">Plex server<span class="dot dot-success" aria-label="Connected"></span></a>
-          <a href="#tautulli">Tautulli<span class="dot dot-destructive" aria-label="Can't connect"></span></a>
-          <a href="#overseerr">Overseerr<span class="dot dot-warning" aria-label="Unsaved changes"></span></a>
+          <a class="on" href="#plex" aria-current="true">Plex server<span class="st tone-success" role="img" aria-label="Working"><svg class="i i-12" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg></span></a>
+          <a href="#tautulli">Tautulli<span class="st tone-destructive" role="img" aria-label="Not working"><svg class="i i-12" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg></span></a>
+          <a href="#overseerr">Overseerr<span class="pip pip-state" role="img" aria-label="Unsaved changes"></span><span class="st tone-muted" role="img" aria-label="Not checked"><svg class="i i-12" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.1 2.182a10 10 0 0 1 3.8 0"/><path d="M13.9 21.818a10 10 0 0 1-3.8 0"/><path d="M17.609 3.721a10 10 0 0 1 2.69 2.7"/><path d="M2.182 13.9a10 10 0 0 1 0-3.8"/><path d="M20.279 17.609a10 10 0 0 1-2.7 2.69"/><path d="M21.818 10.1a10 10 0 0 1 0 3.8"/><path d="M3.721 6.391a10 10 0 0 1 2.7-2.69"/><path d="M6.391 20.279a10 10 0 0 1-2.69-2.7"/></svg></span></a>
           <div class="g">Features</div>
-          <a href="#ai">AI provider<span class="dot dot-success" aria-label="Connected"></span></a>
-          <a href="#discord">Discord<span class="dot dot-success" aria-label="Connected"></span></a>
-          <a href="#stripe">Stripe billing<span class="dot dot-off" aria-label="Off"></span></a>
+          <a href="#ai">AI provider<span class="st tone-success" role="img" aria-label="Working"><svg class="i i-12" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg></span></a>
+          <a href="#discord">Discord<span class="st tone-success" role="img" aria-label="Working"><svg class="i i-12" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg></span></a>
+          <a href="#stripe">Stripe billing<span class="st tone-muted" role="img" aria-label="Off"><svg class="i i-12" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.1 2.182a10 10 0 0 1 3.8 0"/><path d="M13.9 21.818a10 10 0 0 1-3.8 0"/><path d="M17.609 3.721a10 10 0 0 1 2.69 2.7"/><path d="M2.182 13.9a10 10 0 0 1 0-3.8"/><path d="M20.279 17.609a10 10 0 0 1-2.7 2.69"/><path d="M21.818 10.1a10 10 0 0 1 0 3.8"/><path d="M3.721 6.391a10 10 0 0 1 2.7-2.69"/><path d="M6.391 20.279a10 10 0 0 1-2.69-2.7"/></svg></span></a>
           <div class="g">More</div>
           <a href="#other">Other integrations</a>
           <a href="#system">System information</a>
           <div class="legend" aria-hidden="true">
-            <span><i class="dot dot-success"></i>Working</span>
-            <span><i class="dot dot-warning"></i>Needs attention</span>
-            <span><i class="dot dot-destructive"></i>Not working</span>
-            <span><i class="dot dot-off"></i>Off or not set up</span>
+            <span><i class="st tone-success"><svg class="i i-12" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg></i>Working</span>
+            <span><i class="st tone-warning"><svg class="i i-12" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></i>Needs attention</span>
+            <span><i class="st tone-destructive"><svg class="i i-12" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg></i>Not working</span>
+            <span><i class="st tone-muted"><svg class="i i-12" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.1 2.182a10 10 0 0 1 3.8 0"/><path d="M13.9 21.818a10 10 0 0 1-3.8 0"/><path d="M17.609 3.721a10 10 0 0 1 2.69 2.7"/><path d="M2.182 13.9a10 10 0 0 1 0-3.8"/><path d="M20.279 17.609a10 10 0 0 1-2.7 2.69"/><path d="M21.818 10.1a10 10 0 0 1 0 3.8"/><path d="M3.721 6.391a10 10 0 0 1 2.7-2.69"/><path d="M6.391 20.279a10 10 0 0 1-2.69-2.7"/></svg></i>Off, not set up or not checked</span>
+            <span><i class="pip pip-state" style="margin:0 2px"></i>Unsaved changes</span>
           </div>
         </nav>
 
@@ -705,15 +757,15 @@ body { font-size: 14px; line-height: 20px; }
             <div class="card-content">
               <div class="fields">
                 <div class="field"><label class="label" for="o-url">Local URL</label><div class="input mono" id="o-url">http://192.168.1.20:5055</div><span class="hint">Changed from <span class="mono" style="font-size:12.5px">http://localhost:5055</span></span></div>
-                <div class="field"><label class="label" for="o-key">API key</label><div class="input mono" id="o-key"><span>••••••••••••0be4</span><span class="trail"><span class="saved"><svg class="i i-12" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Saved</span><button class="btn btn-ghost btn-sm reveal">Show</button></span></div><span class="hint">In Overseerr, open Settings, then General.</span></div>
+                <div class="field"><label class="label" for="o-key">API key</label><div class="input mono is-focus" id="o-key" role="textbox" aria-label="API key" aria-required="true" aria-describedby="o-key-hint"><span class="ph">Required</span></div><span class="hint" id="o-key-hint" style="display:flex; gap:6px; align-items:flex-start"><span style="display:flex; margin-top:2px"><svg class="i i-12" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/></svg></span><span>Re-enter to use with the new address. The saved key only goes to <span class="mono" style="font-size:12.5px">localhost:5055</span>.</span></span></div>
                 <div class="field full"><label class="label" for="o-pub">Public URL <span class="opt">(optional)</span></label><div class="input mono" id="o-pub">https://requests.northfield.example</div><span class="hint">Members are sent here from the home page. Leave it empty to use the local URL.</span></div>
               </div>
             </div>
             <div class="card-footer">
-              <span class="result"><span class="pip" aria-hidden="true"></span><span class="fg">Unsaved changes</span></span>
+              <span class="result"><span class="pip pip-state" aria-hidden="true"></span><span class="fg">Unsaved changes</span><span>Enter the API key to test or save.</span></span>
               <button class="btn btn-ghost">Discard</button>
-              <button class="btn btn-secondary"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22v-5"/><path d="M15 8V2"/><path d="M17 8a1 1 0 0 1 1 1v4a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1z"/><path d="M9 8V2"/></svg>Test connection</button>
-              <button class="btn btn-primary">Save changes</button>
+              <button class="btn btn-secondary is-disabled" disabled><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22v-5"/><path d="M15 8V2"/><path d="M17 8a1 1 0 0 1 1 1v4a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1z"/><path d="M9 8V2"/></svg>Test connection</button>
+              <button class="btn btn-primary is-disabled" disabled>Save changes</button>
             </div>
           </section>
 
@@ -735,8 +787,8 @@ body { font-size: 14px; line-height: 20px; }
               <div class="fields" style="margin-top:20px">
                 <div class="field"><label class="label" for="a-prov">Provider</label><div class="input select" id="a-prov"><span>OpenAI</span><span class="trail"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg></span></div></div>
                 <div class="field rel"><label class="label" for="a-model">Model</label>
-                  <div class="input select is-focus" id="a-model" aria-expanded="true" aria-haspopup="listbox"><span class="mono">gpt-6-luna</span><span class="trail"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg></span></div>
-                  <div class="listbox" role="listbox" aria-label="Model">
+                  <div class="input select is-focus" id="a-model" role="combobox" aria-label="Model" aria-controls="a-model-list" aria-expanded="true" aria-haspopup="listbox"><span class="mono">gpt-6-luna</span><span class="trail"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg></span></div>
+                  <div class="listbox" id="a-model-list" role="listbox" aria-label="Model">
                     <div class="menu-item" role="option" aria-selected="false"><span class="mono">gpt-6.1-sol</span></div>
                     <div class="menu-item is-active" role="option" aria-selected="true"><span class="mono">gpt-6-luna</span><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></div>
                     <div class="menu-sep"></div>
@@ -757,16 +809,15 @@ body { font-size: 14px; line-height: 20px; }
           <!-- Discord -->
           <section class="card set" id="discord" aria-labelledby="h-dc">
             <div class="card-header">
-              <div><h2 id="h-dc">Discord</h2><p class="card-desc">Account linking, the member role and the support bot.</p></div>
-              <div class="badge-stack"><span class="badge badge-success"><span class="dot"></span>Connected</span><span class="when">Checked 1 hour ago</span></div>
+              <div><h2 id="h-dc">Discord</h2><p class="card-desc">Account linking, the member role and the support bot. Each has its own status.</p></div>
             </div>
             <div class="card-content">
               <div class="sw-row">
-                <div><div class="sw-t">Linked roles</div><div class="sw-d">Members link Discord to prove they're on the server and get the member role.</div></div>
+                <div><div class="sw-t">Linked roles <span class="badge badge-success"><span class="dot"></span>Connected</span></div><div class="sw-d">Members link Discord to prove they're on the server and get the member role. Checked 1 hour ago.</div></div>
                 <span class="row"><span class="t-xs muted">On</span><span class="switch on" role="switch" aria-checked="true" aria-label="Linked roles"></span></span>
               </div>
               <div class="sw-row" style="border-bottom:0">
-                <div><div class="sw-t">Support bot</div><div class="sw-d">Answers questions in your support channel and can check the server for members.</div></div>
+                <div><div class="sw-t">Support bot <span class="badge badge-neutral">Off</span></div><div class="sw-d">Answers questions in your support channel and can check the server for members.</div></div>
                 <span class="row"><span class="t-xs muted">Off</span><span class="switch" role="switch" aria-checked="false" aria-label="Support bot"></span></span>
               </div>
               <div class="fields" style="margin-top:8px">
@@ -799,7 +850,7 @@ body { font-size: 14px; line-height: 20px; }
               </div>
               <div class="fields" style="margin-top:20px">
                 <div class="field"><label class="label" for="s-key">Secret key</label><div class="input mono" id="s-key"><span>sk_live_••••••••3kQ2</span><span class="trail"><span class="saved"><svg class="i i-12" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Saved</span></span></div></div>
-                <div class="field"><label class="label" for="s-wh">Webhook signing secret</label><div class="input mono is-invalid" id="s-wh" aria-invalid="true" aria-describedby="s-wh-err"><span class="ph">whsec_…</span></div><span class="error-text" id="s-wh-err"><svg class="i " xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>Required before subscriptions can be turned on.</span></div>
+                <div class="field"><label class="label" for="s-wh">Webhook signing secret</label><div class="input mono" id="s-wh" aria-describedby="s-wh-d"><span class="ph">whsec_…</span></div><span class="hint" id="s-wh-d">Required before subscriptions can be turned on. In Stripe, open Developers, then Webhooks.</span></div>
                 <div class="field full"><label class="label" for="s-price">Price IDs</label><div class="input mono textarea" id="s-price"><span class="ph">price_… one per line</span></div><span class="hint">The prices offered on the subscribe page. Find them under Products in your Stripe dashboard.</span></div>
               </div>
             </div>
@@ -821,11 +872,11 @@ body { font-size: 14px; line-height: 20px; }
       </div>
     </main>
   <nav class="tabbar" aria-label="Admin sections">
+    <a href="#"><svg class="i i-20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg><span>Overview</span></a>
     <a href="#" class="" ><svg class="i i-20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M16 3.128a4 4 0 0 1 0 7.744"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/></svg><span>Users</span></a>
-    <a href="#"><svg class="i i-20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/></svg><span>Invites</span></a>
-    <a href="#"><svg class="i i-20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/></svg><span>Queues</span><i class="tb-dot" aria-label="2 failed"></i></a>
+    <a href="#"><svg class="i i-20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6a2 2 0 0 0-3.414-1.414l-6 6a2 2 0 0 0 0 2.828l6 6A2 2 0 0 0 12 18z"/><path d="M22 6a2 2 0 0 0-3.414-1.414l-6 6a2 2 0 0 0 0 2.828l6 6A2 2 0 0 0 22 18z"/></svg><span>Rewind</span></a>
     <a href="#" class="on" aria-current="page"><svg class="i i-20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/></svg><span>Settings</span></a>
-    <a href="#"><svg class="i i-20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg><span>More</span></a>
+    <a href="#" aria-label="More, 2 failed jobs"><svg class="i i-20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg><span>More</span><i class="tb-dot" aria-hidden="true"></i></a>
   </nav>
 
   </div>

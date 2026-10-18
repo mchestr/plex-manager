@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Users – Admin – Northfield Plex</title>
+<script>if (/theme=light/.test(location.search)) document.documentElement.setAttribute('data-theme','light')</script>
+<style>
+/*BASE_CSS*/
+
+/* ---- page: admin users ---- */
+body { font-size: 14px; line-height: 20px; }
+.hdr-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 24px; }
+.toolbar { display: flex; align-items: center; gap: 8px; margin: 20px 0 12px; }
+.toolbar .search { width: 300px; }
+.toolbar .spacer { flex: 1; }
+.filter-btn { height: 32px; display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: transparent; font-size: 13px; color: var(--foreground); white-space: nowrap; }
+.filter-btn .k { color: var(--muted-foreground); }
+.filter-btn svg.i { color: var(--muted-foreground); width: 14px; height: 14px; }
+.table-wrap.open { overflow: visible; }
+.table-wrap.open th:first-child { border-top-left-radius: var(--radius-lg); }
+.table-wrap.open th:last-child { border-top-right-radius: var(--radius-lg); }
+.col-user { width: 30%; }
+.t-foot { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-top: 1px solid var(--border); font-size: 13px; color: var(--muted-foreground); }
+.t-foot .pager { display: flex; gap: 6px; align-items: center; }
+.rel { position: relative; }
+.mlist { display: none; }
+
+@media (max-width: 767px) {
+  .crumbs { display: none; }
+  .hdr-row .btn-assist { display: none; }
+  .stats { grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 20px; }
+  .stat { padding: 14px; }
+  .stat .s-value { font-size: 24px; line-height: 32px; }
+  .alert { flex-wrap: wrap; }
+  .alert .alert-actions { flex-basis: 100%; margin-left: 28px; }
+  .toolbar { flex-wrap: wrap; }
+  .toolbar .search { width: 100%; }
+  .toolbar .spacer, .toolbar .sortc, .toolbar .chips { display: none; }
+  .toolbar .countc { width: 100%; }
+  .table-wrap.desk { display: none; }
+  .mlist { display: block; }
+}
+.mlist .mrow { display: flex; gap: 12px; padding: 14px 8px 14px 16px; border-bottom: 1px solid var(--border); align-items: flex-start; }
+.mlist .mrow:last-child { border-bottom: 0; }
+.mlist .body { flex: 1; min-width: 0; }
+.mlist .line1 { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.mlist .badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.mlist .meta { margin-top: 6px; }
+</style>
+</head>
+<body>
+<a class="sr-only" href="#main">Skip to content</a>
+<div class="shell">
+<!--SIDEBAR:users-->
+  <div class="main">
+<!--PART:mtopbar-->
+    <main class="main-inner" id="main">
+      <div class="hdr-row">
+        <nav class="crumbs" aria-label="Breadcrumb"><span>Community</span>{{i:chevron-right}}<span class="here" aria-current="page">Users</span></nav>
+        <button class="btn btn-ghost btn-sm btn-assist">{{i:bot-message-square:i-14}}Assistant</button>
+      </div>
+      <div class="page-header" style="margin-top:8px">
+        <div>
+          <h1 class="t-h1">Users</h1>
+          <p class="ph-desc">Everyone with an account on Northfield Plex, with their access and billing.</p>
+        </div>
+        <div class="ph-actions">
+          <button class="btn btn-secondary">{{i:ticket}}Create invite</button>
+          <button class="btn btn-primary">{{i:download}}Import from Plex</button>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="card stat">
+          <div class="s-label">Members</div>
+          <div class="s-value">7</div>
+          <div class="s-meta">2 joined in October</div>
+        </div>
+        <div class="card stat">
+          <div class="s-label">Plex access</div>
+          <div class="s-value">4<small>of 7 shared</small></div>
+          <div class="s-meta"><span class="status"><span class="dot dot-warning" style="width:7px;height:7px"></span></span>2 not verified</div>
+        </div>
+        <div class="card stat">
+          <div class="s-label">Rewind 2026</div>
+          <div class="s-value">2<small>of 7 ready</small></div>
+          <div class="meter" role="img" aria-label="2 ready, 1 generating, 4 not started">
+            <span style="flex:2; background:var(--success)"></span><span style="flex:1; background:var(--info)"></span><span style="flex:4; background:var(--border-strong)"></span>
+          </div>
+          <div class="s-meta" style="margin-top:6px">1 generating, 4 not started</div>
+        </div>
+        <div class="card stat">
+          <div class="s-label">LLM spend this year</div>
+          <div class="s-value">$0.087</div>
+          <div class="s-meta num">21,338 tokens in 14 requests</div>
+        </div>
+      </div>
+
+      <div class="alert alert-warning" role="status" style="margin-top:20px">
+        {{i:triangle-alert}}
+        <div style="flex:1; min-width:0"><span class="alert-title">Plex didn't respond, so 2 members couldn't be verified.</span> <span class="alert-body">Everyone is still listed, and their access shows as Unknown until Plex answers. Last checked 2 minutes ago.</span></div>
+        <div class="alert-actions"><button class="btn btn-secondary btn-sm">{{i:refresh-cw:i-14}}Check again</button></div>
+      </div>
+
+      <div class="toolbar" role="search" aria-label="Filter users">
+        <div class="input search"><span class="lead">{{i:search}}</span><span class="ph">Search name or email</span></div>
+        <div class="chips">
+          <button class="filter-btn" aria-haspopup="listbox"><span class="k">Role</span>All{{i:chevron-down}}</button>
+          <button class="filter-btn" aria-haspopup="listbox"><span class="k">Plex access</span>All{{i:chevron-down}}</button>
+          <button class="filter-btn" aria-haspopup="listbox"><span class="k">Subscription</span>All{{i:chevron-down}}</button>
+        </div>
+        <div class="show-sm" style="display:flex; gap:8px; width:100%"><button class="filter-btn" style="flex:1; justify-content:center">{{i:list-filter}}Filters</button><button class="filter-btn" style="flex:1; justify-content:center">{{i:arrow-up-down}}Joined, newest</button></div>
+        <span class="spacer"></span>
+        <span class="t-xs muted countc num" aria-live="polite">7 members</span>
+        <button class="filter-btn sortc">{{i:arrow-up-down}}<span class="k">Sort</span>Joined, newest</button>
+      </div>
+
+      <div class="table-wrap open desk">
+        <table class="table">
+          <caption class="sr-only">Users, sorted by join date, newest first</caption>
+          <thead>
+            <tr>
+              <th class="col-user" scope="col">User</th>
+              <th scope="col">Role</th>
+              <th scope="col">Plex access</th>
+              <th scope="col">Subscription</th>
+              <th scope="col" class="r">LLM cost</th>
+              <th scope="col" aria-sort="descending"><span class="sort">Joined{{i:arrow-down:i-14}}</span></th>
+              <th scope="col"><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><div class="user-cell"><span class="avatar">TM</span><div><a class="name" href="#">Theo Marsh</a><div class="sub">theo.marsh@proton.example</div></div></div></td>
+              <td>Member</td>
+              <td><span class="status"><span class="dot dot-off"></span>Not shared</span></td>
+              <td><span class="muted">None</span></td>
+              <td class="r num muted" aria-label="None">–</td>
+              <td class="num">Oct 11, 2026</td>
+              <td class="r"><button class="btn btn-ghost btn-icon btn-sm muted" aria-label="Actions for Theo Marsh">{{i:ellipsis}}</button></td>
+            </tr>
+            <tr>
+              <td><div class="user-cell"><span class="avatar">PP</span><div><a class="name" href="#">Priya Patel</a><div class="sub">priya@patel.example</div></div></div></td>
+              <td>Member</td>
+              <td><span class="status"><span class="dot dot-warning"></span>Unknown</span></td>
+              <td><span class="muted">None</span></td>
+              <td class="r num muted" aria-label="None">–</td>
+              <td class="num">Oct 3, 2026</td>
+              <td class="r"><button class="btn btn-ghost btn-icon btn-sm muted" aria-label="Actions for Priya Patel">{{i:ellipsis}}</button></td>
+            </tr>
+            <tr>
+              <td><div class="user-cell"><span class="avatar">SR</span><div><a class="name" href="#">Sam Rivera</a><div class="sub">sam.rivera@mail.example</div></div></div></td>
+              <td>Member</td>
+              <td><span class="status"><span class="dot dot-warning"></span>Unknown</span></td>
+              <td><span class="badge badge-warning">{{i:triangle-alert}}Past due</span><div class="sub" style="margin-top:4px">Retrying Oct 20</div></td>
+              <td class="r num">$0.031</td>
+              <td class="num">Jul 22, 2025</td>
+              <td class="r"><button class="btn btn-ghost btn-icon btn-sm muted" aria-label="Actions for Sam Rivera">{{i:ellipsis}}</button></td>
+            </tr>
+            <tr class="is-hover">
+              <td><div class="user-cell"><span class="avatar">JS</span><div><a class="name" href="#">Jordan Smith</a><div class="sub">jordan.smith@fastmail.example</div></div></div></td>
+              <td>Member</td>
+              <td><span class="status"><span class="dot dot-success"></span>Shared</span></td>
+              <td><span class="badge badge-neutral">Exempt</span><div class="sub" style="margin-top:4px">Set by Dana</div></td>
+              <td class="r num">$0.001</td>
+              <td class="num">Apr 5, 2024</td>
+              <td class="r rel">
+                <button class="btn btn-ghost btn-icon btn-sm is-hover" aria-label="Actions for Jordan Smith" aria-expanded="true" aria-haspopup="menu" style="background:var(--accent)">{{i:ellipsis}}</button>
+                <div class="menu" role="menu" aria-label="Actions for Jordan Smith" style="right:0; top:calc(100% - 6px); text-align:left">
+                  <div class="menu-label">Jordan Smith</div>
+                  <a class="menu-item" role="menuitem" href="#">{{i:user-round}}View profile</a>
+                  <a class="menu-item is-active" role="menuitem" href="#">{{i:play}}Open Rewind 2026</a>
+                  <a class="menu-item" role="menuitem" href="#">{{i:refresh-cw}}Regenerate Rewind</a>
+                  <div class="menu-sep"></div>
+                  <a class="menu-item" role="menuitem" href="#">{{i:badge-check}}Remove exemption</a>
+                  <a class="menu-item danger" role="menuitem" href="#">{{i:eye-off}}Remove Plex access…</a>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td><div class="user-cell"><span class="avatar">ML</span><div><a class="name" href="#">Morgan Lee</a><div class="sub">morgan.lee@mail.example</div></div></div></td>
+              <td>Member</td>
+              <td><span class="status"><span class="dot dot-success"></span>Shared</span></td>
+              <td><span class="badge badge-success"><span class="dot"></span>Active</span><div class="sub" style="margin-top:4px">Renews Nov 6, 2026</div></td>
+              <td class="r num">$0.019</td>
+              <td class="num">Mar 14, 2024</td>
+              <td class="r"><button class="btn btn-ghost btn-icon btn-sm muted" aria-label="Actions for Morgan Lee">{{i:ellipsis}}</button></td>
+            </tr>
+            <tr>
+              <td><div class="user-cell"><span class="avatar">AK</span><div><a class="name" href="#">Alex Kim</a><div class="sub">alex.kim@fastmail.example</div></div></div></td>
+              <td>Member</td>
+              <td><span class="status"><span class="dot dot-success"></span>Shared</span></td>
+              <td><span class="badge badge-destructive">{{i:circle-x}}Canceled</span><div class="sub" style="margin-top:4px">Ended Sep 30, 2026</div></td>
+              <td class="r num">$0.004</td>
+              <td class="num">Jan 18, 2024</td>
+              <td class="r"><button class="btn btn-ghost btn-icon btn-sm muted" aria-label="Actions for Alex Kim">{{i:ellipsis}}</button></td>
+            </tr>
+            <tr>
+              <td><div class="user-cell"><span class="avatar">DW</span><div><a class="name" href="#">Dana Whitfield</a><div class="sub">dana@northfield.example</div></div></div></td>
+              <td><span class="badge">{{i:shield}}Owner</span></td>
+              <td><span class="muted">Owns the server</span></td>
+              <td><span class="muted">Not required</span></td>
+              <td class="r num">$0.032</td>
+              <td class="num">Mar 2, 2023</td>
+              <td class="r"><button class="btn btn-ghost btn-icon btn-sm muted" aria-label="Actions for Dana Whitfield">{{i:ellipsis}}</button></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="t-foot">
+          <span class="num">Showing all 7 members</span>
+          <div class="pager">
+            <span>Rows per page</span>
+            <button class="filter-btn" aria-haspopup="listbox" aria-label="Rows per page, 25">25{{i:chevron-down}}</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile: same DataTable column defs, stacked rows below md -->
+      <div class="card mlist" role="list" aria-label="Users">
+        <div class="mrow" role="listitem"><span class="avatar">TM</span><div class="body"><div class="line1"><a style="font-weight:500" href="#">Theo Marsh</a></div><div class="t-xs muted">theo.marsh@proton.example</div><div class="badges"><span class="badge"><span class="dot" style="background:transparent; box-shadow: inset 0 0 0 1.5px var(--input)"></span>Not shared</span></div><div class="meta"><span>Joined Oct 11, 2026</span></div></div><button class="btn btn-ghost btn-icon btn-sm muted" aria-label="Actions for Theo Marsh">{{i:ellipsis}}</button></div>
+        <div class="mrow" role="listitem"><span class="avatar">PP</span><div class="body"><div class="line1"><a style="font-weight:500" href="#">Priya Patel</a></div><div class="t-xs muted">priya@patel.example</div><div class="badges"><span class="badge badge-warning"><span class="dot"></span>Access unknown</span></div><div class="meta"><span>Joined Oct 3, 2026</span></div></div><button class="btn btn-ghost btn-icon btn-sm muted" aria-label="Actions for Priya Patel">{{i:ellipsis}}</button></div>
+        <div class="mrow" role="listitem"><span class="avatar">SR</span><div class="body"><div class="line1"><a style="font-weight:500" href="#">Sam Rivera</a><span class="num t-xs">$0.031</span></div><div class="t-xs muted">sam.rivera@mail.example</div><div class="badges"><span class="badge badge-warning"><span class="dot"></span>Access unknown</span><span class="badge badge-warning">{{i:triangle-alert}}Past due</span></div><div class="meta"><span>Retrying Oct 20</span><span>Joined Jul 22, 2025</span></div></div><button class="btn btn-ghost btn-icon btn-sm muted" aria-label="Actions for Sam Rivera">{{i:ellipsis}}</button></div>
+        <div class="mrow" role="listitem"><span class="avatar">JS</span><div class="body"><div class="line1"><a style="font-weight:500" href="#">Jordan Smith</a><span class="num t-xs">$0.001</span></div><div class="t-xs muted">jordan.smith@fastmail.example</div><div class="badges"><span class="badge"><span class="dot" style="background:var(--success)"></span>Shared</span><span class="badge badge-neutral">Exempt</span></div><div class="meta"><span>Joined Apr 5, 2024</span></div></div><button class="btn btn-ghost btn-icon btn-sm muted" aria-label="Actions for Jordan Smith">{{i:ellipsis}}</button></div>
+        <div class="mrow" role="listitem"><span class="avatar">ML</span><div class="body"><div class="line1"><a style="font-weight:500" href="#">Morgan Lee</a><span class="num t-xs">$0.019</span></div><div class="t-xs muted">morgan.lee@mail.example</div><div class="badges"><span class="badge"><span class="dot" style="background:var(--success)"></span>Shared</span><span class="badge badge-success"><span class="dot"></span>Active</span></div><div class="meta"><span>Renews Nov 6, 2026</span><span>Joined Mar 14, 2024</span></div></div><button class="btn btn-ghost btn-icon btn-sm muted" aria-label="Actions for Morgan Lee">{{i:ellipsis}}</button></div>
+        <div class="mrow" role="listitem"><span class="avatar">AK</span><div class="body"><div class="line1"><a style="font-weight:500" href="#">Alex Kim</a><span class="num t-xs">$0.004</span></div><div class="t-xs muted">alex.kim@fastmail.example</div><div class="badges"><span class="badge"><span class="dot" style="background:var(--success)"></span>Shared</span><span class="badge badge-destructive">{{i:circle-x}}Canceled</span></div><div class="meta"><span>Ended Sep 30, 2026</span><span>Joined Jan 18, 2024</span></div></div><button class="btn btn-ghost btn-icon btn-sm muted" aria-label="Actions for Alex Kim">{{i:ellipsis}}</button></div>
+        <div class="mrow" role="listitem"><span class="avatar">DW</span><div class="body"><div class="line1"><a style="font-weight:500" href="#">Dana Whitfield</a><span class="num t-xs">$0.032</span></div><div class="t-xs muted">dana@northfield.example</div><div class="badges"><span class="badge">{{i:shield}}Owner</span></div><div class="meta"><span>Joined Mar 2, 2023</span></div></div><button class="btn btn-ghost btn-icon btn-sm muted" aria-label="Actions for Dana Whitfield">{{i:ellipsis}}</button></div>
+      </div>
+      <p class="t-xs muted show-sm" style="margin-top:12px; text-align:center">Showing all 7 members</p>
+    </main>
+<!--PART:tabbar:T_USERS=on;T_USERS_CUR=aria-current="page";T_SETTINGS=;T_SETTINGS_CUR=-->
+  </div>
+</div>
+</body>
+</html>
