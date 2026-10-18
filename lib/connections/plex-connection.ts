@@ -50,7 +50,8 @@ export async function testPlexConnection(config: PlexServerParsed): Promise<{ su
  * Get the machine identifier from a Plex server
  */
 export async function getPlexServerIdentity(
-  serverConfig: { url: string; token: string }
+  serverConfig: { url: string; token: string },
+  options: { timeoutMs?: number } = {}
 ): Promise<{ success: boolean; machineIdentifier?: string; error?: string }> {
   try {
     const url = `${serverConfig.url}/identity?X-Plex-Token=${serverConfig.token}`
@@ -60,7 +61,7 @@ export async function getPlexServerIdentity(
       headers: {
         "Accept": "application/xml",
       },
-      timeoutMs: 5000,
+      timeoutMs: options.timeoutMs ?? 5000,
     })
 
     if (!response.ok) {
