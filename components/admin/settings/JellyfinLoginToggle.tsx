@@ -43,6 +43,13 @@ export function JellyfinLoginToggle({ enabledForLogin }: JellyfinLoginToggleProp
           size="sm"
           onClick={handleToggle}
           disabled={isPending}
+          aria-label={
+            isPending
+              ? undefined
+              : enabledForLogin
+                ? "Turn off Jellyfin sign-in"
+                : "Turn on Jellyfin sign-in"
+          }
           data-testid="jellyfin-login-toggle"
           className="hover:border-cyan-500/50 hover:text-white whitespace-nowrap"
         >

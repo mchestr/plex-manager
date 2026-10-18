@@ -19,7 +19,7 @@ import { logAuditEvent, AuditEventType } from "@/lib/security/audit-log"
 import { actionClientIp, consume, type LimitName } from "@/lib/security/rate-limit"
 import { RATE_LIMITED_MESSAGE } from "@/lib/security/rate-limit-messages"
 import { jellyfinInviteCredentialsSchema } from "@/lib/validations/jellyfin"
-import { z } from "zod"
+import { isUniqueEmailConflict } from "@/lib/prisma-errors"
 
 const logger = createLogger("INVITE")
 
@@ -69,37 +69,6 @@ function isTransactionConflict(error: unknown): boolean {
     return error.code === "P2034"
   }
   return false
-}
-
-/**
- * Where the pg driver adapter reports a unique-constraint violation (P2002):
- * `{ index: "User_email_key" }`, or `{ fields: ["email"] }` when PostgreSQL
- * names no constraint. There is no `meta.target` with driver adapters.
- */
-const uniqueViolationMetaSchema = z.object({
-  driverAdapterError: z.object({
-    cause: z.object({
-      constraint: z.object({
-        index: z.string().optional(),
-        fields: z.array(z.string()).optional(),
-      }),
-    }),
-  }),
-})
-
-/**
- * Check if an error is a unique-constraint violation on `User.email` (P2002)
- */
-function isUniqueEmailConflict(error: unknown): boolean {
-  if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") {
-    return false
-  }
-  const meta = uniqueViolationMetaSchema.safeParse(error.meta)
-  if (!meta.success) {
-    return false
-  }
-  const { index, fields } = meta.data.driverAdapterError.cause.constraint
-  return index === "User_email_key" || fields?.includes("email") === true
 }
 
 /**

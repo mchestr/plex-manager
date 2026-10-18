@@ -3,6 +3,7 @@ import { createHash } from "node:crypto"
 import { checkUserServerAccess, getPlexUserInfo } from "@/lib/connections/plex"
 import { authenticateJellyfin, isJellyfinAdmin } from "@/lib/jellyfin-auth"
 import { prisma } from "@/lib/prisma"
+import { isUniqueEmailConflict } from "@/lib/prisma-errors"
 import { consume, reward } from "@/lib/security/rate-limit"
 import { isE2ETestMode } from "@/lib/security/test-mode"
 import { createLogger } from "@/lib/utils/logger"
@@ -30,6 +31,41 @@ const ADMIN_RECHECK_INTERVAL_MS = 5 * 60 * 1000
  */
 function jellyfinUsernameSubject(username: string): string {
   return createHash("sha256").update(username.trim().toUpperCase().toLowerCase()).digest("hex")
+}
+
+/**
+ * Runs a Plex sign-in's `User` write with the member's Plex email, and once
+ * more without it when another row already holds that address (SEC-08).
+ *
+ * Rows are matched by `plexUserId`, so a row holding the address is someone
+ * else's: an old release stored Jellyfin usernames as emails, and a Plex email
+ * can go stale after a change on plex.tv. Without the retry the unique email
+ * would refuse the sign-in every time. On the retry a new row gets no email and
+ * an existing row keeps the one it has.
+ *
+ * `write` builds a new data object on each call, because the encryption
+ * extension in lib/prisma.ts rewrites `plexAuthToken` in the object it is given.
+ */
+async function writeWithPlexEmail<T>(
+  plexUser: { id: string; email: string },
+  write: (email: { email?: string }) => Promise<T>
+): Promise<T> {
+  try {
+    return await write({ email: plexUser.email })
+  } catch (error) {
+    if (!isUniqueEmailConflict(error)) {
+      throw error
+    }
+    const existingUser = await prisma.user.findUnique({
+      where: { email: plexUser.email },
+      select: { id: true },
+    })
+    logger.warn("auth.email_conflict", {
+      existingUserId: existingUser?.id ?? null,
+      plexUserId: plexUser.id,
+    })
+    return write({})
+  }
 }
 
 export const authOptions: NextAuthOptions = {
@@ -212,16 +248,18 @@ export const authOptions: NextAuthOptions = {
 
           if (!dbUser) {
             // Create new user
-            dbUser = await prisma.user.create({
-              data: {
-                plexUserId: plexUser.id,
-                plexAuthToken: authToken, // Store for watchlist sync
-                name: plexUser.username,
-                email: plexUser.email,
-                image: plexUser.thumb,
-                isAdmin,
-              },
-            })
+            dbUser = await writeWithPlexEmail(plexUser, (email) =>
+              prisma.user.create({
+                data: {
+                  plexUserId: plexUser.id,
+                  plexAuthToken: authToken, // Store for watchlist sync
+                  name: plexUser.username,
+                  ...email,
+                  image: plexUser.thumb,
+                  isAdmin,
+                },
+              })
+            )
 
             // Audit log: New user created
             if (isAdmin) {
@@ -236,16 +274,19 @@ export const authOptions: NextAuthOptions = {
             const adminStatusChanged = dbUser.isAdmin !== isAdmin
 
             // Update existing user info and admin status
-            dbUser = await prisma.user.update({
-              where: { id: dbUser.id },
-              data: {
-                plexAuthToken: authToken, // Update token on each login for watchlist sync
-                name: plexUser.username,
-                email: plexUser.email,
-                image: plexUser.thumb,
-                isAdmin,
-              },
-            })
+            const userId = dbUser.id
+            dbUser = await writeWithPlexEmail(plexUser, (email) =>
+              prisma.user.update({
+                where: { id: userId },
+                data: {
+                  plexAuthToken: authToken, // Update token on each login for watchlist sync
+                  name: plexUser.username,
+                  ...email,
+                  image: plexUser.thumb,
+                  isAdmin,
+                },
+              })
+            )
 
             // Audit log: Admin privilege change
             if (adminStatusChanged) {
