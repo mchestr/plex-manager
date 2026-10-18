@@ -87,5 +87,17 @@ describe('Plex PIN actions', () => {
       await expect(getPlexAuthToken('42')).resolves.toEqual(RATE_LIMITED_RESULT)
       expect(mockFetch).not.toHaveBeenCalled()
     })
+
+    it.each(['', '42/../../user', '42?strong=true', '-1', '1.5', '1234567890123'])(
+      'refuses the PIN id %p without calling plex.tv',
+      async (pinId) => {
+        await expect(getPlexAuthToken(pinId)).resolves.toEqual({
+          success: false,
+          code: 'INVALID_PIN',
+          error: expect.any(String),
+        })
+        expect(mockFetch).not.toHaveBeenCalled()
+      }
+    )
   })
 })

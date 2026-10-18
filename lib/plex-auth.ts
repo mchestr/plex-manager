@@ -1,5 +1,7 @@
 "use server"
 
+import { z } from "zod"
+
 import { actionClientIp, consume, type LimitName } from "@/lib/security/rate-limit"
 import { RATE_LIMITED_MESSAGE } from "@/lib/security/rate-limit-messages"
 import { createLogger } from "@/lib/utils/logger"
@@ -31,7 +33,13 @@ interface RateLimitedResult {
 export type CreatePlexPinResult = { success: true; data: PlexPinResponse } | RateLimitedResult
 
 /** `authToken` is `null` until the user approves the PIN on plex.tv. */
-export type PlexAuthTokenResult = { success: true; authToken: string | null } | RateLimitedResult
+export type PlexAuthTokenResult =
+  | { success: true; authToken: string | null }
+  | RateLimitedResult
+  | { success: false; code: "INVALID_PIN"; error: string }
+
+/** plex.tv PIN ids are positive integers; anything else never reaches the URL. */
+const pinIdSchema = z.string().regex(/^\d{1,12}$/)
 
 /**
  * Spends one point of an IP-keyed PIN limit. Returns the rate-limited result
@@ -99,9 +107,15 @@ export async function createPlexPin(): Promise<CreatePlexPinResult> {
 /**
  * Get the auth token from a Plex PIN ID. The callback page calls this every
  * few seconds until the user authorizes or the PIN expires; it is limited per
- * client IP (`plex:pin:poll`).
+ * client IP (`plex:pin:poll`). A `pinId` that is not a plex.tv PIN id (digits
+ * only) is refused before it reaches the plex.tv URL. Binding the PIN to the
+ * browser that created it is P4.8.
  */
 export async function getPlexAuthToken(pinId: string): Promise<PlexAuthTokenResult> {
+  if (!pinIdSchema.safeParse(pinId).success) {
+    return { success: false, code: "INVALID_PIN", error: "Invalid sign-in request. Please start signing in again." }
+  }
+
   const rateLimited = await rateLimitPin("plex:pin:poll")
   if (rateLimited) {
     return rateLimited
