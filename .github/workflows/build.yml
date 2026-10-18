@@ -1,4 +1,6 @@
-name: Build
+# Not "Build" or "CI": workflow_run triggers on main matched those names and
+# ran on pull-request code (SEC-02). Required checks key on the job names below.
+name: Checks
 
 on:
   push:

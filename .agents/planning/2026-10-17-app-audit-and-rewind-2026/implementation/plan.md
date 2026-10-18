@@ -547,7 +547,7 @@ gantt
 - **UI lane:** P1.1, then P1.6, P1.7 and P1.8. P1.1 and P1.6 open the longest dependency chain to the season, so they never wait for a Phase 0 step other than P0.1.
 
 **Day-0 rules (Monday 2026-10-19, before any other PR is opened).**
-1. **Stop publishing PR code.** Until P0.3 merges, every pull request still triggers Build, and `docker-publish.yml`'s `workflow_run` pushes that PR's code as `:latest` and `:main` (SEC-02). First thing on 10-19 the owner runs `gh workflow disable docker-publish.yml`. P0.3 merges before any other PR. Once it is on main, the owner re-enables the workflow (`gh workflow enable docker-publish.yml`), and the next push to main publishes from the new trigger.
+1. **Stop publishing PR code.** Until P0.3 merges, main's `docker-publish.yml` runs on `workflow_run` of any workflow named "Build" and pushes that run's PR code as `:latest` and `:main` (SEC-02). A `workflow_run` workflow always runs from main's copy, so editing it in a PR cannot stop this. Instead, the P0.3 PR renames the CI workflow in `build.yml` to "Checks" (not "Build", and not "CI", which main's old `test-analyze-failure.yml` matches): pull-request runs use the PR's copy of `build.yml`, so main's trigger never matches and no disable is needed. P0.3 merges before any other PR, because a PR branched from an older main still carries the "Build" name. After it merges, the next push to main publishes from the new push trigger.
 2. **Guard the databases before any E2E run.** P0.4 merges second, before any step runs `npm run test:e2e`, the seed or a Postgres-backed Jest test. P0.1 and P0.5 rebase on P0.4 before their E2E runs. Until then, and always afterwards, agents run E2E only with an `E2E_DATABASE_URL` whose database name ends in `_test` (for example `plex_manager_test` on `docker compose up -d db-playwright`), never with a `.env` that points at a real database.
 3. **Back up before every migration.** From the first deploy that carries a migration (P0.5's email clean-up on 2026-10-21) until P1.10's documented path replaces this rule, the owner takes a dump before deploying:
 
@@ -1735,7 +1735,7 @@ gantt
 
 **Guidance.**
 - `.github/workflows/build.yml`:
-  - Keep the name "Build", because the docker-publish trigger and branch protection key on it.
+  - Keep the workflow name "Checks" (P0.3 renamed it from "Build" so main's old `workflow_run` triggers never match a pull request). Branch protection keys on the job names, which are unchanged.
   - Add top-level `permissions: contents: read`, and a `concurrency` group on `${{ github.workflow }}-${{ github.ref }}` that cancels in-progress pull-request runs. Set `timeout-minutes`: 10 for lint, typecheck, knip and audit; 20 for test and build; 40 for e2e.
   - Pin every third-party action by SHA, with a version comment, here and in the `claude-*.yml` workflows (P0.3 pinned `docker-publish.yml`). Move setup-node 22, the npm cache, `npm ci` and `prisma generate` (with a dummy `DATABASE_URL`) into `.github/actions/setup/action.yml`.
 - Required jobs:
@@ -9331,7 +9331,7 @@ Where windows overlap inside a lane, the later step starts when the earlier one 
   1. `node scripts/release/prepare.mjs 0.2.0`, run locally, bumps `package.json`, moves "Unreleased" under the version with the date, and opens a PR `chore(release): v0.2.0`;
   2. after it merges, the owner pushes the tag `v0.2.0`;
   3. P0.3's docker-publish trigger on `v*` builds `0.2.0` and `0.2` through the metadata action's semver patterns. `latest` stays on `main`, and the image carries `org.opencontainers.image.version`;
-  4. new `.github/workflows/release.yml`, on `push: tags: ['v*']`, with `permissions: contents: write` on its one job and actions pinned by SHA, checks that the tag matches `package.json` and that "Build" passed on the commit, then runs `gh release create v0.2.0 --notes-file <the version's section>`.
+  4. new `.github/workflows/release.yml`, on `push: tags: ['v*']`, with `permissions: contents: write` on its one job and actions pinned by SHA, checks that the tag matches `package.json` and that "Checks" passed on the commit, then runs `gh release create v0.2.0 --notes-file <the version's section>`.
 - New CI check `changelog` on pull requests (`scripts/check-changelog.mjs`): a PR that touches `prisma/migrations/**`, `lib/env.ts`, `docker-entrypoint.sh`, `Dockerfile` or `deploy/**`, or carries the `breaking` label, must add a line under "Unreleased". The `no-changelog` label skips it.
 - README "Versions and upgrades": `:latest` tracks `main`; pin `:0.2.0` in production; rolling back means restoring the pre-upgrade dump and running the previous tag, because Prisma has no down migrations (GAP-20). Link P1.10's upgrade checklist.
 
