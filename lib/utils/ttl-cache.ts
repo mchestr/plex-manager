@@ -23,8 +23,11 @@
 export interface TtlCache<K, V> {
   /** The cached value, or `undefined` when the key is absent or expired. */
   get(key: K): V | undefined
-  /** Stores a value for the cache's TTL, replacing any earlier value. */
-  set(key: K, value: V): void
+  /**
+   * Stores a value for `ttlMs` (default: the cache's TTL), replacing any
+   * earlier value.
+   */
+  set(key: K, value: V, ttlMs?: number): void
   /** Drops one entry. */
   delete(key: K): void
   /** Drops every entry. */
@@ -36,7 +39,7 @@ interface CacheOptions {
   maxEntries: number
 }
 
-export function createTtlCache<K, V>({ ttlMs, maxEntries }: CacheOptions): TtlCache<K, V> {
+export function createTtlCache<K, V>({ ttlMs: defaultTtlMs, maxEntries }: CacheOptions): TtlCache<K, V> {
   const entries = new Map<K, { value: V; expiresAt: number }>()
 
   return {
@@ -49,7 +52,7 @@ export function createTtlCache<K, V>({ ttlMs, maxEntries }: CacheOptions): TtlCa
       }
       return entry.value
     },
-    set(key, value) {
+    set(key, value, ttlMs = defaultTtlMs) {
       entries.delete(key)
       if (entries.size >= maxEntries) {
         const oldest = entries.keys().next()

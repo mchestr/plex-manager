@@ -35,6 +35,16 @@ describe('createTtlCache', () => {
     expect(cache.get('k')).toBeUndefined()
   })
 
+  it('keeps an entry for the TTL given to set, when one is given', () => {
+    const cache = createTtlCache<string, string>({ ttlMs: 10_000, maxEntries: 10 })
+    cache.set('short', 'v', 1000)
+    cache.set('default', 'v')
+
+    clock.mockReturnValue(now + 1000)
+    expect(cache.get('short')).toBeUndefined()
+    expect(cache.get('default')).toBe('v')
+  })
+
   it('restarts the TTL when a key is set again', () => {
     const cache = createTtlCache<string, string>({ ttlMs: 1000, maxEntries: 10 })
     cache.set('k', 'old')

@@ -29,8 +29,9 @@
  *   eligible: generation then reports its own error. That answer is cached for
  *   {@link FAIL_OPEN_CACHE_MS} only, so the member's match is found soon after
  *   Tautulli recovers.
- * - The cache lives in this process. A changed `plexUserId` misses it, and a
- *   member an admin has just added to Tautulli waits at most 10 minutes.
+ * - The cache lives in this process (`createTtlCache`, at most 10,000
+ *   members). A changed `plexUserId` misses it, and a member an admin has
+ *   just added to Tautulli waits at most 10 minutes.
  * - `generatePlexWrapped` runs this check before it spends any rate-limit
  *   point. The cache, including the fail-open entry, is what keeps a member's
  *   repeated calls (a rate-limited member's among them) from reaching
@@ -44,6 +45,7 @@ import "server-only"
 import { findTautulliUser, type TautulliUserRow } from "@/lib/connections/tautulli"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
+import { createTtlCache } from "@/lib/utils/ttl-cache"
 
 const logger = createLogger("REWIND_ELIGIBILITY")
 
@@ -77,11 +79,13 @@ const ELIGIBLE_UNMATCHED: RewindEligibilityCheck = { eligible: true, tautulliUse
 interface CachedEligibility {
   plexUserId: string
   result: RewindEligibility
-  expiresAt: number
 }
 
-/** One entry per member id, so the map is bounded by the member count. */
-const cachedByMember = new Map<string, CachedEligibility>()
+/** One entry per member id. */
+const cachedByMember = createTtlCache<string, CachedEligibility>({
+  ttlMs: ELIGIBILITY_CACHE_MS,
+  maxEntries: 10_000,
+})
 
 /**
  * Decide whether `user` can have a Rewind, and return the member's Tautulli
@@ -99,9 +103,8 @@ export async function checkRewindEligibility(user: {
     return { eligible: false, reason: "NO_PLEX_IDENTITY" }
   }
 
-  const now = Date.now()
   const cached = cachedByMember.get(id)
-  if (cached && cached.plexUserId === plexUserId && cached.expiresAt > now) {
+  if (cached && cached.plexUserId === plexUserId) {
     const { result } = cached
     return result.eligible ? ELIGIBLE_UNMATCHED : result
   }
@@ -117,17 +120,16 @@ export async function checkRewindEligibility(user: {
   const lookup = await findTautulliUser(tautulli, { plexUserId })
   if (!lookup.ok && lookup.code === "TAUTULLI_ERROR") {
     logger.debug("Tautulli lookup failed; treating the member as eligible", { userId: id })
-    cachedByMember.set(id, { plexUserId, result: ELIGIBLE, expiresAt: now + FAIL_OPEN_CACHE_MS })
+    cachedByMember.set(id, { plexUserId, result: ELIGIBLE }, FAIL_OPEN_CACHE_MS)
     return ELIGIBLE_UNMATCHED
   }
 
-  const expiresAt = now + ELIGIBILITY_CACHE_MS
   if (lookup.ok) {
-    cachedByMember.set(id, { plexUserId, result: ELIGIBLE, expiresAt })
+    cachedByMember.set(id, { plexUserId, result: ELIGIBLE })
     return { eligible: true, tautulliUser: lookup.user }
   }
   const miss = { eligible: false, reason: "NO_TAUTULLI_MATCH" } as const
-  cachedByMember.set(id, { plexUserId, result: miss, expiresAt })
+  cachedByMember.set(id, { plexUserId, result: miss })
   return miss
 }
 
