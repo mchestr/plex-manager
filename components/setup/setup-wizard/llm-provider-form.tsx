@@ -5,6 +5,7 @@ import { fetchLLMModels, saveChatLLMProvider, saveLLMProvider } from "@/actions/
 import { StyledDropdown } from "@/components/ui/styled-dropdown"
 import { StyledInput } from "@/components/ui/styled-input"
 import { WizardFormActions } from "@/components/setup/setup-wizard/wizard-form-actions"
+import { DEFAULT_OPENAI_MODEL } from "@/lib/llm/openai-params"
 import { type LLMProviderInput } from "@/lib/validations/llm-provider"
 import { useCallback, useEffect, useRef, useState, useTransition } from "react"
 
@@ -194,7 +195,7 @@ export function LLMProviderForm({ purpose, onComplete, onBack }: LLMProviderForm
       name: "OpenAI",
       description: config.providerDescription,
       apiKeyHelp: "Get your API key from https://platform.openai.com/api-keys",
-      modelPlaceholder: "gpt-4, gpt-3.5-turbo, etc. (optional)",
+      modelPlaceholder: `${DEFAULT_OPENAI_MODEL} (default), gpt-6-luna, etc. (optional)`,
     },
   }
 

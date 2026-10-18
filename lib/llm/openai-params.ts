@@ -22,7 +22,11 @@
  * - IDs are lowercased, and an `openai/` prefix and a `-YYYY-MM-DD` snapshot
  *   suffix are stripped first, so `openai/GPT-6-Sol-2026-09-22` is `gpt-6-sol`.
  * - The GPT-6 tool rules come from OpenAI's GPT-6 guide as seen in search
- *   snippets (October 2026) and should be re-checked against the API.
+ *   snippets (October 2026), not from a live request. To check them, send one
+ *   Chat Completions request with a function tool to `gpt-6.1-sol` (expect a
+ *   Responses API error) and one to `gpt-6-luna` with `reasoning_effort:
+ *   "none"` (expect success), then correct `RESPONSES_ONLY_TOOLS` and
+ *   `REASONING_NONE_TOOLS` if the API disagrees.
  *
  * @module lib/llm/openai-params
  */

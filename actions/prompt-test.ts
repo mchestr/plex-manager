@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 import { callOpenAI, LLMConfig } from "@/lib/wrapped/api-calls"
+import { memberName } from "@/lib/wrapped/member-name"
 import { generateWrappedPrompt } from "@/lib/wrapped/prompt-template"
 import { WrappedStatistics } from "@/types/wrapped"
 import { getServerSession } from "next-auth"
@@ -45,9 +46,10 @@ export async function testPromptTemplate(input: TestPromptInput) {
 
     const userId = session.user.id
 
-    // Render the prompt with the provided data
+    // Render the prompt the way member generation does, so an email-like
+    // Plex username never reaches the model
     const renderedPrompt = await generateWrappedPrompt(
-      input.userName,
+      memberName({ name: input.userName }) ?? "there",
       input.year,
       input.statistics,
       input.templateString

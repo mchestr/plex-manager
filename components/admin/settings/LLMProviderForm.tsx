@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { StyledDropdown } from "@/components/ui/styled-dropdown"
 import { StyledInput } from "@/components/ui/styled-input"
 import { useToast } from "@/components/ui/toast"
+import { DEFAULT_OPENAI_MODEL } from "@/lib/llm/openai-params"
 import { useRouter } from "next/navigation"
 import { useEffect, useState, useTransition } from "react"
 
@@ -205,7 +206,7 @@ export function LLMProviderForm({ provider, purpose }: LLMProviderFormProps) {
               type="text"
               value={formData.model}
               onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-              placeholder="gpt-4, gpt-3.5-turbo, etc."
+              placeholder={`e.g. ${DEFAULT_OPENAI_MODEL}`}
               required
               disabled={isPending}
             />

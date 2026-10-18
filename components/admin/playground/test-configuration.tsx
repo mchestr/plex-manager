@@ -225,7 +225,7 @@ export function TestConfiguration({
                     type="text"
                     value={testConfig.model}
                     onChange={(e) => onTestConfigChange({ model: e.target.value })}
-                    placeholder="Enter custom model name (e.g., gpt-4-turbo-preview)"
+                    placeholder={`Enter custom model name (e.g., ${DEFAULT_OPENAI_MODEL})`}
                     size="md"
                   />
                   <button

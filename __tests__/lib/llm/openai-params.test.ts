@@ -29,6 +29,10 @@ const TABLE: Row[] = [
   ['gpt-5.5', 'max_completion_tokens', false, true, 'yes'],
   ['gpt-4.1-mini', 'max_tokens', true, true, 'yes'],
   ['gpt-4o', 'max_tokens', true, true, 'yes'],
+  ['gpt-4o-mini-2024-07-18', 'max_tokens', true, true, 'yes'],
+  ['gpt-4-turbo', 'max_tokens', true, false, 'yes'],
+  ['gpt-3.5-turbo', 'max_tokens', true, false, 'yes'],
+  ['gpt-5.2-mini', 'max_completion_tokens', false, true, 'yes'],
   ['openai/gpt-6-sol-2026-09-22', 'max_completion_tokens', false, true, 'reasoning-none'],
 ]
 
