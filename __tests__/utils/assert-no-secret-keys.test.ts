@@ -1,4 +1,5 @@
 import { assertNoSecretKeys, findSecretKeys } from '@/__tests__/utils/assert-no-secret-keys'
+import { ENCRYPTED_FIELDS } from '@/lib/prisma'
 
 describe('assertNoSecretKeys', () => {
   it('passes a value with only public keys', () => {
@@ -31,6 +32,14 @@ describe('assertNoSecretKeys', () => {
       '$.botToken',
       '$.StripeWebhookSecret',
     ])
+  })
+
+  it('flags every column registered in ENCRYPTED_FIELDS', () => {
+    // A new encrypted column whose name the pattern misses would let a leak pass silently.
+    const columns = [...new Set(Object.values(ENCRYPTED_FIELDS).flat())]
+
+    expect(columns.length).toBeGreaterThan(0)
+    expect(columns.filter((column) => findSecretKeys({ [column]: 'x' }).length === 0)).toEqual([])
   })
 
   it('allows shareToken and nextToken', () => {

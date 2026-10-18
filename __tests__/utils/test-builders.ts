@@ -173,7 +173,9 @@ export const INVITEE_PLEX_AUTH_TOKEN = 'invitee-plex-account-token'
 
 /**
  * Creates a full Prisma Invite row with one redemption whose user carries
- * every User scalar column, `plexAuthToken` included. Run it through
+ * every User scalar column, `plexAuthToken` included. The Json column
+ * `onboardingStatus` is null: `applyPrismaShape` reads any object value as a
+ * relation, so a Json object here would be shaped like one. Run it through
  * `applyPrismaShape` (`__tests__/utils/prisma-shape.ts`) with a query's
  * arguments to see exactly what that query would return.
  *
@@ -210,6 +212,7 @@ export const makePrismaInviteWithUsages = (overrides: Record<string, unknown> = 
         jellyfinUserId: null,
         primaryAuthService: 'plex',
         isAdmin: false,
+        onboardingStatus: null,
         isExempt: true,
         exemptReason: 'invite',
         createdAt: new Date('2026-10-02T00:00:00Z'),

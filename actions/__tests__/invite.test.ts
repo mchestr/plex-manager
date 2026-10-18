@@ -957,6 +957,7 @@ describe('invite actions', () => {
       const result = await getInvites()
 
       expect(result.success).toBe(true)
+      if (!result.success) throw new Error(result.error)
       expect(result.data).toEqual(invites)
     })
 
