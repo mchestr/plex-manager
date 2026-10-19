@@ -10,7 +10,7 @@ jest.mock("next-auth/react", () => ({
 describe("Providers", () => {
   it("applies the OS reduced-motion setting app-wide", () => {
     render(
-      <Providers>
+      <Providers format={{ timeZone: "UTC", locale: "en-US" }}>
         <p>app</p>
       </Providers>
     )

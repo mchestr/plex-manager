@@ -89,13 +89,13 @@ describe('LLMProviderForm', () => {
     await choose(user, 'llm-model-select', 'gpt-4o')
     expect(screen.getByTestId('llm-temperature-input')).toHaveValue(null)
     expect(screen.queryByTestId('llm-effort-select')).not.toBeInTheDocument()
-    expect(screen.getByTestId('llm-model-price')).toHaveTextContent('$2.50 / $10 per 1M tokens, as of 17 Oct 2026')
+    expect(screen.getByTestId('llm-model-price')).toHaveTextContent('$2.50 / $10 per 1M tokens, as of Oct 17, 2026')
 
     await choose(user, 'llm-provider-select', 'anthropic')
     await choose(user, 'llm-model-select', 'claude-sonnet-5-5')
     expect(screen.queryByTestId('llm-temperature-input')).not.toBeInTheDocument()
     expect(screen.getByTestId('llm-effort-select')).toBeInTheDocument()
-    expect(screen.getByTestId('llm-model-price')).toHaveTextContent('$2 / $10 per 1M tokens, as of 17 Oct 2026')
+    expect(screen.getByTestId('llm-model-price')).toHaveTextContent('$2 / $10 per 1M tokens, as of Oct 17, 2026')
     expect(screen.queryByTestId('llm-model-retires')).not.toBeInTheDocument()
   })
 
@@ -104,7 +104,7 @@ describe('LLMProviderForm', () => {
 
     await choose(user, 'llm-model-select', 'gpt-4.1-nano')
 
-    expect(screen.getByTestId('llm-model-retires')).toHaveTextContent('Retires on 23 Oct 2026')
+    expect(screen.getByTestId('llm-model-retires')).toHaveTextContent('Retires on Oct 23, 2026')
   })
 
   it('takes a custom model id, priced as unknown', async () => {
