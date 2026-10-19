@@ -15,9 +15,6 @@
     "lib/rewind/typeset/metrics.ts!",
     "lib/wrapped/sources/fixture-source.ts!",
     "evals/rewind/generate-fixtures.ts!",
-    // P3.3's token mirror and its colour maths have no production importer yet: remove both in P3.9
-    "lib/design/tokens.ts!",
-    "lib/design/color.ts!",
     // a test helper for Rewind component tests (P5 onwards), which knip --production never sees
     "lib/design/testing.ts!"
   ],

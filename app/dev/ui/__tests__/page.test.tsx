@@ -59,6 +59,9 @@ describe("/dev/ui", () => {
       "popover",
       "tooltip",
       "toast",
+      "status-vocabulary",
+      "icon-map",
+      "poster-palette",
     ]) {
       expect(screen.getByTestId(`dev-ui-${primitive}`)).toBeInTheDocument()
     }

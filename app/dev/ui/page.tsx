@@ -9,6 +9,7 @@ import { BadgeSpecimen, CardSpecimen, IconSpecimen, StatusSpecimen } from "./_se
 import { AlertSpecimen, SkeletonSpecimen, SpinnerSpecimen } from "./_sections/feedback"
 import { CheckboxSpecimen, FieldSpecimen, InputSpecimen, SelectSpecimen, SwitchSpecimen } from "./_sections/forms"
 import { DropdownMenuSpecimen, PopoverSpecimen, ToastSpecimen, TooltipSpecimen } from "./_sections/popups"
+import { IconMapSpecimen, PosterPaletteSpecimen, StatusVocabularySpecimen } from "./_sections/vocabulary"
 
 export const metadata: Metadata = {
   title: "UI primitives",
@@ -52,6 +53,9 @@ export default function DevUiPage() {
       <PopoverSpecimen />
       <TooltipSpecimen />
       <ToastSpecimen />
+      <StatusVocabularySpecimen />
+      <IconMapSpecimen />
+      <PosterPaletteSpecimen />
     </main>
   )
 }

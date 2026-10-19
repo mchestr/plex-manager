@@ -1,17 +1,12 @@
 import { render, screen } from '@testing-library/react'
 import { CostTrendChart } from '@/components/admin/cost-analysis/cost-trend-chart'
+import { chartTheme } from '@/lib/charts/theme'
 
 // Mock Chart.js and react-chartjs-2
 jest.mock('chart.js', () => ({
   Chart: {
     register: jest.fn(),
   },
-  CategoryScale: jest.fn(),
-  LinearScale: jest.fn(),
-  PointElement: jest.fn(),
-  LineElement: jest.fn(),
-  Tooltip: jest.fn(),
-  Legend: jest.fn(),
 }))
 
 jest.mock('react-chartjs-2', () => ({
@@ -70,7 +65,7 @@ describe('CostTrendChart', () => {
       render(<CostTrendChart data={[]} />)
 
       const emptyState = screen.getByText('No data available')
-      expect(emptyState).toHaveClass('text-slate-500', 'text-sm')
+      expect(emptyState).toHaveClass('text-muted-foreground', 'text-sm')
     })
   })
 
@@ -151,42 +146,36 @@ describe('CostTrendChart', () => {
       expect(parsedOptions.maintainAspectRatio).toBe(false)
     })
 
-    it('should display legend at top', () => {
+    it('has no legend, because its one series is named by the card title', () => {
       render(<CostTrendChart data={mockTrendData} />)
 
       const chartOptions = screen.getByTestId('chart-options')
       const parsedOptions = JSON.parse(chartOptions.textContent || '{}')
 
-      expect(parsedOptions.plugins.legend.display).toBe(true)
-      expect(parsedOptions.plugins.legend.position).toBe('top')
+      expect(parsedOptions.plugins.legend.display).toBe(false)
     })
 
-    it('should configure legend labels with proper styling', () => {
+    it('should style the tooltip as a popover from the chart theme', () => {
       render(<CostTrendChart data={mockTrendData} />)
 
       const chartOptions = screen.getByTestId('chart-options')
       const parsedOptions = JSON.parse(chartOptions.textContent || '{}')
+      const theme = chartTheme('dark')
 
-      expect(parsedOptions.plugins.legend.labels.color).toBe('#94a3b8')
-      expect(parsedOptions.plugins.legend.labels.font.size).toBe(12)
-      expect(parsedOptions.plugins.legend.labels.usePointStyle).toBe(true)
-      expect(parsedOptions.plugins.legend.labels.padding).toBe(15)
-    })
-
-    it('should configure tooltip with custom styling', () => {
-      render(<CostTrendChart data={mockTrendData} />)
-
-      const chartOptions = screen.getByTestId('chart-options')
-      const parsedOptions = JSON.parse(chartOptions.textContent || '{}')
-
-      expect(parsedOptions.plugins.tooltip.backgroundColor).toBe('#1e293b')
-      expect(parsedOptions.plugins.tooltip.titleColor).toBe('#cbd5e1')
-      expect(parsedOptions.plugins.tooltip.bodyColor).toBe('#e2e8f0')
-      expect(parsedOptions.plugins.tooltip.borderColor).toBe('#475569')
+      expect(parsedOptions.plugins.tooltip.backgroundColor).toBe(theme.tooltip.background)
+      expect(parsedOptions.plugins.tooltip.titleColor).toBe(theme.tooltip.text)
+      expect(parsedOptions.plugins.tooltip.bodyColor).toBe(theme.tooltip.text)
+      expect(parsedOptions.plugins.tooltip.borderColor).toBe(theme.tooltip.border)
       expect(parsedOptions.plugins.tooltip.borderWidth).toBe(1)
       expect(parsedOptions.plugins.tooltip.padding).toBe(12)
       expect(parsedOptions.plugins.tooltip.cornerRadius).toBe(6)
-      expect(parsedOptions.plugins.tooltip.displayColors).toBe(true)
+    })
+
+    it('takes the light theme when the mode is light', () => {
+      render(<CostTrendChart data={mockTrendData} mode="light" />)
+
+      const parsedData = JSON.parse(screen.getByTestId('chart-data').textContent || '{}')
+      expect(parsedData.datasets[0].borderColor).toBe(chartTheme('light').series[0])
     })
 
     it('should configure y-axis to begin at zero', () => {
@@ -204,7 +193,8 @@ describe('CostTrendChart', () => {
       const chartOptions = screen.getByTestId('chart-options')
       const parsedOptions = JSON.parse(chartOptions.textContent || '{}')
 
-      expect(parsedOptions.scales.y.ticks.color).toBe('#94a3b8')
+      expect(parsedOptions.scales.y.ticks.color).toBe(chartTheme('dark').tick)
+      expect(parsedOptions.scales.y.grid.color).toBe(chartTheme('dark').grid)
       expect(parsedOptions.scales.y.ticks.font.size).toBe(11)
     })
 
@@ -244,8 +234,8 @@ describe('CostTrendChart', () => {
       const chartData = screen.getByTestId('chart-data')
       const parsedData = JSON.parse(chartData.textContent || '{}')
 
-      expect(parsedData.datasets[0].borderColor).toBe('#22c55e')
-      expect(parsedData.datasets[0].backgroundColor).toBe('rgba(34, 197, 94, 0.1)')
+      expect(parsedData.datasets[0].borderColor).toBe('#cb8315')
+      expect(parsedData.datasets[0].backgroundColor).toBe('#cb831529')
       expect(parsedData.datasets[0].borderWidth).toBe(2)
       expect(parsedData.datasets[0].fill).toBe(true)
       expect(parsedData.datasets[0].tension).toBe(0.4)
@@ -259,8 +249,8 @@ describe('CostTrendChart', () => {
 
       expect(parsedData.datasets[0].pointRadius).toBe(3)
       expect(parsedData.datasets[0].pointHoverRadius).toBe(5)
-      expect(parsedData.datasets[0].pointBackgroundColor).toBe('#22c55e')
-      expect(parsedData.datasets[0].pointBorderColor).toBe('#16a34a')
+      expect(parsedData.datasets[0].pointBackgroundColor).toBe('#cb8315')
+      expect(parsedData.datasets[0].pointBorderColor).toBe('#cb8315')
     })
   })
 
