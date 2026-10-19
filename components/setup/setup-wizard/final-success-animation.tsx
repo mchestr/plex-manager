@@ -10,25 +10,25 @@ interface FinalSuccessAnimationProps {
 }
 
 export function FinalSuccessAnimation({ onComplete, title = "Setup Complete!", subtitle = "Your Plex Wrapped is ready" }: FinalSuccessAnimationProps) {
-  const [exhaustParticles, setExhaustParticles] = useState<Array<{ id: number }>>([])
-  const [stars, setStars] = useState<Array<{ id: number; x: number; y: number; delay: number }>>([])
-
-  useEffect(() => {
-    // Generate exhaust particles
-    const newExhaustParticles = Array.from({ length: 20 }, (_, i) => ({
+  // Random stars and exhaust offsets, generated once per mount
+  const [exhaustParticles] = useState(() =>
+    Array.from({ length: 20 }, (_, i) => ({
       id: i,
+      startX: (Math.random() - 0.5) * 20,
+      endX: (Math.random() - 0.5) * 40,
+      endY: 40 + Math.random() * 20,
     }))
-    setExhaustParticles(newExhaustParticles)
-
-    // Generate stars in the sky
-    const newStars = Array.from({ length: 30 }, (_, i) => ({
+  )
+  const [stars] = useState(() =>
+    Array.from({ length: 30 }, (_, i) => ({
       id: i,
       x: Math.random() * 100,
       y: Math.random() * 50, // Upper portion of screen
       delay: Math.random() * 0.5,
     }))
-    setStars(newStars)
+  )
 
+  useEffect(() => {
     // Complete animation after duration
     const timer = setTimeout(() => {
       onComplete()
@@ -192,13 +192,13 @@ export function FinalSuccessAnimation({ onComplete, title = "Setup Complete!", s
                   }}
                   initial={{
                     y: 0,
-                    x: (Math.random() - 0.5) * 20,
+                    x: particle.startX,
                     scale: 1,
                     opacity: 1,
                   }}
                   animate={{
-                    y: 40 + Math.random() * 20,
-                    x: (Math.random() - 0.5) * 40,
+                    y: particle.endY,
+                    x: particle.endX,
                     scale: [1, 1.5, 0],
                     opacity: [1, 0.8, 0],
                   }}

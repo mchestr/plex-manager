@@ -3,7 +3,7 @@
 import { signOut } from "next-auth/react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useRef, useCallback } from "react"
 import { MobileNavButton, MobileMoreMenu, type NavItem } from "./mobile-nav"
 
 // Navigation items organized by logical groups
@@ -168,9 +168,11 @@ export function AdminNav() {
   }, [])
 
   // Close more menu on navigation
-  useEffect(() => {
+  const [prevPathname, setPrevPathname] = useState(pathname)
+  if (prevPathname !== pathname) {
+    setPrevPathname(pathname)
     setMoreMenuOpen(false)
-  }, [pathname])
+  }
 
   // Check if any secondary item is active (to highlight More button)
   const isSecondaryActive = secondaryMobileNavItems.some((item) => {
