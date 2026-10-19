@@ -3,6 +3,7 @@
 import { processJellyfinInvite } from "@/actions/invite"
 import { Alert } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
+import { safeHref } from "@/lib/ui/markdown"
 import { jellyfinInviteCredentialsSchema } from "@/lib/validations/jellyfin"
 import { motion } from "motion/react"
 import { useState } from "react"
@@ -53,7 +54,7 @@ export function JellyfinSignInForm({
 
       if (result.success && result.data) {
         setShowSuccess(true)
-        setJellyfinUrl(result.data.serverUrl || null)
+        setJellyfinUrl(safeHref(result.data.serverUrl))
         onSuccess?.()
       } else if (!result.success) {
         onError(result.error || "Failed to create account")

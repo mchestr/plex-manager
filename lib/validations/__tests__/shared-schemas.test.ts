@@ -2,7 +2,7 @@ import { randomBytes } from "crypto"
 
 import { generateShareToken } from "@/lib/utils"
 
-import { createServerUrlSchema, createPublicUrlSchema, shareTokenSchema } from "../shared-schemas"
+import { createServerUrlSchema, createPublicUrlSchema, isHttpUrl, shareTokenSchema } from "../shared-schemas"
 
 describe("shared-schemas", () => {
   describe("createServerUrlSchema", () => {
@@ -94,6 +94,19 @@ describe("shared-schemas", () => {
         )
       })
     })
+  })
+
+  describe("isHttpUrl", () => {
+    it.each(["https://example.com", "http://localhost:3000/x", "HTTPS://EXAMPLE.COM"])("accepts %s", (url) => {
+      expect(isHttpUrl(new URL(url))).toBe(true)
+    })
+
+    it.each(["javascript:alert(1)", "data:text/html,hi", "ftp://example.com", "file:///etc/passwd", "mailto:a@b.c"])(
+      "rejects %s",
+      (url) => {
+        expect(isHttpUrl(new URL(url))).toBe(false)
+      }
+    )
   })
 
   describe("createPublicUrlSchema", () => {

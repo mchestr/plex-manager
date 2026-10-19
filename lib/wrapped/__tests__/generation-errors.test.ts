@@ -6,12 +6,15 @@
 import {
   adminErrorHint,
   isGenerationRefusal,
-  memberErrorCopy,
   readGenerationError,
   readStoredError,
   refusalCopy,
+  type RewindErrorCode,
   toStoredError,
 } from '../generation-errors'
+import { errorCopy } from '@/lib/ui/error-copy'
+
+const memberErrorCopy = (code: RewindErrorCode) => errorCopy(code, { audience: 'member' }).description
 
 const LEGACY_ROSTER_ERROR =
   'User not found in Tautulli. Plex User ID: 1, Email: me@example.com. Available users: alice (alice@example.com), bob (bob@example.com)'
@@ -61,7 +64,7 @@ describe('readGenerationError (P2.17)', () => {
   })
 })
 
-describe('memberErrorCopy', () => {
+describe('member copy for stored codes (errorCopy)', () => {
   it.each(['TIMEOUT', 'UPSTREAM_ERROR', 'LLM_FAILED', 'NOT_CONFIGURED', 'WORKER_LOST', 'JOB_LOST'] as const)(
     'has fixed copy for the job code %s',
     (code) => {

@@ -10,7 +10,8 @@ import { rewindInfraMessage } from "@/lib/rewind/infra-copy"
 import { failureCode, infraCode, isActiveRewindState } from "@/lib/rewind/rewind-status"
 import type { RewindEligibility } from "@/lib/wrapped/eligibility"
 import { loop } from "@/lib/utils/motion-loop"
-import { isGenerationRefusal, memberErrorCopy, refusalCopy } from "@/lib/wrapped/generation-errors"
+import { errorCopy } from "@/lib/ui/error-copy"
+import { isGenerationRefusal, refusalCopy } from "@/lib/wrapped/generation-errors"
 import { motion, useReducedMotion } from "motion/react"
 import Link from "next/link"
 import { useCallback, useEffect, useState } from "react"
@@ -310,7 +311,7 @@ export function WrappedCard({ userId, memberLongEnough, rewindEligibility, isAdm
           <div>
             <h3 className="text-xl font-bold text-white">{wrappedYear} Wrapped</h3>
             <p className="mt-1 text-sm text-red-400" data-testid="wrapped-card-failed-message">
-              {memberErrorCopy(failureCode(status.errorCode))}
+              {errorCopy(failureCode(status.errorCode), { audience: "member" }).description}
             </p>
           </div>
           <button

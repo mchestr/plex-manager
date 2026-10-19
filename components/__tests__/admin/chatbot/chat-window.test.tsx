@@ -3,18 +3,15 @@
  */
 
 import { ChatProvider } from "@/components/admin/chatbot/chat-context"
+import { Chatbot } from "@/components/admin/chatbot/chat-window"
 import { render, screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
+import { chatWithAdminBot } from "@/actions/chatbot"
 import { type ChatMessage } from "@/actions/chatbot/types"
 
 // Mock the chatbot action
 jest.mock("@/actions/chatbot", () => ({
   chatWithAdminBot: jest.fn(),
-}))
-
-// Mock react-markdown
-jest.mock("react-markdown", () => ({
-  __esModule: true,
-  default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }))
 
 // Mock motion to avoid animation issues in tests
@@ -331,6 +328,46 @@ describe("Chatbot sources display", () => {
 
       expect(messageWithoutSources.sources).toBeUndefined()
     })
+  })
+})
+
+describe("Chatbot answers render through MarkdownBody (P3.8, SEC-42)", () => {
+  beforeAll(() => {
+    // jsdom has no scrollIntoView; the window scrolls to each new message.
+    Element.prototype.scrollIntoView = jest.fn()
+  })
+
+  async function ask(reply: string) {
+    jest.mocked(chatWithAdminBot).mockResolvedValue({
+      success: true,
+      message: { role: "assistant", content: reply, timestamp: Date.now() },
+    })
+    const user = userEvent.setup()
+    const view = render(
+      <ChatProvider>
+        <Chatbot userName="Admin" />
+      </ChatProvider>
+    )
+    await user.click(screen.getByRole("button", { name: "Toggle Chatbot" }))
+    await user.type(screen.getByPlaceholderText("Ask about server status..."), "status?")
+    await user.keyboard("{Enter}")
+    await screen.findByText("ok")
+    return view
+  }
+
+  it("renders lists with list items inside the typeset wrapper", async () => {
+    const { container } = await ask("Checks:\n\n- ok\n- fine")
+
+    expect(screen.getByText("ok").closest(".typeset")).not.toBeNull()
+    expect(container.querySelectorAll(".typeset ul > li")).toHaveLength(2)
+  })
+
+  it("loads no image and links no javascript: URL from a reply", async () => {
+    const { container } = await ask("ok ![](https://example.com/?d=x) [run](javascript:alert(1))")
+
+    expect(container.querySelector("img")).toBeNull()
+    expect(container.innerHTML).not.toContain("example.com/?d=x")
+    expect(screen.getByText("run").closest("a")).toBeNull()
   })
 })
 

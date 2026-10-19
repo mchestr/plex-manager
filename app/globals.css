@@ -8,6 +8,7 @@
  */
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "./typeset.css"; /* prose for MarkdownBody (P3.8) */
 
 @custom-variant dark (&:where(.dark, .dark *):not(:where(.light, .light *)));
 

@@ -79,6 +79,21 @@ export function createServerUrlSchema(examplePort?: string) {
 }
 
 /**
+ * True when a parsed URL uses `http:` or `https:` (SEC-57). Every other
+ * scheme, including `javascript:`, `data:` and `ftp:`, is refused. `safeHref`
+ * in `lib/ui/markdown.ts` and the public URL schema share this one check.
+ *
+ * @example
+ * ```ts
+ * isHttpUrl(new URL("https://example.com")) // true
+ * isHttpUrl(new URL("javascript:alert(1)")) // false
+ * ```
+ */
+export function isHttpUrl(url: URL): boolean {
+  return url.protocol === "http:" || url.protocol === "https:"
+}
+
+/**
  * Parse an admin-entered API base URL: http or https only, with no
  * credentials, query or fragment. Returns origin + path without a trailing
  * slash, or null when the URL is not allowed.
