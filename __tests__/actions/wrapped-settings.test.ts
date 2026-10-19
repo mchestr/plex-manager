@@ -14,6 +14,10 @@ jest.mock('@/lib/admin', () => ({
   requireAdmin: jest.fn(),
 }))
 
+// `@/actions/admin` also exports actions built on the action helper, which reads the session
+jest.mock('next-auth', () => ({ getServerSession: jest.fn() }))
+jest.mock('@/lib/auth', () => ({ authOptions: {} }))
+
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 
 jest.mock('@/lib/security/audit-log', () => ({
