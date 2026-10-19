@@ -2,12 +2,17 @@ import { createHash } from "node:crypto"
 
 import { getAccessLevel, type AccessLevel } from "@/lib/access"
 import { checkUserServerAccess, getPlexUserInfo } from "@/lib/connections/plex"
+import { waitForInvitedAccess } from "@/lib/connections/plex-access-wait"
+import { readPin } from "@/lib/connections/plex-pin"
 import { getEnv, usesSecureCookies } from "@/lib/env"
+import { redeemPlexInvite } from "@/lib/invites/plex-redemption"
 import { authenticateJellyfin } from "@/lib/jellyfin-auth"
+import { PLEX_PIN_COOKIE, readPinCookie } from "@/lib/plex-pin-cookie"
 import { prisma } from "@/lib/prisma"
 import { isUniqueEmailConflict } from "@/lib/prisma-errors"
 import { consume, reward } from "@/lib/security/rate-limit"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
+import { readCookie } from "@/lib/security/signed-cookie"
 import { SessionRevokedError } from "@/lib/session-revocation"
 import { createLogger } from "@/lib/utils/logger"
 import { NextAuthOptions } from "next-auth"
@@ -87,6 +92,34 @@ async function writeWithPlexEmail<T>(
   }
 }
 
+/**
+ * The Plex sign-in this browser started: the PIN in its signed `pm-plex-pin`
+ * cookie, and the account token plex.tv issued for that PIN (SEC-11). The
+ * token is read here, on the server, so it never passes through the browser,
+ * and a request without the cookie (another browser, or one whose 15 minutes
+ * ran out) cannot finish anyone's sign-in. Throws a `PlexSignInCode`.
+ */
+async function readPlexSignIn(
+  headers: Record<string, unknown> | undefined
+): Promise<{ authToken: string; inviteCode?: string }> {
+  const cookieHeader = typeof headers?.cookie === "string" ? headers.cookie : undefined
+  const pin = readPinCookie(readCookie(cookieHeader, PLEX_PIN_COOKIE))
+  if (!pin) {
+    logger.warn("auth.plex_pin_missing")
+    throw new Error("plex_pin_expired")
+  }
+
+  const status = await readPin(pin.pinId, pin.code, pin.clientId)
+  if (status.status !== "ready") {
+    logger.warn("auth.plex_pin_not_ready", { status: status.status })
+    throw new Error(status.status === "unavailable" ? "sign_in_failed" : "plex_pin_expired")
+  }
+  return { authToken: status.authToken, inviteCode: pin.inviteCode }
+}
+
+/** Errors the Plex `authorize` passes on to the callback page, which maps them to its codes. */
+const PLEX_SIGN_IN_ERRORS = new Set(["access_denied", "NO_SERVER_CONFIGURED"])
+
 export const authOptions: NextAuthOptions = {
   // NOTE: PrismaAdapter is not compatible with CredentialsProvider
   // We use JWT strategy instead for Plex authentication
@@ -94,18 +127,21 @@ export const authOptions: NextAuthOptions = {
     CredentialsProvider({
       id: "plex",
       name: "Plex",
-      credentials: {
-        authToken: {
-          label: "Plex Auth Token",
-          type: "text",
-        },
-      },
-      async authorize(credentials) {
-        if (!credentials?.authToken) {
-          return null
-        }
+      // Nothing is read from the request body: a token sent there is ignored.
+      credentials: {},
+      async authorize(_credentials, req) {
+        const { authToken, inviteCode } = await readPlexSignIn(req?.headers)
 
-        const { authToken } = credentials
+        // The invite is redeemed here, on the server, with the token plex.tv
+        // issued (P4.12's service check included); it is idempotent per account.
+        if (inviteCode) {
+          const redeemed = await redeemPlexInvite(inviteCode, authToken)
+          if (!redeemed.success) {
+            logger.warn("auth.plex_invite_refused", { code: redeemed.code })
+            const invalid = redeemed.code === "INVITE_INVALID" || redeemed.code === "INVITE_WRONG_SERVICE"
+            throw new Error(invalid ? "invite_invalid" : "sign_in_failed")
+          }
+        }
 
         try {
           // Fetch user info from Plex API
@@ -130,14 +166,15 @@ export const authOptions: NextAuthOptions = {
           // Check if user has access to the configured Plex server
           // Use the server's admin token to check if the user exists in the server's user list
           // Also check if the user is the admin (admin users may not be in the user list)
-          const accessCheck = await checkUserServerAccess(
-            {
-              url: plexServer.url,
-              token: plexServer.token,
-              adminPlexUserId: plexServer.adminPlexUserId,
-            },
-            plexUser.id
-          )
+          // A member who just redeemed an invite waits for plex.tv to propagate the share.
+          const serverConfig = {
+            url: plexServer.url,
+            token: plexServer.token,
+            adminPlexUserId: plexServer.adminPlexUserId,
+          }
+          const accessCheck = inviteCode
+            ? await waitForInvitedAccess(serverConfig, plexUser.id)
+            : await checkUserServerAccess(serverConfig, plexUser.id)
 
           if (!accessCheck.success) {
             // A failed access check (Plex/API error) is always fatal, regardless
@@ -150,7 +187,7 @@ export const authOptions: NextAuthOptions = {
               serverUrl: plexServer.url,
               reason: accessCheck.error || "Access check failed",
             })
-            throw new Error("ACCESS_DENIED")
+            throw new Error("access_denied")
           }
 
           if (!accessCheck.hasAccess) {
@@ -171,7 +208,7 @@ export const authOptions: NextAuthOptions = {
                 serverUrl: plexServer.url,
                 reason: accessCheck.error || "No access to server",
               })
-              throw new Error("ACCESS_DENIED")
+              throw new Error("access_denied")
             }
 
             logger.info("Plex non-member allowed session (Stripe gating enabled)", {
@@ -258,8 +295,8 @@ export const authOptions: NextAuthOptions = {
           }
         } catch (error) {
           logger.error("Error authenticating user", error)
-          // Re-throw access denied errors so they can be handled specially
-          if (error instanceof Error && (error.message === "ACCESS_DENIED" || error.message === "NO_SERVER_CONFIGURED")) {
+          // Re-throw access denied errors so the callback page can show them
+          if (error instanceof Error && PLEX_SIGN_IN_ERRORS.has(error.message)) {
             throw error
           }
           return null

@@ -10,6 +10,7 @@
  */
 
 import { authOptions } from '@/lib/auth'
+import { signInWithPlexToken } from '@/__tests__/helpers/plex-sign-in'
 import { checkUserServerAccess, getPlexUserInfo } from '@/lib/connections/plex'
 import { buildUser } from '@/__tests__/helpers/factories'
 import { authenticateJellyfin, type JellyfinAdminStatus } from '@/lib/jellyfin-auth'
@@ -20,6 +21,8 @@ import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 
 beforeEach(() => mockReset(prismaMock))
+
+jest.mock('@/lib/connections/plex-pin', () => ({ readPin: jest.fn() }))
 
 jest.mock('@/lib/connections/plex', () => ({
   checkUserServerAccess: jest.fn(),
@@ -57,7 +60,7 @@ const mockLogAuditEvent = logAuditEvent as jest.MockedFunction<typeof logAuditEv
 
 type Authorize = (credentials: Record<string, string> | undefined) => Promise<unknown>
 
-function getAuthorize(name: 'Plex' | 'Jellyfin'): Authorize {
+function getAuthorize(name: 'Jellyfin'): Authorize {
   const provider = authOptions.providers.find(
     (p) => (p as { options?: { name?: string } }).options?.name === name
   ) as { options?: { authorize?: unknown } } | undefined
@@ -94,8 +97,6 @@ function adminAuditTypes() {
 }
 
 describe('Plex sign-in keeps roles set in the UI', () => {
-  const authorize = getAuthorize('Plex')
-
   function signInAsPlexUser(id: string) {
     mockGetPlexUserInfo.mockResolvedValue({ success: true, data: { id, username: id, email: `${id}@example.com` } } as never)
   }
@@ -110,7 +111,7 @@ describe('Plex sign-in keeps roles set in the UI', () => {
     signInAsPlexUser('plex-member')
     givenRow(buildUser({ id: 'member-row', plexUserId: 'plex-member', isAdmin: true }))
 
-    const result = await authorize({ authToken: 'member-token' })
+    const result = await signInWithPlexToken('member-token')
 
     expect(result).toMatchObject({ id: 'member-row', isAdmin: true, sessionVersion: 0 })
     expect(prismaMock.user.update.mock.calls[0][0].data).not.toHaveProperty('isAdmin')
@@ -121,7 +122,7 @@ describe('Plex sign-in keeps roles set in the UI', () => {
     signInAsPlexUser('plex-member')
     givenRow(buildUser({ id: 'member-row', plexUserId: 'plex-member', isAdmin: false }))
 
-    await expect(authorize({ authToken: 'member-token' })).resolves.toMatchObject({ isAdmin: false })
+    await expect(signInWithPlexToken('member-token')).resolves.toMatchObject({ isAdmin: false })
     expect(adminAuditTypes()).not.toContain(AuditEventType.ADMIN_PRIVILEGE_REVOKED)
   })
 
@@ -129,7 +130,7 @@ describe('Plex sign-in keeps roles set in the UI', () => {
     signInAsPlexUser('plex-owner')
     givenRow(buildUser({ id: 'owner-row', plexUserId: 'plex-owner', isAdmin: false }))
 
-    await expect(authorize({ authToken: 'owner-token' })).resolves.toMatchObject({ isAdmin: true })
+    await expect(signInWithPlexToken('owner-token')).resolves.toMatchObject({ isAdmin: true })
     expect(prismaMock.user.update.mock.calls[0][0].data).toMatchObject({ isAdmin: true })
     expect(adminAuditTypes()).toEqual([AuditEventType.ADMIN_PRIVILEGE_GRANTED])
   })
@@ -138,7 +139,7 @@ describe('Plex sign-in keeps roles set in the UI', () => {
     signInAsPlexUser('plex-owner')
     givenRow(buildUser({ id: 'owner-row', plexUserId: 'plex-owner', isAdmin: true }))
 
-    await authorize({ authToken: 'owner-token' })
+    await signInWithPlexToken('owner-token')
 
     expect(adminAuditTypes()).toEqual([])
   })
@@ -147,14 +148,14 @@ describe('Plex sign-in keeps roles set in the UI', () => {
     signInAsPlexUser('plex-member')
     givenRow(buildUser({ id: 'member-row', plexUserId: 'plex-member', sessionVersion: 3 }))
 
-    await expect(authorize({ authToken: 'member-token' })).resolves.toMatchObject({ sessionVersion: 3 })
+    await expect(signInWithPlexToken('member-token')).resolves.toMatchObject({ sessionVersion: 3 })
   })
 
   it('refuses a disabled user without writing the row', async () => {
     signInAsPlexUser('plex-member')
     givenRow(buildUser({ id: 'member-row', plexUserId: 'plex-member', disabledAt: new Date() }))
 
-    await expect(authorize({ authToken: 'member-token' })).resolves.toBeNull()
+    await expect(signInWithPlexToken('member-token')).resolves.toBeNull()
     expect(prismaMock.user.update).not.toHaveBeenCalled()
     expect(mockWarn).toHaveBeenCalledWith('auth.disabled', { userId: 'member-row', provider: 'plex' })
   })

@@ -4116,10 +4116,20 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 - Pasting the callback URL into another browser shows "Sign-in didn't finish".
 - plex.tv's device list shows one Plex Manager device per browser.
 
+**As merged.**
+- `lib/security/signed-cookie.ts` is `server-only`: `signValue(payload, purpose, ttlSec)`, `verifyValue(raw, purpose)` (the payload without `exp`, or `null`; callers parse it with their own Zod schema) and `readCookie(header, name)`. The HKDF info is `plex-manager:signed-cookie:<purpose>`; purposes are free strings (`plex-pin`, `plex-client`; P4.9 uses `discord-oauth`). Values are signed, not encrypted.
+- The cookies live in `lib/plex-pin-cookie.ts` (`pinCookie`, `readPinCookie`, `clientCookie`, `readClientCookie`): `pm-plex-pin` is `{ pinId, code, clientId, inviteCode? }` for 900 s, `pm-plex-client` is `{ clientId }` (a UUID) for a year, both httpOnly, SameSite=Lax, path `/`, Secure exactly when the session cookie is. The invite code schema moved to `lib/validations/invite.ts`.
+- `lib/connections/plex-pin.ts` returns `readPin` as `waiting | ready (authToken) | expired (plex.tv 404) | unavailable`. Under `isConnectionTestBypassed()` (Jest, and the E2E server) it sends nothing: a made-up PIN that stays `waiting`, which is what the E2E spec drives.
+- `startPlexSignIn({ inviteCode? })` returns `{ authUrl }`; `pollPlexSignIn()` returns `{ status }`, `expired` for a missing, tampered or foreign cookie (it never reaches plex.tv), and maps a plex.tv hiccup to `waiting`; the per-PIN limit reuses `plex:pin:poll` with the subject `pin:<id>`, beside the action's IP limit. `finishPlexSignIn()` deletes `pm-plex-pin` and returns `{ next }`: `/subscribe` below `full` access (the `gated` case), `/onboarding` until onboarding is done, else `/`.
+- The Plex provider has `credentials: {}` and throws its codes as error messages: `plex_pin_expired` (no valid cookie, or the PIN is not ready), `invite_invalid` (`INVITE_INVALID` or `INVITE_WRONG_SERVICE`), `access_denied` (was `ACCESS_DENIED`) and `sign_in_failed`; next-auth's App Router handler passes `Object.fromEntries(await headers())`, so `req.headers.cookie` is the raw header (proved through the real route in `auth-plex-authorize.test.ts`). The route's `auth:plex` limit gives `rate_limited`. Without the cookie `authorize` throws `plex_pin_expired` rather than returning null, so the page can say why.
+- P3.2's `flash-codes.ts` has not merged, so the codes and their copy are in the client-safe `lib/plex-sign-in-codes.ts` and the callback page shows them itself (`plex-callback-error-<code>`, heading `plex-callback-error-heading`); `access_denied` still goes to `/auth/denied`, and `gated` is the `/subscribe` redirect, not a shown code. P3.2 or P10.27 can fold them into the flash codes.
+- `redeemPlexInvite(code, token)` and the shared redemption steps moved out of the `'use server'` file, where any export is callable: `lib/invites/redemption.ts` (`validateAndUseInvite`, `withRetry`, `rollbackInviteUsage`, `INVITE_EXEMPTION`) and `lib/invites/plex-redemption.ts` (`redeemPlexInvite`, still `validateAndUseInvite(code, ServerType.PLEX)`). It is idempotent per Plex account: an `InviteUsage` for this code and `plexUserId` returns success without spending a use, so a second `signIn` with the same PIN cannot redeem twice. `processInvite`, `getPlexAuthToken`, `createPlexPin`, `createPlexAuthUrl` and `actions/auth.ts` (`checkServerAccess`, `isSubscriptionGatingEnabled`) are deleted; the invite flow's access retries are `waitForInvitedAccess` in `lib/connections/plex-access-wait.ts`, run by `authorize` when the cookie carries an invite.
+- Owner check left open: with one real account, confirm that `validatePlexToken`, `getPlexWatchlist` and the invite auto-accept work with a token issued to a browser identifier and used with `PLEX_CLIENT_IDENTIFIER`.
+
 **Done when.**
-- [ ] The PIN id lives only in a signed httpOnly cookie, bound to the browser that created it.
-- [ ] No action returns the account token, and the server completes sign-in and invite redemption.
-- [ ] Each browser has its own client identifier, and PIN creation and polling are rate-limited.
+- [x] The PIN id lives only in a signed httpOnly cookie, bound to the browser that created it.
+- [x] No action returns the account token, and the server completes sign-in and invite redemption.
+- [x] Each browser has its own client identifier, and PIN creation and polling are rate-limited.
 
 ### Step P4.9: Discord OAuth redirect and state binding
 

@@ -1,11 +1,13 @@
 /**
  * Checks the @example blocks in lib/security/secret-reuse.ts,
- * lib/security/config-diff.ts and lib/security/rate-limit-messages.ts.
+ * lib/security/config-diff.ts, lib/security/rate-limit-messages.ts and
+ * lib/security/signed-cookie.ts.
  */
 
 import { configDiff } from "@/lib/security/config-diff"
 import { retryAfterCopy } from "@/lib/security/rate-limit-messages"
 import { resolveSecretForOrigin } from "@/lib/security/secret-reuse"
+import { readCookie, signValue, verifyValue } from "@/lib/security/signed-cookie"
 
 describe("JSDoc Documentation Examples", () => {
   it("resolveSecretForOrigin refuses a stored key for a new host", () => {
@@ -37,5 +39,12 @@ describe("JSDoc Documentation Examples", () => {
   it("retryAfterCopy names when to try again", () => {
     expect(retryAfterCopy(30)).toBe("in 1 minute")
     expect(retryAfterCopy(3 * 3600 + 300)).toBe("in 3 hours, 5 minutes")
+  })
+
+  it("signValue verifies only for its own purpose, and readCookie parses a raw header", () => {
+    const raw = signValue({ pinId: 42 }, "plex-pin", 900)
+    expect(verifyValue(raw, "plex-pin")).toEqual({ pinId: 42 })
+    expect(verifyValue(raw, "discord-oauth")).toBeNull()
+    expect(readCookie("a=1; pm-plex-pin=abc", "pm-plex-pin")).toBe("abc")
   })
 })

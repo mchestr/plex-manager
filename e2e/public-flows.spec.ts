@@ -22,6 +22,60 @@ test.describe('Public Flows', () => {
     await expect(plexSignInButton).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
   });
 
+  // P4.8 (SEC-11). The E2E server skips plex.tv, so the PIN is made up and
+  // never becomes ready; app.plex.tv itself is never opened.
+  test('Plex sign-in binds the PIN to this browser and never hands the page a token', async ({ page, context }) => {
+    await page.route('https://app.plex.tv/**', (route) =>
+      route.fulfill({ status: 200, contentType: 'text/html', body: '<title>Plex</title>' })
+    );
+    // Every Server Action response the page receives, read in full on the way through
+    const actionBodies: string[] = [];
+    await page.route('**/*', async (route) => {
+      const request = route.request();
+      if (request.method() !== 'POST' || !request.headers()['next-action']) {
+        return route.fallback();
+      }
+      const response = await route.fetch();
+      const body = await response.text();
+      actionBodies.push(body);
+      return route.fulfill({ response, body });
+    });
+
+    await navigateAndVerify(page, '/');
+    await page.getByTestId('sign-in-button').filter({ visible: true }).click();
+    await page.getByTestId('sign-in-with-plex').filter({ visible: true }).click();
+    await page.waitForURL(/app\.plex\.tv/, { timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+
+    const cookies = await context.cookies();
+    const pinCookie = cookies.find((cookie) => cookie.name === 'pm-plex-pin');
+    expect(pinCookie).toMatchObject({ httpOnly: true, sameSite: 'Lax', path: '/' });
+    expect(cookies.find((cookie) => cookie.name === 'pm-plex-client')).toMatchObject({ httpOnly: true });
+    // plex.tv sends the browser back with nothing in the URL
+    const forwardUrl = new URLSearchParams(new URL(page.url()).hash.replace(/^#\?/, '')).get('forwardUrl');
+    expect(forwardUrl && new URL(forwardUrl).pathname).toBe('/auth/callback/plex');
+    expect(forwardUrl && new URL(forwardUrl).search).toBe('');
+
+    await page.goto('/auth/callback/plex');
+    await expect(page.getByTestId('plex-callback-waiting').filter({ visible: true })).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    // Wait for at least one status poll after the sign-in start
+    await expect.poll(() => actionBodies.length, { timeout: WAIT_TIMEOUTS.PAGE_CONTENT }).toBeGreaterThan(1);
+
+    const bodies = [...actionBodies];
+    expect(bodies.some((body) => body.includes('"waiting"'))).toBe(true);
+    for (const body of bodies) {
+      expect(body).not.toContain('authToken');
+      expect(body).not.toContain(pinCookie?.value ?? 'pm-plex-pin');
+    }
+  });
+
+  test('a callback opened in a browser that did not start the sign-in does not finish', async ({ page }) => {
+    await page.goto('/auth/callback/plex');
+
+    await expect(page.getByTestId('plex-callback-error-heading').filter({ visible: true })).toHaveText("Sign-in didn't finish", {
+      timeout: WAIT_TIMEOUTS.PAGE_CONTENT,
+    });
+  });
+
   test('invite page shows invalid state for unknown code', async ({ page }) => {
     const inviteCode = 'test-invite-code';
     await navigateAndVerify(page, `/invite/${inviteCode}`, {
