@@ -80,9 +80,9 @@ export interface WatchlistSyncAllResult {
 /**
  * Payload for processing a Stripe webhook event.
  *
- * Only the Stripe `event.id` is carried on the queue; the processor re-fetches
- * the full event from Stripe so it acts on Stripe's current truth and the queue
- * payload stays tiny.
+ * Only the Stripe `event.id` is carried on the queue, so the payload stays tiny.
+ * The processor fetches the event (a snapshot from event time) and re-reads the
+ * subscription it names for the live state.
  */
 export interface StripeWebhookPayload {
   eventId: string
@@ -122,6 +122,8 @@ export interface StripeWebhookResult {
 export interface PlexAccessGrantResult {
   userId: string
   granted: boolean
+  /** Why the live re-check skipped the grant (SEC-38), when it did. */
+  skipped?: string
 }
 
 /**

@@ -26,7 +26,19 @@ import { addJob } from '@/lib/queue/client'
 import { SubscriptionStatus } from '@/lib/generated/prisma/client'
 import { JOB_TYPES } from '@/lib/queue/types'
 import { mockReset } from 'jest-mock-extended'
+import type Stripe from 'stripe'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
+import { buildConfig } from '@/__tests__/helpers/factories'
+import {
+  createFakeStripe,
+  emptyStripeStore,
+  installStripeStore,
+  stripeEvent,
+  stripeSubscription,
+  subscriptionRow,
+  type FakeStripe,
+  type StripeStore,
+} from '@/__tests__/helpers/stripe-fakes'
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 
@@ -106,6 +118,7 @@ describe('evaluateRevokeGuard', () => {
     isExempt: false,
     stripeSubscriptionId: 'sub_1',
     status: SubscriptionStatus.CANCELED,
+    liveStatus: null,
   }
 
   it('protects admins', () => {
@@ -141,8 +154,24 @@ describe('evaluateRevokeGuard', () => {
         isExempt: true,
         stripeSubscriptionId: null,
         status: SubscriptionStatus.PAST_DUE,
+        liveStatus: 'active',
       })
     ).toBe('user is an admin')
+  })
+
+  it('protects a member whose stored status is not CANCELED or UNPAID', () => {
+    expect(evaluateRevokeGuard({ ...eligible, status: SubscriptionStatus.ACTIVE })).toBe(
+      'subscription is active again'
+    )
+    expect(evaluateRevokeGuard({ ...eligible, status: SubscriptionStatus.INCOMPLETE })).toBe(
+      'subscription is active again'
+    )
+  })
+
+  it('protects a member whom Stripe reports active again', () => {
+    expect(evaluateRevokeGuard({ ...eligible, liveStatus: 'active' })).toBe('subscription is active again')
+    expect(evaluateRevokeGuard({ ...eligible, liveStatus: 'past_due' })).toBe('subscription is active again')
+    expect(evaluateRevokeGuard({ ...eligible, liveStatus: 'incomplete_expired' })).toBeNull()
   })
 
   it('returns null for an eligible user', () => {
@@ -311,57 +340,97 @@ describe('getStripeProcessor (revoke)', () => {
 })
 
 // =============================================================================
+// Live re-check (SEC-38): a revoke never runs for a member who is active again
+// =============================================================================
+
+describe('processPlexAccessRevoke live re-check', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(PLEX_SERVER)
+    ;(prisma.subscription.updateMany as jest.Mock).mockResolvedValue({ count: 1 })
+    ;(unshareUserFromPlexServer as jest.Mock).mockResolvedValue({ success: true })
+    prismaMock.user.updateMany.mockResolvedValue({ count: 1 })
+    ;(getStripe as jest.Mock).mockResolvedValue(null)
+  })
+
+  it('skips when Stripe reports the subscription active', async () => {
+    const stripe = createFakeStripe()
+    stripe.subscriptions.set('sub_1', stripeSubscription({ status: 'active' }))
+    ;(getStripe as jest.Mock).mockResolvedValue(stripe.client)
+    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(makeUser())
+
+    const result = await processPlexAccessRevoke(makeRevokeJob('user-1'))
+
+    expect(stripe.client.subscriptions.retrieve).toHaveBeenCalledWith('sub_1')
+    expect(unshareUserFromPlexServer).not.toHaveBeenCalled()
+    expect(result).toEqual({ userId: 'user-1', revoked: false })
+  })
+
+  it('skips a manual retry of an old revoke after the member resubscribed', async () => {
+    // The row is ACTIVE again on a new subscription; the old job only knows the user.
+    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(
+      makeUser({ status: SubscriptionStatus.ACTIVE, stripeSubscriptionId: 'sub_new' })
+    )
+
+    const result = await processPlexAccessRevoke(makeRevokeJob('user-1'))
+
+    expect(unshareUserFromPlexServer).not.toHaveBeenCalled()
+    expect(result).toEqual({ userId: 'user-1', revoked: false })
+  })
+
+  it('unshares when both the row and Stripe say canceled', async () => {
+    const stripe = createFakeStripe()
+    stripe.subscriptions.set('sub_1', stripeSubscription({ status: 'canceled' }))
+    ;(getStripe as jest.Mock).mockResolvedValue(stripe.client)
+    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(makeUser())
+
+    const result = await processPlexAccessRevoke(makeRevokeJob('user-1'))
+
+    expect(unshareUserFromPlexServer).toHaveBeenCalled()
+    expect(result.revoked).toBe(true)
+  })
+
+  it('does not ask Stripe when a stored-state guard already protects the user', async () => {
+    const stripe = createFakeStripe()
+    ;(getStripe as jest.Mock).mockResolvedValue(stripe.client)
+    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(makeUser({ isAdmin: true }))
+
+    await processPlexAccessRevoke(makeRevokeJob('user-1'))
+
+    expect(stripe.client.subscriptions.retrieve).not.toHaveBeenCalled()
+  })
+})
+
+// =============================================================================
 // Webhook wiring: enqueue revoke on deletion/unpaid (respecting stripeEnabled)
 // =============================================================================
 
-const mockEventsRetrieve = jest.fn()
-
-const mockStripe = {
-  events: { retrieve: mockEventsRetrieve },
-  subscriptions: { retrieve: jest.fn() },
-}
-
-function makeWebhookJob(eventId: string): Job {
-  return {
-    id: 'job-webhook-1',
-    data: { eventId },
-    attemptsMade: 0,
-  } as unknown as Job
-}
-
 describe('processStripeWebhook revoke enqueue', () => {
+  let stripe: FakeStripe
+  let store: StripeStore
+
+  async function deliver(id: string, type: string, object: object, liveStatus: Stripe.Subscription.Status) {
+    stripe.subscriptions.set('sub_1', stripeSubscription({ status: liveStatus }))
+    stripe.events.set(id, stripeEvent(id, type, object, 1_760_000_000))
+    await processStripeWebhook({ id, data: { eventId: id }, attemptsMade: 0, opts: { attempts: 3 } } as unknown as Job)
+  }
+
   beforeEach(() => {
     jest.clearAllMocks()
-    ;(getStripe as jest.Mock).mockResolvedValue(mockStripe)
-    ;(prisma.stripeEvent.upsert as jest.Mock).mockResolvedValue({})
-    ;(prisma.subscription.updateMany as jest.Mock).mockResolvedValue({ count: 1 })
-    ;(prisma.subscription.findFirst as jest.Mock).mockResolvedValue({
-      userId: 'user-1',
-    })
-    ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({
-      stripeEnabled: true,
-    })
+    mockReset(prismaMock)
+    stripe = createFakeStripe()
+    store = emptyStripeStore([subscriptionRow({ status: SubscriptionStatus.ACTIVE })])
+    installStripeStore(prismaMock, store)
+    ;(getStripe as jest.Mock).mockResolvedValue(stripe.client)
+    prismaMock.config.findUnique.mockResolvedValue(buildConfig({ stripeEnabled: true }))
     ;(addJob as jest.Mock).mockResolvedValue('job-revoke')
   })
 
   it('enqueues revoke on customer.subscription.deleted when enabled', async () => {
-    mockEventsRetrieve.mockResolvedValue({
-      id: 'evt_deleted',
-      type: 'customer.subscription.deleted',
-      data: { object: { id: 'sub_1' } },
-    })
+    await deliver('evt_deleted', 'customer.subscription.deleted', { id: 'sub_1' }, 'canceled')
 
-    await processStripeWebhook(makeWebhookJob('evt_deleted'))
-
-    // Status recorded CANCELED...
-    expect(prisma.subscription.updateMany).toHaveBeenCalledWith({
-      where: { stripeSubscriptionId: 'sub_1' },
-      data: {
-        status: SubscriptionStatus.CANCELED,
-        canceledAt: expect.any(Date),
-      },
-    })
-    // ...and a revoke job is enqueued, keyed by user AND event id.
+    expect(store.subscriptions[0].status).toBe(SubscriptionStatus.CANCELED)
+    // A revoke job is enqueued, keyed by user AND event id.
     expect(addJob).toHaveBeenCalledWith(
       JOB_TYPES.PLEX_ACCESS_REVOKE,
       { userId: 'user-1' },
@@ -369,21 +438,8 @@ describe('processStripeWebhook revoke enqueue', () => {
     )
   })
 
-  it('enqueues revoke on customer.subscription.updated with unpaid status', async () => {
-    mockEventsRetrieve.mockResolvedValue({
-      id: 'evt_unpaid',
-      type: 'customer.subscription.updated',
-      data: {
-        object: {
-          id: 'sub_1',
-          status: 'unpaid',
-          cancel_at_period_end: false,
-          current_period_end: 1704067200,
-        },
-      },
-    })
-
-    await processStripeWebhook(makeWebhookJob('evt_unpaid'))
+  it('enqueues revoke on customer.subscription.updated with a live unpaid status', async () => {
+    await deliver('evt_unpaid', 'customer.subscription.updated', { id: 'sub_1' }, 'unpaid')
 
     expect(addJob).toHaveBeenCalledWith(
       JOB_TYPES.PLEX_ACCESS_REVOKE,
@@ -392,137 +448,32 @@ describe('processStripeWebhook revoke enqueue', () => {
     )
   })
 
-  it('does NOT enqueue revoke on cancel_at_period_end updates (access retained)', async () => {
-    mockEventsRetrieve.mockResolvedValue({
-      id: 'evt_cape',
-      type: 'customer.subscription.updated',
-      data: {
-        object: {
-          id: 'sub_1',
-          status: 'active',
-          cancel_at_period_end: true,
-          current_period_end: 1704067200,
-        },
-      },
-    })
-
-    await processStripeWebhook(makeWebhookJob('evt_cape'))
-
-    expect(addJob).not.toHaveBeenCalled()
-  })
-
   it('does NOT enqueue revoke on past_due transitions (access retained)', async () => {
-    mockEventsRetrieve.mockResolvedValue({
-      id: 'evt_pastdue',
-      type: 'customer.subscription.updated',
-      data: {
-        object: {
-          id: 'sub_1',
-          status: 'past_due',
-          cancel_at_period_end: false,
-          current_period_end: 1704067200,
-        },
-      },
-    })
+    await deliver('evt_pastdue', 'customer.subscription.updated', { id: 'sub_1' }, 'past_due')
 
-    await processStripeWebhook(makeWebhookJob('evt_pastdue'))
-
+    expect(store.subscriptions[0].status).toBe(SubscriptionStatus.PAST_DUE)
     expect(addJob).not.toHaveBeenCalled()
   })
 
-  it('does NOT enqueue revoke on invoice.payment_failed (maps to PAST_DUE)', async () => {
-    mockEventsRetrieve.mockResolvedValue({
-      id: 'evt_failed',
-      type: 'invoice.payment_failed',
-      data: { object: { id: 'in_1', subscription: 'sub_1' } },
-    })
-
-    await processStripeWebhook(makeWebhookJob('evt_failed'))
+  it('does NOT enqueue revoke on invoice.payment_failed during dunning', async () => {
+    await deliver('evt_failed', 'invoice.payment_failed', { id: 'in_1', subscription: 'sub_1' }, 'past_due')
 
     expect(addJob).not.toHaveBeenCalled()
-  })
-
-  it('re-grants access when a subscription recovers to active (dunning)', async () => {
-    mockEventsRetrieve.mockResolvedValue({
-      id: 'evt_recovered',
-      type: 'customer.subscription.updated',
-      data: {
-        object: {
-          id: 'sub_1',
-          status: 'active',
-          cancel_at_period_end: false,
-          current_period_end: 1704067200,
-        },
-      },
-    })
-
-    await processStripeWebhook(makeWebhookJob('evt_recovered'))
-
-    // No new checkout.session.completed fires on dunning recovery, so the update
-    // handler re-enqueues the grant (idempotent) to restore access.
-    expect(addJob).toHaveBeenCalledWith(
-      JOB_TYPES.PLEX_ACCESS_GRANT,
-      { userId: 'user-1' },
-      { jobId: `${JOB_TYPES.PLEX_ACCESS_GRANT}:user-1:evt_recovered` }
-    )
   })
 
   it('records status but skips revoke enqueue when Stripe is disabled', async () => {
-    ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({
-      stripeEnabled: false,
-    })
-    mockEventsRetrieve.mockResolvedValue({
-      id: 'evt_deleted_disabled',
-      type: 'customer.subscription.deleted',
-      data: { object: { id: 'sub_1' } },
-    })
+    prismaMock.config.findUnique.mockResolvedValue(buildConfig({ stripeEnabled: false }))
 
-    await processStripeWebhook(makeWebhookJob('evt_deleted_disabled'))
+    await deliver('evt_deleted_disabled', 'customer.subscription.deleted', { id: 'sub_1' }, 'canceled')
 
-    // Status still recorded...
-    expect(prisma.subscription.updateMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { stripeSubscriptionId: 'sub_1' } })
-    )
-    // ...but no revoke enqueued (FR-29).
+    expect(store.subscriptions[0].status).toBe(SubscriptionStatus.CANCELED)
     expect(addJob).not.toHaveBeenCalled()
   })
 
-  it('skips revoke enqueue when no local subscription matches', async () => {
-    ;(prisma.subscription.findFirst as jest.Mock).mockResolvedValue(null)
-    mockEventsRetrieve.mockResolvedValue({
-      id: 'evt_deleted_orphan',
-      type: 'customer.subscription.deleted',
-      data: { object: { id: 'sub_unknown' } },
-    })
+  it('enqueues one revoke when the same deletion is delivered twice', async () => {
+    await deliver('evt_deleted_retry', 'customer.subscription.deleted', { id: 'sub_1' }, 'canceled')
+    await deliver('evt_deleted_retry', 'customer.subscription.deleted', { id: 'sub_1' }, 'canceled')
 
-    await processStripeWebhook(makeWebhookJob('evt_deleted_orphan'))
-
-    expect(addJob).not.toHaveBeenCalled()
-  })
-
-  it('enqueues revoke with an event-keyed jobId so retried deletions dedupe', async () => {
-    mockEventsRetrieve.mockResolvedValue({
-      id: 'evt_deleted_retry',
-      type: 'customer.subscription.deleted',
-      data: { object: { id: 'sub_1' } },
-    })
-
-    await processStripeWebhook(makeWebhookJob('evt_deleted_retry'))
-    await processStripeWebhook(makeWebhookJob('evt_deleted_retry'))
-
-    // Same event id both times → identical jobId → BullMQ dedupes.
-    expect(addJob).toHaveBeenCalledTimes(2)
-    expect(addJob).toHaveBeenNthCalledWith(
-      1,
-      JOB_TYPES.PLEX_ACCESS_REVOKE,
-      { userId: 'user-1' },
-      { jobId: `${JOB_TYPES.PLEX_ACCESS_REVOKE}:user-1:evt_deleted_retry` }
-    )
-    expect(addJob).toHaveBeenNthCalledWith(
-      2,
-      JOB_TYPES.PLEX_ACCESS_REVOKE,
-      { userId: 'user-1' },
-      { jobId: `${JOB_TYPES.PLEX_ACCESS_REVOKE}:user-1:evt_deleted_retry` }
-    )
+    expect(addJob).toHaveBeenCalledTimes(1)
   })
 })

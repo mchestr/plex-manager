@@ -13,3 +13,12 @@ export function parseStripeLibrarySectionIds(value: unknown): number[] {
     (id): id is number => typeof id === "number" && Number.isFinite(id)
   )
 }
+
+/**
+ * Parses the stored `stripePriceIds` JSON value into the configured price ids.
+ * Returns [] for missing/malformed values.
+ */
+export function parseStripePriceIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return value.filter((id): id is string => typeof id === "string" && id.trim().length > 0)
+}

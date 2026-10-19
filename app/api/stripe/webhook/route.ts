@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 
 import { getStripe } from "@/lib/stripe/client"
 import { prisma } from "@/lib/prisma"
-import { addJob } from "@/lib/queue/client"
+import { addJob, findJob } from "@/lib/queue/client"
 import { JOB_TYPES } from "@/lib/queue/types"
 import { createLogger } from "@/lib/utils/logger"
 
@@ -55,8 +55,11 @@ async function readCappedBody(request: Request): Promise<string | null> {
  *
  * - 400 on signature verification failure (never 5xx — Stripe would retry).
  * - 413 when the body is over 1 MiB, before the signature is checked.
- * - 200 without re-enqueue when the event id was already seen (idempotency).
- * - 200 + enqueue for a valid, previously-unseen event.
+ * - 200 without re-enqueue when the event was already processed (idempotency).
+ * - 200 + `job.retry()` when an unprocessed event's job failed (SEC-40), so the
+ *   dashboard's "Resend event" recovers it; 200 alone while its job is waiting,
+ *   delayed or running.
+ * - 200 + enqueue for a new event, or one whose job BullMQ has dropped.
  *
  * There is no IP rate limit: the signature is the gate, and an IP limit in
  * front of it would let anyone who spoofs Stripe's addresses get genuine
@@ -103,17 +106,34 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 })
   }
 
-  // Idempotency: if we've already recorded this event id, do not re-enqueue.
+  // Idempotency: an event is a duplicate only once its handler has succeeded.
   const existing = await prisma.stripeEvent.findUnique({
     where: { id: event.id },
-    select: { id: true },
+    select: { processedAt: true },
   })
-  if (existing) {
+  if (existing?.processedAt) {
     logger.info("Duplicate Stripe event ignored", {
       eventId: event.id,
       eventType: event.type,
     })
     return NextResponse.json({ received: true, duplicate: true })
+  }
+
+  // An unprocessed resend recovers its job: a failed job runs again, a queued
+  // or running one is left alone.
+  const job = await findJob(event.id)
+  if (job) {
+    const state = await job.getState()
+    if (state === "failed") {
+      await job.retry()
+      logger.info("Stripe event resent; retrying its failed job", { eventId: event.id, eventType: event.type })
+      return NextResponse.json({ received: true, retried: true })
+    }
+    if (state !== "completed" && state !== "unknown") {
+      return NextResponse.json({ received: true, queued: true })
+    }
+    // A completed job whose event is unprocessed cannot be re-added under its id until it is gone.
+    await job.remove()
   }
 
   await addJob(JOB_TYPES.STRIPE_WEBHOOK, { eventId: event.id }, { jobId: event.id })

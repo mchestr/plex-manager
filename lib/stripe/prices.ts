@@ -2,6 +2,7 @@ import type Stripe from "stripe"
 
 import { prisma } from "@/lib/prisma"
 import { getStripe } from "@/lib/stripe/client"
+import { parseStripePriceIds } from "@/lib/stripe/config"
 import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("STRIPE_PRICES")
@@ -49,12 +50,7 @@ async function getConfiguredPriceIds(): Promise<string[]> {
     return []
   }
 
-  const raw = config.stripePriceIds
-  if (!Array.isArray(raw)) {
-    return []
-  }
-
-  return raw.filter((id): id is string => typeof id === "string" && id.length > 0)
+  return parseStripePriceIds(config.stripePriceIds)
 }
 
 /**

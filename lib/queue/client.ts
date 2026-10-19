@@ -5,7 +5,7 @@
  * All queue interactions should go through this module.
  */
 
-import { Queue, QueueEvents, JobsOptions } from "bullmq"
+import { Queue, QueueEvents, JobsOptions, type Job } from "bullmq"
 import { getRedisConnection } from "./connection"
 import { sanitizeJobId } from "./job-id"
 import { JobType, JobPayloadMap, JobMetadata, QueueStats, JobStatus } from "./types"
@@ -194,6 +194,14 @@ export async function getJobs(options: {
       progress: job.progress,
     }))
   )
+}
+
+/**
+ * Look up a job by the id it was added with, or `undefined` once BullMQ has
+ * dropped it (completed jobs after a day, failed ones after seven).
+ */
+export async function findJob(jobId: string): Promise<Job | undefined> {
+  return getQueue().getJob(sanitizeJobId(jobId))
 }
 
 /**
