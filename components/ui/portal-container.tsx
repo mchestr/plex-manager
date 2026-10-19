@@ -14,14 +14,15 @@ interface PortalContainerValue {
   popupProps?: PopupProps
 }
 
+/** One shared empty object, so `useToast()` stays referentially stable outside any provider. */
+const NO_POPUP_PROPS: PopupProps = {}
+
 const PortalContainerContext = createContext<PortalContainerValue>({})
 
 /**
  * Sets where popups (Select, DropdownMenu, Popover, Tooltip, Dialog) portal
  * to, and the attributes they spread on their popup element, for everything
- * below it. P5.1's Rewind layout is its first caller.
- *
- * @public
+ * below it. P5.1's Rewind layout is its first production caller.
  */
 export function PortalContainerProvider({
   container,
@@ -40,7 +41,7 @@ export function usePortalContainer(): { container: HTMLElement | undefined; popu
   const { container, popupProps } = useContext(PortalContainerContext)
   return {
     container: container ?? (typeof document === "undefined" ? undefined : document.body),
-    popupProps: popupProps ?? {},
+    popupProps: popupProps ?? NO_POPUP_PROPS,
   }
 }
 

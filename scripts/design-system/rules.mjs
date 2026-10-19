@@ -61,7 +61,8 @@ export const RULES = [
     id: 'rewind-only',
     description: 'Rewind-only tokens, fonts and Button variants outside Rewind',
     pattern: /--(?:rw-|field\b|ink\b|spot\b|deep\b|arch-)|\bfont-(?:display|text)\b|variant="ink(?:-outline)?"|size="(?:icon-)?pill"/g,
-    scope: outsideRewind,
+    // The primitives sheet draws the Rewind-only Button entries in its ink panels (P3.7).
+    scope: (path) => outsideRewind(path) && !path.startsWith('app/dev/'),
   },
   {
     id: 'copy',

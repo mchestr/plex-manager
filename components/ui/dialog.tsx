@@ -100,19 +100,24 @@ export function DialogContent({
         >
           <InModalProvider>
             {children}
-            {showCloseButton && (
-              <DialogPrimitive.Close
-                data-slot="dialog-close"
-                render={<Button variant="ghost" size="icon-sm" className="absolute top-3 right-3 text-muted-foreground" />}
-              >
-                <X aria-hidden="true" />
-                <span className="sr-only">Close</span>
-              </DialogPrimitive.Close>
-            )}
+            {showCloseButton && <PanelCloseButton />}
           </InModalProvider>
         </DialogPrimitive.Popup>
       </DialogPrimitive.Viewport>
     </DialogPrimitive.Portal>
+  )
+}
+
+/** The top-right Close button of a dialog or sheet panel. */
+export function PanelCloseButton() {
+  return (
+    <DialogPrimitive.Close
+      data-slot="dialog-close"
+      render={<Button variant="ghost" size="icon-sm" className="absolute top-3 right-3 text-muted-foreground" />}
+    >
+      <X aria-hidden="true" />
+      <span className="sr-only">Close</span>
+    </DialogPrimitive.Close>
   )
 }
 

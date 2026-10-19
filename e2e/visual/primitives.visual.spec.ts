@@ -4,8 +4,9 @@ import { capture, expect, expectScreen, settlePage, skipUnlessProductionBuild, t
 /**
  * The /dev/ui primitives sheet (P3.4), the regression target for
  * components/ui: the dark theme, then the light theme by swapping the class on
- * <html>, then the overlays open (P3.6). P3.5 to P3.9 and P6.5 extend the
- * sheet and retake these baselines.
+ * <html>, then the overlays open (P3.6), then the three Rewind ink panels and
+ * the open sheets (P3.7). P3.5 to P3.9 and P6.5 extend the sheet and retake
+ * these baselines.
  */
 
 skipUnlessProductionBuild();
@@ -48,5 +49,23 @@ test.describe('UI primitives sheet', () => {
 
   test('error toast', async ({ page }) => {
     await captureOpen(page, 'primitives-toast-error', () => page.getByTestId('dev-ui-toast-error').click());
+  });
+
+  for (const ink of ['paper', 'marigold', 'ultramarine'] as const) {
+    test(`${ink} ink panel`, async ({ page }) => {
+      await page.goto('/dev/ui');
+      await settlePage(page);
+      await expect(page.getByTestId(`dev-ui-ink-${ink}`)).toHaveScreenshot(`primitives-ink-${ink}.png`);
+    });
+  }
+
+  test('bottom sheet open in the marigold panel prints on paper', async ({ page }) => {
+    await captureOpen(page, 'primitives-sheet-bottom-ink', () =>
+      page.getByTestId('dev-ui-ink-marigold-sheet-open').click()
+    );
+  });
+
+  test('right sheet open', async ({ page }) => {
+    await captureOpen(page, 'primitives-sheet-right', () => page.getByTestId('dev-ui-sheet-right-open').click());
   });
 });
