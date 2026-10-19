@@ -735,7 +735,26 @@ The project includes custom slash commands in `.claude/commands/`:
 - Supports Chrome, Firefox, and Safari (webkit)
 - Use `/fix-e2e` command for automated test repair
 
-**MCP Servers**: Not currently used. The project uses direct Playwright integration instead of MCP browser automation servers.
+**MCP Servers**: `.mcp.json` commits one server, `chrome-devtools` (pinned `chrome-devtools-mcp@1.11.0`, headless), for quick looks at a running page. It needs a local Chrome and does not start without one. E2E tests still use Playwright directly. Servers that need keys (image generation, Figma, Motion+) stay at user scope and are never committed.
+
+### Agent Skills
+
+`.claude/skills/` holds third-party skills vendored at pinned commits, so every session, including cloud sessions, gets the same reviewed copies. Each loads on its own when you work on files matching its `paths:`, or by name:
+
+| Skill | Loads for | Use it for |
+|---|---|---|
+| `frontend-design` | `app/**`, `components/**` | Visual direction for new or reshaped UI |
+| `web-design-guidelines` | `app/**`, `components/**` | UI review against the Web Interface Guidelines (local copy, no fetch) |
+| `accessibility-review` | `app/**`, `components/**` | Accessibility audits (it targets WCAG 2.1 AA; the project bar is 2.2 AA) |
+| `vercel-react-best-practices` | `app/**`, `components/**`, `hooks/**` | React and Next.js performance |
+| `vercel-composition-patterns` | `app/**`, `components/**`, `hooks/**` | Component API design |
+| `vercel-react-view-transitions` | `app/**` | React `<ViewTransition>` work |
+| `motion` | `components/wrapped/**`, `components/rewind/**`, `lib/rewind/**` | Animation (its `motion/react` imports apply after P2.15) |
+
+- Where a skill's advice conflicts with this file (for example SWR instead of TanStack Query, or throwing from Server Actions), this file wins.
+- Shell execution from skills is off (`disableSkillShellExecution` in `.claude/settings.json`).
+- `.claude/skills/THIRD_PARTY.md` records each skill's source, SHA or npm version, licence, review and local changes, and the update procedure: review the upstream diff at a new SHA, copy, record. Never run `npx skills add` or `npx skills update` here.
+- Any change to `.claude/skills/**` or `.mcp.json` needs a `/security-review` before merge.
 
 ## Additional Resources
 
