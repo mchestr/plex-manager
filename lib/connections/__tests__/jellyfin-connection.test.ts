@@ -37,8 +37,9 @@ describe('Jellyfin Connection', () => {
       expect(global.fetch).not.toHaveBeenCalled()
     })
 
-    it('should return success when SKIP_CONNECTION_TESTS is true', async () => {
+    it('should return success when SKIP_CONNECTION_TESTS and E2E_TEST_MODE are true', async () => {
       process.env.SKIP_CONNECTION_TESTS = 'true'
+      process.env.E2E_TEST_MODE = 'true'
 
       const result = await testJellyfinConnection(config)
 

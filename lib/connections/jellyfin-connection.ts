@@ -2,6 +2,7 @@
  * Jellyfin connection testing and server info functions
  */
 
+import { isConnectionTestBypassed } from "@/lib/connections/connection-test"
 import { type JellyfinServerParsed, type JellyfinSystemInfo, type JellyfinLibrary } from "@/lib/validations/jellyfin"
 import { fetchWithTimeout, isTimeoutError } from "@/lib/utils/fetch-with-timeout"
 import { getJellyfinHeaders, logger, sanitizeUrlForLogging } from "./jellyfin-core"
@@ -12,9 +13,8 @@ import { getJellyfinHeaders, logger, sanitizeUrlForLogging } from "./jellyfin-co
 export async function testJellyfinConnection(
   config: JellyfinServerParsed
 ): Promise<{ success: boolean; error?: string }> {
-  // TEST MODE BYPASS - Skip connection tests in test environment
-  const isTestMode = process.env.NODE_ENV === "test" || process.env.SKIP_CONNECTION_TESTS === "true"
-  if (isTestMode) {
+  // TEST MODE BYPASS - see isConnectionTestBypassed
+  if (isConnectionTestBypassed()) {
     return { success: true }
   }
 

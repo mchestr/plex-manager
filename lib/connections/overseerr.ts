@@ -1,177 +1,94 @@
+import { z } from "zod";
+
+import { testServiceConnection } from "@/lib/connections/connection-test";
+import { serviceErrorMessage, serviceFetch, toConnectionResult, type ServiceResult } from "@/lib/connections/http";
 import { type OverseerrParsed } from "@/lib/validations/overseerr";
-import { fetchWithTimeout, isTimeoutError } from "@/lib/utils/fetch-with-timeout";
 import { createLogger } from "@/lib/utils/logger";
+import { type ConnectionResult } from "@/types/connection";
 
 const logger = createLogger("overseerr");
 
-export async function testOverseerrConnection(config: OverseerrParsed): Promise<{ success: boolean; error?: string }> {
-  // TEST MODE BYPASS - Skip connection tests in test environment
-  const isTestMode = process.env.NODE_ENV === 'test' || process.env.SKIP_CONNECTION_TESTS === 'true'
-  if (isTestMode) {
-    return { success: true }
-  }
+type OverseerrEndpoint = Pick<OverseerrParsed, "url" | "apiKey">
 
-  try {
-    const url = `${config.url}/api/v1/auth/me`
-
-    const response = await fetchWithTimeout(url, {
-      method: "GET",
-      headers: {
-        "Accept": "application/json",
-        "X-Api-Key": config.apiKey,
-      },
-    })
-
-    if (!response.ok) {
-      if (response.status === 401 || response.status === 403) {
-        return { success: false, error: "Invalid API key" }
-      }
-      if (response.status === 404) {
-        return { success: false, error: "Overseerr server not found at this address" }
-      }
-      return { success: false, error: `Connection failed: ${response.statusText}` }
-    }
-
-    const data = await response.json()
-
-    // Check if Overseerr API returned an error
-    if (data.statusCode && data.statusCode >= 400) {
-      return { success: false, error: data.message || "Overseerr API error" }
-    }
-
-    return { success: true }
-  } catch (error) {
-    if (isTimeoutError(error)) {
-      return { success: false, error: "Connection timeout - check your hostname and port" }
-    }
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to connect to Overseerr server" }
-  }
-}
-
-export async function getOverseerrRequests(config: OverseerrParsed, limit = 10) {
-  const url = `${config.url}/api/v1/request?take=${limit}&sort=added&filter=processing`
-  const response = await fetch(url, {
-    headers: { "X-Api-Key": config.apiKey },
+/** One Overseerr API call through `serviceFetch`, authenticated with `X-Api-Key`. */
+function overseerrFetch<T>(
+  config: OverseerrEndpoint,
+  path: string,
+  schema: z.ZodType<T>,
+  init: { method?: "GET" | "POST"; body?: string } = {}
+): Promise<ServiceResult<T>> {
+  return serviceFetch({
+    service: "Overseerr",
+    url: `${config.url}/api/v1${path}`,
+    method: init.method,
+    body: init.body,
+    headers: {
+      "X-Api-Key": config.apiKey,
+      ...(init.body ? { "Content-Type": "application/json" } : {}),
+    },
+    schema,
   })
-  if (!response.ok) throw new Error(`Overseerr request error: ${response.statusText}`)
-  return response.json()
 }
 
-export async function getOverseerrStatus(config: OverseerrParsed) {
-  const url = `${config.url}/api/v1/settings/about`
-  const response = await fetch(url, {
-    headers: { "X-Api-Key": config.apiKey },
-  })
-  if (!response.ok) throw new Error(`Overseerr status error: ${response.statusText}`)
-  return response.json()
+/** The raw JSON of a GET, for the chatbot tools. */
+async function overseerrGet(config: OverseerrEndpoint, path: string): Promise<ConnectionResult<unknown>> {
+  return toConnectionResult("Overseerr", await overseerrFetch(config, path, z.unknown()))
 }
 
-export async function getOverseerrDiscoverMovies(config: OverseerrParsed, page = 1, sortBy = "popularity.desc") {
+/** `/auth/me` answers 200 with a `statusCode` body on some proxy errors. */
+const authMeSchema = z
+  .looseObject({ statusCode: z.number().optional() })
+  .refine((body) => body.statusCode === undefined || body.statusCode < 400)
+
+export async function testOverseerrConnection(config: OverseerrEndpoint): Promise<{ success: boolean; error?: string }> {
+  return testServiceConnection("Overseerr", () => overseerrFetch(config, "/auth/me", authMeSchema))
+}
+
+export async function getOverseerrRequests(config: OverseerrEndpoint, limit = 10): Promise<ConnectionResult<unknown>> {
+  return overseerrGet(config, `/request?take=${limit}&sort=added&filter=processing`)
+}
+
+export async function getOverseerrStatus(config: OverseerrEndpoint): Promise<ConnectionResult<unknown>> {
+  return overseerrGet(config, "/settings/about")
+}
+
+export async function getOverseerrDiscoverMovies(
+  config: OverseerrEndpoint,
+  page = 1,
+  sortBy = "popularity.desc"
+): Promise<ConnectionResult<unknown>> {
   // sortBy originates from LLM tool-call args; encode it so reserved characters
   // cannot inject additional query parameters into the outbound request.
-  const url = `${config.url}/api/v1/discover/movies?page=${page}&sortBy=${encodeURIComponent(sortBy)}`
-  const response = await fetch(url, {
-    headers: { "X-Api-Key": config.apiKey },
-  })
-  if (!response.ok) throw new Error(`Overseerr discover movies error: ${response.statusText}`)
-  return response.json()
+  return overseerrGet(config, `/discover/movies?page=${page}&sortBy=${encodeURIComponent(sortBy)}`)
 }
 
-export async function getOverseerrDiscoverTV(config: OverseerrParsed, page = 1, sortBy = "popularity.desc") {
+export async function getOverseerrDiscoverTV(
+  config: OverseerrEndpoint,
+  page = 1,
+  sortBy = "popularity.desc"
+): Promise<ConnectionResult<unknown>> {
   // See getOverseerrDiscoverMovies: encode caller-supplied sortBy.
-  const url = `${config.url}/api/v1/discover/tv?page=${page}&sortBy=${encodeURIComponent(sortBy)}`
-  const response = await fetch(url, {
-    headers: { "X-Api-Key": config.apiKey },
-  })
-  if (!response.ok) throw new Error(`Overseerr discover TV error: ${response.statusText}`)
-  return response.json()
+  return overseerrGet(config, `/discover/tv?page=${page}&sortBy=${encodeURIComponent(sortBy)}`)
 }
 
-export async function getOverseerrMediaDetails(config: OverseerrParsed, mediaId: number, mediaType: "movie" | "tv") {
-  const url = `${config.url}/api/v1/${mediaType}/${mediaId}`
-  const response = await fetch(url, {
-    headers: { "X-Api-Key": config.apiKey },
-  })
-  if (!response.ok) throw new Error(`Overseerr media details error: ${response.statusText}`)
-  return response.json()
-}
-
-export async function getOverseerrUsers(config: OverseerrParsed) {
-  const url = `${config.url}/api/v1/user`
-  const response = await fetch(url, {
-    headers: { "X-Api-Key": config.apiKey },
-  })
-  if (!response.ok) throw new Error(`Overseerr users error: ${response.statusText}`)
-  return response.json()
-}
-
-export async function getAllOverseerrRequests(config: OverseerrParsed, limit = 20, sortBy = "added") {
-  const url = `${config.url}/api/v1/request?take=${limit}&sort=${sortBy}`
-  const response = await fetch(url, {
-    headers: { "X-Api-Key": config.apiKey },
-  })
-  if (!response.ok) throw new Error(`Overseerr all requests error: ${response.statusText}`)
-  return response.json()
-}
-
-/**
- * Get media status from Overseerr by TMDB ID
- * Returns media info including request status, availability, etc.
- */
-async function getOverseerrMediaByTmdbId(
-  config: OverseerrParsed,
-  tmdbId: number,
+export async function getOverseerrMediaDetails(
+  config: OverseerrEndpoint,
+  mediaId: number,
   mediaType: "movie" | "tv"
-): Promise<{
-  success: boolean
-  data?: {
-    id: number
-    tmdbId: number
-    mediaType: string
-    status: number // 1=UNKNOWN, 2=PENDING, 3=PROCESSING, 4=PARTIALLY_AVAILABLE, 5=AVAILABLE
-    requests?: Array<{
-      id: number
-      status: number
-      requestedBy: { displayName: string }
-      createdAt: string
-    }>
-  }
-  error?: string
-}> {
-  try {
-    const url = `${config.url}/api/v1/${mediaType}/${tmdbId}`
-    const response = await fetch(url, {
-      headers: { "X-Api-Key": config.apiKey },
-    })
+): Promise<ConnectionResult<unknown>> {
+  return overseerrGet(config, `/${mediaType}/${mediaId}`)
+}
 
-    if (!response.ok) {
-      if (response.status === 404) {
-        // Media not found in Overseerr - this is normal for items not in the system
-        return { success: true, data: undefined }
-      }
-      return { success: false, error: `Overseerr API error: ${response.statusText}` }
-    }
+export async function getOverseerrUsers(config: OverseerrEndpoint): Promise<ConnectionResult<unknown>> {
+  return overseerrGet(config, "/user")
+}
 
-    const data = await response.json()
-    return {
-      success: true,
-      data: {
-        id: data.id,
-        tmdbId: data.tmdbId || tmdbId,
-        mediaType: data.mediaType || mediaType,
-        status: data.mediaInfo?.status || 1, // Default to UNKNOWN
-        requests: data.mediaInfo?.requests || [],
-      },
-    }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Overseerr fetch error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to fetch Overseerr media status" }
-  }
+export async function getAllOverseerrRequests(
+  config: OverseerrEndpoint,
+  limit = 20,
+  sortBy = "added"
+): Promise<ConnectionResult<unknown>> {
+  return overseerrGet(config, `/request?take=${limit}&sort=${encodeURIComponent(sortBy)}`)
 }
 
 // Overseerr media status codes
@@ -182,6 +99,35 @@ const OverseerrMediaStatus = {
   PARTIALLY_AVAILABLE: 4,
   AVAILABLE: 5,
 } as const
+
+const mediaDetailsSchema = z.looseObject({
+  mediaInfo: z
+    .looseObject({
+      status: z.number().optional(),
+      requests: z.array(z.looseObject({ id: z.number() })).optional(),
+    })
+    .nullish(),
+})
+
+/**
+ * Media status from Overseerr by TMDB ID. `data` is undefined when Overseerr
+ * does not know the title (HTTP 404), which is normal for new titles.
+ */
+async function getOverseerrMediaByTmdbId(
+  config: OverseerrEndpoint,
+  tmdbId: number,
+  mediaType: "movie" | "tv"
+): Promise<{ success: boolean; data?: { status: number; requestId?: number } }> {
+  const result = await overseerrFetch(config, `/${mediaType}/${tmdbId}`, mediaDetailsSchema)
+  if (!result.ok) return { success: result.code === "HTTP" && result.status === 404 }
+  return {
+    success: true,
+    data: {
+      status: result.data.mediaInfo?.status ?? OverseerrMediaStatus.UNKNOWN,
+      requestId: result.data.mediaInfo?.requests?.[0]?.id,
+    },
+  }
+}
 
 export interface SubmitOverseerrRequestPayload {
   mediaType: "movie" | "tv"
@@ -203,113 +149,65 @@ export interface SubmitOverseerrRequestResult {
  * @param payload Request details (mediaType, mediaId, optional seasons)
  */
 export async function submitOverseerrRequest(
-  config: OverseerrParsed,
+  config: OverseerrEndpoint,
   payload: SubmitOverseerrRequestPayload
 ): Promise<SubmitOverseerrRequestResult> {
-  try {
-    // First check if media already exists/is requested
-    const existingStatus = await getOverseerrMediaByTmdbId(config, payload.mediaId, payload.mediaType)
+  // First check if media already exists/is requested
+  const existingStatus = await getOverseerrMediaByTmdbId(config, payload.mediaId, payload.mediaType)
 
-    if (existingStatus.success && existingStatus.data) {
-      const status = existingStatus.data.status
+  if (existingStatus.success && existingStatus.data) {
+    const status = existingStatus.data.status
 
-      // Check if already available
-      if (status === OverseerrMediaStatus.AVAILABLE || status === OverseerrMediaStatus.PARTIALLY_AVAILABLE) {
-        logger.debug("Media already available in Overseerr", {
-          tmdbId: payload.mediaId,
-          mediaType: payload.mediaType,
-          status,
-        })
-        return {
-          success: true,
-          status: "already_available",
-        }
-      }
-
-      // Check if already requested (pending or processing)
-      if (status === OverseerrMediaStatus.PENDING || status === OverseerrMediaStatus.PROCESSING) {
-        logger.debug("Media already requested in Overseerr", {
-          tmdbId: payload.mediaId,
-          mediaType: payload.mediaType,
-          status,
-        })
-        return {
-          success: true,
-          requestId: existingStatus.data.requests?.[0]?.id,
-          status: "already_requested",
-        }
-      }
-    }
-
-    // Submit the request
-    const url = `${config.url}/api/v1/request`
-    const body: Record<string, unknown> = {
-      mediaType: payload.mediaType,
-      mediaId: payload.mediaId,
-    }
-
-    if (payload.seasons && payload.seasons.length > 0) {
-      body.seasons = payload.seasons
-    }
-
-    if (payload.is4k !== undefined) {
-      body.is4k = payload.is4k
-    }
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Api-Key": config.apiKey,
-      },
-      body: JSON.stringify(body),
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      const errorMessage = errorData.message || response.statusText
-
-      // Check for specific error cases
-      if (response.status === 409 || errorMessage.includes("already")) {
-        return {
-          success: true,
-          status: "already_requested",
-        }
-      }
-
-      logger.error("Overseerr request submission failed", undefined, {
-        status: response.status,
-        error: errorMessage,
+    if (status === OverseerrMediaStatus.AVAILABLE || status === OverseerrMediaStatus.PARTIALLY_AVAILABLE) {
+      logger.debug("Media already available in Overseerr", {
         tmdbId: payload.mediaId,
         mediaType: payload.mediaType,
+        status,
       })
-
-      return {
-        success: false,
-        error: errorMessage,
-        status: "failed",
-      }
+      return { success: true, status: "already_available" }
     }
 
-    const data = await response.json()
+    if (status === OverseerrMediaStatus.PENDING || status === OverseerrMediaStatus.PROCESSING) {
+      logger.debug("Media already requested in Overseerr", {
+        tmdbId: payload.mediaId,
+        mediaType: payload.mediaType,
+        status,
+      })
+      return { success: true, requestId: existingStatus.data.requestId, status: "already_requested" }
+    }
+  }
 
-    logger.info("Overseerr request submitted successfully", {
-      requestId: data.id,
+  const body: Record<string, unknown> = {
+    mediaType: payload.mediaType,
+    mediaId: payload.mediaId,
+  }
+  if (payload.seasons && payload.seasons.length > 0) body.seasons = payload.seasons
+  if (payload.is4k !== undefined) body.is4k = payload.is4k
+
+  const result = await overseerrFetch(config, "/request", z.looseObject({ id: z.number() }), {
+    method: "POST",
+    body: JSON.stringify(body),
+  })
+
+  if (!result.ok) {
+    // Overseerr answers 409 when the title already has a request
+    if (result.code === "HTTP" && result.status === 409) {
+      return { success: true, status: "already_requested" }
+    }
+    logger.error("Overseerr request submission failed", undefined, {
+      code: result.code,
+      status: result.status,
       tmdbId: payload.mediaId,
       mediaType: payload.mediaType,
     })
-
-    return {
-      success: true,
-      requestId: data.id,
-      status: "created",
-    }
-  } catch (error) {
-    logger.error("Error submitting Overseerr request", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-      status: "failed",
-    }
+    return { success: false, error: serviceErrorMessage("Overseerr", result), status: "failed" }
   }
+
+  logger.info("Overseerr request submitted successfully", {
+    requestId: String(result.data.id),
+    tmdbId: payload.mediaId,
+    mediaType: payload.mediaType,
+  })
+
+  return { success: true, requestId: result.data.id, status: "created" }
 }

@@ -35,6 +35,7 @@
 
 import type { z } from "zod"
 
+import { serviceErrorMessage, serviceFetch } from "@/lib/connections/http"
 import { createLogger } from "@/lib/utils/logger"
 import {
   MediaRequestStatus,
@@ -62,27 +63,14 @@ async function getOverseerrPage<T>(
   path: string,
   schema: z.ZodType<T>
 ): Promise<T> {
-  const response = await fetch(`${config.url}/api/v1${path}`, {
-    headers: {
-      "X-Api-Key": config.apiKey,
-      "Accept": "application/json",
-    },
+  const result = await serviceFetch({
+    service: "Overseerr",
+    url: `${config.url}/api/v1${path}`,
+    headers: { "X-Api-Key": config.apiKey },
+    schema,
   })
-
-  if (!response.ok) {
-    throw new Error(`Overseerr ${path} failed: ${response.status} ${response.statusText}`)
-  }
-
-  const parsed = schema.safeParse(await response.json())
-  if (!parsed.success) {
-    logger.warn("Unexpected Overseerr response", {
-      path,
-      issues: parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`),
-    })
-    throw new Error(`Overseerr ${path} returned an unexpected response`)
-  }
-
-  return parsed.data
+  if (!result.ok) throw new Error(serviceErrorMessage("Overseerr", result))
+  return result.data
 }
 
 /**

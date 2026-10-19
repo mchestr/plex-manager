@@ -1,10 +1,35 @@
+import { z } from "zod"
+
+import { testServiceConnection } from "@/lib/connections/connection-test"
+import { serviceErrorMessage, serviceFetch, type ServiceResult } from "@/lib/connections/http"
 import {
+  prometheusRangeDataSchema,
+  prometheusResponseSchema,
   type PrometheusParsed,
-  type PrometheusApiResponse,
   type PrometheusRangeData,
 } from "@/lib/validations/prometheus"
-import { fetchWithTimeout, isTimeoutError } from "@/lib/utils/fetch-with-timeout"
 import { type ConnectionResult } from "@/types/connection"
+
+/**
+ * GET a Prometheus API path; a `status` other than `"success"` is
+ * `UPSTREAM_ERROR`.
+ */
+async function prometheusGet<T>(
+  config: PrometheusParsed,
+  path: string,
+  data: z.ZodType<T>,
+  timeoutMs?: number
+): Promise<ServiceResult<T | undefined>> {
+  const result = await serviceFetch({
+    service: "Prometheus",
+    url: `${config.url}${path}`,
+    schema: prometheusResponseSchema(data),
+    timeoutMs,
+  })
+  if (!result.ok) return result
+  if (result.data.status !== "success") return { ok: false, code: "UPSTREAM_ERROR" }
+  return { ok: true, data: result.data.data }
+}
 
 /**
  * Test connection to Prometheus server
@@ -13,97 +38,22 @@ import { type ConnectionResult } from "@/types/connection"
 export async function testPrometheusConnection(
   config: PrometheusParsed
 ): Promise<{ success: boolean; error?: string }> {
-  // TEST MODE BYPASS - Skip connection tests in test environment
-  const isTestMode =
-    process.env.NODE_ENV === "test" || process.env.SKIP_CONNECTION_TESTS === "true"
-  if (isTestMode) {
-    return { success: true }
-  }
-
-  try {
-    const url = `${config.url}/api/v1/status/buildinfo`
-
-    const response = await fetchWithTimeout(url, {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-      },
-    })
-
-    if (!response.ok) {
-      if (response.status === 404) {
-        return { success: false, error: "Prometheus server not found at this address" }
-      }
-      return { success: false, error: `Connection failed: ${response.statusText}` }
-    }
-
-    const data = (await response.json()) as PrometheusApiResponse<unknown>
-
-    if (data.status !== "success") {
-      return { success: false, error: data.error || "Prometheus API error" }
-    }
-
-    return { success: true }
-  } catch (error) {
-    if (isTimeoutError(error)) {
-      return { success: false, error: "Connection timeout - check your hostname and port" }
-    }
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to connect to Prometheus server" }
-  }
+  return testServiceConnection("Prometheus", () => prometheusGet(config, "/api/v1/status/buildinfo", z.unknown()))
 }
 
 /**
- * Validate that a PromQL query is valid by executing it
+ * Validate that a PromQL query is valid by executing it. Prometheus answers
+ * an invalid query with HTTP 400.
  */
 export async function validatePrometheusQuery(
   config: PrometheusParsed
 ): Promise<{ success: boolean; error?: string }> {
-  // TEST MODE BYPASS
-  const isTestMode =
-    process.env.NODE_ENV === "test" || process.env.SKIP_CONNECTION_TESTS === "true"
-  if (isTestMode) {
-    return { success: true }
-  }
-
-  try {
-    const params = new URLSearchParams({
-      query: config.query,
-    })
-    const url = `${config.url}/api/v1/query?${params.toString()}`
-
-    const response = await fetchWithTimeout(url, {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-      },
-    })
-
-    if (!response.ok) {
-      return { success: false, error: `Query validation failed: ${response.statusText}` }
-    }
-
-    const data = (await response.json()) as PrometheusApiResponse<unknown>
-
-    if (data.status !== "success") {
-      return {
-        success: false,
-        error: data.error || "Invalid PromQL query",
-      }
-    }
-
-    return { success: true }
-  } catch (error) {
-    if (isTimeoutError(error)) {
-      return { success: false, error: "Query validation timeout" }
-    }
-    if (error instanceof Error) {
-      return { success: false, error: `Query validation error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to validate query" }
-  }
+  const params = new URLSearchParams({ query: config.query })
+  const result = await testServiceConnection("Prometheus", () =>
+    prometheusGet(config, `/api/v1/query?${params.toString()}`, z.unknown())
+  )
+  if (result.success) return result
+  return { success: false, error: `Invalid PromQL query: ${result.error}` }
 }
 
 /**
@@ -121,45 +71,15 @@ export async function queryPrometheusRange(
   endTime: number,
   step: string = "1h"
 ): Promise<ConnectionResult<PrometheusRangeData>> {
-  try {
-    const params = new URLSearchParams({
-      query: config.query,
-      start: startTime.toString(),
-      end: endTime.toString(),
-      step,
-    })
-    const url = `${config.url}/api/v1/query_range?${params.toString()}`
-
-    const response = await fetchWithTimeout(url, {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-      },
-      timeoutMs: 30000, // 30 second timeout for range queries
-    })
-
-    if (!response.ok) {
-      return { success: false, error: `Prometheus query error: ${response.statusText}` }
-    }
-
-    const data = (await response.json()) as PrometheusApiResponse<PrometheusRangeData>
-
-    if (data.status !== "success") {
-      return { success: false, error: data.error || "Prometheus query failed" }
-    }
-
-    if (!data.data) {
-      return { success: false, error: "No data returned from Prometheus" }
-    }
-
-    return { success: true, data: data.data }
-  } catch (error) {
-    if (isTimeoutError(error)) {
-      return { success: false, error: "Query timeout - try a shorter time range" }
-    }
-    if (error instanceof Error) {
-      return { success: false, error: `Query error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to query Prometheus" }
-  }
+  const params = new URLSearchParams({
+    query: config.query,
+    start: startTime.toString(),
+    end: endTime.toString(),
+    step,
+  })
+  // 30 second budget for range queries
+  const result = await prometheusGet(config, `/api/v1/query_range?${params.toString()}`, prometheusRangeDataSchema, 30_000)
+  if (!result.ok) return { success: false, error: serviceErrorMessage("Prometheus", result) }
+  if (!result.data) return { success: false, error: "No data returned from Prometheus" }
+  return { success: true, data: result.data }
 }

@@ -41,6 +41,7 @@ describe('Plex Connection', () => {
       ;(global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         status: 200,
+        json: async () => ({ MediaContainer: { size: 0 } }),
       })
 
       const config = makePlexServerConfig()
@@ -48,11 +49,12 @@ describe('Plex Connection', () => {
 
       expect(result.success).toBe(true)
       expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining(config.url),
+        `${config.url}/status/sessions`,
         expect.objectContaining({
           method: 'GET',
           headers: expect.objectContaining({
             Accept: 'application/json',
+            'X-Plex-Token': config.token,
           }),
         })
       )
@@ -82,18 +84,7 @@ describe('Plex Connection', () => {
       expect(result.error).toContain('not found')
     })
 
-    it('should handle connection timeout', async () => {
-      const abortError = new Error('AbortError')
-      abortError.name = 'AbortError'
-      ;(global.fetch as jest.Mock).mockRejectedValueOnce(abortError)
-
-      const result = await withTestModeDisabled(() => testPlexConnection(makePlexServerConfig({ url: 'https://slow.example.com:32400' })))
-
-      expect(result.success).toBe(false)
-      expect(result.error).toContain('timeout')
-    })
-
-    it('should handle other connection errors', async () => {
+    it('should report a failed request without its error text', async () => {
       ;(global.fetch as jest.Mock).mockRejectedValueOnce(
         new Error('Network error')
       )
@@ -101,7 +92,7 @@ describe('Plex Connection', () => {
       const result = await withTestModeDisabled(() => testPlexConnection(makePlexServerConfig()))
 
       expect(result.success).toBe(false)
-      expect(result.error).toContain('Connection error')
+      expect(result.error).toBe('Could not reach Plex')
     })
   })
 
@@ -434,7 +425,7 @@ describe('Plex Connection', () => {
 
       expect(result.success).toBe(false)
       expect(result.hasAccess).toBe(false)
-      expect(result.error).toContain('AbortError')
+      expect(result.error).toContain('Could not reach Plex')
     })
   })
 

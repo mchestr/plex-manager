@@ -1,13 +1,16 @@
+import { z } from "zod"
+
+import { testServiceConnection } from "@/lib/connections/connection-test"
+import { serviceFetch, toConnectionResult } from "@/lib/connections/http"
 import { type ConnectionResult } from "@/types/connection"
 
 /**
  * Shared HTTP helpers for the Sonarr and Radarr v3 API clients.
  *
  * Sonarr and Radarr expose structurally identical REST APIs (same auth header,
- * same `/api/v3/...` shape, same JSON envelope). These helpers centralize the
- * request/error-handling boilerplate that was previously copy-pasted across
- * every read function in both clients, so auth, error normalization, and JSON
- * parsing live in one place.
+ * same `/api/v3/...` shape, same JSON envelope), so both clients call through
+ * here and `serviceFetch` supplies the timeout, safe redirects and key-free
+ * errors.
  */
 
 interface ArrConfig {
@@ -15,34 +18,33 @@ interface ArrConfig {
   apiKey: string
 }
 
+type ArrService = "Sonarr" | "Radarr"
+
 /**
- * Perform a GET request against an *arr v3 endpoint and normalize the result
- * into a {@link ConnectionResult}.
+ * GET an *arr v3 endpoint as a {@link ConnectionResult}.
  *
+ * @param service - "Sonarr" or "Radarr", for messages and logs.
  * @param config - Server URL + API key.
  * @param path - Path beginning with `/` (e.g. `/api/v3/queue`), already URL-encoded.
- * @param errorLabel - Prefix for the non-OK error message, e.g. `"Sonarr queue error"`.
- * @param fallback - Message used when a non-Error value is thrown (e.g. `"Failed to get Sonarr queue"`).
  */
-export async function arrGet(
-  config: ArrConfig,
-  path: string,
-  errorLabel: string,
-  fallback: string
-): Promise<ConnectionResult<unknown>> {
-  try {
-    const response = await fetch(`${config.url}${path}`, {
+export async function arrGet(service: ArrService, config: ArrConfig, path: string): Promise<ConnectionResult<unknown>> {
+  const result = await serviceFetch({
+    service,
+    url: `${config.url}${path}`,
+    headers: { "X-Api-Key": config.apiKey },
+    schema: z.unknown(),
+  })
+  return toConnectionResult(service, result)
+}
+
+/** The setup forms' connection test: `/api/v3/system/status` must answer with an object. */
+export async function testArrConnection(service: ArrService, config: ArrConfig): Promise<{ success: boolean; error?: string }> {
+  return testServiceConnection(service, () =>
+    serviceFetch({
+      service,
+      url: `${config.url}/api/v3/system/status`,
       headers: { "X-Api-Key": config.apiKey },
+      schema: z.looseObject({}),
     })
-    if (!response.ok) {
-      return { success: false, error: `${errorLabel}: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: fallback }
-  }
+  )
 }

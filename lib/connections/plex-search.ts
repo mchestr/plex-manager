@@ -3,8 +3,14 @@
  */
 
 import { type PlexServerParsed } from "@/lib/validations/plex"
-import { fetchWithTimeout, isTimeoutError } from "@/lib/utils/fetch-with-timeout"
+import { z } from "zod"
+
+import { serviceErrorMessage, serviceFetch } from "@/lib/connections/http"
 import { logger, type PlexMediaItem } from "./plex-core"
+
+const searchResponseSchema = z.looseObject({
+  MediaContainer: z.looseObject({ Metadata: z.unknown().optional() }).optional(),
+})
 
 /**
  * Search for media items in Plex by title
@@ -26,34 +32,25 @@ export async function searchPlexMedia(
       episode: 4,
     }
 
-    // Build URL with query parameter
-    let url = `${config.url}/search?query=${encodeURIComponent(query)}&X-Plex-Token=${config.token}`
-
-    // Add type filter if specified
+    const params = new URLSearchParams({ query })
     if (mediaType && typeCodeMap[mediaType]) {
-      url += `&type=${typeCodeMap[mediaType]}`
+      params.set("type", String(typeCodeMap[mediaType]))
     }
 
-    const response = await fetchWithTimeout(url, {
-      method: "GET",
-      headers: {
-        "Accept": "application/json",
-      },
+    const result = await serviceFetch({
+      service: "Plex",
+      url: `${config.url}/search?${params.toString()}`,
+      headers: { "X-Plex-Token": config.token },
+      schema: searchResponseSchema,
     })
 
-    if (!response.ok) {
+    if (!result.ok) {
       const duration = Date.now() - startTime
-      logger.error("Failed to search Plex media", undefined, {
-        query,
-        mediaType,
-        status: response.status,
-        statusText: response.statusText,
-        duration,
-      })
-      return { success: false, error: `Failed to search media: ${response.statusText}` }
+      logger.error("Failed to search Plex media", undefined, { query, mediaType, code: result.code, status: result.status, duration })
+      return { success: false, error: serviceErrorMessage("Plex", result) }
     }
 
-    const data = await response.json()
+    const data = result.data
 
     // Extract media items from response
     const mediaContainer = data.MediaContainer
@@ -93,12 +90,6 @@ export async function searchPlexMedia(
   } catch (error) {
     const duration = Date.now() - startTime
     logger.error("Error searching Plex media", error, { query, mediaType, duration })
-    if (isTimeoutError(error)) {
-      return { success: false, error: "Connection timeout" }
-    }
-    if (error instanceof Error) {
-      return { success: false, error: `Error searching media: ${error.message}` }
-    }
     return { success: false, error: "Failed to search Plex media" }
   }
 }

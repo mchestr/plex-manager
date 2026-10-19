@@ -1264,7 +1264,7 @@ describe('Statistics Functions', () => {
         }
 
         // Plex sections call
-        if (urlStr.includes('/library/sections?') && !urlStr.includes('/all')) {
+        if (urlStr.endsWith('/library/sections')) {
           return Promise.resolve({
             ok: true,
             json: async () => mockSectionsResponse,
@@ -1314,13 +1314,14 @@ describe('Statistics Functions', () => {
     it('should handle Plex API errors', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
+        status: 401,
         statusText: 'Unauthorized',
       } as Response)
 
       const result = await fetchPlexServerStatistics(plexConfig, tautulliConfig)
 
       expect(result.success).toBe(false)
-      expect(result.error).toContain('Unauthorized')
+      expect(result.error).toBe('Failed to fetch library sections from Plex')
     })
   })
 
@@ -1393,9 +1394,8 @@ describe('Statistics Functions', () => {
       const result = await fetchWatchTimeLeaderboard(config, 2024)
 
       expect(result.success).toBe(false)
-      expect(result.error).toBeDefined()
-      // The function returns the error message from response.message or a default message
-      expect(result.error).toMatch(/API error|Tautulli API error/)
+      // A fixed message: Tautulli's own `message` is never passed on (P2.3)
+      expect(result.error).toBe('Failed to fetch home stats from Tautulli')
     })
   })
 
