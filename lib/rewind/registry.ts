@@ -22,12 +22,8 @@
 
 import { z } from "zod"
 
+import type { InkName } from "@/lib/design/tokens"
 import type { PageType } from "@/lib/wrapped/data/page-types"
-
-/** The twelve Rewind inks (design 5.2). P3.3's `rewindInks` holds their values. */
-export type InkName =
-  | "paper" | "coral" | "marigold" | "rose" | "sky" | "peach" | "lilac" | "mint"
-  | "ultramarine" | "forest" | "oxblood" | "petrol"
 
 export type Act = "front" | "features" | "habits" | "server" | "centrefold" | "back"
 

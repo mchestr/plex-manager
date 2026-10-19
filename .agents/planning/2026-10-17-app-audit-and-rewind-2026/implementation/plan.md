@@ -3200,11 +3200,13 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 
 **Demo.** Run `npx jest lib/design`, and show the snapshot of ratios. Then edit one oklch value in `globals.css` only: the sync test names the token and both values.
 
+(as merged: `tokens.ts` also exports `subtleAlpha` (`{ dark: 0.14, light: 0.1 }`, the `-subtle` tints, which are `color-mix()` and so not `TokenName`s) and `rewindRemap`, the mirror of the `[data-field]` remap (each token to `field`, `ink`, `spot`, `paper`, `on-paper`, `transparent` or the scope's overlay value), typed over every non-sidebar token so the closing set also holds at compile time. A translucent token's hex carries its alpha (`overlay` is `#08090bb8`). `lib/rewind/registry.ts` and `lib/wrapped/archetypes/catalogue.ts` now import `InkName` from `tokens.ts`, and `archetypeInks` is checked against `ARCHETYPE_STYLE`. The sync check also fails when a colour declared in `.dark` has no remap. The chart checks measure the hex Chart.js receives: from the unquantised OKLCH, dark chart-4 against chart-5 under protan is 9.997, and from the hex 10.06 (3.5's 10.1). The parser, sync and contrast tables are helpers in `lib/design/__tests__/helpers/`; the ratio snapshot is `lib/design/__tests__/__snapshots__/tokens.test.ts.snap`. `expectNoDarkInsideLight` throws an `Error` rather than calling `expect`, so it can live outside a test file. `knip.json` gains `lib/design/tokens.ts!` and `lib/design/color.ts!` (remove in P3.9) and `lib/design/testing.ts!` (permanent, as only tests import it), with comments, which knip reads as JSONC.)
+
 **Done when.**
-- [ ] `lib/design/tokens.ts` holds `themes`, `rewindInks`, `archetypeInks` and `inkProps`, and `lib/design/color.ts` holds the colour maths.
-- [ ] The sync, hex, app-contrast, Rewind-contrast, closing-set and chart checks pass.
-- [ ] The recipe test and `expectNoDarkInsideLight` exist for later steps.
-- [ ] The knip entry is recorded with its removal step.
+- [x] `lib/design/tokens.ts` holds `themes`, `rewindInks`, `archetypeInks` and `inkProps`, and `lib/design/color.ts` holds the colour maths.
+- [x] The sync, hex, app-contrast, Rewind-contrast, closing-set and chart checks pass.
+- [x] The recipe test and `expectNoDarkInsideLight` exist for later steps.
+- [x] The knip entry is recorded with its removal step.
 
 ### Step P3.4: Base primitives on Base UI behind adapters
 
