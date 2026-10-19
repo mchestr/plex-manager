@@ -30,7 +30,7 @@ const mockWrappedFindUnique = prisma.plexWrapped.findUnique as jest.Mock
 const OPENABLE_YEARS = { gte: 2010, lte: 2100 }
 
 /** The stored window and server zone (one Config row serves both reads). */
-function config(opens = '12-01', closes = '01-31', timezone: string | null = null) {
+function config(opens = '12-01', closes = '01-31', timezone: string | null = 'UTC') {
   mockConfigFindUnique.mockResolvedValue({ rewindSeasonOpens: opens, rewindSeasonCloses: closes, timezone })
 }
 
