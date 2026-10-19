@@ -397,7 +397,7 @@ gantt
 - [x] P4.10: Stripe event ordering, idempotency and live re-checks (security, L, due 2026-11-19)
 - [ ] P4.11: Unshare only this server, idempotently (security, S, due 2026-12-02)
 - [x] P4.12: Jellyfin invites: no Plex redemption, complete compensation (security, S, due 2026-10-28)
-- [ ] P4.13: Watchlist requests filed as the member (security, M, due 2026-12-03)
+- [x] P4.13: Watchlist requests filed as the member (security, M, due 2026-12-03)
 - [x] P4.15: Harden the admin assistant (security, S, due 2026-11-06)
 - [x] P4.16: Redact secrets and identifiers from logs (security, M, due 2026-11-19)
 - [x] P4.17: Harden the Docker image and compose file; add a health check (ops, M, due 2026-11-24)
