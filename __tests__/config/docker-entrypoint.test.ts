@@ -80,7 +80,26 @@ describe('docker-entrypoint.sh', () => {
     expect(calls).toEqual(['migrate status', 'migrate deploy'])
   })
 
-  it('defaults PRISMA_BIN to npx prisma', () => {
-    expect(fs.readFileSync(ENTRYPOINT, 'utf8')).toContain('PRISMA_BIN="${PRISMA_BIN:-npx prisma}"')
+  it("defaults PRISMA_BIN to the image's pinned CLI (P4.17)", () => {
+    expect(fs.readFileSync(ENTRYPOINT, 'utf8')).toContain(
+      'PRISMA_BIN="${PRISMA_BIN:-/opt/prisma-cli/node_modules/.bin/prisma}"'
+    )
+  })
+
+  it("runs the CLI, and only the CLI, with NODE_PATH at the CLI's modules (P4.17)", () => {
+    const record = path.join(dir, 'record-node-path')
+    fs.writeFileSync(record, `#!/bin/sh\necho "$1 NODE_PATH=$NODE_PATH" >> "$STUB_LOG"\n`, { mode: 0o755 })
+
+    const result = spawnSync('sh', [ENTRYPOINT, record, 'app'], {
+      env: { NODE_ENV: 'test', PATH: process.env.PATH ?? '', PRISMA_BIN: record, STUB_LOG: log },
+      encoding: 'utf8',
+    })
+
+    expect(result.status).toBe(0)
+    expect(fs.readFileSync(log, 'utf8').trim().split('\n')).toEqual([
+      'migrate NODE_PATH=/opt/prisma-cli/node_modules',
+      'migrate NODE_PATH=/opt/prisma-cli/node_modules',
+      'app NODE_PATH=',
+    ])
   })
 })
