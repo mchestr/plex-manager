@@ -6,6 +6,7 @@
  */
 
 import Redis, { RedisOptions } from "ioredis"
+import { onShutdown } from "@/lib/instrumentation/shutdown"
 import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("QUEUE_CONNECTION")
@@ -125,6 +126,54 @@ export function createFailFastRedis(url: string): Redis {
     logger.debug("Fail-fast Redis error", { error: err.message })
   })
   return client
+}
+
+let requestPathRedis: Redis | null = null
+
+/**
+ * The shared fail-fast client for request paths (BP-20): Server Actions and
+ * route handlers that touch Redis get an error within about two seconds while
+ * Redis is down, instead of hanging on the BullMQ connection. It starts
+ * connecting when first asked for, and is closed on shutdown.
+ *
+ * @throws Error if REDIS_URL is not configured
+ */
+export function getRequestPathRedis(): Redis {
+  if (!requestPathRedis) {
+    const client = createFailFastRedis(getRedisUrl())
+    // Offline queueing is off, so the client must be connecting before its first command.
+    client.connect().catch((error: unknown) => {
+      logger.warn("Request-path Redis connect failed", {
+        error: error instanceof Error ? error.message : String(error),
+      })
+    })
+    onShutdown("request-path-redis", "close", async () => {
+      client.disconnect()
+    })
+    requestPathRedis = client
+  }
+  return requestPathRedis
+}
+
+/**
+ * Resolves true once `client` is ready (at once when it already is), or false
+ * after `ms`. A fail-fast client refuses commands while it is still
+ * connecting, so its callers wait here first; a lazy client that has not
+ * connected yet, or one that gave up reconnecting, is told to connect.
+ */
+export function readyWithin(client: Redis, ms: number): Promise<boolean> {
+  if (client.status === "ready") return Promise.resolve(true)
+  return new Promise((resolve) => {
+    const settle = (ready: boolean) => {
+      clearTimeout(timer)
+      client.off("ready", onReady)
+      resolve(ready)
+    }
+    const onReady = () => settle(true)
+    const timer = setTimeout(() => settle(false), ms)
+    client.once("ready", onReady)
+    if (client.status === "wait" || client.status === "end") client.connect().catch(() => {})
+  })
 }
 
 type RedisProbe = Pick<Redis, "status" | "connect" | "ping">

@@ -2387,9 +2387,9 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 - **Per-member lock.** `lib/queue/redis-lock.ts` covers every generation path: `SET rw:lock:gen:{year}:{userId} <jobId> NX PX 600000`. A compare-and-`PEXPIRE` script renews it each minute, and a compare-and-`DEL` releases it in `finally`. P11.3 later merges the lock implementations.
 - **Semaphore** (design 9.4). `lib/queue/redis-semaphore.ts` admits at most 4 holders per service through a Lua script on the sorted set `rw:sem:<service>`.
   - Holders have a 30 s TTL, renewed on long calls, and release in `finally`. Waiters back off with jitter, bounded by their signal.
-  - It exports `redisLimiter`, which implements P2.4's `UpstreamLimiter`.
+  - It exports `redisLimiter`, which implements P2.4's `UpstreamLimiter` (as merged: `run(service, fn, signal?)`, where the optional `signal` bounds the wait for a slot, and `UpstreamService` is `'tautulli' | 'overseerr' | 'plex'`; it runs on the fail-fast request-path client, so a Redis outage fails the call instead of hanging it).
 - **Fail fast** (BP-20, FR-50). `getRequestPathRedis()` in `lib/queue/connection.ts` is built on P4.2's `createFailFastRedis`: `enableOfflineQueue: false`, `connectTimeout: 2000`, `commandTimeout: 2000` and `maxRetriesPerRequest: 1`.
-  - `checkRewindInfra()` returns `REDIS_NOT_CONFIGURED`, or `REDIS_UNAVAILABLE` when a ping fails within 2 s, cached for 10 s. There is no Postgres fallback (design 13.5).
+  - `checkRewindInfra()` returns `REDIS_NOT_CONFIGURED`, or `REDIS_UNAVAILABLE` when a ping fails within 2 s, cached for 10 s. There is no Postgres fallback (design 13.5). (As merged: it lives in `lib/queue/rewind-infra.ts`; the lock is `acquireGenerationLock(redis, { year, userId, owner })`, returning a handle with `release()` or null; the Workers are started by `startRewindWorkers()` in `rewind-queues.ts` with their processor maps in its `PROCESSORS` constant; and the four modules without a consumer yet are knip entries until P2.17 and P5.9 import them.)
   - The FR-50 copy lives in `lib/rewind/infra-copy.ts`: "Rewind needs Redis (REDIS_URL)" for admins, "Rewind isn't available on this server yet" for members, and "Rewind is temporarily unavailable. Try again in a few minutes." while Redis is down.
 
 **Tests.**
@@ -2402,9 +2402,9 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 **Demo.** Run two scripts that each take the Tautulli semaphore five times: never more than four holders exist across both processes. With Redis stopped, `checkRewindInfra()` returns `REDIS_UNAVAILABLE` in under 2 s.
 
 **Done when.**
-- [ ] The three Rewind queues and their Workers start with the worker, and drain on shutdown.
-- [ ] The per-member lock and the semaphore work across processes, with owner-only release, and their Redis tests pass in CI.
-- [ ] Request paths fail fast with the FR-50 codes when Redis is missing or down.
+- [x] The three Rewind queues and their Workers start with the worker, and drain on shutdown.
+- [x] The per-member lock and the semaphore work across processes, with owner-only release, and their Redis tests pass in CI.
+- [x] Request paths fail fast with the FR-50 codes when Redis is missing or down.
 
 ### Step P2.17: Generation becomes a job: processor, actions and status hook
 

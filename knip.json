@@ -4,7 +4,11 @@
     "instrumentation.ts!",
     "proxy.ts!",
     "scripts/*.ts!",
-    "scripts/*.mjs!"
+    "scripts/*.mjs!",
+    "lib/queue/redis-lock.ts!",
+    "lib/queue/redis-semaphore.ts!",
+    "lib/queue/rewind-infra.ts!",
+    "lib/rewind/infra-copy.ts!"
   ],
   "project": [
     "**/*.{js,mjs,cjs,ts,tsx}!",
