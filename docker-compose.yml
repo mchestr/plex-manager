@@ -16,8 +16,8 @@ services:
       - .env
     environment:
       - NODE_ENV=development
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/plex_wrapped?schema=public
-      - REDIS_URL=redis://redis:6379
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/plex_wrapped?schema=public
+      - REDIS_URL=redis://:${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}@redis:6379
       - NEXT_PUBLIC_APP_URL=http://localhost:3000
       - NEXTAUTH_URL=http://localhost:3000
     depends_on:
@@ -26,15 +26,18 @@ services:
     stdin_open: true
     tty: true
 
+  # Postgres and Redis listen on loopback only (SEC-04): a port published on
+  # every interface bypasses the host firewall, and P0.10 keeps the rate
+  # limiter's state in this Redis. Both refuse to start without a password.
   db:
     image: postgres:15-alpine
     container_name: plex-wrapped-db
     environment:
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       - POSTGRES_DB=plex_wrapped
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - db-data:/var/lib/postgresql/data
 
@@ -42,10 +45,10 @@ services:
     image: postgres:15-alpine
     environment:
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       - POSTGRES_DB=plex_manager_test
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - db-data-playwright:/var/lib/postgresql/data
 
@@ -53,10 +56,12 @@ services:
     image: redis:7-alpine
     container_name: plex-wrapped-redis
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - redis-data:/data
-    command: redis-server --appendonly yes
+    environment:
+      - REDISCLI_AUTH=${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:?set REDIS_PASSWORD in .env}
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s

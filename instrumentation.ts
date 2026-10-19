@@ -9,6 +9,11 @@ export async function register() {
     return
   }
 
+  // Refuse to start a production server with an unsafe environment, before
+  // anything else runs.
+  const { assertBootEnv } = await import("./lib/env")
+  assertBootEnv()
+
   // Dynamically import Node.js-specific instrumentation
   // This prevents Edge Runtime from analyzing Node.js-only dependencies
   const { startNodeInstrumentation } = await import("./lib/instrumentation/node")

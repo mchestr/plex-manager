@@ -268,7 +268,8 @@ See `example.env` for all available configuration options. Key variables:
 - **Authentication**: `NEXTAUTH_SECRET`, `PLEX_CLIENT_IDENTIFIER`
 - **Jellyfin**: `JELLYFIN_DEVICE_ID` (optional) — the DeviceId reported to Jellyfin at sign-in. By default it is derived from `PLEX_CLIENT_IDENTIFIER`, so leave it unset unless you want your own value. If neither is set, Jellyfin sign-in uses the fixed `plex-manager-server` and logs `jellyfin.auth.device_id_fallback` at warn.
 - **Encryption**: `ENCRYPTION_KEY` (optional but strongly recommended in production) — encrypts external-service secrets/tokens at rest. Use a dedicated value (do **not** reuse `NEXTAUTH_SECRET`); generate with `openssl rand -hex 32`. Rollout is non-destructive; rotating it makes previously-encrypted secrets undecryptable until re-saved.
-- **Job Queue**: `REDIS_URL` (optional) — enables the Redis-backed BullMQ worker. Without it, background jobs fall back to PostgreSQL polling. Required for Stripe subscriptions.
+- **Job Queue**: `REDIS_URL` — enables the Redis-backed BullMQ worker. Rewind and Stripe subscriptions require it; without it, only the watchlist sync keeps running, through PostgreSQL polling.
+- **Docker Compose (development)**: `POSTGRES_PASSWORD` and `REDIS_PASSWORD` are required; `docker compose up` refuses to start without them. `docker-compose.yml` publishes Postgres (5432, 5433) and Redis (6379) on `127.0.0.1` only and builds the app container's `DATABASE_URL` and `REDIS_URL` from the two passwords; use them in your own `.env` URLs as well. A database volume created before this change keeps its old password (`postgres`), so set `POSTGRES_PASSWORD` to that or change it with `ALTER USER`.
 - **Development**: `DEV_*` variables for setup wizard defaults (read only with `NODE_ENV=development` and `DEV_SETUP_PREFILL=true`, until setup is complete)
   - Use URL format: `DEV_PLEX_URL="https://localhost:32400"` (includes protocol and port)
 
@@ -294,14 +295,20 @@ When deploying to production, ensure the following environment variables are set
    - Generate with: `openssl rand -base64 32`
    - Keep this secret and never commit it to version control
 
-4. **`DATABASE_URL`** - Your production PostgreSQL database connection string
+4. **`PLEX_CLIENT_IDENTIFIER`** - A unique, stable identifier for this install
+   - Generate with: `openssl rand -hex 16`
+   - Keep it unchanged across upgrades: Plex and Jellyfin see it as this app's device id
+
+5. **`DATABASE_URL`** - Your production PostgreSQL database connection string
    - Example: `postgresql://user:password@host:port/database`
    - SQLite is no longer supported (Prisma v7 requirement)
+
+A production server checks these at start and exits with code 1, logging `env.invalid` and the variable's name (never its value), when `NEXTAUTH_SECRET` is missing, shorter than 32 characters, has fewer than 10 distinct characters or is a published placeholder (such as `example.env`'s old value), when `NEXTAUTH_URL` or `NEXT_PUBLIC_APP_URL` is not `https:` (loopback hosts excepted), or when `PLEX_CLIENT_IDENTIFIER` is empty. Two URLs with different origins only log a warning. `ALLOW_INSECURE_HTTP=true` lets a LAN-only install run on plain http; it logs a warning at every start, and session cookies are then not Secure, so never set it on an install reachable from the internet.
 
 ### Important Notes
 
 - **No hardcoded localhost**: The application will throw an error in production if neither `NEXT_PUBLIC_APP_URL` nor `NEXTAUTH_URL` is set
-- **HTTPS required**: In production, always use HTTPS URLs for both environment variables
+- **HTTPS required**: In production, both URL variables must be HTTPS, or the server refuses to start (see above). Session cookies are Secure, with the `__Secure-` name, exactly when `NEXTAUTH_URL` is https
 - **Domain consistency**: Both URL variables should point to the same domain to avoid authentication issues
 - **Reverse proxy and rate limits**: Rate limits key on the client IP (IPv6 clients by their /64), read from `X-Forwarded-For`. Run the app behind a reverse proxy that adds the client address to `X-Forwarded-For` (Traefik and Caddy do by default, nginx with `proxy_add_x_forwarded_for`), and set `TRUSTED_PROXY_HOPS` to the number of proxies that append to it: `1` (the default) for one proxy. Keep the app port off the public internet so every request passes through the proxy; a client that reaches the app directly can choose its own address. Set `REDIS_URL` so limits hold across processes and restarts. The server logs a warning once if `TRUSTED_PROXY_HOPS` is invalid or no client address can be found, because such requests share one bucket.
 - **CDN in front of the proxy** (`TRUSTED_PROXY_HOPS=2`): this is only correct when the inner proxy keeps the CDN's `X-Forwarded-For` and appends to it. Traefik and Caddy drop an incoming `X-Forwarded-For` from senders they do not trust, so add the CDN's address ranges to Traefik's `forwardedHeaders.trustedIPs` or Caddy's `trusted_proxies`; otherwise the header has a single entry and every visitor is keyed by a CDN edge address. Let the origin accept traffic only from the CDN (a firewall rule on the CDN's published ranges, or a tunnel), because a request sent straight to the proxy can choose the entry the app reads.

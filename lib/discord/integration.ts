@@ -3,7 +3,7 @@ import { getDiscordBotToken } from "@/lib/discord/config"
 import { computeRoleMetadata } from "@/lib/discord/role-metadata"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
-import { getBaseUrl } from "@/lib/utils"
+import { getBaseUrl } from "@/lib/env"
 import { createLogger } from "@/lib/utils/logger"
 import { randomBytes } from "crypto"
 

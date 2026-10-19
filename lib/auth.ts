@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto"
 
 import { checkUserServerAccess, getPlexUserInfo } from "@/lib/connections/plex"
+import { getEnv, usesSecureCookies } from "@/lib/env"
 import { authenticateJellyfin } from "@/lib/jellyfin-auth"
 import { prisma } from "@/lib/prisma"
 import { isUniqueEmailConflict } from "@/lib/prisma-errors"
@@ -364,6 +365,10 @@ export const authOptions: NextAuthOptions = {
       },
     }),
   ],
+  secret: getEnv().NEXTAUTH_SECRET,
+  // Set explicitly (SEC-09), the same as NextAuth inferred it from NEXTAUTH_URL,
+  // so the `__Secure-` cookie names of existing sessions do not change.
+  useSecureCookies: usesSecureCookies(),
   pages: {
     signIn: "/",
   },

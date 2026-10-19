@@ -46,8 +46,8 @@ jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prism
 
 beforeEach(() => mockReset(prismaMock))
 
-jest.mock('@/lib/utils', () => ({
-  ...jest.requireActual('@/lib/utils'),
+jest.mock('@/lib/env', () => ({
+  ...jest.requireActual('@/lib/env'),
   getBaseUrl: () => 'https://plex.example.com',
 }))
 

@@ -3597,12 +3597,20 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 - With a generated secret and an https URL, it starts. After sign-in, the cookie is `__Secure-next-auth.session-token`.
 - `docker compose up` without `POSTGRES_PASSWORD` refuses to start, with the message. From another machine on the LAN, ports 5432 and 6379 are closed.
 
+**As merged.**
+- `getBaseUrl()` moved from `lib/utils.ts` into `lib/env.ts` (same behaviour), because `lib/utils.ts` is imported by client components and cannot import a `server-only` module; its eight callers import it from `@/lib/env`.
+- `lib/env.ts` also exports `usesSecureCookies()` (what `authOptions.useSecureCookies` reads) and `sessionCookieName()`. `e2e/fixtures/session.ts` cannot import a `server-only` module under Playwright, so it keeps its own copy and `__tests__/lib/auth-cookies.test.ts` checks the two agree.
+- `getEnv()` memoises except under `NODE_ENV=test`, whose suites change `process.env` between cases.
+- `SKIP_MIGRATIONS` (P1.10) is in `envSchema`. `SKIP_SEED` is not: nothing reads it any more. `ENABLE_TEST_AUTH` was already gone (P1.5).
+- Both compose Postgres services (`db` and `db-playwright`) require `POSTGRES_PASSWORD`, so `example.env`'s `E2E_DATABASE_URL` uses it too. Redis's health check authenticates through `REDISCLI_AUTH`.
+- `visual-baselines.yml` runs a production server, so it now generates a per-run `NEXTAUTH_SECRET` like `build.yml`'s E2E job instead of the fixed CI string, which the boot check refuses.
+
 **Done when.**
-- [ ] `lib/env.ts` describes every variable the code reads, and the coverage test passes.
-- [ ] Production refuses to boot with a placeholder or CI secret, with a non-https public URL (without the explicit opt-out), or without `PLEX_CLIENT_IDENTIFIER`.
-- [ ] `useSecureCookies` is set explicitly.
-- [ ] `example.env` ships an empty secret and lists the missing variables, and the README lists `PLEX_CLIENT_IDENTIFIER`.
-- [ ] Compose binds Postgres and Redis to localhost and requires both passwords.
+- [x] `lib/env.ts` describes every variable the code reads, and the coverage test passes.
+- [x] Production refuses to boot with a placeholder or CI secret, with a non-https public URL (without the explicit opt-out), or without `PLEX_CLIENT_IDENTIFIER`.
+- [x] `useSecureCookies` is set explicitly.
+- [x] `example.env` ships an empty secret and lists the missing variables, and the README lists `PLEX_CLIENT_IDENTIFIER`.
+- [x] Compose binds Postgres and Redis to localhost and requires both passwords.
 
 ### Step P4.2: Boot and shutdown resilience
 
