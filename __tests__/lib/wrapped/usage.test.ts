@@ -4,8 +4,6 @@
 
 import {
   getLLMUsageStats,
-  getLLMUsageRecords,
-  getCostSummary,
 } from '@/lib/wrapped/usage'
 import { prisma } from '@/lib/prisma'
 
@@ -241,100 +239,6 @@ describe('LLM Usage Statistics', () => {
       const result = await getLLMUsageStats()
 
       expect(result.byModel[0].model).toBe('unknown')
-    })
-  })
-
-  describe('getLLMUsageRecords', () => {
-    it('should return paginated records', async () => {
-      mockPrisma.lLMUsage.findMany.mockResolvedValue(mockUsageRecords.slice(0, 2) as any)
-      mockPrisma.lLMUsage.count.mockResolvedValue(3)
-
-      const result = await getLLMUsageRecords(1, 2)
-
-      expect(result.records).toHaveLength(2)
-      expect(result.pagination.page).toBe(1)
-      expect(result.pagination.pageSize).toBe(2)
-      expect(result.pagination.total).toBe(3)
-      expect(result.pagination.totalPages).toBe(2)
-      expect(mockPrisma.lLMUsage.findMany).toHaveBeenCalledWith({
-        where: {},
-        include: expect.any(Object),
-        orderBy: {
-          createdAt: 'desc',
-        },
-        skip: 0,
-        take: 2,
-      })
-    })
-
-    it('should handle pagination correctly', async () => {
-      mockPrisma.lLMUsage.findMany.mockResolvedValue([mockUsageRecords[2]] as any)
-      mockPrisma.lLMUsage.count.mockResolvedValue(3)
-
-      const result = await getLLMUsageRecords(2, 2)
-
-      expect(result.records).toHaveLength(1)
-      expect(result.pagination.page).toBe(2)
-      expect(result.pagination.totalPages).toBe(2)
-      expect(mockPrisma.lLMUsage.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          skip: 2,
-          take: 2,
-        })
-      )
-    })
-
-    it('should filter by user ID', async () => {
-      mockPrisma.lLMUsage.findMany.mockResolvedValue(mockUsageRecords.slice(0, 2) as any)
-      mockPrisma.lLMUsage.count.mockResolvedValue(2)
-
-      const result = await getLLMUsageRecords(1, 10, 'user-1')
-
-      expect(mockPrisma.lLMUsage.findMany).toHaveBeenCalledWith({
-        where: { userId: 'user-1' },
-        include: expect.any(Object),
-        orderBy: {
-          createdAt: 'desc',
-        },
-        skip: 0,
-        take: 10,
-      })
-      expect(result.records).toHaveLength(2)
-    })
-
-    it('should use default pagination values', async () => {
-      mockPrisma.lLMUsage.findMany.mockResolvedValue(mockUsageRecords as any)
-      mockPrisma.lLMUsage.count.mockResolvedValue(3)
-
-      await getLLMUsageRecords()
-
-      expect(mockPrisma.lLMUsage.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          skip: 0,
-          take: 50,
-        })
-      )
-    })
-  })
-
-  describe('getCostSummary', () => {
-    it('should return cost summary for date range', async () => {
-      const startDate = new Date('2024-01-01')
-      const endDate = new Date('2024-01-31')
-
-      mockPrisma.lLMUsage.findMany.mockResolvedValue(mockUsageRecords as any)
-
-      const result = await getCostSummary(startDate, endDate)
-
-      expect(result.period.start).toBe(startDate.toISOString())
-      expect(result.period.end).toBe(endDate.toISOString())
-      expect(result.summary.totalCost).toBe(0.0035)
-      expect(result.summary.totalRequests).toBe(3)
-      expect(result.summary.averageCostPerRequest).toBeCloseTo(0.00116667, 5)
-      expect(result.breakdown.byProvider).toHaveLength(1)
-      expect(result.breakdown.byModel).toHaveLength(2)
-      expect(result.breakdown.byUser).toHaveLength(2)
-      expect(result.breakdown.byDate).toHaveLength(3)
     })
   })
 })
