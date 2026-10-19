@@ -55,6 +55,31 @@ jobs:
       - name: Run linter
         run: npm run lint
 
+  # Design-debt ratchet (ui-design-system 9.6): fails when a count in
+  # design-debt.json rises or a new file has a non-zero count. The full history
+  # gives origin/main, which the script diffs against to carry renames over.
+  design-system:
+    name: Design System
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check design debt
+        run: node scripts/check-design-system.mjs --check
+
   build:
     name: Build
     runs-on: ubuntu-latest

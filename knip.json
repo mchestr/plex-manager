@@ -3,7 +3,8 @@
   "entry": [
     "instrumentation.ts!",
     "proxy.ts!",
-    "scripts/*.ts!"
+    "scripts/*.ts!",
+    "scripts/*.mjs!"
   ],
   "ignore": ["lib/generated/**", ".agents/**", ".claude/worktrees/**"],
   "ignoreDependencies": ["zlib-sync"]
