@@ -116,7 +116,7 @@ describe('getBaseUrl', () => {
     process.env.NEXTAUTH_URL = 'https://fallback.com'
     jest.replaceProperty(process.env, 'NODE_ENV', 'production')
 
-    const { getBaseUrl } = require('@/lib/utils')
+    const { getBaseUrl } = require('@/lib/env')
     expect(getBaseUrl()).toBe('https://example.com')
   })
 
@@ -125,7 +125,7 @@ describe('getBaseUrl', () => {
     process.env.NEXTAUTH_URL = 'https://fallback.com'
     jest.replaceProperty(process.env, 'NODE_ENV', 'production')
 
-    const { getBaseUrl } = require('@/lib/utils')
+    const { getBaseUrl } = require('@/lib/env')
     expect(getBaseUrl()).toBe('https://fallback.com')
   })
 
@@ -134,7 +134,7 @@ describe('getBaseUrl', () => {
     delete process.env.NEXTAUTH_URL
     jest.replaceProperty(process.env, 'NODE_ENV', 'development')
 
-    const { getBaseUrl } = require('@/lib/utils')
+    const { getBaseUrl } = require('@/lib/env')
     expect(getBaseUrl()).toBe('http://localhost:3000')
   })
 
@@ -143,7 +143,7 @@ describe('getBaseUrl', () => {
     delete process.env.NEXTAUTH_URL
     jest.replaceProperty(process.env, 'NODE_ENV', 'production')
 
-    const { getBaseUrl } = require('@/lib/utils')
+    const { getBaseUrl } = require('@/lib/env')
     expect(() => getBaseUrl()).toThrow('Base URL is not configured')
   })
 
@@ -151,7 +151,7 @@ describe('getBaseUrl', () => {
     process.env.NEXT_PUBLIC_APP_URL = 'https://example.com/'
     jest.replaceProperty(process.env, 'NODE_ENV', 'production')
 
-    const { getBaseUrl } = require('@/lib/utils')
+    const { getBaseUrl } = require('@/lib/env')
     expect(getBaseUrl()).toBe('https://example.com/')
   })
 
@@ -160,7 +160,7 @@ describe('getBaseUrl', () => {
     process.env.NEXTAUTH_URL = 'https://example.com:8080'
     jest.replaceProperty(process.env, 'NODE_ENV', 'production')
 
-    const { getBaseUrl } = require('@/lib/utils')
+    const { getBaseUrl } = require('@/lib/env')
     expect(getBaseUrl()).toBe('https://example.com:8080')
   })
 
@@ -169,7 +169,7 @@ describe('getBaseUrl', () => {
     process.env.NEXTAUTH_URL = ''
     jest.replaceProperty(process.env, 'NODE_ENV', 'production')
 
-    const { getBaseUrl } = require('@/lib/utils')
+    const { getBaseUrl } = require('@/lib/env')
     expect(() => getBaseUrl()).toThrow('Base URL is not configured')
   })
 
@@ -178,7 +178,7 @@ describe('getBaseUrl', () => {
     delete process.env.NEXTAUTH_URL
     jest.replaceProperty(process.env, 'NODE_ENV', 'test')
 
-    const { getBaseUrl } = require('@/lib/utils')
+    const { getBaseUrl } = require('@/lib/env')
     expect(() => getBaseUrl()).toThrow('Base URL is not configured')
   })
 })

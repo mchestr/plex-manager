@@ -5,7 +5,7 @@ import { z } from "zod"
 import { actionClientIp, consume, type LimitName } from "@/lib/security/rate-limit"
 import { RATE_LIMITED_MESSAGE } from "@/lib/security/rate-limit-messages"
 import { createLogger } from "@/lib/utils/logger"
-import { getBaseUrl } from "@/lib/utils"
+import { getBaseUrl } from "@/lib/env"
 
 const logger = createLogger("PLEX_AUTH")
 

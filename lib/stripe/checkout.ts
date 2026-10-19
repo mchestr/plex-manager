@@ -2,7 +2,7 @@ import type Stripe from "stripe"
 
 import { prisma } from "@/lib/prisma"
 import { getStripe } from "@/lib/stripe/client"
-import { getBaseUrl } from "@/lib/utils"
+import { getBaseUrl } from "@/lib/env"
 
 /**
  * Path a completed Checkout redirects back to. Stripe appends the session id via

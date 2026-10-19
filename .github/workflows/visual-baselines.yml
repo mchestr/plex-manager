@@ -57,7 +57,6 @@ jobs:
       REDIS_URL: "redis://redis:6379/0"
       NEXT_PUBLIC_APP_URL: "http://localhost:3100"
       NEXTAUTH_URL: "http://localhost:3100"
-      NEXTAUTH_SECRET: "test-secret-for-ci-build-at-least-32-chars-long"
       PLEX_CLIENT_IDENTIFIER: "00000000-0000-0000-0000-000000000000"
       E2E_TEST_MODE: "true"
       SKIP_CONNECTION_TESTS: "true"
@@ -92,6 +91,15 @@ jobs:
           repository: ${{ github.repository }}
           ref: ${{ inputs.branch }}
           token: ${{ steps.app-token.outputs.token || secrets.VISUAL_BASELINES_TOKEN || github.token }}
+
+      # A fresh secret per run: the production server this job starts refuses
+      # the old fixed CI string (lib/env.ts), and the minted session cookies
+      # (e2e/fixtures/session.ts) are signed with it.
+      - name: Generate NEXTAUTH_SECRET
+        run: |
+          secret="$(node -e "process.stdout.write(require('node:crypto').randomBytes(32).toString('base64'))")"
+          echo "::add-mask::$secret"
+          echo "NEXTAUTH_SECRET=$secret" >> "$GITHUB_ENV"
 
       - name: Install dependencies
         run: npm ci

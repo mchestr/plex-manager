@@ -8,7 +8,7 @@ import { ServerForm } from "@/components/admin/settings/server-form"
 import { StripeSettingsForm } from "@/components/admin/settings/stripe-settings-form"
 import { WatchlistSyncSettings } from "@/components/admin/settings/watchlist-sync-settings"
 import { WrappedSettingsForm } from "@/components/admin/settings/wrapped-settings-form"
-import { getBaseUrl } from "@/lib/utils"
+import { getBaseUrl } from "@/lib/env"
 import { getSeasonYear } from "@/lib/wrapped/season"
 
 export const dynamic = 'force-dynamic'
