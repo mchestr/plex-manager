@@ -38,7 +38,7 @@ afterEach(() => {
 
 function run(env: Record<string, string> = {}) {
   const result = spawnSync('sh', [ENTRYPOINT, stub, 'start-app'], {
-    env: { PATH: process.env.PATH ?? '', PRISMA_BIN: stub, STUB_LOG: log, ...env },
+    env: { NODE_ENV: 'test', PATH: process.env.PATH ?? '', PRISMA_BIN: stub, STUB_LOG: log, ...env },
     encoding: 'utf8',
   })
   const calls = fs.existsSync(log) ? fs.readFileSync(log, 'utf8').trim().split('\n') : []
