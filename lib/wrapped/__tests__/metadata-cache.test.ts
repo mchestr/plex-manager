@@ -109,6 +109,15 @@ describe("upsertLibraryItems", () => {
     expect(update).not.toHaveProperty("fetchedAt")
     expect(update).not.toHaveProperty("runtimeSec")
   })
+
+  it("keeps a stored rating when Plex reports none", async () => {
+    const item = { ratingKey: "900", type: "movie", title: "A Film", year: 2026, addedAt: null, contentRating: null, librarySectionId: "1", genres: [], directors: [], actors: [], guids: [] }
+
+    await upsertLibraryItems([item])
+
+    expect(upsert.mock.calls[0][0].update.contentRating).toBeUndefined()
+    expect(upsert.mock.calls[0][0].create.contentRating).toBeNull()
+  })
 })
 
 describe("warmTitles", () => {

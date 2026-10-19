@@ -145,7 +145,8 @@ export async function upsertLibraryItems(items: readonly LibraryItem[]): Promise
         return prisma.mediaMetadataCache.upsert({
           where: { ratingKey: item.ratingKey },
           create: { ratingKey: item.ratingKey, ...fields, fetchedAt: NEVER_WARMED },
-          update: fields,
+          // A rating Plex no longer reports keeps the one the warm stored
+          update: { ...fields, contentRating: fields.contentRating ?? undefined },
           select: { ratingKey: true },
         })
       })
