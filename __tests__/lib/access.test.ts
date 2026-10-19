@@ -16,6 +16,7 @@ import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 describe("isAccessAllowed", () => {
   const base = {
     stripeEnabled: true,
+    disabled: false,
     isAdmin: false,
     isExempt: false,
     subscriptionStatus: null,
@@ -27,11 +28,18 @@ describe("isAccessAllowed", () => {
     expect(
       isAccessAllowed({
         stripeEnabled: false,
+        disabled: false,
         isAdmin: false,
         isExempt: false,
         subscriptionStatus: "CANCELED",
       })
     ).toBe(true)
+  })
+
+  it("denies a disabled user, whatever else holds", () => {
+    expect(isAccessAllowed({ ...base, disabled: true, stripeEnabled: false })).toBe(false)
+    expect(isAccessAllowed({ ...base, disabled: true, isAdmin: true })).toBe(false)
+    expect(isAccessAllowed({ ...base, disabled: true, subscriptionStatus: "ACTIVE" })).toBe(false)
   })
 
   it("allows admins and exempt users regardless of subscription", () => {

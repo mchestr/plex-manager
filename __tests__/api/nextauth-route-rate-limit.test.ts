@@ -106,7 +106,7 @@ function acceptPassword(goodPassword: string) {
   mockUserUpdate.mockResolvedValue(dbUser)
   mockAuthenticateJellyfin.mockImplementation(async (username, password) =>
     password === goodPassword
-      ? { success: true, data: { id: "jellyfin-user-1", username, isAdmin: false } }
+      ? { success: true, data: { id: "jellyfin-user-1", username, adminStatus: "not-admin" as const } }
       : { success: false, error: "Invalid username or password" }
   )
 }

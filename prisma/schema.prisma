@@ -36,6 +36,8 @@ model User {
   isExempt              Boolean                @default(false) // Exempt from the subscription requirement (e.g. grandfathered members)
   exemptReason          String? // Why the user is exempt (e.g. "grandfathered")
   timezone              String? // IANA zone the member chose for Rewind; null = the server zone
+  sessionVersion        Int                    @default(0) // Bumped by endUserSessions(); a JWT carrying another version ends
+  disabledAt            DateTime? // Set by an admin; a disabled user cannot sign in and their sessions end
   rewindGenerations     RewindGeneration[]
   rewindPrefs           RewindPrefs[]
   rewindExclusions      RewindExclusion[]

@@ -65,6 +65,8 @@ export interface UserDetails {
   image: string | null
   plexUserId: string | null
   isAdmin: boolean
+  /** When an admin disabled the account; null while it is enabled. */
+  disabledAt: Date | null
   createdAt: Date
   updatedAt: Date
   hasPlexAccess: boolean | null

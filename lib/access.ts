@@ -7,7 +7,8 @@
  * gated surfaces (the authenticated web app AND the Discord bot). This is the
  * single source of truth so the bot and the web app agree on "who's a subscriber".
  *
- * A user is entitled when ANY of the following holds:
+ * A **disabled** user (`User.disabledAt` set by an admin) is never entitled.
+ * Otherwise a user is entitled when ANY of the following holds:
  * - **Stripe gating is disabled** (`Config.stripeEnabled === false`, the default) —
  *   the subscription feature is a no-op, so everyone is entitled (matches the
  *   app's behavior before subscriptions existed).
@@ -36,6 +37,8 @@ const ENTITLING_STATUSES: readonly SubscriptionStatus[] = ["ACTIVE", "PAST_DUE"]
 export interface AccessFacts {
   /** Whether Stripe subscription gating is enabled globally. */
   stripeEnabled: boolean
+  /** Whether an admin disabled the account (`User.disabledAt` is set). */
+  disabled: boolean
   isAdmin: boolean
   isExempt: boolean
   subscriptionStatus: SubscriptionStatus | null | undefined
@@ -48,6 +51,9 @@ export interface AccessFacts {
  * @returns `true` when the user is an entitled member.
  */
 export function isAccessAllowed(facts: AccessFacts): boolean {
+  if (facts.disabled) {
+    return false
+  }
   if (!facts.stripeEnabled) {
     return true
   }
@@ -60,6 +66,10 @@ export function isAccessAllowed(facts: AccessFacts): boolean {
 /**
  * Pure-DB access-gate check for a user id. Reads only the DB (no live Plex/Stripe
  * call), so it is cheap enough to run on every guarded request or bot command.
+ *
+ * The gating-disabled fast path does not read the user, so it does not see
+ * `disabledAt`; a disabled user's session ends at the JWT recheck instead
+ * (`lib/auth.ts`).
  *
  * @param userId - The database user id.
  * @returns `true` when the user may access gated surfaces, `false` otherwise.
@@ -78,6 +88,7 @@ export async function getAccessGateStatus(userId: string): Promise<boolean> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
+      disabledAt: true,
       isAdmin: true,
       isExempt: true,
       subscription: { select: { status: true } },
@@ -90,6 +101,7 @@ export async function getAccessGateStatus(userId: string): Promise<boolean> {
 
   return isAccessAllowed({
     stripeEnabled: true,
+    disabled: user.disabledAt !== null,
     isAdmin: user.isAdmin,
     isExempt: user.isExempt,
     subscriptionStatus: user.subscription?.status ?? null,

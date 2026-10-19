@@ -14,6 +14,8 @@ interface ConfirmModalProps {
   confirmButtonClass?: string
   /** `data-testid` for the dialog element. */
   testId?: string
+  /** `data-testid` for the confirm button. */
+  confirmTestId?: string
 }
 
 export function ConfirmModal({
@@ -26,6 +28,7 @@ export function ConfirmModal({
   cancelText = "Cancel",
   confirmButtonClass = "bg-purple-600 hover:bg-purple-700",
   testId,
+  confirmTestId,
 }: ConfirmModalProps) {
   const titleId = useId()
   const descriptionId = useId()
@@ -65,6 +68,7 @@ export function ConfirmModal({
         </button>
         <button
           onClick={handleConfirm}
+          data-testid={confirmTestId}
           className={`px-4 py-2 ${confirmButtonClass} text-white text-sm font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-slate-800`}
         >
           {confirmText}

@@ -46,6 +46,7 @@ export {
 export {
   getUserById,
   updateUserAdminStatus,
+  setUserDisabled,
 } from "./admin-users"
 
 // Combined settings

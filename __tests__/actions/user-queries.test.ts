@@ -1,4 +1,7 @@
-import { getUserPlexWrapped, getAllUsersWithWrapped } from '@/actions/user-queries'
+import { getUserPlexWrapped, getAllUsersWithWrapped, unshareUserLibrary } from '@/actions/user-queries'
+import { requireAdmin } from '@/lib/admin'
+import { unshareUserFromPlexServer } from '@/lib/connections/plex'
+import { buildUser } from '@/__tests__/helpers/factories'
 import { aggregateLlmUsage } from '@/lib/utils'
 import { getServerSession } from 'next-auth'
 import { makePrismaUser, makePrismaWrapped, makePrismaLlmUsage } from '../utils/test-builders'
@@ -502,5 +505,44 @@ describe('aggregateLlmUsage', () => {
       model: 'claude-3',
       count: 2,
     })
+  })
+})
+
+describe('unshareUserLibrary', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    ;(requireAdmin as jest.Mock).mockResolvedValue({ user: { id: 'admin-1', isAdmin: true } })
+    mockPrisma.user.findUnique.mockResolvedValue(buildUser({ id: 'member-1', plexUserId: 'plex-member' }))
+    mockPrisma.plexServer.findFirst.mockResolvedValue({
+      id: 'ps-1',
+      name: 'Plex',
+      url: 'https://plex.example.com:32400',
+      publicUrl: null,
+      token: 'server-token',
+      adminPlexUserId: 'plex-owner',
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    mockPrisma.user.updateMany.mockResolvedValue({ count: 1 })
+  })
+
+  it("ends the member's sessions after a successful unshare (SEC-10)", async () => {
+    ;(unshareUserFromPlexServer as jest.Mock).mockResolvedValue({ success: true })
+
+    await expect(unshareUserLibrary('member-1')).resolves.toEqual({ success: true })
+
+    expect(mockPrisma.user.updateMany).toHaveBeenCalledWith({
+      where: { id: 'member-1' },
+      data: { sessionVersion: { increment: 1 } },
+    })
+  })
+
+  it('keeps the sessions when the unshare fails', async () => {
+    ;(unshareUserFromPlexServer as jest.Mock).mockResolvedValue({ success: false, error: 'Plex down' })
+
+    await expect(unshareUserLibrary('member-1')).resolves.toEqual({ success: false, error: 'Plex down' })
+
+    expect(mockPrisma.user.updateMany).not.toHaveBeenCalled()
   })
 })

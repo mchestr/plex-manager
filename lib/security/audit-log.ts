@@ -7,6 +7,12 @@ export enum AuditEventType {
   ADMIN_PRIVILEGE_GRANTED = "ADMIN_PRIVILEGE_GRANTED",
   ADMIN_PRIVILEGE_REVOKED = "ADMIN_PRIVILEGE_REVOKED",
   USER_CREATED = "USER_CREATED",
+  // Every session of a user was ended (User.sessionVersion bumped). Details carry
+  // the reason, such as "unshared", "demoted", "disabled" or "subscription_revoked".
+  SESSIONS_REVOKED = "SESSIONS_REVOKED",
+  // An admin disabled or re-enabled a user's account (User.disabledAt).
+  USER_DISABLED = "USER_DISABLED",
+  USER_ENABLED = "USER_ENABLED",
   // Invite processing events
   INVITE_CONSUMED = "INVITE_CONSUMED",
   INVITE_PLEX_FAILURE = "INVITE_PLEX_FAILURE",

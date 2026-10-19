@@ -57,6 +57,7 @@ describe("handleDiscordChat", () => {
       id: "user-1",
       isAdmin: false,
       isExempt: false,
+      disabledAt: null,
       subscription: null,
     },
   }
@@ -170,7 +171,7 @@ describe("handleDiscordChat", () => {
     it("threads isAdmin=true when the linked user is an admin", async () => {
       mockPrisma.discordConnection.findUnique.mockResolvedValue({
         ...mockConnection,
-        user: { id: "user-1", isAdmin: true },
+        user: { ...mockConnection.user, isAdmin: true },
       } as any)
       mockRunChatbotForUser.mockResolvedValue({
         success: true,
@@ -246,7 +247,7 @@ describe("handleDiscordChat", () => {
       mockPrisma.config.findUnique.mockResolvedValue({ stripeEnabled: true } as any)
       mockPrisma.discordConnection.findUnique.mockResolvedValue({
         ...mockConnection,
-        user: { id: "user-1", isAdmin: false, isExempt: false, subscription: null },
+        user: { id: "user-1", isAdmin: false, isExempt: false, disabledAt: null, subscription: null },
       } as any)
 
       const result = await handleDiscordChat({
@@ -263,6 +264,22 @@ describe("handleDiscordChat", () => {
       expect(mockGetOrCreateSession).not.toHaveBeenCalled()
     })
 
+    it("blocks a disabled user even when Stripe gating is off", async () => {
+      mockPrisma.discordConnection.findUnique.mockResolvedValue({
+        ...mockConnection,
+        user: { id: "user-1", isAdmin: true, isExempt: false, disabledAt: new Date(), subscription: null },
+      } as never)
+
+      const result = await handleDiscordChat({
+        discordUserId: "discord-123",
+        channelId: "channel-123",
+        message: "Check Plex status",
+      })
+
+      expect(result.entitled).toBe(false)
+      expect(mockRunChatbotForUser).not.toHaveBeenCalled()
+    })
+
     it("allows an ACTIVE subscriber when Stripe gating is on", async () => {
       mockPrisma.config.findUnique.mockResolvedValue({ stripeEnabled: true } as any)
       mockPrisma.discordConnection.findUnique.mockResolvedValue({
@@ -271,6 +288,7 @@ describe("handleDiscordChat", () => {
           id: "user-1",
           isAdmin: false,
           isExempt: false,
+          disabledAt: null,
           subscription: { status: "ACTIVE" },
         },
       } as any)
@@ -293,7 +311,7 @@ describe("handleDiscordChat", () => {
       mockPrisma.config.findUnique.mockResolvedValue({ stripeEnabled: true } as any)
       mockPrisma.discordConnection.findUnique.mockResolvedValue({
         ...mockConnection,
-        user: { id: "user-1", isAdmin: false, isExempt: true, subscription: null },
+        user: { id: "user-1", isAdmin: false, isExempt: true, disabledAt: null, subscription: null },
       } as any)
       mockRunChatbotForUser.mockResolvedValue({
         success: true,

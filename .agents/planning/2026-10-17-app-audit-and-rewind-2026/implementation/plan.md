@@ -4004,11 +4004,22 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 - An admin clicks Unshare on a signed-in member. Within five minutes, the member's next page load shows sign-in, and `/api/auth/session` returns `{}`.
 - Promote a member in the UI and sign them in again: they are still an admin.
 
+**As merged.**
+- The migration folder is `20261110000000_user_session_version`, so it sorts after every earlier folder.
+- `endUserSessions(userId, reason, actorId)` lives in `lib/session-revocation.ts` with `SessionRevokedError` and `SYSTEM_ACTOR` (`"system"`, the Stripe revoke's actor). `reason` is the `SessionRevocationReason` union (`unshared`, `demoted`, `disabled`, `subscription_revoked`); P4.11 and P4.18 add theirs. A missing row is a no-op with no audit event.
+- A demotion ends the user's sessions too, so a demoted admin signs in again as a member.
+- P4.3 had not merged, so `setUserDisabled` (in `actions/admin/admin-users.ts`) is written in today's action style (`requireAdmin`, Zod, `{ success, error, code }`); P4.3 moves it onto `adminAction`. Refusal codes for it and `updateUserAdminStatus`: `SELF`, `OWNER`, `LAST_ADMIN`, `NOT_FOUND`.
+- P4.5 had not merged, so there is no `getAccessLevel` yet: `AccessFacts` gained `disabled` and `isAccessAllowed` returns false for it (the bot's checks pass it). `getAccessGateStatus`'s gating-off fast path still reads no user row; P4.5's `getAccessLevel` must return `none` when `disabledAt` is set.
+- `authenticateJellyfin` returns `adminStatus` (`'admin' | 'not-admin' | 'unknown'`) instead of `isAdmin`; a lookup that fails, throws or carries no IsAdministrator flag is `'unknown'`. The `JellyfinServer.adminUserId` column stays; nothing reads it now.
+- `authOptions.logger.error` drops next-auth's `JWT_SESSION_ERROR` for a `SessionRevokedError` (the callback logs `auth.session_revoked` at info) and routes every other next-auth error through `createLogger`.
+- `ConfirmModal` gained `confirmTestId`. The user detail page shows a `Disabled` badge (`admin-user-disabled-badge`) and the button; the `admin-user-detail` visual baselines (desktop and mobile) were regenerated for it, and the role row now wraps on mobile.
+- E2E: the minted session writes `sv` from the seeded row (`e2e/fixtures/session.ts`). The disable spec signs in a member of its own, so the seeded users stay enabled.
+
 **Done when.**
-- [ ] The JWT refresh checks `sessionVersion` and `disabledAt`, and a mismatch, a disabled user or a missing row ends the session.
-- [ ] Unshare, demotion, disable and the Stripe revoke bump the version.
-- [ ] Login only promotes, so roles set in the UI persist, and the owner and the last admin cannot be demoted.
-- [ ] A failed Jellyfin lookup changes nothing and writes no audit event.
+- [x] The JWT refresh checks `sessionVersion` and `disabledAt`, and a mismatch, a disabled user or a missing row ends the session.
+- [x] Unshare, demotion, disable and the Stripe revoke bump the version.
+- [x] Login only promotes, so roles set in the UI persist, and the owner and the last admin cannot be demoted.
+- [x] A failed Jellyfin lookup changes nothing and writes no audit event.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
 
 ### Step P4.8: Bind the Plex PIN to the browser

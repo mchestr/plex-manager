@@ -3,7 +3,9 @@ import { RegenerateWrappedButton } from "@/components/admin/users/regenerate-wra
 import { UnshareUserButton } from "@/components/admin/users/unshare-user-button"
 import { UserStatusBadge } from "@/components/admin/users/user-status-badge"
 import { ChangeUserRoleButton } from "@/components/admin/users/change-user-role-button"
+import { DisableUserButton } from "@/components/admin/users/disable-user-button"
 import { UserActivityTimeline } from "@/components/admin/users/user-activity-timeline"
+import { Badge } from "@/components/ui/badge"
 import { getFormat } from "@/lib/settings/app-settings"
 import { readWrappedStatus } from "@/lib/wrapped/data/parse-stored"
 import { getSeasonYear } from "@/lib/wrapped/season"
@@ -75,6 +77,11 @@ export default async function UserDetailsPage({ params }: { params: Promise<{ us
                       Admin
                     </span>
                   )}
+                  {user.disabledAt && (
+                    <Badge tone="danger" data-testid="admin-user-disabled-badge">
+                      Disabled
+                    </Badge>
+                  )}
                 </div>
                 {user.email && (
                   <p className="text-slate-400 mb-2">{user.email}</p>
@@ -109,7 +116,7 @@ export default async function UserDetailsPage({ params }: { params: Promise<{ us
                 </div>
                 {/* Role Management */}
                 <div className="mt-4 pt-4 border-t border-slate-700">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
                       <div className="text-sm text-slate-400 mb-1">Role</div>
                       <div className="text-sm text-white">
@@ -122,11 +129,18 @@ export default async function UserDetailsPage({ params }: { params: Promise<{ us
                         )}
                       </div>
                     </div>
-                    <ChangeUserRoleButton
-                      userId={user.id}
-                      userName={user.name}
-                      currentIsAdmin={user.isAdmin}
-                    />
+                    <div className="flex flex-wrap items-center gap-2">
+                      <DisableUserButton
+                        userId={user.id}
+                        userName={user.name}
+                        disabled={user.disabledAt !== null}
+                      />
+                      <ChangeUserRoleButton
+                        userId={user.id}
+                        userName={user.name}
+                        currentIsAdmin={user.isAdmin}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

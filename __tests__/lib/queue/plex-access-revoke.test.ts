@@ -159,6 +159,7 @@ describe('processPlexAccessRevoke', () => {
     ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(PLEX_SERVER)
     ;(prisma.subscription.updateMany as jest.Mock).mockResolvedValue({ count: 1 })
     ;(unshareUserFromPlexServer as jest.Mock).mockResolvedValue({ success: true })
+    prismaMock.user.updateMany.mockResolvedValue({ count: 1 })
   })
 
   it('NEVER unshares an admin (skips with success)', async () => {
@@ -170,6 +171,7 @@ describe('processPlexAccessRevoke', () => {
 
     expect(unshareUserFromPlexServer).not.toHaveBeenCalled()
     expect(prisma.subscription.updateMany).not.toHaveBeenCalled()
+    expect(prismaMock.user.updateMany).not.toHaveBeenCalled()
     expect(result).toEqual({ userId: 'user-1', revoked: false })
   })
 
@@ -232,6 +234,14 @@ describe('processPlexAccessRevoke', () => {
       where: { userId: 'user-1' },
       data: { plexInviteStatus: 'revoked' },
     })
+    // Sessions end only after the unshare and the revoked status (SEC-10).
+    expect(prismaMock.user.updateMany).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+      data: { sessionVersion: { increment: 1 } },
+    })
+    expect(prismaMock.user.updateMany.mock.invocationCallOrder[0]).toBeGreaterThan(
+      prismaMock.subscription.updateMany.mock.invocationCallOrder[0]
+    )
     expect(result).toEqual({ userId: 'user-1', revoked: true })
   })
 
@@ -278,6 +288,7 @@ describe('processPlexAccessRevoke', () => {
       processPlexAccessRevoke(makeRevokeJob('user-1'))
     ).rejects.toThrow('Plex API unavailable')
     expect(prisma.subscription.updateMany).not.toHaveBeenCalled()
+    expect(prismaMock.user.updateMany).not.toHaveBeenCalled()
   })
 
   it('throws when no active Plex server is configured', async () => {

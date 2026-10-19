@@ -39,6 +39,7 @@ import {
   acceptPlexInvite,
   unshareUserFromPlexServer,
 } from "@/lib/connections/plex-invitations"
+import { endUserSessions, SYSTEM_ACTOR } from "@/lib/session-revocation"
 import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("STRIPE_WEBHOOK_JOB")
@@ -571,7 +572,8 @@ export function evaluateRevokeGuard(target: RevokeGuardTarget): string | null {
  *    configuration error → throw so BullMQ retries) and, when a `plexUserId` is
  *    known, unshare the user. A transient unshare failure throws to retry; a
  *    user with no `plexUserId` is already effectively unshared (idempotent).
- * 4. Record the removal on the subscription (`plexInviteStatus = "revoked"`).
+ * 4. Record the removal on the subscription (`plexInviteStatus = "revoked"`),
+ *    then end the user's sessions ({@link endUserSessions}).
  *
  * @internal
  */
@@ -651,6 +653,8 @@ export async function processPlexAccessRevoke(
     where: { userId },
     data: { plexInviteStatus: "revoked" },
   })
+
+  await endUserSessions(userId, "subscription_revoked", SYSTEM_ACTOR)
 
   logger.info("Plex access revoke complete", { userId })
 

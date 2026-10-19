@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth"
 import { requireAdmin } from "@/lib/admin"
 import { checkUserServerAccess, getPlexServerIdentity, getPlexUsers, unshareUserFromPlexServer } from "@/lib/connections/plex"
 import { prisma } from "@/lib/prisma"
+import { endUserSessions } from "@/lib/session-revocation"
 import { getServerSession } from "next-auth"
 import { SubscriptionStatus } from "@/lib/generated/prisma/client"
 import { aggregateLlmUsage } from "@/lib/utils"
@@ -180,6 +181,7 @@ export async function getUserDetails(userId: string): Promise<UserDetails | null
       image: user.image,
       plexUserId: user.plexUserId,
       isAdmin: user.isAdmin,
+      disabledAt: user.disabledAt,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
       hasPlexAccess,
@@ -264,10 +266,11 @@ export async function getAllUsersWithWrapped(year: number): Promise<AdminUserWit
 }
 
 /**
- * Unshare library access for a user from the Plex server (admin only)
+ * Unshare library access for a user from the Plex server (admin only).
+ * A successful unshare also ends the user's sessions (SEC-10).
  */
 export async function unshareUserLibrary(userId: string): Promise<{ success: boolean; error?: string }> {
-  await requireAdmin()
+  const session = await requireAdmin()
 
   try {
     // Get the user
@@ -320,6 +323,8 @@ export async function unshareUserLibrary(userId: string): Promise<{ success: boo
       })
       return result
     }
+
+    await endUserSessions(user.id, "unshared", session.user.id)
 
     logger.info("Successfully unshared user library", {
       userId: user.id,
