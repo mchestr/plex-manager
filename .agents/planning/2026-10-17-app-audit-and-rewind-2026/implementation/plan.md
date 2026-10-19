@@ -354,8 +354,8 @@ gantt
 **Rewind data layer and AI foundations** (2026-10-22 to 2026-11-09)
 
 - [x] P2.1: Rewind 2026 schema migration and versioned stored-data parser (rewind, M, due 2026-10-23)
-- [ ] P2.2: Server and member time zones and the zone-aware year window (rewind, M, due 2026-10-27)
-- [ ] P2.3: Shared outbound HTTP client and one Tautulli client (platform, M, due 2026-10-23)
+- [x] P2.2: Server and member time zones and the zone-aware year window (rewind, M, due 2026-10-27)
+- [x] P2.3: Shared outbound HTTP client and one Tautulli client (platform, M, due 2026-10-23)
 - [ ] P2.4: Rewind sources with Zod and PlayEvent (rewind, M, due 2026-10-29)
 - [ ] P2.5: Rewind queues, locks, semaphore and fail-fast Redis (rewind, M, due 2026-10-30)
 - [ ] P2.17: Generation becomes a job: processor, actions and status hook (rewind, M, due 2026-11-03)
@@ -365,7 +365,7 @@ gantt
 - [ ] P2.9: Fact catalogue, build-facts and archetype scorers v3 (rewind, M, due 2026-11-05)
 - [ ] P2.10: Twenty golden fixtures with hand-checked stats (rewind, M, due 2026-11-04)
 - [ ] P2.16: Fact and archetype goldens for the twenty fixtures (rewind, M, due 2026-11-09)
-- [ ] P2.11: Provider-agnostic AI facade (rewind, M, due 2026-10-27)
+- [x] P2.11: Provider-agnostic AI facade (rewind, M, due 2026-10-27)
 - [ ] P2.12: LLM provider settings and the admin assistant on the registry (rewind, M, due 2026-10-30)
 - [ ] P2.13: Fonts, typesetting, Rewind format and the registry skeleton (rewind, L, due 2026-11-03)
 - [ ] P2.14: Re-measure cards on Next 16.4.2 (rewind, S, due 2026-11-04)
@@ -387,7 +387,7 @@ gantt
 **Security and reliability hardening** (2026-10-23 to 2026-12-03)
 
 - [x] P4.1: Validate the environment at boot (security, S, due 2026-10-23)
-- [ ] P4.2: Boot and shutdown resilience (ops, M, due 2026-10-28)
+- [x] P4.2: Boot and shutdown resilience (ops, M, due 2026-10-28)
 - [ ] P4.3: One action helper for auth, Zod and result shape (security, M, due 2026-11-02)
 - [ ] P4.5: Enforce entitlement beyond the layout (security, M, due 2026-11-05)
 - [ ] P4.6: Never send a stored secret to a new address; audit config changes (security, M, due 2026-11-06)
