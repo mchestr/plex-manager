@@ -113,7 +113,7 @@ export default async function SettingsPage() {
                   </div>
                   <div>
                     <div className="text-xs font-medium text-slate-400 mb-1">Node.js Version</div>
-                    <div className="text-sm text-white font-mono">{nodeVersion}</div>
+                    <div className="text-sm text-white font-mono" data-visual-mask>{nodeVersion}</div>
                   </div>
                 </div>
               </div>
@@ -428,7 +428,7 @@ export default async function SettingsPage() {
                   </div>
                   <div>
                     <div className="text-xs font-medium text-slate-400 mb-1">Last Config Update</div>
-                    <div className="text-sm text-slate-300">
+                    <div className="text-sm text-slate-300" data-testid="settings-config-updated-timestamp">
                       {settings.config.updatedAt
                         ? new Date(settings.config.updatedAt).toLocaleString()
                         : "Never"}

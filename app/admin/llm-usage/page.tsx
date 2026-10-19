@@ -224,7 +224,7 @@ export default async function LLMUsagePage({
                       .map((group) => (
                         <tr key={group.id} className="hover:bg-slate-700/20 transition-colors">
                           <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
-                            <div className="text-xs sm:text-sm text-slate-300">
+                            <div className="text-xs sm:text-sm text-slate-300" data-testid="llm-usage-started-timestamp">
                               <div className="md:hidden">
                                 {new Date(group.createdAt).toLocaleDateString("en-US", {
                                   month: "short",

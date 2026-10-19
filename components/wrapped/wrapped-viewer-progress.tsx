@@ -25,8 +25,10 @@ export function WrappedViewerProgress({
           aria-valuemax={100}
           aria-label={`Wrapped progress: ${Math.round(progress)}% complete, section ${currentSectionIndex + 1} of ${totalSections}`}
         >
-          {/* Animated progress fill */}
+          {/* Animated progress fill. Follows the auto-advance timer, so the
+              visual baselines hide it (data-visual-mask). */}
           <motion.div
+            data-visual-mask
             className="absolute top-0 left-0 h-full bg-gradient-to-r from-gold via-gold-bright to-gold rounded-full"
             initial={{ width: "0%" }}
             animate={{ width: `${progress}%` }}
@@ -36,6 +38,7 @@ export function WrappedViewerProgress({
           />
           {/* Glow effect */}
           <motion.div
+            data-visual-mask
             className="absolute top-0 left-0 h-full w-20 bg-gradient-to-r from-transparent via-white to-transparent opacity-30 rounded-full"
             style={{
               transform: `translateX(${Math.min((progress / 100) * (100 - 5), 95)}%)`,

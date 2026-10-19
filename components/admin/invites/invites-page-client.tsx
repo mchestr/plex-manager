@@ -298,7 +298,10 @@ export function InvitesPageClient() {
                     <td className="px-3 sm:px-6 py-3 sm:py-4 text-sm text-slate-400 hidden sm:table-cell">
                       {getExpirationLabel(invite.expiresAt ? new Date(invite.expiresAt) : null)}
                     </td>
-                    <td className="px-3 sm:px-6 py-3 sm:py-4 text-sm text-slate-400 hidden md:table-cell">
+                    <td
+                      className="px-3 sm:px-6 py-3 sm:py-4 text-sm text-slate-400 hidden md:table-cell"
+                      data-testid="invite-created-timestamp"
+                    >
                       {new Date(invite.createdAt).toLocaleDateString()}
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4">

@@ -164,7 +164,7 @@ export function UserTableRow({ user, currentYear, stripeDashboardBaseUrl }: User
           <span className="text-xs text-slate-500">—</span>
         )}
       </td>
-      <td className="px-2 py-2">
+      <td className="px-2 py-2" data-testid="user-joined-timestamp">
         <div className="text-xs text-slate-400">
           {new Date(user.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })}
         </div>

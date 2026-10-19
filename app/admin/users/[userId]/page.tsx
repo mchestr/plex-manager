@@ -249,7 +249,10 @@ export default async function UserDetailsPage({ params }: { params: Promise<{ us
               </div>
               {seasonWrapped.generatedAt && (
                 <p className="text-sm text-slate-400">
-                  Generated: {formatDate(seasonWrapped.generatedAt)}
+                  Generated:{" "}
+                  <span data-testid="admin-user-season-generated-timestamp">
+                    {formatDate(seasonWrapped.generatedAt)}
+                  </span>
                 </p>
               )}
             </div>
@@ -301,7 +304,7 @@ export default async function UserDetailsPage({ params }: { params: Promise<{ us
                           <UserStatusBadge status={wrapped.status} />
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-sm text-slate-300">
+                          <span className="text-sm text-slate-300" data-testid="admin-user-history-generated-timestamp">
                             {wrapped.generatedAt ? formatDate(wrapped.generatedAt) : "—"}
                           </span>
                         </td>
@@ -351,11 +354,11 @@ export default async function UserDetailsPage({ params }: { params: Promise<{ us
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <div className="text-sm text-slate-400 mb-1">Created</div>
-                <div className="text-sm text-white">{formatDate(user.createdAt)}</div>
+                <div className="text-sm text-white" data-testid="admin-user-created-timestamp">{formatDate(user.createdAt)}</div>
               </div>
               <div>
                 <div className="text-sm text-slate-400 mb-1">Last Updated</div>
-                <div className="text-sm text-white">{formatDate(user.updatedAt)}</div>
+                <div className="text-sm text-white" data-testid="admin-user-updated-timestamp">{formatDate(user.updatedAt)}</div>
               </div>
             </div>
           </div>

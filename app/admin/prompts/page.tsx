@@ -115,7 +115,7 @@ export default async function PromptsPage() {
                           </div>
                         </td>
                         <td className="px-3 sm:px-6 py-4 hidden lg:table-cell">
-                          <div className="text-sm text-slate-300">
+                          <div className="text-sm text-slate-300" data-testid="prompt-updated-timestamp">
                             {formatDate(template.updatedAt)}
                           </div>
                         </td>
