@@ -45,12 +45,16 @@ jest.mock('@/lib/prisma', () => ({
   },
 }))
 
-jest.mock('@/lib/wrapped/statistics', () => ({
+jest.mock('@/lib/wrapped/tautulli-statistics', () => ({
   fetchTautulliStatistics: jest.fn(),
-  fetchPlexServerStatistics: jest.fn(),
-  fetchOverseerrStatistics: jest.fn(),
   fetchTopContentLeaderboards: jest.fn(),
   fetchWatchTimeLeaderboard: jest.fn(),
+}))
+jest.mock('@/lib/wrapped/server-statistics', () => ({
+  fetchPlexServerStatistics: jest.fn(),
+}))
+jest.mock('@/lib/wrapped/overseerr-statistics', () => ({
+  fetchOverseerrStatistics: jest.fn(),
 }))
 
 jest.mock('@/lib/wrapped/llm', () => ({
@@ -154,7 +158,10 @@ describe('Wrapped Regeneration Security', () => {
       ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({ llmDisabled: false })
 
 
-      const statsModule = await import('@/lib/wrapped/statistics')
+      const statsModule = {
+        ...(await import('@/lib/wrapped/tautulli-statistics')),
+        ...(await import('@/lib/wrapped/server-statistics')),
+      }
       ;(statsModule.fetchTautulliStatistics as jest.Mock).mockResolvedValue({
         success: true,
         data: {
@@ -237,7 +244,10 @@ describe('Wrapped Regeneration Security', () => {
       ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({ llmDisabled: false })
 
 
-      const statsModule = await import('@/lib/wrapped/statistics')
+      const statsModule = {
+        ...(await import('@/lib/wrapped/tautulli-statistics')),
+        ...(await import('@/lib/wrapped/server-statistics')),
+      }
       ;(statsModule.fetchTautulliStatistics as jest.Mock).mockResolvedValue({
         success: true,
         data: {
@@ -329,7 +339,10 @@ describe('Wrapped Regeneration Security', () => {
       ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({ llmDisabled: false })
 
 
-      const statsModule = await import('@/lib/wrapped/statistics')
+      const statsModule = {
+        ...(await import('@/lib/wrapped/tautulli-statistics')),
+        ...(await import('@/lib/wrapped/server-statistics')),
+      }
       ;(statsModule.fetchTautulliStatistics as jest.Mock).mockResolvedValue({
         success: true,
         data: {
@@ -410,7 +423,10 @@ describe('Wrapped Regeneration Security', () => {
       ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue(null)
       ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({ stripeEnabled: false })
 
-      const statsModule = await import('@/lib/wrapped/statistics')
+      const statsModule = {
+        ...(await import('@/lib/wrapped/tautulli-statistics')),
+        ...(await import('@/lib/wrapped/server-statistics')),
+      }
       ;(statsModule.fetchTautulliStatistics as jest.Mock).mockResolvedValue({
         success: true,
         data: {

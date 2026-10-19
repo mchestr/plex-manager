@@ -25,9 +25,9 @@ export {
 export {
   getPlexUserInfo,
   getPlexUsers,
-  checkUserServerAccess,
   getAllPlexServerUsers,
-} from "./plex-users"
+} from "./plex-user-info"
+export { checkUserServerAccess } from "./plex-user-access"
 
 // Invitation and sharing
 export {

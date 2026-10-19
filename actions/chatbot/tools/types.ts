@@ -5,7 +5,7 @@ import { type ChatTool } from "@/lib/llm/chat"
  * context-specific tool sets (e.g. the Discord-safe subset) and, in later
  * phases, to scrub tool output before it reaches a public channel.
  *
- * The extra fields are inert to the LLM layer: `TOOLS` is passed to
+ * The extra fields are inert to the LLM layer: `ALL_TOOLS` is passed to
  * `callChatLLM` as-is, and OpenAI ignores properties it does not recognize.
  */
 export interface RegisteredTool extends ChatTool {

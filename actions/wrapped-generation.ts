@@ -21,13 +21,13 @@ import {
 import { checkRewindEligibility } from "@/lib/wrapped/eligibility"
 import { generateWrappedWithLLM } from "@/lib/wrapped/llm"
 import { memberName } from "@/lib/wrapped/member-name"
+import { fetchOverseerrStatistics } from "@/lib/wrapped/overseerr-statistics"
+import { fetchPlexServerStatistics } from "@/lib/wrapped/server-statistics"
 import {
-  fetchOverseerrStatistics,
-  fetchPlexServerStatistics,
   fetchTautulliStatistics,
   fetchTopContentLeaderboards,
   fetchWatchTimeLeaderboard,
-} from "@/lib/wrapped/statistics"
+} from "@/lib/wrapped/tautulli-statistics"
 import { computePercentile } from "@/lib/wrapped/derived-statistics"
 import {
   type GenerationRefusalCode,

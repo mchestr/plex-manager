@@ -12,13 +12,13 @@ import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { generateWrappedWithLLM } from '@/lib/wrapped/llm'
+import { fetchOverseerrStatistics } from '@/lib/wrapped/overseerr-statistics'
+import { fetchPlexServerStatistics } from '@/lib/wrapped/server-statistics'
 import {
   fetchTautulliStatistics,
-  fetchPlexServerStatistics,
-  fetchOverseerrStatistics,
   fetchTopContentLeaderboards,
   fetchWatchTimeLeaderboard,
-} from '@/lib/wrapped/statistics'
+} from '@/lib/wrapped/tautulli-statistics'
 import { revalidatePath } from 'next/cache'
 import { generateShareToken } from '@/lib/utils'
 import { getWrappedSettings } from '@/actions/admin'
@@ -89,12 +89,16 @@ jest.mock('@/lib/wrapped/llm', () => ({
   generateWrappedWithLLM: jest.fn(),
 }))
 
-jest.mock('@/lib/wrapped/statistics', () => ({
+jest.mock('@/lib/wrapped/tautulli-statistics', () => ({
   fetchTautulliStatistics: jest.fn(),
-  fetchPlexServerStatistics: jest.fn(),
-  fetchOverseerrStatistics: jest.fn(),
   fetchTopContentLeaderboards: jest.fn(),
   fetchWatchTimeLeaderboard: jest.fn(),
+}))
+jest.mock('@/lib/wrapped/server-statistics', () => ({
+  fetchPlexServerStatistics: jest.fn(),
+}))
+jest.mock('@/lib/wrapped/overseerr-statistics', () => ({
+  fetchOverseerrStatistics: jest.fn(),
 }))
 
 jest.mock('next/cache', () => ({

@@ -6,13 +6,13 @@ import { GET } from '@/app/api/admin/playground/statistics/route'
 import { prisma } from '@/lib/prisma'
 import { requireAdminAPI } from '@/lib/security/api-helpers'
 import { limitRequest } from '@/lib/security/rate-limit'
+import { fetchOverseerrStatistics } from '@/lib/wrapped/overseerr-statistics'
+import { fetchPlexServerStatistics } from '@/lib/wrapped/server-statistics'
 import {
   fetchTautulliStatistics,
-  fetchPlexServerStatistics,
-  fetchOverseerrStatistics,
   fetchTopContentLeaderboards,
   fetchWatchTimeLeaderboard,
-} from '@/lib/wrapped/statistics'
+} from '@/lib/wrapped/tautulli-statistics'
 import { NextRequest } from 'next/server'
 
 // Mock dependencies
@@ -41,12 +41,16 @@ jest.mock('@/lib/security/rate-limit', () => ({
   limitRequest: jest.fn(),
 }))
 
-jest.mock('@/lib/wrapped/statistics', () => ({
+jest.mock('@/lib/wrapped/tautulli-statistics', () => ({
   fetchTautulliStatistics: jest.fn(),
-  fetchPlexServerStatistics: jest.fn(),
-  fetchOverseerrStatistics: jest.fn(),
   fetchTopContentLeaderboards: jest.fn(),
   fetchWatchTimeLeaderboard: jest.fn(),
+}))
+jest.mock('@/lib/wrapped/server-statistics', () => ({
+  fetchPlexServerStatistics: jest.fn(),
+}))
+jest.mock('@/lib/wrapped/overseerr-statistics', () => ({
+  fetchOverseerrStatistics: jest.fn(),
 }))
 
 // Mock NextRequest

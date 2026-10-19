@@ -3,13 +3,13 @@ import { requireAdminAPI } from "@/lib/security/api-helpers"
 import { limitRequest } from "@/lib/security/rate-limit"
 import { createSafeError, ErrorCode, getStatusCode, logError } from "@/lib/security/error-handler"
 import { NextRequest, NextResponse } from "next/server"
+import { fetchOverseerrStatistics } from "@/lib/wrapped/overseerr-statistics"
+import { fetchPlexServerStatistics } from "@/lib/wrapped/server-statistics"
 import {
-  fetchOverseerrStatistics,
-  fetchPlexServerStatistics,
   fetchTautulliStatistics,
   fetchTopContentLeaderboards,
   fetchWatchTimeLeaderboard,
-} from "@/lib/wrapped/statistics"
+} from "@/lib/wrapped/tautulli-statistics"
 import { WrappedStatistics } from "@/types/wrapped"
 
 export const dynamic = 'force-dynamic'

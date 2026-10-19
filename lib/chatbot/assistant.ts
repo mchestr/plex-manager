@@ -1,9 +1,9 @@
 import { runConversationLoop } from "@/actions/chatbot/conversation"
 import {
+  ALL_TOOLS,
   DISCORD_SAFE_TOOLS,
   generateDiscordSystemPrompt,
   generateSystemPrompt,
-  TOOLS,
 } from "@/actions/chatbot/tools"
 import { type ChatMessage, type ChatResponse } from "@/actions/chatbot/types"
 import { type ChatTool } from "@/lib/llm/chat"
@@ -30,7 +30,7 @@ interface RunChatbotOptions {
 }
 
 function getToolsForContext(context: ChatbotContext | undefined): ChatTool[] {
-  return context === "discord" ? DISCORD_SAFE_TOOLS : TOOLS
+  return context === "discord" ? DISCORD_SAFE_TOOLS : ALL_TOOLS
 }
 
 function getSystemPrompt(context: ChatbotContext | undefined, toolset: ChatTool[]) {

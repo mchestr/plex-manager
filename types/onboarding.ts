@@ -62,9 +62,6 @@ export const JELLYFIN_ONBOARDING_STEPS: OnboardingStep[] = [
   },
 ]
 
-// Legacy export for backward compatibility
-export const ONBOARDING_STEPS = PLEX_ONBOARDING_STEPS
-
 export function getOnboardingSteps(service: AuthService): OnboardingStep[] {
   return service === "jellyfin" ? JELLYFIN_ONBOARDING_STEPS : PLEX_ONBOARDING_STEPS
 }

@@ -53,7 +53,7 @@ jest.mock("discord.js", () => {
   }
 })
 
-jest.mock("@/lib/wrapped/statistics", () => ({
+jest.mock("@/lib/wrapped/tautulli-statistics", () => ({
   fetchTautulliStatistics: jest.fn(),
 }))
 jest.mock("@/lib/prisma", () => ({
@@ -76,7 +76,7 @@ jest.mock("@/lib/discord/chat-safety", () => {
 })
 
 import { myStatsCommand } from "../mystats"
-import { fetchTautulliStatistics } from "@/lib/wrapped/statistics"
+import { fetchTautulliStatistics } from "@/lib/wrapped/tautulli-statistics"
 import { prisma } from "@/lib/prisma"
 import { sanitizeDiscordResponse } from "@/lib/discord/chat-safety"
 import type { InteractionContext } from "../registry"

@@ -3,7 +3,7 @@ import { calculateCost } from "@/lib/llm/pricing"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 import { executeToolCall } from "./executors"
-import { TOOLS } from "./tools"
+import { ALL_TOOLS } from "./tools"
 import { type ChatMessage } from "./types"
 
 const logger = createLogger("CHATBOT_CONVERSATION")
@@ -44,7 +44,7 @@ export async function runConversationLoop(
     ...messages.map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
   ]
 
-  const toolRegistry = config.tools ?? TOOLS
+  const toolRegistry = config.tools ?? ALL_TOOLS
   const MAX_LOOPS = 5
   let loops = 0
   const toolsUsed = new Set<string>() // Track which tools were called

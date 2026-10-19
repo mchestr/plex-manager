@@ -1,15 +1,15 @@
 /**
- * Tests for lib/wrapped/statistics.ts - statistics fetching functions
+ * Tests for the Wrapped statistics fetchers (Tautulli and server statistics)
  * Focuses on key functions and edge cases
  */
 
+import { fetchPlexServerStatistics } from '@/lib/wrapped/server-statistics'
 import {
   fetchTautulliStatistics,
-  fetchPlexServerStatistics,
   fetchTopContentLeaderboards,
   fetchWatchTimeLeaderboard,
-  formatBytes,
-} from '@/lib/wrapped/statistics'
+} from '@/lib/wrapped/tautulli-statistics'
+import { formatBytes } from '@/lib/utils/time-formatting'
 
 // Mock fetch globally
 global.fetch = jest.fn()

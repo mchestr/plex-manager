@@ -45,12 +45,16 @@ jest.mock('@/lib/prisma', () => ({
   },
 }))
 
-jest.mock('@/lib/wrapped/statistics', () => ({
+jest.mock('@/lib/wrapped/tautulli-statistics', () => ({
   fetchTautulliStatistics: jest.fn(),
-  fetchPlexServerStatistics: jest.fn(),
-  fetchOverseerrStatistics: jest.fn(),
   fetchTopContentLeaderboards: jest.fn(),
   fetchWatchTimeLeaderboard: jest.fn(),
+}))
+jest.mock('@/lib/wrapped/server-statistics', () => ({
+  fetchPlexServerStatistics: jest.fn(),
+}))
+jest.mock('@/lib/wrapped/overseerr-statistics', () => ({
+  fetchOverseerrStatistics: jest.fn(),
 }))
 
 jest.mock('@/lib/wrapped/llm', () => ({
@@ -133,7 +137,10 @@ describe('User Wrapped Generation Security', () => {
       ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue(null)
       ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({ llmDisabled: false })
 
-      const statsModule = await import('@/lib/wrapped/statistics')
+      const statsModule = {
+        ...(await import('@/lib/wrapped/tautulli-statistics')),
+        ...(await import('@/lib/wrapped/server-statistics')),
+      }
       ;(statsModule.fetchTautulliStatistics as jest.Mock).mockResolvedValue({
         success: true,
         data: {
@@ -289,7 +296,10 @@ describe('User Wrapped Generation Security', () => {
       ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(mockPlexServer)
       ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(mockTautulli)
 
-      const statsModule = await import('@/lib/wrapped/statistics')
+      const statsModule = {
+        ...(await import('@/lib/wrapped/tautulli-statistics')),
+        ...(await import('@/lib/wrapped/server-statistics')),
+      }
       ;(statsModule.fetchTautulliStatistics as jest.Mock).mockResolvedValue({
         success: true,
         data: {
@@ -362,7 +372,10 @@ describe('User Wrapped Generation Security', () => {
         ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(mockTautulli)
         ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue(null)
 
-        const statsModule = await import('@/lib/wrapped/statistics')
+        const statsModule = {
+        ...(await import('@/lib/wrapped/tautulli-statistics')),
+        ...(await import('@/lib/wrapped/server-statistics')),
+      }
         ;(statsModule.fetchTautulliStatistics as jest.Mock).mockResolvedValue({
           success: true,
           data: {

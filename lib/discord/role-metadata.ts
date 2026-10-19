@@ -35,7 +35,7 @@ import { checkUserServerAccess } from "@/lib/connections/plex"
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
-import { fetchTautulliStatistics } from "@/lib/wrapped/statistics"
+import { fetchTautulliStatistics } from "@/lib/wrapped/tautulli-statistics"
 
 const logger = createLogger("DISCORD_ROLE_METADATA")
 

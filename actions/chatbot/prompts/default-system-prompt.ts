@@ -1,7 +1,7 @@
 import { type ChatTool } from "@/lib/llm/chat"
-import { TOOLS } from "@/actions/chatbot/tools/registry"
+import { ALL_TOOLS } from "@/actions/chatbot/tools/registry"
 
-export function generateSystemPrompt(toolset: ChatTool[] = TOOLS): string {
+export function generateSystemPrompt(toolset: ChatTool[] = ALL_TOOLS): string {
   const toolList = toolset.map((tool) => `- ${tool.function.name}: ${tool.function.description}`).join("\n    ")
 
   return `You are a specialized troubleshooting and diagnostic assistant for a Plex media server management system.

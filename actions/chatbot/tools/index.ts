@@ -5,6 +5,5 @@ export {
   DISCORD_SAFE_TOOLS,
   DISCORD_SAFE_TOOL_NAMES,
   getRegisteredTool,
-  TOOLS,
 } from "./registry"
 export { type RegisteredTool } from "./types"

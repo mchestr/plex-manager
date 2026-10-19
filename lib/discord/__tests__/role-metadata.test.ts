@@ -18,7 +18,7 @@ import {
 } from "@/lib/discord/role-metadata"
 import { checkUserServerAccess } from "@/lib/connections/plex"
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
-import { fetchTautulliStatistics } from "@/lib/wrapped/statistics"
+import { fetchTautulliStatistics } from "@/lib/wrapped/tautulli-statistics"
 import { prisma } from "@/lib/prisma"
 
 jest.mock("@/lib/utils/logger", () => ({
@@ -38,7 +38,7 @@ jest.mock("@/lib/connections/plex-config", () => ({
   getActivePlexServerConfig: jest.fn(),
 }))
 
-jest.mock("@/lib/wrapped/statistics", () => ({
+jest.mock("@/lib/wrapped/tautulli-statistics", () => ({
   fetchTautulliStatistics: jest.fn(),
 }))
 
