@@ -2,7 +2,6 @@ import {
   cn,
   generateShareToken,
   getBaseUrl,
-  constructServerUrl,
   parseServerUrl,
   aggregateLlmUsage,
 } from '@/lib/utils'
@@ -182,48 +181,6 @@ describe('getBaseUrl', () => {
 
     const { getBaseUrl } = require('@/lib/utils')
     expect(() => getBaseUrl()).toThrow('Base URL is not configured')
-  })
-})
-
-describe('constructServerUrl', () => {
-  it('should construct HTTPS URL with default port', () => {
-    expect(constructServerUrl('https', 'example.com', 443)).toBe('https://example.com')
-  })
-
-  it('should construct HTTP URL with default port', () => {
-    expect(constructServerUrl('http', 'example.com', 80)).toBe('http://example.com')
-  })
-
-  it('should construct HTTPS URL with custom port', () => {
-    expect(constructServerUrl('https', 'example.com', 8443)).toBe('https://example.com:8443')
-  })
-
-  it('should construct HTTP URL with custom port', () => {
-    expect(constructServerUrl('http', 'example.com', 8080)).toBe('http://example.com:8080')
-  })
-
-  it('should handle IP addresses', () => {
-    expect(constructServerUrl('http', '192.168.1.100', 32400)).toBe('http://192.168.1.100:32400')
-  })
-
-  it('should handle IPv6 addresses', () => {
-    expect(constructServerUrl('https', '::1', 443)).toBe('https://::1')
-  })
-
-  it('should handle localhost', () => {
-    expect(constructServerUrl('http', 'localhost', 3000)).toBe('http://localhost:3000')
-  })
-
-  it('should handle subdomains', () => {
-    expect(constructServerUrl('https', 'api.example.com', 443)).toBe('https://api.example.com')
-  })
-
-  it('should handle port 1', () => {
-    expect(constructServerUrl('http', 'example.com', 1)).toBe('http://example.com:1')
-  })
-
-  it('should handle port 65535', () => {
-    expect(constructServerUrl('https', 'example.com', 65535)).toBe('https://example.com:65535')
   })
 })
 
@@ -615,4 +572,3 @@ describe('aggregateLlmUsage', () => {
     })
   })
 })
-

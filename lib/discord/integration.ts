@@ -406,38 +406,3 @@ export async function getDiscordLinkStatus(userId: string) {
     isOnServer,
   }
 }
-
-export async function getDiscordStats() {
-  const [integration, linkedCount] = await Promise.all([
-    prisma.discordIntegration.findUnique({ where: { id: "discord" } }),
-    prisma.discordConnection.count({
-      where: { revokedAt: null },
-    }),
-  ])
-
-  // The Prisma extension DECRYPTS `clientSecret` and `botToken` on read (see
-  // ENCRYPTED_FIELDS in lib/prisma.ts), so returning the row verbatim would leak
-  // the plaintext secrets to any caller. Strip both and expose only
-  // `hasClientSecret` / `hasBotToken` booleans — the established
-  // secret-omission pattern (see admin-settings omitSecret).
-  let sanitizedIntegration:
-    | (Omit<NonNullable<typeof integration>, "clientSecret" | "botToken"> & {
-        hasClientSecret: boolean
-        hasBotToken: boolean
-      })
-    | null = null
-  if (integration) {
-    const { clientSecret, botToken, ...rest } = integration
-    sanitizedIntegration = {
-      ...rest,
-      hasClientSecret: Boolean(clientSecret),
-      hasBotToken: Boolean(botToken),
-    }
-  }
-
-  return {
-    integration: sanitizedIntegration,
-    linkedCount,
-  }
-}
-

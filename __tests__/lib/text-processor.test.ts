@@ -1,4 +1,4 @@
-import { stripHighlightTags, parseStyledText, processWrappedContent } from '@/lib/wrapped/text-processor'
+import { stripHighlightTags, parseStyledText } from '@/lib/wrapped/text-processor'
 
 describe('stripHighlightTags', () => {
   it('should remove highlight tags while preserving content', () => {
@@ -102,20 +102,3 @@ describe('parseStyledText', () => {
     expect(result[2]).toEqual({ type: 'text', content: 'After' })
   })
 })
-
-describe('processWrappedContent', () => {
-  it('should process wrapped content', () => {
-    const result = processWrappedContent('Hello <highlight>world</highlight>!')
-    expect(result).toHaveLength(3)
-    expect(result[0]).toEqual({ type: 'text', content: 'Hello ' })
-    expect(result[1]).toEqual({ type: 'highlight', content: 'world' })
-    expect(result[2]).toEqual({ type: 'text', content: '!' })
-  })
-
-  it('should delegate to parseStyledText', () => {
-    const content = 'You watched <highlight>45</highlight> movies.'
-    const result = processWrappedContent(content)
-    expect(result).toEqual(parseStyledText(content))
-  })
-})
-

@@ -7,7 +7,6 @@ import { NextRequest } from "next/server"
 import { getServerSession } from "next-auth"
 import {
   requireAdminAPI,
-  requireAuthAPI,
   validateYear,
 } from "@/lib/security/api-helpers"
 import { ErrorCode } from "@/lib/security/error-handler"
@@ -120,60 +119,6 @@ describe("API Security Helpers", () => {
     })
   })
 
-  describe("requireAuthAPI", () => {
-    it("should allow authenticated user", async () => {
-      ;(getServerSession as jest.Mock).mockResolvedValue(mockRegularUserSession)
-
-      const request = new NextRequest("http://localhost:3000/api/user/test")
-      const result = await requireAuthAPI(request)
-
-      expect(result.session).toEqual(mockRegularUserSession)
-      expect(result.response).toBeNull()
-    })
-
-    it("should allow admin user", async () => {
-      ;(getServerSession as jest.Mock).mockResolvedValue(mockAdminSession)
-
-      const request = new NextRequest("http://localhost:3000/api/user/test")
-      const result = await requireAuthAPI(request)
-
-      expect(result.session).toEqual(mockAdminSession)
-      expect(result.response).toBeNull()
-    })
-
-    it("should reject unauthenticated user", async () => {
-      ;(getServerSession as jest.Mock).mockResolvedValue(null)
-
-      const request = new NextRequest("http://localhost:3000/api/user/test")
-      const result = await requireAuthAPI(request)
-
-      expect(result.session).toBeNull()
-      expect(result.response).not.toBeNull()
-
-      const data = await result.response!.json()
-      expect(data.code).toBe(ErrorCode.UNAUTHORIZED)
-      expect(data.error).toBe("Authentication required")
-      expect(result.response!.status).toBe(401)
-    })
-
-    it("should handle session check errors gracefully", async () => {
-      ;(getServerSession as jest.Mock).mockRejectedValue(
-        new Error("Session check failed")
-      )
-
-      const request = new NextRequest("http://localhost:3000/api/user/test")
-      const result = await requireAuthAPI(request)
-
-      expect(result.session).toBeNull()
-      expect(result.response).not.toBeNull()
-
-      const data = await result.response!.json()
-      expect(data.code).toBe(ErrorCode.INTERNAL_ERROR)
-      expect(data.error).toBe("Authentication check failed")
-      expect(result.response!.status).toBe(500)
-    })
-  })
-
   describe("validateYear", () => {
     const currentYear = new Date().getFullYear()
 
@@ -223,4 +168,3 @@ describe("API Security Helpers", () => {
     })
   })
 })
-

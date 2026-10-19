@@ -47,38 +47,6 @@ export async function requireAdminAPI(
 }
 
 /**
- * Require authentication for API routes (non-admin)
- */
-export async function requireAuthAPI(
-  _request: NextRequest
-): Promise<{ session: Awaited<ReturnType<typeof getServerSession>>; response: null } | { session: null; response: NextResponse }> {
-  try {
-    const session = await getServerSession(authOptions)
-
-    if (!session) {
-      return {
-        session: null,
-        response: NextResponse.json(
-          createSafeError(ErrorCode.UNAUTHORIZED, "Authentication required"),
-          { status: getStatusCode(ErrorCode.UNAUTHORIZED) }
-        ),
-      }
-    }
-
-    return { session, response: null }
-  } catch (error) {
-    logError("API_AUTH", error)
-    return {
-      session: null,
-      response: NextResponse.json(
-        createSafeError(ErrorCode.INTERNAL_ERROR, "Authentication check failed"),
-        { status: getStatusCode(ErrorCode.INTERNAL_ERROR) }
-      ),
-    }
-  }
-}
-
-/**
  * Validate year parameter from URL
  */
 export function validateYear(yearParam: string | null): number {
@@ -97,4 +65,3 @@ export function validateYear(yearParam: string | null): number {
 
   return parsed
 }
-

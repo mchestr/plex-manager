@@ -53,23 +53,6 @@ export function getBaseUrl(): string {
 }
 
 /**
- * Construct a URL string from protocol, hostname, and port
- *
- * @param protocol - Protocol (http or https)
- * @param hostname - Hostname or IP address
- * @param port - Port number
- * @returns Full URL string
- */
-export function constructServerUrl(protocol: "http" | "https", hostname: string, port: number): string {
-  // Only include port if it's not the default port for the protocol
-  const defaultPort = protocol === "https" ? 443 : 80
-  if (port === defaultPort) {
-    return `${protocol}://${hostname}`
-  }
-  return `${protocol}://${hostname}:${port}`
-}
-
-/**
  * Parse a URL string into its components (protocol, hostname, port)
  * Supports URLs like: https://example.com:32400, http://192.168.1.100:8181
  *
@@ -166,4 +149,3 @@ export function aggregateLlmUsage(usageRecords: {
     count: usageRecords.length,
   }
 }
-
