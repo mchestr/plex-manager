@@ -2,6 +2,7 @@
 
 import { UnauthenticatedError } from "@/components/admin/shared/unauthenticated-error"
 import { UnauthorizedError } from "@/components/admin/shared/unauthorized-error"
+import { authErrorKind } from "@/lib/auth-errors"
 import { ErrorState } from "@/components/ui/error-state"
 
 export default function Error({
@@ -11,25 +12,12 @@ export default function Error({
   error: Error & { digest?: string }
   reset: () => void
 }) {
-  // Check if this is an unauthenticated error
-  const isUnauthenticated =
-    error.name === "UnauthenticatedError" ||
-    error.message === "UNAUTHENTICATED" ||
-    error.message.includes("Authentication required")
-
-  if (isUnauthenticated) {
+  // The digest survives a production build; the name and message do not (BP-27)
+  const authError = authErrorKind(error)
+  if (authError === "unauthenticated") {
     return <UnauthenticatedError />
   }
-
-  // Check if this is an unauthorized access error
-  const isUnauthorized =
-    error.name === "UnauthorizedAdminError" ||
-    error.message === "UNAUTHORIZED" ||
-    error.message === "FORBIDDEN" ||
-    error.message.includes("Admin access required") ||
-    error.message.includes("not authorized")
-
-  if (isUnauthorized) {
+  if (authError === "forbidden") {
     return <UnauthorizedError />
   }
 
