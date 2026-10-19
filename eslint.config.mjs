@@ -3,6 +3,7 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
 import nextTypescript from "eslint-config-next/typescript";
 import jsxA11y from "eslint-plugin-jsx-a11y";
+import { restrictedSyntaxBlocks } from "./eslint/restricted-syntax.mjs";
 
 // jsx-a11y is registered by the Next preset; only turn its recommended rules
 // on, as warnings to be burned down over time. Rules the preset leaves off stay
@@ -73,6 +74,11 @@ export default defineConfig([
       "no-console": "warn",
     },
   },
+  ...restrictedSyntaxBlocks.map(({ files, ignores, level, selectors }) => ({
+    files,
+    ...(ignores ? { ignores } : {}),
+    rules: { "no-restricted-syntax": [level, ...selectors] },
+  })),
   {
     // The centralized logger conditionally requires Winston/Chalk at runtime
     // (Node-only), which legitimately needs CommonJS require(). Scope the

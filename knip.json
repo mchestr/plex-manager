@@ -5,7 +5,8 @@
     "proxy.ts!",
     "scripts/*.ts!",
     "scripts/*.mjs!",
-    "lib/wrapped/time/zone.ts!"
+    "lib/wrapped/time/zone.ts!",
+    "lib/utils/format.ts!"
   ],
   "project": [
     "**/*.{js,mjs,cjs,ts,tsx}!",
@@ -19,6 +20,7 @@
   "ignore": [
     "lib/generated/**",
     ".agents/**",
+    "eslint/restricted-syntax.mjs",
     ".claude/worktrees/**"
   ],
   "ignoreDependencies": [
