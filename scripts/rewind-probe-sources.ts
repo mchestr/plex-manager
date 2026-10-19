@@ -88,7 +88,13 @@ async function main() {
     describePlays("Year", unwrap("Year", await history.fetchYear(member, window, ctx)))
     console.log(`  Tautulli pages: ${calls.tautulli}, excluded sections: ${excludedSectionIds.length}`)
     describePlays("Lifetime", unwrap("Lifetime", await history.fetchLifetime(member, ctx)))
-    if (values.server) describePlays("Server year", unwrap("Server year", await history.fetchServerYear(window, ctx)))
+    if (values.server) {
+      const byUser = unwrap("Server year", await history.fetchServerYear(window, ctx))
+      if (byUser) {
+        describePlays("Server year", [...byUser.values()].flat())
+        console.log(`  Tautulli users with plays: ${byUser.size}`)
+      }
+    }
   } else console.log("Tautulli: not configured")
 
   if (overseerr) {

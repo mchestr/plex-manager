@@ -23,6 +23,7 @@ import { Worker, type Job } from "bullmq"
 import { onShutdown } from "@/lib/instrumentation/shutdown"
 import { getRedisConnection } from "@/lib/queue/connection"
 import type { JobProcessor } from "@/lib/queue/jobs"
+import { REWIND_BATCH_PROCESSORS } from "@/lib/queue/jobs/rewind-batch"
 import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("REWIND_QUEUES")
@@ -37,7 +38,7 @@ type RewindQueueName = keyof typeof REWIND_QUEUES
 
 /** Processors by job name, per queue. Later steps add their jobs here. */
 const PROCESSORS: Record<RewindQueueName, Record<string, JobProcessor>> = {
-  "rewind-batch": {},
+  "rewind-batch": REWIND_BATCH_PROCESSORS,
   "rewind-gen": {},
   "rewind-aux": {},
 }

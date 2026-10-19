@@ -38,8 +38,13 @@ export const tautulliHistoryDataSchema = z.union([
   z.looseObject({ recordsFiltered: num, recordsTotal: num, data: z.array(z.unknown()) }),
 ])
 
-/** One `get_history` row (Tautulli 2.17, `grouping=1`). Times are Unix seconds. */
+/**
+ * One `get_history` row (Tautulli 2.17, `grouping=1`). Times are Unix seconds.
+ * `user_id` (the plex.tv account ID) buckets the server-wide pass by member;
+ * it never reaches a `PlayEvent`.
+ */
 export const tautulliHistoryRowSchema = z.object({
+  user_id: num,
   started: num,
   stopped: num,
   play_duration: num,
@@ -65,13 +70,17 @@ export const tautulliHistoryRowSchema = z.object({
 })
 export type TautulliHistoryRow = z.infer<typeof tautulliHistoryRowSchema>
 
-/** One `get_users` row: the ids and names only, never the email. @public (P2.6) */
+/** One `get_users` row: the ids and names only, never the email. */
 export const tautulliUserSchema = z.object({ user_id: num, username: nullableText, friendly_name: nullableText })
 
 /** One `get_libraries` row. @public (P2.6) */
 export const tautulliLibrarySchema = z.object({ section_id: key, section_name: z.string(), section_type: z.string() })
 
-/** `get_metadata` data for one title, as the metadata cache reads it. @public (P2.6) */
+/**
+ * `get_metadata` data for one film or show, as the metadata cache reads it.
+ * `duration` is in milliseconds; a show has no `media_info`. An unknown
+ * rating key comes back as `{}`, which fails the parse.
+ */
 export const tautulliMetadataSchema = z.object({
   rating_key: key,
   media_type: z.string(),
@@ -86,6 +95,17 @@ export const tautulliMetadataSchema = z.object({
   actors: z.array(z.string()),
   studio: nullableText,
   guids: z.array(z.string()),
+  duration: nullableNum.optional(),
+  media_info: z
+    .array(z.object({ video_full_resolution: nullableText.optional(), video_dynamic_range: nullableText.optional() }))
+    .default([]),
+})
+export type TautulliMetadata = z.infer<typeof tautulliMetadataSchema>
+
+/** `get_children_metadata` data: a show's seasons, or a season's episodes. */
+export const tautulliChildrenSchema = z.object({
+  children_count: num,
+  children_list: z.array(z.object({ rating_key: key, media_index: nullableNum })).default([]),
 })
 
 /* --------------------------------------------------------------- Overseerr */
@@ -181,3 +201,13 @@ export const excludedSectionIdsSchema = z
   .nullable()
   .catch(null)
   .transform((ids) => ids ?? [])
+
+/**
+ * `Config.rewindExcludedContentRatings`: rating strings such as `"TV-MA"`;
+ * anything else is none.
+ */
+export const excludedContentRatingsSchema = z
+  .array(z.string().trim().min(1))
+  .nullable()
+  .catch(null)
+  .transform((ratings) => ratings ?? [])

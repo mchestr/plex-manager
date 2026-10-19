@@ -15,6 +15,9 @@ export const JOB_TYPES = {
   STRIPE_WEBHOOK: "stripe:webhook",
   PLEX_ACCESS_GRANT: "plex:access:grant",
   PLEX_ACCESS_REVOKE: "plex:access:revoke",
+  // Rewind batch jobs (P2.6), on the `rewind-batch` queue
+  REWIND_SERVER_AGGREGATE: "rewind:server-aggregate",
+  REWIND_METADATA_WARM: "rewind:metadata-warm",
 } as const
 
 export type JobType = (typeof JOB_TYPES)[keyof typeof JOB_TYPES]
@@ -126,6 +129,27 @@ export interface PlexAccessRevokeResult {
 }
 
 // =============================================================================
+// Rewind Batch Job Types (P2.6)
+// =============================================================================
+
+/** The server-wide aggregate for one batch: `through` is its last day of data, `YYYY-MM-DD`. */
+export interface RewindServerAggregatePayload {
+  year: number
+  through: string
+}
+
+/**
+ * One metadata warm job: up to 200 film and series rating keys. `batch` names
+ * the job in its deduplication id (`<year>:<index>`, or `refresh:<hash>` for
+ * stale rows); `topSeries` are the keys whose season episode counts it adds.
+ */
+export interface RewindMetadataWarmPayload {
+  batch: string
+  keys: string[]
+  topSeries: string[]
+}
+
+// =============================================================================
 // Type Mapping
 // =============================================================================
 
@@ -138,6 +162,8 @@ export interface JobPayloadMap {
   [JOB_TYPES.STRIPE_WEBHOOK]: StripeWebhookPayload
   [JOB_TYPES.PLEX_ACCESS_GRANT]: PlexAccessGrantPayload
   [JOB_TYPES.PLEX_ACCESS_REVOKE]: PlexAccessRevokePayload
+  [JOB_TYPES.REWIND_SERVER_AGGREGATE]: RewindServerAggregatePayload
+  [JOB_TYPES.REWIND_METADATA_WARM]: RewindMetadataWarmPayload
 }
 
 // =============================================================================

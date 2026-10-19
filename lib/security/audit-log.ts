@@ -56,6 +56,9 @@ export enum AuditEventType {
   // An admin saved an LLM provider for a purpose. Details carry the provider,
   // model, base-URL origin and whether a new key was entered, never the key.
   LLM_PROVIDER_CHANGED = "LLM_PROVIDER_CHANGED",
+  // An admin asked for the Rewind season data (server aggregate and metadata
+  // warm) to be prepared. Details carry the year, the last data day and the job id.
+  REWIND_SEASON_DATA_PREPARED = "REWIND_SEASON_DATA_PREPARED",
 }
 
 interface AuditLogEntry {
