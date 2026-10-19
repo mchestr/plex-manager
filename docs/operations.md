@@ -109,9 +109,11 @@ The Docker image applies migrations at every start:
 
 Use `SKIP_MIGRATIONS=true`:
 
-- to apply migrations by hand after a backup: start with it, run
-  `npm run db:deploy` (or `docker compose exec app npx prisma migrate deploy`),
-  then check `prisma migrate status` reports the schema up to date;
+- to apply migrations by hand after a backup, before the new release serves
+  traffic: with the app stopped, run
+  `docker compose run --rm -e SKIP_MIGRATIONS=true app npx prisma migrate deploy`
+  (the entrypoint skips its own deploy and runs the command you give it), or
+  `npm run db:deploy` outside Docker; then start the app;
 - on every replica but one, so only one process applies migrations.
 
 Afterwards, `npx prisma migrate status` must report "Database schema is up to
