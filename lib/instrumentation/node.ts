@@ -112,17 +112,30 @@ async function startQueueWorker() {
 
 /**
  * Schedules the daily Discord role reconcile (P4.18) at 04:00 in the server
- * zone. It runs on the queue worker, whose drain the shutdown coordinator
- * already owns, and stops its pacing at `shutdownSignal`. Upserting the same
- * scheduler id keeps one schedule however many processes start.
+ * zone while the Discord integration is on, and removes the schedule (with
+ * its pending run) while it is off, as the watchlist sync does: both read
+ * their settings at boot. It runs on the queue worker, whose drain the
+ * shutdown coordinator already owns, and stops its pacing at
+ * `shutdownSignal`. Upserting the same scheduler id keeps one schedule
+ * however many processes start.
  */
 async function scheduleRoleReconcile() {
   if (shutdownSignal.aborted) return
-  const { scheduleCronJob } = await import("@/lib/queue/client")
+  const { scheduleCronJob, removeScheduledJob } = await import("@/lib/queue/client")
   const { JOB_TYPES } = await import("@/lib/queue/types")
+  const { getDiscordIntegration } = await import("@/lib/discord/integration")
   const { ROLE_RECONCILE_PATTERN, ROLE_RECONCILE_SCHEDULER_ID, reconcileTimeZone } = await import(
     "@/lib/queue/jobs/discord-role"
   )
+  if (!(await getDiscordIntegration())) {
+    await withTimeout(
+      removeScheduledJob(ROLE_RECONCILE_SCHEDULER_ID),
+      SCHEDULER_TIMEOUT_MS,
+      "Removing the Discord role reconcile schedule"
+    )
+    logger.info("Discord integration off - role reconcile not scheduled")
+    return
+  }
   const tz = await reconcileTimeZone()
   await withTimeout(
     scheduleCronJob(

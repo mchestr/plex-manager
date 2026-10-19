@@ -87,7 +87,10 @@ A member's linked role follows their access:
   else UTC, read at boot), `discord:role:reconcile` re-syncs every link whose
   last sync is more than 20 hours old, at most 25 a minute, and recomputes
   `watched_hours` through the shared Tautulli limit. Linking an account and
-  the member's own "Resync" also recompute the hours.
+  the member's own "Resync" also recompute the hours. Like the watchlist
+  sync, the schedule follows the settings at boot: it is created when the
+  server starts with the integration on and removed when it starts with it
+  off, so restart after turning the integration on.
 - **Without `REDIS_URL`**, the access-change sync runs inline on a best-effort
   basis, and the daily reconcile does not run (it needs the job queue).
 - Nothing is synced while the integration is off, or for members who have not
