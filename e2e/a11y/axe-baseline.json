@@ -143,12 +143,10 @@
   },
   "member /wrapped": {
     "color-contrast|incomplete": 8,
-    "color-contrast|serious": 1,
     "meta-viewport|moderate": 1
   },
   "member /wrapped/2026": {
     "color-contrast|incomplete": 8,
-    "color-contrast|serious": 1,
     "meta-viewport|moderate": 1
   },
   "public /": {
@@ -190,7 +188,6 @@
   },
   "public /wrapped/share/a11y-share-token000000000000000000000000000": {
     "color-contrast|incomplete": 18,
-    "color-contrast|serious": 21,
     "meta-viewport|moderate": 1
   }
 }
