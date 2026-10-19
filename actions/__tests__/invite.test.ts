@@ -456,7 +456,7 @@ describe('invite actions', () => {
         'system',
         expect.objectContaining({
           inviteId: 'invite-123',
-          inviteCode: 'TESTCODE',
+          inviteCodePrefix: 'TE',
         })
       )
     })
@@ -1125,7 +1125,7 @@ describe('invite actions', () => {
         AuditEventType.INVITE_TRANSACTION_CONFLICT,
         'system',
         expect.objectContaining({
-          inviteCode: 'TESTCODE',
+          inviteCodePrefix: 'TE',
           attempt: 1,
         })
       )

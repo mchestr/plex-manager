@@ -12,18 +12,26 @@
 import { prisma } from "@/lib/prisma"
 import { clientIp } from "@/lib/security/client-ip"
 import { consume } from "@/lib/security/rate-limit"
-import {
-  createLogger,
-  generateRequestId,
-  runWithRequestContext,
-  sanitizeUrlForLogging,
-} from "@/lib/utils/logger"
+import { sanitizeText } from "@/lib/utils/log-redaction"
+import { createLogger, generateRequestId, runWithRequestContext } from "@/lib/utils/logger"
 import { shareTokenSchema, yearParamSchema } from "@/lib/validations/params"
 import { SHARE_BUSY_HEADER } from "@/lib/wrapped/share-page-limit"
 import type { NextRequest } from "next/server"
 import { NextResponse } from "next/server"
 
 const logger = createLogger("HTTP")
+
+/** The only query keys the request log carries; every other key may hold a credential (SEC-54). */
+const LOGGED_QUERY_KEYS = ["year", "page", "tab"] as const
+
+/** The allow-listed query values of a request, or `undefined` when it has none. */
+function loggedQuery(searchParams: URLSearchParams): Record<string, string> | undefined {
+  const entries = LOGGED_QUERY_KEYS.flatMap((key) => {
+    const value = searchParams.get(key)
+    return value === null ? [] : [[key, value] as const]
+  })
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined
+}
 
 /** `/wrapped/<segment>`: one segment, so `/wrapped/share/<token>` never matches. */
 const WRAPPED_YEAR_PATH = /^\/wrapped\/([^/]+)$/
@@ -125,22 +133,13 @@ export async function proxy(request: NextRequest) {
 
   // Run the request within a context
   return runWithRequestContext(requestId, userId, async () => {
-    const url = sanitizeUrlForLogging(request.url)
-    const method = request.method
-    const userAgent = request.headers.get("user-agent") || "unknown"
-    const ip =
-      request.headers.get("x-forwarded-for") ||
-      request.headers.get("x-real-ip") ||
-      "unknown"
-
-    // Log incoming request
-    logger.info("Incoming request", {
-      method,
-      url,
-      userAgent,
-      ip,
-      pathname: request.nextUrl.pathname,
-      searchParams: Object.fromEntries(request.nextUrl.searchParams),
+    // No URL, client IP or query beyond the allow-list: the bearer segment of
+    // share and invite paths is masked (SEC-54)
+    const query = loggedQuery(request.nextUrl.searchParams)
+    logger.debug("Incoming request", {
+      method: request.method,
+      pathname: sanitizeText(request.nextUrl.pathname),
+      ...(query && { query }),
     })
 
     // Create response: the same page, with a 404 status for an invalid Rewind
@@ -167,8 +166,7 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match all request paths except:
-     * - api (API routes)
+     * Match every request path, API routes included, except:
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)

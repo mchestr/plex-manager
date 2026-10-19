@@ -1,5 +1,5 @@
 import { Client, Events, GatewayIntentBits, Partials } from "discord.js"
-import winston from "winston"
+import { createLogger, type Logger } from "@/lib/utils/logger"
 import { getDiscordBotToken, getDiscordPortalUrl, getSupportChannelId } from "./config"
 import { routeInteraction } from "./routing/interaction-router"
 import { routeDirectMessage, defaultDmRouteDeps } from "./routing/dm-router"
@@ -33,47 +33,22 @@ export const defaultClientFactory: DiscordClientFactory = () =>
 
 export class DiscordBot {
   private client: Client | null = null
-  private logger: winston.Logger
+  private readonly logger: Logger
   private isInitialized = false
   private readonly createClient: DiscordClientFactory
 
   /**
    * @param createClient - Factory that builds the discord.js Client. Defaults to
    *   a real client with the bot's gateway intents; inject a fake in tests.
+   * @param logger - Where the bot logs. Defaults to the shared sanitising
+   *   logger, so bot metadata is redacted like every other line (BP-37).
    */
-  constructor(createClient: DiscordClientFactory = defaultClientFactory) {
+  constructor(
+    createClient: DiscordClientFactory = defaultClientFactory,
+    logger: Logger = createLogger("discord-bot")
+  ) {
     this.createClient = createClient
-    const isDevelopment = process.env.NODE_ENV === "development" || !process.env.NODE_ENV
-
-    this.logger = winston.createLogger({
-      level: process.env.LOG_LEVEL || (isDevelopment ? "debug" : "info"),
-      format: winston.format.combine(
-        winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
-        winston.format.errors({ stack: true }),
-        isDevelopment
-          ? winston.format.printf(({ timestamp, level, message, ...meta }) => {
-              const levelSymbol = {
-                error: "✖",
-                warn: "⚠",
-                info: "ℹ",
-                debug: "→",
-              }[level] || "•"
-              const metaStr = Object.keys(meta).length > 0 ? ` | ${JSON.stringify(meta)}` : ""
-              return `${timestamp} ${levelSymbol} ${level.toUpperCase().padEnd(5)} [discord-bot] ${message}${metaStr}`
-            })
-          : winston.format.json()
-      ),
-      defaultMeta: {
-        service: "discord-bot",
-        env: process.env.NODE_ENV || "development",
-      },
-      transports: [
-        new winston.transports.Console({
-          stderrLevels: ["error"],
-        }),
-      ],
-      exitOnError: false,
-    })
+    this.logger = logger
   }
 
   async initialize(): Promise<void> {
