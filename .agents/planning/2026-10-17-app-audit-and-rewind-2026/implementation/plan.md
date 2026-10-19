@@ -353,7 +353,7 @@ gantt
 
 **Rewind data layer and AI foundations** (2026-10-22 to 2026-11-09)
 
-- [ ] P2.1: Rewind 2026 schema migration and versioned stored-data parser (rewind, M, due 2026-10-23)
+- [x] P2.1: Rewind 2026 schema migration and versioned stored-data parser (rewind, M, due 2026-10-23)
 - [ ] P2.2: Server and member time zones and the zone-aware year window (rewind, M, due 2026-10-27)
 - [ ] P2.3: Shared outbound HTTP client and one Tautulli client (platform, M, due 2026-10-23)
 - [ ] P2.4: Rewind sources with Zod and PlayEvent (rewind, M, due 2026-10-29)
@@ -386,7 +386,7 @@ gantt
 
 **Security and reliability hardening** (2026-10-23 to 2026-12-03)
 
-- [ ] P4.1: Validate the environment at boot (security, S, due 2026-10-23)
+- [x] P4.1: Validate the environment at boot (security, S, due 2026-10-23)
 - [ ] P4.2: Boot and shutdown resilience (ops, M, due 2026-10-28)
 - [ ] P4.3: One action helper for auth, Zod and result shape (security, M, due 2026-11-02)
 - [ ] P4.5: Enforce entitlement beyond the layout (security, M, due 2026-11-05)
