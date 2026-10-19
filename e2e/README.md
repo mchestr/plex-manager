@@ -207,8 +207,9 @@ docker compose up -d db-playwright
 DATABASE_URL=$E2E_DATABASE_URL npx prisma migrate deploy
 ```
 
-1. Set `E2E_DATABASE_URL` in `.env` (see `example.env`):
-   `postgresql://postgres:postgres@localhost:5433/plex_manager_test?schema=public`.
+1. Set `E2E_DATABASE_URL` in `.env` (see `example.env`), with your
+   `POSTGRES_PASSWORD` (which `docker compose` requires) as the password:
+   `postgresql://postgres:<POSTGRES_PASSWORD>@localhost:5433/plex_manager_test?schema=public`.
    Its database name must end in `_test`. `playwright.config.ts`,
    `createE2EPrismaClient()` and the setup-wizard spec each refuse any other
    database, and the suite never uses `.env`'s `DATABASE_URL`.
