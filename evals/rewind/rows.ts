@@ -87,6 +87,8 @@ export function historyRow(input: PlayInput): HistoryRow {
   const paused = input.pausedSeconds ?? 0
   const percent = input.percent ?? 100
   const common = {
+    // The member's plex.tv account ID; the server-wide pass (P2.6) buckets on it.
+    user_id: 1,
     started,
     stopped: started + seconds + paused,
     play_duration: seconds,
