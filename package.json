@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": "^20.19 || ^22.12 || >=24.0"
+    "node": ">=22"
   },
   "scripts": {
     "dev": "next dev",
@@ -37,9 +37,14 @@
     "register-discord-commands": "tsx --tsconfig tsconfig.scripts.json scripts/register-discord-commands.ts"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "4.0.71",
+    "@ai-sdk/google": "4.0.87",
+    "@ai-sdk/openai": "4.0.83",
+    "@ai-sdk/openai-compatible": "3.0.62",
     "@prisma/adapter-pg": "^7.10.1",
     "@prisma/client": "^7.10.1",
     "@tanstack/react-query": "^5.101.2",
+    "ai": "7.0.127",
     "bullmq": "^5.81.5",
     "chart.js": "^4.5.1",
     "clsx": "^2.1.1",

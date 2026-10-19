@@ -18,6 +18,12 @@ const { TextEncoder, TextDecoder } = require('util')
 global.TextEncoder = TextEncoder
 global.TextDecoder = TextDecoder
 
+// jsdom has no web streams; the AI SDK builds a TransformStream when it loads
+if (typeof global.TransformStream === 'undefined') {
+  const { ReadableStream, TransformStream, WritableStream } = require('node:stream/web')
+  Object.assign(global, { ReadableStream, TransformStream, WritableStream })
+}
+
 // Mock framer-motion to avoid animation issues in tests
 jest.mock('framer-motion', () => ({
   motion: {
