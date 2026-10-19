@@ -1,101 +1,366 @@
+/*
+ * Design tokens (ui-design-system 4.1). Three cascade rules hold this file together:
+ * - One layer: :root, .dark and the Rewind block are unlayered and come in that order.
+ *   A layered theme block would lose to the unlayered ones and Rewind would render graphite.
+ * - The Rewind remap is declared on each [data-field] element, where its var() references resolve.
+ * - The dark variant is bounded: it stops at a .light region (a light Rewind ink, a paper popup).
+ * Values come from the measured sheets (design/mockups/ui/source/tools/tokens.js and rwcheck.js).
+ */
 @import "tailwindcss";
+@import "tw-animate-css";
 
-/* Base mobile-friendly styles */
-html,
-body {
-  height: 100%;
-  overflow-x: hidden;
+@custom-variant dark (&:where(.dark, .dark *):not(:where(.light, .light *)));
+
+/* ---------- 1. Light values (shadcn convention; ships behind a flag, ui-design-system 3.3) ---------- */
+:root {
+  color-scheme: light;
+  --radius: 0.5rem;
+  --focus-width: 2px; --focus-offset: 2px;
+  --background: oklch(98.5% 0.002 255);
+  --foreground: oklch(20% 0.006 255);
+  --card: oklch(100% 0 0);
+  --card-foreground: oklch(20% 0.006 255);
+  --popover: oklch(100% 0 0);
+  --popover-foreground: oklch(20% 0.006 255);
+  --primary: oklch(79% 0.155 75);
+  --primary-hover: oklch(75% 0.155 72);
+  --primary-foreground: oklch(20% 0.03 65);
+  --primary-indicator: oklch(55% 0.12 62);
+  --primary-indicator-foreground: oklch(98.5% 0 0);
+  --secondary: oklch(95.5% 0.003 255);
+  --secondary-hover: oklch(92.5% 0.004 255);
+  --secondary-foreground: oklch(20% 0.006 255);
+  --muted: oklch(96.5% 0.003 255);
+  --muted-foreground: oklch(47% 0.012 255);
+  --accent: oklch(94.5% 0.004 255);
+  --accent-foreground: oklch(20% 0.006 255);
+  --destructive: oklch(49% 0.19 27);
+  --destructive-foreground: oklch(98.5% 0 0);
+  --success: oklch(46% 0.12 155);
+  --success-foreground: oklch(98.5% 0 0);
+  --warning: oklch(47% 0.1 85);
+  --warning-foreground: oklch(98.5% 0 0);
+  --info: oklch(47% 0.13 250);
+  --info-foreground: oklch(98.5% 0 0);
+  --border: oklch(90% 0.004 255);
+  --border-strong: oklch(84% 0.005 255);
+  --input: oklch(62% 0.008 255);
+  --ring: oklch(55% 0.12 62);
+  --chart-1: oklch(64% 0.135 62);
+  --chart-2: oklch(55% 0.15 250);
+  --chart-3: oklch(60% 0.11 175);
+  --chart-4: oklch(55% 0.18 305);
+  --chart-5: oklch(60% 0.19 355);
+  --sidebar: oklch(97% 0.003 255);
+  --sidebar-foreground: oklch(35% 0.008 255);
+  --sidebar-primary: oklch(55% 0.12 62);
+  --sidebar-primary-foreground: oklch(98.5% 0 0);
+  --sidebar-accent: oklch(93% 0.004 255);
+  --sidebar-accent-foreground: oklch(20% 0.006 255);
+  --sidebar-border: oklch(90% 0.004 255);
+  --sidebar-ring: oklch(55% 0.12 62);
+  --success-subtle: color-mix(in oklab, var(--success) 10%, transparent);
+  --warning-subtle: color-mix(in oklab, var(--warning) 10%, transparent);
+  --info-subtle: color-mix(in oklab, var(--info) 10%, transparent);
+  --destructive-subtle: color-mix(in oklab, var(--destructive) 10%, transparent);
+  --overlay: oklch(20% 0.006 255 / 0.4);
+  --elevation-popover: 0 12px 32px -8px oklch(20% 0.01 255 / 0.18), 0 2px 6px oklch(20% 0.01 255 / 0.08);
+  --elevation-dialog: 0 24px 64px -16px oklch(20% 0.01 255 / 0.3);
+  --elevation-poster: 0 1px 2px oklch(20% 0.01 255 / 0.18), 0 6px 16px -6px oklch(20% 0.01 255 / 0.25);
+  --z-sticky: 10; --z-sidebar: 20; --z-tabbar: 30; --z-dropdown: 40;
+  --z-overlay: 50; --z-modal: 60; --z-popover-in-modal: 70; --z-toast: 80;
 }
 
-/* Use dvh for mobile viewport handling (accounts for browser chrome) */
-@supports (height: 100dvh) {
-  body {
-    min-height: 100dvh;
-  }
+/* ---------- 2. Dark values (default: <html class="dark">, ui-design-system 3.2) ---------- */
+.dark {
+  color-scheme: dark;
+  --background: oklch(22.5% 0.005 255);
+  --foreground: oklch(96.5% 0.003 255);
+  --card: oklch(25.2% 0.005 255);
+  --card-foreground: oklch(96.5% 0.003 255);
+  --popover: oklch(28% 0.006 255);
+  --popover-foreground: oklch(96.5% 0.003 255);
+  --primary: oklch(79% 0.155 75);
+  --primary-hover: oklch(83% 0.145 77);
+  --primary-foreground: oklch(20% 0.03 65);
+  --primary-indicator: var(--primary);
+  --primary-indicator-foreground: var(--primary-foreground);
+  --secondary: oklch(30.5% 0.006 255);
+  --secondary-hover: oklch(34% 0.006 255);
+  --secondary-foreground: oklch(96.5% 0.003 255);
+  --muted: oklch(27.5% 0.005 255);
+  --muted-foreground: oklch(76% 0.01 255);
+  --accent: oklch(31.5% 0.006 255);
+  --accent-foreground: oklch(96.5% 0.003 255);
+  --destructive: oklch(74% 0.15 25);
+  --destructive-foreground: oklch(20% 0.04 25);
+  --success: oklch(77% 0.15 155);
+  --success-foreground: oklch(20% 0.04 155);
+  --warning: oklch(88% 0.13 102);
+  --warning-foreground: oklch(22% 0.04 95);
+  --info: oklch(77% 0.11 240);
+  --info-foreground: oklch(20% 0.04 240);
+  --border: oklch(35% 0.006 255);
+  --border-strong: oklch(44% 0.006 255);
+  --input: oklch(56% 0.008 255);
+  --ring: oklch(79% 0.155 75);
+  --chart-1: oklch(67% 0.14 70);
+  --chart-2: oklch(62% 0.14 250);
+  --chart-3: oklch(66% 0.12 175);
+  --chart-4: oklch(60% 0.16 305);
+  --chart-5: oklch(66% 0.17 355);
+  --sidebar: oklch(20.5% 0.005 255);
+  --sidebar-foreground: oklch(82% 0.006 255);
+  --sidebar-primary: oklch(79% 0.155 75);
+  --sidebar-primary-foreground: oklch(20% 0.03 65);
+  --sidebar-accent: oklch(27.5% 0.006 255);
+  --sidebar-accent-foreground: oklch(96.5% 0.003 255);
+  --sidebar-border: oklch(30% 0.006 255);
+  --sidebar-ring: oklch(79% 0.155 75);
+  --success-subtle: color-mix(in oklab, var(--success) 14%, transparent);
+  --warning-subtle: color-mix(in oklab, var(--warning) 14%, transparent);
+  --info-subtle: color-mix(in oklab, var(--info) 14%, transparent);
+  --destructive-subtle: color-mix(in oklab, var(--destructive) 14%, transparent);
+  --overlay: oklch(14% 0.005 255 / 0.72);
+  --elevation-popover: 0 1px 0 oklch(100% 0 0 / 0.04) inset, 0 12px 32px -8px oklch(0% 0 0 / 0.55), 0 2px 6px oklch(0% 0 0 / 0.3);
+  --elevation-dialog: 0 24px 64px -16px oklch(0% 0 0 / 0.7);
+  --elevation-poster: 0 1px 2px oklch(0% 0 0 / 0.35), 0 6px 16px -6px oklch(0% 0 0 / 0.5);
 }
 
+/* ---------- 3. Rewind scope (ui-design-system 4.4; ink values owned by rewind-2026-design.md 5.2) ---------- */
+/* rewind-scope:start */
+[data-theme="rewind"] {
+  /* field, on-field ink and deep ink (ink on paper) for each of the twelve inks */
+  --rw-paper: oklch(94% 0.02 85);           --rw-on-paper: oklch(19% 0.012 70);       --rw-paper-deep: var(--rw-on-paper);
+  --rw-coral: oklch(71.5% 0.16 34);         --rw-on-coral: oklch(18% 0.035 30);       --rw-coral-deep: oklch(43% 0.15 30);
+  --rw-marigold: oklch(82.5% 0.15 75);      --rw-on-marigold: oklch(20% 0.03 70);     --rw-marigold-deep: oklch(41.5% 0.085 65);
+  --rw-rose: oklch(79% 0.12 352);           --rw-on-rose: oklch(20% 0.04 345);        --rw-rose-deep: oklch(42% 0.15 355);
+  --rw-sky: oklch(84% 0.075 235);           --rw-on-sky: oklch(22% 0.05 245);         --rw-sky-deep: oklch(41% 0.1 245);
+  --rw-peach: oklch(84.5% 0.075 45);        --rw-on-peach: oklch(21% 0.035 40);       --rw-peach-deep: oklch(42% 0.11 40);
+  --rw-lilac: oklch(78% 0.095 290);         --rw-on-lilac: oklch(20% 0.06 285);       --rw-lilac-deep: oklch(42% 0.15 290);
+  --rw-mint: oklch(86% 0.085 165);          --rw-on-mint: oklch(20% 0.03 165);        --rw-mint-deep: oklch(40% 0.08 160);
+  --rw-ultramarine: oklch(42% 0.2 268);     --rw-on-ultramarine: var(--rw-paper);     --rw-ultramarine-deep: var(--rw-ultramarine);
+  --rw-forest: oklch(40% 0.075 165);        --rw-on-forest: var(--rw-paper);          --rw-forest-deep: var(--rw-forest);
+  --rw-oxblood: oklch(33% 0.1 18);          --rw-on-oxblood: oklch(93% 0.03 60);      --rw-oxblood-deep: var(--rw-oxblood);
+  --rw-petrol: oklch(40.5% 0.065 215);      --rw-on-petrol: var(--rw-paper);          --rw-petrol-deep: var(--rw-petrol);
+  /* next/font/local variables, defined where story pages load app/(app)/rewind/fonts.ts (P5.1) */
+  --font-display: var(--font-rw-archivo);
+  --font-text: var(--font-rw-newsreader);
+  --rw-dur-xs: 120ms; --rw-dur-s: 240ms; --rw-dur-m: 420ms; --rw-dur-l: 640ms; --rw-dur-xl: 900ms;
+  --rw-ease-stretch: cubic-bezier(.16, 1, .3, 1);   /* type and entrances */
+  --rw-ease-ink: cubic-bezier(.65, 0, .35, 1);      /* page turns, gatefold */
+  --rw-ease-data: cubic-bezier(.2, .8, .2, 1);      /* bars, odometer */
+  --rw-ease-ui: var(--ease-out-quiet);              /* the app's UI easing for sheets and toggles */
+  font-family: var(--font-text);
+}
+
+/* the member's archetype, on the root through data-archetype (Rewind 5.3: field, spot, back-cover ink) */
+[data-theme="rewind"][data-archetype="midnight-marathoner"] { --arch-field: var(--rw-ultramarine); --arch-spot: var(--rw-marigold); --arch-deep: var(--rw-ultramarine-deep); }
+[data-theme="rewind"][data-archetype="credits-roller"] { --arch-field: var(--rw-forest); --arch-spot: var(--rw-mint); --arch-deep: var(--rw-forest-deep); }
+[data-theme="rewind"][data-archetype="comfort-rewatcher"] { --arch-field: var(--rw-peach); --arch-spot: var(--rw-oxblood); --arch-deep: var(--rw-peach-deep); }
+/* Premiere Chaser prints in two inks (hatch and solid): its spot is the coral ink */
+[data-theme="rewind"][data-archetype="premiere-chaser"] { --arch-field: var(--rw-coral); --arch-spot: var(--rw-on-coral); --arch-deep: var(--rw-coral-deep); }
+[data-theme="rewind"][data-archetype="series-devourer"] { --arch-field: var(--rw-mint); --arch-spot: var(--rw-ultramarine); --arch-deep: var(--rw-mint-deep); }
+[data-theme="rewind"][data-archetype="weekend-double-feature"] { --arch-field: var(--rw-rose); --arch-spot: var(--rw-ultramarine); --arch-deep: var(--rw-rose-deep); }
+/* the Curator's field is paper, so its deep ink is ultramarine rather than paper's own ink */
+[data-theme="rewind"][data-archetype="curator"] { --arch-field: var(--rw-paper); --arch-spot: var(--rw-ultramarine); --arch-deep: var(--rw-ultramarine-deep); }
+[data-theme="rewind"][data-archetype="explorer"] { --arch-field: var(--rw-petrol); --arch-spot: var(--rw-marigold); --arch-deep: var(--rw-petrol-deep); }
+[data-theme="rewind"][data-archetype="loyalist"] { --arch-field: var(--rw-oxblood); --arch-spot: var(--rw-peach); --arch-deep: var(--rw-oxblood-deep); }
+[data-theme="rewind"][data-archetype="golden-hour-viewer"] { --arch-field: var(--rw-marigold); --arch-spot: var(--rw-oxblood); --arch-deep: var(--rw-marigold-deep); }
+[data-theme="rewind"][data-archetype="festival-juror"] { --arch-field: var(--rw-lilac); --arch-spot: var(--rw-forest); --arch-deep: var(--rw-lilac-deep); }
+[data-theme="rewind"][data-archetype="casual-critic"] { --arch-field: var(--rw-sky); --arch-spot: var(--rw-ultramarine); --arch-deep: var(--rw-sky-deep); }
+
+/* the semantic remap, on every element that prints in an ink */
+[data-field]:where([data-theme="rewind"], [data-theme="rewind"] *) {
+  /* from Rewind 5.2 */
+  --background: var(--field);     --foreground: var(--ink);
+  --card: var(--field);           --card-foreground: var(--ink);
+  --popover: var(--rw-paper);     --popover-foreground: var(--rw-on-paper);   /* sheets print on paper */
+  --primary: var(--ink);          --primary-foreground: var(--field);
+  --secondary: transparent;       --secondary-foreground: var(--ink);
+  --muted-foreground: var(--ink);                                              /* no grey text in print */
+  --border: var(--ink);  --input: var(--ink);  --ring: var(--ink);
+  --radius: 0.375rem;
+  /* closing set (this contract): every other token a shared primitive reads, so no graphite leaks in */
+  --primary-hover: var(--ink);                                                 /* solid ink never lightens */
+  --secondary-hover: var(--ink);  --accent: var(--ink);  --accent-foreground: var(--field);  /* hovers reverse out */
+  --muted: transparent;                                                        /* no tinted wells */
+  --border-strong: var(--ink);
+  --primary-indicator: var(--ink);  --primary-indicator-foreground: var(--field);
+  --success: var(--ink);  --warning: var(--ink);  --info: var(--ink);  --destructive: var(--ink);
+  --success-foreground: var(--field);  --warning-foreground: var(--field);
+  --info-foreground: var(--field);  --destructive-foreground: var(--field);
+  --success-subtle: transparent;  --warning-subtle: transparent;
+  --info-subtle: transparent;  --destructive-subtle: transparent;
+  --chart-1: var(--ink);  --chart-2: var(--spot);  --chart-3: var(--ink);  --chart-4: var(--ink);  --chart-5: var(--ink);
+  --overlay: oklch(19% 0.012 70 / 0.55);
+  --elevation-popover: none;  --elevation-dialog: none;  --elevation-poster: none;
+  --focus-width: 3px;  --focus-offset: 3px;                                    /* Rewind 11.1 */
+  color: var(--ink);
+}
+/* light inks: spot is their own ink (paper: the member's archetype deep ink) */
+[data-field="paper"] { --field: var(--rw-paper); --ink: var(--rw-on-paper); --deep: var(--rw-paper-deep); --spot: var(--arch-deep, var(--rw-ultramarine)); color-scheme: light; }
+[data-field="coral"] { --field: var(--rw-coral); --ink: var(--rw-on-coral); --deep: var(--rw-coral-deep); --spot: var(--rw-on-coral); color-scheme: light; }
+[data-field="marigold"] { --field: var(--rw-marigold); --ink: var(--rw-on-marigold); --deep: var(--rw-marigold-deep); --spot: var(--rw-on-marigold); color-scheme: light; }
+[data-field="rose"] { --field: var(--rw-rose); --ink: var(--rw-on-rose); --deep: var(--rw-rose-deep); --spot: var(--rw-on-rose); color-scheme: light; }
+[data-field="sky"] { --field: var(--rw-sky); --ink: var(--rw-on-sky); --deep: var(--rw-sky-deep); --spot: var(--rw-on-sky); color-scheme: light; }
+[data-field="peach"] { --field: var(--rw-peach); --ink: var(--rw-on-peach); --deep: var(--rw-peach-deep); --spot: var(--rw-on-peach); color-scheme: light; }
+[data-field="lilac"] { --field: var(--rw-lilac); --ink: var(--rw-on-lilac); --deep: var(--rw-lilac-deep); --spot: var(--rw-on-lilac); color-scheme: light; }
+[data-field="mint"] { --field: var(--rw-mint); --ink: var(--rw-on-mint); --deep: var(--rw-mint-deep); --spot: var(--rw-on-mint); color-scheme: light; }
+/* dark inks: spot is their own ink, except ultramarine, which takes marigold */
+[data-field="ultramarine"] { --field: var(--rw-ultramarine); --ink: var(--rw-on-ultramarine); --deep: var(--rw-ultramarine-deep); --spot: var(--rw-marigold); color-scheme: dark; }
+[data-field="forest"] { --field: var(--rw-forest); --ink: var(--rw-on-forest); --deep: var(--rw-forest-deep); --spot: var(--rw-on-forest); color-scheme: dark; }
+[data-field="oxblood"] { --field: var(--rw-oxblood); --ink: var(--rw-on-oxblood); --deep: var(--rw-oxblood-deep); --spot: var(--rw-on-oxblood); color-scheme: dark; }
+[data-field="petrol"] { --field: var(--rw-petrol); --ink: var(--rw-on-petrol); --deep: var(--rw-petrol-deep); --spot: var(--rw-on-petrol); color-scheme: dark; }
+/* Rewind additions (4.4 "Rewind may add"), set through inkProps options: the archetype pages and the back cover */
+[data-field][data-spot="arch"] { --spot: var(--arch-spot, var(--ink)); }
+[data-field="paper"][data-ink="arch-deep"] { --ink: var(--arch-deep); --deep: var(--arch-deep); --spot: var(--arch-deep); }
+[data-theme="rewind"] [data-slot="button"]:disabled { border-style: dashed; opacity: 0.6; }   /* disabled has no fill in print */
+@utility font-display { font-family: var(--font-display); }   /* Rewind chrome and controls (Rewind 5.1) */
+@utility font-text { font-family: var(--font-text); }
+/* the card-to-cover handoff runs on <html>, outside the scope, so it states --rw-dur-m and --rw-ease-ink literally */
+::view-transition-group(rewind-field) { animation-duration: 420ms; animation-timing-function: cubic-bezier(.65, 0, .35, 1); }
+/* rewind-scope:end */
+
+/* ---------- 4. Tailwind mapping ---------- */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-indicator: var(--primary-indicator);
+  --color-primary-indicator-foreground: var(--primary-indicator-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-hover: var(--secondary-hover);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-subtle: var(--destructive-subtle);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-subtle: var(--success-subtle);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-subtle: var(--warning-subtle);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-info-subtle: var(--info-subtle);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-overlay: var(--overlay);
+
+  --radius-sm: calc(var(--radius) - 4px);   /* 4px  (Rewind 2px)  */
+  --radius-md: calc(var(--radius) - 2px);   /* 6px  (Rewind 4px)  */
+  --radius-lg: var(--radius);               /* 8px  (Rewind 6px)  */
+  --radius-xl: calc(var(--radius) + 4px);   /* 12px (Rewind 10px) */
+
+  --shadow-popover: var(--elevation-popover);
+  --shadow-dialog: var(--elevation-dialog);
+  --shadow-poster: var(--elevation-poster);
+
+  /* system stacks until P3.2 loads IBM Plex as --font-plex-sans and --font-plex-mono */
+  --font-sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+  /* single-size steps; display, h1 and stat are @utility rules below */
+  --text-h2: 1.25rem;       --text-h2--line-height: 1.75rem;    --text-h2--letter-spacing: -0.01em;       --text-h2--font-weight: 600;
+  --text-h3: 1rem;          --text-h3--line-height: 1.5rem;     --text-h3--letter-spacing: -0.005em;      --text-h3--font-weight: 600;
+  --text-lead: 1.0625rem;   --text-lead--line-height: 1.75rem;
+  --text-body: 0.9375rem;   --text-body--line-height: 1.5rem;
+  --text-ui: 0.875rem;      --text-ui--line-height: 1.25rem;
+  --text-label: 0.8125rem;  --text-label--line-height: 1.125rem; --text-label--font-weight: 500;
+  --text-caption: 0.75rem;  --text-caption--line-height: 1rem;   --text-caption--font-weight: 500;
+}
+
+/* temporary cinematic aliases: delete in P11.29 */
+@theme inline {
+  --color-stage: var(--background);
+  --color-stage-panel: var(--card);
+  --color-gold: var(--primary);
+  --color-gold-bright: var(--primary-hover);
+  --color-ivory: var(--foreground);
+  --color-taupe: var(--muted-foreground);
+}
+
+/* Motion: theme-independent and always emitted as variables, so the Rewind scope can read them */
+@theme static {
+  --ease-out-quiet: cubic-bezier(0.2, 0, 0, 1);
+  --ease-in-quiet: cubic-bezier(0.4, 0, 1, 1);
+  --duration-fast: 120ms; --duration-base: 180ms; --duration-slow: 240ms;
+  --animate-skeleton: skeleton 1.6s ease-in-out infinite;
+  @keyframes skeleton { 50% { opacity: 0.6; } }
+}
+
+/* The one-shot fade-in, and the v2 film grain until P11.29 deletes the v2 viewer */
 @theme {
-  --animate-float: float 2s ease-in-out infinite;
-  --animate-wiggle: wiggle 1.5s ease-in-out infinite;
-  --animate-blink: blink 3s ease-in-out infinite;
-  --animate-twinkle: twinkle 3s ease-in-out infinite;
   --animate-fade-in: fade-in 0.6s ease-out;
-
-  /* Cinematic Premiere theme (wrapped v2) */
-  --color-stage: #0a0908;
-  --color-stage-panel: #16120e;
-  --color-gold: #d4af37;
-  --color-gold-bright: #f5d67b;
-  --color-ivory: #ece5d8;
-  --color-taupe: #9a9082;
   --animate-grain: grain 0.9s steps(4) infinite;
-}
-
-@keyframes grain {
-  0%, 100% { transform: translate(0, 0); }
-  25% { transform: translate(-2%, 1%); }
-  50% { transform: translate(1%, -2%); }
-  75% { transform: translate(-1%, 2%); }
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0px) rotate(0deg);
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
   }
-  50% {
-    transform: translateY(-20px) rotate(180deg);
+  @keyframes grain {
+    0%, 100% { transform: translate(0, 0); }
+    25% { transform: translate(-2%, 1%); }
+    50% { transform: translate(1%, -2%); }
+    75% { transform: translate(-1%, 2%); }
   }
 }
 
-@keyframes wiggle {
-  0%, 100% {
-    transform: rotate(0deg);
-  }
-  25% {
-    transform: rotate(-10deg);
-  }
-  75% {
-    transform: rotate(10deg);
-  }
+/* Responsive type steps (ui-design-system 3.6). font-stretch works once next/font loads the wdth axis (P3.2). */
+@utility text-display {
+  font-size: 1.875rem; line-height: 2.25rem; letter-spacing: -0.022em; font-weight: 600; font-stretch: 92%;
+  @variant md { font-size: 2.5rem; line-height: 3rem; }
+}
+@utility text-h1 {
+  font-size: 1.5rem; line-height: 2rem; letter-spacing: -0.015em; font-weight: 600;
+  @variant md { font-size: 1.75rem; line-height: 2.25rem; }
+}
+@utility text-stat {
+  font-size: 1.5rem; line-height: 2rem; letter-spacing: -0.02em; font-weight: 600; font-variant-numeric: tabular-nums;
+  @variant md { font-size: 1.75rem; line-height: 2.25rem; }
 }
 
-@keyframes blink {
-  0%, 90%, 100% {
-    opacity: 1;
-  }
-  95% {
-    opacity: 0.1;
-  }
-}
-
-@keyframes twinkle {
-  0%, 100% {
-    opacity: 0.2;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.8;
-    transform: scale(1.5);
-  }
-}
-
-@keyframes fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+/* ---------- 5. Base layer ---------- */
+@layer base {
+  * { @apply border-border outline-ring; }
+  html { scroll-padding-top: 4.5rem; -webkit-text-size-adjust: 100%; }
+  body { @apply bg-background text-foreground font-sans text-body antialiased; }
+  h1, h2, h3, .text-display, .text-h1, .text-h2 { text-wrap: balance; }
+  p, li, dd { text-wrap: pretty; }
+  :focus-visible { outline: var(--focus-width) solid var(--ring); outline-offset: var(--focus-offset); }
+  @media (prefers-reduced-motion: reduce) {
+    /* the Rewind scope applies the same policy with its own rule (Rewind 5.6) */
+    :not([data-slot="spinner"], [data-theme="rewind"], [data-theme="rewind"] *),
+    :not([data-theme="rewind"], [data-theme="rewind"] *)::before,
+    :not([data-theme="rewind"], [data-theme="rewind"] *)::after {
+      animation-duration: 0.01ms !important; animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important; scroll-behavior: auto !important;
+    }
+    ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
   }
 }
-
-@keyframes gradient-shift {
-  0%, 100% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-}
-

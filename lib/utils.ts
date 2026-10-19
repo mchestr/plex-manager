@@ -1,6 +1,21 @@
 import { type ClassValue, clsx } from "clsx"
 import { randomBytes } from "crypto"
-import { twMerge } from "tailwind-merge"
+import { extendTailwindMerge } from "tailwind-merge"
+
+/**
+ * tailwind-merge that knows the design system's own scales (ui-design-system
+ * 3.6, 3.8, 3.9). Without them it reads `text-h2` as a colour, so
+ * `cn('text-h2', 'text-foreground')` would drop one of the two.
+ */
+const twMerge = extendTailwindMerge({
+  extend: {
+    theme: {
+      text: ["display", "h1", "h2", "h3", "lead", "body", "ui", "label", "caption", "stat"],
+      shadow: ["popover", "dialog", "poster"],
+      animate: ["skeleton"],
+    },
+  },
+})
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))

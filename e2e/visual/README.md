@@ -40,10 +40,6 @@ and at 390x844 with a 2x phone screen (`visual-mobile`,
   `data-visual-mask` (the Node.js version, the Rewind auto-advance progress
   fill). Give a new absolute date a `*-timestamp` test id.
 
-`screenshot.css` also undoes `html, body { height: 100%; overflow-x: hidden }`
-so full-page shots are not cut off at the viewport; drop that block when P3.1
-deletes the rule.
-
 ## Running the suite
 
 ```bash

@@ -32,7 +32,7 @@ export default async function RootLayout({
   const format = await getAppSettings();
 
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <body>
         <Providers format={format}>
           {children}
