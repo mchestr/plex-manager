@@ -359,7 +359,7 @@ gantt
 - [x] P2.4: Rewind sources with Zod and PlayEvent (rewind, M, due 2026-10-29)
 - [x] P2.5: Rewind queues, locks, semaphore and fail-fast Redis (rewind, M, due 2026-10-30)
 - [ ] P2.17: Generation becomes a job: processor, actions and status hook (rewind, M, due 2026-11-03)
-- [ ] P2.6: Server-wide history pass and metadata cache (rewind, M, due 2026-11-03)
+- [x] P2.6: Server-wide history pass and metadata cache (rewind, M, due 2026-11-03)
 - [x] P2.7: Stats modules, part 1 (rewind, M, due 2026-11-02)
 - [ ] P2.8: Stats modules, part 2 (rewind, M, due 2026-11-04)
 - [ ] P2.9: Fact catalogue, build-facts and archetype scorers v3 (rewind, M, due 2026-11-05)
@@ -382,7 +382,7 @@ gantt
 - [ ] P3.7: Rewind-ready primitives (ui, M, due 2026-11-05)
 - [ ] P3.8: Safe Markdown, safe links and error copy (ui, S, due 2026-10-29)
 - [ ] P3.9: Status vocabulary, icons, brand and chart theme (ui, M, due 2026-11-05)
-- [ ] P3.10: One formatter module (ui, M, due 2026-10-29)
+- [x] P3.10: One formatter module (ui, M, due 2026-10-29)
 
 **Security and reliability hardening** (2026-10-23 to 2026-12-03)
 
