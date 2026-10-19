@@ -48,3 +48,6 @@ test.db
 test.db-journal
 test-results/
 playwright-report/
+
+# Downloaded font sources (scripts/build-rewind-fonts.py)
+/.cache/

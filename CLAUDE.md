@@ -60,6 +60,7 @@ lib/                    # Utilities, helpers, business logic
 ├── connections/       # External API clients (Plex, Tautulli, Overseerr, etc.)
 ├── discord/           # Discord bot, commands and linking
 ├── llm/               # LLM chat client and pricing
+├── rewind/            # Rewind 2026: typesetter, format rules, page registry, card fonts
 ├── security/          # Security utilities (rate limiting, CSRF, audit logging)
 ├── validations/       # Zod schemas for all services
 ├── wrapped/           # Wrapped generation and statistics

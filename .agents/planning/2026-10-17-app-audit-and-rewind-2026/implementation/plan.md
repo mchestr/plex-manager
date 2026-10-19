@@ -2851,6 +2851,7 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
   - Web fonts go to `app/(app)/rewind/_fonts/`: the Archivo variable WOFF2 (about 78 KB) and three Newsreader statics at weight 400 (Display Italic at opsz 72, Text and Text Italic at opsz 16; 22-24 KB each). Card fonts go to `lib/rewind/cards/fonts/`: the eleven TTF instances of design 6.4, renamed "Rewind Archivo …" and "Rewind Newsreader …". OFL licence files sit beside both sets.
   - `lib/rewind/typeset/metrics.json` (design 5.4) holds advances, flattened kerning pairs and covered code points: page metrics from the variable Archivo at six width steps and weights 700, 760, 850 and 900, and card metrics from the eight Archivo statics.
   - The build fails above the NFR-5 budget of 110 KB preloaded and 160 KB in total (the design measured 101 KB and 147 KB).
+  - (as merged: pinned to google/fonts `47d54ca1`, tools pinned in `scripts/rewind-fonts.requirements.txt`. Latin Extended-A put the full variable Archivo at 101 KB and the total at 182 KB, so the web Archivo keeps `wght` 600-900 only, the weights Rewind sets; with that the build measures 97 KB preloaded and 153 KB in all. Web files: `archivo-vf.woff2`, `newsreader-display-italic.woff2`, `newsreader-text.woff2`, `newsreader-text-italic.woff2`, all renamed "Rewind …". `metrics.json` is 144 KB: kerning is stored as a sparse matrix over left and right classes shared by every face (`kernLeft`, `kernRight`, `kern: [l, r, units, …]`), plus `tnum` digit advances; the lockfile also records every output's sha256.)
 - **`lib/rewind/typeset/fit-lines.ts`** is pure. Its metrics load through `metrics.ts`, which imports `server-only`.
   - `fitLines(text, { role, metrics, weight, measure, maxLines, sizeMin, sizeMax })` returns `{ size, lines: [{ text, wdth, width }], ellipsized, ariaLabel, safeMode }`.
   - Lines break only between words. A break is preferred after ": ", " - " and " (", and before "of", "the" and "and" when that avoids a widow. Candidates are enumerated exhaustively up to 12 words, then greedily.
@@ -2858,11 +2859,13 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
   - Sentence mode uses one shared step, set flush left. Candidates score as size times penalties of 0.92, 0.85 and 0.97.
   - The minimum size is 22 px, and words are never broken. List titles longer than 3 lines are cut short with an ellipsis, and the full title goes into `ariaLabel`.
   - A code point that the font does not cover returns `safeMode` (design 4.9). `CARD_SLACK = 0.015` stays provisional until P2.14.
+  - (as merged: the mockup fits reproduce with letter-spacing of -0.01 em after every character, so `tracking` defaults to -0.01; options also take `widths` (allowed steps, for example `[100]` for the masthead or `[62, 75]` for the hero numeral) and `tnum`. A break before "of", "the" or "and" counts as preferred only when it starts a last line of two or more words. `measure.ts` is the pure metrics reader; `metrics.ts` exports `pageMetrics` and `cardMetrics`. Card callers fit to `936 / (1 + CARD_SLACK)`.)
 - **`lib/rewind/format.ts`** extends P3.10's `lib/utils/format.ts` with Rewind's own rules only (design 4.9, and 5.4 item 7): U+00A0 between a number and its unit or meridiem ("10 PM", "26 h 10 m", "4 July"); plurals through `Intl.PluralRules`; "under 1%"; hero numbers never abbreviated ("12,480"); durations through the shared, floored `formatDuration`.
 - **`lib/rewind/registry.ts`.** Every entry has `type`, `name`, `act`, `field`, `altField`, `spot`, `core`, `pocket`, `dwell`, `select` and `schema`, and optionally `table`, `srSummary` and `share`.
   - All 18 pages of design 4.2 get their real values; until P5.5, `select` returns null and `schema` is `z.unknown()`. The ten chart pages (02, 05, 06, 07, 09, 10, 11, 13, 15 and 16) get `table` stubs. Ink names come from P3.3's `rewindInks`.
   - `issueDurationMs(pages)` adds each page's dwell plus 420 ms per turn, for the RewindCard meta line (design 18.4, item 3).
-- **RWV-01 on the live v2 viewer** (until P7.13 and P11.29). `components/wrapped/cinematic/marquee-text.tsx` gives each word one `inline-block whitespace-nowrap` span with the letters animating inside it, sets `transitionEnd: { filter: 'none' }` and puts the gradient on the letter spans. The archetype reveal gets `data-testid="rewind-archetype-name"`.
+  - (as merged: P3.3 had not merged, so `registry.ts` declares the twelve `InkName`s itself; P3.3 or P5.5 points it at `rewindInks`. Design 4.2 gives no alternate fields, so they are provisional and P5.5's registry-tokens test checks them: coral→peach, rose→lilac, marigold→sky, petrol→oxblood, forest→ultramarine, mint→sky, peach→rose, lilac→mint, sky→coral; paper and archetype pages have none. `dwell` is ms, or `tap`, `hold` (counted as 12 s) or `end`, giving 140.14 s for the full issue; `pocket` is `false | 'page' | 'short-list' | 'clock-or-calendar'`. The new modules are knip entries until their first importers land.)
+- **RWV-01 on the live v2 viewer** (until P7.13 and P11.29). `components/wrapped/cinematic/marquee-text.tsx` gives each word one `inline-block whitespace-nowrap` span with the letters animating inside it, sets `transitionEnd: { filter: 'none' }` and puts the gradient on the letter spans. The archetype reveal gets `data-testid="rewind-archetype-name"`. (as merged: the gradient goes in through a new `letterClassName` prop; the v2 visual baselines did not change.)
 - RWV-08 and UI-20 close for Rewind once P5.1 loads the web files with `next/font/local` and P5.10 embeds the matching card instances. P3.2 owns the app fonts.
 
 **Tests.**
@@ -2878,11 +2881,11 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 **Demo.** The font build prints 101 KB preloaded and 147 KB in total. `npx jest lib/rewind` passes, and a short script prints the fitted mockup headlines, which match design 15.3. At 390 px, the v2 archetype slide shows its name with no break inside a word.
 
 **Done when.**
-- [ ] The font build reproduces the files from pinned sources, with OFL licences and renamed families, within the NFR-5 budget.
-- [ ] `fit-lines` reproduces the mockup fits, never breaks a word, applies the one-step spread rule and passes the 200-title fixture.
-- [ ] `lib/rewind/format.ts` adds the non-breaking space and plural rules on top of `lib/utils/format.ts`.
-- [ ] The registry lists all 18 pages, with `spot`, `table` and `select` stubs.
-- [ ] The v2 marquee no longer splits words.
+- [x] The font build reproduces the files from pinned sources, with OFL licences and renamed families, within the NFR-5 budget.
+- [x] `fit-lines` reproduces the mockup fits, never breaks a word, applies the one-step spread rule and passes the 200-title fixture.
+- [x] `lib/rewind/format.ts` adds the non-breaking space and plural rules on top of `lib/utils/format.ts`.
+- [x] The registry lists all 18 pages, with `spot`, `table` and `select` stubs.
+- [x] The v2 marquee no longer splits words.
 
 ### Step P2.14: Re-measure cards on Next 16.4.2
 

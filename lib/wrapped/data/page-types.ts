@@ -31,5 +31,4 @@ const PAGE_TYPES = [
 
 export const PageTypeSchema = z.enum(PAGE_TYPES)
 
-/** @internal */
 export type PageType = z.infer<typeof PageTypeSchema>
