@@ -1,0 +1,44 @@
+{
+  "global": {
+    "statements": 62,
+    "branches": 51,
+    "functions": 59,
+    "lines": 63
+  },
+  "./lib/auth.ts": {
+    "statements": 75,
+    "branches": 59,
+    "functions": 87,
+    "lines": 75
+  },
+  "./lib/prisma.ts": {
+    "statements": 24,
+    "branches": 10,
+    "functions": 25,
+    "lines": 24
+  },
+  "./lib/security/": {
+    "statements": 97,
+    "branches": 96,
+    "functions": 95,
+    "lines": 97
+  },
+  "./lib/stripe/": {
+    "statements": 92,
+    "branches": 88,
+    "functions": 92,
+    "lines": 92
+  },
+  "./actions/admin/": {
+    "statements": 47,
+    "branches": 42,
+    "functions": 48,
+    "lines": 47
+  },
+  "./lib/queue/": {
+    "statements": 43,
+    "branches": 42,
+    "functions": 27,
+    "lines": 43
+  }
+}

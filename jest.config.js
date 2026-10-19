@@ -12,6 +12,10 @@ const createJestConfig = nextJest({
 // and selects only them in a serial run; every other run leaves them out. See
 // test/helpers/integration.ts for how a missing variable is handled.
 const integrationRun = process.env.JEST_INTEGRATION === '1'
+
+// Coverage floors that only rise: `node scripts/coverage-ratchet.mjs --update`
+// raises them after a run with coverage, and never lowers one.
+const coverageThreshold = require('./jest.coverage-thresholds.json')
 const INTEGRATION_SUITES = '\\.(pg|redis)\\.test\\.ts$'
 
 // Add any custom config to be passed to Jest
@@ -32,12 +36,19 @@ const customJestConfig = {
     ...(integrationRun ? [] : [INTEGRATION_SUITES]),
   ],
   collectCoverageFrom: [
+    'app/**/*.{ts,tsx}',
     'components/**/*.{ts,tsx}',
+    'hooks/**/*.{ts,tsx}',
     'lib/**/*.{ts,tsx}',
     'actions/**/*.{ts,tsx}',
     '!**/*.d.ts',
     '!**/node_modules/**',
+    '!lib/generated/**',
   ],
+  // json-summary feeds scripts/coverage-ratchet.mjs.
+  coverageReporters: ['json-summary', 'lcov', 'text-summary'],
+  // The integration run measures only its own few suites.
+  ...(integrationRun ? {} : { coverageThreshold }),
   transformIgnorePatterns: [
     '/node_modules/(?!jose|@panva|openid-client|oauth4webapi|next-auth)/',
   ],
