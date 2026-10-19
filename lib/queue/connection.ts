@@ -158,8 +158,8 @@ export function getRequestPathRedis(): Redis {
 /**
  * Resolves true once `client` is ready (at once when it already is), or false
  * after `ms`. A fail-fast client refuses commands while it is still
- * connecting, so its callers wait here first; a client that gave up
- * reconnecting is told to connect again.
+ * connecting, so its callers wait here first; a lazy client that has not
+ * connected yet, or one that gave up reconnecting, is told to connect.
  */
 export function readyWithin(client: Redis, ms: number): Promise<boolean> {
   if (client.status === "ready") return Promise.resolve(true)
@@ -172,7 +172,7 @@ export function readyWithin(client: Redis, ms: number): Promise<boolean> {
     const onReady = () => settle(true)
     const timer = setTimeout(() => settle(false), ms)
     client.once("ready", onReady)
-    if (client.status === "end") client.connect().catch(() => {})
+    if (client.status === "wait" || client.status === "end") client.connect().catch(() => {})
   })
 }
 
