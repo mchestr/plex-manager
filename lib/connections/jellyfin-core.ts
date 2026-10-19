@@ -28,6 +28,8 @@ export interface JellyfinInviteSettings {
   allowDownloads?: boolean
   /** Whether to enable remote access */
   enableRemoteAccess?: boolean
+  /** Whether the account is disabled (default false) */
+  isDisabled?: boolean
 }
 
 /**

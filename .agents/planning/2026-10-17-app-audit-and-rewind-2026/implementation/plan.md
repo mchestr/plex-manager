@@ -4254,10 +4254,12 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 - Accepting a Jellyfin invite through "Accept with Plex" shows "This invite is for Jellyfin", and the Plex shares are unchanged.
 - With a test hook that fails the database write, the Jellyfin dashboard shows no new enabled user, and the invite's use count is unchanged.
 
+(as merged: the line numbers had moved — `validateAndUseInvite` was at `:247`, `rollbackInviteUsage` at `:192`, the Jellyfin check at `:866` and the outer catch at `:967-975`. `rollbackInviteUsage` is a single `prisma.invite.updateMany` with the `useCount > 0` guard, no transaction. `validateAndUseInvite` returns `{ success: false, code, error }`: an unknown, expired or used-up code is `INVITE_INVALID`, a database error `INTERNAL` with a generic message; the wrong-service check runs right after the lookup, before expiry and use count. Both redemption paths now return that `code`; the Plex path's other error strings are unchanged for P4.3 and P4.8. A failed enable (step 4) returns `{ success: false, code: 'INTERNAL' }` with the "Ask the server owner to enable it" copy and keeps the recorded use. Compensation deletes first; if the delete fails, an account already disabled by step 2 counts as contained (audited as `INVITE_JELLYFIN_FAILURE` stage `compensate`), and one that is not is disabled with a further policy call before the use is restored. The outer catch compensates only while an account exists and is not yet recorded. The owner's list query, which adds email, the invite code, `usedAt` and whether the member also redeemed a Plex invite (an exemption that is then legitimate), is in the P4.12 report and was checked on a seeded `_test` database.)
+
 **Done when.**
-- [ ] The Plex flow rejects Jellyfin codes before consuming them, so they give no library share and no exemption.
-- [ ] Jellyfin accounts stay disabled until the database write succeeds.
-- [ ] A failed write disables or deletes the account and restores the invite, all or nothing, with an audit entry when it cannot.
+- [x] The Plex flow rejects Jellyfin codes before consuming them, so they give no library share and no exemption.
+- [x] Jellyfin accounts stay disabled until the database write succeeds.
+- [x] A failed write disables or deletes the account and restores the invite, all or nothing, with an audit entry when it cannot.
 
 ### Step P4.13: Watchlist requests filed as the member
 

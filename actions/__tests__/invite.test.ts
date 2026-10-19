@@ -27,12 +27,12 @@ import {
   inviteUserToPlexServer,
   acceptPlexInvite,
 } from '@/lib/connections/plex'
-import { createJellyfinUser, setJellyfinUserPolicy } from '@/lib/connections/jellyfin'
+import { createJellyfinUser, deleteJellyfinUser, setJellyfinUserPolicy } from '@/lib/connections/jellyfin'
 import { logAuditEvent, AuditEventType } from '@/lib/security/audit-log'
 import { actionClientIp, consume } from '@/lib/security/rate-limit'
 import { RATE_LIMITED_MESSAGE } from '@/lib/security/rate-limit-messages'
 import { Prisma } from '@/lib/generated/prisma/client'
-import type { Invite, PlexServer } from '@/lib/generated/prisma/client'
+import type { Invite, JellyfinServer, PlexServer } from '@/lib/generated/prisma/client'
 import type { Session } from 'next-auth'
 import { publicUserSelect } from '@/lib/dto/user'
 import { assertNoSecretKeys } from '@/__tests__/utils/assert-no-secret-keys'
@@ -103,6 +103,7 @@ const mockCreateJellyfinUser = createJellyfinUser as jest.MockedFunction<typeof 
 const mockSetJellyfinUserPolicy = setJellyfinUserPolicy as jest.MockedFunction<
   typeof setJellyfinUserPolicy
 >
+const mockDeleteJellyfinUser = deleteJellyfinUser as jest.MockedFunction<typeof deleteJellyfinUser>
 const mockLogAuditEvent = logAuditEvent as jest.MockedFunction<typeof logAuditEvent>
 
 describe('invite actions', () => {
@@ -131,6 +132,19 @@ describe('invite actions', () => {
     token: 'test-token',
     adminPlexUserId: null,
     isActive: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }
+
+  const jellyfinServerRow: JellyfinServer = {
+    id: 'jf-server-1',
+    name: 'Jellyfin',
+    url: 'https://jellyfin.example.com',
+    publicUrl: null,
+    apiKey: 'jf-api-key',
+    adminUserId: null,
+    isActive: true,
+    enabledForLogin: true,
     createdAt: new Date(),
     updatedAt: new Date(),
   }
@@ -802,6 +816,235 @@ describe('invite actions', () => {
       expect(tx.user.create).toHaveBeenCalledWith({
         data: expect.objectContaining({ name: 'jane.doe-2', jellyfinUserId: 'jf-user-1' }),
       })
+    })
+  })
+
+  describe('an invite redeems only through its own service (SEC-29)', () => {
+    const tx = {
+      invite: { findUnique: jest.fn(), update: jest.fn() },
+      user: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn() },
+      inviteUsage: { create: jest.fn() },
+    }
+
+    beforeEach(() => {
+      mockPrisma.$transaction.mockImplementation(async (fn) =>
+        typeof fn === 'function' ? fn(asTransactionClient(tx)) : Promise.resolve()
+      )
+      mockGetPlexUserInfo.mockResolvedValue({ success: true, data: mockPlexUser })
+      mockPrisma.plexServer.findFirst.mockResolvedValue(mockPlexServer)
+      mockPrisma.jellyfinServer.findFirst.mockResolvedValue(jellyfinServerRow)
+    })
+
+    it('refuses a Jellyfin code on the Plex path before consuming it, sharing or exempting', async () => {
+      tx.invite.findUnique.mockResolvedValue({ ...mockInvite, serverType: 'JELLYFIN' })
+
+      const result = await processInvite('TESTCODE', 'plex-auth-token')
+
+      expect(result).toEqual({
+        success: false,
+        code: 'INVITE_WRONG_SERVICE',
+        error: 'This invite is for Jellyfin',
+      })
+      expect(tx.invite.update).not.toHaveBeenCalled()
+      expect(mockPrisma.invite.updateMany).not.toHaveBeenCalled()
+      expect(mockInviteUserToPlexServer).not.toHaveBeenCalled()
+      expect(mockAcceptPlexInvite).not.toHaveBeenCalled()
+      expect(tx.user.create).not.toHaveBeenCalled()
+      expect(tx.user.update).not.toHaveBeenCalled()
+    })
+
+    it('refuses a Plex code on the Jellyfin path before consuming it or creating an account', async () => {
+      tx.invite.findUnique.mockResolvedValue(mockInvite)
+
+      const result = await processJellyfinInvite('TESTCODE', { username: 'newuser', password: 'password123' })
+
+      expect(result).toEqual({
+        success: false,
+        code: 'INVITE_WRONG_SERVICE',
+        error: 'This invite is for Plex',
+      })
+      expect(tx.invite.update).not.toHaveBeenCalled()
+      expect(mockPrisma.invite.updateMany).not.toHaveBeenCalled()
+      expect(mockCreateJellyfinUser).not.toHaveBeenCalled()
+      expect(tx.user.create).not.toHaveBeenCalled()
+    })
+
+    it('reports an unknown code as INVITE_INVALID', async () => {
+      tx.invite.findUnique.mockResolvedValue(null)
+
+      const result = await processInvite('NOPE', 'plex-auth-token')
+
+      expect(result).toEqual({ success: false, code: 'INVITE_INVALID', error: 'Invalid invite code' })
+    })
+  })
+
+  describe('processJellyfinInvite compensation (GAP-28)', () => {
+    const LIB_A = 'f137a2dd21bbc1b99aa5c0f6bf02a805'
+    const GENERIC_ERROR = 'Your account could not be created. Please try again.'
+    const tx = {
+      invite: { findUnique: jest.fn(), update: jest.fn() },
+      user: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn() },
+      inviteUsage: { create: jest.fn() },
+    }
+    const credentials = { username: 'newuser', password: 'password123' }
+
+    function serveInvite(jellyfinLibraryIds: string | null = JSON.stringify([LIB_A])) {
+      const invite = { ...mockInvite, serverType: 'JELLYFIN' as const, jellyfinLibraryIds }
+      tx.invite.findUnique.mockResolvedValue(invite)
+      tx.invite.update.mockResolvedValue({ ...invite, useCount: 1 })
+    }
+
+    function expectInviteRestored() {
+      expect(mockPrisma.invite.updateMany).toHaveBeenCalledWith({
+        where: { id: 'invite-123', useCount: { gt: 0 } },
+        data: { useCount: { decrement: 1 } },
+      })
+    }
+
+    function auditCalls(type: string) {
+      return mockLogAuditEvent.mock.calls.filter(([event]) => event === type).map(([, , details]) => details)
+    }
+
+    beforeEach(() => {
+      mockPrisma.$transaction.mockImplementation(async (fn) =>
+        typeof fn === 'function' ? fn(asTransactionClient(tx)) : Promise.resolve()
+      )
+      mockPrisma.jellyfinServer.findFirst.mockResolvedValue(jellyfinServerRow)
+      serveInvite()
+      tx.user.findUnique.mockResolvedValue(null)
+      tx.user.create.mockResolvedValue({ id: 'user-1' })
+      tx.inviteUsage.create.mockResolvedValue({})
+      mockCreateJellyfinUser.mockResolvedValue({ success: true, userId: 'jf-user-1' })
+      mockSetJellyfinUserPolicy.mockResolvedValue({ success: true })
+      mockDeleteJellyfinUser.mockResolvedValue({ success: true })
+    })
+
+    it('applies the libraries disabled, records the member, and enables the account last', async () => {
+      const result = await processJellyfinInvite('TESTCODE', credentials)
+
+      expect(result.success).toBe(true)
+      expect(mockSetJellyfinUserPolicy).toHaveBeenCalledTimes(2)
+      expect(mockSetJellyfinUserPolicy.mock.calls[0][2]).toEqual({
+        libraryIds: [LIB_A],
+        allowDownloads: false,
+        enableRemoteAccess: true,
+        isDisabled: true,
+      })
+      expect(mockSetJellyfinUserPolicy.mock.calls[1][2]).toMatchObject({ libraryIds: [LIB_A], isDisabled: false })
+
+      const [disableOrder, enableOrder] = mockSetJellyfinUserPolicy.mock.invocationCallOrder
+      const recordOrder = tx.inviteUsage.create.mock.invocationCallOrder[0]
+      expect(mockCreateJellyfinUser.mock.invocationCallOrder[0]).toBeLessThan(disableOrder)
+      expect(disableOrder).toBeLessThan(recordOrder)
+      expect(recordOrder).toBeLessThan(enableOrder)
+      expect(mockDeleteJellyfinUser).not.toHaveBeenCalled()
+      expect(mockPrisma.invite.updateMany).not.toHaveBeenCalled()
+    })
+
+    it('disables, then deletes the account and restores the invite when the database write fails', async () => {
+      tx.user.create.mockRejectedValue(new Error('relation "User" does not exist'))
+
+      const result = await processJellyfinInvite('TESTCODE', credentials)
+
+      expect(result).toEqual({ success: false, code: 'INTERNAL', error: GENERIC_ERROR })
+      expect(mockSetJellyfinUserPolicy).toHaveBeenCalledTimes(1)
+      expect(mockSetJellyfinUserPolicy.mock.calls[0][2]).toMatchObject({ isDisabled: true })
+      expect(mockDeleteJellyfinUser).toHaveBeenCalledWith(
+        { url: jellyfinServerRow.url, apiKey: jellyfinServerRow.apiKey },
+        'jf-user-1'
+      )
+      expect(mockSetJellyfinUserPolicy.mock.invocationCallOrder[0]).toBeLessThan(
+        mockDeleteJellyfinUser.mock.invocationCallOrder[0]
+      )
+      expectInviteRestored()
+      expect(auditCalls(AuditEventType.INVITE_ROLLBACK_FAILED)).toEqual([])
+    })
+
+    it('restores the invite when the delete fails but the account is already disabled', async () => {
+      tx.user.create.mockRejectedValue(new Error('db down'))
+      mockDeleteJellyfinUser.mockResolvedValue({ success: false, error: 'Failed to delete user' })
+
+      const result = await processJellyfinInvite('TESTCODE', credentials)
+
+      expect(result).toEqual({ success: false, code: 'INTERNAL', error: GENERIC_ERROR })
+      // Only the step-2 disable: the account is already confirmed disabled
+      expect(mockSetJellyfinUserPolicy).toHaveBeenCalledTimes(1)
+      expectInviteRestored()
+      expect(auditCalls(AuditEventType.INVITE_JELLYFIN_FAILURE)).toContainEqual(
+        expect.objectContaining({ stage: 'compensate', jellyfinUserId: 'jf-user-1' })
+      )
+    })
+
+    it('keeps the invite consumed and audits the Jellyfin id when deleting and disabling both fail', async () => {
+      mockSetJellyfinUserPolicy.mockResolvedValue({ success: false, error: 'Failed to set user permissions' })
+      mockDeleteJellyfinUser.mockResolvedValue({ success: false, error: 'Failed to delete user' })
+
+      const result = await processJellyfinInvite('TESTCODE', credentials)
+
+      expect(result).toEqual({ success: false, code: 'INTERNAL', error: GENERIC_ERROR })
+      expect(mockDeleteJellyfinUser).toHaveBeenCalledTimes(1)
+      // The step-2 policy call, then the compensating disable
+      expect(mockSetJellyfinUserPolicy).toHaveBeenCalledTimes(2)
+      expect(mockSetJellyfinUserPolicy.mock.calls[1][2]).toMatchObject({ isDisabled: true })
+      expect(mockPrisma.invite.updateMany).not.toHaveBeenCalled()
+      expect(auditCalls(AuditEventType.INVITE_ROLLBACK_FAILED)).toEqual([
+        expect.objectContaining({ inviteId: 'invite-123', jellyfinUserId: 'jf-user-1' }),
+      ])
+      expect(tx.user.create).not.toHaveBeenCalled()
+    })
+
+    it('restores the invite when the policy fails but the delete succeeds', async () => {
+      mockSetJellyfinUserPolicy.mockResolvedValue({ success: false, error: 'Failed to set user permissions: Bad Request' })
+
+      const result = await processJellyfinInvite('TESTCODE', credentials)
+
+      expect(result).toEqual({ success: false, code: 'INTERNAL', error: GENERIC_ERROR })
+      expect(mockDeleteJellyfinUser).toHaveBeenCalledTimes(1)
+      expectInviteRestored()
+    })
+
+    it('compensates an account left behind by an unexpected throw', async () => {
+      mockSetJellyfinUserPolicy.mockRejectedValue(new Error('socket hang up at 10.0.0.5'))
+
+      const result = await processJellyfinInvite('TESTCODE', credentials)
+
+      expect(result).toEqual({ success: false, code: 'INTERNAL', error: GENERIC_ERROR })
+      expect(mockDeleteJellyfinUser).toHaveBeenCalledWith(expect.anything(), 'jf-user-1')
+      expectInviteRestored()
+    })
+
+    it.each([
+      ['not JSON', 'not json'],
+      ['not 32-hex ids', JSON.stringify(['../../Users'])],
+      ['not an array', JSON.stringify({ id: LIB_A })],
+    ])('creates no account and restores the invite when the library ids are %s', async (_label, raw) => {
+      serveInvite(raw)
+
+      const result = await processJellyfinInvite('TESTCODE', credentials)
+
+      expect(result).toEqual({ success: false, code: 'INTERNAL', error: GENERIC_ERROR })
+      expect(mockCreateJellyfinUser).not.toHaveBeenCalled()
+      expectInviteRestored()
+    })
+
+    it('leaves a recorded account disabled and asks for the owner when enabling fails', async () => {
+      mockSetJellyfinUserPolicy
+        .mockResolvedValueOnce({ success: true })
+        .mockResolvedValueOnce({ success: false, error: 'Failed to set user permissions' })
+
+      const result = await processJellyfinInvite('TESTCODE', credentials)
+
+      expect(result).toEqual({
+        success: false,
+        code: 'INTERNAL',
+        error: 'Your account was created. Ask the server owner to enable it.',
+      })
+      expect(tx.inviteUsage.create).toHaveBeenCalled()
+      expect(mockDeleteJellyfinUser).not.toHaveBeenCalled()
+      expect(mockPrisma.invite.updateMany).not.toHaveBeenCalled()
+      expect(auditCalls(AuditEventType.INVITE_JELLYFIN_FAILURE)).toContainEqual(
+        expect.objectContaining({ stage: 'enable', jellyfinUserId: 'jf-user-1' })
+      )
     })
   })
 
