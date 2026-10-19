@@ -3,6 +3,7 @@ import { getPrometheusStatus, type StatusData } from "@/actions/prometheus-statu
 import { ServiceSignInToggle } from "@/components/auth/service-sign-in-toggle";
 import { UserDashboard } from "@/components/dashboard/user-dashboard";
 import { SubscriptionStatusView } from "@/components/subscription/subscription-status-view";
+import { hasEntitlement } from "@/lib/actions/entitlement";
 import { authOptions } from "@/lib/auth";
 import { getFirstWatchDate } from "@/lib/connections/tautulli-first-watch";
 import { prisma } from "@/lib/prisma";
@@ -96,10 +97,12 @@ export default async function Home() {
     // The first watch date from Tautulli gives the membership duration, and
     // eligibility decides whether the Rewind card offers a Rewind (FR-48).
     // Both find the member through findTautulliUser, which calls Tautulli's
-    // get_users once per render.
+    // get_users once per render. The first watch date reads the member's
+    // history, so it needs at least read entitlement (SEC-28).
     const plexUserId = user?.plexUserId ?? null;
+    const canReadHistory = await hasEntitlement(session.user.id, "read");
     const [firstWatchResult, rewindEligibility, { timeZone }] = await Promise.all([
-      plexUserId ? getFirstWatchDate(plexUserId) : null,
+      plexUserId && canReadHistory ? getFirstWatchDate(plexUserId) : null,
       getRewindEligibility({ id: session.user.id, plexUserId }),
       getAppSettings(),
     ]);

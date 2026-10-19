@@ -9,7 +9,6 @@
 import { z } from "zod"
 
 import { getWrappedSettings } from "@/actions/admin"
-import { getAccessGateStatus } from "@/lib/access"
 import { adminAction, memberAction } from "@/lib/actions/define-action"
 import { fail, ok, type ActionErrorCode, type ActionFailure, type ActionResult } from "@/lib/actions/result"
 import { prisma } from "@/lib/prisma"
@@ -80,14 +79,15 @@ async function enqueue(userId: string, year: number, kind: RewindGenerationKind)
 /**
  * Asks for the signed-in member's Rewind for the season year.
  *
- * Checks, in order: the session and `{ year }`; the season window for members (admins
- * whenever the feature is on); `year` is the season year; entitlement
- * (`NOT_ENTITLED`); only admins regenerate a completed Rewind; a run already
+ * Checks, in order: the session and entitlement (`NOT_ENTITLED`, the action
+ * helper's `full`); `{ year }`; the season window for members (admins
+ * whenever the feature is on); `year` is the season year; only admins regenerate a completed Rewind; a run already
  * queued answers `alreadyQueued`; the Plex identity, configuration and
  * Tautulli match (`REWIND_NOT_ELIGIBLE`); Redis (FR-50); then, for members,
  * the `rw:gen` limits (`RATE_LIMITED`). Deduplication refunds the points.
  */
 export const requestRewindGeneration = memberAction({
+  entitlement: "full",
   input: z.object({ year: yearSchema }),
   fallbackError: "Failed to start your Rewind",
   handler: async ({ year }, { session, userId }): Promise<RewindRequestResult> => {
@@ -100,7 +100,6 @@ export const requestRewindGeneration = memberAction({
 
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, plexUserId: true } })
     if (!user) return fail("NOT_FOUND", "User not found")
-    if (!(await getAccessGateStatus(userId))) return refused("NOT_ENTITLED")
 
     const wrapped = await prisma.plexWrapped.findUnique({
       where: { userId_year: { userId, year } },

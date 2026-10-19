@@ -5,9 +5,13 @@
  * share tokens, per-viewer access checks that answer 404, one 3 s deadline
  * per request, fast 404s with a negative cache, and one load per Rewind for a
  * burst of parallel posters.
+ *
+ * SEC-28 (P4.5): a session needs `read` entitlement; one without it is
+ * answered as signed out, so only a covering share token serves it.
  */
 
 import { GET } from '@/app/api/wrapped/poster/[ratingKey]/route'
+import { hasEntitlement } from '@/lib/actions/entitlement'
 import {
   getItemSectionKey,
   getSharedSectionKeys,
@@ -31,6 +35,11 @@ jest.mock('next-auth', () => ({
 
 jest.mock('@/lib/auth', () => ({
   authOptions: {},
+}))
+
+jest.mock('@/lib/actions/entitlement', () => ({
+  ...jest.requireActual('@/lib/actions/entitlement'),
+  hasEntitlement: jest.fn(),
 }))
 
 jest.mock('@/lib/security/rate-limit', () => ({
@@ -165,6 +174,7 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
     ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(PLEX_SERVER)
     ;(getSharedSectionKeys as jest.Mock).mockResolvedValue(new Set<string>())
     ;(getItemSectionKey as jest.Mock).mockResolvedValue({ status: 'unknown' })
+    jest.mocked(hasEntitlement).mockResolvedValue(true)
   })
 
   afterEach(() => {
@@ -613,6 +623,45 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
       ;(getServerSession as jest.Mock).mockResolvedValue(ADMIN_SESSION)
       expect((await callRoute(posterUrl('555'), '555')).status).toBe(404)
       expect(fetchWithTimeout).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('entitlement (SEC-28)', () => {
+    it('serves a lapsed member their own poster: the session needs only read', async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValue(MEMBER_SESSION)
+      mockMember()
+      mockUpstreamImage()
+
+      const response = await callRoute(posterUrl('111'), '111')
+
+      expect(response.status).toBe(200)
+      expect(hasEntitlement).toHaveBeenCalledWith('member-1', 'read')
+    })
+
+    it('refuses a member with no access and no share token with an unstored 403', async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValue(MEMBER_SESSION)
+      jest.mocked(hasEntitlement).mockResolvedValue(false)
+      mockMember()
+
+      const response = await callRoute(posterUrl('111'), '111')
+
+      expect(response.status).toBe(403)
+      expect(await response.json()).toEqual({ error: 'This needs an active membership.', code: 'NOT_ENTITLED' })
+      expect(response.headers.get('Cache-Control')).toBe(ERROR_CACHE)
+      expect(fetchWithTimeout).not.toHaveBeenCalled()
+    })
+
+    it('serves that member a key a share token covers, as a public share response', async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValue(MEMBER_SESSION)
+      jest.mocked(hasEntitlement).mockResolvedValue(false)
+      ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue({ ...SHARED_ROW, data: wrappedJson(['123']) })
+      mockUpstreamImage()
+
+      const response = await callRoute(posterUrl('123', TOK), '123')
+
+      expect(response.status).toBe(200)
+      expect(response.headers.get('Cache-Control')).toBe('public, max-age=300')
+      expect(prisma.user.findUnique).not.toHaveBeenCalled()
     })
   })
 

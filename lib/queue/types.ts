@@ -55,6 +55,8 @@ export interface WatchlistSyncAllPayload {
  */
 export interface WatchlistSyncUserResult {
   success: boolean
+  /** Set when the job did not sync: the member is not entitled (P4.5). */
+  skipped?: "NOT_ENTITLED"
   itemsSynced: number
   itemsRequested: number
   itemsSkipped: number
