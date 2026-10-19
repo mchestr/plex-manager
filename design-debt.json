@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "commit": "456cab74e8b60aba7b693f53e1e43e585ab8570c",
-  "generatedAt": "2026-10-19T02:56:23.283Z",
+  "commit": "4199ad9642a3c760aca555705d99bf8caa65a0c1",
+  "generatedAt": "2026-10-19T03:18:33.167Z",
   "files": {
     "app/(app)/discord/link/page.tsx": {
       "raw-palette": 2
@@ -339,22 +339,22 @@
       "blur": 1,
       "raw-palette": 8
     },
-    "components/admin/settings/DiscordIntegrationForm.tsx": {
+    "components/admin/settings/discord-integration-form.tsx": {
       "raw-palette": 39
     },
-    "components/admin/settings/JellyfinLoginToggle.tsx": {
+    "components/admin/settings/jellyfin-login-toggle.tsx": {
       "raw-palette": 5
     },
-    "components/admin/settings/LLMProviderForm.tsx": {
+    "components/admin/settings/llm-provider-form.tsx": {
       "raw-palette": 25
     },
-    "components/admin/settings/LLMToggle.tsx": {
+    "components/admin/settings/llm-toggle.tsx": {
       "raw-palette": 2
     },
-    "components/admin/settings/ServerForm.tsx": {
+    "components/admin/settings/server-form.tsx": {
       "raw-palette": 23
     },
-    "components/admin/settings/StripeSettingsForm.tsx": {
+    "components/admin/settings/stripe-settings-form.tsx": {
       "raw-palette": 18
     },
     "components/admin/settings/watchlist-sync-settings.tsx": {
