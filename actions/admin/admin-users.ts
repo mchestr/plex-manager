@@ -1,10 +1,13 @@
 "use server"
 
+import { adminAction } from "@/lib/actions/define-action"
+import { ok, type ActionErrorCode, type ActionFailure, type ActionResult } from "@/lib/actions/result"
 import { requireAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { endUserSessions } from "@/lib/session-revocation"
 import { createLogger } from "@/lib/utils/logger"
+import { userIdSchema } from "@/lib/validations/shared-schemas"
 import { z } from "zod"
 
 const logger = createLogger("ADMIN")
@@ -148,10 +151,8 @@ export async function updateUserAdminStatus(userId: string, isAdmin: boolean): P
   }
 }
 
-const setUserDisabledSchema = z.object({
-  userId: z.string().min(1),
-  disabled: z.boolean(),
-})
+/** The action codes plus the refusals the user admin actions return. */
+type UserActionCode = ActionErrorCode | UserActionRefusal
 
 /**
  * Disable or re-enable a user's account (admin only, audited).
@@ -160,18 +161,12 @@ const setUserDisabledSchema = z.object({
  * user cannot sign in. Enabling clears it. Refuses the caller (`SELF`) and the
  * Plex server owner (`OWNER`).
  */
-export async function setUserDisabled(input: { userId: string; disabled: boolean }): Promise<UserActionResult> {
-  const session = await requireAdmin()
-
-  const parsed = setUserDisabledSchema.safeParse(input)
-  if (!parsed.success) {
-    return { success: false, error: "Invalid input" }
-  }
-  const { userId, disabled } = parsed.data
-
-  try {
-    if (session.user.id === userId) {
-      return { success: false, code: "SELF", error: "You cannot disable your own account" }
+export const setUserDisabled = adminAction({
+  input: z.object({ userId: userIdSchema, disabled: z.boolean() }),
+  fallbackError: "Failed to update the account",
+  handler: async ({ userId, disabled }, { userId: actorId }): Promise<ActionResult<null, UserActionCode>> => {
+    if (actorId === userId) {
+      return refused("SELF", "You cannot disable your own account")
     }
 
     const user = await prisma.user.findUnique({
@@ -179,15 +174,15 @@ export async function setUserDisabled(input: { userId: string; disabled: boolean
       select: { plexUserId: true, disabledAt: true },
     })
     if (!user) {
-      return { success: false, code: "NOT_FOUND", error: "User not found" }
+      return refused("NOT_FOUND", "User not found")
     }
 
     if ((user.disabledAt !== null) === disabled) {
-      return { success: true, message: `User is already ${disabled ? "disabled" : "enabled"}` }
+      return ok(null)
     }
 
     if (disabled && (await isPlexServerOwner(user.plexUserId))) {
-      return { success: false, code: "OWNER", error: "The Plex server owner cannot be disabled" }
+      return refused("OWNER", "The Plex server owner cannot be disabled")
     }
 
     await prisma.user.update({
@@ -195,19 +190,20 @@ export async function setUserDisabled(input: { userId: string; disabled: boolean
       data: { disabledAt: disabled ? new Date() : null },
     })
 
-    logAuditEvent(disabled ? AuditEventType.USER_DISABLED : AuditEventType.USER_ENABLED, session.user.id, {
+    logAuditEvent(disabled ? AuditEventType.USER_DISABLED : AuditEventType.USER_ENABLED, actorId, {
       targetUserId: userId,
     })
 
     if (disabled) {
-      await endUserSessions(userId, "disabled", session.user.id)
+      await endUserSessions(userId, "disabled", actorId)
     }
 
     await revalidateUserPages(userId)
 
-    return { success: true }
-  } catch (error) {
-    logger.error("Error updating user disabled status", error, { userId })
-    return { success: false, error: "Failed to update the account" }
-  }
+    return ok(null)
+  },
+})
+
+function refused(code: UserActionRefusal, error: string): ActionFailure<UserActionCode> {
+  return { success: false, code, error }
 }

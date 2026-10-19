@@ -3848,6 +3848,7 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 - `isHttpUrl()` is in `lib/validations/shared-schemas.ts`, marked `@internal` until P3.8's `safeHref` imports it (knip).
 - The guardrail is `actionsAndApi` plus `migratedActionFiles` in `eslint/restricted-syntax.mjs` (P3.4 had not merged): `actions/**` warns, `app/api/**` and the migrated modules error, and each block repeats the formatting selectors at its level. The selector matches only `x instanceof Error ? x.message : ...`, so passing the error object to a logger stays allowed.
 - `getAdminGate()` fixed BP-27 without `authInterrupts`: the installed Next 16.4.2 keeps an existing digest. Next still renders an admin page beside the layout, so its own `requireAdmin()` throws are logged with the `PM_FORBIDDEN` digest, but the layout's screen is what the visitor sees. The 17 `test.fixme` cases are gone, and `admin-protection.spec.ts` asserts `unauthenticated-error-page` (new test id on `UnauthenticatedError`) and `unauthorized-error-page`.
+- P4.7's `setUserDisabled` moved onto `adminAction` after the merge: its result is `ActionResult<null, ActionErrorCode | "SELF" | "OWNER" | "LAST_ADMIN" | "NOT_FOUND">`, the way the Rewind actions widen the code. `updateUserAdminStatus` and the rest of `actions/admin/admin-users.ts` stay on `requireAdmin()` for P11.5, so the module is not in `migratedActionFiles`.
 
 **Done when.**
 - [x] `defineAction` and `ActionResult` exist with tests, and every public and member action, the invite actions and `server-info` use them.
