@@ -2160,7 +2160,7 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 - `schema-v3.test.ts`: an extra top-level key fails, and `readWrappedStatus('queued')` returns `failed` with a warning.
 - `actions/__tests__/admin-llm-history.test.ts`: for v2 rows, the current version is the one picked by `generatedAt`; a v2 response renders; a nulled response returns `removed`.
 - `__tests__/lib/config-encryption.test.ts` covers `rewindSerialKey`. `__tests__/actions/import-plex-users.test.ts` asserts a single `findMany` for 50 users.
-- Drift check: this PR merges before P1.5's `schema-drift` job exists, so run its two commands locally against a fresh `_test` database, `prisma migrate deploy` and then `prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code`, and paste the output (no drift) into the PR. The job's first run on 2026-10-27 re-checks this migration.
+- Drift check (as merged: P1.5's `schema-drift` job now exists and checks this PR; the commands were also run locally): this PR merges before P1.5's `schema-drift` job exists, so run its two commands locally against a fresh `_test` database, `prisma migrate deploy` and then `prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code`, and paste the output (no drift) into the PR. The job's first run on 2026-10-27 re-checks this migration.
 
 **Integration.**
 - `npm run db:generate` refreshes `@/lib/generated/prisma/client`, and P0.8's key-snapshot test now runs on the parser's output.
@@ -2168,12 +2168,21 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 
 **Demo.** Restore a production `pg_dump` into the test database and run `prisma migrate deploy`. A short tsx check then parses every `PlexWrapped` row and reports zero `invalid`. The admin history page opens a v2 version again.
 
+**As merged** (later steps rely on these):
+- The migration folder is `20261026000000_rewind_2026`; it sorts after P1.2's `20261021000100_drop_user_watch_intent`, and P1.5's `schema-drift` commands were run against a fresh `_test` database: no difference.
+- Schema details 7.10 left open: `RewindGeneration.startedAt` is nullable (set when the job runs) and the model has `createdAt`; `RewindShareVisitDay` has the composite id (`shareId`, `day`); `RewindView` is unique on (`wrappedId`, `sessionKey`), so `recordRewindView` can upsert; `RewindGeneration`, `RewindShare` and `RewindShareVisitDay.day` get plain indexes for their foreign keys and the retention sweep. `Decimal` columns: `costUsd` `(10,4)`, `rewindLlmBudgetUsd` `(10,2)`.
+- `setLLMDisabled` and `updateWrappedSettings` returned the whole `Config` row to the client; they now select the non-secret columns, so neither `rewindSerialKey` nor a `Decimal` reaches the browser. `assertNoSecretKeys` also flags `serialKey`.
+- `parseStoredRewind(data: string | null)` takes the column, not the row. The legacy schema is lenient: any object without `version` is a v1 row, so P0.12's `'{}'` placeholder reads as an empty v1 Rewind, and `invalid` means not JSON, not an object, an unknown version or a v3 row that fails its schema. Parsing a legacy row drops `statistics.leaderboards`. `legacyWrappedData({ id, data })` wraps it for the v1/v2 viewer sites and logs the row id and reason. `readWrappedStatus(raw, rowId?)`.
+- `DerivedStatistics`, `PercentileResult` and the leaderboard type are also inferred from `schema-legacy.ts`; `types/wrapped.ts` only re-exports. Stored list items without a `title` are dropped, so they no longer grant a poster key.
+- `getHistoricalWrappedData` returns `{ ...header, removed: true }` or `{ ...header, removed: false, wrappedData }`, and still rebuilds v1 versions from their sections; `pickCurrentUsageId` lives in `lib/wrapped/data/history.ts`. The history test is `__tests__/actions/admin-llm-history.test.ts`.
+- The schema-v3 placeholders P2.9 replaces: `FactId = z.string()`, `ArchetypeResult = { id, runnerUp, evidence }`, `posterLineId: z.string()`.
+
 **Done when.**
-- [ ] One `rewind_2026` migration adds every model and field in design 7.10 and drops the 8 redundant indexes, and the drift check is clean.
-- [ ] Dump taken before deploy; `prisma migrate status` clean.
-- [ ] No unchecked `JSON.parse` of `PlexWrapped.data` remains outside `parse-stored.ts` and the strip transform.
-- [ ] `status` is read through the Zod enum, and the v1, v2 and v3 fixture tests pass.
-- [ ] The admin history viewer works for v2 rows, and the `WrappedData` types are declared once.
+- [x] One `rewind_2026` migration adds every model and field in design 7.10 and drops the 8 redundant indexes, and the drift check is clean.
+- [ ] Dump taken before deploy; `prisma migrate status` clean. (Owner: dump and production deploy; `migrate status` is clean on the test database.)
+- [x] No unchecked `JSON.parse` of `PlexWrapped.data` remains outside `parse-stored.ts` and the strip transform.
+- [x] `status` is read through the Zod enum, and the v1, v2 and v3 fixture tests pass.
+- [x] The admin history viewer works for v2 rows, and the `WrappedData` types are declared once.
 
 ### Step P2.2: Server and member time zones and the zone-aware year window
 
