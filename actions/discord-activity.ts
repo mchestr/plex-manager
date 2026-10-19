@@ -83,7 +83,7 @@ export interface GetStatsParams {
   endDate: string
 }
 
-export async function getDiscordCommandStats(params: GetStatsParams) {
+async function getDiscordCommandStats(params: GetStatsParams) {
   await requireAdmin()
 
   try {
@@ -103,7 +103,7 @@ export async function getDiscordCommandStats(params: GetStatsParams) {
   }
 }
 
-export async function getDiscordDailyActivity(params: GetStatsParams) {
+async function getDiscordDailyActivity(params: GetStatsParams) {
   await requireAdmin()
 
   try {
@@ -123,7 +123,7 @@ export async function getDiscordDailyActivity(params: GetStatsParams) {
   }
 }
 
-export async function getDiscordActiveUsers(params: GetStatsParams & { limit?: number }) {
+async function getDiscordActiveUsers(params: GetStatsParams & { limit?: number }) {
   await requireAdmin()
 
   try {
@@ -150,7 +150,7 @@ export async function getDiscordActiveUsers(params: GetStatsParams & { limit?: n
   }
 }
 
-export async function getDiscordSummaryStats(params: GetStatsParams) {
+async function getDiscordSummaryStats(params: GetStatsParams) {
   await requireAdmin()
 
   try {
@@ -170,7 +170,7 @@ export async function getDiscordSummaryStats(params: GetStatsParams) {
   }
 }
 
-export async function getDiscordBotStatus() {
+async function getDiscordBotStatus() {
   await requireAdmin()
 
   try {
@@ -256,7 +256,7 @@ export async function getDiscordDashboardData(params: GetStatsParams) {
   }
 }
 
-export async function getDiscordHelpStats(params: GetStatsParams) {
+async function getDiscordHelpStats(params: GetStatsParams) {
   await requireAdmin()
 
   try {
@@ -276,7 +276,7 @@ export async function getDiscordHelpStats(params: GetStatsParams) {
   }
 }
 
-export async function getDiscordLinkingMetrics(params: GetStatsParams) {
+async function getDiscordLinkingMetrics(params: GetStatsParams) {
   await requireAdmin()
 
   try {
@@ -296,7 +296,7 @@ export async function getDiscordLinkingMetrics(params: GetStatsParams) {
   }
 }
 
-export async function getDiscordMediaMarkingBreakdown(params: GetStatsParams) {
+async function getDiscordMediaMarkingBreakdown(params: GetStatsParams) {
   await requireAdmin()
 
   try {
@@ -316,7 +316,7 @@ export async function getDiscordMediaMarkingBreakdown(params: GetStatsParams) {
   }
 }
 
-export async function getDiscordContextMetrics(params: GetStatsParams) {
+async function getDiscordContextMetrics(params: GetStatsParams) {
   await requireAdmin()
 
   try {
@@ -336,7 +336,7 @@ export async function getDiscordContextMetrics(params: GetStatsParams) {
   }
 }
 
-export async function getDiscordErrorAnalysis(params: GetStatsParams) {
+async function getDiscordErrorAnalysis(params: GetStatsParams) {
   await requireAdmin()
 
   try {
@@ -356,7 +356,7 @@ export async function getDiscordErrorAnalysis(params: GetStatsParams) {
   }
 }
 
-export async function getDiscordSelectionStats(params: GetStatsParams) {
+async function getDiscordSelectionStats(params: GetStatsParams) {
   await requireAdmin()
 
   try {

@@ -441,6 +441,8 @@ export function runWithRequestContext<T>(
 /**
  * Set user ID in current request context
  * Only works on server-side (Node.js)
+ *
+ * @internal
  */
 export function setRequestUserId(userId: string): void {
   if (!requestContext) return
@@ -460,6 +462,8 @@ export function sanitizeUrlForLogging(url: string): string {
 
 /**
  * Sanitize object for logging (standalone utility)
+ *
+ * @internal
  */
 export function sanitizeForLogging(data: unknown): unknown {
   const isDev = process.env.NODE_ENV === "development"
@@ -469,6 +473,8 @@ export function sanitizeForLogging(data: unknown): unknown {
 /**
  * Get the base logger instance (for advanced use cases)
  * Returns null on client-side
+ *
+ * @internal
  */
 export function getBaseLogger() {
   return baseLogger

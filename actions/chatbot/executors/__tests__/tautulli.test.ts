@@ -14,10 +14,10 @@
 
 import { executeTautulliTool } from "../tautulli"
 import {
-  DISCORD_SAFE_TOOL_NAMES,
   DISCORD_SAFE_TOOLS,
   generateDiscordSystemPrompt,
 } from "@/actions/chatbot/tools"
+import { DISCORD_SAFE_TOOL_NAMES } from "@/actions/chatbot/tools/registry"
 import {
   findTautulliUser,
   getTautulliActivity,

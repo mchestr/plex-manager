@@ -28,6 +28,8 @@ const globalForPrisma = globalThis as unknown as {
  * encrypted. Select explicit fields for nested reads (e.g. `publicUserSelect`
  * in lib/dto/user.ts), and write secret columns only through a top-level query
  * on their own model.
+ *
+ * @internal
  */
 export const ENCRYPTED_FIELDS: Record<string, readonly string[]> = {
   User: ['plexAuthToken'],

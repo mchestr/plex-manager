@@ -205,6 +205,8 @@ export type FindTautulliUserResult =
  * matchTautulliUser(users, { plexUserId: "2" })?.user_id // 2
  * matchTautulliUser(users, { plexUserId: "9" })          // null
  * ```
+ *
+ * @internal
  */
 export function matchTautulliUser<T extends TautulliUserRow>(
   users: readonly T[],

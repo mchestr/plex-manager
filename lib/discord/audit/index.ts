@@ -5,14 +5,12 @@
  * for monitoring, analytics, and debugging purposes.
  *
  * This barrel re-exports the write path and every metric reader from their
- * focused modules under `./`. Import from here (or the `@/lib/discord/audit`
- * shim) to keep call sites stable.
+ * focused modules under `./`. Import from here to keep call sites stable.
  */
 
 export {
   createCommandLog,
   updateCommandLog,
-  logCommandExecution,
   type CreateCommandLogParams,
   type UpdateCommandLogParams,
 } from "./write"

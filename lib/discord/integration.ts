@@ -11,7 +11,7 @@ const logger = createLogger("DISCORD_INTEGRATION")
 const DISCORD_REDIRECT_PATH = "/api/discord/callback"
 const STATE_TTL_MS = 10 * 60 * 1000 // 10 minutes
 
-export function getDiscordRedirectUri(): string {
+function getDiscordRedirectUri(): string {
   return `${getBaseUrl()}${DISCORD_REDIRECT_PATH}`
 }
 

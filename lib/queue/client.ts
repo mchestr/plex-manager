@@ -40,7 +40,7 @@ let queueEvents: QueueEvents | null = null
 /**
  * Get the queue instance (creates if needed)
  */
-export function getQueue(): Queue {
+function getQueue(): Queue {
   if (!queue) {
     queue = new Queue(QUEUE_NAME, {
       connection: getRedisConnection(),
@@ -48,19 +48,6 @@ export function getQueue(): Queue {
     })
   }
   return queue
-}
-
-/**
- * Get the queue events instance (creates if needed)
- * Useful for listening to job completion/failure events
- */
-export function getQueueEvents(): QueueEvents {
-  if (!queueEvents) {
-    queueEvents = new QueueEvents(QUEUE_NAME, {
-      connection: getRedisConnection(),
-    })
-  }
-  return queueEvents
 }
 
 /**
@@ -210,35 +197,6 @@ export async function getJobs(options: {
 }
 
 /**
- * Get a single job by ID
- */
-export async function getJob(jobId: string): Promise<JobMetadata | null> {
-  const q = getQueue()
-  const job = await q.getJob(jobId)
-
-  if (!job) {
-    return null
-  }
-
-  return {
-    jobId: job.id!,
-    jobType: job.name,
-    status: (await job.getState()) as JobStatus,
-    data: job.data,
-    result: job.returnvalue,
-    error: job.failedReason,
-    attempts: job.attemptsMade,
-    maxAttempts: job.opts.attempts ?? 3,
-    createdAt: new Date(job.timestamp ?? Date.now()),
-    startedAt: job.processedOn ? new Date(job.processedOn) : undefined,
-    finishedAt: job.finishedOn ? new Date(job.finishedOn) : undefined,
-    processedOn: job.processedOn,
-    finishedOn: job.finishedOn,
-    progress: job.progress,
-  }
-}
-
-/**
  * Retry a failed job
  */
 export async function retryJob(jobId: string): Promise<void> {
@@ -292,32 +250,6 @@ export async function resumeQueue(): Promise<void> {
 export async function isQueuePaused(): Promise<boolean> {
   const q = getQueue()
   return q.isPaused()
-}
-
-/**
- * Drain the queue (remove all jobs)
- * Use with caution!
- */
-export async function drainQueue(): Promise<void> {
-  const q = getQueue()
-  await q.drain()
-  logger.warn("Queue drained - all jobs removed")
-}
-
-/**
- * Clean old jobs from the queue
- */
-export async function cleanQueue(options: {
-  grace?: number // Time in ms to keep jobs
-  limit?: number // Max jobs to remove
-  status?: "completed" | "failed"
-}): Promise<string[]> {
-  const q = getQueue()
-  const { grace = 0, limit = 1000, status = "completed" } = options
-
-  const removed = await q.clean(grace, limit, status)
-  logger.info("Queue cleaned", { removed: removed.length, status })
-  return removed
 }
 
 /**

@@ -2,17 +2,6 @@ import { parseServerUrl } from "@/lib/utils"
 import { z } from "zod"
 
 /**
- * Pagination schema for server actions
- * Used for listing endpoints that support pagination
- */
-export const paginationSchema = z.object({
-  page: z.number().int().min(1).default(1),
-  pageSize: z.number().int().min(1).max(100).default(20),
-})
-
-export type PaginationInput = z.infer<typeof paginationSchema>
-
-/**
  * Schema for days parameter (time range queries)
  * Common for analytics and historical data endpoints
  */
@@ -44,18 +33,6 @@ export const yearParamSchema = z.string().regex(/^\d{4}$/).pipe(z.coerce.number<
  * random bytes `generateShareToken` encodes.
  */
 export const shareTokenSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/)
-
-/**
- * Schema for API keys
- * Basic format validation - actual validity is tested by connection tests
- */
-export const apiKeySchema = z.string().min(10).max(500)
-
-/**
- * Schema for bulk operation IDs
- * Limits array size to prevent performance issues
- */
-export const bulkIdsSchema = z.array(z.string().min(1)).min(1).max(1000)
 
 /**
  * Schema for LLM usage ID validation

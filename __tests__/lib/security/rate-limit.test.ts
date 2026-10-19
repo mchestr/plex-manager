@@ -88,7 +88,7 @@ describe("rate-limit", () => {
 
   describe("LIMITS", () => {
     it("keeps the existing limits and adds the sign-in, invite, PIN and Rewind generation limits", async () => {
-      const { LIMITS } = await loadRateLimit()
+      const { LIMITS } = await import("@/lib/security/rate-limit-config")
 
       expect(LIMITS).toEqual({
         share: { points: 100, duration: 900 },

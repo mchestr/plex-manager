@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils"
  * viewers must pass the wrapped's share token so the proxy can authorize the
  * request without exposing the Plex token.
  */
-export function buildPosterUrl(ratingKey: string, shareToken?: string): string {
+function buildPosterUrl(ratingKey: string, shareToken?: string): string {
   const base = `/api/wrapped/poster/${ratingKey}`
   return shareToken ? `${base}?share=${encodeURIComponent(shareToken)}` : base
 }

@@ -45,7 +45,7 @@ import { clientIp, trustedProxyHops } from "@/lib/security/client-ip"
 import { LIMITS, type LimitName } from "@/lib/security/rate-limit-config"
 import { createLogger } from "@/lib/utils/logger"
 
-export { LIMITS, type LimitName }
+export { type LimitName }
 
 const logger = createLogger("RATE_LIMIT")
 

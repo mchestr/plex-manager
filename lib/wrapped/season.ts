@@ -61,7 +61,11 @@ export async function getSeasonYear(now: Date = new Date()): Promise<number> {
   return seasonYearFor(config?.wrappedGenerationStartDate ?? null, now)
 }
 
-/** The member's most recent year with a completed Rewind, or null. */
+/**
+ * The member's most recent year with a completed Rewind, or null.
+ *
+ * @internal
+ */
 export async function getLatestCompletedRewindYear(userId: string): Promise<number | null> {
   const latest = await prisma.plexWrapped.findFirst({
     where: { userId, status: "completed", year: OPENABLE_YEARS },

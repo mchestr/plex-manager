@@ -58,6 +58,8 @@ export interface StatusCounts {
  *
  * Replaces multiple paired `count({ where: { status } })` queries with a
  * single grouped query whose rows are summed client-side.
+ *
+ * @internal
  */
 export function foldStatusCounts(groups: StatusCountGroup[]): StatusCounts {
   const counts: StatusCounts = {

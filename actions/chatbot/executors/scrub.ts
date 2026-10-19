@@ -53,6 +53,8 @@ const logger = createLogger("CHATBOT_DISCORD_SCRUB")
 /**
  * Emitted (as a JSON string) whenever scrubbing cannot safely surface data.
  * Kept terse so it reads sensibly if the LLM echoes it to the user.
+ *
+ * @internal
  */
 export const DISCORD_REDACTED_MARKER = "[redacted for privacy]"
 

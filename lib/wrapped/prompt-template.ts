@@ -255,6 +255,8 @@ If a narrative's underlying data was not provided in the statistics, set that na
 /**
  * Get the default user prompt template (fallback if no template in database)
  * This should contain only the viewing statistics data, not instructions
+ *
+ * @internal
  */
 export function getDefaultPromptTemplate(): string {
   return `=== VIEWING STATISTICS FOR {{year}} ===

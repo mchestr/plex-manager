@@ -7,7 +7,6 @@
 
 // Config and wrapped settings
 export {
-  getConfig,
   setLLMDisabled,
   getWrappedSettings,
   updateWrappedSettings,

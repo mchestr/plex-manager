@@ -51,7 +51,11 @@ const DAY_NAMES = [
   "Saturday",
 ] as const
 
-/** Format an hour (0-23) as "12 AM" / "3 PM" style label */
+/**
+ * Format an hour (0-23) as "12 AM" / "3 PM" style label
+ *
+ * @internal
+ */
 export function formatHourLabel(hour: number): string {
   const period = hour < 12 ? "AM" : "PM"
   const display = hour % 12 === 0 ? 12 : hour % 12

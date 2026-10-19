@@ -392,6 +392,8 @@ export async function authenticateJellyfinUser(
 
 /**
  * Get all users from a Jellyfin server
+ *
+ * @internal
  */
 export async function getJellyfinUsers(
   config: JellyfinConfig

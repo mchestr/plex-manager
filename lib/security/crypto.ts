@@ -36,6 +36,8 @@ import crypto from "crypto"
 /**
  * Marker prepended to ciphertext so {@link decryptSecret} can distinguish
  * encrypted values from legacy plaintext. `v1` allows future format changes.
+ *
+ * @internal
  */
 export const ENCRYPTION_PREFIX = "enc:v1:"
 
@@ -62,15 +64,8 @@ function getKey(): Buffer | null {
 /**
  * Returns true if a value is already encrypted by this module.
  */
-export function isEncrypted(value: string): boolean {
+function isEncrypted(value: string): boolean {
   return value.startsWith(ENCRYPTION_PREFIX)
-}
-
-/**
- * Whether at-rest encryption is configured (ENCRYPTION_KEY is set).
- */
-export function isEncryptionConfigured(): boolean {
-  return getKey() !== null
 }
 
 /**

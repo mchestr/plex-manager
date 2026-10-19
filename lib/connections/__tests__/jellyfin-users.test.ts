@@ -8,10 +8,12 @@ import {
   createJellyfinUser,
   setJellyfinUserPolicy,
   deleteJellyfinUser,
+} from '@/lib/connections/jellyfin'
+import {
   getJellyfinUserById,
   authenticateJellyfinUser,
   getJellyfinUsers,
-} from '@/lib/connections/jellyfin'
+} from '@/lib/connections/jellyfin-users'
 import { createHash } from 'node:crypto'
 
 import { makeJellyfinServerConfig } from '../../../__tests__/utils/test-builders'

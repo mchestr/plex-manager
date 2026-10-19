@@ -62,7 +62,7 @@ let lockState: LockState = {
  * Only one instance across all pods can hold this lock at a time.
  * Uses PostgreSQL's row-level locking for atomic operations.
  */
-export async function acquireWatchlistSyncLock(): Promise<boolean> {
+async function acquireWatchlistSyncLock(): Promise<boolean> {
   if (lockState.isHeld && lockState.instanceId === INSTANCE_ID) {
     logger.debug("Lock already held by this instance")
     return true
@@ -210,7 +210,7 @@ async function renewWatchlistSyncLock(): Promise<boolean> {
 /**
  * Releases the watchlist sync lock
  */
-export async function releaseWatchlistSyncLock(): Promise<void> {
+async function releaseWatchlistSyncLock(): Promise<void> {
   if (!lockState.isHeld || lockState.instanceId !== INSTANCE_ID) {
     return
   }
@@ -247,7 +247,7 @@ export async function releaseWatchlistSyncLock(): Promise<void> {
 /**
  * Checks if this instance currently holds the lock
  */
-export function hasWatchlistSyncLock(): boolean {
+function hasWatchlistSyncLock(): boolean {
   return lockState.isHeld && lockState.instanceId === INSTANCE_ID
 }
 

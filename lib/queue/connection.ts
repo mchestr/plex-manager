@@ -15,7 +15,7 @@ let redisConnection: Redis | null = null
 /**
  * Get Redis connection options from environment
  */
-export function getRedisOptions(): RedisOptions {
+function getRedisOptions(): RedisOptions {
   return {
     maxRetriesPerRequest: null, // Required by BullMQ
     enableReadyCheck: false,
@@ -27,7 +27,7 @@ export function getRedisOptions(): RedisOptions {
  * Get the Redis URL from environment
  * @throws Error if REDIS_URL is not configured
  */
-export function getRedisUrl(): string {
+function getRedisUrl(): string {
   const url = process.env.REDIS_URL
   if (!url) {
     throw new Error("REDIS_URL environment variable is required for queue operations")

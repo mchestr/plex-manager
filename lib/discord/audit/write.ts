@@ -89,6 +89,8 @@ export async function updateCommandLog(
 /**
  * Helper to log a complete command execution in one call
  * Use this for simple commands that don't need separate start/end tracking
+ *
+ * @internal
  */
 export async function logCommandExecution(
   params: CreateCommandLogParams & {

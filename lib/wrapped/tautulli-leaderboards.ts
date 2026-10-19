@@ -22,7 +22,7 @@ const logger = createLogger("STATISTICS")
  * Fetch leaderboard stats for a specific media item (movie or show)
  * Returns all users who watched it and their stats
  */
-export async function fetchItemLeaderboard(
+async function fetchItemLeaderboard(
   config: TautulliConfig,
   ratingKey: string,
   mediaType: "movie" | "show",

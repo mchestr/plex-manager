@@ -176,22 +176,6 @@ export function isWorkerRunning(): boolean {
 }
 
 /**
- * Get worker status for monitoring
- */
-export function getWorkerStatus(): {
-  running: boolean
-  closing: boolean
-  concurrency: number
-} {
-  return {
-    running: worker !== null,
-    // worker.closing is a Promise when close is in progress, undefined otherwise
-    closing: worker?.closing !== undefined,
-    concurrency: getWorkerConcurrency(),
-  }
-}
-
-/**
  * Summarize job result for logging (avoid logging large objects)
  */
 function summarizeResult(result: unknown): unknown {

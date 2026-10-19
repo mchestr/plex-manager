@@ -48,6 +48,8 @@ export async function requireAdminAPI(
 
 /**
  * Validate year parameter from URL
+ *
+ * @internal
  */
 export function validateYear(yearParam: string | null): number {
   const currentYear = new Date().getFullYear()

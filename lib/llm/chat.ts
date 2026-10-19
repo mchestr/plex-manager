@@ -60,6 +60,7 @@ export interface ChatCompletionResponse {
   model?: string
 }
 
+/** @internal */
 export const RESPONSES_API_TOOLS_ERROR =
   "This model needs the Responses API for tools; choose gpt-6-sol, gpt-6-luna or a GPT-5 model for the assistant."
 

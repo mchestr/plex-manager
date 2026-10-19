@@ -17,6 +17,8 @@ import { Prisma } from "@/lib/generated/prisma/client"
  * Maximum number of turns retained on a session. Older entries are dropped by
  * {@link trimHistory} so the JSON blob (and the prompt fed to the LLM) stays
  * bounded.
+ *
+ * @internal
  */
 export const HISTORY_LIMIT = 12
 

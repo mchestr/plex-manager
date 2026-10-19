@@ -319,6 +319,8 @@ async function handlePaymentFailed(invoice: Stripe.Invoice): Promise<void> {
  * Re-fetches the event by id from Stripe, records a {@link StripeEvent} for
  * idempotency, and dispatches to the matching status handler. Unhandled event
  * types are recorded and ignored gracefully.
+ *
+ * @internal
  */
 export async function processStripeWebhook(
   job: Job<StripeWebhookPayload, StripeWebhookResult>
@@ -402,6 +404,8 @@ export async function processStripeWebhook(
  *
  * The final `plexInviteStatus` write is idempotent, so re-running after the user
  * already has access simply re-affirms the recorded state.
+ *
+ * @internal
  */
 export async function processPlexAccessGrant(
   job: Job<PlexAccessGrantPayload, PlexAccessGrantResult>
@@ -568,6 +572,8 @@ export function evaluateRevokeGuard(target: RevokeGuardTarget): string | null {
  *    known, unshare the user. A transient unshare failure throws to retry; a
  *    user with no `plexUserId` is already effectively unshared (idempotent).
  * 4. Record the removal on the subscription (`plexInviteStatus = "revoked"`).
+ *
+ * @internal
  */
 export async function processPlexAccessRevoke(
   job: Job<PlexAccessRevokePayload, PlexAccessRevokeResult>

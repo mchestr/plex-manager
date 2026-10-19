@@ -130,7 +130,11 @@ export function rememberPosterMiss(ratingKey: string): void {
   missCache.set(ratingKey, true)
 }
 
-/** Drops every cache behind the poster route. For tests. */
+/**
+ * Drops every cache behind the poster route. For tests.
+ *
+ * @internal
+ */
 export function clearPosterAccessCaches(): void {
   clearPosterKeyCaches()
   missCache.clear()

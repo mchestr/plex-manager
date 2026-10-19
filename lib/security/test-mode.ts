@@ -112,6 +112,8 @@ function parsePostgresUrl(url: string | undefined): ParsedDatabaseUrl {
  * assertTestDatabaseUrl('postgresql://postgres:pw@localhost:5432/plex_wrapped')
  * // => throws: ... database "plex_wrapped" ... postgresql://postgres:***@localhost:5432/plex_wrapped
  * ```
+ *
+ * @internal
  */
 export function assertTestDatabaseUrl(url: string | undefined): string {
   const target = parsePostgresUrl(url)
@@ -139,6 +141,8 @@ export function assertTestDatabaseUrl(url: string | undefined): string {
  * assertSeedTarget('postgresql://postgres:pw@localhost:5432/plex_wrapped?host=db.example.com')
  * // => throws: host "db.example.com" is neither local nor a _test database
  * ```
+ *
+ * @internal
  */
 export function assertSeedTarget(url: string | undefined): ParsedDatabaseUrl {
   const target = parsePostgresUrl(url)
@@ -173,6 +177,8 @@ export function isE2ETestMode(env: TestModeEnv = process.env): boolean {
  * resolveSeedTarget({ DATABASE_URL: 'postgresql://u:pw@localhost/plex_manager_test' })
  * // => throws: set E2E_TEST_MODE=true
  * ```
+ *
+ * @internal
  */
 export function resolveSeedTarget(env: TestModeEnv = process.env): ParsedDatabaseUrl {
   if (!isE2ETestMode(env)) {

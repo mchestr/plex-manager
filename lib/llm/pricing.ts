@@ -78,7 +78,7 @@ export const MODEL_PRICING: Record<string, { input: number; output: number; cach
  * Uses a rough approximation: ~4 characters per token (common for English text)
  * This is an approximation and actual token counts may vary
  */
-export function estimateTokens(text: string): number {
+function estimateTokens(text: string): number {
   // Rough approximation: ~4 characters per token for English text
   // Add some overhead for system messages and formatting
   return Math.ceil(text.length / 4)
@@ -152,4 +152,3 @@ export function estimateCost(
     cost,
   }
 }
-

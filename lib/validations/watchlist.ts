@@ -3,7 +3,7 @@ import { z } from "zod"
 /**
  * Schema for a watchlist item from Plex API
  */
-export const watchlistItemSchema = z.object({
+const watchlistItemSchema = z.object({
   ratingKey: z.string(),
   guid: z.string(),
   type: z.enum(["movie", "show"]),
@@ -39,7 +39,7 @@ export type GlobalWatchlistSyncSettings = z.infer<typeof globalWatchlistSyncSett
 /**
  * Schema for sync result
  */
-export const syncResultSchema = z.object({
+const syncResultSchema = z.object({
   success: z.boolean(),
   itemsSynced: z.number(),
   itemsRequested: z.number(),
@@ -49,27 +49,3 @@ export const syncResultSchema = z.object({
 })
 
 export type SyncResult = z.infer<typeof syncResultSchema>
-
-/**
- * Schema for Overseerr request payload
- */
-export const overseerrRequestPayloadSchema = z.object({
-  mediaType: z.enum(["movie", "tv"]),
-  mediaId: z.number(), // TMDB ID
-  seasons: z.array(z.number()).optional(), // For TV shows
-  is4k: z.boolean().optional(),
-})
-
-export type OverseerrRequestPayload = z.infer<typeof overseerrRequestPayloadSchema>
-
-/**
- * Schema for Overseerr request result
- */
-export const overseerrRequestResultSchema = z.object({
-  success: z.boolean(),
-  requestId: z.number().optional(),
-  error: z.string().optional(),
-  status: z.enum(["created", "already_requested", "already_available", "failed"]),
-})
-
-export type OverseerrRequestResult = z.infer<typeof overseerrRequestResultSchema>

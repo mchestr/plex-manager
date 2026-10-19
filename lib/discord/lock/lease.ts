@@ -6,9 +6,11 @@ import type { PrismaClient } from "@/lib/generated/prisma/client"
 const logger = createLogger("DISCORD_BOT_LOCK")
 
 // Lock lease duration in milliseconds (30 seconds)
+/** @internal */
 export const DEFAULT_LOCK_LEASE_DURATION_MS = 30 * 1000
 
 // The primary key of the singleton lock row.
+/** @internal */
 export const DISCORD_BOT_LOCK_ID = "discord-bot"
 
 /**
@@ -17,7 +19,7 @@ export const DISCORD_BOT_LOCK_ID = "discord-bot"
  * Shape mirrors the previous ambient-module value:
  * `${HOSTNAME}-${pid}-${random}` so operators recognize it in the DB / admin UI.
  */
-export function generateInstanceId(): string {
+function generateInstanceId(): string {
   return `${process.env.HOSTNAME || "unknown"}-${process.pid}-${randomBytes(4).toString("hex")}`
 }
 

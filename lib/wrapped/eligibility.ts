@@ -67,10 +67,18 @@ export type RewindEligibilityCheck =
   | { eligible: true; tautulliUser: TautulliUserRow | null }
   | { eligible: false; reason: RewindIneligibleReason }
 
-/** How long one member's Tautulli answer is reused. */
+/**
+ * How long one member's Tautulli answer is reused.
+ *
+ * @internal
+ */
 export const ELIGIBILITY_CACHE_MS = 10 * 60 * 1000
 
-/** How long a fail-open answer is reused while Tautulli errors or hangs. */
+/**
+ * How long a fail-open answer is reused while Tautulli errors or hangs.
+ *
+ * @internal
+ */
 export const FAIL_OPEN_CACHE_MS = 60 * 1000
 
 const ELIGIBLE: RewindEligibility = { eligible: true }

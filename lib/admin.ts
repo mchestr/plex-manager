@@ -3,6 +3,8 @@ import { authOptions } from "@/lib/auth"
 
 /**
  * Custom error class for unauthorized admin access
+ *
+ * @internal
  */
 export class UnauthorizedAdminError extends Error {
   constructor(message: string = "Admin access required") {
@@ -13,6 +15,8 @@ export class UnauthorizedAdminError extends Error {
 
 /**
  * Custom error class for unauthenticated access
+ *
+ * @internal
  */
 export class UnauthenticatedError extends Error {
   constructor(message: string = "Authentication required") {
@@ -44,6 +48,8 @@ export async function requireAdmin() {
 /**
  * Server-side helper to get admin status without redirecting
  * Returns null if not authenticated, false if not admin, true if admin
+ *
+ * @internal
  */
 export async function getAdminStatus(): Promise<boolean | null> {
   const session = await getServerSession(authOptions)
@@ -54,4 +60,3 @@ export async function getAdminStatus(): Promise<boolean | null> {
 
   return session.user.isAdmin
 }
-

@@ -44,7 +44,11 @@ import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("REWIND_CLAIM")
 
-/** How long a claim holds without a write before another run may take it over. */
+/**
+ * How long a claim holds without a write before another run may take it over.
+ *
+ * @internal
+ */
 export const STALE_CLAIM_MS = 15 * 60 * 1000
 
 /** A held claim: the row and the time that identifies this run. */

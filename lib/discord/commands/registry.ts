@@ -140,5 +140,3 @@ export function getCommand(name: string): SlashCommand | undefined {
 export function getComponentHandler(customId: string): ComponentHandler | undefined {
   return COMPONENT_HANDLERS.find((handler) => customId.startsWith(handler.customIdPrefix))
 }
-
-export { SlashCommandBuilder }

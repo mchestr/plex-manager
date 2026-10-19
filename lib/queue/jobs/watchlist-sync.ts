@@ -20,7 +20,7 @@ const logger = createLogger("WATCHLIST_SYNC_JOB")
 /**
  * Process a single user watchlist sync
  */
-export async function processWatchlistSyncUser(
+async function processWatchlistSyncUser(
   job: Job<WatchlistSyncUserPayload, WatchlistSyncUserResult>
 ): Promise<WatchlistSyncUserResult> {
   const { userId, triggeredBy, triggeredByUserId } = job.data
@@ -61,7 +61,7 @@ export async function processWatchlistSyncUser(
 /**
  * Process batch watchlist sync for all enabled users
  */
-export async function processWatchlistSyncAll(
+async function processWatchlistSyncAll(
   job: Job<WatchlistSyncAllPayload, WatchlistSyncAllResult>
 ): Promise<WatchlistSyncAllResult> {
   const { triggeredBy, triggeredByUserId } = job.data

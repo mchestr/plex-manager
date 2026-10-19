@@ -26,7 +26,7 @@
 
 import { z } from "zod"
 
-export const REWIND_ERROR_CODES = ["TAUTULLI_USER_NOT_FOUND", "GENERATION_FAILED"] as const
+const REWIND_ERROR_CODES = ["TAUTULLI_USER_NOT_FOUND", "GENERATION_FAILED"] as const
 
 export type RewindErrorCode = (typeof REWIND_ERROR_CODES)[number]
 
@@ -113,7 +113,7 @@ export function adminErrorHint(
  * for a member who cannot have a Rewind (FR-48, RWP-08). They are returned to
  * the caller and never stored.
  */
-export const GENERATION_REFUSAL_CODES = [
+const GENERATION_REFUSAL_CODES = [
   "ALREADY_GENERATING",
   "RATE_LIMITED",
   "NOT_ENTITLED",

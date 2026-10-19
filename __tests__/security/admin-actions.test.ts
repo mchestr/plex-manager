@@ -6,7 +6,6 @@
 import { requireAdmin } from '@/lib/admin'
 import {
   setLLMDisabled,
-  getConfig,
   getLLMUsageRecords,
   getLLMUsageById,
   getLLMUsageStats,
@@ -14,6 +13,7 @@ import {
   getHistoricalWrappedVersions,
   getHistoricalWrappedData,
 } from '@/actions/admin'
+import { getConfig } from '@/actions/admin/admin-config'
 import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { redirect } from 'next/navigation'

@@ -127,6 +127,8 @@ function replaceStrings(node: unknown, replace: (text: string) => string): boole
  * )
  * // { status: "changed", data: '{"userName":"Mike","statistics":{"moviesWatched":3}}' }
  * ```
+ *
+ * @internal
  */
 export function stripStoredRewind(data: string, owner: RewindOwner): StrippedRewind {
   let parsed: unknown
@@ -152,7 +154,11 @@ export function stripStoredRewind(data: string, owner: RewindOwner): StrippedRew
   return changed ? { status: "changed", data: JSON.stringify(parsed) } : { status: "unchanged" }
 }
 
-/** Replace the owner's addresses in the `PlexWrapped.summary` column. */
+/**
+ * Replace the owner's addresses in the `PlexWrapped.summary` column.
+ *
+ * @internal
+ */
 export function scrubOwnerEmail(text: string | null, owner: RewindOwner): string | null {
   const replaceEmail = ownerEmailReplacer(owner)
   return text === null || !replaceEmail ? text : replaceEmail(text)

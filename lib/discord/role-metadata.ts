@@ -46,11 +46,15 @@ const logger = createLogger("DISCORD_ROLE_METADATA")
  * `scripts/register-discord-metadata.ts`. This used to be configurable via a
  * `DiscordIntegration.metadataKey` column, but that column was removed; the key
  * is now a constant that must match the registered schema.
+ *
+ * @internal
  */
 export const IS_SUBSCRIBED_KEY = "is_subscribed"
 
 /**
  * Registered Discord metadata key for total watched hours (current year).
+ *
+ * @internal
  */
 export const WATCHED_HOURS_KEY = "watched_hours"
 
