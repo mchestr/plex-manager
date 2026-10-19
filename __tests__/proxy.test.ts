@@ -22,13 +22,15 @@ import { mockReset } from 'jest-mock-extended'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 const mockLogError = jest.fn()
+const mockLogDebug = jest.fn()
+const mockLogInfo = jest.fn()
 
-// Keep the request context helpers; silence the per-request log line.
+// Keep the request context helpers; record the per-request log line.
 jest.mock('@/lib/utils/logger', () => ({
   ...jest.requireActual('@/lib/utils/logger'),
   createLogger: () => ({
-    debug: jest.fn(),
-    info: jest.fn(),
+    debug: (...args: unknown[]) => mockLogDebug(...args),
+    info: (...args: unknown[]) => mockLogInfo(...args),
     warn: jest.fn(),
     error: (...args: unknown[]) => mockLogError(...args),
   }),
@@ -184,5 +186,33 @@ describe('proxy /wrapped/share/<token> status (P0.11)', () => {
 
     expectPassedThrough(await proxy(request(`/wrapped/share/${TOKEN}`)))
     expect(mockLogError).toHaveBeenCalledWith('Share token lookup failed', error)
+  })
+})
+
+describe('proxy request log (P4.16)', () => {
+  it('logs the method, the masked pathname and allow-listed query keys at debug', async () => {
+    await proxy(
+      request(`/wrapped/share/${TOKEN}?year=2026&tab=stats&code=oauth-code&state=oauth-state`, {
+        'x-forwarded-for': '203.0.113.7',
+      })
+    )
+
+    expect(mockLogInfo).not.toHaveBeenCalled()
+    expect(mockLogDebug).toHaveBeenCalledTimes(1)
+    const [message, metadata] = mockLogDebug.mock.calls[0]
+    expect(message).toBe('Incoming request')
+    expect(metadata).toEqual({
+      method: 'GET',
+      pathname: '/wrapped/share/[masked]',
+      query: { year: '2026', tab: 'stats' },
+    })
+    expect(metadata).not.toHaveProperty('searchParams')
+    expect(JSON.stringify(metadata)).not.toMatch(/203\.0\.113|oauth-|Kf-qkQ/)
+  })
+
+  it('masks the invite code and leaves out the query when no key is allowed', async () => {
+    await proxy(request('/invite/ABCD2345?inviteCode=ABCD2345'))
+
+    expect(mockLogDebug).toHaveBeenCalledWith('Incoming request', { method: 'GET', pathname: '/invite/[masked]' })
   })
 })

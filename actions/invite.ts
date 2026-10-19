@@ -339,7 +339,7 @@ async function validateAndUseInvite(
     if (isTransactionConflict(error)) {
       throw error
     }
-    logger.error("Error validating and using invite", error, { code })
+    logger.error("Error validating and using invite", error, { inviteCodePrefix: code.slice(0, 2) })
     return { success: false, code: "INTERNAL", error: "Failed to process invite" }
   }
 }
@@ -666,7 +666,7 @@ async function redeemPlexInvite(code: string, plexAuthToken: string): Promise<Ac
         onConflict: (attempt) => {
           // Log transaction conflict for monitoring/alerting
           logAuditEvent(AuditEventType.INVITE_TRANSACTION_CONFLICT, "system", {
-            inviteCode: code,
+            inviteCodePrefix: code.slice(0, 2),
             plexUserEmail: plexUser.email,
             attempt,
           })
@@ -681,7 +681,7 @@ async function redeemPlexInvite(code: string, plexAuthToken: string): Promise<Ac
     // Audit log that the invite was consumed
     logAuditEvent(AuditEventType.INVITE_CONSUMED, "system", {
       inviteId: invite.id,
-      inviteCode: invite.code,
+      inviteCodePrefix: invite.code.slice(0, 2),
       plexUserEmail: plexUser.email,
     })
 
@@ -957,7 +957,7 @@ async function redeemJellyfinInvite(
       {
         onConflict: (attempt) => {
           logAuditEvent(AuditEventType.INVITE_TRANSACTION_CONFLICT, "system", {
-            inviteCode: code,
+            inviteCodePrefix: code.slice(0, 2),
             jellyfinUsername: username,
             attempt,
           })
@@ -973,7 +973,7 @@ async function redeemJellyfinInvite(
     // Audit log that the invite was consumed
     logAuditEvent(AuditEventType.INVITE_CONSUMED, "system", {
       inviteId: invite.id,
-      inviteCode: invite.code,
+      inviteCodePrefix: invite.code.slice(0, 2),
       serverType: "JELLYFIN",
       jellyfinUsername: username,
     })

@@ -124,10 +124,10 @@ describe('sanitizeUrlForLogging', () => {
     jest.replaceProperty(process.env, 'NODE_ENV', originalEnv)
   })
 
-  it('should return URL as-is in development', () => {
+  it('should redact in development too (P4.16)', () => {
     jest.replaceProperty(process.env, 'NODE_ENV', 'development')
     const url = 'https://example.com/api?token=secret123&key=value'
-    expect(sanitizeUrlForLogging(url)).toBe(url)
+    expect(sanitizeUrlForLogging(url)).toBe('https://example.com/api?token=[REDACTED]&key=[REDACTED]')
   })
 
   it('should redact token parameter in production', () => {
@@ -185,8 +185,7 @@ describe('sanitizeUrlForLogging', () => {
     jest.replaceProperty(process.env, 'NODE_ENV', 'production')
     const url = 'invalid-url?token=secret'
     const result = sanitizeUrlForLogging(url)
-    expect(result).toContain('[REDACTED_PARAMS]')
-    expect(result).not.toContain('secret')
+    expect(result).toBe('invalid-url?token=[REDACTED]')
   })
 
   it('should handle empty string', () => {
@@ -245,9 +244,9 @@ describe('sanitizeForLogging', () => {
     expect(sanitizeForLogging('user@example.com')).toBe('[REDACTED_EMAIL]')
   })
 
-  it('should preserve email addresses in development', () => {
+  it('should redact email addresses in development too (P4.16)', () => {
     jest.replaceProperty(process.env, 'NODE_ENV', 'development')
-    expect(sanitizeForLogging('user@example.com')).toBe('user@example.com')
+    expect(sanitizeForLogging('user@example.com')).toBe('[REDACTED_EMAIL]')
   })
 
   it('should sanitize objects with sensitive fields', () => {
@@ -331,23 +330,21 @@ describe('sanitizeForLogging', () => {
     expect(result.passwordHash).toBe('[REDACTED]')
   })
 
-  it('should preserve sensitive fields in development', () => {
+  it('should redact sensitive fields in development too (P4.16)', () => {
     jest.replaceProperty(process.env, 'NODE_ENV', 'development')
     const obj = {
       token: 'secret123',
       password: 'pass456',
     }
     const result = sanitizeForLogging(obj) as Record<string, unknown>
-    expect(result.token).toBe('secret123')
-    expect(result.password).toBe('pass456')
+    expect(result.token).toBe('[REDACTED]')
+    expect(result.password).toBe('[REDACTED]')
   })
 
-  it('should handle circular references by causing stack overflow', () => {
-    const obj: any = { name: 'test' }
+  it('should print a circular reference as [Circular]', () => {
+    const obj: Record<string, unknown> = { name: 'test' }
     obj.self = obj
-    // Current implementation doesn't handle circular references - it will throw
-    // This documents the current behavior rather than ideal behavior
-    expect(() => sanitizeForLogging(obj)).toThrow()
+    expect(sanitizeForLogging(obj)).toEqual({ name: 'test', self: '[Circular]' })
   })
 
   it('should handle objects with null prototype', () => {
