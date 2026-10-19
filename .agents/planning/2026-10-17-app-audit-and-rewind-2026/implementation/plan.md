@@ -4544,9 +4544,11 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 - Ask for a long answer, and it arrives as split messages.
 
 **Done when.**
-- [ ] The unscoped activity fallback is gone, and unmapped callers get an empty session list.
-- [ ] Executor exceptions and error JSON pass through `scrubForDiscord` in the Discord context.
-- [ ] Replies are split or truncated at 2,000 characters on both paths.
+- [x] The unscoped activity fallback is gone, and unmapped callers get an empty session list.
+- [x] Executor exceptions and error JSON pass through `scrubForDiscord` in the Discord context.
+- [x] Replies are split or truncated at 2,000 characters on both paths.
+
+(As merged: P4.19 landed before P4.20 and does not touch `lib/discord/services.ts`; P4.20 adds its limits there without rebasing on it. The 600-token cap is `DISCORD_MAX_OUTPUT_TOKENS` in `lib/chatbot/assistant.ts`, passed as `maxOutputTokens` through `runConversationLoop` (one config field and one call argument in `actions/chatbot/conversation.ts`) to `chatWithTools`, which uses the smaller of it and the provider row's `maxTokens`. In the Discord context an executor's error result (an `"Error..."` string, a non-null top-level `error`, or `success: false`) is replaced by the fixed text before the scrubber rather than projected by it, and a mapped caller's activity is `{ session_count, sessions, scope: "caller" }` without the server-wide activity fields; `scope` is allowlisted. The admin context's thrown-executor text is "Error: tool execution failed (TOOL_EXECUTION_FAILED)." `fitDiscordContent` also splits on single line breaks between paragraphs and sentences.)
 
 ### Step P4.20: LLM quotas and spend caps for the assistant and Discord
 

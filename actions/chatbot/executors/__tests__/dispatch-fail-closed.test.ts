@@ -146,6 +146,16 @@ describe("executeToolCall - tool failures never leak error text (SEC-50)", () =>
     expect(result).not.toContain("apikey")
   })
 
+  it("still scrubs a successful result that carries a null error field", async () => {
+    mockExecuteTautulliTool.mockResolvedValue(
+      JSON.stringify({ error: null, response: { data: { tautulli_version: "2.13.4", user_id: 42 } } })
+    )
+
+    const result = await executeToolCall(toolCall(SAFE_TOOL), "user-1", "discord")
+
+    expect(JSON.parse(result)).toEqual({ response: { data: { tautulli_version: "2.13.4" } } })
+  })
+
   it("returns a code-only message, never the error text, when an executor throws in the admin context", async () => {
     mockExecuteTautulliTool.mockRejectedValue(new Error(LEAKY))
 

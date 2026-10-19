@@ -31,14 +31,15 @@ const TOOL_EXECUTION_FAILED = "Error: tool execution failed (TOOL_EXECUTION_FAIL
 
 /**
  * True when an executor's output is an error: an `"Error..."` string, or JSON
- * with a top-level `error` or `success: false`.
+ * with a non-null top-level `error` or `success: false`.
  */
 function isToolError(output: string): boolean {
   if (output.startsWith("Error")) return true
   try {
     const parsed: unknown = JSON.parse(output)
     if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return false
-    return "error" in parsed || ("success" in parsed && parsed.success === false)
+    const { error, success } = parsed as { error?: unknown; success?: unknown }
+    return (error !== undefined && error !== null) || success === false
   } catch {
     return false
   }
