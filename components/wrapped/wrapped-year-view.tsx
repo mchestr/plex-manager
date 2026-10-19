@@ -161,7 +161,7 @@ export function WrappedYearView({ userId, year, wrapped, wrappedData, seasonYear
         {year === seasonYear ? (
           <>
             <p className="text-slate-400 mb-6">You haven&apos;t generated your {year} Plex Wrapped yet.</p>
-            <Link href="/" className={primaryLinkClass}>
+            <Link href="/" data-testid="wrapped-generate-link" className={primaryLinkClass}>
               Generate Your Wrapped
             </Link>
           </>

@@ -4,6 +4,7 @@
  * Core orchestration for syncing Plex watchlists to Overseerr requests
  */
 
+import { entitledUserWhere } from "@/lib/access"
 import { submitOverseerrRequest } from "@/lib/connections/overseerr"
 import { MediaType, WatchlistSyncStatus } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
@@ -285,6 +286,11 @@ async function updateSyncSettings(
 /**
  * Sync all users who have sync enabled and are due for a sync
  * Called by the background job
+ *
+ * With Stripe gating on, only entitled members are selected (admin, exempt,
+ * or an ACTIVE or PAST_DUE subscription; never a disabled user), so a lapsed
+ * member's watchlist files no requests (SEC-28). The rest are counted and
+ * logged as skipped.
  */
 export async function syncAllEnabledUsers(): Promise<{
   usersProcessed: number
@@ -297,21 +303,31 @@ export async function syncAllEnabledUsers(): Promise<{
     // Get global sync interval
     const config = await prisma.config.findUnique({
       where: { id: "config" },
-      select: { watchlistSyncIntervalMinutes: true },
+      select: { watchlistSyncIntervalMinutes: true, stripeEnabled: true },
     })
     const intervalMinutes = config?.watchlistSyncIntervalMinutes ?? 60
+    const entitled = entitledUserWhere(config?.stripeEnabled ?? false)
 
     // Find users who need to be synced
     const cutoffTime = new Date(Date.now() - intervalMinutes * 60 * 1000)
+    const due = {
+      syncEnabled: true,
+      OR: [{ lastSyncAt: null }, { lastSyncAt: { lt: cutoffTime } }],
+    }
 
     const usersToSync = await prisma.watchlistSyncSettings.findMany({
-      where: {
-        syncEnabled: true,
-        OR: [{ lastSyncAt: null }, { lastSyncAt: { lt: cutoffTime } }],
-      },
+      where: { ...due, user: entitled },
       select: { userId: true },
       take: 50, // Limit batch size
     })
+
+    // Only for the log, so a failed count never stops the batch
+    const skipped = await prisma.watchlistSyncSettings
+      .count({ where: { ...due, user: { NOT: entitled } } })
+      .catch(() => 0)
+    if (skipped > 0) {
+      logger.info("Batch watchlist sync skipped users", { skipped, reason: "NOT_ENTITLED" })
+    }
 
     logger.info("Starting batch watchlist sync", {
       usersToSync: usersToSync.length,

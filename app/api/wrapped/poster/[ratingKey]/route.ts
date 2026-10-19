@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth"
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 
-import { parseRouteParams, parseSearchParams } from "@/lib/actions/route"
+import { parseRouteParams, parseSearchParams, requireEntitlement } from "@/lib/actions/route"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { createSafeError, ErrorCode, getStatusCode, logError } from "@/lib/security/error-handler"
@@ -126,7 +126,8 @@ async function fetchPoster(
  *   library section shared with the viewer); anything else is a 404. Their
  *   responses are `private`.
  * - **Signed-out requests** need a share token covering the key (401
- *   otherwise). Their responses are `public` with `X-Robots-Tag: noindex`.
+ *   otherwise). A session below `read` entitlement is treated as signed out,
+ *   with a 403 `NOT_ENTITLED` when it brings no share token. Their responses are `public` with `X-Robots-Tag: noindex`.
  * - **Upstream calls** (the access lookups, then the poster) share one 3 s
  *   deadline, bodies included.
  * - **Misses** (Plex 404, timeout, network error, or a denied key) are 404s
@@ -152,7 +153,19 @@ export async function GET(
     if (!query.ok) return query.response
     const shareToken = query.data.share ?? null
 
-    const session = await getServerSession(authOptions)
+    let session = await getServerSession(authOptions)
+    if (session) {
+      // A lapsed member keeps their own Rewind's posters (FR-51). A member
+      // without even that is answered as signed out: a covering share link is
+      // public, so it still works.
+      const entitled = await requireEntitlement(session, "read", {
+        headers: { "Cache-Control": ERROR_CACHE_CONTROL },
+      })
+      if (!entitled.ok) {
+        if (!shareToken) return entitled.response
+        session = null
+      }
+    }
     if (!session) {
       const allowed = shareToken
         ? await shareTokenAllowsRatingKey(shareToken, ratingKey)

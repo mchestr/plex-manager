@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto"
 
+import { getAccessLevel, type AccessLevel } from "@/lib/access"
 import { checkUserServerAccess, getPlexUserInfo } from "@/lib/connections/plex"
 import { getEnv, usesSecureCookies } from "@/lib/env"
 import { authenticateJellyfin } from "@/lib/jellyfin-auth"
@@ -22,6 +23,21 @@ const logger = createLogger("AUTH")
  * DB load (only one query per user per interval).
  */
 const ADMIN_RECHECK_INTERVAL_MS = 5 * 60 * 1000
+
+/**
+ * The member's access level for the session token's `accessLevel` claim, which
+ * `proxy.ts` reads to keep lapsed members on the read-only Rewind pages
+ * (P4.5). `undefined` when the read fails: the proxy then decides nothing and
+ * the `(app)` layout's own check still runs.
+ */
+async function readAccessLevel(userId: string): Promise<AccessLevel | undefined> {
+  try {
+    return await getAccessLevel(userId)
+  } catch (error) {
+    logger.warn("Failed to read the access level for the session token", { userId, error })
+    return undefined
+  }
+}
 
 /**
  * The `auth:jellyfin:user` subject for a submitted username.
@@ -433,6 +449,7 @@ export const authOptions: NextAuthOptions = {
         token.picture = user.image
         token.isAdmin = user.isAdmin || false
         token.sv = user.sessionVersion
+        token.accessLevel = await readAccessLevel(user.id)
         token.checkedAt = Date.now()
         return token
       }
@@ -486,6 +503,7 @@ export const authOptions: NextAuthOptions = {
         })
       }
       token.isAdmin = dbUser.isAdmin
+      token.accessLevel = (await readAccessLevel(userId)) ?? token.accessLevel
       token.checkedAt = Date.now()
       return token
     },

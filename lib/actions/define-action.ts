@@ -7,6 +7,7 @@
  * ```
  * call(input)
  *   -> guard        public | member | admin   (UNAUTHENTICATED, FORBIDDEN)
+ *   -> entitlement  member: full | read       (NOT_ENTITLED)
  *   -> safeParse    the input schema          (VALIDATION + fieldErrors)
  *   -> consume()    the optional named limit  (RATE_LIMITED + retryAfterSec)
  *   -> handler      returns ok(data) or fail(code, message)
@@ -39,6 +40,7 @@ import { getServerSession, type Session } from "next-auth"
 import { unstable_rethrow } from "next/navigation"
 import { z } from "zod"
 
+import { hasEntitlement, NOT_ENTITLED_MESSAGE, type Entitlement } from "@/lib/actions/entitlement"
 import { fail, toActionError, type ActionErrorCode, type ActionResult } from "@/lib/actions/result"
 import { authOptions } from "@/lib/auth"
 import { actionClientIp, consume, type LimitName } from "@/lib/security/rate-limit"
@@ -59,6 +61,11 @@ interface RateLimitOption {
 
 interface Definition<A extends AuthLevel, S extends z.ZodType | undefined, T, C extends string> {
   auth: A
+  /**
+   * Member actions only: `full` needs an active membership, `read` also lets a
+   * lapsed member through (FR-51). With Stripe gating off, every enabled user passes.
+   */
+  entitlement?: Entitlement
   input?: S
   rateLimit?: RateLimitOption
   /** Copy returned when the handler throws. */
@@ -79,7 +86,8 @@ type Action<S extends z.ZodType | undefined, T, C extends string> = S extends z.
 const DEFAULT_FALLBACK = "Something went wrong. Please try again."
 
 async function guard<A extends AuthLevel>(
-  auth: A
+  auth: A,
+  entitlement: Entitlement | undefined
 ): Promise<{ ok: true; ctx: ActionContext<A> } | { ok: false; result: ActionResult<never> }> {
   const session = await getServerSession(authOptions)
   if (auth === "public") {
@@ -90,6 +98,9 @@ async function guard<A extends AuthLevel>(
   }
   if (auth === "admin" && !session.user.isAdmin) {
     return { ok: false, result: fail("FORBIDDEN", "Admins only.") }
+  }
+  if (entitlement && !(await hasEntitlement(session.user.id, entitlement))) {
+    return { ok: false, result: fail("NOT_ENTITLED", NOT_ENTITLED_MESSAGE) }
   }
   return { ok: true, ctx: { session, userId: session.user.id } as ActionContext<A> }
 }
@@ -109,7 +120,7 @@ export function defineAction<
 >(def: Definition<A, S, T, C>): Action<S, T, C> {
   const action = async (raw?: unknown): Promise<ActionResult<T, C | ActionErrorCode>> => {
     try {
-      const guarded = await guard(def.auth)
+      const guarded = await guard(def.auth, def.entitlement)
       if (!guarded.ok) return guarded.result
 
       let input: unknown = undefined
@@ -145,7 +156,7 @@ export function defineAction<
 
 type AliasDefinition<A extends AuthLevel, S extends z.ZodType | undefined, T, C extends string> = Omit<
   Definition<A, S, T, C>,
-  "auth"
+  "auth" | "entitlement"
 >
 
 /** An action anyone may call; `ctx.session` may be null. */
@@ -155,9 +166,12 @@ export function publicAction<T, S extends z.ZodType | undefined = undefined, C e
   return defineAction({ ...def, auth: "public" })
 }
 
-/** An action for a signed-in user; refuses with `UNAUTHENTICATED` otherwise. */
+/**
+ * An action for a signed-in user; refuses with `UNAUTHENTICATED` otherwise, and
+ * with `NOT_ENTITLED` when `entitlement` is set and the member falls short.
+ */
 export function memberAction<T, S extends z.ZodType | undefined = undefined, C extends string = ActionErrorCode>(
-  def: AliasDefinition<"member", S, T, C>
+  def: AliasDefinition<"member", S, T, C> & Pick<Definition<"member", S, T, C>, "entitlement">
 ): Action<S, T, C> {
   return defineAction({ ...def, auth: "member" })
 }

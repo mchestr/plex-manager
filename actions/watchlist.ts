@@ -5,14 +5,17 @@ import { createLogger } from "@/lib/utils/logger"
 import { updateWatchlistSyncSettingsSchema } from "@/lib/validations/watchlist"
 import { syncUserWatchlist } from "@/lib/watchlist/sync-service"
 import { memberAction } from "@/lib/actions/define-action"
+import { hasEntitlement, NOT_ENTITLED_MESSAGE } from "@/lib/actions/entitlement"
 import { fail, ok, type ActionResult } from "@/lib/actions/result"
 
 const logger = createLogger("WATCHLIST_ACTIONS")
 
 /**
- * Get current user's watchlist sync settings and status
+ * Get current user's watchlist sync settings, status and recent history.
+ * A lapsed member may still read them (`read`).
  */
 export const getWatchlistSyncSettings = memberAction({
+  entitlement: "read",
   fallbackError: "Failed to fetch settings",
   handler: async (_input, { userId }) => {
     // Get user's Plex auth token status and sync settings
@@ -90,8 +93,12 @@ export const updateWatchlistSyncSettings = memberAction({
   input: updateWatchlistSyncSettingsSchema,
   fallbackError: "Failed to update settings",
   handler: async (settings, { userId }) => {
-    // Check prerequisites if enabling
+    // Check prerequisites if enabling; turning sync off needs no membership
     if (settings.syncEnabled) {
+      if (!(await hasEntitlement(userId, "full"))) {
+        return fail("NOT_ENTITLED", NOT_ENTITLED_MESSAGE)
+      }
+
       const user = await prisma.user.findUnique({
         where: { id: userId },
         select: { plexAuthToken: true },
@@ -145,6 +152,7 @@ export type TriggerWatchlistSyncData =
  * Uses the job queue if Redis is configured, otherwise falls back to direct execution
  */
 export const triggerWatchlistSync = memberAction({
+  entitlement: "full",
   fallbackError: "Failed to trigger sync",
   handler: async (_input, { userId }): Promise<ActionResult<TriggerWatchlistSyncData>> => {
     // Check if sync is enabled for user

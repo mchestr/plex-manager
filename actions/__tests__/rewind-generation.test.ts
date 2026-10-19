@@ -14,7 +14,7 @@ import { getServerSession } from 'next-auth'
 import { getWrappedSettings } from '@/actions/admin'
 import { adminRegenerateRewind, getRewindStatus, requestRewindGeneration } from '@/actions/rewind-generation'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
-import { getAccessGateStatus } from '@/lib/access'
+import { hasEntitlement } from '@/lib/actions/entitlement'
 import { getRewindQueue } from '@/lib/queue/rewind-producers'
 import { checkRewindInfra } from '@/lib/queue/rewind-infra'
 import { consume, reward } from '@/lib/security/rate-limit'
@@ -25,7 +25,10 @@ jest.mock('next-auth', () => ({ getServerSession: jest.fn() }))
 jest.mock('@/lib/auth', () => ({ authOptions: {} }))
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 jest.mock('@/actions/admin', () => ({ getWrappedSettings: jest.fn() }))
-jest.mock('@/lib/access', () => ({ getAccessGateStatus: jest.fn() }))
+jest.mock('@/lib/actions/entitlement', () => ({
+  ...jest.requireActual('@/lib/actions/entitlement'),
+  hasEntitlement: jest.fn(),
+}))
 jest.mock('@/lib/queue/rewind-producers', () => ({ getRewindQueue: jest.fn() }))
 jest.mock('@/lib/queue/rewind-infra', () => ({ checkRewindInfra: jest.fn() }))
 jest.mock('@/lib/security/rate-limit', () => ({ consume: jest.fn(), reward: jest.fn() }))
@@ -60,7 +63,7 @@ beforeEach(() => {
   jest.clearAllMocks()
   signIn('user-1')
   settings.mockResolvedValue({ featureEnabled: true, seasonOpen: true, wrappedEnabled: true, wrappedYear: 2026 })
-  jest.mocked(getAccessGateStatus).mockResolvedValue(true)
+  jest.mocked(hasEntitlement).mockResolvedValue(true)
   jest.mocked(checkRewindEligibility).mockResolvedValue({ eligible: true, tautulliUser: null })
   jest.mocked(consume).mockResolvedValue({ ok: true } as never)
   infra.mockResolvedValue({ ok: true })
@@ -196,10 +199,11 @@ describe('requestRewindGeneration', () => {
     expect(await requestRewindGeneration({ year: 2026 })).toMatchObject({ success: false, code: 'UNAUTHENTICATED' })
   })
 
-  it('refuses a member who is not entitled', async () => {
-    jest.mocked(getAccessGateStatus).mockResolvedValue(false)
+  it('refuses a member who is not entitled, through the helper\'s full entitlement', async () => {
+    jest.mocked(hasEntitlement).mockResolvedValue(false)
 
     expect(await requestRewindGeneration({ year: 2026 })).toMatchObject({ success: false, code: 'NOT_ENTITLED' })
+    expect(hasEntitlement).toHaveBeenCalledWith('user-1', 'full')
     expect(writes()).toBe(0)
   })
 

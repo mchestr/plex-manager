@@ -1,4 +1,4 @@
-import { parseSearchParams } from "@/lib/actions/route"
+import { parseSearchParams, requireEntitlement } from "@/lib/actions/route"
 import { authOptions } from "@/lib/auth"
 import { createDiscordAuthorizationUrl } from "@/lib/discord/integration"
 import { consume } from "@/lib/security/rate-limit"
@@ -19,6 +19,10 @@ export async function GET(request: NextRequest) {
   if (!session?.user?.id) {
     return NextResponse.redirect(new URL("/", request.url))
   }
+
+  // Linking grants the member's Discord role, so it needs an active membership
+  const entitled = await requireEntitlement(session, "full", { redirectFrom: request.url })
+  if (!entitled.ok) return entitled.response
 
   // Each attempt writes a DiscordOAuthState row, so the per-user
   // `discord-link` limit caps how fast one user can spam the link flow.

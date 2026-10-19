@@ -1,4 +1,10 @@
+import type { Browser, BrowserContext } from '@playwright/test';
+
+import { generateMockWrappedData } from '../lib/wrapped/mock-data';
 import { expect, test, TEST_USERS } from './fixtures/auth';
+import { signInAs } from './fixtures/session';
+import { createE2EPrismaClient } from './helpers/prisma';
+import { REWIND_STATISTICS } from './helpers/seed-fixtures';
 import { WAIT_TIMEOUTS, waitForAdminContent } from './helpers/test-utils';
 import {
   makeUserGatedNonMember,
@@ -69,6 +75,113 @@ test.describe('Stripe subscription gate & admin visibility', () => {
       // Admins bypass the gate (FR-7): they stay in the app, not on /subscribe.
       await adminPage.waitForLoadState('networkidle');
       expect(adminPage.url()).not.toContain('/subscribe');
+    });
+  });
+
+  // P4.5 (SEC-28, FR-51): a canceled member with a completed Rewind keeps the
+  // read-only Rewind pages and nothing else, on full loads and on client-side
+  // navigation alike. A member of its own, so the seeded users stay members.
+  test.describe('Lapsed member (Stripe enabled, canceled, completed Rewind)', () => {
+    const memberId = `p45-lapsed-member-${Date.now()}`;
+    // The seeded season runs all year, so the season year is this year. The
+    // member's Rewind is last year's, so the season year shows "No Wrapped
+    // Found" with its in-app link home
+    const seasonYear = new Date().getFullYear();
+    const rewindYear = seasonYear - 1;
+    let context: BrowserContext;
+
+    test.beforeAll(async () => {
+      const prisma = createE2EPrismaClient();
+      try {
+        await prisma.user.create({
+          data: {
+            id: memberId,
+            name: 'Lapsed Member',
+            email: `${memberId}@example.com`,
+            primaryAuthService: 'plex',
+            onboardingStatus: { plex: true, jellyfin: false },
+            subscription: { create: { status: 'CANCELED', stripeCustomerId: `cus_${memberId}` } },
+            plexWrapped: {
+              create: {
+                year: rewindYear,
+                status: 'completed',
+                data: JSON.stringify(
+                  generateMockWrappedData({
+                    promptName: 'Lapsed Member',
+                    displayName: 'Lapsed Member',
+                    year: rewindYear,
+                    userId: memberId,
+                    statistics: REWIND_STATISTICS,
+                  })
+                ),
+                generatedAt: new Date(),
+              },
+            },
+          },
+        });
+      } finally {
+        await prisma.$disconnect();
+      }
+      await setStripeEnabled(true, { configure: true });
+    });
+
+    test.beforeEach(async ({ browser, baseURL }: { browser: Browser; baseURL?: string }) => {
+      // The claim the jwt callback writes at sign-in, as a canceled member's would be
+      context = await browser.newContext();
+      await signInAs(context, baseURL!, memberId, { accessLevel: 'lapsed' });
+    });
+
+    test.afterEach(async () => {
+      await context.close();
+    });
+
+    test.afterAll(async () => {
+      await resetStripeState();
+      const prisma = createE2EPrismaClient();
+      try {
+        await prisma.user.delete({ where: { id: memberId } });
+      } finally {
+        await prisma.$disconnect();
+      }
+    });
+
+    test('opens their stored Rewind, and is sent from / to /subscribe', async () => {
+      const page = await context.newPage();
+
+      await page.goto('/wrapped');
+      await page.waitForURL(new RegExp(`/wrapped/${rewindYear}$`), { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+      await expect(page.getByTestId('subscribe-page')).toHaveCount(0);
+
+      await page.goto('/');
+      await page.waitForURL(/\/subscribe(?:$|\?|\/)/, { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+      await expect(page.getByTestId('subscribe-page')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    });
+
+    test('is sent to /subscribe when a link on a Rewind page navigates home client-side', async () => {
+      const page = await context.newPage();
+
+      // A full load of a Rewind page, then a soft navigation through a Link.
+      // proxy.ts redirects the router's RSC request; __tests__/proxy.test.ts
+      // covers that rule on its own, since here the (app) layout also renders
+      // below the root loading boundary and would redirect too
+      await page.goto(`/wrapped/${seasonYear}`);
+      // The page streams, so a hidden copy can sit beside the shown one
+      const home = page.getByTestId('wrapped-generate-link').filter({ visible: true });
+      await expect(home).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+      // Hydrated, so the click is a client-side navigation; the marker proves
+      // no full load happened on the way to /subscribe
+      await page.waitForLoadState('networkidle');
+      await page.evaluate(() => Object.assign(window, { p45SoftNavigation: true }));
+      // The router's RSC request for / is answered with the redirect
+      const rscHome = page.waitForResponse(
+        (response) => new URL(response.url()).pathname === '/' && response.request().headers()['rsc'] === '1'
+      );
+      await home.click();
+      expect((await rscHome).status()).toBe(307);
+
+      await page.waitForURL(/\/subscribe(?:$|\?|\/)/, { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+      await expect(page.getByTestId('subscribe-page')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+      expect(await page.evaluate(() => 'p45SoftNavigation' in window)).toBe(true);
     });
   });
 

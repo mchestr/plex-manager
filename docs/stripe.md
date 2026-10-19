@@ -24,6 +24,7 @@ feature safe to ship dark and enable per-deployment.
 - [Enabling the Feature](#enabling-the-feature)
 - [Grandfathering Existing Members](#grandfathering-existing-members)
 - [Subscription Lifecycle](#subscription-lifecycle)
+- [What a Lapsed Member Can Do](#what-a-lapsed-member-can-do)
 - [Admin Management](#admin-management)
 - [Disabling the Feature (Safe & Reversible)](#disabling-the-feature-safe--reversible)
 - [Environment & Config Notes](#environment--config-notes)
@@ -48,10 +49,12 @@ Plex login ─▶ member?  ──yes─▶ into app (unchanged)
                              user is in the app
 ```
 
-- **Gate:** a pure-DB check (`lib/guards.ts` → `getAccessGateStatus`) allows a
-  user into the app when ANY of: Stripe disabled, the user is an admin, the user
-  is exempt, or the user has an `ACTIVE`/`PAST_DUE` subscription. `PAST_DUE`
-  keeps access during Stripe's dunning/retry window.
+- **Gate:** a pure-DB check (`getAccessLevel` in `lib/access.ts`) gives a user
+  `full` access when ANY of: Stripe disabled, the user is an admin, the user is
+  exempt, or the user has an `ACTIVE`/`PAST_DUE` subscription. `PAST_DUE` keeps
+  access during Stripe's dunning/retry window. A disabled user is never
+  entitled. See [What a Lapsed Member Can Do](#what-a-lapsed-member-can-do)
+  for everyone else.
 - **Webhook:** `POST /api/stripe/webhook` verifies the Stripe signature against
   the raw body, dedupes on the event id, enqueues a BullMQ job, and returns 200
   quickly. All side effects (Plex invite/removal) happen asynchronously in the
@@ -188,6 +191,34 @@ job re-reads live DB state before acting.
 - A `PAST_DUE` user keeps full access and sees a persistent global banner linking
   to the Billing Portal.
 - A canceled/removed user is gated back to `/subscribe` and can re-subscribe.
+
+## What a Lapsed Member Can Do
+
+With Stripe on, a user who is not entitled is **lapsed** when they have at
+least one completed Rewind, and has **no access** otherwise (`getAccessLevel`
+in `lib/access.ts`). A lapsed member keeps read-only access to their stored
+Rewinds (FR-51). Each surface checks this itself, not only the `(app)` layout:
+Server Actions through `memberAction({ entitlement })`, route handlers through
+`requireEntitlement` (`lib/actions/route.ts`), pages through `proxy.ts` (on
+every request, client-side navigations included) and the jobs in their queries.
+
+| Surface | Active member | Lapsed member | No access |
+| --- | --- | --- | --- |
+| Rewind pages (`/rewind`, `/rewind/*`, `/wrapped*`) | Yes | Read their stored Rewinds | Sent to `/subscribe` |
+| Home and every other app page | Yes | Sent to `/subscribe` | Sent to `/subscribe` |
+| Poster images on their own Rewind | Yes | Yes | 403, unless a share link covers the poster |
+| Generate a Rewind | Yes | `NOT_ENTITLED` | `NOT_ENTITLED` |
+| Watchlist sync: turn on, sync now | Yes | `NOT_ENTITLED` | `NOT_ENTITLED` |
+| Watchlist sync: settings and history | Yes | Yes | `NOT_ENTITLED` |
+| Watchlist sync: turn off | Yes | Yes | Yes |
+| Scheduled and queued watchlist syncs | Yes | Skipped (`NOT_ENTITLED`) | Skipped (`NOT_ENTITLED`) |
+| Link Discord, resync the Discord role | Yes | Sent to `/subscribe`, `NOT_ENTITLED` | Sent to `/subscribe`, `NOT_ENTITLED` |
+| Unlink Discord | Yes | Yes | Yes |
+| Discord bot commands | Yes | No | No |
+| Manage subscription, `/subscribe` | Yes | Yes | Yes |
+
+Admins and exempt users are always active members. With Stripe off every
+enabled user is an active member.
 
 ## Admin Management
 
