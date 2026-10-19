@@ -19,7 +19,6 @@ export {
 export {
   testPlexConnection,
   getPlexServerIdentity,
-  getLibrarySectionIDs,
 } from "./plex-connection"
 
 // User management
@@ -41,11 +40,8 @@ export {
 export {
   getPlexSessions,
   getPlexLibrarySections,
-  getPlexLibraryItems,
   getPlexRecentlyAdded,
   getPlexOnDeck,
-  getPlexPlaylists,
-  getPlexPlaylistItems,
 } from "./plex-sessions"
 
 // Search functionality
@@ -54,5 +50,4 @@ export { searchPlexMedia } from "./plex-search"
 // Mark watched/unwatched
 export {
   markPlexItemWatched,
-  markPlexItemUnwatched,
 } from "./plex-marking"

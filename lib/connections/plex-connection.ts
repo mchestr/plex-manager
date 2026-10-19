@@ -5,7 +5,6 @@
 import { XMLParser } from "fast-xml-parser"
 import { type PlexServerParsed } from "@/lib/validations/plex"
 import { fetchWithTimeout, isTimeoutError } from "@/lib/utils/fetch-with-timeout"
-import { getClientIdentifier } from "./plex-core"
 
 export async function testPlexConnection(config: PlexServerParsed): Promise<{ success: boolean; error?: string }> {
   // TEST MODE BYPASS - Skip connection tests in test environment
@@ -89,52 +88,5 @@ export async function getPlexServerIdentity(
       return { success: false, error: `Error fetching server identity: ${error.message}` }
     }
     return { success: false, error: "Failed to fetch Plex server identity" }
-  }
-}
-
-/**
- * Get library section IDs from a Plex server using machine identifier
- * Returns the section IDs as used by Plex.tv API
- */
-export async function getLibrarySectionIDs(
-  serverConfig: { url: string; token: string },
-  machineIdentifier: string
-): Promise<{ success: boolean; sectionIDs?: number[]; error?: string }> {
-  try {
-    // Use the Plex.tv API v2 servers endpoint with machine identifier
-    const url = `https://plex.tv/api/v2/servers/${machineIdentifier}`
-
-    let clientIdentifier: string
-    try {
-      clientIdentifier = getClientIdentifier()
-    } catch (error) {
-      return { success: false, error: "PLEX_CLIENT_IDENTIFIER is not configured" }
-    }
-
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "Accept": "application/json",
-        "X-Plex-Token": serverConfig.token,
-        "X-Plex-Client-Identifier": clientIdentifier,
-      },
-    })
-
-    if (!response.ok) {
-      return { success: false, error: `Failed to fetch server info: ${response.statusText}` }
-    }
-
-    const data = await response.json()
-    const sections = data.LibrarySections || []
-
-    // Extract section IDs
-    const sectionIDs = sections.map((section: { ID: number }) => section.ID)
-
-    return { success: true, sectionIDs }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Error fetching library sections: ${error.message}` }
-    }
-    return { success: false, error: "Failed to fetch library sections" }
   }
 }

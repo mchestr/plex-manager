@@ -1,11 +1,10 @@
 /**
  * Tests for Plex API marking and search methods
- * Tests: markPlexItemWatched, markPlexItemUnwatched, searchPlexMedia
+ * Tests: markPlexItemWatched, searchPlexMedia
  */
 
 import {
   markPlexItemWatched,
-  markPlexItemUnwatched,
   searchPlexMedia,
   type PlexMediaItem,
 } from '@/lib/connections/plex'
@@ -128,123 +127,6 @@ describe('Plex Marking and Search', () => {
       })
 
       const result = await markPlexItemWatched(config, ratingKey)
-
-      expect(result.success).toBe(false)
-      expect(result.error).toContain('Internal Server Error')
-    })
-  })
-
-  describe('markPlexItemUnwatched', () => {
-    const config = makePlexServerConfig()
-    const ratingKey = '12345'
-
-    it('should successfully mark item as unwatched', async () => {
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-      })
-
-      const result = await markPlexItemUnwatched(config, ratingKey)
-
-      expect(result.success).toBe(true)
-      expect(result.error).toBeUndefined()
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/:/unscrobble'),
-        expect.objectContaining({
-          method: 'GET',
-          headers: expect.objectContaining({
-            Accept: 'application/json',
-          }),
-        })
-      )
-    })
-
-    it('should construct correct URL with rating key and token', async () => {
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-      })
-
-      await markPlexItemUnwatched(config, ratingKey)
-
-      const callUrl = (global.fetch as jest.Mock).mock.calls[0][0]
-      expect(callUrl).toContain(`${config.url}/:/unscrobble`)
-      expect(callUrl).toContain(`key=${ratingKey}`)
-      expect(callUrl).toContain(`X-Plex-Token=${config.token}`)
-      expect(callUrl).toContain('identifier=com.plexapp.plugins.library')
-    })
-
-    it('should handle 404 not found error', async () => {
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: false,
-        status: 404,
-        statusText: 'Not Found',
-      })
-
-      const result = await markPlexItemUnwatched(config, 'nonexistent-key')
-
-      expect(result.success).toBe(false)
-      expect(result.error).toContain('Failed to mark item as unwatched')
-      expect(result.error).toContain('Not Found')
-    })
-
-    it('should handle 401 unauthorized error', async () => {
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: false,
-        status: 401,
-        statusText: 'Unauthorized',
-      })
-
-      const result = await markPlexItemUnwatched(
-        makePlexServerConfig({ token: 'invalid-token' }),
-        ratingKey
-      )
-
-      expect(result.success).toBe(false)
-      expect(result.error).toContain('Failed to mark item as unwatched')
-      expect(result.error).toContain('Unauthorized')
-    })
-
-    it('should handle connection timeout', async () => {
-      const abortError = new Error('AbortError')
-      abortError.name = 'AbortError'
-      ;(global.fetch as jest.Mock).mockRejectedValueOnce(abortError)
-
-      const result = await markPlexItemUnwatched(config, ratingKey)
-
-      expect(result.success).toBe(false)
-      expect(result.error).toBe('Connection timeout')
-    })
-
-    it('should handle network errors', async () => {
-      ;(global.fetch as jest.Mock).mockRejectedValueOnce(
-        new Error('Network error')
-      )
-
-      const result = await markPlexItemUnwatched(config, ratingKey)
-
-      expect(result.success).toBe(false)
-      expect(result.error).toContain('Error marking item as unwatched')
-      expect(result.error).toContain('Network error')
-    })
-
-    it('should handle non-Error exceptions', async () => {
-      ;(global.fetch as jest.Mock).mockRejectedValueOnce('Unknown error')
-
-      const result = await markPlexItemUnwatched(config, ratingKey)
-
-      expect(result.success).toBe(false)
-      expect(result.error).toBe('Failed to mark Plex item as unwatched')
-    })
-
-    it('should handle server errors (500)', async () => {
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: false,
-        status: 500,
-        statusText: 'Internal Server Error',
-      })
-
-      const result = await markPlexItemUnwatched(config, ratingKey)
 
       expect(result.success).toBe(false)
       expect(result.error).toContain('Internal Server Error')

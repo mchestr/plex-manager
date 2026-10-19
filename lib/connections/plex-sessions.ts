@@ -75,47 +75,8 @@ export async function getPlexRecentlyAdded(serverConfig: PlexServerConfig, limit
 }
 
 /**
- * Get all items from a specific library section
- * @param serverConfig - Plex server configuration
- * @param sectionId - Library section ID
- * @param type - Filter by type (1=movie, 2=show, 4=episode)
- */
-export async function getPlexLibraryItems(
-  serverConfig: PlexServerConfig,
-  sectionId: string | number,
-  type?: number
-): Promise<PlexResult> {
-  const path = type
-    ? `/library/sections/${sectionId}/all?type=${type}`
-    : `/library/sections/${sectionId}/all`
-  return plexGet(serverConfig, path, "library items", {
-    timeoutMs: 60000, // Allow longer timeout for large libraries
-    timeoutError: "Connection timeout - library may be too large",
-  })
-}
-
-/**
  * Get on deck content from Plex server
  */
 export async function getPlexOnDeck(serverConfig: PlexServerConfig): Promise<PlexResult> {
   return plexGet(serverConfig, "/library/onDeck", "on deck")
-}
-
-/**
- * Get all playlists from Plex server
- */
-export async function getPlexPlaylists(serverConfig: PlexServerConfig): Promise<PlexResult> {
-  return plexGet(serverConfig, "/playlists", "playlists")
-}
-
-/**
- * Get items in a specific playlist
- * @param serverConfig - Plex server configuration
- * @param playlistKey - The ratingKey of the playlist
- */
-export async function getPlexPlaylistItems(
-  serverConfig: PlexServerConfig,
-  playlistKey: string
-): Promise<PlexResult> {
-  return plexGet(serverConfig, `/playlists/${playlistKey}/items`, "playlist items")
 }
