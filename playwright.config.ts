@@ -85,11 +85,12 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
-      testIgnore: [/setup-wizard\.spec\.ts/, /\.visual\.spec\.ts$/],
+      testIgnore: [/setup-wizard\.spec\.ts/, /accessibility-setup\.spec\.ts/, /\.visual\.spec\.ts$/],
     },
     {
       name: 'setup-wizard',
-      testMatch: /setup-wizard\.spec\.ts/,
+      // The axe scan of /setup reopens setup too (P1.7).
+      testMatch: [/setup-wizard\.spec\.ts/, /accessibility-setup\.spec\.ts/],
       workers: 1,
       use: { ...devices['Desktop Chrome'] },
     },

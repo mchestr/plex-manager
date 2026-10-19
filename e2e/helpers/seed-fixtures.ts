@@ -26,8 +26,14 @@ export const VISUAL_ONBOARDING_USER = {
 
 export const VISUAL_INVITES = { valid: 'VISUALOK', expired: 'VISUALEXP' } as const;
 
+/** Fixed row ids, for the detail routes the axe spec visits. */
+export const VISUAL_INVITE_IDS = { valid: 'visual-invite-ok', expired: 'visual-invite-expired' } as const;
+
 /** The Rewind year seeded for the regular user. */
 export const VISUAL_REWIND_YEAR = 2026;
+
+/** The id of the regular user's seeded Rewind. */
+export const VISUAL_REWIND_ID = 'visual-rewind';
 
 /** The seeded Plex server, and the unreachable address the Plex-down shot uses. */
 export const VISUAL_PLEX_SERVER = {
@@ -171,6 +177,7 @@ export async function seedVisualFixtures(): Promise<void> {
       await tx.invite.deleteMany();
       await tx.invite.create({
         data: {
+          id: VISUAL_INVITE_IDS.valid,
           code: VISUAL_INVITES.valid,
           maxUses: 5,
           useCount: 1,
@@ -181,6 +188,7 @@ export async function seedVisualFixtures(): Promise<void> {
       });
       await tx.invite.create({
         data: {
+          id: VISUAL_INVITE_IDS.expired,
           code: VISUAL_INVITES.expired,
           maxUses: 1,
           expiresAt: daysAgo(now, 1),
@@ -201,6 +209,7 @@ export async function seedVisualFixtures(): Promise<void> {
       const generatedAt = daysAgo(shown, 2);
       const rewind = await tx.plexWrapped.create({
         data: {
+          id: VISUAL_REWIND_ID,
           userId: TEST_USERS.REGULAR.id,
           year: VISUAL_REWIND_YEAR,
           status: 'completed',
