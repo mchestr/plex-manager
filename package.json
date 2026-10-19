@@ -29,6 +29,8 @@
     "test:e2e:headed": "playwright test --headed",
     "rewind:fixtures": "tsx evals/rewind/generate-fixtures.ts",
     "rewind:strip-leaderboards": "tsx --tsconfig tsconfig.scripts.json scripts/rewind-strip-leaderboards.ts",
+    "rewind:measure-cards": "NODE_ENV=production tsx --conditions=react-server scripts/rewind-measure-cards.tsx",
+    "rewind:card-version": "node scripts/write-card-version.mjs",
     "rewind:probe-sources": "tsx --conditions=react-server --tsconfig tsconfig.scripts.json scripts/rewind-probe-sources.ts",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",

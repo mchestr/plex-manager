@@ -54,11 +54,15 @@
 import { measurer, type FontMetrics, type Measurer } from "./measure"
 
 /**
- * Card lines are fitted to the card measure divided by `1 + CARD_SLACK`,
- * because Satori skipped some kerning pairs on 0.15.2. Provisional until
- * P2.14 measures Satori 0.29.
+ * Card lines are fitted to the card measure divided by `1 + CARD_SLACK`.
+ * Satori 0.29 draws kerning inside a word but places each following word by
+ * unkerned advances, so a line's ink ends up to 2.39% past the kerned width
+ * the metrics predict. The value is that worst overflow plus 0.5%, measured
+ * on Next 16.4.2 by `scripts/rewind-measure-cards.tsx` (P2.14,
+ * `lib/rewind/cards/measurements.json`). Changing it changes card pixels, so
+ * bump `CARD_RENDERER_VERSION` with it.
  */
-export const CARD_SLACK = 0.015
+export const CARD_SLACK = 0.029
 
 export interface FitOptions {
   role: "nameplate" | "sentence"

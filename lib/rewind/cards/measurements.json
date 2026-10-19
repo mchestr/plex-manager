@@ -1,0 +1,254 @@
+{
+  "measuredOn": "2026-10-19",
+  "versions": {
+    "next": "16.4.2",
+    "vercelOg": "1.0.1",
+    "satori": "0.29.0"
+  },
+  "cardVersion": "rewind-cards@1+og@1.0.1+satori@0.29.0+fonts@64205e348993",
+  "environment": {
+    "node": "v22.22.0",
+    "nodeEnv": "production",
+    "cpus": 4,
+    "cpu": "Intel(R) Xeon(R) Processor",
+    "platform": "linux 6.18.44-fc-v139"
+  },
+  "method": {
+    "coldRuns": 3,
+    "warmRuns": 20,
+    "percentiles": "nearest rank",
+    "slack": "rightmost ink column (alpha > 0) of each fitted line drawn alone, against fitLines' predicted width"
+  },
+  "cards": [
+    {
+      "name": "centrefold",
+      "size": "1080x1920",
+      "artwork": false,
+      "coldMs": [
+        418.3,
+        435.6,
+        427.2
+      ],
+      "warmP50Ms": 102.4,
+      "warmP95Ms": 115.9,
+      "warmMs": [
+        94.4,
+        96.5,
+        96.9,
+        97.3,
+        97.7,
+        99.1,
+        99.5,
+        99.8,
+        100.2,
+        102.4,
+        103.3,
+        103.6,
+        103.7,
+        104.1,
+        106.4,
+        109.2,
+        110.3,
+        112.5,
+        115.9,
+        119.6
+      ],
+      "targetMs": 500,
+      "meetsTarget": true,
+      "bytes": 178432
+    },
+    {
+      "name": "back-cover",
+      "size": "1080x1920",
+      "artwork": true,
+      "coldMs": [
+        432.4,
+        424.5,
+        433.6
+      ],
+      "warmP50Ms": 101,
+      "warmP95Ms": 114.1,
+      "warmMs": [
+        96.1,
+        97.3,
+        97.8,
+        97.8,
+        98.3,
+        99.3,
+        100,
+        100,
+        100.7,
+        101,
+        101.5,
+        104.3,
+        105.3,
+        106.4,
+        106.7,
+        107.2,
+        107.8,
+        108.2,
+        114.1,
+        115.2
+      ],
+      "targetMs": 1200,
+      "meetsTarget": true,
+      "bytes": 265757
+    },
+    {
+      "name": "og",
+      "size": "1200x630",
+      "artwork": false,
+      "coldMs": [
+        356.6,
+        367.7,
+        345.9
+      ],
+      "warmP50Ms": 37.9,
+      "warmP95Ms": 47,
+      "warmMs": [
+        35.2,
+        35.5,
+        36,
+        36.2,
+        36.4,
+        36.8,
+        37,
+        37.2,
+        37.8,
+        37.9,
+        38.7,
+        39.4,
+        40.7,
+        40.7,
+        42.5,
+        42.9,
+        44.8,
+        45.2,
+        47,
+        49.6
+      ],
+      "targetMs": 500,
+      "meetsTarget": true,
+      "bytes": 74961
+    }
+  ],
+  "slack": {
+    "cardSlack": 0.029,
+    "titles": 175,
+    "lines": 606,
+    "overflowing": 262,
+    "worst": {
+      "role": "billing caps",
+      "title": "Taxi Driver",
+      "text": "TAXI DRIVER",
+      "wdth": 62,
+      "size": 80,
+      "predicted": 333.04,
+      "inkLeft": 1,
+      "inkRight": 341,
+      "overflow": 0.023901032908959823
+    },
+    "recommended": 0.029,
+    "widestInk": 924,
+    "leftmostInk": -2
+  },
+  "kerning": [
+    {
+      "pair": "Y.",
+      "kernPx": -40,
+      "drawnKernPx": -39.6,
+      "drawnInWord": true,
+      "nextWordShiftPx": 40.8,
+      "inLayout": false
+    },
+    {
+      "pair": "Y,",
+      "kernPx": -40,
+      "drawnKernPx": -39.6,
+      "drawnInWord": true,
+      "nextWordShiftPx": 40.8,
+      "inLayout": false
+    },
+    {
+      "pair": "LY",
+      "kernPx": -28,
+      "drawnKernPx": -27.4,
+      "drawnInWord": true,
+      "nextWordShiftPx": 38,
+      "inLayout": false
+    },
+    {
+      "pair": "V.",
+      "kernPx": -24,
+      "drawnKernPx": -23.6,
+      "drawnInWord": true,
+      "nextWordShiftPx": 24.8,
+      "inLayout": false
+    },
+    {
+      "pair": "V,",
+      "kernPx": -24,
+      "drawnKernPx": -23.6,
+      "drawnInWord": true,
+      "nextWordShiftPx": 24.8,
+      "inLayout": false
+    },
+    {
+      "pair": "W.",
+      "kernPx": -24,
+      "drawnKernPx": -24,
+      "drawnInWord": true,
+      "nextWordShiftPx": 24.4,
+      "inLayout": false
+    },
+    {
+      "pair": "W,",
+      "kernPx": -24,
+      "drawnKernPx": -24,
+      "drawnInWord": true,
+      "nextWordShiftPx": 24.4,
+      "inLayout": false
+    },
+    {
+      "pair": "LT",
+      "kernPx": -22,
+      "drawnKernPx": -21.4,
+      "drawnInWord": true,
+      "nextWordShiftPx": 22.2,
+      "inLayout": false
+    },
+    {
+      "pair": "Ya",
+      "kernPx": -22,
+      "drawnKernPx": -22.6,
+      "drawnInWord": true,
+      "nextWordShiftPx": 22,
+      "inLayout": false
+    },
+    {
+      "pair": "Yc",
+      "kernPx": -22,
+      "drawnKernPx": -21.6,
+      "drawnInWord": true,
+      "nextWordShiftPx": 22,
+      "inLayout": false
+    },
+    {
+      "pair": "Yd",
+      "kernPx": -22,
+      "drawnKernPx": -22.6,
+      "drawnInWord": true,
+      "nextWordShiftPx": 22,
+      "inLayout": false
+    },
+    {
+      "pair": "Ye",
+      "kernPx": -22,
+      "drawnKernPx": -22.6,
+      "drawnInWord": true,
+      "nextWordShiftPx": 22,
+      "inLayout": false
+    }
+  ],
+  "tabularFigures": false
+}

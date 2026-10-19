@@ -3,7 +3,7 @@
   "entry": [
     "instrumentation.ts!",
     "proxy.ts!",
-    "scripts/*.ts!",
+    "scripts/*.{ts,tsx}!",
     "scripts/*.mjs!",
     "scripts/codemods/*.mjs!",
     "lib/wrapped/stats/*.ts!",
