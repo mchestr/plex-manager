@@ -8,7 +8,7 @@ import { MediaServerLinkCard } from "@/components/dashboard/media-server-link-ca
 import { RequestsCard } from "@/components/dashboard/requests-card"
 import { StatusFooter } from "@/components/dashboard/status-background"
 import { WrappedCard } from "@/components/dashboard/wrapped-card"
-import type { DashboardDiscordConnection } from "@/components/discord/link-callout"
+import type { DashboardDiscordConnection } from "@/types/discord"
 import { WatchlistSyncCard } from "@/components/watchlist/sync-settings-card"
 import type { RewindEligibility } from "@/lib/wrapped/eligibility"
 import { signOut } from "next-auth/react"
@@ -114,10 +114,7 @@ export function UserDashboard({
                   <div className="hidden sm:block" />
                 )}
                 {(serverInviteCode || discordEnabled) ? (
-                  <DiscordCard
-                    connection={discordConnection}
-                    serverInviteCode={serverInviteCode}
-                  />
+                  <DiscordCard connection={discordConnection} />
                 ) : (
                   <div className="hidden sm:block" />
                 )}

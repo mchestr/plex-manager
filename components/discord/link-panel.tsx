@@ -3,7 +3,7 @@
 import { disconnectDiscordAccount, resyncDiscordRole } from "@/actions/discord"
 import { useToast } from "@/components/ui/toast"
 import { cn } from "@/lib/utils"
-import { useEffect, useRef, useTransition } from "react"
+import { useTransition } from "react"
 
 interface DiscordConnectionSummary {
   username: string
@@ -19,12 +19,11 @@ interface DiscordLinkPanelProps {
   instructions?: string | null
   connectUrl: string
   isEnabled: boolean
-  error?: string
   serverInviteCode?: string | null
   isOnServer?: boolean | null
 }
 
-export function DiscordLinkPanel({ connection, instructions, connectUrl, isEnabled, error: propError, serverInviteCode, isOnServer }: DiscordLinkPanelProps) {
+export function DiscordLinkPanel({ connection, instructions, connectUrl, isEnabled, serverInviteCode, isOnServer }: DiscordLinkPanelProps) {
   const toast = useToast()
   const [isPending, startTransition] = useTransition()
 
@@ -50,33 +49,35 @@ export function DiscordLinkPanel({ connection, instructions, connectUrl, isEnabl
     })
   }
 
-  // Show prop error as toast if provided
-  const hasShownPropError = useRef(false)
-  useEffect(() => {
-    if (propError && !hasShownPropError.current) {
-      hasShownPropError.current = true
-      toast.showError(propError)
-    }
-  }, [propError, toast])
-
   if (!isEnabled) {
     return (
-      <div className="rounded-3xl border border-white/10 bg-slate-950/60 p-8 text-center text-slate-300 shadow-2xl shadow-black/40 ring-1 ring-white/5">
+      <div data-testid="discord-link-unavailable" className="rounded-3xl border border-white/10 bg-slate-950/60 p-8 text-center text-slate-300 shadow-2xl shadow-black/40 ring-1 ring-white/5">
         <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Discord integration</p>
-        <h3 className="mt-2 text-2xl font-semibold text-white">Linking temporarily unavailable</h3>
+        <h2 className="mt-2 text-2xl font-semibold text-white">Linking temporarily unavailable</h2>
         <p className="mt-3 text-sm text-slate-400">
           Your Plex administrator needs to finish configuring the Discord Linked Roles integration before you can complete this step.
         </p>
+        {serverInviteCode && (
+          <a
+            data-testid="discord-link-join-server"
+            href={`https://discord.gg/${serverInviteCode}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-6 inline-flex items-center gap-2 rounded-xl border border-indigo-500/40 bg-indigo-500/10 px-4 py-2 text-sm font-semibold text-indigo-200 transition hover:border-indigo-400/60 hover:bg-indigo-500/20 hover:text-indigo-100"
+          >
+            Join Discord Server
+          </a>
+        )}
       </div>
     )
   }
 
   return (
-    <div className="space-y-6 rounded-3xl border border-white/10 bg-slate-950/70 p-6 sm:p-8 shadow-2xl shadow-indigo-950/40 ring-1 ring-white/10 backdrop-blur">
+    <div data-testid="discord-link-panel" className="space-y-6 rounded-3xl border border-white/10 bg-slate-950/70 p-6 sm:p-8 shadow-2xl shadow-indigo-950/40 ring-1 ring-white/10 backdrop-blur">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Discord linked roles</p>
-          <h3 className="text-2xl font-semibold text-white">Link your account</h3>
+          <h2 className="text-2xl font-semibold text-white">Link your account</h2>
           <p className="mt-1 text-sm text-slate-400">
             Connect your Discord account to sync your Plex membership status.
           </p>
@@ -117,6 +118,8 @@ export function DiscordLinkPanel({ connection, instructions, connectUrl, isEnabl
               </p>
             </div>
             <button
+              type="button"
+              data-testid="discord-link-resync"
               onClick={handleResync}
               disabled={isPending}
               className="inline-flex items-center justify-center rounded-xl border border-emerald-400/40 px-4 py-2 text-sm font-medium text-emerald-100 transition hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-60"
@@ -150,6 +153,7 @@ export function DiscordLinkPanel({ connection, instructions, connectUrl, isEnabl
           <div className="mt-4 flex flex-wrap gap-3">
             {serverInviteCode && (
               <a
+                data-testid="discord-link-join-server"
                 href={`https://discord.gg/${serverInviteCode}`}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -162,6 +166,7 @@ export function DiscordLinkPanel({ connection, instructions, connectUrl, isEnabl
               </a>
             )}
             <a
+              data-testid="discord-link-connect"
               href={connectUrl}
               className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-500 via-violet-500 to-fuchsia-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-900/30 transition hover:scale-[1.01]"
             >
@@ -183,6 +188,8 @@ export function DiscordLinkPanel({ connection, instructions, connectUrl, isEnabl
             Review Discord link
           </a>
           <button
+            type="button"
+            data-testid="discord-link-disconnect"
             onClick={handleDisconnect}
             disabled={isPending}
             className="inline-flex min-w-[160px] items-center justify-center rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-2 text-sm font-semibold text-rose-100 transition hover:bg-rose-500/20 disabled:cursor-not-allowed disabled:opacity-60"
@@ -199,6 +206,7 @@ export function DiscordLinkPanel({ connection, instructions, connectUrl, isEnabl
             Access support channels, get help from moderators, and connect with the community.
           </p>
           <a
+            data-testid="discord-link-join-server"
             href={`https://discord.gg/${serverInviteCode}`}
             target="_blank"
             rel="noopener noreferrer"

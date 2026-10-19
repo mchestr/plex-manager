@@ -1,33 +1,25 @@
 "use client"
 
 import { motion } from "framer-motion"
-import type { DashboardDiscordConnection } from "@/components/discord/link-callout"
+import type { DashboardDiscordConnection } from "@/types/discord"
 
 interface DiscordCardProps {
   connection: DashboardDiscordConnection | null
-  serverInviteCode?: string | null
 }
 
-export function DiscordCard({ connection, serverInviteCode }: DiscordCardProps) {
-  const isConnected = Boolean(connection)
-  const discordUrl = serverInviteCode
-    ? `https://discord.gg/${serverInviteCode}`
-    : null
-
-  // If there's a server invite and not connected, make it a join link
-  if (discordUrl && !isConnected) {
+export function DiscordCard({ connection }: DiscordCardProps) {
+  // Not linked: the /discord/link page offers both Join server and Link account
+  if (!connection) {
     return (
       <motion.a
-        href={discordUrl}
-        target="_blank"
-        rel="noopener noreferrer"
+        href="/discord/link"
         className="group relative flex items-center gap-3 overflow-hidden rounded-xl border border-[#5865F2]/20 bg-gradient-to-br from-[#5865F2]/10 via-[#5865F2]/5 to-slate-900/80 p-3 sm:p-4 shadow-lg shadow-black/20 transition-all duration-300 hover:border-[#5865F2]/40 hover:shadow-[#5865F2]/10"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: "easeOut", delay: 0.1 }}
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
-        data-testid="discord-card"
+        data-testid="discord-card-link-action"
       >
         {/* Ambient glow */}
         <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[#5865F2]/10 blur-2xl transition-all duration-500 group-hover:bg-[#5865F2]/20" />
@@ -61,7 +53,7 @@ export function DiscordCard({ connection, serverInviteCode }: DiscordCardProps) 
     )
   }
 
-  // Connected state - show status with checkmark
+  // Linked: show status with a checkmark
   return (
     <motion.div
       className="group relative flex items-center gap-3 overflow-hidden rounded-xl border border-[#5865F2]/20 bg-gradient-to-br from-[#5865F2]/10 via-[#5865F2]/5 to-slate-900/80 p-3 sm:p-4 shadow-lg shadow-black/20 transition-all duration-300 hover:border-[#5865F2]/40"
@@ -85,13 +77,11 @@ export function DiscordCard({ connection, serverInviteCode }: DiscordCardProps) 
       </span>
 
       {/* Connected checkmark */}
-      {isConnected && (
-        <div className="ml-auto flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-full bg-green-500/20 text-green-400">
-          <svg className="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-          </svg>
-        </div>
-      )}
+      <div className="ml-auto flex h-6 w-6 sm:h-7 sm:w-7 shrink-0 items-center justify-center rounded-full bg-green-500/20 text-green-400">
+        <svg className="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+        </svg>
+      </div>
     </motion.div>
   )
 }
