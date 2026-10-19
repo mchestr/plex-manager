@@ -1,6 +1,7 @@
 "use client"
 
-import { motion } from "motion/react"
+import { motion, useReducedMotion } from "motion/react"
+import { loop } from "@/lib/utils/motion-loop"
 import { CountUp } from "@/components/ui/count-up"
 import { FormattedText } from "@/components/shared/formatted-text"
 import { SectionHeader } from "@/components/wrapped/wrapped-sections/section-header"
@@ -14,6 +15,7 @@ interface ShowsBreakdownSectionProps {
 }
 
 export function ShowsBreakdownSection({ section, wrappedData, sectionIndex }: ShowsBreakdownSectionProps) {
+  const reduceMotion = useReducedMotion()
   return (
     <div className="text-center space-y-6">
       <SectionHeader title={section.title} />
@@ -31,14 +33,17 @@ export function ShowsBreakdownSection({ section, wrappedData, sectionIndex }: Sh
       >
         <motion.div
           className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-purple-500/5 to-transparent"
-          animate={{
-            opacity: [0.3, 0.6, 0.3],
-          }}
-          transition={{
-            duration: 2,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
+          {...loop(
+            reduceMotion,
+            {
+              opacity: [0.3, 0.6, 0.3],
+            },
+            {
+              duration: 2,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }
+          )}
         />
         <div className="relative text-5xl font-bold text-purple-400 mb-4" key={`shows-${sectionIndex}`}>
           <CountUp key={`${sectionIndex}-shows`} value={wrappedData.statistics.showsWatched} duration={2} delay={0.5} />

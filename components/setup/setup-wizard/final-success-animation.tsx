@@ -1,6 +1,7 @@
 "use client"
 
-import { motion } from "motion/react"
+import { motion, useReducedMotion } from "motion/react"
+import { loop } from "@/lib/utils/motion-loop"
 import { useEffect, useState } from "react"
 
 interface FinalSuccessAnimationProps {
@@ -10,6 +11,7 @@ interface FinalSuccessAnimationProps {
 }
 
 export function FinalSuccessAnimation({ onComplete, title = "Setup Complete!", subtitle = "Your Plex Wrapped is ready" }: FinalSuccessAnimationProps) {
+  const reduceMotion = useReducedMotion()
   // Random stars and exhaust offsets, generated once per mount
   const [exhaustParticles] = useState(() =>
     Array.from({ length: 20 }, (_, i) => ({
@@ -59,16 +61,19 @@ export function FinalSuccessAnimation({ onComplete, title = "Setup Complete!", s
             boxShadow: "0 0 4px rgba(255, 255, 255, 0.8)",
           }}
           initial={{ opacity: 0, scale: 0 }}
-          animate={{
-            opacity: [0, 1, 1, 0],
-            scale: [0, 1, 1, 0],
-          }}
-          transition={{
-            duration: 2,
-            delay: star.delay,
-            repeat: Infinity,
-            repeatDelay: 1,
-          }}
+          {...loop(
+            reduceMotion,
+            {
+              opacity: [0, 1, 1, 0],
+              scale: [0, 1, 1, 0],
+            },
+            {
+              duration: 2,
+              delay: star.delay,
+              repeat: Infinity,
+              repeatDelay: 1,
+            }
+          )}
         />
       ))}
 
@@ -196,18 +201,21 @@ export function FinalSuccessAnimation({ onComplete, title = "Setup Complete!", s
                     scale: 1,
                     opacity: 1,
                   }}
-                  animate={{
-                    y: particle.endY,
-                    x: particle.endX,
-                    scale: [1, 1.5, 0],
-                    opacity: [1, 0.8, 0],
-                  }}
-                  transition={{
-                    duration: 0.8,
-                    delay: index * 0.05,
-                    repeat: Infinity,
-                    ease: "easeOut",
-                  }}
+                  {...loop(
+                    reduceMotion,
+                    {
+                      y: particle.endY,
+                      x: particle.endX,
+                      scale: [1, 1.5, 0],
+                      opacity: [1, 0.8, 0],
+                    },
+                    {
+                      duration: 0.8,
+                      delay: index * 0.05,
+                      repeat: Infinity,
+                      ease: "easeOut",
+                    }
+                  )}
                 />
               ))}
             </div>

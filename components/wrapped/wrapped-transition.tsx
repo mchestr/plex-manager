@@ -1,6 +1,7 @@
 "use client"
 
-import { motion, AnimatePresence } from "motion/react"
+import { motion, AnimatePresence, useReducedMotion } from "motion/react"
+import { loop } from "@/lib/utils/motion-loop"
 import { useEffect, useState } from "react"
 import { SpaceBackground } from "@/components/setup/setup-wizard/space-background"
 
@@ -10,6 +11,7 @@ interface WrappedTransitionProps {
 }
 
 export function WrappedTransition({ year, onComplete }: WrappedTransitionProps) {
+  const reduceMotion = useReducedMotion()
   const [phase, setPhase] = useState<"intro" | "countdown" | "reveal">("intro")
   const [countdown, setCountdown] = useState(3)
   const [showContent, setShowContent] = useState(false)
@@ -91,22 +93,25 @@ export function WrappedTransition({ year, onComplete }: WrappedTransitionProps) 
                 {/* Outer glow ring */}
                 <motion.div
                   className="absolute inset-0 rounded-full bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 opacity-50 blur-2xl"
-                  animate={{
-                    scale: [1, 1.2, 1],
-                    rotate: [0, 360],
-                  }}
-                  transition={{
-                    scale: {
-                      duration: 2,
-                      repeat: Infinity,
-                      ease: "easeInOut",
+                  {...loop(
+                    reduceMotion,
+                    {
+                      scale: [1, 1.2, 1],
+                      rotate: [0, 360],
                     },
-                    rotate: {
-                      duration: 8,
-                      repeat: Infinity,
-                      ease: "linear",
-                    },
-                  }}
+                    {
+                      scale: {
+                        duration: 2,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                      },
+                      rotate: {
+                        duration: 8,
+                        repeat: Infinity,
+                        ease: "linear",
+                      },
+                    }
+                  )}
                 />
 
                 {/* Main icon circle */}
@@ -183,14 +188,17 @@ export function WrappedTransition({ year, onComplete }: WrappedTransitionProps) 
                 {/* Glow effect */}
                 <motion.div
                   className="absolute inset-0 rounded-full bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 opacity-75 blur-3xl"
-                  animate={{
-                    scale: [1, 1.3, 1],
-                  }}
-                  transition={{
-                    duration: 0.6,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                  }}
+                  {...loop(
+                    reduceMotion,
+                    {
+                      scale: [1, 1.3, 1],
+                    },
+                    {
+                      duration: 0.6,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }
+                  )}
                 />
 
                 {/* Countdown number */}
@@ -243,16 +251,19 @@ export function WrappedTransition({ year, onComplete }: WrappedTransitionProps) 
                     key={i}
                     className="absolute inset-0 rounded-full border-4 border-cyan-400"
                     initial={{ scale: 0, opacity: 1 }}
-                    animate={{
-                      scale: [1, 2, 3],
-                      opacity: [1, 0.5, 0]
-                    }}
-                    transition={{
-                      duration: 1.5,
-                      delay: i * 0.2,
-                      repeat: Infinity,
-                      ease: "easeOut",
-                    }}
+                    {...loop(
+                      reduceMotion,
+                      {
+                        scale: [1, 2, 3],
+                        opacity: [1, 0.5, 0]
+                      },
+                      {
+                        duration: 1.5,
+                        delay: i * 0.2,
+                        repeat: Infinity,
+                        ease: "easeOut",
+                      }
+                    )}
                   />
                 ))}
 
@@ -297,16 +308,19 @@ export function WrappedTransition({ year, onComplete }: WrappedTransitionProps) 
                   <motion.div
                     key={i}
                     className="w-3 h-3 bg-gradient-to-r from-cyan-500 to-purple-500 rounded-full"
-                    animate={{
-                      scale: [1, 1.5, 1],
-                      opacity: [0.5, 1, 0.5],
-                    }}
-                    transition={{
-                      duration: 1,
-                      repeat: Infinity,
-                      delay: i * 0.2,
-                      ease: "easeInOut",
-                    }}
+                    {...loop(
+                      reduceMotion,
+                      {
+                        scale: [1, 1.5, 1],
+                        opacity: [0.5, 1, 0.5],
+                      },
+                      {
+                        duration: 1,
+                        repeat: Infinity,
+                        delay: i * 0.2,
+                        ease: "easeInOut",
+                      }
+                    )}
                   />
                 ))}
               </motion.div>

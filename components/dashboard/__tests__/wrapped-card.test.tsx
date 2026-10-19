@@ -35,6 +35,7 @@ jest.mock('motion/react', () => ({
       <div className={className} data-testid={testId}>{children}</div>
     ),
   },
+  useReducedMotion: () => false,
 }))
 
 const ELIGIBLE = { eligible: true } as const

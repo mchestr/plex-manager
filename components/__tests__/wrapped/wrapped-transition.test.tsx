@@ -11,6 +11,7 @@ jest.mock('motion/react', () => ({
     svg: ({ children, ...props }: any) => <svg {...props}>{children}</svg>,
   },
   AnimatePresence: ({ children }: any) => <>{children}</>,
+  useReducedMotion: () => false,
 }))
 
 // Mock SpaceBackground

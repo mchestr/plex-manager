@@ -6,6 +6,7 @@ jest.mock('motion/react', () => ({
   motion: {
     div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
   },
+  useReducedMotion: () => false,
 }))
 
 // Mock Chart.js components

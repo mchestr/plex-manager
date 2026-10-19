@@ -20,16 +20,26 @@ global.TextDecoder = TextDecoder
 
 // Mock motion to avoid animation issues in tests. `animate` and the motion
 // value hooks stay real (CountUp drives a motion value); a test that needs the
-// reduced-motion branch sets `useReducedMotion`'s return value.
+// reduced-motion branch sets `useReducedMotion`'s return value. The elements
+// expose their `animate` and `transition` props as JSON in `data-animate` and
+// `data-transition` (Infinity serialises as null).
 jest.mock('motion/react', () => {
   const actual = jest.requireActual('motion/react')
+  const element = (Tag) =>
+    function MotionElement({ children, animate, transition, ...props }) {
+      return (
+        <Tag {...props} data-animate={JSON.stringify(animate)} data-transition={JSON.stringify(transition)}>
+          {children}
+        </Tag>
+      )
+    }
   const elements = {
-    div: ({ children, ...props }) => <div {...props}>{children}</div>,
-    h1: ({ children, ...props }) => <h1 {...props}>{children}</h1>,
-    h2: ({ children, ...props }) => <h2 {...props}>{children}</h2>,
-    p: ({ children, ...props }) => <p {...props}>{children}</p>,
-    span: ({ children, ...props }) => <span {...props}>{children}</span>,
-    li: ({ children, ...props }) => <li {...props}>{children}</li>,
+    div: element('div'),
+    h1: element('h1'),
+    h2: element('h2'),
+    p: element('p'),
+    span: element('span'),
+    li: element('li'),
   }
   return {
     animate: actual.animate,

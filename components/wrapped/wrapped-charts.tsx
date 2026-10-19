@@ -1,6 +1,7 @@
 "use client"
 
-import { motion } from "motion/react"
+import { motion, useReducedMotion } from "motion/react"
+import { loop } from "@/lib/utils/motion-loop"
 import {
   ArcElement,
   BarElement,
@@ -408,6 +409,7 @@ export function ProgressBar({
   delay = 0,
   showValue = false
 }: ProgressBarProps) {
+  const reduceMotion = useReducedMotion()
   const percentage = max > 0 ? Math.min((value / max) * 100, 100) : 0
 
   const colors = {
@@ -446,15 +448,18 @@ export function ProgressBar({
         >
           <motion.div
             className="absolute inset-0 bg-white/30"
-            animate={{
-              x: ["-100%", "100%"],
-            }}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-              ease: "linear",
-              delay,
-            }}
+            {...loop(
+              reduceMotion,
+              {
+                x: ["-100%", "100%"],
+              },
+              {
+                duration: 2,
+                repeat: Infinity,
+                ease: "linear",
+                delay,
+              }
+            )}
           />
         </motion.div>
       </div>
