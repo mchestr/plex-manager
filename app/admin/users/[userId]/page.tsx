@@ -46,8 +46,8 @@ export default async function UserDetailsPage({ params }: { params: Promise<{ us
             </p>
           </div>
 
-          {/* User Info Card */}
-          <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-6 mb-6">
+          {/* User Info Card: opaque, so axe can measure the tinted Disable account button on it */}
+          <div className="bg-card border border-border rounded-lg p-6 mb-6">
             <div className="flex items-start gap-6">
               {user.image ? (
                 <div className="relative w-20 h-20 rounded-full overflow-hidden bg-slate-700 flex-shrink-0">
@@ -88,13 +88,13 @@ export default async function UserDetailsPage({ params }: { params: Promise<{ us
                 )}
                 <div className="flex flex-wrap items-center gap-4 text-sm">
                   <div>
-                    <span className="text-slate-500">Plex ID: </span>
+                    <span className="text-muted-foreground">Plex ID: </span>
                     <span className="text-slate-300 font-mono">
                       {user.plexUserId || "—"}
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-500">Plex Access: </span>
+                    <span className="text-muted-foreground">Plex Access: </span>
                     {user.hasPlexAccess === true ? (
                       <span className="px-1.5 py-0.5 bg-green-500/20 text-green-400 font-medium rounded text-xs">
                         Yes
@@ -104,7 +104,7 @@ export default async function UserDetailsPage({ params }: { params: Promise<{ us
                         No
                       </span>
                     ) : (
-                      <span className="text-slate-500">—</span>
+                      <span className="text-muted-foreground">—</span>
                     )}
                   </div>
                   {/* Show unshare button only for non-admin users with Plex access */}

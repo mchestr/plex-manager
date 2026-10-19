@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "commit": "83423c9d58ea73cfa7a3f5d9a01491260cac77eb",
-  "generatedAt": "2026-10-19T16:47:22.462Z",
+  "commit": "3a085c430429928e7d0fa5504dc1dd662099504d",
+  "generatedAt": "2026-10-19T18:13:18.943Z",
   "files": {
     "app/(app)/discord/link/page.tsx": {
       "raw-palette": 2
@@ -101,10 +101,10 @@
       "raw-palette": 54
     },
     "app/admin/users/[userId]/page.tsx": {
-      "blur": 11,
+      "blur": 10,
       "caps-eyebrow": 6,
       "copy": 4,
-      "raw-palette": 127
+      "raw-palette": 122
     },
     "app/admin/users/[userId]/wrapped/page.tsx": {
       "blur": 5,
@@ -813,13 +813,13 @@
   "totals": {
     "arbitrary-color": 17,
     "arbitrary-type-z": 39,
-    "blur": 144,
+    "blur": 143,
     "caps-eyebrow": 91,
     "copy": 41,
     "gradient": 136,
     "gradient-text": 56,
     "infinite-motion": 56,
-    "raw-palette": 3495,
+    "raw-palette": 3490,
     "zoom-lock": 2
   }
 }

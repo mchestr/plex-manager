@@ -100,7 +100,7 @@
     "meta-viewport|moderate": 1
   },
   "admin /admin/users/regular-user-id": {
-    "color-contrast|incomplete": 68,
+    "color-contrast|incomplete": 61,
     "color-contrast|serious": 2,
     "meta-viewport|moderate": 1
   },
