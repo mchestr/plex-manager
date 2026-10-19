@@ -85,7 +85,7 @@ export function computeTaste(events: readonly PlayEvent[], ctx: StatsContext, lo
   const byMonth = months.map(() => new Map<string, number>())
   let genreSeconds = 0
   for (const e of listed) {
-    const genres = lookup(e)?.genres ?? []
+    const genres = [...new Set(lookup(e)?.genres)]
     for (const name of genres) {
       const part = e.playSeconds / genres.length
       byGenre.set(name, (byGenre.get(name) ?? 0) + part)

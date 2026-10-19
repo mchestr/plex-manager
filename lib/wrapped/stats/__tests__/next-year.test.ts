@@ -70,6 +70,7 @@ describe.each(ZONES)("computeNextYear in %s", (zone) => {
       episode("79", "2026-11-20T20:00", 1, 2), // still watching
       episode("80", "2026-06-01T20:00", 1, 2), // too long ago
       episode("81", "2026-09-01T20:00", 1, 2), // no season counts
+      play({ at: "2026-09-01T20:00", zone, series: "82" }), // no episode numbers
     ]
     const counts = { "1": 10, "2": 8 }
     const lookup = lookupFor(events, {
@@ -77,6 +78,7 @@ describe.each(ZONES)("computeNextYear in %s", (zone) => {
       "78": meta({ seasonEpisodeCounts: { "1": 10 } }),
       "79": meta({ seasonEpisodeCounts: counts }),
       "80": meta({ seasonEpisodeCounts: counts }),
+      "82": meta({ seasonEpisodeCounts: counts }),
     })
     const next = computeNextYear(events, ctx, lookup, input())
     expect(next.leftForLater).toEqual([{ key: "series:77", title: "Series 77", season: 2, episode: 5, lastWatched: "2026-09-01" }])

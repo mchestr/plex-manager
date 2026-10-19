@@ -7,8 +7,8 @@
  * left for 30 days or more (to the window's end) short of its final episode.
  * The final episode is the last of the highest numbered season in the
  * cache's season episode counts (specials, season 0, aside); a series without
- * counts is skipped. The furthest episode is the highest season, then
- * episode, played.
+ * counts, or without a numbered episode played, is skipped. The furthest
+ * episode is the highest season, then episode, played.
  *
  * ## Picks
  *
@@ -73,7 +73,7 @@ function leftForLater(events: readonly PlayEvent[], ctx: StatsContext, lookup: M
       .filter((e) => (e.parentMediaIndex ?? 0) > 0 && e.mediaIndex !== null)
       .map((e) => [e.parentMediaIndex!, e.mediaIndex!] as const)
       .reduce<readonly [number, number]>((a, b) => (b[0] > a[0] || (b[0] === a[0] && b[1] > a[1]) ? b : a), [0, 0])
-    if (season > finalSeason || (season === finalSeason && episode >= counts[String(finalSeason)])) return []
+    if (season === 0 || season > finalSeason || (season === finalSeason && episode >= counts[String(finalSeason)])) return []
     return [{ key: series.key, title: series.title, season, episode, lastWatched: dayKey(last, ctx.zone) }]
   })
 }
