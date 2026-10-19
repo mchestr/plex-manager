@@ -33,7 +33,7 @@ function timeAndCounts({ totals, milestones }: MemberStats): FactValues {
     "time.totalMinutes": any ? totals.totalMinutes : null,
     "time.totalHours": totals.totalMinutes >= 60 ? hours(totals.totalMinutes) : null,
     "time.daysHours": totals.totalMinutes >= 1440 ? totals.totalMinutes : null,
-    "time.perDay": any ? totals.perDay : null,
+    "time.perDay": totals.perDay > 0 ? totals.perDay : null,
     "time.seriesHours": totals.seriesMinutes >= 60 ? hours(totals.seriesMinutes) : null,
     "time.seriesShare": any ? totals.seriesShare : null,
     "time.filmsHours": totals.filmMinutes >= 60 ? hours(totals.filmMinutes) : null,
