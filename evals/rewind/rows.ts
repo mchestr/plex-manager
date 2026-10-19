@@ -157,7 +157,9 @@ export function metadataRow(title: Film | Series): Record<string, unknown> {
     year: title.year,
     originallyAvailableAt: `${title.released ?? `${title.year}-01-01`}T00:00:00.000Z`,
     runtimeSec: isFilm ? title.minutes * 60 : null,
-    seasonEpisodeCounts: isFilm ? null : (title.seasons ?? null),
+    // Keyed by season number, as the metadata warm writes it (P2.6).
+    seasonEpisodeCounts:
+      isFilm || !title.seasons ? null : Object.fromEntries(title.seasons.map((count, i) => [String(i + 1), count])),
     guids: [`tmdb://${tmdbId(title)}`, ...(isFilm ? [] : [`tvdb://${title.tvdb ?? Number(title.key) + 300000}`])],
     videoResolution: "1080",
     hdr: false,

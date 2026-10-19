@@ -40,7 +40,7 @@
   "lifetimeBefore2026": [],
   "metadata": [
     {"ratingKey":"1401","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Comedy","Crime"],"directors":["Ines Varga"],"actors":["Mira Okafor","Jun Ito"],"studio":null,"contentRating":null,"year":2009,"originallyAvailableAt":"2009-01-01T00:00:00.000Z","runtimeSec":5760,"seasonEpisodeCounts":null,"guids":["tmdb://101401"],"videoResolution":"1080","hdr":false},
-    {"ratingKey":"1402","kind":"show","librarySectionId":"2","addedAt":"2020-06-01T00:00:00.000Z","genres":["Science Fiction","Animation"],"directors":[],"actors":["Tomas Brandt","Lena Marsh"],"studio":null,"contentRating":null,"year":1989,"originallyAvailableAt":"1989-01-01T00:00:00.000Z","runtimeSec":null,"seasonEpisodeCounts":[13],"guids":["tmdb://101402","tvdb://301402"],"videoResolution":"1080","hdr":false}
+    {"ratingKey":"1402","kind":"show","librarySectionId":"2","addedAt":"2020-06-01T00:00:00.000Z","genres":["Science Fiction","Animation"],"directors":[],"actors":["Tomas Brandt","Lena Marsh"],"studio":null,"contentRating":null,"year":1989,"originallyAvailableAt":"1989-01-01T00:00:00.000Z","runtimeSec":null,"seasonEpisodeCounts":{"1":13},"guids":["tmdb://101402","tvdb://301402"],"videoResolution":"1080","hdr":false}
   ],
   "requests": {
     "rows": [],

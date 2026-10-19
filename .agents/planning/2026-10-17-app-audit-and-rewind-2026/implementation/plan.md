@@ -2728,6 +2728,7 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
   - CI runs it under both `TZ=UTC` and `TZ=Australia/Sydney`.
 - Where a hand value and the code disagree, decide in the PR which one is wrong. A code fix goes into the P2.7, P2.8 or P2.9 module with a test; a hand-value fix needs the owner's review, recorded in the README's change log.
 - The heavy fixture's facts reproduce the mockup numbers: 1,307 hours across 586 episodes, 31 series and 112 films; 34% after dark; a 23-day streak from 2 to 24 March; 4 July as the biggest day (12 h 24 m); and 289 active days of 334.
+- P2.8's stats have no hand values yet (noted at the P2.8/P2.10 merge). `golden-stats.test.ts` already runs `taste`, `people`, `devices`, `requests` and `nextYear` through `evals/rewind/__tests__/stats-inputs.ts` (a metadata lookup over the fixture's cache rows, and the member's in-window requests with `requests.genres` keyed by request id), but their `expected.stats` sections are optional and every fixture leaves them out. This step must hand-check those values for the fixtures and add them; never copy them from the code's output. `nextYear` runs with `library: null` (fixtures carry no library), and community has no section because the fixtures carry no server aggregate: add one (and a library) to the fixture schema if those values are to be checked.
 
 **Tests.** The golden test above, plus the PR template checkbox "Golden snapshot changes reviewed by the owner".
 

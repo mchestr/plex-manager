@@ -38,7 +38,7 @@
   ],
   "lifetimeBefore2026": [],
   "metadata": [
-    {"ratingKey":"1301","kind":"show","librarySectionId":"2","addedAt":"2020-06-01T00:00:00.000Z","genres":["Animation","Drama"],"directors":[],"actors":["Noor Haddad","Tomas Brandt"],"studio":null,"contentRating":null,"year":2014,"originallyAvailableAt":"2014-01-01T00:00:00.000Z","runtimeSec":null,"seasonEpisodeCounts":[6,6,6],"guids":["tmdb://101301","tvdb://301301"],"videoResolution":"1080","hdr":false}
+    {"ratingKey":"1301","kind":"show","librarySectionId":"2","addedAt":"2020-06-01T00:00:00.000Z","genres":["Animation","Drama"],"directors":[],"actors":["Noor Haddad","Tomas Brandt"],"studio":null,"contentRating":null,"year":2014,"originallyAvailableAt":"2014-01-01T00:00:00.000Z","runtimeSec":null,"seasonEpisodeCounts":{"1":6,"2":6,"3":6},"guids":["tmdb://101301","tvdb://301301"],"videoResolution":"1080","hdr":false}
   ],
   "requests": {
     "rows": [],

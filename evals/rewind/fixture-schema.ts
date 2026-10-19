@@ -20,10 +20,14 @@ const row = z.record(z.string(), z.unknown())
 const dayKey = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 
 /**
- * Hand-checked stats, one optional section per P2.7 module. A section lists
- * only the fields that were checked by hand; each listed field must equal the
- * module's output exactly (shares to 9 decimal places). `topSeries` and
- * `topFilms` are the head of `rankTitles` as `{ title, minutes, plays }`.
+ * Hand-checked stats, one optional section per P2.7 and P2.8 module. A section
+ * lists only the fields that were checked by hand; each listed field must
+ * equal the module's output exactly (shares to 9 decimal places). `topSeries`
+ * and `topFilms` are the head of `rankTitles` as `{ title, minutes, plays }`.
+ * The P2.8 sections (`taste`, `people`, `devices`, `requests`, `nextYear`)
+ * have no hand values yet: P2.16 hand-checks them. `nextYear` runs without a
+ * library (fixtures carry none), so its `picks` are always empty; community
+ * needs a server aggregate the fixtures do not carry and has no section.
  */
 const section = z.record(z.string(), z.unknown())
 const expectedStatsSchema = z
@@ -34,6 +38,11 @@ const expectedStatsSchema = z
     sessions: section,
     bookends: section,
     race: section,
+    taste: section,
+    people: section,
+    devices: section,
+    requests: section,
+    nextYear: section,
     milestones: z.array(z.object({ hours: z.number(), date: dayKey })),
     topSeries: z.array(z.object({ title: z.string(), minutes: z.number(), plays: z.number() })),
     topFilms: z.array(z.object({ title: z.string(), minutes: z.number(), plays: z.number() })),
@@ -69,6 +78,7 @@ export const fixtureSchema = z
     history: z.array(row),
     lifetimeBefore2026: z.array(row),
     metadata: z.array(row),
+    /** Overseerr rows, and each request's genres keyed by request id; null without Overseerr. */
     requests: z.object({ rows: z.array(row), genres: z.record(z.string(), z.array(z.string())) }).nullable(),
     expected: z.object({
       edition: z.enum(["full", "pocket", "postcard"]),

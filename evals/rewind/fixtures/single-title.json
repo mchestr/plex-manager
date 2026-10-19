@@ -277,7 +277,7 @@
     {"user_id":1,"started":1764534300,"stopped":1764535620,"play_duration":1320,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"19010424","grandparent_rating_key":"1901","parent_media_index":4,"media_index":24,"title":"Episode 24","grandparent_title":"The Office","year":2005,"originally_available_at":"2005-01-01","guid":"plex://episode/19010424","section_id":"2"}
   ],
   "metadata": [
-    {"ratingKey":"1901","kind":"show","librarySectionId":"2","addedAt":"2020-06-01T00:00:00.000Z","genres":["Animation","Drama"],"directors":[],"actors":["Noor Haddad","Tomas Brandt"],"studio":null,"contentRating":null,"year":2005,"originallyAvailableAt":"2005-01-01T00:00:00.000Z","runtimeSec":null,"seasonEpisodeCounts":[24,24,24,24,24,24],"guids":["tmdb://101901","tvdb://301901"],"videoResolution":"1080","hdr":false}
+    {"ratingKey":"1901","kind":"show","librarySectionId":"2","addedAt":"2020-06-01T00:00:00.000Z","genres":["Animation","Drama"],"directors":[],"actors":["Noor Haddad","Tomas Brandt"],"studio":null,"contentRating":null,"year":2005,"originallyAvailableAt":"2005-01-01T00:00:00.000Z","runtimeSec":null,"seasonEpisodeCounts":{"1":24,"2":24,"3":24,"4":24,"5":24,"6":24},"guids":["tmdb://101901","tvdb://301901"],"videoResolution":"1080","hdr":false}
   ],
   "requests": {
     "rows": [],

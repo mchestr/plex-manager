@@ -9,24 +9,31 @@
  * `evals/rewind/profiles/*.ts` and are never updated by tooling; a mismatch
  * means the code or the hand value is wrong, and the PR decides which (see
  * `evals/rewind/fixtures/README.md`). CI runs this file under TZ=UTC and
- * TZ=Australia/Sydney. P2.8 adds its modules' sections when it merges.
+ * TZ=Australia/Sydney. P2.8's modules run through the same harness; their
+ * sections are optional and get hand values in P2.16.
  */
 
 import { createFixtureSource } from "@/lib/wrapped/sources/fixture-source"
 import { directLimiter, type PlayEvent } from "@/lib/wrapped/sources/watch-history-source"
 import { computeBookends } from "@/lib/wrapped/stats/bookends"
 import { computeCalendar } from "@/lib/wrapped/stats/calendar"
+import { computeDevices } from "@/lib/wrapped/stats/devices"
 import type { StatsContext } from "@/lib/wrapped/stats/keys"
 import { computeMilestones } from "@/lib/wrapped/stats/milestones"
+import { computeNextYear } from "@/lib/wrapped/stats/next-year"
+import { computePeople } from "@/lib/wrapped/stats/people"
 import { computeRace } from "@/lib/wrapped/stats/race"
 import { rankTitles } from "@/lib/wrapped/stats/rank"
+import { computeRequests } from "@/lib/wrapped/stats/requests"
 import { computeSessions } from "@/lib/wrapped/stats/sessions"
+import { computeTaste } from "@/lib/wrapped/stats/taste"
 import { computeTime } from "@/lib/wrapped/stats/time"
 import { computeTotals } from "@/lib/wrapped/stats/totals"
 import { dataWindow, resolveZone } from "@/lib/wrapped/time/zone"
 
 import type { Fixture } from "../fixture-schema"
 import { loadFixtures } from "./load-fixtures"
+import { fixtureLookup, fixtureRequests } from "./stats-inputs"
 
 jest.mock("@/lib/utils/logger", () => ({
   createLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
@@ -85,11 +92,29 @@ describe.each(fixtures.map((fixture) => [fixture.id, fixture] as const))("golden
     ["sessions", () => computeSessions(events, ctx)],
     ["bookends", () => computeBookends(events, ctx, lifetime)],
     ["race", () => computeRace(events, ctx)],
+    ["taste", () => computeTaste(events, ctx, fixtureLookup(fixture, events))],
+    ["people", () => computePeople(events, ctx, fixtureLookup(fixture, events))],
+    ["devices", () => computeDevices(events, fixtureLookup(fixture, events))],
+    ["requests", () => computeRequests(events, fixtureRequests(fixture, ctx), fixtureLookup(fixture, events))],
+    [
+      "nextYear",
+      () => {
+        const lookup = fixtureLookup(fixture, events)
+        const taste = computeTaste(events, ctx, lookup)
+        const people = computePeople(events, ctx, lookup)
+        return computeNextYear(events, ctx, lookup, { taste, people, library: null, excludedContentRatings: [] })
+      },
+    ],
   ] as const
 
   it.each(sections.filter(([name]) => expected[name] !== undefined))("%s matches the hand-checked values", (name, compute) => {
     const hand = expected[name]!
     expect(settle(pick(compute(), hand))).toEqual(settle(hand))
+  })
+
+  it("finds a cache row for every play, so the P2.8 sections read real metadata", () => {
+    const lookup = fixtureLookup(fixture, events)
+    expect(events.filter((e) => !lookup(e)).map((e) => e.ratingKey)).toEqual([])
   })
 
   if (expected.milestones) {
