@@ -1,8 +1,8 @@
 import { WelcomeStep } from '@/components/onboarding/onboarding-steps/welcome-step'
 import { fireEvent, render, screen } from '@testing-library/react'
 
-// Mock framer-motion to avoid animation issues in tests
-jest.mock('framer-motion', () => ({
+// Mock motion to avoid animation issues in tests
+jest.mock('motion/react', () => ({
   motion: {
     div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
   },

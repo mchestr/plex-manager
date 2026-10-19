@@ -2901,14 +2901,14 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 **Objective.** Move the app to the current `motion` package and replace `react-countup`, without changing what any screen looks like. Then make the operating system's reduced-motion setting apply app-wide.
 
 **Guidance.**
-- **Dependencies.** Add `motion@14.3.0`, pinned exactly (BP-38). Remove `framer-motion` and `react-countup`. `framer-motion` is published in lockstep with `motion`, so the API is the same.
+- **Dependencies.** Add `motion@14.3.0`, pinned exactly (BP-38). Remove `framer-motion` and `react-countup`. `framer-motion` is published in lockstep with `motion`, so the API is the same. (As merged: `motion` depends on `framer-motion` at the same exact version, so `npm ls framer-motion` and the lockfile still list that transitive copy; no direct dependency or import remains.)
 - **Codemod.** `scripts/codemods/framer-to-motion.mjs` changes the module specifier from `framer-motion` to `motion/react`. It covers `import` and `import type` declarations and `jest.mock(…)` calls in `app/`, `components/`, `lib/`, `hooks/` and the tests.
   - Named imports stay as they are, so each file still imports only what it uses. Since only the specifier changes, no ts-morph is needed.
-  - The script prints the files it changed. Count again after P1.1, because the audit's 57 files include some that P1.1 deletes.
+  - The script prints the files it changed. Count again after P1.1, because the audit's 57 files include some that P1.1 deletes. (As merged: 68 files, tests included; it also rewrites re-exports and `jest.requireActual`/`doMock` calls.)
 - **Lazy loading.** `LazyMotion` with `m.*` is for new Rewind code (P5.2, design 5.6). Do not retrofit it into files that P6 or P10 rebuild or that P11.29 deletes (BP-34).
 - **Mocks.** In `jest.setup.js:14-35`, mock `motion/react` with the same shape, adding `MotionConfig`, `LazyMotion` and `m`. Remove the `react-countup` mock.
-- **Provider.** `lib/providers.tsx` wraps the app in `<MotionConfig reducedMotion="user">`.
-- **Count-up.** New `components/ui/count-up.tsx` replaces `react-countup` in `gold-count-up.tsx`, in `movies-breakdown-section.tsx:40` and `:72`, and in `overseerr-stats-section.tsx:61`.
+- **Provider.** `lib/providers.tsx` wraps the app in `<MotionConfig reducedMotion="user">`. (As merged: it wraps `ToastProvider` too, so toasts follow the setting.)
+- **Count-up.** New `components/ui/count-up.tsx` replaces `react-countup` in `gold-count-up.tsx`, in `movies-breakdown-section.tsx:40` and `:72`, and in `overseerr-stats-section.tsx:61`. (As merged: also in the v2 `hero-section.tsx` and `shows-breakdown-section.tsx`, which imported `react-countup` too. The API is `<CountUp value duration delay />`.)
   - It is built on `animate()` and `useMotionValue`.
   - The final value is in an `sr-only` span from the first render, and the animated digits are `aria-hidden` (RWV-09).
   - Under reduced motion it shows the final value at once.
@@ -2917,10 +2917,12 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
   - `components/shared/formatted-text.tsx:38-44` and `components/setup/setup-wizard/space-background.tsx`;
   - `components/dashboard/announcements-card.tsx` and `wrapped-card.tsx`;
   - `app/auth/denied/denied-client.tsx` and `components/admin/shared/unauthenticated-error.tsx`.
+  - (As merged: every `repeat: Infinity` loop goes through `loop()` in `lib/utils/motion-loop.ts`, which under `useReducedMotion()` returns the final keyframes with `{ duration: 0 }`. Besides the files above it also guards `final-success-animation.tsx`, `wrapped-transition.tsx`, `wrapped-charts.tsx` (ProgressBar shimmer) and the v2 `insights`, `shows-breakdown` and `overseerr-stats` sections. `unauthenticated-error.tsx` has no Motion loop, only Tailwind's `animate-bounce`, which became `motion-safe:animate-bounce`.)
 - **Two commits in one PR.**
   - The first does the rename and the `CountUp` swap, and the P1.6 visual suite must show zero diffs.
   - The second adds `MotionConfig` and the guards. P1.6 takes its baselines with reduced motion emulated, so the loops now rest on their final keyframe. Diffs are allowed only on those elements; review them and re-baseline through the P1.6 workflow.
-- **Measure first** (BP-34). Paste the `next build` First Load JS for `/` and `/wrapped` into the PR, before and after the change.
+  - (As merged: Motion 14 runs transforms on the compositor and commits their final style only when its own clock, paused in the visual specs, passes their end. `settlePage` in `e2e/visual/visual-test.ts` therefore ends with up to three passes of one real second plus one clock second, until no finite script animation is left; the rename commit carries this. With it the rename commit matches every baseline at the CI tolerance, and at zero tolerance differs only on the denied page's infinite particle and heading loops, whose phase moves with the extra clock time. The second commit's diffs are the SpaceBackground stars (onboarding step 2, both invite screens, setup step 3) and the denied page's particles, all inside the CI tolerance, so the baselines were left for the owner to refresh through the workflow.)
+- **Measure first** (BP-34). Paste the `next build` First Load JS for `/` and `/wrapped` into the PR, before and after the change. (As merged: Next 16.4's Turbopack build no longer prints First Load JS, so it was summed from the build manifests, gzip: `/` 386.0 kB before, 391.8 kB after the rename, 392.3 kB after the policy; `/wrapped` 336.0, 341.8 and 342.0 kB.)
 
 **Tests.**
 - `components/ui/__tests__/count-up.test.tsx`:
@@ -2943,10 +2945,10 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
   - VoiceOver reads each number once.
 
 **Done when.**
-- [ ] Every import uses `motion/react`, and `framer-motion` and `react-countup` are uninstalled.
-- [ ] `<MotionConfig reducedMotion="user">` wraps the app, and the infinite loops respect reduced motion.
-- [ ] `CountUp` gives screen readers a stable final value.
-- [ ] The rename commit shows zero visual diffs, and every later diff is limited to looping elements and has been reviewed.
+- [x] Every import uses `motion/react`, and `framer-motion` and `react-countup` are uninstalled.
+- [x] `<MotionConfig reducedMotion="user">` wraps the app, and the infinite loops respect reduced motion.
+- [x] `CountUp` gives screen readers a stable final value.
+- [x] The rename commit shows zero visual diffs, and every later diff is limited to looping elements and has been reviewed. (As merged: zero at the CI tolerance; see the Guidance note on `settlePage`.)
 
 ---
 

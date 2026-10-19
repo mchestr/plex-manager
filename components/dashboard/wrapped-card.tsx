@@ -6,8 +6,9 @@ import { RewindNotEligibleCard } from "@/components/dashboard/rewind-not-eligibl
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
 import type { RewindEligibility } from "@/lib/wrapped/eligibility"
+import { loop } from "@/lib/utils/motion-loop"
 import { isGenerationRefusal, memberErrorCopy, readStoredError, refusalCopy } from "@/lib/wrapped/generation-errors"
-import { motion } from "framer-motion"
+import { motion, useReducedMotion } from "motion/react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useRef, useState } from "react"
@@ -21,20 +22,16 @@ interface WrappedCardProps {
 
 // Floating sparkle component
 function Sparkle({ className, delay = 0 }: { className?: string; delay?: number }) {
+  const reduceMotion = useReducedMotion()
   return (
     <motion.div
       className={className}
       initial={{ opacity: 0, scale: 0 }}
-      animate={{
-        opacity: [0, 1, 0],
-        scale: [0, 1, 0],
-      }}
-      transition={{
-        duration: 2,
-        delay,
-        repeat: Infinity,
-        repeatDelay: 1,
-      }}
+      {...loop(
+        reduceMotion,
+        { opacity: [0, 1, 0], scale: [0, 1, 0] },
+        { duration: 2, delay, repeat: Infinity, repeatDelay: 1 }
+      )}
     >
       <svg className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-300" viewBox="0 0 24 24" fill="currentColor">
         <path d="M12 0L14.59 9.41L24 12L14.59 14.59L12 24L9.41 14.59L0 12L9.41 9.41L12 0Z" />
@@ -59,6 +56,7 @@ function isEligibleForWrapped(memberSince: string): boolean {
 export function WrappedCard({ userId, memberSince, rewindEligibility }: WrappedCardProps) {
   const toast = useToast()
   const router = useRouter()
+  const reduceMotion = useReducedMotion()
   const [isGenerating, setIsGenerating] = useState(false)
   const [wrapped, setWrapped] = useState<{ status: string; error?: string | null; shareToken?: string | null } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -315,8 +313,7 @@ export function WrappedCard({ userId, memberSince, rewindEligibility }: WrappedC
             {/* Year badge */}
             <motion.div
               className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-pink-500/20 to-purple-500/20 border border-pink-500/30 px-4 py-1.5"
-              animate={{ scale: [1, 1.02, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
+              {...loop(reduceMotion, { scale: [1, 1.02, 1] }, { duration: 2, repeat: Infinity })}
             >
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />

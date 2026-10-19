@@ -5,7 +5,7 @@ import { getServerName } from "@/actions/server-info"
 import { PlexSignInButton } from "@/components/auth/plex-sign-in-button"
 import { JellyfinSignInForm } from "@/components/auth/jellyfin-sign-in-form"
 import { Button } from "@/components/ui/button"
-import { motion } from "framer-motion"
+import { motion } from "motion/react"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 

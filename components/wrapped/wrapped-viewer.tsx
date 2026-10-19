@@ -1,7 +1,7 @@
 "use client"
 
 import { WrappedData, WrappedSection } from "@/types/wrapped"
-import { AnimatePresence, motion } from "framer-motion"
+import { AnimatePresence, motion } from "motion/react"
 import { ReactNode, useCallback, useEffect, useRef, useState } from "react"
 import { SpaceBackground } from "@/components/setup/setup-wizard/space-background"
 import { CinematicBackground } from "@/components/wrapped/cinematic/cinematic-background"

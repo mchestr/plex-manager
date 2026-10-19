@@ -3,7 +3,7 @@
 import { getWatchlistSyncSettings, triggerWatchlistSync, updateWatchlistSyncSettings } from "@/actions/watchlist"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
-import { motion } from "framer-motion"
+import { motion } from "motion/react"
 import { useCallback, useEffect, useState, useTransition } from "react"
 
 interface RecentHistoryItem {

@@ -2,7 +2,7 @@
 
 import { chatWithAdminBot } from "@/actions/chatbot"
 import { type ChatMessage } from "@/actions/chatbot/types"
-import { AnimatePresence, motion } from "framer-motion"
+import { AnimatePresence, motion } from "motion/react"
 import dynamic from "next/dynamic"
 import { useEffect, useRef, useState } from "react"
 import { useChat } from "./chat-context"

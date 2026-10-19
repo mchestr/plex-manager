@@ -2,8 +2,8 @@ import { render, screen, waitFor, act, within } from '@testing-library/react'
 import { WrappedViewerWrapper } from '@/components/wrapped/wrapped-viewer-wrapper'
 import { WrappedData } from '@/types/wrapped'
 
-// Mock framer-motion
-jest.mock('framer-motion', () => ({
+// Mock motion
+jest.mock('motion/react', () => ({
   motion: {
     div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
   },

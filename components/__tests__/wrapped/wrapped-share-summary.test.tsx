@@ -2,8 +2,8 @@ import { WrappedShareSummary } from '@/components/wrapped/wrapped-share-summary'
 import type { ShareSafeRewindV2 } from '@/lib/wrapped/data/share-safe-v2'
 import { render, screen } from '@testing-library/react'
 
-// Mock framer-motion
-jest.mock('framer-motion', () => ({
+// Mock motion
+jest.mock('motion/react', () => ({
   motion: {
     div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
   },

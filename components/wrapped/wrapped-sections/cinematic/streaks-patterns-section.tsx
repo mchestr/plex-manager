@@ -1,6 +1,6 @@
 "use client"
 
-import { motion } from "framer-motion"
+import { motion } from "motion/react"
 
 import { GoldCountUp } from "@/components/wrapped/cinematic/gold-count-up"
 import { SlideFrame } from "@/components/wrapped/cinematic/slide-frame"

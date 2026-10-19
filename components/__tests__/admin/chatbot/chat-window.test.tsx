@@ -17,8 +17,8 @@ jest.mock("react-markdown", () => ({
   default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }))
 
-// Mock framer-motion to avoid animation issues in tests
-jest.mock("framer-motion", () => ({
+// Mock motion to avoid animation issues in tests
+jest.mock("motion/react", () => ({
   AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   motion: {
     div: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => (

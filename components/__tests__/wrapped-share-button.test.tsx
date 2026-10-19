@@ -1,5 +1,5 @@
-// Mock framer-motion before imports
-jest.mock('framer-motion', () => ({
+// Mock motion before imports
+jest.mock('motion/react', () => ({
   motion: {
     button: ({ children, ...props }: any) => <button {...props}>{children}</button>,
     div: ({ children, ...props }: any) => <div {...props}>{children}</div>,

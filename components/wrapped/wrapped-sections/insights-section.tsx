@@ -1,6 +1,7 @@
 "use client"
 
-import { motion } from "framer-motion"
+import { motion, useReducedMotion } from "motion/react"
+import { loop } from "@/lib/utils/motion-loop"
 import { FormattedText } from "@/components/shared/formatted-text"
 import { SectionHeader } from "@/components/wrapped/wrapped-sections/section-header"
 import { WrappedData, WrappedSection } from "@/types/wrapped"
@@ -11,6 +12,7 @@ interface InsightsSectionProps {
 }
 
 export function InsightsSection({ section, wrappedData }: InsightsSectionProps) {
+  const reduceMotion = useReducedMotion()
   return (
     <div className="text-center space-y-6">
       <SectionHeader title={section.title} subtitle={section.subtitle} />
@@ -27,14 +29,17 @@ export function InsightsSection({ section, wrappedData }: InsightsSectionProps) 
       >
         <motion.div
           className="absolute inset-0 bg-gradient-to-r from-cyan-500/0 via-purple-500/20 to-pink-500/0"
-          animate={{
-            x: ["-100%", "100%"],
-          }}
-          transition={{
-            duration: 4,
-            repeat: Infinity,
-            ease: "linear",
-          }}
+          {...loop(
+            reduceMotion,
+            {
+              x: ["-100%", "100%"],
+            },
+            {
+              duration: 4,
+              repeat: Infinity,
+              ease: "linear",
+            }
+          )}
         />
         <motion.div
           initial={{ opacity: 0, y: 20 }}

@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useEffect, useRef, useCallback } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion, AnimatePresence } from "motion/react"
 import { type NavItem } from "./MobileNavButton"
 
 type MobileMoreMenuProps = {

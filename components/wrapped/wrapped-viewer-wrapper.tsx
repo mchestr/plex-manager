@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { AnimatePresence, motion } from "framer-motion"
+import { AnimatePresence, motion } from "motion/react"
 import { WrappedShareControls } from "@/components/wrapped/wrapped-share-controls"
 import { WrappedViewer } from "@/components/wrapped/wrapped-viewer"
 import { WrappedTransition } from "@/components/wrapped/wrapped-transition"

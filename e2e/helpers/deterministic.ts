@@ -16,7 +16,7 @@ export const VISUAL_NOW = new Date('2026-10-19T12:00:00Z');
 /** Seed for the page's `Math.random`. */
 export const VISUAL_SEED = 20261019;
 
-/** Fake time run after load, so framer-motion entrances finish. */
+/** Fake time run after load, so Motion entrances finish. */
 export const SETTLE_MS = 5000;
 
 /**

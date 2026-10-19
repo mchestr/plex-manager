@@ -30,7 +30,6 @@ updates:
       motion:
         patterns:
           - "motion"
-          - "framer-motion"
       # Bump the mcr.microsoft.com/playwright:v<version>-noble tags in
       # .github/workflows/build.yml and visual-baselines.yml in the same pull
       # request, then regenerate the visual baselines.

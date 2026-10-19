@@ -29,12 +29,13 @@ jest.mock('next/navigation', () => ({
   useRouter: () => mockRouter,
 }))
 
-jest.mock('framer-motion', () => ({
+jest.mock('motion/react', () => ({
   motion: {
     div: ({ children, className, 'data-testid': testId }: { children?: ReactNode; className?: string; 'data-testid'?: string }) => (
       <div className={className} data-testid={testId}>{children}</div>
     ),
   },
+  useReducedMotion: () => false,
 }))
 
 const ELIGIBLE = { eligible: true } as const

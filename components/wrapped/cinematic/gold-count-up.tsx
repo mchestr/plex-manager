@@ -1,6 +1,6 @@
 "use client"
 
-import CountUp from "react-countup"
+import { CountUp } from "@/components/ui/count-up"
 
 import { cn } from "@/lib/utils"
 
@@ -27,7 +27,7 @@ export function GoldCountUp({
         className
       )}
     >
-      <CountUp start={0} end={value} duration={duration} delay={delay} separator="," />
+      <CountUp value={value} duration={duration} delay={delay} />
       {suffix ? <span className="text-[0.45em] tracking-widest uppercase ml-2 text-gold">{suffix}</span> : null}
     </span>
   )

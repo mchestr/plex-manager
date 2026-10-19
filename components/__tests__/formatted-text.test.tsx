@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import { useReducedMotion } from 'motion/react'
 import { FormattedText } from '@/components/shared/formatted-text'
 
 describe('FormattedText', () => {
@@ -62,5 +63,32 @@ describe('FormattedText', () => {
     expect(screen.getByText('Before')).toBeInTheDocument()
     expect(screen.getByText('After')).toBeInTheDocument()
   })
-})
 
+  describe('highlight pulse', () => {
+    const motionProps = (element: HTMLElement) => ({
+      animate: JSON.parse(element.dataset.animate ?? 'null'),
+      transition: JSON.parse(element.dataset.transition ?? 'null'),
+    })
+
+    afterEach(() => jest.mocked(useReducedMotion).mockReturnValue(false))
+
+    it('loops the highlight scale', () => {
+      render(<FormattedText text="Hello <highlight>world</highlight>" />)
+
+      const { animate, transition } = motionProps(screen.getByText('world'))
+      expect(animate).toEqual({ scale: [1, 1.05, 1] })
+      // Infinity serialises as null.
+      expect(transition).toMatchObject({ repeat: null, repeatDelay: 3 })
+    })
+
+    it('rests on the final keyframe under reduced motion', () => {
+      jest.mocked(useReducedMotion).mockReturnValue(true)
+      render(<FormattedText text="Hello <highlight>world</highlight>" />)
+
+      expect(motionProps(screen.getByText('world'))).toEqual({
+        animate: { scale: 1 },
+        transition: { duration: 0 },
+      })
+    })
+  })
+})

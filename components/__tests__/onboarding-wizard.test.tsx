@@ -14,8 +14,8 @@ jest.mock('@/actions/onboarding', () => ({
   getOnboardingInfo: jest.fn().mockResolvedValue({ overseerrUrl: 'http://test-overseerr.com' }),
 }))
 
-// Mock framer-motion
-jest.mock('framer-motion', () => ({
+// Mock motion
+jest.mock('motion/react', () => ({
   motion: {
     div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
   },

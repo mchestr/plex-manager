@@ -7,11 +7,6 @@ jest.mock('../shared/formatted-text', () => ({
   FormattedText: ({ text }: { text: string }) => <span>{text}</span>,
 }))
 
-jest.mock('react-countup', () => ({
-  __esModule: true,
-  default: ({ end }: { end: number }) => <span>{end}</span>,
-}))
-
 describe('HeroSection', () => {
   const createMockSection = (overrides?: Partial<WrappedSection>): WrappedSection => ({
     id: 'hero-1',
@@ -142,9 +137,10 @@ describe('HeroSection', () => {
         },
       },
     })
-    render(<HeroSection section={section} sectionIndex={0} />)
+    const { container } = render(<HeroSection section={section} sectionIndex={0} />)
 
-    expect(screen.getByText('0')).toBeInTheDocument()
+    // CountUp's screen-reader copy of the final value.
+    expect(container.querySelector('.sr-only')).toHaveTextContent('0')
     expect(screen.getByText('Episodes')).toBeInTheDocument()
   })
 })

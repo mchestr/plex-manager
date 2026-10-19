@@ -1,6 +1,7 @@
 "use client"
 
-import { motion } from "framer-motion"
+import { motion, useReducedMotion } from "motion/react"
+import { loop } from "@/lib/utils/motion-loop"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -10,6 +11,7 @@ import { useIsClient } from "@/hooks/use-is-client"
 const shockwaves = Array.from({ length: 3 }, (_, i) => ({ id: i, delay: i * 0.3 }))
 
 export function DeniedAccessPageClient() {
+  const reduceMotion = useReducedMotion()
   const router = useRouter()
   const isClient = useIsClient()
   // Random positions are generated once and rendered only on the client, so
@@ -36,19 +38,22 @@ export function DeniedAccessPageClient() {
             top: `${particle.y}%`,
           }}
           initial={{ opacity: 0, scale: 0 }}
-          animate={{
-            opacity: [0, 1, 0],
-            scale: [0, 1, 0],
-            x: particle.driftX,
-            y: particle.driftY,
-          }}
-          transition={{
-            duration: 2,
-            delay: particle.delay,
-            repeat: Infinity,
-            repeatDelay: 3,
-            ease: "easeOut",
-          }}
+          {...loop(
+            reduceMotion,
+            {
+              opacity: [0, 1, 0],
+              scale: [0, 1, 0],
+              x: particle.driftX,
+              y: particle.driftY,
+            },
+            {
+              duration: 2,
+              delay: particle.delay,
+              repeat: Infinity,
+              repeatDelay: 3,
+              ease: "easeOut",
+            }
+          )}
         />
       ))}
 
@@ -58,17 +63,20 @@ export function DeniedAccessPageClient() {
           key={`shockwave-${shockwave.id}`}
           className="absolute inset-0 flex items-center justify-center"
           initial={{ opacity: 0 }}
-          animate={{
-            opacity: [0, 0.5, 0],
-            scale: [0.5, 2, 2.5],
-          }}
-          transition={{
-            duration: 1.5,
-            delay: shockwave.delay,
-            repeat: Infinity,
-            repeatDelay: 2,
-            ease: "easeOut",
-          }}
+          {...loop(
+            reduceMotion,
+            {
+              opacity: [0, 0.5, 0],
+              scale: [0.5, 2, 2.5],
+            },
+            {
+              duration: 1.5,
+              delay: shockwave.delay,
+              repeat: Infinity,
+              repeatDelay: 2,
+              ease: "easeOut",
+            }
+          )}
         >
           <div className="w-96 h-96 rounded-full border-2 border-red-500/30" />
         </motion.div>
@@ -122,15 +130,18 @@ export function DeniedAccessPageClient() {
                 {/* Pulsing glow */}
                 <motion.div
                   className="absolute inset-0 rounded-full bg-red-500/20"
-                  animate={{
-                    scale: [1, 1.2, 1],
-                    opacity: [0.5, 0.8, 0.5],
-                  }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                  }}
+                  {...loop(
+                    reduceMotion,
+                    {
+                      scale: [1, 1.2, 1],
+                      opacity: [0.5, 0.8, 0.5],
+                    },
+                    {
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }
+                  )}
                 />
               </div>
             </motion.div>
@@ -146,14 +157,17 @@ export function DeniedAccessPageClient() {
             <motion.h1
               data-testid="access-denied-heading"
               className="text-3xl font-bold text-red-400 mb-3"
-              animate={{
-                scale: [1, 1.05, 1],
-              }}
-              transition={{
-                duration: 2,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
+              {...loop(
+                reduceMotion,
+                {
+                  scale: [1, 1.05, 1],
+                },
+                {
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }
+              )}
             >
               Access Denied
             </motion.h1>
