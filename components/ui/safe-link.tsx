@@ -23,12 +23,16 @@ export function SafeLink({ href, children, node, ...props }: SafeLinkProps) {
       </a>
     )
   }
+  // An autolink's label already is its destination.
+  const labelIsDestination = children === href || children === link.href
   return (
     <a {...props} href={link.href} target="_blank" rel="noopener noreferrer">
       {children}
-      <span className="ml-1 font-mono text-[0.85em] font-normal break-all text-muted-foreground">
-        ({link.href})
-      </span>
+      {!labelIsDestination && (
+        <span className="ml-1 font-mono text-[0.85em] font-normal break-all text-muted-foreground">
+          ({link.href})
+        </span>
+      )}
       <ArrowUpRight aria-hidden="true" className="ml-0.5 inline size-[0.9em] align-[-0.1em]" />
     </a>
   )

@@ -70,6 +70,12 @@ describe('SafeLink', () => {
     }
   )
 
+  it('does not repeat the destination when the label is the URL', () => {
+    render(<SafeLink href="https://example.com/x">https://example.com/x</SafeLink>)
+
+    expect(screen.getByRole('link')).toHaveTextContent(/^https:\/\/example\.com\/x$/)
+  })
+
   it('ignores a caller target and rel on an external link', () => {
     render(
       <SafeLink href="https://example.com/" target="_self" rel="opener">

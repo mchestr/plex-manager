@@ -81,6 +81,12 @@ describe('MarkdownBody', () => {
     expect(link).toHaveTextContent('the docs(https://docs.example.com/guide)')
   })
 
+  it('shows an autolink once', () => {
+    renderMarkdown('Go to <https://docs.example.com/guide>.')
+
+    expect(screen.getByRole('link')).toHaveTextContent(/^https:\/\/docs\.example\.com\/guide$/)
+  })
+
   it('renders a relative link with no destination suffix', () => {
     renderMarkdown('Open [help](/help).')
 
