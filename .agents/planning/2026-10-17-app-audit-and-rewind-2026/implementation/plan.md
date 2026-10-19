@@ -373,7 +373,7 @@ gantt
 
 **UI foundations: tokens, fonts and primitives** (2026-10-26 to 2026-11-05)
 
-- [ ] P3.1: Semantic tokens and the Rewind scope contract (ui, M, due 2026-10-27)
+- [x] P3.1: Semantic tokens and the Rewind scope contract (ui, M, due 2026-10-27)
 - [ ] P3.2: Fonts and root layout (ui, M, due 2026-11-05)
 - [ ] P3.3: Token mirror module and contrast tests (ui, S, due 2026-10-28)
 - [ ] P3.4: Base primitives on Base UI behind adapters (ui, L, due 2026-10-30)
@@ -396,13 +396,13 @@ gantt
 - [ ] P4.9: Discord OAuth redirect and state binding (security, S, due 2026-11-23)
 - [ ] P4.10: Stripe event ordering, idempotency and live re-checks (security, L, due 2026-11-19)
 - [ ] P4.11: Unshare only this server, idempotently (security, S, due 2026-12-02)
-- [ ] P4.12: Jellyfin invites: no Plex redemption, complete compensation (security, S, due 2026-10-28)
+- [x] P4.12: Jellyfin invites: no Plex redemption, complete compensation (security, S, due 2026-10-28)
 - [ ] P4.13: Watchlist requests filed as the member (security, M, due 2026-12-03)
 - [ ] P4.15: Harden the admin assistant (security, S, due 2026-11-06)
 - [ ] P4.16: Redact secrets and identifiers from logs (security, M, due 2026-11-19)
 - [ ] P4.17: Harden the Docker image and compose file; add a health check (ops, M, due 2026-11-24)
 - [ ] P4.18: Discord role metadata follows access; marking acts as the member (security, M, due 2026-11-24)
-- [ ] P4.19: Discord privacy firewall fails closed (security, S, due 2026-11-20)
+- [x] P4.19: Discord privacy firewall fails closed (security, S, due 2026-11-20)
 - [ ] P4.20: LLM quotas and spend caps for the assistant and Discord (security, M, due 2026-11-19)
 
 **Rewind core experience and model bake-off** (2026-11-06 to 2026-11-20)
