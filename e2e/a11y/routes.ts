@@ -7,7 +7,7 @@ import {
   VISUAL_REWIND_ID,
   VISUAL_REWIND_YEAR,
 } from '../helpers/seed-fixtures';
-import { A11Y_CONVERSATION_ID, A11Y_SHARE_TOKEN } from './seed';
+import { A11Y_CONVERSATION_ID, A11Y_SHARE_TOKEN, clearA11yShareVisits } from './seed';
 
 /**
  * Every page under `app/` the axe spec scans, with the seeded ids its detail
@@ -30,6 +30,11 @@ export interface A11yRoute {
   userId?: string;
   /** Turns Stripe on (`e2e/helpers/stripe.ts`) for this scan. */
   stripe?: boolean;
+  /**
+   * Resets rows that earlier routes write and this one reads, so the scan
+   * sees the same data whichever routes ran before it in this worker.
+   */
+  reset?: () => Promise<void>;
 }
 
 export interface A11ySetupRoute {
@@ -122,7 +127,8 @@ export const A11Y_ROUTES: A11yRoute[] = [
     ready: 'wrapped-settings-edit-button',
     setup: (page) => openWith(page, 'wrapped-settings-edit-button', 'wrapped-settings-year-note'),
   },
-  { path: '/admin/shares', as: 'admin', ready: 'admin-shares-heading' },
+  // The public share route records a visit; a worker restart's re-seed drops it.
+  { path: '/admin/shares', as: 'admin', ready: 'admin-shares-heading', reset: clearA11yShareVisits },
   { path: '/admin/llm-usage', as: 'admin', ready: 'admin-llm-usage-heading' },
   { path: '/admin/llm-usage/visual-llm-usage-1', as: 'admin', ready: 'admin-llm-usage-detail-heading' },
   {

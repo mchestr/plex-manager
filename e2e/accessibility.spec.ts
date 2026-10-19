@@ -36,6 +36,7 @@ test.describe('Accessibility', () => {
         const userId = routeUserId(route);
         if (userId) await signIn(userId);
         if (route.stripe) await setStripeEnabled(true, { configure: true });
+        await route.reset?.();
         try {
           await page.goto(route.path);
           await settlePage(page);

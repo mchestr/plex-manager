@@ -44,6 +44,21 @@ export async function seedA11yFixtures(): Promise<void> {
   }
 }
 
+/**
+ * Deletes the seeded Rewind's share visits. Opening the public share route
+ * records one (after its response), and a re-seed after a failed test drops
+ * it, so `/admin/shares` would otherwise show one visit or none depending on
+ * which tests ran before it.
+ */
+export async function clearA11yShareVisits(): Promise<void> {
+  const prisma = createE2EPrismaClient();
+  try {
+    await prisma.wrappedShareVisit.deleteMany({ where: { wrappedId: VISUAL_REWIND_ID } });
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
 export async function clearA11yFixtures(): Promise<void> {
   const prisma = createE2EPrismaClient();
   try {

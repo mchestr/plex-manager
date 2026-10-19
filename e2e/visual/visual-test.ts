@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { Page, Request } from '@playwright/test';
 import { expect, test as sessionTest } from '../fixtures/session';
 import { makeDeterministic, settle } from '../helpers/deterministic';
 
@@ -9,6 +9,7 @@ import { makeDeterministic, settle } from '../helpers/deterministic';
  */
 export const test = sessionTest.extend({
   page: async ({ page }, use) => {
+    trackRequests(page);
     await makeDeterministic(page);
     await use(page);
   },
@@ -29,7 +30,8 @@ export function skipUnlessProductionBuild(): void {
 export { expect };
 
 /**
- * Lets the page finish. Each pass waits for the network, runs the paused
+ * Lets the page finish. Each pass waits until no request is in flight
+ * (including ones a click or a timer started after load), runs the paused
  * clock (timers, animation frames, TanStack Query's `setTimeout` notify) and
  * then finishes every finite Web Animation: Motion runs opacity and
  * transform on WAAPI, which keeps real time, and an `AnimatePresence` exit
@@ -44,7 +46,7 @@ export { expect };
  */
 export async function settlePage(page: Page): Promise<void> {
   for (let pass = 0; pass < 3; pass++) {
-    await page.waitForLoadState('networkidle');
+    await waitForNetworkQuiet(page);
     await settle(page);
     await finishAnimations(page);
   }
@@ -54,6 +56,50 @@ export async function settlePage(page: Page): Promise<void> {
     if ((await finishAnimations(page)) === 0) return;
   }
 }
+
+/** The requests each page has in flight, kept by {@link trackRequests}. */
+const inflight = new WeakMap<Page, Set<Request>>();
+
+/** Starts counting `page`'s requests in flight; call before its first `goto`. */
+function trackRequests(page: Page): void {
+  const requests = new Set<Request>();
+  inflight.set(page, requests);
+  const done = (request: Request) => requests.delete(request);
+  page.on('request', (request) => requests.add(request));
+  page.on('requestfinished', done);
+  page.on('requestfailed', done);
+}
+
+/**
+ * Waits until `page` has had no request in flight for {@link QUIET_MS}.
+ *
+ * Playwright's `networkidle` fires once per navigation and then stays fired,
+ * so it never waits for a request that starts later: a Server Action that a
+ * click or a timer sends (the create-invite dialog's library fetch) would
+ * otherwise resolve mid-scan, and its error toast would land in some scans
+ * and not others.
+ */
+async function waitForNetworkQuiet(page: Page): Promise<void> {
+  await page.waitForLoadState('networkidle');
+  const requests = inflight.get(page);
+  if (!requests) throw new Error('settlePage needs the `page` fixture of e2e/visual/visual-test.ts.');
+  const deadline = Date.now() + QUIET_TIMEOUT_MS;
+  let quietSince = Date.now();
+  for (;;) {
+    if (requests.size > 0) quietSince = Date.now();
+    else if (Date.now() - quietSince >= QUIET_MS) return;
+    if (Date.now() > deadline) {
+      const urls = [...requests].map((request) => request.url()).join(', ');
+      throw new Error(`Requests still in flight after ${QUIET_TIMEOUT_MS} ms: ${urls}`);
+    }
+    await page.waitForTimeout(POLL_MS);
+  }
+}
+
+/** Quiet time that counts as idle, as Playwright's `networkidle` uses. */
+const QUIET_MS = 500;
+const QUIET_TIMEOUT_MS = 15_000;
+const POLL_MS = 50;
 
 /**
  * Finishes every running finite Web Animation. Returns how many finite
