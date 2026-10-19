@@ -1,5 +1,5 @@
 /**
- * Tests for actions/invite.ts - invite validation and processing
+ * Tests for actions/invite.ts and lib/invites/ - invite validation and processing
  *
  * These tests cover:
  * - Basic invite CRUD operations
@@ -14,7 +14,6 @@
 
 import {
   validateInvite,
-  processInvite,
   processJellyfinInvite,
   createInvite,
   getInvites,
@@ -22,6 +21,7 @@ import {
   deleteInvite,
 } from '@/actions/invite'
 import { requireAdmin } from '@/lib/admin'
+import { redeemPlexInvite } from '@/lib/invites/plex-redemption'
 import {
   getPlexUserInfo,
   inviteUserToPlexServer,
@@ -110,8 +110,8 @@ const mockDeleteJellyfinUser = deleteJellyfinUser as jest.MockedFunction<typeof 
 const mockLogAuditEvent = logAuditEvent as jest.MockedFunction<typeof logAuditEvent>
 const mockGetServerSession = jest.mocked(getServerSession)
 
-/** The redemption actions take one input object; these keep the tests' two-argument calls. */
-const redeemPlex = (code: string, plexAuthToken: string) => processInvite({ code, plexAuthToken })
+/** The Plex redemption runs inside the Plex sign-in's authorize (P4.8); the Jellyfin action takes one input object. */
+const redeemPlex = (code: string, plexAuthToken: string) => redeemPlexInvite(code, plexAuthToken)
 const redeemJellyfin = (code: string, credentials: { username: string; password: string }) =>
   processJellyfinInvite({ code, credentials })
 
@@ -176,7 +176,7 @@ describe('invite actions', () => {
   })
 
   /**
-   * Run processInvite under fake timers so the 2s Plex propagation delay
+   * Run the Plex redemption under fake timers so the 2s Plex propagation delay
    * resolves immediately instead of slowing the suite down.
    */
   async function runProcessInvite(code: string, token: string) {
@@ -214,17 +214,6 @@ describe('invite actions', () => {
       expect(mockPrisma.invite.findUnique).not.toHaveBeenCalled()
     })
 
-    it('refuses a rate-limited Plex redemption before contacting Plex or consuming the invite', async () => {
-      limitTo('invite:redeem')
-
-      const result = await redeemPlex('TESTCODE', 'plex-token')
-
-      expect(result).toEqual(RATE_LIMITED_RESULT)
-      expect(mockConsume).toHaveBeenCalledWith('invite:redeem', CLIENT_IP)
-      expect(mockGetPlexUserInfo).not.toHaveBeenCalled()
-      expect(mockPrisma.$transaction).not.toHaveBeenCalled()
-    })
-
     it('refuses a rate-limited Jellyfin redemption before contacting Jellyfin or consuming the invite', async () => {
       limitTo('invite:redeem')
 
@@ -239,7 +228,6 @@ describe('invite actions', () => {
 
     it.each(['A B', '../x', 'X'.repeat(65), ''])('refuses the code %p on every invite action before any lookup', async (code) => {
       await expect(validateInvite(code)).resolves.toMatchObject({ success: false, code: 'VALIDATION' })
-      await expect(redeemPlex(code, 'plex-auth-token')).resolves.toMatchObject({ success: false, code: 'VALIDATION' })
       await expect(redeemJellyfin(code, { username: 'newuser', password: 'password123' })).resolves.toMatchObject({
         success: false,
         code: 'VALIDATION',
@@ -306,7 +294,7 @@ describe('invite actions', () => {
     })
   })
 
-  describe('processInvite - atomic transaction behavior', () => {
+  describe('redeemPlexInvite - atomic transaction behavior', () => {
     beforeEach(() => {
       mockGetPlexUserInfo.mockResolvedValue({
         success: true,
@@ -349,6 +337,20 @@ describe('invite actions', () => {
       expect(mockPrisma.$transaction).toHaveBeenCalled()
       // The first transaction should be validateAndUseInvite with Serializable isolation
       expect(capturedOptions[0]?.isolationLevel).toBe('Serializable')
+    })
+
+    it('succeeds without spending another use when this Plex account already redeemed the code (P4.8)', async () => {
+      mockPrisma.inviteUsage.findFirst.mockResolvedValue({ id: 'usage-1', inviteId: mockInvite.id, userId: 'user-1', usedAt: new Date() })
+
+      const result = await redeemPlex('TESTCODE', 'plex-auth-token')
+
+      expect(result).toEqual({ success: true, data: null })
+      expect(mockPrisma.inviteUsage.findFirst).toHaveBeenCalledWith({
+        where: { invite: { code: 'TESTCODE' }, user: { plexUserId: mockPlexUser.id } },
+        select: { id: true },
+      })
+      expect(mockPrisma.$transaction).not.toHaveBeenCalled()
+      expect(mockInviteUserToPlexServer).not.toHaveBeenCalled()
     })
 
     it('should reject invite that has already been used', async () => {
@@ -416,7 +418,7 @@ describe('invite actions', () => {
     })
   })
 
-  describe('processInvite - rollback and audit logging', () => {
+  describe('redeemPlexInvite - rollback and audit logging', () => {
     beforeEach(() => {
       mockGetPlexUserInfo.mockResolvedValue({ success: true, data: mockPlexUser })
       mockPrisma.plexServer.findFirst.mockResolvedValue(mockPlexServer)

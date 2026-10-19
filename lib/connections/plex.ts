@@ -6,10 +6,7 @@
  */
 
 // Core types and utilities
-export {
-  type PlexUserInfo,
-  type PlexMediaItem,
-} from "./plex-core"
+export { type PlexMediaItem } from "./plex-core"
 
 // Connection and server identity
 export {

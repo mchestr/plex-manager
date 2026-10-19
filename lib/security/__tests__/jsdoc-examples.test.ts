@@ -1,10 +1,11 @@
 /**
- * Checks the @example blocks in lib/security/secret-reuse.ts and
- * lib/security/config-diff.ts.
+ * Checks the @example blocks in lib/security/secret-reuse.ts,
+ * lib/security/config-diff.ts and lib/security/signed-cookie.ts.
  */
 
 import { configDiff } from "@/lib/security/config-diff"
 import { resolveSecretForOrigin } from "@/lib/security/secret-reuse"
+import { readCookie, signValue, verifyValue } from "@/lib/security/signed-cookie"
 
 describe("JSDoc Documentation Examples", () => {
   it("resolveSecretForOrigin refuses a stored key for a new host", () => {
@@ -31,5 +32,12 @@ describe("JSDoc Documentation Examples", () => {
       secretChanged: false,
       origins: { before: { url: "http://old.lan:8181" }, after: { url: "https://new.lan" } },
     })
+  })
+
+  it("signValue verifies only for its own purpose, and readCookie parses a raw header", () => {
+    const raw = signValue({ pinId: 42 }, "plex-pin", 900)
+    expect(verifyValue(raw, "plex-pin")).toEqual({ pinId: 42 })
+    expect(verifyValue(raw, "discord-oauth")).toBeNull()
+    expect(readCookie("a=1; pm-plex-pin=abc", "pm-plex-pin")).toBe("abc")
   })
 })
