@@ -2229,12 +2229,21 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 
 **Demo.** Set the server zone to `Europe/Berlin` and save the window 12-01 to 01-31: the page shows "December 1 to January 31" both before and after hydration, and `getSeasonState(new Date('2026-11-30T23:30Z'))` reports the season as open. An announcement saved at 23:59 Chicago time still shows 23:59 when edited.
 
+**As merged** (later steps rely on these):
+- Owner decisions 1 (season timing) and 5 (member time zones) had no answer by 2026-10-20, so their planned defaults apply: the default season is `12-01` to `01-31`, and `resolveZone` honours an optional `User.timezone`.
+- `lib/utils/zoned-time.ts` also exports `isWallTime` (the Zod check for `YYYY-MM-DDTHH:mm`) and `formatDayKey`; `wallTimeToInstant` returns a `Date` and throws `RangeError` on a malformed value; `zonedParts().weekday` is 0 for Sunday. `normalizeTimeZone` accepts only names in `timeZoneOptions()`, so offsets such as `+05:00` are rejected.
+- `TimeWindow` is `{ start, end, zone }` (epoch ms, half-open), so `paddedDateRange(window)` takes the window alone. `dataWindow`'s `end` is 00:00 on 1 December (exclusive). `elapsedDays(year, { finalCut })` takes no zone. `lib/wrapped/time/zone.ts` is a knip entry until P2.4 imports it; P2.4 removes that line from `knip.json`.
+- `lib/wrapped/season.ts`: `seasonYearFor` is gone; `seasonStateAt(now, opens, closes, zone)` is the pure rule, `getSeasonState(now)` reads Config and `serverZone()`, and `getSeasonYear()` stays. `closesAt` is exclusive (00:00 after the close day). A window within one year belongs to the calendar year; `02-29` falls on 28 February in a common year.
+- `getWrappedSettings()` returns `{ featureEnabled, seasonOpen, wrappedEnabled, wrappedYear }`; `generatePlexWrapped` lets admins through when `featureEnabled` (one condition in `actions/wrapped-generation.ts`). The settings form edits only `opens`/`closes`; there is no "no window" state any more. `updateServerTimeZone(timezone)` logs `SERVER_TIMEZONE_CHANGED`.
+- The plan's example "2026-03-11T05:00Z is a Tuesday at 21:00 in Los Angeles" is 22:00: the US change on 8 March puts it in PDT. Jest cannot change its own process zone, so `zoned-time.test.ts` recomputes a fingerprint of every zone answer in `tsx` child processes under `TZ=UTC` and `TZ=Pacific/Kiritimati`; the settings hydration test mocks the browser's Intl zone instead of `TZ=Europe/Berlin`.
+- `TZ` is in `envSchema`. The server time zone control is `components/admin/settings/server-time-zone-form.tsx`, rendered inside `WrappedSettingsForm` on an opaque panel (so axe can check its contrast; the settings axe counts fell). The visual seed sets the season to `01-01`-`12-31` so screenshots do not change on 1 December; the admin settings screenshots were re-taken.
+
 **Done when.**
-- [ ] `serverZone()` resolves `Config.timezone`, then a valid `TZ`, then UTC, and the setting stores canonical IANA names.
-- [ ] Rewind buckets come only from `Intl` date parts, and the four-zone, DST and 31 December tests pass under both process zones.
-- [ ] Season dates are month-day values evaluated in the server zone, and the legacy dates are migrated with the same result under any session time zone.
-- [ ] Dump taken before deploy; `prisma migrate status` clean.
-- [ ] Announcement expiry and the season form round-trip what the admin typed.
+- [x] `serverZone()` resolves `Config.timezone`, then a valid `TZ`, then UTC, and the setting stores canonical IANA names.
+- [x] Rewind buckets come only from `Intl` date parts, and the four-zone, DST and 31 December tests pass under both process zones.
+- [x] Season dates are month-day values evaluated in the server zone, and the legacy dates are migrated with the same result under any session time zone.
+- [ ] Dump taken before deploy; `prisma migrate status` clean. (Owner: dump and production deploy; `migrate status` is clean on the test database.)
+- [x] Announcement expiry and the season form round-trip what the admin typed.
 
 ### Step P2.3: Shared outbound HTTP client and one Tautulli client
 
