@@ -38,7 +38,7 @@ function AdminHeader({ userName, wrappedId, userId, year: headerYear }: { userNa
               </svg>
             </Link>
             <div className="flex-1 min-w-0">
-              <h1 className="text-xl font-bold text-white truncate">
+              <h1 data-testid="admin-user-wrapped-heading" className="text-xl font-bold text-white truncate">
                 {userName || "User"}&apos;s {headerYear} Wrapped
               </h1>
               <p className="text-xs text-slate-400 mt-0.5">

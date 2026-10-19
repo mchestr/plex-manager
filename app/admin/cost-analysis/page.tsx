@@ -59,7 +59,7 @@ export default async function CostAnalysisPage({ searchParams }: CostAnalysisPag
       <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="mb-6">
-            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Cost Analysis</h1>
+            <h1 data-testid="admin-cost-analysis-heading" className="text-2xl sm:text-3xl font-bold text-white mb-2">Cost Analysis</h1>
             <p className="text-sm text-slate-400">
               Comprehensive cost breakdowns and projections for LLM usage
             </p>

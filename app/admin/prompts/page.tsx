@@ -23,7 +23,7 @@ export default async function PromptsPage() {
           <div className="mb-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Prompt Templates</h1>
+                <h1 data-testid="admin-prompts-heading" className="text-2xl sm:text-3xl font-bold text-white mb-2">Prompt Templates</h1>
                 <p className="text-sm text-slate-400">
                   Manage and configure prompt templates for generating wrapped content
                 </p>

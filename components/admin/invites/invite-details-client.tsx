@@ -87,7 +87,7 @@ export function InviteDetailsClient({ id }: { id: string }) {
           </svg>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-white">Invite Details</h1>
+          <h1 data-testid="admin-invite-details-heading" className="text-2xl font-bold text-white">Invite Details</h1>
           <p className="text-slate-400">View usage history and configuration</p>
         </div>
         <div className="ml-auto">

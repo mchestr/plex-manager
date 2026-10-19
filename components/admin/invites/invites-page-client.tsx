@@ -331,6 +331,7 @@ export function InvitesPageClient() {
                         </button>
                         <button
                           onClick={() => handleDeleteClick(invite.id)}
+                          data-testid={`admin-invites-delete-${invite.id}`}
                           className="text-slate-400 hover:text-red-400 transition-colors"
                           aria-label={`Delete invite ${invite.code}`}
                         >
@@ -356,6 +357,7 @@ export function InvitesPageClient() {
           maxWidth="md"
           labelledBy="create-invite-title"
           describedBy="create-invite-description"
+          testId="admin-invites-create-dialog"
         >
             <div className="p-6 border-b border-slate-700 flex justify-between items-center">
               <div>
@@ -629,6 +631,7 @@ export function InvitesPageClient() {
         confirmText="Delete"
         cancelText="Cancel"
         confirmButtonClass="bg-red-600 hover:bg-red-700"
+        testId="admin-invites-delete-dialog"
       />
     </div>
   )

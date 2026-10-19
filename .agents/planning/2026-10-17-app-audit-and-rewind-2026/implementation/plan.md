@@ -346,7 +346,7 @@ gantt
 - [x] P1.4: Type-check the test files (ops, M, due 2026-10-27)
 - [ ] P1.5: CI gates: typecheck, audit, knip, coverage, integration, schema drift and production-mode E2E (ops, L, due 2026-10-30)
 - [ ] P1.6: Visual-regression project and baselines (ui, M, due 2026-10-23)
-- [ ] P1.7: axe at wcag22aa on every route (ui, S, due 2026-10-22)
+- [x] P1.7: axe at wcag22aa on every route (ui, S, due 2026-10-22)
 - [x] P1.8: Design-system guardrail script and debt baseline (ui, S, due 2026-10-22)
 - [ ] P1.9: Vendor the recommended agent skills with pinned commits (ops, S, due 2026-10-23)
 - [ ] P1.10: Safe upgrade path: db:deploy, migration pre-flight and backups (ops, M, due 2026-11-03)
@@ -1923,11 +1923,19 @@ gantt
 1. Add an unlabeled `<input>` to a page: the spec fails, naming `label|critical` on that route.
 2. Fix the Pause Queue contrast (`components/admin/queues/queue-controls.tsx:64`): the spec asks for a baseline update, and the regenerated file shows the drop.
 
+**As merged.**
+- 44 tests: 38 route scans (`e2e/a11y/routes.ts`: 7 public, 7 member, 24 admin including the four interactive states, plus `/wrapped/2026`, which the guidance list missed), the two `/setup` steps in `e2e/accessibility-setup.spec.ts`, the two modal ARIA checks, the `button-name` check and a check that the baseline lists no route the table lacks. The `setup-wizard` project matches `accessibility-setup.spec.ts` and `chromium` ignores it. Baseline keys are `<as> <path>[ [state]]`, e.g. `admin /admin/invites [confirm dialog open]`.
+- Counts are nodes. `/admin/users` has 50 incomplete-contrast nodes today. Every route carries `meta-viewport|moderate` (the root viewport blocks zoom); P1.7 fixes no violations.
+- axe runs its work on timers, so `analyzeAtRest` (`e2e/a11y/scan.ts`) resumes the paused fake clock just before `analyze()`; pages are settled with P1.6's `settlePage` first. The `next dev` overlay (`nextjs-portal`) is excluded, and the baseline matched in both `next dev` and `E2E_SERVER=prod` runs.
+- The seed (`e2e/helpers/seed-fixtures.ts`) now gives the invites and the regular user's Rewind fixed ids (`VISUAL_INVITE_IDS`, `VISUAL_REWIND_ID`); `e2e/a11y/seed.ts` adds a share token and one chat conversation on top. The writer records a route the file does not list yet (a new table entry), and refuses any rise on a listed route. The update command covers both spec files: `UPDATE_AXE_BASELINE=1 npx playwright test e2e/accessibility.spec.ts e2e/accessibility-setup.spec.ts`.
+- Ready test ids were added to the page headings that had none (`admin-*-heading`, `plex-callback-error-heading`), plus `admin-invites-delete-<id>`, `admin-invites-create-dialog`, `admin-invites-delete-dialog` (through a new `testId` prop on `ModalShell` and `ConfirmModal`) and `wrapped-settings-edit-button`. The create-invite button already had `generate-invite-button`. Next's built-in 404 has no test id, so its entry has `ready: null`.
+- The unit test is `__tests__/e2e-helpers/axe-baseline.test.ts`, next to P1.6's helper test, not `e2e-support/`. `axe-core` and `@axe-core/playwright` are pinned at 4.11.0 in devDependencies.
+
 **Done when.**
-- [ ] Every page under `app/` is scanned with the WCAG 2.2 AA tags plus best-practice, at every impact level.
-- [ ] Incomplete contrast results are counted.
-- [ ] `e2e/a11y/axe-baseline.json` records today's counts, and the check fails on any rise.
-- [ ] The spec uses no CSS or aria-label selectors and no longer scans the nonexistent `/auth/signin`.
+- [x] Every page under `app/` is scanned with the WCAG 2.2 AA tags plus best-practice, at every impact level.
+- [x] Incomplete contrast results are counted.
+- [x] `e2e/a11y/axe-baseline.json` records today's counts, and the check fails on any rise.
+- [x] The spec uses no CSS or aria-label selectors and no longer scans the nonexistent `/auth/signin`.
 
 ### Step P1.8: Design-system guardrail script and debt baseline
 

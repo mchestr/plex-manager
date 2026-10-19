@@ -244,7 +244,7 @@ export function PlexCallbackPageClient() {
     return (
       <div className="z-10 max-w-md w-full">
         <div className="bg-slate-800/50 backdrop-blur-sm border border-red-500/50 rounded-lg p-8 shadow-xl">
-          <h1 className="text-2xl font-bold text-center mb-4 text-red-400">
+          <h1 data-testid="plex-callback-error-heading" className="text-2xl font-bold text-center mb-4 text-red-400">
             {errorTitle}
           </h1>
           <p className="text-center text-slate-300 mb-6">{error}</p>
