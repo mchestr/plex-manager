@@ -228,6 +228,22 @@ describe("assistantCommand.handle — ask", () => {
     expect(editArg.content).toMatch(/DM/i)
   })
 
+  it("fits a long answer and the DM note into one 2,000-character reply (SEC-51)", async () => {
+    mockChat.mockResolvedValue({
+      ...chatSuccess,
+      message: { role: "assistant", content: "All good here. ".repeat(300), timestamp: 0 },
+    })
+    const { ctx, editReply } = createMockContext({ subcommand: "ask", prompt: "explain" })
+
+    await assistantCommand.handle(ctx)
+
+    expect(editReply).toHaveBeenCalledTimes(1)
+    const { content } = editReply.mock.calls[0][0]
+    expect(content.length).toBeLessThanOrEqual(2000)
+    expect(content).toContain("(Reply cut short.)")
+    expect(content).toMatch(/DM me directly/)
+  })
+
   it("nudges via editReply when the chat result reports the user is not linked", async () => {
     mockChat.mockResolvedValue({ success: false, linked: false, error: "not linked" })
     const { ctx, editReply } = createMockContext({ subcommand: "ask" })

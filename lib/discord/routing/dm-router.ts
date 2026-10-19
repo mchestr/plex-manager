@@ -21,7 +21,8 @@
  *   ├─ author not linked ──────► reply with the account-link nudge
  *   ├─ content is reset/clear ─► clearDiscordChat → confirm
  *   ├─ content is empty ───────► reply asking for a message
- *   └─ otherwise ──────────────► handleDiscordChat (context "discord") → reply
+ *   └─ otherwise ──────────────► handleDiscordChat (context "discord") → reply,
+ *                                 split into 2,000-character messages
  *                                 (wrapped in withAuditLog, commandType CHAT)
  * ```
  *
@@ -38,6 +39,7 @@ import {
   handleDiscordChat as defaultHandleDiscordChat,
   verifyDiscordUser as defaultVerifyDiscordUser,
 } from "../services"
+import { fitDiscordContent } from "../chat-safety"
 import { withAuditLog } from "./audit-wrapper"
 import type { CreateCommandLogParams } from "../audit"
 import type { DiscordCommandType } from "@/lib/generated/prisma"
@@ -197,10 +199,15 @@ export async function routeDirectMessage(
         throw new Error(response.error || "Empty assistant response")
       }
 
-      await message.reply({
-        content: response.message.content,
-        allowedMentions: { users: [discordUserId] },
-      })
+      // Discord rejects messages over 2,000 characters: reply with the first
+      // chunk and send the rest as follow-ups (SEC-51).
+      const [first, ...rest] = fitDiscordContent(response.message.content)
+      await message.reply({ content: first, allowedMentions: { users: [discordUserId] } })
+      for (const content of rest) {
+        if (message.channel.isSendable()) {
+          await message.channel.send({ content, allowedMentions: { users: [discordUserId] } })
+        }
+      }
     }
   ).catch(async () => {
     await message.reply({

@@ -23,6 +23,8 @@ interface ConversationConfig {
   isAdmin?: boolean
   systemPrompt: string
   tools?: ChatTool[]
+  /** Output-token cap for each LLM call (the Discord context's 600, SEC-51). */
+  maxOutputTokens?: number
 }
 
 interface ConversationResult {
@@ -53,6 +55,7 @@ export async function runConversationLoop(
       messages: history,
       tools: toolRegistry,
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      maxOutputTokens: config.maxOutputTokens,
       attribution: { userId: config.userId, chatConversationId: config.conversationId },
     })
 

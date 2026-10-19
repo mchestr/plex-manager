@@ -149,6 +149,16 @@ describe('chatWithTools', () => {
     )
   })
 
+  it('caps output tokens at the smaller of the row and the caller cap', async () => {
+    const model = new MockLanguageModelV4({ doGenerate: generated([{ type: 'text', text: 'ok' }]) })
+    useModel(model, 'openai', 'gpt-4o')
+
+    await chatWithTools({ system: 's', messages: [{ role: 'user', content: 'Hi' }], tools: TOOLS, attribution, maxOutputTokens: 600 })
+    await chatWithTools({ system: 's', messages: [{ role: 'user', content: 'Hi' }], tools: TOOLS, attribution, maxOutputTokens: 5000 })
+
+    expect(model.doGenerateCalls.map((call) => call.maxOutputTokens)).toEqual([600, 1000])
+  })
+
   it('keeps temperature for a model that takes it', async () => {
     const model = new MockLanguageModelV4({ doGenerate: generated([{ type: 'text', text: 'ok' }]) })
     useModel(model, 'openai', 'gpt-4o')
