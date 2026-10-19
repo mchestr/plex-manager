@@ -350,6 +350,7 @@ describe("handleDiscordChat", () => {
         scope: null,
         expiresAt: null,
         metadataSyncedAt: null,
+        lastWatchedHours: null,
         lastError: null,
         createdAt: new Date(0),
         updatedAt: new Date(0),

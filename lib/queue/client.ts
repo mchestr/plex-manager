@@ -119,6 +119,27 @@ export async function scheduleRepeatingJob<T extends JobType>(
 }
 
 /**
+ * Schedule a job on a cron pattern in a time zone, through BullMQ's job
+ * scheduler. Upserting the same `schedulerId` again replaces the schedule.
+ *
+ * @param schedulerId - Unique ID for this scheduler
+ * @param jobType - The type of job to schedule
+ * @param data - Job payload
+ * @param repeat - Cron `pattern` and IANA `tz`
+ * @param options - Optional job options
+ */
+export async function scheduleCronJob<T extends JobType>(
+  schedulerId: string,
+  jobType: T,
+  data: JobPayloadMap[T],
+  repeat: { pattern: string; tz: string },
+  options?: Partial<JobsOptions>
+): Promise<void> {
+  await getQueue().upsertJobScheduler(schedulerId, repeat, { name: jobType, data, opts: options })
+  logger.info("Cron job scheduled", { schedulerId, jobType, ...repeat })
+}
+
+/**
  * Remove a scheduled job
  */
 export async function removeScheduledJob(schedulerId: string): Promise<boolean> {
