@@ -136,6 +136,7 @@ export async function myAction(formData: FormData) {
 - **Dark theme first** - Primary design uses dark slate backgrounds
 - **Responsive** - Mobile-first approach, test all breakpoints
 - **Component variants** - Use `clsx`/`tailwind-merge` for conditional classes
+- **Design-debt ratchet** - `npm run design:report` counts the patterns the design system bans (raw palette colours, gradients, blur, caps eyebrows, infinite motion, arrows and "Wrapped" in copy, and more; rules in `scripts/design-system/rules.mjs`). CI's `design:check` fails when a file's count in `design-debt.json` rises or a new file counts above zero; run `npm run design:update` when counts fall. After a merge that renames or moves files on `main`, regenerate the baseline with `npm run design:baseline` and review its diff
 
 ```typescript
 import { clsx } from 'clsx'

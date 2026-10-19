@@ -347,7 +347,7 @@ gantt
 - [ ] P1.5: CI gates: typecheck, audit, knip, coverage, integration, schema drift and production-mode E2E (ops, L, due 2026-10-30)
 - [ ] P1.6: Visual-regression project and baselines (ui, M, due 2026-10-23)
 - [ ] P1.7: axe at wcag22aa on every route (ui, S, due 2026-10-22)
-- [ ] P1.8: Design-system guardrail script and debt baseline (ui, S, due 2026-10-22)
+- [x] P1.8: Design-system guardrail script and debt baseline (ui, S, due 2026-10-22)
 - [ ] P1.9: Vendor the recommended agent skills with pinned commits (ops, S, due 2026-10-23)
 - [ ] P1.10: Safe upgrade path: db:deploy, migration pre-flight and backups (ops, M, due 2026-11-03)
 
@@ -1970,10 +1970,12 @@ gantt
 3. Remove a gradient elsewhere. The check passes and prints the update command.
 
 **Done when.**
-- [ ] The script implements every 9.6 rule, with unit tests.
-- [ ] `design-debt.json` is committed from the tree after P1.1.
-- [ ] The CI job fails only on a rise or on a new file with a non-zero count, and it handles renames.
-- [ ] The PR template carries the 9.6 checkbox.
+- [x] The script implements every 9.6 rule, with unit tests.
+- [x] `design-debt.json` is committed from the tree after P1.1.
+- [x] The CI job fails only on a rise or on a new file with a non-zero count, and it handles renames.
+- [x] The PR template carries the 9.6 checkbox.
+
+(as merged: `scripts/design-system/rules.mjs` holds the rules and `countFile`, and re-exports `compare`, `update`, `nonZero` and `totals` from `baseline.mjs`; the two AST passes live in `ast.mjs`. `copy` joins each element's direct `JsxText` and string-literal children, so `Next{' '}{'->'}` counts, and decodes `&rarr;` and `&middot;`. `*.test.ts` is excluded as well as `*.test.tsx`. A fourth script, `npm run design:baseline` (`--baseline`), rewrites `design-debt.json` from the current tree: it is the one command for regenerating the baseline after a merge that renames files on `main` itself, where no diff against `origin/main` shows the rename (for example P1.2's kebab-case renames in `components/admin/settings/`). `--check` and `--update` take `--base <ref>` (default `origin/main`). `knip.json` gains the entry `scripts/*.mjs!`. The CI job is `Design System` in `build.yml`. The baseline was taken at 84f50d7 (P1.1, P1.3, P1.6 and P1.9 in): 195 files, 3,518 `raw-palette` (392 `text-white` and 1 `bg-black/60`, against the design's pre-P1.1 502 and 17), 144 `blur`, 136 `gradient`, 91 `caps-eyebrow`, 57 `infinite-motion`, 56 `gradient-text`, 43 `copy`, 39 `arbitrary-type-z`, 17 `arbitrary-color`, 2 `zoom-lock` and 0 `rewind-only`.)
 
 ### Step P1.9: Vendor the recommended agent skills with pinned commits
 

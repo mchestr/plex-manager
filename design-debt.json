@@ -1,0 +1,825 @@
+{
+  "schema": 1,
+  "commit": "456cab74e8b60aba7b693f53e1e43e585ab8570c",
+  "generatedAt": "2026-10-19T02:56:23.283Z",
+  "files": {
+    "app/(app)/discord/link/page.tsx": {
+      "raw-palette": 2
+    },
+    "app/(app)/page.tsx": {
+      "gradient": 4,
+      "gradient-text": 4,
+      "raw-palette": 13
+    },
+    "app/(app)/wrapped/[year]/not-found.tsx": {
+      "blur": 1,
+      "gradient": 1,
+      "raw-palette": 9
+    },
+    "app/(app)/wrapped/error.tsx": {
+      "raw-palette": 1
+    },
+    "app/(app)/wrapped/loading.tsx": {
+      "raw-palette": 1
+    },
+    "app/(public)/wrapped/share/[token]/not-found.tsx": {
+      "gradient": 1,
+      "raw-palette": 8
+    },
+    "app/(public)/wrapped/share/[token]/page.tsx": {
+      "raw-palette": 2
+    },
+    "app/admin/cost-analysis/page.tsx": {
+      "blur": 13,
+      "infinite-motion": 1,
+      "raw-palette": 84
+    },
+    "app/admin/discord/page.tsx": {
+      "blur": 16,
+      "infinite-motion": 2,
+      "raw-palette": 79
+    },
+    "app/admin/error.tsx": {
+      "infinite-motion": 1,
+      "raw-palette": 2
+    },
+    "app/admin/llm-usage/[usageId]/page.tsx": {
+      "blur": 7,
+      "copy": 2,
+      "raw-palette": 70
+    },
+    "app/admin/llm-usage/conversation/[conversationId]/page.tsx": {
+      "caps-eyebrow": 6,
+      "raw-palette": 40
+    },
+    "app/admin/llm-usage/page.tsx": {
+      "blur": 5,
+      "caps-eyebrow": 7,
+      "raw-palette": 71
+    },
+    "app/admin/loading.tsx": {
+      "gradient": 1,
+      "raw-palette": 3
+    },
+    "app/admin/playground/page.tsx": {
+      "copy": 1,
+      "raw-palette": 2
+    },
+    "app/admin/prompts/[promptId]/edit/page.tsx": {
+      "gradient": 1,
+      "gradient-text": 2,
+      "raw-palette": 6
+    },
+    "app/admin/prompts/[promptId]/page.tsx": {
+      "blur": 4,
+      "raw-palette": 23
+    },
+    "app/admin/prompts/new/page.tsx": {
+      "gradient": 1,
+      "gradient-text": 2,
+      "raw-palette": 6
+    },
+    "app/admin/prompts/page.tsx": {
+      "blur": 1,
+      "caps-eyebrow": 6,
+      "gradient": 2,
+      "raw-palette": 38
+    },
+    "app/admin/queues/page.tsx": {
+      "blur": 1,
+      "infinite-motion": 1,
+      "raw-palette": 13
+    },
+    "app/admin/settings/page.tsx": {
+      "blur": 5,
+      "copy": 2,
+      "raw-palette": 95
+    },
+    "app/admin/shares/page.tsx": {
+      "blur": 6,
+      "caps-eyebrow": 6,
+      "raw-palette": 54
+    },
+    "app/admin/users/[userId]/page.tsx": {
+      "blur": 11,
+      "caps-eyebrow": 6,
+      "copy": 4,
+      "raw-palette": 127
+    },
+    "app/admin/users/[userId]/wrapped/page.tsx": {
+      "blur": 5,
+      "copy": 3,
+      "gradient": 3,
+      "raw-palette": 44
+    },
+    "app/admin/users/page.tsx": {
+      "raw-palette": 2
+    },
+    "app/admin/wrapped/[wrappedId]/history/[llmUsageId]/page.tsx": {
+      "blur": 3,
+      "copy": 1,
+      "gradient": 2,
+      "raw-palette": 24
+    },
+    "app/auth/callback/plex/callback-client.tsx": {
+      "blur": 2,
+      "raw-palette": 9
+    },
+    "app/auth/callback/plex/error.tsx": {
+      "raw-palette": 1
+    },
+    "app/auth/callback/plex/loading.tsx": {
+      "raw-palette": 1
+    },
+    "app/auth/denied/denied-client.tsx": {
+      "blur": 1,
+      "infinite-motion": 4,
+      "raw-palette": 12
+    },
+    "app/auth/layout.tsx": {
+      "gradient": 1,
+      "raw-palette": 3
+    },
+    "app/error.tsx": {
+      "gradient": 1,
+      "raw-palette": 3
+    },
+    "app/invite/[code]/error.tsx": {
+      "raw-palette": 1
+    },
+    "app/invite/[code]/loading.tsx": {
+      "raw-palette": 1
+    },
+    "app/invite/[code]/page.tsx": {
+      "blur": 3,
+      "gradient": 3,
+      "gradient-text": 4,
+      "raw-palette": 26
+    },
+    "app/layout.tsx": {
+      "zoom-lock": 2
+    },
+    "app/loading.tsx": {
+      "gradient": 1,
+      "raw-palette": 3
+    },
+    "app/onboarding/error.tsx": {
+      "raw-palette": 1
+    },
+    "app/onboarding/loading.tsx": {
+      "raw-palette": 1
+    },
+    "app/setup/error.tsx": {
+      "raw-palette": 1
+    },
+    "app/setup/loading.tsx": {
+      "raw-palette": 1
+    },
+    "app/subscribe/page.tsx": {
+      "raw-palette": 6
+    },
+    "app/subscribe/success/page.tsx": {
+      "raw-palette": 5
+    },
+    "components/admin/announcements/announcement-form-modal.tsx": {
+      "raw-palette": 13
+    },
+    "components/admin/announcements/announcement-list-item.tsx": {
+      "raw-palette": 22
+    },
+    "components/admin/announcements/announcements-page-client.tsx": {
+      "raw-palette": 10
+    },
+    "components/admin/chatbot/chat-window.tsx": {
+      "arbitrary-type-z": 3,
+      "gradient": 2,
+      "infinite-motion": 4,
+      "raw-palette": 51
+    },
+    "components/admin/cost-analysis/cost-date-filter.tsx": {
+      "blur": 1,
+      "raw-palette": 10
+    },
+    "components/admin/cost-analysis/cost-model-chart.tsx": {
+      "raw-palette": 1
+    },
+    "components/admin/cost-analysis/cost-provider-chart.tsx": {
+      "raw-palette": 1
+    },
+    "components/admin/cost-analysis/cost-trend-chart.tsx": {
+      "raw-palette": 1
+    },
+    "components/admin/cost-analysis/cost-user-chart.tsx": {
+      "raw-palette": 1
+    },
+    "components/admin/discord/discord-active-users.tsx": {
+      "raw-palette": 15
+    },
+    "components/admin/discord/discord-activity-table.tsx": {
+      "raw-palette": 44
+    },
+    "components/admin/discord/discord-bot-status.tsx": {
+      "blur": 2,
+      "infinite-motion": 2,
+      "raw-palette": 19
+    },
+    "components/admin/discord/discord-command-chart.tsx": {
+      "raw-palette": 1
+    },
+    "components/admin/discord/discord-context-metrics.tsx": {
+      "raw-palette": 8
+    },
+    "components/admin/discord/discord-date-filter.tsx": {
+      "blur": 1,
+      "raw-palette": 7
+    },
+    "components/admin/discord/discord-error-analysis.tsx": {
+      "raw-palette": 14
+    },
+    "components/admin/discord/discord-help-stats.tsx": {
+      "raw-palette": 10
+    },
+    "components/admin/discord/discord-linking-metrics.tsx": {
+      "raw-palette": 11
+    },
+    "components/admin/discord/discord-marked-media.tsx": {
+      "raw-palette": 44
+    },
+    "components/admin/discord/discord-media-marking-breakdown.tsx": {
+      "raw-palette": 12
+    },
+    "components/admin/discord/discord-selection-stats.tsx": {
+      "raw-palette": 11
+    },
+    "components/admin/discord/discord-trend-chart.tsx": {
+      "raw-palette": 1
+    },
+    "components/admin/invites/invite-details-client.tsx": {
+      "caps-eyebrow": 6,
+      "raw-palette": 67
+    },
+    "components/admin/invites/invites-page-client.tsx": {
+      "caps-eyebrow": 6,
+      "raw-palette": 112
+    },
+    "components/admin/llm-usage/conversation-usage-row.tsx": {
+      "arbitrary-type-z": 1,
+      "caps-eyebrow": 1,
+      "copy": 1,
+      "raw-palette": 12
+    },
+    "components/admin/llm-usage/llm-text-removed-notice.tsx": {
+      "blur": 1,
+      "raw-palette": 4
+    },
+    "components/admin/playground/llm-response.tsx": {
+      "blur": 1,
+      "copy": 1,
+      "raw-palette": 9
+    },
+    "components/admin/playground/preview-modal.tsx": {
+      "arbitrary-type-z": 2,
+      "blur": 3,
+      "copy": 2,
+      "gradient": 1,
+      "raw-palette": 17
+    },
+    "components/admin/playground/rendered-prompt.tsx": {
+      "blur": 1,
+      "raw-palette": 10
+    },
+    "components/admin/playground/statistics-viewer.tsx": {
+      "raw-palette": 67
+    },
+    "components/admin/playground/template-selector.tsx": {
+      "blur": 1,
+      "raw-palette": 8
+    },
+    "components/admin/playground/test-configuration.tsx": {
+      "blur": 1,
+      "raw-palette": 52
+    },
+    "components/admin/prompts/expandable-prompt.tsx": {
+      "blur": 1,
+      "caps-eyebrow": 2,
+      "raw-palette": 29
+    },
+    "components/admin/prompts/prompt-scrollspy.tsx": {
+      "raw-palette": 15
+    },
+    "components/admin/prompts/prompt-template-actions.tsx": {
+      "raw-palette": 11
+    },
+    "components/admin/prompts/prompt-template-editor.tsx": {
+      "blur": 3,
+      "gradient": 1,
+      "raw-palette": 141
+    },
+    "components/admin/queues/job-table.tsx": {
+      "caps-eyebrow": 7,
+      "raw-palette": 50
+    },
+    "components/admin/queues/queue-controls.tsx": {
+      "blur": 1,
+      "raw-palette": 9
+    },
+    "components/admin/queues/queue-filters.tsx": {
+      "raw-palette": 2
+    },
+    "components/admin/queues/queue-stats.tsx": {
+      "blur": 1,
+      "raw-palette": 9
+    },
+    "components/admin/queues/queue-status.tsx": {
+      "blur": 1,
+      "infinite-motion": 1,
+      "raw-palette": 20
+    },
+    "components/admin/queues/scheduler-info.tsx": {
+      "blur": 1,
+      "raw-palette": 8
+    },
+    "components/admin/settings/DiscordIntegrationForm.tsx": {
+      "raw-palette": 39
+    },
+    "components/admin/settings/JellyfinLoginToggle.tsx": {
+      "raw-palette": 5
+    },
+    "components/admin/settings/LLMProviderForm.tsx": {
+      "raw-palette": 25
+    },
+    "components/admin/settings/LLMToggle.tsx": {
+      "raw-palette": 2
+    },
+    "components/admin/settings/ServerForm.tsx": {
+      "raw-palette": 23
+    },
+    "components/admin/settings/StripeSettingsForm.tsx": {
+      "raw-palette": 18
+    },
+    "components/admin/settings/watchlist-sync-settings.tsx": {
+      "blur": 2,
+      "infinite-motion": 1,
+      "raw-palette": 44
+    },
+    "components/admin/settings/wrapped-settings-form.tsx": {
+      "copy": 4,
+      "raw-palette": 15
+    },
+    "components/admin/shared/admin-layout-shell.tsx": {
+      "gradient": 1,
+      "raw-palette": 3
+    },
+    "components/admin/shared/admin-nav.tsx": {
+      "blur": 2,
+      "caps-eyebrow": 2,
+      "gradient": 2,
+      "raw-palette": 43
+    },
+    "components/admin/shared/confirm-modal.tsx": {
+      "raw-palette": 14
+    },
+    "components/admin/shared/mobile-nav/MobileMoreMenu.tsx": {
+      "blur": 1,
+      "gradient": 1,
+      "raw-palette": 23
+    },
+    "components/admin/shared/mobile-nav/MobileNavButton.tsx": {
+      "raw-palette": 6
+    },
+    "components/admin/shared/unauthenticated-error.tsx": {
+      "infinite-motion": 1,
+      "raw-palette": 2
+    },
+    "components/admin/shared/unauthorized-error.tsx": {
+      "gradient": 2,
+      "infinite-motion": 1,
+      "raw-palette": 14
+    },
+    "components/admin/shares/share-time-chart.tsx": {
+      "raw-palette": 1
+    },
+    "components/admin/users/cancel-subscription-button.tsx": {
+      "raw-palette": 4
+    },
+    "components/admin/users/change-user-role-button.tsx": {
+      "infinite-motion": 1,
+      "raw-palette": 11
+    },
+    "components/admin/users/grant-access-button.tsx": {
+      "raw-palette": 4
+    },
+    "components/admin/users/regenerate-wrapped-button.tsx": {
+      "infinite-motion": 1,
+      "raw-palette": 9
+    },
+    "components/admin/users/toggle-exempt-button.tsx": {
+      "raw-palette": 4
+    },
+    "components/admin/users/unshare-user-button.tsx": {
+      "infinite-motion": 1,
+      "raw-palette": 13
+    },
+    "components/admin/users/user-actions-menu.tsx": {
+      "copy": 1,
+      "raw-palette": 22
+    },
+    "components/admin/users/user-activity-timeline.tsx": {
+      "raw-palette": 44
+    },
+    "components/admin/users/user-status-badge.tsx": {
+      "raw-palette": 12
+    },
+    "components/admin/users/user-table-row.tsx": {
+      "raw-palette": 23
+    },
+    "components/admin/users/users-filter.tsx": {
+      "blur": 1,
+      "gradient": 2,
+      "raw-palette": 20
+    },
+    "components/admin/users/users-list.tsx": {
+      "blur": 1,
+      "raw-palette": 7
+    },
+    "components/admin/users/users-stats-summary.tsx": {
+      "blur": 6,
+      "copy": 1,
+      "raw-palette": 26
+    },
+    "components/admin/wrapped/historical-wrapped-selector-header.tsx": {
+      "arbitrary-type-z": 3,
+      "raw-palette": 21
+    },
+    "components/auth/jellyfin-sign-in-button.tsx": {
+      "raw-palette": 6
+    },
+    "components/auth/jellyfin-sign-in-form.tsx": {
+      "raw-palette": 27
+    },
+    "components/auth/plex-sign-in-button.tsx": {
+      "gradient": 1,
+      "raw-palette": 19
+    },
+    "components/auth/service-sign-in-toggle.tsx": {
+      "gradient": 6,
+      "raw-palette": 42
+    },
+    "components/dashboard/announcements-card.tsx": {
+      "arbitrary-type-z": 1,
+      "caps-eyebrow": 1,
+      "gradient": 4,
+      "infinite-motion": 4,
+      "raw-palette": 31
+    },
+    "components/dashboard/discord-card.tsx": {
+      "arbitrary-color": 17,
+      "gradient": 2,
+      "raw-palette": 11
+    },
+    "components/dashboard/media-server-link-card.tsx": {
+      "raw-palette": 5
+    },
+    "components/dashboard/requests-card.tsx": {
+      "gradient": 2,
+      "raw-palette": 16
+    },
+    "components/dashboard/rewind-not-eligible-card.tsx": {
+      "gradient": 1,
+      "raw-palette": 7
+    },
+    "components/dashboard/status-background.tsx": {
+      "blur": 1,
+      "raw-palette": 27
+    },
+    "components/dashboard/user-dashboard.tsx": {
+      "blur": 2,
+      "caps-eyebrow": 3,
+      "gradient": 2,
+      "gradient-text": 2,
+      "raw-palette": 17
+    },
+    "components/dashboard/wrapped-card.tsx": {
+      "copy": 8,
+      "gradient": 17,
+      "gradient-text": 4,
+      "infinite-motion": 5,
+      "raw-palette": 96
+    },
+    "components/discord/link-panel.tsx": {
+      "arbitrary-type-z": 5,
+      "blur": 1,
+      "caps-eyebrow": 5,
+      "gradient": 2,
+      "raw-palette": 84
+    },
+    "components/generator/wrapped-generating-animation.tsx": {
+      "copy": 2,
+      "gradient": 4,
+      "infinite-motion": 5,
+      "raw-palette": 20
+    },
+    "components/onboarding/onboarding-steps/discord-support-step.tsx": {
+      "caps-eyebrow": 1,
+      "raw-palette": 43
+    },
+    "components/onboarding/onboarding-steps/final-step.tsx": {
+      "gradient": 2,
+      "gradient-text": 2,
+      "raw-palette": 17
+    },
+    "components/onboarding/onboarding-steps/jellyfin-configuration-step.tsx": {
+      "raw-palette": 19
+    },
+    "components/onboarding/onboarding-steps/jellyfin-welcome-step.tsx": {
+      "gradient": 2,
+      "gradient-text": 2,
+      "raw-palette": 24
+    },
+    "components/onboarding/onboarding-steps/media-request-step.tsx": {
+      "raw-palette": 21
+    },
+    "components/onboarding/onboarding-steps/plex-configuration-step.tsx": {
+      "raw-palette": 15
+    },
+    "components/onboarding/onboarding-steps/welcome-step.tsx": {
+      "gradient": 2,
+      "gradient-text": 2,
+      "raw-palette": 24
+    },
+    "components/onboarding/onboarding-wizard.tsx": {
+      "gradient": 3,
+      "gradient-text": 2,
+      "raw-palette": 21
+    },
+    "components/setup/setup-wizard/dev-mode-banner.tsx": {
+      "raw-palette": 8
+    },
+    "components/setup/setup-wizard/discord-integration-form.tsx": {
+      "raw-palette": 22
+    },
+    "components/setup/setup-wizard/final-success-animation.tsx": {
+      "blur": 1,
+      "gradient": 1,
+      "gradient-text": 2,
+      "infinite-motion": 2,
+      "raw-palette": 8
+    },
+    "components/setup/setup-wizard/llm-provider-form.tsx": {
+      "raw-palette": 24
+    },
+    "components/setup/setup-wizard/overseerr-form.tsx": {
+      "raw-palette": 17
+    },
+    "components/setup/setup-wizard/plex-server-form.tsx": {
+      "raw-palette": 19
+    },
+    "components/setup/setup-wizard/prometheus-form.tsx": {
+      "raw-palette": 14
+    },
+    "components/setup/setup-wizard/radarr-form.tsx": {
+      "raw-palette": 17
+    },
+    "components/setup/setup-wizard/setup-wizard.tsx": {
+      "arbitrary-type-z": 1,
+      "blur": 1,
+      "caps-eyebrow": 2,
+      "gradient": 4,
+      "gradient-text": 2,
+      "raw-palette": 38
+    },
+    "components/setup/setup-wizard/sonarr-form.tsx": {
+      "raw-palette": 17
+    },
+    "components/setup/setup-wizard/space-background.tsx": {
+      "gradient": 1,
+      "infinite-motion": 4,
+      "raw-palette": 7
+    },
+    "components/setup/setup-wizard/success-animation.tsx": {
+      "blur": 1,
+      "gradient": 1,
+      "raw-palette": 11
+    },
+    "components/setup/setup-wizard/tautulli-form.tsx": {
+      "raw-palette": 17
+    },
+    "components/setup/setup-wizard/wizard-form-actions.tsx": {
+      "gradient": 1,
+      "raw-palette": 15
+    },
+    "components/shared/formatted-text.tsx": {
+      "gradient": 1,
+      "gradient-text": 2,
+      "infinite-motion": 1,
+      "raw-palette": 3
+    },
+    "components/shared/rex-dinosaur.tsx": {
+      "infinite-motion": 1
+    },
+    "components/subscribe/plan-list.tsx": {
+      "raw-palette": 4
+    },
+    "components/subscription/manage-subscription-button.tsx": {
+      "raw-palette": 1
+    },
+    "components/subscription/subscription-status-view.tsx": {
+      "raw-palette": 3
+    },
+    "components/watchlist/sync-settings-card.tsx": {
+      "gradient": 3,
+      "infinite-motion": 1,
+      "raw-palette": 44
+    },
+    "components/wrapped/cinematic/gold-count-up.tsx": {
+      "gradient": 1,
+      "gradient-text": 2
+    },
+    "components/wrapped/cinematic/letterbox.tsx": {
+      "raw-palette": 2
+    },
+    "components/wrapped/cinematic/poster-image.tsx": {
+      "raw-palette": 1
+    },
+    "components/wrapped/cinematic/theme.ts": {
+      "arbitrary-type-z": 2,
+      "caps-eyebrow": 2,
+      "gradient": 1,
+      "gradient-text": 2
+    },
+    "components/wrapped/wrapped-charts.tsx": {
+      "gradient": 1,
+      "infinite-motion": 1,
+      "raw-palette": 22
+    },
+    "components/wrapped/wrapped-sections/cinematic/archetype-reveal-section.tsx": {
+      "gradient": 1,
+      "gradient-text": 2
+    },
+    "components/wrapped/wrapped-sections/cinematic/finale-section.tsx": {
+      "arbitrary-type-z": 2,
+      "caps-eyebrow": 2
+    },
+    "components/wrapped/wrapped-sections/cinematic/hero-section.tsx": {
+      "arbitrary-type-z": 1,
+      "caps-eyebrow": 1,
+      "gradient": 1,
+      "gradient-text": 2
+    },
+    "components/wrapped/wrapped-sections/cinematic/index.tsx": {
+      "arbitrary-type-z": 1,
+      "caps-eyebrow": 1
+    },
+    "components/wrapped/wrapped-sections/cinematic/monthly-journey-section.tsx": {
+      "arbitrary-type-z": 1,
+      "caps-eyebrow": 2,
+      "gradient": 1
+    },
+    "components/wrapped/wrapped-sections/cinematic/movies-breakdown-section.tsx": {
+      "arbitrary-type-z": 1,
+      "caps-eyebrow": 1
+    },
+    "components/wrapped/wrapped-sections/cinematic/overseerr-stats-section.tsx": {
+      "arbitrary-type-z": 3,
+      "caps-eyebrow": 2,
+      "gradient": 1
+    },
+    "components/wrapped/wrapped-sections/cinematic/percentile-section.tsx": {
+      "arbitrary-type-z": 1,
+      "caps-eyebrow": 1,
+      "gradient": 2,
+      "gradient-text": 2
+    },
+    "components/wrapped/wrapped-sections/cinematic/server-stats-section.tsx": {
+      "arbitrary-type-z": 1,
+      "caps-eyebrow": 2
+    },
+    "components/wrapped/wrapped-sections/cinematic/shows-breakdown-section.tsx": {
+      "arbitrary-type-z": 1,
+      "caps-eyebrow": 1
+    },
+    "components/wrapped/wrapped-sections/cinematic/streaks-patterns-section.tsx": {
+      "arbitrary-type-z": 5,
+      "caps-eyebrow": 5,
+      "gradient": 3,
+      "gradient-text": 2
+    },
+    "components/wrapped/wrapped-sections/cinematic/top-billing-list.tsx": {
+      "arbitrary-type-z": 3,
+      "caps-eyebrow": 3
+    },
+    "components/wrapped/wrapped-sections/cinematic/total-watch-time-section.tsx": {
+      "arbitrary-type-z": 1,
+      "caps-eyebrow": 1,
+      "copy": 2,
+      "gradient": 1
+    },
+    "components/wrapped/wrapped-sections/fun-facts-section.tsx": {
+      "blur": 2,
+      "gradient": 2,
+      "raw-palette": 15
+    },
+    "components/wrapped/wrapped-sections/hero-section.tsx": {
+      "gradient": 2,
+      "gradient-text": 4,
+      "raw-palette": 10
+    },
+    "components/wrapped/wrapped-sections/index.tsx": {
+      "raw-palette": 3
+    },
+    "components/wrapped/wrapped-sections/insights-section.tsx": {
+      "blur": 1,
+      "gradient": 2,
+      "infinite-motion": 1,
+      "raw-palette": 18
+    },
+    "components/wrapped/wrapped-sections/movies-breakdown-section.tsx": {
+      "blur": 2,
+      "raw-palette": 10
+    },
+    "components/wrapped/wrapped-sections/overseerr-stats-section.tsx": {
+      "blur": 1,
+      "gradient": 1,
+      "infinite-motion": 4,
+      "raw-palette": 14
+    },
+    "components/wrapped/wrapped-sections/section-header.tsx": {
+      "raw-palette": 2
+    },
+    "components/wrapped/wrapped-sections/server-stats-section.tsx": {
+      "blur": 1,
+      "gradient": 1,
+      "raw-palette": 9
+    },
+    "components/wrapped/wrapped-sections/shows-breakdown-section.tsx": {
+      "blur": 1,
+      "gradient": 1,
+      "infinite-motion": 1,
+      "raw-palette": 8
+    },
+    "components/wrapped/wrapped-sections/top-movies-section.tsx": {
+      "blur": 1,
+      "gradient": 1,
+      "raw-palette": 12
+    },
+    "components/wrapped/wrapped-sections/top-shows-section.tsx": {
+      "blur": 1,
+      "gradient": 1,
+      "raw-palette": 13
+    },
+    "components/wrapped/wrapped-sections/total-watch-time-section.tsx": {
+      "gradient": 2,
+      "gradient-text": 2,
+      "raw-palette": 10
+    },
+    "components/wrapped/wrapped-share-button.tsx": {
+      "gradient": 1,
+      "raw-palette": 9
+    },
+    "components/wrapped/wrapped-share-summary.tsx": {
+      "blur": 7,
+      "copy": 2,
+      "gradient": 2,
+      "gradient-text": 2,
+      "raw-palette": 43
+    },
+    "components/wrapped/wrapped-transition.tsx": {
+      "copy": 1,
+      "gradient": 8,
+      "gradient-text": 4,
+      "infinite-motion": 5,
+      "raw-palette": 29
+    },
+    "components/wrapped/wrapped-viewer-navigation.tsx": {
+      "raw-palette": 9
+    },
+    "components/wrapped/wrapped-viewer-progress.tsx": {
+      "gradient": 2,
+      "raw-palette": 3
+    },
+    "components/wrapped/wrapped-viewer.tsx": {
+      "raw-palette": 11
+    },
+    "components/wrapped/wrapped-year-links.tsx": {
+      "raw-palette": 9
+    },
+    "components/wrapped/wrapped-year-view.tsx": {
+      "blur": 3,
+      "copy": 5,
+      "gradient": 1,
+      "raw-palette": 25
+    }
+  },
+  "totals": {
+    "arbitrary-color": 17,
+    "arbitrary-type-z": 39,
+    "blur": 144,
+    "caps-eyebrow": 91,
+    "copy": 43,
+    "gradient": 136,
+    "gradient-text": 56,
+    "infinite-motion": 57,
+    "raw-palette": 3518,
+    "zoom-lock": 2
+  }
+}
