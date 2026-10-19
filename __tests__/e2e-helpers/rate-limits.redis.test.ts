@@ -18,12 +18,15 @@ import { clearRateLimits } from "@/e2e/helpers/rate-limits"
 import { describeRedis } from "@/test/helpers/integration"
 
 describeRedis("clearRateLimits", (testRedisUrl) => {
-  const isolatedUrl = new URL(testRedisUrl)
-  isolatedUrl.pathname = "/15"
-  const redisUrl = isolatedUrl.toString()
+  let redisUrl: string
   let redis: Redis
 
+  // The URL is built in a hook: a skipped suite (TEST_REDIS_URL unset) still
+  // runs this body with an empty URL, but never its hooks.
   beforeAll(() => {
+    const isolatedUrl = new URL(testRedisUrl)
+    isolatedUrl.pathname = "/15"
+    redisUrl = isolatedUrl.toString()
     redis = new Redis(redisUrl)
   })
 
