@@ -9,7 +9,8 @@
     "lib/queue/redis-semaphore.ts!",
     "lib/queue/rewind-infra.ts!",
     "lib/rewind/infra-copy.ts!",
-    "scripts/codemods/*.mjs!"
+    "scripts/codemods/*.mjs!",
+    "lib/wrapped/stats/*.ts!"
   ],
   "project": [
     "**/*.{js,mjs,cjs,ts,tsx}!",

@@ -2533,11 +2533,18 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 
 **Demo.** `TZ=UTC npx jest lib/wrapped/stats` and `TZ=Australia/Sydney npx jest lib/wrapped/stats` both pass. The draft heavy fixture prints 1,307 hours, 586 episodes, 31 series and 112 films.
 
+**As merged** (later steps rely on these):
+- Shared helpers: `stats/keys.ts` holds `StatsContext`, `titleKey`, `minutesOf`, `isListed`, `displayTitles` and `videoEvents`; `stats/rank.ts` holds `rankTitles(events, ctx, kind?)` and `compareRanked`; `stats/days.ts` holds the day-key arithmetic (`addDays`, `windowDays`, `nightKey`, `weekStart`). `hiddenKeys` holds raw rating keys (`RewindExclusion.ratingKey`): a film's own key or a series' grandparent key. `isListed()` is the one place that decides list membership, so P2.6's `excludedFromLists` flag belongs there.
+- Only films and episodes with a series key are read; tracks and `other` media have no `titleKey` and count nowhere, totals included.
+- Each module exports one `computeX(events, ctx, ...)`: `computeTotals(events, ctx, lifetime?)` (the comparison reads `lifetime` over `dataWindow(year - 1)`; `vsLastYear` is a ratio, `minutes2025` daily minutes, both null without last year's plays), `computeSessions`, `computeTime`, `computeCalendar` (plus `dailyMinutes(events, window)`), `computeBookends(events, ctx, lifetime?)`, `computeRace` (`{ eligible: false }` or the frames) and `computeMilestones`. P2.6 reads a member's minutes as `computeTotals(events, ctx).totalMinutes`.
+- Definitions the plan left open: a day is active when it holds a counted play; the clock counts counted plays by start time, and the golden hour is hours 18 to 21 (design 5.3); the longest binge has the most minutes and the deepest the most episodes; a series' biggest night runs 04:00 to 04:00; `biggestWeek` is Monday to Sunday, clipped to the window; the milestone ladder is the highest four of 10, 25, 50, 100, 250, 500, 750, 1,000, 1,500, 2,000, 2,500, 3,000, 4,000, 5,000, 7,500 and 10,000 hours at or below the total.
+- `lib/wrapped/stats/*.ts` is a knip entry until P2.9's `computeMemberStats()` imports the modules. The demo's draft heavy fixture comes with P2.10; the stats tests pass under `TZ=UTC`, `Australia/Sydney` and `America/Los_Angeles`.
+
 **Done when.**
-- [ ] Totals, sessions, time, calendar, bookends, race and milestones are pure modules over `PlayEvent[]`.
-- [ ] Titles are keyed by `rating_key` and `grandparent_rating_key`, minutes are floored once, and the watched rule comes from P2.4.
-- [ ] Every bucket uses the member's zone, and the zone and DST tests pass.
-- [ ] Each module is at most about 150 lines and has its own Jest file.
+- [x] Totals, sessions, time, calendar, bookends, race and milestones are pure modules over `PlayEvent[]`.
+- [x] Titles are keyed by `rating_key` and `grandparent_rating_key`, minutes are floored once, and the watched rule comes from P2.4.
+- [x] Every bucket uses the member's zone, and the zone and DST tests pass.
+- [x] Each module is at most about 150 lines and has its own Jest file.
 
 ### Step P2.8: Stats modules, part 2
 
