@@ -83,7 +83,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
-          node-version: '22'
+          node-version: '24'
 
       - name: Audit production dependencies
         run: node scripts/audit-gate.mjs
@@ -168,13 +168,21 @@ jobs:
           NEXTAUTH_SECRET: "test-secret-for-ci-build-at-least-32-chars-long"
           PLEX_CLIENT_IDENTIFIER: "00000000-0000-0000-0000-000000000000"
 
-  # Smoke-builds the Docker image for pull requests without pushing it.
-  # Images are published only by docker-publish.yml, from main and v* tags.
-  docker-build:
-    name: Docker Build
+  # Pull requests only: builds the image without pushing it (images are
+  # published only by docker-publish.yml, from main and v* tags), then runs it
+  # the way an operator would: on a fresh Postgres and Redis with passwords, under the
+  # boot check (a generated secret on loopback http). Not a required check.
+  image-smoke:
+    name: Image Smoke Test
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
+
+    env:
+      IMAGE: plex-manager:smoke
+      NET: smoke
+      PG_PASSWORD: smoke-postgres-password
+      REDIS_PASSWORD: smoke-redis-password
 
     steps:
       - name: Checkout code
@@ -188,7 +196,113 @@ jobs:
         with:
           context: .
           push: false
+          load: true
+          tags: ${{ env.IMAGE }}
           cache-from: type=gha
+
+      - name: Start Postgres and Redis
+        run: |
+          docker network create "$NET"
+          docker run -d --name db --network "$NET" \
+            -e POSTGRES_PASSWORD="$PG_PASSWORD" -e POSTGRES_DB=plex_manager_smoke \
+            --health-cmd "pg_isready -U postgres" --health-interval 2s --health-retries 30 \
+            postgres:16
+          docker run -d --name redis --network "$NET" -e REDISCLI_AUTH="$REDIS_PASSWORD" \
+            --health-cmd "redis-cli ping" --health-interval 2s --health-retries 30 \
+            redis:7 redis-server --requirepass "$REDIS_PASSWORD"
+          for service in db redis; do
+            timeout 60 sh -c "until [ \"\$(docker inspect -f '{{.State.Health.Status}}' $service)\" = healthy ]; do sleep 1; done"
+          done
+
+      - name: Write the app environment
+        run: |
+          secret="$(openssl rand -base64 32)"
+          echo "::add-mask::$secret"
+          {
+            echo "DATABASE_URL=postgresql://postgres:${PG_PASSWORD}@db:5432/plex_manager_smoke?schema=public"
+            echo "REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379"
+            echo "NEXTAUTH_SECRET=${secret}"
+            echo "NEXTAUTH_URL=http://localhost:3000"
+            echo "NEXT_PUBLIC_APP_URL=http://localhost:3000"
+            echo "PLEX_CLIENT_IDENTIFIER=$(openssl rand -hex 16)"
+          } > "$RUNNER_TEMP/app.env"
+
+      # The image's own HEALTHCHECK (liveness probe, 30 s interval) decides.
+      - name: Start the app on the fresh database and wait for healthy
+        run: |
+          start_app() {
+            docker run -d --name app --network "$NET" -p 127.0.0.1:3000:3000 \
+              --env-file "$RUNNER_TEMP/app.env" "$@" "$IMAGE"
+            if ! timeout 90 sh -c "until [ \"\$(docker inspect -f '{{.State.Health.Status}}' app)\" = healthy ]; do sleep 2; done"; then
+              docker logs app
+              echo "::error::The container did not report healthy within 90 s"
+              exit 1
+            fi
+          }
+          start_app
+          docker logs app 2>&1 | grep -F "All migrations have been successfully applied"
+          docker exec -e NODE_PATH=/opt/prisma-cli/node_modules app \
+            /opt/prisma-cli/node_modules/.bin/prisma migrate status | grep -F "Database schema is up to date"
+
+          # The readiness body checks both dependencies
+          curl -fsS http://127.0.0.1:3000/api/health | tee /dev/stderr | grep -F '"checks":{"database":"ok","redis":"ok"}'
+
+          # Restarted with SKIP_MIGRATIONS=true: logs the skip, still healthy
+          docker rm -f app
+          start_app -e SKIP_MIGRATIONS=true
+          docker logs app 2>&1 | grep -F "SKIP_MIGRATIONS=true: not applying migrations"
+
+      - name: Check the hardening
+        run: |
+          fail() { echo "::error::$1"; exit 1; }
+          # Read-only app files; the Rewind cache is the one writable path
+          if docker exec app touch /app/server.js; then fail "/app/server.js is writable"; fi
+          docker exec app sh -c 'touch "$REWIND_CACHE_DIR/smoke" && rm "$REWIND_CACHE_DIR/smoke"' ||
+            fail "REWIND_CACHE_DIR is not writable"
+          [ "$(docker exec app printenv REWIND_CACHE_DIR)" = /app/.next/cache/rewind ] ||
+            fail "REWIND_CACHE_DIR is not /app/.next/cache/rewind"
+          # tini is PID 1, Node is 24, and no dev dependency shipped
+          [ "$(docker exec app cat /proc/1/comm)" = tini ] || fail "PID 1 is not tini"
+          docker exec app node -v | grep -q "^v24\." || fail "Node is not v24"
+          for dir in /app/node_modules/jest /app/node_modules/@playwright; do
+            if docker exec app test -e "$dir"; then fail "$dir is in the image"; fi
+          done
+
+      - name: Check a Redis outage leaves the site live
+        run: |
+          docker stop redis
+          status="$(curl -s -o "$RUNNER_TEMP/health.json" -w '%{http_code}' http://127.0.0.1:3000/api/health)"
+          cat "$RUNNER_TEMP/health.json"
+          [ "$status" = 503 ] || { echo "::error::/api/health answered $status with Redis down"; exit 1; }
+          grep -F '"redis":"fail"' "$RUNNER_TEMP/health.json"
+          curl -fsS "http://127.0.0.1:3000/api/health?probe=live"
+          docker start redis
+
+      # P4.2's coordinator drains and exits 0 inside Docker's 10 s stop timeout.
+      - name: Stop the app within 10 s with exit code 0
+        run: |
+          started=$(date +%s)
+          docker stop -t 10 app
+          elapsed=$(( $(date +%s) - started ))
+          code="$(docker inspect -f '{{.State.ExitCode}}' app)"
+          docker logs app 2>&1 | tail -20
+          echo "Stopped in ${elapsed} s with exit code ${code}"
+          if [ "$code" != 0 ] || [ "$elapsed" -ge 10 ]; then
+            echo "::error::docker stop took ${elapsed} s, exit code ${code}"
+            exit 1
+          fi
+
+      - name: Scan the image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ env.IMAGE }}
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'
+
+      - name: Container logs
+        if: failure()
+        run: docker logs app || true
 
   test:
     name: Unit Tests
