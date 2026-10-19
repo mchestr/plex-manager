@@ -1,6 +1,7 @@
 "use server"
 
 import { randomInt } from "crypto"
+import { z } from "zod"
 import { requireAdmin } from "@/lib/admin"
 import {
   acceptPlexInvite,
@@ -12,6 +13,7 @@ import {
   setJellyfinUserPolicy,
   deleteJellyfinUser,
 } from "@/lib/connections/jellyfin"
+import type { JellyfinConfig, JellyfinInviteSettings } from "@/lib/connections/jellyfin-core"
 import { prisma, type PrismaTransactionClient } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 import { Prisma, ServerType } from "@/lib/generated/prisma/client"
@@ -179,15 +181,29 @@ interface JellyfinAuthData {
   password: string
 }
 
-interface ValidateAndUseResult {
-  success: boolean
-  error?: string
-  invite?: InviteData
+/** Typed error codes a redemption returns (P4.3 carries them into `ActionErrorCode`). */
+type InviteErrorCode = "INVITE_WRONG_SERVICE" | "INVITE_INVALID" | "INTERNAL"
+
+type ValidateAndUseResult =
+  | { success: true; invite: InviteData }
+  | { success: false; code: InviteErrorCode; error: string }
+
+const SERVER_LABELS: Record<ServerType, string> = {
+  [ServerType.PLEX]: "Plex",
+  [ServerType.JELLYFIN]: "Jellyfin",
 }
 
+const JELLYFIN_REDEEM_FAILED = "Your account could not be created. Please try again."
+const JELLYFIN_ENABLE_FAILED = "Your account was created. Ask the server owner to enable it."
+
+// Jellyfin virtual-folder ids are 32-hex GUIDs (`ItemId` from /Library/VirtualFolders)
+const jellyfinLibraryIdsSchema = z.array(z.string().regex(/^[0-9a-f]{32}$/i))
+
 /**
- * Rollback invite usage by decrementing the use count
- * Used as a compensating transaction when Plex operations fail
+ * Rollback invite usage by decrementing the use count.
+ * Used as a compensating transaction when a redemption fails after the invite
+ * was consumed. The `useCount > 0` guard keeps a double compensation from
+ * taking the count below zero.
  */
 async function rollbackInviteUsage(
   inviteId: string,
@@ -195,12 +211,9 @@ async function rollbackInviteUsage(
   reason: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    await prisma.$transaction(async (tx) => {
-      // Decrement the use count to restore the invite
-      await tx.invite.update({
-        where: { id: inviteId },
-        data: { useCount: { decrement: 1 } },
-      })
+    await prisma.invite.updateMany({
+      where: { id: inviteId, useCount: { gt: 0 } },
+      data: { useCount: { decrement: 1 } },
     })
 
     logger.info("Invite usage rolled back successfully", {
@@ -242,29 +255,42 @@ async function rollbackInviteUsage(
  * Atomically validate and use an invite within a single transaction.
  * Uses Serializable isolation level to prevent TOCTOU race conditions.
  * This ensures that concurrent requests cannot both pass validation.
+ * An invite for another service is rejected before its use is counted, so a
+ * Jellyfin code never reaches the Plex share or the invite exemption (SEC-29).
  * Note: This function re-throws P2034 transaction conflicts for retry handling
  */
-async function validateAndUseInvite(code: string): Promise<ValidateAndUseResult> {
+async function validateAndUseInvite(
+  code: string,
+  expectedServerType: ServerType
+): Promise<ValidateAndUseResult> {
   try {
     const result = await prisma.$transaction(
-      async (tx) => {
+      async (tx): Promise<ValidateAndUseResult> => {
         // Find invite by code inside the transaction
         const invite = await tx.invite.findUnique({
           where: { code },
         })
 
         if (!invite) {
-          return { success: false as const, error: "Invalid invite code" }
+          return { success: false, code: "INVITE_INVALID", error: "Invalid invite code" }
+        }
+
+        if (invite.serverType !== expectedServerType) {
+          return {
+            success: false,
+            code: "INVITE_WRONG_SERVICE",
+            error: `This invite is for ${SERVER_LABELS[invite.serverType]}`,
+          }
         }
 
         // Validate expiration
         if (invite.expiresAt && invite.expiresAt < new Date()) {
-          return { success: false as const, error: "Invite has expired" }
+          return { success: false, code: "INVITE_INVALID", error: "Invite has expired" }
         }
 
         // Validate max uses
         if (invite.useCount >= invite.maxUses) {
-          return { success: false as const, error: "Invite has reached maximum uses" }
+          return { success: false, code: "INVITE_INVALID", error: "Invite has reached maximum uses" }
         }
 
         // Atomically increment the use count
@@ -274,7 +300,7 @@ async function validateAndUseInvite(code: string): Promise<ValidateAndUseResult>
         })
 
         return {
-          success: true as const,
+          success: true,
           invite: {
             id: updatedInvite.id,
             code: updatedInvite.code,
@@ -300,9 +326,8 @@ async function validateAndUseInvite(code: string): Promise<ValidateAndUseResult>
     if (isTransactionConflict(error)) {
       throw error
     }
-    const errorMessage = error instanceof Error ? error.message : "Failed to process invite"
-    logger.error("Error validating and using invite", { error: errorMessage, code })
-    return { success: false, error: errorMessage }
+    logger.error("Error validating and using invite", error, { code })
+    return { success: false, code: "INTERNAL", error: "Failed to process invite" }
   }
 }
 
@@ -637,7 +662,7 @@ export async function processInvite(code: string, plexAuthToken: string) {
     // Atomically validate and mark the invite as used with retry logic for transaction conflicts
     // This prevents race conditions where multiple requests could use the same invite
     const inviteResult = await withRetry(
-      () => validateAndUseInvite(code),
+      () => validateAndUseInvite(code, ServerType.PLEX),
       {
         onConflict: (attempt) => {
           // Log transaction conflict for monitoring/alerting
@@ -649,8 +674,8 @@ export async function processInvite(code: string, plexAuthToken: string) {
         },
       }
     )
-    if (!inviteResult.success || !inviteResult.invite) {
-      return { success: false, error: inviteResult.error }
+    if (!inviteResult.success) {
+      return { success: false, code: inviteResult.code, error: inviteResult.error }
     }
     const invite = inviteResult.invite
 
@@ -815,8 +840,98 @@ async function recordJellyfinInviteUsage(
 }
 
 /**
+ * Parse an invite's stored Jellyfin library ids. `null` means every library;
+ * a value that is not a JSON array of 32-hex ids is rejected.
+ */
+function parseJellyfinLibraryIds(
+  raw: string | null
+): { success: true; data: string[] | undefined } | { success: false } {
+  if (raw === null) {
+    return { success: true, data: undefined }
+  }
+  try {
+    const parsed = jellyfinLibraryIdsSchema.safeParse(JSON.parse(raw))
+    return parsed.success ? { success: true, data: parsed.data } : { success: false }
+  } catch {
+    return { success: false }
+  }
+}
+
+interface JellyfinRedemption {
+  inviteId: string
+  username: string
+  jellyfinUserId: string
+  /** The account is confirmed disabled (step 2 of the redemption succeeded). */
+  disabled: boolean
+  /** The invite's policy, reused if the account has to be disabled again. */
+  policy: JellyfinInviteSettings
+}
+
+/**
+ * Undo a failed Jellyfin redemption, all or nothing (GAP-28).
+ *
+ * Deletes the account and checks the result. If the delete fails, an account
+ * not yet known to be disabled is disabled instead. The invite's use is only
+ * restored once the account is confirmed deleted or disabled; otherwise the
+ * invite stays consumed and `INVITE_ROLLBACK_FAILED` records the Jellyfin user
+ * id so an admin can remove the account by hand.
+ */
+async function compensateJellyfinInvite(
+  config: JellyfinConfig,
+  redemption: JellyfinRedemption,
+  reason: string
+): Promise<void> {
+  const { inviteId, username, jellyfinUserId } = redemption
+  const deleted = await deleteJellyfinUser(config, jellyfinUserId)
+
+  let contained = deleted.success
+  if (!deleted.success) {
+    contained = redemption.disabled
+    if (!contained) {
+      const disabled = await setJellyfinUserPolicy(config, jellyfinUserId, {
+        ...redemption.policy,
+        isDisabled: true,
+      })
+      contained = disabled.success
+    }
+  }
+
+  if (!contained) {
+    logger.error("Jellyfin invite compensation failed; account left active", undefined, {
+      inviteId,
+      jellyfinUserId,
+    })
+    logAuditEvent(AuditEventType.INVITE_ROLLBACK_FAILED, "system", {
+      inviteId,
+      jellyfinUsername: username,
+      jellyfinUserId,
+      reason,
+      rollbackError: "Jellyfin account could not be deleted or disabled",
+    })
+    return
+  }
+
+  if (!deleted.success) {
+    logAuditEvent(AuditEventType.INVITE_JELLYFIN_FAILURE, "system", {
+      inviteId,
+      jellyfinUsername: username,
+      jellyfinUserId,
+      stage: "compensate",
+      error: "Jellyfin account disabled but not deleted",
+    })
+  }
+
+  await rollbackInviteUsage(inviteId, username, reason)
+}
+
+/**
  * Process a Jellyfin invite: Create user on Jellyfin server with appropriate permissions.
  * Uses atomic validation to prevent TOCTOU race conditions.
+ *
+ * The account is created, given the invite's libraries while disabled, recorded
+ * (user row and `InviteUsage` in one transaction), and only then enabled. A
+ * failure before the record is compensated by `compensateJellyfinInvite`; a
+ * failed enable leaves the recorded account disabled for the owner to enable.
  *
  * This function implements:
  * - Retry logic with exponential backoff for transaction conflicts (P2034)
@@ -828,6 +943,10 @@ export async function processJellyfinInvite(code: string, authData: JellyfinAuth
   if (rateLimited) {
     return rateLimited
   }
+
+  // Set once the Jellyfin account exists and until it is recorded, so the outer
+  // catch knows whether there is an account to compensate.
+  let pending: { config: JellyfinConfig; redemption: JellyfinRedemption } | null = null
 
   try {
     // Validated before the invite is consumed, so a rejected name costs no use
@@ -846,7 +965,7 @@ export async function processJellyfinInvite(code: string, authData: JellyfinAuth
 
     // Atomically validate and mark the invite as used with retry logic for transaction conflicts
     const inviteResult = await withRetry(
-      () => validateAndUseInvite(code),
+      () => validateAndUseInvite(code, ServerType.JELLYFIN),
       {
         onConflict: (attempt) => {
           logAuditEvent(AuditEventType.INVITE_TRANSACTION_CONFLICT, "system", {
@@ -858,16 +977,10 @@ export async function processJellyfinInvite(code: string, authData: JellyfinAuth
       }
     )
 
-    if (!inviteResult.success || !inviteResult.invite) {
-      return { success: false, error: inviteResult.error }
+    if (!inviteResult.success) {
+      return { success: false, code: inviteResult.code, error: inviteResult.error }
     }
     const invite = inviteResult.invite
-
-    // Verify this is a Jellyfin invite
-    if (invite.serverType !== ServerType.JELLYFIN) {
-      await rollbackInviteUsage(invite.id, username, "Invite is not for Jellyfin server")
-      return { success: false, error: "This invite is for Plex, not Jellyfin" }
-    }
 
     // Audit log that the invite was consumed
     logAuditEvent(AuditEventType.INVITE_CONSUMED, "system", {
@@ -877,9 +990,27 @@ export async function processJellyfinInvite(code: string, authData: JellyfinAuth
       jellyfinUsername: username,
     })
 
-    const jellyfinConfig = {
+    // Parsed before any account exists, so a malformed value creates nothing
+    const libraryIds = parseJellyfinLibraryIds(invite.jellyfinLibraryIds)
+    if (!libraryIds.success) {
+      logAuditEvent(AuditEventType.INVITE_JELLYFIN_FAILURE, "system", {
+        inviteId: invite.id,
+        jellyfinUsername: username,
+        stage: "parse_libraries",
+        error: "Invite library ids are malformed",
+      })
+      await rollbackInviteUsage(invite.id, username, "Invite library ids are malformed")
+      return { success: false, code: "INTERNAL", error: JELLYFIN_REDEEM_FAILED }
+    }
+
+    const jellyfinConfig: JellyfinConfig = {
       url: jellyfinServer.url,
       apiKey: jellyfinServer.apiKey,
+    }
+    const policy: JellyfinInviteSettings = {
+      libraryIds: libraryIds.data,
+      allowDownloads: invite.allowDownloads,
+      enableRemoteAccess: true,
     }
 
     // Step 1: Create the Jellyfin user
@@ -896,20 +1027,23 @@ export async function processJellyfinInvite(code: string, authData: JellyfinAuth
       })
 
       await rollbackInviteUsage(invite.id, username, failureReason)
-      return { success: false, error: failureReason }
+      return { success: false, code: "INTERNAL", error: failureReason }
     }
 
     const jellyfinUserId = createResult.userId
+    const redemption: JellyfinRedemption = {
+      inviteId: invite.id,
+      username,
+      jellyfinUserId,
+      disabled: false,
+      policy,
+    }
+    pending = { config: jellyfinConfig, redemption }
 
-    // Step 2: Set library access permissions
-    const libraryIds = invite.jellyfinLibraryIds
-      ? (JSON.parse(invite.jellyfinLibraryIds) as string[])
-      : undefined
-
+    // Step 2: Apply the invite's libraries with the account disabled
     const policyResult = await setJellyfinUserPolicy(jellyfinConfig, jellyfinUserId, {
-      libraryIds,
-      allowDownloads: invite.allowDownloads,
-      enableRemoteAccess: true,
+      ...policy,
+      isDisabled: true,
     })
 
     if (!policyResult.success) {
@@ -923,13 +1057,13 @@ export async function processJellyfinInvite(code: string, authData: JellyfinAuth
         error: failureReason,
       })
 
-      // Compensating transaction: delete the user we just created
-      await deleteJellyfinUser(jellyfinConfig, jellyfinUserId)
-      await rollbackInviteUsage(invite.id, username, failureReason)
-      return { success: false, error: failureReason }
+      pending = null
+      await compensateJellyfinInvite(jellyfinConfig, redemption, failureReason)
+      return { success: false, code: "INTERNAL", error: JELLYFIN_REDEEM_FAILED }
     }
+    redemption.disabled = true
 
-    // Step 3: Record invite usage
+    // Step 3: Record the user row and the invite usage
     try {
       await recordJellyfinInviteUsage(invite.id, jellyfinUserId, username)
     } catch (recordError) {
@@ -945,9 +1079,27 @@ export async function processJellyfinInvite(code: string, authData: JellyfinAuth
         error: failureReason,
       })
 
-      // Note: User is already created on Jellyfin, but we should still restore the invite
-      await rollbackInviteUsage(invite.id, username, failureReason)
-      return { success: false, error: failureReason }
+      pending = null
+      await compensateJellyfinInvite(jellyfinConfig, redemption, failureReason)
+      return { success: false, code: "INTERNAL", error: JELLYFIN_REDEEM_FAILED }
+    }
+    pending = null
+
+    // Step 4: Enable the account now that the app knows about it
+    const enableResult = await setJellyfinUserPolicy(jellyfinConfig, jellyfinUserId, {
+      ...policy,
+      isDisabled: false,
+    })
+
+    if (!enableResult.success) {
+      logAuditEvent(AuditEventType.INVITE_JELLYFIN_FAILURE, "system", {
+        inviteId: invite.id,
+        jellyfinUsername: username,
+        jellyfinUserId,
+        stage: "enable",
+        error: enableResult.error || "Failed to enable Jellyfin user",
+      })
+      return { success: false, code: "INTERNAL", error: JELLYFIN_ENABLE_FAILED }
     }
 
     logger.info("Jellyfin invite processed successfully", {
@@ -967,10 +1119,10 @@ export async function processJellyfinInvite(code: string, authData: JellyfinAuth
   } catch (error) {
     logger.error("Error processing Jellyfin invite", error)
 
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
+    if (pending) {
+      await compensateJellyfinInvite(pending.config, pending.redemption, "Unexpected error")
     }
 
-    return { success: false, error: "An unexpected error occurred" }
+    return { success: false, code: "INTERNAL", error: JELLYFIN_REDEEM_FAILED }
   }
 }
