@@ -55,6 +55,17 @@ describeRedis("redis generation lock", (redisUrl) => {
     await next!.release()
   })
 
+  it("lets the same owner take back a lock its crashed run left behind", async () => {
+    // job-1's first run died holding the lock; BullMQ runs job-1 again.
+    await inspector.set(key, "job-1", "PX", 30_000)
+
+    const lock = await acquireGenerationLock(processB, { year: 2026, userId, owner: "job-1" })
+
+    expect(lock).not.toBeNull()
+    expect(await inspector.pttl(key)).toBeGreaterThan(590_000)
+    expect(await lock!.release()).toBe(true)
+  })
+
   it("can only be released by its owner", async () => {
     const lock = await acquireGenerationLock(processA, { year: 2026, userId, owner: "job-1" })
     // job-1's lock expired and job-2 took it over.

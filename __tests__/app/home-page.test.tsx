@@ -118,6 +118,7 @@ describe('Home page Rewind eligibility', () => {
       userId: 'user-1',
       memberSince: '2021-03-04T00:00:00.000Z',
       rewindEligibility: { eligible: false, reason: 'NO_TAUTULLI_MATCH' },
+      isAdmin: false,
     })
   })
 
@@ -133,6 +134,7 @@ describe('Home page Rewind eligibility', () => {
       userId: 'user-1',
       memberSince: CREATED_AT.toISOString(),
       rewindEligibility: { eligible: false, reason: 'NO_PLEX_IDENTITY' },
+      isAdmin: false,
     })
   })
 

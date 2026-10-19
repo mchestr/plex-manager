@@ -22,7 +22,8 @@ const librariesSchema = z.union([
  * Fetch only library counts from Tautulli (no storage calculation)
  */
 export async function fetchTautulliLibraryCounts(
-  config: TautulliConfig
+  config: TautulliConfig,
+  signal?: AbortSignal
 ): Promise<{
   success: boolean
   data?: {
@@ -36,7 +37,7 @@ export async function fetchTautulliLibraryCounts(
 }> {
   try {
     // get_libraries provides counts, including child_count (episodes)
-    const result = await tautulliCommand(config, "get_libraries", {}, librariesSchema)
+    const result = await tautulliCommand(config, "get_libraries", {}, librariesSchema, { signal })
     if (!result.ok) {
       return { success: false, error: "Failed to fetch libraries from Tautulli" }
     }

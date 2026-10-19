@@ -227,7 +227,6 @@ describe('WrappedYearPage route year', () => {
     expect((WrappedPageClient as jest.Mock).mock.calls[0][0]).toEqual({
       userId: 'user-1',
       year: 2025,
-      initialStatus: 'generating',
     })
   })
 })

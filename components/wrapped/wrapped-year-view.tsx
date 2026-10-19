@@ -99,7 +99,7 @@ export function WrappedYearView({ userId, year, wrapped, wrappedData, seasonYear
   }
 
   if (status === "generating") {
-    return <WrappedPageClient userId={userId} year={year} initialStatus="generating" />
+    return <WrappedPageClient userId={userId} year={year} />
   }
 
   if (wrapped && status === "failed") {

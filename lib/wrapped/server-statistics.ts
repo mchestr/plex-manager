@@ -45,13 +45,14 @@ function sumPartSizes(items: z.infer<typeof plexItemsSchema>): number {
  * A whole-library PMS read. Unpaginated until P2.4's library source replaces
  * it, so the budget is a generous 2 minutes, body included.
  */
-function plexLibraryGet(config: PlexConfig, path: string) {
+function plexLibraryGet(config: PlexConfig, path: string, signal?: AbortSignal) {
   return serviceFetch({
     service: "Plex",
     url: `${config.url}${path}`,
     headers: { "X-Plex-Token": config.token },
     schema: plexContainerSchema,
     timeoutMs: 120_000,
+    signal,
   })
 }
 
@@ -59,7 +60,8 @@ function plexLibraryGet(config: PlexConfig, path: string) {
  * Fetch server statistics from Plex API (more efficient than Tautulli for storage)
  */
 async function fetchPlexServerStatisticsFromPlex(
-  config: PlexConfig
+  config: PlexConfig,
+  signal?: AbortSignal
 ): Promise<{
   success: boolean
   data?: {
@@ -75,7 +77,7 @@ async function fetchPlexServerStatisticsFromPlex(
 }> {
   try {
     // Get all library sections
-    const sectionsResult = await plexLibraryGet(config, "/library/sections")
+    const sectionsResult = await plexLibraryGet(config, "/library/sections", signal)
 
     if (!sectionsResult.ok) {
       logger.error("Failed to fetch library sections from Plex", undefined, { code: sectionsResult.code, status: sectionsResult.status })
@@ -107,7 +109,7 @@ async function fetchPlexServerStatisticsFromPlex(
       const sectionType = section.type // "movie" or "show"
 
       // Get all items in this section using /all endpoint
-      const allItems = await plexLibraryGet(config, `/library/sections/${sectionKey}/all?includeGuids=1`)
+      const allItems = await plexLibraryGet(config, `/library/sections/${sectionKey}/all?includeGuids=1`, signal)
 
       if (!allItems.ok) {
         logger.warn("Failed to fetch items for a Plex library", { sectionTitle, code: allItems.code, status: allItems.status })
@@ -125,7 +127,7 @@ async function fetchPlexServerStatisticsFromPlex(
         showsCount += totalSize
 
         // Get all episodes directly using type=4 (episode)
-        const episodes = await plexLibraryGet(config, `/library/sections/${sectionKey}/all?type=4`)
+        const episodes = await plexLibraryGet(config, `/library/sections/${sectionKey}/all?type=4`, signal)
 
         if (episodes.ok) {
           const episodeItems = episodes.data.MediaContainer?.Metadata || []
@@ -163,7 +165,8 @@ async function fetchPlexServerStatisticsFromPlex(
  */
 export async function fetchPlexServerStatistics(
   config: PlexConfig,
-  tautulliConfig: TautulliConfig
+  tautulliConfig: TautulliConfig,
+  signal?: AbortSignal
 ): Promise<{
   success: boolean
   data?: ServerStatisticsData
@@ -173,8 +176,8 @@ export async function fetchPlexServerStatistics(
     // Use Plex API for storage (more efficient)
     // Use Tautulli for counts only (get_libraries provides accurate episode counts)
     const [plexResult, tautulliCountsResult] = await Promise.all([
-      fetchPlexServerStatisticsFromPlex(config),
-      fetchTautulliLibraryCounts(tautulliConfig),
+      fetchPlexServerStatisticsFromPlex(config, signal),
+      fetchTautulliLibraryCounts(tautulliConfig, signal),
     ])
 
     if (!plexResult.success) {

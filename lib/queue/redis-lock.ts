@@ -13,6 +13,10 @@
  * The compare-and-renew and compare-and-delete scripts mean a run whose lock
  * expired can never extend or release the lock a newer run now holds.
  *
+ * The lock is re-entrant for its owner: a BullMQ job run again after its
+ * worker died (a stalled job keeps its id) takes back the lock its first run
+ * left behind, instead of skipping itself for up to 10 minutes.
+ *
  * @module
  */
 
@@ -24,6 +28,17 @@ const logger = createLogger("REDIS_LOCK")
 
 const LOCK_TTL_MS = 600_000
 const RENEW_EVERY_MS = 60_000
+
+const ACQUIRE_SCRIPT = `
+local holder = redis.call('GET', KEYS[1])
+if not holder then
+  redis.call('SET', KEYS[1], ARGV[1], 'PX', ARGV[2])
+  return 1
+end
+if holder == ARGV[1] then
+  return redis.call('PEXPIRE', KEYS[1], ARGV[2])
+end
+return 0`
 
 const RENEW_SCRIPT = `
 if redis.call('GET', KEYS[1]) == ARGV[1] then
@@ -45,7 +60,8 @@ export interface GenerationLock {
 /**
  * Takes `rw:lock:gen:{year}:{userId}` for `owner` (the BullMQ job id) and
  * renews it every minute until released. Returns null when another owner holds
- * it, in which case the caller ends its run as `skipped`.
+ * it, in which case the caller ends its run as `skipped`; the same owner
+ * takes it back.
  *
  * @example
  * ```ts
@@ -63,8 +79,8 @@ export async function acquireGenerationLock(
   { year, userId, owner }: { year: number; userId: string; owner: string }
 ): Promise<GenerationLock | null> {
   const key = `rw:lock:gen:${year}:${userId}`
-  const taken = await redis.set(key, owner, "PX", LOCK_TTL_MS, "NX")
-  if (taken !== "OK") return null
+  const taken = await redis.eval(ACQUIRE_SCRIPT, 1, key, owner, LOCK_TTL_MS)
+  if (taken !== 1) return null
 
   const renewal = setInterval(() => {
     redis.eval(RENEW_SCRIPT, 1, key, owner, LOCK_TTL_MS).then(

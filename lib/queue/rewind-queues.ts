@@ -9,7 +9,7 @@
  * |----------------|-------------|----------------------------------------------|
  * | `rewind-batch` | 1           | season prepare, aggregate, metadata warm (P2.6) |
  * | `rewind-gen`   | 4           | `REWIND_GENERATE_USER` (P2.17)               |
- * | `rewind-aux`   | 2           | `REWIND_STALE_SWEEP` (P2.17), cards, notify  |
+ * | `rewind-aux`   | 2           | `REWIND_STALE_SWEEP` (P2.17, every 10 min), cards, notify |
  *
  * Workers hold a job's lock for 60 s (BullMQ renews it every 30 s) and give a
  * stalled job one more attempt. Jobs have no BullMQ timeout; each processor
@@ -23,6 +23,10 @@ import { Worker, type Job } from "bullmq"
 import { onShutdown } from "@/lib/instrumentation/shutdown"
 import { getRedisConnection } from "@/lib/queue/connection"
 import type { JobProcessor } from "@/lib/queue/jobs"
+import { processRewindGenerateUser } from "@/lib/queue/jobs/rewind"
+import { processRewindStaleSweep } from "@/lib/queue/jobs/rewind-stale-sweep"
+import { getRewindQueue } from "@/lib/queue/rewind-producers"
+import { JOB_TYPES } from "@/lib/queue/types"
 import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("REWIND_QUEUES")
@@ -33,13 +37,13 @@ const REWIND_QUEUES = {
   "rewind-aux": { concurrency: 2 },
 } as const
 
-type RewindQueueName = keyof typeof REWIND_QUEUES
+export type RewindQueueName = keyof typeof REWIND_QUEUES
 
 /** Processors by job name, per queue. Later steps add their jobs here. */
 const PROCESSORS: Record<RewindQueueName, Record<string, JobProcessor>> = {
   "rewind-batch": {},
-  "rewind-gen": {},
-  "rewind-aux": {},
+  "rewind-gen": { [JOB_TYPES.REWIND_GENERATE_USER]: processRewindGenerateUser as JobProcessor },
+  "rewind-aux": { [JOB_TYPES.REWIND_STALE_SWEEP]: processRewindStaleSweep },
 }
 
 let workers: Worker[] | null = null
@@ -70,11 +74,26 @@ function createRewindWorker(name: RewindQueueName): Worker {
   return worker
 }
 
-/** Starts one Worker per Rewind queue, once, and registers them to drain on shutdown. */
+const STALE_SWEEP_EVERY_MS = 10 * 60 * 1000
+
+/** Schedules `REWIND_STALE_SWEEP` every 10 minutes; one scheduler however many processes start it. */
+async function scheduleStaleSweep(): Promise<void> {
+  await getRewindQueue("rewind-aux").upsertJobScheduler(
+    "rewind-stale-sweep",
+    { every: STALE_SWEEP_EVERY_MS },
+    { name: JOB_TYPES.REWIND_STALE_SWEEP, data: {}, opts: { attempts: 1 } }
+  )
+}
+
+/**
+ * Starts one Worker per Rewind queue, once, registers them to drain on
+ * shutdown, and schedules the stale sweep.
+ */
 export function startRewindWorkers(): void {
   if (workers) return
   workers = (Object.keys(REWIND_QUEUES) as RewindQueueName[]).map(createRewindWorker)
   onShutdown("rewind-workers", "drain", stopRewindWorkers)
+  scheduleStaleSweep().catch((error: unknown) => logger.error("Could not schedule the Rewind stale sweep", error))
   logger.info("Rewind workers started", { queues: Object.keys(REWIND_QUEUES) })
 }
 

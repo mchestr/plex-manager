@@ -181,7 +181,7 @@ export type TautulliUserRow = z.infer<typeof tautulliUserRowSchema>
  * key, as strings, because `cache` compares object arguments by identity.
  * Outside a React render it calls straight through. The call has
  * `serviceFetch`'s default 10-second budget per attempt: the home page and
- * `generatePlexWrapped` wait on it before a member's rate limit is checked.
+ * `requestRewindGeneration` wait on it before a member's rate limit is checked.
  */
 const getTautulliUsersOncePerRender = cache((url: string, apiKey: string) =>
   tautulliCommand({ url, apiKey }, "get_users", {}, z.array(z.unknown()))

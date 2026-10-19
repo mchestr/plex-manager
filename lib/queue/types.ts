@@ -15,6 +15,8 @@ export const JOB_TYPES = {
   STRIPE_WEBHOOK: "stripe:webhook",
   PLEX_ACCESS_GRANT: "plex:access:grant",
   PLEX_ACCESS_REVOKE: "plex:access:revoke",
+  REWIND_GENERATE_USER: "rewind:generate:user",
+  REWIND_STALE_SWEEP: "rewind:stale:sweep",
 } as const
 
 export type JobType = (typeof JOB_TYPES)[keyof typeof JOB_TYPES]
@@ -126,6 +128,20 @@ export interface PlexAccessRevokeResult {
 }
 
 // =============================================================================
+// Rewind Job Types (they run on the Rewind queues, lib/queue/rewind-queues.ts)
+// =============================================================================
+
+/**
+ * Payload for one member's Rewind generation. The `RewindGeneration` row the
+ * request created carries everything else (kind, copy policy).
+ */
+export interface RewindGenerateUserPayload {
+  generationId: string
+  userId: string
+  year: number
+}
+
+// =============================================================================
 // Type Mapping
 // =============================================================================
 
@@ -138,6 +154,8 @@ export interface JobPayloadMap {
   [JOB_TYPES.STRIPE_WEBHOOK]: StripeWebhookPayload
   [JOB_TYPES.PLEX_ACCESS_GRANT]: PlexAccessGrantPayload
   [JOB_TYPES.PLEX_ACCESS_REVOKE]: PlexAccessRevokePayload
+  [JOB_TYPES.REWIND_GENERATE_USER]: RewindGenerateUserPayload
+  [JOB_TYPES.REWIND_STALE_SWEEP]: Record<string, never>
 }
 
 // =============================================================================

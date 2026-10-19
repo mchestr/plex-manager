@@ -1,22 +1,26 @@
 "use client"
 
 import { getWrappedSettings } from "@/actions/admin"
-import { generatePlexWrapped, getUserPlexWrapped } from "@/actions/users"
+import { requestRewindGeneration } from "@/actions/rewind-generation"
 import { RewindNotEligibleCard } from "@/components/dashboard/rewind-not-eligible-card"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
+import { useRewindStatus } from "@/hooks/use-rewind-status"
+import { rewindInfraMessage } from "@/lib/rewind/infra-copy"
+import { failureCode, infraCode, isActiveRewindState } from "@/lib/rewind/rewind-status"
 import type { RewindEligibility } from "@/lib/wrapped/eligibility"
-import { isGenerationRefusal, memberErrorCopy, readStoredError, refusalCopy } from "@/lib/wrapped/generation-errors"
+import { isGenerationRefusal, memberErrorCopy, refusalCopy } from "@/lib/wrapped/generation-errors"
 import { motion } from "framer-motion"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 
 interface WrappedCardProps {
   userId: string
   memberSince: string // ISO date string of when user joined
   /** Decided on the server from `plexUserId` and the Tautulli match (FR-48). */
   rewindEligibility: RewindEligibility
+  /** Picks the FR-50 copy: admins are told to configure Redis. */
+  isAdmin?: boolean
 }
 
 // Floating sparkle component
@@ -56,22 +60,18 @@ function isEligibleForWrapped(memberSince: string): boolean {
   return monthsDiff >= MIN_MEMBERSHIP_MONTHS
 }
 
-export function WrappedCard({ userId, memberSince, rewindEligibility }: WrappedCardProps) {
+export function WrappedCard({ userId, memberSince, rewindEligibility, isAdmin = false }: WrappedCardProps) {
   const toast = useToast()
-  const router = useRouter()
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [wrapped, setWrapped] = useState<{ status: string; error?: string | null; shareToken?: string | null } | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [isRequesting, setIsRequesting] = useState(false)
   const [wrappedSettings, setWrappedSettings] = useState<{ enabled: boolean; year: number } | null>(null)
   const [settingsFailed, setSettingsFailed] = useState(false)
   // The action can refuse a member the page rendered as eligible (Tautulli
   // failed open, or the cached match expired since): the card then explains.
   const [refusedAsIneligible, setRefusedAsIneligible] = useState(false)
-  const pollFailureCountRef = useRef(0)
 
   // Check membership duration; a member without Plex history is ineligible regardless
   const memberLongEnough = isEligibleForWrapped(memberSince)
-  const canHaveRewind = rewindEligibility.eligible && !refusedAsIneligible
+  const canHaveRewind = Boolean(userId) && rewindEligibility.eligible && !refusedAsIneligible
 
   // Load wrapped settings. Without them the season year is unknown, so a
   // failure (e.g. a stale client after a redeploy) shows a retry, not an
@@ -102,94 +102,30 @@ export function WrappedCard({ userId, memberSince, rewindEligibility }: WrappedC
   // The season year from getWrappedSettings(); null until the settings load.
   const wrappedYear = wrappedSettings?.year ?? null
 
-  // Fetches the Rewind and settles the loading flag; it never sets state
-  // synchronously, so the mount effect can call it.
-  const fetchWrapped = useCallback((year: number) =>
-    getUserPlexWrapped(userId, year)
-      .then(setWrapped)
-      .catch((err) => {
-        toast.showError(err instanceof Error ? err.message : "Failed to load wrapped")
-      })
-      .finally(() => {
-        setIsLoading(false)
-      }), [userId, toast])
-
-  const loadWrapped = useCallback(async () => {
-    if (!userId || wrappedYear === null || !canHaveRewind) return
-
-    setIsLoading(true)
-    await fetchWrapped(wrappedYear)
-  }, [userId, wrappedYear, canHaveRewind, fetchWrapped])
-
-  // isLoading starts true, so the first load needs no loading flip
-  useEffect(() => {
-    if (!userId || wrappedYear === null || !canHaveRewind) return
-    fetchWrapped(wrappedYear)
-  }, [userId, wrappedYear, canHaveRewind, fetchWrapped])
-
-  // Poll for wrapped completion when generating
-  useEffect(() => {
-    if (!userId || wrappedYear === null || (!isGenerating && wrapped?.status !== "generating")) {
-      return
-    }
-
-    const pollInterval = setInterval(async () => {
-      try {
-        const wrappedData = await getUserPlexWrapped(userId, wrappedYear)
-        setWrapped(wrappedData)
-        pollFailureCountRef.current = 0
-
-        if (wrappedData?.status === "completed") {
-          setIsGenerating(false)
-          clearInterval(pollInterval)
-          router.push(`/wrapped/${wrappedYear}`)
-        } else if (wrappedData?.status === "failed") {
-          setIsGenerating(false)
-          clearInterval(pollInterval)
-          toast.showError(memberErrorCopy(readStoredError(wrappedData.error)))
-        }
-      } catch (err) {
-        console.error("Error polling wrapped status:", err)
-        pollFailureCountRef.current += 1
-        if (pollFailureCountRef.current === 3) {
-          toast.showError("Having trouble checking status. Will keep trying...")
-        }
-      }
-    }, 2000)
-
-    return () => clearInterval(pollInterval)
-  }, [userId, isGenerating, wrapped?.status, wrappedYear, router, toast])
+  // The one status poll (RWP-20): status columns only, never the Rewind itself.
+  const { status, isLoading, error: statusError, isSlow, track } = useRewindStatus(canHaveRewind ? wrappedYear : null)
 
   const handleGenerate = async () => {
-    if (!userId || wrappedYear === null) return
+    if (wrappedYear === null) return
 
-    setIsGenerating(true)
+    setIsRequesting(true)
     try {
-      const result = await generatePlexWrapped(userId, wrappedYear)
+      const result = await requestRewindGeneration({ year: wrappedYear })
       if (result.success) {
-        await loadWrapped()
-      } else if (result.code === "ALREADY_GENERATING") {
-        // Another tab (or a double click) already started it: keep polling for that run.
-        toast.showInfo(refusalCopy(result.code))
-        await loadWrapped()
+        // Another tab (or a double click) already started it: follow that run.
+        if (result.alreadyQueued) toast.showInfo(refusalCopy("ALREADY_GENERATING"))
       } else if (result.code === "REWIND_NOT_ELIGIBLE") {
-        setIsGenerating(false)
         setRefusedAsIneligible(true)
       } else {
         toast.showError(
-          isGenerationRefusal(result.code)
-            ? refusalCopy(result.code, result.retryAfterSec)
-            : result.error || "Failed to generate wrapped"
+          isGenerationRefusal(result.code) ? refusalCopy(result.code, result.retryAfterSec) : result.error
         )
-        setIsGenerating(false)
-        if (result.code === "RATE_LIMITED") {
-          // A run this member started elsewhere may hold the row: follow it if so.
-          await loadWrapped()
-        }
       }
+      await track()
     } catch (err) {
       toast.showError(err instanceof Error ? err.message : "Failed to generate wrapped")
-      setIsGenerating(false)
+    } finally {
+      setIsRequesting(false)
     }
   }
 
@@ -203,8 +139,8 @@ export function WrappedCard({ userId, memberSince, rewindEligibility }: WrappedC
     return null
   }
 
-  // Settings failed to load: the season year is unknown
-  if (settingsFailed) {
+  // Settings or the status failed to load: the season year or the state is unknown
+  if (settingsFailed || (statusError && !status)) {
     return (
       <motion.div
         className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-red-500/30 bg-gradient-to-br from-red-950/30 via-slate-900 to-slate-900 p-6 sm:p-8 shadow-xl shadow-black/30"
@@ -215,7 +151,7 @@ export function WrappedCard({ userId, memberSince, rewindEligibility }: WrappedC
       >
         <div className="flex flex-col items-center text-center gap-4">
           <p className="text-sm text-red-400">We couldn&apos;t load your Wrapped.</p>
-          <Button variant="danger" size="sm" onClick={retrySettings} data-testid="wrapped-card-error-retry">
+          <Button variant="danger" size="sm" onClick={settingsFailed ? retrySettings : () => void track()} data-testid="wrapped-card-error-retry">
             Try again
           </Button>
         </div>
@@ -229,7 +165,7 @@ export function WrappedCard({ userId, memberSince, rewindEligibility }: WrappedC
   }
 
   // Loading state (also while the season year is unknown)
-  if (isLoading || wrappedYear === null) {
+  if (isLoading || wrappedYear === null || !status) {
     return (
       <motion.div
         className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-purple-500/30 bg-gradient-to-br from-purple-950/50 via-pink-950/30 to-slate-900 p-6 sm:p-8 shadow-2xl shadow-purple-500/10"
@@ -249,8 +185,8 @@ export function WrappedCard({ userId, memberSince, rewindEligibility }: WrappedC
     )
   }
 
-  // Generating state
-  if (isGenerating || wrapped?.status === "generating") {
+  // Generating state; a completed Rewind stays on show while it is regenerated (FR-40)
+  if (isRequesting || (isActiveRewindState(status.state) && !status.hasCompleted)) {
     return (
       <motion.div
         className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-purple-500/40 bg-gradient-to-br from-purple-950/50 via-pink-950/30 to-slate-900 p-6 sm:p-8 shadow-2xl shadow-purple-500/20"
@@ -274,7 +210,11 @@ export function WrappedCard({ userId, memberSince, rewindEligibility }: WrappedC
           </div>
           <div className="text-center">
             <h3 className="text-xl font-bold text-white">Creating Your {wrappedYear} Wrapped</h3>
-            <p className="mt-1 text-sm text-pink-300/80">Analyzing your viewing history...</p>
+            <p className="mt-1 text-sm text-pink-300/80" data-testid={isSlow ? "wrapped-card-slow" : undefined}>
+              {isSlow
+                ? "This is taking longer than usual. Check back in a few minutes."
+                : "Analyzing your viewing history..."}
+            </p>
           </div>
         </div>
       </motion.div>
@@ -282,7 +222,7 @@ export function WrappedCard({ userId, memberSince, rewindEligibility }: WrappedC
   }
 
   // Completed state - Hero style
-  if (wrapped?.status === "completed") {
+  if (status.hasCompleted) {
     return (
       <motion.div
         className="group relative overflow-hidden rounded-2xl sm:rounded-3xl p-[1px] shadow-2xl shadow-purple-500/20"
@@ -355,8 +295,20 @@ export function WrappedCard({ userId, memberSince, rewindEligibility }: WrappedC
     )
   }
 
+  // Redis missing or down: nothing can be enqueued (FR-50)
+  const unavailableCode = status.state === "unavailable" ? infraCode(status.errorCode) : null
+  if (unavailableCode) {
+    return (
+      <RewindNotEligibleCard
+        year={wrappedYear}
+        message={rewindInfraMessage(unavailableCode, isAdmin ? "admin" : "member")}
+        testId="wrapped-card-unavailable"
+      />
+    )
+  }
+
   // Failed state
-  if (wrapped?.status === "failed") {
+  if (status.state === "failed") {
     return (
       <motion.div
         className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-red-500/30 bg-gradient-to-br from-red-950/30 via-slate-900 to-slate-900 p-6 sm:p-8 shadow-xl shadow-black/30"
@@ -373,11 +325,13 @@ export function WrappedCard({ userId, memberSince, rewindEligibility }: WrappedC
           </div>
           <div>
             <h3 className="text-xl font-bold text-white">{wrappedYear} Wrapped</h3>
-            <p className="mt-1 text-sm text-red-400">Something went wrong. Let&apos;s try again!</p>
+            <p className="mt-1 text-sm text-red-400" data-testid="wrapped-card-failed-message">
+              {memberErrorCopy(failureCode(status.errorCode))}
+            </p>
           </div>
           <button
             onClick={handleGenerate}
-            disabled={isGenerating}
+            disabled={isRequesting}
             data-testid="wrapped-card-retry"
             className="inline-flex items-center gap-2 rounded-xl bg-red-500/20 border border-red-500/30 px-5 py-2.5 text-sm font-semibold text-red-300 transition hover:bg-red-500/30 disabled:opacity-50"
           >
@@ -444,7 +398,7 @@ export function WrappedCard({ userId, memberSince, rewindEligibility }: WrappedC
           {/* CTA Button */}
           <button
             onClick={handleGenerate}
-            disabled={isGenerating}
+            disabled={isRequesting}
             data-testid="wrapped-card-generate"
             className="group/btn relative inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-pink-500 via-purple-500 to-pink-500 bg-[length:200%_100%] px-6 sm:px-8 py-3 sm:py-3.5 text-base sm:text-lg font-bold text-white shadow-lg shadow-pink-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-pink-500/40 hover:bg-right disabled:opacity-50 disabled:cursor-not-allowed"
           >

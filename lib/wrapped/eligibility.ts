@@ -7,7 +7,7 @@
  * Plex identity (a Jellyfin-only sign-in) or without a row in Tautulli's user
  * list can never get one. The dashboard card used to offer them a Generate
  * button that always failed and left a failed row behind. The card and
- * `generatePlexWrapped` now ask this module first.
+ * `requestRewindGeneration` now ask this module first.
  *
  * Eligibility is keyed on `plexUserId`, never on `primaryAuthService`, so a
  * member who signs in with Jellyfin but has a linked Plex identity is eligible.
@@ -32,7 +32,7 @@
  * - The cache lives in this process (`createTtlCache`, at most 10,000
  *   members). A changed `plexUserId` misses it, and a member an admin has
  *   just added to Tautulli waits at most 10 minutes.
- * - `generatePlexWrapped` runs this check before it spends any rate-limit
+ * - `requestRewindGeneration` runs this check before it spends any rate-limit
  *   point. The cache, including the fail-open entry, is what keeps a member's
  *   repeated calls (a rate-limited member's among them) from reaching
  *   Tautulli each time, and the timeout bounds the call that does.
@@ -97,7 +97,7 @@ const cachedByMember = createTtlCache<string, CachedEligibility>({
 
 /**
  * Decide whether `user` can have a Rewind, and return the member's Tautulli
- * row when the decision fetched it just now. `generatePlexWrapped` uses this;
+ * row when the decision fetched it just now. The generation actions use this;
  * pages use {@link getRewindEligibility}.
  *
  * @param user - the member's id and plex.tv account ID (`User.plexUserId`)

@@ -26,16 +26,54 @@
 
 import { z } from "zod"
 
-const REWIND_ERROR_CODES = ["TAUTULLI_USER_NOT_FOUND", "GENERATION_FAILED"] as const
+/**
+ * P0.9's codes, then the generation job's (P2.17): `TIMEOUT` (the 5-minute
+ * limit), `UPSTREAM_ERROR` (Tautulli, Plex or Overseerr failed), `LLM_FAILED`,
+ * `NOT_CONFIGURED` (no active Plex, Tautulli or LLM provider), `WORKER_LOST`
+ * (the run stopped with its worker) and `JOB_LOST` (the queued job vanished).
+ */
+const REWIND_ERROR_CODES = [
+  "TAUTULLI_USER_NOT_FOUND",
+  "GENERATION_FAILED",
+  "TIMEOUT",
+  "UPSTREAM_ERROR",
+  "LLM_FAILED",
+  "NOT_CONFIGURED",
+  "WORKER_LOST",
+  "JOB_LOST",
+] as const
 
 export type RewindErrorCode = (typeof REWIND_ERROR_CODES)[number]
 
 const storedErrorSchema = z.object({ code: z.enum(REWIND_ERROR_CODES) })
 
+const INTERRUPTED = "Making your Rewind was interrupted. Please try again."
+
 const MEMBER_ERROR_COPY: Record<RewindErrorCode, string> = {
   TAUTULLI_USER_NOT_FOUND:
     "We couldn't find your account in Tautulli yet. Ask the server admin to refresh Tautulli's user list.",
   GENERATION_FAILED: "Something went wrong while generating your Wrapped. Please try again.",
+  TIMEOUT: "Making your Rewind took too long. Please try again in a few minutes.",
+  UPSTREAM_ERROR: "We couldn't read your watch history just now. Please try again in a few minutes.",
+  LLM_FAILED: "We couldn't write your Rewind this time. Please try again.",
+  NOT_CONFIGURED: "Rewind isn't fully set up on this server yet. Ask the server admin.",
+  WORKER_LOST: INTERRUPTED,
+  JOB_LOST: INTERRUPTED,
+}
+
+/**
+ * Read `RewindGeneration.error` (`{ code }`) back as a code; anything else,
+ * including a skip reason such as `LOCKED`, reads as `GENERATION_FAILED`.
+ *
+ * @example
+ * ```ts
+ * readGenerationError({ code: "TIMEOUT" }) // "TIMEOUT"
+ * readGenerationError(null) // "GENERATION_FAILED"
+ * ```
+ */
+export function readGenerationError(error: unknown): RewindErrorCode {
+  const parsed = storedErrorSchema.safeParse(error)
+  return parsed.success ? parsed.data.code : "GENERATION_FAILED"
 }
 
 /**
@@ -103,13 +141,22 @@ export function adminErrorHint(
       return plexUserId
         ? `Plex user ${plexUserId} is not in Tautulli's user list. Refresh users in Tautulli, then try again in 10 minutes.`
         : "This member has no linked Plex account, so there is no watch history for a Rewind."
+    case "NOT_CONFIGURED":
+      return "Plex, Tautulli or the LLM provider is not configured. Check the settings, then regenerate."
+    case "TIMEOUT":
+      return "The run hit its 5-minute limit. Check that Tautulli and the LLM provider respond quickly."
+    case "UPSTREAM_ERROR":
+      return "Tautulli, Plex or Overseerr failed after three attempts. Check that they are reachable."
     case "GENERATION_FAILED":
+    case "LLM_FAILED":
+    case "WORKER_LOST":
+    case "JOB_LOST":
       return null
   }
 }
 
 /**
- * Codes for a run `generatePlexWrapped` refused to start (SEC-22, RWP-12), or
+ * Codes for a run `requestRewindGeneration` refused to start (SEC-22, RWP-12), or
  * for a member who cannot have a Rewind (FR-48, RWP-08). They are returned to
  * the caller and never stored.
  */
