@@ -9,8 +9,8 @@
  * queues one `DISCORD_ROLE_SYNC` job per member, deduplicated on
  * `discord:role:<userId>`, which pushes a fresh `is_subscribed` with the
  * stored watched hours. The daily `DISCORD_ROLE_RECONCILE` job
- * (`lib/queue/jobs/discord-role.ts`) catches anything an event missed and is
- * the only path that recomputes the hours.
+ * (`lib/queue/jobs/discord-role.ts`) catches anything an event missed and
+ * recomputes the hours, as do a fresh link and the member's manual resync.
  *
  * ## Special Cases
  *
