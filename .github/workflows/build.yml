@@ -7,6 +7,9 @@ on:
     branches:
       - main
   pull_request:
+  # Lets visual-baselines.yml start these checks on the commit it pushes when
+  # no App token or PAT is configured (e2e/visual/README.md).
+  workflow_dispatch:
 
 permissions:
   contents: read
