@@ -70,6 +70,9 @@ const NON_SECRET_CONFIG_SELECT = {
   watchlistSyncIntervalMinutes: true,
   stripeEnabled: true,
   stripePriceIds: true,
+  llmDailyCapPerUserUsd: true,
+  llmDailyCapAdminUsd: true,
+  llmDailyCapServerUsd: true,
   updatedAt: true,
   updatedBy: true,
 } as const
@@ -116,6 +119,9 @@ export async function getConfig() {
       watchlistSyncIntervalMinutes: 60,
       stripeEnabled: false,
       stripePriceIds: null,
+      llmDailyCapPerUserUsd: 0.5,
+      llmDailyCapAdminUsd: 5,
+      llmDailyCapServerUsd: 5,
       updatedAt: new Date(),
       updatedBy: null,
     }
@@ -138,6 +144,41 @@ export const setLLMDisabled = adminAction({
     })
 
     logAuditEvent(AuditEventType.CONFIG_CHANGED, userId, configDiff("llm", before, { llmDisabled: disabled }))
+    return ok(null)
+  },
+})
+
+/** A daily cap in US dollars. 0 refuses every assistant call for that tier. */
+const dailyCapSchema = z.number().min(0, "A cap cannot be negative").max(1000, "A cap can be at most 1000 USD a day")
+
+const llmCapsSchema = z.object({
+  llmDailyCapPerUserUsd: dailyCapSchema,
+  llmDailyCapAdminUsd: dailyCapSchema,
+  llmDailyCapServerUsd: dailyCapSchema,
+})
+
+/**
+ * Set the assistant's daily spend caps (admin only): per member, per admin and
+ * for the whole server, in US dollars per server-zone day. `lib/llm/budget.ts`
+ * checks them before every assistant LLM call.
+ */
+export const updateLlmCaps = adminAction({
+  input: llmCapsSchema,
+  fallbackError: "Failed to update the assistant spend caps",
+  handler: async (caps, { userId }) => {
+    const before = await prisma.config.findUnique({
+      where: { id: "config" },
+      select: { llmDailyCapPerUserUsd: true, llmDailyCapAdminUsd: true, llmDailyCapServerUsd: true },
+    })
+    await prisma.config.upsert({
+      where: { id: "config" },
+      update: { ...caps, updatedBy: userId },
+      create: { id: "config", ...caps, updatedBy: userId },
+      select: { id: true },
+    })
+
+    logAuditEvent(AuditEventType.CONFIG_CHANGED, userId, configDiff("llm.caps", before, caps))
+    revalidatePath("/admin/settings")
     return ok(null)
   },
 })

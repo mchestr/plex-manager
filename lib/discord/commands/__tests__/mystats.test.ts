@@ -154,7 +154,10 @@ interface EmbedShape {
   }
 }
 
-function createMockContext(options: { linked?: boolean } = {}): {
+/** Each context gets its own member, so the per-member limit only counts within a test. */
+let memberCount = 0
+
+function createMockContext(options: { linked?: boolean; userId?: string } = {}): {
   ctx: InteractionContext
   reply: jest.Mock
   deferReply: jest.Mock
@@ -166,8 +169,11 @@ function createMockContext(options: { linked?: boolean } = {}): {
 
   const interaction = { channelId: "channel-1", reply, deferReply, editReply }
 
+  const userId = options.userId ?? `user-${++memberCount}`
   const verifiedUser: VerifyDiscordUserResult =
-    options.linked === false ? { linked: false, entitled: false } : linkedUser
+    options.linked === false
+      ? { linked: false, entitled: false }
+      : { ...linkedUser, user: { ...linkedUser.user!, id: userId } }
 
   return {
     ctx: {
@@ -325,5 +331,37 @@ describe("myStatsCommand.handle", () => {
     expect(editArg.embeds).toBeUndefined()
     expect(editArg.content).toMatch(/couldn't|could not|sorry|unable/i)
     expect(editArg.content).not.toContain("boom")
+  })
+})
+
+describe("myStatsCommand rate limit (P4.20)", () => {
+  it("refuses the sixth call in an hour, before deferring or fetching", async () => {
+    for (let i = 0; i < 5; i++) {
+      const { ctx, editReply } = createMockContext({ userId: "stats-fan" })
+      await myStatsCommand.handle(ctx)
+      expect(editReply.mock.calls[0][0].embeds).toHaveLength(1)
+    }
+    mockFetch.mockClear()
+
+    const { ctx, reply, deferReply } = createMockContext({ userId: "stats-fan" })
+    await myStatsCommand.handle(ctx)
+
+    expect(reply).toHaveBeenCalledWith({
+      content: expect.stringMatching(/You can look again in \d+ (hour|minute)s?\.$/),
+      flags: 64,
+    })
+    expect(deferReply).not.toHaveBeenCalled()
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
+
+  it("counts each member separately", async () => {
+    for (let i = 0; i < 5; i++) {
+      await myStatsCommand.handle(createMockContext({ userId: "member-a" }).ctx)
+    }
+    const { ctx, editReply } = createMockContext({ userId: "member-b" })
+
+    await myStatsCommand.handle(ctx)
+
+    expect(editReply.mock.calls[0][0].embeds).toHaveLength(1)
   })
 })

@@ -95,6 +95,12 @@ async function handleAsk(ctx: InteractionContext): Promise<void> {
     return
   }
 
+  // A message limit or spend cap: say when it resets, never "couldn't reach"
+  if (response.refusal) {
+    await interaction.editReply({ content: response.refusal })
+    return
+  }
+
   if (!response.success || !response.message?.content) {
     logger.error("Assistant chat failed", undefined, {
       discordUserId,

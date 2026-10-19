@@ -4657,10 +4657,12 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 - Send 25 DMs within a minute: from the 21st on, replies are refused without an LLM call.
 
 **Done when.**
-- [ ] The admin assistant, the Discord DM assistant, `/assistant ask`, `/mystats` and resync have per-user Redis limits.
-- [ ] Daily per-user and server spend caps are checked before every LLM call, and fail closed.
-- [ ] Failed but billed calls are recorded through `lib/llm/usage.ts`.
+- [x] The admin assistant, the Discord DM assistant, `/assistant ask`, `/mystats` and resync have per-user Redis limits.
+- [x] Daily per-user and server spend caps are checked before every LLM call, and fail closed.
+- [x] Failed but billed calls are recorded through `lib/llm/usage.ts`.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
+
+(As merged: the migration is `20261119000100_llm_spend_caps`, after P4.10's `20261119000000`. The limits are keyed by app user id; `handleDiscordChat` spends `llm:discord:dm` then `llm:discord:dm:day` after the entitlement gate, so a lapsed member spends nothing. A refusal comes back as `DiscordChatResult.refusal` (copy naming the reset through `retryAfterCopy()` in `lib/security/rate-limit-messages.ts`, or the budget copy), which the DM router and `/assistant ask` send as the reply instead of the fallback. "Assistant spend" is `LLMUsage` rows with a `chatConversationId`, which both assistant paths always set, so Rewind rows never count. `checkSpend` is called in `runConversationLoop` before every `chatWithTools`; `chatWithAdminBot` passes `isAdmin: true`, which selects `llmDailyCapAdminUsd`. A cap reached is `refusal: "BUDGET_EXCEEDED"` (the admin action returns `RATE_LIMITED` with the copy); a failed check is `BUDGET_UNAVAILABLE` with its own copy (`UPSTREAM_UNAVAILABLE` on the web). A Redis error in the cache falls back to the database; only a database or config error fails closed. A cap of 0 refuses every assistant call for that tier. The cache uses P4.2's request-path Redis client; `recordUsage` calls `addSpend`, which adds only to a cached sum that exists (a Lua `EXISTS`/`INCRBYFLOAT`), and a miss caches with `SET ... EX 60 NX`. The settings form has a third field, `llm-cap-admin`, beside `llm-cap-user` and `llm-cap-server`, and saves through `updateLlmCaps` (audited as `CONFIG_CHANGED`, section `llm.caps`); the admin settings visual baseline changed for it. `chatWithTools` now also records a refusal (`rawFinishReason === "refusal"`) as `outcome: "refusal"`; it already recorded `length` and `content-filter`. The `length` test is in `lib/llm/__tests__/chat.test.ts`, where `chatWithTools` is tested, and `usage.test.ts` covers the cache increment.)
 
 ---
 

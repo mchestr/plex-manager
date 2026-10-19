@@ -137,7 +137,7 @@ channel/thread IDs remain configurable (informational only).
 ## Chatbot integration & privacy
 
 - The bot calls `handleDiscordChat()` directly (no HTTP overhead) for verified
-  users, reusing the OpenAI configuration stored in the database.
+  users, reusing the chat LLM provider configured in the admin settings.
 - Conversation history is persisted per Discord DM/channel, so multi-turn context
   is maintained. Session creation and history append are transactional (safe
   under concurrent messages).
@@ -157,6 +157,36 @@ channel/thread IDs remain configurable (informational only).
      emails, phones, IPv4/IPv6, and long/structural IDs.
 - Discord link/unlink, config changes, and token rotation are recorded as audit
   events (never the secret values).
+
+## Limits and spend caps
+
+Every limit is per member (keyed by app user id) and shared across app
+processes through Redis, with the in-process store as the fallback
+(`lib/security/rate-limit-config.ts`).
+
+| What | Limit |
+|---|---|
+| Assistant messages, DMs and `/assistant ask` together | 20 an hour and 100 a day (`llm:discord:dm`, `llm:discord:dm:day`) |
+| `/mystats` | 5 an hour (`discord:mystats`) |
+| The web "Force resync" button | 3 an hour (`discord:resync`) |
+| The admin assistant on the web | 60 messages an hour per admin (`llm:assistant:admin`) |
+
+A refused message is answered with when the member can ask again, for example
+"You can ask again in 42 minutes", and makes no LLM call.
+
+On top of the message limits, the assistant has **daily spend caps**, set under
+Settings, LLM Configuration, Chat Assistant: per member (default $0.50), per
+admin (default $5) and for the whole server (default $5), in US dollars per day
+in the server time zone. They count only assistant calls, both on the web and in
+Discord; Rewind generation has its own budget. The caps are checked before every
+LLM call, including each step of a tool loop, so a long turn stops at the cap
+with "I've hit today's assistant budget. It resets at midnight server time." If
+the check itself fails, for example while the database is down, the call is
+refused. A cap of 0 turns the assistant off for that group.
+
+Every billed call is an `LLMUsage` row, including calls cut short by the token
+limit (`outcome: length`), refused or filtered by the provider. A provider error
+that carries no token usage is logged, not recorded.
 
 ## Troubleshooting
 

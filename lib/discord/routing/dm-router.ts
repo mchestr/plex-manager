@@ -195,6 +195,12 @@ export async function routeDirectMessage(
         return
       }
 
+      // A message limit or spend cap: say when it resets, never "couldn't reach"
+      if (response.refusal) {
+        await message.reply({ content: response.refusal, allowedMentions: { users: [discordUserId] } })
+        return
+      }
+
       if (!response.success || !response.message?.content) {
         throw new Error(response.error || "Empty assistant response")
       }

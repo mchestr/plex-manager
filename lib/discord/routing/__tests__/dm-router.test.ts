@@ -289,6 +289,20 @@ describe("routeDirectMessage", () => {
     )
   })
 
+  it("replies with a limit refusal and its reset time, never the fallback (P4.20)", async () => {
+    const refusal = "You've reached the assistant's message limit. You can ask again in 42 minutes."
+    const deps = makeDeps({
+      handleDiscordChat: jest.fn().mockResolvedValue({ success: false, linked: true, refusal }),
+    })
+    const { message, reply } = createMockMessage({ content: "hi" })
+
+    await routeDirectMessage(message, deps)
+
+    expect(reply).toHaveBeenCalledTimes(1)
+    expect(reply).toHaveBeenCalledWith(expect.objectContaining({ content: refusal }))
+    expect(mockUpdate).toHaveBeenCalledWith("log-1", expect.objectContaining({ status: "SUCCESS" }))
+  })
+
   it("sends a 4,500-character answer as three messages, never the fallback (SEC-51)", async () => {
     const long = "The server is healthy and nothing needs fixing. ".repeat(94).slice(0, 4500)
     const deps = makeDeps({

@@ -255,6 +255,16 @@ describe("assistantCommand.handle — ask", () => {
     )
   })
 
+  it("shows a limit refusal with its reset time, never the fallback (P4.20)", async () => {
+    const refusal = "You've reached the assistant's message limit. You can ask again in 42 minutes."
+    mockChat.mockResolvedValue({ success: false, linked: true, refusal })
+    const { ctx, editReply } = createMockContext({ subcommand: "ask" })
+
+    await assistantCommand.handle(ctx)
+
+    expect(editReply).toHaveBeenCalledWith({ content: refusal })
+  })
+
   it("surfaces a friendly error via editReply when the chat fails", async () => {
     mockChat.mockResolvedValue({ success: false, linked: true, error: "boom" })
     const { ctx, editReply } = createMockContext({ subcommand: "ask" })
