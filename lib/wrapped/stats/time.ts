@@ -18,7 +18,7 @@ const AFTER_DARK = new Set([22, 23, 0, 1, 2, 3])
 const GOLDEN = new Set([18, 19, 20, 21])
 const NIGHT_ENDS = 4 * 60
 
-export interface ClockTime {
+interface ClockTime {
   hour: number
   minute: number
 }

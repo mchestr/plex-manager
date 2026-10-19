@@ -15,7 +15,11 @@ import type { ServerAggregate } from "@/lib/wrapped/aggregate/schema"
 import type { MediaMetadata } from "@/lib/wrapped/metadata-cache"
 import type { PlayEvent } from "@/lib/wrapped/sources/watch-history-source"
 
-/** One title's cached metadata, as the stats read it. An episode's is its series'. */
+/**
+ * One title's cached metadata, as the stats read it. An episode's is its series'.
+ *
+ * @public The stats tests build lookups from it.
+ */
 export interface TitleMetadata {
   genres: string[]
   directors: string[]
@@ -27,6 +31,8 @@ export interface TitleMetadata {
   /** `tmdb://`, `tvdb://` and `imdb://` guids. */
   guids: string[]
   videoResolution: string | null
+  /** The running time; only warmed rows carry it. */
+  runtimeSec: number | null
   /** Episodes per season number (`{ "1": 10 }`), for a warmed series. */
   seasonEpisodeCounts: Record<string, number> | null
 }
@@ -58,6 +64,7 @@ function toTitleMetadata(row: MediaMetadata): TitleMetadata | undefined {
     originallyAvailableAt: row.originallyAvailableAt?.toISOString().slice(0, 10) ?? null,
     guids: guids.data,
     videoResolution: row.videoResolution,
+    runtimeSec: row.runtimeSec,
     seasonEpisodeCounts: seasons.data,
   }
 }

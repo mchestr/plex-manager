@@ -22,7 +22,7 @@ const MIN_COVERAGE = 0.7
 const TOP_ACTORS = 5
 const TOP_DIRECTORS = 3
 
-export interface Person {
+interface Person {
   name: string
   minutes: number
 }

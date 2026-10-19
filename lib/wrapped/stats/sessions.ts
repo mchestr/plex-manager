@@ -23,7 +23,7 @@ import { rankTitles } from "./rank"
 const MAX_GAP_MS = 30 * 60_000
 const MIN_BINGE = 3
 
-export interface Binge {
+interface Binge {
   key: TitleKey
   title: string
   episodes: number

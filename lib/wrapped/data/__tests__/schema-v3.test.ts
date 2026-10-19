@@ -45,7 +45,17 @@ describe("RewindDataV3", () => {
     const row = {
       ...minimalV3(),
       edition: "full",
-      archetype: { id: "midnight-marathoner", runnerUp: "loyalist", evidence: ["hours.afterDarkShare"] },
+      archetype: {
+        id: "midnight-marathoner",
+        runnerUp: "loyalist",
+        evidence: ["hours.afterDarkShare"],
+        shortlist: [
+          { id: "midnight-marathoner", score: 84 },
+          { id: "loyalist", score: 60 },
+        ],
+        llmMayChoose: false,
+        rarity: { count: 6, of: 31 },
+      },
       copy: {
         decks: {
           number: "A deck.",
@@ -68,6 +78,33 @@ describe("RewindDataV3", () => {
     }
 
     expect(RewindDataV3.safeParse(row).success).toBe(true)
+  })
+
+  it("rejects a fact id outside the catalogue", () => {
+    const facts = { "time.totalHourz": { value: 1, display: "1", unit: "hours" } }
+
+    expect(RewindDataV3.safeParse({ ...minimalV3(), facts }).success).toBe(false)
+  })
+
+  it("rejects a poster line that is not one of the archetype catalogue's ids", () => {
+    const copy = {
+      decks: Object.fromEntries(
+        ["number", "bookends", "topShows", "topFilms", "taste", "people", "clock", "calendar", "records", "requests", "standing", "nextYear"].map(
+          (slot) => [slot, null]
+        )
+      ),
+      archetype: { id: "midnight-marathoner", tagline: "t", dedication: "d", posterLineId: "mm.6" },
+      signOff: null,
+    }
+
+    expect(RewindDataV3.safeParse({ ...minimalV3(), copy }).success).toBe(false)
+    expect(RewindDataV3.safeParse({ ...minimalV3(), copy: { ...copy, archetype: { ...copy.archetype, posterLineId: "mm.5" } } }).success).toBe(true)
+  })
+
+  it("rejects a fact with an unknown unit", () => {
+    const facts = { "time.totalMinutes": { value: 12, display: "12 minutes", unit: "minutes" } }
+
+    expect(RewindDataV3.safeParse({ ...minimalV3(), facts }).success).toBe(false)
   })
 })
 

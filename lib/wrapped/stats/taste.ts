@@ -54,7 +54,12 @@ function top(seconds: ReadonlyMap<string, number>): Array<[string, number]> {
   return [...seconds].sort(([a, x], [b, y]) => y - x || (a < b ? -1 : 1))
 }
 
-function freshShare(events: readonly PlayEvent[], lookup: MetadataLookup, zone: string): number | null {
+/**
+ * The share of counted plays started 0 to 14 days after release, or null
+ * without a known release date. P2.9 also reads it outside the page's
+ * coverage gate, for the Premiere Chaser.
+ */
+export function freshShare(events: readonly PlayEvent[], lookup: MetadataLookup, zone: string): number | null {
   let known = 0
   let fresh = 0
   for (const e of videoEvents(events).filter(isCountedPlay)) {

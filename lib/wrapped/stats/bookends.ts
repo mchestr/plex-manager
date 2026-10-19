@@ -15,7 +15,7 @@ import { dayKey } from "@/lib/wrapped/time/zone"
 import { isListed, minutesOf, titleKey, videoEvents, type StatsContext, type TitleKey } from "./keys"
 import { rankTitles } from "./rank"
 
-export interface Bookend {
+interface Bookend {
   key: TitleKey
   title: string
   /** The day and wall-clock time the play started, in the member's zone. */

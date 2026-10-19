@@ -6,40 +6,31 @@
  * here: each page is validated by its registry schema on read, and a page
  * that fails is dropped from the viewer, never crashing it (RWV-12, RWP-21).
  *
- * Provisional until the modules that own them merge: `FactId` (P2.9's
- * catalogue union), the archetype result (P2.9's scorers) and the poster line
- * ids (P5's copy slots).
+ * Fact ids are the catalogue's closed union, the archetype result is
+ * `selectArchetype`'s and poster lines are the catalogue's sixty ids (P2.9).
  *
  * @module lib/wrapped/data/schema-v3
  */
 
 import { z } from "zod"
 
+import { ARCHETYPE_IDS, POSTER_LINE_IDS } from "@/lib/wrapped/archetypes/catalogue"
 import { PageTypeSchema } from "@/lib/wrapped/data/page-types"
-import { ARCHETYPES, type ArchetypeId } from "@/lib/wrapped/llm-output-schema"
+import { FactIdSchema, RewindFactsV3Schema } from "@/lib/wrapped/facts/catalogue"
 
 const IsoDate = z.iso.date()
 const IsoDateTime = z.iso.datetime({ offset: true })
 
-/** Provisional: becomes the catalogue's union of fact ids in P2.9. */
-const FactId = z.string()
+const ArchetypeIdEnum = z.enum(ARCHETYPE_IDS)
 
-const ArchetypeIdEnum = z.enum(ARCHETYPES.map((archetype) => archetype.id) as [ArchetypeId, ...ArchetypeId[]])
-
-/** Display strings plus raw values; a member never has every fact. */
-const RewindFactsV3 = z.partialRecord(
-  FactId,
-  z.strictObject({
-    value: z.union([z.number(), z.string(), z.null()]),
-    display: z.string(),
-    unit: z.string(),
-  })
-)
-
+/** `selectArchetype`'s result: code's pick, its evidence and rarity. */
 const ArchetypeResult = z.strictObject({
   id: ArchetypeIdEnum,
   runnerUp: ArchetypeIdEnum.nullable(),
-  evidence: z.array(FactId),
+  evidence: z.array(FactIdSchema),
+  shortlist: z.array(z.strictObject({ id: ArchetypeIdEnum, score: z.number().min(0).max(100) })).max(3),
+  llmMayChoose: z.boolean(),
+  rarity: z.strictObject({ count: z.number().int().nonnegative(), of: z.number().int().positive() }).nullable(),
 })
 
 const Slot = z.string().nullable()
@@ -63,7 +54,7 @@ const RewindCopyV3 = z.strictObject({
     id: ArchetypeIdEnum,
     tagline: z.string(),
     dedication: z.string(),
-    posterLineId: z.string(),
+    posterLineId: z.enum(POSTER_LINE_IDS),
   }),
   signOff: Slot,
 })
@@ -75,7 +66,7 @@ export const RewindDataV3 = z.strictObject({
   generatedAt: IsoDateTime,
   window: z.strictObject({ from: IsoDate, through: IsoDate, zone: z.string(), finalCut: z.boolean() }),
   edition: z.enum(["full", "pocket", "postcard"]),
-  facts: RewindFactsV3,
+  facts: RewindFactsV3Schema,
   pages: z.array(z.strictObject({ type: PageTypeSchema, data: z.unknown() })),
   archetype: ArchetypeResult.nullable(),
   copy: RewindCopyV3.nullable(), // null for pocket and postcard

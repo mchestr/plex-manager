@@ -47,6 +47,7 @@ describe("metadataLookup", () => {
       originallyAvailableAt: "2022-02-18",
       guids: ["tvdb://371980"],
       videoResolution: null,
+      runtimeSec: null,
       seasonEpisodeCounts: { "1": 9, "2": 10 },
     })
   })
