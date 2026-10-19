@@ -7,16 +7,13 @@
  * embed, grouped by {@link MarkType}. An optional `type` picker narrows the list
  * to a single mark type.
  *
- * ## Self-scoping (why not `getUserMediaMarks`)
+ * ## Self-scoping
  *
- * `actions/user-marks.ts#getUserMediaMarks` self-scopes via
- * `getServerSession(authOptions)` — but a Discord interaction has no NextAuth
- * session. The router resolves the invoking Discord account to a linked
- * Plex-manager user (`verifyDiscordUser`) and hands it to the command as
- * `ctx.verifiedUser.user`. So this command queries `prisma.userMediaMark`
- * directly, mirroring the action's `where`/`orderBy`, but keyed on
- * `verifiedUser.user.id` (never a session). This guarantees a user only ever
- * sees their own marks.
+ * A Discord interaction has no NextAuth session. The router resolves the
+ * invoking Discord account to a linked Plex-manager user (`verifyDiscordUser`)
+ * and hands it to the command as `ctx.verifiedUser.user`. This command queries
+ * `prisma.userMediaMark` keyed on `verifiedUser.user.id` (never a session), so
+ * a user only ever sees their own marks.
  *
  * ## Embed limits
  *
