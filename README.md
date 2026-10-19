@@ -97,7 +97,7 @@ Plex Management System transforms your Plex experience by combining powerful man
 
 ### Prerequisites
 
-- **Node.js** 22 or later (the Docker image ships its own Node.js)
+- **Node.js** 22 or later (the Docker image ships Node.js 24 LTS)
 - **npm** or **yarn**
 - **PostgreSQL** database (SQLite is no longer supported as of Prisma v7)
 - **Redis**, which Rewind and Stripe subscriptions require (it backs the background job queue)
@@ -269,7 +269,7 @@ See `example.env` for all available configuration options. Key variables:
 - **Jellyfin**: `JELLYFIN_DEVICE_ID` (optional) — the DeviceId reported to Jellyfin at sign-in. By default it is derived from `PLEX_CLIENT_IDENTIFIER`, so leave it unset unless you want your own value. If neither is set, Jellyfin sign-in uses the fixed `plex-manager-server` and logs `jellyfin.auth.device_id_fallback` at warn.
 - **Encryption**: `ENCRYPTION_KEY` (optional but strongly recommended in production) — encrypts external-service secrets/tokens at rest. Use a dedicated value (do **not** reuse `NEXTAUTH_SECRET`); generate with `openssl rand -hex 32`. Rollout is non-destructive; rotating it makes previously-encrypted secrets undecryptable until re-saved.
 - **Job Queue**: `REDIS_URL` — enables the Redis-backed BullMQ worker. Rewind and Stripe subscriptions require it; without it, only the watchlist sync keeps running, through PostgreSQL polling.
-- **Docker Compose (development)**: `POSTGRES_PASSWORD` and `REDIS_PASSWORD` are required; `docker compose up` refuses to start without them. `docker-compose.yml` publishes Postgres (5432, 5433) and Redis (6379) on `127.0.0.1` only and builds the app container's `DATABASE_URL` and `REDIS_URL` from the two passwords; use them in your own `.env` URLs as well. A database volume created before this change keeps its old password (`postgres`), so set `POSTGRES_PASSWORD` to that or change it with `ALTER USER`.
+- **Docker Compose (development)**: `POSTGRES_PASSWORD` and `REDIS_PASSWORD` are required; `docker compose up` refuses to start without them. `docker-compose.yml` publishes Postgres (5432, 5433) and Redis (6379) on `127.0.0.1` only and builds the app container's `DATABASE_URL` and `REDIS_URL` from the two passwords; use them in your own `.env` URLs as well. A database volume created before this change keeps its old password (`postgres`), so set `POSTGRES_PASSWORD` to that or change it with `ALTER USER`. The compose databases run `postgres:16-alpine` (they were 15): Postgres 16 cannot open a 15 data directory, so dump an existing `db` volume while it still runs 15 (see [docs/operations.md](docs/operations.md#backup)), remove the volume (`docker compose down -v` removes every volume), then start the new one and restore the dump. The app container starts only once `db` and `redis` pass their health checks.
 - **Development**: `DEV_*` variables for setup wizard defaults (read only with `NODE_ENV=development` and `DEV_SETUP_PREFILL=true`, until setup is complete)
   - Use URL format: `DEV_PLEX_URL="https://localhost:32400"` (includes protocol and port)
 
@@ -345,7 +345,7 @@ Prisma has no down migrations, so a dump is the only way back from a migration. 
 2. **Read the release notes** for every version you are moving past, including the "Upgrading to the release…" notes above.
 3. **Pull or rebuild**: pull the new release and run `npm ci && npm run build`, or pull or rebuild the Docker image.
 4. **Apply migrations**: run `npm run db:deploy`, or let the container do it at start. The container logs `prisma migrate status` first; start it with `SKIP_MIGRATIONS=true` to apply migrations by hand instead.
-5. **Check the app**: sign in, and once a release adds `/api/health`, check that it reports healthy.
+5. **Check the app**: sign in, and check that `/api/health` answers 200 with `"database":"ok"` and `"redis":"ok"`; `docker ps` shows the container `(healthy)`.
 
 #### Installed with `db push`?
 
@@ -379,6 +379,8 @@ The project includes a `Dockerfile` for containerized deployments. When deployin
 6. At every start the container logs `prisma migrate status`, then runs `prisma migrate deploy` (what `npm run db:deploy` runs). With `SKIP_MIGRATIONS=true` it logs `SKIP_MIGRATIONS=true: not applying migrations` and starts without applying them. Take a dump before starting a release that carries a migration; see [docs/operations.md](docs/operations.md).
 7. The site starts serving without waiting for Redis or Discord. The queue worker retries Redis with backoff for about two minutes and then stays off (logging `queue.redis_unreachable`) until the next restart.
 8. On `docker stop` (SIGTERM) the app drains running jobs, stops the Discord bot and releases its lock, closes its connections, and exits with 0, or with 1 if that takes longer than `SHUTDOWN_GRACE_MS` (default 8000 ms, below Docker's 10 s stop timeout). The image and `npm run start:prod` set `NEXT_MANUAL_SIG_HANDLE=true` so the app handles the signal instead of Next; Next then no longer closes the HTTP server itself, and in-flight requests finish inside the same grace window because the process exits last.
+9. The image runs Node.js 24 LTS under `tini` as the unprivileged `nextjs` user. The app files are owned by root and cannot be rewritten at runtime; the one writable path is `/app/.next/cache`, where Next's own cache and Rewind's (`REWIND_CACHE_DIR=/app/.next/cache/rewind`: posters, cards, fonts) live. Mount a volume there to keep the Rewind cache across container replacements; it can always be rebuilt. Migrations run through a Prisma CLI pinned with its own lockfile in `docker/prisma-cli/` (keep its versions equal to the root lockfile; a test checks).
+10. **Health check.** `GET /api/health` checks the database and, when `REDIS_URL` is set, Redis, each within 2 seconds. It answers `200` with `{"status":"ok","checks":{"database":"ok","redis":"ok"}}`, or `503` with `"status":"fail"` and the failed check (`redis` is `not_configured` without `REDIS_URL`, which does not fail it). It needs no sign-in and carries no hostnames or error text; point monitoring at it. `GET /api/health?probe=live` answers `200` without touching either dependency: the image's `HEALTHCHECK` uses it, so a Redis outage, which the site survives, never gets the container restarted.
 
 ---
 

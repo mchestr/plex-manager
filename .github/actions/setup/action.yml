@@ -1,5 +1,5 @@
 name: Setup
-description: Node.js 22 with the npm cache, `npm ci` and the Prisma client.
+description: Node.js 24 with the npm cache, `npm ci` and the Prisma client.
 
 runs:
   using: composite
@@ -7,7 +7,7 @@ runs:
     - name: Setup Node.js
       uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
       with:
-        node-version: '22'
+        node-version: '24'
         cache: 'npm'
 
     - name: Install dependencies

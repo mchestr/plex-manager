@@ -8,15 +8,20 @@ import path from "node:path"
 import { parse } from "yaml"
 
 // The development compose file publishes Postgres and Redis on loopback only and
-// refuses to start without their passwords (SEC-04).
+// refuses to start without their passwords (SEC-04). The app waits for both to
+// report healthy (P4.17).
 
 interface Service {
+  image?: string
   ports?: string[]
   environment?: string[]
   command?: string
+  healthcheck?: { test: string[] }
+  depends_on?: Record<string, { condition: string }>
 }
 
 const compose = parse(readFileSync(path.resolve(__dirname, "../../docker-compose.yml"), "utf8")) as {
+  version?: string
   services: Record<string, Service>
 }
 const services = Object.entries(compose.services)
@@ -49,5 +54,28 @@ describe("docker-compose.yml", () => {
     const env = compose.services.app.environment ?? []
     expect(env.find((entry) => entry.startsWith("DATABASE_URL="))).toContain(`postgres:${REQUIRED_POSTGRES}@db:5432`)
     expect(env.find((entry) => entry.startsWith("REDIS_URL="))).toBe(`REDIS_URL=redis://:${REQUIRED_REDIS}@redis:6379`)
+  })
+
+  it("has no version key and leaves NODE_ENV to the image", () => {
+    expect(compose.version).toBeUndefined()
+    expect(compose.services.app.environment?.some((entry) => entry.startsWith("NODE_ENV="))).toBe(false)
+  })
+
+  it.each(postgresServices)("%s runs postgres:16-alpine with a pg_isready health check", (_name, service) => {
+    expect(service.image).toBe("postgres:16-alpine")
+    expect(service.healthcheck?.test.slice(0, 2)).toEqual(["CMD", "pg_isready"])
+  })
+
+  it("health-checks Redis with the password from REDISCLI_AUTH", () => {
+    const redis = compose.services.redis
+    expect(redis.environment).toContain(`REDISCLI_AUTH=${REQUIRED_REDIS}`)
+    expect(redis.healthcheck?.test).toEqual(["CMD", "redis-cli", "ping"])
+  })
+
+  it("starts the app only once the database and Redis are healthy", () => {
+    expect(compose.services.app.depends_on).toEqual({
+      db: { condition: "service_healthy" },
+      redis: { condition: "service_healthy" },
+    })
   })
 })

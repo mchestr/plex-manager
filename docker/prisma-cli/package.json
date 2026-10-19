@@ -1,0 +1,9 @@
+{
+  "name": "plex-manager-prisma-cli",
+  "private": true,
+  "description": "The Prisma CLI the Docker image runs migrations with (P4.17). Keep the versions equal to the root package-lock.json; __tests__/config/docker-prisma-pin.test.ts checks them.",
+  "dependencies": {
+    "dotenv": "17.4.2",
+    "prisma": "7.10.1"
+  }
+}
