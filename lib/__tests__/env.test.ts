@@ -86,6 +86,12 @@ describe("checkProductionEnv", () => {
     ])
   })
 
+  it("matches its JSDoc example", () => {
+    expect(checkProductionEnv(envSchema.parse({ NEXTAUTH_SECRET: "changeme", PLEX_CLIENT_IDENTIFIER: "x" }))).toEqual([
+      expect.objectContaining({ variable: "NEXTAUTH_SECRET", code: "known_placeholder", severity: "error" }),
+    ])
+  })
+
   it("never puts a secret value in its output", () => {
     for (const secret of [...KNOWN_PLACEHOLDER_SECRETS, "short-secret-value", "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"]) {
       const output = JSON.stringify(issues({ NEXTAUTH_SECRET: secret, NEXTAUTH_URL: "http://plex.example.com" }))
