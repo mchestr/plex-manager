@@ -42,7 +42,7 @@ export default async function PromptTemplatePage({
             </Link>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+                <h1 data-testid="admin-prompt-detail-heading" className="text-2xl sm:text-3xl font-bold text-white mb-2">
                   {template.name}
                 </h1>
                 <p className="text-sm text-slate-400">

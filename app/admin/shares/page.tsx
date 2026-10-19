@@ -20,7 +20,7 @@ export default async function SharesDashboardPage() {
       <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="mb-6">
-            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+            <h1 data-testid="admin-shares-heading" className="text-2xl sm:text-3xl font-bold text-white mb-2">
               Share Analytics
             </h1>
             <p className="text-sm text-slate-400">

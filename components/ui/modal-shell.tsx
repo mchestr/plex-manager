@@ -24,6 +24,8 @@ interface ModalShellProps {
    * vertically centered.
    */
   scrollable?: boolean
+  /** `data-testid` for the dialog element. */
+  testId?: string
 }
 
 const maxWidthClasses: Record<ModalMaxWidth, string> = {
@@ -56,6 +58,7 @@ export function ModalShell({
   describedBy,
   className,
   scrollable = false,
+  testId,
 }: ModalShellProps) {
   const dialogRef = useRef<HTMLDivElement>(null)
   const previousActiveElement = useRef<Element | null>(null)
@@ -137,6 +140,7 @@ export function ModalShell({
           aria-modal="true"
           aria-labelledby={labelledBy}
           aria-describedby={describedBy}
+          data-testid={testId}
           className={cn(
             "relative bg-slate-900 border border-slate-700 rounded-xl shadow-2xl",
             className

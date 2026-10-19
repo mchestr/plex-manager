@@ -42,7 +42,7 @@ export default async function EditPromptTemplatePage({
             </Link>
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2 bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
+                <h1 data-testid="admin-prompt-edit-heading" className="text-3xl sm:text-4xl font-bold text-white mb-2 bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
                   Edit Prompt Template
                 </h1>
                 <p className="text-sm text-slate-400">

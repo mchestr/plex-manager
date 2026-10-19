@@ -106,7 +106,7 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
             >
               ← Back to LLM Requests
             </Link>
-            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">LLM Request Details</h1>
+            <h1 data-testid="admin-llm-usage-detail-heading" className="text-2xl sm:text-3xl font-bold text-white mb-2">LLM Request Details</h1>
             <p className="text-sm text-slate-400">
               Investigate LLM request details, token usage, and response data
             </p>

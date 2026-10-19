@@ -189,6 +189,7 @@ export function WrappedSettingsForm({ enabled, year, startDate, endDate }: Wrapp
             variant="secondary"
             size="sm"
             onClick={() => setIsEditing(true)}
+            data-testid="wrapped-settings-edit-button"
           >
             Edit
           </Button>

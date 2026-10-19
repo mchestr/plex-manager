@@ -164,7 +164,7 @@ export default async function LLMConversationPage({
           >
             ← Back to LLM Requests
           </Link>
-          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+          <h1 data-testid="admin-llm-conversation-heading" className="text-2xl sm:text-3xl font-bold text-white mb-2">
             Conversation LLM Usage
           </h1>
           <p className="text-sm text-slate-400">
