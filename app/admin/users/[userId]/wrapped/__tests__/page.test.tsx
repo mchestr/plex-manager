@@ -8,21 +8,16 @@ import { render, screen } from '@testing-library/react'
 import UserWrappedPage from '@/app/admin/users/[userId]/wrapped/page'
 import { getUserPlexWrapped } from '@/actions/users'
 import { prisma } from '@/lib/prisma'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 jest.mock('@/lib/admin', () => ({
   requireAdmin: jest.fn(),
 }))
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    user: {
-      findUnique: jest.fn(),
-    },
-    config: {
-      findUnique: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('@/actions/users', () => ({
   getUserPlexWrapped: jest.fn(),
@@ -108,9 +103,7 @@ describe('Admin user wrapped page year', () => {
   // P0.14: without ?year= the page opens the season year, not the calendar year.
   it('opens the season year on 2027-01-02 when no year is given', async () => {
     jest.useFakeTimers().setSystemTime(new Date('2027-01-02T12:00:00Z'))
-    ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({
-      wrappedGenerationStartDate: new Date('2026-12-01T12:00:00Z'),
-    })
+    ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({ rewindSeasonOpens: '12-01', rewindSeasonCloses: '01-31', timezone: null })
 
     const ui = await UserWrappedPage({
       params: Promise.resolve({ userId: 'user-1' }),

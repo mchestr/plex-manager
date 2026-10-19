@@ -1,7 +1,8 @@
 "use client"
 
-import { motion } from "framer-motion"
-import CountUp from "react-countup"
+import { motion, useReducedMotion } from "motion/react"
+import { loop } from "@/lib/utils/motion-loop"
+import { CountUp } from "@/components/ui/count-up"
 import { FormattedText } from "@/components/shared/formatted-text"
 import { SectionHeader } from "@/components/wrapped/wrapped-sections/section-header"
 import { BarChart, ProgressBar } from "@/components/wrapped/wrapped-charts"
@@ -14,6 +15,7 @@ interface OverseerrStatsSectionProps {
 }
 
 export function OverseerrStatsSection({ section, wrappedData, sectionIndex }: OverseerrStatsSectionProps) {
+  const reduceMotion = useReducedMotion()
   return (
     <div className="text-center space-y-6">
       <SectionHeader title={section.title} />
@@ -31,14 +33,17 @@ export function OverseerrStatsSection({ section, wrappedData, sectionIndex }: Ov
         >
           <motion.div
             className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-transparent to-pink-500/10"
-            animate={{
-              opacity: [0.3, 0.6, 0.3],
-            }}
-            transition={{
-              duration: 3,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
+            {...loop(
+              reduceMotion,
+              {
+                opacity: [0.3, 0.6, 0.3],
+              },
+              {
+                duration: 3,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }
+            )}
           />
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
@@ -48,17 +53,20 @@ export function OverseerrStatsSection({ section, wrappedData, sectionIndex }: Ov
             key={`overseerr-total-${sectionIndex}`}
           >
             <motion.div
-              animate={{
-                scale: [1, 1.02, 1],
-              }}
-              transition={{
-                duration: 3,
-                repeat: Infinity,
-                ease: "easeInOut",
-                delay: 0.5,
-              }}
+              {...loop(
+                reduceMotion,
+                {
+                  scale: [1, 1.02, 1],
+                },
+                {
+                  duration: 3,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  delay: 0.5,
+                }
+              )}
             >
-              <CountUp key={`${sectionIndex}-overseerr-total`} start={0} end={wrappedData.statistics.overseerrStats.totalRequests} duration={2} delay={0.5} separator="," />
+              <CountUp key={`${sectionIndex}-overseerr-total`} value={wrappedData.statistics.overseerrStats.totalRequests} duration={2} delay={0.5} />
             </motion.div>
           </motion.div>
           <motion.div
@@ -91,17 +99,20 @@ export function OverseerrStatsSection({ section, wrappedData, sectionIndex }: Ov
               <motion.div
                 className="text-2xl font-bold text-green-400"
                 key={`overseerr-approved-${sectionIndex}`}
-                animate={{
-                  scale: [1, 1.03, 1],
-                }}
-                transition={{
-                  duration: 3,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                  delay: 0.7,
-                }}
+                {...loop(
+                  reduceMotion,
+                  {
+                    scale: [1, 1.03, 1],
+                  },
+                  {
+                    duration: 3,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                    delay: 0.7,
+                  }
+                )}
               >
-                <CountUp key={`${sectionIndex}-approved`} start={0} end={wrappedData.statistics.overseerrStats.approvedRequests} duration={2} delay={0.7} separator="," />
+                <CountUp key={`${sectionIndex}-approved`} value={wrappedData.statistics.overseerrStats.approvedRequests} duration={2} delay={0.7} />
               </motion.div>
               <div className="text-slate-400">Approved</div>
               {wrappedData.statistics.overseerrStats.totalRequests > 0 && (
@@ -124,17 +135,20 @@ export function OverseerrStatsSection({ section, wrappedData, sectionIndex }: Ov
               <motion.div
                 className="text-2xl font-bold text-yellow-400"
                 key={`overseerr-pending-${sectionIndex}`}
-                animate={{
-                  scale: [1, 1.03, 1],
-                }}
-                transition={{
-                  duration: 3,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                  delay: 0.8,
-                }}
+                {...loop(
+                  reduceMotion,
+                  {
+                    scale: [1, 1.03, 1],
+                  },
+                  {
+                    duration: 3,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                    delay: 0.8,
+                  }
+                )}
               >
-                <CountUp key={`${sectionIndex}-pending`} start={0} end={wrappedData.statistics.overseerrStats.pendingRequests} duration={2} delay={0.8} separator="," />
+                <CountUp key={`${sectionIndex}-pending`} value={wrappedData.statistics.overseerrStats.pendingRequests} duration={2} delay={0.8} />
               </motion.div>
               <div className="text-slate-400">Pending</div>
               {wrappedData.statistics.overseerrStats.totalRequests > 0 && (

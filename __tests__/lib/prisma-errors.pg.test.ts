@@ -9,10 +9,10 @@
  * invite retries would otherwise stop firing without notice).
  *
  * Gated by `describePg` (test/helpers/integration.ts) and run only by
- * `npm run test:pg`. The database needs the app's migrations applied. The
+ * `npm run test:integration`. The database needs the app's migrations applied. The
  * suite only touches `User` rows whose id starts with its own run prefix.
  *
- *   TEST_DATABASE_URL=postgresql://.../plex_manager_test npm run test:pg
+ *   TEST_DATABASE_URL=postgresql://.../plex_manager_test npm run test:integration
  */
 
 import { randomUUID } from 'node:crypto'

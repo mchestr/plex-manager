@@ -1,0 +1,295 @@
+{
+  "id": "light",
+  "description": "Light viewer, 4 h 12 m in six plays: the pocket edition (design 4.5).",
+  "member": {
+    "displayName": "Priya Natarajan",
+    "userName": null,
+    "timezone": null,
+    "hiddenRatingKeys": []
+  },
+  "server": {
+    "name": "Chester Family Plex",
+    "zone": "America/Chicago",
+    "overseerr": true,
+    "peers": {
+      "members": 12,
+      "hours": [
+        610,
+        402,
+        355,
+        290,
+        240,
+        198,
+        150,
+        96,
+        61,
+        22,
+        3
+      ]
+    }
+  },
+  "window": {
+    "year": 2026,
+    "finalCut": false
+  },
+  "history": [
+    {"user_id":1,"started":1771123200,"stopped":1771130520,"play_duration":7320,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"1101","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Le Fabuleux Destin d'Amélie Poulain","grandparent_title":"","year":2001,"originally_available_at":"2001-01-01","guid":"plex://movie/1101","section_id":"1"},
+    {"user_id":1,"started":1772938800,"stopped":1772940420,"play_duration":1620,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"12010101","grandparent_rating_key":"1201","parent_media_index":1,"media_index":1,"title":"Episode 1","grandparent_title":"Only Murders in the Building","year":2021,"originally_available_at":"2021-01-01","guid":"plex://episode/12010101","section_id":"2"},
+    {"user_id":1,"started":1772940600,"stopped":1772942220,"play_duration":1620,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"12010102","grandparent_rating_key":"1201","parent_media_index":1,"media_index":2,"title":"Episode 2","grandparent_title":"Only Murders in the Building","year":2021,"originally_available_at":"2021-01-01","guid":"plex://episode/12010102","section_id":"2"},
+    {"user_id":1,"started":1772942400,"stopped":1772944080,"play_duration":1680,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"12010103","grandparent_rating_key":"1201","parent_media_index":1,"media_index":3,"title":"Episode 3","grandparent_title":"Only Murders in the Building","year":2021,"originally_available_at":"2021-01-01","guid":"plex://episode/12010103","section_id":"2"},
+    {"user_id":1,"started":1778976000,"stopped":1778977440,"play_duration":1440,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"12020101","grandparent_rating_key":"1202","parent_media_index":1,"media_index":1,"title":"Episode 1","grandparent_title":"The Great British Bake Off","year":2010,"originally_available_at":"2010-01-01","guid":"plex://episode/12020101","section_id":"2"},
+    {"user_id":1,"started":1789084800,"stopped":1789086240,"play_duration":1440,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"12020102","grandparent_rating_key":"1202","parent_media_index":1,"media_index":2,"title":"Episode 2","grandparent_title":"The Great British Bake Off","year":2010,"originally_available_at":"2010-01-01","guid":"plex://episode/12020102","section_id":"2"}
+  ],
+  "lifetimeBefore2026": [],
+  "metadata": [
+    {"ratingKey":"1101","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Animation","Drama"],"directors":["Lena Marsh"],"actors":["Noor Haddad","Tomas Brandt"],"studio":null,"contentRating":null,"year":2001,"originallyAvailableAt":"2001-01-01T00:00:00.000Z","runtimeSec":7320,"seasonEpisodeCounts":null,"guids":["tmdb://101101"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"1201","kind":"show","librarySectionId":"2","addedAt":"2021-06-01T00:00:00.000Z","genres":["Comedy","Crime"],"directors":[],"actors":["Mira Okafor","Jun Ito"],"studio":null,"contentRating":null,"year":2021,"originallyAvailableAt":"2021-01-01T00:00:00.000Z","runtimeSec":null,"seasonEpisodeCounts":{"1":10},"guids":["tmdb://101201","tvdb://301201"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"1202","kind":"show","librarySectionId":"2","addedAt":"2020-06-01T00:00:00.000Z","genres":["Science Fiction","Animation"],"directors":[],"actors":["Tomas Brandt","Lena Marsh"],"studio":null,"contentRating":null,"year":2010,"originallyAvailableAt":"2010-01-01T00:00:00.000Z","runtimeSec":null,"seasonEpisodeCounts":{"1":10},"guids":["tmdb://101202","tvdb://301202"],"videoResolution":"1080","hdr":false}
+  ],
+  "requests": {
+    "rows": [],
+    "genres": {}
+  },
+  "library": null,
+  "expected": {
+    "edition": "pocket",
+    "archetype": "casual-critic",
+    "omittedPages": [
+      9,
+      11,
+      13,
+      14
+    ],
+    "facts": {
+      "member.firstName": "Priya",
+      "time.totalHours": "4",
+      "counts.episodes": "5",
+      "counts.series": "2",
+      "counts.films": "1",
+      "films[1].title": "Le Fabuleux Destin d'Amélie Poulain",
+      "films[1].minutes": "2 h 2 m",
+      "series[1].title": "Only Murders in the Building",
+      "series[1].minutes": "1 h 22 m",
+      "series[1].episodes": "3",
+      "series[2].minutes": "48 minutes",
+      "days.active": "4",
+      "hours.peak": "7 PM",
+      "records.longestBinge.episodes": "3",
+      "tz.label": "America/Chicago",
+      "time.totalMinutes": "4 h 12 m",
+      "next.leftForLater[1].title": "The Great British Bake Off",
+      "archetype.name": "The Casual Critic"
+    },
+    "stats": {
+      "totals": {
+        "totalMinutes": 252,
+        "seriesMinutes": 130,
+        "filmMinutes": 122,
+        "seriesShare": 0.5158730158730159,
+        "filmShare": 0.48412698412698413,
+        "liveMinutes": 0,
+        "counts": {
+          "episodes": 5,
+          "series": 2,
+          "films": 1,
+          "seasons": 2
+        },
+        "perDay": 0,
+        "daysHours": {
+          "days": 0,
+          "hours": 4
+        },
+        "vsLastYear": null
+      },
+      "time": {
+        "peak": 19,
+        "quietest": 0,
+        "afterDarkShare": 0.16666666666666666,
+        "goldenShare": 0.8333333333333334,
+        "medianStart": {
+          "hour": 20,
+          "minute": 50
+        },
+        "latestStart": {
+          "hour": 22,
+          "minute": 0,
+          "date": "2026-03-07",
+          "weekday": 6
+        },
+        "weekendShare": 0.8333333333333334
+      },
+      "calendar": {
+        "active": 4,
+        "biggest": {
+          "date": "2026-02-14",
+          "minutes": 122
+        },
+        "streak": {
+          "days": 1,
+          "from": "2026-02-14",
+          "to": "2026-02-14"
+        },
+        "longestGap": {
+          "days": 116,
+          "from": "2026-05-17",
+          "to": "2026-09-09",
+          "month": 5
+        }
+      },
+      "sessions": {
+        "longestBinge": {
+          "key": "series:1201",
+          "title": "Only Murders in the Building",
+          "episodes": 3,
+          "minutes": 82,
+          "date": "2026-03-07"
+        },
+        "deepestBinge": {
+          "key": "series:1201",
+          "title": "Only Murders in the Building",
+          "episodes": 3,
+          "minutes": 82,
+          "date": "2026-03-07"
+        },
+        "mostEpisodesDay": {
+          "date": "2026-03-07",
+          "episodes": 3
+        },
+        "biggestWeek": {
+          "from": "2026-02-09",
+          "to": "2026-02-15",
+          "minutes": 122
+        },
+        "mostPaused": null
+      },
+      "bookends": {
+        "first": {
+          "key": "film:1101",
+          "title": "Le Fabuleux Destin d'Amélie Poulain",
+          "date": "2026-02-14",
+          "hour": 20,
+          "minute": 40
+        },
+        "last": {
+          "key": "series:1202",
+          "title": "The Great British Bake Off",
+          "date": "2026-09-10",
+          "hour": 19,
+          "minute": 0
+        },
+        "sameTitleSameDay": false,
+        "member": {
+          "since": "2026-02-14",
+          "lifetimeHours": 4
+        }
+      },
+      "race": {
+        "eligible": false
+      },
+      "taste": {
+        "genres": [
+          {
+            "name": "Animation",
+            "minutes": 85,
+            "share": 0.3373015873015873
+          },
+          {
+            "name": "Drama",
+            "minutes": 61,
+            "share": 0.24206349206349206
+          },
+          {
+            "name": "Comedy",
+            "minutes": 41,
+            "share": 0.1626984126984127
+          },
+          {
+            "name": "Crime",
+            "minutes": 41,
+            "share": 0.1626984126984127
+          },
+          {
+            "name": "Science Fiction",
+            "minutes": 24,
+            "share": 0.09523809523809523
+          }
+        ],
+        "medianYear": 2010,
+        "oldest": {
+          "key": "film:1101",
+          "title": "Le Fabuleux Destin d'Amélie Poulain",
+          "year": 2001
+        },
+        "freshShare": 0
+      },
+      "people": {
+        "actors": [
+          {
+            "name": "Tomas Brandt",
+            "minutes": 170
+          },
+          {
+            "name": "Noor Haddad",
+            "minutes": 122
+          },
+          {
+            "name": "Jun Ito",
+            "minutes": 82
+          },
+          {
+            "name": "Mira Okafor",
+            "minutes": 82
+          },
+          {
+            "name": "Lena Marsh",
+            "minutes": 48
+          }
+        ],
+        "directors": [
+          {
+            "name": "Lena Marsh",
+            "minutes": 122
+          }
+        ]
+      },
+      "devices": {
+        "eligible": false
+      },
+      "requests": {
+        "eligible": false
+      },
+      "nextYear": {
+        "leftForLater": [
+          {
+            "key": "series:1202",
+            "title": "The Great British Bake Off",
+            "season": 1,
+            "episode": 2,
+            "lastWatched": "2026-09-10"
+          }
+        ],
+        "picks": []
+      },
+      "milestones": [],
+      "topSeries": [
+        {
+          "title": "Only Murders in the Building",
+          "minutes": 82,
+          "plays": 3
+        },
+        {
+          "title": "The Great British Bake Off",
+          "minutes": 48,
+          "plays": 2
+        }
+      ],
+      "topFilms": [
+        {
+          "title": "Le Fabuleux Destin d'Amélie Poulain",
+          "minutes": 122,
+          "plays": 1
+        }
+      ]
+    }
+  }
+}

@@ -4,10 +4,9 @@ import '@testing-library/jest-dom'
 // Set test environment variables
 process.env.NEXTAUTH_SECRET = 'test-secret-key-for-hashing-ip-addresses-min-32-chars'
 process.env.NODE_ENV = 'test'
-// next/jest loads .env, where a developer may have set the test-login flags.
-// Unit tests never inherit them; the tests that need a flag set it themselves.
+// next/jest loads .env, where a developer may have set E2E_TEST_MODE. Unit
+// tests never inherit it; the tests that need it set it themselves.
 delete process.env.E2E_TEST_MODE
-delete process.env.ENABLE_TEST_AUTH
 // Nor do they reach a developer's Redis through the rate limiter: without
 // REDIS_URL it uses its in-process store. The Redis-backed tests read
 // TEST_REDIS_URL instead.
@@ -19,29 +18,50 @@ const { TextEncoder, TextDecoder } = require('util')
 global.TextEncoder = TextEncoder
 global.TextDecoder = TextDecoder
 
-// Mock framer-motion to avoid animation issues in tests
-jest.mock('framer-motion', () => ({
-  motion: {
-    div: ({ children, ...props }) => <div {...props}>{children}</div>,
-    h1: ({ children, ...props }) => <h1 {...props}>{children}</h1>,
-    h2: ({ children, ...props }) => <h2 {...props}>{children}</h2>,
-    p: ({ children, ...props }) => <p {...props}>{children}</p>,
-    span: ({ children, ...props }) => <span {...props}>{children}</span>,
-    li: ({ children, ...props }) => <li {...props}>{children}</li>,
-  },
-  AnimatePresence: ({ children }) => <>{children}</>,
-  useAnimation: () => ({
-    start: jest.fn(),
-    stop: jest.fn(),
-  }),
-  useReducedMotion: () => false,
-}))
+// jsdom has no web streams; the AI SDK builds a TransformStream when it loads
+if (typeof global.TransformStream === 'undefined') {
+  const { ReadableStream, TransformStream, WritableStream } = require('node:stream/web')
+  Object.assign(global, { ReadableStream, TransformStream, WritableStream })
+}
 
-// Mock react-countup
-jest.mock('react-countup', () => ({
-  __esModule: true,
-  default: ({ end, ...props }) => <span {...props}>{end}</span>,
-}))
+// Mock motion to avoid animation issues in tests. `animate` and the motion
+// value hooks stay real (CountUp drives a motion value); a test that needs the
+// reduced-motion branch sets `useReducedMotion`'s return value. The elements
+// expose their `animate` and `transition` props as JSON in `data-animate` and
+// `data-transition` (Infinity serialises as null).
+jest.mock('motion/react', () => {
+  const actual = jest.requireActual('motion/react')
+  const element = (Tag) =>
+    function MotionElement({ children, animate, transition, ...props }) {
+      return (
+        <Tag {...props} data-animate={JSON.stringify(animate)} data-transition={JSON.stringify(transition)}>
+          {children}
+        </Tag>
+      )
+    }
+  const elements = {
+    div: element('div'),
+    h1: element('h1'),
+    h2: element('h2'),
+    p: element('p'),
+    span: element('span'),
+    li: element('li'),
+  }
+  return {
+    animate: actual.animate,
+    useMotionValue: actual.useMotionValue,
+    motion: elements,
+    m: elements,
+    AnimatePresence: ({ children }) => <>{children}</>,
+    LazyMotion: ({ children }) => <>{children}</>,
+    MotionConfig: jest.fn(({ children }) => <>{children}</>),
+    useAnimation: () => ({
+      start: jest.fn(),
+      stop: jest.fn(),
+    }),
+    useReducedMotion: jest.fn(() => false),
+  }
+})
 
 // Mock Web APIs for Next.js API route tests
 // Note: NextRequest extends Request and has read-only url property

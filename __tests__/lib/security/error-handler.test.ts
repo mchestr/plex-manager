@@ -29,7 +29,7 @@ describe("Error Handler", () => {
   })
 
   afterEach(() => {
-    process.env.NODE_ENV = originalEnv
+    jest.replaceProperty(process.env, 'NODE_ENV', originalEnv)
   })
 
   describe("createSafeError", () => {
@@ -46,7 +46,7 @@ describe("Error Handler", () => {
     })
 
     it("should not include details in production", () => {
-      process.env.NODE_ENV = "production"
+      jest.replaceProperty(process.env, 'NODE_ENV', "production")
 
       const error = createSafeError(
         ErrorCode.INTERNAL_ERROR,
@@ -62,7 +62,7 @@ describe("Error Handler", () => {
     })
 
     it("should include error details in development", () => {
-      process.env.NODE_ENV = "development"
+      jest.replaceProperty(process.env, 'NODE_ENV', "development")
 
       const internalError = new Error("Database connection failed")
       const error = createSafeError(
@@ -79,7 +79,7 @@ describe("Error Handler", () => {
     })
 
     it("should convert non-Error objects to string in development", () => {
-      process.env.NODE_ENV = "development"
+      jest.replaceProperty(process.env, 'NODE_ENV', "development")
 
       const error = createSafeError(
         ErrorCode.INTERNAL_ERROR,
@@ -91,7 +91,7 @@ describe("Error Handler", () => {
     })
 
     it("should handle string errors in development", () => {
-      process.env.NODE_ENV = "development"
+      jest.replaceProperty(process.env, 'NODE_ENV', "development")
 
       const error = createSafeError(
         ErrorCode.INTERNAL_ERROR,
@@ -103,7 +103,7 @@ describe("Error Handler", () => {
     })
 
     it("should handle null internal error", () => {
-      process.env.NODE_ENV = "development"
+      jest.replaceProperty(process.env, 'NODE_ENV', "development")
 
       const error = createSafeError(
         ErrorCode.INTERNAL_ERROR,
@@ -116,7 +116,7 @@ describe("Error Handler", () => {
     })
 
     it("should handle undefined internal error", () => {
-      process.env.NODE_ENV = "development"
+      jest.replaceProperty(process.env, 'NODE_ENV', "development")
 
       const error = createSafeError(
         ErrorCode.INTERNAL_ERROR,

@@ -41,7 +41,7 @@ jest.mock("@/lib/discord/api", () => ({
 
 jest.mock("@/lib/discord/config", () => ({ getDiscordBotToken: jest.fn() }))
 jest.mock("@/lib/discord/role-metadata", () => ({ computeRoleMetadata: jest.fn().mockResolvedValue({}) }))
-jest.mock("@/lib/utils", () => ({ getBaseUrl: () => "https://app.example.com" }))
+jest.mock("@/lib/env", () => ({ getBaseUrl: () => "https://app.example.com" }))
 jest.mock("@/lib/utils/logger", () => ({
   createLogger: () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }),
 }))

@@ -35,6 +35,8 @@ describe("TemplateSelector", () => {
       description: "First template description",
       template: "Template content 1",
       isActive: true,
+      version: 1,
+      updatedBy: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     },
@@ -44,6 +46,8 @@ describe("TemplateSelector", () => {
       description: "Second template description",
       template: "Template content 2",
       isActive: false,
+      version: 1,
+      updatedBy: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     },
@@ -53,6 +57,8 @@ describe("TemplateSelector", () => {
       description: null,
       template: "Template content 3",
       isActive: false,
+      version: 1,
+      updatedBy: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     },
@@ -239,7 +245,7 @@ describe("TemplateSelector", () => {
     })
 
     it("should style description text", () => {
-      const { container } = render(
+      render(
         <TemplateSelector {...mockProps} selectedTemplateId="template-1" />
       )
 
@@ -257,6 +263,8 @@ describe("TemplateSelector", () => {
           description: "Description",
           template: "Content",
           isActive: false,
+          version: 1,
+          updatedBy: null,
           createdAt: new Date(),
           updatedAt: new Date(),
         },
@@ -281,6 +289,8 @@ describe("TemplateSelector", () => {
           description: "Description with <tags> & symbols",
           template: "Content",
           isActive: false,
+          version: 1,
+          updatedBy: null,
           createdAt: new Date(),
           updatedAt: new Date(),
         },
@@ -325,6 +335,8 @@ describe("TemplateSelector", () => {
           description: "Description",
           template: "Content",
           isActive: false,
+          version: 1,
+          updatedBy: null,
           createdAt: new Date(),
           updatedAt: new Date(),
         },
@@ -349,6 +361,8 @@ describe("TemplateSelector", () => {
           description: "B".repeat(500),
           template: "Content",
           isActive: false,
+          version: 1,
+          updatedBy: null,
           createdAt: new Date(),
           updatedAt: new Date(),
         },

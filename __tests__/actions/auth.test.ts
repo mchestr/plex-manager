@@ -1,28 +1,22 @@
 import { checkServerAccess, isSubscriptionGatingEnabled } from '@/actions/auth'
 import { checkUserServerAccess, getPlexUserInfo } from '@/lib/connections/plex'
-import { prisma } from '@/lib/prisma'
 import {
   makePlexUserInfo,
   makePrismaPlexServer,
 } from '../utils/test-builders'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    plexServer: {
-      findFirst: jest.fn(),
-    },
-    config: {
-      findUnique: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('@/lib/connections/plex', () => ({
   checkUserServerAccess: jest.fn(),
   getPlexUserInfo: jest.fn(),
 }))
 
-const mockPrisma = prisma as jest.Mocked<typeof prisma>
+const mockPrisma = prismaMock
 const mockCheckUserServerAccess = checkUserServerAccess as jest.MockedFunction<typeof checkUserServerAccess>
 const mockGetPlexUserInfo = getPlexUserInfo as jest.MockedFunction<typeof getPlexUserInfo>
 

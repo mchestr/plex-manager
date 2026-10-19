@@ -1,5 +1,6 @@
 "use client"
 
+import { useFormat } from "@/lib/format-context"
 import { WrappedStatistics } from "@/types/wrapped"
 
 interface StatisticsViewerProps {
@@ -13,6 +14,7 @@ export function StatisticsViewer({
   viewMode,
   onViewModeChange,
 }: StatisticsViewerProps) {
+  const f = useFormat()
   return (
     <div className="bg-slate-900/50 border border-slate-700/50 rounded-lg p-3 mt-2">
       {/* View Mode Toggle */}
@@ -52,7 +54,7 @@ export function StatisticsViewer({
             <div className="bg-slate-800/50 rounded p-2 border border-slate-700">
               <div className="text-xs text-slate-400 mb-0.5">Total Watch Time</div>
               <div className="text-sm font-semibold text-cyan-400">
-                {Math.round(statistics.totalWatchTime.total / 60)}h
+                {f.duration(statistics.totalWatchTime.total, "short")}
               </div>
             </div>
             <div className="bg-slate-800/50 rounded p-2 border border-slate-700">
@@ -70,7 +72,7 @@ export function StatisticsViewer({
             <div className="bg-slate-800/50 rounded p-2 border border-slate-700">
               <div className="text-xs text-slate-400 mb-0.5">Episodes Watched</div>
               <div className="text-sm font-semibold text-yellow-400">
-                {statistics.episodesWatched.toLocaleString()}
+                {f.number(statistics.episodesWatched)}
               </div>
             </div>
           </div>
@@ -158,11 +160,11 @@ export function StatisticsViewer({
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Movies:</span>
-                  <span className="text-slate-200">{statistics.serverStats.librarySize.movies.toLocaleString()}</span>
+                  <span className="text-slate-200">{f.number(statistics.serverStats.librarySize.movies)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-400">Shows:</span>
-                  <span className="text-slate-200">{statistics.serverStats.librarySize.shows.toLocaleString()}</span>
+                  <span className="text-slate-200">{f.number(statistics.serverStats.librarySize.shows)}</span>
                 </div>
               </div>
             </div>

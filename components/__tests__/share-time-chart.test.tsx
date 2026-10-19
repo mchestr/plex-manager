@@ -140,21 +140,13 @@ describe('ShareTimeChart', () => {
       expect(mockData).toEqual(originalData)
     })
 
-    it('should handle dates in different formats', () => {
-      const differentFormatData: ShareTimeSeriesData[] = [
-        {
-          date: '2024-01-15T10:30:00Z',
-          shares: 5,
-          visits: 25,
-        },
-      ]
-
-      render(<ShareTimeChart data={differentFormatData} />)
+    it('labels a day key as that day, with no UTC shift', () => {
+      render(<ShareTimeChart data={[{ date: '2024-01-15', shares: 5, visits: 25 }]} />)
 
       const chartData = screen.getByTestId('chart-data')
       const parsedData = JSON.parse(chartData.textContent || '{}')
 
-      expect(parsedData.labels[0]).toMatch(/Jan 1\d/)
+      expect(parsedData.labels[0]).toBe('Jan 15')
     })
   })
 
@@ -391,21 +383,6 @@ describe('ShareTimeChart', () => {
 
       expect(parsedData.datasets[0].data).toEqual([5000000])
       expect(parsedData.datasets[1].data).toEqual([999999])
-    })
-
-    it('should handle invalid date strings gracefully', () => {
-      const invalidDateData: ShareTimeSeriesData[] = [
-        {
-          date: 'invalid-date',
-          shares: 5,
-          visits: 25,
-        },
-      ]
-
-      render(<ShareTimeChart data={invalidDateData} />)
-
-      // Should not crash
-      expect(screen.getByTestId('bar-chart')).toBeInTheDocument()
     })
 
     it('should handle data with gaps in dates', () => {

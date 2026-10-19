@@ -4,36 +4,36 @@ import { deleteInvite, getInviteDetails } from "@/actions/invite"
 import { useToast } from "@/components/ui/toast"
 import { ConfirmModal } from "@/components/admin/shared/confirm-modal"
 import type { InviteWithUsages } from "@/lib/dto/user"
+import { useFormat } from "@/lib/format-context"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 
 export function InviteDetailsClient({ id }: { id: string }) {
   const toast = useToast()
+  const f = useFormat()
   const [invite, setInvite] = useState<InviteWithUsages | null>(null)
   const [loading, setLoading] = useState(true)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const router = useRouter()
 
-  const loadInvite = useCallback(async () => {
-    try {
-      const result = await getInviteDetails(id)
-      if (result.success) {
-        setInvite(result.data)
-      } else {
-        router.push("/admin/invites")
-      }
-    } catch (error) {
-      console.error("Failed to load invite details", error)
-    } finally {
-      setLoading(false)
-    }
-  }, [id, router])
-
   useEffect(() => {
-    loadInvite()
-  }, [loadInvite])
+    getInviteDetails(id)
+      .then((result) => {
+        if (result.success) {
+          setInvite(result.data)
+        } else {
+          router.push("/admin/invites")
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to load invite details", error)
+      })
+      .finally(() => {
+        setLoading(false)
+      })
+  }, [id, router])
 
   function handleDeleteClick() {
     setShowDeleteModal(true)
@@ -60,7 +60,7 @@ export function InviteDetailsClient({ id }: { id: string }) {
     if (!date) return "Never"
     const now = new Date()
     if (date < now) return <span className="text-red-400">Expired</span>
-    return date.toLocaleDateString()
+    return f.date(date)
   }
 
   if (loading) {
@@ -89,7 +89,7 @@ export function InviteDetailsClient({ id }: { id: string }) {
           </svg>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-white">Invite Details</h1>
+          <h1 data-testid="admin-invite-details-heading" className="text-2xl font-bold text-white">Invite Details</h1>
           <p className="text-slate-400">View usage history and configuration</p>
         </div>
         <div className="ml-auto">
@@ -130,7 +130,7 @@ export function InviteDetailsClient({ id }: { id: string }) {
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-slate-900/50 rounded-lg p-4">
               <div className="text-sm text-slate-400 mb-1">Created</div>
-              <div className="text-white font-medium">{new Date(invite.createdAt).toLocaleDateString()}</div>
+              <div className="text-white font-medium">{f.date(invite.createdAt)}</div>
             </div>
             <div className="bg-slate-900/50 rounded-lg p-4">
               <div className="text-sm text-slate-400 mb-1">Expires</div>
@@ -262,7 +262,7 @@ export function InviteDetailsClient({ id }: { id: string }) {
                     {usage.user.email}
                   </td>
                   <td className="px-6 py-4 text-slate-400">
-                    {new Date(usage.usedAt).toLocaleString()}
+                    {f.dateTime(usage.usedAt)}
                   </td>
                 </tr>
               ))}

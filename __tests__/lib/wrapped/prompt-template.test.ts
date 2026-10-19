@@ -3,10 +3,13 @@
  */
 
 import {
+  generateSystemPrompt,
   generateWrappedPrompt,
   getAvailablePlaceholders,
+  getDefaultPromptTemplate,
 } from '@/lib/wrapped/prompt-template'
 import { getActivePromptTemplate } from '@/actions/prompts'
+import type { WrappedStatistics } from '@/types/wrapped'
 
 // Mock dependencies
 jest.mock('@/actions/prompts', () => ({
@@ -16,7 +19,7 @@ jest.mock('@/actions/prompts', () => ({
 const mockGetActivePromptTemplate = getActivePromptTemplate as jest.MockedFunction<typeof getActivePromptTemplate>
 
 describe('Prompt Template', () => {
-  const mockStatistics = {
+  const mockStatistics: WrappedStatistics = {
     totalWatchTime: {
       total: 1000, // minutes
       movies: 600,
@@ -29,11 +32,13 @@ describe('Prompt Template', () => {
       {
         title: 'The Matrix',
         watchTime: 200,
+        playCount: 1,
         year: 1999,
       },
       {
         title: 'Inception',
         watchTime: 150,
+        playCount: 1,
         year: 2010,
       },
     ],
@@ -41,12 +46,14 @@ describe('Prompt Template', () => {
       {
         title: 'Breaking Bad',
         watchTime: 300,
+        playCount: 1,
         episodesWatched: 20,
         year: 2008,
       },
     ],
     leaderboards: {
       watchTime: {
+        leaderboard: [],
         userPosition: 5,
         totalUsers: 10,
       },
@@ -83,10 +90,12 @@ describe('Prompt Template', () => {
         topMovie: {
           title: 'Movie 1',
           watchTime: 50,
+          playCount: 1,
         },
         topShow: {
           title: 'Show 1',
           watchTime: 50,
+          playCount: 1,
           episodesWatched: 5,
         },
       },
@@ -300,30 +309,18 @@ describe('Prompt Template', () => {
       expect(result).toContain('My Plex Server')
     })
 
-    it('should replace calculated values', async () => {
+    it('resolves the retired calculated placeholders to empty (RWP-16)', async () => {
       const template = 'Binge watcher: {{bingeWatcher}}, Discovery score: {{discoveryScore}}'
-      const statsWithBinge = {
-        ...mockStatistics,
-        topShows: [
-          {
-            title: 'Breaking Bad',
-            watchTime: 300,
-            episodesWatched: 21, // > 20 to trigger bingeWatcher
-            year: 2008,
-          },
-        ],
-      }
-      const result = await generateWrappedPrompt(
-        'Test User',
-        2024,
-        statsWithBinge,
-        template
-      )
+      const result = await generateWrappedPrompt('Test User', 2024, mockStatistics, template)
 
-      // bingeWatcher should be true (show has > 20 episodes)
-      expect(result).toContain('true')
-      // discoveryScore = min(100, max(0, floor((10 + 5) / 10))) = 1
-      expect(result).toContain('1')
+      expect(result).toBe('Binge watcher: , Discovery score: ')
+    })
+
+    it('no longer asks the model for personality, topGenre, bingeWatcher or discoveryScore', async () => {
+      const result = await generateWrappedPrompt('Test User', 2024, mockStatistics, getDefaultPromptTemplate())
+
+      expect(result).not.toMatch(/Binge watcher|Discovery score/)
+      expect(generateSystemPrompt()).not.toMatch(/"personality"|"topGenre"|"bingeWatcher"|"discoveryScore"/)
     })
 
     it('should handle empty leaderboards gracefully', async () => {

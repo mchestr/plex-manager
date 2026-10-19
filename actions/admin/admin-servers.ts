@@ -3,6 +3,21 @@
 import { requireAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
+import { getJellyfinLibraries as fetchLibraries, getJellyfinServerInfo, testJellyfinConnection } from "@/lib/connections/jellyfin"
+import { testOverseerrConnection } from "@/lib/connections/overseerr"
+import { getPlexUserInfo, testPlexConnection } from "@/lib/connections/plex"
+import { testPrometheusConnection, validatePrometheusQuery } from "@/lib/connections/prometheus"
+import { testRadarrConnection } from "@/lib/connections/radarr"
+import { testSonarrConnection } from "@/lib/connections/sonarr"
+import { testTautulliConnection } from "@/lib/connections/tautulli"
+import { jellyfinServerSchema } from "@/lib/validations/jellyfin"
+import { overseerrSchema } from "@/lib/validations/overseerr"
+import { plexServerSchema } from "@/lib/validations/plex"
+import { prometheusSchema } from "@/lib/validations/prometheus"
+import { radarrSchema } from "@/lib/validations/radarr"
+import { sonarrSchema } from "@/lib/validations/sonarr"
+import { tautulliSchema } from "@/lib/validations/tautulli"
+import { revalidatePath } from "next/cache"
 
 /**
  * Resolves a secret (server token/API key) for a "leave blank to keep current
@@ -38,7 +53,6 @@ export async function getJellyfinLibraries() {
       return { success: false, error: "No active Jellyfin server configured" }
     }
 
-    const { getJellyfinLibraries: fetchLibraries } = await import("@/lib/connections/jellyfin")
 
     const result = await fetchLibraries({
       url: jellyfinServer.url,
@@ -72,10 +86,6 @@ export async function updatePlexServer(data: { name: string; url: string; token?
   await requireAdmin()
 
   try {
-    const { plexServerSchema } = await import("@/lib/validations/plex")
-    const { testPlexConnection } = await import("@/lib/connections/plex")
-    const { getPlexUserInfo } = await import("@/lib/connections/plex")
-    const { revalidatePath } = await import("next/cache")
 
     // Secrets are never sent to the client; a blank token means "keep current".
     const token = await resolveSecret(data.token, async () => {
@@ -156,9 +166,6 @@ export async function updateTautulli(data: { name: string; url: string; apiKey?:
   await requireAdmin()
 
   try {
-    const { tautulliSchema } = await import("@/lib/validations/tautulli")
-    const { testTautulliConnection } = await import("@/lib/connections/tautulli")
-    const { revalidatePath } = await import("next/cache")
 
     // Secrets are never sent to the client; a blank API key means "keep current".
     const apiKey = await resolveSecret(data.apiKey, async () => {
@@ -229,9 +236,6 @@ export async function updateOverseerr(data: { name: string; url: string; apiKey?
   await requireAdmin()
 
   try {
-    const { overseerrSchema } = await import("@/lib/validations/overseerr")
-    const { testOverseerrConnection } = await import("@/lib/connections/overseerr")
-    const { revalidatePath } = await import("next/cache")
 
     // Secrets are never sent to the client; a blank API key means "keep current".
     const apiKey = await resolveSecret(data.apiKey, async () => {
@@ -302,9 +306,6 @@ export async function updateSonarr(data: { name: string; url: string; apiKey?: s
   await requireAdmin()
 
   try {
-    const { sonarrSchema } = await import("@/lib/validations/sonarr")
-    const { testSonarrConnection } = await import("@/lib/connections/sonarr")
-    const { revalidatePath } = await import("next/cache")
 
     // Secrets are never sent to the client; a blank API key means "keep current".
     const apiKey = await resolveSecret(data.apiKey, async () => {
@@ -375,9 +376,6 @@ export async function updateRadarr(data: { name: string; url: string; apiKey?: s
   await requireAdmin()
 
   try {
-    const { radarrSchema } = await import("@/lib/validations/radarr")
-    const { testRadarrConnection } = await import("@/lib/connections/radarr")
-    const { revalidatePath } = await import("next/cache")
 
     // Secrets are never sent to the client; a blank API key means "keep current".
     const apiKey = await resolveSecret(data.apiKey, async () => {
@@ -448,11 +446,6 @@ export async function updatePrometheus(data: { name: string; url: string; query:
   await requireAdmin()
 
   try {
-    const { prometheusSchema } = await import("@/lib/validations/prometheus")
-    const { testPrometheusConnection, validatePrometheusQuery } = await import(
-      "@/lib/connections/prometheus"
-    )
-    const { revalidatePath } = await import("next/cache")
 
     const validated = prometheusSchema.parse(data)
 
@@ -524,9 +517,6 @@ export async function updateJellyfinServer(data: { name: string; url: string; ap
   await requireAdmin()
 
   try {
-    const { jellyfinServerSchema } = await import("@/lib/validations/jellyfin")
-    const { testJellyfinConnection, getJellyfinServerInfo } = await import("@/lib/connections/jellyfin")
-    const { revalidatePath } = await import("next/cache")
 
     // Secrets are never sent to the client; a blank API key means "keep current".
     const apiKey = await resolveSecret(data.apiKey, async () => {
@@ -601,30 +591,6 @@ export async function updateJellyfinServer(data: { name: string; url: string; ap
   }
 }
 
-/**
- * Delete Jellyfin server configuration (admin only)
- */
-export async function deleteJellyfinServer() {
-  await requireAdmin()
-
-  try {
-    const { revalidatePath } = await import("next/cache")
-
-    await prisma.jellyfinServer.updateMany({
-      where: { isActive: true },
-      data: { isActive: false },
-    })
-
-    revalidatePath("/admin/settings")
-    return { success: true }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: "Failed to delete Jellyfin server configuration" }
-  }
-}
-
 const toggleJellyfinLoginSchema = z.boolean()
 
 /**
@@ -641,7 +607,6 @@ export async function toggleJellyfinLogin(enabled: boolean) {
   }
 
   try {
-    const { revalidatePath } = await import("next/cache")
 
     await prisma.jellyfinServer.updateMany({
       where: { isActive: true },
@@ -656,30 +621,5 @@ export async function toggleJellyfinLogin(enabled: boolean) {
       return { success: false, error: error.message }
     }
     return { success: false, error: "Failed to toggle Jellyfin login setting" }
-  }
-}
-
-/**
- * Delete Prometheus configuration (admin only)
- */
-export async function deletePrometheus() {
-  await requireAdmin()
-
-  try {
-    const { revalidatePath } = await import("next/cache")
-
-    await prisma.prometheus.updateMany({
-      where: { isActive: true },
-      data: { isActive: false },
-    })
-
-    revalidatePath("/admin/settings")
-    revalidatePath("/")
-    return { success: true }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: "Failed to delete Prometheus configuration" }
   }
 }

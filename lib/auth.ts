@@ -1,11 +1,12 @@
 import { createHash } from "node:crypto"
 
 import { checkUserServerAccess, getPlexUserInfo } from "@/lib/connections/plex"
+import { getEnv, usesSecureCookies } from "@/lib/env"
 import { authenticateJellyfin } from "@/lib/jellyfin-auth"
 import { prisma } from "@/lib/prisma"
 import { isUniqueEmailConflict } from "@/lib/prisma-errors"
 import { consume, reward } from "@/lib/security/rate-limit"
-import { isE2ETestMode } from "@/lib/security/test-mode"
+import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { createLogger } from "@/lib/utils/logger"
 import { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
@@ -82,82 +83,6 @@ export const authOptions: NextAuthOptions = {
         },
       },
       async authorize(credentials) {
-        // TEST MODE BYPASS
-        // Only active with the server-only E2E_TEST_MODE=true, and never in
-        // production. NODE_ENV=test alone does not enable it. The server logs
-        // a warning at startup when it is on (lib/instrumentation/node.ts).
-        // Server auth does NOT read NEXT_PUBLIC_ENABLE_TEST_AUTH: that flag is
-        // bundled into client JS and only lets the callback page present the
-        // test token.
-        const isTestMode = isE2ETestMode()
-
-        if (isTestMode && credentials?.authToken) {
-          logger.debug('Test mode active', {
-            hasToken: !!credentials.authToken,
-            nodeEnv: process.env.NODE_ENV,
-          })
-
-          if (credentials.authToken === 'TEST_ADMIN_TOKEN') {
-             // Return the seeded admin user
-             logger.debug('Looking up admin test user')
-             try {
-               const adminUser = await prisma.user.findUnique({
-                 where: { email: 'admin@example.com' }
-               })
-
-               if (adminUser && adminUser.isAdmin) {
-                 logger.debug('Admin test user found', { email: adminUser.email })
-                 const userData = {
-                   id: adminUser.id,
-                   email: adminUser.email,
-                   name: adminUser.name,
-                   image: adminUser.image,
-                   isAdmin: true,
-                 }
-                 return userData
-               } else {
-                 logger.error('Admin test user not found or not admin', { hasUser: !!adminUser })
-                 return null
-               }
-             } catch (error) {
-               logger.error('Error looking up admin user', error)
-               return null
-             }
-          }
-
-          if (credentials.authToken === 'TEST_REGULAR_TOKEN') {
-             // Return the seeded regular user
-             logger.debug('Looking up regular test user')
-             try {
-               const regularUser = await prisma.user.findUnique({
-                 where: { email: 'regular@example.com' }
-               })
-
-               if (regularUser) {
-                 logger.debug('Regular test user found', { email: regularUser.email })
-                 const userData = {
-                   id: regularUser.id,
-                   email: regularUser.email,
-                   name: regularUser.name,
-                   image: regularUser.image,
-                   isAdmin: regularUser.isAdmin,
-                 }
-                 return userData
-               } else {
-                 logger.error('Regular test user not found')
-                 return null
-               }
-             } catch (error) {
-               logger.error('Error looking up regular user', error)
-               return null
-             }
-          }
-
-          // If test mode but unrecognized token, fail
-          logger.error('Test mode active but unrecognized test token')
-          return null
-        }
-
         if (!credentials?.authToken) {
           return null
         }
@@ -263,7 +188,6 @@ export const authOptions: NextAuthOptions = {
 
             // Audit log: New user created
             if (isAdmin) {
-              const { logAuditEvent, AuditEventType } = await import("@/lib/security/audit-log")
               logAuditEvent(AuditEventType.USER_CREATED, dbUser.id, {
                 isAdmin: true,
                 plexUserId: plexUser.id,
@@ -290,7 +214,6 @@ export const authOptions: NextAuthOptions = {
 
             // Audit log: Admin privilege change
             if (adminStatusChanged) {
-              const { logAuditEvent, AuditEventType } = await import("@/lib/security/audit-log")
               logAuditEvent(
                 isAdmin ? AuditEventType.ADMIN_PRIVILEGE_GRANTED : AuditEventType.ADMIN_PRIVILEGE_REVOKED,
                 dbUser.id,
@@ -393,7 +316,6 @@ export const authOptions: NextAuthOptions = {
 
             // Audit log: New user created
             if (isAdmin) {
-              const { logAuditEvent, AuditEventType } = await import("@/lib/security/audit-log")
               logAuditEvent(AuditEventType.USER_CREATED, dbUser.id, {
                 isAdmin: true,
                 jellyfinUserId: jellyfinUser.id,
@@ -415,7 +337,6 @@ export const authOptions: NextAuthOptions = {
 
             // Audit log: Admin privilege change
             if (adminStatusChanged) {
-              const { logAuditEvent, AuditEventType } = await import("@/lib/security/audit-log")
               logAuditEvent(
                 isAdmin ? AuditEventType.ADMIN_PRIVILEGE_GRANTED : AuditEventType.ADMIN_PRIVILEGE_REVOKED,
                 dbUser.id,
@@ -444,6 +365,10 @@ export const authOptions: NextAuthOptions = {
       },
     }),
   ],
+  secret: getEnv().NEXTAUTH_SECRET,
+  // Set explicitly (SEC-09), the same as NextAuth inferred it from NEXTAUTH_URL,
+  // so the `__Secure-` cookie names of existing sessions do not change.
+  useSecureCookies: usesSecureCookies(),
   pages: {
     signIn: "/",
   },

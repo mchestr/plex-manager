@@ -1,6 +1,7 @@
 "use client"
 
 import type { StatusData, StatusSegment } from "@/actions/prometheus-status"
+import { useFormat } from "@/lib/format-context"
 import { useState } from "react"
 
 interface StatusFooterProps {
@@ -109,15 +110,16 @@ function UptimePercentage({ segments }: { segments: StatusSegment[] }) {
  * Display info about the hovered segment
  */
 function HoveredSegmentInfo({ segment }: { segment: StatusSegment }) {
+  const f = useFormat()
   const date = new Date(segment.timestamp * 1000)
   const statusLabel = segment.status === "up" ? "Up" : segment.status === "down" ? "Down" : "Unknown"
   const statusColor = segment.status === "up" ? "text-emerald-400" : segment.status === "down" ? "text-red-400" : "text-slate-400"
 
   return (
     <span className="text-xs text-slate-400">
-      {date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+      {f.date(date, "day-month-short")}
       {' '}
-      {date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+      {f.time(date)}
       {' - '}
       <span className={statusColor}>{statusLabel}</span>
     </span>

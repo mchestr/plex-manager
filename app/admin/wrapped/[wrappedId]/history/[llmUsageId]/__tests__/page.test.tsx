@@ -53,7 +53,7 @@ describe('Admin historical Rewind version page', () => {
   })
 
   it('shows the clean-up notice when the version text was removed', async () => {
-    mockGetHistoricalWrappedData.mockResolvedValue({ ...version, wrappedData: null })
+    mockGetHistoricalWrappedData.mockResolvedValue({ ...version, removed: true })
 
     await renderPage()
 
@@ -66,7 +66,7 @@ describe('Admin historical Rewind version page', () => {
   })
 
   it('shows the viewer for a version that has text', async () => {
-    mockGetHistoricalWrappedData.mockResolvedValue({ ...version, wrappedData: { year: 2025, userId: 'user-1' } })
+    mockGetHistoricalWrappedData.mockResolvedValue({ ...version, removed: false, wrappedData: { year: 2025, userId: 'user-1' } })
 
     await renderPage()
 

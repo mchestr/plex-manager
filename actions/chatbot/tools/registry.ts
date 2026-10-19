@@ -90,12 +90,6 @@ export const ALL_TOOLS: RegisteredTool[] = TOOL_ORDER.map((name) => {
 })
 
 /**
- * Tools exposed to the LLM in the default (admin) context. Metadata fields are
- * inert to the LLM layer, so the registered tools are passed through as-is.
- */
-export const TOOLS: ChatTool[] = ALL_TOOLS
-
-/**
  * Discord-safe tools, DERIVED from the `discordSafe` metadata flag. This is the
  * security keystone: adding a tool to Discord requires only tagging it.
  */

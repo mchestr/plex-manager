@@ -15,7 +15,7 @@ describe("coerceHistory", () => {
   })
 
   it("drops entries that are not objects", () => {
-    const result = coerceHistory([null, "string", 5, true, undefined])
+    const result = coerceHistory([null, "string", 5, true])
     expect(result).toEqual([])
   })
 

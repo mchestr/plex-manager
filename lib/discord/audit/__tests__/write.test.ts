@@ -11,15 +11,12 @@ import type {
   DiscordCommandType,
   DiscordCommandStatus,
 } from "@/lib/generated/prisma/client"
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
-jest.mock("@/lib/prisma", () => ({
-  prisma: {
-    discordCommandLog: {
-      create: jest.fn(),
-      update: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 const mockCreate = prisma.discordCommandLog.create as jest.MockedFunction<
   typeof prisma.discordCommandLog.create

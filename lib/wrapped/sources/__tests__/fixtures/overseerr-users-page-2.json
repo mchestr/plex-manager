@@ -1,0 +1,24 @@
+{
+  "pageInfo": {
+    "pages": 2,
+    "pageSize": 100,
+    "results": 101,
+    "page": 2
+  },
+  "results": [
+    {
+      "id": 101,
+      "email": "user101@example.invalid",
+      "plexUsername": "user101",
+      "username": null,
+      "plexId": 100001,
+      "userType": 1,
+      "permissions": 32,
+      "avatar": "/avatar",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z",
+      "requestCount": 3,
+      "displayName": "user101"
+    }
+  ]
+}

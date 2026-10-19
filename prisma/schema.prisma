@@ -12,17 +12,17 @@ datasource db {
 
 // User model
 model User {
-  id                    String        @id @default(cuid())
+  id                    String                 @id @default(cuid())
   name                  String?
-  email                 String?       @unique
+  email                 String?                @unique
   emailVerified         DateTime?
   image                 String?
-  plexUserId            String?       @unique
-  plexAuthToken         String?       // Plex auth token (stored during login for watchlist API access)
-  jellyfinUserId        String?       @unique // Jellyfin user ID (if user was created via Jellyfin invite)
-  primaryAuthService    String?       // Track which service user authenticated with first: "plex" or "jellyfin"
-  isAdmin               Boolean       @default(false)
-  onboardingStatus      Json?         @default("{\"plex\": false, \"jellyfin\": false}") // Track onboarding completion per service
+  plexUserId            String?                @unique
+  plexAuthToken         String? // Plex auth token (stored during login for watchlist API access)
+  jellyfinUserId        String?                @unique // Jellyfin user ID (if user was created via Jellyfin invite)
+  primaryAuthService    String? // Track which service user authenticated with first: "plex" or "jellyfin"
+  isAdmin               Boolean                @default(false)
+  onboardingStatus      Json?                  @default("{\"plex\": false, \"jellyfin\": false}") // Track onboarding completion per service
   plexWrapped           PlexWrapped[]
   llmUsage              LLMUsage[]
   chatConversations     ChatConversation[]
@@ -30,17 +30,18 @@ model User {
   discordConnection     DiscordConnection?
   discordOAuthStates    DiscordOAuthState[]
   userMediaMarks        UserMediaMark[]
-  userWatchIntents      UserWatchIntent[]
   watchlistSyncSettings WatchlistSyncSettings?
   watchlistSyncHistory  WatchlistSyncHistory[]
   subscription          Subscription?
-  isExempt              Boolean       @default(false) // Exempt from the subscription requirement (e.g. grandfathered members)
-  exemptReason          String?       // Why the user is exempt (e.g. "grandfathered")
-  createdAt             DateTime      @default(now())
-  updatedAt             DateTime      @updatedAt
+  isExempt              Boolean                @default(false) // Exempt from the subscription requirement (e.g. grandfathered members)
+  exemptReason          String? // Why the user is exempt (e.g. "grandfathered")
+  timezone              String? // IANA zone the member chose for Rewind; null = the server zone
+  rewindGenerations     RewindGeneration[]
+  rewindPrefs           RewindPrefs[]
+  rewindExclusions      RewindExclusion[]
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
 
-  @@index([plexUserId])
-  @@index([jellyfinUserId])
   @@index([isAdmin])
   @@index([primaryAuthService])
   @@index([isExempt])
@@ -59,8 +60,8 @@ model Setup {
 model PlexServer {
   id              String   @id @default(cuid())
   name            String
-  url             String   // Full URL including protocol, hostname, and port (e.g. https://plex.example.com:32400)
-  publicUrl       String?  // Public facing URL (e.g. https://plex.example.com)
+  url             String // Full URL including protocol, hostname, and port (e.g. https://plex.example.com:32400)
+  publicUrl       String? // Public facing URL (e.g. https://plex.example.com)
   token           String
   adminPlexUserId String? // Plex user ID of the admin (user who configured this server)
   isActive        Boolean  @default(true)
@@ -74,10 +75,10 @@ model PlexServer {
 model JellyfinServer {
   id              String   @id @default(cuid())
   name            String
-  url             String   // Full URL including protocol, hostname, and port (e.g. http://jellyfin.example.com:8096)
-  publicUrl       String?  // Public facing URL (e.g. https://jellyfin.example.com)
-  apiKey          String   // Jellyfin API key for admin operations
-  adminUserId     String?  // Jellyfin user ID of the admin who configured this server
+  url             String // Full URL including protocol, hostname, and port (e.g. http://jellyfin.example.com:8096)
+  publicUrl       String? // Public facing URL (e.g. https://jellyfin.example.com)
+  apiKey          String // Jellyfin API key for admin operations
+  adminUserId     String? // Jellyfin user ID of the admin who configured this server
   isActive        Boolean  @default(true)
   enabledForLogin Boolean  @default(true) // "Allow Jellyfin sign-in": when false, Jellyfin sign-in is refused and hidden from the login page
   createdAt       DateTime @default(now())
@@ -90,8 +91,8 @@ model JellyfinServer {
 model Tautulli {
   id        String   @id @default(cuid())
   name      String
-  url       String   // Full URL including protocol, hostname, and port (e.g. http://tautulli.example.com:8181)
-  publicUrl String?  // Public facing URL (e.g. https://tautulli.example.com)
+  url       String // Full URL including protocol, hostname, and port (e.g. http://tautulli.example.com:8181)
+  publicUrl String? // Public facing URL (e.g. https://tautulli.example.com)
   apiKey    String
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
@@ -103,8 +104,8 @@ model Tautulli {
 model Overseerr {
   id        String   @id @default(cuid())
   name      String
-  url       String   // Full URL including protocol, hostname, and port (e.g. http://overseerr.example.com:5055)
-  publicUrl String?  // Public facing URL (e.g. https://requests.example.com)
+  url       String // Full URL including protocol, hostname, and port (e.g. http://overseerr.example.com:5055)
+  publicUrl String? // Public facing URL (e.g. https://requests.example.com)
   apiKey    String
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
@@ -116,8 +117,8 @@ model Overseerr {
 model Sonarr {
   id        String   @id @default(cuid())
   name      String
-  url       String   // Full URL including protocol, hostname, and port (e.g. http://sonarr.example.com:8989)
-  publicUrl String?  // Public facing URL (e.g. https://sonarr.example.com)
+  url       String // Full URL including protocol, hostname, and port (e.g. http://sonarr.example.com:8989)
+  publicUrl String? // Public facing URL (e.g. https://sonarr.example.com)
   apiKey    String
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
@@ -129,8 +130,8 @@ model Sonarr {
 model Radarr {
   id        String   @id @default(cuid())
   name      String
-  url       String   // Full URL including protocol, hostname, and port (e.g. http://radarr.example.com:7878)
-  publicUrl String?  // Public facing URL (e.g. https://radarr.example.com)
+  url       String // Full URL including protocol, hostname, and port (e.g. http://radarr.example.com:7878)
+  publicUrl String? // Public facing URL (e.g. https://radarr.example.com)
   apiKey    String
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
@@ -141,9 +142,9 @@ model Radarr {
 
 model Prometheus {
   id        String   @id @default(cuid())
-  name      String   // Display name for the service being monitored (e.g. "Plex Server")
-  url       String   // Full URL including protocol, hostname, and port (e.g. http://prometheus.example.com:9090)
-  query     String   // PromQL query to determine status (e.g. up{job="plex"})
+  name      String // Display name for the service being monitored (e.g. "Plex Server")
+  url       String // Full URL including protocol, hostname, and port (e.g. http://prometheus.example.com:9090)
+  query     String // PromQL query to determine status (e.g. up{job="plex"})
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -159,6 +160,8 @@ model LLMProvider {
   model       String // Required - no default model allowed
   temperature Float? // Temperature setting (0.0-2.0), null uses model default
   maxTokens   Int? // Max tokens for completion, null uses default (6000)
+  baseUrl     String? // openai-compatible endpoint (admin-only)
+  effort      String? // reasoning effort, mapped per provider
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -181,16 +184,186 @@ model PlexWrapped {
   summary     String? // Shareable summary text for social sharing
   archetype   String? // v2: archetype display name for share cards/OG images without parsing data JSON
   generatedAt DateTime?
+  // Set only by v3 writes; v1 and v2 rows keep the default and the parser reads `version` from the JSON
+  dataVersion Int                 @default(2)
+  edition     String? // v3: "full", "pocket" or "postcard"
+  factsHash   String? // v3: sha256 of the canonical facts JSON
+  dataThrough DateTime? // v3: end of the data window this issue covers
+  finalCutAt  DateTime? // v3: when the full-year final cut replaced the season issue
+  notifiedAt  DateTime? // v3: when the member was told the issue is ready
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
   llmUsage    LLMUsage[] // Multiple LLM usage records can be associated with a wrapped (for regenerations)
   shareVisits WrappedShareVisit[] // Track visits to shared wraps
+  generations RewindGeneration[]
+  shares      RewindShare[]
+  views       RewindView[]
 
   @@unique([userId, year])
-  @@index([userId])
   @@index([year])
   @@index([status])
-  @@index([shareToken])
+}
+
+// One generation attempt of a Rewind (v3). The job writes PlexWrapped.data
+// only in its final transaction and keeps the data it replaced for one rollback.
+model RewindGeneration {
+  id           String      @id @default(cuid())
+  wrappedId    String
+  wrapped      PlexWrapped @relation(fields: [wrappedId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  year         Int
+  kind         String // "season", "final-cut", "admin", "member"
+  status       String      @default("queued") // "queued", "running", "completed", "failed", "skipped"
+  jobId        String?
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  error        Json? // typed error code, never a roster
+  factsHash    String?
+  copySource   String? // "llm", "repair", "template", "mixed"
+  copyPolicy   String      @default("default") // "default", "no-llm"
+  llmCalls     Int         @default(0)
+  costUsd      Decimal?    @db.Decimal(10, 4)
+  previousData String? // the PlexWrapped.data this generation replaced, kept until 2027-06-30
+  createdAt    DateTime    @default(now())
+  llmUsage     LLMUsage[]
+
+  @@index([userId, year, status])
+  @@index([status, startedAt])
+  @@index([wrappedId])
+}
+
+// A v3 share link. Only the SHA-256 of the token is stored; card and poster
+// URLs use the separate asset key.
+model RewindShare {
+  id            String                @id @default(cuid())
+  wrappedId     String
+  wrapped       PlexWrapped           @relation(fields: [wrappedId], references: [id], onDelete: Cascade)
+  tokenHash     String                @unique
+  assetKey      String                @unique // 16 random bytes, base64url
+  pages         Json // shared page types, registry order
+  signed        Boolean               @default(false)
+  includeArt    Boolean               @default(false)
+  dailyDetail   Boolean               @default(false)
+  cardFacts     Json
+  expiresAt     DateTime?
+  revokedAt     DateTime?
+  createdAt     DateTime              @default(now())
+  rotatedFromId String?
+  visitDays     RewindShareVisitDay[]
+
+  @@index([wrappedId])
+}
+
+// Daily visit counts per share link, kept 90 days (replaces WrappedShareVisit)
+model RewindShareVisitDay {
+  shareId String
+  share   RewindShare @relation(fields: [shareId], references: [id], onDelete: Cascade)
+  day     DateTime    @db.Date
+  count   Int         @default(0)
+
+  @@id([shareId, day])
+  @@index([day])
+}
+
+// A member's sharing and notification choices for one Rewind year
+model RewindPrefs {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  year              Int
+  signed            Boolean  @default(false)
+  includeArt        Boolean  @default(false)
+  dailyDetail       Boolean  @default(false)
+  cardFacts         Json?
+  notify            Boolean  @default(true)
+  exclusionsVersion Int      @default(0) // bumped by hide and unhide; part of the card cache key
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([userId, year])
+}
+
+// A title the member hid from their Rewind
+model RewindExclusion {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ratingKey String
+  kind      String // "film", "series"
+  createdAt DateTime @default(now())
+
+  @@unique([userId, ratingKey])
+}
+
+// The server-wide yearly aggregate a season fan-out reads
+model RewindServerAggregate {
+  id          String   @id @default(cuid())
+  year        Int
+  dataThrough DateTime
+  computedAt  DateTime @default(now())
+  data        Json
+
+  @@unique([year, dataThrough])
+}
+
+// Plex metadata for a rating key, cached for the stats engine
+model MediaMetadataCache {
+  ratingKey             String    @id
+  kind                  String
+  librarySectionId      String
+  addedAt               DateTime?
+  genres                Json
+  directors             Json
+  actors                Json
+  studio                String?
+  contentRating         String?
+  year                  Int?
+  originallyAvailableAt DateTime?
+  runtimeSec            Int?
+  seasonEpisodeCounts   Json?
+  guids                 Json
+  videoResolution       String?
+  hdr                   Boolean?
+  fetchedAt             DateTime  @default(now())
+}
+
+// One open of a Rewind by its owner, kept 120 days (success measures). No IP.
+model RewindView {
+  id           String      @id @default(cuid())
+  wrappedId    String
+  wrapped      PlexWrapped @relation(fields: [wrappedId], references: [id], onDelete: Cascade)
+  sessionKey   String // random per open
+  edition      String
+  furthestPage Int         @default(0)
+  shareActions Json        @default("{}") // counts by kind: image, save, link
+  createdAt    DateTime    @default(now())
+
+  @@unique([wrappedId, sessionKey])
+  @@index([createdAt])
+}
+
+// One run of the Rewind copy eval harness
+model RewindEvalRun {
+  id            String   @id @default(cuid())
+  model         String
+  promptVersion String
+  fixtures      Json
+  results       Json
+  costUsd       Decimal  @db.Decimal(10, 4)
+  createdBy     String?
+  createdAt     DateTime @default(now())
+}
+
+// One provider Batch API submission (final cut)
+model RewindBatch {
+  id          String    @id @default(cuid())
+  provider    String
+  batchRef    String
+  status      String
+  itemCount   Int
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
 }
 
 // Track visits to shared wraps
@@ -208,12 +381,12 @@ model WrappedShareVisit {
 }
 
 model ChatConversation {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  endedAt   DateTime?
-  usage     LLMUsage[]
+  id              String               @id @default(cuid())
+  userId          String
+  user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt       DateTime             @default(now())
+  endedAt         DateTime?
+  usage           LLMUsage[]
   discordSessions DiscordChatSession[]
 
   @@index([userId])
@@ -224,25 +397,35 @@ model ChatConversation {
 // This model stores ALL LLM usage, including regenerations of wrapped content
 // wrappedId is optional to allow tracking LLM usage even without a wrapped
 model LLMUsage {
-  id               String       @id @default(cuid())
-  wrappedId        String? // Optional - allows tracking usage without a wrapped
-  wrapped          PlexWrapped? @relation(fields: [wrappedId], references: [id], onDelete: SetNull)
+  id                 String            @id @default(cuid())
+  wrappedId          String? // Optional - allows tracking usage without a wrapped
+  wrapped            PlexWrapped?      @relation(fields: [wrappedId], references: [id], onDelete: SetNull)
   chatConversationId String?
   chatConversation   ChatConversation? @relation(fields: [chatConversationId], references: [id], onDelete: SetNull)
-  userId           String
-  user             User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  provider         String // Currently "openai", but extensible for other providers
-  model            String? // Model used (e.g., "gpt-4", "openai/gpt-4")
-  prompt           String? // The prompt sent to the LLM; null once removed by the October 2026 privacy clean-up (P0.20)
-  response         String? // The full response from the LLM; null once removed by the October 2026 privacy clean-up (P0.20)
-  promptTokens     Int // Number of tokens in the prompt
-  completionTokens Int // Number of tokens in the completion
-  totalTokens      Int // Total tokens used
-  cost             Float // Estimated cost in USD
-  createdAt        DateTime     @default(now())
+  userId             String
+  user               User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider           String // Currently "openai", but extensible for other providers
+  model              String? // Model used (e.g., "gpt-4", "openai/gpt-4")
+  prompt             String? // The prompt sent to the LLM; null once removed by the October 2026 privacy clean-up (P0.20)
+  response           String? // The full response from the LLM; null once removed by the October 2026 privacy clean-up (P0.20)
+  promptTokens       Int // Number of tokens in the prompt
+  completionTokens   Int // Number of tokens in the completion
+  totalTokens        Int // Total tokens used
+  cost               Float // Estimated cost in USD
+  cachedInputTokens  Int               @default(0)
+  reasoningTokens    Int               @default(0)
+  serviceTier        String?
+  batchId            String?
+  promptVersion      String?
+  factsHash          String?
+  generationId       String?
+  generation         RewindGeneration? @relation(fields: [generationId], references: [id], onDelete: SetNull)
+  outcome            String            @default("ok") // "ok", or why a billed call failed
+  createdAt          DateTime          @default(now())
 
   @@index([userId])
   @@index([wrappedId])
+  @@index([generationId])
   @@index([chatConversationId])
   @@index([provider])
   @@index([createdAt])
@@ -250,20 +433,40 @@ model LLMUsage {
 
 // Application Configuration (singleton pattern)
 model Config {
-  id                          String    @id @default("config")
-  llmDisabled                 Boolean   @default(false) // When true, LLM calls are disabled and mock data is returned
-  wrappedEnabled              Boolean   @default(true) // When false, wrapped generation is disabled
-  wrappedGenerationStartDate  DateTime? // Optional start date for when generation is allowed (e.g., Nov 20). Year is auto-determined from this date.
-  wrappedGenerationEndDate    DateTime? // Optional end date for when generation is allowed (e.g., Jan 31)
-  watchlistSyncEnabled        Boolean   @default(false) // Global toggle for watchlist sync feature
-  watchlistSyncIntervalMinutes Int      @default(60) // Default sync interval in minutes (minimum 15)
-  stripeEnabled               Boolean   @default(false) // Global toggle for the Stripe subscription requirement
-  stripeSecretKey             String?   // Stripe secret API key (encrypted at rest)
-  stripeWebhookSecret         String?   // Stripe webhook signing secret (encrypted at rest)
-  stripePriceIds              Json?     // JSON array of allowed Stripe price-id strings
-  stripeLibrarySectionIds     Json?     // JSON array of Plex library section keys granted to subscribers (null = all libraries)
-  updatedAt                   DateTime  @updatedAt
-  updatedBy                   String?   // User ID who last updated this config
+  id                           String    @id @default("config")
+  llmDisabled                  Boolean   @default(false) // When true, LLM calls are disabled and mock data is returned
+  wrappedEnabled               Boolean   @default(true) // When false, wrapped generation is disabled
+  wrappedGenerationStartDate   DateTime? // Legacy: migrated to rewindSeasonOpens (P2.2), no longer written; P11.18 drops it
+  wrappedGenerationEndDate     DateTime? // Legacy: migrated to rewindSeasonCloses (P2.2), no longer written; P11.18 drops it
+  watchlistSyncEnabled         Boolean   @default(false) // Global toggle for watchlist sync feature
+  watchlistSyncIntervalMinutes Int       @default(60) // Default sync interval in minutes (minimum 15)
+  stripeEnabled                Boolean   @default(false) // Global toggle for the Stripe subscription requirement
+  stripeSecretKey              String? // Stripe secret API key (encrypted at rest)
+  stripeWebhookSecret          String? // Stripe webhook signing secret (encrypted at rest)
+  stripePriceIds               Json? // JSON array of allowed Stripe price-id strings
+  stripeLibrarySectionIds      Json? // JSON array of Plex library section keys granted to subscribers (null = all libraries)
+  timezone                     String? // IANA zone of the server; null resolves to TZ, then UTC
+  locale                       String    @default("en-US") // BCP 47 locale for dates and numbers
+  serverName                   String? // Brand name; null falls back to the Plex server's name
+  rewindSeasonOpens            String    @default("12-01") // month-day, in the server zone
+  rewindSeasonCloses           String    @default("01-31") // month-day, in the server zone
+  rewindEnabled                Boolean   @default(false)
+  rewindAudience               String    @default("admins") // "admins", "all"
+  rewindLlmMode                String    @default("standard") // "standard", "economy", "off"
+  rewindLlmBudgetUsd           Decimal   @default(10) @db.Decimal(10, 2)
+  rewindNotifyChannels         Json      @default("[\"discord\", \"banner\"]")
+  rewindPublicLinks            Boolean   @default(true)
+  rewindPublicCounts           Boolean   @default(false)
+  rewindShowServerNameOnCards  Boolean   @default(true)
+  rewindAllowArtOnCards        Boolean   @default(true)
+  rewindExcludedSectionIds     Json?
+  rewindExcludedContentRatings Json?
+  rewindIncludeManagedUsers    Boolean   @default(false)
+  rewindAudio                  Boolean   @default(false)
+  rewindDisabledPages          Json?
+  rewindSerialKey              String? // HMAC key for member serials (encrypted at rest)
+  updatedAt                    DateTime  @updatedAt
+  updatedBy                    String? // User ID who last updated this config
 }
 
 model DiscordIntegration {
@@ -272,9 +475,9 @@ model DiscordIntegration {
   botEnabled       Boolean  @default(false)
   clientId         String?
   clientSecret     String?
-  botToken         String?  // Discord bot token (encrypted at rest, like clientSecret)
-  supportChannelId String?  // Channel the bot monitors for support (plaintext)
-  supportThreadIds Json?    // JSON array of support thread ID strings (plaintext)
+  botToken         String? // Discord bot token (encrypted at rest, like clientSecret)
+  supportChannelId String? // Channel the bot monitors for support (plaintext)
+  supportThreadIds Json? // JSON array of support thread ID strings (plaintext)
   configVersion    Int      @default(0) // Bumped on every config change; drives Step 18's rotation-bounce
   guildId          String?
   serverInviteCode String?
@@ -287,22 +490,22 @@ model DiscordIntegration {
 
 // Distributed lock for Discord bot (ensures only one pod runs the bot)
 model DiscordBotLock {
-  id           String   @id @default("discord-bot")
-  instanceId   String   // Unique identifier for this pod/instance
-  acquiredAt   DateTime @default(now())
-  expiresAt    DateTime // Lock expires if not renewed (handles crashed pods)
+  id            String   @id @default("discord-bot")
+  instanceId    String // Unique identifier for this pod/instance
+  acquiredAt    DateTime @default(now())
+  expiresAt     DateTime // Lock expires if not renewed (handles crashed pods)
   lastRenewedAt DateTime @default(now())
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@index([expiresAt])
 }
 
 model DiscordConnection {
-  id               String   @id @default(cuid())
-  userId           String   @unique
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  discordUserId    String   @unique
+  id               String    @id @default(cuid())
+  userId           String    @unique
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  discordUserId    String    @unique
   username         String
   discriminator    String?
   globalName       String?
@@ -312,45 +515,42 @@ model DiscordConnection {
   scope            String?
   expiresAt        DateTime?
   metadataSyncedAt DateTime?
-  linkedAt         DateTime @default(now())
+  linkedAt         DateTime  @default(now())
   revokedAt        DateTime?
   lastError        String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
-  @@index([discordUserId])
   @@index([linkedAt])
 }
 
 model DiscordChatSession {
-  id                 String            @id @default(cuid())
+  id                 String           @id @default(cuid())
   discordUserId      String
   discordChannelId   String
   chatConversationId String
-  chatConversation   ChatConversation  @relation(fields: [chatConversationId], references: [id], onDelete: Cascade)
+  chatConversation   ChatConversation @relation(fields: [chatConversationId], references: [id], onDelete: Cascade)
   messages           Json
-  lastMessageAt      DateTime          @default(now())
-  isActive           Boolean           @default(true)
-  createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
+  lastMessageAt      DateTime         @default(now())
+  isActive           Boolean          @default(true)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
 
   @@unique([discordUserId, discordChannelId])
-  @@index([discordUserId])
   @@index([chatConversationId])
 }
 
 model DiscordOAuthState {
-  id           String   @id @default(cuid())
+  id           String    @id @default(cuid())
   userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  state        String   @unique
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  state        String    @unique
   codeVerifier String
   redirectTo   String?
-  createdAt    DateTime @default(now())
+  createdAt    DateTime  @default(now())
   expiresAt    DateTime
   consumedAt   DateTime?
 
-  @@index([state])
   @@index([userId])
   @@index([expiresAt])
 }
@@ -399,18 +599,17 @@ model Invite {
   expiresAt  DateTime?
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
-  createdBy  String?    // Admin User ID who created the invite
+  createdBy  String? // Admin User ID who created the invite
 
   // Plex-specific library access settings
-  librarySectionIds String?  // JSON array of Plex library section IDs to share (null = all libraries)
-  allowDownloads    Boolean  @default(false) // Allow downloads (Plex allowSync)
+  librarySectionIds String? // JSON array of Plex library section IDs to share (null = all libraries)
+  allowDownloads    Boolean @default(false) // Allow downloads (Plex allowSync)
 
   // Jellyfin-specific library access settings
   jellyfinLibraryIds String? // JSON array of Jellyfin library IDs to grant access (null = all libraries)
 
   usages InviteUsage[]
 
-  @@index([code])
   @@index([serverType])
 }
 
@@ -427,13 +626,13 @@ model InviteUsage {
 }
 
 model UserMediaMark {
-  id              String   @id @default(cuid())
-  userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Media identification
-  mediaType       MediaType
-  plexRatingKey   String
+  mediaType     MediaType
+  plexRatingKey String
 
   // Radarr/Sonarr IDs (if available)
   radarrId        Int?
@@ -442,55 +641,29 @@ model UserMediaMark {
   sonarrTitleSlug String?
 
   // Media metadata (cached for display)
-  title           String
-  year            Int?
-  seasonNumber    Int?
-  episodeNumber   Int?
-  parentTitle     String?
+  title         String
+  year          Int?
+  seasonNumber  Int?
+  episodeNumber Int?
+  parentTitle   String?
 
   // Mark details
-  markType        MarkType
-  note            String?
+  markType MarkType
+  note     String?
 
   // Tracking
-  markedAt        DateTime @default(now())
-  markedVia       String
+  markedAt         DateTime @default(now())
+  markedVia        String
   discordChannelId String?
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
+  @@unique([userId, plexRatingKey, markType])
   @@index([userId, mediaType])
   @@index([plexRatingKey])
   @@index([markType])
   @@index([markedAt])
-  @@unique([userId, plexRatingKey, markType])
-}
-
-model UserWatchIntent {
-  id              String   @id @default(cuid())
-  userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  plexRatingKey   String
-  mediaType       MediaType
-  title           String
-
-  // Intent tracking
-  intentType      IntentType
-  priority        Int        @default(0)
-
-  // Progress (for TV series)
-  currentSeason   Int?
-  currentEpisode  Int?
-
-  addedAt         DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  completedAt     DateTime?
-
-  @@index([userId, intentType])
-  @@index([plexRatingKey])
-  @@unique([userId, plexRatingKey])
 }
 
 enum MediaType {
@@ -513,45 +686,37 @@ enum MarkType {
   WRONG_VERSION
 }
 
-enum IntentType {
-  PLAN_TO_WATCH
-  WATCHING
-  COMPLETED
-  DROPPED
-  ON_HOLD
-}
-
 // Discord Command Audit Log - tracks all Discord bot interactions
 model DiscordCommandLog {
-  id              String   @id @default(cuid())
+  id String @id @default(cuid())
 
   // Discord user info
   discordUserId   String
   discordUsername String?
 
   // Linked Plex user (if available)
-  userId          String?
+  userId String?
 
   // Command details
-  commandType     DiscordCommandType
-  commandName     String              // e.g., "!finished", "!assistant", "!clear"
-  commandArgs     String?             // Arguments passed to the command
+  commandType DiscordCommandType
+  commandName String // e.g., "!finished", "!assistant", "!clear"
+  commandArgs String? // Arguments passed to the command
 
   // Context
-  channelId       String
-  channelType     String              // "dm", "support-channel", "thread"
-  guildId         String?
+  channelId   String
+  channelType String // "dm", "support-channel", "thread"
+  guildId     String?
 
   // Execution details
-  status          DiscordCommandStatus @default(PENDING)
-  error           String?
-  responseTimeMs  Int?                // Time to process the command
+  status         DiscordCommandStatus @default(PENDING)
+  error          String?
+  responseTimeMs Int? // Time to process the command
 
   // Timestamps
-  startedAt       DateTime @default(now())
-  completedAt     DateTime?
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
 
-  createdAt       DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([discordUserId])
   @@index([userId])
@@ -563,12 +728,12 @@ model DiscordCommandLog {
 }
 
 enum DiscordCommandType {
-  CHAT          // Chatbot interactions (!assistant, !bot, !support, DMs, mentions)
-  MEDIA_MARK    // Media marking commands (!finished, !not-interested, etc.)
+  CHAT // Chatbot interactions (!assistant, !bot, !support, DMs, mentions)
+  MEDIA_MARK // Media marking commands (!finished, !not-interested, etc.)
   CLEAR_CONTEXT // Context clear commands (!clear, !reset)
-  SELECTION     // Numeric selection responses (1-5)
-  LINK_REQUEST  // User not linked, requested to link account
-  HELP          // Help/command discovery (!help, !commands)
+  SELECTION // Numeric selection responses (1-5)
+  LINK_REQUEST // User not linked, requested to link account
+  HELP // Help/command discovery (!help, !commands)
 }
 
 enum DiscordCommandStatus {
@@ -580,15 +745,15 @@ enum DiscordCommandStatus {
 
 // Admin Announcements for home page
 model Announcement {
-  id          String    @id @default(cuid())
-  title       String
-  content     String    // Markdown content
-  priority    Int       @default(0) // Higher = more important, shown first
-  isActive    Boolean   @default(true)
-  expiresAt   DateTime? // Auto-hide after this date
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  createdBy   String?   // Admin user ID
+  id        String    @id @default(cuid())
+  title     String
+  content   String // Markdown content
+  priority  Int       @default(0) // Higher = more important, shown first
+  isActive  Boolean   @default(true)
+  expiresAt DateTime? // Auto-hide after this date
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  createdBy String? // Admin user ID
 
   @@index([isActive, expiresAt])
   @@index([priority])
@@ -601,7 +766,7 @@ model WatchlistSyncSettings {
   user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   syncEnabled         Boolean   @default(false)
   lastSyncAt          DateTime?
-  lastSyncStatus      String?   // "success", "partial", "failed"
+  lastSyncStatus      String? // "success", "partial", "failed"
   lastSyncError       String?
   itemsSynced         Int       @default(0) // Items processed in last sync
   itemsRequested      Int       @default(0) // Items requested in last sync
@@ -618,8 +783,8 @@ model WatchlistSyncHistory {
   id                 String              @id @default(cuid())
   userId             String
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  plexRatingKey      String              // Plex discover rating key
-  guid               String              // GUID string (e.g., "tmdb://12345")
+  plexRatingKey      String // Plex discover rating key
+  guid               String // GUID string (e.g., "tmdb://12345")
   mediaType          MediaType
   title              String
   year               Int?
@@ -627,8 +792,8 @@ model WatchlistSyncHistory {
   tvdbId             Int?
   imdbId             String?
   syncedAt           DateTime            @default(now())
-  requestedAt        DateTime?           // When submitted to Overseerr
-  overseerrRequestId Int?                // Overseerr request ID if submitted
+  requestedAt        DateTime? // When submitted to Overseerr
+  overseerrRequestId Int? // Overseerr request ID if submitted
   status             WatchlistSyncStatus @default(SYNCED)
 
   @@unique([userId, plexRatingKey])
@@ -639,7 +804,7 @@ model WatchlistSyncHistory {
 // Watchlist Sync - Distributed lock (mirrors DiscordBotLock)
 model WatchlistSyncLock {
   id            String   @id @default("watchlist-sync")
-  instanceId    String   // Unique identifier for this pod/instance
+  instanceId    String // Unique identifier for this pod/instance
   acquiredAt    DateTime @default(now())
   expiresAt     DateTime // Lock expires if not renewed (handles crashed pods)
   lastRenewedAt DateTime @default(now())
@@ -650,29 +815,29 @@ model WatchlistSyncLock {
 }
 
 enum WatchlistSyncStatus {
-  SYNCED               // Item tracked but not requested
-  REQUESTED            // Submitted to Overseerr
-  ALREADY_AVAILABLE    // Already in library
-  ALREADY_REQUESTED    // Already has pending request
-  FAILED               // Request submission failed
+  SYNCED // Item tracked but not requested
+  REQUESTED // Submitted to Overseerr
+  ALREADY_AVAILABLE // Already in library
+  ALREADY_REQUESTED // Already has pending request
+  FAILED // Request submission failed
   REMOVED_FROM_WATCHLIST // Removed from Plex watchlist
 }
 
 // Stripe Subscriptions - one-to-one with User
 model Subscription {
-  id                    String             @id @default(cuid())
-  userId                String             @unique
-  user                  User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  stripeCustomerId      String?            @unique // Stripe customer id
-  stripeSubscriptionId  String?            @unique // Stripe subscription id
-  status                SubscriptionStatus @default(INCOMPLETE)
-  priceId               String?            // Stripe price id the user is subscribed to
-  currentPeriodEnd      DateTime?          // End of the current paid period
-  cancelAtPeriodEnd     Boolean            @default(false)
-  canceledAt            DateTime?          // When the subscription was canceled
-  plexInviteStatus      String?            // Tracks Plex invite lifecycle (e.g. "invited", "accepted")
-  createdAt             DateTime           @default(now())
-  updatedAt             DateTime           @updatedAt
+  id                   String             @id @default(cuid())
+  userId               String             @unique
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stripeCustomerId     String?            @unique // Stripe customer id
+  stripeSubscriptionId String?            @unique // Stripe subscription id
+  status               SubscriptionStatus @default(INCOMPLETE)
+  priceId              String? // Stripe price id the user is subscribed to
+  currentPeriodEnd     DateTime? // End of the current paid period
+  cancelAtPeriodEnd    Boolean            @default(false)
+  canceledAt           DateTime? // When the subscription was canceled
+  plexInviteStatus     String? // Tracks Plex invite lifecycle (e.g. "invited", "accepted")
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
 
   // stripeCustomerId/stripeSubscriptionId are @unique (already indexed).
   @@index([status])
@@ -681,7 +846,7 @@ model Subscription {
 // Stripe webhook idempotency - keyed by the Stripe event id
 model StripeEvent {
   id          String   @id // Stripe event id (evt_...)
-  type        String   // Stripe event type (e.g. customer.subscription.updated)
+  type        String // Stripe event type (e.g. customer.subscription.updated)
   processedAt DateTime @default(now())
 
   @@index([type])

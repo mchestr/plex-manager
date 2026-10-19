@@ -2,7 +2,7 @@
 
 import { GoldCountUp } from "@/components/wrapped/cinematic/gold-count-up"
 import { SlideFrame } from "@/components/wrapped/cinematic/slide-frame"
-import { formatWatchTime } from "@/lib/utils/time-formatting"
+import { formatDuration } from "@/lib/utils/format"
 import { WrappedSection } from "@/types/wrapped"
 
 interface Props {
@@ -19,7 +19,7 @@ export function CinematicMoviesBreakdownSection({ section }: Props) {
       </div>
       {typeof data.watchTime === "number" && data.watchTime > 0 && (
         <p className="text-sm sm:text-base text-taupe uppercase tracking-[0.25em] mt-4">
-          {formatWatchTime(data.watchTime)} in the screening room
+          {formatDuration(data.watchTime, "long", { largestUnit: "day" })} in the screening room
         </p>
       )}
     </SlideFrame>

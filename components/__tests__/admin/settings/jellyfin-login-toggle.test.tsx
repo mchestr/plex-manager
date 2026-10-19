@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 
-import { JellyfinLoginToggle } from '@/components/admin/settings/JellyfinLoginToggle'
+import { JellyfinLoginToggle } from '@/components/admin/settings/jellyfin-login-toggle'
 
 jest.mock('@/actions/admin/admin-servers', () => ({
   toggleJellyfinLogin: jest.fn(),

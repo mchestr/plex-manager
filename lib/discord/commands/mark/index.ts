@@ -74,7 +74,11 @@ import {
 
 const logger = createLogger("DISCORD_MARK_COMMAND")
 
-/** `custom_id` prefix for `/mark`'s disambiguation select menu. */
+/**
+ * `custom_id` prefix for `/mark`'s disambiguation select menu.
+ *
+ * @internal
+ */
 export const MARK_SELECT_PREFIX = "mark:select:"
 
 /** Max results a Plex search can put in a single select menu (Discord cap). */
@@ -84,6 +88,8 @@ const MAX_SELECT_OPTIONS = 25
  * Map a `/mark` subcommand name to the {@link MarkType} it applies. Mirrors the
  * legacy `MARK_COMMANDS` mapping, minus the `!` aliases (each subcommand is a
  * single canonical name).
+ *
+ * @internal
  */
 export const MARK_SUBCOMMANDS: Record<string, MarkType> = {
   finished: MarkType.FINISHED_WATCHING,

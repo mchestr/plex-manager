@@ -17,29 +17,8 @@
  *   zeroed histograms, and a `peakHour` of `null`.
  */
 
+import type { DerivedStatistics, PercentileResult } from "@/lib/wrapped/data/schema-legacy"
 import type { TautulliHistoryItem } from "@/lib/validations/tautulli"
-
-export interface DerivedStatistics {
-  /** Longest run of consecutive calendar days with at least one play */
-  longestStreak: { days: number; start: string; end: string } | null
-  /** Hour of day (0-23) with the most plays, with a friendly label */
-  peakHour: { hour: number; label: string; plays: number } | null
-  /** Minutes watched per hour of day (24 buckets, index = hour) */
-  hourHistogram: number[]
-  /** Minutes watched per day of week, Sunday first */
-  dayOfWeekHistogram: Array<{ day: string; watchTime: number }>
-  /** Single calendar day with the most minutes watched */
-  mostActiveDay: { date: string; watchTime: number } | null
-  /** Share of watch time falling on Saturday/Sunday */
-  weekendVsWeekday: { weekendPct: number }
-}
-
-export interface PercentileResult {
-  /** 1-100, lower is better (1 = top of the leaderboard) */
-  percentile: number
-  /** Display label, e.g. "Top 5%" */
-  topPercentLabel: string
-}
 
 const DAY_NAMES = [
   "Sunday",
@@ -51,7 +30,11 @@ const DAY_NAMES = [
   "Saturday",
 ] as const
 
-/** Format an hour (0-23) as "12 AM" / "3 PM" style label */
+/**
+ * Format an hour (0-23) as "12 AM" / "3 PM" style label
+ *
+ * @internal
+ */
 export function formatHourLabel(hour: number): string {
   const period = hour < 12 ? "AM" : "PM"
   const display = hour % 12 === 0 ? 12 : hour % 12

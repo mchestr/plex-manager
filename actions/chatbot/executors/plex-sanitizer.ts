@@ -1,3 +1,5 @@
+import { formatResolution } from "@/lib/utils/format"
+
 interface RawPlexSessionsResponse {
   MediaContainer?: {
     size?: number
@@ -51,7 +53,7 @@ export interface SanitizedPlexSessions {
   sessions: SanitizedPlexSession[]
 }
 
-export interface SanitizedPlexSession {
+interface SanitizedPlexSession {
   viewerLabel: string
   mediaTitle?: string
   mediaType?: string
@@ -185,18 +187,6 @@ function collectNotes(item: RawPlexSession): string[] {
   return notes
 }
 
-function formatResolution(value: string | number): string {
-  if (typeof value === "number") {
-    return `${value}p`
-  }
-
-  const trimmed = value.trim()
-  if (/^\d+$/.test(trimmed)) {
-    return `${trimmed}p`
-  }
-  return trimmed
-}
-
 function getMediaContainer(raw: unknown): RawPlexSessionsResponse["MediaContainer"] | undefined {
   if (!isRecord(raw)) return undefined
   const container = raw.MediaContainer
@@ -238,5 +228,3 @@ function normalizeNumber(value?: number | string | null): number | undefined {
 function isRecord(value: unknown): value is Record<string, any> {
   return typeof value === "object" && value !== null
 }
-
-

@@ -3,47 +3,36 @@
 /**
  * LLM historical wrapped version management
  *
- * Functions for viewing and restoring historical wrapped versions
+ * Functions for viewing historical wrapped versions. Each version is an
+ * `LLMUsage` row whose response is rebuilt into a Rewind on the statistics
+ * stored with the current one (statistics do not change between
+ * regenerations).
  */
 
 import { requireAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
-import type { Prisma } from "@/lib/generated/prisma/client"
-
-// Type for LLMUsage records with included user
-type LLMUsageWithUser = Prisma.LLMUsageGetPayload<{
-  include: { user: { select: { id: true; name: true; email: true } } }
-}>
+import { assembleWrappedData } from "@/lib/wrapped/assemble-wrapped"
+import { pickCurrentUsageId } from "@/lib/wrapped/data/history"
+import { parseStoredRewind } from "@/lib/wrapped/data/parse-stored"
+import { storedWrappedDataSchema, type StoredWrappedData } from "@/lib/wrapped/data/schema-legacy"
+import { parseWrappedLLMOutput, stripCodeFences } from "@/lib/wrapped/parse-llm-output"
 
 const logger = createLogger("ADMIN")
 
 /**
- * Get historical wrapped versions from LLM usage records (admin only)
+ * Get historical wrapped versions from LLM usage records (admin only).
+ *
+ * The current version is the newest usage row created at or before
+ * `PlexWrapped.generatedAt` ({@link pickCurrentUsageId}).
  */
 export async function getHistoricalWrappedVersions(wrappedId: string) {
   await requireAdmin()
 
-  // Get the wrapped to compare with current data
   const wrapped = await prisma.plexWrapped.findUnique({
     where: { id: wrappedId },
-    select: { data: true, generatedAt: true },
+    select: { generatedAt: true },
   })
-
-  let currentSectionsHash: string | null = null
-  if (wrapped?.data) {
-    try {
-      const currentData = JSON.parse(wrapped.data) as { sections?: Array<{ id: string; type: string }> }
-      // Create a normalized hash of sections to identify the current version
-      const sections = (currentData.sections || []).map((s) => ({
-        id: s.id,
-        type: s.type,
-      }))
-      currentSectionsHash = JSON.stringify(sections.sort((a, b) => a.id.localeCompare(b.id)))
-    } catch (error) {
-      logger.error("Failed to parse wrapped data for comparison", error)
-    }
-  }
 
   const llmUsageRecords = await prisma.lLMUsage.findMany({
     where: {
@@ -67,105 +56,62 @@ export async function getHistoricalWrappedVersions(wrappedId: string) {
     },
   })
 
-  // Get current summary for comparison
-  let currentSummary: string | null = null
-  if (wrapped?.data) {
-    try {
-      const currentData = JSON.parse(wrapped.data)
-      currentSummary = currentData.summary || null
-    } catch (error) {
-      // Ignore
-    }
+  const currentId = pickCurrentUsageId(llmUsageRecords, wrapped?.generatedAt ?? null)
+
+  return llmUsageRecords.map((record) => ({
+    id: record.id,
+    createdAt: record.createdAt,
+    provider: record.provider,
+    model: record.model,
+    cost: record.cost,
+    totalTokens: record.totalTokens,
+    response: record.response,
+    userId: record.userId,
+    userName: record.user.name || record.user.email || "Unknown",
+    isCurrent: record.id === currentId,
+  }))
+}
+
+/** Zeroed statistics, for a version whose current Rewind is not a v1 or v2 row. */
+function emptyStatistics(): StoredWrappedData["statistics"] {
+  return storedWrappedDataSchema.shape.statistics.parse({})
+}
+
+/**
+ * Rebuild one version from its LLM response: a v2 response (creative output)
+ * goes through the v2 schema and assembly; a v1 response (the full sections
+ * list) is read with the lenient legacy schema. Null when it is neither.
+ */
+function rebuildVersion(
+  response: string,
+  context: { year: number; userId: string; userName: string; generatedAt: string; statistics: StoredWrappedData["statistics"] }
+): StoredWrappedData | null {
+  const v2 = parseWrappedLLMOutput(response)
+  if (v2.success) {
+    return { ...assembleWrappedData({ output: v2.output, ...context }), generatedAt: context.generatedAt }
   }
 
-  return llmUsageRecords.map((record: LLMUsageWithUser, index: number) => {
-    // Check if this version matches the current wrapped data
-    let isCurrent = false
-
-    // Try multiple comparison methods
-    if (index === 0) {
-      // The most recent version is typically the current one
-      if (record.response === null) {
-        // Text removed by the clean-up: nothing to compare
-        isCurrent = true
-      } else if (currentSummary) {
-        // Try comparing summary first (most reliable)
-        try {
-          let cleaned = record.response.trim()
-          if (cleaned.startsWith("```json")) {
-            cleaned = cleaned.replace(/^```json\n?/, "").replace(/\n?```$/, "")
-          } else if (cleaned.startsWith("```")) {
-            cleaned = cleaned.replace(/^```\n?/, "").replace(/\n?```$/, "")
-          }
-          const parsed = JSON.parse(cleaned)
-          if (parsed.summary === currentSummary) {
-            isCurrent = true
-          } else if (currentSectionsHash) {
-            // Fallback to section comparison
-            const versionSections = (parsed.sections || []).map((s: { id: string; type: string }) => ({
-              id: s.id,
-              type: s.type,
-            }))
-            const versionSectionsHash = JSON.stringify(versionSections.sort((a: { id: string; type: string }, b: { id: string; type: string }) => a.id.localeCompare(b.id)))
-            isCurrent = versionSectionsHash === currentSectionsHash
-          } else {
-            // If no comparison possible, assume most recent is current
-            isCurrent = true
-          }
-        } catch (error) {
-          // If parsing fails, but it's the most recent, assume it's current
-          isCurrent = true
-        }
-      } else if (currentSectionsHash) {
-        // Try section comparison if no summary
-        try {
-          let cleaned = record.response.trim()
-          if (cleaned.startsWith("```json")) {
-            cleaned = cleaned.replace(/^```json\n?/, "").replace(/\n?```$/, "")
-          } else if (cleaned.startsWith("```")) {
-            cleaned = cleaned.replace(/^```\n?/, "").replace(/\n?```$/, "")
-          }
-          const parsed = JSON.parse(cleaned) as { sections?: Array<{ id: string; type: string }> }
-          const versionSections = (parsed.sections || []).map((s) => ({
-            id: s.id,
-            type: s.type,
-          }))
-          const versionSectionsHash = JSON.stringify(versionSections.sort((a, b) => a.id.localeCompare(b.id)))
-          isCurrent = versionSectionsHash === currentSectionsHash
-        } catch (error) {
-          isCurrent = true
-        }
-      } else {
-        // If we can't compare, mark the most recent one as current
-        isCurrent = true
-      }
-    }
-
-    return {
-      id: record.id,
-      createdAt: record.createdAt,
-      provider: record.provider,
-      model: record.model,
-      cost: record.cost,
-      totalTokens: record.totalTokens,
-      response: record.response,
-      userId: record.userId,
-      userName: record.user.name || record.user.email || "Unknown",
-      isCurrent,
-    }
-  })
+  let json: unknown
+  try {
+    json = JSON.parse(stripCodeFences(response))
+  } catch {
+    return null
+  }
+  if (typeof json !== "object" || json === null || !("sections" in json)) return null
+  const v1 = storedWrappedDataSchema.safeParse({ ...json, ...context })
+  return v1.success ? v1.data : null
 }
 
 /**
  * Get a historical wrapped data from an LLM usage record (admin only).
  *
- * `wrappedData` is null when the October 2026 privacy clean-up removed the
- * record's response (P0.20); the page then shows the clean-up notice.
+ * Returns `removed: true` when the October 2026 privacy clean-up removed the
+ * record's response (P0.20); the page then shows the clean-up notice. Returns
+ * null when the record does not exist or its response cannot be rebuilt.
  */
 export async function getHistoricalWrappedData(llmUsageId: string, _wrappedId: string) {
   await requireAdmin()
 
-  // Get the LLM usage record
   const llmUsage = await prisma.lLMUsage.findUnique({
     where: { id: llmUsageId },
     include: {
@@ -205,63 +151,23 @@ export async function getHistoricalWrappedData(llmUsageId: string, _wrappedId: s
   }
 
   if (llmUsage.response === null) {
-    return { ...version, wrappedData: null }
+    return { ...version, removed: true as const }
   }
 
-  // Get the current wrapped data to extract statistics (they don't change between regenerations)
-  let statistics = null
-  try {
-    const currentWrappedData = JSON.parse(llmUsage.wrapped.data)
-    statistics = currentWrappedData.statistics
-  } catch (error) {
-    logger.error("Failed to parse current wrapped data for statistics", error)
-  }
+  const current = parseStoredRewind(llmUsage.wrapped.data)
+  const statistics = current.version === 1 || current.version === 2 ? current.legacy.statistics : emptyStatistics()
 
-  // Parse the LLM response
-  try {
-    // Clean the response - remove markdown code blocks if present
-    let cleaned = llmUsage.response.trim()
-    if (cleaned.startsWith("```json")) {
-      cleaned = cleaned.replace(/^```json\n?/, "").replace(/\n?```$/, "")
-    } else if (cleaned.startsWith("```")) {
-      cleaned = cleaned.replace(/^```\n?/, "").replace(/\n?```$/, "")
-    }
-
-    const parsed = JSON.parse(cleaned)
-
-    // Build wrapped data using statistics from current wrapped (if available)
-    // or create minimal statistics if not available
-    const wrappedData = {
-      year: version.year,
-      userId: version.userId,
-      userName: version.userName,
-      generatedAt: llmUsage.createdAt.toISOString(),
-      statistics: statistics || {
-        totalWatchTime: { total: 0, movies: 0, shows: 0 },
-        moviesWatched: 0,
-        showsWatched: 0,
-        episodesWatched: 0,
-        topMovies: [],
-        topShows: [],
-      },
-      sections: parsed.sections || [],
-      insights: parsed.insights || {
-        personality: "Viewer",
-        topGenre: "Various",
-        bingeWatcher: false,
-        discoveryScore: 50,
-        funFacts: [],
-      },
-      summary: parsed.summary || undefined,
-      metadata: {
-        totalSections: parsed.sections?.length || 0,
-        generationTime: 0,
-      },
-    }
-
-    return { ...version, wrappedData }
-  } catch (error) {
-    logger.error("Failed to parse historical wrapped data", error)
+  const wrappedData = rebuildVersion(llmUsage.response, {
+    year: version.year,
+    userId: version.userId,
+    userName: version.userName,
+    generatedAt: llmUsage.createdAt.toISOString(),
+    statistics,
+  })
+  if (!wrappedData) {
+    logger.error("Failed to rebuild historical wrapped data", { llmUsageId })
     return null
   }
+
+  return { ...version, removed: false as const, wrappedData }
 }

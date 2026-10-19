@@ -1,6 +1,8 @@
 "use client"
 
-import { motion } from "framer-motion"
+import { motion, useReducedMotion } from "motion/react"
+
+import { loop } from "@/lib/utils/motion-loop"
 import { parseStyledText } from "@/lib/wrapped/text-processor"
 
 interface FormattedTextProps {
@@ -19,6 +21,7 @@ export function FormattedText({
   className = "",
   highlightClassName = "font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent",
 }: FormattedTextProps) {
+  const reduceMotion = useReducedMotion()
   const parts = parseStyledText(text)
 
   // If no styling tags found, return plain text
@@ -35,13 +38,11 @@ export function FormattedText({
               key={index}
               className={highlightClassName}
               initial={{ scale: 1 }}
-              animate={{ scale: [1, 1.05, 1] }}
-              transition={{
-                duration: 0.5,
-                delay: index * 0.1,
-                repeat: Infinity,
-                repeatDelay: 3,
-              }}
+              {...loop(
+                reduceMotion,
+                { scale: [1, 1.05, 1] },
+                { duration: 0.5, delay: index * 0.1, repeat: Infinity, repeatDelay: 3 }
+              )}
             >
               {part.content}
             </motion.span>

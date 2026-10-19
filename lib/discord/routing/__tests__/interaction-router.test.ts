@@ -106,6 +106,8 @@ import type { Interaction } from "discord.js"
 import type { SlashCommand } from "../../commands/registry"
 import type { VerifyDiscordUserResult } from "../../services"
 import type { DiscordCommandLog, DiscordCommandType } from "@/lib/generated/prisma/client"
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 // Let withAuditLog run for real, but stub the DB writes it delegates to so we
 // can assert the SUCCESS / FAILED lifecycle without a live database.
@@ -123,7 +125,9 @@ jest.mock("../../services", () => ({
 // registry → mark/index → plex-config → lib/prisma (needs DATABASE_URL) at import
 // time. Stub prisma so the module graph loads under jsdom; the router only reads
 // injected deps, so the real registry defaults are never exercised here.
-jest.mock("@/lib/prisma", () => ({ prisma: {} }))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 const mockCreate = createCommandLog as jest.MockedFunction<typeof createCommandLog>
 const mockUpdate = updateCommandLog as jest.MockedFunction<typeof updateCommandLog>

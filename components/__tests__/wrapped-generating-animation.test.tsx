@@ -132,8 +132,8 @@ describe('WrappedGeneratingAnimation', () => {
     it('should cycle through phrases over time', async () => {
       render(<WrappedGeneratingAnimation year={2024} compact />)
 
-      // Get initial phrase container
-      const phraseContainer = screen.getByText('|').parentElement
+      // The typing cursor is rendered before the animation advances
+      screen.getByText('|')
 
       // Fast forward through typing animation (80ms per char * ~50 chars)
       act(() => {
@@ -216,7 +216,7 @@ describe('WrappedGeneratingAnimation', () => {
 
   describe('Responsive Design', () => {
     it('should apply responsive classes in full screen mode', () => {
-      const { container } = render(<WrappedGeneratingAnimation year={2024} />)
+      render(<WrappedGeneratingAnimation year={2024} />)
 
       // Should have responsive text sizes (md:text-6xl, md:text-3xl, etc.)
       const title = screen.getByText(/Creating Your 2024 Wrapped/i)

@@ -1,5 +1,8 @@
 import { getLLMUsageRecords } from "@/actions/admin"
 import { aggregateLlmUsage } from "@/lib/utils"
+import { getFormat } from "@/lib/settings/app-settings"
+import type { BoundFormat } from "@/lib/utils/format"
+import { dayKey } from "@/lib/utils/zoned-time"
 import Link from "next/link"
 import Image from "next/image"
 import { ConversationUsageRow } from "@/components/admin/llm-usage/conversation-usage-row"
@@ -8,22 +11,13 @@ import { ExpandablePrompt } from "@/components/admin/prompts/expandable-prompt"
 
 export const dynamic = "force-dynamic"
 
-function formatTimeRange(start: Date, end: Date) {
-  const sameDay = start.toDateString() === end.toDateString()
-  const dateFormatter = new Intl.DateTimeFormat("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  })
-  const timeFormatter = new Intl.DateTimeFormat("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-  })
-
-  const startDate = dateFormatter.format(start)
-  const endDate = dateFormatter.format(end)
-  const startTime = timeFormatter.format(start)
-  const endTime = timeFormatter.format(end)
+function formatTimeRange(start: Date, end: Date, f: BoundFormat) {
+  const { timeZone } = f.settings
+  const sameDay = dayKey(start.getTime(), timeZone) === dayKey(end.getTime(), timeZone)
+  const startDate = f.date(start)
+  const endDate = f.date(end)
+  const startTime = f.time(start)
+  const endTime = f.time(end)
 
   if (sameDay) {
     // Example: "Nov 24 · 10:12–10:14"
@@ -57,7 +51,10 @@ export default async function LLMConversationPage({
   const { conversationId } = await params
 
   // For now, fetch first page with a generous page size – chatbot conversations are short
-  const { records } = await getLLMUsageRecords(1, 100, undefined, conversationId)
+  const [{ records }, f] = await Promise.all([
+    getLLMUsageRecords(1, 100, undefined, conversationId),
+    getFormat(),
+  ])
 
   if (!records.length) {
     return (
@@ -164,7 +161,7 @@ export default async function LLMConversationPage({
           >
             ← Back to LLM Requests
           </Link>
-          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+          <h1 data-testid="admin-llm-conversation-heading" className="text-2xl sm:text-3xl font-bold text-white mb-2">
             Conversation LLM Usage
           </h1>
           <p className="text-sm text-slate-400">
@@ -211,7 +208,7 @@ export default async function LLMConversationPage({
               {callsCount} call{callsCount === 1 ? "" : "s"}
             </div>
             <div className="text-xs text-slate-500 mt-1">
-              {formatTimeRange(startedAt, endedAt)} ({getDurationLabel(startedAt, endedAt)})
+              {formatTimeRange(startedAt, endedAt, f)} ({getDurationLabel(startedAt, endedAt)})
             </div>
             {summary?.model && (
               <div className="text-xs text-slate-500 mt-1">
@@ -222,14 +219,14 @@ export default async function LLMConversationPage({
           <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
             <div className="text-sm text-slate-400 mb-1">Total Usage</div>
             <div className="text-2xl font-bold text-green-400">
-              ${summary?.cost.toFixed(4) ?? "0.0000"}
+              {f.money(summary?.cost ?? 0)}
             </div>
             <div className="text-xs text-slate-500 mt-1">
-              {summary?.totalTokens.toLocaleString() ?? "0"} tokens
+              {f.tokens(summary?.totalTokens ?? 0)}
             </div>
             <div className="text-xs text-slate-500">
-              {summary?.promptTokens.toLocaleString() ?? "0"} prompt +{" "}
-              {summary?.completionTokens.toLocaleString() ?? "0"} completion
+              {f.number(summary?.promptTokens ?? 0)} prompt +{" "}
+              {f.number(summary?.completionTokens ?? 0)} completion
             </div>
           </div>
         </div>

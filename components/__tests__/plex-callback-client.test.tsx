@@ -56,14 +56,13 @@ const mockUseSearchParams = useSearchParams as jest.Mock
 const mockPush = jest.fn()
 
 /**
- * Wire up the standard regular-login search params (a pin id, no invite/test
- * token) unless overridden.
+ * Wire up the standard regular-login search params (a pin id, no invite)
+ * unless overridden.
  */
 function setSearchParams(params: Record<string, string | null> = {}) {
   const defaults: Record<string, string | null> = {
     plexPinId: 'pin-123',
     inviteCode: null,
-    testToken: null,
   }
   const merged = { ...defaults, ...params }
   mockUseSearchParams.mockReturnValue({

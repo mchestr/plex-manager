@@ -18,8 +18,10 @@ import {
 } from "@/lib/discord/role-metadata"
 import { checkUserServerAccess } from "@/lib/connections/plex"
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
-import { fetchTautulliStatistics } from "@/lib/wrapped/statistics"
+import { fetchTautulliStatistics } from "@/lib/wrapped/tautulli-statistics"
 import { prisma } from "@/lib/prisma"
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 jest.mock("@/lib/utils/logger", () => ({
   createLogger: jest.fn(() => ({
@@ -38,17 +40,13 @@ jest.mock("@/lib/connections/plex-config", () => ({
   getActivePlexServerConfig: jest.fn(),
 }))
 
-jest.mock("@/lib/wrapped/statistics", () => ({
+jest.mock("@/lib/wrapped/tautulli-statistics", () => ({
   fetchTautulliStatistics: jest.fn(),
 }))
 
-jest.mock("@/lib/prisma", () => ({
-  prisma: {
-    tautulli: {
-      findFirst: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 const mockCheckAccess = checkUserServerAccess as jest.Mock
 const mockGetPlexConfig = getActivePlexServerConfig as jest.Mock

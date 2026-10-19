@@ -50,7 +50,6 @@ const REVIEWED_CREDENTIAL_INPUTS: Record<string, string> = {
     "the caller's own Plex token, sent only to https://plex.tv/api/v2/user; the server comes from the database",
   'actions/invite.ts processInvite(plexAuthToken: string)':
     "the invitee's own Plex token, sent only to plex.tv (user info and shared_servers accept)",
-  'lib/plex-auth.ts verifyPlexAuthToken(authToken: string)': 'sent only to https://plex.tv/api/v2',
   'actions/discord.ts updateDiscordIntegrationSettings(parse(...) -> botToken)':
     'requireAdmin(); stores the Discord bot token, which the bot sends only to Discord',
 }

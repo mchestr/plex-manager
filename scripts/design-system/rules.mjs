@@ -1,0 +1,98 @@
+/**
+ * The design-debt rules of ui-design-system 9.6 and the per-file counter
+ * behind `scripts/check-design-system.mjs` (plan step P1.8).
+ *
+ * Each rule is `{ id, description, pattern, scope?, allow?, ast? }`:
+ * - `pattern` is a global regex counted over the raw source, unless `ast`
+ *   says which AST text it runs over instead (`'jsx-text'`), or adds a second
+ *   AST pass (`{ target: 'style', pattern }`) on top of the raw count;
+ * - `scope(path)` returns false for paths the rule skips;
+ * - `allow` lists exact paths where the rule is not counted.
+ *
+ * Rewind is not exempt from NFR-6: P5.2 adds a Rewind-scoped motion check for
+ * the paths `rewind-only` and `infinite-motion` skip here.
+ *
+ * Pure functions with no `import.meta`, so Jest's SWC transform can load it.
+ */
+
+import { jsxTexts, styleLiterals } from './ast.mjs'
+import { sortKeys } from './baseline.mjs'
+
+const PALETTE =
+  'slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose'
+const PREFIXES =
+  'bg|text|border|ring|from|via|to|fill|stroke|outline|divide|placeholder|shadow|decoration|caret|accent'
+
+const REWIND_PATHS = ['components/rewind/', 'lib/rewind/']
+const outsideRewind = (path) => !REWIND_PATHS.some((prefix) => path.startsWith(prefix))
+
+/** The Rewind block of `app/globals.css` (P3.1 adds the markers). */
+const REWIND_BLOCK = /\/\* rewind-scope:start \*\/[\s\S]*?\/\* rewind-scope:end \*\//g
+
+export const RULES = [
+  {
+    id: 'raw-palette',
+    description: 'Raw Tailwind palette utilities instead of semantic tokens',
+    pattern: new RegExp(`\\b(?:${PREFIXES})-(?:(?:${PALETTE})-\\d{2,3}|white|black)(?:\\/\\d{1,3})?\\b`, 'g'),
+  },
+  { id: 'gradient', description: 'Gradient backgrounds', pattern: /\bbg-(?:gradient|linear|radial|conic)-/g },
+  { id: 'gradient-text', description: 'Gradient text', pattern: /\bbg-clip-text\b|\btext-transparent\b/g },
+  {
+    id: 'arbitrary-color',
+    description: 'Arbitrary colours, and hex literals in style={{}}',
+    pattern: /\[(?:#[0-9a-fA-F]{3,8}|rgba?\(|hsla?\()/g,
+    ast: { target: 'style', pattern: /#[0-9a-fA-F]{3,8}\b/g },
+  },
+  {
+    id: 'arbitrary-type-z',
+    description: 'Arbitrary type sizes, tracking and z-index',
+    pattern: /\btext-\[\d+px\]|\btracking-\[|\bz-\[\d+\]/g,
+  },
+  // P6.3 adds the member top bar to `allow` when it creates it.
+  { id: 'blur', description: 'Backdrop blur', pattern: /\bbackdrop-blur/g, allow: [] },
+  { id: 'caps-eyebrow', description: 'Uppercase tracked eyebrows', pattern: /\buppercase\b[^"']*\btracking-/g },
+  {
+    id: 'infinite-motion',
+    description: 'Infinite motion outside Rewind (animate-spin and animate-skeleton stay allowed)',
+    pattern: /repeat:\s*Infinity|animate-(?:bounce|ping|pulse)\b/g,
+    scope: outsideRewind,
+  },
+  {
+    id: 'rewind-only',
+    description: 'Rewind-only tokens, fonts and Button variants outside Rewind',
+    pattern: /--(?:rw-|field\b|ink\b|spot\b|deep\b|arch-)|\bfont-(?:display|text)\b|variant="ink(?:-outline)?"|size="(?:icon-)?pill"/g,
+    scope: outsideRewind,
+  },
+  {
+    id: 'copy',
+    description: 'Arrows, middots, "Wrapped" and "Plex Rewind" in JSX copy',
+    pattern: /\s(?:->|→)\s*$|\s·\s|\bWrapped\b|Plex Rewind/g,
+    ast: 'jsx-text',
+  },
+  { id: 'zoom-lock', description: 'Viewport zoom lock', pattern: /maximumScale|userScalable/g },
+]
+
+function countIn(pattern, texts) {
+  return texts.reduce((sum, text) => sum + (text.match(pattern)?.length ?? 0), 0)
+}
+
+/** Counts every rule in one file. Only non-zero counts appear, keys sorted. */
+export function countFile(path, source) {
+  const jsx = /\.tsx?$/.test(path)
+  const counts = {}
+  for (const rule of RULES) {
+    if (rule.scope && !rule.scope(path)) continue
+    if (rule.allow?.includes(path)) continue
+    const raw = rule.scope ? source.replace(REWIND_BLOCK, '') : source
+    let n
+    if (rule.ast === 'jsx-text') n = jsx ? countIn(rule.pattern, jsxTexts(path, source)) : 0
+    else {
+      n = countIn(rule.pattern, [raw])
+      if (rule.ast && jsx) n += countIn(rule.ast.pattern, styleLiterals(path, source))
+    }
+    if (n > 0) counts[rule.id] = n
+  }
+  return sortKeys(counts)
+}
+
+export { compare, update, nonZero, sortKeys, totals } from './baseline.mjs'

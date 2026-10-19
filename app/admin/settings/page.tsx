@@ -1,11 +1,19 @@
 import { getAdminSettings } from "@/actions/admin"
 import { getStripeConfig } from "@/actions/admin/admin-config"
-import { DiscordIntegrationForm, JellyfinLoginToggle, LLMProviderForm, LLMToggle, ServerForm } from "@/components/admin/settings/settings-edit-forms"
-import { StripeSettingsForm } from "@/components/admin/settings/StripeSettingsForm"
+import { getRewindSeasonDataPreparedAt } from "@/actions/admin/rewind-season"
+import { DiscordIntegrationForm } from "@/components/admin/settings/discord-integration-form"
+import { JellyfinLoginToggle } from "@/components/admin/settings/jellyfin-login-toggle"
+import { LLMProviderForm } from "@/components/admin/settings/llm-provider-form"
+import { LLMToggle } from "@/components/admin/settings/llm-toggle"
+import { ServerForm } from "@/components/admin/settings/server-form"
+import { StripeSettingsForm } from "@/components/admin/settings/stripe-settings-form"
 import { WatchlistSyncSettings } from "@/components/admin/settings/watchlist-sync-settings"
 import { WrappedSettingsForm } from "@/components/admin/settings/wrapped-settings-form"
-import { getBaseUrl } from "@/lib/utils"
-import { getSeasonYear } from "@/lib/wrapped/season"
+import { getBaseUrl } from "@/lib/env"
+import { getFormat } from "@/lib/settings/app-settings"
+import { serverZone } from "@/lib/utils/server-zone"
+import { instantToWallTime } from "@/lib/utils/zoned-time"
+import { getSeasonState } from "@/lib/wrapped/season"
 
 export const dynamic = 'force-dynamic'
 
@@ -56,7 +64,8 @@ function FeatureStatusBadge({ featureName, enabled }: FeatureStatusBadgeProps) {
 export default async function SettingsPage() {
   const settings = await getAdminSettings()
   const stripeConfig = await getStripeConfig()
-  const seasonYear = await getSeasonYear()
+  const [season, zone, f] = await Promise.all([getSeasonState(), serverZone(), getFormat()])
+  const seasonDataPreparedAt = await getRewindSeasonDataPreparedAt(season.seasonYear)
   const baseUrl = getBaseUrl()
   const discordPortalUrl = `${baseUrl}/discord/link`
   const nodeVersion = process.version
@@ -109,7 +118,7 @@ export default async function SettingsPage() {
                   </div>
                   <div>
                     <div className="text-xs font-medium text-slate-400 mb-1">Node.js Version</div>
-                    <div className="text-sm text-white font-mono">{nodeVersion}</div>
+                    <div className="text-sm text-white font-mono" data-visual-mask>{nodeVersion}</div>
                   </div>
                 </div>
               </div>
@@ -172,9 +181,13 @@ export default async function SettingsPage() {
                   <div className="space-y-4">
                     <WrappedSettingsForm
                       enabled={settings.config.wrappedEnabled ?? true}
-                      year={seasonYear}
-                      startDate={settings.config.wrappedGenerationStartDate}
-                      endDate={settings.config.wrappedGenerationEndDate}
+                      year={season.seasonYear}
+                      opens={settings.config.rewindSeasonOpens}
+                      closes={settings.config.rewindSeasonCloses}
+                      seasonOpen={season.isOpen}
+                      zone={zone}
+                      configuredZone={settings.config.timezone}
+                      seasonDataPreparedAt={seasonDataPreparedAt && instantToWallTime(new Date(seasonDataPreparedAt), zone)}
                     />
                     <div className="pt-4 border-t border-slate-700">
                       <LLMProviderForm
@@ -424,9 +437,9 @@ export default async function SettingsPage() {
                   </div>
                   <div>
                     <div className="text-xs font-medium text-slate-400 mb-1">Last Config Update</div>
-                    <div className="text-sm text-slate-300">
+                    <div className="text-sm text-slate-300" data-testid="settings-config-updated-timestamp">
                       {settings.config.updatedAt
-                        ? new Date(settings.config.updatedAt).toLocaleString()
+                        ? f.dateTime(settings.config.updatedAt, { zoneLabel: true })
                         : "Never"}
                     </div>
                   </div>

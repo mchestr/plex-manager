@@ -1,0 +1,469 @@
+{
+  "id": "no-overseerr",
+  "description": "No Overseerr on the server: a weeknight sitcom habit and Friday films, with no request data.",
+  "member": {
+    "displayName": "Daniel Osei",
+    "userName": null,
+    "timezone": null,
+    "hiddenRatingKeys": []
+  },
+  "server": {
+    "name": "Chester Family Plex",
+    "zone": "America/Chicago",
+    "overseerr": false,
+    "peers": {
+      "members": 12,
+      "hours": [
+        610,
+        402,
+        355,
+        290,
+        240,
+        198,
+        150,
+        96,
+        61,
+        22,
+        3
+      ]
+    }
+  },
+  "window": {
+    "year": 2026,
+    "finalCut": false
+  },
+  "history": [
+    {"user_id":1,"started":1767661200,"stopped":1767663000,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28010101","grandparent_rating_key":"2801","parent_media_index":1,"media_index":1,"title":"Episode 1","grandparent_title":"The Office","year":2005,"originally_available_at":"2005-01-01","guid":"plex://episode/28010101","section_id":"2"},
+    {"user_id":1,"started":1767747600,"stopped":1767749400,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28020101","grandparent_rating_key":"2802","parent_media_index":1,"media_index":1,"title":"Episode 1","grandparent_title":"Parks and Recreation","year":2009,"originally_available_at":"2009-01-01","guid":"plex://episode/28020101","section_id":"2"},
+    {"user_id":1,"started":1767834000,"stopped":1767835800,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28030101","grandparent_rating_key":"2803","parent_media_index":1,"media_index":1,"title":"Episode 1","grandparent_title":"Abbott Elementary","year":2021,"originally_available_at":"2021-01-01","guid":"plex://episode/28030101","section_id":"2"},
+    {"user_id":1,"started":1767920400,"stopped":1767922200,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28040101","grandparent_rating_key":"2804","parent_media_index":1,"media_index":1,"title":"Episode 1","grandparent_title":"Seinfeld","year":1989,"originally_available_at":"1989-01-01","guid":"plex://episode/28040101","section_id":"2"},
+    {"user_id":1,"started":1768010400,"stopped":1768016400,"play_duration":6000,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2810","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Jurassic Park","grandparent_title":"","year":1993,"originally_available_at":"1993-01-01","guid":"plex://movie/2810","section_id":"1"},
+    {"user_id":1,"started":1768266000,"stopped":1768267800,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28010102","grandparent_rating_key":"2801","parent_media_index":1,"media_index":2,"title":"Episode 2","grandparent_title":"The Office","year":2005,"originally_available_at":"2005-01-01","guid":"plex://episode/28010102","section_id":"2"},
+    {"user_id":1,"started":1768352400,"stopped":1768354200,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28020102","grandparent_rating_key":"2802","parent_media_index":1,"media_index":2,"title":"Episode 2","grandparent_title":"Parks and Recreation","year":2009,"originally_available_at":"2009-01-01","guid":"plex://episode/28020102","section_id":"2"},
+    {"user_id":1,"started":1768438800,"stopped":1768440600,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28030102","grandparent_rating_key":"2803","parent_media_index":1,"media_index":2,"title":"Episode 2","grandparent_title":"Abbott Elementary","year":2021,"originally_available_at":"2021-01-01","guid":"plex://episode/28030102","section_id":"2"},
+    {"user_id":1,"started":1768525200,"stopped":1768527000,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28040102","grandparent_rating_key":"2804","parent_media_index":1,"media_index":2,"title":"Episode 2","grandparent_title":"Seinfeld","year":1989,"originally_available_at":"1989-01-01","guid":"plex://episode/28040102","section_id":"2"},
+    {"user_id":1,"started":1768615200,"stopped":1768621200,"play_duration":6000,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2811","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Schindler's List","grandparent_title":"","year":1993,"originally_available_at":"1993-01-01","guid":"plex://movie/2811","section_id":"1"},
+    {"user_id":1,"started":1768870800,"stopped":1768872600,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28010103","grandparent_rating_key":"2801","parent_media_index":1,"media_index":3,"title":"Episode 3","grandparent_title":"The Office","year":2005,"originally_available_at":"2005-01-01","guid":"plex://episode/28010103","section_id":"2"},
+    {"user_id":1,"started":1768957200,"stopped":1768959000,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28020103","grandparent_rating_key":"2802","parent_media_index":1,"media_index":3,"title":"Episode 3","grandparent_title":"Parks and Recreation","year":2009,"originally_available_at":"2009-01-01","guid":"plex://episode/28020103","section_id":"2"},
+    {"user_id":1,"started":1769043600,"stopped":1769045400,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28030103","grandparent_rating_key":"2803","parent_media_index":1,"media_index":3,"title":"Episode 3","grandparent_title":"Abbott Elementary","year":2021,"originally_available_at":"2021-01-01","guid":"plex://episode/28030103","section_id":"2"},
+    {"user_id":1,"started":1769130000,"stopped":1769131800,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28040103","grandparent_rating_key":"2804","parent_media_index":1,"media_index":3,"title":"Episode 3","grandparent_title":"Seinfeld","year":1989,"originally_available_at":"1989-01-01","guid":"plex://episode/28040103","section_id":"2"},
+    {"user_id":1,"started":1769220000,"stopped":1769226000,"play_duration":6000,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2812","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Pulp Fiction","grandparent_title":"","year":1994,"originally_available_at":"1994-01-01","guid":"plex://movie/2812","section_id":"1"},
+    {"user_id":1,"started":1769475600,"stopped":1769477400,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28010104","grandparent_rating_key":"2801","parent_media_index":1,"media_index":4,"title":"Episode 4","grandparent_title":"The Office","year":2005,"originally_available_at":"2005-01-01","guid":"plex://episode/28010104","section_id":"2"},
+    {"user_id":1,"started":1769562000,"stopped":1769563800,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28020104","grandparent_rating_key":"2802","parent_media_index":1,"media_index":4,"title":"Episode 4","grandparent_title":"Parks and Recreation","year":2009,"originally_available_at":"2009-01-01","guid":"plex://episode/28020104","section_id":"2"},
+    {"user_id":1,"started":1769648400,"stopped":1769650200,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28030104","grandparent_rating_key":"2803","parent_media_index":1,"media_index":4,"title":"Episode 4","grandparent_title":"Abbott Elementary","year":2021,"originally_available_at":"2021-01-01","guid":"plex://episode/28030104","section_id":"2"},
+    {"user_id":1,"started":1769734800,"stopped":1769736600,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28040104","grandparent_rating_key":"2804","parent_media_index":1,"media_index":4,"title":"Episode 4","grandparent_title":"Seinfeld","year":1989,"originally_available_at":"1989-01-01","guid":"plex://episode/28040104","section_id":"2"},
+    {"user_id":1,"started":1769824800,"stopped":1769830800,"play_duration":6000,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2813","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"The Shawshank Redemption","grandparent_title":"","year":1994,"originally_available_at":"1994-01-01","guid":"plex://movie/2813","section_id":"1"},
+    {"user_id":1,"started":1770080400,"stopped":1770082200,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28010105","grandparent_rating_key":"2801","parent_media_index":1,"media_index":5,"title":"Episode 5","grandparent_title":"The Office","year":2005,"originally_available_at":"2005-01-01","guid":"plex://episode/28010105","section_id":"2"},
+    {"user_id":1,"started":1770166800,"stopped":1770168600,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28020105","grandparent_rating_key":"2802","parent_media_index":1,"media_index":5,"title":"Episode 5","grandparent_title":"Parks and Recreation","year":2009,"originally_available_at":"2009-01-01","guid":"plex://episode/28020105","section_id":"2"},
+    {"user_id":1,"started":1770253200,"stopped":1770255000,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28030105","grandparent_rating_key":"2803","parent_media_index":1,"media_index":5,"title":"Episode 5","grandparent_title":"Abbott Elementary","year":2021,"originally_available_at":"2021-01-01","guid":"plex://episode/28030105","section_id":"2"},
+    {"user_id":1,"started":1770339600,"stopped":1770341400,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28040105","grandparent_rating_key":"2804","parent_media_index":1,"media_index":5,"title":"Episode 5","grandparent_title":"Seinfeld","year":1989,"originally_available_at":"1989-01-01","guid":"plex://episode/28040105","section_id":"2"},
+    {"user_id":1,"started":1770429600,"stopped":1770435600,"play_duration":6000,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2814","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Heat","grandparent_title":"","year":1995,"originally_available_at":"1995-01-01","guid":"plex://movie/2814","section_id":"1"},
+    {"user_id":1,"started":1770685200,"stopped":1770687000,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28010106","grandparent_rating_key":"2801","parent_media_index":1,"media_index":6,"title":"Episode 6","grandparent_title":"The Office","year":2005,"originally_available_at":"2005-01-01","guid":"plex://episode/28010106","section_id":"2"},
+    {"user_id":1,"started":1770771600,"stopped":1770773400,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28020106","grandparent_rating_key":"2802","parent_media_index":1,"media_index":6,"title":"Episode 6","grandparent_title":"Parks and Recreation","year":2009,"originally_available_at":"2009-01-01","guid":"plex://episode/28020106","section_id":"2"},
+    {"user_id":1,"started":1770858000,"stopped":1770859800,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28030106","grandparent_rating_key":"2803","parent_media_index":1,"media_index":6,"title":"Episode 6","grandparent_title":"Abbott Elementary","year":2021,"originally_available_at":"2021-01-01","guid":"plex://episode/28030106","section_id":"2"},
+    {"user_id":1,"started":1770944400,"stopped":1770946200,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28040106","grandparent_rating_key":"2804","parent_media_index":1,"media_index":6,"title":"Episode 6","grandparent_title":"Seinfeld","year":1989,"originally_available_at":"1989-01-01","guid":"plex://episode/28040106","section_id":"2"},
+    {"user_id":1,"started":1771034400,"stopped":1771040400,"play_duration":6000,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2815","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Toy Story","grandparent_title":"","year":1995,"originally_available_at":"1995-01-01","guid":"plex://movie/2815","section_id":"1"},
+    {"user_id":1,"started":1771290000,"stopped":1771291800,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28010107","grandparent_rating_key":"2801","parent_media_index":1,"media_index":7,"title":"Episode 7","grandparent_title":"The Office","year":2005,"originally_available_at":"2005-01-01","guid":"plex://episode/28010107","section_id":"2"},
+    {"user_id":1,"started":1771376400,"stopped":1771378200,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28020107","grandparent_rating_key":"2802","parent_media_index":1,"media_index":7,"title":"Episode 7","grandparent_title":"Parks and Recreation","year":2009,"originally_available_at":"2009-01-01","guid":"plex://episode/28020107","section_id":"2"},
+    {"user_id":1,"started":1771462800,"stopped":1771464600,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28030107","grandparent_rating_key":"2803","parent_media_index":1,"media_index":7,"title":"Episode 7","grandparent_title":"Abbott Elementary","year":2021,"originally_available_at":"2021-01-01","guid":"plex://episode/28030107","section_id":"2"},
+    {"user_id":1,"started":1771549200,"stopped":1771551000,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28040107","grandparent_rating_key":"2804","parent_media_index":1,"media_index":7,"title":"Episode 7","grandparent_title":"Seinfeld","year":1989,"originally_available_at":"1989-01-01","guid":"plex://episode/28040107","section_id":"2"},
+    {"user_id":1,"started":1771639200,"stopped":1771645200,"play_duration":6000,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2816","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Fargo","grandparent_title":"","year":1996,"originally_available_at":"1996-01-01","guid":"plex://movie/2816","section_id":"1"},
+    {"user_id":1,"started":1771894800,"stopped":1771896600,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28010108","grandparent_rating_key":"2801","parent_media_index":1,"media_index":8,"title":"Episode 8","grandparent_title":"The Office","year":2005,"originally_available_at":"2005-01-01","guid":"plex://episode/28010108","section_id":"2"},
+    {"user_id":1,"started":1771981200,"stopped":1771983000,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28020108","grandparent_rating_key":"2802","parent_media_index":1,"media_index":8,"title":"Episode 8","grandparent_title":"Parks and Recreation","year":2009,"originally_available_at":"2009-01-01","guid":"plex://episode/28020108","section_id":"2"},
+    {"user_id":1,"started":1772067600,"stopped":1772069400,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28030108","grandparent_rating_key":"2803","parent_media_index":1,"media_index":8,"title":"Episode 8","grandparent_title":"Abbott Elementary","year":2021,"originally_available_at":"2021-01-01","guid":"plex://episode/28030108","section_id":"2"},
+    {"user_id":1,"started":1772154000,"stopped":1772155800,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28040108","grandparent_rating_key":"2804","parent_media_index":1,"media_index":8,"title":"Episode 8","grandparent_title":"Seinfeld","year":1989,"originally_available_at":"1989-01-01","guid":"plex://episode/28040108","section_id":"2"},
+    {"user_id":1,"started":1772244000,"stopped":1772250000,"play_duration":6000,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2817","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Titanic","grandparent_title":"","year":1997,"originally_available_at":"1997-01-01","guid":"plex://movie/2817","section_id":"1"},
+    {"user_id":1,"started":1772499600,"stopped":1772501400,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28010109","grandparent_rating_key":"2801","parent_media_index":1,"media_index":9,"title":"Episode 9","grandparent_title":"The Office","year":2005,"originally_available_at":"2005-01-01","guid":"plex://episode/28010109","section_id":"2"},
+    {"user_id":1,"started":1772586000,"stopped":1772587800,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28020109","grandparent_rating_key":"2802","parent_media_index":1,"media_index":9,"title":"Episode 9","grandparent_title":"Parks and Recreation","year":2009,"originally_available_at":"2009-01-01","guid":"plex://episode/28020109","section_id":"2"},
+    {"user_id":1,"started":1772672400,"stopped":1772674200,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28030109","grandparent_rating_key":"2803","parent_media_index":1,"media_index":9,"title":"Episode 9","grandparent_title":"Abbott Elementary","year":2021,"originally_available_at":"2021-01-01","guid":"plex://episode/28030109","section_id":"2"},
+    {"user_id":1,"started":1772758800,"stopped":1772760600,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28040109","grandparent_rating_key":"2804","parent_media_index":1,"media_index":9,"title":"Episode 9","grandparent_title":"Seinfeld","year":1989,"originally_available_at":"1989-01-01","guid":"plex://episode/28040109","section_id":"2"},
+    {"user_id":1,"started":1772848800,"stopped":1772854800,"play_duration":6000,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2818","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"The Big Lebowski","grandparent_title":"","year":1998,"originally_available_at":"1998-01-01","guid":"plex://movie/2818","section_id":"1"},
+    {"user_id":1,"started":1773100800,"stopped":1773102600,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28010110","grandparent_rating_key":"2801","parent_media_index":1,"media_index":10,"title":"Episode 10","grandparent_title":"The Office","year":2005,"originally_available_at":"2005-01-01","guid":"plex://episode/28010110","section_id":"2"},
+    {"user_id":1,"started":1773187200,"stopped":1773189000,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28020110","grandparent_rating_key":"2802","parent_media_index":1,"media_index":10,"title":"Episode 10","grandparent_title":"Parks and Recreation","year":2009,"originally_available_at":"2009-01-01","guid":"plex://episode/28020110","section_id":"2"},
+    {"user_id":1,"started":1773273600,"stopped":1773275400,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28030110","grandparent_rating_key":"2803","parent_media_index":1,"media_index":10,"title":"Episode 10","grandparent_title":"Abbott Elementary","year":2021,"originally_available_at":"2021-01-01","guid":"plex://episode/28030110","section_id":"2"},
+    {"user_id":1,"started":1773360000,"stopped":1773361800,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28040110","grandparent_rating_key":"2804","parent_media_index":1,"media_index":10,"title":"Episode 10","grandparent_title":"Seinfeld","year":1989,"originally_available_at":"1989-01-01","guid":"plex://episode/28040110","section_id":"2"},
+    {"user_id":1,"started":1773450000,"stopped":1773456000,"play_duration":6000,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2819","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"The Matrix","grandparent_title":"","year":1999,"originally_available_at":"1999-01-01","guid":"plex://movie/2819","section_id":"1"},
+    {"user_id":1,"started":1773705600,"stopped":1773707400,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28010111","grandparent_rating_key":"2801","parent_media_index":1,"media_index":11,"title":"Episode 11","grandparent_title":"The Office","year":2005,"originally_available_at":"2005-01-01","guid":"plex://episode/28010111","section_id":"2"},
+    {"user_id":1,"started":1773792000,"stopped":1773793800,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28020111","grandparent_rating_key":"2802","parent_media_index":1,"media_index":11,"title":"Episode 11","grandparent_title":"Parks and Recreation","year":2009,"originally_available_at":"2009-01-01","guid":"plex://episode/28020111","section_id":"2"},
+    {"user_id":1,"started":1773878400,"stopped":1773880200,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28030111","grandparent_rating_key":"2803","parent_media_index":1,"media_index":11,"title":"Episode 11","grandparent_title":"Abbott Elementary","year":2021,"originally_available_at":"2021-01-01","guid":"plex://episode/28030111","section_id":"2"},
+    {"user_id":1,"started":1773964800,"stopped":1773966600,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28040111","grandparent_rating_key":"2804","parent_media_index":1,"media_index":11,"title":"Episode 11","grandparent_title":"Seinfeld","year":1989,"originally_available_at":"1989-01-01","guid":"plex://episode/28040111","section_id":"2"},
+    {"user_id":1,"started":1774054800,"stopped":1774060800,"play_duration":6000,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2820","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Fight Club","grandparent_title":"","year":1999,"originally_available_at":"1999-01-01","guid":"plex://movie/2820","section_id":"1"},
+    {"user_id":1,"started":1774310400,"stopped":1774312200,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28010112","grandparent_rating_key":"2801","parent_media_index":1,"media_index":12,"title":"Episode 12","grandparent_title":"The Office","year":2005,"originally_available_at":"2005-01-01","guid":"plex://episode/28010112","section_id":"2"},
+    {"user_id":1,"started":1774396800,"stopped":1774398600,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28020112","grandparent_rating_key":"2802","parent_media_index":1,"media_index":12,"title":"Episode 12","grandparent_title":"Parks and Recreation","year":2009,"originally_available_at":"2009-01-01","guid":"plex://episode/28020112","section_id":"2"},
+    {"user_id":1,"started":1774483200,"stopped":1774485000,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28030112","grandparent_rating_key":"2803","parent_media_index":1,"media_index":12,"title":"Episode 12","grandparent_title":"Abbott Elementary","year":2021,"originally_available_at":"2021-01-01","guid":"plex://episode/28030112","section_id":"2"},
+    {"user_id":1,"started":1774569600,"stopped":1774571400,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28040112","grandparent_rating_key":"2804","parent_media_index":1,"media_index":12,"title":"Episode 12","grandparent_title":"Seinfeld","year":1989,"originally_available_at":"1989-01-01","guid":"plex://episode/28040112","section_id":"2"},
+    {"user_id":1,"started":1774659600,"stopped":1774665600,"play_duration":6000,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2821","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Gladiator","grandparent_title":"","year":2000,"originally_available_at":"2000-01-01","guid":"plex://movie/2821","section_id":"1"},
+    {"user_id":1,"started":1774915200,"stopped":1774917000,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28010113","grandparent_rating_key":"2801","parent_media_index":1,"media_index":13,"title":"Episode 13","grandparent_title":"The Office","year":2005,"originally_available_at":"2005-01-01","guid":"plex://episode/28010113","section_id":"2"},
+    {"user_id":1,"started":1775001600,"stopped":1775003400,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28020113","grandparent_rating_key":"2802","parent_media_index":1,"media_index":13,"title":"Episode 13","grandparent_title":"Parks and Recreation","year":2009,"originally_available_at":"2009-01-01","guid":"plex://episode/28020113","section_id":"2"},
+    {"user_id":1,"started":1775088000,"stopped":1775089800,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28030113","grandparent_rating_key":"2803","parent_media_index":1,"media_index":13,"title":"Episode 13","grandparent_title":"Abbott Elementary","year":2021,"originally_available_at":"2021-01-01","guid":"plex://episode/28030113","section_id":"2"},
+    {"user_id":1,"started":1775174400,"stopped":1775176200,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28040113","grandparent_rating_key":"2804","parent_media_index":1,"media_index":13,"title":"Episode 13","grandparent_title":"Seinfeld","year":1989,"originally_available_at":"1989-01-01","guid":"plex://episode/28040113","section_id":"2"},
+    {"user_id":1,"started":1775264400,"stopped":1775270400,"play_duration":6000,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2822","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Memento","grandparent_title":"","year":2000,"originally_available_at":"2000-01-01","guid":"plex://movie/2822","section_id":"1"},
+    {"user_id":1,"started":1775520000,"stopped":1775521800,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28010201","grandparent_rating_key":"2801","parent_media_index":2,"media_index":1,"title":"Episode 1","grandparent_title":"The Office","year":2005,"originally_available_at":"2005-01-01","guid":"plex://episode/28010201","section_id":"2"},
+    {"user_id":1,"started":1775606400,"stopped":1775608200,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28020201","grandparent_rating_key":"2802","parent_media_index":2,"media_index":1,"title":"Episode 1","grandparent_title":"Parks and Recreation","year":2009,"originally_available_at":"2009-01-01","guid":"plex://episode/28020201","section_id":"2"},
+    {"user_id":1,"started":1775692800,"stopped":1775694600,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28030201","grandparent_rating_key":"2803","parent_media_index":2,"media_index":1,"title":"Episode 1","grandparent_title":"Abbott Elementary","year":2021,"originally_available_at":"2021-01-01","guid":"plex://episode/28030201","section_id":"2"},
+    {"user_id":1,"started":1775779200,"stopped":1775781000,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28040201","grandparent_rating_key":"2804","parent_media_index":2,"media_index":1,"title":"Episode 1","grandparent_title":"Seinfeld","year":1989,"originally_available_at":"1989-01-01","guid":"plex://episode/28040201","section_id":"2"},
+    {"user_id":1,"started":1775869200,"stopped":1775875200,"play_duration":6000,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2823","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Mulholland Drive","grandparent_title":"","year":2001,"originally_available_at":"2001-01-01","guid":"plex://movie/2823","section_id":"1"},
+    {"user_id":1,"started":1776124800,"stopped":1776126600,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28010202","grandparent_rating_key":"2801","parent_media_index":2,"media_index":2,"title":"Episode 2","grandparent_title":"The Office","year":2005,"originally_available_at":"2005-01-01","guid":"plex://episode/28010202","section_id":"2"},
+    {"user_id":1,"started":1776211200,"stopped":1776213000,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28020202","grandparent_rating_key":"2802","parent_media_index":2,"media_index":2,"title":"Episode 2","grandparent_title":"Parks and Recreation","year":2009,"originally_available_at":"2009-01-01","guid":"plex://episode/28020202","section_id":"2"},
+    {"user_id":1,"started":1776297600,"stopped":1776299400,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28030202","grandparent_rating_key":"2803","parent_media_index":2,"media_index":2,"title":"Episode 2","grandparent_title":"Abbott Elementary","year":2021,"originally_available_at":"2021-01-01","guid":"plex://episode/28030202","section_id":"2"},
+    {"user_id":1,"started":1776384000,"stopped":1776385800,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28040202","grandparent_rating_key":"2804","parent_media_index":2,"media_index":2,"title":"Episode 2","grandparent_title":"Seinfeld","year":1989,"originally_available_at":"1989-01-01","guid":"plex://episode/28040202","section_id":"2"},
+    {"user_id":1,"started":1776474000,"stopped":1776480000,"play_duration":6000,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2824","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Lost in Translation","grandparent_title":"","year":2003,"originally_available_at":"2003-01-01","guid":"plex://movie/2824","section_id":"1"},
+    {"user_id":1,"started":1776729600,"stopped":1776731400,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28010203","grandparent_rating_key":"2801","parent_media_index":2,"media_index":3,"title":"Episode 3","grandparent_title":"The Office","year":2005,"originally_available_at":"2005-01-01","guid":"plex://episode/28010203","section_id":"2"},
+    {"user_id":1,"started":1776816000,"stopped":1776817800,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28020203","grandparent_rating_key":"2802","parent_media_index":2,"media_index":3,"title":"Episode 3","grandparent_title":"Parks and Recreation","year":2009,"originally_available_at":"2009-01-01","guid":"plex://episode/28020203","section_id":"2"},
+    {"user_id":1,"started":1776902400,"stopped":1776904200,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28030203","grandparent_rating_key":"2803","parent_media_index":2,"media_index":3,"title":"Episode 3","grandparent_title":"Abbott Elementary","year":2021,"originally_available_at":"2021-01-01","guid":"plex://episode/28030203","section_id":"2"},
+    {"user_id":1,"started":1776988800,"stopped":1776990600,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28040203","grandparent_rating_key":"2804","parent_media_index":2,"media_index":3,"title":"Episode 3","grandparent_title":"Seinfeld","year":1989,"originally_available_at":"1989-01-01","guid":"plex://episode/28040203","section_id":"2"},
+    {"user_id":1,"started":1777078800,"stopped":1777084800,"play_duration":6000,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2825","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Kill Bill: Vol. 1","grandparent_title":"","year":2003,"originally_available_at":"2003-01-01","guid":"plex://movie/2825","section_id":"1"},
+    {"user_id":1,"started":1777334400,"stopped":1777336200,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28010204","grandparent_rating_key":"2801","parent_media_index":2,"media_index":4,"title":"Episode 4","grandparent_title":"The Office","year":2005,"originally_available_at":"2005-01-01","guid":"plex://episode/28010204","section_id":"2"},
+    {"user_id":1,"started":1777420800,"stopped":1777422600,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28020204","grandparent_rating_key":"2802","parent_media_index":2,"media_index":4,"title":"Episode 4","grandparent_title":"Parks and Recreation","year":2009,"originally_available_at":"2009-01-01","guid":"plex://episode/28020204","section_id":"2"},
+    {"user_id":1,"started":1777507200,"stopped":1777509000,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28030204","grandparent_rating_key":"2803","parent_media_index":2,"media_index":4,"title":"Episode 4","grandparent_title":"Abbott Elementary","year":2021,"originally_available_at":"2021-01-01","guid":"plex://episode/28030204","section_id":"2"},
+    {"user_id":1,"started":1777593600,"stopped":1777595400,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28040204","grandparent_rating_key":"2804","parent_media_index":2,"media_index":4,"title":"Episode 4","grandparent_title":"Seinfeld","year":1989,"originally_available_at":"1989-01-01","guid":"plex://episode/28040204","section_id":"2"},
+    {"user_id":1,"started":1777683600,"stopped":1777689600,"play_duration":6000,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2826","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Oldboy","grandparent_title":"","year":2003,"originally_available_at":"2003-01-01","guid":"plex://movie/2826","section_id":"1"},
+    {"user_id":1,"started":1777939200,"stopped":1777941000,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28010205","grandparent_rating_key":"2801","parent_media_index":2,"media_index":5,"title":"Episode 5","grandparent_title":"The Office","year":2005,"originally_available_at":"2005-01-01","guid":"plex://episode/28010205","section_id":"2"},
+    {"user_id":1,"started":1778025600,"stopped":1778027400,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28020205","grandparent_rating_key":"2802","parent_media_index":2,"media_index":5,"title":"Episode 5","grandparent_title":"Parks and Recreation","year":2009,"originally_available_at":"2009-01-01","guid":"plex://episode/28020205","section_id":"2"},
+    {"user_id":1,"started":1778112000,"stopped":1778113800,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28030205","grandparent_rating_key":"2803","parent_media_index":2,"media_index":5,"title":"Episode 5","grandparent_title":"Abbott Elementary","year":2021,"originally_available_at":"2021-01-01","guid":"plex://episode/28030205","section_id":"2"},
+    {"user_id":1,"started":1778198400,"stopped":1778200200,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28040205","grandparent_rating_key":"2804","parent_media_index":2,"media_index":5,"title":"Episode 5","grandparent_title":"Seinfeld","year":1989,"originally_available_at":"1989-01-01","guid":"plex://episode/28040205","section_id":"2"},
+    {"user_id":1,"started":1778288400,"stopped":1778294400,"play_duration":6000,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2827","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Million Dollar Baby","grandparent_title":"","year":2004,"originally_available_at":"2004-01-01","guid":"plex://movie/2827","section_id":"1"},
+    {"user_id":1,"started":1778544000,"stopped":1778545800,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28010206","grandparent_rating_key":"2801","parent_media_index":2,"media_index":6,"title":"Episode 6","grandparent_title":"The Office","year":2005,"originally_available_at":"2005-01-01","guid":"plex://episode/28010206","section_id":"2"},
+    {"user_id":1,"started":1778630400,"stopped":1778632200,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28020206","grandparent_rating_key":"2802","parent_media_index":2,"media_index":6,"title":"Episode 6","grandparent_title":"Parks and Recreation","year":2009,"originally_available_at":"2009-01-01","guid":"plex://episode/28020206","section_id":"2"},
+    {"user_id":1,"started":1778716800,"stopped":1778718600,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28030206","grandparent_rating_key":"2803","parent_media_index":2,"media_index":6,"title":"Episode 6","grandparent_title":"Abbott Elementary","year":2021,"originally_available_at":"2021-01-01","guid":"plex://episode/28030206","section_id":"2"},
+    {"user_id":1,"started":1778803200,"stopped":1778805000,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28040206","grandparent_rating_key":"2804","parent_media_index":2,"media_index":6,"title":"Episode 6","grandparent_title":"Seinfeld","year":1989,"originally_available_at":"1989-01-01","guid":"plex://episode/28040206","section_id":"2"},
+    {"user_id":1,"started":1778893200,"stopped":1778899200,"play_duration":6000,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2828","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Brokeback Mountain","grandparent_title":"","year":2005,"originally_available_at":"2005-01-01","guid":"plex://movie/2828","section_id":"1"},
+    {"user_id":1,"started":1779148800,"stopped":1779150600,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28010207","grandparent_rating_key":"2801","parent_media_index":2,"media_index":7,"title":"Episode 7","grandparent_title":"The Office","year":2005,"originally_available_at":"2005-01-01","guid":"plex://episode/28010207","section_id":"2"},
+    {"user_id":1,"started":1779235200,"stopped":1779237000,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28020207","grandparent_rating_key":"2802","parent_media_index":2,"media_index":7,"title":"Episode 7","grandparent_title":"Parks and Recreation","year":2009,"originally_available_at":"2009-01-01","guid":"plex://episode/28020207","section_id":"2"},
+    {"user_id":1,"started":1779321600,"stopped":1779323400,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28030207","grandparent_rating_key":"2803","parent_media_index":2,"media_index":7,"title":"Episode 7","grandparent_title":"Abbott Elementary","year":2021,"originally_available_at":"2021-01-01","guid":"plex://episode/28030207","section_id":"2"},
+    {"user_id":1,"started":1779408000,"stopped":1779409800,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28040207","grandparent_rating_key":"2804","parent_media_index":2,"media_index":7,"title":"Episode 7","grandparent_title":"Seinfeld","year":1989,"originally_available_at":"1989-01-01","guid":"plex://episode/28040207","section_id":"2"},
+    {"user_id":1,"started":1779498000,"stopped":1779504000,"play_duration":6000,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2829","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"The Departed","grandparent_title":"","year":2006,"originally_available_at":"2006-01-01","guid":"plex://movie/2829","section_id":"1"},
+    {"user_id":1,"started":1779753600,"stopped":1779755400,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28010208","grandparent_rating_key":"2801","parent_media_index":2,"media_index":8,"title":"Episode 8","grandparent_title":"The Office","year":2005,"originally_available_at":"2005-01-01","guid":"plex://episode/28010208","section_id":"2"},
+    {"user_id":1,"started":1779840000,"stopped":1779841800,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28020208","grandparent_rating_key":"2802","parent_media_index":2,"media_index":8,"title":"Episode 8","grandparent_title":"Parks and Recreation","year":2009,"originally_available_at":"2009-01-01","guid":"plex://episode/28020208","section_id":"2"},
+    {"user_id":1,"started":1779926400,"stopped":1779928200,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28030208","grandparent_rating_key":"2803","parent_media_index":2,"media_index":8,"title":"Episode 8","grandparent_title":"Abbott Elementary","year":2021,"originally_available_at":"2021-01-01","guid":"plex://episode/28030208","section_id":"2"},
+    {"user_id":1,"started":1780012800,"stopped":1780014600,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28040208","grandparent_rating_key":"2804","parent_media_index":2,"media_index":8,"title":"Episode 8","grandparent_title":"Seinfeld","year":1989,"originally_available_at":"1989-01-01","guid":"plex://episode/28040208","section_id":"2"},
+    {"user_id":1,"started":1780102800,"stopped":1780108800,"play_duration":6000,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2830","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"No Country for Old Men","grandparent_title":"","year":2007,"originally_available_at":"2007-01-01","guid":"plex://movie/2830","section_id":"1"},
+    {"user_id":1,"started":1780358400,"stopped":1780360200,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28010209","grandparent_rating_key":"2801","parent_media_index":2,"media_index":9,"title":"Episode 9","grandparent_title":"The Office","year":2005,"originally_available_at":"2005-01-01","guid":"plex://episode/28010209","section_id":"2"},
+    {"user_id":1,"started":1780444800,"stopped":1780446600,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28020209","grandparent_rating_key":"2802","parent_media_index":2,"media_index":9,"title":"Episode 9","grandparent_title":"Parks and Recreation","year":2009,"originally_available_at":"2009-01-01","guid":"plex://episode/28020209","section_id":"2"},
+    {"user_id":1,"started":1780531200,"stopped":1780533000,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28030209","grandparent_rating_key":"2803","parent_media_index":2,"media_index":9,"title":"Episode 9","grandparent_title":"Abbott Elementary","year":2021,"originally_available_at":"2021-01-01","guid":"plex://episode/28030209","section_id":"2"},
+    {"user_id":1,"started":1780617600,"stopped":1780619400,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28040209","grandparent_rating_key":"2804","parent_media_index":2,"media_index":9,"title":"Episode 9","grandparent_title":"Seinfeld","year":1989,"originally_available_at":"1989-01-01","guid":"plex://episode/28040209","section_id":"2"},
+    {"user_id":1,"started":1780707600,"stopped":1780713600,"play_duration":6000,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2831","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"There Will Be Blood","grandparent_title":"","year":2007,"originally_available_at":"2007-01-01","guid":"plex://movie/2831","section_id":"1"},
+    {"user_id":1,"started":1780963200,"stopped":1780965000,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28010210","grandparent_rating_key":"2801","parent_media_index":2,"media_index":10,"title":"Episode 10","grandparent_title":"The Office","year":2005,"originally_available_at":"2005-01-01","guid":"plex://episode/28010210","section_id":"2"},
+    {"user_id":1,"started":1781049600,"stopped":1781051400,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28020210","grandparent_rating_key":"2802","parent_media_index":2,"media_index":10,"title":"Episode 10","grandparent_title":"Parks and Recreation","year":2009,"originally_available_at":"2009-01-01","guid":"plex://episode/28020210","section_id":"2"},
+    {"user_id":1,"started":1781136000,"stopped":1781137800,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28030210","grandparent_rating_key":"2803","parent_media_index":2,"media_index":10,"title":"Episode 10","grandparent_title":"Abbott Elementary","year":2021,"originally_available_at":"2021-01-01","guid":"plex://episode/28030210","section_id":"2"},
+    {"user_id":1,"started":1781222400,"stopped":1781224200,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28040210","grandparent_rating_key":"2804","parent_media_index":2,"media_index":10,"title":"Episode 10","grandparent_title":"Seinfeld","year":1989,"originally_available_at":"1989-01-01","guid":"plex://episode/28040210","section_id":"2"},
+    {"user_id":1,"started":1781312400,"stopped":1781318400,"play_duration":6000,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2832","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"WALL-E","grandparent_title":"","year":2008,"originally_available_at":"2008-01-01","guid":"plex://movie/2832","section_id":"1"},
+    {"user_id":1,"started":1781568000,"stopped":1781569800,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28010211","grandparent_rating_key":"2801","parent_media_index":2,"media_index":11,"title":"Episode 11","grandparent_title":"The Office","year":2005,"originally_available_at":"2005-01-01","guid":"plex://episode/28010211","section_id":"2"},
+    {"user_id":1,"started":1781654400,"stopped":1781656200,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28020211","grandparent_rating_key":"2802","parent_media_index":2,"media_index":11,"title":"Episode 11","grandparent_title":"Parks and Recreation","year":2009,"originally_available_at":"2009-01-01","guid":"plex://episode/28020211","section_id":"2"},
+    {"user_id":1,"started":1781740800,"stopped":1781742600,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28030211","grandparent_rating_key":"2803","parent_media_index":2,"media_index":11,"title":"Episode 11","grandparent_title":"Abbott Elementary","year":2021,"originally_available_at":"2021-01-01","guid":"plex://episode/28030211","section_id":"2"},
+    {"user_id":1,"started":1781827200,"stopped":1781829000,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28040211","grandparent_rating_key":"2804","parent_media_index":2,"media_index":11,"title":"Episode 11","grandparent_title":"Seinfeld","year":1989,"originally_available_at":"1989-01-01","guid":"plex://episode/28040211","section_id":"2"},
+    {"user_id":1,"started":1781917200,"stopped":1781923200,"play_duration":6000,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2833","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"The Dark Knight","grandparent_title":"","year":2008,"originally_available_at":"2008-01-01","guid":"plex://movie/2833","section_id":"1"},
+    {"user_id":1,"started":1782172800,"stopped":1782174600,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28010212","grandparent_rating_key":"2801","parent_media_index":2,"media_index":12,"title":"Episode 12","grandparent_title":"The Office","year":2005,"originally_available_at":"2005-01-01","guid":"plex://episode/28010212","section_id":"2"},
+    {"user_id":1,"started":1782259200,"stopped":1782261000,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28020212","grandparent_rating_key":"2802","parent_media_index":2,"media_index":12,"title":"Episode 12","grandparent_title":"Parks and Recreation","year":2009,"originally_available_at":"2009-01-01","guid":"plex://episode/28020212","section_id":"2"},
+    {"user_id":1,"started":1782345600,"stopped":1782347400,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28030212","grandparent_rating_key":"2803","parent_media_index":2,"media_index":12,"title":"Episode 12","grandparent_title":"Abbott Elementary","year":2021,"originally_available_at":"2021-01-01","guid":"plex://episode/28030212","section_id":"2"},
+    {"user_id":1,"started":1782432000,"stopped":1782433800,"play_duration":1800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"28040212","grandparent_rating_key":"2804","parent_media_index":2,"media_index":12,"title":"Episode 12","grandparent_title":"Seinfeld","year":1989,"originally_available_at":"1989-01-01","guid":"plex://episode/28040212","section_id":"2"},
+    {"user_id":1,"started":1782522000,"stopped":1782528000,"play_duration":6000,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2834","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Up","grandparent_title":"","year":2009,"originally_available_at":"2009-01-01","guid":"plex://movie/2834","section_id":"1"}
+  ],
+  "lifetimeBefore2026": [],
+  "metadata": [
+    {"ratingKey":"2801","kind":"show","librarySectionId":"2","addedAt":"2020-06-01T00:00:00.000Z","genres":["Comedy","Crime"],"directors":[],"actors":["Mira Okafor","Jun Ito"],"studio":null,"contentRating":null,"year":2005,"originallyAvailableAt":"2005-01-01T00:00:00.000Z","runtimeSec":null,"seasonEpisodeCounts":{"1":13,"2":12},"guids":["tmdb://102801","tvdb://302801"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2802","kind":"show","librarySectionId":"2","addedAt":"2020-06-01T00:00:00.000Z","genres":["Science Fiction","Animation"],"directors":[],"actors":["Tomas Brandt","Lena Marsh"],"studio":null,"contentRating":null,"year":2009,"originallyAvailableAt":"2009-01-01T00:00:00.000Z","runtimeSec":null,"seasonEpisodeCounts":{"1":13,"2":12},"guids":["tmdb://102802","tvdb://302802"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2803","kind":"show","librarySectionId":"2","addedAt":"2021-06-01T00:00:00.000Z","genres":["Thriller","Fantasy"],"directors":[],"actors":["Ines Varga","Rowan Hale"],"studio":null,"contentRating":null,"year":2021,"originallyAvailableAt":"2021-01-01T00:00:00.000Z","runtimeSec":null,"seasonEpisodeCounts":{"1":13,"2":12},"guids":["tmdb://102803","tvdb://302803"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2804","kind":"show","librarySectionId":"2","addedAt":"2020-06-01T00:00:00.000Z","genres":["Crime","Documentary"],"directors":[],"actors":["Calum Reyes","Mira Okafor"],"studio":null,"contentRating":null,"year":1989,"originallyAvailableAt":"1989-01-01T00:00:00.000Z","runtimeSec":null,"seasonEpisodeCounts":{"1":13,"2":12},"guids":["tmdb://102804","tvdb://302804"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2810","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Science Fiction","Animation"],"directors":["Calum Reyes"],"actors":["Tomas Brandt","Lena Marsh"],"studio":null,"contentRating":null,"year":1993,"originallyAvailableAt":"1993-01-01T00:00:00.000Z","runtimeSec":6000,"seasonEpisodeCounts":null,"guids":["tmdb://102810"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2811","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Thriller","Fantasy"],"directors":["Noor Haddad"],"actors":["Ines Varga","Rowan Hale"],"studio":null,"contentRating":null,"year":1993,"originallyAvailableAt":"1993-01-01T00:00:00.000Z","runtimeSec":6000,"seasonEpisodeCounts":null,"guids":["tmdb://102811"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2812","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Crime","Documentary"],"directors":["Jun Ito"],"actors":["Calum Reyes","Mira Okafor"],"studio":null,"contentRating":null,"year":1994,"originallyAvailableAt":"1994-01-01T00:00:00.000Z","runtimeSec":6000,"seasonEpisodeCounts":null,"guids":["tmdb://102812"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2813","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Animation","Drama"],"directors":["Lena Marsh"],"actors":["Noor Haddad","Tomas Brandt"],"studio":null,"contentRating":null,"year":1994,"originallyAvailableAt":"1994-01-01T00:00:00.000Z","runtimeSec":6000,"seasonEpisodeCounts":null,"guids":["tmdb://102813"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2814","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Fantasy","Comedy"],"directors":["Rowan Hale"],"actors":["Jun Ito","Ines Varga"],"studio":null,"contentRating":null,"year":1995,"originallyAvailableAt":"1995-01-01T00:00:00.000Z","runtimeSec":6000,"seasonEpisodeCounts":null,"guids":["tmdb://102814"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2815","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Documentary","Science Fiction"],"directors":["Mira Okafor"],"actors":["Lena Marsh","Calum Reyes"],"studio":null,"contentRating":null,"year":1995,"originallyAvailableAt":"1995-01-01T00:00:00.000Z","runtimeSec":6000,"seasonEpisodeCounts":null,"guids":["tmdb://102815"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2816","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Drama","Thriller"],"directors":["Tomas Brandt"],"actors":["Rowan Hale","Noor Haddad"],"studio":null,"contentRating":null,"year":1996,"originallyAvailableAt":"1996-01-01T00:00:00.000Z","runtimeSec":6000,"seasonEpisodeCounts":null,"guids":["tmdb://102816"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2817","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Comedy","Crime"],"directors":["Ines Varga"],"actors":["Mira Okafor","Jun Ito"],"studio":null,"contentRating":null,"year":1997,"originallyAvailableAt":"1997-01-01T00:00:00.000Z","runtimeSec":6000,"seasonEpisodeCounts":null,"guids":["tmdb://102817"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2818","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Science Fiction","Animation"],"directors":["Calum Reyes"],"actors":["Tomas Brandt","Lena Marsh"],"studio":null,"contentRating":null,"year":1998,"originallyAvailableAt":"1998-01-01T00:00:00.000Z","runtimeSec":6000,"seasonEpisodeCounts":null,"guids":["tmdb://102818"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2819","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Thriller","Fantasy"],"directors":["Noor Haddad"],"actors":["Ines Varga","Rowan Hale"],"studio":null,"contentRating":null,"year":1999,"originallyAvailableAt":"1999-01-01T00:00:00.000Z","runtimeSec":6000,"seasonEpisodeCounts":null,"guids":["tmdb://102819"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2820","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Crime","Documentary"],"directors":["Jun Ito"],"actors":["Calum Reyes","Mira Okafor"],"studio":null,"contentRating":null,"year":1999,"originallyAvailableAt":"1999-01-01T00:00:00.000Z","runtimeSec":6000,"seasonEpisodeCounts":null,"guids":["tmdb://102820"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2821","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Animation","Drama"],"directors":["Lena Marsh"],"actors":["Noor Haddad","Tomas Brandt"],"studio":null,"contentRating":null,"year":2000,"originallyAvailableAt":"2000-01-01T00:00:00.000Z","runtimeSec":6000,"seasonEpisodeCounts":null,"guids":["tmdb://102821"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2822","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Fantasy","Comedy"],"directors":["Rowan Hale"],"actors":["Jun Ito","Ines Varga"],"studio":null,"contentRating":null,"year":2000,"originallyAvailableAt":"2000-01-01T00:00:00.000Z","runtimeSec":6000,"seasonEpisodeCounts":null,"guids":["tmdb://102822"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2823","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Documentary","Science Fiction"],"directors":["Mira Okafor"],"actors":["Lena Marsh","Calum Reyes"],"studio":null,"contentRating":null,"year":2001,"originallyAvailableAt":"2001-01-01T00:00:00.000Z","runtimeSec":6000,"seasonEpisodeCounts":null,"guids":["tmdb://102823"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2824","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Drama","Thriller"],"directors":["Tomas Brandt"],"actors":["Rowan Hale","Noor Haddad"],"studio":null,"contentRating":null,"year":2003,"originallyAvailableAt":"2003-01-01T00:00:00.000Z","runtimeSec":6000,"seasonEpisodeCounts":null,"guids":["tmdb://102824"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2825","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Comedy","Crime"],"directors":["Ines Varga"],"actors":["Mira Okafor","Jun Ito"],"studio":null,"contentRating":null,"year":2003,"originallyAvailableAt":"2003-01-01T00:00:00.000Z","runtimeSec":6000,"seasonEpisodeCounts":null,"guids":["tmdb://102825"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2826","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Science Fiction","Animation"],"directors":["Calum Reyes"],"actors":["Tomas Brandt","Lena Marsh"],"studio":null,"contentRating":null,"year":2003,"originallyAvailableAt":"2003-01-01T00:00:00.000Z","runtimeSec":6000,"seasonEpisodeCounts":null,"guids":["tmdb://102826"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2827","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Thriller","Fantasy"],"directors":["Noor Haddad"],"actors":["Ines Varga","Rowan Hale"],"studio":null,"contentRating":null,"year":2004,"originallyAvailableAt":"2004-01-01T00:00:00.000Z","runtimeSec":6000,"seasonEpisodeCounts":null,"guids":["tmdb://102827"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2828","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Crime","Documentary"],"directors":["Jun Ito"],"actors":["Calum Reyes","Mira Okafor"],"studio":null,"contentRating":null,"year":2005,"originallyAvailableAt":"2005-01-01T00:00:00.000Z","runtimeSec":6000,"seasonEpisodeCounts":null,"guids":["tmdb://102828"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2829","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Animation","Drama"],"directors":["Lena Marsh"],"actors":["Noor Haddad","Tomas Brandt"],"studio":null,"contentRating":null,"year":2006,"originallyAvailableAt":"2006-01-01T00:00:00.000Z","runtimeSec":6000,"seasonEpisodeCounts":null,"guids":["tmdb://102829"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2830","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Fantasy","Comedy"],"directors":["Rowan Hale"],"actors":["Jun Ito","Ines Varga"],"studio":null,"contentRating":null,"year":2007,"originallyAvailableAt":"2007-01-01T00:00:00.000Z","runtimeSec":6000,"seasonEpisodeCounts":null,"guids":["tmdb://102830"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2831","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Documentary","Science Fiction"],"directors":["Mira Okafor"],"actors":["Lena Marsh","Calum Reyes"],"studio":null,"contentRating":null,"year":2007,"originallyAvailableAt":"2007-01-01T00:00:00.000Z","runtimeSec":6000,"seasonEpisodeCounts":null,"guids":["tmdb://102831"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2832","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Drama","Thriller"],"directors":["Tomas Brandt"],"actors":["Rowan Hale","Noor Haddad"],"studio":null,"contentRating":null,"year":2008,"originallyAvailableAt":"2008-01-01T00:00:00.000Z","runtimeSec":6000,"seasonEpisodeCounts":null,"guids":["tmdb://102832"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2833","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Comedy","Crime"],"directors":["Ines Varga"],"actors":["Mira Okafor","Jun Ito"],"studio":null,"contentRating":null,"year":2008,"originallyAvailableAt":"2008-01-01T00:00:00.000Z","runtimeSec":6000,"seasonEpisodeCounts":null,"guids":["tmdb://102833"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2834","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Science Fiction","Animation"],"directors":["Calum Reyes"],"actors":["Tomas Brandt","Lena Marsh"],"studio":null,"contentRating":null,"year":2009,"originallyAvailableAt":"2009-01-01T00:00:00.000Z","runtimeSec":6000,"seasonEpisodeCounts":null,"guids":["tmdb://102834"],"videoResolution":"1080","hdr":false}
+  ],
+  "requests": null,
+  "library": null,
+  "expected": {
+    "edition": "full",
+    "archetype": "golden-hour-viewer",
+    "omittedPages": [
+      4,
+      12,
+      14,
+      17
+    ],
+    "facts": {
+      "member.firstName": "Daniel",
+      "time.totalHours": "91",
+      "counts.episodes": "100",
+      "counts.series": "4",
+      "counts.films": "25",
+      "streak.longest.days": "5 days",
+      "hours.peak": "7 PM",
+      "hours.goldenShare": "100%",
+      "race.overtakeMonth": "March",
+      "days.active": "125",
+      "tz.label": "America/Chicago",
+      "people.director[1].name": "Calum Reyes",
+      "archetype.name": "The Golden Hour Viewer"
+    },
+    "stats": {
+      "totals": {
+        "totalMinutes": 5500,
+        "seriesMinutes": 3000,
+        "filmMinutes": 2500,
+        "counts": {
+          "episodes": 100,
+          "series": 4,
+          "films": 25,
+          "seasons": 8
+        },
+        "perDay": 16,
+        "daysHours": {
+          "days": 3,
+          "hours": 19
+        },
+        "vsLastYear": null
+      },
+      "time": {
+        "peak": 19,
+        "afterDarkShare": 0,
+        "goldenShare": 1,
+        "medianStart": {
+          "hour": 19,
+          "minute": 0
+        },
+        "latestStart": {
+          "hour": 20,
+          "minute": 0,
+          "date": "2026-06-26",
+          "weekday": 5
+        },
+        "weekendShare": 0
+      },
+      "calendar": {
+        "active": 125,
+        "biggest": {
+          "date": "2026-01-09",
+          "minutes": 100
+        },
+        "streak": {
+          "days": 5,
+          "from": "2026-01-05",
+          "to": "2026-01-09"
+        },
+        "longestGap": {
+          "days": 2,
+          "from": "2026-01-10",
+          "to": "2026-01-11",
+          "month": 1
+        }
+      },
+      "sessions": {
+        "longestBinge": null,
+        "deepestBinge": null,
+        "mostEpisodesDay": {
+          "date": "2026-01-05",
+          "episodes": 1
+        },
+        "biggestWeek": {
+          "from": "2026-01-05",
+          "to": "2026-01-11",
+          "minutes": 220
+        },
+        "mostPaused": null
+      },
+      "bookends": {
+        "first": {
+          "key": "series:2801",
+          "title": "The Office",
+          "date": "2026-01-05",
+          "hour": 19,
+          "minute": 0
+        },
+        "last": {
+          "key": "film:2834",
+          "title": "Up",
+          "date": "2026-06-26",
+          "hour": 20,
+          "minute": 0
+        },
+        "sameTitleSameDay": false,
+        "member": {
+          "since": "2026-01-05",
+          "lifetimeHours": 91
+        }
+      },
+      "race": {
+        "eligible": true,
+        "leader": [
+          "series:2804",
+          "series:2804",
+          "series:2802",
+          "series:2802",
+          "series:2802",
+          "series:2802",
+          "series:2802",
+          "series:2802",
+          "series:2802",
+          "series:2802",
+          "series:2802"
+        ],
+        "leadChanges": 1,
+        "overtakeMonth": 3,
+        "closestGapMinutes": 0
+      },
+      "taste": {
+        "genres": [
+          {
+            "name": "Crime",
+            "minutes": 1050,
+            "share": 0.19090909090909092
+          },
+          {
+            "name": "Animation",
+            "minutes": 725,
+            "share": 0.1318181818181818
+          },
+          {
+            "name": "Science Fiction",
+            "minutes": 725,
+            "share": 0.1318181818181818
+          },
+          {
+            "name": "Comedy",
+            "minutes": 675,
+            "share": 0.12272727272727273
+          },
+          {
+            "name": "Documentary",
+            "minutes": 675,
+            "share": 0.12272727272727273
+          }
+        ],
+        "medianYear": 2001,
+        "oldest": {
+          "key": "series:2804",
+          "title": "Seinfeld",
+          "year": 1989
+        },
+        "freshShare": 0
+      },
+      "people": {
+        "actors": [
+          {
+            "name": "Mira Okafor",
+            "minutes": 2100
+          },
+          {
+            "name": "Lena Marsh",
+            "minutes": 1450
+          },
+          {
+            "name": "Tomas Brandt",
+            "minutes": 1450
+          },
+          {
+            "name": "Calum Reyes",
+            "minutes": 1350
+          },
+          {
+            "name": "Ines Varga",
+            "minutes": 1350
+          }
+        ],
+        "directors": [
+          {
+            "name": "Calum Reyes",
+            "minutes": 400
+          },
+          {
+            "name": "Ines Varga",
+            "minutes": 300
+          },
+          {
+            "name": "Jun Ito",
+            "minutes": 300
+          }
+        ]
+      },
+      "devices": {
+        "directPlayShare": 1,
+        "homeShare": 1,
+        "topPlatform": "Apple TV",
+        "topProduct": "Plex for Apple TV",
+        "fourKShare": 0
+      },
+      "requests": {
+        "eligible": false
+      },
+      "nextYear": {
+        "leftForLater": [],
+        "picks": []
+      },
+      "milestones": [
+        {
+          "hours": 10,
+          "date": "2026-01-23"
+        },
+        {
+          "hours": 25,
+          "date": "2026-02-20"
+        },
+        {
+          "hours": 50,
+          "date": "2026-04-10"
+        }
+      ],
+      "topSeries": [
+        {
+          "title": "Seinfeld",
+          "minutes": 750,
+          "plays": 25
+        },
+        {
+          "title": "Abbott Elementary",
+          "minutes": 750,
+          "plays": 25
+        },
+        {
+          "title": "Parks and Recreation",
+          "minutes": 750,
+          "plays": 25
+        },
+        {
+          "title": "The Office",
+          "minutes": 750,
+          "plays": 25
+        }
+      ],
+      "topFilms": [
+        {
+          "title": "Up",
+          "minutes": 100,
+          "plays": 1
+        },
+        {
+          "title": "The Dark Knight",
+          "minutes": 100,
+          "plays": 1
+        },
+        {
+          "title": "WALL-E",
+          "minutes": 100,
+          "plays": 1
+        }
+      ]
+    }
+  }
+}

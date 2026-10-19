@@ -6,6 +6,8 @@ import { SubscriptionStatusView } from "@/components/subscription/subscription-s
 import { authOptions } from "@/lib/auth";
 import { getFirstWatchDate } from "@/lib/connections/tautulli-first-watch";
 import { prisma } from "@/lib/prisma";
+import { getAppSettings } from "@/lib/settings/app-settings";
+import { calendarMonthsBetween } from "@/lib/utils/format";
 import { getRewindEligibility } from "@/lib/wrapped/eligibility";
 import type { AuthService } from "@/types/onboarding";
 import { getServerSession } from "next-auth";
@@ -13,6 +15,9 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 export const dynamic = 'force-dynamic'
+
+// Calendar months since the first watch (or sign-up) before Rewind is offered
+const MIN_MEMBERSHIP_MONTHS = 6
 
 const OnboardingStatusSchema = z.object({
   plex: z.boolean(),
@@ -85,9 +90,10 @@ export default async function Home() {
     // Both find the member through findTautulliUser, which calls Tautulli's
     // get_users once per render.
     const plexUserId = user?.plexUserId ?? null;
-    const [firstWatchResult, rewindEligibility] = await Promise.all([
+    const [firstWatchResult, rewindEligibility, { timeZone }] = await Promise.all([
       plexUserId ? getFirstWatchDate(plexUserId) : null,
       getRewindEligibility({ id: session.user.id, plexUserId }),
+      getAppSettings(),
     ]);
 
     // Falls back to account creation date if Tautulli is not available or user has no history
@@ -95,6 +101,8 @@ export default async function Home() {
     if (firstWatchResult?.success && firstWatchResult.firstWatchDate) {
       memberSince = firstWatchResult.firstWatchDate;
     }
+    const now = new Date();
+    const memberLongEnough = calendarMonthsBetween(memberSince, now, timeZone) >= MIN_MEMBERSHIP_MONTHS;
 
     const discordConnectionSummary = discordConnection
       ? {
@@ -122,7 +130,8 @@ export default async function Home() {
         announcements={announcements}
         overseerrUrl={overseerrUrl}
         prometheusStatus={prometheusStatus}
-        memberSince={memberSince}
+        memberLongEnough={memberLongEnough}
+        renderedAt={now.toISOString()}
         rewindEligibility={rewindEligibility}
         primaryAuthService={user?.primaryAuthService}
         mediaServerUrl={mediaServerUrl}

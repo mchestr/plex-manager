@@ -10,12 +10,12 @@
 
 import { prisma } from "@/lib/prisma"
 import { getShareSafeRewind } from "@/lib/wrapped/data/get-share-safe"
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
-jest.mock("@/lib/prisma", () => ({
-  prisma: {
-    plexWrapped: { findUnique: jest.fn() },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 /**
  * A request-scoped memo standing in for React's server `cache()`, which the

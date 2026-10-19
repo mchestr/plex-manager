@@ -1,40 +1,45 @@
 /**
  * Admin actions
  *
- * This is a barrel file that re-exports all admin-related actions
- * from their domain-specific modules.
+ * The one entry point for admin actions: it re-exports them from their
+ * domain-specific modules.
  */
 
 // Config and wrapped settings
 export {
-  getConfig,
   setLLMDisabled,
   getWrappedSettings,
   updateWrappedSettings,
+  updateServerTimeZone,
 } from "./admin-config"
 
-// LLM usage and providers
+// LLM usage, providers and historical wrapped versions
 export {
   getLLMUsageRecords,
   getLLMUsageById,
   getLLMUsageStats,
+} from "./admin-llm-usage"
+
+export {
+  listLLMModels,
   updateChatLLMProvider,
   updateWrappedLLMProvider,
+} from "./admin-llm-providers"
+
+export {
   getHistoricalWrappedVersions,
   getHistoricalWrappedData,
-} from "./admin-llm"
+} from "./admin-llm-history"
 
 // Server configurations
 export {
   updatePlexServer,
   updateJellyfinServer,
-  deleteJellyfinServer,
   updateTautulli,
   updateOverseerr,
   updateSonarr,
   updateRadarr,
   updatePrometheus,
-  deletePrometheus,
 } from "./admin-servers"
 
 // User management

@@ -32,7 +32,11 @@ import { Prisma } from "@/lib/generated/prisma/client"
 
 const logger = createLogger("DISCORD_CHAT_SESSION")
 
-/** How long a session may sit idle before the next message starts fresh. */
+/**
+ * How long a session may sit idle before the next message starts fresh.
+ *
+ * @internal
+ */
 export const SESSION_IDLE_TIMEOUT_MS = 30 * 60 * 1000 // 30 minutes
 
 /** Serializable transactions can abort under contention; retry a few times. */

@@ -1,7 +1,7 @@
 "use client"
 
 import { FormattedText } from "@/components/shared/formatted-text"
-import { formatWatchTime } from "@/components/wrapped/wrapped-sections/utils"
+import { formatDuration } from "@/lib/utils/format"
 import { WrappedSection } from "@/types/wrapped"
 
 interface TopShowsSectionProps {
@@ -42,7 +42,7 @@ export function TopShowsSection({ section }: TopShowsSectionProps) {
                   )}
                 </div>
                 <div className="flex items-center gap-3 text-slate-300 text-xs sm:text-sm mt-1 flex-wrap">
-                  <span>{formatWatchTime(show.watchTime)} watched</span>
+                  <span>{formatDuration(show.watchTime, "long", { largestUnit: "day" })} watched</span>
                   <span className="text-slate-400">•</span>
                   <span>{show.episodesWatched} episode{show.episodesWatched !== 1 ? "s" : ""}</span>
                 </div>

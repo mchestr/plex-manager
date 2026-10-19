@@ -1,25 +1,24 @@
 /**
- * Unit tests for wrapped settings date range feature
- * Tests date range logic, year rollover, and validation
+ * The Rewind switch, the month-day season window and the server time zone
+ * (P2.2, GAP-40): getWrappedSettings, updateWrappedSettings and
+ * updateServerTimeZone.
  */
 
-import { getWrappedSettings, updateWrappedSettings } from '@/actions/admin'
+import { getWrappedSettings, updateServerTimeZone, updateWrappedSettings } from '@/actions/admin'
 import { requireAdmin } from '@/lib/admin'
-import { prisma } from '@/lib/prisma'
-import { createLogger } from '@/lib/utils/logger'
+import { AuditEventType, logAuditEvent } from '@/lib/security/audit-log'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
-// Mock dependencies
 jest.mock('@/lib/admin', () => ({
   requireAdmin: jest.fn(),
 }))
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    config: {
-      findUnique: jest.fn(),
-      upsert: jest.fn(),
-    },
-  },
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+jest.mock('@/lib/security/audit-log', () => ({
+  ...jest.requireActual('@/lib/security/audit-log'),
+  logAuditEvent: jest.fn(),
 }))
 
 jest.mock('@/lib/utils/logger', () => ({
@@ -31,486 +30,218 @@ jest.mock('@/lib/utils/logger', () => ({
 }))
 
 const mockRevalidatePath = jest.fn()
+const mockUpdateTag = jest.fn()
 jest.mock('next/cache', () => ({
-  revalidatePath: (...args: any[]) => mockRevalidatePath(...args),
+  revalidatePath: (...args: unknown[]) => mockRevalidatePath(...args),
+  updateTag: (...args: unknown[]) => mockUpdateTag(...args),
+  unstable_cache: (fn: unknown) => fn,
 }))
 
 const mockRequireAdmin = requireAdmin as jest.MockedFunction<typeof requireAdmin>
-const mockPrisma = prisma as jest.Mocked<typeof prisma>
+const mockFindUnique = prismaMock.config.findUnique as jest.Mock
+const mockUpsert = prismaMock.config.upsert as jest.Mock
 
 const mockAdminSession = {
-  user: {
-    id: 'admin-user-id',
-    email: 'admin@example.com',
-    name: 'Admin User',
-    isAdmin: true,
-  },
+  user: { id: 'admin-user-id', email: 'admin@example.com', name: 'Admin User', isAdmin: true },
+  expires: '2099-01-01T00:00:00.000Z',
 }
 
-describe('Wrapped Settings Date Range', () => {
-  beforeEach(() => {
-    jest.clearAllMocks()
-    jest.useFakeTimers()
-    mockRequireAdmin.mockResolvedValue(mockAdminSession as any)
-  })
+/** One Config row answers the switch, the window and the zone reads. */
+function storedConfig(row: { wrappedEnabled?: boolean; opens?: string; closes?: string; timezone?: string | null } | null) {
+  mockFindUnique.mockResolvedValue(
+    row && {
+      wrappedEnabled: row.wrappedEnabled ?? true,
+      rewindSeasonOpens: row.opens ?? '12-01',
+      rewindSeasonCloses: row.closes ?? '01-31',
+      timezone: row.timezone ?? null,
+    },
+  )
+}
 
-  afterEach(() => {
-    jest.useRealTimers()
-  })
+beforeEach(() => {
+  mockReset(prismaMock)
+  jest.clearAllMocks()
+  mockRequireAdmin.mockResolvedValue(mockAdminSession)
+})
 
-  describe('getWrappedSettings', () => {
-    it('should return defaults when config does not exist', async () => {
-      jest.setSystemTime(new Date('2026-10-18T12:00:00Z'))
-      ;(mockPrisma.config.findUnique as jest.Mock).mockResolvedValue(null)
+describe('getWrappedSettings', () => {
+  beforeEach(() => jest.useFakeTimers())
+  afterEach(() => jest.useRealTimers())
 
-      const result = await getWrappedSettings()
+  it('uses the default window when no config exists: closed in October', async () => {
+    jest.setSystemTime(new Date('2026-10-18T12:00:00Z'))
+    storedConfig(null)
 
-      expect(result.wrappedEnabled).toBe(true)
-      expect(result.wrappedYear).toBe(2026)
-    })
-
-    it('should return enabled when no date range is set', async () => {
-      jest.setSystemTime(new Date('2026-10-18T12:00:00Z'))
-      ;(mockPrisma.config.findUnique as jest.Mock).mockResolvedValue({
-        wrappedEnabled: true,
-        wrappedGenerationStartDate: null,
-        wrappedGenerationEndDate: null,
-      })
-
-      const result = await getWrappedSettings()
-
-      expect(result.wrappedEnabled).toBe(true)
-      expect(result.wrappedYear).toBe(2026) // Year defaults to current year when no date range
-    })
-
-    // P0.14: the season year, not the calendar year, so the card and
-    // /wrapped agree in January (RWP-04, RWV-02).
-    it('keeps last year as the year in January when no date range is set', async () => {
-      jest.setSystemTime(new Date('2027-01-02T12:00:00Z'))
-      ;(mockPrisma.config.findUnique as jest.Mock).mockResolvedValue({
-        wrappedEnabled: true,
-        wrappedGenerationStartDate: null,
-        wrappedGenerationEndDate: null,
-      })
-
-      const result = await getWrappedSettings()
-
-      expect(result.wrappedYear).toBe(2026)
-    })
-
-    it('keeps the start date year in January for a Dec 1 - Jan 31 window', async () => {
-      jest.setSystemTime(new Date('2027-01-02T12:00:00Z'))
-      ;(mockPrisma.config.findUnique as jest.Mock).mockResolvedValue({
-        wrappedEnabled: true,
-        wrappedGenerationStartDate: new Date('2026-12-01T12:00:00Z'),
-        wrappedGenerationEndDate: new Date('2026-01-31T12:00:00Z'),
-      })
-
-      const result = await getWrappedSettings()
-
-      expect(result).toEqual({ wrappedEnabled: true, wrappedYear: 2026 })
-    })
-
-    it('should return disabled when wrappedEnabled is false, regardless of date range', async () => {
-      jest.setSystemTime(new Date('2024-12-15'))
-      ;(mockPrisma.config.findUnique as jest.Mock).mockResolvedValue({
-        wrappedEnabled: false,
-        wrappedYear: 2024,
-        wrappedGenerationStartDate: new Date('2024-11-20'),
-        wrappedGenerationEndDate: new Date('2025-01-31'),
-      })
-
-      const result = await getWrappedSettings()
-
-      expect(result.wrappedEnabled).toBe(false)
-    })
-
-    describe('normal date range (same year)', () => {
-      it('should allow generation when current date is within range', async () => {
-        jest.setSystemTime(new Date('2024-12-15'))
-        ;(mockPrisma.config.findUnique as jest.Mock).mockResolvedValue({
-          wrappedEnabled: true,
-          wrappedYear: 2024,
-          wrappedGenerationStartDate: new Date('2024-11-20'),
-          wrappedGenerationEndDate: new Date('2024-12-31'),
-        })
-
-        const result = await getWrappedSettings()
-
-        expect(result.wrappedEnabled).toBe(true)
-      })
-
-      it('should disallow generation when current date is before start date', async () => {
-        jest.setSystemTime(new Date('2024-11-15'))
-        ;(mockPrisma.config.findUnique as jest.Mock).mockResolvedValue({
-          wrappedEnabled: true,
-          wrappedYear: 2024,
-          wrappedGenerationStartDate: new Date('2024-11-20'),
-          wrappedGenerationEndDate: new Date('2024-12-31'),
-        })
-
-        const result = await getWrappedSettings()
-
-        expect(result.wrappedEnabled).toBe(false)
-      })
-
-      it('should disallow generation when current date is after end date', async () => {
-        jest.setSystemTime(new Date('2025-01-15'))
-        ;(mockPrisma.config.findUnique as jest.Mock).mockResolvedValue({
-          wrappedEnabled: true,
-          wrappedYear: 2024,
-          wrappedGenerationStartDate: new Date('2024-11-20'),
-          wrappedGenerationEndDate: new Date('2024-12-31'),
-        })
-
-        const result = await getWrappedSettings()
-
-        expect(result.wrappedEnabled).toBe(false)
-      })
-
-      it('should allow generation on start date', async () => {
-        jest.setSystemTime(new Date('2024-11-20'))
-        ;(mockPrisma.config.findUnique as jest.Mock).mockResolvedValue({
-          wrappedEnabled: true,
-          wrappedYear: 2024,
-          wrappedGenerationStartDate: new Date('2024-11-20'),
-          wrappedGenerationEndDate: new Date('2024-12-31'),
-        })
-
-        const result = await getWrappedSettings()
-
-        expect(result.wrappedEnabled).toBe(true)
-      })
-
-      it('should allow generation on end date', async () => {
-        jest.setSystemTime(new Date('2024-12-31'))
-        ;(mockPrisma.config.findUnique as jest.Mock).mockResolvedValue({
-          wrappedEnabled: true,
-          wrappedYear: 2024,
-          wrappedGenerationStartDate: new Date('2024-11-20'),
-          wrappedGenerationEndDate: new Date('2024-12-31'),
-        })
-
-        const result = await getWrappedSettings()
-
-        expect(result.wrappedEnabled).toBe(true)
-      })
-    })
-
-    describe('year rollover date range (Nov - Jan)', () => {
-      it('should allow generation in November (after start)', async () => {
-        jest.setSystemTime(new Date('2024-11-25'))
-        ;(mockPrisma.config.findUnique as jest.Mock).mockResolvedValue({
-          wrappedEnabled: true,
-          wrappedYear: 2024,
-          wrappedGenerationStartDate: new Date('2024-11-20'),
-          wrappedGenerationEndDate: new Date('2025-01-31'),
-        })
-
-        const result = await getWrappedSettings()
-
-        expect(result.wrappedEnabled).toBe(true)
-      })
-
-      it('should allow generation in December', async () => {
-        jest.setSystemTime(new Date('2024-12-15'))
-        ;(mockPrisma.config.findUnique as jest.Mock).mockResolvedValue({
-          wrappedEnabled: true,
-          wrappedYear: 2024,
-          wrappedGenerationStartDate: new Date('2024-11-20'),
-          wrappedGenerationEndDate: new Date('2025-01-31'),
-        })
-
-        const result = await getWrappedSettings()
-
-        expect(result.wrappedEnabled).toBe(true)
-      })
-
-      it('should allow generation in January (next year, before end)', async () => {
-        jest.setSystemTime(new Date('2025-01-15'))
-        ;(mockPrisma.config.findUnique as jest.Mock).mockResolvedValue({
-          wrappedEnabled: true,
-          wrappedYear: 2024,
-          wrappedGenerationStartDate: new Date('2024-11-20'),
-          wrappedGenerationEndDate: new Date('2025-01-31'),
-        })
-
-        const result = await getWrappedSettings()
-
-        expect(result.wrappedEnabled).toBe(true)
-      })
-
-      it('should disallow generation in February (after end date)', async () => {
-        jest.setSystemTime(new Date('2025-02-15'))
-        ;(mockPrisma.config.findUnique as jest.Mock).mockResolvedValue({
-          wrappedEnabled: true,
-          wrappedYear: 2024,
-          wrappedGenerationStartDate: new Date('2024-11-20'),
-          wrappedGenerationEndDate: new Date('2025-01-31'),
-        })
-
-        const result = await getWrappedSettings()
-
-        expect(result.wrappedEnabled).toBe(false)
-      })
-
-      it('should disallow generation in October (before start date)', async () => {
-        jest.setSystemTime(new Date('2024-10-15'))
-        ;(mockPrisma.config.findUnique as jest.Mock).mockResolvedValue({
-          wrappedEnabled: true,
-          wrappedYear: 2024,
-          wrappedGenerationStartDate: new Date('2024-11-20'),
-          wrappedGenerationEndDate: new Date('2025-01-31'),
-        })
-
-        const result = await getWrappedSettings()
-
-        expect(result.wrappedEnabled).toBe(false)
-      })
-
-      it('should allow generation on start date (Nov 20)', async () => {
-        jest.setSystemTime(new Date('2024-11-20'))
-        ;(mockPrisma.config.findUnique as jest.Mock).mockResolvedValue({
-          wrappedEnabled: true,
-          wrappedYear: 2024,
-          wrappedGenerationStartDate: new Date('2024-11-20'),
-          wrappedGenerationEndDate: new Date('2025-01-31'),
-        })
-
-        const result = await getWrappedSettings()
-
-        expect(result.wrappedEnabled).toBe(true)
-      })
-
-      it('should allow generation on end date (Jan 31)', async () => {
-        jest.setSystemTime(new Date('2025-01-31'))
-        ;(mockPrisma.config.findUnique as jest.Mock).mockResolvedValue({
-          wrappedEnabled: true,
-          wrappedYear: 2024,
-          wrappedGenerationStartDate: new Date('2024-11-20'),
-          wrappedGenerationEndDate: new Date('2025-01-31'),
-        })
-
-        const result = await getWrappedSettings()
-
-        expect(result.wrappedEnabled).toBe(true)
-      })
-    })
-
-    it('should handle errors gracefully and return defaults', async () => {
-      jest.setSystemTime(new Date('2027-01-02T12:00:00Z'))
-      ;(mockPrisma.config.findUnique as jest.Mock).mockRejectedValue(new Error('Database error'))
-
-      const result = await getWrappedSettings()
-
-      expect(result.wrappedEnabled).toBe(true)
-      expect(result.wrappedYear).toBe(2026)
+    await expect(getWrappedSettings()).resolves.toEqual({
+      featureEnabled: true,
+      seasonOpen: false,
+      wrappedEnabled: false,
+      wrappedYear: 2026,
     })
   })
 
-  describe('updateWrappedSettings', () => {
+  it('is open on 2 January for the season that opened in December', async () => {
+    jest.setSystemTime(new Date('2027-01-02T12:00:00Z'))
+    storedConfig({})
 
-    it('should update wrapped settings without date range', async () => {
-      ;(mockPrisma.config.upsert as jest.Mock).mockResolvedValue({
-        id: 'config',
-        wrappedEnabled: true,
-        wrappedGenerationStartDate: null,
-        wrappedGenerationEndDate: null,
-        updatedBy: 'admin-user-id',
-      })
-
-      const result = await updateWrappedSettings({
-        enabled: true,
-      })
-
-      expect(mockRequireAdmin).toHaveBeenCalled()
-      expect(result.success).toBe(true)
-      expect(mockPrisma.config.upsert).toHaveBeenCalledWith({
-        where: { id: 'config' },
-        update: {
-          wrappedEnabled: true,
-          updatedBy: 'admin-user-id',
-        },
-        create: {
-          id: 'config',
-          llmDisabled: false,
-          wrappedEnabled: true,
-          wrappedGenerationStartDate: null,
-          wrappedGenerationEndDate: null,
-          updatedBy: 'admin-user-id',
-        },
-      })
+    await expect(getWrappedSettings()).resolves.toEqual({
+      featureEnabled: true,
+      seasonOpen: true,
+      wrappedEnabled: true,
+      wrappedYear: 2026,
     })
+  })
 
-    it('should update wrapped settings with date range (year is auto-determined, not stored)', async () => {
-      const startDate = new Date('2024-11-20')
-      const endDate = new Date('2025-01-31')
-      ;(mockPrisma.config.upsert as jest.Mock).mockResolvedValue({
-        id: 'config',
-        wrappedEnabled: true,
-        wrappedGenerationStartDate: startDate,
-        wrappedGenerationEndDate: endDate,
-        updatedBy: 'admin-user-id',
-      })
+  it('evaluates the window in the server zone', async () => {
+    // 23:30 UTC on 30 November is 00:30 on 1 December in Berlin
+    jest.setSystemTime(new Date('2026-11-30T23:30:00Z'))
+    storedConfig({ timezone: 'Europe/Berlin' })
+    await expect(getWrappedSettings()).resolves.toMatchObject({ wrappedEnabled: true, wrappedYear: 2026 })
 
-      const result = await updateWrappedSettings({
-        enabled: true,
-        startDate,
-        endDate,
-      })
+    storedConfig({ timezone: 'UTC' })
+    await expect(getWrappedSettings()).resolves.toMatchObject({ wrappedEnabled: false, wrappedYear: 2026 })
+  })
 
-      expect(result.success).toBe(true)
-      expect(mockPrisma.config.upsert).toHaveBeenCalledWith({
-        where: { id: 'config' },
-        update: {
-          wrappedEnabled: true,
-          wrappedGenerationStartDate: startDate,
-          wrappedGenerationEndDate: endDate,
-          updatedBy: 'admin-user-id',
-        },
-        create: {
-          id: 'config',
-          llmDisabled: false,
-          wrappedEnabled: true,
-          wrappedGenerationStartDate: startDate,
-          wrappedGenerationEndDate: endDate,
-          updatedBy: 'admin-user-id',
-        },
-      })
+  it('a feature switched off disables generation inside the window', async () => {
+    jest.setSystemTime(new Date('2026-12-15T12:00:00Z'))
+    storedConfig({ wrappedEnabled: false })
+
+    await expect(getWrappedSettings()).resolves.toEqual({
+      featureEnabled: false,
+      seasonOpen: true,
+      wrappedEnabled: false,
+      wrappedYear: 2026,
     })
+  })
 
-    it('should clear date range when both are null', async () => {
-      ;(mockPrisma.config.upsert as jest.Mock).mockResolvedValue({
-        id: 'config',
-        wrappedEnabled: true,
-        wrappedGenerationStartDate: null,
-        wrappedGenerationEndDate: null,
-        updatedBy: 'admin-user-id',
-      })
+  it('a window within one year belongs to the calendar year', async () => {
+    jest.setSystemTime(new Date('2026-11-25T12:00:00Z'))
+    storedConfig({ opens: '11-20', closes: '12-31' })
 
-      const result = await updateWrappedSettings({
-        enabled: true,
-        startDate: null,
-        endDate: null,
-      })
+    await expect(getWrappedSettings()).resolves.toMatchObject({ wrappedEnabled: true, wrappedYear: 2026 })
+  })
 
-      expect(result.success).toBe(true)
-      expect(mockPrisma.config.upsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          update: expect.objectContaining({
-            wrappedGenerationStartDate: null,
-            wrappedGenerationEndDate: null,
-          }),
-        })
-      )
-    })
+  it('falls back to the default window in UTC on a database error', async () => {
+    jest.setSystemTime(new Date('2027-01-02T12:00:00Z'))
+    mockFindUnique.mockRejectedValue(new Error('Database error'))
 
-    it('should reject when only start date is provided', async () => {
-      const result = await updateWrappedSettings({
-        enabled: true,
-        startDate: new Date('2024-11-20'),
-        endDate: null,
-      })
-
-      expect(result.success).toBe(false)
-      expect(result.error).toContain('Both start and end dates must be set')
-      expect(mockPrisma.config.upsert).not.toHaveBeenCalled()
-    })
-
-    it('should reject when only end date is provided', async () => {
-      const result = await updateWrappedSettings({
-        enabled: true,
-        startDate: null,
-        endDate: new Date('2025-01-31'),
-      })
-
-      expect(result.success).toBe(false)
-      expect(result.error).toContain('Both start and end dates must be set')
-      expect(mockPrisma.config.upsert).not.toHaveBeenCalled()
-    })
-
-    it('should reject when start and end dates are the same', async () => {
-      const sameDate = new Date('2024-11-20')
-      const result = await updateWrappedSettings({
-        enabled: true,
-        startDate: sameDate,
-        endDate: sameDate,
-      })
-
-      expect(result.success).toBe(false)
-      expect(result.error).toContain('Start and end dates cannot be the same')
-      expect(mockPrisma.config.upsert).not.toHaveBeenCalled()
-    })
-
-    it('should allow year rollover dates (end before start)', async () => {
-      const startDate = new Date('2024-11-20')
-      const endDate = new Date('2025-01-31')
-      ;(mockPrisma.config.upsert as jest.Mock).mockResolvedValue({
-        id: 'config',
-        wrappedEnabled: true,
-        wrappedGenerationStartDate: startDate,
-        wrappedGenerationEndDate: endDate,
-        updatedBy: 'admin-user-id',
-      })
-
-      const result = await updateWrappedSettings({
-        enabled: true,
-        startDate,
-        endDate,
-      })
-
-      expect(result.success).toBe(true)
-      expect(mockPrisma.config.upsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          update: expect.objectContaining({
-            wrappedGenerationStartDate: startDate,
-            wrappedGenerationEndDate: endDate,
-          }),
-        })
-      )
-    })
-
-    it('should require admin access', async () => {
-      mockRequireAdmin.mockImplementation(() => {
-        throw new Error('Not admin')
-      })
-
-      await expect(
-        updateWrappedSettings({
-          enabled: true,
-        })
-      ).rejects.toThrow('Not admin')
-
-      expect(mockPrisma.config.upsert).not.toHaveBeenCalled()
-    })
-
-    it('should handle database errors gracefully', async () => {
-      ;(mockPrisma.config.upsert as jest.Mock).mockRejectedValue(new Error('Database error'))
-
-      const result = await updateWrappedSettings({
-        enabled: true,
-      })
-
-      expect(result.success).toBe(false)
-      expect(result.error).toContain('Database error')
-    })
-
-    it('should revalidate paths after successful update', async () => {
-      ;(mockPrisma.config.upsert as jest.Mock).mockResolvedValue({
-        id: 'config',
-        wrappedEnabled: true,
-        wrappedYear: 2024,
-        updatedBy: 'admin-user-id',
-      })
-
-      await updateWrappedSettings({
-        enabled: true,
-        year: 2024,
-      })
-
-      expect(mockRevalidatePath).toHaveBeenCalledWith('/')
-      expect(mockRevalidatePath).toHaveBeenCalledWith('/wrapped')
+    await expect(getWrappedSettings()).resolves.toEqual({
+      featureEnabled: true,
+      seasonOpen: true,
+      wrappedEnabled: true,
+      wrappedYear: 2026,
     })
   })
 })
 
+describe('updateWrappedSettings', () => {
+  const saved = { wrappedEnabled: true, rewindSeasonOpens: '12-01', rewindSeasonCloses: '01-31', updatedBy: 'admin-user-id' }
+
+  it('stores the month-day window and the switch', async () => {
+    mockUpsert.mockResolvedValue({ id: 'config', ...saved })
+
+    const result = await updateWrappedSettings({ enabled: true, opens: '12-01', closes: '01-31' })
+
+    expect(result.success).toBe(true)
+    expect(mockUpsert).toHaveBeenCalledWith({
+      where: { id: 'config' },
+      update: saved,
+      create: { id: 'config', llmDisabled: false, ...saved },
+      select: expect.not.objectContaining({ stripeSecretKey: true, rewindSerialKey: true }),
+    })
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/wrapped')
+  })
+
+  it('accepts a window within one year and 29 February', async () => {
+    mockUpsert.mockResolvedValue({ id: 'config' })
+
+    await expect(updateWrappedSettings({ enabled: false, opens: '11-20', closes: '02-29' })).resolves.toMatchObject({
+      success: true,
+    })
+  })
+
+  it('rejects the same day for opening and closing', async () => {
+    const result = await updateWrappedSettings({ enabled: true, opens: '12-01', closes: '12-01' })
+
+    expect(result).toEqual({ success: false, error: 'The season cannot open and close on the same day' })
+    expect(mockUpsert).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['02-30', '01-31'],
+    ['12-01', '13-01'],
+    ['2026-12-01', '01-31'],
+    ['', '01-31'],
+  ])('rejects %p to %p', async (opens, closes) => {
+    const result = await updateWrappedSettings({ enabled: true, opens, closes })
+
+    expect(result).toEqual({ success: false, error: 'Season dates must be real month-day values (MM-DD)' })
+    expect(mockUpsert).not.toHaveBeenCalled()
+  })
+
+  it('requires an admin', async () => {
+    mockRequireAdmin.mockRejectedValue(new Error('Not admin'))
+
+    await expect(updateWrappedSettings({ enabled: true, opens: '12-01', closes: '01-31' })).rejects.toThrow('Not admin')
+    expect(mockUpsert).not.toHaveBeenCalled()
+  })
+
+  it('returns database errors', async () => {
+    mockUpsert.mockRejectedValue(new Error('Database error'))
+
+    await expect(updateWrappedSettings({ enabled: true, opens: '12-01', closes: '01-31' })).resolves.toEqual({
+      success: false,
+      error: 'Database error',
+    })
+  })
+})
+
+describe('updateServerTimeZone', () => {
+  it('stores the canonical name, audits the change and revalidates every page', async () => {
+    mockFindUnique.mockResolvedValue({ timezone: 'UTC' })
+    mockUpsert.mockResolvedValue({ id: 'config' })
+
+    await expect(updateServerTimeZone('US/Pacific')).resolves.toEqual({
+      success: true,
+      timezone: 'America/Los_Angeles',
+    })
+    expect(mockUpsert).toHaveBeenCalledWith({
+      where: { id: 'config' },
+      update: { timezone: 'America/Los_Angeles', updatedBy: 'admin-user-id' },
+      create: { id: 'config', timezone: 'America/Los_Angeles', updatedBy: 'admin-user-id' },
+      select: { id: true },
+    })
+    expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.SERVER_TIMEZONE_CHANGED, 'admin-user-id', {
+      from: 'UTC',
+      to: 'America/Los_Angeles',
+    })
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/', 'layout')
+    // The cached format settings (lib/settings/app-settings.ts) pick up the new zone.
+    expect(mockUpdateTag).toHaveBeenCalledWith('app-settings')
+  })
+
+  it('accepts UTC, which Intl.supportedValuesOf leaves out', async () => {
+    mockFindUnique.mockResolvedValue(null)
+    mockUpsert.mockResolvedValue({ id: 'config' })
+
+    await expect(updateServerTimeZone('Etc/UTC')).resolves.toEqual({ success: true, timezone: 'UTC' })
+    expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.SERVER_TIMEZONE_CHANGED, 'admin-user-id', {
+      from: null,
+      to: 'UTC',
+    })
+  })
+
+  it.each(['Mars/Base', '', '+05:00', 'x'.repeat(65)])('rejects %p', async (zone) => {
+    await expect(updateServerTimeZone(zone)).resolves.toMatchObject({ success: false })
+    expect(mockUpsert).not.toHaveBeenCalled()
+    expect(logAuditEvent).not.toHaveBeenCalled()
+  })
+
+  it('requires an admin', async () => {
+    mockRequireAdmin.mockRejectedValue(new Error('Not admin'))
+
+    await expect(updateServerTimeZone('Europe/Berlin')).rejects.toThrow('Not admin')
+    expect(mockUpsert).not.toHaveBeenCalled()
+  })
+})

@@ -8,7 +8,7 @@
  */
 
 import { getActivePromptTemplate } from "@/actions/prompts"
-import { formatWatchTime } from "@/lib/utils/time-formatting"
+import { formatDuration } from "@/lib/utils/format"
 import { suggestArchetypes } from "@/lib/wrapped/archetype-scoring"
 import { WrappedStatistics } from "@/types/wrapped"
 
@@ -35,11 +35,11 @@ function replacePlaceholders(template: string, context: PlaceholderContext): str
     "{{year}}": year.toString(),
 
     // Watch time placeholders
-    "{{totalWatchTime}}": formatWatchTime(statistics.totalWatchTime.total),
+    "{{totalWatchTime}}": formatDuration(statistics.totalWatchTime.total, "long", { largestUnit: "day" }),
     "{{totalWatchTimeMinutes}}": statistics.totalWatchTime.total.toString(),
-    "{{moviesWatchTime}}": formatWatchTime(statistics.totalWatchTime.movies),
+    "{{moviesWatchTime}}": formatDuration(statistics.totalWatchTime.movies, "long", { largestUnit: "day" }),
     "{{moviesWatchTimeMinutes}}": statistics.totalWatchTime.movies.toString(),
-    "{{showsWatchTime}}": formatWatchTime(statistics.totalWatchTime.shows),
+    "{{showsWatchTime}}": formatDuration(statistics.totalWatchTime.shows, "long", { largestUnit: "day" }),
     "{{showsWatchTimeMinutes}}": statistics.totalWatchTime.shows.toString(),
 
     // Content count placeholders
@@ -49,12 +49,12 @@ function replacePlaceholders(template: string, context: PlaceholderContext): str
 
     // Top movies list
     "{{topMoviesList}}": statistics.topMovies.slice(0, 5).map((movie, idx) =>
-      `${idx + 1}. ${movie.title}${movie.year ? ` (${movie.year})` : ""} - ${formatWatchTime(movie.watchTime)} watched (${movie.watchTime} minutes)`
+      `${idx + 1}. ${movie.title}${movie.year ? ` (${movie.year})` : ""} - ${formatDuration(movie.watchTime, "long", { largestUnit: "day" })} watched (${movie.watchTime} minutes)`
     ).join("\n"),
 
     // Top shows list
     "{{topShowsList}}": statistics.topShows.slice(0, 5).map((show, idx) =>
-      `${idx + 1}. ${show.title}${show.year ? ` (${show.year})` : ""} - ${formatWatchTime(show.watchTime)} watched (${show.watchTime} minutes), ${show.episodesWatched} episodes`
+      `${idx + 1}. ${show.title}${show.year ? ` (${show.year})` : ""} - ${formatDuration(show.watchTime, "long", { largestUnit: "day" })} watched (${show.watchTime} minutes), ${show.episodesWatched} episodes`
     ).join("\n"),
 
     // Top movies JSON (for data sections)
@@ -77,9 +77,9 @@ function replacePlaceholders(template: string, context: PlaceholderContext): str
 **Viewing Patterns:**
 - Longest streak: ${derived.longestStreak ? `${derived.longestStreak.days} consecutive days (${derived.longestStreak.start} to ${derived.longestStreak.end})` : "none"}
 - Peak viewing hour: ${derived.peakHour ? `${derived.peakHour.label} (${derived.peakHour.plays} plays)` : "unknown"}
-- Watch time by day of week: ${derived.dayOfWeekHistogram.map(d => `${d.day}: ${formatWatchTime(d.watchTime)}`).join(", ")}
+- Watch time by day of week: ${derived.dayOfWeekHistogram.map(d => `${d.day}: ${formatDuration(d.watchTime, "long", { largestUnit: "day" })}`).join(", ")}
 - Weekend share of watch time: ${derived.weekendVsWeekday.weekendPct}%
-- Most active single day: ${derived.mostActiveDay ? `${derived.mostActiveDay.date} (${formatWatchTime(derived.mostActiveDay.watchTime)})` : "unknown"}
+- Most active single day: ${derived.mostActiveDay ? `${derived.mostActiveDay.date} (${formatDuration(derived.mostActiveDay.watchTime, "long", { largestUnit: "day" })})` : "unknown"}
 ` : "",
 
     // Server percentile (v2, conditional)
@@ -103,8 +103,8 @@ function replacePlaceholders(template: string, context: PlaceholderContext): str
 
 **Your Position in Overall Watch Time Leaderboard:**
 ${statistics.leaderboards.watchTime.userPosition
-  ? `You ranked #${statistics.leaderboards.watchTime.userPosition} out of ${statistics.leaderboards.watchTime.totalUsers} users with ${formatWatchTime(statistics.totalWatchTime.total)} total watch time (${statistics.totalWatchTime.total} minutes)`
-  : `You watched ${formatWatchTime(statistics.totalWatchTime.total)} total (${statistics.totalWatchTime.total} minutes) out of ${statistics.leaderboards.watchTime.totalUsers} users`}
+  ? `You ranked #${statistics.leaderboards.watchTime.userPosition} out of ${statistics.leaderboards.watchTime.totalUsers} users with ${formatDuration(statistics.totalWatchTime.total, "long", { largestUnit: "day" })} total watch time (${statistics.totalWatchTime.total} minutes)`
+  : `You watched ${formatDuration(statistics.totalWatchTime.total, "long", { largestUnit: "day" })} total (${statistics.totalWatchTime.total} minutes) out of ${statistics.leaderboards.watchTime.totalUsers} users`}
 
 **Top Movies Leaderboards (all watch times in minutes):**
 ${statistics.leaderboards.topContent.movies.map((movie) => {
@@ -113,7 +113,7 @@ ${statistics.leaderboards.topContent.movies.map((movie) => {
     : `watched by ${movie.totalWatchers} users`
   const topWatcher = movie.leaderboard[0]
   const topWatcherText = topWatcher && topWatcher.watchTime > 0
-    ? `The top watcher watched ${formatWatchTime(topWatcher.watchTime)} (${topWatcher.watchTime} minutes)`
+    ? `The top watcher watched ${formatDuration(topWatcher.watchTime, "long", { largestUnit: "day" })} (${topWatcher.watchTime} minutes)`
     : ""
   return `- ${movie.title}: Your position: ${positionText}. ${topWatcherText}`
 }).join("\n")}
@@ -125,7 +125,7 @@ ${statistics.leaderboards.topContent.shows.map((show) => {
     : `watched by ${show.totalWatchers} users`
   const topWatcher = show.leaderboard[0]
   const topWatcherText = topWatcher && topWatcher.watchTime > 0
-    ? `The top watcher watched ${formatWatchTime(topWatcher.watchTime)} (${topWatcher.watchTime} minutes, ${topWatcher.episodesWatched} episodes)`
+    ? `The top watcher watched ${formatDuration(topWatcher.watchTime, "long", { largestUnit: "day" })} (${topWatcher.watchTime} minutes, ${topWatcher.episodesWatched} episodes)`
     : ""
   return `- ${show.title}: Your position: ${positionText}. ${topWatcherText}`
 }).join("\n")}
@@ -155,12 +155,12 @@ ${statistics.leaderboards.topContent.shows.map((show) => {
     "{{watchTimeByMonthSection}}": statistics.watchTimeByMonth && statistics.watchTimeByMonth.length > 0 ? `
 **Watch Time by Month (all times in minutes):**
 ${statistics.watchTimeByMonth.map(month => {
-  const watchTimeText = `${formatWatchTime(month.watchTime)} (${month.watchTime} minutes)`
+  const watchTimeText = `${formatDuration(month.watchTime, "long", { largestUnit: "day" })} (${month.watchTime} minutes)`
   const movieText = month.topMovie
-    ? ` | Top Movie: ${month.topMovie.title}${month.topMovie.year ? ` (${month.topMovie.year})` : ""} - ${formatWatchTime(month.topMovie.watchTime)} (${month.topMovie.watchTime} minutes)`
+    ? ` | Top Movie: ${month.topMovie.title}${month.topMovie.year ? ` (${month.topMovie.year})` : ""} - ${formatDuration(month.topMovie.watchTime, "long", { largestUnit: "day" })} (${month.topMovie.watchTime} minutes)`
     : ""
   const showText = month.topShow
-    ? ` | Top Show: ${month.topShow.title}${month.topShow.year ? ` (${month.topShow.year})` : ""} - ${formatWatchTime(month.topShow.watchTime)} (${month.topShow.watchTime} minutes), ${month.topShow.episodesWatched} episodes`
+    ? ` | Top Show: ${month.topShow.title}${month.topShow.year ? ` (${month.topShow.year})` : ""} - ${formatDuration(month.topShow.watchTime, "long", { largestUnit: "day" })} (${month.topShow.watchTime} minutes), ${month.topShow.episodesWatched} episodes`
     : ""
   return `- ${month.monthName}: ${watchTimeText}${movieText}${showText}`
 }).join("\n")}
@@ -169,12 +169,11 @@ ${statistics.watchTimeByMonth.map(month => {
     // Server name (if available)
     "{{serverName}}": statistics.serverStats?.serverName || "",
 
-    // Calculated values
-    "{{bingeWatcher}}": statistics.topShows.some(s => s.episodesWatched > 20) ? "true" : "false",
-    "{{discoveryScore}}": Math.min(100, Math.max(0, Math.floor((statistics.moviesWatched + statistics.showsWatched) / 10))).toString(),
-
-    // Deprecated placeholders (v1 JSON-format era) — resolve to empty so
-    // existing custom DB templates keep rendering without stale scaffolding
+    // Deprecated placeholders — resolve to empty so existing custom DB
+    // templates keep rendering without stale scaffolding. bingeWatcher and
+    // discoveryScore fed LLM-computed fields that left the contract (RWP-16).
+    "{{bingeWatcher}}": "",
+    "{{discoveryScore}}": "",
     "{{overseerrSectionJson}}": "",
     "{{overseerrAnimationDelay}}": "",
     "{{insightsAnimationDelay}}": "",
@@ -241,10 +240,6 @@ You return a JSON object with four parts (the exact shape is enforced automatica
 - "finale": the closing credits. Thank them, land one last image, and hint at next year's sequel.
 
 **insights** —
-- "personality": a one-line viewing personality description.
-- "topGenre": your best inference of their most-watched genre from the titles and request data provided.
-- "bingeWatcher": true if any show has episodesWatched > 20, else false.
-- "discoveryScore": min(100, max(0, floor((moviesWatched + showsWatched) / 10))).
 - "funFacts": 3-7 standalone facts, each a single sentence, 2nd person, with <highlight>tags</highlight> around every number. Mix viewing-habit facts with server-library facts when server data is available.
 
 **summary** — 2-3 shareable sentences capturing the most impressive stats of their year, written to be posted publicly. Include <highlight>tags</highlight> around numbers.
@@ -255,6 +250,8 @@ If a narrative's underlying data was not provided in the statistics, set that na
 /**
  * Get the default user prompt template (fallback if no template in database)
  * This should contain only the viewing statistics data, not instructions
+ *
+ * @internal
  */
 export function getDefaultPromptTemplate(): string {
   return `=== VIEWING STATISTICS FOR {{year}} ===
@@ -291,8 +288,6 @@ Here are the viewing statistics for {{userName}}:
 
 **Additional Context:**
 - Server name: {{serverName}}
-- Binge watcher calculation: {{bingeWatcher}} (true if any show has episodesWatched > 20)
-- Discovery score: {{discoveryScore}} (calculated as min(100, max(0, floor((moviesWatched + showsWatched) / 10))))
 
 **Archetype Candidates (choose exactly one id):**
 {{archetypeCandidates}}
@@ -353,8 +348,8 @@ export function getAvailablePlaceholders(): Array<{ placeholder: string; descrip
     { placeholder: "{{overseerrStatsSection}}", description: "Overseerr statistics section (empty if not available)" },
     { placeholder: "{{watchTimeByMonthSection}}", description: "Watch time by month section (empty if not available)" },
     { placeholder: "{{serverName}}", description: "Server name (empty if not available)" },
-    { placeholder: "{{bingeWatcher}}", description: "'true' or 'false' based on viewing habits" },
-    { placeholder: "{{discoveryScore}}", description: "Discovery score (0-100)" },
+    { placeholder: "{{bingeWatcher}}", description: "DEPRECATED — resolves to empty (no longer an LLM output)" },
+    { placeholder: "{{discoveryScore}}", description: "DEPRECATED — resolves to empty (no longer an LLM output)" },
     { placeholder: "{{overseerrSectionJson}}", description: "DEPRECATED — resolves to empty (output format is now schema-enforced)" },
     { placeholder: "{{overseerrAnimationDelay}}", description: "DEPRECATED — resolves to empty (pacing is viewer-owned)" },
     { placeholder: "{{insightsAnimationDelay}}", description: "DEPRECATED — resolves to empty (pacing is viewer-owned)" },

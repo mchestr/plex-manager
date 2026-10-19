@@ -45,6 +45,8 @@ describe("playwright.config.ts database guard", () => {
     delete env.E2E_DATABASE_URL
     delete env.E2E_PORT
     delete env.E2E_REUSE_SERVER
+    delete env.E2E_SERVER
+    delete env.E2E_PREBUILT
   })
 
   afterEach(() => {
@@ -92,5 +94,35 @@ describe("playwright.config.ts database guard", () => {
 
     env.E2E_REUSE_SERVER = "1"
     expect(webServer(loadConfig())?.reuseExistingServer).toBe(true)
+  })
+
+  it("serves a production build only with E2E_SERVER=prod", () => {
+    env.E2E_DATABASE_URL = TEST_URL
+    const webServer = (config: PlaywrightTestConfig) =>
+      Array.isArray(config.webServer) ? undefined : config.webServer
+
+    const dev = webServer(loadConfig())
+    expect(dev?.command).toBe("npx next dev -p 3100")
+    expect(dev?.env?.NODE_ENV).toBe("test")
+
+    env.E2E_SERVER = "prod"
+    const prod = webServer(loadConfig())
+    expect(prod?.command).toBe("npm run build:e2e && npx next start -p 3100")
+    expect(prod?.env?.NODE_ENV).toBe("production")
+
+    env.E2E_PREBUILT = "1"
+    expect(webServer(loadConfig())?.command).toBe("npx next start -p 3100")
+  })
+
+  it("keeps the visual specs out of the chromium project", () => {
+    env.E2E_DATABASE_URL = TEST_URL
+    const projects = loadConfig().projects ?? []
+    const chromium = projects.find((project) => project.name === "chromium")
+    const ignored = [chromium?.testIgnore].flat() as RegExp[]
+
+    expect(ignored.some((pattern) => pattern.test("e2e/visual/member.visual.spec.ts"))).toBe(true)
+    expect(projects.map((project) => project.name)).toEqual(
+      expect.arrayContaining(["visual-desktop", "visual-mobile", "visual-setup-desktop", "visual-setup-mobile"])
+    )
   })
 })

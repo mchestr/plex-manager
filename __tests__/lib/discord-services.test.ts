@@ -5,7 +5,8 @@
 import { handleDiscordChat } from "@/lib/discord/services"
 import { runChatbotForUser } from "@/lib/chatbot/assistant"
 import { getOrCreateSession, appendTurn } from "@/lib/discord/chat-session"
-import { prisma } from "@/lib/prisma"
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 // Mock dependencies
 jest.mock("@/lib/chatbot/assistant", () => ({
@@ -20,16 +21,9 @@ jest.mock("@/lib/discord/chat-session", () => ({
   appendTurn: jest.fn(),
 }))
 
-jest.mock("@/lib/prisma", () => ({
-  prisma: {
-    discordConnection: {
-      findUnique: jest.fn(),
-    },
-    config: {
-      findUnique: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock("@/lib/discord/chat-safety", () => ({
   sanitizeDiscordResponse: jest.fn((content: string) => ({
@@ -50,7 +44,7 @@ jest.mock("@/lib/utils/logger", () => ({
 const mockRunChatbotForUser = runChatbotForUser as jest.MockedFunction<typeof runChatbotForUser>
 const mockGetOrCreateSession = getOrCreateSession as jest.MockedFunction<typeof getOrCreateSession>
 const mockAppendTurn = appendTurn as jest.MockedFunction<typeof appendTurn>
-const mockPrisma = prisma as jest.Mocked<typeof prisma>
+const mockPrisma = prismaMock
 
 describe("handleDiscordChat", () => {
   const mockConnection = {

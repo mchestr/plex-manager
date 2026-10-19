@@ -16,6 +16,8 @@ import { redirect } from "next/navigation"
  * async function; a `export { … } from "@/lib/access"` re-export is rejected by
  * Next's server-action compiler ("module has no exports at all"), hence this
  * wrapper rather than a bare re-export.
+ *
+ * @internal
  */
 export async function getAccessGateStatus(userId: string): Promise<boolean> {
   return computeAccessGateStatus(userId)
@@ -53,4 +55,3 @@ export async function ensureSubscriptionOrAccess() {
     redirect("/subscribe")
   }
 }
-

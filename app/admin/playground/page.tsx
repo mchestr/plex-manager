@@ -17,7 +17,7 @@ export default async function PlaygroundPage({
     <div className="p-4 sm:p-6">
       <div className="max-w-7xl mx-auto">
           <div className="mb-6">
-            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+            <h1 data-testid="admin-playground-heading" className="text-2xl sm:text-3xl font-bold text-white mb-2">
               Wrapped Playground
             </h1>
             <p className="text-sm text-slate-400">

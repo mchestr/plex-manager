@@ -24,20 +24,9 @@ jest.mock("@/lib/security/audit-log", () => ({
   logAuditEvent: jest.fn(),
 }))
 
-jest.mock("@/lib/prisma", () => ({
-  prisma: {
-    discordIntegration: {
-      findUnique: jest.fn(),
-      upsert: jest.fn(),
-    },
-    discordConnection: {
-      upsert: jest.fn(),
-      update: jest.fn(),
-      deleteMany: jest.fn(),
-      findUnique: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock("@/lib/admin", () => ({
   requireAdmin: jest.fn(),
@@ -66,15 +55,13 @@ jest.mock("@/lib/utils/logger", () => ({
 }))
 
 import { updateDiscordIntegrationSettings, disconnectDiscordAccount } from "@/actions/discord"
-import { prisma } from "@/lib/prisma"
 import { requireAdmin } from "@/lib/admin"
 import { clearDiscordRoleForUser as mockedClearRole } from "@/lib/discord/integration"
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 const mockLogAuditEvent = logAuditEvent as jest.MockedFunction<typeof logAuditEvent>
-const mockPrisma = prisma as unknown as {
-  discordIntegration: { findUnique: jest.Mock; upsert: jest.Mock }
-  discordConnection: { deleteMany: jest.Mock; findUnique: jest.Mock }
-}
+const mockPrisma = prismaMock
 const mockRequireAdmin = requireAdmin as jest.MockedFunction<typeof requireAdmin>
 
 beforeEach(() => {

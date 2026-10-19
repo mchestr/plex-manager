@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { getPlexAuthToken } from "@/lib/plex-auth"
 import { isRateLimitedSignInError, RATE_LIMITED_MESSAGE } from "@/lib/security/rate-limit-messages"
 import { redirectTo } from "@/lib/utils/navigation"
-import { getSession, signIn } from "next-auth/react"
+import { signIn } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 
@@ -25,67 +25,6 @@ export function PlexCallbackPageClient() {
 
       const pinId = searchParams.get("plexPinId")
       const inviteCode = searchParams.get("inviteCode")
-      const testToken = searchParams.get("testToken")
-
-      // TEST MODE BYPASS
-      // Check for test token - only works when explicitly enabled via env var and
-      // never in production. Mirrors the server-side guard in lib/auth.ts so a
-      // client bundle built for production can never present the test flow.
-      // Note: NEXT_PUBLIC_ prefix is required for client-side runtime access.
-      const isTestMode =
-        process.env.NODE_ENV !== 'production' &&
-        process.env.NEXT_PUBLIC_ENABLE_TEST_AUTH === 'true'
-
-      if (testToken) {
-        if (!isTestMode) {
-          setError('Test authentication is not enabled on this server')
-          return
-        }
-      }
-
-      if (testToken && isTestMode) {
-        isProcessingRef.current = true
-        setStatus("Using test token...")
-
-        try {
-          const result = await signIn("plex", {
-            authToken: testToken,
-            redirect: false,
-          })
-
-          if (result?.ok) {
-            // Wait a moment for the session cookie to be set server-side
-            await new Promise(resolve => setTimeout(resolve, 1500))
-
-            // Verify session is available before redirecting
-            try {
-              await getSession()
-            } catch {
-              // Proceed with the redirect even if session verification fails;
-              // the full page load below will re-establish it.
-            }
-
-            // Check if user needs to complete onboarding
-            const { getOnboardingStatus } = await import("@/actions/onboarding")
-            const { isComplete } = await getOnboardingStatus()
-
-            // Full page reload (via redirectTo) to ensure the session cookie is sent.
-            // The test fixture will wait for the redirect and verify the session.
-            redirectTo(isComplete ? '/' : '/onboarding')
-            return
-          } else {
-            console.error("[AUTH] Test token sign in failed:", result?.error)
-            setError(result?.error || "Failed to sign in with test token")
-            isProcessingRef.current = false
-            return
-          }
-        } catch (err) {
-          console.error("[AUTH] Test token sign in error:", err)
-          setError("Failed to sign in with test token")
-          isProcessingRef.current = false
-          return
-        }
-      }
 
       if (!pinId) {
         setError("No PIN ID received from Plex")
@@ -244,7 +183,7 @@ export function PlexCallbackPageClient() {
     return (
       <div className="z-10 max-w-md w-full">
         <div className="bg-slate-800/50 backdrop-blur-sm border border-red-500/50 rounded-lg p-8 shadow-xl">
-          <h1 className="text-2xl font-bold text-center mb-4 text-red-400">
+          <h1 data-testid="plex-callback-error-heading" className="text-2xl font-bold text-center mb-4 text-red-400">
             {errorTitle}
           </h1>
           <p className="text-center text-slate-300 mb-6">{error}</p>

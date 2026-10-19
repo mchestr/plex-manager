@@ -108,6 +108,13 @@ horizontally (Kubernetes, Docker Swarm, etc.).
   only slows takeover and settings changes; it cannot take the bot offline.
 - No manual configuration needed.
 
+**Gateway compression is optional.** `zlib-sync` is an optional dependency.
+When it builds (it needs `python3`, `make` and `g++` at install time),
+discord.js compresses the gateway connection; when it does not, `npm ci` skips
+it and the bot connects uncompressed. The Docker image ships without that
+toolchain, so it runs uncompressed. To compress, install the toolchain before
+`npm ci` in your own image.
+
 ### Token rotation
 
 Because only the lock holder runs the bot, config changes are applied there. The
@@ -164,6 +171,14 @@ channel/thread IDs remain configurable (informational only).
   should show `lastRenewedAt` advancing every 10 s for one instance. If it
   stops, check database connectivity: a failed renewal shuts the bot down
   until the next poll takes the lock again.
+- **Bot stays offline for up to 30 s after a restart** → a clean stop
+  (SIGTERM, `docker stop`) destroys the bot and deletes the `DiscordBotLock`
+  row, so the next instance takes over at its first poll. The shutdown
+  coordinator needs `NEXT_MANUAL_SIG_HANDLE=true` (the image and
+  `npm run start:prod` set it); without it, Next exits at once and the lease
+  has to expire instead. With manual signal handling Next no longer closes the
+  HTTP server: in-flight requests finish within `SHUTDOWN_GRACE_MS` (default
+  8000) because the process exits last.
 - **Assistant doesn't reply in a channel** → the assistant is DM-based; DM the
   bot, or use `/assistant ask`.
 - **Verification errors** → check database connectivity and that the Discord

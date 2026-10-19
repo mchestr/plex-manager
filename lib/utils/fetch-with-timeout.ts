@@ -4,7 +4,13 @@
  * Provides a wrapper around the native fetch API that includes automatic
  * timeout handling via AbortController. This eliminates duplicated
  * timeout/abort logic across connection files.
+ *
+ * Redirects go through `fetchWithSafeRedirects`, so a cross-origin hop drops
+ * the custom auth headers (SEC-36). New service calls use `serviceFetch` from
+ * `@/lib/connections/http`, whose timeout always covers the body.
  */
+
+import { fetchWithSafeRedirects } from "@/lib/connections/http"
 
 export interface FetchWithTimeoutOptions extends Omit<RequestInit, 'signal'> {
   /** Timeout in milliseconds (default: 10000ms / 10 seconds) */
@@ -44,7 +50,7 @@ export async function fetchWithTimeout(
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
   try {
-    const response = await fetch(url, {
+    const response = await fetchWithSafeRedirects(url, {
       ...fetchOptions,
       signal: controller.signal,
     })

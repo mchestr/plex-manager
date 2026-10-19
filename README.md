@@ -97,10 +97,10 @@ Plex Management System transforms your Plex experience by combining powerful man
 
 ### Prerequisites
 
-- **Node.js** 20.19+, 22.12+, or 24+ (LTS recommended)
+- **Node.js** 22 or later (the Docker image ships its own Node.js)
 - **npm** or **yarn**
 - **PostgreSQL** database (SQLite is no longer supported as of Prisma v7)
-- **Redis** (optional, for the background job queue — required for Stripe subscriptions)
+- **Redis**, which Rewind and Stripe subscriptions require (it backs the background job queue)
 - Access to:
   - A **Plex server** (with admin token)
   - **Tautulli** instance (for viewing statistics)
@@ -137,8 +137,9 @@ Edit `.env` and configure:
 4. **Initialize the database**
 ```bash
 npm run db:generate
-npm run db:push
+npm run db:deploy
 ```
+`db:deploy` applies the migrations in `prisma/migrations`, the same command the Docker image runs at start. Upgrades use it too; see [Upgrading](#upgrading).
 
 5. **Start the development server**
 ```bash
@@ -204,8 +205,9 @@ plex-wrapped/
 | `npm run test:e2e` | Run end-to-end tests (Playwright) |
 | `npm run test:e2e:ui` | Run E2E tests in UI mode |
 | `npm run db:generate` | Generate Prisma Client |
-| `npm run db:push` | Push schema changes to database |
-| `npm run db:migrate` | Run database migrations |
+| `npm run db:deploy` | Apply pending migrations (install and upgrade) |
+| `npm run db:push` | Contributor-only: push the schema to a throwaway database while prototyping |
+| `npm run db:migrate` | Contributor-only: create a new migration (`prisma migrate dev`) |
 | `npm run db:studio` | Open Prisma Studio (database GUI) |
 | `npm run db:seed` | Deletes all users, Rewinds and service configs, then creates test users. Local or `_test` databases only; needs `E2E_TEST_MODE=true`. Never run it on a host that serves production |
 
@@ -250,17 +252,11 @@ The CLAUDE.md file contains detailed information about:
 ### Database Management
 
 ```bash
-# Generate Prisma Client after schema changes
-npm run db:generate
-
-# Push schema changes (development)
-npm run db:push
-
-# Create migration (production)
-npm run db:migrate
-
-# Open database GUI
-npm run db:studio
+npm run db:generate   # Generate Prisma Client after schema changes
+npm run db:deploy     # Apply pending migrations (install and upgrade)
+npm run db:push       # Contributor-only: push the schema to a throwaway database while prototyping
+npm run db:migrate    # Contributor-only: create a migration after changing prisma/schema.prisma
+npm run db:studio     # Open database GUI
 ```
 
 ### Environment Variables
@@ -272,7 +268,8 @@ See `example.env` for all available configuration options. Key variables:
 - **Authentication**: `NEXTAUTH_SECRET`, `PLEX_CLIENT_IDENTIFIER`
 - **Jellyfin**: `JELLYFIN_DEVICE_ID` (optional) — the DeviceId reported to Jellyfin at sign-in. By default it is derived from `PLEX_CLIENT_IDENTIFIER`, so leave it unset unless you want your own value. If neither is set, Jellyfin sign-in uses the fixed `plex-manager-server` and logs `jellyfin.auth.device_id_fallback` at warn.
 - **Encryption**: `ENCRYPTION_KEY` (optional but strongly recommended in production) — encrypts external-service secrets/tokens at rest. Use a dedicated value (do **not** reuse `NEXTAUTH_SECRET`); generate with `openssl rand -hex 32`. Rollout is non-destructive; rotating it makes previously-encrypted secrets undecryptable until re-saved.
-- **Job Queue**: `REDIS_URL` (optional) — enables the Redis-backed BullMQ worker. Without it, background jobs fall back to PostgreSQL polling. Required for Stripe subscriptions.
+- **Job Queue**: `REDIS_URL` — enables the Redis-backed BullMQ worker. Rewind and Stripe subscriptions require it; without it, only the watchlist sync keeps running, through PostgreSQL polling.
+- **Docker Compose (development)**: `POSTGRES_PASSWORD` and `REDIS_PASSWORD` are required; `docker compose up` refuses to start without them. `docker-compose.yml` publishes Postgres (5432, 5433) and Redis (6379) on `127.0.0.1` only and builds the app container's `DATABASE_URL` and `REDIS_URL` from the two passwords; use them in your own `.env` URLs as well. A database volume created before this change keeps its old password (`postgres`), so set `POSTGRES_PASSWORD` to that or change it with `ALTER USER`.
 - **Development**: `DEV_*` variables for setup wizard defaults (read only with `NODE_ENV=development` and `DEV_SETUP_PREFILL=true`, until setup is complete)
   - Use URL format: `DEV_PLEX_URL="https://localhost:32400"` (includes protocol and port)
 
@@ -298,14 +295,20 @@ When deploying to production, ensure the following environment variables are set
    - Generate with: `openssl rand -base64 32`
    - Keep this secret and never commit it to version control
 
-4. **`DATABASE_URL`** - Your production PostgreSQL database connection string
+4. **`PLEX_CLIENT_IDENTIFIER`** - A unique, stable identifier for this install
+   - Generate with: `openssl rand -hex 16`
+   - Keep it unchanged across upgrades: Plex and Jellyfin see it as this app's device id
+
+5. **`DATABASE_URL`** - Your production PostgreSQL database connection string
    - Example: `postgresql://user:password@host:port/database`
    - SQLite is no longer supported (Prisma v7 requirement)
+
+A production server checks these at start and exits with code 1, logging `env.invalid` and the variable's name (never its value), when `NEXTAUTH_SECRET` is missing, shorter than 32 characters, has fewer than 10 distinct characters or is a published placeholder (such as `example.env`'s old value), when `NEXTAUTH_URL` or `NEXT_PUBLIC_APP_URL` is not `https:` (loopback hosts excepted), or when `PLEX_CLIENT_IDENTIFIER` is empty. Two URLs with different origins only log a warning. `ALLOW_INSECURE_HTTP=true` lets a LAN-only install run on plain http; it logs a warning at every start, and session cookies are then not Secure, so never set it on an install reachable from the internet.
 
 ### Important Notes
 
 - **No hardcoded localhost**: The application will throw an error in production if neither `NEXT_PUBLIC_APP_URL` nor `NEXTAUTH_URL` is set
-- **HTTPS required**: In production, always use HTTPS URLs for both environment variables
+- **HTTPS required**: In production, both URL variables must be HTTPS, or the server refuses to start (see above). Session cookies are Secure, with the `__Secure-` name, exactly when `NEXTAUTH_URL` is https
 - **Domain consistency**: Both URL variables should point to the same domain to avoid authentication issues
 - **Reverse proxy and rate limits**: Rate limits key on the client IP (IPv6 clients by their /64), read from `X-Forwarded-For`. Run the app behind a reverse proxy that adds the client address to `X-Forwarded-For` (Traefik and Caddy do by default, nginx with `proxy_add_x_forwarded_for`), and set `TRUSTED_PROXY_HOPS` to the number of proxies that append to it: `1` (the default) for one proxy. Keep the app port off the public internet so every request passes through the proxy; a client that reaches the app directly can choose its own address. Set `REDIS_URL` so limits hold across processes and restarts. The server logs a warning once if `TRUSTED_PROXY_HOPS` is invalid or no client address can be found, because such requests share one bucket.
 - **CDN in front of the proxy** (`TRUSTED_PROXY_HOPS=2`): this is only correct when the inner proxy keeps the CDN's `X-Forwarded-For` and appends to it. Traefik and Caddy drop an incoming `X-Forwarded-For` from senders they do not trust, so add the CDN's address ranges to Traefik's `forwardedHeaders.trustedIPs` or Caddy's `trusted_proxies`; otherwise the header has a single entry and every visitor is keyed by a CDN edge address. Let the origin accept traffic only from the CDN (a firewall rule on the CDN's published ranges, or a tunnel), because a request sent straight to the proxy can choose the entry the app reads.
@@ -329,6 +332,39 @@ When deploying to production, ensure the following environment variables are set
   ```
   If the count is not 0, those links stop working after the upgrade. Clear their tokens (`UPDATE "PlexWrapped" SET "shareToken" = NULL WHERE "shareToken" IS NOT NULL AND "shareToken" !~ '^[A-Za-z0-9_-]{43}$';`) and tell the owners to turn sharing on again for a new link, or keep the release back until those links can lapse.
 
+### Upgrading
+
+Prisma has no down migrations, so a dump is the only way back from a migration. For every upgrade:
+
+1. **Take a dump**, encrypt it and keep it off the host (see [docs/operations.md](docs/operations.md#backup)):
+   ```bash
+   docker compose exec -T db pg_dump -U postgres -Fc plex_wrapped > plex-manager-$(date +%F-%H%M).dump
+   ```
+2. **Read the release notes** for every version you are moving past, including the "Upgrading to the release…" notes above.
+3. **Pull or rebuild**: pull the new release and run `npm ci && npm run build`, or pull or rebuild the Docker image.
+4. **Apply migrations**: run `npm run db:deploy`, or let the container do it at start. The container logs `prisma migrate status` first; start it with `SKIP_MIGRATIONS=true` to apply migrations by hand instead.
+5. **Check the app**: sign in, and once a release adds `/api/health`, check that it reports healthy.
+
+#### Installed with `db push`?
+
+Earlier instructions installed the schema with `npm run db:push` (now contributor-only), which records no migrations, so `db:deploy` would try to create tables that already exist. Baseline the database once, **on the old release, before upgrading**, after taking a dump:
+
+1. Check that the database matches the old release's schema. This must exit 0 and report no difference:
+   ```bash
+   npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
+   ```
+   If it reports a difference, stop: the database has drifted, and marking migrations applied would hide that.
+2. Mark every folder in `prisma/migrations` as applied:
+   ```bash
+   for dir in prisma/migrations/*/; do npx prisma migrate resolve --applied "$(basename "$dir")"; done
+   ```
+3. Only if Stripe subscriptions were **never** enabled, run the grandfather update from `20260703000000_add_stripe_subscriptions`, which `db push` skipped (see [docs/stripe.md](docs/stripe.md#grandfathering-existing-members)):
+   ```bash
+   echo "UPDATE \"User\" SET \"isExempt\" = true, \"exemptReason\" = 'grandfathered';" | npx prisma db execute --stdin
+   ```
+
+Then upgrade as above. The new release's migrations, including their data steps, apply normally.
+
 ### Docker Deployment
 
 The project includes a `Dockerfile` for containerized deployments. When deploying with Docker:
@@ -337,6 +373,10 @@ The project includes a `Dockerfile` for containerized deployments. When deployin
 2. Ensure `NEXT_PUBLIC_APP_URL` and `NEXTAUTH_URL` are set to your production domain
 3. The application will fail to start in production mode if these are not configured
 4. Publish the app port on loopback or an internal network only, with your reverse proxy in front: `127.0.0.1:3000:3000` under compose `ports:`, `-p 127.0.0.1:3000:3000` with `docker run`, or no published port when the proxy shares a Docker network with the app. Rate limits trust `X-Forwarded-For` (see "Reverse proxy and rate limits" above), so a client that reaches the app port directly gets a fresh limit on every request.
+5. The image installs no native toolchain (`python3`, `make`, `g++`). `zlib-sync`, which compresses the Discord gateway, is an optional dependency that is skipped without one, so the Discord bot connects uncompressed. See [docs/discord-bot.md](docs/discord-bot.md).
+6. At every start the container logs `prisma migrate status`, then runs `prisma migrate deploy` (what `npm run db:deploy` runs). With `SKIP_MIGRATIONS=true` it logs `SKIP_MIGRATIONS=true: not applying migrations` and starts without applying them. Take a dump before starting a release that carries a migration; see [docs/operations.md](docs/operations.md).
+7. The site starts serving without waiting for Redis or Discord. The queue worker retries Redis with backoff for about two minutes and then stays off (logging `queue.redis_unreachable`) until the next restart.
+8. On `docker stop` (SIGTERM) the app drains running jobs, stops the Discord bot and releases its lock, closes its connections, and exits with 0, or with 1 if that takes longer than `SHUTDOWN_GRACE_MS` (default 8000 ms, below Docker's 10 s stop timeout). The image and `npm run start:prod` set `NEXT_MANUAL_SIG_HANDLE=true` so the app handles the signal instead of Next; Next then no longer closes the HTTP server itself, and in-flight requests finish inside the same grace window because the process exits last.
 
 ---
 

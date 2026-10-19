@@ -11,13 +11,12 @@ import {
   LEADERBOARD_MEMBER_EMAIL,
 } from '@/lib/wrapped/__tests__/fixtures'
 import { getServerSession } from 'next-auth'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    user: { findFirst: jest.fn() },
-    plexWrapped: { upsert: jest.fn() },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),

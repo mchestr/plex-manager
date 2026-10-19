@@ -69,7 +69,8 @@ const store = {
     upsert: (args: {
       where: Parameters<typeof findSession>[0]
       update: Partial<SessionRow>
-      create: Omit<SessionRow, "id">
+      create: Omit<SessionRow, "id" | "isActive" | "lastMessageAt"> &
+        Partial<Pick<SessionRow, "isActive" | "lastMessageAt">>
     }) => {
       upsertSpy(args)
       const existing = findSession(args.where)

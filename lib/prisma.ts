@@ -1,5 +1,6 @@
 import { PrismaClient } from '@/lib/generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
+import { poolConfigFor, processRole } from '@/lib/db/pool-config'
 import { decryptSecret, encryptSecret } from '@/lib/security/crypto'
 
 const globalForPrisma = globalThis as unknown as {
@@ -28,6 +29,8 @@ const globalForPrisma = globalThis as unknown as {
  * encrypted. Select explicit fields for nested reads (e.g. `publicUserSelect`
  * in lib/dto/user.ts), and write secret columns only through a top-level query
  * on their own model.
+ *
+ * @internal
  */
 export const ENCRYPTED_FIELDS: Record<string, readonly string[]> = {
   User: ['plexAuthToken'],
@@ -40,7 +43,7 @@ export const ENCRYPTED_FIELDS: Record<string, readonly string[]> = {
   LLMProvider: ['apiKey'],
   DiscordIntegration: ['clientSecret', 'botToken'],
   DiscordConnection: ['accessToken', 'refreshToken'],
-  Config: ['stripeSecretKey', 'stripeWebhookSecret'],
+  Config: ['stripeSecretKey', 'stripeWebhookSecret', 'rewindSerialKey'],
 }
 
 /** Encrypt any configured secret fields present on a write-args `data` object. */
@@ -81,6 +84,7 @@ function createPrismaClient() {
   }
   const adapter = new PrismaPg({
     connectionString: process.env.DATABASE_URL,
+    ...poolConfigFor(processRole()),
   })
 
   return new PrismaClient({ adapter }).$extends({
@@ -133,7 +137,7 @@ if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 /**
  * The extended Prisma client type (with the encryption query extension applied).
  */
-export type ExtendedPrismaClient = ReturnType<typeof createPrismaClient>
+type ExtendedPrismaClient = ReturnType<typeof createPrismaClient>
 
 /**
  * Interactive-transaction client type for the extended client. Because `$extends`

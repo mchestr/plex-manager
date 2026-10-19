@@ -34,6 +34,7 @@ import {
   WrappedStatistics,
 } from "@/types/wrapped"
 
+/** @internal */
 export const WRAPPED_DATA_VERSION = 2
 
 /**

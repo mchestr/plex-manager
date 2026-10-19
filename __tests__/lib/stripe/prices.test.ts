@@ -9,14 +9,12 @@ import {
 } from '@/lib/stripe/prices'
 import { prisma } from '@/lib/prisma'
 import { getStripe } from '@/lib/stripe/client'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    config: {
-      findUnique: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('@/lib/stripe/client', () => ({
   getStripe: jest.fn(),

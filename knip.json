@@ -1,0 +1,41 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "instrumentation.ts!",
+    "proxy.ts!",
+    "scripts/*.{ts,tsx}!",
+    "scripts/*.mjs!",
+    "scripts/codemods/*.mjs!",
+    "lib/wrapped/facts/*.ts!",
+    "lib/wrapped/archetypes/*.ts!",
+    "lib/utils/format.ts!",
+    "lib/rewind/format.ts!",
+    "lib/rewind/registry.ts!",
+    "lib/rewind/typeset/fit-lines.ts!",
+    "lib/rewind/typeset/metrics.ts!",
+    "lib/wrapped/sources/fixture-source.ts!",
+    "evals/rewind/generate-fixtures.ts!"
+  ],
+  "project": [
+    "**/*.{js,mjs,cjs,ts,tsx}!",
+    "!**/__tests__/**!",
+    "!**/*.test.{ts,tsx}!",
+    "!e2e/**!",
+    "!test/**!",
+    "!jest.setup.js!",
+    "!prisma/seed.ts!"
+  ],
+  "ignore": [
+    "lib/generated/**",
+    ".agents/**",
+    "eslint/restricted-syntax.mjs",
+    ".claude/worktrees/**"
+  ],
+  "ignoreDependencies": [
+    "zlib-sync",
+    "@prisma/client"
+  ],
+  "ignoreBinaries": [
+    "tsx"
+  ]
+}

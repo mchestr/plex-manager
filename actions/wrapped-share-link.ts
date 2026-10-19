@@ -8,8 +8,10 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { consume } from "@/lib/security/rate-limit"
-import { generateShareToken, getBaseUrl } from "@/lib/utils"
+import { getBaseUrl } from "@/lib/env"
+import { generateShareToken } from "@/lib/utils"
 import { createLogger } from "@/lib/utils/logger"
+import { readWrappedStatus } from "@/lib/wrapped/data/parse-stored"
 import { forgetShareToken } from "@/lib/wrapped/poster-keys"
 import { yearSchema } from "@/lib/validations/shared-schemas"
 
@@ -92,7 +94,7 @@ export async function enableWrappedShareLink(input: { year: number }): Promise<E
       where: { userId_year: { userId: caller.userId, year: caller.year } },
       select: { id: true, status: true, shareToken: true },
     })
-    if (!wrapped || wrapped.status !== "completed") {
+    if (!wrapped || readWrappedStatus(wrapped.status, wrapped.id) !== "completed") {
       return { success: false, error: "Your Rewind for this year is not ready to share" }
     }
 

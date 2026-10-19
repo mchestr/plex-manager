@@ -1,0 +1,299 @@
+{
+  "id": "premiere-chaser",
+  "description": "Premiere chaser: new episodes on release night and new films the day after release.",
+  "member": {
+    "displayName": "Camille Laurent",
+    "userName": null,
+    "timezone": "Europe/Paris",
+    "hiddenRatingKeys": []
+  },
+  "server": {
+    "name": "Chester Family Plex",
+    "zone": "America/Chicago",
+    "overseerr": true,
+    "peers": {
+      "members": 12,
+      "hours": [
+        610,
+        402,
+        355,
+        290,
+        240,
+        198,
+        150,
+        96,
+        61,
+        22,
+        3
+      ]
+    }
+  },
+  "window": {
+    "year": 2026,
+    "finalCut": false
+  },
+  "history": [
+    {"user_id":1,"started":1768593600,"stopped":1768596900,"play_duration":3300,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"27010301","grandparent_rating_key":"2701","parent_media_index":3,"media_index":1,"title":"Episode 1","grandparent_title":"Severance","year":2022,"originally_available_at":"2026-01-16","guid":"plex://episode/27010301","section_id":"2"},
+    {"user_id":1,"started":1769198400,"stopped":1769201700,"play_duration":3300,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"27010302","grandparent_rating_key":"2701","parent_media_index":3,"media_index":2,"title":"Episode 2","grandparent_title":"Severance","year":2022,"originally_available_at":"2026-01-23","guid":"plex://episode/27010302","section_id":"2"},
+    {"user_id":1,"started":1769803200,"stopped":1769806500,"play_duration":3300,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"27010303","grandparent_rating_key":"2701","parent_media_index":3,"media_index":3,"title":"Episode 3","grandparent_title":"Severance","year":2022,"originally_available_at":"2026-01-30","guid":"plex://episode/27010303","section_id":"2"},
+    {"user_id":1,"started":1770408000,"stopped":1770411300,"play_duration":3300,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"27010304","grandparent_rating_key":"2701","parent_media_index":3,"media_index":4,"title":"Episode 4","grandparent_title":"Severance","year":2022,"originally_available_at":"2026-02-06","guid":"plex://episode/27010304","section_id":"2"},
+    {"user_id":1,"started":1771012800,"stopped":1771016100,"play_duration":3300,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"27010305","grandparent_rating_key":"2701","parent_media_index":3,"media_index":5,"title":"Episode 5","grandparent_title":"Severance","year":2022,"originally_available_at":"2026-02-13","guid":"plex://episode/27010305","section_id":"2"},
+    {"user_id":1,"started":1771092000,"stopped":1771098120,"play_duration":6120,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2721","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Casablanca","grandparent_title":"","year":1942,"originally_available_at":"1942-01-01","guid":"plex://movie/2721","section_id":"1"},
+    {"user_id":1,"started":1771617600,"stopped":1771620900,"play_duration":3300,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"27010306","grandparent_rating_key":"2701","parent_media_index":3,"media_index":6,"title":"Episode 6","grandparent_title":"Severance","year":2022,"originally_available_at":"2026-02-20","guid":"plex://episode/27010306","section_id":"2"},
+    {"user_id":1,"started":1772222400,"stopped":1772225700,"play_duration":3300,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"27010307","grandparent_rating_key":"2701","parent_media_index":3,"media_index":7,"title":"Episode 7","grandparent_title":"Severance","year":2022,"originally_available_at":"2026-02-27","guid":"plex://episode/27010307","section_id":"2"},
+    {"user_id":1,"started":1772388000,"stopped":1772395680,"play_duration":7680,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2722","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Vertigo","grandparent_title":"","year":1958,"originally_available_at":"1958-01-01","guid":"plex://movie/2722","section_id":"1"},
+    {"user_id":1,"started":1772827200,"stopped":1772830500,"play_duration":3300,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"27010308","grandparent_rating_key":"2701","parent_media_index":3,"media_index":8,"title":"Episode 8","grandparent_title":"Severance","year":2022,"originally_available_at":"2026-03-06","guid":"plex://episode/27010308","section_id":"2"},
+    {"user_id":1,"started":1773432000,"stopped":1773435300,"play_duration":3300,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"27010309","grandparent_rating_key":"2701","parent_media_index":3,"media_index":9,"title":"Episode 9","grandparent_title":"Severance","year":2022,"originally_available_at":"2026-03-13","guid":"plex://episode/27010309","section_id":"2"},
+    {"user_id":1,"started":1774036800,"stopped":1774040100,"play_duration":3300,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"27010310","grandparent_rating_key":"2701","parent_media_index":3,"media_index":10,"title":"Episode 10","grandparent_title":"Severance","year":2022,"originally_available_at":"2026-03-20","guid":"plex://episode/27010310","section_id":"2"},
+    {"user_id":1,"started":1774116000,"stopped":1774125360,"play_duration":9360,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2711","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Project Hail Mary","grandparent_title":"","year":2026,"originally_available_at":"2026-03-20","guid":"plex://movie/2711","section_id":"1"},
+    {"user_id":1,"started":1775307600,"stopped":1775313300,"play_duration":5700,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2712","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"The Super Mario Galaxy Movie","grandparent_title":"","year":2026,"originally_available_at":"2026-04-03","guid":"plex://movie/2712","section_id":"1"},
+    {"user_id":1,"started":1776103200,"stopped":1776106800,"play_duration":3600,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"27020301","grandparent_rating_key":"2702","parent_media_index":3,"media_index":1,"title":"Episode 1","grandparent_title":"The Last of Us","year":2023,"originally_available_at":"2026-04-12","guid":"plex://episode/27020301","section_id":"2"},
+    {"user_id":1,"started":1776708000,"stopped":1776711600,"play_duration":3600,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"27020302","grandparent_rating_key":"2702","parent_media_index":3,"media_index":2,"title":"Episode 2","grandparent_title":"The Last of Us","year":2023,"originally_available_at":"2026-04-19","guid":"plex://episode/27020302","section_id":"2"},
+    {"user_id":1,"started":1777136400,"stopped":1777144200,"play_duration":7800,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2713","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Michael","grandparent_title":"","year":2026,"originally_available_at":"2026-04-24","guid":"plex://movie/2713","section_id":"1"},
+    {"user_id":1,"started":1777312800,"stopped":1777316400,"play_duration":3600,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"27020303","grandparent_rating_key":"2702","parent_media_index":3,"media_index":3,"title":"Episode 3","grandparent_title":"The Last of Us","year":2023,"originally_available_at":"2026-04-26","guid":"plex://episode/27020303","section_id":"2"},
+    {"user_id":1,"started":1777917600,"stopped":1777921200,"play_duration":3600,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"27020304","grandparent_rating_key":"2702","parent_media_index":3,"media_index":4,"title":"Episode 4","grandparent_title":"The Last of Us","year":2023,"originally_available_at":"2026-05-03","guid":"plex://episode/27020304","section_id":"2"},
+    {"user_id":1,"started":1778522400,"stopped":1778526000,"play_duration":3600,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"27020305","grandparent_rating_key":"2702","parent_media_index":3,"media_index":5,"title":"Episode 5","grandparent_title":"The Last of Us","year":2023,"originally_available_at":"2026-05-10","guid":"plex://episode/27020305","section_id":"2"},
+    {"user_id":1,"started":1779127200,"stopped":1779130800,"play_duration":3600,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"27020306","grandparent_rating_key":"2702","parent_media_index":3,"media_index":6,"title":"Episode 6","grandparent_title":"The Last of Us","year":2023,"originally_available_at":"2026-05-17","guid":"plex://episode/27020306","section_id":"2"},
+    {"user_id":1,"started":1779555600,"stopped":1779563100,"play_duration":7500,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2714","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"The Mandalorian & Grogu","grandparent_title":"","year":2026,"originally_available_at":"2026-05-22","guid":"plex://movie/2714","section_id":"1"},
+    {"user_id":1,"started":1779732000,"stopped":1779735600,"play_duration":3600,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"27020307","grandparent_rating_key":"2702","parent_media_index":3,"media_index":7,"title":"Episode 7","grandparent_title":"The Last of Us","year":2023,"originally_available_at":"2026-05-24","guid":"plex://episode/27020307","section_id":"2"},
+    {"user_id":1,"started":1780336800,"stopped":1780340400,"play_duration":3600,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"27020308","grandparent_rating_key":"2702","parent_media_index":3,"media_index":8,"title":"Episode 8","grandparent_title":"The Last of Us","year":2023,"originally_available_at":"2026-05-31","guid":"plex://episode/27020308","section_id":"2"},
+    {"user_id":1,"started":1781960400,"stopped":1781966400,"play_duration":6000,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2715","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Toy Story 5","grandparent_title":"","year":2026,"originally_available_at":"2026-06-19","guid":"plex://movie/2715","section_id":"1"},
+    {"user_id":1,"started":1782579600,"stopped":1782586800,"play_duration":7200,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2716","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Supergirl","grandparent_title":"","year":2026,"originally_available_at":"2026-06-26","guid":"plex://movie/2716","section_id":"1"},
+    {"user_id":1,"started":1783188000,"stopped":1783195440,"play_duration":7440,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2723","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Jaws","grandparent_title":"","year":1975,"originally_available_at":"1975-01-01","guid":"plex://movie/2723","section_id":"1"},
+    {"user_id":1,"started":1784394000,"stopped":1784404200,"play_duration":10200,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2717","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"The Odyssey","grandparent_title":"","year":2026,"originally_available_at":"2026-07-17","guid":"plex://movie/2717","section_id":"1"},
+    {"user_id":1,"started":1785603600,"stopped":1785612000,"play_duration":8400,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2718","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Spider-Man: Brand New Day","grandparent_title":"","year":2026,"originally_available_at":"2026-07-31","guid":"plex://movie/2718","section_id":"1"},
+    {"user_id":1,"started":1793476800,"stopped":1793483340,"play_duration":6540,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2724","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Psycho","grandparent_title":"","year":1960,"originally_available_at":"1960-01-01","guid":"plex://movie/2724","section_id":"1"}
+  ],
+  "lifetimeBefore2026": [],
+  "metadata": [
+    {"ratingKey":"2701","kind":"show","librarySectionId":"2","addedAt":"2022-06-01T00:00:00.000Z","genres":["Animation","Drama"],"directors":[],"actors":["Noor Haddad","Tomas Brandt"],"studio":null,"contentRating":null,"year":2022,"originallyAvailableAt":"2022-01-01T00:00:00.000Z","runtimeSec":null,"seasonEpisodeCounts":{"1":9,"2":10,"3":10},"guids":["tmdb://102701","tvdb://302701"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2702","kind":"show","librarySectionId":"2","addedAt":"2023-06-01T00:00:00.000Z","genres":["Fantasy","Comedy"],"directors":[],"actors":["Jun Ito","Ines Varga"],"studio":null,"contentRating":null,"year":2023,"originallyAvailableAt":"2023-01-01T00:00:00.000Z","runtimeSec":null,"seasonEpisodeCounts":{"1":9,"2":7,"3":8},"guids":["tmdb://102702","tvdb://302702"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2711","kind":"movie","librarySectionId":"1","addedAt":"2026-06-01T00:00:00.000Z","genres":["Science Fiction","Adventure"],"directors":[],"actors":[],"studio":null,"contentRating":null,"year":2026,"originallyAvailableAt":"2026-03-20T00:00:00.000Z","runtimeSec":9360,"seasonEpisodeCounts":null,"guids":["tmdb://102711"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2712","kind":"movie","librarySectionId":"1","addedAt":"2026-06-01T00:00:00.000Z","genres":["Science Fiction","Adventure"],"directors":[],"actors":[],"studio":null,"contentRating":null,"year":2026,"originallyAvailableAt":"2026-04-03T00:00:00.000Z","runtimeSec":5700,"seasonEpisodeCounts":null,"guids":["tmdb://102712"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2713","kind":"movie","librarySectionId":"1","addedAt":"2026-06-01T00:00:00.000Z","genres":["Science Fiction","Adventure"],"directors":[],"actors":[],"studio":null,"contentRating":null,"year":2026,"originallyAvailableAt":"2026-04-24T00:00:00.000Z","runtimeSec":7800,"seasonEpisodeCounts":null,"guids":["tmdb://102713"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2714","kind":"movie","librarySectionId":"1","addedAt":"2026-06-01T00:00:00.000Z","genres":["Science Fiction","Adventure"],"directors":[],"actors":[],"studio":null,"contentRating":null,"year":2026,"originallyAvailableAt":"2026-05-22T00:00:00.000Z","runtimeSec":7500,"seasonEpisodeCounts":null,"guids":["tmdb://102714"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2715","kind":"movie","librarySectionId":"1","addedAt":"2026-06-01T00:00:00.000Z","genres":["Science Fiction","Adventure"],"directors":[],"actors":[],"studio":null,"contentRating":null,"year":2026,"originallyAvailableAt":"2026-06-19T00:00:00.000Z","runtimeSec":6000,"seasonEpisodeCounts":null,"guids":["tmdb://102715"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2716","kind":"movie","librarySectionId":"1","addedAt":"2026-06-01T00:00:00.000Z","genres":["Science Fiction","Adventure"],"directors":[],"actors":[],"studio":null,"contentRating":null,"year":2026,"originallyAvailableAt":"2026-06-26T00:00:00.000Z","runtimeSec":7200,"seasonEpisodeCounts":null,"guids":["tmdb://102716"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2717","kind":"movie","librarySectionId":"1","addedAt":"2026-06-01T00:00:00.000Z","genres":["Science Fiction","Adventure"],"directors":[],"actors":[],"studio":null,"contentRating":null,"year":2026,"originallyAvailableAt":"2026-07-17T00:00:00.000Z","runtimeSec":10200,"seasonEpisodeCounts":null,"guids":["tmdb://102717"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2718","kind":"movie","librarySectionId":"1","addedAt":"2026-06-01T00:00:00.000Z","genres":["Science Fiction","Adventure"],"directors":[],"actors":[],"studio":null,"contentRating":null,"year":2026,"originallyAvailableAt":"2026-07-31T00:00:00.000Z","runtimeSec":8400,"seasonEpisodeCounts":null,"guids":["tmdb://102718"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2721","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Comedy","Crime"],"directors":["Ines Varga"],"actors":["Mira Okafor","Jun Ito"],"studio":null,"contentRating":null,"year":1942,"originallyAvailableAt":"1942-01-01T00:00:00.000Z","runtimeSec":6120,"seasonEpisodeCounts":null,"guids":["tmdb://102721"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2722","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Science Fiction","Animation"],"directors":["Calum Reyes"],"actors":["Tomas Brandt","Lena Marsh"],"studio":null,"contentRating":null,"year":1958,"originallyAvailableAt":"1958-01-01T00:00:00.000Z","runtimeSec":7680,"seasonEpisodeCounts":null,"guids":["tmdb://102722"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2723","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Thriller","Fantasy"],"directors":["Noor Haddad"],"actors":["Ines Varga","Rowan Hale"],"studio":null,"contentRating":null,"year":1975,"originallyAvailableAt":"1975-01-01T00:00:00.000Z","runtimeSec":7440,"seasonEpisodeCounts":null,"guids":["tmdb://102723"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2724","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Crime","Documentary"],"directors":["Jun Ito"],"actors":["Calum Reyes","Mira Okafor"],"studio":null,"contentRating":null,"year":1960,"originallyAvailableAt":"1960-01-01T00:00:00.000Z","runtimeSec":6540,"seasonEpisodeCounts":null,"guids":["tmdb://102724"],"videoResolution":"1080","hdr":false}
+  ],
+  "requests": {
+    "rows": [],
+    "genres": {}
+  },
+  "library": null,
+  "expected": {
+    "edition": "full",
+    "archetype": "premiere-chaser",
+    "omittedPages": [
+      8,
+      11,
+      12,
+      14,
+      17
+    ],
+    "facts": {
+      "member.firstName": "Camille",
+      "taste.freshShare": "87%",
+      "time.totalHours": "42",
+      "counts.films": "12",
+      "counts.episodes": "18",
+      "series[1].title": "Severance",
+      "films[1].title": "The Odyssey",
+      "days.biggest.date": "July 18",
+      "days.longestGap.days": "90 days",
+      "days.longestGap.month": "August",
+      "hours.peak": "9 PM",
+      "tz.label": "Europe/Paris",
+      "taste.genre[1].name": "Science Fiction",
+      "archetype.name": "The Premiere Chaser"
+    },
+    "stats": {
+      "totals": {
+        "totalMinutes": 2529,
+        "seriesMinutes": 1030,
+        "filmMinutes": 1499,
+        "counts": {
+          "episodes": 18,
+          "series": 2,
+          "films": 12,
+          "seasons": 2
+        },
+        "perDay": 7,
+        "daysHours": {
+          "days": 1,
+          "hours": 18
+        },
+        "vsLastYear": null
+      },
+      "time": {
+        "peak": 21,
+        "afterDarkShare": 0,
+        "goldenShare": 0.9333333333333333,
+        "medianStart": {
+          "hour": 20,
+          "minute": 0
+        },
+        "latestStart": {
+          "hour": 21,
+          "minute": 0,
+          "date": "2026-10-31",
+          "weekday": 6
+        },
+        "weekendShare": 0.4
+      },
+      "calendar": {
+        "active": 30,
+        "biggest": {
+          "date": "2026-07-18",
+          "minutes": 170
+        },
+        "streak": {
+          "days": 2,
+          "from": "2026-02-13",
+          "to": "2026-02-14"
+        },
+        "longestGap": {
+          "days": 90,
+          "from": "2026-08-02",
+          "to": "2026-10-30",
+          "month": 8
+        }
+      },
+      "sessions": {
+        "longestBinge": null,
+        "deepestBinge": null,
+        "mostEpisodesDay": {
+          "date": "2026-01-16",
+          "episodes": 1
+        },
+        "biggestWeek": {
+          "from": "2026-03-16",
+          "to": "2026-03-22",
+          "minutes": 211
+        },
+        "mostPaused": null
+      },
+      "bookends": {
+        "first": {
+          "key": "series:2701",
+          "title": "Severance",
+          "date": "2026-01-16",
+          "hour": 21,
+          "minute": 0
+        },
+        "last": {
+          "key": "film:2724",
+          "title": "Psycho",
+          "date": "2026-10-31",
+          "hour": 21,
+          "minute": 0
+        },
+        "sameTitleSameDay": false,
+        "member": {
+          "since": "2026-01-16",
+          "lifetimeHours": 42
+        }
+      },
+      "race": {
+        "eligible": false
+      },
+      "taste": {
+        "genres": [
+          {
+            "name": "Science Fiction",
+            "minutes": 582,
+            "share": 0.23013048635824437
+          },
+          {
+            "name": "Adventure",
+            "minutes": 518,
+            "share": 0.2048240411229735
+          },
+          {
+            "name": "Animation",
+            "minutes": 339,
+            "share": 0.13404507710557534
+          },
+          {
+            "name": "Fantasy",
+            "minutes": 302,
+            "share": 0.11941478845393436
+          },
+          {
+            "name": "Comedy",
+            "minutes": 291,
+            "share": 0.11506524317912219
+          }
+        ],
+        "medianYear": 2026,
+        "oldest": {
+          "key": "film:2721",
+          "title": "Casablanca",
+          "year": 1942
+        },
+        "freshShare": 0.8666666666666667
+      },
+      "people": {
+        "eligible": false
+      },
+      "devices": {
+        "directPlayShare": 1,
+        "homeShare": 1,
+        "topPlatform": "Apple TV",
+        "topProduct": "Plex for Apple TV",
+        "fourKShare": 0
+      },
+      "requests": {
+        "eligible": false
+      },
+      "nextYear": {
+        "leftForLater": [],
+        "picks": []
+      },
+      "milestones": [
+        {
+          "hours": 10,
+          "date": "2026-03-01"
+        },
+        {
+          "hours": 25,
+          "date": "2026-05-18"
+        }
+      ],
+      "topSeries": [
+        {
+          "title": "Severance",
+          "minutes": 550,
+          "plays": 10
+        },
+        {
+          "title": "The Last of Us",
+          "minutes": 480,
+          "plays": 8
+        }
+      ],
+      "topFilms": [
+        {
+          "title": "The Odyssey",
+          "minutes": 170,
+          "plays": 1
+        },
+        {
+          "title": "Project Hail Mary",
+          "minutes": 156,
+          "plays": 1
+        },
+        {
+          "title": "Spider-Man: Brand New Day",
+          "minutes": 140,
+          "plays": 1
+        }
+      ]
+    }
+  }
+}

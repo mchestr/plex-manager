@@ -1,38 +1,35 @@
 "use client"
 
-import { motion } from "framer-motion"
-import { useEffect, useState } from "react"
+import { motion, useReducedMotion } from "motion/react"
+import { loop } from "@/lib/utils/motion-loop"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { useIsClient } from "@/hooks/use-is-client"
+
+const shockwaves = Array.from({ length: 3 }, (_, i) => ({ id: i, delay: i * 0.3 }))
 
 export function DeniedAccessPageClient() {
+  const reduceMotion = useReducedMotion()
   const router = useRouter()
-  const [particles, setParticles] = useState<Array<{ id: number; x: number; y: number; delay: number }>>([])
-  const [shockwaves, setShockwaves] = useState<Array<{ id: number; delay: number }>>([])
-
-  useEffect(() => {
-    // Generate particles for the "X" effect
-    const newParticles = Array.from({ length: 50 }, (_, i) => ({
+  const isClient = useIsClient()
+  // Random positions are generated once and rendered only on the client, so
+  // the server HTML never disagrees with them.
+  const [particles] = useState(() =>
+    Array.from({ length: 50 }, (_, i) => ({
       id: i,
       x: Math.random() * 100,
       y: Math.random() * 100,
       delay: Math.random() * 0.5,
+      driftX: (Math.random() - 0.5) * 200,
+      driftY: (Math.random() - 0.5) * 200,
     }))
-    setParticles(newParticles)
-
-    // Generate shockwave rings
-    const newShockwaves = Array.from({ length: 3 }, (_, i) => ({
-      id: i,
-      delay: i * 0.3,
-    }))
-    setShockwaves(newShockwaves)
-  }, [])
-
+  )
   return (
     <>
       {/* Animated particles background */}
-      {particles.map((particle) => (
+      {isClient && particles.map((particle) => (
         <motion.div
           key={`particle-${particle.id}`}
           className="absolute w-1 h-1 rounded-full bg-red-500"
@@ -41,39 +38,45 @@ export function DeniedAccessPageClient() {
             top: `${particle.y}%`,
           }}
           initial={{ opacity: 0, scale: 0 }}
-          animate={{
-            opacity: [0, 1, 0],
-            scale: [0, 1, 0],
-            x: (Math.random() - 0.5) * 200,
-            y: (Math.random() - 0.5) * 200,
-          }}
-          transition={{
-            duration: 2,
-            delay: particle.delay,
-            repeat: Infinity,
-            repeatDelay: 3,
-            ease: "easeOut",
-          }}
+          {...loop(
+            reduceMotion,
+            {
+              opacity: [0, 1, 0],
+              scale: [0, 1, 0],
+              x: particle.driftX,
+              y: particle.driftY,
+            },
+            {
+              duration: 2,
+              delay: particle.delay,
+              repeat: Infinity,
+              repeatDelay: 3,
+              ease: "easeOut",
+            }
+          )}
         />
       ))}
 
       {/* Shockwave rings */}
-      {shockwaves.map((shockwave) => (
+      {isClient && shockwaves.map((shockwave) => (
         <motion.div
           key={`shockwave-${shockwave.id}`}
           className="absolute inset-0 flex items-center justify-center"
           initial={{ opacity: 0 }}
-          animate={{
-            opacity: [0, 0.5, 0],
-            scale: [0.5, 2, 2.5],
-          }}
-          transition={{
-            duration: 1.5,
-            delay: shockwave.delay,
-            repeat: Infinity,
-            repeatDelay: 2,
-            ease: "easeOut",
-          }}
+          {...loop(
+            reduceMotion,
+            {
+              opacity: [0, 0.5, 0],
+              scale: [0.5, 2, 2.5],
+            },
+            {
+              duration: 1.5,
+              delay: shockwave.delay,
+              repeat: Infinity,
+              repeatDelay: 2,
+              ease: "easeOut",
+            }
+          )}
         >
           <div className="w-96 h-96 rounded-full border-2 border-red-500/30" />
         </motion.div>
@@ -127,15 +130,18 @@ export function DeniedAccessPageClient() {
                 {/* Pulsing glow */}
                 <motion.div
                   className="absolute inset-0 rounded-full bg-red-500/20"
-                  animate={{
-                    scale: [1, 1.2, 1],
-                    opacity: [0.5, 0.8, 0.5],
-                  }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                  }}
+                  {...loop(
+                    reduceMotion,
+                    {
+                      scale: [1, 1.2, 1],
+                      opacity: [0.5, 0.8, 0.5],
+                    },
+                    {
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }
+                  )}
                 />
               </div>
             </motion.div>
@@ -151,14 +157,17 @@ export function DeniedAccessPageClient() {
             <motion.h1
               data-testid="access-denied-heading"
               className="text-3xl font-bold text-red-400 mb-3"
-              animate={{
-                scale: [1, 1.05, 1],
-              }}
-              transition={{
-                duration: 2,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
+              {...loop(
+                reduceMotion,
+                {
+                  scale: [1, 1.05, 1],
+                },
+                {
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }
+              )}
             >
               Access Denied
             </motion.h1>

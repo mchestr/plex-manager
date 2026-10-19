@@ -5,8 +5,8 @@ import { fetchLLMModels, saveChatLLMProvider, saveLLMProvider } from "@/actions/
 import { StyledDropdown } from "@/components/ui/styled-dropdown"
 import { StyledInput } from "@/components/ui/styled-input"
 import { WizardFormActions } from "@/components/setup/setup-wizard/wizard-form-actions"
-import { DEFAULT_OPENAI_MODEL } from "@/lib/llm/openai-params"
-import { type LLMProviderInput } from "@/lib/validations/llm-provider"
+import { DEFAULT_OPENAI_MODEL } from "@/lib/llm/provider-presets"
+import { type SetupLLMProviderInput } from "@/lib/validations/llm-provider"
 import { useCallback, useEffect, useRef, useState, useTransition } from "react"
 
 interface LLMProviderFormProps {
@@ -35,7 +35,7 @@ const PURPOSE_CONFIG = {
 } as const
 
 /** Check if all required fields are populated for LLM form */
-function isFormComplete(data: LLMProviderInput): boolean {
+function isFormComplete(data: SetupLLMProviderInput): boolean {
   return !!(data.provider && data.apiKey?.trim())
 }
 
@@ -45,7 +45,7 @@ export function LLMProviderForm({ purpose, onComplete, onBack }: LLMProviderForm
   const [isPending, startTransition] = useTransition()
   const [isSuccess, setIsSuccess] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [formData, setFormData] = useState<LLMProviderInput>(() => ({
+  const [formData, setFormData] = useState<SetupLLMProviderInput>(() => ({
     provider: "openai",
     apiKey: "",
     model: "",
@@ -141,21 +141,30 @@ export function LLMProviderForm({ purpose, onComplete, onBack }: LLMProviderForm
     }
   }, [formData.model])
 
-  // Load models when provider or API key changes
-  useEffect(() => {
-    if (formData.apiKey && formData.provider) {
-      // Debounce the API call
-      const timeoutId = setTimeout(() => {
-        loadModels(formData.provider, formData.apiKey)
-      }, 500)
-
-      return () => clearTimeout(timeoutId)
-    } else {
+  // Clear the model list during render when the provider or API key is
+  // emptied (React's "adjust state when a prop changes" pattern).
+  const canLoadModels = Boolean(formData.apiKey && formData.provider)
+  const modelsInput = `${formData.provider}|${formData.apiKey}`
+  const [prevModelsInput, setPrevModelsInput] = useState(modelsInput)
+  if (prevModelsInput !== modelsInput) {
+    setPrevModelsInput(modelsInput)
+    if (!canLoadModels) {
       setAvailableModels([])
       setModelsError(null)
     }
-    return undefined
-  }, [formData.provider, formData.apiKey, loadModels])
+  }
+
+  // Load models when provider or API key changes
+  useEffect(() => {
+    if (!canLoadModels) return undefined
+
+    // Debounce the API call
+    const timeoutId = setTimeout(() => {
+      loadModels(formData.provider, formData.apiKey)
+    }, 500)
+
+    return () => clearTimeout(timeoutId)
+  }, [canLoadModels, formData.provider, formData.apiKey, loadModels])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()

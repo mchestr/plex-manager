@@ -20,6 +20,8 @@ import { getStripe } from '@/lib/stripe/client'
 import { prisma } from '@/lib/prisma'
 import { addJob } from '@/lib/queue/client'
 import { SubscriptionStatus } from '@/lib/generated/prisma/client'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 jest.mock('@/lib/stripe/client', () => ({
   getStripe: jest.fn(),
@@ -29,21 +31,9 @@ jest.mock('@/lib/queue/client', () => ({
   addJob: jest.fn(),
 }))
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    subscription: {
-      upsert: jest.fn(),
-      updateMany: jest.fn(),
-      findFirst: jest.fn(),
-    },
-    stripeEvent: {
-      upsert: jest.fn(),
-    },
-    config: {
-      findUnique: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('@/lib/utils/logger', () => ({
   createLogger: () => ({

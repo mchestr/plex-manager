@@ -34,7 +34,7 @@ export interface DropdownOption {
   disabled?: boolean
 }
 
-export interface DropdownOptGroup {
+interface DropdownOptGroup {
   label: string
   options: DropdownOption[]
 }
@@ -246,4 +246,3 @@ export function StyledDropdown({
     </div>
   )
 }
-

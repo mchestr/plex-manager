@@ -2,86 +2,49 @@
 
 import { requireAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/prisma"
+import { APP_SETTINGS_TAG } from "@/lib/settings/app-settings"
 import { parseStripeLibrarySectionIds } from "@/lib/stripe/config"
 import { clearOfferedPricesCache } from "@/lib/stripe/prices"
+import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { createLogger } from "@/lib/utils/logger"
-import { seasonYearFor } from "@/lib/wrapped/season"
+import { normalizeTimeZone } from "@/lib/utils/zoned-time"
+import { DEFAULT_SEASON, getSeasonState, parseMonthDay, seasonStateAt } from "@/lib/wrapped/season"
+import { revalidatePath, updateTag } from "next/cache"
 import { z } from "zod"
 
 const logger = createLogger("ADMIN")
 
 /**
- * Get wrapped settings (public - no auth required)
- * Checks date range if configured, otherwise falls back to wrappedEnabled flag
+ * The Rewind generation settings (public, no auth required).
+ *
+ * - `featureEnabled`: the admin's on/off switch (`Config.wrappedEnabled`).
+ * - `seasonOpen`: the season window is open now, in the server zone.
+ * - `wrappedEnabled`: both, so members may generate now. Admins regenerate
+ *   whenever the feature is on, inside the window or not.
+ * - `wrappedYear`: the season year (`lib/wrapped/season.ts`).
  */
 export async function getWrappedSettings() {
   try {
-    const config = await prisma.config.findUnique({
-      where: { id: "config" },
-      select: {
-        wrappedEnabled: true,
-        wrappedGenerationStartDate: true,
-        wrappedGenerationEndDate: true,
-      },
-    })
-
-    // Return defaults if config doesn't exist
-    if (!config) {
-      return {
-        wrappedEnabled: true,
-        wrappedYear: seasonYearFor(null, new Date()),
-      }
-    }
-
-    let isEnabled = config.wrappedEnabled ?? true
-
-    // Check date range if both dates are set
-    if (config.wrappedGenerationStartDate && config.wrappedGenerationEndDate) {
-      const now = new Date()
-      const startDate = new Date(config.wrappedGenerationStartDate)
-      const endDate = new Date(config.wrappedGenerationEndDate)
-
-      // Set time to start of day for comparison
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-
-      // Normalize dates to current year for comparison
-      const start = new Date(now.getFullYear(), startDate.getMonth(), startDate.getDate())
-      const end = new Date(now.getFullYear(), endDate.getMonth(), endDate.getDate())
-
-      // Handle year rollover (e.g., Nov 20 - Jan 31)
-      // If end date is before start date, it means it spans across years
-      if (end < start) {
-        // Check if we're after start date this year
-        const isAfterStart = today >= start
-        // Check if we're in next year and before end date
-        // We're in the next year if the current year is one more than the start date's year
-        const startYear = startDate.getFullYear()
-        const isInNextYear = now.getFullYear() === startYear + 1
-        if (isInNextYear) {
-          const nextYearEnd = new Date(now.getFullYear(), endDate.getMonth(), endDate.getDate())
-          const isBeforeNextYearEnd = today <= nextYearEnd
-          isEnabled = isEnabled && isBeforeNextYearEnd
-        } else {
-          // We're in the same year as start date
-          isEnabled = isEnabled && isAfterStart
-        }
-      } else {
-        // Normal range within same year
-        isEnabled = isEnabled && (today >= start && today <= end)
-      }
-    }
-
+    const [config, season] = await Promise.all([
+      prisma.config.findUnique({ where: { id: "config" }, select: { wrappedEnabled: true } }),
+      getSeasonState(),
+    ])
+    const featureEnabled = config?.wrappedEnabled ?? true
     return {
-      wrappedEnabled: isEnabled,
-      // The season year, the same one the /wrapped resolver and admin screens use
-      wrappedYear: seasonYearFor(config.wrappedGenerationStartDate, new Date()),
+      featureEnabled,
+      seasonOpen: season.isOpen,
+      wrappedEnabled: featureEnabled && season.isOpen,
+      wrappedYear: season.seasonYear,
     }
   } catch (error) {
     logger.error("Error getting wrapped settings", error)
-    // Return defaults on error
+    // Fail as the default configuration would: the default window, in UTC
+    const season = seasonStateAt(new Date(), DEFAULT_SEASON.opens, DEFAULT_SEASON.closes, "UTC")
     return {
-      wrappedEnabled: true,
-      wrappedYear: seasonYearFor(null, new Date()),
+      featureEnabled: true,
+      seasonOpen: season.isOpen,
+      wrappedEnabled: season.isOpen,
+      wrappedYear: season.seasonYear,
     }
   }
 }
@@ -97,8 +60,9 @@ const NON_SECRET_CONFIG_SELECT = {
   id: true,
   llmDisabled: true,
   wrappedEnabled: true,
-  wrappedGenerationStartDate: true,
-  wrappedGenerationEndDate: true,
+  rewindSeasonOpens: true,
+  rewindSeasonCloses: true,
+  timezone: true,
   watchlistSyncEnabled: true,
   watchlistSyncIntervalMinutes: true,
   stripeEnabled: true,
@@ -142,8 +106,9 @@ export async function getConfig() {
       id: "config",
       llmDisabled: false,
       wrappedEnabled: true,
-      wrappedGenerationStartDate: null,
-      wrappedGenerationEndDate: null,
+      rewindSeasonOpens: DEFAULT_SEASON.opens,
+      rewindSeasonCloses: DEFAULT_SEASON.closes,
+      timezone: null,
       watchlistSyncEnabled: false,
       watchlistSyncIntervalMinutes: 60,
       stripeEnabled: false,
@@ -172,6 +137,8 @@ export async function setLLMDisabled(disabled: boolean) {
         llmDisabled: disabled,
         updatedBy: session.user.id,
       },
+      // The full row holds secrets and Decimal columns, which must not reach the client
+      select: NON_SECRET_CONFIG_SELECT,
     })
 
     return { success: true, config }
@@ -184,75 +151,42 @@ export async function setLLMDisabled(disabled: boolean) {
   }
 }
 
+const monthDaySchema = z.string().refine((value) => parseMonthDay(value) !== null, {
+  message: "Season dates must be real month-day values (MM-DD)",
+})
+
+const wrappedSettingsSchema = z
+  .object({ enabled: z.boolean(), opens: monthDaySchema, closes: monthDaySchema })
+  .refine((data) => data.opens !== data.closes, { message: "The season cannot open and close on the same day" })
+
 /**
- * Update wrapped settings (admin only)
+ * Update the Rewind switch and season window (admin only). `opens` and
+ * `closes` are `MM-DD` values in the server zone; a window may cross the new
+ * year (`12-01` to `01-31`).
  */
-export async function updateWrappedSettings(data: {
-  enabled: boolean
-  startDate?: Date | null
-  endDate?: Date | null
-}) {
+export async function updateWrappedSettings(data: { enabled: boolean; opens: string; closes: string }) {
   const session = await requireAdmin()
 
+  const validated = wrappedSettingsSchema.safeParse(data)
+  if (!validated.success) {
+    return { success: false, error: validated.error.issues[0]?.message ?? "Invalid season settings" }
+  }
+  const { enabled, opens, closes } = validated.data
+
   try {
-    // Validate date range: if one is set, both must be set
-    if ((data.startDate && !data.endDate) || (!data.startDate && data.endDate)) {
-      return {
-        success: false,
-        error: "Both start and end dates must be set, or both must be empty",
-      }
-    }
-
-    // Validate that end date is after start date (or handle year rollover)
-    if (data.startDate && data.endDate) {
-      const start = new Date(data.startDate)
-      const end = new Date(data.endDate)
-      // Normalize to same year for comparison
-      const startNormalized = new Date(2000, start.getMonth(), start.getDate())
-      const endNormalized = new Date(2000, end.getMonth(), end.getDate())
-
-      // If end is before start, it's a year rollover (e.g., Nov -> Jan), which is valid
-      // But if they're the same or end is way before start, it's invalid
-      if (startNormalized.getTime() === endNormalized.getTime()) {
-        return {
-          success: false,
-          error: "Start and end dates cannot be the same",
-        }
-      }
-    }
-
-    const updateData: {
-      wrappedEnabled: boolean
-      wrappedGenerationStartDate?: Date | null
-      wrappedGenerationEndDate?: Date | null
-      updatedBy: string
-    } = {
-      wrappedEnabled: data.enabled,
+    const values = {
+      wrappedEnabled: enabled,
+      rewindSeasonOpens: opens,
+      rewindSeasonCloses: closes,
       updatedBy: session.user.id,
     }
-
-    if (data.startDate !== undefined) {
-      updateData.wrappedGenerationStartDate = data.startDate || null
-    }
-
-    if (data.endDate !== undefined) {
-      updateData.wrappedGenerationEndDate = data.endDate || null
-    }
-
     const config = await prisma.config.upsert({
       where: { id: "config" },
-      update: updateData,
-      create: {
-        id: "config",
-        llmDisabled: false,
-        wrappedEnabled: data.enabled,
-        wrappedGenerationStartDate: data.startDate || null,
-        wrappedGenerationEndDate: data.endDate || null,
-        updatedBy: session.user.id,
-      },
+      update: values,
+      create: { id: "config", llmDisabled: false, ...values },
+      select: NON_SECRET_CONFIG_SELECT,
     })
 
-    const { revalidatePath } = await import("next/cache")
     revalidatePath("/")
     revalidatePath("/wrapped")
 
@@ -263,6 +197,50 @@ export async function updateWrappedSettings(data: {
       success: false,
       error: error instanceof Error ? error.message : "Failed to update wrapped settings",
     }
+  }
+}
+
+const serverTimeZoneSchema = z
+  .string()
+  .max(64)
+  .transform((value) => normalizeTimeZone(value.trim()))
+  .refine((zone): zone is string => zone !== null, { message: "Choose a time zone from the list" })
+
+/**
+ * Set the server time zone, `Config.timezone` (admin only). The value is
+ * stored under its canonical IANA name, so `US/Pacific` is saved as
+ * `America/Los_Angeles`; it overrides the `TZ` environment variable.
+ */
+export async function updateServerTimeZone(timezone: string) {
+  const session = await requireAdmin()
+
+  const validated = serverTimeZoneSchema.safeParse(timezone)
+  if (!validated.success) {
+    return { success: false, error: validated.error.issues[0]?.message ?? "Invalid time zone" }
+  }
+  const zone = validated.data
+
+  try {
+    const previous = await prisma.config.findUnique({ where: { id: "config" }, select: { timezone: true } })
+    await prisma.config.upsert({
+      where: { id: "config" },
+      update: { timezone: zone, updatedBy: session.user.id },
+      create: { id: "config", timezone: zone, updatedBy: session.user.id },
+      select: { id: true },
+    })
+
+    logAuditEvent(AuditEventType.SERVER_TIMEZONE_CHANGED, session.user.id, {
+      from: previous?.timezone ?? null,
+      to: zone,
+    })
+    // Every page that shows a time or the season reads the zone
+    updateTag(APP_SETTINGS_TAG)
+    revalidatePath("/", "layout")
+
+    return { success: true, timezone: zone }
+  } catch (error) {
+    logger.error("Error updating the server time zone", error)
+    return { success: false, error: "Failed to update the server time zone" }
   }
 }
 
@@ -426,7 +404,6 @@ export async function updateStripeSettings(data: {
     // /subscribe immediately rather than after the TTL.
     clearOfferedPricesCache()
 
-    const { revalidatePath } = await import("next/cache")
     revalidatePath("/admin/settings")
 
     return { success: true }
@@ -500,7 +477,6 @@ export async function setStripeEnabled(enabled: boolean) {
     // to the TTL after disabling).
     clearOfferedPricesCache()
 
-    const { revalidatePath } = await import("next/cache")
     revalidatePath("/admin/settings")
     revalidatePath("/")
 

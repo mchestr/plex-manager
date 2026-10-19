@@ -25,27 +25,12 @@ import { getStripe } from '@/lib/stripe/client'
 import { addJob } from '@/lib/queue/client'
 import { SubscriptionStatus } from '@/lib/generated/prisma/client'
 import { JOB_TYPES } from '@/lib/queue/types'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    plexServer: {
-      findFirst: jest.fn(),
-    },
-    user: {
-      findUnique: jest.fn(),
-    },
-    subscription: {
-      findFirst: jest.fn(),
-      updateMany: jest.fn(),
-    },
-    stripeEvent: {
-      upsert: jest.fn(),
-    },
-    config: {
-      findUnique: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('@/lib/connections/plex-invitations', () => ({
   inviteUserToPlexServer: jest.fn(),

@@ -1,7 +1,7 @@
 "use client"
 
-import { motion } from "framer-motion"
-import CountUp from "react-countup"
+import { motion } from "motion/react"
+import { CountUp } from "@/components/ui/count-up"
 import { FormattedText } from "@/components/shared/formatted-text"
 import { WrappedSection } from "@/types/wrapped"
 
@@ -49,7 +49,7 @@ export function HeroSection({ section, sectionIndex }: HeroSectionProps) {
               {typeof prominentStat.value === "string" ? (
                 prominentStat.value
               ) : (
-                <CountUp key={`${sectionIndex}-${prominentStat.value}`} start={0} end={prominentStat.value} duration={2} delay={0.4} separator="," />
+                <CountUp key={`${sectionIndex}-${prominentStat.value}`} value={prominentStat.value} duration={2} delay={0.4} />
               )}
             </div>
             <div className="text-xl sm:text-2xl md:text-3xl font-semibold text-purple-300">

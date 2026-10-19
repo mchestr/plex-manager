@@ -2,6 +2,7 @@
 
 import { requireAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/prisma"
+import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { getStripe } from "@/lib/stripe/client"
 import { addJob } from "@/lib/queue/client"
 import { JOB_TYPES } from "@/lib/queue/types"
@@ -77,7 +78,6 @@ export async function adminCancelSubscription(
       stripeSubscriptionId: subscription.stripeSubscriptionId,
     })
 
-    const { logAuditEvent, AuditEventType } = await import("@/lib/security/audit-log")
     logAuditEvent(AuditEventType.SUBSCRIPTION_CANCELED, session.user.id, {
       targetUserId: userId,
       stripeSubscriptionId: subscription.stripeSubscriptionId,
@@ -153,7 +153,6 @@ export async function adminGrantAccess(
 
     logger.info("Admin granted comp access", { userId })
 
-    const { logAuditEvent, AuditEventType } = await import("@/lib/security/audit-log")
     logAuditEvent(AuditEventType.SUBSCRIPTION_ACCESS_GRANTED, session.user.id, {
       targetUserId: userId,
       exemptReason: "comp",
@@ -220,7 +219,6 @@ export async function adminToggleExempt(
 
     logger.info("Admin toggled exempt", { userId, isExempt: nextExempt })
 
-    const { logAuditEvent, AuditEventType } = await import("@/lib/security/audit-log")
     logAuditEvent(AuditEventType.SUBSCRIPTION_EXEMPT_CHANGED, session.user.id, {
       targetUserId: userId,
       isExempt: nextExempt,

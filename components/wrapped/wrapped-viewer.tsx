@@ -1,7 +1,7 @@
 "use client"
 
 import { WrappedData, WrappedSection } from "@/types/wrapped"
-import { AnimatePresence, motion } from "framer-motion"
+import { AnimatePresence, motion } from "motion/react"
 import { ReactNode, useCallback, useEffect, useRef, useState } from "react"
 import { SpaceBackground } from "@/components/setup/setup-wizard/space-background"
 import { CinematicBackground } from "@/components/wrapped/cinematic/cinematic-background"
@@ -40,8 +40,7 @@ export function WrappedViewer({
   const [isAutoAdvancing, setIsAutoAdvancing] = useState(true)
   const [showAll, setShowAll] = useState(false)
   const [progress, setProgress] = useState(0)
-  const [sectionStartTime, setSectionStartTime] = useState(Date.now())
-  const prevSectionIndexRef = useRef(currentSectionIndex)
+  const [sectionStartTime, setSectionStartTime] = useState(() => Date.now())
 
   // Use refs to track sections and only update when content actually changes
   // This prevents infinite loops from array reference changes
@@ -89,18 +88,24 @@ export function WrappedViewer({
       : baseDelay + 4000   // Subsequent sections: 12s total (8s base + 4s buffer)
   }, [sections, isCinematic])
 
+  // The bar is full whenever nothing is auto-advancing.
+  const progressComplete =
+    showAll ||
+    !isAutoAdvancing ||
+    currentSectionIndex >= sections.length - 1 ||
+    getSectionDelay(currentSectionIndex) === 0
+
+  const goToSection = useCallback((index: number) => {
+    setCurrentSectionIndex(index)
+    setSectionStartTime(Date.now())
+    setProgress(0)
+  }, [])
+
   // Update progress bar based on elapsed time
   useEffect(() => {
-    if (showAll || !isAutoAdvancing || currentSectionIndex >= sections.length - 1) {
-      setProgress(100)
-      return
-    }
+    if (progressComplete) return
 
     const delay = getSectionDelay(currentSectionIndex)
-    if (delay === 0) {
-      setProgress(100)
-      return
-    }
 
     const updateProgress = () => {
       const elapsed = Date.now() - sectionStartTime
@@ -113,16 +118,7 @@ export function WrappedViewer({
     const interval = setInterval(updateProgress, 50)
 
     return () => clearInterval(interval)
-  }, [currentSectionIndex, sectionStartTime, isAutoAdvancing, showAll, sections.length, getSectionDelay])
-
-  // Update section start time only when section index actually changes
-  useEffect(() => {
-    if (prevSectionIndexRef.current !== currentSectionIndex) {
-      setSectionStartTime(Date.now())
-      setProgress(0)
-      prevSectionIndexRef.current = currentSectionIndex
-    }
-  }, [currentSectionIndex])
+  }, [currentSectionIndex, sectionStartTime, progressComplete, getSectionDelay])
 
   useEffect(() => {
     if (showAll) return
@@ -131,31 +127,30 @@ export function WrappedViewer({
       const delay = getSectionDelay(currentSectionIndex)
 
       const timer = setTimeout(() => {
-        setCurrentSectionIndex((prev) => prev + 1)
+        goToSection(currentSectionIndex + 1)
       }, delay)
 
       return () => clearTimeout(timer)
     } else if (currentSectionIndex >= sections.length - 1 && onComplete) {
       // Last section shown, call onComplete after a delay
-      setProgress(100)
       const timer = setTimeout(() => {
         onComplete?.()
       }, 10000)
       return () => clearTimeout(timer)
     }
     return undefined
-  }, [currentSectionIndex, sections.length, isAutoAdvancing, showAll, onComplete, getSectionDelay])
+  }, [currentSectionIndex, sections.length, isAutoAdvancing, showAll, onComplete, getSectionDelay, goToSection])
 
   const handleNext = () => {
     if (currentSectionIndex < sections.length - 1) {
-      setCurrentSectionIndex((prev) => prev + 1)
+      goToSection(currentSectionIndex + 1)
       setIsAutoAdvancing(false)
     }
   }
 
   const handlePrevious = () => {
     if (currentSectionIndex > 0) {
-      setCurrentSectionIndex((prev) => prev - 1)
+      goToSection(currentSectionIndex - 1)
       setIsAutoAdvancing(false)
     }
   }
@@ -239,7 +234,7 @@ export function WrappedViewer({
       {isCinematic ? <CinematicBackground letterbox={!isPreview} /> : <SpaceBackground />}
       <div className="max-w-4xl mx-auto relative z-10">
         <WrappedViewerProgress
-          progress={progress}
+          progress={progressComplete ? 100 : progress}
           currentSectionIndex={currentSectionIndex}
           totalSections={sections.length}
         />

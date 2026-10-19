@@ -22,7 +22,9 @@
  */
 
 // Load .env before the registry: its import chain reaches lib/prisma, which
-// reads DATABASE_URL as soon as it is imported.
+// reads DATABASE_URL as soon as it is imported. The chain also reaches
+// `server-only` modules (lib/connections/http.ts), so the npm script runs tsx
+// with `--conditions=react-server`, under which that guard is a no-op.
 import "dotenv/config"
 import { REST, Routes } from "discord.js"
 import { COMMANDS } from "@/lib/discord/commands/registry"

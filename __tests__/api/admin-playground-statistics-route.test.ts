@@ -6,32 +6,20 @@ import { GET } from '@/app/api/admin/playground/statistics/route'
 import { prisma } from '@/lib/prisma'
 import { requireAdminAPI } from '@/lib/security/api-helpers'
 import { limitRequest } from '@/lib/security/rate-limit'
+import { fetchOverseerrStatistics } from '@/lib/wrapped/overseerr-statistics'
+import { fetchPlexServerStatistics } from '@/lib/wrapped/server-statistics'
 import {
   fetchTautulliStatistics,
-  fetchPlexServerStatistics,
-  fetchOverseerrStatistics,
   fetchTopContentLeaderboards,
   fetchWatchTimeLeaderboard,
-} from '@/lib/wrapped/statistics'
-import { NextRequest } from 'next/server'
+} from '@/lib/wrapped/tautulli-statistics'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 // Mock dependencies
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    user: {
-      findFirst: jest.fn(),
-    },
-    tautulli: {
-      findFirst: jest.fn(),
-    },
-    plexServer: {
-      findFirst: jest.fn(),
-    },
-    overseerr: {
-      findFirst: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('@/lib/security/api-helpers', () => ({
   requireAdminAPI: jest.fn(),
@@ -41,12 +29,16 @@ jest.mock('@/lib/security/rate-limit', () => ({
   limitRequest: jest.fn(),
 }))
 
-jest.mock('@/lib/wrapped/statistics', () => ({
+jest.mock('@/lib/wrapped/tautulli-statistics', () => ({
   fetchTautulliStatistics: jest.fn(),
-  fetchPlexServerStatistics: jest.fn(),
-  fetchOverseerrStatistics: jest.fn(),
   fetchTopContentLeaderboards: jest.fn(),
   fetchWatchTimeLeaderboard: jest.fn(),
+}))
+jest.mock('@/lib/wrapped/server-statistics', () => ({
+  fetchPlexServerStatistics: jest.fn(),
+}))
+jest.mock('@/lib/wrapped/overseerr-statistics', () => ({
+  fetchOverseerrStatistics: jest.fn(),
 }))
 
 // Mock NextRequest

@@ -10,7 +10,6 @@ export { fetchTautulliStatistics } from "./tautulli-user-statistics"
 
 // Leaderboard functions (item and overall leaderboards)
 export {
-  fetchItemLeaderboard,
   fetchWatchTimeLeaderboard,
   fetchTopContentLeaderboards,
 } from "./tautulli-leaderboards"

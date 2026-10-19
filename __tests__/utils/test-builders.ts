@@ -14,7 +14,6 @@ import {
   DiscordCommandActivity,
   LlmUsageStats,
   MediaMarkActivity,
-  UserActivityItem,
   UserActivityTimelineData,
   WrappedSummary,
 } from '@/types/admin'
@@ -83,6 +82,12 @@ export const makeAdminUserWithStats = (
   hasPlexAccess: true,
   llmUsage: makeLlmUsageStats(),
   totalLlmUsage: makeLlmUsageStats(),
+  subscriptionStatus: null,
+  currentPeriodEnd: null,
+  cancelAtPeriodEnd: false,
+  isExempt: false,
+  exemptReason: null,
+  stripeCustomerId: null,
   ...overrides,
 })
 

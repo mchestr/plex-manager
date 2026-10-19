@@ -2,18 +2,66 @@
  * Plex server statistics functions
  */
 
+import { z } from "zod"
+
+import { serviceFetch } from "@/lib/connections/http"
 import { createLogger } from "@/lib/utils/logger"
-import { formatBytes } from "@/lib/utils/time-formatting"
+import { formatBytes } from "@/lib/utils/format"
 import type { PlexConfig, TautulliConfig, ServerStatisticsData } from "./statistics-types"
 import { fetchTautulliLibraryCounts } from "./tautulli-statistics"
 
 const logger = createLogger("STATISTICS")
 
+const plexItemsSchema = z.array(
+  z.looseObject({
+    Media: z
+      .array(z.looseObject({ Part: z.array(z.looseObject({ size: z.union([z.number(), z.string()]).optional() })).optional() }))
+      .optional(),
+  })
+)
+
+const plexContainerSchema = z.looseObject({
+  MediaContainer: z
+    .looseObject({
+      Directory: z.unknown().optional(),
+      Metadata: plexItemsSchema.optional(),
+      totalSize: z.number().optional(),
+    })
+    .optional(),
+})
+
+/** Bytes in every `Media.Part` of the items. */
+function sumPartSizes(items: z.infer<typeof plexItemsSchema>): number {
+  let total = 0
+  for (const item of items) {
+    for (const media of item.Media ?? []) {
+      for (const part of media.Part ?? []) total += parseInt(String(part.size ?? "0"), 10) || 0
+    }
+  }
+  return total
+}
+
+/**
+ * A whole-library PMS read. Unpaginated until P2.4's library source replaces
+ * it, so the budget is a generous 2 minutes, body included.
+ */
+function plexLibraryGet(config: PlexConfig, path: string, signal?: AbortSignal) {
+  return serviceFetch({
+    service: "Plex",
+    url: `${config.url}${path}`,
+    headers: { "X-Plex-Token": config.token },
+    schema: plexContainerSchema,
+    timeoutMs: 120_000,
+    signal,
+  })
+}
+
 /**
  * Fetch server statistics from Plex API (more efficient than Tautulli for storage)
  */
 async function fetchPlexServerStatisticsFromPlex(
-  config: PlexConfig
+  config: PlexConfig,
+  signal?: AbortSignal
 ): Promise<{
   success: boolean
   data?: {
@@ -28,26 +76,18 @@ async function fetchPlexServerStatisticsFromPlex(
   error?: string
 }> {
   try {
-    const baseUrl = `${config.url}`
-    const token = config.token
-
     // Get all library sections
-    const sectionsUrl = `${baseUrl}/library/sections?X-Plex-Token=${token}`
+    const sectionsResult = await plexLibraryGet(config, "/library/sections", signal)
 
-    const sectionsResponse = await fetch(sectionsUrl, {
-      headers: { "Accept": "application/json" },
-    })
-
-    if (!sectionsResponse.ok) {
-      logger.error("Failed to fetch library sections from Plex", undefined, { statusText: sectionsResponse.statusText })
+    if (!sectionsResult.ok) {
+      logger.error("Failed to fetch library sections from Plex", undefined, { code: sectionsResult.code, status: sectionsResult.status })
       return {
         success: false,
-        error: `Failed to fetch library sections from Plex: ${sectionsResponse.statusText}`,
+        error: "Failed to fetch library sections from Plex",
       }
     }
 
-    const sectionsData = await sectionsResponse.json()
-    const sections = sectionsData.MediaContainer?.Directory || []
+    const sections = sectionsResult.data.MediaContainer?.Directory || []
 
     if (!Array.isArray(sections)) {
       logger.error("Invalid response format from Plex API: expected array of sections")
@@ -68,70 +108,34 @@ async function fetchPlexServerStatisticsFromPlex(
       const sectionTitle = section.title || `Section ${sectionKey}`
       const sectionType = section.type // "movie" or "show"
 
-      try {
-        // Get all items in this section using /all endpoint
-        const allItemsUrl = `${baseUrl}/library/sections/${sectionKey}/all?X-Plex-Token=${token}&includeGuids=1`
+      // Get all items in this section using /all endpoint
+      const allItems = await plexLibraryGet(config, `/library/sections/${sectionKey}/all?includeGuids=1`, signal)
 
-        const allItemsResponse = await fetch(allItemsUrl, {
-          headers: { "Accept": "application/json" },
-        })
-
-        if (!allItemsResponse.ok) {
-          console.warn(`[STATISTICS] Failed to fetch items for library "${sectionTitle}": ${allItemsResponse.statusText}`)
-          continue
-        }
-
-        const allItemsData = await allItemsResponse.json()
-        const mediaContainer = allItemsData.MediaContainer || {}
-        const items = mediaContainer.Metadata || []
-        const totalSize = mediaContainer.totalSize || items.length
-
-        if (sectionType === "movie") {
-          moviesCount += totalSize
-
-          // Sum file sizes from all movies
-          for (const movie of items) {
-            const media = movie.Media || []
-            for (const mediaItem of media) {
-              const parts = mediaItem.Part || []
-              for (const part of parts) {
-                totalStorage += parseInt(part.size || "0", 10)
-              }
-            }
-          }
-        } else if (sectionType === "show") {
-          showsCount += totalSize
-
-          // Get all episodes directly using type=episode filter
-          const episodesUrl = `${baseUrl}/library/sections/${sectionKey}/all?X-Plex-Token=${token}&type=4` // type=4 is episode
-
-          const episodesResponse = await fetch(episodesUrl, {
-            headers: { "Accept": "application/json" },
-          })
-
-          if (episodesResponse.ok) {
-            const episodesData = await episodesResponse.json()
-            const episodesContainer = episodesData.MediaContainer || {}
-            const episodes = episodesContainer.Metadata || []
-            episodesCount += episodes.length
-
-            // Sum file sizes from all episodes
-            for (const episode of episodes) {
-              const media = episode.Media || []
-              for (const mediaItem of media) {
-                const parts = mediaItem.Part || []
-                for (const part of parts) {
-                  totalStorage += parseInt(part.size || "0", 10)
-                }
-              }
-            }
-          } else {
-            console.warn(`[STATISTICS] Failed to fetch episodes for library "${sectionTitle}": ${episodesResponse.statusText}`)
-          }
-        }
-      } catch (libraryError) {
-        console.warn(`[STATISTICS] Error processing library "${sectionTitle}":`, libraryError)
+      if (!allItems.ok) {
+        logger.warn("Failed to fetch items for a Plex library", { sectionTitle, code: allItems.code, status: allItems.status })
         continue
+      }
+
+      const mediaContainer = allItems.data.MediaContainer || {}
+      const items = mediaContainer.Metadata || []
+      const totalSize = mediaContainer.totalSize || items.length
+
+      if (sectionType === "movie") {
+        moviesCount += totalSize
+        totalStorage += sumPartSizes(items)
+      } else if (sectionType === "show") {
+        showsCount += totalSize
+
+        // Get all episodes directly using type=4 (episode)
+        const episodes = await plexLibraryGet(config, `/library/sections/${sectionKey}/all?type=4`, signal)
+
+        if (episodes.ok) {
+          const episodeItems = episodes.data.MediaContainer?.Metadata || []
+          episodesCount += episodeItems.length
+          totalStorage += sumPartSizes(episodeItems)
+        } else {
+          logger.warn("Failed to fetch episodes for a Plex library", { sectionTitle, code: episodes.code, status: episodes.status })
+        }
       }
     }
 
@@ -161,7 +165,8 @@ async function fetchPlexServerStatisticsFromPlex(
  */
 export async function fetchPlexServerStatistics(
   config: PlexConfig,
-  tautulliConfig: TautulliConfig
+  tautulliConfig: TautulliConfig,
+  signal?: AbortSignal
 ): Promise<{
   success: boolean
   data?: ServerStatisticsData
@@ -171,8 +176,8 @@ export async function fetchPlexServerStatistics(
     // Use Plex API for storage (more efficient)
     // Use Tautulli for counts only (get_libraries provides accurate episode counts)
     const [plexResult, tautulliCountsResult] = await Promise.all([
-      fetchPlexServerStatisticsFromPlex(config),
-      fetchTautulliLibraryCounts(tautulliConfig),
+      fetchPlexServerStatisticsFromPlex(config, signal),
+      fetchTautulliLibraryCounts(tautulliConfig, signal),
     ])
 
     if (!plexResult.success) {

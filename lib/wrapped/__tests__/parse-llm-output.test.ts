@@ -1,6 +1,8 @@
+import { z } from "zod"
+
 import {
   ARCHETYPES,
-  wrappedOutputJsonSchema,
+  wrappedLLMOutputSchema,
 } from "@/lib/wrapped/llm-output-schema"
 import { parseWrappedLLMOutput } from "@/lib/wrapped/parse-llm-output"
 
@@ -10,7 +12,7 @@ import { buildValidOutput } from "./fixtures"
 interface MutableOutput {
   archetype: { id: string; tagline: string; dedication: string }
   narratives: Record<string, string | null | undefined>
-  insights: { discoveryScore: number }
+  insights: { funFacts: string[] }
   summary: string
 }
 
@@ -69,15 +71,29 @@ describe("parseWrappedLLMOutput", () => {
     }
   })
 
-  it("rejects out-of-range discoveryScore", () => {
+  it("rejects too few fun facts", () => {
     const output = cloneOutput()
-    output.insights.discoveryScore = 150
+    output.insights.funFacts = ["Only one."]
 
     expect(parseWrappedLLMOutput(JSON.stringify(output)).success).toBe(false)
   })
+
+  it("asks the model for no computed insight (RWP-16) and drops one it sends", () => {
+    const insights = (wrappedOutputJsonSchema().properties as Record<string, { properties: object }>).insights
+
+    expect(Object.keys(insights.properties)).toEqual(["funFacts"])
+    const output = { ...cloneOutput(), insights: { ...cloneOutput().insights, discoveryScore: 72, personality: "Night owl" } }
+    const result = parseWrappedLLMOutput(JSON.stringify(output))
+    expect(result.success && result.output.insights).toEqual({ funFacts: cloneOutput().insights.funFacts })
+  })
 })
 
-describe("wrappedOutputJsonSchema (strict structured outputs)", () => {
+// The JSON Schema the AI SDK sends for strict structured outputs
+function wrappedOutputJsonSchema() {
+  return z.toJSONSchema(wrappedLLMOutputSchema)
+}
+
+describe("wrappedLLMOutputSchema as JSON Schema (strict structured outputs)", () => {
   function collectObjects(node: unknown, out: Record<string, unknown>[] = []) {
     if (node && typeof node === "object") {
       const obj = node as Record<string, unknown>

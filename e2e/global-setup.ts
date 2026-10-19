@@ -11,7 +11,6 @@ async function globalSetup() {
   const databaseUrl = process.env.DATABASE_URL;
 
   console.log('[E2E Setup] Database URL:', databaseUrl?.replace(/\/\/[^:]+:[^@]+@/, '//***:***@') || 'not set');
-  console.log('[E2E Setup] Test auth enabled:', process.env.NEXT_PUBLIC_ENABLE_TEST_AUTH);
 
   const prisma = createE2EPrismaClient();
 

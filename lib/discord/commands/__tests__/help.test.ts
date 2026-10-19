@@ -77,7 +77,6 @@ import {
   buildFullHelpMessage,
   buildCommandHelpMessage,
   helpCommand,
-  type CommandDefinition,
 } from "../help"
 import type { InteractionContext } from "../registry"
 

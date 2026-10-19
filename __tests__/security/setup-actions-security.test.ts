@@ -6,7 +6,6 @@
 
 import { requireAdmin } from '@/lib/admin'
 import {
-  getSetupStatus,
   savePlexServer,
   saveTautulli,
   saveOverseerr,
@@ -19,6 +18,9 @@ import { testTautulliConnection } from '@/lib/connections/tautulli'
 import { testOverseerrConnection } from '@/lib/connections/overseerr'
 import { testLLMProviderConnection } from '@/lib/connections/llm-provider'
 import { UnauthorizedAdminError, UnauthenticatedError } from '@/lib/admin'
+import { mockDeep, mockReset } from 'jest-mock-extended'
+import type { Prisma } from '@/lib/generated/prisma/client'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 // Mock dependencies
 jest.mock('@/lib/admin', () => ({
@@ -38,54 +40,13 @@ jest.mock('@/lib/admin', () => ({
   },
 }))
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    setup: {
-      findFirst: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-    },
-    plexServer: {
-      create: jest.fn(),
-    },
-    tautulli: {
-      create: jest.fn(),
-    },
-    overseerr: {
-      create: jest.fn(),
-    },
-    lLMProvider: {
-      updateMany: jest.fn(),
-      create: jest.fn(),
-    },
-    discordIntegration: {
-      upsert: jest.fn(),
-    },
-    $transaction: jest.fn((callback) => callback({
-      setup: {
-        findFirst: jest.fn(),
-        create: jest.fn(),
-        update: jest.fn(),
-      },
-      plexServer: {
-        create: jest.fn(),
-      },
-      tautulli: {
-        create: jest.fn(),
-      },
-      overseerr: {
-        create: jest.fn(),
-      },
-      lLMProvider: {
-        updateMany: jest.fn(),
-        create: jest.fn(),
-      },
-      discordIntegration: {
-        upsert: jest.fn(),
-      },
-    })),
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => {
+  mockReset(prismaMock)
+  // Each transaction runs against a fresh client whose delegates resolve to undefined.
+  prismaMock.$transaction.mockImplementation((callback) => callback(mockDeep<Prisma.TransactionClient>()))
+})
 
 jest.mock('@/lib/connections/plex', () => ({
   testPlexConnection: jest.fn(),

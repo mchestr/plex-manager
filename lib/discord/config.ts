@@ -85,6 +85,8 @@ export async function getSupportChannelId(): Promise<string | undefined> {
  * Resolves the support thread ids as a string array. Prefers the DB
  * `supportThreadIds` JSON column when present and non-empty, otherwise falls
  * back to the comma-separated env `DISCORD_SUPPORT_THREAD_IDS`.
+ *
+ * @internal
  */
 export async function getSupportThreadIds(): Promise<string[]> {
   const row = await getRow()

@@ -6,10 +6,7 @@
 export enum AuditEventType {
   ADMIN_PRIVILEGE_GRANTED = "ADMIN_PRIVILEGE_GRANTED",
   ADMIN_PRIVILEGE_REVOKED = "ADMIN_PRIVILEGE_REVOKED",
-  ADMIN_PRIVILEGE_CHANGED = "ADMIN_PRIVILEGE_CHANGED",
-  CONFIG_CHANGED = "CONFIG_CHANGED",
   USER_CREATED = "USER_CREATED",
-  USER_UPDATED = "USER_UPDATED",
   // Invite processing events
   INVITE_CONSUMED = "INVITE_CONSUMED",
   INVITE_PLEX_FAILURE = "INVITE_PLEX_FAILURE",
@@ -28,7 +25,6 @@ export enum AuditEventType {
   QUEUE_JOB_REMOVED = "QUEUE_JOB_REMOVED",
   QUEUE_JOB_RETRIED = "QUEUE_JOB_RETRIED",
   QUEUE_SYNC_TRIGGERED = "QUEUE_SYNC_TRIGGERED",
-  QUEUE_SCHEDULE_UPDATED = "QUEUE_SCHEDULE_UPDATED",
   // Subscription management events
   SUBSCRIPTION_CANCELED = "SUBSCRIPTION_CANCELED",
   SUBSCRIPTION_ACCESS_GRANTED = "SUBSCRIPTION_ACCESS_GRANTED",
@@ -55,9 +51,20 @@ export enum AuditEventType {
   // never the token, which is the credential for the public link.
   SHARE_LINK_CREATED = "SHARE_LINK_CREATED",
   SHARE_LINK_REVOKED = "SHARE_LINK_REVOKED",
+  // The server time zone (Config.timezone) changed. Details carry the old and new zone.
+  SERVER_TIMEZONE_CHANGED = "SERVER_TIMEZONE_CHANGED",
+  // An admin saved an LLM provider for a purpose. Details carry the provider,
+  // model, base-URL origin and whether a new key was entered, never the key.
+  LLM_PROVIDER_CHANGED = "LLM_PROVIDER_CHANGED",
+  // An admin asked for the Rewind season data (server aggregate and metadata
+  // warm) to be prepared. Details carry the year, the last data day and the job id.
+  REWIND_SEASON_DATA_PREPARED = "REWIND_SEASON_DATA_PREPARED",
+  // An admin asked for a member's Rewind to be regenerated. Details carry the year
+  // and whether a run was already queued.
+  REWIND_REGENERATE_REQUESTED = "REWIND_REGENERATE_REQUESTED",
 }
 
-export interface AuditLogEntry {
+interface AuditLogEntry {
   type: AuditEventType
   userId: string
   targetUserId?: string
@@ -102,4 +109,3 @@ export function logAuditEvent(
   // - External audit log service (e.g., CloudWatch, Datadog)
   // - Immutable log storage
 }
-

@@ -1,6 +1,6 @@
 "use client"
 
-import { motion, useReducedMotion } from "framer-motion"
+import { motion, useReducedMotion } from "motion/react"
 
 interface SpotlightProps {
   /** Wash color at the beam's center; defaults to warm gold */

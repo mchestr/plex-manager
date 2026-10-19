@@ -11,16 +11,3 @@ export const radarrSchema = z.object({
 
 export type RadarrInput = z.input<typeof radarrSchema>
 export type RadarrParsed = z.output<typeof radarrSchema>
-
-// Schema for Radarr server list response
-export const radarrServerListSchema = z.object({
-  servers: z.array(
-    z.object({
-      id: z.string(),
-      name: z.string(),
-    })
-  ),
-})
-
-export type RadarrServerList = z.infer<typeof radarrServerListSchema>
-

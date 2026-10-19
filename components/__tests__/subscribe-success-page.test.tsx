@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth'
 
 import SubscribeSuccessPage from '@/app/subscribe/success/page'
 import { prisma } from '@/lib/prisma'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),
@@ -12,13 +14,9 @@ jest.mock('@/lib/auth', () => ({
   authOptions: {},
 }))
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    subscription: {
-      findUnique: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 const mockGetServerSession = getServerSession as jest.MockedFunction<
   typeof getServerSession

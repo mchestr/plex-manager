@@ -29,10 +29,6 @@ export function buildValidOutput(): WrappedLLMOutput {
       finale: "That's a wrap on 2026.",
     },
     insights: {
-      personality: "A dedicated night-owl cinephile",
-      topGenre: "Science Fiction",
-      bingeWatcher: true,
-      discoveryScore: 72,
       funFacts: [
         "Your busiest night was a Tuesday.",
         "You finished three full series in March.",

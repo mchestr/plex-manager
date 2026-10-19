@@ -4,11 +4,16 @@
  * Fetches leaderboard data for media items and overall watch time
  */
 
+import { z } from "zod"
+
+import { tautulliCommand } from "@/lib/connections/tautulli"
 import { createLogger } from "@/lib/utils/logger"
-import type {
-  TautulliItemUserStat,
-  TautulliHomeStatsRow,
-  TautulliHomeStat,
+import type { TopContentLeaderboards } from "@/lib/wrapped/data/schema-legacy"
+import {
+  tautulliHomeStatSchema,
+  tautulliItemUserStatSchema,
+  type TautulliItemUserStat,
+  type TautulliHomeStatsRow,
 } from "@/lib/validations/tautulli"
 import type {
   TautulliConfig,
@@ -22,50 +27,36 @@ const logger = createLogger("STATISTICS")
  * Fetch leaderboard stats for a specific media item (movie or show)
  * Returns all users who watched it and their stats
  */
-export async function fetchItemLeaderboard(
+async function fetchItemLeaderboard(
   config: TautulliConfig,
   ratingKey: string,
   mediaType: "movie" | "show",
-  year: number
+  year: number,
+  signal?: AbortSignal
 ): Promise<{
   success: boolean
   data?: LeaderboardEntry[]
   error?: string
 }> {
   try {
-    const baseUrl = `${config.url}/api/v2`
-    const apiKey = config.apiKey
-
     // Use Unix timestamps for date filtering
     const startDate = new Date(`${year}-01-01T00:00:00Z`).getTime() / 1000
     const endDate = new Date(`${year}-12-31T23:59:59Z`).getTime() / 1000
 
     // Fetch user stats for this item
-    const statsUrl = `${baseUrl}?apikey=${apiKey}&cmd=get_item_user_stats&rating_key=${ratingKey}&time_range=${startDate},${endDate}`
+    const result = await tautulliCommand(
+      config,
+      "get_item_user_stats",
+      { rating_key: ratingKey, time_range: `${startDate},${endDate}` },
+      z.array(tautulliItemUserStatSchema).nullish(),
+      { signal }
+    )
 
-    const response = await fetch(statsUrl, {
-      headers: {
-        "Accept": "application/json",
-      },
-    })
-
-    if (!response.ok) {
-      return {
-        success: false,
-        error: `Failed to fetch item leaderboard: ${response.statusText}`,
-      }
+    if (!result.ok) {
+      return { success: false, error: "Failed to fetch item leaderboard from Tautulli" }
     }
 
-    const data = await response.json()
-
-    if (data.response?.result === "error") {
-      return {
-        success: false,
-        error: data.response?.message || "Tautulli API error",
-      }
-    }
-
-    const stats = (data.response?.data || []) as TautulliItemUserStat[]
+    const stats = result.data ?? []
     const leaderboard = stats.map((stat: TautulliItemUserStat) => {
       // Tautulli's get_item_user_stats returns duration in seconds
       // Try multiple possible field names for duration
@@ -104,16 +95,14 @@ export async function fetchItemLeaderboard(
  */
 export async function fetchWatchTimeLeaderboard(
   config: TautulliConfig,
-  year: number
+  year: number,
+  signal?: AbortSignal
 ): Promise<{
   success: boolean
   data?: WatchTimeLeaderboardEntry[]
   error?: string
 }> {
   try {
-    const baseUrl = `${config.url}/api/v2`
-    const apiKey = config.apiKey
-
     // Calculate days from beginning of year to now
     const yearStart = new Date(`${year}-01-01T00:00:00Z`)
     const now = new Date()
@@ -121,33 +110,20 @@ export async function fetchWatchTimeLeaderboard(
 
     // Fetch top users by watch time using get_home_stats
     // type=duration for watch time, time_range is days since start of year
-    const homeStatsUrl = `${baseUrl}?apikey=${apiKey}&cmd=get_home_stats&time_range=${daysSinceYearStart}&type=duration&stats_count=1000`
+    const result = await tautulliCommand(
+      config,
+      "get_home_stats",
+      { time_range: daysSinceYearStart, type: "duration", stats_count: 1000 },
+      z.array(tautulliHomeStatSchema).nullish(),
+      { signal }
+    )
 
-    const response = await fetch(homeStatsUrl, {
-      headers: {
-        "Accept": "application/json",
-      },
-    })
-
-    if (!response.ok) {
-      return {
-        success: false,
-        error: `Failed to fetch home stats: ${response.statusText}`,
-      }
+    if (!result.ok) {
+      return { success: false, error: "Failed to fetch home stats from Tautulli" }
     }
 
-    const data = await response.json()
-
-    if (data.response?.result === "error") {
-      return {
-        success: false,
-        error: data.response?.message || "Tautulli API error",
-      }
-    }
-
-    // Extract user stats from home stats response
     // The response contains an array of stat objects, each with a rows array
-    const stats = (data.response?.data || []) as TautulliHomeStat[]
+    const stats = result.data ?? []
 
     // Find the stat object that contains user watch time data
     // Look for stat_id like "top_users" or check rows for user data
@@ -238,75 +214,22 @@ export async function fetchTopContentLeaderboards(
   topMovies: Array<{ title: string; ratingKey?: string }>,
   topShows: Array<{ title: string; ratingKey?: string }>,
   userId: string,
-  year: number
+  year: number,
+  signal?: AbortSignal
 ): Promise<{
   success: boolean
-  data?: {
-    movies: Array<{
-      title: string
-      ratingKey?: string
-      leaderboard: Array<{
-        userId: string
-        username: string
-        friendlyName: string
-        watchTime: number
-        playCount: number
-      }>
-      userPosition?: number
-      totalWatchers: number
-    }>
-    shows: Array<{
-      title: string
-      ratingKey?: string
-      leaderboard: Array<{
-        userId: string
-        username: string
-        friendlyName: string
-        watchTime: number
-        playCount: number
-        episodesWatched: number
-      }>
-      userPosition?: number
-      totalWatchers: number
-    }>
-  }
+  data?: TopContentLeaderboards
   error?: string
 }> {
   try {
-    const moviesLeaderboards: Array<{
-      title: string
-      ratingKey?: string
-      leaderboard: Array<{
-        userId: string
-        username: string
-        friendlyName: string
-        watchTime: number
-        playCount: number
-      }>
-      userPosition?: number
-      totalWatchers: number
-    }> = []
-
-    const showsLeaderboards: Array<{
-      title: string
-      ratingKey?: string
-      leaderboard: Array<{
-        userId: string
-        username: string
-        friendlyName: string
-        watchTime: number
-        playCount: number
-        episodesWatched: number
-      }>
-      userPosition?: number
-      totalWatchers: number
-    }> = []
+    const moviesLeaderboards: TopContentLeaderboards["movies"] = []
+    const showsLeaderboards: TopContentLeaderboards["shows"] = []
 
     // Fetch leaderboards for top movies
     for (const movie of topMovies.slice(0, 5)) {
       if (!movie.ratingKey) continue
 
-      const result = await fetchItemLeaderboard(config, movie.ratingKey, "movie", year)
+      const result = await fetchItemLeaderboard(config, movie.ratingKey, "movie", year, signal)
       if (result.success && result.data) {
         const userIndex = result.data.findIndex((entry) => entry.userId === userId)
         moviesLeaderboards.push({
@@ -329,7 +252,7 @@ export async function fetchTopContentLeaderboards(
     for (const show of topShows.slice(0, 5)) {
       if (!show.ratingKey) continue
 
-      const result = await fetchItemLeaderboard(config, show.ratingKey, "show", year)
+      const result = await fetchItemLeaderboard(config, show.ratingKey, "show", year, signal)
       if (result.success && result.data) {
         const userIndex = result.data.findIndex((entry) => entry.userId === userId)
         showsLeaderboards.push({

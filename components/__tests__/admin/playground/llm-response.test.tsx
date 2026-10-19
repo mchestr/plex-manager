@@ -122,7 +122,7 @@ describe("LLMResponse", () => {
     })
 
     it("should show save icon when not saving", () => {
-      const { container } = renderWithToast(<LLMResponse {...mockProps} isSaving={false} />)
+      renderWithToast(<LLMResponse {...mockProps} isSaving={false} />)
 
       const saveButton = screen.getByRole("button", { name: /save as wrapped/i })
       const svg = saveButton.querySelector("svg")
@@ -130,7 +130,7 @@ describe("LLMResponse", () => {
     })
 
     it("should show spinner when saving", () => {
-      const { container } = renderWithToast(<LLMResponse {...mockProps} isSaving={true} />)
+      renderWithToast(<LLMResponse {...mockProps} isSaving={true} />)
 
       const saveButton = screen.getByRole("button", { name: /saving/i })
       const spinner = saveButton.querySelector(".animate-spin")

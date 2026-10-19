@@ -1,3 +1,4 @@
+import { listLLMModels } from "@/actions/admin/admin-llm-providers"
 import { WrappedPlayground } from "@/components/admin/playground/wrapped-playground"
 import { PromptTemplate } from "@/lib/generated/prisma/client"
 import { act, render, screen, waitFor } from "@testing-library/react"
@@ -78,6 +79,10 @@ jest.mock("@/actions/playground-wrapped", () => ({
   savePlaygroundWrapped: jest.fn(),
 }))
 
+jest.mock("@/actions/admin/admin-llm-providers", () => ({
+  listLLMModels: jest.fn(),
+}))
+
 // Mock fetch
 global.fetch = jest.fn()
 
@@ -89,6 +94,8 @@ describe("WrappedPlayground", () => {
       description: "Test template",
       template: "Test content",
       isActive: true,
+      version: 1,
+      updatedBy: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     },
@@ -101,6 +108,12 @@ describe("WrappedPlayground", () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    ;(listLLMModels as jest.Mock).mockResolvedValue({
+      success: true,
+      models: [],
+      configuredProvider: "openai",
+      configuredModel: "gpt-4",
+    })
     ;(global.fetch as jest.Mock).mockResolvedValue({
       ok: true,
       json: async () => ({ users: [], models: [], configuredModel: "gpt-4" }),
@@ -147,7 +160,7 @@ describe("WrappedPlayground", () => {
       render(<WrappedPlayground {...mockProps} />)
 
       await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalledWith("/api/admin/models")
+        expect(listLLMModels).toHaveBeenCalledWith({ purpose: "wrapped" })
       }, { timeout: 3000 })
     })
 
@@ -255,6 +268,8 @@ describe("WrappedPlayground", () => {
           description: "Test template 1",
           template: "Content 1",
           isActive: true,
+          version: 1,
+          updatedBy: null,
           createdAt: new Date(),
           updatedAt: new Date(),
         },
@@ -264,6 +279,8 @@ describe("WrappedPlayground", () => {
           description: "Test template 2",
           template: "Content 2",
           isActive: false,
+          version: 1,
+          updatedBy: null,
           createdAt: new Date(),
           updatedAt: new Date(),
         },
@@ -290,7 +307,7 @@ describe("WrappedPlayground", () => {
       render(<WrappedPlayground {...mockProps} />)
 
       await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalledWith("/api/admin/models")
+        expect(listLLMModels).toHaveBeenCalledWith({ purpose: "wrapped" })
       })
     })
   })
@@ -397,15 +414,17 @@ describe("WrappedPlayground", () => {
     it("should handle successful models fetch", async () => {
       const mockModels = ["gpt-4", "gpt-3.5-turbo"]
 
-      ;(global.fetch as jest.Mock).mockResolvedValue({
-        ok: true,
-        json: async () => ({ models: mockModels, configuredModel: "gpt-4" }),
+      ;(listLLMModels as jest.Mock).mockResolvedValue({
+        success: true,
+        models: mockModels,
+        configuredProvider: "openai",
+        configuredModel: "gpt-4",
       })
 
       render(<WrappedPlayground {...mockProps} />)
 
       await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalledWith("/api/admin/models")
+        expect(listLLMModels).toHaveBeenCalledWith({ purpose: "wrapped" })
       })
     })
 
@@ -423,15 +442,17 @@ describe("WrappedPlayground", () => {
     })
 
     it("should handle empty models response", async () => {
-      ;(global.fetch as jest.Mock).mockResolvedValue({
-        ok: true,
-        json: async () => ({ models: [], configuredModel: "" }),
+      ;(listLLMModels as jest.Mock).mockResolvedValue({
+        success: true,
+        models: [],
+        configuredProvider: null,
+        configuredModel: null,
       })
 
       render(<WrappedPlayground {...mockProps} />)
 
       await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalledWith("/api/admin/models")
+        expect(listLLMModels).toHaveBeenCalledWith({ purpose: "wrapped" })
       })
     })
   })

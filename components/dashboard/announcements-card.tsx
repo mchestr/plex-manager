@@ -1,8 +1,10 @@
 "use client"
 
-import { motion, AnimatePresence } from "framer-motion"
+import { motion, AnimatePresence, useReducedMotion } from "motion/react"
 import dynamic from "next/dynamic"
 import type { AnnouncementData } from "@/actions/announcements"
+import { loop } from "@/lib/utils/motion-loop"
+import { useFormat } from "@/lib/format-context"
 
 const ReactMarkdown = dynamic(() => import("react-markdown"), {
   loading: () => <div className="h-4 w-24 animate-pulse rounded bg-slate-700" />,
@@ -10,9 +12,13 @@ const ReactMarkdown = dynamic(() => import("react-markdown"), {
 
 interface AnnouncementsCardProps {
   announcements: AnnouncementData[]
+  /** The server clock at render time, so the relative dates hydrate unchanged. */
+  now: string
 }
 
-export function AnnouncementsCard({ announcements }: AnnouncementsCardProps) {
+export function AnnouncementsCard({ announcements, now }: AnnouncementsCardProps) {
+  const reduceMotion = useReducedMotion()
+  const f = useFormat()
   if (announcements.length === 0) {
     return null
   }
@@ -45,8 +51,7 @@ export function AnnouncementsCard({ announcements }: AnnouncementsCardProps) {
           {/* Animated bell icon */}
           <motion.div
             className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 shadow-lg shadow-amber-500/30"
-            animate={{ rotate: [0, -10, 10, -10, 0] }}
-            transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 3 }}
+            {...loop(reduceMotion, { rotate: [0, -10, 10, -10, 0] }, { duration: 0.5, repeat: Infinity, repeatDelay: 3 })}
           >
             <svg className="h-5 w-5 sm:h-5 sm:w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
@@ -98,7 +103,7 @@ export function AnnouncementsCard({ announcements }: AnnouncementsCardProps) {
                       <ReactMarkdown>{announcement.content}</ReactMarkdown>
                     </div>
                     <p className="mt-2 text-xs text-amber-300/60 font-medium">
-                      {formatRelativeDate(announcement.createdAt)}
+                      {capitalize(f.relative(announcement.createdAt, now))}
                     </p>
                   </div>
                 </div>
@@ -111,23 +116,7 @@ export function AnnouncementsCard({ announcements }: AnnouncementsCardProps) {
   )
 }
 
-function formatRelativeDate(dateString: string): string {
-  const date = new Date(dateString)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-
-  if (diffDays === 0) {
-    return "Today"
-  } else if (diffDays === 1) {
-    return "Yesterday"
-  } else if (diffDays < 7) {
-    return `${diffDays} days ago`
-  } else {
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
-    })
-  }
+// "yesterday" starts the line, so it reads "Yesterday".
+function capitalize(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1)
 }

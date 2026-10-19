@@ -1,0 +1,244 @@
+{
+  "id": "seven-minutes",
+  "description": "Seven minutes in three samples: one rounding rule and the minimum-play rule (FR-46).",
+  "member": {
+    "displayName": "Theo Lindqvist",
+    "userName": null,
+    "timezone": null,
+    "hiddenRatingKeys": []
+  },
+  "server": {
+    "name": "Chester Family Plex",
+    "zone": "America/Los_Angeles",
+    "overseerr": true,
+    "peers": {
+      "members": 12,
+      "hours": [
+        610,
+        402,
+        355,
+        290,
+        240,
+        198,
+        150,
+        96,
+        61,
+        22,
+        3
+      ]
+    }
+  },
+  "window": {
+    "year": 2026,
+    "finalCut": false
+  },
+  "history": [
+    {"user_id":1,"started":1781989200,"stopped":1781989360,"play_duration":160,"paused_counter":0,"percent_complete":3,"watched_status":0,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"1401","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Up","grandparent_title":"","year":2009,"originally_available_at":"2009-01-01","guid":"plex://movie/1401","section_id":"1"},
+    {"user_id":1,"started":1782075600,"stopped":1782075770,"play_duration":170,"paused_counter":0,"percent_complete":3,"watched_status":0,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"1401","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Up","grandparent_title":"","year":2009,"originally_available_at":"2009-01-01","guid":"plex://movie/1401","section_id":"1"},
+    {"user_id":1,"started":1782090000,"stopped":1782090110,"play_duration":110,"paused_counter":0,"percent_complete":5,"watched_status":0,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"14020101","grandparent_rating_key":"1402","parent_media_index":1,"media_index":1,"title":"Episode 1","grandparent_title":"The Simpsons","year":1989,"originally_available_at":"1989-01-01","guid":"plex://episode/14020101","section_id":"2"}
+  ],
+  "lifetimeBefore2026": [],
+  "metadata": [
+    {"ratingKey":"1401","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Comedy","Crime"],"directors":["Ines Varga"],"actors":["Mira Okafor","Jun Ito"],"studio":null,"contentRating":null,"year":2009,"originallyAvailableAt":"2009-01-01T00:00:00.000Z","runtimeSec":5760,"seasonEpisodeCounts":null,"guids":["tmdb://101401"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"1402","kind":"show","librarySectionId":"2","addedAt":"2020-06-01T00:00:00.000Z","genres":["Science Fiction","Animation"],"directors":[],"actors":["Tomas Brandt","Lena Marsh"],"studio":null,"contentRating":null,"year":1989,"originallyAvailableAt":"1989-01-01T00:00:00.000Z","runtimeSec":null,"seasonEpisodeCounts":{"1":13},"guids":["tmdb://101402","tvdb://301402"],"videoResolution":"1080","hdr":false}
+  ],
+  "requests": {
+    "rows": [],
+    "genres": {}
+  },
+  "library": null,
+  "expected": {
+    "edition": "postcard",
+    "archetype": null,
+    "omittedPages": [
+      4,
+      5,
+      9,
+      11,
+      12,
+      13,
+      14,
+      17
+    ],
+    "facts": {
+      "member.firstName": "Theo",
+      "time.totalMinutes": "7 minutes",
+      "counts.films": "1",
+      "counts.episodes": "0",
+      "films[1].title": "Up",
+      "films[1].plays": "2",
+      "days.active": "2",
+      "days.biggest.minutes": "4 minutes",
+      "streak.longest.days": "2 days",
+      "hours.peak": "2 PM",
+      "tz.label": "America/Los_Angeles"
+    },
+    "stats": {
+      "totals": {
+        "totalMinutes": 7,
+        "seriesMinutes": 1,
+        "filmMinutes": 5,
+        "seriesShare": 0.25,
+        "filmShare": 0.75,
+        "counts": {
+          "episodes": 0,
+          "series": 0,
+          "films": 1,
+          "seasons": 0
+        },
+        "perDay": 0,
+        "daysHours": {
+          "days": 0,
+          "hours": 0
+        },
+        "vsLastYear": null
+      },
+      "time": {
+        "peak": 14,
+        "afterDarkShare": 0,
+        "goldenShare": 0,
+        "medianStart": {
+          "hour": 14,
+          "minute": 0
+        },
+        "latestStart": {
+          "hour": 14,
+          "minute": 0,
+          "date": "2026-06-21",
+          "weekday": 0
+        },
+        "weekendShare": 1
+      },
+      "calendar": {
+        "active": 2,
+        "biggest": {
+          "date": "2026-06-21",
+          "minutes": 4
+        },
+        "streak": {
+          "days": 2,
+          "from": "2026-06-20",
+          "to": "2026-06-21"
+        },
+        "longestGap": null
+      },
+      "sessions": {
+        "longestBinge": null,
+        "deepestBinge": null,
+        "mostEpisodesDay": null,
+        "biggestWeek": {
+          "from": "2026-06-15",
+          "to": "2026-06-21",
+          "minutes": 7
+        },
+        "mostPaused": null
+      },
+      "bookends": {
+        "first": {
+          "key": "film:1401",
+          "title": "Up",
+          "date": "2026-06-20",
+          "hour": 14,
+          "minute": 0
+        },
+        "last": {
+          "key": "film:1401",
+          "title": "Up",
+          "date": "2026-06-21",
+          "hour": 14,
+          "minute": 0
+        },
+        "sameTitleSameDay": false,
+        "member": {
+          "since": "2026-06-20",
+          "lifetimeHours": 0
+        }
+      },
+      "race": {
+        "eligible": false
+      },
+      "taste": {
+        "genres": [
+          {
+            "name": "Comedy",
+            "minutes": 2,
+            "share": 0.375
+          },
+          {
+            "name": "Crime",
+            "minutes": 2,
+            "share": 0.375
+          },
+          {
+            "name": "Animation",
+            "minutes": 0,
+            "share": 0.125
+          },
+          {
+            "name": "Science Fiction",
+            "minutes": 0,
+            "share": 0.125
+          }
+        ],
+        "medianYear": 2009,
+        "oldest": {
+          "key": "film:1401",
+          "title": "Up",
+          "year": 2009
+        },
+        "freshShare": 0
+      },
+      "people": {
+        "actors": [
+          {
+            "name": "Jun Ito",
+            "minutes": 5
+          },
+          {
+            "name": "Mira Okafor",
+            "minutes": 5
+          },
+          {
+            "name": "Lena Marsh",
+            "minutes": 1
+          },
+          {
+            "name": "Tomas Brandt",
+            "minutes": 1
+          }
+        ],
+        "directors": [
+          {
+            "name": "Ines Varga",
+            "minutes": 5
+          }
+        ]
+      },
+      "devices": {
+        "eligible": false
+      },
+      "requests": {
+        "eligible": false
+      },
+      "nextYear": {
+        "leftForLater": [],
+        "picks": []
+      },
+      "milestones": [],
+      "topSeries": [
+        {
+          "title": "The Simpsons",
+          "minutes": 1,
+          "plays": 0
+        }
+      ],
+      "topFilms": [
+        {
+          "title": "Up",
+          "minutes": 5,
+          "plays": 2
+        }
+      ]
+    }
+  }
+}

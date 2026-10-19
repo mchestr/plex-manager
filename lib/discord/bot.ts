@@ -21,6 +21,7 @@ import { routeDirectMessage, defaultDmRouteDeps } from "./routing/dm-router"
  */
 export type DiscordClientFactory = () => Client
 
+/** @internal */
 export const defaultClientFactory: DiscordClientFactory = () =>
   new Client({
     intents: [

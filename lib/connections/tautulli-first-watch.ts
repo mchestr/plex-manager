@@ -1,10 +1,18 @@
 import "server-only"
 
-import { findTautulliUser } from "@/lib/connections/tautulli"
+import { z } from "zod"
+
+import { findTautulliUser, tautulliCommand } from "@/lib/connections/tautulli"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("TAUTULLI_FIRST_WATCH")
+
+const oldestRowSchema = z.looseObject({ date: z.number().nullish(), started: z.number().nullish() })
+const historyPageSchema = z.union([
+  z.array(oldestRowSchema),
+  z.looseObject({ data: z.array(oldestRowSchema) }).transform((page) => page.data),
+])
 
 /**
  * The member's first watch date from Tautulli: the timestamp of their earliest
@@ -39,24 +47,23 @@ export async function getFirstWatchDate(
     }
 
     // The oldest history entry: history ordered by date ascending, one row.
-    const historyResponse = await fetch(
-      `${tautulli.url}/api/v2?apikey=${tautulli.apiKey}&cmd=get_history&user_id=${lookup.user.user_id}&order_dir=asc&length=1`,
-      { headers: { "Accept": "application/json" } }
+    const history = await tautulliCommand(
+      tautulli,
+      "get_history",
+      { user_id: lookup.user.user_id, order_dir: "asc", length: 1 },
+      historyPageSchema
     )
 
-    if (!historyResponse.ok) {
+    if (!history.ok) {
       return { success: false, error: "Failed to fetch user history from Tautulli" }
     }
 
-    const historyData = await historyResponse.json()
-    const historyItems = historyData.response?.data?.data || []
-
-    if (historyItems.length === 0) {
+    const firstItem = history.data[0]
+    if (!firstItem) {
       logger.debug("No watch history found for user", { plexUserId })
       return { success: false, error: "No watch history found" }
     }
 
-    const firstItem = historyItems[0]
     const timestamp = firstItem.date || firstItem.started
 
     if (!timestamp) {

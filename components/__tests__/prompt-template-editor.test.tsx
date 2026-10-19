@@ -1,6 +1,7 @@
 import { createPromptTemplate, updatePromptTemplate } from '@/actions/prompts'
 import { PromptTemplateEditor } from '@/components/admin/prompts/prompt-template-editor'
 import { PlexWrapped, PromptTemplate } from '@/lib/generated/prisma/client'
+import { buildPlexWrapped } from '@/__tests__/helpers/factories'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { useRouter } from 'next/navigation'
 
@@ -412,20 +413,7 @@ describe('PromptTemplateEditor', () => {
         topShows: [],
         percentile: { percentile: 10, topPercentLabel: 'Top 10%' },
       }
-      const userWrapped: PlexWrapped = {
-        id: 'wrapped-1',
-        userId: 'user-1',
-        data: JSON.stringify({ statistics: storedStatistics }),
-        year: 2026,
-        status: 'completed',
-        error: null,
-        shareToken: null,
-        summary: null,
-        archetype: null,
-        generatedAt: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      }
+      const userWrapped: PlexWrapped = buildPlexWrapped({ data: JSON.stringify({ statistics: storedStatistics }) })
       const { container } = render(<PromptTemplateEditor userWrapped={userWrapped} />)
 
       fireEvent.change(screen.getByLabelText(/Template Content/), {
@@ -732,7 +720,7 @@ describe('PromptTemplateEditor', () => {
       fireEvent.click(userNameChips[0])
 
       // Add more content
-      const templateInput = screen.getByLabelText(/Template Content/)
+      const templateInput = screen.getByLabelText<HTMLTextAreaElement>(/Template Content/)
       fireEvent.change(templateInput, { target: { value: templateInput.value + ' watched movies' } })
 
       // Toggle active

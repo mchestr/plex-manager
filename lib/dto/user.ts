@@ -19,8 +19,6 @@ export const publicUserSelect = {
   image: true,
 } satisfies Prisma.UserSelect
 
-export type PublicUser = Prisma.UserGetPayload<{ select: typeof publicUserSelect }>
-
 /** An invite with its redemptions, each carrying only the public user fields. */
 export type InviteWithUsages = Prisma.InviteGetPayload<{
   include: { usages: { include: { user: { select: typeof publicUserSelect } } } }

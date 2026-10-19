@@ -1,6 +1,6 @@
 "use client"
 
-import { motion } from "framer-motion"
+import { motion } from "motion/react"
 
 import { ConfettiBurst } from "@/components/wrapped/cinematic/confetti-burst"
 import { MarqueeText } from "@/components/wrapped/cinematic/marquee-text"
@@ -40,12 +40,12 @@ export function CinematicArchetypeRevealSection({ section }: Props) {
       </motion.p>
 
       <div className="space-y-4">
-        <h2 className="text-4xl sm:text-6xl md:text-7xl leading-tight">
+        <h2 className="text-4xl sm:text-6xl md:text-7xl leading-tight" data-testid="rewind-archetype-name">
           <MarqueeText
             text={name}
             delay={1.2}
             stagger={0.06}
-            className="bg-gradient-to-b from-gold-bright via-gold to-gold bg-clip-text text-transparent"
+            letterClassName="bg-gradient-to-b from-gold-bright via-gold to-gold bg-clip-text text-transparent"
           />
         </h2>
         {section.subtitle && (

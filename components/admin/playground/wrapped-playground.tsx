@@ -1,11 +1,12 @@
 "use client"
 
+import { listLLMModels } from "@/actions/admin/admin-llm-providers"
 import { savePlaygroundWrapped } from "@/actions/playground-wrapped"
 import { testPromptTemplate } from "@/actions/prompt-test"
 import { useToast } from "@/components/ui/toast"
 import { usePlaygroundState } from "@/hooks/use-playground-state"
-import { DEFAULT_OPENAI_MODEL } from "@/lib/llm/openai-params"
-import { estimateCost } from "@/lib/llm/pricing"
+import { DEFAULT_OPENAI_MODEL, isLLMProviderId } from "@/lib/llm/provider-presets"
+import { estimateCostUsd, type LLMProviderId } from "@/lib/llm/models"
 import { assembleWrappedData } from "@/lib/wrapped/assemble-wrapped"
 import { parseWrappedLLMOutput } from "@/lib/wrapped/parse-llm-output"
 import { generateSystemPrompt } from "@/lib/wrapped/prompt-template"
@@ -59,6 +60,7 @@ export function WrappedPlayground({ templates, initialTemplateId }: WrappedPlayg
   const [models, setModels] = useState<string[]>([])
   const [loadingModels, setLoadingModels] = useState(true)
   const [configuredModel, setConfiguredModel] = useState<string>("")
+  const [configuredProvider, setConfiguredProvider] = useState<LLMProviderId>("openai")
   const [statistics, setStatistics] = useState<WrappedStatistics | null>(null)
   const [loadingStatistics, setLoadingStatistics] = useState(false)
   const [statisticsError, setStatisticsError] = useState<string | null>(null)
@@ -91,22 +93,21 @@ export function WrappedPlayground({ templates, initialTemplateId }: WrappedPlayg
     fetchUsers()
   }, [])
 
-  // Fetch models
+  // The models the Rewind provider lists, and its configured model
   useEffect(() => {
     async function fetchModels() {
       try {
         setLoadingModels(true)
-        const response = await fetch("/api/admin/models")
-        if (response.ok) {
-          const data = await response.json()
-          setModels(data.models || [])
-          setConfiguredModel(data.configuredModel || "")
+        const result = await listLLMModels({ purpose: "wrapped" })
+        if (result.success) {
+          setModels(result.models)
+          setConfiguredModel(result.configuredModel || "")
+          setConfiguredProvider(result.configuredProvider && isLLMProviderId(result.configuredProvider) ? result.configuredProvider : "openai")
         } else {
-          toast.showError("Failed to fetch models")
+          toast.showError(result.error)
         }
-      } catch (error) {
-        console.error("Failed to fetch models:", error)
-        toast.showError(error instanceof Error ? error.message : "Failed to fetch models")
+      } catch {
+        toast.showError("Failed to fetch models")
       } finally {
         setLoadingModels(false)
       }
@@ -157,18 +158,19 @@ export function WrappedPlayground({ templates, initialTemplateId }: WrappedPlayg
 
     const model = testConfig.model || configuredModel || DEFAULT_OPENAI_MODEL
     const systemPrompt = generateSystemPrompt()
-    const estimate = estimateCost(
-      result.renderedPrompt,
+    const estimate = estimateCostUsd({
+      provider: configuredProvider,
       model,
-      testConfig.maxTokens,
-      systemPrompt
-    )
+      prompt: result.renderedPrompt,
+      systemPrompt,
+      completionTokens: testConfig.maxTokens,
+    })
 
     return {
       ...estimate,
       model,
     }
-  }, [result?.renderedPrompt, testConfig.model, testConfig.maxTokens, configuredModel])
+  }, [result?.renderedPrompt, testConfig.model, testConfig.maxTokens, configuredModel, configuredProvider])
 
   const handleRenderTemplate = async () => {
     if (!testConfig.userName || !statistics || !selectedTemplate) return

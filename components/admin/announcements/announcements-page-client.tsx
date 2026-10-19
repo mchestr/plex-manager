@@ -11,12 +11,15 @@ import {
 import { ConfirmModal } from "@/components/admin/shared/confirm-modal"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
+import { instantToWallTime } from "@/lib/utils/zoned-time"
 import { useCallback, useState } from "react"
 import { AnnouncementFormModal, type AnnouncementFormData } from "./announcement-form-modal"
 import { AnnouncementListItem } from "./announcement-list-item"
 
 interface AnnouncementsPageClientProps {
   initialAnnouncements: AnnouncementData[]
+  /** The server zone expiry times are entered and shown in (`serverZone()`). */
+  zone: string
 }
 
 const defaultFormData: AnnouncementFormData = {
@@ -27,7 +30,7 @@ const defaultFormData: AnnouncementFormData = {
   expiresAt: "",
 }
 
-export function AnnouncementsPageClient({ initialAnnouncements }: AnnouncementsPageClientProps) {
+export function AnnouncementsPageClient({ initialAnnouncements, zone }: AnnouncementsPageClientProps) {
   const toast = useToast()
   const [announcements, setAnnouncements] = useState<AnnouncementData[]>(initialAnnouncements)
   const [loading, setLoading] = useState(false)
@@ -135,9 +138,7 @@ export function AnnouncementsPageClient({ initialAnnouncements }: AnnouncementsP
       content: announcement.content,
       priority: announcement.priority,
       isActive: announcement.isActive,
-      expiresAt: announcement.expiresAt
-        ? new Date(announcement.expiresAt).toISOString().slice(0, 16)
-        : "",
+      expiresAt: announcement.expiresAt ? instantToWallTime(new Date(announcement.expiresAt), zone) : "",
     })
   }
 
@@ -203,6 +204,7 @@ export function AnnouncementsPageClient({ initialAnnouncements }: AnnouncementsP
         isOpen={showCreateModal || editingAnnouncement !== null}
         isEditing={editingAnnouncement !== null}
         formData={formData}
+        zone={zone}
         submitting={submitting}
         onFormChange={setFormData}
         onSubmit={editingAnnouncement ? handleUpdate : handleCreate}

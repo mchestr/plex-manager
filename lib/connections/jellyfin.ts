@@ -11,10 +11,6 @@
 
 // Core types and utilities
 export {
-  type JellyfinConfig,
-  type JellyfinInviteSettings,
-  getJellyfinHeaders,
-  getJellyfinAuthHeaders,
 } from "./jellyfin-core"
 
 // Connection and server info
@@ -29,7 +25,4 @@ export {
   createJellyfinUser,
   setJellyfinUserPolicy,
   deleteJellyfinUser,
-  getJellyfinUserById,
-  authenticateJellyfinUser,
-  getJellyfinUsers,
 } from "./jellyfin-users"

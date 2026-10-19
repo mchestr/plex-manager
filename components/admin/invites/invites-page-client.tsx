@@ -7,6 +7,7 @@ import { useToast } from "@/components/ui/toast"
 import { ModalShell } from "@/components/ui/modal-shell"
 import { ConfirmModal } from "@/components/admin/shared/confirm-modal"
 import type { InviteWithUsages } from "@/lib/dto/user"
+import { useFormat } from "@/lib/format-context"
 import Link from "next/link"
 import { useCallback, useEffect, useState } from "react"
 
@@ -20,6 +21,7 @@ interface JellyfinLibrary {
 
 export function InvitesPageClient() {
   const toast = useToast()
+  const f = useFormat()
   const [invites, setInvites] = useState<InviteWithUsages[]>([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
@@ -99,16 +101,30 @@ export function InvitesPageClient() {
     }
   }, [])
 
-  useEffect(() => {
-    if (showCreateModal) {
-      // Load libraries based on selected server type
-      if (formData.serverType === "PLEX") {
-        loadPlexLibraries()
-      } else {
-        loadJellyfinLibrariesFn()
-      }
+  // Libraries load when the create modal opens and when its server type changes
+  function loadLibraries(serverType: ServerType) {
+    if (serverType === "PLEX") {
+      loadPlexLibraries()
+    } else {
+      loadJellyfinLibrariesFn()
     }
-  }, [showCreateModal, formData.serverType, loadPlexLibraries, loadJellyfinLibrariesFn])
+  }
+
+  function openCreateModal() {
+    setShowCreateModal(true)
+    loadLibraries(formData.serverType)
+  }
+
+  function selectServerType(serverType: ServerType) {
+    setFormData(
+      serverType === "PLEX"
+        ? { ...formData, serverType, jellyfinLibraryIds: [] } // Clear Jellyfin selections
+        : { ...formData, serverType, librarySectionIds: [], allowDownloads: false } // Clear Plex selections
+    )
+    if (serverType !== formData.serverType) {
+      loadLibraries(serverType)
+    }
+  }
 
   async function loadInvites() {
     try {
@@ -205,7 +221,7 @@ export function InvitesPageClient() {
     if (!date) return "Never"
     const now = new Date()
     if (date < now) return <span className="text-red-400">Expired</span>
-    return date.toLocaleDateString()
+    return f.date(date)
   }
 
   return (
@@ -216,7 +232,7 @@ export function InvitesPageClient() {
           <p className="text-slate-400">Manage invites to your media servers</p>
         </div>
         <button
-          onClick={() => setShowCreateModal(true)}
+          onClick={openCreateModal}
           data-testid="generate-invite-button"
           className="px-4 py-2 bg-cyan-700 hover:bg-cyan-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
         >
@@ -298,8 +314,11 @@ export function InvitesPageClient() {
                     <td className="px-3 sm:px-6 py-3 sm:py-4 text-sm text-slate-400 hidden sm:table-cell">
                       {getExpirationLabel(invite.expiresAt ? new Date(invite.expiresAt) : null)}
                     </td>
-                    <td className="px-3 sm:px-6 py-3 sm:py-4 text-sm text-slate-400 hidden md:table-cell">
-                      {new Date(invite.createdAt).toLocaleDateString()}
+                    <td
+                      className="px-3 sm:px-6 py-3 sm:py-4 text-sm text-slate-400 hidden md:table-cell"
+                      data-testid="invite-created-timestamp"
+                    >
+                      {f.date(invite.createdAt)}
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
                       <div className="flex items-center gap-2 sm:gap-3">
@@ -314,6 +333,7 @@ export function InvitesPageClient() {
                         </button>
                         <button
                           onClick={() => handleDeleteClick(invite.id)}
+                          data-testid={`admin-invites-delete-${invite.id}`}
                           className="text-slate-400 hover:text-red-400 transition-colors"
                           aria-label={`Delete invite ${invite.code}`}
                         >
@@ -339,6 +359,7 @@ export function InvitesPageClient() {
           maxWidth="md"
           labelledBy="create-invite-title"
           describedBy="create-invite-description"
+          testId="admin-invites-create-dialog"
         >
             <div className="p-6 border-b border-slate-700 flex justify-between items-center">
               <div>
@@ -366,11 +387,7 @@ export function InvitesPageClient() {
                     <button
                       type="button"
                       data-testid="invite-server-type-plex"
-                      onClick={() => setFormData({
-                        ...formData,
-                        serverType: "PLEX",
-                        jellyfinLibraryIds: [] // Clear Jellyfin selections
-                      })}
+                      onClick={() => selectServerType("PLEX")}
                       className={`flex-1 px-4 py-3 rounded-lg border transition-colors flex items-center justify-center gap-2 ${
                         formData.serverType === "PLEX"
                           ? "bg-amber-500/20 border-amber-500 text-amber-300"
@@ -386,12 +403,7 @@ export function InvitesPageClient() {
                     <button
                       type="button"
                       data-testid="invite-server-type-jellyfin"
-                      onClick={() => setFormData({
-                        ...formData,
-                        serverType: "JELLYFIN",
-                        librarySectionIds: [], // Clear Plex selections
-                        allowDownloads: false
-                      })}
+                      onClick={() => selectServerType("JELLYFIN")}
                       className={`flex-1 px-4 py-3 rounded-lg border transition-colors flex items-center justify-center gap-2 ${
                         formData.serverType === "JELLYFIN"
                           ? "bg-purple-500/20 border-purple-500 text-purple-300"
@@ -621,6 +633,7 @@ export function InvitesPageClient() {
         confirmText="Delete"
         cancelText="Cancel"
         confirmButtonClass="bg-red-600 hover:bg-red-700"
+        testId="admin-invites-delete-dialog"
       />
     </div>
   )

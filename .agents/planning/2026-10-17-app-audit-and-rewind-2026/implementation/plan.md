@@ -341,35 +341,35 @@ gantt
 **Baselines, guardrails and CI gates** (2026-10-20 to 2026-11-03)
 
 - [ ] P1.1: Delete unreachable code; revive the Discord link panel (ui, M, due 2026-10-21)
-- [ ] P1.2: Remove dead exports, the orphaned model and stale CLAUDE.md facts (ops, S, due 2026-10-27)
-- [ ] P1.3: Wire the Next, react-hooks and jsx-a11y ESLint presets (ops, S, due 2026-10-26)
-- [ ] P1.4: Type-check the test files (ops, M, due 2026-10-27)
+- [x] P1.2: Remove dead exports, the orphaned model and stale CLAUDE.md facts (ops, S, due 2026-10-27)
+- [x] P1.3: Wire the Next, react-hooks and jsx-a11y ESLint presets (ops, S, due 2026-10-26)
+- [x] P1.4: Type-check the test files (ops, M, due 2026-10-27)
 - [ ] P1.5: CI gates: typecheck, audit, knip, coverage, integration, schema drift and production-mode E2E (ops, L, due 2026-10-30)
 - [ ] P1.6: Visual-regression project and baselines (ui, M, due 2026-10-23)
-- [ ] P1.7: axe at wcag22aa on every route (ui, S, due 2026-10-22)
-- [ ] P1.8: Design-system guardrail script and debt baseline (ui, S, due 2026-10-22)
+- [x] P1.7: axe at wcag22aa on every route (ui, S, due 2026-10-22)
+- [x] P1.8: Design-system guardrail script and debt baseline (ui, S, due 2026-10-22)
 - [ ] P1.9: Vendor the recommended agent skills with pinned commits (ops, S, due 2026-10-23)
-- [ ] P1.10: Safe upgrade path: db:deploy, migration pre-flight and backups (ops, M, due 2026-11-03)
+- [x] P1.10: Safe upgrade path: db:deploy, migration pre-flight and backups (ops, M, due 2026-11-03)
 
 **Rewind data layer and AI foundations** (2026-10-22 to 2026-11-09)
 
-- [ ] P2.1: Rewind 2026 schema migration and versioned stored-data parser (rewind, M, due 2026-10-23)
-- [ ] P2.2: Server and member time zones and the zone-aware year window (rewind, M, due 2026-10-27)
-- [ ] P2.3: Shared outbound HTTP client and one Tautulli client (platform, M, due 2026-10-23)
-- [ ] P2.4: Rewind sources with Zod and PlayEvent (rewind, M, due 2026-10-29)
-- [ ] P2.5: Rewind queues, locks, semaphore and fail-fast Redis (rewind, M, due 2026-10-30)
-- [ ] P2.17: Generation becomes a job: processor, actions and status hook (rewind, M, due 2026-11-03)
-- [ ] P2.6: Server-wide history pass and metadata cache (rewind, M, due 2026-11-03)
-- [ ] P2.7: Stats modules, part 1 (rewind, M, due 2026-11-02)
-- [ ] P2.8: Stats modules, part 2 (rewind, M, due 2026-11-04)
-- [ ] P2.9: Fact catalogue, build-facts and archetype scorers v3 (rewind, M, due 2026-11-05)
-- [ ] P2.10: Twenty golden fixtures with hand-checked stats (rewind, M, due 2026-11-04)
-- [ ] P2.16: Fact and archetype goldens for the twenty fixtures (rewind, M, due 2026-11-09)
-- [ ] P2.11: Provider-agnostic AI facade (rewind, M, due 2026-10-27)
-- [ ] P2.12: LLM provider settings and the admin assistant on the registry (rewind, M, due 2026-10-30)
-- [ ] P2.13: Fonts, typesetting, Rewind format and the registry skeleton (rewind, L, due 2026-11-03)
-- [ ] P2.14: Re-measure cards on Next 16.4.2 (rewind, S, due 2026-11-04)
-- [ ] P2.15: framer-motion to motion with a global reduced-motion policy (ui, M, due 2026-10-28)
+- [x] P2.1: Rewind 2026 schema migration and versioned stored-data parser (rewind, M, due 2026-10-23)
+- [x] P2.2: Server and member time zones and the zone-aware year window (rewind, M, due 2026-10-27)
+- [x] P2.3: Shared outbound HTTP client and one Tautulli client (platform, M, due 2026-10-23)
+- [x] P2.4: Rewind sources with Zod and PlayEvent (rewind, M, due 2026-10-29)
+- [x] P2.5: Rewind queues, locks, semaphore and fail-fast Redis (rewind, M, due 2026-10-30)
+- [x] P2.17: Generation becomes a job: processor, actions and status hook (rewind, M, due 2026-11-03)
+- [x] P2.6: Server-wide history pass and metadata cache (rewind, M, due 2026-11-03)
+- [x] P2.7: Stats modules, part 1 (rewind, M, due 2026-11-02)
+- [x] P2.8: Stats modules, part 2 (rewind, M, due 2026-11-04)
+- [x] P2.9: Fact catalogue, build-facts and archetype scorers v3 (rewind, M, due 2026-11-05)
+- [x] P2.10: Twenty golden fixtures with hand-checked stats (rewind, M, due 2026-11-04)
+- [x] P2.16: Fact and archetype goldens for the twenty fixtures (rewind, M, due 2026-11-09)
+- [x] P2.11: Provider-agnostic AI facade (rewind, M, due 2026-10-27)
+- [x] P2.12: LLM provider settings and the admin assistant on the registry (rewind, M, due 2026-10-30)
+- [x] P2.13: Fonts, typesetting, Rewind format and the registry skeleton (rewind, L, due 2026-11-03)
+- [x] P2.14: Re-measure cards on Next 16.4.2 (rewind, S, due 2026-11-04)
+- [x] P2.15: framer-motion to motion with a global reduced-motion policy (ui, M, due 2026-10-28)
 
 **UI foundations: tokens, fonts and primitives** (2026-10-26 to 2026-11-05)
 
@@ -382,12 +382,12 @@ gantt
 - [ ] P3.7: Rewind-ready primitives (ui, M, due 2026-11-05)
 - [ ] P3.8: Safe Markdown, safe links and error copy (ui, S, due 2026-10-29)
 - [ ] P3.9: Status vocabulary, icons, brand and chart theme (ui, M, due 2026-11-05)
-- [ ] P3.10: One formatter module (ui, M, due 2026-10-29)
+- [x] P3.10: One formatter module (ui, M, due 2026-10-29)
 
 **Security and reliability hardening** (2026-10-23 to 2026-12-03)
 
-- [ ] P4.1: Validate the environment at boot (security, S, due 2026-10-23)
-- [ ] P4.2: Boot and shutdown resilience (ops, M, due 2026-10-28)
+- [x] P4.1: Validate the environment at boot (security, S, due 2026-10-23)
+- [x] P4.2: Boot and shutdown resilience (ops, M, due 2026-10-28)
 - [ ] P4.3: One action helper for auth, Zod and result shape (security, M, due 2026-11-02)
 - [ ] P4.5: Enforce entitlement beyond the layout (security, M, due 2026-11-05)
 - [ ] P4.6: Never send a stored secret to a new address; audit config changes (security, M, due 2026-11-06)
@@ -1538,6 +1538,12 @@ gantt
   - When the member is not linked, `DiscordCard` links to `/discord/link` (`data-testid="discord-card-link-action"`) instead of discord.gg. The page offers both Join server and Link account. P10.21 and P6.11 restyle both.
 - Add `knip` (exact version) as a devDependency, with an `npm run knip` script that runs `knip --production`. `knip.json` marks the production entries with `!` (`instrumentation.ts`, `proxy.ts`, `server.js`, `scripts/*.ts`), ignores `lib/generated/**` and `.agents/**`, and sets `ignoreDependencies: ["zlib-sync"]`, because discord.js loads that package inside a try. Run knip with a dummy `DATABASE_URL`, because its Prisma plugin loads `prisma.config.ts`.
 - Pitfall: `resyncDiscordRole` and `getDiscordLinkStatus` are dead exports today and become live again here, so P1.2 must keep them.
+- As merged:
+  - `server.js` does not exist (`start:prod` still names it), so `knip.json` has no entry for it. It also ignores `.claude/worktrees/**`, where agent worktrees hold full copies of the repo. `npm run knip` exits 1 on the remaining dead exports and on test helpers, which production mode reports as unused files; P1.2 and P1.5 work from that output.
+  - The panel's query-string `error` prop is removed, not just left unwired. `DiscordCard` no longer takes `serverInviteCode`.
+  - While linking is unavailable, the panel still offers Join server when an invite code is set. Without it, a member whose tile used to open discord.gg would lose that link.
+  - Playwright selects by `data-testid` with `filter({ visible: true })` on this page, because React streaming briefly leaves a hidden copy of the page in its `S:0` container.
+  - The E2E suite is not yet green, so the first Done-when item stays open. Four tests fail the same way on the pre-P1.1 commit: `announcements.spec.ts` (create and toggle) and `stripe-subscription.spec.ts` ("admin is never gated") hit `page.goto: net::ERR_ABORTED` intermittently, and `rewind-year.spec.ts` ("a year without a Rewind") hits the same hidden `S:0` duplicate as a strict-mode violation.
 
 **Tests.**
 - Delete the tests of the deleted code, about 6,700 lines: `components/__tests__/wrapped-generator*.test.tsx` (three files), `__tests__/hooks/use-wrapped-polling.test.ts`, `components/__tests__/wrapped/user-wrapped-viewer.test.tsx`, `wrapped-home-button.test.tsx`, `admin-wrapped-viewer.test.tsx`, `historical-wrapped-selector.test.tsx`, `historical-versions-inline.test.tsx`, `admin-footer.test.tsx`, `admin-footer-client.test.tsx`, `llm-toggle.test.tsx`, `components/__tests__/admin/playground/cost-display.test.tsx` and `__tests__/api/admin-{sonarr,radarr,wrapped-by-user,wrapped-user}-route.test.ts`.
@@ -1556,9 +1562,9 @@ gantt
 
 **Done when.**
 - [ ] The 25 files, the 4 routes, `settings-edit-forms.tsx` and `link-callout.tsx` are deleted with their tests, and `npm run build`, `npm test` and the E2E suite pass.
-- [ ] `/discord/link` renders the panel for signed-in members, and no secret field reaches the client.
-- [ ] The home Discord tile takes unlinked members to `/discord/link`.
-- [ ] `npm run knip` exists, and its unused-files list contains none of the removed paths.
+- [x] `/discord/link` renders the panel for signed-in members, and no secret field reaches the client.
+- [x] The home Discord tile takes unlinked members to `/discord/link`.
+- [x] `npm run knip` exists, and its unused-files list contains none of the removed paths.
 
 ### Step P1.2: Remove dead exports, the orphaned model and stale CLAUDE.md facts
 
@@ -1611,12 +1617,18 @@ gantt
 **Demo.** Show the `git diff --stat` (about 1,150 lines removed), knip listing no unused exports, and the CLAUDE.md path test passing.
 
 **Done when.**
-- [ ] Every DUP-13 dead export is deleted, and so are those P1.1 orphaned, except the two Discord helpers the link page uses.
-- [ ] The `drop_user_watch_intent` migration applies cleanly, and `migrate diff` reports no difference.
-- [ ] Dump taken before deploy; `prisma migrate status` clean.
-- [ ] No nested barrel or compatibility shim remains, and each domain has at most one entry.
-- [ ] CLAUDE.md names only APIs and paths that exist, and the path test enforces it.
-- [ ] Build, typecheck and Jest are green.
+- [x] Every DUP-13 dead export is deleted, and so are those P1.1 orphaned, except the two Discord helpers the link page uses.
+- [x] The `drop_user_watch_intent` migration applies cleanly, and `migrate diff` reports no difference.
+- [ ] Dump taken before deploy; `prisma migrate status` clean. (Owner, at deploy: `migrate status` is clean on the `_test` database.)
+- [x] No nested barrel or compatibility shim remains, and each domain has at most one entry.
+- [x] CLAUDE.md names only APIs and paths that exist, and the path test enforces it.
+- [x] Build, typecheck and Jest are green.
+
+(As merged:
+- The migration is `20261021000100_drop_user_watch_intent`. P2.1 had not merged, so P1.2 went first; P2.1 generates `rewind_2026` after rebasing on it, which gives it a later name. It is dated after the hand-dated `20261020000000_clear_jellyfin_username_emails` and `20261021000000_llmusage_text_nullable` so it sorts last on every database (a real `migrate dev` timestamp would have sorted before them). The generated `ALTER TABLE ... DROP CONSTRAINT` was removed, because `DROP TABLE` drops the foreign key.
+- `lib/validations/user-media.ts`, the `settings-edit-forms.tsx` shim and the second `LLMToggle` were already gone. `lib/wrapped/statistics.ts` had 4 production importers plus tests; they now import `tautulli-statistics.ts` (the one Tautulli statistics entry), `server-statistics.ts` and `overseerr-statistics.ts`. All 24 lazy imports in `admin-servers.ts` became static; none was a queue or Redis module. The settings components are now `discord-integration-form.tsx`, `jellyfin-login-toggle.tsx`, `llm-provider-form.tsx`, `llm-toggle.tsx`, `server-form.tsx` and `stripe-settings-form.tsx`.
+- `knip --production` reports no unused exports, types or duplicates. Besides DUP-13, the sweep deleted exports with no caller, stopped exporting module-local helpers (including eleven Discord activity server actions that only `getDiscordDashboardData` and `getDiscordDetailedStats` call) and tagged test-only exports `@internal`. Left for P1.5: 15 unused enum members (`AuditEventType` values, Overseerr status values), the 18 unused test-helper files, `@prisma/client` and the unlisted `tsx` binary.
+- `__tests__/docs/claude-md-paths.test.ts` checks inline-code paths, including `@/` aliases, and skips fenced blocks (the file tree and sample code) and globs, so P3.9's `components/shell/` in the tree passes.)
 
 ### Step P1.3: Wire the Next, react-hooks and jsx-a11y ESLint presets
 
@@ -1671,10 +1683,12 @@ gantt
 - the bot logging in from that image.
 
 **Done when.**
-- [ ] The Next core-web-vitals, Next TypeScript and jsx-a11y recommended rules run, with one copy of each plugin.
-- [ ] The 18 errors are fixed, and the new rules report as warnings.
-- [ ] `autoprefixer`, `@eslint/eslintrc`, `qs` and `@types/qs` are gone, and `chalk` (plus `tsconfig-paths` if needed) is declared.
+- [x] The Next core-web-vitals, Next TypeScript and jsx-a11y recommended rules run, with one copy of each plugin.
+- [x] The 18 errors are fixed, and the new rules report as warnings.
+- [x] `autoprefixer`, `@eslint/eslintrc`, `qs` and `@types/qs` are gone, and `chalk` (plus `tsconfig-paths` if needed) is declared.
 - [ ] `zlib-sync` is optional, and the Docker build needs no native toolchain.
+
+(As merged: with `eslint-plugin-react-hooks` 7.1.1 the preset reported 34 errors from `purity`, `set-state-in-effect` and `static-components`, not 18, plus 22 `react-hooks/refs` and 1 `react-hooks/preserve-manual-memoization` errors and 22 `react/no-unescaped-entities` errors. All 34 are fixed. `refs` and `preserve-manual-memoization` start as warnings like the other new rules, and `react/no-unescaped-entities` stays off, because the preset turns it on rather than covering it. jsx-a11y rules the recommended set leaves off stay off, and their options are kept. Browser-only random content renders through the new `hooks/use-is-client.ts` (`useSyncExternalStore`), and effect-time resets became render-time adjustments ("adjust state when a prop changes"). The `qs` swap and `plex-auth-url.test.ts` had already merged in P0.2, and the `register-discord-*` scripts already run `tsx`, so `tsconfig-paths` is not needed. `zlib-sync` is in `optionalDependencies` and the Dockerfile's `deps` stage installs only `libc6-compat`, but `docker build --target runner .` and the bot smoke test from that image were not run, because no Docker daemon was available; the last box stays open until they pass.)
 
 ### Step P1.4: Type-check the test files
 
@@ -1721,10 +1735,12 @@ gantt
 3. Break one mock's shape on purpose, and the check fails.
 
 **Done when.**
-- [ ] `tsconfig.test.json` type-checks every Jest test file.
-- [ ] `npm run typecheck` passes for both projects with 0 errors.
-- [ ] The stale tests assert today's contracts, and Jest is green.
-- [ ] Tests use the typed Prisma mock helper and the factories, and no new suppressions were added.
+- [x] `tsconfig.test.json` type-checks every Jest test file.
+- [x] `npm run typecheck` passes for both projects with 0 errors.
+- [x] The stale tests assert today's contracts, and Jest is green.
+- [x] Tests use the typed Prisma mock helper and the factories, and no new suppressions were added.
+
+(as merged: the hidden count was 541 errors in 71 files after P1.1, not 601. `npm run typecheck` runs `prisma generate` first, then both projects; the root project keeps checking `e2e/` (its `include` is `**/*.ts`), so new specs are covered with no config change. `jest-mock-extended` is pinned at 4.0.1. `prisma-mock.ts` also exports `asTransactionClient(partial)` for hand-built `$transaction` clients, and `factories.ts` adds `buildConfig`. 86 of the 97 files that mocked `@/lib/prisma` moved to the helper; 11 keep their own mock: six whose mocks return `select`- or `include`-shaped partial rows that the full-row types reject (`guards`, `auth-access-relaxation`, `admin-settings-leave-blank-to-keep`, `admin-settings-secret-hiding`, `discord/config`, `discord/integration-audit`), four in-memory fakes (`chat-session`, `oauth-state-cap`, both `wrapped` page tests) and the real-database `wrapped-generation-claim.pg`. `as any` in tests went from 199 to 197; the one `@ts-ignore` and one `@ts-expect-error` that predate the step are still there.)
 
 ### Step P1.5: CI gates: typecheck, audit, knip, coverage, integration, schema drift and production-mode E2E
 
@@ -1787,13 +1803,23 @@ gantt
 
 **Demo.** On a scratch PR, add a type error in a test, an unused file, a dependency with a known high advisory, and a coverage drop. Each check goes red with a clear message. Revert the changes, and the run is green, with `next start` in the E2E log.
 
+**As merged.**
+- Required check names (the job `name:`s; existing ones kept): `Lint`, `Typecheck`, `Unit Tests`, `Integration`, `Schema Drift`, `Build`, `Audit`, `Knip`, `Design System`, `E2E Tests`. `Docker Build` stays optional.
+- The integration suites are not a Jest `projects` entry (next/jest wraps one config): `npm run test:integration` (`JEST_INTEGRATION=1`, serial) replaces `test:pg` and runs `*.pg.test.ts` and `*.redis.test.ts`; every other run ignores both. `describeRedis` also checks the URL is `redis://` or `rediss://`. The CI steps still call `npx prisma migrate deploy`; the owner switches them to `npm run db:deploy` when P1.10 merges.
+- E2E: the job builds in its own step and sets `E2E_PREBUILT=1`, a new `playwright.config.ts` switch that makes the prod web server skip `build:e2e`. It runs on port 3100 (`E2E_PORT`'s default), so `NEXT_PUBLIC_APP_URL` is `http://localhost:3100`, not 3000. `NEXTAUTH_SECRET` comes from Node's `crypto` (the container may lack `openssl`) and is masked.
+- Production mode turned up two things the dev server hid. BP-27: the 16 `admin-protection.spec.ts` cases and the session-persistence case in `user-scenarios.spec.ts` assert the 401 page, which a production build replaces with the generic error, so they are `test.fixme(E2E_SERVER === 'prod', 'BP-27, fixed in P4.3')`; P4.3 must remove those fixmes. `production.spec.ts`'s member check therefore asserts that no admin content renders rather than the 401 page. Streaming: a production page can briefly hold a hidden `S:0` copy, so the strict locators that raced it (sign-in button, setup intro text, users heading) take `.filter({ visible: true })`; others may need the same if CI shows a strict-mode violation. The axe baseline is now counted on the production build (`region` on the invite dialog fell to 0). The known flaky `net::ERR_ABORTED` cases (announcements, Stripe "admin is never gated") came from `adminPage`: `/admin` redirects in the browser after `load` (the admin layout streams), and the test's next `goto` raced it; the fixture now waits for `/admin/users`. `rewind-year.spec.ts:133` passed in production mode unchanged. The visual baselines were taken outside the CI image, so they must be regenerated through the Visual Baselines workflow before `E2E Tests` can pass in CI.
+- Removing test-token login also removed the E2E-mode exemption from the Plex sign-in rate limit and the startup "E2E test login is enabled" warning; `E2E_TEST_MODE` now only arms the seed.
+- Knip: production mode leaves test helpers out through negated `project` patterns; `@prisma/client` is in `ignoreDependencies` (the generated client needs its runtime utils) and `tsx` in `ignoreBinaries`; the audit-log calls import statically (knip cannot see members read through a destructured dynamic import), the four never-logged `AuditEventType` members are deleted, and the Overseerr enums are `@public`.
+- Coverage floors are whole percentages. The actionlint binary comes from its release tarball, pinned by version and SHA-256. Dependabot's security-updates group and its scan of `.github/actions/*` are in `dependabot.yml`.
+- Not done here (owner): marking the ten checks required; turning on Dependabot security updates and CodeQL default setup; the scratch-PR demo, including a schema edit without a migration (checked locally: exit 2 with the diff); regenerating the visual baselines in the CI container (above). `scripts/__tests__/vendored-skills.test.ts` fails in `Unit Tests` until the owner's `.claude/settings.json` edit from P1.9.
+
 **Done when.**
-- [ ] The ten checks are required on `main`, and every job has permissions, concurrency and a timeout.
-- [ ] E2E runs against `next build` plus `next start` on a throwaway `_test` Postgres with a `redis:7` service, and the test-token sign-in path is gone.
-- [ ] The `integration` job runs every Postgres- and Redis-gated test, and a missing variable fails CI instead of skipping.
-- [ ] `schema-drift` gates every migration from P1.2 and P2.2 on, and its first run passes over P0.5's, P0.20's and P2.1's.
-- [ ] Coverage includes `app/` and `hooks/`, with committed floors that only rise.
-- [ ] Actions are pinned by SHA, the broken workflows are fixed or deleted, and Dependabot groups next, react, next-auth, motion and Playwright.
+- [ ] The ten checks are required on `main`, and every job has permissions, concurrency and a timeout. (Permissions, concurrency and timeouts done; marking required is the owner's.)
+- [x] E2E runs against `next build` plus `next start` on a throwaway `_test` Postgres with a `redis:7` service, and the test-token sign-in path is gone.
+- [x] The `integration` job runs every Postgres- and Redis-gated test, and a missing variable fails CI instead of skipping.
+- [x] `schema-drift` gates every migration from P1.2 and P2.2 on, and its first run passes over P0.5's, P0.20's and P2.1's. (Checked locally on a fresh `plex_manager_drift_test`; first CI run pending.)
+- [x] Coverage includes `app/` and `hooks/`, with committed floors that only rise.
+- [x] Actions are pinned by SHA, the broken workflows are fixed or deleted, and Dependabot groups next, react, next-auth, motion and Playwright.
 
 ### Step P1.6: Visual-regression project and baselines
 
@@ -1846,11 +1872,19 @@ gantt
 
 **Demo.** On a branch, change `text-slate-400` to `text-slate-500` on the users heading. The visual check fails and shows the highlighted diff. Revert the change, and the check is green again.
 
+**As merged.**
+- Setup step 3 runs in two projects, `visual-setup-desktop` and `visual-setup-mobile` (both `dependencies: ['setup-wizard']`), since one project has one viewport. The snapshot template is `{testDir}/visual/__screenshots__/...` and `stylePath` is absolute, so overlay configs resolve them; images land at `e2e/visual/__screenshots__/<project>/visual/<spec>/<name>.png`.
+- The visual specs skip unless `E2E_SERVER=prod`, so today's `next dev` CI job stays green until P1.5 switches it. In prod mode the webServer sets `NODE_ENV=production`; `build:e2e` is `npm run build`. Specs that sign in through the test token (`e2e/fixtures/auth.ts`) do not work against a production build, so P1.5 must move them to `e2e/fixtures/session.ts` (`signIn` fixture / `signInAs`) before making prod the default.
+- Determinism goes further than the guidance: the clock is installed and paused before `goto`, and `settlePage` runs it forward three times while finishing every finite Web Animation, because framer-motion runs opacity and transform on WAAPI (real time) and `AnimatePresence` exits otherwise stall. `screenshot.css` also undoes the `html, body { height: 100%; overflow-x: hidden }` rule (and gives `html` slate-900) so full-page shots are not cut at the viewport; drop that block in P3.1.
+- `seedVisualFixtures()` resets every table the screens read (users other than the three seeded, invites, Rewinds, LLM usage, prompts, announcements, service configs, Config, Discord on) and `clearVisualFixtures()` removes its extras in `afterAll`. Timestamps masked through new `*-timestamp` test ids (admin user detail, invites, LLM usage, prompts, settings, users table) and `data-visual-mask` on the settings Node.js version and on the Rewind viewer's auto-advance progress fill. Dates the screens print in full sit at fixed days before 2026-10-19 rather than offsets from now, because a masked date's text width still moves table columns; only dates shown relative to the server clock (the announcement's "Yesterday", the expired invite) are offsets. The determinism test lives in `__tests__/e2e-helpers/deterministic.test.ts` (next to the existing E2E helper tests), not `e2e-support/`.
+- The committed baselines were generated in the agent's Linux container (Chromium 1194 at `/opt/pw-browsers`), not the Playwright CI image, and were checked there with two consecutive runs at `maxDiffPixels: 0` (Playwright's default per-pixel threshold; with `threshold: 0` the blurred background orbs dither by a few pixels between runs). Regenerate them once through the Visual Baselines workflow before P1.5 makes the suite a required check.
+- Not done here: `@playwright/test` is still `^1.57.0` (pinning it exactly touches package.json dependencies while P1.3 edits them; pin it in P1.5 together with the container tag); creating the GitHub App or `VISUAL_BASELINES_TOKEN` secret is an owner task. `/subscribe` shows its "unavailable" state, because the fake Stripe key returns no prices. P1.3's particle fix touches `success-animation.tsx`, which the onboarding-step-2 shot passes through but does not show, so no baseline should change from it; re-run the suite after P1.3 merges to confirm.
+
 **Done when.**
-- [ ] 20 screens at both viewports (40 images) are committed under `e2e/visual/__screenshots__/`, generated in the CI container.
-- [ ] Two consecutive CI runs pass with no pixel differences.
-- [ ] Time, randomness and timestamps are controlled, and the seed is deterministic.
-- [ ] `e2e/visual/README.md` explains how to update a baseline, and a baseline commit from the workflow gets the required checks on its own SHA.
+- [ ] 20 screens at both viewports (40 images) are committed under `e2e/visual/__screenshots__/`, generated in the CI container. (40 committed, generated in the agent container; regenerate via the workflow.)
+- [ ] Two consecutive CI runs pass with no pixel differences. (Two consecutive local runs passed with 0 differing pixels; CI runs pending.)
+- [x] Time, randomness and timestamps are controlled, and the seed is deterministic.
+- [ ] `e2e/visual/README.md` explains how to update a baseline, and a baseline commit from the workflow gets the required checks on its own SHA. (README and workflow done; the push-token path needs the owner's App or PAT and a first run.)
 
 ### Step P1.7: axe at wcag22aa on every route
 
@@ -1899,11 +1933,19 @@ gantt
 1. Add an unlabeled `<input>` to a page: the spec fails, naming `label|critical` on that route.
 2. Fix the Pause Queue contrast (`components/admin/queues/queue-controls.tsx:64`): the spec asks for a baseline update, and the regenerated file shows the drop.
 
+**As merged.**
+- 44 tests: 38 route scans (`e2e/a11y/routes.ts`: 7 public, 7 member, 24 admin including the four interactive states, plus `/wrapped/2026`, which the guidance list missed), the two `/setup` steps in `e2e/accessibility-setup.spec.ts`, the two modal ARIA checks, the `button-name` check and a check that the baseline lists no route the table lacks. The `setup-wizard` project matches `accessibility-setup.spec.ts` and `chromium` ignores it. Baseline keys are `<as> <path>[ [state]]`, e.g. `admin /admin/invites [confirm dialog open]`.
+- Counts are nodes. `/admin/users` has 50 incomplete-contrast nodes today. Every route carries `meta-viewport|moderate` (the root viewport blocks zoom); P1.7 fixes no violations.
+- axe runs its work on timers, so `analyzeAtRest` (`e2e/a11y/scan.ts`) resumes the paused fake clock just before `analyze()`; pages are settled with P1.6's `settlePage` first. The `next dev` overlay (`nextjs-portal`) is excluded, and the baseline matched in both `next dev` and `E2E_SERVER=prod` runs.
+- The seed (`e2e/helpers/seed-fixtures.ts`) now gives the invites and the regular user's Rewind fixed ids (`VISUAL_INVITE_IDS`, `VISUAL_REWIND_ID`); `e2e/a11y/seed.ts` adds a share token and one chat conversation on top. The writer records a route the file does not list yet (a new table entry), and refuses any rise on a listed route. The update command covers both spec files: `UPDATE_AXE_BASELINE=1 npx playwright test e2e/accessibility.spec.ts e2e/accessibility-setup.spec.ts`.
+- Ready test ids were added to the page headings that had none (`admin-*-heading`, `plex-callback-error-heading`), plus `admin-invites-delete-<id>`, `admin-invites-create-dialog`, `admin-invites-delete-dialog` (through a new `testId` prop on `ModalShell` and `ConfirmModal`) and `wrapped-settings-edit-button`. The create-invite button already had `generate-invite-button`. Next's built-in 404 has no test id, so its entry has `ready: null`.
+- The unit test is `__tests__/e2e-helpers/axe-baseline.test.ts`, next to P1.6's helper test, not `e2e-support/`. `axe-core` and `@axe-core/playwright` are pinned at 4.11.0 in devDependencies.
+
 **Done when.**
-- [ ] Every page under `app/` is scanned with the WCAG 2.2 AA tags plus best-practice, at every impact level.
-- [ ] Incomplete contrast results are counted.
-- [ ] `e2e/a11y/axe-baseline.json` records today's counts, and the check fails on any rise.
-- [ ] The spec uses no CSS or aria-label selectors and no longer scans the nonexistent `/auth/signin`.
+- [x] Every page under `app/` is scanned with the WCAG 2.2 AA tags plus best-practice, at every impact level.
+- [x] Incomplete contrast results are counted.
+- [x] `e2e/a11y/axe-baseline.json` records today's counts, and the check fails on any rise.
+- [x] The spec uses no CSS or aria-label selectors and no longer scans the nonexistent `/auth/signin`.
 
 ### Step P1.8: Design-system guardrail script and debt baseline
 
@@ -1954,10 +1996,12 @@ gantt
 3. Remove a gradient elsewhere. The check passes and prints the update command.
 
 **Done when.**
-- [ ] The script implements every 9.6 rule, with unit tests.
-- [ ] `design-debt.json` is committed from the tree after P1.1.
-- [ ] The CI job fails only on a rise or on a new file with a non-zero count, and it handles renames.
-- [ ] The PR template carries the 9.6 checkbox.
+- [x] The script implements every 9.6 rule, with unit tests.
+- [x] `design-debt.json` is committed from the tree after P1.1.
+- [x] The CI job fails only on a rise or on a new file with a non-zero count, and it handles renames.
+- [x] The PR template carries the 9.6 checkbox.
+
+(as merged: `scripts/design-system/rules.mjs` holds the rules and `countFile`, and re-exports `compare`, `update`, `nonZero` and `totals` from `baseline.mjs`; the two AST passes live in `ast.mjs`. `copy` joins each element's direct `JsxText` and string-literal children, so `Next{' '}{'->'}` counts, and decodes `&rarr;` and `&middot;`. `*.test.ts` is excluded as well as `*.test.tsx`. A fourth script, `npm run design:baseline` (`--baseline`), rewrites `design-debt.json` from the current tree: it is the one command for regenerating the baseline after a merge that renames files on `main` itself, where no diff against `origin/main` shows the rename (for example P1.2's kebab-case renames in `components/admin/settings/`). `--check` and `--update` take `--base <ref>` (default `origin/main`). `knip.json` gains the entry `scripts/*.mjs!`. The CI job is `Design System` in `build.yml`. The baseline was taken at 84f50d7 (P1.1, P1.3, P1.6 and P1.9 in): 195 files, 3,518 `raw-palette` (392 `text-white` and 1 `bg-black/60`, against the design's pre-P1.1 502 and 17), 144 `blur`, 136 `gradient`, 91 `caps-eyebrow`, 57 `infinite-motion`, 56 `gradient-text`, 43 `copy`, 39 `arbitrary-type-z`, 17 `arbitrary-color`, 2 `zoom-lock` and 0 `rewind-only`.)
 
 ### Step P1.9: Vendor the recommended agent skills with pinned commits
 
@@ -2006,10 +2050,12 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 **Demo.** In a fresh cloud session, opening `components/wrapped/wrapped-viewer.tsx` makes `motion` available, while a file in `lib/` does not. `/security-review` comes back clean, and `web-design-guidelines` runs without a network fetch.
 
 **Done when.**
-- [ ] The seven skills are vendored, each with its licence and a THIRD_PARTY.md row.
-- [ ] `web-design-guidelines` reads its local guidelines.
+- [x] The seven skills are vendored, each with its licence and a THIRD_PARTY.md row.
+- [x] `web-design-guidelines` reads its local guidelines.
 - [ ] Shell execution from skills is disabled, and `.mcp.json` holds only the pinned chrome-devtools server.
 - [ ] The vendored-skills test passes, and `/security-review` ran on the PR.
+
+(as merged: `accessibility-review` is pinned at `33eeda1e8fd856455b05479d13a0f85b5f803744`. The Vercel folders take their skill names (`vercel-react-best-practices` and so on). `vercel-labs/agent-skills` and the `motion-ai` tarball ship no LICENSE file, so each of those folders has a `LICENSE` with the MIT terms and a note on where the licence is declared. `motion`'s `performance-audit/index.md` no longer runs `npx motionscore`. `next.config.js` already had `agentRules: false`, so nothing changed there. The `.claude/settings.json` change, `disableSkillShellExecution` and the seven `Skill(...)` rules, is applied by the owner, because the agent session may not edit its own settings; the test's settings case fails until then.)
 
 ### Step P1.10: Safe upgrade path: db:deploy, migration pre-flight and backups
 
@@ -2047,10 +2093,12 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 **Demo.** On the dev compose, take a dump, apply a new migration, restore the dump, and `prisma migrate status` shows the earlier state. A container started with `SKIP_MIGRATIONS=true` logs the skip and still starts. A fresh clone installs with the README's steps and `npm run db:deploy`.
 
 **Done when.**
-- [ ] `npm run db:deploy` exists, CI uses it, and README and CLAUDE.md install and upgrade with it, with `db:push` and `db:migrate` labelled contributor-only.
-- [ ] `docs/operations.md` has the state inventory, backup and restore commands, the dump-before-every-migration rule and the db-push baseline note.
-- [ ] The entrypoint logs pending migrations and honours `SKIP_MIGRATIONS`, and the `./data` mount is gone.
+- [x] `npm run db:deploy` exists, CI uses it, and README and CLAUDE.md install and upgrade with it, with `db:push` and `db:migrate` labelled contributor-only.
+- [x] `docs/operations.md` has the state inventory, backup and restore commands, the dump-before-every-migration rule and the db-push baseline note.
+- [x] The entrypoint logs pending migrations and honours `SKIP_MIGRATIONS`, and the `./data` mount is gone.
 - [ ] It is live in production by 2026-11-03, and every later migration deploy follows it.
+
+(as merged: the restore command is `pg_restore -U postgres -d postgres --clean --if-exists --create --no-owner`, not `-d plex_wrapped --clean`: tested on Postgres 16, `--clean` alone drops only the objects in the dump, so a table a later migration created survives the restore and that migration then fails when it is reapplied; `--create` drops and recreates the database, which needs every connection to it closed. P4.1's `envSchema` does not exist yet, so `SKIP_MIGRATIONS` joins `example.env` only and P4.1 adds it to the schema. The `build.yml` switch to `npm run db:deploy` lands with P1.5's workflow rather than in this step's diff, because the two were built in parallel. README's Node prerequisite says "22 or later" without naming the image's Node version, which is 25.8 until P4.17. The db-push baseline commands were run end to end on a `_test` database: `migrate diff --exit-code` exits 0 after `db push`, the `resolve --applied` loop leaves `migrate status` up to date, and the grandfather `UPDATE` runs through `db execute --stdin`.)
 
 ---
 
@@ -2112,7 +2160,7 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 - `schema-v3.test.ts`: an extra top-level key fails, and `readWrappedStatus('queued')` returns `failed` with a warning.
 - `actions/__tests__/admin-llm-history.test.ts`: for v2 rows, the current version is the one picked by `generatedAt`; a v2 response renders; a nulled response returns `removed`.
 - `__tests__/lib/config-encryption.test.ts` covers `rewindSerialKey`. `__tests__/actions/import-plex-users.test.ts` asserts a single `findMany` for 50 users.
-- Drift check: this PR merges before P1.5's `schema-drift` job exists, so run its two commands locally against a fresh `_test` database, `prisma migrate deploy` and then `prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code`, and paste the output (no drift) into the PR. The job's first run on 2026-10-27 re-checks this migration.
+- Drift check (as merged: P1.5's `schema-drift` job now exists and checks this PR; the commands were also run locally): this PR merges before P1.5's `schema-drift` job exists, so run its two commands locally against a fresh `_test` database, `prisma migrate deploy` and then `prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code`, and paste the output (no drift) into the PR. The job's first run on 2026-10-27 re-checks this migration.
 
 **Integration.**
 - `npm run db:generate` refreshes `@/lib/generated/prisma/client`, and P0.8's key-snapshot test now runs on the parser's output.
@@ -2120,12 +2168,21 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 
 **Demo.** Restore a production `pg_dump` into the test database and run `prisma migrate deploy`. A short tsx check then parses every `PlexWrapped` row and reports zero `invalid`. The admin history page opens a v2 version again.
 
+**As merged** (later steps rely on these):
+- The migration folder is `20261026000000_rewind_2026`; it sorts after P1.2's `20261021000100_drop_user_watch_intent`, and P1.5's `schema-drift` commands were run against a fresh `_test` database: no difference.
+- Schema details 7.10 left open: `RewindGeneration.startedAt` is nullable (set when the job runs) and the model has `createdAt`; `RewindShareVisitDay` has the composite id (`shareId`, `day`); `RewindView` is unique on (`wrappedId`, `sessionKey`), so `recordRewindView` can upsert; `RewindGeneration`, `RewindShare` and `RewindShareVisitDay.day` get plain indexes for their foreign keys and the retention sweep. `Decimal` columns: `costUsd` `(10,4)`, `rewindLlmBudgetUsd` `(10,2)`.
+- `setLLMDisabled` and `updateWrappedSettings` returned the whole `Config` row to the client; they now select the non-secret columns, so neither `rewindSerialKey` nor a `Decimal` reaches the browser. `assertNoSecretKeys` also flags `serialKey`.
+- `parseStoredRewind(data: string | null)` takes the column, not the row. The legacy schema is lenient: any object without `version` is a v1 row, so P0.12's `'{}'` placeholder reads as an empty v1 Rewind, and `invalid` means not JSON, not an object, an unknown version or a v3 row that fails its schema. Parsing a legacy row drops `statistics.leaderboards`. `legacyWrappedData({ id, data })` wraps it for the v1/v2 viewer sites and logs the row id and reason. `readWrappedStatus(raw, rowId?)`.
+- `DerivedStatistics`, `PercentileResult` and the leaderboard type are also inferred from `schema-legacy.ts`; `types/wrapped.ts` only re-exports. Stored list items without a `title` are dropped, so they no longer grant a poster key.
+- `getHistoricalWrappedData` returns `{ ...header, removed: true }` or `{ ...header, removed: false, wrappedData }`, and still rebuilds v1 versions from their sections; `pickCurrentUsageId` lives in `lib/wrapped/data/history.ts`. The history test is `__tests__/actions/admin-llm-history.test.ts`.
+- The schema-v3 placeholders P2.9 replaces: `FactId = z.string()`, `ArchetypeResult = { id, runnerUp, evidence }`, `posterLineId: z.string()`.
+
 **Done when.**
-- [ ] One `rewind_2026` migration adds every model and field in design 7.10 and drops the 8 redundant indexes, and the drift check is clean.
-- [ ] Dump taken before deploy; `prisma migrate status` clean.
-- [ ] No unchecked `JSON.parse` of `PlexWrapped.data` remains outside `parse-stored.ts` and the strip transform.
-- [ ] `status` is read through the Zod enum, and the v1, v2 and v3 fixture tests pass.
-- [ ] The admin history viewer works for v2 rows, and the `WrappedData` types are declared once.
+- [x] One `rewind_2026` migration adds every model and field in design 7.10 and drops the 8 redundant indexes, and the drift check is clean.
+- [ ] Dump taken before deploy; `prisma migrate status` clean. (Owner: dump and production deploy; `migrate status` is clean on the test database.)
+- [x] No unchecked `JSON.parse` of `PlexWrapped.data` remains outside `parse-stored.ts` and the strip transform.
+- [x] `status` is read through the Zod enum, and the v1, v2 and v3 fixture tests pass.
+- [x] The admin history viewer works for v2 rows, and the `WrappedData` types are declared once.
 
 ### Step P2.2: Server and member time zones and the zone-aware year window
 
@@ -2172,12 +2229,21 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 
 **Demo.** Set the server zone to `Europe/Berlin` and save the window 12-01 to 01-31: the page shows "December 1 to January 31" both before and after hydration, and `getSeasonState(new Date('2026-11-30T23:30Z'))` reports the season as open. An announcement saved at 23:59 Chicago time still shows 23:59 when edited.
 
+**As merged** (later steps rely on these):
+- Owner decisions 1 (season timing) and 5 (member time zones) had no answer by 2026-10-20, so their planned defaults apply: the default season is `12-01` to `01-31`, and `resolveZone` honours an optional `User.timezone`.
+- `lib/utils/zoned-time.ts` also exports `isWallTime` (the Zod check for `YYYY-MM-DDTHH:mm`) and `formatDayKey`; `wallTimeToInstant` returns a `Date` and throws `RangeError` on a malformed value; `zonedParts().weekday` is 0 for Sunday. `normalizeTimeZone` accepts only names in `timeZoneOptions()`, so offsets such as `+05:00` are rejected.
+- `TimeWindow` is `{ start, end, zone }` (epoch ms, half-open), so `paddedDateRange(window)` takes the window alone. `dataWindow`'s `end` is 00:00 on 1 December (exclusive). `elapsedDays(year, { finalCut })` takes no zone. `lib/wrapped/time/zone.ts` is a knip entry until P2.4 imports it; P2.4 removes that line from `knip.json`.
+- `lib/wrapped/season.ts`: `seasonYearFor` is gone; `seasonStateAt(now, opens, closes, zone)` is the pure rule, `getSeasonState(now)` reads Config and `serverZone()`, and `getSeasonYear()` stays. `closesAt` is exclusive (00:00 after the close day). A window within one year belongs to the calendar year; `02-29` falls on 28 February in a common year.
+- `getWrappedSettings()` returns `{ featureEnabled, seasonOpen, wrappedEnabled, wrappedYear }`; `generatePlexWrapped` lets admins through when `featureEnabled` (one condition in `actions/wrapped-generation.ts`). The settings form edits only `opens`/`closes`; there is no "no window" state any more. `updateServerTimeZone(timezone)` logs `SERVER_TIMEZONE_CHANGED`.
+- The plan's example "2026-03-11T05:00Z is a Tuesday at 21:00 in Los Angeles" is 22:00: the US change on 8 March puts it in PDT. Jest cannot change its own process zone, so `zoned-time.test.ts` recomputes a fingerprint of every zone answer in `tsx` child processes under `TZ=UTC` and `TZ=Pacific/Kiritimati`; the settings hydration test mocks the browser's Intl zone instead of `TZ=Europe/Berlin`.
+- `TZ` is in `envSchema`. The server time zone control is `components/admin/settings/server-time-zone-form.tsx`, rendered inside `WrappedSettingsForm` on an opaque panel (so axe can check its contrast; the settings axe counts fell). The visual seed sets the season to `01-01`-`12-31` so screenshots do not change on 1 December; the admin settings screenshots were re-taken.
+
 **Done when.**
-- [ ] `serverZone()` resolves `Config.timezone`, then a valid `TZ`, then UTC, and the setting stores canonical IANA names.
-- [ ] Rewind buckets come only from `Intl` date parts, and the four-zone, DST and 31 December tests pass under both process zones.
-- [ ] Season dates are month-day values evaluated in the server zone, and the legacy dates are migrated with the same result under any session time zone.
-- [ ] Dump taken before deploy; `prisma migrate status` clean.
-- [ ] Announcement expiry and the season form round-trip what the admin typed.
+- [x] `serverZone()` resolves `Config.timezone`, then a valid `TZ`, then UTC, and the setting stores canonical IANA names.
+- [x] Rewind buckets come only from `Intl` date parts, and the four-zone, DST and 31 December tests pass under both process zones.
+- [x] Season dates are month-day values evaluated in the server zone, and the legacy dates are migrated with the same result under any session time zone.
+- [ ] Dump taken before deploy; `prisma migrate status` clean. (Owner: dump and production deploy; `migrate status` is clean on the test database.)
+- [x] Announcement expiry and the season form round-trip what the admin typed.
 
 ### Step P2.3: Shared outbound HTTP client and one Tautulli client
 
@@ -2222,12 +2288,21 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 - Put a redirect to another host in front of Sonarr. The log shows the second request without `X-Api-Key`.
 - `rg "api/v2\?apikey" lib actions app` matches only `lib/connections/tautulli.ts`.
 
+**As merged.**
+- `isConnectionTestBypassed()` and `testServiceConnection()` live in `lib/connections/connection-test.ts`, beside `http.ts`, to keep each module near the size limit. The bypass is `NODE_ENV === 'test'`, or `SKIP_CONNECTION_TESTS=true` together with `E2E_TEST_MODE=true` under any `NODE_ENV`, because CI's E2E job runs a production build with both flags; `SKIP_CONNECTION_TESTS` alone never bypasses.
+- `ServiceResult` also has an `ABORTED` code for a caller's own signal, so P2.4's "an aborted signal stops paging" can tell it from `TIMEOUT`. `withRetry` retries network errors, 429 and 5xx (and Tautulli's `TAUTULLI_ERROR`), never a timeout or another 4xx.
+- `fetchWithTimeout` now follows redirects through `fetchWithSafeRedirects`, so its callers (Jellyfin, the plex.tv user lookups, the poster proxy, the v2 LLM call) also drop the four auth headers on a cross-origin hop. Their timeout still stops at the headers until they move to `serviceFetch` (plex.tv in P11.8, the LLM in P2.11; Jellyfin has no step yet).
+- Also moved to `serviceFetch`: `lib/wrapped/server-statistics.ts` (token in a header, 2-minute budget for the unpaginated library reads until P2.4), `lib/wrapped/overseerr-statistics.ts`, `actions/server-info.ts` and `lib/connections/tautulli-first-watch.ts` (formerly `actions/user-queries.ts:539-600`).
+- The chatbot's "recently watched" calls `get_history`; "most watched" calls `get_home_stats` twice (`top_movies`, `top_tv`); "top users" calls it with `top_users` by duration. The Tautulli wrappers now return the envelope's `data`, not the whole envelope.
+- `lib/connections/http.ts` is `server-only`, so `npm run register-discord-commands` runs tsx with `--conditions=react-server`.
+- Still on bare `fetch`, out of this step's scope: plex.tv (`plex-invitations.ts`, `plex-auth.ts`, `lib/watchlist/plex-watchlist.ts`; P11.8 and P4.8), Discord OAuth (`lib/discord/api.ts`) and the OpenAI clients (P2.11).
+
 **Done when.**
-- [ ] Every outbound service call goes through `serviceFetch` or `tautulliCommand`, with a timeout that covers the body.
-- [ ] Cross-origin redirects drop the custom auth headers, and no error text contains a key.
-- [ ] There is one Tautulli client, the three nonexistent commands are gone, and the chatbot tools still work.
-- [ ] A `result` other than `'success'` becomes a typed `TAUTULLI_ERROR` that is retried.
-- [ ] One test-mode bypass remains, off in production.
+- [x] Every outbound service call goes through `serviceFetch` or `tautulliCommand`, with a timeout that covers the body. (Plex PMS, Tautulli, Overseerr, Sonarr, Radarr and Prometheus; see "As merged" for the rest.)
+- [x] Cross-origin redirects drop the custom auth headers, and no error text contains a key.
+- [x] There is one Tautulli client, the three nonexistent commands are gone, and the chatbot tools still work.
+- [x] A `result` other than `'success'` becomes a typed `TAUTULLI_ERROR` that is retried.
+- [x] One test-mode bypass remains, off in production.
 
 ### Step P2.4: Rewind sources with Zod and PlayEvent
 
@@ -2280,13 +2355,24 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 
 **Demo.** Run `npx tsx scripts/rewind-probe-sources.ts --user <id> --year 2026` against the owner's Tautulli. It prints the pages, the rows kept and dropped, and the minutes, which match Tautulli's own user stats for the same dates to within a minute.
 
+**As merged** (later steps rely on these):
+- `watch-history-source.ts` exports `UpstreamService = 'tautulli' | 'overseerr' | 'plex'` and `UpstreamLimiter { run<T>(service, fn: () => Promise<T>, options?: { signal?: AbortSignal }): Promise<T> }`, which P2.5's `redisLimiter` implements; a waiter rejects once its signal aborts, and `runLimited()` turns that into `ABORTED`. `directLimiter` runs calls at once. `SourceContext` is `{ signal?, limiter }`; `RewindUser` is `{ plexUserId }`, because Tautulli's `user_id` is the plex.tv account ID.
+- Sources never throw for an upstream failure: they return `SourceResult<T>`, `{ ok: true, data }` or `{ ok: false, code, status? }`, so `fetchYear` resolves to `SourceResult<PlayEvent[]>` rather than design 7.3's bare array. Codes are the HTTP client's, `TAUTULLI_ERROR`, `ROWS_INVALID` (more than 1% of rows failed) and `PAGE_LIMIT` (a partial read is never returned).
+- The Tautulli source is `createTautulliHistorySource({ config, excludedSectionIds })` with `fetchYear`, `fetchServerYear` and `fetchLifetime`; `excludedSectionIdsSchema` parses `Config.rewindExcludedSectionIds`. A flat-array `get_history` response is one complete page.
+- Row validation is `parseRows`/`tooManyInvalid` in `sources/rows.ts`. The envelope stays parsed by `tautulliCommand`; `sources/schemas.ts` describes its `data`. `get_users`, `get_libraries` and `get_metadata` schemas are defined for P2.6 (`get_metadata` is not yet in the `TautulliCommand` union).
+- Overseerr: `findOverseerrUser(config, plexUserId, ctx)`, `fetchMemberRequests(config, overseerrUserId, window, genreCache, ctx)` and `fetchServerRequests(config, window, ctx)` (no genres); `RequestEvent` and its status mapping live in `sources/request-event.ts`. Paging uses `sort=added` and stops at the first page that reaches before the window. P0.15's enums moved to `sources/schemas.ts`; v2's `overseerr-statistics.ts` imports them from there.
+- Plex: `listSections(config, ctx)` and `fetchSectionItems(config, sectionKey, ctx)`; a TV section lists shows, and `LibraryItem.addedAt` is epoch ms.
+- The fixtures are synthetic, written to Tautulli 2.17's field names; no live instance was available to capture them from.
+- The probe runs as `npm run rewind:probe-sources -- --user <User.id> --year 2026` (the sources are server-only, so tsx needs `--conditions=react-server`). It counts pages through a counting limiter; dropped rows show as warnings with field paths. Running it against the owner's Tautulli is the owner's demo.
+- `lib/wrapped/time/zone.ts` left knip's `entry` list; its exports no module imports yet are tagged `@public` for P2.6 and P2.7.
+
 **Done when.**
-- [ ] `tautulli-history.ts` reads with `after` and `before` in the Rewind zone and `grouping=1`, and pages until `recordsFiltered` is reached.
-- [ ] Overseerr requests are paged by `requestedBy`, statuses are mapped, genres come by `tmdbId`, and users are matched by `plexId`.
-- [ ] Every response is validated in `sources/schemas.ts`, and the private fields never get past the parser.
-- [ ] One watched rule is exported, and no source calls `get_item_user_stats` or `get_home_stats`.
-- [ ] Excluded library sections are dropped in `toPlayEvent()`, and `LibraryItem` carries the content rating and section that P2.6's rating exclusions use.
-- [ ] The fixture tests use real field names and pass.
+- [x] `tautulli-history.ts` reads with `after` and `before` in the Rewind zone and `grouping=1`, and pages until `recordsFiltered` is reached.
+- [x] Overseerr requests are paged by `requestedBy`, statuses are mapped, genres come by `tmdbId`, and users are matched by `plexId`.
+- [x] Every response is validated in `sources/schemas.ts`, and the private fields never get past the parser.
+- [x] One watched rule is exported, and no source calls `get_item_user_stats` or `get_home_stats`.
+- [x] Excluded library sections are dropped in `toPlayEvent()`, and `LibraryItem` carries the content rating and section that P2.6's rating exclusions use.
+- [x] The fixture tests use real field names and pass.
 
 ### Step P2.5: Rewind queues, locks, semaphore and fail-fast Redis
 
@@ -2301,9 +2387,9 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 - **Per-member lock.** `lib/queue/redis-lock.ts` covers every generation path: `SET rw:lock:gen:{year}:{userId} <jobId> NX PX 600000`. A compare-and-`PEXPIRE` script renews it each minute, and a compare-and-`DEL` releases it in `finally`. P11.3 later merges the lock implementations.
 - **Semaphore** (design 9.4). `lib/queue/redis-semaphore.ts` admits at most 4 holders per service through a Lua script on the sorted set `rw:sem:<service>`.
   - Holders have a 30 s TTL, renewed on long calls, and release in `finally`. Waiters back off with jitter, bounded by their signal.
-  - It exports `redisLimiter`, which implements P2.4's `UpstreamLimiter`.
+  - It exports `redisLimiter`, which implements P2.4's `UpstreamLimiter` (as merged: `run(service, fn, signal?)`, where the optional `signal` bounds the wait for a slot, and `UpstreamService` is `'tautulli' | 'overseerr' | 'plex'`; it runs on the fail-fast request-path client, so a Redis outage fails the call instead of hanging it).
 - **Fail fast** (BP-20, FR-50). `getRequestPathRedis()` in `lib/queue/connection.ts` is built on P4.2's `createFailFastRedis`: `enableOfflineQueue: false`, `connectTimeout: 2000`, `commandTimeout: 2000` and `maxRetriesPerRequest: 1`.
-  - `checkRewindInfra()` returns `REDIS_NOT_CONFIGURED`, or `REDIS_UNAVAILABLE` when a ping fails within 2 s, cached for 10 s. There is no Postgres fallback (design 13.5).
+  - `checkRewindInfra()` returns `REDIS_NOT_CONFIGURED`, or `REDIS_UNAVAILABLE` when a ping fails within 2 s, cached for 10 s. There is no Postgres fallback (design 13.5). (As merged: it lives in `lib/queue/rewind-infra.ts`; the lock is `acquireGenerationLock(redis, { year, userId, owner })`, returning a handle with `release()` or null; the Workers are started by `startRewindWorkers()` in `rewind-queues.ts` with their processor maps in its `PROCESSORS` constant; and the four modules without a consumer yet are knip entries until P2.17 and P5.9 import them.)
   - The FR-50 copy lives in `lib/rewind/infra-copy.ts`: "Rewind needs Redis (REDIS_URL)" for admins, "Rewind isn't available on this server yet" for members, and "Rewind is temporarily unavailable. Try again in a few minutes." while Redis is down.
 
 **Tests.**
@@ -2316,9 +2402,9 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 **Demo.** Run two scripts that each take the Tautulli semaphore five times: never more than four holders exist across both processes. With Redis stopped, `checkRewindInfra()` returns `REDIS_UNAVAILABLE` in under 2 s.
 
 **Done when.**
-- [ ] The three Rewind queues and their Workers start with the worker, and drain on shutdown.
-- [ ] The per-member lock and the semaphore work across processes, with owner-only release, and their Redis tests pass in CI.
-- [ ] Request paths fail fast with the FR-50 codes when Redis is missing or down.
+- [x] The three Rewind queues and their Workers start with the worker, and drain on shutdown.
+- [x] The per-member lock and the semaphore work across processes, with owner-only release, and their Redis tests pass in CI.
+- [x] Request paths fail fast with the FR-50 codes when Redis is missing or down.
 
 ### Step P2.17: Generation becomes a job: processor, actions and status hook
 
@@ -2355,13 +2441,15 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 
 **Integration.** `startWorker()` starts the sweep scheduler. P5.9 swaps the processor body for `generateUserRewind`, with SEC-43's repair and fallback. P6.9's `RewindCard` uses the hook, and P7.8 adds the FlowProducer fan-out.
 
+(As merged: `processRewindGenerateUser` is in `lib/queue/jobs/rewind.ts` and calls `generateRewindV2` (`lib/wrapped/pipeline/generate-v2.ts`, statistics in `collect-v2-statistics.ts`), which P5.9 replaces; the sweep is `processRewindStaleSweep` in `lib/queue/jobs/rewind-stale-sweep.ts`. Every enqueue goes through `enqueueRewindGeneration({ userId, year, kind })` in `lib/rewind/enqueue-generation.ts` (its `RewindGeneration` row's id is also the BullMQ `jobId`; a deduplicated request's row is `skipped` with `{ code: 'ALREADY_QUEUED' }`), on the producer queues of `getRewindQueue(name)` in `lib/queue/rewind-producers.ts`, which run on the fail-fast request-path client. A `PlexWrapped` row that has not completed mirrors its run (`generating`, then `failed` with the stored code), so the v2 pages need no second status source; a completed row is never touched until the final transaction. `getRewindStatus({ year, userId? })` takes an optional `userId` for admins and returns `RewindStatus` from `lib/rewind/rewind-status.ts`, with states `none`, `queued`, `running`, `completed`, `failed` and `unavailable` (FR-50); the hook's query key is `['rewind-status', year, userId ?? null]` and it exposes `track()` to restart polling after a request. P2.5's lock is now re-entrant for its owner (the job id), so a stalled job run again takes back its own lock. Stored codes added: `TIMEOUT`, `UPSTREAM_ERROR`, `LLM_FAILED`, `NOT_CONFIGURED`, `WORKER_LOST`, `JOB_LOST`; a `WORKER_LOST` row that was re-enqueued carries `requeuedAs`, which is how the sweep re-enqueues only once. The sweep also fails `PlexWrapped` rows left `generating` by the old in-request generation. The card refreshes on completion instead of navigating to the viewer.)
+
 **Demo.** Two tabs press Generate together: one run starts, and the other tab shows "already being made". A container restart mid-run is marked `WORKER_LOST` and re-run within 25 minutes. With Redis stopped, Generate shows the FR-50 message in under 2 s. During an admin regenerate, the old Rewind and its share link stay live until the new one lands.
 
 **Done when.**
-- [ ] Generation is a `REWIND_GENERATE_USER` job with deduplication, P2.5's per-member lock and an enforced time limit.
-- [ ] A `RewindGeneration` row records every attempt, and the final write is atomic and keeps `previousData`.
-- [ ] `REWIND_STALE_SWEEP` recovers each lost run once.
-- [ ] One status hook replaces the polling loops, and no poll carries `data`.
+- [x] Generation is a `REWIND_GENERATE_USER` job with deduplication, P2.5's per-member lock and an enforced time limit.
+- [x] A `RewindGeneration` row records every attempt, and the final write is atomic and keeps `previousData`.
+- [x] `REWIND_STALE_SWEEP` recovers each lost run once.
+- [x] One status hook replaces the polling loops, and no poll carries `data`.
 
 ### Step P2.6: Server-wide history pass and metadata cache
 
@@ -2407,12 +2495,22 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 
 **Demo.** On the dev server, press "Prepare season data": the log shows one server pass of N pages, an aggregate row appears with member and community counts, and `MediaMetadataCache` fills. A second press while the run is in progress does nothing.
 
+**As merged** (later steps rely on these):
+- A batch is keyed by `(year, through)`, `through` being the last data day: `"YYYY-11-30"` in the season, `"YYYY-12-31"` once the year has ended in the server zone (`aggregate/window.ts`: `throughFor`, `isFinalCut`, `batchWindowAt`; `dataThrough` is midnight UTC of that day). `computeServerYear`'s `window` is `{ year, finalCut, serverZone }`.
+- `fetchServerYear()` now returns `Map<tautulliUserId, PlayEvent[]>`, folding each page into per-user buckets; the history row schema reads `user_id` for that, and it never reaches a `PlayEvent`. The pass reads the union of every member's window, and each member is trimmed to their own.
+- Rating exclusions follow the Done-when and the test, not "dropped like an excluded section": an excluded or (with exclusions configured) unknown rating sets `PlayEvent.excludedFromLists`, and the play stays in totals. **P2.7 to P2.9 and P5 build lists, records, calendar top titles and card inputs from `listableEvents()`** (`aggregate/rating-exclusions.ts`), or skip `excludedFromLists`.
+- Member minutes use `totalMinutes()` in `server-year.ts` (every second, floored once), because P2.7's `totals.ts` was not merged; P2.7 should keep that rule or swap it in. `titles` keeps only titles with 3 or more viewers (a viewer has a counted play), keyed `film:<ratingKey>` / `series:<grandparentRatingKey>`. Community facts: `hours`, `topSeries`, `busiestNight` (day in the server zone), `peakConcurrent`, `requestsFulfilled` (`RequestEvent.available`, so TV at 4 counts), `titlesAdded`.
+- `getMemberEvents({ year, through, member: { userId, plexUserId }, window, source, excludedContentRatings }, ctx)` and `getMemberLifetimeEvents(...)` live in `aggregate/batch-cache.ts`; `getMetadata(events)` and `getContentRatings(keys)` in `lib/wrapped/metadata-cache.ts`, the warm in `lib/wrapped/metadata-warm.ts`. Library-only rows carry `fetchedAt = 1970-01-01` (`NEVER_WARMED`); only warmed rows older than 30 days queue a refresh.
+- Jobs: `JOB_TYPES.REWIND_SERVER_AGGREGATE`/`REWIND_METADATA_WARM`, processors in `lib/queue/jobs/rewind-batch.ts` (`REWIND_BATCH_PROCESSORS`), producers in `lib/queue/rewind-batch-queue.ts` on the fail-fast client (`getDeduplicationJobId` reports `alreadyQueued`). Warm payload is `{ batch, keys, topSeries }`, dedup `rewind:meta:{batch}` with `batch` = `{year}:{index}` or `refresh:{hash}`. Missing Tautulli or Plex is an `UnrecoverableError`; an Overseerr failure only nulls `requestsFulfilled`.
+- Trigger: `prepareRewindSeasonData({ year })` and `getRewindSeasonDataPreparedAt(year)` in `actions/admin/rewind-season.ts`; audit type `REWIND_SEASON_DATA_PREPARED`; the button is `components/admin/settings/prepare-season-data-button.tsx`. `redis-semaphore`, `rewind-infra` and `infra-copy` left knip's `entry` list.
+- The dev-server demo needs the owner's Plex, Tautulli and Overseerr.
+
 **Done when.**
-- [ ] One paged server-wide `get_history` pass per batch fills `RewindServerAggregate`, and community facts need 3 or more contributors.
-- [ ] `REWIND_METADATA_WARM` fills the cache for the titles that cover 95% of each member's minutes, at concurrency 4 with 10 s timeouts.
-- [ ] Member reads go through the per-batch event cache, with a per-member fallback.
-- [ ] Content-rating exclusions apply to every title, fail closed on an unknown rating, and keep the title in totals.
-- [ ] The fixture tests pass, and the v3 path makes no per-member Plex library scan.
+- [x] One paged server-wide `get_history` pass per batch fills `RewindServerAggregate`, and community facts need 3 or more contributors.
+- [x] `REWIND_METADATA_WARM` fills the cache for the titles that cover 95% of each member's minutes, at concurrency 4 with 10 s timeouts.
+- [x] Member reads go through the per-batch event cache, with a per-member fallback.
+- [x] Content-rating exclusions apply to every title, fail closed on an unknown rating, and keep the title in totals.
+- [x] The fixture tests pass, and the v3 path makes no per-member Plex library scan.
 
 ### Step P2.7: Stats modules, part 1
 
@@ -2447,11 +2545,18 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 
 **Demo.** `TZ=UTC npx jest lib/wrapped/stats` and `TZ=Australia/Sydney npx jest lib/wrapped/stats` both pass. The draft heavy fixture prints 1,307 hours, 586 episodes, 31 series and 112 films.
 
+**As merged** (later steps rely on these):
+- Shared helpers: `stats/keys.ts` holds `StatsContext`, `titleKey`, `minutesOf`, `isListed`, `displayTitles` and `videoEvents`; `stats/rank.ts` holds `rankTitles(events, ctx, kind?)` and `compareRanked`; `stats/days.ts` holds the day-key arithmetic (`addDays`, `windowDays`, `nightKey`, `weekStart`). `hiddenKeys` holds raw rating keys (`RewindExclusion.ratingKey`): a film's own key or a series' grandparent key. `isListed()` is the one place that decides list membership, so P2.6's `excludedFromLists` flag belongs there.
+- Only films and episodes with a series key are read; tracks and `other` media have no `titleKey` and count nowhere, totals included.
+- Each module exports one `computeX(events, ctx, ...)`: `computeTotals(events, ctx, lifetime?)` (the comparison reads `lifetime` over `dataWindow(year - 1)`; `vsLastYear` is a ratio, `minutes2025` daily minutes, both null without last year's plays), `computeSessions`, `computeTime`, `computeCalendar` (plus `dailyMinutes(events, window)`), `computeBookends(events, ctx, lifetime?)`, `computeRace` (`{ eligible: false }` or the frames) and `computeMilestones`. P2.6 reads a member's minutes as `computeTotals(events, ctx).totalMinutes`.
+- Definitions the plan left open: a day is active when it holds a counted play; the clock counts counted plays by start time, and the golden hour is hours 18 to 21 (design 5.3); the longest binge has the most minutes and the deepest the most episodes; a series' biggest night runs 04:00 to 04:00; `biggestWeek` is Monday to Sunday, clipped to the window; the milestone ladder is the highest four of 10, 25, 50, 100, 250, 500, 750, 1,000, 1,500, 2,000, 2,500, 3,000, 4,000, 5,000, 7,500 and 10,000 hours at or below the total.
+- `lib/wrapped/stats/*.ts` is a knip entry until P2.9's `computeMemberStats()` imports the modules. The demo's draft heavy fixture comes with P2.10; the stats tests pass under `TZ=UTC`, `Australia/Sydney` and `America/Los_Angeles`.
+
 **Done when.**
-- [ ] Totals, sessions, time, calendar, bookends, race and milestones are pure modules over `PlayEvent[]`.
-- [ ] Titles are keyed by `rating_key` and `grandparent_rating_key`, minutes are floored once, and the watched rule comes from P2.4.
-- [ ] Every bucket uses the member's zone, and the zone and DST tests pass.
-- [ ] Each module is at most about 150 lines and has its own Jest file.
+- [x] Totals, sessions, time, calendar, bookends, race and milestones are pure modules over `PlayEvent[]`.
+- [x] Titles are keyed by `rating_key` and `grandparent_rating_key`, minutes are floored once, and the watched rule comes from P2.4.
+- [x] Every bucket uses the member's zone, and the zone and DST tests pass.
+- [x] Each module is at most about 150 lines and has its own Jest file.
 
 ### Step P2.8: Stats modules, part 2
 
@@ -2503,11 +2608,19 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 
 **Demo.** For the draft heavy fixture, print its top genres with shares, three directors, its request ledger and its percentile against a fixture aggregate of 10 members. Then remove its metadata: Taste and People become ineligible, without an error.
 
+**As merged** (later steps rely on these):
+- `isListed()` in `stats/keys.ts` now also rejects `excludedFromLists`, so every P2.7 list, record, calendar top title and bookend skips rating-excluded plays (totals unchanged). This is the only P2.7 behaviour change, and it touches only plays with that flag.
+- Lookups live in `stats/metadata.ts`: `MetadataLookup = (e) => TitleMetadata | undefined`, built by `metadataLookup(await getMetadata(events))` (Zod-parses the JSON columns; a malformed row is a miss), and `AggregateView = { userId, aggregate: Pick<ServerAggregate, "members" | "titles" | "community"> }`.
+- Signatures: `computeTaste(events, ctx, lookup)`, `computePeople(events, ctx, lookup)` (both `{ eligible: false, coverage }` below 60% and 70%), `computeDevices(events, lookup)`, `computeRequests(events, requests | null, lookup)`, `computeCommunity(events, ctx, view | null)` and `computeNextYear(events, ctx, lookup, { taste, people, library, excludedContentRatings })`. `library` is `LibraryTitle[]` (a subset of `LibraryItem`; the cache has no titles), or null; P5.9 has to supply it.
+- Definitions the plan left open: a title's minutes are split evenly across its genres (shares add to 1); taste and people read only listed plays, `freshShare` every counted play, with day 0 to 14 after release counting as fresh; the median year is per title, lower middle on an even count; decades count titles; every actor of a title (top ten billed) earns its minutes, directors films only, top 5 and 3; device shares are by plays among those reporting the field, 20 plays needed, and `fourKShare` is null when no play's title has a cached resolution (only warmed films do); requests count only counted plays as watched; `standing.percentile` is the "Top N%" figure `ceil(rank / members * 100)` over everyone in `aggregate.members` with minutes, anonymous users included, with `rank` shared on a tie; viewer ranks are for listed series; picks need the top genre and score one per matched top person or other top genre, ties by `addedAt` then title, and skip watched, hidden and (with exclusions set) excluded or unrated titles.
+- `RequestEvent` gains `tvdbId` (Overseerr `media.tvdbId`); TV requests match on `tvdb://` or `tmdb://` series guids.
+- The demo needs P2.10's heavy fixture, which had not merged; P2.10's golden-stats test should add these modules' cases.
+
 **Done when.**
-- [ ] Taste, people, devices, requests, community and next-year are pure modules that read the cache and the aggregate through injected lookups.
-- [ ] Request outcomes are joined through cached guids, and the status mapping matches design 7.2.
-- [ ] Community facts and viewer ranks follow the contributor rules.
-- [ ] No module can read player names or IP addresses, and every module has tests.
+- [x] Taste, people, devices, requests, community and next-year are pure modules that read the cache and the aggregate through injected lookups.
+- [x] Request outcomes are joined through cached guids, and the status mapping matches design 7.2.
+- [x] Community facts and viewer ranks follow the contributor rules.
+- [x] No module can read player names or IP addresses, and every module has tests.
 
 ### Step P2.9: Fact catalogue, build-facts and archetype scorers v3
 
@@ -2552,11 +2665,20 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 
 **Demo.** For the heavy fixture, `buildFacts` prints the fact table, and the archetype is Midnight Marathoner with three evidence facts. The credits-roller fixture now wins its archetype. A fixture aggregate of 10 members reports rarity in the "6 of 31" form, and each count matches the members' own picks.
 
+**As merged** (later steps rely on these):
+- Facts: `lib/wrapped/facts/catalogue.ts` (`FACTS`, `FactId`, `FactIdSchema`, `RewindFactsV3Schema`, `CATALOGUE_VERSION`; 236 ids, snapshotted), `display.ts` (`display(unit, value, { locale })`, the units table; every rule from `lib/rewind/format.ts`, so displays carry U+00A0 and follow `Config.locale`: "July\u00A04" in en-US, "4\u00A0July" and "22:00" in en-GB), `values.ts`, `build-facts.ts` (`buildFacts(stats, { member: { name, nthRewind?, serial? }, window: TimeWindow & { year, finalCut }, archetype, medians?, locale })`, `firstName()`), `hash.ts` (`canonicalJson`, `factsHash`, `STATS_VERSION`; the hash covers values only, so a locale change keeps it), `fact-sheet.ts` (`buildFactSheet(facts, ids)`; `titles` are the title-unit displays among the ids). Values: shares 0-1, dates day keys, clock times minutes after midnight, months 1-12, `member.since` a year. Ids beyond design 7.8's excerpt: `counts.titles`, `counts.titlesPer10Hours`, `series.top3Share`, `records.deepestBinge.*`, `records.rewatchShare`, `records.rewatchedTitles`, `days.biggestWeek.from`, the `.median` facts, `archetype.scoredMembers` and `archetype.evidence[1..3]` (value the evidence id, display that fact's). `time.totalHours` is whole hours from 1 hour up; under 10 hours the page reads `time.totalMinutes` ("4 h 12 m").
+- `quiz.gapMinutes` is present only when the Guess page is eligible: 3 or more series (else films and series together with 3 or more titles), and No. 1 leads No. 2 by more than 2% of No. 1's minutes (D7, as the design states it). The heavy fixture's lead is 1.5%, so it has no quiz.
+- `lib/wrapped/stats/compute.ts`: `computeMemberStats(events, ctx, { lifetime, metadata, requests, aggregate, library, excludedContentRatings })`, each nullable; it adds `plays` (counted plays), `freshShare` (taste's rule, outside the 60% coverage gate) and the new `stats/titles.ts` (list entries, films by plays then minutes, completion over 5 started films and episodes, `rewatchShare` = plays of titles played 3+ times, the quiz). `TitleMetadata` gained `runtimeSec` (for `films.longest`). P2.7's knip entry for `stats/*.ts` is gone; `facts/*.ts` and `archetypes/*.ts` are knip entries until P5.9 imports them.
+- Archetypes: `lib/wrapped/archetypes/catalogue.ts` (`ARCHETYPES` moved here, re-exported by `llm-output-schema.ts`; `TIE_BREAK_ORDER`, rarest habit first, prime-time and volume shapes last; `LOW_VOLUME_SHORTLIST`; `ARCHETYPE_STYLE`; `posterLineIds`, `POSTER_LINE_IDS` such as `mm.1`), `scorers.ts` (the formula table in its JSDoc; credits-roller tops out at 80 so completion alone, which is near 100% for most viewers, never outranks a distinctive habit), `select.ts` (`selectArchetype(stats, { userId, year, counts })`, `isPostcard`). The hash tie-break applies only when every eligible score is 0; equal non-zero scores follow the fixed order. The pocket edition by page count (P5.9) is not a volume gate here.
+- Aggregate: `scoredMembers`, `archetypeCounts` (by archetype id) and `medians` (`longestBinge`, `deepestBinge`, `mostEpisodesDay` in episodes, `completionShare`, `mostPaused` and `biggestWeek` in minutes) come from `aggregate/archetypes.ts`; counts and medians are null below 10 scored members. `computeServerYear` takes `hiddenKeys` (by user) and one `metadata` lookup, which `runServerAggregate` loads (`RewindExclusion`, `getMetadata`). Residual risk: a film whose history row lacks a release date reads it from the cache, which the warm job can fill after the aggregate; P5.9 should re-check that the member's pick equals the aggregate's.
+- RWP-16: the four fields are gone from `wrappedLLMOutputSchema`, the system prompt and the default template; `{{bingeWatcher}}` and `{{discoveryScore}}` resolve to empty for custom templates; the legacy schema keeps them optional and the v2 insights slide shows them only when a stored row has them. `schema-v3.ts` reads `FactIdSchema`, the real `ArchetypeResult` (`id`, `runnerUp`, `evidence`, `shortlist`, `llmMayChoose`, `rarity`) and `posterLineId` from the 60 ids.
+- Against P2.10's provisional goldens, 14 of 20 archetypes match; the differences, and the display strings that differ by locale, zero-padding and the hours rule, are listed in the P2.9 PR for P2.16. The credits-roller fixture comes out a Festival Juror (it is 94% films over 40 films, all at 19:30, and every fixture is 100% finished), so the plan's demo line about it does not hold on that fixture; `scorers.test.ts` proves both new scorers on built members.
+
 **Done when.**
-- [ ] `catalogue.ts`, `build-facts.ts` and `fact-sheet.ts` exist, `FactId` is a closed union, and `factsHash` is stable.
-- [ ] All twelve archetypes have real scorers that return evidence fact ids, with volume gates, the fixed tie-break and rarity.
-- [ ] The aggregate's `archetypeCounts` and `medians` come from the same scorers, and the consistency test passes for every fixture.
-- [ ] The four LLM-computed fields are gone from the v2 schema, the prompt and the v3 contract.
+- [x] `catalogue.ts`, `build-facts.ts` and `fact-sheet.ts` exist, `FactId` is a closed union, and `factsHash` is stable.
+- [x] All twelve archetypes have real scorers that return evidence fact ids, with volume gates, the fixed tie-break and rarity.
+- [x] The aggregate's `archetypeCounts` and `medians` come from the same scorers, and the consistency test passes for every fixture.
+- [x] The four LLM-computed fields are gone from the v2 schema, the prompt and the v3 contract.
 
 ### Step P2.10: Twenty golden fixtures with hand-checked stats
 
@@ -2588,10 +2710,18 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 
 **Demo.** `npx tsx evals/rewind/generate-fixtures.ts --check` reports no drift, and `npx jest evals/rewind` passes under both zones. The owner reviews the README table and the profiles, and records the sign-off on 2026-11-06.
 
+**As merged** (later steps rely on these):
+- Profiles are one module each in `evals/rewind/profiles/<id>.ts`, listed by `evals/rewind/profiles.ts`; `heavy` is built by `heavy-plan.ts` and `heavy-schedule.ts`. `npm run rewind:fixtures [-- --check]` runs the generator; CI runs `--check` and repeats `evals/rewind` and `lib/wrapped/stats` under `TZ=Australia/Sydney`.
+- Fixture fields beyond the plan: `member.userName` (an email-like `User.name`), `member.hiddenRatingKeys`, `server.name`, `server.peers` as `{ members, hours[] }`, `window: { year, finalCut }`, and `requests` as `{ rows, genres }` or null. `expected.stats` has one optional section per P2.7 module (`totals`, `time`, `calendar`, `sessions`, `bookends`, `race`, `milestones`, `topSeries`, `topFilms`); a section lists only the hand-checked fields, compared exactly (shares to 9 places). P2.8 adds its sections to the schema and the test.
+- `omittedPages` lists the full-issue pages whose own rule fails, whatever the edition; the page-rule thresholds the plan leaves open, the provisional archetypes and the display strings are listed in `evals/rewind/README.md` for P2.16 to confirm. Under D7's 2% rule the heavy member omits Guess (its No. 1 leads by 50 minutes, 1.5%), unlike the mockup: an owner decision at sign-off.
+- `createFixtureSource(fixture)` in `lib/wrapped/sources/fixture-source.ts` returns `fetchYear` and `fetchLifetime()` (lifetime rows plus the year's). `evals/rewind/hand-tally.py` is the independent second derivation.
+- The goldens found one P2.7 bug: `rankTitles(events, ctx, kind)` disambiguated titles only within one kind; display titles now settle across all listed titles first ("Fargo (2014)" in the series list when the film "Fargo" was also watched).
+- `data/titles-200.json` is `{ description, titles: [{ title, year, kind }] }`: 137 films and 63 series, with Latin Extended-B (Romanian), Vietnamese and non-Latin titles for safe mode.
+
 **Done when.**
-- [ ] 20 synthetic fixtures cover every profile in design 8.6 and parse through the real source schemas.
-- [ ] For each fixture, the hand-checked stats-level values match in Jest under both process zones.
-- [ ] The generator is deterministic, and its `--check` run is clean.
+- [x] 20 synthetic fixtures cover every profile in design 8.6 and parse through the real source schemas.
+- [x] For each fixture, the hand-checked stats-level values match in Jest under both process zones.
+- [x] The generator is deterministic, and its `--check` run is clean.
 - [ ] The owner has signed off the profiles and the eval budget on 2026-11-06.
 
 ### Step P2.16: Fact and archetype goldens for the twenty fixtures
@@ -2607,6 +2737,7 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
   - CI runs it under both `TZ=UTC` and `TZ=Australia/Sydney`.
 - Where a hand value and the code disagree, decide in the PR which one is wrong. A code fix goes into the P2.7, P2.8 or P2.9 module with a test; a hand-value fix needs the owner's review, recorded in the README's change log.
 - The heavy fixture's facts reproduce the mockup numbers: 1,307 hours across 586 episodes, 31 series and 112 films; 34% after dark; a 23-day streak from 2 to 24 March; 4 July as the biggest day (12 h 24 m); and 289 active days of 334.
+- P2.8's stats have no hand values yet (noted at the P2.8/P2.10 merge). `golden-stats.test.ts` already runs `taste`, `people`, `devices`, `requests` and `nextYear` through `evals/rewind/__tests__/stats-inputs.ts` (a metadata lookup over the fixture's cache rows, and the member's in-window requests with `requests.genres` keyed by request id), but their `expected.stats` sections are optional and every fixture leaves them out. This step must hand-check those values for the fixtures and add them; never copy them from the code's output. `nextYear` runs with `library: null` (fixtures carry no library), and community has no section because the fixtures carry no server aggregate: add one (and a library) to the fixture schema if those values are to be checked.
 
 **Tests.** The golden test above, plus the PR template checkbox "Golden snapshot changes reviewed by the owner".
 
@@ -2614,8 +2745,15 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 
 **Demo.** `npx jest evals/rewind/__tests__/golden-facts.test.ts` passes under both zones, and the heavy fixture prints Midnight Marathoner with its three evidence facts.
 
+**As merged** (later steps rely on these):
+- `evals/rewind/__tests__/golden-facts.test.ts` runs `fixtureMember` (now with an aggregate built from `server.peers`, the member as `FIXTURE_USER_ID`, and the fixture's `library`), `selectArchetype` and `buildFacts` (en-US, `User.name` = `member.userName ?? displayName`), and snapshots every fact's display. Pages and edition come from `evals/rewind/__tests__/pages.ts`, which states design 4.3's rules as P2.10's README reads them (12 counts four cells; 08 needs 70% cast coverage); P5.5's registry `select()` must reproduce its output for every fixture and then replace it.
+- The hand values were derived with the new `evals/rewind/hand-facts.py` (scores, pages, edition, P2.8 stats, en-US displays) and the profiles' own hand stats; every P2.8 module now has a hand-checked `expected.stats` section in each fixture. The fixture schema gained `library` (null except `heavy`, whose pick is Killers of the Flower Moon, so its page 17 stays).
+- Two module fixes, each with a test: `stats/titles.ts` lists, quizzes and measures only titles with a counted play (design 7.2; `seven-minutes` listed a 110 s sample as its No. 1 series); `normalizeTimeZone` and `timeZoneOptions` return IANA names instead of ICU's legacy ids, so `tz.label` reads the zone the member chose ("Asia/Ho_Chi_Minh", not "Asia/Saigon"; "Europe/Kyiv", not "Europe/Kiev").
+- `credits-roller` and `explorer` were rebuilt with the same intent (both scored Festival Juror; now 48 h and 91 h). Provisional values corrected: archetypes of `solo-server` and `long-and-email-name` (weekend-double-feature) and `long-and-non-latin-titles` (festival-juror); page 08 omitted for `premiere-chaser`, `hostile-titles` and `long-and-non-latin-titles` (cast coverage); displays in en-US with U+00A0; `time.totalHours` whole hours; heavy's Standing "Top 4%" (P2.8's ceil). The review table and change log are in `evals/rewind/README.md`.
+- Open owner decisions, implemented as the design states: D7's 2% rule (heavy has no page 04) and floored versus rounded figures ("3 h 54 m" per day, "Top 4%" for rank 1 of 31).
+
 **Done when.**
-- [ ] For each fixture, the hand-checked facts, edition, archetype and omitted pages match in Jest under both process zones.
+- [x] For each fixture, the hand-checked facts, edition, archetype and omitted pages match in Jest under both process zones.
 - [ ] The owner has reviewed the golden values by 2026-11-10.
 
 ### Step P2.11: Provider-agnostic AI facade
@@ -2626,8 +2764,8 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 **Objective.** One path for every structured LLM call, whatever the provider: model facts in one table, typed finish reasons, retries, and a usage row for every billed attempt. v2 generation moves onto it.
 
 **Guidance.**
-- **Packages.** Pin exactly `ai@7.0.143`, `@ai-sdk/openai@4.0.96`, `@ai-sdk/anthropic@4.0.82`, `@ai-sdk/google@4.0.99` and `@ai-sdk/openai-compatible@3.0.71` (design 8.1). Set `engines.node` to `>=22`. The installed zod 4.3 is within their peer range.
-- **`lib/llm/models.ts`.** Pure, so the playground's client component can import it.
+- **Packages.** Pin exactly `ai@7.0.143`, `@ai-sdk/openai@4.0.96`, `@ai-sdk/anthropic@4.0.82`, `@ai-sdk/google@4.0.99` and `@ai-sdk/openai-compatible@3.0.71` (design 8.1). Set `engines.node` to `>=22`. The installed zod 4.3 is within their peer range. (As merged: `ai@7.0.127`, `@ai-sdk/openai@4.0.83`, `@ai-sdk/anthropic@4.0.71`, `@ai-sdk/google@4.0.87` and `@ai-sdk/openai-compatible@3.0.62`, the 2026-09-30/10-01 release set, because new dependencies are pinned to versions at least two weeks old; the planned 10-16 versions qualify from 2026-10-30. The packages are ES modules only: `jest.config.js` adds them to next/jest's transform exception and `jest.setup.js` gives jsdom web streams, and tests that drive the SDK use `@jest-environment node`.)
+- **`lib/llm/models.ts`.** Pure, so the playground's client component can import it. (As merged: the table lives in `lib/llm/model-catalog.ts`, with `pricing` an array of dated `ModelPrice` entries and a `known` flag; `models.ts` exports `lookupModel`, `listKnownModels`, `resolveEffort`, `costUsd`, `estimateCostUsd` and the `TokenUsage` type. Effort levels the model lacks are raised to its nearest level, never sent as is.)
   - One `ModelInfo` per model: `provider`, `id`, `displayName`, `pricing` (per 1M tokens for input, output, cache read, cache write and batch, `asOf: '2026-10-17'`), `capabilities` (`structuredOutputs`, `samplingParams`, `effortLevels`, `tools`, `batch`, `refusalFallback`, `minCacheTokens`) and `retiresOn`.
   - Entries: P0.13's GPT-5 and GPT-4o rows, plus the design 8.2 matrix, which covers the Claude 5.5 family, `gpt-6.1-sol`, `gpt-6-sol`, `gpt-6-luna`, `gpt-6-astra` and `gemini-4-argon` (its 2026-12-01 price change is a dated entry).
   - `lookupModel(provider, id)` lowercases the id, strips an `openai/` prefix and a date suffix, then looks it up exactly. There are no prefix families.
@@ -2638,18 +2776,21 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
   - It builds the model with `createOpenAI`, `createAnthropic`, `createGoogleGenerativeAI` or `createOpenAICompatible({ baseURL })`, caches it by row id and `updatedAt`, and returns `{ model, info, row }`.
   - `OPENAI_COMPATIBLE_PRESETS` covers Ollama (`http://localhost:11434/v1`), LM Studio (port 1234), vLLM (port 8000) and OpenRouter.
   - `llmProviderSchema` still accepts only `openai` until P2.12.
+  - (As merged: `getLanguageModel` returns null when no row is active and throws `LLMConfigError` for a row it cannot build; `resolveModel(row, modelId)` builds from a row directly.)
 - **`lib/llm/generate-structured.ts`.** `generateStructured({ purpose, schema, system, prompt, effort, maxOutputTokens, cacheKey, signal, attribution })` calls `generateText({ output: Output.object({ schema }), abortSignal: signal, maxRetries: 2 })`.
   - `generateObject` is deprecated in v7, and the SDK already retries 429 and 5xx responses.
   - It maps `effort` to each provider's own option. It drops `temperature` and `topP` when `samplingParams` is false, because Claude 5.x and the reasoning models reject them.
   - It sets Anthropic `cacheControl` on the system block and the OpenAI `promptCacheKey`. Check the option names against the installed typings.
   - Finish reasons map to typed errors: `length`, `content-filter` and refusals become `TRUNCATED`, `CONTENT_FILTER` and `REFUSAL`. `NoObjectGeneratedError` becomes `SCHEMA`, with the raw text kept for P5.9's repair call.
   - It returns a `Result` holding `{ output, usage, modelId, finishReason }`.
+  - (As merged: `{ ok: true, value: { output, usage, cost, modelId, finishReason, rawText } } | { ok: false, error: { code, message, rawText?, usage?, modelId? } }`, with codes `NOT_CONFIGURED`, `TRUNCATED`, `CONTENT_FILTER`, `REFUSAL`, `SCHEMA`, `ABORTED` and `PROVIDER`; it throws only when the provider row cannot be read, and `PROVIDER` carries only the HTTP status. It also takes `temperature`, `modelOverride` (the playground) and `recordText`, which keeps the prompt and raw response on the usage row as v2 did. It records usage itself, so callers never write `LLMUsage`. A refusal is `rawFinishReason === 'refusal'`, because the SDK maps Anthropic refusals to `content-filter`. The SDK's OpenAI request for `wrappedLLMOutputSchema` is strict `json_schema` on `/v1/responses` with every key required and `minLength` kept, which OpenAI has accepted since v2 shipped; the Anthropic provider strips the keywords Claude rejects.)
 - **`lib/llm/usage.ts`.** `recordUsage()` writes one `LLMUsage` row per billed attempt, with the served `modelId`, `cachedInputTokens`, `reasoningTokens`, `outcome`, `generationId`, `promptVersion` and `factsHash`. Truncated, refused and schema-failed responses are billed, so they are recorded; network errors with no usage are not. Admin analytics stay in `lib/wrapped/usage.ts`.
 - **v2 switch.**
   - `generateWrappedWithLLM` (`lib/wrapped/llm.ts`) calls `generateStructured` with `wrappedLLMOutputSchema`, effort `low`, `cacheKey: 'rewind-v2'` and the job's signal. `actions/prompt-test.ts:102` uses `generateStructured` too.
   - Delete `lib/wrapped/api-calls.ts` (`callOpenAI` and its prefix lists), `lib/llm/pricing.ts`, and `parse-llm-output.ts` if knip reports it unused.
   - Move the remaining callers: `actions/chatbot/conversation.ts:79` to `costUsd`, `app/api/admin/models/route.ts` to `listKnownModels()`, and `wrapped-playground.tsx:7` to `estimateCostUsd`.
   - Until P2.12 deletes it, P0.13's `openai-params.ts` keeps only what the chat client needs, as a regex-free lookup into `models.ts`.
+  - (As merged: `generateWrappedWithLLM` takes an optional `signal` and falls back to `AbortSignal.timeout(LLM_REQUEST_TIMEOUT_MS ?? 300000)` until P2.17's job passes one, and returns `errorCode`. The `startsWith("gpt-")` filter in `lib/connections/openai.ts` stays until P2.12 deletes that file. `wrappedOutputJsonSchema` was deleted as unused. The models route returns `configuredProvider` and the catalogue ids of that provider.)
 - **Pitfall.** The SDK's OpenAI provider uses the Responses API. Check the strict JSON schema that it builds from `wrappedLLMOutputSchema` (RWP-15 mentions `$schema` and `minLength`) against a recorded request.
 
 **Tests.**
@@ -2666,11 +2807,11 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 **Demo.** Point the Rewind provider at `gpt-6-luna` and run an admin regenerate: the `LLMUsage` row shows the served model, the cached and reasoning tokens, and a cost not priced at GPT-4 rates. Then set `maxTokens` to 50: the run fails as `TRUNCATED`, and an `outcome: 'length'` row records the billed failure.
 
 **Done when.**
-- [ ] The AI SDK 7 packages are pinned to exact versions, and `engines.node` is `>=22`.
-- [ ] `models.ts`, `registry.ts`, `generate-structured.ts` and `usage.ts` exist, with tests on mocked providers.
-- [ ] `lib/llm/pricing.ts`, `lib/wrapped/api-calls.ts` and every model-name prefix check are deleted.
-- [ ] Billed failures are recorded with cached and reasoning tokens, and unknown models cost 0 with a warning.
-- [ ] v2 generation runs on the facade.
+- [x] The AI SDK 7 packages are pinned to exact versions, and `engines.node` is `>=22`.
+- [x] `models.ts`, `registry.ts`, `generate-structured.ts` and `usage.ts` exist, with tests on mocked providers.
+- [x] `lib/llm/pricing.ts`, `lib/wrapped/api-calls.ts` and every model-name prefix check are deleted (as merged: except the `lib/connections/openai.ts` list filter, which P2.12 deletes with the file).
+- [x] Billed failures are recorded with cached and reasoning tokens, and unknown models cost 0 with a warning.
+- [x] v2 generation runs on the facade.
 
 ### Step P2.12: LLM provider settings and the admin assistant on the registry
 
@@ -2702,6 +2843,7 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
   - `actions/chatbot/conversation.ts` keeps its `MAX_LOOPS` loop and its own tool execution. Usage is recorded through `recordUsage` instead of a direct `prisma.lLMUsage.create`.
   - Remove the `provider === "openai"` filter from `lib/chatbot/assistant.ts:62`. A model without `capabilities.tools` gets a clear error.
   - Delete P0.13's `openai-params.ts`.
+- (As merged: the effort enum accepts every catalogue level, `xhigh` and `max` included, and the form offers only the chosen model's own levels; settings a model does not take are stored as null. The presets and `DEFAULT_OPENAI_MODEL` live in the pure `lib/llm/provider-presets.ts`. `listProviderModels` is wrapped by `loadProviderModels` (the E2E/Jest bypass and fixed messages); `serviceFetch` now also drops `x-goog-api-key` on a cross-origin hop. `listLLMModels({ purpose, provider?, apiKey?, baseUrl? })` serves both the form's Test button and the playground (no `provider` lists the active row), under a new `llm:models` limit of 30 per 15 minutes per admin; saves are audited as `LLM_PROVIDER_CHANGED`. `chatWithTools` also returns `responseMessages`, the provider's assistant turn with its reasoning, which the loop appends before its tool results, and takes a `system` prompt; client-sent system messages are dropped from the history. The provider row's `effort` now wins over a caller's default in `generateStructured`. Setup keeps `setupLLMProviderSchema` (OpenAI only, no base URL). The form is `llm-provider-form.tsx` with its state in `hooks/use-llm-provider-form.ts`, and the component test is `components/__tests__/admin/settings/llm-provider-form.test.tsx`, following the repo's layout. `testPromptTemplate` is untouched, so its model override still has no catalogue check.)
 
 **Tests.**
 - `lib/validations/__tests__/llm-provider.test.ts`: `openai-compatible` requires `baseUrl`; `file:`, `javascript:` and `http://user:pass@host` are rejected; a `/v1` path is kept.
@@ -2715,10 +2857,10 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 **Demo.** Choose `claude-sonnet-5-5` with effort `low` for Rewind: the form shows the price and no temperature field, Test lists the models, and an admin regenerate runs on Claude. Then point the assistant at the Ollama preset on a local Ollama, and ask it a question that needs a tool.
 
 **Done when.**
-- [ ] The form has a provider select, base-URL presets, effort where the model supports it, models from `models.list`, and each model's price and retirement date.
-- [ ] Base URLs are validated and admin-only, and a stored key is never sent to a new origin.
-- [ ] The admin assistant and Discord DMs run on the registry, and a non-OpenAI row cannot break them.
-- [ ] `lib/connections/openai.ts`, the models API route and `openai-params.ts` are gone, and the component and action tests pass.
+- [x] The form has a provider select, base-URL presets, effort where the model supports it, models from `models.list`, and each model's price and retirement date.
+- [x] Base URLs are validated and admin-only, and a stored key is never sent to a new origin.
+- [x] The admin assistant and Discord DMs run on the registry, and a non-OpenAI row cannot break them.
+- [x] `lib/connections/openai.ts`, the models API route and `openai-params.ts` are gone, and the component and action tests pass.
 
 ### Step P2.13: Fonts, typesetting, Rewind format and the registry skeleton
 
@@ -2734,6 +2876,7 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
   - Web fonts go to `app/(app)/rewind/_fonts/`: the Archivo variable WOFF2 (about 78 KB) and three Newsreader statics at weight 400 (Display Italic at opsz 72, Text and Text Italic at opsz 16; 22-24 KB each). Card fonts go to `lib/rewind/cards/fonts/`: the eleven TTF instances of design 6.4, renamed "Rewind Archivo …" and "Rewind Newsreader …". OFL licence files sit beside both sets.
   - `lib/rewind/typeset/metrics.json` (design 5.4) holds advances, flattened kerning pairs and covered code points: page metrics from the variable Archivo at six width steps and weights 700, 760, 850 and 900, and card metrics from the eight Archivo statics.
   - The build fails above the NFR-5 budget of 110 KB preloaded and 160 KB in total (the design measured 101 KB and 147 KB).
+  - (as merged: pinned to google/fonts `47d54ca1`, tools pinned in `scripts/rewind-fonts.requirements.txt`. Latin Extended-A put the full variable Archivo at 101 KB and the total at 182 KB, so the web Archivo keeps `wght` 600-900 only, the weights Rewind sets; with that the build measures 97 KB preloaded and 153 KB in all. Web files: `archivo-vf.woff2`, `newsreader-display-italic.woff2`, `newsreader-text.woff2`, `newsreader-text-italic.woff2`, all renamed "Rewind …". `metrics.json` is 144 KB: kerning is stored as a sparse matrix over left and right classes shared by every face (`kernLeft`, `kernRight`, `kern: [l, r, units, …]`), plus `tnum` digit advances; the lockfile also records every output's sha256.)
 - **`lib/rewind/typeset/fit-lines.ts`** is pure. Its metrics load through `metrics.ts`, which imports `server-only`.
   - `fitLines(text, { role, metrics, weight, measure, maxLines, sizeMin, sizeMax })` returns `{ size, lines: [{ text, wdth, width }], ellipsized, ariaLabel, safeMode }`.
   - Lines break only between words. A break is preferred after ": ", " - " and " (", and before "of", "the" and "and" when that avoids a widow. Candidates are enumerated exhaustively up to 12 words, then greedily.
@@ -2741,11 +2884,13 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
   - Sentence mode uses one shared step, set flush left. Candidates score as size times penalties of 0.92, 0.85 and 0.97.
   - The minimum size is 22 px, and words are never broken. List titles longer than 3 lines are cut short with an ellipsis, and the full title goes into `ariaLabel`.
   - A code point that the font does not cover returns `safeMode` (design 4.9). `CARD_SLACK = 0.015` stays provisional until P2.14.
+  - (as merged: the mockup fits reproduce with letter-spacing of -0.01 em after every character, so `tracking` defaults to -0.01; options also take `widths` (allowed steps, for example `[100]` for the masthead or `[62, 75]` for the hero numeral) and `tnum`. A break before "of", "the" or "and" counts as preferred only when it starts a last line of two or more words. `measure.ts` is the pure metrics reader; `metrics.ts` exports `pageMetrics` and `cardMetrics`. Card callers fit to `936 / (1 + CARD_SLACK)`.)
 - **`lib/rewind/format.ts`** extends P3.10's `lib/utils/format.ts` with Rewind's own rules only (design 4.9, and 5.4 item 7): U+00A0 between a number and its unit or meridiem ("10 PM", "26 h 10 m", "4 July"); plurals through `Intl.PluralRules`; "under 1%"; hero numbers never abbreviated ("12,480"); durations through the shared, floored `formatDuration`.
 - **`lib/rewind/registry.ts`.** Every entry has `type`, `name`, `act`, `field`, `altField`, `spot`, `core`, `pocket`, `dwell`, `select` and `schema`, and optionally `table`, `srSummary` and `share`.
   - All 18 pages of design 4.2 get their real values; until P5.5, `select` returns null and `schema` is `z.unknown()`. The ten chart pages (02, 05, 06, 07, 09, 10, 11, 13, 15 and 16) get `table` stubs. Ink names come from P3.3's `rewindInks`.
   - `issueDurationMs(pages)` adds each page's dwell plus 420 ms per turn, for the RewindCard meta line (design 18.4, item 3).
-- **RWV-01 on the live v2 viewer** (until P7.13 and P11.29). `components/wrapped/cinematic/marquee-text.tsx` gives each word one `inline-block whitespace-nowrap` span with the letters animating inside it, sets `transitionEnd: { filter: 'none' }` and puts the gradient on the letter spans. The archetype reveal gets `data-testid="rewind-archetype-name"`.
+  - (as merged: P3.3 had not merged, so `registry.ts` declares the twelve `InkName`s itself; P3.3 or P5.5 points it at `rewindInks`. Design 4.2 gives no alternate fields, so they are provisional and P5.5's registry-tokens test checks them: coral→peach, rose→lilac, marigold→sky, petrol→oxblood, forest→ultramarine, mint→sky, peach→rose, lilac→mint, sky→coral; paper and archetype pages have none. `dwell` is ms, or `tap`, `hold` (counted as 12 s) or `end`, giving 140.14 s for the full issue; `pocket` is `false | 'page' | 'short-list' | 'clock-or-calendar'`. The new modules are knip entries until their first importers land.)
+- **RWV-01 on the live v2 viewer** (until P7.13 and P11.29). `components/wrapped/cinematic/marquee-text.tsx` gives each word one `inline-block whitespace-nowrap` span with the letters animating inside it, sets `transitionEnd: { filter: 'none' }` and puts the gradient on the letter spans. The archetype reveal gets `data-testid="rewind-archetype-name"`. (as merged: the gradient goes in through a new `letterClassName` prop; the v2 visual baselines did not change.)
 - RWV-08 and UI-20 close for Rewind once P5.1 loads the web files with `next/font/local` and P5.10 embeds the matching card instances. P3.2 owns the app fonts.
 
 **Tests.**
@@ -2761,11 +2906,11 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 **Demo.** The font build prints 101 KB preloaded and 147 KB in total. `npx jest lib/rewind` passes, and a short script prints the fitted mockup headlines, which match design 15.3. At 390 px, the v2 archetype slide shows its name with no break inside a word.
 
 **Done when.**
-- [ ] The font build reproduces the files from pinned sources, with OFL licences and renamed families, within the NFR-5 budget.
-- [ ] `fit-lines` reproduces the mockup fits, never breaks a word, applies the one-step spread rule and passes the 200-title fixture.
-- [ ] `lib/rewind/format.ts` adds the non-breaking space and plural rules on top of `lib/utils/format.ts`.
-- [ ] The registry lists all 18 pages, with `spot`, `table` and `select` stubs.
-- [ ] The v2 marquee no longer splits words.
+- [x] The font build reproduces the files from pinned sources, with OFL licences and renamed families, within the NFR-5 budget.
+- [x] `fit-lines` reproduces the mockup fits, never breaks a word, applies the one-step spread rule and passes the 200-title fixture.
+- [x] `lib/rewind/format.ts` adds the non-breaking space and plural rules on top of `lib/utils/format.ts`.
+- [x] The registry lists all 18 pages, with `spot`, `table` and `select` stubs.
+- [x] The v2 marquee no longer splits words.
 
 ### Step P2.14: Re-measure cards on Next 16.4.2
 
@@ -2789,6 +2934,7 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
   - Satori is bundled without a package.json, so `scripts/write-card-version.mjs` matches `/satori@(\d+\.\d+\.\d+)/` against `next/dist/compiled/@vercel/og/index.node.js`. That works on 16.1.1; re-check it on 16.4.2, and fail loudly when nothing matches.
   - The script writes `lib/rewind/cards/card-version.generated.ts`, which is committed. A test recomputes it, so upgrading Next or the fonts without regenerating it fails CI.
 - If Satori 0.29 changes rotation, SVG data URIs or kerning, record it as a P5.10 risk and add the constraint to the Satori lint rule's list.
+- (as merged: measured on 2026-10-19, Next 16.4.2, `@vercel/og` 1.0.1, Satori 0.29.0, 4 vCPU, `NODE_ENV=production`; the cards render byte-identically through the script and through a temporary route on a production `next build` + `next start`. Warm p50/p95 over 20 renders (cold = first render in a fresh process, 3 runs): centrefold 102/116 ms (cold 418-436), back cover 101/114 ms (cold 425-434), OG 38/47 ms (cold 346-368), all inside NFR-10; through the production server the warm requests took 110/119, 107/120 and 41/59 ms. Full record in `lib/rewind/cards/measurements.json`. **Satori 0.29 draws kerning inside a word but places the next word by unkerned grapheme advances**, so each kerned word pushes the rest of its line right ("FAMILY  PLEX"); worst overflow 2.39% ("TAXI DRIVER", billing caps, 80 px) over 606 lines of the 200 titles in three card roles (No. 1 title, list title, and billing caps, which the step did not name), so `CARD_SLACK = 0.029`. Satori ignores `tnum`, so card numerals fit with proportional figures; an `<img>`'s size includes its border. No Satori lint rule exists yet, so these went into design 6.4's rule list and 13.4's risks for P5.10, with the fix if the word gaps show: card TTFs without GPOS `kern` and card metrics without kerning. `CARD_VERSION` is `rewind-cards@1+og@1.0.1+satori@0.29.0+fonts@64205e348993`; `n` is `CARD_RENDERER_VERSION` in `version.ts`, which `scripts/card-version/compute.mjs` reads, and it must be bumped with `CARD_SLACK` or any card change. `loadCardFonts()`, `archivoFamily(wdth, wght)` and `NEWSREADER` live in `fonts.ts`; it reads `lib/rewind/cards/fonts/` under `process.cwd()`, so P5.10's routes need that folder in `outputFileTracingIncludes` for the standalone build. The fixtures are `__fixtures__/mockup-cards.tsx` (with `CARD_TITLE_ROLES`) and `mockup-art.ts` (the mockups' SVG data URIs). The script decodes PNGs with `node:zlib` instead of `sharp`: sharp is only Next's optional dependency, and declaring it marked its platform binaries dev-only in the lockfile. Jest cannot import `@vercel/og` (ESM plus WASM), so the render test runs `scripts/rewind-measure-cards.tsx --check` in a child process. Scripts: `npm run rewind:measure-cards [-- --record]` and `npm run rewind:card-version`.)
 
 **Tests.**
 - `lib/rewind/cards/__tests__/card-version.test.ts`: the committed value equals the recomputed one and matches the format regex.
@@ -2800,9 +2946,9 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 **Demo.** `npx tsx scripts/rewind-measure-cards.tsx` prints a table of the warm p50 and p95 for each card, and the slack. It also writes PNGs to `${REWIND_CACHE_DIR}/measure/` (P4.1's default, `.next/cache/rewind`), which can be compared with `design/mockups/rewind/png/card-*.png`.
 
 **Done when.**
-- [ ] The three mockup cards and the fitting fixtures render through the installed `next/og`.
-- [ ] Render timings are recorded against NFR-10, with the versions they were measured on.
-- [ ] `CARD_SLACK` comes from measurement, and `CARD_VERSION` is generated in the fixed format and checked in CI.
+- [x] The three mockup cards and the fitting fixtures render through the installed `next/og`.
+- [x] Render timings are recorded against NFR-10, with the versions they were measured on.
+- [x] `CARD_SLACK` comes from measurement, and `CARD_VERSION` is generated in the fixed format and checked in CI.
 
 ### Step P2.15: framer-motion to motion with a global reduced-motion policy
 
@@ -2812,14 +2958,14 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 **Objective.** Move the app to the current `motion` package and replace `react-countup`, without changing what any screen looks like. Then make the operating system's reduced-motion setting apply app-wide.
 
 **Guidance.**
-- **Dependencies.** Add `motion@14.3.0`, pinned exactly (BP-38). Remove `framer-motion` and `react-countup`. `framer-motion` is published in lockstep with `motion`, so the API is the same.
+- **Dependencies.** Add `motion@14.3.0`, pinned exactly (BP-38). Remove `framer-motion` and `react-countup`. `framer-motion` is published in lockstep with `motion`, so the API is the same. (As merged: `motion` depends on `framer-motion` at the same exact version, so `npm ls framer-motion` and the lockfile still list that transitive copy; no direct dependency or import remains.)
 - **Codemod.** `scripts/codemods/framer-to-motion.mjs` changes the module specifier from `framer-motion` to `motion/react`. It covers `import` and `import type` declarations and `jest.mock(…)` calls in `app/`, `components/`, `lib/`, `hooks/` and the tests.
   - Named imports stay as they are, so each file still imports only what it uses. Since only the specifier changes, no ts-morph is needed.
-  - The script prints the files it changed. Count again after P1.1, because the audit's 57 files include some that P1.1 deletes.
+  - The script prints the files it changed. Count again after P1.1, because the audit's 57 files include some that P1.1 deletes. (As merged: 68 files, tests included; it also rewrites re-exports and `jest.requireActual`/`doMock` calls.)
 - **Lazy loading.** `LazyMotion` with `m.*` is for new Rewind code (P5.2, design 5.6). Do not retrofit it into files that P6 or P10 rebuild or that P11.29 deletes (BP-34).
 - **Mocks.** In `jest.setup.js:14-35`, mock `motion/react` with the same shape, adding `MotionConfig`, `LazyMotion` and `m`. Remove the `react-countup` mock.
-- **Provider.** `lib/providers.tsx` wraps the app in `<MotionConfig reducedMotion="user">`.
-- **Count-up.** New `components/ui/count-up.tsx` replaces `react-countup` in `gold-count-up.tsx`, in `movies-breakdown-section.tsx:40` and `:72`, and in `overseerr-stats-section.tsx:61`.
+- **Provider.** `lib/providers.tsx` wraps the app in `<MotionConfig reducedMotion="user">`. (As merged: it wraps `ToastProvider` too, so toasts follow the setting.)
+- **Count-up.** New `components/ui/count-up.tsx` replaces `react-countup` in `gold-count-up.tsx`, in `movies-breakdown-section.tsx:40` and `:72`, and in `overseerr-stats-section.tsx:61`. (As merged: also in the v2 `hero-section.tsx` and `shows-breakdown-section.tsx`, which imported `react-countup` too. The API is `<CountUp value duration delay />`.)
   - It is built on `animate()` and `useMotionValue`.
   - The final value is in an `sr-only` span from the first render, and the animated digits are `aria-hidden` (RWV-09).
   - Under reduced motion it shows the final value at once.
@@ -2828,10 +2974,12 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
   - `components/shared/formatted-text.tsx:38-44` and `components/setup/setup-wizard/space-background.tsx`;
   - `components/dashboard/announcements-card.tsx` and `wrapped-card.tsx`;
   - `app/auth/denied/denied-client.tsx` and `components/admin/shared/unauthenticated-error.tsx`.
+  - (As merged: every `repeat: Infinity` loop goes through `loop()` in `lib/utils/motion-loop.ts`, which under `useReducedMotion()` returns the final keyframes with `{ duration: 0 }`. Besides the files above it also guards `final-success-animation.tsx`, `wrapped-transition.tsx`, `wrapped-charts.tsx` (ProgressBar shimmer) and the v2 `insights`, `shows-breakdown` and `overseerr-stats` sections. `unauthenticated-error.tsx` has no Motion loop, only Tailwind's `animate-bounce`, which became `motion-safe:animate-bounce`.)
 - **Two commits in one PR.**
   - The first does the rename and the `CountUp` swap, and the P1.6 visual suite must show zero diffs.
   - The second adds `MotionConfig` and the guards. P1.6 takes its baselines with reduced motion emulated, so the loops now rest on their final keyframe. Diffs are allowed only on those elements; review them and re-baseline through the P1.6 workflow.
-- **Measure first** (BP-34). Paste the `next build` First Load JS for `/` and `/wrapped` into the PR, before and after the change.
+  - (As merged: Motion 14 runs transforms on the compositor and commits their final style only when its own clock, paused in the visual specs, passes their end. `settlePage` in `e2e/visual/visual-test.ts` therefore ends with up to three passes of one real second plus one clock second, until no finite script animation is left; the rename commit carries this. With it the rename commit matches every baseline at the CI tolerance, and at zero tolerance differs only on the denied page's infinite particle and heading loops, whose phase moves with the extra clock time. The second commit's diffs are the SpaceBackground stars (onboarding step 2, both invite screens, setup step 3) and the denied page's particles, all inside the CI tolerance, so the baselines were left for the owner to refresh through the workflow.)
+- **Measure first** (BP-34). Paste the `next build` First Load JS for `/` and `/wrapped` into the PR, before and after the change. (As merged: Next 16.4's Turbopack build no longer prints First Load JS, so it was summed from the build manifests, gzip: `/` 386.0 kB before, 391.8 kB after the rename, 392.3 kB after the policy; `/wrapped` 336.0, 341.8 and 342.0 kB.)
 
 **Tests.**
 - `components/ui/__tests__/count-up.test.tsx`:
@@ -2854,10 +3002,10 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
   - VoiceOver reads each number once.
 
 **Done when.**
-- [ ] Every import uses `motion/react`, and `framer-motion` and `react-countup` are uninstalled.
-- [ ] `<MotionConfig reducedMotion="user">` wraps the app, and the infinite loops respect reduced motion.
-- [ ] `CountUp` gives screen readers a stable final value.
-- [ ] The rename commit shows zero visual diffs, and every later diff is limited to looping elements and has been reviewed.
+- [x] Every import uses `motion/react`, and `framer-motion` and `react-countup` are uninstalled.
+- [x] `<MotionConfig reducedMotion="user">` wraps the app, and the infinite loops respect reduced motion.
+- [x] `CountUp` gives screen readers a stable final value.
+- [x] The rename commit shows zero visual diffs, and every later diff is limited to looping elements and has been reviewed. (As merged: zero at the CI tolerance; see the Guidance note on `settlePage`.)
 
 ---
 
@@ -3440,11 +3588,23 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 
 **Demo.** Set `Config.timezone` to Europe/Berlin, and the browser to de-DE in America/Los_Angeles. `/admin/announcements` and the conversation page load with no hydration warning; numbers group the same (in `Config.locale`) in the KPI tile and the tooltip; and an announcement from 20:00 Berlin time last night reads "yesterday".
 
+**As merged** (P2.13 and later steps rely on these):
+- `serverZone()` stays in the server-only `lib/utils/server-zone.ts` (P2.2), because `format.ts` must stay client-safe for `<Time>`; `getAppSettings()` takes the zone from it.
+- `lib/utils/format.ts` functions take the settings last: `formatDate(d, style, { timeZone, locale })`, `formatMoney(usd, mode, { locale })`, `formatRelative(d, { now, timeZone, locale })`. Extra exports: `formatTime(d, settings)`, the date style `day-month-short` ("Oct 11", chart axes), `formatDuration`'s `smallestUnit` option (needed to reproduce `formatWatchTimeHours`, which prints "0 hours", not minutes) and `locale` option (grouping; default en-US), and `bindFormat(settings)`, which returns `f.number`, `f.money`, `f.tokens`, `f.date`, `f.time`, `f.dateTime`, `f.dayKey`, `f.relative`, `f.percent`, `f.duration` and `f.settings`. Long durations join with ", " ("26 hours, 10 minutes"), as v2 did. `formatPercent` takes a ratio. Prose money below $1 keeps 2 decimals from $0.10 ("$0.50"). `formatRelative` says "now" under 10 seconds, uses elapsed seconds, minutes and hours within the same calendar day, then calendar days, months and years.
+- Server Components call `await getFormat()` (`lib/settings/app-settings.ts`); client components call `useFormat()` from `lib/format-context.tsx` (default UTC and en-US outside the provider, so isolated tests render). `getAppSettings()` falls back to `TZ` and en-US when the database is unreachable. `updateServerTimeZone` calls `updateTag('app-settings')` (Next 16's server-action form of `revalidateTag`); P7.12's locale save must do the same.
+- The root layout awaits `connection()`, so every route is dynamic (the build lists no static pages).
+- The v2 call sites call `formatDuration(m, 'long', { largestUnit: 'day' })` directly; `wrapped-sections/utils.ts` is gone.
+- The home page decides the six-month rule (`memberLongEnough`) with `calendarMonthsBetween` in the server zone; `WrappedCard` takes `memberLongEnough` instead of `memberSince`, and `AnnouncementsCard` takes the server's `now`, so its relative dates hydrate unchanged ("Yesterday").
+- P3.4 had not merged, so this step created `eslint/restricted-syntax.mjs` (`formatting` selectors, `restrictedSyntaxBlocks`) and `eslint/__tests__/restricted-syntax.test.ts`; P3.4 adds its arrays there. The bans cover every `toLocaleString`/`toLocaleDateString`/`toLocaleTimeString` call (not only bare ones) and `toFixed` after a `$` in a template literal or JSX text. The remaining warnings are in `components/wrapped/**`, `lib/wrapped/prompt-template.ts` and `actions/chatbot/executors/media-marking.ts` (GAP-44, P11.17).
+- `lib/utils/format.ts` is a knip entry while some exports are only called through `bindFormat`; `eslint/restricted-syntax.mjs` is in knip's `ignore`. `npm run test:tz` runs in the unit-test CI job.
+- `e2e/hydration.spec.ts` also matches React's minified errors #418, #423 and #425, because CI runs E2E on a production build. The cost-analysis "Period" header now shows the selected end date (GAP-42's quick fix), and the chart axes format the `YYYY-MM-DD` keys from their parts.
+- Visual baselines: all 38 desktop and mobile screens still match locally. Text did change on covered screens (money below $1 at 3 decimals on LLM usage, users and user detail; zone-labelled timestamps), within the comparison threshold, so no baseline was regenerated. The `/admin/shares` axe count of `color-contrast|incomplete` fell from 47 to 46 and its baseline was lowered.
+
 **Done when.**
-- [ ] `lib/utils/format.ts`, `lib/settings/app-settings.ts` and `<Time>` exist, and `formatters.ts`, `time-formatting.ts`, the shims and the local copies are deleted.
-- [ ] Server and client format in `Config.timezone` and `Config.locale`.
-- [ ] The hydration spec passes, and the zone and locale tests pass.
-- [ ] The lint bans are on for `app/` and `components/`.
+- [x] `lib/utils/format.ts`, `lib/settings/app-settings.ts` and `<Time>` exist, and `formatters.ts`, `time-formatting.ts`, the shims and the local copies are deleted.
+- [x] Server and client format in `Config.timezone` and `Config.locale`.
+- [x] The hydration spec passes, and the zone and locale tests pass.
+- [x] The lint bans are on for `app/` and `components/`.
 
 ---
 
@@ -3540,12 +3700,20 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 - With a generated secret and an https URL, it starts. After sign-in, the cookie is `__Secure-next-auth.session-token`.
 - `docker compose up` without `POSTGRES_PASSWORD` refuses to start, with the message. From another machine on the LAN, ports 5432 and 6379 are closed.
 
+**As merged.**
+- `getBaseUrl()` moved from `lib/utils.ts` into `lib/env.ts` (same behaviour), because `lib/utils.ts` is imported by client components and cannot import a `server-only` module; its eight callers import it from `@/lib/env`.
+- `lib/env.ts` also exports `usesSecureCookies()` (what `authOptions.useSecureCookies` reads) and `sessionCookieName()`. `e2e/fixtures/session.ts` cannot import a `server-only` module under Playwright, so it keeps its own copy and `__tests__/lib/auth-cookies.test.ts` checks the two agree.
+- `getEnv()` memoises except under `NODE_ENV=test`, whose suites change `process.env` between cases.
+- `SKIP_MIGRATIONS` (P1.10) is in `envSchema`. `SKIP_SEED` is not: nothing reads it any more. `ENABLE_TEST_AUTH` was already gone (P1.5).
+- Both compose Postgres services (`db` and `db-playwright`) require `POSTGRES_PASSWORD`, so `example.env`'s `E2E_DATABASE_URL` uses it too. Redis's health check authenticates through `REDISCLI_AUTH`.
+- `visual-baselines.yml` runs a production server, so it now generates a per-run `NEXTAUTH_SECRET` like `build.yml`'s E2E job instead of the fixed CI string, which the boot check refuses.
+
 **Done when.**
-- [ ] `lib/env.ts` describes every variable the code reads, and the coverage test passes.
-- [ ] Production refuses to boot with a placeholder or CI secret, with a non-https public URL (without the explicit opt-out), or without `PLEX_CLIENT_IDENTIFIER`.
-- [ ] `useSecureCookies` is set explicitly.
-- [ ] `example.env` ships an empty secret and lists the missing variables, and the README lists `PLEX_CLIENT_IDENTIFIER`.
-- [ ] Compose binds Postgres and Redis to localhost and requires both passwords.
+- [x] `lib/env.ts` describes every variable the code reads, and the coverage test passes.
+- [x] Production refuses to boot with a placeholder or CI secret, with a non-https public URL (without the explicit opt-out), or without `PLEX_CLIENT_IDENTIFIER`.
+- [x] `useSecureCookies` is set explicitly.
+- [x] `example.env` ships an empty secret and lists the missing variables, and the README lists `PLEX_CLIENT_IDENTIFIER`.
+- [x] Compose binds Postgres and Redis to localhost and requires both passwords.
 
 ### Step P4.2: Boot and shutdown resilience
 
@@ -3598,11 +3766,20 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 
 **Demo.** Boot with `REDIS_URL` pointing at a stopped Redis: the sign-in page answers within a second and the logs show the retries; start Redis within two minutes, and the worker starts. Then run `docker stop` during a watchlist sync: the logs list the drain tasks with their durations, the `DiscordBotLock` row is gone, and the exit code is 0.
 
+**As merged.**
+- `onShutdown(name, phase, fn)` takes `fn: () => Promise<unknown>`. A task still running at the deadline is abandoned, not force-closed: BullMQ's `worker.close(true)` returns the graceful close already in progress (`worker.js` `close()`), so a second call cannot cut it short. The exit itself is the force close, and the stall check hands the job on.
+- `installShutdownHandlers()` uses `process.on` behind a `started` guard instead of `process.once`, so a second SIGTERM or a SIGINT during the drain is logged and ignored rather than killing the process through Node's default handler.
+- `createFailFastRedis(url)` uses `lazyConnect: true`: with the offline queue off, a command on a client that is not connected fails at once, so callers call `connect()` first (`waitForRedis` does on its first attempt). P2.5's `getRequestPathRedis()` should call `client.connect().catch(...)` when it creates the client.
+- `waitForRedis(client, { attempts, baseDelayMs, maxDelayMs, signal })` takes the client as its first argument and returns `true` or `false`; delays are 1, 2, 4, 8, 16, 30 and 30 s with ±20% jitter (about 1.5 to 2 minutes with the ping timeouts). `withTimeout` is a local helper in `node.ts`.
+- `lib/db/pool-config.ts` reads `process.env` directly (not `getEnv()`), because `lib/prisma.ts` is also loaded outside Next where `server-only` throws. `PROCESS_ROLE`, the three `DB_*` variables and `SHUTDOWN_GRACE_MS` are in `envSchema` and `example.env`.
+- The plan's `lib/instrumentation/__tests__/node.test.ts` sits beside the older `__tests__/lib/instrumentation/node.test.ts` (the poll-interval tests); `__tests__/instrumentation.test.ts` now flushes the background start before asserting it ran. Jest's sandboxed `process.emit` does not reach `process.on` listeners, so the shutdown tests call the added handlers directly.
+- `/api/health` does not exist yet; P4.17 adds it.
+
 **Done when.**
-- [ ] `register()` returns at once, whatever Redis or Discord do.
-- [ ] One coordinator handles SIGTERM and SIGINT, drains the workers and the bot under a deadline, and exports `shutdownSignal`.
-- [ ] The pg pool has an explicit size, connection wait and statement timeout per role.
-- [ ] The Redis-down and SIGTERM tests pass.
+- [x] `register()` returns at once, whatever Redis or Discord do.
+- [x] One coordinator handles SIGTERM and SIGINT, drains the workers and the bot under a deadline, and exports `shutdownSignal`.
+- [x] The pg pool has an explicit size, connection wait and statement timeout per role.
+- [x] The Redis-down and SIGTERM tests pass.
 
 ### Step P4.3: One action helper for auth, Zod and result shape
 

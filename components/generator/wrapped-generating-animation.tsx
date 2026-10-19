@@ -1,7 +1,7 @@
 "use client"
 
 import { RexDinosaur } from "@/components/shared/rex-dinosaur"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 
 interface WrappedGeneratingAnimationProps {
   year?: number
@@ -25,6 +25,28 @@ const funPhrases = [
   "Almost ready to reveal your year!... 🎉",
   "Rex says you have great taste!... 👏",
 ]
+
+// Wrapper component that includes floating particles for the full animation
+function DinosaurAnimation({ size = "w-32 h-32" }: { size?: string }) {
+  return (
+    <div className={`${size} relative`}>
+      <RexDinosaur size={size} />
+      {/* Floating particles around dinosaur */}
+      {[0, 1, 2, 3, 4].map((i) => (
+        <div
+          key={i}
+          className="absolute w-2 h-2 bg-cyan-400 rounded-full opacity-60 animate-float"
+          style={{
+            left: `${20 + i * 20}%`,
+            top: `${10 + (i % 2) * 20}%`,
+            animationDuration: `${2 + i * 0.5}s`,
+            animationDelay: `${i * 0.3}s`,
+          }}
+        />
+      ))}
+    </div>
+  )
+}
 
 export function WrappedGeneratingAnimation({ year, compact = false }: WrappedGeneratingAnimationProps) {
   const [currentPhraseIndex, setCurrentPhraseIndex] = useState(0)
@@ -64,34 +86,14 @@ export function WrappedGeneratingAnimation({ year, compact = false }: WrappedGen
     return undefined
   }, [isTyping])
 
-  // Generate stable random positions for background particles
-  const backgroundParticles = useMemo(() => {
-    return Array.from({ length: 20 }, () => ({
+  // Random positions for background particles, generated once per mount
+  const [backgroundParticles] = useState(() =>
+    Array.from({ length: 20 }, () => ({
       left: Math.random() * 100,
       top: Math.random() * 100,
       delay: Math.random() * 2,
       duration: 3 + Math.random() * 2,
     }))
-  }, [])
-
-  // Wrapper component that includes floating particles for the full animation
-  const DinosaurAnimation = ({ size = "w-32 h-32" }: { size?: string }) => (
-    <div className={`${size} relative`}>
-      <RexDinosaur size={size} />
-      {/* Floating particles around dinosaur */}
-      {[0, 1, 2, 3, 4].map((i) => (
-        <div
-          key={i}
-          className="absolute w-2 h-2 bg-cyan-400 rounded-full opacity-60 animate-float"
-          style={{
-            left: `${20 + i * 20}%`,
-            top: `${10 + (i % 2) * 20}%`,
-            animationDuration: `${2 + i * 0.5}s`,
-            animationDelay: `${i * 0.3}s`,
-          }}
-        />
-      ))}
-    </div>
   )
 
   if (compact) {

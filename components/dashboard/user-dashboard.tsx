@@ -8,7 +8,7 @@ import { MediaServerLinkCard } from "@/components/dashboard/media-server-link-ca
 import { RequestsCard } from "@/components/dashboard/requests-card"
 import { StatusFooter } from "@/components/dashboard/status-background"
 import { WrappedCard } from "@/components/dashboard/wrapped-card"
-import type { DashboardDiscordConnection } from "@/components/discord/link-callout"
+import type { DashboardDiscordConnection } from "@/types/discord"
 import { WatchlistSyncCard } from "@/components/watchlist/sync-settings-card"
 import type { RewindEligibility } from "@/lib/wrapped/eligibility"
 import { signOut } from "next-auth/react"
@@ -25,7 +25,8 @@ interface UserDashboardProps {
   announcements: AnnouncementData[]
   overseerrUrl?: string | null
   prometheusStatus?: StatusData
-  memberSince: string // ISO date string of when user joined
+  memberLongEnough: boolean // six calendar months since joining, decided on the server
+  renderedAt: string // the server clock, so relative dates hydrate unchanged
   rewindEligibility: RewindEligibility // decided on the server (FR-48)
   primaryAuthService?: string | null // "plex" or "jellyfin"
   mediaServerUrl?: string | null // URL to the media server
@@ -42,7 +43,8 @@ export function UserDashboard({
   announcements,
   overseerrUrl,
   prometheusStatus,
-  memberSince,
+  memberLongEnough,
+  renderedAt,
   rewindEligibility,
   primaryAuthService,
   mediaServerUrl,
@@ -93,11 +95,11 @@ export function UserDashboard({
 
           {/* Announcements - Only shown when there are announcements */}
           {announcements.length > 0 && (
-            <AnnouncementsCard announcements={announcements} />
+            <AnnouncementsCard announcements={announcements} now={renderedAt} />
           )}
 
             {/* Wrapped - Hero callout at the top */}
-            <WrappedCard userId={userId} memberSince={memberSince} rewindEligibility={rewindEligibility} />
+            <WrappedCard userId={userId} memberLongEnough={memberLongEnough} rewindEligibility={rewindEligibility} isAdmin={isAdmin} />
 
             {/* Quick Links - visually separated section */}
             <div className="space-y-3 sm:space-y-4 pt-2">
@@ -114,10 +116,7 @@ export function UserDashboard({
                   <div className="hidden sm:block" />
                 )}
                 {(serverInviteCode || discordEnabled) ? (
-                  <DiscordCard
-                    connection={discordConnection}
-                    serverInviteCode={serverInviteCode}
-                  />
+                  <DiscordCard connection={discordConnection} />
                 ) : (
                   <div className="hidden sm:block" />
                 )}

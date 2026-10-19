@@ -18,20 +18,12 @@ import { fetchWithTimeout } from '@/lib/utils/fetch-with-timeout'
 import { clearPosterAccessCaches } from '@/lib/wrapped/poster-access'
 import { forgetShareToken } from '@/lib/wrapped/poster-keys'
 import { getServerSession } from 'next-auth'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    plexWrapped: {
-      findUnique: jest.fn(),
-    },
-    plexServer: {
-      findFirst: jest.fn(),
-    },
-    user: {
-      findUnique: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),
@@ -460,8 +452,8 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
           'member-plex-id',
           JSON.stringify({
             statistics: {
-              topMovies: [{ ratingKey: '111' }, { ratingKey: { id: 1 } }, { title: 'no key' }, 'junk'],
-              topShows: [{ ratingKey: 333 }],
+              topMovies: [{ title: 'A', ratingKey: '111' }, { title: 'B', ratingKey: { id: 1 } }, { title: 'no key' }, 'junk'],
+              topShows: [{ title: 'S', ratingKey: 333 }],
             },
           })
         )

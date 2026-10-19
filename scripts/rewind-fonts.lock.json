@@ -1,0 +1,51 @@
+{
+  "source": {
+    "repo": "google/fonts",
+    "commit": "47d54ca1ebb14fd864695f1d39dc734f39017c33",
+    "raw": "https://raw.githubusercontent.com/google/fonts/{commit}/{path}",
+    "files": {
+      "archivo": {
+        "path": "ofl/archivo/Archivo[wdth,wght].ttf",
+        "sha256": "0e094a7d3c7c4c25cf1310c4b30014f1dae9332220b1c2c88f4fa996f0b05053"
+      },
+      "newsreader": {
+        "path": "ofl/newsreader/Newsreader[opsz,wght].ttf",
+        "sha256": "8a08d13f8a6c0d51be379a60af84f945f65369a67e509ee3c3bdcc421254d7c1"
+      },
+      "newsreader-italic": {
+        "path": "ofl/newsreader/Newsreader-Italic[opsz,wght].ttf",
+        "sha256": "796668611f80b64d5adf182fde3b6f29ed83b4e7cbec7b96937e84ac01364792"
+      },
+      "ofl-archivo": {
+        "path": "ofl/archivo/OFL.txt",
+        "sha256": "108b4e57c9c796d3d38d0428ca7ee39de47ad93187302718d9b2d8864b9b716b"
+      },
+      "ofl-newsreader": {
+        "path": "ofl/newsreader/OFL.txt",
+        "sha256": "fdfad38143ec470553cae82a1e45320bdd1b9ec70415d37bd0171051d8a4ded8"
+      }
+    }
+  },
+  "outputs": {
+    "app/(app)/rewind/_fonts/archivo-vf.woff2": "79bf3fa8b00c1bc9ba1a25da234a669215ea158c16b546b3fa3dc5baa524fb6d",
+    "app/(app)/rewind/_fonts/newsreader-display-italic.woff2": "17bd2521785141a39f8206143d868214ebfad806a2a1116bf0ae139838a34525",
+    "app/(app)/rewind/_fonts/newsreader-text-italic.woff2": "132a32e8256ff95106b650bfa957deda2abdba8d6c358e4b8459d224bbfcb53b",
+    "app/(app)/rewind/_fonts/newsreader-text.woff2": "b470cfc6f59728e29b38f746c037d44c49db4f7d586b7a091076d4cf7a6d09d3",
+    "lib/rewind/cards/fonts/RewindArchivo-W100-600.ttf": "ecba50c5cffbe06b881d7bfd19f2cde6da38b6133bda9dd1541293e7ec7b266d",
+    "lib/rewind/cards/fonts/RewindArchivo-W100-900.ttf": "deec5b00cc382c43caa37570c6968f781ddba02fa7021fd7fdf535ab5e120379",
+    "lib/rewind/cards/fonts/RewindArchivo-W125-900.ttf": "4664370089c8de8be57f93783ab2a682b3eb8f7d561a7c14cad6000420c8d187",
+    "lib/rewind/cards/fonts/RewindArchivo-W62-700.ttf": "13def95a8da63b0a10c5eb233af718fd5639f6449d63dea53e0864ebc2746ab6",
+    "lib/rewind/cards/fonts/RewindArchivo-W62-900.ttf": "3e60b26af4c9497e1038ce25bd4609db54b59d7e89dbf2a209f7c86b4333695a",
+    "lib/rewind/cards/fonts/RewindArchivo-W75-900.ttf": "b04eea71330e35905d33a16af1b1354a2b10545dd482441d184ff2668ba36470",
+    "lib/rewind/cards/fonts/RewindArchivo-W87-700.ttf": "7362eca1996e6f5b722d0713cda81725ff45fa50e1773e56381c685a7e03abbb",
+    "lib/rewind/cards/fonts/RewindArchivo-W87-900.ttf": "0701888b78f4a7ae7cf382f888ffa8a608005616f3b0fdbcc20f26c20c0d0685",
+    "lib/rewind/cards/fonts/RewindNewsreader-16.ttf": "9756721fdeb95ebdebf00806571d40c0c7b6fe05e24518b0dd8216e9e7aefa33",
+    "lib/rewind/cards/fonts/RewindNewsreader-Italic-16.ttf": "6c4ad0e18dac194c397b866e8bc3f12c9699c60f772323aae38eb23205e35e98",
+    "lib/rewind/cards/fonts/RewindNewsreader-Italic-72.ttf": "553e480b31eaea70ff50b1493b6c834de6a4cf06957e7cfdb37f95d0306b5b55",
+    "lib/rewind/typeset/metrics.json": "a0eb487c7b07c56261eb94fd664efb89286e6ed35e34f588db00aeb306a5fed0"
+  },
+  "budget": {
+    "preloaded": 99188,
+    "total": 156300
+  }
+}

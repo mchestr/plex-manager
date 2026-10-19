@@ -31,6 +31,7 @@ describe('fetch-with-timeout', () => {
       expect(mockFetch).toHaveBeenCalledWith('https://api.example.com/data', {
         method: 'GET',
         headers: { Accept: 'application/json' },
+        redirect: 'manual',
         signal: expect.any(AbortSignal),
       })
       expect(response).toBe(mockResponse)
@@ -121,6 +122,7 @@ describe('fetch-with-timeout', () => {
         },
         body: JSON.stringify({ key: 'value' }),
         credentials: 'include',
+        redirect: 'manual',
         signal: expect.any(AbortSignal),
       })
     })
@@ -134,6 +136,9 @@ describe('fetch-with-timeout', () => {
       const response = await promise
 
       expect(mockFetch).toHaveBeenCalledWith('https://api.example.com/data', {
+        method: 'GET',
+        headers: {},
+        redirect: 'manual',
         signal: expect.any(AbortSignal),
       })
       expect(response).toBe(mockResponse)

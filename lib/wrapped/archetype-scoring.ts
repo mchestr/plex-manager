@@ -45,6 +45,7 @@ export interface ArchetypeScore {
 
 const clamp = (value: number) => Math.max(0, Math.min(100, Math.round(value)))
 
+/** @internal */
 export function rankArchetypes(statistics: WrappedStatistics): ArchetypeScore[] {
   const totalMinutes = statistics.totalWatchTime.total
   const totalHours = totalMinutes / 60

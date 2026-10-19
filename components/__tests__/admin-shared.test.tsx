@@ -636,7 +636,7 @@ describe('AdminNav', () => {
 
     it('should show indicator dot when secondary item is active and menu is closed', () => {
       mockUsePathname.mockReturnValue('/admin/llm-usage')
-      const { container } = render(<AdminNav />)
+      render(<AdminNav />)
 
       const moreButton = screen.getByTestId('admin-nav-more-mobile')
       // There should be a small indicator dot

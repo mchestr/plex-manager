@@ -1,5 +1,5 @@
 import { completeDiscordLink } from "@/lib/discord/integration"
-import { getBaseUrl } from "@/lib/utils"
+import { getBaseUrl } from "@/lib/env"
 import { NextResponse } from "next/server"
 
 export async function GET(request: Request) {

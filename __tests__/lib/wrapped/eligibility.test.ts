@@ -19,14 +19,12 @@ import {
   getRewindEligibility,
 } from '@/lib/wrapped/eligibility'
 import { makePrismaTautulli, makePrismaUser } from '../../utils/test-builders'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    tautulli: {
-      findFirst: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('@/lib/utils/logger', () => ({
   createLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
@@ -114,12 +112,14 @@ describe('getRewindEligibility', () => {
     const member = { id: `member-error-${label}`, plexUserId: '999' }
 
     expect(await getRewindEligibility(member)).toEqual({ eligible: true })
+    // tautulliCommand retries a network error or an error result (P2.3)
+    const failedLookupCalls = mockFetch.mock.calls.length
 
     // Cached for a minute only: once Tautulli answers, the miss is found.
     respondWithRoster()
     clock += FAIL_OPEN_CACHE_MS
     expect(await getRewindEligibility(member)).toEqual({ eligible: false, reason: 'NO_TAUTULLI_MATCH' })
-    expect(mockFetch).toHaveBeenCalledTimes(2)
+    expect(mockFetch).toHaveBeenCalledTimes(failedLookupCalls + 1)
   })
 
   it('asks a failing Tautulli once for two calls within a minute', async () => {
@@ -127,10 +127,12 @@ describe('getRewindEligibility', () => {
     const member = { id: 'member-error-twice', plexUserId: '999' }
 
     expect(await getRewindEligibility(member)).toEqual({ eligible: true })
+    // One lookup: the first attempt and tautulliCommand's two retries (P2.3)
+    expect(mockFetch).toHaveBeenCalledTimes(3)
     clock += FAIL_OPEN_CACHE_MS - 1000
     expect(await getRewindEligibility(member)).toEqual({ eligible: true })
 
-    expect(mockFetch).toHaveBeenCalledTimes(1)
+    expect(mockFetch).toHaveBeenCalledTimes(3)
   })
 
   it('fails open when get_users hangs, after 10 seconds', async () => {

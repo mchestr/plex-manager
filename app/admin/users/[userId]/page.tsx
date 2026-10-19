@@ -4,6 +4,8 @@ import { UnshareUserButton } from "@/components/admin/users/unshare-user-button"
 import { UserStatusBadge } from "@/components/admin/users/user-status-badge"
 import { ChangeUserRoleButton } from "@/components/admin/users/change-user-role-button"
 import { UserActivityTimeline } from "@/components/admin/users/user-activity-timeline"
+import { getFormat } from "@/lib/settings/app-settings"
+import { readWrappedStatus } from "@/lib/wrapped/data/parse-stored"
 import { getSeasonYear } from "@/lib/wrapped/season"
 import Link from "next/link"
 import Image from "next/image"
@@ -13,24 +15,15 @@ export const dynamic = 'force-dynamic'
 
 export default async function UserDetailsPage({ params }: { params: Promise<{ userId: string }> }) {
   const { userId } = await params
-  const [user, activityTimeline, seasonYear] = await Promise.all([
+  const [user, activityTimeline, seasonYear, f] = await Promise.all([
     getUserDetails(userId),
     getUserActivityTimeline(userId, { page: 1, pageSize: 10 }),
     getSeasonYear(),
+    getFormat(),
   ])
 
   if (!user) {
     notFound()
-  }
-
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    })
   }
 
   const seasonWrapped = user.wrapped.find((w) => w.year === seasonYear)
@@ -178,14 +171,14 @@ export default async function UserDetailsPage({ params }: { params: Promise<{ us
                 <div>
                   <div className="text-sm text-slate-400 mb-1">Linked</div>
                   <div className="text-sm text-white">
-                    {formatDate(user.discordConnection.linkedAt)}
+                    {f.dateTime(user.discordConnection.linkedAt, { zoneLabel: true })}
                   </div>
                 </div>
                 <div>
                   <div className="text-sm text-slate-400 mb-1">Last Metadata Sync</div>
                   <div className="text-sm text-white">
                     {user.discordConnection.metadataSyncedAt
-                      ? formatDate(user.discordConnection.metadataSyncedAt)
+                      ? f.dateTime(user.discordConnection.metadataSyncedAt, { zoneLabel: true })
                       : "Pending"}
                   </div>
                 </div>
@@ -211,16 +204,16 @@ export default async function UserDetailsPage({ params }: { params: Promise<{ us
             </div>
             <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
               <div className="text-sm text-slate-400 mb-1">Total Visits</div>
-              <div className="text-2xl font-bold text-green-400">{user.totalVisits.toLocaleString()}</div>
+              <div className="text-2xl font-bold text-green-400">{f.number(user.totalVisits)}</div>
             </div>
             <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
               <div className="text-sm text-slate-400 mb-1">LLM Cost</div>
               <div className="text-2xl font-bold text-green-400">
-                ${user.llmUsage?.cost.toFixed(3) || "0.000"}
+                {f.money(user.llmUsage?.cost ?? 0)}
               </div>
               {user.llmUsage && (
                 <div className="text-xs text-slate-500 mt-1">
-                  {user.llmUsage.totalTokens.toLocaleString()} tokens
+                  {f.tokens(user.llmUsage.totalTokens)}
                 </div>
               )}
             </div>
@@ -234,8 +227,8 @@ export default async function UserDetailsPage({ params }: { params: Promise<{ us
                   {seasonYear} Wrapped
                 </h3>
                 <div className="flex items-center gap-3">
-                  <UserStatusBadge status={seasonWrapped.status} />
-                  {seasonWrapped.status === "completed" && (
+                  <UserStatusBadge status={readWrappedStatus(seasonWrapped.status, seasonWrapped.id)} />
+                  {readWrappedStatus(seasonWrapped.status, seasonWrapped.id) === "completed" && (
                     <Link
                       href={`/admin/users/${user.id}/wrapped?year=${seasonYear}`}
                       data-testid="admin-user-season-wrapped-view"
@@ -249,7 +242,10 @@ export default async function UserDetailsPage({ params }: { params: Promise<{ us
               </div>
               {seasonWrapped.generatedAt && (
                 <p className="text-sm text-slate-400">
-                  Generated: {formatDate(seasonWrapped.generatedAt)}
+                  Generated:{" "}
+                  <span data-testid="admin-user-season-generated-timestamp">
+                    {f.dateTime(seasonWrapped.generatedAt, { zoneLabel: true })}
+                  </span>
                 </p>
               )}
             </div>
@@ -298,11 +294,11 @@ export default async function UserDetailsPage({ params }: { params: Promise<{ us
                           <span className="text-sm font-medium text-white">{wrapped.year}</span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <UserStatusBadge status={wrapped.status} />
+                          <UserStatusBadge status={readWrappedStatus(wrapped.status, wrapped.id)} />
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-sm text-slate-300">
-                            {wrapped.generatedAt ? formatDate(wrapped.generatedAt) : "—"}
+                          <span className="text-sm text-slate-300" data-testid="admin-user-history-generated-timestamp">
+                            {wrapped.generatedAt ? f.dateTime(wrapped.generatedAt, { zoneLabel: true }) : "—"}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -318,7 +314,7 @@ export default async function UserDetailsPage({ params }: { params: Promise<{ us
                           <span className="text-sm text-slate-300">
                             {wrapped.shareVisits > 0 ? (
                               <span className="font-medium text-green-400">
-                                {wrapped.shareVisits.toLocaleString()}
+                                {f.number(wrapped.shareVisits)}
                               </span>
                             ) : (
                               <span className="text-slate-500">—</span>
@@ -326,7 +322,7 @@ export default async function UserDetailsPage({ params }: { params: Promise<{ us
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {wrapped.status === "completed" ? (
+                          {readWrappedStatus(wrapped.status, wrapped.id) === "completed" ? (
                             <Link
                               href={`/admin/users/${user.id}/wrapped?year=${wrapped.year}`}
                               className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-medium rounded transition-colors"
@@ -351,11 +347,11 @@ export default async function UserDetailsPage({ params }: { params: Promise<{ us
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <div className="text-sm text-slate-400 mb-1">Created</div>
-                <div className="text-sm text-white">{formatDate(user.createdAt)}</div>
+                <div className="text-sm text-white" data-testid="admin-user-created-timestamp">{f.dateTime(user.createdAt, { zoneLabel: true })}</div>
               </div>
               <div>
                 <div className="text-sm text-slate-400 mb-1">Last Updated</div>
-                <div className="text-sm text-white">{formatDate(user.updatedAt)}</div>
+                <div className="text-sm text-white" data-testid="admin-user-updated-timestamp">{f.dateTime(user.updatedAt, { zoneLabel: true })}</div>
               </div>
             </div>
           </div>
@@ -387,16 +383,16 @@ export default async function UserDetailsPage({ params }: { params: Promise<{ us
                 <div>
                   <div className="text-sm text-slate-400 mb-1">Total Tokens</div>
                   <div className="text-lg font-bold text-cyan-400">
-                    {user.llmUsage.totalTokens.toLocaleString()}
+                    {f.number(user.llmUsage.totalTokens)}
                   </div>
                   <div className="text-xs text-slate-500 mt-1">
-                    {user.llmUsage.promptTokens.toLocaleString()} prompt + {user.llmUsage.completionTokens.toLocaleString()} completion
+                    {f.number(user.llmUsage.promptTokens)} prompt + {f.number(user.llmUsage.completionTokens)} completion
                   </div>
                 </div>
                 <div>
                   <div className="text-sm text-slate-400 mb-1">Total Cost</div>
                   <div className="text-lg font-bold text-green-400">
-                    ${user.llmUsage.cost.toFixed(3)}
+                    {f.money(user.llmUsage.cost)}
                   </div>
                 </div>
                 <div>

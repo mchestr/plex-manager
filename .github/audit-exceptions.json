@@ -1,0 +1,4 @@
+{
+  "$comment": "High or critical production advisories CI accepts for now (scripts/audit-gate.mjs). Each entry: id (GHSA id), reason, expires (YYYY-MM-DD, at most 14 days out).",
+  "exceptions": []
+}

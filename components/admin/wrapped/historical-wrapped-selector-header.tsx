@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
 
+import { useFormat } from "@/lib/format-context"
+
 interface HistoricalVersion {
   id: string
   createdAt: Date | string
@@ -20,17 +22,38 @@ interface HistoricalWrappedSelectorHeaderProps {
   year: number
 }
 
+/** The version a path shows, or null when the path names none. */
+function versionFromPathname(pathname: string | null, userId: string): string | null {
+  const historyMatch = pathname?.match(/\/admin\/wrapped\/[^/]+\/history\/([^/]+)/)
+  if (historyMatch) return historyMatch[1]
+  if (pathname?.includes(`/admin/users/${userId}/wrapped`)) return "current"
+  return null
+}
+
 export function HistoricalWrappedSelectorHeader({
   wrappedId,
   userId,
   year,
 }: HistoricalWrappedSelectorHeaderProps) {
+  const router = useRouter()
+  const f = useFormat()
+  const pathname = usePathname()
   const [versions, setVersions] = useState<HistoricalVersion[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedVersion, setSelectedVersion] = useState<string>("current")
+  const [selectedVersion, setSelectedVersion] = useState<string>(
+    () => versionFromPathname(pathname, userId) ?? "current"
+  )
   const [isExpanded, setIsExpanded] = useState(false)
-  const router = useRouter()
-  const pathname = usePathname()
+
+  // Detect current version from pathname, during render when it changes
+  const [prevLocation, setPrevLocation] = useState({ pathname, userId })
+  if (prevLocation.pathname !== pathname || prevLocation.userId !== userId) {
+    setPrevLocation({ pathname, userId })
+    const version = versionFromPathname(pathname, userId)
+    if (version) {
+      setSelectedVersion(version)
+    }
+  }
 
   useEffect(() => {
     async function loadVersions() {
@@ -51,16 +74,6 @@ export function HistoricalWrappedSelectorHeader({
       loadVersions()
     }
   }, [wrappedId])
-
-  // Detect current version from pathname
-  useEffect(() => {
-    const historyMatch = pathname?.match(/\/admin\/wrapped\/[^/]+\/history\/([^/]+)/)
-    if (historyMatch) {
-      setSelectedVersion(historyMatch[1])
-    } else if (pathname?.includes(`/admin/users/${userId}/wrapped`)) {
-      setSelectedVersion("current")
-    }
-  }, [pathname, userId])
 
   const handleVersionChange = async (versionId: string) => {
     try {
@@ -87,19 +100,6 @@ export function HistoricalWrappedSelectorHeader({
         setSelectedVersion("current")
       }
     }
-  }
-
-  const formatDate = (date: Date | string) => {
-    return new Date(date).toLocaleString(undefined, {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    })
-  }
-
-  const formatCost = (cost: number) => {
-    return `$${cost.toFixed(4)}`
   }
 
   const currentVersion = versions.find(v => v.isCurrent)
@@ -132,7 +132,7 @@ export function HistoricalWrappedSelectorHeader({
           />
         </svg>
         <span className="font-medium">
-          {selectedVersion === "current" ? "Current" : formatDate(selectedVersionData?.createdAt || new Date())}
+          {selectedVersion === "current" ? "Current" : f.dateTime(selectedVersionData?.createdAt || new Date())}
         </span>
         <span className="text-slate-500">({versions.length})</span>
         <svg
@@ -178,7 +178,7 @@ export function HistoricalWrappedSelectorHeader({
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           <span className="font-medium truncate">
-                            {formatDate(version.createdAt)}
+                            {f.dateTime(version.createdAt)}
                           </span>
                           {version.isCurrent && (
                             <span className="flex-shrink-0 text-[10px] bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded border border-green-500/30">
@@ -190,7 +190,7 @@ export function HistoricalWrappedSelectorHeader({
                           {version.provider}/{version.model || "unknown"}
                         </div>
                         <div className="text-[10px] text-slate-400 mt-0.5">
-                          {formatCost(version.cost)} • {version.totalTokens.toLocaleString()} tokens
+                          {f.money(version.cost)} • {f.tokens(version.totalTokens)}
                         </div>
                       </div>
                       {isSelected && (

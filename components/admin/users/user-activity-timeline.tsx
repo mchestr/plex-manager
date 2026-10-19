@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { getUserActivityTimeline } from "@/actions/user-queries"
 import { Pagination } from "@/components/ui/pagination"
-import { formatRelativeTime } from "@/lib/utils/time-formatting"
+import { Time } from "@/components/ui/time"
 import type { UserActivityItem, UserActivityTimelineData } from "@/types/admin"
 
 interface UserActivityTimelineProps {
@@ -151,7 +151,7 @@ function ActivityItem({ item }: { item: UserActivityItem }) {
 
           {/* Timestamp */}
           <span className="text-xs text-slate-500">
-            {formatRelativeTime(item.timestamp)}
+            <Time value={item.timestamp} />
           </span>
         </div>
 

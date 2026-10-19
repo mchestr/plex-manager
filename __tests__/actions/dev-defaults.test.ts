@@ -45,7 +45,7 @@ describe('getDevDefaults', () => {
 
   describe('Production Mode', () => {
     it('should return empty defaults when NODE_ENV is production', async () => {
-      process.env.NODE_ENV = 'production'
+      jest.replaceProperty(process.env, 'NODE_ENV', 'production')
       process.env.DEV_PLEX_NAME = 'My Plex'
       process.env.DEV_PLEX_URL = 'http://localhost:32400'
 
@@ -67,7 +67,7 @@ describe('getDevDefaults', () => {
 
     it('should return empty defaults when NODE_ENV is test but treated as production', async () => {
       // Note: In actual tests NODE_ENV is 'test', so this tests that behavior
-      process.env.NODE_ENV = 'test'
+      jest.replaceProperty(process.env, 'NODE_ENV', 'test')
       process.env.DEV_PLEX_NAME = 'My Plex'
 
       const { getDevDefaults } = await import('@/actions/dev-defaults')
@@ -122,7 +122,7 @@ describe('getDevDefaults', () => {
     })
 
     it('should not treat E2E_TEST_MODE as the prefill flag', async () => {
-      // Test-token login and the seed use E2E_TEST_MODE; turning it on must not
+      // The seed uses E2E_TEST_MODE; turning it on must not
       // also expose the DEV_* tokens and keys, and vice versa.
       delete process.env.DEV_SETUP_PREFILL
       process.env.E2E_TEST_MODE = 'true'
@@ -147,7 +147,7 @@ describe('getDevDefaults', () => {
 
   describe('Development Mode - Service Defaults', () => {
     beforeEach(() => {
-      process.env.NODE_ENV = 'development'
+      jest.replaceProperty(process.env, 'NODE_ENV', 'development')
     })
 
     it('should return Plex defaults when DEV_PLEX_* variables are set', async () => {
@@ -267,7 +267,7 @@ describe('getDevDefaults', () => {
 
   describe('Development Mode - Discord Defaults', () => {
     beforeEach(() => {
-      process.env.NODE_ENV = 'development'
+      jest.replaceProperty(process.env, 'NODE_ENV', 'development')
     })
 
     it('should return Discord defaults when DEV_DISCORD_* variables are set', async () => {
@@ -320,7 +320,7 @@ describe('getDevDefaults', () => {
 
   describe('Development Mode - LLM Provider Defaults', () => {
     beforeEach(() => {
-      process.env.NODE_ENV = 'development'
+      jest.replaceProperty(process.env, 'NODE_ENV', 'development')
     })
 
     it('should return chat LLM defaults from DEV_CHAT_LLM_* variables', async () => {
@@ -425,7 +425,7 @@ describe('getDevDefaults', () => {
 
   describe('Input Validation - Temperature', () => {
     beforeEach(() => {
-      process.env.NODE_ENV = 'development'
+      jest.replaceProperty(process.env, 'NODE_ENV', 'development')
     })
 
     it('should parse valid temperature values', async () => {
@@ -477,7 +477,7 @@ describe('getDevDefaults', () => {
 
   describe('Input Validation - Max Tokens', () => {
     beforeEach(() => {
-      process.env.NODE_ENV = 'development'
+      jest.replaceProperty(process.env, 'NODE_ENV', 'development')
     })
 
     it('should parse valid max tokens values', async () => {
@@ -528,7 +528,7 @@ describe('getDevDefaults', () => {
 
   describe('Input Validation - LLM Provider', () => {
     beforeEach(() => {
-      process.env.NODE_ENV = 'development'
+      jest.replaceProperty(process.env, 'NODE_ENV', 'development')
     })
 
     it('should accept valid provider value "openai"', async () => {
@@ -570,7 +570,7 @@ describe('getDevDefaults', () => {
 
   describe('Auto-Submit Feature', () => {
     beforeEach(() => {
-      process.env.NODE_ENV = 'development'
+      jest.replaceProperty(process.env, 'NODE_ENV', 'development')
     })
 
     it('should enable auto-submit when DEV_SETUP_AUTO_SUBMIT is true', async () => {
@@ -615,7 +615,7 @@ describe('getDevDefaults', () => {
 
   describe('isDevMode Flag', () => {
     beforeEach(() => {
-      process.env.NODE_ENV = 'development'
+      jest.replaceProperty(process.env, 'NODE_ENV', 'development')
     })
 
     it('should be true when any service defaults are set', async () => {

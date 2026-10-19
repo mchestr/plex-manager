@@ -23,9 +23,9 @@ jest.mock('@/lib/admin', () => ({
   requireAdmin: jest.fn(),
 }))
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: { invite: { findMany: jest.fn() } },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('@/lib/connections/plex', () => ({}))
 jest.mock('@/lib/connections/jellyfin', () => ({}))
@@ -74,6 +74,8 @@ import { makePrismaInviteWithUsages, INVITEE_PLEX_AUTH_TOKEN } from '@/__tests__
 import * as serverInfo from '@/actions/server-info'
 import * as adminServers from '@/actions/admin/admin-servers'
 import { InvitesPageClient } from '@/components/admin/invites/invites-page-client'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 describe('InvitesPageClient', () => {
   const mockGetInvites = inviteActions.getInvites as jest.MockedFunction<typeof inviteActions.getInvites>
@@ -210,9 +212,9 @@ describe('InvitesPageClient', () => {
       render(<InvitesPageClient />)
 
       await waitFor(() => {
-        const firstDate = screen.getAllByText(new Date('2025-01-01').toLocaleDateString())
+        const firstDate = screen.getAllByText('Jan 1, 2025')
         expect(firstDate.length).toBeGreaterThan(0)
-        const secondDate = screen.getAllByText(new Date('2025-01-15').toLocaleDateString())
+        const secondDate = screen.getAllByText('Jan 15, 2025')
         expect(secondDate.length).toBeGreaterThan(0)
       })
     })

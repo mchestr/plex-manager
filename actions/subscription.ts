@@ -8,7 +8,7 @@ import { getStripe } from "@/lib/stripe/client"
 import { createCheckoutSession } from "@/lib/stripe/checkout"
 import { getOfferedPrices } from "@/lib/stripe/prices"
 import { consume } from "@/lib/security/rate-limit"
-import { getBaseUrl } from "@/lib/utils"
+import { getBaseUrl } from "@/lib/env"
 import { createLogger } from "@/lib/utils/logger"
 import { getServerSession } from "next-auth"
 

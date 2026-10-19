@@ -1,6 +1,5 @@
 /**
- * Guards for test-only code paths: destructive E2E runs, the seed and
- * test-token login.
+ * Guards for test-only code paths: destructive E2E runs and the seed.
  *
  * This is a plain module with no `@/` imports, so Jest, the Playwright config
  * and `prisma/seed.ts` (run by tsx) can all import it without path aliases.
@@ -112,6 +111,8 @@ function parsePostgresUrl(url: string | undefined): ParsedDatabaseUrl {
  * assertTestDatabaseUrl('postgresql://postgres:pw@localhost:5432/plex_wrapped')
  * // => throws: ... database "plex_wrapped" ... postgresql://postgres:***@localhost:5432/plex_wrapped
  * ```
+ *
+ * @internal
  */
 export function assertTestDatabaseUrl(url: string | undefined): string {
   const target = parsePostgresUrl(url)
@@ -139,6 +140,8 @@ export function assertTestDatabaseUrl(url: string | undefined): string {
  * assertSeedTarget('postgresql://postgres:pw@localhost:5432/plex_wrapped?host=db.example.com')
  * // => throws: host "db.example.com" is neither local nor a _test database
  * ```
+ *
+ * @internal
  */
 export function assertSeedTarget(url: string | undefined): ParsedDatabaseUrl {
   const target = parsePostgresUrl(url)
@@ -154,8 +157,9 @@ export function assertSeedTarget(url: string | undefined): ParsedDatabaseUrl {
 /**
  * True only outside production when `E2E_TEST_MODE=true` is set explicitly.
  *
- * Gates test-token login and the seed. `NODE_ENV=test` on its own never
- * enables either of them.
+ * Gates the seed. `NODE_ENV=test` on its own never enables it.
+ *
+ * @internal
  */
 export function isE2ETestMode(env: TestModeEnv = process.env): boolean {
   return env.NODE_ENV !== "production" && env.E2E_TEST_MODE === "true"
@@ -173,6 +177,8 @@ export function isE2ETestMode(env: TestModeEnv = process.env): boolean {
  * resolveSeedTarget({ DATABASE_URL: 'postgresql://u:pw@localhost/plex_manager_test' })
  * // => throws: set E2E_TEST_MODE=true
  * ```
+ *
+ * @internal
  */
 export function resolveSeedTarget(env: TestModeEnv = process.env): ParsedDatabaseUrl {
   if (!isE2ETestMode(env)) {

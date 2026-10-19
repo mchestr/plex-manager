@@ -12,70 +12,24 @@ import {
     savePrometheus,
     saveTautulli,
 } from '@/actions/setup'
-import { testLLMProviderConnection } from '@/lib/connections/llm-provider'
-import { fetchOpenAIModels } from '@/lib/connections/openai'
+import { loadProviderModels, testLLMProviderConnection } from '@/lib/connections/llm-provider'
 import { testOverseerrConnection } from '@/lib/connections/overseerr'
 import { getPlexUserInfo, testPlexConnection } from '@/lib/connections/plex'
 import { testPrometheusConnection } from '@/lib/connections/prometheus'
 import { testTautulliConnection } from '@/lib/connections/tautulli'
-import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
+import { mockDeep, mockReset } from 'jest-mock-extended'
+import type { Prisma } from '@/lib/generated/prisma/client'
+import { asTransactionClient, prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 // Mock dependencies
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    setup: {
-      findFirst: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-    },
-    plexServer: {
-      create: jest.fn(),
-    },
-    tautulli: {
-      create: jest.fn(),
-    },
-    overseerr: {
-      create: jest.fn(),
-    },
-    prometheus: {
-      create: jest.fn(),
-    },
-    lLMProvider: {
-      updateMany: jest.fn(),
-      create: jest.fn(),
-    },
-    discordIntegration: {
-      upsert: jest.fn(),
-    },
-    $transaction: jest.fn((callback) => callback({
-      setup: {
-        findFirst: jest.fn(),
-        create: jest.fn(),
-        update: jest.fn(),
-      },
-      plexServer: {
-        create: jest.fn(),
-      },
-      tautulli: {
-        create: jest.fn(),
-      },
-      overseerr: {
-        create: jest.fn(),
-      },
-      prometheus: {
-        create: jest.fn(),
-      },
-      lLMProvider: {
-        updateMany: jest.fn(),
-        create: jest.fn(),
-      },
-      discordIntegration: {
-        upsert: jest.fn(),
-      },
-    })),
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => {
+  mockReset(prismaMock)
+  // Each transaction runs against a fresh client whose delegates resolve to undefined.
+  prismaMock.$transaction.mockImplementation((callback) => callback(mockDeep<Prisma.TransactionClient>()))
+})
 
 jest.mock('@/lib/connections/plex', () => ({
   testPlexConnection: jest.fn(),
@@ -95,11 +49,8 @@ jest.mock('@/lib/connections/prometheus', () => ({
 }))
 
 jest.mock('@/lib/connections/llm-provider', () => ({
+  loadProviderModels: jest.fn(),
   testLLMProviderConnection: jest.fn(),
-}))
-
-jest.mock('@/lib/connections/openai', () => ({
-  fetchOpenAIModels: jest.fn(),
 }))
 
 jest.mock('next/cache', () => ({
@@ -114,14 +65,14 @@ jest.mock('@/lib/admin', () => ({
   requireAdmin: jest.fn(),
 }))
 
-const mockPrisma = prisma as jest.Mocked<typeof prisma>
+const mockPrisma = prismaMock
 const mockTestPlexConnection = testPlexConnection as jest.MockedFunction<typeof testPlexConnection>
 const mockGetPlexUserInfo = getPlexUserInfo as jest.MockedFunction<typeof getPlexUserInfo>
 const mockTestTautulliConnection = testTautulliConnection as jest.MockedFunction<typeof testTautulliConnection>
 const mockTestOverseerrConnection = testOverseerrConnection as jest.MockedFunction<typeof testOverseerrConnection>
 const mockTestPrometheusConnection = testPrometheusConnection as jest.MockedFunction<typeof testPrometheusConnection>
 const mockTestLLMProviderConnection = testLLMProviderConnection as jest.MockedFunction<typeof testLLMProviderConnection>
-const mockFetchOpenAIModels = fetchOpenAIModels as jest.MockedFunction<typeof fetchOpenAIModels>
+const mockLoadProviderModels = loadProviderModels as jest.MockedFunction<typeof loadProviderModels>
 const mockRevalidatePath = revalidatePath as jest.MockedFunction<typeof revalidatePath>
 
 describe('Setup Actions', () => {
@@ -168,7 +119,7 @@ describe('Setup Actions', () => {
       mockTestPlexConnection.mockResolvedValue({ success: true })
       mockGetPlexUserInfo.mockResolvedValue({
         success: true,
-        data: { id: 'plex-user-123' },
+        data: { id: 'plex-user-123', username: 'admin', email: 'admin@example.com' },
       })
 
       const mockTx = {
@@ -181,8 +132,8 @@ describe('Setup Actions', () => {
         },
       }
 
-      mockPrisma.$transaction.mockImplementation(async (callback: any) => {
-        return callback(mockTx)
+      mockPrisma.$transaction.mockImplementation(async (callback) => {
+        return callback(asTransactionClient(mockTx))
       })
 
       const result = await savePlexServer(plexInput)
@@ -239,7 +190,7 @@ describe('Setup Actions', () => {
       mockTestPlexConnection.mockResolvedValue({ success: true })
       mockGetPlexUserInfo.mockResolvedValue({
         success: true,
-        data: { id: 'plex-user-123' },
+        data: { id: 'plex-user-123', username: 'admin', email: 'admin@example.com' },
       })
 
       const mockTx = {
@@ -252,8 +203,8 @@ describe('Setup Actions', () => {
         },
       }
 
-      mockPrisma.$transaction.mockImplementation(async (callback: any) => {
-        return callback(mockTx)
+      mockPrisma.$transaction.mockImplementation(async (callback) => {
+        return callback(asTransactionClient(mockTx))
       })
 
       await savePlexServer(plexInput)
@@ -286,8 +237,8 @@ describe('Setup Actions', () => {
         },
       }
 
-      mockPrisma.$transaction.mockImplementation(async (callback: any) => {
-        return callback(mockTx)
+      mockPrisma.$transaction.mockImplementation(async (callback) => {
+        return callback(asTransactionClient(mockTx))
       })
 
       const result = await saveTautulli(tautulliInput)
@@ -339,8 +290,8 @@ describe('Setup Actions', () => {
         },
       }
 
-      mockPrisma.$transaction.mockImplementation(async (callback: any) => {
-        return callback(mockTx)
+      mockPrisma.$transaction.mockImplementation(async (callback) => {
+        return callback(asTransactionClient(mockTx))
       })
 
       const result = await saveOverseerr(overseerrInput)
@@ -379,8 +330,8 @@ describe('Setup Actions', () => {
         },
       }
 
-      mockPrisma.$transaction.mockImplementation(async (callback: any) => {
-        return callback(mockTx)
+      mockPrisma.$transaction.mockImplementation(async (callback) => {
+        return callback(asTransactionClient(mockTx))
       })
 
       const result = await savePrometheus(prometheusInput)
@@ -431,8 +382,8 @@ describe('Setup Actions', () => {
         },
       }
 
-      mockPrisma.$transaction.mockImplementation(async (callback: any) => {
-        return callback(mockTx)
+      mockPrisma.$transaction.mockImplementation(async (callback) => {
+        return callback(asTransactionClient(mockTx))
       })
 
       const result = await saveLLMProvider(llmInput)
@@ -469,7 +420,7 @@ describe('Setup Actions', () => {
           create: jest.fn().mockResolvedValue({ id: 'llm-1' }),
         },
       }
-      mockPrisma.$transaction.mockImplementation(async (callback: any) => callback(mockTx))
+      mockPrisma.$transaction.mockImplementation(async (callback) => callback(asTransactionClient(mockTx)))
 
       const result = await saveLLMProvider({ provider: 'openai', apiKey: 'openai-key' })
 
@@ -533,7 +484,7 @@ describe('Setup Actions', () => {
   describe('fetchLLMModels', () => {
     it('should fetch OpenAI models successfully', async () => {
       const mockModels = ['gpt-4', 'gpt-3.5-turbo', 'gpt-4-turbo']
-      mockFetchOpenAIModels.mockResolvedValue({
+      mockLoadProviderModels.mockResolvedValue({
         success: true,
         models: mockModels,
       })
@@ -544,7 +495,7 @@ describe('Setup Actions', () => {
 
       expect(result.success).toBe(true)
       expect(result.models).toEqual(mockModels)
-      expect(mockFetchOpenAIModels).toHaveBeenCalledWith(validApiKey)
+      expect(mockLoadProviderModels).toHaveBeenCalledWith({ provider: 'openai', apiKey: validApiKey })
     })
 
     it('should return error when API key is missing', async () => {
@@ -553,7 +504,7 @@ describe('Setup Actions', () => {
       expect(result.success).toBe(false)
       // With validation, empty string fails the min length check
       expect(result.error).toBeDefined()
-      expect(mockFetchOpenAIModels).not.toHaveBeenCalled()
+      expect(mockLoadProviderModels).not.toHaveBeenCalled()
     })
 
     it('should return error when API key is too short', async () => {
@@ -562,7 +513,7 @@ describe('Setup Actions', () => {
       expect(result.success).toBe(false)
       // With validation, short API key fails the min length check
       expect(result.error).toBeDefined()
-      expect(mockFetchOpenAIModels).not.toHaveBeenCalled()
+      expect(mockLoadProviderModels).not.toHaveBeenCalled()
     })
 
     it('should return error for invalid provider', async () => {
@@ -573,14 +524,12 @@ describe('Setup Actions', () => {
       expect(result.error).toBeDefined()
     })
 
-    it('should handle fetch errors', async () => {
-      mockFetchOpenAIModels.mockRejectedValue(new Error('Network error'))
+    it('passes on a fixed listing error', async () => {
+      mockLoadProviderModels.mockResolvedValue({ success: false, error: 'Invalid API key' })
 
-      const validApiKey = 'test-api-key-12345'
-      const result = await fetchLLMModels('openai', validApiKey)
+      const result = await fetchLLMModels('openai', 'test-api-key-12345')
 
-      expect(result.success).toBe(false)
-      expect(result.error).toBe('Network error')
+      expect(result).toEqual({ success: false, error: 'Invalid API key' })
     })
   })
 })

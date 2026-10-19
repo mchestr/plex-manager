@@ -55,14 +55,6 @@ export function parseStyledText(text: string): TextPart[] {
 }
 
 /**
- * Process wrapped content sections and convert styling tags
- * This is called after LLM generation to prepare content for rendering
- */
-export function processWrappedContent(content: string): TextPart[] {
-  return parseStyledText(content)
-}
-
-/**
  * Strip highlight tags from text for plain text output (e.g., social media sharing)
  * Removes <highlight> and </highlight> tags while preserving the content
  */
@@ -75,4 +67,3 @@ export function stripHighlightTags(text: string): string {
   // Remove <highlight> and </highlight> tags, keeping the content
   return processedText.replace(/<highlight>([^<]*)<\/highlight>/gi, "$1")
 }
-

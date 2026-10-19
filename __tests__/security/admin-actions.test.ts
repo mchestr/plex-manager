@@ -6,7 +6,6 @@
 import { requireAdmin } from '@/lib/admin'
 import {
   setLLMDisabled,
-  getConfig,
   getLLMUsageRecords,
   getLLMUsageById,
   getLLMUsageStats,
@@ -14,9 +13,11 @@ import {
   getHistoricalWrappedVersions,
   getHistoricalWrappedData,
 } from '@/actions/admin'
+import { getConfig } from '@/actions/admin/admin-config'
 import { prisma } from '@/lib/prisma'
-import { getServerSession } from 'next-auth'
 import { redirect } from 'next/navigation'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 // Mock dependencies
 jest.mock('@/lib/admin', () => ({
@@ -24,26 +25,9 @@ jest.mock('@/lib/admin', () => ({
   getAdminStatus: jest.fn(),
 }))
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    config: {
-      upsert: jest.fn(),
-      findUnique: jest.fn(),
-      create: jest.fn(),
-    },
-    lLMUsage: {
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      count: jest.fn(),
-    },
-    user: {
-      findUnique: jest.fn(),
-    },
-    plexWrapped: {
-      findUnique: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),
@@ -166,7 +150,12 @@ describe('Admin Actions Security', () => {
           llmDisabled: true,
           updatedBy: 'admin-user-id',
         },
+        select: expect.objectContaining({ llmDisabled: true }),
       })
+      // The returned row reaches the client: no secrets
+      const { select } = (prisma.config.upsert as jest.Mock).mock.calls[0][0]
+      expect(select).not.toHaveProperty('stripeSecretKey')
+      expect(select).not.toHaveProperty('rewindSerialKey')
     })
 
     it('should reject non-admin user', async () => {
@@ -404,8 +393,7 @@ describe('Admin Actions Security', () => {
       const result = await getHistoricalWrappedData('llm-usage-1', 'wrapped-1')
 
       expect(requireAdmin).toHaveBeenCalled()
-      expect(result).toBeTruthy()
-      expect(result?.wrappedData).toBeTruthy()
+      expect(result).toMatchObject({ removed: false, wrappedData: expect.any(Object) })
     })
 
     it('should reject non-admin user', async () => {

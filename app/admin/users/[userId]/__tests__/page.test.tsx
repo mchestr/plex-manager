@@ -10,15 +10,17 @@ import UserDetailsPage from '@/app/admin/users/[userId]/page'
 import { getUserActivityTimeline, getUserDetails } from '@/actions/users'
 import { RegenerateWrappedButton } from '@/components/admin/users/regenerate-wrapped-button'
 import { prisma } from '@/lib/prisma'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 jest.mock('@/actions/users', () => ({
   getUserDetails: jest.fn(),
   getUserActivityTimeline: jest.fn(),
 }))
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: { config: { findUnique: jest.fn() } },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('next/navigation', () => ({
   notFound: jest.fn(() => {
@@ -77,9 +79,8 @@ describe('Admin user page season year', () => {
     jest.useFakeTimers().setSystemTime(new Date('2027-01-02T12:00:00Z'))
     ;(getUserDetails as jest.Mock).mockResolvedValue(userDetails)
     ;(getUserActivityTimeline as jest.Mock).mockResolvedValue({ items: [], page: 1, pageSize: 10, totalItems: 0, totalPages: 0 })
-    ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({
-      wrappedGenerationStartDate: new Date('2026-12-01T12:00:00Z'),
-    })
+    // The default season, 12-01 to 01-31: on 2 January 2027 it is the 2026 season
+    ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({ rewindSeasonOpens: '12-01', rewindSeasonCloses: '01-31', timezone: null })
   })
 
   afterEach(() => {

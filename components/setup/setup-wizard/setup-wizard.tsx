@@ -14,7 +14,7 @@ import { SonarrForm } from "@/components/setup/setup-wizard/sonarr-form"
 import { SuccessAnimation } from "@/components/setup/setup-wizard/success-animation"
 import { TautulliForm } from "@/components/setup/setup-wizard/tautulli-form"
 import { SETUP_STEPS } from "@/types/setup"
-import { AnimatePresence, motion } from "framer-motion"
+import { AnimatePresence, motion } from "motion/react"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 

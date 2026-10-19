@@ -11,7 +11,7 @@ import { requireLinkedUser } from "./require-linked-user"
 /**
  * Command category for grouping related commands
  */
-export type CommandCategory = "chat" | "media" | "utility"
+type CommandCategory = "chat" | "media" | "utility"
 
 /**
  * Command definition with metadata for help display.
@@ -19,6 +19,8 @@ export type CommandCategory = "chat" | "media" | "utility"
  * These describe the bot's slash-command surface. Slash commands have no
  * aliases, so `aliases` is retained (for the embed/help renderers) but is
  * always empty.
+ *
+ * @internal
  */
 export interface CommandDefinition {
   /** Primary command name (e.g., "/help", "/mark finished") */
@@ -37,6 +39,8 @@ export interface CommandDefinition {
 
 /**
  * Registry of all available Discord bot slash commands, used to render `/help`.
+ *
+ * @internal
  */
 export const COMMAND_REGISTRY: CommandDefinition[] = [
   // Utility commands
@@ -177,6 +181,8 @@ function getCategoryEmoji(category: CommandCategory): string {
  *
  * The leading `/` is optional and case is ignored, so `mark finished`,
  * `/mark finished`, and `/MARK FINISHED` all resolve the same entry.
+ *
+ * @internal
  */
 export function findCommand(searchTerm: string): CommandDefinition | undefined {
   const normalizedSearch = searchTerm.toLowerCase().replace(/^\//, "")
@@ -190,6 +196,8 @@ export function findCommand(searchTerm: string): CommandDefinition | undefined {
 
 /**
  * Build the full help message showing all commands grouped by category
+ *
+ * @internal
  */
 export function buildFullHelpMessage(): string {
   const lines: string[] = [
@@ -224,6 +232,8 @@ export function buildFullHelpMessage(): string {
 
 /**
  * Build detailed help message for a specific command
+ *
+ * @internal
  */
 export function buildCommandHelpMessage(command: CommandDefinition): string {
   const lines: string[] = [

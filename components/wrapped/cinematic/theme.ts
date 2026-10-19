@@ -28,7 +28,7 @@ export const REVEAL_SPRING = {
 }
 
 /** Auto-advance duration per slide type, in milliseconds */
-export const SLIDE_DURATIONS: Record<WrappedSectionType, number> = {
+const SLIDE_DURATIONS: Record<WrappedSectionType, number> = {
   "hero": 9000,
   "total-watch-time": 9000,
   "movies-breakdown": 9000,

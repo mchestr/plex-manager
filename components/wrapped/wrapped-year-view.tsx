@@ -1,15 +1,16 @@
 import Link from "next/link"
 import { WrappedPageClient } from "@/components/wrapped/wrapped-page-client"
 import { WrappedViewerWrapper } from "@/components/wrapped/wrapped-viewer-wrapper"
+import { readWrappedStatus } from "@/lib/wrapped/data/parse-stored"
 import { memberErrorCopy, readStoredError } from "@/lib/wrapped/generation-errors"
-import { WrappedData } from "@/types/wrapped"
+import type { WrappedData } from "@/types/wrapped"
 
 interface WrappedYearViewProps {
   userId: string
   /** The year in the route. */
   year: number
   /** The member's own row for `year`, or null when there is none. */
-  wrapped: { status: string; data: string | null; error: string | null; shareToken: string | null } | null
+  wrapped: { id: string; status: string; data: string | null; error: string | null; shareToken: string | null } | null
   /** The parsed `wrapped.data` of a completed row, or null when it does not parse. */
   wrappedData: WrappedData | null
   /** The season year: the dashboard card generates and retries only this year. */
@@ -60,7 +61,9 @@ function OtherYearRecovery(props: OtherYearProps) {
  * completed (the viewer), generating, failed, or none.
  */
 export function WrappedYearView({ userId, year, wrapped, wrappedData, seasonYear, latestYear }: WrappedYearViewProps) {
-  if (wrapped?.status === "completed" && wrapped.data) {
+  const status = wrapped ? readWrappedStatus(wrapped.status, wrapped.id) : null
+
+  if (wrapped && status === "completed" && wrapped.data) {
     if (wrappedData) {
       return (
         <WrappedViewerWrapper
@@ -95,11 +98,11 @@ export function WrappedYearView({ userId, year, wrapped, wrappedData, seasonYear
     )
   }
 
-  if (wrapped?.status === "generating") {
-    return <WrappedPageClient userId={userId} year={year} initialStatus="generating" />
+  if (status === "generating") {
+    return <WrappedPageClient userId={userId} year={year} />
   }
 
-  if (wrapped?.status === "failed") {
+  if (wrapped && status === "failed") {
     return (
       <div className="bg-slate-800/50 backdrop-blur-sm border border-red-500/50 rounded-lg p-12 text-center">
         <div className="max-w-md mx-auto">

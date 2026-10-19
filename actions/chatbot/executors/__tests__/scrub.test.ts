@@ -18,7 +18,7 @@
 
 import { scrubForDiscord, DISCORD_REDACTED_MARKER } from "../scrub"
 import { getRegisteredTool } from "@/actions/chatbot/tools"
-import type { RegisteredTool } from "@/actions/chatbot/tools"
+import type { RegisteredTool } from "@/actions/chatbot/tools/types"
 
 jest.mock("@/lib/utils/logger", () => ({
   createLogger: jest.fn(() => ({

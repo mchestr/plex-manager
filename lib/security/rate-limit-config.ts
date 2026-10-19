@@ -37,6 +37,7 @@ export const LIMITS = {
   "invite:redeem": { points: 10, duration: 15 * MINUTE },
   "plex:pin:create": { points: 30, duration: 10 * MINUTE },
   "plex:pin:poll": { points: 300, duration: 10 * MINUTE },
+  "llm:models": { points: 30, duration: 15 * MINUTE },
   "rw:share-actions": { points: 10, duration: 60 * MINUTE },
   "rw:share-page": { points: 60, duration: MINUTE },
   "rw:gen:burst": { points: 1, duration: 10 * MINUTE },

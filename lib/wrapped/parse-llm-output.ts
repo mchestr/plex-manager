@@ -16,7 +16,7 @@ export type ParseLLMOutputResult =
   | { success: false; error: string; issues?: string[] }
 
 /** Strip optional ```json fences around the payload */
-function stripCodeFences(raw: string): string {
+export function stripCodeFences(raw: string): string {
   let text = raw.trim()
   if (text.startsWith("```json")) {
     text = text.slice(7)

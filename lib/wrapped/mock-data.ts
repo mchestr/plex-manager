@@ -7,7 +7,7 @@
  * and section order the viewer renders in production.
  */
 
-import { formatWatchTime } from "@/lib/utils/time-formatting"
+import { formatDuration } from "@/lib/utils/format"
 import { assembleWrappedData } from "@/lib/wrapped/assemble-wrapped"
 import { WrappedLLMOutput } from "@/lib/wrapped/llm-output-schema"
 import { WrappedData, WrappedStatistics } from "@/types/wrapped"
@@ -25,7 +25,7 @@ export function generateMockWrappedData(args: {
   statistics: WrappedStatistics
 }): WrappedData {
   const { promptName, displayName, year, userId, statistics } = args
-  const totalWatchTime = formatWatchTime(statistics.totalWatchTime.total)
+  const totalWatchTime = formatDuration(statistics.totalWatchTime.total, "long", { largestUnit: "day" })
   const topMovie = statistics.topMovies[0]
   const topShow = statistics.topShows[0]
   const streak = statistics.derived?.longestStreak
@@ -43,10 +43,10 @@ export function generateMockWrappedData(args: {
     narratives: {
       opening: `Welcome to your <highlight>${year}</highlight> premiere. Tonight, we look back at your year in film and television.`,
       totalWatchTime: `You spent <highlight>${totalWatchTime}</highlight> watching content this year. A truly committed performance.`,
-      movies: `You screened <highlight>${statistics.moviesWatched} films</highlight>, totaling <highlight>${formatWatchTime(statistics.totalWatchTime.movies)}</highlight>.`,
+      movies: `You screened <highlight>${statistics.moviesWatched} films</highlight>, totaling <highlight>${formatDuration(statistics.totalWatchTime.movies, "long", { largestUnit: "day" })}</highlight>.`,
       shows: `You followed <highlight>${statistics.showsWatched} series</highlight> across <highlight>${statistics.episodesWatched} episodes</highlight>.`,
       topMovies: topMovie
-        ? `Leading the bill: <highlight>${topMovie.title}</highlight>, with ${formatWatchTime(topMovie.watchTime)} on screen.`
+        ? `Leading the bill: <highlight>${topMovie.title}</highlight>, with ${formatDuration(topMovie.watchTime, "long", { largestUnit: "day" })} on screen.`
         : "Your top films earned their place on the marquee.",
       topShows: topShow
         ? `Headlining your series: <highlight>${topShow.title}</highlight> — ${topShow.episodesWatched} episodes deep.`
@@ -67,17 +67,6 @@ export function generateMockWrappedData(args: {
       finale: `That's a wrap on <highlight>${year}</highlight>. Thank you for a remarkable year at the movies — see you at next year's premiere.`,
     },
     insights: {
-      personality: "Entertainment Enthusiast",
-      topGenre: "Various",
-      bingeWatcher:
-        statistics.totalWatchTime.shows > statistics.totalWatchTime.movies,
-      discoveryScore: Math.min(
-        100,
-        Math.max(
-          0,
-          Math.floor((statistics.moviesWatched + statistics.showsWatched) / 10)
-        )
-      ),
       funFacts: [
         `You watched ${statistics.moviesWatched} movies and ${statistics.showsWatched} shows`,
         `Your total watch time was ${totalWatchTime}`,

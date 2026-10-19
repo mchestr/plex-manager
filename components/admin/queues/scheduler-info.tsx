@@ -1,5 +1,7 @@
 "use client"
 
+import { Time } from "@/components/ui/time"
+
 interface SchedulerInfoProps {
   schedulers: Array<{
     id: string
@@ -9,21 +11,6 @@ interface SchedulerInfoProps {
 }
 
 export function SchedulerInfo({ schedulers }: SchedulerInfoProps) {
-  const formatNextRun = (next: Date | null) => {
-    if (!next) return "N/A"
-
-    const date = new Date(next)
-    const now = new Date()
-    const diffMs = date.getTime() - now.getTime()
-
-    if (diffMs < 0) return "Running..."
-    if (diffMs < 60000) return `in ${Math.round(diffMs / 1000)}s`
-    if (diffMs < 3600000) return `in ${Math.round(diffMs / 60000)}m`
-    if (diffMs < 86400000) return `in ${Math.round(diffMs / 3600000)}h`
-
-    return date.toLocaleString()
-  }
-
   const formatPattern = (pattern: string) => {
     // Handle BullMQ repeat patterns like "every 3600000" (ms)
     if (pattern.startsWith("every ")) {
@@ -61,7 +48,7 @@ export function SchedulerInfo({ schedulers }: SchedulerInfoProps) {
                   {formatPattern(scheduler.pattern)}
                 </span>
                 <span className="text-cyan-400">
-                  {formatNextRun(scheduler.next)}
+                  {scheduler.next ? <Time value={scheduler.next} /> : "N/A"}
                 </span>
               </div>
             </div>

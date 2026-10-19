@@ -11,6 +11,8 @@ import {
 } from "chart.js"
 import { Bar } from "react-chartjs-2"
 
+import { useFormat } from "@/lib/format-context"
+
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -32,6 +34,7 @@ interface CostUserChartProps {
 }
 
 export function CostUserChart({ data }: CostUserChartProps) {
+  const f = useFormat()
   if (data.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-slate-500 text-sm">
@@ -85,10 +88,10 @@ export function CostUserChart({ data }: CostUserChartProps) {
             const item = topUsers[index]
             return [
               `User: ${item.userName || "Unknown"}`,
-              `Cost: $${item.cost.toFixed(2)}`,
-              `Requests: ${item.requests.toLocaleString()}`,
-              `Tokens: ${item.tokens.toLocaleString()}`,
-              `Avg: $${(item.cost / item.requests).toFixed(4)}/request`,
+              `Cost: ${f.money(item.cost)}`,
+              `Requests: ${f.number(item.requests)}`,
+              `Tokens: ${f.number(item.tokens)}`,
+              `Avg: ${f.money(item.cost / item.requests)}/request`,
             ]
           },
         },
@@ -102,7 +105,7 @@ export function CostUserChart({ data }: CostUserChartProps) {
           font: {
             size: 11,
           },
-          callback: (value) => `$${Number(value).toFixed(2)}`,
+          callback: (value) => f.money(Number(value)),
         },
         grid: {
           color: "rgba(71, 85, 105, 0.3)",

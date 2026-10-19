@@ -19,57 +19,6 @@ export function generateShareToken(): string {
 }
 
 /**
- * Get the base URL for the application (server-side only)
- *
- * Priority:
- * 1. NEXT_PUBLIC_APP_URL (preferred for public URLs)
- * 2. NEXTAUTH_URL (fallback, also required by NextAuth.js)
- *
- * Falls back to localhost only in development mode.
- * For client-side URL construction, use window.location.origin instead.
- *
- * @throws Error in production if neither environment variable is set
- */
-export function getBaseUrl(): string {
-  // Prefer NEXT_PUBLIC_APP_URL for public-facing URLs
-  if (process.env.NEXT_PUBLIC_APP_URL) {
-    return process.env.NEXT_PUBLIC_APP_URL
-  }
-
-  // Fall back to NEXTAUTH_URL (required by NextAuth)
-  if (process.env.NEXTAUTH_URL) {
-    return process.env.NEXTAUTH_URL
-  }
-
-  // Only allow localhost fallback in development
-  if (process.env.NODE_ENV === "development") {
-    return "http://localhost:3000"
-  }
-
-  // In production, require at least one to be set
-  throw new Error(
-    "Base URL is not configured. Please set NEXT_PUBLIC_APP_URL (or NEXTAUTH_URL) environment variable to your application URL (e.g., https://yourdomain.com)."
-  )
-}
-
-/**
- * Construct a URL string from protocol, hostname, and port
- *
- * @param protocol - Protocol (http or https)
- * @param hostname - Hostname or IP address
- * @param port - Port number
- * @returns Full URL string
- */
-export function constructServerUrl(protocol: "http" | "https", hostname: string, port: number): string {
-  // Only include port if it's not the default port for the protocol
-  const defaultPort = protocol === "https" ? 443 : 80
-  if (port === defaultPort) {
-    return `${protocol}://${hostname}`
-  }
-  return `${protocol}://${hostname}:${port}`
-}
-
-/**
  * Parse a URL string into its components (protocol, hostname, port)
  * Supports URLs like: https://example.com:32400, http://192.168.1.100:8181
  *
@@ -166,4 +115,3 @@ export function aggregateLlmUsage(usageRecords: {
     count: usageRecords.length,
   }
 }
-

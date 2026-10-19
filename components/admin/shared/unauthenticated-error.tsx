@@ -5,7 +5,7 @@ export function UnauthenticatedError() {
     <div className="min-h-screen bg-slate-900 flex items-center justify-center">
       <div className="relative flex items-center gap-8">
         {/* Rex mascot */}
-        <div className="w-24 h-24 relative animate-bounce" style={{ animationDuration: "2s" }}>
+        <div className="w-24 h-24 relative motion-safe:animate-bounce" style={{ animationDuration: "2s" }}>
           <RexDinosaur size="w-24 h-24" />
         </div>
 

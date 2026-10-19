@@ -1,5 +1,6 @@
 import { SubscriptionStatus } from "@/lib/generated/prisma/client"
 
+/** @internal */
 export interface LlmUsageStats {
   totalTokens: number
   promptTokens: number
@@ -8,11 +9,6 @@ export interface LlmUsageStats {
   provider: string | null
   model: string | null
   count: number
-}
-
-export interface ShareStats {
-  totalShares: number
-  totalVisits: number
 }
 
 export interface AdminUserWithWrappedStats {
@@ -50,7 +46,7 @@ export interface WrappedSummary {
   shareVisits: number
 }
 
-export interface DiscordConnectionDetails {
+interface DiscordConnectionDetails {
   discordUserId: string
   username: string
   discriminator: string | null
@@ -77,10 +73,6 @@ export interface UserDetails {
   totalVisits: number
   llmUsage: LlmUsageStats | null
   discordConnection: DiscordConnectionDetails | null
-}
-
-export interface UserQueryOptions {
-  year?: number
 }
 
 // Activity Timeline Types

@@ -1,6 +1,6 @@
 "use client"
 
-import { motion } from "framer-motion"
+import { motion } from "motion/react"
 
 /**
  * Cinema letterbox bars that close in from the top and bottom edges when the

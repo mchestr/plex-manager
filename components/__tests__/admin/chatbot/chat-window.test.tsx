@@ -2,11 +2,8 @@
  * Tests for components/admin/chatbot/chat-window.tsx - sources display functionality
  */
 
-import { Chatbot } from "@/components/admin/chatbot/chat-window"
 import { ChatProvider } from "@/components/admin/chatbot/chat-context"
-import { render, screen, waitFor } from "@testing-library/react"
-import userEvent from "@testing-library/user-event"
-import { chatWithAdminBot } from "@/actions/chatbot"
+import { render, screen } from "@testing-library/react"
 import { type ChatMessage } from "@/actions/chatbot/types"
 
 // Mock the chatbot action
@@ -20,8 +17,8 @@ jest.mock("react-markdown", () => ({
   default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }))
 
-// Mock framer-motion to avoid animation issues in tests
-jest.mock("framer-motion", () => ({
+// Mock motion to avoid animation issues in tests
+jest.mock("motion/react", () => ({
   AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   motion: {
     div: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => (
@@ -30,20 +27,10 @@ jest.mock("framer-motion", () => ({
   },
 }))
 
-const mockChatWithAdminBot = chatWithAdminBot as jest.MockedFunction<typeof chatWithAdminBot>
-
 describe("Chatbot sources display", () => {
   beforeEach(() => {
     jest.clearAllMocks()
   })
-
-  const renderChatbot = (userName?: string) => {
-    return render(
-      <ChatProvider>
-        <Chatbot userName={userName} />
-      </ChatProvider>
-    )
-  }
 
   describe("sources rendering", () => {
     it("should display sources when present in assistant message", () => {
@@ -62,7 +49,7 @@ describe("Chatbot sources display", () => {
       ]
 
       // Mock the initial state by directly rendering with messages
-      const { container } = render(
+      render(
         <ChatProvider>
           <div>
             {/* Simulate the chat window being open */}
@@ -118,7 +105,7 @@ describe("Chatbot sources display", () => {
         },
       ]
 
-      const { container } = render(
+      render(
         <ChatProvider>
           <div>
             <div className="fixed bottom-24 right-6 z-50 w-96 h-[500px] bg-slate-900 border border-slate-700 rounded-2xl">
@@ -168,7 +155,7 @@ describe("Chatbot sources display", () => {
         },
       ]
 
-      const { container } = render(
+      render(
         <ChatProvider>
           <div>
             <div className="fixed bottom-24 right-6 z-50 w-96 h-[500px] bg-slate-900 border border-slate-700 rounded-2xl">
@@ -226,7 +213,7 @@ describe("Chatbot sources display", () => {
         },
       ]
 
-      const { container } = render(
+      render(
         <ChatProvider>
           <div>
             <div className="fixed bottom-24 right-6 z-50 w-96 h-[500px] bg-slate-900 border border-slate-700 rounded-2xl">
@@ -275,7 +262,7 @@ describe("Chatbot sources display", () => {
         },
       ]
 
-      const { container } = render(
+      render(
         <ChatProvider>
           <div>
             <div className="fixed bottom-24 right-6 z-50 w-96 h-[500px] bg-slate-900 border border-slate-700 rounded-2xl">

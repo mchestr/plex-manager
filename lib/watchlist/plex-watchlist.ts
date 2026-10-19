@@ -38,7 +38,7 @@ interface PlexGuid {
  * Parse external IDs from Plex GUID array
  * @param guids Array of Plex GUIDs with format like "tmdb://12345"
  */
-export function parseExternalIds(guids: PlexGuid[] | undefined): {
+function parseExternalIds(guids: PlexGuid[] | undefined): {
   tmdbId?: number
   tvdbId?: number
   imdbId?: string
@@ -68,29 +68,6 @@ export function parseExternalIds(guids: PlexGuid[] | undefined): {
   }
 
   return result
-}
-
-/**
- * Parse a single GUID string to extract external ID
- * @param guid GUID string like "plex://movie/5d776833880197001ec939fa"
- */
-export function parseWatchlistGuid(guid: string): {
-  type: "plex" | "tmdb" | "tvdb" | "imdb" | "unknown"
-  id: string
-} {
-  if (guid.startsWith("plex://")) {
-    // Format: plex://movie/5d776833880197001ec939fa
-    const parts = guid.split("/")
-    return { type: "plex", id: parts[parts.length - 1] }
-  } else if (guid.startsWith("tmdb://")) {
-    return { type: "tmdb", id: guid.replace("tmdb://", "") }
-  } else if (guid.startsWith("tvdb://")) {
-    return { type: "tvdb", id: guid.replace("tvdb://", "") }
-  } else if (guid.startsWith("imdb://")) {
-    return { type: "imdb", id: guid.replace("imdb://", "") }
-  }
-
-  return { type: "unknown", id: guid }
 }
 
 /**

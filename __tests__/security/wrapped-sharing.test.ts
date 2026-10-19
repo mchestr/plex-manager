@@ -7,15 +7,20 @@
 import { GET as getSharedWrapped } from '@/app/api/wrapped/share/[token]/route'
 import { prisma } from '@/lib/prisma'
 import { limitRequest } from '@/lib/security/rate-limit'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 // Mock dependencies
 jest.mock('next/server', () => ({
   NextRequest: class NextRequest {
-    constructor(url, init = {}) {
+    nextUrl: URL
+    method: string
+    headers: { get: jest.Mock }
+    constructor(url: string, init: { method?: string; headers?: Record<string, string> } = {}) {
       this.nextUrl = new URL(url)
       this.method = init.method || 'GET'
       this.headers = {
-        get: jest.fn((name) => {
+        get: jest.fn((name: string) => {
           const headers = init.headers || {}
           return headers[name.toLowerCase()] || null
         }),
@@ -35,16 +40,9 @@ jest.mock('@/lib/security/rate-limit', () => ({
   limitRequest: jest.fn(),
 }))
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    plexWrapped: {
-      findUnique: jest.fn(),
-    },
-    wrappedShareVisit: {
-      create: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 const SHARE_TOKEN = 'Kf-qkQFsJ4E6X_vMSKq1PiT624JyrVJtTNbepCgWYl8'
 const UNKNOWN_TOKEN = 'vZ2bLJpJkqoegfJ4-9rodbBNhGs3XZ-sdNzNXJC96wI'
@@ -109,7 +107,7 @@ describe('Wrapped Sharing Security', () => {
       method: 'GET',
       headers: {
         get: (name: string) => {
-          const allHeaders = {
+          const allHeaders: Record<string, string> = {
             'user-agent': 'Mozilla/5.0',
             'x-forwarded-for': '192.168.1.1',
             ...headers,
@@ -130,7 +128,7 @@ describe('Wrapped Sharing Security', () => {
       ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(mockCompletedWrapped)
 
       const request = createMockRequest()
-      const response = await getSharedWrapped(request, { params: { token: SHARE_TOKEN } })
+      const response = await getSharedWrapped(request, { params: Promise.resolve({ token: SHARE_TOKEN }) })
       const data = await response.json()
 
       expect(response.status).toBe(200)
@@ -150,7 +148,7 @@ describe('Wrapped Sharing Security', () => {
       ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(mockGeneratingWrapped)
 
       const request = createMockRequest()
-      const response = await getSharedWrapped(request, { params: { token: SHARE_TOKEN } })
+      const response = await getSharedWrapped(request, { params: Promise.resolve({ token: SHARE_TOKEN }) })
       const data = await response.json()
 
       // Security: Use 404 to prevent token enumeration
@@ -162,7 +160,7 @@ describe('Wrapped Sharing Security', () => {
       ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(mockFailedWrapped)
 
       const request = createMockRequest()
-      const response = await getSharedWrapped(request, { params: { token: SHARE_TOKEN } })
+      const response = await getSharedWrapped(request, { params: Promise.resolve({ token: SHARE_TOKEN }) })
       const data = await response.json()
 
       // Security: Use 404 to prevent token enumeration
@@ -174,7 +172,7 @@ describe('Wrapped Sharing Security', () => {
       ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(mockPendingWrapped)
 
       const request = createMockRequest()
-      const response = await getSharedWrapped(request, { params: { token: SHARE_TOKEN } })
+      const response = await getSharedWrapped(request, { params: Promise.resolve({ token: SHARE_TOKEN }) })
       const data = await response.json()
 
       // Security: Use 404 to prevent token enumeration
@@ -186,7 +184,7 @@ describe('Wrapped Sharing Security', () => {
       ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
 
       const request = createMockRequest()
-      const response = await getSharedWrapped(request, { params: { token: UNKNOWN_TOKEN } })
+      const response = await getSharedWrapped(request, { params: Promise.resolve({ token: UNKNOWN_TOKEN }) })
       const data = await response.json()
 
       expect(response.status).toBe(404)
@@ -195,7 +193,7 @@ describe('Wrapped Sharing Security', () => {
 
     it('should return 400 for missing token', async () => {
       const request = createMockRequest()
-      const response = await getSharedWrapped(request, { params: { token: '' } })
+      const response = await getSharedWrapped(request, { params: Promise.resolve({ token: '' }) })
       const data = await response.json()
 
       expect(response.status).toBe(400)
@@ -211,14 +209,14 @@ describe('Wrapped Sharing Security', () => {
         referer: 'https://example.com',
       })
 
-      const response = await getSharedWrapped(request, { params: { token: SHARE_TOKEN } })
+      const response = await getSharedWrapped(request, { params: Promise.resolve({ token: SHARE_TOKEN }) })
 
       expect(response.status).toBe(200)
       expect(prisma.wrappedShareVisit.create).not.toHaveBeenCalled()
     })
 
     it('answers a malformed token with the same 404, without a database call', async () => {
-      const response = await getSharedWrapped(createMockRequest(), { params: { token: 'valid-share-token' } })
+      const response = await getSharedWrapped(createMockRequest(), { params: Promise.resolve({ token: 'valid-share-token' }) })
       const data = await response.json()
 
       expect(response.status).toBe(404)
@@ -230,7 +228,7 @@ describe('Wrapped Sharing Security', () => {
       ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(mockCompletedWrapped)
 
       const request = createMockRequest()
-      const response = await getSharedWrapped(request, { params: { token: SHARE_TOKEN } })
+      const response = await getSharedWrapped(request, { params: Promise.resolve({ token: SHARE_TOKEN }) })
       const data = await response.json()
 
       expect(response.status).toBe(200)
@@ -251,7 +249,7 @@ describe('Wrapped Sharing Security', () => {
     it('sends noindex on not-found responses too', async () => {
       ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
 
-      const response = await getSharedWrapped(createMockRequest(), { params: { token: UNKNOWN_TOKEN } })
+      const response = await getSharedWrapped(createMockRequest(), { params: Promise.resolve({ token: UNKNOWN_TOKEN }) })
 
       expect(response.status).toBe(404)
       expect(response.headers.get('X-Robots-Tag')).toBe('noindex')

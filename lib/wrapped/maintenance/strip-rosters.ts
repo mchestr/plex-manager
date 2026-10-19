@@ -58,12 +58,12 @@ const LEGACY_VISIT = {
   OR: [{ ipAddress: { not: null } }, { userAgent: { not: null } }, { referer: { not: null } }],
 } satisfies Prisma.WrappedShareVisitWhereInput
 
-export interface RewindOwner {
+interface RewindOwner {
   name: string | null
   email: string | null
 }
 
-export type StrippedRewind = { status: "unchanged" } | { status: "changed"; data: string } | { status: "unparsable" }
+type StrippedRewind = { status: "unchanged" } | { status: "changed"; data: string } | { status: "unparsable" }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
@@ -127,6 +127,8 @@ function replaceStrings(node: unknown, replace: (text: string) => string): boole
  * )
  * // { status: "changed", data: '{"userName":"Mike","statistics":{"moviesWatched":3}}' }
  * ```
+ *
+ * @internal
  */
 export function stripStoredRewind(data: string, owner: RewindOwner): StrippedRewind {
   let parsed: unknown
@@ -152,7 +154,11 @@ export function stripStoredRewind(data: string, owner: RewindOwner): StrippedRew
   return changed ? { status: "changed", data: JSON.stringify(parsed) } : { status: "unchanged" }
 }
 
-/** Replace the owner's addresses in the `PlexWrapped.summary` column. */
+/**
+ * Replace the owner's addresses in the `PlexWrapped.summary` column.
+ *
+ * @internal
+ */
 export function scrubOwnerEmail(text: string | null, owner: RewindOwner): string | null {
   const replaceEmail = ownerEmailReplacer(owner)
   return text === null || !replaceEmail ? text : replaceEmail(text)

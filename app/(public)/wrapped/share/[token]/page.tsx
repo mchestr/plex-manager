@@ -4,7 +4,7 @@ import { after } from "next/server"
 
 import { WrappedShareSummary } from "@/components/wrapped/wrapped-share-summary"
 import { prisma } from "@/lib/prisma"
-import { getBaseUrl } from "@/lib/utils"
+import { getBaseUrl } from "@/lib/env"
 import { createLogger } from "@/lib/utils/logger"
 import { getShareSafeRewind } from "@/lib/wrapped/data/get-share-safe"
 import { isShareBusy } from "@/lib/wrapped/share-page-limit"

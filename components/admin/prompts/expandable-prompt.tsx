@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useId, useMemo, useState } from "react"
+import { useFormat } from "@/lib/format-context"
 import { PromptScrollspy } from "./prompt-scrollspy"
 
 interface ExpandablePromptProps {
@@ -138,6 +139,7 @@ function formatChatMessage(
 export function ExpandablePrompt({ content, title, characterCount, characterCountSuffix }: ExpandablePromptProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const id = useId()
+  const f = useFormat()
   const containerId = `prompt-container-${id.replace(/:/g, "-")}`
 
   const { node, messages } = useMemo(() => formatChatMessage(content, containerId), [content, containerId])
@@ -168,7 +170,7 @@ export function ExpandablePrompt({ content, title, characterCount, characterCoun
       </div>
       {characterCount !== undefined && (
         <div className="mt-2 text-xs text-slate-500">
-          {characterCount.toLocaleString()} characters
+          {f.number(characterCount)} characters
           {characterCountSuffix && ` ${characterCountSuffix}`}
         </div>
       )}

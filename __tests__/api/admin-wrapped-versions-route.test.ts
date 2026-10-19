@@ -6,7 +6,6 @@ import { GET } from '@/app/api/admin/wrapped/[wrappedId]/versions/route'
 import { getHistoricalWrappedVersions } from '@/actions/admin'
 import { requireAdminAPI } from '@/lib/security/api-helpers'
 import { limitRequest } from '@/lib/security/rate-limit'
-import { NextRequest } from 'next/server'
 
 // Mock dependencies
 jest.mock('@/actions/admin', () => ({
@@ -79,7 +78,7 @@ describe('GET /api/admin/wrapped/[wrappedId]/versions', () => {
     const { NextRequest } = await import('next/server')
     const request = new NextRequest('http://localhost/api/admin/wrapped/wrapped-1/versions')
 
-    const response = await GET(request, { params: { wrappedId: 'wrapped-1' } })
+    const response = await GET(request, { params: Promise.resolve({ wrappedId: 'wrapped-1' }) })
     const data = await response.json()
 
     expect(response.status).toBe(200)
@@ -93,7 +92,7 @@ describe('GET /api/admin/wrapped/[wrappedId]/versions', () => {
     const { NextRequest } = await import('next/server')
     const request = new NextRequest('http://localhost/api/admin/wrapped/wrapped-1/versions')
 
-    const response = await GET(request, { params: { wrappedId: 'wrapped-1' } })
+    const response = await GET(request, { params: Promise.resolve({ wrappedId: 'wrapped-1' }) })
     const data = await response.json()
 
     expect(response.status).toBe(200)
@@ -107,7 +106,7 @@ describe('GET /api/admin/wrapped/[wrappedId]/versions', () => {
     const { NextRequest } = await import('next/server')
     const request = new NextRequest('http://localhost/api/admin/wrapped/wrapped-1/versions')
 
-    const response = await GET(request, { params: { wrappedId: 'wrapped-1' } })
+    const response = await GET(request, { params: Promise.resolve({ wrappedId: 'wrapped-1' }) })
 
     expect(response).toBe(mockResponse)
     expect(getHistoricalWrappedVersions).not.toHaveBeenCalled()
@@ -120,7 +119,7 @@ describe('GET /api/admin/wrapped/[wrappedId]/versions', () => {
     const { NextRequest } = await import('next/server')
     const request = new NextRequest('http://localhost/api/admin/wrapped/wrapped-1/versions')
 
-    const response = await GET(request, { params: { wrappedId: 'wrapped-1' } })
+    const response = await GET(request, { params: Promise.resolve({ wrappedId: 'wrapped-1' }) })
 
     expect(response).toBe(mockResponse)
     expect(getHistoricalWrappedVersions).not.toHaveBeenCalled()
@@ -133,7 +132,7 @@ describe('GET /api/admin/wrapped/[wrappedId]/versions', () => {
     const { NextRequest } = await import('next/server')
     const request = new NextRequest('http://localhost/api/admin/wrapped/wrapped-1/versions')
 
-    const response = await GET(request, { params: { wrappedId: 'wrapped-1' } })
+    const response = await GET(request, { params: Promise.resolve({ wrappedId: 'wrapped-1' }) })
 
     expect(response).toBe(mockRateLimitResponse)
     expect(limitRequest).toHaveBeenCalledWith('admin', request)
@@ -148,7 +147,7 @@ describe('GET /api/admin/wrapped/[wrappedId]/versions', () => {
     const { NextRequest } = await import('next/server')
     const request = new NextRequest('http://localhost/api/admin/wrapped/wrapped-1/versions')
 
-    const response = await GET(request, { params: { wrappedId: 'wrapped-1' } })
+    const response = await GET(request, { params: Promise.resolve({ wrappedId: 'wrapped-1' }) })
     const data = await response.json()
 
     expect(response.status).toBe(500)

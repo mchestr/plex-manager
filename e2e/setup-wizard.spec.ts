@@ -67,7 +67,8 @@ test.describe('Setup Wizard', () => {
 
     // Verify we're on the setup wizard
     await expect(page.getByRole('heading', { name: /Welcome to Plex Manager/i })).toBeVisible();
-    await expect(page.getByTestId('setup-wizard-intro-text')).toBeVisible();
+    // A production build can briefly hold a hidden streamed copy (`<div hidden id="S:0">`).
+    await expect(page.getByTestId('setup-wizard-intro-text').filter({ visible: true })).toBeVisible();
 
     // Known hidden fields that are auto-populated by form logic
     // These fields have hidden inputs for form submission but are managed by custom UI components

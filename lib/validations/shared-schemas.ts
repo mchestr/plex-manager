@@ -2,17 +2,6 @@ import { parseServerUrl } from "@/lib/utils"
 import { z } from "zod"
 
 /**
- * Pagination schema for server actions
- * Used for listing endpoints that support pagination
- */
-export const paginationSchema = z.object({
-  page: z.number().int().min(1).default(1),
-  pageSize: z.number().int().min(1).max(100).default(20),
-})
-
-export type PaginationInput = z.infer<typeof paginationSchema>
-
-/**
  * Schema for days parameter (time range queries)
  * Common for analytics and historical data endpoints
  */
@@ -44,18 +33,6 @@ export const yearParamSchema = z.string().regex(/^\d{4}$/).pipe(z.coerce.number<
  * random bytes `generateShareToken` encodes.
  */
 export const shareTokenSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/)
-
-/**
- * Schema for API keys
- * Basic format validation - actual validity is tested by connection tests
- */
-export const apiKeySchema = z.string().min(10).max(500)
-
-/**
- * Schema for bulk operation IDs
- * Limits array size to prevent performance issues
- */
-export const bulkIdsSchema = z.array(z.string().min(1)).min(1).max(1000)
 
 /**
  * Schema for LLM usage ID validation
@@ -99,6 +76,49 @@ export function createServerUrlSchema(examplePort?: string) {
       }
       return `${parsed.protocol}://${parsed.hostname}:${parsed.port}`
     })
+}
+
+/**
+ * Parse an admin-entered API base URL: http or https only, with no
+ * credentials, query or fragment. Returns origin + path without a trailing
+ * slash, or null when the URL is not allowed.
+ */
+export function normalizeBaseUrl(value: string): string | null {
+  const trimmed = value.trim()
+  // URL() drops an empty "?" or "#", so check the raw text too
+  if (trimmed.includes("?") || trimmed.includes("#")) return null
+  let parsed: URL
+  try {
+    parsed = new URL(trimmed)
+  } catch {
+    return null
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null
+  if (parsed.username || parsed.password) return null
+  return `${parsed.origin}${parsed.pathname.replace(/\/+$/, "")}`
+}
+
+/**
+ * Schema for an API base URL such as an OpenAI-compatible server's
+ * `http://localhost:11434/v1`. Unlike {@link createServerUrlSchema} it keeps
+ * the path, because the API lives under it.
+ *
+ * @example
+ * ```ts
+ * createBaseUrlSchema().parse("http://localhost:11434/v1/") // "http://localhost:11434/v1"
+ * createBaseUrlSchema().safeParse("http://user:pass@host/v1").success // false
+ * ```
+ */
+export function createBaseUrlSchema() {
+  return z
+    .string()
+    .trim()
+    .min(1, "Base URL is required")
+    .max(2048, "Base URL is too long")
+    .refine((url) => normalizeBaseUrl(url) !== null, {
+      message: "Enter an http or https URL with no credentials, query or fragment, e.g. http://localhost:11434/v1",
+    })
+    .transform((url) => normalizeBaseUrl(url) ?? url)
 }
 
 /**

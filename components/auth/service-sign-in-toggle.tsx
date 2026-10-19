@@ -2,7 +2,7 @@
 
 import { JellyfinSignInButton } from "@/components/auth/jellyfin-sign-in-button"
 import { PlexSignInButton } from "@/components/auth/plex-sign-in-button"
-import { motion } from "framer-motion"
+import { motion } from "motion/react"
 import { useState } from "react"
 
 interface ServiceSignInToggleProps {

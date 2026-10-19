@@ -1,0 +1,218 @@
+{
+  "id": "postcard",
+  "description": "Twelve minutes all year: two partial plays of one episode on the same morning (the postcard).",
+  "member": {
+    "displayName": "Ada Brennan",
+    "userName": null,
+    "timezone": "Europe/London",
+    "hiddenRatingKeys": []
+  },
+  "server": {
+    "name": "Chester Family Plex",
+    "zone": "America/Chicago",
+    "overseerr": true,
+    "peers": {
+      "members": 12,
+      "hours": [
+        610,
+        402,
+        355,
+        290,
+        240,
+        198,
+        150,
+        96,
+        61,
+        22,
+        3
+      ]
+    }
+  },
+  "window": {
+    "year": 2026,
+    "finalCut": false
+  },
+  "history": [
+    {"user_id":1,"started":1775293200,"stopped":1775293620,"play_duration":420,"paused_counter":0,"percent_complete":25,"watched_status":0.25,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"13010101","grandparent_rating_key":"1301","parent_media_index":1,"media_index":1,"title":"Episode 1","grandparent_title":"Detectorists","year":2014,"originally_available_at":"2014-01-01","guid":"plex://episode/13010101","section_id":"2"},
+    {"user_id":1,"started":1775295000,"stopped":1775295300,"play_duration":300,"paused_counter":0,"percent_complete":18,"watched_status":0,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"13010101","grandparent_rating_key":"1301","parent_media_index":1,"media_index":1,"title":"Episode 1","grandparent_title":"Detectorists","year":2014,"originally_available_at":"2014-01-01","guid":"plex://episode/13010101","section_id":"2"}
+  ],
+  "lifetimeBefore2026": [],
+  "metadata": [
+    {"ratingKey":"1301","kind":"show","librarySectionId":"2","addedAt":"2020-06-01T00:00:00.000Z","genres":["Animation","Drama"],"directors":[],"actors":["Noor Haddad","Tomas Brandt"],"studio":null,"contentRating":null,"year":2014,"originallyAvailableAt":"2014-01-01T00:00:00.000Z","runtimeSec":null,"seasonEpisodeCounts":{"1":6,"2":6,"3":6},"guids":["tmdb://101301","tvdb://301301"],"videoResolution":"1080","hdr":false}
+  ],
+  "requests": {
+    "rows": [],
+    "genres": {}
+  },
+  "library": null,
+  "expected": {
+    "edition": "postcard",
+    "archetype": null,
+    "omittedPages": [
+      3,
+      4,
+      6,
+      9,
+      11,
+      12,
+      13,
+      14,
+      17
+    ],
+    "facts": {
+      "member.firstName": "Ada",
+      "time.totalMinutes": "12 minutes",
+      "counts.episodes": "1",
+      "counts.series": "1",
+      "counts.films": "0",
+      "series[1].title": "Detectorists",
+      "series[1].minutes": "12 minutes",
+      "days.active": "1",
+      "days.biggest.date": "April 4",
+      "hours.peak": "10 AM",
+      "tz.label": "Europe/London"
+    },
+    "stats": {
+      "totals": {
+        "totalMinutes": 12,
+        "seriesMinutes": 12,
+        "filmMinutes": 0,
+        "seriesShare": 1,
+        "filmShare": 0,
+        "counts": {
+          "episodes": 1,
+          "series": 1,
+          "films": 0,
+          "seasons": 1
+        },
+        "perDay": 0,
+        "daysHours": {
+          "days": 0,
+          "hours": 0
+        },
+        "vsLastYear": null,
+        "minutes2025": null
+      },
+      "time": {
+        "peak": 10,
+        "afterDarkShare": 0,
+        "goldenShare": 0,
+        "medianStart": {
+          "hour": 10,
+          "minute": 15
+        },
+        "latestStart": {
+          "hour": 10,
+          "minute": 30,
+          "date": "2026-04-04",
+          "weekday": 6
+        },
+        "weekendShare": 1
+      },
+      "calendar": {
+        "active": 1,
+        "biggest": {
+          "date": "2026-04-04",
+          "minutes": 12
+        },
+        "streak": {
+          "days": 1,
+          "from": "2026-04-04",
+          "to": "2026-04-04"
+        },
+        "longestGap": null
+      },
+      "sessions": {
+        "longestBinge": null,
+        "deepestBinge": null,
+        "mostEpisodesDay": {
+          "date": "2026-04-04",
+          "episodes": 2
+        },
+        "biggestWeek": {
+          "from": "2026-03-30",
+          "to": "2026-04-05",
+          "minutes": 12
+        },
+        "mostPaused": null
+      },
+      "bookends": {
+        "first": {
+          "key": "series:1301",
+          "title": "Detectorists",
+          "date": "2026-04-04",
+          "hour": 10,
+          "minute": 0
+        },
+        "last": {
+          "key": "series:1301",
+          "title": "Detectorists",
+          "date": "2026-04-04",
+          "hour": 10,
+          "minute": 30
+        },
+        "sameTitleSameDay": true,
+        "member": {
+          "since": "2026-04-04",
+          "lifetimeHours": 0
+        }
+      },
+      "race": {
+        "eligible": false
+      },
+      "taste": {
+        "genres": [
+          {
+            "name": "Animation",
+            "minutes": 6,
+            "share": 0.5
+          },
+          {
+            "name": "Drama",
+            "minutes": 6,
+            "share": 0.5
+          }
+        ],
+        "medianYear": 2014,
+        "oldest": {
+          "key": "series:1301",
+          "title": "Detectorists",
+          "year": 2014
+        },
+        "freshShare": 0
+      },
+      "people": {
+        "actors": [
+          {
+            "name": "Noor Haddad",
+            "minutes": 12
+          },
+          {
+            "name": "Tomas Brandt",
+            "minutes": 12
+          }
+        ],
+        "directors": []
+      },
+      "devices": {
+        "eligible": false
+      },
+      "requests": {
+        "eligible": false
+      },
+      "nextYear": {
+        "leftForLater": [],
+        "picks": []
+      },
+      "milestones": [],
+      "topSeries": [
+        {
+          "title": "Detectorists",
+          "minutes": 12,
+          "plays": 2
+        }
+      ],
+      "topFilms": []
+    }
+  }
+}

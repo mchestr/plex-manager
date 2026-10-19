@@ -1,7 +1,7 @@
 "use client"
 
 import { FormattedText } from "@/components/shared/formatted-text"
-import { formatWatchTime } from "@/components/wrapped/wrapped-sections/utils"
+import { formatDuration } from "@/lib/utils/format"
 import { WrappedSection } from "@/types/wrapped"
 
 interface TopMoviesSectionProps {
@@ -42,7 +42,7 @@ export function TopMoviesSection({ section }: TopMoviesSectionProps) {
                   )}
                 </div>
                 <p className="text-slate-300 text-xs sm:text-sm mt-1">
-                  {formatWatchTime(movie.watchTime)} watched
+                  {formatDuration(movie.watchTime, "long", { largestUnit: "day" })} watched
                 </p>
               </div>
             </div>

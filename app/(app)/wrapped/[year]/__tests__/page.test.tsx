@@ -146,9 +146,14 @@ const LEGACY_ROSTER_ERROR =
 beforeEach(() => {
   jest.clearAllMocks()
   ;(getServerSession as jest.Mock).mockResolvedValue({ user: { id: 'user-1', isAdmin: false } })
-  // A Dec 1 window saved in 2026: the season is 2026, also in January 2027.
-  mockConfigFindUnique.mockResolvedValue({ wrappedGenerationStartDate: new Date('2026-12-01T12:00:00Z') })
+  // The default 12-01 to 01-31 window on 2 January 2027: the season is 2026.
+  jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate', 'setTimeout', 'setInterval'] }).setSystemTime(new Date('2027-01-02T12:00:00Z'))
+  mockConfigFindUnique.mockResolvedValue({ rewindSeasonOpens: '12-01', rewindSeasonCloses: '01-31', timezone: null })
   seed()
+})
+
+afterEach(() => {
+  jest.useRealTimers()
 })
 
 describe('WrappedYearPage route year', () => {
@@ -169,7 +174,8 @@ describe('WrappedYearPage route year', () => {
     await renderPage('2025')
 
     expect(viewerProps().year).toBe(2025)
-    expect(viewerProps().wrappedData).toEqual({ year: 2025, owner: 'user-1' })
+    // The stored row is the one for the route year, read through the parser
+    expect(viewerProps().wrappedData).toMatchObject({ year: 2025, statistics: { moviesWatched: 0 } })
   })
 
   it("never returns another member's row for the year", async () => {
@@ -221,7 +227,6 @@ describe('WrappedYearPage route year', () => {
     expect((WrappedPageClient as jest.Mock).mock.calls[0][0]).toEqual({
       userId: 'user-1',
       year: 2025,
-      initialStatus: 'generating',
     })
   })
 })

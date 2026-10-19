@@ -10,6 +10,8 @@ import * as actionsUsers from '@/actions/users'
 import * as userQueries from '@/actions/user-queries'
 import { getFirstWatchDate } from '@/lib/connections/tautulli-first-watch'
 import { prisma } from '@/lib/prisma'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),
@@ -19,13 +21,9 @@ jest.mock('@/lib/auth', () => ({
   authOptions: {},
 }))
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    tautulli: {
-      findFirst: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('@/lib/utils/logger', () => ({
   createLogger: () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }),
@@ -95,7 +93,9 @@ describe('getFirstWatchDate', () => {
     const result = await getFirstWatchDate('402')
 
     expect(result).toEqual({ success: false, error: 'Failed to fetch users from Tautulli' })
-    expect(mockFetch).toHaveBeenCalledTimes(1)
+    // tautulliCommand retries the error result (P2.3); no history is read
+    const commands = mockFetch.mock.calls.map(([url]) => new URL(String(url)).searchParams.get('cmd'))
+    expect(commands).toEqual(['get_users', 'get_users', 'get_users'])
   })
 
   it('is not exposed as a Server Action that takes another member\'s ID', () => {

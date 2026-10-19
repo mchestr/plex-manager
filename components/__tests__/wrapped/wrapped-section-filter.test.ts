@@ -99,7 +99,7 @@ describe('filterSections', () => {
   describe('invalid type handling', () => {
     it('should include sections with missing type but warn in development', () => {
       const originalEnv = process.env.NODE_ENV
-      process.env.NODE_ENV = 'development'
+      jest.replaceProperty(process.env, 'NODE_ENV', 'development')
 
       const sections = [
         createMockSection({ id: 'section-1', type: '' as any }),
@@ -116,12 +116,12 @@ describe('filterSections', () => {
         })
       )
 
-      process.env.NODE_ENV = originalEnv
+      jest.replaceProperty(process.env, 'NODE_ENV', originalEnv)
     })
 
     it('should include sections with invalid type but warn in development', () => {
       const originalEnv = process.env.NODE_ENV
-      process.env.NODE_ENV = 'development'
+      jest.replaceProperty(process.env, 'NODE_ENV', 'development')
 
       const sections = [
         createMockSection({ id: 'section-1', type: null as any }),
@@ -137,12 +137,12 @@ describe('filterSections', () => {
         })
       )
 
-      process.env.NODE_ENV = originalEnv
+      jest.replaceProperty(process.env, 'NODE_ENV', originalEnv)
     })
 
     it('should not warn about invalid types in production', () => {
       const originalEnv = process.env.NODE_ENV
-      process.env.NODE_ENV = 'production'
+      jest.replaceProperty(process.env, 'NODE_ENV', 'production')
 
       const sections = [
         createMockSection({ id: 'section-1', type: '' as any }),
@@ -152,7 +152,7 @@ describe('filterSections', () => {
 
       expect(console.warn).not.toHaveBeenCalled()
 
-      process.env.NODE_ENV = originalEnv
+      jest.replaceProperty(process.env, 'NODE_ENV', originalEnv)
     })
 
     it('should include sections with whitespace-only type', () => {
@@ -179,7 +179,7 @@ describe('filterSections', () => {
   describe('development mode warnings', () => {
     it('should warn when filtering null sections in development', () => {
       const originalEnv = process.env.NODE_ENV
-      process.env.NODE_ENV = 'development'
+      jest.replaceProperty(process.env, 'NODE_ENV', 'development')
 
       const sections = [null as any, createMockSection()]
 
@@ -189,12 +189,12 @@ describe('filterSections', () => {
         '[WrappedViewer] Filtered out null/undefined section'
       )
 
-      process.env.NODE_ENV = originalEnv
+      jest.replaceProperty(process.env, 'NODE_ENV', originalEnv)
     })
 
     it('should not warn when filtering null sections in production', () => {
       const originalEnv = process.env.NODE_ENV
-      process.env.NODE_ENV = 'production'
+      jest.replaceProperty(process.env, 'NODE_ENV', 'production')
 
       const sections = [null as any, createMockSection()]
 
@@ -202,7 +202,7 @@ describe('filterSections', () => {
 
       expect(console.warn).not.toHaveBeenCalled()
 
-      process.env.NODE_ENV = originalEnv
+      jest.replaceProperty(process.env, 'NODE_ENV', originalEnv)
     })
   })
 

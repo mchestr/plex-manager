@@ -23,7 +23,11 @@ import { type MarkType } from "@/lib/generated/prisma/client"
 import { type PlexMediaItem } from "@/lib/connections/plex"
 import { type Prisma } from "@/lib/generated/prisma/client"
 
-/** How long a parked selection remains valid before it is swept. */
+/**
+ * How long a parked selection remains valid before it is swept.
+ *
+ * @internal
+ */
 export const PENDING_SELECTION_TTL_MS = 5 * 60 * 1000
 
 export interface CreatePendingSelectionParams {
@@ -59,6 +63,8 @@ export interface PendingSelectionRecord {
  *
  * @param now - Current time (injectable for tests). Defaults to `new Date()`.
  * @returns The number of rows removed.
+ *
+ * @internal
  */
 export async function gcExpired(now: Date = new Date()): Promise<number> {
   const { count } = await prisma.discordPendingSelection.deleteMany({

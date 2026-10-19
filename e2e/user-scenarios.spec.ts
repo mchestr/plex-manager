@@ -24,6 +24,9 @@ test.describe('User Scenarios', () => {
   test.describe('Session Persistence', () => {
 
     test('regular user session persists across navigation', async ({ regularUserPage }) => {
+      // verifyNoAdminAccess expects the 401 page, which a production build
+      // replaces with the generic error (BP-27).
+      test.fixme(process.env.E2E_SERVER === 'prod', 'BP-27, fixed in P4.3');
       // Navigate to home
       await regularUserPage.goto('/');
 

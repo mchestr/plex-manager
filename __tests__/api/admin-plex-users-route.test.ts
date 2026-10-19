@@ -7,16 +7,13 @@ import { prisma } from '@/lib/prisma'
 import { getAllPlexServerUsers } from '@/lib/connections/plex'
 import { requireAdminAPI } from '@/lib/security/api-helpers'
 import { limitRequest } from '@/lib/security/rate-limit'
-import { NextRequest } from 'next/server'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 // Mock dependencies
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    plexServer: {
-      findFirst: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('@/lib/connections/plex', () => ({
   getAllPlexServerUsers: jest.fn(),

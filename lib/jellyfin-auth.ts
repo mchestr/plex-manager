@@ -49,6 +49,8 @@ const JellyfinCredentialsSchema = z.object({
  * Returns null when no server is active or sign-in is turned off, so the
  * toggle is checked in one place for every Jellyfin sign-in. The encryption
  * extension in lib/prisma.ts has already decrypted `apiKey`.
+ *
+ * @internal
  */
 export async function getJellyfinLoginServer() {
   const server = await prisma.jellyfinServer.findFirst({

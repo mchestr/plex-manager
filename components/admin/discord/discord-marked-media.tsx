@@ -5,17 +5,18 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { StyledInput } from "@/components/ui/styled-input"
 import { StyledDropdown } from "@/components/ui/styled-dropdown"
 import { Button } from "@/components/ui/button"
-import { formatRelativeTime } from "@/lib/utils/time-formatting"
+import { Time } from "@/components/ui/time"
+import { useFormat } from "@/lib/format-context"
 import type { MarkType, MediaType } from "@/lib/generated/prisma"
 
-export interface MarkedMediaUser {
+interface MarkedMediaUser {
   id: string
   name: string | null
   email: string | null
   image: string | null
 }
 
-export interface MarkedMediaItem {
+interface MarkedMediaItem {
   id: string
   title: string
   year: number | null
@@ -32,7 +33,7 @@ export interface MarkedMediaItem {
   user: MarkedMediaUser
 }
 
-export interface MarkTypeSummary {
+interface MarkTypeSummary {
   markType: MarkType
   count: number
 }
@@ -116,6 +117,7 @@ export function DiscordMarkedMedia({
 }: DiscordMarkedMediaProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const f = useFormat()
 
   const updateParams = useCallback(
     (updates: Record<string, string | null>) => {
@@ -173,7 +175,7 @@ export function DiscordMarkedMedia({
               }`}
             >
               {meta.label}
-              <span className="ml-2 font-bold">{s.count.toLocaleString()}</span>
+              <span className="ml-2 font-bold">{f.number(s.count)}</span>
             </button>
           )
         })}
@@ -284,7 +286,7 @@ export function DiscordMarkedMedia({
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right text-sm text-slate-400">
-                      {formatRelativeTime(mark.markedAt)}
+                      <Time value={mark.markedAt} />
                     </td>
                   </tr>
                 )
@@ -298,7 +300,7 @@ export function DiscordMarkedMedia({
       {total > 0 && (
         <div className="flex items-center justify-between mt-4">
           <span className="text-sm text-slate-400" data-testid="marks-range">
-            Showing {start}–{end} of {total.toLocaleString()}
+            Showing {start}–{end} of {f.number(total)}
           </span>
           <div className="flex gap-2">
             <Button

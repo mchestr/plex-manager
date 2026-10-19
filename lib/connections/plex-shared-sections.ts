@@ -207,7 +207,11 @@ export async function getItemSectionKey(
   }
 }
 
-/** Drops both caches. For tests. */
+/**
+ * Drops both caches. For tests.
+ *
+ * @internal
+ */
 export function clearPlexSharedSectionCaches(): void {
   sharedServersCache.clear()
   itemSectionCache.clear()

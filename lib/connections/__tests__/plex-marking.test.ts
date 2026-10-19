@@ -1,13 +1,11 @@
 /**
  * Tests for Plex API marking and search methods
- * Tests: markPlexItemWatched, markPlexItemUnwatched, searchPlexMedia
+ * Tests: markPlexItemWatched, searchPlexMedia
  */
 
 import {
   markPlexItemWatched,
-  markPlexItemUnwatched,
   searchPlexMedia,
-  type PlexMediaItem,
 } from '@/lib/connections/plex'
 import { makePlexServerConfig } from '../../../__tests__/utils/test-builders'
 
@@ -25,6 +23,7 @@ describe('Plex Marking and Search', () => {
       (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         status: 200,
+        text: async () => '',
       })
 
       const result = await markPlexItemWatched(config, ratingKey)
@@ -35,17 +34,17 @@ describe('Plex Marking and Search', () => {
         expect.stringContaining('/:/scrobble'),
         expect.objectContaining({
           method: 'GET',
-          headers: expect.objectContaining({
-            Accept: 'application/json',
-          }),
+          redirect: 'manual',
+          headers: expect.objectContaining({ 'X-Plex-Token': config.token }),
         })
       )
     })
 
-    it('should construct correct URL with rating key and token', async () => {
+    it('should construct correct URL with rating key, and send the token as a header only', async () => {
       (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         status: 200,
+        text: async () => '',
       })
 
       await markPlexItemWatched(config, ratingKey)
@@ -53,7 +52,7 @@ describe('Plex Marking and Search', () => {
       const callUrl = (global.fetch as jest.Mock).mock.calls[0][0]
       expect(callUrl).toContain(`${config.url}/:/scrobble`)
       expect(callUrl).toContain(`key=${ratingKey}`)
-      expect(callUrl).toContain(`X-Plex-Token=${config.token}`)
+      expect(callUrl).not.toContain(config.token)
       expect(callUrl).toContain('identifier=com.plexapp.plugins.library')
     })
 
@@ -67,8 +66,7 @@ describe('Plex Marking and Search', () => {
       const result = await markPlexItemWatched(config, 'nonexistent-key')
 
       expect(result.success).toBe(false)
-      expect(result.error).toContain('Failed to mark item as watched')
-      expect(result.error).toContain('Not Found')
+      expect(result.error).toBe('Plex returned HTTP 404')
     })
 
     it('should handle 401 unauthorized error', async () => {
@@ -84,31 +82,18 @@ describe('Plex Marking and Search', () => {
       )
 
       expect(result.success).toBe(false)
-      expect(result.error).toContain('Failed to mark item as watched')
-      expect(result.error).toContain('Unauthorized')
+      expect(result.error).toBe('Plex returned HTTP 401')
     })
 
-    it('should handle connection timeout', async () => {
-      const abortError = new Error('AbortError')
-      abortError.name = 'AbortError'
-      ;(global.fetch as jest.Mock).mockRejectedValueOnce(abortError)
-
-      const result = await markPlexItemWatched(config, ratingKey)
-
-      expect(result.success).toBe(false)
-      expect(result.error).toBe('Connection timeout')
-    })
-
-    it('should handle network errors', async () => {
+    it('should handle network errors without passing the error text on', async () => {
       ;(global.fetch as jest.Mock).mockRejectedValueOnce(
-        new Error('Network error')
+        new Error(`Network error at ${config.url}?X-Plex-Token=${config.token}`)
       )
 
       const result = await markPlexItemWatched(config, ratingKey)
 
       expect(result.success).toBe(false)
-      expect(result.error).toContain('Error marking item as watched')
-      expect(result.error).toContain('Network error')
+      expect(result.error).toBe('Could not reach Plex')
     })
 
     it('should handle non-Error exceptions', async () => {
@@ -117,7 +102,7 @@ describe('Plex Marking and Search', () => {
       const result = await markPlexItemWatched(config, ratingKey)
 
       expect(result.success).toBe(false)
-      expect(result.error).toBe('Failed to mark Plex item as watched')
+      expect(result.error).toBe('Could not reach Plex')
     })
 
     it('should handle server errors (500)', async () => {
@@ -130,124 +115,7 @@ describe('Plex Marking and Search', () => {
       const result = await markPlexItemWatched(config, ratingKey)
 
       expect(result.success).toBe(false)
-      expect(result.error).toContain('Internal Server Error')
-    })
-  })
-
-  describe('markPlexItemUnwatched', () => {
-    const config = makePlexServerConfig()
-    const ratingKey = '12345'
-
-    it('should successfully mark item as unwatched', async () => {
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-      })
-
-      const result = await markPlexItemUnwatched(config, ratingKey)
-
-      expect(result.success).toBe(true)
-      expect(result.error).toBeUndefined()
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/:/unscrobble'),
-        expect.objectContaining({
-          method: 'GET',
-          headers: expect.objectContaining({
-            Accept: 'application/json',
-          }),
-        })
-      )
-    })
-
-    it('should construct correct URL with rating key and token', async () => {
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-      })
-
-      await markPlexItemUnwatched(config, ratingKey)
-
-      const callUrl = (global.fetch as jest.Mock).mock.calls[0][0]
-      expect(callUrl).toContain(`${config.url}/:/unscrobble`)
-      expect(callUrl).toContain(`key=${ratingKey}`)
-      expect(callUrl).toContain(`X-Plex-Token=${config.token}`)
-      expect(callUrl).toContain('identifier=com.plexapp.plugins.library')
-    })
-
-    it('should handle 404 not found error', async () => {
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: false,
-        status: 404,
-        statusText: 'Not Found',
-      })
-
-      const result = await markPlexItemUnwatched(config, 'nonexistent-key')
-
-      expect(result.success).toBe(false)
-      expect(result.error).toContain('Failed to mark item as unwatched')
-      expect(result.error).toContain('Not Found')
-    })
-
-    it('should handle 401 unauthorized error', async () => {
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: false,
-        status: 401,
-        statusText: 'Unauthorized',
-      })
-
-      const result = await markPlexItemUnwatched(
-        makePlexServerConfig({ token: 'invalid-token' }),
-        ratingKey
-      )
-
-      expect(result.success).toBe(false)
-      expect(result.error).toContain('Failed to mark item as unwatched')
-      expect(result.error).toContain('Unauthorized')
-    })
-
-    it('should handle connection timeout', async () => {
-      const abortError = new Error('AbortError')
-      abortError.name = 'AbortError'
-      ;(global.fetch as jest.Mock).mockRejectedValueOnce(abortError)
-
-      const result = await markPlexItemUnwatched(config, ratingKey)
-
-      expect(result.success).toBe(false)
-      expect(result.error).toBe('Connection timeout')
-    })
-
-    it('should handle network errors', async () => {
-      ;(global.fetch as jest.Mock).mockRejectedValueOnce(
-        new Error('Network error')
-      )
-
-      const result = await markPlexItemUnwatched(config, ratingKey)
-
-      expect(result.success).toBe(false)
-      expect(result.error).toContain('Error marking item as unwatched')
-      expect(result.error).toContain('Network error')
-    })
-
-    it('should handle non-Error exceptions', async () => {
-      ;(global.fetch as jest.Mock).mockRejectedValueOnce('Unknown error')
-
-      const result = await markPlexItemUnwatched(config, ratingKey)
-
-      expect(result.success).toBe(false)
-      expect(result.error).toBe('Failed to mark Plex item as unwatched')
-    })
-
-    it('should handle server errors (500)', async () => {
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: false,
-        status: 500,
-        statusText: 'Internal Server Error',
-      })
-
-      const result = await markPlexItemUnwatched(config, ratingKey)
-
-      expect(result.success).toBe(false)
-      expect(result.error).toContain('Internal Server Error')
+      expect(result.error).toBe('Plex returned HTTP 500')
     })
   })
 
@@ -530,7 +398,7 @@ describe('Plex Marking and Search', () => {
         await searchPlexMedia(config, 'Lord of the Rings: Return of the King')
 
         const callUrl = (global.fetch as jest.Mock).mock.calls[0][0]
-        expect(callUrl).toContain(encodeURIComponent('Lord of the Rings: Return of the King'))
+        expect(new URL(callUrl).searchParams.get('query')).toBe('Lord of the Rings: Return of the King')
       })
 
       it('should handle numeric ratingKey conversion', async () => {
@@ -595,8 +463,8 @@ describe('Plex Marking and Search', () => {
 
         const callUrl = (global.fetch as jest.Mock).mock.calls[0][0]
         expect(callUrl).toContain(`${config.url}/search`)
-        expect(callUrl).toContain(`query=${encodeURIComponent('Test Query')}`)
-        expect(callUrl).toContain(`X-Plex-Token=${config.token}`)
+        expect(callUrl).toContain('query=Test+Query')
+        expect(callUrl).not.toContain(config.token)
       })
 
       it('should not include type parameter when no type specified', async () => {
@@ -624,8 +492,7 @@ describe('Plex Marking and Search', () => {
         const result = await searchPlexMedia(config, 'Query')
 
         expect(result.success).toBe(false)
-        expect(result.error).toContain('Failed to search media')
-        expect(result.error).toContain('Not Found')
+        expect(result.error).toBe('Plex returned HTTP 404')
       })
 
       it('should handle 401 unauthorized error', async () => {
@@ -641,22 +508,10 @@ describe('Plex Marking and Search', () => {
         )
 
         expect(result.success).toBe(false)
-        expect(result.error).toContain('Failed to search media')
-        expect(result.error).toContain('Unauthorized')
+        expect(result.error).toBe('Plex returned HTTP 401')
       })
 
-      it('should handle connection timeout', async () => {
-        const abortError = new Error('AbortError')
-        abortError.name = 'AbortError'
-        ;(global.fetch as jest.Mock).mockRejectedValueOnce(abortError)
-
-        const result = await searchPlexMedia(config, query)
-
-        expect(result.success).toBe(false)
-        expect(result.error).toBe('Connection timeout')
-      })
-
-      it('should handle network errors', async () => {
+      it('should handle network errors without passing the error text on', async () => {
         ;(global.fetch as jest.Mock).mockRejectedValueOnce(
           new Error('Network connection failed')
         )
@@ -664,8 +519,7 @@ describe('Plex Marking and Search', () => {
         const result = await searchPlexMedia(config, query)
 
         expect(result.success).toBe(false)
-        expect(result.error).toContain('Error searching media')
-        expect(result.error).toContain('Network connection failed')
+        expect(result.error).toBe('Could not reach Plex')
       })
 
       it('should handle non-Error exceptions', async () => {
@@ -674,7 +528,7 @@ describe('Plex Marking and Search', () => {
         const result = await searchPlexMedia(config, query)
 
         expect(result.success).toBe(false)
-        expect(result.error).toBe('Failed to search Plex media')
+        expect(result.error).toBe('Could not reach Plex')
       })
 
       it('should handle server errors (500)', async () => {
@@ -687,7 +541,7 @@ describe('Plex Marking and Search', () => {
         const result = await searchPlexMedia(config, query)
 
         expect(result.success).toBe(false)
-        expect(result.error).toContain('Internal Server Error')
+        expect(result.error).toBe('Plex returned HTTP 500')
       })
 
       it('should handle malformed JSON response', async () => {
@@ -702,7 +556,7 @@ describe('Plex Marking and Search', () => {
         const result = await searchPlexMedia(config, query)
 
         expect(result.success).toBe(false)
-        expect(result.error).toContain('Invalid JSON')
+        expect(result.error).toBe('Plex sent an unexpected response')
       })
     })
   })

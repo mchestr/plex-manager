@@ -1,9 +1,9 @@
 import { runConversationLoop } from "@/actions/chatbot/conversation"
 import {
+  ALL_TOOLS,
   DISCORD_SAFE_TOOLS,
   generateDiscordSystemPrompt,
   generateSystemPrompt,
-  TOOLS,
 } from "@/actions/chatbot/tools"
 import { type ChatMessage, type ChatResponse } from "@/actions/chatbot/types"
 import { type ChatTool } from "@/lib/llm/chat"
@@ -12,7 +12,7 @@ import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("CHATBOT_ASSISTANT")
 
-export type ChatbotContext = "default" | "discord"
+type ChatbotContext = "default" | "discord"
 
 interface RunChatbotOptions {
   userId: string
@@ -30,7 +30,7 @@ interface RunChatbotOptions {
 }
 
 function getToolsForContext(context: ChatbotContext | undefined): ChatTool[] {
-  return context === "discord" ? DISCORD_SAFE_TOOLS : TOOLS
+  return context === "discord" ? DISCORD_SAFE_TOOLS : ALL_TOOLS
 }
 
 function getSystemPrompt(context: ChatbotContext | undefined, toolset: ChatTool[]) {
@@ -55,19 +55,18 @@ export async function runChatbotForUser(options: RunChatbotOptions): Promise<Cha
       }),
       prisma.lLMProvider.findFirst({
         where: { isActive: true, purpose: "chat" },
+        select: { id: true },
       }),
     ])
 
-    const llmDisabled = config?.llmDisabled ?? false
-    const useLLM = !llmDisabled && !!llmProvider && llmProvider.provider === "openai" && !!llmProvider.model
-
-    if (!useLLM || !llmProvider?.model) {
+    // Any provider row works: the registry builds the model, and a row it cannot build is reported by the loop
+    if (config?.llmDisabled || !llmProvider) {
       return {
         success: true,
         message: {
           role: "assistant",
           content:
-            "AI features are currently disabled or not configured. Please configure a chat OpenAI model in Settings to use the troubleshooting assistant.",
+            "AI features are currently disabled or not configured. Please configure a chat model in Settings to use the troubleshooting assistant.",
           timestamp: Date.now(),
         },
       }
@@ -89,12 +88,6 @@ export async function runChatbotForUser(options: RunChatbotOptions): Promise<Cha
       conversationId: activeConversationId,
       context: options.context,
       isAdmin: options.isAdmin,
-      llmProvider: {
-        apiKey: llmProvider.apiKey,
-        model: llmProvider.model,
-        temperature: llmProvider.temperature,
-        maxTokens: llmProvider.maxTokens,
-      },
       systemPrompt,
       tools: toolset,
     })
@@ -113,5 +106,3 @@ export async function runChatbotForUser(options: RunChatbotOptions): Promise<Cha
     }
   }
 }
-
-

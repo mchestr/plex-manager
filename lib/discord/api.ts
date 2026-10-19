@@ -140,7 +140,7 @@ export async function fetchDiscordUserProfile(accessToken: string): Promise<Disc
   return (await response.json()) as DiscordUserProfile
 }
 
-export interface RoleConnectionPayload {
+interface RoleConnectionPayload {
   platform_name: string
   platform_username: string
   metadata: Record<string, number | string | boolean>
@@ -308,4 +308,3 @@ export async function checkGuildMembership(
     return false
   }
 }
-

@@ -3,25 +3,17 @@
  */
 
 import { testPromptTemplate } from '@/actions/prompt-test'
-import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
-import { callOpenAI } from '@/lib/wrapped/api-calls'
+import { generateStructured } from '@/lib/llm/generate-structured'
 import { generateWrappedPrompt } from '@/lib/wrapped/prompt-template'
+import type { WrappedStatistics } from '@/types/wrapped'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 // Mock dependencies
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    config: {
-      findUnique: jest.fn(),
-    },
-    lLMProvider: {
-      findFirst: jest.fn(),
-    },
-    lLMUsage: {
-      create: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),
@@ -29,16 +21,17 @@ jest.mock('next-auth', () => ({
 
 jest.mock('@/lib/wrapped/prompt-template', () => ({
   generateWrappedPrompt: jest.fn(),
+  generateSystemPrompt: jest.fn(() => 'system prompt'),
 }))
 
-jest.mock('@/lib/wrapped/api-calls', () => ({
-  callOpenAI: jest.fn(),
+jest.mock('@/lib/llm/generate-structured', () => ({
+  generateStructured: jest.fn(),
 }))
 
-const mockPrisma = prisma as jest.Mocked<typeof prisma>
+const mockPrisma = prismaMock
 const mockGetServerSession = getServerSession as jest.MockedFunction<typeof getServerSession>
 const mockGenerateWrappedPrompt = generateWrappedPrompt as jest.MockedFunction<typeof generateWrappedPrompt>
-const mockCallOpenAI = callOpenAI as jest.MockedFunction<typeof callOpenAI>
+const mockGenerateStructured = generateStructured as jest.MockedFunction<typeof generateStructured>
 
 describe('testPromptTemplate', () => {
   const mockSession = {
@@ -50,7 +43,7 @@ describe('testPromptTemplate', () => {
     },
   }
 
-  const mockStatistics = {
+  const mockStatistics: WrappedStatistics = {
     totalWatchTime: {
       total: 1000,
       movies: 600,
@@ -60,11 +53,11 @@ describe('testPromptTemplate', () => {
     showsWatched: 5,
     episodesWatched: 50,
     topMovies: [
-      { title: 'Movie 1', watchTime: 200, year: 2020 },
-      { title: 'Movie 2', watchTime: 150, year: 2021 },
+      { title: 'Movie 1', watchTime: 200, playCount: 1, year: 2020 },
+      { title: 'Movie 2', watchTime: 150, playCount: 1, year: 2021 },
     ],
     topShows: [
-      { title: 'Show 1', watchTime: 300, episodesWatched: 20, year: 2019 },
+      { title: 'Show 1', watchTime: 300, playCount: 20, episodesWatched: 20, year: 2019 },
     ],
   }
 
@@ -124,7 +117,7 @@ describe('testPromptTemplate', () => {
         mockStatistics,
         undefined
       )
-      expect(mockCallOpenAI).not.toHaveBeenCalled()
+      expect(mockGenerateStructured).not.toHaveBeenCalled()
     })
 
     it('should use custom template string when provided', async () => {
@@ -151,29 +144,34 @@ describe('testPromptTemplate', () => {
   })
 
   describe('prompt rendering with AI (sendToAI: true)', () => {
-    const mockLLMProvider = {
-      id: 'provider-1',
-      provider: 'openai',
-      apiKey: 'test-api-key',
-      model: 'gpt-4',
-      isActive: true,
+    const usage = { inputTokens: 100, cachedInputTokens: 0, outputTokens: 50, reasoningTokens: 10 }
+
+    function succeed(rawText = 'Raw response') {
+      mockGenerateStructured.mockResolvedValue({
+        ok: true,
+        value: {
+          output: { archetype: { id: 'curator' } },
+          usage,
+          cost: 0.001,
+          modelId: 'gpt-6-luna-2026-09-22',
+          finishReason: 'stop',
+          rawText,
+        },
+      } as never)
     }
 
     beforeEach(() => {
       mockPrisma.config.findUnique.mockResolvedValue({
         llmDisabled: false,
       } as any)
-      mockPrisma.lLMProvider.findFirst.mockResolvedValue(mockLLMProvider as any)
+      mockGenerateWrappedPrompt.mockResolvedValue('Rendered prompt')
     })
 
-    it('should return error when LLM is disabled and not call OpenAI', async () => {
+    it('should return error when LLM is disabled and not call the model', async () => {
       mockPrisma.config.findUnique.mockResolvedValue({
         llmDisabled: true,
       } as any)
 
-      const mockRenderedPrompt = 'Rendered prompt'
-      mockGenerateWrappedPrompt.mockResolvedValue(mockRenderedPrompt)
-
       const result = await testPromptTemplate({
         userName: 'Test User',
         year: 2024,
@@ -182,48 +180,14 @@ describe('testPromptTemplate', () => {
       })
 
       expect(result.success).toBe(false)
-      expect(result.renderedPrompt).toBe(mockRenderedPrompt)
+      expect(result.renderedPrompt).toBe('Rendered prompt')
       expect(result.error).toContain('LLM calls are currently disabled')
       expect(result.error).toContain('enable LLM in admin settings')
-      expect(mockCallOpenAI).not.toHaveBeenCalled()
-      expect(mockPrisma.lLMProvider.findFirst).not.toHaveBeenCalled()
+      expect(mockGenerateStructured).not.toHaveBeenCalled()
     })
 
-    it('should return error when no active LLM provider', async () => {
-      mockPrisma.lLMProvider.findFirst.mockResolvedValue(null)
-
-      const mockRenderedPrompt = 'Rendered prompt'
-      mockGenerateWrappedPrompt.mockResolvedValue(mockRenderedPrompt)
-
-      const result = await testPromptTemplate({
-        userName: 'Test User',
-        year: 2024,
-        statistics: mockStatistics,
-        sendToAI: true,
-      })
-
-      expect(result.success).toBe(false)
-      expect(result.renderedPrompt).toBe(mockRenderedPrompt)
-      expect(result.error).toContain('No active LLM provider')
-      expect(mockCallOpenAI).not.toHaveBeenCalled()
-    })
-
-    it('should call OpenAI and return response when LLM is enabled', async () => {
-      const mockRenderedPrompt = 'Rendered prompt'
-      const mockLLMResponse = {
-        success: true,
-        output: { archetype: { id: 'curator' } },
-        rawResponse: 'Raw response',
-        tokenUsage: {
-          promptTokens: 100,
-          completionTokens: 50,
-          totalTokens: 150,
-          cost: 0.001,
-        },
-      }
-
-      mockGenerateWrappedPrompt.mockResolvedValue(mockRenderedPrompt)
-      mockCallOpenAI.mockResolvedValue(mockLLMResponse as any)
+    it('should call the facade with the v2 schema and the admin as the usage owner', async () => {
+      succeed()
 
       const result = await testPromptTemplate({
         userName: 'Test User',
@@ -233,24 +197,43 @@ describe('testPromptTemplate', () => {
       })
 
       expect(result.success).toBe(true)
-      expect(result.renderedPrompt).toBe(mockRenderedPrompt)
+      expect(result.renderedPrompt).toBe('Rendered prompt')
       expect(result.llmResponse).toBe('Raw response')
-      expect(result.tokenUsage).toEqual(mockLLMResponse.tokenUsage)
-      expect(mockCallOpenAI).toHaveBeenCalledWith(
-        {
-          provider: 'openai',
-          apiKey: 'test-api-key',
-          model: 'gpt-4',
-          temperature: undefined,
-          maxTokens: undefined,
-        },
-        mockRenderedPrompt
+      expect(result.tokenUsage).toEqual({ promptTokens: 100, completionTokens: 50, totalTokens: 150, cost: 0.001 })
+      expect(mockGenerateStructured).toHaveBeenCalledWith(
+        expect.objectContaining({
+          purpose: 'wrapped',
+          system: 'system prompt',
+          prompt: 'Rendered prompt',
+          effort: 'low',
+          cacheKey: 'rewind-v2',
+          attribution: { userId: 'user-1' },
+          recordText: true,
+        })
+      )
+    })
+
+    it('should pass the playground model, temperature and token overrides', async () => {
+      succeed()
+
+      await testPromptTemplate({
+        userName: 'Test User',
+        year: 2024,
+        statistics: mockStatistics,
+        sendToAI: true,
+        model: 'gpt-6-luna',
+        temperature: 0.4,
+        maxTokens: 50,
+      })
+
+      expect(mockGenerateStructured).toHaveBeenCalledWith(
+        expect.objectContaining({ modelOverride: 'gpt-6-luna', temperature: 0.4, maxOutputTokens: 50 })
       )
     })
 
     it('should send "there" instead of an email-like Plex username', async () => {
       mockGenerateWrappedPrompt.mockResolvedValue('Rendered prompt for there')
-      mockCallOpenAI.mockResolvedValue({ success: false, error: 'API error' } as any)
+      mockGenerateStructured.mockResolvedValue({ ok: false, error: { code: 'PROVIDER', message: 'API error' } })
 
       const result = await testPromptTemplate({
         userName: 'invited.member@example.com',
@@ -260,14 +243,13 @@ describe('testPromptTemplate', () => {
       })
 
       expect(mockGenerateWrappedPrompt).toHaveBeenCalledWith('there', 2024, mockStatistics, undefined)
-      expect(mockCallOpenAI).toHaveBeenCalledWith(expect.any(Object), 'Rendered prompt for there')
+      expect(mockGenerateStructured).toHaveBeenCalledWith(expect.objectContaining({ prompt: 'Rendered prompt for there' }))
       expect(JSON.stringify(mockGenerateWrappedPrompt.mock.calls)).not.toContain('@example.com')
       expect(result.renderedPrompt).toBe('Rendered prompt for there')
     })
 
     it('should send the trimmed member name when it is not an email', async () => {
-      mockGenerateWrappedPrompt.mockResolvedValue('Rendered prompt')
-      mockCallOpenAI.mockResolvedValue({ success: false, error: 'API error' } as any)
+      mockGenerateStructured.mockResolvedValue({ ok: false, error: { code: 'PROVIDER', message: 'API error' } })
 
       await testPromptTemplate({
         userName: '  Mike  ',
@@ -279,153 +261,11 @@ describe('testPromptTemplate', () => {
       expect(mockGenerateWrappedPrompt).toHaveBeenCalledWith('Mike', 2024, mockStatistics, undefined)
     })
 
-    it('should use custom model when provided', async () => {
-      const mockRenderedPrompt = 'Rendered prompt'
-      const mockLLMResponse = {
-        success: true,
-        output: { archetype: { id: 'curator' } },
-        rawResponse: 'Raw response',
-        tokenUsage: {
-          promptTokens: 100,
-          completionTokens: 50,
-          totalTokens: 150,
-          cost: 0.001,
-        },
-      }
-
-      mockGenerateWrappedPrompt.mockResolvedValue(mockRenderedPrompt)
-      mockCallOpenAI.mockResolvedValue(mockLLMResponse as any)
-
-      await testPromptTemplate({
-        userName: 'Test User',
-        year: 2024,
-        statistics: mockStatistics,
-        sendToAI: true,
-        model: 'gpt-3.5-turbo',
+    it('should return the facade error message', async () => {
+      mockGenerateStructured.mockResolvedValue({
+        ok: false,
+        error: { code: 'NOT_CONFIGURED', message: 'No active LLM provider is configured for this purpose' },
       })
-
-      expect(mockCallOpenAI).toHaveBeenCalledWith(
-        expect.objectContaining({
-          model: 'gpt-3.5-turbo',
-        }),
-        expect.any(String)
-      )
-    })
-
-    it('should record LLM usage to database', async () => {
-      const mockRenderedPrompt = 'Rendered prompt'
-      const mockLLMResponse = {
-        success: true,
-        output: { archetype: { id: 'curator' } },
-        rawResponse: 'Raw response',
-        tokenUsage: {
-          promptTokens: 100,
-          completionTokens: 50,
-          totalTokens: 150,
-          cost: 0.001,
-        },
-      }
-
-      mockGenerateWrappedPrompt.mockResolvedValue(mockRenderedPrompt)
-      mockCallOpenAI.mockResolvedValue(mockLLMResponse as any)
-      mockPrisma.lLMUsage.create.mockResolvedValue({} as any)
-
-      await testPromptTemplate({
-        userName: 'Test User',
-        year: 2024,
-        statistics: mockStatistics,
-        sendToAI: true,
-      })
-
-      expect(mockPrisma.lLMUsage.create).toHaveBeenCalledWith({
-        data: {
-          wrappedId: null,
-          userId: 'user-1',
-          provider: 'openai',
-          model: 'gpt-4',
-          prompt: mockRenderedPrompt,
-          response: 'Raw response',
-          promptTokens: 100,
-          completionTokens: 50,
-          totalTokens: 150,
-          cost: 0.001,
-        },
-      })
-    })
-
-    it('should record the model the API served', async () => {
-      mockGenerateWrappedPrompt.mockResolvedValue('Rendered prompt')
-      mockCallOpenAI.mockResolvedValue({
-        success: true,
-        output: { archetype: { id: 'curator' } },
-        rawResponse: 'Raw response',
-        model: 'gpt-6-luna-2026-09-22',
-        tokenUsage: { promptTokens: 100, completionTokens: 50, totalTokens: 150, cost: 0.000035 },
-      } as any)
-      mockPrisma.lLMUsage.create.mockResolvedValue({} as any)
-
-      await testPromptTemplate({
-        userName: 'Test User',
-        year: 2024,
-        statistics: mockStatistics,
-        sendToAI: true,
-        model: 'gpt-6-luna',
-      })
-
-      expect(mockPrisma.lLMUsage.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({ model: 'gpt-6-luna-2026-09-22', cost: 0.000035 }),
-      })
-    })
-
-    it('should handle LLM usage logging failure gracefully', async () => {
-      const mockRenderedPrompt = 'Rendered prompt'
-      const mockLLMResponse = {
-        success: true,
-        output: { archetype: { id: 'curator' } },
-        rawResponse: 'Raw response',
-        tokenUsage: {
-          promptTokens: 100,
-          completionTokens: 50,
-          totalTokens: 150,
-          cost: 0.001,
-        },
-      }
-
-      mockGenerateWrappedPrompt.mockResolvedValue(mockRenderedPrompt)
-      mockCallOpenAI.mockResolvedValue(mockLLMResponse as any)
-      mockPrisma.lLMUsage.create.mockRejectedValue(new Error('DB error'))
-
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation()
-
-      const result = await testPromptTemplate({
-        userName: 'Test User',
-        year: 2024,
-        statistics: mockStatistics,
-        sendToAI: true,
-      })
-
-      expect(result.success).toBe(true)
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        '[PROMPT_TEST]',
-        expect.stringContaining('Failed to save LLM usage'),
-        expect.objectContaining({
-          err: expect.objectContaining({
-            message: 'DB error'
-          })
-        })
-      )
-      consoleErrorSpy.mockRestore()
-    })
-
-    it('should handle LLM call failure', async () => {
-      const mockRenderedPrompt = 'Rendered prompt'
-      const mockLLMResponse = {
-        success: false,
-        error: 'API error',
-      }
-
-      mockGenerateWrappedPrompt.mockResolvedValue(mockRenderedPrompt)
-      mockCallOpenAI.mockResolvedValue(mockLLMResponse as any)
 
       const result = await testPromptTemplate({
         userName: 'Test User',
@@ -435,27 +275,12 @@ describe('testPromptTemplate', () => {
       })
 
       expect(result.success).toBe(false)
-      expect(result.renderedPrompt).toBe(mockRenderedPrompt)
-      expect(result.error).toBe('API error')
+      expect(result.renderedPrompt).toBe('Rendered prompt')
+      expect(result.error).toContain('No active LLM provider')
     })
 
-    it('should use JSON.stringify when rawResponse is missing', async () => {
-      const mockRenderedPrompt = 'Rendered prompt'
-      const mockData = { archetype: { id: 'curator' } }
-      const mockLLMResponse = {
-        success: true,
-        output: mockData,
-        tokenUsage: {
-          promptTokens: 100,
-          completionTokens: 50,
-          totalTokens: 150,
-          cost: 0.001,
-        },
-      }
-
-      mockGenerateWrappedPrompt.mockResolvedValue(mockRenderedPrompt)
-      mockCallOpenAI.mockResolvedValue(mockLLMResponse as any)
-      mockPrisma.lLMUsage.create.mockResolvedValue({} as any)
+    it('should use JSON.stringify when the raw text is empty', async () => {
+      succeed('')
 
       const result = await testPromptTemplate({
         userName: 'Test User',
@@ -465,14 +290,7 @@ describe('testPromptTemplate', () => {
       })
 
       expect(result.success).toBe(true)
-      expect(result.llmResponse).toBe(JSON.stringify(mockData, null, 2))
-      expect(mockPrisma.lLMUsage.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            response: JSON.stringify(mockData, null, 2),
-          }),
-        })
-      )
+      expect(result.llmResponse).toBe(JSON.stringify({ archetype: { id: 'curator' } }, null, 2))
     })
   })
 

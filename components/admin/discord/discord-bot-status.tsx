@@ -1,6 +1,6 @@
 "use client"
 
-import { formatRelativeTime } from "@/lib/utils/time-formatting"
+import { Time } from "@/components/ui/time"
 
 interface BotStatus {
   isEnabled: boolean
@@ -102,7 +102,7 @@ export function DiscordBotStatus({ status }: DiscordBotStatusProps) {
           {status.lastCommandAt && (
             <div className="text-center">
               <div className="text-lg font-bold text-slate-300">
-                {formatRelativeTime(status.lastCommandAt)}
+                <Time value={status.lastCommandAt} />
               </div>
               <div className="text-xs text-slate-500">Last command</div>
             </div>
@@ -110,9 +110,9 @@ export function DiscordBotStatus({ status }: DiscordBotStatusProps) {
           {status.isConnected && status.expiresAt && (
             <div className="text-center">
               <div className="text-lg font-bold text-slate-300">
-                {formatRelativeTime(status.expiresAt, { addSuffix: false })}
+                <Time value={status.expiresAt} />
               </div>
-              <div className="text-xs text-slate-500">Lock expires in</div>
+              <div className="text-xs text-slate-500">Lock expires</div>
             </div>
           )}
         </div>

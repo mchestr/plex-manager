@@ -1,9 +1,10 @@
 import { expect, test, TEST_USERS } from './fixtures/auth';
+import { signInAs } from './fixtures/session';
 import { createE2EPrismaClient } from './helpers/prisma';
 import { waitForLoadingGone, WAIT_TIMEOUTS } from './helpers/test-utils';
 
 test.describe('Onboarding Flow', () => {
-  test('new user completes onboarding and is redirected to homepage', async ({ browser }) => {
+  test('new user completes onboarding and is redirected to homepage', async ({ browser, baseURL }) => {
     const prisma = createE2EPrismaClient();
 
     try {
@@ -20,11 +21,13 @@ test.describe('Onboarding Flow', () => {
       const context = await browser.newContext({
         acceptDownloads: true,
       });
+      if (!baseURL) throw new Error('This spec needs `use.baseURL` in playwright.config.ts.');
+      await signInAs(context, baseURL, TEST_USERS.REGULAR.id);
       const page = await context.newPage();
 
       try {
-        // Authenticate the user - they should be redirected to onboarding
-        await page.goto(`/auth/callback/plex?testToken=${TEST_USERS.REGULAR.testToken}`, { waitUntil: 'load' });
+        // Home sends a signed-in user who has not finished onboarding to /onboarding
+        await page.goto('/', { waitUntil: 'load' });
 
         // Wait for redirect to onboarding page
         await page.waitForURL((url) => {

@@ -20,18 +20,12 @@ import { prisma } from '@/lib/prisma'
 import { getStripe } from '@/lib/stripe/client'
 import { addJob } from '@/lib/queue/client'
 import { getServerSession } from 'next-auth'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    subscription: {
-      findUnique: jest.fn(),
-    },
-    user: {
-      findUnique: jest.fn(),
-      update: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('@/lib/stripe/client', () => ({
   getStripe: jest.fn(),

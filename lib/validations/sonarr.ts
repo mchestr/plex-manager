@@ -11,16 +11,3 @@ export const sonarrSchema = z.object({
 
 export type SonarrInput = z.input<typeof sonarrSchema>
 export type SonarrParsed = z.output<typeof sonarrSchema>
-
-// Schema for Sonarr server list response
-export const sonarrServerListSchema = z.object({
-  servers: z.array(
-    z.object({
-      id: z.string(),
-      name: z.string(),
-    })
-  ),
-})
-
-export type SonarrServerList = z.infer<typeof sonarrServerListSchema>
-

@@ -10,6 +10,8 @@ import UsersPage from '@/app/admin/users/page'
 import { getAllUsersWithWrapped } from '@/actions/users'
 import { UsersList } from '@/components/admin/users/users-list'
 import { prisma } from '@/lib/prisma'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 jest.mock('@/actions/users', () => ({
   getAllUsersWithWrapped: jest.fn(),
@@ -19,9 +21,9 @@ jest.mock('@/lib/stripe/client', () => ({
   getStripeDashboardBaseUrl: jest.fn().mockResolvedValue(null),
 }))
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: { config: { findUnique: jest.fn() } },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('@/components/admin/users/import-plex-users-button', () => ({
   ImportPlexUsersButton: () => null,
@@ -47,10 +49,10 @@ describe('Admin users page season year', () => {
   })
 
   it.each([
-    ['a Dec 1 window saved in 2026', new Date('2026-12-01T12:00:00Z')],
-    ['no window', null],
-  ])('uses 2026 on 2027-01-02 with %s', async (_label, startDate) => {
-    ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({ wrappedGenerationStartDate: startDate })
+    ['the stored default window', { rewindSeasonOpens: '12-01', rewindSeasonCloses: '01-31', timezone: null }],
+    ['no config row', null],
+  ])('uses 2026 on 2027-01-02 with %s', async (_label, config) => {
+    ;(prisma.config.findUnique as jest.Mock).mockResolvedValue(config)
 
     render(await UsersPage())
 

@@ -37,6 +37,8 @@ export function toDateKey(date: Date): string {
 
 /**
  * A single status-count group as returned by `groupBy(["status"])`.
+ *
+ * @internal
  */
 export interface StatusCountGroup {
   status: DiscordCommandStatus
@@ -46,7 +48,7 @@ export interface StatusCountGroup {
 /**
  * Per-status counts folded from a `groupBy(["status"])` result.
  */
-export interface StatusCounts {
+interface StatusCounts {
   success: number
   failed: number
   timeout: number
@@ -58,6 +60,8 @@ export interface StatusCounts {
  *
  * Replaces multiple paired `count({ where: { status } })` queries with a
  * single grouped query whose rows are summed client-side.
+ *
+ * @internal
  */
 export function foldStatusCounts(groups: StatusCountGroup[]): StatusCounts {
   const counts: StatusCounts = {

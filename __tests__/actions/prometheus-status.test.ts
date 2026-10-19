@@ -4,8 +4,9 @@
 
 import { getPrometheusStatus } from '@/actions/prometheus-status'
 import { queryPrometheusRange } from '@/lib/connections/prometheus'
-import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 // Mock dependencies
 jest.mock('next-auth', () => ({
@@ -16,13 +17,9 @@ jest.mock('@/lib/auth', () => ({
   authOptions: {},
 }))
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    prometheus: {
-      findFirst: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('@/lib/connections/prometheus', () => ({
   queryPrometheusRange: jest.fn(),
@@ -41,7 +38,7 @@ jest.mock('@/lib/utils/logger', () => ({
   })),
 }))
 
-const mockPrisma = prisma as jest.Mocked<typeof prisma>
+const mockPrisma = prismaMock
 const mockQueryPrometheusRange = queryPrometheusRange as jest.MockedFunction<typeof queryPrometheusRange>
 const mockGetServerSession = getServerSession as jest.MockedFunction<typeof getServerSession>
 

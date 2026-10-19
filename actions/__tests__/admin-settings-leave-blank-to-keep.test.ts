@@ -107,7 +107,7 @@ describe('updateTautulli leave-blank-to-keep', () => {
 describe('updateChatLLMProvider leave-blank-to-keep', () => {
   it('reuses the stored key when the submitted key is blank', async () => {
     // First findFirst: resolve stored key. Inside tx: deactivate then findMany.
-    mockPrisma.lLMProvider.findFirst.mockResolvedValue({ id: 'p1', apiKey: 'stored-llm-key', purpose: 'chat' })
+    mockPrisma.lLMProvider.findFirst.mockResolvedValue({ id: 'p1', provider: 'openai', baseUrl: null, apiKey: 'stored-llm-key', purpose: 'chat' })
     mockPrisma.lLMProvider.findMany.mockResolvedValue([])
     mockPrisma.lLMProvider.updateMany.mockResolvedValue({ count: 1 })
     mockPrisma.lLMProvider.create.mockResolvedValue({})
@@ -116,7 +116,7 @@ describe('updateChatLLMProvider leave-blank-to-keep', () => {
     const result = await updateChatLLMProvider({ provider: 'openai', apiKey: undefined, model: 'gpt-4' })
 
     expect(result).toEqual({ success: true })
-    expect(mockTestLLM).toHaveBeenCalledWith(expect.objectContaining({ apiKey: 'stored-llm-key' }))
+    expect(mockTestLLM).toHaveBeenCalledWith(expect.objectContaining({ apiKey: 'stored-llm-key' }), expect.anything())
     expect(mockPrisma.lLMProvider.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ apiKey: 'stored-llm-key' }) })
     )

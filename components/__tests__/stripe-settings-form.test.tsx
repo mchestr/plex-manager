@@ -1,7 +1,7 @@
 import React from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { StripeSettingsForm } from '@/components/admin/settings/StripeSettingsForm'
+import { StripeSettingsForm } from '@/components/admin/settings/stripe-settings-form'
 import * as configActions from '@/actions/admin/admin-config'
 import { getAvailableLibraries } from '@/actions/server-info'
 import { useRouter } from 'next/navigation'

@@ -98,7 +98,7 @@ export interface DevDefaults {
  * SECURITY NOTE: These values are ONLY returned when NODE_ENV=development, the explicit
  * DEV_SETUP_PREFILL=true flag is set, and setup is not yet complete. Otherwise every value
  * is null regardless of the DEV_* environment variables. The flag is separate from
- * E2E_TEST_MODE so that turning on the prefill never enables test-token login or the seed.
+ * E2E_TEST_MODE so that turning on the prefill never enables the seed.
  *
  * Auto-submit behavior:
  * - When DEV_SETUP_AUTO_SUBMIT=true and all required fields for a form are populated,

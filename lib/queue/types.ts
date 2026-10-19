@@ -5,8 +5,6 @@
  * Add new job types here as the system grows.
  */
 
-import { Job } from "bullmq"
-
 /**
  * Job Type Registry
  * Add new job types here when extending the queue system
@@ -17,6 +15,11 @@ export const JOB_TYPES = {
   STRIPE_WEBHOOK: "stripe:webhook",
   PLEX_ACCESS_GRANT: "plex:access:grant",
   PLEX_ACCESS_REVOKE: "plex:access:revoke",
+  // Rewind batch jobs (P2.6), on the `rewind-batch` queue
+  REWIND_SERVER_AGGREGATE: "rewind:server-aggregate",
+  REWIND_METADATA_WARM: "rewind:metadata-warm",
+  REWIND_GENERATE_USER: "rewind:generate:user",
+  REWIND_STALE_SWEEP: "rewind:stale:sweep",
 } as const
 
 export type JobType = (typeof JOB_TYPES)[keyof typeof JOB_TYPES]
@@ -24,7 +27,7 @@ export type JobType = (typeof JOB_TYPES)[keyof typeof JOB_TYPES]
 /**
  * Job trigger source - who/what initiated the job
  */
-export type JobTrigger = "manual" | "scheduled" | "admin"
+type JobTrigger = "manual" | "scheduled" | "admin"
 
 // =============================================================================
 // Watchlist Sync Job Types
@@ -128,6 +131,41 @@ export interface PlexAccessRevokeResult {
 }
 
 // =============================================================================
+// Rewind Batch Job Types (P2.6)
+// =============================================================================
+
+/** The server-wide aggregate for one batch: `through` is its last day of data, `YYYY-MM-DD`. */
+export interface RewindServerAggregatePayload {
+  year: number
+  through: string
+}
+
+/**
+ * One metadata warm job: up to 200 film and series rating keys. `batch` names
+ * the job in its deduplication id (`<year>:<index>`, or `refresh:<hash>` for
+ * stale rows); `topSeries` are the keys whose season episode counts it adds.
+ */
+export interface RewindMetadataWarmPayload {
+  batch: string
+  keys: string[]
+  topSeries: string[]
+}
+
+// =============================================================================
+// Rewind Generation Job Types (they run on the Rewind queues, lib/queue/rewind-queues.ts)
+// =============================================================================
+
+/**
+ * Payload for one member's Rewind generation. The `RewindGeneration` row the
+ * request created carries everything else (kind, copy policy).
+ */
+export interface RewindGenerateUserPayload {
+  generationId: string
+  userId: string
+  year: number
+}
+
+// =============================================================================
 // Type Mapping
 // =============================================================================
 
@@ -140,23 +178,11 @@ export interface JobPayloadMap {
   [JOB_TYPES.STRIPE_WEBHOOK]: StripeWebhookPayload
   [JOB_TYPES.PLEX_ACCESS_GRANT]: PlexAccessGrantPayload
   [JOB_TYPES.PLEX_ACCESS_REVOKE]: PlexAccessRevokePayload
+  [JOB_TYPES.REWIND_SERVER_AGGREGATE]: RewindServerAggregatePayload
+  [JOB_TYPES.REWIND_METADATA_WARM]: RewindMetadataWarmPayload
+  [JOB_TYPES.REWIND_GENERATE_USER]: RewindGenerateUserPayload
+  [JOB_TYPES.REWIND_STALE_SWEEP]: Record<string, never>
 }
-
-/**
- * Maps job types to their result types
- */
-export interface JobResultMap {
-  [JOB_TYPES.WATCHLIST_SYNC_USER]: WatchlistSyncUserResult
-  [JOB_TYPES.WATCHLIST_SYNC_ALL]: WatchlistSyncAllResult
-  [JOB_TYPES.STRIPE_WEBHOOK]: StripeWebhookResult
-  [JOB_TYPES.PLEX_ACCESS_GRANT]: PlexAccessGrantResult
-  [JOB_TYPES.PLEX_ACCESS_REVOKE]: PlexAccessRevokeResult
-}
-
-/**
- * Generic typed job - provides type safety for job data and results
- */
-export type TypedJob<T extends JobType> = Job<JobPayloadMap[T], JobResultMap[T]>
 
 // =============================================================================
 // Job Metadata (for admin UI)
@@ -205,14 +231,4 @@ export interface QueueStats {
   delayed: number
   paused: number
   prioritized: number
-}
-
-/**
- * Queue health status for admin dashboard
- */
-export interface QueueHealth {
-  redisConnected: boolean
-  workerRunning: boolean
-  isPaused: boolean
-  stats: QueueStats
 }

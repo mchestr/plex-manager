@@ -12,34 +12,25 @@ import {
   setActivePromptTemplate,
 } from '@/actions/prompts'
 import { requireAdmin } from '@/lib/admin'
-import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 // Mock dependencies
 jest.mock('@/lib/admin', () => ({
   requireAdmin: jest.fn(),
 }))
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    promptTemplate: {
-      findMany: jest.fn(),
-      findFirst: jest.fn(),
-      findUnique: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      updateMany: jest.fn(),
-      delete: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('next/cache', () => ({
   revalidatePath: jest.fn(),
 }))
 
 const mockRequireAdmin = requireAdmin as jest.MockedFunction<typeof requireAdmin>
-const mockPrisma = prisma as jest.Mocked<typeof prisma>
+const mockPrisma = prismaMock
 const mockRevalidatePath = revalidatePath as jest.MockedFunction<typeof revalidatePath>
 
 describe('Prompt Template Actions', () => {

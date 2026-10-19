@@ -10,9 +10,7 @@ jest.mock('@/lib/plex-auth', () => ({
   createPlexAuthUrl: jest.fn(),
 }))
 
-// Mock window.location.href
-// jsdom throws an error when setting window.location.href, so we need to suppress it
-let mockHref = ''
+// jsdom throws when the component sets window.location.href.
 // Override the console.error to suppress jsdom navigation errors in tests
 const originalConsoleError = console.error
 beforeAll(() => {
@@ -32,7 +30,6 @@ afterAll(() => {
 describe('PlexSignInButton', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockHref = ''
   })
 
 
@@ -64,7 +61,7 @@ describe('PlexSignInButton', () => {
 
   it('should redirect to auth URL on successful pin creation', async () => {
     const user = userEvent.setup()
-    const mockCreatePin = jest.spyOn(plexAuth, 'createPlexPin').mockResolvedValue({
+    jest.spyOn(plexAuth, 'createPlexPin').mockResolvedValue({
       success: true,
       data: { id: 123, code: 'ABC123' },
     })

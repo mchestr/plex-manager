@@ -8,6 +8,8 @@ import {
   getTopSharedWraps,
 } from '@/actions/share-analytics'
 import { prisma } from '@/lib/prisma'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 // These are admin-only analytics; requireAdmin() is a no-op success in tests.
 jest.mock('@/lib/admin', () => ({
@@ -15,18 +17,9 @@ jest.mock('@/lib/admin', () => ({
 }))
 
 // Mock dependencies
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    plexWrapped: {
-      count: jest.fn(),
-      findMany: jest.fn(),
-    },
-    wrappedShareVisit: {
-      count: jest.fn(),
-      findMany: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 describe('Share Analytics', () => {
   beforeEach(() => {
@@ -482,7 +475,7 @@ describe('Share Analytics', () => {
 
       ;(prisma.plexWrapped.findMany as jest.Mock).mockResolvedValue(mockWraps)
 
-      const result = await getTopSharedWraps(-5)
+      await getTopSharedWraps(-5)
 
       // With validation, invalid limit (-5) falls back to default (10)
       expect(prisma.plexWrapped.findMany).toHaveBeenCalledWith(
@@ -516,7 +509,7 @@ describe('Share Analytics', () => {
         return Promise.resolve(mockWraps.slice(0, limit))
       })
 
-      const result = await getTopSharedWraps(1000)
+      await getTopSharedWraps(1000)
 
       // With validation, limit over 100 falls back to default (10)
       expect(prisma.plexWrapped.findMany).toHaveBeenCalledWith(
@@ -651,7 +644,6 @@ describe('Share Analytics', () => {
 
     it('should include most recent visit timestamp', async () => {
       const recentVisit = new Date('2024-01-25')
-      const olderVisit = new Date('2024-01-20')
 
       const mockWraps = [
         {

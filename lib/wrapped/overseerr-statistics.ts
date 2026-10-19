@@ -35,14 +35,14 @@
 
 import type { z } from "zod"
 
+import { serviceErrorMessage, serviceFetch } from "@/lib/connections/http"
 import { createLogger } from "@/lib/utils/logger"
 import {
-  MediaRequestStatus,
-  MediaStatus,
   overseerrRequestPageSchema,
   overseerrUserPageSchema,
   type OverseerrRequest,
 } from "@/lib/validations/overseerr"
+import { MediaRequestStatus, MediaStatus } from "@/lib/wrapped/sources/schemas"
 import type { OverseerrConfig, OverseerrStatisticsData } from "./statistics-types"
 
 const logger = createLogger("STATISTICS")
@@ -60,29 +60,18 @@ export interface OverseerrMemberIdentity {
 async function getOverseerrPage<T>(
   config: OverseerrConfig,
   path: string,
-  schema: z.ZodType<T>
+  schema: z.ZodType<T>,
+  signal?: AbortSignal
 ): Promise<T> {
-  const response = await fetch(`${config.url}/api/v1${path}`, {
-    headers: {
-      "X-Api-Key": config.apiKey,
-      "Accept": "application/json",
-    },
+  const result = await serviceFetch({
+    service: "Overseerr",
+    url: `${config.url}/api/v1${path}`,
+    headers: { "X-Api-Key": config.apiKey },
+    schema,
+    signal,
   })
-
-  if (!response.ok) {
-    throw new Error(`Overseerr ${path} failed: ${response.status} ${response.statusText}`)
-  }
-
-  const parsed = schema.safeParse(await response.json())
-  if (!parsed.success) {
-    logger.warn("Unexpected Overseerr response", {
-      path,
-      issues: parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`),
-    })
-    throw new Error(`Overseerr ${path} returned an unexpected response`)
-  }
-
-  return parsed.data
+  if (!result.ok) throw new Error(serviceErrorMessage("Overseerr", result))
+  return result.data
 }
 
 /**
@@ -91,7 +80,8 @@ async function getOverseerrPage<T>(
  */
 async function findOverseerrUserId(
   config: OverseerrConfig,
-  identity: OverseerrMemberIdentity
+  identity: OverseerrMemberIdentity,
+  signal?: AbortSignal
 ): Promise<number | null> {
   const plexIdText = identity.plexUserId?.trim()
   const plexId = plexIdText && Number.isSafeInteger(Number(plexIdText)) ? Number(plexIdText) : null
@@ -104,7 +94,8 @@ async function findOverseerrUserId(
     const users = await getOverseerrPage(
       config,
       `/user?take=${PAGE_SIZE}&skip=${page * PAGE_SIZE}`,
-      overseerrUserPageSchema
+      overseerrUserPageSchema,
+      signal
     )
 
     for (const user of users.results) {
@@ -122,7 +113,7 @@ async function findOverseerrUserId(
 }
 
 /** @internal */
-async function fetchAllRequests(config: OverseerrConfig): Promise<OverseerrRequest[]> {
+async function fetchAllRequests(config: OverseerrConfig, signal?: AbortSignal): Promise<OverseerrRequest[]> {
   const requests = new Map<number, OverseerrRequest>()
   let skip = 0
 
@@ -130,7 +121,8 @@ async function fetchAllRequests(config: OverseerrConfig): Promise<OverseerrReque
     const page = await getOverseerrPage(
       config,
       `/request?take=${PAGE_SIZE}&skip=${skip}&sort=added&filter=all`,
-      overseerrRequestPageSchema
+      overseerrRequestPageSchema,
+      signal
     )
     for (const request of page.results) requests.set(request.id, request)
     if (page.results.length === 0 || page.pageInfo.page >= page.pageInfo.pages) {
@@ -169,15 +161,16 @@ function isAvailable(request: OverseerrRequest): boolean {
 export async function fetchOverseerrStatistics(
   config: OverseerrConfig,
   identity: OverseerrMemberIdentity,
-  year: number
+  year: number,
+  signal?: AbortSignal
 ): Promise<{
   success: boolean
   data?: OverseerrStatisticsData
   error?: string
 }> {
   try {
-    const overseerrUserId = await findOverseerrUserId(config, identity)
-    const allRequests = await fetchAllRequests(config)
+    const overseerrUserId = await findOverseerrUserId(config, identity, signal)
+    const allRequests = await fetchAllRequests(config, signal)
 
     const yearStart = Date.UTC(year, 0, 1)
     const yearEnd = Date.UTC(year + 1, 0, 1)

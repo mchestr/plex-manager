@@ -4,26 +4,16 @@ import { ExpandablePrompt } from "@/components/admin/prompts/expandable-prompt"
 import Link from "next/link"
 import Image from "next/image"
 import { notFound } from "next/navigation"
+import { getFormat } from "@/lib/settings/app-settings"
 
 export const dynamic = 'force-dynamic'
 
 export default async function LLMUsageDetailPage({ params }: { params: Promise<{ usageId: string }> }) {
   const { usageId } = await params
-  const record = await getLLMUsageById(usageId)
+  const [record, f] = await Promise.all([getLLMUsageById(usageId), getFormat()])
 
   if (!record) {
     notFound()
-  }
-
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    })
   }
 
   const getProviderBadge = (provider: string) => {
@@ -106,7 +96,7 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
             >
               ← Back to LLM Requests
             </Link>
-            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">LLM Request Details</h1>
+            <h1 data-testid="admin-llm-usage-detail-heading" className="text-2xl sm:text-3xl font-bold text-white mb-2">LLM Request Details</h1>
             <p className="text-sm text-slate-400">
               Investigate LLM request details, token usage, and response data
             </p>
@@ -126,17 +116,17 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
           </div>
           <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
             <div className="text-sm text-slate-400 mb-1">Total Tokens</div>
-            <div className="text-2xl font-bold text-cyan-400">{record.totalTokens.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-cyan-400">{f.number(record.totalTokens)}</div>
             <div className="text-xs text-slate-500 mt-1">
-              {record.promptTokens.toLocaleString()} prompt + {record.completionTokens.toLocaleString()} completion
+              {f.number(record.promptTokens)} prompt + {f.number(record.completionTokens)} completion
             </div>
           </div>
           <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
             <div className="text-sm text-slate-400 mb-1">Total Cost</div>
-            <div className="text-2xl font-bold text-green-400">${record.cost.toFixed(4)}</div>
+            <div className="text-2xl font-bold text-green-400">{f.money(record.cost)}</div>
             <div className="text-xs text-slate-500 mt-1">
               {record.totalTokens > 0
-                ? `$${((record.cost / record.totalTokens) * 1000000).toFixed(2)} per 1M tokens`
+                ? `${f.money((record.cost / record.totalTokens) * 1000000)} per 1M tokens`
                 : "N/A"}
             </div>
           </div>
@@ -199,7 +189,7 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
                       <div>
                         <span className="text-sm text-slate-400">Generated: </span>
                         <span className="text-sm text-white">
-                          {formatDate(record.wrapped.generatedAt)}
+                          {f.dateTime(record.wrapped.generatedAt, { zoneLabel: true })}
                         </span>
                       </div>
                     )}
@@ -215,7 +205,7 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
                   <div className="space-y-2">
                     <div className="text-sm text-slate-400 mb-1">Chat Conversation</div>
                     <div className="text-sm text-white">
-                      Started {formatDate(record.chatConversation.createdAt)}
+                      Started {f.dateTime(record.chatConversation.createdAt, { zoneLabel: true })}
                     </div>
                     <Link
                       href={`/admin/llm-usage/conversation/${record.chatConversation.id}`}
@@ -240,22 +230,22 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
           <div className="space-y-4">
             <div>
               <div className="text-sm text-slate-400 mb-2">Created At</div>
-              <div className="text-sm text-white">{formatDate(record.createdAt)}</div>
+              <div className="text-sm text-white">{f.dateTime(record.createdAt, { zoneLabel: true })}</div>
             </div>
             <div>
               <div className="text-sm text-slate-400 mb-2">Token Breakdown</div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="bg-slate-900/50 rounded p-3">
                   <div className="text-xs text-slate-400 mb-1">Prompt Tokens</div>
-                  <div className="text-lg font-bold text-blue-400">{record.promptTokens.toLocaleString()}</div>
+                  <div className="text-lg font-bold text-blue-400">{f.number(record.promptTokens)}</div>
                 </div>
                 <div className="bg-slate-900/50 rounded p-3">
                   <div className="text-xs text-slate-400 mb-1">Completion Tokens</div>
-                  <div className="text-lg font-bold text-purple-400">{record.completionTokens.toLocaleString()}</div>
+                  <div className="text-lg font-bold text-purple-400">{f.number(record.completionTokens)}</div>
                 </div>
                 <div className="bg-slate-900/50 rounded p-3">
                   <div className="text-xs text-slate-400 mb-1">Total Tokens</div>
-                  <div className="text-lg font-bold text-cyan-400">{record.totalTokens.toLocaleString()}</div>
+                  <div className="text-lg font-bold text-cyan-400">{f.number(record.totalTokens)}</div>
                 </div>
               </div>
             </div>

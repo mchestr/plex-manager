@@ -12,40 +12,27 @@ export type PrometheusInput = z.input<typeof prometheusSchema>
 export type PrometheusParsed = z.output<typeof prometheusSchema>
 
 /**
- * Prometheus API response types
+ * Prometheus API response schemas
  * Based on Prometheus HTTP API: https://prometheus.io/docs/prometheus/latest/querying/api/
  */
 
-/**
- * Prometheus API response wrapper
- */
-export interface PrometheusApiResponse<T> {
-  status: "success" | "error"
-  data?: T
-  errorType?: string
-  error?: string
+/** The `{ status, data }` wrapper every Prometheus API response uses. */
+export function prometheusResponseSchema<T extends z.ZodType>(data: T) {
+  return z.looseObject({
+    status: z.string(),
+    data: data.optional(),
+  })
 }
 
-/**
- * Prometheus query_range result data
- */
-export interface PrometheusRangeData {
-  resultType: "matrix" | "vector" | "scalar" | "string"
-  result: PrometheusRangeResult[]
-}
+/** `query_range` data: one series per metric, as `[timestamp, value]` pairs. */
+export const prometheusRangeDataSchema = z.looseObject({
+  resultType: z.enum(["matrix", "vector", "scalar", "string"]),
+  result: z.array(
+    z.looseObject({
+      metric: z.record(z.string(), z.string()),
+      values: z.array(z.tuple([z.number(), z.string()])),
+    })
+  ),
+})
 
-/**
- * Prometheus range query result (matrix type)
- */
-export interface PrometheusRangeResult {
-  metric: Record<string, string>
-  values: Array<[number, string]> // [timestamp, value]
-}
-
-/**
- * Prometheus instant query result (vector type)
- */
-export interface PrometheusInstantResult {
-  metric: Record<string, string>
-  value: [number, string] // [timestamp, value]
-}
+export type PrometheusRangeData = z.infer<typeof prometheusRangeDataSchema>

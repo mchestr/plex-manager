@@ -2,7 +2,7 @@ import { HTMLAttributes, ReactNode, forwardRef } from "react"
 
 import { cn } from "@/lib/utils"
 
-export type AlertTone = "info" | "warning" | "danger" | "success"
+type AlertTone = "info" | "warning" | "danger" | "success"
 
 interface AlertProps extends Omit<HTMLAttributes<HTMLDivElement>, "title"> {
   /** Visual tone of the alert; also drives the default icon. */

@@ -7,6 +7,7 @@ import {
   adminErrorHint,
   isGenerationRefusal,
   memberErrorCopy,
+  readGenerationError,
   readStoredError,
   refusalCopy,
   toStoredError,
@@ -47,7 +48,27 @@ describe('readStoredError', () => {
   })
 })
 
+describe('readGenerationError (P2.17)', () => {
+  it('reads a RewindGeneration error back as its code', () => {
+    expect(readGenerationError({ code: 'TIMEOUT' })).toBe('TIMEOUT')
+    expect(readGenerationError({ code: 'WORKER_LOST', requeuedAs: 'gen-2' })).toBe('WORKER_LOST')
+  })
+
+  it('reads a skip reason, null or anything else as GENERATION_FAILED', () => {
+    expect(readGenerationError({ code: 'LOCKED' })).toBe('GENERATION_FAILED')
+    expect(readGenerationError(null)).toBe('GENERATION_FAILED')
+    expect(readGenerationError('TIMEOUT')).toBe('GENERATION_FAILED')
+  })
+})
+
 describe('memberErrorCopy', () => {
+  it.each(['TIMEOUT', 'UPSTREAM_ERROR', 'LLM_FAILED', 'NOT_CONFIGURED', 'WORKER_LOST', 'JOB_LOST'] as const)(
+    'has fixed copy for the job code %s',
+    (code) => {
+      expect(memberErrorCopy(code)).toMatch(/\.$/)
+    }
+  )
+
   it('returns the fixed copy for a missing Tautulli account', () => {
     expect(memberErrorCopy('TAUTULLI_USER_NOT_FOUND')).toBe(
       "We couldn't find your account in Tautulli yet. Ask the server admin to refresh Tautulli's user list."

@@ -8,10 +8,14 @@
  */
 
 import { DistributedLock, DISCORD_BOT_LOCK_ID } from "@/lib/discord/lock/lease"
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 // The module imports the real prisma client at load; stub it so module
 // evaluation doesn't require DATABASE_URL. Every test injects its own store.
-jest.mock("@/lib/prisma", () => ({ prisma: {} }))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock("@/lib/utils/logger", () => ({
   createLogger: jest.fn(() => ({
@@ -34,7 +38,10 @@ interface LockRow {
 let row: LockRow | null
 
 // `prisma`-shaped facade over the single-row store.
-const store = {
+const store: {
+  discordBotLock: Record<string, jest.Mock>
+  $transaction: jest.Mock
+} = {
   discordBotLock: {
     deleteMany: jest.fn((args: { where: { expiresAt?: { lt: Date }; id?: string; instanceId?: string } }) => {
       let count = 0
@@ -80,7 +87,7 @@ const store = {
       }
     ),
   },
-  $transaction: jest.fn((fn: (tx: unknown) => unknown) => fn(store)),
+  $transaction: jest.fn((fn: (tx: unknown) => unknown): unknown => fn(store)),
 }
 
 const INSTANCE = "instance-A"

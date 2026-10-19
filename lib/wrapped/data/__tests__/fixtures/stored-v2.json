@@ -1,0 +1,415 @@
+{
+  "version": 2,
+  "year": 2025,
+  "userId": "user-1",
+  "userName": "Mike",
+  "generatedAt": "2025-12-01T09:00:00.000Z",
+  "archetype": {
+    "id": "midnight-marathoner",
+    "name": "The Midnight Marathoner",
+    "tagline": "The night belongs to you",
+    "dedication": "For 200 nights this year, the credits rolled long after midnight. You never blinked."
+  },
+  "statistics": {
+    "totalWatchTime": {
+      "total": 60480,
+      "movies": 20160,
+      "shows": 40320
+    },
+    "moviesWatched": 85,
+    "showsWatched": 23,
+    "episodesWatched": 412,
+    "topMovies": [
+      {
+        "title": "Dune: Part Three",
+        "watchTime": 165,
+        "playCount": 1,
+        "year": 2026
+      },
+      {
+        "title": "The Odyssey",
+        "watchTime": 150,
+        "playCount": 1,
+        "year": 2026
+      }
+    ],
+    "topShows": [
+      {
+        "title": "Severance",
+        "watchTime": 900,
+        "playCount": 18,
+        "episodesWatched": 18,
+        "year": 2022
+      }
+    ],
+    "watchTimeByMonth": [
+      {
+        "month": 1,
+        "monthName": "January",
+        "watchTime": 5040
+      },
+      {
+        "month": 2,
+        "monthName": "February",
+        "watchTime": 4200
+      }
+    ],
+    "derived": {
+      "longestStreak": {
+        "days": 12,
+        "start": "2026-03-01",
+        "end": "2026-03-12"
+      },
+      "peakHour": {
+        "hour": 23,
+        "label": "11 PM",
+        "plays": 210
+      },
+      "hourHistogram": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "dayOfWeekHistogram": [
+        {
+          "day": "Sunday",
+          "watchTime": 9000
+        },
+        {
+          "day": "Monday",
+          "watchTime": 7000
+        },
+        {
+          "day": "Tuesday",
+          "watchTime": 8000
+        },
+        {
+          "day": "Wednesday",
+          "watchTime": 7500
+        },
+        {
+          "day": "Thursday",
+          "watchTime": 8500
+        },
+        {
+          "day": "Friday",
+          "watchTime": 10000
+        },
+        {
+          "day": "Saturday",
+          "watchTime": 10480
+        }
+      ],
+      "mostActiveDay": {
+        "date": "2026-03-07",
+        "watchTime": 720
+      },
+      "weekendVsWeekday": {
+        "weekendPct": 32
+      }
+    },
+    "percentile": {
+      "percentile": 5,
+      "topPercentLabel": "Top 5%"
+    }
+  },
+  "sections": [
+    {
+      "id": "hero",
+      "type": "hero",
+      "title": "Your 2025 Wrapped",
+      "subtitle": "Now Presenting",
+      "content": "Welcome to your <highlight>2026</highlight> premiere.",
+      "data": {
+        "prominentStat": {
+          "value": 1008,
+          "label": "hours watched",
+          "description": "Your year in film and television, 2025"
+        }
+      }
+    },
+    {
+      "id": "total-watch-time",
+      "type": "total-watch-time",
+      "title": "Total Watch Time",
+      "content": "You watched <highlight>42 days</highlight> of content.",
+      "data": {
+        "totalWatchTime": {
+          "total": 60480,
+          "movies": 20160,
+          "shows": 40320
+        }
+      }
+    },
+    {
+      "id": "movies-breakdown",
+      "type": "movies-breakdown",
+      "title": "The Features",
+      "content": "You screened <highlight>85 films</highlight> this year.",
+      "data": {
+        "moviesWatched": 85,
+        "watchTime": 20160
+      }
+    },
+    {
+      "id": "shows-breakdown",
+      "type": "shows-breakdown",
+      "title": "The Series",
+      "content": "You followed <highlight>23 series</highlight>.",
+      "data": {
+        "showsWatched": 23,
+        "episodesWatched": 412,
+        "watchTime": 40320
+      }
+    },
+    {
+      "id": "top-movies",
+      "type": "top-movies",
+      "title": "Top Billing — Films",
+      "content": "These films earned top billing.",
+      "data": {
+        "movies": [
+          {
+            "title": "Dune: Part Three",
+            "watchTime": 165,
+            "playCount": 1,
+            "year": 2026
+          },
+          {
+            "title": "The Odyssey",
+            "watchTime": 150,
+            "playCount": 1,
+            "year": 2026
+          }
+        ]
+      }
+    },
+    {
+      "id": "top-shows",
+      "type": "top-shows",
+      "title": "Top Billing — Series",
+      "content": "These series kept you coming back.",
+      "data": {
+        "shows": [
+          {
+            "title": "Severance",
+            "watchTime": 900,
+            "playCount": 18,
+            "episodesWatched": 18,
+            "year": 2022
+          }
+        ]
+      }
+    },
+    {
+      "id": "streaks-patterns",
+      "type": "streaks-patterns",
+      "title": "Your Viewing Patterns",
+      "content": "Your longest streak ran <highlight>12 days</highlight>.",
+      "data": {
+        "derived": {
+          "longestStreak": {
+            "days": 12,
+            "start": "2026-03-01",
+            "end": "2026-03-12"
+          },
+          "peakHour": {
+            "hour": 23,
+            "label": "11 PM",
+            "plays": 210
+          },
+          "hourHistogram": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "dayOfWeekHistogram": [
+            {
+              "day": "Sunday",
+              "watchTime": 9000
+            },
+            {
+              "day": "Monday",
+              "watchTime": 7000
+            },
+            {
+              "day": "Tuesday",
+              "watchTime": 8000
+            },
+            {
+              "day": "Wednesday",
+              "watchTime": 7500
+            },
+            {
+              "day": "Thursday",
+              "watchTime": 8500
+            },
+            {
+              "day": "Friday",
+              "watchTime": 10000
+            },
+            {
+              "day": "Saturday",
+              "watchTime": 10480
+            }
+          ],
+          "mostActiveDay": {
+            "date": "2026-03-07",
+            "watchTime": 720
+          },
+          "weekendVsWeekday": {
+            "weekendPct": 32
+          }
+        }
+      }
+    },
+    {
+      "id": "monthly-journey",
+      "type": "monthly-journey",
+      "title": "A Year in Reels",
+      "content": "From January to December, quite the arc.",
+      "data": {
+        "watchTimeByMonth": [
+          {
+            "month": 1,
+            "monthName": "January",
+            "watchTime": 5040
+          },
+          {
+            "month": 2,
+            "monthName": "February",
+            "watchTime": 4200
+          }
+        ]
+      }
+    },
+    {
+      "id": "percentile",
+      "type": "percentile",
+      "title": "Among the Audience",
+      "content": "You ranked in the <highlight>Top 5%</highlight>.",
+      "data": {
+        "percentile": {
+          "percentile": 5,
+          "topPercentLabel": "Top 5%"
+        }
+      }
+    },
+    {
+      "id": "archetype-reveal",
+      "type": "archetype-reveal",
+      "title": "And the Award Goes To…",
+      "subtitle": "The night belongs to you",
+      "content": "For 200 nights this year, the credits rolled long after midnight. You never blinked.",
+      "data": {
+        "archetype": {
+          "id": "midnight-marathoner",
+          "name": "The Midnight Marathoner",
+          "motif": "Watches deep into the night, one more episode always wins"
+        }
+      }
+    },
+    {
+      "id": "fun-facts",
+      "type": "fun-facts",
+      "title": "Deleted Scenes",
+      "content": "",
+      "data": {
+        "facts": [
+          "Your busiest night was a Tuesday.",
+          "You finished three full series in March.",
+          "Your peak hour was 11 PM."
+        ]
+      }
+    },
+    {
+      "id": "finale",
+      "type": "finale",
+      "title": "Closing Credits",
+      "content": "That's a wrap on 2026.",
+      "data": {
+        "topMovies": [
+          {
+            "title": "Dune: Part Three",
+            "watchTime": 165,
+            "playCount": 1,
+            "year": 2026
+          },
+          {
+            "title": "The Odyssey",
+            "watchTime": 150,
+            "playCount": 1,
+            "year": 2026
+          }
+        ],
+        "topShows": [
+          {
+            "title": "Severance",
+            "watchTime": 900,
+            "playCount": 18,
+            "episodesWatched": 18,
+            "year": 2022
+          }
+        ]
+      }
+    }
+  ],
+  "insights": {
+    "personality": "A dedicated night-owl cinephile",
+    "topGenre": "Science Fiction",
+    "bingeWatcher": true,
+    "discoveryScore": 72,
+    "funFacts": [
+      "Your busiest night was a Tuesday.",
+      "You finished three full series in March.",
+      "Your peak hour was 11 PM."
+    ]
+  },
+  "summary": "42 days watched, 85 films, Top 5% of the server.",
+  "metadata": {
+    "totalSections": 12,
+    "generationTime": 42
+  }
+}

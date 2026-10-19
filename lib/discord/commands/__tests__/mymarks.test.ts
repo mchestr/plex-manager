@@ -74,14 +74,9 @@ jest.mock("discord.js", () => {
   }
 })
 
-jest.mock("@/lib/prisma", () => ({
-  prisma: {
-    userMediaMark: {
-      findMany: jest.fn(),
-      count: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 jest.mock("@/lib/utils/logger", () => ({
   createLogger: () => ({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }),
 }))
@@ -91,6 +86,8 @@ import { prisma } from "@/lib/prisma"
 import { MarkType } from "@/lib/generated/prisma/client"
 import type { InteractionContext } from "../registry"
 import type { VerifyDiscordUserResult } from "@/lib/discord/services"
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 const findMany = prisma.userMediaMark.findMany as jest.Mock
 const count = prisma.userMediaMark.count as jest.Mock

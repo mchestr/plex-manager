@@ -14,8 +14,9 @@
  *
  * ## Process
  *
- * 1. Parse the stored JSON loosely (v1 and v2 rows share `statistics`); a
- *    missing or malformed value becomes 0 or an empty list.
+ * 1. Parse the stored row with `parseStoredRewind` (v1 and v2 rows share
+ *    `statistics`, read leniently: a missing or malformed value becomes 0 or
+ *    an empty list).
  * 2. Copy only the allow-listed fields into a new object, keeping at most
  *    five titles per list, the first entry for each month and no per-month
  *    top titles.
@@ -28,6 +29,8 @@
 
 import { z } from "zod"
 
+import { parseStoredRewind } from "@/lib/wrapped/data/parse-stored"
+import type { StoredWrappedData } from "@/lib/wrapped/data/schema-legacy"
 import { memberName } from "@/lib/wrapped/member-name"
 
 const MAX_TOP_TITLES = 5
@@ -73,51 +76,9 @@ export type ShareSafeRewindV2 = z.infer<typeof ShareSafeRewindV2>
 type ShareSafeMovie = z.infer<typeof shareSafeMovie>
 type ShareSafeShow = z.infer<typeof shareSafeShow>
 
-const storedCount = z.number().nonnegative().catch(0)
-
-const storedTitle = z.object({
-  title: z.string(),
-  watchTime: storedCount,
-  playCount: storedCount,
-  episodesWatched: storedCount,
-  year: z.coerce.number().int().positive().optional().catch(undefined),
-  ratingKey: z.string().optional().catch(undefined),
-})
-
-const storedMonth = z.object({
-  month: z.number().int().min(1).max(12),
-  watchTime: storedCount,
-})
-
-type StoredTitle = z.infer<typeof storedTitle>
-type StoredMonth = z.infer<typeof storedMonth>
-
-/** Keep the entries that parse; one bad entry does not empty the list. */
-function listOf<T>(schema: z.ZodType<T>) {
-  return z
-    .array(z.unknown())
-    .catch([])
-    .transform((items) =>
-      items.flatMap((item) => {
-        const parsed = schema.safeParse(item)
-        return parsed.success ? [parsed.data] : []
-      })
-    )
-}
-
-const storedStatistics = z.object({
-  totalWatchTime: z.object({ total: storedCount }).catch({ total: 0 }),
-  moviesWatched: storedCount,
-  showsWatched: storedCount,
-  episodesWatched: storedCount,
-  topMovies: listOf(storedTitle),
-  topShows: listOf(storedTitle),
-  watchTimeByMonth: listOf(storedMonth),
-})
-
-const storedRewind = z.object({
-  statistics: storedStatistics.catch(() => storedStatistics.parse({})),
-})
+type StoredStatistics = StoredWrappedData["statistics"]
+type StoredTitle = StoredStatistics["topShows"][number]
+type StoredMonth = NonNullable<StoredStatistics["watchTimeByMonth"]>[number]
 
 /**
  * Keep the first entry for each month. Generation writes one per month, but
@@ -132,7 +93,7 @@ function firstPerMonth(months: StoredMonth[]): StoredMonth[] {
   return [...byMonth.values()]
 }
 
-function toMovie(title: StoredTitle): ShareSafeMovie {
+function toMovie(title: StoredStatistics["topMovies"][number]): ShareSafeMovie {
   const movie: ShareSafeMovie = { title: title.title, minutes: title.watchTime, plays: title.playCount }
   if (title.year !== undefined) movie.year = title.year
   if (title.ratingKey !== undefined) movie.ratingKey = title.ratingKey
@@ -158,7 +119,7 @@ function toShow(title: StoredTitle): ShareSafeShow {
  *   stored JSON string.
  * @param owner - The owning `User`; only `name` is read.
  * @returns The validated projection.
- * @throws When `row.data` is not JSON, or the projection fails its schema.
+ * @throws When `row.data` is not a v1 or v2 Rewind, or the projection fails its schema.
  *
  * @example
  * ```ts
@@ -174,7 +135,11 @@ export function toShareSafeV2(
   row: { year: number; summary: string | null; archetype: string | null; data: string },
   owner: { name: string | null }
 ): ShareSafeRewindV2 {
-  const { statistics } = storedRewind.parse(JSON.parse(row.data))
+  const stored = parseStoredRewind(row.data)
+  if (stored.version !== 1 && stored.version !== 2) {
+    throw new Error(`Stored Rewind is not a v1 or v2 row (${stored.version === 3 ? "v3" : stored.reason})`)
+  }
+  const { statistics } = stored.legacy
 
   return ShareSafeRewindV2.parse({
     year: row.year,
@@ -187,7 +152,7 @@ export function toShareSafeV2(
       shows: statistics.showsWatched,
       episodes: statistics.episodesWatched,
     },
-    months: firstPerMonth(statistics.watchTimeByMonth).map((month) => ({ month: month.month, minutes: month.watchTime })),
+    months: firstPerMonth(statistics.watchTimeByMonth ?? []).map((month) => ({ month: month.month, minutes: month.watchTime })),
     topMovies: statistics.topMovies.slice(0, MAX_TOP_TITLES).map(toMovie),
     topShows: statistics.topShows.slice(0, MAX_TOP_TITLES).map(toShow),
   })

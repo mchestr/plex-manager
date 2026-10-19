@@ -1,10 +1,10 @@
 "use client"
 
 import type { ShareSafeRewindV2 } from "@/lib/wrapped/data/share-safe-v2"
-import { motion } from "framer-motion"
+import { motion } from "motion/react"
 import { FormattedText } from "@/components/shared/formatted-text"
 import { SpaceBackground } from "@/components/setup/setup-wizard/space-background"
-import { formatWatchTime, formatWatchTimeHours } from "@/lib/utils/time-formatting"
+import { formatDuration } from "@/lib/utils/format"
 import { PosterImage } from "@/components/wrapped/cinematic/poster-image"
 import Link from "next/link"
 
@@ -62,7 +62,7 @@ export function WrappedShareSummary({ rewind, shareToken }: WrappedShareSummaryP
         >
           <div data-testid="wrapped-total-watch-time" className="bg-slate-800/60 backdrop-blur-sm border border-slate-700 rounded-lg p-6 text-center">
             <div className="text-3xl font-bold text-cyan-400 mb-2">
-              {formatWatchTimeHours(totals.minutes)}
+              {formatDuration(totals.minutes, "long", { largestUnit: "day", smallestUnit: "hour", maxUnits: 1 })}
             </div>
             <div data-testid="wrapped-total-watch-time-label" className="text-slate-400 text-sm">Total Watch Time</div>
           </div>
@@ -121,7 +121,7 @@ export function WrappedShareSummary({ rewind, shareToken }: WrappedShareSummaryP
                         )}
                       </div>
                       <div className="text-sm text-slate-400">
-                        {formatWatchTime(movie.minutes)} • {movie.plays} play{movie.plays !== 1 ? "s" : ""}
+                        {formatDuration(movie.minutes, "long", { largestUnit: "day" })} • {movie.plays} play{movie.plays !== 1 ? "s" : ""}
                       </div>
                     </div>
                   </div>
@@ -170,7 +170,7 @@ export function WrappedShareSummary({ rewind, shareToken }: WrappedShareSummaryP
                         )}
                       </div>
                       <div className="text-sm text-slate-400">
-                        {formatWatchTime(show.minutes)} • {show.episodes} episode{show.episodes !== 1 ? "s" : ""}
+                        {formatDuration(show.minutes, "long", { largestUnit: "day" })} • {show.episodes} episode{show.episodes !== 1 ? "s" : ""}
                       </div>
                     </div>
                   </div>

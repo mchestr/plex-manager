@@ -2,7 +2,7 @@
  * Type definitions for statistics functions
  */
 
-import type { DerivedStatistics } from "./derived-statistics"
+import type { DerivedStatistics } from "./data/schema-legacy"
 
 export interface TautulliConfig {
   url: string
@@ -32,7 +32,7 @@ export interface TopShow extends TopMedia {
   episodesWatched: number
 }
 
-export interface MonthlyWatchTime {
+interface MonthlyWatchTime {
   month: number
   monthName: string
   watchTime: number
@@ -67,7 +67,7 @@ export interface TautulliStatisticsData {
   derived: DerivedStatistics
 }
 
-export interface LibrarySize {
+interface LibrarySize {
   movies: number
   shows: number
   episodes: number
@@ -108,16 +108,4 @@ export interface WatchTimeLeaderboardEntry {
   totalWatchTime: number
   moviesWatchTime: number
   showsWatchTime: number
-}
-
-export interface ContentLeaderboard {
-  title: string
-  ratingKey?: string
-  leaderboard: LeaderboardEntry[]
-  userPosition?: number
-  totalWatchers: number
-}
-
-export interface ShowContentLeaderboard extends ContentLeaderboard {
-  leaderboard: Array<LeaderboardEntry & { episodesWatched: number }>
 }

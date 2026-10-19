@@ -13,7 +13,7 @@
 /**
  * Successful connection result with data
  */
-export type ConnectionSuccess<T> = {
+type ConnectionSuccess<T> = {
   success: true
   data: T
 }
@@ -21,7 +21,7 @@ export type ConnectionSuccess<T> = {
 /**
  * Failed connection result with error message
  */
-export type ConnectionError = {
+type ConnectionError = {
   success: false
   error: string
 }

@@ -5,7 +5,7 @@ import { z } from "zod"
 import { actionClientIp, consume, type LimitName } from "@/lib/security/rate-limit"
 import { RATE_LIMITED_MESSAGE } from "@/lib/security/rate-limit-messages"
 import { createLogger } from "@/lib/utils/logger"
-import { getBaseUrl } from "@/lib/utils"
+import { getBaseUrl } from "@/lib/env"
 
 const logger = createLogger("PLEX_AUTH")
 
@@ -145,34 +145,6 @@ export async function getPlexAuthToken(pinId: string): Promise<PlexAuthTokenResu
 }
 
 /**
- * Verify a Plex auth token
- */
-export async function verifyPlexAuthToken(authToken: string): Promise<boolean> {
-  const clientIdentifier = getClientIdentifier()
-
-  try {
-    const response = await fetch(`${PLEX_API_ENDPOINT}/user?strong=true`, {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "X-Plex-Token": authToken,
-        "X-Plex-Product": PLEX_PRODUCT_NAME,
-        "X-Plex-Client-Identifier": clientIdentifier,
-      },
-    })
-
-    if (response.status === 401) {
-      return false
-    }
-
-    return response.ok
-  } catch (error) {
-    logger.error("Error verifying Plex auth token", error)
-    return false
-  }
-}
-
-/**
  * Create the Plex authorization URL with PIN code
  */
 export async function createPlexAuthUrl(pinId: number, pinCode: string, inviteCode?: string): Promise<string> {
@@ -199,4 +171,3 @@ export async function createPlexAuthUrl(pinId: number, pinCode: string, inviteCo
 
   return `https://app.plex.tv/auth#?${queryString}`
 }
-

@@ -53,16 +53,12 @@ jest.mock("discord.js", () => {
   }
 })
 
-jest.mock("@/lib/wrapped/statistics", () => ({
+jest.mock("@/lib/wrapped/tautulli-statistics", () => ({
   fetchTautulliStatistics: jest.fn(),
 }))
-jest.mock("@/lib/prisma", () => ({
-  prisma: {
-    tautulli: {
-      findFirst: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 jest.mock("@/lib/utils/logger", () => ({
   createLogger: () => ({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }),
 }))
@@ -76,12 +72,14 @@ jest.mock("@/lib/discord/chat-safety", () => {
 })
 
 import { myStatsCommand } from "../mystats"
-import { fetchTautulliStatistics } from "@/lib/wrapped/statistics"
+import { fetchTautulliStatistics } from "@/lib/wrapped/tautulli-statistics"
 import { prisma } from "@/lib/prisma"
 import { sanitizeDiscordResponse } from "@/lib/discord/chat-safety"
 import type { InteractionContext } from "../registry"
 import type { VerifyDiscordUserResult } from "@/lib/discord/services"
 import type { TautulliStatisticsData } from "@/lib/wrapped/statistics-types"
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 const mockFetch = fetchTautulliStatistics as jest.MockedFunction<
   typeof fetchTautulliStatistics

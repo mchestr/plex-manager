@@ -6,7 +6,7 @@
  *
  * Both key sets are cached in process (a viewer's for 10 minutes, a share
  * token's for 5) as pending loads, so the burst of parallel poster requests a
- * slide makes runs one query and one `JSON.parse` per Rewind. Invalid or
+ * slide makes runs one query and one parse per Rewind. Invalid or
  * incomplete share tokens and failed queries are not cached.
  *
  * A key missing from a set loaded more than a minute ago triggers one reload,
@@ -17,8 +17,9 @@
  * ## Parsing
  *
  * A viewer's keys come from `statistics.topMovies[].ratingKey` and
- * `statistics.topShows[].ratingKey`. Items are read one by one: a malformed
- * item is skipped without emptying the rest of the set.
+ * `statistics.topShows[].ratingKey` of their v1 and v2 Rewinds, read through
+ * `parseStoredRewind`, which checks items one by one: a malformed item is
+ * skipped without emptying the rest of the set. v3 rows cover no keys yet.
  *
  * A share token's keys come from the share-safe projection
  * (`./data/share-safe-v2`), which keeps five titles per list, so a share link
@@ -30,10 +31,9 @@
 
 import "server-only"
 
-import { z } from "zod"
-
 import { prisma } from "@/lib/prisma"
 import { createLoadingCache } from "@/lib/utils/ttl-cache"
+import { parseStoredRewind, readWrappedStatus } from "@/lib/wrapped/data/parse-stored"
 import { toShareSafeV2 } from "@/lib/wrapped/data/share-safe-v2"
 
 const VIEWER_KEYS_TTL_MS = 10 * 60 * 1000
@@ -46,19 +46,6 @@ interface ViewerPosterKeys {
   keys: ReadonlySet<string>
 }
 
-const rankedListSchema = z.array(z.unknown()).nullish().catch(null)
-
-const posterKeysSchema = z.object({
-  statistics: z
-    .object({ topMovies: rankedListSchema, topShows: rankedListSchema })
-    .nullish()
-    .catch(null),
-})
-
-const rankedItemSchema = z.object({
-  ratingKey: z.union([z.string().min(1), z.number().int().nonnegative()]).transform(String),
-})
-
 const viewerKeysCache = createLoadingCache<string, ViewerPosterKeys>({
   ttlMs: VIEWER_KEYS_TTL_MS,
   maxEntries: 5_000,
@@ -69,21 +56,12 @@ const shareKeysCache = createLoadingCache<string, ReadonlySet<string> | null>({
   keep: (keys) => keys !== null,
 })
 
-/** The poster rating keys (top movies and shows) stored in one Rewind's JSON. */
+/** The poster rating keys (top movies and shows) stored in one v1 or v2 Rewind. */
 function extractPosterKeys(data: string): string[] {
-  let json: unknown
-  try {
-    json = JSON.parse(data)
-  } catch {
-    return []
-  }
-  const parsed = posterKeysSchema.safeParse(json)
-  if (!parsed.success) return []
-  const statistics = parsed.data.statistics
-  return [...(statistics?.topMovies ?? []), ...(statistics?.topShows ?? [])].flatMap((item) => {
-    const ranked = rankedItemSchema.safeParse(item)
-    return ranked.success ? [ranked.data.ratingKey] : []
-  })
+  const stored = parseStoredRewind(data)
+  if (stored.version !== 1 && stored.version !== 2) return []
+  const { topMovies, topShows } = stored.legacy.statistics
+  return [...topMovies, ...topShows].flatMap((item) => (item.ratingKey ? [item.ratingKey] : []))
 }
 
 async function loadViewerPosterKeys(userId: string): Promise<ViewerPosterKeys> {
@@ -110,9 +88,9 @@ function extractSharePosterKeys(row: Parameters<typeof toShareSafeV2>[0]): strin
 async function loadShareKeys(token: string): Promise<ReadonlySet<string> | null> {
   const wrapped = await prisma.plexWrapped.findUnique({
     where: { shareToken: token },
-    select: { year: true, status: true, summary: true, archetype: true, data: true },
+    select: { id: true, year: true, status: true, summary: true, archetype: true, data: true },
   })
-  if (!wrapped || wrapped.status !== "completed") return null
+  if (!wrapped || readWrappedStatus(wrapped.status, wrapped.id) !== "completed") return null
   return new Set(extractSharePosterKeys(wrapped))
 }
 

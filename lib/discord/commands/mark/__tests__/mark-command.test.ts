@@ -127,7 +127,7 @@ import { applyMark } from "@/lib/discord/media/mark-media"
 import { createPendingSelection, findByCustomId, deleteById } from "../pending-store"
 import { verifyDiscordUser } from "@/lib/discord/services"
 import { MarkType } from "@/lib/generated/prisma/client"
-import type { InteractionContext } from "../registry"
+import type { InteractionContext } from "../../registry"
 import type { VerifyDiscordUserResult } from "@/lib/discord/services"
 
 const mockSearch = searchPlexMedia as jest.MockedFunction<typeof searchPlexMedia>

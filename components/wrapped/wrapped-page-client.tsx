@@ -1,60 +1,33 @@
 "use client"
 
-import { getUserPlexWrapped } from "@/actions/users"
 import { WrappedGeneratingAnimation } from "@/components/generator/wrapped-generating-animation"
-import { useToast } from "@/components/ui/toast"
+import { useRewindStatus } from "@/hooks/use-rewind-status"
+import { isActiveRewindState } from "@/lib/rewind/rewind-status"
 import { useRouter } from "next/navigation"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef } from "react"
 
 interface WrappedPageClientProps {
+  /** Whose run: the signed-in member, or the member an admin is viewing. */
   userId: string
   year: number
-  initialStatus: string
 }
 
-export function WrappedPageClient({ userId, year, initialStatus }: WrappedPageClientProps) {
-  const toast = useToast()
+/**
+ * The generating page: the animation while the run is queued or running,
+ * through the shared status hook, which refreshes the page when the run it
+ * watched finishes. The server rendered this page for a `generating` row, so
+ * a run that was already over at the first read refreshes it here.
+ */
+export function WrappedPageClient({ userId, year }: WrappedPageClientProps) {
   const router = useRouter()
-  const [status, setStatus] = useState(initialStatus)
-  const pollFailureCountRef = useRef(0)
+  const { status } = useRewindStatus(year, { userId })
+  const settled = status !== null && !isActiveRewindState(status.state)
+  const sawActive = useRef(false)
 
   useEffect(() => {
-    if (status !== "generating") {
-      return
-    }
+    if (status && !settled) sawActive.current = true
+    if (settled && !sawActive.current) router.refresh()
+  }, [status, settled, router])
 
-    const pollInterval = setInterval(async () => {
-      try {
-        const wrappedData = await getUserPlexWrapped(userId, year)
-        setStatus(wrappedData?.status || "generating")
-        pollFailureCountRef.current = 0 // Reset on success
-
-        if (wrappedData?.status === "completed") {
-          clearInterval(pollInterval)
-          // Refresh the page to show the completed wrapped
-          router.refresh()
-        } else if (wrappedData?.status === "failed") {
-          clearInterval(pollInterval)
-          // Refresh to show error state
-          router.refresh()
-        }
-      } catch (err) {
-        console.error("Error polling wrapped status:", err)
-        pollFailureCountRef.current += 1
-        // Show toast after 3 consecutive failures
-        if (pollFailureCountRef.current === 3) {
-          toast.showError("Having trouble checking status. Will keep trying...")
-        }
-      }
-    }, 2000) // Poll every 2 seconds
-
-    return () => clearInterval(pollInterval)
-  }, [userId, year, status, router])
-
-  if (status === "generating") {
-    return <WrappedGeneratingAnimation year={year} />
-  }
-
-  return null
+  return settled ? null : <WrappedGeneratingAnimation year={year} />
 }
-

@@ -1,6 +1,6 @@
 "use client"
 
-import { InputHTMLAttributes, forwardRef } from "react"
+import { InputHTMLAttributes, forwardRef, useId } from "react"
 
 interface StyledCheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "type"> {
   label?: string
@@ -10,7 +10,8 @@ interface StyledCheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>
 
 export const StyledCheckbox = forwardRef<HTMLInputElement, StyledCheckboxProps>(
   ({ label, description, className = "", disabled = false, id, "data-testid": testId, ...props }, ref) => {
-    const checkboxId = id || `checkbox-${Math.random().toString(36).substr(2, 9)}`
+    const generatedId = useId()
+    const checkboxId = id || generatedId
 
     return (
       <div className={`flex items-start gap-3 ${className}`}>

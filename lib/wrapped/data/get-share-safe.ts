@@ -19,6 +19,7 @@ import { cache } from "react"
 
 import { prisma } from "@/lib/prisma"
 import { shareTokenSchema } from "@/lib/validations/shared-schemas"
+import { readWrappedStatus } from "@/lib/wrapped/data/parse-stored"
 import { toShareSafeV2, type ShareSafeRewindV2 } from "@/lib/wrapped/data/share-safe-v2"
 
 export interface ShareSafeLookup {
@@ -57,7 +58,7 @@ export const getShareSafeRewind = cache(async (token: string): Promise<ShareSafe
     },
   })
 
-  if (!wrapped || wrapped.status !== "completed") {
+  if (!wrapped || readWrappedStatus(wrapped.status, wrapped.id) !== "completed") {
     return null
   }
 

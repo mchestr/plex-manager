@@ -3,7 +3,8 @@
 import { Button } from "@/components/ui/button"
 import { StyledDropdown } from "@/components/ui/styled-dropdown"
 import { StyledInput } from "@/components/ui/styled-input"
-import { DEFAULT_OPENAI_MODEL } from "@/lib/llm/openai-params"
+import { useFormat } from "@/lib/format-context"
+import { DEFAULT_OPENAI_MODEL } from "@/lib/llm/provider-presets"
 import { WrappedStatistics } from "@/types/wrapped"
 import { StatisticsViewer } from "@/components/admin/playground/statistics-viewer"
 
@@ -88,6 +89,7 @@ export function TestConfiguration({
   selectedModel,
   onReset,
 }: TestConfigurationProps) {
+  const f = useFormat()
   return (
     <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6 shadow-lg shadow-slate-900/20">
       <div className="mb-6">
@@ -352,23 +354,23 @@ export function TestConfiguration({
                 </span>
               </div>
               <div className={`text-base font-bold ${tokenUsage ? 'text-green-400' : 'text-purple-400'}`}>
-                ${tokenUsage ? tokenUsage.cost.toFixed(4) : costEstimate?.cost.toFixed(4)}
+                {f.money(tokenUsage ? tokenUsage.cost : (costEstimate?.cost ?? 0))}
               </div>
             </div>
             <div className="mt-2 flex items-center gap-4 text-xs text-slate-400">
               {tokenUsage ? (
                 <>
-                  <span>{tokenUsage.promptTokens.toLocaleString()} prompt tokens</span>
+                  <span>{f.number(tokenUsage.promptTokens)} prompt tokens</span>
                   <span>•</span>
-                  <span>{tokenUsage.completionTokens.toLocaleString()} completion tokens</span>
+                  <span>{f.number(tokenUsage.completionTokens)} completion tokens</span>
                   <span>•</span>
-                  <span>{tokenUsage.totalTokens.toLocaleString()} total tokens</span>
+                  <span>{f.number(tokenUsage.totalTokens)} total tokens</span>
                 </>
               ) : (
                 <>
-                  <span>~{costEstimate?.promptTokens.toLocaleString()} prompt tokens</span>
+                  <span>~{f.number(costEstimate?.promptTokens ?? 0)} prompt tokens</span>
                   <span>•</span>
-                  <span>~{costEstimate?.estimatedCompletionTokens.toLocaleString()} est. completion</span>
+                  <span>~{f.number(costEstimate?.estimatedCompletionTokens ?? 0)} est. completion</span>
                 </>
               )}
             </div>

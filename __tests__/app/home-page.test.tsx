@@ -16,6 +16,8 @@ import { WrappedCard } from '@/components/dashboard/wrapped-card'
 import { getFirstWatchDate } from '@/lib/connections/tautulli-first-watch'
 import { prisma } from '@/lib/prisma'
 import { getRewindEligibility } from '@/lib/wrapped/eligibility'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),
@@ -36,18 +38,9 @@ jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: jest.fn(), refresh: jest.fn() }),
 }))
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    plexServer: { findFirst: jest.fn() },
-    jellyfinServer: { findFirst: jest.fn() },
-    discordIntegration: { findUnique: jest.fn() },
-    overseerr: { findFirst: jest.fn() },
-    config: { findUnique: jest.fn() },
-    user: { findUnique: jest.fn() },
-    discordConnection: { findUnique: jest.fn() },
-    subscription: { findUnique: jest.fn() },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('@/actions/announcements', () => ({
   getActiveAnnouncements: jest.fn(async () => []),
@@ -59,6 +52,10 @@ jest.mock('@/actions/prometheus-status', () => ({
 
 jest.mock('@/lib/connections/tautulli-first-watch', () => ({
   getFirstWatchDate: jest.fn(),
+}))
+
+jest.mock('@/lib/settings/app-settings', () => ({
+  getAppSettings: jest.fn().mockResolvedValue({ timeZone: 'America/Los_Angeles', locale: 'en-US' }),
 }))
 
 jest.mock('@/lib/wrapped/eligibility', () => ({
@@ -100,11 +97,17 @@ function wrappedCardProps() {
 describe('Home page Rewind eligibility', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    // Five months and 30 days after CREATED_AT in Los Angeles; only Date is faked.
+    jest.useFakeTimers({ now: new Date('2026-07-14T12:00:00Z'), doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask', 'setTimeout', 'setInterval', 'clearTimeout', 'clearInterval'] })
     ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue({ name: 'Test Plex', url: 'https://plex.example.com' })
     ;(prisma.jellyfinServer.findFirst as jest.Mock).mockResolvedValue(null)
     ;(prisma.discordIntegration.findUnique as jest.Mock).mockResolvedValue(null)
     ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue(null)
     ;(prisma.config.findUnique as jest.Mock).mockResolvedValue(null)
+  })
+
+  afterEach(() => {
+    jest.useRealTimers()
   })
 
   it("asks with the member's id and plexUserId and hands the answer to the Rewind card", async () => {
@@ -123,8 +126,9 @@ describe('Home page Rewind eligibility', () => {
     expect(screen.getByTestId('wrapped-card-stub')).toBeInTheDocument()
     expect(wrappedCardProps()).toEqual({
       userId: 'user-1',
-      memberSince: '2021-03-04T00:00:00.000Z',
+      memberLongEnough: true,
       rewindEligibility: { eligible: false, reason: 'NO_TAUTULLI_MATCH' },
+      isAdmin: false,
     })
   })
 
@@ -138,9 +142,20 @@ describe('Home page Rewind eligibility', () => {
     expect(getFirstWatchDate).not.toHaveBeenCalled()
     expect(wrappedCardProps()).toEqual({
       userId: 'user-1',
-      memberSince: CREATED_AT.toISOString(),
+      memberLongEnough: false,
       rewindEligibility: { eligible: false, reason: 'NO_PLEX_IDENTITY' },
+      isAdmin: false,
     })
+  })
+
+  it('counts six calendar months from sign-up in the server zone', async () => {
+    jest.setSystemTime(new Date('2026-07-15T12:00:00Z'))
+    signInWith({ plexUserId: null, primaryAuthService: 'jellyfin' })
+    ;(getRewindEligibility as jest.Mock).mockResolvedValue({ eligible: true })
+
+    render(await Home())
+
+    expect(wrappedCardProps().memberLongEnough).toBe(true)
   })
 
   it('hands an eligible answer through for a Jellyfin sign-in with a linked Plex identity', async () => {

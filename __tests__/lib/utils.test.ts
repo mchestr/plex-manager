@@ -1,8 +1,6 @@
 import {
   cn,
   generateShareToken,
-  getBaseUrl,
-  constructServerUrl,
   parseServerUrl,
   aggregateLlmUsage,
 } from '@/lib/utils'
@@ -116,114 +114,72 @@ describe('getBaseUrl', () => {
   it('should prefer NEXT_PUBLIC_APP_URL', () => {
     process.env.NEXT_PUBLIC_APP_URL = 'https://example.com'
     process.env.NEXTAUTH_URL = 'https://fallback.com'
-    process.env.NODE_ENV = 'production'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'production')
 
-    const { getBaseUrl } = require('@/lib/utils')
+    const { getBaseUrl } = require('@/lib/env')
     expect(getBaseUrl()).toBe('https://example.com')
   })
 
   it('should fallback to NEXTAUTH_URL when NEXT_PUBLIC_APP_URL is not set', () => {
     delete process.env.NEXT_PUBLIC_APP_URL
     process.env.NEXTAUTH_URL = 'https://fallback.com'
-    process.env.NODE_ENV = 'production'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'production')
 
-    const { getBaseUrl } = require('@/lib/utils')
+    const { getBaseUrl } = require('@/lib/env')
     expect(getBaseUrl()).toBe('https://fallback.com')
   })
 
   it('should use localhost in development when no env vars are set', () => {
     delete process.env.NEXT_PUBLIC_APP_URL
     delete process.env.NEXTAUTH_URL
-    process.env.NODE_ENV = 'development'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'development')
 
-    const { getBaseUrl } = require('@/lib/utils')
+    const { getBaseUrl } = require('@/lib/env')
     expect(getBaseUrl()).toBe('http://localhost:3000')
   })
 
   it('should throw error in production when no env vars are set', () => {
     delete process.env.NEXT_PUBLIC_APP_URL
     delete process.env.NEXTAUTH_URL
-    process.env.NODE_ENV = 'production'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'production')
 
-    const { getBaseUrl } = require('@/lib/utils')
+    const { getBaseUrl } = require('@/lib/env')
     expect(() => getBaseUrl()).toThrow('Base URL is not configured')
   })
 
   it('should handle NEXT_PUBLIC_APP_URL with trailing slash', () => {
     process.env.NEXT_PUBLIC_APP_URL = 'https://example.com/'
-    process.env.NODE_ENV = 'production'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'production')
 
-    const { getBaseUrl } = require('@/lib/utils')
+    const { getBaseUrl } = require('@/lib/env')
     expect(getBaseUrl()).toBe('https://example.com/')
   })
 
   it('should handle NEXTAUTH_URL with port', () => {
     delete process.env.NEXT_PUBLIC_APP_URL
     process.env.NEXTAUTH_URL = 'https://example.com:8080'
-    process.env.NODE_ENV = 'production'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'production')
 
-    const { getBaseUrl } = require('@/lib/utils')
+    const { getBaseUrl } = require('@/lib/env')
     expect(getBaseUrl()).toBe('https://example.com:8080')
   })
 
   it('should handle empty string environment variables as unset', () => {
     process.env.NEXT_PUBLIC_APP_URL = ''
     process.env.NEXTAUTH_URL = ''
-    process.env.NODE_ENV = 'production'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'production')
 
-    const { getBaseUrl } = require('@/lib/utils')
+    const { getBaseUrl } = require('@/lib/env')
     expect(() => getBaseUrl()).toThrow('Base URL is not configured')
   })
 
   it('should work in test environment with no env vars', () => {
     delete process.env.NEXT_PUBLIC_APP_URL
     delete process.env.NEXTAUTH_URL
-    process.env.NODE_ENV = 'test'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'test')
 
-    const { getBaseUrl } = require('@/lib/utils')
+    const { getBaseUrl } = require('@/lib/env')
     expect(() => getBaseUrl()).toThrow('Base URL is not configured')
-  })
-})
-
-describe('constructServerUrl', () => {
-  it('should construct HTTPS URL with default port', () => {
-    expect(constructServerUrl('https', 'example.com', 443)).toBe('https://example.com')
-  })
-
-  it('should construct HTTP URL with default port', () => {
-    expect(constructServerUrl('http', 'example.com', 80)).toBe('http://example.com')
-  })
-
-  it('should construct HTTPS URL with custom port', () => {
-    expect(constructServerUrl('https', 'example.com', 8443)).toBe('https://example.com:8443')
-  })
-
-  it('should construct HTTP URL with custom port', () => {
-    expect(constructServerUrl('http', 'example.com', 8080)).toBe('http://example.com:8080')
-  })
-
-  it('should handle IP addresses', () => {
-    expect(constructServerUrl('http', '192.168.1.100', 32400)).toBe('http://192.168.1.100:32400')
-  })
-
-  it('should handle IPv6 addresses', () => {
-    expect(constructServerUrl('https', '::1', 443)).toBe('https://::1')
-  })
-
-  it('should handle localhost', () => {
-    expect(constructServerUrl('http', 'localhost', 3000)).toBe('http://localhost:3000')
-  })
-
-  it('should handle subdomains', () => {
-    expect(constructServerUrl('https', 'api.example.com', 443)).toBe('https://api.example.com')
-  })
-
-  it('should handle port 1', () => {
-    expect(constructServerUrl('http', 'example.com', 1)).toBe('http://example.com:1')
-  })
-
-  it('should handle port 65535', () => {
-    expect(constructServerUrl('https', 'example.com', 65535)).toBe('https://example.com:65535')
   })
 })
 
@@ -615,4 +571,3 @@ describe('aggregateLlmUsage', () => {
     })
   })
 })
-

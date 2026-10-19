@@ -1,5 +1,6 @@
 import { getLLMUsageRecords, getLLMUsageStats, getUserById } from "@/actions/admin"
 import { aggregateLlmUsage } from "@/lib/utils"
+import { getFormat } from "@/lib/settings/app-settings"
 import Image from "next/image"
 import Link from "next/link"
 
@@ -18,6 +19,7 @@ export default async function LLMUsagePage({
   const { records, pagination } = await getLLMUsageRecords(page, 50, userId, conversationId)
   const stats = await getLLMUsageStats(undefined, undefined, userId)
   const filteredUser = userId ? await getUserById(userId) : null
+  const f = await getFormat()
 
   const conversationGroups = (() => {
     const groups = new Map<
@@ -86,7 +88,7 @@ export default async function LLMUsagePage({
     <div className="p-4 sm:p-6">
       <div className="max-w-7xl mx-auto">
           <div className="mb-6">
-            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">LLM Requests</h1>
+            <h1 data-testid="admin-llm-usage-heading" className="text-2xl sm:text-3xl font-bold text-white mb-2">LLM Requests</h1>
             <p className="text-sm text-slate-400">
               {filteredUser
                 ? `Filtered by: ${filteredUser.name || filteredUser.email || "Unknown User"}`
@@ -148,16 +150,16 @@ export default async function LLMUsagePage({
             <div className="text-sm text-slate-400 mb-1">
               {filteredUser ? "User Requests" : "Total Requests"}
             </div>
-            <div className="text-2xl font-bold text-white">{stats.totalRequests.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-white">{f.number(stats.totalRequests)}</div>
             <div className="text-xs text-slate-500 mt-1">
-              {stats.averageTokensPerRequest.toLocaleString()} avg tokens
+              {f.number(stats.averageTokensPerRequest)} avg tokens
             </div>
           </div>
           <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
             <div className="text-sm text-slate-400 mb-1">
               {filteredUser ? "User Tokens" : "Total Tokens"}
             </div>
-            <div className="text-2xl font-bold text-cyan-400">{stats.totalTokens.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-cyan-400">{f.number(stats.totalTokens)}</div>
             <div className="text-xs text-slate-500 mt-1">
               {stats.byProvider.length} provider{stats.byProvider.length !== 1 ? "s" : ""}
             </div>
@@ -166,9 +168,9 @@ export default async function LLMUsagePage({
             <div className="text-sm text-slate-400 mb-1">
               {filteredUser ? "User Cost" : "Total Cost"}
             </div>
-            <div className="text-2xl font-bold text-green-400">${stats.totalCost.toFixed(4)}</div>
+            <div className="text-2xl font-bold text-green-400">{f.money(stats.totalCost)}</div>
             <div className="text-xs text-slate-500 mt-1">
-              ${stats.averageCostPerRequest.toFixed(6)} avg per request
+              {f.money(stats.averageCostPerRequest, "prose")} avg per request
             </div>
           </div>
           <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
@@ -224,21 +226,12 @@ export default async function LLMUsagePage({
                       .map((group) => (
                         <tr key={group.id} className="hover:bg-slate-700/20 transition-colors">
                           <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
-                            <div className="text-xs sm:text-sm text-slate-300">
+                            <div className="text-xs sm:text-sm text-slate-300" data-testid="llm-usage-started-timestamp">
                               <div className="md:hidden">
-                                {new Date(group.createdAt).toLocaleDateString("en-US", {
-                                  month: "short",
-                                  day: "numeric",
-                                })}
+                                {f.date(group.createdAt, "day-month-short")}
                               </div>
                               <div className="hidden md:block">
-                                {new Date(group.createdAt).toLocaleString("en-US", {
-                                  year: "numeric",
-                                  month: "short",
-                                  day: "numeric",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })}
+                                {f.dateTime(group.createdAt, { zoneLabel: true })}
                               </div>
                             </div>
                           </td>
@@ -280,17 +273,17 @@ export default async function LLMUsagePage({
                           <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                             <div className="text-sm">
                               <div className="text-white font-medium">
-                                {group.totalTokens.toLocaleString()}
+                                {f.number(group.totalTokens)}
                               </div>
                               <div className="text-xs text-slate-400 hidden sm:block">
-                                {group.promptTokens.toLocaleString()} +{" "}
-                                {group.completionTokens.toLocaleString()}
+                                {f.number(group.promptTokens)} +{" "}
+                                {f.number(group.completionTokens)}
                               </div>
                             </div>
                           </td>
                           <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                             <div className="text-sm text-green-400 font-medium">
-                              ${group.cost.toFixed(4)}
+                              {f.money(group.cost)}
                             </div>
                           </td>
                           <td className="px-3 sm:px-6 py-4 whitespace-nowrap">

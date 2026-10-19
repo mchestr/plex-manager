@@ -1,21 +1,12 @@
 import { getPromptTemplates } from "@/actions/prompts"
+import { getFormat } from "@/lib/settings/app-settings"
 import Link from "next/link"
 
 export const dynamic = 'force-dynamic'
 
 export default async function PromptsPage() {
-  const result = await getPromptTemplates()
+  const [result, f] = await Promise.all([getPromptTemplates(), getFormat()])
   const templates = result.success ? result.data : []
-
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    })
-  }
 
   return (
     <div className="p-4 sm:p-6">
@@ -23,7 +14,7 @@ export default async function PromptsPage() {
           <div className="mb-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Prompt Templates</h1>
+                <h1 data-testid="admin-prompts-heading" className="text-2xl sm:text-3xl font-bold text-white mb-2">Prompt Templates</h1>
                 <p className="text-sm text-slate-400">
                   Manage and configure prompt templates for generating wrapped content
                 </p>
@@ -115,8 +106,8 @@ export default async function PromptsPage() {
                           </div>
                         </td>
                         <td className="px-3 sm:px-6 py-4 hidden lg:table-cell">
-                          <div className="text-sm text-slate-300">
-                            {formatDate(template.updatedAt)}
+                          <div className="text-sm text-slate-300" data-testid="prompt-updated-timestamp">
+                            {f.dateTime(template.updatedAt, { zoneLabel: true })}
                           </div>
                         </td>
                         <td className="px-3 sm:px-6 py-4">
