@@ -387,9 +387,7 @@ describe('CostDateFilter', () => {
 
     it('should support keyboard navigation', async () => {
       const user = userEvent.setup()
-      const { container } = render(<CostDateFilter />)
-
-      const dateInputs = container.querySelectorAll('input[type="date"]')
+      render(<CostDateFilter />)
 
       // Focus should work on first input
       await user.tab()

@@ -164,7 +164,7 @@ describe('Pricing Calculation', () => {
     })
 
     it('should have input and output pricing for all models', () => {
-      Object.entries(MODEL_PRICING).forEach(([model, pricing]) => {
+      Object.values(MODEL_PRICING).forEach((pricing) => {
         expect(pricing.input).toBeDefined()
         expect(pricing.output).toBeDefined()
         expect(typeof pricing.input).toBe('number')
@@ -175,7 +175,7 @@ describe('Pricing Calculation', () => {
     })
 
     it('should have reasonable pricing values', () => {
-      Object.entries(MODEL_PRICING).forEach(([model, pricing]) => {
+      Object.values(MODEL_PRICING).forEach((pricing) => {
         // Prices should be reasonable (not negative, not extremely high)
         expect(pricing.input).toBeGreaterThanOrEqual(0)
         expect(pricing.output).toBeGreaterThanOrEqual(0)

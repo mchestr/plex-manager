@@ -3,7 +3,6 @@
  * Tests that admin-only endpoints properly enforce authorization
  */
 
-import { NextRequest } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { GET as getWrappedVersions } from '@/app/api/admin/wrapped/[wrappedId]/versions/route'
 import { getHistoricalWrappedVersions } from '@/actions/admin'
@@ -16,7 +15,10 @@ jest.mock('next-auth', () => ({
 
 jest.mock('next/server', () => ({
   NextRequest: class NextRequest {
-    constructor(url, init = {}) {
+    nextUrl: URL
+    method: string
+    headers: { get: jest.Mock }
+    constructor(url: string, init: { method?: string } = {}) {
       this.nextUrl = new URL(url)
       this.method = init.method || 'GET'
       this.headers = {
@@ -87,7 +89,7 @@ describe('Admin API Routes Security', () => {
       ])
 
       const request = mockRequest('http://localhost:3000/api/admin/wrapped/wrapped-id/versions')
-      const response = await getWrappedVersions(request, { params: { wrappedId: 'wrapped-id' } })
+      const response = await getWrappedVersions(request, { params: Promise.resolve({ wrappedId: 'wrapped-id' }) })
       const data = await response.json()
 
       expect(response.status).toBe(200)
@@ -99,7 +101,7 @@ describe('Admin API Routes Security', () => {
       ;(getServerSession as jest.Mock).mockResolvedValue(mockRegularUserSession)
 
       const request = mockRequest('http://localhost:3000/api/admin/wrapped/wrapped-id/versions')
-      const response = await getWrappedVersions(request, { params: { wrappedId: 'wrapped-id' } })
+      const response = await getWrappedVersions(request, { params: Promise.resolve({ wrappedId: 'wrapped-id' }) })
       const data = await response.json()
 
       expect(response.status).toBe(403)
@@ -111,7 +113,7 @@ describe('Admin API Routes Security', () => {
       ;(getServerSession as jest.Mock).mockResolvedValue(null)
 
       const request = mockRequest('http://localhost:3000/api/admin/wrapped/wrapped-id/versions')
-      const response = await getWrappedVersions(request, { params: { wrappedId: 'wrapped-id' } })
+      const response = await getWrappedVersions(request, { params: Promise.resolve({ wrappedId: 'wrapped-id' }) })
       const data = await response.json()
 
       expect(response.status).toBe(401)

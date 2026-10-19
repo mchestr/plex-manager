@@ -3,9 +3,6 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { useRouter } from 'next/navigation'
 import { ToastProvider } from '@/components/ui/toast'
 
-// Store original window.location
-const originalLocation = window.location
-
 // Mock the dependencies
 jest.mock('next/navigation', () => ({
   useRouter: jest.fn(),
@@ -92,15 +89,12 @@ describe('OnboardingWizard', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    // Restore original location
-    delete (window as any).location
-    window.location = originalLocation
     mockCompleteOnboarding.mockResolvedValue({ success: true })
     ;(useRouter as jest.Mock).mockReturnValue(mockRouter)
   })
 
   it('should render the initial step', async () => {
-    renderWithProviders(<OnboardingWizard currentStep={1} />)
+    renderWithProviders(<OnboardingWizard currentStep={1} service="plex" />)
 
     await waitFor(() => {
       expect(screen.getByTestId('welcome-step')).toBeInTheDocument()
@@ -108,7 +102,7 @@ describe('OnboardingWizard', () => {
   })
 
   it('should navigate through the steps', async () => {
-    renderWithProviders(<OnboardingWizard currentStep={1} />)
+    renderWithProviders(<OnboardingWizard currentStep={1} service="plex" />)
 
     // Step 1: Welcome
     await waitFor(() => {
@@ -163,7 +157,7 @@ describe('OnboardingWizard', () => {
   })
 
   it('should pass overseerr url to media request step', async () => {
-    renderWithProviders(<OnboardingWizard currentStep={3} />)
+    renderWithProviders(<OnboardingWizard currentStep={3} service="plex" />)
 
     await waitFor(() => {
       expect(screen.getByTestId('media-request-step')).toBeInTheDocument()

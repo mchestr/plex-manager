@@ -110,14 +110,15 @@ describe("main", () => {
     const unexpected = () => {
       throw new Error("the clean-up ran")
     }
+    const unexpectedCall = () => jest.fn<Promise<unknown>, unknown[]>(unexpected)
     const isNullable = nullable ? "YES" : "NO"
     return {
       $queryRaw: jest.fn().mockResolvedValue([
         { column_name: "prompt", is_nullable: isNullable },
         { column_name: "response", is_nullable: isNullable },
       ]),
-      plexWrapped: { count: jest.fn(unexpected), findMany: jest.fn(unexpected), updateMany: jest.fn(unexpected) },
-      wrappedShareVisit: { count: jest.fn(unexpected) },
+      plexWrapped: { count: unexpectedCall(), findMany: unexpectedCall(), updateMany: unexpectedCall() },
+      wrappedShareVisit: { count: unexpectedCall() },
       $transaction: jest.fn(unexpected),
     }
   }

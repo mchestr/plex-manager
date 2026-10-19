@@ -1,7 +1,6 @@
 import {
   cn,
   generateShareToken,
-  getBaseUrl,
   parseServerUrl,
   aggregateLlmUsage,
 } from '@/lib/utils'
@@ -115,7 +114,7 @@ describe('getBaseUrl', () => {
   it('should prefer NEXT_PUBLIC_APP_URL', () => {
     process.env.NEXT_PUBLIC_APP_URL = 'https://example.com'
     process.env.NEXTAUTH_URL = 'https://fallback.com'
-    process.env.NODE_ENV = 'production'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'production')
 
     const { getBaseUrl } = require('@/lib/utils')
     expect(getBaseUrl()).toBe('https://example.com')
@@ -124,7 +123,7 @@ describe('getBaseUrl', () => {
   it('should fallback to NEXTAUTH_URL when NEXT_PUBLIC_APP_URL is not set', () => {
     delete process.env.NEXT_PUBLIC_APP_URL
     process.env.NEXTAUTH_URL = 'https://fallback.com'
-    process.env.NODE_ENV = 'production'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'production')
 
     const { getBaseUrl } = require('@/lib/utils')
     expect(getBaseUrl()).toBe('https://fallback.com')
@@ -133,7 +132,7 @@ describe('getBaseUrl', () => {
   it('should use localhost in development when no env vars are set', () => {
     delete process.env.NEXT_PUBLIC_APP_URL
     delete process.env.NEXTAUTH_URL
-    process.env.NODE_ENV = 'development'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'development')
 
     const { getBaseUrl } = require('@/lib/utils')
     expect(getBaseUrl()).toBe('http://localhost:3000')
@@ -142,7 +141,7 @@ describe('getBaseUrl', () => {
   it('should throw error in production when no env vars are set', () => {
     delete process.env.NEXT_PUBLIC_APP_URL
     delete process.env.NEXTAUTH_URL
-    process.env.NODE_ENV = 'production'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'production')
 
     const { getBaseUrl } = require('@/lib/utils')
     expect(() => getBaseUrl()).toThrow('Base URL is not configured')
@@ -150,7 +149,7 @@ describe('getBaseUrl', () => {
 
   it('should handle NEXT_PUBLIC_APP_URL with trailing slash', () => {
     process.env.NEXT_PUBLIC_APP_URL = 'https://example.com/'
-    process.env.NODE_ENV = 'production'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'production')
 
     const { getBaseUrl } = require('@/lib/utils')
     expect(getBaseUrl()).toBe('https://example.com/')
@@ -159,7 +158,7 @@ describe('getBaseUrl', () => {
   it('should handle NEXTAUTH_URL with port', () => {
     delete process.env.NEXT_PUBLIC_APP_URL
     process.env.NEXTAUTH_URL = 'https://example.com:8080'
-    process.env.NODE_ENV = 'production'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'production')
 
     const { getBaseUrl } = require('@/lib/utils')
     expect(getBaseUrl()).toBe('https://example.com:8080')
@@ -168,7 +167,7 @@ describe('getBaseUrl', () => {
   it('should handle empty string environment variables as unset', () => {
     process.env.NEXT_PUBLIC_APP_URL = ''
     process.env.NEXTAUTH_URL = ''
-    process.env.NODE_ENV = 'production'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'production')
 
     const { getBaseUrl } = require('@/lib/utils')
     expect(() => getBaseUrl()).toThrow('Base URL is not configured')
@@ -177,7 +176,7 @@ describe('getBaseUrl', () => {
   it('should work in test environment with no env vars', () => {
     delete process.env.NEXT_PUBLIC_APP_URL
     delete process.env.NEXTAUTH_URL
-    process.env.NODE_ENV = 'test'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'test')
 
     const { getBaseUrl } = require('@/lib/utils')
     expect(() => getBaseUrl()).toThrow('Base URL is not configured')

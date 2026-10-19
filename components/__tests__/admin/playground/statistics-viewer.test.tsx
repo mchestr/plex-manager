@@ -18,14 +18,12 @@ describe("StatisticsViewer", () => {
         year: 2023,
         watchTime: 7200,
         playCount: 3,
-        lastWatchedAt: "2024-01-01",
       },
       {
         title: "Test Movie 2",
         year: 2022,
         watchTime: 5400,
         playCount: 2,
-        lastWatchedAt: "2024-01-02",
       },
     ],
     topShows: [
@@ -33,17 +31,17 @@ describe("StatisticsViewer", () => {
         title: "Test Show 1",
         year: 2023,
         watchTime: 10800,
+        playCount: 1,
         episodesWatched: 12,
-        lastWatchedAt: "2024-01-01",
       },
     ],
-    topGenres: [],
     watchTimeByMonth: [
       { month: 1, monthName: "January", watchTime: 3600 },
       { month: 2, monthName: "February", watchTime: 5400 },
     ],
     serverStats: {
       serverName: "Test Server",
+      totalStorage: 10 * 1024 ** 4,
       totalStorageFormatted: "10 TB",
       librarySize: {
         movies: 1000,
@@ -53,8 +51,10 @@ describe("StatisticsViewer", () => {
     },
     overseerrStats: {
       totalRequests: 100,
+      totalServerRequests: 100,
       approvedRequests: 80,
       pendingRequests: 20,
+      topRequestedGenres: [],
     },
   }
 
@@ -216,7 +216,6 @@ describe("StatisticsViewer", () => {
         year: 2023,
         watchTime: 3600,
         playCount: 1,
-        lastWatchedAt: "2024-01-01",
       }))
 
       render(
@@ -236,8 +235,8 @@ describe("StatisticsViewer", () => {
         title: `Show ${i + 1}`,
         year: 2023,
         watchTime: 3600,
+        playCount: 1,
         episodesWatched: 10,
-        lastWatchedAt: "2024-01-01",
       }))
 
       render(
@@ -347,7 +346,7 @@ describe("StatisticsViewer", () => {
     })
 
     it("should style formatted view with proper colors", () => {
-      const { container } = render(<StatisticsViewer {...mockProps} viewMode="formatted" />)
+      render(<StatisticsViewer {...mockProps} viewMode="formatted" />)
 
       const watchTimeElement = screen.getByText("600h")
       expect(watchTimeElement).toHaveClass("text-cyan-400")
@@ -413,7 +412,6 @@ describe("StatisticsViewer", () => {
                 title: "Movie Without Year",
                 watchTime: 3600,
                 playCount: 1,
-                lastWatchedAt: "2024-01-01",
               },
             ],
           }}
@@ -433,8 +431,8 @@ describe("StatisticsViewer", () => {
               {
                 title: "Show Without Year",
                 watchTime: 3600,
+                playCount: 1,
                 episodesWatched: 10,
-                lastWatchedAt: "2024-01-01",
               },
             ],
           }}

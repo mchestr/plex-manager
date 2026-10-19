@@ -93,7 +93,7 @@ describe('WelcomeStep', () => {
     })
 
     it('should have accessible text content', () => {
-      const { container } = render(<WelcomeStep onComplete={mockOnComplete} />)
+      render(<WelcomeStep onComplete={mockOnComplete} />)
 
       const headings = screen.getAllByRole('heading', { level: 2 })
       expect(headings.length).toBeGreaterThan(0)

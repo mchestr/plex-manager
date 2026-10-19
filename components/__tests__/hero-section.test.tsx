@@ -39,7 +39,7 @@ describe('HeroSection', () => {
 
   it('should not render subtitle when not provided', () => {
     const section = createMockSection()
-    const { container } = render(<HeroSection section={section} sectionIndex={0} />)
+    render(<HeroSection section={section} sectionIndex={0} />)
 
     expect(screen.queryByText('2024 Edition')).not.toBeInTheDocument()
   })

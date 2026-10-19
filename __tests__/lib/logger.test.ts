@@ -121,17 +121,17 @@ describe('sanitizeUrlForLogging', () => {
   const originalEnv = process.env.NODE_ENV
 
   afterEach(() => {
-    process.env.NODE_ENV = originalEnv
+    jest.replaceProperty(process.env, 'NODE_ENV', originalEnv)
   })
 
   it('should return URL as-is in development', () => {
-    process.env.NODE_ENV = 'development'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'development')
     const url = 'https://example.com/api?token=secret123&key=value'
     expect(sanitizeUrlForLogging(url)).toBe(url)
   })
 
   it('should redact token parameter in production', () => {
-    process.env.NODE_ENV = 'production'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'production')
     const url = 'https://example.com/api?token=secret123'
     const result = sanitizeUrlForLogging(url)
     // URL encoding converts [REDACTED] to %5BREDACTED%5D
@@ -140,7 +140,7 @@ describe('sanitizeUrlForLogging', () => {
   })
 
   it('should redact apiKey parameter in production', () => {
-    process.env.NODE_ENV = 'production'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'production')
     const url = 'https://example.com/api?apiKey=secret123'
     const result = sanitizeUrlForLogging(url)
     // URL encoding converts [REDACTED] to %5BREDACTED%5D
@@ -149,7 +149,7 @@ describe('sanitizeUrlForLogging', () => {
   })
 
   it('should redact multiple sensitive parameters', () => {
-    process.env.NODE_ENV = 'production'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'production')
     const url = 'https://example.com/api?token=secret1&apiKey=secret2&password=secret3'
     const result = sanitizeUrlForLogging(url)
     // URL encoding converts [REDACTED] to %5BREDACTED%5D
@@ -160,7 +160,7 @@ describe('sanitizeUrlForLogging', () => {
   })
 
   it('should preserve non-sensitive parameters', () => {
-    process.env.NODE_ENV = 'production'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'production')
     const url = 'https://example.com/api?token=secret&foo=bar&baz=qux'
     const result = sanitizeUrlForLogging(url)
     expect(result).toContain('foo=bar')
@@ -168,13 +168,13 @@ describe('sanitizeUrlForLogging', () => {
   })
 
   it('should handle URL without query params', () => {
-    process.env.NODE_ENV = 'production'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'production')
     const url = 'https://example.com/api'
     expect(sanitizeUrlForLogging(url)).toBe(url)
   })
 
   it('should handle invalid URL gracefully', () => {
-    process.env.NODE_ENV = 'production'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'production')
     const invalidUrl = 'not a valid url'
     const result = sanitizeUrlForLogging(invalidUrl)
     expect(result).toBeDefined()
@@ -182,7 +182,7 @@ describe('sanitizeUrlForLogging', () => {
   })
 
   it('should redact suspicious query params in invalid URLs', () => {
-    process.env.NODE_ENV = 'production'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'production')
     const url = 'invalid-url?token=secret'
     const result = sanitizeUrlForLogging(url)
     expect(result).toContain('[REDACTED_PARAMS]')
@@ -190,12 +190,12 @@ describe('sanitizeUrlForLogging', () => {
   })
 
   it('should handle empty string', () => {
-    process.env.NODE_ENV = 'production'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'production')
     expect(sanitizeUrlForLogging('')).toBe('')
   })
 
   it('should handle URL with fragment', () => {
-    process.env.NODE_ENV = 'production'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'production')
     const url = 'https://example.com/api?token=secret#section'
     const result = sanitizeUrlForLogging(url)
     // URL encoding converts [REDACTED] to %5BREDACTED%5D
@@ -204,7 +204,7 @@ describe('sanitizeUrlForLogging', () => {
   })
 
   it('should handle URL with port', () => {
-    process.env.NODE_ENV = 'production'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'production')
     const url = 'https://example.com:8080/api?token=secret'
     const result = sanitizeUrlForLogging(url)
     expect(result).toContain('8080')
@@ -217,7 +217,7 @@ describe('sanitizeForLogging', () => {
   const originalEnv = process.env.NODE_ENV
 
   afterEach(() => {
-    process.env.NODE_ENV = originalEnv
+    jest.replaceProperty(process.env, 'NODE_ENV', originalEnv)
   })
 
   it('should return primitives as-is', () => {
@@ -229,29 +229,29 @@ describe('sanitizeForLogging', () => {
   })
 
   it('should redact long random strings in production', () => {
-    process.env.NODE_ENV = 'production'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'production')
     const longToken = 'a'.repeat(50) // 50 character alphanumeric string
     expect(sanitizeForLogging(longToken)).toBe('[REDACTED]')
   })
 
   it('should not redact normal strings', () => {
-    process.env.NODE_ENV = 'production'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'production')
     const normalString = 'This is a normal string with spaces'
     expect(sanitizeForLogging(normalString)).toBe(normalString)
   })
 
   it('should redact email addresses in production', () => {
-    process.env.NODE_ENV = 'production'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'production')
     expect(sanitizeForLogging('user@example.com')).toBe('[REDACTED_EMAIL]')
   })
 
   it('should preserve email addresses in development', () => {
-    process.env.NODE_ENV = 'development'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'development')
     expect(sanitizeForLogging('user@example.com')).toBe('user@example.com')
   })
 
   it('should sanitize objects with sensitive fields', () => {
-    process.env.NODE_ENV = 'production'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'production')
     const obj = {
       username: 'john',
       password: 'secret123',
@@ -264,7 +264,7 @@ describe('sanitizeForLogging', () => {
   })
 
   it('should sanitize nested objects', () => {
-    process.env.NODE_ENV = 'production'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'production')
     const obj = {
       user: {
         name: 'john',
@@ -279,7 +279,7 @@ describe('sanitizeForLogging', () => {
   })
 
   it('should sanitize arrays', () => {
-    process.env.NODE_ENV = 'production'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'production')
     const arr = [
       'normal',
       'user@example.com',
@@ -306,7 +306,7 @@ describe('sanitizeForLogging', () => {
   })
 
   it('should handle case-insensitive sensitive field matching', () => {
-    process.env.NODE_ENV = 'production'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'production')
     const obj = {
       Token: 'secret1',
       PASSWORD: 'secret2',
@@ -319,7 +319,7 @@ describe('sanitizeForLogging', () => {
   })
 
   it('should handle partial field name matches', () => {
-    process.env.NODE_ENV = 'production'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'production')
     const obj = {
       userToken: 'secret1',
       apiKeyValue: 'secret2',
@@ -332,7 +332,7 @@ describe('sanitizeForLogging', () => {
   })
 
   it('should preserve sensitive fields in development', () => {
-    process.env.NODE_ENV = 'development'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'development')
     const obj = {
       token: 'secret123',
       password: 'pass456',

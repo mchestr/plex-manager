@@ -30,7 +30,7 @@ function storedRewind(overrides: Record<string, unknown> = {}) {
   }
 }
 
-function strip(data: unknown, owner = OWNER) {
+function strip(data: unknown, owner: Parameters<typeof stripStoredRewind>[1] = OWNER) {
   const result = stripStoredRewind(JSON.stringify(data), owner)
   if (result.status !== "changed") throw new Error(`expected a change, got ${result.status}`)
   return JSON.parse(result.data)

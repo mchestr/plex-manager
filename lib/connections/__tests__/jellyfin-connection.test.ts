@@ -29,7 +29,7 @@ describe('Jellyfin Connection', () => {
     const config = makeJellyfinServerConfig()
 
     it('should return success in test mode', async () => {
-      process.env.NODE_ENV = 'test'
+      jest.replaceProperty(process.env, 'NODE_ENV', 'test')
 
       const result = await testJellyfinConnection(config)
 

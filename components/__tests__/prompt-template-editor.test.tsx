@@ -732,7 +732,7 @@ describe('PromptTemplateEditor', () => {
       fireEvent.click(userNameChips[0])
 
       // Add more content
-      const templateInput = screen.getByLabelText(/Template Content/)
+      const templateInput = screen.getByLabelText<HTMLTextAreaElement>(/Template Content/)
       fireEvent.change(templateInput, { target: { value: templateInput.value + ' watched movies' } })
 
       // Toggle active

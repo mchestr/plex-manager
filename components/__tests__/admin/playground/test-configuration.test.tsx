@@ -4,7 +4,7 @@ import { fireEvent, render, screen } from "@testing-library/react"
 
 // Mock child components
 jest.mock("@/components/admin/playground/statistics-viewer", () => ({
-  StatisticsViewer: ({ statistics, viewMode }: any) => (
+  StatisticsViewer: ({ viewMode }: { viewMode: string }) => (
     <div data-testid="statistics-viewer">
       Statistics Viewer - Mode: {viewMode}
     </div>
@@ -27,7 +27,6 @@ jest.mock("@/components/ui/styled-dropdown", () => ({
       data-testid="styled-dropdown"
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
     >
       {placeholder && <option value="">{placeholder}</option>}
       {options.map((opt) => (
@@ -99,7 +98,6 @@ describe("TestConfiguration", () => {
     episodesWatched: 150,
     topMovies: [],
     topShows: [],
-    topGenres: [],
   }
 
   const mockProps = {

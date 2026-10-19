@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { WrappedViewer } from '@/components/wrapped/wrapped-viewer'
 import { WrappedData } from '@/types/wrapped'
@@ -127,7 +127,7 @@ describe('WrappedViewer', () => {
         sections: [],
       })
 
-      const { container } = render(<WrappedViewer wrappedData={wrappedData} />)
+      render(<WrappedViewer wrappedData={wrappedData} />)
       expect(screen.getByText('No sections available to display')).toBeInTheDocument()
     })
 
@@ -136,7 +136,7 @@ describe('WrappedViewer', () => {
         sections: undefined as any,
       })
 
-      const { container } = render(<WrappedViewer wrappedData={wrappedData} />)
+      render(<WrappedViewer wrappedData={wrappedData} />)
       expect(screen.getByText('No sections available to display')).toBeInTheDocument()
     })
 
@@ -429,7 +429,7 @@ describe('WrappedViewer', () => {
         sections: [],
       })
 
-      const { container } = render(<WrappedViewer wrappedData={wrappedData} />)
+      render(<WrappedViewer wrappedData={wrappedData} />)
 
       const emptyStateContainer = screen.getByText('No sections available to display').parentElement
       expect(emptyStateContainer).toHaveClass('bg-slate-900/90', 'border-cyan-500/20')
@@ -440,7 +440,7 @@ describe('WrappedViewer', () => {
         sections: [],
       })
 
-      const { container } = render(<WrappedViewer wrappedData={wrappedData} />)
+      render(<WrappedViewer wrappedData={wrappedData} />)
 
       const emptyStateContainer = screen.getByText('No sections available to display').parentElement
       expect(emptyStateContainer).toHaveClass('text-center')
@@ -448,7 +448,7 @@ describe('WrappedViewer', () => {
 
     it('should show debug info in development when sections are filtered', () => {
       const originalEnv = process.env.NODE_ENV
-      process.env.NODE_ENV = 'development'
+      jest.replaceProperty(process.env, 'NODE_ENV', 'development')
 
       const wrappedData = createMockWrappedData({
         sections: [
@@ -465,7 +465,7 @@ describe('WrappedViewer', () => {
 
       expect(screen.getByText('No sections available to display')).toBeInTheDocument()
 
-      process.env.NODE_ENV = originalEnv
+      jest.replaceProperty(process.env, 'NODE_ENV', originalEnv)
     })
   })
 
@@ -524,7 +524,7 @@ describe('WrappedViewer', () => {
         sections: [],
       })
 
-      const { container } = render(<WrappedViewer wrappedData={wrappedData} />)
+      render(<WrappedViewer wrappedData={wrappedData} />)
 
       const errorContainer = screen.getByText('No sections available to display').parentElement
       expect(errorContainer).toHaveClass('bg-slate-900/90', 'border-cyan-500/20', 'rounded-lg')
@@ -539,13 +539,8 @@ describe('WrappedViewer', () => {
             title: 'Welcome',
             content: 'Welcome',
           },
-          // Malformed section
-          {
-            id: null as any,
-            type: 'invalid',
-            title: 'Bad Section',
-            content: 'This is bad',
-          },
+          // Malformed section, as it could come back from stored JSON
+          JSON.parse('{"id":null,"type":"invalid","title":"Bad Section","content":"This is bad"}'),
         ],
       })
 

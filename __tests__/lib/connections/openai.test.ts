@@ -16,11 +16,11 @@ describe('OpenAI Connection', () => {
   const withTestModeDisabled = <T>(fn: () => Promise<T>): Promise<T> => {
     const originalEnv = process.env.NODE_ENV
     const originalSkip = process.env.SKIP_CONNECTION_TESTS
-    process.env.NODE_ENV = 'production'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'production')
     delete process.env.SKIP_CONNECTION_TESTS
 
     return fn().finally(() => {
-      process.env.NODE_ENV = originalEnv
+      jest.replaceProperty(process.env, 'NODE_ENV', originalEnv)
       if (originalSkip) {
         process.env.SKIP_CONNECTION_TESTS = originalSkip
       }

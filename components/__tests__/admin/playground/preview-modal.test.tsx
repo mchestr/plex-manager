@@ -15,15 +15,28 @@ jest.mock("@/components/wrapped/wrapped-viewer-wrapper", () => ({
 
 describe("PreviewModal", () => {
   const mockWrappedData: WrappedData = {
-    totalWatchTime: { hours: 100, minutes: 30 },
-    moviesWatched: 50,
-    showsWatched: 20,
-    episodesWatched: 150,
-    topMovies: [],
-    topShows: [],
-    topGenres: [],
-    insights: [],
+    year: 2024,
+    userId: "user-1",
+    userName: "TestUser",
+    generatedAt: "2024-12-01T00:00:00.000Z",
+    statistics: {
+      totalWatchTime: { total: 6030, movies: 3000, shows: 3030 },
+      moviesWatched: 50,
+      showsWatched: 20,
+      episodesWatched: 150,
+      topMovies: [],
+      topShows: [],
+    },
+    sections: [],
+    insights: {
+      personality: "Cinephile",
+      topGenre: "Drama",
+      bingeWatcher: false,
+      discoveryScore: 50,
+      funFacts: [],
+    },
     summary: "Test summary",
+    metadata: { totalSections: 0, generationTime: 1 },
   }
 
   const mockProps = {
@@ -273,7 +286,7 @@ describe("PreviewModal", () => {
 
   describe("Icons", () => {
     it("should render save icon in save button", () => {
-      const { container } = render(<PreviewModal {...mockProps} />)
+      render(<PreviewModal {...mockProps} />)
 
       const saveButton = screen.getByRole("button", { name: /save as wrapped/i })
       const svg = saveButton.querySelector("svg")
@@ -281,7 +294,7 @@ describe("PreviewModal", () => {
     })
 
     it("should render back icon in back button", () => {
-      const { container } = render(<PreviewModal {...mockProps} />)
+      render(<PreviewModal {...mockProps} />)
 
       const backButton = screen.getByRole("button", { name: /back to playground/i })
       const svg = backButton.querySelector("svg")

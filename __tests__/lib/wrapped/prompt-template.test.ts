@@ -7,6 +7,7 @@ import {
   getAvailablePlaceholders,
 } from '@/lib/wrapped/prompt-template'
 import { getActivePromptTemplate } from '@/actions/prompts'
+import type { WrappedStatistics } from '@/types/wrapped'
 
 // Mock dependencies
 jest.mock('@/actions/prompts', () => ({
@@ -16,7 +17,7 @@ jest.mock('@/actions/prompts', () => ({
 const mockGetActivePromptTemplate = getActivePromptTemplate as jest.MockedFunction<typeof getActivePromptTemplate>
 
 describe('Prompt Template', () => {
-  const mockStatistics = {
+  const mockStatistics: WrappedStatistics = {
     totalWatchTime: {
       total: 1000, // minutes
       movies: 600,
@@ -29,11 +30,13 @@ describe('Prompt Template', () => {
       {
         title: 'The Matrix',
         watchTime: 200,
+        playCount: 1,
         year: 1999,
       },
       {
         title: 'Inception',
         watchTime: 150,
+        playCount: 1,
         year: 2010,
       },
     ],
@@ -41,12 +44,14 @@ describe('Prompt Template', () => {
       {
         title: 'Breaking Bad',
         watchTime: 300,
+        playCount: 1,
         episodesWatched: 20,
         year: 2008,
       },
     ],
     leaderboards: {
       watchTime: {
+        leaderboard: [],
         userPosition: 5,
         totalUsers: 10,
       },
@@ -83,10 +88,12 @@ describe('Prompt Template', () => {
         topMovie: {
           title: 'Movie 1',
           watchTime: 50,
+          playCount: 1,
         },
         topShow: {
           title: 'Show 1',
           watchTime: 50,
+          playCount: 1,
           episodesWatched: 5,
         },
       },
@@ -308,6 +315,7 @@ describe('Prompt Template', () => {
           {
             title: 'Breaking Bad',
             watchTime: 300,
+            playCount: 1,
             episodesWatched: 21, // > 20 to trigger bingeWatcher
             year: 2008,
           },

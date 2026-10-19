@@ -6,7 +6,6 @@
 import {
   markPlexItemWatched,
   searchPlexMedia,
-  type PlexMediaItem,
 } from '@/lib/connections/plex'
 import { makePlexServerConfig } from '../../../__tests__/utils/test-builders'
 

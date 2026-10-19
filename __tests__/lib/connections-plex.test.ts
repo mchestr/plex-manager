@@ -13,7 +13,6 @@ import {
 import {
   makePlexServerConfig,
   makePlexUserInfo,
-  makeTautulliUser,
 } from '../utils/test-builders'
 
 describe('Plex Connection', () => {
@@ -21,11 +20,11 @@ describe('Plex Connection', () => {
   const withTestModeDisabled = <T>(fn: () => Promise<T>): Promise<T> => {
     const originalEnv = process.env.NODE_ENV
     const originalSkip = process.env.SKIP_CONNECTION_TESTS
-    process.env.NODE_ENV = 'production'
+    jest.replaceProperty(process.env, 'NODE_ENV', 'production')
     delete process.env.SKIP_CONNECTION_TESTS
 
     return fn().finally(() => {
-      process.env.NODE_ENV = originalEnv
+      jest.replaceProperty(process.env, 'NODE_ENV', originalEnv)
       if (originalSkip) {
         process.env.SKIP_CONNECTION_TESTS = originalSkip
       }
@@ -372,9 +371,7 @@ describe('Plex Connection', () => {
 
       const result = await checkUserServerAccess(
         {
-          hostname: 'plex.example.com',
-          port: 32400,
-          protocol: 'https',
+          url: 'https://plex.example.com:32400',
           token: 'invalid-token',
           adminPlexUserId: '999',
         },
