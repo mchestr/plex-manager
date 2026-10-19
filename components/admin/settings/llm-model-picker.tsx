@@ -71,7 +71,9 @@ interface LLMModelPickerProps {
  */
 export function LLMModelPicker({ id, provider, model, custom, liveModels, onChange, disabled }: LLMModelPickerProps) {
   const [now] = useState(() => new Date())
-  const ids = orderModels(provider, liveModels)
+  const listed = orderModels(provider, liveModels)
+  // A saved model the provider no longer lists stays selectable
+  const ids = !custom && model && !listed.includes(model) ? [model, ...listed] : listed
   const info = model ? lookupModel(provider, model) : null
   const retirement = info ? retirementLabel(info, now) : null
 

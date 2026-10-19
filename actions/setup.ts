@@ -411,7 +411,8 @@ async function saveLLMProviderForPurpose(
 
     const validated = setupLLMProviderSchema.parse(data)
 
-    const connectionTest = await testLLMProviderConnection(validated)
+    // Setup checks the key only; its model field is free text, as before P2.12
+    const connectionTest = await testLLMProviderConnection(validated, { customModel: true })
     if (!connectionTest.success) {
       return { success: false, error: connectionTest.error || "Failed to connect to LLM provider" }
     }
