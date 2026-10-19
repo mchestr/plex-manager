@@ -2918,6 +2918,7 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
   - Satori is bundled without a package.json, so `scripts/write-card-version.mjs` matches `/satori@(\d+\.\d+\.\d+)/` against `next/dist/compiled/@vercel/og/index.node.js`. That works on 16.1.1; re-check it on 16.4.2, and fail loudly when nothing matches.
   - The script writes `lib/rewind/cards/card-version.generated.ts`, which is committed. A test recomputes it, so upgrading Next or the fonts without regenerating it fails CI.
 - If Satori 0.29 changes rotation, SVG data URIs or kerning, record it as a P5.10 risk and add the constraint to the Satori lint rule's list.
+- (as merged: measured on 2026-10-19, Next 16.4.2, `@vercel/og` 1.0.1, Satori 0.29.0, 4 vCPU, `NODE_ENV=production`; the cards render byte-identically through the script and through a temporary route on a production `next build` + `next start`. Warm p50/p95 over 20 renders (cold = first render in a fresh process, 3 runs): centrefold 102/116 ms (cold 418-436), back cover 101/114 ms (cold 425-434), OG 38/47 ms (cold 346-368), all inside NFR-10; through the production server the warm requests took 110/119, 107/120 and 41/59 ms. Full record in `lib/rewind/cards/measurements.json`. **Satori 0.29 draws kerning inside a word but places the next word by unkerned grapheme advances**, so each kerned word pushes the rest of its line right ("FAMILY  PLEX"); worst overflow 2.39% ("TAXI DRIVER", billing caps, 80 px) over 606 lines of the 200 titles in three card roles (No. 1 title, list title, and billing caps, which the step did not name), so `CARD_SLACK = 0.029`. Satori ignores `tnum`, so card numerals fit with proportional figures; an `<img>`'s size includes its border. No Satori lint rule exists yet, so these went into design 6.4's rule list and 13.4's risks for P5.10, with the fix if the word gaps show: card TTFs without GPOS `kern` and card metrics without kerning. `CARD_VERSION` is `rewind-cards@1+og@1.0.1+satori@0.29.0+fonts@64205e348993`; `n` is `CARD_RENDERER_VERSION` in `version.ts`, which `scripts/card-version/compute.mjs` reads, and it must be bumped with `CARD_SLACK` or any card change. `loadCardFonts()`, `archivoFamily(wdth, wght)` and `NEWSREADER` live in `fonts.ts`; it reads `lib/rewind/cards/fonts/` under `process.cwd()`, so P5.10's routes need that folder in `outputFileTracingIncludes` for the standalone build. The fixtures are `__fixtures__/mockup-cards.tsx` (with `CARD_TITLE_ROLES`) and `mockup-art.ts` (the mockups' SVG data URIs). The script decodes PNGs with `node:zlib` instead of `sharp`: sharp is only Next's optional dependency, and declaring it marked its platform binaries dev-only in the lockfile. Jest cannot import `@vercel/og` (ESM plus WASM), so the render test runs `scripts/rewind-measure-cards.tsx --check` in a child process. Scripts: `npm run rewind:measure-cards [-- --record]` and `npm run rewind:card-version`.)
 
 **Tests.**
 - `lib/rewind/cards/__tests__/card-version.test.ts`: the committed value equals the recomputed one and matches the format regex.
@@ -2929,9 +2930,9 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 **Demo.** `npx tsx scripts/rewind-measure-cards.tsx` prints a table of the warm p50 and p95 for each card, and the slack. It also writes PNGs to `${REWIND_CACHE_DIR}/measure/` (P4.1's default, `.next/cache/rewind`), which can be compared with `design/mockups/rewind/png/card-*.png`.
 
 **Done when.**
-- [ ] The three mockup cards and the fitting fixtures render through the installed `next/og`.
-- [ ] Render timings are recorded against NFR-10, with the versions they were measured on.
-- [ ] `CARD_SLACK` comes from measurement, and `CARD_VERSION` is generated in the fixed format and checked in CI.
+- [x] The three mockup cards and the fitting fixtures render through the installed `next/og`.
+- [x] Render timings are recorded against NFR-10, with the versions they were measured on.
+- [x] `CARD_SLACK` comes from measurement, and `CARD_VERSION` is generated in the fixed format and checked in CI.
 
 ### Step P2.15: framer-motion to motion with a global reduced-motion policy
 
