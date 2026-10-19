@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "commit": "28e45d9cc526d517f6ba68ef1644d5853a10bd91",
-  "generatedAt": "2026-10-19T06:09:18.348Z",
+  "commit": "5c95ff09aff711cccff24432213248e1a69b83d3",
+  "generatedAt": "2026-10-19T06:37:41.603Z",
   "files": {
     "app/(app)/discord/link/page.tsx": {
       "raw-palette": 2
@@ -346,7 +346,7 @@
       "raw-palette": 5
     },
     "components/admin/settings/llm-provider-form.tsx": {
-      "raw-palette": 25
+      "raw-palette": 9
     },
     "components/admin/settings/llm-toggle.tsx": {
       "raw-palette": 2
@@ -819,7 +819,7 @@
     "gradient": 136,
     "gradient-text": 56,
     "infinite-motion": 57,
-    "raw-palette": 3518,
+    "raw-palette": 3502,
     "zoom-lock": 2
   }
 }

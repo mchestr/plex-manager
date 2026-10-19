@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { StyledDropdown } from "@/components/ui/styled-dropdown"
 import { StyledInput } from "@/components/ui/styled-input"
-import { DEFAULT_OPENAI_MODEL } from "@/lib/llm/openai-params"
+import { DEFAULT_OPENAI_MODEL } from "@/lib/llm/provider-presets"
 import { WrappedStatistics } from "@/types/wrapped"
 import { StatisticsViewer } from "@/components/admin/playground/statistics-viewer"
 

@@ -1,10 +1,11 @@
 "use client"
 
+import { listLLMModels } from "@/actions/admin/admin-llm-providers"
 import { savePlaygroundWrapped } from "@/actions/playground-wrapped"
 import { testPromptTemplate } from "@/actions/prompt-test"
 import { useToast } from "@/components/ui/toast"
 import { usePlaygroundState } from "@/hooks/use-playground-state"
-import { DEFAULT_OPENAI_MODEL } from "@/lib/llm/openai-params"
+import { DEFAULT_OPENAI_MODEL, isLLMProviderId } from "@/lib/llm/provider-presets"
 import { estimateCostUsd, type LLMProviderId } from "@/lib/llm/models"
 import { assembleWrappedData } from "@/lib/wrapped/assemble-wrapped"
 import { parseWrappedLLMOutput } from "@/lib/wrapped/parse-llm-output"
@@ -92,23 +93,21 @@ export function WrappedPlayground({ templates, initialTemplateId }: WrappedPlayg
     fetchUsers()
   }, [])
 
-  // Fetch models
+  // The models the Rewind provider lists, and its configured model
   useEffect(() => {
     async function fetchModels() {
       try {
         setLoadingModels(true)
-        const response = await fetch("/api/admin/models")
-        if (response.ok) {
-          const data = await response.json()
-          setModels(data.models || [])
-          setConfiguredModel(data.configuredModel || "")
-          setConfiguredProvider(data.configuredProvider || "openai")
+        const result = await listLLMModels({ purpose: "wrapped" })
+        if (result.success) {
+          setModels(result.models)
+          setConfiguredModel(result.configuredModel || "")
+          setConfiguredProvider(result.configuredProvider && isLLMProviderId(result.configuredProvider) ? result.configuredProvider : "openai")
         } else {
-          toast.showError("Failed to fetch models")
+          toast.showError(result.error)
         }
-      } catch (error) {
-        console.error("Failed to fetch models:", error)
-        toast.showError(error instanceof Error ? error.message : "Failed to fetch models")
+      } catch {
+        toast.showError("Failed to fetch models")
       } finally {
         setLoadingModels(false)
       }

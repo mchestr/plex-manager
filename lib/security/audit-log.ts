@@ -53,6 +53,9 @@ export enum AuditEventType {
   SHARE_LINK_REVOKED = "SHARE_LINK_REVOKED",
   // The server time zone (Config.timezone) changed. Details carry the old and new zone.
   SERVER_TIMEZONE_CHANGED = "SERVER_TIMEZONE_CHANGED",
+  // An admin saved an LLM provider for a purpose. Details carry the provider,
+  // model, base-URL origin and whether a new key was entered, never the key.
+  LLM_PROVIDER_CHANGED = "LLM_PROVIDER_CHANGED",
 }
 
 interface AuditLogEntry {

@@ -87,7 +87,7 @@ describe("rate-limit", () => {
   })
 
   describe("LIMITS", () => {
-    it("keeps the existing limits and adds the sign-in, invite, PIN and Rewind generation limits", async () => {
+    it("keeps the existing limits and adds the sign-in, invite, PIN, LLM model-list and Rewind generation limits", async () => {
       const { LIMITS } = await import("@/lib/security/rate-limit-config")
 
       expect(LIMITS).toEqual({
@@ -104,6 +104,7 @@ describe("rate-limit", () => {
         "invite:redeem": { points: 10, duration: 900 },
         "plex:pin:create": { points: 30, duration: 600 },
         "plex:pin:poll": { points: 300, duration: 600 },
+        "llm:models": { points: 30, duration: 900 },
         "rw:share-actions": { points: 10, duration: 3600 },
         "rw:share-page": { points: 60, duration: 60 },
         "rw:gen:burst": { points: 1, duration: 600 },

@@ -79,6 +79,49 @@ export function createServerUrlSchema(examplePort?: string) {
 }
 
 /**
+ * Parse an admin-entered API base URL: http or https only, with no
+ * credentials, query or fragment. Returns origin + path without a trailing
+ * slash, or null when the URL is not allowed.
+ */
+export function normalizeBaseUrl(value: string): string | null {
+  const trimmed = value.trim()
+  // URL() drops an empty "?" or "#", so check the raw text too
+  if (trimmed.includes("?") || trimmed.includes("#")) return null
+  let parsed: URL
+  try {
+    parsed = new URL(trimmed)
+  } catch {
+    return null
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return null
+  if (parsed.username || parsed.password) return null
+  return `${parsed.origin}${parsed.pathname.replace(/\/+$/, "")}`
+}
+
+/**
+ * Schema for an API base URL such as an OpenAI-compatible server's
+ * `http://localhost:11434/v1`. Unlike {@link createServerUrlSchema} it keeps
+ * the path, because the API lives under it.
+ *
+ * @example
+ * ```ts
+ * createBaseUrlSchema().parse("http://localhost:11434/v1/") // "http://localhost:11434/v1"
+ * createBaseUrlSchema().safeParse("http://user:pass@host/v1").success // false
+ * ```
+ */
+export function createBaseUrlSchema() {
+  return z
+    .string()
+    .trim()
+    .min(1, "Base URL is required")
+    .max(2048, "Base URL is too long")
+    .refine((url) => normalizeBaseUrl(url) !== null, {
+      message: "Enter an http or https URL with no credentials, query or fragment, e.g. http://localhost:11434/v1",
+    })
+    .transform((url) => normalizeBaseUrl(url) ?? url)
+}
+
+/**
  * Schema for validating optional public URLs.
  * Used for external access URLs that may be different from internal server URLs.
  *
