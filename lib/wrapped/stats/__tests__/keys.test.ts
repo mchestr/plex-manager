@@ -43,6 +43,11 @@ describe("isListed", () => {
     ])
     expect([isListed(film, ctx), isListed(episode, ctx), isListed(other, ctx)]).toEqual([false, false, true])
   })
+
+  it("leaves out a play the content-rating exclusions kept out of lists (FR-44)", () => {
+    const [excluded] = videoEvents([{ ...play({ at: "2026-02-01T20:00", zone, film: "103" }), excludedFromLists: true }])
+    expect(isListed(excluded, statsContext(zone))).toBe(false)
+  })
 })
 
 describe("displayTitles", () => {

@@ -7,7 +7,8 @@
  *   `series:<grandparentRatingKey>` for an episode. Tracks and other media
  *   have no key and no Rewind stat reads them.
  * - Seconds are summed and floored to minutes once, at the end.
- * - Hidden titles count toward totals and are left out of every list.
+ * - Hidden titles count toward totals and are left out of every list, and so
+ *   are plays P2.6's content-rating exclusions marked `excludedFromLists`.
  *
  * @module lib/wrapped/stats/keys
  */
@@ -65,10 +66,14 @@ export function minutesOf(seconds: number): number {
   return Math.floor(seconds / 60)
 }
 
-/** Whether a play may appear in a list: its title is not hidden. */
+/**
+ * Whether a play may appear in a list, a record, a calendar day's top title
+ * or a card: its title is not hidden and its content rating is not excluded
+ * (FR-44). Every stat module decides list membership here.
+ */
 export function isListed(e: VideoEvent, ctx: Pick<StatsContext, "hiddenKeys">): boolean {
   const key = e.mediaType === "movie" ? e.ratingKey : e.grandparentRatingKey
-  return key !== null && !ctx.hiddenKeys.has(key)
+  return key !== null && !e.excludedFromLists && !ctx.hiddenKeys.has(key)
 }
 
 /** The display title of a play's title: the series name for an episode. */
