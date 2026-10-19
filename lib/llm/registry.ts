@@ -1,0 +1,122 @@
+import "server-only"
+
+import { createAnthropic } from "@ai-sdk/anthropic"
+import { createGoogleGenerativeAI } from "@ai-sdk/google"
+import { createOpenAI } from "@ai-sdk/openai"
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
+import type { LanguageModel } from "ai"
+
+import type { LLMProvider } from "@/lib/generated/prisma/client"
+import { lookupModel, type LLMProviderId, type ModelInfo } from "@/lib/llm/models"
+import { prisma } from "@/lib/prisma"
+
+export type LLMPurpose = "wrapped" | "chat"
+
+/**
+ * Base URLs for the common OpenAI-compatible servers. P2.12's admin form
+ * offers them as presets.
+ *
+ * @internal
+ */
+export const OPENAI_COMPATIBLE_PRESETS = {
+  ollama: { label: "Ollama", baseUrl: "http://localhost:11434/v1" },
+  lmstudio: { label: "LM Studio", baseUrl: "http://localhost:1234/v1" },
+  vllm: { label: "vLLM", baseUrl: "http://localhost:8000/v1" },
+  openrouter: { label: "OpenRouter", baseUrl: "https://openrouter.ai/api/v1" },
+} as const
+
+/** A provider row that cannot build a model, e.g. an OpenAI-compatible row with no base URL. */
+export class LLMConfigError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "LLMConfigError"
+  }
+}
+
+export interface ResolvedModel {
+  model: LanguageModel
+  info: ModelInfo
+  row: LLMProvider
+}
+
+type ModelFactory = (modelId: string) => LanguageModel
+
+const PROVIDER_IDS: readonly LLMProviderId[] = ["openai", "anthropic", "google", "openai-compatible"]
+
+function isProviderId(value: string): value is LLMProviderId {
+  return (PROVIDER_IDS as readonly string[]).includes(value)
+}
+
+function createFactory(row: LLMProvider): ModelFactory {
+  switch (row.provider) {
+    case "openai":
+      // The OpenAI provider builds Responses API models by default
+      return createOpenAI({ apiKey: row.apiKey })
+    case "anthropic":
+      return createAnthropic({ apiKey: row.apiKey })
+    case "google":
+      return createGoogleGenerativeAI({ apiKey: row.apiKey })
+    case "openai-compatible": {
+      if (!row.baseUrl) {
+        throw new LLMConfigError("An OpenAI-compatible provider needs a base URL")
+      }
+      const provider = createOpenAICompatible({
+        name: "openai-compatible",
+        baseURL: row.baseUrl,
+        // A local server such as Ollama has no key
+        apiKey: row.apiKey || undefined,
+        supportsStructuredOutputs: true,
+        includeUsage: true,
+      })
+      return (modelId) => provider.chatModel(modelId)
+    }
+    default:
+      throw new LLMConfigError(`Unsupported LLM provider: ${row.provider}`)
+  }
+}
+
+// Keyed by row id and updatedAt, so a saved change (new key, URL or provider) builds a fresh client
+const factories = new Map<string, ModelFactory>()
+
+function factoryFor(row: LLMProvider): ModelFactory {
+  const key = `${row.id}:${row.updatedAt.getTime()}`
+  let factory = factories.get(key)
+  if (!factory) {
+    for (const existing of factories.keys()) {
+      if (existing.startsWith(`${row.id}:`)) factories.delete(existing)
+    }
+    factory = createFactory(row)
+    factories.set(key, factory)
+  }
+  return factory
+}
+
+/**
+ * Build the model for a provider row. Throws `LLMConfigError` when the row
+ * cannot build one.
+ *
+ * @internal
+ */
+export function resolveModel(row: LLMProvider, modelId: string = row.model): ResolvedModel {
+  if (!isProviderId(row.provider)) {
+    throw new LLMConfigError(`Unsupported LLM provider: ${row.provider}`)
+  }
+  if (!modelId) {
+    throw new LLMConfigError("No model is configured for this provider")
+  }
+  return { model: factoryFor(row)(modelId), info: lookupModel(row.provider, modelId), row }
+}
+
+/**
+ * The model for a purpose, from its active `LLMProvider` row (whose key
+ * `ENCRYPTED_FIELDS` has already decrypted). Null when no row is active;
+ * throws `LLMConfigError` when the row cannot build a model.
+ */
+export async function getLanguageModel(
+  purpose: LLMPurpose,
+  override?: { model?: string }
+): Promise<ResolvedModel | null> {
+  const row = await prisma.lLMProvider.findFirst({ where: { isActive: true, purpose } })
+  if (!row) return null
+  return resolveModel(row, override?.model ?? row.model)
+}

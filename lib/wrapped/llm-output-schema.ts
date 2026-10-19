@@ -130,11 +130,3 @@ export const wrappedLLMOutputSchema = z.object({
 })
 
 export type WrappedLLMOutput = z.infer<typeof wrappedLLMOutputSchema>
-
-/**
- * JSON Schema for OpenAI strict structured outputs
- * (`response_format: { type: "json_schema", ... }`).
- */
-export function wrappedOutputJsonSchema(): Record<string, unknown> {
-  return z.toJSONSchema(wrappedLLMOutputSchema) as Record<string, unknown>
-}

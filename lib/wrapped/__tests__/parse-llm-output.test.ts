@@ -1,6 +1,8 @@
+import { z } from "zod"
+
 import {
   ARCHETYPES,
-  wrappedOutputJsonSchema,
+  wrappedLLMOutputSchema,
 } from "@/lib/wrapped/llm-output-schema"
 import { parseWrappedLLMOutput } from "@/lib/wrapped/parse-llm-output"
 
@@ -77,7 +79,12 @@ describe("parseWrappedLLMOutput", () => {
   })
 })
 
-describe("wrappedOutputJsonSchema (strict structured outputs)", () => {
+// The JSON Schema the AI SDK sends for strict structured outputs
+function wrappedOutputJsonSchema() {
+  return z.toJSONSchema(wrappedLLMOutputSchema)
+}
+
+describe("wrappedLLMOutputSchema as JSON Schema (strict structured outputs)", () => {
   function collectObjects(node: unknown, out: Record<string, unknown>[] = []) {
     if (node && typeof node === "object") {
       const obj = node as Record<string, unknown>

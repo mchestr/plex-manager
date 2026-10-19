@@ -22,13 +22,6 @@ jest.mock('@/lib/security/rate-limit', () => ({
   limitRequest: jest.fn(),
 }))
 
-jest.mock('@/lib/llm/pricing', () => ({
-  MODEL_PRICING: {
-    'gpt-4': { input: 0.03, output: 0.06 },
-    'gpt-3.5-turbo': { input: 0.001, output: 0.002 },
-    'claude-3-opus': { input: 0.015, output: 0.075 },
-  },
-}))
 
 // Mock NextRequest
 jest.mock('next/server', () => {
@@ -65,9 +58,10 @@ describe('GET /api/admin/models', () => {
     ;(requireAdminAPI as jest.Mock).mockResolvedValue({ session: { user: { isAdmin: true } }, response: null })
   })
 
-  it('should return models and configured model for admin user', async () => {
+  it('should return the known models of the configured provider and the configured model', async () => {
     const mockLlmProvider = {
-      model: 'gpt-4',
+      model: 'claude-sonnet-5-5',
+      provider: 'anthropic',
     }
 
     ;(prisma.lLMProvider.findFirst as jest.Mock).mockResolvedValue(mockLlmProvider)
@@ -79,11 +73,12 @@ describe('GET /api/admin/models', () => {
     const data = await response.json()
 
     expect(response.status).toBe(200)
-    expect(data.models).toEqual(['claude-3-opus', 'gpt-3.5-turbo', 'gpt-4'])
-    expect(data.configuredModel).toBe('gpt-4')
+    expect(data.models).toEqual(['claude-fable-5-1', 'claude-haiku-5-5', 'claude-opus-5-5', 'claude-sonnet-5-5'])
+    expect(data.configuredModel).toBe('claude-sonnet-5-5')
+    expect(data.configuredProvider).toBe('anthropic')
     expect(prisma.lLMProvider.findFirst).toHaveBeenCalledWith({
       where: { isActive: true },
-      select: { model: true },
+      select: { model: true, provider: true },
     })
   })
 
@@ -97,8 +92,10 @@ describe('GET /api/admin/models', () => {
     const data = await response.json()
 
     expect(response.status).toBe(200)
-    expect(data.models).toEqual(['claude-3-opus', 'gpt-3.5-turbo', 'gpt-4'])
+    expect(data.models).toContain('gpt-6-sol')
+    expect(data.models).not.toContain('claude-sonnet-5-5')
     expect(data.configuredModel).toBeNull()
+    expect(data.configuredProvider).toBe('openai')
   })
 
   it('should return 401 when user is not authenticated', async () => {

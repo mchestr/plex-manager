@@ -2,15 +2,20 @@
  * LLM integration for generating wrapped content
  */
 
+import { generateStructured, type StructuredErrorCode } from "@/lib/llm/generate-structured"
+import { recordUsage } from "@/lib/llm/usage"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
-import { callOpenAI, LLMConfig } from "@/lib/wrapped/api-calls"
 import { assembleWrappedData } from "@/lib/wrapped/assemble-wrapped"
+import { wrappedLLMOutputSchema } from "@/lib/wrapped/llm-output-schema"
 import { generateMockWrappedData } from "@/lib/wrapped/mock-data"
-import { generateWrappedPrompt } from "@/lib/wrapped/prompt-template"
+import { generateSystemPrompt, generateWrappedPrompt } from "@/lib/wrapped/prompt-template"
 import { WrappedData, WrappedStatistics } from "@/types/wrapped"
 
 const logger = createLogger("LLM")
+
+// The caller's signal wins; without one the call stops after 5 minutes
+const REQUEST_TIMEOUT_MS = Number(process.env.LLM_REQUEST_TIMEOUT_MS) || 300_000
 
 /**
  * Call LLM to generate wrapped content.
@@ -25,10 +30,12 @@ export async function generateWrappedWithLLM(args: {
   userId: string
   wrappedId: string
   statistics: WrappedStatistics
+  signal?: AbortSignal
 }): Promise<{
   success: boolean
   data?: WrappedData
   error?: string
+  errorCode?: StructuredErrorCode
   tokenUsage?: {
     promptTokens: number
     completionTokens: number
@@ -36,7 +43,7 @@ export async function generateWrappedWithLLM(args: {
     cost: number
   }
 }> {
-  const { promptName, displayName, year, userId, wrappedId, statistics } = args
+  const { promptName, displayName, year, userId, wrappedId, statistics, signal } = args
 
   try {
     // Check if LLM is disabled in config
@@ -48,27 +55,17 @@ export async function generateWrappedWithLLM(args: {
       logger.info("LLM calls are disabled - returning mock data")
       const mockData = generateMockWrappedData({ promptName, displayName, year, userId, statistics })
 
-      // Still save a record that this was generated with mock data (no cost)
-      // Always create a new record to track all usage, including regenerations
-      try {
-        await prisma.lLMUsage.create({
-          data: {
-            wrappedId,
-            userId,
-            provider: "mock",
-            model: "mock",
-            prompt: "[LLM Disabled - Mock Data]",
-            response: JSON.stringify(mockData),
-            promptTokens: 0,
-            completionTokens: 0,
-            totalTokens: 0,
-            cost: 0,
-          },
-        })
-      } catch (dbError) {
-        logger.error("Failed to save mock usage to database", dbError)
-        // Don't fail the whole operation if logging fails
-      }
+      // Still record the run (no cost), including regenerations
+      await recordUsage({
+        attribution: { userId, wrappedId },
+        provider: "mock",
+        modelId: "mock",
+        usage: { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, reasoningTokens: 0 },
+        cost: 0,
+        outcome: "ok",
+        prompt: "[LLM Disabled - Mock Data]",
+        response: JSON.stringify(mockData),
+      })
 
       return {
         success: true,
@@ -82,80 +79,44 @@ export async function generateWrappedWithLLM(args: {
       }
     }
 
-    // Get active LLM provider for wrapped generation
-    const llmProvider = await prisma.lLMProvider.findFirst({
-      where: { isActive: true, purpose: "wrapped" },
-    })
-
-    if (!llmProvider) {
-      return { success: false, error: "No active LLM provider configured for wrapped generation" }
-    }
-
-    if (!llmProvider.model) {
-      return { success: false, error: "No model configured for wrapped generation. Please configure a model in admin settings." }
-    }
-
-    const config: LLMConfig = {
-      provider: llmProvider.provider as "openai",
-      apiKey: llmProvider.apiKey,
-      model: llmProvider.model,
-      temperature: llmProvider.temperature ?? undefined,
-      maxTokens: llmProvider.maxTokens ?? undefined,
-    }
-
     // Generate prompt using template system
     const prompt = await generateWrappedPrompt(promptName, year, statistics)
 
-    // Call appropriate LLM provider
-    // Currently only OpenAI is supported, but the structure allows for easy extension
-    let llmResult
-    if (config.provider === "openai") {
-      llmResult = await callOpenAI(config, prompt)
-    } else {
-      return { success: false, error: "Unsupported LLM provider" }
-    }
+    const llmResult = await generateStructured({
+      purpose: "wrapped",
+      schema: wrappedLLMOutputSchema,
+      system: generateSystemPrompt(),
+      prompt,
+      effort: "low",
+      cacheKey: "rewind-v2",
+      signal: signal ?? AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      attribution: { userId, wrappedId },
+      recordText: true,
+    })
 
-    if (!llmResult.success || !llmResult.output) {
-      return { success: false, error: llmResult.error }
+    if (!llmResult.ok) {
+      return { success: false, error: llmResult.error.message, errorCode: llmResult.error.code }
     }
 
     // Merge the LLM's creative output with code-computed statistics
     const wrappedData = assembleWrappedData({
-      output: llmResult.output,
+      output: llmResult.value.output,
       statistics,
       userId,
       userName: displayName,
       year,
     })
 
-    // Save token usage to database for cost tracking
-    // Always create a new record to track all usage, including regenerations
-    if (llmResult.tokenUsage) {
-      try {
-        await prisma.lLMUsage.create({
-          data: {
-            wrappedId,
-            userId,
-            provider: config.provider,
-            model: llmResult.model ?? config.model,
-            prompt,
-            response: llmResult.rawResponse || JSON.stringify(wrappedData),
-            promptTokens: llmResult.tokenUsage.promptTokens,
-            completionTokens: llmResult.tokenUsage.completionTokens,
-            totalTokens: llmResult.tokenUsage.totalTokens,
-            cost: llmResult.tokenUsage.cost,
-          },
-        })
-      } catch (dbError) {
-        logger.error("Failed to save token usage to database", dbError)
-        // Don't fail the whole operation if logging fails
-      }
-    }
-
+    const { usage, cost } = llmResult.value
     return {
       success: true,
       data: wrappedData,
-      tokenUsage: llmResult.tokenUsage,
+      tokenUsage: {
+        promptTokens: usage.inputTokens,
+        completionTokens: usage.outputTokens,
+        totalTokens: usage.inputTokens + usage.outputTokens,
+        cost,
+      },
     }
   } catch (error) {
     logger.error("Error generating wrapped content", error)

@@ -1,35 +1,27 @@
 /**
- * Shared OpenAI model capabilities and Chat Completions request parameters.
+ * Chat Completions request fields for the admin assistant (`lib/llm/chat.ts`).
  *
  * ## Overview
  *
- * The Rewind client (`lib/wrapped/api-calls.ts`) and the assistant client
- * (`lib/llm/chat.ts`) both build their request fields here, so a model behaves
- * the same way in both. Capabilities are inferred from the model ID:
+ * A lookup into `lib/llm/models.ts`, with no model-name patterns: a model with
+ * effort levels is a reasoning model and takes `max_completion_tokens`; a
+ * model takes `temperature` only when its entry allows sampling parameters.
+ * An unknown model is treated as a reasoning model, which every current
+ * OpenAI model accepts. P2.12 moves the assistant onto the provider registry
+ * and deletes this module.
  *
- * | Rule              | Models                                          |
- * |-------------------|-------------------------------------------------|
- * | Reasoning model   | `gpt-5*`, `gpt-6*`, `o<digit>*`                 |
- * | Structured output | `gpt-4o*`, `gpt-4.1*`, `gpt-5*`, `gpt-6*`, `o3*`, `o4*` |
- * | Tools need the Responses API | `gpt-6-astra`, `gpt-6.1-sol`         |
- * | Tools need `reasoning_effort: "none"` | `gpt-6-sol`, `gpt-6-luna`   |
+ * | Tool rule | Models |
+ * |-----------|--------|
+ * | Tools need the Responses API | `gpt-6-astra`, `gpt-6.1-sol` |
+ * | Tools need `reasoning_effort: "none"` | `gpt-6-sol`, `gpt-6-luna` |
  *
- * Reasoning models take `max_completion_tokens` and no `temperature`; every
- * other model takes `max_tokens` and keeps the configured temperature.
- *
- * ## Special cases
- *
- * - IDs are lowercased, and an `openai/` prefix and a `-YYYY-MM-DD` snapshot
- *   suffix are stripped first, so `openai/GPT-6-Sol-2026-09-22` is `gpt-6-sol`.
- * - The GPT-6 tool rules come from OpenAI's GPT-6 guide as seen in search
- *   snippets (October 2026), not from a live request. To check them, send one
- *   Chat Completions request with a function tool to `gpt-6.1-sol` (expect a
- *   Responses API error) and one to `gpt-6-luna` with `reasoning_effort:
- *   "none"` (expect success), then correct `RESPONSES_ONLY_TOOLS` and
- *   `REASONING_NONE_TOOLS` if the API disagrees.
+ * The GPT-6 tool rules come from OpenAI's GPT-6 guide as seen in search
+ * snippets (October 2026), not from a live request.
  *
  * @module lib/llm/openai-params
  */
+
+import { lookupModel, normalizeModelId } from "@/lib/llm/models"
 
 /** Default for new providers: current, off every retirement list, and handled by Chat Completions. */
 export const DEFAULT_OPENAI_MODEL = "gpt-5.4-mini"
@@ -38,7 +30,7 @@ export const DEFAULT_OPENAI_MODEL = "gpt-5.4-mini"
  * How a model handles function tools in Chat Completions.
  * - `yes`: tools work as sent.
  * - `reasoning-none`: tools work only with `reasoning_effort: "none"`.
- * - `responses-only`: tools need the Responses API, which this app does not use yet.
+ * - `responses-only`: tools need the Responses API, which the assistant does not use yet.
  *
  * @internal
  */
@@ -47,7 +39,6 @@ export type ChatToolSupport = "yes" | "reasoning-none" | "responses-only"
 export interface OpenAIModelCaps {
   tokenParam: "max_tokens" | "max_completion_tokens"
   acceptsTemperature: boolean
-  structuredOutputs: boolean
   chatTools: ChatToolSupport
 }
 
@@ -58,51 +49,26 @@ export interface OpenAIRequestParams {
   reasoning_effort?: "none"
 }
 
-const REASONING_MODEL = /^(gpt-5|gpt-6|o\d)/
-const STRUCTURED_OUTPUTS = /^(gpt-4o|gpt-4\.1|gpt-5|gpt-6|o3|o4)/
 const RESPONSES_ONLY_TOOLS = new Set(["gpt-6-astra", "gpt-6.1-sol"])
 const REASONING_NONE_TOOLS = new Set(["gpt-6-sol", "gpt-6-luna"])
 
 /**
- * Normalize a model ID for capability and price lookups.
- *
- * @example
- * ```ts
- * normalizeOpenAIModelId("openai/GPT-6-Sol-2026-09-22") // "gpt-6-sol"
- * ```
- */
-export function normalizeOpenAIModelId(model: string): string {
-  return model
-    .trim()
-    .toLowerCase()
-    .replace(/^openai\//, "")
-    .replace(/-\d{4}-\d{2}-\d{2}$/, "")
-}
-
-function chatToolSupport(id: string): ChatToolSupport {
-  if (RESPONSES_ONLY_TOOLS.has(id)) return "responses-only"
-  if (REASONING_NONE_TOOLS.has(id)) return "reasoning-none"
-  return "yes"
-}
-
-/**
- * Capabilities of an OpenAI model, inferred from its ID.
+ * Capabilities of an OpenAI model for Chat Completions.
  *
  * @example
  * ```ts
  * openAIModelCaps("gpt-6-luna")
- * // { tokenParam: "max_completion_tokens", acceptsTemperature: false,
- * //   structuredOutputs: true, chatTools: "reasoning-none" }
+ * // { tokenParam: "max_completion_tokens", acceptsTemperature: false, chatTools: "reasoning-none" }
  * ```
  */
 export function openAIModelCaps(model: string): OpenAIModelCaps {
-  const id = normalizeOpenAIModelId(model)
-  const reasoning = REASONING_MODEL.test(id)
+  const info = lookupModel("openai", model)
+  const id = normalizeModelId(model)
+  const nonReasoning = info.known && info.capabilities.effortLevels === null
   return {
-    tokenParam: reasoning ? "max_completion_tokens" : "max_tokens",
-    acceptsTemperature: !reasoning,
-    structuredOutputs: STRUCTURED_OUTPUTS.test(id),
-    chatTools: chatToolSupport(id),
+    tokenParam: nonReasoning ? "max_tokens" : "max_completion_tokens",
+    acceptsTemperature: info.capabilities.samplingParams,
+    chatTools: RESPONSES_ONLY_TOOLS.has(id) ? "responses-only" : REASONING_NONE_TOOLS.has(id) ? "reasoning-none" : "yes",
   }
 }
 
