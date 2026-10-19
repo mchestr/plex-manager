@@ -142,7 +142,6 @@ test.describe('Admin Functionality', () => {
       const memberPage = await memberContext.newPage();
 
       await adminPage.goto(`/admin/users/${memberId}`);
-      // The page streams; wait until the final copy has replaced the hidden one.
       await waitForAdminPageReady(adminPage);
       await expect(adminPage.getByTestId('admin-user-disable-button')).toHaveCount(1);
       await adminPage.getByTestId('admin-user-disable-button').click();

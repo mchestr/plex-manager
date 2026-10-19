@@ -458,9 +458,16 @@ If you see errors about Plex API calls failing during tests:
 
 ### Production-Build Differences
 
-- A production build streams pages, and for a moment the DOM can hold a
-  hidden copy of the page (`<div hidden id="S:0">`). A strict locator then
-  matches two elements; add `.filter({ visible: true })`.
+- A production build streams pages (`app/loading.tsx` wraps every route in
+  Suspense): the page arrives in a hidden `<div hidden id="S:0">` and React
+  moves it into place on the next animation frame, so it exists only once and
+  a strict locator needs no `.filter({ visible: true })`. If one ever resolves
+  to two elements, one inside `S:0`, look for a client update that changes a
+  context above the root loading boundary during hydration: React then
+  renders the page a second time beside the hidden copy instead of revealing
+  it. next-auth's `SessionProvider` did that with its session fetch until it
+  was removed from `lib/providers.tsx`. Keep the filter for elements a page
+  renders twice on purpose, such as its phone and desktop layouts.
 - A production build hides server error names and messages. The admin
   layout therefore renders the 401 and access-denied screens itself
   (`getAdminGate()`, P4.3), and the error boundaries match only the

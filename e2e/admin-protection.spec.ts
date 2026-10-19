@@ -19,7 +19,7 @@ test.describe('Admin Protection - Unauthenticated Users', () => {
     base(`should show 401 error for unauthenticated user on ${pagePath}`, async ({ page }) => {
       await page.goto(pagePath);
 
-      await expect(page.getByTestId('unauthenticated-error-page').filter({ visible: true })).toBeVisible();
+      await expect(page.getByTestId('unauthenticated-error-page')).toBeVisible();
       await expect(page.getByTestId('unauthorized-error-page')).toHaveCount(0);
     });
   }
@@ -30,7 +30,7 @@ test.describe('Admin Protection - Regular Users', () => {
     test(`regular user should not access ${pagePath}`, async ({ regularUserPage }) => {
       await regularUserPage.goto(pagePath);
 
-      await expect(regularUserPage.getByTestId('unauthorized-error-page').filter({ visible: true })).toBeVisible();
+      await expect(regularUserPage.getByTestId('unauthorized-error-page')).toBeVisible();
       await expect(regularUserPage.getByTestId('unauthenticated-error-page')).toHaveCount(0);
     });
   }

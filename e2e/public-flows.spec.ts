@@ -9,9 +9,8 @@ test.describe('Public Flows', () => {
   test('home page has sign in button and initiates flow', async ({ page }) => {
     await navigateAndVerify(page, '/');
 
-    // Check for collapsed Sign In button. A production build can briefly hold a
-    // hidden streamed copy of the page (`<div hidden id="S:0">`).
-    const signInButton = page.getByTestId('sign-in-button').filter({ visible: true });
+    // Check for collapsed Sign In button
+    const signInButton = page.getByTestId('sign-in-button');
     await expect(signInButton).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
     await expect(signInButton).toBeEnabled();
 
@@ -49,9 +48,9 @@ test.describe('Public Flows', () => {
     await page.goto('/auth/denied');
 
     // Should show access denied message
-    await expect(page.getByTestId('access-denied-heading').filter({ visible: true })).toBeVisible();
+    await expect(page.getByTestId('access-denied-heading')).toBeVisible();
     // The page actually has a "Try Again" link and a "Return Home" button, not a "Return to Home" link
-    await expect(page.getByTestId('return-home-button').filter({ visible: true })).toBeVisible();
+    await expect(page.getByTestId('return-home-button')).toBeVisible();
   });
 
   test('onboarding page accessibility check', async ({ page }) => {

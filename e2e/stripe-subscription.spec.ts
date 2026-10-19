@@ -165,8 +165,7 @@ test.describe('Stripe subscription gate & admin visibility', () => {
       // covers that rule on its own, since here the (app) layout also renders
       // below the root loading boundary and would redirect too
       await page.goto(`/wrapped/${seasonYear}`);
-      // The page streams, so a hidden copy can sit beside the shown one
-      const home = page.getByTestId('wrapped-generate-link').filter({ visible: true });
+      const home = page.getByTestId('wrapped-generate-link');
       await expect(home).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
       // Hydrated, so the click is a client-side navigation; the marker proves
       // no full load happened on the way to /subscribe

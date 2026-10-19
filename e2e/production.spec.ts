@@ -28,9 +28,8 @@ test.describe('Production build', () => {
     await signIn(TEST_USERS.ADMIN.id);
     await page.goto('/admin/users');
 
-    // The streamed page can briefly have a hidden copy (`<div hidden id="S:0">`).
-    await expect(page.getByTestId('admin-users-heading').filter({ visible: true })).toBeVisible();
-    await expect(page.getByTestId('admin-nav-users').filter({ visible: true })).toBeVisible();
+    await expect(page.getByTestId('admin-users-heading')).toBeVisible();
+    await expect(page.getByTestId('admin-nav-users')).toBeVisible();
   });
 
   // Until P4.3 (BP-27) a production build shows the generic error page rather

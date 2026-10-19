@@ -1,4 +1,3 @@
-import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures/auth';
 import { createE2EPrismaClient } from './helpers/prisma';
 import { WAIT_TIMEOUTS } from './helpers/test-utils';
@@ -7,9 +6,6 @@ import { WAIT_TIMEOUTS } from './helpers/test-utils';
  * P1.1 (UI-01): /discord/link is the page every Discord nudge points at. It
  * says linking is unavailable while the integration is off, and offers the
  * Discord OAuth connect link once it is on.
- *
- * While React streams the page, a hidden copy of it sits in the `S:0`
- * container for a moment, so the assertions look only at visible elements.
  */
 
 const CONNECT_URL = '/discord/connect?redirect=%2Fdiscord%2Flink';
@@ -25,10 +21,6 @@ type IntegrationFields = {
   clientSecret: string | null;
   serverInviteCode: string | null;
 };
-
-function visibleByTestId(page: Page, testId: string) {
-  return page.getByTestId(testId).filter({ visible: true });
-}
 
 async function writeIntegration(data: IntegrationFields) {
   const prisma = createE2EPrismaClient();
@@ -76,7 +68,7 @@ test.describe('Discord link page', () => {
 
     await regularUserPage.goto('/discord/link');
 
-    await expect(visibleByTestId(regularUserPage, 'discord-link-unavailable')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    await expect(regularUserPage.getByTestId('discord-link-unavailable')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
     await expect(regularUserPage.getByTestId('discord-link-connect')).toHaveCount(0);
   });
 
@@ -85,8 +77,8 @@ test.describe('Discord link page', () => {
 
     await regularUserPage.goto('/discord/link');
 
-    await expect(visibleByTestId(regularUserPage, 'discord-link-panel')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
-    await expect(visibleByTestId(regularUserPage, 'discord-link-connect')).toHaveAttribute('href', CONNECT_URL);
-    await expect(visibleByTestId(regularUserPage, 'discord-link-join-server')).toHaveAttribute('href', 'https://discord.gg/e2einvite');
+    await expect(regularUserPage.getByTestId('discord-link-panel')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    await expect(regularUserPage.getByTestId('discord-link-connect')).toHaveAttribute('href', CONNECT_URL);
+    await expect(regularUserPage.getByTestId('discord-link-join-server')).toHaveAttribute('href', 'https://discord.gg/e2einvite');
   });
 });
