@@ -276,7 +276,7 @@ export async function seedVisualFixtures(): Promise<void> {
           createdBy: TEST_USERS.ADMIN.id,
         },
       });
-    });
+    }, { timeout: 30000 }); // dozens of writes: past the 5 s interactive default on a slow CI runner
   } finally {
     await prisma.$disconnect();
   }
