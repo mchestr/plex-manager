@@ -65,6 +65,9 @@ export function verifyValue(raw: string | null | undefined, purpose: string): Pa
   const expected = sign(body, purpose)
   const given = Buffer.from(signature, "base64url")
   if (given.length !== expected.length || !timingSafeEqual(given, expected)) return null
+  // base64url decoding ignores the last character's padding bits, so accept
+  // only the one encoding signValue writes.
+  if (given.toString("base64url") !== signature) return null
 
   let parsed: unknown
   try {

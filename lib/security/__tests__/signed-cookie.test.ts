@@ -28,10 +28,13 @@ describe("signValue and verifyValue", () => {
     const raw = signValue({ pinId: 42 }, "plex-pin", 900)
     const [body, signature] = raw.split(".")
     const forgedBody = Buffer.from(JSON.stringify({ pinId: 43, exp: 9_999_999_999 })).toString("base64url")
-    const flipped = `${signature.slice(0, -1)}${signature.endsWith("A") ? "B" : "A"}`
+    // The first character carries six signature bits; the last carries padding.
+    const flipped = `${signature.startsWith("A") ? "B" : "A"}${signature.slice(1)}`
+    const repadded = `${signature.slice(0, -1)}${signature.endsWith("A") ? "B" : "A"}`
 
     expect(verifyValue(`${forgedBody}.${signature}`, "plex-pin")).toBeNull()
     expect(verifyValue(`${body}.${flipped}`, "plex-pin")).toBeNull()
+    expect(verifyValue(`${body}.${repadded}`, "plex-pin")).toBeNull()
     expect(verifyValue(`${body}.${signature}.extra`, "plex-pin")).toBeNull()
     expect(verifyValue(body, "plex-pin")).toBeNull()
   })
