@@ -1,16 +1,17 @@
 "use client"
 
-import { useId } from "react"
-import { ModalShell } from "@/components/ui/modal-shell"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
 interface ConfirmModalProps {
   isOpen: boolean
   onClose: () => void
-  onConfirm: () => void
+  /** The dialog shows its pending state until a returned promise settles. */
+  onConfirm: () => void | Promise<void>
   title: string
   message: string
   confirmText?: string
   cancelText?: string
+  /** Only a red class still means anything: it picks the destructive tone. */
   confirmButtonClass?: string
   /** `data-testid` for the dialog element. */
   testId?: string
@@ -18,6 +19,12 @@ interface ConfirmModalProps {
   confirmTestId?: string
 }
 
+/**
+ * @deprecated Use ConfirmDialog from components/ui/confirm-dialog with
+ * useActionDialog (ui-design-system 9.4). This adapter renders ConfirmDialog
+ * in controlled mode until its importers move (P10.18 moves the user action
+ * buttons and P10.11 deletes it).
+ */
 export function ConfirmModal({
   isOpen,
   onClose,
@@ -26,55 +33,27 @@ export function ConfirmModal({
   message,
   confirmText = "Confirm",
   cancelText = "Cancel",
-  confirmButtonClass = "bg-purple-600 hover:bg-purple-700",
+  confirmButtonClass,
   testId,
   confirmTestId,
 }: ConfirmModalProps) {
-  const titleId = useId()
-  const descriptionId = useId()
-
-  const handleConfirm = () => {
-    onConfirm()
-    onClose()
-  }
-
   return (
-    <ModalShell
-      isOpen={isOpen}
-      onClose={onClose}
-      maxWidth="md"
-      labelledBy={titleId}
-      describedBy={descriptionId}
-      className="bg-slate-800 overflow-hidden"
-      testId={testId}
-    >
-      {/* Header */}
-      <div className="px-6 pt-6 pb-4 border-b border-slate-700">
-        <h3 id={titleId} className="text-xl font-bold text-white leading-tight">{title}</h3>
-      </div>
-
-      {/* Body */}
-      <div className="px-6 py-4 max-h-[60vh] overflow-y-auto">
-        <p id={descriptionId} className="text-slate-300 text-sm leading-relaxed overflow-wrap-break-word">{message}</p>
-      </div>
-
-      {/* Footer */}
-      <div className="px-6 py-4 bg-slate-800/50 border-t border-slate-700 flex gap-3 justify-end">
-        <button
-          onClick={onClose}
-          className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white text-sm font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 focus:ring-offset-slate-800"
-        >
-          {cancelText}
-        </button>
-        <button
-          onClick={handleConfirm}
-          data-testid={confirmTestId}
-          className={`px-4 py-2 ${confirmButtonClass} text-white text-sm font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-slate-800`}
-        >
-          {confirmText}
-        </button>
-      </div>
-    </ModalShell>
+    <ConfirmDialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
+      title={title}
+      description={message}
+      confirmLabel={confirmText}
+      cancelLabel={cancelText}
+      tone={confirmButtonClass?.includes("red") ? "destructive" : "default"}
+      action={async () => {
+        await onConfirm()
+        return {}
+      }}
+      data-testid={testId}
+      confirmTestId={confirmTestId}
+    />
   )
 }
-

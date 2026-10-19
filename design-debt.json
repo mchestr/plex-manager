@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "commit": "1a41401ad6ee53a1b0800a004ec58c9fe0e77d29",
-  "generatedAt": "2026-10-19T18:50:05.015Z",
+  "commit": "8915f2d4a0265b13d2eac6ba036676ef0d2ee476",
+  "generatedAt": "2026-10-19T20:01:16.503Z",
   "files": {
     "app/(app)/discord/link/page.tsx": {
       "raw-palette": 2
@@ -375,9 +375,6 @@
       "caps-eyebrow": 2,
       "gradient": 2,
       "raw-palette": 43
-    },
-    "components/admin/shared/confirm-modal.tsx": {
-      "raw-palette": 14
     },
     "components/admin/shared/mobile-nav/MobileMoreMenu.tsx": {
       "blur": 1,
@@ -819,7 +816,7 @@
     "gradient": 136,
     "gradient-text": 56,
     "infinite-motion": 56,
-    "raw-palette": 3482,
+    "raw-palette": 3468,
     "zoom-lock": 2
   }
 }

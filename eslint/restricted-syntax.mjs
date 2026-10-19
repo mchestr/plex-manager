@@ -109,8 +109,8 @@ export const inlineSvg = [
 ];
 
 /**
- * The deprecated `components/ui` adapters (ui-design-system 9.4): new code
- * imports the primitive. A `no-restricted-syntax` selector rather than
+ * The deprecated adapters (ui-design-system 9.4): new code imports the
+ * primitive. A `no-restricted-syntax` selector rather than
  * `no-restricted-imports`, so it shares the raw-element block. P3.5 adds the
  * `styled-*` form adapters; P3.6 adds `modal-shell` and `confirm-modal`.
  */
@@ -120,6 +120,14 @@ export const deprecatedImports = [
     selector: "ImportDeclaration[source.value=/^@.components.ui.styled-/]",
     message:
       "StyledInput, StyledTextarea, StyledCheckbox and StyledDropdown are deprecated: use Input, Textarea, Checkbox or Select from components/ui, with Field or FormField.",
+  },
+  {
+    selector: "ImportDeclaration[source.value=/^@.components.ui.modal-shell$/]",
+    message: "ModalShell is deprecated: use Dialog from components/ui/dialog.",
+  },
+  {
+    selector: "ImportDeclaration[source.value=/^@.components.admin.shared.confirm-modal$/]",
+    message: "ConfirmModal is deprecated: use ConfirmDialog from components/ui/confirm-dialog with useActionDialog.",
   },
 ];
 

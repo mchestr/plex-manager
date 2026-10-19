@@ -1,4 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
+import type { Page } from '@playwright/test';
 import { TEST_USERS } from './fixtures/auth';
 import { ALL_ROUTE_NAMES, A11Y_ROUTES, routeName, routeUserId } from './a11y/routes';
 import { readBaseline, staleRoutes, UPDATE_COMMAND, writeBaseline } from './a11y/baseline';
@@ -65,6 +66,18 @@ test.describe('Accessibility', () => {
   });
 
   test.describe('Modal ARIA', () => {
+    /**
+     * Base UI makes a dialog modal by hiding the rest of the page with
+     * `aria-hidden`, not with `aria-modal`, so popups portalled out of the
+     * dialog stay reachable (P3.6).
+     */
+    async function expectPageBehindHidden(page: Page) {
+      const hidden = await page
+        .getByTestId('generate-invite-button')
+        .evaluate((el) => el.closest('[aria-hidden="true"]') !== null);
+      expect(hidden).toBe(true);
+    }
+
     test.beforeEach(async ({ page, signIn }) => {
       await signIn(TEST_USERS.ADMIN.id);
       await page.goto('/admin/invites');
@@ -75,11 +88,14 @@ test.describe('Accessibility', () => {
       await page.getByTestId(`admin-invites-delete-${VISUAL_INVITE_IDS.valid}`).click();
       const dialog = page.getByTestId('admin-invites-delete-dialog');
       await expect(dialog).toBeVisible();
-      await expect(dialog).toHaveAttribute('role', 'dialog');
-      await expect(dialog).toHaveAttribute('aria-modal', 'true');
+      // A confirmation asks for a decision, so it is an alertdialog (P3.6).
+      await expect(dialog).toHaveAttribute('role', 'alertdialog');
+      await expectPageBehindHidden(page);
       await expect(dialog).toHaveAttribute('aria-labelledby');
       await expect(dialog).toHaveAttribute('aria-describedby');
       await page.keyboard.press('Escape');
+      // The paused clock holds Base UI's exit transition until it runs.
+      await settlePage(page);
       await expect(dialog).toBeHidden();
     });
 
@@ -88,7 +104,7 @@ test.describe('Accessibility', () => {
       const dialog = page.getByTestId('admin-invites-create-dialog');
       await expect(dialog).toBeVisible();
       await expect(dialog).toHaveAttribute('role', 'dialog');
-      await expect(dialog).toHaveAttribute('aria-modal', 'true');
+      await expectPageBehindHidden(page);
       await expect(dialog).toHaveAttribute('aria-labelledby', 'create-invite-title');
       await page.keyboard.press('Escape');
       await expect(dialog).toBeHidden();
