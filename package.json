@@ -34,7 +34,7 @@
     "db:studio": "prisma studio",
     "db:seed": "prisma db seed",
     "register-discord-metadata": "tsx --tsconfig tsconfig.scripts.json scripts/register-discord-metadata.ts",
-    "register-discord-commands": "tsx --tsconfig tsconfig.scripts.json scripts/register-discord-commands.ts"
+    "register-discord-commands": "tsx --conditions=react-server --tsconfig tsconfig.scripts.json scripts/register-discord-commands.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "4.0.71",

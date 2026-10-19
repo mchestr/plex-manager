@@ -4,6 +4,7 @@
  * Functions for fetching user data from Plex.tv API
  */
 
+import { isConnectionTestBypassed } from "@/lib/connections/connection-test"
 import { XMLParser } from "fast-xml-parser"
 import { fetchWithTimeout, isTimeoutError } from "@/lib/utils/fetch-with-timeout"
 import {
@@ -26,9 +27,8 @@ import {
  * Uses the Plex.tv API to get account information
  */
 export async function getPlexUserInfo(token: string): Promise<{ success: boolean; data?: PlexUserInfo; error?: string }> {
-  // TEST MODE BYPASS - Return mock user info in test environment
-  const isTestMode = process.env.NODE_ENV === 'test' || process.env.SKIP_CONNECTION_TESTS === 'true'
-  if (isTestMode) {
+  // TEST MODE BYPASS - see isConnectionTestBypassed
+  if (isConnectionTestBypassed()) {
     return {
       success: true,
       data: {

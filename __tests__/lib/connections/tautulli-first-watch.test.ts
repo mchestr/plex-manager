@@ -93,7 +93,9 @@ describe('getFirstWatchDate', () => {
     const result = await getFirstWatchDate('402')
 
     expect(result).toEqual({ success: false, error: 'Failed to fetch users from Tautulli' })
-    expect(mockFetch).toHaveBeenCalledTimes(1)
+    // tautulliCommand retries the error result (P2.3); no history is read
+    const commands = mockFetch.mock.calls.map(([url]) => new URL(String(url)).searchParams.get('cmd'))
+    expect(commands).toEqual(['get_users', 'get_users', 'get_users'])
   })
 
   it('is not exposed as a Server Action that takes another member\'s ID', () => {

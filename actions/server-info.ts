@@ -1,6 +1,9 @@
 "use server"
 
 import { getServerSession } from "next-auth"
+import { z } from "zod"
+
+import { serviceErrorMessage, serviceFetch } from "@/lib/connections/http"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
@@ -52,22 +55,18 @@ export async function getAvailableLibraries(): Promise<{
     }
 
     // Fetch library sections directly from the local Plex server
-    const sectionsUrl = `${plexServer.url}/library/sections?X-Plex-Token=${plexServer.token}`
-
-    logger.debug("Fetching libraries from local server", { url: sectionsUrl })
-
-    const response = await fetch(sectionsUrl, {
-      headers: { Accept: "application/json" },
+    const result = await serviceFetch({
+      service: "Plex",
+      url: `${plexServer.url}/library/sections`,
+      headers: { "X-Plex-Token": plexServer.token },
+      schema: z.looseObject({ MediaContainer: z.looseObject({ Directory: z.unknown() }).optional() }),
     })
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      logger.error("Failed to fetch library details", undefined, { status: response.status, errorText })
-      return { success: false, error: `Failed to fetch library details: ${response.statusText}` }
+    if (!result.ok) {
+      return { success: false, error: `Failed to fetch library details: ${serviceErrorMessage("Plex", result)}` }
     }
 
-    const data = await response.json()
-    logger.debug("Library sections response", { data })
+    const data = result.data
 
     const sections = data.MediaContainer?.Directory || []
 

@@ -1,3 +1,5 @@
+import { isConnectionTestBypassed } from "@/lib/connections/connection-test"
+
 const OPENAI_API_URL = "https://api.openai.com/v1/models"
 const CONNECTION_TIMEOUT_MS = 10000 // 10 seconds
 
@@ -15,9 +17,8 @@ interface OpenAIModelResponse {
 }
 
 export async function testOpenAIConnection(apiKey: string): Promise<{ success: boolean; error?: string }> {
-  // TEST MODE BYPASS - Skip connection tests in test environment
-  const isTestMode = process.env.NODE_ENV === 'test' || process.env.SKIP_CONNECTION_TESTS === 'true'
-  if (isTestMode) {
+  // TEST MODE BYPASS - see isConnectionTestBypassed
+  if (isConnectionTestBypassed()) {
     return { success: true }
   }
 
@@ -63,9 +64,8 @@ export async function testOpenAIConnection(apiKey: string): Promise<{ success: b
 }
 
 export async function fetchOpenAIModels(apiKey: string): Promise<{ success: boolean; models?: string[]; error?: string }> {
-  // TEST MODE BYPASS - Return mock models in test environment
-  const isTestMode = process.env.NODE_ENV === 'test' || process.env.SKIP_CONNECTION_TESTS === 'true'
-  if (isTestMode) {
+  // TEST MODE BYPASS - see isConnectionTestBypassed
+  if (isConnectionTestBypassed()) {
     return {
       success: true,
       models: ['gpt-5.4-mini', 'gpt-6-sol', 'gpt-6-luna'],

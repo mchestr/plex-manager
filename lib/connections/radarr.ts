@@ -1,73 +1,29 @@
 import { type RadarrParsed } from "@/lib/validations/radarr";
-import { fetchWithTimeout, isTimeoutError } from "@/lib/utils/fetch-with-timeout";
-import { arrGet } from "@/lib/connections/arr-client";
+import { arrGet, testArrConnection } from "@/lib/connections/arr-client";
 import { type ConnectionResult } from "@/types/connection";
 
 export async function testRadarrConnection(config: RadarrParsed): Promise<{ success: boolean; error?: string }> {
-  // TEST MODE BYPASS - Skip connection tests in test environment
-  const isTestMode = process.env.NODE_ENV === 'test' || process.env.SKIP_CONNECTION_TESTS === 'true'
-  if (isTestMode) {
-    return { success: true }
-  }
-
-  try {
-    const url = `${config.url}/api/v3/system/status`
-
-    const response = await fetchWithTimeout(url, {
-      method: "GET",
-      headers: {
-        "Accept": "application/json",
-        "X-Api-Key": config.apiKey,
-      },
-    })
-
-    if (!response.ok) {
-      if (response.status === 401 || response.status === 403) {
-        return { success: false, error: "Invalid API key" }
-      }
-      if (response.status === 404) {
-        return { success: false, error: "Radarr server not found at this address" }
-      }
-      return { success: false, error: `Connection failed: ${response.statusText}` }
-    }
-
-    const data = await response.json()
-
-    // Check if Radarr API returned valid system status
-    if (!data || typeof data !== "object") {
-      return { success: false, error: "Invalid response from Radarr API" }
-    }
-
-    return { success: true }
-  } catch (error) {
-    if (isTimeoutError(error)) {
-      return { success: false, error: "Connection timeout - check your hostname and port" }
-    }
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to connect to Radarr server" }
-  }
+  return testArrConnection("Radarr", config)
 }
 
 export async function getRadarrSystemStatus(config: RadarrParsed): Promise<ConnectionResult<unknown>> {
-  return arrGet(config, "/api/v3/system/status", "Radarr status error", "Failed to get Radarr system status")
+  return arrGet("Radarr", config, "/api/v3/system/status")
 }
 
 export async function getRadarrQueue(config: RadarrParsed): Promise<ConnectionResult<unknown>> {
-  return arrGet(config, "/api/v3/queue", "Radarr queue error", "Failed to get Radarr queue")
+  return arrGet("Radarr", config, "/api/v3/queue")
 }
 
 export async function getRadarrHealth(config: RadarrParsed): Promise<ConnectionResult<unknown>> {
-  return arrGet(config, "/api/v3/health", "Radarr health error", "Failed to get Radarr health")
+  return arrGet("Radarr", config, "/api/v3/health")
 }
 
 export async function getRadarrDiskSpace(config: RadarrParsed): Promise<ConnectionResult<unknown>> {
-  return arrGet(config, "/api/v3/diskspace", "Radarr diskspace error", "Failed to get Radarr disk space")
+  return arrGet("Radarr", config, "/api/v3/diskspace")
 }
 
 export async function searchRadarrMovies(config: RadarrParsed, term: string): Promise<ConnectionResult<unknown>> {
-  return arrGet(config, `/api/v3/movie/lookup?term=${encodeURIComponent(term)}`, "Radarr search error", "Failed to search Radarr movies")
+  return arrGet("Radarr", config, `/api/v3/movie/lookup?term=${encodeURIComponent(term)}`)
 }
 
 export async function getRadarrHistory(
@@ -83,15 +39,15 @@ export async function getRadarrHistory(
   if (movieId !== undefined) {
     params.append("movieId", movieId.toString())
   }
-  return arrGet(config, `/api/v3/history?${params.toString()}`, "Radarr history error", "Failed to get Radarr history")
+  return arrGet("Radarr", config, `/api/v3/history?${params.toString()}`)
 }
 
 export async function getRadarrMovies(config: RadarrParsed): Promise<ConnectionResult<unknown>> {
-  return arrGet(config, "/api/v3/movie", "Radarr movies error", "Failed to get Radarr movies")
+  return arrGet("Radarr", config, "/api/v3/movie")
 }
 
 export async function getRadarrMovieById(config: RadarrParsed, movieId: number): Promise<ConnectionResult<unknown>> {
-  return arrGet(config, `/api/v3/movie/${movieId}`, "Radarr movie detail error", "Failed to get Radarr movie by ID")
+  return arrGet("Radarr", config, `/api/v3/movie/${movieId}`)
 }
 
 export async function getRadarrCalendar(config: RadarrParsed, startDate?: string, endDate?: string): Promise<ConnectionResult<unknown>> {
@@ -100,17 +56,17 @@ export async function getRadarrCalendar(config: RadarrParsed, startDate?: string
   if (startDate) params.append("start", startDate)
   if (endDate) params.append("end", endDate)
   if (params.toString()) path += `?${params.toString()}`
-  return arrGet(config, path, "Radarr calendar error", "Failed to get Radarr calendar")
+  return arrGet("Radarr", config, path)
 }
 
 export async function getRadarrWantedMissing(config: RadarrParsed, pageSize = 20): Promise<ConnectionResult<unknown>> {
-  return arrGet(config, `/api/v3/wanted/missing?pageSize=${pageSize}&sortKey=physicalRelease&sortDir=desc`, "Radarr wanted missing error", "Failed to get Radarr wanted missing")
+  return arrGet("Radarr", config, `/api/v3/wanted/missing?pageSize=${pageSize}&sortKey=physicalRelease&sortDir=desc`)
 }
 
 export async function getRadarrRootFolders(config: RadarrParsed): Promise<ConnectionResult<unknown>> {
-  return arrGet(config, "/api/v3/rootFolder", "Radarr root folders error", "Failed to get Radarr root folders")
+  return arrGet("Radarr", config, "/api/v3/rootFolder")
 }
 
 export async function getRadarrQualityProfiles(config: RadarrParsed): Promise<ConnectionResult<unknown>> {
-  return arrGet(config, "/api/v3/qualityProfile", "Radarr quality profiles error", "Failed to get Radarr quality profiles")
+  return arrGet("Radarr", config, "/api/v3/qualityProfile")
 }

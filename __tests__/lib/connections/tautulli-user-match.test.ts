@@ -100,10 +100,11 @@ describe('findTautulliUser', () => {
     const result = await findTautulliUser(config, { plexUserId: '102' })
 
     expect(result).toEqual({ ok: true, user: { user_id: 102, username: 'BobTheBuilder' } })
-    // Bounded by fetchWithTimeout's signal (P0.17), not undici's 300 s default.
-    expect(mockFetch).toHaveBeenCalledWith('http://tautulli.local:8181/api/v2?apikey=key&cmd=get_users', {
-      signal: expect.any(AbortSignal),
-    })
+    // Bounded by serviceFetch's signal (P0.17, P2.3), not undici's 300 s default.
+    expect(mockFetch).toHaveBeenCalledWith(
+      'http://tautulli.local:8181/api/v2?apikey=key&cmd=get_users',
+      expect.objectContaining({ signal: expect.any(AbortSignal), redirect: 'manual' })
+    )
   })
 
   it('returns TAUTULLI_USER_NOT_FOUND and logs a candidate count only, at debug', async () => {
@@ -151,7 +152,7 @@ describe('findTautulliUser', () => {
     const result = await findTautulliUser(config, { plexUserId: '102' })
 
     expect(result).toEqual({ ok: false, code: 'TAUTULLI_ERROR' })
-    expect(mockWarn).toHaveBeenCalledWith('Tautulli get_users returned an error', { message: 'Invalid apikey' })
+    expect(mockWarn).toHaveBeenCalledWith('Tautulli returned an error result', { cmd: 'get_users' })
   })
 
   it('returns TAUTULLI_ERROR for an unexpected response shape', async () => {

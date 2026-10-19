@@ -6,12 +6,17 @@
 
 import {
   findTautulliUser,
+  tautulliCommand,
   type FindTautulliUserResult,
   type TautulliUserIdentity,
   type TautulliUserRow,
 } from "@/lib/connections/tautulli"
 import { createLogger } from "@/lib/utils/logger"
-import type { TautulliHistoryItem } from "@/lib/validations/tautulli"
+import {
+  tautulliHistoryItemSchema,
+  tautulliHistoryPageSchema,
+  type TautulliHistoryItem,
+} from "@/lib/validations/tautulli"
 
 import { computeDerivedStatistics } from "./derived-statistics"
 import { memberErrorCopy } from "./generation-errors"
@@ -49,9 +54,6 @@ export async function fetchTautulliStatistics(
   code?: "TAUTULLI_USER_NOT_FOUND"
 }> {
   try {
-    const baseUrl = `${config.url}/api/v2`
-    const apiKey = config.apiKey
-
     const lookup: FindTautulliUserResult = matchedUser
       ? { ok: true, user: matchedUser }
       : await findTautulliUser(config, identity)
@@ -91,54 +93,40 @@ export async function fetchTautulliStatistics(
     const length = 1000 // Tautulli default page size
     let hasMore = true
 
+    let droppedRows = 0
+
     while (hasMore) {
       // Fetch without date filters - Tautulli's after/before parameters are unreliable
-      const historyUrl = `${baseUrl}?apikey=${apiKey}&cmd=get_history&user_id=${userId}&start=${start}&length=${length}`
-      const historyResponse = await fetch(
-        historyUrl,
-        {
-          headers: {
-            "Accept": "application/json",
-          },
-        }
+      const result = await tautulliCommand(
+        config,
+        "get_history",
+        { user_id: userId, start, length },
+        tautulliHistoryPageSchema,
+        { timeoutMs: 20_000 }
       )
 
-      if (!historyResponse.ok) {
-        return {
-          success: false,
-          error: `Failed to fetch watch history: ${historyResponse.statusText}`
-        }
+      if (!result.ok) {
+        return { success: false, error: "Failed to fetch watch history from Tautulli" }
       }
 
-      const historyData = await historyResponse.json()
-
-      // Check for API errors
-      if (historyData.response?.result === "error") {
-        return {
-          success: false,
-          error: historyData.response?.message || "Tautulli API error"
-        }
-      }
-
-      // Handle different response structures - Tautulli can return data directly or nested
-      let historyPage: TautulliHistoryItem[] = []
-      if (Array.isArray(historyData.response?.data)) {
-        // Data is directly an array
-        historyPage = historyData.response.data as TautulliHistoryItem[]
-      } else if (historyData.response?.data?.data) {
-        // Data is nested in data.data (paginated response)
-        historyPage = historyData.response.data.data as TautulliHistoryItem[]
-      } else if (historyData.response?.data) {
-        // Try to use data directly if it's an object with array-like structure
-        historyPage = []
-      }
+      // Tautulli returns either a page object or, on some builds, a bare array
+      const rows = Array.isArray(result.data) ? result.data : result.data.data
+      const historyPage = rows.flatMap((row) => {
+        const item = tautulliHistoryItemSchema.safeParse(row)
+        if (!item.success) droppedRows++
+        return item.success ? [item.data] : []
+      })
 
       allHistory = allHistory.concat(historyPage)
 
       // Check if there are more pages (using recordsTotal since we're fetching all records)
-      const recordsTotal = historyData.response?.data?.recordsTotal || 0
-      hasMore = historyPage.length === length && allHistory.length < recordsTotal
+      const recordsTotal = Array.isArray(result.data) ? 0 : result.data.recordsTotal ?? 0
+      hasMore = rows.length === length && allHistory.length + droppedRows < recordsTotal
       start += length
+    }
+
+    if (droppedRows > 0) {
+      logger.warn("Dropped Tautulli history rows that failed validation", { droppedRows })
     }
 
     // Filter history by date range in code (more reliable than Tautulli's date filtering)

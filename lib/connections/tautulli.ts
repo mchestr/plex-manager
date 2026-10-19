@@ -1,7 +1,18 @@
+import "server-only"
+
 import { cache } from "react";
 import { z } from "zod";
-import { type TautulliParsed } from "@/lib/validations/tautulli";
-import { fetchWithTimeout, isTimeoutError } from "@/lib/utils/fetch-with-timeout";
+import { testServiceConnection } from "@/lib/connections/connection-test";
+import {
+  invalidResponse,
+  isTransientFailure,
+  serviceFetch,
+  toConnectionResult,
+  withRetry,
+  type ServiceErrorCode,
+  type ServiceResult,
+} from "@/lib/connections/http";
+import { tautulliEnvelopeSchema, type TautulliParsed } from "@/lib/validations/tautulli";
 import { createLogger } from "@/lib/utils/logger";
 import { type ConnectionResult } from "@/types/connection";
 
@@ -10,144 +21,143 @@ const logger = createLogger("TAUTULLI");
 /** The URL and API key needed to call Tautulli. */
 type TautulliEndpoint = Pick<TautulliParsed, "url" | "apiKey">
 
-export async function testTautulliConnection(config: TautulliParsed): Promise<{ success: boolean; error?: string }> {
-  // TEST MODE BYPASS - Skip connection tests in test environment
-  const isTestMode = process.env.NODE_ENV === 'test' || process.env.SKIP_CONNECTION_TESTS === 'true'
-  if (isTestMode) {
-    return { success: true }
+/**
+ * The Tautulli v2 commands this app calls. Only commands Tautulli's API
+ * exposes belong here (RWP-10): "recently watched", "most watched" and "top
+ * users" are `get_history` and `get_home_stats` with a `stat_id`.
+ */
+export type TautulliCommand =
+  | "get_activity"
+  | "get_history"
+  | "get_home_stats"
+  | "get_item_user_stats"
+  | "get_libraries"
+  | "get_libraries_table"
+  | "get_library_names"
+  | "get_server_info"
+  | "get_user_watch_time_stats"
+  | "get_users"
+
+type TautulliResult<T> = ServiceResult<T, ServiceErrorCode | "TAUTULLI_ERROR">
+
+type TautulliParams = Record<string, string | number | undefined>
+
+/** The `api/v2` URL. The key stays in the query, because Tautulli requires it there. @internal */
+function tautulliUrl(config: TautulliEndpoint, cmd: TautulliCommand, params: TautulliParams): string {
+  const query = new URLSearchParams({ apikey: config.apiKey, cmd })
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined) query.set(key, String(value))
   }
-
-  try {
-    const url = `${config.url}/api/v2?apikey=${config.apiKey}&cmd=get_server_info`
-
-    const response = await fetchWithTimeout(url, {
-      method: "GET",
-      headers: {
-        "Accept": "application/json",
-      },
-    })
-
-    if (!response.ok) {
-      if (response.status === 401 || response.status === 403) {
-        return { success: false, error: "Invalid API key" }
-      }
-      if (response.status === 404) {
-        return { success: false, error: "Tautulli server not found at this address" }
-      }
-      return { success: false, error: `Connection failed: ${response.statusText}` }
-    }
-
-    const data = await response.json()
-
-    // Check if Tautulli API returned an error
-    if (data.response?.result === "error") {
-      return { success: false, error: data.response?.message || "Tautulli API error" }
-    }
-
-    return { success: true }
-  } catch (error) {
-    if (isTimeoutError(error)) {
-      return { success: false, error: "Connection timeout - check your hostname and port" }
-    }
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to connect to Tautulli server" }
-  }
-}
-
-export async function getTautulliActivity(config: TautulliParsed): Promise<ConnectionResult<unknown>> {
-  try {
-    const url = `${config.url}/api/v2?apikey=${config.apiKey}&cmd=get_activity`
-    const response = await fetch(url)
-    if (!response.ok) {
-      return { success: false, error: `Tautulli activity error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Tautulli activity" }
-  }
-}
-
-export async function getTautulliServerInfo(config: TautulliParsed): Promise<ConnectionResult<unknown>> {
-  try {
-    const url = `${config.url}/api/v2?apikey=${config.apiKey}&cmd=get_server_info`
-    const response = await fetch(url)
-    if (!response.ok) {
-      return { success: false, error: `Tautulli server info error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Tautulli server info" }
-  }
-}
-
-export async function getTautulliLibraryNames(config: TautulliParsed): Promise<ConnectionResult<unknown>> {
-  try {
-    const url = `${config.url}/api/v2?apikey=${config.apiKey}&cmd=get_library_names`
-    const response = await fetch(url)
-    if (!response.ok) {
-      return { success: false, error: `Tautulli library names error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Tautulli library names" }
-  }
-}
-
-export async function getTautulliLibraryStats(config: TautulliParsed): Promise<ConnectionResult<unknown>> {
-  try {
-    const url = `${config.url}/api/v2?apikey=${config.apiKey}&cmd=get_libraries_table`
-    const response = await fetch(url)
-    if (!response.ok) {
-      return { success: false, error: `Tautulli library stats error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Tautulli library stats" }
-  }
+  return `${config.url.replace(/\/+$/, "")}/api/v2?${query.toString()}`
 }
 
 /**
- * Tautulli's user list. The request is bounded by `fetchWithTimeout`'s default
- * 10 seconds: the home page and `generatePlexWrapped` wait on it (through
- * {@link findTautulliUser}) before a member's rate limit is checked, so a hung
- * Tautulli must not hold them for undici's 300-second default.
+ * The one Tautulli client. Calls `cmd` through `serviceFetch`, unwraps the
+ * `{ response: { result, message, data } }` envelope and parses `data` with
+ * `schema`.
+ *
+ * - A `result` other than `"success"` is `TAUTULLI_ERROR`; Tautulli's
+ *   `message` is not passed on.
+ * - `TAUTULLI_ERROR`, network errors, 429 and 5xx are retried (3 attempts by
+ *   default, jittered backoff). A 4xx, such as the 400 Tautulli sends for an
+ *   unknown command, and a timeout are not.
+ *
+ * @example
+ * ```ts
+ * const users = await tautulliCommand(config, "get_users", {}, z.array(z.unknown()))
+ * if (!users.ok) return users.code // "TAUTULLI_ERROR", "TIMEOUT", "HTTP", ...
+ * ```
  */
-export async function getTautulliUsers(config: TautulliEndpoint): Promise<ConnectionResult<unknown>> {
-  try {
-    const url = `${config.url}/api/v2?apikey=${config.apiKey}&cmd=get_users`
-    const response = await fetchWithTimeout(url)
-    if (!response.ok) {
-      return { success: false, error: `Tautulli users error: ${response.statusText}` }
+export async function tautulliCommand<T>(
+  config: TautulliEndpoint,
+  cmd: TautulliCommand,
+  params: TautulliParams,
+  schema: z.ZodType<T>,
+  opts: { timeoutMs?: number; signal?: AbortSignal; attempts?: number } = {}
+): Promise<TautulliResult<T>> {
+  const url = tautulliUrl(config, cmd, params)
+  const once = async (): Promise<TautulliResult<T>> => {
+    const result = await serviceFetch({
+      service: "Tautulli",
+      url,
+      schema: tautulliEnvelopeSchema,
+      timeoutMs: opts.timeoutMs,
+      signal: opts.signal,
+    })
+    if (!result.ok) return result
+    if (result.data.response.result !== "success") {
+      logger.warn("Tautulli returned an error result", { cmd })
+      return { ok: false, code: "TAUTULLI_ERROR" }
     }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (isTimeoutError(error)) {
-      return { success: false, error: "Tautulli users request timed out" }
-    }
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Tautulli users" }
+    const parsed = schema.safeParse(result.data.response.data)
+    return parsed.success ? { ok: true, data: parsed.data } : invalidResponse("Tautulli", parsed.error, { cmd })
   }
+  return withRetry(once, {
+    attempts: opts.attempts,
+    signal: opts.signal,
+    retryOn: (failure) => failure.code === "TAUTULLI_ERROR" || isTransientFailure(failure),
+  })
+}
+
+/** {@link tautulliCommand} for the chatbot tools: the raw `data`, in the older result shape. */
+async function rawCommand(
+  config: TautulliEndpoint,
+  cmd: TautulliCommand,
+  params: TautulliParams = {}
+): Promise<ConnectionResult<unknown>> {
+  return toConnectionResult("Tautulli", await tautulliCommand(config, cmd, params, z.unknown()))
+}
+
+export async function testTautulliConnection(config: TautulliEndpoint): Promise<{ success: boolean; error?: string }> {
+  return testServiceConnection("Tautulli", () =>
+    tautulliCommand(config, "get_server_info", {}, z.unknown(), { attempts: 1 })
+  )
+}
+
+export async function getTautulliActivity(config: TautulliEndpoint): Promise<ConnectionResult<unknown>> {
+  return rawCommand(config, "get_activity")
+}
+
+export async function getTautulliServerInfo(config: TautulliEndpoint): Promise<ConnectionResult<unknown>> {
+  return rawCommand(config, "get_server_info")
+}
+
+export async function getTautulliLibraryNames(config: TautulliEndpoint): Promise<ConnectionResult<unknown>> {
+  return rawCommand(config, "get_library_names")
+}
+
+export async function getTautulliLibraryStats(config: TautulliEndpoint): Promise<ConnectionResult<unknown>> {
+  return rawCommand(config, "get_libraries_table")
+}
+
+export async function getTautulliUsers(config: TautulliEndpoint): Promise<ConnectionResult<unknown>> {
+  return rawCommand(config, "get_users")
+}
+
+/** Newest plays first (Tautulli's default order), optionally for one Tautulli user. */
+export async function getTautulliHistory(
+  config: TautulliEndpoint,
+  userId?: number,
+  limit = 20
+): Promise<ConnectionResult<unknown>> {
+  return rawCommand(config, "get_history", { length: limit, user_id: userId })
+}
+
+/** One `get_home_stats` card: `top_movies`, `top_tv` or `top_users`. */
+export async function getTautulliHomeStat(
+  config: TautulliEndpoint,
+  statId: "top_movies" | "top_tv" | "top_users",
+  count: number,
+  statsType: "plays" | "duration" = "plays"
+): Promise<ConnectionResult<unknown>> {
+  return rawCommand(config, "get_home_stats", { stat_id: statId, stats_count: count, stats_type: statsType })
+}
+
+export async function getTautulliUserWatchTimeStats(
+  config: TautulliEndpoint,
+  userId?: number
+): Promise<ConnectionResult<unknown>> {
+  return rawCommand(config, "get_user_watch_time_stats", { user_id: userId })
 }
 
 /** The Plex identity used to find a member in Tautulli's user list. */
@@ -164,21 +174,18 @@ const tautulliUserRowSchema = z.object({
 /** The `get_users` fields the lookup relies on. Other fields are stripped. */
 export type TautulliUserRow = z.infer<typeof tautulliUserRowSchema>
 
-const getUsersResponseSchema = z.object({
-  response: z.discriminatedUnion("result", [
-    z.object({ result: z.literal("success"), data: z.array(z.unknown()) }),
-    z.object({ result: z.literal("error"), message: z.string().nullish() }),
-  ]),
-})
-
 /**
  * `get_users` at most once per server render for one Tautulli. The home page
  * checks Rewind eligibility and reads the first-watch date, and both find the
  * member through {@link findTautulliUser} (P0.17). The URL and API key are the
  * key, as strings, because `cache` compares object arguments by identity.
- * Outside a React render it calls straight through.
+ * Outside a React render it calls straight through. The call has
+ * `serviceFetch`'s default 10-second budget per attempt: the home page and
+ * `generatePlexWrapped` wait on it before a member's rate limit is checked.
  */
-const getTautulliUsersOncePerRender = cache((url: string, apiKey: string) => getTautulliUsers({ url, apiKey }))
+const getTautulliUsersOncePerRender = cache((url: string, apiKey: string) =>
+  tautulliCommand({ url, apiKey }, "get_users", {}, z.array(z.unknown()))
+)
 
 /** On a miss, `candidates` is the size of Tautulli's user list, for count-only logging. */
 export type FindTautulliUserResult =
@@ -230,22 +237,12 @@ export async function findTautulliUser(
   identity: TautulliUserIdentity
 ): Promise<FindTautulliUserResult> {
   const result = await getTautulliUsersOncePerRender(config.url, config.apiKey)
-  if (!result.success) {
-    logger.warn("Tautulli get_users request failed", { error: result.error })
+  if (!result.ok) {
+    logger.warn("Tautulli get_users request failed", { code: result.code, status: result.status })
     return { ok: false, code: "TAUTULLI_ERROR" }
   }
 
-  const parsed = getUsersResponseSchema.safeParse(result.data)
-  if (!parsed.success) {
-    logger.warn("Unexpected Tautulli get_users response shape")
-    return { ok: false, code: "TAUTULLI_ERROR" }
-  }
-  if (parsed.data.response.result === "error") {
-    logger.warn("Tautulli get_users returned an error", { message: parsed.data.response.message })
-    return { ok: false, code: "TAUTULLI_ERROR" }
-  }
-
-  const users = parsed.data.response.data.flatMap((row) => {
+  const users = result.data.flatMap((row) => {
     const user = tautulliUserRowSchema.safeParse(row)
     return user.success ? [user.data] : []
   })
@@ -256,91 +253,4 @@ export async function findTautulliUser(
     return { ok: false, code: "TAUTULLI_USER_NOT_FOUND", candidates: users.length }
   }
   return { ok: true, user }
-}
-
-export async function getTautulliHistory(config: TautulliParsed, userId?: number, limit = 20): Promise<ConnectionResult<unknown>> {
-  try {
-    let url = `${config.url}/api/v2?apikey=${config.apiKey}&cmd=get_history&length=${limit}`
-    if (userId) url += `&user_id=${userId}`
-    const response = await fetch(url)
-    if (!response.ok) {
-      return { success: false, error: `Tautulli history error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Tautulli history" }
-  }
-}
-
-export async function getTautulliRecentlyWatched(config: TautulliParsed, limit = 20): Promise<ConnectionResult<unknown>> {
-  try {
-    const url = `${config.url}/api/v2?apikey=${config.apiKey}&cmd=get_recently_watched&length=${limit}`
-    const response = await fetch(url)
-    if (!response.ok) {
-      return { success: false, error: `Tautulli recently watched error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Tautulli recently watched" }
-  }
-}
-
-export async function getTautulliMostWatched(config: TautulliParsed, limit = 20): Promise<ConnectionResult<unknown>> {
-  try {
-    const url = `${config.url}/api/v2?apikey=${config.apiKey}&cmd=get_most_watched&length=${limit}`
-    const response = await fetch(url)
-    if (!response.ok) {
-      return { success: false, error: `Tautulli most watched error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Tautulli most watched" }
-  }
-}
-
-export async function getTautulliTopUsers(config: TautulliParsed, limit = 10): Promise<ConnectionResult<unknown>> {
-  try {
-    const url = `${config.url}/api/v2?apikey=${config.apiKey}&cmd=get_top_users&length=${limit}`
-    const response = await fetch(url)
-    if (!response.ok) {
-      return { success: false, error: `Tautulli top users error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Tautulli top users" }
-  }
-}
-
-export async function getTautulliUserWatchTimeStats(config: TautulliParsed, userId?: number): Promise<ConnectionResult<unknown>> {
-  try {
-    let url = `${config.url}/api/v2?apikey=${config.apiKey}&cmd=get_user_watch_time_stats`
-    if (userId) url += `&user_id=${userId}`
-    const response = await fetch(url)
-    if (!response.ok) {
-      return { success: false, error: `Tautulli user watch time stats error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Tautulli user watch time stats" }
-  }
 }

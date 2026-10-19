@@ -9,7 +9,8 @@
  *    never advertised in the generated Discord system prompt.
  *
  * It also covers the Discord activity scoping, which maps the caller to their
- * Tautulli user through the shared findTautulliUser lookup (P0.9).
+ * Tautulli user through the shared findTautulliUser lookup (P0.9), and the
+ * three tools that used to call commands Tautulli does not have (P2.3, RWP-10).
  */
 
 import { executeTautulliTool } from "../tautulli"
@@ -21,6 +22,8 @@ import { DISCORD_SAFE_TOOL_NAMES } from "@/actions/chatbot/tools/registry"
 import {
   findTautulliUser,
   getTautulliActivity,
+  getTautulliHistory,
+  getTautulliHomeStat,
   getTautulliLibraryNames,
   getTautulliLibraryStats,
 } from "@/lib/connections/tautulli"
@@ -35,6 +38,8 @@ beforeEach(() => mockReset(prismaMock))
 jest.mock("@/lib/connections/tautulli", () => ({
   findTautulliUser: jest.fn(),
   getTautulliActivity: jest.fn(),
+  getTautulliHistory: jest.fn(),
+  getTautulliHomeStat: jest.fn(),
   getTautulliLibraryNames: jest.fn(),
   getTautulliLibraryStats: jest.fn(),
   getTautulliUsers: jest.fn(),
@@ -136,17 +141,13 @@ describe("executeTautulliTool - library stats routing", () => {
 })
 
 describe("executeTautulliTool - Discord activity scoping", () => {
+  // get_activity's `data`, as getTautulliActivity returns it
   const activity = {
-    response: {
-      result: "success",
-      data: {
-        stream_count: "2",
-        sessions: [
-          { user_id: 501, title: "Mine" },
-          { user_id: 502, title: "Someone else's" },
-        ],
-      },
-    },
+    stream_count: "2",
+    sessions: [
+      { user_id: 501, title: "Mine" },
+      { user_id: 502, title: "Someone else's" },
+    ],
   }
 
   beforeEach(() => {
@@ -178,8 +179,8 @@ describe("executeTautulliTool - Discord activity scoping", () => {
       expect.objectContaining({ url: "http://localhost:8181", apiKey: "test-key" }),
       { plexUserId: "501" }
     )
-    expect(result.response.data.session_count).toBe(1)
-    expect(result.response.data.sessions).toEqual([{ user_id: 501, title: "Mine" }])
+    expect(result.session_count).toBe(1)
+    expect(result.sessions).toEqual([{ user_id: 501, title: "Mine" }])
   })
 
   it("returns no sessions when the matched user is not streaming", async () => {
@@ -189,8 +190,8 @@ describe("executeTautulliTool - Discord activity scoping", () => {
       await executeTautulliTool("get_tautulli_activity", {}, "user-1", "discord")
     )
 
-    expect(result.response.data.session_count).toBe(0)
-    expect(result.response.data.sessions).toEqual([])
+    expect(result.session_count).toBe(0)
+    expect(result.sessions).toEqual([])
   })
 
   it.each([
@@ -203,8 +204,8 @@ describe("executeTautulliTool - Discord activity scoping", () => {
       await executeTautulliTool("get_tautulli_activity", {}, "user-1", "discord")
     )
 
-    expect(result.response.data.session_count).toBe(0)
-    expect(result.response.data.sessions).toEqual([])
+    expect(result.session_count).toBe(0)
+    expect(result.sessions).toEqual([])
   })
 
   it("returns no sessions to a caller without a Plex user ID", async () => {
@@ -215,13 +216,69 @@ describe("executeTautulliTool - Discord activity scoping", () => {
     )
 
     expect(mockFindTautulliUser).not.toHaveBeenCalled()
-    expect(result.response.data.sessions).toEqual([])
+    expect(result.sessions).toEqual([])
   })
 
   it("does not look the caller up outside the Discord context", async () => {
     await executeTautulliTool("get_tautulli_activity", {}, "user-1", "admin")
 
     expect(mockFindTautulliUser).not.toHaveBeenCalled()
+  })
+})
+
+describe("executeTautulliTool - tools built on real Tautulli commands", () => {
+  const mockGetTautulliHomeStat = getTautulliHomeStat as jest.MockedFunction<typeof getTautulliHomeStat>
+  const mockGetTautulliHistory = getTautulliHistory as jest.MockedFunction<typeof getTautulliHistory>
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockTautulliFindFirst.mockResolvedValue({
+      id: "tautulli-1",
+      name: "Tautulli",
+      url: "http://localhost:8181",
+      apiKey: "test-key",
+      publicUrl: null,
+      isActive: true,
+    } as never)
+    mockGetTautulliHomeStat.mockImplementation(async (_config, statId) => ({
+      success: true,
+      data: { stat_id: statId, rows: [] },
+    }))
+    mockGetTautulliHistory.mockResolvedValue({ success: true, data: { data: [] } })
+  })
+
+  it("get_tautulli_most_watched reads get_home_stats with stat_id top_movies and top_tv", async () => {
+    const result = JSON.parse(await executeTautulliTool("get_tautulli_most_watched", { limit: 5 }))
+
+    expect(mockGetTautulliHomeStat).toHaveBeenCalledTimes(2)
+    expect(mockGetTautulliHomeStat).toHaveBeenCalledWith(expect.anything(), "top_movies", 5)
+    expect(mockGetTautulliHomeStat).toHaveBeenCalledWith(expect.anything(), "top_tv", 5)
+    expect(result).toEqual({
+      top_movies: { stat_id: "top_movies", rows: [] },
+      top_tv: { stat_id: "top_tv", rows: [] },
+    })
+  })
+
+  it("get_tautulli_top_users reads get_home_stats with stat_id top_users, by duration", async () => {
+    await executeTautulliTool("get_tautulli_top_users", {})
+
+    expect(mockGetTautulliHomeStat).toHaveBeenCalledTimes(1)
+    expect(mockGetTautulliHomeStat).toHaveBeenCalledWith(expect.anything(), "top_users", 10, "duration")
+  })
+
+  it("get_tautulli_recently_watched reads get_history, newest first", async () => {
+    await executeTautulliTool("get_tautulli_recently_watched", { limit: 7 })
+
+    expect(mockGetTautulliHistory).toHaveBeenCalledWith(expect.anything(), undefined, 7)
+    expect(mockGetTautulliHomeStat).not.toHaveBeenCalled()
+  })
+
+  it("returns the client's fixed error message when a call fails", async () => {
+    mockGetTautulliHomeStat.mockResolvedValue({ success: false, error: "Tautulli reported an error" })
+
+    const result = JSON.parse(await executeTautulliTool("get_tautulli_top_users", {}))
+
+    expect(result).toEqual({ error: "Tautulli reported an error" })
   })
 })
 

@@ -2288,12 +2288,21 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 - Put a redirect to another host in front of Sonarr. The log shows the second request without `X-Api-Key`.
 - `rg "api/v2\?apikey" lib actions app` matches only `lib/connections/tautulli.ts`.
 
+**As merged.**
+- `isConnectionTestBypassed()` and `testServiceConnection()` live in `lib/connections/connection-test.ts`, beside `http.ts`, to keep each module near the size limit. The bypass is `NODE_ENV === 'test'`, or `SKIP_CONNECTION_TESTS=true` together with `E2E_TEST_MODE=true` under any `NODE_ENV`, because CI's E2E job runs a production build with both flags; `SKIP_CONNECTION_TESTS` alone never bypasses.
+- `ServiceResult` also has an `ABORTED` code for a caller's own signal, so P2.4's "an aborted signal stops paging" can tell it from `TIMEOUT`. `withRetry` retries network errors, 429 and 5xx (and Tautulli's `TAUTULLI_ERROR`), never a timeout or another 4xx.
+- `fetchWithTimeout` now follows redirects through `fetchWithSafeRedirects`, so its callers (Jellyfin, the plex.tv user lookups, the poster proxy, the v2 LLM call) also drop the four auth headers on a cross-origin hop. Their timeout still stops at the headers until they move to `serviceFetch` (plex.tv in P11.8, the LLM in P2.11; Jellyfin has no step yet).
+- Also moved to `serviceFetch`: `lib/wrapped/server-statistics.ts` (token in a header, 2-minute budget for the unpaginated library reads until P2.4), `lib/wrapped/overseerr-statistics.ts`, `actions/server-info.ts` and `lib/connections/tautulli-first-watch.ts` (formerly `actions/user-queries.ts:539-600`).
+- The chatbot's "recently watched" calls `get_history`; "most watched" calls `get_home_stats` twice (`top_movies`, `top_tv`); "top users" calls it with `top_users` by duration. The Tautulli wrappers now return the envelope's `data`, not the whole envelope.
+- `lib/connections/http.ts` is `server-only`, so `npm run register-discord-commands` runs tsx with `--conditions=react-server`.
+- Still on bare `fetch`, out of this step's scope: plex.tv (`plex-invitations.ts`, `plex-auth.ts`, `lib/watchlist/plex-watchlist.ts`; P11.8 and P4.8), Discord OAuth (`lib/discord/api.ts`) and the OpenAI clients (P2.11).
+
 **Done when.**
-- [ ] Every outbound service call goes through `serviceFetch` or `tautulliCommand`, with a timeout that covers the body.
-- [ ] Cross-origin redirects drop the custom auth headers, and no error text contains a key.
-- [ ] There is one Tautulli client, the three nonexistent commands are gone, and the chatbot tools still work.
-- [ ] A `result` other than `'success'` becomes a typed `TAUTULLI_ERROR` that is retried.
-- [ ] One test-mode bypass remains, off in production.
+- [x] Every outbound service call goes through `serviceFetch` or `tautulliCommand`, with a timeout that covers the body. (Plex PMS, Tautulli, Overseerr, Sonarr, Radarr and Prometheus; see "As merged" for the rest.)
+- [x] Cross-origin redirects drop the custom auth headers, and no error text contains a key.
+- [x] There is one Tautulli client, the three nonexistent commands are gone, and the chatbot tools still work.
+- [x] A `result` other than `'success'` becomes a typed `TAUTULLI_ERROR` that is retried.
+- [x] One test-mode bypass remains, off in production.
 
 ### Step P2.4: Rewind sources with Zod and PlayEvent
 

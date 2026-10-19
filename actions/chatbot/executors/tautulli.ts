@@ -1,5 +1,6 @@
-import { findTautulliUser, getTautulliActivity, getTautulliHistory, getTautulliLibraryNames, getTautulliLibraryStats, getTautulliMostWatched, getTautulliRecentlyWatched, getTautulliServerInfo, getTautulliTopUsers, getTautulliUserWatchTimeStats, getTautulliUsers } from "@/lib/connections/tautulli"
+import { findTautulliUser, getTautulliActivity, getTautulliHistory, getTautulliHomeStat, getTautulliLibraryNames, getTautulliLibraryStats, getTautulliServerInfo, getTautulliUserWatchTimeStats, getTautulliUsers } from "@/lib/connections/tautulli"
 import { prisma } from "@/lib/prisma"
+import { toToolOutput } from "./tool-output"
 
 export async function executeTautulliTool(
   toolName: string,
@@ -30,7 +31,8 @@ export async function executeTautulliTool(
       if (!activityResult.success) {
         return JSON.stringify({ error: activityResult.error })
       }
-      const activity = activityResult.data as any
+      // `data` of get_activity: { stream_count, sessions, ... }
+      const activity = activityResult.data as { sessions?: unknown } | null
 
       // In Discord context, scope activity to the requesting user. Fail closed:
       // a caller with no Plex user ID, no Tautulli match or a failed lookup
@@ -43,22 +45,14 @@ export async function executeTautulliTool(
           ? await findTautulliUser(config, { plexUserId: user.plexUserId })
           : null
         const tautulliUserId = lookup?.ok ? lookup.user.user_id : null
-        const raw = activity?.response?.data?.sessions
-        const all = raw === undefined || raw === null ? [] : Array.isArray(raw) ? raw : [raw]
+        const raw = activity?.sessions
+        const all: unknown[] = raw === undefined || raw === null ? [] : Array.isArray(raw) ? raw : [raw]
         const sessions =
-          tautulliUserId === null ? [] : all.filter((session: any) => session.user_id === tautulliUserId)
+          tautulliUserId === null
+            ? []
+            : all.filter((session) => (session as { user_id?: unknown } | null)?.user_id === tautulliUserId)
 
-        return JSON.stringify({
-          ...activity,
-          response: {
-            ...activity.response,
-            data: {
-              ...activity.response.data,
-              session_count: sessions.length,
-              sessions,
-            },
-          },
-        })
+        return JSON.stringify({ ...activity, session_count: sessions.length, sessions })
       }
 
       return JSON.stringify(activity)
@@ -94,28 +88,23 @@ export async function executeTautulliTool(
       return JSON.stringify(historyResult.data)
     }
     case "get_tautulli_recently_watched": {
+      // get_history is newest first by default
       const limit = typeof args.limit === "number" ? args.limit : 20
-      const recentResult = await getTautulliRecentlyWatched(config, limit)
-      if (!recentResult.success) {
-        return JSON.stringify({ error: recentResult.error })
-      }
-      return JSON.stringify(recentResult.data)
+      return toToolOutput(await getTautulliHistory(config, undefined, limit))
     }
     case "get_tautulli_most_watched": {
       const limit = typeof args.limit === "number" ? args.limit : 20
-      const mostWatchedResult = await getTautulliMostWatched(config, limit)
-      if (!mostWatchedResult.success) {
-        return JSON.stringify({ error: mostWatchedResult.error })
-      }
-      return JSON.stringify(mostWatchedResult.data)
+      const [movies, tv] = await Promise.all([
+        getTautulliHomeStat(config, "top_movies", limit),
+        getTautulliHomeStat(config, "top_tv", limit),
+      ])
+      if (!movies.success) return toToolOutput(movies)
+      if (!tv.success) return toToolOutput(tv)
+      return JSON.stringify({ top_movies: movies.data, top_tv: tv.data })
     }
     case "get_tautulli_top_users": {
       const limit = typeof args.limit === "number" ? args.limit : 10
-      const topUsersResult = await getTautulliTopUsers(config, limit)
-      if (!topUsersResult.success) {
-        return JSON.stringify({ error: topUsersResult.error })
-      }
-      return JSON.stringify(topUsersResult.data)
+      return toToolOutput(await getTautulliHomeStat(config, "top_users", limit, "duration"))
     }
     case "get_tautulli_user_watch_stats": {
       const tautulliUserId = typeof args.userId === "number" ? args.userId : undefined

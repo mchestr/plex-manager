@@ -132,7 +132,7 @@ export async function syncUserWatchlist(userId: string): Promise<SyncUserWatchli
         // Submit request to Overseerr
         const mediaType = item.type === "movie" ? "movie" : "tv"
         const requestResult = await submitOverseerrRequest(
-          { name: overseerr.name, url: overseerr.url, apiKey: overseerr.apiKey },
+          { url: overseerr.url, apiKey: overseerr.apiKey },
           { mediaType, mediaId: item.tmdbId }
         )
 

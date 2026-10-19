@@ -13,101 +13,97 @@ export type TautulliInput = z.input<typeof tautulliSchema>
 export type TautulliParsed = z.output<typeof tautulliSchema>
 
 /**
- * Tautulli API response types
- * Based on Tautulli API documentation: https://docs.tautulli.com/extending-tautulli/api-reference
+ * Tautulli API response schemas: the envelope and the rows the v2 Rewind
+ * reads. They are lenient on purpose (`looseObject`, and optional fields that
+ * fall back to `undefined` on a bad value), so a Tautulli upgrade cannot crash
+ * the v2 pipeline; P2.4 owns the strict v3 history row.
+ *
+ * Based on https://docs.tautulli.com/extending-tautulli/api-reference
  */
 
-/**
- * Tautulli history item from get_history API endpoint
- * Represents a single playback record in the watch history
- */
-export interface TautulliHistoryItem {
-  /** Unix timestamp when the playback started */
-  date: number
-  /** Unix timestamp of playback start (alternative field) */
-  started?: number
-  /** Total duration of the media in seconds */
-  duration: number
-  /** Actual duration watched in seconds */
-  viewed_duration?: number
-  /** Type of media: 'movie', 'episode', 'track' */
-  media_type: "movie" | "episode" | "track"
-  /** Title of the media (movie title or episode title) */
-  title: string
-  /** Show title for episodes */
-  grandparent_title?: string
-  /** Release year */
-  year?: number
-  /** Original release year */
-  original_year?: number
-  /** User or audience rating */
-  rating?: number
-  /** User-set rating */
-  user_rating?: number
-  /** Unique identifier for the media item in Plex */
-  rating_key?: string
-  /** Parent rating key (for episodes, this is the season) */
-  parent_rating_key?: string
-  /** Grandparent rating key (for episodes, this is the show) */
-  grandparent_rating_key?: string
-  /** Tautulli user ID */
-  user_id?: number
-  /** Username of the viewer */
-  user?: string
-}
+const optionalNumber = z.number().nullish().catch(undefined)
+const optionalString = z.string().nullish().catch(undefined)
+const numberOrString = z.union([z.number(), z.string()]).nullish().catch(undefined)
 
-/**
- * Tautulli item user stats from get_item_user_stats API endpoint
- * Represents user statistics for a specific media item
- */
-export interface TautulliItemUserStat {
-  /** User ID */
-  user_id?: number
-  /** Username */
-  username?: string
-  /** User-friendly display name */
-  friendly_name?: string
-  /** Total duration in seconds */
-  total_duration?: number
-  /** Duration in seconds (alternative field) */
-  duration?: number
-  /** Time watched in seconds (alternative field) */
-  time?: number
-  /** Number of plays */
-  plays?: string | number
-}
+/** Every Tautulli v2 response: `{ response: { result, message, data } }`. */
+export const tautulliEnvelopeSchema = z.looseObject({
+  response: z.looseObject({
+    result: z.string(),
+    message: z.string().nullish(),
+    data: z.unknown().optional(),
+  }),
+})
 
-/**
- * Tautulli home stats row from get_home_stats API endpoint
- * Represents a row of user watch time statistics
- */
-export interface TautulliHomeStatsRow {
-  /** User ID */
-  user_id?: number
-  /** User string identifier */
-  user?: string
-  /** Username */
-  username?: string
-  /** User-friendly display name */
-  friendly_name?: string
-  /** Total duration in seconds */
-  total_duration?: number | string
-  /** Duration in seconds (alternative field) */
-  duration?: number | string
-  /** Movies watch time in seconds */
-  movies_duration?: number | string
-  /** Shows watch time in seconds */
-  shows_duration?: number | string
-}
+/** One `get_history` row, as the v2 statistics read it. */
+export const tautulliHistoryItemSchema = z.looseObject({
+  /** Unix seconds when the play happened. */
+  date: z.number(),
+  /** Unix seconds when playback started. */
+  started: optionalNumber,
+  /** Seconds. */
+  duration: optionalNumber,
+  /** Not a real Tautulli field; v2 still falls back on it until P5.9. */
+  viewed_duration: optionalNumber,
+  /** `movie`, `episode`, `track`, ... */
+  media_type: z.string(),
+  title: optionalString,
+  grandparent_title: optionalString,
+  year: optionalNumber,
+  original_year: optionalNumber,
+  rating: optionalNumber,
+  user_rating: optionalNumber,
+  rating_key: numberOrString,
+  parent_rating_key: numberOrString,
+  grandparent_rating_key: numberOrString,
+  user_id: optionalNumber,
+  user: optionalString,
+})
+export type TautulliHistoryItem = z.infer<typeof tautulliHistoryItemSchema>
 
-/**
- * Tautulli home stats stat object from get_home_stats API endpoint
- * Represents a stat category with rows of data
- */
-export interface TautulliHomeStat {
-  /** Stat identifier (e.g., "top_users") */
-  stat_id?: string
-  /** Array of stat rows */
-  rows?: TautulliHomeStatsRow[]
-}
+/** `get_history` data: a page object, or a bare array on some builds. */
+export const tautulliHistoryPageSchema = z.union([
+  z.array(z.unknown()),
+  z.looseObject({
+    recordsTotal: optionalNumber,
+    recordsFiltered: optionalNumber,
+    data: z.array(z.unknown()),
+  }),
+])
 
+/** One `get_item_user_stats` row. */
+export const tautulliItemUserStatSchema = z.looseObject({
+  user_id: numberOrString,
+  username: optionalString,
+  friendly_name: optionalString,
+  total_duration: numberOrString,
+  duration: numberOrString,
+  time: numberOrString,
+  plays: numberOrString,
+})
+export type TautulliItemUserStat = z.infer<typeof tautulliItemUserStatSchema>
+
+/** One row of a `get_home_stats` stat. */
+const tautulliHomeStatsRowSchema = z.looseObject({
+  user_id: numberOrString,
+  user: optionalString,
+  username: optionalString,
+  friendly_name: optionalString,
+  total_duration: numberOrString,
+  duration: numberOrString,
+  movies_duration: numberOrString,
+  shows_duration: numberOrString,
+})
+export type TautulliHomeStatsRow = z.infer<typeof tautulliHomeStatsRowSchema>
+
+/** One `get_home_stats` stat, e.g. `top_users`. */
+export const tautulliHomeStatSchema = z.looseObject({
+  stat_id: optionalString,
+  rows: z.array(tautulliHomeStatsRowSchema).nullish().catch(undefined),
+})
+
+/** One `get_libraries` row. Counts arrive as strings or numbers. */
+export const tautulliLibrarySchema = z.looseObject({
+  section_type: optionalString,
+  count: numberOrString,
+  child_count: numberOrString,
+})
