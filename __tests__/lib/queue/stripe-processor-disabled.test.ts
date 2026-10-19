@@ -1,4 +1,8 @@
 /**
+ * @jest-environment node
+ */
+
+/**
  * Disabled-state regression tests for the Stripe webhook processor
  * (`lib/queue/jobs/stripe.ts`).
  *

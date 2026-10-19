@@ -25,6 +25,8 @@ export interface PlexServerUser {
 
 export interface PlexUserServer {
   machineIdentifier: string
+  /** The `<Server id>` of this share: the id plex.tv's `shared_servers` route deletes. */
+  shareId?: string
 }
 
 export interface PlexUser {
@@ -65,6 +67,7 @@ export interface ParsedXmlUser {
 }
 
 export interface ParsedXmlServer {
+  "@_id"?: string
   "@_machineIdentifier": string
 }
 
