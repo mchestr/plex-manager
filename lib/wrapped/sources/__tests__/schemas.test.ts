@@ -22,6 +22,7 @@ const { play_duration, ...withoutPlayDuration } = episodeRow
 const renamed = { ...withoutPlayDuration, playDuration: play_duration }
 
 beforeEach(() => mockWarn.mockReset())
+afterEach(() => jest.restoreAllMocks())
 
 describe("tautulliHistoryRowSchema", () => {
   it("strips the private fields at parse time", () => {

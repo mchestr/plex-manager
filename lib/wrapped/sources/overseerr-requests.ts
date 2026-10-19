@@ -8,10 +8,7 @@
  *   member) and kept when created inside the window; paging stops at the
  *   first page that reaches back before it. `/api/v1/request/count` is never
  *   used: it is all-time and server-wide.
- * - Statuses use Overseerr's enums. Approved is APPROVED or COMPLETED;
- *   available is an approved request whose media (`status4k` for a 4K
- *   request) is AVAILABLE, or PARTIALLY_AVAILABLE for TV. Seerr's 6 and 7
- *   (blocklisted, deleted) are never available.
+ * - Statuses map through `toRequestEvent` (`./request-event.ts`).
  * - A member's request genres come from `/api/v1/movie/{tmdbId}` and
  *   `/api/v1/tv/{tmdbId}`, looked up once per title per batch through a
  *   {@link GenreCache}. A failed lookup leaves the genres empty.
@@ -27,14 +24,12 @@ import { serviceFetch } from "@/lib/connections/http"
 import { inWindow, type TimeWindow } from "@/lib/wrapped/time/zone"
 
 import { parseRows, tooManyInvalid, type RowTally } from "./rows"
+import { toRequestEvent, type RequestEvent } from "./request-event"
 import {
-  MediaRequestStatus,
-  MediaStatus,
   overseerrMediaDetailSchema,
   overseerrRequestPageSchema,
   overseerrRequestSchema,
   overseerrUserPageSchema,
-  type OverseerrRequestRow,
 } from "./schemas"
 import { runLimited, type SourceContext, type SourceResult } from "./watch-history-source"
 
@@ -47,31 +42,8 @@ export interface OverseerrEndpoint {
   apiKey: string
 }
 
-/** One request, as the Rewind stats read it. `createdAt` is epoch ms. */
-export interface RequestEvent {
-  id: number
-  mediaType: "movie" | "tv"
-  tmdbId: number | null
-  createdAt: number
-  requestedById: number | null
-  is4k: boolean
-  status: "pending" | "approved" | "declined" | "failed" | "completed" | "unknown"
-  approved: boolean
-  available: boolean
-  /** Filled for a member's requests; empty in the server-wide pass. */
-  genres: string[]
-}
-
 /** Genres by `movie:<tmdbId>` or `tv:<tmdbId>`, shared by every member in a batch. */
 export type GenreCache = Map<string, string[]>
-
-const STATUS_NAMES: Record<number, RequestEvent["status"]> = {
-  [MediaRequestStatus.PENDING]: "pending",
-  [MediaRequestStatus.APPROVED]: "approved",
-  [MediaRequestStatus.DECLINED]: "declined",
-  [MediaRequestStatus.FAILED]: "failed",
-  [MediaRequestStatus.COMPLETED]: "completed",
-}
 
 function get<T>(config: OverseerrEndpoint, path: string, schema: z.ZodType<T>, ctx: SourceContext) {
   return runLimited(ctx, "overseerr", () =>
@@ -84,26 +56,6 @@ function get<T>(config: OverseerrEndpoint, path: string, schema: z.ZodType<T>, c
       signal: ctx.signal,
     })
   )
-}
-
-/** Map a validated request row to a {@link RequestEvent} (genres empty). */
-function toRequestEvent(row: OverseerrRequestRow): RequestEvent {
-  const approved = row.status === MediaRequestStatus.APPROVED || row.status === MediaRequestStatus.COMPLETED
-  const mediaStatus = row.is4k ? row.media.status4k : row.media.status
-  const onServer =
-    mediaStatus === MediaStatus.AVAILABLE || (row.type === "tv" && mediaStatus === MediaStatus.PARTIALLY_AVAILABLE)
-  return {
-    id: row.id,
-    mediaType: row.type,
-    tmdbId: row.media.tmdbId ?? null,
-    createdAt: Date.parse(row.createdAt),
-    requestedById: row.requestedBy?.id ?? null,
-    is4k: row.is4k ?? false,
-    status: STATUS_NAMES[row.status] ?? "unknown",
-    approved,
-    available: approved && onServer,
-    genres: [],
-  }
 }
 
 /** The Overseerr user id whose `plexId` is the member's `plexUserId`, or `null`. */
