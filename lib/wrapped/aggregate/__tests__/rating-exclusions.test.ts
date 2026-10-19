@@ -132,6 +132,8 @@ describe("content-rating exclusions", () => {
       window: { year: 2026, finalCut: false, serverZone: zone },
       serverRequests: null,
       libraryItems: [],
+      hiddenKeys: new Map(),
+      metadata: null,
     })
 
     expect(aggregate.titles[`film:${TAIL}`]).toBeUndefined()

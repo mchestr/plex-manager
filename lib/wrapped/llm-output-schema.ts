@@ -19,89 +19,18 @@
 
 import { z } from "zod"
 
+import { ARCHETYPE_IDS, ARCHETYPES, getArchetype, type ArchetypeId } from "@/lib/wrapped/archetypes/catalogue"
+
 /**
- * Curated viewer archetypes. The LLM selects one id (enforced by the schema
- * enum) and writes the tagline + dedication; names and motifs are fixed in
- * code so the reveal slide is never off-brand or empty.
+ * The curated archetypes now live in `lib/wrapped/archetypes/catalogue.ts`
+ * (P2.9); v2 keeps reading them from here. The LLM selects one id (enforced
+ * by the schema enum) and writes the tagline and dedication.
  */
-export const ARCHETYPES = [
-  {
-    id: "midnight-marathoner",
-    name: "The Midnight Marathoner",
-    motif: "Watches deep into the night, one more episode always wins",
-  },
-  {
-    id: "credits-roller",
-    name: "The Credits Roller",
-    motif: "Finishes what they start — every film watched to the last frame",
-  },
-  {
-    id: "comfort-rewatcher",
-    name: "The Comfort Rewatcher",
-    motif: "Returns to beloved favorites again and again",
-  },
-  {
-    id: "premiere-chaser",
-    name: "The Premiere Chaser",
-    motif: "First in line for new releases and fresh episodes",
-  },
-  {
-    id: "series-devourer",
-    name: "The Series Devourer",
-    motif: "Consumes entire seasons in sittings, binges without mercy",
-  },
-  {
-    id: "weekend-double-feature",
-    name: "The Weekend Double Feature",
-    motif: "Saves it all up for marathon weekend sessions",
-  },
-  {
-    id: "curator",
-    name: "The Curator",
-    motif: "A carefully chosen catalog — quality over quantity",
-  },
-  {
-    id: "explorer",
-    name: "The Explorer",
-    motif: "Always discovering something new, rarely repeats",
-  },
-  {
-    id: "loyalist",
-    name: "The Loyalist",
-    motif: "Devoted to a handful of shows above all others",
-  },
-  {
-    id: "golden-hour-viewer",
-    name: "The Golden Hour Viewer",
-    motif: "Reliable evening ritual, the same prime-time slot every day",
-  },
-  {
-    id: "festival-juror",
-    name: "The Festival Juror",
-    motif: "Broad taste across films — a serious cinema diet",
-  },
-  {
-    id: "casual-critic",
-    name: "The Casual Critic",
-    motif: "Drops in when something's worth it, watches on their own terms",
-  },
-] as const
-
-export type ArchetypeId = (typeof ARCHETYPES)[number]["id"]
-
-const archetypeIds = ARCHETYPES.map((a) => a.id) as [
-  ArchetypeId,
-  ...ArchetypeId[],
-]
-
-export function getArchetype(id: ArchetypeId) {
-  // Ids come from the schema enum, so the lookup always succeeds
-  return ARCHETYPES.find((a) => a.id === id)!
-}
+export { ARCHETYPES, getArchetype, type ArchetypeId }
 
 export const wrappedLLMOutputSchema = z.object({
   archetype: z.object({
-    id: z.enum(archetypeIds),
+    id: z.enum(ARCHETYPE_IDS),
     tagline: z.string().min(1),
     dedication: z.string().min(1),
   }),
@@ -120,10 +49,6 @@ export const wrappedLLMOutputSchema = z.object({
     finale: z.string().min(1),
   }),
   insights: z.object({
-    personality: z.string().min(1),
-    topGenre: z.string().min(1),
-    bingeWatcher: z.boolean(),
-    discoveryScore: z.number().min(0).max(100),
     funFacts: z.array(z.string().min(1)).min(3).max(7),
   }),
   summary: z.string().min(1),

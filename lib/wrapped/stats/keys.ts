@@ -14,7 +14,6 @@
  */
 
 import type { PlayEvent } from "@/lib/wrapped/sources/watch-history-source"
-import { zonedParts } from "@/lib/utils/zoned-time"
 import type { TimeWindow } from "@/lib/wrapped/time/zone"
 
 /** What every stat module needs besides the events. */
@@ -96,10 +95,4 @@ export function displayTitles(
       (keysPerTitle.get(title) ?? 0) > 1 && year !== null ? `${title} (${year})` : title,
     ])
   )
-}
-
-/** Minutes since midnight of `ms` in `zone`, 0-1439. */
-export function minuteOfDay(ms: number, zone: string): number {
-  const { hour, minute } = zonedParts(ms, zone)
-  return hour * 60 + minute
 }

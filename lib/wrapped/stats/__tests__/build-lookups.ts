@@ -16,6 +16,7 @@ export function meta(fields: Partial<TitleMetadata> = {}): TitleMetadata {
     originallyAvailableAt: null,
     guids: [],
     videoResolution: null,
+    runtimeSec: null,
     seasonEpisodeCounts: null,
     ...fields,
   }

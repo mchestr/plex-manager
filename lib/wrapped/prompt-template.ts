@@ -169,12 +169,11 @@ ${statistics.watchTimeByMonth.map(month => {
     // Server name (if available)
     "{{serverName}}": statistics.serverStats?.serverName || "",
 
-    // Calculated values
-    "{{bingeWatcher}}": statistics.topShows.some(s => s.episodesWatched > 20) ? "true" : "false",
-    "{{discoveryScore}}": Math.min(100, Math.max(0, Math.floor((statistics.moviesWatched + statistics.showsWatched) / 10))).toString(),
-
-    // Deprecated placeholders (v1 JSON-format era) — resolve to empty so
-    // existing custom DB templates keep rendering without stale scaffolding
+    // Deprecated placeholders — resolve to empty so existing custom DB
+    // templates keep rendering without stale scaffolding. bingeWatcher and
+    // discoveryScore fed LLM-computed fields that left the contract (RWP-16).
+    "{{bingeWatcher}}": "",
+    "{{discoveryScore}}": "",
     "{{overseerrSectionJson}}": "",
     "{{overseerrAnimationDelay}}": "",
     "{{insightsAnimationDelay}}": "",
@@ -241,10 +240,6 @@ You return a JSON object with four parts (the exact shape is enforced automatica
 - "finale": the closing credits. Thank them, land one last image, and hint at next year's sequel.
 
 **insights** —
-- "personality": a one-line viewing personality description.
-- "topGenre": your best inference of their most-watched genre from the titles and request data provided.
-- "bingeWatcher": true if any show has episodesWatched > 20, else false.
-- "discoveryScore": min(100, max(0, floor((moviesWatched + showsWatched) / 10))).
 - "funFacts": 3-7 standalone facts, each a single sentence, 2nd person, with <highlight>tags</highlight> around every number. Mix viewing-habit facts with server-library facts when server data is available.
 
 **summary** — 2-3 shareable sentences capturing the most impressive stats of their year, written to be posted publicly. Include <highlight>tags</highlight> around numbers.
@@ -293,8 +288,6 @@ Here are the viewing statistics for {{userName}}:
 
 **Additional Context:**
 - Server name: {{serverName}}
-- Binge watcher calculation: {{bingeWatcher}} (true if any show has episodesWatched > 20)
-- Discovery score: {{discoveryScore}} (calculated as min(100, max(0, floor((moviesWatched + showsWatched) / 10))))
 
 **Archetype Candidates (choose exactly one id):**
 {{archetypeCandidates}}
@@ -355,8 +348,8 @@ export function getAvailablePlaceholders(): Array<{ placeholder: string; descrip
     { placeholder: "{{overseerrStatsSection}}", description: "Overseerr statistics section (empty if not available)" },
     { placeholder: "{{watchTimeByMonthSection}}", description: "Watch time by month section (empty if not available)" },
     { placeholder: "{{serverName}}", description: "Server name (empty if not available)" },
-    { placeholder: "{{bingeWatcher}}", description: "'true' or 'false' based on viewing habits" },
-    { placeholder: "{{discoveryScore}}", description: "Discovery score (0-100)" },
+    { placeholder: "{{bingeWatcher}}", description: "DEPRECATED — resolves to empty (no longer an LLM output)" },
+    { placeholder: "{{discoveryScore}}", description: "DEPRECATED — resolves to empty (no longer an LLM output)" },
     { placeholder: "{{overseerrSectionJson}}", description: "DEPRECATED — resolves to empty (output format is now schema-enforced)" },
     { placeholder: "{{overseerrAnimationDelay}}", description: "DEPRECATED — resolves to empty (pacing is viewer-owned)" },
     { placeholder: "{{insightsAnimationDelay}}", description: "DEPRECATED — resolves to empty (pacing is viewer-owned)" },

@@ -228,15 +228,19 @@ const legacyFields = {
   /** Viewer personality archetype (v2) */
   archetype: part(z.object({ id: z.string(), name: z.string(), tagline: z.string(), dedication: z.string() })),
   sections: itemsOf(sectionSchema).catch([]),
+  /**
+   * The four LLM-computed fields are only in rows generated before P2.9
+   * (RWP-16); new v2 rows carry `funFacts` alone.
+   */
   insights: z
     .object({
-      personality: z.string().catch(""),
-      topGenre: z.string().catch(""),
-      bingeWatcher: z.boolean().catch(false),
-      discoveryScore: z.number().catch(0), // 0-100
+      personality: z.string().optional().catch(undefined),
+      topGenre: z.string().optional().catch(undefined),
+      bingeWatcher: z.boolean().optional().catch(undefined),
+      discoveryScore: z.number().optional().catch(undefined), // 0-100
       funFacts: itemsOf(z.string()).catch([]),
     })
-    .catch({ personality: "", topGenre: "", bingeWatcher: false, discoveryScore: 0, funFacts: [] }),
+    .catch({ funFacts: [] }),
   /** Shareable summary for social sharing */
   summary: part(z.string()),
   metadata: z

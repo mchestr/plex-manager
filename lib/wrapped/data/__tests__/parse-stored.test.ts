@@ -101,7 +101,7 @@ describe("parseStoredRewind", () => {
     expect(statistics.watchTimeByMonth).toEqual([{ month: 2, monthName: "", watchTime: 30 }])
     expect(statistics.derived).toBeUndefined()
     expect(sections).toEqual([{ id: "hero", type: "hero", title: "", content: "Hi" }])
-    expect(insights).toEqual({ personality: "", topGenre: "", bingeWatcher: false, discoveryScore: 0, funFacts: [] })
+    expect(insights).toEqual({ funFacts: [] })
   })
 
   it("matches the JSDoc examples", () => {

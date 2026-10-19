@@ -9,7 +9,9 @@
  * 3. The Overseerr server pass (optional: a failure only nulls
  *    `requestsFulfilled`), then the Plex library listing, which is upserted
  *    into `MediaMetadataCache` so every title has its rating.
- * 4. Apply the content-rating exclusions, compute the aggregate and upsert
+ * 4. Apply the content-rating exclusions, read the members' hidden titles
+ *    and the metadata cache (archetype scoring reads them exactly as each
+ *    member's own Rewind does), compute the aggregate and upsert
  *    `RewindServerAggregate` on `(year, dataThrough)`.
  * 5. Store each matched member's plays in the batch cache, and plan the
  *    metadata warm: the titles covering 95% of each member's minutes, minus
@@ -23,11 +25,12 @@ import "server-only"
 import { prisma } from "@/lib/prisma"
 import type { RewindMetadataWarmPayload } from "@/lib/queue/types"
 import { createLogger } from "@/lib/utils/logger"
-import { freshKeys, getContentRatings, upsertLibraryItems, WARM_BATCH_SIZE } from "@/lib/wrapped/metadata-cache"
+import { freshKeys, getContentRatings, getMetadata, upsertLibraryItems, WARM_BATCH_SIZE } from "@/lib/wrapped/metadata-cache"
 import { fetchServerRequests } from "@/lib/wrapped/sources/overseerr-requests"
 import type { RequestEvent } from "@/lib/wrapped/sources/request-event"
 import { createTautulliHistorySource } from "@/lib/wrapped/sources/tautulli-history"
 import type { SourceContext, UpstreamLimiter } from "@/lib/wrapped/sources/watch-history-source"
+import { metadataLookup } from "@/lib/wrapped/stats/metadata"
 import { inWindow } from "@/lib/wrapped/time/zone"
 
 import { storeMemberEvents, type BatchCacheRedis } from "./batch-cache"
@@ -93,7 +96,24 @@ export async function runServerAggregate(
     [...history.data].map(([id, events]) => [id, applyRatingExclusions(events, ratings, setup.excludedContentRatings)])
   )
 
-  const data = computeServerYear({ eventsByTautulliUser: rated, members, window: batch, serverRequests, libraryItems })
+  const exclusions = await prisma.rewindExclusion.findMany({
+    where: { userId: { in: members.map((m) => m.userId) } },
+    select: { userId: true, ratingKey: true },
+  })
+  const hiddenKeys = new Map<string, Set<string>>()
+  for (const { userId, ratingKey } of exclusions) hiddenKeys.set(userId, (hiddenKeys.get(userId) ?? new Set()).add(ratingKey))
+  const memberEvents = members.flatMap((m) => rated.get(m.tautulliUserId) ?? [])
+  const metadata = metadataLookup(await getMetadata(memberEvents))
+
+  const data = computeServerYear({
+    eventsByTautulliUser: rated,
+    members,
+    window: batch,
+    serverRequests,
+    libraryItems,
+    hiddenKeys,
+    metadata,
+  })
   const dataThrough = dataThroughDate(through)
   const row = await prisma.rewindServerAggregate.upsert({
     where: { year_dataThrough: { year, dataThrough } },
