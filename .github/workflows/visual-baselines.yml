@@ -24,6 +24,7 @@ jobs:
   update:
     name: Update visual baselines
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     # The image the visual specs are compared in. Keep the tag equal to the
     # exact @playwright/test version in package-lock.json.
     container:
@@ -78,13 +79,13 @@ jobs:
       - name: Mint a GitHub App token
         id: app-token
         if: vars.VISUAL_BASELINES_APP_ID != ''
-        uses: actions/create-github-app-token@v2
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2.2.2
         with:
           app-id: ${{ vars.VISUAL_BASELINES_APP_ID }}
           private-key: ${{ secrets.VISUAL_BASELINES_APP_PRIVATE_KEY }}
 
       - name: Checkout the branch
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Branches of this repository only: a fork's branch is not reachable
           # by name here.
@@ -107,7 +108,7 @@ jobs:
 
       - name: Upload the report and diffs
         if: always()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: visual-baselines-report
           path: |
@@ -142,6 +143,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           BRANCH: ${{ inputs.branch }}
         run: |
+          # The single quotes hold JavaScript, which expands its own variables.
+          # shellcheck disable=SC2016
           node -e '
             const url = `${process.env.GITHUB_API_URL}/repos/${process.env.GITHUB_REPOSITORY}/actions/workflows/build.yml/dispatches`;
             fetch(url, {

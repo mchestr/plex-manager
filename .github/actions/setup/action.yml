@@ -1,0 +1,22 @@
+name: Setup
+description: Node.js 22 with the npm cache, `npm ci` and the Prisma client.
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+      with:
+        node-version: '22'
+        cache: 'npm'
+
+    - name: Install dependencies
+      shell: bash
+      run: npm ci
+
+    # prisma.config.ts needs a DATABASE_URL to load; generate never connects.
+    - name: Generate Prisma Client
+      shell: bash
+      run: npx prisma generate
+      env:
+        DATABASE_URL: ${{ env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/plex_manager_test?schema=public' }}

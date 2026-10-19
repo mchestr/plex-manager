@@ -14,6 +14,41 @@ updates:
     commit-message:
       prefix: "chore"
       include: "scope"
+    # Packages that must move together arrive in one pull request.
+    groups:
+      next-react:
+        patterns:
+          - "next"
+          - "eslint-config-next"
+          - "@next/*"
+          - "react"
+          - "react-dom"
+          - "@types/react*"
+      next-auth:
+        patterns:
+          - "next-auth"
+      motion:
+        patterns:
+          - "motion"
+          - "framer-motion"
+      # Bump the mcr.microsoft.com/playwright:v<version>-noble tags in
+      # .github/workflows/build.yml and visual-baselines.yml in the same pull
+      # request, then regenerate the visual baselines.
+      playwright:
+        patterns:
+          - "@playwright/test"
+      # Every security update in one pull request (Dependabot security
+      # updates must be on in the repository settings).
+      security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+    ignore:
+      # Semver-major TypeScript and ESLint wait for P11.23.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
 
   # Enable version updates for Docker
   - package-ecosystem: "docker"
@@ -30,9 +65,12 @@ updates:
       prefix: "chore"
       include: "scope"
 
-  # Enable version updates for GitHub Actions
+  # Enable version updates for GitHub Actions (SHA pins included), in the
+  # workflows and in the composite actions under .github/actions/.
   - package-ecosystem: "github-actions"
-    directory: "/"
+    directories:
+      - "/"
+      - "/.github/actions/*"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -44,4 +82,3 @@ updates:
     commit-message:
       prefix: "chore"
       include: "scope"
-
