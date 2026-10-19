@@ -380,7 +380,7 @@ gantt
 - [ ] P3.5: Form primitives and the Field pattern (ui, M, due 2026-11-04)
 - [ ] P3.6: Overlay and feedback primitives (ui, M, due 2026-11-03)
 - [ ] P3.7: Rewind-ready primitives (ui, M, due 2026-11-05)
-- [ ] P3.8: Safe Markdown, safe links and error copy (ui, S, due 2026-10-29)
+- [x] P3.8: Safe Markdown, safe links and error copy (ui, S, due 2026-10-29)
 - [ ] P3.9: Status vocabulary, icons, brand and chart theme (ui, M, due 2026-11-05)
 - [x] P3.10: One formatter module (ui, M, due 2026-10-29)
 
@@ -388,7 +388,7 @@ gantt
 
 - [x] P4.1: Validate the environment at boot (security, S, due 2026-10-23)
 - [x] P4.2: Boot and shutdown resilience (ops, M, due 2026-10-28)
-- [ ] P4.3: One action helper for auth, Zod and result shape (security, M, due 2026-11-02)
+- [x] P4.3: One action helper for auth, Zod and result shape (security, M, due 2026-11-02)
 - [ ] P4.5: Enforce entitlement beyond the layout (security, M, due 2026-11-05)
 - [ ] P4.6: Never send a stored secret to a new address; audit config changes (security, M, due 2026-11-06)
 - [x] P4.7: Sessions end when access ends; role changes stick (security, M, due 2026-11-10)
@@ -399,7 +399,7 @@ gantt
 - [x] P4.12: Jellyfin invites: no Plex redemption, complete compensation (security, S, due 2026-10-28)
 - [ ] P4.13: Watchlist requests filed as the member (security, M, due 2026-12-03)
 - [ ] P4.15: Harden the admin assistant (security, S, due 2026-11-06)
-- [ ] P4.16: Redact secrets and identifiers from logs (security, M, due 2026-11-19)
+- [x] P4.16: Redact secrets and identifiers from logs (security, M, due 2026-11-19)
 - [ ] P4.17: Harden the Docker image and compose file; add a health check (ops, M, due 2026-11-24)
 - [ ] P4.18: Discord role metadata follows access; marking acts as the member (security, M, due 2026-11-24)
 - [x] P4.19: Discord privacy firewall fails closed (security, S, due 2026-11-20)
