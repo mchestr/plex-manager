@@ -128,56 +128,56 @@ export function WrappedSettingsForm({
 
   function renderForm() {
     return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-4 p-4 bg-slate-900/30 border border-slate-700 rounded-lg">
-        <StyledCheckbox
-          id="wrapped-enabled"
-          checked={formData.enabled}
-          onChange={(e) => setFormData({ ...formData, enabled: e.target.checked })}
-          disabled={isPending}
-          label="Enable Wrapped Feature"
-          description="When disabled, nobody can generate new wrapped content"
-        />
-      </div>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-4 p-4 bg-slate-900/30 border border-slate-700 rounded-lg">
+          <StyledCheckbox
+            id="wrapped-enabled"
+            checked={formData.enabled}
+            onChange={(e) => setFormData({ ...formData, enabled: e.target.checked })}
+            disabled={isPending}
+            label="Enable Wrapped Feature"
+            description="When disabled, nobody can generate new wrapped content"
+          />
+        </div>
 
-      <div className="border-t border-slate-700 pt-4">
-        <h4 className="text-sm font-semibold text-white mb-3">Season</h4>
-        <p data-testid="wrapped-settings-year-note" className="text-xs text-slate-400 mb-4">
-          The season opens at 00:00 on the start date and closes at the end of the end date, in {zone}. A season
-          that crosses the new year belongs to the year it opens in, so December 1 to January 31 stays on that
-          year&apos;s Wrapped through January. Members can generate only while the season is open; admins can
-          regenerate at any time.
-        </p>
-        <DateRangePicker
-          startMonth={formData.startMonth}
-          startDay={formData.startDay}
-          endMonth={formData.endMonth}
-          endDay={formData.endDay}
-          onStartMonthChange={(month) => setFormData({ ...formData, startMonth: month })}
-          onStartDayChange={(day) => setFormData({ ...formData, startDay: day })}
-          onEndMonthChange={(month) => setFormData({ ...formData, endMonth: month })}
-          onEndDayChange={(day) => setFormData({ ...formData, endDay: day })}
-          disabled={isPending}
-        />
-      </div>
+        <div className="border-t border-slate-700 pt-4">
+          <h4 className="text-sm font-semibold text-white mb-3">Season</h4>
+          <p data-testid="wrapped-settings-year-note" className="text-xs text-slate-400 mb-4">
+            The season opens at 00:00 on the start date and closes at the end of the end date, in {zone}. A season
+            that crosses the new year belongs to the year it opens in, so December 1 to January 31 stays on that
+            year&apos;s Wrapped through January. Members can generate only while the season is open; admins can
+            regenerate at any time.
+          </p>
+          <DateRangePicker
+            startMonth={formData.startMonth}
+            startDay={formData.startDay}
+            endMonth={formData.endMonth}
+            endDay={formData.endDay}
+            onStartMonthChange={(month) => setFormData({ ...formData, startMonth: month })}
+            onStartDayChange={(day) => setFormData({ ...formData, startDay: day })}
+            onEndMonthChange={(month) => setFormData({ ...formData, endMonth: month })}
+            onEndDayChange={(day) => setFormData({ ...formData, endDay: day })}
+            disabled={isPending}
+          />
+        </div>
 
-      <div className="flex gap-2">
-        <Button type="submit" disabled={isPending} data-testid="wrapped-settings-save-button">
-          {isPending ? "Saving..." : "Save"}
-        </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => {
-            setIsEditing(false)
-            setFormData(toFormData(enabled, opens, closes))
-          }}
-          disabled={isPending}
-        >
-          Cancel
-        </Button>
-      </div>
-    </form>
+        <div className="flex gap-2">
+          <Button type="submit" disabled={isPending} data-testid="wrapped-settings-save-button">
+            {isPending ? "Saving..." : "Save"}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              setIsEditing(false)
+              setFormData(toFormData(enabled, opens, closes))
+            }}
+            disabled={isPending}
+          >
+            Cancel
+          </Button>
+        </div>
+      </form>
     )
   }
 }
