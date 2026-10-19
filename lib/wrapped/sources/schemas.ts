@@ -138,11 +138,6 @@ export enum MediaStatus {
 
 const overseerrPageInfo = z.looseObject({ pages: num, page: num })
 
-/** One page of `/api/v1/user?take=&skip=`: ids and Plex ids only. */
-export const overseerrUserPageSchema = z.object({
-  pageInfo: overseerrPageInfo,
-  results: z.array(z.object({ id: num, plexId: z.number().int().nullish() })),
-})
 
 /** One page of `/api/v1/request`; each result is parsed with {@link overseerrRequestSchema}. */
 export const overseerrRequestPageSchema = z.object({ pageInfo: overseerrPageInfo, results: z.array(z.unknown()) })

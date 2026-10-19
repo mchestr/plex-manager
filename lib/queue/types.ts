@@ -6,6 +6,7 @@
  */
 
 import type { SessionRevocationReason } from "@/lib/session-revocation"
+import type { WatchlistSkipCode } from "@/lib/watchlist/skip"
 
 /**
  * Job Type Registry
@@ -60,8 +61,8 @@ export interface WatchlistSyncAllPayload {
  */
 export interface WatchlistSyncUserResult {
   success: boolean
-  /** Set when the job did not sync: the member is not entitled (P4.5). */
-  skipped?: "NOT_ENTITLED"
+  /** Set when the job did not sync, with why (P4.5, P4.13). */
+  skipped?: WatchlistSkipCode
   itemsSynced: number
   itemsRequested: number
   itemsSkipped: number

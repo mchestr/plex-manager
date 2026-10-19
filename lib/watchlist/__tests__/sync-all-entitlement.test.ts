@@ -32,17 +32,17 @@ jest.mock('@/lib/utils/logger', () => ({
 }))
 
 function given(stripeEnabled: boolean, status: 'ACTIVE' | 'CANCELED') {
-  prismaMock.config.findUnique.mockResolvedValue(buildConfig({ stripeEnabled }))
+  prismaMock.config.findUnique.mockResolvedValue(buildConfig({ stripeEnabled, watchlistSyncEnabled: true }))
   prismaMock.user.findUnique.mockResolvedValue({
     id: 'member-1',
     disabledAt: null,
     isAdmin: false,
     isExempt: false,
     subscription: { status },
-    // syncUserWatchlist's own read: no token, so it fails fast without Plex
+    // syncUserWatchlist's own read: opted in with no token, so it fails fast without Plex
     plexAuthToken: null,
-    email: null,
-    watchlistSyncSettings: null,
+    plexUserId: '4815162',
+    watchlistSyncSettings: { syncEnabled: true },
   } as never)
   prismaMock.plexWrapped.findFirst.mockResolvedValue({ id: 'w1' } as never)
   prismaMock.watchlistSyncSettings.findMany.mockResolvedValue([])
@@ -98,7 +98,7 @@ describe('WATCHLIST_SYNC_USER processor', () => {
   it('skips a CANCELED member with NOT_ENTITLED and no retry', async () => {
     given(true, 'CANCELED')
 
-    await expect(userJob()).resolves.toMatchObject({ success: false, skipped: 'NOT_ENTITLED' })
+    await expect(userJob()).resolves.toMatchObject({ success: true, skipped: 'NOT_ENTITLED' })
     expect(validatePlexToken).not.toHaveBeenCalled()
     expect(mockInfo).toHaveBeenCalledWith(
       'User watchlist sync job skipped',

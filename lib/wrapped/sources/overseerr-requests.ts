@@ -2,7 +2,9 @@
  * Media requests from Overseerr (design 7.2, RWP-06).
  *
  * - The member's Overseerr account is the one whose `plexId` equals their
- *   `plexUserId`, found by paging `/api/v1/user`. There is no email fallback:
+ *   `plexUserId`, found in the Overseerr user index that
+ *   `lib/connections/overseerr.ts` pages from `/api/v1/user` (the same index
+ *   watchlist sync files requests with). There is no email fallback:
  *   members without a Plex identity are not eligible for Rewind.
  * - Requests are paged newest first with `filter=all` (by `requestedBy` for a
  *   member) and kept when created inside the window; paging stops at the
@@ -21,16 +23,12 @@ import "server-only"
 import type { z } from "zod"
 
 import { serviceFetch } from "@/lib/connections/http"
+import { buildOverseerrUserIndex, findOverseerrUserId } from "@/lib/connections/overseerr"
 import { inWindow, type TimeWindow } from "@/lib/wrapped/time/zone"
 
 import { parseRows, tooManyInvalid, type RowTally } from "./rows"
 import { toRequestEvent, type RequestEvent } from "./request-event"
-import {
-  overseerrMediaDetailSchema,
-  overseerrRequestPageSchema,
-  overseerrRequestSchema,
-  overseerrUserPageSchema,
-} from "./schemas"
+import { overseerrMediaDetailSchema, overseerrRequestPageSchema, overseerrRequestSchema } from "./schemas"
 import { runLimited, type SourceContext, type SourceResult } from "./watch-history-source"
 
 const PAGE_SIZE = 100
@@ -58,25 +56,19 @@ function get<T>(config: OverseerrEndpoint, path: string, schema: z.ZodType<T>, c
   )
 }
 
-/** The Overseerr user id whose `plexId` is the member's `plexUserId`, or `null`. */
+/**
+ * The Overseerr user id whose `plexId` is the member's `plexUserId`, or `null`,
+ * from the shared {@link buildOverseerrUserIndex} (built once per batch, then
+ * cached for 10 minutes).
+ */
 export async function findOverseerrUser(
   config: OverseerrEndpoint,
   plexUserId: string,
   ctx: SourceContext
 ): Promise<SourceResult<number | null>> {
-  const plexId = Number(plexUserId)
-  if (!plexUserId.trim() || !Number.isSafeInteger(plexId)) return { ok: true, data: null }
-
-  for (let page = 0; page < MAX_PAGES; page++) {
-    const result = await get(config, `/user?take=${PAGE_SIZE}&skip=${page * PAGE_SIZE}`, overseerrUserPageSchema, ctx)
-    if (!result.ok) return result
-    const match = result.data.results.find((user) => user.plexId === plexId)
-    if (match) return { ok: true, data: match.id }
-    if (result.data.results.length === 0 || result.data.pageInfo.page >= result.data.pageInfo.pages) {
-      return { ok: true, data: null }
-    }
-  }
-  return { ok: false, code: "PAGE_LIMIT" }
+  const index = await runLimited(ctx, "overseerr", () => buildOverseerrUserIndex(config, { signal: ctx.signal }))
+  if (!index.ok) return index
+  return { ok: true, data: findOverseerrUserId(index.data, plexUserId) }
 }
 
 /** Every request created inside `window`, optionally by one Overseerr user. @internal */

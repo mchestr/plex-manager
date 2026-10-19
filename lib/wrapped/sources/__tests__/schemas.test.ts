@@ -3,13 +3,8 @@
  */
 
 import { parseRows, SourceRowError, tooManyInvalid, type RowTally } from "@/lib/wrapped/sources/rows"
-import {
-  excludedSectionIdsSchema,
-  overseerrUserPageSchema,
-  tautulliHistoryRowSchema,
-} from "@/lib/wrapped/sources/schemas"
+import { excludedSectionIdsSchema, tautulliHistoryRowSchema } from "@/lib/wrapped/sources/schemas"
 
-import usersPage2 from "./fixtures/overseerr-users-page-2.json"
 import page1 from "./fixtures/tautulli-history-page-1.json"
 
 const mockWarn = jest.fn()
@@ -48,11 +43,6 @@ describe("tautulliHistoryRowSchema", () => {
   })
 })
 
-describe("overseerrUserPageSchema", () => {
-  it("never keeps a user's email", () => {
-    expect(JSON.stringify(overseerrUserPageSchema.parse(usersPage2))).not.toContain("@")
-  })
-})
 
 describe("parseRows", () => {
   it("throws on a renamed field in tests", () => {

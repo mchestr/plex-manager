@@ -3,6 +3,7 @@
 import { getWatchlistSyncSettings, triggerWatchlistSync, updateWatchlistSyncSettings } from "@/actions/watchlist"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
+import { WATCHLIST_SKIP_COPY } from "@/lib/watchlist/skip"
 import { motion } from "motion/react"
 import { useCallback, useEffect, useState, useTransition } from "react"
 
@@ -83,7 +84,12 @@ export function WatchlistSyncCard() {
         }
 
         // Handle direct sync response (when Redis is not configured)
-        const { itemsSynced, itemsRequested, itemsFailed } = result.data
+        const { skipped, itemsSynced, itemsRequested, itemsFailed } = result.data
+        if (skipped) {
+          showInfo(WATCHLIST_SKIP_COPY[skipped])
+          await loadSettings()
+          return
+        }
         if (itemsRequested && itemsRequested > 0) {
           showSuccess(`Synced ${itemsSynced} items, requested ${itemsRequested} new items`)
         } else if (itemsSynced && itemsSynced > 0) {
@@ -255,6 +261,7 @@ export function WatchlistSyncCard() {
                     {lastStatus === "success" && "Success"}
                     {lastStatus === "partial" && "Partial"}
                     {lastStatus === "failed" && "Failed"}
+                    {lastStatus === "skipped" && "Skipped"}
                   </span>
                 )}
               </div>
@@ -272,8 +279,12 @@ export function WatchlistSyncCard() {
               </div>
             )}
 
-            {/* Error message */}
-            {settings.settings?.lastSyncError && (
+            {/* Why the last sync was skipped, or its error */}
+            {lastStatus === "skipped" && settings.settings?.lastSyncError ? (
+              <p className="text-xs text-muted-foreground" data-testid="watchlist-sync-skip-reason">
+                {settings.settings.lastSyncError}
+              </p>
+            ) : settings.settings?.lastSyncError && (
               <p className="text-xs text-red-400 line-clamp-2">
                 {settings.settings.lastSyncError}
               </p>

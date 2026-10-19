@@ -1,23 +1,54 @@
 /**
  * Watchlist Sync Service
  *
- * Core orchestration for syncing Plex watchlists to Overseerr requests
+ * Syncs a member's Plex watchlist to Overseerr requests, each filed as the
+ * member's own Overseerr user (`X-Api-User`), so that user's approval rules,
+ * quotas and attribution apply (P4.13, SEC-27).
+ *
+ * ## Skips
+ *
+ * `syncUserWatchlist` checks, in order, before it calls Plex or files a
+ * request, whatever triggered it (the member, an admin or the batch):
+ *
+ * 1. `WATCHLIST_DISABLED`: `Config.watchlistSyncEnabled` is off.
+ * 2. `NOT_OPTED_IN`: the member's `syncEnabled` is false (GAP-39).
+ * 3. `NOT_ENTITLED`: `getAccessLevel` is below `full` (P4.5; a disabled member is `none`).
+ * 4. `NO_PLEX_IDENTITY`: the member has no `plexUserId`.
+ * 5. `OVERSEERR_USER_NOT_FOUND`: no Overseerr user has the member's `plexId`.
+ *
+ * A skip writes `lastSyncStatus: "skipped"` with the fixed copy from
+ * `./skip.ts` and returns `{ success: true, skipped }`, so the job is not retried.
+ *
+ * @module lib/watchlist/sync-service
  */
 
-import { entitledUserWhere } from "@/lib/access"
-import { submitOverseerrRequest } from "@/lib/connections/overseerr"
+import { entitledUserWhere, getAccessLevel } from "@/lib/access"
+import { buildOverseerrUserIndex, findOverseerrUserId, submitOverseerrRequest } from "@/lib/connections/overseerr"
 import { MediaType, WatchlistSyncStatus } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 import { SyncResult } from "@/lib/validations/watchlist"
 import { getPlexWatchlist, validatePlexToken } from "./plex-watchlist"
+import { WATCHLIST_SKIP_COPY, type WatchlistSkipCode } from "./skip"
 
 const logger = createLogger("WATCHLIST_SYNC")
 
 export interface SyncUserWatchlistResult {
   success: boolean
+  /** Set when the sync did not run; `success` is then true. */
+  skipped?: WatchlistSkipCode
   data?: SyncResult
   error?: string
+}
+
+/** Record a skip on the member's settings row, if they have one. */
+async function skip(userId: string, code: WatchlistSkipCode): Promise<SyncUserWatchlistResult> {
+  logger.info("Watchlist sync skipped", { userId, reason: code })
+  await prisma.watchlistSyncSettings.updateMany({
+    where: { userId },
+    data: { lastSyncAt: new Date(), lastSyncStatus: "skipped", lastSyncError: WATCHLIST_SKIP_COPY[code] },
+  })
+  return { success: true, skipped: code }
 }
 
 /**
@@ -28,20 +59,26 @@ export async function syncUserWatchlist(userId: string): Promise<SyncUserWatchli
   const startTime = Date.now()
 
   try {
-    // Get user with their Plex token and sync settings
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        plexAuthToken: true,
-        email: true,
-        watchlistSyncSettings: true,
-      },
-    })
+    const [config, user] = await Promise.all([
+      prisma.config.findUnique({ where: { id: "config" }, select: { watchlistSyncEnabled: true } }),
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          plexUserId: true,
+          plexAuthToken: true,
+          watchlistSyncSettings: { select: { syncEnabled: true } },
+        },
+      }),
+    ])
 
-    if (!user) {
-      return { success: false, error: "User not found" }
-    }
+    // A deleted member has no access (`getAccessLevel` is `none`): skip, no retry
+    if (!user) return await skip(userId, "NOT_ENTITLED")
+
+    if (!config?.watchlistSyncEnabled) return await skip(userId, "WATCHLIST_DISABLED")
+    if (!user.watchlistSyncSettings?.syncEnabled) return await skip(userId, "NOT_OPTED_IN")
+    if ((await getAccessLevel(userId)) !== "full") return await skip(userId, "NOT_ENTITLED")
+    if (!user.plexUserId) return await skip(userId, "NO_PLEX_IDENTITY")
 
     if (!user.plexAuthToken) {
       logger.warn("User has no Plex auth token", { userId })
@@ -50,17 +87,6 @@ export async function syncUserWatchlist(userId: string): Promise<SyncUserWatchli
         lastSyncError: "No Plex auth token - please log in again",
       })
       return { success: false, error: "No Plex auth token" }
-    }
-
-    // Validate token is still valid
-    const tokenValid = await validatePlexToken(user.plexAuthToken)
-    if (!tokenValid) {
-      logger.warn("Plex token is invalid or expired", { userId })
-      await updateSyncSettings(userId, {
-        lastSyncStatus: "failed",
-        lastSyncError: "Plex token expired - please log in again",
-      })
-      return { success: false, error: "Plex token is invalid or expired" }
     }
 
     // Get Overseerr configuration
@@ -75,6 +101,31 @@ export async function syncUserWatchlist(userId: string): Promise<SyncUserWatchli
         lastSyncError: "No Overseerr server configured",
       })
       return { success: false, error: "No Overseerr server configured" }
+    }
+
+    // Requests are filed as the member's own Overseerr user, never as the admin
+    const overseerrConfig = { url: overseerr.url, apiKey: overseerr.apiKey }
+    const index = await buildOverseerrUserIndex(overseerrConfig)
+    if (!index.ok) {
+      logger.warn("Could not read the Overseerr users", { userId, code: index.code, status: index.status })
+      await updateSyncSettings(userId, {
+        lastSyncStatus: "failed",
+        lastSyncError: "Could not reach Overseerr. Please try again later.",
+      })
+      return { success: false, error: "Could not read the Overseerr users" }
+    }
+    const overseerrUserId = findOverseerrUserId(index.data, user.plexUserId)
+    if (overseerrUserId === null) return await skip(userId, "OVERSEERR_USER_NOT_FOUND")
+
+    // Validate token is still valid
+    const tokenValid = await validatePlexToken(user.plexAuthToken)
+    if (!tokenValid) {
+      logger.warn("Plex token is invalid or expired", { userId })
+      await updateSyncSettings(userId, {
+        lastSyncStatus: "failed",
+        lastSyncError: "Plex token expired - please log in again",
+      })
+      return { success: false, error: "Plex token is invalid or expired" }
     }
 
     // Fetch watchlist from Plex
@@ -133,8 +184,9 @@ export async function syncUserWatchlist(userId: string): Promise<SyncUserWatchli
         // Submit request to Overseerr
         const mediaType = item.type === "movie" ? "movie" : "tv"
         const requestResult = await submitOverseerrRequest(
-          { url: overseerr.url, apiKey: overseerr.apiKey },
-          { mediaType, mediaId: item.tmdbId }
+          overseerrConfig,
+          { mediaType, mediaId: item.tmdbId },
+          { overseerrUserId }
         )
 
         // Map Prisma MediaType
@@ -232,20 +284,19 @@ export async function syncUserWatchlist(userId: string): Promise<SyncUserWatchli
       },
     }
   } catch (error) {
+    // The error text stays in the log: the stored copy is shown to the member
     logger.error("Watchlist sync failed", error, { userId })
     await updateSyncSettings(userId, {
       lastSyncStatus: "failed",
-      lastSyncError: error instanceof Error ? error.message : "Unknown error",
+      lastSyncError: "Sync failed. Please try again later.",
     })
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Sync failed",
-    }
+    return { success: false, error: "Sync failed" }
   }
 }
 
 /**
- * Helper to update sync settings
+ * Write a run's status, and add its counts to the totals with atomic
+ * increments, so two overlapping runs cannot lose each other's counts (SEC-27).
  */
 async function updateSyncSettings(
   userId: string,
@@ -257,12 +308,6 @@ async function updateSyncSettings(
     itemsRequested?: number
   }
 ): Promise<void> {
-  // Get current settings to calculate cumulative totals
-  const current = await prisma.watchlistSyncSettings.findUnique({
-    where: { userId },
-    select: { totalItemsSynced: true, totalItemsRequested: true },
-  })
-
   const incrementSynced = data.itemsSynced ?? 0
   const incrementRequested = data.itemsRequested ?? 0
 
@@ -277,15 +322,15 @@ async function updateSyncSettings(
     },
     update: {
       ...data,
-      totalItemsSynced: (current?.totalItemsSynced ?? 0) + incrementSynced,
-      totalItemsRequested: (current?.totalItemsRequested ?? 0) + incrementRequested,
+      totalItemsSynced: { increment: incrementSynced },
+      totalItemsRequested: { increment: incrementRequested },
     },
   })
 }
 
 /**
  * Sync all users who have sync enabled and are due for a sync
- * Called by the background job
+ * Called by the background job. Nothing runs while the global toggle is off.
  *
  * With Stripe gating on, only entitled members are selected (admin, exempt,
  * or an ACTIVE or PAST_DUE subscription; never a disabled user), so a lapsed
@@ -303,8 +348,12 @@ export async function syncAllEnabledUsers(): Promise<{
     // Get global sync interval
     const config = await prisma.config.findUnique({
       where: { id: "config" },
-      select: { watchlistSyncIntervalMinutes: true, stripeEnabled: true },
+      select: { watchlistSyncEnabled: true, watchlistSyncIntervalMinutes: true, stripeEnabled: true },
     })
+    if (!config?.watchlistSyncEnabled) {
+      logger.info("Batch watchlist sync skipped", { reason: "WATCHLIST_DISABLED" })
+      return { usersProcessed: 0, usersSucceeded: 0, usersFailed: 0 }
+    }
     const intervalMinutes = config?.watchlistSyncIntervalMinutes ?? 60
     const entitled = entitledUserWhere(config?.stripeEnabled ?? false)
 

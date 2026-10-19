@@ -87,7 +87,7 @@ describe("rate-limit", () => {
   })
 
   describe("LIMITS", () => {
-    it("keeps the existing limits and adds the sign-in, invite, PIN, LLM, Discord and Rewind generation limits", async () => {
+    it("keeps the existing limits and adds the sign-in, invite, PIN, LLM, Discord, watchlist and Rewind generation limits", async () => {
       const { LIMITS } = await import("@/lib/security/rate-limit-config")
 
       expect(LIMITS).toEqual({
@@ -110,6 +110,7 @@ describe("rate-limit", () => {
         "llm:discord:dm:day": { points: 100, duration: 86400 },
         "discord:mystats": { points: 5, duration: 3600 },
         "discord:resync": { points: 3, duration: 3600 },
+        "watchlist:manual": { points: 4, duration: 3600 },
         "rw:share-actions": { points: 10, duration: 3600 },
         "rw:share-page": { points: 60, duration: 60 },
         "rw:gen:burst": { points: 1, duration: 600 },
