@@ -223,12 +223,12 @@ export interface SubmitOverseerrRequestResult {
  *
  * @param config Overseerr configuration
  * @param payload Request details (mediaType, mediaId, optional seasons)
- * @param as The member's Overseerr user id (see {@link buildOverseerrUserIndex})
+ * @param requester The member's Overseerr user id (see {@link buildOverseerrUserIndex})
  */
 export async function submitOverseerrRequest(
   config: OverseerrEndpoint,
   payload: SubmitOverseerrRequestPayload,
-  as: { overseerrUserId: number }
+  requester: { overseerrUserId: number }
 ): Promise<SubmitOverseerrRequestResult> {
   // First check if media already exists/is requested
   const existingStatus = await getOverseerrMediaByTmdbId(config, payload.mediaId, payload.mediaType)
@@ -265,7 +265,7 @@ export async function submitOverseerrRequest(
   const result = await overseerrFetch(config, "/request", z.looseObject({ id: z.number() }), {
     method: "POST",
     body: JSON.stringify(body),
-    asUser: as.overseerrUserId,
+    asUser: requester.overseerrUserId,
   })
 
   if (!result.ok) {

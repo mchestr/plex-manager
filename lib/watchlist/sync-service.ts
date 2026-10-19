@@ -72,9 +72,8 @@ export async function syncUserWatchlist(userId: string): Promise<SyncUserWatchli
       }),
     ])
 
-    if (!user) {
-      return { success: false, error: "User not found" }
-    }
+    // A deleted member has no access (`getAccessLevel` is `none`): skip, no retry
+    if (!user) return await skip(userId, "NOT_ENTITLED")
 
     if (!config?.watchlistSyncEnabled) return await skip(userId, "WATCHLIST_DISABLED")
     if (!user.watchlistSyncSettings?.syncEnabled) return await skip(userId, "NOT_OPTED_IN")

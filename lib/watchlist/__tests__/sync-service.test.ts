@@ -89,6 +89,14 @@ describe('syncUserWatchlist skips', () => {
     })
   })
 
+  it('skips a deleted member as NOT_ENTITLED, so the job is not retried', async () => {
+    given()
+    prismaMock.user.findUnique.mockResolvedValue(null)
+
+    await expect(syncUserWatchlist('member-1')).resolves.toEqual({ success: true, skipped: 'NOT_ENTITLED' })
+    expect(buildOverseerrUserIndex).not.toHaveBeenCalled()
+  })
+
   it('makes no Overseerr call at all before the Overseerr user lookup', async () => {
     given({ level: 'none' })
 
