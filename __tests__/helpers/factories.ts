@@ -5,7 +5,8 @@
  */
 import type { Config, Invite, LLMUsage, PlexWrapped, User } from '@/lib/generated/prisma/client'
 
-const FIXED_DATE = new Date('2026-01-01T00:00:00.000Z')
+// A fresh Date per row, so a test that mutates one cannot leak into another.
+const fixedDate = () => new Date('2026-01-01T00:00:00.000Z')
 
 export function buildUser(overrides: Partial<User> = {}): User {
   return {
@@ -22,8 +23,8 @@ export function buildUser(overrides: Partial<User> = {}): User {
     onboardingStatus: { plex: false, jellyfin: false },
     isExempt: false,
     exemptReason: null,
-    createdAt: FIXED_DATE,
-    updatedAt: FIXED_DATE,
+    createdAt: fixedDate(),
+    updatedAt: fixedDate(),
     ...overrides,
   }
 }
@@ -39,9 +40,9 @@ export function buildPlexWrapped(overrides: Partial<PlexWrapped> = {}): PlexWrap
     shareToken: null,
     summary: null,
     archetype: null,
-    generatedAt: FIXED_DATE,
-    createdAt: FIXED_DATE,
-    updatedAt: FIXED_DATE,
+    generatedAt: fixedDate(),
+    createdAt: fixedDate(),
+    updatedAt: fixedDate(),
     ...overrides,
   }
 }
@@ -54,8 +55,8 @@ export function buildInvite(overrides: Partial<Invite> = {}): Invite {
     maxUses: 1,
     useCount: 0,
     expiresAt: null,
-    createdAt: FIXED_DATE,
-    updatedAt: FIXED_DATE,
+    createdAt: fixedDate(),
+    updatedAt: fixedDate(),
     createdBy: null,
     librarySectionIds: null,
     allowDownloads: false,
@@ -78,7 +79,7 @@ export function buildLLMUsage(overrides: Partial<LLMUsage> = {}): LLMUsage {
     completionTokens: 50,
     totalTokens: 150,
     cost: 0.01,
-    createdAt: FIXED_DATE,
+    createdAt: fixedDate(),
     ...overrides,
   }
 }
@@ -97,7 +98,7 @@ export function buildConfig(overrides: Partial<Config> = {}): Config {
     stripeWebhookSecret: null,
     stripePriceIds: null,
     stripeLibrarySectionIds: null,
-    updatedAt: FIXED_DATE,
+    updatedAt: fixedDate(),
     updatedBy: null,
     ...overrides,
   }
