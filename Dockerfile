@@ -3,8 +3,9 @@ FROM node:25.8-alpine AS base
 # Install dependencies only when needed
 FROM base AS deps
 # Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
-# Install build dependencies for native modules (zlib-sync, etc.)
-RUN apk add --no-cache libc6-compat python3 make g++
+# No native toolchain: zlib-sync is an optional dependency, so `npm ci` skips its
+# failed build and discord.js falls back to an uncompressed gateway connection.
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # Install dependencies based on the preferred package manager
