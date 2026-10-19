@@ -73,7 +73,7 @@ function oneOf<T extends string>(allowed: ReadonlySet<string>, value: string | n
  * section is excluded. Seconds become epoch ms; minutes come from
  * `play_duration`, never `viewed_duration` (which does not exist).
  *
- * @internal Exported for tests and P2.10's fixture source.
+ * Exported for P2.10's fixture source and the tests.
  */
 export function toPlayEvent(row: TautulliHistoryRow, excludedSectionIds: ReadonlySet<string>): PlayEvent | null {
   if (row.section_id !== null && excludedSectionIds.has(row.section_id)) return null

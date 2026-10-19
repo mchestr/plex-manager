@@ -69,6 +69,15 @@ describe("rankTitles", () => {
     expect(ranked.map((t) => t.title)).toEqual(["Dune (1984)", "Dune (2021)"])
   })
 
+  it("names a title the same way in a list of one kind as in the full list", () => {
+    const events = [
+      play({ at: "2026-02-01T20:00", zone, film: "96", title: "Fargo", year: 1996 }),
+      play({ at: "2026-02-02T20:00", zone, series: "14", title: "Fargo", year: 2014 }),
+    ]
+    expect(rankTitles(events, ctx, "series").map((t) => t.title)).toEqual(["Fargo (2014)"])
+    expect(rankTitles(events, ctx, "film").map((t) => t.title)).toEqual(["Fargo (1996)"])
+  })
+
   it("groups episodes under their series, leaves hidden titles out and filters by kind", () => {
     const events = [
       play({ at: "2026-02-01T20:00", zone, series: "77", title: "Severance" }),

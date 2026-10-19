@@ -7,4 +7,5 @@
 - [ ] Matches the reference mockup or the components sheet; visual diff attached
 - [ ] Design-debt counts not raised; ran `npm run design:update` if they fell
 - [ ] New interactive elements have a `data-testid`
+- [ ] Golden snapshot changes reviewed by the owner (`evals/rewind/fixtures/**`, `evals/rewind/profiles/**`)
 - [ ] Touches `.claude/skills/**` or `.mcp.json`: `/security-review` run

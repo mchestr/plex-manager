@@ -35,7 +35,9 @@ export function compareRanked(
 
 /**
  * The listed titles among `events`, ranked. Hidden titles are left out;
- * `kind` narrows the list to films or series.
+ * `kind` narrows the list to films or series. Display titles are settled
+ * across every listed title first, so a series list still says "Fargo (2014)"
+ * when the member also watched the film "Fargo" (P2.10).
  *
  * @example
  * ```ts
@@ -46,7 +48,7 @@ export function rankTitles(events: readonly PlayEvent[], ctx: Pick<StatsContext,
   const sums = new Map<TitleKey, Omit<RankedTitle, "minutes"> & { year: number | null }>()
   for (const e of videoEvents(events)) {
     const key = titleKey(e)!
-    if (!isListed(e, ctx) || (kind && !key.startsWith(`${kind}:`))) continue
+    if (!isListed(e, ctx)) continue
     const entry = sums.get(key) ?? {
       key,
       kind: e.mediaType === "movie" ? ("film" as const) : ("series" as const),
@@ -65,6 +67,7 @@ export function rankTitles(events: readonly PlayEvent[], ctx: Pick<StatsContext,
   }
   const titles = displayTitles([...sums.values()])
   return [...sums.values()]
+    .filter((s) => !kind || s.kind === kind)
     .map((s) => ({
       key: s.key,
       kind: s.kind,

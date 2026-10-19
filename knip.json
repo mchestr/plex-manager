@@ -11,7 +11,9 @@
     "lib/rewind/format.ts!",
     "lib/rewind/registry.ts!",
     "lib/rewind/typeset/fit-lines.ts!",
-    "lib/rewind/typeset/metrics.ts!"
+    "lib/rewind/typeset/metrics.ts!",
+    "lib/wrapped/sources/fixture-source.ts!",
+    "evals/rewind/generate-fixtures.ts!"
   ],
   "project": [
     "**/*.{js,mjs,cjs,ts,tsx}!",
