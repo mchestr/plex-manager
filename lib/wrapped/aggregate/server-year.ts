@@ -27,6 +27,7 @@
 import type { LibraryItem } from "@/lib/wrapped/sources/plex-library"
 import type { RequestEvent } from "@/lib/wrapped/sources/request-event"
 import { isCountedPlay, type PlayEvent } from "@/lib/wrapped/sources/watch-history-source"
+import { minutesOf, videoEvents } from "@/lib/wrapped/stats/keys"
 import { inWindow } from "@/lib/wrapped/time/zone"
 
 import { computeCommunity, type ViewerPlays } from "./community"
@@ -51,18 +52,14 @@ export interface ServerYearInput {
 }
 
 /**
- * Total minutes: every second of every play, floored once at the end. The
- * same rule as P2.7's `totals.ts` total.
- *
- * @example
- * ```ts
- * totalMinutes([{ playSeconds: 50 }, { playSeconds: 50 }, { playSeconds: 50 }]) // 2
- * ```
+ * A member's total minutes for the percentile ranking: the films' and
+ * episodes' seconds, floored once, which is `computeTotals().totalMinutes`.
+ * Music and other media count in neither.
  *
  * @internal Exported for tests.
  */
-export function totalMinutes(events: readonly Pick<PlayEvent, "playSeconds">[]): number {
-  return Math.floor(events.reduce((sum, e) => sum + e.playSeconds, 0) / 60)
+export function totalMinutes(events: readonly PlayEvent[]): number {
+  return minutesOf(videoEvents(events).reduce((sum, e) => sum + e.playSeconds, 0))
 }
 
 /** `film:<ratingKey>` or `series:<grandparentRatingKey>`; null for anything else. */

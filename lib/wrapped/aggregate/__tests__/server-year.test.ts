@@ -203,3 +203,14 @@ describe("computeServerYear", () => {
     expect(() => serverAggregateSchema.parse({ ...result, members: [{ userId: "x", minutes: 1, name: "Alice" }] })).toThrow()
   })
 })
+
+describe("totalMinutes", () => {
+  it("counts films and episodes only, the same total computeTotals reports", () => {
+    const zone = "America/Chicago"
+    const film = play({ at: "2026-03-01T20:00", zone, seconds: 90 * 60, film: "7" })
+    const episode = play({ at: "2026-03-02T20:00", zone, seconds: 30 * 60 + 30, series: "9" })
+    const track: PlayEvent = { ...play({ at: "2026-03-03T20:00", zone, seconds: 600, film: "8" }), mediaType: "track" }
+
+    expect(totalMinutes([film, episode, track])).toBe(120)
+  })
+})
