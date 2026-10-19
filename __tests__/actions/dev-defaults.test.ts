@@ -122,7 +122,7 @@ describe('getDevDefaults', () => {
     })
 
     it('should not treat E2E_TEST_MODE as the prefill flag', async () => {
-      // Test-token login and the seed use E2E_TEST_MODE; turning it on must not
+      // The seed uses E2E_TEST_MODE; turning it on must not
       // also expose the DEV_* tokens and keys, and vice versa.
       delete process.env.DEV_SETUP_PREFILL
       process.env.E2E_TEST_MODE = 'true'

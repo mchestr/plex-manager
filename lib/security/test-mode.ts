@@ -1,6 +1,5 @@
 /**
- * Guards for test-only code paths: destructive E2E runs, the seed and
- * test-token login.
+ * Guards for test-only code paths: destructive E2E runs and the seed.
  *
  * This is a plain module with no `@/` imports, so Jest, the Playwright config
  * and `prisma/seed.ts` (run by tsx) can all import it without path aliases.
@@ -158,8 +157,7 @@ export function assertSeedTarget(url: string | undefined): ParsedDatabaseUrl {
 /**
  * True only outside production when `E2E_TEST_MODE=true` is set explicitly.
  *
- * Gates test-token login and the seed. `NODE_ENV=test` on its own never
- * enables either of them.
+ * Gates the seed. `NODE_ENV=test` on its own never enables it.
  */
 export function isE2ETestMode(env: TestModeEnv = process.env): boolean {
   return env.NODE_ENV !== "production" && env.E2E_TEST_MODE === "true"

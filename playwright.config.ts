@@ -113,8 +113,10 @@ export default defineConfig({
 
   /* Run the app before starting the tests */
   webServer: {
+    // E2E_PREBUILT=1 skips the build when `npm run build:e2e` already ran
+    // with the same NEXT_PUBLIC_APP_URL, as CI does in its own step.
     command: prodServer
-      ? `npm run build:e2e && npx next start -p ${port}`
+      ? `${process.env.E2E_PREBUILT === '1' ? '' : 'npm run build:e2e && '}npx next start -p ${port}`
       : `npx next dev -p ${port}`,
     url: baseURL,
     // A running `npm run dev` points at the dev database, so only reuse a
@@ -129,7 +131,6 @@ export default defineConfig({
       NODE_ENV: prodServer ? 'production' : 'test',
       NEXT_PUBLIC_APP_URL: baseURL,
       NEXTAUTH_URL: baseURL,
-      NEXT_PUBLIC_ENABLE_TEST_AUTH: 'true',
       E2E_TEST_MODE: 'true',
       SKIP_CONNECTION_TESTS: 'true',
       FAST_REFRESH: 'false',

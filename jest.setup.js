@@ -4,10 +4,9 @@ import '@testing-library/jest-dom'
 // Set test environment variables
 process.env.NEXTAUTH_SECRET = 'test-secret-key-for-hashing-ip-addresses-min-32-chars'
 process.env.NODE_ENV = 'test'
-// next/jest loads .env, where a developer may have set the test-login flags.
-// Unit tests never inherit them; the tests that need a flag set it themselves.
+// next/jest loads .env, where a developer may have set E2E_TEST_MODE. Unit
+// tests never inherit it; the tests that need it set it themselves.
 delete process.env.E2E_TEST_MODE
-delete process.env.ENABLE_TEST_AUTH
 // Nor do they reach a developer's Redis through the rate limiter: without
 // REDIS_URL it uses its in-process store. The Redis-backed tests read
 // TEST_REDIS_URL instead.

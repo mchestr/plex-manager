@@ -233,13 +233,15 @@ describe("NextAuth credential callback rate limits", () => {
       expect(mockGetPlexUserInfo).toHaveBeenCalledTimes(20)
     })
 
-    it("does not limit Plex test-token sign-ins in E2E test mode", async () => {
+    it("keeps the Plex limit in E2E test mode", async () => {
       env.E2E_TEST_MODE = "true"
 
-      for (let i = 0; i < 25; i++) {
-        const attempt = await callback("plex", "203.0.113.21", { authToken: "UNKNOWN_TEST_TOKEN" })
+      for (let i = 0; i < 20; i++) {
+        const attempt = await callback("plex", "203.0.113.21", { authToken: "TEST_ADMIN_TOKEN" })
         expect(attempt.status).toBe(401)
       }
+
+      expect((await callback("plex", "203.0.113.21", { authToken: "TEST_ADMIN_TOKEN" })).status).toBe(429)
     })
 
     it("keeps the Jellyfin limit in E2E test mode", async () => {

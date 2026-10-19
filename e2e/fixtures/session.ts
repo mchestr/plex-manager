@@ -16,6 +16,30 @@ export function sessionCookieName(baseURL: string): string {
   return baseURL.startsWith('https:') ? '__Secure-next-auth.session-token' : 'next-auth.session-token';
 }
 
+/** The seeded row a session token is minted from. */
+interface SessionUser {
+  id: string;
+  name: string | null;
+  email: string | null;
+  image: string | null;
+  isAdmin: boolean;
+}
+
+/** The NextAuth session JWT for `user`, as the session cookie carries it. */
+export function mintSessionToken(user: SessionUser, secret: string): Promise<string> {
+  return encode({
+    secret,
+    token: {
+      sub: user.id,
+      name: user.name,
+      email: user.email,
+      picture: user.image,
+      isAdmin: user.isAdmin,
+      checkedAt: 0,
+    },
+  });
+}
+
 /** Adds a session cookie for the seeded user `userId` to `context`. */
 export async function signInAs(context: BrowserContext, baseURL: string, userId: string): Promise<void> {
   const secret = process.env.NEXTAUTH_SECRET;
@@ -29,17 +53,7 @@ export async function signInAs(context: BrowserContext, baseURL: string, userId:
       where: { id: userId },
       select: { id: true, name: true, email: true, image: true, isAdmin: true },
     });
-    const value = await encode({
-      secret,
-      token: {
-        sub: user.id,
-        name: user.name,
-        email: user.email,
-        picture: user.image,
-        isAdmin: user.isAdmin,
-        checkedAt: 0,
-      },
-    });
+    const value = await mintSessionToken(user, secret);
     await context.addCookies([
       { name: sessionCookieName(baseURL), value, url: baseURL, httpOnly: true, sameSite: 'Lax' },
     ]);

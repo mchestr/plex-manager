@@ -46,6 +46,7 @@ describe("playwright.config.ts database guard", () => {
     delete env.E2E_PORT
     delete env.E2E_REUSE_SERVER
     delete env.E2E_SERVER
+    delete env.E2E_PREBUILT
   })
 
   afterEach(() => {
@@ -108,6 +109,9 @@ describe("playwright.config.ts database guard", () => {
     const prod = webServer(loadConfig())
     expect(prod?.command).toBe("npm run build:e2e && npx next start -p 3100")
     expect(prod?.env?.NODE_ENV).toBe("production")
+
+    env.E2E_PREBUILT = "1"
+    expect(webServer(loadConfig())?.command).toBe("npx next start -p 3100")
   })
 
   it("keeps the visual specs out of the chromium project", () => {
