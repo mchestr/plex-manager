@@ -2791,6 +2791,7 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
   - `actions/chatbot/conversation.ts` keeps its `MAX_LOOPS` loop and its own tool execution. Usage is recorded through `recordUsage` instead of a direct `prisma.lLMUsage.create`.
   - Remove the `provider === "openai"` filter from `lib/chatbot/assistant.ts:62`. A model without `capabilities.tools` gets a clear error.
   - Delete P0.13's `openai-params.ts`.
+- (As merged: the effort enum accepts every catalogue level, `xhigh` and `max` included, and the form offers only the chosen model's own levels; settings a model does not take are stored as null. The presets and `DEFAULT_OPENAI_MODEL` live in the pure `lib/llm/provider-presets.ts`. `listProviderModels` is wrapped by `loadProviderModels` (the E2E/Jest bypass and fixed messages); `serviceFetch` now also drops `x-goog-api-key` on a cross-origin hop. `listLLMModels({ purpose, provider?, apiKey?, baseUrl? })` serves both the form's Test button and the playground (no `provider` lists the active row), under a new `llm:models` limit of 30 per 15 minutes per admin; saves are audited as `LLM_PROVIDER_CHANGED`. `chatWithTools` also returns `responseMessages`, the provider's assistant turn with its reasoning, which the loop appends before its tool results, and takes a `system` prompt; client-sent system messages are dropped from the history. The provider row's `effort` now wins over a caller's default in `generateStructured`. Setup keeps `setupLLMProviderSchema` (OpenAI only, no base URL). The form is `llm-provider-form.tsx` with its state in `hooks/use-llm-provider-form.ts`, and the component test is `components/__tests__/admin/settings/llm-provider-form.test.tsx`, following the repo's layout. `testPromptTemplate` is untouched, so its model override still has no catalogue check.)
 
 **Tests.**
 - `lib/validations/__tests__/llm-provider.test.ts`: `openai-compatible` requires `baseUrl`; `file:`, `javascript:` and `http://user:pass@host` are rejected; a `/v1` path is kept.
@@ -2804,10 +2805,10 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 **Demo.** Choose `claude-sonnet-5-5` with effort `low` for Rewind: the form shows the price and no temperature field, Test lists the models, and an admin regenerate runs on Claude. Then point the assistant at the Ollama preset on a local Ollama, and ask it a question that needs a tool.
 
 **Done when.**
-- [ ] The form has a provider select, base-URL presets, effort where the model supports it, models from `models.list`, and each model's price and retirement date.
-- [ ] Base URLs are validated and admin-only, and a stored key is never sent to a new origin.
-- [ ] The admin assistant and Discord DMs run on the registry, and a non-OpenAI row cannot break them.
-- [ ] `lib/connections/openai.ts`, the models API route and `openai-params.ts` are gone, and the component and action tests pass.
+- [x] The form has a provider select, base-URL presets, effort where the model supports it, models from `models.list`, and each model's price and retirement date.
+- [x] Base URLs are validated and admin-only, and a stored key is never sent to a new origin.
+- [x] The admin assistant and Discord DMs run on the registry, and a non-OpenAI row cannot break them.
+- [x] `lib/connections/openai.ts`, the models API route and `openai-params.ts` are gone, and the component and action tests pass.
 
 ### Step P2.13: Fonts, typesetting, Rewind format and the registry skeleton
 

@@ -175,6 +175,15 @@ describe('generateStructured', () => {
     expect(model.doGenerateCalls[1].temperature).toBe(0.8)
   })
 
+  it("uses the admin's effort from the provider row over the caller's default", async () => {
+    const model = new MockLanguageModelV4({ doGenerate: reply('{"title":"Hi","score":3}') })
+    useModel(model, 'anthropic', 'claude-sonnet-5-5', { effort: 'high' })
+
+    await generateStructured(base)
+
+    expect(model.doGenerateCalls[0].providerOptions?.anthropic).toEqual({ effort: 'high' })
+  })
+
   it('stops on abort and records nothing', async () => {
     const controller = new AbortController()
     let started: () => void = () => {}

@@ -55,19 +55,18 @@ export async function runChatbotForUser(options: RunChatbotOptions): Promise<Cha
       }),
       prisma.lLMProvider.findFirst({
         where: { isActive: true, purpose: "chat" },
+        select: { id: true },
       }),
     ])
 
-    const llmDisabled = config?.llmDisabled ?? false
-    const useLLM = !llmDisabled && !!llmProvider && llmProvider.provider === "openai" && !!llmProvider.model
-
-    if (!useLLM || !llmProvider?.model) {
+    // Any provider row works: the registry builds the model, and a row it cannot build is reported by the loop
+    if (config?.llmDisabled || !llmProvider) {
       return {
         success: true,
         message: {
           role: "assistant",
           content:
-            "AI features are currently disabled or not configured. Please configure a chat OpenAI model in Settings to use the troubleshooting assistant.",
+            "AI features are currently disabled or not configured. Please configure a chat model in Settings to use the troubleshooting assistant.",
           timestamp: Date.now(),
         },
       }
@@ -89,12 +88,6 @@ export async function runChatbotForUser(options: RunChatbotOptions): Promise<Cha
       conversationId: activeConversationId,
       context: options.context,
       isAdmin: options.isAdmin,
-      llmProvider: {
-        apiKey: llmProvider.apiKey,
-        model: llmProvider.model,
-        temperature: llmProvider.temperature,
-        maxTokens: llmProvider.maxTokens,
-      },
       systemPrompt,
       tools: toolset,
     })

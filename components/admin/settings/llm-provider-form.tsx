@@ -1,166 +1,77 @@
 "use client"
 
-import { updateChatLLMProvider, updateWrappedLLMProvider } from "@/actions/admin"
+import { LLMBaseUrlField } from "@/components/admin/settings/llm-base-url-field"
+import { LLMModelPicker } from "@/components/admin/settings/llm-model-picker"
 import { Button } from "@/components/ui/button"
 import { StyledDropdown } from "@/components/ui/styled-dropdown"
 import { StyledInput } from "@/components/ui/styled-input"
-import { useToast } from "@/components/ui/toast"
-import { DEFAULT_OPENAI_MODEL } from "@/lib/llm/openai-params"
-import { useRouter } from "next/navigation"
-import { useEffect, useState, useTransition } from "react"
+import { useLLMProviderForm, type StoredLLMProvider } from "@/hooks/use-llm-provider-form"
+import { isLLMProviderId, LLM_PROVIDER_IDS, LLM_PROVIDER_LABELS } from "@/lib/llm/provider-presets"
 
 interface LLMProviderFormProps {
-  /**
-   * The active provider config, with the API key stripped. `hasApiKey` indicates
-   * a key is stored (never the value itself) so the form can offer "leave blank
-   * to keep current value" without exposing the key.
-   */
-  provider: { provider: string; model: string | null; hasApiKey: boolean; temperature: number | null; maxTokens: number | null } | null
+  /** The active provider config, with the API key stripped. */
+  provider: StoredLLMProvider | null
   purpose: "chat" | "wrapped"
 }
 
-export function LLMProviderForm({ provider, purpose }: LLMProviderFormProps) {
-  const [isEditing, setIsEditing] = useState(false)
-  const [isPending, startTransition] = useTransition()
-  const router = useRouter()
-  const toast = useToast()
+function FieldLabel({ htmlFor, required, children }: { htmlFor: string; required?: boolean; children: React.ReactNode }) {
+  return (
+    <label htmlFor={htmlFor} className="block text-xs font-medium text-slate-400 mb-1">
+      {children}
+      {required && <span className="text-red-400"> *</span>}
+    </label>
+  )
+}
 
-  // Whether an API key is already stored (drives leave-blank-to-keep).
-  const hasStoredApiKey = Boolean(provider?.hasApiKey)
+function ReadOnlyField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="text-xs font-medium text-slate-400 mb-1">{label}</div>
+      <div className="text-sm text-white">{children}</div>
+    </div>
+  )
+}
 
-  // The API key is never sent to the client. Empty means "keep existing".
-  const [formData, setFormData] = useState({
-    provider: provider?.provider || "openai",
-    apiKey: "",
-    model: provider?.model || "",
-    temperature: provider?.temperature ?? (purpose === "chat" ? 0.7 : 0.8),
-    maxTokens: provider?.maxTokens ?? (purpose === "chat" ? 1000 : 6000),
-  })
+function ProviderSummary({ stored }: { stored: StoredLLMProvider }) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <ReadOnlyField label="Provider">
+        <span className="px-2 py-1 bg-slate-700/50 text-slate-300 rounded text-xs font-medium">
+          {isLLMProviderId(stored.provider) ? LLM_PROVIDER_LABELS[stored.provider] : stored.provider}
+        </span>
+      </ReadOnlyField>
+      <ReadOnlyField label="Model">
+        <span className="font-mono">{stored.model || "Not configured"}</span>
+      </ReadOnlyField>
+      <ReadOnlyField label={stored.effort ? "Effort" : "Temperature"}>
+        {stored.effort ?? stored.temperature ?? "Model default"}
+      </ReadOnlyField>
+      <ReadOnlyField label="Max Tokens">{stored.maxTokens ?? "Default"}</ReadOnlyField>
+      {stored.baseUrl && (
+        <div className="md:col-span-4">
+          <ReadOnlyField label="Base URL">
+            <span className="font-mono break-all">{stored.baseUrl}</span>
+          </ReadOnlyField>
+        </div>
+      )}
+    </div>
+  )
+}
 
-  const [availableModels, setAvailableModels] = useState<string[]>([])
-  const [isLoadingModels, setIsLoadingModels] = useState(false)
-  const [modelsError, setModelsError] = useState<string | null>(null)
-  const [useCustomModel, setUseCustomModel] = useState(false)
+/**
+ * The LLM provider for one purpose: provider, base URL (OpenAI-compatible
+ * only), key, model with its price, and only the settings the model supports.
+ */
+export function LLMProviderForm({ provider: stored, purpose }: LLMProviderFormProps) {
+  const state = useLLMProviderForm(stored, purpose)
+  const { form, update, busy, effortLevels } = state
 
-  // Load models from pricing API when editing. The loading and error flags
-  // reset during render when the inputs change (React's "adjust state when a
-  // prop changes" pattern); the effect only fetches.
-  const shouldLoadModels = isEditing && formData.provider === "openai"
-  const modelsRequest = `${isEditing}|${formData.provider}|${formData.model}`
-  const [prevModelsRequest, setPrevModelsRequest] = useState(modelsRequest)
-  if (prevModelsRequest !== modelsRequest) {
-    setPrevModelsRequest(modelsRequest)
-    setModelsError(null)
-    if (shouldLoadModels) {
-      setIsLoadingModels(true)
-    } else {
-      setAvailableModels([])
-    }
-  }
-
-  useEffect(() => {
-    if (!shouldLoadModels) return
-
-    fetch("/api/admin/models")
-      .then(async (res) => {
-        if (!res.ok) {
-          throw new Error("Failed to fetch models")
-        }
-        const data = await res.json()
-        if (data.models && Array.isArray(data.models)) {
-          setAvailableModels(data.models)
-          setModelsError(null)
-
-          // If current model is in the list, switch to dropdown mode
-          if (formData.model && data.models.includes(formData.model)) {
-            setUseCustomModel(false)
-          }
-        } else {
-          throw new Error("Invalid response format")
-        }
-      })
-      .catch((error) => {
-        setAvailableModels([])
-        setModelsError(error instanceof Error ? error.message : "Failed to load models")
-      })
-      .finally(() => {
-        setIsLoadingModels(false)
-      })
-  }, [shouldLoadModels, formData.model])
-
-  // Keep useCustomModel in step with whether the current model is in the list
-  const [prevModelSync, setPrevModelSync] = useState({ model: formData.model, models: availableModels })
-  if (prevModelSync.model !== formData.model || prevModelSync.models !== availableModels) {
-    setPrevModelSync({ model: formData.model, models: availableModels })
-    if (formData.model && availableModels.length > 0) {
-      setUseCustomModel(!availableModels.includes(formData.model))
-    } else if (!formData.model) {
-      setUseCustomModel(false)
-    }
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!formData.model) {
-      toast.showError("Model is required")
-      return
-    }
-
-    startTransition(async () => {
-      const updateFn = purpose === "chat" ? updateChatLLMProvider : updateWrappedLLMProvider
-      const result = await updateFn({
-        provider: formData.provider,
-        // Blank key is sent as undefined so the action keeps the stored key.
-        apiKey: formData.apiKey.trim() || undefined,
-        model: formData.model!,
-        temperature: formData.temperature,
-        maxTokens: formData.maxTokens,
-      })
-
-      if (result.success) {
-        setIsEditing(false)
-        toast.showSuccess(`${purpose === "chat" ? "Chat" : "Wrapped"} LLM provider updated successfully`)
-        router.refresh()
-      } else {
-        toast.showError(result.error || `Failed to update ${purpose} LLM provider`)
-      }
-    })
-  }
-
-  if (!isEditing) {
+  if (!state.isEditing) {
     return (
       <div className="flex items-center justify-between">
         <div className="flex-1">
-          {provider ? (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <div className="text-xs font-medium text-slate-400 mb-1">Provider</div>
-                <div className="text-sm text-white">
-                  <span className="px-2 py-1 bg-slate-700/50 text-slate-300 rounded text-xs font-medium">
-                    {provider.provider.toUpperCase()}
-                  </span>
-                </div>
-              </div>
-              <div>
-                <div className="text-xs font-medium text-slate-400 mb-1">Model</div>
-                <div className="text-sm text-white font-mono">
-                  {provider.model || "Not configured"}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs font-medium text-slate-400 mb-1">Temperature</div>
-                <div className="text-sm text-white">
-                  {provider.temperature ?? `Default (${purpose === "chat" ? "0.7" : "0.8"})`}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs font-medium text-slate-400 mb-1">Max Tokens</div>
-                <div className="text-sm text-white">
-                  {provider.maxTokens ?? `Default (${purpose === "chat" ? "1000" : "6000"})`}
-                </div>
-              </div>
-            </div>
+          {stored ? (
+            <ProviderSummary stored={stored} />
           ) : (
             <div className="text-sm text-slate-400">No LLM provider configured</div>
           )}
@@ -168,8 +79,9 @@ export function LLMProviderForm({ provider, purpose }: LLMProviderFormProps) {
         <Button
           variant="secondary"
           size="sm"
-          onClick={() => setIsEditing(true)}
+          onClick={state.startEditing}
           className="ml-4"
+          data-testid={`llm-edit-${purpose}`}
         >
           Edit
         </Button>
@@ -177,138 +89,144 @@ export function LLMProviderForm({ provider, purpose }: LLMProviderFormProps) {
     )
   }
 
+  const idPrefix = `llm-${purpose}`
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form
+      onSubmit={(e) => {
+        e.preventDefault()
+        state.save()
+      }}
+      className="space-y-4"
+      data-testid={`llm-provider-form-${purpose}`}
+    >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1">Provider</label>
+          <FieldLabel htmlFor={`${idPrefix}-provider`}>Provider</FieldLabel>
           <StyledDropdown
-            value={formData.provider}
-            onChange={(value) => setFormData({ ...formData, provider: value })}
-            options={[
-              { value: "openai", label: "OpenAI" },
-            ]}
+            id={`${idPrefix}-provider`}
+            value={form.provider}
+            onChange={state.changeProvider}
+            options={LLM_PROVIDER_IDS.map((id) => ({ value: id, label: LLM_PROVIDER_LABELS[id] }))}
             size="md"
-            disabled={isPending}
+            disabled={busy}
+            data-testid="llm-provider-select"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1">Model <span className="text-red-400">*</span></label>
-          {!useCustomModel && availableModels.length > 0 ? (
-            <StyledDropdown
-              value={formData.model || ""}
-              onChange={(value) => {
-                if (value === "__custom__") {
-                  setUseCustomModel(true)
-                  setFormData({ ...formData, model: "" })
-                } else {
-                  setFormData({ ...formData, model: value })
-                }
-              }}
-              options={[
-                { value: "", label: "Select a model" },
-                ...availableModels.map((model) => ({ value: model, label: model })),
-                { value: "__custom__", label: "Enter custom model..." },
-              ]}
-              size="md"
-            />
-          ) : useCustomModel || ((hasStoredApiKey || formData.apiKey) && availableModels.length === 0 && !isLoadingModels) ? (
-            <StyledInput
-              type="text"
-              value={formData.model}
-              onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-              placeholder={`e.g. ${DEFAULT_OPENAI_MODEL}`}
-              required
-              disabled={isPending}
-            />
-          ) : (
-            <div className="w-full bg-slate-800/50 border border-slate-600 rounded-lg px-4 py-2 text-sm text-slate-400">
-              {isLoadingModels ? "Loading models..." : "Available models"}
-            </div>
-          )}
-          {modelsError && (
-            <p className="mt-1 text-xs text-yellow-400">
-              {modelsError} - You can still enter a model manually
-            </p>
-          )}
+          <FieldLabel htmlFor={`${idPrefix}-model`} required>
+            Model
+          </FieldLabel>
+          <LLMModelPicker
+            id={`${idPrefix}-model`}
+            provider={form.provider}
+            model={form.model}
+            custom={form.custom}
+            liveModels={state.liveModels}
+            onChange={(model, custom) => update({ model, custom, effort: "", temperature: "" })}
+            disabled={busy}
+          />
         </div>
+        {form.provider === "openai-compatible" && (
+          <div className="md:col-span-2">
+            <FieldLabel htmlFor={`${idPrefix}-base-url`} required>
+              Base URL
+            </FieldLabel>
+            <LLMBaseUrlField id={`${idPrefix}-base-url`} value={form.baseUrl} onChange={state.changeBaseUrl} disabled={busy} />
+          </div>
+        )}
         <div className="md:col-span-2">
-          <label className="block text-xs font-medium text-slate-400 mb-1">API Key</label>
+          <FieldLabel htmlFor={`${idPrefix}-api-key`} required={!state.keyOptional}>
+            API Key
+          </FieldLabel>
           <StyledInput
+            id={`${idPrefix}-api-key`}
             type="password"
-            value={formData.apiKey}
-            onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
-            placeholder={hasStoredApiKey ? "Leave blank to keep current key" : "sk-..."}
-            required={!hasStoredApiKey}
-            disabled={isPending}
+            value={form.apiKey}
+            onChange={(e) => update({ apiKey: e.target.value })}
+            placeholder={
+              state.keyReusable
+                ? "Leave blank to keep the current key"
+                : form.provider === "openai-compatible"
+                  ? "Optional for a local server"
+                  : "Enter the API key"
+            }
+            required={!state.keyOptional}
+            disabled={busy}
             autoComplete="off"
+            data-testid="llm-api-key-input"
           />
         </div>
+        {effortLevels && (
+          <div>
+            <FieldLabel htmlFor={`${idPrefix}-effort`}>Effort</FieldLabel>
+            <StyledDropdown
+              id={`${idPrefix}-effort`}
+              value={form.effort}
+              onChange={(effort) => update({ effort })}
+              options={[{ value: "", label: "Model default" }, ...effortLevels.map((level) => ({ value: level, label: level }))]}
+              size="md"
+              disabled={busy}
+              data-testid="llm-effort-select"
+            />
+          </div>
+        )}
+        {state.takesTemperature && (
+          <div>
+            <FieldLabel htmlFor={`${idPrefix}-temperature`}>Temperature (0.0-2.0, optional)</FieldLabel>
+            <StyledInput
+              id={`${idPrefix}-temperature`}
+              type="number"
+              min="0"
+              max="2"
+              step="0.1"
+              value={form.temperature}
+              onChange={(e) => update({ temperature: e.target.value })}
+              placeholder="Model default"
+              disabled={busy}
+              data-testid="llm-temperature-input"
+            />
+          </div>
+        )}
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1">
-            Temperature (0.0-2.0)
-            <span className="text-slate-500 ml-1">(optional, default: {purpose === "chat" ? "0.7" : "0.8"})</span>
-          </label>
+          <FieldLabel htmlFor={`${idPrefix}-max-tokens`}>Max Tokens (1-100000, optional)</FieldLabel>
           <StyledInput
-            type="number"
-            min="0"
-            max="2"
-            step="0.1"
-            value={formData.temperature}
-            onChange={(e) => setFormData({ ...formData, temperature: parseFloat(e.target.value) || (purpose === "chat" ? 0.7 : 0.8) })}
-            placeholder={purpose === "chat" ? "0.7" : "0.8"}
-            disabled={isPending}
-          />
-          <p className="mt-1 text-xs text-slate-500">
-            Note: GPT-5 models only support temperature 1 (default)
-          </p>
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1">
-            Max Tokens (1-100000)
-            <span className="text-slate-500 ml-1">(optional, default: {purpose === "chat" ? "1000" : "6000"})</span>
-          </label>
-          <StyledInput
+            id={`${idPrefix}-max-tokens`}
             type="number"
             min="1"
             max="100000"
             step="1"
-            value={formData.maxTokens}
-            onChange={(e) => setFormData({ ...formData, maxTokens: parseInt(e.target.value) || (purpose === "chat" ? 1000 : 6000) })}
-            placeholder={purpose === "chat" ? "1000" : "6000"}
-            disabled={isPending}
+            value={form.maxTokens}
+            onChange={(e) => update({ maxTokens: e.target.value })}
+            placeholder="Default"
+            disabled={busy}
+            data-testid="llm-max-tokens-input"
           />
-          <p className="mt-1 text-xs text-slate-500">
-            Maximum number of tokens to generate in the response
-          </p>
         </div>
       </div>
-      <div className="flex gap-2">
-        <Button
-          type="submit"
-          variant="primary"
-          disabled={isPending}
+      {state.test && (
+        <p
+          role="status"
+          className={state.test.ok ? "text-xs text-green-400" : "text-xs text-amber-400"}
+          data-testid="llm-test-result"
         >
-          {isPending ? "Saving..." : "Save"}
+          {state.test.message}
+        </p>
+      )}
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" variant="primary" disabled={busy} data-testid="llm-save">
+          {state.isSaving ? "Saving..." : "Save"}
         </Button>
         <Button
           type="button"
           variant="secondary"
-          onClick={() => {
-            setIsEditing(false)
-            setFormData({
-              provider: provider?.provider || "openai",
-              apiKey: "",
-              model: provider?.model || "",
-              temperature: provider?.temperature ?? (purpose === "chat" ? 0.7 : 0.8),
-              maxTokens: provider?.maxTokens ?? (purpose === "chat" ? 1000 : 6000),
-            })
-            setAvailableModels([])
-            setModelsError(null)
-            setUseCustomModel(false)
-          }}
-          disabled={isPending}
+          onClick={state.testConnection}
+          disabled={busy}
+          data-testid="llm-test-connection"
         >
+          {state.isTesting ? "Testing..." : "Test"}
+        </Button>
+        <Button type="button" variant="secondary" onClick={state.cancel} disabled={busy}>
           Cancel
         </Button>
       </div>

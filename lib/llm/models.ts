@@ -98,11 +98,7 @@ export function listKnownModels(provider?: LLMProviderId): ModelInfo[] {
   return MODEL_CATALOG.filter((info) => !provider || info.provider === provider)
 }
 
-/**
- * The price in force at `at`, or null when the model has none.
- *
- * @internal
- */
+/** The price in force at `at`, or null when the model has none. */
 export function priceAt(info: ModelInfo, at: Date = new Date()): ModelPrice | null {
   if (!info.pricing) return null
   const day = at.toISOString().slice(0, 10)

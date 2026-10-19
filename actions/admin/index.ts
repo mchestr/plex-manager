@@ -21,6 +21,7 @@ export {
 } from "./admin-llm-usage"
 
 export {
+  listLLMModels,
   updateChatLLMProvider,
   updateWrappedLLMProvider,
 } from "./admin-llm-providers"

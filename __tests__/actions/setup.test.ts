@@ -12,8 +12,7 @@ import {
     savePrometheus,
     saveTautulli,
 } from '@/actions/setup'
-import { testLLMProviderConnection } from '@/lib/connections/llm-provider'
-import { fetchOpenAIModels } from '@/lib/connections/openai'
+import { loadProviderModels, testLLMProviderConnection } from '@/lib/connections/llm-provider'
 import { testOverseerrConnection } from '@/lib/connections/overseerr'
 import { getPlexUserInfo, testPlexConnection } from '@/lib/connections/plex'
 import { testPrometheusConnection } from '@/lib/connections/prometheus'
@@ -50,11 +49,8 @@ jest.mock('@/lib/connections/prometheus', () => ({
 }))
 
 jest.mock('@/lib/connections/llm-provider', () => ({
+  loadProviderModels: jest.fn(),
   testLLMProviderConnection: jest.fn(),
-}))
-
-jest.mock('@/lib/connections/openai', () => ({
-  fetchOpenAIModels: jest.fn(),
 }))
 
 jest.mock('next/cache', () => ({
@@ -76,7 +72,7 @@ const mockTestTautulliConnection = testTautulliConnection as jest.MockedFunction
 const mockTestOverseerrConnection = testOverseerrConnection as jest.MockedFunction<typeof testOverseerrConnection>
 const mockTestPrometheusConnection = testPrometheusConnection as jest.MockedFunction<typeof testPrometheusConnection>
 const mockTestLLMProviderConnection = testLLMProviderConnection as jest.MockedFunction<typeof testLLMProviderConnection>
-const mockFetchOpenAIModels = fetchOpenAIModels as jest.MockedFunction<typeof fetchOpenAIModels>
+const mockLoadProviderModels = loadProviderModels as jest.MockedFunction<typeof loadProviderModels>
 const mockRevalidatePath = revalidatePath as jest.MockedFunction<typeof revalidatePath>
 
 describe('Setup Actions', () => {
@@ -488,7 +484,7 @@ describe('Setup Actions', () => {
   describe('fetchLLMModels', () => {
     it('should fetch OpenAI models successfully', async () => {
       const mockModels = ['gpt-4', 'gpt-3.5-turbo', 'gpt-4-turbo']
-      mockFetchOpenAIModels.mockResolvedValue({
+      mockLoadProviderModels.mockResolvedValue({
         success: true,
         models: mockModels,
       })
@@ -499,7 +495,7 @@ describe('Setup Actions', () => {
 
       expect(result.success).toBe(true)
       expect(result.models).toEqual(mockModels)
-      expect(mockFetchOpenAIModels).toHaveBeenCalledWith(validApiKey)
+      expect(mockLoadProviderModels).toHaveBeenCalledWith({ provider: 'openai', apiKey: validApiKey })
     })
 
     it('should return error when API key is missing', async () => {
@@ -508,7 +504,7 @@ describe('Setup Actions', () => {
       expect(result.success).toBe(false)
       // With validation, empty string fails the min length check
       expect(result.error).toBeDefined()
-      expect(mockFetchOpenAIModels).not.toHaveBeenCalled()
+      expect(mockLoadProviderModels).not.toHaveBeenCalled()
     })
 
     it('should return error when API key is too short', async () => {
@@ -517,7 +513,7 @@ describe('Setup Actions', () => {
       expect(result.success).toBe(false)
       // With validation, short API key fails the min length check
       expect(result.error).toBeDefined()
-      expect(mockFetchOpenAIModels).not.toHaveBeenCalled()
+      expect(mockLoadProviderModels).not.toHaveBeenCalled()
     })
 
     it('should return error for invalid provider', async () => {
@@ -528,14 +524,12 @@ describe('Setup Actions', () => {
       expect(result.error).toBeDefined()
     })
 
-    it('should handle fetch errors', async () => {
-      mockFetchOpenAIModels.mockRejectedValue(new Error('Network error'))
+    it('passes on a fixed listing error', async () => {
+      mockLoadProviderModels.mockResolvedValue({ success: false, error: 'Invalid API key' })
 
-      const validApiKey = 'test-api-key-12345'
-      const result = await fetchLLMModels('openai', validApiKey)
+      const result = await fetchLLMModels('openai', 'test-api-key-12345')
 
-      expect(result.success).toBe(false)
-      expect(result.error).toBe('Network error')
+      expect(result).toEqual({ success: false, error: 'Invalid API key' })
     })
   })
 })

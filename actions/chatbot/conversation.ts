@@ -1,12 +1,15 @@
-import { callChatLLM, type ChatTool, type ChatMessage as LLMChatMessage } from "@/lib/llm/chat"
-import { costUsd, lookupModel } from "@/lib/llm/models"
-import { prisma } from "@/lib/prisma"
+import type { ModelMessage } from "ai"
+
+import { chatWithTools, type ChatTool } from "@/lib/llm/chat"
 import { createLogger } from "@/lib/utils/logger"
 import { executeToolCall } from "./executors"
 import { ALL_TOOLS } from "./tools"
 import { type ChatMessage } from "./types"
 
 const logger = createLogger("CHATBOT_CONVERSATION")
+
+// Per assistant turn, including retries
+const REQUEST_TIMEOUT_MS = 30000
 
 interface ConversationConfig {
   userId: string
@@ -18,12 +21,6 @@ interface ConversationConfig {
    * (fail-closed) in the Discord context; inert in the admin web context.
    */
   isAdmin?: boolean
-  llmProvider: {
-    apiKey: string
-    model: string | null
-    temperature: number | null
-    maxTokens: number | null
-  }
   systemPrompt: string
   tools?: ChatTool[]
 }
@@ -38,11 +35,10 @@ export async function runConversationLoop(
   messages: ChatMessage[],
   config: ConversationConfig
 ): Promise<ConversationResult> {
-  // Convert messages to LLM format
-  let currentMessages: LLMChatMessage[] = [
-    { role: "system", content: config.systemPrompt },
-    ...messages.map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
-  ]
+  // Only the member's and the assistant's own turns; a client cannot add system text
+  const history: ModelMessage[] = messages.flatMap((m): ModelMessage[] =>
+    m.role === "user" || m.role === "assistant" ? [{ role: m.role, content: m.content }] : []
+  )
 
   const toolRegistry = config.tools ?? ALL_TOOLS
   const MAX_LOOPS = 5
@@ -52,64 +48,25 @@ export async function runConversationLoop(
   while (loops < MAX_LOOPS) {
     loops++
 
-    if (!config.llmProvider.model) {
-      logger.error("No model configured for chat LLM")
-      return { success: false, error: "No model configured for chat assistant. Please configure a model in admin settings." }
-    }
+    const response = await chatWithTools({
+      system: config.systemPrompt,
+      messages: history,
+      tools: toolRegistry,
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      attribution: { userId: config.userId, chatConversationId: config.conversationId },
+    })
 
-    const response = await callChatLLM(
-      {
-        provider: "openai",
-        apiKey: config.llmProvider.apiKey,
-        model: config.llmProvider.model,
-        temperature: config.llmProvider.temperature || undefined,
-        maxTokens: config.llmProvider.maxTokens || undefined,
-      },
-      currentMessages,
-      toolRegistry
-    )
-
-    if (!response.success) {
+    if (!response.ok) {
       logger.error("LLM call failed", undefined, { error: response.error })
-      // A model-choice problem tells the admin what to change; anything else stays generic
+      // A provider or model-choice problem tells the admin what to change; anything else stays generic
       return {
         success: false,
         error: response.configurationError ? response.error : "Failed to communicate with AI provider",
       }
     }
 
-    // Log usage if available
-    if (response.usage) {
-      const servedModel = response.model || config.llmProvider.model
-      const cachedInputTokens = response.usage.prompt_tokens_details?.cached_tokens ?? 0
-      const cost = costUsd(lookupModel("openai", servedModel), {
-        inputTokens: response.usage.prompt_tokens,
-        cachedInputTokens,
-        outputTokens: response.usage.completion_tokens,
-        reasoningTokens: 0,
-      })
-
-      await prisma.lLMUsage.create({
-        data: {
-          userId: config.userId,
-          chatConversationId: config.conversationId,
-          provider: "openai",
-          model: servedModel,
-          prompt: JSON.stringify(currentMessages), // Store context as prompt
-          response: response.content || JSON.stringify(response.toolCalls),
-          promptTokens: response.usage.prompt_tokens,
-          completionTokens: response.usage.completion_tokens,
-          totalTokens: response.usage.total_tokens,
-          cachedInputTokens,
-          cost,
-          wrappedId: null, // Explicitly null for chatbot usage
-        },
-      })
-    }
-
     // If we have content and no tool calls, we're done
-    if (response.content && (!response.toolCalls || response.toolCalls.length === 0)) {
-      // Build sources array from tools used
+    if (response.toolCalls.length === 0) {
       const sources = Array.from(toolsUsed).map((toolName) => {
         const tool = toolRegistry.find((t) => t.function.name === toolName)
         return {
@@ -129,42 +86,25 @@ export async function runConversationLoop(
       }
     }
 
-    // If we have tool calls, execute them
-    if (response.toolCalls && response.toolCalls.length > 0) {
-      // Track which tools were called
-      response.toolCalls.forEach((toolCall) => {
-        toolsUsed.add(toolCall.function.name)
-      })
+    response.toolCalls.forEach((toolCall) => {
+      toolsUsed.add(toolCall.function.name)
+    })
 
-      // Add the assistant's message with tool calls to history
-      currentMessages.push({
-        role: "assistant",
-        content: response.content || null,
-        tool_calls: response.toolCalls,
-      })
+    // The assistant turn as the provider returned it (with its reasoning), then the results
+    history.push(...response.responseMessages)
 
-      // Execute tools in parallel
-      const toolResults = await Promise.all(
-        response.toolCalls.map(async (toolCall) => {
-          const result = await executeToolCall(toolCall, config.userId, config.context, config.isAdmin)
-          return {
-            role: "tool" as const,
-            tool_call_id: toolCall.id,
-            name: toolCall.function.name,
-            content: result,
-          }
-        })
-      )
-
-      // Add tool results to history
-      currentMessages.push(...toolResults)
-
-      // Continue loop to get AI interpretation of tool results
-      continue
-    }
-
-    // Should not reach here if logic is correct (either content or toolCalls)
-    break
+    const toolResults = await Promise.all(
+      response.toolCalls.map(async (toolCall) => ({
+        type: "tool-result" as const,
+        toolCallId: toolCall.id,
+        toolName: toolCall.function.name,
+        output: {
+          type: "text" as const,
+          value: await executeToolCall(toolCall, config.userId, config.context, config.isAdmin),
+        },
+      }))
+    )
+    history.push({ role: "tool", content: toolResults })
   }
 
   return {
@@ -172,4 +112,3 @@ export async function runConversationLoop(
     error: "Maximum conversation turns exceeded",
   }
 }
-

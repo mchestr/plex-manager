@@ -16,7 +16,8 @@ import { type ConnectionResult } from "@/types/connection"
  *   while the body is read, so a slow body cannot outlast the budget.
  * - **Safe redirects.** Redirects are followed by hand, at most
  *   {@link MAX_REDIRECTS} hops, to `http:` or `https:` only. A cross-origin hop
- *   drops `X-Api-Key`, `X-Plex-Token`, `X-Emby-Token` and `Authorization`.
+ *   drops `X-Api-Key`, `X-Goog-Api-Key`, `X-Plex-Token`, `X-Emby-Token` and
+ *   `Authorization`.
  * - **Zod parsing.** A body that fails the schema is `INVALID_RESPONSE`; only
  *   the issue paths are logged, never values.
  * - **Key-free errors.** A failure is a code and maybe a status. Logs carry the
@@ -69,7 +70,7 @@ export interface ServiceFetchOptions<T> {
 const DEFAULT_TIMEOUT_MS = 10_000
 const MAX_REDIRECTS = 3
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308])
-const AUTH_HEADERS = new Set(["x-api-key", "x-plex-token", "x-emby-token", "authorization"])
+const AUTH_HEADERS = new Set(["x-api-key", "x-goog-api-key", "x-plex-token", "x-emby-token", "authorization"])
 
 class RedirectBlockedError extends Error {
   override name = "RedirectBlockedError"

@@ -1,4 +1,3 @@
-import { llmProviderSchema, type LLMProviderInput } from '@/lib/validations/llm-provider'
 import { overseerrSchema, type OverseerrInput } from '@/lib/validations/overseerr'
 import { plexServerSchema, type PlexServerInput } from '@/lib/validations/plex'
 import { tautulliSchema, type TautulliInput } from '@/lib/validations/tautulli'
@@ -188,47 +187,3 @@ describe('overseerrSchema', () => {
     expect(() => overseerrSchema.parse(invalid)).toThrow()
   })
 })
-
-describe('llmProviderSchema', () => {
-  it('should validate valid OpenAI provider', () => {
-    const valid: LLMProviderInput = {
-      provider: 'openai',
-      apiKey: 'sk-abc123',
-      model: 'gpt-4',
-    }
-    expect(() => llmProviderSchema.parse(valid)).not.toThrow()
-  })
-
-  it('should allow optional model', () => {
-    const valid: LLMProviderInput = {
-      provider: 'openai',
-      apiKey: 'sk-abc123',
-    }
-    const result = llmProviderSchema.parse(valid)
-    expect(result.model).toBeUndefined()
-  })
-
-  it('should reject invalid provider', () => {
-    const invalid = {
-      provider: 'anthropic',
-      apiKey: 'sk-abc123',
-    }
-    expect(() => llmProviderSchema.parse(invalid)).toThrow()
-  })
-
-  it('should reject empty apiKey', () => {
-    const invalid = {
-      provider: 'openai',
-      apiKey: '',
-    }
-    expect(() => llmProviderSchema.parse(invalid)).toThrow()
-  })
-
-  it('should reject missing provider', () => {
-    const invalid = {
-      apiKey: 'sk-abc123',
-    }
-    expect(() => llmProviderSchema.parse(invalid)).toThrow('Please select a provider')
-  })
-})
-

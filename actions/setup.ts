@@ -2,16 +2,16 @@
 
 import { z } from "zod"
 import { requireAdmin } from "@/lib/admin"
-import { testLLMProviderConnection } from "@/lib/connections/llm-provider"
+import { loadProviderModels, testLLMProviderConnection } from "@/lib/connections/llm-provider"
 import { testOverseerrConnection } from "@/lib/connections/overseerr"
 import { testPlexConnection } from "@/lib/connections/plex"
 import { testRadarrConnection } from "@/lib/connections/radarr"
 import { testSonarrConnection } from "@/lib/connections/sonarr"
 import { testTautulliConnection } from "@/lib/connections/tautulli"
-import { DEFAULT_OPENAI_MODEL } from "@/lib/llm/openai-params"
+import { DEFAULT_OPENAI_MODEL } from "@/lib/llm/provider-presets"
 import { prisma } from "@/lib/prisma"
 import { discordIntegrationSchema, type DiscordIntegrationInputData } from "@/lib/validations/discord"
-import { llmProviderSchema, type LLMProviderInput } from "@/lib/validations/llm-provider"
+import { setupLLMProviderSchema, type SetupLLMProviderInput } from "@/lib/validations/llm-provider"
 import { overseerrSchema, type OverseerrInput, type OverseerrParsed } from "@/lib/validations/overseerr"
 import { plexServerSchema, type PlexServerInput, type PlexServerParsed } from "@/lib/validations/plex"
 import { radarrSchema, type RadarrInput, type RadarrParsed } from "@/lib/validations/radarr"
@@ -402,16 +402,17 @@ export async function saveDiscordIntegration(data: DiscordIntegrationInputData) 
 }
 
 async function saveLLMProviderForPurpose(
-  data: LLMProviderInput,
+  data: SetupLLMProviderInput,
   purpose: "chat" | "wrapped",
   nextStep: number
 ) {
   try {
     await requireAdminIfSetupComplete()
 
-    const validated = llmProviderSchema.parse(data)
+    const validated = setupLLMProviderSchema.parse(data)
 
-    const connectionTest = await testLLMProviderConnection(validated)
+    // Setup checks the key only; its model field is free text, as before P2.12
+    const connectionTest = await testLLMProviderConnection(validated, { customModel: true })
     if (!connectionTest.success) {
       return { success: false, error: connectionTest.error || "Failed to connect to LLM provider" }
     }
@@ -464,11 +465,11 @@ async function saveLLMProviderForPurpose(
   }
 }
 
-export async function saveChatLLMProvider(data: LLMProviderInput) {
+export async function saveChatLLMProvider(data: SetupLLMProviderInput) {
   return saveLLMProviderForPurpose(data, "chat", 8)
 }
 
-export async function saveLLMProvider(data: LLMProviderInput) {
+export async function saveLLMProvider(data: SetupLLMProviderInput) {
   return saveLLMProviderForPurpose(data, "wrapped", 10)
 }
 
@@ -566,20 +567,6 @@ export async function fetchLLMModels(
     return { success: false, error: firstError || "Invalid parameters" }
   }
 
-  const { provider: validProvider, apiKey: validApiKey } = validated.data
-
-  try {
-    if (validProvider === "openai") {
-      const { fetchOpenAIModels } = await import("@/lib/connections/openai")
-      return await fetchOpenAIModels(validApiKey)
-    }
-
-    return { success: false, error: "Invalid provider" }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: "Failed to fetch models" }
-  }
+  return loadProviderModels({ provider: validated.data.provider, apiKey: validated.data.apiKey })
 }
 

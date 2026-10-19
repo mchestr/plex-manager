@@ -14,6 +14,7 @@ import { costUsd, lookupModel, resolveEffort, type EffortLevel, type TokenUsage 
 import { getLanguageModel, LLMConfigError, type LLMPurpose, type ResolvedModel } from "@/lib/llm/registry"
 import { recordUsage, type UsageAttribution, type UsageOutcome } from "@/lib/llm/usage"
 import { createLogger } from "@/lib/utils/logger"
+import { EFFORT_LEVELS } from "@/lib/validations/llm-provider"
 
 const logger = createLogger("LLM_STRUCTURED")
 
@@ -53,6 +54,7 @@ export interface GenerateStructuredInput<S extends z.ZodType> {
   schema: S
   system: string
   prompt: string
+  /** The caller's default; the provider row's `effort`, when an admin set one, wins. */
   effort?: EffortLevel
   /** Falls back to the provider row's `maxTokens`. */
   maxOutputTokens?: number
@@ -87,8 +89,10 @@ function toTokenUsage(usage: LanguageModelUsage): TokenUsage {
   }
 }
 
-/** The provider options for effort and caching, under each provider's own names. */
-function providerOptionsFor(
+/**
+ * The provider options for effort and caching, under each provider's own names.
+ */
+export function providerOptionsFor(
   resolved: ResolvedModel,
   effort: EffortLevel | undefined,
   cacheKey: string | undefined
@@ -104,6 +108,11 @@ function providerOptionsFor(
     case "openai-compatible":
       return { "openai-compatible": { ...(level && { reasoningEffort: level }) } }
   }
+}
+
+/** The effort an admin chose for the provider row, if any. */
+export function rowEffort(row: { effort: string | null }): EffortLevel | undefined {
+  return EFFORT_LEVELS.find((level) => level === row.effort)
 }
 
 function failureFor(step: StepSnapshot): { code: StructuredErrorCode; outcome: UsageOutcome } | null {
@@ -179,7 +188,7 @@ export async function generateStructured<S extends z.ZodType>(
       output: Output.object({ schema: input.schema }),
       maxOutputTokens: input.maxOutputTokens ?? row.maxTokens ?? undefined,
       ...(info.capabilities.samplingParams && temperature !== undefined && { temperature }),
-      providerOptions: providerOptionsFor(resolved, input.effort, input.cacheKey),
+      providerOptions: providerOptionsFor(resolved, rowEffort(row) ?? input.effort, input.cacheKey),
       abortSignal: input.signal,
       maxRetries: 2,
       onStepEnd: (event) => {

@@ -7,23 +7,11 @@ import { createOpenAICompatible } from "@ai-sdk/openai-compatible"
 import type { LanguageModel } from "ai"
 
 import type { LLMProvider } from "@/lib/generated/prisma/client"
-import { lookupModel, type LLMProviderId, type ModelInfo } from "@/lib/llm/models"
+import { lookupModel, type ModelInfo } from "@/lib/llm/models"
+import { isLLMProviderId } from "@/lib/llm/provider-presets"
 import { prisma } from "@/lib/prisma"
 
 export type LLMPurpose = "wrapped" | "chat"
-
-/**
- * Base URLs for the common OpenAI-compatible servers. P2.12's admin form
- * offers them as presets.
- *
- * @internal
- */
-export const OPENAI_COMPATIBLE_PRESETS = {
-  ollama: { label: "Ollama", baseUrl: "http://localhost:11434/v1" },
-  lmstudio: { label: "LM Studio", baseUrl: "http://localhost:1234/v1" },
-  vllm: { label: "vLLM", baseUrl: "http://localhost:8000/v1" },
-  openrouter: { label: "OpenRouter", baseUrl: "https://openrouter.ai/api/v1" },
-} as const
 
 /** A provider row that cannot build a model, e.g. an OpenAI-compatible row with no base URL. */
 export class LLMConfigError extends Error {
@@ -40,12 +28,6 @@ export interface ResolvedModel {
 }
 
 type ModelFactory = (modelId: string) => LanguageModel
-
-const PROVIDER_IDS: readonly LLMProviderId[] = ["openai", "anthropic", "google", "openai-compatible"]
-
-function isProviderId(value: string): value is LLMProviderId {
-  return (PROVIDER_IDS as readonly string[]).includes(value)
-}
 
 function createFactory(row: LLMProvider): ModelFactory {
   switch (row.provider) {
@@ -98,7 +80,7 @@ function factoryFor(row: LLMProvider): ModelFactory {
  * @internal
  */
 export function resolveModel(row: LLMProvider, modelId: string = row.model): ResolvedModel {
-  if (!isProviderId(row.provider)) {
+  if (!isLLMProviderId(row.provider)) {
     throw new LLMConfigError(`Unsupported LLM provider: ${row.provider}`)
   }
   if (!modelId) {
