@@ -1,0 +1,7 @@
+{
+  "pageInfo": { "pages": 2, "pageSize": 100, "results": 102, "page": 1 },
+  "results": [
+    { "id": 1, "email": "owner@example.invalid", "plexUsername": "owner", "username": null, "plexId": 1001, "userType": 1, "permissions": 2, "displayName": "owner", "requestCount": 12 },
+    { "id": 2, "email": "local@example.invalid", "plexUsername": null, "username": "local", "plexId": null, "userType": 2, "permissions": 32, "displayName": "local", "requestCount": 0 }
+  ]
+}

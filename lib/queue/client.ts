@@ -8,7 +8,7 @@
 import { Queue, QueueEvents, JobsOptions, type Job } from "bullmq"
 import { getRedisConnection } from "./connection"
 import { sanitizeJobId } from "./job-id"
-import { JobType, JobPayloadMap, JobMetadata, QueueStats, JobStatus } from "./types"
+import { JOB_TYPES, JobType, JobPayloadMap, JobMetadata, QueueStats, JobStatus } from "./types"
 import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("QUEUE_CLIENT")
@@ -81,6 +81,20 @@ export async function addJob<T extends JobType>(
   })
 
   return job.id!
+}
+
+/**
+ * Queue one member's watchlist sync. BullMQ deduplicates on
+ * `watchlist:user:<userId>` while a job for the member is waiting or running,
+ * so repeated triggers (the member's, an admin's) collapse into that job and
+ * get its id back (P4.13).
+ */
+export function addWatchlistSyncUserJob(
+  data: JobPayloadMap[typeof JOB_TYPES.WATCHLIST_SYNC_USER]
+): Promise<string> {
+  return addJob(JOB_TYPES.WATCHLIST_SYNC_USER, data, {
+    deduplication: { id: `watchlist:user:${data.userId}` },
+  })
 }
 
 /**

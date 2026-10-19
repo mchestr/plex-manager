@@ -5,6 +5,8 @@
  * Add new job types here as the system grows.
  */
 
+import type { WatchlistSkipCode } from "@/lib/watchlist/skip"
+
 /**
  * Job Type Registry
  * Add new job types here when extending the queue system
@@ -55,8 +57,8 @@ export interface WatchlistSyncAllPayload {
  */
 export interface WatchlistSyncUserResult {
   success: boolean
-  /** Set when the job did not sync: the member is not entitled (P4.5). */
-  skipped?: "NOT_ENTITLED"
+  /** Set when the job did not sync, with why (P4.5, P4.13). */
+  skipped?: WatchlistSkipCode
   itemsSynced: number
   itemsRequested: number
   itemsSkipped: number

@@ -61,6 +61,12 @@ Plex Management System transforms your Plex experience by combining powerful man
 - **Discord Integration** for community engagement and announcements (optional)
 - **Service Status** monitoring for all connected platforms
 
+### 📌 Watchlist Sync (Optional)
+- **Plex watchlist to Overseerr** - Members who turn it on get the titles on their Plex watchlist requested in Overseerr, on the admin's interval or with **Sync Now** (4 an hour)
+- **Filed as the member** - Each request is sent as the member's own Overseerr user (`X-Api-User`), so approval follows their Overseerr permissions: auto-approve rules, quotas and the requester shown in Overseerr are theirs, never the admin's
+- **Needs an Overseerr account imported from Plex** - A member is matched by their Plex account id, so they must have signed in to Overseerr with Plex once (or been imported from Plex by an admin). Members without a match are skipped, and their card says why
+- **Opt-in only** - Nothing syncs for a member who has not turned it on, whoever triggers the sync, nor while the admin has the feature off
+
 ### 📊 Plex Wrapped & Statistics
 - **Total watch time** breakdown (movies vs. shows)
 - **Top movies and shows** with play counts and ratings

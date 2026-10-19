@@ -1,0 +1,36 @@
+{
+  "id": 412,
+  "status": 1,
+  "createdAt": "2026-12-02T10:15:00.000Z",
+  "updatedAt": "2026-12-02T10:15:00.000Z",
+  "type": "movie",
+  "is4k": false,
+  "serverId": null,
+  "profileId": null,
+  "rootFolder": null,
+  "languageProfileId": null,
+  "tags": null,
+  "isAutoRequest": false,
+  "media": {
+    "id": 88,
+    "mediaType": "movie",
+    "tmdbId": 603,
+    "tvdbId": null,
+    "imdbId": null,
+    "status": 2,
+    "status4k": 1,
+    "createdAt": "2026-12-02T10:15:00.000Z",
+    "updatedAt": "2026-12-02T10:15:00.000Z"
+  },
+  "requestedBy": {
+    "id": 7,
+    "plexId": 4815162,
+    "plexUsername": "member7",
+    "userType": 1,
+    "permissions": 32,
+    "displayName": "member7",
+    "requestCount": 1
+  },
+  "modifiedBy": null,
+  "seasons": []
+}

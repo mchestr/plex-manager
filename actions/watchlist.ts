@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 import { updateWatchlistSyncSettingsSchema } from "@/lib/validations/watchlist"
+import type { WatchlistSkipCode } from "@/lib/watchlist/skip"
 import { syncUserWatchlist } from "@/lib/watchlist/sync-service"
 import { memberAction } from "@/lib/actions/define-action"
 import { hasEntitlement, NOT_ENTITLED_MESSAGE } from "@/lib/actions/entitlement"
@@ -145,14 +146,24 @@ export const updateWatchlistSyncSettings = memberAction({
 /** A queued job (with Redis), or the counts of a sync run in this request. */
 export type TriggerWatchlistSyncData =
   | { queued: true; jobId: string; message: string }
-  | { queued: false; itemsSynced?: number; itemsRequested?: number; itemsSkipped?: number; itemsFailed?: number }
+  | {
+      queued: false
+      skipped?: WatchlistSkipCode
+      itemsSynced?: number
+      itemsRequested?: number
+      itemsSkipped?: number
+      itemsFailed?: number
+    }
 
 /**
- * Trigger a manual sync for the current user
- * Uses the job queue if Redis is configured, otherwise falls back to direct execution
+ * Trigger a manual sync for the current user, at most 4 an hour
+ * (`watchlist:manual`). Uses the job queue if Redis is configured, where a
+ * trigger while the member's job is waiting or running joins that job;
+ * otherwise it falls back to direct execution.
  */
 export const triggerWatchlistSync = memberAction({
   entitlement: "full",
+  rateLimit: { name: "watchlist:manual" },
   fallbackError: "Failed to trigger sync",
   handler: async (_input, { userId }): Promise<ActionResult<TriggerWatchlistSyncData>> => {
     // Check if sync is enabled for user
@@ -169,10 +180,9 @@ export const triggerWatchlistSync = memberAction({
 
     if (isRedisConfigured()) {
       // Use job queue
-      const { addJob } = await import("@/lib/queue/client")
-      const { JOB_TYPES } = await import("@/lib/queue/types")
+      const { addWatchlistSyncUserJob } = await import("@/lib/queue/client")
 
-      const jobId = await addJob(JOB_TYPES.WATCHLIST_SYNC_USER, {
+      const jobId = await addWatchlistSyncUserJob({
         userId,
         triggeredBy: "manual",
         triggeredByUserId: userId,
@@ -197,6 +207,7 @@ export const triggerWatchlistSync = memberAction({
 
     return ok({
       queued: false,
+      skipped: result.skipped,
       itemsSynced: result.data?.itemsSynced,
       itemsRequested: result.data?.itemsRequested,
       itemsSkipped: result.data?.itemsSkipped,
