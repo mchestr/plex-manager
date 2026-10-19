@@ -7,7 +7,7 @@ import {
 } from "@/actions/admin/watchlist"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
-import { useCallback, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 
 interface GlobalSettings {
   watchlistSyncEnabled: boolean
@@ -36,27 +36,23 @@ export function WatchlistSyncSettings() {
   const [isSaving, setIsSaving] = useState(false)
   const [intervalInput, setIntervalInput] = useState("")
 
-  const loadData = useCallback(async () => {
-    const [settingsResult, statsResult] = await Promise.all([
+  useEffect(() => {
+    Promise.all([
       getGlobalWatchlistSyncSettings(),
       getWatchlistSyncStats(),
-    ])
+    ]).then(([settingsResult, statsResult]) => {
+      if (settingsResult.success && settingsResult.data) {
+        setSettings(settingsResult.data)
+        setIntervalInput(settingsResult.data.watchlistSyncIntervalMinutes.toString())
+      }
 
-    if (settingsResult.success && settingsResult.data) {
-      setSettings(settingsResult.data)
-      setIntervalInput(settingsResult.data.watchlistSyncIntervalMinutes.toString())
-    }
+      if (statsResult.success && statsResult.data) {
+        setStats(statsResult.data)
+      }
 
-    if (statsResult.success && statsResult.data) {
-      setStats(statsResult.data)
-    }
-
-    setIsLoading(false)
+      setIsLoading(false)
+    })
   }, [])
-
-  useEffect(() => {
-    loadData()
-  }, [loadData])
 
   const handleToggleEnabled = async () => {
     if (!settings) return

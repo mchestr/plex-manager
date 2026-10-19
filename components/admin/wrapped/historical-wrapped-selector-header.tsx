@@ -20,17 +20,37 @@ interface HistoricalWrappedSelectorHeaderProps {
   year: number
 }
 
+/** The version a path shows, or null when the path names none. */
+function versionFromPathname(pathname: string | null, userId: string): string | null {
+  const historyMatch = pathname?.match(/\/admin\/wrapped\/[^/]+\/history\/([^/]+)/)
+  if (historyMatch) return historyMatch[1]
+  if (pathname?.includes(`/admin/users/${userId}/wrapped`)) return "current"
+  return null
+}
+
 export function HistoricalWrappedSelectorHeader({
   wrappedId,
   userId,
   year,
 }: HistoricalWrappedSelectorHeaderProps) {
-  const [versions, setVersions] = useState<HistoricalVersion[]>([])
-  const [loading, setLoading] = useState(true)
-  const [selectedVersion, setSelectedVersion] = useState<string>("current")
-  const [isExpanded, setIsExpanded] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
+  const [versions, setVersions] = useState<HistoricalVersion[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selectedVersion, setSelectedVersion] = useState<string>(
+    () => versionFromPathname(pathname, userId) ?? "current"
+  )
+  const [isExpanded, setIsExpanded] = useState(false)
+
+  // Detect current version from pathname, during render when it changes
+  const [prevLocation, setPrevLocation] = useState({ pathname, userId })
+  if (prevLocation.pathname !== pathname || prevLocation.userId !== userId) {
+    setPrevLocation({ pathname, userId })
+    const version = versionFromPathname(pathname, userId)
+    if (version) {
+      setSelectedVersion(version)
+    }
+  }
 
   useEffect(() => {
     async function loadVersions() {
@@ -51,16 +71,6 @@ export function HistoricalWrappedSelectorHeader({
       loadVersions()
     }
   }, [wrappedId])
-
-  // Detect current version from pathname
-  useEffect(() => {
-    const historyMatch = pathname?.match(/\/admin\/wrapped\/[^/]+\/history\/([^/]+)/)
-    if (historyMatch) {
-      setSelectedVersion(historyMatch[1])
-    } else if (pathname?.includes(`/admin/users/${userId}/wrapped`)) {
-      setSelectedVersion("current")
-    }
-  }, [pathname, userId])
 
   const handleVersionChange = async (versionId: string) => {
     try {

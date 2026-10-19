@@ -7,7 +7,7 @@ import type { InviteWithUsages } from "@/lib/dto/user"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 
 export function InviteDetailsClient({ id }: { id: string }) {
   const toast = useToast()
@@ -16,24 +16,22 @@ export function InviteDetailsClient({ id }: { id: string }) {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const router = useRouter()
 
-  const loadInvite = useCallback(async () => {
-    try {
-      const result = await getInviteDetails(id)
-      if (result.success) {
-        setInvite(result.data)
-      } else {
-        router.push("/admin/invites")
-      }
-    } catch (error) {
-      console.error("Failed to load invite details", error)
-    } finally {
-      setLoading(false)
-    }
-  }, [id, router])
-
   useEffect(() => {
-    loadInvite()
-  }, [loadInvite])
+    getInviteDetails(id)
+      .then((result) => {
+        if (result.success) {
+          setInvite(result.data)
+        } else {
+          router.push("/admin/invites")
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to load invite details", error)
+      })
+      .finally(() => {
+        setLoading(false)
+      })
+  }, [id, router])
 
   function handleDeleteClick() {
     setShowDeleteModal(true)

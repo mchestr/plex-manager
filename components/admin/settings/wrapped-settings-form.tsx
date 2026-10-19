@@ -6,7 +6,7 @@ import { DateRangePicker } from "@/components/ui/date-range-picker"
 import { StyledCheckbox } from "@/components/ui/styled-checkbox"
 import { useToast } from "@/components/ui/toast"
 import { useRouter } from "next/navigation"
-import { useState, useTransition, useEffect } from "react"
+import { useState, useTransition } from "react"
 
 interface WrappedSettingsFormProps {
   enabled: boolean
@@ -91,8 +91,10 @@ export function WrappedSettingsForm({ enabled, year, startDate, endDate }: Wrapp
     endDay: extractDay(endDate),
   })
 
-  // Update form data when props change
-  useEffect(() => {
+  // Reset form data during render when the props change
+  const [prevProps, setPrevProps] = useState({ enabled, startDate, endDate })
+  if (prevProps.enabled !== enabled || prevProps.startDate !== startDate || prevProps.endDate !== endDate) {
+    setPrevProps({ enabled, startDate, endDate })
     setFormData({
       enabled,
       startMonth: extractMonth(startDate),
@@ -100,7 +102,7 @@ export function WrappedSettingsForm({ enabled, year, startDate, endDate }: Wrapp
       endMonth: extractMonth(endDate),
       endDay: extractDay(endDate),
     })
-  }, [enabled, startDate, endDate])
+  }
 
   // Show status toast when settings are updated (after successful save)
   // This is handled in handleSubmit after successful update

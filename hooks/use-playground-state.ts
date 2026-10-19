@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
+
+import { useIsClient } from "@/hooks/use-is-client"
 
 const STORAGE_KEY = "playground-state"
 
@@ -65,7 +67,8 @@ export function usePlaygroundState({
   templates,
   initialTemplateId,
 }: UsePlaygroundStateOptions): UsePlaygroundStateReturn {
-  const hasRestoredStateRef = useRef(false)
+  const isClient = useIsClient()
+  const [hasRestoredState, setHasRestoredState] = useState(false)
 
   // Find initial template or use active template
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(() => {
@@ -90,12 +93,11 @@ export function usePlaygroundState({
   const [showAIParameters, setShowAIParameters] = useState(false)
   const [showRenderedPrompt, setShowRenderedPrompt] = useState(true)
 
-  // Load state from localStorage on mount (only once)
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    if (templates.length === 0) return // Wait for templates to load
-    if (hasRestoredStateRef.current) return // Only restore once
-
+  // Restore state from localStorage once, during the first client render that
+  // has templates (never during hydration, so the server HTML still matches).
+  // Restoring is marked done whether or not anything was saved, and on error.
+  if (isClient && templates.length > 0 && !hasRestoredState) {
+    setHasRestoredState(true)
     try {
       const saved = localStorage.getItem(STORAGE_KEY)
       if (saved) {
@@ -138,20 +140,17 @@ export function usePlaygroundState({
           setResult(savedState.result || null)
         }
       }
-      // Mark as restored whether we had saved state or not
-      hasRestoredStateRef.current = true
     } catch (err) {
       console.error("Failed to load playground state from localStorage:", err)
       // Clear corrupted data
       localStorage.removeItem(STORAGE_KEY)
-      hasRestoredStateRef.current = true // Mark as restored even on error to prevent retries
     }
-  }, [templates, initialTemplateId]) // Run when templates are available
+  }
 
   // Save state to localStorage whenever relevant state changes
   useEffect(() => {
     if (typeof window === "undefined") return
-    if (!hasRestoredStateRef.current) return // Don't save until after initial restore
+    if (!hasRestoredState) return // Don't save until after initial restore
 
     try {
       const stateToSave: SavedPlaygroundState = {
@@ -170,6 +169,7 @@ export function usePlaygroundState({
       console.error("Failed to save playground state to localStorage:", err)
     }
   }, [
+    hasRestoredState,
     selectedTemplateId,
     testConfig,
     useCustomModel,

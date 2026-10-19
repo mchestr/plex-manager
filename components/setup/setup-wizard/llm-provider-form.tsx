@@ -141,21 +141,30 @@ export function LLMProviderForm({ purpose, onComplete, onBack }: LLMProviderForm
     }
   }, [formData.model])
 
-  // Load models when provider or API key changes
-  useEffect(() => {
-    if (formData.apiKey && formData.provider) {
-      // Debounce the API call
-      const timeoutId = setTimeout(() => {
-        loadModels(formData.provider, formData.apiKey)
-      }, 500)
-
-      return () => clearTimeout(timeoutId)
-    } else {
+  // Clear the model list during render when the provider or API key is
+  // emptied (React's "adjust state when a prop changes" pattern).
+  const canLoadModels = Boolean(formData.apiKey && formData.provider)
+  const modelsInput = `${formData.provider}|${formData.apiKey}`
+  const [prevModelsInput, setPrevModelsInput] = useState(modelsInput)
+  if (prevModelsInput !== modelsInput) {
+    setPrevModelsInput(modelsInput)
+    if (!canLoadModels) {
       setAvailableModels([])
       setModelsError(null)
     }
-    return undefined
-  }, [formData.provider, formData.apiKey, loadModels])
+  }
+
+  // Load models when provider or API key changes
+  useEffect(() => {
+    if (!canLoadModels) return undefined
+
+    // Debounce the API call
+    const timeoutId = setTimeout(() => {
+      loadModels(formData.provider, formData.apiKey)
+    }, 500)
+
+    return () => clearTimeout(timeoutId)
+  }, [canLoadModels, formData.provider, formData.apiKey, loadModels])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()

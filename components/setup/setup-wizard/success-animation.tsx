@@ -10,17 +10,18 @@ interface SuccessAnimationProps {
 }
 
 export function SuccessAnimation({ onComplete, title = "Success!", message = "Configuration saved" }: SuccessAnimationProps) {
-  const [particles, setParticles] = useState<Array<{ id: number; x: number; y: number }>>([])
-
-  useEffect(() => {
-    // Generate particles for celebration effect
-    const newParticles = Array.from({ length: 20 }, (_, i) => ({
+  // Random celebration particles, generated once per mount
+  const [particles] = useState(() =>
+    Array.from({ length: 20 }, (_, i) => ({
       id: i,
       x: Math.random() * 100,
       y: Math.random() * 100,
+      driftX: (Math.random() - 0.5) * 200,
+      driftY: (Math.random() - 0.5) * 200,
     }))
-    setParticles(newParticles)
+  )
 
+  useEffect(() => {
     // Complete animation after duration
     const timer = setTimeout(() => {
       onComplete()
@@ -130,8 +131,8 @@ export function SuccessAnimation({ onComplete, title = "Success!", message = "Co
             animate={{
               scale: [0, 1, 0],
               opacity: [1, 1, 0],
-              x: (Math.random() - 0.5) * 200,
-              y: (Math.random() - 0.5) * 200,
+              x: particle.driftX,
+              y: particle.driftY,
             }}
             transition={{
               duration: 1,

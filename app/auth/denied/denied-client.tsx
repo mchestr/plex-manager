@@ -1,38 +1,33 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { useIsClient } from "@/hooks/use-is-client"
+
+const shockwaves = Array.from({ length: 3 }, (_, i) => ({ id: i, delay: i * 0.3 }))
 
 export function DeniedAccessPageClient() {
   const router = useRouter()
-  const [particles, setParticles] = useState<Array<{ id: number; x: number; y: number; delay: number }>>([])
-  const [shockwaves, setShockwaves] = useState<Array<{ id: number; delay: number }>>([])
-
-  useEffect(() => {
-    // Generate particles for the "X" effect
-    const newParticles = Array.from({ length: 50 }, (_, i) => ({
+  const isClient = useIsClient()
+  // Random positions are generated once and rendered only on the client, so
+  // the server HTML never disagrees with them.
+  const [particles] = useState(() =>
+    Array.from({ length: 50 }, (_, i) => ({
       id: i,
       x: Math.random() * 100,
       y: Math.random() * 100,
       delay: Math.random() * 0.5,
+      driftX: (Math.random() - 0.5) * 200,
+      driftY: (Math.random() - 0.5) * 200,
     }))
-    setParticles(newParticles)
-
-    // Generate shockwave rings
-    const newShockwaves = Array.from({ length: 3 }, (_, i) => ({
-      id: i,
-      delay: i * 0.3,
-    }))
-    setShockwaves(newShockwaves)
-  }, [])
-
+  )
   return (
     <>
       {/* Animated particles background */}
-      {particles.map((particle) => (
+      {isClient && particles.map((particle) => (
         <motion.div
           key={`particle-${particle.id}`}
           className="absolute w-1 h-1 rounded-full bg-red-500"
@@ -44,8 +39,8 @@ export function DeniedAccessPageClient() {
           animate={{
             opacity: [0, 1, 0],
             scale: [0, 1, 0],
-            x: (Math.random() - 0.5) * 200,
-            y: (Math.random() - 0.5) * 200,
+            x: particle.driftX,
+            y: particle.driftY,
           }}
           transition={{
             duration: 2,
@@ -58,7 +53,7 @@ export function DeniedAccessPageClient() {
       ))}
 
       {/* Shockwave rings */}
-      {shockwaves.map((shockwave) => (
+      {isClient && shockwaves.map((shockwave) => (
         <motion.div
           key={`shockwave-${shockwave.id}`}
           className="absolute inset-0 flex items-center justify-center"

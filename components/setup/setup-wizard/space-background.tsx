@@ -1,7 +1,9 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { useEffect, useState } from "react"
+import { useState } from "react"
+
+import { useIsClient } from "@/hooks/use-is-client"
 
 interface Star {
   id: number
@@ -9,25 +11,23 @@ interface Star {
   y: number
   size: number
   opacity: number
+  duration: number
 }
 
 export function SpaceBackground() {
-  const [stars, setStars] = useState<Star[]>([])
-
-  useEffect(() => {
-    // Generate fewer stars (50 instead of 100) for better performance
-    const newStars: Star[] = []
-    for (let i = 0; i < 50; i++) {
-      newStars.push({
-        id: i,
-        x: Math.random() * 100,
-        y: Math.random() * 100,
-        size: Math.random() * 2 + 1,
-        opacity: Math.random() * 0.6 + 0.4,
-      })
-    }
-    setStars(newStars)
-  }, [])
+  const isClient = useIsClient()
+  // Random stars are generated once and rendered only on the client, so the
+  // server HTML never disagrees with them. 50 stars keeps it cheap.
+  const [stars] = useState<Star[]>(() =>
+    Array.from({ length: 50 }, (_, i) => ({
+      id: i,
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      size: Math.random() * 2 + 1,
+      opacity: Math.random() * 0.6 + 0.4,
+      duration: 3 + Math.random() * 2, // 3-5 seconds - slower
+    }))
+  )
 
   return (
     <div className="fixed inset-0 overflow-hidden -z-10">
@@ -35,7 +35,7 @@ export function SpaceBackground() {
       <div className="absolute inset-0 bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900" />
 
       {/* Simple twinkling stars - slower, smoother animation */}
-      {stars.map((star) => (
+      {isClient && stars.map((star) => (
         <motion.div
           key={star.id}
           className="absolute rounded-full bg-white"
@@ -50,7 +50,7 @@ export function SpaceBackground() {
             opacity: [star.opacity * 0.5, star.opacity, star.opacity * 0.5],
           }}
           transition={{
-            duration: 3 + Math.random() * 2, // 3-5 seconds - slower
+            duration: star.duration,
             repeat: Infinity,
             ease: "easeInOut",
           }}

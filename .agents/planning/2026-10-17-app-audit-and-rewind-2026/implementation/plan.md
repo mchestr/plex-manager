@@ -342,7 +342,7 @@ gantt
 
 - [ ] P1.1: Delete unreachable code; revive the Discord link panel (ui, M, due 2026-10-21)
 - [ ] P1.2: Remove dead exports, the orphaned model and stale CLAUDE.md facts (ops, S, due 2026-10-27)
-- [ ] P1.3: Wire the Next, react-hooks and jsx-a11y ESLint presets (ops, S, due 2026-10-26)
+- [x] P1.3: Wire the Next, react-hooks and jsx-a11y ESLint presets (ops, S, due 2026-10-26)
 - [ ] P1.4: Type-check the test files (ops, M, due 2026-10-27)
 - [ ] P1.5: CI gates: typecheck, audit, knip, coverage, integration, schema drift and production-mode E2E (ops, L, due 2026-10-30)
 - [ ] P1.6: Visual-regression project and baselines (ui, M, due 2026-10-23)
@@ -1677,10 +1677,12 @@ gantt
 - the bot logging in from that image.
 
 **Done when.**
-- [ ] The Next core-web-vitals, Next TypeScript and jsx-a11y recommended rules run, with one copy of each plugin.
-- [ ] The 18 errors are fixed, and the new rules report as warnings.
-- [ ] `autoprefixer`, `@eslint/eslintrc`, `qs` and `@types/qs` are gone, and `chalk` (plus `tsconfig-paths` if needed) is declared.
+- [x] The Next core-web-vitals, Next TypeScript and jsx-a11y recommended rules run, with one copy of each plugin.
+- [x] The 18 errors are fixed, and the new rules report as warnings.
+- [x] `autoprefixer`, `@eslint/eslintrc`, `qs` and `@types/qs` are gone, and `chalk` (plus `tsconfig-paths` if needed) is declared.
 - [ ] `zlib-sync` is optional, and the Docker build needs no native toolchain.
+
+(As merged: with `eslint-plugin-react-hooks` 7.1.1 the preset reported 34 errors from `purity`, `set-state-in-effect` and `static-components`, not 18, plus 22 `react-hooks/refs` and 1 `react-hooks/preserve-manual-memoization` errors and 22 `react/no-unescaped-entities` errors. All 34 are fixed. `refs` and `preserve-manual-memoization` start as warnings like the other new rules, and `react/no-unescaped-entities` stays off, because the preset turns it on rather than covering it. jsx-a11y rules the recommended set leaves off stay off, and their options are kept. Browser-only random content renders through the new `hooks/use-is-client.ts` (`useSyncExternalStore`), and effect-time resets became render-time adjustments ("adjust state when a prop changes"). The `qs` swap and `plex-auth-url.test.ts` had already merged in P0.2, and the `register-discord-*` scripts already run `tsx`, so `tsconfig-paths` is not needed. `zlib-sync` is in `optionalDependencies` and the Dockerfile's `deps` stage installs only `libc6-compat`, but `docker build --target runner .` and the bot smoke test from that image were not run, because no Docker daemon was available; the last box stays open until they pass.)
 
 ### Step P1.4: Type-check the test files
 

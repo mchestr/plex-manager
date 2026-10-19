@@ -108,6 +108,13 @@ horizontally (Kubernetes, Docker Swarm, etc.).
   only slows takeover and settings changes; it cannot take the bot offline.
 - No manual configuration needed.
 
+**Gateway compression is optional.** `zlib-sync` is an optional dependency.
+When it builds (it needs `python3`, `make` and `g++` at install time),
+discord.js compresses the gateway connection; when it does not, `npm ci` skips
+it and the bot connects uncompressed. The Docker image ships without that
+toolchain, so it runs uncompressed. To compress, install the toolchain before
+`npm ci` in your own image.
+
 ### Token rotation
 
 Because only the lock holder runs the bot, config changes are applied there. The

@@ -12,29 +12,8 @@ import Link from "next/link"
 // Force dynamic rendering to prevent caching
 export const dynamic = 'force-dynamic'
 
-export default async function UserWrappedPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ userId: string }>
-  searchParams: Promise<{ year?: string }>
-}) {
-  await requireAdmin()
-
-  const { userId } = await params
-  const resolvedSearchParams = await searchParams
-  const year = resolvedSearchParams.year ? parseInt(resolvedSearchParams.year, 10) : await getSeasonYear()
-  const wrapped = await getUserPlexWrapped(userId, year)
-
-  const errorCode = wrapped?.status === "failed" ? readStoredError(wrapped.error) : null
-  let errorHint: string | null = null
-  if (errorCode === "TAUTULLI_USER_NOT_FOUND") {
-    const target = await prisma.user.findUnique({ where: { id: userId }, select: { plexUserId: true } })
-    errorHint = adminErrorHint(errorCode, target?.plexUserId ?? null)
-  }
-
-  // Admin header component
-  const AdminHeader = ({ userName, wrappedId, userId, year: headerYear }: { userName?: string | null; wrappedId?: string; userId: string; year: number }) => (
+function AdminHeader({ userName, wrappedId, userId, year: headerYear }: { userName?: string | null; wrappedId?: string; userId: string; year: number }) {
+  return (
     <div className="fixed top-0 left-0 right-0 z-50 bg-slate-900/90 backdrop-blur-sm border-b border-slate-700">
       <div className="max-w-7xl mx-auto px-6 py-4">
         <div className="flex justify-between items-center gap-4">
@@ -76,6 +55,28 @@ export default async function UserWrappedPage({
       </div>
     </div>
   )
+}
+
+export default async function UserWrappedPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ userId: string }>
+  searchParams: Promise<{ year?: string }>
+}) {
+  await requireAdmin()
+
+  const { userId } = await params
+  const resolvedSearchParams = await searchParams
+  const year = resolvedSearchParams.year ? parseInt(resolvedSearchParams.year, 10) : await getSeasonYear()
+  const wrapped = await getUserPlexWrapped(userId, year)
+
+  const errorCode = wrapped?.status === "failed" ? readStoredError(wrapped.error) : null
+  let errorHint: string | null = null
+  if (errorCode === "TAUTULLI_USER_NOT_FOUND") {
+    const target = await prisma.user.findUnique({ where: { id: userId }, select: { plexUserId: true } })
+    errorHint = adminErrorHint(errorCode, target?.plexUserId ?? null)
+  }
 
   if (!wrapped) {
     return (

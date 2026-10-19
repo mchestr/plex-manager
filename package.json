@@ -55,12 +55,10 @@
     "stripe": "^22.3.0",
     "tailwind-merge": "^3.6.0",
     "winston": "^3.19.0",
-    "zlib-sync": "^0.1.10",
     "zod": "^4.3.5"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.0",
-    "@eslint/eslintrc": "^3.3.3",
     "@eslint/js": "^9.39.2",
     "@playwright/test": "^1.57.0",
     "@tailwindcss/postcss": "^4.1.18",
@@ -71,9 +69,10 @@
     "@types/node": "^25.0.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "autoprefixer": "^10.4.23",
+    "chalk": "4.1.2",
     "eslint": "^9.39.2",
     "eslint-config-next": "^16.4.2",
+    "eslint-plugin-jsx-a11y": "6.10.2",
     "jest": "^30.2.0",
     "jest-environment-jsdom": "^30.2.0",
     "knip": "6.39.0",
@@ -83,5 +82,8 @@
     "tsx": "4.23.15",
     "typescript": "^5.5.0",
     "typescript-eslint": "^8.52.0"
+  },
+  "optionalDependencies": {
+    "zlib-sync": "^0.1.10"
   }
 }

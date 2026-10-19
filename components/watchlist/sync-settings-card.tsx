@@ -39,17 +39,20 @@ export function WatchlistSyncCard() {
   const [settings, setSettings] = useState<SyncSettings | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  const loadSettings = useCallback(async () => {
-    const result = await getWatchlistSyncSettings()
+  const applySettings = useCallback((result: Awaited<ReturnType<typeof getWatchlistSyncSettings>>) => {
     if (result.success && result.data) {
       setSettings(result.data)
     }
     setIsLoading(false)
   }, [])
 
+  const loadSettings = useCallback(async () => {
+    applySettings(await getWatchlistSyncSettings())
+  }, [applySettings])
+
   useEffect(() => {
-    loadSettings()
-  }, [loadSettings])
+    getWatchlistSyncSettings().then(applySettings)
+  }, [applySettings])
 
   const handleToggleSync = () => {
     if (!settings) return

@@ -42,51 +42,62 @@ export function LLMProviderForm({ provider, purpose }: LLMProviderFormProps) {
   const [modelsError, setModelsError] = useState<string | null>(null)
   const [useCustomModel, setUseCustomModel] = useState(false)
 
-  // Load models from pricing API when editing
-  useEffect(() => {
-    if (isEditing && formData.provider === "openai") {
+  // Load models from pricing API when editing. The loading and error flags
+  // reset during render when the inputs change (React's "adjust state when a
+  // prop changes" pattern); the effect only fetches.
+  const shouldLoadModels = isEditing && formData.provider === "openai"
+  const modelsRequest = `${isEditing}|${formData.provider}|${formData.model}`
+  const [prevModelsRequest, setPrevModelsRequest] = useState(modelsRequest)
+  if (prevModelsRequest !== modelsRequest) {
+    setPrevModelsRequest(modelsRequest)
+    setModelsError(null)
+    if (shouldLoadModels) {
       setIsLoadingModels(true)
-      setModelsError(null)
-
-      fetch("/api/admin/models")
-        .then(async (res) => {
-          if (!res.ok) {
-            throw new Error("Failed to fetch models")
-          }
-          const data = await res.json()
-          if (data.models && Array.isArray(data.models)) {
-            setAvailableModels(data.models)
-            setModelsError(null)
-
-            // If current model is in the list, switch to dropdown mode
-            if (formData.model && data.models.includes(formData.model)) {
-              setUseCustomModel(false)
-            }
-          } else {
-            throw new Error("Invalid response format")
-          }
-        })
-        .catch((error) => {
-          setAvailableModels([])
-          setModelsError(error instanceof Error ? error.message : "Failed to load models")
-        })
-        .finally(() => {
-          setIsLoadingModels(false)
-        })
     } else {
       setAvailableModels([])
-      setModelsError(null)
     }
-  }, [isEditing, formData.provider, formData.model])
+  }
 
-  // Initialize useCustomModel based on whether current model is in available models
   useEffect(() => {
+    if (!shouldLoadModels) return
+
+    fetch("/api/admin/models")
+      .then(async (res) => {
+        if (!res.ok) {
+          throw new Error("Failed to fetch models")
+        }
+        const data = await res.json()
+        if (data.models && Array.isArray(data.models)) {
+          setAvailableModels(data.models)
+          setModelsError(null)
+
+          // If current model is in the list, switch to dropdown mode
+          if (formData.model && data.models.includes(formData.model)) {
+            setUseCustomModel(false)
+          }
+        } else {
+          throw new Error("Invalid response format")
+        }
+      })
+      .catch((error) => {
+        setAvailableModels([])
+        setModelsError(error instanceof Error ? error.message : "Failed to load models")
+      })
+      .finally(() => {
+        setIsLoadingModels(false)
+      })
+  }, [shouldLoadModels, formData.model])
+
+  // Keep useCustomModel in step with whether the current model is in the list
+  const [prevModelSync, setPrevModelSync] = useState({ model: formData.model, models: availableModels })
+  if (prevModelSync.model !== formData.model || prevModelSync.models !== availableModels) {
+    setPrevModelSync({ model: formData.model, models: availableModels })
     if (formData.model && availableModels.length > 0) {
       setUseCustomModel(!availableModels.includes(formData.model))
     } else if (!formData.model) {
       setUseCustomModel(false)
     }
-  }, [formData.model, availableModels])
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
