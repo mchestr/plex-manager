@@ -121,7 +121,7 @@ export async function getAllOverseerrRequests(config: OverseerrParsed, limit = 2
  * Get media status from Overseerr by TMDB ID
  * Returns media info including request status, availability, etc.
  */
-export async function getOverseerrMediaByTmdbId(
+async function getOverseerrMediaByTmdbId(
   config: OverseerrParsed,
   tmdbId: number,
   mediaType: "movie" | "tv"
@@ -174,69 +174,8 @@ export async function getOverseerrMediaByTmdbId(
   }
 }
 
-/**
- * Batch fetch media status from Overseerr for multiple TMDB IDs
- * More efficient than individual calls
- */
-export async function batchGetOverseerrMediaStatus(
-  config: OverseerrParsed,
-  items: Array<{ tmdbId: number; mediaType: "movie" | "tv" }>
-): Promise<Map<string, {
-  status: number
-  hasRequest: boolean
-  requestedBy?: string
-  requestedAt?: Date
-  requestCount: number
-}>> {
-  const results = new Map<string, {
-    status: number
-    hasRequest: boolean
-    requestedBy?: string
-    requestedAt?: Date
-    requestCount: number
-  }>()
-
-  // Process in batches to avoid overwhelming the API
-  const batchSize = 10
-  for (let i = 0; i < items.length; i += batchSize) {
-    const batch = items.slice(i, i + batchSize)
-    const promises = batch.map(async (item) => {
-      const key = `${item.mediaType}_${item.tmdbId}`
-      try {
-        const result = await getOverseerrMediaByTmdbId(config, item.tmdbId, item.mediaType)
-        if (result.success && result.data) {
-          const latestRequest = result.data.requests?.[0]
-          const requestCount = result.data.requests?.length || 0
-          results.set(key, {
-            status: result.data.status,
-            hasRequest: requestCount > 0,
-            requestedBy: latestRequest?.requestedBy?.displayName,
-            requestedAt: latestRequest?.createdAt ? new Date(latestRequest.createdAt) : undefined,
-            requestCount,
-          })
-        } else if (!result.success) {
-          logger.debug("Failed to fetch media status", {
-            tmdbId: item.tmdbId,
-            mediaType: item.mediaType,
-            error: result.error,
-          })
-        }
-      } catch (error) {
-        logger.error("Error fetching Overseerr media status", {
-          tmdbId: item.tmdbId,
-          mediaType: item.mediaType,
-          error,
-        })
-      }
-    })
-    await Promise.all(promises)
-  }
-
-  return results
-}
-
 // Overseerr media status codes
-export const OverseerrMediaStatus = {
+const OverseerrMediaStatus = {
   UNKNOWN: 1,
   PENDING: 2,
   PROCESSING: 3,

@@ -90,36 +90,6 @@ export async function getTautulliServerInfo(config: TautulliParsed): Promise<Con
   }
 }
 
-export async function getTautulliLibraryMediaInfo(
-  config: TautulliParsed,
-  sectionId: string | number,
-  options?: {
-    orderColumn?: string
-    start?: number
-    length?: number
-    search?: string
-  }
-): Promise<ConnectionResult<unknown>> {
-  try {
-    let url = `${config.url}/api/v2?apikey=${config.apiKey}&cmd=get_library_media_info&section_id=${sectionId}`
-    if (options?.orderColumn) url += `&order_column=${options.orderColumn}`
-    if (options?.start !== undefined) url += `&start=${options.start}`
-    if (options?.length !== undefined) url += `&length=${options.length}`
-    if (options?.search) url += `&search=${encodeURIComponent(options.search)}`
-    const response = await fetch(url)
-    if (!response.ok) {
-      return { success: false, error: `Tautulli library media info error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Tautulli library media info" }
-  }
-}
-
 export async function getTautulliLibraryNames(config: TautulliParsed): Promise<ConnectionResult<unknown>> {
   try {
     const url = `${config.url}/api/v2?apikey=${config.apiKey}&cmd=get_library_names`
@@ -370,39 +340,5 @@ export async function getTautulliUserWatchTimeStats(config: TautulliParsed, user
       return { success: false, error: `Connection error: ${error.message}` }
     }
     return { success: false, error: "Failed to get Tautulli user watch time stats" }
-  }
-}
-
-export async function getTautulliMediaWatchStats(config: TautulliParsed, ratingKey: string | number): Promise<ConnectionResult<unknown>> {
-  try {
-    const url = `${config.url}/api/v2?apikey=${config.apiKey}&cmd=get_metadata&rating_key=${ratingKey}`
-    const response = await fetch(url)
-    if (!response.ok) {
-      return { success: false, error: `Tautulli media watch stats error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Tautulli media watch stats" }
-  }
-}
-
-export async function getTautulliUnwatchedMedia(config: TautulliParsed, sectionId: string | number): Promise<ConnectionResult<unknown>> {
-  try {
-    const url = `${config.url}/api/v2?apikey=${config.apiKey}&cmd=get_library_media_info&section_id=${sectionId}`
-    const response = await fetch(url)
-    if (!response.ok) {
-      return { success: false, error: `Tautulli unwatched media error: ${response.statusText}` }
-    }
-    const data = await response.json()
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Connection error: ${error.message}` }
-    }
-    return { success: false, error: "Failed to get Tautulli unwatched media" }
   }
 }
