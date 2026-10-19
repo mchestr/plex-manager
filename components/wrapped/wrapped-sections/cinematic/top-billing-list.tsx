@@ -5,7 +5,7 @@ import { motion } from "framer-motion"
 import { formatWatchTime } from "@/lib/utils/time-formatting"
 import { PosterImage } from "@/components/wrapped/cinematic/poster-image"
 
-export interface BillingEntry {
+interface BillingEntry {
   title: string
   year?: number
   watchTime: number

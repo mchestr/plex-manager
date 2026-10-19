@@ -17,7 +17,7 @@ import type * as Winston from "winston"
 
 // --- Types ---
 
-export interface LogMetadata extends Record<string, unknown> {
+interface LogMetadata extends Record<string, unknown> {
   requestId?: string
   userId?: string
   error?: unknown

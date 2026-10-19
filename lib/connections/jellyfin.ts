@@ -11,8 +11,6 @@
 
 // Core types and utilities
 export {
-  type JellyfinConfig,
-  type JellyfinInviteSettings,
 } from "./jellyfin-core"
 
 // Connection and server info

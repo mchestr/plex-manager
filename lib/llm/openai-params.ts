@@ -39,6 +39,8 @@ export const DEFAULT_OPENAI_MODEL = "gpt-5.4-mini"
  * - `yes`: tools work as sent.
  * - `reasoning-none`: tools work only with `reasoning_effort: "none"`.
  * - `responses-only`: tools need the Responses API, which this app does not use yet.
+ *
+ * @internal
  */
 export type ChatToolSupport = "yes" | "reasoning-none" | "responses-only"
 

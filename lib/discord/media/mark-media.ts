@@ -54,7 +54,7 @@ export interface ApplyMarkParams {
 }
 
 /** Successful mark application. */
-export interface ApplyMarkSuccess {
+interface ApplyMarkSuccess {
   ok: true
   mediaType: MediaType
   /** Whether Plex's watched state was successfully synced (FINISHED_WATCHING only). */
@@ -62,7 +62,7 @@ export interface ApplyMarkSuccess {
 }
 
 /** The Plex item's `type` is not one we can mark. */
-export interface ApplyMarkUnsupported {
+interface ApplyMarkUnsupported {
   ok: false
   reason: "unsupported_media_type"
   mediaType: string

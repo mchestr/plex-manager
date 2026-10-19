@@ -8,14 +8,14 @@ import { Button } from "@/components/ui/button"
 import { formatRelativeTime } from "@/lib/utils/time-formatting"
 import type { MarkType, MediaType } from "@/lib/generated/prisma"
 
-export interface MarkedMediaUser {
+interface MarkedMediaUser {
   id: string
   name: string | null
   email: string | null
   image: string | null
 }
 
-export interface MarkedMediaItem {
+interface MarkedMediaItem {
   id: string
   title: string
   year: number | null
@@ -32,7 +32,7 @@ export interface MarkedMediaItem {
   user: MarkedMediaUser
 }
 
-export interface MarkTypeSummary {
+interface MarkTypeSummary {
   markType: MarkType
   count: number
 }

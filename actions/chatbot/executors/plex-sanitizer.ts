@@ -51,7 +51,7 @@ export interface SanitizedPlexSessions {
   sessions: SanitizedPlexSession[]
 }
 
-export interface SanitizedPlexSession {
+interface SanitizedPlexSession {
   viewerLabel: string
   mediaTitle?: string
   mediaType?: string
@@ -238,5 +238,3 @@ function normalizeNumber(value?: number | string | null): number | undefined {
 function isRecord(value: unknown): value is Record<string, any> {
   return typeof value === "object" && value !== null
 }
-
-

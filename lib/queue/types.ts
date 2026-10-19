@@ -5,8 +5,6 @@
  * Add new job types here as the system grows.
  */
 
-import { Job } from "bullmq"
-
 /**
  * Job Type Registry
  * Add new job types here when extending the queue system
@@ -24,7 +22,7 @@ export type JobType = (typeof JOB_TYPES)[keyof typeof JOB_TYPES]
 /**
  * Job trigger source - who/what initiated the job
  */
-export type JobTrigger = "manual" | "scheduled" | "admin"
+type JobTrigger = "manual" | "scheduled" | "admin"
 
 // =============================================================================
 // Watchlist Sync Job Types
@@ -142,22 +140,6 @@ export interface JobPayloadMap {
   [JOB_TYPES.PLEX_ACCESS_REVOKE]: PlexAccessRevokePayload
 }
 
-/**
- * Maps job types to their result types
- */
-export interface JobResultMap {
-  [JOB_TYPES.WATCHLIST_SYNC_USER]: WatchlistSyncUserResult
-  [JOB_TYPES.WATCHLIST_SYNC_ALL]: WatchlistSyncAllResult
-  [JOB_TYPES.STRIPE_WEBHOOK]: StripeWebhookResult
-  [JOB_TYPES.PLEX_ACCESS_GRANT]: PlexAccessGrantResult
-  [JOB_TYPES.PLEX_ACCESS_REVOKE]: PlexAccessRevokeResult
-}
-
-/**
- * Generic typed job - provides type safety for job data and results
- */
-export type TypedJob<T extends JobType> = Job<JobPayloadMap[T], JobResultMap[T]>
-
 // =============================================================================
 // Job Metadata (for admin UI)
 // =============================================================================
@@ -205,14 +187,4 @@ export interface QueueStats {
   delayed: number
   paused: number
   prioritized: number
-}
-
-/**
- * Queue health status for admin dashboard
- */
-export interface QueueHealth {
-  redisConnected: boolean
-  workerRunning: boolean
-  isPaused: boolean
-  stats: QueueStats
 }

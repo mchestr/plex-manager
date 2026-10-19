@@ -8,11 +8,7 @@
 // Core types and utilities
 export {
   type PlexUserInfo,
-  type PlexServerUser,
-  type PlexUserServer,
-  type PlexUser,
   type PlexMediaItem,
-  type InviteSettings,
 } from "./plex-core"
 
 // Connection and server identity

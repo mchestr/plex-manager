@@ -50,7 +50,7 @@ import { createTtlCache } from "@/lib/utils/ttl-cache"
 const logger = createLogger("REWIND_ELIGIBILITY")
 
 /** Why a member cannot have a Rewind. */
-export type RewindIneligibleReason = "NO_PLEX_IDENTITY" | "NO_TAUTULLI_MATCH"
+type RewindIneligibleReason = "NO_PLEX_IDENTITY" | "NO_TAUTULLI_MATCH"
 
 export type RewindEligibility =
   | { eligible: true }

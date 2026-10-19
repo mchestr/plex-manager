@@ -168,13 +168,13 @@ export interface ShowData {
   ratingKey?: string
 }
 
-export interface ProminentStat {
+interface ProminentStat {
   value: number | string
   label: string
   description: string
 }
 
-export type WrappedSectionData =
+type WrappedSectionData =
   | { prominentStat: ProminentStat } // hero section
   | { movies: MovieData[] } // top-movies section
   | { shows: ShowData[] } // top-shows section
@@ -211,7 +211,7 @@ export interface WrappedSection {
   animationDelay?: number // v1 only — v2 pacing is owned by the viewer
 }
 
-export interface WrappedArchetype {
+interface WrappedArchetype {
   id: string
   name: string
   tagline: string
@@ -254,4 +254,3 @@ export interface WrappedData {
     generationTime: number // in seconds
   }
 }
-

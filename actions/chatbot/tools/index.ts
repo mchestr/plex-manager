@@ -5,4 +5,3 @@ export {
   DISCORD_SAFE_TOOLS,
   getRegisteredTool,
 } from "./registry"
-export { type RegisteredTool } from "./types"

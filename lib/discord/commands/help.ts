@@ -11,7 +11,7 @@ import { requireLinkedUser } from "./require-linked-user"
 /**
  * Command category for grouping related commands
  */
-export type CommandCategory = "chat" | "media" | "utility"
+type CommandCategory = "chat" | "media" | "utility"
 
 /**
  * Command definition with metadata for help display.
@@ -19,6 +19,8 @@ export type CommandCategory = "chat" | "media" | "utility"
  * These describe the bot's slash-command surface. Slash commands have no
  * aliases, so `aliases` is retained (for the embed/help renderers) but is
  * always empty.
+ *
+ * @internal
  */
 export interface CommandDefinition {
   /** Primary command name (e.g., "/help", "/mark finished") */

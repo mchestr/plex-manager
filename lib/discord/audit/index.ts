@@ -12,43 +12,31 @@ export {
   createCommandLog,
   updateCommandLog,
   type CreateCommandLogParams,
-  type UpdateCommandLogParams,
 } from "./write"
 
 export {
   getCommandLogs,
   type GetCommandLogsParams,
-  type GetCommandLogsResult,
 } from "./logs"
 
 export {
   getDailyActivity,
   getSummaryStats,
-  type DailyActivity,
-  type SummaryStats,
 } from "./metrics/activity"
 
 export {
   getCommandStats,
   getMediaMarkingBreakdown,
   getContextMetrics,
-  type CommandStats,
-  type MediaMarkingBreakdown,
-  type ContextMetrics,
 } from "./metrics/commands"
 
 export {
   getActiveUsers,
   getAccountLinkingMetrics,
-  type ActiveUser,
-  type AccountLinkingMetrics,
 } from "./metrics/users"
 
 export {
   getErrorAnalysis,
   getSelectionMenuStats,
   getHelpCommandStats,
-  type ErrorAnalysis,
-  type SelectionMenuStats,
-  type HelpCommandStats,
 } from "./metrics/errors"

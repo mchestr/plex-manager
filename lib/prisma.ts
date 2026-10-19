@@ -135,7 +135,7 @@ if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 /**
  * The extended Prisma client type (with the encryption query extension applied).
  */
-export type ExtendedPrismaClient = ReturnType<typeof createPrismaClient>
+type ExtendedPrismaClient = ReturnType<typeof createPrismaClient>
 
 /**
  * Interactive-transaction client type for the extended client. Because `$extends`

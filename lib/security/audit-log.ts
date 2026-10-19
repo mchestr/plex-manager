@@ -57,7 +57,7 @@ export enum AuditEventType {
   SHARE_LINK_REVOKED = "SHARE_LINK_REVOKED",
 }
 
-export interface AuditLogEntry {
+interface AuditLogEntry {
   type: AuditEventType
   userId: string
   targetUserId?: string
@@ -102,4 +102,3 @@ export function logAuditEvent(
   // - External audit log service (e.g., CloudWatch, Datadog)
   // - Immutable log storage
 }
-

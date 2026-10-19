@@ -12,7 +12,7 @@ import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("CHATBOT_ASSISTANT")
 
-export type ChatbotContext = "default" | "discord"
+type ChatbotContext = "default" | "discord"
 
 interface RunChatbotOptions {
   userId: string
@@ -113,5 +113,3 @@ export async function runChatbotForUser(options: RunChatbotOptions): Promise<Cha
     }
   }
 }
-
-

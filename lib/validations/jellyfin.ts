@@ -9,7 +9,6 @@ export const jellyfinServerSchema = z.object({
   publicUrl: createPublicUrlSchema("jellyfin.example.com"),
 })
 
-export type JellyfinServerInput = z.input<typeof jellyfinServerSchema>
 export type JellyfinServerParsed = z.output<typeof jellyfinServerSchema>
 
 /**
@@ -106,7 +105,7 @@ export interface JellyfinUser {
 /**
  * Jellyfin user policy (permissions)
  */
-export interface JellyfinUserPolicy {
+interface JellyfinUserPolicy {
   /** Whether user is administrator */
   IsAdministrator: boolean
   /** Whether user is hidden from other users */
@@ -159,16 +158,6 @@ export const jellyfinAuthResultSchema = z.object({
 })
 
 export type JellyfinAuthResult = z.infer<typeof jellyfinAuthResultSchema>
-
-/**
- * Request body for creating a new Jellyfin user
- */
-export interface JellyfinCreateUserRequest {
-  /** Username for the new user */
-  Name: string
-  /** Password for the new user */
-  Password?: string
-}
 
 /**
  * Request body for updating user policy (permissions)

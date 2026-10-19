@@ -58,12 +58,12 @@ const LEGACY_VISIT = {
   OR: [{ ipAddress: { not: null } }, { userAgent: { not: null } }, { referer: { not: null } }],
 } satisfies Prisma.WrappedShareVisitWhereInput
 
-export interface RewindOwner {
+interface RewindOwner {
   name: string | null
   email: string | null
 }
 
-export type StrippedRewind = { status: "unchanged" } | { status: "changed"; data: string } | { status: "unparsable" }
+type StrippedRewind = { status: "unchanged" } | { status: "changed"; data: string } | { status: "unparsable" }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)

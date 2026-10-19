@@ -37,15 +37,7 @@ export interface PrometheusRangeData {
 /**
  * Prometheus range query result (matrix type)
  */
-export interface PrometheusRangeResult {
+interface PrometheusRangeResult {
   metric: Record<string, string>
   values: Array<[number, string]> // [timestamp, value]
-}
-
-/**
- * Prometheus instant query result (vector type)
- */
-export interface PrometheusInstantResult {
-  metric: Record<string, string>
-  value: [number, string] // [timestamp, value]
 }
