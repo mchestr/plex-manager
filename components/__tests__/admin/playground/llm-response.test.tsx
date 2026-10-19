@@ -211,26 +211,25 @@ describe("LLMResponse", () => {
   })
 
   describe("Button Styling", () => {
-    it("should style preview button with cyan-purple gradient", () => {
+    it("renders preview as the one primary button", () => {
       renderWithToast(<LLMResponse {...mockProps} />)
 
       const previewButton = screen.getByRole("button", { name: /preview/i })
-      expect(previewButton).toHaveClass("bg-gradient-to-r", "from-cyan-600", "to-purple-600")
+      expect(previewButton).toHaveClass("bg-primary")
     })
 
-    it("should style save button with the success variant", () => {
+    it("renders save with the deprecated success variant, which is secondary", () => {
       renderWithToast(<LLMResponse {...mockProps} />)
 
-      // Save now uses the shared <Button variant="success"> (solid green).
       const saveButton = screen.getByRole("button", { name: /save as wrapped/i })
-      expect(saveButton).toHaveClass("bg-green-600", "hover:bg-green-500", "text-white")
+      expect(saveButton).toHaveClass("bg-secondary")
+      expect(saveButton).not.toHaveClass("bg-primary")
     })
 
-    it("should apply disabled styling when saving", () => {
+    it("disables save while saving", () => {
       renderWithToast(<LLMResponse {...mockProps} isSaving={true} />)
 
-      const saveButton = screen.getByRole("button", { name: /saving/i })
-      expect(saveButton).toHaveClass("disabled:opacity-50", "disabled:cursor-not-allowed")
+      expect(screen.getByRole("button", { name: /saving/i })).toBeDisabled()
     })
   })
 

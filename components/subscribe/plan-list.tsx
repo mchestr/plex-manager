@@ -90,6 +90,7 @@ export function PlanList({ plans }: PlanListProps) {
         return (
           <Card
             key={plan.priceId}
+            padding="md"
             className="flex flex-col gap-4 text-left"
             data-testid={`subscribe-plan-${plan.priceId}`}
           >

@@ -389,10 +389,9 @@ describe("TestConfiguration", () => {
     })
 
     it("should call onGenerateResponse when generate button is clicked", () => {
-      const { container } = render(<TestConfiguration {...mockProps} statistics={mockStatistics} />)
+      render(<TestConfiguration {...mockProps} statistics={mockStatistics} />)
 
-      const generateButton = container.querySelector(".bg-gradient-to-r.from-cyan-600") as HTMLElement
-      fireEvent.click(generateButton!)
+      fireEvent.click(screen.getByTestId("playground-generate-button"))
 
       expect(mockProps.onGenerateResponse).toHaveBeenCalledTimes(1)
     })
@@ -425,7 +424,7 @@ describe("TestConfiguration", () => {
     })
 
     it("should disable buttons when userName is not set", () => {
-      const { container } = render(
+      render(
         <TestConfiguration
           {...mockProps}
           testConfig={{ ...mockProps.testConfig, userName: "" }}
@@ -433,10 +432,9 @@ describe("TestConfiguration", () => {
       )
 
       const renderButton = screen.getByRole("button", { name: /render template/i })
-      const generateButton = container.querySelector(".bg-gradient-to-r.from-cyan-600") as HTMLElement
 
       expect(renderButton).toBeDisabled()
-      expect(generateButton).toHaveAttribute("disabled")
+      expect(screen.getByTestId("playground-generate-button")).toBeDisabled()
     })
   })
 
@@ -514,12 +512,10 @@ describe("TestConfiguration", () => {
       expect(mainDiv).toHaveClass("backdrop-blur-sm", "border", "border-slate-700/50")
     })
 
-    it("should style generate button with gradient", () => {
-      const { container } = render(<TestConfiguration {...mockProps} />)
+    it("renders generate as the primary button", () => {
+      render(<TestConfiguration {...mockProps} />)
 
-      const generateButton = container.querySelector(".bg-gradient-to-r.from-cyan-600")
-      expect(generateButton).toBeInTheDocument()
-      expect(generateButton).toHaveClass("to-purple-600")
+      expect(screen.getByTestId("playground-generate-button")).toHaveClass("bg-primary")
     })
   })
 

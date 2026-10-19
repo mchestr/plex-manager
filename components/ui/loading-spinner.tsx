@@ -1,49 +1,34 @@
+import type { HTMLAttributes } from "react"
+
+import { Spinner } from "@/components/ui/spinner"
 import { cn } from "@/lib/utils"
 
-interface LoadingSpinnerProps extends React.HTMLAttributes<HTMLDivElement> {
-  size?: "sm" | "md" | "lg" | "xl"
+type LoadingSpinnerSize = "sm" | "md" | "lg" | "xl"
+
+interface LoadingSpinnerProps extends HTMLAttributes<HTMLDivElement> {
+  size?: LoadingSpinnerSize
   label?: string
 }
 
-export function LoadingSpinner({ className, size = "md", label = "Loading...", ...props }: LoadingSpinnerProps) {
-  const sizeClasses = {
-    sm: "w-4 h-4",
-    md: "w-8 h-8",
-    lg: "w-12 h-12",
-    xl: "w-16 h-16"
-  }
+const sizes: Record<LoadingSpinnerSize, number> = { sm: 12, md: 16, lg: 20, xl: 24 }
 
+/**
+ * A spinner announced as a status, named by `label`.
+ *
+ * @deprecated Use `Spinner` beside the text it stands for, or `Button loading`
+ * (ui-design-system 9.4). Removed in P10.11.
+ */
+export function LoadingSpinner({ className, size = "md", label = "Loading...", ...props }: LoadingSpinnerProps) {
   return (
     <div
       role="status"
       aria-busy="true"
-      aria-live="polite"
       aria-label={label}
+      data-slot="loading-spinner"
       className={cn("flex items-center justify-center", className)}
       {...props}
     >
-      <svg
-        className={cn("animate-spin text-slate-200", sizeClasses[size])}
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <circle
-          className="opacity-25"
-          cx="12"
-          cy="12"
-          r="10"
-          stroke="currentColor"
-          strokeWidth="4"
-        ></circle>
-        <path
-          className="opacity-75"
-          fill="currentColor"
-          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-        ></path>
-      </svg>
+      <Spinner size={sizes[size]} />
     </div>
   )
 }
-
