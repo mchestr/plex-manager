@@ -2493,12 +2493,22 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 
 **Demo.** On the dev server, press "Prepare season data": the log shows one server pass of N pages, an aggregate row appears with member and community counts, and `MediaMetadataCache` fills. A second press while the run is in progress does nothing.
 
+**As merged** (later steps rely on these):
+- A batch is keyed by `(year, through)`, `through` being the last data day: `"YYYY-11-30"` in the season, `"YYYY-12-31"` once the year has ended in the server zone (`aggregate/window.ts`: `throughFor`, `isFinalCut`, `batchWindowAt`; `dataThrough` is midnight UTC of that day). `computeServerYear`'s `window` is `{ year, finalCut, serverZone }`.
+- `fetchServerYear()` now returns `Map<tautulliUserId, PlayEvent[]>`, folding each page into per-user buckets; the history row schema reads `user_id` for that, and it never reaches a `PlayEvent`. The pass reads the union of every member's window, and each member is trimmed to their own.
+- Rating exclusions follow the Done-when and the test, not "dropped like an excluded section": an excluded or (with exclusions configured) unknown rating sets `PlayEvent.excludedFromLists`, and the play stays in totals. **P2.7 to P2.9 and P5 build lists, records, calendar top titles and card inputs from `listableEvents()`** (`aggregate/rating-exclusions.ts`), or skip `excludedFromLists`.
+- Member minutes use `totalMinutes()` in `server-year.ts` (every second, floored once), because P2.7's `totals.ts` was not merged; P2.7 should keep that rule or swap it in. `titles` keeps only titles with 3 or more viewers (a viewer has a counted play), keyed `film:<ratingKey>` / `series:<grandparentRatingKey>`. Community facts: `hours`, `topSeries`, `busiestNight` (day in the server zone), `peakConcurrent`, `requestsFulfilled` (`RequestEvent.available`, so TV at 4 counts), `titlesAdded`.
+- `getMemberEvents({ year, through, member: { userId, plexUserId }, window, source, excludedContentRatings }, ctx)` and `getMemberLifetimeEvents(...)` live in `aggregate/batch-cache.ts`; `getMetadata(events)` and `getContentRatings(keys)` in `lib/wrapped/metadata-cache.ts`, the warm in `lib/wrapped/metadata-warm.ts`. Library-only rows carry `fetchedAt = 1970-01-01` (`NEVER_WARMED`); only warmed rows older than 30 days queue a refresh.
+- Jobs: `JOB_TYPES.REWIND_SERVER_AGGREGATE`/`REWIND_METADATA_WARM`, processors in `lib/queue/jobs/rewind-batch.ts` (`REWIND_BATCH_PROCESSORS`), producers in `lib/queue/rewind-batch-queue.ts` on the fail-fast client (`getDeduplicationJobId` reports `alreadyQueued`). Warm payload is `{ batch, keys, topSeries }`, dedup `rewind:meta:{batch}` with `batch` = `{year}:{index}` or `refresh:{hash}`. Missing Tautulli or Plex is an `UnrecoverableError`; an Overseerr failure only nulls `requestsFulfilled`.
+- Trigger: `prepareRewindSeasonData({ year })` and `getRewindSeasonDataPreparedAt(year)` in `actions/admin/rewind-season.ts`; audit type `REWIND_SEASON_DATA_PREPARED`; the button is `components/admin/settings/prepare-season-data-button.tsx`. `redis-semaphore`, `rewind-infra` and `infra-copy` left knip's `entry` list.
+- The dev-server demo needs the owner's Plex, Tautulli and Overseerr.
+
 **Done when.**
-- [ ] One paged server-wide `get_history` pass per batch fills `RewindServerAggregate`, and community facts need 3 or more contributors.
-- [ ] `REWIND_METADATA_WARM` fills the cache for the titles that cover 95% of each member's minutes, at concurrency 4 with 10 s timeouts.
-- [ ] Member reads go through the per-batch event cache, with a per-member fallback.
-- [ ] Content-rating exclusions apply to every title, fail closed on an unknown rating, and keep the title in totals.
-- [ ] The fixture tests pass, and the v3 path makes no per-member Plex library scan.
+- [x] One paged server-wide `get_history` pass per batch fills `RewindServerAggregate`, and community facts need 3 or more contributors.
+- [x] `REWIND_METADATA_WARM` fills the cache for the titles that cover 95% of each member's minutes, at concurrency 4 with 10 s timeouts.
+- [x] Member reads go through the per-batch event cache, with a per-member fallback.
+- [x] Content-rating exclusions apply to every title, fail closed on an unknown rating, and keep the title in totals.
+- [x] The fixture tests pass, and the v3 path makes no per-member Plex library scan.
 
 ### Step P2.7: Stats modules, part 1
 
