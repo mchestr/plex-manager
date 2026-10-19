@@ -7,18 +7,18 @@
 
 import { Linter } from "eslint"
 
-import { formatting } from "../restricted-syntax.mjs"
+import { actionsAndApi, formatting, restrictedSyntaxBlocks } from "../restricted-syntax.mjs"
 
 const linter = new Linter({ configType: "flat" })
 
-function hits(code: string): number {
+function hits(code: string, selectors: unknown[] = formatting): number {
   const messages = linter.verify(
     code,
     [
       {
         files: ["**/*.jsx"],
         languageOptions: { parserOptions: { ecmaFeatures: { jsx: true } } },
-        rules: { "no-restricted-syntax": ["error", ...formatting] },
+        rules: { "no-restricted-syntax": ["error", ...selectors] },
       },
     ],
     "fixture.jsx",
@@ -53,5 +53,30 @@ describe("formatting bans (P3.10)", () => {
     "formatNumber(n, settings)",
   ])("allows %s", (code) => {
     expect(hits(code)).toBe(0)
+  })
+})
+
+describe("error-text ban in actions and route handlers (P4.3)", () => {
+  it.each([
+    'function f(error) { return { success: false, error: error instanceof Error ? error.message : "Failed" } }',
+    'const reason = e instanceof Error ? e.message : "unknown"',
+  ])("bans %s", (code) => {
+    expect(hits(code, actionsAndApi)).toBe(1)
+  })
+
+  it.each([
+    'logger.error("Failed", error instanceof Error ? error : undefined)',
+    "const name = error instanceof Error ? error.name : String(error)",
+    'const result = toActionError(error, "Failed")',
+  ])("allows %s", (code) => {
+    expect(hits(code, actionsAndApi)).toBe(0)
+  })
+
+  it("is an error in app/api and the migrated modules, and repeats the formatting bans there", () => {
+    const errorBlock = restrictedSyntaxBlocks.find(
+      (block) => block.level === "error" && block.files.includes("app/api/**/*.{ts,tsx}")
+    )
+    expect(errorBlock?.files).toContain("actions/invite.ts")
+    expect(errorBlock?.selectors).toEqual([...formatting, ...actionsAndApi])
   })
 })

@@ -18,7 +18,7 @@ import {
   runWithRequestContext,
   sanitizeUrlForLogging,
 } from "@/lib/utils/logger"
-import { shareTokenSchema, yearParamSchema } from "@/lib/validations/shared-schemas"
+import { shareTokenSchema, yearParamSchema } from "@/lib/validations/params"
 import { SHARE_BUSY_HEADER } from "@/lib/wrapped/share-page-limit"
 import type { NextRequest } from "next/server"
 import { NextResponse } from "next/server"

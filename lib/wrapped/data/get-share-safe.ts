@@ -18,7 +18,7 @@ import "server-only"
 import { cache } from "react"
 
 import { prisma } from "@/lib/prisma"
-import { shareTokenSchema } from "@/lib/validations/shared-schemas"
+import { shareTokenSchema } from "@/lib/validations/params"
 import { readWrappedStatus } from "@/lib/wrapped/data/parse-stored"
 import { toShareSafeV2, type ShareSafeRewindV2 } from "@/lib/wrapped/data/share-safe-v2"
 
