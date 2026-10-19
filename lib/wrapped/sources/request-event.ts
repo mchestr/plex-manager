@@ -16,6 +16,8 @@ export interface RequestEvent {
   id: number
   mediaType: "movie" | "tv"
   tmdbId: number | null
+  /** Overseerr's TVDB id for a series; P2.8 matches TV requests on it. */
+  tvdbId: number | null
   createdAt: number
   requestedById: number | null
   is4k: boolean
@@ -44,6 +46,7 @@ export function toRequestEvent(row: OverseerrRequestRow): RequestEvent {
     id: row.id,
     mediaType: row.type,
     tmdbId: row.media.tmdbId ?? null,
+    tvdbId: row.media.tvdbId ?? null,
     createdAt: Date.parse(row.createdAt),
     requestedById: row.requestedBy?.id ?? null,
     is4k: row.is4k ?? false,
