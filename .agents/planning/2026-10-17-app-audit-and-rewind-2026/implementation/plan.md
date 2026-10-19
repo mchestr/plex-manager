@@ -3663,11 +3663,20 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 
 **Demo.** Boot with `REDIS_URL` pointing at a stopped Redis: the sign-in page answers within a second and the logs show the retries; start Redis within two minutes, and the worker starts. Then run `docker stop` during a watchlist sync: the logs list the drain tasks with their durations, the `DiscordBotLock` row is gone, and the exit code is 0.
 
+**As merged.**
+- `onShutdown(name, phase, fn)` takes `fn: () => Promise<unknown>`. A task still running at the deadline is abandoned, not force-closed: BullMQ's `worker.close(true)` returns the graceful close already in progress (`worker.js` `close()`), so a second call cannot cut it short. The exit itself is the force close, and the stall check hands the job on.
+- `installShutdownHandlers()` uses `process.on` behind a `started` guard instead of `process.once`, so a second SIGTERM or a SIGINT during the drain is logged and ignored rather than killing the process through Node's default handler.
+- `createFailFastRedis(url)` uses `lazyConnect: true`: with the offline queue off, a command on a client that is not connected fails at once, so callers call `connect()` first (`waitForRedis` does on its first attempt). P2.5's `getRequestPathRedis()` should call `client.connect().catch(...)` when it creates the client.
+- `waitForRedis(client, { attempts, baseDelayMs, maxDelayMs, signal })` takes the client as its first argument and returns `true` or `false`; delays are 1, 2, 4, 8, 16, 30 and 30 s with ±20% jitter (about 1.5 to 2 minutes with the ping timeouts). `withTimeout` is a local helper in `node.ts`.
+- `lib/db/pool-config.ts` reads `process.env` directly (not `getEnv()`), because `lib/prisma.ts` is also loaded outside Next where `server-only` throws. `PROCESS_ROLE`, the three `DB_*` variables and `SHUTDOWN_GRACE_MS` are in `envSchema` and `example.env`.
+- The plan's `lib/instrumentation/__tests__/node.test.ts` sits beside the older `__tests__/lib/instrumentation/node.test.ts` (the poll-interval tests); `__tests__/instrumentation.test.ts` now flushes the background start before asserting it ran. Jest's sandboxed `process.emit` does not reach `process.on` listeners, so the shutdown tests call the added handlers directly.
+- `/api/health` does not exist yet; P4.17 adds it.
+
 **Done when.**
-- [ ] `register()` returns at once, whatever Redis or Discord do.
-- [ ] One coordinator handles SIGTERM and SIGINT, drains the workers and the bot under a deadline, and exports `shutdownSignal`.
-- [ ] The pg pool has an explicit size, connection wait and statement timeout per role.
-- [ ] The Redis-down and SIGTERM tests pass.
+- [x] `register()` returns at once, whatever Redis or Discord do.
+- [x] One coordinator handles SIGTERM and SIGINT, drains the workers and the bot under a deadline, and exports `shutdownSignal`.
+- [x] The pg pool has an explicit size, connection wait and statement timeout per role.
+- [x] The Redis-down and SIGTERM tests pass.
 
 ### Step P4.3: One action helper for auth, Zod and result shape
 

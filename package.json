@@ -10,7 +10,7 @@
     "build": "prisma generate && next build",
     "build:e2e": "npm run build",
     "start": "next start",
-    "start:prod": "node server.js",
+    "start:prod": "NEXT_MANUAL_SIG_HANDLE=true node server.js",
     "lint": "eslint .",
     "typecheck": "prisma generate && tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json",
     "knip": "knip --production",

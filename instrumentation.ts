@@ -14,8 +14,16 @@ export async function register() {
   const { assertBootEnv } = await import("./lib/env")
   assertBootEnv()
 
-  // Dynamically import Node.js-specific instrumentation
-  // This prevents Edge Runtime from analyzing Node.js-only dependencies
-  const { startNodeInstrumentation } = await import("./lib/instrumentation/node")
-  await startNodeInstrumentation()
+  // Start the background work without awaiting it: Next awaits register()
+  // before serving, so a down Redis or a slow Discord login must not sit in
+  // front of the return (BP-13). The dynamic import keeps the Edge runtime from
+  // analysing Node-only dependencies.
+  void import("./lib/instrumentation/node")
+    .then((m) => m.startNodeInstrumentation())
+    .catch(logBootError)
+}
+
+async function logBootError(error: unknown) {
+  const { createLogger } = await import("./lib/utils/logger")
+  createLogger("INSTRUMENTATION").error("Background start failed", error)
 }

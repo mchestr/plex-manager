@@ -171,6 +171,14 @@ channel/thread IDs remain configurable (informational only).
   should show `lastRenewedAt` advancing every 10 s for one instance. If it
   stops, check database connectivity: a failed renewal shuts the bot down
   until the next poll takes the lock again.
+- **Bot stays offline for up to 30 s after a restart** → a clean stop
+  (SIGTERM, `docker stop`) destroys the bot and deletes the `DiscordBotLock`
+  row, so the next instance takes over at its first poll. The shutdown
+  coordinator needs `NEXT_MANUAL_SIG_HANDLE=true` (the image and
+  `npm run start:prod` set it); without it, Next exits at once and the lease
+  has to expire instead. With manual signal handling Next no longer closes the
+  HTTP server: in-flight requests finish within `SHUTDOWN_GRACE_MS` (default
+  8000) because the process exits last.
 - **Assistant doesn't reply in a channel** → the assistant is DM-based; DM the
   bot, or use `/assistant ask`.
 - **Verification errors** → check database connectivity and that the Discord

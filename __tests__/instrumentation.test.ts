@@ -69,6 +69,8 @@ describe("register()", () => {
     process.env.NEXTAUTH_SECRET = "q3V0Zm1sY2hQa2F6dGN2b0x1N2Q4c2Y5ZzBoMWkyajM="
 
     await register()
+    // register() starts the background work without awaiting it (P4.2).
+    await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(exit).not.toHaveBeenCalled()
     expect(mockError).not.toHaveBeenCalled()
