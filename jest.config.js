@@ -28,6 +28,7 @@ const customJestConfig = {
   // set, and always in CI, where a missing URL fails them.
   testPathIgnorePatterns: [
     '<rootDir>/e2e/',
+    '<rootDir>/.claude/worktrees/',
     ...(process.env.TEST_REDIS_URL || process.env.CI ? [] : ['\\.redis\\.test\\.ts$']),
     ...(pgRun ? [] : ['\\.pg\\.test\\.ts$']),
   ],
