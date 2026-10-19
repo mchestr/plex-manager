@@ -381,7 +381,7 @@ gantt
 - [x] P3.6: Overlay and feedback primitives (ui, M, due 2026-11-03)
 - [x] P3.7: Rewind-ready primitives (ui, M, due 2026-11-05)
 - [x] P3.8: Safe Markdown, safe links and error copy (ui, S, due 2026-10-29)
-- [ ] P3.9: Status vocabulary, icons, brand and chart theme (ui, M, due 2026-11-05)
+- [x] P3.9: Status vocabulary, icons, brand and chart theme (ui, M, due 2026-11-05)
 - [x] P3.10: One formatter module (ui, M, due 2026-10-29)
 
 **Security and reliability hardening** (2026-10-23 to 2026-12-03)
