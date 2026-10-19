@@ -360,7 +360,7 @@ gantt
 - [x] P2.5: Rewind queues, locks, semaphore and fail-fast Redis (rewind, M, due 2026-10-30)
 - [ ] P2.17: Generation becomes a job: processor, actions and status hook (rewind, M, due 2026-11-03)
 - [ ] P2.6: Server-wide history pass and metadata cache (rewind, M, due 2026-11-03)
-- [ ] P2.7: Stats modules, part 1 (rewind, M, due 2026-11-02)
+- [x] P2.7: Stats modules, part 1 (rewind, M, due 2026-11-02)
 - [ ] P2.8: Stats modules, part 2 (rewind, M, due 2026-11-04)
 - [ ] P2.9: Fact catalogue, build-facts and archetype scorers v3 (rewind, M, due 2026-11-05)
 - [ ] P2.10: Twenty golden fixtures with hand-checked stats (rewind, M, due 2026-11-04)
