@@ -55,15 +55,17 @@ export async function importPlexUsers(): Promise<{
     let skipped = 0
     const errors: string[] = []
 
-    // Process each Plex user
+    // One query for every user already imported, instead of one per Plex user
+    const existing = await prisma.user.findMany({
+      where: { plexUserId: { in: plexUsers.map((plexUser) => plexUser.id) } },
+      select: { plexUserId: true },
+    })
+    const existingIds = new Set(existing.map((user) => user.plexUserId))
+
+    // One create per user, so an email collision is reported for that user only
     for (const plexUser of plexUsers) {
       try {
-        // Check if user already exists
-        const existingUser = await prisma.user.findUnique({
-          where: { plexUserId: plexUser.id },
-        })
-
-        if (existingUser) {
+        if (existingIds.has(plexUser.id)) {
           skipped++
           continue
         }
