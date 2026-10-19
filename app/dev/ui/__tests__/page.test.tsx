@@ -67,6 +67,9 @@ describe("/dev/ui", () => {
       "ink-paper",
       "ink-marigold",
       "ink-ultramarine",
+      "status-vocabulary",
+      "icon-map",
+      "poster-palette",
     ]) {
       expect(screen.getByTestId(`dev-ui-${primitive}`)).toBeInTheDocument()
     }

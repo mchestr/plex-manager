@@ -25,7 +25,7 @@ jest.mock('@/lib/prisma', () => ({
 
 jest.mock('next-auth', () => ({ getServerSession: jest.fn() }))
 jest.mock('@/lib/auth', () => ({ authOptions: {} }))
-jest.mock('next/cache', () => ({ revalidatePath: jest.fn() }))
+jest.mock('next/cache', () => ({ revalidatePath: jest.fn(), unstable_cache: (fn: () => unknown) => fn }))
 
 // Connection/validation modules are dynamically imported by the actions.
 jest.mock('@/lib/connections/tautulli', () => ({

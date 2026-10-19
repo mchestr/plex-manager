@@ -26,6 +26,7 @@
 
 /** Gamma-encoded sRGB channels from 0 to 1. */
 export type Rgb = readonly [number, number, number]
+/** @internal */
 export type Cvd = "deutan" | "protan"
 
 const clamp = (x: number) => Math.min(1, Math.max(0, x))
@@ -33,7 +34,7 @@ const gamma = (x: number) => (x <= 0.0031308 ? 12.92 * x : 1.055 * Math.pow(x, 1
 const ungamma = (x: number) => (x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4))
 const map3 = (v: Rgb, f: (x: number) => number): Rgb => [f(v[0]), f(v[1]), f(v[2])]
 
-/** sRGB for an OKLCH colour; `l` is 0 to 1 and `h` is in degrees. */
+/** sRGB for an OKLCH colour; `l` is 0 to 1 and `h` is in degrees. @internal */
 export function oklch(l: number, c: number, h: number): Rgb {
   const rad = (h * Math.PI) / 180
   const a = c * Math.cos(rad)
@@ -51,7 +52,7 @@ export function oklch(l: number, c: number, h: number): Rgb {
 
 const OKLCH = /^oklch\(\s*([\d.]+)(%?)\s+([\d.]+)\s+([\d.]+)\s*(?:\/\s*([\d.]+)(%?)\s*)?\)$/
 
-/** Parses `oklch(L% C H)` or `oklch(L% C H / a)`; L and a may also be plain numbers. */
+/** Parses `oklch(L% C H)` or `oklch(L% C H / a)`; L and a may also be plain numbers. @internal */
 export function parseOklch(value: string): { l: number; c: number; h: number; alpha: number } {
   const m = OKLCH.exec(value.trim())
   if (!m) throw new Error(`Not an oklch() colour: ${value}`)
@@ -59,7 +60,7 @@ export function parseOklch(value: string): { l: number; c: number; h: number; al
   return { l: Number(m[1]) / (m[2] ? 100 : 1), c: Number(m[3]), h: Number(m[4]), alpha }
 }
 
-/** sRGB for an `oklch()` string, ignoring its alpha. */
+/** sRGB for an `oklch()` string, ignoring its alpha. @internal */
 export function toRgb(value: string): Rgb {
   const { l, c, h } = parseOklch(value)
   return oklch(l, c, h)
@@ -79,20 +80,20 @@ export function hexToRgb(value: string): { rgb: Rgb; alpha: number } {
   return { rgb: [at(0), at(2), at(4)], alpha: h.length === 8 ? at(6) : 1 }
 }
 
-/** WCAG relative luminance. */
+/** WCAG relative luminance. @internal */
 export function luminance(rgb: Rgb): number {
   const [r, g, b] = map3(rgb, ungamma)
   return 0.2126 * r + 0.7152 * g + 0.0722 * b
 }
 
-/** WCAG 2.2 contrast ratio, from 1 to 21. */
+/** WCAG 2.2 contrast ratio, from 1 to 21. @internal */
 export function contrast(a: Rgb, b: Rgb): number {
   const la = luminance(a)
   const lb = luminance(b)
   return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05)
 }
 
-/** `fg` at `alpha` painted over `bg`, composited in sRGB. */
+/** `fg` at `alpha` painted over `bg`, composited in sRGB. @internal */
 export function mix(fg: Rgb, bg: Rgb, alpha: number): Rgb {
   const over = (i: 0 | 1 | 2) => fg[i] * alpha + bg[i] * (1 - alpha)
   return [over(0), over(1), over(2)]
@@ -122,7 +123,7 @@ function oklab([r, g, b]: Rgb): Rgb {
   ]
 }
 
-/** OKLab distance x100, optionally under a simulated colour-vision deficiency. */
+/** OKLab distance x100, optionally under a simulated colour-vision deficiency. @internal */
 export function deltaE(a: Rgb, b: Rgb, cvd?: Cvd): number {
   const A = oklab(cvd ? simulate(a, cvd) : map3(a, ungamma))
   const B = oklab(cvd ? simulate(b, cvd) : map3(b, ungamma))

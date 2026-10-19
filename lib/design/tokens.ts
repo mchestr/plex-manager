@@ -152,7 +152,7 @@ export const themes = {
   },
 } as const satisfies Record<ThemeName, Record<TokenName, TokenValue>>
 
-/** The `-subtle` status tints: the tone at this alpha over the surface (14% dark, 10% light). */
+/** The `-subtle` status tints: the tone at this alpha over the surface (14% dark, 10% light). @internal */
 export const subtleAlpha = { dark: 0.14, light: 0.1 } as const satisfies Record<ThemeName, number>
 
 /** The twelve Rewind inks (Rewind 5.2). */
@@ -281,6 +281,7 @@ export const rewindRemap = {
   overlay: { oklch: "oklch(19% 0.012 70 / 0.55)", hex: "#17130e8c" },
 } as const satisfies Record<Exclude<TokenName, "sidebar" | `sidebar-${string}`> | `${StatusTone}-subtle`, RemapValue>
 
+/** @public P5 prints the cover and back cover from it. */
 export interface ArchetypeInks {
   field: InkName
   /** `own`: the archetype prints in two inks (hatch and solid), so its spot is the field's own ink. */
@@ -289,7 +290,7 @@ export interface ArchetypeInks {
   deep: InkName
 }
 
-/** Each archetype's colourway (Rewind 5.3). */
+/** Each archetype's colourway (Rewind 5.3). @public P5 prints the cover and back cover from it. */
 export const archetypeInks = {
   "midnight-marathoner": { field: "ultramarine", spot: "marigold", deep: "ultramarine" },
   "credits-roller": { field: "forest", spot: "mint", deep: "forest" },
@@ -305,6 +306,7 @@ export const archetypeInks = {
   "casual-critic": { field: "sky", spot: "ultramarine", deep: "sky" },
 } as const satisfies Record<ArchetypeId, ArchetypeInks>
 
+/** @public P5.1 sets the Rewind scope with `inkProps`. */
 export interface InkPropsOptions {
   /** The cover and centrefold: the spot is the archetype's spot. */
   spot?: "arch"
@@ -312,6 +314,7 @@ export interface InkPropsOptions {
   ink?: "arch-deep"
 }
 
+/** @public */
 export interface InkProps {
   "data-field": InkName
   "data-spot"?: "arch"
@@ -319,7 +322,7 @@ export interface InkProps {
   className: "light" | "dark"
 }
 
-/** Props for an element that prints in an ink: `<section {...inkProps('coral')}>`. */
+/** Props for an element that prints in an ink: `<section {...inkProps('coral')}>`. @public P5.1 is its first caller. */
 export function inkProps(ink: InkName, opts: InkPropsOptions = {}): InkProps {
   return {
     "data-field": ink,
@@ -329,7 +332,8 @@ export function inkProps(ink: InkName, opts: InkPropsOptions = {}): InkProps {
   }
 }
 
-/** The app radius scale in px (the Rewind scope is 2px smaller at every step). */
+/** The app radius scale in px (the Rewind scope is 2px smaller at every step). @public P5.10's card routes read it. */
 export const radius = { sm: 4, md: 6, lg: 8, xl: 12 } as const
 
+/** @public P5.10's card routes read it. */
 export const fonts = { sans: "IBM Plex Sans", mono: "IBM Plex Mono" } as const

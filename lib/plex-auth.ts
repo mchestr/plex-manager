@@ -26,7 +26,8 @@ import { getOnboardingStatus } from "@/actions/onboarding"
 import { getAccessLevel } from "@/lib/access"
 import { publicAction } from "@/lib/actions/define-action"
 import { fail, ok } from "@/lib/actions/result"
-import { createPin, PLEX_PRODUCT_NAME, readPin } from "@/lib/connections/plex-pin"
+import { plexProduct } from "@/lib/brand"
+import { createPin, readPin } from "@/lib/connections/plex-pin"
 import { getBaseUrl } from "@/lib/env"
 import {
   clientCookie,
@@ -63,7 +64,7 @@ function plexAuthUrl(clientId: string, code: string): string {
     clientID: clientId,
     code,
     forwardUrl,
-    "context[device][product]": PLEX_PRODUCT_NAME,
+    "context[device][product]": plexProduct,
   })
     .toString()
     .replace(/\+/g, "%20")

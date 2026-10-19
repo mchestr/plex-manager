@@ -46,6 +46,7 @@ jest.mock('@/lib/auth', () => ({
 
 jest.mock('next/cache', () => ({
   revalidatePath: jest.fn(),
+  unstable_cache: <T,>(fn: T) => fn,
 }))
 
 jest.mock('@/lib/utils/logger', () => ({

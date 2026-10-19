@@ -5,6 +5,7 @@ import { UserDashboard } from "@/components/dashboard/user-dashboard";
 import { SubscriptionStatusView } from "@/components/subscription/subscription-status-view";
 import { hasEntitlement } from "@/lib/actions/entitlement";
 import { authOptions } from "@/lib/auth";
+import { serverName as getServerName } from "@/lib/brand";
 import { getFirstWatchDate } from "@/lib/connections/tautulli-first-watch";
 import { prisma } from "@/lib/prisma";
 import { getAppSettings } from "@/lib/settings/app-settings";
@@ -35,7 +36,7 @@ interface OnboardingStatusRecord {
 
 export default async function Home() {
   const session = await getServerSession(authOptions);
-  const [plexServer, jellyfinServer, discordIntegration, announcementsResult, overseerr, prometheusResult, config] = await Promise.all([
+  const [plexServer, jellyfinServer, discordIntegration, announcementsResult, overseerr, prometheusResult, config, serverName] = await Promise.all([
     prisma.plexServer.findFirst({
       where: { isActive: true },
     }),
@@ -47,13 +48,12 @@ export default async function Home() {
     prisma.overseerr.findFirst({ where: { isActive: true } }),
     getPrometheusStatus(),
     prisma.config.findUnique({ where: { id: "config" }, select: { stripeEnabled: true } }),
+    getServerName(),
   ]);
 
   const announcements = announcementsResult.success ? announcementsResult.data : []
   const prometheusStatus = prometheusResult.success ? prometheusResult.data : UNKNOWN_STATUS
 
-  // Determine server name based on what's configured
-  const serverName = plexServer?.name || jellyfinServer?.name || "Media Server";
   const discordEnabled = Boolean(discordIntegration?.isEnabled && discordIntegration?.clientId && discordIntegration?.clientSecret);
   // Members get public URLs only (the internal ones are often LAN or Docker
   // addresses), and an admin-set one renders only when it is http or https (SEC-57).

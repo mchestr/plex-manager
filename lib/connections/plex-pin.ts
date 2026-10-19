@@ -15,13 +15,11 @@ import "server-only"
 import { randomInt } from "node:crypto"
 import { z } from "zod"
 
+import { plexProduct } from "@/lib/brand"
 import { isConnectionTestBypassed } from "@/lib/connections/connection-test"
 import { serviceFetch, type ServiceResult } from "@/lib/connections/http"
 
 const PLEX_TV_PINS = "https://plex.tv/api/v2/pins"
-
-/** The product name plex.tv shows in the member's device list. */
-export const PLEX_PRODUCT_NAME = "Plex Manager"
 
 export interface PlexPin {
   id: number
@@ -39,7 +37,7 @@ const pinSchema = z.looseObject({ id: z.number().int().positive(), code: z.strin
 const pinStatusSchema = z.looseObject({ authToken: z.string().min(1).max(200).nullish() })
 
 function plexHeaders(clientId: string): Record<string, string> {
-  return { "X-Plex-Product": PLEX_PRODUCT_NAME, "X-Plex-Client-Identifier": clientId }
+  return { "X-Plex-Product": plexProduct, "X-Plex-Client-Identifier": clientId }
 }
 
 /** Creates a strong PIN (`POST /pins?strong=true`) for the browser's client identifier. */

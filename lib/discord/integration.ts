@@ -1,3 +1,4 @@
+import { serverName } from "@/lib/brand"
 import { exchangeDiscordCode, fetchDiscordUserProfile, refreshDiscordToken, updateDiscordRoleConnection } from "@/lib/discord/api"
 import { getDiscordBotToken } from "@/lib/discord/config"
 import { computeRoleMetadata, type RoleMetadataOptions } from "@/lib/discord/role-metadata"
@@ -309,7 +310,7 @@ export async function syncDiscordRoleConnection(
     throw new Error("Discord integration client ID is not configured")
   }
 
-  const platformName = integration.platformName || "Plex Wrapped"
+  const platformName = integration.platformName || (await serverName())
   const platformUsername = user.name || "Plex member"
 
   const { metadata, watchedHours } = await computeRoleMetadata(
@@ -346,7 +347,7 @@ export async function clearDiscordRoleForUser(userId: string) {
     await updateDiscordRoleConnection({
       accessToken: connection.accessToken,
       applicationId: integration.clientId,
-      platform_name: integration.platformName || "Plex Wrapped",
+      platform_name: integration.platformName || (await serverName()),
       platform_username: "Unlinked",
       metadata: {},
     })

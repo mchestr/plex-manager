@@ -1,9 +1,12 @@
 /**
- * The @example blocks in lib/ui/markdown.ts and lib/ui/error-copy.ts.
+ * The @example blocks in lib/ui/markdown.ts, lib/ui/error-copy.ts,
+ * lib/ui/status.ts and lib/ui/poster-palette.ts.
  */
 
 import { errorCopy } from '../error-copy'
 import { safeHref, safeLink } from '../markdown'
+import { posterPalette } from '../poster-palette'
+import { resolveStatus, settingsCategory } from '../status'
 
 const original = process.env.NEXT_PUBLIC_APP_URL
 
@@ -24,6 +27,21 @@ describe('JSDoc Documentation Examples', () => {
   it('safeHref', () => {
     expect(safeHref('https://requests.example.com')).toBe('https://requests.example.com/')
     expect(safeHref('data:text/html,hi')).toBeNull()
+  })
+
+  it('resolveStatus and settingsCategory', () => {
+    expect(resolveStatus('subscription', 'ACTIVE', { date: new Date('2026-11-06T12:00:00Z') })).toEqual({
+      label: 'Active',
+      tone: 'success',
+      mark: 'dot',
+      sub: 'Renews Nov 6, 2026',
+    })
+    expect(resolveStatus('connection', 'untested').sub).toBe('Test after saving')
+    expect(settingsCategory('degraded').label).toBe('Needs attention')
+  })
+
+  it('posterPalette', () => {
+    expect(posterPalette('12345')).toEqual({ ink: 'coral', field: '#f6795c', on: '#1f0b08' })
   })
 
   it('errorCopy', () => {
