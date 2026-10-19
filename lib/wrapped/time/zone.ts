@@ -12,10 +12,7 @@
 
 import { dayKey, formatDayKey, normalizeTimeZone, wallTimeToInstant, zonedParts } from "@/lib/utils/zoned-time"
 
-/**
- * The day key of an instant in a zone, `YYYY-MM-DD`.
- * @public P2.7 buckets with it.
- */
+/** The day key of an instant in a zone, `YYYY-MM-DD`. */
 export { dayKey }
 
 /** A half-open span of instants, `start <= ms < end`, and the zone it was built in. */
@@ -61,10 +58,7 @@ export function weekdayOf(ms: number, zone: string): number {
   return zonedParts(ms, zone).weekday
 }
 
-/**
- * The month of `ms` in `zone`, 1-12.
- * @public P2.7 buckets with it.
- */
+/** The month of `ms` in `zone`, 1-12. */
 export function monthOf(ms: number, zone: string): number {
   return zonedParts(ms, zone).month
 }
@@ -102,8 +96,6 @@ const isLeapYear = (year: number) => new Date(Date.UTC(year, 1, 29)).getUTCMonth
 /**
  * Days the data window covers, for per-day averages: 334 during the season
  * (335 in a leap year), or the whole year after the final cut.
- *
- * @public P2.7 averages with it.
  */
 export function elapsedDays(year: number, { finalCut }: { finalCut: boolean }): number {
   const leap = isLeapYear(year) ? 1 : 0
