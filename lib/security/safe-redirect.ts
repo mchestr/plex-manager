@@ -41,15 +41,11 @@ export function safeRedirectPath(input: string | null | undefined, fallback: str
   if (!input || !input.startsWith("/") || input.startsWith("//")) return fallback
   if (UNSAFE_CHARACTERS.test(input) || UNSAFE_ENCODINGS.test(input)) return fallback
 
+  // A single leading slash with no backslash always parses on the base origin;
+  // the origin check stays as the rule's last line of defence.
   const base = new URL(getBaseUrl())
-  let resolved: URL
-  try {
-    resolved = new URL(input, base)
-  } catch {
-    return fallback
-  }
-  if (resolved.origin !== base.origin) return fallback
-  if (!REDIRECT_ALLOW_LIST.has(resolved.pathname)) return fallback
+  const resolved = new URL(input, base)
+  if (resolved.origin !== base.origin || !REDIRECT_ALLOW_LIST.has(resolved.pathname)) return fallback
 
   return `${resolved.pathname}${resolved.search}`
 }
