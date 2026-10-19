@@ -391,7 +391,7 @@ gantt
 - [ ] P4.3: One action helper for auth, Zod and result shape (security, M, due 2026-11-02)
 - [ ] P4.5: Enforce entitlement beyond the layout (security, M, due 2026-11-05)
 - [ ] P4.6: Never send a stored secret to a new address; audit config changes (security, M, due 2026-11-06)
-- [ ] P4.7: Sessions end when access ends; role changes stick (security, M, due 2026-11-10)
+- [x] P4.7: Sessions end when access ends; role changes stick (security, M, due 2026-11-10)
 - [ ] P4.8: Bind the Plex PIN to the browser (security, M, due 2026-11-12)
 - [ ] P4.9: Discord OAuth redirect and state binding (security, S, due 2026-11-23)
 - [ ] P4.10: Stripe event ordering, idempotency and live re-checks (security, L, due 2026-11-19)
