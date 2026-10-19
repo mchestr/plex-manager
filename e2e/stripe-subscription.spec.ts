@@ -83,9 +83,11 @@ test.describe('Stripe subscription gate & admin visibility', () => {
   // navigation alike. A member of its own, so the seeded users stay members.
   test.describe('Lapsed member (Stripe enabled, canceled, completed Rewind)', () => {
     const memberId = `p45-lapsed-member-${Date.now()}`;
-    // Not the season year, so the season year shows "No Wrapped Found" with
-    // its in-app link home
-    const rewindYear = 2025;
+    // The seeded season runs all year, so the season year is this year. The
+    // member's Rewind is last year's, so the season year shows "No Wrapped
+    // Found" with its in-app link home
+    const seasonYear = new Date().getFullYear();
+    const rewindYear = seasonYear - 1;
     let context: BrowserContext;
 
     test.beforeAll(async () => {
@@ -162,7 +164,7 @@ test.describe('Stripe subscription gate & admin visibility', () => {
       // proxy.ts redirects the router's RSC request; __tests__/proxy.test.ts
       // covers that rule on its own, since here the (app) layout also renders
       // below the root loading boundary and would redirect too
-      await page.goto('/wrapped/2026');
+      await page.goto(`/wrapped/${seasonYear}`);
       // The page streams, so a hidden copy can sit beside the shown one
       const home = page.getByTestId('wrapped-generate-link').filter({ visible: true });
       await expect(home).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
