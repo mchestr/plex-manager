@@ -10,7 +10,9 @@
     "lib/queue/rewind-infra.ts!",
     "lib/rewind/infra-copy.ts!",
     "scripts/codemods/*.mjs!",
-    "lib/wrapped/stats/*.ts!"
+    "lib/wrapped/stats/*.ts!",
+    "lib/wrapped/sources/fixture-source.ts!",
+    "evals/rewind/generate-fixtures.ts!"
   ],
   "project": [
     "**/*.{js,mjs,cjs,ts,tsx}!",

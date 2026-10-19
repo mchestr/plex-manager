@@ -26,6 +26,7 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:headed": "playwright test --headed",
+    "rewind:fixtures": "tsx evals/rewind/generate-fixtures.ts",
     "rewind:strip-leaderboards": "tsx --tsconfig tsconfig.scripts.json scripts/rewind-strip-leaderboards.ts",
     "rewind:probe-sources": "tsx --conditions=react-server --tsconfig tsconfig.scripts.json scripts/rewind-probe-sources.ts",
     "db:generate": "prisma generate",

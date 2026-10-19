@@ -209,6 +209,16 @@ jobs:
       - name: Run unit tests with coverage
         run: npm run test:coverage -- --ci --reporters=default --reporters=github-actions
 
+      # The run above is in UTC. The Rewind goldens and stats must give the
+      # same answers in any process zone (P2.10), so run them again in Sydney.
+      - name: Run the Rewind goldens under TZ=Australia/Sydney
+        run: npx jest evals/rewind lib/wrapped/stats --ci
+        env:
+          TZ: Australia/Sydney
+
+      - name: Check the Rewind fixtures match their profiles
+        run: npm run rewind:fixtures -- --check
+
       - name: Upload coverage report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

@@ -65,6 +65,7 @@ lib/                    # Utilities, helpers, business logic
 ├── wrapped/           # Wrapped generation and statistics
 └── utils/             # Shared utilities
 
+evals/                  # Rewind golden fixtures and eval harness (evals/rewind/README.md)
 types/                  # TypeScript type definitions (admin.ts, discord.ts, wrapped.ts, ...)
 prisma/                # Database schema and migrations
 ```

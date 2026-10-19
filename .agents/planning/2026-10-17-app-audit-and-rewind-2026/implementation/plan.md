@@ -2681,10 +2681,18 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 
 **Demo.** `npx tsx evals/rewind/generate-fixtures.ts --check` reports no drift, and `npx jest evals/rewind` passes under both zones. The owner reviews the README table and the profiles, and records the sign-off on 2026-11-06.
 
+**As merged** (later steps rely on these):
+- Profiles are one module each in `evals/rewind/profiles/<id>.ts`, listed by `evals/rewind/profiles.ts`; `heavy` is built by `heavy-plan.ts` and `heavy-schedule.ts`. `npm run rewind:fixtures [-- --check]` runs the generator; CI runs `--check` and repeats `evals/rewind` and `lib/wrapped/stats` under `TZ=Australia/Sydney`.
+- Fixture fields beyond the plan: `member.userName` (an email-like `User.name`), `member.hiddenRatingKeys`, `server.name`, `server.peers` as `{ members, hours[] }`, `window: { year, finalCut }`, and `requests` as `{ rows, genres }` or null. `expected.stats` has one optional section per P2.7 module (`totals`, `time`, `calendar`, `sessions`, `bookends`, `race`, `milestones`, `topSeries`, `topFilms`); a section lists only the hand-checked fields, compared exactly (shares to 9 places). P2.8 adds its sections to the schema and the test.
+- `omittedPages` lists the full-issue pages whose own rule fails, whatever the edition; the page-rule thresholds the plan leaves open, the provisional archetypes and the display strings are listed in `evals/rewind/README.md` for P2.16 to confirm. Under D7's 2% rule the heavy member omits Guess (its No. 1 leads by 50 minutes, 1.5%), unlike the mockup: an owner decision at sign-off.
+- `createFixtureSource(fixture)` in `lib/wrapped/sources/fixture-source.ts` returns `fetchYear` and `fetchLifetime()` (lifetime rows plus the year's). `evals/rewind/hand-tally.py` is the independent second derivation.
+- The goldens found one P2.7 bug: `rankTitles(events, ctx, kind)` disambiguated titles only within one kind; display titles now settle across all listed titles first ("Fargo (2014)" in the series list when the film "Fargo" was also watched).
+- `data/titles-200.json` is `{ description, titles: [{ title, year, kind }] }`: 137 films and 63 series, with Latin Extended-B (Romanian), Vietnamese and non-Latin titles for safe mode.
+
 **Done when.**
-- [ ] 20 synthetic fixtures cover every profile in design 8.6 and parse through the real source schemas.
-- [ ] For each fixture, the hand-checked stats-level values match in Jest under both process zones.
-- [ ] The generator is deterministic, and its `--check` run is clean.
+- [x] 20 synthetic fixtures cover every profile in design 8.6 and parse through the real source schemas.
+- [x] For each fixture, the hand-checked stats-level values match in Jest under both process zones.
+- [x] The generator is deterministic, and its `--check` run is clean.
 - [ ] The owner has signed off the profiles and the eval budget on 2026-11-06.
 
 ### Step P2.16: Fact and archetype goldens for the twenty fixtures
