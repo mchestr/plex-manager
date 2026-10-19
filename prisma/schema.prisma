@@ -30,7 +30,6 @@ model User {
   discordConnection     DiscordConnection?
   discordOAuthStates    DiscordOAuthState[]
   userMediaMarks        UserMediaMark[]
-  userWatchIntents      UserWatchIntent[]
   watchlistSyncSettings WatchlistSyncSettings?
   watchlistSyncHistory  WatchlistSyncHistory[]
   subscription          Subscription?
@@ -467,32 +466,6 @@ model UserMediaMark {
   @@unique([userId, plexRatingKey, markType])
 }
 
-model UserWatchIntent {
-  id              String   @id @default(cuid())
-  userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  plexRatingKey   String
-  mediaType       MediaType
-  title           String
-
-  // Intent tracking
-  intentType      IntentType
-  priority        Int        @default(0)
-
-  // Progress (for TV series)
-  currentSeason   Int?
-  currentEpisode  Int?
-
-  addedAt         DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  completedAt     DateTime?
-
-  @@index([userId, intentType])
-  @@index([plexRatingKey])
-  @@unique([userId, plexRatingKey])
-}
-
 enum MediaType {
   MOVIE
   TV_SERIES
@@ -511,14 +484,6 @@ enum MarkType {
   REWATCH_CANDIDATE
   POOR_QUALITY
   WRONG_VERSION
-}
-
-enum IntentType {
-  PLAN_TO_WATCH
-  WATCHING
-  COMPLETED
-  DROPPED
-  ON_HOLD
 }
 
 // Discord Command Audit Log - tracks all Discord bot interactions
