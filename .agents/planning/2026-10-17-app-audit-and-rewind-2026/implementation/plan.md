@@ -364,7 +364,7 @@ gantt
 - [x] P2.8: Stats modules, part 2 (rewind, M, due 2026-11-04)
 - [x] P2.9: Fact catalogue, build-facts and archetype scorers v3 (rewind, M, due 2026-11-05)
 - [x] P2.10: Twenty golden fixtures with hand-checked stats (rewind, M, due 2026-11-04)
-- [ ] P2.16: Fact and archetype goldens for the twenty fixtures (rewind, M, due 2026-11-09)
+- [x] P2.16: Fact and archetype goldens for the twenty fixtures (rewind, M, due 2026-11-09)
 - [x] P2.11: Provider-agnostic AI facade (rewind, M, due 2026-10-27)
 - [x] P2.12: LLM provider settings and the admin assistant on the registry (rewind, M, due 2026-10-30)
 - [x] P2.13: Fonts, typesetting, Rewind format and the registry skeleton (rewind, L, due 2026-11-03)
