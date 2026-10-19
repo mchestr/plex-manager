@@ -55,6 +55,8 @@ export interface ChatWithToolsInput {
   tools: ChatTool[]
   signal?: AbortSignal
   attribution: UsageAttribution
+  /** A cap on output tokens below the provider row's own `maxTokens` (the Discord context's 600). */
+  maxOutputTokens?: number
 }
 
 export type ChatWithToolsResult =
@@ -89,6 +91,12 @@ export function toToolSet(tools: ChatTool[]): ToolSet {
   )
 }
 
+/** The smaller of two optional token caps. */
+function capTokens(rowCap: number | null, inputCap: number | undefined): number | undefined {
+  if (rowCap === null) return inputCap
+  return inputCap === undefined ? rowCap : Math.min(rowCap, inputCap)
+}
+
 /** Run one assistant turn. Never throws. */
 export async function chatWithTools(input: ChatWithToolsInput): Promise<ChatWithToolsResult> {
   let resolved
@@ -115,7 +123,7 @@ export async function chatWithTools(input: ChatWithToolsInput): Promise<ChatWith
       instructions: input.system,
       messages: input.messages,
       tools: toToolSet(input.tools),
-      maxOutputTokens: row.maxTokens ?? undefined,
+      maxOutputTokens: capTokens(row.maxTokens, input.maxOutputTokens),
       ...(info.capabilities.samplingParams && row.temperature !== null && { temperature: row.temperature }),
       providerOptions: providerOptionsFor(resolved, rowEffort(row), undefined),
       abortSignal: input.signal,

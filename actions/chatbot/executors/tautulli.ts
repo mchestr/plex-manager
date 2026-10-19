@@ -1,6 +1,38 @@
 import { findTautulliUser, getTautulliActivity, getTautulliHistory, getTautulliHomeStat, getTautulliLibraryNames, getTautulliLibraryStats, getTautulliServerInfo, getTautulliUserWatchTimeStats, getTautulliUsers } from "@/lib/connections/tautulli"
 import { prisma } from "@/lib/prisma"
+import { z } from "zod"
 import { toToolOutput } from "./tool-output"
+
+type TautulliConfig = Parameters<typeof findTautulliUser>[0]
+
+// `data` of get_activity: { stream_count, sessions: [{ user_id, ... }], ... }
+const activitySchema = z.object({
+  sessions: z.array(z.object({ user_id: z.union([z.number(), z.string()]) }).passthrough()),
+})
+
+/** What a Discord caller sees when their sessions cannot be picked out from everyone's. */
+const UNMAPPED_ACTIVITY = { session_count: 0, sessions: [], scope: "unmapped" } as const
+
+/**
+ * Activity scoped to the Discord caller. Fails closed (SEC-50): only a caller
+ * positively mapped to a Tautulli user sees sessions, and only their own. No
+ * caller, no Plex user ID, a failed or empty lookup, or an activity payload of
+ * an unexpected shape all return no sessions.
+ */
+async function scopeActivityToCaller(config: TautulliConfig, data: unknown, userId: string | undefined) {
+  const activity = activitySchema.safeParse(data)
+  if (!activity.success || !userId) return UNMAPPED_ACTIVITY
+
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { plexUserId: true } })
+  if (!user?.plexUserId) return UNMAPPED_ACTIVITY
+
+  const lookup = await findTautulliUser(config, { plexUserId: user.plexUserId })
+  if (!lookup.ok) return UNMAPPED_ACTIVITY
+
+  const tautulliUserId = String(lookup.user.user_id)
+  const sessions = activity.data.sessions.filter((session) => String(session.user_id) === tautulliUserId)
+  return { session_count: sessions.length, sessions, scope: "caller" }
+}
 
 export async function executeTautulliTool(
   toolName: string,
@@ -31,31 +63,11 @@ export async function executeTautulliTool(
       if (!activityResult.success) {
         return JSON.stringify({ error: activityResult.error })
       }
-      // `data` of get_activity: { stream_count, sessions, ... }
-      const activity = activityResult.data as { sessions?: unknown } | null
-
-      // In Discord context, scope activity to the requesting user. Fail closed:
-      // a caller with no Plex user ID, no Tautulli match or a failed lookup
-      // sees no sessions rather than everyone's.
       if (context === "discord") {
-        const user = userId
-          ? await prisma.user.findUnique({ where: { id: userId }, select: { plexUserId: true } })
-          : null
-        const lookup = user?.plexUserId
-          ? await findTautulliUser(config, { plexUserId: user.plexUserId })
-          : null
-        const tautulliUserId = lookup?.ok ? lookup.user.user_id : null
-        const raw = activity?.sessions
-        const all: unknown[] = raw === undefined || raw === null ? [] : Array.isArray(raw) ? raw : [raw]
-        const sessions =
-          tautulliUserId === null
-            ? []
-            : all.filter((session) => (session as { user_id?: unknown } | null)?.user_id === tautulliUserId)
-
-        return JSON.stringify({ ...activity, session_count: sessions.length, sessions })
+        return JSON.stringify(await scopeActivityToCaller(config, activityResult.data, userId))
       }
 
-      return JSON.stringify(activity)
+      return JSON.stringify(activityResult.data)
     }
     case "get_tautulli_library_stats": {
       const statsResult = await getTautulliLibraryStats(config)

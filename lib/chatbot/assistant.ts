@@ -14,6 +14,9 @@ const logger = createLogger("CHATBOT_ASSISTANT")
 
 type ChatbotContext = "default" | "discord"
 
+/** Discord replies are short and must fit in a few 2,000-character messages (SEC-51). */
+const DISCORD_MAX_OUTPUT_TOKENS = 600
+
 interface RunChatbotOptions {
   userId: string
   messages: ChatMessage[]
@@ -90,6 +93,7 @@ export async function runChatbotForUser(options: RunChatbotOptions): Promise<Cha
       isAdmin: options.isAdmin,
       systemPrompt,
       tools: toolset,
+      maxOutputTokens: options.context === "discord" ? DISCORD_MAX_OUTPUT_TOKENS : undefined,
     })
 
     return {

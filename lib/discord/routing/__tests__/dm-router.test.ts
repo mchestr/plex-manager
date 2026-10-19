@@ -95,6 +95,7 @@ interface MockMessageOptions {
 function createMockMessage(options: MockMessageOptions = {}) {
   const reply = jest.fn().mockResolvedValue(undefined)
   const sendTyping = jest.fn().mockResolvedValue(undefined)
+  const send = jest.fn().mockResolvedValue(undefined)
 
   const isDm = options.isDm ?? true
 
@@ -107,11 +108,12 @@ function createMockMessage(options: MockMessageOptions = {}) {
       type: isDm ? 1 : 0, // ChannelType.DM = 1
       isSendable: () => true,
       sendTyping,
+      send,
     },
     reply,
   }
 
-  return { message: message as unknown as Message, reply, sendTyping }
+  return { message: message as unknown as Message, reply, sendTyping, send }
 }
 
 function makeDeps(overrides: Partial<DmRouteDeps> = {}): DmRouteDeps {
@@ -285,6 +287,29 @@ describe("routeDirectMessage", () => {
     expect(reply).toHaveBeenCalledWith(
       expect.objectContaining({ content: expect.stringContaining("couldn't reach the assistant") })
     )
+  })
+
+  it("sends a 4,500-character answer as three messages, never the fallback (SEC-51)", async () => {
+    const long = "The server is healthy and nothing needs fixing. ".repeat(94).slice(0, 4500)
+    const deps = makeDeps({
+      handleDiscordChat: jest.fn().mockResolvedValue({
+        ...chatSuccess,
+        message: { role: "assistant", content: long, timestamp: 0 },
+      }),
+    })
+    const { message, reply, send } = createMockMessage({ content: "tell me everything" })
+
+    await routeDirectMessage(message, deps)
+
+    expect(reply).toHaveBeenCalledTimes(1)
+    expect(send).toHaveBeenCalledTimes(2)
+    const sent = [reply.mock.calls[0][0], ...send.mock.calls.map((call) => call[0])] as { content: string }[]
+    sent.forEach(({ content }) => {
+      expect(content.length).toBeLessThanOrEqual(2000)
+      expect(content).not.toContain("couldn't reach the assistant")
+    })
+    expect(sent.map(({ content }) => content).join(" ").replace(/\s+/g, " ")).toBe(long.replace(/\s+/g, " "))
+    expect(mockUpdate).toHaveBeenCalledWith("log-1", expect.objectContaining({ status: "SUCCESS" }))
   })
 
   it("nudges when the chat result reports the user is not linked", async () => {
