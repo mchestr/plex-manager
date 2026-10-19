@@ -4,7 +4,6 @@ import { prisma } from "@/lib/prisma"
 import { requireAdmin } from "@/lib/admin"
 import { createLogger } from "@/lib/utils/logger"
 import { globalWatchlistSyncSettingsSchema } from "@/lib/validations/watchlist"
-import { syncUserWatchlist } from "@/lib/watchlist/sync-service"
 
 const logger = createLogger("ADMIN_WATCHLIST_ACTIONS")
 
@@ -130,73 +129,5 @@ export async function getWatchlistSyncStats() {
   } catch (error) {
     logger.error("Error fetching watchlist sync stats", error)
     return { success: false as const, error: "Failed to fetch stats" }
-  }
-}
-
-/**
- * Force sync for a specific user (admin only)
- * Uses the job queue if Redis is configured, otherwise falls back to direct execution
- */
-export async function forceUserWatchlistSync(userId: string) {
-  const session = await requireAdmin()
-
-  try {
-    // Verify user exists
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true },
-    })
-
-    if (!user) {
-      return { success: false as const, error: "User not found" }
-    }
-
-    // Check if queue is available (Redis configured)
-    const { isRedisConfigured } = await import("@/lib/queue/connection")
-
-    if (isRedisConfigured()) {
-      // Use job queue
-      const { addJob } = await import("@/lib/queue/client")
-      const { JOB_TYPES } = await import("@/lib/queue/types")
-
-      const jobId = await addJob(JOB_TYPES.WATCHLIST_SYNC_USER, {
-        userId,
-        triggeredBy: "admin",
-        triggeredByUserId: session?.user?.id,
-      })
-
-      logger.info("Admin triggered watchlist sync job", {
-        userId,
-        adminUserId: session?.user?.id,
-        jobId,
-      })
-
-      return {
-        success: true as const,
-        data: {
-          queued: true,
-          jobId,
-          message: "Sync job has been queued and will be processed shortly",
-        },
-      }
-    }
-
-    // Fallback: Direct execution when Redis is not configured
-    const result = await syncUserWatchlist(userId)
-
-    if (!result.success) {
-      return { success: false as const, error: result.error || "Sync failed" }
-    }
-
-    return {
-      success: true as const,
-      data: {
-        queued: false,
-        ...result.data,
-      },
-    }
-  } catch (error) {
-    logger.error("Error forcing user watchlist sync", error)
-    return { success: false as const, error: "Failed to sync" }
   }
 }

@@ -5,7 +5,6 @@ import { createLogger } from "@/lib/utils/logger"
 import {
   getQueueStats,
   getJobs,
-  getJob,
   retryJob,
   removeJob,
   pauseQueue,
@@ -13,14 +12,11 @@ import {
   isQueuePaused,
   addJob,
   getJobSchedulers,
-  scheduleRepeatingJob,
-  removeScheduledJob,
 } from "@/lib/queue/client"
 import { isRedisConfigured, isRedisHealthy } from "@/lib/queue/connection"
-import { JOB_TYPES, JobStatus, JobMetadata, QueueStats, QueueHealth } from "@/lib/queue/types"
+import { JOB_TYPES, JobStatus, JobMetadata, QueueStats } from "@/lib/queue/types"
 import { isRegisteredJobType } from "@/lib/queue/jobs"
 import { isWorkerRunning } from "@/lib/queue/worker"
-import { isWatchlistSyncEnabled, getWatchlistSyncInterval } from "@/lib/watchlist/lock"
 import { logAuditEvent, AuditEventType } from "@/lib/security/audit-log"
 import { z } from "zod"
 
@@ -80,10 +76,6 @@ const jobIdSchema = z.object({
 
 const triggerSyncSchema = z.object({
   userId: z.string().optional(),
-})
-
-const updateScheduleSchema = z.object({
-  intervalMinutes: z.number().min(1).max(1440),
 })
 
 // =============================================================================
@@ -169,64 +161,6 @@ export async function getQueueDashboardData(): Promise<
   }
 }
 
-/**
- * Get queue health status for quick checks
- */
-export async function getQueueHealth(): Promise<
-  | { success: true; data: QueueHealth }
-  | { success: false; error: string }
-> {
-  try {
-    await requireAdmin()
-  } catch {
-    return { success: false, error: "Unauthorized" }
-  }
-
-  if (!isRedisConfigured()) {
-    return {
-      success: true,
-      data: {
-        redisConnected: false,
-        workerRunning: false,
-        isPaused: false,
-        stats: {
-          waiting: 0,
-          active: 0,
-          completed: 0,
-          failed: 0,
-          delayed: 0,
-          paused: 0,
-          prioritized: 0,
-        },
-      },
-    }
-  }
-
-  try {
-    const [stats, isPaused, redisConnected] = await Promise.all([
-      getQueueStats(),
-      isQueuePaused(),
-      isRedisHealthy(),
-    ])
-
-    return {
-      success: true,
-      data: {
-        stats,
-        isPaused,
-        workerRunning: isWorkerRunning(),
-        redisConnected,
-      },
-    }
-  } catch (error) {
-    logger.error("Error fetching queue health", error)
-    return {
-      success: false,
-      error: "Failed to load queue health. Please try again.",
-    }
-  }
-}
-
 // =============================================================================
 // Job Management Actions
 // =============================================================================
@@ -280,39 +214,6 @@ export async function getQueueJobs(
   } catch (error) {
     logger.error("Error fetching jobs", error)
     return { success: false, error: "Failed to fetch jobs" }
-  }
-}
-
-/**
- * Get a single job by ID
- */
-export async function getQueueJob(
-  input: unknown
-): Promise<{ success: true; data: JobMetadata } | { success: false; error: string }> {
-  try {
-    await requireAdmin()
-  } catch {
-    return { success: false, error: "Unauthorized" }
-  }
-
-  const validated = jobIdSchema.safeParse(input)
-  if (!validated.success) {
-    return { success: false, error: "Invalid job ID" }
-  }
-
-  if (!isRedisConfigured()) {
-    return { success: false, error: "Redis is not configured" }
-  }
-
-  try {
-    const job = await getJob(validated.data.jobId)
-    if (!job) {
-      return { success: false, error: "Job not found" }
-    }
-    return { success: true, data: job }
-  } catch (error) {
-    logger.error("Error fetching job", error, { jobId: validated.data.jobId })
-    return { success: false, error: "Failed to fetch job" }
   }
 }
 
@@ -540,114 +441,5 @@ export async function triggerWatchlistSyncJob(
   } catch (error) {
     logger.error("Error triggering sync job", error)
     return { success: false, error: "Failed to trigger sync. Please try again." }
-  }
-}
-
-/**
- * Update the watchlist sync schedule
- */
-export async function updateWatchlistSyncSchedule(
-  input: unknown
-): Promise<{ success: true } | { success: false; error: string }> {
-  let session: Awaited<ReturnType<typeof requireAdmin>>
-  try {
-    session = await requireAdmin()
-  } catch {
-    return { success: false, error: "Unauthorized" }
-  }
-
-  const adminId = session.user.id
-  if (isRateLimited(adminId)) {
-    return { success: false, error: "Too many requests. Please try again later." }
-  }
-
-  const validated = updateScheduleSchema.safeParse(input)
-  if (!validated.success) {
-    return { success: false, error: "Invalid interval" }
-  }
-
-  if (!isRedisConfigured()) {
-    return { success: false, error: "Redis is not configured" }
-  }
-
-  try {
-    const { intervalMinutes } = validated.data
-    const intervalMs = intervalMinutes * 60 * 1000
-
-    // Check if sync is enabled
-    const syncEnabled = await isWatchlistSyncEnabled()
-
-    if (syncEnabled) {
-      // Update or create the scheduler
-      await scheduleRepeatingJob(
-        "watchlist-sync-scheduled",
-        JOB_TYPES.WATCHLIST_SYNC_ALL,
-        { triggeredBy: "scheduled" },
-        intervalMs
-      )
-
-      logAuditEvent(AuditEventType.QUEUE_SCHEDULE_UPDATED, adminId, {
-        intervalMinutes,
-        action: "updated",
-      })
-      logger.info("Watchlist sync schedule updated", { intervalMinutes, adminId })
-    } else {
-      // Remove the scheduler if sync is disabled
-      await removeScheduledJob("watchlist-sync-scheduled")
-
-      logAuditEvent(AuditEventType.QUEUE_SCHEDULE_UPDATED, adminId, {
-        action: "removed",
-        reason: "sync_disabled",
-      })
-      logger.info("Watchlist sync schedule removed (sync disabled)", { adminId })
-    }
-
-    return { success: true }
-  } catch (error) {
-    logger.error("Error updating sync schedule", error)
-    return { success: false, error: "Failed to update schedule. Please try again." }
-  }
-}
-
-/**
- * Get watchlist sync scheduler status
- */
-export async function getWatchlistSyncSchedulerStatus(): Promise<
-  | {
-      success: true
-      data: {
-        enabled: boolean
-        intervalMinutes: number
-        nextRun: Date | null
-      }
-    }
-  | { success: false; error: string }
-> {
-  try {
-    await requireAdmin()
-  } catch {
-    return { success: false, error: "Unauthorized" }
-  }
-
-  try {
-    const [syncEnabled, intervalMinutes, schedulers] = await Promise.all([
-      isWatchlistSyncEnabled(),
-      getWatchlistSyncInterval(),
-      isRedisConfigured() ? getJobSchedulers() : Promise.resolve([]),
-    ])
-
-    const scheduler = schedulers.find((s) => s.id === "watchlist-sync-scheduled")
-
-    return {
-      success: true,
-      data: {
-        enabled: syncEnabled,
-        intervalMinutes,
-        nextRun: scheduler?.next ? new Date(scheduler.next) : null,
-      },
-    }
-  } catch (error) {
-    logger.error("Error fetching scheduler status", error)
-    return { success: false, error: "Failed to fetch scheduler status" }
   }
 }

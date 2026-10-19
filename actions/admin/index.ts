@@ -28,13 +28,11 @@ export {
 export {
   updatePlexServer,
   updateJellyfinServer,
-  deleteJellyfinServer,
   updateTautulli,
   updateOverseerr,
   updateSonarr,
   updateRadarr,
   updatePrometheus,
-  deletePrometheus,
 } from "./admin-servers"
 
 // User management

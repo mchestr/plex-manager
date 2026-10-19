@@ -601,30 +601,6 @@ export async function updateJellyfinServer(data: { name: string; url: string; ap
   }
 }
 
-/**
- * Delete Jellyfin server configuration (admin only)
- */
-export async function deleteJellyfinServer() {
-  await requireAdmin()
-
-  try {
-    const { revalidatePath } = await import("next/cache")
-
-    await prisma.jellyfinServer.updateMany({
-      where: { isActive: true },
-      data: { isActive: false },
-    })
-
-    revalidatePath("/admin/settings")
-    return { success: true }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: "Failed to delete Jellyfin server configuration" }
-  }
-}
-
 const toggleJellyfinLoginSchema = z.boolean()
 
 /**
@@ -656,30 +632,5 @@ export async function toggleJellyfinLogin(enabled: boolean) {
       return { success: false, error: error.message }
     }
     return { success: false, error: "Failed to toggle Jellyfin login setting" }
-  }
-}
-
-/**
- * Delete Prometheus configuration (admin only)
- */
-export async function deletePrometheus() {
-  await requireAdmin()
-
-  try {
-    const { revalidatePath } = await import("next/cache")
-
-    await prisma.prometheus.updateMany({
-      where: { isActive: true },
-      data: { isActive: false },
-    })
-
-    revalidatePath("/admin/settings")
-    revalidatePath("/")
-    return { success: true }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: "Failed to delete Prometheus configuration" }
   }
 }
