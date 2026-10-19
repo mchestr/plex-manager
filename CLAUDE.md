@@ -419,8 +419,9 @@ See the JSDoc in `lib/utils/logger.ts` for log levels, metadata, and best practi
 ```bash
 # After schema changes
 npm run db:generate    # Generate Prisma Client
-npm run db:push        # Push to dev database (development)
-npm run db:migrate     # Create migration (production)
+npm run db:deploy      # Apply pending migrations (install, upgrade, CI)
+npm run db:push        # Contributor-only: prototype on a throwaway database
+npm run db:migrate     # Contributor-only: create a migration
 npm run db:studio      # Open database GUI
 ```
 
@@ -743,7 +744,7 @@ If Discord features are enabled:
 1. Set `NEXT_PUBLIC_APP_URL` and `NEXTAUTH_URL` to production domain
 2. Generate secure `NEXTAUTH_SECRET`
 3. Configure production `DATABASE_URL`
-4. Run database migrations: `npm run db:migrate`
+4. Take a backup (`pg_dump -Fc`), then run `npm run db:deploy`; the Docker image runs it at start unless `SKIP_MIGRATIONS=true`. See `docs/operations.md`.
 5. Build: `npm run build`
 6. Start: `npm run start:prod` (runs the standalone `server.js` that `next build` writes; the Docker image ships it)
 7. Verify environment variables are set (app will fail on startup if missing)
@@ -820,5 +821,6 @@ The project includes custom slash commands in `.claude/commands/`:
 - Logging: See the JSDoc in `lib/utils/logger.ts`
 - Discord Bot: See `docs/discord-bot.md`
 - Stripe Subscriptions: See `docs/stripe.md`
+- Operations (backup, restore, upgrades): See `docs/operations.md`
 - Performance Testing: See `docs/performance-testing.md`
 - Project README: See `README.md`

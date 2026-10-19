@@ -349,7 +349,7 @@ gantt
 - [x] P1.7: axe at wcag22aa on every route (ui, S, due 2026-10-22)
 - [x] P1.8: Design-system guardrail script and debt baseline (ui, S, due 2026-10-22)
 - [ ] P1.9: Vendor the recommended agent skills with pinned commits (ops, S, due 2026-10-23)
-- [ ] P1.10: Safe upgrade path: db:deploy, migration pre-flight and backups (ops, M, due 2026-11-03)
+- [x] P1.10: Safe upgrade path: db:deploy, migration pre-flight and backups (ops, M, due 2026-11-03)
 
 **Rewind data layer and AI foundations** (2026-10-22 to 2026-11-09)
 
@@ -2093,10 +2093,12 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 **Demo.** On the dev compose, take a dump, apply a new migration, restore the dump, and `prisma migrate status` shows the earlier state. A container started with `SKIP_MIGRATIONS=true` logs the skip and still starts. A fresh clone installs with the README's steps and `npm run db:deploy`.
 
 **Done when.**
-- [ ] `npm run db:deploy` exists, CI uses it, and README and CLAUDE.md install and upgrade with it, with `db:push` and `db:migrate` labelled contributor-only.
-- [ ] `docs/operations.md` has the state inventory, backup and restore commands, the dump-before-every-migration rule and the db-push baseline note.
-- [ ] The entrypoint logs pending migrations and honours `SKIP_MIGRATIONS`, and the `./data` mount is gone.
+- [x] `npm run db:deploy` exists, CI uses it, and README and CLAUDE.md install and upgrade with it, with `db:push` and `db:migrate` labelled contributor-only.
+- [x] `docs/operations.md` has the state inventory, backup and restore commands, the dump-before-every-migration rule and the db-push baseline note.
+- [x] The entrypoint logs pending migrations and honours `SKIP_MIGRATIONS`, and the `./data` mount is gone.
 - [ ] It is live in production by 2026-11-03, and every later migration deploy follows it.
+
+(as merged: the restore command is `pg_restore -U postgres -d postgres --clean --if-exists --create --no-owner`, not `-d plex_wrapped --clean`: tested on Postgres 16, `--clean` alone drops only the objects in the dump, so a table a later migration created survives the restore and that migration then fails when it is reapplied; `--create` drops and recreates the database, which needs every connection to it closed. P4.1's `envSchema` does not exist yet, so `SKIP_MIGRATIONS` joins `example.env` only and P4.1 adds it to the schema. The `build.yml` switch to `npm run db:deploy` lands with P1.5's workflow rather than in this step's diff, because the two were built in parallel. README's Node prerequisite says "22 or later" without naming the image's Node version, which is 25.8 until P4.17. The db-push baseline commands were run end to end on a `_test` database: `migrate diff --exit-code` exits 0 after `db push`, the `resolve --applied` loop leaves `migrate status` up to date, and the grandfather `UPDATE` runs through `db execute --stdin`.)
 
 ---
 
