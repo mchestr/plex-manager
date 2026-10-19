@@ -93,6 +93,8 @@ test.describe('Accessibility', () => {
       await expectPageBehindHidden(page);
       await expect(dialog).toHaveAttribute('aria-labelledby');
       await expect(dialog).toHaveAttribute('aria-describedby');
+      await expect(dialog).toHaveAccessibleName('Delete Invite');
+      await expect(dialog).toHaveAccessibleDescription(/cannot be undone/);
       await page.keyboard.press('Escape');
       // The paused clock holds Base UI's exit transition until it runs.
       await settlePage(page);

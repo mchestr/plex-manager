@@ -24,10 +24,12 @@ export function AdminLayoutShell({ children, hasChatLLM, chatUserName }: AdminLa
     [pathname]
   )
 
+  // `main` fills the screen so a dialog over a short page sits on one stack
+  // of elements, which axe needs to measure the dialog's contrast.
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
+    <div className="flex min-h-screen flex-col bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
       {!hideChrome && <AdminNav />}
-      <main className={cn("pb-20 md:pb-6 transition-all", hideChrome ? "md:ml-0" : "md:ml-64")}>
+      <main className={cn("flex-1 pb-20 md:pb-6 transition-all", hideChrome ? "md:ml-0" : "md:ml-64")}>
         {children}
       </main>
       {hasChatLLM && <Chatbot userName={chatUserName} />}
