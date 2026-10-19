@@ -8,20 +8,17 @@
 import { getDiscordMarkedMedia } from "@/actions/discord-activity"
 import { requireAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/prisma"
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
+import { makeAdminSession } from '@/__tests__/utils/test-builders'
 
 jest.mock("@/lib/admin", () => ({
   requireAdmin: jest.fn(),
 }))
 
-jest.mock("@/lib/prisma", () => ({
-  prisma: {
-    userMediaMark: {
-      findMany: jest.fn(),
-      count: jest.fn(),
-      groupBy: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock("@/lib/utils/logger", () => ({
   createLogger: () => ({ info: jest.fn(), error: jest.fn(), warn: jest.fn() }),
@@ -54,7 +51,7 @@ function makeRow(overrides: Record<string, unknown> = {}) {
 
 beforeEach(() => {
   jest.clearAllMocks()
-  mockRequireAdmin.mockResolvedValue(undefined)
+  mockRequireAdmin.mockResolvedValue(makeAdminSession())
   findMany.mockResolvedValue([])
   count.mockResolvedValue(0)
   groupBy.mockResolvedValue([])

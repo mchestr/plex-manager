@@ -9,15 +9,13 @@ import { GET } from '@/app/api/wrapped/og-image/route'
 import { prisma } from '@/lib/prisma'
 import { limitRequest } from '@/lib/security/rate-limit'
 import { NextRequest } from 'next/server'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 // Mock dependencies
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    plexWrapped: {
-      findUnique: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('@/lib/security/rate-limit', () => ({
   limitRequest: jest.fn(),
@@ -209,7 +207,7 @@ describe('GET /api/wrapped/og-image', () => {
 
   it('returns 400 when token is missing', async () => {
     const response = await GET(buildRequest('http://localhost/api/wrapped/og-image'))
-    const data = JSON.parse(response.body as string)
+    const data = JSON.parse(String(response.body))
 
     expect(response.status).toBe(400)
     expect(data.code).toBe('VALIDATION_ERROR')
@@ -308,7 +306,7 @@ describe('GET /api/wrapped/og-image', () => {
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation()
 
     const response = await GET(buildRequest(`http://localhost/api/wrapped/og-image?token=${TOKEN}`))
-    const data = JSON.parse(response.body as string)
+    const data = JSON.parse(String(response.body))
 
     expect(response.status).toBe(500)
     expect(data.error).toContain('Failed to generate image')

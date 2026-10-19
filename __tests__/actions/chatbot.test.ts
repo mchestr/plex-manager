@@ -5,8 +5,9 @@
 import { chatWithAdminBot } from "@/actions/chatbot"
 import { type ChatMessage } from "@/actions/chatbot/types"
 import { callChatLLM, RESPONSES_API_TOOLS_ERROR } from "@/lib/llm/chat"
-import { prisma } from "@/lib/prisma"
 import { getServerSession } from "next-auth"
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 // Mock dependencies
 jest.mock("@/lib/llm/chat", () => ({
@@ -14,37 +15,9 @@ jest.mock("@/lib/llm/chat", () => ({
   callChatLLM: jest.fn(),
 }))
 
-jest.mock("@/lib/prisma", () => ({
-  prisma: {
-    config: {
-      findUnique: jest.fn(),
-    },
-    lLMProvider: {
-      findFirst: jest.fn(),
-    },
-    lLMUsage: {
-      create: jest.fn(),
-    },
-    chatConversation: {
-      create: jest.fn(),
-    },
-    plexServer: {
-      findFirst: jest.fn(),
-    },
-    sonarr: {
-      findFirst: jest.fn(),
-    },
-    radarr: {
-      findFirst: jest.fn(),
-    },
-    tautulli: {
-      findFirst: jest.fn(),
-    },
-    overseerr: {
-      findFirst: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock("@/lib/connections/plex", () => ({
   getPlexServerIdentity: jest.fn(),
@@ -91,7 +64,7 @@ jest.mock("next-auth", () => ({
 }))
 
 const mockCallChatLLM = callChatLLM as jest.MockedFunction<typeof callChatLLM>
-const mockPrisma = prisma as jest.Mocked<typeof prisma>
+const mockPrisma = prismaMock
 const mockGetServerSession = getServerSession as jest.MockedFunction<typeof getServerSession>
 
 describe("chatbot sources tracking", () => {

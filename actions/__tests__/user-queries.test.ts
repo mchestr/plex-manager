@@ -10,11 +10,13 @@
 
 import { getUserActivityTimeline } from '@/actions/user-queries'
 import { requireAdmin } from '@/lib/admin'
-import { prisma } from '@/lib/prisma'
 import {
+  makeAdminSession,
   makePrismaDiscordCommandLog,
   makePrismaUserMediaMark,
 } from '@/__tests__/utils/test-builders'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 // Mock dependencies
 // user-queries.ts now imports getServerSession/authOptions; mock them so the
@@ -32,28 +34,19 @@ jest.mock('@/lib/admin', () => ({
   requireAdmin: jest.fn(),
 }))
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    discordCommandLog: {
-      findMany: jest.fn(),
-      count: jest.fn(),
-    },
-    userMediaMark: {
-      findMany: jest.fn(),
-      count: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 const mockRequireAdmin = requireAdmin as jest.MockedFunction<typeof requireAdmin>
-const mockPrisma = prisma as jest.Mocked<typeof prisma>
+const mockPrisma = prismaMock
 
 describe('getUserActivityTimeline', () => {
   const userId = 'user-123'
 
   beforeEach(() => {
     jest.clearAllMocks()
-    mockRequireAdmin.mockResolvedValue(undefined)
+    mockRequireAdmin.mockResolvedValue(makeAdminSession())
   })
 
   describe('admin access', () => {

@@ -253,9 +253,7 @@ describe('Statistics Functions', () => {
 
     describe('Watch Time Aggregation', () => {
       const config = {
-        hostname: 'tautulli.example.com',
-        port: 8181,
-        protocol: 'https',
+        url: 'https://tautulli.example.com:8181',
         apiKey: 'test-key',
       }
 
@@ -685,9 +683,7 @@ describe('Statistics Functions', () => {
 
     describe('Monthly Watch Time and Counts', () => {
       const config = {
-        hostname: 'tautulli.example.com',
-        port: 8181,
-        protocol: 'https',
+        url: 'https://tautulli.example.com:8181',
         apiKey: 'test-key',
       }
 
@@ -840,7 +836,7 @@ describe('Statistics Functions', () => {
         expect(result.success).toBe(true)
         expect(result.data?.watchTimeByMonth).toHaveLength(1)
 
-        const march = result.data?.watchTimeByMonth[0]
+        const march = result.data!.watchTimeByMonth[0]
         expect(march.month).toBe(3)
         expect(march.monthName).toBe('March')
         expect(march.watchTime).toBe(290) // 120 + 90 + 50 + 30
@@ -1147,7 +1143,7 @@ describe('Statistics Functions', () => {
         expect(result.success).toBe(true)
         expect(result.data?.watchTimeByMonth).toHaveLength(1)
 
-        const july = result.data?.watchTimeByMonth[0]
+        const july = result.data!.watchTimeByMonth[0]
         expect(july.month).toBe(7)
         expect(july.watchTime).toBe(90) // 30 * 3
         expect(july.topShow).toBeDefined()
@@ -1406,9 +1402,7 @@ describe('Statistics Functions', () => {
   describe('Edge Cases & Empty States', () => {
     describe('fetchTautulliStatistics - empty and minimal data', () => {
       const config = {
-        hostname: 'tautulli.example.com',
-        port: 8181,
-        protocol: 'https',
+        url: 'https://tautulli.example.com:8181',
         apiKey: 'test-key',
       }
 
@@ -1773,9 +1767,7 @@ describe('Statistics Functions', () => {
 
     describe('fetchWatchTimeLeaderboard - empty and minimal data', () => {
       const config = {
-        hostname: 'tautulli.example.com',
-        port: 8181,
-        protocol: 'https',
+        url: 'https://tautulli.example.com:8181',
         apiKey: 'test-key',
       }
 
@@ -2038,7 +2030,7 @@ describe('Statistics Functions', () => {
         { title: 'Movie 1', ratingKey: undefined },
       ]
 
-      const topShows = []
+      const topShows: Array<{ title: string; ratingKey?: string }> = []
 
       const result = await fetchTopContentLeaderboards(
         config,

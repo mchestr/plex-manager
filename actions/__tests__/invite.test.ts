@@ -22,7 +22,6 @@ import {
   deleteInvite,
 } from '@/actions/invite'
 import { requireAdmin } from '@/lib/admin'
-import { prisma } from '@/lib/prisma'
 import {
   getPlexUserInfo,
   inviteUserToPlexServer,
@@ -39,38 +38,18 @@ import { publicUserSelect } from '@/lib/dto/user'
 import { assertNoSecretKeys } from '@/__tests__/utils/assert-no-secret-keys'
 import { applyPrismaShape } from '@/__tests__/utils/prisma-shape'
 import { makePrismaInviteWithUsages, INVITEE_PLEX_AUTH_TOKEN } from '@/__tests__/utils/test-builders'
+import { mockReset } from 'jest-mock-extended'
+import { asTransactionClient, prismaMock } from '@/__tests__/helpers/prisma-mock'
+import { buildInvite } from '@/__tests__/helpers/factories'
 
 // Mock dependencies
 jest.mock('@/lib/admin', () => ({
   requireAdmin: jest.fn(),
 }))
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    invite: {
-      findUnique: jest.fn(),
-      findMany: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
-    },
-    inviteUsage: {
-      create: jest.fn(),
-    },
-    plexServer: {
-      findFirst: jest.fn(),
-    },
-    jellyfinServer: {
-      findFirst: jest.fn(),
-    },
-    user: {
-      findUnique: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-    },
-    $transaction: jest.fn(),
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('@/lib/connections/plex', () => ({
   getPlexUserInfo: jest.fn(),
@@ -114,7 +93,7 @@ jest.mock('@/lib/utils/logger', () => ({
 const mockRequireAdmin = requireAdmin as jest.MockedFunction<typeof requireAdmin>
 const mockConsume = consume as jest.MockedFunction<typeof consume>
 const mockActionClientIp = actionClientIp as jest.MockedFunction<typeof actionClientIp>
-const mockPrisma = prisma as jest.Mocked<typeof prisma>
+const mockPrisma = prismaMock
 const mockGetPlexUserInfo = getPlexUserInfo as jest.MockedFunction<typeof getPlexUserInfo>
 const mockInviteUserToPlexServer = inviteUserToPlexServer as jest.MockedFunction<
   typeof inviteUserToPlexServer
@@ -132,7 +111,7 @@ describe('invite actions', () => {
     expires: new Date(Date.now() + 86400000).toISOString(),
   }
 
-  const mockInvite: Invite = {
+  const mockInvite: Invite = buildInvite({
     id: 'invite-123',
     code: 'TESTCODE',
     maxUses: 1,
@@ -142,14 +121,15 @@ describe('invite actions', () => {
     createdAt: new Date(),
     librarySectionIds: null,
     allowDownloads: false,
-  }
+  })
 
   const mockPlexServer: PlexServer = {
     id: 'server-123',
     name: 'Test Server',
     url: 'http://localhost:32400',
+    publicUrl: null,
     token: 'test-token',
-    machineIdentifier: 'machine-123',
+    adminPlexUserId: null,
     isActive: true,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -159,7 +139,6 @@ describe('invite actions', () => {
     id: 'plex-user-123',
     username: 'testuser',
     email: 'test@example.com',
-    thumb: null,
   }
 
   const CLIENT_IP = '203.0.113.7'
@@ -250,8 +229,7 @@ describe('invite actions', () => {
 
       const result = await validateInvite('TESTCODE')
 
-      expect(result.success).toBe(true)
-      expect(result.data).toEqual(mockInvite)
+      expect(result).toEqual({ success: true, data: mockInvite })
     })
 
     it('should return error for non-existent invite', async () => {
@@ -325,7 +303,7 @@ describe('invite actions', () => {
 
       mockPrisma.$transaction.mockImplementation(async (fn, options) => {
         capturedOptions.push(options)
-        return fn(mockTx)
+        return fn(asTransactionClient(mockTx))
       })
 
       const result = await processInvite('TESTCODE', 'plex-auth-token')
@@ -345,7 +323,7 @@ describe('invite actions', () => {
             findUnique: jest.fn().mockResolvedValue(usedInvite),
           },
         }
-        return fn(mockTx)
+        return fn(asTransactionClient(mockTx))
       })
 
       const result = await processInvite('TESTCODE', 'plex-auth-token')
@@ -366,7 +344,7 @@ describe('invite actions', () => {
             findUnique: jest.fn().mockResolvedValue(expiredInvite),
           },
         }
-        return fn(mockTx)
+        return fn(asTransactionClient(mockTx))
       })
 
       const result = await processInvite('TESTCODE', 'plex-auth-token')
@@ -424,7 +402,7 @@ describe('invite actions', () => {
               create: jest.fn().mockResolvedValue({}),
             },
           }
-          return fn(txClient as Prisma.TransactionClient)
+          return fn(asTransactionClient(txClient))
         }
         return Promise.resolve()
       })
@@ -617,7 +595,7 @@ describe('invite actions', () => {
       inviteUsage: { create: jest.fn() },
     }
 
-    const victim = { id: 'plex-victim', username: 'victim', email: 'victim@example.com', thumb: null }
+    const victim = { id: 'plex-victim', username: 'victim', email: 'victim@example.com' }
 
     /** A row created by the old Jellyfin sign-in, which stored the username as its email. */
     const preClaimedRow = {
@@ -865,7 +843,7 @@ describe('invite actions', () => {
               create: jest.fn().mockResolvedValue({}),
             },
           }
-          return fn(txClient as Prisma.TransactionClient)
+          return fn(asTransactionClient(txClient))
         }
         return Promise.resolve()
       })

@@ -16,22 +16,15 @@ import {
   deleteAnnouncement,
   setAnnouncementActive,
 } from '@/actions/announcements'
-import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { revalidatePath } from 'next/cache'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 // Mock dependencies
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    announcement: {
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),
@@ -45,7 +38,7 @@ jest.mock('@/lib/auth', () => ({
   authOptions: {},
 }))
 
-const mockPrisma = prisma as jest.Mocked<typeof prisma>
+const mockPrisma = prismaMock
 const mockGetServerSession = getServerSession as jest.MockedFunction<typeof getServerSession>
 const mockRevalidatePath = revalidatePath as jest.MockedFunction<typeof revalidatePath>
 
@@ -166,6 +159,8 @@ describe('announcements actions', () => {
       const result = await createAnnouncement({
         title: 'Test',
         content: 'Content',
+        priority: 0,
+        isActive: true,
       })
 
       expect(result.success).toBe(false)
@@ -178,6 +173,8 @@ describe('announcements actions', () => {
       const result = await createAnnouncement({
         title: '',
         content: 'Content',
+        priority: 0,
+        isActive: true,
       })
 
       expect(result.success).toBe(false)
@@ -190,6 +187,8 @@ describe('announcements actions', () => {
       const result = await createAnnouncement({
         title: 'Title',
         content: '',
+        priority: 0,
+        isActive: true,
       })
 
       expect(result.success).toBe(false)
@@ -202,6 +201,8 @@ describe('announcements actions', () => {
       const result = await createAnnouncement({
         title: 'a'.repeat(201),
         content: 'Content',
+        priority: 0,
+        isActive: true,
       })
 
       expect(result.success).toBe(false)
@@ -215,6 +216,8 @@ describe('announcements actions', () => {
         title: 'Title',
         content: 'Content',
         expiresAt: 'invalid-date',
+        priority: 0,
+        isActive: true,
       })
 
       expect(result.success).toBe(false)
@@ -232,6 +235,8 @@ describe('announcements actions', () => {
         title: 'Test',
         content: 'Content',
         expiresAt: null,
+        priority: 0,
+        isActive: true,
       })
 
       expect(result.success).toBe(true)

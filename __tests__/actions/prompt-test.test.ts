@@ -3,25 +3,17 @@
  */
 
 import { testPromptTemplate } from '@/actions/prompt-test'
-import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { callOpenAI } from '@/lib/wrapped/api-calls'
 import { generateWrappedPrompt } from '@/lib/wrapped/prompt-template'
+import type { WrappedStatistics } from '@/types/wrapped'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 // Mock dependencies
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    config: {
-      findUnique: jest.fn(),
-    },
-    lLMProvider: {
-      findFirst: jest.fn(),
-    },
-    lLMUsage: {
-      create: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),
@@ -35,7 +27,7 @@ jest.mock('@/lib/wrapped/api-calls', () => ({
   callOpenAI: jest.fn(),
 }))
 
-const mockPrisma = prisma as jest.Mocked<typeof prisma>
+const mockPrisma = prismaMock
 const mockGetServerSession = getServerSession as jest.MockedFunction<typeof getServerSession>
 const mockGenerateWrappedPrompt = generateWrappedPrompt as jest.MockedFunction<typeof generateWrappedPrompt>
 const mockCallOpenAI = callOpenAI as jest.MockedFunction<typeof callOpenAI>
@@ -50,7 +42,7 @@ describe('testPromptTemplate', () => {
     },
   }
 
-  const mockStatistics = {
+  const mockStatistics: WrappedStatistics = {
     totalWatchTime: {
       total: 1000,
       movies: 600,
@@ -60,11 +52,11 @@ describe('testPromptTemplate', () => {
     showsWatched: 5,
     episodesWatched: 50,
     topMovies: [
-      { title: 'Movie 1', watchTime: 200, year: 2020 },
-      { title: 'Movie 2', watchTime: 150, year: 2021 },
+      { title: 'Movie 1', watchTime: 200, playCount: 1, year: 2020 },
+      { title: 'Movie 2', watchTime: 150, playCount: 1, year: 2021 },
     ],
     topShows: [
-      { title: 'Show 1', watchTime: 300, episodesWatched: 20, year: 2019 },
+      { title: 'Show 1', watchTime: 300, playCount: 20, episodesWatched: 20, year: 2019 },
     ],
   }
 

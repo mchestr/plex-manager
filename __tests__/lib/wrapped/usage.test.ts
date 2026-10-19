@@ -5,19 +5,15 @@
 import {
   getLLMUsageStats,
 } from '@/lib/wrapped/usage'
-import { prisma } from '@/lib/prisma'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 // Mock dependencies
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    lLMUsage: {
-      findMany: jest.fn(),
-      count: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 
-const mockPrisma = prisma as jest.Mocked<typeof prisma>
+beforeEach(() => mockReset(prismaMock))
+
+const mockPrisma = prismaMock
 
 describe('LLM Usage Statistics', () => {
   const mockUsageRecords = [

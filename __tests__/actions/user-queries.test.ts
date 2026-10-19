@@ -1,8 +1,9 @@
 import { getUserPlexWrapped, getAllUsersWithWrapped } from '@/actions/user-queries'
-import { prisma } from '@/lib/prisma'
 import { aggregateLlmUsage } from '@/lib/utils'
 import { getServerSession } from 'next-auth'
 import { makePrismaUser, makePrismaWrapped, makePrismaLlmUsage } from '../utils/test-builders'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),
@@ -16,26 +17,9 @@ jest.mock('@/lib/admin', () => ({
   requireAdmin: jest.fn(),
 }))
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    plexWrapped: {
-      findUnique: jest.fn(),
-      findMany: jest.fn(),
-    },
-    user: {
-      findMany: jest.fn(),
-    },
-    plexServer: {
-      findFirst: jest.fn(),
-    },
-    subscription: {
-      findMany: jest.fn(),
-    },
-    tautulli: {
-      findFirst: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('@/lib/connections/plex', () => ({
   checkUserServerAccess: jest.fn(),
@@ -44,7 +28,7 @@ jest.mock('@/lib/connections/plex', () => ({
   unshareUserFromPlexServer: jest.fn(),
 }))
 
-const mockPrisma = prisma as jest.Mocked<typeof prisma>
+const mockPrisma = prismaMock
 
 describe('getUserPlexWrapped', () => {
   beforeEach(() => {

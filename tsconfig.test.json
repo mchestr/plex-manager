@@ -2,16 +2,16 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "types": ["jest", "@testing-library/jest-dom", "node"],
-    "noEmit": true
+    "noEmit": true,
+    "tsBuildInfoFile": "node_modules/.cache/tsc-test.tsbuildinfo"
   },
   "include": [
     "**/*.test.ts",
     "**/*.test.tsx",
     "**/__tests__/**/*",
     "jest.setup.js",
-    "jest.config.js",
     "types/**/*.d.ts",
     "next-env.d.ts"
-  ]
+  ],
+  "exclude": ["node_modules", ".next", "e2e", "lib/generated", ".agents", ".claude"]
 }
-

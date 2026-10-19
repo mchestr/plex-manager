@@ -5,22 +5,17 @@
 
 import { getWrappedSettings, updateWrappedSettings } from '@/actions/admin'
 import { requireAdmin } from '@/lib/admin'
-import { prisma } from '@/lib/prisma'
-import { createLogger } from '@/lib/utils/logger'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 // Mock dependencies
 jest.mock('@/lib/admin', () => ({
   requireAdmin: jest.fn(),
 }))
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    config: {
-      findUnique: jest.fn(),
-      upsert: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('@/lib/utils/logger', () => ({
   createLogger: jest.fn(() => ({
@@ -36,7 +31,7 @@ jest.mock('next/cache', () => ({
 }))
 
 const mockRequireAdmin = requireAdmin as jest.MockedFunction<typeof requireAdmin>
-const mockPrisma = prisma as jest.Mocked<typeof prisma>
+const mockPrisma = prismaMock
 
 const mockAdminSession = {
   user: {
@@ -499,13 +494,11 @@ describe('Wrapped Settings Date Range', () => {
       ;(mockPrisma.config.upsert as jest.Mock).mockResolvedValue({
         id: 'config',
         wrappedEnabled: true,
-        wrappedYear: 2024,
         updatedBy: 'admin-user-id',
       })
 
       await updateWrappedSettings({
         enabled: true,
-        year: 2024,
       })
 
       expect(mockRevalidatePath).toHaveBeenCalledWith('/')

@@ -1,22 +1,12 @@
 
 import { completeOnboarding, getOnboardingInfo, getOnboardingStatus } from '@/actions/onboarding'
-import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    overseerr: {
-      findFirst: jest.fn(),
-    },
-    discordIntegration: {
-      findUnique: jest.fn(),
-    },
-    user: {
-      findUnique: jest.fn(),
-      update: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),
@@ -30,7 +20,7 @@ jest.mock('@/lib/utils/logger', () => ({
 }))
 
 describe('Onboarding Actions', () => {
-  const mockPrisma = prisma as jest.Mocked<typeof prisma>
+  const mockPrisma = prismaMock
   const mockGetServerSession = getServerSession as jest.MockedFunction<typeof getServerSession>
 
   beforeEach(() => {

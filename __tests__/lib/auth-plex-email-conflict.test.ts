@@ -15,14 +15,12 @@ import { authOptions } from '@/lib/auth'
 import { checkUserServerAccess, getPlexUserInfo } from '@/lib/connections/plex'
 import { Prisma } from '@/lib/generated/prisma/client'
 import { prisma } from '@/lib/prisma'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    plexServer: { findFirst: jest.fn() },
-    config: { findUnique: jest.fn() },
-    user: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn() },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('@/lib/connections/plex', () => ({
   checkUserServerAccess: jest.fn(),
@@ -101,7 +99,7 @@ const PLEX_SERVER = {
   isActive: true,
 }
 
-const VICTIM = { id: 'plex-victim', username: 'victim', email: 'victim@example.com', thumb: null }
+const VICTIM = { id: 'plex-victim', username: 'victim', email: 'victim@example.com' }
 
 /** The row that holds the victim's address: an old Jellyfin username stored as its email. */
 const HOLDER_ROW = { id: 'jellyfin-row', email: VICTIM.email, plexUserId: null, jellyfinUserId: 'jf-eve' }

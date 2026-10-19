@@ -9,8 +9,9 @@
 
 import { getAllUsersWithWrapped } from '@/actions/user-queries'
 import { requireAdmin } from '@/lib/admin'
-import { prisma } from '@/lib/prisma'
-import { makePrismaUser, makePrismaSubscription } from '@/__tests__/utils/test-builders'
+import { makeAdminSession, makePrismaUser, makePrismaSubscription } from '@/__tests__/utils/test-builders'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 // user-queries.ts imports getServerSession/authOptions; mock them so the module
 // doesn't pull in the full NextAuth (ESM `jose`) chain, which Jest can't parse.
@@ -36,35 +37,17 @@ jest.mock('@/lib/connections/plex', () => ({
   unshareUserFromPlexServer: jest.fn(),
 }))
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    user: {
-      findMany: jest.fn(),
-    },
-    plexServer: {
-      findFirst: jest.fn(),
-    },
-    plexWrapped: {
-      findMany: jest.fn(),
-    },
-    subscription: {
-      findMany: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 const mockRequireAdmin = requireAdmin as jest.MockedFunction<typeof requireAdmin>
-const mockPrisma = prisma as unknown as {
-  user: { findMany: jest.Mock }
-  plexServer: { findFirst: jest.Mock }
-  plexWrapped: { findMany: jest.Mock }
-  subscription: { findMany: jest.Mock }
-}
+const mockPrisma = prismaMock
 
 describe('getAllUsersWithWrapped - subscription attach', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockRequireAdmin.mockResolvedValue(undefined)
+    mockRequireAdmin.mockResolvedValue(makeAdminSession())
     // No active Plex server → access map is null for everyone.
     mockPrisma.plexServer.findFirst.mockResolvedValue(null)
     // No share stats by default.

@@ -15,8 +15,9 @@ import {
 } from '@/actions/admin'
 import { getConfig } from '@/actions/admin/admin-config'
 import { prisma } from '@/lib/prisma'
-import { getServerSession } from 'next-auth'
 import { redirect } from 'next/navigation'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 // Mock dependencies
 jest.mock('@/lib/admin', () => ({
@@ -24,26 +25,9 @@ jest.mock('@/lib/admin', () => ({
   getAdminStatus: jest.fn(),
 }))
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    config: {
-      upsert: jest.fn(),
-      findUnique: jest.fn(),
-      create: jest.fn(),
-    },
-    lLMUsage: {
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      count: jest.fn(),
-    },
-    user: {
-      findUnique: jest.fn(),
-    },
-    plexWrapped: {
-      findUnique: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),

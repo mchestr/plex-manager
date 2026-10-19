@@ -18,22 +18,14 @@ import {
   inviteUserToPlexServer,
   unshareUserFromPlexServer,
 } from '@/lib/connections/plex-invitations'
-import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
-import { revalidatePath } from 'next/cache'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
+import { buildConfig } from '@/__tests__/helpers/factories'
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    config: {
-      findUnique: jest.fn(),
-      upsert: jest.fn(),
-    },
-    subscription: {
-      findMany: jest.fn(),
-      updateMany: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),
@@ -59,10 +51,7 @@ jest.mock('@/lib/connections/plex-invitations', () => ({
   acceptPlexInvite: jest.fn(),
 }))
 
-const mockPrisma = prisma as unknown as {
-  config: { findUnique: jest.Mock; upsert: jest.Mock }
-  subscription: { findMany: jest.Mock; updateMany: jest.Mock }
-}
+const mockPrisma = prismaMock
 const mockGetServerSession = getServerSession as jest.MockedFunction<typeof getServerSession>
 
 describe('setStripeEnabled(false) — safe & reversible toggle-off (FR-4)', () => {
@@ -74,7 +63,7 @@ describe('setStripeEnabled(false) — safe & reversible toggle-off (FR-4)', () =
   beforeEach(() => {
     jest.clearAllMocks()
     mockGetServerSession.mockResolvedValue(adminSession)
-    mockPrisma.config.upsert.mockResolvedValue({ id: 'config', stripeEnabled: false })
+    mockPrisma.config.upsert.mockResolvedValue(buildConfig({ stripeEnabled: false }))
   })
 
   it('only writes the flag: no config-completeness read, no Stripe, no Plex', async () => {

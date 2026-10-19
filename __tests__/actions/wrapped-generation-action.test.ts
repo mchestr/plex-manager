@@ -10,7 +10,6 @@ import {
 } from '@/actions/wrapped-generation'
 import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { generateWrappedWithLLM } from '@/lib/wrapped/llm'
 import { fetchOverseerrStatistics } from '@/lib/wrapped/overseerr-statistics'
 import { fetchPlexServerStatistics } from '@/lib/wrapped/server-statistics'
@@ -33,32 +32,9 @@ import {
 } from '@/lib/wrapped/__tests__/fixtures'
 
 // Mock dependencies
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    user: {
-      findUnique: jest.fn(),
-      findMany: jest.fn(),
-    },
-    plexWrapped: {
-      findUnique: jest.fn(),
-      createMany: jest.fn(),
-      updateMany: jest.fn(),
-      updateManyAndReturn: jest.fn(),
-    },
-    plexServer: {
-      findFirst: jest.fn(),
-    },
-    tautulli: {
-      findFirst: jest.fn(),
-    },
-    overseerr: {
-      findFirst: jest.fn(),
-    },
-    config: {
-      findUnique: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('@/actions/admin', () => ({
   getWrappedSettings: jest.fn(),
@@ -117,6 +93,8 @@ import {
   makePrismaPlexServer,
   makePrismaTautulli,
 } from '../utils/test-builders'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 const SEASON_YEAR = 2026
 
