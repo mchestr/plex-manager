@@ -4,7 +4,7 @@
  * Zone: the member's, Europe/London.
  */
 
-import { MEMBER, metadataFor, SEASON, SERVER, type Profile } from "../profile"
+import { MEMBER, metadataFor, ratio, SEASON, SERVER, type Profile } from "../profile"
 import { historyRow } from "../rows"
 import { series } from "../titles"
 
@@ -33,15 +33,15 @@ export const postcard: Profile = {
     omittedPages: [3, 4, 6, 9, 11, 12, 13, 14, 17],
     facts: {
       "member.firstName": "Ada",
-      "time.totalMinutes": "12 minutes",
+      "time.totalMinutes": "12\u00A0minutes",
       "counts.episodes": "1",
       "counts.series": "1",
       "counts.films": "0",
       "series[1].title": "Detectorists",
-      "series[1].minutes": "12 minutes",
+      "series[1].minutes": "12\u00A0minutes",
       "days.active": "1",
-      "days.biggest.date": "4 Apr",
-      "hours.peak": "10 AM",
+      "days.biggest.date": "April\u00A04",
+      "hours.peak": "10\u00A0AM",
       "tz.label": "Europe/London",
     },
     stats: {
@@ -87,6 +87,25 @@ export const postcard: Profile = {
       },
       race: { eligible: false },
       milestones: [],
+      // P2.8 sections, derived with hand-facts.py (P2.16): genre shares split each
+      // title's seconds evenly across its genres, over the seconds that have one;
+      // every credited actor earns a title's minutes; devices count every play.
+      taste: {
+        genres: [
+          { name: "Animation", minutes: 6, share: ratio(360, 720) },
+          { name: "Drama", minutes: 6, share: ratio(360, 720) },
+        ],
+        medianYear: 2014,
+        oldest: { key: "series:1301", title: "Detectorists", year: 2014 },
+        freshShare: ratio(0, 2),
+      },
+      people: {
+        actors: [{ name: "Noor Haddad", minutes: 12 }, { name: "Tomas Brandt", minutes: 12 }],
+        directors: [],
+      },
+      devices: { eligible: false }, // under 20 plays
+      requests: { eligible: false },
+      nextYear: { leftForLater: [], picks: [] },
       topSeries: [{ title: "Detectorists", minutes: 12, plays: 2 }],
       topFilms: [],
     },

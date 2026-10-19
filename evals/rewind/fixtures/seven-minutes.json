@@ -46,6 +46,7 @@
     "rows": [],
     "genres": {}
   },
+  "library": null,
   "expected": {
     "edition": "postcard",
     "archetype": null,
@@ -61,15 +62,15 @@
     ],
     "facts": {
       "member.firstName": "Theo",
-      "time.totalMinutes": "7 minutes",
+      "time.totalMinutes": "7 minutes",
       "counts.films": "1",
       "counts.episodes": "0",
       "films[1].title": "Up",
       "films[1].plays": "2",
       "days.active": "2",
-      "days.biggest.minutes": "4 minutes",
-      "streak.longest.days": "2 days",
-      "hours.peak": "2 PM",
+      "days.biggest.minutes": "4 minutes",
+      "streak.longest.days": "2 days",
+      "hours.peak": "2 PM",
       "tz.label": "America/Los_Angeles"
     },
     "stats": {
@@ -155,6 +156,73 @@
       },
       "race": {
         "eligible": false
+      },
+      "taste": {
+        "genres": [
+          {
+            "name": "Comedy",
+            "minutes": 2,
+            "share": 0.375
+          },
+          {
+            "name": "Crime",
+            "minutes": 2,
+            "share": 0.375
+          },
+          {
+            "name": "Animation",
+            "minutes": 0,
+            "share": 0.125
+          },
+          {
+            "name": "Science Fiction",
+            "minutes": 0,
+            "share": 0.125
+          }
+        ],
+        "medianYear": 2009,
+        "oldest": {
+          "key": "film:1401",
+          "title": "Up",
+          "year": 2009
+        },
+        "freshShare": 0
+      },
+      "people": {
+        "actors": [
+          {
+            "name": "Jun Ito",
+            "minutes": 5
+          },
+          {
+            "name": "Mira Okafor",
+            "minutes": 5
+          },
+          {
+            "name": "Lena Marsh",
+            "minutes": 1
+          },
+          {
+            "name": "Tomas Brandt",
+            "minutes": 1
+          }
+        ],
+        "directors": [
+          {
+            "name": "Ines Varga",
+            "minutes": 5
+          }
+        ]
+      },
+      "devices": {
+        "eligible": false
+      },
+      "requests": {
+        "eligible": false
+      },
+      "nextYear": {
+        "leftForLater": [],
+        "picks": []
       },
       "milestones": [],
       "topSeries": [

@@ -387,6 +387,7 @@
     ],
     "genres": {}
   },
+  "library": null,
   "expected": {
     "edition": "full",
     "archetype": "series-devourer",
@@ -405,11 +406,14 @@
       "records.longestBinge.title": "Breaking Bad",
       "records.longestBinge.episodes": "6",
       "records.mostEpisodesDay": "10",
-      "streak.longest.days": "2 days",
+      "streak.longest.days": "2 days",
       "days.active": "49",
-      "hours.peak": "1 PM",
+      "hours.peak": "1 PM",
       "race.leadChanges": "0",
-      "tz.label": "America/Los_Angeles"
+      "tz.label": "America/Los_Angeles",
+      "requests.made": "3",
+      "requests.watched": "2",
+      "archetype.name": "The Series Devourer"
     },
     "stats": {
       "totals": {
@@ -530,6 +534,87 @@
         "leadChanges": 0,
         "overtakeMonth": null,
         "closestGapMinutes": 600
+      },
+      "taste": {
+        "genres": [
+          {
+            "name": "Drama",
+            "minutes": 3600,
+            "share": 0.24573378839590443
+          },
+          {
+            "name": "Animation",
+            "minutes": 2100,
+            "share": 0.14334470989761092
+          },
+          {
+            "name": "Comedy",
+            "minutes": 1925,
+            "share": 0.13139931740614336
+          },
+          {
+            "name": "Documentary",
+            "minutes": 1800,
+            "share": 0.12286689419795221
+          },
+          {
+            "name": "Fantasy",
+            "minutes": 1800,
+            "share": 0.12286689419795221
+          }
+        ],
+        "medianYear": 2008,
+        "oldest": {
+          "key": "series:1703",
+          "title": "The Sopranos",
+          "year": 1999
+        },
+        "freshShare": 0
+      },
+      "people": {
+        "actors": [
+          {
+            "name": "Noor Haddad",
+            "minutes": 7200
+          },
+          {
+            "name": "Tomas Brandt",
+            "minutes": 4200
+          },
+          {
+            "name": "Jun Ito",
+            "minutes": 3850
+          },
+          {
+            "name": "Calum Reyes",
+            "minutes": 3600
+          },
+          {
+            "name": "Ines Varga",
+            "minutes": 3600
+          }
+        ],
+        "directors": []
+      },
+      "devices": {
+        "directPlayShare": 1,
+        "homeShare": 1,
+        "topPlatform": "Apple TV",
+        "topProduct": "Plex for Apple TV",
+        "fourKShare": 0
+      },
+      "requests": {
+        "made": 3,
+        "approved": 2,
+        "available": 1,
+        "pending": 1,
+        "declined": 0,
+        "watched": 2,
+        "genres": []
+      },
+      "nextYear": {
+        "leftForLater": [],
+        "picks": []
       },
       "milestones": [
         {

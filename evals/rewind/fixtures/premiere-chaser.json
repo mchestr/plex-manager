@@ -85,10 +85,12 @@
     "rows": [],
     "genres": {}
   },
+  "library": null,
   "expected": {
     "edition": "full",
     "archetype": "premiere-chaser",
     "omittedPages": [
+      8,
       11,
       12,
       14,
@@ -102,11 +104,13 @@
       "counts.episodes": "18",
       "series[1].title": "Severance",
       "films[1].title": "The Odyssey",
-      "days.biggest.date": "18 Jul",
-      "days.longestGap.days": "90",
+      "days.biggest.date": "July 18",
+      "days.longestGap.days": "90 days",
       "days.longestGap.month": "August",
-      "hours.peak": "9 PM",
-      "tz.label": "Europe/Paris"
+      "hours.peak": "9 PM",
+      "tz.label": "Europe/Paris",
+      "taste.genre[1].name": "Science Fiction",
+      "archetype.name": "The Premiere Chaser"
     },
     "stats": {
       "totals": {
@@ -197,6 +201,59 @@
       },
       "race": {
         "eligible": false
+      },
+      "taste": {
+        "genres": [
+          {
+            "name": "Science Fiction",
+            "minutes": 582,
+            "share": 0.23013048635824437
+          },
+          {
+            "name": "Adventure",
+            "minutes": 518,
+            "share": 0.2048240411229735
+          },
+          {
+            "name": "Animation",
+            "minutes": 339,
+            "share": 0.13404507710557534
+          },
+          {
+            "name": "Fantasy",
+            "minutes": 302,
+            "share": 0.11941478845393436
+          },
+          {
+            "name": "Comedy",
+            "minutes": 291,
+            "share": 0.11506524317912219
+          }
+        ],
+        "medianYear": 2026,
+        "oldest": {
+          "key": "film:2721",
+          "title": "Casablanca",
+          "year": 1942
+        },
+        "freshShare": 0.8666666666666667
+      },
+      "people": {
+        "eligible": false
+      },
+      "devices": {
+        "directPlayShare": 1,
+        "homeShare": 1,
+        "topPlatform": "Apple TV",
+        "topProduct": "Plex for Apple TV",
+        "fourKShare": 0
+      },
+      "requests": {
+        "eligible": false
+      },
+      "nextYear": {
+        "leftForLater": [],
+        "picks": []
       },
       "milestones": [
         {

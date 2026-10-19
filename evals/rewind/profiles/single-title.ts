@@ -46,11 +46,12 @@ export const singleTitle: Profile = {
       "counts.seasons": "6",
       "series[1].title": "The Office",
       "series[1].episodes": "144",
-      "hours.peak": "9 PM",
+      "hours.peak": "9\u00A0PM",
       "days.active": "48",
       "records.longestBinge.episodes": "3",
-      "time.milestones[3].date": "15 Nov",
+      "time.milestones[3].date": "November\u00A015",
       "tz.label": "Europe/Berlin",
+      "archetype.name": "The Loyalist",
     },
     stats: {
       // 48 x 3 x 22 = 3,168; last year 48 x 2 x 22 = 2,112.
@@ -102,6 +103,31 @@ export const singleTitle: Profile = {
         { hours: 25, date: "2026-06-07" },
         { hours: 50, date: "2026-11-15" },
       ],
+      // P2.8 sections, derived with hand-facts.py (P2.16): genre shares split each
+      // title's seconds evenly across its genres, over the seconds that have one;
+      // every credited actor earns a title's minutes; devices count every play.
+      taste: {
+        genres: [
+          { name: "Animation", minutes: 1584, share: ratio(95_040, 190_080) },
+          { name: "Drama", minutes: 1584, share: ratio(95_040, 190_080) },
+        ],
+        medianYear: 2005,
+        oldest: { key: "series:1901", title: "The Office", year: 2005 },
+        freshShare: ratio(0, 144),
+      },
+      people: {
+        actors: [{ name: "Noor Haddad", minutes: 3168 }, { name: "Tomas Brandt", minutes: 3168 }],
+        directors: [],
+      },
+      devices: {
+        directPlayShare: ratio(144, 144),
+        homeShare: ratio(144, 144),
+        topPlatform: "Apple TV",
+        topProduct: "Plex for Apple TV",
+        fourKShare: ratio(0, 144),
+      },
+      requests: { eligible: false },
+      nextYear: { leftForLater: [], picks: [] },
       topSeries: [{ title: "The Office", minutes: 3168, plays: 144 }],
       topFilms: [],
     },

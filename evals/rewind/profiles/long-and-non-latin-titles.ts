@@ -45,8 +45,8 @@ export const longAndNonLatinTitles: Profile = {
   }),
   expected: {
     edition: "full",
-    archetype: "explorer",
-    omittedPages: [11, 12, 14, 17],
+    archetype: "festival-juror",
+    omittedPages: [8, 11, 12, 14, 17],
     facts: {
       "member.firstName": "Linh",
       "time.totalHours": "284",
@@ -56,9 +56,11 @@ export const longAndNonLatinTitles: Profile = {
       "films[1].plays": "2",
       "series[1].title": "Fargo (2014)",
       "days.active": "202",
-      "streak.longest.days": "202 days",
-      "hours.peak": "8 PM",
+      "streak.longest.days": "202\u00A0days",
+      "hours.peak": "8\u00A0PM",
       "tz.label": "Asia/Ho_Chi_Minh",
+      "taste.genre[1].name": "Drama",
+      "archetype.name": "The Festival Juror",
     },
     stats: {
       // 137 films x 100 + 155 = 13,855; 63 pilots x 50 + 50 = 3,200.
@@ -105,6 +107,27 @@ export const longAndNonLatinTitles: Profile = {
         { hours: 100, date: "2026-03-08" },
         { hours: 250, date: "2026-06-12" },
       ],
+      // P2.8 sections, derived with hand-facts.py (P2.16): genre shares split each
+      // title's seconds evenly across its genres, over the seconds that have one;
+      // every credited actor earns a title's minutes; devices count every play.
+      taste: {
+        genres: [
+          { name: "Drama", minutes: 17_055, share: ratio(1_023_300, 1_023_300) },
+        ],
+        medianYear: 2009,
+        oldest: { key: "film:3269", title: "Citizen Kane", year: 1941 },
+        freshShare: ratio(0, 202),
+      },
+      people: { eligible: false }, // no cast or director metadata
+      devices: {
+        directPlayShare: ratio(202, 202),
+        homeShare: ratio(202, 202),
+        topPlatform: "Apple TV",
+        topProduct: "Plex for Apple TV",
+        fourKShare: ratio(0, 202),
+      },
+      requests: { eligible: false },
+      nextYear: { leftForLater: [], picks: [] },
       topSeries: [
         { title: "Fargo (2014)", minutes: 100, plays: 2 },
         { title: "Normal People", minutes: 50, plays: 1 },

@@ -283,6 +283,7 @@
     "rows": [],
     "genres": {}
   },
+  "library": null,
   "expected": {
     "edition": "full",
     "archetype": "loyalist",
@@ -302,11 +303,12 @@
       "counts.seasons": "6",
       "series[1].title": "The Office",
       "series[1].episodes": "144",
-      "hours.peak": "9 PM",
+      "hours.peak": "9 PM",
       "days.active": "48",
       "records.longestBinge.episodes": "3",
-      "time.milestones[3].date": "15 Nov",
-      "tz.label": "Europe/Berlin"
+      "time.milestones[3].date": "November 15",
+      "tz.label": "Europe/Berlin",
+      "archetype.name": "The Loyalist"
     },
     "stats": {
       "totals": {
@@ -409,6 +411,54 @@
       },
       "race": {
         "eligible": false
+      },
+      "taste": {
+        "genres": [
+          {
+            "name": "Animation",
+            "minutes": 1584,
+            "share": 0.5
+          },
+          {
+            "name": "Drama",
+            "minutes": 1584,
+            "share": 0.5
+          }
+        ],
+        "medianYear": 2005,
+        "oldest": {
+          "key": "series:1901",
+          "title": "The Office",
+          "year": 2005
+        },
+        "freshShare": 0
+      },
+      "people": {
+        "actors": [
+          {
+            "name": "Noor Haddad",
+            "minutes": 3168
+          },
+          {
+            "name": "Tomas Brandt",
+            "minutes": 3168
+          }
+        ],
+        "directors": []
+      },
+      "devices": {
+        "directPlayShare": 1,
+        "homeShare": 1,
+        "topPlatform": "Apple TV",
+        "topProduct": "Plex for Apple TV",
+        "fourKShare": 0
+      },
+      "requests": {
+        "eligible": false
+      },
+      "nextYear": {
+        "leftForLater": [],
+        "picks": []
       },
       "milestones": [
         {

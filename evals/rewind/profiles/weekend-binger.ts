@@ -7,7 +7,7 @@
  */
 
 import { shift } from "../dates"
-import { MEMBER, metadataFor, SEASON, SERVER, type Profile } from "../profile"
+import { MEMBER, metadataFor, ratio, SEASON, SERVER, type Profile } from "../profile"
 import { historyRow } from "../rows"
 import { episodes, film, listRun, series } from "../titles"
 
@@ -52,10 +52,11 @@ export const weekendBinger: Profile = {
       "series[1].title": "The Crown",
       "days.weekendShare": "100%",
       "days.active": "40",
-      "streak.longest.days": "2 days",
-      "hours.peak": "1 PM",
+      "streak.longest.days": "2\u00A0days",
+      "hours.peak": "1\u00A0PM",
       "records.longestBinge.episodes": "3",
       "tz.label": "Australia/Sydney",
+      "archetype.name": "The Weekend Double Feature",
     },
     stats: {
       // A weekend: 110 + 100 + 3 x 40 = 330; 20 weekends = 6,600.
@@ -107,6 +108,40 @@ export const weekendBinger: Profile = {
         { hours: 50, date: "2026-03-07" },
         { hours: 100, date: "2026-05-09" },
       ],
+      // P2.8 sections, derived with hand-facts.py (P2.16): genre shares split each
+      // title's seconds evenly across its genres, over the seconds that have one;
+      // every credited actor earns a title's minutes; devices count every play.
+      taste: {
+        genres: [
+          { name: "Animation", minutes: 1725, share: ratio(103_500, 396_000) },
+          { name: "Drama", minutes: 1725, share: ratio(103_500, 396_000) },
+          { name: "Comedy", minutes: 525, share: ratio(31_500, 396_000) },
+          { name: "Crime", minutes: 525, share: ratio(31_500, 396_000) },
+          { name: "Documentary", minutes: 525, share: ratio(31_500, 396_000) },
+        ],
+        medianYear: 1979,
+        oldest: { key: "film:2124", title: "Citizen Kane", year: 1941 },
+        freshShare: ratio(0, 100),
+      },
+      people: {
+        actors: [
+          { name: "Noor Haddad", minutes: 3450 },
+          { name: "Tomas Brandt", minutes: 3450 },
+          { name: "Calum Reyes", minutes: 1050 },
+          { name: "Ines Varga", minutes: 1050 },
+          { name: "Jun Ito", minutes: 1050 },
+        ],
+        directors: [{ name: "Calum Reyes", minutes: 550 }, { name: "Jun Ito", minutes: 550 }, { name: "Rowan Hale", minutes: 550 }],
+      },
+      devices: {
+        directPlayShare: ratio(100, 100),
+        homeShare: ratio(100, 100),
+        topPlatform: "Apple TV",
+        topProduct: "Plex for Apple TV",
+        fourKShare: ratio(0, 100),
+      },
+      requests: { eligible: false },
+      nextYear: { leftForLater: [], picks: [] },
       topSeries: [{ title: "The Crown", minutes: 2400, plays: 60 }],
       // The 110-minute films, most recent first (weekends 20, 19 and 18).
       topFilms: [

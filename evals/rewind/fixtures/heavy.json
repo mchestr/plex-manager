@@ -2897,6 +2897,153 @@
     ],
     "genres": {}
   },
+  "library": [
+    {"ratingKey":"4001","type":"show","title":"The Lord of the Rings: The Rings of Power","year":2022,"addedAt":"2022-06-01T00:00:00.000Z","contentRating":null,"genres":["Comedy","Crime"],"directors":[],"actors":["Mira Okafor","Jun Ito"]},
+    {"ratingKey":"4002","type":"show","title":"Severance","year":2022,"addedAt":"2022-06-01T00:00:00.000Z","contentRating":null,"genres":["Science Fiction","Animation"],"directors":[],"actors":["Tomas Brandt","Lena Marsh"]},
+    {"ratingKey":"4003","type":"show","title":"The Sopranos","year":1999,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Thriller","Fantasy"],"directors":[],"actors":["Ines Varga","Rowan Hale"]},
+    {"ratingKey":"4004","type":"show","title":"Breaking Bad","year":2008,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Crime","Documentary"],"directors":[],"actors":["Calum Reyes","Mira Okafor"]},
+    {"ratingKey":"4005","type":"show","title":"Game of Thrones","year":2011,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Animation","Drama"],"directors":[],"actors":["Noor Haddad","Tomas Brandt"]},
+    {"ratingKey":"4010","type":"show","title":"Only Murders in the Building","year":2021,"addedAt":"2021-06-01T00:00:00.000Z","contentRating":null,"genres":["Science Fiction","Animation"],"directors":[],"actors":["Tomas Brandt","Lena Marsh"]},
+    {"ratingKey":"4011","type":"show","title":"Marvel's Agents of S.H.I.E.L.D.","year":2013,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Thriller","Fantasy"],"directors":[],"actors":["Ines Varga","Rowan Hale"]},
+    {"ratingKey":"4012","type":"show","title":"Unbreakable Kimmy Schmidt","year":2015,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Crime","Documentary"],"directors":[],"actors":["Calum Reyes","Mira Okafor"]},
+    {"ratingKey":"4013","type":"show","title":"Crazy Ex-Girlfriend","year":2015,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Animation","Drama"],"directors":[],"actors":["Noor Haddad","Tomas Brandt"]},
+    {"ratingKey":"4014","type":"show","title":"It's Always Sunny in Philadelphia","year":2005,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Fantasy","Comedy"],"directors":[],"actors":["Jun Ito","Ines Varga"]},
+    {"ratingKey":"4015","type":"show","title":"Star Trek: Strange New Worlds","year":2022,"addedAt":"2022-06-01T00:00:00.000Z","contentRating":null,"genres":["Documentary","Science Fiction"],"directors":[],"actors":["Lena Marsh","Calum Reyes"]},
+    {"ratingKey":"4016","type":"show","title":"Avatar: The Last Airbender","year":2005,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Drama","Thriller"],"directors":[],"actors":["Rowan Hale","Noor Haddad"]},
+    {"ratingKey":"4017","type":"show","title":"Shōgun","year":2024,"addedAt":"2024-06-01T00:00:00.000Z","contentRating":null,"genres":["Comedy","Crime"],"directors":[],"actors":["Mira Okafor","Jun Ito"]},
+    {"ratingKey":"4018","type":"show","title":"Dix pour cent","year":2015,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Science Fiction","Animation"],"directors":[],"actors":["Tomas Brandt","Lena Marsh"]},
+    {"ratingKey":"4019","type":"show","title":"Bron/Broen","year":2011,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Thriller","Fantasy"],"directors":[],"actors":["Ines Varga","Rowan Hale"]},
+    {"ratingKey":"4020","type":"show","title":"The Bear","year":2022,"addedAt":"2022-06-01T00:00:00.000Z","contentRating":null,"genres":["Crime","Documentary"],"directors":[],"actors":["Calum Reyes","Mira Okafor"]},
+    {"ratingKey":"4021","type":"show","title":"Andor","year":2022,"addedAt":"2022-06-01T00:00:00.000Z","contentRating":null,"genres":["Animation","Drama"],"directors":[],"actors":["Noor Haddad","Tomas Brandt"]},
+    {"ratingKey":"4022","type":"show","title":"The Great British Bake Off","year":2010,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Fantasy","Comedy"],"directors":[],"actors":["Jun Ito","Ines Varga"]},
+    {"ratingKey":"4023","type":"show","title":"Better Call Saul","year":2015,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Documentary","Science Fiction"],"directors":[],"actors":["Lena Marsh","Calum Reyes"]},
+    {"ratingKey":"4024","type":"show","title":"The Wire","year":2002,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Drama","Thriller"],"directors":[],"actors":["Rowan Hale","Noor Haddad"]},
+    {"ratingKey":"4025","type":"show","title":"Mad Men","year":2007,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Comedy","Crime"],"directors":[],"actors":["Mira Okafor","Jun Ito"]},
+    {"ratingKey":"4026","type":"show","title":"House of the Dragon","year":2022,"addedAt":"2022-06-01T00:00:00.000Z","contentRating":null,"genres":["Science Fiction","Animation"],"directors":[],"actors":["Tomas Brandt","Lena Marsh"]},
+    {"ratingKey":"4027","type":"show","title":"Succession","year":2018,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Thriller","Fantasy"],"directors":[],"actors":["Ines Varga","Rowan Hale"]},
+    {"ratingKey":"4028","type":"show","title":"The Last of Us","year":2023,"addedAt":"2023-06-01T00:00:00.000Z","contentRating":null,"genres":["Crime","Documentary"],"directors":[],"actors":["Calum Reyes","Mira Okafor"]},
+    {"ratingKey":"4029","type":"show","title":"Stranger Things","year":2016,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Animation","Drama"],"directors":[],"actors":["Noor Haddad","Tomas Brandt"]},
+    {"ratingKey":"4030","type":"show","title":"The Crown","year":2016,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Fantasy","Comedy"],"directors":[],"actors":["Jun Ito","Ines Varga"]},
+    {"ratingKey":"4031","type":"show","title":"Fleabag","year":2016,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Documentary","Science Fiction"],"directors":[],"actors":["Lena Marsh","Calum Reyes"]},
+    {"ratingKey":"4032","type":"show","title":"Ted Lasso","year":2020,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Drama","Thriller"],"directors":[],"actors":["Rowan Hale","Noor Haddad"]},
+    {"ratingKey":"4033","type":"show","title":"The Office","year":2005,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Comedy","Crime"],"directors":[],"actors":["Mira Okafor","Jun Ito"]},
+    {"ratingKey":"4034","type":"show","title":"Parks and Recreation","year":2009,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Science Fiction","Animation"],"directors":[],"actors":["Tomas Brandt","Lena Marsh"]},
+    {"ratingKey":"4035","type":"show","title":"Seinfeld","year":1989,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Thriller","Fantasy"],"directors":[],"actors":["Ines Varga","Rowan Hale"]},
+    {"ratingKey":"5001","type":"movie","title":"Dr. Strangelove or: How I Learned to Stop Worrying and Love the Bomb","year":1964,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Comedy","Crime"],"directors":["Ines Varga"],"actors":["Mira Okafor","Jun Ito"]},
+    {"ratingKey":"5002","type":"movie","title":"Le Fabuleux Destin d'Amélie Poulain","year":2001,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Science Fiction","Animation"],"directors":["Calum Reyes"],"actors":["Tomas Brandt","Lena Marsh"]},
+    {"ratingKey":"5003","type":"movie","title":"Birdman or (The Unexpected Virtue of Ignorance)","year":2014,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Thriller","Fantasy"],"directors":["Noor Haddad"],"actors":["Ines Varga","Rowan Hale"]},
+    {"ratingKey":"5004","type":"movie","title":"Borat Subsequent Moviefilm: Delivery of Prodigious Bribe to American Regime for Make Benefit Once Glorious Nation of Kazakhstan","year":2020,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Crime","Documentary"],"directors":["Jun Ito"],"actors":["Calum Reyes","Mira Okafor"]},
+    {"ratingKey":"5005","type":"movie","title":"The Assassination of Jesse James by the Coward Robert Ford","year":2007,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Animation","Drama"],"directors":["Lena Marsh"],"actors":["Noor Haddad","Tomas Brandt"]},
+    {"ratingKey":"5006","type":"movie","title":"Pirates of the Caribbean: The Curse of the Black Pearl","year":2003,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Fantasy","Comedy"],"directors":["Rowan Hale"],"actors":["Jun Ito","Ines Varga"]},
+    {"ratingKey":"5007","type":"movie","title":"Harry Potter and the Deathly Hallows: Part 2","year":2011,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Documentary","Science Fiction"],"directors":["Mira Okafor"],"actors":["Lena Marsh","Calum Reyes"]},
+    {"ratingKey":"5008","type":"movie","title":"Star Wars: Episode V - The Empire Strikes Back","year":1980,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Drama","Thriller"],"directors":["Tomas Brandt"],"actors":["Rowan Hale","Noor Haddad"]},
+    {"ratingKey":"5009","type":"movie","title":"Everything Everywhere All at Once","year":2022,"addedAt":"2022-06-01T00:00:00.000Z","contentRating":null,"genres":["Comedy","Crime"],"directors":["Ines Varga"],"actors":["Mira Okafor","Jun Ito"]},
+    {"ratingKey":"5010","type":"movie","title":"Eternal Sunshine of the Spotless Mind","year":2004,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Science Fiction","Animation"],"directors":["Calum Reyes"],"actors":["Tomas Brandt","Lena Marsh"]},
+    {"ratingKey":"5011","type":"movie","title":"Spider-Man: Across the Spider-Verse","year":2023,"addedAt":"2023-06-01T00:00:00.000Z","contentRating":null,"genres":["Thriller","Fantasy"],"directors":["Noor Haddad"],"actors":["Ines Varga","Rowan Hale"]},
+    {"ratingKey":"5012","type":"movie","title":"Mission: Impossible - Dead Reckoning Part One","year":2023,"addedAt":"2023-06-01T00:00:00.000Z","contentRating":null,"genres":["Crime","Documentary"],"directors":["Jun Ito"],"actors":["Calum Reyes","Mira Okafor"]},
+    {"ratingKey":"5013","type":"movie","title":"Dune: Part Two","year":2024,"addedAt":"2024-06-01T00:00:00.000Z","contentRating":null,"genres":["Animation","Drama"],"directors":["Lena Marsh"],"actors":["Noor Haddad","Tomas Brandt"]},
+    {"ratingKey":"5014","type":"movie","title":"The Hitchhiker's Guide to the Galaxy","year":2005,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Fantasy","Comedy"],"directors":["Rowan Hale"],"actors":["Jun Ito","Ines Varga"]},
+    {"ratingKey":"5015","type":"movie","title":"The Good, the Bad and the Ugly","year":1966,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Documentary","Science Fiction"],"directors":["Mira Okafor"],"actors":["Lena Marsh","Calum Reyes"]},
+    {"ratingKey":"5016","type":"movie","title":"Crouching Tiger, Hidden Dragon","year":2000,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Drama","Thriller"],"directors":["Tomas Brandt"],"actors":["Rowan Hale","Noor Haddad"]},
+    {"ratingKey":"5017","type":"movie","title":"Portrait of a Lady on Fire","year":2019,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Comedy","Crime"],"directors":["Ines Varga"],"actors":["Mira Okafor","Jun Ito"]},
+    {"ratingKey":"5018","type":"movie","title":"Furiosa: A Mad Max Saga","year":2024,"addedAt":"2024-06-01T00:00:00.000Z","contentRating":null,"genres":["Science Fiction","Animation"],"directors":["Calum Reyes"],"actors":["Tomas Brandt","Lena Marsh"]},
+    {"ratingKey":"5019","type":"movie","title":"Les Misérables","year":2012,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Thriller","Fantasy"],"directors":["Noor Haddad"],"actors":["Ines Varga","Rowan Hale"]},
+    {"ratingKey":"5020","type":"movie","title":"La Haine","year":1995,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Crime","Documentary"],"directors":["Jun Ito"],"actors":["Calum Reyes","Mira Okafor"]},
+    {"ratingKey":"5021","type":"movie","title":"Y tu mamá también","year":2001,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Animation","Drama"],"directors":["Lena Marsh"],"actors":["Noor Haddad","Tomas Brandt"]},
+    {"ratingKey":"5022","type":"movie","title":"Das Boot","year":1981,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Fantasy","Comedy"],"directors":["Rowan Hale"],"actors":["Jun Ito","Ines Varga"]},
+    {"ratingKey":"5023","type":"movie","title":"Der Himmel über Berlin","year":1987,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Documentary","Science Fiction"],"directors":["Mira Okafor"],"actors":["Lena Marsh","Calum Reyes"]},
+    {"ratingKey":"5024","type":"movie","title":"Det sjunde inseglet","year":1957,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Drama","Thriller"],"directors":["Tomas Brandt"],"actors":["Rowan Hale","Noor Haddad"]},
+    {"ratingKey":"5025","type":"movie","title":"Ladri di biciclette","year":1948,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Comedy","Crime"],"directors":["Ines Varga"],"actors":["Mira Okafor","Jun Ito"]},
+    {"ratingKey":"5026","type":"movie","title":"Cidade de Deus","year":2002,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Science Fiction","Animation"],"directors":["Calum Reyes"],"actors":["Tomas Brandt","Lena Marsh"]},
+    {"ratingKey":"5027","type":"movie","title":"Anatomie d'une chute","year":2023,"addedAt":"2023-06-01T00:00:00.000Z","contentRating":null,"genres":["Thriller","Fantasy"],"directors":["Noor Haddad"],"actors":["Ines Varga","Rowan Hale"]},
+    {"ratingKey":"5028","type":"movie","title":"Moartea domnului Lăzărescu","year":2005,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Crime","Documentary"],"directors":["Jun Ito"],"actors":["Calum Reyes","Mira Okafor"]},
+    {"ratingKey":"5029","type":"movie","title":"După dealuri","year":2012,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Animation","Drama"],"directors":["Lena Marsh"],"actors":["Noor Haddad","Tomas Brandt"]},
+    {"ratingKey":"5030","type":"movie","title":"The Godfather","year":1972,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Fantasy","Comedy"],"directors":["Rowan Hale"],"actors":["Jun Ito","Ines Varga"]},
+    {"ratingKey":"5031","type":"movie","title":"The Godfather Part II","year":1974,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Documentary","Science Fiction"],"directors":["Mira Okafor"],"actors":["Lena Marsh","Calum Reyes"]},
+    {"ratingKey":"5032","type":"movie","title":"Casablanca","year":1942,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Drama","Thriller"],"directors":["Tomas Brandt"],"actors":["Rowan Hale","Noor Haddad"]},
+    {"ratingKey":"5033","type":"movie","title":"Citizen Kane","year":1941,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Comedy","Crime"],"directors":["Ines Varga"],"actors":["Mira Okafor","Jun Ito"]},
+    {"ratingKey":"5034","type":"movie","title":"Vertigo","year":1958,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Science Fiction","Animation"],"directors":["Calum Reyes"],"actors":["Tomas Brandt","Lena Marsh"]},
+    {"ratingKey":"5035","type":"movie","title":"Psycho","year":1960,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Thriller","Fantasy"],"directors":["Noor Haddad"],"actors":["Ines Varga","Rowan Hale"]},
+    {"ratingKey":"5036","type":"movie","title":"Rear Window","year":1954,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Crime","Documentary"],"directors":["Jun Ito"],"actors":["Calum Reyes","Mira Okafor"]},
+    {"ratingKey":"5037","type":"movie","title":"North by Northwest","year":1959,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Animation","Drama"],"directors":["Lena Marsh"],"actors":["Noor Haddad","Tomas Brandt"]},
+    {"ratingKey":"5038","type":"movie","title":"Some Like It Hot","year":1959,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Fantasy","Comedy"],"directors":["Rowan Hale"],"actors":["Jun Ito","Ines Varga"]},
+    {"ratingKey":"5039","type":"movie","title":"Sunset Boulevard","year":1950,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Documentary","Science Fiction"],"directors":["Mira Okafor"],"actors":["Lena Marsh","Calum Reyes"]},
+    {"ratingKey":"5040","type":"movie","title":"12 Angry Men","year":1957,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Drama","Thriller"],"directors":["Tomas Brandt"],"actors":["Rowan Hale","Noor Haddad"]},
+    {"ratingKey":"5041","type":"movie","title":"Lawrence of Arabia","year":1962,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Comedy","Crime"],"directors":["Ines Varga"],"actors":["Mira Okafor","Jun Ito"]},
+    {"ratingKey":"5042","type":"movie","title":"2001: A Space Odyssey","year":1968,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Science Fiction","Animation"],"directors":["Calum Reyes"],"actors":["Tomas Brandt","Lena Marsh"]},
+    {"ratingKey":"5043","type":"movie","title":"Chinatown","year":1974,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Thriller","Fantasy"],"directors":["Noor Haddad"],"actors":["Ines Varga","Rowan Hale"]},
+    {"ratingKey":"5044","type":"movie","title":"Taxi Driver","year":1976,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Crime","Documentary"],"directors":["Jun Ito"],"actors":["Calum Reyes","Mira Okafor"]},
+    {"ratingKey":"5045","type":"movie","title":"Jaws","year":1975,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Animation","Drama"],"directors":["Lena Marsh"],"actors":["Noor Haddad","Tomas Brandt"]},
+    {"ratingKey":"5046","type":"movie","title":"Star Wars","year":1977,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Fantasy","Comedy"],"directors":["Rowan Hale"],"actors":["Jun Ito","Ines Varga"]},
+    {"ratingKey":"5047","type":"movie","title":"Alien","year":1979,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Documentary","Science Fiction"],"directors":["Mira Okafor"],"actors":["Lena Marsh","Calum Reyes"]},
+    {"ratingKey":"5048","type":"movie","title":"Apocalypse Now","year":1979,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Drama","Thriller"],"directors":["Tomas Brandt"],"actors":["Rowan Hale","Noor Haddad"]},
+    {"ratingKey":"5049","type":"movie","title":"Raging Bull","year":1980,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Comedy","Crime"],"directors":["Ines Varga"],"actors":["Mira Okafor","Jun Ito"]},
+    {"ratingKey":"5050","type":"movie","title":"Blade Runner","year":1982,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Science Fiction","Animation"],"directors":["Calum Reyes"],"actors":["Tomas Brandt","Lena Marsh"]},
+    {"ratingKey":"5051","type":"movie","title":"E.T. the Extra-Terrestrial","year":1982,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Thriller","Fantasy"],"directors":["Noor Haddad"],"actors":["Ines Varga","Rowan Hale"]},
+    {"ratingKey":"5052","type":"movie","title":"Back to the Future","year":1985,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Crime","Documentary"],"directors":["Jun Ito"],"actors":["Calum Reyes","Mira Okafor"]},
+    {"ratingKey":"5053","type":"movie","title":"Aliens","year":1986,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Animation","Drama"],"directors":["Lena Marsh"],"actors":["Noor Haddad","Tomas Brandt"]},
+    {"ratingKey":"5054","type":"movie","title":"Die Hard","year":1988,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Fantasy","Comedy"],"directors":["Rowan Hale"],"actors":["Jun Ito","Ines Varga"]},
+    {"ratingKey":"5055","type":"movie","title":"Do the Right Thing","year":1989,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Documentary","Science Fiction"],"directors":["Mira Okafor"],"actors":["Lena Marsh","Calum Reyes"]},
+    {"ratingKey":"5056","type":"movie","title":"Goodfellas","year":1990,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Drama","Thriller"],"directors":["Tomas Brandt"],"actors":["Rowan Hale","Noor Haddad"]},
+    {"ratingKey":"5057","type":"movie","title":"The Silence of the Lambs","year":1991,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Comedy","Crime"],"directors":["Ines Varga"],"actors":["Mira Okafor","Jun Ito"]},
+    {"ratingKey":"5058","type":"movie","title":"Unforgiven","year":1992,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Science Fiction","Animation"],"directors":["Calum Reyes"],"actors":["Tomas Brandt","Lena Marsh"]},
+    {"ratingKey":"5059","type":"movie","title":"Jurassic Park","year":1993,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Thriller","Fantasy"],"directors":["Noor Haddad"],"actors":["Ines Varga","Rowan Hale"]},
+    {"ratingKey":"5060","type":"movie","title":"Schindler's List","year":1993,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Crime","Documentary"],"directors":["Jun Ito"],"actors":["Calum Reyes","Mira Okafor"]},
+    {"ratingKey":"5061","type":"movie","title":"Pulp Fiction","year":1994,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Animation","Drama"],"directors":["Lena Marsh"],"actors":["Noor Haddad","Tomas Brandt"]},
+    {"ratingKey":"5062","type":"movie","title":"The Shawshank Redemption","year":1994,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Fantasy","Comedy"],"directors":["Rowan Hale"],"actors":["Jun Ito","Ines Varga"]},
+    {"ratingKey":"5063","type":"movie","title":"Heat","year":1995,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Documentary","Science Fiction"],"directors":["Mira Okafor"],"actors":["Lena Marsh","Calum Reyes"]},
+    {"ratingKey":"5064","type":"movie","title":"Toy Story","year":1995,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Drama","Thriller"],"directors":["Tomas Brandt"],"actors":["Rowan Hale","Noor Haddad"]},
+    {"ratingKey":"5065","type":"movie","title":"Fargo","year":1996,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Comedy","Crime"],"directors":["Ines Varga"],"actors":["Mira Okafor","Jun Ito"]},
+    {"ratingKey":"5066","type":"movie","title":"Titanic","year":1997,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Science Fiction","Animation"],"directors":["Calum Reyes"],"actors":["Tomas Brandt","Lena Marsh"]},
+    {"ratingKey":"5067","type":"movie","title":"The Big Lebowski","year":1998,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Thriller","Fantasy"],"directors":["Noor Haddad"],"actors":["Ines Varga","Rowan Hale"]},
+    {"ratingKey":"5068","type":"movie","title":"The Matrix","year":1999,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Crime","Documentary"],"directors":["Jun Ito"],"actors":["Calum Reyes","Mira Okafor"]},
+    {"ratingKey":"5069","type":"movie","title":"Fight Club","year":1999,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Animation","Drama"],"directors":["Lena Marsh"],"actors":["Noor Haddad","Tomas Brandt"]},
+    {"ratingKey":"5070","type":"movie","title":"Gladiator","year":2000,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Fantasy","Comedy"],"directors":["Rowan Hale"],"actors":["Jun Ito","Ines Varga"]},
+    {"ratingKey":"5071","type":"movie","title":"Memento","year":2000,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Documentary","Science Fiction"],"directors":["Mira Okafor"],"actors":["Lena Marsh","Calum Reyes"]},
+    {"ratingKey":"5072","type":"movie","title":"Mulholland Drive","year":2001,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Drama","Thriller"],"directors":["Tomas Brandt"],"actors":["Rowan Hale","Noor Haddad"]},
+    {"ratingKey":"5073","type":"movie","title":"Lost in Translation","year":2003,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Comedy","Crime"],"directors":["Ines Varga"],"actors":["Mira Okafor","Jun Ito"]},
+    {"ratingKey":"5074","type":"movie","title":"Kill Bill: Vol. 1","year":2003,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Science Fiction","Animation"],"directors":["Calum Reyes"],"actors":["Tomas Brandt","Lena Marsh"]},
+    {"ratingKey":"5075","type":"movie","title":"Oldboy","year":2003,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Thriller","Fantasy"],"directors":["Noor Haddad"],"actors":["Ines Varga","Rowan Hale"]},
+    {"ratingKey":"5076","type":"movie","title":"Million Dollar Baby","year":2004,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Crime","Documentary"],"directors":["Jun Ito"],"actors":["Calum Reyes","Mira Okafor"]},
+    {"ratingKey":"5077","type":"movie","title":"Brokeback Mountain","year":2005,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Animation","Drama"],"directors":["Lena Marsh"],"actors":["Noor Haddad","Tomas Brandt"]},
+    {"ratingKey":"5078","type":"movie","title":"The Departed","year":2006,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Fantasy","Comedy"],"directors":["Rowan Hale"],"actors":["Jun Ito","Ines Varga"]},
+    {"ratingKey":"5079","type":"movie","title":"No Country for Old Men","year":2007,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Documentary","Science Fiction"],"directors":["Mira Okafor"],"actors":["Lena Marsh","Calum Reyes"]},
+    {"ratingKey":"5080","type":"movie","title":"There Will Be Blood","year":2007,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Drama","Thriller"],"directors":["Tomas Brandt"],"actors":["Rowan Hale","Noor Haddad"]},
+    {"ratingKey":"5081","type":"movie","title":"WALL-E","year":2008,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Comedy","Crime"],"directors":["Ines Varga"],"actors":["Mira Okafor","Jun Ito"]},
+    {"ratingKey":"5082","type":"movie","title":"The Dark Knight","year":2008,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Science Fiction","Animation"],"directors":["Calum Reyes"],"actors":["Tomas Brandt","Lena Marsh"]},
+    {"ratingKey":"5083","type":"movie","title":"Up","year":2009,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Thriller","Fantasy"],"directors":["Noor Haddad"],"actors":["Ines Varga","Rowan Hale"]},
+    {"ratingKey":"5084","type":"movie","title":"Inglourious Basterds","year":2009,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Crime","Documentary"],"directors":["Jun Ito"],"actors":["Calum Reyes","Mira Okafor"]},
+    {"ratingKey":"5085","type":"movie","title":"Inception","year":2010,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Animation","Drama"],"directors":["Lena Marsh"],"actors":["Noor Haddad","Tomas Brandt"]},
+    {"ratingKey":"5086","type":"movie","title":"The Social Network","year":2010,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Fantasy","Comedy"],"directors":["Rowan Hale"],"actors":["Jun Ito","Ines Varga"]},
+    {"ratingKey":"5087","type":"movie","title":"Drive","year":2011,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Documentary","Science Fiction"],"directors":["Mira Okafor"],"actors":["Lena Marsh","Calum Reyes"]},
+    {"ratingKey":"5088","type":"movie","title":"The Artist","year":2011,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Drama","Thriller"],"directors":["Tomas Brandt"],"actors":["Rowan Hale","Noor Haddad"]},
+    {"ratingKey":"5089","type":"movie","title":"Django Unchained","year":2012,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Comedy","Crime"],"directors":["Ines Varga"],"actors":["Mira Okafor","Jun Ito"]},
+    {"ratingKey":"5090","type":"movie","title":"Gravity","year":2013,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Science Fiction","Animation"],"directors":["Calum Reyes"],"actors":["Tomas Brandt","Lena Marsh"]},
+    {"ratingKey":"5091","type":"movie","title":"Her","year":2013,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Thriller","Fantasy"],"directors":["Noor Haddad"],"actors":["Ines Varga","Rowan Hale"]},
+    {"ratingKey":"5092","type":"movie","title":"Interstellar","year":2014,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Crime","Documentary"],"directors":["Jun Ito"],"actors":["Calum Reyes","Mira Okafor"]},
+    {"ratingKey":"5093","type":"movie","title":"Whiplash","year":2014,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Animation","Drama"],"directors":["Lena Marsh"],"actors":["Noor Haddad","Tomas Brandt"]},
+    {"ratingKey":"5094","type":"movie","title":"Mad Max: Fury Road","year":2015,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Fantasy","Comedy"],"directors":["Rowan Hale"],"actors":["Jun Ito","Ines Varga"]},
+    {"ratingKey":"5095","type":"movie","title":"Arrival","year":2016,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Documentary","Science Fiction"],"directors":["Mira Okafor"],"actors":["Lena Marsh","Calum Reyes"]},
+    {"ratingKey":"5096","type":"movie","title":"Moonlight","year":2016,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Drama","Thriller"],"directors":["Tomas Brandt"],"actors":["Rowan Hale","Noor Haddad"]},
+    {"ratingKey":"5097","type":"movie","title":"La La Land","year":2016,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Comedy","Crime"],"directors":["Ines Varga"],"actors":["Mira Okafor","Jun Ito"]},
+    {"ratingKey":"5098","type":"movie","title":"Get Out","year":2017,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Science Fiction","Animation"],"directors":["Calum Reyes"],"actors":["Tomas Brandt","Lena Marsh"]},
+    {"ratingKey":"5099","type":"movie","title":"Lady Bird","year":2017,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Thriller","Fantasy"],"directors":["Noor Haddad"],"actors":["Ines Varga","Rowan Hale"]},
+    {"ratingKey":"5100","type":"movie","title":"Roma","year":2018,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Crime","Documentary"],"directors":["Jun Ito"],"actors":["Calum Reyes","Mira Okafor"]},
+    {"ratingKey":"5101","type":"movie","title":"The Favourite","year":2018,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Animation","Drama"],"directors":["Lena Marsh"],"actors":["Noor Haddad","Tomas Brandt"]},
+    {"ratingKey":"5102","type":"movie","title":"Knives Out","year":2019,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Fantasy","Comedy"],"directors":["Rowan Hale"],"actors":["Jun Ito","Ines Varga"]},
+    {"ratingKey":"5103","type":"movie","title":"Nomadland","year":2020,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Documentary","Science Fiction"],"directors":["Mira Okafor"],"actors":["Lena Marsh","Calum Reyes"]},
+    {"ratingKey":"5104","type":"movie","title":"Dune","year":2021,"addedAt":"2021-06-01T00:00:00.000Z","contentRating":null,"genres":["Drama","Thriller"],"directors":["Tomas Brandt"],"actors":["Rowan Hale","Noor Haddad"]},
+    {"ratingKey":"5105","type":"movie","title":"Dune","year":1984,"addedAt":"2020-06-01T00:00:00.000Z","contentRating":null,"genres":["Comedy","Crime"],"directors":["Ines Varga"],"actors":["Mira Okafor","Jun Ito"]},
+    {"ratingKey":"5106","type":"movie","title":"The Power of the Dog","year":2021,"addedAt":"2021-06-01T00:00:00.000Z","contentRating":null,"genres":["Science Fiction","Animation"],"directors":["Calum Reyes"],"actors":["Tomas Brandt","Lena Marsh"]},
+    {"ratingKey":"5107","type":"movie","title":"Top Gun: Maverick","year":2022,"addedAt":"2022-06-01T00:00:00.000Z","contentRating":null,"genres":["Thriller","Fantasy"],"directors":["Noor Haddad"],"actors":["Ines Varga","Rowan Hale"]},
+    {"ratingKey":"5108","type":"movie","title":"The Banshees of Inisherin","year":2022,"addedAt":"2022-06-01T00:00:00.000Z","contentRating":null,"genres":["Crime","Documentary"],"directors":["Jun Ito"],"actors":["Calum Reyes","Mira Okafor"]},
+    {"ratingKey":"5109","type":"movie","title":"Oppenheimer","year":2023,"addedAt":"2023-06-01T00:00:00.000Z","contentRating":null,"genres":["Animation","Drama"],"directors":["Lena Marsh"],"actors":["Noor Haddad","Tomas Brandt"]},
+    {"ratingKey":"5110","type":"movie","title":"Past Lives","year":2023,"addedAt":"2023-06-01T00:00:00.000Z","contentRating":null,"genres":["Fantasy","Comedy"],"directors":["Rowan Hale"],"actors":["Jun Ito","Ines Varga"]},
+    {"ratingKey":"5111","type":"movie","title":"Poor Things","year":2023,"addedAt":"2023-06-01T00:00:00.000Z","contentRating":null,"genres":["Documentary","Science Fiction"],"directors":["Mira Okafor"],"actors":["Lena Marsh","Calum Reyes"]},
+    {"ratingKey":"5112","type":"movie","title":"Barbie","year":2023,"addedAt":"2023-06-01T00:00:00.000Z","contentRating":null,"genres":["Drama","Thriller"],"directors":["Tomas Brandt"],"actors":["Rowan Hale","Noor Haddad"]},
+    {"ratingKey":"5113","type":"movie","title":"The Zone of Interest","year":2023,"addedAt":"2023-06-01T00:00:00.000Z","contentRating":null,"genres":["Comedy","Crime"],"directors":["Ines Varga"],"actors":["Mira Okafor","Jun Ito"]},
+    {"ratingKey":"5114","type":"movie","title":"Killers of the Flower Moon","year":2023,"addedAt":"2023-06-01T00:00:00.000Z","contentRating":null,"genres":["Science Fiction","Animation"],"directors":["Calum Reyes"],"actors":["Tomas Brandt","Lena Marsh"]}
+  ],
   "expected": {
     "edition": "full",
     "archetype": "midnight-marathoner",
@@ -2906,8 +3053,8 @@
     "facts": {
       "member.firstName": "Mike",
       "time.totalHours": "1,307",
-      "time.daysHours": "54 days, 11 hours",
-      "time.perDay": "3 h 54 m",
+      "time.daysHours": "54 days, 11 hours",
+      "time.perDay": "3 h 54 m",
       "time.seriesHours": "872",
       "time.seriesShare": "67%",
       "time.filmsHours": "435",
@@ -2917,18 +3064,29 @@
       "counts.series": "31",
       "counts.films": "112",
       "hours.afterDarkShare": "34%",
-      "hours.peak": "10 PM",
-      "hours.quietest": "5 AM",
-      "streak.longest.days": "23 days",
-      "streak.longest.from": "2 Mar",
-      "streak.longest.to": "24 Mar",
-      "days.biggest.date": "4 Jul",
-      "days.biggest.minutes": "12 h 24 m",
+      "hours.peak": "10 PM",
+      "hours.quietest": "5 AM",
+      "streak.longest.days": "23 days",
+      "streak.longest.from": "March 2",
+      "streak.longest.to": "March 24",
+      "days.biggest.date": "July 4",
+      "days.biggest.minutes": "12 h 24 m",
       "days.active": "289",
-      "days.longestGap.days": "9",
+      "days.longestGap.days": "9 days",
       "series[1].title": "The Lord of the Rings: The Rings of Power",
       "films[1].title": "Dune: Part Two",
-      "standing.percentile": "Top 3%"
+      "standing.percentile": "Top 4%",
+      "setup.directPlayShare": "91%",
+      "taste.genre[1].name": "Animation",
+      "people.actor[1].name": "Tomas Brandt",
+      "requests.watched": "15",
+      "standing.members": "31",
+      "next.picks[1].title": "Killers of the Flower Moon",
+      "member.since": "2023",
+      "member.lifetimeHours": "3,940",
+      "time.milestones[1].date": "March 14",
+      "race.overtakeMonth": "November",
+      "archetype.name": "The Midnight Marathoner"
     },
     "stats": {
       "totals": {
@@ -3055,6 +3213,109 @@
         "leadChanges": 1,
         "overtakeMonth": 11,
         "closestGapMinutes": 50
+      },
+      "taste": {
+        "genres": [
+          {
+            "name": "Animation",
+            "minutes": 10757,
+            "share": 0.13717801581229278
+          },
+          {
+            "name": "Crime",
+            "minutes": 10052,
+            "share": 0.12818796225452692
+          },
+          {
+            "name": "Drama",
+            "minutes": 9935,
+            "share": 0.12668961999489925
+          },
+          {
+            "name": "Thriller",
+            "minutes": 9820,
+            "share": 0.1252231573578169
+          },
+          {
+            "name": "Science Fiction",
+            "minutes": 9682,
+            "share": 0.12346977811782708
+          }
+        ],
+        "medianYear": 2006,
+        "oldest": {
+          "key": "film:5033",
+          "title": "Citizen Kane",
+          "year": 1941
+        },
+        "freshShare": 0
+      },
+      "people": {
+        "actors": [
+          {
+            "name": "Tomas Brandt",
+            "minutes": 21515
+          },
+          {
+            "name": "Mira Okafor",
+            "minutes": 20105
+          },
+          {
+            "name": "Noor Haddad",
+            "minutes": 19870
+          },
+          {
+            "name": "Rowan Hale",
+            "minutes": 19640
+          },
+          {
+            "name": "Lena Marsh",
+            "minutes": 19365
+          }
+        ],
+        "directors": [
+          {
+            "name": "Tomas Brandt",
+            "minutes": 4620
+          },
+          {
+            "name": "Mira Okafor",
+            "minutes": 4340
+          },
+          {
+            "name": "Lena Marsh",
+            "minutes": 4170
+          }
+        ]
+      },
+      "devices": {
+        "directPlayShare": 0.9149443561208267,
+        "homeShare": 0.8926868044515104,
+        "topPlatform": "Apple TV",
+        "topProduct": "Plex for Apple TV",
+        "fourKShare": 0
+      },
+      "requests": {
+        "made": 27,
+        "approved": 20,
+        "available": 15,
+        "pending": 3,
+        "declined": 2,
+        "watched": 15,
+        "genres": []
+      },
+      "nextYear": {
+        "leftForLater": [],
+        "picks": [
+          {
+            "ratingKey": "5114",
+            "kind": "film",
+            "title": "Killers of the Flower Moon",
+            "year": 2023,
+            "genre": "Animation",
+            "person": "Tomas Brandt"
+          }
+        ]
       },
       "milestones": [
         {

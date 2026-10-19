@@ -1,13 +1,16 @@
 /**
  * The P2.8 stats modules' inputs, built from a golden fixture the way the live
  * pipeline builds them: a metadata lookup over the fixture's cache rows (an
- * episode resolves to its series' row, as `getMetadata()` does) and the
- * member's Overseerr requests created in the window.
+ * episode resolves to its series' row, as `getMetadata()` does), the
+ * member's Overseerr requests created in the window, the server library, and
+ * the member's view of a server aggregate built from `server.peers`.
  */
 
 import { z } from "zod"
 
 import type { MediaMetadata } from "@/lib/wrapped/metadata-cache"
+import type { AggregateView } from "@/lib/wrapped/stats/metadata"
+import type { LibraryTitle } from "@/lib/wrapped/stats/next-year"
 import { toRequestEvent, type RequestEvent } from "@/lib/wrapped/sources/request-event"
 import { overseerrRequestSchema } from "@/lib/wrapped/sources/schemas"
 import type { PlayEvent } from "@/lib/wrapped/sources/watch-history-source"
@@ -63,4 +66,50 @@ export function fixtureRequests(fixture: Fixture, ctx: StatsContext): RequestEve
     .map((raw) => toRequestEvent(overseerrRequestSchema.parse(raw)))
     .filter((request) => inWindow(request.createdAt, ctx.window))
     .map((request) => ({ ...request, genres: genres[String(request.id)] ?? [] }))
+}
+
+const libraryRowSchema = z.object({
+  ratingKey: z.string(),
+  type: z.enum(["movie", "show"]),
+  title: z.string(),
+  year: z.number().nullable(),
+  addedAt: z.iso.datetime().transform((value) => Date.parse(value)),
+  contentRating: z.string().nullable(),
+  genres: z.array(z.string()),
+  directors: z.array(z.string()),
+  actors: z.array(z.string()),
+})
+
+/** The fixture's library, or null when it models none. */
+export function fixtureLibrary(fixture: Fixture): LibraryTitle[] | null {
+  return fixture.library && fixture.library.map((raw) => libraryRowSchema.parse(raw))
+}
+
+/** The member's id in the fixture aggregate. */
+export const FIXTURE_USER_ID = "fixture-member"
+
+/**
+ * The member's view of a server aggregate with `server.peers`: the member's
+ * own minutes, and each other member's hours as minutes (anonymous). No title
+ * reaches 3 viewers and no community fact has contributors.
+ */
+export function fixtureAggregate(fixture: Fixture, memberMinutes: number): AggregateView {
+  return {
+    userId: FIXTURE_USER_ID,
+    aggregate: {
+      members: [
+        { userId: FIXTURE_USER_ID, minutes: memberMinutes },
+        ...fixture.server.peers.hours.map((hours) => ({ userId: null, minutes: hours * 60 })),
+      ],
+      titles: {},
+      community: {
+        hours: null,
+        topSeries: null,
+        busiestNight: null,
+        peakConcurrent: null,
+        requestsFulfilled: null,
+        titlesAdded: { total: 0, films: 0, series: 0 },
+      },
+    },
+  }
 }

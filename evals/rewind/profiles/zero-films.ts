@@ -7,7 +7,7 @@
  */
 
 import { shift } from "../dates"
-import { MEMBER, metadataFor, SEASON, SERVER, type Profile } from "../profile"
+import { MEMBER, metadataFor, ratio, SEASON, SERVER, type Profile } from "../profile"
 import { historyRow, requestRow, tmdbId, type Series } from "../rows"
 import { episodes, series } from "../titles"
 
@@ -73,11 +73,14 @@ export const zeroFilms: Profile = {
       "records.longestBinge.title": "Breaking Bad",
       "records.longestBinge.episodes": "6",
       "records.mostEpisodesDay": "10",
-      "streak.longest.days": "2 days",
+      "streak.longest.days": "2\u00A0days",
       "days.active": "49",
-      "hours.peak": "1 PM",
+      "hours.peak": "1\u00A0PM",
       "race.leadChanges": "0",
       "tz.label": "America/Los_Angeles",
+      "requests.made": "3",
+      "requests.watched": "2",
+      "archetype.name": "The Series Devourer",
     },
     stats: {
       // 14 x 300 + 12 x 300 + 12 x 300 + 10 x 300 + 10 x 25 = 14,650.
@@ -142,6 +145,40 @@ export const zeroFilms: Profile = {
         { hours: 100, date: "2026-05-16" },
       ],
       // Saul and The Sopranos tie on minutes and plays; The Sopranos was watched later.
+      // P2.8 sections, derived with hand-facts.py (P2.16): genre shares split each
+      // title's seconds evenly across its genres, over the seconds that have one;
+      // every credited actor earns a title's minutes; devices count every play.
+      taste: {
+        genres: [
+          { name: "Drama", minutes: 3600, share: ratio(216_000, 879_000) },
+          { name: "Animation", minutes: 2100, share: ratio(126_000, 879_000) },
+          { name: "Comedy", minutes: 1925, share: ratio(115_500, 879_000) },
+          { name: "Documentary", minutes: 1800, share: ratio(108_000, 879_000) },
+          { name: "Fantasy", minutes: 1800, share: ratio(108_000, 879_000) },
+        ],
+        medianYear: 2008,
+        oldest: { key: "series:1703", title: "The Sopranos", year: 1999 },
+        freshShare: ratio(0, 298),
+      },
+      people: {
+        actors: [
+          { name: "Noor Haddad", minutes: 7200 },
+          { name: "Tomas Brandt", minutes: 4200 },
+          { name: "Jun Ito", minutes: 3850 },
+          { name: "Calum Reyes", minutes: 3600 },
+          { name: "Ines Varga", minutes: 3600 },
+        ],
+        directors: [],
+      },
+      devices: {
+        directPlayShare: ratio(298, 298),
+        homeShare: ratio(298, 298),
+        topPlatform: "Apple TV",
+        topProduct: "Plex for Apple TV",
+        fourKShare: ratio(0, 298),
+      },
+      requests: { made: 3, approved: 2, available: 1, pending: 1, declined: 0, watched: 2, genres: [] },
+      nextYear: { leftForLater: [], picks: [] },
       topSeries: [
         { title: "Breaking Bad", minutes: 4200, plays: 84 },
         { title: "The Sopranos", minutes: 3600, plays: 72 },

@@ -79,8 +79,8 @@ export const median: Profile = {
     facts: {
       "member.firstName": "Sam",
       "time.totalHours": "180",
-      "time.daysHours": "7 days, 12 hours",
-      "time.perDay": "32 minutes",
+      "time.daysHours": "7\u00A0days, 12\u00A0hours",
+      "time.perDay": "32\u00A0minutes",
       "time.seriesShare": "50%",
       "time.filmsShare": "50%",
       "time.vsLastYear": "+20%",
@@ -88,7 +88,7 @@ export const median: Profile = {
       "counts.series": "3",
       "counts.films": "45",
       "series[1].title": "Doctor Who",
-      "hours.peak": "8 PM",
+      "hours.peak": "8\u00A0PM",
       "days.active": "135",
       "records.mostPaused.title": "Slow Horses",
       "member.since": "2024",
@@ -96,6 +96,11 @@ export const median: Profile = {
       "race.leadChanges": "0",
       "requests.made": "5",
       "tz.label": "Europe/London",
+      "quiz.gapMinutes": "21\u00A0h",
+      "requests.watched": "3",
+      "standing.percentile": "Top 59%",
+      "hours.medianStart": "8:00\u00A0PM",
+      "archetype.name": "The Golden Hour Viewer",
     },
     stats: {
       // Series 45 x 60 + 24 x 60 + 21 x 60 = 5,400; films 45 x 120 = 5,400.
@@ -163,6 +168,40 @@ export const median: Profile = {
         { hours: 50, date: "2026-04-01" },
         { hours: 100, date: "2026-06-27" },
       ],
+      // P2.8 sections, derived with hand-facts.py (P2.16): genre shares split each
+      // title's seconds evenly across its genres, over the seconds that have one;
+      // every credited actor earns a title's minutes; devices count every play.
+      taste: {
+        genres: [
+          { name: "Comedy", minutes: 2010, share: ratio(120_600, 640_800) },
+          { name: "Crime", minutes: 2010, share: ratio(120_600, 640_800) },
+          { name: "Animation", minutes: 1380, share: ratio(82_800, 640_800) },
+          { name: "Fantasy", minutes: 1350, share: ratio(81_000, 640_800) },
+          { name: "Science Fiction", minutes: 1320, share: ratio(79_200, 640_800) },
+        ],
+        medianYear: 1988,
+        oldest: { key: "film:1613", title: "Citizen Kane", year: 1941 },
+        freshShare: ratio(0, 135),
+      },
+      people: {
+        actors: [
+          { name: "Jun Ito", minutes: 4020 },
+          { name: "Mira Okafor", minutes: 4020 },
+          { name: "Tomas Brandt", minutes: 2760 },
+          { name: "Ines Varga", minutes: 2700 },
+          { name: "Lena Marsh", minutes: 2640 },
+        ],
+        directors: [{ name: "Jun Ito", minutes: 720 }, { name: "Lena Marsh", minutes: 720 }, { name: "Noor Haddad", minutes: 720 }],
+      },
+      devices: {
+        directPlayShare: ratio(135, 135),
+        homeShare: ratio(135, 135),
+        topPlatform: "Apple TV",
+        topProduct: "Plex for Apple TV",
+        fourKShare: ratio(0, 135),
+      },
+      requests: { made: 5, approved: 3, available: 3, pending: 1, declined: 1, watched: 3, genres: [] },
+      nextYear: { leftForLater: [], picks: [] },
       topSeries: [
         { title: "Doctor Who", minutes: 2700, plays: 45 },
         { title: "Slow Horses", minutes: 1440, plays: 24 },

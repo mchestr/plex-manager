@@ -68,7 +68,7 @@ export const premiereChaser: Profile = {
   expected: {
     edition: "full",
     archetype: "premiere-chaser",
-    omittedPages: [11, 12, 14, 17],
+    omittedPages: [8, 11, 12, 14, 17],
     facts: {
       "member.firstName": "Camille",
       "taste.freshShare": "87%",
@@ -77,11 +77,13 @@ export const premiereChaser: Profile = {
       "counts.episodes": "18",
       "series[1].title": "Severance",
       "films[1].title": "The Odyssey",
-      "days.biggest.date": "18 Jul",
-      "days.longestGap.days": "90",
+      "days.biggest.date": "July\u00A018",
+      "days.longestGap.days": "90\u00A0days",
       "days.longestGap.month": "August",
-      "hours.peak": "9 PM",
+      "hours.peak": "9\u00A0PM",
       "tz.label": "Europe/Paris",
+      "taste.genre[1].name": "Science Fiction",
+      "archetype.name": "The Premiere Chaser",
     },
     stats: {
       // Series 550 + 480 = 1,030; new films 1,036; old films 463.
@@ -133,6 +135,31 @@ export const premiereChaser: Profile = {
         { hours: 10, date: "2026-03-01" },
         { hours: 25, date: "2026-05-18" },
       ],
+      // P2.8 sections, derived with hand-facts.py (P2.16): genre shares split each
+      // title's seconds evenly across its genres, over the seconds that have one;
+      // every credited actor earns a title's minutes; devices count every play.
+      taste: {
+        genres: [
+          { name: "Science Fiction", minutes: 582, share: ratio(34_920, 151_740) },
+          { name: "Adventure", minutes: 518, share: ratio(31_080, 151_740) },
+          { name: "Animation", minutes: 339, share: ratio(20_340, 151_740) },
+          { name: "Fantasy", minutes: 302, share: ratio(18_120, 151_740) },
+          { name: "Comedy", minutes: 291, share: ratio(17_460, 151_740) },
+        ],
+        medianYear: 2026,
+        oldest: { key: "film:2721", title: "Casablanca", year: 1942 },
+        freshShare: ratio(26, 30),
+      },
+      people: { eligible: false }, // no cast or director metadata
+      devices: {
+        directPlayShare: ratio(30, 30),
+        homeShare: ratio(30, 30),
+        topPlatform: "Apple TV",
+        topProduct: "Plex for Apple TV",
+        fourKShare: ratio(0, 30),
+      },
+      requests: { eligible: false },
+      nextYear: { leftForLater: [], picks: [] },
       topSeries: [
         { title: "Severance", minutes: 550, plays: 10 },
         { title: "The Last of Us", minutes: 480, plays: 8 },

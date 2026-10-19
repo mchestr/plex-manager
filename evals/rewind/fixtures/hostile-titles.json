@@ -62,10 +62,12 @@
     "rows": [],
     "genres": {}
   },
+  "library": null,
   "expected": {
     "edition": "full",
     "archetype": "weekend-double-feature",
     "omittedPages": [
+      8,
       11,
       13,
       14,
@@ -73,7 +75,7 @@
     ],
     "facts": {
       "member.firstName": "Robin",
-      "time.totalHours": "15 h 06 m",
+      "time.totalHours": "15",
       "counts.films": "4",
       "counts.episodes": "10",
       "films[1].title": "Cash $& Prizes",
@@ -84,7 +86,9 @@
       "records.longestBinge.title": "Ke$ha: My Crazy Beautiful Life",
       "records.longestBinge.episodes": "6",
       "days.active": "10",
-      "tz.label": "America/Chicago"
+      "tz.label": "America/Chicago",
+      "time.totalMinutes": "15 h 6 m",
+      "archetype.name": "The Weekend Double Feature"
     },
     "stats": {
       "totals": {
@@ -187,6 +191,55 @@
       },
       "race": {
         "eligible": false
+      },
+      "taste": {
+        "genres": [
+          {
+            "name": "Comedy",
+            "minutes": 347,
+            "share": 0.3830022075055188
+          },
+          {
+            "name": "Documentary",
+            "minutes": 132,
+            "share": 0.1456953642384106
+          },
+          {
+            "name": "Fantasy",
+            "minutes": 100,
+            "share": 0.11037527593818984
+          },
+          {
+            "name": "Animation",
+            "minutes": 90,
+            "share": 0.09933774834437085
+          },
+          {
+            "name": "Drama",
+            "minutes": 90,
+            "share": 0.09933774834437085
+          }
+        ],
+        "medianYear": 2022,
+        "oldest": {
+          "key": "series:3101",
+          "title": "Ke$ha: My Crazy Beautiful Life",
+          "year": 2013
+        },
+        "freshShare": 0
+      },
+      "people": {
+        "eligible": false
+      },
+      "devices": {
+        "eligible": false
+      },
+      "requests": {
+        "eligible": false
+      },
+      "nextYear": {
+        "leftForLater": [],
+        "picks": []
       },
       "milestones": [
         {

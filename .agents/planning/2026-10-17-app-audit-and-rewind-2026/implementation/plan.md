@@ -2745,8 +2745,15 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 
 **Demo.** `npx jest evals/rewind/__tests__/golden-facts.test.ts` passes under both zones, and the heavy fixture prints Midnight Marathoner with its three evidence facts.
 
+**As merged** (later steps rely on these):
+- `evals/rewind/__tests__/golden-facts.test.ts` runs `fixtureMember` (now with an aggregate built from `server.peers`, the member as `FIXTURE_USER_ID`, and the fixture's `library`), `selectArchetype` and `buildFacts` (en-US, `User.name` = `member.userName ?? displayName`), and snapshots every fact's display. Pages and edition come from `evals/rewind/__tests__/pages.ts`, which states design 4.3's rules as P2.10's README reads them (12 counts four cells; 08 needs 70% cast coverage); P5.5's registry `select()` must reproduce its output for every fixture and then replace it.
+- The hand values were derived with the new `evals/rewind/hand-facts.py` (scores, pages, edition, P2.8 stats, en-US displays) and the profiles' own hand stats; every P2.8 module now has a hand-checked `expected.stats` section in each fixture. The fixture schema gained `library` (null except `heavy`, whose pick is Killers of the Flower Moon, so its page 17 stays).
+- Two module fixes, each with a test: `stats/titles.ts` lists, quizzes and measures only titles with a counted play (design 7.2; `seven-minutes` listed a 110 s sample as its No. 1 series); `normalizeTimeZone` and `timeZoneOptions` return IANA names instead of ICU's legacy ids, so `tz.label` reads the zone the member chose ("Asia/Ho_Chi_Minh", not "Asia/Saigon"; "Europe/Kyiv", not "Europe/Kiev").
+- `credits-roller` and `explorer` were rebuilt with the same intent (both scored Festival Juror; now 48 h and 91 h). Provisional values corrected: archetypes of `solo-server` and `long-and-email-name` (weekend-double-feature) and `long-and-non-latin-titles` (festival-juror); page 08 omitted for `premiere-chaser`, `hostile-titles` and `long-and-non-latin-titles` (cast coverage); displays in en-US with U+00A0; `time.totalHours` whole hours; heavy's Standing "Top 4%" (P2.8's ceil). The review table and change log are in `evals/rewind/README.md`.
+- Open owner decisions, implemented as the design states: D7's 2% rule (heavy has no page 04) and floored versus rounded figures ("3 h 54 m" per day, "Top 4%" for rank 1 of 31).
+
 **Done when.**
-- [ ] For each fixture, the hand-checked facts, edition, archetype and omitted pages match in Jest under both process zones.
+- [x] For each fixture, the hand-checked facts, edition, archetype and omitted pages match in Jest under both process zones.
 - [ ] The owner has reviewed the golden values by 2026-11-10.
 
 ### Step P2.11: Provider-agnostic AI facade

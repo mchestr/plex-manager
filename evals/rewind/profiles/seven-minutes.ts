@@ -35,15 +35,15 @@ export const sevenMinutes: Profile = {
     omittedPages: [4, 5, 9, 11, 12, 13, 14, 17],
     facts: {
       "member.firstName": "Theo",
-      "time.totalMinutes": "7 minutes",
+      "time.totalMinutes": "7\u00A0minutes",
       "counts.films": "1",
       "counts.episodes": "0",
       "films[1].title": "Up",
       "films[1].plays": "2",
       "days.active": "2",
-      "days.biggest.minutes": "4 minutes",
-      "streak.longest.days": "2 days",
-      "hours.peak": "2 PM",
+      "days.biggest.minutes": "4\u00A0minutes",
+      "streak.longest.days": "2\u00A0days",
+      "hours.peak": "2\u00A0PM",
       "tz.label": "America/Los_Angeles",
     },
     stats: {
@@ -91,6 +91,32 @@ export const sevenMinutes: Profile = {
       },
       race: { eligible: false },
       milestones: [],
+      // P2.8 sections, derived with hand-facts.py (P2.16): genre shares split each
+      // title's seconds evenly across its genres, over the seconds that have one;
+      // every credited actor earns a title's minutes; devices count every play.
+      taste: {
+        genres: [
+          { name: "Comedy", minutes: 2, share: ratio(165, 440) },
+          { name: "Crime", minutes: 2, share: ratio(165, 440) },
+          { name: "Animation", minutes: 0, share: ratio(55, 440) },
+          { name: "Science Fiction", minutes: 0, share: ratio(55, 440) },
+        ],
+        medianYear: 2009,
+        oldest: { key: "film:1401", title: "Up", year: 2009 },
+        freshShare: ratio(0, 2),
+      },
+      people: {
+        actors: [
+          { name: "Jun Ito", minutes: 5 },
+          { name: "Mira Okafor", minutes: 5 },
+          { name: "Lena Marsh", minutes: 1 },
+          { name: "Tomas Brandt", minutes: 1 },
+        ],
+        directors: [{ name: "Ines Varga", minutes: 5 }],
+      },
+      devices: { eligible: false }, // under 20 plays
+      requests: { eligible: false },
+      nextYear: { leftForLater: [], picks: [] },
       topSeries: [{ title: "The Simpsons", minutes: 1, plays: 0 }],
       topFilms: [{ title: "Up", minutes: 5, plays: 2 }],
     },

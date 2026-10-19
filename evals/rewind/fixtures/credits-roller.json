@@ -1,6 +1,6 @@
 {
   "id": "credits-roller",
-  "description": "Credits roller: forty films and a mini-series, every one watched to the end.",
+  "description": "Credits roller: sixteen films and two mini-series, every one watched to the end.",
   "member": {
     "displayName": "Hannah Kowalski",
     "userName": null,
@@ -33,51 +33,35 @@
     "finalCut": false
   },
   "history": [
-    {"user_id":1,"started":1767317400,"stopped":1767323100,"play_duration":5700,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2610","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"The Godfather","grandparent_title":"","year":1972,"originally_available_at":"1972-01-01","guid":"plex://movie/2610","section_id":"1"},
+    {"user_id":1,"started":1767301200,"stopped":1767306900,"play_duration":5700,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2610","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"The Godfather","grandparent_title":"","year":1972,"originally_available_at":"1972-01-01","guid":"plex://movie/2610","section_id":"1"},
     {"user_id":1,"started":1767578400,"stopped":1767582300,"play_duration":3900,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"26010101","grandparent_rating_key":"2601","parent_media_index":1,"media_index":1,"title":"Episode 1","grandparent_title":"Chernobyl","year":2019,"originally_available_at":"2019-01-01","guid":"plex://episode/26010101","section_id":"2"},
-    {"user_id":1,"started":1767922200,"stopped":1767928500,"play_duration":6300,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2611","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"The Godfather Part II","grandparent_title":"","year":1974,"originally_available_at":"1974-01-01","guid":"plex://movie/2611","section_id":"1"},
+    {"user_id":1,"started":1767906000,"stopped":1767912300,"play_duration":6300,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2611","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"The Godfather Part II","grandparent_title":"","year":1974,"originally_available_at":"1974-01-01","guid":"plex://movie/2611","section_id":"1"},
     {"user_id":1,"started":1768183200,"stopped":1768187100,"play_duration":3900,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"26010102","grandparent_rating_key":"2601","parent_media_index":1,"media_index":2,"title":"Episode 2","grandparent_title":"Chernobyl","year":2019,"originally_available_at":"2019-01-01","guid":"plex://episode/26010102","section_id":"2"},
-    {"user_id":1,"started":1768527000,"stopped":1768533900,"play_duration":6900,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2612","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Casablanca","grandparent_title":"","year":1942,"originally_available_at":"1942-01-01","guid":"plex://movie/2612","section_id":"1"},
+    {"user_id":1,"started":1768510800,"stopped":1768517700,"play_duration":6900,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2612","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Casablanca","grandparent_title":"","year":1942,"originally_available_at":"1942-01-01","guid":"plex://movie/2612","section_id":"1"},
     {"user_id":1,"started":1768788000,"stopped":1768791900,"play_duration":3900,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"26010103","grandparent_rating_key":"2601","parent_media_index":1,"media_index":3,"title":"Episode 3","grandparent_title":"Chernobyl","year":2019,"originally_available_at":"2019-01-01","guid":"plex://episode/26010103","section_id":"2"},
-    {"user_id":1,"started":1769131800,"stopped":1769139300,"play_duration":7500,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2613","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Citizen Kane","grandparent_title":"","year":1941,"originally_available_at":"1941-01-01","guid":"plex://movie/2613","section_id":"1"},
+    {"user_id":1,"started":1769115600,"stopped":1769123100,"play_duration":7500,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2613","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Citizen Kane","grandparent_title":"","year":1941,"originally_available_at":"1941-01-01","guid":"plex://movie/2613","section_id":"1"},
     {"user_id":1,"started":1769392800,"stopped":1769396700,"play_duration":3900,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"26010104","grandparent_rating_key":"2601","parent_media_index":1,"media_index":4,"title":"Episode 4","grandparent_title":"Chernobyl","year":2019,"originally_available_at":"2019-01-01","guid":"plex://episode/26010104","section_id":"2"},
-    {"user_id":1,"started":1769736600,"stopped":1769744700,"play_duration":8100,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2614","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Vertigo","grandparent_title":"","year":1958,"originally_available_at":"1958-01-01","guid":"plex://movie/2614","section_id":"1"},
+    {"user_id":1,"started":1769720400,"stopped":1769728500,"play_duration":8100,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2614","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Vertigo","grandparent_title":"","year":1958,"originally_available_at":"1958-01-01","guid":"plex://movie/2614","section_id":"1"},
     {"user_id":1,"started":1769997600,"stopped":1770001500,"play_duration":3900,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"26010105","grandparent_rating_key":"2601","parent_media_index":1,"media_index":5,"title":"Episode 5","grandparent_title":"Chernobyl","year":2019,"originally_available_at":"2019-01-01","guid":"plex://episode/26010105","section_id":"2"},
-    {"user_id":1,"started":1770341400,"stopped":1770350100,"play_duration":8700,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2615","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Psycho","grandparent_title":"","year":1960,"originally_available_at":"1960-01-01","guid":"plex://movie/2615","section_id":"1"},
-    {"user_id":1,"started":1770946200,"stopped":1770955500,"play_duration":9300,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2616","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Rear Window","grandparent_title":"","year":1954,"originally_available_at":"1954-01-01","guid":"plex://movie/2616","section_id":"1"},
-    {"user_id":1,"started":1771551000,"stopped":1771560900,"play_duration":9900,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2617","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"North by Northwest","grandparent_title":"","year":1959,"originally_available_at":"1959-01-01","guid":"plex://movie/2617","section_id":"1"},
-    {"user_id":1,"started":1772155800,"stopped":1772161500,"play_duration":5700,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2618","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Some Like It Hot","grandparent_title":"","year":1959,"originally_available_at":"1959-01-01","guid":"plex://movie/2618","section_id":"1"},
-    {"user_id":1,"started":1772760600,"stopped":1772766900,"play_duration":6300,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2619","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Sunset Boulevard","grandparent_title":"","year":1950,"originally_available_at":"1950-01-01","guid":"plex://movie/2619","section_id":"1"},
-    {"user_id":1,"started":1773361800,"stopped":1773368700,"play_duration":6900,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2620","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"12 Angry Men","grandparent_title":"","year":1957,"originally_available_at":"1957-01-01","guid":"plex://movie/2620","section_id":"1"},
-    {"user_id":1,"started":1773966600,"stopped":1773974100,"play_duration":7500,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2621","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Lawrence of Arabia","grandparent_title":"","year":1962,"originally_available_at":"1962-01-01","guid":"plex://movie/2621","section_id":"1"},
-    {"user_id":1,"started":1774571400,"stopped":1774579500,"play_duration":8100,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2622","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"2001: A Space Odyssey","grandparent_title":"","year":1968,"originally_available_at":"1968-01-01","guid":"plex://movie/2622","section_id":"1"},
-    {"user_id":1,"started":1775176200,"stopped":1775184900,"play_duration":8700,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2623","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Chinatown","grandparent_title":"","year":1974,"originally_available_at":"1974-01-01","guid":"plex://movie/2623","section_id":"1"},
-    {"user_id":1,"started":1775781000,"stopped":1775790300,"play_duration":9300,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2624","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Taxi Driver","grandparent_title":"","year":1976,"originally_available_at":"1976-01-01","guid":"plex://movie/2624","section_id":"1"},
-    {"user_id":1,"started":1776385800,"stopped":1776395700,"play_duration":9900,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2625","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Jaws","grandparent_title":"","year":1975,"originally_available_at":"1975-01-01","guid":"plex://movie/2625","section_id":"1"},
-    {"user_id":1,"started":1776990600,"stopped":1776996300,"play_duration":5700,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2626","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Star Wars","grandparent_title":"","year":1977,"originally_available_at":"1977-01-01","guid":"plex://movie/2626","section_id":"1"},
-    {"user_id":1,"started":1777595400,"stopped":1777601700,"play_duration":6300,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2627","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Alien","grandparent_title":"","year":1979,"originally_available_at":"1979-01-01","guid":"plex://movie/2627","section_id":"1"},
-    {"user_id":1,"started":1778200200,"stopped":1778207100,"play_duration":6900,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2628","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Apocalypse Now","grandparent_title":"","year":1979,"originally_available_at":"1979-01-01","guid":"plex://movie/2628","section_id":"1"},
-    {"user_id":1,"started":1778805000,"stopped":1778812500,"play_duration":7500,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2629","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Raging Bull","grandparent_title":"","year":1980,"originally_available_at":"1980-01-01","guid":"plex://movie/2629","section_id":"1"},
-    {"user_id":1,"started":1779409800,"stopped":1779417900,"play_duration":8100,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2630","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Blade Runner","grandparent_title":"","year":1982,"originally_available_at":"1982-01-01","guid":"plex://movie/2630","section_id":"1"},
-    {"user_id":1,"started":1780014600,"stopped":1780023300,"play_duration":8700,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2631","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"E.T. the Extra-Terrestrial","grandparent_title":"","year":1982,"originally_available_at":"1982-01-01","guid":"plex://movie/2631","section_id":"1"},
-    {"user_id":1,"started":1780619400,"stopped":1780628700,"play_duration":9300,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2632","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Back to the Future","grandparent_title":"","year":1985,"originally_available_at":"1985-01-01","guid":"plex://movie/2632","section_id":"1"},
-    {"user_id":1,"started":1781224200,"stopped":1781234100,"play_duration":9900,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2633","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Aliens","grandparent_title":"","year":1986,"originally_available_at":"1986-01-01","guid":"plex://movie/2633","section_id":"1"},
-    {"user_id":1,"started":1781829000,"stopped":1781834700,"play_duration":5700,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2634","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Die Hard","grandparent_title":"","year":1988,"originally_available_at":"1988-01-01","guid":"plex://movie/2634","section_id":"1"},
-    {"user_id":1,"started":1782433800,"stopped":1782440100,"play_duration":6300,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2635","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Do the Right Thing","grandparent_title":"","year":1989,"originally_available_at":"1989-01-01","guid":"plex://movie/2635","section_id":"1"},
-    {"user_id":1,"started":1783038600,"stopped":1783045500,"play_duration":6900,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2636","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Goodfellas","grandparent_title":"","year":1990,"originally_available_at":"1990-01-01","guid":"plex://movie/2636","section_id":"1"},
-    {"user_id":1,"started":1783643400,"stopped":1783650900,"play_duration":7500,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2637","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"The Silence of the Lambs","grandparent_title":"","year":1991,"originally_available_at":"1991-01-01","guid":"plex://movie/2637","section_id":"1"},
-    {"user_id":1,"started":1784248200,"stopped":1784256300,"play_duration":8100,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2638","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Unforgiven","grandparent_title":"","year":1992,"originally_available_at":"1992-01-01","guid":"plex://movie/2638","section_id":"1"},
-    {"user_id":1,"started":1784853000,"stopped":1784861700,"play_duration":8700,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2639","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Jurassic Park","grandparent_title":"","year":1993,"originally_available_at":"1993-01-01","guid":"plex://movie/2639","section_id":"1"},
-    {"user_id":1,"started":1785457800,"stopped":1785467100,"play_duration":9300,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2640","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Schindler's List","grandparent_title":"","year":1993,"originally_available_at":"1993-01-01","guid":"plex://movie/2640","section_id":"1"},
-    {"user_id":1,"started":1786062600,"stopped":1786072500,"play_duration":9900,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2641","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Pulp Fiction","grandparent_title":"","year":1994,"originally_available_at":"1994-01-01","guid":"plex://movie/2641","section_id":"1"},
-    {"user_id":1,"started":1786667400,"stopped":1786673100,"play_duration":5700,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2642","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"The Shawshank Redemption","grandparent_title":"","year":1994,"originally_available_at":"1994-01-01","guid":"plex://movie/2642","section_id":"1"},
-    {"user_id":1,"started":1787272200,"stopped":1787278500,"play_duration":6300,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2643","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Heat","grandparent_title":"","year":1995,"originally_available_at":"1995-01-01","guid":"plex://movie/2643","section_id":"1"},
-    {"user_id":1,"started":1787877000,"stopped":1787883900,"play_duration":6900,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2644","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Toy Story","grandparent_title":"","year":1995,"originally_available_at":"1995-01-01","guid":"plex://movie/2644","section_id":"1"},
-    {"user_id":1,"started":1788481800,"stopped":1788489300,"play_duration":7500,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2645","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Fargo","grandparent_title":"","year":1996,"originally_available_at":"1996-01-01","guid":"plex://movie/2645","section_id":"1"},
-    {"user_id":1,"started":1789086600,"stopped":1789094700,"play_duration":8100,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2646","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Titanic","grandparent_title":"","year":1997,"originally_available_at":"1997-01-01","guid":"plex://movie/2646","section_id":"1"},
-    {"user_id":1,"started":1789691400,"stopped":1789700100,"play_duration":8700,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2647","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"The Big Lebowski","grandparent_title":"","year":1998,"originally_available_at":"1998-01-01","guid":"plex://movie/2647","section_id":"1"},
-    {"user_id":1,"started":1790296200,"stopped":1790305500,"play_duration":9300,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2648","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"The Matrix","grandparent_title":"","year":1999,"originally_available_at":"1999-01-01","guid":"plex://movie/2648","section_id":"1"},
-    {"user_id":1,"started":1790901000,"stopped":1790910900,"play_duration":9900,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2649","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Fight Club","grandparent_title":"","year":1999,"originally_available_at":"1999-01-01","guid":"plex://movie/2649","section_id":"1"}
+    {"user_id":1,"started":1770325200,"stopped":1770333900,"play_duration":8700,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2615","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Psycho","grandparent_title":"","year":1960,"originally_available_at":"1960-01-01","guid":"plex://movie/2615","section_id":"1"},
+    {"user_id":1,"started":1770930000,"stopped":1770939300,"play_duration":9300,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2616","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Rear Window","grandparent_title":"","year":1954,"originally_available_at":"1954-01-01","guid":"plex://movie/2616","section_id":"1"},
+    {"user_id":1,"started":1771534800,"stopped":1771544700,"play_duration":9900,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2617","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"North by Northwest","grandparent_title":"","year":1959,"originally_available_at":"1959-01-01","guid":"plex://movie/2617","section_id":"1"},
+    {"user_id":1,"started":1772139600,"stopped":1772145300,"play_duration":5700,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2618","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Some Like It Hot","grandparent_title":"","year":1959,"originally_available_at":"1959-01-01","guid":"plex://movie/2618","section_id":"1"},
+    {"user_id":1,"started":1772744400,"stopped":1772750700,"play_duration":6300,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2619","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Sunset Boulevard","grandparent_title":"","year":1950,"originally_available_at":"1950-01-01","guid":"plex://movie/2619","section_id":"1"},
+    {"user_id":1,"started":1773345600,"stopped":1773352500,"play_duration":6900,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2620","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"12 Angry Men","grandparent_title":"","year":1957,"originally_available_at":"1957-01-01","guid":"plex://movie/2620","section_id":"1"},
+    {"user_id":1,"started":1773950400,"stopped":1773957900,"play_duration":7500,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2621","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Lawrence of Arabia","grandparent_title":"","year":1962,"originally_available_at":"1962-01-01","guid":"plex://movie/2621","section_id":"1"},
+    {"user_id":1,"started":1774555200,"stopped":1774563300,"play_duration":8100,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2622","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"2001: A Space Odyssey","grandparent_title":"","year":1968,"originally_available_at":"1968-01-01","guid":"plex://movie/2622","section_id":"1"},
+    {"user_id":1,"started":1775160000,"stopped":1775168700,"play_duration":8700,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2623","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Chinatown","grandparent_title":"","year":1974,"originally_available_at":"1974-01-01","guid":"plex://movie/2623","section_id":"1"},
+    {"user_id":1,"started":1775764800,"stopped":1775774100,"play_duration":9300,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2624","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Taxi Driver","grandparent_title":"","year":1976,"originally_available_at":"1976-01-01","guid":"plex://movie/2624","section_id":"1"},
+    {"user_id":1,"started":1776369600,"stopped":1776379500,"play_duration":9900,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"movie","rating_key":"2625","grandparent_rating_key":"","parent_media_index":"","media_index":"","title":"Jaws","grandparent_title":"","year":1975,"originally_available_at":"1975-01-01","guid":"plex://movie/2625","section_id":"1"},
+    {"user_id":1,"started":1778032800,"stopped":1778036400,"play_duration":3600,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"26020101","grandparent_rating_key":"2602","parent_media_index":1,"media_index":1,"title":"Episode 1","grandparent_title":"Ripley","year":2024,"originally_available_at":"2024-01-01","guid":"plex://episode/26020101","section_id":"2"},
+    {"user_id":1,"started":1778637600,"stopped":1778641200,"play_duration":3600,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"26020102","grandparent_rating_key":"2602","parent_media_index":1,"media_index":2,"title":"Episode 2","grandparent_title":"Ripley","year":2024,"originally_available_at":"2024-01-01","guid":"plex://episode/26020102","section_id":"2"},
+    {"user_id":1,"started":1779242400,"stopped":1779246000,"play_duration":3600,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"26020103","grandparent_rating_key":"2602","parent_media_index":1,"media_index":3,"title":"Episode 3","grandparent_title":"Ripley","year":2024,"originally_available_at":"2024-01-01","guid":"plex://episode/26020103","section_id":"2"},
+    {"user_id":1,"started":1779847200,"stopped":1779850800,"play_duration":3600,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"26020104","grandparent_rating_key":"2602","parent_media_index":1,"media_index":4,"title":"Episode 4","grandparent_title":"Ripley","year":2024,"originally_available_at":"2024-01-01","guid":"plex://episode/26020104","section_id":"2"},
+    {"user_id":1,"started":1780452000,"stopped":1780455600,"play_duration":3600,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"26020105","grandparent_rating_key":"2602","parent_media_index":1,"media_index":5,"title":"Episode 5","grandparent_title":"Ripley","year":2024,"originally_available_at":"2024-01-01","guid":"plex://episode/26020105","section_id":"2"},
+    {"user_id":1,"started":1781056800,"stopped":1781060400,"play_duration":3600,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"26020106","grandparent_rating_key":"2602","parent_media_index":1,"media_index":6,"title":"Episode 6","grandparent_title":"Ripley","year":2024,"originally_available_at":"2024-01-01","guid":"plex://episode/26020106","section_id":"2"},
+    {"user_id":1,"started":1781661600,"stopped":1781665200,"play_duration":3600,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"26020107","grandparent_rating_key":"2602","parent_media_index":1,"media_index":7,"title":"Episode 7","grandparent_title":"Ripley","year":2024,"originally_available_at":"2024-01-01","guid":"plex://episode/26020107","section_id":"2"},
+    {"user_id":1,"started":1782266400,"stopped":1782270000,"play_duration":3600,"paused_counter":0,"percent_complete":100,"watched_status":1,"transcode_decision":"direct play","location":"lan","platform":"Apple TV","product":"Plex for Apple TV","live":0,"media_type":"episode","rating_key":"26020108","grandparent_rating_key":"2602","parent_media_index":1,"media_index":8,"title":"Episode 8","grandparent_title":"Ripley","year":2024,"originally_available_at":"2024-01-01","guid":"plex://episode/26020108","section_id":"2"}
   ],
   "lifetimeBefore2026": [],
   "metadata": [
@@ -97,36 +81,14 @@
     {"ratingKey":"2623","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Documentary","Science Fiction"],"directors":["Mira Okafor"],"actors":["Lena Marsh","Calum Reyes"],"studio":null,"contentRating":null,"year":1974,"originallyAvailableAt":"1974-01-01T00:00:00.000Z","runtimeSec":8700,"seasonEpisodeCounts":null,"guids":["tmdb://102623"],"videoResolution":"1080","hdr":false},
     {"ratingKey":"2624","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Drama","Thriller"],"directors":["Tomas Brandt"],"actors":["Rowan Hale","Noor Haddad"],"studio":null,"contentRating":null,"year":1976,"originallyAvailableAt":"1976-01-01T00:00:00.000Z","runtimeSec":9300,"seasonEpisodeCounts":null,"guids":["tmdb://102624"],"videoResolution":"1080","hdr":false},
     {"ratingKey":"2625","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Comedy","Crime"],"directors":["Ines Varga"],"actors":["Mira Okafor","Jun Ito"],"studio":null,"contentRating":null,"year":1975,"originallyAvailableAt":"1975-01-01T00:00:00.000Z","runtimeSec":9900,"seasonEpisodeCounts":null,"guids":["tmdb://102625"],"videoResolution":"1080","hdr":false},
-    {"ratingKey":"2626","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Science Fiction","Animation"],"directors":["Calum Reyes"],"actors":["Tomas Brandt","Lena Marsh"],"studio":null,"contentRating":null,"year":1977,"originallyAvailableAt":"1977-01-01T00:00:00.000Z","runtimeSec":5700,"seasonEpisodeCounts":null,"guids":["tmdb://102626"],"videoResolution":"1080","hdr":false},
-    {"ratingKey":"2627","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Thriller","Fantasy"],"directors":["Noor Haddad"],"actors":["Ines Varga","Rowan Hale"],"studio":null,"contentRating":null,"year":1979,"originallyAvailableAt":"1979-01-01T00:00:00.000Z","runtimeSec":6300,"seasonEpisodeCounts":null,"guids":["tmdb://102627"],"videoResolution":"1080","hdr":false},
-    {"ratingKey":"2628","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Crime","Documentary"],"directors":["Jun Ito"],"actors":["Calum Reyes","Mira Okafor"],"studio":null,"contentRating":null,"year":1979,"originallyAvailableAt":"1979-01-01T00:00:00.000Z","runtimeSec":6900,"seasonEpisodeCounts":null,"guids":["tmdb://102628"],"videoResolution":"1080","hdr":false},
-    {"ratingKey":"2629","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Animation","Drama"],"directors":["Lena Marsh"],"actors":["Noor Haddad","Tomas Brandt"],"studio":null,"contentRating":null,"year":1980,"originallyAvailableAt":"1980-01-01T00:00:00.000Z","runtimeSec":7500,"seasonEpisodeCounts":null,"guids":["tmdb://102629"],"videoResolution":"1080","hdr":false},
-    {"ratingKey":"2630","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Fantasy","Comedy"],"directors":["Rowan Hale"],"actors":["Jun Ito","Ines Varga"],"studio":null,"contentRating":null,"year":1982,"originallyAvailableAt":"1982-01-01T00:00:00.000Z","runtimeSec":8100,"seasonEpisodeCounts":null,"guids":["tmdb://102630"],"videoResolution":"1080","hdr":false},
-    {"ratingKey":"2631","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Documentary","Science Fiction"],"directors":["Mira Okafor"],"actors":["Lena Marsh","Calum Reyes"],"studio":null,"contentRating":null,"year":1982,"originallyAvailableAt":"1982-01-01T00:00:00.000Z","runtimeSec":8700,"seasonEpisodeCounts":null,"guids":["tmdb://102631"],"videoResolution":"1080","hdr":false},
-    {"ratingKey":"2632","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Drama","Thriller"],"directors":["Tomas Brandt"],"actors":["Rowan Hale","Noor Haddad"],"studio":null,"contentRating":null,"year":1985,"originallyAvailableAt":"1985-01-01T00:00:00.000Z","runtimeSec":9300,"seasonEpisodeCounts":null,"guids":["tmdb://102632"],"videoResolution":"1080","hdr":false},
-    {"ratingKey":"2633","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Comedy","Crime"],"directors":["Ines Varga"],"actors":["Mira Okafor","Jun Ito"],"studio":null,"contentRating":null,"year":1986,"originallyAvailableAt":"1986-01-01T00:00:00.000Z","runtimeSec":9900,"seasonEpisodeCounts":null,"guids":["tmdb://102633"],"videoResolution":"1080","hdr":false},
-    {"ratingKey":"2634","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Science Fiction","Animation"],"directors":["Calum Reyes"],"actors":["Tomas Brandt","Lena Marsh"],"studio":null,"contentRating":null,"year":1988,"originallyAvailableAt":"1988-01-01T00:00:00.000Z","runtimeSec":5700,"seasonEpisodeCounts":null,"guids":["tmdb://102634"],"videoResolution":"1080","hdr":false},
-    {"ratingKey":"2635","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Thriller","Fantasy"],"directors":["Noor Haddad"],"actors":["Ines Varga","Rowan Hale"],"studio":null,"contentRating":null,"year":1989,"originallyAvailableAt":"1989-01-01T00:00:00.000Z","runtimeSec":6300,"seasonEpisodeCounts":null,"guids":["tmdb://102635"],"videoResolution":"1080","hdr":false},
-    {"ratingKey":"2636","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Crime","Documentary"],"directors":["Jun Ito"],"actors":["Calum Reyes","Mira Okafor"],"studio":null,"contentRating":null,"year":1990,"originallyAvailableAt":"1990-01-01T00:00:00.000Z","runtimeSec":6900,"seasonEpisodeCounts":null,"guids":["tmdb://102636"],"videoResolution":"1080","hdr":false},
-    {"ratingKey":"2637","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Animation","Drama"],"directors":["Lena Marsh"],"actors":["Noor Haddad","Tomas Brandt"],"studio":null,"contentRating":null,"year":1991,"originallyAvailableAt":"1991-01-01T00:00:00.000Z","runtimeSec":7500,"seasonEpisodeCounts":null,"guids":["tmdb://102637"],"videoResolution":"1080","hdr":false},
-    {"ratingKey":"2638","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Fantasy","Comedy"],"directors":["Rowan Hale"],"actors":["Jun Ito","Ines Varga"],"studio":null,"contentRating":null,"year":1992,"originallyAvailableAt":"1992-01-01T00:00:00.000Z","runtimeSec":8100,"seasonEpisodeCounts":null,"guids":["tmdb://102638"],"videoResolution":"1080","hdr":false},
-    {"ratingKey":"2639","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Documentary","Science Fiction"],"directors":["Mira Okafor"],"actors":["Lena Marsh","Calum Reyes"],"studio":null,"contentRating":null,"year":1993,"originallyAvailableAt":"1993-01-01T00:00:00.000Z","runtimeSec":8700,"seasonEpisodeCounts":null,"guids":["tmdb://102639"],"videoResolution":"1080","hdr":false},
-    {"ratingKey":"2640","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Drama","Thriller"],"directors":["Tomas Brandt"],"actors":["Rowan Hale","Noor Haddad"],"studio":null,"contentRating":null,"year":1993,"originallyAvailableAt":"1993-01-01T00:00:00.000Z","runtimeSec":9300,"seasonEpisodeCounts":null,"guids":["tmdb://102640"],"videoResolution":"1080","hdr":false},
-    {"ratingKey":"2641","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Comedy","Crime"],"directors":["Ines Varga"],"actors":["Mira Okafor","Jun Ito"],"studio":null,"contentRating":null,"year":1994,"originallyAvailableAt":"1994-01-01T00:00:00.000Z","runtimeSec":9900,"seasonEpisodeCounts":null,"guids":["tmdb://102641"],"videoResolution":"1080","hdr":false},
-    {"ratingKey":"2642","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Science Fiction","Animation"],"directors":["Calum Reyes"],"actors":["Tomas Brandt","Lena Marsh"],"studio":null,"contentRating":null,"year":1994,"originallyAvailableAt":"1994-01-01T00:00:00.000Z","runtimeSec":5700,"seasonEpisodeCounts":null,"guids":["tmdb://102642"],"videoResolution":"1080","hdr":false},
-    {"ratingKey":"2643","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Thriller","Fantasy"],"directors":["Noor Haddad"],"actors":["Ines Varga","Rowan Hale"],"studio":null,"contentRating":null,"year":1995,"originallyAvailableAt":"1995-01-01T00:00:00.000Z","runtimeSec":6300,"seasonEpisodeCounts":null,"guids":["tmdb://102643"],"videoResolution":"1080","hdr":false},
-    {"ratingKey":"2644","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Crime","Documentary"],"directors":["Jun Ito"],"actors":["Calum Reyes","Mira Okafor"],"studio":null,"contentRating":null,"year":1995,"originallyAvailableAt":"1995-01-01T00:00:00.000Z","runtimeSec":6900,"seasonEpisodeCounts":null,"guids":["tmdb://102644"],"videoResolution":"1080","hdr":false},
-    {"ratingKey":"2645","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Animation","Drama"],"directors":["Lena Marsh"],"actors":["Noor Haddad","Tomas Brandt"],"studio":null,"contentRating":null,"year":1996,"originallyAvailableAt":"1996-01-01T00:00:00.000Z","runtimeSec":7500,"seasonEpisodeCounts":null,"guids":["tmdb://102645"],"videoResolution":"1080","hdr":false},
-    {"ratingKey":"2646","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Fantasy","Comedy"],"directors":["Rowan Hale"],"actors":["Jun Ito","Ines Varga"],"studio":null,"contentRating":null,"year":1997,"originallyAvailableAt":"1997-01-01T00:00:00.000Z","runtimeSec":8100,"seasonEpisodeCounts":null,"guids":["tmdb://102646"],"videoResolution":"1080","hdr":false},
-    {"ratingKey":"2647","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Documentary","Science Fiction"],"directors":["Mira Okafor"],"actors":["Lena Marsh","Calum Reyes"],"studio":null,"contentRating":null,"year":1998,"originallyAvailableAt":"1998-01-01T00:00:00.000Z","runtimeSec":8700,"seasonEpisodeCounts":null,"guids":["tmdb://102647"],"videoResolution":"1080","hdr":false},
-    {"ratingKey":"2648","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Drama","Thriller"],"directors":["Tomas Brandt"],"actors":["Rowan Hale","Noor Haddad"],"studio":null,"contentRating":null,"year":1999,"originallyAvailableAt":"1999-01-01T00:00:00.000Z","runtimeSec":9300,"seasonEpisodeCounts":null,"guids":["tmdb://102648"],"videoResolution":"1080","hdr":false},
-    {"ratingKey":"2649","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Comedy","Crime"],"directors":["Ines Varga"],"actors":["Mira Okafor","Jun Ito"],"studio":null,"contentRating":null,"year":1999,"originallyAvailableAt":"1999-01-01T00:00:00.000Z","runtimeSec":9900,"seasonEpisodeCounts":null,"guids":["tmdb://102649"],"videoResolution":"1080","hdr":false},
-    {"ratingKey":"2601","kind":"show","librarySectionId":"2","addedAt":"2020-06-01T00:00:00.000Z","genres":["Comedy","Crime"],"directors":[],"actors":["Mira Okafor","Jun Ito"],"studio":null,"contentRating":null,"year":2019,"originallyAvailableAt":"2019-01-01T00:00:00.000Z","runtimeSec":null,"seasonEpisodeCounts":{"1":5},"guids":["tmdb://102601","tvdb://302601"],"videoResolution":"1080","hdr":false}
+    {"ratingKey":"2601","kind":"show","librarySectionId":"2","addedAt":"2020-06-01T00:00:00.000Z","genres":["Comedy","Crime"],"directors":[],"actors":["Mira Okafor","Jun Ito"],"studio":null,"contentRating":null,"year":2019,"originallyAvailableAt":"2019-01-01T00:00:00.000Z","runtimeSec":null,"seasonEpisodeCounts":{"1":5},"guids":["tmdb://102601","tvdb://302601"],"videoResolution":"1080","hdr":false},
+    {"ratingKey":"2602","kind":"show","librarySectionId":"2","addedAt":"2024-06-01T00:00:00.000Z","genres":["Science Fiction","Animation"],"directors":[],"actors":["Tomas Brandt","Lena Marsh"],"studio":null,"contentRating":null,"year":2024,"originallyAvailableAt":"2024-01-01T00:00:00.000Z","runtimeSec":null,"seasonEpisodeCounts":{"1":8},"guids":["tmdb://102602","tvdb://302602"],"videoResolution":"1080","hdr":false}
   ],
   "requests": {
     "rows": [],
     "genres": {}
   },
+  "library": null,
   "expected": {
     "edition": "full",
     "archetype": "credits-roller",
@@ -138,53 +100,56 @@
     ],
     "facts": {
       "member.firstName": "Hannah",
-      "time.totalHours": "92",
-      "counts.films": "40",
-      "counts.episodes": "5",
+      "time.totalHours": "48",
+      "counts.films": "16",
+      "counts.episodes": "13",
       "films.finishedShare": "100%",
       "records.completionShare": "100%",
-      "series[1].title": "Chernobyl",
-      "films[1].title": "Fight Club",
-      "hours.peak": "7 PM",
-      "days.active": "45",
-      "tz.label": "America/Chicago"
+      "series[1].title": "Ripley",
+      "films[1].title": "Jaws",
+      "hours.peak": "3 PM",
+      "days.active": "29",
+      "tz.label": "America/Chicago",
+      "archetype.runnerUp": "The Festival Juror",
+      "days.longestGap.days": "18 days",
+      "archetype.name": "The Credits Roller"
     },
     "stats": {
       "totals": {
-        "totalMinutes": 5525,
-        "seriesMinutes": 325,
-        "filmMinutes": 5200,
+        "totalMinutes": 2885,
+        "seriesMinutes": 805,
+        "filmMinutes": 2080,
         "counts": {
-          "episodes": 5,
-          "series": 1,
-          "films": 40,
-          "seasons": 1
+          "episodes": 13,
+          "series": 2,
+          "films": 16,
+          "seasons": 2
         },
-        "perDay": 16,
+        "perDay": 8,
         "daysHours": {
-          "days": 3,
-          "hours": 20
+          "days": 2,
+          "hours": 0
         },
         "vsLastYear": null
       },
       "time": {
-        "peak": 19,
+        "peak": 15,
         "afterDarkShare": 0,
-        "goldenShare": 1,
+        "goldenShare": 0.4482758620689655,
         "medianStart": {
-          "hour": 19,
-          "minute": 30
+          "hour": 15,
+          "minute": 0
         },
         "latestStart": {
-          "hour": 20,
+          "hour": 21,
           "minute": 0,
-          "date": "2026-02-01",
-          "weekday": 0
+          "date": "2026-06-23",
+          "weekday": 2
         },
-        "weekendShare": 0.1111111111111111
+        "weekendShare": 0.1724137931034483
       },
       "calendar": {
-        "active": 45,
+        "active": 29,
         "biggest": {
           "date": "2026-02-19",
           "minutes": 165
@@ -195,10 +160,10 @@
           "to": "2026-01-01"
         },
         "longestGap": {
-          "days": 6,
-          "from": "2026-02-06",
-          "to": "2026-02-11",
-          "month": 2
+          "days": 18,
+          "from": "2026-04-17",
+          "to": "2026-05-04",
+          "month": 4
         }
       },
       "sessions": {
@@ -220,24 +185,112 @@
           "key": "film:2610",
           "title": "The Godfather",
           "date": "2026-01-01",
-          "hour": 19,
-          "minute": 30
+          "hour": 15,
+          "minute": 0
         },
         "last": {
-          "key": "film:2649",
-          "title": "Fight Club",
-          "date": "2026-10-01",
-          "hour": 19,
-          "minute": 30
+          "key": "series:2602",
+          "title": "Ripley",
+          "date": "2026-06-23",
+          "hour": 21,
+          "minute": 0
         },
         "sameTitleSameDay": false,
         "member": {
           "since": "2026-01-01",
-          "lifetimeHours": 92
+          "lifetimeHours": 48
         }
       },
       "race": {
         "eligible": false
+      },
+      "taste": {
+        "genres": [
+          {
+            "name": "Science Fiction",
+            "minutes": 480,
+            "share": 0.1663778162911612
+          },
+          {
+            "name": "Comedy",
+            "minutes": 462,
+            "share": 0.16031195840554593
+          },
+          {
+            "name": "Animation",
+            "minutes": 460,
+            "share": 0.15944540727902945
+          },
+          {
+            "name": "Crime",
+            "minutes": 442,
+            "share": 0.15337954939341422
+          },
+          {
+            "name": "Drama",
+            "minutes": 280,
+            "share": 0.09705372616984402
+          }
+        ],
+        "medianYear": 1960,
+        "oldest": {
+          "key": "film:2613",
+          "title": "Citizen Kane",
+          "year": 1941
+        },
+        "freshShare": 0
+      },
+      "people": {
+        "actors": [
+          {
+            "name": "Lena Marsh",
+            "minutes": 960
+          },
+          {
+            "name": "Jun Ito",
+            "minutes": 925
+          },
+          {
+            "name": "Tomas Brandt",
+            "minutes": 920
+          },
+          {
+            "name": "Mira Okafor",
+            "minutes": 885
+          },
+          {
+            "name": "Noor Haddad",
+            "minutes": 560
+          }
+        ],
+        "directors": [
+          {
+            "name": "Ines Varga",
+            "minutes": 330
+          },
+          {
+            "name": "Tomas Brandt",
+            "minutes": 310
+          },
+          {
+            "name": "Mira Okafor",
+            "minutes": 290
+          }
+        ]
+      },
+      "devices": {
+        "directPlayShare": 1,
+        "homeShare": 1,
+        "topPlatform": "Apple TV",
+        "topProduct": "Plex for Apple TV",
+        "fourKShare": 0
+      },
+      "requests": {
+        "eligible": false
+      },
+      "nextYear": {
+        "leftForLater": [],
+        "picks": []
       },
       "milestones": [
         {
@@ -247,13 +300,14 @@
         {
           "hours": 25,
           "date": "2026-03-05"
-        },
-        {
-          "hours": 50,
-          "date": "2026-05-28"
         }
       ],
       "topSeries": [
+        {
+          "title": "Ripley",
+          "minutes": 480,
+          "plays": 8
+        },
         {
           "title": "Chernobyl",
           "minutes": 325,
@@ -262,18 +316,18 @@
       ],
       "topFilms": [
         {
-          "title": "Fight Club",
+          "title": "Jaws",
           "minutes": 165,
           "plays": 1
         },
         {
-          "title": "Pulp Fiction",
+          "title": "North by Northwest",
           "minutes": 165,
           "plays": 1
         },
         {
-          "title": "Aliens",
-          "minutes": 165,
+          "title": "Taxi Driver",
+          "minutes": 155,
           "plays": 1
         }
       ]

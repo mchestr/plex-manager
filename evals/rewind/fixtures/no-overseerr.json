@@ -192,6 +192,7 @@
     {"ratingKey":"2834","kind":"movie","librarySectionId":"1","addedAt":"2020-06-01T00:00:00.000Z","genres":["Science Fiction","Animation"],"directors":["Calum Reyes"],"actors":["Tomas Brandt","Lena Marsh"],"studio":null,"contentRating":null,"year":2009,"originallyAvailableAt":"2009-01-01T00:00:00.000Z","runtimeSec":6000,"seasonEpisodeCounts":null,"guids":["tmdb://102834"],"videoResolution":"1080","hdr":false}
   ],
   "requests": null,
+  "library": null,
   "expected": {
     "edition": "full",
     "archetype": "golden-hour-viewer",
@@ -207,12 +208,14 @@
       "counts.episodes": "100",
       "counts.series": "4",
       "counts.films": "25",
-      "streak.longest.days": "5 days",
-      "hours.peak": "7 PM",
+      "streak.longest.days": "5 days",
+      "hours.peak": "7 PM",
       "hours.goldenShare": "100%",
       "race.overtakeMonth": "March",
       "days.active": "125",
-      "tz.label": "America/Chicago"
+      "tz.label": "America/Chicago",
+      "people.director[1].name": "Calum Reyes",
+      "archetype.name": "The Golden Hour Viewer"
     },
     "stats": {
       "totals": {
@@ -319,6 +322,94 @@
         "leadChanges": 1,
         "overtakeMonth": 3,
         "closestGapMinutes": 0
+      },
+      "taste": {
+        "genres": [
+          {
+            "name": "Crime",
+            "minutes": 1050,
+            "share": 0.19090909090909092
+          },
+          {
+            "name": "Animation",
+            "minutes": 725,
+            "share": 0.1318181818181818
+          },
+          {
+            "name": "Science Fiction",
+            "minutes": 725,
+            "share": 0.1318181818181818
+          },
+          {
+            "name": "Comedy",
+            "minutes": 675,
+            "share": 0.12272727272727273
+          },
+          {
+            "name": "Documentary",
+            "minutes": 675,
+            "share": 0.12272727272727273
+          }
+        ],
+        "medianYear": 2001,
+        "oldest": {
+          "key": "series:2804",
+          "title": "Seinfeld",
+          "year": 1989
+        },
+        "freshShare": 0
+      },
+      "people": {
+        "actors": [
+          {
+            "name": "Mira Okafor",
+            "minutes": 2100
+          },
+          {
+            "name": "Lena Marsh",
+            "minutes": 1450
+          },
+          {
+            "name": "Tomas Brandt",
+            "minutes": 1450
+          },
+          {
+            "name": "Calum Reyes",
+            "minutes": 1350
+          },
+          {
+            "name": "Ines Varga",
+            "minutes": 1350
+          }
+        ],
+        "directors": [
+          {
+            "name": "Calum Reyes",
+            "minutes": 400
+          },
+          {
+            "name": "Ines Varga",
+            "minutes": 300
+          },
+          {
+            "name": "Jun Ito",
+            "minutes": 300
+          }
+        ]
+      },
+      "devices": {
+        "directPlayShare": 1,
+        "homeShare": 1,
+        "topPlatform": "Apple TV",
+        "topProduct": "Plex for Apple TV",
+        "fourKShare": 0
+      },
+      "requests": {
+        "eligible": false
+      },
+      "nextYear": {
+        "leftForLater": [],
+        "picks": []
       },
       "milestones": [
         {

@@ -7,7 +7,7 @@
  */
 
 import { shift } from "../dates"
-import { MEMBER, metadataFor, SEASON, SERVER, type Profile } from "../profile"
+import { MEMBER, metadataFor, ratio, SEASON, SERVER, type Profile } from "../profile"
 import { historyRow } from "../rows"
 import { episodes, film, listRun, series } from "../titles"
 
@@ -48,12 +48,14 @@ export const noOverseerr: Profile = {
       "counts.episodes": "100",
       "counts.series": "4",
       "counts.films": "25",
-      "streak.longest.days": "5 days",
-      "hours.peak": "7 PM",
+      "streak.longest.days": "5\u00A0days",
+      "hours.peak": "7\u00A0PM",
       "hours.goldenShare": "100%",
       "race.overtakeMonth": "March",
       "days.active": "125",
       "tz.label": "America/Chicago",
+      "people.director[1].name": "Calum Reyes",
+      "archetype.name": "The Golden Hour Viewer",
     },
     stats: {
       // Each week 4 x 30 + 100 = 220; 25 weeks = 5,500. Two seasons per sitcom.
@@ -111,6 +113,40 @@ export const noOverseerr: Profile = {
         { hours: 25, date: "2026-02-20" },
         { hours: 50, date: "2026-04-10" },
       ],
+      // P2.8 sections, derived with hand-facts.py (P2.16): genre shares split each
+      // title's seconds evenly across its genres, over the seconds that have one;
+      // every credited actor earns a title's minutes; devices count every play.
+      taste: {
+        genres: [
+          { name: "Crime", minutes: 1050, share: ratio(63_000, 330_000) },
+          { name: "Animation", minutes: 725, share: ratio(43_500, 330_000) },
+          { name: "Science Fiction", minutes: 725, share: ratio(43_500, 330_000) },
+          { name: "Comedy", minutes: 675, share: ratio(40_500, 330_000) },
+          { name: "Documentary", minutes: 675, share: ratio(40_500, 330_000) },
+        ],
+        medianYear: 2001,
+        oldest: { key: "series:2804", title: "Seinfeld", year: 1989 },
+        freshShare: ratio(0, 125),
+      },
+      people: {
+        actors: [
+          { name: "Mira Okafor", minutes: 2100 },
+          { name: "Lena Marsh", minutes: 1450 },
+          { name: "Tomas Brandt", minutes: 1450 },
+          { name: "Calum Reyes", minutes: 1350 },
+          { name: "Ines Varga", minutes: 1350 },
+        ],
+        directors: [{ name: "Calum Reyes", minutes: 400 }, { name: "Ines Varga", minutes: 300 }, { name: "Jun Ito", minutes: 300 }],
+      },
+      devices: {
+        directPlayShare: ratio(125, 125),
+        homeShare: ratio(125, 125),
+        topPlatform: "Apple TV",
+        topProduct: "Plex for Apple TV",
+        fourKShare: ratio(0, 125),
+      },
+      requests: { eligible: false },
+      nextYear: { leftForLater: [], picks: [] },
       topSeries: [
         { title: "Seinfeld", minutes: 750, plays: 25 },
         { title: "Abbott Elementary", minutes: 750, plays: 25 },

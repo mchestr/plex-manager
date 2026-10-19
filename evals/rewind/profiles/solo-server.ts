@@ -55,7 +55,7 @@ export const soloServer: Profile = {
   },
   expected: {
     edition: "full",
-    archetype: "series-devourer",
+    archetype: "weekend-double-feature",
     omittedPages: [14, 15, 17],
     facts: {
       "member.firstName": "Fionn",
@@ -65,11 +65,13 @@ export const soloServer: Profile = {
       "counts.series": "3",
       "series[1].title": "The White Lotus",
       "race.overtakeMonth": "July",
-      "days.biggest.date": "18 Jul",
-      "days.biggest.minutes": "4 h 54 m",
+      "days.biggest.date": "July\u00A018",
+      "days.biggest.minutes": "4\u00A0h 54\u00A0m",
       "records.longestBinge.title": "Succession",
-      "hours.peak": "9 PM",
+      "hours.peak": "9\u00A0PM",
       "tz.label": "Europe/Dublin",
+      "setup.directPlayShare": "100%",
+      "archetype.name": "The Weekend Double Feature",
     },
     stats: {
       // 13 x 180 + 14 x 180 + 22 x 30 + 114 + 180 = 5,814; 2025: 48 x 100 = 4,800.
@@ -129,6 +131,40 @@ export const soloServer: Profile = {
         { hours: 25, date: "2026-03-01" },
         { hours: 50, date: "2026-04-26" },
       ],
+      // P2.8 sections, derived with hand-facts.py (P2.16): genre shares split each
+      // title's seconds evenly across its genres, over the seconds that have one;
+      // every credited actor earns a title's minutes; devices count every play.
+      taste: {
+        genres: [
+          { name: "Comedy", minutes: 1260, share: ratio(75_600, 348_840) },
+          { name: "Drama", minutes: 1260, share: ratio(75_600, 348_840) },
+          { name: "Fantasy", minutes: 1260, share: ratio(75_600, 348_840) },
+          { name: "Animation", minutes: 1170, share: ratio(70_200, 348_840) },
+          { name: "Documentary", minutes: 387, share: ratio(23_220, 348_840) },
+        ],
+        medianYear: 2021,
+        oldest: { key: "series:2901", title: "Succession", year: 2018 },
+        freshShare: ratio(0, 105),
+      },
+      people: {
+        actors: [
+          { name: "Ines Varga", minutes: 2520 },
+          { name: "Jun Ito", minutes: 2520 },
+          { name: "Noor Haddad", minutes: 2520 },
+          { name: "Tomas Brandt", minutes: 2340 },
+          { name: "Calum Reyes", minutes: 774 },
+        ],
+        directors: [{ name: "Tomas Brandt", minutes: 180 }, { name: "Mira Okafor", minutes: 114 }],
+      },
+      devices: {
+        directPlayShare: ratio(105, 105),
+        homeShare: ratio(105, 105),
+        topPlatform: "Apple TV",
+        topProduct: "Plex for Apple TV",
+        fourKShare: ratio(0, 105),
+      },
+      requests: { eligible: false },
+      nextYear: { leftForLater: [], picks: [] },
       topSeries: [
         { title: "The White Lotus", minutes: 2520, plays: 42 },
         { title: "Succession", minutes: 2340, plays: 39 },

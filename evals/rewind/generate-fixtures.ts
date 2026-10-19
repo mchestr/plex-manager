@@ -32,7 +32,7 @@ function seedOf(id: string): number {
 
 /** JSON with two-space indents, except that every row sits on one line. */
 function serialise(fixture: Fixture): string {
-  const ROWS = ["history", "lifetimeBefore2026", "metadata"] as const
+  const ROWS = ["history", "lifetimeBefore2026", "metadata", "library"] as const
   const placeholder = (key: string) => `"__${key}__"`
   const skeleton = JSON.stringify(
     { ...fixture, ...Object.fromEntries(ROWS.map((key) => [key, `__${key}__`])) },
@@ -42,7 +42,7 @@ function serialise(fixture: Fixture): string {
   return (
     ROWS.reduce((text, key) => {
       const rows = fixture[key]
-      const body = rows.length === 0 ? "[]" : `[\n${rows.map((row) => `    ${JSON.stringify(row)}`).join(",\n")}\n  ]`
+      const body = !rows ? "null" : rows.length === 0 ? "[]" : `[\n${rows.map((row) => `    ${JSON.stringify(row)}`).join(",\n")}\n  ]`
       return text.replace(placeholder(key), () => body)
     }, skeleton) + "\n"
   )
@@ -51,7 +51,8 @@ function serialise(fixture: Fixture): string {
 function build(): Map<string, string> {
   const files = new Map<string, string>()
   for (const { build: rows, ...profile } of PROFILES) {
-    const fixture = fixtureSchema.parse({ ...profile, ...rows(mulberry32(seedOf(profile.id))) })
+    const built = rows(mulberry32(seedOf(profile.id)))
+    const fixture = fixtureSchema.parse({ ...profile, ...built, library: built.library ?? null })
     if (files.has(`${fixture.id}.json`)) throw new Error(`Duplicate fixture id ${fixture.id}`)
     files.set(`${fixture.id}.json`, serialise(fixture))
   }

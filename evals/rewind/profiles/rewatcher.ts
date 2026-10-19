@@ -7,7 +7,7 @@
  */
 
 import { shift } from "../dates"
-import { MEMBER, metadataFor, SEASON, SERVER, type Profile } from "../profile"
+import { MEMBER, metadataFor, ratio, SEASON, SERVER, type Profile } from "../profile"
 import { historyRow } from "../rows"
 import { film, series } from "../titles"
 
@@ -48,9 +48,11 @@ export const rewatcher: Profile = {
       "films[2].title": "Back to the Future",
       "series[1].title": "Friends",
       "series[1].rewatched": "watched three times",
-      "hours.peak": "8 PM",
+      "hours.peak": "8\u00A0PM",
       "days.active": "57",
       "tz.label": "Europe/London",
+      "records.rewatchShare": "100%",
+      "archetype.name": "The Comfort Rewatcher",
     },
     stats: {
       // Films 15 x (81 + 116 + 117) = 4,710; Friends 12 x 22 = 264.
@@ -101,6 +103,44 @@ export const rewatcher: Profile = {
         { hours: 25, date: "2026-03-24" },
         { hours: 50, date: "2026-07-03" },
       ],
+      // P2.8 sections, derived with hand-facts.py (P2.16): genre shares split each
+      // title's seconds evenly across its genres, over the seconds that have one;
+      // every credited actor earns a title's minutes; devices count every play.
+      taste: {
+        genres: [
+          { name: "Fantasy", minutes: 877, share: ratio(52_650, 298_440) },
+          { name: "Thriller", minutes: 877, share: ratio(52_650, 298_440) },
+          { name: "Animation", minutes: 870, share: ratio(52_200, 298_440) },
+          { name: "Science Fiction", minutes: 870, share: ratio(52_200, 298_440) },
+          { name: "Crime", minutes: 739, share: ratio(44_370, 298_440) },
+        ],
+        medianYear: 1994,
+        oldest: { key: "film:2202", title: "Back to the Future", year: 1985 },
+        freshShare: ratio(0, 57),
+      },
+      people: {
+        actors: [
+          { name: "Ines Varga", minutes: 1755 },
+          { name: "Rowan Hale", minutes: 1755 },
+          { name: "Lena Marsh", minutes: 1740 },
+          { name: "Tomas Brandt", minutes: 1740 },
+          { name: "Mira Okafor", minutes: 1479 },
+        ],
+        directors: [
+          { name: "Noor Haddad", minutes: 1755 },
+          { name: "Calum Reyes", minutes: 1740 },
+          { name: "Ines Varga", minutes: 1215 },
+        ],
+      },
+      devices: {
+        directPlayShare: ratio(57, 57),
+        homeShare: ratio(57, 57),
+        topPlatform: "Apple TV",
+        topProduct: "Plex for Apple TV",
+        fourKShare: ratio(0, 57),
+      },
+      requests: { eligible: false },
+      nextYear: { leftForLater: [], picks: [] },
       topSeries: [{ title: "Friends", minutes: 264, plays: 12 }],
       topFilms: [
         { title: "The Big Lebowski", minutes: 1755, plays: 15 },

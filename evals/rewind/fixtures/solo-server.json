@@ -189,9 +189,10 @@
     "rows": [],
     "genres": {}
   },
+  "library": null,
   "expected": {
     "edition": "full",
-    "archetype": "series-devourer",
+    "archetype": "weekend-double-feature",
     "omittedPages": [
       14,
       15,
@@ -205,11 +206,13 @@
       "counts.series": "3",
       "series[1].title": "The White Lotus",
       "race.overtakeMonth": "July",
-      "days.biggest.date": "18 Jul",
-      "days.biggest.minutes": "4 h 54 m",
+      "days.biggest.date": "July 18",
+      "days.biggest.minutes": "4 h 54 m",
       "records.longestBinge.title": "Succession",
-      "hours.peak": "9 PM",
-      "tz.label": "Europe/Dublin"
+      "hours.peak": "9 PM",
+      "tz.label": "Europe/Dublin",
+      "setup.directPlayShare": "100%",
+      "archetype.name": "The Weekend Double Feature"
     },
     "stats": {
       "totals": {
@@ -328,6 +331,90 @@
         "leadChanges": 1,
         "overtakeMonth": 7,
         "closestGapMinutes": 0
+      },
+      "taste": {
+        "genres": [
+          {
+            "name": "Comedy",
+            "minutes": 1260,
+            "share": 0.21671826625386997
+          },
+          {
+            "name": "Drama",
+            "minutes": 1260,
+            "share": 0.21671826625386997
+          },
+          {
+            "name": "Fantasy",
+            "minutes": 1260,
+            "share": 0.21671826625386997
+          },
+          {
+            "name": "Animation",
+            "minutes": 1170,
+            "share": 0.20123839009287925
+          },
+          {
+            "name": "Documentary",
+            "minutes": 387,
+            "share": 0.06656346749226007
+          }
+        ],
+        "medianYear": 2021,
+        "oldest": {
+          "key": "series:2901",
+          "title": "Succession",
+          "year": 2018
+        },
+        "freshShare": 0
+      },
+      "people": {
+        "actors": [
+          {
+            "name": "Ines Varga",
+            "minutes": 2520
+          },
+          {
+            "name": "Jun Ito",
+            "minutes": 2520
+          },
+          {
+            "name": "Noor Haddad",
+            "minutes": 2520
+          },
+          {
+            "name": "Tomas Brandt",
+            "minutes": 2340
+          },
+          {
+            "name": "Calum Reyes",
+            "minutes": 774
+          }
+        ],
+        "directors": [
+          {
+            "name": "Tomas Brandt",
+            "minutes": 180
+          },
+          {
+            "name": "Mira Okafor",
+            "minutes": 114
+          }
+        ]
+      },
+      "devices": {
+        "directPlayShare": 1,
+        "homeShare": 1,
+        "topPlatform": "Apple TV",
+        "topProduct": "Plex for Apple TV",
+        "fourKShare": 0
+      },
+      "requests": {
+        "eligible": false
+      },
+      "nextYear": {
+        "leftForLater": [],
+        "picks": []
       },
       "milestones": [
         {

@@ -182,6 +182,7 @@
     "rows": [],
     "genres": {}
   },
+  "library": null,
   "expected": {
     "edition": "full",
     "archetype": "weekend-double-feature",
@@ -198,10 +199,11 @@
       "series[1].title": "The Crown",
       "days.weekendShare": "100%",
       "days.active": "40",
-      "streak.longest.days": "2 days",
-      "hours.peak": "1 PM",
+      "streak.longest.days": "2 days",
+      "hours.peak": "1 PM",
       "records.longestBinge.episodes": "3",
-      "tz.label": "Australia/Sydney"
+      "tz.label": "Australia/Sydney",
+      "archetype.name": "The Weekend Double Feature"
     },
     "stats": {
       "totals": {
@@ -304,6 +306,94 @@
       },
       "race": {
         "eligible": false
+      },
+      "taste": {
+        "genres": [
+          {
+            "name": "Animation",
+            "minutes": 1725,
+            "share": 0.26136363636363635
+          },
+          {
+            "name": "Drama",
+            "minutes": 1725,
+            "share": 0.26136363636363635
+          },
+          {
+            "name": "Comedy",
+            "minutes": 525,
+            "share": 0.07954545454545454
+          },
+          {
+            "name": "Crime",
+            "minutes": 525,
+            "share": 0.07954545454545454
+          },
+          {
+            "name": "Documentary",
+            "minutes": 525,
+            "share": 0.07954545454545454
+          }
+        ],
+        "medianYear": 1979,
+        "oldest": {
+          "key": "film:2124",
+          "title": "Citizen Kane",
+          "year": 1941
+        },
+        "freshShare": 0
+      },
+      "people": {
+        "actors": [
+          {
+            "name": "Noor Haddad",
+            "minutes": 3450
+          },
+          {
+            "name": "Tomas Brandt",
+            "minutes": 3450
+          },
+          {
+            "name": "Calum Reyes",
+            "minutes": 1050
+          },
+          {
+            "name": "Ines Varga",
+            "minutes": 1050
+          },
+          {
+            "name": "Jun Ito",
+            "minutes": 1050
+          }
+        ],
+        "directors": [
+          {
+            "name": "Calum Reyes",
+            "minutes": 550
+          },
+          {
+            "name": "Jun Ito",
+            "minutes": 550
+          },
+          {
+            "name": "Rowan Hale",
+            "minutes": 550
+          }
+        ]
+      },
+      "devices": {
+        "directPlayShare": 1,
+        "homeShare": 1,
+        "topPlatform": "Apple TV",
+        "topProduct": "Plex for Apple TV",
+        "fourKShare": 0
+      },
+      "requests": {
+        "eligible": false
+      },
+      "nextYear": {
+        "leftForLater": [],
+        "picks": []
       },
       "milestones": [
         {

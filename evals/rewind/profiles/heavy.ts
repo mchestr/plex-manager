@@ -10,7 +10,7 @@
  */
 
 import { shift } from "../dates"
-import { MEMBER, metadataFor, ratio, SEASON, SERVER, type Profile, type ProfileRows } from "../profile"
+import { libraryFor, MEMBER, metadataFor, ratio, SEASON, SERVER, type Profile, type ProfileRows } from "../profile"
 import { historyRow, requestRow, tmdbId, type Film, type HistoryRow } from "../rows"
 import { film } from "../titles"
 import { breakingBad, films, others, rings, severance, sopranos, thrones } from "./heavy-plan"
@@ -84,16 +84,18 @@ export const heavy: Profile = {
     ],
     metadata: metadataFor([rings, severance, sopranos, breakingBad, thrones, ...others, ...films, ...unwatched]),
     requests: requests(),
+    // The library: everything played, and two films never played (next year's picks).
+    library: libraryFor([rings, severance, sopranos, breakingBad, thrones, ...others, ...films, ...unwatched]),
   }),
   expected: {
     edition: "full",
     archetype: "midnight-marathoner",
-    omittedPages: [4], // No. 1 and No. 2 are 50 minutes (1.5%) apart: within 2% (D7)
+    omittedPages: [4], // No. 1 and No. 2 are 50 minutes (1.5%) apart: within 2% (D7), an owner decision
     facts: {
       "member.firstName": "Mike",
       "time.totalHours": "1,307",
-      "time.daysHours": "54 days, 11 hours",
-      "time.perDay": "3 h 54 m",
+      "time.daysHours": "54\u00A0days, 11\u00A0hours",
+      "time.perDay": "3\u00A0h 54\u00A0m",
       "time.seriesHours": "872",
       "time.seriesShare": "67%",
       "time.filmsHours": "435",
@@ -103,18 +105,29 @@ export const heavy: Profile = {
       "counts.series": "31",
       "counts.films": "112",
       "hours.afterDarkShare": "34%",
-      "hours.peak": "10 PM",
-      "hours.quietest": "5 AM",
-      "streak.longest.days": "23 days",
-      "streak.longest.from": "2 Mar",
-      "streak.longest.to": "24 Mar",
-      "days.biggest.date": "4 Jul",
-      "days.biggest.minutes": "12 h 24 m",
+      "hours.peak": "10\u00A0PM",
+      "hours.quietest": "5\u00A0AM",
+      "streak.longest.days": "23\u00A0days",
+      "streak.longest.from": "March\u00A02",
+      "streak.longest.to": "March\u00A024",
+      "days.biggest.date": "July\u00A04",
+      "days.biggest.minutes": "12\u00A0h 24\u00A0m",
       "days.active": "289",
-      "days.longestGap.days": "9",
+      "days.longestGap.days": "9\u00A0days",
       "series[1].title": "The Lord of the Rings: The Rings of Power",
       "films[1].title": "Dune: Part Two",
-      "standing.percentile": "Top 3%",
+      "standing.percentile": "Top 4%",
+      "setup.directPlayShare": "91%",
+      "taste.genre[1].name": "Animation",
+      "people.actor[1].name": "Tomas Brandt",
+      "requests.watched": "15",
+      "standing.members": "31",
+      "next.picks[1].title": "Killers of the Flower Moon",
+      "member.since": "2023",
+      "member.lifetimeHours": "3,940",
+      "time.milestones[1].date": "March\u00A014",
+      "race.overtakeMonth": "November",
+      "archetype.name": "The Midnight Marathoner",
     },
     stats: {
       // Built to the mockup: series 14,440 (the five runners) + 17 x 1,440 +
@@ -189,6 +202,51 @@ export const heavy: Profile = {
         { hours: 750, date: "2026-07-17" },
         { hours: 1000, date: "2026-09-18" },
       ],
+      // P2.8 sections, derived with hand-facts.py (P2.16): genre shares split each
+      // title's seconds evenly across its genres, over the seconds that have one;
+      // every credited actor earns a title's minutes; devices count every play.
+      taste: {
+        genres: [
+          { name: "Animation", minutes: 10_757, share: ratio(645_450, 4_705_200) },
+          { name: "Crime", minutes: 10_052, share: ratio(603_150, 4_705_200) },
+          { name: "Drama", minutes: 9935, share: ratio(596_100, 4_705_200) },
+          { name: "Thriller", minutes: 9820, share: ratio(589_200, 4_705_200) },
+          { name: "Science Fiction", minutes: 9682, share: ratio(580_950, 4_705_200) },
+        ],
+        medianYear: 2006,
+        oldest: { key: "film:5033", title: "Citizen Kane", year: 1941 },
+        freshShare: ratio(0, 1258),
+      },
+      people: {
+        actors: [
+          { name: "Tomas Brandt", minutes: 21_515 },
+          { name: "Mira Okafor", minutes: 20_105 },
+          { name: "Noor Haddad", minutes: 19_870 },
+          { name: "Rowan Hale", minutes: 19_640 },
+          { name: "Lena Marsh", minutes: 19_365 },
+        ],
+        directors: [
+          { name: "Tomas Brandt", minutes: 4620 },
+          { name: "Mira Okafor", minutes: 4340 },
+          { name: "Lena Marsh", minutes: 4170 },
+        ],
+      },
+      devices: {
+        directPlayShare: ratio(1151, 1258),
+        homeShare: ratio(1123, 1258),
+        topPlatform: "Apple TV",
+        topProduct: "Plex for Apple TV",
+        fourKShare: ratio(0, 1258),
+      },
+      requests: { made: 27, approved: 20, available: 15, pending: 3, declined: 2, watched: 15, genres: [] },
+      // Of the two unplayed library films, only Killers of the Flower Moon
+      // (Science Fiction, Animation) carries the top genre; Tomas Brandt, the
+      // top actor, is in its cast. No series stops short within the last
+      // 120 days.
+      nextYear: {
+        leftForLater: [],
+        picks: [{ ratingKey: "5114", kind: "film", title: "Killers of the Flower Moon", year: 2023, genre: "Animation", person: "Tomas Brandt" }],
+      },
       topSeries: [
         { title: "The Lord of the Rings: The Rings of Power", minutes: 3350, plays: 48 },
         { title: "Severance", minutes: 3300, plays: 60 },

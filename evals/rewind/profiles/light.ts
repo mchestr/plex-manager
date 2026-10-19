@@ -39,20 +39,23 @@ export const light: Profile = {
     omittedPages: [9, 11, 13, 14],
     facts: {
       "member.firstName": "Priya",
-      "time.totalHours": "4 h 12 m",
+      "time.totalHours": "4",
       "counts.episodes": "5",
       "counts.series": "2",
       "counts.films": "1",
       "films[1].title": "Le Fabuleux Destin d'Amélie Poulain",
-      "films[1].minutes": "2 h 02 m",
+      "films[1].minutes": "2\u00A0h 2\u00A0m",
       "series[1].title": "Only Murders in the Building",
-      "series[1].minutes": "1 h 22 m",
+      "series[1].minutes": "1\u00A0h 22\u00A0m",
       "series[1].episodes": "3",
-      "series[2].minutes": "48 minutes",
+      "series[2].minutes": "48\u00A0minutes",
       "days.active": "4",
-      "hours.peak": "7 PM",
+      "hours.peak": "7\u00A0PM",
       "records.longestBinge.episodes": "3",
       "tz.label": "America/Chicago",
+      "time.totalMinutes": "4\u00A0h 12\u00A0m",
+      "next.leftForLater[1].title": "The Great British Bake Off",
+      "archetype.name": "The Casual Critic",
     },
     stats: {
       // 122 + (27 + 27 + 28) + (24 + 24) = 252; series 130, film 122.
@@ -105,6 +108,34 @@ export const light: Profile = {
       },
       race: { eligible: false }, // one series of 60 minutes or more
       milestones: [], // under 10 hours
+      // P2.8 sections, derived with hand-facts.py (P2.16): genre shares split each
+      // title's seconds evenly across its genres, over the seconds that have one;
+      // every credited actor earns a title's minutes; devices count every play.
+      taste: {
+        genres: [
+          { name: "Animation", minutes: 85, share: ratio(5100, 15_120) },
+          { name: "Drama", minutes: 61, share: ratio(3660, 15_120) },
+          { name: "Comedy", minutes: 41, share: ratio(2460, 15_120) },
+          { name: "Crime", minutes: 41, share: ratio(2460, 15_120) },
+          { name: "Science Fiction", minutes: 24, share: ratio(1440, 15_120) },
+        ],
+        medianYear: 2010,
+        oldest: { key: "film:1101", title: "Le Fabuleux Destin d'Amélie Poulain", year: 2001 },
+        freshShare: ratio(0, 6),
+      },
+      people: {
+        actors: [
+          { name: "Tomas Brandt", minutes: 170 },
+          { name: "Noor Haddad", minutes: 122 },
+          { name: "Jun Ito", minutes: 82 },
+          { name: "Mira Okafor", minutes: 82 },
+          { name: "Lena Marsh", minutes: 48 },
+        ],
+        directors: [{ name: "Lena Marsh", minutes: 122 }],
+      },
+      devices: { eligible: false }, // under 20 plays
+      requests: { eligible: false },
+      nextYear: { leftForLater: [{ key: "series:1202", title: "The Great British Bake Off", season: 1, episode: 2, lastWatched: "2026-09-10" }], picks: [] },
       topSeries: [
         { title: "Only Murders in the Building", minutes: 82, plays: 3 },
         { title: "The Great British Bake Off", minutes: 48, plays: 2 },

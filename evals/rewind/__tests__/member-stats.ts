@@ -1,19 +1,21 @@
 /**
  * A golden fixture run the way the member pipeline will run it (P5.9): the
  * fixture source, the member's zone and window, every source the fixture
- * carries, then `computeMemberStats`. The P2.9 tests and P2.16's goldens
+ * carries (the aggregate built from `server.peers`), then
+ * `computeMemberStats`. The P2.9 tests and P2.16's goldens
  * start from it.
  */
 
 import { createFixtureSource } from "@/lib/wrapped/sources/fixture-source"
 import { directLimiter, type PlayEvent } from "@/lib/wrapped/sources/watch-history-source"
 import { computeMemberStats, type MemberStats } from "@/lib/wrapped/stats/compute"
+import { computeTotals } from "@/lib/wrapped/stats/totals"
 import type { StatsContext } from "@/lib/wrapped/stats/keys"
 import type { MetadataLookup } from "@/lib/wrapped/stats/metadata"
 import { dataWindow, resolveZone } from "@/lib/wrapped/time/zone"
 
 import type { Fixture } from "../fixture-schema"
-import { fixtureLookup, fixtureRequests } from "./stats-inputs"
+import { fixtureAggregate, fixtureLibrary, fixtureLookup, fixtureRequests } from "./stats-inputs"
 
 export interface FixtureMember {
   ctx: StatsContext
@@ -41,8 +43,8 @@ export async function fixtureMember(fixture: Fixture): Promise<FixtureMember> {
     lifetime: lifetime.data,
     metadata,
     requests: fixtureRequests(fixture, ctx),
-    aggregate: null,
-    library: null,
+    aggregate: fixtureAggregate(fixture, computeTotals(year.data, ctx).totalMinutes),
+    library: fixtureLibrary(fixture),
     excludedContentRatings: [],
   })
   return { ctx, events: year.data, lifetime: lifetime.data, metadata, stats }

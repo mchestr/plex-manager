@@ -30,7 +30,7 @@ async function factsOf(id: string): Promise<RewindFactsV3> {
 describe("buildFactSheet", () => {
   it("holds only the requested ids the member has, as display strings", async () => {
     const facts = await factsOf("heavy")
-    const sheet = buildFactSheet(facts, ["time.totalHours", "series[1].title", "next.picks[1].title", "time.totalHours"])
+    const sheet = buildFactSheet(facts, ["time.totalHours", "series[1].title", "next.returning[1].title", "time.totalHours"])
 
     expect(sheet).toEqual({
       facts: [

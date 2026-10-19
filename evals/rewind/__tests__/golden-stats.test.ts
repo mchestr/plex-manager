@@ -9,8 +9,8 @@
  * `evals/rewind/profiles/*.ts` and are never updated by tooling; a mismatch
  * means the code or the hand value is wrong, and the PR decides which (see
  * `evals/rewind/fixtures/README.md`). CI runs this file under TZ=UTC and
- * TZ=Australia/Sydney. P2.8's modules run through the same harness; their
- * sections are optional and get hand values in P2.16.
+ * TZ=Australia/Sydney. P2.8's modules run through the same harness, with
+ * hand values from P2.16.
  */
 
 import { createFixtureSource } from "@/lib/wrapped/sources/fixture-source"
@@ -33,7 +33,7 @@ import { dataWindow, resolveZone } from "@/lib/wrapped/time/zone"
 
 import type { Fixture } from "../fixture-schema"
 import { loadFixtures } from "./load-fixtures"
-import { fixtureLookup, fixtureRequests } from "./stats-inputs"
+import { fixtureLibrary, fixtureLookup, fixtureRequests } from "./stats-inputs"
 
 jest.mock("@/lib/utils/logger", () => ({
   createLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
@@ -102,7 +102,7 @@ describe.each(fixtures.map((fixture) => [fixture.id, fixture] as const))("golden
         const lookup = fixtureLookup(fixture, events)
         const taste = computeTaste(events, ctx, lookup)
         const people = computePeople(events, ctx, lookup)
-        return computeNextYear(events, ctx, lookup, { taste, people, library: null, excludedContentRatings: [] })
+        return computeNextYear(events, ctx, lookup, { taste, people, library: fixtureLibrary(fixture), excludedContentRatings: [] })
       },
     ],
   ] as const

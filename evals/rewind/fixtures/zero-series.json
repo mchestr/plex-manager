@@ -174,6 +174,7 @@
     ],
     "genres": {}
   },
+  "library": null,
   "expected": {
     "edition": "full",
     "archetype": "festival-juror",
@@ -192,10 +193,12 @@
       "films[1].title": "Dr. Strangelove or: How I Learned to Stop Worrying and Love the Bomb",
       "films[1].plays": "3",
       "films[2].title": "Die Hard",
-      "hours.peak": "7 PM",
+      "hours.peak": "7 PM",
       "days.active": "60",
       "days.weekendShare": "50%",
-      "tz.label": "America/Chicago"
+      "tz.label": "America/Chicago",
+      "standing.percentile": "Top 67%",
+      "archetype.name": "The Festival Juror"
     },
     "stats": {
       "totals": {
@@ -286,6 +289,100 @@
       },
       "race": {
         "eligible": false
+      },
+      "taste": {
+        "genres": [
+          {
+            "name": "Comedy",
+            "minutes": 1035,
+            "share": 0.1396761133603239
+          },
+          {
+            "name": "Crime",
+            "minutes": 1025,
+            "share": 0.13832658569500675
+          },
+          {
+            "name": "Animation",
+            "minutes": 940,
+            "share": 0.12685560053981107
+          },
+          {
+            "name": "Science Fiction",
+            "minutes": 920,
+            "share": 0.1241565452091768
+          },
+          {
+            "name": "Fantasy",
+            "minutes": 885,
+            "share": 0.1194331983805668
+          }
+        ],
+        "medianYear": 1985,
+        "oldest": {
+          "key": "film:1833",
+          "title": "Citizen Kane",
+          "year": 1941
+        },
+        "freshShare": 0
+      },
+      "people": {
+        "actors": [
+          {
+            "name": "Jun Ito",
+            "minutes": 2070
+          },
+          {
+            "name": "Mira Okafor",
+            "minutes": 2050
+          },
+          {
+            "name": "Tomas Brandt",
+            "minutes": 1880
+          },
+          {
+            "name": "Lena Marsh",
+            "minutes": 1840
+          },
+          {
+            "name": "Ines Varga",
+            "minutes": 1770
+          }
+        ],
+        "directors": [
+          {
+            "name": "Ines Varga",
+            "minutes": 1140
+          },
+          {
+            "name": "Calum Reyes",
+            "minutes": 1020
+          },
+          {
+            "name": "Rowan Hale",
+            "minutes": 930
+          }
+        ]
+      },
+      "devices": {
+        "directPlayShare": 1,
+        "homeShare": 1,
+        "topPlatform": "Apple TV",
+        "topProduct": "Plex for Apple TV",
+        "fourKShare": 0
+      },
+      "requests": {
+        "made": 1,
+        "approved": 1,
+        "available": 1,
+        "pending": 0,
+        "declined": 0,
+        "watched": 1,
+        "genres": []
+      },
+      "nextYear": {
+        "leftForLater": [],
+        "picks": []
       },
       "milestones": [
         {

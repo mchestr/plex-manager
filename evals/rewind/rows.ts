@@ -166,6 +166,22 @@ export function metadataRow(title: Film | Series): Record<string, unknown> {
   }
 }
 
+/** One library title (`LibraryItem` fields, `addedAt` as ISO), added when its cache row says. */
+export function libraryRow(title: Film | Series): Record<string, unknown> {
+  const isFilm = "minutes" in title
+  return {
+    ratingKey: title.key,
+    type: isFilm ? "movie" : "show",
+    title: title.title,
+    year: title.year,
+    addedAt: `${Math.max(title.year, 2020)}-06-01T00:00:00.000Z`,
+    contentRating: null,
+    genres: title.genres ?? [],
+    directors: isFilm ? (title.directors ?? []) : [],
+    actors: title.actors ?? [],
+  }
+}
+
 export interface RequestInput {
   id: number
   type: "movie" | "tv"

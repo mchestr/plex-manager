@@ -7,7 +7,7 @@
  */
 
 import { shift } from "../dates"
-import { MEMBER, metadataFor, SEASON, SERVER, type Profile } from "../profile"
+import { MEMBER, metadataFor, ratio, SEASON, SERVER, type Profile } from "../profile"
 import { historyRow, requestRow, tmdbId } from "../rows"
 import { film, listRun } from "../titles"
 
@@ -51,10 +51,12 @@ export const zeroSeries: Profile = {
       "films[1].title": "Dr. Strangelove or: How I Learned to Stop Worrying and Love the Bomb",
       "films[1].plays": "3",
       "films[2].title": "Die Hard",
-      "hours.peak": "7 PM",
+      "hours.peak": "7\u00A0PM",
       "days.active": "60",
       "days.weekendShare": "50%",
       "tz.label": "America/Chicago",
+      "standing.percentile": "Top 67%",
+      "archetype.name": "The Festival Juror",
     },
     stats: {
       // Films 1-58: nine full cycles (9 x 750) plus 100 + 110 + 120 + 130 =
@@ -111,6 +113,44 @@ export const zeroSeries: Profile = {
         { hours: 50, date: "2026-03-22" },
         { hours: 100, date: "2026-06-19" },
       ],
+      // P2.8 sections, derived with hand-facts.py (P2.16): genre shares split each
+      // title's seconds evenly across its genres, over the seconds that have one;
+      // every credited actor earns a title's minutes; devices count every play.
+      taste: {
+        genres: [
+          { name: "Comedy", minutes: 1035, share: ratio(62_100, 444_600) },
+          { name: "Crime", minutes: 1025, share: ratio(61_500, 444_600) },
+          { name: "Animation", minutes: 940, share: ratio(56_400, 444_600) },
+          { name: "Science Fiction", minutes: 920, share: ratio(55_200, 444_600) },
+          { name: "Fantasy", minutes: 885, share: ratio(53_100, 444_600) },
+        ],
+        medianYear: 1985,
+        oldest: { key: "film:1833", title: "Citizen Kane", year: 1941 },
+        freshShare: ratio(0, 60),
+      },
+      people: {
+        actors: [
+          { name: "Jun Ito", minutes: 2070 },
+          { name: "Mira Okafor", minutes: 2050 },
+          { name: "Tomas Brandt", minutes: 1880 },
+          { name: "Lena Marsh", minutes: 1840 },
+          { name: "Ines Varga", minutes: 1770 },
+        ],
+        directors: [
+          { name: "Ines Varga", minutes: 1140 },
+          { name: "Calum Reyes", minutes: 1020 },
+          { name: "Rowan Hale", minutes: 930 },
+        ],
+      },
+      devices: {
+        directPlayShare: ratio(60, 60),
+        homeShare: ratio(60, 60),
+        topPlatform: "Apple TV",
+        topProduct: "Plex for Apple TV",
+        fourKShare: ratio(0, 60),
+      },
+      requests: { made: 1, approved: 1, available: 1, pending: 0, declined: 0, watched: 1, genres: [] },
+      nextYear: { leftForLater: [], picks: [] },
       topSeries: [],
       // Then the 150-minute films, most recent first: Die Hard (film 54, 10 Jul)
       // and Apocalypse Now (film 48, 19 Jun).

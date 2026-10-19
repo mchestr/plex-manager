@@ -362,6 +362,7 @@
     ],
     "genres": {}
   },
+  "library": null,
   "expected": {
     "edition": "full",
     "archetype": "midnight-marathoner",
@@ -375,14 +376,15 @@
       "counts.films": "24",
       "series[1].title": "Black Mirror",
       "hours.afterDarkShare": "91%",
-      "hours.peak": "11 PM",
-      "hours.quietest": "2 AM",
-      "hours.latestStart.time": "1:00 AM",
+      "hours.peak": "11 PM",
+      "hours.quietest": "2 AM",
+      "hours.latestStart.time": "1:00 AM",
       "hours.latestStart.weekday": "Saturday",
       "records.longestBinge.episodes": "4",
       "race.overtakeMonth": "September",
       "days.active": "167",
-      "tz.label": "America/New_York"
+      "tz.label": "America/New_York",
+      "archetype.name": "The Midnight Marathoner"
     },
     "stats": {
       "totals": {
@@ -504,6 +506,100 @@
         "leadChanges": 1,
         "overtakeMonth": 9,
         "closestGapMinutes": 0
+      },
+      "taste": {
+        "genres": [
+          {
+            "name": "Animation",
+            "minutes": 2850,
+            "share": 0.19874476987447698
+          },
+          {
+            "name": "Crime",
+            "minutes": 2520,
+            "share": 0.17573221757322174
+          },
+          {
+            "name": "Drama",
+            "minutes": 1770,
+            "share": 0.12343096234309624
+          },
+          {
+            "name": "Comedy",
+            "minutes": 1440,
+            "share": 0.100418410041841
+          },
+          {
+            "name": "Documentary",
+            "minutes": 1440,
+            "share": 0.100418410041841
+          }
+        ],
+        "medianYear": 1975,
+        "oldest": {
+          "key": "film:2013",
+          "title": "Citizen Kane",
+          "year": 1941
+        },
+        "freshShare": 0
+      },
+      "people": {
+        "actors": [
+          {
+            "name": "Tomas Brandt",
+            "minutes": 5700
+          },
+          {
+            "name": "Mira Okafor",
+            "minutes": 5040
+          },
+          {
+            "name": "Noor Haddad",
+            "minutes": 3540
+          },
+          {
+            "name": "Calum Reyes",
+            "minutes": 2880
+          },
+          {
+            "name": "Ines Varga",
+            "minutes": 2880
+          }
+        ],
+        "directors": [
+          {
+            "name": "Calum Reyes",
+            "minutes": 360
+          },
+          {
+            "name": "Ines Varga",
+            "minutes": 360
+          },
+          {
+            "name": "Jun Ito",
+            "minutes": 360
+          }
+        ]
+      },
+      "devices": {
+        "directPlayShare": 1,
+        "homeShare": 1,
+        "topPlatform": "Apple TV",
+        "topProduct": "Plex for Apple TV",
+        "fourKShare": 0
+      },
+      "requests": {
+        "made": 2,
+        "approved": 1,
+        "available": 1,
+        "pending": 1,
+        "declined": 0,
+        "watched": 1,
+        "genres": []
+      },
+      "nextYear": {
+        "leftForLater": [],
+        "picks": []
       },
       "milestones": [
         {

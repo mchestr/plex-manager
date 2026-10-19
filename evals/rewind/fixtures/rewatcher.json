@@ -102,6 +102,7 @@
     "rows": [],
     "genres": {}
   },
+  "library": null,
   "expected": {
     "edition": "full",
     "archetype": "comfort-rewatcher",
@@ -122,9 +123,11 @@
       "films[2].title": "Back to the Future",
       "series[1].title": "Friends",
       "series[1].rewatched": "watched three times",
-      "hours.peak": "8 PM",
+      "hours.peak": "8 PM",
       "days.active": "57",
-      "tz.label": "Europe/London"
+      "tz.label": "Europe/London",
+      "records.rewatchShare": "100%",
+      "archetype.name": "The Comfort Rewatcher"
     },
     "stats": {
       "totals": {
@@ -215,6 +218,94 @@
       },
       "race": {
         "eligible": false
+      },
+      "taste": {
+        "genres": [
+          {
+            "name": "Fantasy",
+            "minutes": 877,
+            "share": 0.1764173703256936
+          },
+          {
+            "name": "Thriller",
+            "minutes": 877,
+            "share": 0.1764173703256936
+          },
+          {
+            "name": "Animation",
+            "minutes": 870,
+            "share": 0.17490952955367914
+          },
+          {
+            "name": "Science Fiction",
+            "minutes": 870,
+            "share": 0.17490952955367914
+          },
+          {
+            "name": "Crime",
+            "minutes": 739,
+            "share": 0.14867310012062726
+          }
+        ],
+        "medianYear": 1994,
+        "oldest": {
+          "key": "film:2202",
+          "title": "Back to the Future",
+          "year": 1985
+        },
+        "freshShare": 0
+      },
+      "people": {
+        "actors": [
+          {
+            "name": "Ines Varga",
+            "minutes": 1755
+          },
+          {
+            "name": "Rowan Hale",
+            "minutes": 1755
+          },
+          {
+            "name": "Lena Marsh",
+            "minutes": 1740
+          },
+          {
+            "name": "Tomas Brandt",
+            "minutes": 1740
+          },
+          {
+            "name": "Mira Okafor",
+            "minutes": 1479
+          }
+        ],
+        "directors": [
+          {
+            "name": "Noor Haddad",
+            "minutes": 1755
+          },
+          {
+            "name": "Calum Reyes",
+            "minutes": 1740
+          },
+          {
+            "name": "Ines Varga",
+            "minutes": 1215
+          }
+        ]
+      },
+      "devices": {
+        "directPlayShare": 1,
+        "homeShare": 1,
+        "topPlatform": "Apple TV",
+        "topProduct": "Plex for Apple TV",
+        "fourKShare": 0
+      },
+      "requests": {
+        "eligible": false
+      },
+      "nextYear": {
+        "leftForLater": [],
+        "picks": []
       },
       "milestones": [
         {

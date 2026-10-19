@@ -45,10 +45,10 @@ export const hostileTitles: Profile = {
   expected: {
     edition: "full",
     archetype: "weekend-double-feature",
-    omittedPages: [11, 13, 14, 17],
+    omittedPages: [8, 11, 13, 14, 17],
     facts: {
       "member.firstName": "Robin",
-      "time.totalHours": "15 h 06 m",
+      "time.totalHours": "15",
       "counts.films": "4",
       "counts.episodes": "10",
       "films[1].title": "Cash $& Prizes",
@@ -60,6 +60,8 @@ export const hostileTitles: Profile = {
       "records.longestBinge.episodes": "6",
       "days.active": "10",
       "tz.label": "America/Chicago",
+      "time.totalMinutes": "15\u00A0h 6\u00A0m",
+      "archetype.name": "The Weekend Double Feature",
     },
     stats: {
       // Series 6 x 22 + 4 x 50 = 332; films 2 x 95 + 90 + 114 + 180 = 574.
@@ -106,6 +108,25 @@ export const hostileTitles: Profile = {
       race: { eligible: false },
       // 132, 227, 322, 412, 526, then Oppenheimer on 7 Jun: 706.
       milestones: [{ hours: 10, date: "2026-06-07" }],
+      // P2.8 sections, derived with hand-facts.py (P2.16): genre shares split each
+      // title's seconds evenly across its genres, over the seconds that have one;
+      // every credited actor earns a title's minutes; devices count every play.
+      taste: {
+        genres: [
+          { name: "Comedy", minutes: 347, share: ratio(20_820, 54_360) },
+          { name: "Documentary", minutes: 132, share: ratio(7920, 54_360) },
+          { name: "Fantasy", minutes: 100, share: ratio(6000, 54_360) },
+          { name: "Animation", minutes: 90, share: ratio(5400, 54_360) },
+          { name: "Drama", minutes: 90, share: ratio(5400, 54_360) },
+        ],
+        medianYear: 2022,
+        oldest: { key: "series:3101", title: "Ke$ha: My Crazy Beautiful Life", year: 2013 },
+        freshShare: ratio(0, 15),
+      },
+      people: { eligible: false }, // no cast or director metadata
+      devices: { eligible: false }, // under 20 plays
+      requests: { eligible: false },
+      nextYear: { leftForLater: [], picks: [] },
       topSeries: [
         { title: "Severance", minutes: 200, plays: 4 },
         { title: "Ke$ha: My Crazy Beautiful Life", minutes: 132, plays: 6 },

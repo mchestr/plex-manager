@@ -389,6 +389,7 @@
     ],
     "genres": {}
   },
+  "library": null,
   "expected": {
     "edition": "full",
     "archetype": "golden-hour-viewer",
@@ -398,8 +399,8 @@
     "facts": {
       "member.firstName": "Sam",
       "time.totalHours": "180",
-      "time.daysHours": "7 days, 12 hours",
-      "time.perDay": "32 minutes",
+      "time.daysHours": "7 days, 12 hours",
+      "time.perDay": "32 minutes",
       "time.seriesShare": "50%",
       "time.filmsShare": "50%",
       "time.vsLastYear": "+20%",
@@ -407,14 +408,19 @@
       "counts.series": "3",
       "counts.films": "45",
       "series[1].title": "Doctor Who",
-      "hours.peak": "8 PM",
+      "hours.peak": "8 PM",
       "days.active": "135",
       "records.mostPaused.title": "Slow Horses",
       "member.since": "2024",
       "member.lifetimeHours": "332",
       "race.leadChanges": "0",
       "requests.made": "5",
-      "tz.label": "Europe/London"
+      "tz.label": "Europe/London",
+      "quiz.gapMinutes": "21 h",
+      "requests.watched": "3",
+      "standing.percentile": "Top 59%",
+      "hours.medianStart": "8:00 PM",
+      "archetype.name": "The Golden Hour Viewer"
     },
     "stats": {
       "totals": {
@@ -528,6 +534,100 @@
         "leadChanges": 0,
         "overtakeMonth": null,
         "closestGapMinutes": 0
+      },
+      "taste": {
+        "genres": [
+          {
+            "name": "Comedy",
+            "minutes": 2010,
+            "share": 0.18820224719101122
+          },
+          {
+            "name": "Crime",
+            "minutes": 2010,
+            "share": 0.18820224719101122
+          },
+          {
+            "name": "Animation",
+            "minutes": 1380,
+            "share": 0.12921348314606743
+          },
+          {
+            "name": "Fantasy",
+            "minutes": 1350,
+            "share": 0.12640449438202248
+          },
+          {
+            "name": "Science Fiction",
+            "minutes": 1320,
+            "share": 0.12359550561797752
+          }
+        ],
+        "medianYear": 1988,
+        "oldest": {
+          "key": "film:1613",
+          "title": "Citizen Kane",
+          "year": 1941
+        },
+        "freshShare": 0
+      },
+      "people": {
+        "actors": [
+          {
+            "name": "Jun Ito",
+            "minutes": 4020
+          },
+          {
+            "name": "Mira Okafor",
+            "minutes": 4020
+          },
+          {
+            "name": "Tomas Brandt",
+            "minutes": 2760
+          },
+          {
+            "name": "Ines Varga",
+            "minutes": 2700
+          },
+          {
+            "name": "Lena Marsh",
+            "minutes": 2640
+          }
+        ],
+        "directors": [
+          {
+            "name": "Jun Ito",
+            "minutes": 720
+          },
+          {
+            "name": "Lena Marsh",
+            "minutes": 720
+          },
+          {
+            "name": "Noor Haddad",
+            "minutes": 720
+          }
+        ]
+      },
+      "devices": {
+        "directPlayShare": 1,
+        "homeShare": 1,
+        "topPlatform": "Apple TV",
+        "topProduct": "Plex for Apple TV",
+        "fourKShare": 0
+      },
+      "requests": {
+        "made": 5,
+        "approved": 3,
+        "available": 3,
+        "pending": 1,
+        "declined": 1,
+        "watched": 3,
+        "genres": []
+      },
+      "nextYear": {
+        "leftForLater": [],
+        "picks": []
       },
       "milestones": [
         {

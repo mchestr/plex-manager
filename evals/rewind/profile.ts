@@ -7,13 +7,15 @@
  */
 
 import type { Fixture } from "./fixture-schema"
-import { metadataRow, type Film, type HistoryRow, type Series } from "./rows"
+import { libraryRow, metadataRow, type Film, type HistoryRow, type Series } from "./rows"
 
 export interface ProfileRows {
   history: HistoryRow[]
   lifetimeBefore2026: HistoryRow[]
   metadata: Array<Record<string, unknown>>
   requests: Fixture["requests"]
+  /** The server's library, for next year's picks; left out, it is null. */
+  library?: Fixture["library"]
 }
 
 export interface Profile extends Omit<Fixture, keyof ProfileRows> {
@@ -26,6 +28,9 @@ export const ratio = (part: number, whole: number) => part / whole
 
 /** Metadata rows for every title a profile plays. */
 export const metadataFor = (titles: ReadonlyArray<Film | Series>) => titles.map(metadataRow)
+
+/** Library rows for every title on the server. */
+export const libraryFor = (titles: ReadonlyArray<Film | Series>) => titles.map(libraryRow)
 
 /** The defaults most profiles share; each overrides what it tests. */
 export const SERVER: Profile["server"] = {

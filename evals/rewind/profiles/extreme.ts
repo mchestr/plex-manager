@@ -41,19 +41,21 @@ export const extreme: Profile = {
     facts: {
       "member.firstName": "Kenji",
       "time.totalHours": "12,480",
-      "time.daysHours": "520 days, 0 hours",
-      "time.perDay": "37 h 21 m",
+      "time.daysHours": "520\u00A0days",
+      "time.perDay": "37\u00A0h 21\u00A0m",
       "time.liveHours": "6,240",
       "counts.episodes": "624",
       "counts.series": "2",
       "series[1].title": "Friends",
-      "hours.peak": "2 AM",
+      "hours.peak": "2\u00A0AM",
       "hours.afterDarkShare": "100%",
       "days.active": "312",
-      "streak.longest.days": "312 days",
+      "streak.longest.days": "312\u00A0days",
       "time.milestones[4].hours": "10,000",
-      "time.milestones[4].date": "7 Sep",
+      "time.milestones[4].date": "September\u00A07",
       "tz.label": "Asia/Tokyo",
+      "time.seriesShare": "100%",
+      "archetype.name": "The Midnight Marathoner",
     },
     stats: {
       totals: {
@@ -113,6 +115,38 @@ export const extreme: Profile = {
         { hours: 10000, date: "2026-09-07" },
       ],
       // A tie on minutes and plays; Friends was watched last.
+      // P2.8 sections, derived with hand-facts.py (P2.16): genre shares split each
+      // title's seconds evenly across its genres, over the seconds that have one;
+      // every credited actor earns a title's minutes; devices count every play.
+      taste: {
+        genres: [
+          { name: "Animation", minutes: 187_200, share: ratio(11_232_000, 44_928_000) },
+          { name: "Comedy", minutes: 187_200, share: ratio(11_232_000, 44_928_000) },
+          { name: "Drama", minutes: 187_200, share: ratio(11_232_000, 44_928_000) },
+          { name: "Fantasy", minutes: 187_200, share: ratio(11_232_000, 44_928_000) },
+        ],
+        medianYear: 1989,
+        oldest: { key: "series:1501", title: "The Simpsons", year: 1989 },
+        freshShare: ratio(0, 624),
+      },
+      people: {
+        actors: [
+          { name: "Ines Varga", minutes: 374_400 },
+          { name: "Jun Ito", minutes: 374_400 },
+          { name: "Noor Haddad", minutes: 374_400 },
+          { name: "Tomas Brandt", minutes: 374_400 },
+        ],
+        directors: [],
+      },
+      devices: {
+        directPlayShare: ratio(624, 624),
+        homeShare: ratio(624, 624),
+        topPlatform: "Apple TV",
+        topProduct: "Plex for Apple TV",
+        fourKShare: ratio(0, 624),
+      },
+      requests: { eligible: false },
+      nextYear: { leftForLater: [], picks: [] },
       topSeries: [
         { title: "Friends", minutes: 374_400, plays: 312 },
         { title: "The Simpsons", minutes: 374_400, plays: 312 },

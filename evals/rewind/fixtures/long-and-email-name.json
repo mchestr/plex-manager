@@ -120,9 +120,10 @@
     "rows": [],
     "genres": {}
   },
+  "library": null,
   "expected": {
     "edition": "full",
-    "archetype": "festival-juror",
+    "archetype": "weekend-double-feature",
     "omittedPages": [
       11,
       12,
@@ -137,10 +138,11 @@
       "series[1].title": "Ted Lasso",
       "films[1].title": "Arrival",
       "days.active": "52",
-      "hours.peak": "3 PM",
-      "hours.medianStart": "5:30 PM",
-      "time.milestones[3].date": "16 May",
-      "tz.label": "America/Toronto"
+      "hours.peak": "3 PM",
+      "hours.medianStart": "5:30 PM",
+      "time.milestones[3].date": "May 16",
+      "tz.label": "America/Toronto",
+      "archetype.name": "The Weekend Double Feature"
     },
     "stats": {
       "totals": {
@@ -231,6 +233,94 @@
       },
       "race": {
         "eligible": false
+      },
+      "taste": {
+        "genres": [
+          {
+            "name": "Comedy",
+            "minutes": 915,
+            "share": 0.22704714640198512
+          },
+          {
+            "name": "Crime",
+            "minutes": 915,
+            "share": 0.22704714640198512
+          },
+          {
+            "name": "Animation",
+            "minutes": 385,
+            "share": 0.09553349875930521
+          },
+          {
+            "name": "Fantasy",
+            "minutes": 385,
+            "share": 0.09553349875930521
+          },
+          {
+            "name": "Science Fiction",
+            "minutes": 385,
+            "share": 0.09553349875930521
+          }
+        ],
+        "medianYear": 2009,
+        "oldest": {
+          "key": "film:3011",
+          "title": "Memento",
+          "year": 2000
+        },
+        "freshShare": 0
+      },
+      "people": {
+        "actors": [
+          {
+            "name": "Jun Ito",
+            "minutes": 1830
+          },
+          {
+            "name": "Mira Okafor",
+            "minutes": 1830
+          },
+          {
+            "name": "Ines Varga",
+            "minutes": 770
+          },
+          {
+            "name": "Lena Marsh",
+            "minutes": 770
+          },
+          {
+            "name": "Rowan Hale",
+            "minutes": 770
+          }
+        ],
+        "directors": [
+          {
+            "name": "Calum Reyes",
+            "minutes": 440
+          },
+          {
+            "name": "Noor Haddad",
+            "minutes": 440
+          },
+          {
+            "name": "Ines Varga",
+            "minutes": 330
+          }
+        ]
+      },
+      "devices": {
+        "directPlayShare": 1,
+        "homeShare": 1,
+        "topPlatform": "Apple TV",
+        "topProduct": "Plex for Apple TV",
+        "fourKShare": 0
+      },
+      "requests": {
+        "eligible": false
+      },
+      "nextYear": {
+        "leftForLater": [],
+        "picks": []
       },
       "milestones": [
         {

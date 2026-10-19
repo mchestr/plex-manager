@@ -8,7 +8,7 @@
  */
 
 import { shift } from "../dates"
-import { MEMBER, metadataFor, SEASON, SERVER, type Profile } from "../profile"
+import { MEMBER, metadataFor, ratio, SEASON, SERVER, type Profile } from "../profile"
 import { historyRow } from "../rows"
 import { episodes, film, listRun, series } from "../titles"
 
@@ -33,7 +33,7 @@ export const longAndEmailName: Profile = {
   }),
   expected: {
     edition: "full",
-    archetype: "festival-juror",
+    archetype: "weekend-double-feature",
     omittedPages: [11, 12, 14, 17],
     facts: {
       "time.totalHours": "67",
@@ -43,10 +43,11 @@ export const longAndEmailName: Profile = {
       "series[1].title": "Ted Lasso",
       "films[1].title": "Arrival",
       "days.active": "52",
-      "hours.peak": "3 PM",
-      "hours.medianStart": "5:30 PM",
-      "time.milestones[3].date": "16 May",
+      "hours.peak": "3\u00A0PM",
+      "hours.medianStart": "5:30\u00A0PM",
+      "time.milestones[3].date": "May\u00A016",
       "tz.label": "America/Toronto",
+      "archetype.name": "The Weekend Double Feature",
     },
     stats: {
       // 26 x 110 = 2,860; 26 x 45 = 1,170. Ted Lasso seasons: 12, 12, 2.
@@ -97,6 +98,44 @@ export const longAndEmailName: Profile = {
         { hours: 25, date: "2026-03-07" },
         { hours: 50, date: "2026-05-16" },
       ],
+      // P2.8 sections, derived with hand-facts.py (P2.16): genre shares split each
+      // title's seconds evenly across its genres, over the seconds that have one;
+      // every credited actor earns a title's minutes; devices count every play.
+      taste: {
+        genres: [
+          { name: "Comedy", minutes: 915, share: ratio(54_900, 241_800) },
+          { name: "Crime", minutes: 915, share: ratio(54_900, 241_800) },
+          { name: "Animation", minutes: 385, share: ratio(23_100, 241_800) },
+          { name: "Fantasy", minutes: 385, share: ratio(23_100, 241_800) },
+          { name: "Science Fiction", minutes: 385, share: ratio(23_100, 241_800) },
+        ],
+        medianYear: 2009,
+        oldest: { key: "film:3011", title: "Memento", year: 2000 },
+        freshShare: ratio(0, 52),
+      },
+      people: {
+        actors: [
+          { name: "Jun Ito", minutes: 1830 },
+          { name: "Mira Okafor", minutes: 1830 },
+          { name: "Ines Varga", minutes: 770 },
+          { name: "Lena Marsh", minutes: 770 },
+          { name: "Rowan Hale", minutes: 770 },
+        ],
+        directors: [
+          { name: "Calum Reyes", minutes: 440 },
+          { name: "Noor Haddad", minutes: 440 },
+          { name: "Ines Varga", minutes: 330 },
+        ],
+      },
+      devices: {
+        directPlayShare: ratio(52, 52),
+        homeShare: ratio(52, 52),
+        topPlatform: "Apple TV",
+        topProduct: "Plex for Apple TV",
+        fourKShare: ratio(0, 52),
+      },
+      requests: { eligible: false },
+      nextYear: { leftForLater: [], picks: [] },
       topSeries: [{ title: "Ted Lasso", minutes: 1170, plays: 26 }],
       topFilms: [
         { title: "Arrival", minutes: 110, plays: 1 },

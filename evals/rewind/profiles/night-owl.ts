@@ -68,14 +68,15 @@ export const nightOwl: Profile = {
       "counts.films": "24",
       "series[1].title": "Black Mirror",
       "hours.afterDarkShare": "91%",
-      "hours.peak": "11 PM",
-      "hours.quietest": "2 AM",
-      "hours.latestStart.time": "1:00 AM",
+      "hours.peak": "11\u00A0PM",
+      "hours.quietest": "2\u00A0AM",
+      "hours.latestStart.time": "1:00\u00A0AM",
       "hours.latestStart.weekday": "Saturday",
       "records.longestBinge.episodes": "4",
       "race.overtakeMonth": "September",
       "days.active": "167",
       "tz.label": "America/New_York",
+      "archetype.name": "The Midnight Marathoner",
     },
     stats: {
       // Fridays 192 x 45 = 8,640; Wednesdays 47 x 60 = 2,820; films 24 x 120 = 2,880.
@@ -146,6 +147,40 @@ export const nightOwl: Profile = {
         { hours: 50, date: "2026-03-11" },
         { hours: 100, date: "2026-05-20" },
       ],
+      // P2.8 sections, derived with hand-facts.py (P2.16): genre shares split each
+      // title's seconds evenly across its genres, over the seconds that have one;
+      // every credited actor earns a title's minutes; devices count every play.
+      taste: {
+        genres: [
+          { name: "Animation", minutes: 2850, share: ratio(171_000, 860_400) },
+          { name: "Crime", minutes: 2520, share: ratio(151_200, 860_400) },
+          { name: "Drama", minutes: 1770, share: ratio(106_200, 860_400) },
+          { name: "Comedy", minutes: 1440, share: ratio(86_400, 860_400) },
+          { name: "Documentary", minutes: 1440, share: ratio(86_400, 860_400) },
+        ],
+        medianYear: 1975,
+        oldest: { key: "film:2013", title: "Citizen Kane", year: 1941 },
+        freshShare: ratio(0, 263),
+      },
+      people: {
+        actors: [
+          { name: "Tomas Brandt", minutes: 5700 },
+          { name: "Mira Okafor", minutes: 5040 },
+          { name: "Noor Haddad", minutes: 3540 },
+          { name: "Calum Reyes", minutes: 2880 },
+          { name: "Ines Varga", minutes: 2880 },
+        ],
+        directors: [{ name: "Calum Reyes", minutes: 360 }, { name: "Ines Varga", minutes: 360 }, { name: "Jun Ito", minutes: 360 }],
+      },
+      devices: {
+        directPlayShare: ratio(263, 263),
+        homeShare: ratio(263, 263),
+        topPlatform: "Apple TV",
+        topProduct: "Plex for Apple TV",
+        fourKShare: ratio(0, 263),
+      },
+      requests: { made: 2, approved: 1, available: 1, pending: 1, declined: 0, watched: 1, genres: [] },
+      nextYear: { leftForLater: [], picks: [] },
       topSeries: [
         { title: "Black Mirror", minutes: 2820, plays: 47 },
         { title: "Yellowjackets", minutes: 2160, plays: 48 },

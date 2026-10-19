@@ -44,6 +44,7 @@
     "rows": [],
     "genres": {}
   },
+  "library": null,
   "expected": {
     "edition": "postcard",
     "archetype": null,
@@ -60,15 +61,15 @@
     ],
     "facts": {
       "member.firstName": "Ada",
-      "time.totalMinutes": "12 minutes",
+      "time.totalMinutes": "12 minutes",
       "counts.episodes": "1",
       "counts.series": "1",
       "counts.films": "0",
       "series[1].title": "Detectorists",
-      "series[1].minutes": "12 minutes",
+      "series[1].minutes": "12 minutes",
       "days.active": "1",
-      "days.biggest.date": "4 Apr",
-      "hours.peak": "10 AM",
+      "days.biggest.date": "April 4",
+      "hours.peak": "10 AM",
       "tz.label": "Europe/London"
     },
     "stats": {
@@ -158,6 +159,50 @@
       },
       "race": {
         "eligible": false
+      },
+      "taste": {
+        "genres": [
+          {
+            "name": "Animation",
+            "minutes": 6,
+            "share": 0.5
+          },
+          {
+            "name": "Drama",
+            "minutes": 6,
+            "share": 0.5
+          }
+        ],
+        "medianYear": 2014,
+        "oldest": {
+          "key": "series:1301",
+          "title": "Detectorists",
+          "year": 2014
+        },
+        "freshShare": 0
+      },
+      "people": {
+        "actors": [
+          {
+            "name": "Noor Haddad",
+            "minutes": 12
+          },
+          {
+            "name": "Tomas Brandt",
+            "minutes": 12
+          }
+        ],
+        "directors": []
+      },
+      "devices": {
+        "eligible": false
+      },
+      "requests": {
+        "eligible": false
+      },
+      "nextYear": {
+        "leftForLater": [],
+        "picks": []
       },
       "milestones": [],
       "topSeries": [

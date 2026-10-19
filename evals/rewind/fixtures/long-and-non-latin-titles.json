@@ -443,10 +443,12 @@
     "rows": [],
     "genres": {}
   },
+  "library": null,
   "expected": {
     "edition": "full",
-    "archetype": "explorer",
+    "archetype": "festival-juror",
     "omittedPages": [
+      8,
       11,
       12,
       14,
@@ -461,9 +463,11 @@
       "films[1].plays": "2",
       "series[1].title": "Fargo (2014)",
       "days.active": "202",
-      "streak.longest.days": "202 days",
-      "hours.peak": "8 PM",
-      "tz.label": "Asia/Ho_Chi_Minh"
+      "streak.longest.days": "202 days",
+      "hours.peak": "8 PM",
+      "tz.label": "Asia/Ho_Chi_Minh",
+      "taste.genre[1].name": "Drama",
+      "archetype.name": "The Festival Juror"
     },
     "stats": {
       "totals": {
@@ -544,6 +548,39 @@
       },
       "race": {
         "eligible": false
+      },
+      "taste": {
+        "genres": [
+          {
+            "name": "Drama",
+            "minutes": 17055,
+            "share": 1
+          }
+        ],
+        "medianYear": 2009,
+        "oldest": {
+          "key": "film:3269",
+          "title": "Citizen Kane",
+          "year": 1941
+        },
+        "freshShare": 0
+      },
+      "people": {
+        "eligible": false
+      },
+      "devices": {
+        "directPlayShare": 1,
+        "homeShare": 1,
+        "topPlatform": "Apple TV",
+        "topProduct": "Plex for Apple TV",
+        "fourKShare": 0
+      },
+      "requests": {
+        "eligible": false
+      },
+      "nextYear": {
+        "leftForLater": [],
+        "picks": []
       },
       "milestones": [
         {

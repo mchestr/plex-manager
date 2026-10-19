@@ -26,8 +26,32 @@ arithmetic on literals) typed into a profile.
    of `evals/rewind/README.md`.
 
 Shares are stored as the ratio of two counts (`ratio(423, 1258)`) and compared
-to 9 decimal places. `facts`, `edition`, `archetype` and `omittedPages` are
-authored here too and asserted by P2.16 once P2.9 merges.
+to 9 decimal places.
+
+## Facts, archetypes, pages and the P2.8 stats (P2.16)
+
+`expected.facts`, `edition`, `archetype`, `omittedPages` and the P2.8 stats
+sections (`taste`, `people`, `devices`, `requests`, `nextYear`) were derived
+again in P2.16, independently of `lib/wrapped`:
+
+1. **`hand-facts.py`** recomputes, from the fixture JSON, each archetype's
+   score from P2.9's scorer table (with design 7.6's gates and tie-break
+   order), the page rules and edition of design 4.3 and 4.5 (as
+   `evals/rewind/README.md` states them), the P2.8 stats from the plan's
+   "as merged" definitions (genre minutes split evenly, every credited
+   actor earning a title's minutes, device shares over every play, requests
+   joined through cached guids, left-for-later and library picks), and the
+   en-US display of the facts the profiles check. Run it with
+   `python3 evals/rewind/hand-facts.py evals/rewind/fixtures/<id>.json`.
+2. **Facts that restate a hand-checked stat** (the calendar, streak, gap,
+   clock times, milestones, race, lifetime) take their value from that stat
+   in the profile and only their display from the en-US rules: U+00A0
+   between number and unit, "Month D" dates, floored durations without
+   zero parts, ceil for "Top N%".
+3. **`__tests__/golden-facts.test.ts`** compares them with the code; a
+   snapshot of every fact's display catches drift in the facts nobody
+   checked by hand. Every value matched on first run once the two module
+   fixes below were in.
 
 ## Per fixture
 
@@ -45,8 +69,8 @@ authored here too and asserted by P2.16 once P2.9 merges.
 | `night-owl` | Friday binges cross midnight, so a binge's day differs from its night; hour counts 48/48/48/95/24 are listed in the profile, and the race overtake is month 9 from cumulative Wednesday counts. |
 | `weekend-binger` | 20 weekends x 330 in the Sydney server zone, across the April DST change. |
 | `rewatcher` | 15 x (81 + 116 + 117) + 12 x 22; the running total to each rung is in the profile. |
-| `explorer` | 100 films on odd days, 30 pilots on even days to 1 March: days 1-61 all active. |
-| `credits-roller` | 40 films on the 8-runtime cycle (5 x 1,040) + 5 x 65; every play 100%. |
+| `explorer` | 100 films on odd days, 30 pilots on even days to 1 March: days 1-61 all active. Every fifth film runs 100 minutes, the rest 25: 20 x 100 + 80 x 25 + 30 x 50 = 5,500. 130 titles in 91.7 hours is 14.2 per 10 hours (Explorer 100); films are 73% of minutes over 100 films (Festival Juror 98); hour 21 holds 30 of 130 plays (Golden Hour Viewer 92). |
+| `credits-roller` | 16 films on the 8-runtime cycle (2 x 1,040) + 5 x 65 + 8 x 60 = 2,885; every play 100%, so completion scores 80. Films are 72% of minutes over 16 films (Festival Juror 74), the peak hour is 3 PM (Golden Hour Viewer 0), and no binge or weekend habit stands out. |
 | `premiere-chaser` | Each play listed with its date; 26 of 30 within a day of release. |
 | `no-overseerr` | 25 weeks x 220; the race tie-breaks are worked month by month in the profile. |
 | `solo-server` | 27 Sundays x 180 + 22 x 30 + 294; 2025 is 48 x 100, so +21.1%. |
@@ -61,6 +85,15 @@ authored here too and asserted by P2.16 once P2.9 merges.
   over everything) said "Fargo (2014)". Design 7.2 adds the year "when two
   keys share a title"; the fix settles display titles across every listed
   title before filtering by kind (`lib/wrapped/stats/rank.ts`, with a test).
+- P2.16: the title lists, the quiz and the longest film took titles with
+  no counted play, so `seven-minutes` listed a 110-second sample of The
+  Simpsons as its No. 1 series; design 7.2 lists only counted plays
+  (`lib/wrapped/stats/titles.ts`, with a test). And `normalizeTimeZone`
+  returned ICU's legacy zone ids, so `tz.label` read "Asia/Saigon" for a
+  member who chose Asia/Ho_Chi_Minh (`lib/utils/zoned-time.ts`, with a test).
+- P2.16: `credits-roller` and `explorer` did not express their profiles
+  (both scored Festival Juror), so their rows were rebuilt with the same
+  intent; their stats were derived again.
 - Every other hand value matched the P2.7 modules on first run, under
   `TZ=UTC`, `TZ=Australia/Sydney` and `TZ=America/Los_Angeles`. The mismatches
   met while building were in the fixtures (an episode-key collision, a film

@@ -25,9 +25,9 @@ const dayKey = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
  * equal the module's output exactly (shares to 9 decimal places). `topSeries`
  * and `topFilms` are the head of `rankTitles` as `{ title, minutes, plays }`.
  * The P2.8 sections (`taste`, `people`, `devices`, `requests`, `nextYear`)
- * have no hand values yet: P2.16 hand-checks them. `nextYear` runs without a
- * library (fixtures carry none), so its `picks` are always empty; community
- * needs a server aggregate the fixtures do not carry and has no section.
+ * were hand-checked in P2.16. `nextYear` reads the fixture's `library` (only
+ * `heavy` models one); community is checked through the standing facts,
+ * from an aggregate the golden harness builds from `server.peers`.
  */
 const section = z.record(z.string(), z.unknown())
 const expectedStatsSchema = z
@@ -80,6 +80,8 @@ export const fixtureSchema = z
     metadata: z.array(row),
     /** Overseerr rows, and each request's genres keyed by request id; null without Overseerr. */
     requests: z.object({ rows: z.array(row), genres: z.record(z.string(), z.array(z.string())) }).nullable(),
+    /** The server's films and series (`LibraryItem` fields, `addedAt` as ISO) for next year's picks; null when not modelled. */
+    library: z.array(row).nullable(),
     expected: z.object({
       edition: z.enum(["full", "pocket", "postcard"]),
       archetype: z.string().nullable(),
