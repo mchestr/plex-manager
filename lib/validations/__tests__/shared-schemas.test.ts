@@ -92,6 +92,19 @@ describe("shared-schemas", () => {
     })
   })
 
+  describe("isHttpUrl", () => {
+    it.each(["https://example.com", "http://localhost:3000/x", "HTTPS://EXAMPLE.COM"])("accepts %s", (url) => {
+      expect(isHttpUrl(new URL(url))).toBe(true)
+    })
+
+    it.each(["javascript:alert(1)", "data:text/html,hi", "ftp://example.com", "file:///etc/passwd", "mailto:a@b.c"])(
+      "rejects %s",
+      (url) => {
+        expect(isHttpUrl(new URL(url))).toBe(false)
+      }
+    )
+  })
+
   describe("createPublicUrlSchema", () => {
     const publicUrlSchema = createPublicUrlSchema("sonarr.example.com")
 
@@ -153,18 +166,9 @@ describe("shared-schemas", () => {
         expect(publicUrlSchema.safeParse(url).success).toBe(false)
       }
     )
-  })
 
-  describe("isHttpUrl", () => {
-    it.each([
-      ["https://requests.example.com", true],
-      ["http://localhost:5055", true],
-      ["javascript:alert(1)", false],
-      ["data:text/plain,hi", false],
-      ["ftp://example.com", false],
-      ["not a url", false],
-    ])("%s -> %s", (url, expected) => {
-      expect(isHttpUrl(url)).toBe(expected)
+    it("rejects text that is not a URL", () => {
+      expect(publicUrlSchema.safeParse("not a url").success).toBe(false)
     })
   })
 })

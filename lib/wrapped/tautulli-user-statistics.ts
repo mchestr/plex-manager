@@ -19,7 +19,7 @@ import {
 } from "@/lib/validations/tautulli"
 
 import { computeDerivedStatistics } from "./derived-statistics"
-import { memberErrorCopy } from "./generation-errors"
+import { errorCopy } from "@/lib/ui/error-copy"
 import type {
   TautulliConfig,
   TautulliStatisticsData,
@@ -61,7 +61,7 @@ export async function fetchTautulliStatistics(
     if (!lookup.ok) {
       if (lookup.code === "TAUTULLI_USER_NOT_FOUND") {
         logger.warn("Tautulli user not found", { plexUserId: identity.plexUserId, candidates: lookup.candidates })
-        return { success: false, code: lookup.code, error: memberErrorCopy(lookup.code) }
+        return { success: false, code: lookup.code, error: errorCopy(lookup.code, { audience: "member" }).description }
       }
       return { success: false, error: "Failed to fetch users from Tautulli" }
     }

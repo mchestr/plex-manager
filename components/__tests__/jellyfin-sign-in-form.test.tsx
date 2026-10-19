@@ -104,6 +104,24 @@ describe('JellyfinSignInForm validation', () => {
     expect(onError).not.toHaveBeenCalled()
   })
 
+  it.each([
+    ['https://jellyfin.example.com', 'https://jellyfin.example.com/'],
+    ['javascript:alert(1)', null],
+  ])('links the admin-set server URL %j only when it is http or https (SEC-57)', async (serverUrl, expected) => {
+    mockProcessJellyfinInvite.mockResolvedValue({ success: true, data: { serverUrl } } as never)
+    renderForm()
+
+    await submit('jane.doe')
+
+    expect(await screen.findByTestId('jellyfin-success-heading')).toBeInTheDocument()
+    const link = screen.queryByRole('link', { name: /Open Jellyfin/ })
+    if (expected) {
+      expect(link).toHaveAttribute('href', expected)
+    } else {
+      expect(link).not.toBeInTheDocument()
+    }
+  })
+
   it('still hands a server rejection to the page', async () => {
     mockProcessJellyfinInvite.mockResolvedValue({ success: false, code: 'INVITE_INVALID', error: 'Invite has expired' } as never)
     const { onError } = renderForm()

@@ -1,38 +1,41 @@
 "use client"
 
 import { useEffect } from "react"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { errorCopy } from "@/lib/ui/error-copy"
 
 interface ErrorStateProps {
   error?: Error & { digest?: string }
   reset?: () => void
   title?: string
+  /** Fixed copy from the caller. The error's own message is never shown (SEC-20). */
   message?: string
   className?: string
 }
 
-export function ErrorState({
-  error,
-  reset,
-  title = "Something went wrong",
-  message,
-  className,
-}: ErrorStateProps) {
+export function ErrorState({ error, reset, title, message, className }: ErrorStateProps) {
   useEffect(() => {
     if (error) {
       console.error("Route Error:", error)
     }
   }, [error])
 
+  const copy = errorCopy(error?.digest, { audience: "member" })
+
   return (
-    <div className={cn("flex flex-col items-center justify-center min-h-[50vh] p-6 text-center", className)}>
-      <div className="p-4 bg-red-500/10 rounded-full mb-6">
+    <div
+      className={cn("flex flex-col items-center justify-center min-h-[50vh] p-6 text-center", className)}
+      data-testid="error-state"
+    >
+      <div className="p-4 bg-destructive-subtle rounded-full mb-6">
         <svg
-          className="w-12 h-12 text-red-500"
+          className="w-12 h-12 text-destructive"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
           xmlns="http://www.w3.org/2000/svg"
+          aria-hidden="true"
         >
           <path
             strokeLinecap="round"
@@ -42,19 +45,18 @@ export function ErrorState({
           />
         </svg>
       </div>
-      <h2 className="text-2xl font-bold mb-3 text-white">{title}</h2>
-      <p className="text-slate-400 mb-8 max-w-md mx-auto">
-        {message || error?.message || "An unexpected error occurred. Please try again later."}
-      </p>
+      <h2 className="text-2xl font-bold mb-3 text-foreground">{title ?? copy.title}</h2>
+      <p className="text-muted-foreground mb-4 max-w-md mx-auto">{message || copy.description}</p>
+      {error?.digest && (
+        <p className="text-xs text-muted-foreground mb-8" data-testid="error-state-digest">
+          Reference <span className="font-mono">{error.digest}</span>
+        </p>
+      )}
       {reset && (
-        <button
-          onClick={reset}
-          className="px-6 py-2 bg-amber-500 hover:bg-amber-600 text-black font-bold rounded-full transition-colors"
-        >
+        <Button onClick={reset} className="mt-4" data-testid="error-state-retry">
           Try again
-        </button>
+        </Button>
       )}
     </div>
   )
 }
-

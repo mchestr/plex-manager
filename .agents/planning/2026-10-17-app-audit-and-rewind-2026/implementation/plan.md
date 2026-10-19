@@ -3475,11 +3475,13 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 
 **Demo.** Post an announcement containing a bulleted list, an image and a `javascript:` link. Home shows the bullets, no image and plain text for the bad link. In the assistant, a reply containing `![](https://example.com/?d=x)` loads nothing: the network panel shows no request.
 
+(as merged: the `shadcn` npm package ships no `typeset.css` (checked at 4.21.2 and 4.22.1; the docs say to copy the file), so no dependency was added. The file is vendored unchanged as `app/typeset.css` from shadcn-ui/ui at `3cdaa6eb` (2026-07-10, MIT), with its source in the header, and `app/globals.css` imports `./typeset.css` after `tw-animate-css`. `lib/ui/markdown.ts` also exports `safeLink(href)` (`{ href, external } | null`), which SafeLink uses; `safeHref` returns its href. Links resolve against `NEXT_PUBLIC_APP_URL`, or `https://app.invalid` when it is unset, so server and client agree; same-origin links come back as paths, and credentials in a URL are refused. `isHttpUrl(url: URL)` is in `lib/validations/shared-schemas.ts`; `createPublicUrlSchema` still accepts any URL until P4.3 routes it through `isHttpUrl`. `errorCopy(code: unknown, { audience })` keys P4.3's `ActionErrorCode` names through a local type; P4.3 replaces it with an import from `lib/actions/result.ts`, and P3.2 adds its flash error codes to the map when `lib/ui/flash-codes.ts` exists (it had not merged). `memberErrorCopy` is gone: `components/wrapped/wrapped-year-view.tsx` (the old `app/(app)/wrapped/page.tsx` caller), `components/dashboard/wrapped-card.tsx` and `lib/wrapped/tautulli-user-statistics.ts` call `errorCopy(...).description`, and the stored Rewind copy is unchanged. ErrorState looks its copy up from `error.digest`, shows the digest as "Reference <mono>", and keeps the old `Button` until P3.4 swaps it. There is no E2E chat test; a Jest case renders the real `Chatbot` instead, and `next build` passes without the `ssr: false` workaround. The `react-markdown` tree joins `ESM_ONLY_PACKAGES` in `jest.config.js` as regex alternatives. The new E2E case filters to the visible card, because home renders it in both layouts. Visual baselines are unchanged; design debt fell in `chat-window.tsx` and `announcements-card.tsx`.)
+
 **Done when.**
-- [ ] MarkdownBody, SafeLink, `safeHref` and `error-copy.ts` exist with unit tests.
-- [ ] Announcements and the assistant render through MarkdownBody, and lists have bullets.
-- [ ] No member or admin surface renders `error.message` through ErrorState.
-- [ ] The three admin-set public links pass through `safeHref`.
+- [x] MarkdownBody, SafeLink, `safeHref` and `error-copy.ts` exist with unit tests.
+- [x] Announcements and the assistant render through MarkdownBody, and lists have bullets.
+- [x] No member or admin surface renders `error.message` through ErrorState.
+- [x] The three admin-set public links pass through `safeHref`.
 
 ### Step P3.9: Status vocabulary, icons, brand and chart theme
 

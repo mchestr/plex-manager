@@ -7,6 +7,7 @@ import { authOptions } from "@/lib/auth";
 import { getFirstWatchDate } from "@/lib/connections/tautulli-first-watch";
 import { prisma } from "@/lib/prisma";
 import { getAppSettings } from "@/lib/settings/app-settings";
+import { safeHref } from "@/lib/ui/markdown";
 import { calendarMonthsBetween } from "@/lib/utils/format";
 import { getRewindEligibility } from "@/lib/wrapped/eligibility";
 import type { AuthService } from "@/types/onboarding";
@@ -53,8 +54,9 @@ export default async function Home() {
   // Determine server name based on what's configured
   const serverName = plexServer?.name || jellyfinServer?.name || "Media Server";
   const discordEnabled = Boolean(discordIntegration?.isEnabled && discordIntegration?.clientId && discordIntegration?.clientSecret);
-  // Members get public URLs only: the internal ones are often LAN or Docker addresses
-  const overseerrUrl = overseerr?.publicUrl || null;
+  // Members get public URLs only (the internal ones are often LAN or Docker
+  // addresses), and an admin-set one renders only when it is http or https (SEC-57).
+  const overseerrUrl = safeHref(overseerr?.publicUrl);
 
   // Handle redirect logic for authenticated users
   if (session?.user?.id) {

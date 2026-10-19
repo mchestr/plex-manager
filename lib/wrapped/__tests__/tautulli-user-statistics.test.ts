@@ -9,7 +9,7 @@
  */
 
 import { fetchTautulliStatistics } from '../tautulli-user-statistics'
-import { memberErrorCopy } from '../generation-errors'
+import { errorCopy } from '@/lib/ui/error-copy'
 
 const mockWarn = jest.fn()
 
@@ -56,7 +56,7 @@ describe('fetchTautulliStatistics user match', () => {
     expect(result).toEqual({
       success: false,
       code: 'TAUTULLI_USER_NOT_FOUND',
-      error: memberErrorCopy('TAUTULLI_USER_NOT_FOUND'),
+      error: errorCopy('TAUTULLI_USER_NOT_FOUND', { audience: 'member' }).description,
     })
     expect(mockFetch).toHaveBeenCalledTimes(1)
     expect(mockWarn).toHaveBeenCalledWith('Tautulli user not found', { plexUserId: '999', candidates: 3 })

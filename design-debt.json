@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "commit": "5c95ff09aff711cccff24432213248e1a69b83d3",
-  "generatedAt": "2026-10-19T06:37:41.603Z",
+  "commit": "83423c9d58ea73cfa7a3f5d9a01491260cac77eb",
+  "generatedAt": "2026-10-19T16:47:22.462Z",
   "files": {
     "app/(app)/discord/link/page.tsx": {
       "raw-palette": 2
@@ -194,7 +194,7 @@
       "arbitrary-type-z": 3,
       "gradient": 2,
       "infinite-motion": 4,
-      "raw-palette": 51
+      "raw-palette": 46
     },
     "components/admin/cost-analysis/cost-date-filter.tsx": {
       "blur": 1,
@@ -469,8 +469,8 @@
       "arbitrary-type-z": 1,
       "caps-eyebrow": 1,
       "gradient": 4,
-      "infinite-motion": 4,
-      "raw-palette": 31
+      "infinite-motion": 3,
+      "raw-palette": 29
     },
     "components/dashboard/discord-card.tsx": {
       "arbitrary-color": 17,
@@ -818,8 +818,8 @@
     "copy": 41,
     "gradient": 136,
     "gradient-text": 56,
-    "infinite-motion": 57,
-    "raw-palette": 3502,
+    "infinite-motion": 56,
+    "raw-palette": 3495,
     "zoom-lock": 2
   }
 }
