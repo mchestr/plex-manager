@@ -30,9 +30,7 @@ import {
 } from "@/lib/wrapped/statistics"
 import { computePercentile } from "@/lib/wrapped/derived-statistics"
 import {
-  adminErrorHint,
   type GenerationRefusalCode,
-  isGenerationRefusal,
   memberErrorCopy,
   refusalCopy,
   type RewindErrorCode,
@@ -455,73 +453,3 @@ export async function generatePlexWrapped(userId: string, year: number): Promise
     }
   }
 }
-
-/**
- * Generate the season's Rewind for every member with a Plex account.
- * Admin-only function
- */
-export async function generateAllPlexWrapped(): Promise<{
-  success: boolean
-  generated: number
-  failed: number
-  errors: string[]
-}> {
-  try {
-    // Require admin for bulk generation
-    const session = await getServerSession(authOptions)
-    if (!session || !session.user.isAdmin) {
-      return {
-        success: false,
-        generated: 0,
-        failed: 0,
-        errors: ["Unauthorized: Only admins can generate wrapped for all users"],
-      }
-    }
-    // The season year, not the calendar year: they differ in January.
-    const { wrappedYear } = await getWrappedSettings()
-    const users = await prisma.user.findMany({
-      where: {
-        plexUserId: { not: null }, // Only users with Plex accounts
-      },
-    })
-
-    let generated = 0
-    let failed = 0
-    const errors: string[] = []
-
-    for (const user of users) {
-      const result = await generatePlexWrapped(user.id, wrappedYear)
-      if (result.success) {
-        generated++
-      } else {
-        failed++
-        // A typed failure or an ineligible member gets the admin hint (or the
-        // code), not the member copy.
-        const hint =
-          result.code === "REWIND_NOT_ELIGIBLE" || (result.code && !isGenerationRefusal(result.code))
-            ? adminErrorHint(result.code, user.plexUserId)
-            : null
-        const detail = hint ?? (result.code || result.error || "Unknown error")
-        errors.push(`${user.name || user.id}: ${detail}`)
-      }
-    }
-
-    revalidatePath("/admin")
-    return {
-      success: true,
-      generated,
-      failed,
-      errors,
-    }
-  } catch (error) {
-    const logger = (await import("@/lib/utils/logger")).createLogger("USERS_ACTION")
-    logger.error("Error generating all wrapped", error)
-    return {
-      success: false,
-      generated: 0,
-      failed: 0,
-      errors: [error instanceof Error ? error.message : "Failed to generate wrapped for all users"],
-    }
-  }
-}
-

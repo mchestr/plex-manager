@@ -5,7 +5,7 @@
  * member limits do not apply to them (SEC-22, RWP-12)
  */
 
-import { generatePlexWrapped, generateAllPlexWrapped } from '@/actions/wrapped-generation'
+import { generatePlexWrapped } from '@/actions/wrapped-generation'
 import { getServerSession } from 'next-auth'
 import { prisma } from '@/lib/prisma'
 import { getWrappedSettings } from '@/actions/admin'
@@ -512,100 +512,4 @@ describe('Wrapped Regeneration Security', () => {
       expect(llm).not.toHaveBeenCalled()
     })
   })
-
-  describe('generateAllPlexWrapped - Admin Only', () => {
-    it('should allow admin to generate wrapped for all users', async () => {
-      ;(getServerSession as jest.Mock).mockResolvedValue({
-        user: {
-          id: 'admin-1',
-          isAdmin: true,
-        },
-      })
-      ;(prisma.user.findMany as jest.Mock).mockResolvedValue([mockUser1])
-      ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(mockUser1)
-      ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
-      ;(prisma.plexServer.findFirst as jest.Mock)
-        .mockResolvedValueOnce(mockPlexServer)
-        .mockResolvedValueOnce(mockPlexServer)
-      ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(mockTautulli)
-      ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue(null)
-      ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({ llmDisabled: false })
-
-
-      const statsModule = await import('@/lib/wrapped/statistics')
-      ;(statsModule.fetchTautulliStatistics as jest.Mock).mockResolvedValue({
-        success: true,
-        data: {
-          totalWatchTime: 1000,
-          moviesWatchTime: 500,
-          showsWatchTime: 500,
-          moviesWatched: 10,
-          showsWatched: 5,
-          episodesWatched: 50,
-          topMovies: [],
-          topShows: [],
-          watchTimeByMonth: [],
-          tautulliUserId: 'tautulli-user-1',
-        },
-      })
-      ;(statsModule.fetchPlexServerStatistics as jest.Mock).mockResolvedValue({
-        success: true,
-        data: {
-          totalStorage: 1000,
-          totalStorageFormatted: '1TB',
-          librarySize: 500,
-        },
-      })
-      ;(statsModule.fetchTopContentLeaderboards as jest.Mock).mockResolvedValue({
-        success: true,
-        data: [],
-      })
-      ;(statsModule.fetchWatchTimeLeaderboard as jest.Mock).mockResolvedValue({
-        success: true,
-        data: [],
-      })
-
-      const { generateWrappedWithLLM } = await import('@/lib/wrapped/llm')
-      ;(generateWrappedWithLLM as jest.Mock).mockResolvedValue({
-        success: true,
-        data: {
-          sections: [],
-          summary: 'Test summary',
-          metadata: { totalSections: 0, generationTime: 0 },
-        },
-      })
-
-      const result = await generateAllPlexWrapped()
-
-      expect(result.success).toBe(true)
-      expect(result.generated).toBe(1)
-      expect(getServerSession).toHaveBeenCalled()
-    })
-
-    it('should reject non-admin user', async () => {
-      ;(getServerSession as jest.Mock).mockResolvedValue({
-        user: {
-          id: 'user-1',
-          isAdmin: false,
-        },
-      })
-
-      const result = await generateAllPlexWrapped()
-
-      expect(result.success).toBe(false)
-      expect(result.errors).toContain('Unauthorized: Only admins can generate wrapped for all users')
-      expect(prisma.user.findMany).not.toHaveBeenCalled()
-    })
-
-    it('should reject unauthenticated user', async () => {
-      ;(getServerSession as jest.Mock).mockResolvedValue(null)
-
-      const result = await generateAllPlexWrapped()
-
-      expect(result.success).toBe(false)
-      expect(result.errors).toContain('Unauthorized: Only admins can generate wrapped for all users')
-      expect(prisma.user.findMany).not.toHaveBeenCalled()
-    })
-  })
 })
-

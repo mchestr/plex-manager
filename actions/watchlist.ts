@@ -1,6 +1,5 @@
 "use server"
 
-import { WatchlistSyncStatus } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 import { updateWatchlistSyncSettingsSchema } from "@/lib/validations/watchlist"
@@ -230,61 +229,5 @@ export async function triggerWatchlistSync() {
   } catch (error) {
     logger.error("Error triggering watchlist sync", error)
     return { success: false as const, error: "Failed to trigger sync" }
-  }
-}
-
-/**
- * Get user's watchlist sync history
- */
-export async function getWatchlistSyncHistory(options?: {
-  limit?: number
-  offset?: number
-  status?: WatchlistSyncStatus
-}) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) {
-    return { success: false as const, error: "Not authenticated" }
-  }
-
-  const limit = options?.limit ?? 20
-  const offset = options?.offset ?? 0
-
-  try {
-    const where = {
-      userId: session.user.id,
-      ...(options?.status ? { status: options.status } : {}),
-    }
-
-    const [items, total] = await Promise.all([
-      prisma.watchlistSyncHistory.findMany({
-        where,
-        orderBy: { syncedAt: "desc" },
-        take: limit,
-        skip: offset,
-        select: {
-          id: true,
-          title: true,
-          year: true,
-          mediaType: true,
-          status: true,
-          syncedAt: true,
-          requestedAt: true,
-          overseerrRequestId: true,
-        },
-      }),
-      prisma.watchlistSyncHistory.count({ where }),
-    ])
-
-    return {
-      success: true as const,
-      data: {
-        items,
-        total,
-        hasMore: offset + items.length < total,
-      },
-    }
-  } catch (error) {
-    logger.error("Error fetching watchlist sync history", error)
-    return { success: false as const, error: "Failed to fetch history" }
   }
 }
