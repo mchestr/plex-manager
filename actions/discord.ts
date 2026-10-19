@@ -159,6 +159,7 @@ export const disconnectDiscordAccount = memberAction({
 })
 
 export const resyncDiscordRole = memberAction({
+  entitlement: "full",
   fallbackError: "Failed to resync Discord role",
   handler: async (_input, { userId }) => {
     await syncDiscordRoleConnection(userId)

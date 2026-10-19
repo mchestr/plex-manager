@@ -2,9 +2,12 @@ import "server-only"
 
 import { getOnboardingStatus } from "@/actions/onboarding"
 import { getSetupStatus } from "@/actions/setup"
+import { needsSubscribeRedirect } from "@/lib/access-paths"
+import { requestAccessLevel } from "@/lib/actions/entitlement"
 import { authOptions } from "@/lib/auth"
-import { getAccessGateStatus } from "@/lib/access"
+import { PATHNAME_HEADER } from "@/lib/request-headers"
 import { getServerSession } from "next-auth"
+import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 
 /**
@@ -29,11 +32,17 @@ export async function ensureOnboardingComplete() {
 }
 
 /**
- * Redirects a gated user to `/subscribe` when they are not allowed into the app.
+ * Redirects a gated user to `/subscribe` when their access level does not
+ * cover the requested page: a `lapsed` member keeps only the read-only Rewind
+ * pages, and a `none` member keeps nothing (`lib/access-paths.ts`).
  *
- * No-op when the user is allowed (see `getAccessGateStatus` in `@/lib/access`) or when there is
- * no session (unauthenticated access is handled elsewhere). `/subscribe` lives
- * outside the `(app)` group so this cannot cause a redirect loop.
+ * `proxy.ts` applies the same rule to every request, client-side navigations
+ * included; this is the defence in depth for full loads. The path comes from
+ * the {@link PATHNAME_HEADER} request header the proxy sets.
+ *
+ * No-op when there is no session (unauthenticated access is handled
+ * elsewhere). `/subscribe` lives outside the `(app)` group so this cannot
+ * cause a redirect loop.
  */
 export async function ensureSubscriptionOrAccess() {
   const session = await getServerSession(authOptions)
@@ -41,8 +50,9 @@ export async function ensureSubscriptionOrAccess() {
     return
   }
 
-  const allowed = await getAccessGateStatus(session.user.id)
-  if (!allowed) {
+  const level = await requestAccessLevel(session.user.id)
+  const pathname = (await headers()).get(PATHNAME_HEADER) ?? "/"
+  if (needsSubscribeRedirect(pathname, level)) {
     redirect("/subscribe")
   }
 }

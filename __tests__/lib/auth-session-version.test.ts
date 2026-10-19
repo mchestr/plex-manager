@@ -8,11 +8,15 @@
  * `User.sessionVersion`, by throwing SessionRevokedError. A token issued
  * before P4.7 has no `sv` and counts as version 0, and a database error keeps
  * the token.
+ *
+ * The same sign-in and recheck write the `accessLevel` claim that proxy.ts
+ * reads (P4.5).
  */
 
 import type { JWT } from 'next-auth/jwt'
 import type { User } from 'next-auth'
 
+import { getAccessLevel } from '@/lib/access'
 import { authOptions } from '@/lib/auth'
 import { SessionRevokedError } from '@/lib/session-revocation'
 import { mockReset } from 'jest-mock-extended'
@@ -20,7 +24,15 @@ import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 
-beforeEach(() => mockReset(prismaMock))
+jest.mock('@/lib/access', () => ({ getAccessLevel: jest.fn() }))
+
+const accessLevel = jest.mocked(getAccessLevel)
+
+beforeEach(() => {
+  mockReset(prismaMock)
+  accessLevel.mockReset()
+  accessLevel.mockResolvedValue('full')
+})
 
 jest.mock('@/lib/connections/plex', () => ({
   checkUserServerAccess: jest.fn(),
@@ -146,6 +158,56 @@ describe('JWT callback session version (P4.7)', () => {
     await expect(jwt({ token: staleToken({ checkedAt: Date.now() }), trigger: 'update' })).rejects.toBeInstanceOf(
       SessionRevokedError
     )
+  })
+})
+
+describe('JWT accessLevel claim (P4.5)', () => {
+  it('stores the access level at sign-in', async () => {
+    accessLevel.mockResolvedValue('lapsed')
+
+    const token = await jwt({
+      token: {} as JWT,
+      user: { id: 'user-1', name: 'Member', isAdmin: false, sessionVersion: 0 },
+    })
+
+    expect(token.accessLevel).toBe('lapsed')
+    expect(accessLevel).toHaveBeenCalledWith('user-1')
+  })
+
+  it('signs in without the claim when the read fails', async () => {
+    accessLevel.mockRejectedValue(new Error('connection terminated'))
+
+    const token = await jwt({
+      token: {} as JWT,
+      user: { id: 'user-1', name: 'Member', isAdmin: false, sessionVersion: 0 },
+    })
+
+    expect(token.sub).toBe('user-1')
+    expect(token.accessLevel).toBeUndefined()
+  })
+
+  it('refreshes the claim at the periodic recheck', async () => {
+    givenRow({})
+    accessLevel.mockResolvedValue('none')
+
+    const token = await jwt({ token: staleToken({ accessLevel: 'full' }) })
+
+    expect(token.accessLevel).toBe('none')
+  })
+
+  it('keeps the previous claim when the recheck cannot read it', async () => {
+    givenRow({})
+    accessLevel.mockRejectedValue(new Error('connection terminated'))
+
+    const token = await jwt({ token: staleToken({ accessLevel: 'lapsed' }) })
+
+    expect(token.accessLevel).toBe('lapsed')
+  })
+
+  it('does not read the level for a fresh token', async () => {
+    await jwt({ token: staleToken({ checkedAt: Date.now() }) })
+
+    expect(accessLevel).not.toHaveBeenCalled()
   })
 })
 

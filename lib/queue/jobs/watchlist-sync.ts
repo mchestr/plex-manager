@@ -12,6 +12,7 @@ import {
   WatchlistSyncUserResult,
   WatchlistSyncAllResult,
 } from "../types"
+import { getAccessLevel } from "@/lib/access"
 import { syncUserWatchlist, syncAllEnabledUsers } from "@/lib/watchlist/sync-service"
 import { createLogger } from "@/lib/utils/logger"
 
@@ -19,6 +20,10 @@ const logger = createLogger("WATCHLIST_SYNC_JOB")
 
 /**
  * Process a single user watchlist sync
+ *
+ * The member's entitlement is checked again when the job runs, since it may
+ * have lapsed after the job was queued: a member below `full` finishes as
+ * skipped with `NOT_ENTITLED`, without a retry (SEC-28).
  */
 async function processWatchlistSyncUser(
   job: Job<WatchlistSyncUserPayload, WatchlistSyncUserResult>
@@ -32,6 +37,18 @@ async function processWatchlistSyncUser(
     triggeredByUserId,
     attempt: job.attemptsMade + 1,
   })
+
+  if ((await getAccessLevel(userId)) !== "full") {
+    logger.info("User watchlist sync job skipped", { jobId: job.id, userId, reason: "NOT_ENTITLED" })
+    return {
+      success: false,
+      skipped: "NOT_ENTITLED",
+      itemsSynced: 0,
+      itemsRequested: 0,
+      itemsSkipped: 0,
+      itemsFailed: 0,
+    }
+  }
 
   const result = await syncUserWatchlist(userId)
 

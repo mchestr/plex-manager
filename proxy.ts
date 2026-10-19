@@ -2,6 +2,11 @@
  * Next.js proxy (formerly middleware) for request logging and request ID tracking
  * Logs incoming HTTP requests and sets up request context for async operations
  *
+ * It also keeps members below full access out of the `(app)` pages on every
+ * request, client-side navigations and prefetches included, which the
+ * `(app)` layout alone cannot do (P4.5, FR-51), and forwards the pathname to
+ * the pages as the `x-pm-pathname` request header.
+ *
  * The proxy is bundled apart from the app, so in production it holds its own
  * PrismaClient and pg pool (lib/prisma.ts reuses a client through globalThis
  * only outside production) and, with REDIS_URL, its own rate-limiter Redis
@@ -9,13 +14,18 @@
  * proxied request, not only the pages that read the database.
  */
 
+import { getAccessLevel } from "@/lib/access"
+import { isMemberAppPath, needsSubscribeRedirect } from "@/lib/access-paths"
+import { getEnv, usesSecureCookies } from "@/lib/env"
 import { prisma } from "@/lib/prisma"
+import { PATHNAME_HEADER } from "@/lib/request-headers"
 import { clientIp } from "@/lib/security/client-ip"
 import { consume } from "@/lib/security/rate-limit"
 import { sanitizeText } from "@/lib/utils/log-redaction"
 import { createLogger, generateRequestId, runWithRequestContext } from "@/lib/utils/logger"
 import { shareTokenSchema, yearParamSchema } from "@/lib/validations/params"
 import { SHARE_BUSY_HEADER } from "@/lib/wrapped/share-page-limit"
+import { getToken } from "next-auth/jwt"
 import type { NextRequest } from "next/server"
 import { NextResponse } from "next/server"
 
@@ -110,13 +120,54 @@ async function checkSharePath(pathname: string, headers: Headers): Promise<"miss
 }
 
 /**
- * The request headers a share page receives: the client's, with the proxy's
- * busy verdict in place of any {@link SHARE_BUSY_HEADER} the client sent.
+ * Whether a signed-in member must be sent to `/subscribe` from this path: a
+ * `lapsed` member may open only the read-only Rewind pages, and a `none`
+ * member no `(app)` page (`lib/access-paths.ts`).
+ *
+ * The session token's `accessLevel` claim filters cheaply, so a `full`
+ * member's request costs no query. The cookie is only rewritten when the
+ * session route runs, so a `lapsed` or `none` claim can be stale; it is
+ * confirmed from the database before the redirect, so a member who renewed is
+ * not sent away. A token without the claim (issued before P4.5), or a failed
+ * read, decides nothing here: the `(app)` layout still checks full loads.
  */
-function shareRequestHeaders(headers: Headers, busy: boolean): Headers {
+async function needsMemberRedirect(request: NextRequest): Promise<boolean> {
+  const { pathname } = request.nextUrl
+  // Page loads only: a Server Action POST checks entitlement itself
+  if ((request.method !== "GET" && request.method !== "HEAD") || !isMemberAppPath(pathname)) {
+    return false
+  }
+  try {
+    const token = await getToken({
+      req: request,
+      secret: getEnv().NEXTAUTH_SECRET,
+      secureCookie: usesSecureCookies(),
+    })
+    const claimed = token?.accessLevel
+    if (!token?.sub || !claimed || !needsSubscribeRedirect(pathname, claimed)) {
+      return false
+    }
+    return needsSubscribeRedirect(pathname, await getAccessLevel(token.sub))
+  } catch (error) {
+    logger.error("Access level check failed", error)
+    return false
+  }
+}
+
+/**
+ * The request headers a page receives: the client's, with the proxy's
+ * {@link PATHNAME_HEADER} and, on a share page, its busy verdict in place of
+ * any value the client sent for either.
+ */
+function pageRequestHeaders(
+  headers: Headers,
+  pathname: string,
+  share: Awaited<ReturnType<typeof checkSharePath>>
+): Headers {
   const next = new Headers(headers)
+  next.set(PATHNAME_HEADER, pathname)
   next.delete(SHARE_BUSY_HEADER)
-  if (busy) {
+  if (share === "busy") {
     next.set(SHARE_BUSY_HEADER, "1")
   }
   return next
@@ -142,12 +193,18 @@ export async function proxy(request: NextRequest) {
       ...(query && { query }),
     })
 
+    const { pathname } = request.nextUrl
+    if (await needsMemberRedirect(request)) {
+      // RSC navigations and prefetches get the same redirect; the router follows it
+      const redirect = NextResponse.redirect(new URL("/subscribe", request.url))
+      redirect.headers.set("X-Request-ID", requestId)
+      return redirect
+    }
+
     // Create response: the same page, with a 404 status for an invalid Rewind
     // year or a share token that shares nothing
-    const { pathname } = request.nextUrl
     const share = await checkSharePath(pathname, request.headers)
-    const init =
-      share === null ? {} : { request: { headers: shareRequestHeaders(request.headers, share === "busy") } }
+    const init = { request: { headers: pageRequestHeaders(request.headers, pathname, share) } }
     const notFound = isInvalidWrappedYearPath(pathname) || share === "missing"
     const response = notFound
       ? NextResponse.rewrite(request.nextUrl, { ...init, status: 404 })
@@ -166,7 +223,9 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match every request path, API routes included, except:
+     * Match every request path, API routes included, except the following.
+     * Every `(app)` page must stay matched for the lapsed-member redirect;
+     * `__tests__/proxy.test.ts` checks each route folder.
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)

@@ -5,9 +5,13 @@
  * check and before creating an auth URL/state, enforce a per-user rate limit so a
  * user can't spam link attempts (each of which writes an OAuthState row). On the
  * N+1th attempt it returns a friendly redirect instead of building the URL.
+ *
+ * P4.5 (SEC-28): linking grants the Discord role, so it needs `full`
+ * entitlement; anyone else is redirected to /subscribe before any of that.
  */
 
 import { GET } from "@/app/(app)/discord/connect/route"
+import { hasEntitlement } from "@/lib/actions/entitlement"
 import { getServerSession } from "next-auth"
 import { createDiscordAuthorizationUrl } from "@/lib/discord/integration"
 import { consume } from "@/lib/security/rate-limit"
@@ -19,6 +23,10 @@ jest.mock("@/lib/discord/integration", () => ({
 }))
 jest.mock("@/lib/security/rate-limit", () => ({
   consume: jest.fn(),
+}))
+jest.mock("@/lib/actions/entitlement", () => ({
+  ...jest.requireActual("@/lib/actions/entitlement"),
+  hasEntitlement: jest.fn(),
 }))
 
 const mockGetServerSession = getServerSession as jest.MockedFunction<typeof getServerSession>
@@ -36,6 +44,19 @@ describe("discord connect route rate limiting", () => {
     jest.clearAllMocks()
     mockGetServerSession.mockResolvedValue({ user: { id: "user-1" } } as never)
     mockCreateUrl.mockResolvedValue({ url: "https://discord.com/oauth2/authorize?x=1", state: "s" })
+    jest.mocked(hasEntitlement).mockResolvedValue(true)
+  })
+
+  it("redirects a member without full entitlement to /subscribe (no rate-limit / URL work)", async () => {
+    jest.mocked(hasEntitlement).mockResolvedValue(false)
+
+    const res = await GET(makeRequest())
+
+    expect(hasEntitlement).toHaveBeenCalledWith("user-1", "full")
+    expect(res.status).toBe(307)
+    expect(res.headers.get("location")).toBe("http://localhost:3000/subscribe")
+    expect(mockConsume).not.toHaveBeenCalled()
+    expect(mockCreateUrl).not.toHaveBeenCalled()
   })
 
   it("redirects to home when unauthenticated (no rate-limit / URL work)", async () => {
