@@ -2,6 +2,7 @@
 
 import { requireAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/prisma"
+import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("ADMIN")
@@ -68,7 +69,6 @@ export async function updateUserAdminStatus(userId: string, isAdmin: boolean) {
     })
 
     // Log audit event
-    const { logAuditEvent, AuditEventType } = await import("@/lib/security/audit-log")
     logAuditEvent(
       isAdmin ? AuditEventType.ADMIN_PRIVILEGE_GRANTED : AuditEventType.ADMIN_PRIVILEGE_REVOKED,
       session.user.id,

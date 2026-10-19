@@ -5,6 +5,7 @@ import { authenticateJellyfin } from "@/lib/jellyfin-auth"
 import { prisma } from "@/lib/prisma"
 import { isUniqueEmailConflict } from "@/lib/prisma-errors"
 import { consume, reward } from "@/lib/security/rate-limit"
+import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { isE2ETestMode } from "@/lib/security/test-mode"
 import { createLogger } from "@/lib/utils/logger"
 import { NextAuthOptions } from "next-auth"
@@ -263,7 +264,6 @@ export const authOptions: NextAuthOptions = {
 
             // Audit log: New user created
             if (isAdmin) {
-              const { logAuditEvent, AuditEventType } = await import("@/lib/security/audit-log")
               logAuditEvent(AuditEventType.USER_CREATED, dbUser.id, {
                 isAdmin: true,
                 plexUserId: plexUser.id,
@@ -290,7 +290,6 @@ export const authOptions: NextAuthOptions = {
 
             // Audit log: Admin privilege change
             if (adminStatusChanged) {
-              const { logAuditEvent, AuditEventType } = await import("@/lib/security/audit-log")
               logAuditEvent(
                 isAdmin ? AuditEventType.ADMIN_PRIVILEGE_GRANTED : AuditEventType.ADMIN_PRIVILEGE_REVOKED,
                 dbUser.id,
@@ -393,7 +392,6 @@ export const authOptions: NextAuthOptions = {
 
             // Audit log: New user created
             if (isAdmin) {
-              const { logAuditEvent, AuditEventType } = await import("@/lib/security/audit-log")
               logAuditEvent(AuditEventType.USER_CREATED, dbUser.id, {
                 isAdmin: true,
                 jellyfinUserId: jellyfinUser.id,
@@ -415,7 +413,6 @@ export const authOptions: NextAuthOptions = {
 
             // Audit log: Admin privilege change
             if (adminStatusChanged) {
-              const { logAuditEvent, AuditEventType } = await import("@/lib/security/audit-log")
               logAuditEvent(
                 isAdmin ? AuditEventType.ADMIN_PRIVILEGE_GRANTED : AuditEventType.ADMIN_PRIVILEGE_REVOKED,
                 dbUser.id,

@@ -6,6 +6,25 @@
     "scripts/*.ts!",
     "scripts/*.mjs!"
   ],
-  "ignore": ["lib/generated/**", ".agents/**", ".claude/worktrees/**"],
-  "ignoreDependencies": ["zlib-sync"]
+  "project": [
+    "**/*.{js,mjs,cjs,ts,tsx}!",
+    "!**/__tests__/**!",
+    "!**/*.test.{ts,tsx}!",
+    "!e2e/**!",
+    "!test/**!",
+    "!jest.setup.js!",
+    "!prisma/seed.ts!"
+  ],
+  "ignore": [
+    "lib/generated/**",
+    ".agents/**",
+    ".claude/worktrees/**"
+  ],
+  "ignoreDependencies": [
+    "zlib-sync",
+    "@prisma/client"
+  ],
+  "ignoreBinaries": [
+    "tsx"
+  ]
 }

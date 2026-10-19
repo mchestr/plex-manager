@@ -25,6 +25,10 @@ export type OverseerrParsed = z.output<typeof overseerrSchema>
  * `MediaRequest.status`: the state of one request. The schema accepts any
  * integer, so a status a later release adds does not fail the whole page; it
  * counts as neither pending nor approved.
+ *
+ * Every member mirrors Overseerr's constant, including the ones no code reads.
+ *
+ * @public
  */
 export enum MediaRequestStatus {
   PENDING = 1,
@@ -38,6 +42,10 @@ export enum MediaRequestStatus {
  * `Media.status`: whether the requested title is on the server. Overseerr
  * also sends 6 (deleted); Seerr sends 6 (blocklisted) and 7 (deleted). Any
  * value other than the ones below counts as not available.
+ *
+ * Every member mirrors Overseerr's constant, including the ones no code reads.
+ *
+ * @public
  */
 export enum MediaStatus {
   UNKNOWN = 1,

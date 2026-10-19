@@ -60,35 +60,17 @@ describe("Audit Logging", () => {
       )
     })
 
-    it("should log admin privilege changed event", () => {
-      logAuditEvent(AuditEventType.ADMIN_PRIVILEGE_CHANGED, "admin-id", {
-        targetUserId: "user-id",
-        from: false,
-        to: true,
-      })
-
-      expect(mockLogger.info).toHaveBeenCalledWith(
-        "Audit event: ADMIN_PRIVILEGE_CHANGED",
-        expect.objectContaining({
-          type: AuditEventType.ADMIN_PRIVILEGE_CHANGED,
-          userId: "admin-id",
-          targetUserId: "user-id",
-          details: { from: false, to: true },
-        })
-      )
-    })
-
-    it("should log config changed event", () => {
-      logAuditEvent(AuditEventType.CONFIG_CHANGED, "admin-id", {
+    it("should log a config changed event", () => {
+      logAuditEvent(AuditEventType.DISCORD_INTEGRATION_CONFIG_CHANGED, "admin-id", {
         setting: "llmDisabled",
         oldValue: false,
         newValue: true,
       })
 
       expect(mockLogger.info).toHaveBeenCalledWith(
-        "Audit event: CONFIG_CHANGED",
+        "Audit event: DISCORD_INTEGRATION_CONFIG_CHANGED",
         expect.objectContaining({
-          type: AuditEventType.CONFIG_CHANGED,
+          type: AuditEventType.DISCORD_INTEGRATION_CONFIG_CHANGED,
           userId: "admin-id",
           details: {
             setting: "llmDisabled",
@@ -116,16 +98,16 @@ describe("Audit Logging", () => {
       )
     })
 
-    it("should log user updated event", () => {
-      logAuditEvent(AuditEventType.USER_UPDATED, "admin-id", {
+    it("should log an updated event", () => {
+      logAuditEvent(AuditEventType.ANNOUNCEMENT_UPDATED, "admin-id", {
         targetUserId: "user-id",
         changes: ["name", "email"],
       })
 
       expect(mockLogger.info).toHaveBeenCalledWith(
-        "Audit event: USER_UPDATED",
+        "Audit event: ANNOUNCEMENT_UPDATED",
         expect.objectContaining({
-          type: AuditEventType.USER_UPDATED,
+          type: AuditEventType.ANNOUNCEMENT_UPDATED,
           userId: "admin-id",
           targetUserId: "user-id",
           details: { changes: ["name", "email"] },
@@ -134,12 +116,12 @@ describe("Audit Logging", () => {
     })
 
     it("should handle events without details", () => {
-      logAuditEvent(AuditEventType.CONFIG_CHANGED, "admin-id")
+      logAuditEvent(AuditEventType.DISCORD_INTEGRATION_CONFIG_CHANGED, "admin-id")
 
       expect(mockLogger.info).toHaveBeenCalledWith(
-        "Audit event: CONFIG_CHANGED",
+        "Audit event: DISCORD_INTEGRATION_CONFIG_CHANGED",
         expect.objectContaining({
-          type: AuditEventType.CONFIG_CHANGED,
+          type: AuditEventType.DISCORD_INTEGRATION_CONFIG_CHANGED,
           userId: "admin-id",
           targetUserId: undefined,
           details: undefined,
@@ -148,14 +130,14 @@ describe("Audit Logging", () => {
     })
 
     it("should handle events without targetUserId", () => {
-      logAuditEvent(AuditEventType.CONFIG_CHANGED, "admin-id", {
+      logAuditEvent(AuditEventType.DISCORD_INTEGRATION_CONFIG_CHANGED, "admin-id", {
         setting: "llmDisabled",
       })
 
       expect(mockLogger.info).toHaveBeenCalledWith(
-        "Audit event: CONFIG_CHANGED",
+        "Audit event: DISCORD_INTEGRATION_CONFIG_CHANGED",
         expect.objectContaining({
-          type: AuditEventType.CONFIG_CHANGED,
+          type: AuditEventType.DISCORD_INTEGRATION_CONFIG_CHANGED,
           userId: "admin-id",
           targetUserId: undefined,
           details: { setting: "llmDisabled" },
@@ -164,14 +146,14 @@ describe("Audit Logging", () => {
     })
 
     it("should exclude targetUserId from details object", () => {
-      logAuditEvent(AuditEventType.USER_UPDATED, "admin-id", {
+      logAuditEvent(AuditEventType.ANNOUNCEMENT_UPDATED, "admin-id", {
         targetUserId: "user-id",
         field: "email",
         value: "newemail@example.com",
       })
 
       expect(mockLogger.info).toHaveBeenCalledWith(
-        "Audit event: USER_UPDATED",
+        "Audit event: ANNOUNCEMENT_UPDATED",
         expect.objectContaining({
           targetUserId: "user-id",
           details: {
@@ -195,12 +177,12 @@ describe("Audit Logging", () => {
         },
       }
 
-      logAuditEvent(AuditEventType.USER_UPDATED, "admin-id", complexDetails)
+      logAuditEvent(AuditEventType.ANNOUNCEMENT_UPDATED, "admin-id", complexDetails)
 
       expect(mockLogger.info).toHaveBeenCalledWith(
-        "Audit event: USER_UPDATED",
+        "Audit event: ANNOUNCEMENT_UPDATED",
         expect.objectContaining({
-          type: AuditEventType.USER_UPDATED,
+          type: AuditEventType.ANNOUNCEMENT_UPDATED,
           userId: "admin-id",
           targetUserId: "user-id",
           details: {
@@ -212,7 +194,7 @@ describe("Audit Logging", () => {
     })
 
     it("should include all custom fields in details", () => {
-      logAuditEvent(AuditEventType.CONFIG_CHANGED, "admin-id", {
+      logAuditEvent(AuditEventType.DISCORD_INTEGRATION_CONFIG_CHANGED, "admin-id", {
         setting: "llmDisabled",
         oldValue: false,
         newValue: true,
@@ -221,7 +203,7 @@ describe("Audit Logging", () => {
       })
 
       expect(mockLogger.info).toHaveBeenCalledWith(
-        "Audit event: CONFIG_CHANGED",
+        "Audit event: DISCORD_INTEGRATION_CONFIG_CHANGED",
         expect.objectContaining({
           details: {
             setting: "llmDisabled",
@@ -243,12 +225,10 @@ describe("Audit Logging", () => {
       expect(AuditEventType.ADMIN_PRIVILEGE_REVOKED).toBe(
         "ADMIN_PRIVILEGE_REVOKED"
       )
-      expect(AuditEventType.ADMIN_PRIVILEGE_CHANGED).toBe(
-        "ADMIN_PRIVILEGE_CHANGED"
-      )
-      expect(AuditEventType.CONFIG_CHANGED).toBe("CONFIG_CHANGED")
       expect(AuditEventType.USER_CREATED).toBe("USER_CREATED")
-      expect(AuditEventType.USER_UPDATED).toBe("USER_UPDATED")
+      expect(AuditEventType.DISCORD_INTEGRATION_CONFIG_CHANGED).toBe(
+        "DISCORD_INTEGRATION_CONFIG_CHANGED"
+      )
     })
   })
 })
