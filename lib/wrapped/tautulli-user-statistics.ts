@@ -39,14 +39,15 @@ const logger = createLogger("STATISTICS")
  * with a candidate count only.
  *
  * `matchedUser` is the member's row when the caller has just found it with
- * that lookup (`generatePlexWrapped`'s eligibility check), so `get_users` is
+ * that lookup, so `get_users` is
  * not fetched a second time for the same run.
  */
 export async function fetchTautulliStatistics(
   config: TautulliConfig,
   identity: TautulliUserIdentity,
   year: number,
-  matchedUser: TautulliUserRow | null = null
+  matchedUser: TautulliUserRow | null = null,
+  signal?: AbortSignal
 ): Promise<{
   success: boolean
   data?: TautulliStatisticsData
@@ -102,7 +103,7 @@ export async function fetchTautulliStatistics(
         "get_history",
         { user_id: userId, start, length },
         tautulliHistoryPageSchema,
-        { timeoutMs: 20_000 }
+        { timeoutMs: 20_000, signal }
       )
 
       if (!result.ok) {

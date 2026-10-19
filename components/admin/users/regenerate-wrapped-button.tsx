@@ -1,8 +1,8 @@
 "use client"
 
-import { generatePlexWrapped } from "@/actions/users"
+import { adminRegenerateRewind } from "@/actions/rewind-generation"
 import { useToast } from "@/components/ui/toast"
-import { adminErrorHint, isGenerationRefusal } from "@/lib/wrapped/generation-errors"
+import { adminErrorHint } from "@/lib/wrapped/generation-errors"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { ConfirmModal } from "@/components/admin/shared/confirm-modal"
@@ -38,8 +38,10 @@ export function RegenerateWrappedButton({
     setShowSuccess(false)
 
     try {
-      const result = await generatePlexWrapped(userId, year)
-      if (result.success) {
+      const result = await adminRegenerateRewind({ userId, year })
+      if (result.success && result.alreadyQueued) {
+        toast.showError(ALREADY_GENERATING_COPY)
+      } else if (result.success) {
         onSuccess?.()
         // Force refresh to show updated status
         router.refresh()
@@ -51,11 +53,9 @@ export function RegenerateWrappedButton({
         setTimeout(() => {
           setShowSuccess(false)
         }, 3000)
-      } else if (result.code === "ALREADY_GENERATING") {
-        toast.showError(ALREADY_GENERATING_COPY)
-      } else if (result.code === "REWIND_NOT_ELIGIBLE" || (result.code && !isGenerationRefusal(result.code))) {
-        // A typed failure or an ineligible member: show the admin hint (or the code), not the member copy.
-        toast.showError(adminErrorHint(result.code, plexUserId) ?? result.code)
+      } else if (result.code === "REWIND_NOT_ELIGIBLE") {
+        // An ineligible member: show the admin hint, not the member copy.
+        toast.showError(adminErrorHint(result.code, plexUserId) ?? result.error)
       } else {
         toast.showError(result.error || "Failed to regenerate wrapped")
       }
@@ -138,7 +138,7 @@ export function RegenerateWrappedButton({
           onClose={() => setShowConfirmModal(false)}
           onConfirm={handleRegenerate}
           title="Regenerate Wrapped"
-          message={`Are you sure you want to regenerate the ${year} wrapped for this user? This will overwrite the existing wrapped.`}
+          message={`Are you sure you want to regenerate the ${year} wrapped for this user? The current one stays live until the new one is ready.`}
           confirmText="Regenerate"
           cancelText="Cancel"
         />
@@ -230,7 +230,7 @@ export function RegenerateWrappedButton({
         onClose={() => setShowConfirmModal(false)}
         onConfirm={handleRegenerate}
         title="Regenerate Wrapped"
-        message={`Are you sure you want to regenerate the ${year} wrapped for this user? This will overwrite the existing wrapped.`}
+        message={`Are you sure you want to regenerate the ${year} wrapped for this user? The current one stays live until the new one is ready.`}
         confirmText="Regenerate"
         cancelText="Cancel"
       />

@@ -27,6 +27,12 @@ jest.mock("@/lib/queue/connection", () => ({ getRedisConnection: jest.fn(() => (
 jest.mock("@/lib/queue/client", () => ({ QUEUE_NAME: "plex-wrapped" }))
 jest.mock("@/lib/queue/jobs", () => ({ getJobProcessor: jest.fn(), getRegisteredJobTypes: jest.fn(() => []) }))
 jest.mock("@/lib/instrumentation/shutdown", () => ({ onShutdown: jest.fn() }))
+jest.mock("@/lib/queue/jobs/rewind", () => ({ processRewindGenerateUser: jest.fn(async () => "generated") }))
+jest.mock("@/lib/queue/jobs/rewind-stale-sweep", () => ({ processRewindStaleSweep: jest.fn(async () => "swept") }))
+const mockUpsertJobScheduler = jest.fn(async () => ({}))
+jest.mock("@/lib/queue/rewind-producers", () => ({
+  getRewindQueue: jest.fn(() => ({ upsertJobScheduler: mockUpsertJobScheduler })),
+}))
 
 describe("Rewind queues", () => {
   afterEach(async () => {
@@ -71,6 +77,26 @@ describe("Rewind queues", () => {
     const rewind = mockWorkers.filter((w) => w.name.startsWith("rewind-"))
     await drain()
     rewind.forEach((w) => expect(w.close).toHaveBeenCalledTimes(1))
+  })
+
+  it("routes generation to rewind-gen and the stale sweep to rewind-aux", async () => {
+    await startWorker()
+    const gen = mockWorkers.find((w) => w.name === "rewind-gen")!
+    const aux = mockWorkers.find((w) => w.name === "rewind-aux")!
+
+    await expect(gen.processor({ name: "rewind:generate:user" } as Job)).resolves.toBe("generated")
+    await expect(aux.processor({ name: "rewind:stale:sweep" } as Job)).resolves.toBe("swept")
+    await expect(gen.processor({ name: "rewind:stale:sweep" } as Job)).rejects.toThrow("Unknown job type")
+  })
+
+  it("schedules the stale sweep every 10 minutes", async () => {
+    await startWorker()
+
+    expect(mockUpsertJobScheduler).toHaveBeenCalledWith(
+      "rewind-stale-sweep",
+      { every: 600_000 },
+      { name: "rewind:stale:sweep", data: {}, opts: { attempts: 1 } }
+    )
   })
 
   it("fails a job with no registered processor", async () => {

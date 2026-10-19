@@ -29,6 +29,8 @@ export async function generateWrappedWithLLM(args: {
   year: number
   userId: string
   wrappedId: string
+  /** The `RewindGeneration` this call belongs to; its usage rows carry it. */
+  generationId?: string
   statistics: WrappedStatistics
   signal?: AbortSignal
 }): Promise<{
@@ -43,7 +45,7 @@ export async function generateWrappedWithLLM(args: {
     cost: number
   }
 }> {
-  const { promptName, displayName, year, userId, wrappedId, statistics, signal } = args
+  const { promptName, displayName, year, userId, wrappedId, generationId, statistics, signal } = args
 
   try {
     // Check if LLM is disabled in config
@@ -57,7 +59,7 @@ export async function generateWrappedWithLLM(args: {
 
       // Still record the run (no cost), including regenerations
       await recordUsage({
-        attribution: { userId, wrappedId },
+        attribution: { userId, wrappedId, generationId },
         provider: "mock",
         modelId: "mock",
         usage: { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, reasoningTokens: 0 },
@@ -90,7 +92,7 @@ export async function generateWrappedWithLLM(args: {
       effort: "low",
       cacheKey: "rewind-v2",
       signal: signal ?? AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-      attribution: { userId, wrappedId },
+      attribution: { userId, wrappedId, generationId },
       recordText: true,
     })
 

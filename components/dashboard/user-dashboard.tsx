@@ -99,7 +99,7 @@ export function UserDashboard({
           )}
 
             {/* Wrapped - Hero callout at the top */}
-            <WrappedCard userId={userId} memberLongEnough={memberLongEnough} rewindEligibility={rewindEligibility} />
+            <WrappedCard userId={userId} memberLongEnough={memberLongEnough} rewindEligibility={rewindEligibility} isAdmin={isAdmin} />
 
             {/* Quick Links - visually separated section */}
             <div className="space-y-3 sm:space-y-4 pt-2">

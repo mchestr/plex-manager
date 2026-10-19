@@ -133,7 +133,7 @@ export default async function UserWrappedPage({
             }
           })()
         ) : status === "generating" ? (
-          <WrappedPageClient userId={userId} year={year} initialStatus="generating" />
+          <WrappedPageClient userId={userId} year={year} />
         ) : status === "failed" ? (
           <div className="bg-slate-800/50 backdrop-blur-sm border border-red-500/50 rounded-lg p-12 text-center max-w-2xl mx-auto mt-8">
             <div className="max-w-md mx-auto">

@@ -31,7 +31,8 @@ async function fetchItemLeaderboard(
   config: TautulliConfig,
   ratingKey: string,
   mediaType: "movie" | "show",
-  year: number
+  year: number,
+  signal?: AbortSignal
 ): Promise<{
   success: boolean
   data?: LeaderboardEntry[]
@@ -47,7 +48,8 @@ async function fetchItemLeaderboard(
       config,
       "get_item_user_stats",
       { rating_key: ratingKey, time_range: `${startDate},${endDate}` },
-      z.array(tautulliItemUserStatSchema).nullish()
+      z.array(tautulliItemUserStatSchema).nullish(),
+      { signal }
     )
 
     if (!result.ok) {
@@ -93,7 +95,8 @@ async function fetchItemLeaderboard(
  */
 export async function fetchWatchTimeLeaderboard(
   config: TautulliConfig,
-  year: number
+  year: number,
+  signal?: AbortSignal
 ): Promise<{
   success: boolean
   data?: WatchTimeLeaderboardEntry[]
@@ -111,7 +114,8 @@ export async function fetchWatchTimeLeaderboard(
       config,
       "get_home_stats",
       { time_range: daysSinceYearStart, type: "duration", stats_count: 1000 },
-      z.array(tautulliHomeStatSchema).nullish()
+      z.array(tautulliHomeStatSchema).nullish(),
+      { signal }
     )
 
     if (!result.ok) {
@@ -210,7 +214,8 @@ export async function fetchTopContentLeaderboards(
   topMovies: Array<{ title: string; ratingKey?: string }>,
   topShows: Array<{ title: string; ratingKey?: string }>,
   userId: string,
-  year: number
+  year: number,
+  signal?: AbortSignal
 ): Promise<{
   success: boolean
   data?: TopContentLeaderboards
@@ -224,7 +229,7 @@ export async function fetchTopContentLeaderboards(
     for (const movie of topMovies.slice(0, 5)) {
       if (!movie.ratingKey) continue
 
-      const result = await fetchItemLeaderboard(config, movie.ratingKey, "movie", year)
+      const result = await fetchItemLeaderboard(config, movie.ratingKey, "movie", year, signal)
       if (result.success && result.data) {
         const userIndex = result.data.findIndex((entry) => entry.userId === userId)
         moviesLeaderboards.push({
@@ -247,7 +252,7 @@ export async function fetchTopContentLeaderboards(
     for (const show of topShows.slice(0, 5)) {
       if (!show.ratingKey) continue
 
-      const result = await fetchItemLeaderboard(config, show.ratingKey, "show", year)
+      const result = await fetchItemLeaderboard(config, show.ratingKey, "show", year, signal)
       if (result.success && result.data) {
         const userIndex = result.data.findIndex((entry) => entry.userId === userId)
         showsLeaderboards.push({

@@ -2441,13 +2441,15 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 
 **Integration.** `startWorker()` starts the sweep scheduler. P5.9 swaps the processor body for `generateUserRewind`, with SEC-43's repair and fallback. P6.9's `RewindCard` uses the hook, and P7.8 adds the FlowProducer fan-out.
 
+(As merged: `processRewindGenerateUser` is in `lib/queue/jobs/rewind.ts` and calls `generateRewindV2` (`lib/wrapped/pipeline/generate-v2.ts`, statistics in `collect-v2-statistics.ts`), which P5.9 replaces; the sweep is `processRewindStaleSweep` in `lib/queue/jobs/rewind-stale-sweep.ts`. Every enqueue goes through `enqueueRewindGeneration({ userId, year, kind })` in `lib/rewind/enqueue-generation.ts` (its `RewindGeneration` row's id is also the BullMQ `jobId`; a deduplicated request's row is `skipped` with `{ code: 'ALREADY_QUEUED' }`), on the producer queues of `getRewindQueue(name)` in `lib/queue/rewind-producers.ts`, which run on the fail-fast request-path client. A `PlexWrapped` row that has not completed mirrors its run (`generating`, then `failed` with the stored code), so the v2 pages need no second status source; a completed row is never touched until the final transaction. `getRewindStatus({ year, userId? })` takes an optional `userId` for admins and returns `RewindStatus` from `lib/rewind/rewind-status.ts`, with states `none`, `queued`, `running`, `completed`, `failed` and `unavailable` (FR-50); the hook's query key is `['rewind-status', year, userId ?? null]` and it exposes `track()` to restart polling after a request. P2.5's lock is now re-entrant for its owner (the job id), so a stalled job run again takes back its own lock. Stored codes added: `TIMEOUT`, `UPSTREAM_ERROR`, `LLM_FAILED`, `NOT_CONFIGURED`, `WORKER_LOST`, `JOB_LOST`; a `WORKER_LOST` row that was re-enqueued carries `requeuedAs`, which is how the sweep re-enqueues only once. The sweep also fails `PlexWrapped` rows left `generating` by the old in-request generation. The card refreshes on completion instead of navigating to the viewer.)
+
 **Demo.** Two tabs press Generate together: one run starts, and the other tab shows "already being made". A container restart mid-run is marked `WORKER_LOST` and re-run within 25 minutes. With Redis stopped, Generate shows the FR-50 message in under 2 s. During an admin regenerate, the old Rewind and its share link stay live until the new one lands.
 
 **Done when.**
-- [ ] Generation is a `REWIND_GENERATE_USER` job with deduplication, P2.5's per-member lock and an enforced time limit.
-- [ ] A `RewindGeneration` row records every attempt, and the final write is atomic and keeps `previousData`.
-- [ ] `REWIND_STALE_SWEEP` recovers each lost run once.
-- [ ] One status hook replaces the polling loops, and no poll carries `data`.
+- [x] Generation is a `REWIND_GENERATE_USER` job with deduplication, P2.5's per-member lock and an enforced time limit.
+- [x] A `RewindGeneration` row records every attempt, and the final write is atomic and keeps `previousData`.
+- [x] `REWIND_STALE_SWEEP` recovers each lost run once.
+- [x] One status hook replaces the polling loops, and no poll carries `data`.
 
 ### Step P2.6: Server-wide history pass and metadata cache
 

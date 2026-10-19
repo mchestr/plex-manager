@@ -1,4 +1,4 @@
-import * as usersAction from '@/actions/users'
+import * as rewindActions from '@/actions/rewind-generation'
 import { RegenerateWrappedButton } from '@/components/admin/users/regenerate-wrapped-button'
 import { ToastProvider } from '@/components/ui/toast'
 import { act, render, screen, waitFor } from '@testing-library/react'
@@ -6,9 +6,8 @@ import userEvent from '@testing-library/user-event'
 import { useRouter } from 'next/navigation'
 import React from 'react'
 
-// Mock the users action
-jest.mock('@/actions/users', () => ({
-  generatePlexWrapped: jest.fn(),
+jest.mock('@/actions/rewind-generation', () => ({
+  adminRegenerateRewind: jest.fn(),
 }))
 
 // Mock next/navigation
@@ -70,7 +69,7 @@ describe('RegenerateWrappedButton', () => {
       expect(screen.getByText('Regenerate Wrapped')).toBeInTheDocument()
       expect(
         screen.getByText(
-          'Are you sure you want to regenerate the 2024 wrapped for this user? This will overwrite the existing wrapped.'
+          'Are you sure you want to regenerate the 2024 wrapped for this user? The current one stays live until the new one is ready.'
         )
       ).toBeInTheDocument()
     })
@@ -91,8 +90,9 @@ describe('RegenerateWrappedButton', () => {
 
     it('should regenerate wrapped when confirmed', async () => {
       const user = userEvent.setup({ delay: null })
-      jest.spyOn(usersAction, 'generatePlexWrapped').mockResolvedValue({
+      jest.spyOn(rewindActions, 'adminRegenerateRewind').mockResolvedValue({
         success: true,
+        alreadyQueued: false,
       })
 
       renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2024} />)
@@ -103,7 +103,7 @@ describe('RegenerateWrappedButton', () => {
       await user.click(confirmButton)
 
       await waitFor(() => {
-        expect(usersAction.generatePlexWrapped).toHaveBeenCalledWith('user-1', 2024)
+        expect(rewindActions.adminRegenerateRewind).toHaveBeenCalledWith({ userId: 'user-1', year: 2024 })
       })
     })
 
@@ -113,7 +113,7 @@ describe('RegenerateWrappedButton', () => {
       const generatePromise = new Promise((resolve) => {
         resolveGenerate = resolve
       })
-      jest.spyOn(usersAction, 'generatePlexWrapped').mockReturnValue(generatePromise as any)
+      jest.spyOn(rewindActions, 'adminRegenerateRewind').mockReturnValue(generatePromise as any)
 
       renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} />)
       const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
@@ -129,13 +129,14 @@ describe('RegenerateWrappedButton', () => {
         expect(svg).toBeInTheDocument()
       })
 
-      resolveGenerate!({ success: true })
+      resolveGenerate!({ success: true, alreadyQueued: false })
     })
 
     it('should show success state after successful regeneration', async () => {
       const user = userEvent.setup({ delay: null })
-      jest.spyOn(usersAction, 'generatePlexWrapped').mockResolvedValue({
+      jest.spyOn(rewindActions, 'adminRegenerateRewind').mockResolvedValue({
         success: true,
+        alreadyQueued: false,
       })
 
       renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} />)
@@ -156,8 +157,9 @@ describe('RegenerateWrappedButton', () => {
 
     it('should hide success message after 3 seconds', async () => {
       const user = userEvent.setup({ delay: null })
-      jest.spyOn(usersAction, 'generatePlexWrapped').mockResolvedValue({
+      jest.spyOn(rewindActions, 'adminRegenerateRewind').mockResolvedValue({
         success: true,
+        alreadyQueued: false,
       })
 
       renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} />)
@@ -187,8 +189,9 @@ describe('RegenerateWrappedButton', () => {
 
     it('should call onSuccess callback after successful regeneration', async () => {
       const user = userEvent.setup({ delay: null })
-      jest.spyOn(usersAction, 'generatePlexWrapped').mockResolvedValue({
+      jest.spyOn(rewindActions, 'adminRegenerateRewind').mockResolvedValue({
         success: true,
+        alreadyQueued: false,
       })
 
       renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} onSuccess={mockOnSuccess} />)
@@ -205,8 +208,9 @@ describe('RegenerateWrappedButton', () => {
 
     it('should refresh router after successful regeneration', async () => {
       const user = userEvent.setup({ delay: null })
-      jest.spyOn(usersAction, 'generatePlexWrapped').mockResolvedValue({
+      jest.spyOn(rewindActions, 'adminRegenerateRewind').mockResolvedValue({
         success: true,
+        alreadyQueued: false,
       })
 
       renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} />)
@@ -223,7 +227,7 @@ describe('RegenerateWrappedButton', () => {
 
     it('should show error message when regeneration fails', async () => {
       const user = userEvent.setup({ delay: null })
-      jest.spyOn(usersAction, 'generatePlexWrapped').mockResolvedValue({
+      jest.spyOn(rewindActions, 'adminRegenerateRewind').mockResolvedValue({
         success: false,
         error: 'Failed to generate wrapped',
       })
@@ -242,8 +246,9 @@ describe('RegenerateWrappedButton', () => {
 
     it('should show generic error message when no specific error provided', async () => {
       const user = userEvent.setup({ delay: null })
-      jest.spyOn(usersAction, 'generatePlexWrapped').mockResolvedValue({
+      jest.spyOn(rewindActions, 'adminRegenerateRewind').mockResolvedValue({
         success: false,
+        error: '',
       })
 
       renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} />)
@@ -258,32 +263,12 @@ describe('RegenerateWrappedButton', () => {
       })
     })
 
-    it('shows the admin hint, not the member copy, for a typed failure (P0.9)', async () => {
-      const user = userEvent.setup({ delay: null })
-      jest.spyOn(usersAction, 'generatePlexWrapped').mockResolvedValue({
-        success: false,
-        code: 'TAUTULLI_USER_NOT_FOUND',
-        error: "We couldn't find your account in Tautulli yet. Ask the server admin to refresh Tautulli's user list.",
-      })
-
-      renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} />)
-      await user.click(screen.getByRole('button', { name: /Regenerate wrapped/i }))
-      await user.click(screen.getByText('Regenerate'))
-
-      await waitFor(() => {
-        expect(
-          screen.getByText("Plex user plex-1 is not in Tautulli's user list. Refresh users in Tautulli.")
-        ).toBeInTheDocument()
-      })
-      expect(screen.queryByText(/We couldn't find your account/)).not.toBeInTheDocument()
-    })
-
     it.each([
       ['plex-1', "Plex user plex-1 is not in Tautulli's user list. Refresh users in Tautulli, then try again in 10 minutes."],
       [null, 'This member has no linked Plex account, so there is no watch history for a Rewind.'],
     ])('explains an ineligible member (Plex user %s) in admin terms (P0.17)', async (plexUserId, hint) => {
       const user = userEvent.setup({ delay: null })
-      jest.spyOn(usersAction, 'generatePlexWrapped').mockResolvedValue({
+      jest.spyOn(rewindActions, 'adminRegenerateRewind').mockResolvedValue({
         success: false,
         code: 'REWIND_NOT_ELIGIBLE',
         error: 'Rewind needs Plex watch history. Jellyfin support is planned.',
@@ -301,11 +286,7 @@ describe('RegenerateWrappedButton', () => {
 
     it('says a run is already in progress, in admin terms (P0.12)', async () => {
       const user = userEvent.setup({ delay: null })
-      jest.spyOn(usersAction, 'generatePlexWrapped').mockResolvedValue({
-        success: false,
-        code: 'ALREADY_GENERATING',
-        error: 'Your Rewind is already being made.',
-      })
+      jest.spyOn(rewindActions, 'adminRegenerateRewind').mockResolvedValue({ success: true, alreadyQueued: true })
 
       renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} />)
       await user.click(screen.getByRole('button', { name: /Regenerate wrapped/i }))
@@ -316,8 +297,7 @@ describe('RegenerateWrappedButton', () => {
           screen.getByText("This member's Rewind is already being made. Try again when it finishes.")
         ).toBeInTheDocument()
       })
-      expect(screen.queryByText('Your Rewind is already being made.')).not.toBeInTheDocument()
-      expect(screen.queryByText('ALREADY_GENERATING')).not.toBeInTheDocument()
+      expect(screen.queryByText('Wrapped regeneration started successfully')).not.toBeInTheDocument()
     })
 
     it.each([
@@ -325,7 +305,7 @@ describe('RegenerateWrappedButton', () => {
       ['NOT_ENTITLED', 'Rewind is part of an active membership. Renew your subscription to make yours.'],
     ])('shows the copy, not the code, for a %s refusal (P0.12)', async (code, copy) => {
       const user = userEvent.setup({ delay: null })
-      jest.spyOn(usersAction, 'generatePlexWrapped').mockResolvedValue({ success: false, code, error: copy } as never)
+      jest.spyOn(rewindActions, 'adminRegenerateRewind').mockResolvedValue({ success: false, code, error: copy } as never)
 
       renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} />)
       await user.click(screen.getByRole('button', { name: /Regenerate wrapped/i }))
@@ -339,7 +319,7 @@ describe('RegenerateWrappedButton', () => {
 
     it('should handle exception during regeneration', async () => {
       const user = userEvent.setup({ delay: null })
-      jest.spyOn(usersAction, 'generatePlexWrapped').mockRejectedValue(
+      jest.spyOn(rewindActions, 'adminRegenerateRewind').mockRejectedValue(
         new Error('Network error')
       )
 
@@ -357,7 +337,7 @@ describe('RegenerateWrappedButton', () => {
 
     it('should handle non-Error exceptions', async () => {
       const user = userEvent.setup({ delay: null })
-      jest.spyOn(usersAction, 'generatePlexWrapped').mockRejectedValue('String error')
+      jest.spyOn(rewindActions, 'adminRegenerateRewind').mockRejectedValue('String error')
 
       renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} />)
       const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
@@ -374,8 +354,9 @@ describe('RegenerateWrappedButton', () => {
     it('should use current year by default', async () => {
       const user = userEvent.setup({ delay: null })
       const currentYear = new Date().getFullYear()
-      jest.spyOn(usersAction, 'generatePlexWrapped').mockResolvedValue({
+      jest.spyOn(rewindActions, 'adminRegenerateRewind').mockResolvedValue({
         success: true,
+        alreadyQueued: false,
       })
 
       renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} />)
@@ -385,7 +366,7 @@ describe('RegenerateWrappedButton', () => {
 
       expect(
         screen.getByText(
-          `Are you sure you want to regenerate the ${currentYear} wrapped for this user? This will overwrite the existing wrapped.`
+          `Are you sure you want to regenerate the ${currentYear} wrapped for this user? The current one stays live until the new one is ready.`
         )
       ).toBeInTheDocument()
 
@@ -393,7 +374,7 @@ describe('RegenerateWrappedButton', () => {
       await user.click(confirmButton)
 
       await waitFor(() => {
-        expect(usersAction.generatePlexWrapped).toHaveBeenCalledWith('user-1', currentYear)
+        expect(rewindActions.adminRegenerateRewind).toHaveBeenCalledWith({ userId: 'user-1', year: currentYear })
       })
     })
   })
@@ -416,7 +397,7 @@ describe('RegenerateWrappedButton', () => {
       const generatePromise = new Promise((resolve) => {
         resolveGenerate = resolve
       })
-      jest.spyOn(usersAction, 'generatePlexWrapped').mockReturnValue(generatePromise as any)
+      jest.spyOn(rewindActions, 'adminRegenerateRewind').mockReturnValue(generatePromise as any)
 
       renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} inline={true} />)
       const button = screen.getByRole('button', { name: /Regenerate wrapped/i })
@@ -429,7 +410,7 @@ describe('RegenerateWrappedButton', () => {
         expect(screen.getByText('Regenerating...')).toBeInTheDocument()
       })
 
-      resolveGenerate!({ success: true })
+      resolveGenerate!({ success: true, alreadyQueued: false })
     })
 
     // P0.14: the menu passes the season year; there is no calendar default,
@@ -437,7 +418,7 @@ describe('RegenerateWrappedButton', () => {
     it('regenerates the season year it is given, also in January', async () => {
       jest.setSystemTime(new Date('2027-01-02T12:00:00Z'))
       const user = userEvent.setup({ delay: null })
-      jest.spyOn(usersAction, 'generatePlexWrapped').mockResolvedValue({ success: true })
+      jest.spyOn(rewindActions, 'adminRegenerateRewind').mockResolvedValue({ success: true, alreadyQueued: false })
 
       renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} inline={true} />)
       await user.click(screen.getByRole('button', { name: /Regenerate wrapped/i }))
@@ -445,14 +426,15 @@ describe('RegenerateWrappedButton', () => {
       await user.click(screen.getByText('Regenerate'))
 
       await waitFor(() => {
-        expect(usersAction.generatePlexWrapped).toHaveBeenCalledWith('user-1', 2026)
+        expect(rewindActions.adminRegenerateRewind).toHaveBeenCalledWith({ userId: 'user-1', year: 2026 })
       })
     })
 
     it('should show "Started!" text after success in inline mode', async () => {
       const user = userEvent.setup({ delay: null })
-      jest.spyOn(usersAction, 'generatePlexWrapped').mockResolvedValue({
+      jest.spyOn(rewindActions, 'adminRegenerateRewind').mockResolvedValue({
         success: true,
+        alreadyQueued: false,
       })
 
       renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} inline={true} />)
@@ -469,7 +451,7 @@ describe('RegenerateWrappedButton', () => {
 
     it('should show error message in inline mode', async () => {
       const user = userEvent.setup({ delay: null })
-      jest.spyOn(usersAction, 'generatePlexWrapped').mockResolvedValue({
+      jest.spyOn(rewindActions, 'adminRegenerateRewind').mockResolvedValue({
         success: false,
         error: 'Inline error',
       })
@@ -488,8 +470,9 @@ describe('RegenerateWrappedButton', () => {
 
     it('should show different icons for different states in inline mode', async () => {
       const user = userEvent.setup({ delay: null })
-      jest.spyOn(usersAction, 'generatePlexWrapped').mockResolvedValue({
+      jest.spyOn(rewindActions, 'adminRegenerateRewind').mockResolvedValue({
         success: true,
+        alreadyQueued: false,
       })
 
       const { container } = renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} inline={true} />)
@@ -522,7 +505,7 @@ describe('RegenerateWrappedButton', () => {
       expect(screen.getByText('Regenerate Wrapped')).toBeInTheDocument()
       expect(
         screen.getByText(
-          'Are you sure you want to regenerate the 2023 wrapped for this user? This will overwrite the existing wrapped.'
+          'Are you sure you want to regenerate the 2023 wrapped for this user? The current one stays live until the new one is ready.'
         )
       ).toBeInTheDocument()
       expect(screen.getByText('Regenerate')).toBeInTheDocument()

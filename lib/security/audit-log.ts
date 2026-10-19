@@ -59,6 +59,9 @@ export enum AuditEventType {
   // An admin asked for the Rewind season data (server aggregate and metadata
   // warm) to be prepared. Details carry the year, the last data day and the job id.
   REWIND_SEASON_DATA_PREPARED = "REWIND_SEASON_DATA_PREPARED",
+  // An admin asked for a member's Rewind to be regenerated. Details carry the year
+  // and whether a run was already queued.
+  REWIND_REGENERATE_REQUESTED = "REWIND_REGENERATE_REQUESTED",
 }
 
 interface AuditLogEntry {

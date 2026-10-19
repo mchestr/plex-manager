@@ -18,6 +18,8 @@ export const JOB_TYPES = {
   // Rewind batch jobs (P2.6), on the `rewind-batch` queue
   REWIND_SERVER_AGGREGATE: "rewind:server-aggregate",
   REWIND_METADATA_WARM: "rewind:metadata-warm",
+  REWIND_GENERATE_USER: "rewind:generate:user",
+  REWIND_STALE_SWEEP: "rewind:stale:sweep",
 } as const
 
 export type JobType = (typeof JOB_TYPES)[keyof typeof JOB_TYPES]
@@ -150,6 +152,20 @@ export interface RewindMetadataWarmPayload {
 }
 
 // =============================================================================
+// Rewind Generation Job Types (they run on the Rewind queues, lib/queue/rewind-queues.ts)
+// =============================================================================
+
+/**
+ * Payload for one member's Rewind generation. The `RewindGeneration` row the
+ * request created carries everything else (kind, copy policy).
+ */
+export interface RewindGenerateUserPayload {
+  generationId: string
+  userId: string
+  year: number
+}
+
+// =============================================================================
 // Type Mapping
 // =============================================================================
 
@@ -164,6 +180,8 @@ export interface JobPayloadMap {
   [JOB_TYPES.PLEX_ACCESS_REVOKE]: PlexAccessRevokePayload
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: RewindServerAggregatePayload
   [JOB_TYPES.REWIND_METADATA_WARM]: RewindMetadataWarmPayload
+  [JOB_TYPES.REWIND_GENERATE_USER]: RewindGenerateUserPayload
+  [JOB_TYPES.REWIND_STALE_SWEEP]: Record<string, never>
 }
 
 // =============================================================================
