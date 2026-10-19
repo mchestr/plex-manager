@@ -21,7 +21,7 @@
 import type { AccessLevel } from "@/lib/access"
 
 /** The first path segments of the folders outside `(app)`. */
-const NON_APP_SEGMENTS = new Set(["admin", "api", "auth", "invite", "onboarding", "setup", "subscribe"])
+const NON_APP_SEGMENTS = new Set(["admin", "api", "auth", "dev", "invite", "onboarding", "setup", "subscribe"])
 
 /** Pages in `(public)`: anyone may open a share link. */
 const PUBLIC_PATH = /^\/wrapped\/share(\/|$)/
