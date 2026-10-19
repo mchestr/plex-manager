@@ -9,6 +9,8 @@
     "scripts/codemods/*.mjs!",
     "lib/wrapped/stats/*.ts!",
     "lib/utils/format.ts!",
+    "lib/rewind/format.ts!",
+    "lib/rewind/registry.ts!",
     "lib/rewind/typeset/fit-lines.ts!",
     "lib/rewind/typeset/metrics.ts!"
   ],
