@@ -214,7 +214,8 @@ function ellipsize(s: Setter, words: string[], floor: number, label: string): Fi
 
 /** Fits `text` to the measure. See the module documentation. */
 export function fitLines(text: string, opts: FitOptions): FitResult {
-  const label = text.trim().replace(/\s+/g, " ")
+  // Collapse ordinary whitespace only: U+00A0 from lib/rewind/format.ts must keep "10 PM" together.
+  const label = text.replace(/[ \t\n\r]+/g, " ").replace(/^ | $/g, "")
   const m = measurer(opts.metrics)
   if (!m.covers(label)) {
     return { size: opts.sizeMin, lines: [{ text: label, wdth: 100, width: 0 }], ellipsized: false, ariaLabel: label, safeMode: true }

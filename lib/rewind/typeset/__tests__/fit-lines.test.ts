@@ -117,6 +117,13 @@ describe("fitLines: rules", () => {
     for (const line of fit.lines) expect(line.width).toBeLessThanOrEqual(280)
   })
 
+  it("keeps a number and its unit together across a no-break space", () => {
+    const fit = fitLines("Most of it after 10 PM", { ...NO1_TITLE, measure: 200, maxLines: 3 })
+    expect(fit.lines.map((l) => l.text).join(" ")).toBe("Most of it after 10 PM")
+    expect(fit.lines.some((l) => l.text.endsWith("10 PM"))).toBe(true)
+    expect(fit.lines.some((l) => l.text.endsWith(" 10") || l.text === "PM")).toBe(false)
+  })
+
   it("never breaks a word, dropping to the 22 px floor instead", () => {
     const fit = fitLines("Supercalifragilisticexpialidocious", NO1_TITLE)
     expect(fit.lines).toHaveLength(1)
