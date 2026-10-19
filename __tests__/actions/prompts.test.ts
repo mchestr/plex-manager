@@ -5,7 +5,6 @@
 import {
   getPromptTemplates,
   getPromptTemplate,
-  getActivePromptTemplate,
   createPromptTemplate,
   updatePromptTemplate,
   deletePromptTemplate,
@@ -101,38 +100,6 @@ describe('Prompt Template Actions', () => {
 
       expect(result.success).toBe(false)
       expect(result.error).toBe('Template not found')
-    })
-  })
-
-  describe('getActivePromptTemplate', () => {
-    it('should return active template', async () => {
-      const mockTemplate = {
-        id: '1',
-        name: 'Active Template',
-        isActive: true,
-      }
-
-      mockPrisma.promptTemplate.findFirst.mockResolvedValue(mockTemplate as any)
-
-      const result = await getActivePromptTemplate()
-
-      expect(result).toEqual(mockTemplate)
-      expect(mockPrisma.promptTemplate.findFirst).toHaveBeenCalledWith({
-        where: { isActive: true },
-      })
-    })
-
-    it('should return null when no active template', async () => {
-      mockPrisma.promptTemplate.findFirst.mockResolvedValue(null)
-
-      const result = await getActivePromptTemplate()
-
-      expect(result).toBeNull()
-    })
-
-    it('should not require admin access', async () => {
-      await getActivePromptTemplate()
-      expect(mockRequireAdmin).not.toHaveBeenCalled()
     })
   })
 

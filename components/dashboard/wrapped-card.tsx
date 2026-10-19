@@ -98,7 +98,7 @@ export function WrappedCard({ userId, memberLongEnough, rewindEligibility, isAdm
       const result = await requestRewindGeneration({ year: wrappedYear })
       if (result.success) {
         // Another tab (or a double click) already started it: follow that run.
-        if (result.alreadyQueued) toast.showInfo(refusalCopy("ALREADY_GENERATING"))
+        if (result.data.alreadyQueued) toast.showInfo(refusalCopy("ALREADY_GENERATING"))
       } else if (result.code === "REWIND_NOT_ELIGIBLE") {
         setRefusedAsIneligible(true)
       } else {

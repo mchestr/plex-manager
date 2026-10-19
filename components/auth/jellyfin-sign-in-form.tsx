@@ -49,14 +49,14 @@ export function JellyfinSignInForm({
     setFormError(null)
     setIsSubmitting(true)
     try {
-      const result = await processJellyfinInvite(inviteCode, credentials.data)
+      const result = await processJellyfinInvite({ code: inviteCode, credentials: credentials.data })
 
-      if (result.success && result.data) {
+      if (result.success) {
         setShowSuccess(true)
         setJellyfinUrl(result.data.serverUrl || null)
         onSuccess?.()
-      } else if (!result.success) {
-        onError(result.error || "Failed to create account")
+      } else {
+        onError(result.error)
       }
     } catch (error) {
       onError(error instanceof Error ? error.message : "An unexpected error occurred")

@@ -1,13 +1,13 @@
 "use server"
 
+import { memberAction } from "@/lib/actions/define-action"
+import { ok } from "@/lib/actions/result"
 import { requireAdmin } from "@/lib/admin"
-import { authOptions } from "@/lib/auth"
 import { clearDiscordRoleForUser, syncDiscordRoleConnection } from "@/lib/discord/integration"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { createLogger } from "@/lib/utils/logger"
 import { discordIntegrationSchema } from "@/lib/validations/discord"
-import { getServerSession } from "next-auth"
 import { revalidatePath } from "next/cache"
 
 const logger = createLogger("DISCORD_ACTIONS")
@@ -145,47 +145,24 @@ export async function updateDiscordIntegrationSettings(data: Record<string, unkn
   }
 }
 
-export async function disconnectDiscordAccount() {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) {
-    return { success: false, error: "Unauthorized" }
-  }
-
-  try {
+export const disconnectDiscordAccount = memberAction({
+  fallbackError: "Failed to disconnect Discord account",
+  handler: async (_input, { userId }) => {
     // clearDiscordRoleForUser emits the DISCORD_ACCOUNT_UNLINKED audit event, so
     // this action does not log it again (avoids a duplicate on the disconnect
     // path).
-    await clearDiscordRoleForUser(session.user.id)
+    await clearDiscordRoleForUser(userId)
     revalidatePath("/discord/link")
     revalidatePath("/")
-    return { success: true }
-  } catch (error) {
-    logger.error("Failed to disconnect Discord account", error instanceof Error ? error : undefined)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to disconnect Discord account",
-    }
-  }
-}
+    return ok(null)
+  },
+})
 
-export async function resyncDiscordRole() {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) {
-    return { success: false, error: "Unauthorized" }
-  }
-
-  try {
-    await syncDiscordRoleConnection(session.user.id)
+export const resyncDiscordRole = memberAction({
+  fallbackError: "Failed to resync Discord role",
+  handler: async (_input, { userId }) => {
+    await syncDiscordRoleConnection(userId)
     revalidatePath("/discord/link")
-    return { success: true }
-  } catch (error) {
-    logger.error("Failed to resync Discord role", error instanceof Error ? error : undefined, {
-      userId: session.user.id,
-    })
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to resync Discord role",
-    }
-  }
-}
-
+    return ok(null)
+  },
+})

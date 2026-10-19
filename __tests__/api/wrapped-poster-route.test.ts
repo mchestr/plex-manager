@@ -101,6 +101,10 @@ const SESSION_CACHE = 'private, max-age=86400'
 const NOT_FOUND_CACHE = 'private, max-age=60'
 const ERROR_CACHE = 'private, no-store'
 
+/** Share tokens in the 43-character base64url shape the route accepts. */
+const TOK = 't'.repeat(43)
+const BOGUS = 'b'.repeat(43)
+
 function wrappedJson(movieKeys: string[], showKeys: string[] = []) {
   return JSON.stringify({
     statistics: {
@@ -176,6 +180,15 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
       expect(response.status).toBe(400)
       expect(response.headers.get('Cache-Control')).toBe(ERROR_CACHE)
       expect(fetchWithTimeout).not.toHaveBeenCalled()
+    })
+
+    it('rejects the rating key ../1 with a code', async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValue(ADMIN_SESSION)
+
+      const response = await callRoute(posterUrl('1'), '../1')
+
+      expect(response.status).toBe(400)
+      expect((await response.json()).code).toBe('VALIDATION_ERROR')
     })
 
     it('short-circuits on the poster rate limit before any lookup', async () => {
@@ -408,7 +421,7 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
       })
       mockUpstreamImage()
 
-      const response = await callRoute(posterUrl('777', 'tok'), '777')
+      const response = await callRoute(posterUrl('777', TOK), '777')
 
       expect(response.status).toBe(200)
       expect(response.headers.get('Cache-Control')).toContain('public')
@@ -615,13 +628,13 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
       })
       mockUpstreamImage()
 
-      const response = await callRoute(posterUrl('123', 'tok'), '123')
+      const response = await callRoute(posterUrl('123', TOK), '123')
 
       expect(response.status).toBe(200)
       expect(response.headers.get('Cache-Control')).toBe('public, max-age=300')
       expect(response.headers.get('X-Robots-Tag')).toBe('noindex')
       expect(prisma.plexWrapped.findUnique).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { shareToken: 'tok' } })
+        expect.objectContaining({ where: { shareToken: TOK } })
       )
     })
 
@@ -632,10 +645,10 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
       })
       mockUpstreamImage()
 
-      expect((await callRoute(posterUrl('505', 'tok'), '505')).status).toBe(200)
+      expect((await callRoute(posterUrl('505', TOK), '505')).status).toBe(200)
 
       ;(fetchWithTimeout as jest.Mock).mockClear()
-      expect((await callRoute(posterUrl('506', 'tok'), '506')).status).toBe(401)
+      expect((await callRoute(posterUrl('506', TOK), '506')).status).toBe(401)
       expect(fetchWithTimeout).not.toHaveBeenCalled()
     })
 
@@ -645,19 +658,26 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
         data: wrappedJson(['123']),
       })
       mockUpstreamImage()
-      expect((await callRoute(posterUrl('123', 'tok'), '123')).status).toBe(200)
+      expect((await callRoute(posterUrl('123', TOK), '123')).status).toBe(200)
 
       // disableWrappedShareLink nulls the token, then forgets its cached keys.
       ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
-      forgetShareToken('tok')
+      forgetShareToken(TOK)
 
-      expect((await callRoute(posterUrl('123', 'tok'), '123')).status).toBe(401)
+      expect((await callRoute(posterUrl('123', TOK), '123')).status).toBe(401)
+    })
+
+    it('refuses a malformed share token with 400 before any lookup', async () => {
+      const response = await callRoute(posterUrl('123', 'not-a-token'), '123')
+
+      expect(response.status).toBe(400)
+      expect(prisma.plexWrapped.findUnique).not.toHaveBeenCalled()
     })
 
     it('refuses a token that matches no Rewind', async () => {
       ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue(null)
 
-      const response = await callRoute(posterUrl('123', 'bogus'), '123')
+      const response = await callRoute(posterUrl('123', BOGUS), '123')
 
       expect(response.status).toBe(401)
       expect(fetchWithTimeout).not.toHaveBeenCalled()
@@ -669,7 +689,7 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
         data: wrappedJson(['123']),
       })
 
-      const response = await callRoute(posterUrl('999', 'tok'), '999')
+      const response = await callRoute(posterUrl('999', TOK), '999')
 
       expect(response.status).toBe(401)
       expect(fetchWithTimeout).not.toHaveBeenCalled()
@@ -682,7 +702,7 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
         data: '{}',
       })
 
-      const response = await callRoute(posterUrl('123', 'tok'), '123')
+      const response = await callRoute(posterUrl('123', TOK), '123')
 
       expect(response.status).toBe(401)
     })
@@ -695,8 +715,8 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
       mockUpstreamImage()
       const parse = jest.spyOn(JSON, 'parse')
 
-      await callRoute(posterUrl('123', 'tok'), '123')
-      await callRoute(posterUrl('124', 'tok'), '124')
+      await callRoute(posterUrl('123', TOK), '123')
+      await callRoute(posterUrl('124', TOK), '124')
 
       expect(prisma.plexWrapped.findUnique).toHaveBeenCalledTimes(1)
       expect(parse).toHaveBeenCalledTimes(1)
@@ -710,7 +730,7 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
       mockUpstreamImage()
       const parse = jest.spyOn(JSON, 'parse')
 
-      const responses = await Promise.all(keys.map((key) => callRoute(posterUrl(key, 'tok'), key)))
+      const responses = await Promise.all(keys.map((key) => callRoute(posterUrl(key, TOK), key)))
 
       expect(responses.map((response) => response.status)).toEqual([200, 200, 200, 200, 200])
       expect(prisma.plexWrapped.findUnique).toHaveBeenCalledTimes(1)
@@ -721,7 +741,7 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
       ;(prisma.plexWrapped.findUnique as jest.Mock).mockImplementation(() => later(null))
 
       const responses = await Promise.all(
-        ['121', '122', '123'].map((key) => callRoute(posterUrl(key, 'tok'), key))
+        ['121', '122', '123'].map((key) => callRoute(posterUrl(key, TOK), key))
       )
       expect(responses.map((response) => response.status)).toEqual([401, 401, 401])
       expect(prisma.plexWrapped.findUnique).toHaveBeenCalledTimes(1)
@@ -732,7 +752,7 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
         data: wrappedJson(['123']),
       })
       mockUpstreamImage()
-      expect((await callRoute(posterUrl('123', 'tok'), '123')).status).toBe(200)
+      expect((await callRoute(posterUrl('123', TOK), '123')).status).toBe(200)
       expect(prisma.plexWrapped.findUnique).toHaveBeenCalledTimes(2)
     })
 
@@ -744,10 +764,10 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
         data: wrappedJson(['123']),
       })
       mockUpstreamImage()
-      await callRoute(posterUrl('123', 'tok'), '123')
+      await callRoute(posterUrl('123', TOK), '123')
 
       clock.mockReturnValue(now + 30 * 1000)
-      expect((await callRoute(posterUrl('999', 'tok'), '999')).status).toBe(401)
+      expect((await callRoute(posterUrl('999', TOK), '999')).status).toBe(401)
       expect(prisma.plexWrapped.findUnique).toHaveBeenCalledTimes(1)
 
       clock.mockReturnValue(now + 61 * 1000)
@@ -755,7 +775,7 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
         ...SHARED_ROW,
         data: wrappedJson(['123', '999']),
       })
-      expect((await callRoute(posterUrl('999', 'tok'), '999')).status).toBe(200)
+      expect((await callRoute(posterUrl('999', TOK), '999')).status).toBe(200)
       expect(prisma.plexWrapped.findUnique).toHaveBeenCalledTimes(2)
     })
   })
@@ -829,7 +849,7 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
         ...SHARED_ROW,
         data: wrappedJson(['123']),
       })
-      const response = await callRoute(posterUrl('123', 'tok'), '123')
+      const response = await callRoute(posterUrl('123', TOK), '123')
 
       expect(response.status).toBe(404)
       expect(fetchWithTimeout).toHaveBeenCalledTimes(1)

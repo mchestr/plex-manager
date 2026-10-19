@@ -80,8 +80,8 @@ describe('PlexCallbackPageClient — Stripe subscription gating', () => {
 
   it('routes a gated non-member to /subscribe when Stripe gating is enabled', async () => {
     // Clean "no access" result (success: true) + gating on → relaxed sign-in.
-    mockCheckServerAccess.mockResolvedValue({ success: true, hasAccess: false })
-    mockIsSubscriptionGatingEnabled.mockResolvedValue(true)
+    mockCheckServerAccess.mockResolvedValue({ success: true, data: { hasAccess: false } })
+    mockIsSubscriptionGatingEnabled.mockResolvedValue({ success: true, data: true })
     mockSignIn.mockResolvedValue({ ok: true })
 
     render(<PlexCallbackPageClient />)
@@ -104,8 +104,8 @@ describe('PlexCallbackPageClient — Stripe subscription gating', () => {
   })
 
   it('denies a non-member (no sign-in) when Stripe gating is disabled', async () => {
-    mockCheckServerAccess.mockResolvedValue({ success: true, hasAccess: false })
-    mockIsSubscriptionGatingEnabled.mockResolvedValue(false)
+    mockCheckServerAccess.mockResolvedValue({ success: true, data: { hasAccess: false } })
+    mockIsSubscriptionGatingEnabled.mockResolvedValue({ success: true, data: false })
 
     render(<PlexCallbackPageClient />)
 
@@ -122,7 +122,7 @@ describe('PlexCallbackPageClient — Stripe subscription gating', () => {
     // user whose access we could not actually determine, even if gating is on.
     mockCheckServerAccess.mockResolvedValue({
       success: false,
-      hasAccess: false,
+      code: 'UPSTREAM_UNAVAILABLE',
       error: 'Plex API error',
     })
 
@@ -137,9 +137,9 @@ describe('PlexCallbackPageClient — Stripe subscription gating', () => {
   })
 
   it('does not gate a member (regression): signs in and follows the normal flow', async () => {
-    mockCheckServerAccess.mockResolvedValue({ success: true, hasAccess: true })
+    mockCheckServerAccess.mockResolvedValue({ success: true, data: { hasAccess: true } })
     mockSignIn.mockResolvedValue({ ok: true })
-    mockGetOnboardingStatus.mockResolvedValue({ isComplete: true })
+    mockGetOnboardingStatus.mockResolvedValue({ success: true, data: { isComplete: true, service: 'plex', allStatuses: { plex: true, jellyfin: false } } })
 
     render(<PlexCallbackPageClient />)
 
@@ -157,9 +157,9 @@ describe('PlexCallbackPageClient — Stripe subscription gating', () => {
   })
 
   it('sends a member with incomplete onboarding to /onboarding (regression)', async () => {
-    mockCheckServerAccess.mockResolvedValue({ success: true, hasAccess: true })
+    mockCheckServerAccess.mockResolvedValue({ success: true, data: { hasAccess: true } })
     mockSignIn.mockResolvedValue({ ok: true })
-    mockGetOnboardingStatus.mockResolvedValue({ isComplete: false })
+    mockGetOnboardingStatus.mockResolvedValue({ success: true, data: { isComplete: false, service: 'plex', allStatuses: { plex: false, jellyfin: false } } })
 
     render(<PlexCallbackPageClient />)
 
@@ -178,11 +178,11 @@ describe('PlexCallbackPageClient — Stripe subscription gating', () => {
     // exempt, so a clean "no access" (plex.tv propagation lag) must not gate
     // them to /subscribe — they follow the normal member flow.
     setSearchParams({ inviteCode: 'ABCD2345' })
-    mockProcessInvite.mockResolvedValue({ success: true })
-    mockCheckServerAccess.mockResolvedValue({ success: true, hasAccess: false })
-    mockIsSubscriptionGatingEnabled.mockResolvedValue(true)
+    mockProcessInvite.mockResolvedValue({ success: true, data: null })
+    mockCheckServerAccess.mockResolvedValue({ success: true, data: { hasAccess: false } })
+    mockIsSubscriptionGatingEnabled.mockResolvedValue({ success: true, data: true })
     mockSignIn.mockResolvedValue({ ok: true })
-    mockGetOnboardingStatus.mockResolvedValue({ isComplete: false })
+    mockGetOnboardingStatus.mockResolvedValue({ success: true, data: { isComplete: false, service: 'plex', allStatuses: { plex: false, jellyfin: false } } })
 
     render(<PlexCallbackPageClient />)
 
@@ -193,16 +193,18 @@ describe('PlexCallbackPageClient — Stripe subscription gating', () => {
       { timeout: 3000 }
     )
 
-    expect(mockProcessInvite).toHaveBeenCalledWith('ABCD2345', 'user-token')
+    expect(mockProcessInvite).toHaveBeenCalledWith({ code: 'ABCD2345', plexAuthToken: 'user-token' })
+    // Only the flow flag goes over the wire; the retry schedule is fixed on the server (SEC-19)
+    expect(mockCheckServerAccess).toHaveBeenCalledWith({ token: 'user-token', isInviteFlow: true })
     expect(mockRedirectTo).not.toHaveBeenCalledWith('/subscribe')
     expect(mockPush).not.toHaveBeenCalledWith('/auth/denied')
   })
 
   it('still denies an invite redeemer without access when gating is disabled', async () => {
     setSearchParams({ inviteCode: 'ABCD2345' })
-    mockProcessInvite.mockResolvedValue({ success: true })
-    mockCheckServerAccess.mockResolvedValue({ success: true, hasAccess: false })
-    mockIsSubscriptionGatingEnabled.mockResolvedValue(false)
+    mockProcessInvite.mockResolvedValue({ success: true, data: null })
+    mockCheckServerAccess.mockResolvedValue({ success: true, data: { hasAccess: false } })
+    mockIsSubscriptionGatingEnabled.mockResolvedValue({ success: true, data: false })
 
     render(<PlexCallbackPageClient />)
 
@@ -214,8 +216,8 @@ describe('PlexCallbackPageClient — Stripe subscription gating', () => {
   })
 
   it('shows an error and does not redirect when the gated sign-in fails', async () => {
-    mockCheckServerAccess.mockResolvedValue({ success: true, hasAccess: false })
-    mockIsSubscriptionGatingEnabled.mockResolvedValue(true)
+    mockCheckServerAccess.mockResolvedValue({ success: true, data: { hasAccess: false } })
+    mockIsSubscriptionGatingEnabled.mockResolvedValue({ success: true, data: true })
     mockSignIn.mockResolvedValue({ ok: false, error: 'Sign in failed' })
 
     render(<PlexCallbackPageClient />)
@@ -254,7 +256,7 @@ describe('PlexCallbackPageClient — rate limits', () => {
     'shows the rate-limit message when sign-in returns %s',
     async (code) => {
       mockGetPlexAuthToken.mockResolvedValue({ success: true, authToken: 'user-token' })
-      mockCheckServerAccess.mockResolvedValue({ success: true, hasAccess: true })
+      mockCheckServerAccess.mockResolvedValue({ success: true, data: { hasAccess: true } })
       mockSignIn.mockResolvedValue({ ok: false, status: 429, error: code, url: null })
 
       render(<PlexCallbackPageClient />)

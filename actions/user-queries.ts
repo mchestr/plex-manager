@@ -1,15 +1,18 @@
 "use server"
 
-import { authOptions } from "@/lib/auth"
+import { z } from "zod"
+
+import { memberAction } from "@/lib/actions/define-action"
+import { fail, ok } from "@/lib/actions/result"
 import { requireAdmin } from "@/lib/admin"
 import { checkUserServerAccess, getPlexServerIdentity, getPlexUsers, unshareUserFromPlexServer } from "@/lib/connections/plex"
 import { prisma } from "@/lib/prisma"
-import { getServerSession } from "next-auth"
 import { SubscriptionStatus } from "@/lib/generated/prisma/client"
 import { aggregateLlmUsage } from "@/lib/utils"
 import { createLogger } from "@/lib/utils/logger"
 import { parseStoredRewind } from "@/lib/wrapped/data/parse-stored"
 import { readStoredError, toStoredError } from "@/lib/wrapped/generation-errors"
+import { userIdSchema, yearSchema } from "@/lib/validations/shared-schemas"
 import {
   AdminUserWithWrappedStats,
   DiscordCommandActivity,
@@ -35,24 +38,26 @@ const logger = createLogger("USER_QUERIES")
  * `data` never carries `statistics.leaderboards`: rows written before P0.8
  * hold every member's name and yearly watch minutes there until P0.20's
  * clean-up runs, and no viewer reads them.
+ *
+ * A member may read only their own row (`FORBIDDEN` otherwise); admins may
+ * read any. `data` is null when there is no row for the year.
+ *
+ * @param input - `{ userId, year }`
  */
-export async function getUserPlexWrapped(userId: string, year: number) {
-  // Authorization: a user may only read their own Wrapped; admins may read any.
-  // This action is exposed as a public endpoint, so the check must live here —
-  // there is no middleware gating direct Server Action invocation.
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) {
-    return null
-  }
-  if (session.user.id !== userId && !session.user.isAdmin) {
-    logger.warn("Unauthorized attempt to read another user's wrapped", {
-      requesterId: session.user.id,
-      targetUserId: userId,
-    })
-    return null
-  }
+export const getUserPlexWrapped = memberAction({
+  input: z.object({ userId: userIdSchema, year: yearSchema }),
+  fallbackError: "Failed to load the Rewind",
+  handler: async ({ userId, year }, { session }) => {
+    // This action is a public endpoint, so the ownership check must live here:
+    // nothing gates direct Server Action calls.
+    if (session.user.id !== userId && !session.user.isAdmin) {
+      logger.warn("Unauthorized attempt to read another user's wrapped", {
+        requesterId: session.user.id,
+        targetUserId: userId,
+      })
+      return fail("FORBIDDEN", "You can only open your own Rewind.")
+    }
 
-  try {
     const wrapped = await prisma.plexWrapped.findUnique({
       where: {
         userId_year: {
@@ -73,18 +78,15 @@ export async function getUserPlexWrapped(userId: string, year: number) {
     })
 
     if (!wrapped) {
-      return null
+      return ok(null)
     }
     const visible = { ...wrapped, data: withoutLeaderboards(wrapped.data) }
     if (!visible.error || session.user.isAdmin) {
-      return visible
+      return ok(visible)
     }
-    return { ...visible, error: toStoredError(readStoredError(visible.error)) }
-  } catch (error) {
-    logger.error("Error getting user wrapped", error)
-    return null
-  }
-}
+    return ok({ ...visible, error: toStoredError(readStoredError(visible.error)) })
+  },
+})
 
 /**
  * Get detailed user information including all wrapped, shares, visits, and LLM usage
@@ -329,9 +331,6 @@ export async function unshareUserLibrary(userId: string): Promise<{ success: boo
     return { success: true }
   } catch (error) {
     logger.error("Error unsharing user library", error, { userId })
-    if (error instanceof Error) {
-      return { success: false, error: `Error unsharing library: ${error.message}` }
-    }
     return { success: false, error: "Failed to unshare user library" }
   }
 }

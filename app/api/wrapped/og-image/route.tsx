@@ -1,8 +1,11 @@
 import { ImageResponse } from "next/og"
 import { NextRequest, NextResponse } from "next/server"
+import { z } from "zod"
 
+import { parseSearchParams } from "@/lib/actions/route"
 import { createSafeError, ErrorCode, getStatusCode, logError } from "@/lib/security/error-handler"
 import { limitRequest } from "@/lib/security/rate-limit"
+import { shareTokenSchema } from "@/lib/validations/params"
 import { getShareSafeRewind } from "@/lib/wrapped/data/get-share-safe"
 
 // Force dynamic rendering since we use request.headers for rate limiting
@@ -16,6 +19,11 @@ const STAGE = "#0a0908"
 
 // Share images are public but not meant for search results.
 const NOINDEX = "noindex"
+
+const querySchema = z.object({
+  token: shareTokenSchema,
+  format: z.enum(["card"]).optional(),
+})
 
 interface CardStats {
   userName: string
@@ -42,19 +50,9 @@ export async function GET(request: NextRequest) {
       return rateLimitResponse
     }
 
-    const { searchParams } = new URL(request.url)
-    const token = searchParams.get("token")
-    const format = searchParams.get("format")
-
-    if (!token) {
-      return new NextResponse(
-        JSON.stringify(createSafeError(ErrorCode.VALIDATION_ERROR, "Token is required")),
-        {
-          status: getStatusCode(ErrorCode.VALIDATION_ERROR),
-          headers: { "Content-Type": "application/json", "X-Robots-Tag": NOINDEX },
-        }
-      )
-    }
+    const query = parseSearchParams(querySchema, request.url, { "X-Robots-Tag": NOINDEX })
+    if (!query.ok) return query.response
+    const { token, format } = query.data
 
     const found = await getShareSafeRewind(token)
 

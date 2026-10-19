@@ -31,13 +31,13 @@ export default function InvitePage() {
           validateInvite(code),
         ])
 
-        setServerName(serverNameResult)
+        if (serverNameResult.success) setServerName(serverNameResult.data)
 
-        if (inviteResult.success && inviteResult.data) {
+        if (inviteResult.success) {
           setValid(true)
-          setServerType(inviteResult.data.serverType as ServerType)
+          setServerType(inviteResult.data.serverType)
         } else {
-          setError(inviteResult.error || "Invalid invite code")
+          setError(inviteResult.error)
         }
       } catch (error) {
         setError("Failed to validate invite")

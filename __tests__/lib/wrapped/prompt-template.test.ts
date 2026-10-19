@@ -2,21 +2,17 @@
  * Tests for lib/wrapped/prompt-template.ts - prompt template generation
  */
 
-import {
-  generateSystemPrompt,
-  generateWrappedPrompt,
-  getAvailablePlaceholders,
-  getDefaultPromptTemplate,
-} from '@/lib/wrapped/prompt-template'
-import { getActivePromptTemplate } from '@/actions/prompts'
+import { mockReset } from 'jest-mock-extended'
+
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
+import { buildPromptTemplate } from '@/__tests__/helpers/factories'
+import { generateWrappedPrompt } from '@/lib/wrapped/prompt-template'
+import { generateSystemPrompt, getAvailablePlaceholders, getDefaultPromptTemplate } from '@/lib/wrapped/prompt-text'
 import type { WrappedStatistics } from '@/types/wrapped'
 
-// Mock dependencies
-jest.mock('@/actions/prompts', () => ({
-  getActivePromptTemplate: jest.fn(),
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 
-const mockGetActivePromptTemplate = getActivePromptTemplate as jest.MockedFunction<typeof getActivePromptTemplate>
+const mockGetActivePromptTemplate = prismaMock.promptTemplate.findFirst
 
 describe('Prompt Template', () => {
   const mockStatistics: WrappedStatistics = {
@@ -103,7 +99,7 @@ describe('Prompt Template', () => {
   }
 
   beforeEach(() => {
-    jest.clearAllMocks()
+    mockReset(prismaMock)
   })
 
   describe('generateWrappedPrompt', () => {
@@ -124,11 +120,7 @@ describe('Prompt Template', () => {
 
     it('should use active template from database when no template string provided', async () => {
       const dbTemplate = 'Database template for {{userName}}'
-      mockGetActivePromptTemplate.mockResolvedValue({
-        id: '1',
-        template: dbTemplate,
-        isActive: true,
-      } as any)
+      mockGetActivePromptTemplate.mockResolvedValue(buildPromptTemplate({ template: dbTemplate }))
 
       const result = await generateWrappedPrompt(
         'John Doe',

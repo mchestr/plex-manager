@@ -1,12 +1,15 @@
 import { getServerSession } from "next-auth"
 import { NextRequest, NextResponse } from "next/server"
+import { z } from "zod"
 
+import { parseRouteParams, parseSearchParams } from "@/lib/actions/route"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { createSafeError, ErrorCode, getStatusCode, logError } from "@/lib/security/error-handler"
 import { limitRequest } from "@/lib/security/rate-limit"
 import { fetchWithTimeout } from "@/lib/utils/fetch-with-timeout"
 import { createLogger } from "@/lib/utils/logger"
+import { ratingKeySchema, shareTokenSchema } from "@/lib/validations/params"
 import {
   isKnownPosterMiss,
   rememberPosterMiss,
@@ -19,7 +22,8 @@ export const dynamic = "force-dynamic"
 
 const logger = createLogger("WRAPPED_POSTER_API")
 
-const RATING_KEY_PATTERN = /^\d{1,12}$/
+const paramsSchema = z.object({ ratingKey: ratingKeySchema })
+const querySchema = z.object({ share: shareTokenSchema.optional() })
 const POSTER_WIDTH = 400
 const POSTER_HEIGHT = 600
 /** Every upstream call of one request (lookups and the poster) shares this budget. */
@@ -140,13 +144,15 @@ export async function GET(
       return rateLimitResponse
     }
 
-    const { ratingKey } = await context.params
-    if (!RATING_KEY_PATTERN.test(ratingKey)) {
-      return errorResponse(ErrorCode.VALIDATION_ERROR, "Invalid rating key")
-    }
+    const params = parseRouteParams(paramsSchema, await context.params, { "Cache-Control": ERROR_CACHE_CONTROL })
+    if (!params.ok) return params.response
+    const { ratingKey } = params.data
+
+    const query = parseSearchParams(querySchema, request.nextUrl, { "Cache-Control": ERROR_CACHE_CONTROL })
+    if (!query.ok) return query.response
+    const shareToken = query.data.share ?? null
 
     const session = await getServerSession(authOptions)
-    const shareToken = request.nextUrl.searchParams.get("share")
     if (!session) {
       const allowed = shareToken
         ? await shareTokenAllowsRatingKey(shareToken, ratingKey)

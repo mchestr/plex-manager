@@ -19,6 +19,8 @@ jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),
 }))
 
+jest.mock('@/lib/auth', () => ({ authOptions: {} }))
+
 jest.mock('@/lib/wrapped/prompt-template', () => ({
   generateWrappedPrompt: jest.fn(),
   generateSystemPrompt: jest.fn(() => 'system prompt'),
@@ -66,33 +68,44 @@ describe('testPromptTemplate', () => {
     mockGetServerSession.mockResolvedValue(mockSession as any)
   })
 
+  const baseInput = { userName: 'Test User', year: 2024, statistics: mockStatistics, sendToAI: false }
+
   describe('authentication', () => {
-    it('should return error when not authenticated', async () => {
+    it('refuses a signed-out caller', async () => {
       mockGetServerSession.mockResolvedValue(null)
 
-      const result = await testPromptTemplate({
-        userName: 'Test User',
-        year: 2024,
-        statistics: mockStatistics,
-        sendToAI: false,
-      })
+      const result = await testPromptTemplate(baseInput)
 
-      expect(result.success).toBe(false)
-      expect(result.error).toBe('Authentication required')
+      expect(result).toMatchObject({ success: false, code: 'UNAUTHENTICATED' })
     })
 
-    it('should return error when session has no user ID', async () => {
-      mockGetServerSession.mockResolvedValue({} as any)
+    it('refuses a member: the call is billable', async () => {
+      mockGetServerSession.mockResolvedValue({ user: { ...mockSession.user, isAdmin: false } } as any)
 
-      const result = await testPromptTemplate({
-        userName: 'Test User',
-        year: 2024,
-        statistics: mockStatistics,
-        sendToAI: false,
-      })
+      const result = await testPromptTemplate(baseInput)
 
-      expect(result.success).toBe(false)
-      expect(result.error).toBe('Authentication required')
+      expect(result).toMatchObject({ success: false, code: 'FORBIDDEN' })
+      expect(mockGenerateWrappedPrompt).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('input validation', () => {
+    it.each(['some-unlisted-model', 'gpt-6-luna; drop', 'x'.repeat(300)])(
+      'refuses the model id %s, which is not in the catalogue',
+      async (model) => {
+        const result = await testPromptTemplate({ ...baseInput, sendToAI: true, model })
+
+        expect(result).toMatchObject({ success: false, code: 'VALIDATION' })
+        expect(mockGenerateStructured).not.toHaveBeenCalled()
+      }
+    )
+
+    it('accepts a dated catalogue id', async () => {
+      mockGenerateWrappedPrompt.mockResolvedValue('Rendered prompt')
+
+      const result = await testPromptTemplate({ ...baseInput, model: 'gpt-6-luna-2026-09-22' })
+
+      expect(result.success).toBe(true)
     })
   })
 
@@ -108,9 +121,7 @@ describe('testPromptTemplate', () => {
         sendToAI: false,
       })
 
-      expect(result.success).toBe(true)
-      expect(result.renderedPrompt).toBe(mockRenderedPrompt)
-      expect(result.llmResponse).toBeUndefined()
+      expect(result).toEqual({ success: true, data: { renderedPrompt: mockRenderedPrompt } })
       expect(mockGenerateWrappedPrompt).toHaveBeenCalledWith(
         'Test User',
         2024,
@@ -179,10 +190,8 @@ describe('testPromptTemplate', () => {
         sendToAI: true,
       })
 
-      expect(result.success).toBe(false)
-      expect(result.renderedPrompt).toBe('Rendered prompt')
-      expect(result.error).toContain('LLM calls are currently disabled')
-      expect(result.error).toContain('enable LLM in admin settings')
+      expect(result).toMatchObject({ success: false, code: 'CONFLICT' })
+      expect(!result.success && result.error).toContain('LLM calls are currently disabled')
       expect(mockGenerateStructured).not.toHaveBeenCalled()
     })
 
@@ -196,10 +205,14 @@ describe('testPromptTemplate', () => {
         sendToAI: true,
       })
 
-      expect(result.success).toBe(true)
-      expect(result.renderedPrompt).toBe('Rendered prompt')
-      expect(result.llmResponse).toBe('Raw response')
-      expect(result.tokenUsage).toEqual({ promptTokens: 100, completionTokens: 50, totalTokens: 150, cost: 0.001 })
+      expect(result).toEqual({
+        success: true,
+        data: {
+          renderedPrompt: 'Rendered prompt',
+          llmResponse: 'Raw response',
+          tokenUsage: { promptTokens: 100, completionTokens: 50, totalTokens: 150, cost: 0.001 },
+        },
+      })
       expect(mockGenerateStructured).toHaveBeenCalledWith(
         expect.objectContaining({
           purpose: 'wrapped',
@@ -245,7 +258,7 @@ describe('testPromptTemplate', () => {
       expect(mockGenerateWrappedPrompt).toHaveBeenCalledWith('there', 2024, mockStatistics, undefined)
       expect(mockGenerateStructured).toHaveBeenCalledWith(expect.objectContaining({ prompt: 'Rendered prompt for there' }))
       expect(JSON.stringify(mockGenerateWrappedPrompt.mock.calls)).not.toContain('@example.com')
-      expect(result.renderedPrompt).toBe('Rendered prompt for there')
+      expect(result).toMatchObject({ success: false, code: 'UPSTREAM_UNAVAILABLE' })
     })
 
     it('should send the trimmed member name when it is not an email', async () => {
@@ -274,9 +287,8 @@ describe('testPromptTemplate', () => {
         sendToAI: true,
       })
 
-      expect(result.success).toBe(false)
-      expect(result.renderedPrompt).toBe('Rendered prompt')
-      expect(result.error).toContain('No active LLM provider')
+      expect(result).toMatchObject({ success: false, code: 'UPSTREAM_UNAVAILABLE' })
+      expect(!result.success && result.error).toContain('No active LLM provider')
     })
 
     it('should use JSON.stringify when the raw text is empty', async () => {
@@ -289,8 +301,7 @@ describe('testPromptTemplate', () => {
         sendToAI: true,
       })
 
-      expect(result.success).toBe(true)
-      expect(result.llmResponse).toBe(JSON.stringify({ archetype: { id: 'curator' } }, null, 2))
+      expect(result.success && result.data.llmResponse).toBe(JSON.stringify({ archetype: { id: 'curator' } }, null, 2))
     })
   })
 
@@ -305,8 +316,7 @@ describe('testPromptTemplate', () => {
         sendToAI: false,
       })
 
-      expect(result.success).toBe(false)
-      expect(result.error).toBe('Template error')
+      expect(result).toEqual({ success: false, code: 'INTERNAL', error: 'Failed to test prompt' })
     })
 
     it('should handle non-Error exceptions', async () => {
@@ -319,8 +329,7 @@ describe('testPromptTemplate', () => {
         sendToAI: false,
       })
 
-      expect(result.success).toBe(false)
-      expect(result.error).toBe('Failed to test prompt')
+      expect(result).toEqual({ success: false, code: 'INTERNAL', error: 'Failed to test prompt' })
     })
   })
 })

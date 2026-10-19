@@ -66,6 +66,13 @@ jest.mock('next/server', () => {
         this.status = init?.status || 200
         this.headers = new Map(Object.entries(init?.headers || {}))
       }
+
+      static json(data: unknown, init?: { status?: number; headers?: Record<string, string> }) {
+        return new MockNextResponse(JSON.stringify(data), {
+          ...init,
+          headers: { 'Content-Type': 'application/json', ...init?.headers },
+        })
+      }
     },
   }
 })
@@ -225,12 +232,21 @@ describe('GET /api/wrapped/og-image', () => {
     expect(response.headers.get('X-Robots-Tag')).toBe('noindex')
   })
 
-  it('returns the same 404 for a malformed token without a database call', async () => {
-    const response = await GET(buildRequest('http://localhost/api/wrapped/og-image?token=nope'))
+  it.each(['nope', '../etc/passwd', `${'a'.repeat(42)}.`])(
+    'returns 400 with a code for the malformed token %s, without a database call',
+    async (token) => {
+      const response = await GET(buildRequest(`http://localhost/api/wrapped/og-image?token=${encodeURIComponent(token)}`))
 
-    expect(response.status).toBe(404)
-    expect(response.body).toBe('Wrapped not found')
-    expect(prisma.plexWrapped.findUnique).not.toHaveBeenCalled()
+      expect(response.status).toBe(400)
+      expect(JSON.parse(String(response.body)).code).toBe('VALIDATION_ERROR')
+      expect(prisma.plexWrapped.findUnique).not.toHaveBeenCalled()
+    }
+  )
+
+  it('returns 400 for an unknown format', async () => {
+    const response = await GET(buildRequest(`http://localhost/api/wrapped/og-image?token=${TOKEN}&format=../x`))
+
+    expect(response.status).toBe(400)
     expect(imageCalls).toHaveLength(0)
   })
 

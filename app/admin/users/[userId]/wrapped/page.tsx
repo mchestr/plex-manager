@@ -69,7 +69,8 @@ export default async function UserWrappedPage({
   const { userId } = await params
   const resolvedSearchParams = await searchParams
   const year = resolvedSearchParams.year ? parseInt(resolvedSearchParams.year, 10) : await getSeasonYear()
-  const wrapped = await getUserPlexWrapped(userId, year)
+  const wrappedResult = await getUserPlexWrapped({ userId, year })
+  const wrapped = wrappedResult.success ? wrappedResult.data : null
 
   const status = wrapped ? readWrappedStatus(wrapped.status, wrapped.id) : null
   const errorCode = wrapped && status === "failed" ? readStoredError(wrapped.error) : null

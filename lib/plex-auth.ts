@@ -148,12 +148,14 @@ export async function getPlexAuthToken(pinId: string): Promise<PlexAuthTokenResu
  * Create the Plex authorization URL with PIN code
  */
 export async function createPlexAuthUrl(pinId: number, pinCode: string, inviteCode?: string): Promise<string> {
-  const baseUrl = getBaseUrl()
-  let forwardUrl = `${baseUrl}/auth/callback/plex?plexPinId=${pinId}`
-
+  // Built with URL so an invite code can never add or override a parameter.
+  // The path is appended, not resolved, so a base URL with a path keeps it.
+  const forward = new URL(`${getBaseUrl().replace(/\/+$/, "")}/auth/callback/plex`)
+  forward.searchParams.set("plexPinId", String(pinId))
   if (inviteCode) {
-    forwardUrl += `&inviteCode=${inviteCode}`
+    forward.searchParams.set("inviteCode", inviteCode)
   }
+  const forwardUrl = forward.toString()
 
   const clientIdentifier = getClientIdentifier()
 

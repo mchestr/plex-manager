@@ -5,11 +5,7 @@
  * what ends up stored rather than which calls were made.
  */
 
-import {
-  disableWrappedShareLink,
-  enableWrappedShareLink,
-  type EnableWrappedShareLinkResult,
-} from '@/actions/wrapped-share-link'
+import { disableWrappedShareLink, enableWrappedShareLink } from '@/actions/wrapped-share-link'
 import { prisma } from '@/lib/prisma'
 import { AuditEventType, logAuditEvent } from '@/lib/security/audit-log'
 import { generateShareToken } from '@/lib/utils'
@@ -78,9 +74,9 @@ function seed(row: Partial<Row> & Pick<Row, 'userId'>): Row {
   return full
 }
 
-function tokenOf(result: EnableWrappedShareLinkResult): string {
+function tokenOf(result: Awaited<ReturnType<typeof enableWrappedShareLink>>): string {
   if (!result.success) throw new Error(`enable failed: ${result.error}`)
-  return result.shareToken
+  return result.data.shareToken
 }
 
 function rowOf(userId: string): Row {
@@ -144,8 +140,7 @@ describe('enableWrappedShareLink', () => {
 
     expect(result).toEqual({
       success: true,
-      shareToken: 'token-1',
-      url: 'https://plex.example.com/wrapped/share/token-1',
+      data: { shareToken: 'token-1', url: 'https://plex.example.com/wrapped/share/token-1' },
     })
     expect(rowOf(memberId).shareToken).toBe('token-1')
     expect(revalidatePath).toHaveBeenCalledWith('/wrapped')
@@ -168,7 +163,7 @@ describe('enableWrappedShareLink', () => {
 
     const result = await enableWrappedShareLink({ year: YEAR })
 
-    expect(result).toEqual(expect.objectContaining({ success: true, shareToken: 'surviving-v2-token' }))
+    expect(result).toMatchObject({ success: true, data: { shareToken: 'surviving-v2-token' } })
     expect(generateShareToken).not.toHaveBeenCalled()
     expect(logAuditEvent).not.toHaveBeenCalled()
   })
@@ -202,7 +197,7 @@ describe('enableWrappedShareLink', () => {
 
     const result = await enableWrappedShareLink({ year: YEAR })
 
-    expect(result).toEqual({ success: false, error: 'Your Rewind for this year is not ready to share' })
+    expect(result).toEqual({ success: false, code: 'CONFLICT', error: 'Your Rewind for this year is not ready to share' })
     expect(rowOf('someone-else').shareToken).toBeNull()
     expect(generateShareToken).not.toHaveBeenCalled()
   })
@@ -235,7 +230,7 @@ describe('enableWrappedShareLink', () => {
 
     const result = await enableWrappedShareLink({ year: YEAR })
 
-    expect(result).toEqual({ success: false, error: 'Unauthorized' })
+    expect(result).toMatchObject({ success: false, code: 'UNAUTHENTICATED' })
     expect(prisma.plexWrapped.findUnique).not.toHaveBeenCalled()
   })
 
@@ -248,7 +243,7 @@ describe('enableWrappedShareLink', () => {
 
     const result = await enableWrappedShareLink(input as { year: number })
 
-    expect(result).toEqual({ success: false, error: 'Invalid year' })
+    expect(result).toMatchObject({ success: false, code: 'VALIDATION' })
     expect(prisma.plexWrapped.findUnique).not.toHaveBeenCalled()
   })
 
@@ -263,7 +258,7 @@ describe('enableWrappedShareLink', () => {
 
     const limited = await enableWrappedShareLink({ year: YEAR })
 
-    expect(limited).toEqual({ success: false, error: 'Too many share links created. Please try again later.' })
+    expect(limited).toMatchObject({ success: false, code: 'RATE_LIMITED' })
     expect(prisma.plexWrapped.findUnique).not.toHaveBeenCalled()
   })
 
@@ -278,10 +273,7 @@ describe('enableWrappedShareLink', () => {
       expect((await enableWrappedShareLink({ year: YEAR })).success).toBe(true)
     }
 
-    expect(await enableWrappedShareLink({ year: YEAR })).toEqual({
-      success: false,
-      error: 'Too many share links created. Please try again later.',
-    })
+    expect(await enableWrappedShareLink({ year: YEAR })).toMatchObject({ success: false, code: 'RATE_LIMITED' })
   })
 
   it('creates no link when the public URL cannot be built', async () => {
@@ -293,7 +285,7 @@ describe('enableWrappedShareLink', () => {
     try {
       const result = await enableWrappedShareLink({ year: YEAR })
 
-      expect(result).toEqual({ success: false, error: 'Failed to create share link' })
+      expect(result).toEqual({ success: false, code: 'INTERNAL', error: 'Failed to create share link' })
     } finally {
       process.env.NEXT_PUBLIC_APP_URL = saved.app
       if (saved.auth !== undefined) process.env.NEXTAUTH_URL = saved.auth
@@ -311,7 +303,7 @@ describe('disableWrappedShareLink', () => {
 
     const result = await disableWrappedShareLink({ year: YEAR })
 
-    expect(result).toEqual({ success: true })
+    expect(result).toEqual({ success: true, data: null })
     expect(rowOf(memberId).shareToken).toBeNull()
     expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.SHARE_LINK_REVOKED, memberId, {
       wrappedId: row.id,
@@ -329,7 +321,7 @@ describe('disableWrappedShareLink', () => {
     await disableWrappedShareLink({ year: YEAR })
     const result = await enableWrappedShareLink({ year: YEAR })
 
-    expect(result).toEqual(expect.objectContaining({ success: true, shareToken: 'token-1' }))
+    expect(result).toMatchObject({ success: true, data: { shareToken: 'token-1' } })
     expect(rowOf(memberId).shareToken).toBe('token-1')
   })
 
@@ -338,7 +330,7 @@ describe('disableWrappedShareLink', () => {
 
     const result = await disableWrappedShareLink({ year: YEAR })
 
-    expect(result).toEqual({ success: true })
+    expect(result).toEqual({ success: true, data: null })
     expect(prisma.plexWrapped.update).not.toHaveBeenCalled()
     expect(logAuditEvent).not.toHaveBeenCalled()
   })
@@ -348,7 +340,7 @@ describe('disableWrappedShareLink', () => {
 
     const result = await disableWrappedShareLink({ year: YEAR })
 
-    expect(result).toEqual({ success: true })
+    expect(result).toEqual({ success: true, data: null })
     expect(rowOf(memberId).shareToken).toBeNull()
   })
 
@@ -357,7 +349,7 @@ describe('disableWrappedShareLink', () => {
 
     const result = await disableWrappedShareLink({ year: YEAR, userId: 'someone-else' } as { year: number })
 
-    expect(result).toEqual({ success: false, error: 'No Rewind found for this year' })
+    expect(result).toEqual({ success: false, code: 'NOT_FOUND', error: 'No Rewind found for this year' })
     expect(rowOf('someone-else').shareToken).toBe('their-token')
   })
 
@@ -367,7 +359,7 @@ describe('disableWrappedShareLink', () => {
 
     const result = await disableWrappedShareLink({ year: YEAR })
 
-    expect(result).toEqual({ success: false, error: 'Unauthorized' })
+    expect(result).toMatchObject({ success: false, code: 'UNAUTHENTICATED' })
     expect(rowOf(memberId).shareToken).toBe('live-token')
   })
 
@@ -381,7 +373,7 @@ describe('disableWrappedShareLink', () => {
 
     const result = await disableWrappedShareLink({ year: YEAR })
 
-    expect(result).toEqual({ success: true })
+    expect(result).toEqual({ success: true, data: null })
     expect(rowOf(memberId).shareToken).toBeNull()
   })
 
@@ -391,7 +383,7 @@ describe('disableWrappedShareLink', () => {
 
     const result = await disableWrappedShareLink({ year: 2025 })
 
-    expect(result).toEqual({ success: true })
+    expect(result).toEqual({ success: true, data: null })
     expect(rows.find((r) => r.year === 2025)?.shareToken).toBeNull()
     expect(rowOf(memberId).shareToken).toBe('current-token')
   })
@@ -402,6 +394,6 @@ describe('disableWrappedShareLink', () => {
 
     const result = await disableWrappedShareLink({ year: YEAR })
 
-    expect(result).toEqual({ success: false, error: 'Failed to stop sharing' })
+    expect(result).toEqual({ success: false, code: 'INTERNAL', error: 'Failed to stop sharing' })
   })
 })

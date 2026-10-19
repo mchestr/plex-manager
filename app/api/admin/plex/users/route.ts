@@ -40,8 +40,9 @@ export async function GET(request: NextRequest) {
     })
 
     if (!usersResult.success) {
+      logError("ADMIN_PLEX_USERS_API", usersResult.error)
       return NextResponse.json(
-        createSafeError(ErrorCode.INTERNAL_ERROR, usersResult.error || "Failed to fetch Plex users"),
+        createSafeError(ErrorCode.INTERNAL_ERROR, "Failed to fetch Plex users"),
         { status: getStatusCode(ErrorCode.INTERNAL_ERROR) }
       )
     }

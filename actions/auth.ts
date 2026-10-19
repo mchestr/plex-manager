@@ -1,5 +1,9 @@
 "use server"
 
+import { z } from "zod"
+
+import { publicAction } from "@/lib/actions/define-action"
+import { fail, ok } from "@/lib/actions/result"
 import { checkUserServerAccess, getPlexUserInfo, type PlexUserInfo } from "@/lib/connections/plex"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
@@ -11,13 +15,23 @@ const DEFAULT_RETRY_DELAY_MS = 2000
 const EXPONENTIAL_BACKOFF_MULTIPLIER = 2
 const MAX_RETRY_TIMEOUT_MS = 3 * 60 * 1000 // 3 minutes
 
-// Types
-interface RetryOptions {
-  maxRetries?: number
-  initialDelay?: number
-  isInviteFlow?: boolean
-}
+/**
+ * The invite flow's retries, fixed on the server (SEC-19): Plex needs a few
+ * seconds to propagate a new share, so the first check waits 3 s and five
+ * retries follow with backoff. A caller cannot ask for longer waits.
+ */
+const INVITE_FLOW_MAX_RETRIES = 5
+const INVITE_FLOW_INITIAL_DELAY_MS = 3000
 
+const ACCESS_CHECK_FAILED = "We couldn't check your access to the server. Please try again."
+
+/** The Plex token (as plex.tv issues it) and whether this is an invite redemption; nothing else. */
+const checkServerAccessSchema = z.strictObject({
+  token: z.string().min(10).max(200),
+  isInviteFlow: z.boolean(),
+})
+
+// Types
 interface ServerAccessResult {
   success: boolean
   hasAccess: boolean
@@ -207,117 +221,71 @@ function logAccessDenied(
 }
 
 /**
- * Check if a user has access to the configured Plex server
- * @param userToken - Plex authentication token
- * @param retryOptions - Optional retry configuration for invite flows
+ * Check if a user has access to the configured Plex server.
+ *
+ * `{ hasAccess: false }` is a clean "no access" answer. A check that could not
+ * be completed (no server, plex.tv unreachable, timeout) is a failure with
+ * `UPSTREAM_UNAVAILABLE` or `NOT_FOUND`, never a guess, and never carries the
+ * underlying error text.
+ *
+ * @param input - `{ token, isInviteFlow }`; invite flows retry with the fixed
+ *   server-side schedule above.
  */
-export async function checkServerAccess(
-  userToken: string,
-  retryOptions?: RetryOptions
-): Promise<ServerAccessResult> {
-  const functionStartTime = Date.now()
-  const maxRetries = retryOptions?.maxRetries ?? 0
-  const initialDelay = retryOptions?.initialDelay ?? DEFAULT_RETRY_DELAY_MS
-  const isInviteFlow = retryOptions?.isInviteFlow ?? false
+export const checkServerAccess = publicAction({
+  input: checkServerAccessSchema,
+  fallbackError: ACCESS_CHECK_FAILED,
+  handler: async ({ token: userToken, isInviteFlow }) => {
+    const functionStartTime = Date.now()
+    const maxRetries = isInviteFlow ? INVITE_FLOW_MAX_RETRIES : 0
 
-  logger.debug("checkServerAccess called", {
-    isInviteFlow,
-    maxRetries,
-    initialDelay,
-  })
+    logger.debug("checkServerAccess called", { isInviteFlow, maxRetries })
 
-  try {
-    if (isInviteFlow && initialDelay > 0) {
-      const delayStart = Date.now()
-      logger.debug("Applying initial delay for invite flow", { initialDelay })
-      await waitForDelay(initialDelay)
-      const delayDuration = Date.now() - delayStart
-      logger.debug("Initial delay completed", { duration: delayDuration })
+    if (isInviteFlow) {
+      logger.debug("Applying initial delay for invite flow", { initialDelay: INVITE_FLOW_INITIAL_DELAY_MS })
+      await waitForDelay(INVITE_FLOW_INITIAL_DELAY_MS)
     }
 
-    const serverStartTime = Date.now()
-    logger.debug("Fetching active Plex server configuration")
     const serverResult = await getActivePlexServer()
-    const serverDuration = Date.now() - serverStartTime
-    logger.debug("Server config fetched", { duration: serverDuration, success: serverResult.success })
-
     if (!serverResult.success || !serverResult.data) {
-      const totalDuration = Date.now() - functionStartTime
-      logger.warn("checkServerAccess failed: No server config", { duration: totalDuration })
-      return {
-        success: false,
-        hasAccess: false,
-        error: serverResult.error,
-      }
+      logger.warn("checkServerAccess failed: No server config", { duration: Date.now() - functionStartTime })
+      return fail("NOT_FOUND", "No Plex server is configured.")
     }
 
-    const userStartTime = Date.now()
-    logger.debug("Fetching Plex user info")
     const userResult = await fetchPlexUser(userToken)
-    const userDuration = Date.now() - userStartTime
-    logger.debug("User info fetched", { duration: userDuration, success: userResult.success })
-
     if (!userResult.success || !userResult.data) {
-      const totalDuration = Date.now() - functionStartTime
-      logger.warn("checkServerAccess failed: Failed to fetch user", { duration: totalDuration })
-      return {
-        success: false,
-        hasAccess: false,
+      logger.warn("checkServerAccess failed: Failed to fetch user", {
+        duration: Date.now() - functionStartTime,
         error: userResult.error,
-      }
+      })
+      return fail("UPSTREAM_UNAVAILABLE", ACCESS_CHECK_FAILED)
     }
 
     const plexUser = userResult.data
     const serverConfig = serverResult.data
 
-    logger.debug("Starting access check", {
-      plexUserId: plexUser.id,
-      username: plexUser.username,
-      url: serverConfig.url,
-    })
+    logger.debug("Starting access check", { plexUserId: plexUser.id, username: plexUser.username })
 
-    let accessCheck: ServerAccessResult
-    const accessCheckStartTime = Date.now()
-
-    if (isInviteFlow && maxRetries > 0) {
-      // Initial delay (initialDelay) was already applied above (lines 216-222) before the first access check.
-      // For retries, we use DEFAULT_RETRY_DELAY_MS as the first retry delay to avoid reusing initialDelay,
-      // which would cause the first retry to wait unnecessarily long (double delay issue).
-      accessCheck = await retryAccessCheckWithBackoff(serverConfig, plexUser.id, maxRetries, DEFAULT_RETRY_DELAY_MS)
-    } else {
-      accessCheck = await performAccessCheck(serverConfig, plexUser.id)
-    }
-
-    const accessCheckDuration = Date.now() - accessCheckStartTime
-    logger.debug("Access check phase completed", { duration: accessCheckDuration })
+    const accessCheck =
+      maxRetries > 0
+        ? // The initial delay was applied above; the first retry waits DEFAULT_RETRY_DELAY_MS.
+          await retryAccessCheckWithBackoff(serverConfig, plexUser.id, maxRetries, DEFAULT_RETRY_DELAY_MS)
+        : await performAccessCheck(serverConfig, plexUser.id)
 
     if (!accessCheck.hasAccess) {
-      const retriesAttempted = isInviteFlow && maxRetries > 0 ? maxRetries : 0
-      logAccessDenied(
-        plexUser,
-        serverConfig.url,
-        accessCheck.error || "No access to server",
-        retriesAttempted
-      )
+      logAccessDenied(plexUser, serverConfig.url, accessCheck.error || "No access to server", maxRetries)
     }
 
-    const totalDuration = Date.now() - functionStartTime
     logger.info("checkServerAccess completed", {
-      duration: totalDuration,
+      duration: Date.now() - functionStartTime,
       hasAccess: accessCheck.hasAccess,
     })
 
-    return accessCheck
-  } catch (error) {
-    const totalDuration = Date.now() - functionStartTime
-    logger.error("Error checking server access", error, { duration: totalDuration })
-    return {
-      success: false,
-      hasAccess: false,
-      error: error instanceof Error ? error.message : "Failed to check server access",
+    if (!accessCheck.success && !accessCheck.hasAccess) {
+      return fail("UPSTREAM_UNAVAILABLE", ACCESS_CHECK_FAILED)
     }
-  }
-}
+    return ok({ hasAccess: accessCheck.hasAccess })
+  },
+})
 
 /**
  * Whether the Stripe subscription gate is enabled (`Config.stripeEnabled`).
@@ -330,20 +298,18 @@ export async function checkServerAccess(
  * When this returns `true`, a Plex user who lacks server access should still be
  * allowed to sign in and be routed to `/subscribe` (the `(app)` layout guard
  * enforces the gate). When `false`, no-access users are denied exactly as before
- * the Stripe feature existed. Fails closed (returns `false`) on any error so a DB
- * hiccup can never accidentally admit a non-member.
+ * the Stripe feature existed. Callers fail closed: anything but
+ * `{ success: true, data: true }` is "off", so a DB hiccup can never
+ * accidentally admit a non-member.
  */
-export async function isSubscriptionGatingEnabled(): Promise<boolean> {
-  try {
+export const isSubscriptionGatingEnabled = publicAction({
+  handler: async () => {
     const config = await prisma.config.findUnique({
       where: { id: "config" },
       select: { stripeEnabled: true },
     })
 
-    return Boolean(config?.stripeEnabled)
-  } catch (error) {
-    logger.error("Error reading subscription gating flag", error)
-    return false
-  }
-}
+    return ok(Boolean(config?.stripeEnabled))
+  },
+})
 

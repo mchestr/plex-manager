@@ -78,7 +78,7 @@ beforeEach(() => {
 
 describe('requestRewindGeneration', () => {
   it('creates a queued generation and enqueues it with the per-member deduplication id', async () => {
-    await expect(requestRewindGeneration({ year: 2026 })).resolves.toEqual({ success: true, alreadyQueued: false })
+    await expect(requestRewindGeneration({ year: 2026 })).resolves.toEqual({ success: true, data: { alreadyQueued: false } })
 
     const created = prismaMock.rewindGeneration.create.mock.calls[0][0].data
     expect(created).toMatchObject({ wrappedId: 'wrapped-1', userId: 'user-1', year: 2026, kind: 'member', status: 'queued' })
@@ -134,7 +134,7 @@ describe('requestRewindGeneration', () => {
   it('answers alreadyQueued for a duplicate BullMQ deduplicated, skipping its row and refunding the points', async () => {
     add.mockResolvedValue({ id: 'gen-running' })
 
-    await expect(requestRewindGeneration({ year: 2026 })).resolves.toEqual({ success: true, alreadyQueued: true })
+    await expect(requestRewindGeneration({ year: 2026 })).resolves.toEqual({ success: true, data: { alreadyQueued: true } })
 
     expect(prismaMock.rewindGeneration.update).toHaveBeenCalledWith({
       where: { id: expect.any(String) },
@@ -147,7 +147,7 @@ describe('requestRewindGeneration', () => {
   it('answers alreadyQueued before spending a point while a run is queued or running', async () => {
     prismaMock.rewindGeneration.count.mockResolvedValue(1)
 
-    await expect(requestRewindGeneration({ year: 2026 })).resolves.toEqual({ success: true, alreadyQueued: true })
+    await expect(requestRewindGeneration({ year: 2026 })).resolves.toEqual({ success: true, data: { alreadyQueued: true } })
     expect(consume).not.toHaveBeenCalled()
     expect(writes()).toBe(0)
   })
@@ -157,13 +157,14 @@ describe('requestRewindGeneration', () => {
 
     expect(await requestRewindGeneration({ year: 2026 })).toEqual({
       success: false,
+      code: 'CONFLICT',
       error: 'Wrapped generation is currently disabled',
     })
     expect(writes()).toBe(0)
 
     signIn('user-1', true)
-    expect(await requestRewindGeneration({ year: 2026 })).toEqual({ success: true, alreadyQueued: false })
-    expect(await adminRegenerateRewind({ userId: 'user-1', year: 2026 })).toEqual({ success: true, alreadyQueued: false })
+    expect(await requestRewindGeneration({ year: 2026 })).toEqual({ success: true, data: { alreadyQueued: false } })
+    expect(await adminRegenerateRewind({ userId: 'user-1', year: 2026 })).toEqual({ success: true, data: { alreadyQueued: false } })
   })
 
   it('refuses everyone while the feature is off', async () => {
@@ -175,17 +176,24 @@ describe('requestRewindGeneration', () => {
     expect(writes()).toBe(0)
   })
 
-  it.each([2025, '2026'])('accepts only the season year (%p)', async (year) => {
-    const result = await requestRewindGeneration({ year: year as number })
+  it('accepts only the season year', async () => {
+    const result = await requestRewindGeneration({ year: 2025 })
 
-    expect(result).toEqual({ success: false, error: 'Rewind is only available for 2026' })
+    expect(result).toEqual({ success: false, code: 'VALIDATION', error: 'Rewind is only available for 2026' })
+    expect(writes()).toBe(0)
+  })
+
+  it('refuses a year that is not a number', async () => {
+    const result = await requestRewindGeneration(JSON.parse('{"year":"2026"}'))
+
+    expect(result).toMatchObject({ success: false, code: 'VALIDATION' })
     expect(writes()).toBe(0)
   })
 
   it('refuses without a session', async () => {
     session.mockResolvedValue(null)
 
-    expect(await requestRewindGeneration({ year: 2026 })).toEqual({ success: false, error: 'Unauthorized' })
+    expect(await requestRewindGeneration({ year: 2026 })).toMatchObject({ success: false, code: 'UNAUTHENTICATED' })
   })
 
   it('refuses a member who is not entitled', async () => {
@@ -200,6 +208,7 @@ describe('requestRewindGeneration', () => {
 
     expect(await requestRewindGeneration({ year: 2026 })).toEqual({
       success: false,
+      code: 'FORBIDDEN',
       error: 'Only admins can regenerate wrapped data',
     })
     expect(writes()).toBe(0)
@@ -222,6 +231,7 @@ describe('requestRewindGeneration', () => {
 
     expect(await requestRewindGeneration({ year: 2026 })).toEqual({
       success: false,
+      code: 'NOT_FOUND',
       error: 'No active Tautulli server configured',
     })
     expect(consume).not.toHaveBeenCalled()
@@ -239,7 +249,7 @@ describe('requestRewindGeneration', () => {
     expect(writes()).toBe(0)
 
     signIn('user-1', true)
-    expect(await requestRewindGeneration({ year: 2026 })).toEqual({ success: true, alreadyQueued: false })
+    expect(await requestRewindGeneration({ year: 2026 })).toEqual({ success: true, data: { alreadyQueued: false } })
   })
 
   it('reports Redis as down and refunds the points when the add fails', async () => {
@@ -260,7 +270,7 @@ describe('adminRegenerateRewind', () => {
   it('requires an admin', async () => {
     signIn('user-1')
 
-    expect(await adminRegenerateRewind({ userId: 'user-2', year: 2026 })).toEqual({ success: false, error: 'Unauthorized' })
+    expect(await adminRegenerateRewind({ userId: 'user-2', year: 2026 })).toMatchObject({ success: false, code: 'FORBIDDEN' })
     expect(writes()).toBe(0)
   })
 
@@ -268,7 +278,7 @@ describe('adminRegenerateRewind', () => {
     prismaMock.user.findUnique.mockResolvedValue({ id: 'user-2', plexUserId: 'plex-2' } as never)
     prismaMock.plexWrapped.findUnique.mockResolvedValue({ status: 'completed' } as never)
 
-    expect(await adminRegenerateRewind({ userId: 'user-2', year: 2026 })).toEqual({ success: true, alreadyQueued: false })
+    expect(await adminRegenerateRewind({ userId: 'user-2', year: 2026 })).toEqual({ success: true, data: { alreadyQueued: false } })
 
     expect(prismaMock.rewindGeneration.create.mock.calls[0][0].data).toMatchObject({ userId: 'user-2', kind: 'admin' })
     expect(consume).not.toHaveBeenCalled()
@@ -285,12 +295,18 @@ describe('adminRegenerateRewind', () => {
   })
 })
 
+/** The status a permitted caller reads. */
+function unwrapStatus(result: Awaited<ReturnType<typeof getRewindStatus>>) {
+  if (!result.success) throw new Error(result.error)
+  return result.data
+}
+
 describe('getRewindStatus', () => {
   it('selects status columns only, never data', async () => {
     prismaMock.plexWrapped.findUnique.mockResolvedValue({ status: 'completed', error: null } as never)
     prismaMock.rewindGeneration.findFirst.mockResolvedValue(null)
 
-    await expect(getRewindStatus({ year: 2026 })).resolves.toEqual({
+    await expect(getRewindStatus({ year: 2026 }).then(unwrapStatus)).resolves.toEqual({
       state: 'completed',
       errorCode: null,
       startedAt: null,
@@ -312,7 +328,7 @@ describe('getRewindStatus', () => {
       startedAt: new Date('2026-12-05T12:00:00Z'),
     } as never)
 
-    await expect(getRewindStatus({ year: 2026 })).resolves.toEqual({
+    await expect(getRewindStatus({ year: 2026 }).then(unwrapStatus)).resolves.toEqual({
       state: 'running',
       errorCode: null,
       startedAt: '2026-12-05T12:00:00.000Z',
@@ -324,7 +340,7 @@ describe('getRewindStatus', () => {
     infra.mockResolvedValue({ ok: false, code: 'REDIS_NOT_CONFIGURED' })
     prismaMock.rewindGeneration.findFirst.mockResolvedValue(null)
 
-    await expect(getRewindStatus({ year: 2026 })).resolves.toMatchObject({
+    await expect(getRewindStatus({ year: 2026 }).then(unwrapStatus)).resolves.toMatchObject({
       state: 'unavailable',
       errorCode: 'REDIS_NOT_CONFIGURED',
     })
@@ -333,11 +349,11 @@ describe('getRewindStatus', () => {
   it("lets an admin read a member's status, and nobody else", async () => {
     prismaMock.rewindGeneration.findFirst.mockResolvedValue(null)
 
-    expect(await getRewindStatus({ year: 2026, userId: 'user-2' })).toEqual({ error: 'Unauthorized' })
+    expect(await getRewindStatus({ year: 2026, userId: 'user-2' })).toMatchObject({ success: false, code: 'FORBIDDEN' })
     expect(prismaMock.plexWrapped.findUnique).not.toHaveBeenCalled()
 
     signIn('admin-1', true)
-    await expect(getRewindStatus({ year: 2026, userId: 'user-2' })).resolves.toMatchObject({ state: 'none' })
+    await expect(getRewindStatus({ year: 2026, userId: 'user-2' }).then(unwrapStatus)).resolves.toMatchObject({ state: 'none' })
     expect(prismaMock.plexWrapped.findUnique.mock.calls[0][0].where).toEqual({
       userId_year: { userId: 'user-2', year: 2026 },
     })

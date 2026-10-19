@@ -1,4 +1,5 @@
-import { ensureSubscriptionOrAccess, getAccessGateStatus } from '@/lib/guards'
+import { ensureSubscriptionOrAccess } from '@/lib/guards'
+import { getAccessGateStatus } from '@/lib/access'
 import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { redirect } from 'next/navigation'

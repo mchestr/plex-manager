@@ -6,7 +6,7 @@ import {
   updatePromptTemplate,
 } from "@/actions/prompts"
 import { ModalShell } from "@/components/ui/modal-shell"
-import { getAvailablePlaceholders } from "@/lib/wrapped/prompt-template"
+import { getAvailablePlaceholders } from "@/lib/wrapped/prompt-text"
 import { formatDuration } from "@/lib/utils/format"
 import { legacyWrappedData, readWrappedStatus } from "@/lib/wrapped/data/parse-stored"
 import type { WrappedStatistics } from "@/types/wrapped"
