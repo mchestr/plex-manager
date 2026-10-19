@@ -1,7 +1,7 @@
 "use client"
 
 import { WrappedData, WrappedSection } from "@/types/wrapped"
-import { motion } from "framer-motion"
+import { motion } from "motion/react"
 import { FormattedText } from "@/components/shared/formatted-text"
 import { BarChart, Sparkline } from "@/components/wrapped/wrapped-charts"
 import { SectionHeader } from "@/components/wrapped/wrapped-sections/section-header"

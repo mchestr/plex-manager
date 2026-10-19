@@ -1,6 +1,6 @@
 "use client"
 
-import { motion } from "framer-motion"
+import { motion } from "motion/react"
 
 import { FormattedText } from "@/components/shared/formatted-text"
 import { SlideFrame } from "@/components/wrapped/cinematic/slide-frame"

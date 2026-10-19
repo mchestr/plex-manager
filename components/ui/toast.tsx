@@ -1,6 +1,6 @@
 "use client"
 
-import { motion, AnimatePresence } from "framer-motion"
+import { motion, AnimatePresence } from "motion/react"
 import { createContext, useContext, useState, useCallback, ReactNode } from "react"
 
 export type ToastType = "success" | "error" | "info"

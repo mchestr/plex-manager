@@ -4,7 +4,8 @@
     "instrumentation.ts!",
     "proxy.ts!",
     "scripts/*.ts!",
-    "scripts/*.mjs!"
+    "scripts/*.mjs!",
+    "scripts/codemods/*.mjs!"
   ],
   "project": [
     "**/*.{js,mjs,cjs,ts,tsx}!",

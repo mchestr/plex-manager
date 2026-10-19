@@ -1,7 +1,7 @@
 "use client"
 
 import { refusalCopy } from "@/lib/wrapped/generation-errors"
-import { motion } from "framer-motion"
+import { motion } from "motion/react"
 
 interface RewindNotEligibleCardProps {
   /** The season year (`getWrappedSettings().wrappedYear`). */

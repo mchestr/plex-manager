@@ -1,7 +1,7 @@
 "use client"
 
-import { motion } from "framer-motion"
-import CountUp from "react-countup"
+import { motion } from "motion/react"
+import { CountUp } from "@/components/ui/count-up"
 import { FormattedText } from "@/components/shared/formatted-text"
 import { SectionHeader } from "@/components/wrapped/wrapped-sections/section-header"
 import { formatWatchTime } from "@/components/wrapped/wrapped-sections/utils"
@@ -41,7 +41,7 @@ export function ShowsBreakdownSection({ section, wrappedData, sectionIndex }: Sh
           }}
         />
         <div className="relative text-5xl font-bold text-purple-400 mb-4" key={`shows-${sectionIndex}`}>
-          <CountUp key={`${sectionIndex}-shows`} start={0} end={wrappedData.statistics.showsWatched} duration={2} delay={0.5} separator="," />
+          <CountUp key={`${sectionIndex}-shows`} value={wrappedData.statistics.showsWatched} duration={2} delay={0.5} />
         </div>
         <div className="relative text-xl text-slate-300 mb-4">Shows Watched</div>
         <div className="relative text-lg text-slate-400">

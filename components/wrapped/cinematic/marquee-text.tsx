@@ -1,6 +1,6 @@
 "use client"
 
-import { motion, useReducedMotion } from "framer-motion"
+import { motion, useReducedMotion } from "motion/react"
 
 import { DISPLAY_CLASS } from "./theme"
 import { cn } from "@/lib/utils"

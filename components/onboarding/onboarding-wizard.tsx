@@ -8,7 +8,7 @@ import { FinalSuccessAnimation } from "@/components/setup/setup-wizard/final-suc
 import { SuccessAnimation } from "@/components/setup/setup-wizard/success-animation"
 import { useToast } from "@/components/ui/toast"
 import { type AuthService, getOnboardingSteps } from "@/types/onboarding"
-import { AnimatePresence, motion } from "framer-motion"
+import { AnimatePresence, motion } from "motion/react"
 import { useEffect, useState } from "react"
 
 interface OnboardingWizardProps {

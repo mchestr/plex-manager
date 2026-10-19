@@ -18,29 +18,34 @@ const { TextEncoder, TextDecoder } = require('util')
 global.TextEncoder = TextEncoder
 global.TextDecoder = TextDecoder
 
-// Mock framer-motion to avoid animation issues in tests
-jest.mock('framer-motion', () => ({
-  motion: {
+// Mock motion to avoid animation issues in tests. `animate` and the motion
+// value hooks stay real (CountUp drives a motion value); a test that needs the
+// reduced-motion branch sets `useReducedMotion`'s return value.
+jest.mock('motion/react', () => {
+  const actual = jest.requireActual('motion/react')
+  const elements = {
     div: ({ children, ...props }) => <div {...props}>{children}</div>,
     h1: ({ children, ...props }) => <h1 {...props}>{children}</h1>,
     h2: ({ children, ...props }) => <h2 {...props}>{children}</h2>,
     p: ({ children, ...props }) => <p {...props}>{children}</p>,
     span: ({ children, ...props }) => <span {...props}>{children}</span>,
     li: ({ children, ...props }) => <li {...props}>{children}</li>,
-  },
-  AnimatePresence: ({ children }) => <>{children}</>,
-  useAnimation: () => ({
-    start: jest.fn(),
-    stop: jest.fn(),
-  }),
-  useReducedMotion: () => false,
-}))
-
-// Mock react-countup
-jest.mock('react-countup', () => ({
-  __esModule: true,
-  default: ({ end, ...props }) => <span {...props}>{end}</span>,
-}))
+  }
+  return {
+    animate: actual.animate,
+    useMotionValue: actual.useMotionValue,
+    motion: elements,
+    m: elements,
+    AnimatePresence: ({ children }) => <>{children}</>,
+    LazyMotion: ({ children }) => <>{children}</>,
+    MotionConfig: jest.fn(({ children }) => <>{children}</>),
+    useAnimation: () => ({
+      start: jest.fn(),
+      stop: jest.fn(),
+    }),
+    useReducedMotion: jest.fn(() => false),
+  }
+})
 
 // Mock Web APIs for Next.js API route tests
 // Note: NextRequest extends Request and has read-only url property

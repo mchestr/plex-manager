@@ -1,7 +1,7 @@
 "use client"
 
-import { motion } from "framer-motion"
-import CountUp from "react-countup"
+import { motion } from "motion/react"
+import { CountUp } from "@/components/ui/count-up"
 import { FormattedText } from "@/components/shared/formatted-text"
 import { SectionHeader } from "@/components/wrapped/wrapped-sections/section-header"
 import { formatWatchTime } from "@/components/wrapped/wrapped-sections/utils"
@@ -37,7 +37,7 @@ export function MoviesBreakdownSection({ section, wrappedData, sectionIndex }: M
           className="bg-slate-800/50 backdrop-blur-sm border border-cyan-500/30 rounded-lg p-6 relative overflow-hidden"
         >
           <div className="relative text-4xl font-bold text-cyan-400 mb-2" key={`movies-${sectionIndex}`}>
-            <CountUp key={`${sectionIndex}-movies`} start={0} end={wrappedData.statistics.moviesWatched} duration={2} delay={0.6} separator="," />
+            <CountUp key={`${sectionIndex}-movies`} value={wrappedData.statistics.moviesWatched} duration={2} delay={0.6} />
           </div>
           <div className="relative text-slate-300">Movies Watched</div>
           <div className="relative text-sm text-slate-400 mt-2">
@@ -69,7 +69,7 @@ export function MoviesBreakdownSection({ section, wrappedData, sectionIndex }: M
           className="bg-slate-800/50 backdrop-blur-sm border border-purple-500/30 rounded-lg p-6 relative overflow-hidden"
         >
           <motion.div className="relative text-4xl font-bold text-purple-400 mb-2" key={`episodes-${sectionIndex}`}>
-            <CountUp key={`${sectionIndex}-episodes`} start={0} end={wrappedData.statistics.episodesWatched} duration={2} delay={0.8} separator="," />
+            <CountUp key={`${sectionIndex}-episodes`} value={wrappedData.statistics.episodesWatched} duration={2} delay={0.8} />
           </motion.div>
           <div className="relative text-slate-300">Episodes Watched</div>
           {/* Progress bar for shows watch time */}

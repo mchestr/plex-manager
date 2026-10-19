@@ -1,7 +1,7 @@
 import { DiscordCard } from '@/components/dashboard/discord-card'
 import { render, screen } from '@testing-library/react'
 
-jest.mock('framer-motion', () => {
+jest.mock('motion/react', () => {
   const React = jest.requireActual<typeof import('react')>('react')
   const strip = ({ initial: _i, animate: _a, transition: _t, whileHover: _h, whileTap: _p, ...rest }: Record<string, unknown>) => rest
   return {

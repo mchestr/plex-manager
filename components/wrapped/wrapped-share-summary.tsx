@@ -1,7 +1,7 @@
 "use client"
 
 import type { ShareSafeRewindV2 } from "@/lib/wrapped/data/share-safe-v2"
-import { motion } from "framer-motion"
+import { motion } from "motion/react"
 import { FormattedText } from "@/components/shared/formatted-text"
 import { SpaceBackground } from "@/components/setup/setup-wizard/space-background"
 import { formatWatchTime, formatWatchTimeHours } from "@/lib/utils/time-formatting"

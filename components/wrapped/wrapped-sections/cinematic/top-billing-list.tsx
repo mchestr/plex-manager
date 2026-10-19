@@ -1,6 +1,6 @@
 "use client"
 
-import { motion } from "framer-motion"
+import { motion } from "motion/react"
 
 import { formatWatchTime } from "@/lib/utils/time-formatting"
 import { PosterImage } from "@/components/wrapped/cinematic/poster-image"

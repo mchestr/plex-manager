@@ -1,7 +1,7 @@
 "use client"
 
-import { motion } from "framer-motion"
-import CountUp from "react-countup"
+import { motion } from "motion/react"
+import { CountUp } from "@/components/ui/count-up"
 import { FormattedText } from "@/components/shared/formatted-text"
 import { SectionHeader } from "@/components/wrapped/wrapped-sections/section-header"
 import { BarChart, ProgressBar } from "@/components/wrapped/wrapped-charts"
@@ -58,7 +58,7 @@ export function OverseerrStatsSection({ section, wrappedData, sectionIndex }: Ov
                 delay: 0.5,
               }}
             >
-              <CountUp key={`${sectionIndex}-overseerr-total`} start={0} end={wrappedData.statistics.overseerrStats.totalRequests} duration={2} delay={0.5} separator="," />
+              <CountUp key={`${sectionIndex}-overseerr-total`} value={wrappedData.statistics.overseerrStats.totalRequests} duration={2} delay={0.5} />
             </motion.div>
           </motion.div>
           <motion.div
@@ -101,7 +101,7 @@ export function OverseerrStatsSection({ section, wrappedData, sectionIndex }: Ov
                   delay: 0.7,
                 }}
               >
-                <CountUp key={`${sectionIndex}-approved`} start={0} end={wrappedData.statistics.overseerrStats.approvedRequests} duration={2} delay={0.7} separator="," />
+                <CountUp key={`${sectionIndex}-approved`} value={wrappedData.statistics.overseerrStats.approvedRequests} duration={2} delay={0.7} />
               </motion.div>
               <div className="text-slate-400">Approved</div>
               {wrappedData.statistics.overseerrStats.totalRequests > 0 && (
@@ -134,7 +134,7 @@ export function OverseerrStatsSection({ section, wrappedData, sectionIndex }: Ov
                   delay: 0.8,
                 }}
               >
-                <CountUp key={`${sectionIndex}-pending`} start={0} end={wrappedData.statistics.overseerrStats.pendingRequests} duration={2} delay={0.8} separator="," />
+                <CountUp key={`${sectionIndex}-pending`} value={wrappedData.statistics.overseerrStats.pendingRequests} duration={2} delay={0.8} />
               </motion.div>
               <div className="text-slate-400">Pending</div>
               {wrappedData.statistics.overseerrStats.totalRequests > 0 && (

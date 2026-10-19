@@ -1,8 +1,8 @@
 import { render, screen, waitFor, act } from '@testing-library/react'
 import { WrappedTransition } from '@/components/wrapped/wrapped-transition'
 
-// Mock framer-motion
-jest.mock('framer-motion', () => ({
+// Mock motion
+jest.mock('motion/react', () => ({
   motion: {
     div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
     h1: ({ children, ...props }: any) => <h1 {...props}>{children}</h1>,

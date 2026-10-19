@@ -4,7 +4,7 @@ import { processJellyfinInvite } from "@/actions/invite"
 import { Alert } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { jellyfinInviteCredentialsSchema } from "@/lib/validations/jellyfin"
-import { motion } from "framer-motion"
+import { motion } from "motion/react"
 import { useState } from "react"
 
 interface JellyfinSignInFormProps {

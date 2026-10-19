@@ -1,8 +1,8 @@
 import { render, screen } from '@testing-library/react'
 import { BarChart, DonutChart, Sparkline, ProgressBar } from '@/components/wrapped/wrapped-charts'
 
-// Mock framer-motion
-jest.mock('framer-motion', () => ({
+// Mock motion
+jest.mock('motion/react', () => ({
   motion: {
     div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
   },
