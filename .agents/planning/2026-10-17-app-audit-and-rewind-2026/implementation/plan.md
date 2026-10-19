@@ -3905,10 +3905,21 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 
 **Demo.** With Stripe on, a canceled member who calls `triggerWatchlistSync` from devtools gets `NOT_ENTITLED`, but can still open their stored Rewind. The batch log shows "skipped: NOT_ENTITLED".
 
+**As merged.**
+- `getAccessLevel(userId)` is in `lib/access.ts` and always reads the user row, so a disabled user is `none` with Stripe on or off (this replaces P4.7's gating-off fast path); a missing user is `none`. `getAccessGateStatus` had no callers left and was deleted. `entitledUserWhere(stripeEnabled)` beside it is the query form of `isAccessAllowed`, used by `syncAllEnabledUsers`.
+- New `lib/actions/entitlement.ts` (`server-only`): `requestAccessLevel` (`cache(getAccessLevel)`), `hasEntitlement(userId, 'full' | 'read')` and `NOT_ENTITLED_MESSAGE`. Admins pass because `getAccessLevel` reports them `full`, not through a session shortcut, so a disabled admin is refused too. `memberAction({ entitlement })` checks it right after the session, before the input parses; only `memberAction` accepts the option. `requireEntitlement(session, level, { redirectFrom?, headers? })` in `lib/actions/route.ts` answers 403 `{ error, code: 'NOT_ENTITLED' }` (new `ErrorCode.NOT_ENTITLED`) or redirects to `/subscribe` when `redirectFrom` is given.
+- The path rule is `lib/access-paths.ts` (`isMemberAppPath`, `needsSubscribeRedirect`), shared by `proxy.ts` and the `(app)` layout. `(app)` paths are found by exclusion (every path except `admin`, `api`, `auth`, `invite`, `onboarding`, `setup`, `subscribe`, `/wrapped/share/*`, `/_*` and file names), so a new member page is covered without being listed; `__tests__/proxy.test.ts` walks `app/` and checks every route folder both ways. A new folder outside `(app)` (for example P7.10's public `/rewind/s/*`) must be added to the exclusions, or that test fails.
+- The header name is `PATHNAME_HEADER` in `lib/request-headers.ts`. The proxy sets it on every forwarded request, 404 rewrites included.
+- The proxy redirects only GET and HEAD (a Server Action POST checks entitlement itself). It trusts a `full` claim without a query, confirms a `lapsed` or `none` claim with `getAccessLevel` before redirecting (so a member who renewed is not sent away by a stale claim), and decides nothing for a token without the claim or when the read fails. Why the confirmation: no `SessionProvider` calls `/api/auth/session`, and `getServerSession` in Server Components and actions cannot write cookies, so the claim is in practice the sign-in value until the member signs in again (P4.7's revoke ends the session at cancellation).
+- `getWatchlistSyncHistory` does not exist: the history is read by `getWatchlistSyncSettings`, which takes `read`. `updateWatchlistSyncSettings` checks `full` only when enabling. The batch also counts and logs the due members it skipped (`Batch watchlist sync skipped users`, `reason: NOT_ENTITLED`); the processor returns `{ success: false, skipped: 'NOT_ENTITLED' }` without throwing.
+- A session below `read` on the poster route gets the 403 only without a share token; with one it is served as a signed-out share request.
+- The Discord connect route test stayed beside the route (`app/(app)/discord/__tests__/connect-route.test.ts`) instead of a new `__tests__/api/discord-connect-route.test.ts`. The filter also runs against Postgres in `__tests__/lib/access-entitled-where.pg.test.ts`.
+- E2E: `signInAs(context, baseURL, userId, { accessLevel })` mints the claim (seeded sessions carry none, as pre-P4.5 tokens). `/rewind/*` does not exist yet, so the soft-navigation case opens `/wrapped/2026` (a season year the member has no Rewind for) and follows its new `wrapped-generate-link` home. Next re-renders the `(app)` layout on that navigation too (the root `loading.tsx` sits above it), so the E2E passes with either layer; the proxy's own RSC and prefetch handling is covered by `__tests__/proxy.test.ts`.
+
 **Done when.**
-- [ ] `getAccessLevel` returns `full`, `lapsed` or `none`, and the action helper and route helper enforce `full` and `read`.
-- [ ] The watchlist, Discord, poster and generation paths and the watchlist jobs check entitlement, with Stripe on and off.
-- [ ] Lapsed members reach only the read-only Rewind routes, on full loads and on client-side navigation, and the matrix is in `docs/stripe.md`.
+- [x] `getAccessLevel` returns `full`, `lapsed` or `none`, and the action helper and route helper enforce `full` and `read`.
+- [x] The watchlist, Discord, poster and generation paths and the watchlist jobs check entitlement, with Stripe on and off.
+- [x] Lapsed members reach only the read-only Rewind routes, on full loads and on client-side navigation, and the matrix is in `docs/stripe.md`.
 
 ### Step P4.6: Never send a stored secret to a new address; audit config changes
 
