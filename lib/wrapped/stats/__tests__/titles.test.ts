@@ -93,6 +93,17 @@ describe.each(ZONES)("computeTitles in %s", (zone) => {
     expect(computeTitles(films, ctx, none)).toMatchObject({ longestFilm: null, top3SeriesShare: null })
   })
 
+  it("lists only titles with a counted play (design 7.2), so a sample alone makes no list or quiz (P2.16)", () => {
+    const sample = play({ at: "2026-03-01T18:00", zone, series: "3", season: 1, episode: 1, seconds: 110, percent: 5 })
+    const films = [1, 2].map((n) => play({ at: `2026-03-0${n}T14:00`, zone, film: "1", seconds: 170, percent: 3 }))
+    const titles = computeTitles([sample, ...films], ctx, none)
+
+    expect(titles.series).toEqual([])
+    expect(titles.films.map((f) => f.key)).toEqual(["film:1"])
+    expect(titles.top3SeriesShare).toBe(0)
+    expect(titles.quiz).toBeNull()
+  })
+
   it("keeps hidden titles out of the lists but in completion", () => {
     const hidden = statsContext(zone, { hidden: ["1"] })
     const films = [1, 2, 3, 4, 5].map((n) => play({ at: `2026-03-0${n}T20:00`, zone, film: `${n}` }))

@@ -5,9 +5,12 @@
  *
  * ## Rules
  *
- * - The lists are listed titles only (hidden or rating-excluded titles never
- *   appear). Series rank by minutes (design 4.9); films by counted plays,
- *   then that same order (page 06).
+ * - The lists are listed titles with a counted play (design 7.2: a play
+ *   counts toward "watched" lists from 120 s or 90%; hidden or
+ *   rating-excluded titles never appear). A title seen only in samples
+ *   still counts toward the totals but makes no list, quiz or longest film.
+ *   Series rank by minutes (design 4.9); films by counted plays, then that
+ *   same order (page 06).
  * - A series' `rewatched` is how many times over its episodes were played:
  *   counted plays divided by distinct episodes, floored, when 2 or more.
  * - `rewatchShare` counts the plays of films and episodes played 3 times or
@@ -110,7 +113,7 @@ function quiz(ranked: RankedTitle[], series: RankedTitle[]): TitleStats["quiz"] 
 export function computeTitles(events: readonly PlayEvent[], ctx: StatsContext, lookup: MetadataLookup): TitleStats {
   const videos = videoEvents(events)
   const counted = videos.filter(isCountedPlay)
-  const ranked = rankTitles(events, ctx)
+  const ranked = rankTitles(events, ctx).filter((t) => t.plays > 0)
   const series = ranked.filter((t) => t.kind === "series")
   const films = ranked.filter((t) => t.kind === "film")
 
