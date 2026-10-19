@@ -4,7 +4,8 @@ import { CostModelChart } from "@/components/admin/cost-analysis/cost-model-char
 import { CostProviderChart } from "@/components/admin/cost-analysis/cost-provider-chart"
 import { CostTrendChart } from "@/components/admin/cost-analysis/cost-trend-chart"
 import { CostUserChart } from "@/components/admin/cost-analysis/cost-user-chart"
-import { toEndOfDayExclusive } from "@/lib/utils/formatters"
+import { getFormat } from "@/lib/settings/app-settings"
+import { toEndOfDayExclusive } from "@/lib/utils/format"
 import { Suspense } from "react"
 
 export const dynamic = 'force-dynamic'
@@ -19,7 +20,7 @@ export default async function CostAnalysisPage({ searchParams }: CostAnalysisPag
   const endDate = toEndOfDayExclusive(params.endDate)
 
   // Get stats for the selected period
-  const stats = await getLLMUsageStats(startDate, endDate)
+  const [stats, f] = await Promise.all([getLLMUsageStats(startDate, endDate), getFormat()])
 
   // Calculate projections
   const projectionDays = 30
@@ -49,8 +50,8 @@ export default async function CostAnalysisPage({ searchParams }: CostAnalysisPag
     if (!startDate && !endDate) {
       return "All Time"
     }
-    const start = startDate?.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) || "Beginning"
-    const end = endDate?.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) || "Now"
+    const start = params.startDate ? f.dayKey(params.startDate) : "Beginning"
+    const end = params.endDate ? f.dayKey(params.endDate) : "Now"
     return `${start} - ${end}`
   }
 
@@ -77,28 +78,28 @@ export default async function CostAnalysisPage({ searchParams }: CostAnalysisPag
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
               <div className="text-sm text-slate-400 mb-1">Total Cost</div>
-              <div className="text-3xl font-bold text-green-400">${stats.totalCost.toFixed(2)}</div>
+              <div className="text-3xl font-bold text-green-400">{f.money(stats.totalCost)}</div>
               <div className="text-xs text-slate-500 mt-1">
-                ${stats.averageCostPerRequest.toFixed(4)} avg per request
+                {f.money(stats.averageCostPerRequest, "prose")} avg per request
               </div>
             </div>
             <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
               <div className="text-sm text-slate-400 mb-1">Total Tokens</div>
-              <div className="text-3xl font-bold text-cyan-400">{stats.totalTokens.toLocaleString()}</div>
+              <div className="text-3xl font-bold text-cyan-400">{f.number(stats.totalTokens)}</div>
               <div className="text-xs text-slate-500 mt-1">
-                ${costPer1MTokens.toFixed(2)} per 1M tokens
+                {f.money(costPer1MTokens)} per 1M tokens
               </div>
             </div>
             <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
               <div className="text-sm text-slate-400 mb-1">30-Day Projection</div>
-              <div className="text-3xl font-bold text-purple-400">${projectedCost30Days.toFixed(2)}</div>
+              <div className="text-3xl font-bold text-purple-400">{f.money(projectedCost30Days)}</div>
               <div className="text-xs text-slate-500 mt-1">
                 Based on recent trends
               </div>
             </div>
             <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
               <div className="text-sm text-slate-400 mb-1">12-Month Projection</div>
-              <div className="text-3xl font-bold text-yellow-400">${projectedCost12Months.toFixed(2)}</div>
+              <div className="text-3xl font-bold text-yellow-400">{f.money(projectedCost12Months)}</div>
               <div className="text-xs text-slate-500 mt-1">
                 Annual estimate
               </div>
@@ -109,9 +110,9 @@ export default async function CostAnalysisPage({ searchParams }: CostAnalysisPag
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
               <div className="text-sm text-slate-400 mb-1">Total Requests</div>
-              <div className="text-2xl font-bold text-white">{stats.totalRequests.toLocaleString()}</div>
+              <div className="text-2xl font-bold text-white">{f.number(stats.totalRequests)}</div>
               <div className="text-xs text-slate-500 mt-1">
-                {stats.averageTokensPerRequest.toLocaleString()} avg tokens/request
+                {f.number(stats.averageTokensPerRequest)} avg tokens/request
               </div>
             </div>
             <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
@@ -124,11 +125,11 @@ export default async function CostAnalysisPage({ searchParams }: CostAnalysisPag
             <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
               <div className="text-sm text-slate-400 mb-1">Most Expensive Day</div>
               <div className="text-2xl font-bold text-white">
-                {mostExpensiveDay ? `$${mostExpensiveDay.cost.toFixed(2)}` : "N/A"}
+                {mostExpensiveDay ? f.money(mostExpensiveDay.cost) : "N/A"}
               </div>
               <div className="text-xs text-slate-500 mt-1">
                 {mostExpensiveDay
-                  ? new Date(mostExpensiveDay.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                  ? f.dayKey(mostExpensiveDay.date, "day-month-short")
                   : "No data"}
               </div>
             </div>
@@ -198,13 +199,13 @@ export default async function CostAnalysisPage({ searchParams }: CostAnalysisPag
                           </span>
                         </td>
                         <td className="px-4 py-3 text-right text-sm font-medium text-green-400">
-                          ${provider.cost.toFixed(2)}
+                          {f.money(provider.cost)}
                         </td>
                         <td className="px-4 py-3 text-right text-sm text-slate-300">
-                          {provider.requests.toLocaleString()}
+                          {f.number(provider.requests)}
                         </td>
                         <td className="px-4 py-3 text-right text-sm text-slate-300">
-                          {provider.tokens.toLocaleString()}
+                          {f.number(provider.tokens)}
                         </td>
                       </tr>
                     ))}
@@ -237,13 +238,13 @@ export default async function CostAnalysisPage({ searchParams }: CostAnalysisPag
                           </div>
                         </td>
                         <td className="px-4 py-3 text-right text-sm font-medium text-green-400">
-                          ${model.cost.toFixed(2)}
+                          {f.money(model.cost)}
                         </td>
                         <td className="px-4 py-3 text-right text-sm text-slate-300">
-                          {model.requests.toLocaleString()}
+                          {f.number(model.requests)}
                         </td>
                         <td className="px-4 py-3 text-right text-sm text-slate-400">
-                          ${(model.cost / model.requests).toFixed(4)}
+                          {f.money(model.cost / model.requests)}
                         </td>
                       </tr>
                     ))}

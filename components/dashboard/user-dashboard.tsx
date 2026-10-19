@@ -25,7 +25,8 @@ interface UserDashboardProps {
   announcements: AnnouncementData[]
   overseerrUrl?: string | null
   prometheusStatus?: StatusData
-  memberSince: string // ISO date string of when user joined
+  memberLongEnough: boolean // six calendar months since joining, decided on the server
+  renderedAt: string // the server clock, so relative dates hydrate unchanged
   rewindEligibility: RewindEligibility // decided on the server (FR-48)
   primaryAuthService?: string | null // "plex" or "jellyfin"
   mediaServerUrl?: string | null // URL to the media server
@@ -42,7 +43,8 @@ export function UserDashboard({
   announcements,
   overseerrUrl,
   prometheusStatus,
-  memberSince,
+  memberLongEnough,
+  renderedAt,
   rewindEligibility,
   primaryAuthService,
   mediaServerUrl,
@@ -93,11 +95,11 @@ export function UserDashboard({
 
           {/* Announcements - Only shown when there are announcements */}
           {announcements.length > 0 && (
-            <AnnouncementsCard announcements={announcements} />
+            <AnnouncementsCard announcements={announcements} now={renderedAt} />
           )}
 
             {/* Wrapped - Hero callout at the top */}
-            <WrappedCard userId={userId} memberSince={memberSince} rewindEligibility={rewindEligibility} />
+            <WrappedCard userId={userId} memberLongEnough={memberLongEnough} rewindEligibility={rewindEligibility} />
 
             {/* Quick Links - visually separated section */}
             <div className="space-y-3 sm:space-y-4 pt-2">

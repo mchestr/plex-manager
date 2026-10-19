@@ -5,6 +5,7 @@ import { type ChatMessage } from "@/actions/chatbot/types"
 import { AnimatePresence, motion } from "framer-motion"
 import dynamic from "next/dynamic"
 import { useEffect, useRef, useState } from "react"
+import { useFormat } from "@/lib/format-context"
 import { useChat } from "./chat-context"
 
 // ReactMarkdown pulls in a number of micromark dependencies that Next.js
@@ -27,6 +28,7 @@ const getInitialMessage = (userName?: string): ChatMessage => ({
 
 export function Chatbot({ userName }: ChatbotProps) {
   const { isOpen, toggleChat } = useChat()
+  const f = useFormat()
   const [messages, setMessages] = useState<ChatMessage[]>([getInitialMessage(userName)])
   const [conversationId, setConversationId] = useState<string | undefined>(undefined)
   const [input, setInput] = useState("")
@@ -227,7 +229,7 @@ export function Chatbot({ userName }: ChatbotProps) {
                       </div>
                     )}
                     <div className={`text-[10px] mt-1 ${msg.role === "user" ? "text-cyan-200" : "text-slate-500"}`}>
-                      {new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      {f.time(msg.timestamp)}
                     </div>
                   </div>
                 </div>

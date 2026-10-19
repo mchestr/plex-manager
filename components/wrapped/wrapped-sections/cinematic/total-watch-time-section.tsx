@@ -4,7 +4,7 @@ import { motion } from "framer-motion"
 
 import { GoldCountUp } from "@/components/wrapped/cinematic/gold-count-up"
 import { SlideFrame } from "@/components/wrapped/cinematic/slide-frame"
-import { formatWatchTime } from "@/lib/utils/time-formatting"
+import { formatDuration } from "@/lib/utils/format"
 import { WrappedSection } from "@/types/wrapped"
 
 interface Props {
@@ -42,10 +42,10 @@ export function CinematicTotalWatchTimeSection({ section }: Props) {
             </div>
             <div className="flex justify-between text-xs sm:text-sm uppercase tracking-[0.2em] text-taupe">
               <span>
-                Films · <span className="text-gold-bright">{formatWatchTime(totalWatchTime.movies)}</span>
+                Films · <span className="text-gold-bright">{formatDuration(totalWatchTime.movies, "long", { largestUnit: "day" })}</span>
               </span>
               <span>
-                Series · <span className="text-gold-bright">{formatWatchTime(totalWatchTime.shows)}</span>
+                Series · <span className="text-gold-bright">{formatDuration(totalWatchTime.shows, "long", { largestUnit: "day" })}</span>
               </span>
             </div>
           </div>

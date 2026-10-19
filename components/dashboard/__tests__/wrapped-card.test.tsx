@@ -54,7 +54,7 @@ function pollEndsWith(error: string) {
 
 /** Render the card and run its 2 s status poll once, on fake timers. */
 async function renderAndPollOnce() {
-  render(<WrappedCard userId="user-1" memberSince="2020-01-01T00:00:00.000Z" rewindEligibility={ELIGIBLE} />)
+  render(<WrappedCard userId="user-1" memberLongEnough rewindEligibility={ELIGIBLE} />)
   expect(await screen.findByTestId('wrapped-card-generating')).toBeInTheDocument()
   await act(async () => {
     await jest.advanceTimersByTimeAsync(2000)
@@ -119,7 +119,7 @@ describe('WrappedCard season year', () => {
   it('links a completed Rewind to /wrapped/<season year> in January', async () => {
     ;(getUserPlexWrapped as jest.Mock).mockResolvedValue({ status: 'completed', error: null })
 
-    render(<WrappedCard userId="user-1" memberSince="2020-01-01T00:00:00.000Z" rewindEligibility={ELIGIBLE} />)
+    render(<WrappedCard userId="user-1" memberLongEnough rewindEligibility={ELIGIBLE} />)
 
     expect(await screen.findByTestId('wrapped-card-view-link')).toHaveAttribute('href', '/wrapped/2026')
     expect(getUserPlexWrapped).toHaveBeenCalledWith('user-1', 2026)
@@ -139,7 +139,7 @@ describe('WrappedCard season year', () => {
   it('stays loading and reads nothing until the season year is known', async () => {
     ;(getWrappedSettings as jest.Mock).mockReturnValue(new Promise(() => {}))
 
-    render(<WrappedCard userId="user-1" memberSince="2020-01-01T00:00:00.000Z" rewindEligibility={ELIGIBLE} />)
+    render(<WrappedCard userId="user-1" memberLongEnough rewindEligibility={ELIGIBLE} />)
     await act(async () => {
       await jest.advanceTimersByTimeAsync(2000)
     })
@@ -156,7 +156,7 @@ describe('WrappedCard season year', () => {
     ;(getUserPlexWrapped as jest.Mock).mockResolvedValue({ status: 'completed', error: null })
 
     try {
-      render(<WrappedCard userId="user-1" memberSince="2020-01-01T00:00:00.000Z" rewindEligibility={ELIGIBLE} />)
+      render(<WrappedCard userId="user-1" memberLongEnough rewindEligibility={ELIGIBLE} />)
 
       expect(await screen.findByTestId('wrapped-card-error')).toBeInTheDocument()
       expect(screen.queryByTestId('wrapped-card-loading')).not.toBeInTheDocument()
@@ -192,7 +192,7 @@ describe('WrappedCard refused generation', () => {
   })
 
   async function clickGenerate() {
-    render(<WrappedCard userId="user-1" memberSince="2020-01-01T00:00:00.000Z" rewindEligibility={ELIGIBLE} />)
+    render(<WrappedCard userId="user-1" memberLongEnough rewindEligibility={ELIGIBLE} />)
     fireEvent.click(await screen.findByTestId('wrapped-card-generate'))
   }
 
@@ -296,13 +296,13 @@ describe('WrappedCard eligibility', () => {
   })
 
   it.each([
-    ['NO_PLEX_IDENTITY', '2020-01-01T00:00:00.000Z'],
-    ['NO_TAUTULLI_MATCH', '2020-01-01T00:00:00.000Z'],
+    ['NO_PLEX_IDENTITY', true],
+    ['NO_TAUTULLI_MATCH', true],
     // Joined last month: the explanation shows regardless of the six-month rule.
-    ['NO_PLEX_IDENTITY', new Date().toISOString()],
-  ] as const)('explains Rewind to an ineligible member (%s, joined %s), with no action', async (reason, memberSince) => {
+    ['NO_PLEX_IDENTITY', false],
+  ] as const)('explains Rewind to an ineligible member (%s, member long enough: %s), with no action', async (reason, memberLongEnough) => {
     render(
-      <WrappedCard userId="user-1" memberSince={memberSince} rewindEligibility={{ eligible: false, reason }} />
+      <WrappedCard userId="user-1" memberLongEnough={memberLongEnough} rewindEligibility={{ eligible: false, reason }} />
     )
 
     const card = await screen.findByTestId('wrapped-card-not-eligible')
@@ -321,7 +321,7 @@ describe('WrappedCard eligibility', () => {
     render(
       <WrappedCard
         userId="user-1"
-        memberSince="2020-01-01T00:00:00.000Z"
+        memberLongEnough
         rewindEligibility={{ eligible: false, reason: 'NO_PLEX_IDENTITY' }}
       />
     )
@@ -336,7 +336,7 @@ describe('WrappedCard eligibility', () => {
     const { container } = render(
       <WrappedCard
         userId="user-1"
-        memberSince="2020-01-01T00:00:00.000Z"
+        memberLongEnough
         rewindEligibility={{ eligible: false, reason: 'NO_PLEX_IDENTITY' }}
       />
     )
@@ -354,7 +354,7 @@ describe('WrappedCard eligibility', () => {
       error: 'server text',
     })
 
-    render(<WrappedCard userId="user-1" memberSince="2020-01-01T00:00:00.000Z" rewindEligibility={ELIGIBLE} />)
+    render(<WrappedCard userId="user-1" memberLongEnough rewindEligibility={ELIGIBLE} />)
     fireEvent.click(await screen.findByTestId('wrapped-card-generate'))
 
     const card = await screen.findByTestId('wrapped-card-not-eligible')
@@ -370,10 +370,21 @@ describe('WrappedCard eligibility', () => {
   it('offers an eligible member the Generate button', async () => {
     ;(getUserPlexWrapped as jest.Mock).mockResolvedValue(null)
 
-    render(<WrappedCard userId="user-1" memberSince="2020-01-01T00:00:00.000Z" rewindEligibility={ELIGIBLE} />)
+    render(<WrappedCard userId="user-1" memberLongEnough rewindEligibility={ELIGIBLE} />)
 
     expect(await screen.findByRole('button', { name: /generate/i })).toBeEnabled()
     expect(screen.queryByTestId('wrapped-card-not-eligible')).not.toBeInTheDocument()
     expect(screen.queryByText(COPY)).not.toBeInTheDocument()
+  })
+
+  it('shows nothing to an eligible member who joined under six months ago (decided on the server)', async () => {
+    ;(getUserPlexWrapped as jest.Mock).mockResolvedValue(null)
+
+    const { container } = render(
+      <WrappedCard userId="user-1" memberLongEnough={false} rewindEligibility={ELIGIBLE} />
+    )
+
+    await waitFor(() => expect(getWrappedSettings).toHaveBeenCalled())
+    expect(container).toBeEmptyDOMElement()
   })
 })

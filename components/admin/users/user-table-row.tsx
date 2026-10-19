@@ -2,6 +2,7 @@
 
 import { UserActionsMenu } from "@/components/admin/users/user-actions-menu"
 import { Badge } from "@/components/ui/badge"
+import { useFormat } from "@/lib/format-context"
 import { AdminUserWithWrappedStats } from "@/types/admin"
 import Link from "next/link"
 import Image from "next/image"
@@ -56,6 +57,7 @@ function exemptLabel(exemptReason: string | null): string | null {
 
 export function UserTableRow({ user, currentYear, stripeDashboardBaseUrl }: UserTableRowProps) {
   const router = useRouter()
+  const f = useFormat()
 
   const handleRowClick = () => {
     router.push(`/admin/users/${user.id}`)
@@ -66,6 +68,7 @@ export function UserTableRow({ user, currentYear, stripeDashboardBaseUrl }: User
   return (
     <tr
       key={user.id}
+      data-testid={`user-row-${user.id}`}
       className="hover:bg-slate-700/20 transition-colors cursor-pointer"
       onClick={handleRowClick}
     >
@@ -132,11 +135,7 @@ export function UserTableRow({ user, currentYear, stripeDashboardBaseUrl }: User
               {badge.tone !== "danger" && user.currentPeriodEnd && (
                 <div className="text-xs text-slate-400 mt-0.5">
                   {user.cancelAtPeriodEnd ? "Ends" : "Renews"}{" "}
-                  {new Date(user.currentPeriodEnd).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    year: "2-digit",
-                  })}
+                  {f.date(user.currentPeriodEnd)}
                 </div>
               )}
             </>
@@ -154,7 +153,7 @@ export function UserTableRow({ user, currentYear, stripeDashboardBaseUrl }: User
               href={`/admin/llm-usage?userId=${user.id}`}
               className="text-green-400 font-medium hover:text-green-300 transition-colors underline"
             >
-              ${user.totalLlmUsage.cost.toFixed(3)}
+              {f.money(user.totalLlmUsage.cost)}
             </Link>
             <div className="text-xs text-slate-400 truncate">
               {user.totalLlmUsage.provider}
@@ -166,10 +165,10 @@ export function UserTableRow({ user, currentYear, stripeDashboardBaseUrl }: User
       </td>
       <td className="px-2 py-2" data-testid="user-joined-timestamp">
         <div className="text-xs text-slate-400">
-          {new Date(user.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })}
+          {f.date(user.createdAt)}
         </div>
         <div className="text-xs text-slate-500">
-          {new Date(user.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+          {f.time(user.createdAt)}
         </div>
       </td>
       <td className="px-2 py-2">

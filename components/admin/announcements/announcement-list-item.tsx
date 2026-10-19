@@ -2,6 +2,7 @@
 
 import type { AnnouncementData } from "@/actions/announcements"
 import { Button } from "@/components/ui/button"
+import { useFormat } from "@/lib/format-context"
 
 interface AnnouncementListItemProps {
   announcement: AnnouncementData
@@ -21,6 +22,7 @@ export function AnnouncementListItem({
   onEdit,
   onDelete,
 }: AnnouncementListItemProps) {
+  const f = useFormat()
   return (
     <div
       className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 sm:p-6"
@@ -55,9 +57,9 @@ export function AnnouncementListItem({
             {announcement.content}
           </p>
           <div className="mt-3 flex items-center gap-4 text-xs text-slate-500">
-            <span>Created: {new Date(announcement.createdAt).toLocaleDateString()}</span>
+            <span>Created: {f.date(announcement.createdAt)}</span>
             {announcement.expiresAt && (
-              <span>Expires: {new Date(announcement.expiresAt).toLocaleDateString()}</span>
+              <span>Expires: {f.date(announcement.expiresAt)}</span>
             )}
           </div>
         </div>

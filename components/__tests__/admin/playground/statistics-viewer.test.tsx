@@ -121,7 +121,7 @@ describe("StatisticsViewer", () => {
     it("should display summary statistics", () => {
       const { container } = render(<StatisticsViewer {...mockProps} viewMode="formatted" />)
 
-      expect(screen.getByText("600h")).toBeInTheDocument() // 36000 / 60
+      expect(screen.getByText("600 h")).toBeInTheDocument() // 36000 / 60
 
       // Check for movies watched in the specific context
       const moviesDiv = container.querySelector(".text-purple-400")
@@ -348,7 +348,7 @@ describe("StatisticsViewer", () => {
     it("should style formatted view with proper colors", () => {
       render(<StatisticsViewer {...mockProps} viewMode="formatted" />)
 
-      const watchTimeElement = screen.getByText("600h")
+      const watchTimeElement = screen.getByText("600 h")
       expect(watchTimeElement).toHaveClass("text-cyan-400")
     })
 
@@ -398,7 +398,7 @@ describe("StatisticsViewer", () => {
         />
       )
 
-      expect(screen.getByText("0h")).toBeInTheDocument()
+      expect(screen.getByText("0 m")).toBeInTheDocument()
     })
 
     it("should handle movies without year", () => {

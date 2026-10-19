@@ -7,6 +7,7 @@ import { useToast } from "@/components/ui/toast"
 import { ModalShell } from "@/components/ui/modal-shell"
 import { ConfirmModal } from "@/components/admin/shared/confirm-modal"
 import type { InviteWithUsages } from "@/lib/dto/user"
+import { useFormat } from "@/lib/format-context"
 import Link from "next/link"
 import { useCallback, useEffect, useState } from "react"
 
@@ -20,6 +21,7 @@ interface JellyfinLibrary {
 
 export function InvitesPageClient() {
   const toast = useToast()
+  const f = useFormat()
   const [invites, setInvites] = useState<InviteWithUsages[]>([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
@@ -219,7 +221,7 @@ export function InvitesPageClient() {
     if (!date) return "Never"
     const now = new Date()
     if (date < now) return <span className="text-red-400">Expired</span>
-    return date.toLocaleDateString()
+    return f.date(date)
   }
 
   return (
@@ -316,7 +318,7 @@ export function InvitesPageClient() {
                       className="px-3 sm:px-6 py-3 sm:py-4 text-sm text-slate-400 hidden md:table-cell"
                       data-testid="invite-created-timestamp"
                     >
-                      {new Date(invite.createdAt).toLocaleDateString()}
+                      {f.date(invite.createdAt)}
                     </td>
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
                       <div className="flex items-center gap-2 sm:gap-3">

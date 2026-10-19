@@ -2,6 +2,7 @@
 
 import { disconnectDiscordAccount, resyncDiscordRole } from "@/actions/discord"
 import { useToast } from "@/components/ui/toast"
+import { useFormat } from "@/lib/format-context"
 import { cn } from "@/lib/utils"
 import { useTransition } from "react"
 
@@ -25,6 +26,7 @@ interface DiscordLinkPanelProps {
 
 export function DiscordLinkPanel({ connection, instructions, connectUrl, isEnabled, serverInviteCode, isOnServer }: DiscordLinkPanelProps) {
   const toast = useToast()
+  const f = useFormat()
   const [isPending, startTransition] = useTransition()
 
   const handleDisconnect = () => {
@@ -130,11 +132,11 @@ export function DiscordLinkPanel({ connection, instructions, connectUrl, isEnabl
           <dl className="mt-4 grid gap-3 text-xs text-slate-300 sm:grid-cols-2">
             <div>
               <dt className="text-slate-500">Linked</dt>
-              <dd className="text-white">{connection.linkedAt ? new Date(connection.linkedAt).toLocaleString() : "Recently"}</dd>
+              <dd className="text-white">{connection.linkedAt ? f.dateTime(connection.linkedAt) : "Recently"}</dd>
             </div>
             <div>
               <dt className="text-slate-500">Last synced</dt>
-              <dd className="text-white">{connection.metadataSyncedAt ? new Date(connection.metadataSyncedAt).toLocaleString() : "Pending"}</dd>
+              <dd className="text-white">{connection.metadataSyncedAt ? f.dateTime(connection.metadataSyncedAt) : "Pending"}</dd>
             </div>
           </dl>
           {connection.lastError && (

@@ -424,7 +424,7 @@ describe('HistoricalWrappedSelectorHeader', () => {
       fireEvent.click(screen.getByRole('button'))
 
       await waitFor(() => {
-        expect(screen.getByText(/\$0\.0234/)).toBeInTheDocument()
+        expect(screen.getByText(/\$0\.023/)).toBeInTheDocument()
         expect(screen.getByText(/1,500 tokens/)).toBeInTheDocument()
       })
     })

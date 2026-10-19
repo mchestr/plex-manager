@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { JobMetadata, JobStatus } from "@/lib/queue/types"
 import { retryQueueJob, removeQueueJob } from "@/actions/admin/queue"
 import { useToast } from "@/components/ui/toast"
+import { useFormat } from "@/lib/format-context"
 
 interface JobTableProps {
   jobs: JobMetadata[]
@@ -27,14 +28,9 @@ export function JobTable({ jobs, page, hasMore, disabled = false }: JobTableProp
   const router = useRouter()
   const searchParams = useSearchParams()
   const { showSuccess, showError } = useToast()
+  const f = useFormat()
   const [pendingJobId, setPendingJobId] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
-
-  const formatTime = (date: Date | undefined) => {
-    if (!date) return "-"
-    const d = new Date(date)
-    return d.toLocaleString()
-  }
 
   const formatDuration = (start: Date | undefined, end: Date | undefined) => {
     if (!start || !end) return "-"
@@ -170,7 +166,7 @@ export function JobTable({ jobs, page, hasMore, disabled = false }: JobTableProp
                 </td>
                 <td className="px-4 py-3">
                   <span className="text-sm text-slate-400">
-                    {formatTime(job.createdAt)}
+                    {job.createdAt ? f.dateTime(job.createdAt) : "-"}
                   </span>
                 </td>
                 <td className="px-4 py-3">

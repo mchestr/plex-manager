@@ -4,7 +4,7 @@ import { motion } from "framer-motion"
 import CountUp from "react-countup"
 import { FormattedText } from "@/components/shared/formatted-text"
 import { SectionHeader } from "@/components/wrapped/wrapped-sections/section-header"
-import { formatWatchTime } from "@/components/wrapped/wrapped-sections/utils"
+import { formatDuration } from "@/lib/utils/format"
 import { DonutChart, ProgressBar } from "@/components/wrapped/wrapped-charts"
 import { WrappedData, WrappedSection } from "@/types/wrapped"
 
@@ -41,7 +41,7 @@ export function MoviesBreakdownSection({ section, wrappedData, sectionIndex }: M
           </div>
           <div className="relative text-slate-300">Movies Watched</div>
           <div className="relative text-sm text-slate-400 mt-2">
-            {formatWatchTime(wrappedData.statistics.totalWatchTime.movies)}
+            {formatDuration(wrappedData.statistics.totalWatchTime.movies, "long", { largestUnit: "day" })}
           </div>
           {/* Progress bar for movies watch time */}
           {wrappedData.statistics.totalWatchTime.total > 0 && (

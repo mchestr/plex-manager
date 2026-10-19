@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "framer-motion"
 import dynamic from "next/dynamic"
 import type { AnnouncementData } from "@/actions/announcements"
+import { useFormat } from "@/lib/format-context"
 
 const ReactMarkdown = dynamic(() => import("react-markdown"), {
   loading: () => <div className="h-4 w-24 animate-pulse rounded bg-slate-700" />,
@@ -10,9 +11,12 @@ const ReactMarkdown = dynamic(() => import("react-markdown"), {
 
 interface AnnouncementsCardProps {
   announcements: AnnouncementData[]
+  /** The server clock at render time, so the relative dates hydrate unchanged. */
+  now: string
 }
 
-export function AnnouncementsCard({ announcements }: AnnouncementsCardProps) {
+export function AnnouncementsCard({ announcements, now }: AnnouncementsCardProps) {
+  const f = useFormat()
   if (announcements.length === 0) {
     return null
   }
@@ -98,7 +102,7 @@ export function AnnouncementsCard({ announcements }: AnnouncementsCardProps) {
                       <ReactMarkdown>{announcement.content}</ReactMarkdown>
                     </div>
                     <p className="mt-2 text-xs text-amber-300/60 font-medium">
-                      {formatRelativeDate(announcement.createdAt)}
+                      {capitalize(f.relative(announcement.createdAt, now))}
                     </p>
                   </div>
                 </div>
@@ -111,23 +115,7 @@ export function AnnouncementsCard({ announcements }: AnnouncementsCardProps) {
   )
 }
 
-function formatRelativeDate(dateString: string): string {
-  const date = new Date(dateString)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-
-  if (diffDays === 0) {
-    return "Today"
-  } else if (diffDays === 1) {
-    return "Yesterday"
-  } else if (diffDays < 7) {
-    return `${diffDays} days ago`
-  } else {
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
-    })
-  }
+// "yesterday" starts the line, so it reads "Yesterday".
+function capitalize(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1)
 }

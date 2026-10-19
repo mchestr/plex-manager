@@ -3,6 +3,8 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
+import { useFormat } from "@/lib/format-context"
+
 interface ConversationUsageRowProps {
   record: {
     id: string
@@ -16,16 +18,6 @@ interface ConversationUsageRowProps {
     prompt: string | null
   }
   index: number
-}
-
-function formatDateTime(date: Date): string {
-  return new Date(date).toLocaleString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  })
 }
 
 function getLastUserSnippet(prompt: string | null, maxLength: number = 80): string | null {
@@ -50,6 +42,7 @@ export function ConversationUsageRow({
   index,
 }: ConversationUsageRowProps) {
   const router = useRouter()
+  const f = useFormat()
   const promptSnippet = getLastUserSnippet(record.prompt)
 
   const handleRowClick = () => {
@@ -58,6 +51,7 @@ export function ConversationUsageRow({
 
   return (
     <tr
+      data-testid={`conversation-usage-row-${record.id}`}
       onClick={handleRowClick}
       className="hover:bg-slate-700/20 transition-colors cursor-pointer group"
     >
@@ -66,7 +60,7 @@ export function ConversationUsageRow({
       </td>
       <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
         <div className="text-xs sm:text-sm text-slate-300">
-          {formatDateTime(record.createdAt)}
+          {f.dateTime(record.createdAt)}
         </div>
         {promptSnippet && (
           <div className="mt-1 text-[11px] text-slate-500 line-clamp-1">
@@ -83,17 +77,17 @@ export function ConversationUsageRow({
       <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
         <div className="text-sm">
           <div className="text-white font-medium">
-            {record.totalTokens.toLocaleString()}
+            {f.number(record.totalTokens)}
           </div>
           <div className="text-xs text-slate-400 hidden sm:block">
-            {record.promptTokens.toLocaleString()} +{" "}
-            {record.completionTokens.toLocaleString()}
+            {f.number(record.promptTokens)} +{" "}
+            {f.number(record.completionTokens)}
           </div>
         </div>
       </td>
       <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
         <div className="text-sm text-green-400 font-medium">
-          ${record.cost.toFixed(4)}
+          {f.money(record.cost)}
         </div>
       </td>
       <td className="px-3 sm:px-6 py-4 whitespace-nowrap">

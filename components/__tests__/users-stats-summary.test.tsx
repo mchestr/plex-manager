@@ -81,7 +81,7 @@ describe('UsersStatsSummary', () => {
     render(<UsersStatsSummary users={users} />)
 
     expect(screen.getByText('Total Cost')).toBeInTheDocument()
-    expect(screen.getByText('$0.0400')).toBeInTheDocument()
+    expect(screen.getByText('$0.040')).toBeInTheDocument()
   })
 
   it('should handle users without LLM usage', () => {
@@ -95,7 +95,7 @@ describe('UsersStatsSummary', () => {
     const tokenValue = screen.getByText('Total Tokens').parentElement?.querySelector('.text-2xl')
     expect(tokenValue).toHaveTextContent('0')
     expect(screen.getByText('Total Cost')).toBeInTheDocument()
-    expect(screen.getByText('$0.0000')).toBeInTheDocument()
+    expect(screen.getByText('$0.00')).toBeInTheDocument()
   })
 
   it('should handle empty users array', () => {

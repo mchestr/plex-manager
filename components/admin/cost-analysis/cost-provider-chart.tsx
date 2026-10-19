@@ -9,6 +9,8 @@ import {
 } from "chart.js"
 import { Doughnut } from "react-chartjs-2"
 
+import { useFormat } from "@/lib/format-context"
+
 ChartJS.register(ArcElement, Tooltip, Legend)
 
 interface ProviderData {
@@ -34,6 +36,7 @@ const providerColors: Record<string, { bg: string; border: string }> = {
 }
 
 export function CostProviderChart({ data }: CostProviderChartProps) {
+  const f = useFormat()
   if (data.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-slate-500 text-sm">
@@ -89,10 +92,10 @@ export function CostProviderChart({ data }: CostProviderChartProps) {
             const total = data.reduce((sum, d) => sum + d.cost, 0)
             const percentage = ((item.cost / total) * 100).toFixed(1)
             return [
-              `${item.provider}: $${item.cost.toFixed(2)}`,
+              `${item.provider}: ${f.money(item.cost)}`,
               `${percentage}% of total`,
-              `Requests: ${item.requests.toLocaleString()}`,
-              `Tokens: ${item.tokens.toLocaleString()}`,
+              `Requests: ${f.number(item.requests)}`,
+              `Tokens: ${f.number(item.tokens)}`,
             ]
           },
         },

@@ -9,7 +9,7 @@ import {
   fetchTopContentLeaderboards,
   fetchWatchTimeLeaderboard,
 } from '@/lib/wrapped/tautulli-statistics'
-import { formatBytes } from '@/lib/utils/time-formatting'
+import { formatBytes } from '@/lib/utils/format'
 
 // Mock fetch globally
 global.fetch = jest.fn()

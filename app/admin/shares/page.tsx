@@ -4,15 +4,17 @@ import {
   getTopSharedWraps,
 } from "@/actions/share-analytics"
 import { ShareTimeChart } from "@/components/admin/shares/share-time-chart"
+import { getFormat } from "@/lib/settings/app-settings"
 import Link from "next/link"
 
 export const dynamic = 'force-dynamic'
 
 export default async function SharesDashboardPage() {
-  const [stats, timeSeriesData, topWraps] = await Promise.all([
+  const [stats, timeSeriesData, topWraps, f] = await Promise.all([
     getShareAnalyticsStats(),
     getShareTimeSeriesData(30),
     getTopSharedWraps(20),
+    getFormat(),
   ])
 
   return (
@@ -33,7 +35,7 @@ export default async function SharesDashboardPage() {
           <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
             <div className="text-sm text-slate-400 mb-1">Total Shares</div>
             <div className="text-2xl font-bold text-cyan-400">
-              {stats.totalShares.toLocaleString()}
+              {f.number(stats.totalShares)}
             </div>
             <div className="text-xs text-slate-500 mt-1">
               Wraps with share tokens
@@ -42,7 +44,7 @@ export default async function SharesDashboardPage() {
           <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
             <div className="text-sm text-slate-400 mb-1">Total Visits</div>
             <div className="text-2xl font-bold text-green-400">
-              {stats.totalVisits.toLocaleString()}
+              {f.number(stats.totalVisits)}
             </div>
             <div className="text-xs text-slate-500 mt-1">
               All-time share visits
@@ -51,7 +53,7 @@ export default async function SharesDashboardPage() {
           <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
             <div className="text-sm text-slate-400 mb-1">Unique Wraps</div>
             <div className="text-2xl font-bold text-white">
-              {stats.uniqueWrapsShared.toLocaleString()}
+              {f.number(stats.uniqueWrapsShared)}
             </div>
             <div className="text-xs text-slate-500 mt-1">
               Different wraps shared
@@ -150,32 +152,20 @@ export default async function SharesDashboardPage() {
                       </td>
                       <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                         <span className="text-sm font-medium text-green-400">
-                          {wrap.visitCount.toLocaleString()}
+                          {f.number(wrap.visitCount)}
                         </span>
                       </td>
                       <td className="px-3 sm:px-6 py-4 whitespace-nowrap hidden sm:table-cell">
                         <div className="text-sm text-slate-300">
                           {wrap.firstSharedAt
-                            ? new Date(
-                                wrap.firstSharedAt
-                              ).toLocaleDateString("en-US", {
-                                month: "short",
-                                day: "numeric",
-                                year: "numeric",
-                              })
+                            ? f.date(wrap.firstSharedAt)
                             : "—"}
                         </div>
                       </td>
                       <td className="px-3 sm:px-6 py-4 whitespace-nowrap hidden md:table-cell">
                         <div className="text-sm text-slate-300">
                           {wrap.lastVisitedAt
-                            ? new Date(
-                                wrap.lastVisitedAt
-                              ).toLocaleDateString("en-US", {
-                                month: "short",
-                                day: "numeric",
-                                year: "numeric",
-                              })
+                            ? f.date(wrap.lastVisitedAt)
                             : "—"}
                         </div>
                       </td>

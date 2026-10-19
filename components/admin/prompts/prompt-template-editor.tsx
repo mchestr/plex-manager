@@ -7,7 +7,7 @@ import {
 } from "@/actions/prompts"
 import { ModalShell } from "@/components/ui/modal-shell"
 import { getAvailablePlaceholders } from "@/lib/wrapped/prompt-template"
-import { formatWatchTime } from "@/lib/utils/time-formatting"
+import { formatDuration } from "@/lib/utils/format"
 import { legacyWrappedData, readWrappedStatus } from "@/lib/wrapped/data/parse-stored"
 import type { WrappedStatistics } from "@/types/wrapped"
 import { PlexWrapped, PromptTemplate } from "@/lib/generated/prisma/client"
@@ -264,20 +264,20 @@ export function PromptTemplateEditor({ template, userWrapped, userName = "User" 
       const replacements: Record<string, string> = {
         "{{userName}}": userName,
         "{{year}}": currentYear.toString(),
-        "{{totalWatchTime}}": formatWatchTime(stats.totalWatchTime.total),
+        "{{totalWatchTime}}": formatDuration(stats.totalWatchTime.total, "long", { largestUnit: "day" }),
         "{{totalWatchTimeMinutes}}": stats.totalWatchTime.total.toString(),
-        "{{moviesWatchTime}}": formatWatchTime(stats.totalWatchTime.movies),
+        "{{moviesWatchTime}}": formatDuration(stats.totalWatchTime.movies, "long", { largestUnit: "day" }),
         "{{moviesWatchTimeMinutes}}": stats.totalWatchTime.movies.toString(),
-        "{{showsWatchTime}}": formatWatchTime(stats.totalWatchTime.shows),
+        "{{showsWatchTime}}": formatDuration(stats.totalWatchTime.shows, "long", { largestUnit: "day" }),
         "{{showsWatchTimeMinutes}}": stats.totalWatchTime.shows.toString(),
         "{{moviesWatched}}": stats.moviesWatched.toString(),
         "{{showsWatched}}": stats.showsWatched.toString(),
         "{{episodesWatched}}": stats.episodesWatched.toString(),
         "{{topMoviesList}}": stats.topMovies.slice(0, 5).map((movie, idx) =>
-          `${idx + 1}. ${movie.title}${movie.year ? ` (${movie.year})` : ""} - ${formatWatchTime(movie.watchTime)} watched (${movie.watchTime} minutes)`
+          `${idx + 1}. ${movie.title}${movie.year ? ` (${movie.year})` : ""} - ${formatDuration(movie.watchTime, "long", { largestUnit: "day" })} watched (${movie.watchTime} minutes)`
         ).join("\n"),
         "{{topShowsList}}": stats.topShows.slice(0, 5).map((show, idx) =>
-          `${idx + 1}. ${show.title}${show.year ? ` (${show.year})` : ""} - ${formatWatchTime(show.watchTime)} watched (${show.watchTime} minutes), ${show.episodesWatched} episodes`
+          `${idx + 1}. ${show.title}${show.year ? ` (${show.year})` : ""} - ${formatDuration(show.watchTime, "long", { largestUnit: "day" })} watched (${show.watchTime} minutes), ${show.episodesWatched} episodes`
         ).join("\n"),
         "{{topMoviesJson}}": JSON.stringify(stats.topMovies.slice(0, 5)),
         "{{topShowsJson}}": JSON.stringify(stats.topShows.slice(0, 5)),
@@ -288,7 +288,7 @@ export function PromptTemplateEditor({ template, userWrapped, userName = "User" 
           : "\n[Leaderboard stats come from live data at generation time and are not stored with the Rewind, so this preview cannot show them]\n",
         "{{serverStatsSection}}": stats.serverStats ? `\n**Plex Server Statistics:**\n- Server name: ${stats.serverStats.serverName}\n- Total storage: ${stats.serverStats.totalStorageFormatted}\n` : "",
         "{{overseerrStatsSection}}": stats.overseerrStats ? `\n**Overseerr Requests:**\n- Your requests: ${stats.overseerrStats.totalRequests}\n` : "",
-        "{{watchTimeByMonthSection}}": stats.watchTimeByMonth && stats.watchTimeByMonth.length > 0 ? `\n**Watch Time by Month:**\n${stats.watchTimeByMonth.map(m => `- ${m.monthName}: ${formatWatchTime(m.watchTime)}`).join("\n")}\n` : "",
+        "{{watchTimeByMonthSection}}": stats.watchTimeByMonth && stats.watchTimeByMonth.length > 0 ? `\n**Watch Time by Month:**\n${stats.watchTimeByMonth.map(m => `- ${m.monthName}: ${formatDuration(m.watchTime, "long", { largestUnit: "day" })}`).join("\n")}\n` : "",
         "{{serverName}}": stats.serverStats?.serverName || "",
         "{{bingeWatcher}}": stats.topShows.some(s => s.episodesWatched > 20) ? "true" : "false",
         "{{discoveryScore}}": Math.min(100, Math.max(0, Math.floor((stats.moviesWatched + stats.showsWatched) / 10))).toString(),
