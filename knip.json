@@ -8,7 +8,9 @@
     "lib/queue/redis-lock.ts!",
     "scripts/codemods/*.mjs!",
     "lib/wrapped/stats/*.ts!",
-    "lib/utils/format.ts!"
+    "lib/utils/format.ts!",
+    "lib/rewind/typeset/fit-lines.ts!",
+    "lib/rewind/typeset/metrics.ts!"
   ],
   "project": [
     "**/*.{js,mjs,cjs,ts,tsx}!",
