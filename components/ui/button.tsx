@@ -29,6 +29,11 @@ export const buttonVariants = cva(
         destructive: "border-destructive/40 bg-destructive-subtle text-destructive hover:bg-destructive/20",
         "destructive-solid": "bg-destructive font-semibold text-destructive-foreground",
         link: "text-foreground underline decoration-border-strong underline-offset-3 hover:decoration-foreground data-disabled:not-aria-busy:border-transparent data-disabled:not-aria-busy:bg-transparent",
+        // Rewind scope only (lint keeps them in components/rewind): solid ink
+        // never lightens, it underlines; the keyline reverses out on hover.
+        ink: "border-[1.5px] border-primary bg-primary font-semibold text-primary-foreground decoration-[1.5px] underline-offset-4 hover:underline",
+        "ink-outline":
+          "border-[1.5px] border-primary bg-transparent font-semibold text-primary hover:bg-primary hover:text-primary-foreground",
       },
       size: {
         sm: "h-8 px-3 text-label",
@@ -36,6 +41,10 @@ export const buttonVariants = cva(
         lg: "h-11 px-5 text-body",
         icon: "size-9 p-0",
         "icon-sm": "size-8 p-0",
+        // Rewind scope only: a 44px pill, and a 38px circle whose ::before
+        // extends the hit area to 44px (Rewind 4.6).
+        pill: "h-11 rounded-full px-5 text-ui",
+        "icon-pill": "relative size-[38px] rounded-full p-0 before:absolute before:-inset-[3px] before:rounded-full",
       },
     },
     defaultVariants: { variant: "primary", size: "default" },
@@ -51,12 +60,13 @@ type DeprecatedSize = "md"
 
 const variantAliases: Record<DeprecatedVariant, Variant> = { danger: "destructive", success: "secondary" }
 
-interface ButtonProps extends Omit<ButtonPrimitive.Props, "className"> {
+interface BaseButtonProps extends Omit<ButtonPrimitive.Props, "className"> {
   className?: string
-  /** `danger` (now `destructive`) and `success` (now `secondary`) are deprecated. */
+  /**
+   * `danger` (now `destructive`) and `success` (now `secondary`) are
+   * deprecated. `ink` and `ink-outline` are for the Rewind scope only.
+   */
   variant?: Variant | DeprecatedVariant
-  /** `md` (now `default`) is deprecated. */
-  size?: Size | DeprecatedSize
   /** The leading icon, 16px. A Spinner takes its place while `loading`. */
   icon?: ReactNode
   /**
@@ -68,6 +78,13 @@ interface ButtonProps extends Omit<ButtonPrimitive.Props, "className"> {
   /** The progressive label shown while loading, such as "Saving". */
   loadingLabel?: ReactNode
 }
+
+/**
+ * `md` (now `default`) is deprecated; `pill` and `icon-pill` are for the
+ * Rewind scope only. An `icon-pill` holds only an icon, so it must be named.
+ */
+type ButtonProps = BaseButtonProps &
+  ({ size: "icon-pill"; "aria-label": string } | { size?: Exclude<Size, "icon-pill"> | DeprecatedSize })
 
 /**
  * The app's button, on Base UI Button.

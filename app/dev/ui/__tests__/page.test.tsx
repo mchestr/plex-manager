@@ -59,6 +59,14 @@ describe("/dev/ui", () => {
       "popover",
       "tooltip",
       "toast",
+      "sheet",
+      "toggle",
+      "slider",
+      "segmented-control",
+      "ink",
+      "ink-paper",
+      "ink-marigold",
+      "ink-ultramarine",
     ]) {
       expect(screen.getByTestId(`dev-ui-${primitive}`)).toBeInTheDocument()
     }

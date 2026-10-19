@@ -217,6 +217,8 @@
 [data-field][data-spot="arch"] { --spot: var(--arch-spot, var(--ink)); }
 [data-field="paper"][data-ink="arch-deep"] { --ink: var(--arch-deep); --deep: var(--arch-deep); --spot: var(--arch-deep); }
 [data-theme="rewind"] [data-slot="button"]:disabled { border-style: dashed; opacity: 0.6; }   /* disabled has no fill in print */
+/* the slider's unfilled track is hatched in ink, the range solid (ui-design-system 5.4) */
+[data-theme="rewind"] [data-slot="slider-track"] { background: repeating-linear-gradient(-45deg, var(--ink) 0 1px, transparent 1px 3px); }
 @utility font-display { font-family: var(--font-display); }   /* Rewind chrome and controls (Rewind 5.1) */
 @utility font-text { font-family: var(--font-text); }
 /* the card-to-cover handoff runs on <html>, outside the scope, so it states --rw-dur-m and --rw-ease-ink literally */

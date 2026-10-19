@@ -83,6 +83,12 @@ describe("rules", () => {
     expect(count(source)).toEqual({ "infinite-motion": 1, "rewind-only": 1 })
   })
 
+  it("skips rewind-only, but not infinite-motion, on the primitives sheet under app/dev/", () => {
+    const source = '<Button variant="ink" size="icon-pill" className="animate-pulse" />'
+    expect(count(source, "app/dev/ui/_sections/ink.tsx")).toEqual({ "infinite-motion": 1 })
+    expect(count(source, "app/admin/page.tsx")).toEqual({ "infinite-motion": 1, "rewind-only": 2 })
+  })
+
   it("skips the Rewind block of globals.css for the Rewind rules only", () => {
     const css = [
       ".a { color: var(--ink); }",

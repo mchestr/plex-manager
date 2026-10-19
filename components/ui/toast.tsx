@@ -5,6 +5,7 @@ import { CircleCheck, CircleX, Info, X, type LucideIcon } from "lucide-react"
 import { useMemo, type ReactNode } from "react"
 
 import { Button } from "@/components/ui/button"
+import { usePortalContainer, type PopupProps } from "@/components/ui/portal-container"
 import { cn } from "@/lib/utils"
 
 type ToastType ="success" | "error" | "info"
@@ -37,7 +38,10 @@ let lastId = 0
  * an action stay until dismissed, and errors are announced assertively.
  */
 export function useToast(): ToastApi {
-  const { add, close } = ToastPrimitive.useToastManager()
+  const { add, close } = ToastPrimitive.useToastManager<ToastData>()
+  // A toast keeps the popup props of where it was raised, so one raised in
+  // Rewind prints on paper although the viewport sits outside the scope.
+  const { popupProps } = usePortalContainer()
 
   return useMemo(() => {
     const show = ({ title, description, tone = "info", action }: ToastOptions, duration?: number) => {
@@ -48,6 +52,7 @@ export function useToast(): ToastApi {
         title,
         description,
         type: tone,
+        data: { popupProps },
         timeout: persistent ? 0 : (duration ?? TIMEOUT_MS),
         actionProps: action && {
           children: action.label,
@@ -68,7 +73,7 @@ export function useToast(): ToastApi {
       showInfo: (message, duration) => showToast(message, "info", duration),
       toast: (options) => show(options),
     }
-  }, [add, close])
+  }, [add, close, popupProps])
 }
 
 const toneIcons: Record<ToastType, { icon: LucideIcon; className: string }> = {
@@ -77,15 +82,31 @@ const toneIcons: Record<ToastType, { icon: LucideIcon; className: string }> = {
   error: { icon: CircleX, className: "text-destructive" },
 }
 
+interface ToastData {
+  popupProps: PopupProps
+}
+
+/**
+ * The attributes a toast root takes from where it was raised. The viewport
+ * renders outside any Rewind root, so a toast that prints in an ink carries
+ * its own one-element scope (`data-theme="rewind"`, ui-design-system 4.4).
+ */
+function scopeOf(popupProps: PopupProps | undefined): PopupProps {
+  if (!popupProps) return {}
+  return popupProps["data-field"] ? { "data-theme": "rewind", ...popupProps } : popupProps
+}
+
 const isToastType = (type: string | undefined): type is ToastType =>
   type === "success" || type === "error" || type === "info"
 
-function ToastItem({ toast }: { toast: ToastPrimitive.Root.ToastObject }) {
+function ToastItem({ toast }: { toast: ToastPrimitive.Root.ToastObject<ToastData> }) {
   const tone: ToastType = isToastType(toast.type) ? toast.type : "info"
   const { icon: ToneIcon, className: iconClass } = toneIcons[tone]
+  const scope = scopeOf(toast.data?.popupProps)
   return (
     <ToastPrimitive.Root
       toast={toast}
+      {...scope}
       data-slot="toast"
       data-testid="toast"
       data-tone={tone}
@@ -98,7 +119,8 @@ function ToastItem({ toast }: { toast: ToastPrimitive.Root.ToastObject }) {
         "w-full rounded-lg border border-border-strong bg-popover px-4 py-3.5 text-ui text-popover-foreground shadow-popover outline-none select-none",
         "transition-[opacity,translate] duration-(--duration-slow) ease-(--ease-out-quiet)",
         "data-starting-style:translate-y-2 data-starting-style:opacity-0",
-        "data-ending-style:opacity-0 data-ending-style:duration-(--duration-fast) data-ending-style:ease-(--ease-in-quiet) data-limited:hidden"
+        "data-ending-style:opacity-0 data-ending-style:duration-(--duration-fast) data-ending-style:ease-(--ease-in-quiet) data-limited:hidden",
+        scope.className
       )}
     >
       <ToastPrimitive.Content className="flex items-start gap-3">
@@ -123,7 +145,7 @@ function ToastItem({ toast }: { toast: ToastPrimitive.Root.ToastObject }) {
 }
 
 function ToastList() {
-  const { toasts } = ToastPrimitive.useToastManager()
+  const { toasts } = ToastPrimitive.useToastManager<ToastData>()
   return toasts.map((toast) => <ToastItem key={toast.id} toast={toast} />)
 }
 

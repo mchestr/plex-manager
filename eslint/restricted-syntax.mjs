@@ -131,6 +131,34 @@ export const deprecatedImports = [
   },
 ];
 
+/**
+ * The Rewind-only Button entries (P3.7, ui-design-system 4.4 and 9.6): the
+ * `ink` and `ink-outline` variants and the `pill` and `icon-pill` sizes print
+ * in a page's ink, so they are errors outside `components/rewind/**`, the
+ * primitives (`components/ui/**`) and the dev sheet (`app/dev/**`).
+ */
+export const rewindOnlyProps = [
+  {
+    selector: "JSXAttribute[name.name='variant'][value.value=/^ink(-outline)?$/]",
+    message: "The ink and ink-outline Button variants are for the Rewind scope only (components/rewind).",
+  },
+  {
+    selector: "JSXAttribute[name.name='variant'] > JSXExpressionContainer > Literal[value=/^ink(-outline)?$/]",
+    message: "The ink and ink-outline Button variants are for the Rewind scope only (components/rewind).",
+  },
+  {
+    selector: "JSXAttribute[name.name='size'][value.value=/^(icon-)?pill$/]",
+    message: "The pill and icon-pill Button sizes are for the Rewind scope only (components/rewind).",
+  },
+  {
+    selector: "JSXAttribute[name.name='size'] > JSXExpressionContainer > Literal[value=/^(icon-)?pill$/]",
+    message: "The pill and icon-pill Button sizes are for the Rewind scope only (components/rewind).",
+  },
+];
+
+/** Where the Rewind-only Button entries may appear. */
+const REWIND_ONLY_ALLOWED = ["components/ui/**", "components/rewind/**", "app/dev/**"];
+
 const APP_AND_COMPONENTS = ["app/**/*.{js,jsx,ts,tsx}", "components/**/*.{js,jsx,ts,tsx}"];
 const V2_VIEWER = "components/wrapped/**";
 
@@ -148,6 +176,8 @@ const V2_VIEWER = "components/wrapped/**";
  *   earlier error blocks for its files, so the `app/api/` one repeats the
  *   formatting bans; the migrated modules leave the warn blocks, so their
  *   formatting bans are errors only.
+ * - The Rewind-only Button entries (P3.7) are errors everywhere but
+ *   `REWIND_ONLY_ALLOWED`, so every error block outside it carries them.
  */
 export const restrictedSyntaxBlocks = [
   {
@@ -156,7 +186,20 @@ export const restrictedSyntaxBlocks = [
     level: "warn",
     selectors: formatting,
   },
-  { files: APP_AND_COMPONENTS, ignores: [V2_VIEWER], level: "error", selectors: formatting },
+  {
+    files: ["**/*.{jsx,tsx}"],
+    ignores: ["app/**", "components/**"],
+    level: "error",
+    selectors: rewindOnlyProps,
+  },
+  {
+    files: APP_AND_COMPONENTS,
+    ignores: [V2_VIEWER, ...REWIND_ONLY_ALLOWED],
+    level: "error",
+    selectors: [...formatting, ...rewindOnlyProps],
+  },
+  { files: REWIND_ONLY_ALLOWED.map((glob) => glob + "/*.{js,jsx,ts,tsx}"), level: "error", selectors: formatting },
+  { files: ["components/wrapped/**/*.{js,jsx,ts,tsx}"], level: "error", selectors: rewindOnlyProps },
   { files: ["components/wrapped/**/*.{js,jsx,ts,tsx}"], level: "warn", selectors: [...formatting, ...rawControls] },
   {
     files: APP_AND_COMPONENTS,
@@ -170,5 +213,9 @@ export const restrictedSyntaxBlocks = [
     level: "warn",
     selectors: [...formatting, ...actionsAndApi],
   },
-  { files: ["app/api/**/*.{ts,tsx}", ...migratedActionFiles], level: "error", selectors: [...formatting, ...actionsAndApi] },
+  {
+    files: ["app/api/**/*.{ts,tsx}", ...migratedActionFiles],
+    level: "error",
+    selectors: [...formatting, ...actionsAndApi, ...rewindOnlyProps],
+  },
 ];
