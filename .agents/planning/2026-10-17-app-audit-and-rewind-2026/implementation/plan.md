@@ -4176,10 +4176,18 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 - `/discord/connect?redirect=/%5Cevil.com` completes the link and lands on `/discord/link`.
 - Opening an authorize URL started by another account ends with the `discord_session_mismatch` notice.
 
+**As merged.**
+- `safeRedirectPath` also refuses any percent-encoded control character (`%00`-`%1f`, `%7f`), and an empty or missing value; `/discord/connect` no longer 400s a `redirect` that does not start with `/`, it falls back like any other refused value. `createDiscordAuthorizationUrl` stores the vetted path (default now `/discord/link`, was `/`), and `completeDiscordLink` vets the stored `redirectTo` again, for rows written before the allow-list.
+- The cookie lives in `lib/discord/oauth-cookie.ts` (`discordOAuthCookie(state, userId)`, `clearedDiscordOAuthCookie()`, `matchesDiscordOAuthCookie(raw, state, userId)`): `pm-discord-oauth` is `{ stateHash (sha256 hex), userId }` signed for 600 s, httpOnly, SameSite=Lax, path `/api/discord/callback`, Secure exactly when the session cookie is.
+- `consumeOAuthState(state, userId)` is one `updateMany` whose `where` also holds `userId`, then `findUniqueOrThrow`; a count other than 1 throws the exported `DiscordStateError`. `completeDiscordLink(code, state, userId)` takes the session user.
+- Codes: no session, a missing, tampered or foreign cookie, or a cookie for another member or state all give `discord_session_mismatch` (a missing cookie is also what a browser that did not start the flow has); a used or expired state gives `discord_expired`; a Discord `error`, a malformed query and any other failure give `discord_failed`; success gives `discord_linked` on the stored path. Every response clears the cookie. Failures still land on `/` until P6.11.
+- P3.2 had not merged, so `lib/ui/flash-codes.ts` is new here and holds only the four callback codes (`DiscordCallbackFlash`) and `withFlash(path, code)`, which sets `?flash=`. P3.2 adds the connect route's codes (`discord_rate_limited`, `discord_unavailable`, whose redirects still carry fixed `error=` copy), the NextAuth codes, the tones and `FlashFromQuery`; nothing shows the codes yet (P3.2 and P6.11).
+- `e2e/discord-link.spec.ts` gains a case: `/discord/connect` sets the httpOnly `pm-discord-oauth` cookie on the callback path, and a callback with another state lands on `/?flash=discord_session_mismatch`.
+
 **Done when.**
-- [ ] Redirect paths are normalised and allow-listed, and every known bypass string falls back.
-- [ ] The state is bound to the session by a signed cookie, checked against the session user and consumed atomically.
-- [ ] The callback sends only fixed codes.
+- [x] Redirect paths are normalised and allow-listed, and every known bypass string falls back.
+- [x] The state is bound to the session by a signed cookie, checked against the session user and consumed atomically.
+- [x] The callback sends only fixed codes.
 
 ### Step P4.10: Stripe event ordering, idempotency and live re-checks
 

@@ -1,6 +1,7 @@
 import { parseSearchParams, requireEntitlement } from "@/lib/actions/route"
 import { authOptions } from "@/lib/auth"
 import { createDiscordAuthorizationUrl } from "@/lib/discord/integration"
+import { discordOAuthCookie } from "@/lib/discord/oauth-cookie"
 import { consume } from "@/lib/security/rate-limit"
 import { createLogger } from "@/lib/utils/logger"
 import { getServerSession } from "next-auth"
@@ -11,8 +12,12 @@ export const dynamic = "force-dynamic"
 
 const logger = createLogger("DISCORD_CONNECT")
 
-/** `redirect` is an in-app path; `createDiscordAuthorizationUrl` sanitises it further. */
-const querySchema = z.object({ redirect: z.string().startsWith("/").max(512).optional() })
+/**
+ * `redirect` is where the member lands after linking. `safeRedirectPath` (in
+ * `createDiscordAuthorizationUrl`) keeps only allow-listed in-app paths and
+ * turns anything else into `/discord/link`.
+ */
+const querySchema = z.object({ redirect: z.string().max(512).optional() })
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -40,8 +45,11 @@ export async function GET(request: NextRequest) {
   if (!query.ok) return query.response
 
   try {
-    const { url } = await createDiscordAuthorizationUrl(session.user.id, query.data.redirect)
-    return NextResponse.redirect(url)
+    const { url, state } = await createDiscordAuthorizationUrl(session.user.id, query.data.redirect)
+    const response = NextResponse.redirect(url)
+    // Binds the state to this browser and member; the callback checks both.
+    response.cookies.set(discordOAuthCookie(state, session.user.id))
+    return response
   } catch (error) {
     logger.error("Could not start Discord linking", error)
     const fallback = new URL("/", request.url)

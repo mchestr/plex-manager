@@ -14,6 +14,7 @@ import { GET } from "@/app/(app)/discord/connect/route"
 import { hasEntitlement } from "@/lib/actions/entitlement"
 import { getServerSession } from "next-auth"
 import { createDiscordAuthorizationUrl } from "@/lib/discord/integration"
+import { DISCORD_OAUTH_COOKIE, matchesDiscordOAuthCookie } from "@/lib/discord/oauth-cookie"
 import { consume } from "@/lib/security/rate-limit"
 
 jest.mock("next-auth", () => ({ getServerSession: jest.fn() }))
@@ -78,6 +79,26 @@ describe("discord connect route rate limiting", () => {
     expect(mockCreateUrl).toHaveBeenCalledTimes(1)
     // Redirect to the Discord authorize URL.
     expect(res.headers.get("location")).toContain("discord.com/oauth2/authorize")
+  })
+
+  it("binds the state to this member in an httpOnly cookie for the callback path (P4.9)", async () => {
+    mockConsume.mockResolvedValue({ ok: true })
+
+    const res = await GET(makeRequest())
+
+    const cookie = res.cookies.get(DISCORD_OAUTH_COOKIE)
+    expect(cookie).toMatchObject({ httpOnly: true, sameSite: "lax", path: "/api/discord/callback", maxAge: 600 })
+    expect(matchesDiscordOAuthCookie(cookie?.value, "s", "user-1")).toBe(true)
+    expect(matchesDiscordOAuthCookie(cookie?.value, "s", "user-2")).toBe(false)
+    expect(matchesDiscordOAuthCookie(cookie?.value, "t", "user-1")).toBe(false)
+  })
+
+  it("passes the redirect through for createDiscordAuthorizationUrl to vet", async () => {
+    mockConsume.mockResolvedValue({ ok: true })
+
+    await GET(makeRequest("http://localhost:3000/discord/connect?redirect=https%3A%2F%2Fevil.com"))
+
+    expect(mockCreateUrl).toHaveBeenCalledWith("user-1", "https://evil.com")
   })
 
   it("blocks and redirects with an error when the rate limit is exceeded (URL not built)", async () => {

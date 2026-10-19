@@ -25,8 +25,8 @@ jest.mock("@/lib/prisma", () => ({
       findUnique: jest.fn(),
     },
     discordOAuthState: {
-      findUnique: jest.fn(),
-      update: jest.fn(),
+      updateMany: jest.fn(),
+      findUniqueOrThrow: jest.fn(),
     },
     user: { findUnique: jest.fn() },
   },
@@ -58,7 +58,7 @@ const mockLogAuditEvent = logAuditEvent as jest.MockedFunction<typeof logAuditEv
 const p = prisma as unknown as {
   discordIntegration: { findUnique: jest.Mock }
   discordConnection: { upsert: jest.Mock; update: jest.Mock; deleteMany: jest.Mock; findUnique: jest.Mock }
-  discordOAuthState: { findUnique: jest.Mock; update: jest.Mock }
+  discordOAuthState: { updateMany: jest.Mock; findUniqueOrThrow: jest.Mock }
   user: { findUnique: jest.Mock }
 }
 
@@ -68,14 +68,14 @@ beforeEach(() => {
 
 describe("completeDiscordLink audit", () => {
   it("emits DISCORD_ACCOUNT_LINKED with actor userId and discordUserId", async () => {
-    p.discordOAuthState.findUnique.mockResolvedValue({
+    p.discordOAuthState.updateMany.mockResolvedValue({ count: 1 })
+    p.discordOAuthState.findUniqueOrThrow.mockResolvedValue({
       state: "state-1",
       userId: "user-42",
       consumedAt: null,
       expiresAt: new Date(Date.now() + 60_000),
       redirectTo: "/",
     })
-    p.discordOAuthState.update.mockResolvedValue({})
     p.discordIntegration.findUnique.mockResolvedValue({
       id: "discord",
       isEnabled: true,
@@ -97,7 +97,7 @@ describe("completeDiscordLink audit", () => {
     })
     p.discordConnection.upsert.mockResolvedValue({})
 
-    const result = await completeDiscordLink("code", "state-1")
+    const result = await completeDiscordLink("code", "state-1", "user-42")
 
     expect(result.redirectTo).toBe("/")
     expect(mockLogAuditEvent).toHaveBeenCalledWith(

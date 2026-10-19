@@ -3,6 +3,7 @@ import { getDiscordBotToken } from "@/lib/discord/config"
 import { computeRoleMetadata } from "@/lib/discord/role-metadata"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
+import { safeRedirectPath } from "@/lib/security/safe-redirect"
 import { getBaseUrl } from "@/lib/env"
 import { createLogger } from "@/lib/utils/logger"
 import { randomBytes } from "crypto"
@@ -53,22 +54,6 @@ function toBase64Url(buffer: Buffer): string {
 //   return toBase64Url(createHash("sha256").update(verifier).digest())
 // }
 
-function sanitizeRedirectPath(path?: string | null): string | undefined {
-  if (!path) {
-    return undefined
-  }
-
-  if (!path.startsWith("/")) {
-    return undefined
-  }
-
-  if (path.startsWith("//")) {
-    return undefined
-  }
-
-  return path === "/" ? "/" : path
-}
-
 export async function createDiscordAuthorizationUrl(userId: string, redirectTo?: string) {
   const integration = await getDiscordIntegration(true)
   if (!integration || !integration.isEnabled || !integration.clientId || !integration.clientSecret) {
@@ -76,7 +61,7 @@ export async function createDiscordAuthorizationUrl(userId: string, redirectTo?:
   }
 
   const state = toBase64Url(randomBytes(24))
-  const redirectPath = sanitizeRedirectPath(redirectTo) ?? "/"
+  const redirectPath = safeRedirectPath(redirectTo)
 
   const expiresAt = new Date(Date.now() + STATE_TTL_MS)
 
@@ -123,29 +108,37 @@ export async function createDiscordAuthorizationUrl(userId: string, redirectTo?:
   return { url: authorizeUrl.toString(), state }
 }
 
-async function consumeOAuthState(state: string) {
-  const record = await prisma.discordOAuthState.findUnique({
-    where: { state },
-  })
-
-  if (!record || record.consumedAt) {
-    throw new Error("Invalid or expired Discord state")
+/** The state was unknown, used, expired or another member's. */
+export class DiscordStateError extends Error {
+  constructor() {
+    super("Discord authorization state is invalid, used or expired")
+    this.name = "DiscordStateError"
   }
-
-  if (record.expiresAt.getTime() < Date.now()) {
-    throw new Error("Discord authorization session has expired")
-  }
-
-  await prisma.discordOAuthState.update({
-    where: { state },
-    data: { consumedAt: new Date() },
-  })
-
-  return record
 }
 
-export async function completeDiscordLink(code: string, state: string) {
-  const oauthState = await consumeOAuthState(state)
+/**
+ * Marks `userId`'s pending `state` consumed in one conditional write, so two
+ * concurrent callbacks with the same state can never both pass.
+ */
+async function consumeOAuthState(state: string, userId: string) {
+  const now = new Date()
+  const { count } = await prisma.discordOAuthState.updateMany({
+    where: { state, userId, consumedAt: null, expiresAt: { gt: now } },
+    data: { consumedAt: now },
+  })
+  if (count !== 1) {
+    throw new DiscordStateError()
+  }
+
+  return prisma.discordOAuthState.findUniqueOrThrow({ where: { state } })
+}
+
+/**
+ * Links the signed-in `userId`'s Discord account. The callback has already
+ * matched the `pm-discord-oauth` cookie; the state must also be theirs.
+ */
+export async function completeDiscordLink(code: string, state: string, userId: string) {
+  const oauthState = await consumeOAuthState(state, userId)
   const integration = await getDiscordIntegration(true)
 
   if (!integration || !integration.clientId || !integration.clientSecret) {
@@ -230,7 +223,8 @@ export async function completeDiscordLink(code: string, state: string) {
   })
 
   return {
-    redirectTo: oauthState.redirectTo ?? "/",
+    // Rows written before the allow-list existed are checked again here.
+    redirectTo: safeRedirectPath(oauthState.redirectTo),
   }
 }
 

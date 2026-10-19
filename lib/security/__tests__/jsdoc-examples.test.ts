@@ -1,13 +1,19 @@
 /**
  * Checks the @example blocks in lib/security/secret-reuse.ts,
- * lib/security/config-diff.ts, lib/security/rate-limit-messages.ts and
- * lib/security/signed-cookie.ts.
+ * lib/security/config-diff.ts, lib/security/rate-limit-messages.ts,
+ * lib/security/safe-redirect.ts and lib/security/signed-cookie.ts.
  */
 
 import { configDiff } from "@/lib/security/config-diff"
 import { retryAfterCopy } from "@/lib/security/rate-limit-messages"
+import { safeRedirectPath } from "@/lib/security/safe-redirect"
 import { resolveSecretForOrigin } from "@/lib/security/secret-reuse"
 import { readCookie, signValue, verifyValue } from "@/lib/security/signed-cookie"
+
+jest.mock("@/lib/env", () => ({
+  ...jest.requireActual("@/lib/env"),
+  getBaseUrl: () => "https://app.example.com",
+}))
 
 describe("JSDoc Documentation Examples", () => {
   it("resolveSecretForOrigin refuses a stored key for a new host", () => {
@@ -39,6 +45,12 @@ describe("JSDoc Documentation Examples", () => {
   it("retryAfterCopy names when to try again", () => {
     expect(retryAfterCopy(30)).toBe("in 1 minute")
     expect(retryAfterCopy(3 * 3600 + 300)).toBe("in 3 hours, 5 minutes")
+  })
+
+  it("safeRedirectPath keeps allow-listed paths and refuses bypasses", () => {
+    expect(safeRedirectPath("/discord/link?x=1")).toBe("/discord/link?x=1")
+    expect(safeRedirectPath("/%5Cevil.com")).toBe("/discord/link")
+    expect(safeRedirectPath("/admin", "/")).toBe("/")
   })
 
   it("signValue verifies only for its own purpose, and readCookie parses a raw header", () => {

@@ -81,4 +81,27 @@ test.describe('Discord link page', () => {
     await expect(regularUserPage.getByTestId('discord-link-connect')).toHaveAttribute('href', CONNECT_URL);
     await expect(regularUserPage.getByTestId('discord-link-join-server')).toHaveAttribute('href', 'https://discord.gg/e2einvite');
   });
+
+  // P4.9 (SEC-13): the authorization is bound to this browser by a cookie,
+  // and a callback whose state does not match it links nothing.
+  test('binds the authorization to the browser and refuses a foreign state', async ({ regularUserPage }) => {
+    await writeIntegration({ ...TEST_INTEGRATION, isEnabled: true });
+
+    const connect = await regularUserPage.request.get('/discord/connect?redirect=%2F%5Cevil.com', { maxRedirects: 0 });
+    expect(connect.status()).toBe(307);
+    const authorize = new URL(connect.headers()['location'] ?? '');
+    expect(authorize.origin).toBe('https://discord.com');
+
+    const cookie = (await regularUserPage.context().cookies()).find((c) => c.name === 'pm-discord-oauth');
+    expect(cookie).toMatchObject({ httpOnly: true, sameSite: 'Lax', path: '/api/discord/callback' });
+
+    const foreignState = 'Z'.repeat(32);
+    expect(authorize.searchParams.get('state')).not.toBe(foreignState);
+    const callback = await regularUserPage.request.get(`/api/discord/callback?code=abc&state=${foreignState}`, {
+      maxRedirects: 0,
+    });
+    const landing = new URL(callback.headers()['location'] ?? '');
+    expect(landing.pathname).toBe('/');
+    expect(landing.searchParams.get('flash')).toBe('discord_session_mismatch');
+  });
 });
