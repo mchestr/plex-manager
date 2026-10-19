@@ -21,7 +21,9 @@ import { createLogger } from "@/lib/utils/logger"
  * reasoning parts, which Claude and the OpenAI reasoning models need back on
  * the turn after a tool call.
  *
- * Every billed call writes one usage row through `recordUsage`.
+ * Every billed call writes one usage row through `recordUsage`. The row's
+ * `prompt` holds the caller's `usagePrompt`, what that call added, never the
+ * whole context again (SEC-45).
  *
  * @module lib/llm/chat
  */
@@ -57,6 +59,32 @@ export interface ChatWithToolsInput {
   attribution: UsageAttribution
   /** A cap on output tokens below the provider row's own `maxTokens` (the Discord context's 600). */
   maxOutputTokens?: number
+  /**
+   * What this call added to the conversation: the new user message, or the
+   * tool results since the last call. The usage row stores it in place of the
+   * whole context (SEC-45), as {@link usagePromptText} writes it.
+   */
+  usagePrompt: UsagePromptMessage[]
+}
+
+/** One message a call added, as its usage row stores it. `name` is the tool's. */
+export interface UsagePromptMessage {
+  role: "user" | "tool"
+  name?: string
+  content: string
+}
+
+/** The most message text one usage row keeps (4 KB), shared by its messages. */
+const USAGE_PROMPT_MAX_CHARS = 4096
+
+/**
+ * The stored prompt: a JSON message array, the shape the admin usage pages
+ * read, with each message's text cut to its share of
+ * {@link USAGE_PROMPT_MAX_CHARS}.
+ */
+function usagePromptText(messages: UsagePromptMessage[]): string {
+  const share = Math.floor(USAGE_PROMPT_MAX_CHARS / Math.max(messages.length, 1))
+  return JSON.stringify(messages.map((m) => ({ ...m, content: m.content.slice(0, share) })))
 }
 
 export type ChatWithToolsResult =
@@ -152,7 +180,7 @@ export async function chatWithTools(input: ChatWithToolsInput): Promise<ChatWith
       usage,
       cost: costUsd(served.known ? served : info, usage),
       outcome: result.finishReason === "length" ? "length" : result.finishReason === "content-filter" ? "content-filter" : "ok",
-      prompt: JSON.stringify(input.messages),
+      prompt: usagePromptText(input.usagePrompt),
       response: result.text || JSON.stringify(toolCalls),
     })
 

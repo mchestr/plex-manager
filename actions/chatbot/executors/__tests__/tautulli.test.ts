@@ -27,6 +27,7 @@ import {
   getTautulliHomeStat,
   getTautulliLibraryNames,
   getTautulliLibraryStats,
+  getTautulliUsers,
 } from "@/lib/connections/tautulli"
 import { prisma } from "@/lib/prisma"
 import { mockReset } from 'jest-mock-extended'
@@ -337,5 +338,63 @@ describe("Discord tool gating - get_tautulli_users", () => {
     const prompt = generateDiscordSystemPrompt(DISCORD_SAFE_TOOLS)
 
     expect(prompt).not.toContain("get_tautulli_users")
+  })
+})
+
+describe("admin context drops emails, addresses and tokens (P4.15, SEC-42)", () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockTautulliFindFirst.mockResolvedValue({
+      id: "tautulli-1",
+      name: "Tautulli",
+      url: "http://localhost:8181",
+      apiKey: "test-key",
+      publicUrl: null,
+      isActive: true,
+    } as never)
+  })
+
+  const PERSONAL = /email|ip_address|server_token|example\.com|203\.0\.113/
+
+  it("get_tautulli_users keeps names and ids only", async () => {
+    jest.mocked(getTautulliUsers).mockResolvedValue({
+      success: true,
+      data: [{ user_id: 7, friendly_name: "Sam", email: "sam@example.com", server_token: "tok" }],
+    })
+
+    const result = await executeTautulliTool("get_tautulli_users", {})
+
+    expect(result).not.toMatch(PERSONAL)
+    expect(JSON.parse(result)).toEqual([{ user_id: 7, friendly_name: "Sam" }])
+  })
+
+  it("get_tautulli_activity drops each session's addresses", async () => {
+    mockGetTautulliActivity.mockResolvedValue({
+      success: true,
+      data: {
+        stream_count: "1",
+        sessions: [
+          { user_id: 7, title: "Heat", ip_address: "203.0.113.7", ip_address_public: "203.0.113.8", email: "sam@example.com" },
+        ],
+      },
+    })
+
+    const result = await executeTautulliTool("get_tautulli_activity", {})
+
+    expect(result).not.toMatch(PERSONAL)
+    expect(JSON.parse(result)).toEqual({ stream_count: "1", sessions: [{ user_id: 7, title: "Heat" }] })
+  })
+
+  it("the history tools drop each row's address", async () => {
+    jest.mocked(getTautulliHistory).mockResolvedValue({
+      success: true,
+      data: { data: [{ title: "Heat", user: "Sam", ip_address: "203.0.113.7" }] },
+    })
+
+    for (const tool of ["get_tautulli_watch_history", "get_tautulli_recently_watched"]) {
+      const result = await executeTautulliTool(tool, {})
+      expect(result).not.toMatch(PERSONAL)
+      expect(JSON.parse(result)).toEqual({ data: [{ title: "Heat", user: "Sam" }] })
+    }
   })
 })

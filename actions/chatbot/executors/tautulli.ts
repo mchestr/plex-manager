@@ -1,6 +1,7 @@
 import { findTautulliUser, getTautulliActivity, getTautulliHistory, getTautulliHomeStat, getTautulliLibraryNames, getTautulliLibraryStats, getTautulliServerInfo, getTautulliUserWatchTimeStats, getTautulliUsers } from "@/lib/connections/tautulli"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
+import { withoutPersonalFields } from "./personal-fields"
 import { toToolOutput } from "./tool-output"
 
 type TautulliConfig = Parameters<typeof findTautulliUser>[0]
@@ -67,7 +68,7 @@ export async function executeTautulliTool(
         return JSON.stringify(await scopeActivityToCaller(config, activityResult.data, userId))
       }
 
-      return JSON.stringify(activityResult.data)
+      return JSON.stringify(withoutPersonalFields(activityResult.data))
     }
     case "get_tautulli_library_stats": {
       const statsResult = await getTautulliLibraryStats(config)
@@ -88,7 +89,7 @@ export async function executeTautulliTool(
       if (!usersResult.success) {
         return JSON.stringify({ error: usersResult.error })
       }
-      return JSON.stringify(usersResult.data)
+      return JSON.stringify(withoutPersonalFields(usersResult.data))
     }
     case "get_tautulli_watch_history": {
       const tautulliUserId = typeof args.userId === "number" ? args.userId : undefined
@@ -97,12 +98,13 @@ export async function executeTautulliTool(
       if (!historyResult.success) {
         return JSON.stringify({ error: historyResult.error })
       }
-      return JSON.stringify(historyResult.data)
+      return JSON.stringify(withoutPersonalFields(historyResult.data))
     }
     case "get_tautulli_recently_watched": {
       // get_history is newest first by default
       const limit = typeof args.limit === "number" ? args.limit : 20
-      return toToolOutput(await getTautulliHistory(config, undefined, limit))
+      const recent = await getTautulliHistory(config, undefined, limit)
+      return toToolOutput(recent.success ? { ...recent, data: withoutPersonalFields(recent.data) } : recent)
     }
     case "get_tautulli_most_watched": {
       const limit = typeof args.limit === "number" ? args.limit : 20

@@ -65,6 +65,7 @@ export const migratedActionFiles = [
   "actions/admin/watchlist.ts",
   "actions/announcements.ts",
   "actions/auth.ts",
+  "actions/chatbot/index.ts",
   "actions/invite.ts",
   "actions/onboarding.ts",
   "actions/prometheus-status.ts",

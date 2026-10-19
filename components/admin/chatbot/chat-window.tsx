@@ -12,6 +12,19 @@ interface ChatbotProps {
   userName?: string
 }
 
+/** The newest turns that fit the action's bounds: 40 messages and 60,000 characters (SEC-42). */
+function boundedHistory(messages: ChatMessage[]) {
+  const history: { role: "user" | "assistant"; content: string }[] = []
+  let total = 0
+  for (const { role, content } of [...messages].reverse()) {
+    if (role === "system") continue
+    if (history.length === 40 || total + content.length > 60_000) break
+    total += content.length
+    history.unshift({ role, content })
+  }
+  return history
+}
+
 const getInitialMessage = (userName?: string): ChatMessage => ({
   role: "assistant",
   content: `Hi${userName ? " " + userName : ""}! I'm your admin assistant. I can help you troubleshoot issues with Plex, Tautulli, Overseerr, Sonarr, and Radarr. What can I do for you?`,
@@ -51,20 +64,23 @@ export function Chatbot({ userName }: ChatbotProps) {
     setIsLoading(true)
 
     try {
-      // Pass the entire conversation history (excluding the initial greeting if you want, but keeping it is fine)
-      const response = await chatWithAdminBot([...messages, userMessage], conversationId)
+      const response = await chatWithAdminBot({
+        messages: boundedHistory([...messages, userMessage]),
+        conversationId,
+      })
 
-      if (response.success && response.message) {
-        if (response.conversationId) {
-          setConversationId(response.conversationId)
+      if (response.success) {
+        const { message, conversationId: activeId } = response.data
+        if (activeId) {
+          setConversationId(activeId)
         }
-        setMessages((prev) => [...prev, response.message!])
+        setMessages((prev) => [...prev, message])
       } else {
         setMessages((prev) => [
           ...prev,
           {
             role: "assistant",
-            content: "Sorry, I encountered an error while processing your request.",
+            content: `Sorry, I couldn't answer that. ${response.error}`,
             timestamp: Date.now(),
           },
         ])
@@ -224,6 +240,7 @@ export function Chatbot({ userName }: ChatbotProps) {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Ask about server status..."
+                  maxLength={8000}
                   className="w-full bg-slate-900 text-white border border-slate-600 rounded-lg py-2 pl-4 pr-10 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 text-sm placeholder-slate-500"
                   disabled={isLoading}
                 />

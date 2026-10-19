@@ -1,6 +1,6 @@
 import type { ModelMessage } from "ai"
 
-import { chatWithTools, type ChatTool } from "@/lib/llm/chat"
+import { chatWithTools, type ChatTool, type UsagePromptMessage } from "@/lib/llm/chat"
 import { createLogger } from "@/lib/utils/logger"
 import { executeToolCall } from "./executors"
 import { ALL_TOOLS } from "./tools"
@@ -27,6 +27,22 @@ interface ConversationConfig {
   maxOutputTokens?: number
 }
 
+/**
+ * A tool's output as the model receives it: wrapped as `untrusted_data`, so
+ * text that members and services control (display names, titles, error
+ * bodies) reads as data and never as instructions (SEC-42). JSON output is
+ * embedded as a value; anything else as a string.
+ */
+function asUntrustedData(output: string): string {
+  let result: unknown = output
+  try {
+    result = JSON.parse(output)
+  } catch {
+    // Plain text, such as an "Error: ..." line, stays a string
+  }
+  return JSON.stringify({ untrusted_data: result })
+}
+
 interface ConversationResult {
   success: boolean
   message?: ChatMessage
@@ -46,6 +62,8 @@ export async function runConversationLoop(
   const MAX_LOOPS = 5
   let loops = 0
   const toolsUsed = new Set<string>() // Track which tools were called
+  // What each call adds to the context, the only prompt text its usage row stores (SEC-45)
+  let usagePrompt: UsagePromptMessage[] = [{ role: "user", content: messages.at(-1)?.content ?? "" }]
 
   while (loops < MAX_LOOPS) {
     loops++
@@ -56,6 +74,7 @@ export async function runConversationLoop(
       tools: toolRegistry,
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       maxOutputTokens: config.maxOutputTokens,
+      usagePrompt,
       attribution: { userId: config.userId, chatConversationId: config.conversationId },
     })
 
@@ -103,11 +122,12 @@ export async function runConversationLoop(
         toolName: toolCall.function.name,
         output: {
           type: "text" as const,
-          value: await executeToolCall(toolCall, config.userId, config.context, config.isAdmin),
+          value: asUntrustedData(await executeToolCall(toolCall, config.userId, config.context, config.isAdmin)),
         },
       }))
     )
     history.push({ role: "tool", content: toolResults })
+    usagePrompt = toolResults.map((result) => ({ role: "tool", name: result.toolName, content: result.output.value }))
   }
 
   return {
