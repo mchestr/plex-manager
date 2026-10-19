@@ -1852,11 +1852,19 @@ gantt
 
 **Demo.** On a branch, change `text-slate-400` to `text-slate-500` on the users heading. The visual check fails and shows the highlighted diff. Revert the change, and the check is green again.
 
+**As merged.**
+- Setup step 3 runs in two projects, `visual-setup-desktop` and `visual-setup-mobile` (both `dependencies: ['setup-wizard']`), since one project has one viewport. The snapshot template is `{testDir}/visual/__screenshots__/...` and `stylePath` is absolute, so overlay configs resolve them; images land at `e2e/visual/__screenshots__/<project>/visual/<spec>/<name>.png`.
+- The visual specs skip unless `E2E_SERVER=prod`, so today's `next dev` CI job stays green until P1.5 switches it. In prod mode the webServer sets `NODE_ENV=production`; `build:e2e` is `npm run build`. Specs that sign in through the test token (`e2e/fixtures/auth.ts`) do not work against a production build, so P1.5 must move them to `e2e/fixtures/session.ts` (`signIn` fixture / `signInAs`) before making prod the default.
+- Determinism goes further than the guidance: the clock is installed and paused before `goto`, and `settlePage` runs it forward three times while finishing every finite Web Animation, because framer-motion runs opacity and transform on WAAPI (real time) and `AnimatePresence` exits otherwise stall. `screenshot.css` also undoes the `html, body { height: 100%; overflow-x: hidden }` rule (and gives `html` slate-900) so full-page shots are not cut at the viewport; drop that block in P3.1.
+- `seedVisualFixtures()` resets every table the screens read (users other than the three seeded, invites, Rewinds, LLM usage, prompts, announcements, service configs, Config, Discord on) and `clearVisualFixtures()` removes its extras in `afterAll`. Timestamps masked through new `*-timestamp` test ids (admin user detail, invites, LLM usage, prompts, settings, users table) and `data-visual-mask` on the settings Node.js version and on the Rewind viewer's auto-advance progress fill. Dates the screens print in full sit at fixed days before 2026-10-19 rather than offsets from now, because a masked date's text width still moves table columns; only dates shown relative to the server clock (the announcement's "Yesterday", the expired invite) are offsets. The determinism test lives in `__tests__/e2e-helpers/deterministic.test.ts` (next to the existing E2E helper tests), not `e2e-support/`.
+- The committed baselines were generated in the agent's Linux container (Chromium 1194 at `/opt/pw-browsers`), not the Playwright CI image, and were checked there with two consecutive runs at `maxDiffPixels: 0` (Playwright's default per-pixel threshold; with `threshold: 0` the blurred background orbs dither by a few pixels between runs). Regenerate them once through the Visual Baselines workflow before P1.5 makes the suite a required check.
+- Not done here: `@playwright/test` is still `^1.57.0` (pinning it exactly touches package.json dependencies while P1.3 edits them; pin it in P1.5 together with the container tag); creating the GitHub App or `VISUAL_BASELINES_TOKEN` secret is an owner task. `/subscribe` shows its "unavailable" state, because the fake Stripe key returns no prices. P1.3's particle fix touches `success-animation.tsx`, which the onboarding-step-2 shot passes through but does not show, so no baseline should change from it; re-run the suite after P1.3 merges to confirm.
+
 **Done when.**
-- [ ] 20 screens at both viewports (40 images) are committed under `e2e/visual/__screenshots__/`, generated in the CI container.
-- [ ] Two consecutive CI runs pass with no pixel differences.
-- [ ] Time, randomness and timestamps are controlled, and the seed is deterministic.
-- [ ] `e2e/visual/README.md` explains how to update a baseline, and a baseline commit from the workflow gets the required checks on its own SHA.
+- [ ] 20 screens at both viewports (40 images) are committed under `e2e/visual/__screenshots__/`, generated in the CI container. (40 committed, generated in the agent container; regenerate via the workflow.)
+- [ ] Two consecutive CI runs pass with no pixel differences. (Two consecutive local runs passed with 0 differing pixels; CI runs pending.)
+- [x] Time, randomness and timestamps are controlled, and the seed is deterministic.
+- [ ] `e2e/visual/README.md` explains how to update a baseline, and a baseline commit from the workflow gets the required checks on its own SHA. (README and workflow done; the push-token path needs the owner's App or PAT and a first run.)
 
 ### Step P1.7: axe at wcag22aa on every route
 
