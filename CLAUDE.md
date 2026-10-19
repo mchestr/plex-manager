@@ -300,7 +300,8 @@ describe('Component', () => {
 - **Authenticated sessions** - Use setup project for auth state
 - **Critical user flows** - Test onboarding, wrapped generation, admin actions
 - **Chromium only** - `playwright.config.ts` runs the `chromium` and `setup-wizard` projects, plus the `visual-*` screenshot projects (see `e2e/visual/README.md`)
-- **Auth fixtures** - Import `test` and `expect` from `e2e/fixtures/auth.ts`; see `e2e/README.md` for authenticated session patterns
+- **Auth fixtures** - Import `test` and `expect` from `e2e/fixtures/auth.ts` (`adminPage`, `regularUserPage`) or `e2e/fixtures/session.ts` (`signIn`); both mint the NextAuth session cookie, so they work against `next dev` and a production build. There is no test-token login. See `e2e/README.md`
+- **Production mode** - `E2E_SERVER=prod` runs `npm run build:e2e` then `next start`; CI runs every project that way (visual specs and `e2e/production.spec.ts` skip without it). `E2E_PREBUILT=1` skips the build when one already exists
 
 **⚠️ CRITICAL - Playwright Best Practices**:
 - **ALWAYS use `data-testid` for selectors** to prevent flaky tests
@@ -315,6 +316,14 @@ describe('Component', () => {
 - E2E tests in `e2e/` directory
 - Run tests: `npm test` (unit), `npm run test:e2e` (E2E)
 - Type-check app and tests: `npm run typecheck` (`tsconfig.json`, which also covers `e2e/`, then `tsconfig.test.json` for the Jest files)
+- Unused code: `npm run knip` (production mode; it is a CI gate)
+- **Integration suites** - A Postgres-backed test is `*.pg.test.ts` and wraps its body in `describePg`; a Redis-backed one is `*.redis.test.ts` with `describeRedis` (both in `test/helpers/integration.ts`). `npm test` leaves them out; `TEST_DATABASE_URL=... TEST_REDIS_URL=redis://localhost:6379/0 npm run test:integration` runs them serially. Locally a missing variable skips them; under `CI` it fails them
+- **Coverage ratchet** - Jest fails below the floors in `jest.coverage-thresholds.json`. After raising coverage, run `npm run test:coverage` then `node scripts/coverage-ratchet.mjs --update`, which only ever raises floors
+- **Throwaway Postgres** - For a production-mode E2E run on a fresh database: `docker run --rm -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=plex_manager_e2e_test -p 5433:5432 postgres:16`, then point `E2E_DATABASE_URL` at it and run `prisma migrate deploy`
+
+### CI Checks
+
+`.github/workflows/build.yml` ("Checks") runs the checks that `main` requires: Lint (ESLint and actionlint), Typecheck, Audit (`scripts/audit-gate.mjs`; exceptions in `.github/audit-exceptions.json`, at most 14 days each), Knip, Design System, Unit Tests (with coverage floors), Integration, Schema Drift (a schema change without its migration fails), Build and E2E Tests (production build, Postgres and Redis). Docker Build runs on pull requests but is not required. Shared setup lives in `.github/actions/setup/action.yml`, and every action is pinned by SHA
 
 ## JSDoc Documentation Strategy
 
