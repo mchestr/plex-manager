@@ -83,7 +83,7 @@ workflow, so the workflow pushes with, in order of preference:
    contents write on this repository only. Same effect.
 3. **Neither.** The workflow pushes with `GITHUB_TOKEN` and then dispatches
    `build.yml` on the branch, so the checks with the same job names land on
-   the new SHA (Docker Build only runs on pull requests, so it does not). If
+   the new SHA (Image Smoke Test only runs on pull requests, so it does not). If
    that is not enough, push an empty commit
    (`git commit --allow-empty -m "ci: rerun checks"`) or close and reopen the
    pull request by hand.
