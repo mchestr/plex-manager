@@ -9,6 +9,7 @@ import { render, screen } from '@testing-library/react'
 import UserDetailsPage from '@/app/admin/users/[userId]/page'
 import { getUserActivityTimeline, getUserDetails } from '@/actions/users'
 import { RegenerateWrappedButton } from '@/components/admin/users/regenerate-wrapped-button'
+import { DisableUserButton } from '@/components/admin/users/disable-user-button'
 import { prisma } from '@/lib/prisma'
 import { mockReset } from 'jest-mock-extended'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
@@ -40,6 +41,10 @@ jest.mock('@/components/admin/users/change-user-role-button', () => ({
   ChangeUserRoleButton: () => null,
 }))
 
+jest.mock('@/components/admin/users/disable-user-button', () => ({
+  DisableUserButton: jest.fn(() => null),
+}))
+
 jest.mock('@/components/admin/users/user-activity-timeline', () => ({
   UserActivityTimeline: () => null,
 }))
@@ -62,6 +67,7 @@ const userDetails = {
   image: null,
   plexUserId: 'plex-1',
   isAdmin: false,
+  disabledAt: null as Date | null,
   hasPlexAccess: null,
   discordConnection: null,
   // A stray 2027 row, as January's calendar-year Regenerate used to create
@@ -97,5 +103,21 @@ describe('Admin user page season year', () => {
       '/admin/users/user-1/wrapped?year=2026'
     )
     expect((RegenerateWrappedButton as jest.Mock).mock.calls[0][0]).toMatchObject({ userId: 'user-1', year: 2026 })
+  })
+
+  it('marks a disabled account and offers to enable it (P4.7)', async () => {
+    ;(getUserDetails as jest.Mock).mockResolvedValue({ ...userDetails, disabledAt: new Date('2026-12-06T12:00:00Z') })
+
+    render(await UserDetailsPage({ params: Promise.resolve({ userId: 'user-1' }) }))
+
+    expect(screen.getByTestId('admin-user-disabled-badge')).toHaveTextContent('Disabled')
+    expect((DisableUserButton as jest.Mock).mock.calls[0][0]).toMatchObject({ userId: 'user-1', disabled: true })
+  })
+
+  it('shows no disabled badge for an enabled account', async () => {
+    render(await UserDetailsPage({ params: Promise.resolve({ userId: 'user-1' }) }))
+
+    expect(screen.queryByTestId('admin-user-disabled-badge')).not.toBeInTheDocument()
+    expect((DisableUserButton as jest.Mock).mock.calls[0][0]).toMatchObject({ disabled: false })
   })
 })
