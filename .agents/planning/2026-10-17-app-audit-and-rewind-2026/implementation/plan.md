@@ -343,7 +343,7 @@ gantt
 - [ ] P1.1: Delete unreachable code; revive the Discord link panel (ui, M, due 2026-10-21)
 - [x] P1.2: Remove dead exports, the orphaned model and stale CLAUDE.md facts (ops, S, due 2026-10-27)
 - [x] P1.3: Wire the Next, react-hooks and jsx-a11y ESLint presets (ops, S, due 2026-10-26)
-- [ ] P1.4: Type-check the test files (ops, M, due 2026-10-27)
+- [x] P1.4: Type-check the test files (ops, M, due 2026-10-27)
 - [ ] P1.5: CI gates: typecheck, audit, knip, coverage, integration, schema drift and production-mode E2E (ops, L, due 2026-10-30)
 - [ ] P1.6: Visual-regression project and baselines (ui, M, due 2026-10-23)
 - [ ] P1.7: axe at wcag22aa on every route (ui, S, due 2026-10-22)
@@ -1735,10 +1735,12 @@ gantt
 3. Break one mock's shape on purpose, and the check fails.
 
 **Done when.**
-- [ ] `tsconfig.test.json` type-checks every Jest test file.
-- [ ] `npm run typecheck` passes for both projects with 0 errors.
-- [ ] The stale tests assert today's contracts, and Jest is green.
-- [ ] Tests use the typed Prisma mock helper and the factories, and no new suppressions were added.
+- [x] `tsconfig.test.json` type-checks every Jest test file.
+- [x] `npm run typecheck` passes for both projects with 0 errors.
+- [x] The stale tests assert today's contracts, and Jest is green.
+- [x] Tests use the typed Prisma mock helper and the factories, and no new suppressions were added.
+
+(as merged: the hidden count was 541 errors in 71 files after P1.1, not 601. `npm run typecheck` runs `prisma generate` first, then both projects; the root project keeps checking `e2e/` (its `include` is `**/*.ts`), so new specs are covered with no config change. `jest-mock-extended` is pinned at 4.0.1. `prisma-mock.ts` also exports `asTransactionClient(partial)` for hand-built `$transaction` clients, and `factories.ts` adds `buildConfig`. 86 of the 97 files that mocked `@/lib/prisma` moved to the helper; 11 keep their own mock: six whose mocks return `select`- or `include`-shaped partial rows that the full-row types reject (`guards`, `auth-access-relaxation`, `admin-settings-leave-blank-to-keep`, `admin-settings-secret-hiding`, `discord/config`, `discord/integration-audit`), four in-memory fakes (`chat-session`, `oauth-state-cap`, both `wrapped` page tests) and the real-database `wrapped-generation-claim.pg`. `as any` in tests went from 199 to 197; the one `@ts-ignore` and one `@ts-expect-error` that predate the step are still there.)
 
 ### Step P1.5: CI gates: typecheck, audit, knip, coverage, integration, schema drift and production-mode E2E
 
