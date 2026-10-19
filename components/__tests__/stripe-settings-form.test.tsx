@@ -45,6 +45,7 @@ const renderForm = (props?: Partial<React.ComponentProps<typeof StripeSettingsFo
         enabled={false}
         hasSecretKey={false}
         hasWebhookSecret={false}
+        hasJobQueue
         priceIds={[]}
         librarySectionIds={[]}
         {...props}
@@ -104,6 +105,13 @@ describe('StripeSettingsForm', () => {
 
     expect(screen.getByTestId('stripe-enabled-toggle')).not.toBeDisabled()
     expect(screen.queryByTestId('stripe-enable-requirements')).not.toBeInTheDocument()
+  })
+
+  it('keeps the toggle disabled without the job queue (GAP-15)', () => {
+    renderForm({ enabled: false, hasSecretKey: true, hasWebhookSecret: true, hasJobQueue: false, priceIds: ['price_1'] })
+
+    expect(screen.getByTestId('stripe-enabled-toggle')).toBeDisabled()
+    expect(screen.getByTestId('stripe-enable-requirements')).toHaveTextContent('job queue (REDIS_URL)')
   })
 
   it('saves settings via updateStripeSettings and shows a success toast', async () => {

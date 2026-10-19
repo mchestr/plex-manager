@@ -841,6 +841,7 @@ model Subscription {
   cancelAtPeriodEnd    Boolean            @default(false)
   canceledAt           DateTime? // When the subscription was canceled
   plexInviteStatus     String? // Tracks Plex invite lifecycle (e.g. "invited", "accepted")
+  stripeEventAt        DateTime? // `created` of the newest Stripe event applied; older events are skipped (SEC-37)
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
 
@@ -848,11 +849,15 @@ model Subscription {
   @@index([status])
 }
 
-// Stripe webhook idempotency - keyed by the Stripe event id
+// Stripe webhook idempotency - keyed by the Stripe event id. An event counts as
+// handled only once `processedAt` is set, after its handler succeeded (SEC-40).
 model StripeEvent {
-  id          String   @id // Stripe event id (evt_...)
+  id          String    @id // Stripe event id (evt_...)
   type        String // Stripe event type (e.g. customer.subscription.updated)
-  processedAt DateTime @default(now())
+  receivedAt  DateTime  @default(now())
+  attempts    Int       @default(0)
+  lastError   String? // An error code from the last failed attempt, never a message
+  processedAt DateTime?
 
   @@index([type])
 }

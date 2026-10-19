@@ -3,6 +3,7 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 
 import { PlanList } from "@/components/subscribe/plan-list"
+import { getAccessLevel } from "@/lib/access"
 import { authOptions } from "@/lib/auth"
 import { getOfferedPrices } from "@/lib/stripe/prices"
 
@@ -20,7 +21,9 @@ export const dynamic = "force-dynamic"
  * admin-configured offered prices from `getOfferedPrices()`, each with a
  * Subscribe button wired (client-side) to `startCheckout`. When Stripe is
  * disabled/unconfigured, `getOfferedPrices()` returns an empty list, so the page
- * shows an "unavailable" state and never offers a subscription (FR-9).
+ * shows an "unavailable" state and never offers a subscription (FR-9). A member
+ * with full access (`getAccessLevel`) sees no plans either, since a second
+ * checkout would bill them twice (SEC-39).
  */
 export default async function SubscribePage() {
   const session = await getServerSession(authOptions)
@@ -29,7 +32,10 @@ export default async function SubscribePage() {
     redirect("/")
   }
 
-  const plans = await getOfferedPrices()
+  // An entitled member gets no plan buttons: a second checkout would bill them
+  // twice (SEC-39). P10.28 designs this state.
+  const [plans, accessLevel] = await Promise.all([getOfferedPrices(), getAccessLevel(session.user.id)])
+  const hasAccess = accessLevel === "full"
 
   return (
     <main
@@ -43,16 +49,17 @@ export default async function SubscribePage() {
         </p>
       </div>
 
-      {plans.length > 0 ? (
+      {plans.length > 0 && !hasAccess ? (
         <PlanList plans={plans} />
       ) : (
         <div
           className="max-w-md text-slate-400"
-          data-testid="subscribe-unavailable"
+          data-testid={hasAccess ? "subscribe-has-access" : "subscribe-unavailable"}
         >
           <p>
-            Subscriptions are not available right now. Please check back later or
-            contact the server administrator.
+            {hasAccess
+              ? "You already have access to the media server. Manage your subscription from the home page."
+              : "Subscriptions are not available right now. Please check back later or contact the server administrator."}
           </p>
           <Link
             href="/"

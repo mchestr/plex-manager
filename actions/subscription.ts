@@ -3,7 +3,7 @@
 import { z } from "zod"
 
 import { memberAction } from "@/lib/actions/define-action"
-import { fail, ok } from "@/lib/actions/result"
+import { fail, ok, type ActionErrorCode, type ActionResult } from "@/lib/actions/result"
 import { prisma } from "@/lib/prisma"
 import { getStripe } from "@/lib/stripe/client"
 import { createCheckoutSession } from "@/lib/stripe/checkout"
@@ -12,6 +12,9 @@ import { getBaseUrl } from "@/lib/env"
 import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("SUBSCRIPTION")
+
+/** `startCheckout` refuses a member whose subscription is ACTIVE or PAST_DUE (SEC-39). */
+type CheckoutCode = ActionErrorCode | "ALREADY_SUBSCRIBED"
 
 /**
  * Path the Billing Portal returns the user to after they finish managing their
@@ -34,12 +37,15 @@ const PORTAL_RETURN_PATH = "/"
  * ## Behavior
  *
  * 1. Requires a session (`UNAUTHENTICATED`) and spends a `checkout` point.
- * 2. Validates `priceId` against {@link getOfferedPrices} so a client cannot
+ * 2. Returns `ALREADY_SUBSCRIBED` when the member's subscription is ACTIVE or
+ *    PAST_DUE, so nobody is billed twice (SEC-39).
+ * 3. Validates `priceId` against {@link getOfferedPrices} so a client cannot
  *    check out against an arbitrary/un-offered price. This also returns an empty
  *    list (→ `{error}`) when Stripe is disabled/unconfigured.
- * 3. Returns `{error}` when the user has no stored email: the Plex access grant
+ * 4. Returns `{error}` when the user has no stored email: the Plex access grant
  *    invites by email, so the payment could never grant access.
- * 4. Builds the Checkout session and returns its `url`, or `{error}` when Stripe
+ * 5. Builds the Checkout session, as the member's existing Stripe customer when
+ *    they have one, and returns its `url`, or `{error}` when Stripe
  *    is unconfigured or the session has no URL.
  *
  * Never throws — callers get a failure with a code and can surface its
@@ -53,7 +59,21 @@ export const startCheckout = memberAction({
   // Keyed by user id so a signed-in user cannot hammer Stripe.
   rateLimit: { name: "checkout" },
   fallbackError: "Could not start checkout. Please try again.",
-  handler: async ({ priceId }, { userId }) => {
+  handler: async ({ priceId }, { userId }): Promise<ActionResult<{ url: string }, CheckoutCode>> => {
+    // A second checkout would start a second, separately billed subscription.
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true, subscription: { select: { status: true } } },
+    })
+    const status = user?.subscription?.status
+    if (status === "ACTIVE" || status === "PAST_DUE") {
+      return {
+        success: false,
+        code: "ALREADY_SUBSCRIBED",
+        error: "You already have a subscription. Manage it from your account instead.",
+      }
+    }
+
     const offered = await getOfferedPrices()
     if (offered.length === 0) {
       return fail("UPSTREAM_UNAVAILABLE", "Subscriptions are not available right now.")
@@ -71,10 +91,6 @@ export const startCheckout = memberAction({
     // The Plex access grant invites by email, so a member without one would pay
     // and never get access. A Plex sign-in whose email another account already
     // holds stores none (lib/auth.ts, auth.email_conflict).
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { email: true },
-    })
     if (!user?.email) {
       logger.warn("Rejected checkout for a user with no email", { userId })
       return fail(

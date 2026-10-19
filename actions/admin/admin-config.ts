@@ -5,7 +5,8 @@ import { fail, ok } from "@/lib/actions/result"
 import { requireAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/prisma"
 import { APP_SETTINGS_TAG } from "@/lib/settings/app-settings"
-import { parseStripeLibrarySectionIds } from "@/lib/stripe/config"
+import { isRedisConfigured } from "@/lib/queue/connection"
+import { parseStripeLibrarySectionIds, parseStripePriceIds } from "@/lib/stripe/config"
 import { clearOfferedPricesCache } from "@/lib/stripe/prices"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { configDiff } from "@/lib/security/config-diff"
@@ -271,23 +272,19 @@ export interface StripeConfigStatus {
   enabled: boolean
   hasSecretKey: boolean
   hasWebhookSecret: boolean
+  /** Whether `REDIS_URL` is set, so the queue that processes webhooks can run. */
+  hasJobQueue: boolean
   priceIds: string[]
   librarySectionIds: number[]
 }
 
-/**
- * Parses the stored `stripePriceIds` JSON value into a clean array of strings.
- * @internal
- */
-function parseStripePriceIds(value: unknown): string[] {
-  if (!Array.isArray(value)) return []
-  return value.filter((id): id is string => typeof id === "string" && id.trim().length > 0)
-}
+/** The missing-config entry for the job queue; the settings form shows the same words. */
+const STRIPE_QUEUE_REQUIREMENT = "job queue (REDIS_URL)"
 
 /**
- * Determines whether Stripe is fully configured (secret key, webhook secret, and
- * at least one price id present). Centralized so `setStripeEnabled` and the UI
- * agree on the requirement (FR-3).
+ * Determines whether Stripe is fully configured (secret key, webhook secret, at
+ * least one price id, and the job queue that processes webhooks, GAP-15).
+ * `setStripeEnabled` refuses on the same list the settings form shows (FR-3).
  * @internal
  */
 function getMissingStripeConfig(status: {
@@ -299,6 +296,7 @@ function getMissingStripeConfig(status: {
   if (!status.hasSecretKey) missing.push("secret key")
   if (!status.hasWebhookSecret) missing.push("webhook secret")
   if (status.priceIds.length === 0) missing.push("at least one price ID")
+  if (!isRedisConfigured()) missing.push(STRIPE_QUEUE_REQUIREMENT)
   return missing
 }
 
@@ -331,31 +329,32 @@ export async function getStripeConfig(): Promise<StripeConfigStatus> {
     })
 
     if (!config) {
-      return {
-        enabled: false,
-        hasSecretKey: false,
-        hasWebhookSecret: false,
-        priceIds: [],
-        librarySectionIds: [],
-      }
+      return emptyStripeConfigStatus()
     }
 
     return {
       enabled: config.stripeEnabled,
       hasSecretKey: Boolean(config.stripeSecretKey),
       hasWebhookSecret: Boolean(config.stripeWebhookSecret),
+      hasJobQueue: isRedisConfigured(),
       priceIds: parseStripePriceIds(config.stripePriceIds),
       librarySectionIds: parseStripeLibrarySectionIds(config.stripeLibrarySectionIds),
     }
   } catch (error) {
     logger.error("Error getting Stripe config", error)
-    return {
-      enabled: false,
-      hasSecretKey: false,
-      hasWebhookSecret: false,
-      priceIds: [],
-      librarySectionIds: [],
-    }
+    return emptyStripeConfigStatus()
+  }
+}
+
+/** @internal */
+function emptyStripeConfigStatus(): StripeConfigStatus {
+  return {
+    enabled: false,
+    hasSecretKey: false,
+    hasWebhookSecret: false,
+    hasJobQueue: isRedisConfigured(),
+    priceIds: [],
+    librarySectionIds: [],
   }
 }
 
@@ -419,7 +418,8 @@ export const updateStripeSettings = adminAction({
  * Flip the master Stripe toggle (admin only).
  *
  * Enabling is blocked (FR-3) unless Stripe is fully configured: a secret key, a
- * webhook secret, and at least one price id must all be present. When any are
+ * webhook secret, at least one price id and the job queue (`REDIS_URL`, without
+ * which no webhook is ever processed) must all be present. When any are
  * missing, returns `{error}` naming what is missing and does NOT set
  * `stripeEnabled = true`. Disabling is always allowed.
  */

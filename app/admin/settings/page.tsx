@@ -411,6 +411,7 @@ export default async function SettingsPage() {
                   enabled={stripeConfig.enabled}
                   hasSecretKey={stripeConfig.hasSecretKey}
                   hasWebhookSecret={stripeConfig.hasWebhookSecret}
+                  hasJobQueue={stripeConfig.hasJobQueue}
                   priceIds={stripeConfig.priceIds}
                   librarySectionIds={stripeConfig.librarySectionIds}
                 />

@@ -6,19 +6,32 @@
  * Tests for app/api/stripe/webhook/route.ts - Stripe webhook endpoint.
  *
  * Covers: valid signed event → 200 + enqueue, invalid signature → 400 + no
- * enqueue, duplicate event → 200 no-op, and bodies over 1 MiB → 413 before
- * verification. `constructEvent`, `addJob`, and the `StripeEvent` lookup are
- * mocked.
+ * enqueue, processed duplicate → 200 no-op, an unprocessed resend → its job
+ * retried or left queued (SEC-40), and bodies over 1 MiB → 413 before
+ * verification. Most cases mock `constructEvent`; the resend cases sign
+ * fixture events with the Stripe SDK's test header and verify them for real.
  */
 
 import { POST } from '@/app/api/stripe/webhook/route'
 import { getStripe } from '@/lib/stripe/client'
 import { prisma } from '@/lib/prisma'
-import { addJob } from '@/lib/queue/client'
+import { addJob, findJob } from '@/lib/queue/client'
+import { processStripeWebhook } from '@/lib/queue/jobs/stripe'
 import { JOB_TYPES } from '@/lib/queue/types'
 import { NextRequest } from 'next/server'
 import { mockReset } from 'jest-mock-extended'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
+import { buildConfig } from '@/__tests__/helpers/factories'
+import {
+  TEST_WEBHOOK_SECRET,
+  createFakeStripe,
+  emptyStripeStore,
+  installStripeStore,
+  signFixture,
+  stripeEvent,
+  subscriptionRow,
+} from '@/__tests__/helpers/stripe-fakes'
+import type { Job } from 'bullmq'
 
 jest.mock('@/lib/stripe/client', () => ({
   getStripe: jest.fn(),
@@ -30,6 +43,12 @@ beforeEach(() => mockReset(prismaMock))
 
 jest.mock('@/lib/queue/client', () => ({
   addJob: jest.fn(),
+  findJob: jest.fn(),
+}))
+
+jest.mock('@/lib/security/audit-log', () => ({
+  AuditEventType: { STRIPE_EVENT_FAILED: 'STRIPE_EVENT_FAILED' },
+  logAuditEvent: jest.fn(),
 }))
 
 jest.mock('@/lib/utils/logger', () => ({
@@ -82,6 +101,7 @@ describe('POST /api/stripe/webhook', () => {
     })
     ;(prisma.stripeEvent.findUnique as jest.Mock).mockResolvedValue(null)
     ;(addJob as jest.Mock).mockResolvedValue('evt_1')
+    ;(findJob as jest.Mock).mockResolvedValue(undefined)
   })
 
   it('enqueues a STRIPE_WEBHOOK job and returns 200 for a valid, unseen event', async () => {
@@ -177,9 +197,9 @@ describe('POST /api/stripe/webhook', () => {
     expect(addJob).toHaveBeenCalledTimes(150)
   })
 
-  it('returns 200 without re-enqueuing when the event id was already seen', async () => {
+  it('returns 200 without re-enqueuing when the event was already processed', async () => {
     mockConstructEvent.mockReturnValue({ id: 'evt_dup', type: 'invoice.payment_failed' })
-    ;(prisma.stripeEvent.findUnique as jest.Mock).mockResolvedValue({ id: 'evt_dup' })
+    ;(prisma.stripeEvent.findUnique as jest.Mock).mockResolvedValue({ processedAt: new Date() })
 
     const response = await POST(makeRequest('{"raw":true}'))
     const data = await response.json()
@@ -208,5 +228,105 @@ describe('POST /api/stripe/webhook', () => {
     expect(response.status).toBe(503)
     expect(mockConstructEvent).not.toHaveBeenCalled()
     expect(addJob).not.toHaveBeenCalled()
+  })
+})
+
+describe('POST /api/stripe/webhook: resends of unprocessed events (SEC-40)', () => {
+  /** A fake BullMQ job in `state`. */
+  function fakeJob(state: string) {
+    return { getState: jest.fn().mockResolvedValue(state), retry: jest.fn(), remove: jest.fn() }
+  }
+
+  /** A signed delivery of `event`, verified by the real SDK. */
+  function signedRequest(event: object) {
+    const payload = JSON.stringify(event)
+    return makeRequest(payload, { 'stripe-signature': signFixture(payload) })
+  }
+
+  const unprocessedRow = {
+    id: 'evt_resend',
+    type: 'customer.subscription.updated',
+    receivedAt: new Date(),
+    attempts: 3,
+    lastError: 'HANDLER_FAILED',
+    processedAt: null,
+  }
+
+  const fixture = { id: 'evt_resend', object: 'event', type: 'customer.subscription.updated', created: 1, data: { object: { id: 'sub_1' } } }
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockReset(prismaMock)
+    ;(getStripe as jest.Mock).mockResolvedValue(createFakeStripe().client)
+    prismaMock.config.findUnique.mockResolvedValue(buildConfig({ stripeWebhookSecret: TEST_WEBHOOK_SECRET }))
+    ;(addJob as jest.Mock).mockResolvedValue('evt_resend')
+  })
+
+  it('rejects a fixture signed with another secret', async () => {
+    const payload = JSON.stringify(fixture)
+    const response = await POST(makeRequest(payload, { 'stripe-signature': `${signFixture(payload)}0` }))
+
+    expect(response.status).toBe(400)
+  })
+
+  it('enqueues a new signed event', async () => {
+    const response = await POST(signedRequest(fixture))
+
+    expect(response.status).toBe(200)
+    expect(addJob).toHaveBeenCalledWith(JOB_TYPES.STRIPE_WEBHOOK, { eventId: 'evt_resend' }, { jobId: 'evt_resend' })
+  })
+
+  it('retries the failed job of an unprocessed event', async () => {
+    prismaMock.stripeEvent.findUnique.mockResolvedValue(unprocessedRow)
+    const job = fakeJob('failed')
+    ;(findJob as jest.Mock).mockResolvedValue(job)
+
+    const response = await POST(signedRequest(fixture))
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toEqual({ received: true, retried: true })
+    expect(job.retry).toHaveBeenCalledTimes(1)
+    expect(addJob).not.toHaveBeenCalled()
+  })
+
+  it.each(['waiting', 'active', 'delayed'])('leaves a %s job alone', async (state) => {
+    const job = fakeJob(state)
+    ;(findJob as jest.Mock).mockResolvedValue(job)
+
+    const response = await POST(signedRequest(fixture))
+
+    expect(response.status).toBe(200)
+    expect(job.retry).not.toHaveBeenCalled()
+    expect(addJob).not.toHaveBeenCalled()
+  })
+
+  it('enqueues again under the same id when the job record has expired', async () => {
+    prismaMock.stripeEvent.findUnique.mockResolvedValue(unprocessedRow)
+    ;(findJob as jest.Mock).mockResolvedValue(undefined)
+
+    await POST(signedRequest(fixture))
+
+    expect(addJob).toHaveBeenCalledWith(JOB_TYPES.STRIPE_WEBHOOK, { eventId: 'evt_resend' }, { jobId: 'evt_resend' })
+  })
+
+  it('a failed handler leaves the event unprocessed, and the resend retries its job', async () => {
+    const stripe = createFakeStripe()
+    ;(getStripe as jest.Mock).mockResolvedValue(stripe.client)
+    const store = emptyStripeStore([subscriptionRow()])
+    installStripeStore(prismaMock, store)
+    stripe.events.set('evt_resend', stripeEvent('evt_resend', 'customer.subscription.updated', { id: 'sub_1' }, 1))
+    stripe.failSubscriptionReads(new Error('database briefly down'))
+
+    // The worker's last attempt fails; BullMQ keeps the job as failed.
+    const queued = { id: 'evt_resend', data: { eventId: 'evt_resend' }, attemptsMade: 2, opts: { attempts: 3 } } as unknown as Job
+    await expect(processStripeWebhook(queued)).rejects.toThrow('database briefly down')
+    expect(store.events.get('evt_resend')).toMatchObject({ processedAt: null, lastError: 'HANDLER_FAILED' })
+
+    const failedJob = fakeJob('failed')
+    ;(findJob as jest.Mock).mockResolvedValue(failedJob)
+    const response = await POST(signedRequest(fixture))
+
+    expect(response.status).toBe(200)
+    expect(failedJob.retry).toHaveBeenCalledTimes(1)
   })
 })

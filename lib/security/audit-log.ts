@@ -51,6 +51,9 @@ export enum AuditEventType {
   SUBSCRIPTION_CANCELED = "SUBSCRIPTION_CANCELED",
   SUBSCRIPTION_ACCESS_GRANTED = "SUBSCRIPTION_ACCESS_GRANTED",
   SUBSCRIPTION_EXEMPT_CHANGED = "SUBSCRIPTION_EXEMPT_CHANGED",
+  // A Stripe webhook event failed its last attempt (SEC-40). Details carry the
+  // event id and an error code; Stripe's "Resend event" retries it.
+  STRIPE_EVENT_FAILED = "STRIPE_EVENT_FAILED",
   // Discord events
   // Emitted when a chatbot tool call is refused in the public Discord context
   // because the requested tool is not in the resolved Discord-safe set (or the
