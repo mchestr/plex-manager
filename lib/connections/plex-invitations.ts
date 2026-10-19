@@ -2,6 +2,10 @@
  * Plex invitation and sharing functions
  */
 
+import { z } from "zod"
+
+import { serviceFetch } from "@/lib/connections/http"
+
 import {
   logger,
   sanitizeUrlForLogging,
@@ -9,6 +13,7 @@ import {
   type InviteSettings,
 } from "./plex-core"
 import { getPlexServerIdentity } from "./plex-connection"
+import { getPlexUsers } from "./plex-user-info"
 
 /**
  * Invite a user to the Plex server
@@ -249,76 +254,96 @@ export async function acceptPlexInvite(
   }
 }
 
+
+/** Why an unshare could not be confirmed. */
+export type PlexUnshareErrorCode = "PLEX_AUTH" | "PLEX_UNAVAILABLE"
+
 /**
- * Unshare library access for a user from the Plex server
- * Removes the user's access to the shared server
- * Uses the Plex API v2 sharings endpoint
+ * The outcome of {@link unshareUserFromPlexServer}. `already_removed` is a
+ * success, so retries and reruns settle.
+ */
+export type PlexUnshareResult =
+  | { success: true; status: "removed" | "already_removed" }
+  | { success: false; code: PlexUnshareErrorCode }
+
+/** plex.tv's friend-server route (python-plexapi's `FRIENDSERVERS`). */
+const SHARED_SERVER_URL = "https://plex.tv/api/servers"
+const UNSHARE_TIMEOUT_MS = 10_000
+
+function authOrUnavailable(status: number | undefined): PlexUnshareErrorCode {
+  return status === 401 || status === 403 ? "PLEX_AUTH" : "PLEX_UNAVAILABLE"
+}
+
+/**
+ * Removes a user's share of this Plex server, and only that (GAP-04).
+ *
+ * ## Process
+ *
+ * 1. Resolve this server's machine identifier from its `/identity`.
+ * 2. Read the owner's plex.tv user list and find the user's `<Server>` entry
+ *    for that machine identifier. No user, or no entry (managed home users
+ *    have none), is `already_removed` without a DELETE.
+ * 3. `DELETE https://plex.tv/api/servers/{machineIdentifier}/shared_servers/{shareId}`.
+ *    The plex.tv friendship and the owner's other servers are left alone.
+ *
+ * ## Result mapping
+ *
+ * 200 or 204 is `removed`; 404 is `already_removed` (plex.tv's status for a
+ * share that is already gone is unconfirmed, so a 404 and a missing entry both
+ * count as success); 401 or 403 is `PLEX_AUTH`; anything else, including a
+ * timeout or network error, is `PLEX_UNAVAILABLE`. No Plex response text is
+ * returned or logged.
  */
 export async function unshareUserFromPlexServer(
   serverConfig: { url: string; token: string },
   plexUserId: string
-): Promise<{ success: boolean; error?: string }> {
-  const unshareStartTime = Date.now()
-  logger.debug("Unsharing user from Plex server", { plexUserId, url: sanitizeUrlForLogging(serverConfig.url) })
-
-  try {
-    // 1. Get client identifier
-    let clientIdentifier: string
-    try {
-      clientIdentifier = getClientIdentifier()
-    } catch (error) {
-      return { success: false, error: "PLEX_CLIENT_IDENTIFIER is not configured" }
-    }
-
-    // 2. The sharing ID is the Plex user ID - use it directly
-    const sharingId = plexUserId
-    logger.debug("Using Plex user ID as sharing ID", { sharingId })
-
-    // 3. Delete the sharing using the /api/v2/sharings/{sharingId} endpoint
-    // The sharing ID is the Plex user ID
-    const deleteUrl = `https://plex.tv/api/v2/sharings/${sharingId}`
-    logger.debug("Deleting sharing", { sharingId, deleteUrl: sanitizeUrlForLogging(deleteUrl) })
-
-    const deleteResponse = await fetch(deleteUrl, {
-      method: "DELETE",
-      headers: {
-        "Accept": "application/json",
-        "X-Plex-Token": serverConfig.token,
-        "X-Plex-Client-Identifier": clientIdentifier,
-      },
-    })
-
-    if (deleteResponse.status !== 200 && deleteResponse.status !== 204) {
-      const errorText = await deleteResponse.text()
-      logger.error("Failed to delete sharing", undefined, {
-        status: deleteResponse.status,
-        statusText: deleteResponse.statusText,
-        errorPreview: errorText.substring(0, 100),
-        sharingId,
-      })
-
-      // Try to parse structured error if available
-      try {
-        const errorData = JSON.parse(errorText)
-        if (errorData.errors && Array.isArray(errorData.errors) && errorData.errors.length > 0) {
-          return { success: false, error: errorData.errors[0].message || `Unshare API returned error status: ${deleteResponse.status} ${deleteResponse.statusText}` }
-        }
-      } catch {
-        // If JSON parsing fails, use the text as-is
-      }
-
-      return { success: false, error: `Unshare API returned error status: ${deleteResponse.status} ${deleteResponse.statusText}` }
-    }
-
-    const duration = Date.now() - unshareStartTime
-    logger.info("Successfully unshared user from server", { duration, plexUserId, sharingId })
-    return { success: true }
-  } catch (error) {
-    const duration = Date.now() - unshareStartTime
-    logger.error("Error unsharing user from server", error, { duration, plexUserId })
-    if (error instanceof Error) {
-      return { success: false, error: `Error unsharing user: ${error.message}` }
-    }
-    return { success: false, error: "Failed to unshare user from Plex server" }
+): Promise<PlexUnshareResult> {
+  const identity = await getPlexServerIdentity(serverConfig)
+  if (!identity.success || !identity.machineIdentifier) {
+    logger.warn("plex.unshare_failed", { plexUserId, step: "identity", url: sanitizeUrlForLogging(serverConfig.url) })
+    return { success: false, code: "PLEX_UNAVAILABLE" }
   }
+  const machineIdentifier = identity.machineIdentifier
+
+  const users = await getPlexUsers(serverConfig.token)
+  if (!users.success || !users.data) {
+    const code = authOrUnavailable(users.status)
+    logger.warn("plex.unshare_failed", { plexUserId, step: "users", code, status: users.status })
+    return { success: false, code }
+  }
+
+  const user = users.data.find((candidate) => candidate.id === plexUserId)
+  const share = user?.servers.find((server) => server.machineIdentifier === machineIdentifier)
+  if (!share?.shareId) {
+    logger.info("plex.unshare_already_removed", {
+      plexUserId,
+      reason: user ? "no_share_for_this_server" : "not_in_user_list",
+    })
+    return { success: true, status: "already_removed" }
+  }
+
+  const result = await serviceFetch({
+    service: "Plex",
+    url: `${SHARED_SERVER_URL}/${encodeURIComponent(machineIdentifier)}/shared_servers/${encodeURIComponent(share.shareId)}`,
+    method: "DELETE",
+    headers: {
+      "X-Plex-Token": serverConfig.token,
+      "X-Plex-Client-Identifier": getClientIdentifier(),
+    },
+    responseType: "text",
+    schema: z.string(),
+    timeoutMs: UNSHARE_TIMEOUT_MS,
+  })
+
+  if (result.ok) {
+    logger.info("plex.unshare_removed", { plexUserId })
+    return { success: true, status: "removed" }
+  }
+  if (result.code === "HTTP" && result.status === 404) {
+    logger.info("plex.unshare_already_removed", { plexUserId, reason: "not_found" })
+    return { success: true, status: "already_removed" }
+  }
+  const code = result.code === "HTTP" ? authOrUnavailable(result.status) : "PLEX_UNAVAILABLE"
+  logger.warn("plex.unshare_failed", { plexUserId, step: "delete", code, status: result.status })
+  return { success: false, code }
 }

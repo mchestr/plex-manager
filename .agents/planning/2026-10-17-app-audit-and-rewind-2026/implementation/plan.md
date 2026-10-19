@@ -4292,10 +4292,12 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 
 **Demo.** The owner shares two servers with a test friend. Unshare in the app: the friend keeps the second server and stays a friend. A second Unshare reports "already removed".
 
+(As merged: `unshareUserFromPlexServer` stays in `lib/connections/plex-invitations.ts` and returns `PlexUnshareResult`: `{ success: true, status: "removed" | "already_removed" }` or `{ success: false, code: PlexUnshareErrorCode }` (`PLEX_AUTH`, `PLEX_UNAVAILABLE`). `PlexUserServer.shareId` is optional (a `<Server>` without `id` has none and counts as no share). `getPlexUsers` now also returns the HTTP `status` of a failure, so a 401 or 403 on the user list is `PLEX_AUTH` too; a failed `/identity` lookup is `PLEX_UNAVAILABLE`. The DELETE also sends `X-Plex-Client-Identifier`. No new `SessionRevocationReason`: the action keeps `unshared` and the revoke keeps `subscription_revoked`, so the role sync is unchanged. The revoke writes `plexInviteStatus: 'revoked'` only where it is not already `revoked` (nulls included); an `already_removed` result whose write changed no row is a rerun and returns `revoked: false` without calling `endUserSessions`, so a rerun bumps the version once in total, while an `already_removed` on a row not yet revoked (an earlier manual unshare, or a crash before the write) still ends the sessions. `unshareUserLibrary` returns `ActionResult<{ status }, ActionErrorCode | PlexUnshareErrorCode>` (still on `requireAdmin`; P11.5 moves it onto `adminAction`), ends the sessions on both successes, and the button's toast says "Library access was already removed" for the second. The action tests are in `__tests__/actions/user-queries.test.ts`, not `actions/__tests__/`. Importing `UnrecoverableError` makes `lib/queue/jobs/stripe.ts` load BullMQ at runtime, so the five `__tests__/lib/queue/` suites that import it now run under `@jest-environment node`. The demo needs a real plex.tv account and is the owner's to run.)
+
 **Done when.**
-- [ ] Unshare deletes only the configured server's share, found by machine identifier and share id.
-- [ ] An already removed share returns success, and authentication failures are not retried.
-- [ ] The recorded-response tests pass.
+- [x] Unshare deletes only the configured server's share, found by machine identifier and share id.
+- [x] An already removed share returns success, and authentication failures are not retried.
+- [x] The recorded-response tests pass.
 
 ### Step P4.12: Jellyfin invites: no Plex redemption, complete compensation
 

@@ -1,4 +1,8 @@
 /**
+ * @jest-environment node
+ */
+
+/**
  * Tests for the PLEX_ACCESS_GRANT job processor (`processPlexAccessGrant` in
  * lib/queue/jobs/stripe.ts).
  *

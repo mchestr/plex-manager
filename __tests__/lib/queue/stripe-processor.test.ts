@@ -1,4 +1,8 @@
 /**
+ * @jest-environment node
+ */
+
+/**
  * Tests for lib/queue/jobs/stripe.ts - the STRIPE_WEBHOOK job processor.
  *
  * The processor is invoked directly with a fixture `Job`; BullMQ/Redis are not

@@ -210,6 +210,11 @@ exempt user, a non-Stripe-managed user, or a `PAST_DUE` subscriber. The revoke
 job re-reads live DB state before acting, requires the stored status to be
 `CANCELED` or `UNPAID`, and asks Stripe: unless the live status is `canceled`,
 `unpaid` or `incomplete_expired`, it skips with "subscription is active again".
+The removal deletes only the member's share of the configured server (their
+plex.tv friendship and other servers stay). A share that is already gone counts
+as success, so a retried or rerun revoke settles without ending the member's
+sessions twice. If plex.tv rejects the owner's token, the job fails at once
+without retries; reconnect Plex in settings, then retry the job.
 The grant job re-checks too: it does nothing unless the user has full access
 and is exempt (comp grants) or holds an `ACTIVE` subscription, confirmed with
 Stripe, and it records `accepted` without a new invite when the user already

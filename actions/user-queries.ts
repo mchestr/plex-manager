@@ -3,9 +3,10 @@
 import { z } from "zod"
 
 import { memberAction } from "@/lib/actions/define-action"
-import { fail, ok } from "@/lib/actions/result"
+import { type ActionErrorCode, type ActionResult, fail, ok, toActionError } from "@/lib/actions/result"
 import { requireAdmin } from "@/lib/admin"
 import { checkUserServerAccess, getPlexServerIdentity, getPlexUsers, unshareUserFromPlexServer } from "@/lib/connections/plex"
+import { type PlexUnshareErrorCode } from "@/lib/connections/plex-invitations"
 import { prisma } from "@/lib/prisma"
 import { endUserSessions } from "@/lib/session-revocation"
 import { SubscriptionStatus } from "@/lib/generated/prisma/client"
@@ -267,48 +268,53 @@ export async function getAllUsersWithWrapped(year: number): Promise<AdminUserWit
   }
 }
 
+/** Admin copy for each unshare failure; Plex's own text is never shown. */
+const UNSHARE_ERROR_COPY: Record<PlexUnshareErrorCode, string> = {
+  PLEX_AUTH: "Plex rejected Plex Manager's token. Reconnect Plex in settings.",
+  PLEX_UNAVAILABLE: "Plex didn't respond. Try again in a few minutes.",
+}
+
 /**
- * Unshare library access for a user from the Plex server (admin only).
- * A successful unshare also ends the user's sessions (SEC-10).
+ * Removes a user's share of the configured Plex server (admin only), leaving
+ * their plex.tv friendship and the owner's other servers alone. A share that
+ * is already gone succeeds as `already_removed`. Either success also ends the
+ * user's sessions (SEC-10).
  */
-export async function unshareUserLibrary(userId: string): Promise<{ success: boolean; error?: string }> {
+export async function unshareUserLibrary(
+  userId: string
+): Promise<ActionResult<{ status: "removed" | "already_removed" }, ActionErrorCode | PlexUnshareErrorCode>> {
   const session = await requireAdmin()
 
   try {
-    // Get the user
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
         id: true,
-        email: true,
         plexUserId: true,
         isAdmin: true,
       },
     })
 
     if (!user) {
-      return { success: false, error: "User not found" }
+      return fail("NOT_FOUND", "User not found")
     }
 
-    // Don't allow unsharing admin users
     if (user.isAdmin) {
-      return { success: false, error: "Cannot unshare library access for admin users" }
+      return fail("FORBIDDEN", "Cannot unshare library access for admin users")
     }
 
     if (!user.plexUserId) {
-      return { success: false, error: "User Plex ID is required to unshare library access" }
+      return fail("VALIDATION", "User Plex ID is required to unshare library access")
     }
 
-    // Get active Plex server
     const plexServer = await prisma.plexServer.findFirst({
       where: { isActive: true },
     })
 
     if (!plexServer) {
-      return { success: false, error: "No active Plex server configured" }
+      return fail("NOT_FOUND", "No active Plex server configured")
     }
 
-    // Unshare the user
     const result = await unshareUserFromPlexServer(
       {
         url: plexServer.url,
@@ -318,25 +324,17 @@ export async function unshareUserLibrary(userId: string): Promise<{ success: boo
     )
 
     if (!result.success) {
-      logger.error("Failed to unshare user library", undefined, {
-        userId: user.id,
-        email: user.email,
-        error: result.error,
-      })
-      return result
+      logger.warn("Failed to unshare user library", { userId: user.id, code: result.code })
+      return { success: false, code: result.code, error: UNSHARE_ERROR_COPY[result.code] }
     }
 
     await endUserSessions(user.id, "unshared", session.user.id)
 
-    logger.info("Successfully unshared user library", {
-      userId: user.id,
-      email: user.email,
-    })
+    logger.info("Unshared user library", { userId: user.id, status: result.status })
 
-    return { success: true }
+    return ok({ status: result.status })
   } catch (error) {
-    logger.error("Error unsharing user library", error, { userId })
-    return { success: false, error: "Failed to unshare user library" }
+    return toActionError(error, "Failed to unshare user library")
   }
 }
 

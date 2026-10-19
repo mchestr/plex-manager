@@ -1,4 +1,8 @@
 /**
+ * @jest-environment node
+ */
+
+/**
  * Tests for the PLEX_ACCESS_REVOKE job (`processPlexAccessRevoke` and the
  * `evaluateRevokeGuard` predicate in lib/queue/jobs/stripe.ts) plus the webhook
  * wiring that enqueues revoke on deletion/unpaid.
@@ -11,7 +15,7 @@
  * touched. The Plex unshare helper and Prisma are mocked.
  */
 
-import type { Job } from 'bullmq'
+import { UnrecoverableError, type Job } from 'bullmq'
 
 import {
   processPlexAccessRevoke,
@@ -187,7 +191,7 @@ describe('processPlexAccessRevoke', () => {
     jest.clearAllMocks()
     ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(PLEX_SERVER)
     ;(prisma.subscription.updateMany as jest.Mock).mockResolvedValue({ count: 1 })
-    ;(unshareUserFromPlexServer as jest.Mock).mockResolvedValue({ success: true })
+    ;(unshareUserFromPlexServer as jest.Mock).mockResolvedValue({ success: true, status: 'removed' })
     prismaMock.user.updateMany.mockResolvedValue({ count: 1 })
   })
 
@@ -260,7 +264,10 @@ describe('processPlexAccessRevoke', () => {
       'plex-99'
     )
     expect(prisma.subscription.updateMany).toHaveBeenCalledWith({
-      where: { userId: 'user-1' },
+      where: {
+        userId: 'user-1',
+        OR: [{ plexInviteStatus: null }, { plexInviteStatus: { not: 'revoked' } }],
+      },
       data: { plexInviteStatus: 'revoked' },
     })
     // Sessions end only after the unshare and the revoked status (SEC-10).
@@ -335,18 +342,67 @@ describe('processPlexAccessRevoke', () => {
     expect(result).toEqual({ userId: 'missing', revoked: false })
   })
 
-  it('throws (to trigger retry) when the unshare fails transiently', async () => {
+  it('throws a retryable error when Plex is unavailable', async () => {
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(makeUser())
     ;(unshareUserFromPlexServer as jest.Mock).mockResolvedValue({
       success: false,
-      error: 'Plex API unavailable',
+      code: 'PLEX_UNAVAILABLE',
     })
 
-    await expect(
-      processPlexAccessRevoke(makeRevokeJob('user-1'))
-    ).rejects.toThrow('Plex API unavailable')
+    const error = await processPlexAccessRevoke(makeRevokeJob('user-1')).catch((thrown: unknown) => thrown)
+
+    expect(error).toEqual(new Error('PLEX_UNAVAILABLE'))
+    expect(error).not.toBeInstanceOf(UnrecoverableError)
     expect(prisma.subscription.updateMany).not.toHaveBeenCalled()
     expect(prismaMock.user.updateMany).not.toHaveBeenCalled()
+  })
+
+  it('throws UnrecoverableError when Plex rejects the owner token, so it is not retried', async () => {
+    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(makeUser())
+    ;(unshareUserFromPlexServer as jest.Mock).mockResolvedValue({ success: false, code: 'PLEX_AUTH' })
+
+    const error = await processPlexAccessRevoke(makeRevokeJob('user-1')).catch((thrown: unknown) => thrown)
+
+    expect(error).toBeInstanceOf(UnrecoverableError)
+    expect(prisma.subscription.updateMany).not.toHaveBeenCalled()
+    expect(prismaMock.user.updateMany).not.toHaveBeenCalled()
+  })
+
+  it('records the removal and ends sessions when the share was already gone', async () => {
+    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(makeUser())
+    ;(unshareUserFromPlexServer as jest.Mock).mockResolvedValue({ success: true, status: 'already_removed' })
+
+    const result = await processPlexAccessRevoke(makeRevokeJob('user-1'))
+
+    expect(prisma.subscription.updateMany).toHaveBeenCalledWith({
+      where: {
+        userId: 'user-1',
+        OR: [{ plexInviteStatus: null }, { plexInviteStatus: { not: 'revoked' } }],
+      },
+      data: { plexInviteStatus: 'revoked' },
+    })
+    expect(prismaMock.user.updateMany).toHaveBeenCalledTimes(1)
+    expect(result).toEqual({ userId: 'user-1', revoked: true })
+  })
+
+  it('settles a rerun after success as a no-op, ending sessions once', async () => {
+    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(makeUser())
+    // First run removes the share; the rerun finds it gone and the status already recorded.
+    ;(unshareUserFromPlexServer as jest.Mock)
+      .mockResolvedValueOnce({ success: true, status: 'removed' })
+      .mockResolvedValueOnce({ success: true, status: 'already_removed' })
+    ;(prisma.subscription.updateMany as jest.Mock)
+      .mockResolvedValueOnce({ count: 1 })
+      .mockResolvedValueOnce({ count: 0 })
+
+    await expect(processPlexAccessRevoke(makeRevokeJob('user-1'))).resolves.toEqual({ userId: 'user-1', revoked: true })
+    await expect(processPlexAccessRevoke(makeRevokeJob('user-1'))).resolves.toEqual({ userId: 'user-1', revoked: false })
+
+    expect(prismaMock.user.updateMany).toHaveBeenCalledTimes(1)
+    expect(prismaMock.user.updateMany).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+      data: { sessionVersion: { increment: 1 } },
+    })
   })
 
   it('throws when no active Plex server is configured', async () => {
@@ -377,7 +433,7 @@ describe('processPlexAccessRevoke live re-check', () => {
     jest.clearAllMocks()
     ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(PLEX_SERVER)
     ;(prisma.subscription.updateMany as jest.Mock).mockResolvedValue({ count: 1 })
-    ;(unshareUserFromPlexServer as jest.Mock).mockResolvedValue({ success: true })
+    ;(unshareUserFromPlexServer as jest.Mock).mockResolvedValue({ success: true, status: 'removed' })
     prismaMock.user.updateMany.mockResolvedValue({ count: 1 })
     ;(getStripe as jest.Mock).mockResolvedValue(null)
   })

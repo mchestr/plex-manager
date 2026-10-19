@@ -534,9 +534,9 @@ describe('unshareUserLibrary', () => {
   })
 
   it("ends the member's sessions after a successful unshare (SEC-10)", async () => {
-    ;(unshareUserFromPlexServer as jest.Mock).mockResolvedValue({ success: true })
+    ;(unshareUserFromPlexServer as jest.Mock).mockResolvedValue({ success: true, status: 'removed' })
 
-    await expect(unshareUserLibrary('member-1')).resolves.toEqual({ success: true })
+    await expect(unshareUserLibrary('member-1')).resolves.toEqual({ success: true, data: { status: 'removed' } })
 
     expect(mockPrisma.user.updateMany).toHaveBeenCalledWith({
       where: { id: 'member-1' },
@@ -544,11 +544,39 @@ describe('unshareUserLibrary', () => {
     })
   })
 
-  it('keeps the sessions when the unshare fails', async () => {
-    ;(unshareUserFromPlexServer as jest.Mock).mockResolvedValue({ success: false, error: 'Plex down' })
+  it('reports a share that is already gone as success, and still ends the sessions', async () => {
+    ;(unshareUserFromPlexServer as jest.Mock).mockResolvedValue({ success: true, status: 'already_removed' })
 
-    await expect(unshareUserLibrary('member-1')).resolves.toEqual({ success: false, error: 'Plex down' })
+    await expect(unshareUserLibrary('member-1')).resolves.toEqual({
+      success: true,
+      data: { status: 'already_removed' },
+    })
+    expect(mockPrisma.user.updateMany).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    ['PLEX_AUTH', "Plex rejected Plex Manager's token. Reconnect Plex in settings."],
+    ['PLEX_UNAVAILABLE', "Plex didn't respond. Try again in a few minutes."],
+  ])('returns %s with admin copy and keeps the sessions', async (code, error) => {
+    ;(unshareUserFromPlexServer as jest.Mock).mockResolvedValue({ success: false, code })
+
+    await expect(unshareUserLibrary('member-1')).resolves.toEqual({ success: false, code, error })
 
     expect(mockPrisma.user.updateMany).not.toHaveBeenCalled()
+  })
+
+  it('never returns the text of a thrown error', async () => {
+    ;(unshareUserFromPlexServer as jest.Mock).mockRejectedValue(new Error('plex.tv said: invalid token abc123'))
+
+    const result = await unshareUserLibrary('member-1')
+
+    expect(result).toEqual({ success: false, code: 'INTERNAL', error: 'Failed to unshare user library' })
+  })
+
+  it('refuses an admin with a code', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue(buildUser({ id: 'member-1', plexUserId: 'plex-member', isAdmin: true }))
+
+    await expect(unshareUserLibrary('member-1')).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
+    expect(unshareUserFromPlexServer).not.toHaveBeenCalled()
   })
 })

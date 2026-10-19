@@ -27,7 +27,7 @@
  */
 
 import type Stripe from "stripe"
-import { Job } from "bullmq"
+import { Job, UnrecoverableError } from "bullmq"
 
 import {
   JOB_TYPES,
@@ -666,10 +666,15 @@ export function evaluateRevokeGuard(target: RevokeGuardTarget): string | null {
  *    logged reason and succeed (`revoked: false`) — this does not call Plex.
  * 3. Otherwise load the active {@link PlexServer} (a missing server is a
  *    configuration error → throw so BullMQ retries) and, when a `plexUserId` is
- *    known, unshare the user. A transient unshare failure throws to retry; a
- *    user with no `plexUserId` is already effectively unshared (idempotent).
- * 4. Record the removal on the subscription (`plexInviteStatus = "revoked"`),
- *    then end the user's sessions ({@link endUserSessions}).
+ *    known, remove the user's share of that server only
+ *    ({@link unshareUserFromPlexServer}). `PLEX_AUTH` throws
+ *    `UnrecoverableError` (a rejected owner token is not retried) and
+ *    `PLEX_UNAVAILABLE` throws to retry; a user with no `plexUserId` is
+ *    already effectively unshared (idempotent).
+ * 4. On `removed` or `already_removed`, record the removal on the subscription
+ *    (`plexInviteStatus = "revoked"`), then end the user's sessions
+ *    ({@link endUserSessions}). A rerun that finds the share gone and the
+ *    removal already recorded succeeds without ending them again.
  *
  * @internal
  */
@@ -747,20 +752,31 @@ export async function processPlexAccessRevoke(
   )
 
   if (!unshareResult.success) {
-    // Transient Plex failure: throw so BullMQ retries the revoke.
-    throw new Error(
-      unshareResult.error || "Failed to unshare user from Plex server"
-    )
+    // A rejected owner token will not fix itself: stop instead of retrying.
+    if (unshareResult.code === "PLEX_AUTH") {
+      throw new UnrecoverableError("PLEX_AUTH")
+    }
+    // Plex is unavailable: throw so BullMQ retries the revoke.
+    throw new Error(unshareResult.code)
   }
 
-  await prisma.subscription.updateMany({
-    where: { userId },
+  // An already removed share whose removal is already recorded is a rerun:
+  // succeed without ending the sessions a second time.
+  const { count } = await prisma.subscription.updateMany({
+    where: {
+      userId,
+      OR: [{ plexInviteStatus: null }, { plexInviteStatus: { not: "revoked" } }],
+    },
     data: { plexInviteStatus: "revoked" },
   })
+  if (count === 0 && unshareResult.status === "already_removed") {
+    logger.info("Revoke already applied", { userId })
+    return { userId, revoked: false }
+  }
 
   await endUserSessions(userId, "subscription_revoked", SYSTEM_ACTOR)
 
-  logger.info("Plex access revoke complete", { userId })
+  logger.info("Plex access revoke complete", { userId, status: unshareResult.status })
 
   return { userId, revoked: true }
 }
