@@ -9,6 +9,9 @@ test.describe('Form primitives', () => {
   test('the Plex access filter works from the keyboard and returns focus', async ({ adminPage }) => {
     await adminPage.goto('/admin/users');
     const trigger = adminPage.getByTestId('users-filter-plex-access');
+    // The streamed page waits in a hidden segment until React reveals it, and
+    // moving it into place drops focus given to it there.
+    await expect(trigger).toBeVisible();
     await expect(trigger).toHaveText('Yes');
     await expect(trigger).toHaveAttribute('aria-expanded', 'false');
 
