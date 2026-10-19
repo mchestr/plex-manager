@@ -209,6 +209,10 @@ jobs:
       - name: Run unit tests with coverage
         run: npm run test:coverage -- --ci --reporters=default --reporters=github-actions
 
+      # The formatters must not read the process zone (P3.10).
+      - name: Rerun the formatter tests at UTC+14
+        run: npm run test:tz -- --ci
+
       - name: Upload coverage report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

@@ -30,8 +30,11 @@ jest.mock('@/lib/utils/logger', () => ({
 }))
 
 const mockRevalidatePath = jest.fn()
+const mockUpdateTag = jest.fn()
 jest.mock('next/cache', () => ({
   revalidatePath: (...args: unknown[]) => mockRevalidatePath(...args),
+  updateTag: (...args: unknown[]) => mockUpdateTag(...args),
+  unstable_cache: (fn: unknown) => fn,
 }))
 
 const mockRequireAdmin = requireAdmin as jest.MockedFunction<typeof requireAdmin>
@@ -214,6 +217,8 @@ describe('updateServerTimeZone', () => {
       to: 'America/Los_Angeles',
     })
     expect(mockRevalidatePath).toHaveBeenCalledWith('/', 'layout')
+    // The cached format settings (lib/settings/app-settings.ts) pick up the new zone.
+    expect(mockUpdateTag).toHaveBeenCalledWith('app-settings')
   })
 
   it('accepts UTC, which Intl.supportedValuesOf leaves out', async () => {
