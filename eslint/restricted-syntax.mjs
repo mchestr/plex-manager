@@ -48,6 +48,7 @@ export const actionsAndApi = [
 export const migratedActionFiles = [
   "actions/announcements.ts",
   "actions/auth.ts",
+  "actions/chatbot/index.ts",
   "actions/invite.ts",
   "actions/onboarding.ts",
   "actions/prometheus-status.ts",
