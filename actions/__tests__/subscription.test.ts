@@ -129,6 +129,19 @@ describe('createCheckoutSession', () => {
     expect(params).not.toHaveProperty('customer_email')
   })
 
+  it('reuses the existing Stripe customer instead of prefilling the email (SEC-39)', async () => {
+    const stripe = makeStripeMock()
+    stripe.checkout.sessions.create.mockResolvedValue({ id: 'cs_test_4', url: 'u' })
+    mockGetStripe.mockResolvedValue(stripe)
+    mockUserFindUnique.mockResolvedValue({ email: 'user@test.com', subscription: { stripeCustomerId: 'cus_existing' } })
+
+    await createCheckoutSession('user-123', 'price_month')
+
+    const params = stripe.checkout.sessions.create.mock.calls[0][0]
+    expect(params.customer).toBe('cus_existing')
+    expect(params).not.toHaveProperty('customer_email')
+  })
+
   it('returns null when Stripe is unconfigured', async () => {
     mockGetStripe.mockResolvedValue(null)
 
@@ -169,6 +182,40 @@ describe('startCheckout', () => {
     const result = await startCheckout({ priceId: 'price_month' })
 
     expect(result).toEqual({ success: true, data: { url: 'https://checkout.stripe.com/c/pay/cs_test_3' } })
+  })
+
+  it.each(['ACTIVE', 'PAST_DUE'])('refuses a member whose subscription is %s with ALREADY_SUBSCRIBED (SEC-39)', async (status) => {
+    mockGetServerSession.mockResolvedValue(userSession)
+    mockGetOfferedPrices.mockResolvedValue([
+      { priceId: 'price_month', amount: 500, currency: 'usd', interval: 'month', productName: 'Plex' },
+    ])
+    const stripe = makeStripeMock()
+    mockGetStripe.mockResolvedValue(stripe)
+    mockUserFindUnique.mockResolvedValue({ email: 'user@test.com', subscription: { status } })
+
+    const result = await startCheckout({ priceId: 'price_month' })
+
+    expect(result).toMatchObject({ success: false, code: 'ALREADY_SUBSCRIBED' })
+    expect(stripe.checkout.sessions.create).not.toHaveBeenCalled()
+  })
+
+  it('lets a CANCELED member check out again', async () => {
+    mockGetServerSession.mockResolvedValue(userSession)
+    mockGetOfferedPrices.mockResolvedValue([
+      { priceId: 'price_month', amount: 500, currency: 'usd', interval: 'month', productName: 'Plex' },
+    ])
+    const stripe = makeStripeMock()
+    stripe.checkout.sessions.create.mockResolvedValue({ id: 'cs_again', url: 'https://checkout.stripe.com/again' })
+    mockGetStripe.mockResolvedValue(stripe)
+    mockUserFindUnique.mockResolvedValue({
+      email: 'user@test.com',
+      subscription: { status: 'CANCELED', stripeCustomerId: 'cus_existing' },
+    })
+
+    const result = await startCheckout({ priceId: 'price_month' })
+
+    expect(result).toEqual({ success: true, data: { url: 'https://checkout.stripe.com/again' } })
+    expect(stripe.checkout.sessions.create.mock.calls[0][0].customer).toBe('cus_existing')
   })
 
   it('rejects a price that is not in the offered set without creating a session', async () => {
