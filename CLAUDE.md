@@ -279,6 +279,23 @@ describe('Component', () => {
 })
 ```
 
+### Prisma Mocks and Factories
+- **Typed Prisma mock** - Mock `@/lib/prisma` with the shared helper, never a hand-rolled object of `jest.fn()`s:
+  ```typescript
+  import { mockReset } from 'jest-mock-extended'
+  import { prismaMock } from '@/__tests__/helpers/prisma-mock'
+  import { buildUser } from '@/__tests__/helpers/factories'
+
+  jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+  beforeEach(() => mockReset(prismaMock))
+
+  prismaMock.user.findUnique.mockResolvedValue(buildUser({ isAdmin: true }))
+  ```
+- **Factories** - `__tests__/helpers/factories.ts` builds full rows (`buildUser`, `buildPlexWrapped`, `buildInvite`, `buildLLMUsage`, `buildConfig`) from partial overrides
+- **Transactions** - Pass a hand-built `tx` to a `$transaction` callback through `asTransactionClient()` from the same helper
+- **No suppressions** - No `@ts-ignore`, `@ts-expect-error` or `as any` in tests; `as unknown as` only inside `__tests__/helpers/`
+- **Env** - Change read-only keys with `jest.replaceProperty(process.env, 'NODE_ENV', 'production')`
+
 ### E2E Tests (Playwright)
 - **Authenticated sessions** - Use setup project for auth state
 - **Critical user flows** - Test onboarding, wrapped generation, admin actions
@@ -297,6 +314,7 @@ describe('Component', () => {
 - Component tests in `__tests__/` directories alongside components
 - E2E tests in `e2e/` directory
 - Run tests: `npm test` (unit), `npm run test:e2e` (E2E)
+- Type-check app and tests: `npm run typecheck` (`tsconfig.json`, which also covers `e2e/`, then `tsconfig.test.json` for the Jest files)
 
 ## JSDoc Documentation Strategy
 

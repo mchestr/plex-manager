@@ -62,6 +62,12 @@ This command runs an automated agent that:
 - TypeScript types changed in source code
 - Mock types need updating
 - Test assertions using wrong types
+- Check with `npm run typecheck`; Jest (SWC) does not type-check
+
+**Standard for new and fixed tests**:
+- Mock `@/lib/prisma` with the typed helper: `jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)` plus `beforeEach(() => mockReset(prismaMock))`
+- Build rows with the factories in `__tests__/helpers/factories.ts` instead of partial objects
+- Never silence a type error with `@ts-ignore`, `@ts-expect-error` or `as any`
 
 **Component Changes**:
 - Props changed/renamed/removed
