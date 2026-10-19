@@ -8,13 +8,13 @@
  * compare-and-set outcome writes that `generatePlexWrapped` relies on.
  *
  * Gated by `describePg` (test/helpers/integration.ts) and run only by
- * `npm run test:pg`. The database needs the app's migrations applied. The suite
+ * `npm run test:integration`. The database needs the app's migrations applied. The suite
  * only touches rows of a `User` whose id starts with its own run prefix, but
  * scripts/__tests__/rewind-strip-leaderboards.pg.test.ts empties PlexWrapped
  * and counts every row, so the two must not run at the same time on one
- * database; `npm run test:pg` runs the Postgres suites one at a time.
+ * database; `npm run test:integration` runs the Postgres suites one at a time.
  *
- *   TEST_DATABASE_URL=postgresql://.../plex_manager_test npm run test:pg
+ *   TEST_DATABASE_URL=postgresql://.../plex_manager_test npm run test:integration
  */
 
 import { randomUUID } from 'node:crypto'

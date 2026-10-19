@@ -8,24 +8,24 @@
  *
  * It deletes every limiter key in the database it is given, so it runs on
  * database 15 of the TEST_REDIS_URL server, away from the other Redis suites
- * that may be counting in parallel.
+ * that may be counting in parallel. Gated by `describeRedis`
+ * (test/helpers/integration.ts) and run only by `npm run test:integration`.
  */
 
 import Redis from "ioredis"
 
 import { clearRateLimits } from "@/e2e/helpers/rate-limits"
+import { describeRedis } from "@/test/helpers/integration"
 
-const testRedisUrl = process.env.TEST_REDIS_URL
-if (!testRedisUrl) {
-  throw new Error("TEST_REDIS_URL is required for the Redis-backed E2E helper tests")
-}
+describeRedis("clearRateLimits", (testRedisUrl) => {
+  const isolatedUrl = new URL(testRedisUrl)
+  isolatedUrl.pathname = "/15"
+  const redisUrl = isolatedUrl.toString()
+  let redis: Redis
 
-const isolatedUrl = new URL(testRedisUrl)
-isolatedUrl.pathname = "/15"
-const redisUrl = isolatedUrl.toString()
-
-describe("clearRateLimits", () => {
-  const redis = new Redis(redisUrl)
+  beforeAll(() => {
+    redis = new Redis(redisUrl)
+  })
 
   afterAll(async () => {
     await redis.del("bull:queue:job-1", "unrelated:share:1", "sharepoint:1")

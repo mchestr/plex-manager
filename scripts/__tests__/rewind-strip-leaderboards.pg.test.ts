@@ -6,13 +6,13 @@
  * The roster clean-up CLI against a real PostgreSQL database (P0.20).
  *
  * Gated by `describePg` (test/helpers/integration.ts) and run only by
- * `npm run test:pg`. The suite empties the PlexWrapped, LLMUsage,
+ * `npm run test:integration`. The suite empties the PlexWrapped, LLMUsage,
  * ChatConversation and WrappedShareVisit tables of that database and asserts
  * whole-table counts, because the script scans every row, so it must not run
- * in parallel with another suite on the same database; `npm run test:pg` runs
+ * in parallel with another suite on the same database; `npm run test:integration` runs
  * the Postgres suites one at a time.
  *
- *   TEST_DATABASE_URL=postgresql://.../plex_manager_test npm run test:pg
+ *   TEST_DATABASE_URL=postgresql://.../plex_manager_test npm run test:integration
  */
 
 import { PrismaPg } from "@prisma/adapter-pg"

@@ -158,31 +158,6 @@ jobs:
     name: Unit Tests
     runs-on: ubuntu-latest
 
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: plex_manager_test
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-      # For the Redis-backed suites (*.redis.test.ts), which read TEST_REDIS_URL.
-      redis:
-        image: redis:7
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 6379:6379
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -201,26 +176,13 @@ jobs:
         env:
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/plex_manager_test?schema=public"
 
-      # Leaves out the Postgres-backed suites (*.pg.test.ts); see jest.config.js.
+      # No database: lib/prisma.ts only needs DATABASE_URL set. The Postgres-
+      # and Redis-backed suites (*.pg.test.ts, *.redis.test.ts) run in the
+      # integration job; see jest.config.js.
       - name: Run unit tests with coverage
         run: npm run test:coverage -- --ci --reporters=default --reporters=github-actions
         env:
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/plex_manager_test?schema=public"
-          TEST_REDIS_URL: "redis://localhost:6379/0"
-
-      - name: Run Prisma migrations
-        run: npx prisma migrate deploy
-        env:
-          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/plex_manager_test?schema=public"
-
-      # The Postgres-backed suites share this database, so they run one at a
-      # time. Under CI a missing TEST_DATABASE_URL fails them instead of
-      # skipping them (test/helpers/integration.ts).
-      - name: Run Postgres integration tests
-        run: npm run test:pg -- --ci --reporters=default --reporters=github-actions
-        env:
-          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/plex_manager_test?schema=public"
-          TEST_DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/plex_manager_test?schema=public"
 
       - name: Upload coverage report
         if: always()
@@ -229,6 +191,117 @@ jobs:
           name: coverage-report
           path: coverage/
           retention-days: 7
+
+  # The Postgres- and Redis-backed suites (*.pg.test.ts, *.redis.test.ts),
+  # gated by describePg and describeRedis (test/helpers/integration.ts). Under
+  # CI a missing TEST_DATABASE_URL or TEST_REDIS_URL fails them instead of
+  # skipping them.
+  integration:
+    name: Integration
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: plex_manager_it_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    env:
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/plex_manager_it_test?schema=public"
+      TEST_DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/plex_manager_it_test?schema=public"
+      TEST_REDIS_URL: "redis://localhost:6379/0"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Run Prisma migrations
+        run: npx prisma migrate deploy
+
+      # The suites share one database and one Redis, so they run one at a time.
+      - name: Run integration tests
+        run: npm run test:integration -- --ci --reporters=default --reporters=github-actions
+
+  # Fails when prisma/schema.prisma and the migrations disagree: a schema edit
+  # without its migration, or a migration edited by hand. Exit code 2 is drift.
+  schema-drift:
+    name: Schema Drift
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: plex_manager_drift_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    env:
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/plex_manager_drift_test?schema=public"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply every migration to an empty database
+        run: npx prisma migrate deploy
+
+      # Prints the human-readable diff before failing.
+      - name: Compare the migrated database with schema.prisma
+        run: |
+          set +e
+          npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
+          status=$?
+          if [ "$status" -eq 2 ]; then
+            echo "::error::prisma/schema.prisma differs from the migrations. Create a migration with npm run db:migrate."
+          fi
+          exit "$status"
 
   e2e:
     name: E2E Tests
@@ -248,6 +321,16 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
+      # Without Redis, FR-50 shows Rewind's unavailable state (P5.1, P6.9).
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
 
     steps:
       - name: Checkout code
@@ -287,6 +370,7 @@ jobs:
           NEXT_PUBLIC_ENABLE_TEST_AUTH: "true"
           E2E_TEST_MODE: "true"
           SKIP_CONNECTION_TESTS: "true"
+          REDIS_URL: "redis://localhost:6379/0"
 
       - name: Upload Playwright report
         if: always()

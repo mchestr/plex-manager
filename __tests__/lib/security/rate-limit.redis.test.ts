@@ -4,8 +4,8 @@
 
 /**
  * Redis-backed tests for lib/security/rate-limit.ts, run against the server in
- * TEST_REDIS_URL. jest.config.js collects this file only when TEST_REDIS_URL
- * is set, or in CI, where a missing URL fails the suite instead.
+ * TEST_REDIS_URL. Gated by `describeRedis` (test/helpers/integration.ts) and
+ * run only by `npm run test:integration`.
  *
  * Two copies of the module stand in for two app processes on one Redis.
  */
@@ -13,12 +13,9 @@
 import { randomInt, randomUUID } from "node:crypto"
 import type Redis from "ioredis"
 
-type RateLimitModule = typeof import("@/lib/security/rate-limit")
+import { describeRedis } from "@/test/helpers/integration"
 
-const redisUrl = process.env.TEST_REDIS_URL
-if (!redisUrl) {
-  throw new Error("TEST_REDIS_URL is required for the Redis-backed rate-limit tests")
-}
+type RateLimitModule = typeof import("@/lib/security/rate-limit")
 
 /** Every ioredis client the modules under test create, so they can be closed. */
 const mockCreatedClients: Redis[] = []
@@ -37,22 +34,23 @@ jest.mock("ioredis", () => {
 })
 
 const ActualRedis: typeof Redis = jest.requireActual("ioredis").default
-const inspector = new ActualRedis(redisUrl)
 const runId = randomUUID()
 const touchedKeys = new Set<string>()
 
-/** Loads a fresh copy of the module pointed at the test Redis: one "process". */
-async function loadProcess(): Promise<RateLimitModule> {
-  process.env.REDIS_URL = redisUrl
-  jest.resetModules()
-  return import("@/lib/security/rate-limit")
-}
-
-describe("rate-limit on Redis", () => {
+describeRedis("rate-limit on Redis", (redisUrl) => {
+  let inspector: Redis
   let processA: RateLimitModule
   let processB: RateLimitModule
 
+  /** Loads a fresh copy of the module pointed at the test Redis: one "process". */
+  async function loadProcess(): Promise<RateLimitModule> {
+    process.env.REDIS_URL = redisUrl
+    jest.resetModules()
+    return import("@/lib/security/rate-limit")
+  }
+
   beforeAll(async () => {
+    inspector = new ActualRedis(redisUrl)
     processA = await loadProcess()
     processB = await loadProcess()
   })
