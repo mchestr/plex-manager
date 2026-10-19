@@ -1,46 +1,34 @@
-"use client"
+import type { ComponentProps } from "react"
 
-import { InputHTMLAttributes, forwardRef } from "react"
+import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 
-interface StyledInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "size"> {
+interface StyledInputProps extends Omit<ComponentProps<typeof Input>, "size"> {
   size?: "sm" | "md" | "lg"
   error?: boolean
   "data-testid"?: string
 }
 
+/** `md` keeps Input's own height: 40px below `md`, 36px from it. */
 const sizeClasses = {
-  sm: "px-3 py-1.5 text-sm",
-  md: "px-4 py-2 text-sm",
-  lg: "px-4 py-2.5 text-base",
+  sm: "h-8 md:h-8",
+  md: "",
+  lg: "h-11 md:h-11 md:text-body",
 }
 
-export const StyledInput = forwardRef<HTMLInputElement, StyledInputProps>(
-  ({ size = "md", className, error = false, name, "data-testid": providedTestId, ...props }, ref) => {
-    // Generate data-testid from name if not explicitly provided
-    const testId = providedTestId || (name ? `setup-input-${name}` : undefined)
-
-    return (
-      <input
-        ref={ref}
-        name={name}
-        data-testid={testId}
-        aria-invalid={error ? "true" : undefined}
-        className={cn(
-          "w-full bg-slate-800/50 border rounded-lg text-white placeholder-slate-400 shadow-sm",
-          "focus:outline-none focus:border-cyan-400 focus:ring-cyan-400 focus:ring-1",
-          "transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
-          error
-            ? "border-red-500/50 focus:border-red-400 focus:ring-red-400"
-            : "border-slate-600 hover:border-slate-500",
-          sizeClasses[size],
-          className
-        )}
-        {...props}
-      />
-    )
-  }
-)
-
-StyledInput.displayName = "StyledInput"
-
+/**
+ * @deprecated Use `Input` (with `Field` or `FormField`). This adapter keeps
+ * the old `size` and `error` props and the `setup-input-<name>` test id that
+ * `e2e/setup-wizard.spec.ts` reads, until P10.11 removes it.
+ */
+export function StyledInput({ size = "md", className, error = false, name, "data-testid": providedTestId, ...props }: StyledInputProps) {
+  return (
+    <Input
+      name={name}
+      data-testid={providedTestId || (name ? `setup-input-${name}` : undefined)}
+      aria-invalid={error || undefined}
+      className={cn(sizeClasses[size], className)}
+      {...props}
+    />
+  )
+}

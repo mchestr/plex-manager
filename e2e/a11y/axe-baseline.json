@@ -5,14 +5,12 @@
     "meta-viewport|moderate": 1
   },
   "admin /admin/cost-analysis": {
-    "color-contrast|incomplete": 72,
-    "label|critical": 2,
+    "color-contrast|incomplete": 70,
     "meta-viewport|moderate": 1,
     "role-img-alt|serious": 4
   },
   "admin /admin/discord": {
-    "color-contrast|incomplete": 84,
-    "label|critical": 2,
+    "color-contrast|incomplete": 79,
     "meta-viewport|moderate": 1
   },
   "admin /admin/invites": {
@@ -47,7 +45,7 @@
     "meta-viewport|moderate": 1
   },
   "admin /admin/playground": {
-    "color-contrast|incomplete": 33,
+    "color-contrast|incomplete": 30,
     "label|critical": 1,
     "meta-viewport|moderate": 1
   },
@@ -70,17 +68,17 @@
     "meta-viewport|moderate": 1
   },
   "admin /admin/queues": {
-    "color-contrast|incomplete": 50,
+    "color-contrast|incomplete": 48,
     "color-contrast|serious": 1,
     "heading-order|moderate": 1,
     "meta-viewport|moderate": 1
   },
   "admin /admin/settings": {
-    "color-contrast|incomplete": 115,
+    "color-contrast|incomplete": 112,
     "meta-viewport|moderate": 1
   },
   "admin /admin/settings [Wrapped settings editing]": {
-    "color-contrast|incomplete": 115,
+    "color-contrast|incomplete": 112,
     "meta-viewport|moderate": 1
   },
   "admin /admin/shares": {
@@ -90,12 +88,12 @@
     "role-img-alt|serious": 1
   },
   "admin /admin/users": {
-    "color-contrast|incomplete": 49,
+    "color-contrast|incomplete": 46,
     "heading-order|moderate": 1,
     "meta-viewport|moderate": 1
   },
   "admin /admin/users [role filter open]": {
-    "color-contrast|incomplete": 49,
+    "color-contrast|incomplete": 46,
     "heading-order|moderate": 1,
     "meta-viewport|moderate": 1
   },

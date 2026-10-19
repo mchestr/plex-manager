@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "commit": "3a085c430429928e7d0fa5504dc1dd662099504d",
-  "generatedAt": "2026-10-19T18:13:18.943Z",
+  "commit": "1a41401ad6ee53a1b0800a004ec58c9fe0e77d29",
+  "generatedAt": "2026-10-19T18:50:05.015Z",
   "files": {
     "app/(app)/discord/link/page.tsx": {
       "raw-palette": 2
@@ -198,7 +198,7 @@
     },
     "components/admin/cost-analysis/cost-date-filter.tsx": {
       "blur": 1,
-      "raw-palette": 10
+      "raw-palette": 6
     },
     "components/admin/cost-analysis/cost-model-chart.tsx": {
       "raw-palette": 1
@@ -231,7 +231,7 @@
     },
     "components/admin/discord/discord-date-filter.tsx": {
       "blur": 1,
-      "raw-palette": 7
+      "raw-palette": 3
     },
     "components/admin/discord/discord-error-analysis.tsx": {
       "raw-palette": 14
@@ -819,7 +819,7 @@
     "gradient": 136,
     "gradient-text": 56,
     "infinite-motion": 56,
-    "raw-palette": 3490,
+    "raw-palette": 3482,
     "zoom-lock": 2
   }
 }

@@ -39,6 +39,17 @@ if (typeof window !== 'undefined') {
   if (!Element.prototype.hasPointerCapture) Element.prototype.hasPointerCapture = () => false
   if (!Element.prototype.setPointerCapture) Element.prototype.setPointerCapture = () => {}
   if (!Element.prototype.releasePointerCapture) Element.prototype.releasePointerCapture = () => {}
+  // Base UI's Checkbox re-dispatches a click on its hidden input as a
+  // PointerEvent (P3.5).
+  if (typeof window.PointerEvent === 'undefined') {
+    window.PointerEvent = class PointerEvent extends MouseEvent {
+      constructor(type, init = {}) {
+        super(type, init)
+        this.pointerId = init.pointerId ?? 0
+        this.pointerType = init.pointerType ?? ''
+      }
+    }
+  }
   if (!window.matchMedia) {
     window.matchMedia = (query) => ({
       matches: false,

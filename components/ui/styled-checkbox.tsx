@@ -1,94 +1,74 @@
 "use client"
 
-import { InputHTMLAttributes, forwardRef, useId } from "react"
+import { useId } from "react"
 
-interface StyledCheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "type"> {
+import { Checkbox } from "@/components/ui/checkbox"
+import { cn } from "@/lib/utils"
+
+interface StyledCheckboxProps {
+  checked?: boolean
+  /** Called with an event-shaped object, so `(e) => e.target.checked` call sites keep compiling. */
+  onChange?: (event: { target: { checked: boolean } }) => void
   label?: string
   description?: string
+  disabled?: boolean
+  id?: string
+  name?: string
+  className?: string
   "data-testid"?: string
 }
 
-export const StyledCheckbox = forwardRef<HTMLInputElement, StyledCheckboxProps>(
-  ({ label, description, className = "", disabled = false, id, "data-testid": testId, ...props }, ref) => {
-    const generatedId = useId()
-    const checkboxId = id || generatedId
+/**
+ * @deprecated Use `Checkbox` with a label. This adapter keeps the old
+ * `label`, `description`, `onChange` and `data-testid` props until P10.11.
+ */
+export function StyledCheckbox({
+  checked,
+  onChange,
+  label,
+  description,
+  disabled = false,
+  id,
+  name,
+  className,
+  "data-testid": testId,
+}: StyledCheckboxProps) {
+  const generatedId = useId()
+  const checkboxId = id || generatedId
+  const descriptionId = `${checkboxId}-description`
 
-    return (
-      <div className={`flex items-start gap-3 ${className}`}>
-        <div className="relative flex items-center h-5 mt-0.5">
-          <input
-            ref={ref}
-            id={checkboxId}
-            type="checkbox"
-            disabled={disabled}
-            className="peer sr-only"
-            {...props}
-          />
-          <label
-            htmlFor={checkboxId}
-            data-testid={testId}
-            className={`
-              relative h-5 w-5 rounded border-2 transition-all duration-200 block
-              ${
-                disabled
-                  ? "bg-slate-800/30 border-slate-700 cursor-not-allowed"
-                  : "bg-slate-800/50 border-slate-600 cursor-pointer hover:border-slate-500 peer-focus:border-cyan-400 peer-focus:ring-2 peer-focus:ring-cyan-400/20"
-              }
-              ${
-                props.checked
-                  ? disabled
-                    ? "bg-slate-700 border-slate-600"
-                    : "bg-gradient-to-br from-cyan-500 to-purple-600 border-cyan-400"
-                  : ""
-              }
-            `}
-          >
-            {props.checked && (
-              <svg
-                className="absolute inset-0 h-full w-full text-white p-0.5 pointer-events-none"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                strokeWidth={3}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-            )}
-          </label>
+  return (
+    <div className={cn("flex items-start gap-3", className)}>
+      <Checkbox
+        id={checkboxId}
+        name={name}
+        checked={checked}
+        onCheckedChange={(next) => onChange?.({ target: { checked: next } })}
+        disabled={disabled}
+        aria-describedby={description ? descriptionId : undefined}
+        data-testid={testId}
+        className="mt-0.5"
+      />
+      {(label || description) && (
+        <div className="flex flex-1 flex-col gap-0.5">
+          {label && (
+            <label
+              htmlFor={checkboxId}
+              className={cn(
+                "cursor-pointer text-ui font-medium text-foreground select-none",
+                disabled && "cursor-not-allowed text-muted-foreground"
+              )}
+            >
+              {label}
+            </label>
+          )}
+          {description && (
+            <p id={descriptionId} className="text-label font-normal text-muted-foreground">
+              {description}
+            </p>
+          )}
         </div>
-        {(label || description) && (
-          <div className="flex-1">
-            {label && (
-              <label
-                htmlFor={checkboxId}
-                className={`
-                  block text-sm font-medium cursor-pointer select-none
-                  ${disabled ? "text-slate-500" : "text-white"}
-                `}
-              >
-                {label}
-              </label>
-            )}
-            {description && (
-              <p
-                className={`
-                  mt-0.5 text-xs
-                  ${disabled ? "text-slate-600" : "text-slate-400"}
-                `}
-              >
-                {description}
-              </p>
-            )}
-          </div>
-        )}
-      </div>
-    )
-  }
-)
-
-StyledCheckbox.displayName = "StyledCheckbox"
-
+      )}
+    </div>
+  )
+}
