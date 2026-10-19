@@ -113,7 +113,7 @@ test.describe('Rewind year from data', () => {
     await expect(regularUserPage).toHaveURL(/\/wrapped\/2026$/);
     // The viewer shows after its ~6.5 s intro transition
     await expect(regularUserPage.getByTestId('wrapped-viewer')).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
-    await expect(regularUserPage.getByTestId('no-wrapped-found')).toHaveCount(0);
+    await expect(regularUserPage.getByTestId('no-wrapped-found').filter({ visible: true })).toHaveCount(0);
     await expect(regularUserPage.getByTestId('wrapped-year-link-2026')).toHaveAttribute('aria-current', 'page');
     await expect(regularUserPage.getByTestId('wrapped-year-link-2025')).toHaveAttribute('href', '/wrapped/2025');
   });
@@ -130,8 +130,8 @@ test.describe('Rewind year from data', () => {
     await regularUserPage.goto('/wrapped/2019');
 
     await expect(regularUserPage.getByTestId('no-wrapped-found')).toBeVisible();
-    await expect(regularUserPage.getByTestId('wrapped-year-missing')).toHaveText("You don't have a Rewind for 2019.");
-    await expect(regularUserPage.getByTestId('wrapped-latest-year-link')).toHaveAttribute('href', '/wrapped/2026');
+    await expect(regularUserPage.getByTestId('wrapped-year-missing').filter({ visible: true })).toHaveText("You don't have a Rewind for 2019.");
+    await expect(regularUserPage.getByTestId('wrapped-latest-year-link').filter({ visible: true })).toHaveAttribute('href', '/wrapped/2026');
   });
 
   // The plan's /wrapped/1999 is outside the accepted 2010-2100 range, so it

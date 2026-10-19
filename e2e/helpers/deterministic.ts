@@ -56,7 +56,10 @@ export async function makeDeterministic(page: Page): Promise<void> {
     content: `Math.random = (${mulberry32.toString()})(${VISUAL_SEED});`,
   });
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.clock.install({ time: VISUAL_NOW });
+  // Install a minute early: the installed clock ticks in real time, so
+  // pausing at the install time itself can land in the past and throw.
+  // Nothing is loaded yet, so no timer fires on the way to VISUAL_NOW.
+  await page.clock.install({ time: new Date(VISUAL_NOW.getTime() - 60_000) });
   await page.clock.pauseAt(VISUAL_NOW);
 }
 
