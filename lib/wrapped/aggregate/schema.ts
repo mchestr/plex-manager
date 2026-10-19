@@ -12,8 +12,13 @@
 
 import { z } from "zod"
 
+import { ARCHETYPE_IDS } from "@/lib/wrapped/archetypes/catalogue"
+
 /** A community fact needs this many distinct contributors, or it is null. */
 export const MIN_CONTRIBUTORS = 3
+
+/** Archetype counts and medians need this many scored members, or they are null. */
+export const MIN_SCORED_MEMBERS = 10
 
 const count = z.number().int().nonnegative()
 const contributors = z.number().int().min(MIN_CONTRIBUTORS)
@@ -42,11 +47,28 @@ export const serverAggregateSchema = z.strictObject({
     requestsFulfilled: z.strictObject({ value: count, contributors }).nullable(),
     titlesAdded: z.strictObject({ total: count, films: count, series: count }),
   }),
-  /** Filled by P2.9's scorers. */
-  archetypeCounts: z.record(z.string(), count).nullable(),
-  /** Filled by P2.9. */
-  medians: z.record(z.string(), z.number()).nullable(),
+  /** Matched members with an archetype (not on the postcard), scored by P2.9's scorers. */
+  scoredMembers: count.default(0),
+  /** Members per archetype; null under {@link MIN_SCORED_MEMBERS}. */
+  archetypeCounts: z.partialRecord(z.enum(ARCHETYPE_IDS), count).nullable(),
+  /**
+   * Server medians of the records cells over the scored members, each over
+   * the members who have that cell: binges and the busiest day in episodes,
+   * completion as a share, the most-paused title and the biggest week in
+   * minutes. Null under {@link MIN_SCORED_MEMBERS}.
+   */
+  medians: z
+    .strictObject({
+      longestBinge: z.number().nullable(),
+      deepestBinge: z.number().nullable(),
+      mostEpisodesDay: z.number().nullable(),
+      completionShare: z.number().nullable(),
+      mostPaused: z.number().nullable(),
+      biggestWeek: z.number().nullable(),
+    })
+    .nullable(),
 })
 
 export type ServerAggregate = z.infer<typeof serverAggregateSchema>
 export type CommunityFacts = ServerAggregate["community"]
+export type ServerMedians = NonNullable<ServerAggregate["medians"]>

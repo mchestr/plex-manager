@@ -99,6 +99,8 @@ function input(overrides: Partial<ServerYearInput> = {}): ServerYearInput {
       item("500", "show", "2026-03-01T00:00:00Z"),
       item("901", "movie", "2025-06-01T00:00:00Z"),
     ],
+    hiddenKeys: new Map(),
+    metadata: null,
     ...overrides,
   }
 }
@@ -187,6 +189,8 @@ describe("computeServerYear", () => {
     const result = computeServerYear(input())
 
     expect(() => serverAggregateSchema.parse(result)).not.toThrow()
+    // Six members are under the 10 needed for rarity and medians.
+    expect(result.scoredMembers).toBeLessThanOrEqual(6)
     expect(result.archetypeCounts).toBeNull()
     expect(result.medians).toBeNull()
     const keys = new Set<string>()

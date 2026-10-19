@@ -28,6 +28,7 @@ jest.mock("@/lib/prisma", () => ({
     overseerr: { findFirst: jest.fn() },
     plexServer: { findFirst: jest.fn() },
     user: { findMany: jest.fn() },
+    rewindExclusion: { findMany: jest.fn(async () => []) },
     mediaMetadataCache: { findMany: jest.fn(async () => []), upsert: jest.fn(async () => ({})) },
     rewindServerAggregate: { upsert: jest.fn(async () => ({ id: "agg-1" })) },
   },

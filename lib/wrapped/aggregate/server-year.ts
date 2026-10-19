@@ -15,7 +15,8 @@
  *   kept, because nothing smaller is ever shown. A viewer is one with a
  *   counted play; plays kept out of lists (FR-44) never make a title.
  * - `community`: `./community.ts`.
- * - `archetypeCounts` and `medians` stay null until P2.9.
+ * - `scoredMembers`, `archetypeCounts` and `medians`: `./archetypes.ts`,
+ *   which scores each matched member exactly as their own Rewind does.
  *
  * Names and emails are never inputs, and the result is checked against the
  * strict schema in `./schema.ts` before it is returned. The aggregate never
@@ -28,8 +29,10 @@ import type { LibraryItem } from "@/lib/wrapped/sources/plex-library"
 import type { RequestEvent } from "@/lib/wrapped/sources/request-event"
 import { isCountedPlay, type PlayEvent } from "@/lib/wrapped/sources/watch-history-source"
 import { minutesOf, videoEvents } from "@/lib/wrapped/stats/keys"
+import type { MetadataLookup } from "@/lib/wrapped/stats/metadata"
 import { inWindow } from "@/lib/wrapped/time/zone"
 
+import { scoreMembers, type ScoredMemberInput } from "./archetypes"
 import { computeCommunity, type ViewerPlays } from "./community"
 import { MIN_CONTRIBUTORS, serverAggregateSchema, type ServerAggregate } from "./schema"
 import { throughFor, zoneWindow, type BatchWindow } from "./window"
@@ -49,6 +52,10 @@ export interface ServerYearInput {
   /** The server-wide Overseerr pass, or null when Overseerr is not configured or failed. */
   serverRequests: readonly RequestEvent[] | null
   libraryItems: readonly LibraryItem[]
+  /** Each member's hidden rating keys (`RewindExclusion`), by `userId`. */
+  hiddenKeys: ReadonlyMap<string, ReadonlySet<string>>
+  /** The metadata cache over every member's plays (it is keyed by rating key), or null without it. */
+  metadata: MetadataLookup | null
 }
 
 /**
@@ -107,11 +114,15 @@ export function computeServerYear(input: ServerYearInput): ServerAggregate {
 
   const viewers: ViewerPlays[] = []
   const members: ServerAggregate["members"] = []
+  const scoring: ScoredMemberInput[] = []
   for (const member of input.members) {
     const own = zoneWindow(window, member.zone)
     const events = (input.eventsByTautulliUser.get(member.tautulliUserId) ?? []).filter((e) => inWindow(e.startedAt, own))
     viewers.push({ viewerId: `member:${member.userId}`, events })
     members.push({ userId: member.userId, minutes: totalMinutes(events) })
+    const hiddenKeys = input.hiddenKeys.get(member.userId) ?? new Set<string>()
+    const ctx = { zone: member.zone, window: own, finalCut: window.finalCut, hiddenKeys }
+    scoring.push({ userId: member.userId, events, ctx, metadata: input.metadata })
   }
   for (const [tautulliUserId, all] of input.eventsByTautulliUser) {
     if (memberByTautulliId.has(tautulliUserId)) continue
@@ -136,7 +147,6 @@ export function computeServerYear(input: ServerYearInput): ServerAggregate {
       serverRequests: input.serverRequests,
       libraryItems: input.libraryItems,
     }),
-    archetypeCounts: null,
-    medians: null,
+    ...scoreMembers(scoring, window.year),
   })
 }
