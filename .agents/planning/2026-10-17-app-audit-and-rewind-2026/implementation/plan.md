@@ -341,7 +341,7 @@ gantt
 **Baselines, guardrails and CI gates** (2026-10-20 to 2026-11-03)
 
 - [ ] P1.1: Delete unreachable code; revive the Discord link panel (ui, M, due 2026-10-21)
-- [ ] P1.2: Remove dead exports, the orphaned model and stale CLAUDE.md facts (ops, S, due 2026-10-27)
+- [x] P1.2: Remove dead exports, the orphaned model and stale CLAUDE.md facts (ops, S, due 2026-10-27)
 - [x] P1.3: Wire the Next, react-hooks and jsx-a11y ESLint presets (ops, S, due 2026-10-26)
 - [ ] P1.4: Type-check the test files (ops, M, due 2026-10-27)
 - [ ] P1.5: CI gates: typecheck, audit, knip, coverage, integration, schema drift and production-mode E2E (ops, L, due 2026-10-30)
@@ -1617,12 +1617,18 @@ gantt
 **Demo.** Show the `git diff --stat` (about 1,150 lines removed), knip listing no unused exports, and the CLAUDE.md path test passing.
 
 **Done when.**
-- [ ] Every DUP-13 dead export is deleted, and so are those P1.1 orphaned, except the two Discord helpers the link page uses.
-- [ ] The `drop_user_watch_intent` migration applies cleanly, and `migrate diff` reports no difference.
-- [ ] Dump taken before deploy; `prisma migrate status` clean.
-- [ ] No nested barrel or compatibility shim remains, and each domain has at most one entry.
-- [ ] CLAUDE.md names only APIs and paths that exist, and the path test enforces it.
-- [ ] Build, typecheck and Jest are green.
+- [x] Every DUP-13 dead export is deleted, and so are those P1.1 orphaned, except the two Discord helpers the link page uses.
+- [x] The `drop_user_watch_intent` migration applies cleanly, and `migrate diff` reports no difference.
+- [ ] Dump taken before deploy; `prisma migrate status` clean. (Owner, at deploy: `migrate status` is clean on the `_test` database.)
+- [x] No nested barrel or compatibility shim remains, and each domain has at most one entry.
+- [x] CLAUDE.md names only APIs and paths that exist, and the path test enforces it.
+- [x] Build, typecheck and Jest are green.
+
+(As merged:
+- The migration is `20261019025723_drop_user_watch_intent`. P2.1 had not merged, so P1.2 went first; P2.1 generates `rewind_2026` after rebasing on it, which gives it the later timestamp. The real timestamp sorts before the hand-dated `20261020000000_clear_jellyfin_username_emails` and `20261021000000_llmusage_text_nullable`; `migrate deploy` applied it on a database that already had both. The generated `ALTER TABLE ... DROP CONSTRAINT` was removed, because `DROP TABLE` drops the foreign key.
+- `lib/validations/user-media.ts`, the `settings-edit-forms.tsx` shim and the second `LLMToggle` were already gone. `lib/wrapped/statistics.ts` had 4 production importers plus tests; they now import `tautulli-statistics.ts` (the one Tautulli statistics entry), `server-statistics.ts` and `overseerr-statistics.ts`. All 24 lazy imports in `admin-servers.ts` became static; none was a queue or Redis module. The settings components are now `discord-integration-form.tsx`, `jellyfin-login-toggle.tsx`, `llm-provider-form.tsx`, `llm-toggle.tsx`, `server-form.tsx` and `stripe-settings-form.tsx`.
+- `knip --production` reports no unused exports, types or duplicates. Besides DUP-13, the sweep deleted exports with no caller, stopped exporting module-local helpers (including eleven Discord activity server actions that only `getDiscordDashboardData` and `getDiscordDetailedStats` call) and tagged test-only exports `@internal`. Left for P1.5: 15 unused enum members (`AuditEventType` values, Overseerr status values), the 18 unused test-helper files, `@prisma/client` and the unlisted `tsx` binary.
+- `__tests__/docs/claude-md-paths.test.ts` checks inline-code paths, including `@/` aliases, and skips fenced blocks (the file tree and sample code) and globs, so P3.9's `components/shell/` in the tree passes.)
 
 ### Step P1.3: Wire the Next, react-hooks and jsx-a11y ESLint presets
 
