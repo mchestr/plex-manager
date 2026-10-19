@@ -104,6 +104,21 @@ export const inlineSvg = [
   },
 ];
 
+/**
+ * The deprecated `components/ui` adapters (ui-design-system 9.4): new code
+ * imports the primitive. A `no-restricted-syntax` selector rather than
+ * `no-restricted-imports`, so it shares the raw-element block. P3.5 adds the
+ * `styled-*` form adapters; P3.6 adds `modal-shell` and `confirm-modal`.
+ */
+export const deprecatedImports = [
+  {
+    // esquery regexes cannot hold a slash, so `.` stands in for each one.
+    selector: "ImportDeclaration[source.value=/^@.components.ui.styled-/]",
+    message:
+      "StyledInput, StyledTextarea, StyledCheckbox and StyledDropdown are deprecated: use Input, Textarea, Checkbox or Select from components/ui, with Field or FormField.",
+  },
+];
+
 const APP_AND_COMPONENTS = ["app/**/*.{js,jsx,ts,tsx}", "components/**/*.{js,jsx,ts,tsx}"];
 const V2_VIEWER = "components/wrapped/**";
 
@@ -115,6 +130,7 @@ const V2_VIEWER = "components/wrapped/**";
  *   primitives (`components/ui/**`), the dev sheet (`app/dev/**`), Rewind art
  *   (`components/rewind/**`) and the Satori image routes (`app/api/**`). The
  *   v2 viewer warns on raw controls but keeps its inline art until P11.29.
+ *   The same block warns on imports of the deprecated adapters.
  * - The `actionsAndApi` bans are errors in `app/api/` and the migrated action
  *   modules, and warn in the rest of `actions/`. An error block replaces the
  *   earlier error blocks for its files, so the `app/api/` one repeats the
@@ -134,7 +150,7 @@ export const restrictedSyntaxBlocks = [
     files: APP_AND_COMPONENTS,
     ignores: ["components/ui/**", "components/rewind/**", "app/dev/**", "app/api/**", V2_VIEWER],
     level: "warn",
-    selectors: [...rawControls, ...inlineSvg],
+    selectors: [...rawControls, ...inlineSvg, ...deprecatedImports],
   },
   {
     files: ["actions/**/*.ts"],

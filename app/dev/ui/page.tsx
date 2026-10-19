@@ -6,6 +6,7 @@ import { getEnv } from "@/lib/env"
 import { ButtonSpecimen } from "./_sections/buttons"
 import { BadgeSpecimen, CardSpecimen, IconSpecimen, StatusSpecimen } from "./_sections/display"
 import { AlertSpecimen, SkeletonSpecimen, SpinnerSpecimen } from "./_sections/feedback"
+import { CheckboxSpecimen, FieldSpecimen, InputSpecimen, SelectSpecimen, SwitchSpecimen } from "./_sections/forms"
 
 export const metadata: Metadata = {
   title: "UI primitives",
@@ -37,6 +38,11 @@ export default function DevUiPage() {
       <SpinnerSpecimen />
       <SkeletonSpecimen />
       <IconSpecimen />
+      <InputSpecimen />
+      <FieldSpecimen />
+      <CheckboxSpecimen />
+      <SwitchSpecimen />
+      <SelectSpecimen />
     </main>
   )
 }

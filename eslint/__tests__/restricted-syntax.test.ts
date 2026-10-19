@@ -10,7 +10,7 @@ import path from "node:path"
 import { Linter } from "eslint"
 
 import config from "../../eslint.config.mjs"
-import { actionsAndApi, formatting, inlineSvg, rawControls } from "../restricted-syntax.mjs"
+import { actionsAndApi, deprecatedImports, formatting, inlineSvg, rawControls } from "../restricted-syntax.mjs"
 
 const linter = new Linter({ configType: "flat" })
 
@@ -114,6 +114,24 @@ describe("raw-element warnings (P3.4)", () => {
   })
 })
 
+describe("deprecated adapter imports (P3.5)", () => {
+  it.each([
+    'import { StyledInput } from "@/components/ui/styled-input"',
+    'import { StyledDropdown, DropdownOption } from "@/components/ui/styled-dropdown"',
+    'import { StyledCheckbox } from "@/components/ui/styled-checkbox"',
+  ])("warns on %s", (code) => {
+    expect(hits(code, deprecatedImports)).toBe(1)
+  })
+
+  it.each([
+    'import { Input } from "@/components/ui/input"',
+    'import { Select } from "@/components/ui/select"',
+    'import { styled } from "@/lib/styled-things"',
+  ])("allows %s", (code) => {
+    expect(hits(code, deprecatedImports)).toBe(0)
+  })
+})
+
 /**
  * Lints one fixture with the real config, so a later block that replaces a
  * level's selectors for a kind of file fails here. The paths need not exist.
@@ -153,6 +171,18 @@ describe("what each kind of file gets from eslint.config.mjs", () => {
     ["lib/fixture.tsx", { formatting: ["warn"], button: [], svg: [] }],
   ])("%s", (file, expected) => {
     expect(lint(file)).toEqual(expected)
+  })
+
+  it.each([
+    ["components/admin/users/fixture.tsx", ["warn"]],
+    ["app/admin/fixture/page.tsx", ["warn"]],
+    ["components/ui/fixture.tsx", []],
+    ["app/dev/ui/fixture.tsx", []],
+  ])("%s (deprecated adapter import)", (file, expected) => {
+    const messages = realLinter
+      .verify('import { StyledInput } from "@/components/ui/styled-input"\nexport { StyledInput }\n', config, path.join(root, file))
+      .filter((m) => m.ruleId === "restricted-syntax/warn" || m.ruleId === "no-restricted-syntax")
+    expect(messages.map((m) => (m.severity === 2 ? "error" : "warn"))).toEqual(expected)
   })
 
   const actionSource = [

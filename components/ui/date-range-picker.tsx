@@ -76,6 +76,7 @@ function MonthDayPicker({
           onChange={handleMonthChange}
           options={months}
           placeholder="Month"
+          aria-label={label ? `${label}, month` : "Month"}
           disabled={disabled}
           size="md"
           className="flex-1"
@@ -85,6 +86,7 @@ function MonthDayPicker({
           onChange={onDayChange}
           options={days}
           placeholder="Day"
+          aria-label={label ? `${label}, day` : "Day"}
           disabled={disabled}
           size="md"
           className="flex-1"

@@ -1,6 +1,9 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { axe, toHaveNoViolations } from 'jest-axe'
 import { Switch } from '@/components/ui/switch'
+
+expect.extend(toHaveNoViolations)
 
 describe('Switch', () => {
   it('calls onCheckedChange with true when clicking an unchecked switch', async () => {
@@ -88,7 +91,7 @@ describe('Switch', () => {
     const toggle = screen.getByRole('switch')
     expect(toggle).toBeDisabled()
     expect(toggle).toHaveAttribute('aria-busy', 'true')
-    expect(document.querySelector('.animate-spin')).toBeInTheDocument()
+    expect(document.querySelector('[data-slot="spinner"]')).toBeInTheDocument()
 
     await user.click(toggle)
     expect(onCheckedChange).not.toHaveBeenCalled()
@@ -105,5 +108,25 @@ describe('Switch', () => {
     )
 
     expect(screen.getByTestId('my-switch')).toBeInTheDocument()
+  })
+
+  it('marks the on state with primary-indicator, and has a 44px hit area on touch', () => {
+    render(<Switch checked onCheckedChange={jest.fn()} label="Toggle feature" />)
+
+    const toggle = screen.getByRole('switch')
+    expect(toggle).toHaveAttribute('type', 'button')
+    expect(toggle).toHaveClass('h-5', 'w-9', 'data-checked:bg-primary-indicator', 'pointer-coarse:after:-inset-y-3')
+  })
+
+  it('keeps its name when the state changes, and has no axe violations', async () => {
+    const { container, rerender } = render(
+      <Switch checked={false} onCheckedChange={jest.fn()} label="Watchlist Sync" />
+    )
+    expect(screen.getByRole('switch', { name: 'Watchlist Sync' })).toBeInTheDocument()
+    expect(await axe(container)).toHaveNoViolations()
+
+    rerender(<Switch checked loading onCheckedChange={jest.fn()} label="Watchlist Sync" />)
+    expect(screen.getByRole('switch', { name: 'Watchlist Sync' })).toHaveAttribute('aria-checked', 'true')
+    expect(await axe(container)).toHaveNoViolations()
   })
 })

@@ -3,7 +3,8 @@
 import { useRouter, useSearchParams } from "next/navigation"
 import { useCallback } from "react"
 import { Button } from "@/components/ui/button"
-import { StyledInput } from "@/components/ui/styled-input"
+import { Field, FieldLabel } from "@/components/ui/field"
+import { Input } from "@/components/ui/input"
 
 export function CostDateFilter() {
   const router = useRouter()
@@ -57,26 +58,14 @@ export function CostDateFilter() {
     <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4 mb-6">
       <div className="flex flex-col sm:flex-row sm:items-center gap-4">
         <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">Start Date</label>
-            <StyledInput
-              type="date"
-              value={startDate}
-              onChange={handleStartDateChange}
-              size="sm"
-              className="bg-slate-700/50"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">End Date</label>
-            <StyledInput
-              type="date"
-              value={endDate}
-              onChange={handleEndDateChange}
-              size="sm"
-              className="bg-slate-700/50"
-            />
-          </div>
+          <Field>
+            <FieldLabel>Start date</FieldLabel>
+            <Input type="date" value={startDate} onChange={handleStartDateChange} data-testid="cost-start-date" />
+          </Field>
+          <Field>
+            <FieldLabel>End date</FieldLabel>
+            <Input type="date" value={endDate} onChange={handleEndDateChange} data-testid="cost-end-date" />
+          </Field>
         </div>
         <div className="flex flex-wrap items-end gap-2">
           <div className="text-xs text-slate-400 mb-1 w-full sm:w-auto sm:mb-0">Quick Filters:</div>

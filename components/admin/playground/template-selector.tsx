@@ -28,10 +28,11 @@ export function TemplateSelector({
         <p className="text-xs text-slate-400 mt-1">Choose which prompt template to test</p>
       </div>
       <div>
-        <label className="block text-sm font-medium text-slate-300 mb-1.5">
+        <label htmlFor="playground-template" className="block text-sm font-medium text-slate-300 mb-1.5">
           Select Template
         </label>
         <StyledDropdown
+          id="playground-template"
           value={selectedTemplateId}
           onChange={onTemplateChange}
           options={templates.map((template) => ({

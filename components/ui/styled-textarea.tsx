@@ -1,9 +1,9 @@
-"use client"
+import type { ComponentProps } from "react"
 
-import { TextareaHTMLAttributes, forwardRef } from "react"
+import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
 
-interface StyledTextareaProps extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "size"> {
+interface StyledTextareaProps extends Omit<ComponentProps<"textarea">, "size"> {
   size?: "sm" | "md" | "lg"
   error?: boolean
   resize?: "none" | "vertical" | "horizontal" | "both"
@@ -11,9 +11,9 @@ interface StyledTextareaProps extends Omit<TextareaHTMLAttributes<HTMLTextAreaEl
 }
 
 const sizeClasses = {
-  sm: "px-3 py-1.5 text-sm",
-  md: "px-4 py-2 text-sm",
-  lg: "px-4 py-2.5 text-base",
+  sm: "py-1.5",
+  md: "",
+  lg: "py-2.5 md:text-body",
 }
 
 const resizeClasses = {
@@ -23,32 +23,27 @@ const resizeClasses = {
   both: "resize",
 }
 
-export const StyledTextarea = forwardRef<HTMLTextAreaElement, StyledTextareaProps>(
-  ({ size = "md", className, error = false, resize = "vertical", name, "data-testid": providedTestId, ...props }, ref) => {
-    // Generate data-testid from name if not explicitly provided
-    const testId = providedTestId || (name ? `setup-input-${name}` : undefined)
-
-    return (
-      <textarea
-        ref={ref}
-        name={name}
-        data-testid={testId}
-        aria-invalid={error ? "true" : undefined}
-        className={cn(
-          "w-full bg-slate-800/50 border rounded-lg text-white placeholder-slate-400 shadow-sm",
-          "focus:outline-none focus:border-cyan-400 focus:ring-cyan-400 focus:ring-1",
-          "transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
-          error
-            ? "border-red-500/50 focus:border-red-400 focus:ring-red-400"
-            : "border-slate-600 hover:border-slate-500",
-          sizeClasses[size],
-          resizeClasses[resize],
-          className
-        )}
-        {...props}
-      />
-    )
-  }
-)
-
-StyledTextarea.displayName = "StyledTextarea"
+/**
+ * @deprecated Use `Textarea` (with `Field` or `FormField`). This adapter keeps
+ * the old `size`, `error` and `resize` props and the `setup-input-<name>` test
+ * id, until P10.11 removes it.
+ */
+export function StyledTextarea({
+  size = "md",
+  className,
+  error = false,
+  resize = "vertical",
+  name,
+  "data-testid": providedTestId,
+  ...props
+}: StyledTextareaProps) {
+  return (
+    <Textarea
+      name={name}
+      data-testid={providedTestId || (name ? `setup-input-${name}` : undefined)}
+      aria-invalid={error || undefined}
+      className={cn(sizeClasses[size], resizeClasses[resize], className)}
+      {...props}
+    />
+  )
+}

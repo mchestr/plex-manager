@@ -36,7 +36,7 @@ describe("/dev/ui", () => {
     process.env.ENABLE_DEV_UI = "1"
     const { container } = render(DevUiPage())
 
-    for (const primitive of ["button", "card", "badge", "status-badge", "alert", "spinner", "skeleton", "icon"]) {
+    for (const primitive of ["button", "card", "badge", "status-badge", "alert", "spinner", "skeleton", "icon", "input", "field", "checkbox", "switch", "select"]) {
       expect(screen.getByTestId(`dev-ui-${primitive}`)).toBeInTheDocument()
     }
     expect(await axe(container)).toHaveNoViolations()
