@@ -3,6 +3,10 @@
  * in the Discord context a tool that is NOT in the resolved Discord-safe set
  * MUST be refused — the executor is never called — and the refusal is audited.
  * Admin/default context may call any registered tool.
+ *
+ * Tool failures fail closed too (P4.19, SEC-50, SEC-20): in the Discord context
+ * a thrown executor or an executor's error result becomes one fixed text, and
+ * the admin context gets a code, never the error message.
  */
 
 import { executeToolCall } from ".."
@@ -110,5 +114,50 @@ describe("executeToolCall - Discord fail-closed dispatch (FR-9)", () => {
     await executeToolCall(toolCall(UNSAFE_TOOL), "user-1")
 
     expect(mockLogAuditEvent).not.toHaveBeenCalled()
+  })
+})
+
+describe("executeToolCall - tool failures never leak error text (SEC-50)", () => {
+  const FIXED = "Error: that tool isn't available right now."
+  const LEAKY = "connect ECONNREFUSED http://tautulli:8181/api/v2?apikey=secret-key-123"
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it("returns the fixed text, with no message or stack, when an executor throws in the Discord context", async () => {
+    mockExecuteTautulliTool.mockRejectedValue(new Error(LEAKY))
+
+    const result = await executeToolCall(toolCall(SAFE_TOOL), "user-1", "discord")
+
+    expect(result).toBe(FIXED)
+  })
+
+  it.each([
+    ["an { error } result", JSON.stringify({ error: "http://tautulli:8181/api/v2?apikey=secret-key-123" })],
+    ["a { success: false } result", JSON.stringify({ success: false, error: LEAKY })],
+    ["an Error string", `Error searching for "x": ${LEAKY}`],
+  ])("scrubs %s in the Discord context", async (_case, output) => {
+    mockExecuteTautulliTool.mockResolvedValue(output)
+
+    const result = await executeToolCall(toolCall(SAFE_TOOL), "user-1", "discord")
+
+    expect(result).toBe(FIXED)
+    expect(result).not.toContain("apikey")
+  })
+
+  it("returns a code-only message, never the error text, when an executor throws in the admin context", async () => {
+    mockExecuteTautulliTool.mockRejectedValue(new Error(LEAKY))
+
+    const result = await executeToolCall(toolCall(SAFE_TOOL), "user-1", "default")
+
+    expect(result).toBe("Error: tool execution failed (TOOL_EXECUTION_FAILED).")
+  })
+
+  it("keeps an executor's error result for the admin context", async () => {
+    const output = JSON.stringify({ error: "Tautulli reported an error" })
+    mockExecuteTautulliTool.mockResolvedValue(output)
+
+    expect(await executeToolCall(toolCall(SAFE_TOOL), "user-1", "default")).toBe(output)
   })
 })
