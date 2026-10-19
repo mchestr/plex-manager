@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
 import { assertTestDatabaseUrl } from './lib/security/test-mode';
 
@@ -10,7 +11,27 @@ process.env.DATABASE_URL = databaseUrl;
 
 const port = process.env.E2E_PORT || '3100';
 const baseURL = `http://localhost:${port}`;
-console.log(`Running tests on ${baseURL}`);
+// E2E_SERVER=prod builds the app and serves it with `next start`; the default
+// is still `next dev`. Visual baselines are taken and compared only in prod.
+const prodServer = process.env.E2E_SERVER === 'prod';
+console.log(`Running tests on ${baseURL} (${prodServer ? 'production build' : 'next dev'})`);
+
+const VISUAL_SPECS = /visual\/(member|admin)\.visual\.spec\.ts$/;
+const VISUAL_SETUP_SPEC = /visual\/setup\.visual\.spec\.ts$/;
+const visualDesktop = {
+  ...devices['Desktop Chrome'],
+  viewport: { width: 1440, height: 900 },
+  deviceScaleFactor: 1,
+};
+// Chromium with a phone viewport. devices['iPhone ...'] would switch to webkit,
+// which arrives with the Rewind visual projects (P5.4).
+const visualMobile = {
+  ...devices['Desktop Chrome'],
+  viewport: { width: 390, height: 844 },
+  deviceScaleFactor: 2,
+  isMobile: true,
+  hasTouch: true,
+};
 /**
  * See https://playwright.dev/docs/test-configuration
  */
@@ -47,12 +68,24 @@ export default defineConfig({
   /* Set up database before running tests */
   globalSetup: require.resolve('./e2e/global-setup.ts'),
 
+  /* Visual regression (e2e/visual/README.md) */
+  snapshotPathTemplate: '{testDir}/visual/__screenshots__/{projectName}/{testFilePath}/{arg}{ext}',
+  expect: {
+    toHaveScreenshot: {
+      animations: 'disabled',
+      caret: 'hide',
+      scale: 'css',
+      maxDiffPixelRatio: 0.01,
+      stylePath: path.join(__dirname, 'e2e/visual/screenshot.css'),
+    },
+  },
+
   /* Configure projects for major browsers */
   projects: [
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
-      testIgnore: /setup-wizard\.spec\.ts/,
+      testIgnore: [/setup-wizard\.spec\.ts/, /\.visual\.spec\.ts$/],
     },
     {
       name: 'setup-wizard',
@@ -60,20 +93,39 @@ export default defineConfig({
       workers: 1,
       use: { ...devices['Desktop Chrome'] },
     },
+    { name: 'visual-desktop', testMatch: VISUAL_SPECS, use: visualDesktop },
+    { name: 'visual-mobile', testMatch: VISUAL_SPECS, use: visualMobile },
+    // Setup step 3 empties Setup.isComplete, so it runs after the wizard spec.
+    {
+      name: 'visual-setup-desktop',
+      testMatch: VISUAL_SETUP_SPEC,
+      dependencies: ['setup-wizard'],
+      use: visualDesktop,
+    },
+    {
+      name: 'visual-setup-mobile',
+      testMatch: VISUAL_SETUP_SPEC,
+      dependencies: ['setup-wizard'],
+      use: visualMobile,
+    },
   ],
 
-  /* Run your local dev server before starting the tests */
+  /* Run the app before starting the tests */
   webServer: {
-    command: `npx next dev -p ${port}`,
+    command: prodServer
+      ? `npm run build:e2e && npx next start -p ${port}`
+      : `npx next dev -p ${port}`,
     url: baseURL,
     // A running `npm run dev` points at the dev database, so only reuse a
     // server when asked to explicitly.
     reuseExistingServer: process.env.E2E_REUSE_SERVER === '1',
-    timeout: 30000, // 30 seconds to allow for build/startup
+    // A production build takes minutes; `next dev` starts in seconds.
+    timeout: prodServer ? 600000 : 30000,
     env: {
       ...process.env,
       DATABASE_URL: databaseUrl,
-      NODE_ENV: 'test',
+      // `next build` and `next start` expect production; `next dev` runs as test.
+      NODE_ENV: prodServer ? 'production' : 'test',
       NEXT_PUBLIC_APP_URL: baseURL,
       NEXTAUTH_URL: baseURL,
       NEXT_PUBLIC_ENABLE_TEST_AUTH: 'true',

@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
+    "build:e2e": "npm run build",
     "start": "next start",
     "start:prod": "node server.js",
     "lint": "eslint .",
