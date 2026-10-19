@@ -29,11 +29,9 @@ import type Redis from "ioredis"
 
 import { getRequestPathRedis, readyWithin } from "@/lib/queue/connection"
 import { createLogger } from "@/lib/utils/logger"
+import type { UpstreamLimiter, UpstreamService } from "@/lib/wrapped/sources/watch-history-source"
 
 const logger = createLogger("REDIS_SEMAPHORE")
-
-/** The upstream services whose concurrent calls are capped. */
-export type UpstreamService = "tautulli" | "overseerr" | "plex"
 
 const NOW_MS = `
 local t = redis.call('TIME')
@@ -97,15 +95,15 @@ export interface SemaphoreHolder {
   release(): Promise<void>
 }
 
-export interface RedisSemaphore {
+export interface RedisSemaphore extends UpstreamLimiter {
   /** Waits for a slot; rejects with the signal's reason if it aborts first. */
   acquire(service: UpstreamService, signal?: AbortSignal): Promise<SemaphoreHolder>
   /**
    * Runs `fn` while holding a slot for `service`, renewing it on long calls and
    * releasing it in `finally`. This is P2.4's `UpstreamLimiter.run`; the
-   * optional `signal` bounds the wait for a slot.
+   * optional `options.signal` bounds the wait for a slot.
    */
-  run<T>(service: UpstreamService, fn: () => Promise<T>, signal?: AbortSignal): Promise<T>
+  run<T>(service: UpstreamService, fn: () => Promise<T>, options?: { signal?: AbortSignal }): Promise<T>
 }
 
 /**
@@ -115,7 +113,7 @@ export interface RedisSemaphore {
  * @example
  * ```ts
  * const semaphore = createRedisSemaphore(() => redis, { limit: 4 })
- * const rows = await semaphore.run("tautulli", () => fetchPage(1), signal)
+ * const rows = await semaphore.run("tautulli", () => fetchPage(1), { signal })
  * ```
  */
 export function createRedisSemaphore(
@@ -147,8 +145,12 @@ export function createRedisSemaphore(
     }
   }
 
-  async function run<T>(service: UpstreamService, fn: () => Promise<T>, signal?: AbortSignal): Promise<T> {
-    const holder = await acquire(service, signal)
+  async function run<T>(
+    service: UpstreamService,
+    fn: () => Promise<T>,
+    options: { signal?: AbortSignal } = {}
+  ): Promise<T> {
+    const holder = await acquire(service, options.signal)
     const renewal = setInterval(() => {
       holder.renew().then(
         (renewed) => {
