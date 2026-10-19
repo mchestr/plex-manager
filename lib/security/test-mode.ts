@@ -158,6 +158,8 @@ export function assertSeedTarget(url: string | undefined): ParsedDatabaseUrl {
  * True only outside production when `E2E_TEST_MODE=true` is set explicitly.
  *
  * Gates the seed. `NODE_ENV=test` on its own never enables it.
+ *
+ * @internal
  */
 export function isE2ETestMode(env: TestModeEnv = process.env): boolean {
   return env.NODE_ENV !== "production" && env.E2E_TEST_MODE === "true"
