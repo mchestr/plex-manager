@@ -294,7 +294,6 @@ for k, v in out.items():
 # ---- with --json: the same values as one object, shares as [part, whole], for typing into a profile
 if '--json' in sys.argv:
     def rat(a, b): return [a, b]
-    sec = lambda d: {n: s for n, s in d.items()}
     sections = {
         'taste': {'genres': [{'name': n, 'minutes': int(s // 60), 'share': rat(s, gsec)} for n, s in genres], 'medianYear': median_year,
                   'oldest': oldest and {'key': oldest['key'], 'title': oldest['display'], 'year': years[oldest['key']]},
