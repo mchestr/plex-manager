@@ -267,6 +267,7 @@ jobs:
           for dir in /app/node_modules/jest /app/node_modules/@playwright; do
             if docker exec app test -e "$dir"; then fail "$dir is in the image"; fi
           done
+          if docker exec app sh -c 'command -v npm'; then fail "npm is in the runner"; fi
 
       - name: Check a Redis outage leaves the site live
         run: |

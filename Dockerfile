@@ -57,9 +57,13 @@ ENV NODE_ENV=production \
     HOSTNAME=0.0.0.0 \
     REWIND_CACHE_DIR=/app/.next/cache/rewind
 
-# tini is PID 1: it forwards SIGTERM to Node and reaps zombies.
+# tini is PID 1: it forwards SIGTERM to Node and reaps zombies. The runner
+# installs nothing at runtime, so the base image's npm, npx, corepack and yarn
+# (and the advisories in their bundled packages) go.
 # hadolint ignore=DL3018
 RUN apk add --no-cache tini && \
+    rm -rf /usr/local/lib/node_modules /opt/yarn-* \
+      /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /usr/local/bin/yarn /usr/local/bin/yarnpkg && \
     addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
