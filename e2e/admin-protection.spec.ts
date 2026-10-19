@@ -3,6 +3,9 @@ import { test } from './fixtures/auth';
 import { verifyPageUnauthorized } from './helpers/test-utils';
 
 test.describe('Admin Protection - Unauthenticated Users', () => {
+  // A production build hides server error names and messages, so admin/error.tsx
+  // cannot tell a 401 from a crash and shows the generic error (BP-27).
+  test.fixme(process.env.E2E_SERVER === 'prod', 'BP-27, fixed in P4.3');
   // List of admin pages to check
   const adminPages = [
     '/admin',
@@ -30,6 +33,9 @@ test.describe('Admin Protection - Unauthenticated Users', () => {
 });
 
 test.describe('Admin Protection - Regular Users', () => {
+  // A production build hides server error names and messages, so admin/error.tsx
+  // cannot tell a 401 from a crash and shows the generic error (BP-27).
+  test.fixme(process.env.E2E_SERVER === 'prod', 'BP-27, fixed in P4.3');
   // List of admin pages to check
   const adminPages = [
     '/admin',

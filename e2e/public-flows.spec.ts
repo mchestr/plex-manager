@@ -9,8 +9,9 @@ test.describe('Public Flows', () => {
   test('home page has sign in button and initiates flow', async ({ page }) => {
     await navigateAndVerify(page, '/');
 
-    // Check for collapsed Sign In button
-    const signInButton = page.getByTestId('sign-in-button');
+    // Check for collapsed Sign In button. A production build can briefly hold a
+    // hidden streamed copy of the page (`<div hidden id="S:0">`).
+    const signInButton = page.getByTestId('sign-in-button').filter({ visible: true });
     await expect(signInButton).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
     await expect(signInButton).toBeEnabled();
 

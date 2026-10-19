@@ -26,8 +26,7 @@
   },
   "admin /admin/invites [create dialog open]": {
     "color-contrast|incomplete": 35,
-    "meta-viewport|moderate": 1,
-    "region|moderate": 1
+    "meta-viewport|moderate": 1
   },
   "admin /admin/invites/visual-invite-ok": {
     "color-contrast|incomplete": 37,
