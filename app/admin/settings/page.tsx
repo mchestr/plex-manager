@@ -1,5 +1,6 @@
 import { getAdminSettings } from "@/actions/admin"
 import { getStripeConfig } from "@/actions/admin/admin-config"
+import { getRewindSeasonDataPreparedAt } from "@/actions/admin/rewind-season"
 import { DiscordIntegrationForm } from "@/components/admin/settings/discord-integration-form"
 import { JellyfinLoginToggle } from "@/components/admin/settings/jellyfin-login-toggle"
 import { LLMProviderForm } from "@/components/admin/settings/llm-provider-form"
@@ -10,6 +11,7 @@ import { WatchlistSyncSettings } from "@/components/admin/settings/watchlist-syn
 import { WrappedSettingsForm } from "@/components/admin/settings/wrapped-settings-form"
 import { getBaseUrl } from "@/lib/env"
 import { serverZone } from "@/lib/utils/server-zone"
+import { instantToWallTime } from "@/lib/utils/zoned-time"
 import { getSeasonState } from "@/lib/wrapped/season"
 
 export const dynamic = 'force-dynamic'
@@ -62,6 +64,7 @@ export default async function SettingsPage() {
   const settings = await getAdminSettings()
   const stripeConfig = await getStripeConfig()
   const [season, zone] = await Promise.all([getSeasonState(), serverZone()])
+  const seasonDataPreparedAt = await getRewindSeasonDataPreparedAt(season.seasonYear)
   const baseUrl = getBaseUrl()
   const discordPortalUrl = `${baseUrl}/discord/link`
   const nodeVersion = process.version
@@ -183,6 +186,7 @@ export default async function SettingsPage() {
                       seasonOpen={season.isOpen}
                       zone={zone}
                       configuredZone={settings.config.timezone}
+                      seasonDataPreparedAt={seasonDataPreparedAt && instantToWallTime(new Date(seasonDataPreparedAt), zone)}
                     />
                     <div className="pt-4 border-t border-slate-700">
                       <LLMProviderForm

@@ -53,6 +53,9 @@ export enum AuditEventType {
   SHARE_LINK_REVOKED = "SHARE_LINK_REVOKED",
   // The server time zone (Config.timezone) changed. Details carry the old and new zone.
   SERVER_TIMEZONE_CHANGED = "SERVER_TIMEZONE_CHANGED",
+  // An admin asked for the Rewind season data (server aggregate and metadata
+  // warm) to be prepared. Details carry the year, the last data day and the job id.
+  REWIND_SEASON_DATA_PREPARED = "REWIND_SEASON_DATA_PREPARED",
 }
 
 interface AuditLogEntry {

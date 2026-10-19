@@ -28,12 +28,14 @@ type TautulliEndpoint = Pick<TautulliParsed, "url" | "apiKey">
  */
 export type TautulliCommand =
   | "get_activity"
+  | "get_children_metadata"
   | "get_history"
   | "get_home_stats"
   | "get_item_user_stats"
   | "get_libraries"
   | "get_libraries_table"
   | "get_library_names"
+  | "get_metadata"
   | "get_server_info"
   | "get_user_watch_time_stats"
   | "get_users"
@@ -212,8 +214,6 @@ export type FindTautulliUserResult =
  * matchTautulliUser(users, { plexUserId: "2" })?.user_id // 2
  * matchTautulliUser(users, { plexUserId: "9" })          // null
  * ```
- *
- * @internal
  */
 export function matchTautulliUser<T extends TautulliUserRow>(
   users: readonly T[],

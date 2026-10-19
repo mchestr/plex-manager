@@ -1,6 +1,7 @@
 "use client"
 
 import { updateWrappedSettings } from "@/actions/admin"
+import { PrepareSeasonDataButton } from "@/components/admin/settings/prepare-season-data-button"
 import { ServerTimeZoneForm } from "@/components/admin/settings/server-time-zone-form"
 import { Button } from "@/components/ui/button"
 import { DateRangePicker } from "@/components/ui/date-range-picker"
@@ -22,6 +23,8 @@ interface WrappedSettingsFormProps {
   zone: string
   /** `Config.timezone`, or null while the zone comes from `TZ` or UTC. */
   configuredZone: string | null
+  /** When the season data was last prepared, as wall time in `zone`, or null. */
+  seasonDataPreparedAt: string | null
 }
 
 const MONTHS = [
@@ -49,6 +52,7 @@ export function WrappedSettingsForm({
   seasonOpen,
   zone,
   configuredZone,
+  seasonDataPreparedAt,
 }: WrappedSettingsFormProps) {
   const router = useRouter()
   const toast = useToast()
@@ -119,7 +123,8 @@ export function WrappedSettingsForm({
             Edit
           </Button>
         </div>
-        <div className="pt-4 border-t border-slate-700 text-slate-300">
+        <div className="flex flex-col gap-4 pt-4 border-t border-slate-700 text-slate-300">
+          <PrepareSeasonDataButton year={year} preparedAt={seasonDataPreparedAt} zone={zone} />
           <ServerTimeZoneForm configured={configuredZone} effective={zone} />
         </div>
       </div>

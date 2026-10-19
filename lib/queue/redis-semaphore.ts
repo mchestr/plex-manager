@@ -89,6 +89,7 @@ function sleep(ms: number, signal: AbortSignal | undefined): Promise<void> {
   })
 }
 
+/** @internal Returned by `acquire`; the tests hold slots with it. */
 export interface SemaphoreHolder {
   /** Pushes the holder's expiry out by the TTL; false when it had already expired. */
   renew(): Promise<boolean>
@@ -109,6 +110,8 @@ export interface RedisSemaphore extends UpstreamLimiter {
 /**
  * Builds a semaphore on the client `getClient` returns, called per command so
  * a client created lazily is only opened when first used.
+ *
+ * @internal Production code uses {@link redisLimiter}; the tests build their own.
  *
  * @example
  * ```ts

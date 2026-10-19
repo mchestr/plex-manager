@@ -47,9 +47,15 @@ export interface TautulliHistoryOptions {
   excludedSectionIds: readonly string[]
 }
 
+/** Plays by Tautulli `user_id` (the plex.tv account ID). */
+type PlaysByUser = Map<string, PlayEvent[]>
+
 export interface TautulliHistorySource extends WatchHistorySource {
-  /** Every member's plays in the window, for P2.6's server-wide aggregate. */
-  fetchServerYear(window: TimeWindow, ctx: SourceContext): Promise<SourceResult<PlayEvent[]>>
+  /**
+   * Every user's plays in the window, for P2.6's server-wide aggregate. Each
+   * page is folded into per-user buckets as it arrives.
+   */
+  fetchServerYear(window: TimeWindow, ctx: SourceContext): Promise<SourceResult<PlaysByUser>>
   /** The member's plays with no date filter: only for `member.since` and the 2025 comparison. */
   fetchLifetime(user: RewindUser, ctx: SourceContext): Promise<SourceResult<PlayEvent[]>>
 }
@@ -100,13 +106,19 @@ export function toPlayEvent(row: TautulliHistoryRow, excludedSectionIds: Readonl
 
 type HistoryFilter = { user_id?: string; after?: string; before?: string }
 
-/** Every `get_history` row matching `filter`, validated. @internal */
-async function readHistory(
+/**
+ * Every `get_history` row matching `filter`, validated, mapped to events and
+ * trimmed to `window` when given. Each page's events go to `add` as the page
+ * arrives, so no caller has to hold the raw rows. @internal
+ */
+async function readEvents(
   options: TautulliHistoryOptions,
   filter: HistoryFilter,
-  ctx: SourceContext
-): Promise<SourceResult<TautulliHistoryRow[]>> {
-  const rows: TautulliHistoryRow[] = []
+  ctx: SourceContext,
+  window: TimeWindow | undefined,
+  add: (event: PlayEvent, row: TautulliHistoryRow) => void
+): Promise<SourceResult<null>> {
+  const excluded = new Set(options.excludedSectionIds)
   const tally: RowTally = { read: 0, dropped: 0 }
   let start = 0
 
@@ -123,30 +135,43 @@ async function readHistory(
 
     const data = result.data
     const raw = Array.isArray(data) ? data : data.data
-    rows.push(...parseRows("tautulli get_history", tautulliHistoryRowSchema, raw, tally))
+    for (const row of parseRows("tautulli get_history", tautulliHistoryRowSchema, raw, tally)) {
+      const event = toPlayEvent(row, excluded)
+      if (event && (!window || inWindow(event.startedAt, window))) add(event, row)
+    }
     start += raw.length
 
     if (Array.isArray(data) || raw.length === 0 || start >= data.recordsFiltered) {
-      return tooManyInvalid(tally) ? { ok: false, code: "ROWS_INVALID" } : { ok: true, data: rows }
+      return tooManyInvalid(tally) ? { ok: false, code: "ROWS_INVALID" } : { ok: true, data: null }
     }
   }
   return { ok: false, code: "PAGE_LIMIT" }
 }
 
-async function readEvents(
+async function readEventList(
   options: TautulliHistoryOptions,
   filter: HistoryFilter,
   ctx: SourceContext,
   window?: TimeWindow
 ): Promise<SourceResult<PlayEvent[]>> {
-  const result = await readHistory(options, filter, ctx)
-  if (!result.ok) return result
-  const excluded = new Set(options.excludedSectionIds)
-  const events = result.data.flatMap((row) => {
-    const event = toPlayEvent(row, excluded)
-    return event && (!window || inWindow(event.startedAt, window)) ? [event] : []
+  const events: PlayEvent[] = []
+  const result = await readEvents(options, filter, ctx, window, (event) => events.push(event))
+  return result.ok ? { ok: true, data: events } : result
+}
+
+async function readEventsByUser(
+  options: TautulliHistoryOptions,
+  window: TimeWindow,
+  ctx: SourceContext
+): Promise<SourceResult<PlaysByUser>> {
+  const byUser: PlaysByUser = new Map()
+  const result = await readEvents(options, paddedDateRange(window), ctx, window, (event, row) => {
+    const userId = String(row.user_id)
+    const bucket = byUser.get(userId)
+    if (bucket) bucket.push(event)
+    else byUser.set(userId, [event])
   })
-  return { ok: true, data: events }
+  return result.ok ? { ok: true, data: byUser } : result
 }
 
 /**
@@ -163,8 +188,8 @@ export function createTautulliHistorySource(options: TautulliHistoryOptions): Ta
   return {
     kind: "tautulli",
     fetchYear: (user, window, ctx) =>
-      readEvents(options, { user_id: user.plexUserId, ...paddedDateRange(window) }, ctx, window),
-    fetchServerYear: (window, ctx) => readEvents(options, paddedDateRange(window), ctx, window),
-    fetchLifetime: (user, ctx) => readEvents(options, { user_id: user.plexUserId }, ctx),
+      readEventList(options, { user_id: user.plexUserId, ...paddedDateRange(window) }, ctx, window),
+    fetchServerYear: (window, ctx) => readEventsByUser(options, window, ctx),
+    fetchLifetime: (user, ctx) => readEventList(options, { user_id: user.plexUserId }, ctx),
   }
 }

@@ -42,6 +42,12 @@ export interface PlayEvent {
   /** History rows carry none; P2.6's `getMemberEvents()` fills it from the library pass. */
   contentRating: string | null
   live: boolean
+  /**
+   * Set by P2.6's content-rating exclusions (FR-44): the play counts toward
+   * totals but never reaches a list, a record, a calendar day's top title or
+   * a card.
+   */
+  excludedFromLists?: boolean
 }
 
 /** The upstream services whose calls a {@link UpstreamLimiter} admits. */

@@ -194,8 +194,10 @@ describe("createTautulliHistorySource().fetchYear", () => {
     mockFetch.mockImplementation(async () => json(flatResponse))
     const source = createTautulliHistorySource({ config, excludedSectionIds: [] })
 
-    await source.fetchServerYear(window2026, ctx)
+    const byUser = await source.fetchServerYear(window2026, ctx)
     await source.fetchLifetime(member, ctx)
+
+    expect(byUser.ok && [...byUser.data.keys()]).toEqual(["100001"])
 
     const [server, lifetime] = requestedUrls()
     expect(server.searchParams.has("user_id")).toBe(false)
@@ -203,6 +205,21 @@ describe("createTautulliHistorySource().fetchYear", () => {
     expect(lifetime.searchParams.get("user_id")).toBe("100001")
     expect(lifetime.searchParams.has("after")).toBe(false)
     expect(lifetime.searchParams.has("before")).toBe(false)
+  })
+})
+
+describe("createTautulliHistorySource().fetchServerYear", () => {
+  it("folds each page into per-user buckets as it arrives", async () => {
+    const rows = [100001, 100002, 100001].map((userId, i) => ({ ...episodeRow, user_id: userId, rating_key: 70000 + i }))
+    mockFetch.mockResolvedValueOnce(json(page(rows.slice(0, 2), 3))).mockResolvedValueOnce(json(page(rows.slice(2), 3)))
+
+    const result = await createTautulliHistorySource({ config, excludedSectionIds: [] }).fetchServerYear(window2026, ctx)
+
+    if (!result.ok) throw new Error(result.code)
+    expect(mockFetch).toHaveBeenCalledTimes(2)
+    expect(result.data.get("100001")?.map((e) => e.ratingKey)).toEqual(["70000", "70002"])
+    expect(result.data.get("100002")?.map((e) => e.ratingKey)).toEqual(["70001"])
+    expect(result.data.get("100001")?.[0]).not.toHaveProperty("user_id")
   })
 })
 
