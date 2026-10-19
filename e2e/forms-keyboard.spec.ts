@@ -8,8 +8,7 @@ import { expect, test, TEST_USERS } from './fixtures/auth';
 test.describe('Form primitives', () => {
   test('the Plex access filter works from the keyboard and returns focus', async ({ adminPage }) => {
     await adminPage.goto('/admin/users');
-    // The filter renders once per layout (phone and desktop); use the visible one.
-    const trigger = adminPage.getByTestId('users-filter-plex-access').filter({ visible: true });
+    const trigger = adminPage.getByTestId('users-filter-plex-access');
     await expect(trigger).toHaveText('Yes');
     await expect(trigger).toHaveAttribute('aria-expanded', 'false');
 
@@ -26,7 +25,7 @@ test.describe('Form primitives', () => {
     await expect(adminPage.getByRole('listbox')).toBeHidden();
     await expect(trigger).toBeFocused();
     await expect(trigger).toHaveText('All');
-    await expect(adminPage.getByTestId(`user-row-${TEST_USERS.ADMIN.id}`).filter({ visible: true })).toBeVisible();
+    await expect(adminPage.getByTestId(`user-row-${TEST_USERS.ADMIN.id}`)).toBeVisible();
   });
 
   test('inputs use 16px text at 390x844', async ({ adminPage }) => {
@@ -34,22 +33,22 @@ test.describe('Form primitives', () => {
 
     await adminPage.goto('/admin/cost-analysis');
     for (const id of ['cost-start-date', 'cost-end-date']) {
-      await expect(adminPage.getByTestId(id).filter({ visible: true })).toHaveCSS('font-size', '16px');
+      await expect(adminPage.getByTestId(id)).toHaveCSS('font-size', '16px');
     }
 
     await adminPage.goto('/admin/discord');
     for (const id of ['discord-start-date', 'discord-end-date']) {
-      await expect(adminPage.getByTestId(id).filter({ visible: true })).toHaveCSS('font-size', '16px');
+      await expect(adminPage.getByTestId(id)).toHaveCSS('font-size', '16px');
     }
   });
 
   test('the date inputs are labelled', async ({ adminPage }) => {
     await adminPage.goto('/admin/cost-analysis');
-    await expect(adminPage.getByTestId('cost-start-date').filter({ visible: true })).toHaveAccessibleName('Start date');
-    await expect(adminPage.getByTestId('cost-end-date').filter({ visible: true })).toHaveAccessibleName('End date');
+    await expect(adminPage.getByTestId('cost-start-date')).toHaveAccessibleName('Start date');
+    await expect(adminPage.getByTestId('cost-end-date')).toHaveAccessibleName('End date');
 
     await adminPage.goto('/admin/discord');
-    await expect(adminPage.getByTestId('discord-start-date').filter({ visible: true })).toHaveAccessibleName('Start date');
-    await expect(adminPage.getByTestId('discord-end-date').filter({ visible: true })).toHaveAccessibleName('End date');
+    await expect(adminPage.getByTestId('discord-start-date')).toHaveAccessibleName('Start date');
+    await expect(adminPage.getByTestId('discord-end-date')).toHaveAccessibleName('End date');
   });
 });

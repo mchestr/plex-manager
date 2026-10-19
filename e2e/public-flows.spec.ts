@@ -42,8 +42,8 @@ test.describe('Public Flows', () => {
     });
 
     await navigateAndVerify(page, '/');
-    await page.getByTestId('sign-in-button').filter({ visible: true }).click();
-    await page.getByTestId('sign-in-with-plex').filter({ visible: true }).click();
+    await page.getByTestId('sign-in-button').click();
+    await page.getByTestId('sign-in-with-plex').click();
     await page.waitForURL(/app\.plex\.tv/, { timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
 
     const cookies = await context.cookies();
@@ -56,7 +56,7 @@ test.describe('Public Flows', () => {
     expect(forwardUrl && new URL(forwardUrl).search).toBe('');
 
     await page.goto('/auth/callback/plex');
-    await expect(page.getByTestId('plex-callback-waiting').filter({ visible: true })).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    await expect(page.getByTestId('plex-callback-waiting')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
     // Wait for at least one status poll after the sign-in start
     await expect.poll(() => actionBodies.length, { timeout: WAIT_TIMEOUTS.PAGE_CONTENT }).toBeGreaterThan(1);
 
@@ -71,7 +71,7 @@ test.describe('Public Flows', () => {
   test('a callback opened in a browser that did not start the sign-in does not finish', async ({ page }) => {
     await page.goto('/auth/callback/plex');
 
-    await expect(page.getByTestId('plex-callback-error-heading').filter({ visible: true })).toHaveText("Sign-in didn't finish", {
+    await expect(page.getByTestId('plex-callback-error-heading')).toHaveText("Sign-in didn't finish", {
       timeout: WAIT_TIMEOUTS.PAGE_CONTENT,
     });
   });
