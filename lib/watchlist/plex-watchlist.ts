@@ -5,6 +5,7 @@
  * API Endpoint: https://discover.provider.plex.tv/library/sections/watchlist/all
  */
 
+import { plexProduct } from "@/lib/brand"
 import { getClientIdentifier } from "@/lib/connections/plex-core"
 import { createLogger } from "@/lib/utils/logger"
 import { WatchlistItem } from "@/lib/validations/watchlist"
@@ -78,7 +79,7 @@ function getPlexHeaders(userToken: string): Record<string, string> {
     Accept: "application/json",
     "X-Plex-Token": userToken,
     "X-Plex-Client-Identifier": getClientIdentifier(),
-    "X-Plex-Product": "Plex Wrapped",
+    "X-Plex-Product": plexProduct,
     "X-Plex-Version": "1.0.0",
     "X-Plex-Platform": "Web",
   }

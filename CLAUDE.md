@@ -52,18 +52,24 @@ components/             # React components
 ├── onboarding/        # Onboarding components
 ├── setup/
 │   └── setup-wizard/  # Setup wizard steps
+├── shell/             # App and admin shells (from P6.1)
 ├── ui/                # Shared UI primitives
 └── wrapped/           # Wrapped display components
 
 hooks/                  # Shared client hooks
 lib/                    # Utilities, helpers, business logic
+├── brand.ts           # Product strings: serverName(), rewindName(), productName, monogramFor()
+├── charts/            # Chart.js theme from the token mirror (chartTheme, registerCharts)
 ├── connections/       # External API clients (Plex, Tautulli, Overseerr, etc.)
 ├── design/            # Token mirror of app/globals.css and colour contrast helpers
 ├── discord/           # Discord bot, commands and linking
 ├── llm/               # LLM chat client and pricing
+├── og/                # App icons and the default OG card (next/og)
+│   └── fonts/         # Committed IBM Plex subsets for next/og (scripts/build-og-fonts.py)
 ├── rewind/            # Rewind 2026: typesetter, format rules, page registry, card fonts
 ├── security/          # Security utilities (rate limiting, CSRF, audit logging)
-├── ui/                # UI helpers: status tones, safe Markdown links, error copy
+├── settings/          # getAppSettings(): server zone, locale and server name
+├── ui/                # UI helpers: status vocabulary, icon map, poster palette, safe Markdown links, error copy
 ├── validations/       # Zod schemas for all services
 ├── wrapped/           # Wrapped generation and statistics
 └── utils/             # Shared utilities

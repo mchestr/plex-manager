@@ -40,6 +40,14 @@ module.exports = (phase) => ({
   images: {
     unoptimized: true,
   },
+  // lib/og/fonts.ts reads the OG fonts with fs.readFile, which the standalone
+  // trace cannot see.
+  outputFileTracingIncludes: {
+    '/icon/[id]': ['./lib/og/fonts/*'],
+    '/apple-icon': ['./lib/og/fonts/*'],
+    '/opengraph-image': ['./lib/og/fonts/*'],
+    '/twitter-image': ['./lib/og/fonts/*'],
+  },
   async headers() {
     return [
       {
