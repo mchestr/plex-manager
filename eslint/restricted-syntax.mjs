@@ -60,12 +60,16 @@ export const actionsAndApi = [
  * makes the bans errors in all of `actions/`.
  */
 export const migratedActionFiles = [
+  "actions/admin/admin-config.ts",
+  "actions/admin/admin-llm-providers.ts",
+  "actions/admin/watchlist.ts",
   "actions/announcements.ts",
   "actions/auth.ts",
   "actions/invite.ts",
   "actions/onboarding.ts",
   "actions/prometheus-status.ts",
   "actions/prompt-test.ts",
+  "actions/prompts.ts",
   "actions/rewind-generation.ts",
   "actions/server-info.ts",
   "actions/subscription.ts",

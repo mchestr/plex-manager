@@ -533,7 +533,8 @@ describe('PromptTemplateEditor', () => {
       fireEvent.click(submitButton)
 
       await waitFor(() => {
-        expect(updatePromptTemplate).toHaveBeenCalledWith(mockTemplate.id, expect.objectContaining({
+        expect(updatePromptTemplate).toHaveBeenCalledWith(expect.objectContaining({
+          id: mockTemplate.id,
           name: 'Updated Name',
         }))
       })
