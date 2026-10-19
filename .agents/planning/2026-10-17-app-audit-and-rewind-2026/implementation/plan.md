@@ -4418,10 +4418,12 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 **Demo.** In production mode, open a share link and an invite link, and complete a Discord link. `docker logs <container> | grep -E 'share/|invite/|code=|state='` shows only masked values, and a forced error prints its stack.
 
 **Done when.**
-- [ ] Share tokens, `/rewind/s/*` and card asset paths, OAuth codes and states, PIN ids, invite codes and client IPs are masked, including inside message strings.
-- [ ] Error metadata is serialised with its stack.
-- [ ] The Discord bot uses the shared sanitising logger.
-- [ ] The redaction-list tests pass.
+- [x] Share tokens, `/rewind/s/*` and card asset paths, OAuth codes and states, PIN ids, invite codes and client IPs are masked, including inside message strings.
+- [x] Error metadata is serialised with its stack.
+- [x] The Discord bot uses the shared sanitising logger.
+- [x] The redaction-list tests pass.
+
+(As merged: `REDACT_RULES`, `sanitizeText`, `sanitizeValue` and `maskIp` live in `lib/utils/log-redaction.ts`, which `logger.ts` imports, to keep the rules apart from the logger P11.4 trims; `sanitizeUrlForLogging` is now `sanitizeText`. P4.16 went before P4.5, so `__tests__/proxy.test.ts` already existed and P4.5 rebases onto the new `logger.debug("Incoming request", { method, pathname, query? })` line, which also drops `userAgent`. Metadata keys `state`, `pinId`, `plexPinId`, `inviteCode`, `assetKey` and `shareKey` are redacted by exact name; `code` is not, since error codes use it. Invite logs and audit details carry `inviteCodePrefix` (two characters). The Discord-state log at `integration.ts:78` and the token URL in `server-info.ts` were already gone; no PIN id is logged outside URLs.)
 
 ### Step P4.17: Harden the Docker image and compose file; add a health check
 

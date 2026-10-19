@@ -17,8 +17,9 @@
  * - `bearerPaths`: the path segment after one of these prefixes is a bearer
  *   credential and becomes `[masked]`; the rest of the path stays readable.
  * - `fieldSubstrings` and `fieldNames`: a metadata key containing one of the
- *   first, or equal to one of the second, has its value replaced (booleans
- *   pass, so `hasToken: true` stays useful).
+ *   first, or equal to one of the second, has its value replaced. Booleans
+ *   pass, and numbers pass a substring match, so `hasToken: true` and
+ *   `inputTokens: 1200` stay useful.
  * - `ipKeys`: the value becomes its network through {@link maskIp}.
  *
  * Strings also lose emails, URL credentials and long random-looking values;
@@ -121,10 +122,15 @@ function sanitizeField(key: string, value: unknown, seen: WeakSet<object>): unkn
   if ((REDACT_RULES.ipKeys as readonly string[]).includes(lower)) {
     return typeof value === "string" ? maskIp(value) : MASKED
   }
-  const sensitive =
+  if (value === null || value === undefined || typeof value === "boolean") {
+    return value
+  }
+  // A substring match spares numbers, so `inputTokens: 1200` stays readable;
+  // an exact name (a numeric PIN id) never does
+  if (
     (REDACT_RULES.fieldNames as readonly string[]).includes(lower) ||
-    REDACT_RULES.fieldSubstrings.some((field) => lower.includes(field))
-  if (sensitive && typeof value !== "boolean" && value !== null && value !== undefined) {
+    (typeof value !== "number" && REDACT_RULES.fieldSubstrings.some((field) => lower.includes(field)))
+  ) {
     return REDACTED
   }
   return sanitizeValue(value, seen)

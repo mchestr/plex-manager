@@ -104,8 +104,9 @@ describe("fields and values", () => {
     expect(printed(() => logger.info("x", { [key]: value })).line.metadata?.[key]).toBe("[REDACTED]")
   })
 
-  it("keeps booleans under sensitive keys", () => {
-    expect(printed(() => logger.info("x", { hasToken: true })).line.metadata?.hasToken).toBe(true)
+  it("keeps booleans under sensitive keys, and numbers under a substring match", () => {
+    const { line } = printed(() => logger.info("x", { hasToken: true, inputTokens: 1200 }))
+    expect(line.metadata).toEqual({ hasToken: true, inputTokens: 1200 })
   })
 
   it("masks an email anywhere", () => {
