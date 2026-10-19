@@ -11,9 +11,10 @@ export default async function NewPromptTemplatePage() {
 
   // Get current user's wrapped data for placeholder examples
   const currentYear = new Date().getFullYear()
-  const userWrapped = session?.user?.id
-    ? await getUserPlexWrapped(session.user.id, currentYear)
+  const wrappedResult = session?.user?.id
+    ? await getUserPlexWrapped({ userId: session.user.id, year: currentYear })
     : null
+  const userWrapped = wrappedResult?.success ? wrappedResult.data : null
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">

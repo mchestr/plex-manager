@@ -1,7 +1,7 @@
 "use server"
 
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { memberAction } from "@/lib/actions/define-action"
+import { ok } from "@/lib/actions/result"
 import { prisma } from "@/lib/prisma"
 import { queryPrometheusRange } from "@/lib/connections/prometheus"
 import type { PrometheusParsed } from "@/lib/validations/prometheus"
@@ -184,22 +184,14 @@ const getCachedPrometheusStatus = unstable_cache(
  * Fetch Prometheus status data for the dashboard background
  * Results are cached for 5 minutes to reduce load on Prometheus
  * Queries the last 7 days with 1-hour resolution (168 data points)
+ *
+ * Members only: Server Actions are publicly invokable endpoints, so service
+ * names and uptime never reach an unauthenticated caller.
  */
-export async function getPrometheusStatus(): Promise<StatusData> {
-  // Server actions are publicly invokable endpoints — don't leak service
-  // names/uptime to unauthenticated callers.
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) {
-    return {
-      isConfigured: false,
-      serviceName: "",
-      segments: [],
-      overallStatus: "unknown",
-    }
-  }
-
-  return getCachedPrometheusStatus()
-}
+export const getPrometheusStatus = memberAction({
+  fallbackError: "Failed to load the server status",
+  handler: async () => ok(await getCachedPrometheusStatus()),
+})
 
 /**
  * Generate unknown status segments for the time range

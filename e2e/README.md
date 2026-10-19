@@ -461,9 +461,10 @@ If you see errors about Plex API calls failing during tests:
 - A production build streams pages, and for a moment the DOM can hold a
   hidden copy of the page (`<div hidden id="S:0">`). A strict locator then
   matches two elements; add `.filter({ visible: true })`.
-- Until P4.3 (BP-27), a production build hides server error names and
-  messages, so admin pages show the generic error instead of the 401 page.
-  The specs that assert the 401 page are `test.fixme` under `E2E_SERVER=prod`.
+- A production build hides server error names and messages. The admin
+  layout therefore renders the 401 and access-denied screens itself
+  (`getAdminGate()`, P4.3), and the error boundaries match only the
+  `PM_UNAUTHENTICATED` and `PM_FORBIDDEN` digests (BP-27).
 - The axe baseline (`a11y/axe-baseline.json`) is counted against the
   production build, as CI runs it.
 

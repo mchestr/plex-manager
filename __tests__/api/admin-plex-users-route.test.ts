@@ -150,7 +150,8 @@ describe('GET /api/admin/plex/users', () => {
     const data = await response.json()
 
     expect(response.status).toBe(500)
-    expect(data.error).toContain('Failed to connect to Plex server')
+    expect(data.error).toBe('Failed to fetch Plex users')
+    expect(JSON.stringify(data)).not.toContain('Failed to connect to Plex server')
     expect(data.code).toBe('INTERNAL_ERROR')
   })
 

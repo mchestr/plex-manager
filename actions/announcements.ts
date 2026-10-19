@@ -1,5 +1,7 @@
 "use server"
 
+import { memberAction } from "@/lib/actions/define-action"
+import { ok } from "@/lib/actions/result"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
@@ -23,10 +25,12 @@ export interface AnnouncementData {
 }
 
 /**
- * Get all active, non-expired announcements sorted by priority (descending)
+ * Get all active, non-expired announcements sorted by priority (descending),
+ * for signed-in members.
  */
-export async function getActiveAnnouncements(): Promise<AnnouncementData[]> {
-  try {
+export const getActiveAnnouncements = memberAction({
+  fallbackError: "Failed to load announcements",
+  handler: async () => {
     const now = new Date()
 
     const announcements = await prisma.announcement.findMany({
@@ -52,20 +56,19 @@ export async function getActiveAnnouncements(): Promise<AnnouncementData[]> {
       },
     })
 
-    return announcements.map((a) => ({
-      id: a.id,
-      title: a.title,
-      content: a.content,
-      priority: a.priority,
-      isActive: a.isActive,
-      createdAt: a.createdAt.toISOString(),
-      expiresAt: a.expiresAt?.toISOString() ?? null,
-    }))
-  } catch (error) {
-    logger.error("Error fetching active announcements", error)
-    return []
-  }
-}
+    return ok(
+      announcements.map((a): AnnouncementData => ({
+        id: a.id,
+        title: a.title,
+        content: a.content,
+        priority: a.priority,
+        isActive: a.isActive,
+        createdAt: a.createdAt.toISOString(),
+        expiresAt: a.expiresAt?.toISOString() ?? null,
+      }))
+    )
+  },
+})
 
 /**
  * Get all announcements for admin view (including inactive)

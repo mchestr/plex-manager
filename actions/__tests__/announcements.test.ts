@@ -70,10 +70,23 @@ describe('announcements actions', () => {
   })
 
   describe('getActiveAnnouncements', () => {
+    const memberSession = { expires: '2099-01-01', user: { id: 'member-1', isAdmin: false } }
+
+    /** The announcements a signed-in member gets. */
+    async function active() {
+      const result = await getActiveAnnouncements()
+      if (!result.success) throw new Error(result.error)
+      return result.data
+    }
+
+    beforeEach(() => {
+      mockGetServerSession.mockResolvedValue(memberSession)
+    })
+
     it('should return active, non-expired announcements', async () => {
       mockPrisma.announcement.findMany.mockResolvedValue([mockAnnouncement])
 
-      const result = await getActiveAnnouncements()
+      const result = await active()
 
       expect(result).toHaveLength(1)
       expect(result[0].id).toBe('ann-123')
@@ -87,18 +100,23 @@ describe('announcements actions', () => {
       )
     })
 
-    it('should return empty array on database error', async () => {
+    it('refuses a signed-out caller', async () => {
+      mockGetServerSession.mockResolvedValue(null)
+
+      await expect(getActiveAnnouncements()).resolves.toMatchObject({ success: false, code: 'UNAUTHENTICATED' })
+      expect(mockPrisma.announcement.findMany).not.toHaveBeenCalled()
+    })
+
+    it('returns a coded failure on database error', async () => {
       mockPrisma.announcement.findMany.mockRejectedValue(new Error('Database error'))
 
-      const result = await getActiveAnnouncements()
-
-      expect(result).toEqual([])
+      await expect(getActiveAnnouncements()).resolves.toMatchObject({ success: false, code: 'INTERNAL' })
     })
 
     it('should convert dates to ISO strings', async () => {
       mockPrisma.announcement.findMany.mockResolvedValue([mockAnnouncement])
 
-      const result = await getActiveAnnouncements()
+      const result = await active()
 
       expect(result[0].createdAt).toBe('2024-01-01T00:00:00.000Z')
       expect(result[0].expiresAt).toBe('2025-12-31T00:00:00.000Z')

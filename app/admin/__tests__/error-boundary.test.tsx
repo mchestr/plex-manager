@@ -15,20 +15,9 @@ jest.mock('@/components/admin/shared/unauthenticated-error', () => ({
   UnauthenticatedError: () => <div data-testid="unauthenticated-error">Unauthenticated Error Component</div>,
 }))
 
-// Define error classes locally to avoid importing from lib/admin
-// which would require mocking next-auth
-class UnauthorizedAdminError extends Error {
-  constructor(message: string = "Admin access required") {
-    super(message)
-    this.name = "UnauthorizedAdminError"
-  }
-}
-
-class UnauthenticatedError extends Error {
-  constructor(message: string = "Authentication required") {
-    super(message)
-    this.name = "UnauthenticatedError"
-  }
+/** What the browser receives in production: a generic message and the digest. */
+function productionError(digest?: string): Error & { digest?: string } {
+  return Object.assign(new Error('An error occurred in the Server Components render.'), digest ? { digest } : {})
 }
 
 describe('AdminError Boundary', () => {
@@ -44,63 +33,28 @@ describe('AdminError Boundary', () => {
     jest.restoreAllMocks()
   })
 
-  it('should render UnauthenticatedError for UnauthenticatedError', () => {
-    const error = new UnauthenticatedError('UNAUTHENTICATED')
-
-    render(<AdminError error={error} reset={mockReset} />)
-
-    expect(screen.getByTestId('unauthenticated-error')).toBeInTheDocument()
-    expect(screen.queryByText('Something went wrong')).not.toBeInTheDocument()
-  })
-
-  it('should render UnauthenticatedError for error with UNAUTHENTICATED message', () => {
-    const error = new Error('UNAUTHENTICATED')
-
-    render(<AdminError error={error} reset={mockReset} />)
+  it('renders UnauthenticatedError for the PM_UNAUTHENTICATED digest', () => {
+    render(<AdminError error={productionError('PM_UNAUTHENTICATED')} reset={mockReset} />)
 
     expect(screen.getByTestId('unauthenticated-error')).toBeInTheDocument()
   })
 
-  it('should render UnauthorizedError for UnauthorizedAdminError', () => {
-    const error = new UnauthorizedAdminError('UNAUTHORIZED')
-
-    render(<AdminError error={error} reset={mockReset} />)
-
-    expect(screen.getByTestId('unauthorized-error')).toBeInTheDocument()
-    expect(screen.queryByText('Something went wrong')).not.toBeInTheDocument()
-  })
-
-  it('should render UnauthorizedError for error with UNAUTHORIZED message', () => {
-    const error = new Error('UNAUTHORIZED')
-
-    render(<AdminError error={error} reset={mockReset} />)
+  it('renders UnauthorizedError for the PM_FORBIDDEN digest', () => {
+    render(<AdminError error={productionError('PM_FORBIDDEN')} reset={mockReset} />)
 
     expect(screen.getByTestId('unauthorized-error')).toBeInTheDocument()
   })
 
-  it('should render UnauthorizedError for error with FORBIDDEN message', () => {
-    const error = new Error('FORBIDDEN')
+  it.each(['UNAUTHENTICATED', 'UNAUTHORIZED', 'FORBIDDEN', 'Admin access required'])(
+    'ignores the message %s without a digest',
+    (message) => {
+      render(<AdminError error={new Error(message)} reset={mockReset} />)
 
-    render(<AdminError error={error} reset={mockReset} />)
-
-    expect(screen.getByTestId('unauthorized-error')).toBeInTheDocument()
-  })
-
-  it('should render UnauthorizedError for error containing "Admin access required"', () => {
-    const error = new Error('Admin access required')
-
-    render(<AdminError error={error} reset={mockReset} />)
-
-    expect(screen.getByTestId('unauthorized-error')).toBeInTheDocument()
-  })
-
-  it('should render UnauthorizedError for error containing "not authorized"', () => {
-    const error = new Error('User is not authorized')
-
-    render(<AdminError error={error} reset={mockReset} />)
-
-    expect(screen.getByTestId('unauthorized-error')).toBeInTheDocument()
-  })
+      expect(screen.queryByTestId('unauthorized-error')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('unauthenticated-error')).not.toBeInTheDocument()
+      expect(screen.getByText('500')).toBeInTheDocument()
+    }
+  )
 
   it('should render generic error page for other errors', () => {
     const error = new Error('Something broke')

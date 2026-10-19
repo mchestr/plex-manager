@@ -48,17 +48,6 @@ export async function getPromptTemplate(id: string) {
 }
 
 /**
- * Get the active prompt template
- */
-export async function getActivePromptTemplate() {
-  const template = await prisma.promptTemplate.findFirst({
-    where: { isActive: true },
-  })
-
-  return template
-}
-
-/**
  * Create a new prompt template
  */
 export async function createPromptTemplate(data: PromptTemplateInput) {

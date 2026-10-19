@@ -23,18 +23,6 @@ export const YEAR_MAX = 2100
 export const yearSchema = z.number().int().min(YEAR_MIN).max(YEAR_MAX)
 
 /**
- * A year as a URL segment (`/wrapped/<year>`): four digits in the yearSchema
- * range, so `/wrapped/0x7EA` or `/wrapped/2026.0` is not a second URL for 2026.
- */
-export const yearParamSchema = z.string().regex(/^\d{4}$/).pipe(z.coerce.number<string>().pipe(yearSchema))
-
-/**
- * A Rewind share token as a URL segment: 43 base64url characters, the 32
- * random bytes `generateShareToken` encodes.
- */
-export const shareTokenSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/)
-
-/**
  * Schema for LLM usage ID validation
  * UUID format expected (cuid is the actual format used by Prisma)
  */
@@ -134,15 +122,28 @@ export function createPublicUrlSchema(exampleDomain?: string) {
   return z.string()
     .optional()
     .refine(
-      (url) => {
-        if (!url) return true
-        try {
-          new URL(url)
-          return true
-        } catch {
-          return false
-        }
-      },
+      (url) => !url || isHttpUrl(url),
       { message: `Invalid URL format. Expected format: https://${domainExample}` }
     )
+}
+
+/**
+ * True when `value` parses as an absolute `http:` or `https:` URL, so
+ * `javascript:`, `data:` and `ftp:` links never reach an `href` (SEC-57).
+ *
+ * @example
+ * ```ts
+ * isHttpUrl("https://requests.example.com") // true
+ * isHttpUrl("javascript:alert(1)") // false
+ * ```
+ *
+ * @internal Exported for P3.8's `safeHref`, its next caller.
+ */
+export function isHttpUrl(value: string): boolean {
+  try {
+    const { protocol } = new URL(value)
+    return protocol === "http:" || protocol === "https:"
+  } catch {
+    return false
+  }
 }

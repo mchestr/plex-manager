@@ -104,4 +104,12 @@ describe('createPlexAuthUrl', () => {
       'context[device][product]': 'Plex Manager',
     })
   })
+
+  it('encodes an & in the invite code, so it cannot add a parameter to the callback (P4.3)', async () => {
+    const url = await createPlexAuthUrl(123, 'ABCD', 'X&plexPinId=999')
+
+    const forwardUrl = new URL(new URLSearchParams(url.slice(AUTH_PREFIX.length)).get('forwardUrl') ?? '')
+    expect(forwardUrl.searchParams.getAll('plexPinId')).toEqual(['123'])
+    expect(forwardUrl.searchParams.get('inviteCode')).toBe('X&plexPinId=999')
+  })
 })

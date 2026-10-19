@@ -35,7 +35,7 @@ export function WrappedShareControls({ year, shareToken, onShareTokenChange }: W
         toast.showError(result.error)
         return
       }
-      onShareTokenChange(result.shareToken)
+      onShareTokenChange(result.data.shareToken)
       toast.showSuccess("Share link created")
     })
   }

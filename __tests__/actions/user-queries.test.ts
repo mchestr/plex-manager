@@ -33,6 +33,12 @@ jest.mock('@/lib/connections/plex', () => ({
 
 const mockPrisma = prismaMock
 
+/** The row the action returns, or null for no row or a failure. */
+async function read(userId: string, year: number) {
+  const result = await getUserPlexWrapped({ userId, year })
+  return result.success ? result.data : null
+}
+
 describe('getUserPlexWrapped', () => {
   beforeEach(() => {
     jest.useFakeTimers()
@@ -63,7 +69,7 @@ describe('getUserPlexWrapped', () => {
 
     mockPrisma.plexWrapped.findUnique.mockResolvedValue(mockWrapped as any)
 
-    const result = await getUserPlexWrapped('user-1', 2024)
+    const result = await read('user-1', 2024)
 
     expect(result).toEqual(mockWrapped)
     expect(mockPrisma.plexWrapped.findUnique).toHaveBeenCalledWith({
@@ -99,7 +105,7 @@ describe('getUserPlexWrapped', () => {
       makePrismaWrapped({ userId: 'user-1', year: 2024, data: JSON.stringify(data) }) as any
     )
 
-    const result = await getUserPlexWrapped('user-1', 2024)
+    const result = await read('user-1', 2024)
 
     // Re-serialised from the stored-data parser, which drops leaderboards
     const visible = JSON.parse(result!.data)
@@ -114,7 +120,7 @@ describe('getUserPlexWrapped', () => {
     jest.setSystemTime(new Date('2027-01-02T12:00:00Z'))
     mockPrisma.plexWrapped.findUnique.mockResolvedValue(null)
 
-    await getUserPlexWrapped('user-1', 2026)
+    await read('user-1', 2026)
 
     expect(mockPrisma.plexWrapped.findUnique).toHaveBeenCalledWith({
       where: {
@@ -139,7 +145,7 @@ describe('getUserPlexWrapped', () => {
   it('should return null when wrapped not found', async () => {
     mockPrisma.plexWrapped.findUnique.mockResolvedValue(null)
 
-    const result = await getUserPlexWrapped('user-1', 2024)
+    const result = await read('user-1', 2024)
 
     expect(result).toBeNull()
   })
@@ -147,7 +153,7 @@ describe('getUserPlexWrapped', () => {
   it('should return null on error', async () => {
     mockPrisma.plexWrapped.findUnique.mockRejectedValue(new Error('Database error'))
 
-    const result = await getUserPlexWrapped('user-1', 2024)
+    const result = await read('user-1', 2024)
 
     expect(result).toBeNull()
   })
@@ -162,7 +168,7 @@ describe('getUserPlexWrapped', () => {
         makePrismaWrapped({ status: 'failed', error: LEGACY_ROSTER_ERROR }) as any
       )
 
-      const result = await getUserPlexWrapped('user-1', 2024)
+      const result = await read('user-1', 2024)
 
       expect(result?.error).toBe('{"code":"GENERATION_FAILED"}')
       const output = JSON.stringify(result)
@@ -176,7 +182,7 @@ describe('getUserPlexWrapped', () => {
         makePrismaWrapped({ status: 'failed', error: '{"code":"TAUTULLI_USER_NOT_FOUND"}' }) as any
       )
 
-      const result = await getUserPlexWrapped('user-1', 2024)
+      const result = await read('user-1', 2024)
 
       expect(result?.error).toBe('{"code":"TAUTULLI_USER_NOT_FOUND"}')
     })
@@ -185,7 +191,7 @@ describe('getUserPlexWrapped', () => {
       const row = makePrismaWrapped({ status: 'completed', error: null })
       mockPrisma.plexWrapped.findUnique.mockResolvedValue(row as any)
 
-      const result = await getUserPlexWrapped('user-1', 2024)
+      const result = await read('user-1', 2024)
 
       expect(result).toEqual(row)
     })
@@ -196,7 +202,7 @@ describe('getUserPlexWrapped', () => {
         makePrismaWrapped({ status: 'failed', error: LEGACY_ROSTER_ERROR }) as any
       )
 
-      const result = await getUserPlexWrapped('user-1', 2024)
+      const result = await read('user-1', 2024)
 
       expect(result?.error).toBe(LEGACY_ROSTER_ERROR)
     })

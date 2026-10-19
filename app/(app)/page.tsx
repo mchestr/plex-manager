@@ -1,5 +1,5 @@
 import { getActiveAnnouncements } from "@/actions/announcements";
-import { getPrometheusStatus } from "@/actions/prometheus-status";
+import { getPrometheusStatus, type StatusData } from "@/actions/prometheus-status";
 import { ServiceSignInToggle } from "@/components/auth/service-sign-in-toggle";
 import { UserDashboard } from "@/components/dashboard/user-dashboard";
 import { SubscriptionStatusView } from "@/components/subscription/subscription-status-view";
@@ -24,6 +24,8 @@ const OnboardingStatusSchema = z.object({
   jellyfin: z.boolean(),
 })
 
+const UNKNOWN_STATUS: StatusData = { isConfigured: false, serviceName: "", segments: [], overallStatus: "unknown" }
+
 interface OnboardingStatusRecord {
   plex: boolean
   jellyfin: boolean
@@ -31,7 +33,7 @@ interface OnboardingStatusRecord {
 
 export default async function Home() {
   const session = await getServerSession(authOptions);
-  const [plexServer, jellyfinServer, discordIntegration, announcements, overseerr, prometheusStatus, config] = await Promise.all([
+  const [plexServer, jellyfinServer, discordIntegration, announcementsResult, overseerr, prometheusResult, config] = await Promise.all([
     prisma.plexServer.findFirst({
       where: { isActive: true },
     }),
@@ -45,10 +47,14 @@ export default async function Home() {
     prisma.config.findUnique({ where: { id: "config" }, select: { stripeEnabled: true } }),
   ]);
 
+  const announcements = announcementsResult.success ? announcementsResult.data : []
+  const prometheusStatus = prometheusResult.success ? prometheusResult.data : UNKNOWN_STATUS
+
   // Determine server name based on what's configured
   const serverName = plexServer?.name || jellyfinServer?.name || "Media Server";
   const discordEnabled = Boolean(discordIntegration?.isEnabled && discordIntegration?.clientId && discordIntegration?.clientSecret);
-  const overseerrUrl = overseerr?.publicUrl || overseerr?.url || null;
+  // Members get public URLs only: the internal ones are often LAN or Docker addresses
+  const overseerrUrl = overseerr?.publicUrl || null;
 
   // Handle redirect logic for authenticated users
   if (session?.user?.id) {
@@ -116,8 +122,8 @@ export default async function Home() {
 
     // Determine media server URL based on primary auth service
     const mediaServerUrl = user?.primaryAuthService === "jellyfin"
-      ? jellyfinServer?.url
-      : plexServer?.url;
+      ? jellyfinServer?.publicUrl ?? null
+      : plexServer?.publicUrl ?? null;
 
     return (
       <UserDashboard

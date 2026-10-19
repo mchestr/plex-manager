@@ -57,11 +57,10 @@ export function PlexCallbackPageClient() {
             if (inviteCode) {
               setStatus("Processing invite...")
               const { processInvite } = await import("@/actions/invite")
-              const result = await processInvite(inviteCode, authToken)
+              const result = await processInvite({ code: inviteCode, plexAuthToken: authToken })
 
               if (!result.success) {
-                // @ts-ignore - we know error exists if success is false
-                setError(result.error || "Failed to process invite")
+                setError(result.error)
                 isProcessingRef.current = false
                 return
               }
@@ -75,13 +74,8 @@ export function PlexCallbackPageClient() {
             // Check if user has access to the server before signing in
             // For invite flows, use retry logic since Plex needs time to propagate the user
             // For regular flows, no retries - fail immediately if no access
-            const accessCheck = inviteCode
-              ? await checkServerAccess(authToken, {
-                  maxRetries: 5, // Retry up to 5 times for invite flows
-                  initialDelay: 3000, // Wait 3 seconds initially for invite flows
-                  isInviteFlow: true,
-                })
-              : await checkServerAccess(authToken) // No retry options for regular flows
+            // (the retry schedule is fixed on the server)
+            const accessCheck = await checkServerAccess({ token: authToken, isInviteFlow: Boolean(inviteCode) })
 
             // A user without Plex server access is normally denied here, before
             // sign-in ever happens. When the Stripe subscription gate is enabled,
@@ -98,11 +92,12 @@ export function PlexCallbackPageClient() {
             // plex.tv propagation lag — they continue as a normal member instead
             // of being gated to /subscribe.
             let gatedNonMember = false
-            if (!accessCheck.hasAccess) {
+            if (!accessCheck.success || !accessCheck.data.hasAccess) {
               let gatingEnabled = false
               if (accessCheck.success) {
                 const { isSubscriptionGatingEnabled } = await import("@/actions/auth")
-                gatingEnabled = await isSubscriptionGatingEnabled()
+                const gating = await isSubscriptionGatingEnabled()
+                gatingEnabled = gating.success && gating.data
               }
 
               if (!gatingEnabled) {
@@ -136,9 +131,9 @@ export function PlexCallbackPageClient() {
 
               // Check if user needs to complete onboarding (for all users, not just invite flows)
               const { getOnboardingStatus } = await import("@/actions/onboarding")
-              const { isComplete } = await getOnboardingStatus()
+              const onboarding = await getOnboardingStatus()
 
-              if (!isComplete) {
+              if (onboarding.success && !onboarding.data.isComplete) {
                 // Full page reload (via redirectTo) to ensure the session is properly set
                 redirectTo("/onboarding")
                 return

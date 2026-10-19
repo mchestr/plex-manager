@@ -1,8 +1,4 @@
-import { randomBytes } from "crypto"
-
-import { generateShareToken } from "@/lib/utils"
-
-import { createServerUrlSchema, createPublicUrlSchema, shareTokenSchema } from "../shared-schemas"
+import { createServerUrlSchema, createPublicUrlSchema, isHttpUrl } from "../shared-schemas"
 
 describe("shared-schemas", () => {
   describe("createServerUrlSchema", () => {
@@ -148,22 +144,27 @@ describe("shared-schemas", () => {
     })
   })
 
-  describe("shareTokenSchema", () => {
-    it("accepts every token generateShareToken makes", () => {
-      for (let i = 0; i < 50; i++) {
-        expect(shareTokenSchema.safeParse(generateShareToken()).success).toBe(true)
-      }
-    })
+  describe("createPublicUrlSchema protocols (SEC-57)", () => {
+    const publicUrlSchema = createPublicUrlSchema()
 
+    it.each(["javascript:alert(1)", "data:text/html,<script>alert(1)</script>", "ftp://example.com/file"])(
+      "rejects %s",
+      (url) => {
+        expect(publicUrlSchema.safeParse(url).success).toBe(false)
+      }
+    )
+  })
+
+  describe("isHttpUrl", () => {
     it.each([
-      ["31 bytes", randomBytes(31).toString("base64url")],
-      ["33 bytes", randomBytes(33).toString("base64url")],
-      ["standard base64 with padding", randomBytes(32).toString("base64")],
-      ["a slash", `${"a".repeat(42)}/`],
-      ["a dot", `${"a".repeat(42)}.`],
-      ["empty", ""],
-    ])("rejects %s", (_label, token) => {
-      expect(shareTokenSchema.safeParse(token).success).toBe(false)
+      ["https://requests.example.com", true],
+      ["http://localhost:5055", true],
+      ["javascript:alert(1)", false],
+      ["data:text/plain,hi", false],
+      ["ftp://example.com", false],
+      ["not a url", false],
+    ])("%s -> %s", (url, expected) => {
+      expect(isHttpUrl(url)).toBe(expected)
     })
   })
 })

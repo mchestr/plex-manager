@@ -56,8 +56,8 @@ export function PlanList({ plans }: PlanListProps) {
 
     setPendingPriceId(priceId)
     try {
-      const result = await startCheckout(priceId)
-      if ("error" in result) {
+      const result = await startCheckout({ priceId })
+      if (!result.success) {
         toast.showError(result.error)
         setPendingPriceId(null)
         return
@@ -65,7 +65,7 @@ export function PlanList({ plans }: PlanListProps) {
 
       // Redirect to Stripe Checkout. Leave the loading state active so the
       // button stays disabled until the navigation happens.
-      redirectTo(result.url)
+      redirectTo(result.data.url)
     } catch {
       toast.showError("Could not start checkout. Please try again.")
       setPendingPriceId(null)

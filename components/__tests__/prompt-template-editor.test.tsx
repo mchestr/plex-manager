@@ -15,7 +15,7 @@ jest.mock('@/actions/prompts', () => ({
   updatePromptTemplate: jest.fn(),
 }))
 
-jest.mock('@/lib/wrapped/prompt-template', () => ({
+jest.mock('@/lib/wrapped/prompt-text', () => ({
   getAvailablePlaceholders: jest.fn(() => [
     { placeholder: '{{userName}}', description: 'User name' },
     { placeholder: '{{year}}', description: 'Current year' },

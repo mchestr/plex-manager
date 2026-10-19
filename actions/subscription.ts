@@ -2,21 +2,16 @@
 
 import { z } from "zod"
 
-import { authOptions } from "@/lib/auth"
+import { memberAction } from "@/lib/actions/define-action"
+import { fail, ok } from "@/lib/actions/result"
 import { prisma } from "@/lib/prisma"
 import { getStripe } from "@/lib/stripe/client"
 import { createCheckoutSession } from "@/lib/stripe/checkout"
 import { getOfferedPrices } from "@/lib/stripe/prices"
-import { consume } from "@/lib/security/rate-limit"
 import { getBaseUrl } from "@/lib/env"
 import { createLogger } from "@/lib/utils/logger"
-import { getServerSession } from "next-auth"
 
 const logger = createLogger("SUBSCRIPTION")
-
-type StartCheckoutResult = { url: string } | { error: string }
-
-type OpenBillingPortalResult = { url: string } | { error: string }
 
 /**
  * Path the Billing Portal returns the user to after they finish managing their
@@ -38,7 +33,7 @@ const PORTAL_RETURN_PATH = "/"
  *
  * ## Behavior
  *
- * 1. Requires a session; returns `{error}` when unauthenticated.
+ * 1. Requires a session (`UNAUTHENTICATED`) and spends a `checkout` point.
  * 2. Validates `priceId` against {@link getOfferedPrices} so a client cannot
  *    check out against an arbitrary/un-offered price. This also returns an empty
  *    list (→ `{error}`) when Stripe is disabled/unconfigured.
@@ -47,78 +42,61 @@ const PORTAL_RETURN_PATH = "/"
  * 4. Builds the Checkout session and returns its `url`, or `{error}` when Stripe
  *    is unconfigured or the session has no URL.
  *
- * Never throws for the expected failure paths — callers get `{error}` and can
- * surface it via a toast.
+ * Never throws — callers get a failure with a code and can surface its
+ * `error` via a toast.
  *
- * @param priceId - The Stripe price id the user chose to subscribe to.
- * @returns `{ url }` with the Checkout URL, or `{ error }`.
+ * @param input - `{ priceId }`, the Stripe price id the user chose.
+ * @returns `{ url }` with the Checkout URL as `data`, or a failure.
  */
-export async function startCheckout(priceId: string): Promise<StartCheckoutResult> {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) {
-    return { error: "You must be signed in to subscribe." }
-  }
-
+export const startCheckout = memberAction({
+  input: z.object({ priceId: z.string().min(1, "Invalid plan selected.").max(255) }),
   // Keyed by user id so a signed-in user cannot hammer Stripe.
-  if (!(await consume("checkout", session.user.id)).ok) {
-    return { error: "Too many attempts. Please wait a moment and try again." }
-  }
-
-  const parsed = z.string().min(1).safeParse(priceId)
-  if (!parsed.success) {
-    return { error: "Invalid plan selected." }
-  }
-
-  try {
+  rateLimit: { name: "checkout" },
+  fallbackError: "Could not start checkout. Please try again.",
+  handler: async ({ priceId }, { userId }) => {
     const offered = await getOfferedPrices()
     if (offered.length === 0) {
-      return { error: "Subscriptions are not available right now." }
+      return fail("UPSTREAM_UNAVAILABLE", "Subscriptions are not available right now.")
     }
 
     const isOffered = offered.some((price) => price.priceId === priceId)
     if (!isOffered) {
       logger.warn("Rejected checkout for non-offered price", {
-        userId: session.user.id,
+        userId,
         priceId,
       })
-      return { error: "Invalid plan selected." }
+      return fail("VALIDATION", "Invalid plan selected.")
     }
 
     // The Plex access grant invites by email, so a member without one would pay
     // and never get access. A Plex sign-in whose email another account already
     // holds stores none (lib/auth.ts, auth.email_conflict).
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: userId },
       select: { email: true },
     })
     if (!user?.email) {
-      logger.warn("Rejected checkout for a user with no email", { userId: session.user.id })
-      return {
-        error:
-          "Your account has no email address, which Plex access needs. Sign out and sign in with Plex again; if this message stays, ask the server admin.",
-      }
+      logger.warn("Rejected checkout for a user with no email", { userId })
+      return fail(
+        "CONFLICT",
+        "Your account has no email address, which Plex access needs. Sign out and sign in with Plex again; if this message stays, ask the server admin."
+      )
     }
 
-    const checkoutSession = await createCheckoutSession(session.user.id, priceId)
+    const checkoutSession = await createCheckoutSession(userId, priceId)
     if (!checkoutSession?.url) {
-      return { error: "Subscriptions are not available right now." }
+      return fail("UPSTREAM_UNAVAILABLE", "Subscriptions are not available right now.")
     }
 
     logger.info("Started checkout session", {
-      userId: session.user.id,
+      userId,
       priceId,
       sessionId: checkoutSession.id,
     })
 
-    return { url: checkoutSession.url }
-  } catch (error) {
-    logger.error("Failed to start checkout", error, {
-      userId: session.user.id,
-      priceId,
-    })
-    return { error: "Could not start checkout. Please try again." }
-  }
-}
+    return ok({ url: checkoutSession.url })
+  },
+})
 
 /**
  * Creates a Stripe Billing Portal session for the current user and returns the
@@ -127,7 +105,7 @@ export async function startCheckout(priceId: string): Promise<StartCheckoutResul
  *
  * ## Behavior
  *
- * 1. Requires a session; returns `{error}` when unauthenticated.
+ * 1. Requires a session (`UNAUTHENTICATED`) and spends a `portal` point.
  * 2. Looks up the user's `Subscription.stripeCustomerId` (recorded at first
  *    successful checkout). Returns `{error}` when the user has no customer id —
  *    there is nothing to manage yet.
@@ -136,36 +114,29 @@ export async function startCheckout(priceId: string): Promise<StartCheckoutResul
  * 4. Creates a Billing Portal session with a `return_url` back to the
  *    account/status surface and returns its `url`.
  *
- * Never throws for the expected failure paths — callers get `{error}` and can
- * surface it via a toast. Only the portal URL is ever returned; no secrets are
+ * Never throws — callers get a failure with a code and can surface its
+ * `error` via a toast. Only the portal URL is ever returned; no secrets are
  * exposed.
  *
- * @returns `{ url }` with the Billing Portal URL, or `{ error }`.
+ * @returns `{ url }` with the Billing Portal URL as `data`, or a failure.
  */
-export async function openBillingPortal(): Promise<OpenBillingPortalResult> {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) {
-    return { error: "You must be signed in to manage your subscription." }
-  }
-
-  if (!(await consume("portal", session.user.id)).ok) {
-    return { error: "Too many attempts. Please wait a moment and try again." }
-  }
-
-  try {
+export const openBillingPortal = memberAction({
+  rateLimit: { name: "portal" },
+  fallbackError: "Could not open the billing portal. Please try again.",
+  handler: async (_input, { userId }) => {
     const subscription = await prisma.subscription.findUnique({
-      where: { userId: session.user.id },
+      where: { userId },
       select: { stripeCustomerId: true },
     })
 
     const customerId = subscription?.stripeCustomerId
     if (!customerId) {
-      return { error: "No billing account found for your subscription." }
+      return fail("NOT_FOUND", "No billing account found for your subscription.")
     }
 
     const stripe = await getStripe()
     if (!stripe) {
-      return { error: "Subscription management is not available right now." }
+      return fail("UPSTREAM_UNAVAILABLE", "Subscription management is not available right now.")
     }
 
     const portalSession = await stripe.billingPortal.sessions.create({
@@ -174,19 +145,14 @@ export async function openBillingPortal(): Promise<OpenBillingPortalResult> {
     })
 
     if (!portalSession?.url) {
-      return { error: "Subscription management is not available right now." }
+      return fail("UPSTREAM_UNAVAILABLE", "Subscription management is not available right now.")
     }
 
     logger.info("Opened billing portal session", {
-      userId: session.user.id,
+      userId,
       sessionId: portalSession.id,
     })
 
-    return { url: portalSession.url }
-  } catch (error) {
-    logger.error("Failed to open billing portal", error, {
-      userId: session.user.id,
-    })
-    return { error: "Could not open the billing portal. Please try again." }
-  }
-}
+    return ok({ url: portalSession.url })
+  },
+})

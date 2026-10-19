@@ -12,6 +12,8 @@ jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),
 }))
 
+jest.mock('@/lib/auth', () => ({ authOptions: {} }))
+
 jest.mock('@/lib/utils/logger', () => ({
   createLogger: () => ({
     error: jest.fn(),
@@ -25,6 +27,7 @@ describe('Onboarding Actions', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    mockGetServerSession.mockResolvedValue({ user: { id: 'user-1' } } as any)
   })
 
   describe('getOnboardingInfo', () => {
@@ -37,10 +40,10 @@ describe('Onboarding Actions', () => {
 
       const result = await getOnboardingInfo()
 
-      expect(result.overseerrUrl).toBe('https://requests.example.com')
+      expect(result).toMatchObject({ success: true, data: { overseerrUrl: 'https://requests.example.com' } })
     })
 
-    it('should construct internal URL when publicUrl is missing', async () => {
+    it('never returns the internal URL when publicUrl is missing', async () => {
       mockPrisma.overseerr.findFirst.mockResolvedValue({
         publicUrl: null,
         url: 'http://localhost:5055',
@@ -49,7 +52,8 @@ describe('Onboarding Actions', () => {
 
       const result = await getOnboardingInfo()
 
-      expect(result.overseerrUrl).toBe('http://localhost:5055')
+      expect(result).toMatchObject({ success: true, data: { overseerrUrl: null } })
+      expect(JSON.stringify(result)).not.toContain('localhost')
     })
 
     it('should return null when no overseerr configured', async () => {
@@ -58,7 +62,7 @@ describe('Onboarding Actions', () => {
 
       const result = await getOnboardingInfo()
 
-      expect(result.overseerrUrl).toBeNull()
+      expect(result).toMatchObject({ success: true, data: { overseerrUrl: null } })
     })
   })
 
@@ -72,15 +76,21 @@ describe('Onboarding Actions', () => {
 
       const result = await getOnboardingStatus()
 
-      expect(result.isComplete).toBe(false)
+      expect(result).toMatchObject({ success: true, data: { isComplete: false, service: 'plex' } })
     })
 
-    it('should assume complete if unauthenticated', async () => {
+    it('refuses an unauthenticated caller with a code', async () => {
       mockGetServerSession.mockResolvedValue(null)
 
       const result = await getOnboardingStatus()
 
-      expect(result.isComplete).toBe(true)
+      expect(result).toMatchObject({ success: false, code: 'UNAUTHENTICATED' })
+    })
+
+    it('refuses an unknown service', async () => {
+      const result = await getOnboardingStatus({ service: 'emby' as 'plex' })
+
+      expect(result).toMatchObject({ success: false, code: 'VALIDATION' })
     })
   })
 
@@ -91,7 +101,7 @@ describe('Onboarding Actions', () => {
         onboardingStatus: { plex: false, jellyfin: false }
       } as any)
 
-      const result = await completeOnboarding('plex')
+      const result = await completeOnboarding({ service: 'plex' })
 
       expect(result.success).toBe(true)
       expect(mockPrisma.user.update).toHaveBeenCalledWith({
@@ -106,7 +116,7 @@ describe('Onboarding Actions', () => {
         onboardingStatus: { plex: false, jellyfin: false }
       } as any)
 
-      const result = await completeOnboarding('jellyfin')
+      const result = await completeOnboarding({ service: 'jellyfin' })
 
       expect(result.success).toBe(true)
       expect(mockPrisma.user.update).toHaveBeenCalledWith({
@@ -121,7 +131,7 @@ describe('Onboarding Actions', () => {
         onboardingStatus: { plex: true, jellyfin: false }
       } as any)
 
-      const result = await completeOnboarding('jellyfin')
+      const result = await completeOnboarding({ service: 'jellyfin' })
 
       expect(result.success).toBe(true)
       expect(mockPrisma.user.update).toHaveBeenCalledWith({
@@ -133,7 +143,7 @@ describe('Onboarding Actions', () => {
     it('should fail if unauthenticated', async () => {
       mockGetServerSession.mockResolvedValue(null)
 
-      const result = await completeOnboarding('plex')
+      const result = await completeOnboarding({ service: 'plex' })
 
       expect(result.success).toBe(false)
       expect(mockPrisma.user.update).not.toHaveBeenCalled()

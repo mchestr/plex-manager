@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
+import { z } from "zod"
+
+import { parseRouteParams } from "@/lib/actions/route"
 import { limitRequest } from "@/lib/security/rate-limit"
 import { createSafeError, ErrorCode, getStatusCode, logError } from "@/lib/security/error-handler"
+import { shareTokenSchema } from "@/lib/validations/params"
 import { getShareSafeRewind } from "@/lib/wrapped/data/get-share-safe"
 
 // Share links are public but not meant for search results.
@@ -19,7 +23,6 @@ export async function GET(
   context: { params: Promise<{ token: string }> }
 ) {
   try {
-    const { token } = await context.params
     // Apply rate limiting
     const rateLimitResponse = await limitRequest("share", request)
     if (rateLimitResponse) {
@@ -27,17 +30,14 @@ export async function GET(
       return rateLimitResponse
     }
 
-    if (!token) {
-      return NextResponse.json(
-        createSafeError(ErrorCode.VALIDATION_ERROR, "Share token is required"),
-        { status: getStatusCode(ErrorCode.VALIDATION_ERROR), headers: NOINDEX }
-      )
-    }
+    // A malformed token is a 400; its shape says nothing about which tokens exist
+    const params = parseRouteParams(z.object({ token: shareTokenSchema }), await context.params, NOINDEX)
+    if (!params.ok) return params.response
 
-    const found = await getShareSafeRewind(token)
+    const found = await getShareSafeRewind(params.data.token)
 
-    // Security: Use same error message for malformed, unknown, revoked and
-    // unfinished shares to prevent token enumeration attacks
+    // Security: Use same error message for unknown, revoked and unfinished
+    // shares to prevent token enumeration attacks
     if (!found) {
       return NextResponse.json(
         createSafeError(ErrorCode.NOT_FOUND, "Wrapped not found"),

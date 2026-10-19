@@ -1,5 +1,6 @@
-import { getServerSession } from "next-auth"
+import { getServerSession, type Session } from "next-auth"
 import { authOptions } from "@/lib/auth"
+import { AUTH_ERROR_DIGESTS } from "@/lib/auth-errors"
 
 /**
  * Custom error class for unauthorized admin access
@@ -7,6 +8,9 @@ import { authOptions } from "@/lib/auth"
  * @internal
  */
 export class UnauthorizedAdminError extends Error {
+  /** Kept by Next in production, unlike the name and message (BP-27). */
+  readonly digest = AUTH_ERROR_DIGESTS.forbidden
+
   constructor(message: string = "Admin access required") {
     super(message)
     this.name = "UnauthorizedAdminError"
@@ -19,16 +23,36 @@ export class UnauthorizedAdminError extends Error {
  * @internal
  */
 export class UnauthenticatedError extends Error {
+  /** Kept by Next in production, unlike the name and message (BP-27). */
+  readonly digest = AUTH_ERROR_DIGESTS.unauthenticated
+
   constructor(message: string = "Authentication required") {
     super(message)
     this.name = "UnauthenticatedError"
   }
 }
 
+export type AdminGate =
+  | { ok: true; session: Session }
+  | { ok: false; reason: "unauthenticated" | "forbidden" }
+
 /**
- * Server-side helper to check if the current user is an admin
- * Throws UnauthenticatedError if not authenticated (caught by error boundary)
- * Throws UnauthorizedAdminError if not admin (caught by error boundary)
+ * The admin check without throwing, for `app/admin/layout.tsx`: it renders the
+ * matching screen itself, so nothing depends on how a production build
+ * rewrites thrown errors (BP-27).
+ */
+export async function getAdminGate(): Promise<AdminGate> {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) return { ok: false, reason: "unauthenticated" }
+  if (!session.user.isAdmin) return { ok: false, reason: "forbidden" }
+  return { ok: true, session }
+}
+
+/**
+ * Server-side helper to check if the current user is an admin, for the admin
+ * actions until P11.5 moves them onto `adminAction`.
+ * Throws UnauthenticatedError if not authenticated and UnauthorizedAdminError
+ * if not admin; both carry a stable `digest` the error boundaries read.
  * Returns the session if admin
  */
 export async function requireAdmin() {

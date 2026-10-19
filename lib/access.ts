@@ -19,8 +19,8 @@
  *
  * This module is a plain (non-`"use server"`) module with no next-auth / Next.js
  * imports, so it is safe to use from the always-on Discord bot process as well as
- * from server actions. `lib/guards.ts` re-exports {@link getAccessGateStatus} for
- * the web request path.
+ * from server actions. The web request path (`lib/guards.ts`) imports
+ * {@link getAccessGateStatus} from here.
  */
 
 import { prisma } from "@/lib/prisma"

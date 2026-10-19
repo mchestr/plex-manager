@@ -1,10 +1,10 @@
 "use server"
 
-import { getServerSession } from "next-auth"
 import { z } from "zod"
 
+import { adminAction, publicAction } from "@/lib/actions/define-action"
+import { fail, ok } from "@/lib/actions/result"
 import { serviceErrorMessage, serviceFetch } from "@/lib/connections/http"
-import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 
@@ -17,41 +17,33 @@ export interface LibrarySection {
 }
 
 /**
- * Get the name of the active Plex server
+ * Get the name of the active Plex server. Public: the invite page shows it
+ * before the visitor signs in.
  */
-export async function getServerName(): Promise<string> {
-  try {
+export const getServerName = publicAction({
+  fallbackError: "Failed to load the server name",
+  handler: async () => {
     const plexServer = await prisma.plexServer.findFirst({
       where: { isActive: true },
+      select: { name: true },
     })
-    return plexServer?.name || "Plex"
-  } catch (error) {
-    logger.error("Error fetching server name", error)
-    return "Plex"
-  }
-}
+    return ok(plexServer?.name || "Plex")
+  },
+})
 
 /**
  * Get available library sections from the active Plex server
  * Returns libraries with their section keys (which are used as IDs in Plex API)
  */
-export async function getAvailableLibraries(): Promise<{
-  success: boolean
-  data?: LibrarySection[]
-  error?: string
-}> {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.isAdmin) {
-    return { success: false, error: "Unauthorized" }
-  }
-
-  try {
+export const getAvailableLibraries = adminAction({
+  fallbackError: "Failed to fetch libraries",
+  handler: async () => {
     const plexServer = await prisma.plexServer.findFirst({
       where: { isActive: true },
     })
 
     if (!plexServer) {
-      return { success: false, error: "No active Plex server configured" }
+      return fail("NOT_FOUND", "No active Plex server configured")
     }
 
     // Fetch library sections directly from the local Plex server
@@ -63,7 +55,9 @@ export async function getAvailableLibraries(): Promise<{
     })
 
     if (!result.ok) {
-      return { success: false, error: `Failed to fetch library details: ${serviceErrorMessage("Plex", result)}` }
+      // The upstream status and URL stay in the log, never in the result
+      logger.warn("Could not fetch Plex libraries", { error: serviceErrorMessage("Plex", result) })
+      return fail("UPSTREAM_UNAVAILABLE", "Could not reach the Plex server to list libraries")
     }
 
     const data = result.data
@@ -72,7 +66,7 @@ export async function getAvailableLibraries(): Promise<{
 
     if (!Array.isArray(sections)) {
       logger.error("Invalid sections format", undefined, { sections })
-      return { success: false, error: "Invalid response format from Plex server" }
+      return fail("UPSTREAM_UNAVAILABLE", "Invalid response format from Plex server")
     }
 
     // Use local server section keys directly as IDs
@@ -96,18 +90,12 @@ export async function getAvailableLibraries(): Promise<{
       })
       .filter((lib): lib is LibrarySection => lib !== null)
 
-    logger.info("Retrieved libraries from Plex server", { count: libraries.length, libraries })
+    logger.info("Retrieved libraries from Plex server", { count: libraries.length })
 
     if (libraries.length === 0) {
-      return { success: false, error: "No libraries found on the server" }
+      return fail("NOT_FOUND", "No libraries found on the server")
     }
 
-    return { success: true, data: libraries }
-  } catch (error) {
-    logger.error("Error fetching libraries", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to fetch libraries",
-    }
-  }
-}
+    return ok(libraries)
+  },
+})

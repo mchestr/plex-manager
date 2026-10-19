@@ -1,10 +1,18 @@
+import { parseSearchParams } from "@/lib/actions/route"
 import { authOptions } from "@/lib/auth"
 import { createDiscordAuthorizationUrl } from "@/lib/discord/integration"
 import { consume } from "@/lib/security/rate-limit"
+import { createLogger } from "@/lib/utils/logger"
 import { getServerSession } from "next-auth"
 import { NextResponse, type NextRequest } from "next/server"
+import { z } from "zod"
 
 export const dynamic = "force-dynamic"
+
+const logger = createLogger("DISCORD_CONNECT")
+
+/** `redirect` is an in-app path; `createDiscordAuthorizationUrl` sanitises it further. */
+const querySchema = z.object({ redirect: z.string().startsWith("/").max(512).optional() })
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -24,15 +32,16 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(throttled)
   }
 
-  const redirectParam = request.nextUrl.searchParams.get("redirect") ?? undefined
+  const query = parseSearchParams(querySchema, request.nextUrl)
+  if (!query.ok) return query.response
 
   try {
-    const { url } = await createDiscordAuthorizationUrl(session.user.id, redirectParam ?? undefined)
+    const { url } = await createDiscordAuthorizationUrl(session.user.id, query.data.redirect)
     return NextResponse.redirect(url)
   } catch (error) {
-    const reason = error instanceof Error ? error.message : "Discord linking unavailable"
+    logger.error("Could not start Discord linking", error)
     const fallback = new URL("/", request.url)
-    fallback.searchParams.set("error", reason)
+    fallback.searchParams.set("error", "Discord linking is unavailable right now.")
     return NextResponse.redirect(fallback)
   }
 }

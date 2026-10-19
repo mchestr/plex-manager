@@ -46,9 +46,9 @@ const PARSE_METHODS = new Set(['parse', 'safeParse', 'parseAsync', 'safeParseAsy
  * entry goes when its input changes and gets checked again.
  */
 const REVIEWED_CREDENTIAL_INPUTS: Record<string, string> = {
-  'actions/auth.ts checkServerAccess(userToken: string)':
+  'actions/auth.ts checkServerAccess(input: { token: string; isInviteFlow: boolean; })':
     "the caller's own Plex token, sent only to https://plex.tv/api/v2/user; the server comes from the database",
-  'actions/invite.ts processInvite(plexAuthToken: string)':
+  'actions/invite.ts processInvite(input: { code: string; plexAuthToken: string; })':
     "the invitee's own Plex token, sent only to plex.tv (user info and shared_servers accept)",
   'actions/discord.ts updateDiscordIntegrationSettings(parse(...) -> botToken)':
     'requireAdmin(); stores the Discord bot token, which the bot sends only to Discord',

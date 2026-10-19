@@ -89,19 +89,19 @@ describe('Admin API Routes Security', () => {
       ])
 
       const request = mockRequest('http://localhost:3000/api/admin/wrapped/wrapped-id/versions')
-      const response = await getWrappedVersions(request, { params: Promise.resolve({ wrappedId: 'wrapped-id' }) })
+      const response = await getWrappedVersions(request, { params: Promise.resolve({ wrappedId: 'cmgx1y2z30000abcdefghijkl' }) })
       const data = await response.json()
 
       expect(response.status).toBe(200)
       expect(data.versions).toHaveLength(1)
-      expect(getHistoricalWrappedVersions).toHaveBeenCalledWith('wrapped-id')
+      expect(getHistoricalWrappedVersions).toHaveBeenCalledWith('cmgx1y2z30000abcdefghijkl')
     })
 
     it('should reject non-admin user', async () => {
       ;(getServerSession as jest.Mock).mockResolvedValue(mockRegularUserSession)
 
       const request = mockRequest('http://localhost:3000/api/admin/wrapped/wrapped-id/versions')
-      const response = await getWrappedVersions(request, { params: Promise.resolve({ wrappedId: 'wrapped-id' }) })
+      const response = await getWrappedVersions(request, { params: Promise.resolve({ wrappedId: 'cmgx1y2z30000abcdefghijkl' }) })
       const data = await response.json()
 
       expect(response.status).toBe(403)
@@ -113,7 +113,7 @@ describe('Admin API Routes Security', () => {
       ;(getServerSession as jest.Mock).mockResolvedValue(null)
 
       const request = mockRequest('http://localhost:3000/api/admin/wrapped/wrapped-id/versions')
-      const response = await getWrappedVersions(request, { params: Promise.resolve({ wrappedId: 'wrapped-id' }) })
+      const response = await getWrappedVersions(request, { params: Promise.resolve({ wrappedId: 'cmgx1y2z30000abcdefghijkl' }) })
       const data = await response.json()
 
       expect(response.status).toBe(401)

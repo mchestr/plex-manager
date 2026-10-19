@@ -151,7 +151,7 @@ describe('GET /api/wrapped/share/[token]', () => {
     const data = await response.json()
 
     expect(response.status).toBe(400)
-    expect(data.error).toBe('Share token is required')
+    expect(data.error).toBe('Invalid share token')
     expect(data.code).toBe('VALIDATION_ERROR')
   })
 
@@ -167,12 +167,13 @@ describe('GET /api/wrapped/share/[token]', () => {
     expect(response.headers.get('X-Robots-Tag')).toBe('noindex')
   })
 
-  it('returns the same 404 for a malformed token without a database call', async () => {
+  it('returns 400 with a code for a malformed token, without a database call', async () => {
     const response = await GET(buildRequest(), { params: Promise.resolve({ token: 'invalid-token' }) })
     const data = await response.json()
 
-    expect(response.status).toBe(404)
-    expect(data.error).toBe('Wrapped not found')
+    expect(response.status).toBe(400)
+    expect(data.code).toBe('VALIDATION_ERROR')
+    expect(response.headers.get('X-Robots-Tag')).toBe('noindex')
     expect(prisma.plexWrapped.findUnique).not.toHaveBeenCalled()
   })
 

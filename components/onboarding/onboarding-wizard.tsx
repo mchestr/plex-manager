@@ -30,9 +30,10 @@ export function OnboardingWizard({ currentStep: initialStep, service }: Onboardi
   useEffect(() => {
     const fetchInfo = async () => {
       const info = await getOnboardingInfo()
-      setOverseerrUrl(info.overseerrUrl)
-      setDiscordEnabled(info.discordEnabled ?? false)
-      setDiscordInstructions(info.discordInstructions ?? null)
+      if (!info.success) return
+      setOverseerrUrl(info.data.overseerrUrl)
+      setDiscordEnabled(info.data.discordEnabled)
+      setDiscordInstructions(info.data.discordInstructions)
     }
     fetchInfo()
   }, [])
@@ -53,7 +54,7 @@ export function OnboardingWizard({ currentStep: initialStep, service }: Onboardi
 
   const handleFinalSuccessComplete = async () => {
     // Mark onboarding as complete in the database for this service
-    const result = await completeOnboarding(service)
+    const result = await completeOnboarding({ service })
 
     if (result.success) {
       // Wait a moment to ensure the database update is committed
