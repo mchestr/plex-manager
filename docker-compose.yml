@@ -7,11 +7,6 @@ services:
       dockerfile: Dockerfile
     container_name: plex-wrapped-dev
     working_dir: /app
-    volumes:
-      # - .:/app
-      # - /app/node_modules
-      # - /app/.next
-      - ./data:/data
     # Loopback only: rate limits trust X-Forwarded-For, so a client that
     # reaches the app port directly could choose its own address. Put the
     # reverse proxy in front, on this host or an internal network.
