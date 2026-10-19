@@ -105,3 +105,85 @@ export async function isRedisHealthy(): Promise<boolean> {
     return false
   }
 }
+
+/**
+ * A Redis client whose commands fail within about two seconds instead of
+ * queueing while Redis is down. The shared BullMQ connection above waits
+ * forever (BullMQ needs `maxRetriesPerRequest: null`), so code that must not
+ * hang on Redis, such as the boot probe and request-path reads, uses this.
+ * It connects on the first {@link waitForRedis} attempt or `connect()` call.
+ */
+export function createFailFastRedis(url: string): Redis {
+  const client = new Redis(url, {
+    enableOfflineQueue: false,
+    connectTimeout: 2000,
+    commandTimeout: 2000,
+    maxRetriesPerRequest: 1,
+    lazyConnect: true,
+  })
+  client.on("error", (err) => {
+    logger.debug("Fail-fast Redis error", { error: err.message })
+  })
+  return client
+}
+
+type RedisProbe = Pick<Redis, "status" | "connect" | "ping">
+
+interface WaitForRedisOptions {
+  attempts: number
+  baseDelayMs: number
+  maxDelayMs: number
+  signal: AbortSignal
+}
+
+/** Resolves after `ms`, or as soon as `signal` aborts. */
+function sleep(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    const done = () => {
+      clearTimeout(timer)
+      signal.removeEventListener("abort", done)
+      resolve()
+    }
+    const timer = setTimeout(done, ms)
+    signal.addEventListener("abort", done, { once: true })
+  })
+}
+
+/**
+ * Pings `client` until Redis answers, with exponential backoff between
+ * attempts: doubling from `baseDelayMs`, capped at `maxDelayMs`, with ±20%
+ * jitter. With the boot settings (8 attempts, 1 s to 30 s) it waits about two
+ * minutes, long enough for a Redis container that starts after the app.
+ *
+ * @returns true once a ping succeeds; false when the attempts run out or
+ * `signal` aborts
+ *
+ * @example
+ * ```ts
+ * const reachable = await waitForRedis(createFailFastRedis(url), {
+ *   attempts: 8, baseDelayMs: 1000, maxDelayMs: 30_000, signal: shutdownSignal,
+ * })
+ * ```
+ */
+export async function waitForRedis(client: RedisProbe, options: WaitForRedisOptions): Promise<boolean> {
+  const { attempts, baseDelayMs, maxDelayMs, signal } = options
+  for (let attempt = 1; attempt <= attempts && !signal.aborted; attempt++) {
+    try {
+      if (client.status === "wait") await client.connect()
+      await client.ping()
+      if (attempt > 1) logger.info("Redis reachable", { attempt })
+      return true
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      if (attempt === attempts) {
+        logger.warn("Redis unreachable", { attempt, attempts, error: message })
+        break
+      }
+      const backoff = Math.min(maxDelayMs, baseDelayMs * 2 ** (attempt - 1))
+      const delayMs = Math.round(backoff * (0.8 + Math.random() * 0.4))
+      logger.warn("Redis unreachable, retrying", { attempt, attempts, delayMs, error: message })
+      await sleep(delayMs, signal)
+    }
+  }
+  return false
+}

@@ -1,99 +1,111 @@
 /**
- * Node.js runtime instrumentation - starts background jobs
- * This file should only be imported dynamically from instrumentation.ts
- * to prevent Edge Runtime from analyzing Node.js-only dependencies
+ * Node.js runtime instrumentation: the background start of the server process.
+ *
+ * `instrumentation.ts` calls {@link startNodeInstrumentation} without awaiting
+ * it, because Next awaits `register()` before serving the first request. It
+ * installs the shutdown coordinator first, then starts the queue worker and the
+ * Discord bot poller side by side, so neither a down Redis nor a slow Discord
+ * login holds up the other or the site (BP-13).
+ *
+ * Imported dynamically from instrumentation.ts so the Edge runtime never
+ * analyses its Node-only dependencies.
  */
 
+import { installShutdownHandlers, onShutdown, shutdownSignal } from "@/lib/instrumentation/shutdown"
 import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("INSTRUMENTATION")
 
-export async function startNodeInstrumentation() {
-  // Start queue worker (for watchlist sync and other background jobs)
-  await startQueueWorker()
+const SCHEDULER_TIMEOUT_MS = 5000
 
-  // Start Discord bot polling
-  await startDiscordBotPolling()
+export async function startNodeInstrumentation() {
+  installShutdownHandlers()
+  onShutdown("prisma", "close", async () => {
+    const { prisma } = await import("@/lib/prisma")
+    await prisma.$disconnect()
+  })
+
+  await Promise.all([
+    startQueueWorker().catch((error) => logger.error("Queue worker start failed", error)),
+    startDiscordBotPolling().catch((error) => logger.error("Discord bot start failed", error)),
+  ])
+}
+
+/** Rejects when `promise` has not settled within `ms`. */
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: NodeJS.Timeout | undefined
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms} ms`)), ms)
+  })
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer))
 }
 
 /**
- * Starts the BullMQ queue worker for processing background jobs
- * This replaces the previous polling-based watchlist sync system
+ * Starts the BullMQ worker once Redis answers. Without `REDIS_URL` the legacy
+ * polling watchlist sync runs instead; with it, never, so two sync paths never
+ * run at once.
  */
 async function startQueueWorker() {
-  // Check if queue worker should be enabled
-  const envQueueEnabled = process.env.ENABLE_QUEUE_WORKER !== "false"
-
-  if (!envQueueEnabled) {
+  if (process.env.ENABLE_QUEUE_WORKER === "false") {
     logger.debug("Queue worker disabled via ENABLE_QUEUE_WORKER=false")
     return
   }
 
-  // Check if Redis is configured
-  if (!process.env.REDIS_URL) {
+  const redisUrl = process.env.REDIS_URL
+  if (!redisUrl) {
     logger.debug("Queue worker disabled: REDIS_URL not configured")
-    // Fall back to legacy polling system if Redis is not configured
     await startWatchlistSyncPolling()
     return
   }
 
-  try {
-    const { startWorker, stopWorker } = await import("@/lib/queue/worker")
-    const { scheduleRepeatingJob, removeScheduledJob, closeQueue } = await import("@/lib/queue/client")
-    const { closeRedisConnection, isRedisConfigured } = await import("@/lib/queue/connection")
-    const { JOB_TYPES } = await import("@/lib/queue/types")
-    const { isWatchlistSyncEnabled, getWatchlistSyncInterval } = await import("@/lib/watchlist/lock")
+  const { startWorker, stopWorker } = await import("@/lib/queue/worker")
+  const { scheduleRepeatingJob, removeScheduledJob, closeQueue } = await import("@/lib/queue/client")
+  const { closeRedisConnection, createFailFastRedis, waitForRedis } = await import("@/lib/queue/connection")
+  const { JOB_TYPES } = await import("@/lib/queue/types")
+  const { isWatchlistSyncEnabled, getWatchlistSyncInterval } = await import("@/lib/watchlist/lock")
 
-    if (!isRedisConfigured()) {
-      logger.info("Queue worker disabled: Redis not configured")
-      return
-    }
+  // Each is a no-op when nothing was started.
+  onShutdown("queue-worker", "drain", stopWorker)
+  onShutdown("queue", "close", closeQueue)
+  onShutdown("redis", "close", closeRedisConnection)
 
-    // Start the worker
-    await startWorker()
-    logger.info("Queue worker started")
+  const probe = createFailFastRedis(redisUrl)
+  const reachable = await waitForRedis(probe, {
+    attempts: 8,
+    baseDelayMs: 1000,
+    maxDelayMs: 30_000,
+    signal: shutdownSignal,
+  }).finally(() => probe.disconnect())
 
-    // Schedule watchlist sync if enabled
-    const syncEnabled = await isWatchlistSyncEnabled()
-    if (syncEnabled) {
-      const intervalMinutes = await getWatchlistSyncInterval()
-      const intervalMs = intervalMinutes * 60 * 1000
+  if (shutdownSignal.aborted) return
+  if (!reachable) {
+    // The site keeps serving; /api/health reports Redis down, and a restart retries.
+    logger.error("queue.redis_unreachable: the queue worker is not running")
+    return
+  }
 
-      await scheduleRepeatingJob(
+  await startWorker()
+
+  if (await isWatchlistSyncEnabled()) {
+    const intervalMinutes = await getWatchlistSyncInterval()
+    await withTimeout(
+      scheduleRepeatingJob(
         "watchlist-sync-scheduled",
         JOB_TYPES.WATCHLIST_SYNC_ALL,
         { triggeredBy: "scheduled" },
-        intervalMs
-      )
-      logger.info(`Watchlist sync scheduled every ${intervalMinutes} minutes`)
-    } else {
-      // Remove any existing scheduled job if sync is disabled
-      await removeScheduledJob("watchlist-sync-scheduled")
-      logger.info("Watchlist sync disabled - scheduler removed")
-    }
-
-    // Graceful shutdown handlers
-    if (process.env.NODE_ENV !== "test") {
-      const shutdown = async () => {
-        try {
-          logger.info("Shutting down queue worker...")
-          await stopWorker()
-          await closeQueue()
-          await closeRedisConnection()
-          logger.info("Queue worker shutdown complete")
-        } catch (error) {
-          logger.error("Error during queue worker shutdown", error)
-        }
-      }
-
-      process.on("SIGINT", shutdown)
-      process.on("SIGTERM", shutdown)
-    }
-  } catch (error) {
-    logger.warn("Queue worker could not be started", { error })
-    // Fall back to legacy polling system
-    logger.info("Falling back to legacy polling system")
-    await startWatchlistSyncPolling()
+        intervalMinutes * 60 * 1000
+      ),
+      SCHEDULER_TIMEOUT_MS,
+      "Scheduling the watchlist sync"
+    )
+    logger.info(`Watchlist sync scheduled every ${intervalMinutes} minutes`)
+  } else {
+    await withTimeout(
+      removeScheduledJob("watchlist-sync-scheduled"),
+      SCHEDULER_TIMEOUT_MS,
+      "Removing the watchlist sync schedule"
+    )
+    logger.info("Watchlist sync disabled - scheduler removed")
   }
 }
 
@@ -124,6 +136,8 @@ async function startWatchlistSyncPolling() {
     // Poll interval in milliseconds (default: 60 seconds)
     const pollIntervalMs = parseInt(process.env.WATCHLIST_SYNC_POLL_INTERVAL_MS || "60000", 10)
 
+    onShutdown("watchlist-sync-polling", "drain", stopWatchlistSyncPolling)
+
     // Start background polling
     startPolling(
       // onLockAcquired - called when we successfully acquire the lock
@@ -144,20 +158,6 @@ async function startWatchlistSyncPolling() {
     )
 
     logger.info(`Watchlist sync polling started (checking every ${pollIntervalMs / 1000} seconds)`)
-
-    // Graceful shutdown handlers
-    if (process.env.NODE_ENV !== "test") {
-      const shutdown = async () => {
-        try {
-          await stopWatchlistSyncPolling()
-        } catch (error) {
-          logger.error("Error during watchlist sync shutdown", error)
-        }
-      }
-
-      process.on("SIGINT", shutdown)
-      process.on("SIGTERM", shutdown)
-    }
   } catch (error) {
     logger.warn("Watchlist sync module could not be loaded", { error })
   }
@@ -256,33 +256,15 @@ async function startDiscordBotPolling() {
       }
     )
 
-    // Start background polling - this doesn't block server startup.
-    // The bot initializes automatically when the lock is acquired.
+    // stop() fires onLockLost (which destroys the bot) and releases the
+    // DiscordBotLock row, so another instance can take over at once.
+    onShutdown("discord-bot", "drain", () => poller.stop())
+
+    // Runs the first acquisition attempt, then polls in the background. The
+    // bot initializes automatically when the lock is acquired.
     await poller.start()
 
     logger.info(`Discord bot lock polling started (checking every ${pollIntervalMs / 1000} seconds)`)
-
-    // Graceful shutdown handlers - only register if we're in Node.js runtime.
-    // Skip in test environments (Playwright) to avoid interference.
-    if (process.env.NODE_ENV !== "test") {
-      const shutdown = async () => {
-        try {
-          // stop() fires onLockLost (which destroys the bot) and releases the lock.
-          await poller.stop()
-          // Fallback destroy in case the bot was never running.
-          try {
-            await bot.destroy()
-          } catch {
-            // Ignore errors if bot wasn't initialized
-          }
-        } catch (error) {
-          logger.error("Error during Discord bot shutdown", error)
-        }
-      }
-
-      process.on("SIGINT", shutdown)
-      process.on("SIGTERM", shutdown)
-    }
   } catch (error) {
     // Silently fail if Discord.js can't be loaded (e.g., missing native dependencies)
     // This allows the app to start even if the bot can't be initialized

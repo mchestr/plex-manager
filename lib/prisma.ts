@@ -1,5 +1,6 @@
 import { PrismaClient } from '@/lib/generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
+import { poolConfigFor, processRole } from '@/lib/db/pool-config'
 import { decryptSecret, encryptSecret } from '@/lib/security/crypto'
 
 const globalForPrisma = globalThis as unknown as {
@@ -83,6 +84,7 @@ function createPrismaClient() {
   }
   const adapter = new PrismaPg({
     connectionString: process.env.DATABASE_URL,
+    ...poolConfigFor(processRole()),
   })
 
   return new PrismaClient({ adapter }).$extends({

@@ -46,6 +46,11 @@ export const envSchema = z.object({
   WATCHLIST_SYNC_POLL_INTERVAL_MS: text("How often the polling watchlist sync checks its lock (default 60000)."),
   LOG_LEVEL: text("error, warn, info, verbose, debug or silly (default info in production)."),
   SKIP_MIGRATIONS: text('Docker image only: "true" starts without applying migrations.'),
+  PROCESS_ROLE: text("web, worker or all (default all): picks the database pool defaults."),
+  DB_POOL_MAX: text("Database pool size (default 10 web, 5 worker, 12 all)."),
+  DB_CONNECTION_TIMEOUT_MS: text("How long a query waits for a free database connection (default 10000)."),
+  DB_STATEMENT_TIMEOUT_MS: text("Statement timeout in milliseconds (default 15000 web, 120000 worker, 60000 all)."),
+  SHUTDOWN_GRACE_MS: text("How long SIGTERM waits for jobs, the bot and connections before exiting (default 8000)."),
   // Integrations
   DISCORD_BOT_TOKEN: text("Discord bot token, used when none is stored in Admin settings."),
   DISCORD_CLIENT_ID: text("Discord application id for the slash-command and metadata scripts."),

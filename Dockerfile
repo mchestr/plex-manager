@@ -36,7 +36,10 @@ RUN npx prisma generate && npm run build
 FROM base AS runner
 WORKDIR /app
 
+# NEXT_MANUAL_SIG_HANDLE: the app's shutdown coordinator handles SIGTERM and
+# drains jobs and the Discord bot; Next's own handler would exit at once.
 ENV NEXT_TELEMETRY_DISABLED=1 \
+    NEXT_MANUAL_SIG_HANDLE=true \
     PORT=3000 \
     HOSTNAME="0.0.0.0"
 
