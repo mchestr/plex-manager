@@ -19,14 +19,12 @@ import {
   getRewindEligibility,
 } from '@/lib/wrapped/eligibility'
 import { makePrismaTautulli, makePrismaUser } from '../../utils/test-builders'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    tautulli: {
-      findFirst: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('@/lib/utils/logger', () => ({
   createLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),

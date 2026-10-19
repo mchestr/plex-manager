@@ -8,21 +8,16 @@ import { render, screen } from '@testing-library/react'
 import UserWrappedPage from '@/app/admin/users/[userId]/wrapped/page'
 import { getUserPlexWrapped } from '@/actions/users'
 import { prisma } from '@/lib/prisma'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 jest.mock('@/lib/admin', () => ({
   requireAdmin: jest.fn(),
 }))
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    user: {
-      findUnique: jest.fn(),
-    },
-    config: {
-      findUnique: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('@/actions/users', () => ({
   getUserPlexWrapped: jest.fn(),

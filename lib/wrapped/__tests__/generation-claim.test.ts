@@ -7,16 +7,12 @@
 
 import { prisma } from '@/lib/prisma'
 import { claimGeneration, isLiveClaim, STALE_CLAIM_MS, writeIfClaimed } from '@/lib/wrapped/generation-claim'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    plexWrapped: {
-      createMany: jest.fn(),
-      updateMany: jest.fn(),
-      updateManyAndReturn: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 const mockWarn = jest.fn()
 jest.mock('@/lib/utils/logger', () => ({

@@ -7,6 +7,8 @@
 
 import { getStripe } from '@/lib/stripe/client'
 import { prisma } from '@/lib/prisma'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 // A lightweight Stripe constructor mock that records how it was invoked.
 const stripeConstructor = jest.fn()
@@ -19,13 +21,9 @@ jest.mock('stripe', () => ({
   }),
 }))
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    config: {
-      findUnique: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 const mockFindUnique = prisma.config.findUnique as jest.Mock
 

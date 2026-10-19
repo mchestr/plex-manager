@@ -12,13 +12,12 @@ import {
   resolveRewindYear,
   seasonYearFor,
 } from '@/lib/wrapped/season'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    config: { findUnique: jest.fn() },
-    plexWrapped: { findFirst: jest.fn(), findMany: jest.fn(), findUnique: jest.fn() },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 const mockConfigFindUnique = prisma.config.findUnique as jest.Mock
 const mockWrappedFindFirst = prisma.plexWrapped.findFirst as jest.Mock

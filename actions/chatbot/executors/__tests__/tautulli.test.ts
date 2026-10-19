@@ -25,17 +25,12 @@ import {
   getTautulliLibraryStats,
 } from "@/lib/connections/tautulli"
 import { prisma } from "@/lib/prisma"
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
-jest.mock("@/lib/prisma", () => ({
-  prisma: {
-    tautulli: {
-      findFirst: jest.fn(),
-    },
-    user: {
-      findUnique: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock("@/lib/connections/tautulli", () => ({
   findTautulliUser: jest.fn(),

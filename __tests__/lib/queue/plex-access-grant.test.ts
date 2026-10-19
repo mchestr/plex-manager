@@ -16,23 +16,12 @@ import {
   inviteUserToPlexServer,
   acceptPlexInvite,
 } from '@/lib/connections/plex-invitations'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    plexServer: {
-      findFirst: jest.fn(),
-    },
-    user: {
-      findUnique: jest.fn(),
-    },
-    config: {
-      findUnique: jest.fn(),
-    },
-    subscription: {
-      updateMany: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('@/lib/connections/plex-invitations', () => ({
   inviteUserToPlexServer: jest.fn(),

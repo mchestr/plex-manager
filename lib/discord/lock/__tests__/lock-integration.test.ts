@@ -15,9 +15,13 @@
 
 import { DistributedLock, DEFAULT_LOCK_LEASE_DURATION_MS, DISCORD_BOT_LOCK_ID } from "@/lib/discord/lock/lease"
 import { BotLockPoller, DEFAULT_POLL_INTERVAL_MS, type BotLockPollerOptions } from "@/lib/discord/lock/poller"
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 // lease.ts imports the real prisma client at load; every lock here gets the store.
-jest.mock("@/lib/prisma", () => ({ prisma: {} }))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock("@/lib/utils/logger", () => ({
   createLogger: jest.fn(() => ({

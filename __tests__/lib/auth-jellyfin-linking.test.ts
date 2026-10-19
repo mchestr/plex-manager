@@ -14,13 +14,12 @@
 import { authOptions } from '@/lib/auth'
 import { authenticateJellyfinUser, getJellyfinUserById } from '@/lib/connections/jellyfin-users'
 import { prisma } from '@/lib/prisma'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    jellyfinServer: { findFirst: jest.fn() },
-    user: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn() },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 // The real lib/jellyfin-auth, so the toggle check and the admin check run
 // against the mocked prisma; only the requests that would reach Jellyfin are

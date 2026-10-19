@@ -5,15 +5,12 @@ import type {
   DiscordCommandType,
   DiscordCommandStatus,
 } from "@/lib/generated/prisma/client"
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
-jest.mock("@/lib/prisma", () => ({
-  prisma: {
-    discordCommandLog: {
-      findMany: jest.fn(),
-      count: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 const mockFindMany = prisma.discordCommandLog.findMany as jest.MockedFunction<
   typeof prisma.discordCommandLog.findMany

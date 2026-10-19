@@ -10,15 +10,17 @@ import UserDetailsPage from '@/app/admin/users/[userId]/page'
 import { getUserActivityTimeline, getUserDetails } from '@/actions/users'
 import { RegenerateWrappedButton } from '@/components/admin/users/regenerate-wrapped-button'
 import { prisma } from '@/lib/prisma'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 jest.mock('@/actions/users', () => ({
   getUserDetails: jest.fn(),
   getUserActivityTimeline: jest.fn(),
 }))
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: { config: { findUnique: jest.fn() } },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('next/navigation', () => ({
   notFound: jest.fn(() => {

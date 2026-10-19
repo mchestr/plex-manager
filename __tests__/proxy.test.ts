@@ -18,6 +18,8 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { consume } from '@/lib/security/rate-limit'
 import { proxy } from '@/proxy'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 const mockLogError = jest.fn()
 
@@ -32,9 +34,9 @@ jest.mock('@/lib/utils/logger', () => ({
   }),
 }))
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: { plexWrapped: { findUnique: jest.fn() } },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('@/lib/security/rate-limit', () => ({
   consume: jest.fn(),

@@ -17,6 +17,8 @@ import SharedWrappedPage, { generateMetadata } from '@/app/(public)/wrapped/shar
 import { WrappedShareSummary } from '@/components/wrapped/wrapped-share-summary'
 import { prisma } from '@/lib/prisma'
 import type { ShareSafeRewindV2 } from '@/lib/wrapped/data/share-safe-v2'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 let currentHeaders = new Headers()
 
@@ -40,12 +42,9 @@ jest.mock('next/navigation', () => ({
   }),
 }))
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    plexWrapped: { findUnique: jest.fn() },
-    wrappedShareVisit: { create: jest.fn() },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('@/lib/utils', () => ({
   ...jest.requireActual('@/lib/utils'),

@@ -4,6 +4,8 @@
 
 import { BotLockPoller } from "@/lib/discord/lock/poller"
 import { startNodeInstrumentation } from "@/lib/instrumentation/node"
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 const mockWarn = jest.fn()
 jest.mock("@/lib/utils/logger", () => ({
@@ -26,7 +28,9 @@ jest.mock("@/lib/discord/lock/poller", () => ({
 jest.mock("@/lib/discord/lock/lease", () => ({ DistributedLock: jest.fn() }))
 jest.mock("@/lib/discord/lock", () => ({ isDiscordBotEnabled: jest.fn().mockResolvedValue(true) }))
 jest.mock("@/lib/discord/bot", () => ({ DiscordBot: jest.fn() }))
-jest.mock("@/lib/prisma", () => ({ prisma: {} }))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 const env = process.env as Record<string, string | undefined>
 const originalEnv = { ...process.env }

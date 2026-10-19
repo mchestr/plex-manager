@@ -11,6 +11,8 @@ import { prisma } from '@/lib/prisma'
 import { getWrappedSettings } from '@/actions/admin'
 import { consume } from '@/lib/security/rate-limit'
 import { checkRewindEligibility } from '@/lib/wrapped/eligibility'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 // Mock dependencies
 jest.mock('next-auth', () => ({
@@ -18,32 +20,9 @@ jest.mock('next-auth', () => ({
   authOptions: {},
 }))
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    user: {
-      findUnique: jest.fn(),
-      findMany: jest.fn(),
-    },
-    plexWrapped: {
-      findUnique: jest.fn(),
-      createMany: jest.fn(),
-      updateMany: jest.fn(),
-      updateManyAndReturn: jest.fn(),
-    },
-    plexServer: {
-      findFirst: jest.fn(),
-    },
-    tautulli: {
-      findFirst: jest.fn(),
-    },
-    overseerr: {
-      findFirst: jest.fn(),
-    },
-    config: {
-      findUnique: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('@/lib/wrapped/tautulli-statistics', () => ({
   fetchTautulliStatistics: jest.fn(),

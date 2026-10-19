@@ -10,6 +10,8 @@ import UsersPage from '@/app/admin/users/page'
 import { getAllUsersWithWrapped } from '@/actions/users'
 import { UsersList } from '@/components/admin/users/users-list'
 import { prisma } from '@/lib/prisma'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 jest.mock('@/actions/users', () => ({
   getAllUsersWithWrapped: jest.fn(),
@@ -19,9 +21,9 @@ jest.mock('@/lib/stripe/client', () => ({
   getStripeDashboardBaseUrl: jest.fn().mockResolvedValue(null),
 }))
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: { config: { findUnique: jest.fn() } },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('@/components/admin/users/import-plex-users-button', () => ({
   ImportPlexUsersButton: () => null,

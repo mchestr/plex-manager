@@ -13,19 +13,15 @@ import {
   setStripeEnabled,
   updateStripeSettings,
 } from '@/actions/admin/admin-config'
-import { prisma } from '@/lib/prisma'
 import { clearOfferedPricesCache } from '@/lib/stripe/prices'
 import { getServerSession } from 'next-auth'
 import { revalidatePath } from 'next/cache'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    config: {
-      findUnique: jest.fn(),
-      upsert: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 // admin-config imports clearOfferedPricesCache; mock the prices module so this
 // test doesn't pull in the real Stripe SDK / price cache.
@@ -45,7 +41,7 @@ jest.mock('@/lib/auth', () => ({
   authOptions: {},
 }))
 
-const mockPrisma = prisma as jest.Mocked<typeof prisma>
+const mockPrisma = prismaMock
 const mockGetServerSession = getServerSession as jest.MockedFunction<typeof getServerSession>
 const mockRevalidatePath = revalidatePath as jest.MockedFunction<typeof revalidatePath>
 

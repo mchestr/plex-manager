@@ -4,16 +4,14 @@ import { type PlexServerConfig } from "@/lib/connections/plex-config"
 import { prisma } from "@/lib/prisma"
 import { MarkType, MediaType } from "@/lib/generated/prisma/client"
 import { findRadarrIdByTitle, findSonarrIdByTitle } from "@/lib/utils/media-matching"
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 jest.mock("@/lib/connections/plex")
 jest.mock("@/lib/utils/media-matching")
-jest.mock("@/lib/prisma", () => ({
-  prisma: {
-    userMediaMark: {
-      upsert: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 jest.mock("@/lib/utils/logger", () => ({
   createLogger: () => ({
     info: jest.fn(),

@@ -15,9 +15,9 @@ jest.mock('@/lib/admin', () => ({
   requireAdmin: jest.fn(),
 }))
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: { invite: { findUnique: jest.fn() } },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('@/lib/connections/plex', () => ({}))
 jest.mock('@/lib/connections/jellyfin', () => ({}))
@@ -74,6 +74,8 @@ import { assertNoSecretKeys } from '@/__tests__/utils/assert-no-secret-keys'
 import { applyPrismaShape } from '@/__tests__/utils/prisma-shape'
 import { makePrismaInviteWithUsages, INVITEE_PLEX_AUTH_TOKEN } from '@/__tests__/utils/test-builders'
 import { InviteDetailsClient } from '@/components/admin/invites/invite-details-client'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 describe('InviteDetailsClient', () => {
   const mockGetInviteDetailsFn = inviteActions.getInviteDetails as jest.MockedFunction<

@@ -13,10 +13,12 @@ import { authenticateJellyfinUser, getJellyfinUserById } from '@/lib/connections
 import { authenticateJellyfin, getJellyfinLoginServer } from '@/lib/jellyfin-auth'
 import { prisma } from '@/lib/prisma'
 import type { JellyfinUser } from '@/lib/validations/jellyfin'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: { jellyfinServer: { findFirst: jest.fn() } },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('@/lib/connections/jellyfin-users', () => ({
   authenticateJellyfinUser: jest.fn(),

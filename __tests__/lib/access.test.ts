@@ -5,11 +5,13 @@
 
 // lib/access imports prisma at module load; stub it so the module is loadable
 // without a DATABASE_URL (this suite only exercises the pure predicate).
-jest.mock("@/lib/prisma", () => ({
-  prisma: { config: { findUnique: jest.fn() }, user: { findUnique: jest.fn() } },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 import { isAccessAllowed } from "@/lib/access"
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 describe("isAccessAllowed", () => {
   const base = {

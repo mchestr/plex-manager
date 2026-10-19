@@ -6,18 +6,13 @@ import { GET } from '@/app/api/wrapped/share/[token]/route'
 import { prisma } from '@/lib/prisma'
 import { limitRequest } from '@/lib/security/rate-limit'
 import { NextRequest } from 'next/server'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 // Mock dependencies
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    plexWrapped: {
-      findUnique: jest.fn(),
-    },
-    wrappedShareVisit: {
-      create: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('@/lib/security/rate-limit', () => ({
   limitRequest: jest.fn(),

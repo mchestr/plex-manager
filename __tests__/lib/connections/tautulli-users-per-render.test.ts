@@ -13,6 +13,8 @@ import { getFirstWatchDate } from '@/lib/connections/tautulli-first-watch'
 import { findTautulliUser } from '@/lib/connections/tautulli'
 import { prisma } from '@/lib/prisma'
 import { getRewindEligibility } from '@/lib/wrapped/eligibility'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 const mockRender: { memo: Map<unknown, unknown> | null } = { memo: null }
 
@@ -47,13 +49,9 @@ jest.mock('react', () => {
   }
 })
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    tautulli: {
-      findFirst: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 global.fetch = jest.fn()
 const mockFetch = global.fetch as jest.MockedFunction<typeof fetch>

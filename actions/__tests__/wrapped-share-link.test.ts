@@ -16,16 +16,12 @@ import { generateShareToken } from '@/lib/utils'
 import { forgetShareToken } from '@/lib/wrapped/poster-keys'
 import { getServerSession } from 'next-auth'
 import { revalidatePath } from 'next/cache'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    plexWrapped: {
-      findUnique: jest.fn(),
-      updateMany: jest.fn(),
-      update: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),

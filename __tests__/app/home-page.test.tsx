@@ -16,6 +16,8 @@ import { WrappedCard } from '@/components/dashboard/wrapped-card'
 import { getFirstWatchDate } from '@/lib/connections/tautulli-first-watch'
 import { prisma } from '@/lib/prisma'
 import { getRewindEligibility } from '@/lib/wrapped/eligibility'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),
@@ -36,18 +38,9 @@ jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: jest.fn(), refresh: jest.fn() }),
 }))
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    plexServer: { findFirst: jest.fn() },
-    jellyfinServer: { findFirst: jest.fn() },
-    discordIntegration: { findUnique: jest.fn() },
-    overseerr: { findFirst: jest.fn() },
-    config: { findUnique: jest.fn() },
-    user: { findUnique: jest.fn() },
-    discordConnection: { findUnique: jest.fn() },
-    subscription: { findUnique: jest.fn() },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('@/actions/announcements', () => ({
   getActiveAnnouncements: jest.fn(async () => []),

@@ -6,17 +6,16 @@
 
 import { getHistoricalWrappedData, getHistoricalWrappedVersions } from "@/actions/admin/admin-llm-history"
 import { prisma } from "@/lib/prisma"
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 jest.mock("@/lib/admin", () => ({
   requireAdmin: jest.fn().mockResolvedValue({ user: { id: "admin-1", isAdmin: true } }),
 }))
 
-jest.mock("@/lib/prisma", () => ({
-  prisma: {
-    plexWrapped: { findUnique: jest.fn() },
-    lLMUsage: { findMany: jest.fn(), findUnique: jest.fn() },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 const mockWrappedFindUnique = prisma.plexWrapped.findUnique as jest.Mock
 const mockUsageFindMany = prisma.lLMUsage.findMany as jest.Mock

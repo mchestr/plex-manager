@@ -1,15 +1,11 @@
 import { getActiveUsers, getAccountLinkingMetrics } from "../users"
 import { prisma } from "@/lib/prisma"
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
-jest.mock("@/lib/prisma", () => ({
-  prisma: {
-    discordCommandLog: {
-      findMany: jest.fn(),
-      count: jest.fn(),
-      groupBy: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 const mockFindMany = prisma.discordCommandLog.findMany as jest.Mock
 const mockCount = prisma.discordCommandLog.count as jest.Mock

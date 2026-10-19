@@ -19,6 +19,8 @@ import { getPlexUserInfo } from "@/lib/connections/plex"
 import { prisma } from "@/lib/prisma"
 import { consume } from "@/lib/security/rate-limit"
 import { NextRequest } from "next/server"
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 const CSRF_TOKEN = "csrf-token-for-tests"
 
@@ -34,12 +36,9 @@ jest.mock("next/headers", () => ({
   })),
 }))
 
-jest.mock("@/lib/prisma", () => ({
-  prisma: {
-    plexServer: { findFirst: jest.fn() },
-    user: { findUnique: jest.fn(), update: jest.fn() },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock("@/lib/jellyfin-auth", () => ({
   authenticateJellyfin: jest.fn(),

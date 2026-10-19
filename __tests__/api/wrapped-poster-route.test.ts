@@ -18,20 +18,12 @@ import { fetchWithTimeout } from '@/lib/utils/fetch-with-timeout'
 import { clearPosterAccessCaches } from '@/lib/wrapped/poster-access'
 import { forgetShareToken } from '@/lib/wrapped/poster-keys'
 import { getServerSession } from 'next-auth'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    plexWrapped: {
-      findUnique: jest.fn(),
-    },
-    plexServer: {
-      findFirst: jest.fn(),
-    },
-    user: {
-      findUnique: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('next-auth', () => ({
   getServerSession: jest.fn(),

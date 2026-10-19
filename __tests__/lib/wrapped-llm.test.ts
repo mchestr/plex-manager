@@ -9,21 +9,13 @@ import { callOpenAI } from '@/lib/wrapped/api-calls'
 import { generateMockWrappedData } from '@/lib/wrapped/mock-data'
 import { buildValidOutput } from '@/lib/wrapped/__tests__/fixtures'
 import { WrappedStatistics } from '@/types/wrapped'
+import { mockReset } from 'jest-mock-extended'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
 // Mock dependencies
-jest.mock('@/lib/prisma', () => ({
-  prisma: {
-    config: {
-      findUnique: jest.fn(),
-    },
-    lLMProvider: {
-      findFirst: jest.fn(),
-    },
-    lLMUsage: {
-      create: jest.fn(),
-    },
-  },
-}))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+
+beforeEach(() => mockReset(prismaMock))
 
 jest.mock('@/actions/prompts', () => ({
   getActivePromptTemplate: jest.fn(),
