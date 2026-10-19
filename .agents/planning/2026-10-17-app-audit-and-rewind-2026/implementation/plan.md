@@ -3083,11 +3083,13 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 
 **Demo.** Open `/` and `/admin/users` beside `main`. The canvas is graphite, native scrollbars and date pickers render dark, `window.scrollTo` works, and the v2 viewer renders in amber on graphite. Turn on reduced motion in DevTools: the remaining CSS loops stop, and a `data-slot="spinner"` element keeps turning.
 
+(as merged: `tw-animate-css` is pinned at 1.4.0, and `knip.json` lists `app/globals.css` as a project file so knip's Tailwind compiler sees the CSS import. The archetype rules write `--arch-deep` as `var(--rw-<field>-deep)` for every archetype (the dark inks' deep is their field), with the Curator on `var(--rw-ultramarine-deep)`; `globals-css.test.ts` checks them against `ARCHETYPE_STYLE` in `lib/wrapped/archetypes/catalogue.ts`, where `ARCHETYPES` now lives, and checks that every field and `altField` in `lib/rewind/registry.ts` is one of the twelve inks. `--font-sans` and `--font-mono` are Tailwind's system stacks until P3.2. The one-shot `fade-in` and the v2 `grain` sit in their own `@theme` block. `theme-contract.spec.ts` compares colours within 1/255 per channel, because Chromium renders the marigold ink as `#1f1406`. `e2e/visual/screenshot.css` drops its height workaround. The 36 changed baselines were regenerated locally on a production build, not through the workflow; the axe baseline lost `color-contrast|serious` on `/wrapped`, `/wrapped/2026` and the v2 share page, and no design-debt count fell.)
+
 **Done when.**
-- [ ] `app/globals.css` matches 4.1 and 4.4 section by section, with the Rewind block between the markers.
-- [ ] The height rule, the cinematic colours and the decorative loops are gone, and the aliases are marked for deletion in P11.29.
-- [ ] `globals-css.test.ts`, `cn.test.ts` and `theme-contract.spec.ts` pass.
-- [ ] The baselines are regenerated with every diff explained, and the axe and design-debt baselines are lowered where counts fell.
+- [x] `app/globals.css` matches 4.1 and 4.4 section by section, with the Rewind block between the markers.
+- [x] The height rule, the cinematic colours and the decorative loops are gone, and the aliases are marked for deletion in P11.29.
+- [x] `globals-css.test.ts`, `cn.test.ts` and `theme-contract.spec.ts` pass.
+- [x] The baselines are regenerated with every diff explained, and the axe and design-debt baselines are lowered where counts fell.
 
 ### Step P3.2: Fonts and root layout
 
