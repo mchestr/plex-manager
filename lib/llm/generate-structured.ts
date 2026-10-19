@@ -131,7 +131,8 @@ const MESSAGES: Record<StructuredErrorCode, string> = {
  * `promptCacheKey`), retries 429 and 5xx through the SDK (`maxRetries: 2`), and
  * maps finish reasons to typed errors. Every billed attempt, failed or not,
  * writes one usage row; errors with no response (network, abort) write none.
- * Never throws.
+ * Provider and output failures come back as typed errors; it throws only when
+ * the provider row itself cannot be read.
  */
 export async function generateStructured<S extends z.ZodType>(
   input: GenerateStructuredInput<S>
