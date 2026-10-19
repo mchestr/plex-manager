@@ -6,12 +6,12 @@ A Next.js-based Plex management platform that combines server management tools, 
 
 ## Tech Stack
 
-- **Framework**: Next.js 14+ (App Router)
+- **Framework**: Next.js 16 (App Router) + React 19
 - **Language**: TypeScript (strict mode with exhaustive checks)
 - **Database**: Prisma v7 + PostgreSQL (SQLite no longer supported)
 - **Auth**: NextAuth.js (Plex PIN-based authentication)
 - **State**: TanStack Query (React Query) for client-side data fetching
-- **Styling**: Tailwind CSS with utility-first approach
+- **Styling**: Tailwind CSS v4 with utility-first approach
 - **Animation**: Framer Motion
 - **Validation**: Zod schemas for all inputs/responses
 - **Testing**: Jest + Testing Library + Playwright (E2E)
@@ -32,31 +32,40 @@ A Next.js-based Plex management platform that combines server management tools, 
 ### File Organization
 ```
 app/                     # Next.js App Router (pages, layouts, routes)
-├── (app)/              # Authenticated app layout group
+├── (app)/              # Authenticated member layout group
+│   ├── discord/        # Discord account linking
+│   └── wrapped/        # Wrapped viewer
+├── (public)/           # Public pages (shared Wrapped links)
 ├── admin/              # Admin dashboard and management
 ├── api/                # API routes (webhooks, external integrations)
 ├── auth/               # Authentication pages
+├── invite/             # Invite redemption
 ├── onboarding/         # User onboarding flow
 ├── setup/              # Initial setup wizard
-└── wrapped/            # Wrapped viewer and sharing
+└── subscribe/          # Stripe subscription flow
 
 actions/                # Server Actions (mutations, data operations)
 components/             # React components
 ├── admin/             # Admin-specific components
-├── generator/         # Wrapped generation UI
+├── dashboard/         # Member home page cards
+├── generator/         # Wrapped generating animation
 ├── onboarding/        # Onboarding components
-├── setup-wizard/      # Setup wizard steps
+├── setup/
+│   └── setup-wizard/  # Setup wizard steps
 ├── ui/                # Shared UI primitives
 └── wrapped/           # Wrapped display components
 
+hooks/                  # Shared client hooks
 lib/                    # Utilities, helpers, business logic
 ├── connections/       # External API clients (Plex, Tautulli, Overseerr, etc.)
+├── discord/           # Discord bot, commands and linking
+├── llm/               # LLM chat client and pricing
 ├── security/          # Security utilities (rate limiting, CSRF, audit logging)
 ├── validations/       # Zod schemas for all services
 ├── wrapped/           # Wrapped generation and statistics
 └── utils/             # Shared utilities
 
-types/                  # TypeScript type definitions
+types/                  # TypeScript type definitions (admin.ts, discord.ts, wrapped.ts, ...)
 prisma/                # Database schema and migrations
 ```
 
@@ -272,8 +281,8 @@ describe('Component', () => {
 ### E2E Tests (Playwright)
 - **Authenticated sessions** - Use setup project for auth state
 - **Critical user flows** - Test onboarding, wrapped generation, admin actions
-- **Cross-browser** - Test Chrome, Firefox, Safari (webkit)
-- See `e2e/README.md` for authenticated session patterns
+- **Chromium only** - `playwright.config.ts` runs the `chromium` and `setup-wizard` projects, plus the `visual-*` screenshot projects (see `e2e/visual/README.md`)
+- **Auth fixtures** - Import `test` and `expect` from `e2e/fixtures/auth.ts`; see `e2e/README.md` for authenticated session patterns
 
 **⚠️ CRITICAL - Playwright Best Practices**:
 - **ALWAYS use `data-testid` for selectors** to prevent flaky tests
@@ -332,26 +341,25 @@ Use detailed JSDoc documentation for **complex modules** with:
 
 ### JSDoc Best Practices
 
-- **Test examples**: Include working code examples that are verified by tests (see `lib/maintenance/__tests__/jsdoc-examples.test.ts`)
-- **Internal functions**: Mark helper functions with `@internal` tag
+- **Test examples**: Add `__tests__/jsdoc-examples.test.ts` beside any module whose JSDoc has an `@example`, so the example is checked
+- **Internal functions**: Mark helper functions with `@internal` tag (knip's production mode also skips `@internal` exports that only tests use)
 - **Module annotations**: Use `@module` at file level for complex modules
 - **ASCII diagrams**: Use for tree structures, state machines, or data flow
 - **Avoid redundancy**: Don't document self-explanatory code
 
-### Example: Rule Evaluator Module
+### Example: Archetype Scoring Module
 
-See `lib/maintenance/rule-evaluator.ts` for a reference implementation:
-- Module-level JSDoc with algorithm explanation
-- ASCII tree diagram for hierarchical evaluation
-- Documented special cases (null handling, type coercion)
-- Working `@example` blocks verified by tests
+See `lib/wrapped/archetype-scoring.ts` for a reference implementation:
+- Module-level JSDoc with an Overview section explaining why the module exists
+- A Scoring section that lists each scorer and the signal it measures
+- Documented special cases (archetypes with no measurable signal score 0)
 
 ### Testing JSDoc Examples
 
-Create tests to verify documentation examples remain accurate:
+Verify documentation examples in a test next to the module:
 
 ```typescript
-// lib/maintenance/__tests__/jsdoc-examples.test.ts
+// <module dir>/__tests__/jsdoc-examples.test.ts
 describe('JSDoc Documentation Examples', () => {
   it('should match the documented behavior', () => {
     // Copy code from @example block
@@ -412,6 +420,13 @@ PLEX_CLIENT_IDENTIFIER=                        # Any unique string
 
 # Database (PostgreSQL required for Prisma v7)
 DATABASE_URL=postgresql://user:password@localhost:5432/plex_manager
+```
+
+### Recommended Production Variables
+```env
+# Encrypts stored service secrets at rest (ENCRYPTED_FIELDS in lib/prisma.ts).
+# Generate with: openssl rand -hex 32. Use a dedicated value and keep it stable.
+ENCRYPTION_KEY=
 ```
 
 ### Development Shortcuts
@@ -477,11 +492,17 @@ const handleSubmit = (formData: FormData) => {
 
 ### Plex API
 ```typescript
-import { getPlexClient } from '@/lib/connections/plex'
+import { getActivePlexServerConfig } from '@/lib/connections/plex-config'
+import { getPlexSessions } from '@/lib/connections/plex'
 
-const client = await getPlexClient()
-const library = await client.getLibrary()
+const config = await getActivePlexServerConfig() // null when no server is active
+if (!config) return { error: 'No active Plex server configured' }
+
+const sessions = await getPlexSessions(config) // { success, data?, error? }
 ```
+
+`@/lib/connections/plex` is the one entry point for the Plex functions (sessions,
+libraries, users, invitations, search, marking).
 
 **Official Documentation**: [developer.plex.tv](https://developer.plex.tv) (OpenAPI standard)
 
@@ -504,10 +525,14 @@ const library = await client.getLibrary()
 
 ### Tautulli API
 ```typescript
-import { getTautulliClient } from '@/lib/connections/tautulli'
+import { prisma } from '@/lib/prisma'
+import { getTautulliHistory } from '@/lib/connections/tautulli'
 
-const client = await getTautulliClient()
-const history = await client.getHistory()
+const server = await prisma.tautulli.findFirst({ where: { isActive: true } })
+if (!server) return { error: 'No active Tautulli server configured' }
+
+const config = { name: server.name, url: server.url, apiKey: server.apiKey }
+const history = await getTautulliHistory(config, tautulliUserId, 50) // (config, userId?, limit = 20)
 ```
 
 **Official Documentation**: [docs.tautulli.com/extending-tautulli/api-reference](https://docs.tautulli.com/extending-tautulli/api-reference)
@@ -588,11 +613,15 @@ const history = await client.getHistory()
 
 ### LLM Provider
 ```typescript
-import { getLLMProvider } from '@/lib/connections/llm-provider'
+import { callChatLLM } from '@/lib/llm/chat'
 
-const provider = await getLLMProvider()
-const response = await provider.chat({ messages })
+// config: LLMConfig ({ provider: 'openai', apiKey, model, temperature?, maxTokens? })
+const response = await callChatLLM(config, messages, tools) // tools is optional
+if (!response.success) return { error: response.error }
 ```
+
+`actions/chatbot/conversation.ts` shows how the chat assistant builds the config
+from the active `LLMProvider` row and runs the tool loop.
 
 ### Stripe Subscriptions (Optional)
 
@@ -675,9 +704,10 @@ subscriber (FR-19, `evaluateRevokeGuard`).
 ## Discord Integration (Optional)
 
 If Discord features are enabled:
-- Bot commands in `lib/discord/bot.ts`
+- Bot client and event wiring in `lib/discord/bot.ts`
+- Slash commands live in `lib/discord/commands/` (`registry.ts` lists them); register them with `npm run register-discord-commands`
 - Safety checks in `lib/discord/chat-safety.ts`
-- Register metadata: `npm run register-discord-metadata`
+- Register linked-role metadata: `npm run register-discord-metadata`
 - See `docs/discord-bot.md` for setup
 
 ## Deployment Checklist
@@ -687,7 +717,7 @@ If Discord features are enabled:
 3. Configure production `DATABASE_URL`
 4. Run database migrations: `npm run db:migrate`
 5. Build: `npm run build`
-6. Start: `npm run start:prod` (uses server.js)
+6. Start: `npm run start:prod` (runs the standalone `server.js` that `next build` writes; the Docker image ships it)
 7. Verify environment variables are set (app will fail on startup if missing)
 
 ## Claude Code Workflow Patterns
@@ -732,7 +762,7 @@ The project includes custom slash commands in `.claude/commands/`:
 **Playwright** is used for all E2E testing and browser automation:
 - Configured in project (see `npm run test:e2e` scripts)
 - Tests located in `e2e/` directory
-- Supports Chrome, Firefox, and Safari (webkit)
+- Runs on Chromium only
 - Use `/fix-e2e` command for automated test repair
 
 **MCP Servers**: `.mcp.json` commits one server, `chrome-devtools` (pinned `chrome-devtools-mcp@1.11.0`, headless), for quick looks at a running page. It needs a local Chrome and does not start without one. E2E tests still use Playwright directly. Servers that need keys (image generation, Figma, Motion+) stay at user scope and are never committed.
