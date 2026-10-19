@@ -63,6 +63,7 @@ export async function verifyDiscordUser(discordUserId: string): Promise<VerifyDi
             plexUserId: true,
             isAdmin: true,
             isExempt: true,
+            disabledAt: true,
             subscription: { select: { status: true } },
           },
         },
@@ -80,6 +81,7 @@ export async function verifyDiscordUser(discordUserId: string): Promise<VerifyDi
 
   const entitled = isAccessAllowed({
     stripeEnabled: config?.stripeEnabled ?? false,
+    disabled: connection.user.disabledAt !== null,
     isAdmin: connection.user.isAdmin,
     isExempt: connection.user.isExempt,
     subscriptionStatus: connection.user.subscription?.status ?? null,
@@ -127,6 +129,7 @@ export async function handleDiscordChat({
             id: true,
             isAdmin: true,
             isExempt: true,
+            disabledAt: true,
             subscription: { select: { status: true } },
           },
         },
@@ -147,6 +150,7 @@ export async function handleDiscordChat({
   // is the authoritative chokepoint where tool data would otherwise be accessed.
   const entitled = isAccessAllowed({
     stripeEnabled: config?.stripeEnabled ?? false,
+    disabled: connection.user.disabledAt !== null,
     isAdmin: connection.user.isAdmin,
     isExempt: connection.user.isExempt,
     subscriptionStatus: connection.user.subscription?.status ?? null,

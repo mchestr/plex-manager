@@ -99,7 +99,7 @@ describe('lib/jellyfin-auth', () => {
 
       const result = await authenticateJellyfin(' alice ', 'correct-password')
 
-      expect(result).toEqual({ success: true, data: { id: 'jf-alice', username: 'alice', isAdmin: false } })
+      expect(result).toEqual({ success: true, data: { id: 'jf-alice', username: 'alice', adminStatus: 'not-admin' } })
       expect(mockAuthenticateJellyfinUser).toHaveBeenCalledWith(
         { url: SERVER.url, apiKey: SERVER.apiKey },
         'alice',
@@ -115,45 +115,58 @@ describe('lib/jellyfin-auth', () => {
 
       const result = await authenticateJellyfin('bob', 'correct-password')
 
-      expect(result).toEqual({ success: true, data: { id: 'jf-bob', username: 'bob', isAdmin: true } })
+      expect(result).toEqual({ success: true, data: { id: 'jf-bob', username: 'bob', adminStatus: 'admin' } })
       expect(mockFindFirst).toHaveBeenCalledTimes(1)
       expect(mockGetJellyfinUserById).toHaveBeenCalledWith({ url: SERVER.url, apiKey: SERVER.apiKey }, 'jf-bob')
     })
 
-    it("marks the server's recorded admin without a Jellyfin user lookup", async () => {
-      jellyfinAccepts(jellyfinUser('jf-owner', 'owner', false))
-
-      const result = await authenticateJellyfin('owner', 'correct-password')
-
-      expect(result).toEqual({ success: true, data: { id: 'jf-owner', username: 'owner', isAdmin: true } })
-      expect(mockGetJellyfinUserById).not.toHaveBeenCalled()
-    })
-
-    it('is not admin for a user without IsAdministrator', async () => {
+      it('is not admin for a user without IsAdministrator', async () => {
       jellyfinAccepts(jellyfinUser('jf-carol', 'carol', false))
       mockGetJellyfinUserById.mockResolvedValue({ success: true, data: jellyfinUser('jf-carol', 'carol', false) })
 
       const result = await authenticateJellyfin('carol', 'correct-password')
 
-      expect(result.data?.isAdmin).toBe(false)
+      expect(result.data?.adminStatus).toBe('not-admin')
     })
 
-    it('still signs in, as not admin, when the admin lookup fails', async () => {
+    it("reads the policy even for the server row's stale adminUserId", async () => {
+      jellyfinAccepts(jellyfinUser('jf-owner', 'owner', false))
+      mockGetJellyfinUserById.mockResolvedValue({ success: true, data: jellyfinUser('jf-owner', 'owner', false) })
+
+      const result = await authenticateJellyfin('owner', 'correct-password')
+
+      expect(result.data?.adminStatus).toBe('not-admin')
+      expect(mockGetJellyfinUserById).toHaveBeenCalled()
+    })
+
+    it('is unknown when the policy carries no administrator flag', async () => {
+      jellyfinAccepts(jellyfinUser('jf-fay', 'fay', true))
+      mockGetJellyfinUserById.mockResolvedValue({
+        success: true,
+        data: { Id: 'jf-fay', Name: 'fay', HasPassword: true, HasConfiguredPassword: true },
+      })
+
+      const result = await authenticateJellyfin('fay', 'correct-password')
+
+      expect(result.data?.adminStatus).toBe('unknown')
+    })
+
+    it('still signs in, with an unknown admin status, when the admin lookup fails', async () => {
       jellyfinAccepts(jellyfinUser('jf-dave', 'dave', true))
       mockGetJellyfinUserById.mockResolvedValue({ success: false, error: 'User not found' })
 
       const result = await authenticateJellyfin('dave', 'correct-password')
 
-      expect(result).toEqual({ success: true, data: { id: 'jf-dave', username: 'dave', isAdmin: false } })
+      expect(result).toEqual({ success: true, data: { id: 'jf-dave', username: 'dave', adminStatus: 'unknown' } })
     })
 
-    it('still signs in, as not admin, when the admin lookup throws', async () => {
+    it('still signs in, with an unknown admin status, when the admin lookup throws', async () => {
       jellyfinAccepts(jellyfinUser('jf-erin', 'erin', true))
       mockGetJellyfinUserById.mockRejectedValue(new Error('socket hang up'))
 
       const result = await authenticateJellyfin('erin', 'correct-password')
 
-      expect(result).toEqual({ success: true, data: { id: 'jf-erin', username: 'erin', isAdmin: false } })
+      expect(result).toEqual({ success: true, data: { id: 'jf-erin', username: 'erin', adminStatus: 'unknown' } })
     })
 
     it('passes the connection error through without an admin lookup', async () => {

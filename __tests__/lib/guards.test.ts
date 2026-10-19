@@ -74,6 +74,7 @@ describe('getAccessGateStatus', () => {
 
     it('allows an admin regardless of subscription', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
+        disabledAt: null,
         isAdmin: true,
         isExempt: false,
         subscription: null,
@@ -84,6 +85,7 @@ describe('getAccessGateStatus', () => {
 
     it('allows an exempt user regardless of subscription', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
+        disabledAt: null,
         isAdmin: false,
         isExempt: true,
         subscription: null,
@@ -94,6 +96,7 @@ describe('getAccessGateStatus', () => {
 
     it('allows a user with an ACTIVE subscription', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
+        disabledAt: null,
         isAdmin: false,
         isExempt: false,
         subscription: { status: 'ACTIVE' },
@@ -104,6 +107,7 @@ describe('getAccessGateStatus', () => {
 
     it('allows a user with a PAST_DUE subscription', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
+        disabledAt: null,
         isAdmin: false,
         isExempt: false,
         subscription: { status: 'PAST_DUE' },
@@ -116,6 +120,7 @@ describe('getAccessGateStatus', () => {
       'denies a non-admin/non-exempt user with a %s subscription',
       async (status) => {
         mockPrisma.user.findUnique.mockResolvedValue({
+          disabledAt: null,
           isAdmin: false,
           isExempt: false,
           subscription: { status },
@@ -125,8 +130,20 @@ describe('getAccessGateStatus', () => {
       }
     )
 
+    it('denies a disabled admin', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        disabledAt: new Date(),
+        isAdmin: true,
+        isExempt: false,
+        subscription: null,
+      })
+
+      expect(await getAccessGateStatus('user-1')).toBe(false)
+    })
+
     it('denies a non-admin/non-exempt user with no subscription', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
+        disabledAt: null,
         isAdmin: false,
         isExempt: false,
         subscription: null,
@@ -164,6 +181,7 @@ describe('ensureSubscriptionOrAccess', () => {
     mockGetServerSession.mockResolvedValue({ user: { id: 'user-1' } } as never)
     mockPrisma.config.findUnique.mockResolvedValue({ stripeEnabled: true })
     mockPrisma.user.findUnique.mockResolvedValue({
+      disabledAt: null,
       isAdmin: false,
       isExempt: false,
       subscription: null,

@@ -15,6 +15,8 @@ declare module "next-auth" {
   interface User {
     id: string
     isAdmin: boolean
+    /** `User.sessionVersion` at sign-in, stored in the JWT as `sv`. */
+    sessionVersion: number
   }
 }
 
@@ -23,6 +25,10 @@ declare module "next-auth/jwt" {
     isAdmin: boolean
     /** Epoch ms of the last time isAdmin was refreshed from the database. */
     checkedAt?: number
+    /**
+     * The `User.sessionVersion` the token was issued under. A token without it
+     * (issued before P4.7) counts as version 0.
+     */
+    sv?: number
   }
 }
-

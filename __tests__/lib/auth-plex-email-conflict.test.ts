@@ -179,7 +179,8 @@ describe('Plex sign-in when another row holds the Plex email (SEC-08)', () => {
     })
     const retry = mockUserUpdate.mock.calls[1][0]
     expect(retry.where).toEqual({ id: 'victim-row' })
-    expect(retry.data).toMatchObject({ plexAuthToken: 'victim-token', name: 'victim', isAdmin: false })
+    expect(retry.data).toMatchObject({ plexAuthToken: 'victim-token', name: 'victim' })
+    expect(retry.data).not.toHaveProperty('isAdmin')
     expect(retry.data).not.toHaveProperty('email')
     expect(mockWarn).toHaveBeenCalledWith('auth.email_conflict', {
       existingUserId: HOLDER_ROW.id,

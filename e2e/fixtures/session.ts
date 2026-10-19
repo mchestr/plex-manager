@@ -8,7 +8,9 @@ import { createE2EPrismaClient } from '../helpers/prisma';
  * and a production build alike, and needs no application code.
  *
  * The token carries `checkedAt: 0`, so the first request's jwt callback
- * treats it as stale and re-reads the seeded row's admin flag.
+ * treats it as stale and re-reads the seeded row's admin flag and session
+ * version. `sv` is the row's `sessionVersion`, so the session survives the
+ * re-check until something ends the user's sessions (P4.7).
  */
 
 /** Matches NextAuth's inferred cookie name: `__Secure-` only on https. */
@@ -23,6 +25,7 @@ interface SessionUser {
   email: string | null;
   image: string | null;
   isAdmin: boolean;
+  sessionVersion: number;
 }
 
 /** The NextAuth session JWT for `user`, as the session cookie carries it. */
@@ -36,6 +39,8 @@ export function mintSessionToken(user: SessionUser, secret: string): Promise<str
       picture: user.image,
       isAdmin: user.isAdmin,
       checkedAt: 0,
+      // The seeded row's version, so the jwt callback's re-check keeps the session.
+      sv: user.sessionVersion,
     },
   });
 }
@@ -51,7 +56,7 @@ export async function signInAs(context: BrowserContext, baseURL: string, userId:
   try {
     const user = await prisma.user.findUniqueOrThrow({
       where: { id: userId },
-      select: { id: true, name: true, email: true, image: true, isAdmin: true },
+      select: { id: true, name: true, email: true, image: true, isAdmin: true, sessionVersion: true },
     });
     const value = await mintSessionToken(user, secret);
     await context.addCookies([
