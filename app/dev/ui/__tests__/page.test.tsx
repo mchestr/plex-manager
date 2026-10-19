@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react"
 import { axe, toHaveNoViolations } from "jest-axe"
 
 import DevUiPage, { metadata } from "@/app/dev/ui/page"
+import { ToastProvider } from "@/components/ui/toast"
 
 expect.extend(toHaveNoViolations)
 
@@ -9,6 +10,7 @@ jest.mock("next/navigation", () => ({
   notFound: () => {
     throw new Error("NEXT_NOT_FOUND")
   },
+  useRouter: () => ({ refresh: jest.fn() }),
 }))
 
 jest.mock("next/link", () => {
@@ -34,9 +36,30 @@ describe("/dev/ui", () => {
 
   it("shows every primitive under its test id, with no axe violations", async () => {
     process.env.ENABLE_DEV_UI = "1"
-    const { container } = render(DevUiPage())
+    const { container } = render(<ToastProvider>{DevUiPage()}</ToastProvider>)
 
-    for (const primitive of ["button", "card", "badge", "status-badge", "alert", "spinner", "skeleton", "icon", "input", "field", "checkbox", "switch", "select"]) {
+    for (const primitive of [
+      "button",
+      "card",
+      "badge",
+      "status-badge",
+      "alert",
+      "spinner",
+      "skeleton",
+      "icon",
+      "input",
+      "field",
+      "checkbox",
+      "switch",
+      "select",
+      "dialog",
+      "alert-dialog",
+      "confirm-dialog",
+      "dropdown-menu",
+      "popover",
+      "tooltip",
+      "toast",
+    ]) {
       expect(screen.getByTestId(`dev-ui-${primitive}`)).toBeInTheDocument()
     }
     expect(await axe(container)).toHaveNoViolations()

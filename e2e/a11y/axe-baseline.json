@@ -18,8 +18,7 @@
     "meta-viewport|moderate": 1
   },
   "admin /admin/invites [confirm dialog open]": {
-    "color-contrast|incomplete": 35,
-    "heading-order|moderate": 1,
+    "color-contrast|incomplete": 36,
     "meta-viewport|moderate": 1
   },
   "admin /admin/invites [create dialog open]": {

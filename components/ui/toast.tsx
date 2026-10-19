@@ -1,165 +1,152 @@
 "use client"
 
-import { motion, AnimatePresence } from "motion/react"
-import { createContext, useContext, useState, useCallback, ReactNode } from "react"
+import { Toast as ToastPrimitive } from "@base-ui/react/toast"
+import { CircleCheck, CircleX, Info, X, type LucideIcon } from "lucide-react"
+import { useMemo, type ReactNode } from "react"
 
-export type ToastType = "success" | "error" | "info"
+import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 
-export interface Toast {
-  id: string
-  message: string
-  type: ToastType
-  duration?: number
+type ToastType ="success" | "error" | "info"
+
+interface ToastOptions {
+  title: ReactNode
+  description?: ReactNode
+  tone?: ToastType
+  /** A toast with an action never auto-dismisses (WCAG 2.2.1); the action also dismisses it. */
+  action?: { label: string; onClick: () => void }
 }
 
-interface ToastContextType {
+interface ToastApi {
   showToast: (message: string, type?: ToastType, duration?: number) => void
   showSuccess: (message: string, duration?: number) => void
   showError: (message: string, duration?: number) => void
   showInfo: (message: string, duration?: number) => void
+  /** Shows a toast and returns its id. */
+  toast: (options: ToastOptions) => string
 }
 
-const ToastContext = createContext<ToastContextType | undefined>(undefined)
+/** How long success and info toasts stay, paused while hovered or focused. */
+const TIMEOUT_MS = 5000
 
-export function useToast() {
-  const context = useContext(ToastContext)
-  if (!context) {
-    throw new Error("useToast must be used within a ToastProvider")
-  }
-  return context
-}
+let lastId = 0
 
-export function ToastProvider({ children }: { children: ReactNode }) {
-  const [toasts, setToasts] = useState<Toast[]>([])
+/**
+ * The toast facade (ui-design-system 5.4), on Base UI Toast. Success and info
+ * toasts last 5s (a legacy `duration` overrides that); errors and toasts with
+ * an action stay until dismissed, and errors are announced assertively.
+ */
+export function useToast(): ToastApi {
+  const { add, close } = ToastPrimitive.useToastManager()
 
-  const removeToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id))
-  }, [])
-
-  const showToast = useCallback(
-    (message: string, type: ToastType = "info", duration: number = 3000) => {
-      const id = Math.random().toString(36).substring(7)
-      const newToast: Toast = { id, message, type, duration }
-
-      setToasts((prev) => [...prev, newToast])
-
-      setTimeout(() => {
-        removeToast(id)
-      }, duration)
-    },
-    [removeToast]
-  )
-
-  const showSuccess = useCallback(
-    (message: string, duration?: number) => {
-      showToast(message, "success", duration)
-    },
-    [showToast]
-  )
-
-  const showError = useCallback(
-    (message: string, duration?: number) => {
-      showToast(message, "error", duration || 5000)
-    },
-    [showToast]
-  )
-
-  const showInfo = useCallback(
-    (message: string, duration?: number) => {
-      showToast(message, "info", duration)
-    },
-    [showToast]
-  )
-
-  return (
-    <ToastContext.Provider value={{ showToast, showSuccess, showError, showInfo }}>
-      {children}
-      <ToastContainer toasts={toasts} onRemove={removeToast} />
-    </ToastContext.Provider>
-  )
-}
-
-function ToastContainer({ toasts, onRemove }: { toasts: Toast[]; onRemove: (id: string) => void }) {
-  return (
-    <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
-      <AnimatePresence>
-        {toasts.map((toast) => (
-          <ToastItem key={toast.id} toast={toast} onRemove={onRemove} />
-        ))}
-      </AnimatePresence>
-    </div>
-  )
-}
-
-function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: (id: string) => void }) {
-  const getToastStyles = () => {
-    switch (toast.type) {
-      case "success":
-        return "bg-green-900/90 border-green-500/50 text-green-100"
-      case "error":
-        return "bg-red-900/90 border-red-500/50 text-red-100"
-      case "info":
-        return "bg-slate-800/90 border-slate-600/50 text-slate-100"
-      default:
-        return "bg-slate-800/90 border-slate-600/50 text-slate-100"
+  return useMemo(() => {
+    const show = ({ title, description, tone = "info", action }: ToastOptions, duration?: number) => {
+      const id = `toast-${++lastId}`
+      const persistent = tone === "error" || action !== undefined
+      return add({
+        id,
+        title,
+        description,
+        type: tone,
+        timeout: persistent ? 0 : (duration ?? TIMEOUT_MS),
+        actionProps: action && {
+          children: action.label,
+          onClick: () => {
+            action.onClick()
+            close(id)
+          },
+        },
+      })
     }
-  }
-
-  const getIcon = () => {
-    switch (toast.type) {
-      case "success":
-        return (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-        )
-      case "error":
-        return (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        )
-      case "info":
-        return (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-        )
+    const showToast = (message: string, type: ToastType = "info", duration?: number) => {
+      show({ title: message, tone: type }, duration)
     }
-  }
+    return {
+      showToast,
+      showSuccess: (message, duration) => showToast(message, "success", duration),
+      showError: (message) => showToast(message, "error"),
+      showInfo: (message, duration) => showToast(message, "info", duration),
+      toast: (options) => show(options),
+    }
+  }, [add, close])
+}
 
+const toneIcons: Record<ToastType, { icon: LucideIcon; className: string }> = {
+  success: { icon: CircleCheck, className: "text-success" },
+  info: { icon: Info, className: "text-info" },
+  error: { icon: CircleX, className: "text-destructive" },
+}
+
+const isToastType = (type: string | undefined): type is ToastType =>
+  type === "success" || type === "error" || type === "info"
+
+function ToastItem({ toast }: { toast: ToastPrimitive.Root.ToastObject }) {
+  const tone: ToastType = isToastType(toast.type) ? toast.type : "info"
+  const { icon: ToneIcon, className: iconClass } = toneIcons[tone]
   return (
-    <motion.div
-      initial={{ opacity: 0, y: -20, x: 100 }}
-      animate={{ opacity: 1, y: 0, x: 0 }}
-      exit={{ opacity: 0, x: 100 }}
-      transition={{ duration: 0.2 }}
-      className={`${getToastStyles()} border rounded-lg shadow-lg p-4 min-w-[300px] max-w-[400px] pointer-events-auto backdrop-blur-sm flex items-start gap-3`}
+    <ToastPrimitive.Root
+      toast={toast}
+      data-slot="toast"
+      data-testid="toast"
+      data-tone={tone}
+      // Errors are assertive alerts, the rest polite status messages. Base UI's
+      // own `priority: "high"` would hide the toast, Dismiss button and all,
+      // behind `aria-hidden` until F6 (axe aria-hidden-focus), so it is unused.
+      role={tone === "error" ? "alert" : "status"}
+      aria-modal={undefined}
+      className={cn(
+        "w-full rounded-lg border border-border-strong bg-popover px-4 py-3.5 text-ui text-popover-foreground shadow-popover outline-none select-none",
+        "transition-[opacity,translate] duration-(--duration-slow) ease-(--ease-out-quiet)",
+        "data-starting-style:translate-y-2 data-starting-style:opacity-0",
+        "data-ending-style:opacity-0 data-ending-style:duration-(--duration-fast) data-ending-style:ease-(--ease-in-quiet) data-limited:hidden"
+      )}
     >
-      <div className="flex-shrink-0 mt-0.5">{getIcon()}</div>
-      <div className="flex-1">
-        <p className="text-sm font-medium">{toast.message}</p>
-      </div>
-      <button
-        onClick={() => onRemove(toast.id)}
-        className="flex-shrink-0 text-current/60 hover:text-current transition-colors"
-        aria-label="Close"
-      >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
-    </motion.div>
+      <ToastPrimitive.Content className="flex items-start gap-3">
+        <ToneIcon aria-hidden="true" className={cn("mt-0.5 size-4 shrink-0", iconClass)} />
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <ToastPrimitive.Title render={<p />} className="font-semibold" />
+          <ToastPrimitive.Description render={<p />} className="text-muted-foreground" />
+        </div>
+        <ToastPrimitive.Action render={<Button variant="ghost" size="sm" className="-my-1.5" />} />
+        <ToastPrimitive.Close
+          aria-label="Dismiss notification"
+          // Base UI hides Close on stacked toasts it collapses; these never collapse.
+          aria-hidden={false}
+          data-testid="toast-dismiss"
+          render={<Button variant="ghost" size="icon-sm" className="-my-1.5 -mr-2 text-muted-foreground" />}
+        >
+          <X aria-hidden="true" />
+        </ToastPrimitive.Close>
+      </ToastPrimitive.Content>
+    </ToastPrimitive.Root>
   )
 }
 
+function ToastList() {
+  const { toasts } = ToastPrimitive.useToastManager()
+  return toasts.map((toast) => <ToastItem key={toast.id} toast={toast} />)
+}
+
+/**
+ * Holds the toasts and renders their viewport: a "Notifications" landmark
+ * above dialogs (`--z-toast`), bottom-right on desktop and full width with
+ * 16px insets on mobile. F6 moves focus into it, Tab moves between toasts,
+ * and Escape dismisses the focused one.
+ */
+export function ToastProvider({ children }: { children: ReactNode }) {
+  return (
+    <ToastPrimitive.Provider timeout={TIMEOUT_MS}>
+      {children}
+      <ToastPrimitive.Portal>
+        <ToastPrimitive.Viewport
+          data-slot="toast-viewport"
+          data-testid="toast-viewport"
+          render={<section />}
+          className="fixed inset-x-4 bottom-4 z-(--z-toast) flex flex-col-reverse gap-2 outline-none sm:left-auto sm:w-[360px]"
+        >
+          <ToastList />
+        </ToastPrimitive.Viewport>
+      </ToastPrimitive.Portal>
+    </ToastPrimitive.Provider>
+  )
+}

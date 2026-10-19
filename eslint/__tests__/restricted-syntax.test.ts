@@ -114,11 +114,13 @@ describe("raw-element warnings (P3.4)", () => {
   })
 })
 
-describe("deprecated adapter imports (P3.5)", () => {
+describe("deprecated adapter imports (P3.5, P3.6)", () => {
   it.each([
     'import { StyledInput } from "@/components/ui/styled-input"',
     'import { StyledDropdown, DropdownOption } from "@/components/ui/styled-dropdown"',
     'import { StyledCheckbox } from "@/components/ui/styled-checkbox"',
+    'import { ModalShell } from "@/components/ui/modal-shell"',
+    'import { ConfirmModal } from "@/components/admin/shared/confirm-modal"',
   ])("warns on %s", (code) => {
     expect(hits(code, deprecatedImports)).toBe(1)
   })
@@ -127,6 +129,9 @@ describe("deprecated adapter imports (P3.5)", () => {
     'import { Input } from "@/components/ui/input"',
     'import { Select } from "@/components/ui/select"',
     'import { styled } from "@/lib/styled-things"',
+    'import { Dialog } from "@/components/ui/dialog"',
+    'import { ConfirmDialog } from "@/components/ui/confirm-dialog"',
+    'import { ModalShellNotes } from "@/components/ui/modal-shell-notes"',
   ])("allows %s", (code) => {
     expect(hits(code, deprecatedImports)).toBe(0)
   })

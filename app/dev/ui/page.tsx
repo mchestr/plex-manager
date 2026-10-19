@@ -4,9 +4,11 @@ import { notFound } from "next/navigation"
 import { getEnv } from "@/lib/env"
 
 import { ButtonSpecimen } from "./_sections/buttons"
+import { AlertDialogSpecimen, ConfirmDialogSpecimen, DialogSpecimen } from "./_sections/dialogs"
 import { BadgeSpecimen, CardSpecimen, IconSpecimen, StatusSpecimen } from "./_sections/display"
 import { AlertSpecimen, SkeletonSpecimen, SpinnerSpecimen } from "./_sections/feedback"
 import { CheckboxSpecimen, FieldSpecimen, InputSpecimen, SelectSpecimen, SwitchSpecimen } from "./_sections/forms"
+import { DropdownMenuSpecimen, PopoverSpecimen, ToastSpecimen, TooltipSpecimen } from "./_sections/popups"
 
 export const metadata: Metadata = {
   title: "UI primitives",
@@ -43,6 +45,13 @@ export default function DevUiPage() {
       <CheckboxSpecimen />
       <SwitchSpecimen />
       <SelectSpecimen />
+      <DialogSpecimen />
+      <AlertDialogSpecimen />
+      <ConfirmDialogSpecimen />
+      <DropdownMenuSpecimen />
+      <PopoverSpecimen />
+      <TooltipSpecimen />
+      <ToastSpecimen />
     </main>
   )
 }
