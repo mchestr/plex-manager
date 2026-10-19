@@ -300,7 +300,7 @@ describe("markCommand.handle", () => {
   it("marks directly and confirms on a single result", async () => {
     const item = makeItem()
     mockSearch.mockResolvedValue({ success: true, data: [item] })
-    mockApplyMark.mockResolvedValue({ ok: true, mediaType: "TV_SERIES" as never, watchedSynced: true })
+    mockApplyMark.mockResolvedValue({ ok: true, mediaType: "TV_SERIES" as never, watched: "synced" })
     const { ctx, editReply } = createMockContext({ subcommand: "finished" })
 
     await markCommand.handle(ctx)
@@ -318,7 +318,7 @@ describe("markCommand.handle", () => {
     expect(mockCreatePending).not.toHaveBeenCalled()
     expect(editReply).toHaveBeenCalledWith(
       expect.objectContaining({
-        content: expect.stringContaining("marked as watched in Plex"),
+        content: expect.stringContaining("Your Plex watch status is updated."),
       })
     )
   })
@@ -394,7 +394,7 @@ describe("select-menu component handler", () => {
       createdAt: new Date(),
       expiresAt: new Date(Date.now() + 60_000),
     })
-    mockApplyMark.mockResolvedValue({ ok: true, mediaType: "TV_SERIES" as never, watchedSynced: false })
+    mockApplyMark.mockResolvedValue({ ok: true, mediaType: "TV_SERIES" as never, watched: "not_applicable" })
     const { interaction, update } = createMockSelectInteraction({ values: ["0"] })
 
     await handleSelect()(interaction)

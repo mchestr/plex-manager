@@ -1,5 +1,12 @@
+/**
+ * Tests for applyMark. Plex is faked at `fetch` with a recorded plex.tv
+ * `/api/v2/resources` response, so the scrobble's token is checked end to end
+ * (SEC-48): it is the member's own server token, never the owner's.
+ */
 import { applyMark } from "../mark-media"
-import { markPlexItemWatched, type PlexMediaItem } from "@/lib/connections/plex"
+import { watchStatusNote } from "../mark-labels"
+import { type PlexMediaItem } from "@/lib/connections/plex"
+import { clearMemberTokenCache } from "@/lib/connections/plex-member-token"
 import { type PlexServerConfig } from "@/lib/connections/plex-config"
 import { prisma } from "@/lib/prisma"
 import { MarkType, MediaType } from "@/lib/generated/prisma/client"
@@ -7,7 +14,6 @@ import { findRadarrIdByTitle, findSonarrIdByTitle } from "@/lib/utils/media-matc
 import { mockReset } from 'jest-mock-extended'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
-jest.mock("@/lib/connections/plex")
 jest.mock("@/lib/utils/media-matching")
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 
@@ -17,12 +23,13 @@ jest.mock("@/lib/utils/logger", () => ({
     info: jest.fn(),
     error: jest.fn(),
     warn: jest.fn(),
+    debug: jest.fn(),
   }),
 }))
 
-const mockMarkPlexItemWatched = markPlexItemWatched as jest.MockedFunction<
-  typeof markPlexItemWatched
->
+const RESOURCES = jest.requireActual<unknown[]>("./fixtures/plex-tv-resources.json")
+const MEMBER_PLEX_SIGN_IN = "member-plex-tv-token"
+const MEMBER_SERVER_TOKEN = "member-shared-token-for-this-server"
 const mockFindRadarrIdByTitle = findRadarrIdByTitle as jest.MockedFunction<
   typeof findRadarrIdByTitle
 >
@@ -34,7 +41,7 @@ const mockUpsert = prisma.userMediaMark.upsert as jest.Mock
 const plexConfig: PlexServerConfig = {
   name: "Test Server",
   url: "http://localhost:32400",
-  token: "test-token",
+  token: "owner-token",
   publicUrl: undefined,
   adminPlexUserId: null,
 }
@@ -49,12 +56,56 @@ function makeItem(overrides: Partial<PlexMediaItem> = {}): PlexMediaItem {
   }
 }
 
+interface FakePlex {
+  resourcesStatus?: number
+  scrobbleStatus?: number
+  identityFails?: boolean
+}
+
+/** A minimal fetch response; jsdom has no `Response`. */
+function reply(status: number, body: string) {
+  return { ok: status >= 200 && status < 300, status, headers: new Map(), body: null, text: async () => body, json: async () => JSON.parse(body) }
+}
+
+/** Answers `/identity`, plex.tv resources and the scrobble; records every call. */
+function fakePlex({ resourcesStatus = 200, scrobbleStatus = 200, identityFails = false }: FakePlex = {}) {
+  const calls: { url: string; token: string | undefined }[] = []
+  const fetchMock = jest.fn()
+  global.fetch = fetchMock
+  fetchMock.mockImplementation(async (input: unknown, init?: RequestInit) => {
+    const url = String(input)
+    const headers = (init?.headers ?? {}) as Record<string, string>
+    calls.push({ url, token: headers["X-Plex-Token"] })
+    if (url === `${plexConfig.url}/identity`) {
+      return identityFails
+        ? reply(503, "")
+        : reply(200, '<MediaContainer size="0" machineIdentifier="this-server-machine-id"/>')
+    }
+    if (url.startsWith("https://clients.plex.tv/api/v2/resources")) {
+      return reply(resourcesStatus, resourcesStatus === 200 ? JSON.stringify(RESOURCES) : "")
+    }
+    if (url.startsWith(`${plexConfig.url}/:/scrobble`)) {
+      return reply(scrobbleStatus, "")
+    }
+    return reply(404, "")
+  })
+  return calls
+}
+
+const scrobbles = (calls: { url: string; token: string | undefined }[]) => calls.filter((call) => call.url.includes("/:/scrobble"))
+
+afterAll(() => {
+  delete process.env.PLEX_CLIENT_IDENTIFIER
+})
+
 beforeEach(() => {
   jest.clearAllMocks()
+  clearMemberTokenCache()
+  process.env.PLEX_CLIENT_IDENTIFIER = "test-client"
   mockUpsert.mockResolvedValue({})
   mockFindRadarrIdByTitle.mockResolvedValue(null)
   mockFindSonarrIdByTitle.mockResolvedValue(null)
-  mockMarkPlexItemWatched.mockResolvedValue({ success: true })
+  prismaMock.user.findUnique.mockResolvedValue({ plexAuthToken: MEMBER_PLEX_SIGN_IN } as never)
 })
 
 describe("applyMark", () => {
@@ -70,7 +121,7 @@ describe("applyMark", () => {
       channelId: "chan-1",
     })
 
-    expect(result).toEqual({ ok: true, mediaType: MediaType.MOVIE, watchedSynced: false })
+    expect(result).toEqual({ ok: true, mediaType: MediaType.MOVIE, watched: "not_applicable" })
     expect(mockUpsert).toHaveBeenCalledWith({
       where: {
         userId_plexRatingKey_markType: {
@@ -182,7 +233,8 @@ describe("applyMark", () => {
     )
   })
 
-  it("syncs Plex watched state only for FINISHED_WATCHING", async () => {
+  it("scrobbles FINISHED_WATCHING with the member's resource token, never the owner's", async () => {
+    const calls = fakePlex()
     const item = makeItem({ ratingKey: "movie-1", type: "movie" })
 
     const result = await applyMark({
@@ -193,8 +245,100 @@ describe("applyMark", () => {
       plexConfig,
     })
 
-    expect(mockMarkPlexItemWatched).toHaveBeenCalledWith(plexConfig, "movie-1")
-    expect(result).toEqual({ ok: true, mediaType: MediaType.MOVIE, watchedSynced: true })
+    expect(result).toEqual({ ok: true, mediaType: MediaType.MOVIE, watched: "synced" })
+    const resources = calls.find((call) => call.url.startsWith("https://clients.plex.tv/api/v2/resources"))
+    expect(resources?.token).toBe(MEMBER_PLEX_SIGN_IN)
+    expect(scrobbles(calls)).toHaveLength(1)
+    expect(scrobbles(calls)[0].url).toContain("key=movie-1")
+    expect(scrobbles(calls)[0].token).toBe(MEMBER_SERVER_TOKEN)
+    expect(scrobbles(calls).some((call) => call.token === plexConfig.token)).toBe(false)
+  })
+
+  it("reuses the resolved member token for 10 minutes", async () => {
+    const calls = fakePlex()
+    const mark = () =>
+      applyMark({ userId: "user-1", item: makeItem({ type: "movie" }), markType: MarkType.FINISHED_WATCHING, markedVia: "discord", plexConfig })
+
+    await mark()
+    await mark()
+
+    expect(calls.filter((call) => call.url.includes("/api/v2/resources"))).toHaveLength(1)
+    expect(scrobbles(calls)).toHaveLength(2)
+  })
+
+  it("without a stored Plex sign-in, saves the mark and skips the scrobble", async () => {
+    const calls = fakePlex()
+    prismaMock.user.findUnique.mockResolvedValue({ plexAuthToken: null } as never)
+
+    const result = await applyMark({
+      userId: "user-1",
+      item: makeItem({ type: "movie" }),
+      markType: MarkType.FINISHED_WATCHING,
+      markedVia: "discord",
+      plexConfig,
+    })
+
+    expect(mockUpsert).toHaveBeenCalledTimes(1)
+    expect(result).toEqual({ ok: true, mediaType: MediaType.MOVIE, watched: "no_plex_sign_in" })
+    expect(calls).toHaveLength(0)
+    expect(watchStatusNote("no_plex_sign_in")).toMatch(
+      /^Saved\. I can't update your Plex watch status, because Plex Manager doesn't have your Plex sign-in\. Sign in with Plex at \S+, then try again\.$/
+    )
+  })
+
+  it("when plex.tv rejects the sign-in, saves the mark and skips the scrobble", async () => {
+    const calls = fakePlex({ resourcesStatus: 401 })
+
+    const result = await applyMark({
+      userId: "user-1",
+      item: makeItem({ type: "movie" }),
+      markType: MarkType.FINISHED_WATCHING,
+      markedVia: "discord",
+      plexConfig,
+    })
+
+    expect(result).toMatchObject({ ok: true, watched: "no_plex_sign_in" })
+    expect(scrobbles(calls)).toHaveLength(0)
+  })
+
+  it("when the member's resources lack this server, skips the scrobble", async () => {
+    const calls = fakePlex()
+    const fetchMock = jest.fn()
+    global.fetch = fetchMock
+    fetchMock.mockImplementation(async (input: unknown, init?: RequestInit) => {
+      const url = String(input)
+      calls.push({ url, token: ((init?.headers ?? {}) as Record<string, string>)["X-Plex-Token"] })
+      if (url.endsWith("/identity")) {
+        return reply(200, '<MediaContainer machineIdentifier="some-other-server"/>')
+      }
+      return reply(200, JSON.stringify(RESOURCES))
+    })
+
+    const result = await applyMark({
+      userId: "user-1",
+      item: makeItem({ type: "movie" }),
+      markType: MarkType.FINISHED_WATCHING,
+      markedVia: "discord",
+      plexConfig,
+    })
+
+    expect(result).toMatchObject({ ok: true, watched: "no_plex_sign_in" })
+    expect(scrobbles(calls)).toHaveLength(0)
+  })
+
+  it("when the server cannot be reached for its identity, reports a failed update", async () => {
+    const calls = fakePlex({ identityFails: true })
+
+    const result = await applyMark({
+      userId: "user-1",
+      item: makeItem({ type: "movie" }),
+      markType: MarkType.FINISHED_WATCHING,
+      markedVia: "discord",
+      plexConfig,
+    })
+
+    expect(result).toMatchObject({ ok: true, watched: "failed" })
+    expect(scrobbles(calls)).toHaveLength(0)
   })
 
   it("does not sync Plex watched state for non-FINISHED_WATCHING marks", async () => {
@@ -208,11 +352,11 @@ describe("applyMark", () => {
       plexConfig,
     })
 
-    expect(mockMarkPlexItemWatched).not.toHaveBeenCalled()
+    expect(global.fetch).not.toHaveBeenCalled()
   })
 
-  it("tolerates a Plex sync failure: mark still succeeds, watchedSynced is false", async () => {
-    mockMarkPlexItemWatched.mockResolvedValue({ success: false, error: "Plex API error" })
+  it("tolerates a Plex sync failure: mark still succeeds, watched is failed", async () => {
+    fakePlex({ scrobbleStatus: 500 })
     const item = makeItem({ ratingKey: "movie-1", type: "movie" })
 
     const result = await applyMark({
@@ -224,7 +368,7 @@ describe("applyMark", () => {
     })
 
     expect(mockUpsert).toHaveBeenCalledTimes(1)
-    expect(result).toEqual({ ok: true, mediaType: MediaType.MOVIE, watchedSynced: false })
+    expect(result).toEqual({ ok: true, mediaType: MediaType.MOVIE, watched: "failed" })
   })
 
   it("returns an unsupported result (no writes) for an unknown media type", async () => {
@@ -244,6 +388,6 @@ describe("applyMark", () => {
       mediaType: "track",
     })
     expect(mockUpsert).not.toHaveBeenCalled()
-    expect(mockMarkPlexItemWatched).not.toHaveBeenCalled()
+    expect(global.fetch).not.toHaveBeenCalled()
   })
 })

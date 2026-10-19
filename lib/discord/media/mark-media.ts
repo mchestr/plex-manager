@@ -23,7 +23,12 @@
  *    title + year. Episodes match on `grandparentTitle` (the show title).
  * 3. Upsert the mark on the `(userId, plexRatingKey, markType)` composite key.
  * 4. For {@link MarkType.FINISHED_WATCHING} only, best-effort sync Plex's watched
- *    state. A failure here is logged and swallowed — the mark still succeeds.
+ *    state **as the member** (SEC-48): the scrobble carries the member's own
+ *    server token from `resolveMemberServerToken`, never the owner's, so it
+ *    changes only the member's history. Without a stored Plex sign-in, or
+ *    without this server among the member's resources, the scrobble is
+ *    skipped (`no_plex_sign_in`); a failed call is `failed`. Either way the
+ *    mark is still saved.
  */
 
 import {
@@ -31,6 +36,8 @@ import {
   type PlexMediaItem,
 } from "@/lib/connections/plex"
 import { type PlexServerConfig } from "@/lib/connections/plex-config"
+import { resolveMemberServerToken } from "@/lib/connections/plex-member-token"
+import { type WatchStatusSync } from "@/lib/discord/media/mark-labels"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 import { MarkType, MediaType } from "@/lib/generated/prisma/client"
@@ -47,7 +54,10 @@ export interface ApplyMarkParams {
   markType: MarkType
   /** Provenance string stored on the mark (e.g. `"discord"`, `"chatbot"`). */
   markedVia: string
-  /** Active Plex server config, used only for the FINISHED_WATCHING sync. */
+  /**
+   * Active Plex server config, used only for the FINISHED_WATCHING sync: its
+   * URL, and its token only to read the server's identity.
+   */
   plexConfig: PlexServerConfig
   /** Optional Discord channel id recorded on the mark. */
   channelId?: string
@@ -57,8 +67,8 @@ export interface ApplyMarkParams {
 interface ApplyMarkSuccess {
   ok: true
   mediaType: MediaType
-  /** Whether Plex's watched state was successfully synced (FINISHED_WATCHING only). */
-  watchedSynced: boolean
+  /** The member's Plex watch status update (FINISHED_WATCHING only). */
+  watched: WatchStatusSync
 }
 
 /** The Plex item's `type` is not one we can mark. */
@@ -163,18 +173,10 @@ export async function applyMark(params: ApplyMarkParams): Promise<ApplyMarkResul
     },
   })
 
-  let watchedSynced = false
-  if (markType === MarkType.FINISHED_WATCHING) {
-    const watchedResult = await markPlexItemWatched(plexConfig, item.ratingKey)
-    if (watchedResult.success) {
-      watchedSynced = true
-    } else {
-      logger.warn("Failed to mark item as watched in Plex", {
-        ratingKey: item.ratingKey,
-        error: watchedResult.error,
-      })
-    }
-  }
+  const watched =
+    markType === MarkType.FINISHED_WATCHING
+      ? await markWatchedAsMember(userId, item.ratingKey, plexConfig)
+      : "not_applicable"
 
   logger.info("Media mark applied", {
     userId,
@@ -183,8 +185,29 @@ export async function applyMark(params: ApplyMarkParams): Promise<ApplyMarkResul
     plexRatingKey: item.ratingKey,
     markType,
     title: item.title,
-    watchedSynced,
+    watched,
   })
 
-  return { ok: true, mediaType, watchedSynced }
+  return { ok: true, mediaType, watched }
 }
+
+/** Scrobbles the item with the member's own server token. @internal */
+async function markWatchedAsMember(
+  userId: string,
+  ratingKey: string,
+  plexConfig: PlexServerConfig
+): Promise<WatchStatusSync> {
+  const member = await resolveMemberServerToken(userId, plexConfig)
+  if (!member.ok) {
+    logger.info("Skipping the Plex watch status update", { userId, ratingKey, reason: member.reason })
+    return member.reason === "UNAVAILABLE" ? "failed" : "no_plex_sign_in"
+  }
+
+  const watchedResult = await markPlexItemWatched(member.access, ratingKey)
+  if (!watchedResult.success) {
+    logger.warn("Failed to mark item as watched in Plex", { ratingKey, error: watchedResult.error })
+    return "failed"
+  }
+  return "synced"
+}
+
