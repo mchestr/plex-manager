@@ -1,6 +1,6 @@
 # Visual regression
 
-Full-page screenshots of 20 key screens, compared on every run against the
+Full-page screenshots of 20 key screens and the primitives sheet, compared on every run against the
 baselines committed in `__screenshots__/`. They exist so that every styling
 change shows up as a reviewed image diff. **An unexplained diff is a
 regression**: fix the code, do not update the baseline.
@@ -12,10 +12,11 @@ regression**: fix the code, do not update the baseline.
 | `member.visual.spec.ts` | sign-in (signed-out `/`), home, onboarding step 2, invite valid and expired, `/subscribe`, `/discord/link`, `/auth/denied`, the stored v2 Rewind at `/wrapped` |
 | `admin.visual.spec.ts` | users, users with Plex down, user detail, settings, invites, queues, LLM usage, prompts; a 404 and an error state |
 | `setup.visual.spec.ts` | setup wizard step 3 |
+| `primitives.visual.spec.ts` | the `/dev/ui` primitives sheet (P3.4), dark and light; the web server sets `ENABLE_DEV_UI=1` |
 
 Each screen is taken at 1440x900 (`visual-desktop`, `visual-setup-desktop`)
 and at 390x844 with a 2x phone screen (`visual-mobile`,
-`visual-setup-mobile`): 40 images. The setup projects depend on the
+`visual-setup-mobile`): 44 images. The setup projects depend on the
 `setup-wizard` project, because reopening setup sends every other page to
 `/setup`.
 

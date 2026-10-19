@@ -82,7 +82,7 @@ export async function SubscriptionStatusView() {
   }
 
   return (
-    <Card className="flex flex-col gap-4" data-testid="subscription-status-view">
+    <Card padding="md" className="flex flex-col gap-4" data-testid="subscription-status-view">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-lg font-semibold text-white">Subscription</h2>

@@ -407,6 +407,7 @@ export function TestConfiguration({
             onClick={onGenerateResponse}
             disabled={isPending || !testConfig.userName || !statistics || loadingStatistics}
             className="flex-1"
+            data-testid="playground-generate-button"
           >
             <svg
               className="w-4 h-4"

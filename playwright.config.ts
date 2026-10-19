@@ -16,7 +16,7 @@ const baseURL = `http://localhost:${port}`;
 const prodServer = process.env.E2E_SERVER === 'prod';
 console.log(`Running tests on ${baseURL} (${prodServer ? 'production build' : 'next dev'})`);
 
-const VISUAL_SPECS = /visual\/(member|admin)\.visual\.spec\.ts$/;
+const VISUAL_SPECS = /visual\/(member|admin|primitives)\.visual\.spec\.ts$/;
 const VISUAL_SETUP_SPEC = /visual\/setup\.visual\.spec\.ts$/;
 const visualDesktop = {
   ...devices['Desktop Chrome'],
@@ -133,6 +133,7 @@ export default defineConfig({
       NEXTAUTH_URL: baseURL,
       E2E_TEST_MODE: 'true',
       SKIP_CONNECTION_TESTS: 'true',
+      ENABLE_DEV_UI: '1',
       FAST_REFRESH: 'false',
     },
   },
