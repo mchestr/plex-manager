@@ -9,7 +9,6 @@ import { getSeasonYear } from "@/lib/wrapped/season"
 import { adminErrorHint, readStoredError } from "@/lib/wrapped/generation-errors"
 import Link from "next/link"
 
-
 // Force dynamic rendering to prevent caching
 export const dynamic = 'force-dynamic'
 

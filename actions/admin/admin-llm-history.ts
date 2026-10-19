@@ -88,11 +88,7 @@ function rebuildVersion(
 ): StoredWrappedData | null {
   const v2 = parseWrappedLLMOutput(response)
   if (v2.success) {
-    return {
-      ...assembleWrappedData({ output: v2.output, ...context }),
-      statistics: context.statistics,
-      generatedAt: context.generatedAt,
-    }
+    return { ...assembleWrappedData({ output: v2.output, ...context }), generatedAt: context.generatedAt }
   }
 
   let json: unknown
