@@ -102,8 +102,6 @@ export function WrappedCard({ userId, memberSince, rewindEligibility }: WrappedC
   // The season year from getWrappedSettings(); null until the settings load.
   const wrappedYear = wrappedSettings?.year ?? null
 
-  const canLoadWrapped = Boolean(userId) && wrappedYear !== null && canHaveRewind
-
   // Fetches the Rewind and settles the loading flag; it never sets state
   // synchronously, so the mount effect can call it.
   const fetchWrapped = useCallback((year: number) =>
@@ -117,17 +115,17 @@ export function WrappedCard({ userId, memberSince, rewindEligibility }: WrappedC
       }), [userId, toast])
 
   const loadWrapped = useCallback(async () => {
-    if (!canLoadWrapped || wrappedYear === null) return
+    if (!userId || wrappedYear === null || !canHaveRewind) return
 
     setIsLoading(true)
     await fetchWrapped(wrappedYear)
-  }, [canLoadWrapped, wrappedYear, fetchWrapped])
+  }, [userId, wrappedYear, canHaveRewind, fetchWrapped])
 
   // isLoading starts true, so the first load needs no loading flip
   useEffect(() => {
-    if (!canLoadWrapped || wrappedYear === null) return
+    if (!userId || wrappedYear === null || !canHaveRewind) return
     fetchWrapped(wrappedYear)
-  }, [canLoadWrapped, wrappedYear, fetchWrapped])
+  }, [userId, wrappedYear, canHaveRewind, fetchWrapped])
 
   // Poll for wrapped completion when generating
   useEffect(() => {

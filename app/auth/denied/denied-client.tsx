@@ -7,6 +7,8 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { useIsClient } from "@/hooks/use-is-client"
 
+const shockwaves = Array.from({ length: 3 }, (_, i) => ({ id: i, delay: i * 0.3 }))
+
 export function DeniedAccessPageClient() {
   const router = useRouter()
   const isClient = useIsClient()
@@ -22,8 +24,6 @@ export function DeniedAccessPageClient() {
       driftY: (Math.random() - 0.5) * 200,
     }))
   )
-  const shockwaves = Array.from({ length: 3 }, (_, i) => ({ id: i, delay: i * 0.3 }))
-
   return (
     <>
       {/* Animated particles background */}
