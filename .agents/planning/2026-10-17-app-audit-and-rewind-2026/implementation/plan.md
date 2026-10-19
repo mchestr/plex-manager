@@ -366,10 +366,10 @@ gantt
 - [ ] P2.10: Twenty golden fixtures with hand-checked stats (rewind, M, due 2026-11-04)
 - [ ] P2.16: Fact and archetype goldens for the twenty fixtures (rewind, M, due 2026-11-09)
 - [x] P2.11: Provider-agnostic AI facade (rewind, M, due 2026-10-27)
-- [ ] P2.12: LLM provider settings and the admin assistant on the registry (rewind, M, due 2026-10-30)
+- [x] P2.12: LLM provider settings and the admin assistant on the registry (rewind, M, due 2026-10-30)
 - [ ] P2.13: Fonts, typesetting, Rewind format and the registry skeleton (rewind, L, due 2026-11-03)
 - [ ] P2.14: Re-measure cards on Next 16.4.2 (rewind, S, due 2026-11-04)
-- [ ] P2.15: framer-motion to motion with a global reduced-motion policy (ui, M, due 2026-10-28)
+- [x] P2.15: framer-motion to motion with a global reduced-motion policy (ui, M, due 2026-10-28)
 
 **UI foundations: tokens, fonts and primitives** (2026-10-26 to 2026-11-05)
 
