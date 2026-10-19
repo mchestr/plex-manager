@@ -31,6 +31,8 @@ import { NextResponse } from "next/server"
 
 const logger = createLogger("HTTP")
 
+const HEALTH_PATH = "/api/health"
+
 /** The only query keys the request log carries; every other key may hold a credential (SEC-54). */
 const LOGGED_QUERY_KEYS = ["year", "page", "tab"] as const
 
@@ -184,16 +186,19 @@ export async function proxy(request: NextRequest) {
 
   // Run the request within a context
   return runWithRequestContext(requestId, userId, async () => {
-    // No URL, client IP or query beyond the allow-list: the bearer segment of
-    // share and invite paths is masked (SEC-54)
-    const query = loggedQuery(request.nextUrl.searchParams)
-    logger.debug("Incoming request", {
-      method: request.method,
-      pathname: sanitizeText(request.nextUrl.pathname),
-      ...(query && { query }),
-    })
-
     const { pathname } = request.nextUrl
+
+    // No URL, client IP or query beyond the allow-list: the bearer segment of
+    // share and invite paths is masked (SEC-54). The health check, which the
+    // image's HEALTHCHECK polls every 30 s, is not logged.
+    if (pathname !== HEALTH_PATH) {
+      const query = loggedQuery(request.nextUrl.searchParams)
+      logger.debug("Incoming request", {
+        method: request.method,
+        pathname: sanitizeText(pathname),
+        ...(query && { query }),
+      })
+    }
     if (await needsMemberRedirect(request)) {
       // RSC navigations and prefetches get the same redirect; the router follows it
       const redirect = NextResponse.redirect(new URL("/subscribe", request.url))

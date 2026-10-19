@@ -232,6 +232,12 @@ describe('proxy request log (P4.16)', () => {
 
     expect(mockLogDebug).toHaveBeenCalledWith('Incoming request', { method: 'GET', pathname: '/invite/[masked]' })
   })
+
+  it('does not log the health check the image polls, and passes it through (P4.17)', async () => {
+    expectPassedThrough(await proxy(request('/api/health?probe=live')))
+
+    expect(mockLogDebug).not.toHaveBeenCalled()
+  })
 })
 
 describe('proxy x-pm-pathname header (P4.5)', () => {
@@ -301,7 +307,7 @@ describe('proxy lapsed-member redirect (P4.5, FR-51)', () => {
     expectSubscribeRedirect(await proxy(request(path)))
   })
 
-  it.each(['/subscribe', '/admin/users', '/api/wrapped/poster/1', '/auth/denied', `/wrapped/share/${TOKEN}`, '/robots.txt'])(
+  it.each(['/subscribe', '/admin/users', '/api/wrapped/poster/1', '/api/health', '/auth/denied', `/wrapped/share/${TOKEN}`, '/robots.txt'])(
     'leaves %s alone, whatever the level',
     async (path) => {
       signedIn('none')
