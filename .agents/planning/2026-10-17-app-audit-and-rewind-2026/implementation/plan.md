@@ -2355,13 +2355,24 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 
 **Demo.** Run `npx tsx scripts/rewind-probe-sources.ts --user <id> --year 2026` against the owner's Tautulli. It prints the pages, the rows kept and dropped, and the minutes, which match Tautulli's own user stats for the same dates to within a minute.
 
+**As merged** (later steps rely on these):
+- `watch-history-source.ts` exports `UpstreamService = 'tautulli' | 'overseerr' | 'plex'` and `UpstreamLimiter { run<T>(service, fn: () => Promise<T>, options?: { signal?: AbortSignal }): Promise<T> }`, which P2.5's `redisLimiter` implements; a waiter rejects once its signal aborts, and `runLimited()` turns that into `ABORTED`. `directLimiter` runs calls at once. `SourceContext` is `{ signal?, limiter }`; `RewindUser` is `{ plexUserId }`, because Tautulli's `user_id` is the plex.tv account ID.
+- Sources never throw for an upstream failure: they return `SourceResult<T>`, `{ ok: true, data }` or `{ ok: false, code, status? }`, so `fetchYear` resolves to `SourceResult<PlayEvent[]>` rather than design 7.3's bare array. Codes are the HTTP client's, `TAUTULLI_ERROR`, `ROWS_INVALID` (more than 1% of rows failed) and `PAGE_LIMIT` (a partial read is never returned).
+- The Tautulli source is `createTautulliHistorySource({ config, excludedSectionIds })` with `fetchYear`, `fetchServerYear` and `fetchLifetime`; `excludedSectionIdsSchema` parses `Config.rewindExcludedSectionIds`. A flat-array `get_history` response is one complete page.
+- Row validation is `parseRows`/`tooManyInvalid` in `sources/rows.ts`. The envelope stays parsed by `tautulliCommand`; `sources/schemas.ts` describes its `data`. `get_users`, `get_libraries` and `get_metadata` schemas are defined for P2.6 (`get_metadata` is not yet in the `TautulliCommand` union).
+- Overseerr: `findOverseerrUser(config, plexUserId, ctx)`, `fetchMemberRequests(config, overseerrUserId, window, genreCache, ctx)` and `fetchServerRequests(config, window, ctx)` (no genres); `RequestEvent` and its status mapping live in `sources/request-event.ts`. Paging uses `sort=added` and stops at the first page that reaches before the window. P0.15's enums moved to `sources/schemas.ts`; v2's `overseerr-statistics.ts` imports them from there.
+- Plex: `listSections(config, ctx)` and `fetchSectionItems(config, sectionKey, ctx)`; a TV section lists shows, and `LibraryItem.addedAt` is epoch ms.
+- The fixtures are synthetic, written to Tautulli 2.17's field names; no live instance was available to capture them from.
+- The probe runs as `npm run rewind:probe-sources -- --user <User.id> --year 2026` (the sources are server-only, so tsx needs `--conditions=react-server`). It counts pages through a counting limiter; dropped rows show as warnings with field paths. Running it against the owner's Tautulli is the owner's demo.
+- `lib/wrapped/time/zone.ts` left knip's `entry` list; its exports no module imports yet are tagged `@public` for P2.6 and P2.7.
+
 **Done when.**
-- [ ] `tautulli-history.ts` reads with `after` and `before` in the Rewind zone and `grouping=1`, and pages until `recordsFiltered` is reached.
-- [ ] Overseerr requests are paged by `requestedBy`, statuses are mapped, genres come by `tmdbId`, and users are matched by `plexId`.
-- [ ] Every response is validated in `sources/schemas.ts`, and the private fields never get past the parser.
-- [ ] One watched rule is exported, and no source calls `get_item_user_stats` or `get_home_stats`.
-- [ ] Excluded library sections are dropped in `toPlayEvent()`, and `LibraryItem` carries the content rating and section that P2.6's rating exclusions use.
-- [ ] The fixture tests use real field names and pass.
+- [x] `tautulli-history.ts` reads with `after` and `before` in the Rewind zone and `grouping=1`, and pages until `recordsFiltered` is reached.
+- [x] Overseerr requests are paged by `requestedBy`, statuses are mapped, genres come by `tmdbId`, and users are matched by `plexId`.
+- [x] Every response is validated in `sources/schemas.ts`, and the private fields never get past the parser.
+- [x] One watched rule is exported, and no source calls `get_item_user_stats` or `get_home_stats`.
+- [x] Excluded library sections are dropped in `toPlayEvent()`, and `LibraryItem` carries the content rating and section that P2.6's rating exclusions use.
+- [x] The fixture tests use real field names and pass.
 
 ### Step P2.5: Rewind queues, locks, semaphore and fail-fast Redis
 

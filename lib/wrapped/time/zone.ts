@@ -12,6 +12,10 @@
 
 import { dayKey, formatDayKey, normalizeTimeZone, wallTimeToInstant, zonedParts } from "@/lib/utils/zoned-time"
 
+/**
+ * The day key of an instant in a zone, `YYYY-MM-DD`.
+ * @public P2.7 buckets with it.
+ */
 export { dayKey }
 
 /** A half-open span of instants, `start <= ms < end`, and the zone it was built in. */
@@ -41,17 +45,26 @@ export function resolveZone(user: { timezone: string | null }, serverZone: strin
   return memberZone ? { zone: memberZone, source: "member" } : { zone: serverZone, source: "server" }
 }
 
-/** The hour, 0-23, at which `ms` falls in `zone`. */
+/**
+ * The hour, 0-23, at which `ms` falls in `zone`.
+ * @public P2.7 buckets with it.
+ */
 export function hourOf(ms: number, zone: string): number {
   return zonedParts(ms, zone).hour
 }
 
-/** The weekday of `ms` in `zone`: 0 is Sunday, 6 is Saturday. */
+/**
+ * The weekday of `ms` in `zone`: 0 is Sunday, 6 is Saturday.
+ * @public P2.7 buckets with it.
+ */
 export function weekdayOf(ms: number, zone: string): number {
   return zonedParts(ms, zone).weekday
 }
 
-/** The month of `ms` in `zone`, 1-12. */
+/**
+ * The month of `ms` in `zone`, 1-12.
+ * @public P2.7 buckets with it.
+ */
 export function monthOf(ms: number, zone: string): number {
   return zonedParts(ms, zone).month
 }
@@ -68,6 +81,8 @@ const startOf = (year: number, month: number, day: number, zone: string) =>
  * new Date(window.start).toISOString() // "2026-01-01T08:00:00.000Z"
  * new Date(window.end).toISOString()   // "2027-01-01T08:00:00.000Z"
  * ```
+ *
+ * @public P2.6 and P2.7 read whole years.
  */
 export function yearWindow(year: number, zone: string): TimeWindow {
   return { start: startOf(year, 1, 1, zone), end: startOf(year + 1, 1, 1, zone), zone }
@@ -87,6 +102,8 @@ const isLeapYear = (year: number) => new Date(Date.UTC(year, 1, 29)).getUTCMonth
 /**
  * Days the data window covers, for per-day averages: 334 during the season
  * (335 in a leap year), or the whole year after the final cut.
+ *
+ * @public P2.7 averages with it.
  */
 export function elapsedDays(year: number, { finalCut }: { finalCut: boolean }): number {
   const leap = isLeapYear(year) ? 1 : 0

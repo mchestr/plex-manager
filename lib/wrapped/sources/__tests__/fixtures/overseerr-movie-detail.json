@@ -1,0 +1,17 @@
+{
+  "id": 1001,
+  "title": "Synthetic Film",
+  "genres": [
+    {
+      "id": 878,
+      "name": "Science Fiction"
+    },
+    {
+      "id": 12,
+      "name": "Adventure"
+    }
+  ],
+  "mediaInfo": null,
+  "releaseDate": "2021-10-22",
+  "runtime": 155
+}

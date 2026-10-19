@@ -1,0 +1,221 @@
+{
+  "MediaContainer": {
+    "size": 3,
+    "totalSize": 3,
+    "offset": 0,
+    "allowSync": true,
+    "art": "/:/resources/movie-fanart.jpg",
+    "identifier": "com.plexapp.plugins.library",
+    "librarySectionID": 1,
+    "librarySectionTitle": "Films",
+    "librarySectionUUID": "00000000-0000-0000-0000-000000000001",
+    "mediaTagPrefix": "/system/bundle/media/flags/",
+    "title1": "Films",
+    "title2": "All Films",
+    "viewGroup": "movie",
+    "Metadata": [
+      {
+        "ratingKey": "60001",
+        "key": "/library/metadata/60001",
+        "guid": "plex://movie/000000000000000000000001",
+        "studio": "Synthetic Studio",
+        "type": "movie",
+        "title": "Synthetic Film 1",
+        "contentRating": "PG-13",
+        "summary": "",
+        "rating": 7.5,
+        "year": 2021,
+        "thumb": "/library/metadata/60001/thumb/1",
+        "duration": 9300000,
+        "originallyAvailableAt": "2021-10-22",
+        "addedAt": 1700000001,
+        "updatedAt": 1700000001,
+        "Media": [
+          {
+            "id": 1,
+            "duration": 9300000,
+            "videoResolution": "4k",
+            "Part": [
+              {
+                "id": 1,
+                "key": "/library/parts/1/file.mkv",
+                "size": 55000000000,
+                "file": "/media/movies/film.mkv"
+              }
+            ]
+          }
+        ],
+        "Genre": [
+          {
+            "tag": "Science Fiction"
+          },
+          {
+            "tag": "Adventure"
+          }
+        ],
+        "Director": [
+          {
+            "tag": "Director 1"
+          }
+        ],
+        "Role": [
+          {
+            "tag": "Actor 0"
+          },
+          {
+            "tag": "Actor 1"
+          },
+          {
+            "tag": "Actor 2"
+          },
+          {
+            "tag": "Actor 3"
+          },
+          {
+            "tag": "Actor 4"
+          },
+          {
+            "tag": "Actor 5"
+          },
+          {
+            "tag": "Actor 6"
+          },
+          {
+            "tag": "Actor 7"
+          },
+          {
+            "tag": "Actor 8"
+          },
+          {
+            "tag": "Actor 9"
+          },
+          {
+            "tag": "Actor 10"
+          },
+          {
+            "tag": "Actor 11"
+          }
+        ],
+        "Guid": [
+          {
+            "id": "imdb://tt0000001"
+          },
+          {
+            "id": "tmdb://1001"
+          }
+        ]
+      },
+      {
+        "ratingKey": "60002",
+        "key": "/library/metadata/60002",
+        "guid": "plex://movie/000000000000000000000002",
+        "studio": "Synthetic Studio",
+        "type": "movie",
+        "title": "Synthetic Film 2",
+        "contentRating": "R",
+        "summary": "",
+        "rating": 7.5,
+        "year": 2021,
+        "thumb": "/library/metadata/60002/thumb/1",
+        "duration": 9300000,
+        "originallyAvailableAt": "2021-10-22",
+        "addedAt": 1700000002,
+        "updatedAt": 1700000002,
+        "Media": [
+          {
+            "id": 2,
+            "duration": 9300000,
+            "videoResolution": "4k",
+            "Part": [
+              {
+                "id": 2,
+                "key": "/library/parts/2/file.mkv",
+                "size": 55000000000,
+                "file": "/media/movies/film.mkv"
+              }
+            ]
+          }
+        ],
+        "Genre": [
+          {
+            "tag": "Science Fiction"
+          },
+          {
+            "tag": "Adventure"
+          }
+        ],
+        "Director": [
+          {
+            "tag": "Director 2"
+          }
+        ],
+        "Role": [
+          {
+            "tag": "Actor 0"
+          },
+          {
+            "tag": "Actor 1"
+          },
+          {
+            "tag": "Actor 2"
+          }
+        ],
+        "Guid": [
+          {
+            "id": "imdb://tt0000002"
+          },
+          {
+            "id": "tmdb://1002"
+          }
+        ]
+      },
+      {
+        "ratingKey": "60003",
+        "key": "/library/metadata/60003",
+        "guid": "plex://movie/000000000000000000000003",
+        "studio": "Synthetic Studio",
+        "type": "movie",
+        "title": "Synthetic Film 3",
+        "summary": "",
+        "rating": 7.5,
+        "year": 2021,
+        "thumb": "/library/metadata/60003/thumb/1",
+        "duration": 9300000,
+        "originallyAvailableAt": "2021-10-22",
+        "addedAt": 1700000003,
+        "updatedAt": 1700000003,
+        "Media": [
+          {
+            "id": 3,
+            "duration": 9300000,
+            "videoResolution": "4k",
+            "Part": [
+              {
+                "id": 3,
+                "key": "/library/parts/3/file.mkv",
+                "size": 55000000000,
+                "file": "/media/movies/film.mkv"
+              }
+            ]
+          }
+        ],
+        "Genre": [
+          {
+            "tag": "Science Fiction"
+          },
+          {
+            "tag": "Adventure"
+          }
+        ],
+        "Guid": [
+          {
+            "id": "imdb://tt0000003"
+          },
+          {
+            "id": "tmdb://1003"
+          }
+        ]
+      }
+    ]
+  }
+}
