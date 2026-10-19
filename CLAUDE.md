@@ -105,41 +105,40 @@ export function ClientComponent() {
 ```
 
 ### Server Actions
+Build every action with `publicAction`, `memberAction` or `adminAction` from
+`@/lib/actions/define-action`. The helper checks the session, parses the input
+with Zod (`VALIDATION` with `fieldErrors`), spends an optional named rate limit,
+runs the handler and maps a thrown error to `INTERNAL` without its text. Results
+are `ActionResult<T>` (`@/lib/actions/result`):
+`{ success: true, data }` or `{ success: false, code, error }`.
+
 ```typescript
 'use server'
 
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 
-const schema = z.object({
-  field: z.string().min(1)
+import { memberAction } from '@/lib/actions/define-action'
+import { fail, ok } from '@/lib/actions/result'
+
+export const renameThing = memberAction({
+  input: z.object({ name: z.string().min(1).max(80) }),
+  rateLimit: { name: 'checkout' },           // optional; keyed by user id (public actions: by address)
+  fallbackError: 'Could not rename it',      // copy for a thrown error
+  handler: async ({ name }, { userId }) => {
+    const thing = await prisma.thing.findUnique({ where: { userId } })
+    if (!thing) return fail('NOT_FOUND', 'Nothing to rename')
+
+    await prisma.thing.update({ where: { userId }, data: { name } })
+    revalidatePath('/path')
+    return ok(null)
+  },
 })
-
-export async function myAction(formData: FormData) {
-  // 1. Validate input
-  const validated = schema.safeParse({
-    field: formData.get('field')
-  })
-
-  if (!validated.success) {
-    return { error: 'Invalid input' }
-  }
-
-  // 2. Auth check
-  const session = await getServerSession()
-  if (!session) {
-    return { error: 'Unauthorized' }
-  }
-
-  // 3. Perform operation
-  await db.update(validated.data)
-
-  // 4. Revalidate cache
-  revalidatePath('/path')
-
-  return { success: true }
-}
 ```
+
+- Never return `error.message`; ESLint bans `error instanceof Error ? error.message : ...` in `actions/` and `app/api/`.
+- Route handlers validate params with `parseRouteParams` / `parseSearchParams` (`@/lib/actions/route`) and the schemas in `@/lib/validations/params`.
+- Admin modules still on `requireAdmin()` move onto `adminAction` in P11.5.
 
 ### Styling
 - **Tailwind utility classes** - No custom CSS unless absolutely necessary
@@ -172,19 +171,9 @@ export function cn(...inputs: ClassValue[]) {
 - **Type-safe errors** - Return error objects, don't throw in Server Actions
 
 ```typescript
-// Good: Return errors
-export async function action() {
-  try {
-    await operation()
-    return { success: true }
-  } catch (error) {
-    return { error: 'Operation failed' }
-  }
-}
-
-// Component usage
-const result = await action()
-if (result.error) {
+// The action helper returns a coded failure; it never throws
+const result = await renameThing({ name })
+if (!result.success) {
   showToast({ type: 'error', message: result.error })
 }
 ```
