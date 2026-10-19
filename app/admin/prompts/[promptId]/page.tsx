@@ -2,6 +2,7 @@ import { getPromptTemplate } from "@/actions/prompts"
 import { ExpandablePrompt } from "@/components/admin/prompts/expandable-prompt"
 import Link from "next/link"
 import { notFound } from "next/navigation"
+import { getFormat } from "@/lib/settings/app-settings"
 import { PromptTemplateActions } from "@/components/admin/prompts/prompt-template-actions"
 
 export const dynamic = 'force-dynamic'
@@ -12,23 +13,12 @@ export default async function PromptTemplatePage({
   params: Promise<{ promptId: string }>
 }) {
   const { promptId } = await params
-  const result = await getPromptTemplate(promptId)
+  const [result, f] = await Promise.all([getPromptTemplate(promptId), getFormat()])
   if (!result.success || !result.data) {
     notFound()
   }
 
   const template = result.data
-
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    })
-  }
 
   return (
     <div className="p-4 sm:p-6">
@@ -78,13 +68,13 @@ export default async function PromptTemplatePage({
             <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
               <div className="text-sm text-slate-400 mb-1">Created</div>
               <div className="text-sm text-white">
-                {formatDate(template.createdAt)}
+                {f.dateTime(template.createdAt, { zoneLabel: true })}
               </div>
             </div>
             <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
               <div className="text-sm text-slate-400 mb-1">Last Updated</div>
               <div className="text-sm text-white">
-                {formatDate(template.updatedAt)}
+                {f.dateTime(template.updatedAt, { zoneLabel: true })}
               </div>
             </div>
           </div>

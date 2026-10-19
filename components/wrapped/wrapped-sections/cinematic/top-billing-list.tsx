@@ -2,7 +2,7 @@
 
 import { motion } from "motion/react"
 
-import { formatWatchTime } from "@/lib/utils/time-formatting"
+import { formatDuration } from "@/lib/utils/format"
 import { PosterImage } from "@/components/wrapped/cinematic/poster-image"
 
 interface BillingEntry {
@@ -53,7 +53,7 @@ export function TopBillingList({ entries, shareToken }: TopBillingListProps) {
         </p>
         <p className="text-xs sm:text-sm text-taupe mt-2 uppercase tracking-[0.2em]">
           {headliner.year ? `${headliner.year} · ` : ""}
-          {formatWatchTime(headliner.watchTime)}
+          {formatDuration(headliner.watchTime, "long", { largestUnit: "day" })}
           {headliner.playCount && headliner.playCount > 1 ? ` · ${headliner.playCount} screenings` : ""}
           {headliner.episodesWatched ? ` · ${headliner.episodesWatched} episodes` : ""}
         </p>
@@ -86,7 +86,7 @@ export function TopBillingList({ entries, shareToken }: TopBillingListProps) {
                 {entry.year ? <span className="text-taupe text-sm"> ({entry.year})</span> : null}
               </span>
               <span className="text-taupe text-xs sm:text-sm whitespace-nowrap">
-                {formatWatchTime(entry.watchTime)}
+                {formatDuration(entry.watchTime, "long", { largestUnit: "day" })}
                 {entry.playCount && entry.playCount > 1 ? ` · ×${entry.playCount}` : ""}
                 {entry.episodesWatched ? ` · ${entry.episodesWatched} ep` : ""}
               </span>

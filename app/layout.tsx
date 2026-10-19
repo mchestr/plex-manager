@@ -1,6 +1,8 @@
 import "@/app/globals.css";
+import { getAppSettings } from "@/lib/settings/app-settings";
 import { Providers } from "@/lib/providers";
 import type { Metadata, Viewport } from "next";
+import { connection } from "next/server";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -19,15 +21,20 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Every page formats in the stored zone and locale, so none prerenders at
+  // build time, when there is no database.
+  await connection();
+  const format = await getAppSettings();
+
   return (
     <html lang="en">
       <body>
-        <Providers>
+        <Providers format={format}>
           {children}
         </Providers>
       </body>

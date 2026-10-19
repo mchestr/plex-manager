@@ -1,6 +1,7 @@
 "use client"
 
-import { formatRelativeTime } from "@/lib/utils/time-formatting"
+import { Time } from "@/components/ui/time"
+import { useFormat } from "@/lib/format-context"
 
 interface ActivityLog {
   id: string
@@ -102,6 +103,7 @@ function getCommandTypeBadge(type: string) {
 }
 
 export function DiscordActivityTable({ logs }: DiscordActivityTableProps) {
+  const f = useFormat()
   if (logs.length === 0) {
     return (
       <div className="p-8 text-center text-slate-500">
@@ -144,10 +146,10 @@ export function DiscordActivityTable({ logs }: DiscordActivityTableProps) {
               <td className="px-4 py-3 text-sm text-slate-300">
                 <div className="flex flex-col">
                   <span className="text-slate-300">
-                    {formatRelativeTime(log.createdAt)}
+                    <Time value={log.createdAt} />
                   </span>
                   <span className="text-xs text-slate-500">
-                    {new Date(log.createdAt).toLocaleTimeString()}
+                    {f.time(log.createdAt)}
                   </span>
                 </div>
               </td>

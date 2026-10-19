@@ -1,5 +1,6 @@
 "use client"
 
+import { useFormat } from "@/lib/format-context"
 import { QueueStats as QueueStatsType } from "@/lib/queue/types"
 
 interface QueueStatsProps {
@@ -7,6 +8,7 @@ interface QueueStatsProps {
 }
 
 export function QueueStats({ stats }: QueueStatsProps) {
+  const f = useFormat()
   const statCards = [
     {
       label: "Waiting",
@@ -50,7 +52,7 @@ export function QueueStats({ stats }: QueueStatsProps) {
         >
           <div className="text-sm text-slate-400 mb-1">{stat.label}</div>
           <div className={`text-3xl font-bold ${stat.color}`}>
-            {stat.value.toLocaleString()}
+            {f.number(stat.value)}
           </div>
           <div className="text-xs text-slate-500 mt-1">{stat.description}</div>
         </div>

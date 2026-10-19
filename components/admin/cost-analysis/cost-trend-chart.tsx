@@ -12,6 +12,8 @@ import {
 } from "chart.js"
 import { Line } from "react-chartjs-2"
 
+import { useFormat } from "@/lib/format-context"
+
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -33,6 +35,7 @@ interface CostTrendChartProps {
 }
 
 export function CostTrendChart({ data }: CostTrendChartProps) {
+  const f = useFormat()
   if (data.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-slate-500 text-sm">
@@ -45,10 +48,7 @@ export function CostTrendChart({ data }: CostTrendChartProps) {
   const sortedData = [...data].sort((a, b) => a.date.localeCompare(b.date))
 
   const labels = sortedData.map((point) =>
-    new Date(point.date).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    })
+    f.dayKey(point.date, "day-month-short")
   )
 
   const chartData = {
@@ -100,9 +100,9 @@ export function CostTrendChart({ data }: CostTrendChartProps) {
             const index = context.dataIndex
             const point = sortedData[index]
             return [
-              `Cost: $${point.cost.toFixed(4)}`,
-              `Requests: ${point.requests.toLocaleString()}`,
-              `Tokens: ${point.tokens.toLocaleString()}`,
+              `Cost: ${f.money(point.cost)}`,
+              `Requests: ${f.number(point.requests)}`,
+              `Tokens: ${f.number(point.tokens)}`,
             ]
           },
         },
@@ -132,7 +132,7 @@ export function CostTrendChart({ data }: CostTrendChartProps) {
           font: {
             size: 11,
           },
-          callback: (value) => `$${Number(value).toFixed(2)}`,
+          callback: (value) => f.money(Number(value)),
         },
         grid: {
           color: "rgba(71, 85, 105, 0.3)",

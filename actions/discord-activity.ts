@@ -16,7 +16,7 @@ import {
   type GetCommandLogsParams,
 } from "@/lib/discord/audit"
 import { prisma } from "@/lib/prisma"
-import { toEndOfDayExclusive } from "@/lib/utils/formatters"
+import { toEndOfDayExclusive } from "@/lib/utils/format"
 import { createLogger } from "@/lib/utils/logger"
 import type {
   DiscordCommandType,

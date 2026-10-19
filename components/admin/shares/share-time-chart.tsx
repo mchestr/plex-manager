@@ -12,6 +12,8 @@ import {
 } from "chart.js"
 import { Bar } from "react-chartjs-2"
 
+import { useFormat } from "@/lib/format-context"
+
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -26,6 +28,7 @@ interface ShareTimeChartProps {
 }
 
 export function ShareTimeChart({ data, height = 250 }: ShareTimeChartProps) {
+  const f = useFormat()
   if (data.length === 0) {
     return (
       <div
@@ -39,10 +42,7 @@ export function ShareTimeChart({ data, height = 250 }: ShareTimeChartProps) {
 
   // Format data for Chart.js
   const labels = data.map((point) =>
-    new Date(point.date).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    })
+    f.dayKey(point.date, "day-month-short")
   )
 
   const chartData = {

@@ -212,9 +212,9 @@ describe('InvitesPageClient', () => {
       render(<InvitesPageClient />)
 
       await waitFor(() => {
-        const firstDate = screen.getAllByText(new Date('2025-01-01').toLocaleDateString())
+        const firstDate = screen.getAllByText('Jan 1, 2025')
         expect(firstDate.length).toBeGreaterThan(0)
-        const secondDate = screen.getAllByText(new Date('2025-01-15').toLocaleDateString())
+        const secondDate = screen.getAllByText('Jan 15, 2025')
         expect(secondDate.length).toBeGreaterThan(0)
       })
     })

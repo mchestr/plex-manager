@@ -1,3 +1,5 @@
+import { formatResolution } from "@/lib/utils/format"
+
 interface RawPlexSessionsResponse {
   MediaContainer?: {
     size?: number
@@ -183,18 +185,6 @@ function collectNotes(item: RawPlexSession): string[] {
   }
 
   return notes
-}
-
-function formatResolution(value: string | number): string {
-  if (typeof value === "number") {
-    return `${value}p`
-  }
-
-  const trimmed = value.trim()
-  if (/^\d+$/.test(trimmed)) {
-    return `${trimmed}p`
-  }
-  return trimmed
 }
 
 function getMediaContainer(raw: unknown): RawPlexSessionsResponse["MediaContainer"] | undefined {

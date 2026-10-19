@@ -17,6 +17,7 @@ import { DiscordContextMetrics } from "@/components/admin/discord/discord-contex
 import { DiscordErrorAnalysis } from "@/components/admin/discord/discord-error-analysis"
 import { DiscordSelectionStats } from "@/components/admin/discord/discord-selection-stats"
 import { DiscordMarkedMedia } from "@/components/admin/discord/discord-marked-media"
+import { getFormat } from "@/lib/settings/app-settings"
 import { Suspense } from "react"
 
 const MARKED_MEDIA_PAGE_SIZE = 25
@@ -52,7 +53,7 @@ export default async function DiscordDashboardPage({
   const marksOffset = Math.max(0, parseInt(params.marksOffset ?? "0", 10) || 0)
 
   // Fetch dashboard data
-  const [dashboardResult, logsResult, detailedResult, markedMediaResult] =
+  const [dashboardResult, logsResult, detailedResult, markedMediaResult, f] =
     await Promise.all([
       getDiscordDashboardData({ startDate, endDate }),
       getDiscordActivityLogs({ limit: 20 }),
@@ -66,6 +67,7 @@ export default async function DiscordDashboardPage({
         limit: MARKED_MEDIA_PAGE_SIZE,
         offset: marksOffset,
       }),
+      getFormat(),
     ])
 
   const dashboard = dashboardResult.success ? dashboardResult.data : null
@@ -76,17 +78,7 @@ export default async function DiscordDashboardPage({
 
   // Format date range display
   const formatDateRange = () => {
-    const start = new Date(startDate).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    })
-    const end = new Date(endDate).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    })
-    return `${start} - ${end}`
+    return `${f.dayKey(startDate)} - ${f.dayKey(endDate)}`
   }
 
   return (
@@ -128,7 +120,7 @@ export default async function DiscordDashboardPage({
           <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
             <div className="text-sm text-slate-400 mb-1">Total Commands</div>
             <div className="text-3xl font-bold text-cyan-400">
-              {dashboard?.summary?.totalCommands?.toLocaleString() ?? 0}
+              {f.number(dashboard?.summary?.totalCommands ?? 0)}
             </div>
             <div className="text-xs text-slate-500 mt-1">
               In selected period
@@ -155,7 +147,7 @@ export default async function DiscordDashboardPage({
           <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
             <div className="text-sm text-slate-400 mb-1">Unique Users</div>
             <div className="text-3xl font-bold text-yellow-400">
-              {dashboard?.summary?.uniqueUsers?.toLocaleString() ?? 0}
+              {f.number(dashboard?.summary?.uniqueUsers ?? 0)}
             </div>
             <div className="text-xs text-slate-500 mt-1">
               Users who used the bot
@@ -229,7 +221,7 @@ export default async function DiscordDashboardPage({
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right text-sm font-medium text-cyan-400">
-                        {item.count.toLocaleString()}
+                        {f.number(item.count)}
                       </td>
                       <td className="px-4 py-3 text-right text-sm text-slate-300">
                         {dashboard?.summary?.totalCommands
@@ -347,7 +339,7 @@ export default async function DiscordDashboardPage({
               Recent Activity
             </h2>
             <span className="text-sm text-slate-400">
-              {logsTotal.toLocaleString()} total commands
+              {f.number(logsTotal)} total commands
             </span>
           </div>
           <DiscordActivityTable logs={logs} />

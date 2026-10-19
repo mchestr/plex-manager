@@ -10,7 +10,8 @@
     "lib/queue/rewind-infra.ts!",
     "lib/rewind/infra-copy.ts!",
     "scripts/codemods/*.mjs!",
-    "lib/wrapped/stats/*.ts!"
+    "lib/wrapped/stats/*.ts!",
+    "lib/utils/format.ts!"
   ],
   "project": [
     "**/*.{js,mjs,cjs,ts,tsx}!",
@@ -24,6 +25,7 @@
   "ignore": [
     "lib/generated/**",
     ".agents/**",
+    "eslint/restricted-syntax.mjs",
     ".claude/worktrees/**"
   ],
   "ignoreDependencies": [

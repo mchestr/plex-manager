@@ -3,6 +3,7 @@ import { LlmTextRemovedNotice } from "@/components/admin/llm-usage/llm-text-remo
 import { HistoricalWrappedSelectorHeader } from "@/components/admin/wrapped/historical-wrapped-selector-header"
 import { WrappedViewerWrapper } from "@/components/wrapped/wrapped-viewer-wrapper"
 import { requireAdmin } from "@/lib/admin"
+import { getFormat } from "@/lib/settings/app-settings"
 import Link from "next/link"
 
 // Force dynamic rendering to prevent caching
@@ -16,7 +17,7 @@ export default async function HistoricalWrappedPage({
   await requireAdmin()
   const { wrappedId, llmUsageId } = await params
 
-  const historicalData = await getHistoricalWrappedData(llmUsageId, wrappedId)
+  const [historicalData, f] = await Promise.all([getHistoricalWrappedData(llmUsageId, wrappedId), getFormat()])
 
   if (!historicalData) {
     return (
@@ -78,16 +79,6 @@ export default async function HistoricalWrappedPage({
 
   const { llmUsage, userId, userName, year } = historicalData
 
-  const formatDate = (date: Date | string) => {
-    return new Date(date).toLocaleString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    })
-  }
-
   return (
     <main className="min-h-screen">
       <div className="fixed top-0 left-0 right-0 z-50 bg-slate-900/90 backdrop-blur-sm border-b border-slate-700">
@@ -118,7 +109,7 @@ export default async function HistoricalWrappedPage({
                   {userName}&apos;s {year} Wrapped
                 </h1>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Historical Version • {formatDate(llmUsage.createdAt)} • {llmUsage.provider}/{llmUsage.model || "unknown"}
+                  Historical Version • {f.dateTime(llmUsage.createdAt, { zoneLabel: true })} • {llmUsage.provider}/{llmUsage.model || "unknown"}
                 </p>
               </div>
             </div>

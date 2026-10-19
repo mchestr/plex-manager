@@ -5,7 +5,7 @@ import { loop } from "@/lib/utils/motion-loop"
 import { CountUp } from "@/components/ui/count-up"
 import { FormattedText } from "@/components/shared/formatted-text"
 import { SectionHeader } from "@/components/wrapped/wrapped-sections/section-header"
-import { formatWatchTime } from "@/components/wrapped/wrapped-sections/utils"
+import { formatDuration } from "@/lib/utils/format"
 import { WrappedData, WrappedSection } from "@/types/wrapped"
 
 interface ShowsBreakdownSectionProps {
@@ -50,7 +50,7 @@ export function ShowsBreakdownSection({ section, wrappedData, sectionIndex }: Sh
         </div>
         <div className="relative text-xl text-slate-300 mb-4">Shows Watched</div>
         <div className="relative text-lg text-slate-400">
-          {formatWatchTime(wrappedData.statistics.totalWatchTime.shows)} of show content
+          {formatDuration(wrappedData.statistics.totalWatchTime.shows, "long", { largestUnit: "day" })} of show content
         </div>
       </motion.div>
       <motion.p

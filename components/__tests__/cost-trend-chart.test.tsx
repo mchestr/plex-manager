@@ -331,38 +331,13 @@ describe('CostTrendChart', () => {
       expect(parsedData.datasets[0].data).toEqual([-50])
     })
 
-    it('should handle invalid date strings gracefully', () => {
-      const invalidDateData = [
-        {
-          date: 'invalid-date',
-          cost: 100,
-          requests: 1000,
-          tokens: 50000,
-        },
-      ]
-
-      render(<CostTrendChart data={invalidDateData} />)
-
-      // Should not crash
-      expect(screen.getByTestId('line-chart')).toBeInTheDocument()
-    })
-
-    it('should handle dates in different formats', () => {
-      const differentFormatData = [
-        {
-          date: '2024-01-15T10:30:00Z',
-          cost: 45.5,
-          requests: 500,
-          tokens: 25000,
-        },
-      ]
-
-      render(<CostTrendChart data={differentFormatData} />)
+    it('labels a day key as that day, with no UTC shift', () => {
+      render(<CostTrendChart data={[{ date: '2024-01-15', cost: 45.5, requests: 500, tokens: 25000 }]} />)
 
       const chartData = screen.getByTestId('chart-data')
       const parsedData = JSON.parse(chartData.textContent || '{}')
 
-      expect(parsedData.labels[0]).toMatch(/Jan 1\d/)
+      expect(parsedData.labels[0]).toBe('Jan 15')
     })
 
     it('should handle duplicate dates', () => {

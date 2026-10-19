@@ -331,7 +331,7 @@ describe("TestConfiguration", () => {
       render(<TestConfiguration {...mockProps} costEstimate={costEstimate} />)
 
       expect(screen.getByText("Estimated Cost")).toBeInTheDocument()
-      expect(screen.getByText("$0.0234")).toBeInTheDocument()
+      expect(screen.getByText("$0.023")).toBeInTheDocument()
     })
 
     it("should display actual cost when token usage is available", () => {
@@ -345,7 +345,7 @@ describe("TestConfiguration", () => {
       render(<TestConfiguration {...mockProps} tokenUsage={tokenUsage} />)
 
       expect(screen.getByText("Actual Cost")).toBeInTheDocument()
-      expect(screen.getByText("$0.0234")).toBeInTheDocument()
+      expect(screen.getByText("$0.023")).toBeInTheDocument()
     })
 
     it("should show confirmation message for actual cost", () => {

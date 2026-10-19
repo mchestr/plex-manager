@@ -6,7 +6,7 @@ import { z } from "zod"
 
 import { serviceFetch } from "@/lib/connections/http"
 import { createLogger } from "@/lib/utils/logger"
-import { formatBytes } from "@/lib/utils/time-formatting"
+import { formatBytes } from "@/lib/utils/format"
 import type { PlexConfig, TautulliConfig, ServerStatisticsData } from "./statistics-types"
 import { fetchTautulliLibraryCounts } from "./tautulli-statistics"
 

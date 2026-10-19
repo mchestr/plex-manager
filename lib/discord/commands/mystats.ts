@@ -36,7 +36,7 @@ import type { DiscordCommandType } from "@/lib/generated/prisma"
 import { sanitizeDiscordResponse } from "@/lib/discord/chat-safety"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
-import { formatWatchTime } from "@/lib/utils/time-formatting"
+import { formatDuration } from "@/lib/utils/format"
 import { fetchTautulliStatistics } from "@/lib/wrapped/tautulli-statistics"
 import type { TautulliStatisticsData } from "@/lib/wrapped/statistics-types"
 import type { InteractionContext, SlashCommand } from "./registry"
@@ -71,7 +71,7 @@ function buildStatsEmbed(stats: TautulliStatisticsData): EmbedBuilder {
   const embed = new EmbedBuilder()
     .setTitle("📊 Your Watch Stats")
     .setDescription(
-      `You've watched **${scrub(formatWatchTime(stats.totalWatchTime))}** this year.`
+      `You've watched **${scrub(formatDuration(stats.totalWatchTime, "long", { largestUnit: "day" }))}** this year.`
     )
     .addFields(
       { name: "🎬 Movies", value: `${stats.moviesWatched}`, inline: true },

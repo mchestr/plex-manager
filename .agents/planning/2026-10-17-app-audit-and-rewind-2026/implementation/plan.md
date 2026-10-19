@@ -3539,11 +3539,23 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 
 **Demo.** Set `Config.timezone` to Europe/Berlin, and the browser to de-DE in America/Los_Angeles. `/admin/announcements` and the conversation page load with no hydration warning; numbers group the same (in `Config.locale`) in the KPI tile and the tooltip; and an announcement from 20:00 Berlin time last night reads "yesterday".
 
+**As merged** (P2.13 and later steps rely on these):
+- `serverZone()` stays in the server-only `lib/utils/server-zone.ts` (P2.2), because `format.ts` must stay client-safe for `<Time>`; `getAppSettings()` takes the zone from it.
+- `lib/utils/format.ts` functions take the settings last: `formatDate(d, style, { timeZone, locale })`, `formatMoney(usd, mode, { locale })`, `formatRelative(d, { now, timeZone, locale })`. Extra exports: `formatTime(d, settings)`, the date style `day-month-short` ("Oct 11", chart axes), `formatDuration`'s `smallestUnit` option (needed to reproduce `formatWatchTimeHours`, which prints "0 hours", not minutes) and `locale` option (grouping; default en-US), and `bindFormat(settings)`, which returns `f.number`, `f.money`, `f.tokens`, `f.date`, `f.time`, `f.dateTime`, `f.dayKey`, `f.relative`, `f.percent`, `f.duration` and `f.settings`. Long durations join with ", " ("26 hours, 10 minutes"), as v2 did. `formatPercent` takes a ratio. Prose money below $1 keeps 2 decimals from $0.10 ("$0.50"). `formatRelative` says "now" under 10 seconds, uses elapsed seconds, minutes and hours within the same calendar day, then calendar days, months and years.
+- Server Components call `await getFormat()` (`lib/settings/app-settings.ts`); client components call `useFormat()` from `lib/format-context.tsx` (default UTC and en-US outside the provider, so isolated tests render). `getAppSettings()` falls back to `TZ` and en-US when the database is unreachable. `updateServerTimeZone` calls `updateTag('app-settings')` (Next 16's server-action form of `revalidateTag`); P7.12's locale save must do the same.
+- The root layout awaits `connection()`, so every route is dynamic (the build lists no static pages).
+- The v2 call sites call `formatDuration(m, 'long', { largestUnit: 'day' })` directly; `wrapped-sections/utils.ts` is gone.
+- The home page decides the six-month rule (`memberLongEnough`) with `calendarMonthsBetween` in the server zone; `WrappedCard` takes `memberLongEnough` instead of `memberSince`, and `AnnouncementsCard` takes the server's `now`, so its relative dates hydrate unchanged ("Yesterday").
+- P3.4 had not merged, so this step created `eslint/restricted-syntax.mjs` (`formatting` selectors, `restrictedSyntaxBlocks`) and `eslint/__tests__/restricted-syntax.test.ts`; P3.4 adds its arrays there. The bans cover every `toLocaleString`/`toLocaleDateString`/`toLocaleTimeString` call (not only bare ones) and `toFixed` after a `$` in a template literal or JSX text. The remaining warnings are in `components/wrapped/**`, `lib/wrapped/prompt-template.ts` and `actions/chatbot/executors/media-marking.ts` (GAP-44, P11.17).
+- `lib/utils/format.ts` is a knip entry while some exports are only called through `bindFormat`; `eslint/restricted-syntax.mjs` is in knip's `ignore`. `npm run test:tz` runs in the unit-test CI job.
+- `e2e/hydration.spec.ts` also matches React's minified errors #418, #423 and #425, because CI runs E2E on a production build. The cost-analysis "Period" header now shows the selected end date (GAP-42's quick fix), and the chart axes format the `YYYY-MM-DD` keys from their parts.
+- Visual baselines: all 38 desktop and mobile screens still match locally. Text did change on covered screens (money below $1 at 3 decimals on LLM usage, users and user detail; zone-labelled timestamps), within the comparison threshold, so no baseline was regenerated. The `/admin/shares` axe count of `color-contrast|incomplete` fell from 47 to 46 and its baseline was lowered.
+
 **Done when.**
-- [ ] `lib/utils/format.ts`, `lib/settings/app-settings.ts` and `<Time>` exist, and `formatters.ts`, `time-formatting.ts`, the shims and the local copies are deleted.
-- [ ] Server and client format in `Config.timezone` and `Config.locale`.
-- [ ] The hydration spec passes, and the zone and locale tests pass.
-- [ ] The lint bans are on for `app/` and `components/`.
+- [x] `lib/utils/format.ts`, `lib/settings/app-settings.ts` and `<Time>` exist, and `formatters.ts`, `time-formatting.ts`, the shims and the local copies are deleted.
+- [x] Server and client format in `Config.timezone` and `Config.locale`.
+- [x] The hydration spec passes, and the zone and locale tests pass.
+- [x] The lint bans are on for `app/` and `components/`.
 
 ---
 

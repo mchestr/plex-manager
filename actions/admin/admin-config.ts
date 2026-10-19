@@ -2,13 +2,14 @@
 
 import { requireAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/prisma"
+import { APP_SETTINGS_TAG } from "@/lib/settings/app-settings"
 import { parseStripeLibrarySectionIds } from "@/lib/stripe/config"
 import { clearOfferedPricesCache } from "@/lib/stripe/prices"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { createLogger } from "@/lib/utils/logger"
 import { normalizeTimeZone } from "@/lib/utils/zoned-time"
 import { DEFAULT_SEASON, getSeasonState, parseMonthDay, seasonStateAt } from "@/lib/wrapped/season"
-import { revalidatePath } from "next/cache"
+import { revalidatePath, updateTag } from "next/cache"
 import { z } from "zod"
 
 const logger = createLogger("ADMIN")
@@ -233,6 +234,7 @@ export async function updateServerTimeZone(timezone: string) {
       to: zone,
     })
     // Every page that shows a time or the season reads the zone
+    updateTag(APP_SETTINGS_TAG)
     revalidatePath("/", "layout")
 
     return { success: true, timezone: zone }

@@ -12,6 +12,8 @@ import {
 } from "chart.js"
 import { Line } from "react-chartjs-2"
 
+import { useFormat } from "@/lib/format-context"
+
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -33,6 +35,7 @@ interface DiscordTrendChartProps {
 }
 
 export function DiscordTrendChart({ data }: DiscordTrendChartProps) {
+  const f = useFormat()
   if (data.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-slate-500 text-sm">
@@ -45,10 +48,7 @@ export function DiscordTrendChart({ data }: DiscordTrendChartProps) {
   const sortedData = [...data].sort((a, b) => a.date.localeCompare(b.date))
 
   const labels = sortedData.map((point) =>
-    new Date(point.date).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    })
+    f.dayKey(point.date, "day-month-short")
   )
 
   const chartData = {

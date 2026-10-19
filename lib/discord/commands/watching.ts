@@ -34,6 +34,7 @@ import type { DiscordCommandType } from "@/lib/generated/prisma"
 import { getPlexSessions } from "@/lib/connections/plex"
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
 import { sanitizeDiscordResponse } from "@/lib/discord/chat-safety"
+import { formatResolution } from "@/lib/utils/format"
 import { createLogger } from "@/lib/utils/logger"
 import type { InteractionContext, SlashCommand } from "./registry"
 import { requireLinkedUser } from "./require-linked-user"
@@ -176,11 +177,6 @@ function formatStreamDetail(session: PlexSession): string {
   }
 
   return lines.length > 0 ? lines.join("\n") : "Streaming"
-}
-
-/** @internal */
-function formatResolution(value: string): string {
-  return /^\d+$/.test(value) ? `${value}p` : value
 }
 
 /**

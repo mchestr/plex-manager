@@ -9,6 +9,7 @@ import { StripeSettingsForm } from "@/components/admin/settings/stripe-settings-
 import { WatchlistSyncSettings } from "@/components/admin/settings/watchlist-sync-settings"
 import { WrappedSettingsForm } from "@/components/admin/settings/wrapped-settings-form"
 import { getBaseUrl } from "@/lib/env"
+import { getFormat } from "@/lib/settings/app-settings"
 import { serverZone } from "@/lib/utils/server-zone"
 import { getSeasonState } from "@/lib/wrapped/season"
 
@@ -61,7 +62,7 @@ function FeatureStatusBadge({ featureName, enabled }: FeatureStatusBadgeProps) {
 export default async function SettingsPage() {
   const settings = await getAdminSettings()
   const stripeConfig = await getStripeConfig()
-  const [season, zone] = await Promise.all([getSeasonState(), serverZone()])
+  const [season, zone, f] = await Promise.all([getSeasonState(), serverZone(), getFormat()])
   const baseUrl = getBaseUrl()
   const discordPortalUrl = `${baseUrl}/discord/link`
   const nodeVersion = process.version
@@ -434,7 +435,7 @@ export default async function SettingsPage() {
                     <div className="text-xs font-medium text-slate-400 mb-1">Last Config Update</div>
                     <div className="text-sm text-slate-300" data-testid="settings-config-updated-timestamp">
                       {settings.config.updatedAt
-                        ? new Date(settings.config.updatedAt).toLocaleString()
+                        ? f.dateTime(settings.config.updatedAt, { zoneLabel: true })
                         : "Never"}
                     </div>
                   </div>

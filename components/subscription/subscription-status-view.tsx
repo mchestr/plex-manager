@@ -7,24 +7,7 @@ import { Card } from "@/components/ui/card"
 import { authOptions } from "@/lib/auth"
 import { SubscriptionStatus } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
-
-/**
- * Formats a subscription period-end date for display, tolerating an absent value.
- *
- * Returns `null` when the date is missing so callers can render a friendly
- * fallback instead of crashing (FR-15 — absent period-end handled gracefully).
- */
-function formatPeriodEnd(date: Date | null): string | null {
-  if (!date) {
-    return null
-  }
-
-  return new Intl.DateTimeFormat(undefined, {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  }).format(date)
-}
+import { getFormat } from "@/lib/settings/app-settings"
 
 /** Maps a subscription status to a {@link Badge} tone + human label. */
 function statusBadge(status: SubscriptionStatus): {
@@ -82,7 +65,9 @@ export async function SubscriptionStatusView() {
   }
 
   const badge = statusBadge(subscription.status)
-  const formattedPeriodEnd = formatPeriodEnd(subscription.currentPeriodEnd)
+  // An absent period end falls back to friendly copy (FR-15).
+  const f = await getFormat()
+  const formattedPeriodEnd = subscription.currentPeriodEnd ? f.date(subscription.currentPeriodEnd, "long") : null
   const isCanceling = subscription.cancelAtPeriodEnd
 
   let periodLine: string

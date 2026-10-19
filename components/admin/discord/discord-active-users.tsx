@@ -1,6 +1,7 @@
 "use client"
 
-import { formatRelativeTime } from "@/lib/utils/time-formatting"
+import { Time } from "@/components/ui/time"
+import { useFormat } from "@/lib/format-context"
 
 interface ActiveUser {
   discordUserId: string
@@ -15,6 +16,7 @@ interface DiscordActiveUsersProps {
 }
 
 export function DiscordActiveUsers({ users }: DiscordActiveUsersProps) {
+  const f = useFormat()
   if (users.length === 0) {
     return (
       <div className="p-8 text-center text-slate-500">
@@ -68,11 +70,11 @@ export function DiscordActiveUsers({ users }: DiscordActiveUsersProps) {
               </td>
               <td className="px-4 py-3 text-right">
                 <span className="text-lg font-bold text-cyan-400">
-                  {user.commandCount.toLocaleString()}
+                  {f.number(user.commandCount)}
                 </span>
               </td>
               <td className="px-4 py-3 text-right text-sm text-slate-400">
-                {formatRelativeTime(user.lastActiveAt)}
+                <Time value={user.lastActiveAt} />
               </td>
             </tr>
           ))}

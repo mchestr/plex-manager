@@ -3,7 +3,9 @@
 import { useState } from "react"
 
 import { startCheckout } from "@/actions/subscription"
+import { useFormat } from "@/lib/format-context"
 import { cn } from "@/lib/utils"
+import { formatNumber } from "@/lib/utils/format"
 import { redirectTo } from "@/lib/utils/navigation"
 import type { OfferedPrice } from "@/lib/stripe/prices"
 import { Button } from "@/components/ui/button"
@@ -17,19 +19,16 @@ interface PlanListProps {
 
 /**
  * Formats a Stripe amount (in the smallest currency unit, e.g. cents) into a
- * localized currency string. Returns a friendly fallback for custom pricing
- * (`amount === null`).
+ * currency string in the app locale. Returns a friendly fallback for custom
+ * pricing (`amount === null`).
  */
-function formatPrice(amount: number | null, currency: string): string {
+function formatPrice(amount: number | null, currency: string, locale: string): string {
   if (amount === null) {
     return "Custom"
   }
 
   try {
-    return new Intl.NumberFormat(undefined, {
-      style: "currency",
-      currency: currency.toUpperCase(),
-    }).format(amount / 100)
+    return formatNumber(amount / 100, { locale }, { style: "currency", currency: currency.toUpperCase() })
   } catch {
     // Unknown currency code — fall back to a plain number + upper-cased code.
     return `${(amount / 100).toFixed(2)} ${currency.toUpperCase()}`
@@ -46,6 +45,7 @@ function formatPrice(amount: number | null, currency: string): string {
  */
 export function PlanList({ plans }: PlanListProps) {
   const toast = useToast()
+  const f = useFormat()
   const [pendingPriceId, setPendingPriceId] = useState<string | null>(null)
 
   const handleSubscribe = async (priceId: string) => {
@@ -102,7 +102,7 @@ export function PlanList({ plans }: PlanListProps) {
                   className="text-2xl font-bold text-white"
                   data-testid={`subscribe-plan-price-${plan.priceId}`}
                 >
-                  {formatPrice(plan.amount, plan.currency)}
+                  {formatPrice(plan.amount, plan.currency, f.settings.locale)}
                 </span>
                 {plan.interval && (
                   <span className="text-sm text-slate-400">/ {plan.interval}</span>
