@@ -49,6 +49,10 @@ beforeEach(() => {
   mockReset(prismaMock)
   jest.mocked(getServerSession).mockResolvedValue(session)
   prismaMock.config.findUnique.mockResolvedValue(buildConfig({ llmDisabled: false }))
+  // Nothing spent today, so the spend caps let the calls through
+  prismaMock.lLMUsage.aggregate.mockResolvedValue({ _sum: { cost: 0 } } as Awaited<
+    ReturnType<typeof prismaMock.lLMUsage.aggregate>
+  >)
   prismaMock.lLMProvider.findFirst.mockResolvedValue({ id: "provider-1" } as LLMProvider)
   prismaMock.chatConversation.create.mockResolvedValue({ id: "conv-1", userId: "admin-1" } as ChatConversation)
   prismaMock.overseerr.findFirst.mockResolvedValue({

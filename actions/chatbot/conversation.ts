@@ -1,10 +1,11 @@
 import type { ModelMessage } from "ai"
 
+import { ASSISTANT_BUDGET_MESSAGE, ASSISTANT_BUDGET_UNAVAILABLE_MESSAGE, checkSpend } from "@/lib/llm/budget"
 import { chatWithTools, type ChatTool, type UsagePromptMessage } from "@/lib/llm/chat"
 import { createLogger } from "@/lib/utils/logger"
 import { executeToolCall } from "./executors"
 import { ALL_TOOLS } from "./tools"
-import { type ChatMessage } from "./types"
+import { type ChatMessage, type ChatResponse } from "./types"
 
 const logger = createLogger("CHATBOT_CONVERSATION")
 
@@ -19,6 +20,7 @@ interface ConversationConfig {
    * Whether the acting user is an app admin. Threaded through to the executor's
    * Discord admin-tier guard (Step 19, FR-14). Undefined → treated as non-admin
    * (fail-closed) in the Discord context; inert in the admin web context.
+   * True selects the admin daily spend cap; anything else the member cap.
    */
   isAdmin?: boolean
   systemPrompt: string
@@ -47,6 +49,8 @@ interface ConversationResult {
   success: boolean
   message?: ChatMessage
   error?: string
+  /** Set when a spend cap stopped the turn, or its check failed closed; `error` is then copy for the member. */
+  refusal?: ChatResponse["refusal"]
 }
 
 export async function runConversationLoop(
@@ -67,6 +71,15 @@ export async function runConversationLoop(
 
   while (loops < MAX_LOOPS) {
     loops++
+
+    // Before every call, not once per message, so a tool loop stops at the cap (SEC-23)
+    const spend = await checkSpend({ userId: config.userId, isAdmin: config.isAdmin === true })
+    if (!spend.ok) {
+      logger.warn("Assistant call refused by the daily spend cap", { userId: config.userId, scope: spend.scope, loops })
+      return spend.scope === "unavailable"
+        ? { success: false, refusal: "BUDGET_UNAVAILABLE", error: ASSISTANT_BUDGET_UNAVAILABLE_MESSAGE }
+        : { success: false, refusal: "BUDGET_EXCEEDED", error: ASSISTANT_BUDGET_MESSAGE }
+    }
 
     const response = await chatWithTools({
       system: config.systemPrompt,

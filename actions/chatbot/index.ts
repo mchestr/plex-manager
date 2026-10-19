@@ -41,10 +41,13 @@ interface ChatReply {
 /**
  * One admin assistant turn. Admin-only: the default tool set reads every
  * member's data and spends the admin LLM budget. A `conversationId` must be
- * one of the caller's own conversations.
+ * one of the caller's own conversations. Each admin may send 60 messages an
+ * hour, and every LLM call in the turn is checked against the daily spend
+ * caps (`lib/llm/budget.ts`).
  */
 export const chatWithAdminBot = adminAction({
   input: chatInputSchema,
+  rateLimit: { name: "llm:assistant:admin", by: "user" },
   fallbackError: "Failed to process message",
   handler: async ({ messages, conversationId }, { userId }): Promise<ActionResult<ChatReply>> => {
     if (conversationId) {
@@ -59,7 +62,9 @@ export const chatWithAdminBot = adminAction({
       userId,
       messages: messages.map((m) => ({ ...m, timestamp: Date.now() })),
       conversationId,
+      isAdmin: true,
     })
+    if (result.refusal === "BUDGET_EXCEEDED") return fail("RATE_LIMITED", result.error ?? "Daily budget reached")
     if (!result.success || !result.message) {
       return fail("UPSTREAM_UNAVAILABLE", result.error ?? "Failed to process message")
     }

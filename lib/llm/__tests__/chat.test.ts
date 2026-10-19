@@ -149,6 +149,30 @@ describe('chatWithTools', () => {
     )
   })
 
+  it('records a billed length finish with its outcome and cost (SEC-23)', async () => {
+    const model = new MockLanguageModelV4({ doGenerate: generated([{ type: 'text', text: 'Partial ans' }], 'length') })
+    useModel(model, 'anthropic', 'claude-sonnet-5-5')
+
+    const result = await chatWithTools({ system: 's', messages: [{ role: 'user', content: 'Hi' }], tools: TOOLS, attribution, usagePrompt: [{ role: 'user', content: 'Hi' }] })
+
+    expect(result).toMatchObject({ ok: true, content: 'Partial ans' })
+    expect(recordUsage).toHaveBeenCalledWith(
+      expect.objectContaining({ attribution, outcome: 'length', cost: expect.closeTo(0.003, 10) })
+    )
+  })
+
+  it('records a refusal as a refusal, though the SDK reports content-filter', async () => {
+    const refused = generated([{ type: 'text', text: 'I cannot help with that' }], 'content-filter')
+    const model = new MockLanguageModelV4({
+      doGenerate: { ...refused, finishReason: { unified: 'content-filter', raw: 'refusal' } },
+    })
+    useModel(model, 'anthropic', 'claude-sonnet-5-5')
+
+    await chatWithTools({ system: 's', messages: [{ role: 'user', content: 'Hi' }], tools: TOOLS, attribution, usagePrompt: [{ role: 'user', content: 'Hi' }] })
+
+    expect(recordUsage).toHaveBeenCalledWith(expect.objectContaining({ outcome: 'refusal' }))
+  })
+
   it('caps output tokens at the smaller of the row and the caller cap', async () => {
     const model = new MockLanguageModelV4({ doGenerate: generated([{ type: 'text', text: 'ok' }]) })
     useModel(model, 'openai', 'gpt-4o')

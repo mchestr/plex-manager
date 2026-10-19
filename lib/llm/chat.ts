@@ -5,7 +5,7 @@ import { APICallError, generateText, jsonSchema, RetryError, tool, type JSONSche
 import { providerOptionsFor, rowEffort } from "@/lib/llm/generate-structured"
 import { costUsd, lookupModel, type TokenUsage } from "@/lib/llm/models"
 import { getLanguageModel, LLMConfigError } from "@/lib/llm/registry"
-import { recordUsage, type UsageAttribution } from "@/lib/llm/usage"
+import { recordUsage, type UsageAttribution, type UsageOutcome } from "@/lib/llm/usage"
 import { createLogger } from "@/lib/utils/logger"
 
 /**
@@ -119,6 +119,17 @@ export function toToolSet(tools: ChatTool[]): ToolSet {
   )
 }
 
+/**
+ * Why a billed call ended, as its usage row records it. The SDK maps an
+ * Anthropic refusal to `content-filter`; the raw reason tells them apart.
+ */
+function usageOutcome(finishReason: string, rawFinishReason: string | undefined): UsageOutcome {
+  if (finishReason === "length") return "length"
+  if (rawFinishReason === "refusal") return "refusal"
+  if (finishReason === "content-filter") return "content-filter"
+  return "ok"
+}
+
 /** The smaller of two optional token caps. */
 function capTokens(rowCap: number | null, inputCap: number | undefined): number | undefined {
   if (rowCap === null) return inputCap
@@ -179,7 +190,7 @@ export async function chatWithTools(input: ChatWithToolsInput): Promise<ChatWith
       modelId,
       usage,
       cost: costUsd(served.known ? served : info, usage),
-      outcome: result.finishReason === "length" ? "length" : result.finishReason === "content-filter" ? "content-filter" : "ok",
+      outcome: usageOutcome(result.finishReason, result.rawFinishReason),
       prompt: usagePromptText(input.usagePrompt),
       response: result.text || JSON.stringify(toolCalls),
     })

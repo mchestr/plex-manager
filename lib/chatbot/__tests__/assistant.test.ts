@@ -22,6 +22,10 @@ beforeEach(() => {
   mockChatWithTools.mockReset()
   prismaMock.config.findUnique.mockResolvedValue(buildConfig({ llmDisabled: false }))
   prismaMock.lLMProvider.findFirst.mockResolvedValue({ id: "provider-1" } as never)
+  // Nothing spent today, so the spend caps let the calls through
+  prismaMock.lLMUsage.aggregate.mockResolvedValue({ _sum: { cost: 0 } } as Awaited<
+    ReturnType<typeof prismaMock.lLMUsage.aggregate>
+  >)
   mockChatWithTools.mockResolvedValue({
     ok: true,
     content: "All good.",

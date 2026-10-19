@@ -1,9 +1,10 @@
 /**
- * Checks the @example blocks in lib/security/secret-reuse.ts and
- * lib/security/config-diff.ts.
+ * Checks the @example blocks in lib/security/secret-reuse.ts,
+ * lib/security/config-diff.ts and lib/security/rate-limit-messages.ts.
  */
 
 import { configDiff } from "@/lib/security/config-diff"
+import { retryAfterCopy } from "@/lib/security/rate-limit-messages"
 import { resolveSecretForOrigin } from "@/lib/security/secret-reuse"
 
 describe("JSDoc Documentation Examples", () => {
@@ -31,5 +32,10 @@ describe("JSDoc Documentation Examples", () => {
       secretChanged: false,
       origins: { before: { url: "http://old.lan:8181" }, after: { url: "https://new.lan" } },
     })
+  })
+
+  it("retryAfterCopy names when to try again", () => {
+    expect(retryAfterCopy(30)).toBe("in 1 minute")
+    expect(retryAfterCopy(3 * 3600 + 300)).toBe("in 3 hours, 5 minutes")
   })
 })

@@ -97,6 +97,21 @@ describeRedis("rate-limit on Redis", (redisUrl) => {
     expect(await processA.consume("admin", ip)).toMatchObject({ ok: false })
   })
 
+  it("shares a member's Discord assistant messages between two processes (P4.20)", async () => {
+    const userId = `member-${runId}`
+    touchedKeys.add(`llm:discord:dm:${userId}`)
+
+    for (let i = 0; i < 10; i++) {
+      expect(await processA.consume("llm:discord:dm", userId)).toEqual({ ok: true })
+      expect(await processB.consume("llm:discord:dm", userId)).toEqual({ ok: true })
+    }
+    expect(await inspector.get(`llm:discord:dm:${userId}`)).toBe("20")
+
+    // The 21st message in the hour is refused, whichever process sees it
+    expect(await processA.consume("llm:discord:dm", userId)).toMatchObject({ ok: false })
+    expect(await processB.consume("llm:discord:dm", userId)).toMatchObject({ ok: false })
+  })
+
   it("keeps limits apart in Redis", async () => {
     const ip = `198.18.0.3-${runId}`
     touchedKeys.add(`poster:${ip}`)

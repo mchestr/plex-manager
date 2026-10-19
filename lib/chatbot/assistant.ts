@@ -24,9 +24,10 @@ interface RunChatbotOptions {
   context?: ChatbotContext
   /**
    * Whether the acting user is an app admin. Threaded through to the executor's
-   * Discord admin-tier guard (Step 19, FR-14). The admin web path leaves this
-   * undefined (the default context has no tier restriction); the Discord path
-   * sets it from the linked user's `isAdmin` so a non-admin member cannot invoke
+   * Discord admin-tier guard (Step 19, FR-14) and to the spend check, which
+   * applies the admin cap when it is true (P4.20). The admin web path sets it
+   * (the default context has no tier restriction); the Discord path sets it
+   * from the linked user's `isAdmin` so a non-admin member cannot invoke
    * server-wide admin-only tools.
    */
   isAdmin?: boolean

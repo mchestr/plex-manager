@@ -467,7 +467,10 @@ model Config {
   rewindAudio                  Boolean   @default(false)
   rewindDisabledPages          Json?
   rewindSerialKey              String? // HMAC key for member serials (encrypted at rest)
-  updatedAt                    DateTime  @updatedAt
+  llmDailyCapPerUserUsd        Float     @default(0.5) // Daily assistant spend per member, server-zone day (P4.20)
+  llmDailyCapAdminUsd          Float     @default(5) // Daily assistant spend per admin
+  llmDailyCapServerUsd         Float     @default(5) // Daily assistant spend for the whole server
+  updatedAt                   DateTime  @updatedAt
   updatedBy                    String? // User ID who last updated this config
 }
 

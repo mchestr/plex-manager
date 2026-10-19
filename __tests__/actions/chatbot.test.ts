@@ -1,7 +1,8 @@
 /**
  * Tests for actions/chatbot: sources tracking, the registry loop, the bounded
- * history and conversation ownership (P4.15, SEC-42), and usage rows that
- * store only each call's own content (SEC-45).
+ * history and conversation ownership (P4.15, SEC-42), usage rows that
+ * store only each call's own content (SEC-45), and the message limit and
+ * daily spend caps (P4.20, SEC-23).
  */
 
 import { chatWithAdminBot } from "@/actions/chatbot"
@@ -110,7 +111,14 @@ beforeEach(() => {
   prismaMock.config.findUnique.mockResolvedValue(buildConfig({ llmDisabled: false }))
   prismaMock.lLMProvider.findFirst.mockResolvedValue({ id: "provider-1", provider: "openai" } as LLMProvider)
   prismaMock.chatConversation.create.mockResolvedValue({ id: "conversation-1", userId: "user-1" } as ChatConversation)
+  // Nothing spent today
+  prismaMock.lLMUsage.aggregate.mockResolvedValue(spent(0))
 })
+
+/** An `LLMUsage` cost sum, as the spend check reads it. */
+function spent(cost: number) {
+  return { _sum: { cost } } as Awaited<ReturnType<typeof prismaMock.lLMUsage.aggregate>>
+}
 
 describe("chatbot sources tracking", () => {
   it("includes sources when a single tool is called", async () => {
@@ -324,5 +332,59 @@ describe("usage rows store only each call's new content (SEC-45)", () => {
     const stored = calls.reduce((total, call) => total + JSON.stringify(call.usagePrompt).length, 0)
     const context = JSON.stringify(calls[2].messages).length
     expect(stored).toBeLessThan(1.5 * context)
+  })
+})
+
+describe("message limit and spend caps (P4.20)", () => {
+  it("rate-limits the 61st message an admin sends in an hour", async () => {
+    // Its own admin, so the other tests' messages do not count
+    mockGetServerSession.mockResolvedValue({ ...adminSession, user: { ...adminSession.user, id: "busy-admin" } })
+    mockChatWithTools.mockResolvedValue(turn({ content: "ok" }))
+
+    for (let i = 0; i < 60; i++) {
+      expect((await chatWithAdminBot({ messages: [userMessage(`message ${i}`)] })).success).toBe(true)
+    }
+    const refused = await chatWithAdminBot({ messages: [userMessage("one more")] })
+
+    expect(refused).toMatchObject({ success: false, code: "RATE_LIMITED" })
+    expect(refused.success === false && refused.retryAfterSec).toBeGreaterThan(0)
+    expect(mockChatWithTools).toHaveBeenCalledTimes(60)
+  })
+
+  it("stops a tool loop at the cap, before the next LLM call", async () => {
+    prismaMock.config.findUnique.mockResolvedValue(buildConfig({ llmDisabled: false, llmDailyCapAdminUsd: 0.01 }))
+    // First check: nothing spent (user, then server). Second check: the first call cost 0.02
+    prismaMock.lLMUsage.aggregate
+      .mockResolvedValueOnce(spent(0))
+      .mockResolvedValueOnce(spent(0))
+      .mockResolvedValue(spent(0.02))
+    mockChatWithTools.mockResolvedValueOnce(turn({ toolCalls: [toolCall("call-1", "get_sonarr_status")] }))
+    prismaMock.sonarr.findFirst.mockResolvedValue(sonarrRow)
+
+    const response = await chatWithAdminBot({ messages: [userMessage("Check Sonarr")] })
+
+    expect(mockChatWithTools).toHaveBeenCalledTimes(1)
+    expect(response).toMatchObject({
+      success: false,
+      code: "RATE_LIMITED",
+      error: "I've hit today's assistant budget. It resets at midnight server time.",
+    })
+  })
+
+  it("applies the admin cap, not the member cap, to an admin", async () => {
+    // 1 USD is over the 0.5 member default but under the 5 admin default
+    prismaMock.lLMUsage.aggregate.mockResolvedValue(spent(1))
+    mockChatWithTools.mockResolvedValueOnce(turn({ content: "ok" }))
+
+    expect((await chatWithAdminBot({ messages: [userMessage("hi")] })).success).toBe(true)
+  })
+
+  it("refuses the call when the spend check fails", async () => {
+    prismaMock.lLMUsage.aggregate.mockRejectedValue(new Error("Can't reach database server"))
+
+    const response = await chatWithAdminBot({ messages: [userMessage("hi")] })
+
+    expect(response).toMatchObject({ success: false, code: "UPSTREAM_UNAVAILABLE" })
+    expect(mockChatWithTools).not.toHaveBeenCalled()
   })
 })

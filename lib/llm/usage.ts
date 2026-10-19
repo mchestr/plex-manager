@@ -1,5 +1,6 @@
 import "server-only"
 
+import { addSpend } from "@/lib/llm/budget"
 import type { TokenUsage } from "@/lib/llm/models"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
@@ -38,7 +39,9 @@ export interface UsageRecord {
  * Write one `LLMUsage` row for one billed attempt. Network errors with no
  * usage are never recorded; truncated, refused and schema-failed responses
  * are. A failed write is logged, never thrown: losing a usage row must not
- * fail the generation that paid for it.
+ * fail the generation that paid for it. An assistant call (one with a
+ * `chatConversationId`) also adds its cost to today's cached spend, which the
+ * caps in `lib/llm/budget.ts` read.
  */
 export async function recordUsage(record: UsageRecord): Promise<void> {
   const { attribution, usage } = record
@@ -64,6 +67,7 @@ export async function recordUsage(record: UsageRecord): Promise<void> {
         outcome: record.outcome,
       },
     })
+    if (attribution.chatConversationId) await addSpend(attribution.userId, record.cost)
   } catch (error) {
     logger.error("Failed to record LLM usage", error, { provider: record.provider, model: record.modelId })
   }
