@@ -158,7 +158,7 @@ jobs:
         uses: ./.github/actions/setup
 
       - name: Run Prisma migrations
-        run: npx prisma migrate deploy
+        run: npm run db:deploy
 
       - name: Build application
         run: npm run build
@@ -263,7 +263,7 @@ jobs:
         uses: ./.github/actions/setup
 
       - name: Run Prisma migrations
-        run: npx prisma migrate deploy
+        run: npm run db:deploy
 
       # The suites share one database and one Redis, so they run one at a time.
       - name: Run integration tests
@@ -302,7 +302,7 @@ jobs:
         uses: ./.github/actions/setup
 
       - name: Apply every migration to an empty database
-        run: npx prisma migrate deploy
+        run: npm run db:deploy
 
       # Prints the human-readable diff before failing.
       - name: Compare the migrated database with schema.prisma
@@ -375,7 +375,7 @@ jobs:
           echo "NEXTAUTH_SECRET=$secret" >> "$GITHUB_ENV"
 
       - name: Run Prisma migrations
-        run: npx prisma migrate deploy
+        run: npm run db:deploy
 
       - name: Build the app for E2E
         run: npm run build:e2e

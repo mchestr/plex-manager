@@ -97,7 +97,7 @@ jobs:
         run: npm ci
 
       - name: Apply migrations
-        run: npx prisma migrate deploy
+        run: npm run db:deploy
 
       - name: Regenerate the baselines
         run: >-
