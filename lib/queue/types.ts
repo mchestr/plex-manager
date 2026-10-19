@@ -5,6 +5,8 @@
  * Add new job types here as the system grows.
  */
 
+import type { SessionRevocationReason } from "@/lib/session-revocation"
+
 /**
  * Job Type Registry
  * Add new job types here when extending the queue system
@@ -15,6 +17,9 @@ export const JOB_TYPES = {
   STRIPE_WEBHOOK: "stripe:webhook",
   PLEX_ACCESS_GRANT: "plex:access:grant",
   PLEX_ACCESS_REVOKE: "plex:access:revoke",
+  // Discord linked-role metadata (P4.18)
+  DISCORD_ROLE_SYNC: "discord:role:sync",
+  DISCORD_ROLE_RECONCILE: "discord:role:reconcile",
   // Rewind batch jobs (P2.6), on the `rewind-batch` queue
   REWIND_SERVER_AGGREGATE: "rewind:server-aggregate",
   REWIND_METADATA_WARM: "rewind:metadata-warm",
@@ -135,6 +140,50 @@ export interface PlexAccessRevokeResult {
 }
 
 // =============================================================================
+// Discord Role Job Types (P4.18)
+// =============================================================================
+
+/**
+ * Why a member's linked-role metadata is re-synced: every reason their
+ * sessions end (through `endUserSessions`), plus the access changes that do
+ * not end a session, and the daily reconcile.
+ */
+export type RoleSyncReason =
+  | SessionRevocationReason
+  | "enabled"
+  | "access_granted"
+  | "comp_granted"
+  | "exemption_changed"
+  | "subscription_changed"
+  | "subscription_canceled"
+  | "reconcile"
+
+/**
+ * Payload for re-syncing one member's linked-role metadata. Only the daily
+ * reconcile sets `refreshHours`, which recomputes the watched hours from
+ * Tautulli; every other sync pushes the stored hours.
+ */
+export interface DiscordRoleSyncPayload {
+  userId: string
+  reason: RoleSyncReason
+  refreshHours: boolean
+}
+
+/** Result of a role sync: skipped when the integration is off or the member is not linked. */
+export interface DiscordRoleSyncResult {
+  userId: string
+  synced: boolean
+  skipped?: "DISCORD_DISABLED" | "NOT_LINKED"
+}
+
+/** Result of the daily reconcile: how many stale connections it queued. */
+export interface DiscordRoleReconcileResult {
+  enqueued: number
+  stale: number
+  skipped?: "DISCORD_DISABLED"
+}
+
+// =============================================================================
 // Rewind Batch Job Types (P2.6)
 // =============================================================================
 
@@ -182,6 +231,8 @@ export interface JobPayloadMap {
   [JOB_TYPES.STRIPE_WEBHOOK]: StripeWebhookPayload
   [JOB_TYPES.PLEX_ACCESS_GRANT]: PlexAccessGrantPayload
   [JOB_TYPES.PLEX_ACCESS_REVOKE]: PlexAccessRevokePayload
+  [JOB_TYPES.DISCORD_ROLE_SYNC]: DiscordRoleSyncPayload
+  [JOB_TYPES.DISCORD_ROLE_RECONCILE]: Record<string, never>
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: RewindServerAggregatePayload
   [JOB_TYPES.REWIND_METADATA_WARM]: RewindMetadataWarmPayload
   [JOB_TYPES.REWIND_GENERATE_USER]: RewindGenerateUserPayload

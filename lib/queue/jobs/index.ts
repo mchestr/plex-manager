@@ -9,6 +9,7 @@ import { Job } from "bullmq"
 import { JobType, JOB_TYPES } from "../types"
 import { getWatchlistProcessor } from "./watchlist-sync"
 import { getStripeProcessor } from "./stripe"
+import { getDiscordRoleProcessor } from "./discord-role"
 
 /**
  * Job processor function type
@@ -32,6 +33,12 @@ export function getJobProcessor(jobType: string): JobProcessor | null {
   const stripeProcessor = getStripeProcessor(jobType)
   if (stripeProcessor) {
     return stripeProcessor
+  }
+
+  // Check Discord role processors
+  const discordRoleProcessor = getDiscordRoleProcessor(jobType)
+  if (discordRoleProcessor) {
+    return discordRoleProcessor
   }
 
   // Add more processor lookups here as new job types are added

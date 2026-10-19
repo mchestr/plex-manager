@@ -520,6 +520,8 @@ model DiscordConnection {
   scope            String?
   expiresAt        DateTime?
   metadataSyncedAt DateTime?
+  /// Watched hours from the last daily role reconcile; event-driven role syncs push it unchanged (P4.18)
+  lastWatchedHours Int?
   linkedAt         DateTime  @default(now())
   revokedAt        DateTime?
   lastError        String?

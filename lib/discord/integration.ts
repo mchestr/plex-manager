@@ -1,6 +1,6 @@
 import { exchangeDiscordCode, fetchDiscordUserProfile, refreshDiscordToken, updateDiscordRoleConnection } from "@/lib/discord/api"
 import { getDiscordBotToken } from "@/lib/discord/config"
-import { computeRoleMetadata } from "@/lib/discord/role-metadata"
+import { computeRoleMetadata, type RoleMetadataOptions } from "@/lib/discord/role-metadata"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { safeRedirectPath } from "@/lib/security/safe-redirect"
@@ -278,14 +278,25 @@ async function ensureValidAccessToken(userId: string) {
   }
 }
 
-export async function syncDiscordRoleConnection(userId: string) {
+/**
+ * Pushes a user's linked-role metadata to Discord and records the sync.
+ *
+ * `platform_username` is the member's display name, never their email
+ * (SEC-47). By default the watched hours are recomputed (a fresh link or a
+ * manual resync); event-driven syncs pass `refreshHours: false` and push the
+ * stored `lastWatchedHours` (see `lib/discord/role-metadata.ts`).
+ */
+export async function syncDiscordRoleConnection(
+  userId: string,
+  options: RoleMetadataOptions = { refreshHours: true }
+) {
   const { connection, integration } = await ensureValidAccessToken(userId)
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
+      id: true,
       name: true,
-      email: true,
       plexUserId: true,
     },
   })
@@ -299,9 +310,12 @@ export async function syncDiscordRoleConnection(userId: string) {
   }
 
   const platformName = integration.platformName || "Plex Wrapped"
-  const platformUsername = user.name || user.email || user.plexUserId || "Plex User"
+  const platformUsername = user.name || "Plex member"
 
-  const metadata = await computeRoleMetadata(user)
+  const { metadata, watchedHours } = await computeRoleMetadata(
+    { id: user.id, plexUserId: user.plexUserId, lastWatchedHours: connection.lastWatchedHours },
+    options
+  )
 
   await updateDiscordRoleConnection({
     accessToken: connection.accessToken,
@@ -315,6 +329,7 @@ export async function syncDiscordRoleConnection(userId: string) {
     where: { userId },
     data: {
       metadataSyncedAt: new Date(),
+      lastWatchedHours: watchedHours,
       lastError: null,
     },
   })

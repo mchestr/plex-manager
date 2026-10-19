@@ -1,0 +1,48 @@
+[
+  {
+    "name": "Member's own server",
+    "product": "Plex Media Server",
+    "productVersion": "1.41.3.9314",
+    "platform": "Linux",
+    "clientIdentifier": "member-own-machine-id",
+    "provides": "server",
+    "owned": true,
+    "accessToken": "member-own-server-token",
+    "publicAddress": "198.51.100.20",
+    "httpsRequired": false,
+    "relay": true,
+    "presence": true,
+    "connections": [
+      { "protocol": "https", "address": "10.0.0.5", "port": 32400, "uri": "https://10-0-0-5.example.plex.direct:32400", "local": true, "relay": false, "IPv6": false }
+    ]
+  },
+  {
+    "name": "Home",
+    "product": "Plex Media Server",
+    "productVersion": "1.41.3.9314",
+    "platform": "Linux",
+    "clientIdentifier": "this-server-machine-id",
+    "provides": "server",
+    "owned": false,
+    "accessToken": "member-shared-token-for-this-server",
+    "publicAddress": "203.0.113.10",
+    "httpsRequired": true,
+    "relay": true,
+    "presence": true,
+    "connections": [
+      { "protocol": "https", "address": "203.0.113.10", "port": 32400, "uri": "https://203-0-113-10.example.plex.direct:32400", "local": false, "relay": false, "IPv6": false }
+    ]
+  },
+  {
+    "name": "Living Room TV",
+    "product": "Plex for Android (TV)",
+    "productVersion": "10.20.0.1234",
+    "platform": "Android",
+    "clientIdentifier": "tv-client-id",
+    "provides": "player,pubsub-player",
+    "owned": true,
+    "accessToken": null,
+    "presence": false,
+    "connections": []
+  }
+]

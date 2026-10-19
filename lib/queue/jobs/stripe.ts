@@ -56,6 +56,7 @@ import {
   unshareUserFromPlexServer,
 } from "@/lib/connections/plex-invitations"
 import { checkUserServerAccess } from "@/lib/connections/plex-user-access"
+import { enqueueRoleSync } from "@/lib/discord/role-sync"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { endUserSessions, SYSTEM_ACTOR } from "@/lib/session-revocation"
 import { createLogger } from "@/lib/utils/logger"
@@ -145,7 +146,9 @@ async function enqueuePlexAccessRevoke(userId: string, eventId: string): Promise
  * - a move into ACTIVE from UNPAID, CANCELED or INCOMPLETE enqueues a grant;
  * - a CANCELED or UNPAID row enqueues a revoke. Whichever event applies the
  *   state runs its effects, since an older event for the same change is then
- *   stale; the revoke job's guards make a repeated revoke harmless.
+ *   stale; the revoke job's guards make a repeated revoke harmless;
+ * - every applied write re-syncs the member's Discord linked role (P4.18),
+ *   since a status change can change their access level.
  *
  * `cancel_at_period_end` and PAST_DUE keep access: removal waits for
  * `customer.subscription.deleted` at period end.
@@ -182,6 +185,7 @@ async function applySideEffects(
   } else if (REVOKABLE_STATUSES.includes(outcome.status)) {
     await enqueuePlexAccessRevoke(outcome.userId, event.id)
   }
+  await enqueueRoleSync(outcome.userId, "subscription_changed")
 }
 
 /**
@@ -450,6 +454,9 @@ async function grantSkipReason(user: {
  *    failure the invite is left `pending` (do NOT throw — the user can still
  *    accept via the emailed invite, FR-13).
  * 6. Record the resulting `plexInviteStatus` (`accepted` | `pending`).
+ * 7. Once the member has access (`accepted`), re-sync their Discord linked
+ *    role (P4.18). A pending invite gives no access yet; the daily reconcile
+ *    picks it up after the member accepts.
  *
  * @internal
  */
@@ -506,6 +513,7 @@ export async function processPlexAccessGrant(
         data: { plexInviteStatus: "accepted" },
       })
       logger.info("User already has Plex access; recorded as accepted", { userId })
+      await enqueueRoleSync(userId, "access_granted")
       return { userId, granted: true }
     }
   }
@@ -565,6 +573,9 @@ export async function processPlexAccessGrant(
   })
 
   logger.info("Plex access grant complete", { userId, plexInviteStatus })
+  if (plexInviteStatus === "accepted") {
+    await enqueueRoleSync(userId, "access_granted")
+  }
 
   return { userId, granted: plexInviteStatus === "accepted" }
 }

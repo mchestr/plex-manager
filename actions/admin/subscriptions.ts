@@ -1,6 +1,7 @@
 "use server"
 
 import { requireAdmin } from "@/lib/admin"
+import { enqueueRoleSync } from "@/lib/discord/role-sync"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { getStripe } from "@/lib/stripe/client"
@@ -85,6 +86,7 @@ export async function adminCancelSubscription(
       cancelAtPeriodEnd: true,
     })
 
+    await enqueueRoleSync(userId, "subscription_canceled")
     await revalidateUsers(userId)
 
     return { success: true }
@@ -177,6 +179,7 @@ export async function adminGrantAccess(
       exemptReason: "comp",
     })
 
+    await enqueueRoleSync(userId, "comp_granted")
     await revalidateUsers(userId)
 
     return { success: true }
@@ -244,6 +247,7 @@ export async function adminToggleExempt(
       exemptReason: nextExempt ? reason ?? "comp" : null,
     })
 
+    await enqueueRoleSync(userId, "exemption_changed")
     await revalidateUsers(userId)
 
     return { success: true }

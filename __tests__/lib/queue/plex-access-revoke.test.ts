@@ -274,6 +274,35 @@ describe('processPlexAccessRevoke', () => {
     expect(result).toEqual({ userId: 'user-1', revoked: true })
   })
 
+  it('enqueues one Discord role sync for a linked member, through endUserSessions (P4.18)', async () => {
+    const previousRedisUrl = process.env.REDIS_URL
+    process.env.REDIS_URL = 'redis://localhost:6379/15'
+    try {
+      ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(makeUser())
+      prismaMock.discordIntegration.findUnique.mockResolvedValue({
+        id: 'discord',
+        isEnabled: true,
+        clientId: 'client',
+        clientSecret: 'secret',
+      } as never)
+      prismaMock.discordConnection.findUnique.mockResolvedValue({ revokedAt: null } as never)
+
+      await processPlexAccessRevoke(makeRevokeJob('user-1'))
+
+      const roleSyncs = (addJob as jest.Mock).mock.calls.filter(([type]) => type === JOB_TYPES.DISCORD_ROLE_SYNC)
+      expect(roleSyncs).toEqual([
+        [
+          JOB_TYPES.DISCORD_ROLE_SYNC,
+          { userId: 'user-1', reason: 'subscription_revoked', refreshHours: false },
+          { attempts: 3, deduplication: { id: 'discord:role:user-1' } },
+        ],
+      ])
+    } finally {
+      if (previousRedisUrl === undefined) delete process.env.REDIS_URL
+      else process.env.REDIS_URL = previousRedisUrl
+    }
+  })
+
   it('unshares an eligible UNPAID subscriber', async () => {
     ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(
       makeUser({ status: SubscriptionStatus.UNPAID })

@@ -13,8 +13,14 @@
 
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
+import { createLogger } from "@/lib/utils/logger"
 
-/** Why a user's sessions were ended. P4.11 and P4.18 add their own reasons. */
+const logger = createLogger("SESSION_REVOCATION")
+
+/**
+ * Why a user's sessions were ended. P4.11 adds its own reason; P4.18's role
+ * syncs reuse these (`RoleSyncReason` in `lib/queue/types.ts`).
+ */
 export type SessionRevocationReason = "unshared" | "demoted" | "disabled" | "subscription_revoked"
 
 /** The audit actor for revocations that no admin triggered, such as a Stripe job. */
@@ -34,9 +40,10 @@ export class SessionRevokedError extends Error {
 }
 
 /**
- * Ends every session of `userId` within the JWT recheck interval, and audits
- * `SESSIONS_REVOKED`. A user row that no longer exists is a no-op: its
- * sessions already end at the next recheck.
+ * Ends every session of `userId` within the JWT recheck interval, audits
+ * `SESSIONS_REVOKED`, and queues a re-sync of their Discord linked role, since
+ * every reason here changes their access (P4.18). A user row that no longer
+ * exists is a no-op: its sessions already end at the next recheck.
  *
  * @param userId - The user whose sessions end.
  * @param reason - Why, recorded in the audit event.
@@ -55,4 +62,9 @@ export async function endUserSessions(
     return
   }
   logAuditEvent(AuditEventType.SESSIONS_REVOKED, actorId, { targetUserId: userId, reason })
+
+  // Loaded on use: lib/auth.ts imports this module. A role sync never fails the revocation.
+  await import("@/lib/discord/role-sync")
+    .then(({ enqueueRoleSync }) => enqueueRoleSync(userId, reason))
+    .catch((error: unknown) => logger.warn("discord.role_sync_enqueue_failed", { userId, reason, error }))
 }
