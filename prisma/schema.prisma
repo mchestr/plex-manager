@@ -861,3 +861,21 @@ enum SubscriptionStatus {
   INCOMPLETE
   UNPAID
 }
+
+// Append-only audit trail (SEC-55). Every logAuditEvent call writes one row;
+// no code path updates or deletes rows. `actorUserId` is a user id, or "setup"
+// for the first-run wizard, and is not a foreign key, so a row outlives its user.
+// `details` hold the sanitised event details (for CONFIG_CHANGED, a redacted diff).
+model AuditLog {
+  id           String   @id @default(cuid())
+  type         String
+  actorUserId  String
+  targetUserId String?
+  details      Json?
+  requestId    String?
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([type, createdAt])
+  @@index([targetUserId])
+}

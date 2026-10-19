@@ -321,7 +321,7 @@ export function PromptTemplateEditor({ template, userWrapped, userName = "User" 
 
     startTransition(async () => {
       const result = template
-        ? await updatePromptTemplate(template.id, formData)
+        ? await updatePromptTemplate({ id: template.id, ...formData })
         : await createPromptTemplate(formData)
 
       if (result.success) {

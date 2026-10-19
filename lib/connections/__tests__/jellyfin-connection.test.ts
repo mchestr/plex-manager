@@ -1,11 +1,10 @@
 /**
  * Tests for Jellyfin connection testing and server info functions
- * Tests: testJellyfinConnection, getJellyfinServerInfo, getJellyfinLibraries
+ * Tests: testJellyfinConnection, getJellyfinLibraries
  */
 
 import {
   testJellyfinConnection,
-  getJellyfinServerInfo,
   getJellyfinLibraries,
 } from '@/lib/connections/jellyfin'
 import { makeJellyfinServerConfig } from '../../../__tests__/utils/test-builders'
@@ -207,79 +206,6 @@ describe('Jellyfin Connection', () => {
 
       expect(result.success).toBe(false)
       expect(result.error).toBe('Failed to connect to Jellyfin server')
-    })
-  })
-
-  describe('getJellyfinServerInfo', () => {
-    const config = makeJellyfinServerConfig()
-
-    it('should successfully fetch server info', async () => {
-      const mockSystemInfo = {
-        Id: 'server-id-123',
-        ServerName: 'My Jellyfin',
-        Version: '10.8.0',
-        ProductName: 'Jellyfin Server',
-        OperatingSystem: 'Linux',
-      }
-
-      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => mockSystemInfo,
-      })
-
-      const result = await getJellyfinServerInfo(config)
-
-      expect(result.success).toBe(true)
-      expect(result.data).toEqual(mockSystemInfo)
-      expect(result.error).toBeUndefined()
-    })
-
-    it('should handle missing server ID in response', async () => {
-      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({ ServerName: 'My Jellyfin' }),
-      })
-
-      const result = await getJellyfinServerInfo(config)
-
-      expect(result.success).toBe(false)
-      expect(result.error).toBe('Server ID not found in response')
-    })
-
-    it('should handle fetch failure', async () => {
-      ;(global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: false,
-        status: 500,
-        statusText: 'Internal Server Error',
-      })
-
-      const result = await getJellyfinServerInfo(config)
-
-      expect(result.success).toBe(false)
-      expect(result.error).toContain('Failed to fetch server info')
-    })
-
-    it('should handle network errors', async () => {
-      ;(global.fetch as jest.Mock).mockRejectedValueOnce(
-        new Error('Connection refused')
-      )
-
-      const result = await getJellyfinServerInfo(config)
-
-      expect(result.success).toBe(false)
-      expect(result.error).toContain('Error fetching server info')
-      expect(result.error).toContain('Connection refused')
-    })
-
-    it('should handle non-Error exceptions', async () => {
-      ;(global.fetch as jest.Mock).mockRejectedValueOnce('Unknown error')
-
-      const result = await getJellyfinServerInfo(config)
-
-      expect(result.success).toBe(false)
-      expect(result.error).toBe('Failed to fetch Jellyfin server info')
     })
   })
 

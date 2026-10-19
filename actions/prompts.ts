@@ -1,9 +1,23 @@
 "use server"
 
-import { requireAdmin } from "@/lib/admin"
-import { prisma } from "@/lib/prisma"
+/**
+ * Admin actions for the Rewind prompt templates. Every mutation is audited as
+ * `CONFIG_CHANGED` with a redacted diff (changed field names only, never the
+ * template text), and a change of the active template runs in one transaction,
+ * so concurrent saves cannot leave zero or two active templates.
+ */
+
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
+
+import { adminAction } from "@/lib/actions/define-action"
+import { fail, ok } from "@/lib/actions/result"
+import { requireAdmin } from "@/lib/admin"
+import type { PromptTemplate } from "@/lib/generated/prisma/client"
+import { prisma, type PrismaTransactionClient } from "@/lib/prisma"
+import { AuditEventType, logAuditEvent, recordAuditEvent } from "@/lib/security/audit-log"
+import { configDiff } from "@/lib/security/config-diff"
+import { recordIdSchema } from "@/lib/validations/params"
 
 const promptTemplateSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -13,6 +27,35 @@ const promptTemplateSchema = z.object({
 })
 
 export type PromptTemplateInput = z.infer<typeof promptTemplateSchema>
+
+type AuditedTemplate = Pick<PromptTemplate, "name" | "description" | "template" | "isActive">
+
+function auditedFields({ name, description, template, isActive }: AuditedTemplate) {
+  return { name, description, template, isActive }
+}
+
+function templateDiff(
+  action: "created" | "updated" | "deleted" | "activated",
+  templateId: string,
+  before: AuditedTemplate | null,
+  after: AuditedTemplate | null
+) {
+  return {
+    action,
+    templateId,
+    ...configDiff("prompt", before && auditedFields(before), after ? auditedFields(after) : {}),
+  }
+}
+
+/**
+ * Makes `id` the only active template, inside the caller's transaction.
+ * The first statement locks every row, so a concurrent activation waits for
+ * this one to commit instead of leaving two templates active.
+ */
+async function activateOnly(tx: PrismaTransactionClient, id: string) {
+  await tx.promptTemplate.updateMany({ data: { isActive: false } })
+  return tx.promptTemplate.update({ where: { id }, data: { isActive: true } })
+}
 
 /**
  * Get all prompt templates
@@ -50,163 +93,106 @@ export async function getPromptTemplate(id: string) {
 /**
  * Create a new prompt template
  */
-export async function createPromptTemplate(data: PromptTemplateInput) {
-  const session = await requireAdmin()
-
-  try {
-    const validated = promptTemplateSchema.parse(data)
-
-    // If this template should be active, deactivate all others first
-    if (validated.isActive) {
-      await prisma.promptTemplate.updateMany({
-        where: { isActive: true },
-        data: { isActive: false },
+export const createPromptTemplate = adminAction({
+  input: promptTemplateSchema,
+  fallbackError: "Failed to create prompt template",
+  handler: async (validated, { userId }) => {
+    const template = await prisma.$transaction(async (tx) => {
+      const created = await tx.promptTemplate.create({
+        data: {
+          name: validated.name,
+          description: validated.description || null,
+          template: validated.template,
+          isActive: false,
+          updatedBy: userId,
+        },
       })
-    }
-
-    const template = await prisma.promptTemplate.create({
-      data: {
-        name: validated.name,
-        description: validated.description || null,
-        template: validated.template,
-        isActive: validated.isActive || false,
-        updatedBy: session.user.id,
-      },
+      return validated.isActive ? activateOnly(tx, created.id) : created
     })
 
+    logAuditEvent(AuditEventType.CONFIG_CHANGED, userId, templateDiff("created", template.id, null, template))
     revalidatePath("/admin/prompts")
-    return { success: true, data: template }
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return { success: false, error: error.issues[0].message }
-    }
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: "Failed to create prompt template" }
-  }
-}
+    return ok(template)
+  },
+})
 
 /**
  * Update an existing prompt template
  */
-export async function updatePromptTemplate(id: string, data: PromptTemplateInput) {
-  const session = await requireAdmin()
+export const updatePromptTemplate = adminAction({
+  input: promptTemplateSchema.extend({ id: recordIdSchema }),
+  fallbackError: "Failed to update prompt template",
+  handler: async ({ id, ...validated }, { userId }) => {
+    const existing = await prisma.promptTemplate.findUnique({ where: { id } })
+    if (!existing) return fail("NOT_FOUND", "Template not found")
 
-  try {
-    const validated = promptTemplateSchema.parse(data)
-
-    // Check if template exists
-    const existing = await prisma.promptTemplate.findUnique({
-      where: { id },
-    })
-
-    if (!existing) {
-      return { success: false, error: "Template not found" }
-    }
-
-    // If this template should be active, deactivate all others first
-    if (validated.isActive && !existing.isActive) {
-      await prisma.promptTemplate.updateMany({
-        where: { isActive: true },
-        data: { isActive: false },
+    const template = await prisma.$transaction(async (tx) => {
+      const updated = await tx.promptTemplate.update({
+        where: { id },
+        data: {
+          name: validated.name,
+          description: validated.description || null,
+          template: validated.template,
+          version: existing.version + 1,
+          updatedBy: userId,
+        },
       })
-    }
-
-    const template = await prisma.promptTemplate.update({
-      where: { id },
-      data: {
-        name: validated.name,
-        description: validated.description || null,
-        template: validated.template,
-        isActive: validated.isActive ?? existing.isActive,
-        version: existing.version + 1,
-        updatedBy: session.user.id,
-      },
+      return validated.isActive && !existing.isActive ? activateOnly(tx, id) : updated
     })
 
+    logAuditEvent(AuditEventType.CONFIG_CHANGED, userId, templateDiff("updated", id, existing, template))
     revalidatePath("/admin/prompts")
     revalidatePath(`/admin/prompts/${id}`)
-    return { success: true, data: template }
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return { success: false, error: error.issues[0].message }
-    }
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: "Failed to update prompt template" }
-  }
-}
+    return ok(template)
+  },
+})
 
 /**
  * Delete a prompt template
  */
-export async function deletePromptTemplate(id: string) {
-  await requireAdmin()
+export const deletePromptTemplate = adminAction({
+  input: recordIdSchema,
+  fallbackError: "Failed to delete prompt template",
+  handler: async (id, { userId }) => {
+    const existing = await prisma.promptTemplate.findUnique({ where: { id } })
+    if (!existing) return fail("NOT_FOUND", "Template not found")
 
-  try {
     // Don't allow deleting the active template
-    const existing = await prisma.promptTemplate.findUnique({
-      where: { id },
-    })
-
-    if (!existing) {
-      return { success: false, error: "Template not found" }
-    }
-
     if (existing.isActive) {
-      return { success: false, error: "Cannot delete the active template. Please activate another template first." }
+      return fail("CONFLICT", "Cannot delete the active template. Please activate another template first.")
     }
 
-    await prisma.promptTemplate.delete({
-      where: { id },
-    })
+    await prisma.promptTemplate.delete({ where: { id } })
 
+    logAuditEvent(AuditEventType.CONFIG_CHANGED, userId, templateDiff("deleted", id, existing, null))
     revalidatePath("/admin/prompts")
-    return { success: true }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: "Failed to delete prompt template" }
-  }
-}
+    return ok(null)
+  },
+})
 
 /**
- * Set a template as active (deactivates all others)
+ * Set a template as active (deactivates all others), in one transaction
  */
-export async function setActivePromptTemplate(id: string) {
-  await requireAdmin()
+export const setActivePromptTemplate = adminAction({
+  input: recordIdSchema,
+  fallbackError: "Failed to set active template",
+  handler: async (id, { userId }) => {
+    const found = await prisma.$transaction(async (tx) => {
+      const template = await tx.promptTemplate.findUnique({ where: { id } })
+      if (!template) return false
 
-  try {
-    const template = await prisma.promptTemplate.findUnique({
-      where: { id },
+      await activateOnly(tx, id)
+      await recordAuditEvent(
+        AuditEventType.CONFIG_CHANGED,
+        userId,
+        templateDiff("activated", id, template, { ...template, isActive: true }),
+        tx
+      )
+      return true
     })
-
-    if (!template) {
-      return { success: false, error: "Template not found" }
-    }
-
-    // Deactivate all templates
-    await prisma.promptTemplate.updateMany({
-      where: { isActive: true },
-      data: { isActive: false },
-    })
-
-    // Activate the selected template
-    await prisma.promptTemplate.update({
-      where: { id },
-      data: { isActive: true },
-    })
+    if (!found) return fail("NOT_FOUND", "Template not found")
 
     revalidatePath("/admin/prompts")
-    return { success: true }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: "Failed to set active template" }
-  }
-}
-
+    return ok(null)
+  },
+})

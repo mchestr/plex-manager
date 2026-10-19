@@ -13,6 +13,7 @@ import {
   setStripeEnabled,
   updateStripeSettings,
 } from '@/actions/admin/admin-config'
+import { AuditEventType, logAuditEvent } from '@/lib/security/audit-log'
 import { clearOfferedPricesCache } from '@/lib/stripe/prices'
 import { getServerSession } from 'next-auth'
 import { revalidatePath } from 'next/cache'
@@ -41,6 +42,11 @@ jest.mock('next/cache', () => ({
 
 jest.mock('@/lib/auth', () => ({
   authOptions: {},
+}))
+
+jest.mock('@/lib/security/audit-log', () => ({
+  ...jest.requireActual('@/lib/security/audit-log'),
+  logAuditEvent: jest.fn(),
 }))
 
 const mockPrisma = prismaMock
@@ -92,6 +98,40 @@ describe('admin Stripe config actions', () => {
       expect(clearOfferedPricesCache).toHaveBeenCalled()
     })
 
+    it('audits the change with secretChanged and never a secret value', async () => {
+      mockGetServerSession.mockResolvedValue(mockAdminSession)
+      ;(mockPrisma.config.findUnique as jest.Mock).mockResolvedValue({
+        stripeSecretKey: 'sk_test_old',
+        stripeWebhookSecret: 'whsec_old',
+        stripePriceIds: ['price_1'],
+        stripeLibrarySectionIds: [],
+      })
+
+      await updateStripeSettings({ secretKey: 'sk_test_new', priceIds: ['price_1', 'price_2'], librarySectionIds: [] })
+
+      expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.CONFIG_CHANGED, 'admin-123', {
+        section: 'stripe',
+        changedFields: ['stripePriceIds'],
+        secretChanged: true,
+        origins: { before: {}, after: {} },
+      })
+      expect(JSON.stringify((logAuditEvent as jest.Mock).mock.calls)).not.toMatch(/sk_test|whsec/)
+    })
+
+    it('records secretChanged: false when both secrets are left blank', async () => {
+      mockGetServerSession.mockResolvedValue(mockAdminSession)
+      ;(mockPrisma.config.findUnique as jest.Mock).mockResolvedValue({
+        stripeSecretKey: 'sk_test_old',
+        stripeWebhookSecret: 'whsec_old',
+        stripePriceIds: ['price_1'],
+        stripeLibrarySectionIds: [],
+      })
+
+      await updateStripeSettings({ priceIds: ['price_1'], librarySectionIds: [] })
+
+      expect((logAuditEvent as jest.Mock).mock.calls[0][2]).toMatchObject({ changedFields: [], secretChanged: false })
+    })
+
     it('does not overwrite secrets when omitted (leave-blank-to-keep)', async () => {
       mockGetServerSession.mockResolvedValue(mockAdminSession)
       ;(mockPrisma.config.upsert as jest.Mock).mockResolvedValue({ id: 'config' })
@@ -109,7 +149,7 @@ describe('admin Stripe config actions', () => {
 
       await expect(
         updateStripeSettings({ priceIds: ['price_1'], librarySectionIds: [] })
-      ).rejects.toThrow()
+      ).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
       expect(mockPrisma.config.upsert).not.toHaveBeenCalled()
     })
 
@@ -120,7 +160,7 @@ describe('admin Stripe config actions', () => {
         priceIds: 'not-an-array',
       } as unknown as { priceIds: string[]; librarySectionIds: number[] })
 
-      expect(result).toEqual({ success: false, error: 'Invalid Stripe settings input' })
+      expect(result).toMatchObject({ success: false, code: 'VALIDATION' })
       expect(mockPrisma.config.upsert).not.toHaveBeenCalled()
     })
 
@@ -130,7 +170,7 @@ describe('admin Stripe config actions', () => {
 
       const result = await updateStripeSettings({ priceIds: ['price_1'], librarySectionIds: [] })
 
-      expect(result).toEqual({ success: false, error: 'DB down' })
+      expect(result).toEqual({ success: false, code: 'INTERNAL', error: 'Failed to update Stripe settings' })
     })
   })
 
@@ -145,7 +185,8 @@ describe('admin Stripe config actions', () => {
 
       const result = await setStripeEnabled(true)
 
-      expect(result.success).toBe(false)
+      if (result.success) throw new Error('Expected enabling to be refused')
+      expect(result.code).toBe('VALIDATION')
       expect(result.error).toContain('webhook secret')
       expect(result.error).toContain('at least one price ID')
       expect(result.error).not.toContain('secret key,')
@@ -158,8 +199,7 @@ describe('admin Stripe config actions', () => {
 
       const result = await setStripeEnabled(true)
 
-      expect(result.success).toBe(false)
-      expect(result.error).toContain('secret key')
+      expect(result).toMatchObject({ success: false, error: expect.stringContaining('secret key') })
       expect(mockPrisma.config.upsert).not.toHaveBeenCalled()
     })
 
@@ -188,8 +228,14 @@ describe('admin Stripe config actions', () => {
       expect(clearOfferedPricesCache).toHaveBeenCalled()
     })
 
-    it('allows disabling without checking config', async () => {
+    it('allows disabling an incomplete config, and audits the change', async () => {
       mockGetServerSession.mockResolvedValue(mockAdminSession)
+      ;(mockPrisma.config.findUnique as jest.Mock).mockResolvedValue({
+        stripeEnabled: true,
+        stripeSecretKey: null,
+        stripeWebhookSecret: null,
+        stripePriceIds: [],
+      })
       ;(mockPrisma.config.upsert as jest.Mock).mockResolvedValue({
         id: 'config',
         stripeEnabled: false,
@@ -198,7 +244,11 @@ describe('admin Stripe config actions', () => {
       const result = await setStripeEnabled(false)
 
       expect(result.success).toBe(true)
-      expect(mockPrisma.config.findUnique).not.toHaveBeenCalled()
+      expect(logAuditEvent).toHaveBeenCalledWith(
+        AuditEventType.CONFIG_CHANGED,
+        'admin-123',
+        expect.objectContaining({ section: 'stripe.enabled', changedFields: ['stripeEnabled'] })
+      )
       expect(mockPrisma.config.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({ stripeEnabled: false }),
@@ -209,7 +259,7 @@ describe('admin Stripe config actions', () => {
     it('rejects non-admin users', async () => {
       mockGetServerSession.mockResolvedValue(mockNonAdminSession)
 
-      await expect(setStripeEnabled(true)).rejects.toThrow()
+      await expect(setStripeEnabled(true)).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
       expect(mockPrisma.config.upsert).not.toHaveBeenCalled()
     })
   })

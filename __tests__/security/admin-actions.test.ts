@@ -145,18 +145,14 @@ describe('Admin Actions Security', () => {
   })
 
   describe('setLLMDisabled', () => {
-    it('should allow admin to update LLM disabled setting', async () => {
-      ;(requireAdmin as jest.Mock).mockResolvedValue(mockAdminSession)
-      ;(prisma.config.upsert as jest.Mock).mockResolvedValue({
-        id: 'config',
-        llmDisabled: true,
-        updatedBy: 'admin-user-id',
-      })
+    it('should allow admin to update LLM disabled setting, and audit it', async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValue(mockAdminSession)
+      ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({ llmDisabled: false })
+      ;(prisma.config.upsert as jest.Mock).mockResolvedValue({ id: 'config' })
 
       const result = await setLLMDisabled(true)
 
-      expect(requireAdmin).toHaveBeenCalled()
-      expect(result.success).toBe(true)
+      expect(result).toEqual({ success: true, data: null })
       expect(prisma.config.upsert).toHaveBeenCalledWith({
         where: { id: 'config' },
         update: {
@@ -168,21 +164,20 @@ describe('Admin Actions Security', () => {
           llmDisabled: true,
           updatedBy: 'admin-user-id',
         },
-        select: expect.objectContaining({ llmDisabled: true }),
+        // Nothing of the row reaches the client
+        select: { id: true },
       })
-      // The returned row reaches the client: no secrets
-      const { select } = (prisma.config.upsert as jest.Mock).mock.calls[0][0]
-      expect(select).not.toHaveProperty('stripeSecretKey')
-      expect(select).not.toHaveProperty('rewindSerialKey')
+      expect(logAuditEvent).toHaveBeenCalledWith(
+        AuditEventType.CONFIG_CHANGED,
+        'admin-user-id',
+        expect.objectContaining({ section: 'llm', changedFields: ['llmDisabled'] })
+      )
     })
 
     it('should reject non-admin user', async () => {
-      ;(requireAdmin as jest.Mock).mockImplementation(() => {
-        redirect('/')
-        throw new Error('Not admin')
-      })
+      ;(getServerSession as jest.Mock).mockResolvedValue({ ...mockAdminSession, user: { ...mockAdminSession.user, isAdmin: false } })
 
-      await expect(setLLMDisabled(true)).rejects.toThrow()
+      await expect(setLLMDisabled(true)).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
       expect(prisma.config.upsert).not.toHaveBeenCalled()
     })
   })

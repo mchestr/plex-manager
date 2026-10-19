@@ -16,7 +16,6 @@ export {
 // Connection and server info
 export {
   testJellyfinConnection,
-  getJellyfinServerInfo,
   getJellyfinLibraries,
 } from "./jellyfin-connection"
 
