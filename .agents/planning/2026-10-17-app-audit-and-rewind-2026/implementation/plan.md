@@ -401,7 +401,7 @@ gantt
 - [x] P4.15: Harden the admin assistant (security, S, due 2026-11-06)
 - [x] P4.16: Redact secrets and identifiers from logs (security, M, due 2026-11-19)
 - [x] P4.17: Harden the Docker image and compose file; add a health check (ops, M, due 2026-11-24)
-- [ ] P4.18: Discord role metadata follows access; marking acts as the member (security, M, due 2026-11-24)
+- [x] P4.18: Discord role metadata follows access; marking acts as the member (security, M, due 2026-11-24)
 - [x] P4.19: Discord privacy firewall fails closed (security, S, due 2026-11-20)
 - [x] P4.20: LLM quotas and spend caps for the assistant and Discord (security, M, due 2026-11-19)
 
