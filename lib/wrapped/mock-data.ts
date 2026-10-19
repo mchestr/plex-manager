@@ -67,17 +67,6 @@ export function generateMockWrappedData(args: {
       finale: `That's a wrap on <highlight>${year}</highlight>. Thank you for a remarkable year at the movies — see you at next year's premiere.`,
     },
     insights: {
-      personality: "Entertainment Enthusiast",
-      topGenre: "Various",
-      bingeWatcher:
-        statistics.totalWatchTime.shows > statistics.totalWatchTime.movies,
-      discoveryScore: Math.min(
-        100,
-        Math.max(
-          0,
-          Math.floor((statistics.moviesWatched + statistics.showsWatched) / 10)
-        )
-      ),
       funFacts: [
         `You watched ${statistics.moviesWatched} movies and ${statistics.showsWatched} shows`,
         `Your total watch time was ${totalWatchTime}`,

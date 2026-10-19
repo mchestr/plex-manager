@@ -3,8 +3,10 @@
  */
 
 import {
+  generateSystemPrompt,
   generateWrappedPrompt,
   getAvailablePlaceholders,
+  getDefaultPromptTemplate,
 } from '@/lib/wrapped/prompt-template'
 import { getActivePromptTemplate } from '@/actions/prompts'
 import type { WrappedStatistics } from '@/types/wrapped'
@@ -307,31 +309,18 @@ describe('Prompt Template', () => {
       expect(result).toContain('My Plex Server')
     })
 
-    it('should replace calculated values', async () => {
+    it('resolves the retired calculated placeholders to empty (RWP-16)', async () => {
       const template = 'Binge watcher: {{bingeWatcher}}, Discovery score: {{discoveryScore}}'
-      const statsWithBinge = {
-        ...mockStatistics,
-        topShows: [
-          {
-            title: 'Breaking Bad',
-            watchTime: 300,
-            playCount: 1,
-            episodesWatched: 21, // > 20 to trigger bingeWatcher
-            year: 2008,
-          },
-        ],
-      }
-      const result = await generateWrappedPrompt(
-        'Test User',
-        2024,
-        statsWithBinge,
-        template
-      )
+      const result = await generateWrappedPrompt('Test User', 2024, mockStatistics, template)
 
-      // bingeWatcher should be true (show has > 20 episodes)
-      expect(result).toContain('true')
-      // discoveryScore = min(100, max(0, floor((10 + 5) / 10))) = 1
-      expect(result).toContain('1')
+      expect(result).toBe('Binge watcher: , Discovery score: ')
+    })
+
+    it('no longer asks the model for personality, topGenre, bingeWatcher or discoveryScore', async () => {
+      const result = await generateWrappedPrompt('Test User', 2024, mockStatistics, getDefaultPromptTemplate())
+
+      expect(result).not.toMatch(/Binge watcher|Discovery score/)
+      expect(generateSystemPrompt()).not.toMatch(/"personality"|"topGenre"|"bingeWatcher"|"discoveryScore"/)
     })
 
     it('should handle empty leaderboards gracefully', async () => {
