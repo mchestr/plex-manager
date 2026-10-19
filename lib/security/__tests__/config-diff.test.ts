@@ -55,6 +55,14 @@ describe("configDiff", () => {
     })
   })
 
+  it("records an unparseable or empty URL, and an opaque origin, as null", () => {
+    expect(
+      configDiff("x", null, { url: "not a url", publicUrl: "", baseUrl: "file:///etc/passwd" }, {
+        urlFields: ["url", "publicUrl", "baseUrl"],
+      }).origins.after
+    ).toEqual({ url: null, publicUrl: null, baseUrl: null })
+  })
+
   it("compares arrays by value", () => {
     expect(configDiff("stripe", { stripePriceIds: ["a", "b"] }, { stripePriceIds: ["a", "b"] }).changedFields).toEqual([])
     expect(configDiff("stripe", { stripePriceIds: ["a"] }, { stripePriceIds: ["a", "b"] }).changedFields).toEqual([

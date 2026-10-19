@@ -135,6 +135,8 @@ export const updatePromptTemplate = adminAction({
           template: validated.template,
           version: existing.version + 1,
           updatedBy: userId,
+          // Switching a template off needs no lock; switching one on goes through activateOnly
+          ...(validated.isActive === false && { isActive: false }),
         },
       })
       return validated.isActive && !existing.isActive ? activateOnly(tx, id) : updated

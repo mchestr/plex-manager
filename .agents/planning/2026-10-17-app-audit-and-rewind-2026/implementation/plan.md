@@ -3960,11 +3960,23 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 
 **Demo.** In settings, change Tautulli's URL to a netcat listener, leave the key blank and save: the form says "Enter the API key again", and the listener receives nothing. `SELECT type, details FROM "AuditLog" ORDER BY "createdAt" DESC LIMIT 3` then shows `CONFIG_CHANGED` rows with origins and `secretChanged`.
 
+**As merged.**
+- The migration is `20261111000000_audit_log`. `actorUserId` is not a foreign key, so a row outlives its user; `requestId` stays null until P11.4 adds request IDs.
+- `logAuditEvent(type, userId, details?)` is unchanged for its callers: stdout gets the details as before (the logger sanitises them), and the row gets `sanitizeValue(details)` with `targetUserId` in its own column. A failed write logs `audit.persist_failed`. `recordAuditEvent(type, userId, details?, db = prisma)` awaits the row and throws on failure; pass a transaction client as `db` to write it inside a `$transaction`.
+- `resolveSecretForOrigin` returns `{ ok: false, code: 'SECRET_REQUIRED' }`; the actions return it as a widened code (`ActionResult<null, ActionErrorCode | SecretRequiredCode>`, `SECRET_REQUIRED_MESSAGE` as copy), not as a new `ActionErrorCode`, so `errorCopy` is unchanged. With no stored row a blank secret is a plain `VALIDATION` "required" error. The LLM rule compares the key's destination: the base URL for `openai-compatible`, each hosted provider's API origin otherwise.
+- `configDiff(section, before, after, { secretFields, urlFields })` lists only the URL fields present in the rows; a secret left `undefined` in `after` counts as kept. Sections are `plex`, `jellyfin`, `tautulli`, `overseerr`, `sonarr`, `radarr`, `prometheus`, `jellyfin.login`, `llm.chat`, `llm.wrapped` (plus `from`/`to` provider and model), `llm`, `rewind.season`, `stripe`, `stripe.enabled`, `watchlist`, `prompt` (plus `action` and `templateId`) and `setup.*`.
+- The LLM saves now emit `CONFIG_CHANGED` instead of `LLM_PROVIDER_CHANGED`; that enum member stays, tagged `@public` for knip.
+- Every touched admin action is on `adminAction` and in `migratedActionFiles` except `admin-servers.ts`, whose `getJellyfinLibraries` still returns `error.message` (P11.5). Single-value actions keep their argument (`toggleJellyfinLogin(enabled)`, `setLLMDisabled(disabled)`, `setStripeEnabled(enabled)`, `deletePromptTemplate(id)`, `setActivePromptTemplate(id)`); `updatePromptTemplate` takes `{ id, ...fields }`. Results are `{ success: true, data }`.
+- Prompt activation deactivates every row with one unfiltered `updateMany` before switching the chosen row on, all in one transaction, so a concurrent activation waits on the row locks; create and update activate the same way.
+- Setup saves accept a blank secret and reuse the active row's only for the same origin. The actor is `setup` before setup completes and the admin's id after; there is no claim id until P11.32.
+- The Postgres test is `__tests__/lib/security/audit-log.pg.test.ts`, beside the other `.pg` suites: under `lib/` it would count toward the `lib/security/` coverage floor.
+- Not present in the code, so nothing to emit: `deleteJellyfinServer`, `deletePrometheus` and a queue-schedule settings action (the watchlist interval is the only schedule setting). `getJellyfinServerInfo` was deleted: its only caller discarded the result.
+
 **Done when.**
-- [ ] A blank secret is reused only for the same origin, in settings, connection tests and setup.
-- [ ] `AuditLog` exists, and every audit event is written to the database as well as stdout.
-- [ ] Every credential, settings, setup and template mutation emits `CONFIG_CHANGED` with a redacted diff.
-- [ ] Prompt activation is atomic.
+- [x] A blank secret is reused only for the same origin, in settings, connection tests and setup.
+- [x] `AuditLog` exists, and every audit event is written to the database as well as stdout.
+- [x] Every credential, settings, setup and template mutation emits `CONFIG_CHANGED` with a redacted diff.
+- [x] Prompt activation is atomic.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
 
 ### Step P4.7: Sessions end when access ends; role changes stick

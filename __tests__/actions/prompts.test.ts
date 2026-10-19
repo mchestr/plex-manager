@@ -199,6 +199,19 @@ describe('updatePromptTemplate', () => {
     expect(prismaMock.promptTemplate.updateMany).not.toHaveBeenCalled()
   })
 
+  it('switches a template off when the edit says so', async () => {
+    prismaMock.promptTemplate.findUnique.mockResolvedValue({ ...existing, isActive: true })
+    prismaMock.promptTemplate.update.mockResolvedValue({ ...existing, isActive: false })
+
+    await updatePromptTemplate({ ...input, isActive: false })
+
+    expect(prismaMock.promptTemplate.update).toHaveBeenCalledWith({
+      where: { id: 't1' },
+      data: expect.objectContaining({ isActive: false }),
+    })
+    expect(prismaMock.promptTemplate.updateMany).not.toHaveBeenCalled()
+  })
+
   it('returns NOT_FOUND for a missing template', async () => {
     prismaMock.promptTemplate.findUnique.mockResolvedValue(null)
 
