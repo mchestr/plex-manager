@@ -695,14 +695,19 @@ if (!stripe) return { error: 'Stripe is not configured' }
 - `actions/subscription.ts` — `startCheckout(priceId)`, `openBillingPortal()`.
 - `actions/admin/subscriptions.ts` — admin cancel/grant/toggle-exempt.
 - `app/api/stripe/webhook/route.ts` — **the only** Stripe API route: verifies the
-  signature, dedupes on `StripeEvent(event.id)`, enqueues a BullMQ job, returns
-  200 (400 on bad signature, never 5xx).
+  signature, dedupes on a processed `StripeEvent(event.id)`, enqueues a BullMQ
+  job (or retries its failed one), returns 200 (400 on bad signature, never 5xx).
 - `lib/queue/jobs/stripe.ts` — BullMQ processors (`STRIPE_WEBHOOK`,
   `PLEX_ACCESS_GRANT`, `PLEX_ACCESS_REVOKE`).
 
 **Handled webhook events**: `checkout.session.completed`,
-`customer.subscription.updated`, `customer.subscription.deleted`,
-`invoice.payment_failed`.
+`checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`
+(logged no-op), `customer.subscription.updated`, `customer.subscription.deleted`,
+`invoice.payment_failed`. Handlers write the live subscription
+(`stripe.subscriptions.retrieve`), never an older event over a newer one
+(`Subscription.stripeEventAt`, `lib/stripe/subscription-sync.ts`), and a
+`StripeEvent` is processed only after its handler succeeds, so a resend
+recovers a failed event.
 
 **⚠️ CRITICAL — disabled-state safety**: the webhook still verifies signatures and
 records subscription **status** while disabled, but performs **no** Plex

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { getStripe } from "@/lib/stripe/client"
 import { addJob } from "@/lib/queue/client"
+import { isRedisConfigured } from "@/lib/queue/connection"
 import { JOB_TYPES } from "@/lib/queue/types"
 import { createLogger } from "@/lib/utils/logger"
 
@@ -100,11 +101,13 @@ export async function adminCancelSubscription(
  *
  * ## Behavior (FR-24 / R10)
  *
- * 1. Enqueues the shared {@link JOB_TYPES.PLEX_ACCESS_GRANT} job so the user is
- *    invited to (and auto-accepted onto) the active Plex server — reusing the
- *    exact same grant path as a paid checkout.
+ * 1. Refuses without the job queue (`REDIS_URL`), which runs the grant.
  * 2. Marks the user `isExempt = true` with `exemptReason = "comp"` so the
  *    subscription gate treats them as covered independent of Stripe.
+ * 3. Enqueues the shared {@link JOB_TYPES.PLEX_ACCESS_GRANT} job so the user is
+ *    invited to (and auto-accepted onto) the active Plex server — reusing the
+ *    exact same grant path as a paid checkout. If the enqueue fails, the
+ *    exemption is put back as it was.
  *
  * The grant job id is keyed by the user (matching the checkout path) so a repeat
  * grant collapses onto a single job rather than creating duplicate invites.
@@ -122,9 +125,15 @@ export async function adminGrantAccess(
   }
 
   try {
+    // The grant runs as a queued job: without the queue it would never run,
+    // so fail before marking the user exempt (GAP-15).
+    if (!isRedisConfigured()) {
+      return { error: "The job queue (REDIS_URL) is not configured, so access cannot be granted." }
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, isAdmin: true },
+      select: { id: true, isAdmin: true, isExempt: true, exemptReason: true },
     })
 
     if (!user) {
@@ -143,13 +152,23 @@ export async function adminGrantAccess(
       data: { isExempt: true, exemptReason: "comp" },
     })
 
-    // Unique jobId suffix so a repeat comp-grant isn't collapsed onto a stale
-    // completed job still retained in Redis (BullMQ dedupes by jobId).
-    await addJob(
-      JOB_TYPES.PLEX_ACCESS_GRANT,
-      { userId },
-      { jobId: `${JOB_TYPES.PLEX_ACCESS_GRANT}:${userId}:admin-${Date.now()}` }
-    )
+    try {
+      // Unique jobId suffix so a repeat comp-grant isn't collapsed onto a stale
+      // completed job still retained in Redis (BullMQ dedupes by jobId).
+      await addJob(
+        JOB_TYPES.PLEX_ACCESS_GRANT,
+        { userId },
+        { jobId: `${JOB_TYPES.PLEX_ACCESS_GRANT}:${userId}:admin-${Date.now()}` }
+      )
+    } catch (error) {
+      // No grant is coming, so the exemption must not stay either.
+      await prisma.user.update({
+        where: { id: userId },
+        data: { isExempt: user.isExempt, exemptReason: user.exemptReason },
+      })
+      logger.error("Failed to queue the comp grant; exemption reverted", error, { userId })
+      return { error: "The job queue is unavailable, so access was not granted. Try again later." }
+    }
 
     logger.info("Admin granted comp access", { userId })
 

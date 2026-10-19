@@ -4214,12 +4214,24 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 
 **Demo.** With the Stripe CLI, resend a `customer.subscription.updated` (active) event after `customer.subscription.deleted`: the row stays CANCELED, and the logs show `stripe.stale_event`. Then make a handler fail by stopping the database briefly, and use "Resend" in the dashboard: the event is processed.
 
+**As merged.**
+- The migration is `20261119000000_stripe_event_processing`. Existing `StripeEvent` rows get `receivedAt = processedAt` and `attempts = 1`, then `processedAt` loses its default and NOT NULL.
+- The ordered write is `applySubscriptionState(match, data, eventAt)` in new `lib/stripe/subscription-sync.ts`, beside `liveSubscriptionState(subscription)`. It returns `missing`, `stale` or `{ applied, userId, status, becameActive }`. Instead of reading the previous status in a transaction, a write into ACTIVE first runs as an `updateMany` whose `where` also requires the status to be UNPAID, CANCELED or INCOMPLETE, so the transition is decided by the same atomic statement that changes the row, and two concurrent workers report it once (`__tests__/lib/stripe/subscription-sync.pg.test.ts`). Checkout matches by `userId` and creates the row when there is none.
+- `customer.subscription.updated` and `deleted` share one handler. A revoke is enqueued after any applied write whose live status is CANCELED or UNPAID, `invoice.payment_failed` included (its event may be the one that applies the final unpaid state), keyed by user and event as before; a grant only on the move into ACTIVE.
+- The processor upserts the row after `events.retrieve` (the event's type is needed for the create), so a failure to fetch the event leaves no row; the route then treats the event as unprocessed. A row that is already processed ends the job without running the handler. `lastError` codes: `STRIPE_NOT_CONFIGURED`, `DB_<Prisma code>`, `DB_UNAVAILABLE`, the Stripe error type (`StripeConnectionError`, ...) or `HANDLER_FAILED`. The audit actor of `STRIPE_EVENT_FAILED` is `system`.
+- The route looks the job up with new `findJob(jobId)` in `lib/queue/client.ts`: `failed` is retried, `waiting`, `active`, `delayed` and the other pending states get a 200, and a `completed` job (an unprocessed event cannot normally have one) is removed and the event enqueued again, as is a missing one.
+- The grant job checks `getAccessLevel(userId) === 'full'` first (so a disabled user is skipped), then exempt or a stored ACTIVE status confirmed live, and returns `{ granted: false, skipped }` without a retry. It calls `checkUserServerAccess` only when the user has a `plexUserId`; a failed check falls through to the invite.
+- `evaluateRevokeGuard` takes `liveStatus` (null when unchecked); the job calls it on the stored state first, and asks Stripe only when that passes.
+- `startCheckout` returns the widened code `ALREADY_SUBSCRIBED` (`ActionResult<{ url }, ActionErrorCode | "ALREADY_SUBSCRIBED">`). `/subscribe` hides the plans when `getAccessLevel` is `full` and shows `subscribe-has-access` copy in the existing notice block.
+- `StripeConfigStatus` gained `hasJobQueue`, which the settings form adds to its "Missing" list as "job queue (REDIS_URL)". `parseStripePriceIds` moved to `lib/stripe/config.ts` and replaced the copies in `admin-config.ts` and `lib/stripe/prices.ts`.
+- Tests use `__tests__/helpers/stripe-fakes.ts`: a fake Stripe whose `subscriptions.retrieve` returns live state, the real SDK's `webhooks` for signed fixture events (`generateTestHeaderString`), and an in-memory `Subscription`/`StripeEvent` store behind `prismaMock`.
+
 **Done when.**
-- [ ] A `StripeEvent` is marked processed only after its handler succeeds, and a resend recovers a failed event.
-- [ ] Subscription writes use live state and never apply an older event over a newer one.
-- [ ] The grant and revoke jobs re-check live state before acting.
-- [ ] Checkout refuses an existing subscription and reuses the customer, and `checkout.session.completed` checks mode, payment status, price and owner.
-- [ ] Stripe cannot be enabled without Redis, and the out-of-order and resent-event tests pass.
+- [x] A `StripeEvent` is marked processed only after its handler succeeds, and a resend recovers a failed event.
+- [x] Subscription writes use live state and never apply an older event over a newer one.
+- [x] The grant and revoke jobs re-check live state before acting.
+- [x] Checkout refuses an existing subscription and reuses the customer, and `checkout.session.completed` checks mode, payment status, price and owner.
+- [x] Stripe cannot be enabled without Redis, and the out-of-order and resent-event tests pass.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
 
 ### Step P4.11: Unshare only this server, idempotently

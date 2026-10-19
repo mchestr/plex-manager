@@ -3,8 +3,8 @@
  *
  * Covers:
  * - updateStripeSettings: persistence, leave-blank-to-keep secrets, admin auth
- * - setStripeEnabled: enable-blocked when incomplete, enable-allowed when complete,
- *   disable always allowed, admin auth
+ * - setStripeEnabled: enable-blocked when incomplete (the job queue included,
+ *   GAP-15), enable-allowed when complete, disable always allowed, admin auth
  * - getStripeConfig: returns only non-secret status (no secret leakage)
  */
 
@@ -66,6 +66,11 @@ describe('admin Stripe config actions', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    process.env.REDIS_URL = 'redis://localhost:6379/15'
+  })
+
+  afterEach(() => {
+    delete process.env.REDIS_URL
   })
 
   describe('updateStripeSettings', () => {
@@ -228,6 +233,21 @@ describe('admin Stripe config actions', () => {
       expect(clearOfferedPricesCache).toHaveBeenCalled()
     })
 
+    it('refuses enabling without REDIS_URL, which the webhook jobs need (GAP-15)', async () => {
+      delete process.env.REDIS_URL
+      mockGetServerSession.mockResolvedValue(mockAdminSession)
+      ;(mockPrisma.config.findUnique as jest.Mock).mockResolvedValue({
+        stripeSecretKey: 'sk_test_123',
+        stripeWebhookSecret: 'whsec_123',
+        stripePriceIds: ['price_1'],
+      })
+
+      const result = await setStripeEnabled(true)
+
+      expect(result).toMatchObject({ success: false, code: 'VALIDATION', error: expect.stringContaining('job queue (REDIS_URL)') })
+      expect(mockPrisma.config.upsert).not.toHaveBeenCalled()
+    })
+
     it('allows disabling an incomplete config, and audits the change', async () => {
       mockGetServerSession.mockResolvedValue(mockAdminSession)
       ;(mockPrisma.config.findUnique as jest.Mock).mockResolvedValue({
@@ -281,6 +301,7 @@ describe('admin Stripe config actions', () => {
         enabled: true,
         hasSecretKey: true,
         hasWebhookSecret: true,
+        hasJobQueue: true,
         priceIds: ['price_1', 'price_2'],
         librarySectionIds: [1, 2],
       })
@@ -306,6 +327,7 @@ describe('admin Stripe config actions', () => {
         enabled: false,
         hasSecretKey: false,
         hasWebhookSecret: false,
+        hasJobQueue: true,
         priceIds: [],
         librarySectionIds: [],
       })
@@ -321,9 +343,18 @@ describe('admin Stripe config actions', () => {
         enabled: false,
         hasSecretKey: false,
         hasWebhookSecret: false,
+        hasJobQueue: true,
         priceIds: [],
         librarySectionIds: [],
       })
+    })
+
+    it('reports a missing job queue', async () => {
+      delete process.env.REDIS_URL
+      mockGetServerSession.mockResolvedValue(mockAdminSession)
+      ;(mockPrisma.config.findUnique as jest.Mock).mockResolvedValue(null)
+
+      await expect(getStripeConfig()).resolves.toMatchObject({ hasJobQueue: false })
     })
 
     it('rejects non-admin users', async () => {
