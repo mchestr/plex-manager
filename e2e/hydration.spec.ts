@@ -96,7 +96,8 @@ test.describe('Hydration across zones and locales', () => {
   test('announcements', async ({ page }) => {
     const errors = collectHydrationErrors(page);
     await page.goto('/admin/announcements');
-    await expect(page.getByTestId(`announcement-${ANNOUNCEMENT_ID}`)).toBeVisible();
+    // A production build can stream a hidden copy beside the shown one until React swaps it in.
+    await expect(page.getByTestId(`announcement-${ANNOUNCEMENT_ID}`).filter({ visible: true })).toBeVisible();
     await page.waitForLoadState('networkidle');
     expect(errors).toEqual([]);
   });
@@ -104,9 +105,11 @@ test.describe('Hydration across zones and locales', () => {
   test('LLM conversation', async ({ page }) => {
     const errors = collectHydrationErrors(page);
     await page.goto(`/admin/llm-usage/conversation/${CONVERSATION_ID}`);
-    await expect(page.getByTestId(`conversation-usage-row-${USAGE_IDS[0]}`)).toBeVisible();
+    // A production build can stream a hidden copy beside the shown one until React swaps it in.
+    const row = page.getByTestId(`conversation-usage-row-${USAGE_IDS[0]}`).filter({ visible: true });
+    await expect(row).toBeVisible();
     // Grouped in the app locale (en-US), not the browser's de-DE.
-    await expect(page.getByTestId(`conversation-usage-row-${USAGE_IDS[0]}`)).toContainText('14,690');
+    await expect(row).toContainText('14,690');
     await page.waitForLoadState('networkidle');
     expect(errors).toEqual([]);
   });
