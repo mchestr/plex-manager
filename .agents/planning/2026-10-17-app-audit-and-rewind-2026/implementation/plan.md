@@ -379,7 +379,7 @@ gantt
 - [x] P3.4: Base primitives on Base UI behind adapters (ui, L, due 2026-10-30)
 - [x] P3.5: Form primitives and the Field pattern (ui, M, due 2026-11-04)
 - [x] P3.6: Overlay and feedback primitives (ui, M, due 2026-11-03)
-- [ ] P3.7: Rewind-ready primitives (ui, M, due 2026-11-05)
+- [x] P3.7: Rewind-ready primitives (ui, M, due 2026-11-05)
 - [x] P3.8: Safe Markdown, safe links and error copy (ui, S, due 2026-10-29)
 - [ ] P3.9: Status vocabulary, icons, brand and chart theme (ui, M, due 2026-11-05)
 - [x] P3.10: One formatter module (ui, M, due 2026-10-29)
