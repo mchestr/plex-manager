@@ -9,6 +9,7 @@ import { Worker, Job } from "bullmq"
 import { getRedisConnection } from "./connection"
 import { getJobProcessor, getRegisteredJobTypes } from "./jobs"
 import { QUEUE_NAME } from "./client"
+import { startRewindWorkers, stopRewindWorkers } from "./rewind-queues"
 import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("QUEUE_WORKER")
@@ -31,7 +32,7 @@ function getWorkerConcurrency(): number {
 }
 
 /**
- * Start the queue worker
+ * Start the queue worker, and the Rewind queues' Workers beside it
  * Safe to call multiple times - will only start once
  */
 export async function startWorker(): Promise<void> {
@@ -138,6 +139,8 @@ export async function startWorker(): Promise<void> {
     })
   })
 
+  startRewindWorkers()
+
   logger.info("Queue worker started", { concurrency })
 }
 
@@ -146,6 +149,8 @@ export async function startWorker(): Promise<void> {
  * Waits for current jobs to complete (with timeout)
  */
 export async function stopWorker(): Promise<void> {
+  await stopRewindWorkers()
+
   if (!worker) {
     return
   }
