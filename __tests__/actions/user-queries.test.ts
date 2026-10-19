@@ -98,7 +98,10 @@ describe('getUserPlexWrapped', () => {
 
     const result = await getUserPlexWrapped('user-1', 2024)
 
-    expect(JSON.parse(result!.data)).toEqual({ version: 2, userName: 'Test User', statistics: { moviesWatched: 3 } })
+    // Re-serialised from the stored-data parser, which drops leaderboards
+    const visible = JSON.parse(result!.data)
+    expect(visible).toMatchObject({ version: 2, userName: 'Test User', statistics: { moviesWatched: 3 } })
+    expect(visible.statistics).not.toHaveProperty('leaderboards')
     expect(result!.data).not.toContain('Someone Else')
   })
 

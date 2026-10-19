@@ -452,8 +452,8 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
           'member-plex-id',
           JSON.stringify({
             statistics: {
-              topMovies: [{ ratingKey: '111' }, { ratingKey: { id: 1 } }, { title: 'no key' }, 'junk'],
-              topShows: [{ ratingKey: 333 }],
+              topMovies: [{ title: 'A', ratingKey: '111' }, { title: 'B', ratingKey: { id: 1 } }, { title: 'no key' }, 'junk'],
+              topShows: [{ title: 'S', ratingKey: 333 }],
             },
           })
         )

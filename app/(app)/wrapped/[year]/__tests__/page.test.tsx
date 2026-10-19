@@ -169,7 +169,8 @@ describe('WrappedYearPage route year', () => {
     await renderPage('2025')
 
     expect(viewerProps().year).toBe(2025)
-    expect(viewerProps().wrappedData).toEqual({ year: 2025, owner: 'user-1' })
+    // The stored row is the one for the route year, read through the parser
+    expect(viewerProps().wrappedData).toMatchObject({ year: 2025, statistics: { moviesWatched: 0 } })
   })
 
   it("never returns another member's row for the year", async () => {

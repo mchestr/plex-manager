@@ -5,6 +5,7 @@
  */
 
 import { createLogger } from "@/lib/utils/logger"
+import type { TopContentLeaderboards } from "@/lib/wrapped/data/schema-legacy"
 import type {
   TautulliItemUserStat,
   TautulliHomeStatsRow,
@@ -241,66 +242,12 @@ export async function fetchTopContentLeaderboards(
   year: number
 ): Promise<{
   success: boolean
-  data?: {
-    movies: Array<{
-      title: string
-      ratingKey?: string
-      leaderboard: Array<{
-        userId: string
-        username: string
-        friendlyName: string
-        watchTime: number
-        playCount: number
-      }>
-      userPosition?: number
-      totalWatchers: number
-    }>
-    shows: Array<{
-      title: string
-      ratingKey?: string
-      leaderboard: Array<{
-        userId: string
-        username: string
-        friendlyName: string
-        watchTime: number
-        playCount: number
-        episodesWatched: number
-      }>
-      userPosition?: number
-      totalWatchers: number
-    }>
-  }
+  data?: TopContentLeaderboards
   error?: string
 }> {
   try {
-    const moviesLeaderboards: Array<{
-      title: string
-      ratingKey?: string
-      leaderboard: Array<{
-        userId: string
-        username: string
-        friendlyName: string
-        watchTime: number
-        playCount: number
-      }>
-      userPosition?: number
-      totalWatchers: number
-    }> = []
-
-    const showsLeaderboards: Array<{
-      title: string
-      ratingKey?: string
-      leaderboard: Array<{
-        userId: string
-        username: string
-        friendlyName: string
-        watchTime: number
-        playCount: number
-        episodesWatched: number
-      }>
-      userPosition?: number
-      totalWatchers: number
-    }> = []
+    const moviesLeaderboards: TopContentLeaderboards["movies"] = []
+    const showsLeaderboards: TopContentLeaderboards["shows"] = []
 
     // Fetch leaderboards for top movies
     for (const movie of topMovies.slice(0, 5)) {

@@ -3,7 +3,7 @@
 import { motion } from "framer-motion"
 
 import { SlideFrame } from "@/components/wrapped/cinematic/slide-frame"
-import type { PercentileResult } from "@/lib/wrapped/derived-statistics"
+import type { PercentileResult } from "@/lib/wrapped/data/schema-legacy"
 import { WrappedSection } from "@/types/wrapped"
 
 interface Props {

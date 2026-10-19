@@ -8,7 +8,8 @@ import {
 import { ModalShell } from "@/components/ui/modal-shell"
 import { getAvailablePlaceholders } from "@/lib/wrapped/prompt-template"
 import { formatWatchTime } from "@/lib/utils/time-formatting"
-import { WrappedData, WrappedStatistics } from "@/types/wrapped"
+import { legacyWrappedData, readWrappedStatus } from "@/lib/wrapped/data/parse-stored"
+import type { WrappedStatistics } from "@/types/wrapped"
 import { PlexWrapped, PromptTemplate } from "@/lib/generated/prisma/client"
 import { useRouter } from "next/navigation"
 import { useMemo, useState, useTransition } from "react"
@@ -122,7 +123,7 @@ export function PromptTemplateEditor({ template, userWrapped, userName = "User" 
 
   // Parse wrapped data and extract statistics for examples
   const exampleStatistics = useMemo((): WrappedStatistics | null => {
-    if (!userWrapped || userWrapped.status !== "completed" || !userWrapped.data) {
+    if (!userWrapped || readWrappedStatus(userWrapped.status, userWrapped.id) !== "completed" || !userWrapped.data) {
       // Generate default example statistics with all placeholder data
 
       return {
@@ -245,13 +246,7 @@ export function PromptTemplateEditor({ template, userWrapped, userName = "User" 
       }
     }
 
-    try {
-      const wrappedData: WrappedData = JSON.parse(userWrapped.data)
-      return wrappedData.statistics
-    } catch (error) {
-      console.error("Failed to parse wrapped data:", error)
-      return null
-    }
+    return legacyWrappedData(userWrapped)?.statistics ?? null
   }, [userWrapped])
 
   // Generate example preview with placeholders replaced (synchronous client-side version)

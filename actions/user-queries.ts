@@ -8,6 +8,7 @@ import { getServerSession } from "next-auth"
 import { SubscriptionStatus } from "@/lib/generated/prisma/client"
 import { aggregateLlmUsage } from "@/lib/utils"
 import { createLogger } from "@/lib/utils/logger"
+import { parseStoredRewind } from "@/lib/wrapped/data/parse-stored"
 import { readStoredError, toStoredError } from "@/lib/wrapped/generation-errors"
 import {
   AdminUserWithWrappedStats,
@@ -340,20 +341,14 @@ export async function unshareUserLibrary(userId: string): Promise<{ success: boo
 // endpoint. These return user PII and are only consumed by getAllUsersWithWrapped
 // (which is admin-gated), so they must not be independently callable.
 
-/** A stored `PlexWrapped.data` string without `statistics.leaderboards`. */
+/**
+ * A stored `PlexWrapped.data` string without `statistics.leaderboards`: v1
+ * and v2 rows are re-serialised from the parser, which drops them. Other rows
+ * hold no leaderboards and pass through.
+ */
 function withoutLeaderboards(data: string): string {
-  let parsed: unknown
-  try {
-    parsed = JSON.parse(data)
-  } catch {
-    return data
-  }
-  const statistics = typeof parsed === "object" && parsed !== null ? (parsed as { statistics?: unknown }).statistics : undefined
-  if (typeof statistics !== "object" || statistics === null || !("leaderboards" in statistics)) {
-    return data
-  }
-  delete (statistics as { leaderboards?: unknown }).leaderboards
-  return JSON.stringify(parsed)
+  const stored = parseStoredRewind(data)
+  return stored.version === 1 || stored.version === 2 ? JSON.stringify(stored.legacy) : data
 }
 
 async function fetchUsersWithWrappedData(year: number) {

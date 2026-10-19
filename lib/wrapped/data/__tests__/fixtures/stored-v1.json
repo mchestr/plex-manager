@@ -1,0 +1,133 @@
+{
+  "year": 2024,
+  "userId": "user-1",
+  "userName": "Mike",
+  "generatedAt": "2024-12-01T09:00:00.000Z",
+  "statistics": {
+    "totalWatchTime": {
+      "total": 60480,
+      "movies": 20160,
+      "shows": 40320
+    },
+    "moviesWatched": 85,
+    "showsWatched": 23,
+    "episodesWatched": 412,
+    "topMovies": [
+      {
+        "title": "Dune: Part Three",
+        "watchTime": 165,
+        "playCount": 1,
+        "year": 2026
+      },
+      {
+        "title": "The Odyssey",
+        "watchTime": 150,
+        "playCount": 1,
+        "year": 2026
+      }
+    ],
+    "topShows": [
+      {
+        "title": "Severance",
+        "watchTime": 900,
+        "playCount": 18,
+        "episodesWatched": 18,
+        "year": 2022
+      }
+    ],
+    "watchTimeByMonth": [
+      {
+        "month": 1,
+        "monthName": "January",
+        "watchTime": 5040
+      },
+      {
+        "month": 2,
+        "monthName": "February",
+        "watchTime": 4200
+      }
+    ],
+    "longestBinge": {
+      "title": "Severance",
+      "duration": 300,
+      "date": "2024-03-02"
+    },
+    "mostActiveDay": {
+      "day": "Saturday",
+      "watchTime": 4000
+    }
+  },
+  "sections": [
+    {
+      "id": "hero",
+      "type": "hero",
+      "title": "Your 2024 Wrapped",
+      "subtitle": "Now Presenting",
+      "content": "What a year.",
+      "animationDelay": 0,
+      "data": {
+        "prominentStat": {
+          "value": 1008,
+          "label": "hours watched",
+          "description": "Your year"
+        }
+      }
+    },
+    {
+      "id": "top-movies",
+      "type": "top-movies",
+      "title": "Top Movies",
+      "content": "Your favourites.",
+      "animationDelay": 400,
+      "data": {
+        "movies": [
+          {
+            "title": "Dune: Part Three",
+            "watchTime": 165,
+            "playCount": 1,
+            "year": 2026
+          },
+          {
+            "title": "The Odyssey",
+            "watchTime": 150,
+            "playCount": 1,
+            "year": 2026
+          }
+        ]
+      }
+    },
+    {
+      "id": "fun-facts",
+      "type": "fun-facts",
+      "title": "Fun Facts",
+      "content": "",
+      "animationDelay": 800,
+      "data": {
+        "facts": [
+          "You watched on a Tuesday."
+        ]
+      }
+    },
+    {
+      "id": "insights",
+      "type": "insights",
+      "title": "Insights",
+      "content": "You love sci-fi.",
+      "animationDelay": 1200
+    }
+  ],
+  "insights": {
+    "personality": "Movie Buff",
+    "topGenre": "Science Fiction",
+    "bingeWatcher": true,
+    "discoveryScore": 64,
+    "funFacts": [
+      "You watched on a Tuesday."
+    ]
+  },
+  "summary": "1,008 hours of film and television.",
+  "metadata": {
+    "totalSections": 4,
+    "generationTime": 12
+  }
+}

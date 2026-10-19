@@ -2,7 +2,7 @@
  * Type definitions for statistics functions
  */
 
-import type { DerivedStatistics } from "./derived-statistics"
+import type { DerivedStatistics } from "./data/schema-legacy"
 
 export interface TautulliConfig {
   url: string

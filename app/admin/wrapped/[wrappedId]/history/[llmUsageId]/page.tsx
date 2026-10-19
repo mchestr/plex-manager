@@ -3,7 +3,6 @@ import { LlmTextRemovedNotice } from "@/components/admin/llm-usage/llm-text-remo
 import { HistoricalWrappedSelectorHeader } from "@/components/admin/wrapped/historical-wrapped-selector-header"
 import { WrappedViewerWrapper } from "@/components/wrapped/wrapped-viewer-wrapper"
 import { requireAdmin } from "@/lib/admin"
-import { WrappedData } from "@/types/wrapped"
 import Link from "next/link"
 
 // Force dynamic rendering to prevent caching
@@ -77,7 +76,7 @@ export default async function HistoricalWrappedPage({
     )
   }
 
-  const { wrappedData, llmUsage, userId, userName, year } = historicalData
+  const { llmUsage, userId, userName, year } = historicalData
 
   const formatDate = (date: Date | string) => {
     return new Date(date).toLocaleString(undefined, {
@@ -131,10 +130,10 @@ export default async function HistoricalWrappedPage({
       </div>
       <div className="pt-20">
         <div className="max-w-7xl mx-auto px-6 pb-8">
-          {wrappedData ? (
-            <WrappedViewerWrapper wrappedData={wrappedData as WrappedData} year={year} />
-          ) : (
+          {historicalData.removed ? (
             <LlmTextRemovedNotice title="Historical version" />
+          ) : (
+            <WrappedViewerWrapper wrappedData={historicalData.wrappedData} year={year} />
           )}
         </div>
       </div>

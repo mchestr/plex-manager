@@ -4,6 +4,7 @@ import { UnshareUserButton } from "@/components/admin/users/unshare-user-button"
 import { UserStatusBadge } from "@/components/admin/users/user-status-badge"
 import { ChangeUserRoleButton } from "@/components/admin/users/change-user-role-button"
 import { UserActivityTimeline } from "@/components/admin/users/user-activity-timeline"
+import { readWrappedStatus } from "@/lib/wrapped/data/parse-stored"
 import { getSeasonYear } from "@/lib/wrapped/season"
 import Link from "next/link"
 import Image from "next/image"
@@ -234,8 +235,8 @@ export default async function UserDetailsPage({ params }: { params: Promise<{ us
                   {seasonYear} Wrapped
                 </h3>
                 <div className="flex items-center gap-3">
-                  <UserStatusBadge status={seasonWrapped.status} />
-                  {seasonWrapped.status === "completed" && (
+                  <UserStatusBadge status={readWrappedStatus(seasonWrapped.status, seasonWrapped.id)} />
+                  {readWrappedStatus(seasonWrapped.status, seasonWrapped.id) === "completed" && (
                     <Link
                       href={`/admin/users/${user.id}/wrapped?year=${seasonYear}`}
                       data-testid="admin-user-season-wrapped-view"
@@ -301,7 +302,7 @@ export default async function UserDetailsPage({ params }: { params: Promise<{ us
                           <span className="text-sm font-medium text-white">{wrapped.year}</span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <UserStatusBadge status={wrapped.status} />
+                          <UserStatusBadge status={readWrappedStatus(wrapped.status, wrapped.id)} />
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="text-sm text-slate-300" data-testid="admin-user-history-generated-timestamp">
@@ -329,7 +330,7 @@ export default async function UserDetailsPage({ params }: { params: Promise<{ us
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          {wrapped.status === "completed" ? (
+                          {readWrappedStatus(wrapped.status, wrapped.id) === "completed" ? (
                             <Link
                               href={`/admin/users/${user.id}/wrapped?year=${wrapped.year}`}
                               className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-medium rounded transition-colors"

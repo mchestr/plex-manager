@@ -4,10 +4,11 @@ import { WrappedPageClient } from "@/components/wrapped/wrapped-page-client"
 import { WrappedViewerWrapper } from "@/components/wrapped/wrapped-viewer-wrapper"
 import { requireAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/prisma"
+import { legacyWrappedData, readWrappedStatus } from "@/lib/wrapped/data/parse-stored"
 import { getSeasonYear } from "@/lib/wrapped/season"
 import { adminErrorHint, readStoredError } from "@/lib/wrapped/generation-errors"
-import { WrappedData } from "@/types/wrapped"
 import Link from "next/link"
+
 
 // Force dynamic rendering to prevent caching
 export const dynamic = 'force-dynamic'
@@ -71,7 +72,8 @@ export default async function UserWrappedPage({
   const year = resolvedSearchParams.year ? parseInt(resolvedSearchParams.year, 10) : await getSeasonYear()
   const wrapped = await getUserPlexWrapped(userId, year)
 
-  const errorCode = wrapped?.status === "failed" ? readStoredError(wrapped.error) : null
+  const status = wrapped ? readWrappedStatus(wrapped.status, wrapped.id) : null
+  const errorCode = wrapped && status === "failed" ? readStoredError(wrapped.error) : null
   let errorHint: string | null = null
   if (errorCode === "TAUTULLI_USER_NOT_FOUND") {
     const target = await prisma.user.findUnique({ where: { id: userId }, select: { plexUserId: true } })
@@ -103,17 +105,16 @@ export default async function UserWrappedPage({
     <main className="min-h-screen">
       <AdminHeader userName={wrapped.user.name || wrapped.user.email} wrappedId={wrapped.id} userId={userId} year={year} />
       <div className="pt-20">
-        {wrapped.status === "completed" && wrapped.data ? (
+        {status === "completed" && wrapped.data ? (
           (() => {
-            try {
-              const wrappedData: WrappedData = JSON.parse(wrapped.data)
+            const wrappedData = legacyWrappedData(wrapped)
+            if (wrappedData) {
               return (
                 <div className="max-w-7xl mx-auto px-6 pb-8">
                   <WrappedViewerWrapper wrappedData={wrappedData} year={year} />
                 </div>
               )
-            } catch (error) {
-              console.error("Failed to parse wrapped data:", error)
+            } else {
               return (
                 <div className="bg-slate-800/50 backdrop-blur-sm border border-red-500/50 rounded-lg p-12 text-center max-w-2xl mx-auto mt-8">
                   <div className="max-w-md mx-auto">
@@ -132,9 +133,9 @@ export default async function UserWrappedPage({
               )
             }
           })()
-        ) : wrapped.status === "generating" ? (
+        ) : status === "generating" ? (
           <WrappedPageClient userId={userId} year={year} initialStatus="generating" />
-        ) : wrapped.status === "failed" ? (
+        ) : status === "failed" ? (
           <div className="bg-slate-800/50 backdrop-blur-sm border border-red-500/50 rounded-lg p-12 text-center max-w-2xl mx-auto mt-8">
             <div className="max-w-md mx-auto">
               <svg

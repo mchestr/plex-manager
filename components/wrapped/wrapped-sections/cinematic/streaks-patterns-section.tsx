@@ -4,7 +4,7 @@ import { motion } from "framer-motion"
 
 import { GoldCountUp } from "@/components/wrapped/cinematic/gold-count-up"
 import { SlideFrame } from "@/components/wrapped/cinematic/slide-frame"
-import type { DerivedStatistics } from "@/lib/wrapped/derived-statistics"
+import type { DerivedStatistics } from "@/lib/wrapped/data/schema-legacy"
 import { WrappedSection } from "@/types/wrapped"
 
 interface Props {

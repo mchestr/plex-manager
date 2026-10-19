@@ -6,23 +6,11 @@ import { WrappedSharedYearsNotice } from "@/components/wrapped/wrapped-shared-ye
 import { WrappedYearLinks } from "@/components/wrapped/wrapped-year-links"
 import { WrappedYearView } from "@/components/wrapped/wrapped-year-view"
 import { prisma } from "@/lib/prisma"
-import { createLogger } from "@/lib/utils/logger"
 import { yearParamSchema } from "@/lib/validations/shared-schemas"
+import { legacyWrappedData, readWrappedStatus } from "@/lib/wrapped/data/parse-stored"
 import { getSeasonYear, listCompletedRewindYears } from "@/lib/wrapped/season"
-import { WrappedData } from "@/types/wrapped"
 
 export const dynamic = 'force-dynamic'
-
-const logger = createLogger("WRAPPED_PAGE")
-
-function parseWrappedData(data: string): WrappedData | null {
-  try {
-    return JSON.parse(data) as WrappedData
-  } catch (error) {
-    logger.error("Failed to parse wrapped data", error)
-    return null
-  }
-}
 
 /** The member's own Rewind for the year in the route (RWP-04, RWV-02, UI-02). */
 export default async function WrappedYearPage({ params }: { params: Promise<{ year: string }> }) {
@@ -55,7 +43,7 @@ export default async function WrappedYearPage({ params }: { params: Promise<{ ye
   ])
 
   const wrappedData =
-    wrapped && wrapped.status === "completed" && wrapped.data ? parseWrappedData(wrapped.data) : null
+    wrapped && readWrappedStatus(wrapped.status, wrapped.id) === "completed" && wrapped.data ? legacyWrappedData(wrapped) : null
   // The viewer has its own controls for the year it shows.
   const otherSharedYears = sharedRows.map((row) => row.year).filter((shared) => !(wrappedData && shared === year))
 
