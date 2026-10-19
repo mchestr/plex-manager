@@ -9,35 +9,21 @@
  *
  * - `ErrorCode` from `lib/security/error-handler.ts` (API route errors);
  * - `RewindErrorCode` from `lib/wrapped/generation-errors.ts` (stored failures);
- * - the `ActionErrorCode` names that P4.3's action helper returns.
+ * - `ActionErrorCode` from `lib/actions/result.ts` (Server Action results).
  *
  * The map `satisfies Record<AppErrorCode, ...>`, so a new code without copy is
  * a type error. Anything that is not a known code, including an exception's
  * message or a digest, gets the generic copy and is never echoed.
  *
- * This module is imported by client components, so it stays free of
- * server-only imports.
+ * This module is imported by client components, so it imports only types
+ * from server modules.
  *
  * @module lib/ui/error-copy
  */
 
+import type { ActionErrorCode } from "@/lib/actions/result"
 import type { ErrorCode } from "@/lib/security/error-handler"
 import type { RewindErrorCode } from "@/lib/wrapped/generation-errors"
-
-/**
- * P4.3's planned codes (plan step P4.3). When `lib/actions/result.ts` lands,
- * this becomes `import type { ActionErrorCode } from "@/lib/actions/result"`.
- */
-type ActionErrorCode =
-  | "UNAUTHENTICATED"
-  | "FORBIDDEN"
-  | "VALIDATION"
-  | "NOT_FOUND"
-  | "RATE_LIMITED"
-  | "NOT_ENTITLED"
-  | "CONFLICT"
-  | "UPSTREAM_UNAVAILABLE"
-  | "INTERNAL"
 
 type AppErrorCode = `${ErrorCode}` | RewindErrorCode | ActionErrorCode
 
@@ -87,7 +73,7 @@ const COPY = {
   RATE_LIMIT_EXCEEDED: RATE_LIMITED,
   FORBIDDEN,
 
-  // P4.3's ActionErrorCode (NOT_FOUND and FORBIDDEN are shared above)
+  // lib/actions/result.ts ActionErrorCode (NOT_FOUND and FORBIDDEN are shared above)
   UNAUTHENTICATED: SIGN_IN,
   VALIDATION: INVALID,
   RATE_LIMITED,
@@ -105,6 +91,18 @@ const COPY = {
     admin: {
       title: "A connected service didn't answer",
       description: "Plex, Tautulli, Overseerr or another service is unreachable. Check its connection in Settings.",
+    },
+  },
+  INVITE_INVALID: {
+    member: {
+      title: "This invite can't be used",
+      description: "The invite code is wrong, expired or used up. Ask the person who invited you for a new one.",
+    },
+  },
+  INVITE_WRONG_SERVICE: {
+    member: {
+      title: "This invite is for the other media server",
+      description: "Sign in with the service the invite names, Plex or Jellyfin, to use it.",
     },
   },
   INTERNAL,
