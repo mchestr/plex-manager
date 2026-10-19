@@ -2006,10 +2006,12 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 **Demo.** In a fresh cloud session, opening `components/wrapped/wrapped-viewer.tsx` makes `motion` available, while a file in `lib/` does not. `/security-review` comes back clean, and `web-design-guidelines` runs without a network fetch.
 
 **Done when.**
-- [ ] The seven skills are vendored, each with its licence and a THIRD_PARTY.md row.
-- [ ] `web-design-guidelines` reads its local guidelines.
+- [x] The seven skills are vendored, each with its licence and a THIRD_PARTY.md row.
+- [x] `web-design-guidelines` reads its local guidelines.
 - [ ] Shell execution from skills is disabled, and `.mcp.json` holds only the pinned chrome-devtools server.
 - [ ] The vendored-skills test passes, and `/security-review` ran on the PR.
+
+(as merged: `accessibility-review` is pinned at `33eeda1e8fd856455b05479d13a0f85b5f803744`. The Vercel folders take their skill names (`vercel-react-best-practices` and so on). `vercel-labs/agent-skills` and the `motion-ai` tarball ship no LICENSE file, so each of those folders has a `LICENSE` with the MIT terms and a note on where the licence is declared. `motion`'s `performance-audit/index.md` no longer runs `npx motionscore`. `next.config.js` already had `agentRules: false`, so nothing changed there. The `.claude/settings.json` change, `disableSkillShellExecution` and the seven `Skill(...)` rules, is applied by the owner, because the agent session may not edit its own settings; the test's settings case fails until then.)
 
 ### Step P1.10: Safe upgrade path: db:deploy, migration pre-flight and backups
 
