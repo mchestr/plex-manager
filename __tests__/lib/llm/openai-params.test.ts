@@ -1,70 +1,54 @@
 /**
- * Tests for lib/llm/openai-params.ts - shared OpenAI model capabilities
+ * Tests for lib/llm/openai-params.ts - Chat Completions fields for the assistant
  */
 
 import {
   buildOpenAIParams,
   type ChatToolSupport,
   DEFAULT_OPENAI_MODEL,
-  normalizeOpenAIModelId,
   openAIModelCaps,
 } from '@/lib/llm/openai-params'
+import { lookupModel } from '@/lib/llm/models'
 
 type Row = [
   model: string,
   tokenParam: 'max_tokens' | 'max_completion_tokens',
   acceptsTemperature: boolean,
-  structuredOutputs: boolean,
   chatTools: ChatToolSupport,
 ]
 
 const TABLE: Row[] = [
-  ['gpt-6-astra', 'max_completion_tokens', false, true, 'responses-only'],
-  ['gpt-6.1-sol', 'max_completion_tokens', false, true, 'responses-only'],
-  ['gpt-6-sol', 'max_completion_tokens', false, true, 'reasoning-none'],
-  ['gpt-6-luna', 'max_completion_tokens', false, true, 'reasoning-none'],
-  ['o4-mini', 'max_completion_tokens', false, true, 'yes'],
-  ['o3', 'max_completion_tokens', false, true, 'yes'],
-  ['gpt-5.4-mini', 'max_completion_tokens', false, true, 'yes'],
-  ['gpt-5.5', 'max_completion_tokens', false, true, 'yes'],
-  ['gpt-4.1-mini', 'max_tokens', true, true, 'yes'],
-  ['gpt-4o', 'max_tokens', true, true, 'yes'],
-  ['gpt-4o-mini-2024-07-18', 'max_tokens', true, true, 'yes'],
-  ['gpt-4-turbo', 'max_tokens', true, false, 'yes'],
-  ['gpt-3.5-turbo', 'max_tokens', true, false, 'yes'],
-  ['gpt-5.2-mini', 'max_completion_tokens', false, true, 'yes'],
-  ['openai/gpt-6-sol-2026-09-22', 'max_completion_tokens', false, true, 'reasoning-none'],
+  ['gpt-6-astra', 'max_completion_tokens', false, 'responses-only'],
+  ['gpt-6.1-sol', 'max_completion_tokens', false, 'responses-only'],
+  ['gpt-6-sol', 'max_completion_tokens', false, 'reasoning-none'],
+  ['gpt-6-luna', 'max_completion_tokens', false, 'reasoning-none'],
+  ['o4-mini', 'max_completion_tokens', false, 'yes'],
+  ['o3', 'max_completion_tokens', false, 'yes'],
+  ['gpt-5.4-mini', 'max_completion_tokens', false, 'yes'],
+  ['gpt-5.5', 'max_completion_tokens', false, 'yes'],
+  ['gpt-4.1-mini', 'max_tokens', true, 'yes'],
+  ['gpt-4o', 'max_tokens', true, 'yes'],
+  ['gpt-4o-mini-2024-07-18', 'max_tokens', true, 'yes'],
+  ['gpt-4', 'max_tokens', true, 'yes'],
+  ['openai/gpt-6-sol-2026-09-22', 'max_completion_tokens', false, 'reasoning-none'],
 ]
 
 describe('openAIModelCaps', () => {
-  it.each(TABLE)(
-    '%s → %s, temperature %s, structured outputs %s, tools %s',
-    (model, tokenParam, acceptsTemperature, structuredOutputs, chatTools) => {
-      expect(openAIModelCaps(model)).toEqual({
-        tokenParam,
-        acceptsTemperature,
-        structuredOutputs,
-        chatTools,
-      })
-    }
-  )
+  it.each(TABLE)('%s → %s, temperature %s, tools %s', (model, tokenParam, acceptsTemperature, chatTools) => {
+    expect(openAIModelCaps(model)).toEqual({ tokenParam, acceptsTemperature, chatTools })
+  })
 
-  it('treats legacy chat models as non-reasoning without structured outputs', () => {
-    expect(openAIModelCaps('gpt-4')).toEqual({
-      tokenParam: 'max_tokens',
-      acceptsTemperature: true,
-      structuredOutputs: false,
+  it('treats an unknown model as a reasoning model with no temperature', () => {
+    expect(openAIModelCaps('gpt-7-nova')).toEqual({
+      tokenParam: 'max_completion_tokens',
+      acceptsTemperature: false,
       chatTools: 'yes',
     })
-    expect(openAIModelCaps('o1').structuredOutputs).toBe(false)
-    expect(openAIModelCaps('o1').tokenParam).toBe('max_completion_tokens')
   })
 
   it('ignores case, the openai/ prefix and a dated snapshot suffix', () => {
-    expect(normalizeOpenAIModelId('openai/GPT-6-Sol-2026-09-22')).toBe('gpt-6-sol')
-    expect(normalizeOpenAIModelId(' OpenAI/GPT-6.1-Sol-2026-09-29 ')).toBe('gpt-6.1-sol')
     expect(openAIModelCaps('GPT-6-ASTRA').chatTools).toBe('responses-only')
-    expect(openAIModelCaps('gpt-4o-mini-2024-07-18').tokenParam).toBe('max_tokens')
+    expect(openAIModelCaps(' OpenAI/GPT-6.1-Sol-2026-09-29 ').chatTools).toBe('responses-only')
   })
 })
 
@@ -81,7 +65,7 @@ describe('buildOpenAIParams', () => {
     }
   })
 
-  it.each(TABLE)('%s with tools follows the tool rule', (model, _tokenParam, _temp, _structured, chatTools) => {
+  it.each(TABLE)('%s with tools follows the tool rule', (model, _tokenParam, _temp, chatTools) => {
     const params = buildOpenAIParams(model, { hasTools: true })
 
     if (chatTools === 'reasoning-none') {
@@ -109,10 +93,12 @@ describe('buildOpenAIParams', () => {
 })
 
 describe('DEFAULT_OPENAI_MODEL', () => {
-  it('is a current model that handles structured outputs and Chat Completions tools', () => {
+  it('is a current catalogue model that handles structured outputs and Chat Completions tools', () => {
     expect(DEFAULT_OPENAI_MODEL).toBe('gpt-5.4-mini')
-    const caps = openAIModelCaps(DEFAULT_OPENAI_MODEL)
-    expect(caps.structuredOutputs).toBe(true)
-    expect(caps.chatTools).toBe('yes')
+    const info = lookupModel('openai', DEFAULT_OPENAI_MODEL)
+    expect(info.known).toBe(true)
+    expect(info.retiresOn).toBeNull()
+    expect(info.capabilities.structuredOutputs).toBe(true)
+    expect(openAIModelCaps(DEFAULT_OPENAI_MODEL).chatTools).toBe('yes')
   })
 })

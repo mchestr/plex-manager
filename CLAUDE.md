@@ -642,15 +642,24 @@ const history = await getTautulliHistory(config, tautulliUserId, 50) // (config,
 
 ### LLM Provider
 ```typescript
-import { callChatLLM } from '@/lib/llm/chat'
+import { generateStructured } from '@/lib/llm/generate-structured'
 
-// config: LLMConfig ({ provider: 'openai', apiKey, model, temperature?, maxTokens? })
-const response = await callChatLLM(config, messages, tools) // tools is optional
-if (!response.success) return { error: response.error }
+// One structured call on the purpose's active LLMProvider row (any provider)
+const result = await generateStructured({
+  purpose: 'wrapped', schema, system, prompt,
+  effort: 'low', cacheKey: 'rewind-v2', signal, attribution: { userId },
+})
+if (!result.ok) return { error: result.error.message } // TRUNCATED, REFUSAL, SCHEMA, ...
 ```
 
-`actions/chatbot/conversation.ts` shows how the chat assistant builds the config
-from the active `LLMProvider` row and runs the tool loop.
+- Built on the Vercel AI SDK 7 (exact pins). `getLanguageModel(purpose)` in
+  `lib/llm/registry.ts` (server-only) builds the model from the active row.
+- `lib/llm/models.ts` is the one table of model prices and capabilities
+  (`lookupModel`, `costUsd`); never match model names by prefix.
+- Every billed attempt, failed ones included, writes one `LLMUsage` row through
+  `recordUsage` (`lib/llm/usage.ts`).
+- The chat assistant still uses `callChatLLM` (`lib/llm/chat.ts`, OpenAI only)
+  until it moves onto the registry.
 
 ### Stripe Subscriptions (Optional)
 

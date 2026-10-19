@@ -5,7 +5,7 @@ import { testPromptTemplate } from "@/actions/prompt-test"
 import { useToast } from "@/components/ui/toast"
 import { usePlaygroundState } from "@/hooks/use-playground-state"
 import { DEFAULT_OPENAI_MODEL } from "@/lib/llm/openai-params"
-import { estimateCost } from "@/lib/llm/pricing"
+import { estimateCostUsd, type LLMProviderId } from "@/lib/llm/models"
 import { assembleWrappedData } from "@/lib/wrapped/assemble-wrapped"
 import { parseWrappedLLMOutput } from "@/lib/wrapped/parse-llm-output"
 import { generateSystemPrompt } from "@/lib/wrapped/prompt-template"
@@ -59,6 +59,7 @@ export function WrappedPlayground({ templates, initialTemplateId }: WrappedPlayg
   const [models, setModels] = useState<string[]>([])
   const [loadingModels, setLoadingModels] = useState(true)
   const [configuredModel, setConfiguredModel] = useState<string>("")
+  const [configuredProvider, setConfiguredProvider] = useState<LLMProviderId>("openai")
   const [statistics, setStatistics] = useState<WrappedStatistics | null>(null)
   const [loadingStatistics, setLoadingStatistics] = useState(false)
   const [statisticsError, setStatisticsError] = useState<string | null>(null)
@@ -101,6 +102,7 @@ export function WrappedPlayground({ templates, initialTemplateId }: WrappedPlayg
           const data = await response.json()
           setModels(data.models || [])
           setConfiguredModel(data.configuredModel || "")
+          setConfiguredProvider(data.configuredProvider || "openai")
         } else {
           toast.showError("Failed to fetch models")
         }
@@ -157,18 +159,19 @@ export function WrappedPlayground({ templates, initialTemplateId }: WrappedPlayg
 
     const model = testConfig.model || configuredModel || DEFAULT_OPENAI_MODEL
     const systemPrompt = generateSystemPrompt()
-    const estimate = estimateCost(
-      result.renderedPrompt,
+    const estimate = estimateCostUsd({
+      provider: configuredProvider,
       model,
-      testConfig.maxTokens,
-      systemPrompt
-    )
+      prompt: result.renderedPrompt,
+      systemPrompt,
+      completionTokens: testConfig.maxTokens,
+    })
 
     return {
       ...estimate,
       model,
     }
-  }, [result?.renderedPrompt, testConfig.model, testConfig.maxTokens, configuredModel])
+  }, [result?.renderedPrompt, testConfig.model, testConfig.maxTokens, configuredModel, configuredProvider])
 
   const handleRenderTemplate = async () => {
     if (!testConfig.userName || !statistics || !selectedTemplate) return

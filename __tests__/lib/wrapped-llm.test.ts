@@ -1,44 +1,44 @@
 /**
- * Tests for lib/wrapped/llm.ts - LLM integration logic
+ * @jest-environment node
+ *
+ * Tests for lib/wrapped/llm.ts - v2 generation on the AI facade, with the
+ * AI SDK's mock language model standing in for the provider.
  */
 
-import { generateWrappedWithLLM } from '@/lib/wrapped/llm'
-import { prisma } from '@/lib/prisma'
-import { generateWrappedPrompt } from '@/lib/wrapped/prompt-template'
-import { callOpenAI } from '@/lib/wrapped/api-calls'
-import { generateMockWrappedData } from '@/lib/wrapped/mock-data'
-import { buildValidOutput } from '@/lib/wrapped/__tests__/fixtures'
-import { WrappedStatistics } from '@/types/wrapped'
+import { MockLanguageModelV4 } from 'ai/test'
 import { mockReset } from 'jest-mock-extended'
-import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 
-// Mock dependencies
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
+import { buildConfig } from '@/__tests__/helpers/factories'
+import type { LLMProvider } from '@/lib/generated/prisma/client'
+import { lookupModel } from '@/lib/llm/models'
+import { getLanguageModel, LLMConfigError } from '@/lib/llm/registry'
+import { buildValidOutput } from '@/lib/wrapped/__tests__/fixtures'
+import { generateWrappedWithLLM } from '@/lib/wrapped/llm'
+import { generateMockWrappedData } from '@/lib/wrapped/mock-data'
+import { generateWrappedPrompt } from '@/lib/wrapped/prompt-template'
+import { WrappedStatistics } from '@/types/wrapped'
+
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 
-beforeEach(() => mockReset(prismaMock))
-
-jest.mock('@/actions/prompts', () => ({
-  getActivePromptTemplate: jest.fn(),
+jest.mock('@/lib/llm/registry', () => ({
+  ...jest.requireActual('@/lib/llm/registry'),
+  getLanguageModel: jest.fn(),
 }))
 
 jest.mock('@/lib/wrapped/prompt-template', () => ({
   generateWrappedPrompt: jest.fn(),
-}))
-
-jest.mock('@/lib/wrapped/api-calls', () => ({
-  callOpenAI: jest.fn(),
+  generateSystemPrompt: jest.fn(() => 'system prompt'),
 }))
 
 jest.mock('@/lib/wrapped/mock-data', () => ({
   generateMockWrappedData: jest.fn(),
 }))
 
+const mockGetLanguageModel = getLanguageModel as jest.MockedFunction<typeof getLanguageModel>
+
 const mockStatistics: WrappedStatistics = {
-  totalWatchTime: {
-    total: 1000,
-    movies: 500,
-    shows: 500,
-  },
+  totalWatchTime: { total: 1000, movies: 500, shows: 500 },
   moviesWatched: 10,
   showsWatched: 5,
   episodesWatched: 50,
@@ -56,23 +56,52 @@ const baseArgs = {
   statistics: mockStatistics,
 }
 
+type GenerateResult = Awaited<ReturnType<MockLanguageModelV4['doGenerate']>>
+
+function reply(text: string, unified: GenerateResult['finishReason']['unified'] = 'stop'): GenerateResult {
+  return {
+    content: [{ type: 'text', text }],
+    finishReason: { unified, raw: unified },
+    usage: {
+      inputTokens: { total: 1000, noCache: 1000, cacheRead: 0, cacheWrite: 0 },
+      outputTokens: { total: 500, text: 400, reasoning: 100 },
+    },
+    warnings: [],
+    response: { id: 'resp-1', modelId: 'gpt-6-luna-2026-09-22', timestamp: new Date(0) },
+  }
+}
+
+function useModel(model: MockLanguageModelV4, overrides: Partial<LLMProvider> = {}) {
+  const row: LLMProvider = {
+    id: 'provider-1',
+    provider: 'openai',
+    purpose: 'wrapped',
+    apiKey: 'test-key',
+    model: 'gpt-6-luna',
+    temperature: 0.8,
+    maxTokens: null,
+    baseUrl: null,
+    effort: null,
+    isActive: true,
+    createdAt: new Date(0),
+    updatedAt: new Date(0),
+    ...overrides,
+  }
+  mockGetLanguageModel.mockResolvedValue({ model, info: lookupModel('openai', row.model), row })
+}
+
+beforeEach(() => {
+  mockReset(prismaMock)
+  jest.clearAllMocks()
+  prismaMock.config.findUnique.mockResolvedValue(buildConfig({ llmDisabled: false }))
+  ;(generateWrappedPrompt as jest.Mock).mockResolvedValue('test prompt')
+})
+
 describe('generateWrappedWithLLM', () => {
-  beforeEach(() => {
-    jest.clearAllMocks()
-  })
-
-  it('should return mock data when LLM is disabled and NOT call OpenAI API', async () => {
-    ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({
-      id: 'config',
-      llmDisabled: true,
-    })
-
-    const mockData = {
-      sections: [],
-      summary: 'Mock summary',
-    }
+  it('returns mock data when LLM is disabled and never calls a model', async () => {
+    prismaMock.config.findUnique.mockResolvedValue(buildConfig({ llmDisabled: true }))
+    const mockData = { sections: [], summary: 'Mock summary' }
     ;(generateMockWrappedData as jest.Mock).mockReturnValue(mockData)
-    ;(prisma.lLMUsage.create as jest.Mock).mockResolvedValue({})
 
     const result = await generateWrappedWithLLM(baseArgs)
 
@@ -86,53 +115,19 @@ describe('generateWrappedWithLLM', () => {
       userId: 'user-1',
       statistics: mockStatistics,
     })
-    // Verify OpenAI API is NOT called
-    expect(callOpenAI).not.toHaveBeenCalled()
+    expect(mockGetLanguageModel).not.toHaveBeenCalled()
     expect(generateWrappedPrompt).not.toHaveBeenCalled()
-    expect(prisma.lLMProvider.findFirst).not.toHaveBeenCalled()
-    expect(prisma.lLMUsage.create).toHaveBeenCalledWith(
+    expect(prismaMock.lLMUsage.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({
-          provider: 'mock',
-          model: 'mock',
-          cost: 0,
-          totalTokens: 0,
-        }),
+        data: expect.objectContaining({ provider: 'mock', model: 'mock', cost: 0, totalTokens: 0 }),
       })
     )
   })
 
-  it('should call OpenAI when OpenAI provider is configured', async () => {
-    ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({
-      id: 'config',
-      llmDisabled: false,
-    })
-
-    ;(prisma.lLMProvider.findFirst as jest.Mock).mockResolvedValue({
-      id: 'provider-1',
-      provider: 'openai',
-      apiKey: 'test-key',
-      model: 'gpt-4',
-      isActive: true,
-    })
-
-    ;(generateWrappedPrompt as jest.Mock).mockResolvedValue('test prompt')
-
+  it('generates through the facade with the v2 schema, low effort and the rewind-v2 cache key', async () => {
     const mockOutput = buildValidOutput()
-    const mockLLMResponse = {
-      success: true,
-      output: mockOutput,
-      rawResponse: JSON.stringify(mockOutput),
-      tokenUsage: {
-        promptTokens: 1000,
-        completionTokens: 500,
-        totalTokens: 1500,
-        cost: 0.06,
-      },
-    }
-
-    ;(callOpenAI as jest.Mock).mockResolvedValue(mockLLMResponse)
-    ;(prisma.lLMUsage.create as jest.Mock).mockResolvedValue({})
+    const model = new MockLanguageModelV4({ doGenerate: reply(JSON.stringify(mockOutput)) })
+    useModel(model)
 
     const result = await generateWrappedWithLLM(baseArgs)
 
@@ -140,219 +135,113 @@ describe('generateWrappedWithLLM', () => {
     expect(result.data?.version).toBe(2)
     expect(result.data?.archetype?.name).toBe('The Midnight Marathoner')
     expect(result.data?.summary).toBe(mockOutput.summary)
-    expect(callOpenAI).toHaveBeenCalledWith(
-      {
-        provider: 'openai',
-        apiKey: 'test-key',
-        model: 'gpt-4',
-        temperature: undefined,
-        maxTokens: undefined,
-      },
-      'test prompt'
-    )
-    expect(prisma.lLMUsage.create).toHaveBeenCalledWith(
+    const call = model.doGenerateCalls[0]
+    expect(call.providerOptions?.openai).toEqual({ reasoningEffort: 'low', promptCacheKey: 'rewind-v2' })
+    expect(call.temperature).toBeUndefined()
+    expect(call.prompt[0]).toMatchObject({ role: 'system', content: 'system prompt' })
+    expect(call.abortSignal).toBeDefined()
+    // 1000 input at $0.10 and 500 output at $0.50 per 1M
+    expect(result.tokenUsage).toEqual({ promptTokens: 1000, completionTokens: 500, totalTokens: 1500, cost: 0.00035 })
+    expect(prismaMock.lLMUsage.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
+          wrappedId: 'wrapped-1',
           provider: 'openai',
-          model: 'gpt-4',
-          promptTokens: 1000,
-          completionTokens: 500,
-          totalTokens: 1500,
-          cost: 0.06,
+          model: 'gpt-6-luna-2026-09-22',
+          prompt: 'test prompt',
+          reasoningTokens: 100,
+          outcome: 'ok',
         }),
       })
     )
   })
 
-  it('should send only the prompt name to the model and store the display name', async () => {
-    ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({ id: 'config', llmDisabled: false })
-    ;(prisma.lLMProvider.findFirst as jest.Mock).mockResolvedValue({
-      id: 'provider-1',
-      provider: 'openai',
-      apiKey: 'test-key',
-      model: 'gpt-6-luna',
-      isActive: true,
-    })
-    ;(generateWrappedPrompt as jest.Mock).mockResolvedValue('test prompt')
-    const mockOutput = buildValidOutput()
-    ;(callOpenAI as jest.Mock).mockResolvedValue({
-      success: true,
-      output: mockOutput,
-      rawResponse: JSON.stringify(mockOutput),
-      model: 'gpt-6-luna-2026-09-22',
-      tokenUsage: { promptTokens: 1000, completionTokens: 500, totalTokens: 1500, cost: 0.00035 },
-    })
-    ;(prisma.lLMUsage.create as jest.Mock).mockResolvedValue({})
+  it('sends only the prompt name to the model and stores the display name', async () => {
+    useModel(new MockLanguageModelV4({ doGenerate: reply(JSON.stringify(buildValidOutput())) }))
 
-    const result = await generateWrappedWithLLM({
-      ...baseArgs,
-      promptName: 'there',
-      displayName: 'member@example.com',
-    })
+    const result = await generateWrappedWithLLM({ ...baseArgs, promptName: 'there', displayName: 'member@example.com' })
 
     expect(result.success).toBe(true)
     expect(generateWrappedPrompt).toHaveBeenCalledWith('there', 2024, mockStatistics)
     expect(result.data?.userName).toBe('member@example.com')
-    // The usage row records the model the API served, not a fallback
-    expect(prisma.lLMUsage.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ model: 'gpt-6-luna-2026-09-22', cost: 0.00035 }),
-      })
-    )
   })
 
-  it('should give the mock the prompt name for its copy and the display name to store', async () => {
-    ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({ id: 'config', llmDisabled: true })
+  it('gives the mock the prompt name for its copy and the display name to store', async () => {
+    prismaMock.config.findUnique.mockResolvedValue(buildConfig({ llmDisabled: true }))
     const { generateMockWrappedData: realMock } =
       jest.requireActual<typeof import('@/lib/wrapped/mock-data')>('@/lib/wrapped/mock-data')
     ;(generateMockWrappedData as jest.Mock).mockImplementation(realMock)
-    ;(prisma.lLMUsage.create as jest.Mock).mockResolvedValue({})
 
-    const result = await generateWrappedWithLLM({
-      ...baseArgs,
-      promptName: 'there',
-      displayName: 'Stored Name',
-    })
+    const result = await generateWrappedWithLLM({ ...baseArgs, promptName: 'there', displayName: 'Stored Name' })
 
     expect(result.data?.userName).toBe('Stored Name')
     expect(result.data?.archetype?.dedication).toContain('Hey there')
     expect(JSON.stringify(result.data?.sections)).not.toContain('Stored Name')
   })
 
-  it('should return error when no active LLM provider is configured', async () => {
-    ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({
-      id: 'config',
-      llmDisabled: false,
-    })
+  it('passes the caller signal through to the model', async () => {
+    const model = new MockLanguageModelV4({ doGenerate: reply(JSON.stringify(buildValidOutput())) })
+    useModel(model)
+    const controller = new AbortController()
 
-    ;(prisma.lLMProvider.findFirst as jest.Mock).mockResolvedValue(null)
+    await generateWrappedWithLLM({ ...baseArgs, signal: controller.signal })
+
+    expect(model.doGenerateCalls[0].abortSignal?.aborted).toBe(false)
+  })
+
+  it('returns an error when no active LLM provider is configured', async () => {
+    mockGetLanguageModel.mockResolvedValue(null)
 
     const result = await generateWrappedWithLLM(baseArgs)
 
-    expect(result.success).toBe(false)
+    expect(result).toMatchObject({ success: false, errorCode: 'NOT_CONFIGURED' })
     expect(result.error).toContain('No active LLM provider')
   })
 
-  it('should return error when LLM call fails', async () => {
-    ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({
-      id: 'config',
-      llmDisabled: false,
-    })
-
-    ;(prisma.lLMProvider.findFirst as jest.Mock).mockResolvedValue({
-      id: 'provider-1',
-      provider: 'openai',
-      apiKey: 'test-key',
-      model: 'gpt-4',
-      isActive: true,
-    })
-
-    ;(generateWrappedPrompt as jest.Mock).mockResolvedValue('test prompt')
-
-    ;(callOpenAI as jest.Mock).mockResolvedValue({
-      success: false,
-      error: 'API error',
-    })
+  it('returns an error for a row that cannot build a model', async () => {
+    mockGetLanguageModel.mockRejectedValue(new LLMConfigError('Unsupported LLM provider: unsupported'))
 
     const result = await generateWrappedWithLLM(baseArgs)
 
-    expect(result.success).toBe(false)
-    expect(result.error).toBe('API error')
-    expect(prisma.lLMUsage.create).not.toHaveBeenCalled()
+    expect(result).toMatchObject({ success: false, errorCode: 'NOT_CONFIGURED', error: 'Unsupported LLM provider: unsupported' })
   })
 
-  it('should handle unsupported provider', async () => {
-    ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({
-      id: 'config',
-      llmDisabled: false,
-    })
-
-    ;(prisma.lLMProvider.findFirst as jest.Mock).mockResolvedValue({
-      id: 'provider-1',
-      provider: 'unsupported',
-      apiKey: 'test-key',
-      model: 'test-model',
-      isActive: true,
-    })
-
-    ;(generateWrappedPrompt as jest.Mock).mockResolvedValue('test prompt')
+  it('fails as TRUNCATED and records the billed attempt with outcome length', async () => {
+    useModel(new MockLanguageModelV4({ doGenerate: reply('{"archetype":{"id":"cur', 'length') }), { maxTokens: 50 })
 
     const result = await generateWrappedWithLLM(baseArgs)
 
-    expect(result.success).toBe(false)
-    expect(result.error).toContain('Unsupported LLM provider')
-  })
-
-  it('should not fail if token usage logging fails', async () => {
-    ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({
-      id: 'config',
-      llmDisabled: false,
-    })
-
-    ;(prisma.lLMProvider.findFirst as jest.Mock).mockResolvedValue({
-      id: 'provider-1',
-      provider: 'openai',
-      apiKey: 'test-key',
-      model: 'gpt-4',
-      isActive: true,
-    })
-
-    ;(generateWrappedPrompt as jest.Mock).mockResolvedValue('test prompt')
-
-    const mockOutput = buildValidOutput()
-    const mockLLMResponse = {
-      success: true,
-      output: mockOutput,
-      rawResponse: JSON.stringify(mockOutput),
-      tokenUsage: {
-        promptTokens: 1000,
-        completionTokens: 500,
-        totalTokens: 1500,
-        cost: 0.06,
-      },
-    }
-
-    ;(callOpenAI as jest.Mock).mockResolvedValue(mockLLMResponse)
-    ;(prisma.lLMUsage.create as jest.Mock).mockRejectedValue(
-      new Error('Database error')
+    expect(result).toMatchObject({ success: false, errorCode: 'TRUNCATED' })
+    expect(result.error).toContain('ran out of output tokens')
+    expect(prismaMock.lLMUsage.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ outcome: 'length', model: 'gpt-6-luna-2026-09-22' }) })
     )
+  })
 
+  it('fails as SCHEMA on output that does not match the v2 schema', async () => {
+    useModel(new MockLanguageModelV4({ doGenerate: reply('{"archetype":{"id":"nope"}}') }))
+
+    const result = await generateWrappedWithLLM(baseArgs)
+
+    expect(result).toMatchObject({ success: false, errorCode: 'SCHEMA' })
+    expect(prismaMock.lLMUsage.create).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ outcome: 'schema' }) })
+    )
+  })
+
+  it('still succeeds if the usage row cannot be written', async () => {
+    useModel(new MockLanguageModelV4({ doGenerate: reply(JSON.stringify(buildValidOutput())) }))
+    prismaMock.lLMUsage.create.mockRejectedValue(new Error('Database error'))
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation()
 
     const result = await generateWrappedWithLLM(baseArgs)
 
-    expect(result.success).toBe(true) // Should still succeed even if logging fails
-    expect(consoleErrorSpy).toHaveBeenCalled()
+    expect(result.success).toBe(true)
     consoleErrorSpy.mockRestore()
   })
 
-  it('should return error when model is not specified', async () => {
-    ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({
-      id: 'config',
-      llmDisabled: false,
-    })
-
-    ;(prisma.lLMProvider.findFirst as jest.Mock).mockResolvedValue({
-      id: 'provider-1',
-      provider: 'openai',
-      apiKey: 'test-key',
-      model: null,
-      isActive: true,
-    })
-
-    ;(generateWrappedPrompt as jest.Mock).mockResolvedValue('test prompt')
-
-    const result = await generateWrappedWithLLM(baseArgs)
-
-    expect(result.success).toBe(false)
-    expect(result.error).toContain('No model configured')
-    expect(callOpenAI).not.toHaveBeenCalled()
-  })
-
-  it('should handle errors gracefully', async () => {
-    ;(prisma.config.findUnique as jest.Mock).mockRejectedValue(
-      new Error('Database error')
-    )
+  it('handles errors gracefully', async () => {
+    prismaMock.config.findUnique.mockRejectedValue(new Error('Database error'))
 
     const result = await generateWrappedWithLLM(baseArgs)
 
@@ -360,4 +249,3 @@ describe('generateWrappedWithLLM', () => {
     expect(result.error).toBeDefined()
   })
 })
-

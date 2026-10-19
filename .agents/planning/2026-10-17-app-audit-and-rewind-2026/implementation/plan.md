@@ -2692,8 +2692,8 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 **Objective.** One path for every structured LLM call, whatever the provider: model facts in one table, typed finish reasons, retries, and a usage row for every billed attempt. v2 generation moves onto it.
 
 **Guidance.**
-- **Packages.** Pin exactly `ai@7.0.143`, `@ai-sdk/openai@4.0.96`, `@ai-sdk/anthropic@4.0.82`, `@ai-sdk/google@4.0.99` and `@ai-sdk/openai-compatible@3.0.71` (design 8.1). Set `engines.node` to `>=22`. The installed zod 4.3 is within their peer range.
-- **`lib/llm/models.ts`.** Pure, so the playground's client component can import it.
+- **Packages.** Pin exactly `ai@7.0.143`, `@ai-sdk/openai@4.0.96`, `@ai-sdk/anthropic@4.0.82`, `@ai-sdk/google@4.0.99` and `@ai-sdk/openai-compatible@3.0.71` (design 8.1). Set `engines.node` to `>=22`. The installed zod 4.3 is within their peer range. (As merged: `ai@7.0.127`, `@ai-sdk/openai@4.0.83`, `@ai-sdk/anthropic@4.0.71`, `@ai-sdk/google@4.0.87` and `@ai-sdk/openai-compatible@3.0.62`, the 2026-09-30/10-01 release set, because new dependencies are pinned to versions at least two weeks old; the planned 10-16 versions qualify from 2026-10-30. The packages are ES modules only: `jest.config.js` adds them to next/jest's transform exception and `jest.setup.js` gives jsdom web streams, and tests that drive the SDK use `@jest-environment node`.)
+- **`lib/llm/models.ts`.** Pure, so the playground's client component can import it. (As merged: the table lives in `lib/llm/model-catalog.ts`, with `pricing` an array of dated `ModelPrice` entries and a `known` flag; `models.ts` exports `lookupModel`, `listKnownModels`, `resolveEffort`, `costUsd`, `estimateCostUsd` and the `TokenUsage` type. Effort levels the model lacks are raised to its nearest level, never sent as is.)
   - One `ModelInfo` per model: `provider`, `id`, `displayName`, `pricing` (per 1M tokens for input, output, cache read, cache write and batch, `asOf: '2026-10-17'`), `capabilities` (`structuredOutputs`, `samplingParams`, `effortLevels`, `tools`, `batch`, `refusalFallback`, `minCacheTokens`) and `retiresOn`.
   - Entries: P0.13's GPT-5 and GPT-4o rows, plus the design 8.2 matrix, which covers the Claude 5.5 family, `gpt-6.1-sol`, `gpt-6-sol`, `gpt-6-luna`, `gpt-6-astra` and `gemini-4-argon` (its 2026-12-01 price change is a dated entry).
   - `lookupModel(provider, id)` lowercases the id, strips an `openai/` prefix and a date suffix, then looks it up exactly. There are no prefix families.
@@ -2704,18 +2704,21 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
   - It builds the model with `createOpenAI`, `createAnthropic`, `createGoogleGenerativeAI` or `createOpenAICompatible({ baseURL })`, caches it by row id and `updatedAt`, and returns `{ model, info, row }`.
   - `OPENAI_COMPATIBLE_PRESETS` covers Ollama (`http://localhost:11434/v1`), LM Studio (port 1234), vLLM (port 8000) and OpenRouter.
   - `llmProviderSchema` still accepts only `openai` until P2.12.
+  - (As merged: `getLanguageModel` returns null when no row is active and throws `LLMConfigError` for a row it cannot build; `resolveModel(row, modelId)` builds from a row directly.)
 - **`lib/llm/generate-structured.ts`.** `generateStructured({ purpose, schema, system, prompt, effort, maxOutputTokens, cacheKey, signal, attribution })` calls `generateText({ output: Output.object({ schema }), abortSignal: signal, maxRetries: 2 })`.
   - `generateObject` is deprecated in v7, and the SDK already retries 429 and 5xx responses.
   - It maps `effort` to each provider's own option. It drops `temperature` and `topP` when `samplingParams` is false, because Claude 5.x and the reasoning models reject them.
   - It sets Anthropic `cacheControl` on the system block and the OpenAI `promptCacheKey`. Check the option names against the installed typings.
   - Finish reasons map to typed errors: `length`, `content-filter` and refusals become `TRUNCATED`, `CONTENT_FILTER` and `REFUSAL`. `NoObjectGeneratedError` becomes `SCHEMA`, with the raw text kept for P5.9's repair call.
   - It returns a `Result` holding `{ output, usage, modelId, finishReason }`.
+  - (As merged: `{ ok: true, value: { output, usage, cost, modelId, finishReason, rawText } } | { ok: false, error: { code, message, rawText?, usage?, modelId? } }`, with codes `NOT_CONFIGURED`, `TRUNCATED`, `CONTENT_FILTER`, `REFUSAL`, `SCHEMA`, `ABORTED` and `PROVIDER`; it throws only when the provider row cannot be read, and `PROVIDER` carries only the HTTP status. It also takes `temperature`, `modelOverride` (the playground) and `recordText`, which keeps the prompt and raw response on the usage row as v2 did. It records usage itself, so callers never write `LLMUsage`. A refusal is `rawFinishReason === 'refusal'`, because the SDK maps Anthropic refusals to `content-filter`. The SDK's OpenAI request for `wrappedLLMOutputSchema` is strict `json_schema` on `/v1/responses` with every key required and `minLength` kept, which OpenAI has accepted since v2 shipped; the Anthropic provider strips the keywords Claude rejects.)
 - **`lib/llm/usage.ts`.** `recordUsage()` writes one `LLMUsage` row per billed attempt, with the served `modelId`, `cachedInputTokens`, `reasoningTokens`, `outcome`, `generationId`, `promptVersion` and `factsHash`. Truncated, refused and schema-failed responses are billed, so they are recorded; network errors with no usage are not. Admin analytics stay in `lib/wrapped/usage.ts`.
 - **v2 switch.**
   - `generateWrappedWithLLM` (`lib/wrapped/llm.ts`) calls `generateStructured` with `wrappedLLMOutputSchema`, effort `low`, `cacheKey: 'rewind-v2'` and the job's signal. `actions/prompt-test.ts:102` uses `generateStructured` too.
   - Delete `lib/wrapped/api-calls.ts` (`callOpenAI` and its prefix lists), `lib/llm/pricing.ts`, and `parse-llm-output.ts` if knip reports it unused.
   - Move the remaining callers: `actions/chatbot/conversation.ts:79` to `costUsd`, `app/api/admin/models/route.ts` to `listKnownModels()`, and `wrapped-playground.tsx:7` to `estimateCostUsd`.
   - Until P2.12 deletes it, P0.13's `openai-params.ts` keeps only what the chat client needs, as a regex-free lookup into `models.ts`.
+  - (As merged: `generateWrappedWithLLM` takes an optional `signal` and falls back to `AbortSignal.timeout(LLM_REQUEST_TIMEOUT_MS ?? 300000)` until P2.17's job passes one, and returns `errorCode`. The `startsWith("gpt-")` filter in `lib/connections/openai.ts` stays until P2.12 deletes that file. `wrappedOutputJsonSchema` was deleted as unused. The models route returns `configuredProvider` and the catalogue ids of that provider.)
 - **Pitfall.** The SDK's OpenAI provider uses the Responses API. Check the strict JSON schema that it builds from `wrappedLLMOutputSchema` (RWP-15 mentions `$schema` and `minLength`) against a recorded request.
 
 **Tests.**
@@ -2732,11 +2735,11 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 **Demo.** Point the Rewind provider at `gpt-6-luna` and run an admin regenerate: the `LLMUsage` row shows the served model, the cached and reasoning tokens, and a cost not priced at GPT-4 rates. Then set `maxTokens` to 50: the run fails as `TRUNCATED`, and an `outcome: 'length'` row records the billed failure.
 
 **Done when.**
-- [ ] The AI SDK 7 packages are pinned to exact versions, and `engines.node` is `>=22`.
-- [ ] `models.ts`, `registry.ts`, `generate-structured.ts` and `usage.ts` exist, with tests on mocked providers.
-- [ ] `lib/llm/pricing.ts`, `lib/wrapped/api-calls.ts` and every model-name prefix check are deleted.
-- [ ] Billed failures are recorded with cached and reasoning tokens, and unknown models cost 0 with a warning.
-- [ ] v2 generation runs on the facade.
+- [x] The AI SDK 7 packages are pinned to exact versions, and `engines.node` is `>=22`.
+- [x] `models.ts`, `registry.ts`, `generate-structured.ts` and `usage.ts` exist, with tests on mocked providers.
+- [x] `lib/llm/pricing.ts`, `lib/wrapped/api-calls.ts` and every model-name prefix check are deleted (as merged: except the `lib/connections/openai.ts` list filter, which P2.12 deletes with the file).
+- [x] Billed failures are recorded with cached and reasoning tokens, and unknown models cost 0 with a warning.
+- [x] v2 generation runs on the facade.
 
 ### Step P2.12: LLM provider settings and the admin assistant on the registry
 

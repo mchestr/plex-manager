@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma"
 import { requireAdminAPI } from "@/lib/security/api-helpers"
 import { createSafeError, ErrorCode, getStatusCode, logError } from "@/lib/security/error-handler"
 import { limitRequest } from "@/lib/security/rate-limit"
-import { MODEL_PRICING } from "@/lib/llm/pricing"
+import { listKnownModels, type LLMProviderId } from "@/lib/llm/models"
 import { NextRequest, NextResponse } from "next/server"
 
 export const dynamic = 'force-dynamic'
@@ -21,18 +21,17 @@ export async function GET(request: NextRequest) {
       return authResult.response
     }
 
-    // Get all model names from MODEL_PRICING (already filtered to text-only base models)
-    const models = Object.keys(MODEL_PRICING).sort()
-
-    // Get configured model from active LLM provider
+    // The configured model and the known models of its provider
     const llmProvider = await prisma.lLMProvider.findFirst({
       where: { isActive: true },
-      select: { model: true },
+      select: { model: true, provider: true },
     })
 
+    const configuredProvider = (llmProvider?.provider ?? "openai") as LLMProviderId
+    const models = listKnownModels(configuredProvider).map((info) => info.id).sort()
     const configuredModel = llmProvider?.model || null
 
-    return NextResponse.json({ models, configuredModel })
+    return NextResponse.json({ models, configuredModel, configuredProvider })
   } catch (error) {
     logError("ADMIN_MODELS_API", error)
     return NextResponse.json(

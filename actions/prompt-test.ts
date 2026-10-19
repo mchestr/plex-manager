@@ -1,11 +1,12 @@
 "use server"
 
 import { authOptions } from "@/lib/auth"
+import { generateStructured } from "@/lib/llm/generate-structured"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
-import { callOpenAI, LLMConfig } from "@/lib/wrapped/api-calls"
 import { memberName } from "@/lib/wrapped/member-name"
-import { generateWrappedPrompt } from "@/lib/wrapped/prompt-template"
+import { wrappedLLMOutputSchema } from "@/lib/wrapped/llm-output-schema"
+import { generateSystemPrompt, generateWrappedPrompt } from "@/lib/wrapped/prompt-template"
 import { WrappedStatistics } from "@/types/wrapped"
 import { getServerSession } from "next-auth"
 
@@ -71,75 +72,37 @@ export async function testPromptTemplate(input: TestPromptInput) {
         }
       }
 
-      // Get active LLM provider for wrapped generation
-      const llmProvider = await prisma.lLMProvider.findFirst({
-        where: { isActive: true, purpose: "wrapped" },
+      // Usage is recorded with no wrappedId: a playground test is not a generation
+      const llmResult = await generateStructured({
+        purpose: "wrapped",
+        schema: wrappedLLMOutputSchema,
+        system: generateSystemPrompt(),
+        prompt: renderedPrompt,
+        effort: "low",
+        cacheKey: "rewind-v2",
+        modelOverride: input.model,
+        temperature: input.temperature,
+        maxOutputTokens: input.maxTokens,
+        attribution: { userId },
+        recordText: true,
       })
 
-      if (!llmProvider) {
-        return {
-          success: false,
-          renderedPrompt,
-          error: "No active LLM provider configured for wrapped generation. Please configure an LLM provider in settings.",
-        }
+      if (!llmResult.ok) {
+        logger.warn("Prompt test failed", { code: llmResult.error.code })
+        return { success: false, renderedPrompt, error: llmResult.error.message }
       }
 
-      if (!llmProvider.model && !input.model) {
-        return {
-          success: false,
-          renderedPrompt,
-          error: "No model configured. Please configure a model in admin settings or provide one in the test.",
-        }
-      }
-
-      const config: LLMConfig = {
-        provider: llmProvider.provider as "openai",
-        apiKey: llmProvider.apiKey,
-        model: input.model ?? llmProvider.model!,
-        temperature: input.temperature ?? llmProvider.temperature ?? undefined,
-        maxTokens: input.maxTokens ?? llmProvider.maxTokens ?? undefined,
-      }
-
-      // Currently only OpenAI is supported
-      const llmResult = await callOpenAI(config, renderedPrompt)
-
-      if (llmResult.success && llmResult.output) {
-        // Record LLM usage for cost analysis
-        // wrappedId is null since this is a playground test, not an actual wrapped generation
-        if (llmResult.tokenUsage) {
-          try {
-            await prisma.lLMUsage.create({
-              data: {
-                wrappedId: null, // Playground tests don't have a wrapped ID
-                userId,
-                provider: config.provider,
-                model: llmResult.model ?? config.model,
-                prompt: renderedPrompt,
-                response: llmResult.rawResponse || JSON.stringify(llmResult.output, null, 2),
-                promptTokens: llmResult.tokenUsage.promptTokens,
-                completionTokens: llmResult.tokenUsage.completionTokens,
-                totalTokens: llmResult.tokenUsage.totalTokens,
-                cost: llmResult.tokenUsage.cost,
-              },
-            })
-          } catch (dbError) {
-            logger.error("Failed to save LLM usage to database", dbError)
-            // Don't fail the whole operation if logging fails
-          }
-        }
-
-        return {
-          success: true,
-          renderedPrompt,
-          llmResponse: llmResult.rawResponse || JSON.stringify(llmResult.output, null, 2),
-          tokenUsage: llmResult.tokenUsage,
-        }
-      } else {
-        return {
-          success: false,
-          renderedPrompt,
-          error: llmResult.error || "Failed to get LLM response",
-        }
+      const { output, usage, cost, rawText } = llmResult.value
+      return {
+        success: true,
+        renderedPrompt,
+        llmResponse: rawText || JSON.stringify(output, null, 2),
+        tokenUsage: {
+          promptTokens: usage.inputTokens,
+          completionTokens: usage.outputTokens,
+          totalTokens: usage.inputTokens + usage.outputTokens,
+          cost,
+        },
       }
     }
 

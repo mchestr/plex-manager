@@ -1,5 +1,5 @@
 import { callChatLLM, type ChatTool, type ChatMessage as LLMChatMessage } from "@/lib/llm/chat"
-import { calculateCost } from "@/lib/llm/pricing"
+import { costUsd, lookupModel } from "@/lib/llm/models"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 import { executeToolCall } from "./executors"
@@ -80,24 +80,27 @@ export async function runConversationLoop(
 
     // Log usage if available
     if (response.usage) {
-      const cost = calculateCost(
-        response.model,
-        response.usage.prompt_tokens,
-        response.usage.completion_tokens,
-        response.usage.prompt_tokens_details?.cached_tokens ?? 0
-      )
+      const servedModel = response.model || config.llmProvider.model
+      const cachedInputTokens = response.usage.prompt_tokens_details?.cached_tokens ?? 0
+      const cost = costUsd(lookupModel("openai", servedModel), {
+        inputTokens: response.usage.prompt_tokens,
+        cachedInputTokens,
+        outputTokens: response.usage.completion_tokens,
+        reasoningTokens: 0,
+      })
 
       await prisma.lLMUsage.create({
         data: {
           userId: config.userId,
           chatConversationId: config.conversationId,
           provider: "openai",
-          model: response.model || config.llmProvider.model || "unknown",
+          model: servedModel,
           prompt: JSON.stringify(currentMessages), // Store context as prompt
           response: response.content || JSON.stringify(response.toolCalls),
           promptTokens: response.usage.prompt_tokens,
           completionTokens: response.usage.completion_tokens,
           totalTokens: response.usage.total_tokens,
+          cachedInputTokens,
           cost,
           wrappedId: null, // Explicitly null for chatbot usage
         },

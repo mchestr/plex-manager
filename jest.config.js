@@ -55,6 +55,21 @@ const customJestConfig = {
   moduleDirectories: ['node_modules', '<rootDir>/'],
 }
 
+// The AI SDK and its dependencies ship ES modules only, so Jest must transform
+// them. next/jest ignores all of node_modules except its own transpiled
+// packages (a custom pattern can only add to that list), so these join its
+// exception here rather than the app's transpilePackages.
+const ESM_ONLY_PACKAGES = ['ai', '@ai-sdk', '@standard-schema', '@workflow/serde', 'eventsource-parser']
+const NEXT_EXCEPTION = '/node_modules/(?!.pnpm)(?!('
+
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
-module.exports = createJestConfig(customJestConfig)
+module.exports = async () => {
+  const config = await createJestConfig(customJestConfig)()
+  config.transformIgnorePatterns = config.transformIgnorePatterns.map((pattern) =>
+    pattern.startsWith(NEXT_EXCEPTION)
+      ? pattern.replace(NEXT_EXCEPTION, `${NEXT_EXCEPTION}${ESM_ONLY_PACKAGES.join('|')}|`)
+      : pattern
+  )
+  return config
+}
 

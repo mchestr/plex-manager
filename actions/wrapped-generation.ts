@@ -1,8 +1,8 @@
 "use server"
 
 // Note: Server action timeout is platform-dependent (Vercel Hobby: 10s, Pro: 60s+)
-// The fetch timeout in lib/wrapped/api-calls.ts is set to 5 minutes by default
-// and can be configured via LLM_REQUEST_TIMEOUT_MS environment variable
+// The LLM call in lib/wrapped/llm.ts times out after 5 minutes by default,
+// configurable through the LLM_REQUEST_TIMEOUT_MS environment variable
 
 import { getWrappedSettings } from "@/actions/admin"
 import { getAccessGateStatus } from "@/lib/access"
