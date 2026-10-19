@@ -84,7 +84,7 @@
     "meta-viewport|moderate": 1
   },
   "admin /admin/shares": {
-    "color-contrast|incomplete": 47,
+    "color-contrast|incomplete": 46,
     "color-contrast|serious": 1,
     "meta-viewport|moderate": 1,
     "role-img-alt|serious": 1
