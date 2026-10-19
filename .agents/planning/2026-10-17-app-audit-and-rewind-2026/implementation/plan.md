@@ -2608,11 +2608,19 @@ Project-authored skills follow in P11.27, and the P1.8 PR checkbox covers later 
 
 **Demo.** For the draft heavy fixture, print its top genres with shares, three directors, its request ledger and its percentile against a fixture aggregate of 10 members. Then remove its metadata: Taste and People become ineligible, without an error.
 
+**As merged** (later steps rely on these):
+- `isListed()` in `stats/keys.ts` now also rejects `excludedFromLists`, so every P2.7 list, record, calendar top title and bookend skips rating-excluded plays (totals unchanged). This is the only P2.7 behaviour change, and it touches only plays with that flag.
+- Lookups live in `stats/metadata.ts`: `MetadataLookup = (e) => TitleMetadata | undefined`, built by `metadataLookup(await getMetadata(events))` (Zod-parses the JSON columns; a malformed row is a miss), and `AggregateView = { userId, aggregate: Pick<ServerAggregate, "members" | "titles" | "community"> }`.
+- Signatures: `computeTaste(events, ctx, lookup)`, `computePeople(events, ctx, lookup)` (both `{ eligible: false, coverage }` below 60% and 70%), `computeDevices(events, lookup)`, `computeRequests(events, requests | null, lookup)`, `computeCommunity(events, ctx, view | null)` and `computeNextYear(events, ctx, lookup, { taste, people, library, excludedContentRatings })`. `library` is `LibraryTitle[]` (a subset of `LibraryItem`; the cache has no titles), or null; P5.9 has to supply it.
+- Definitions the plan left open: a title's minutes are split evenly across its genres (shares add to 1); taste and people read only listed plays, `freshShare` every counted play, with day 0 to 14 after release counting as fresh; the median year is per title, lower middle on an even count; decades count titles; every actor of a title (top ten billed) earns its minutes, directors films only, top 5 and 3; device shares are by plays among those reporting the field, 20 plays needed, and `fourKShare` is null when no play's title has a cached resolution (only warmed films do); requests count only counted plays as watched; `standing.percentile` is the "Top N%" figure `ceil(rank / members * 100)` over everyone in `aggregate.members` with minutes, anonymous users included, with `rank` shared on a tie; viewer ranks are for listed series; picks need the top genre and score one per matched top person or other top genre, ties by `addedAt` then title, and skip watched, hidden and (with exclusions set) excluded or unrated titles.
+- `RequestEvent` gains `tvdbId` (Overseerr `media.tvdbId`); TV requests match on `tvdb://` or `tmdb://` series guids.
+- The demo needs P2.10's heavy fixture, which had not merged; P2.10's golden-stats test should add these modules' cases.
+
 **Done when.**
-- [ ] Taste, people, devices, requests, community and next-year are pure modules that read the cache and the aggregate through injected lookups.
-- [ ] Request outcomes are joined through cached guids, and the status mapping matches design 7.2.
-- [ ] Community facts and viewer ranks follow the contributor rules.
-- [ ] No module can read player names or IP addresses, and every module has tests.
+- [x] Taste, people, devices, requests, community and next-year are pure modules that read the cache and the aggregate through injected lookups.
+- [x] Request outcomes are joined through cached guids, and the status mapping matches design 7.2.
+- [x] Community facts and viewer ranks follow the contributor rules.
+- [x] No module can read player names or IP addresses, and every module has tests.
 
 ### Step P2.9: Fact catalogue, build-facts and archetype scorers v3
 

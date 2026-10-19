@@ -155,7 +155,7 @@ export const overseerrRequestSchema = z.object({
   is4k: z.boolean().optional(),
   createdAt: z.string(),
   requestedBy: z.object({ id: num }).nullable(),
-  media: z.object({ status: num, status4k: num.optional(), tmdbId: num.nullish() }),
+  media: z.object({ status: num, status4k: num.optional(), tmdbId: num.nullish(), tvdbId: num.nullish() }),
 })
 export type OverseerrRequestRow = z.infer<typeof overseerrRequestSchema>
 

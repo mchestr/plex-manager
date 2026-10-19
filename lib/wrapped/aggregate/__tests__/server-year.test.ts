@@ -64,6 +64,7 @@ const request = (id: number, requestedById: number, available = true): RequestEv
   id,
   mediaType: "movie",
   tmdbId: id,
+  tvdbId: null,
   createdAt: Date.parse("2026-05-01T12:00:00Z"),
   requestedById,
   is4k: false,
