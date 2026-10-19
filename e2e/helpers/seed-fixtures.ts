@@ -128,8 +128,10 @@ export async function seedVisualFixtures(): Promise<void> {
       const config = {
         llmDisabled: false,
         wrappedEnabled: true,
-        wrappedGenerationStartDate: null,
-        wrappedGenerationEndDate: null,
+        // A season open all year, so the screenshots do not change on 1 December
+        rewindSeasonOpens: '01-01',
+        rewindSeasonCloses: '12-31',
+        timezone: null,
         watchlistSyncEnabled: false,
         watchlistSyncIntervalMinutes: 60,
         stripeEnabled: false,

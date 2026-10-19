@@ -18,6 +18,8 @@ interface AnnouncementFormModalProps {
   isOpen: boolean
   isEditing: boolean
   formData: AnnouncementFormData
+  /** The server zone the expiry is entered in. */
+  zone: string
   submitting: boolean
   onFormChange: (data: AnnouncementFormData) => void
   onSubmit: (e: React.FormEvent) => void
@@ -28,6 +30,7 @@ export function AnnouncementFormModal({
   isOpen,
   isEditing,
   formData,
+  zone,
   submitting,
   onFormChange,
   onSubmit,
@@ -137,7 +140,9 @@ export function AnnouncementFormModal({
               onChange={(e) => onFormChange({ ...formData, expiresAt: e.target.value })}
               data-testid="announcement-expires-input"
             />
-            <p className="text-xs text-slate-500 mt-1">Leave empty for no expiration</p>
+            <p className="text-xs text-slate-500 mt-1" data-testid="announcement-expires-zone">
+              Times in {zone}. Leave empty for no expiration.
+            </p>
           </div>
 
           {/* Modal Footer */}

@@ -9,7 +9,8 @@ import { StripeSettingsForm } from "@/components/admin/settings/stripe-settings-
 import { WatchlistSyncSettings } from "@/components/admin/settings/watchlist-sync-settings"
 import { WrappedSettingsForm } from "@/components/admin/settings/wrapped-settings-form"
 import { getBaseUrl } from "@/lib/env"
-import { getSeasonYear } from "@/lib/wrapped/season"
+import { serverZone } from "@/lib/utils/server-zone"
+import { getSeasonState } from "@/lib/wrapped/season"
 
 export const dynamic = 'force-dynamic'
 
@@ -60,7 +61,7 @@ function FeatureStatusBadge({ featureName, enabled }: FeatureStatusBadgeProps) {
 export default async function SettingsPage() {
   const settings = await getAdminSettings()
   const stripeConfig = await getStripeConfig()
-  const seasonYear = await getSeasonYear()
+  const [season, zone] = await Promise.all([getSeasonState(), serverZone()])
   const baseUrl = getBaseUrl()
   const discordPortalUrl = `${baseUrl}/discord/link`
   const nodeVersion = process.version
@@ -176,9 +177,12 @@ export default async function SettingsPage() {
                   <div className="space-y-4">
                     <WrappedSettingsForm
                       enabled={settings.config.wrappedEnabled ?? true}
-                      year={seasonYear}
-                      startDate={settings.config.wrappedGenerationStartDate}
-                      endDate={settings.config.wrappedGenerationEndDate}
+                      year={season.seasonYear}
+                      opens={settings.config.rewindSeasonOpens}
+                      closes={settings.config.rewindSeasonCloses}
+                      seasonOpen={season.isOpen}
+                      zone={zone}
+                      configuredZone={settings.config.timezone}
                     />
                     <div className="pt-4 border-t border-slate-700">
                       <LLMProviderForm

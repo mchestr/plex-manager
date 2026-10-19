@@ -76,11 +76,11 @@
     "meta-viewport|moderate": 1
   },
   "admin /admin/settings": {
-    "color-contrast|incomplete": 120,
+    "color-contrast|incomplete": 116,
     "meta-viewport|moderate": 1
   },
   "admin /admin/settings [Wrapped settings editing]": {
-    "color-contrast|incomplete": 130,
+    "color-contrast|incomplete": 117,
     "meta-viewport|moderate": 1
   },
   "admin /admin/shares": {

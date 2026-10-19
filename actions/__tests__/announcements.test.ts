@@ -144,13 +144,34 @@ describe('announcements actions', () => {
         content: 'This is test content',
         priority: 10,
         isActive: true,
-        expiresAt: '2025-12-31T00:00:00.000Z',
+        expiresAt: '2025-12-31T00:00',
       })
 
       expect(result.success).toBe(true)
       expect(result.data?.title).toBe('Test Announcement')
       expect(mockRevalidatePath).toHaveBeenCalledWith('/')
       expect(mockRevalidatePath).toHaveBeenCalledWith('/admin/announcements')
+    })
+
+    it('reads the expiry as wall time in the server zone', async () => {
+      mockGetServerSession.mockResolvedValue(mockAdminSession)
+      mockPrisma.config.findUnique.mockResolvedValue({ timezone: 'America/Los_Angeles' } as never)
+      mockPrisma.announcement.create.mockResolvedValue(mockAnnouncement)
+
+      await createAnnouncement({ title: 'T', content: 'C', priority: 0, isActive: true, expiresAt: '2026-12-31T23:59' })
+
+      expect(mockPrisma.announcement.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ expiresAt: new Date('2027-01-01T07:59:00Z') }),
+      })
+    })
+
+    it('rejects an expiry with a zone or offset, which would bypass the server zone', async () => {
+      mockGetServerSession.mockResolvedValue(mockAdminSession)
+
+      const result = await createAnnouncement({ title: 'T', content: 'C', priority: 0, isActive: true, expiresAt: '2026-12-31T23:59:00Z' })
+
+      expect(result).toEqual({ success: false, error: 'Invalid date format' })
+      expect(mockPrisma.announcement.create).not.toHaveBeenCalled()
     })
 
     it('should reject for non-admin', async () => {
@@ -260,6 +281,19 @@ describe('announcements actions', () => {
 
       expect(result.success).toBe(true)
       expect(mockRevalidatePath).toHaveBeenCalledWith('/')
+    })
+
+    it('reads the expiry as wall time in the server zone', async () => {
+      mockGetServerSession.mockResolvedValue(mockAdminSession)
+      mockPrisma.config.findUnique.mockResolvedValue({ timezone: 'America/Chicago' } as never)
+      mockPrisma.announcement.update.mockResolvedValue(mockAnnouncement)
+
+      await updateAnnouncement({ id: 'ann-123', title: 'T', content: 'C', priority: 0, isActive: true, expiresAt: '2026-12-31T23:59' })
+
+      expect(mockPrisma.announcement.update).toHaveBeenCalledWith({
+        where: { id: 'ann-123' },
+        data: expect.objectContaining({ expiresAt: new Date('2027-01-01T05:59:00Z') }),
+      })
     })
 
     it('should return error for non-existent announcement', async () => {

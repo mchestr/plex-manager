@@ -49,10 +49,10 @@ describe('Admin users page season year', () => {
   })
 
   it.each([
-    ['a Dec 1 window saved in 2026', new Date('2026-12-01T12:00:00Z')],
-    ['no window', null],
-  ])('uses 2026 on 2027-01-02 with %s', async (_label, startDate) => {
-    ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({ wrappedGenerationStartDate: startDate })
+    ['the stored default window', { rewindSeasonOpens: '12-01', rewindSeasonCloses: '01-31', timezone: null }],
+    ['no config row', null],
+  ])('uses 2026 on 2027-01-02 with %s', async (_label, config) => {
+    ;(prisma.config.findUnique as jest.Mock).mockResolvedValue(config)
 
     render(await UsersPage())
 

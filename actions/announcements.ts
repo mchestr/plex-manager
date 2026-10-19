@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { createLogger } from "@/lib/utils/logger"
+import { serverZone } from "@/lib/utils/server-zone"
+import { isWallTime, wallTimeToInstant } from "@/lib/utils/zoned-time"
 import { getServerSession } from "next-auth"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
@@ -108,11 +110,17 @@ export async function getAllAnnouncements(): Promise<AnnouncementData[]> {
 }
 
 /**
- * Validates that a string is a valid ISO date/datetime string
+ * Expiry is a `datetime-local` value (`YYYY-MM-DDTHH:mm`), read as wall time
+ * in the server zone, so it means what the admin typed.
  */
-const isValidDateString = (val: string): boolean => {
-  const date = new Date(val)
-  return !isNaN(date.getTime())
+const expiresAtSchema = z
+  .string()
+  .refine(isWallTime, { message: "Invalid date format" })
+  .nullable()
+  .optional()
+
+async function toExpiry(value: string | null | undefined): Promise<Date | null> {
+  return value ? wallTimeToInstant(value, await serverZone()) : null
 }
 
 const createAnnouncementSchema = z.object({
@@ -120,10 +128,7 @@ const createAnnouncementSchema = z.object({
   content: z.string().min(1, "Content is required").max(5000, "Content too long"),
   priority: z.number().int().min(0).max(100).default(0),
   isActive: z.boolean().default(true),
-  expiresAt: z.string()
-    .refine((val) => isValidDateString(val), { message: "Invalid date format" })
-    .nullable()
-    .optional(),
+  expiresAt: expiresAtSchema,
 })
 
 export type CreateAnnouncementInput = z.infer<typeof createAnnouncementSchema>
@@ -151,7 +156,7 @@ export async function createAnnouncement(input: CreateAnnouncementInput): Promis
         content,
         priority,
         isActive,
-        expiresAt: expiresAt ? new Date(expiresAt) : null,
+        expiresAt: await toExpiry(expiresAt),
         createdBy: session.user.id,
       },
     })
@@ -191,10 +196,7 @@ const updateAnnouncementSchema = z.object({
   content: z.string().min(1, "Content is required").max(5000, "Content too long"),
   priority: z.number().int().min(0).max(100),
   isActive: z.boolean(),
-  expiresAt: z.string()
-    .refine((val) => isValidDateString(val), { message: "Invalid date format" })
-    .nullable()
-    .optional(),
+  expiresAt: expiresAtSchema,
 })
 
 export type UpdateAnnouncementInput = z.infer<typeof updateAnnouncementSchema>
@@ -223,7 +225,7 @@ export async function updateAnnouncement(input: UpdateAnnouncementInput): Promis
         content,
         priority,
         isActive,
-        expiresAt: expiresAt ? new Date(expiresAt) : null,
+        expiresAt: await toExpiry(expiresAt),
       },
     })
 

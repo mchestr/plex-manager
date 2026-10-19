@@ -103,9 +103,7 @@ describe('Admin user wrapped page year', () => {
   // P0.14: without ?year= the page opens the season year, not the calendar year.
   it('opens the season year on 2027-01-02 when no year is given', async () => {
     jest.useFakeTimers().setSystemTime(new Date('2027-01-02T12:00:00Z'))
-    ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({
-      wrappedGenerationStartDate: new Date('2026-12-01T12:00:00Z'),
-    })
+    ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({ rewindSeasonOpens: '12-01', rewindSeasonCloses: '01-31', timezone: null })
 
     const ui = await UserWrappedPage({
       params: Promise.resolve({ userId: 'user-1' }),

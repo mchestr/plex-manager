@@ -60,8 +60,11 @@ function seed(...rows: MockRow[]) {
   mockRows.splice(0, mockRows.length, ...rows)
 }
 
-function windowStartsOn(value: string | null) {
-  mockConfigFindUnique.mockResolvedValue({ wrappedGenerationStartDate: value ? new Date(value) : null })
+/** The stored season window, or no config row (the same default window). */
+function seasonWindow(window: { opens: string; closes: string } | null) {
+  mockConfigFindUnique.mockResolvedValue(
+    window && { rewindSeasonOpens: window.opens, rewindSeasonCloses: window.closes, timezone: null }
+  )
 }
 
 describe('/wrapped resolver', () => {
@@ -69,7 +72,7 @@ describe('/wrapped resolver', () => {
     jest.clearAllMocks()
     jest.useFakeTimers().setSystemTime(new Date('2027-01-02T12:00:00Z'))
     ;(getServerSession as jest.Mock).mockResolvedValue({ user: { id: 'user-1', isAdmin: false } })
-    windowStartsOn('2026-12-01T12:00:00Z')
+    seasonWindow({ opens: '12-01', closes: '01-31' })
     seed()
   })
 
@@ -114,7 +117,7 @@ describe('/wrapped resolver', () => {
   })
 
   it('falls back to the season year when the member has no completed Rewind', async () => {
-    windowStartsOn(null)
+    seasonWindow(null)
 
     await expect(WrappedResolverPage()).rejects.toThrow('NEXT_REDIRECT /wrapped/2026')
   })

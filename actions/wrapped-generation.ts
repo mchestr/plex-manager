@@ -100,8 +100,9 @@ async function runInFlight(userId: string, year: number): Promise<boolean> {
  *
  * ## Guardrails (SEC-22, RWP-12), in order
  *
- * 1. A session, then `getWrappedSettings()`: generation is enabled, and
- *    `wrappedYear` is the season year.
+ * 1. A session, then `getWrappedSettings()`: generation is enabled and,
+ *    for members, the season window is open; `wrappedYear` is the season
+ *    year.
  * 2. Zod: `year` must be exactly the season year.
  * 3. A non-admin acts only on their own row, checked before the member is
  *    read so another id gets the same answer whether or not it exists; then
@@ -142,8 +143,9 @@ export async function generatePlexWrapped(userId: string, year: number): Promise
       return { success: false, error: "Unauthorized: Invalid session" }
     }
 
-    const { wrappedEnabled, wrappedYear } = await getWrappedSettings()
-    if (!wrappedEnabled) {
+    // Members generate only while the season is open; admins whenever the feature is on
+    const { wrappedEnabled, featureEnabled, wrappedYear } = await getWrappedSettings()
+    if (!wrappedEnabled && !(isAdmin && featureEnabled)) {
       return { success: false, error: "Wrapped generation is currently disabled" }
     }
 

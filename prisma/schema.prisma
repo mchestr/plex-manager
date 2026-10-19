@@ -436,8 +436,8 @@ model Config {
   id                           String    @id @default("config")
   llmDisabled                  Boolean   @default(false) // When true, LLM calls are disabled and mock data is returned
   wrappedEnabled               Boolean   @default(true) // When false, wrapped generation is disabled
-  wrappedGenerationStartDate   DateTime? // Optional start date for when generation is allowed (e.g., Nov 20). Year is auto-determined from this date.
-  wrappedGenerationEndDate     DateTime? // Optional end date for when generation is allowed (e.g., Jan 31)
+  wrappedGenerationStartDate   DateTime? // Legacy: migrated to rewindSeasonOpens (P2.2), no longer written; P11.18 drops it
+  wrappedGenerationEndDate     DateTime? // Legacy: migrated to rewindSeasonCloses (P2.2), no longer written; P11.18 drops it
   watchlistSyncEnabled         Boolean   @default(false) // Global toggle for watchlist sync feature
   watchlistSyncIntervalMinutes Int       @default(60) // Default sync interval in minutes (minimum 15)
   stripeEnabled                Boolean   @default(false) // Global toggle for the Stripe subscription requirement

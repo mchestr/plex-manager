@@ -1463,6 +1463,39 @@ describe('generation guardrails (P0.12)', () => {
     })
   })
 
+  describe('the season window (P2.2)', () => {
+    const closedSeason = { featureEnabled: true, seasonOpen: false, wrappedEnabled: false, wrappedYear: SEASON_YEAR }
+
+    it('refuses a member while the season is closed', async () => {
+      ;(getWrappedSettings as jest.Mock).mockResolvedValue(closedSeason)
+      setUpRun()
+
+      expect(await generatePlexWrapped('user-1', SEASON_YEAR)).toEqual({
+        success: false,
+        error: 'Wrapped generation is currently disabled',
+      })
+      expectNothingWritten()
+    })
+
+    it('lets an admin regenerate while the season is closed', async () => {
+      ;(getWrappedSettings as jest.Mock).mockResolvedValue(closedSeason)
+      setUpRun({ session: mockAdminSession })
+
+      expect(await generatePlexWrapped('user-1', SEASON_YEAR)).toEqual({ success: true, wrappedId: 'wrapped-1' })
+    })
+
+    it('refuses an admin when the feature is switched off', async () => {
+      ;(getWrappedSettings as jest.Mock).mockResolvedValue({ ...closedSeason, featureEnabled: false, seasonOpen: true })
+      setUpRun({ session: mockAdminSession })
+
+      expect(await generatePlexWrapped('user-1', SEASON_YEAR)).toEqual({
+        success: false,
+        error: 'Wrapped generation is currently disabled',
+      })
+      expectNothingWritten()
+    })
+  })
+
   describe('one run at a time', () => {
     it('makes one LLM call for five parallel calls; the others are refused and refunded', async () => {
       setUpRun()

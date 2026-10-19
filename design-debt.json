@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "commit": "4199ad9642a3c760aca555705d99bf8caa65a0c1",
-  "generatedAt": "2026-10-19T03:18:33.167Z",
+  "commit": "28e45d9cc526d517f6ba68ef1644d5853a10bd91",
+  "generatedAt": "2026-10-19T06:09:18.348Z",
   "files": {
     "app/(app)/discord/link/page.tsx": {
       "raw-palette": 2
@@ -363,7 +363,7 @@
       "raw-palette": 44
     },
     "components/admin/settings/wrapped-settings-form.tsx": {
-      "copy": 4,
+      "copy": 2,
       "raw-palette": 15
     },
     "components/admin/shared/admin-layout-shell.tsx": {
@@ -815,7 +815,7 @@
     "arbitrary-type-z": 39,
     "blur": 144,
     "caps-eyebrow": 91,
-    "copy": 43,
+    "copy": 41,
     "gradient": 136,
     "gradient-text": 56,
     "infinite-motion": 57,

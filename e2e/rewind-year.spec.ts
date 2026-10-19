@@ -4,17 +4,20 @@ import { WAIT_TIMEOUTS } from './helpers/test-utils';
 
 /**
  * P0.14 (RWP-04, RWV-02, UI-02): the Rewind year comes from data, not the
- * calendar. With a Dec 1 window saved in 2026 and completed 2025 and 2026
- * Rewinds, `/wrapped` opens 2026 and past years open by URL.
+ * calendar. With the default 12-01 to 01-31 season (P2.2) and completed 2025
+ * and 2026 Rewinds, `/wrapped` opens 2026 and past years open by URL.
  *
- * `page.clock` moves only the browser clock to 2027-01-02. The server picks
- * the year from the stored rows and the window, which is what this proves;
- * the Jest season tests cover the server's own January fallback.
+ * `page.clock` moves only the browser clock to 2027-01-02. The server's clock
+ * is real: from October 2026 to January 2027 the season is 2026, and later
+ * the 2027 season has no row, so `/wrapped` falls back to the latest
+ * completed year, 2026, either way. The Jest season tests cover the dates.
  */
 
 const SEEDED_YEARS = [2025, 2026];
 const TOUCHED_YEARS = [...SEEDED_YEARS, 2027];
-const WINDOW_START = new Date('2026-12-01T12:00:00Z');
+const DEFAULT_SEASON = { rewindSeasonOpens: '12-01', rewindSeasonCloses: '01-31' };
+type Season = typeof DEFAULT_SEASON;
+const SEASON_SELECT = { rewindSeasonOpens: true, rewindSeasonCloses: true } as const;
 
 function rewindData(year: number) {
   return {
@@ -52,21 +55,17 @@ function rewindData(year: number) {
 
 test.describe('Rewind year from data', () => {
   let hadConfig = false;
-  let previousStart: Date | null = null;
+  let previousSeason: Season | null = null;
 
   test.beforeAll(async () => {
     const prisma = createE2EPrismaClient();
     try {
-      const config = await prisma.config.findUnique({
-        where: { id: 'config' },
-        select: { wrappedGenerationStartDate: true },
-      });
-      hadConfig = config !== null;
-      previousStart = config?.wrappedGenerationStartDate ?? null;
+      previousSeason = await prisma.config.findUnique({ where: { id: 'config' }, select: SEASON_SELECT });
+      hadConfig = previousSeason !== null;
       await prisma.config.upsert({
         where: { id: 'config' },
-        create: { id: 'config', wrappedGenerationStartDate: WINDOW_START },
-        update: { wrappedGenerationStartDate: WINDOW_START },
+        create: { id: 'config', ...DEFAULT_SEASON },
+        update: DEFAULT_SEASON,
       });
 
       await prisma.plexWrapped.deleteMany({
@@ -94,11 +93,8 @@ test.describe('Rewind year from data', () => {
       await prisma.plexWrapped.deleteMany({
         where: { userId: TEST_USERS.REGULAR.id, year: { in: TOUCHED_YEARS } },
       });
-      if (hadConfig) {
-        await prisma.config.update({
-          where: { id: 'config' },
-          data: { wrappedGenerationStartDate: previousStart },
-        });
+      if (hadConfig && previousSeason) {
+        await prisma.config.update({ where: { id: 'config' }, data: previousSeason });
       } else {
         await prisma.config.delete({ where: { id: 'config' } });
       }
@@ -154,24 +150,20 @@ test.describe('Rewind year from data', () => {
 });
 
 /**
- * Without a window the season year is the calendar year, so a member whose
- * only Rewind is 2025 tells the two rules apart while the server's clock is in
- * 2026 or later: redirecting to the calendar year would open /wrapped/2026,
- * and the data rule opens 2025. The server clock is real here.
+ * From 2026 on, the season year is 2026 or later, so a member whose only
+ * Rewind is 2025 tells the two rules apart: redirecting to the season year
+ * would open /wrapped/2026, and the data rule opens 2025. The server clock is
+ * real here.
  */
-test.describe('Rewind year from data, without a window', () => {
-  let previousStart: Date | null = null;
+test.describe('Rewind year from data, with only an older Rewind', () => {
+  let previousSeason: Season | null = null;
 
   test.beforeAll(async () => {
     const prisma = createE2EPrismaClient();
     try {
-      const config = await prisma.config.findUnique({
-        where: { id: 'config' },
-        select: { wrappedGenerationStartDate: true },
-      });
-      previousStart = config?.wrappedGenerationStartDate ?? null;
-      if (config) {
-        await prisma.config.update({ where: { id: 'config' }, data: { wrappedGenerationStartDate: null } });
+      previousSeason = await prisma.config.findUnique({ where: { id: 'config' }, select: SEASON_SELECT });
+      if (previousSeason) {
+        await prisma.config.update({ where: { id: 'config' }, data: DEFAULT_SEASON });
       }
 
       await prisma.plexWrapped.deleteMany({
@@ -197,18 +189,15 @@ test.describe('Rewind year from data, without a window', () => {
       await prisma.plexWrapped.deleteMany({
         where: { userId: TEST_USERS.REGULAR.id, year: { in: TOUCHED_YEARS } },
       });
-      if (previousStart) {
-        await prisma.config.update({
-          where: { id: 'config' },
-          data: { wrappedGenerationStartDate: previousStart },
-        });
+      if (previousSeason) {
+        await prisma.config.update({ where: { id: 'config' }, data: previousSeason });
       }
     } finally {
       await prisma.$disconnect();
     }
   });
 
-  test('/wrapped opens the only completed year, not the calendar year', async ({ regularUserPage }) => {
+  test('/wrapped opens the only completed year, not the season year', async ({ regularUserPage }) => {
     test.skip(new Date().getFullYear() <= 2025, 'the two rules agree until the calendar reaches 2026');
 
     await regularUserPage.goto('/wrapped');

@@ -32,6 +32,7 @@ export const envSchema = z.object({
   // Infrastructure
   REDIS_URL: text("Redis for the job queue and rate limits. Rewind and Stripe need it."),
   TRUSTED_PROXY_HOPS: text("Reverse proxies that append to X-Forwarded-For (default 1)."),
+  TZ: text("Server time zone (IANA name) until one is saved in Admin settings; otherwise UTC."),
   REWIND_CACHE_DIR: z
     .string()
     .default(".next/cache/rewind")
