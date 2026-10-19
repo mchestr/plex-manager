@@ -165,6 +165,12 @@ describe("normalizeTimeZone", () => {
     ["UTC", "UTC"],
     ["Etc/UTC", "UTC"],
     ["Europe/Berlin", "Europe/Berlin"],
+    // ICU's legacy ids come back as the IANA names a member chose (design 7.7)
+    ["Asia/Ho_Chi_Minh", "Asia/Ho_Chi_Minh"],
+    ["Asia/Saigon", "Asia/Ho_Chi_Minh"],
+    ["Asia/Kolkata", "Asia/Kolkata"],
+    ["Europe/Kyiv", "Europe/Kyiv"],
+    ["Europe/Kiev", "Europe/Kyiv"],
   ])("maps %s to %s", (input, expected) => {
     expect(normalizeTimeZone(input)).toBe(expected)
   })
@@ -177,6 +183,8 @@ describe("normalizeTimeZone", () => {
     const options = timeZoneOptions()
     expect(options[0]).toBe("UTC")
     expect(options).toContain("America/Los_Angeles")
+    expect(options).toContain("Asia/Ho_Chi_Minh")
+    expect(options).not.toContain("Asia/Saigon")
     for (const zone of options) expect(normalizeTimeZone(zone)).toBe(zone)
   })
 })

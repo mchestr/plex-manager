@@ -158,18 +158,50 @@ export function instantToWallTime(instant: Date | number, zone: string): string 
 let options: string[] | null = null
 
 /**
+ * ICU still names these zones by their old CLDR ids (`Asia/Saigon`,
+ * `Europe/Kiev`), so `Intl` hands them back for the current IANA names. The
+ * zone a member picks is the one Rewind prints in `tz.label` (design 7.7),
+ * so the options and the normalised value use the IANA name. Only renames of
+ * the same place are listed, never zones that IANA merged into another.
+ */
+const IANA_RENAMES: Readonly<Record<string, string>> = {
+  "Africa/Asmera": "Africa/Asmara",
+  "America/Buenos_Aires": "America/Argentina/Buenos_Aires",
+  "America/Catamarca": "America/Argentina/Catamarca",
+  "America/Cordoba": "America/Argentina/Cordoba",
+  "America/Godthab": "America/Nuuk",
+  "America/Indianapolis": "America/Indiana/Indianapolis",
+  "America/Jujuy": "America/Argentina/Jujuy",
+  "America/Louisville": "America/Kentucky/Louisville",
+  "America/Mendoza": "America/Argentina/Mendoza",
+  "Asia/Calcutta": "Asia/Kolkata",
+  "Asia/Katmandu": "Asia/Kathmandu",
+  "Asia/Rangoon": "Asia/Yangon",
+  "Asia/Saigon": "Asia/Ho_Chi_Minh",
+  "Atlantic/Faeroe": "Atlantic/Faroe",
+  "Europe/Kiev": "Europe/Kyiv",
+  "Pacific/Enderbury": "Pacific/Kanton",
+  "Pacific/Ponape": "Pacific/Pohnpei",
+  "Pacific/Truk": "Pacific/Chuuk",
+}
+
+const ianaName = (zone: string) => IANA_RENAMES[zone] ?? zone
+
+/**
  * Every zone the settings can store: `UTC` first, then
- * `Intl.supportedValuesOf('timeZone')`, which on Node 22 leaves `UTC` out.
+ * `Intl.supportedValuesOf('timeZone')` (which on Node 22 leaves `UTC` out)
+ * under their current IANA names.
  */
 export function timeZoneOptions(): string[] {
-  options ??= ["UTC", ...Intl.supportedValuesOf("timeZone")]
+  options ??= ["UTC", ...Intl.supportedValuesOf("timeZone").map(ianaName).sort()]
   return options
 }
 
 /**
  * The canonical IANA name for `input`, or null when it is not a zone the
  * settings can store. Aliases resolve (`US/Pacific` is `America/Los_Angeles`,
- * `Etc/UTC` is `UTC`); offsets such as `+05:00` and unknown names are null.
+ * `Etc/UTC` is `UTC`, `Asia/Saigon` is `Asia/Ho_Chi_Minh`); offsets such as
+ * `+05:00` and unknown names are null.
  *
  * @example
  * ```ts
@@ -180,7 +212,7 @@ export function timeZoneOptions(): string[] {
 export function normalizeTimeZone(input: string | null | undefined): string | null {
   if (!input) return null
   try {
-    const zone = new Intl.DateTimeFormat("en-US", { timeZone: input }).resolvedOptions().timeZone
+    const zone = ianaName(new Intl.DateTimeFormat("en-US", { timeZone: input }).resolvedOptions().timeZone)
     return timeZoneOptions().includes(zone) ? zone : null
   } catch {
     return null
