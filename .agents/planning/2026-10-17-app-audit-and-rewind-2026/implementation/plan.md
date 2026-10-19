@@ -375,7 +375,7 @@ gantt
 
 - [x] P3.1: Semantic tokens and the Rewind scope contract (ui, M, due 2026-10-27)
 - [ ] P3.2: Fonts and root layout (ui, M, due 2026-11-05)
-- [ ] P3.3: Token mirror module and contrast tests (ui, S, due 2026-10-28)
+- [x] P3.3: Token mirror module and contrast tests (ui, S, due 2026-10-28)
 - [ ] P3.4: Base primitives on Base UI behind adapters (ui, L, due 2026-10-30)
 - [ ] P3.5: Form primitives and the Field pattern (ui, M, due 2026-11-04)
 - [ ] P3.6: Overlay and feedback primitives (ui, M, due 2026-11-03)
