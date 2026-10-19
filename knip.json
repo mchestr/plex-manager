@@ -4,8 +4,7 @@
     "instrumentation.ts!",
     "proxy.ts!",
     "scripts/*.ts!",
-    "scripts/*.mjs!",
-    "lib/wrapped/time/zone.ts!"
+    "scripts/*.mjs!"
   ],
   "project": [
     "**/*.{js,mjs,cjs,ts,tsx}!",

@@ -38,12 +38,11 @@ import type { z } from "zod"
 import { serviceErrorMessage, serviceFetch } from "@/lib/connections/http"
 import { createLogger } from "@/lib/utils/logger"
 import {
-  MediaRequestStatus,
-  MediaStatus,
   overseerrRequestPageSchema,
   overseerrUserPageSchema,
   type OverseerrRequest,
 } from "@/lib/validations/overseerr"
+import { MediaRequestStatus, MediaStatus } from "@/lib/wrapped/sources/schemas"
 import type { OverseerrConfig, OverseerrStatisticsData } from "./statistics-types"
 
 const logger = createLogger("STATISTICS")

@@ -1,0 +1,227 @@
+{
+  "pageInfo": {
+    "pages": 1,
+    "pageSize": 100,
+    "results": 7,
+    "page": 1
+  },
+  "results": [
+    {
+      "id": 7,
+      "status": 1,
+      "createdAt": "2026-11-02T10:00:00.000Z",
+      "updatedAt": "2026-11-02T10:00:00.000Z",
+      "type": "movie",
+      "is4k": false,
+      "serverId": 0,
+      "profileId": 1,
+      "rootFolder": "/media",
+      "media": {
+        "id": 307,
+        "mediaType": "movie",
+        "tmdbId": 1001,
+        "tvdbId": null,
+        "imdbId": null,
+        "status": 2,
+        "status4k": 1,
+        "createdAt": "2026-11-02T10:00:00.000Z",
+        "updatedAt": "2026-11-02T10:00:00.000Z"
+      },
+      "requestedBy": {
+        "id": 101,
+        "email": "user101@example.invalid",
+        "plexUsername": "user101",
+        "plexId": 100001,
+        "displayName": "user101"
+      },
+      "modifiedBy": null,
+      "seasons": []
+    },
+    {
+      "id": 6,
+      "status": 2,
+      "createdAt": "2026-09-15T10:00:00.000Z",
+      "updatedAt": "2026-09-15T10:00:00.000Z",
+      "type": "tv",
+      "is4k": false,
+      "serverId": 0,
+      "profileId": 1,
+      "rootFolder": "/media",
+      "media": {
+        "id": 306,
+        "mediaType": "tv",
+        "tmdbId": 2001,
+        "tvdbId": null,
+        "imdbId": null,
+        "status": 4,
+        "status4k": 1,
+        "createdAt": "2026-09-15T10:00:00.000Z",
+        "updatedAt": "2026-09-15T10:00:00.000Z"
+      },
+      "requestedBy": {
+        "id": 101,
+        "email": "user101@example.invalid",
+        "plexUsername": "user101",
+        "plexId": 100001,
+        "displayName": "user101"
+      },
+      "modifiedBy": null,
+      "seasons": []
+    },
+    {
+      "id": 5,
+      "status": 5,
+      "createdAt": "2026-06-01T10:00:00.000Z",
+      "updatedAt": "2026-06-01T10:00:00.000Z",
+      "type": "movie",
+      "is4k": false,
+      "serverId": 0,
+      "profileId": 1,
+      "rootFolder": "/media",
+      "media": {
+        "id": 305,
+        "mediaType": "movie",
+        "tmdbId": 1002,
+        "tvdbId": null,
+        "imdbId": null,
+        "status": 5,
+        "status4k": 1,
+        "createdAt": "2026-06-01T10:00:00.000Z",
+        "updatedAt": "2026-06-01T10:00:00.000Z"
+      },
+      "requestedBy": {
+        "id": 101,
+        "email": "user101@example.invalid",
+        "plexUsername": "user101",
+        "plexId": 100001,
+        "displayName": "user101"
+      },
+      "modifiedBy": null,
+      "seasons": []
+    },
+    {
+      "id": 4,
+      "status": 2,
+      "createdAt": "2026-05-01T10:00:00.000Z",
+      "updatedAt": "2026-05-01T10:00:00.000Z",
+      "type": "movie",
+      "is4k": true,
+      "serverId": 0,
+      "profileId": 1,
+      "rootFolder": "/media",
+      "media": {
+        "id": 304,
+        "mediaType": "movie",
+        "tmdbId": 1001,
+        "tvdbId": null,
+        "imdbId": null,
+        "status": 4,
+        "status4k": 5,
+        "createdAt": "2026-05-01T10:00:00.000Z",
+        "updatedAt": "2026-05-01T10:00:00.000Z"
+      },
+      "requestedBy": {
+        "id": 101,
+        "email": "user101@example.invalid",
+        "plexUsername": "user101",
+        "plexId": 100001,
+        "displayName": "user101"
+      },
+      "modifiedBy": null,
+      "seasons": []
+    },
+    {
+      "id": 3,
+      "status": 3,
+      "createdAt": "2026-04-01T10:00:00.000Z",
+      "updatedAt": "2026-04-01T10:00:00.000Z",
+      "type": "movie",
+      "is4k": false,
+      "serverId": 0,
+      "profileId": 1,
+      "rootFolder": "/media",
+      "media": {
+        "id": 303,
+        "mediaType": "movie",
+        "tmdbId": 1003,
+        "tvdbId": null,
+        "imdbId": null,
+        "status": 1,
+        "status4k": 1,
+        "createdAt": "2026-04-01T10:00:00.000Z",
+        "updatedAt": "2026-04-01T10:00:00.000Z"
+      },
+      "requestedBy": {
+        "id": 101,
+        "email": "user101@example.invalid",
+        "plexUsername": "user101",
+        "plexId": 100001,
+        "displayName": "user101"
+      },
+      "modifiedBy": null,
+      "seasons": []
+    },
+    {
+      "id": 2,
+      "status": 5,
+      "createdAt": "2026-02-01T10:00:00.000Z",
+      "updatedAt": "2026-02-01T10:00:00.000Z",
+      "type": "movie",
+      "is4k": false,
+      "serverId": 0,
+      "profileId": 1,
+      "rootFolder": "/media",
+      "media": {
+        "id": 302,
+        "mediaType": "movie",
+        "tmdbId": 1004,
+        "tvdbId": null,
+        "imdbId": null,
+        "status": 7,
+        "status4k": 1,
+        "createdAt": "2026-02-01T10:00:00.000Z",
+        "updatedAt": "2026-02-01T10:00:00.000Z"
+      },
+      "requestedBy": {
+        "id": 101,
+        "email": "user101@example.invalid",
+        "plexUsername": "user101",
+        "plexId": 100001,
+        "displayName": "user101"
+      },
+      "modifiedBy": null,
+      "seasons": []
+    },
+    {
+      "id": 1,
+      "status": 2,
+      "createdAt": "2025-12-15T10:00:00.000Z",
+      "updatedAt": "2025-12-15T10:00:00.000Z",
+      "type": "movie",
+      "is4k": false,
+      "serverId": 0,
+      "profileId": 1,
+      "rootFolder": "/media",
+      "media": {
+        "id": 301,
+        "mediaType": "movie",
+        "tmdbId": 1005,
+        "tvdbId": null,
+        "imdbId": null,
+        "status": 5,
+        "status4k": 1,
+        "createdAt": "2025-12-15T10:00:00.000Z",
+        "updatedAt": "2025-12-15T10:00:00.000Z"
+      },
+      "requestedBy": {
+        "id": 101,
+        "email": "user101@example.invalid",
+        "plexUsername": "user101",
+        "plexId": 100001,
+        "displayName": "user101"
+      },
+      "modifiedBy": null,
+      "seasons": []
+    }
+  ]
+}

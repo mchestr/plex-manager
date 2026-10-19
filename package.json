@@ -27,6 +27,7 @@
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:headed": "playwright test --headed",
     "rewind:strip-leaderboards": "tsx --tsconfig tsconfig.scripts.json scripts/rewind-strip-leaderboards.ts",
+    "rewind:probe-sources": "tsx --conditions=react-server --tsconfig tsconfig.scripts.json scripts/rewind-probe-sources.ts",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
