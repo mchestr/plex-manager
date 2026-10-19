@@ -3,7 +3,7 @@
  * mocks (`prismaMock.user.findUnique.mockResolvedValue(buildUser())`) get a
  * valid shape without casts.
  */
-import type { Config, Invite, LLMUsage, PlexWrapped, User } from '@/lib/generated/prisma/client'
+import { Prisma, type Config, type Invite, type LLMUsage, type PlexWrapped, type User } from '@/lib/generated/prisma/client'
 
 // A fresh Date per row, so a test that mutates one cannot leak into another.
 const fixedDate = () => new Date('2026-01-01T00:00:00.000Z')
@@ -23,6 +23,7 @@ export function buildUser(overrides: Partial<User> = {}): User {
     onboardingStatus: { plex: false, jellyfin: false },
     isExempt: false,
     exemptReason: null,
+    timezone: null,
     createdAt: fixedDate(),
     updatedAt: fixedDate(),
     ...overrides,
@@ -41,6 +42,12 @@ export function buildPlexWrapped(overrides: Partial<PlexWrapped> = {}): PlexWrap
     summary: null,
     archetype: null,
     generatedAt: fixedDate(),
+    dataVersion: 2,
+    edition: null,
+    factsHash: null,
+    dataThrough: null,
+    finalCutAt: null,
+    notifiedAt: null,
     createdAt: fixedDate(),
     updatedAt: fixedDate(),
     ...overrides,
@@ -79,6 +86,14 @@ export function buildLLMUsage(overrides: Partial<LLMUsage> = {}): LLMUsage {
     completionTokens: 50,
     totalTokens: 150,
     cost: 0.01,
+    cachedInputTokens: 0,
+    reasoningTokens: 0,
+    serviceTier: null,
+    batchId: null,
+    promptVersion: null,
+    factsHash: null,
+    generationId: null,
+    outcome: 'ok',
     createdAt: fixedDate(),
     ...overrides,
   }
@@ -98,6 +113,26 @@ export function buildConfig(overrides: Partial<Config> = {}): Config {
     stripeWebhookSecret: null,
     stripePriceIds: null,
     stripeLibrarySectionIds: null,
+    timezone: null,
+    locale: 'en-US',
+    serverName: null,
+    rewindSeasonOpens: '12-01',
+    rewindSeasonCloses: '01-31',
+    rewindEnabled: false,
+    rewindAudience: 'admins',
+    rewindLlmMode: 'standard',
+    rewindLlmBudgetUsd: new Prisma.Decimal(10),
+    rewindNotifyChannels: ['discord', 'banner'],
+    rewindPublicLinks: true,
+    rewindPublicCounts: false,
+    rewindShowServerNameOnCards: true,
+    rewindAllowArtOnCards: true,
+    rewindExcludedSectionIds: null,
+    rewindExcludedContentRatings: null,
+    rewindIncludeManagedUsers: false,
+    rewindAudio: false,
+    rewindDisabledPages: null,
+    rewindSerialKey: null,
     updatedAt: fixedDate(),
     updatedBy: null,
     ...overrides,

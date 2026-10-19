@@ -42,7 +42,7 @@ export const ENCRYPTED_FIELDS: Record<string, readonly string[]> = {
   LLMProvider: ['apiKey'],
   DiscordIntegration: ['clientSecret', 'botToken'],
   DiscordConnection: ['accessToken', 'refreshToken'],
-  Config: ['stripeSecretKey', 'stripeWebhookSecret'],
+  Config: ['stripeSecretKey', 'stripeWebhookSecret', 'rewindSerialKey'],
 }
 
 /** Encrypt any configured secret fields present on a write-args `data` object. */

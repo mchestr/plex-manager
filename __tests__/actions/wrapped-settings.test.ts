@@ -334,6 +334,7 @@ describe('Wrapped Settings Date Range', () => {
           wrappedGenerationEndDate: null,
           updatedBy: 'admin-user-id',
         },
+        select: expect.not.objectContaining({ stripeSecretKey: true }),
       })
     })
 
@@ -371,6 +372,7 @@ describe('Wrapped Settings Date Range', () => {
           wrappedGenerationEndDate: endDate,
           updatedBy: 'admin-user-id',
         },
+        select: expect.not.objectContaining({ stripeSecretKey: true }),
       })
     })
 

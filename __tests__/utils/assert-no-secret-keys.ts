@@ -2,7 +2,7 @@
  * Fails when any key in a value looks like a secret.
  *
  * Walks plain objects and arrays at any depth and collects the path of every
- * key matching `/token|apikey|secret|password/i`. Use it on server-action
+ * key matching `/token|apikey|secret|password|serialkey/i`. Use it on server-action
  * results and client-component props or state to prove that no credential
  * reaches the browser (SEC-18, BP-03).
  *
@@ -17,7 +17,7 @@
  * ```
  */
 
-const SECRET_KEY_PATTERN = /token|apikey|secret|password/i
+const SECRET_KEY_PATTERN = /token|apikey|secret|password|serialkey/i
 const ALLOWED_KEYS = new Set(['shareToken', 'nextToken'])
 
 /** Returns the path of every secret-looking key in `value`. */

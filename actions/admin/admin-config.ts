@@ -172,6 +172,8 @@ export async function setLLMDisabled(disabled: boolean) {
         llmDisabled: disabled,
         updatedBy: session.user.id,
       },
+      // The full row holds secrets and Decimal columns, which must not reach the client
+      select: NON_SECRET_CONFIG_SELECT,
     })
 
     return { success: true, config }
@@ -250,6 +252,7 @@ export async function updateWrappedSettings(data: {
         wrappedGenerationEndDate: data.endDate || null,
         updatedBy: session.user.id,
       },
+      select: NON_SECRET_CONFIG_SELECT,
     })
 
     const { revalidatePath } = await import("next/cache")

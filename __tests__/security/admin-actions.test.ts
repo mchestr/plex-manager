@@ -150,7 +150,12 @@ describe('Admin Actions Security', () => {
           llmDisabled: true,
           updatedBy: 'admin-user-id',
         },
+        select: expect.objectContaining({ llmDisabled: true }),
       })
+      // The returned row reaches the client: no secrets
+      const { select } = (prisma.config.upsert as jest.Mock).mock.calls[0][0]
+      expect(select).not.toHaveProperty('stripeSecretKey')
+      expect(select).not.toHaveProperty('rewindSerialKey')
     })
 
     it('should reject non-admin user', async () => {
@@ -388,8 +393,7 @@ describe('Admin Actions Security', () => {
       const result = await getHistoricalWrappedData('llm-usage-1', 'wrapped-1')
 
       expect(requireAdmin).toHaveBeenCalled()
-      expect(result).toBeTruthy()
-      expect(result?.wrappedData).toBeTruthy()
+      expect(result).toMatchObject({ removed: false, wrappedData: expect.any(Object) })
     })
 
     it('should reject non-admin user', async () => {

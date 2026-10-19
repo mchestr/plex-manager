@@ -1,5 +1,6 @@
 /**
- * Verifies that the Stripe secret Config fields are encrypted at rest.
+ * Verifies that the secret Config fields (the Stripe secrets and the Rewind
+ * serial key) are encrypted at rest.
  *
  * The Prisma query extension in `lib/prisma.ts` encrypts/decrypts the fields
  * listed in its `ENCRYPTED_FIELDS` map via `lib/security/crypto.ts`. These tests
@@ -12,7 +13,7 @@ import { ENCRYPTION_PREFIX } from '@/lib/security/crypto'
 
 // The crypto module caches the derived key at module load, so each scenario
 // resets modules and re-imports with the desired ENCRYPTION_KEY state.
-const CONFIG_SECRET_FIELDS = ['stripeSecretKey', 'stripeWebhookSecret'] as const
+const CONFIG_SECRET_FIELDS = ['stripeSecretKey', 'stripeWebhookSecret', 'rewindSerialKey'] as const
 
 describe('Config Stripe secret encryption', () => {
   const originalKey = process.env.ENCRYPTION_KEY
@@ -79,14 +80,15 @@ describe('Config Stripe secret encryption', () => {
     expect(typeof nonSecretEnabled).toBe('boolean')
   })
 
-  it('registers the Stripe secret fields (and ONLY those) in ENCRYPTED_FIELDS', () => {
+  it('registers the secret fields (and ONLY those) in ENCRYPTED_FIELDS', () => {
     jest.resetModules()
     // Guards against accidental removal of the Stripe secrets from the registry,
     // which would silently store them in plaintext.
     const { ENCRYPTED_FIELDS } = require('@/lib/prisma')
-    expect(ENCRYPTED_FIELDS.Config).toEqual(['stripeSecretKey', 'stripeWebhookSecret'])
+    expect(ENCRYPTED_FIELDS.Config).toEqual(['stripeSecretKey', 'stripeWebhookSecret', 'rewindSerialKey'])
     // Non-secret Stripe columns must NOT be encrypted (they are read/filtered plainly).
     expect(ENCRYPTED_FIELDS.Config).not.toContain('stripePriceIds')
     expect(ENCRYPTED_FIELDS.Config).not.toContain('stripeEnabled')
+    expect(ENCRYPTED_FIELDS.Config).not.toContain('rewindEnabled')
   })
 })
