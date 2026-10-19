@@ -1538,6 +1538,12 @@ gantt
   - When the member is not linked, `DiscordCard` links to `/discord/link` (`data-testid="discord-card-link-action"`) instead of discord.gg. The page offers both Join server and Link account. P10.21 and P6.11 restyle both.
 - Add `knip` (exact version) as a devDependency, with an `npm run knip` script that runs `knip --production`. `knip.json` marks the production entries with `!` (`instrumentation.ts`, `proxy.ts`, `server.js`, `scripts/*.ts`), ignores `lib/generated/**` and `.agents/**`, and sets `ignoreDependencies: ["zlib-sync"]`, because discord.js loads that package inside a try. Run knip with a dummy `DATABASE_URL`, because its Prisma plugin loads `prisma.config.ts`.
 - Pitfall: `resyncDiscordRole` and `getDiscordLinkStatus` are dead exports today and become live again here, so P1.2 must keep them.
+- As merged:
+  - `server.js` does not exist (`start:prod` still names it), so `knip.json` has no entry for it. It also ignores `.claude/worktrees/**`, where agent worktrees hold full copies of the repo. `npm run knip` exits 1 on the remaining dead exports and on test helpers, which production mode reports as unused files; P1.2 and P1.5 work from that output.
+  - The panel's query-string `error` prop is removed, not just left unwired. `DiscordCard` no longer takes `serverInviteCode`.
+  - While linking is unavailable, the panel still offers Join server when an invite code is set. Without it, a member whose tile used to open discord.gg would lose that link.
+  - Playwright selects by `data-testid` with `filter({ visible: true })` on this page, because React streaming briefly leaves a hidden copy of the page in its `S:0` container.
+  - The E2E suite is not yet green, so the first Done-when item stays open. Four tests fail the same way on the pre-P1.1 commit: `announcements.spec.ts` (create and toggle) and `stripe-subscription.spec.ts` ("admin is never gated") hit `page.goto: net::ERR_ABORTED` intermittently, and `rewind-year.spec.ts` ("a year without a Rewind") hits the same hidden `S:0` duplicate as a strict-mode violation.
 
 **Tests.**
 - Delete the tests of the deleted code, about 6,700 lines: `components/__tests__/wrapped-generator*.test.tsx` (three files), `__tests__/hooks/use-wrapped-polling.test.ts`, `components/__tests__/wrapped/user-wrapped-viewer.test.tsx`, `wrapped-home-button.test.tsx`, `admin-wrapped-viewer.test.tsx`, `historical-wrapped-selector.test.tsx`, `historical-versions-inline.test.tsx`, `admin-footer.test.tsx`, `admin-footer-client.test.tsx`, `llm-toggle.test.tsx`, `components/__tests__/admin/playground/cost-display.test.tsx` and `__tests__/api/admin-{sonarr,radarr,wrapped-by-user,wrapped-user}-route.test.ts`.
@@ -1556,9 +1562,9 @@ gantt
 
 **Done when.**
 - [ ] The 25 files, the 4 routes, `settings-edit-forms.tsx` and `link-callout.tsx` are deleted with their tests, and `npm run build`, `npm test` and the E2E suite pass.
-- [ ] `/discord/link` renders the panel for signed-in members, and no secret field reaches the client.
-- [ ] The home Discord tile takes unlinked members to `/discord/link`.
-- [ ] `npm run knip` exists, and its unused-files list contains none of the removed paths.
+- [x] `/discord/link` renders the panel for signed-in members, and no secret field reaches the client.
+- [x] The home Discord tile takes unlinked members to `/discord/link`.
+- [x] `npm run knip` exists, and its unused-files list contains none of the removed paths.
 
 ### Step P1.2: Remove dead exports, the orphaned model and stale CLAUDE.md facts
 
