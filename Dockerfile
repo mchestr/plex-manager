@@ -1,5 +1,5 @@
 # Node 24 LTS, pinned by digest; Dependabot's docker entry keeps tag and digest current.
-FROM node:24-alpine@sha256:44fce696f38ba8c987c4db89954051000bbd05ffd8d8659ba15ed4a8602e937f AS base
+FROM node:26-alpine@sha256:6f08a523443ddedf52941874c203475b0ad503e859ad70cb26ab8be9a517dbd5 AS base
 
 # Install dependencies only when needed
 FROM base AS deps
