@@ -1,4 +1,14 @@
 {
+  "version": 3,
+  "year": 2026,
+  "statsVersion": "stats-2026.1",
+  "generatedAt": "2026-12-01T12:00:00.000Z",
+  "window": {
+    "from": "2026-01-01",
+    "through": "2026-11-30",
+    "zone": "America/Chicago",
+    "finalCut": false
+  },
   "edition": "full",
   "facts": {
     "time.totalMinutes": {
@@ -922,8 +932,8 @@
       "unit": "hours"
     },
     "member.nthRewind": {
-      "value": 4,
-      "display": "4",
+      "value": 1,
+      "display": "1",
       "unit": "count"
     },
     "member.serial": {
@@ -3728,5 +3738,46 @@
     ],
     "llmMayChoose": false,
     "rarity": null
-  }
+  },
+  "copy": {
+    "decks": {
+      "number": "Every minute of it counted from your own history.",
+      "bookends": "Here since {{fact:member.since}}, and this is how the year opened and closed.",
+      "topShows": "The series you kept returning to, in order.",
+      "topFilms": "The longest was {{fact:films.longest.title}}, at {{fact:films.longest.minutes}}.",
+      "taste": null,
+      "people": null,
+      "clock": "Your latest start was {{fact:hours.latestStart.time}} on a {{fact:hours.latestStart.weekday}}.",
+      "calendar": "Your biggest day was {{fact:days.biggest.date}}, at {{fact:days.biggest.minutes}}.",
+      "records": null,
+      "requests": null,
+      "standing": null,
+      "nextYear": null
+    },
+    "archetype": {
+      "id": "midnight-marathoner",
+      "tagline": "Up past the credits, every night.",
+      "dedication": "Every reason here comes from what you watched, not from a guess.",
+      "posterLineId": "mm.5"
+    },
+    "signOff": "See you in the final cut, {{fact:member.firstName}}."
+  },
+  "copySource": "template",
+  "copyMeta": {
+    "model": null,
+    "promptVersion": "rewind-2026.1",
+    "slotHashes": {
+      "deck.number": "8561c7b6ebff76c1c8ddb27d94e0e9ae895935690d5e188d482751890a36c22b",
+      "deck.bookends": "fd194e98efa59c19136e07f7df6d4fb626f0cc24d54b7b26ea0942580c2eec07",
+      "deck.topShows": "9e85f8a1ea4ab9e850477fd1df54000af2167afa5fcca31ceb886dafb9dca79b",
+      "deck.topFilms": "955adc4c6916e4f20d335028212cc1633fea5c52415ac6a25eb06b46ad4dbea3",
+      "deck.clock": "7e2cf557e4fd3084f4f19f4d770a2c5ccb0b03ceb32516d847233e5f3ab4ff7f",
+      "deck.calendar": "91ae0d9fe232ce5b52c732219db1007124c4500eb5f09f680854cd14899747b8",
+      "archetype.tagline": "bbe47e8e679a44cc390d72bbbd5a84af3b0125ce8c1f8b381ebaa0fab4ef3295",
+      "archetype.dedication": "36e809250218668021554139c15e07a989efedcd6c344bcfb85e055ba2c38ff0",
+      "archetype.posterLineId": "6ad5d4456c4261f374b8c0c96ae25105b7bd7f34f315c00d688c904eaa3af5f2",
+      "signOff": "eced201f4e22c6fc77b9c82c66882fdaf0b4eacc70918404179e489d7a0ed360"
+    }
+  },
+  "factsHash": "77a83e05215a3aaf19b8c3a3b56f13e0c8c8a83e856b571e58f1fee3a131c756"
 }

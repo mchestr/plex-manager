@@ -117,7 +117,12 @@ export interface FixtureRun {
 }
 
 /** Runs one fixture in dry-run mode on the given model calls; see the module comment. */
-export async function runFixture(fixture: Fixture, model: ModelRef, deps: StructuredDeps, options: { mode?: "dry-run" | "persist" } = {}): Promise<FixtureRun> {
+export async function runFixture(
+  fixture: Fixture,
+  model: ModelRef,
+  deps: StructuredDeps,
+  options: { mode?: "dry-run" | "persist"; copyPolicy?: "default" | "no-llm" } = {}
+): Promise<FixtureRun> {
   const inputs = await fixtureInputs(fixture)
   const calls: RecordedCall[] = []
   const generate = recordingGenerate((input) => generateStructured(input, deps), calls)
@@ -129,7 +134,7 @@ export async function runFixture(fixture: Fixture, model: ModelRef, deps: Struct
       year: fixture.window.year,
       kind: "admin",
       mode,
-      copyPolicy: "default",
+      copyPolicy: options.copyPolicy ?? "default",
       signal: new AbortController().signal,
       generationId: mode === "persist" ? "gen-1" : undefined,
       source: async () => ({ events: inputs.events, sources: inputs.sources }),

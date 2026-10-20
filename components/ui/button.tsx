@@ -42,9 +42,10 @@ export const buttonVariants = cva(
         icon: "size-9 p-0",
         "icon-sm": "size-8 p-0",
         // Rewind scope only: a 44px pill, and a 38px circle whose ::before
-        // extends the hit area to 44px (Rewind 4.6).
+        // extends the hit area to 44px (Rewind 4.6). The ::before sits on the
+        // padding box, inside the 1.5px ink keyline: 35 + 2 x 4.5 = 44.
         pill: "h-11 rounded-full px-5 text-ui",
-        "icon-pill": "relative size-[38px] rounded-full p-0 before:absolute before:-inset-[3px] before:rounded-full",
+        "icon-pill": "relative size-[38px] rounded-full p-0 before:absolute before:-inset-[4.5px] before:rounded-full",
       },
     },
     defaultVariants: { variant: "primary", size: "default" },

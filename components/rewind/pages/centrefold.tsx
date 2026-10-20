@@ -10,11 +10,13 @@ import type { RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 
 import { CentrefoldWhy } from "./centrefold-why"
 import { CopyText } from "./copy-text"
-import { EvidenceGraphicView } from "./evidence-graphic"
+import { EvidenceGraphicView, RING_BASIS } from "./evidence-graphic"
 import { FittedLines } from "./fitted-lines"
+import { RING_LABEL } from "./hour-ring-figure"
 import type { IssueContext, PageProps } from "./issue-context"
 import { axes, MEASURE, u, ut } from "./units"
 
+/** Crop marks in the artboard's corners, 8 px in from its sides and 4 px from its top and foot (`slide-16-centrefold.png`). */
 const CROPS = ["left-0 top-0 border-t-[1.5px] border-l-[1.5px]", "right-0 top-0 border-t-[1.5px] border-r-[1.5px]", "bottom-0 left-0 border-b-[1.5px] border-l-[1.5px]", "right-0 bottom-0 border-r-[1.5px] border-b-[1.5px]"]
 
 /**
@@ -27,16 +29,25 @@ export function archetypeNameFit(name: string) {
   return fitLines(nameAfterLead(name), { role: "nameplate", metrics: pageMetrics, weight: 900, measure: MEASURE, maxLines: 3, sizeMin: 40, sizeMax: 120 })
 }
 
-/** The ring's key: the arc's swatch, the quietest hour and the short zone note. Other graphics carry their own captions. */
+/**
+ * The ring's key: the arc's swatch, the quietest hour and the short zone note.
+ * Other graphics carry their own captions. It starts below the ring's "noon"
+ * label, and where its 12 px text floor outgrows the measure (below the 0.8
+ * scale floor) it wraps between items, never inside the swatch or the hour.
+ */
 function KeyRow({ graphic, facts }: { graphic: Extract<CentrefoldData["graphic"], { kind: "hour-ring" }>; facts: RewindFactsV3 }) {
   return (
-    <div aria-hidden className="flex items-center justify-between" style={{ gap: u(10), fontSize: ut(14), marginTop: u(6) }}>
-      <span className="flex items-center italic" style={{ gap: u(7) }}>
+    <div
+      aria-hidden
+      className="flex flex-wrap items-center justify-between"
+      style={{ columnGap: u(10), rowGap: u(2), fontSize: ut(14), lineHeight: 1.25, marginTop: `calc(${RING_LABEL} + ${u(6)})` }}
+    >
+      <span className="flex items-center whitespace-nowrap italic" style={{ gap: u(7) }}>
         <i className="inline-block rounded-sm bg-chart-2" style={{ width: u(22), height: u(4) }} />
         {graphic.arc.from === 22 ? "after dark" : "evening"}
       </span>
       {has(facts, "hours.quietest") && (
-        <span>
+        <span className="whitespace-nowrap">
           Quietest: <CopyText text="{{fact:hours.quietest}}" source={facts} />
         </span>
       )}
@@ -112,7 +123,7 @@ export function CentrefoldPage({ data, issue }: PageProps<CentrefoldData>) {
   return (
     <div className="relative flex h-full flex-col font-text" style={{ padding: `${u(4)} ${u(16)} 0` }} data-testid="rewind-page-centrefold">
       {CROPS.map((corner) => (
-        <i key={corner} aria-hidden className={`absolute border-current ${corner}`} style={{ width: u(14), height: u(14), margin: `${u(-4)} ${u(-8)}` }} />
+        <i key={corner} aria-hidden className={`absolute border-current ${corner}`} style={{ width: u(14), height: u(14), margin: `${u(4)} ${u(8)}` }} />
       ))}
       <div className="flex items-baseline justify-between font-display" style={{ fontSize: ut(13), fontVariationSettings: axes(100, 600), marginTop: u(8) }}>
         <span>Pull-out poster</span>
@@ -140,7 +151,12 @@ export function CentrefoldPage({ data, issue }: PageProps<CentrefoldData>) {
         </p>
       )}
       {data.graphic && (
-        <RewindFigure summary={graphicSummary(data.graphic, facts) || centrefoldPage.srSummary(data, facts)}>
+        <RewindFigure
+          summary={graphicSummary(data.graphic, facts) || centrefoldPage.srSummary(data, facts)}
+          // The ring gives way first when the column runs out of height (design 4.7)
+          className={data.graphic.kind === "hour-ring" ? "flex min-h-0 flex-col" : undefined}
+          style={data.graphic.kind === "hour-ring" ? { flexBasis: RING_BASIS } : undefined}
+        >
           <EvidenceGraphicView data={data} facts={facts} />
         </RewindFigure>
       )}

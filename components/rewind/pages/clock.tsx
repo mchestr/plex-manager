@@ -12,7 +12,7 @@ import { headline, tzNote } from "@/lib/wrapped/copy/templates"
 import { CopyText } from "./copy-text"
 import { FittedLines } from "./fitted-lines"
 import { HatchDefs } from "./hatch"
-import { HourRingFigure } from "./hour-ring-figure"
+import { HourRingFigure, RING_LABEL } from "./hour-ring-figure"
 import { deckText, type PageProps } from "./issue-context"
 import { axes, MEASURE, u, ut } from "./units"
 
@@ -22,13 +22,13 @@ const WEEKDAYS = ["M", "T", "W", "T", "F", "S", "S"]
 const ROW_H = 40
 const ROW_GAP = 6
 
-/** Seven bars, Monday first, on one scale; the weekend solid, weekdays hatched. */
+/** Seven bars, Monday first, on one scale; the weekend solid, weekdays hatched. They start below the ring's "noon". */
 function WeekdayRow({ shares }: { shares: readonly number[] }) {
   const id = useId()
   const max = Math.max(...shares, 0.0001)
   const w = (MEASURE - ROW_GAP * 6) / 7
   return (
-    <div aria-hidden style={{ marginTop: u(10) }}>
+    <div aria-hidden style={{ marginTop: `calc(${RING_LABEL} + ${u(6)})` }}>
       <svg viewBox={`0 0 ${MEASURE} ${ROW_H}`} className="block w-full" style={{ height: u(ROW_H) }}>
         <HatchDefs id={id} />
         {shares.map((share, i) => {

@@ -17,6 +17,8 @@ import { SoundtrackStrip } from "./soundtrack-strip"
 import { axes, MEASURE, u, ut } from "./units"
 
 const ROAD_HEIGHT = 64
+/** "hours" under the numeral: 56 px at a line height of 1. */
+const HOURS_H = 56
 
 /**
  * 02 The number (design 4.3, `slide-02-number.png`): the lead, the hero
@@ -52,16 +54,17 @@ export function NumberPage({ data, issue }: PageProps<NumberData>) {
         {hours && (
           <>
             {" "}
-            <span className="block font-lead" style={{ fontSize: u(56), lineHeight: 1 }}>
+            <span className="block font-lead" style={{ fontSize: u(HOURS_H), lineHeight: 1 }}>
               hours
             </span>
           </>
         )}
       </h2>
       {has(facts, "time.vsLastYear") && (
+        // In the flow, beside "hours" (`slide-02-number.png`), so the deck starts below it at every scale
         <p
-          className="rw-stamp absolute flex flex-col items-center rounded-sm border-[1.5px] border-current font-display"
-          style={{ right: u(16), top: u(265), padding: `${u(6)} ${u(10)}`, rotate: "-4deg", fontSize: ut(13), lineHeight: 1.15, fontVariationSettings: axes(100, 650) }}
+          className="rw-stamp relative flex flex-col items-center self-end rounded-sm border-[1.5px] border-current font-display"
+          style={{ marginTop: hours ? u(-(HOURS_H + 6)) : u(6), marginRight: u(4), padding: `${u(6)} ${u(10)}`, rotate: "-4deg", fontSize: ut(13), lineHeight: 1.15, fontVariationSettings: axes(100, 650) }}
           data-testid="rewind-number-stamp"
         >
           <span style={{ fontSize: u(19), fontVariationSettings: axes(87.5, 850) }}>{shown(facts, "time.vsLastYear")}</span>

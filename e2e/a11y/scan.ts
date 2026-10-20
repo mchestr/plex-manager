@@ -48,7 +48,12 @@ export async function scanAgainstBaseline(page: Page, name: string): Promise<voi
     // The message names three targets per key; the job log gets every one, so a
     // count that differs only in CI can be traced without the report artifact.
     const nodes = [...results.violations, ...results.incomplete].flatMap((rule) =>
-      rule.nodes.map((node) => `${rule.id}${results.incomplete.includes(rule) ? ' (incomplete)' : ''}: ${node.target.join(' ')}`)
+      rule.nodes.map(
+        (node) =>
+          `${rule.id}${results.incomplete.includes(rule) ? ' (incomplete)' : ''}: ${node.target.join(' ')}` +
+          // axe's reason, such as which element obscures it, so a CI-only node can be explained
+          ` -- ${[...node.any, ...node.all, ...node.none].map((check) => check.message).join('; ')}`
+      )
     );
     console.log(`axe nodes on ${name}:\n  ${nodes.join('\n  ')}`);
     throw error;

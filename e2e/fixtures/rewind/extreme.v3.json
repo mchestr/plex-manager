@@ -1,0 +1,3211 @@
+{
+  "version": 3,
+  "year": 2026,
+  "statsVersion": "stats-2026.1",
+  "generatedAt": "2026-12-01T12:00:00.000Z",
+  "window": {
+    "from": "2026-01-01",
+    "through": "2026-11-30",
+    "zone": "Asia/Tokyo",
+    "finalCut": false
+  },
+  "edition": "full",
+  "facts": {
+    "time.totalMinutes": {
+      "value": 748800,
+      "display": "12,480 h",
+      "unit": "duration"
+    },
+    "time.totalHours": {
+      "value": 12480,
+      "display": "12,480",
+      "unit": "hours"
+    },
+    "time.daysHours": {
+      "value": 748800,
+      "display": "520 days",
+      "unit": "days-hours"
+    },
+    "time.perDay": {
+      "value": 2241,
+      "display": "37 h 21 m",
+      "unit": "duration"
+    },
+    "time.seriesHours": {
+      "value": 12480,
+      "display": "12,480",
+      "unit": "hours"
+    },
+    "time.seriesShare": {
+      "value": 1,
+      "display": "100%",
+      "unit": "share"
+    },
+    "time.filmsShare": {
+      "value": 0,
+      "display": "0%",
+      "unit": "share"
+    },
+    "time.liveHours": {
+      "value": 6240,
+      "display": "6,240",
+      "unit": "hours"
+    },
+    "time.milestones[1].hours": {
+      "value": 4000,
+      "display": "4,000",
+      "unit": "hours"
+    },
+    "time.milestones[1].date": {
+      "value": "2026-04-10",
+      "display": "April 10",
+      "unit": "date"
+    },
+    "time.milestones[2].hours": {
+      "value": 5000,
+      "display": "5,000",
+      "unit": "hours"
+    },
+    "time.milestones[2].date": {
+      "value": "2026-05-05",
+      "display": "May 5",
+      "unit": "date"
+    },
+    "time.milestones[3].hours": {
+      "value": 7500,
+      "display": "7,500",
+      "unit": "hours"
+    },
+    "time.milestones[3].date": {
+      "value": "2026-07-07",
+      "display": "July 7",
+      "unit": "date"
+    },
+    "time.milestones[4].hours": {
+      "value": 10000,
+      "display": "10,000",
+      "unit": "hours"
+    },
+    "time.milestones[4].date": {
+      "value": "2026-09-07",
+      "display": "September 7",
+      "unit": "date"
+    },
+    "counts.episodes": {
+      "value": 624,
+      "display": "624",
+      "unit": "count"
+    },
+    "counts.series": {
+      "value": 2,
+      "display": "2",
+      "unit": "count"
+    },
+    "counts.films": {
+      "value": 0,
+      "display": "0",
+      "unit": "count"
+    },
+    "counts.seasons": {
+      "value": 24,
+      "display": "24",
+      "unit": "count"
+    },
+    "bookends.first.title": {
+      "value": "The Simpsons",
+      "display": "The Simpsons",
+      "unit": "title"
+    },
+    "bookends.first.date": {
+      "value": "2026-01-01",
+      "display": "January 1",
+      "unit": "date"
+    },
+    "bookends.first.time": {
+      "value": 120,
+      "display": "2:00 AM",
+      "unit": "time"
+    },
+    "bookends.last.title": {
+      "value": "Friends",
+      "display": "Friends",
+      "unit": "title"
+    },
+    "bookends.last.date": {
+      "value": "2026-11-08",
+      "display": "November 8",
+      "unit": "date"
+    },
+    "bookends.last.time": {
+      "value": 180,
+      "display": "3:00 AM",
+      "unit": "time"
+    },
+    "days.active": {
+      "value": 312,
+      "display": "312",
+      "unit": "count"
+    },
+    "days.biggest.date": {
+      "value": "2026-01-01",
+      "display": "January 1",
+      "unit": "date"
+    },
+    "days.biggest.minutes": {
+      "value": 2400,
+      "display": "40 h",
+      "unit": "duration"
+    },
+    "streak.longest.days": {
+      "value": 312,
+      "display": "312 days",
+      "unit": "days"
+    },
+    "streak.longest.from": {
+      "value": "2026-01-01",
+      "display": "January 1",
+      "unit": "date"
+    },
+    "streak.longest.to": {
+      "value": "2026-11-08",
+      "display": "November 8",
+      "unit": "date"
+    },
+    "days.biggestWeek": {
+      "value": 16800,
+      "display": "280 h",
+      "unit": "duration"
+    },
+    "days.biggestWeek.from": {
+      "value": "2026-01-05",
+      "display": "January 5",
+      "unit": "date"
+    },
+    "hours.peak": {
+      "value": 2,
+      "display": "2 AM",
+      "unit": "hour"
+    },
+    "hours.quietest": {
+      "value": 0,
+      "display": "12 AM",
+      "unit": "hour"
+    },
+    "hours.afterDarkShare": {
+      "value": 1,
+      "display": "100%",
+      "unit": "share"
+    },
+    "hours.goldenShare": {
+      "value": 0,
+      "display": "0%",
+      "unit": "share"
+    },
+    "hours.medianStart": {
+      "value": 150,
+      "display": "2:30 AM",
+      "unit": "time"
+    },
+    "hours.latestStart.time": {
+      "value": 180,
+      "display": "3:00 AM",
+      "unit": "time"
+    },
+    "hours.latestStart.weekday": {
+      "value": 0,
+      "display": "Sunday",
+      "unit": "weekday"
+    },
+    "days.weekendShare": {
+      "value": 0.28846153846153844,
+      "display": "29%",
+      "unit": "share"
+    },
+    "series[1].title": {
+      "value": "Friends",
+      "display": "Friends",
+      "unit": "title"
+    },
+    "series[1].minutes": {
+      "value": 374400,
+      "display": "6,240 h",
+      "unit": "duration"
+    },
+    "series[1].episodes": {
+      "value": 312,
+      "display": "312",
+      "unit": "count"
+    },
+    "series[1].seasons": {
+      "value": 12,
+      "display": "12",
+      "unit": "count"
+    },
+    "series[1].monthsActive": {
+      "value": 11,
+      "display": "11",
+      "unit": "count"
+    },
+    "series[1].biggestNight.date": {
+      "value": "2025-12-31",
+      "display": "December 31",
+      "unit": "date"
+    },
+    "series[1].biggestNight.episodes": {
+      "value": 1,
+      "display": "1",
+      "unit": "count"
+    },
+    "series[2].title": {
+      "value": "The Simpsons",
+      "display": "The Simpsons",
+      "unit": "title"
+    },
+    "series[2].minutes": {
+      "value": 374400,
+      "display": "6,240 h",
+      "unit": "duration"
+    },
+    "series[2].episodes": {
+      "value": 312,
+      "display": "312",
+      "unit": "count"
+    },
+    "series[2].seasons": {
+      "value": 12,
+      "display": "12",
+      "unit": "count"
+    },
+    "series[2].monthsActive": {
+      "value": 11,
+      "display": "11",
+      "unit": "count"
+    },
+    "series[2].biggestNight.date": {
+      "value": "2025-12-31",
+      "display": "December 31",
+      "unit": "date"
+    },
+    "series[2].biggestNight.episodes": {
+      "value": 1,
+      "display": "1",
+      "unit": "count"
+    },
+    "series.top3Share": {
+      "value": 1,
+      "display": "100%",
+      "unit": "share"
+    },
+    "counts.titles": {
+      "value": 2,
+      "display": "2",
+      "unit": "count"
+    },
+    "records.mostEpisodesDay": {
+      "value": 2,
+      "display": "2",
+      "unit": "count"
+    },
+    "records.completionShare": {
+      "value": 1,
+      "display": "100%",
+      "unit": "share"
+    },
+    "records.rewatchShare": {
+      "value": 0,
+      "display": "0%",
+      "unit": "share"
+    },
+    "records.rewatchedTitles": {
+      "value": 0,
+      "display": "0",
+      "unit": "count"
+    },
+    "counts.titlesPer10Hours": {
+      "value": 0,
+      "display": "0",
+      "unit": "decimal"
+    },
+    "taste.freshShare": {
+      "value": 0,
+      "display": "0%",
+      "unit": "share"
+    },
+    "taste.genre[1].name": {
+      "value": "Animation",
+      "display": "Animation",
+      "unit": "text"
+    },
+    "taste.genre[1].share": {
+      "value": 0.25,
+      "display": "25%",
+      "unit": "share"
+    },
+    "taste.genre[2].name": {
+      "value": "Comedy",
+      "display": "Comedy",
+      "unit": "text"
+    },
+    "taste.genre[2].share": {
+      "value": 0.25,
+      "display": "25%",
+      "unit": "share"
+    },
+    "taste.genre[3].name": {
+      "value": "Drama",
+      "display": "Drama",
+      "unit": "text"
+    },
+    "taste.genre[3].share": {
+      "value": 0.25,
+      "display": "25%",
+      "unit": "share"
+    },
+    "taste.genre[4].name": {
+      "value": "Fantasy",
+      "display": "Fantasy",
+      "unit": "text"
+    },
+    "taste.genre[4].share": {
+      "value": 0.25,
+      "display": "25%",
+      "unit": "share"
+    },
+    "taste.genreByMonth[1]": {
+      "value": "Animation",
+      "display": "Animation",
+      "unit": "text"
+    },
+    "taste.genreByMonth[2]": {
+      "value": "Animation",
+      "display": "Animation",
+      "unit": "text"
+    },
+    "taste.genreByMonth[3]": {
+      "value": "Animation",
+      "display": "Animation",
+      "unit": "text"
+    },
+    "taste.genreByMonth[4]": {
+      "value": "Animation",
+      "display": "Animation",
+      "unit": "text"
+    },
+    "taste.genreByMonth[5]": {
+      "value": "Animation",
+      "display": "Animation",
+      "unit": "text"
+    },
+    "taste.genreByMonth[6]": {
+      "value": "Animation",
+      "display": "Animation",
+      "unit": "text"
+    },
+    "taste.genreByMonth[7]": {
+      "value": "Animation",
+      "display": "Animation",
+      "unit": "text"
+    },
+    "taste.genreByMonth[8]": {
+      "value": "Animation",
+      "display": "Animation",
+      "unit": "text"
+    },
+    "taste.genreByMonth[9]": {
+      "value": "Animation",
+      "display": "Animation",
+      "unit": "text"
+    },
+    "taste.genreByMonth[10]": {
+      "value": "Animation",
+      "display": "Animation",
+      "unit": "text"
+    },
+    "taste.genreByMonth[11]": {
+      "value": "Animation",
+      "display": "Animation",
+      "unit": "text"
+    },
+    "taste.medianYear": {
+      "value": 1989,
+      "display": "1989",
+      "unit": "year"
+    },
+    "taste.oldest.title": {
+      "value": "The Simpsons",
+      "display": "The Simpsons",
+      "unit": "title"
+    },
+    "taste.oldest.year": {
+      "value": 1989,
+      "display": "1989",
+      "unit": "year"
+    },
+    "people.actor[1].name": {
+      "value": "Ines Varga",
+      "display": "Ines Varga",
+      "unit": "name"
+    },
+    "people.actor[1].minutes": {
+      "value": 374400,
+      "display": "6,240 h",
+      "unit": "duration"
+    },
+    "people.actor[2].name": {
+      "value": "Jun Ito",
+      "display": "Jun Ito",
+      "unit": "name"
+    },
+    "people.actor[2].minutes": {
+      "value": 374400,
+      "display": "6,240 h",
+      "unit": "duration"
+    },
+    "people.actor[3].name": {
+      "value": "Noor Haddad",
+      "display": "Noor Haddad",
+      "unit": "name"
+    },
+    "people.actor[3].minutes": {
+      "value": 374400,
+      "display": "6,240 h",
+      "unit": "duration"
+    },
+    "people.actor[4].name": {
+      "value": "Tomas Brandt",
+      "display": "Tomas Brandt",
+      "unit": "name"
+    },
+    "people.actor[4].minutes": {
+      "value": 374400,
+      "display": "6,240 h",
+      "unit": "duration"
+    },
+    "setup.directPlayShare": {
+      "value": 1,
+      "display": "100%",
+      "unit": "share"
+    },
+    "setup.homeShare": {
+      "value": 1,
+      "display": "100%",
+      "unit": "share"
+    },
+    "setup.topPlatform": {
+      "value": "Apple TV",
+      "display": "Apple TV",
+      "unit": "text"
+    },
+    "setup.topProduct": {
+      "value": "Plex for Apple TV",
+      "display": "Plex for Apple TV",
+      "unit": "text"
+    },
+    "setup.fourKShare": {
+      "value": 0,
+      "display": "0%",
+      "unit": "share"
+    },
+    "standing.percentile": {
+      "value": 9,
+      "display": "Top 9%",
+      "unit": "percentile"
+    },
+    "standing.members": {
+      "value": 12,
+      "display": "12",
+      "unit": "count"
+    },
+    "community.titlesAdded": {
+      "value": 0,
+      "display": "0",
+      "unit": "count"
+    },
+    "member.firstName": {
+      "value": "Kenji",
+      "display": "Kenji",
+      "unit": "name"
+    },
+    "member.since": {
+      "value": 2026,
+      "display": "2026",
+      "unit": "year"
+    },
+    "member.volume": {
+      "value": 1,
+      "display": "1",
+      "unit": "count"
+    },
+    "member.lifetimeHours": {
+      "value": 12480,
+      "display": "12,480",
+      "unit": "hours"
+    },
+    "member.nthRewind": {
+      "value": 1,
+      "display": "1",
+      "unit": "count"
+    },
+    "member.serial": {
+      "value": "K7Q4",
+      "display": "K7Q4",
+      "unit": "text"
+    },
+    "window.from": {
+      "value": "2026-01-01",
+      "display": "January 1",
+      "unit": "date"
+    },
+    "window.through": {
+      "value": "2026-11-30",
+      "display": "November 30",
+      "unit": "date"
+    },
+    "window.finalCut": {
+      "value": 0,
+      "display": "0",
+      "unit": "count"
+    },
+    "window.elapsedDays": {
+      "value": 334,
+      "display": "334 days",
+      "unit": "days"
+    },
+    "tz.label": {
+      "value": "Asia/Tokyo",
+      "display": "Asia/Tokyo",
+      "unit": "text"
+    },
+    "archetype.id": {
+      "value": "midnight-marathoner",
+      "display": "midnight-marathoner",
+      "unit": "id"
+    },
+    "archetype.name": {
+      "value": "The Midnight Marathoner",
+      "display": "The Midnight Marathoner",
+      "unit": "name"
+    },
+    "archetype.runnerUp": {
+      "value": "The Loyalist",
+      "display": "The Loyalist",
+      "unit": "name"
+    },
+    "archetype.evidence[1]": {
+      "value": "hours.afterDarkShare",
+      "display": "100%",
+      "unit": "text"
+    },
+    "archetype.evidence[2]": {
+      "value": "hours.peak",
+      "display": "2 AM",
+      "unit": "text"
+    },
+    "archetype.evidence[3]": {
+      "value": "hours.quietest",
+      "display": "12 AM",
+      "unit": "text"
+    }
+  },
+  "pages": [
+    {
+      "type": "cover",
+      "data": {
+        "minutes": [
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "type": "number",
+      "data": {
+        "hero": "time.totalHours",
+        "minutes": [
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "type": "bookends",
+      "data": {
+        "first": {
+          "key": "series:1501",
+          "masked": false
+        },
+        "last": {
+          "key": "series:1502",
+          "masked": true
+        }
+      }
+    },
+    {
+      "type": "top-shows",
+      "data": {
+        "rows": [
+          {
+            "key": "series:1502",
+            "monthly": [
+              37200,
+              33600,
+              37200,
+              36000,
+              37200,
+              36000,
+              37200,
+              37200,
+              36000,
+              37200,
+              9600,
+              0
+            ]
+          },
+          {
+            "key": "series:1501",
+            "monthly": [
+              37200,
+              33600,
+              37200,
+              36000,
+              37200,
+              36000,
+              37200,
+              37200,
+              36000,
+              37200,
+              9600,
+              0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "clock",
+      "data": {
+        "hours": [
+          0,
+          0,
+          312,
+          312,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "weekdays": [
+          0.14102564102564102,
+          0.14102564102564102,
+          0.14102564102564102,
+          0.14423076923076922,
+          0.14423076923076922,
+          0.14423076923076922,
+          0.14423076923076922
+        ]
+      }
+    },
+    {
+      "type": "calendar",
+      "data": {
+        "days": [
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 2400,
+            "key": "series:1502"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          }
+        ],
+        "titles": {
+          "series:1502": "Friends"
+        },
+        "gap": null
+      }
+    },
+    {
+      "type": "centrefold",
+      "data": {
+        "shortlist": [
+          {
+            "id": "midnight-marathoner",
+            "evidence": [
+              "hours.afterDarkShare",
+              "hours.peak",
+              "hours.quietest"
+            ]
+          },
+          {
+            "id": "loyalist",
+            "evidence": [
+              "series.top3Share",
+              "series[1].title"
+            ]
+          },
+          {
+            "id": "credits-roller",
+            "evidence": [
+              "records.completionShare"
+            ]
+          }
+        ],
+        "hours": [
+          0,
+          0,
+          312,
+          312,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "graphic": {
+          "kind": "hour-ring",
+          "arc": {
+            "from": 22,
+            "to": 3
+          },
+          "share": "hours.afterDarkShare"
+        }
+      }
+    },
+    {
+      "type": "back-cover",
+      "data": {
+        "minutes": [
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          2400,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "keys": {
+          "series": [
+            "series:1502",
+            "series:1501"
+          ],
+          "film": null
+        }
+      }
+    }
+  ],
+  "archetype": {
+    "id": "midnight-marathoner",
+    "runnerUp": "loyalist",
+    "evidence": [
+      "hours.afterDarkShare",
+      "hours.peak",
+      "hours.quietest"
+    ],
+    "shortlist": [
+      {
+        "id": "midnight-marathoner",
+        "score": 100
+      },
+      {
+        "id": "loyalist",
+        "score": 100
+      },
+      {
+        "id": "credits-roller",
+        "score": 80
+      }
+    ],
+    "llmMayChoose": false,
+    "rarity": null
+  },
+  "copy": {
+    "decks": {
+      "number": "Every minute of it counted from your own history.",
+      "bookends": "Here since {{fact:member.since}}, and this is how the year opened and closed.",
+      "topShows": "The series you kept returning to, in order.",
+      "topFilms": null,
+      "taste": null,
+      "people": null,
+      "clock": "Your latest start was {{fact:hours.latestStart.time}} on a {{fact:hours.latestStart.weekday}}.",
+      "calendar": "Your biggest day was {{fact:days.biggest.date}}, at {{fact:days.biggest.minutes}}.",
+      "records": null,
+      "requests": null,
+      "standing": null,
+      "nextYear": null
+    },
+    "archetype": {
+      "id": "midnight-marathoner",
+      "tagline": "Up past the credits, every night.",
+      "dedication": "Every reason here comes from what you watched, not from a guess.",
+      "posterLineId": "mm.5"
+    },
+    "signOff": "See you in the final cut, {{fact:member.firstName}}."
+  },
+  "copySource": "template",
+  "copyMeta": {
+    "model": null,
+    "promptVersion": "rewind-2026.1",
+    "slotHashes": {
+      "deck.number": "8561c7b6ebff76c1c8ddb27d94e0e9ae895935690d5e188d482751890a36c22b",
+      "deck.bookends": "fc7f9ae1d3b0e80f47ce28ee3d961fb8ff43bb702b43f3454bed466ede98f21d",
+      "deck.topShows": "0b2cb25aef9162bce8f12ac3c72ff2608eb7877e5777bf3072658c36c7415ace",
+      "deck.clock": "54a31c163f4af94b5335b5fa9fdb6f9398a38c19029ee95bbfbba2ac346b550a",
+      "deck.calendar": "7a7abce11024cfefee2f36894f925561b415718593b1eaa998aefe2a6c4c6a4e",
+      "archetype.tagline": "bbe47e8e679a44cc390d72bbbd5a84af3b0125ce8c1f8b381ebaa0fab4ef3295",
+      "archetype.dedication": "ac6b95c524e0cabb26904674718dfb75490c36b10aecab4595c1d61be1b520e8",
+      "archetype.posterLineId": "6ad5d4456c4261f374b8c0c96ae25105b7bd7f34f315c00d688c904eaa3af5f2",
+      "signOff": "3a0f5e4429e753eeee790dad756605881d8f92365e66bf9c16b64e090c5845f9"
+    }
+  },
+  "factsHash": "c39d26063298b81abddf239c8d07be5f598dfbc29a02ea5bbb9bbab764be3945"
+}

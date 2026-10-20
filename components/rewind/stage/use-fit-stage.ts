@@ -6,11 +6,13 @@ import { fitStage, type StageFit } from "@/lib/rewind/stage/fit-stage"
 
 export interface FitSummary {
   chrome: StageFit["chrome"]["variant"]
+  /** False until the first fit, which runs once the stage has hydrated. */
+  measured: boolean
   belowFloor: boolean
   largeText: boolean
 }
 
-const INITIAL: FitSummary = { chrome: "roomy", belowFloor: false, largeText: false }
+const INITIAL: FitSummary = { chrome: "roomy", measured: false, belowFloor: false, largeText: false }
 
 /**
  * Re-fits the stage on `resize` and `visualViewport` changes. The scale and
@@ -39,9 +41,9 @@ export function useFitStage(root: RefObject<HTMLElement | null>, safeArea: RefOb
       el.style.setProperty("--rw-chrome-bottom", `${fit.chrome.bottom}px`)
       el.style.setProperty("--rw-artboard-h", String(fit.artboardH))
       setSummary((prev) =>
-        prev.chrome === fit.chrome.variant && prev.belowFloor === fit.belowFloor && prev.largeText === fit.largeText
+        prev.measured && prev.chrome === fit.chrome.variant && prev.belowFloor === fit.belowFloor && prev.largeText === fit.largeText
           ? prev
-          : { chrome: fit.chrome.variant, belowFloor: fit.belowFloor, largeText: fit.largeText }
+          : { chrome: fit.chrome.variant, measured: true, belowFloor: fit.belowFloor, largeText: fit.largeText }
       )
     }
 

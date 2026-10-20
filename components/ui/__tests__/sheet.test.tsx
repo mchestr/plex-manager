@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { axe, toHaveNoViolations } from "jest-axe"
-import { useState } from "react"
+import { useRef } from "react"
 
 import { Button } from "@/components/ui/button"
 import { PortalContainerProvider } from "@/components/ui/portal-container"
@@ -84,11 +84,11 @@ describe("Sheet", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument())
   })
 
-  it("portals into the provided container and spreads popupProps on the popup", async () => {
+  it("portals into the provided container ref and spreads popupProps on the popup", async () => {
     function InScope() {
-      const [root, setRoot] = useState<HTMLDivElement | null>(null)
+      const root = useRef<HTMLDivElement>(null)
       return (
-        <div data-testid="scope" ref={setRoot}>
+        <div data-testid="scope" ref={root}>
           <PortalContainerProvider container={root} popupProps={{ "data-field": "paper", className: "light" }}>
             <Example side="bottom" />
           </PortalContainerProvider>

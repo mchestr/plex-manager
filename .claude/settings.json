@@ -1,6 +1,14 @@
 {
+"disableSkillShellExecution": true,
   "permissions": {
     "allow": [
+"Skill(accessibility-review)",
+"Skill(frontend-design)",
+"Skill(motion)",
+"Skill(vercel-composition-patterns)",
+"Skill(vercel-react-best-practices)",
+"Skill(vercel-react-view-transitions)",
+"Skill(web-design-guidelines)",
       "Edit(./app/**)",
       "Edit(./components/**)",
       "Edit(./lib/**)",

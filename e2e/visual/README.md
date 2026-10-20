@@ -6,9 +6,10 @@ change shows up as a reviewed image diff. **An unexplained diff is a
 regression**: fix the code, do not update the baseline.
 
 In CI the diffs are **advisory**. The visual projects run in their own
-**Visual Diffs** job (`build.yml`), which is not a required check: a diff
-leaves a warning on the run and uploads the `visual-diffs` artifact, but does
-not fail the workflow. The required **E2E Tests** job runs every other
+**Visual Diffs** and **Rewind Visual Diffs** jobs (`build.yml`), which are not
+required checks: a diff leaves a warning on the run and uploads the
+`visual-diffs` or `rewind-visual-diffs` artifact, but does not fail the
+workflow. The required **E2E Tests** job runs every other
 project. Refresh the baselines with the Visual Baselines workflow below.
 
 ## What is covered
@@ -19,12 +20,21 @@ project. Refresh the baselines with the Visual Baselines workflow below.
 | `admin.visual.spec.ts` | users, users with Plex down, user detail, settings, invites, queues, LLM usage, prompts; a 404 and an error state |
 | `setup.visual.spec.ts` | setup wizard step 3 |
 | `primitives.visual.spec.ts` | the `/dev/ui` primitives sheet (P3.4), dark and light; the web server sets `ENABLE_DEV_UI=1` |
+| `rewind.spec.ts` | every page of the heavy, median and light Rewind issues, the article offer below the 0.8 scale floor, and one normal-motion pass per issue (P5.4) |
 
 Each screen is taken at 1440x900 (`visual-desktop`, `visual-setup-desktop`)
 and at 390x844 with a 2x phone screen (`visual-mobile`,
 `visual-setup-mobile`): 44 images. The setup projects depend on the
 `setup-wizard` project, because reopening setup sends every other page to
 `/setup`.
+
+The Rewind story is taken of `rewind-stage` on chromium and webkit: the
+`rewind-visual-phone-*` projects loop over the five supported phone sizes
+(390x844, 412x760, 390x664, 360x640 and 375x548) with a 2x touch screen, and
+the `rewind-visual-desktop-*` projects use 1440x900. At each phone size at or
+above the scale floor the spec also fails on text under 12 px or a control
+whose hit area is under 44x44 px; below it the article offer must open. See
+the Rewind section of `e2e/README.md` for its seed.
 
 ## How the screens are kept stable
 
@@ -53,6 +63,9 @@ and at 390x844 with a 2x phone screen (`visual-mobile`,
 E2E_SERVER=prod npx playwright test \
   --project=visual-desktop --project=visual-mobile \
   --project=visual-setup-desktop --project=visual-setup-mobile
+E2E_SERVER=prod npx playwright test \
+  --project=rewind-visual-phone-chromium --project=rewind-visual-phone-webkit \
+  --project=rewind-visual-desktop-chromium --project=rewind-visual-desktop-webkit
 ```
 
 Fonts and anti-aliasing differ between machines, so a local run can fail on a
@@ -70,8 +83,10 @@ description with a one-line reason. Reviewers look at every changed image.
 ## The Visual Baselines workflow
 
 1. Push your branch (a branch of this repository; forks cannot use it).
-2. Actions, **Visual Baselines**, **Run workflow**, enter the branch name.
-3. The workflow runs the visual projects with `--update-snapshots=all` in the
+2. Actions, **Visual Baselines**, **Run workflow**, enter the branch name and
+   pick the suite: `app` (the P1.6 screens), `rewind` (the story pages) or
+   `all`.
+3. The workflow runs those visual projects with `--update-snapshots=all` in the
    Playwright container and commits any changed images to the branch as
    `test(visual): update visual baselines`.
 4. Pull the commit, and review the image diffs in the pull request ("Files

@@ -26,7 +26,7 @@ import {
   updateRewindShare,
 } from "@/actions/rewind-sharing"
 import { hasEntitlement } from "@/lib/actions/entitlement"
-import type { PlexWrapped, RewindShare } from "@/lib/generated/prisma/client"
+import { Prisma, type PlexWrapped, type RewindShare } from "@/lib/generated/prisma/client"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { fixtureRewind } from "@/lib/wrapped/data/__tests__/share-fixture"
 
@@ -71,8 +71,10 @@ function installTables() {
   prismaMock.config.findUnique.mockResolvedValue(buildConfig({ rewindPublicLinks: true }))
   prismaMock.plexWrapped.findUnique.mockImplementation((async ({ where }: { where: { userId_year: { userId: string; year: number } } }) =>
     wrapped.find((w) => w.userId === where.userId_year.userId && w.year === where.userId_year.year) ?? null) as never)
-  prismaMock.rewindShare.findFirst.mockImplementation((async ({ where }: { where: { wrappedId: string } }) =>
-    shares.find((s) => s.wrappedId === where.wrappedId && !s.revokedAt && (!s.expiresAt || s.expiresAt > new Date())) ?? null) as never)
+  prismaMock.rewindShare.findFirst.mockImplementation((async ({ where }: { where: { wrappedId: string; id?: { not: string } } }) =>
+    shares.find(
+      (s) => s.wrappedId === where.wrappedId && s.id !== where.id?.not && !s.revokedAt && (!s.expiresAt || s.expiresAt > new Date())
+    ) ?? null) as never)
   prismaMock.rewindShare.findUnique.mockImplementation((async ({ where }: { where: { id: string } }) => {
     const share = shares.find((s) => s.id === where.id)
     return share ? withWrapped(share) : null
@@ -86,6 +88,11 @@ function installTables() {
     const share = shares.find((s) => s.id === where.id)!
     Object.assign(share, data)
     return share
+  }) as never)
+  prismaMock.rewindShare.updateMany.mockImplementation((async ({ where, data }: { where: { id: string; revokedAt: null }; data: Partial<RewindShare> }) => {
+    const share = shares.find((s) => s.id === where.id && !s.revokedAt)
+    if (share) Object.assign(share, data)
+    return { count: share ? 1 : 0 }
   }) as never)
   prismaMock.$transaction.mockImplementation((async (fn: (tx: unknown) => Promise<unknown>) => fn(asTransactionClient(prismaMock))) as never)
 }
@@ -134,6 +141,45 @@ describe("enableRewindShare", () => {
     } finally {
       jest.useRealTimers()
     }
+  })
+
+  it("ends a chosen date at its last second in the server zone, and refuses a date that has passed", async () => {
+    jest.useFakeTimers({ now: new Date("2026-12-05T12:00:00Z"), advanceTimers: true })
+    try {
+      seedRewind()
+      expect(await enable({ expiresAt: "2026-12-01" })).toMatchObject({ success: false, code: "VALIDATION" })
+      expect(shares).toHaveLength(0)
+      await enabled()
+      expect((await enable({ expiresAt: "2026-12-31" })).success).toBe(false)
+      shares.length = 0
+      await enable({ expiresAt: "2026-12-31" })
+      // 2026-12-31 23:59:59 in America/Chicago (UTC-6)
+      expect(shares[0].expiresAt?.toISOString()).toBe("2027-01-01T05:59:59.000Z")
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  it("moves the default expiry to next year's close once a season within one year has closed", async () => {
+    jest.useFakeTimers({ now: new Date("2026-05-10T12:00:00Z"), advanceTimers: true })
+    try {
+      prismaMock.config.findUnique.mockResolvedValue(buildConfig({ rewindPublicLinks: true, rewindSeasonOpens: "03-01", rewindSeasonCloses: "04-30" }))
+      seedRewind()
+      await enabled()
+      // 2027-04-30 23:59:59 in America/Chicago (UTC-5), not this year's close, which has passed
+      expect(shares[0].expiresAt?.toISOString()).toBe("2027-05-01T04:59:59.000Z")
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  it("answers the losing request of a race with CONFLICT, not a generic error", async () => {
+    seedRewind()
+    prismaMock.$transaction.mockRejectedValueOnce(
+      new Prisma.PrismaClientKnownRequestError("write conflict", { code: "P2034", clientVersion: "7" })
+    )
+    expect(await enable()).toMatchObject({ success: false, code: "CONFLICT" })
+    expect(shares).toHaveLength(0)
   })
 
   it("stores no expiry when the member chooses none", async () => {
@@ -206,6 +252,40 @@ describe("rotate, update and disable", () => {
     if (!rotated.success) throw new Error(rotated.error)
     expect((await disableRewindShare({ shareId: rotated.data.shareId })).success).toBe(true)
     expect(shares.every((s) => s.revokedAt !== null)).toBe(true)
+  })
+
+  it("rotates an expired link to one that is live, and lets only one of two rotations through", async () => {
+    seedRewind()
+    const { shareId } = await enabled()
+    shares[0].expiresAt = new Date(Date.now() - 60_000)
+    const rotated = await rotateRewindShare({ shareId })
+    if (!rotated.success) throw new Error(rotated.error)
+    expect(new Date(rotated.data.expiresAt!).getTime()).toBeGreaterThan(Date.now())
+
+    // A second rotation of the same (now revoked) link finds it already replaced.
+    shares[0].revokedAt = null
+    prismaMock.rewindShare.updateMany.mockResolvedValueOnce({ count: 0 })
+    expect(await rotateRewindShare({ shareId })).toMatchObject({ success: false, code: "CONFLICT" })
+    expect(shares).toHaveLength(2)
+  })
+
+  it("will not rotate an expired link back to life beside a newer live one", async () => {
+    seedRewind()
+    const { shareId: expiredId } = await enabled()
+    shares[0].expiresAt = new Date(Date.now() - 60_000)
+    await enabled()
+
+    expect(await rotateRewindShare({ shareId: expiredId })).toMatchObject({ success: false, code: "CONFLICT" })
+    expect(shares).toHaveLength(2)
+  })
+
+  it("answers a serialization failure on rotate with CONFLICT", async () => {
+    seedRewind()
+    const { shareId } = await enabled()
+    prismaMock.$transaction.mockRejectedValueOnce(
+      new Prisma.PrismaClientKnownRequestError("could not serialize", { code: "P2034", clientVersion: "7" })
+    )
+    expect(await rotateRewindShare({ shareId })).toMatchObject({ success: false, code: "CONFLICT" })
   })
 
   it("refuses another member's link", async () => {

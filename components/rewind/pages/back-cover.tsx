@@ -12,7 +12,7 @@ import { BillingBlock } from "./billing-block"
 import { CopyText } from "./copy-text"
 import type { PageProps } from "./issue-context"
 import { SoundtrackStrip } from "./soundtrack-strip"
-import { MEASURE, u, ut } from "./units"
+import { MEASURE, tight, u, ut } from "./units"
 
 const STRIP_H = 40
 
@@ -43,27 +43,27 @@ export function BackCoverPage({ data, issue }: PageProps<BackCoverData>) {
       <h2 tabIndex={-1} className="font-lead outline-none" style={{ fontSize: u(42), lineHeight: 1.02, letterSpacing: "-0.01em" }}>
         <CopyText text={headline("back-cover", facts)} source={source} />
       </h2>
-      <div className="border-y-[1.5px] border-current" style={{ marginTop: u(12), padding: `${u(10)} 0` }}>
+      <div className="border-y-[1.5px] border-current" style={{ marginTop: tight(12), padding: `${tight(10)} 0` }}>
         <BillingBlock lines={block.lines} entries={block.entries} />
       </div>
-      <RewindFigure summary={backCoverPage.srSummary(data, facts)} className="mt-[calc(var(--u)*12px)]">
+      <RewindFigure summary={backCoverPage.srSummary(data, facts)} style={{ marginTop: tight(12) }}>
         <SoundtrackStrip minutes={data.minutes} from={from} locale={locale} width={MEASURE} height={STRIP_H} />
       </RewindFigure>
-      <p className="italic" style={{ fontSize: ut(14), lineHeight: 1.25, marginTop: u(6) }}>
+      <p className="italic" style={{ fontSize: ut(14), lineHeight: 1.25, marginTop: tight(6) }}>
         {backCoverCaption(facts, issue.year, locale)}
       </p>
       {signOff && (
-        <p style={{ fontSize: u(17), lineHeight: 1.3, marginTop: u(8) }} data-testid="rewind-sign-off">
+        <p style={{ fontSize: u(17), lineHeight: 1.3, marginTop: tight(8) }} data-testid="rewind-sign-off">
           <CopyText text={signOff} source={facts} />
         </p>
       )}
-      <p style={{ fontSize: u(16), lineHeight: 1.3, marginTop: u(8) }} data-testid="rewind-back-cover-disclosure">
+      <p style={{ fontSize: u(16), lineHeight: 1.3, marginTop: tight(8) }} data-testid="rewind-back-cover-disclosure">
         {backCoverDisclosure(issue.copySource)}
       </p>
-      <div style={{ marginTop: u(12) }}>
+      <div style={{ marginTop: tight(12) }}>
         <BackCoverShare />
       </div>
-      <p className="text-center italic" style={{ fontSize: ut(13.5), lineHeight: 1.3, marginTop: u(10) }}>
+      <p className="text-center italic" style={{ fontSize: ut(13.5), lineHeight: 1.3, marginTop: tight(10) }}>
         {colophon(facts, issue)}
       </p>
       <div className="mt-auto">

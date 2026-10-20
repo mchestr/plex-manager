@@ -1,7 +1,7 @@
 "use client"
 
 import { CircleCheck, Ellipsis, Pause, Settings, Table2, TriangleAlert, X } from "lucide-react"
-import { useState, type ReactNode } from "react"
+import { useRef, useState, type ReactNode } from "react"
 
 import { Alert } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -62,10 +62,10 @@ export function InkSpecimen() {
 }
 
 function InkPanel({ ink, children }: { ink: InkName; children: ReactNode }) {
-  const [root, setRoot] = useState<HTMLDivElement | null>(null)
+  const root = useRef<HTMLDivElement>(null)
   const field = inkProps(ink)
   return (
-    <div data-theme="rewind" ref={setRoot}>
+    <div data-theme="rewind" ref={root}>
       <section
         {...field}
         aria-label={`${ink} ink`}
