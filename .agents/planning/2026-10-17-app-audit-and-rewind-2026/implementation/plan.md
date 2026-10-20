@@ -5244,14 +5244,23 @@ P5.1 and P5.2 start only once P3.1's scope contract and P3.7's primitives have m
 
 **Demo.** An admin regenerates the heavy test member: one `LLMUsage` row appears and the data is v3. A second regenerate makes no LLM call. With the provider key removed, the Rewind still completes, with `copySource: 'template'` and a warning in the logs.
 
+**As merged** (later steps rely on these):
+- Modules in `lib/wrapped/pipeline/`: `generate-user.ts` (`generateUserRewind(options, deps?)` returns `{ status: 'completed', data, trail }` or `{ status: 'skipped', reason }`; `source` is an injectable inputs reader, used by the fixtures), `load-context.ts` (`RewindContext`, `memberSerial`: 4 Crockford base32 characters of `HMAC-SHA256(rewindSerialKey, userId:year)`), `eligibility.ts` (`SkipReason`), `read-inputs.ts`, `build-issue.ts` (`buildIssue`, `withArchetype`), `edition.ts` (`omittedPages`, `editionOf`, `selectIssuePages`), `copy-step.ts`, `copy-draft.ts`, `copy-llm.ts`, `persist.ts`, `after-complete.ts` (`onRewindCompleted(name, hook)` for P5.10 and P7.14). The P2.16 page rules moved from `evals/rewind/__tests__/pages.ts` (now a re-export) into `edition.ts`. **Pages are stored as `{ type, data: null }`** until P5.5's `selectPages` replaces `selectIssuePages`; the pocket edition is cover, number, short-list, clock (else calendar), centrefold, back cover; the postcard is one `cover` page until P7.3.
+- Pocket and postcard store `copy: null` with `copySource: 'template'`. `copyMeta.model` is `"<provider>:<normalised id>"` (null for template-only copy). The model may pick another archetype only when `llmMayChoose`; the facts are then rebuilt around it (`withArchetype`, code's pick as runner-up). `RewindGeneration.factsHash` stores the copy step's input hash (before that choice), which the next run's reuse check reads; `PlexWrapped.factsHash` and `data.factsHash` are the stored facts' hash.
+- Skip reasons joined `RewindErrorCode` (with member copy in `lib/ui/error-copy.ts`); a skipped run marks a Rewind that has not completed `failed` with that code. Managed accounts are Tautulli `get_users` rows with `is_restricted: 1`. Entitlement uses `getAccessLevel()` (the job has no session). Members (`kind: 'member'`) are now skipped as `REWIND_DISABLED` until `rewindEnabled` is on; admin regenerations bypass both flags.
+- `budgetModelFor(provider)` is in `lib/llm/models.ts` (`claude-haiku-5-5`, `gpt-6-luna`, null otherwise: the configured model repairs). The `rw:llm` limit (30 a minute per provider) is in `LIMITS`; the wait is bounded by the job's signal. The aggregate job also caches the library listing (`rw:batch:{year}:{through}:library`) for next year's picks, read by `getBatchLibrary`.
+- RWP-13: the unauthenticated export at `actions/prompts.ts:53-59` was already gone; `lib/wrapped/prompt/store.ts` now serves both reads. The migration is `20261124000100_prompt_template_kind` (the planned `20261111000000` would sort before merged migrations). Activation is per kind; audit type `PROMPT_TEMPLATE_CHANGED`. The admin UI has no style-guide editor yet (the action takes `kind`).
+- `generate-v2.ts`, `generateRewindV2` and `lib/wrapped/llm.ts` (`generateWrappedWithLLM`) are deleted: no v2 path generates any more. The playground route resolves `userId` (app id or Plex account id) and calls `collectV2Statistics` from `collect-v2-statistics.ts`.
+- Not done here: the CLAUDE.md integration line about `generateUserRewind` (an agent may not edit CLAUDE.md; coordinator item).
+
 **Done when.**
-- [ ] `generateUserRewind` runs in persist and dry-run modes, and the job uses it.
-- [ ] Eligibility covers Redis, the audience, the Plex identity, managed accounts and entitlement, each with a typed skip reason.
-- [ ] The pocket and postcard editions make zero LLM calls, and unchanged inputs make none.
-- [ ] One repair call is followed by a per-slot template fallback, and no model failure fails a generation.
-- [ ] The prompt is frozen in code as `rewind-2026.1`, and the style guide is read through a server-only function, with no unauthenticated action left.
-- [ ] The final write is one atomic transaction, and the golden snapshot tests pass.
-- [ ] Dump taken before deploy; `prisma migrate status` clean.
+- [x] `generateUserRewind` runs in persist and dry-run modes, and the job uses it.
+- [x] Eligibility covers Redis, the audience, the Plex identity, managed accounts and entitlement, each with a typed skip reason.
+- [x] The pocket and postcard editions make zero LLM calls, and unchanged inputs make none.
+- [x] One repair call is followed by a per-slot template fallback, and no model failure fails a generation.
+- [x] The prompt is frozen in code as `rewind-2026.1`, and the style guide is read through a server-only function, with no unauthenticated action left.
+- [x] The final write is one atomic transaction, and the golden snapshot tests pass.
+- [ ] Dump taken before deploy; `prisma migrate status` clean. (Owner: dump and production deploy; `migrate status` is clean on the test database.)
 
 ### Step P5.10: Share-safe projection v3 and card routes
 

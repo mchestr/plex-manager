@@ -40,6 +40,7 @@ describe('PromptTemplateEditor', () => {
     name: 'Test Template',
     description: 'Test description',
     template: 'Hello {{userName}}, you watched {{moviesWatched}} movies!',
+    kind: 'v2-full',
     isActive: false,
     version: 1,
     createdAt: new Date(),

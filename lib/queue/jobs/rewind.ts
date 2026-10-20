@@ -4,8 +4,9 @@
  * ```
  * RewindGeneration queued ──► lock rw:lock:gen:{year}:{userId}
  *                               ├─ held by another job ─► skipped (LOCKED)
- *                               └─ taken ─► running ─► generateRewindV2(signal)
- *                                             ├─ ok ─► one $transaction: previousData, data, completed
+ *                               └─ taken ─► running ─► generateUserRewind({ mode: 'persist', signal })
+ *                                             ├─ completed ─► (its one $transaction: previousData, v3 data, completed)
+ *                                             ├─ not eligible ─► skipped with the typed reason
  *                                             └─ error ─► retry (queued) or failed with a typed code
  * ```
  *
@@ -20,9 +21,11 @@
  *
  * A failure marks the generation `failed`, never the data: a completed Rewind
  * keeps its data and share links. A Rewind that has not completed yet mirrors
- * the failure, so the v2 pages show it. Retryable failures (upstream or
- * provider errors) go back to `queued` while attempts remain (3, backing off
- * from 30 s); the rest throw `UnrecoverableError`. The job never calls
+ * the failure, so the status panels show it. A model failure never fails a
+ * run (the pipeline falls back to templates); retryable failures (upstream
+ * errors) go back to `queued` while attempts remain (3, backing off from
+ * 30 s); the rest throw `UnrecoverableError`. A member who is not eligible
+ * ends `skipped` with the pipeline's typed reason. The job never calls
  * `revalidatePath`, which needs a request scope; the status hook refreshes the
  * member's page instead.
  *
@@ -39,9 +42,9 @@ import { acquireGenerationLock } from "@/lib/queue/redis-lock"
 import type { RewindGenerateUserPayload } from "@/lib/queue/types"
 import { createLogger } from "@/lib/utils/logger"
 import { type RewindErrorCode, toStoredError } from "@/lib/wrapped/generation-errors"
-import { generateRewindV2 } from "@/lib/wrapped/pipeline/generate-v2"
+import type { RewindGenerationKind } from "@/lib/rewind/enqueue-generation"
+import { generateUserRewind } from "@/lib/wrapped/pipeline/generate-user"
 import { RewindGenerationError } from "@/lib/wrapped/pipeline/generation-error"
-import type { WrappedData } from "@/types/wrapped"
 
 const logger = createLogger("REWIND_GENERATE")
 
@@ -64,43 +67,14 @@ async function usageOf(client: PrismaTransactionClient, generationId: string) {
   return { llmCalls: usage._count._all, costUsd: usage._sum.cost ?? 0 }
 }
 
-/** Writes the result atomically, keeping the data it replaces (RWP-14). */
-async function complete({ generationId, wrappedId }: Run, data: WrappedData): Promise<void> {
-  await prisma.$transaction(async (tx) => {
-    const current = await tx.plexWrapped.findUniqueOrThrow({
-      where: { id: wrappedId },
-      select: { status: true, data: true },
-    })
-    const now = new Date()
-    await tx.rewindGeneration.update({
-      where: { id: generationId },
-      data: {
-        status: "completed",
-        finishedAt: now,
-        previousData: current.status === "completed" ? current.data : null,
-        ...(await usageOf(tx, generationId)),
-      },
-    })
-    await tx.plexWrapped.update({
-      where: { id: wrappedId },
-      data: {
-        data: JSON.stringify(data),
-        status: "completed",
-        error: null,
-        generatedAt: now,
-        dataVersion: 2,
-        summary: data.summary || null,
-        archetype: data.archetype?.name || null,
-      },
-    })
-  })
-}
-
-/** Ends the run as `failed`; a Rewind that has not completed shows the failure too. */
-async function fail({ generationId, wrappedId }: Run, code: RewindErrorCode): Promise<void> {
+/**
+ * Ends the run as `failed`, or `skipped` for a member who is not eligible; a
+ * Rewind that has not completed shows the code too.
+ */
+async function fail({ generationId, wrappedId }: Run, code: RewindErrorCode, status: "failed" | "skipped" = "failed"): Promise<void> {
   await prisma.rewindGeneration.update({
     where: { id: generationId },
-    data: { status: "failed", error: { code }, finishedAt: new Date(), ...(await usageOf(prisma, generationId)) },
+    data: { status, error: { code }, finishedAt: new Date(), ...(await usageOf(prisma, generationId)) },
   })
   await prisma.plexWrapped.updateMany({
     where: { id: wrappedId, status: { not: "completed" } },
@@ -143,7 +117,7 @@ export async function processRewindGenerateUser(job: Job<RewindGenerateUserPaylo
   const { generationId, userId, year } = job.data
   const generation = await prisma.rewindGeneration.findUnique({
     where: { id: generationId },
-    select: { wrappedId: true, status: true },
+    select: { wrappedId: true, status: true, kind: true, copyPolicy: true },
   })
   // A row the stale sweep already closed, or one deleted with its member.
   if (!generation || (generation.status !== "queued" && generation.status !== "running")) {
@@ -167,8 +141,19 @@ export async function processRewindGenerateUser(job: Job<RewindGenerateUserPaylo
       where: { id: generationId },
       data: { status: "running", startedAt: new Date(), error: Prisma.DbNull },
     })
-    const data = await generateRewindV2({ userId, year, wrappedId: run.wrappedId, generationId, signal })
-    await complete(run, data)
+    const result = await generateUserRewind({
+      userId,
+      year,
+      kind: generation.kind as RewindGenerationKind,
+      mode: "persist",
+      copyPolicy: generation.copyPolicy === "no-llm" ? "no-llm" : "default",
+      signal,
+      generationId,
+    })
+    if (result.status === "skipped") {
+      await fail(run, result.reason, "skipped")
+      return { status: "skipped" }
+    }
     return { status: "completed" }
   } catch (error) {
     logger.warn("Rewind generation attempt failed", {

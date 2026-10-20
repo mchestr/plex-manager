@@ -52,6 +52,8 @@ export const LIMITS = {
   "rw:share-page": { points: 60, duration: MINUTE },
   "rw:gen:burst": { points: 1, duration: 10 * MINUTE },
   "rw:gen:daily": { points: 3, duration: DAY },
+  // Rewind copy calls per LLM provider (design 9.4); the pipeline waits for a point
+  "rw:llm": { points: 30, duration: MINUTE },
 } as const satisfies Record<string, LimitConfig>
 
 export type LimitName = keyof typeof LIMITS

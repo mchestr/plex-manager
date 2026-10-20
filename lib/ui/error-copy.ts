@@ -145,6 +145,10 @@ const COPY = {
   NOT_CONFIGURED: rewind("Rewind isn't fully set up on this server yet. Ask the server admin."),
   WORKER_LOST: rewind(INTERRUPTED),
   JOB_LOST: rewind(INTERRUPTED),
+  REWIND_DISABLED: rewind("Rewind isn't open on this server yet."),
+  NOT_IN_AUDIENCE: rewind("Rewind isn't open to everyone on this server yet."),
+  NO_PLEX_IDENTITY: rewind("Rewind needs Plex watch history. Jellyfin support is planned."),
+  MANAGED_ACCOUNT: rewind("Rewind isn't made for managed Plex accounts on this server."),
 
   // RewindPanelCode: the /rewind/<year> status panels
   REWIND_GENERATING: {

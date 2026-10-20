@@ -62,6 +62,7 @@ export function buildPromptTemplate(overrides: Partial<PromptTemplate> = {}): Pr
     name: 'Test template',
     description: null,
     template: 'Hello {{userName}}',
+    kind: 'v2-full',
     isActive: true,
     version: 1,
     createdAt: fixedDate(),

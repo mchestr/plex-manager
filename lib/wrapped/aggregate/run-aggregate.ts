@@ -13,7 +13,8 @@
  *    and the metadata cache (archetype scoring reads them exactly as each
  *    member's own Rewind does), compute the aggregate and upsert
  *    `RewindServerAggregate` on `(year, dataThrough)`.
- * 5. Store each matched member's plays in the batch cache, and plan the
+ * 5. Store each matched member's plays and the library listing in the batch
+ *    cache (next year's picks read it), and plan the
  *    metadata warm: the titles covering 95% of each member's minutes, minus
  *    rows that are still fresh, 200 keys per job.
  *
@@ -33,7 +34,7 @@ import type { SourceContext, UpstreamLimiter } from "@/lib/wrapped/sources/watch
 import { metadataLookup } from "@/lib/wrapped/stats/metadata"
 import { inWindow } from "@/lib/wrapped/time/zone"
 
-import { storeMemberEvents, type BatchCacheRedis } from "./batch-cache"
+import { storeBatchLibrary, storeMemberEvents, type BatchCacheRedis } from "./batch-cache"
 import { loadBatchSetup, matchMembers, readLibrary } from "./load-batch"
 import { applyRatingExclusions, metadataKeyOf } from "./rating-exclusions"
 import { computeServerYear } from "./server-year"
@@ -88,6 +89,9 @@ export async function runServerAggregate(
   }
   const libraryItems = await readLibrary(setup, ctx)
   await upsertLibraryItems(libraryItems)
+  await storeBatchLibrary(ctx.redis, { year, through, titles: libraryItems }).catch((error: unknown) =>
+    logger.warn("Batch library write failed; next year's picks are left out", { error: String(error) })
+  )
 
   const keys = new Set<string>()
   for (const events of history.data.values()) for (const e of events) keys.add(metadataKeyOf(e))

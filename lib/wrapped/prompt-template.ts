@@ -13,9 +13,9 @@
 
 import "server-only"
 
-import { prisma } from "@/lib/prisma"
 import { formatDuration } from "@/lib/utils/format"
 import { suggestArchetypes } from "@/lib/wrapped/archetype-scoring"
+import { findActivePromptTemplate } from "@/lib/wrapped/prompt/store"
 import { getDefaultPromptTemplate } from "@/lib/wrapped/prompt-text"
 import { WrappedStatistics } from "@/types/wrapped"
 
@@ -208,13 +208,7 @@ export async function generateWrappedPrompt(
   templateString?: string
 ): Promise<string> {
   // If template string is provided, use it; otherwise get active template from database
-  let finalTemplateString: string
-  if (templateString) {
-    finalTemplateString = templateString
-  } else {
-    const template = await prisma.promptTemplate.findFirst({ where: { isActive: true } })
-    finalTemplateString = template?.template || getDefaultPromptTemplate()
-  }
+  const finalTemplateString = templateString || (await findActivePromptTemplate()) || getDefaultPromptTemplate()
 
   // Replace placeholders with actual values
   return replacePlaceholders(finalTemplateString, { userName, year, statistics })
