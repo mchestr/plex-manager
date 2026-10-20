@@ -15,6 +15,11 @@ jest.mock("@/app/fonts", () => ({ plexFontClassNames: "" }))
 jest.mock("@/components/ui/flash-from-query", () => ({ FlashFromQuery: () => null }))
 
 const settings = getAppSettings as jest.Mock
+const originalEnv = process.env
+
+afterEach(() => {
+  process.env = originalEnv
+})
 
 describe("generateMetadata", () => {
   it("titles every page '{page} - {server name}'", async () => {
@@ -33,7 +38,8 @@ describe("generateMetadata", () => {
   })
 
   it("resolves the OG card against the public URL", async () => {
-    jest.replaceProperty(process.env, "NEXT_PUBLIC_APP_URL", "https://plex.example.com")
+    // replaceProperty needs the key to exist, and CI sets no NEXT_PUBLIC_APP_URL.
+    process.env = { ...originalEnv, NEXT_PUBLIC_APP_URL: "https://plex.example.com" }
     settings.mockResolvedValue({ timeZone: "UTC", locale: "en-US", serverName: null })
 
     expect(String((await generateMetadata()).metadataBase)).toBe("https://plex.example.com/")

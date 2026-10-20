@@ -6,7 +6,7 @@
  */
 
 import { Worker, Job } from "bullmq"
-import { getRedisConnection } from "./connection"
+import { closeWorker, getRedisConnection } from "./connection"
 import { getJobProcessor, getRegisteredJobTypes } from "./jobs"
 import { QUEUE_NAME } from "./client"
 import { startRewindWorkers, stopRewindWorkers } from "./rewind-queues"
@@ -145,8 +145,8 @@ export async function startWorker(): Promise<void> {
 }
 
 /**
- * Stop the queue worker gracefully
- * Waits for current jobs to complete (with timeout)
+ * Stop the queue worker, waiting for current jobs while Redis is connected
+ * (see `closeWorker`)
  */
 export async function stopWorker(): Promise<void> {
   await stopRewindWorkers()
@@ -158,8 +158,7 @@ export async function stopWorker(): Promise<void> {
   logger.info("Stopping queue worker...")
 
   try {
-    // Close waits for current jobs to finish (30s timeout by default)
-    await worker.close()
+    await closeWorker(worker)
     worker = null
     logger.info("Queue worker stopped")
   } catch (error) {

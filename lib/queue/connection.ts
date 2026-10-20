@@ -5,6 +5,7 @@
  * Uses lazy initialization to avoid connecting during build.
  */
 
+import type { Worker } from "bullmq"
 import Redis, { RedisOptions } from "ioredis"
 import { onShutdown } from "@/lib/instrumentation/shutdown"
 import { createLogger } from "@/lib/utils/logger"
@@ -89,6 +90,18 @@ export async function closeRedisConnection(): Promise<void> {
       connection.disconnect()
     }
   }
+}
+
+/**
+ * Closes a BullMQ Worker on the shared connection at shutdown, letting its
+ * active jobs finish while Redis is connected. While the connection is down or
+ * reconnecting, BullMQ's graceful close waits on a job fetch that never
+ * settles (it held shutdown past its deadline in the image smoke test), and no
+ * job could record its result anyway, so the close is forced; the stall check
+ * hands any active job to the next worker.
+ */
+export function closeWorker(worker: Pick<Worker, "close">): Promise<void> {
+  return worker.close(redisConnection?.status !== "ready")
 }
 
 /**
