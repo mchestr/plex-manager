@@ -5181,11 +5181,17 @@ P5.1 and P5.2 start only once P3.1's scope contract and P3.7's primitives have m
 
 **Demo.** Run `groundSlot` on the personal-signature line against the heavy fixture: it prints the rule 3 and rule 4 issues with their hints. Render a deck that names "Ke$ha: My Crazy Beautiful Life", and the title comes out intact.
 
+**As merged** (later steps rely on these):
+- `lib/wrapped/copy/`: `slots.ts` (`COPY_SLOTS`, `SLOT_IDS`, `HERO_FACTS`, `factPages(id)` for rule 5, `slotsForPages`, `slotDependencyHash`), `schema.ts` (`RewindCopyV3Wire`, now also the stored `copy` in `schema-v3.ts`; `RewindCopyV3` caps raw text at 3x `maxChars` as a runaway guard, since rule 7 checks the rendered length), `render-copy.ts` (`TOKEN_RE`, `renderCopy` segments `text`/`token`/`title`, `renderCopyText`, `tokenIds`, `TokenSource`), `grounding.ts` (`groundSlot(slotId, text, { facts, selected, source?, locals? })` for rules 1-7, `groundArchetype(choice, selection)` for rule 8), `templates.ts` (`slotTemplate`, `headline(page, facts)`, `coverLines([{ type, folio }])` returning `{ folio, text }` so the folio is set apart, `windowLine`, `tzNote('member' | 'server')`, `tzShort`, `pocketNote`, `posterLineTemplate`, `copyLocals({ year, firstTitle })`), `poster-lines.ts` (the 60 lines).
+- Values that are not facts (the issue year, Bookends' first title) are template-only tokens `copy.year` and `copy.firstTitle`, passed as `locals`; the catalogue has no year fact.
+- Rule 3 needs a share token cited in the same slot (the "Most of it after dark" line cites none). Templates pass `source: 'template'`, which allows "so far" and "still". The tagline's template is one of the archetype's poster lines.
+- Word list: the 10,000 English 1-grams of orgtre/google-books-ngram-frequency (CC BY 3.0, pinned by commit and sha256 in `scripts/build-wordlist.mjs`), minus capitalised entries, so a sentence can't start with a month or a place: 9,824 words, plus "starring" and "unfinished" for the design's headlines. Its source and licence are recorded in the generated file's header, not `.claude/skills/THIRD_PARTY.md`, which lists only vendored skills.
+
 **Done when.**
-- [ ] `slots.ts` declares every slot with its limits, allowed facts, identity facts and bands, and `slotDependencyHash` is stable.
-- [ ] Templates exist for every headline and slot, with variants and window wording keyed on `window.finalCut`.
-- [ ] All eight grounding rules have passing and failing fixtures, including the "Most of it after dark" line.
-- [ ] `render-copy` inserts titles containing `$` patterns literally, and the v2 prompt substitution uses a replacer function.
+- [x] `slots.ts` declares every slot with its limits, allowed facts, identity facts and bands, and `slotDependencyHash` is stable.
+- [x] Templates exist for every headline and slot, with variants and window wording keyed on `window.finalCut`.
+- [x] All eight grounding rules have passing and failing fixtures, including the "Most of it after dark" line.
+- [x] `render-copy` inserts titles containing `$` patterns literally, and the v2 prompt substitution uses a replacer function.
 
 ### Step P5.9: The v3 pipeline end to end
 

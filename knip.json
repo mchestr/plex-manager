@@ -8,6 +8,7 @@
     "scripts/codemods/*.mjs!",
     "lib/wrapped/facts/*.ts!",
     "lib/wrapped/archetypes/*.ts!",
+    "lib/wrapped/copy/*.ts!",
     "lib/utils/format.ts!",
     "lib/rewind/format.ts!",
     "lib/rewind/registry.ts!",
