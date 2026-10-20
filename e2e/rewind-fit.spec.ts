@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
 
-import heavyIssue from './fixtures/rewind/heavy-issue.json';
+import heavyIssue from './fixtures/rewind/heavy.v3.json';
 import { expect, test, TEST_USERS } from './fixtures/auth';
 import { createE2EPrismaClient } from './helpers/prisma';
 import { WAIT_TIMEOUTS } from './helpers/test-utils';
@@ -36,24 +36,9 @@ function withGuess(pages: typeof heavyIssue.pages, facts: Record<string, { displ
   return [...pages.slice(0, at), guess, ...pages.slice(at)];
 }
 
-// The heavy golden fixture as the pipeline builds it; lib/rewind/__tests__/e2e-issue-fixture.test.ts keeps it current
+/** The heavy fixture's stored v3 Rewind (`npm run rewind:e2e-fixtures`), with the Guess page added. */
 function seedIssue() {
-  const issue = heavyIssue;
-  return {
-    version: 3,
-    year: YEAR,
-    statsVersion: 'stats-2026.1',
-    generatedAt: new Date('2026-12-01T12:00:00Z').toISOString(),
-    window: { from: '2026-01-01', through: '2026-11-30', zone: 'America/Chicago', finalCut: false },
-    edition: issue.edition,
-    facts: issue.facts,
-    pages: withGuess(issue.pages, issue.facts),
-    archetype: issue.archetype,
-    copy: null,
-    copySource: 'template',
-    copyMeta: { model: null, promptVersion: 'e2e', slotHashes: {} },
-    factsHash: 'e2e',
-  };
+  return { ...heavyIssue, year: YEAR, pages: withGuess(heavyIssue.pages, heavyIssue.facts) };
 }
 
 interface Box {
@@ -141,7 +126,16 @@ test.describe('Rewind pages fit the phone', () => {
     try {
       await prisma.plexWrapped.deleteMany({ where: { userId: TEST_USERS.ADMIN.id, year: YEAR } });
       await prisma.plexWrapped.create({
-        data: { userId: TEST_USERS.ADMIN.id, year: YEAR, status: 'completed', data: JSON.stringify(data), generatedAt: new Date(data.generatedAt) },
+        data: {
+          userId: TEST_USERS.ADMIN.id,
+          year: YEAR,
+          status: 'completed',
+          dataVersion: 3,
+          edition: data.edition,
+          factsHash: data.factsHash,
+          data: JSON.stringify(data),
+          generatedAt: new Date(data.generatedAt),
+        },
       });
     } finally {
       await prisma.$disconnect();
