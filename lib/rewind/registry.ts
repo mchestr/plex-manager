@@ -59,7 +59,19 @@ export type Edition = "full" | "pocket" | "postcard"
  */
 export type Dwell = number | "tap" | "hold" | "end"
 
-/** A chart page's table: the same data as the graphic, for the Table sheet. */
+/**
+ * A chart page's table: the same data as the graphic, for the Table sheet,
+ * the desktop Notes and article mode (design 4.6, 11.1, FR-16).
+ *
+ * - `caption` names what is counted, the counting window and, on pages that
+ *   show clock times, the `tz.note` zone.
+ * - `columns` are the header cells (`th scope="col"`).
+ * - Each row has one display string per column; its first cell names the row
+ *   (`th scope="row"`).
+ *
+ * Built on the server from the same data as the graphic; null when the page
+ * has nothing to tabulate (no Table control then).
+ */
 export interface PageTable {
   caption: string
   columns: string[]

@@ -34,6 +34,8 @@ interface StagePageProps {
   /** The page the last turn left, which shifts away under the incoming one. */
   previous: number | null
   ink: PageInk
+  /** "Page 5 of 18: Top shows". */
+  label: string
   children: ReactNode
 }
 
@@ -42,10 +44,12 @@ interface StagePageProps {
  * scaled artboard between the chrome rows. Only the current page and its
  * neighbours are rendered visible; the rest are `hidden`. Pages other than
  * the current one are `inert`. A turn sets `data-turn` on the incoming page
- * (the ink roll) and `data-leaving` on the outgoing one; P5.3 adds the page
- * semantics and P5.6 the match-cut layer.
+ * (the ink roll) and `data-leaving` on the outgoing one. Each page is an
+ * `<article aria-roledescription="page">` labelled with its position (design
+ * 11.1); its body brings the `h2` that a member's turn focuses, and the page
+ * itself takes focus when the body has none. P5.6 adds the match-cut layer.
  */
-export function StagePage({ index, current, previous, ink, children }: StagePageProps) {
+export function StagePage({ index, current, previous, ink, label, children }: StagePageProps) {
   const distance = index - current
   const isCurrent = distance === 0
   const direction = previous === null ? null : current > previous ? "forward" : "back"
@@ -55,6 +59,9 @@ export function StagePage({ index, current, previous, ink, children }: StagePage
     <StagePageContext.Provider value={{ index, distance }}>
       <article
         {...fieldProps}
+        aria-roledescription="page"
+        aria-label={label}
+        tabIndex={-1}
         data-testid="rewind-page"
         data-index={index}
         data-current={isCurrent || undefined}
@@ -64,7 +71,7 @@ export function StagePage({ index, current, previous, ink, children }: StagePage
         inert={!isCurrent}
         className={cn(
           scheme,
-          "rw-page absolute inset-0 flex items-center justify-center overflow-hidden bg-background pt-(--rw-chrome-top) pb-(--rw-chrome-bottom) text-foreground",
+          "rw-page absolute inset-0 flex outline-none items-center justify-center overflow-hidden bg-background pt-(--rw-chrome-top) pb-(--rw-chrome-bottom) text-foreground",
           isCurrent ? "z-2" : index === previous ? "z-1" : "z-0"
         )}
       >

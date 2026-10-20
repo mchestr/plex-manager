@@ -4926,12 +4926,14 @@ P5.1 and P5.2 start only once P3.1's scope contract and P3.7's primitives have m
 
 **Demo.** With VoiceOver on iOS, a swipe announces the new heading once. During autoplay each automatic turn is announced while focus stays put. With shortcuts off, K does nothing. At 375x548 the article offer opens first, and under reduced motion pages crossfade while the dwell still runs.
 
+(as merged: `StoryStage({ pages: { type, content, table? }[], year, archetype, closeHref, copy: { copySource, model } })`: `year` and `copy` are new required props and `prefs` is gone (the stage reads `useRewindPrefs()`), so P5.1 passes the year and the row's `copySource` and `copyMeta.model`. Each page's `table` is the registry's `table(data)` result, built on the server; the Table control and T show only when it is non-null. The `PageTable` contract stays `{ caption, columns, rows }`: the caption names what is counted, the window and (on clock pages) `tz.note`, and each row's first cell is its `th scope="row"`. `copyMeta.model` is read as `"<provider>:<model id>"` (`lib/rewind/copy-disclosure.ts` `aboutTheWords`), so P5.9 should store it that way; a bare id is matched against the hosted catalogue, and `openai-compatible` or an unknown bare id reads "a model running on this server". Page bodies bring their own `h2 tabIndex={-1}`; `components/rewind/a11y/page-heading.tsx` `PageHeading({ lines, full? })` draws one (fitted lines, ellipsized full text in `sr-only`), and a page with no `h2` takes focus itself. `LazyMotion` is `strict`, so islands must use `m.*`. The article offer is the player sheet `article-offer`; "Read as an article" links go to `/rewind/<year>/read`, which 404s until P5.12. `Switch` gained an `aria-describedby` prop for the row hints. `/dev/rewind-stage` takes `?words=llm|local|template` and gives every chart page a placeholder table. No E2E spec was in scope; P5.4 drives the test ids.)
+
 **Done when.**
-- [ ] The Settings and Table sheets work from their buttons and keys, and the preferences live in `localStorage` with safe defaults.
-- [ ] The stage is a labelled region, each page is a labelled article with a real `h2`, and no generic span carries `aria-label`.
-- [ ] User turns move focus to the heading, automatic turns are announced once through the polite live region, and focus on a control pauses autoplay.
-- [ ] Rewind's own reduced-motion rule keeps the 120 ms crossfades and the dwell timing.
-- [ ] Article mode is offered below the 0.8 scale floor and at 130% text size.
+- [x] The Settings and Table sheets work from their buttons and keys, and the preferences live in `localStorage` with safe defaults.
+- [x] The stage is a labelled region, each page is a labelled article with a real `h2`, and no generic span carries `aria-label`.
+- [x] User turns move focus to the heading, automatic turns are announced once through the polite live region, and focus on a control pauses autoplay.
+- [x] Rewind's own reduced-motion rule keeps the 120 ms crossfades and the dwell timing.
+- [x] Article mode is offered below the 0.8 scale floor and at 130% text size.
 
 ### Step P5.4: Rewind visual, axe and performance test projects
 
