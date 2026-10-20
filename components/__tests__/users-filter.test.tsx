@@ -1,5 +1,13 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { UsersFilter } from '@/components/admin/users/users-filter'
+
+async function choose(testId: string, value: string) {
+  const user = userEvent.setup()
+  await user.click(screen.getByTestId(testId))
+  await user.click(await screen.findByTestId(`${testId}-option-${value}`))
+  return user
+}
 
 describe('UsersFilter - subscription control', () => {
   it('renders the subscription dropdown', () => {
@@ -9,12 +17,11 @@ describe('UsersFilter - subscription control', () => {
     expect(screen.getByTestId('users-filter-subscription')).toBeInTheDocument()
   })
 
-  it('reports subscription changes with the full filter state', () => {
+  it('reports subscription changes with the full filter state', async () => {
     const onFilterChange = jest.fn()
     render(<UsersFilter onFilterChange={onFilterChange} />)
 
-    fireEvent.click(screen.getByTestId('users-filter-subscription'))
-    fireEvent.click(screen.getByTestId('users-filter-subscription-option-active'))
+    await choose('users-filter-subscription', 'active')
 
     expect(onFilterChange).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -25,26 +32,24 @@ describe('UsersFilter - subscription control', () => {
     )
   })
 
-  it('counts an active subscription filter toward the active-filter badge', () => {
+  it('counts an active subscription filter toward the active-filter badge', async () => {
     render(<UsersFilter onFilterChange={jest.fn()} />)
 
     // No active filters initially (defaults: plexAccess=yes, role=all, subscription=all).
     expect(screen.queryByText(/active$/)).not.toBeInTheDocument()
 
-    fireEvent.click(screen.getByTestId('users-filter-subscription'))
-    fireEvent.click(screen.getByTestId('users-filter-subscription-option-canceled'))
+    await choose('users-filter-subscription', 'canceled')
 
     expect(screen.getByText('1 active')).toBeInTheDocument()
   })
 
-  it('resets the subscription filter back to "all" on clear', () => {
+  it('resets the subscription filter back to "all" on clear', async () => {
     const onFilterChange = jest.fn()
     render(<UsersFilter onFilterChange={onFilterChange} />)
 
-    fireEvent.click(screen.getByTestId('users-filter-subscription'))
-    fireEvent.click(screen.getByTestId('users-filter-subscription-option-past_due'))
+    const user = await choose('users-filter-subscription', 'past_due')
 
-    fireEvent.click(screen.getByText('Reset'))
+    await user.click(screen.getByText('Reset'))
 
     expect(onFilterChange).toHaveBeenLastCalledWith(
       expect.objectContaining({

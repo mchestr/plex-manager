@@ -45,7 +45,7 @@ export function ManageSubscriptionButton({
     setIsPending(true)
     try {
       const result = await openBillingPortal()
-      if ("error" in result) {
+      if (!result.success) {
         toast.showError(result.error)
         setIsPending(false)
         return
@@ -53,7 +53,7 @@ export function ManageSubscriptionButton({
 
       // Leave the loading state active so the button stays disabled until the
       // navigation to Stripe happens.
-      redirectTo(result.url)
+      redirectTo(result.data.url)
     } catch {
       toast.showError("Could not open the billing portal. Please try again.")
       setIsPending(false)

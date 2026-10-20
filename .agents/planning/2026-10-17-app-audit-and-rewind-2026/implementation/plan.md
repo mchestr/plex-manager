@@ -373,37 +373,37 @@ gantt
 
 **UI foundations: tokens, fonts and primitives** (2026-10-26 to 2026-11-05)
 
-- [ ] P3.1: Semantic tokens and the Rewind scope contract (ui, M, due 2026-10-27)
+- [x] P3.1: Semantic tokens and the Rewind scope contract (ui, M, due 2026-10-27)
 - [ ] P3.2: Fonts and root layout (ui, M, due 2026-11-05)
-- [ ] P3.3: Token mirror module and contrast tests (ui, S, due 2026-10-28)
-- [ ] P3.4: Base primitives on Base UI behind adapters (ui, L, due 2026-10-30)
-- [ ] P3.5: Form primitives and the Field pattern (ui, M, due 2026-11-04)
-- [ ] P3.6: Overlay and feedback primitives (ui, M, due 2026-11-03)
-- [ ] P3.7: Rewind-ready primitives (ui, M, due 2026-11-05)
-- [ ] P3.8: Safe Markdown, safe links and error copy (ui, S, due 2026-10-29)
-- [ ] P3.9: Status vocabulary, icons, brand and chart theme (ui, M, due 2026-11-05)
+- [x] P3.3: Token mirror module and contrast tests (ui, S, due 2026-10-28)
+- [x] P3.4: Base primitives on Base UI behind adapters (ui, L, due 2026-10-30)
+- [x] P3.5: Form primitives and the Field pattern (ui, M, due 2026-11-04)
+- [x] P3.6: Overlay and feedback primitives (ui, M, due 2026-11-03)
+- [x] P3.7: Rewind-ready primitives (ui, M, due 2026-11-05)
+- [x] P3.8: Safe Markdown, safe links and error copy (ui, S, due 2026-10-29)
+- [x] P3.9: Status vocabulary, icons, brand and chart theme (ui, M, due 2026-11-05)
 - [x] P3.10: One formatter module (ui, M, due 2026-10-29)
 
 **Security and reliability hardening** (2026-10-23 to 2026-12-03)
 
 - [x] P4.1: Validate the environment at boot (security, S, due 2026-10-23)
 - [x] P4.2: Boot and shutdown resilience (ops, M, due 2026-10-28)
-- [ ] P4.3: One action helper for auth, Zod and result shape (security, M, due 2026-11-02)
-- [ ] P4.5: Enforce entitlement beyond the layout (security, M, due 2026-11-05)
-- [ ] P4.6: Never send a stored secret to a new address; audit config changes (security, M, due 2026-11-06)
-- [ ] P4.7: Sessions end when access ends; role changes stick (security, M, due 2026-11-10)
-- [ ] P4.8: Bind the Plex PIN to the browser (security, M, due 2026-11-12)
-- [ ] P4.9: Discord OAuth redirect and state binding (security, S, due 2026-11-23)
-- [ ] P4.10: Stripe event ordering, idempotency and live re-checks (security, L, due 2026-11-19)
-- [ ] P4.11: Unshare only this server, idempotently (security, S, due 2026-12-02)
-- [ ] P4.12: Jellyfin invites: no Plex redemption, complete compensation (security, S, due 2026-10-28)
-- [ ] P4.13: Watchlist requests filed as the member (security, M, due 2026-12-03)
-- [ ] P4.15: Harden the admin assistant (security, S, due 2026-11-06)
-- [ ] P4.16: Redact secrets and identifiers from logs (security, M, due 2026-11-19)
-- [ ] P4.17: Harden the Docker image and compose file; add a health check (ops, M, due 2026-11-24)
-- [ ] P4.18: Discord role metadata follows access; marking acts as the member (security, M, due 2026-11-24)
-- [ ] P4.19: Discord privacy firewall fails closed (security, S, due 2026-11-20)
-- [ ] P4.20: LLM quotas and spend caps for the assistant and Discord (security, M, due 2026-11-19)
+- [x] P4.3: One action helper for auth, Zod and result shape (security, M, due 2026-11-02)
+- [x] P4.5: Enforce entitlement beyond the layout (security, M, due 2026-11-05)
+- [x] P4.6: Never send a stored secret to a new address; audit config changes (security, M, due 2026-11-06)
+- [x] P4.7: Sessions end when access ends; role changes stick (security, M, due 2026-11-10)
+- [x] P4.8: Bind the Plex PIN to the browser (security, M, due 2026-11-12)
+- [x] P4.9: Discord OAuth redirect and state binding (security, S, due 2026-11-23)
+- [x] P4.10: Stripe event ordering, idempotency and live re-checks (security, L, due 2026-11-19)
+- [x] P4.11: Unshare only this server, idempotently (security, S, due 2026-12-02)
+- [x] P4.12: Jellyfin invites: no Plex redemption, complete compensation (security, S, due 2026-10-28)
+- [x] P4.13: Watchlist requests filed as the member (security, M, due 2026-12-03)
+- [x] P4.15: Harden the admin assistant (security, S, due 2026-11-06)
+- [x] P4.16: Redact secrets and identifiers from logs (security, M, due 2026-11-19)
+- [x] P4.17: Harden the Docker image and compose file; add a health check (ops, M, due 2026-11-24)
+- [x] P4.18: Discord role metadata follows access; marking acts as the member (security, M, due 2026-11-24)
+- [x] P4.19: Discord privacy firewall fails closed (security, S, due 2026-11-20)
+- [x] P4.20: LLM quotas and spend caps for the assistant and Discord (security, M, due 2026-11-19)
 
 **Rewind core experience and model bake-off** (2026-11-06 to 2026-11-20)
 
@@ -3083,11 +3083,13 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 
 **Demo.** Open `/` and `/admin/users` beside `main`. The canvas is graphite, native scrollbars and date pickers render dark, `window.scrollTo` works, and the v2 viewer renders in amber on graphite. Turn on reduced motion in DevTools: the remaining CSS loops stop, and a `data-slot="spinner"` element keeps turning.
 
+(as merged: `tw-animate-css` is pinned at 1.4.0, and `knip.json` lists `app/globals.css` as a project file so knip's Tailwind compiler sees the CSS import. The archetype rules write `--arch-deep` as `var(--rw-<field>-deep)` for every archetype (the dark inks' deep is their field), with the Curator on `var(--rw-ultramarine-deep)`; `globals-css.test.ts` checks them against `ARCHETYPE_STYLE` in `lib/wrapped/archetypes/catalogue.ts`, where `ARCHETYPES` now lives, and checks that every field and `altField` in `lib/rewind/registry.ts` is one of the twelve inks. `--font-sans` and `--font-mono` are Tailwind's system stacks until P3.2. The one-shot `fade-in` and the v2 `grain` sit in their own `@theme` block. `theme-contract.spec.ts` compares colours within 1/255 per channel, because Chromium renders the marigold ink as `#1f1406`. `e2e/visual/screenshot.css` drops its height workaround. The 36 changed baselines were regenerated locally on a production build, not through the workflow; the axe baseline lost `color-contrast|serious` on `/wrapped`, `/wrapped/2026` and the v2 share page, and no design-debt count fell.)
+
 **Done when.**
-- [ ] `app/globals.css` matches 4.1 and 4.4 section by section, with the Rewind block between the markers.
-- [ ] The height rule, the cinematic colours and the decorative loops are gone, and the aliases are marked for deletion in P11.29.
-- [ ] `globals-css.test.ts`, `cn.test.ts` and `theme-contract.spec.ts` pass.
-- [ ] The baselines are regenerated with every diff explained, and the axe and design-debt baselines are lowered where counts fell.
+- [x] `app/globals.css` matches 4.1 and 4.4 section by section, with the Rewind block between the markers.
+- [x] The height rule, the cinematic colours and the decorative loops are gone, and the aliases are marked for deletion in P11.29.
+- [x] `globals-css.test.ts`, `cn.test.ts` and `theme-contract.spec.ts` pass.
+- [x] The baselines are regenerated with every diff explained, and the axe and design-debt baselines are lowered where counts fell.
 
 ### Step P3.2: Fonts and root layout
 
@@ -3198,11 +3200,13 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 
 **Demo.** Run `npx jest lib/design`, and show the snapshot of ratios. Then edit one oklch value in `globals.css` only: the sync test names the token and both values.
 
+(as merged: `tokens.ts` also exports `subtleAlpha` (`{ dark: 0.14, light: 0.1 }`, the `-subtle` tints, which are `color-mix()` and so not `TokenName`s) and `rewindRemap`, the mirror of the `[data-field]` remap (each token to `field`, `ink`, `spot`, `paper`, `on-paper`, `transparent` or the scope's overlay value), typed over every non-sidebar token so the closing set also holds at compile time. A translucent token's hex carries its alpha (`overlay` is `#08090bb8`). `lib/rewind/registry.ts` and `lib/wrapped/archetypes/catalogue.ts` now import `InkName` from `tokens.ts`, and `archetypeInks` is checked against `ARCHETYPE_STYLE`. The sync check also fails when a colour declared in `.dark` has no remap. The chart checks measure the hex Chart.js receives: from the unquantised OKLCH, dark chart-4 against chart-5 under protan is 9.997, and from the hex 10.06 (3.5's 10.1). The parser, sync and contrast tables are helpers in `lib/design/__tests__/helpers/`; the ratio snapshot is `lib/design/__tests__/__snapshots__/tokens.test.ts.snap`. `expectNoDarkInsideLight` throws an `Error` rather than calling `expect`, so it can live outside a test file. `knip.json` gains `lib/design/tokens.ts!` and `lib/design/color.ts!` (remove in P3.9) and `lib/design/testing.ts!` (permanent, as only tests import it), with comments, which knip reads as JSONC.)
+
 **Done when.**
-- [ ] `lib/design/tokens.ts` holds `themes`, `rewindInks`, `archetypeInks` and `inkProps`, and `lib/design/color.ts` holds the colour maths.
-- [ ] The sync, hex, app-contrast, Rewind-contrast, closing-set and chart checks pass.
-- [ ] The recipe test and `expectNoDarkInsideLight` exist for later steps.
-- [ ] The knip entry is recorded with its removal step.
+- [x] `lib/design/tokens.ts` holds `themes`, `rewindInks`, `archetypeInks` and `inkProps`, and `lib/design/color.ts` holds the colour maths.
+- [x] The sync, hex, app-contrast, Rewind-contrast, closing-set and chart checks pass.
+- [x] The recipe test and `expectNoDarkInsideLight` exist for later steps.
+- [x] The knip entry is recorded with its removal step.
 
 ### Step P3.4: Base primitives on Base UI behind adapters
 
@@ -3252,11 +3256,13 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 
 **Demo.** Start the app with `ENABLE_DEV_UI=1` and open `/dev/ui`. Every variant renders. Tabbing shows a 2px amber ring, and a mouse click shows none. `npm run lint` reports the raw-element warnings by file.
 
+(as merged: `@base-ui/react` 1.8.0, `class-variance-authority` 0.7.1, `jest-axe` 11.0.0 and `@types/jest-axe` 3.5.9, exact. The shadcn CLI is pinned at 4.21.1, but ui.shadcn.com is unreachable from the build sandbox, so `init` and `add --dry-run --diff` could not run; `components.json` (`style: "base-nova"`, the Nova preset's values from the 4.21.1 CLI) and the primitives were ported by hand from the `shadcn@4.21.1` tag's `apps/v4/registry/bases/base/ui/*.tsx`. One rule has one severity, so `eslint/restricted-syntax.mjs` now runs warnings under a second id, `restricted-syntax/warn` (the core rule registered again by `restrictedSyntaxPlugin`), and errors under `no-restricted-syntax`; each `restrictedSyntaxBlocks` entry's `level` picks the id, a block replaces only earlier blocks of its own level, and the formatting warn block no longer covers `app/` and `components/` (the v2 viewer gets its own warn block). Later steps add warn and error selectors the same way; the test's real-config table shows what each kind of file ends up with. The raw-element warnings (307 at merge: 208 `svg`, 82 `button`, 15 `input`, one `select`, one `textarea`) skip `components/ui/**`, `components/rewind/**`, `app/dev/**` and `app/api/**`; the v2 viewer warns on raw controls but not its inline art. `Button` takes an `icon` slot for the leading icon that `loading` swaps for the Spinner; a busy button keeps its variant colour, stays focusable (`aria-disabled`) and ignores clicks. A `nativeButton={false}` link keeps the link role. The `Card` `padding` adapter has no default, so the two call sites that relied on the old `md` default now pass it, and `className` styles the padded `CardContent`. `ENABLE_DEV_UI` is in `lib/env.ts` and `example.env`. Eight baselines changed beyond the new `primitives-dark` and `primitives-light` pairs: the restyled Button (amber primary, 36px and 32px heights) on the admin settings and error screens at both sizes, and on the mobile admin users (both), invite-expired and access-denied screens; the desktop copies of those last four differ by less than the 1% threshold. The axe baseline lost one or two `color-contrast|incomplete` entries on ten scans (the gradient buttons are gone); no design-debt count fell. The baselines were regenerated locally on a production build, not through the workflow. At the merge with P4.3, its `actionsAndApi` blocks joined this structure: the migrated action modules leave both warn blocks (formatting and `actions/**`), so they get the formatting and error-text bans as errors only, and the real-config table gained the `actions/` and `app/api/` rows. Sixteen baselines differed from the merged code, all but the mobile admin user detail under the 1% threshold (the restyled Button on desktop admin users (both), invite-expired and access-denied, on admin queues and onboarding step 2 at both sizes, a re-wrapped announcement line on home at both sizes, admin settings taken on port 3340, and sub-pixel shifts on mobile admin invites and admin users with Plex down), so the merge retook all 16 on port 3100, with admin user detail at both sizes showing P4.7's Disable account button in the tinted `destructive` style. That button over the translucent header card raised `color-contrast|incomplete` on `/admin/users/regular-user-id`, so the header card is now opaque `bg-card` with `text-muted-foreground` labels, and the entry fell from 68 to 61.)
+
 **Done when.**
-- [ ] `components.json` exists, and the six primitives follow the 5.4 recipes on Base UI.
-- [ ] The adapters keep every old prop, and every existing `data-testid` survives.
-- [ ] Each primitive has a component test with axe, and the moved tests pass.
-- [ ] The raw-element ESLint warnings are on, and `/dev/ui` has its visual baseline.
+- [x] `components.json` exists, and the six primitives follow the 5.4 recipes on Base UI.
+- [x] The adapters keep every old prop, and every existing `data-testid` survives.
+- [x] Each primitive has a component test with axe, and the moved tests pass.
+- [x] The raw-element ESLint warnings are on, and `/dev/ui` has its visual baseline.
 
 ### Step P3.5: Form primitives and the Field pattern
 
@@ -3312,11 +3318,13 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 
 **Demo.** On `/admin/users`, operate the filter with the keyboard only, and use VoiceOver to hear "Plex access, All, collapsed, popup button". Then show the setup wizard's provider select still submitting through its hidden input.
 
+(as merged: `components/ui/portal-container.tsx` exports `PortalContainerProvider({ container, popupProps })`, `usePortalContainer()` (`{ container, popupProps }`, the container `document.body` by default and undefined on the server), the `PopupProps` type (`className` plus `data-*`), `InModalProvider` for P3.6's Dialog to wrap its popup in, and `usePopupLayer()`, which returns `z-(--z-popover-in-modal)` inside a dialog and `z-(--z-dropdown)` otherwise; the two providers carry `@public` for knip until P3.6 and P5.1 call them. `Label` (`components/ui/label.tsx`) is the native label with `optional`; `FieldLabel` is Base UI's `Field.Label` with the same recipe, and `FieldError` defaults `match` to `true`, so it renders only with a message. Textarea renders through `Field.Control` so Field wires it too. Switch renders Base UI Switch as a native `<button>` (so `disabled` and Enter work as before) with the spinner in the thumb; a busy switch keeps its state colour. Select's popup does not overlap the trigger (`alignItemWithTrigger={false}`), and its default trigger is 40px below `md` like Input. `StyledDropdown` gained an `aria-label` prop: a combobox takes no name from its content, so the triggers with no `<label htmlFor>` were named (`discord-marked-media`, `date-range-picker`) or their labels associated (`users-filter`, `queue-filters`, the two playground files), which kept axe's `button-name` from rising. The adapter warnings are `restricted-syntax/warn` selectors on `ImportDeclaration` (the `deprecatedImports` array, in the raw-element warn block) rather than `no-restricted-imports`, so P3.6 appends `modal-shell` and `confirm-modal` to the same array; 33 warnings at merge. `jest.setup.js` stubs `PointerEvent`, which Base UI's Checkbox dispatches. Tests that drive a Select click the option after `findByTestId`, since the list portals and mounts a frame later; `e2e/a11y/routes.ts`'s `openWith` runs the paused clock 100ms for the same reason, and `e2e/a11y/scan.ts` loads axe with `[role=listbox]` added to the `region` check's `regionMatcher` (axe already counts dialogs), so a portalled open list is not "outside landmarks". The axe baseline lost `label|critical` on `/admin/cost-analysis` and `/admin/discord` and two to five `color-contrast|incomplete` entries on eight scans. Eleven baselines changed, all regenerated locally on a production build: `primitives-dark` and `primitives-light` at both sizes (the new forms section), `admin-settings` at both sizes, mobile `admin-users`, `admin-users-plex-down` and `admin-queues` (the restyled inputs, selects and 32px filter triggers), and `setup-step-3` at both sizes (the restyled inputs); the desktop users and queues screens differ by less than the 1% threshold. design-debt fell in the two date filters.)
+
 **Done when.**
-- [ ] The seven primitives, `FormField` and `PortalContainer` exist and follow 5.4.
-- [ ] The four adapters keep their props, test ids and hidden input.
-- [ ] Labelling and keyboard tests pass with axe, and the moved tests pass.
-- [ ] The four date inputs are labelled, and their axe entries are gone.
+- [x] The seven primitives, `FormField` and `PortalContainer` exist and follow 5.4.
+- [x] The four adapters keep their props, test ids and hidden input.
+- [x] Labelling and keyboard tests pass with axe, and the moved tests pass.
+- [x] The four date inputs are labelled, and their axe entries are gone.
 
 ### Step P3.6: Overlay and feedback primitives
 
@@ -3366,11 +3374,13 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 
 **Demo.** In the create-invite dialog, cause a save error: it renders inside the dialog, not behind it. Remove access for a test member: the dialog shows "Removing" until the action resolves. Press F6 to reach a persistent error toast, then Escape.
 
+(as merged: built on P3.5's `portal-container.tsx`; `DialogContent` wraps its children in `InModalProvider`, lays the panel out in Base UI's `Dialog.Viewport`, and takes `size: 'default' | 'form'`, `align: 'center' | 'top'` and `showCloseButton`. `AlertDialogContent` is the same panel without the Close button, and a press inside the toast viewport never counts as an outside press. ConfirmDialog is an AlertDialog (`role="alertdialog"`), so a backdrop click never dismisses it, pending or not; it also takes `cancelLabel`, `data-testid` and `confirmTestId`, and a thrown `action` shows fixed copy (`CONFIRM_FALLBACK_ERROR`). `useToast().toast()` takes `action: { label, onClick }`, and the action also dismisses the toast. Errors do not use Base UI's `priority: 'high'`, which keeps an unfocused toast and its Dismiss button behind `aria-hidden` (axe `aria-hidden-focus`, serious); each toast root is `role="alert"` (errors) or `role="status"` inside the polite "Notifications" region. Base UI's own F6 hotkey and per-toast Escape are used. The toast viewport renders from `ToastProvider` until P3.2 adds its slot. Base UI opens a tooltip on keyboard focus at once; only hover waits 400ms. Base UI sets no `aria-modal` on dialogs (it hides the page behind with `aria-hidden`, so portalled popups stay reachable), so `accessibility.spec.ts`'s Modal ARIA tests now check the alertdialog role and the hidden page, and run the paused clock before checking the exit. The deprecated-import warnings for `modal-shell` and `confirm-modal` join P3.5's `deprecatedImports` selectors. `/dev/ui` gains the overlay specimens, and `primitives.visual.spec.ts` adds viewport shots of the open dialog, the confirm error, the menu and an error toast. The axe baseline lost `heading-order` on the confirm-dialog scan but rose by one `color-contrast|incomplete` there, edited by hand because the update refuses rises: axe compares the page under each line of the two-line description beneath the scrim, which is not a contrast failure (the panel is opaque). No other open-dialog entry fell.)
+
 **Done when.**
-- [ ] The seven primitives and `useActionDialog` follow 5.4 and 5.5.
-- [ ] Toasts keep the facade, announce through live regions, persist for errors and actions, and render above dialogs.
-- [ ] The ModalShell and ConfirmModal adapters keep their props, and ConfirmModal callers get a pending state.
-- [ ] Every primitive has tests, and the E2E toast helper uses test ids.
+- [x] The seven primitives and `useActionDialog` follow 5.4 and 5.5.
+- [x] Toasts keep the facade, announce through live regions, persist for errors and actions, and render above dialogs.
+- [x] The ModalShell and ConfirmModal adapters keep their props, and ConfirmModal callers get a pending state.
+- [x] Every primitive has tests, and the E2E toast helper uses test ids.
 
 ### Step P3.7: Rewind-ready primitives
 
@@ -3416,10 +3426,12 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 
 **Demo.** On `/dev/ui` at 390px, open the bottom sheet in a marigold panel: it prints on paper with ink controls. Drive the slider with the keyboard while VoiceOver reads "August". Then show the lint error on an `ink` Button placed in `components/admin`.
 
+(as merged: `sheet.tsx` re-exports `dialog.tsx`'s parts as `Sheet`, `SheetTrigger`, `SheetClose`, `SheetHeader`, `SheetTitle`, `SheetDescription` and `SheetFooter`, and adds `SheetContent({ side, grabber, showCloseButton })` on the same Base UI Dialog, wrapped in `InModalProvider`; `dialog.tsx` exports its Close button as `PanelCloseButton` for it. Under reduced motion the sheet does not slide and fades in 120ms (Rewind 5.6). SegmentedControl is compound, `<SegmentedControl aria-label>` with `<Segment value>` children; it and `Slider` take `aria-label` or `aria-labelledby` as a type-level union. `Slider` is single-thumb, a client component (it wraps `getAriaValueText(formatted, value)`), and draws the focus ring on the thumb, whose hidden range input takes focus. `Toggle` takes `size: 'sm' | 'default'`. The `icon-pill` `aria-label` requirement is a union on `ButtonProps`. Toasts now carry the `popupProps` of where they were raised (`useToast` reads `usePortalContainer()`), and a toast whose props carry `data-field` also gets `data-theme="rewind"`, a one-element scope, because the single viewport renders outside every Rewind root; P5.1 relies on this to print toasts on paper. `usePortalContainer()` returns one shared empty `popupProps`, so `useToast()` stays referentially stable. `PortalContainerProvider` lost its knip `@public` (the dev sheet calls it). The `rewindOnlyProps` selectors (string and `{"..."}` forms) are errors in every error block outside `components/ui/**`, `components/rewind/**` and `app/dev/**`, including `app/api/`, the v2 viewer and `**/*.{jsx,tsx}` outside `app/` and `components/`; the formatting error block was split so those three globs keep the formatting bans. The design-debt `rewind-only` rule skips `app/dev/`. `/dev/ui` gains Sheet, Toggle, Slider and SegmentedControl specimens (`_sections/rewind-ready.tsx`) and "In the Rewind scope" (`_sections/ink.tsx`), three panels (`dev-ui-ink-<ink>`) with Button, Switch, Checkbox, Toggle, SegmentedControl, Slider, StatusBadge, Badge, Spinner, Skeleton, Field and Input, Card, Alert, Tooltip, Popover, DropdownMenu, Sheet and Toast. The axe and computed-style checks are in a new `e2e/rewind-primitives.spec.ts` (chromium project, so they also run on `next dev`), not the visual spec. Visual baselines: new `primitives-ink-{paper,marigold,ultramarine}` (panel shots), `primitives-sheet-bottom-ink` and `primitives-sheet-right` in both projects; `primitives-dark` and `primitives-light` changed for the new sections, and `primitives-toast-error` only because the longer page scrolls differently when the Error button is clicked. Taken locally on a production build. No axe-scanned route changed, so the axe baseline is unchanged, and no design-debt count fell.)
+
 **Done when.**
-- [ ] Sheet, Toggle, Slider and SegmentedControl follow 5.4, with tests.
-- [ ] The four Button entries exist, and lint rejects them outside `components/rewind/**`.
-- [ ] `/dev/ui` draws every primitive in dark, light and three inks, with visual and axe coverage.
+- [x] Sheet, Toggle, Slider and SegmentedControl follow 5.4, with tests.
+- [x] The four Button entries exist, and lint rejects them outside `components/rewind/**`.
+- [x] `/dev/ui` draws every primitive in dark, light and three inks, with visual and axe coverage.
 - [ ] Everything is merged by 2026-11-08.
 
 ### Step P3.8: Safe Markdown, safe links and error copy
@@ -3471,11 +3483,13 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 
 **Demo.** Post an announcement containing a bulleted list, an image and a `javascript:` link. Home shows the bullets, no image and plain text for the bad link. In the assistant, a reply containing `![](https://example.com/?d=x)` loads nothing: the network panel shows no request.
 
+(as merged: the `shadcn` npm package ships no `typeset.css` (checked at 4.21.2 and 4.22.1; the docs say to copy the file), so no dependency was added. The file is vendored unchanged as `app/typeset.css` from shadcn-ui/ui at `3cdaa6eb` (2026-07-10, MIT), with its source in the header, and `app/globals.css` imports `./typeset.css` after `tw-animate-css`. `lib/ui/markdown.ts` also exports `safeLink(href)` (`{ href, external } | null`), which SafeLink uses; `safeHref` returns its href. Links resolve against `NEXT_PUBLIC_APP_URL`, or `https://app.invalid` when it is unset, so server and client agree; same-origin links come back as paths, and credentials in a URL are refused. `isHttpUrl(url: URL)` is in `lib/validations/shared-schemas.ts`; `createPublicUrlSchema` still accepts any URL until P4.3 routes it through `isHttpUrl`. `errorCopy(code: unknown, { audience })` keys P4.3's `ActionErrorCode` names through a local type; P4.3 replaces it with an import from `lib/actions/result.ts`, and P3.2 adds its flash error codes to the map when `lib/ui/flash-codes.ts` exists (it had not merged). `memberErrorCopy` is gone: `components/wrapped/wrapped-year-view.tsx` (the old `app/(app)/wrapped/page.tsx` caller), `components/dashboard/wrapped-card.tsx` and `lib/wrapped/tautulli-user-statistics.ts` call `errorCopy(...).description`, and the stored Rewind copy is unchanged. ErrorState looks its copy up from `error.digest`, shows the digest as "Reference <mono>", and keeps the old `Button` until P3.4 swaps it. There is no E2E chat test; a Jest case renders the real `Chatbot` instead, and `next build` passes without the `ssr: false` workaround. The `react-markdown` tree joins `ESM_ONLY_PACKAGES` in `jest.config.js` as regex alternatives. The new E2E case filters to the visible card, because home renders it in both layouts. Visual baselines are unchanged; design debt fell in `chat-window.tsx` and `announcements-card.tsx`.)
+
 **Done when.**
-- [ ] MarkdownBody, SafeLink, `safeHref` and `error-copy.ts` exist with unit tests.
-- [ ] Announcements and the assistant render through MarkdownBody, and lists have bullets.
-- [ ] No member or admin surface renders `error.message` through ErrorState.
-- [ ] The three admin-set public links pass through `safeHref`.
+- [x] MarkdownBody, SafeLink, `safeHref` and `error-copy.ts` exist with unit tests.
+- [x] Announcements and the assistant render through MarkdownBody, and lists have bullets.
+- [x] No member or admin surface renders `error.message` through ErrorState.
+- [x] The three admin-set public links pass through `safeHref`.
 
 ### Step P3.9: Status vocabulary, icons, brand and chart theme
 
@@ -3528,11 +3542,13 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 - Set `Config.serverName` to "Northfield Plex". Tab titles read "Users - Northfield Plex", the installed PWA uses the N monogram, and an invite link pasted into Discord unfurls with the OG card.
 - Set the name to "東京サーバー". The icon falls back to the pip tile, with no outbound request in the logs.
 
+(as merged: `STATUS` entries are objects, `{ label, tone, mark?, sub? }`, where `mark` is `"dot"`, `"spinner"` or a lucide icon from `lib/ui/icons.ts`; domain keys are camelCase (`plexAccess`, `queueJob`) and the table's `true`/`false`/`null` and spaced values are named (`shared`, `notShared`, `unknown`, `notStarted`, `usedUp`, `notConfigured`, `untested`, ...). Every warning row carries `triangle-alert` (3.1) unless the table names a mark. `resolveStatus(domain, value, fill?)` fills `{date}` ("Nov 6, 2026"), `{day}` ("Oct 20"), `{ago}` (with `now`), `{by}`, `{left}` and `{total}` through `lib/utils/format.ts` (`fill.settings`, default UTC and en-US); a sub-line with an unfilled placeholder is left out, and an unfilled label placeholder drops ("Opens"). `StatusBadge`'s domain form is `{ domain, value, sub? }` and reads only fixed sub-lines from the table, so it stays a Server Component; callers pass `sub={resolveStatus(..., fill).sub}` for dated ones. `settingsCategory(status)` returns `{ category, label, tone, icon }`. `getAppSettings()` returns `AppSettings` (`serverName: string | null`, from `Config.serverName`, then the newest active `PlexServer.name`, then the active `JellyfinServer.name`, an addition so Jellyfin-only installs keep their name on home); `getFormatSettings()` returns the zone and locale alone for `FormatProvider` and `getFormat()`. `lib/brand.ts` has `productName`, `plexProduct` and `jellyfinClientName` as separate literals (knip flags aliases), async `serverName()` and `rewindName(year)`, and `monogramFor(name, locale?)`, which returns `null` for the pip-only tile; it imports `lib/settings/app-settings.ts`, so it is server-only. `PLEX_PRODUCT_NAME` is gone from `lib/connections/plex-pin.ts`. The Discord `platform_name` fallback is `serverName()`; `lib/validations/discord.ts` still defaults a blank form value to "Plex Wrapped" (left for P10.20). The OG fonts come from IBM's npm releases `@ibm/plex-sans@1.1.0` and `@ibm/plex-mono@1.1.0` (WOFF sources, sha256 in the script), and are renamed "OG Sans" and "OG Mono" because the OFL reserves "Plex"; `lib/og/fonts/` is 276 KB (Plex Mono has no Greek). `lib/og/coverage.ts` reads `coverage.json`; `lib/og/brand-images.tsx` draws the icons and the OG card (monogram tile, name, and the public host in Mono); a name the fonts cannot draw becomes `productName` on the card. Every image route and the manifest await `connection()`, and `next.config.js` adds `lib/og/fonts/*` to `outputFileTracingIncludes`. `app/twitter-image.tsx` re-exports all but `runtime`, which Next will not accept re-exported. The root `generateMetadata` also sets `metadataBase` from `NEXT_PUBLIC_APP_URL` (else `NEXTAUTH_URL`), so the OG URL is absolute; P3.2 keeps it and adds the rest. `public/icon.svg` is deleted but `public/.gitkeep` stays, because the Dockerfile copies `public/` (P4.17 may drop both). Jest cannot load `@vercel/og`, so `app/__tests__/icon-routes.test.tsx` captures the element and renders it in a child Node process (`lib/og/__tests__/helpers/render-png.cjs`) with `fetch` disabled except for `data:` URLs, which `@vercel/og` uses for its own WebAssembly. Chart.js: `registerCharts()` also registers the line, bar, doughnut and pie controllers; `chartTheme(mode)` adds `area` (each series at 16%, through `lib/design/color.ts`) and `other`; `CostTrendChart` takes `mode` (default dark), drops its legend (one series, titled by its card) and fills its area for the first time. The knip entries for `tokens.ts` and `color.ts` are gone: their test-only exports are `@internal`, and exports awaiting Rewind callers (`inkProps`, `archetypeInks`, `radius`, `fonts`, `rewindName`, `rewindChartTheme`, `posterPalette`) are `@public`. `/dev/ui` gains Status vocabulary (every row, filled from a fixed date, plus the settings-nav glyphs), Icon concepts and the poster palette at the end of the sheet. There is no cost-analysis visual screen, so the changed baselines are `primitives-dark`, `primitives-light` (the three new sections) and `primitives-toast-error` (its viewport now shows them below the toast) at both sizes, regenerated locally on a production build. No design-debt count rose; `cost-trend-chart.tsx` fell to zero. The axe spec passes unchanged.)
+
 **Done when.**
-- [ ] `status.ts`, `icons.ts`, `poster-palette.ts`, `brand.ts` and `charts/theme.ts` exist with tests, and each has a production importer.
-- [ ] The icons, manifest and default OG image render offline from committed fonts within the 300 KB budget.
-- [ ] Hard-coded product names use `lib/brand.ts`.
-- [ ] CLAUDE.md's tree lists the new folders.
+- [x] `status.ts`, `icons.ts`, `poster-palette.ts`, `brand.ts` and `charts/theme.ts` exist with tests, and each has a production importer.
+- [x] The icons, manifest and default OG image render offline from committed fonts within the 300 KB budget.
+- [x] Hard-coded product names use `lib/brand.ts`.
+- [x] CLAUDE.md's tree lists the new folders.
 
 ### Step P3.10: One formatter module
 
@@ -3833,11 +3849,24 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 
 **Demo.** In a production build, a member who opens `/admin` sees the Unauthorized screen. From devtools, `validateInvite` returns two fields, and `checkServerAccess` with `initialDelay: 600000` is refused in under 100 ms.
 
+**As merged.**
+- `ActionErrorCode` also has `INVITE_INVALID` and `INVITE_WRONG_SERVICE`, the codes P4.12 introduced. `ActionResult<T, C>` and `ActionFailure<C>` take an optional code parameter, so the Rewind generation actions keep their `GenerationRefusalCode` and `RewindInfraCode` values (`REWIND_NOT_ELIGIBLE`, `REDIS_UNAVAILABLE`, ...) beside the action codes.
+- `defineAction({ auth, input?, rateLimit?: { name, by?: 'ip' | 'user' }, fallbackError?, handler })`: the limit is keyed by user id for member and admin actions and by address for public ones, and is spent after the input parses. `defineAction` itself is `@internal`; modules use the three aliases. Next's `redirect()` and `notFound()` are rethrown (`unstable_rethrow`).
+- Every migrated action takes one input object: `checkServerAccess({ token, isInviteFlow })` (a strict object, so `initialDelay` or `maxRetries` is `VALIDATION`), `processInvite({ code, plexAuthToken })`, `processJellyfinInvite({ code, credentials })`, `completeOnboarding({ service })`, `getOnboardingStatus({ service }?)`, `startCheckout({ priceId })`, `getUserPlexWrapped({ userId, year })`; `validateInvite(code)` takes the code itself. Results are `{ success, data }`, so callers read `result.data`.
+- Migrated: `actions/auth.ts`, the public and `createInvite` exports of `actions/invite.ts` (P4.12's `validateAndUseInvite(code, ServerType)` kept; the admin list, detail and delete exports stay on `requireAdmin()` for P11.5), `onboarding`, `watchlist`, `subscription`, `disconnectDiscordAccount` and `resyncDiscordRole`, `getActiveAnnouncements` and `getPrometheusStatus` (now member-only), `server-info` (`getServerName` public, `getAvailableLibraries` admin), `getUserPlexWrapped`, `wrapped-share-link`, all three `rewind-generation` actions, and the admin `testPromptTemplate`, whose `model` must be a catalogue id (`listKnownModels()` after `normalizeModelId`). Not migrated: `setup.ts` and `dev-defaults.ts` (P11.32), and the other admin modules (P11.5).
+- `lib/guards.ts` is a `server-only` module, no longer `'use server'`, so none of its guards is a callable action; `getAccessGateStatus` comes from `lib/access.ts`. `getActivePromptTemplate` became a direct read in `generateWrappedPrompt`; `lib/wrapped/prompt-template.ts` is now `server-only`, and the texts the admin prompt editor and playground show (`generateSystemPrompt`, `getDefaultPromptTemplate`, `getAvailablePlaceholders`) moved to the client-safe `lib/wrapped/prompt-text.ts`.
+- `shareTokenSchema` and `yearParamSchema` (the URL form of `yearSchema`) moved from `shared-schemas.ts` into `lib/validations/params.ts`, beside `ratingKeySchema`. `cuidSchema` became `recordIdSchema` (`/^[A-Za-z0-9_-]{1,64}$/`): seeds and the E2E fixtures use readable ids such as `visual-rewind`, which a strict cuid check turned into 400s on the admin history pages. Route 400s use the existing `{ error, code: 'VALIDATION_ERROR' }` body of `createSafeError`. A malformed share token is now a 400, not the enumeration-proof 404 (its shape reveals nothing); the poster route validates its `share` query too. `api/discord/callback` redirects with a fixed error for a malformed query instead of a 400, since the member's browser lands there, and both Discord routes stop forwarding the thrown message. `api/admin/plex/users` stops echoing the upstream error.
+- Members get public URLs only in more places than `getOnboardingInfo`: the home page's requests link and Jellyfin link, and the Jellyfin invite success screen (`publicUrl` or null).
+- `isHttpUrl()` is in `lib/validations/shared-schemas.ts`. At the P3.8 merge the two copies became one, P3.8's `isHttpUrl(url: URL)`, which `safeHref` and `createPublicUrlSchema` (after `URL.canParse`) both call.
+- The guardrail is `actionsAndApi` plus `migratedActionFiles` in `eslint/restricted-syntax.mjs` (P3.4 had not merged): `actions/**` warns, `app/api/**` and the migrated modules error, and each block repeats the formatting selectors at its level. The selector matches only `x instanceof Error ? x.message : ...`, so passing the error object to a logger stays allowed.
+- `getAdminGate()` fixed BP-27 without `authInterrupts`: the installed Next 16.4.2 keeps an existing digest. Next still renders an admin page beside the layout, so its own `requireAdmin()` throws are logged with the `PM_FORBIDDEN` digest, but the layout's screen is what the visitor sees. The 17 `test.fixme` cases are gone, and `admin-protection.spec.ts` asserts `unauthenticated-error-page` (new test id on `UnauthenticatedError`) and `unauthorized-error-page`.
+- P4.7's `setUserDisabled` moved onto `adminAction` after the merge: its result is `ActionResult<null, ActionErrorCode | "SELF" | "OWNER" | "LAST_ADMIN" | "NOT_FOUND">`, the way the Rewind actions widen the code. `updateUserAdminStatus` and the rest of `actions/admin/admin-users.ts` stay on `requireAdmin()` for P11.5, so the module is not in `migratedActionFiles`.
+
 **Done when.**
-- [ ] `defineAction` and `ActionResult` exist with tests, and every public and member action, the invite actions and `server-info` use them.
-- [ ] The route handlers validate their parameters with the shared schemas, and the public URL schema accepts only http and https.
-- [ ] No migrated module returns `error.message`, and the lint rule enforces it.
-- [ ] The admin gate works in a production build without matching error names or messages.
+- [x] `defineAction` and `ActionResult` exist with tests, and every public and member action, the invite actions and `server-info` use them.
+- [x] The route handlers validate their parameters with the shared schemas, and the public URL schema accepts only http and https.
+- [x] No migrated module returns `error.message`, and the lint rule enforces it.
+- [x] The admin gate works in a production build without matching error names or messages.
 
 ### Step P4.5: Enforce entitlement beyond the layout
 
@@ -3886,10 +3915,21 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 
 **Demo.** With Stripe on, a canceled member who calls `triggerWatchlistSync` from devtools gets `NOT_ENTITLED`, but can still open their stored Rewind. The batch log shows "skipped: NOT_ENTITLED".
 
+**As merged.**
+- `getAccessLevel(userId)` is in `lib/access.ts` and always reads the user row, so a disabled user is `none` with Stripe on or off (this replaces P4.7's gating-off fast path); a missing user is `none`. `getAccessGateStatus` had no callers left and was deleted. `entitledUserWhere(stripeEnabled)` beside it is the query form of `isAccessAllowed`, used by `syncAllEnabledUsers`.
+- New `lib/actions/entitlement.ts` (`server-only`): `requestAccessLevel` (`cache(getAccessLevel)`), `hasEntitlement(userId, 'full' | 'read')` and `NOT_ENTITLED_MESSAGE`. Admins pass because `getAccessLevel` reports them `full`, not through a session shortcut, so a disabled admin is refused too. `memberAction({ entitlement })` checks it right after the session, before the input parses; only `memberAction` accepts the option. `requireEntitlement(session, level, { redirectFrom?, headers? })` in `lib/actions/route.ts` answers 403 `{ error, code: 'NOT_ENTITLED' }` (new `ErrorCode.NOT_ENTITLED`) or redirects to `/subscribe` when `redirectFrom` is given.
+- The path rule is `lib/access-paths.ts` (`isMemberAppPath`, `needsSubscribeRedirect`), shared by `proxy.ts` and the `(app)` layout. `(app)` paths are found by exclusion (every path except `admin`, `api`, `auth`, `dev` (P3.4's `/dev/ui`, added at the merge), `invite`, `onboarding`, `setup`, `subscribe`, `/wrapped/share/*`, `/_*` and file names), so a new member page is covered without being listed; `__tests__/proxy.test.ts` walks `app/` and checks every route folder both ways. A new folder outside `(app)` (for example P7.10's public `/rewind/s/*`) must be added to the exclusions, or that test fails.
+- The header name is `PATHNAME_HEADER` in `lib/request-headers.ts`. The proxy sets it on every forwarded request, 404 rewrites included.
+- The proxy redirects only GET and HEAD (a Server Action POST checks entitlement itself). It trusts a `full` claim without a query, confirms a `lapsed` or `none` claim with `getAccessLevel` before redirecting (so a member who renewed is not sent away by a stale claim), and decides nothing for a token without the claim or when the read fails. Why the confirmation: no `SessionProvider` calls `/api/auth/session`, and `getServerSession` in Server Components and actions cannot write cookies, so the claim is in practice the sign-in value until the member signs in again (P4.7's revoke ends the session at cancellation).
+- `getWatchlistSyncHistory` does not exist: the history is read by `getWatchlistSyncSettings`, which takes `read`. `updateWatchlistSyncSettings` checks `full` only when enabling. The batch also counts and logs the due members it skipped (`Batch watchlist sync skipped users`, `reason: NOT_ENTITLED`); the processor returns `{ success: false, skipped: 'NOT_ENTITLED' }` without throwing.
+- A session below `read` on the poster route gets the 403 only without a share token; with one it is served as a signed-out share request.
+- The Discord connect route test stayed beside the route (`app/(app)/discord/__tests__/connect-route.test.ts`) instead of a new `__tests__/api/discord-connect-route.test.ts`. The filter also runs against Postgres in `__tests__/lib/access-entitled-where.pg.test.ts`.
+- E2E: `signInAs(context, baseURL, userId, { accessLevel })` mints the claim (seeded sessions carry none, as pre-P4.5 tokens). `/rewind/*` does not exist yet, so the soft-navigation case opens `/wrapped/2026` (a season year the member has no Rewind for) and follows its new `wrapped-generate-link` home. Next re-renders the `(app)` layout on that navigation too (the root `loading.tsx` sits above it), so the E2E passes with either layer; the proxy's own RSC and prefetch handling is covered by `__tests__/proxy.test.ts`.
+
 **Done when.**
-- [ ] `getAccessLevel` returns `full`, `lapsed` or `none`, and the action helper and route helper enforce `full` and `read`.
-- [ ] The watchlist, Discord, poster and generation paths and the watchlist jobs check entitlement, with Stripe on and off.
-- [ ] Lapsed members reach only the read-only Rewind routes, on full loads and on client-side navigation, and the matrix is in `docs/stripe.md`.
+- [x] `getAccessLevel` returns `full`, `lapsed` or `none`, and the action helper and route helper enforce `full` and `read`.
+- [x] The watchlist, Discord, poster and generation paths and the watchlist jobs check entitlement, with Stripe on and off.
+- [x] Lapsed members reach only the read-only Rewind routes, on full loads and on client-side navigation, and the matrix is in `docs/stripe.md`.
 
 ### Step P4.6: Never send a stored secret to a new address; audit config changes
 
@@ -3941,11 +3981,23 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 
 **Demo.** In settings, change Tautulli's URL to a netcat listener, leave the key blank and save: the form says "Enter the API key again", and the listener receives nothing. `SELECT type, details FROM "AuditLog" ORDER BY "createdAt" DESC LIMIT 3` then shows `CONFIG_CHANGED` rows with origins and `secretChanged`.
 
+**As merged.**
+- The migration is `20261111000000_audit_log`. `actorUserId` is not a foreign key, so a row outlives its user; `requestId` stays null until P11.4 adds request IDs.
+- `logAuditEvent(type, userId, details?)` is unchanged for its callers: stdout gets the details as before (the logger sanitises them), and the row gets `sanitizeValue(details)` with `targetUserId` in its own column. A failed write logs `audit.persist_failed`. `recordAuditEvent(type, userId, details?, db = prisma)` awaits the row and throws on failure; pass a transaction client as `db` to write it inside a `$transaction`.
+- `resolveSecretForOrigin` returns `{ ok: false, code: 'SECRET_REQUIRED' }`; the actions return it as a widened code (`ActionResult<null, ActionErrorCode | SecretRequiredCode>`, `SECRET_REQUIRED_MESSAGE` as copy), not as a new `ActionErrorCode`, so `errorCopy` is unchanged. With no stored row a blank secret is a plain `VALIDATION` "required" error. The LLM rule compares the key's destination: the base URL for `openai-compatible`, each hosted provider's API origin otherwise.
+- `configDiff(section, before, after, { secretFields, urlFields })` lists only the URL fields present in the rows; a secret left `undefined` in `after` counts as kept. Sections are `plex`, `jellyfin`, `tautulli`, `overseerr`, `sonarr`, `radarr`, `prometheus`, `jellyfin.login`, `llm.chat`, `llm.wrapped` (plus `from`/`to` provider and model), `llm`, `rewind.season`, `stripe`, `stripe.enabled`, `watchlist`, `prompt` (plus `action` and `templateId`) and `setup.*`.
+- The LLM saves now emit `CONFIG_CHANGED` instead of `LLM_PROVIDER_CHANGED`; that enum member stays, tagged `@public` for knip.
+- Every touched admin action is on `adminAction` and in `migratedActionFiles` except `admin-servers.ts`, whose `getJellyfinLibraries` still returns `error.message` (P11.5). Single-value actions keep their argument (`toggleJellyfinLogin(enabled)`, `setLLMDisabled(disabled)`, `setStripeEnabled(enabled)`, `deletePromptTemplate(id)`, `setActivePromptTemplate(id)`); `updatePromptTemplate` takes `{ id, ...fields }`. Results are `{ success: true, data }`.
+- Prompt activation deactivates every row with one unfiltered `updateMany` before switching the chosen row on, all in one transaction, so a concurrent activation waits on the row locks; create and update activate the same way.
+- Setup saves accept a blank secret and reuse the active row's only for the same origin. The actor is `setup` before setup completes and the admin's id after; there is no claim id until P11.32.
+- The Postgres test is `__tests__/lib/security/audit-log.pg.test.ts`, beside the other `.pg` suites: under `lib/` it would count toward the `lib/security/` coverage floor.
+- Not present in the code, so nothing to emit: `deleteJellyfinServer`, `deletePrometheus` and a queue-schedule settings action (the watchlist interval is the only schedule setting). `getJellyfinServerInfo` was deleted: its only caller discarded the result.
+
 **Done when.**
-- [ ] A blank secret is reused only for the same origin, in settings, connection tests and setup.
-- [ ] `AuditLog` exists, and every audit event is written to the database as well as stdout.
-- [ ] Every credential, settings, setup and template mutation emits `CONFIG_CHANGED` with a redacted diff.
-- [ ] Prompt activation is atomic.
+- [x] A blank secret is reused only for the same origin, in settings, connection tests and setup.
+- [x] `AuditLog` exists, and every audit event is written to the database as well as stdout.
+- [x] Every credential, settings, setup and template mutation emits `CONFIG_CHANGED` with a redacted diff.
+- [x] Prompt activation is atomic.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
 
 ### Step P4.7: Sessions end when access ends; role changes stick
@@ -4002,11 +4054,22 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 - An admin clicks Unshare on a signed-in member. Within five minutes, the member's next page load shows sign-in, and `/api/auth/session` returns `{}`.
 - Promote a member in the UI and sign them in again: they are still an admin.
 
+**As merged.**
+- The migration folder is `20261110000000_user_session_version`, so it sorts after every earlier folder.
+- `endUserSessions(userId, reason, actorId)` lives in `lib/session-revocation.ts` with `SessionRevokedError` and `SYSTEM_ACTOR` (`"system"`, the Stripe revoke's actor). `reason` is the `SessionRevocationReason` union (`unshared`, `demoted`, `disabled`, `subscription_revoked`); P4.11 and P4.18 add theirs. A missing row is a no-op with no audit event.
+- A demotion ends the user's sessions too, so a demoted admin signs in again as a member.
+- P4.3 had not merged, so `setUserDisabled` (in `actions/admin/admin-users.ts`) is written in today's action style (`requireAdmin`, Zod, `{ success, error, code }`); P4.3 moves it onto `adminAction`. Refusal codes for it and `updateUserAdminStatus`: `SELF`, `OWNER`, `LAST_ADMIN`, `NOT_FOUND`.
+- P4.5 had not merged, so there is no `getAccessLevel` yet: `AccessFacts` gained `disabled` and `isAccessAllowed` returns false for it (the bot's checks pass it). `getAccessGateStatus`'s gating-off fast path still reads no user row; P4.5's `getAccessLevel` must return `none` when `disabledAt` is set.
+- `authenticateJellyfin` returns `adminStatus` (`'admin' | 'not-admin' | 'unknown'`) instead of `isAdmin`; a lookup that fails, throws or carries no IsAdministrator flag is `'unknown'`. The `JellyfinServer.adminUserId` column stays; nothing reads it now.
+- `authOptions.logger.error` drops next-auth's `JWT_SESSION_ERROR` for a `SessionRevokedError` (the callback logs `auth.session_revoked` at info) and routes every other next-auth error through `createLogger`.
+- `ConfirmModal` gained `confirmTestId`. The user detail page shows a `Disabled` badge (`admin-user-disabled-badge`) and the button; the `admin-user-detail` visual baselines (desktop and mobile) were regenerated for it, and the role row now wraps on mobile.
+- E2E: the minted session writes `sv` from the seeded row (`e2e/fixtures/session.ts`). The disable spec signs in a member of its own, so the seeded users stay enabled.
+
 **Done when.**
-- [ ] The JWT refresh checks `sessionVersion` and `disabledAt`, and a mismatch, a disabled user or a missing row ends the session.
-- [ ] Unshare, demotion, disable and the Stripe revoke bump the version.
-- [ ] Login only promotes, so roles set in the UI persist, and the owner and the last admin cannot be demoted.
-- [ ] A failed Jellyfin lookup changes nothing and writes no audit event.
+- [x] The JWT refresh checks `sessionVersion` and `disabledAt`, and a mismatch, a disabled user or a missing row ends the session.
+- [x] Unshare, demotion, disable and the Stripe revoke bump the version.
+- [x] Login only promotes, so roles set in the UI persist, and the owner and the last admin cannot be demoted.
+- [x] A failed Jellyfin lookup changes nothing and writes no audit event.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
 
 ### Step P4.8: Bind the Plex PIN to the browser
@@ -4061,10 +4124,20 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 - Pasting the callback URL into another browser shows "Sign-in didn't finish".
 - plex.tv's device list shows one Plex Manager device per browser.
 
+**As merged.**
+- `lib/security/signed-cookie.ts` is `server-only`: `signValue(payload, purpose, ttlSec)`, `verifyValue(raw, purpose)` (the payload without `exp`, or `null`; callers parse it with their own Zod schema) and `readCookie(header, name)`. The HKDF info is `plex-manager:signed-cookie:<purpose>`; purposes are free strings (`plex-pin`, `plex-client`; P4.9 uses `discord-oauth`). Values are signed, not encrypted.
+- The cookies live in `lib/plex-pin-cookie.ts` (`pinCookie`, `readPinCookie`, `clientCookie`, `readClientCookie`): `pm-plex-pin` is `{ pinId, code, clientId, inviteCode? }` for 900 s, `pm-plex-client` is `{ clientId }` (a UUID) for a year, both httpOnly, SameSite=Lax, path `/`, Secure exactly when the session cookie is. The invite code schema moved to `lib/validations/invite.ts`.
+- `lib/connections/plex-pin.ts` returns `readPin` as `waiting | ready (authToken) | expired (plex.tv 404) | unavailable`. Under `isConnectionTestBypassed()` (Jest, and the E2E server) it sends nothing: a made-up PIN that stays `waiting`, which is what the E2E spec drives.
+- `startPlexSignIn({ inviteCode? })` returns `{ authUrl }`; `pollPlexSignIn()` returns `{ status }`, `expired` for a missing, tampered or foreign cookie (it never reaches plex.tv), and maps a plex.tv hiccup to `waiting`; the per-PIN limit reuses `plex:pin:poll` with the subject `pin:<id>`, beside the action's IP limit. `finishPlexSignIn()` deletes `pm-plex-pin` and returns `{ next }`: `/subscribe` below `full` access (the `gated` case), `/onboarding` until onboarding is done, else `/`.
+- The Plex provider has `credentials: {}` and throws its codes as error messages: `plex_pin_expired` (no valid cookie, or the PIN is not ready), `invite_invalid` (`INVITE_INVALID` or `INVITE_WRONG_SERVICE`), `access_denied` (was `ACCESS_DENIED`) and `sign_in_failed`; next-auth's App Router handler passes `Object.fromEntries(await headers())`, so `req.headers.cookie` is the raw header (proved through the real route in `auth-plex-authorize.test.ts`). The route's `auth:plex` limit gives `rate_limited`. Without the cookie `authorize` throws `plex_pin_expired` rather than returning null, so the page can say why.
+- P3.2's `flash-codes.ts` has not merged, so the codes and their copy are in the client-safe `lib/plex-sign-in-codes.ts` and the callback page shows them itself (`plex-callback-error-<code>`, heading `plex-callback-error-heading`); `access_denied` still goes to `/auth/denied`, and `gated` is the `/subscribe` redirect, not a shown code. P3.2 or P10.27 can fold them into the flash codes.
+- `redeemPlexInvite(code, token)` and the shared redemption steps moved out of the `'use server'` file, where any export is callable: `lib/invites/redemption.ts` (`validateAndUseInvite`, `withRetry`, `rollbackInviteUsage`, `INVITE_EXEMPTION`) and `lib/invites/plex-redemption.ts` (`redeemPlexInvite`, still `validateAndUseInvite(code, ServerType.PLEX)`). It is idempotent per Plex account: an `InviteUsage` for this code and `plexUserId` returns success without spending a use, so a second `signIn` with the same PIN cannot redeem twice. `processInvite`, `getPlexAuthToken`, `createPlexPin`, `createPlexAuthUrl` and `actions/auth.ts` (`checkServerAccess`, `isSubscriptionGatingEnabled`) are deleted; the invite flow's access retries are `waitForInvitedAccess` in `lib/connections/plex-access-wait.ts`, run by `authorize` when the cookie carries an invite.
+- Owner check left open: with one real account, confirm that `validatePlexToken`, `getPlexWatchlist` and the invite auto-accept work with a token issued to a browser identifier and used with `PLEX_CLIENT_IDENTIFIER`.
+
 **Done when.**
-- [ ] The PIN id lives only in a signed httpOnly cookie, bound to the browser that created it.
-- [ ] No action returns the account token, and the server completes sign-in and invite redemption.
-- [ ] Each browser has its own client identifier, and PIN creation and polling are rate-limited.
+- [x] The PIN id lives only in a signed httpOnly cookie, bound to the browser that created it.
+- [x] No action returns the account token, and the server completes sign-in and invite redemption.
+- [x] Each browser has its own client identifier, and PIN creation and polling are rate-limited.
 
 ### Step P4.9: Discord OAuth redirect and state binding
 
@@ -4107,10 +4180,18 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 - `/discord/connect?redirect=/%5Cevil.com` completes the link and lands on `/discord/link`.
 - Opening an authorize URL started by another account ends with the `discord_session_mismatch` notice.
 
+**As merged.**
+- `safeRedirectPath` also refuses any percent-encoded control character (`%00`-`%1f`, `%7f`), and an empty or missing value; `/discord/connect` no longer 400s a `redirect` that does not start with `/`, it falls back like any other refused value. `createDiscordAuthorizationUrl` stores the vetted path (default now `/discord/link`, was `/`), and `completeDiscordLink` vets the stored `redirectTo` again, for rows written before the allow-list.
+- The cookie lives in `lib/discord/oauth-cookie.ts` (`discordOAuthCookie(state, userId)`, `clearedDiscordOAuthCookie()`, `matchesDiscordOAuthCookie(raw, state, userId)`): `pm-discord-oauth` is `{ stateHash (sha256 hex), userId }` signed for 600 s, httpOnly, SameSite=Lax, path `/api/discord/callback`, Secure exactly when the session cookie is.
+- `consumeOAuthState(state, userId)` is one `updateMany` whose `where` also holds `userId`, then `findUniqueOrThrow`; a count other than 1 throws the exported `DiscordStateError`. `completeDiscordLink(code, state, userId)` takes the session user.
+- Codes: no session, a missing, tampered or foreign cookie, or a cookie for another member or state all give `discord_session_mismatch` (a missing cookie is also what a browser that did not start the flow has); a used or expired state gives `discord_expired`; a Discord `error`, a malformed query and any other failure give `discord_failed`; success gives `discord_linked` on the stored path. Every response clears the cookie. Failures still land on `/` until P6.11.
+- P3.2 had not merged, so `lib/ui/flash-codes.ts` is new here and holds only the four callback codes (`DiscordCallbackFlash`) and `withFlash(path, code)`, which sets `?flash=`. P3.2 adds the connect route's codes (`discord_rate_limited`, `discord_unavailable`, whose redirects still carry fixed `error=` copy), the NextAuth codes, the tones and `FlashFromQuery`; nothing shows the codes yet (P3.2 and P6.11).
+- `e2e/discord-link.spec.ts` gains a case: `/discord/connect` sets the httpOnly `pm-discord-oauth` cookie on the callback path, and a callback with another state lands on `/?flash=discord_session_mismatch`.
+
 **Done when.**
-- [ ] Redirect paths are normalised and allow-listed, and every known bypass string falls back.
-- [ ] The state is bound to the session by a signed cookie, checked against the session user and consumed atomically.
-- [ ] The callback sends only fixed codes.
+- [x] Redirect paths are normalised and allow-listed, and every known bypass string falls back.
+- [x] The state is bound to the session by a signed cookie, checked against the session user and consumed atomically.
+- [x] The callback sends only fixed codes.
 
 ### Step P4.10: Stripe event ordering, idempotency and live re-checks
 
@@ -4159,12 +4240,24 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 
 **Demo.** With the Stripe CLI, resend a `customer.subscription.updated` (active) event after `customer.subscription.deleted`: the row stays CANCELED, and the logs show `stripe.stale_event`. Then make a handler fail by stopping the database briefly, and use "Resend" in the dashboard: the event is processed.
 
+**As merged.**
+- The migration is `20261119000000_stripe_event_processing`. Existing `StripeEvent` rows get `receivedAt = processedAt` and `attempts = 1`, then `processedAt` loses its default and NOT NULL.
+- The ordered write is `applySubscriptionState(match, data, eventAt)` in new `lib/stripe/subscription-sync.ts`, beside `liveSubscriptionState(subscription)`. It returns `missing`, `stale` or `{ applied, userId, status, becameActive }`. Instead of reading the previous status in a transaction, a write into ACTIVE first runs as an `updateMany` whose `where` also requires the status to be UNPAID, CANCELED or INCOMPLETE, so the transition is decided by the same atomic statement that changes the row, and two concurrent workers report it once (`__tests__/lib/stripe/subscription-sync.pg.test.ts`). Checkout matches by `userId` and creates the row when there is none.
+- `customer.subscription.updated` and `deleted` share one handler. A revoke is enqueued after any applied write whose live status is CANCELED or UNPAID, `invoice.payment_failed` included (its event may be the one that applies the final unpaid state), keyed by user and event as before; a grant only on the move into ACTIVE.
+- The processor upserts the row after `events.retrieve` (the event's type is needed for the create), so a failure to fetch the event leaves no row; the route then treats the event as unprocessed. A row that is already processed ends the job without running the handler. `lastError` codes: `STRIPE_NOT_CONFIGURED`, `DB_<Prisma code>`, `DB_UNAVAILABLE`, the Stripe error type (`StripeConnectionError`, ...) or `HANDLER_FAILED`. The audit actor of `STRIPE_EVENT_FAILED` is `system`.
+- The route looks the job up with new `findJob(jobId)` in `lib/queue/client.ts`: `failed` is retried, `waiting`, `active`, `delayed` and the other pending states get a 200, and a `completed` job (an unprocessed event cannot normally have one) is removed and the event enqueued again, as is a missing one.
+- The grant job checks `getAccessLevel(userId) === 'full'` first (so a disabled user is skipped), then exempt or a stored ACTIVE status confirmed live, and returns `{ granted: false, skipped }` without a retry. It calls `checkUserServerAccess` only when the user has a `plexUserId`; a failed check falls through to the invite.
+- `evaluateRevokeGuard` takes `liveStatus` (null when unchecked); the job calls it on the stored state first, and asks Stripe only when that passes.
+- `startCheckout` returns the widened code `ALREADY_SUBSCRIBED` (`ActionResult<{ url }, ActionErrorCode | "ALREADY_SUBSCRIBED">`). `/subscribe` hides the plans when `getAccessLevel` is `full` and shows `subscribe-has-access` copy in the existing notice block.
+- `StripeConfigStatus` gained `hasJobQueue`, which the settings form adds to its "Missing" list as "job queue (REDIS_URL)". `parseStripePriceIds` moved to `lib/stripe/config.ts` and replaced the copies in `admin-config.ts` and `lib/stripe/prices.ts`.
+- Tests use `__tests__/helpers/stripe-fakes.ts`: a fake Stripe whose `subscriptions.retrieve` returns live state, the real SDK's `webhooks` for signed fixture events (`generateTestHeaderString`), and an in-memory `Subscription`/`StripeEvent` store behind `prismaMock`.
+
 **Done when.**
-- [ ] A `StripeEvent` is marked processed only after its handler succeeds, and a resend recovers a failed event.
-- [ ] Subscription writes use live state and never apply an older event over a newer one.
-- [ ] The grant and revoke jobs re-check live state before acting.
-- [ ] Checkout refuses an existing subscription and reuses the customer, and `checkout.session.completed` checks mode, payment status, price and owner.
-- [ ] Stripe cannot be enabled without Redis, and the out-of-order and resent-event tests pass.
+- [x] A `StripeEvent` is marked processed only after its handler succeeds, and a resend recovers a failed event.
+- [x] Subscription writes use live state and never apply an older event over a newer one.
+- [x] The grant and revoke jobs re-check live state before acting.
+- [x] Checkout refuses an existing subscription and reuses the customer, and `checkout.session.completed` checks mode, payment status, price and owner.
+- [x] Stripe cannot be enabled without Redis, and the out-of-order and resent-event tests pass.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
 
 ### Step P4.11: Unshare only this server, idempotently
@@ -4203,10 +4296,12 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 
 **Demo.** The owner shares two servers with a test friend. Unshare in the app: the friend keeps the second server and stays a friend. A second Unshare reports "already removed".
 
+(As merged: `unshareUserFromPlexServer` stays in `lib/connections/plex-invitations.ts` and returns `PlexUnshareResult`: `{ success: true, status: "removed" | "already_removed" }` or `{ success: false, code: PlexUnshareErrorCode }` (`PLEX_AUTH`, `PLEX_UNAVAILABLE`). `PlexUserServer.shareId` is optional (a `<Server>` without `id` has none and counts as no share). `getPlexUsers` now also returns the HTTP `status` of a failure, so a 401 or 403 on the user list is `PLEX_AUTH` too; a failed `/identity` lookup is `PLEX_UNAVAILABLE`. The DELETE also sends `X-Plex-Client-Identifier`. No new `SessionRevocationReason`: the action keeps `unshared` and the revoke keeps `subscription_revoked`, so the role sync is unchanged. The revoke writes `plexInviteStatus: 'revoked'` only where it is not already `revoked` (nulls included); an `already_removed` result whose write changed no row is a rerun and returns `revoked: false` without calling `endUserSessions`, so a rerun bumps the version once in total, while an `already_removed` on a row not yet revoked (an earlier manual unshare, or a crash before the write) still ends the sessions. `unshareUserLibrary` returns `ActionResult<{ status }, ActionErrorCode | PlexUnshareErrorCode>` (still on `requireAdmin`; P11.5 moves it onto `adminAction`), ends the sessions on both successes, and the button's toast says "Library access was already removed" for the second. The action tests are in `__tests__/actions/user-queries.test.ts`, not `actions/__tests__/`. Importing `UnrecoverableError` makes `lib/queue/jobs/stripe.ts` load BullMQ at runtime, so the five `__tests__/lib/queue/` suites that import it now run under `@jest-environment node`. The demo needs a real plex.tv account and is the owner's to run.)
+
 **Done when.**
-- [ ] Unshare deletes only the configured server's share, found by machine identifier and share id.
-- [ ] An already removed share returns success, and authentication failures are not retried.
-- [ ] The recorded-response tests pass.
+- [x] Unshare deletes only the configured server's share, found by machine identifier and share id.
+- [x] An already removed share returns success, and authentication failures are not retried.
+- [x] The recorded-response tests pass.
 
 ### Step P4.12: Jellyfin invites: no Plex redemption, complete compensation
 
@@ -4252,10 +4347,12 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 - Accepting a Jellyfin invite through "Accept with Plex" shows "This invite is for Jellyfin", and the Plex shares are unchanged.
 - With a test hook that fails the database write, the Jellyfin dashboard shows no new enabled user, and the invite's use count is unchanged.
 
+(as merged: the line numbers had moved — `validateAndUseInvite` was at `:247`, `rollbackInviteUsage` at `:192`, the Jellyfin check at `:866` and the outer catch at `:967-975`. `rollbackInviteUsage` is a single `prisma.invite.updateMany` with the `useCount > 0` guard, no transaction. `validateAndUseInvite` returns `{ success: false, code, error }`: an unknown, expired or used-up code is `INVITE_INVALID`, a database error `INTERNAL` with a generic message; the wrong-service check runs right after the lookup, before expiry and use count. Both redemption paths now return that `code`; the Plex path's other error strings are unchanged for P4.3 and P4.8. A failed enable (step 4) returns `{ success: false, code: 'INTERNAL' }` with the "Ask the server owner to enable it" copy and keeps the recorded use. Compensation deletes first; if the delete fails, an account already disabled by step 2 counts as contained (audited as `INVITE_JELLYFIN_FAILURE` stage `compensate`), and one that is not is disabled with a further policy call before the use is restored. The outer catch compensates only while an account exists and is not yet recorded. The owner's list query, which adds email, the invite code, `usedAt` and whether the member also redeemed a Plex invite (an exemption that is then legitimate), is in the P4.12 report and was checked on a seeded `_test` database.)
+
 **Done when.**
-- [ ] The Plex flow rejects Jellyfin codes before consuming them, so they give no library share and no exemption.
-- [ ] Jellyfin accounts stay disabled until the database write succeeds.
-- [ ] A failed write disables or deletes the account and restores the invite, all or nothing, with an audit entry when it cannot.
+- [x] The Plex flow rejects Jellyfin codes before consuming them, so they give no library share and no exemption.
+- [x] Jellyfin accounts stay disabled until the database write succeeds.
+- [x] A failed write disables or deletes the account and restores the invite, all or nothing, with an audit entry when it cannot.
 
 ### Step P4.13: Watchlist requests filed as the member
 
@@ -4299,9 +4396,11 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 - An admin-triggered sync for a member who has not opted in finishes as skipped.
 
 **Done when.**
-- [ ] Every Overseerr request carries `X-Api-User` for the member's matched user, with no admin fallback.
-- [ ] Unmatched, disabled, not-opted-in and not-entitled members are skipped with a typed reason, whatever the trigger.
-- [ ] Triggers are deduplicated and rate-limited, and the totals use atomic increments.
+- [x] Every Overseerr request carries `X-Api-User` for the member's matched user, with no admin fallback.
+- [x] Unmatched, disabled, not-opted-in and not-entitled members are skipped with a typed reason, whatever the trigger.
+- [x] Triggers are deduplicated and rate-limited, and the totals use atomic increments.
+
+(As merged: `submitOverseerrRequest` was at `lib/connections/overseerr.ts:151`, `syncUserWatchlist` at `:27`, `updateSyncSettings` at `:250` and `triggerWatchlistSyncJob` at `actions/admin/queue.ts:385`. The third argument is `requester: { overseerrUserId }`; only the POST carries `X-Api-User`, while the media-status GET stays on the key alone. `buildOverseerrUserIndex(config, { signal })` returns `ServiceResult<OverseerrUserIndex, ServiceErrorCode | "PAGE_LIMIT">` (a `ReadonlyMap<number, number>`); hitting the 50-page cap is `PAGE_LIMIT`, never a partial index, and only a complete index is cached (10 minutes, per URL and key, `clearOverseerrUserIndexCache()` for tests). `findOverseerrUserId(index, plexUserId)` matches a string of digits only. P2.4's `findOverseerrUser` keeps its signature and reads the index through `runLimited`; `overseerrUserPageSchema` left `lib/wrapped/sources/schemas.ts` for a private schema beside the index. The skip codes and their copy are `WatchlistSkipCode` and `WATCHLIST_SKIP_COPY` in the client-safe `lib/watchlist/skip.ts`; the copy goes in `lastSyncError` beside `lastSyncStatus: "skipped"` (no new column), written with `updateMany`, so a member with no settings row gets none, and `lastSyncAt` is set so the batch waits an interval. Order: user missing (treated as `NOT_ENTITLED`, not retried), `WATCHLIST_DISABLED`, `NOT_OPTED_IN`, `NOT_ENTITLED` (the `getAccessLevel` check moved from P4.5's processor into `syncUserWatchlist`; the processor now returns `{ success: true, skipped }`), `NO_PLEX_IDENTITY`, then the Plex-token and Overseerr-config failures, then `OVERSEERR_USER_NOT_FOUND` before plex.tv is called. `syncAllEnabledUsers` also returns at once while `Config.watchlistSyncEnabled` is off. A thrown sync stores "Sync failed. Please try again later." instead of `error.message`. Both triggers enqueue through `addWatchlistSyncUserJob()` in `lib/queue/client.ts`, which carries the deduplication id; the direct (no-Redis) path returns `skipped` and the card toasts its copy. `watchlist:manual` is spent after the entitlement check, through `memberAction`'s `rateLimit`. The README had no watchlist section, so one was added under Features.)
 
 ### Step P4.15: Harden the admin assistant
 
@@ -4338,9 +4437,11 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 **Demo.** Set a test Overseerr display name to the payload and ask the assistant to list Overseerr users. The reply shows the name as plain text, the network panel shows no request to the attacker's host, and the `LLMUsage` row holds only the delta.
 
 **Done when.**
-- [ ] Tool results reach the model wrapped as untrusted data, without emails, and model output renders without images.
-- [ ] The message history is validated (user and assistant roles only, bounded), and `conversationId` ownership is checked.
-- [ ] Each `LLMUsage` row stores only its own call's new content, and the injection fixtures pass.
+- [x] Tool results reach the model wrapped as untrusted data, without emails, and model output renders without images.
+- [x] The message history is validated (user and assistant roles only, bounded), and `conversationId` ownership is checked.
+- [x] Each `LLMUsage` row stores only its own call's new content, and the injection fixtures pass.
+
+(As merged: `runConversationLoop` wraps every tool message, in both contexts, as `{ untrusted_data: <parsed JSON, or the text> }` after the Discord scrub. The three rules are `UNTRUSTED_DATA_RULES` in `lib/chatbot/assistant.ts`, appended to the admin and the Discord prompt. A new `actions/chatbot/executors/personal-fields.ts` (`withoutPersonalFields`) drops `email`, `ip_address`, `ip_address_public`, `server_token` and `user_token` at any depth from the Tautulli users, activity (admin context), watch-history and recently-watched tools and from the three Overseerr request and media-details tools; `get_overseerr_users` returns `{ users: [{ id, displayName, requestCount, permissions }] }`. `chatWithAdminBot({ messages, conversationId? })` is an `adminAction` returning `ActionResult<{ message, conversationId? }>`: a foreign conversation is `NOT_FOUND`, a loop failure `UPSTREAM_UNAVAILABLE` with the loop's copy; `conversationId` uses P4.3's `recordIdSchema`, not a strict cuid. `actions/chatbot/index.ts` joined `migratedActionFiles`. The chat window sends the newest turns that fit the bounds (roles and content only), caps its input at 8,000 characters and shows the action's error copy. `chatWithTools` takes a required `usagePrompt: UsagePromptMessage[]` (`{ role: 'user' | 'tool', name?, content }`) and stores it as a JSON message array, the shape the admin usage pages already read, with each message's text cut to its share of 4,096 characters. No other path renders model text as HTML: `MarkdownBody` is the only Markdown renderer and nothing uses `dangerouslySetInnerHTML`; the sources list and the usage pages render text. For P4.20: the admin limit goes on the action's `rateLimit` option, and the spend check before `chatWithTools` in the loop.)
 
 ### Step P4.16: Redact secrets and identifiers from logs
 
@@ -4388,10 +4489,12 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 **Demo.** In production mode, open a share link and an invite link, and complete a Discord link. `docker logs <container> | grep -E 'share/|invite/|code=|state='` shows only masked values, and a forced error prints its stack.
 
 **Done when.**
-- [ ] Share tokens, `/rewind/s/*` and card asset paths, OAuth codes and states, PIN ids, invite codes and client IPs are masked, including inside message strings.
-- [ ] Error metadata is serialised with its stack.
-- [ ] The Discord bot uses the shared sanitising logger.
-- [ ] The redaction-list tests pass.
+- [x] Share tokens, `/rewind/s/*` and card asset paths, OAuth codes and states, PIN ids, invite codes and client IPs are masked, including inside message strings.
+- [x] Error metadata is serialised with its stack.
+- [x] The Discord bot uses the shared sanitising logger.
+- [x] The redaction-list tests pass.
+
+(As merged: `REDACT_RULES`, `sanitizeText`, `sanitizeValue` and `maskIp` live in `lib/utils/log-redaction.ts`, which `logger.ts` imports, to keep the rules apart from the logger P11.4 trims; `sanitizeUrlForLogging` is now `sanitizeText`. P4.16 went before P4.5, so `__tests__/proxy.test.ts` already existed and P4.5 rebases onto the new `logger.debug("Incoming request", { method, pathname, query? })` line, which also drops `userAgent`. Metadata keys `state`, `pinId`, `plexPinId`, `inviteCode`, `assetKey` and `shareKey` are redacted by exact name; `code` is not, since error codes use it. Invite logs and audit details carry `inviteCodePrefix` (two characters). The Discord-state log at `integration.ts:78` and the token URL in `server-info.ts` were already gone; no PIN id is logged outside URLs.)
 
 ### Step P4.17: Harden the Docker image and compose file; add a health check
 
@@ -4443,9 +4546,11 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 
 **Done when.**
 - [ ] The image runs Node 24 LTS under tini, with production dependencies from the lockfile, a pinned Prisma CLI and read-only app files.
-- [ ] `/api/health` checks the database and Redis, and `HEALTHCHECK` uses its liveness probe.
+- [x] `/api/health` checks the database and Redis, and `HEALTHCHECK` uses its liveness probe.
 - [ ] Migrations apply inside the image through the pinned CLI, and `REWIND_CACHE_DIR` points at the one writable path.
 - [ ] The image smoke test, including the scan, runs in CI.
+
+(as merged: no Docker daemon was available, so the image was never built; the first and the last two boxes stay open until the `Image Smoke Test` job passes on the pull request. Validated instead: hadolint 2.14.0, shellcheck 0.11.0 and actionlint 1.7.12 are clean; the compose file validates against the compose-spec schema; the standalone build, assembled as the runner stage lays it out, applied every migration on a fresh `_test` database through `docker/prisma-cli` installed with `npm ci --omit=dev` (and failed with `Cannot find module 'dotenv/config'` without the CLI's `NODE_PATH`), answered `/api/health` and the `HEALTHCHECK` command, reported Redis `fail` with 503 in 2.2 s with Redis unreachable while `?probe=live` stayed 200, and drained on SIGTERM in 1.9 s. The base is `node:24-alpine@sha256:44fce696…` (24.22.0 on 2026-10-19). The entrypoint does not export `NODE_PATH`: it sets it on the two CLI calls only (`PRISMA_NODE_PATH`, default `/opt/prisma-cli/node_modules`), so the app never falls back to the CLI's modules. `docker-prisma-pin.test.ts` compares the exact pins with the versions the root `package-lock.json` installs, because the root `package.json` uses caret ranges. The `image-smoke` job replaces P0.3's `docker-build` job, runs on pull requests only and is not required; it uses `aquasecurity/trivy-action` v0.36.0 at `ed142fd0673e97e23eac54620cfb913e5ce36c25` (checked to be on the action's main history), and it also stops Redis to check the 503 and the live probe. P5.10's owner card route and P5.4's `heavy.v3.json` have not merged, so the job only proves `REWIND_CACHE_DIR` writable with `touch`; P5.10 adds the card render and the `ls` of `cards/` to the job. The proxy skips only the request log for `/api/health`: `/api` was already outside the member paths. `.dockerignore` also leaves out `.claude/`. The compose databases move from Postgres 15 to 16, so the README says to dump an existing dev volume before the switch. The runner also deletes the base image's npm, npx, corepack and yarn, which nothing runs any more and whose bundled packages Trivy would otherwise report, and the smoke job checks that `npm` is gone. The unused `dev` stage stays. `visual-baselines.yml` keeps the Node of its Playwright container.)
 
 ### Step P4.18: Discord role metadata follows access; marking acts as the member
 
@@ -4495,10 +4600,13 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 - Cancel a test subscriber in Stripe test mode. Within a minute, their linked role disappears from the Discord member list.
 - `/mark` as a member: the member's Plex shows the item as watched, and the owner's On Deck is unchanged.
 
+(As merged: the migration is `20261124000000_discord_last_watched_hours`. `enqueueRoleSync(userId, reason)` and `runRoleSync` live in new `lib/discord/role-sync.ts` and never throw from the enqueue side; the processors are in `lib/queue/jobs/discord-role.ts` (`DISCORD_ROLE_SYNC` = `discord:role:sync`, `DISCORD_ROLE_RECONCILE` = `discord:role:reconcile`). P4.18 adds no session-ending reason: `SessionRevocationReason` is unchanged, and the role-sync reason is the wider `RoleSyncReason` in `lib/queue/types.ts` (every `SessionRevocationReason` plus `enabled`, `access_granted`, `comp_granted`, `exemption_changed`, `subscription_changed`, `subscription_canceled`, `reconcile`); P4.11's new revocation reason flows into it automatically. `endUserSessions` loads the role sync with a dynamic import (lib/auth.ts imports it), and `role-sync.ts` loads the queue client the same way, so no action or auth path loads BullMQ. Beyond the plan's call sites, re-enabling a disabled user (`setUserDisabled`) also syncs. The grant job syncs only once access is `accepted` (a pending invite gives none yet). Every applied Stripe write syncs, with the toggle on or off (a role sync is not a Plex side effect). `computeRoleMetadata(user, { refreshHours, limiter?, signal? })` returns `{ metadata, watchedHours }`; a failed refresh keeps the stored hours. A fresh link and the member's manual resync also refresh the hours (`syncDiscordRoleConnection` defaults to `refreshHours: true`); only the queued event syncs reuse them. The reconcile is scheduled with new `scheduleCronJob` (`lib/queue/client.ts`) from `startQueueWorker` after the worker starts, pattern `0 4 * * *` in `Config.timezone` (else `TZ`, else UTC) read at boot. It paces itself (25, then a minute's pause, stopping at `shutdownSignal`) instead of delaying jobs, because a delayed job would hold the `discord:role:<userId>` deduplication id and block an event sync for that member. `resolveMemberServerToken(userId, server)` is in new `lib/connections/plex-member-token.ts` and takes the active server's `{ url, token }` (the owner token only reads `/identity`); `markPlexItemWatched` takes a `MemberServerAccess` (`{ kind: "member", url, token }`) that only it builds. `applyMark` returns `watched: "synced" | "no_plex_sign_in" | "failed" | "not_applicable"` instead of `watchedSynced`, and `watchStatusNote()` in `lib/discord/media/mark-labels.ts` holds the reply copy; a member whose resources lack this server gets the same "no Plex sign-in" copy, as the plan says. The `platform_username` tests are in new `lib/discord/__tests__/role-connection-sync.test.ts`, and a Redis suite (`lib/queue/__tests__/discord-role-dedup.redis.test.ts`) checks the deduplication against BullMQ.)
+(As merged, follow-up: the boot schedules the reconcile only while the Discord integration is on, and removes the scheduler and its pending run while it is off, as the watchlist sync does; an always-on no-op schedule put a delayed job on `/admin/queues` and broke its axe baseline and mobile visual baseline.)
+
 **Done when.**
-- [ ] A deduplicated job re-syncs linked-role metadata on unshare, revoke, grant, exemption and subscription changes, and a daily reconcile catches stale rows.
-- [ ] No email is pushed to Discord.
-- [ ] `/mark` and the chatbot tool scrobble with the member's own token, and refuse the scrobble with a clear message when there is none.
+- [x] A deduplicated job re-syncs linked-role metadata on unshare, revoke, grant, exemption and subscription changes, and a daily reconcile catches stale rows.
+- [x] No email is pushed to Discord.
+- [x] `/mark` and the chatbot tool scrobble with the member's own token, and refuse the scrobble with a clear message when there is none.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
 
 ### Step P4.19: Discord privacy firewall fails closed
@@ -4544,9 +4652,11 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 - Ask for a long answer, and it arrives as split messages.
 
 **Done when.**
-- [ ] The unscoped activity fallback is gone, and unmapped callers get an empty session list.
-- [ ] Executor exceptions and error JSON pass through `scrubForDiscord` in the Discord context.
-- [ ] Replies are split or truncated at 2,000 characters on both paths.
+- [x] The unscoped activity fallback is gone, and unmapped callers get an empty session list.
+- [x] Executor exceptions and error JSON pass through `scrubForDiscord` in the Discord context.
+- [x] Replies are split or truncated at 2,000 characters on both paths.
+
+(As merged: P4.19 landed before P4.20 and does not touch `lib/discord/services.ts`; P4.20 adds its limits there without rebasing on it. The 600-token cap is `DISCORD_MAX_OUTPUT_TOKENS` in `lib/chatbot/assistant.ts`, passed as `maxOutputTokens` through `runConversationLoop` (one config field and one call argument in `actions/chatbot/conversation.ts`) to `chatWithTools`, which uses the smaller of it and the provider row's `maxTokens`. In the Discord context an executor's error result (an `"Error..."` string, a non-null top-level `error`, or `success: false`) is replaced by the fixed text before the scrubber rather than projected by it, and a mapped caller's activity is `{ session_count, sessions, scope: "caller" }` without the server-wide activity fields; `scope` is allowlisted. The admin context's thrown-executor text is "Error: tool execution failed (TOOL_EXECUTION_FAILED)." `fitDiscordContent` also splits on single line breaks between paragraphs and sentences.)
 
 ### Step P4.20: LLM quotas and spend caps for the assistant and Discord
 
@@ -4594,10 +4704,12 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 - Send 25 DMs within a minute: from the 21st on, replies are refused without an LLM call.
 
 **Done when.**
-- [ ] The admin assistant, the Discord DM assistant, `/assistant ask`, `/mystats` and resync have per-user Redis limits.
-- [ ] Daily per-user and server spend caps are checked before every LLM call, and fail closed.
-- [ ] Failed but billed calls are recorded through `lib/llm/usage.ts`.
+- [x] The admin assistant, the Discord DM assistant, `/assistant ask`, `/mystats` and resync have per-user Redis limits.
+- [x] Daily per-user and server spend caps are checked before every LLM call, and fail closed.
+- [x] Failed but billed calls are recorded through `lib/llm/usage.ts`.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
+
+(As merged: the migration is `20261119000100_llm_spend_caps`, after P4.10's `20261119000000`. The limits are keyed by app user id; `handleDiscordChat` spends `llm:discord:dm` then `llm:discord:dm:day` after the entitlement gate, so a lapsed member spends nothing. A refusal comes back as `DiscordChatResult.refusal` (copy naming the reset through `retryAfterCopy()` in `lib/security/rate-limit-messages.ts`, or the budget copy), which the DM router and `/assistant ask` send as the reply instead of the fallback. "Assistant spend" is `LLMUsage` rows with a `chatConversationId`, which both assistant paths always set, so Rewind rows never count. `checkSpend` is called in `runConversationLoop` before every `chatWithTools`; `chatWithAdminBot` passes `isAdmin: true`, which selects `llmDailyCapAdminUsd`. A cap reached is `refusal: "BUDGET_EXCEEDED"` (the admin action returns `RATE_LIMITED` with the copy); a failed check is `BUDGET_UNAVAILABLE` with its own copy (`UPSTREAM_UNAVAILABLE` on the web). A Redis error in the cache falls back to the database; only a database or config error fails closed. A cap of 0 refuses every assistant call for that tier. The cache uses P4.2's request-path Redis client; `recordUsage` calls `addSpend`, which adds only to a cached sum that exists (a Lua `EXISTS`/`INCRBYFLOAT`), and a miss caches with `SET ... EX 60 NX`. The settings form has a third field, `llm-cap-admin`, beside `llm-cap-user` and `llm-cap-server`, and saves through `updateLlmCaps` (audited as `CONFIG_CHANGED`, section `llm.caps`), on an opaque `bg-card` panel so axe can measure its contrast (the settings axe counts are unchanged). The two `admin-settings` visual baselines (desktop and mobile) change for the new panel and are regenerated at merge. `chatWithTools` now also records a refusal (`rawFinishReason === "refusal"`) as `outcome: "refusal"`; it already recorded `length` and `content-filter`. The `length` test is in `lib/llm/__tests__/chat.test.ts`, where `chatWithTools` is tested, and `usage.test.ts` covers the cache increment.)
 
 ---
 

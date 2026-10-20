@@ -16,7 +16,8 @@ export const TAUTULLI_TOOLS: RegisteredTool[] = [
     type: "function",
     discordSafe: true,
     userScoped: true,
-    // Sessions are filtered to the caller upstream, but raw Tautulli session
+    // The executor returns only the caller's own sessions in the Discord
+    // context, or none with scope "unmapped". Raw Tautulli session
     // records still carry heavy PII (user, username, friendly_name, user_id,
     // ip_address, machine_id, session_id...). Keep ONLY non-identifying
     // media/player/quality/progress fields; every identifier is excluded.
@@ -24,6 +25,7 @@ export const TAUTULLI_TOOLS: RegisteredTool[] = [
       "result",
       "stream_count",
       "session_count",
+      "scope",
       "sessions",
       "full_title",
       "title",

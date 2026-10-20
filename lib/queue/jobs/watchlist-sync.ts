@@ -19,6 +19,12 @@ const logger = createLogger("WATCHLIST_SYNC_JOB")
 
 /**
  * Process a single user watchlist sync
+ *
+ * `syncUserWatchlist` re-checks the global toggle, the member's opt-in, their
+ * entitlement (which may have lapsed after the job was queued) and their Plex
+ * and Overseerr identities when the job runs, whoever queued it. A skip
+ * finishes the job as `{ success: true, skipped }`, without a retry (SEC-28,
+ * GAP-39).
  */
 async function processWatchlistSyncUser(
   job: Job<WatchlistSyncUserPayload, WatchlistSyncUserResult>
@@ -38,6 +44,11 @@ async function processWatchlistSyncUser(
   if (!result.success) {
     // Throw error to trigger retry mechanism
     throw new Error(result.error || "Sync failed")
+  }
+
+  if (result.skipped) {
+    logger.info("User watchlist sync job skipped", { jobId: job.id, userId, reason: result.skipped })
+    return { success: true, skipped: result.skipped, itemsSynced: 0, itemsRequested: 0, itemsSkipped: 0, itemsFailed: 0 }
   }
 
   const syncResult: WatchlistSyncUserResult = {

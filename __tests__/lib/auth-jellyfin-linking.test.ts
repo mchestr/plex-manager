@@ -210,7 +210,7 @@ describe('Jellyfin authorize: no email-based account linking', () => {
     expect(mockUserCreate).not.toHaveBeenCalled()
     expect(mockUserUpdate).toHaveBeenCalledWith({
       where: { id: 'carol-row' },
-      data: { name: 'carol@example.com', isAdmin: false },
+      data: { name: 'carol@example.com' },
     })
   })
 })

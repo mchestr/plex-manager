@@ -6,12 +6,11 @@
  * check, enqueue and report status, and return at once.
  */
 
-import { getServerSession } from "next-auth"
 import { z } from "zod"
 
 import { getWrappedSettings } from "@/actions/admin"
-import { getAccessGateStatus } from "@/lib/access"
-import { authOptions } from "@/lib/auth"
+import { adminAction, memberAction } from "@/lib/actions/define-action"
+import { fail, ok, type ActionErrorCode, type ActionFailure, type ActionResult } from "@/lib/actions/result"
 import { prisma } from "@/lib/prisma"
 import { checkRewindInfra } from "@/lib/queue/rewind-infra"
 import { enqueueRewindGeneration, type RewindGenerationKind } from "@/lib/rewind/enqueue-generation"
@@ -30,17 +29,18 @@ import { type GenerationRefusalCode, refusalCopy } from "@/lib/wrapped/generatio
 
 const logger = createLogger("REWIND_GENERATION")
 
-export type RewindRequestResult =
-  | { success: true; alreadyQueued: boolean }
-  | { success: false; error: string; code?: GenerationRefusalCode | RewindInfraCode; retryAfterSec?: number }
+/** The action codes plus the Rewind refusal and infrastructure codes the UI branches on. */
+type RewindCode = ActionErrorCode | GenerationRefusalCode | RewindInfraCode
+
+type RewindRequestResult = ActionResult<{ alreadyQueued: boolean }, RewindCode>
 
 type Audience = "admin" | "member"
 
-function refused(code: GenerationRefusalCode, retryAfterSec?: number): RewindRequestResult {
+function refused(code: GenerationRefusalCode, retryAfterSec?: number): ActionFailure<RewindCode> {
   return { success: false, code, error: refusalCopy(code, retryAfterSec), ...(retryAfterSec && { retryAfterSec }) }
 }
 
-function unavailable(code: RewindInfraCode, audience: Audience): RewindRequestResult {
+function unavailable(code: RewindInfraCode, audience: Audience): ActionFailure<RewindCode> {
   return { success: false, code, error: rewindInfraMessage(code, audience) }
 }
 
@@ -48,6 +48,10 @@ const BLOCKER_COPY = {
   NO_PLEX_SERVER: "No active Plex server configured",
   NO_TAUTULLI: "No active Tautulli server configured",
 } as const
+
+const DISABLED = "Wrapped generation is currently disabled"
+
+const onlySeasonYear = (wrappedYear: number) => fail("VALIDATION", `Rewind is only available for ${wrappedYear}`)
 
 /**
  * The checks both actions share once the caller is allowed to ask: the
@@ -57,7 +61,7 @@ const BLOCKER_COPY = {
 async function preflight(user: { id: string; plexUserId: string | null }, audience: Audience) {
   const blocker = await generationBlocker(user)
   if (blocker === "REWIND_NOT_ELIGIBLE") return refused(blocker)
-  if (blocker) return { success: false, error: BLOCKER_COPY[blocker] } as const
+  if (blocker) return fail("NOT_FOUND", BLOCKER_COPY[blocker])
   const infra = await checkRewindInfra()
   return infra.ok ? null : unavailable(infra.code, audience)
 }
@@ -75,43 +79,36 @@ async function enqueue(userId: string, year: number, kind: RewindGenerationKind)
 /**
  * Asks for the signed-in member's Rewind for the season year.
  *
- * Checks, in order: the session; the season window for members (admins
- * whenever the feature is on); `year` is the season year; entitlement
- * (`NOT_ENTITLED`); only admins regenerate a completed Rewind; a run already
+ * Checks, in order: the session and entitlement (`NOT_ENTITLED`, the action
+ * helper's `full`); `{ year }`; the season window for members (admins
+ * whenever the feature is on); `year` is the season year; only admins regenerate a completed Rewind; a run already
  * queued answers `alreadyQueued`; the Plex identity, configuration and
  * Tautulli match (`REWIND_NOT_ELIGIBLE`); Redis (FR-50); then, for members,
  * the `rw:gen` limits (`RATE_LIMITED`). Deduplication refunds the points.
  */
-export async function requestRewindGeneration(input: { year: number }): Promise<RewindRequestResult> {
-  try {
-    const session = await getServerSession(authOptions)
-    const userId = session?.user?.id?.trim()
-    if (!session || !userId) return { success: false, error: "Unauthorized" }
+export const requestRewindGeneration = memberAction({
+  entitlement: "full",
+  input: z.object({ year: yearSchema }),
+  fallbackError: "Failed to start your Rewind",
+  handler: async ({ year }, { session, userId }): Promise<RewindRequestResult> => {
     const isAdmin = session.user.isAdmin
     const audience: Audience = isAdmin ? "admin" : "member"
 
     const { wrappedEnabled, featureEnabled, wrappedYear } = await getWrappedSettings()
-    if (!wrappedEnabled && !(isAdmin && featureEnabled)) {
-      return { success: false, error: "Wrapped generation is currently disabled" }
-    }
-    const parsed = z
-      .object({ year: z.literal(wrappedYear, { error: `Rewind is only available for ${wrappedYear}` }) })
-      .safeParse(input)
-    if (!parsed.success) return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid parameters" }
-    const { year } = parsed.data
+    if (!wrappedEnabled && !(isAdmin && featureEnabled)) return fail("CONFLICT", DISABLED)
+    if (year !== wrappedYear) return onlySeasonYear(wrappedYear)
 
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, plexUserId: true } })
-    if (!user) return { success: false, error: "User not found" }
-    if (!(await getAccessGateStatus(userId))) return refused("NOT_ENTITLED")
+    if (!user) return fail("NOT_FOUND", "User not found")
 
     const wrapped = await prisma.plexWrapped.findUnique({
       where: { userId_year: { userId, year } },
       select: { status: true },
     })
     if (wrapped?.status === "completed" && !isAdmin) {
-      return { success: false, error: "Only admins can regenerate wrapped data" }
+      return fail("FORBIDDEN", "Only admins can regenerate wrapped data")
     }
-    if (await hasActiveGeneration(userId, year)) return { success: true, alreadyQueued: true }
+    if (await hasActiveGeneration(userId, year)) return ok({ alreadyQueued: true })
 
     const blocked = await preflight(user, audience)
     if (blocked) return blocked
@@ -123,37 +120,25 @@ export async function requestRewindGeneration(input: { year: number }): Promise<
     const queued = await enqueue(userId, year, isAdmin ? "admin" : "member")
     if (!isAdmin && (!queued || queued.alreadyQueued)) await refundGenerationPoints(userId)
     if (!queued) return unavailable("REDIS_UNAVAILABLE", audience)
-    return { success: true, alreadyQueued: queued.alreadyQueued }
-  } catch (error) {
-    logger.error("Error requesting a Rewind generation", error)
-    return { success: false, error: "Failed to start your Rewind" }
-  }
-}
+    return ok({ alreadyQueued: queued.alreadyQueued })
+  },
+})
 
 /**
  * Regenerates a member's Rewind for the season year, for an admin. It ignores
  * the season window and the member limits, and writes an audit entry. The
  * current Rewind and its share links stay live until the new one lands (FR-40).
  */
-export async function adminRegenerateRewind(input: { userId: string; year: number }): Promise<RewindRequestResult> {
-  try {
-    const session = await getServerSession(authOptions)
-    const adminId = session?.user?.id
-    if (!session || !adminId || !session.user.isAdmin) return { success: false, error: "Unauthorized" }
-
+export const adminRegenerateRewind = adminAction({
+  input: z.object({ userId: userIdSchema, year: yearSchema }),
+  fallbackError: "Failed to regenerate the Rewind",
+  handler: async ({ userId, year }, { userId: adminId }): Promise<RewindRequestResult> => {
     const { featureEnabled, wrappedYear } = await getWrappedSettings()
-    if (!featureEnabled) return { success: false, error: "Wrapped generation is currently disabled" }
-    const parsed = z
-      .object({
-        userId: userIdSchema,
-        year: z.literal(wrappedYear, { error: `Rewind is only available for ${wrappedYear}` }),
-      })
-      .safeParse(input)
-    if (!parsed.success) return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid parameters" }
-    const { userId, year } = parsed.data
+    if (!featureEnabled) return fail("CONFLICT", DISABLED)
+    if (year !== wrappedYear) return onlySeasonYear(wrappedYear)
 
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, plexUserId: true } })
-    if (!user) return { success: false, error: "User not found" }
+    if (!user) return fail("NOT_FOUND", "User not found")
 
     const blocked = await preflight(user, "admin")
     if (blocked) return blocked
@@ -165,41 +150,33 @@ export async function adminRegenerateRewind(input: { userId: string; year: numbe
       year,
       alreadyQueued: queued.alreadyQueued,
     })
-    return { success: true, alreadyQueued: queued.alreadyQueued }
-  } catch (error) {
-    logger.error("Error regenerating a Rewind", error)
-    return { success: false, error: "Failed to regenerate the Rewind" }
-  }
-}
+    return ok({ alreadyQueued: queued.alreadyQueued })
+  },
+})
 
 /**
  * The status the Rewind UI polls (BP-22): status columns only, never `data`.
  * A member reads their own; an admin may pass `userId` to read a member's.
  */
-export async function getRewindStatus(input: {
-  year: number
-  userId?: string
-}): Promise<RewindStatus | { error: string }> {
-  const session = await getServerSession(authOptions)
-  const sessionUserId = session?.user?.id
-  if (!session || !sessionUserId) return { error: "Unauthorized" }
+export const getRewindStatus = memberAction({
+  input: z.object({ year: yearSchema, userId: userIdSchema.optional() }),
+  fallbackError: "Failed to load the Rewind status",
+  handler: async (input, { session, userId: sessionUserId }): Promise<ActionResult<RewindStatus>> => {
+    const userId = input.userId ?? sessionUserId
+    if (userId !== sessionUserId && !session.user.isAdmin) return fail("FORBIDDEN", "Admins only.")
+    const { year } = input
 
-  const parsed = z.object({ year: yearSchema, userId: userIdSchema.optional() }).safeParse(input)
-  if (!parsed.success) return { error: "Invalid parameters" }
-  const userId = parsed.data.userId ?? sessionUserId
-  if (userId !== sessionUserId && !session.user.isAdmin) return { error: "Unauthorized" }
-  const { year } = parsed.data
-
-  const [wrapped, latest] = await Promise.all([
-    prisma.plexWrapped.findUnique({
-      where: { userId_year: { userId, year } },
-      select: { status: true, error: true },
-    }),
-    prisma.rewindGeneration.findFirst({
-      where: { userId, year, status: { not: "skipped" } },
-      orderBy: { createdAt: "desc" },
-      select: { status: true, error: true, startedAt: true },
-    }),
-  ])
-  return deriveRewindStatus({ wrapped, latest, infra: checkRewindInfra })
-}
+    const [wrapped, latest] = await Promise.all([
+      prisma.plexWrapped.findUnique({
+        where: { userId_year: { userId, year } },
+        select: { status: true, error: true },
+      }),
+      prisma.rewindGeneration.findFirst({
+        where: { userId, year, status: { not: "skipped" } },
+        orderBy: { createdAt: "desc" },
+        select: { status: true, error: true, startedAt: true },
+      }),
+    ])
+    return ok(await deriveRewindStatus({ wrapped, latest, infra: checkRewindInfra }))
+  },
+})

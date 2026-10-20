@@ -1,12 +1,34 @@
 /**
- * Audit logging for security-sensitive operations
- * Logs admin privilege changes and other critical security events
+ * Audit logging for security-sensitive operations (SEC-55).
+ *
+ * Every event is written twice: a line on stdout through the `AUDIT` logger, and
+ * a row in the append-only `AuditLog` table. Both copies carry details that have
+ * passed through the log sanitiser, so a secret that slips into `details` is
+ * redacted in the database as well. No code path updates or deletes rows.
+ *
+ * - {@link logAuditEvent} is fire-and-forget: it never throws and never waits,
+ *   so a database outage cannot fail the action it audits.
+ * - {@link recordAuditEvent} awaits the write and throws when it fails, for
+ *   callers that write inside a `$transaction` or must know the row landed.
+ *
+ * @module lib/security/audit-log
  */
+
+import type { Prisma } from "@/lib/generated/prisma/client"
+import { prisma } from "@/lib/prisma"
+import { sanitizeValue } from "@/lib/utils/log-redaction"
+import { createLogger } from "@/lib/utils/logger"
 
 export enum AuditEventType {
   ADMIN_PRIVILEGE_GRANTED = "ADMIN_PRIVILEGE_GRANTED",
   ADMIN_PRIVILEGE_REVOKED = "ADMIN_PRIVILEGE_REVOKED",
   USER_CREATED = "USER_CREATED",
+  // Every session of a user was ended (User.sessionVersion bumped). Details carry
+  // the reason, such as "unshared", "demoted", "disabled" or "subscription_revoked".
+  SESSIONS_REVOKED = "SESSIONS_REVOKED",
+  // An admin disabled or re-enabled a user's account (User.disabledAt).
+  USER_DISABLED = "USER_DISABLED",
+  USER_ENABLED = "USER_ENABLED",
   // Invite processing events
   INVITE_CONSUMED = "INVITE_CONSUMED",
   INVITE_PLEX_FAILURE = "INVITE_PLEX_FAILURE",
@@ -29,6 +51,9 @@ export enum AuditEventType {
   SUBSCRIPTION_CANCELED = "SUBSCRIPTION_CANCELED",
   SUBSCRIPTION_ACCESS_GRANTED = "SUBSCRIPTION_ACCESS_GRANTED",
   SUBSCRIPTION_EXEMPT_CHANGED = "SUBSCRIPTION_EXEMPT_CHANGED",
+  // A Stripe webhook event failed its last attempt (SEC-40). Details carry the
+  // event id and an error code; Stripe's "Resend event" retries it.
+  STRIPE_EVENT_FAILED = "STRIPE_EVENT_FAILED",
   // Discord events
   // Emitted when a chatbot tool call is refused in the public Discord context
   // because the requested tool is not in the resolved Discord-safe set (or the
@@ -53,8 +78,10 @@ export enum AuditEventType {
   SHARE_LINK_REVOKED = "SHARE_LINK_REVOKED",
   // The server time zone (Config.timezone) changed. Details carry the old and new zone.
   SERVER_TIMEZONE_CHANGED = "SERVER_TIMEZONE_CHANGED",
-  // An admin saved an LLM provider for a purpose. Details carry the provider,
-  // model, base-URL origin and whether a new key was entered, never the key.
+  /**
+   * @public An LLM provider save, as P2.12 logged it. Kept so the type stays
+   * known; saves are audited as CONFIG_CHANGED since P4.6.
+   */
   LLM_PROVIDER_CHANGED = "LLM_PROVIDER_CHANGED",
   // An admin asked for the Rewind season data (server aggregate and metadata
   // warm) to be prepared. Details carry the year, the last data day and the job id.
@@ -62,50 +89,82 @@ export enum AuditEventType {
   // An admin asked for a member's Rewind to be regenerated. Details carry the year
   // and whether a run was already queued.
   REWIND_REGENERATE_REQUESTED = "REWIND_REGENERATE_REQUESTED",
+  // A credential, settings, setup or prompt-template change. Details carry the
+  // redacted diff from lib/security/config-diff.ts: changed field names, whether
+  // a secret changed, and URL origins only.
+  CONFIG_CHANGED = "CONFIG_CHANGED",
 }
 
-interface AuditLogEntry {
-  type: AuditEventType
-  userId: string
+type AuditDetails = {
   targetUserId?: string
-  details?: Record<string, unknown>
-  timestamp: Date
+  [key: string]: unknown
 }
 
-import { createLogger } from "@/lib/utils/logger"
+/** The prisma client, or a transaction client, that writes the row. */
+interface AuditWriter {
+  auditLog: { create(args: { data: Prisma.AuditLogUncheckedCreateInput }): Promise<unknown> }
+}
 
 const auditLogger = createLogger("AUDIT")
 
-/**
- * Log an audit event
- * In production, this should write to a secure audit log system
- */
-export function logAuditEvent(
-  type: AuditEventType,
-  userId: string,
-  details?: {
-    targetUserId?: string
-    [key: string]: unknown
-  }
-) {
-  const entry: AuditLogEntry = {
-    type,
-    userId,
-    targetUserId: details?.targetUserId,
-    details: details ? { ...details, targetUserId: undefined } : undefined,
-    timestamp: new Date(),
-  }
+interface AuditEntry {
+  type: AuditEventType
+  actorUserId: string
+  targetUserId: string | null
+  /** The caller's details, unsanitised: the logger and `persist` each sanitise them. */
+  details: Record<string, unknown> | undefined
+}
 
-  // Log audit event (in production, use a proper audit log system)
-  auditLogger.info(`Audit event: ${type}`, {
-    type,
-    userId,
-    targetUserId: entry.targetUserId,
+function buildEntry(type: AuditEventType, userId: string, details: AuditDetails | undefined): AuditEntry {
+  const { targetUserId, ...rest } = details ?? {}
+  return { type, actorUserId: userId, targetUserId: targetUserId ?? null, details: details ? rest : undefined }
+}
+
+function writeStdout(entry: AuditEntry) {
+  auditLogger.info(`Audit event: ${entry.type}`, {
+    type: entry.type,
+    userId: entry.actorUserId,
+    targetUserId: entry.targetUserId ?? undefined,
     details: entry.details,
   })
+}
 
-  // TODO: In production, write to:
-  // - Database audit log table
-  // - External audit log service (e.g., CloudWatch, Datadog)
-  // - Immutable log storage
+/** Writes the row; its details pass through the same sanitiser as the log line. */
+async function persist(entry: AuditEntry, db: AuditWriter) {
+  await db.auditLog.create({
+    data: {
+      type: entry.type,
+      actorUserId: entry.actorUserId,
+      targetUserId: entry.targetUserId,
+      details: entry.details && (sanitizeValue(entry.details) as Prisma.InputJsonObject),
+    },
+  })
+}
+
+/**
+ * Log an audit event to stdout and, without waiting, to the `AuditLog` table.
+ * A failed write is logged as `audit.persist_failed` and never thrown.
+ */
+export function logAuditEvent(type: AuditEventType, userId: string, details?: AuditDetails): void {
+  const entry = buildEntry(type, userId, details)
+  writeStdout(entry)
+  void persist(entry, prisma).catch((error: unknown) => {
+    auditLogger.error("audit.persist_failed", error, { type })
+  })
+}
+
+/**
+ * Log an audit event and wait for its row. Pass a transaction client as `db`
+ * to write the row in the same transaction as the change it records; a failed
+ * write throws, so the transaction rolls back.
+ */
+export async function recordAuditEvent(
+  type: AuditEventType,
+  userId: string,
+  details?: AuditDetails,
+  db: AuditWriter = prisma
+): Promise<void> {
+  const entry = buildEntry(type, userId, details)
+  writeStdout(entry)
+  await persist(entry, db)
 }

@@ -106,7 +106,7 @@ function acceptPassword(goodPassword: string) {
   mockUserUpdate.mockResolvedValue(dbUser)
   mockAuthenticateJellyfin.mockImplementation(async (username, password) =>
     password === goodPassword
-      ? { success: true, data: { id: "jellyfin-user-1", username, isAdmin: false } }
+      ? { success: true, data: { id: "jellyfin-user-1", username, adminStatus: "not-admin" as const } }
       : { success: false, error: "Invalid username or password" }
   )
 }
@@ -224,13 +224,15 @@ describe("NextAuth credential callback rate limits", () => {
       for (let i = 0; i < 20; i++) {
         const attempt = await callback("plex", "203.0.113.20", { authToken: `token-${i}` })
         expect(attempt.status).toBe(401)
+        // No PIN cookie: the token in the body is ignored (P4.8)
+        expect(attempt.error).toBe("plex_pin_expired")
       }
 
       const limited = await callback("plex", "203.0.113.20", { authToken: "token-20" })
 
       expect(limited.status).toBe(429)
       expect(limited.error).toBe("RateLimited")
-      expect(mockGetPlexUserInfo).toHaveBeenCalledTimes(20)
+      expect(mockGetPlexUserInfo).not.toHaveBeenCalled()
     })
 
     it("keeps the Plex limit in E2E test mode", async () => {

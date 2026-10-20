@@ -7,6 +7,7 @@ import { runChatbotForUser } from "@/lib/chatbot/assistant"
 import { getOrCreateSession, appendTurn } from "@/lib/discord/chat-session"
 import { mockReset } from 'jest-mock-extended'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
+import { buildConfig } from '@/__tests__/helpers/factories'
 
 // Mock dependencies
 jest.mock("@/lib/chatbot/assistant", () => ({
@@ -57,6 +58,7 @@ describe("handleDiscordChat", () => {
       id: "user-1",
       isAdmin: false,
       isExempt: false,
+      disabledAt: null,
       subscription: null,
     },
   }
@@ -170,7 +172,7 @@ describe("handleDiscordChat", () => {
     it("threads isAdmin=true when the linked user is an admin", async () => {
       mockPrisma.discordConnection.findUnique.mockResolvedValue({
         ...mockConnection,
-        user: { id: "user-1", isAdmin: true },
+        user: { ...mockConnection.user, isAdmin: true },
       } as any)
       mockRunChatbotForUser.mockResolvedValue({
         success: true,
@@ -246,7 +248,7 @@ describe("handleDiscordChat", () => {
       mockPrisma.config.findUnique.mockResolvedValue({ stripeEnabled: true } as any)
       mockPrisma.discordConnection.findUnique.mockResolvedValue({
         ...mockConnection,
-        user: { id: "user-1", isAdmin: false, isExempt: false, subscription: null },
+        user: { id: "user-1", isAdmin: false, isExempt: false, disabledAt: null, subscription: null },
       } as any)
 
       const result = await handleDiscordChat({
@@ -263,6 +265,22 @@ describe("handleDiscordChat", () => {
       expect(mockGetOrCreateSession).not.toHaveBeenCalled()
     })
 
+    it("blocks a disabled user even when Stripe gating is off", async () => {
+      mockPrisma.discordConnection.findUnique.mockResolvedValue({
+        ...mockConnection,
+        user: { id: "user-1", isAdmin: true, isExempt: false, disabledAt: new Date(), subscription: null },
+      } as never)
+
+      const result = await handleDiscordChat({
+        discordUserId: "discord-123",
+        channelId: "channel-123",
+        message: "Check Plex status",
+      })
+
+      expect(result.entitled).toBe(false)
+      expect(mockRunChatbotForUser).not.toHaveBeenCalled()
+    })
+
     it("allows an ACTIVE subscriber when Stripe gating is on", async () => {
       mockPrisma.config.findUnique.mockResolvedValue({ stripeEnabled: true } as any)
       mockPrisma.discordConnection.findUnique.mockResolvedValue({
@@ -271,6 +289,7 @@ describe("handleDiscordChat", () => {
           id: "user-1",
           isAdmin: false,
           isExempt: false,
+          disabledAt: null,
           subscription: { status: "ACTIVE" },
         },
       } as any)
@@ -293,7 +312,7 @@ describe("handleDiscordChat", () => {
       mockPrisma.config.findUnique.mockResolvedValue({ stripeEnabled: true } as any)
       mockPrisma.discordConnection.findUnique.mockResolvedValue({
         ...mockConnection,
-        user: { id: "user-1", isAdmin: false, isExempt: true, subscription: null },
+        user: { id: "user-1", isAdmin: false, isExempt: true, disabledAt: null, subscription: null },
       } as any)
       mockRunChatbotForUser.mockResolvedValue({
         success: true,
@@ -310,5 +329,82 @@ describe("handleDiscordChat", () => {
       expect(mockRunChatbotForUser).toHaveBeenCalled()
     })
   })
-})
 
+  describe("message limits and spend caps (P4.20)", () => {
+    const answer = {
+      success: true,
+      message: { role: "assistant" as const, content: "ok", timestamp: Date.now() },
+    }
+
+    function connectionFor(userId: string) {
+      // A full row plus the included user, as the handler's query returns it
+      const row = {
+        ...mockConnection,
+        userId,
+        username: "member",
+        discriminator: null,
+        globalName: null,
+        avatar: null,
+        accessToken: "token",
+        refreshToken: null,
+        scope: null,
+        expiresAt: null,
+        metadataSyncedAt: null,
+        lastWatchedHours: null,
+        lastError: null,
+        createdAt: new Date(0),
+        updatedAt: new Date(0),
+        user: { ...mockConnection.user, id: userId },
+      }
+      mockPrisma.discordConnection.findUnique.mockResolvedValue(row)
+    }
+
+    const chat = () => handleDiscordChat({ discordUserId: "discord-123", channelId: "channel-123", message: "hi" })
+
+    it("refuses the 21st message in an hour with the reset time, without an LLM call", async () => {
+      connectionFor("chatty-member")
+      mockRunChatbotForUser.mockResolvedValue(answer)
+
+      for (let i = 0; i < 20; i++) {
+        expect((await chat()).success).toBe(true)
+      }
+      mockRunChatbotForUser.mockClear()
+      const result = await chat()
+
+      expect(result).toMatchObject({ success: false, linked: true })
+      expect(result.refusal).toMatch(/^You've reached the assistant's message limit\. You can ask again in \d+ (hour|minute)s?\.$/)
+      expect(result.refusal).not.toMatch(/couldn't reach/)
+      expect(mockRunChatbotForUser).not.toHaveBeenCalled()
+    })
+
+    it("does not spend a limit point for a member who is not entitled", async () => {
+      mockPrisma.config.findUnique.mockResolvedValue(buildConfig({ stripeEnabled: true }))
+      connectionFor("lapsed-member")
+
+      for (let i = 0; i < 25; i++) await chat()
+      mockPrisma.config.findUnique.mockResolvedValue(buildConfig({ stripeEnabled: false }))
+      mockRunChatbotForUser.mockResolvedValue(answer)
+
+      expect((await chat()).success).toBe(true)
+    })
+
+    it("passes a spend-cap refusal on as the reply", async () => {
+      connectionFor("capped-member")
+      mockRunChatbotForUser.mockResolvedValue({
+        success: false,
+        refusal: "BUDGET_EXCEEDED",
+        error: "I've hit today's assistant budget. It resets at midnight server time.",
+        conversationId: "conversation-1",
+      })
+
+      const result = await chat()
+
+      expect(result).toMatchObject({
+        success: false,
+        linked: true,
+        refusal: "I've hit today's assistant budget. It resets at midnight server time.",
+      })
+      expect(mockAppendTurn).not.toHaveBeenCalled()
+    })
+  })
+})

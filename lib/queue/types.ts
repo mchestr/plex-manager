@@ -5,6 +5,9 @@
  * Add new job types here as the system grows.
  */
 
+import type { SessionRevocationReason } from "@/lib/session-revocation"
+import type { WatchlistSkipCode } from "@/lib/watchlist/skip"
+
 /**
  * Job Type Registry
  * Add new job types here when extending the queue system
@@ -15,6 +18,9 @@ export const JOB_TYPES = {
   STRIPE_WEBHOOK: "stripe:webhook",
   PLEX_ACCESS_GRANT: "plex:access:grant",
   PLEX_ACCESS_REVOKE: "plex:access:revoke",
+  // Discord linked-role metadata (P4.18)
+  DISCORD_ROLE_SYNC: "discord:role:sync",
+  DISCORD_ROLE_RECONCILE: "discord:role:reconcile",
   // Rewind batch jobs (P2.6), on the `rewind-batch` queue
   REWIND_SERVER_AGGREGATE: "rewind:server-aggregate",
   REWIND_METADATA_WARM: "rewind:metadata-warm",
@@ -55,6 +61,8 @@ export interface WatchlistSyncAllPayload {
  */
 export interface WatchlistSyncUserResult {
   success: boolean
+  /** Set when the job did not sync, with why (P4.5, P4.13). */
+  skipped?: WatchlistSkipCode
   itemsSynced: number
   itemsRequested: number
   itemsSkipped: number
@@ -78,9 +86,9 @@ export interface WatchlistSyncAllResult {
 /**
  * Payload for processing a Stripe webhook event.
  *
- * Only the Stripe `event.id` is carried on the queue; the processor re-fetches
- * the full event from Stripe so it acts on Stripe's current truth and the queue
- * payload stays tiny.
+ * Only the Stripe `event.id` is carried on the queue, so the payload stays tiny.
+ * The processor fetches the event (a snapshot from event time) and re-reads the
+ * subscription it names for the live state.
  */
 export interface StripeWebhookPayload {
   eventId: string
@@ -120,6 +128,8 @@ export interface StripeWebhookResult {
 export interface PlexAccessGrantResult {
   userId: string
   granted: boolean
+  /** Why the live re-check skipped the grant (SEC-38), when it did. */
+  skipped?: string
 }
 
 /**
@@ -128,6 +138,50 @@ export interface PlexAccessGrantResult {
 export interface PlexAccessRevokeResult {
   userId: string
   revoked: boolean
+}
+
+// =============================================================================
+// Discord Role Job Types (P4.18)
+// =============================================================================
+
+/**
+ * Why a member's linked-role metadata is re-synced: every reason their
+ * sessions end (through `endUserSessions`), plus the access changes that do
+ * not end a session, and the daily reconcile.
+ */
+export type RoleSyncReason =
+  | SessionRevocationReason
+  | "enabled"
+  | "access_granted"
+  | "comp_granted"
+  | "exemption_changed"
+  | "subscription_changed"
+  | "subscription_canceled"
+  | "reconcile"
+
+/**
+ * Payload for re-syncing one member's linked-role metadata. Only the daily
+ * reconcile sets `refreshHours`, which recomputes the watched hours from
+ * Tautulli; every other sync pushes the stored hours.
+ */
+export interface DiscordRoleSyncPayload {
+  userId: string
+  reason: RoleSyncReason
+  refreshHours: boolean
+}
+
+/** Result of a role sync: skipped when the integration is off or the member is not linked. */
+export interface DiscordRoleSyncResult {
+  userId: string
+  synced: boolean
+  skipped?: "DISCORD_DISABLED" | "NOT_LINKED"
+}
+
+/** Result of the daily reconcile: how many stale connections it queued. */
+export interface DiscordRoleReconcileResult {
+  enqueued: number
+  stale: number
+  skipped?: "DISCORD_DISABLED"
 }
 
 // =============================================================================
@@ -178,6 +232,8 @@ export interface JobPayloadMap {
   [JOB_TYPES.STRIPE_WEBHOOK]: StripeWebhookPayload
   [JOB_TYPES.PLEX_ACCESS_GRANT]: PlexAccessGrantPayload
   [JOB_TYPES.PLEX_ACCESS_REVOKE]: PlexAccessRevokePayload
+  [JOB_TYPES.DISCORD_ROLE_SYNC]: DiscordRoleSyncPayload
+  [JOB_TYPES.DISCORD_ROLE_RECONCILE]: Record<string, never>
   [JOB_TYPES.REWIND_SERVER_AGGREGATE]: RewindServerAggregatePayload
   [JOB_TYPES.REWIND_METADATA_WARM]: RewindMetadataWarmPayload
   [JOB_TYPES.REWIND_GENERATE_USER]: RewindGenerateUserPayload

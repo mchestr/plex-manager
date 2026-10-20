@@ -4,6 +4,8 @@ import { runChatbotForUser } from "@/lib/chatbot/assistant"
 import { appendTurn, getOrCreateSession } from "@/lib/discord/chat-session"
 import { sanitizeDiscordResponse } from "@/lib/discord/chat-safety"
 import { prisma } from "@/lib/prisma"
+import { consume } from "@/lib/security/rate-limit"
+import { retryAfterCopy } from "@/lib/security/rate-limit-messages"
 import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("DISCORD_SERVICES")
@@ -37,6 +39,18 @@ export interface DiscordChatResult {
   message?: ChatMessage
   conversationId?: string
   error?: string
+  /**
+   * Copy to send the member instead of an answer: a message limit or a daily
+   * spend cap stopped the turn (P4.20). Never the "couldn't reach" fallback.
+   */
+  refusal?: string
+}
+
+/** The member's message limits, checked in order; both DMs and `/assistant ask` spend them. */
+const DISCORD_CHAT_LIMITS = ["llm:discord:dm", "llm:discord:dm:day"] as const
+
+function discordLimitCopy(retryAfterSec: number): string {
+  return `You've reached the assistant's message limit. You can ask again ${retryAfterCopy(retryAfterSec)}.`
 }
 
 export interface ClearChatResult {
@@ -63,6 +77,7 @@ export async function verifyDiscordUser(discordUserId: string): Promise<VerifyDi
             plexUserId: true,
             isAdmin: true,
             isExempt: true,
+            disabledAt: true,
             subscription: { select: { status: true } },
           },
         },
@@ -80,6 +95,7 @@ export async function verifyDiscordUser(discordUserId: string): Promise<VerifyDi
 
   const entitled = isAccessAllowed({
     stripeEnabled: config?.stripeEnabled ?? false,
+    disabled: connection.user.disabledAt !== null,
     isAdmin: connection.user.isAdmin,
     isExempt: connection.user.isExempt,
     subscriptionStatus: connection.user.subscription?.status ?? null,
@@ -127,6 +143,7 @@ export async function handleDiscordChat({
             id: true,
             isAdmin: true,
             isExempt: true,
+            disabledAt: true,
             subscription: { select: { status: true } },
           },
         },
@@ -147,12 +164,22 @@ export async function handleDiscordChat({
   // is the authoritative chokepoint where tool data would otherwise be accessed.
   const entitled = isAccessAllowed({
     stripeEnabled: config?.stripeEnabled ?? false,
+    disabled: connection.user.disabledAt !== null,
     isAdmin: connection.user.isAdmin,
     isExempt: connection.user.isExempt,
     subscriptionStatus: connection.user.subscription?.status ?? null,
   })
   if (!entitled) {
     return { success: false, linked: true, entitled: false, error: "Subscription required" }
+  }
+
+  // Per-member message limits, before any LLM call (SEC-23)
+  for (const name of DISCORD_CHAT_LIMITS) {
+    const limit = await consume(name, connection.userId)
+    if (!limit.ok) {
+      logger.info("Discord chat rate-limited", { userId: connection.userId, limit: name })
+      return { success: false, linked: true, refusal: discordLimitCopy(limit.retryAfterSec) }
+    }
   }
 
   const session = await getOrCreateSession({
@@ -179,6 +206,10 @@ export async function handleDiscordChat({
     // guard can gate server-wide tools (Step 19, FR-14).
     isAdmin: connection.user.isAdmin,
   })
+
+  if (chatbotResponse.refusal) {
+    return { success: false, linked: true, refusal: chatbotResponse.error }
+  }
 
   if (!chatbotResponse.success || !chatbotResponse.message) {
     logger.error("Failed to process Discord chatbot request", undefined, {

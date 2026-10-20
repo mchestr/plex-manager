@@ -2,7 +2,7 @@ import { RexDinosaur } from "@/components/shared/rex-dinosaur"
 
 export function UnauthenticatedError() {
   return (
-    <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+    <div data-testid="unauthenticated-error-page" className="min-h-screen bg-slate-900 flex items-center justify-center">
       <div className="relative flex items-center gap-8">
         {/* Rex mascot */}
         <div className="w-24 h-24 relative motion-safe:animate-bounce" style={{ animationDuration: "2s" }}>

@@ -43,11 +43,11 @@ jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prism
 beforeEach(() => mockReset(prismaMock))
 
 jest.mock('@/actions/announcements', () => ({
-  getActiveAnnouncements: jest.fn(async () => []),
+  getActiveAnnouncements: jest.fn(async () => ({ success: true, data: [] })),
 }))
 
 jest.mock('@/actions/prometheus-status', () => ({
-  getPrometheusStatus: jest.fn(async () => undefined),
+  getPrometheusStatus: jest.fn(async () => ({ success: false, code: 'INTERNAL', error: 'off' })),
 }))
 
 jest.mock('@/lib/connections/tautulli-first-watch', () => ({

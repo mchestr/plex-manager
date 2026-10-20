@@ -1,8 +1,4 @@
-import { randomBytes } from "crypto"
-
-import { generateShareToken } from "@/lib/utils"
-
-import { createServerUrlSchema, createPublicUrlSchema, shareTokenSchema } from "../shared-schemas"
+import { createServerUrlSchema, createPublicUrlSchema, isHttpUrl } from "../shared-schemas"
 
 describe("shared-schemas", () => {
   describe("createServerUrlSchema", () => {
@@ -96,6 +92,19 @@ describe("shared-schemas", () => {
     })
   })
 
+  describe("isHttpUrl", () => {
+    it.each(["https://example.com", "http://localhost:3000/x", "HTTPS://EXAMPLE.COM"])("accepts %s", (url) => {
+      expect(isHttpUrl(new URL(url))).toBe(true)
+    })
+
+    it.each(["javascript:alert(1)", "data:text/html,hi", "ftp://example.com", "file:///etc/passwd", "mailto:a@b.c"])(
+      "rejects %s",
+      (url) => {
+        expect(isHttpUrl(new URL(url))).toBe(false)
+      }
+    )
+  })
+
   describe("createPublicUrlSchema", () => {
     const publicUrlSchema = createPublicUrlSchema("sonarr.example.com")
 
@@ -148,22 +157,18 @@ describe("shared-schemas", () => {
     })
   })
 
-  describe("shareTokenSchema", () => {
-    it("accepts every token generateShareToken makes", () => {
-      for (let i = 0; i < 50; i++) {
-        expect(shareTokenSchema.safeParse(generateShareToken()).success).toBe(true)
-      }
-    })
+  describe("createPublicUrlSchema protocols (SEC-57)", () => {
+    const publicUrlSchema = createPublicUrlSchema()
 
-    it.each([
-      ["31 bytes", randomBytes(31).toString("base64url")],
-      ["33 bytes", randomBytes(33).toString("base64url")],
-      ["standard base64 with padding", randomBytes(32).toString("base64")],
-      ["a slash", `${"a".repeat(42)}/`],
-      ["a dot", `${"a".repeat(42)}.`],
-      ["empty", ""],
-    ])("rejects %s", (_label, token) => {
-      expect(shareTokenSchema.safeParse(token).success).toBe(false)
+    it.each(["javascript:alert(1)", "data:text/html,<script>alert(1)</script>", "ftp://example.com/file"])(
+      "rejects %s",
+      (url) => {
+        expect(publicUrlSchema.safeParse(url).success).toBe(false)
+      }
+    )
+
+    it("rejects text that is not a URL", () => {
+      expect(publicUrlSchema.safeParse("not a url").success).toBe(false)
     })
   })
 })

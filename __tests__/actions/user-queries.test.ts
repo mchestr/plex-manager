@@ -1,4 +1,7 @@
-import { getUserPlexWrapped, getAllUsersWithWrapped } from '@/actions/user-queries'
+import { getUserPlexWrapped, getAllUsersWithWrapped, unshareUserLibrary } from '@/actions/user-queries'
+import { requireAdmin } from '@/lib/admin'
+import { unshareUserFromPlexServer } from '@/lib/connections/plex'
+import { buildUser } from '@/__tests__/helpers/factories'
 import { aggregateLlmUsage } from '@/lib/utils'
 import { getServerSession } from 'next-auth'
 import { makePrismaUser, makePrismaWrapped, makePrismaLlmUsage } from '../utils/test-builders'
@@ -30,6 +33,12 @@ jest.mock('@/lib/connections/plex', () => ({
 
 const mockPrisma = prismaMock
 
+/** The row the action returns, or null for no row or a failure. */
+async function read(userId: string, year: number) {
+  const result = await getUserPlexWrapped({ userId, year })
+  return result.success ? result.data : null
+}
+
 describe('getUserPlexWrapped', () => {
   beforeEach(() => {
     jest.useFakeTimers()
@@ -60,7 +69,7 @@ describe('getUserPlexWrapped', () => {
 
     mockPrisma.plexWrapped.findUnique.mockResolvedValue(mockWrapped as any)
 
-    const result = await getUserPlexWrapped('user-1', 2024)
+    const result = await read('user-1', 2024)
 
     expect(result).toEqual(mockWrapped)
     expect(mockPrisma.plexWrapped.findUnique).toHaveBeenCalledWith({
@@ -96,7 +105,7 @@ describe('getUserPlexWrapped', () => {
       makePrismaWrapped({ userId: 'user-1', year: 2024, data: JSON.stringify(data) }) as any
     )
 
-    const result = await getUserPlexWrapped('user-1', 2024)
+    const result = await read('user-1', 2024)
 
     // Re-serialised from the stored-data parser, which drops leaderboards
     const visible = JSON.parse(result!.data)
@@ -111,7 +120,7 @@ describe('getUserPlexWrapped', () => {
     jest.setSystemTime(new Date('2027-01-02T12:00:00Z'))
     mockPrisma.plexWrapped.findUnique.mockResolvedValue(null)
 
-    await getUserPlexWrapped('user-1', 2026)
+    await read('user-1', 2026)
 
     expect(mockPrisma.plexWrapped.findUnique).toHaveBeenCalledWith({
       where: {
@@ -136,7 +145,7 @@ describe('getUserPlexWrapped', () => {
   it('should return null when wrapped not found', async () => {
     mockPrisma.plexWrapped.findUnique.mockResolvedValue(null)
 
-    const result = await getUserPlexWrapped('user-1', 2024)
+    const result = await read('user-1', 2024)
 
     expect(result).toBeNull()
   })
@@ -144,7 +153,7 @@ describe('getUserPlexWrapped', () => {
   it('should return null on error', async () => {
     mockPrisma.plexWrapped.findUnique.mockRejectedValue(new Error('Database error'))
 
-    const result = await getUserPlexWrapped('user-1', 2024)
+    const result = await read('user-1', 2024)
 
     expect(result).toBeNull()
   })
@@ -159,7 +168,7 @@ describe('getUserPlexWrapped', () => {
         makePrismaWrapped({ status: 'failed', error: LEGACY_ROSTER_ERROR }) as any
       )
 
-      const result = await getUserPlexWrapped('user-1', 2024)
+      const result = await read('user-1', 2024)
 
       expect(result?.error).toBe('{"code":"GENERATION_FAILED"}')
       const output = JSON.stringify(result)
@@ -173,7 +182,7 @@ describe('getUserPlexWrapped', () => {
         makePrismaWrapped({ status: 'failed', error: '{"code":"TAUTULLI_USER_NOT_FOUND"}' }) as any
       )
 
-      const result = await getUserPlexWrapped('user-1', 2024)
+      const result = await read('user-1', 2024)
 
       expect(result?.error).toBe('{"code":"TAUTULLI_USER_NOT_FOUND"}')
     })
@@ -182,7 +191,7 @@ describe('getUserPlexWrapped', () => {
       const row = makePrismaWrapped({ status: 'completed', error: null })
       mockPrisma.plexWrapped.findUnique.mockResolvedValue(row as any)
 
-      const result = await getUserPlexWrapped('user-1', 2024)
+      const result = await read('user-1', 2024)
 
       expect(result).toEqual(row)
     })
@@ -193,7 +202,7 @@ describe('getUserPlexWrapped', () => {
         makePrismaWrapped({ status: 'failed', error: LEGACY_ROSTER_ERROR }) as any
       )
 
-      const result = await getUserPlexWrapped('user-1', 2024)
+      const result = await read('user-1', 2024)
 
       expect(result?.error).toBe(LEGACY_ROSTER_ERROR)
     })
@@ -502,5 +511,72 @@ describe('aggregateLlmUsage', () => {
       model: 'claude-3',
       count: 2,
     })
+  })
+})
+
+describe('unshareUserLibrary', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    ;(requireAdmin as jest.Mock).mockResolvedValue({ user: { id: 'admin-1', isAdmin: true } })
+    mockPrisma.user.findUnique.mockResolvedValue(buildUser({ id: 'member-1', plexUserId: 'plex-member' }))
+    mockPrisma.plexServer.findFirst.mockResolvedValue({
+      id: 'ps-1',
+      name: 'Plex',
+      url: 'https://plex.example.com:32400',
+      publicUrl: null,
+      token: 'server-token',
+      adminPlexUserId: 'plex-owner',
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+    mockPrisma.user.updateMany.mockResolvedValue({ count: 1 })
+  })
+
+  it("ends the member's sessions after a successful unshare (SEC-10)", async () => {
+    ;(unshareUserFromPlexServer as jest.Mock).mockResolvedValue({ success: true, status: 'removed' })
+
+    await expect(unshareUserLibrary('member-1')).resolves.toEqual({ success: true, data: { status: 'removed' } })
+
+    expect(mockPrisma.user.updateMany).toHaveBeenCalledWith({
+      where: { id: 'member-1' },
+      data: { sessionVersion: { increment: 1 } },
+    })
+  })
+
+  it('reports a share that is already gone as success, and still ends the sessions', async () => {
+    ;(unshareUserFromPlexServer as jest.Mock).mockResolvedValue({ success: true, status: 'already_removed' })
+
+    await expect(unshareUserLibrary('member-1')).resolves.toEqual({
+      success: true,
+      data: { status: 'already_removed' },
+    })
+    expect(mockPrisma.user.updateMany).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    ['PLEX_AUTH', "Plex rejected Plex Manager's token. Reconnect Plex in settings."],
+    ['PLEX_UNAVAILABLE', "Plex didn't respond. Try again in a few minutes."],
+  ])('returns %s with admin copy and keeps the sessions', async (code, error) => {
+    ;(unshareUserFromPlexServer as jest.Mock).mockResolvedValue({ success: false, code })
+
+    await expect(unshareUserLibrary('member-1')).resolves.toEqual({ success: false, code, error })
+
+    expect(mockPrisma.user.updateMany).not.toHaveBeenCalled()
+  })
+
+  it('never returns the text of a thrown error', async () => {
+    ;(unshareUserFromPlexServer as jest.Mock).mockRejectedValue(new Error('plex.tv said: invalid token abc123'))
+
+    const result = await unshareUserLibrary('member-1')
+
+    expect(result).toEqual({ success: false, code: 'INTERNAL', error: 'Failed to unshare user library' })
+  })
+
+  it('refuses an admin with a code', async () => {
+    mockPrisma.user.findUnique.mockResolvedValue(buildUser({ id: 'member-1', plexUserId: 'plex-member', isAdmin: true }))
+
+    await expect(unshareUserLibrary('member-1')).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
+    expect(unshareUserFromPlexServer).not.toHaveBeenCalled()
   })
 })

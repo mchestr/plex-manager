@@ -6,7 +6,7 @@ import {
   updatePromptTemplate,
 } from "@/actions/prompts"
 import { ModalShell } from "@/components/ui/modal-shell"
-import { getAvailablePlaceholders } from "@/lib/wrapped/prompt-template"
+import { getAvailablePlaceholders } from "@/lib/wrapped/prompt-text"
 import { formatDuration } from "@/lib/utils/format"
 import { legacyWrappedData, readWrappedStatus } from "@/lib/wrapped/data/parse-stored"
 import type { WrappedStatistics } from "@/types/wrapped"
@@ -321,7 +321,7 @@ export function PromptTemplateEditor({ template, userWrapped, userName = "User" 
 
     startTransition(async () => {
       const result = template
-        ? await updatePromptTemplate(template.id, formData)
+        ? await updatePromptTemplate({ id: template.id, ...formData })
         : await createPromptTemplate(formData)
 
       if (result.success) {

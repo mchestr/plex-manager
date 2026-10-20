@@ -1,13 +1,12 @@
 "use server"
 
-import { getServerSession } from "next-auth"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
-import { authOptions } from "@/lib/auth"
+import { memberAction } from "@/lib/actions/define-action"
+import { fail, ok } from "@/lib/actions/result"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
-import { consume } from "@/lib/security/rate-limit"
 import { getBaseUrl } from "@/lib/env"
 import { generateShareToken } from "@/lib/utils"
 import { createLogger } from "@/lib/utils/logger"
@@ -17,34 +16,7 @@ import { yearSchema } from "@/lib/validations/shared-schemas"
 
 const logger = createLogger("WRAPPED_SHARE_LINK")
 
-const shareLinkInputSchema = z.object({ year: yearSchema })
-
-export type EnableWrappedShareLinkResult =
-  | { success: true; shareToken: string; url: string }
-  | { success: false; error: string }
-
-export type DisableWrappedShareLinkResult = { success: true } | { success: false; error: string }
-
-type ShareActionCaller = { ok: true; userId: string; year: number } | { ok: false; error: string }
-
-/**
- * The checks both share actions run first: Zod input and a signed-in session.
- *
- * @internal
- */
-async function authorizeShareAction(input: unknown): Promise<ShareActionCaller> {
-  const parsed = shareLinkInputSchema.safeParse(input)
-  if (!parsed.success) {
-    return { ok: false, error: "Invalid year" }
-  }
-
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) {
-    return { ok: false, error: "Unauthorized" }
-  }
-
-  return { ok: true, userId: session.user.id, year: parsed.data.year }
-}
+const shareLinkInputSchema = z.object({ year: yearSchema }, { error: "Invalid year" })
 
 function revalidateSharePaths() {
   revalidatePath("/wrapped")
@@ -72,30 +44,24 @@ function revalidateSharePaths() {
  * stopping a link is never refused (see {@link disableWrappedShareLink}).
  *
  * @param input - `{ year }` of the member's Rewind.
- * @returns `{ success: true, shareToken, url }`, or `{ success: false, error }`.
+ * @returns `data: { shareToken, url }`, or a failure.
  */
-export async function enableWrappedShareLink(input: { year: number }): Promise<EnableWrappedShareLinkResult> {
-  const caller = await authorizeShareAction(input)
-  if (!caller.ok) {
-    return { success: false, error: caller.error }
-  }
-
-  if (!(await consume("rw:share-actions", caller.userId)).ok) {
-    return { success: false, error: "Too many share links created. Please try again later." }
-  }
-
-  try {
+export const enableWrappedShareLink = memberAction({
+  input: shareLinkInputSchema,
+  rateLimit: { name: "rw:share-actions" },
+  fallbackError: "Failed to create share link",
+  handler: async ({ year }, { userId }) => {
     // getBaseUrl() throws when no app URL is configured. Resolving it before
     // the write means that failure cannot leave a live link the member was
     // told was not created.
     const baseUrl = getBaseUrl()
 
     const wrapped = await prisma.plexWrapped.findUnique({
-      where: { userId_year: { userId: caller.userId, year: caller.year } },
+      where: { userId_year: { userId, year } },
       select: { id: true, status: true, shareToken: true },
     })
     if (!wrapped || readWrappedStatus(wrapped.status, wrapped.id) !== "completed") {
-      return { success: false, error: "Your Rewind for this year is not ready to share" }
+      return fail("CONFLICT", "Your Rewind for this year is not ready to share")
     }
 
     let shareToken = wrapped.shareToken
@@ -107,9 +73,9 @@ export async function enableWrappedShareLink(input: { year: number }): Promise<E
       })
       if (count === 1) {
         shareToken = minted
-        logAuditEvent(AuditEventType.SHARE_LINK_CREATED, caller.userId, {
+        logAuditEvent(AuditEventType.SHARE_LINK_CREATED, userId, {
           wrappedId: wrapped.id,
-          year: caller.year,
+          year,
         })
       } else {
         const current = await prisma.plexWrapped.findUnique({
@@ -121,16 +87,14 @@ export async function enableWrappedShareLink(input: { year: number }): Promise<E
     }
 
     if (!shareToken) {
-      return { success: false, error: "Failed to create share link" }
+      logger.error("Share link vanished after it was minted", undefined, { userId, year })
+      return fail("INTERNAL", "Failed to create share link")
     }
 
     revalidateSharePaths()
-    return { success: true, shareToken, url: `${baseUrl}/wrapped/share/${shareToken}` }
-  } catch (error) {
-    logger.error("Error creating share link", error, { userId: caller.userId, year: caller.year })
-    return { success: false, error: "Failed to create share link" }
-  }
-}
+    return ok({ shareToken, url: `${baseUrl}/wrapped/share/${shareToken}` })
+  },
+})
 
 /**
  * Turns off the public share link for the signed-in member's own Rewind. The
@@ -148,21 +112,18 @@ export async function enableWrappedShareLink(input: { year: number }): Promise<E
  * would only keep a public link alive.
  *
  * @param input - `{ year }` of the member's Rewind.
- * @returns `{ success: true }` (also when no link was on), or `{ success: false, error }`.
+ * @returns success (also when no link was on), or a failure.
  */
-export async function disableWrappedShareLink(input: { year: number }): Promise<DisableWrappedShareLinkResult> {
-  const caller = await authorizeShareAction(input)
-  if (!caller.ok) {
-    return { success: false, error: caller.error }
-  }
-
-  try {
+export const disableWrappedShareLink = memberAction({
+  input: shareLinkInputSchema,
+  fallbackError: "Failed to stop sharing",
+  handler: async ({ year }, { userId }) => {
     const wrapped = await prisma.plexWrapped.findUnique({
-      where: { userId_year: { userId: caller.userId, year: caller.year } },
+      where: { userId_year: { userId, year } },
       select: { id: true, shareToken: true },
     })
     if (!wrapped) {
-      return { success: false, error: "No Rewind found for this year" }
+      return fail("NOT_FOUND", "No Rewind found for this year")
     }
 
     if (wrapped.shareToken) {
@@ -171,16 +132,13 @@ export async function disableWrappedShareLink(input: { year: number }): Promise<
         data: { shareToken: null },
       })
       forgetShareToken(wrapped.shareToken)
-      logAuditEvent(AuditEventType.SHARE_LINK_REVOKED, caller.userId, {
+      logAuditEvent(AuditEventType.SHARE_LINK_REVOKED, userId, {
         wrappedId: wrapped.id,
-        year: caller.year,
+        year,
       })
     }
 
     revalidateSharePaths()
-    return { success: true }
-  } catch (error) {
-    logger.error("Error stopping share link", error, { userId: caller.userId, year: caller.year })
-    return { success: false, error: "Failed to stop sharing" }
-  }
-}
+    return ok(null)
+  },
+})

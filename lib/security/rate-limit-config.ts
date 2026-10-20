@@ -14,6 +14,7 @@
  */
 
 const MINUTE = 60
+const HOUR = 60 * MINUTE
 const DAY = 24 * 60 * MINUTE
 
 interface LimitConfig {
@@ -38,6 +39,15 @@ export const LIMITS = {
   "plex:pin:create": { points: 30, duration: 10 * MINUTE },
   "plex:pin:poll": { points: 300, duration: 10 * MINUTE },
   "llm:models": { points: 30, duration: 15 * MINUTE },
+  // Assistant messages per user (P4.20). The Discord pair is shared by DMs and `/assistant ask`.
+  "llm:assistant:admin": { points: 60, duration: HOUR },
+  "llm:discord:dm": { points: 20, duration: HOUR },
+  "llm:discord:dm:day": { points: 100, duration: DAY },
+  "discord:mystats": { points: 5, duration: HOUR },
+  // The web "Force resync" button
+  "discord:resync": { points: 3, duration: HOUR },
+  // The member's "Sync Now" watchlist button (P4.13)
+  "watchlist:manual": { points: 4, duration: HOUR },
   "rw:share-actions": { points: 10, duration: 60 * MINUTE },
   "rw:share-page": { points: 60, duration: MINUTE },
   "rw:gen:burst": { points: 1, duration: 10 * MINUTE },

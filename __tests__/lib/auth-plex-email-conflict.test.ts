@@ -11,7 +11,7 @@
  * sign-in on every attempt, right after their invite redemption succeeded.
  */
 
-import { authOptions } from '@/lib/auth'
+import { signInWithPlexToken } from '@/__tests__/helpers/plex-sign-in'
 import { checkUserServerAccess, getPlexUserInfo } from '@/lib/connections/plex'
 import { Prisma } from '@/lib/generated/prisma/client'
 import { prisma } from '@/lib/prisma'
@@ -21,6 +21,8 @@ import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 
 beforeEach(() => mockReset(prismaMock))
+
+jest.mock('@/lib/connections/plex-pin', () => ({ readPin: jest.fn() }))
 
 jest.mock('@/lib/connections/plex', () => ({
   checkUserServerAccess: jest.fn(),
@@ -61,20 +63,6 @@ const mockPlexServerFindFirst = prisma.plexServer.findFirst as jest.Mock
 const mockUserFindUnique = prisma.user.findUnique as jest.Mock
 const mockUserCreate = prisma.user.create as jest.Mock
 const mockUserUpdate = prisma.user.update as jest.Mock
-
-/** The Plex provider's raw `authorize` (next-auth keeps the configured name at `options.name`). */
-function getPlexAuthorize() {
-  const provider = authOptions.providers.find(
-    (p) => (p as { options?: { name?: string } }).options?.name === 'Plex'
-  ) as { options?: { authorize?: unknown } } | undefined
-  const authorize = provider?.options?.authorize as (
-    credentials: Record<string, string> | undefined
-  ) => Promise<unknown>
-  if (typeof authorize !== 'function') {
-    throw new Error('Plex authorize function not found on authOptions')
-  }
-  return authorize
-}
 
 /** The P2002 that the pg driver adapter raises for a duplicate value. */
 function uniqueViolation(index: string) {
@@ -126,7 +114,6 @@ function givenPlexRow(byPlexId: typeof VICTIM_ROW | null) {
 }
 
 describe('Plex sign-in when another row holds the Plex email (SEC-08)', () => {
-  const authorize = getPlexAuthorize()
 
   beforeEach(() => {
     jest.clearAllMocks()
@@ -146,7 +133,7 @@ describe('Plex sign-in when another row holds the Plex email (SEC-08)', () => {
       .mockRejectedValueOnce(uniqueViolation('User_email_key'))
       .mockResolvedValueOnce({ ...VICTIM_ROW })
 
-    const result = await authorize({ authToken: 'victim-token' })
+    const result = await signInWithPlexToken('victim-token')
 
     expect(result).toEqual({ id: 'victim-row', email: null, name: 'victim', image: null, isAdmin: false })
     expect(mockUserCreate).toHaveBeenCalledTimes(2)
@@ -169,7 +156,7 @@ describe('Plex sign-in when another row holds the Plex email (SEC-08)', () => {
       .mockRejectedValueOnce(uniqueViolation('User_email_key'))
       .mockResolvedValueOnce({ ...VICTIM_ROW })
 
-    const result = await authorize({ authToken: 'victim-token' })
+    const result = await signInWithPlexToken('victim-token')
 
     expect(result).toEqual({ id: 'victim-row', email: null, name: 'victim', image: null, isAdmin: false })
     expect(mockUserUpdate).toHaveBeenCalledTimes(2)
@@ -179,7 +166,8 @@ describe('Plex sign-in when another row holds the Plex email (SEC-08)', () => {
     })
     const retry = mockUserUpdate.mock.calls[1][0]
     expect(retry.where).toEqual({ id: 'victim-row' })
-    expect(retry.data).toMatchObject({ plexAuthToken: 'victim-token', name: 'victim', isAdmin: false })
+    expect(retry.data).toMatchObject({ plexAuthToken: 'victim-token', name: 'victim' })
+    expect(retry.data).not.toHaveProperty('isAdmin')
     expect(retry.data).not.toHaveProperty('email')
     expect(mockWarn).toHaveBeenCalledWith('auth.email_conflict', {
       existingUserId: HOLDER_ROW.id,
@@ -192,7 +180,7 @@ describe('Plex sign-in when another row holds the Plex email (SEC-08)', () => {
     givenPlexRow({ ...VICTIM_ROW })
     mockUserUpdate.mockResolvedValueOnce({ ...VICTIM_ROW, email: VICTIM.email })
 
-    const result = await authorize({ authToken: 'victim-token' })
+    const result = await signInWithPlexToken('victim-token')
 
     expect(result).toMatchObject({ id: 'victim-row', email: VICTIM.email })
     expect(mockUserUpdate).toHaveBeenCalledTimes(1)
@@ -204,7 +192,7 @@ describe('Plex sign-in when another row holds the Plex email (SEC-08)', () => {
     givenPlexRow(null)
     mockUserCreate.mockRejectedValue(uniqueViolation('User_plexUserId_key'))
 
-    const result = await authorize({ authToken: 'victim-token' })
+    const result = await signInWithPlexToken('victim-token')
 
     expect(result).toBeNull()
     expect(mockUserCreate).toHaveBeenCalledTimes(1)

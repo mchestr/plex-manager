@@ -25,7 +25,7 @@ jest.mock('@/lib/prisma', () => ({
 
 jest.mock('next-auth', () => ({ getServerSession: jest.fn() }))
 jest.mock('@/lib/auth', () => ({ authOptions: {} }))
-jest.mock('next/cache', () => ({ revalidatePath: jest.fn() }))
+jest.mock('next/cache', () => ({ revalidatePath: jest.fn(), unstable_cache: (fn: () => unknown) => fn }))
 
 // Connection/validation modules are dynamically imported by the actions.
 jest.mock('@/lib/connections/tautulli', () => ({
@@ -72,7 +72,7 @@ describe('updateTautulli leave-blank-to-keep', () => {
 
     const result = await updateTautulli({ name: 'Tautulli', url: 'http://taut', apiKey: undefined })
 
-    expect(result).toEqual({ success: true })
+    expect(result).toEqual({ success: true, data: null })
     // Connection test must run with the stored secret, not a blank one.
     expect(mockTestTautulli).toHaveBeenCalledWith(expect.objectContaining({ apiKey: 'stored-secret' }))
     // Persisted with the stored secret.
@@ -115,7 +115,7 @@ describe('updateChatLLMProvider leave-blank-to-keep', () => {
 
     const result = await updateChatLLMProvider({ provider: 'openai', apiKey: undefined, model: 'gpt-4' })
 
-    expect(result).toEqual({ success: true })
+    expect(result).toEqual({ success: true, data: null })
     expect(mockTestLLM).toHaveBeenCalledWith(expect.objectContaining({ apiKey: 'stored-llm-key' }), expect.anything())
     expect(mockPrisma.lLMProvider.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ apiKey: 'stored-llm-key' }) })

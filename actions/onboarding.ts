@@ -1,10 +1,10 @@
 "use server"
 
-import { authOptions } from "@/lib/auth"
+import { memberAction } from "@/lib/actions/define-action"
+import { ok } from "@/lib/actions/result"
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 import type { AuthService } from "@/types/onboarding"
-import { getServerSession } from "next-auth"
 import { z } from "zod"
 
 const logger = createLogger("ONBOARDING")
@@ -31,18 +31,17 @@ interface OnboardingStatusRecord {
 }
 
 /**
- * Check if the current user has completed onboarding for a specific service
- * @param service - The auth service ("plex" or "jellyfin"). If not specified, uses primaryAuthService
+ * Whether the signed-in user has completed onboarding for a service.
+ *
+ * @param input - `{ service }`, the auth service ("plex" or "jellyfin"); when
+ *   omitted, the user's primaryAuthService
  */
-export async function getOnboardingStatus(service?: AuthService) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return { isComplete: true, service: service || "plex" } // If not logged in, assume complete to avoid blocking
-    }
-
+export const getOnboardingStatus = memberAction({
+  input: z.object({ service: AuthServiceSchema.optional() }).optional(),
+  fallbackError: "Failed to check onboarding status",
+  handler: async (input, { userId }) => {
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: userId },
       select: {
         onboardingStatus: true,
         primaryAuthService: true,
@@ -55,40 +54,28 @@ export async function getOnboardingStatus(service?: AuthService) {
       : { plex: false, jellyfin: false }
 
     // If no service specified, use primary auth service
-    const targetService: AuthService = service || (user?.primaryAuthService as AuthService) || "plex"
+    const targetService: AuthService = input?.service || (user?.primaryAuthService as AuthService) || "plex"
 
-    return {
+    return ok({
       isComplete: status[targetService] || false,
       service: targetService,
       allStatuses: status,
-    }
-  } catch (error) {
-    logger.error("Error checking onboarding status", error, { service })
-    return { isComplete: true, service: service || "plex" } // On error, assume complete to avoid blocking
-  }
-}
+    })
+  },
+})
 
 /**
  * Mark onboarding as complete for a specific service
- * @param service - The auth service ("plex" or "jellyfin")
+ *
+ * @param input - `{ service }`, the auth service ("plex" or "jellyfin")
  */
-export async function completeOnboarding(service: AuthService) {
-  try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
-      return { success: false, error: "Not authenticated" }
-    }
-
-    // Validate the service before using it as a persisted object key.
-    const parsedService = AuthServiceSchema.safeParse(service)
-    if (!parsedService.success) {
-      return { success: false, error: "Invalid service" }
-    }
-    const validService = parsedService.data
-
-    // Get current onboarding status
+export const completeOnboarding = memberAction({
+  // Validated before it is used as a persisted object key
+  input: z.object({ service: AuthServiceSchema }),
+  fallbackError: "Failed to complete onboarding",
+  handler: async ({ service }, { userId }) => {
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: userId },
       select: { onboardingStatus: true },
     })
 
@@ -97,38 +84,30 @@ export async function completeOnboarding(service: AuthService) {
       ? validation.data
       : { plex: false, jellyfin: false }
 
-    // Update the status for the specified service
-    const updatedStatus = {
-      ...currentStatus,
-      [validService]: true,
-    }
-
     await prisma.user.update({
-      where: { id: session.user.id },
-      data: { onboardingStatus: updatedStatus },
+      where: { id: userId },
+      data: { onboardingStatus: { ...currentStatus, [service]: true } },
     })
 
-    logger.info("Onboarding completed", { userId: session.user.id, service: validService })
+    logger.info("Onboarding completed", { userId, service })
 
-    return { success: true }
-  } catch (error) {
-    logger.error("Error completing onboarding", error, { service })
-    return { success: false, error: "Failed to complete onboarding" }
-  }
-}
+    return ok(null)
+  },
+})
 
 /**
- * Get onboarding configuration info
+ * What the onboarding wizard shows: the requests link and the Discord step.
+ *
+ * Only the Overseerr public URL is returned, or null when none is set; the
+ * internal URL is often a LAN or Docker address and is never sent to a member.
  */
-export async function getOnboardingInfo() {
-  try {
+export const getOnboardingInfo = memberAction({
+  fallbackError: "Failed to load onboarding",
+  handler: async () => {
     const [overseerr, discordIntegration] = await Promise.all([
       prisma.overseerr.findFirst({
         where: { isActive: true },
-        select: {
-          publicUrl: true,
-          url: true,
-        },
+        select: { publicUrl: true },
       }),
       prisma.discordIntegration.findUnique({
         where: { id: "discord" },
@@ -141,30 +120,10 @@ export async function getOnboardingInfo() {
       }),
     ])
 
-    let overseerrUrl = null
-    if (overseerr) {
-      if (overseerr.publicUrl) {
-        overseerrUrl = overseerr.publicUrl
-      } else {
-        // Use internal URL if public URL is not set
-        // Note: This might not be reachable from client browser if it's an internal IP/docker hostname
-        // but it's better than nothing for now
-        overseerrUrl = overseerr.url
-      }
-    }
-
-    return {
-      overseerrUrl,
+    return ok({
+      overseerrUrl: overseerr?.publicUrl || null,
       discordEnabled: Boolean(discordIntegration?.isEnabled && discordIntegration?.clientId && discordIntegration?.clientSecret),
       discordInstructions: discordIntegration?.instructions ?? null,
-    }
-  } catch (error) {
-    logger.error("Error fetching onboarding info", error)
-    return {
-      overseerrUrl: null,
-      discordEnabled: false,
-      discordInstructions: null,
-    }
-  }
-}
-
+    })
+  },
+})

@@ -1,15 +1,26 @@
 import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
-import type { AxeResults } from 'axe-core';
+import axe, { type AxeResults } from 'axe-core';
 import { enforceBaseline } from './baseline';
 import { summarizeAxe } from './summarize';
 
 /** WCAG 2.2 AA plus best-practice (which carries `region` and `heading-order`). */
 export const AXE_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'];
 
+/**
+ * axe's `region` check counts dialogs as regions; an open listbox popup
+ * (P3.5's Select, portalled to `<body>`) belongs to its combobox the same
+ * way, through `aria-controls`, so it counts too.
+ */
+const REGION_MATCHER = 'dialog, [role=dialog], [role=alertdialog], svg, [role=listbox]';
+
+/** axe itself, configured with {@link REGION_MATCHER} once it loads in the page. */
+const AXE_SOURCE = `${axe.source}
+axe.configure({ checks: [{ id: 'region', options: { regionMatcher: ${JSON.stringify(REGION_MATCHER)} } }] });`;
+
 /** Scans the whole page at every impact level, leaving out the `next dev` overlay. */
 export function axeFor(page: Page): AxeBuilder {
-  return new AxeBuilder({ page }).withTags(AXE_TAGS).exclude('nextjs-portal');
+  return new AxeBuilder({ page, axeSource: AXE_SOURCE }).withTags(AXE_TAGS).exclude('nextjs-portal');
 }
 
 /**

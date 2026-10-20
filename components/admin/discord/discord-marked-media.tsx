@@ -189,6 +189,7 @@ export function DiscordMarkedMedia({
             onChange={(v) => setFilter("markType", v)}
             options={MARK_TYPE_OPTIONS}
             size="md"
+            aria-label="Mark type"
             data-testid="marks-type-filter"
           />
         </div>
@@ -198,6 +199,7 @@ export function DiscordMarkedMedia({
             onChange={(v) => setFilter("source", v)}
             options={SOURCE_OPTIONS}
             size="md"
+            aria-label="Source"
             data-testid="marks-source-filter"
           />
         </div>

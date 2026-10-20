@@ -36,6 +36,8 @@ model User {
   isExempt              Boolean                @default(false) // Exempt from the subscription requirement (e.g. grandfathered members)
   exemptReason          String? // Why the user is exempt (e.g. "grandfathered")
   timezone              String? // IANA zone the member chose for Rewind; null = the server zone
+  sessionVersion        Int                    @default(0) // Bumped by endUserSessions(); a JWT carrying another version ends
+  disabledAt            DateTime? // Set by an admin; a disabled user cannot sign in and their sessions end
   rewindGenerations     RewindGeneration[]
   rewindPrefs           RewindPrefs[]
   rewindExclusions      RewindExclusion[]
@@ -465,7 +467,10 @@ model Config {
   rewindAudio                  Boolean   @default(false)
   rewindDisabledPages          Json?
   rewindSerialKey              String? // HMAC key for member serials (encrypted at rest)
-  updatedAt                    DateTime  @updatedAt
+  llmDailyCapPerUserUsd        Float     @default(0.5) // Daily assistant spend per member, server-zone day (P4.20)
+  llmDailyCapAdminUsd          Float     @default(5) // Daily assistant spend per admin
+  llmDailyCapServerUsd         Float     @default(5) // Daily assistant spend for the whole server
+  updatedAt                   DateTime  @updatedAt
   updatedBy                    String? // User ID who last updated this config
 }
 
@@ -515,6 +520,8 @@ model DiscordConnection {
   scope            String?
   expiresAt        DateTime?
   metadataSyncedAt DateTime?
+  /// Watched hours from the last daily role reconcile; event-driven role syncs push it unchanged (P4.18)
+  lastWatchedHours Int?
   linkedAt         DateTime  @default(now())
   revokedAt        DateTime?
   lastError        String?
@@ -836,6 +843,7 @@ model Subscription {
   cancelAtPeriodEnd    Boolean            @default(false)
   canceledAt           DateTime? // When the subscription was canceled
   plexInviteStatus     String? // Tracks Plex invite lifecycle (e.g. "invited", "accepted")
+  stripeEventAt        DateTime? // `created` of the newest Stripe event applied; older events are skipped (SEC-37)
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
 
@@ -843,11 +851,15 @@ model Subscription {
   @@index([status])
 }
 
-// Stripe webhook idempotency - keyed by the Stripe event id
+// Stripe webhook idempotency - keyed by the Stripe event id. An event counts as
+// handled only once `processedAt` is set, after its handler succeeded (SEC-40).
 model StripeEvent {
-  id          String   @id // Stripe event id (evt_...)
+  id          String    @id // Stripe event id (evt_...)
   type        String // Stripe event type (e.g. customer.subscription.updated)
-  processedAt DateTime @default(now())
+  receivedAt  DateTime  @default(now())
+  attempts    Int       @default(0)
+  lastError   String? // An error code from the last failed attempt, never a message
+  processedAt DateTime?
 
   @@index([type])
 }
@@ -858,4 +870,22 @@ enum SubscriptionStatus {
   CANCELED
   INCOMPLETE
   UNPAID
+}
+
+// Append-only audit trail (SEC-55). Every logAuditEvent call writes one row;
+// no code path updates or deletes rows. `actorUserId` is a user id, or "setup"
+// for the first-run wizard, and is not a foreign key, so a row outlives its user.
+// `details` hold the sanitised event details (for CONFIG_CHANGED, a redacted diff).
+model AuditLog {
+  id           String   @id @default(cuid())
+  type         String
+  actorUserId  String
+  targetUserId String?
+  details      Json?
+  requestId    String?
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([type, createdAt])
+  @@index([targetUserId])
 }

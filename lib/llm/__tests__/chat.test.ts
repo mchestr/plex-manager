@@ -92,7 +92,7 @@ describe('chatWithTools', () => {
     useModel(model, 'openai', 'gpt-6-sol')
     const history: ModelMessage[] = [{ role: 'user', content: 'Is Sonarr up?' }]
 
-    const first = await chatWithTools({ system: 'You help.', messages: history, tools: TOOLS, attribution })
+    const first = await chatWithTools({ system: 'You help.', messages: history, tools: TOOLS, attribution, usagePrompt: [{ role: 'user', content: 'Hi' }] })
 
     expect(first.ok).toBe(true)
     if (!first.ok) return
@@ -116,7 +116,7 @@ describe('chatWithTools', () => {
         { type: 'tool-result', toolCallId: 'call-1', toolName: 'get_sonarr_status', output: { type: 'text', value: '{"version":"4"}' } },
       ],
     })
-    const second = await chatWithTools({ system: 'You help.', messages: history, tools: TOOLS, attribution })
+    const second = await chatWithTools({ system: 'You help.', messages: history, tools: TOOLS, attribution, usagePrompt: [{ role: 'user', content: 'Hi' }] })
 
     expect(second).toMatchObject({ ok: true, content: 'Sonarr is up', toolCalls: [] })
     const prompt = model.doGenerateCalls[1].prompt
@@ -130,7 +130,7 @@ describe('chatWithTools', () => {
     const model = new MockLanguageModelV4({ doGenerate: generated([{ type: 'text', text: 'Hello' }]) })
     useModel(model, 'anthropic', 'claude-sonnet-5-5', { effort: 'low' })
 
-    const result = await chatWithTools({ system: 's', messages: [{ role: 'user', content: 'Hi' }], tools: TOOLS, attribution })
+    const result = await chatWithTools({ system: 's', messages: [{ role: 'user', content: 'Hi' }], tools: TOOLS, attribution, usagePrompt: [{ role: 'user', content: 'Hi' }] })
 
     expect(result).toMatchObject({ ok: true, content: 'Hello', modelId: 'claude-sonnet-5-5' })
     const call = model.doGenerateCalls[0]
@@ -149,24 +149,89 @@ describe('chatWithTools', () => {
     )
   })
 
+  it('records a billed length finish with its outcome and cost (SEC-23)', async () => {
+    const model = new MockLanguageModelV4({ doGenerate: generated([{ type: 'text', text: 'Partial ans' }], 'length') })
+    useModel(model, 'anthropic', 'claude-sonnet-5-5')
+
+    const result = await chatWithTools({ system: 's', messages: [{ role: 'user', content: 'Hi' }], tools: TOOLS, attribution, usagePrompt: [{ role: 'user', content: 'Hi' }] })
+
+    expect(result).toMatchObject({ ok: true, content: 'Partial ans' })
+    expect(recordUsage).toHaveBeenCalledWith(
+      expect.objectContaining({ attribution, outcome: 'length', cost: expect.closeTo(0.003, 10) })
+    )
+  })
+
+  it('records a refusal as a refusal, though the SDK reports content-filter', async () => {
+    const refused = generated([{ type: 'text', text: 'I cannot help with that' }], 'content-filter')
+    const model = new MockLanguageModelV4({
+      doGenerate: { ...refused, finishReason: { unified: 'content-filter', raw: 'refusal' } },
+    })
+    useModel(model, 'anthropic', 'claude-sonnet-5-5')
+
+    await chatWithTools({ system: 's', messages: [{ role: 'user', content: 'Hi' }], tools: TOOLS, attribution, usagePrompt: [{ role: 'user', content: 'Hi' }] })
+
+    expect(recordUsage).toHaveBeenCalledWith(expect.objectContaining({ outcome: 'refusal' }))
+  })
+
+  it('caps output tokens at the smaller of the row and the caller cap', async () => {
+    const model = new MockLanguageModelV4({ doGenerate: generated([{ type: 'text', text: 'ok' }]) })
+    useModel(model, 'openai', 'gpt-4o')
+
+    await chatWithTools({ system: 's', messages: [{ role: 'user', content: 'Hi' }], tools: TOOLS, attribution, maxOutputTokens: 600, usagePrompt: [{ role: 'user', content: 'Hi' }] })
+    await chatWithTools({ system: 's', messages: [{ role: 'user', content: 'Hi' }], tools: TOOLS, attribution, maxOutputTokens: 5000, usagePrompt: [{ role: 'user', content: 'Hi' }] })
+
+    expect(model.doGenerateCalls.map((call) => call.maxOutputTokens)).toEqual([600, 1000])
+  })
+
   it('keeps temperature for a model that takes it', async () => {
     const model = new MockLanguageModelV4({ doGenerate: generated([{ type: 'text', text: 'ok' }]) })
     useModel(model, 'openai', 'gpt-4o')
 
-    await chatWithTools({ system: 's', messages: [{ role: 'user', content: 'Hi' }], tools: TOOLS, attribution })
+    await chatWithTools({ system: 's', messages: [{ role: 'user', content: 'Hi' }], tools: TOOLS, attribution, usagePrompt: [{ role: 'user', content: 'Hi' }] })
 
     expect(model.doGenerateCalls[0].temperature).toBe(0.7)
   })
 
+  it('stores only what the call added, cut to 4 KB, never the whole context (SEC-45)', async () => {
+    const model = new MockLanguageModelV4({ doGenerate: generated([{ type: 'text', text: 'ok' }]) })
+    useModel(model, 'openai', 'gpt-4o')
+    const context: ModelMessage[] = [
+      { role: 'user', content: 'earlier question '.repeat(50) },
+      { role: 'assistant', content: 'earlier answer' },
+      { role: 'user', content: 'Hi' },
+    ]
+
+    await chatWithTools({ system: 's', messages: context, tools: TOOLS, attribution, usagePrompt: [{ role: 'user', content: 'Hi' }] })
+    await chatWithTools({
+      system: 's',
+      messages: context,
+      tools: TOOLS,
+      attribution,
+      usagePrompt: [
+        { role: 'tool', name: 'get_sonarr_status', content: 'x'.repeat(10_000) },
+        { role: 'tool', name: 'get_sonarr_status', content: 'y'.repeat(10) },
+      ],
+    })
+
+    const prompts = jest.mocked(recordUsage).mock.calls.map(([record]) => JSON.parse(record.prompt ?? ''))
+    expect(prompts).toEqual([
+      [{ role: 'user', content: 'Hi' }],
+      [
+        { role: 'tool', name: 'get_sonarr_status', content: 'x'.repeat(2048) },
+        { role: 'tool', name: 'get_sonarr_status', content: 'y'.repeat(10) },
+      ],
+    ])
+  })
+
   it('reports a missing or broken provider row as a configuration error', async () => {
     mockGetLanguageModel.mockResolvedValueOnce(null)
-    expect(await chatWithTools({ system: 's', messages: [], tools: TOOLS, attribution })).toMatchObject({
+    expect(await chatWithTools({ system: 's', messages: [], tools: TOOLS, attribution, usagePrompt: [{ role: 'user', content: 'Hi' }] })).toMatchObject({
       ok: false,
       configurationError: true,
     })
 
     mockGetLanguageModel.mockRejectedValueOnce(new LLMConfigError('An OpenAI-compatible provider needs a base URL'))
-    expect(await chatWithTools({ system: 's', messages: [], tools: TOOLS, attribution })).toEqual({
+    expect(await chatWithTools({ system: 's', messages: [], tools: TOOLS, attribution, usagePrompt: [{ role: 'user', content: 'Hi' }] })).toEqual({
       ok: false,
       error: 'An OpenAI-compatible provider needs a base URL',
       configurationError: true,
@@ -181,7 +246,7 @@ describe('chatWithTools', () => {
       row: { effort: null, temperature: null, maxTokens: null } as LLMProvider,
     })
 
-    const result = await chatWithTools({ system: 's', messages: [], tools: TOOLS, attribution })
+    const result = await chatWithTools({ system: 's', messages: [], tools: TOOLS, attribution, usagePrompt: [{ role: 'user', content: 'Hi' }] })
 
     expect(result).toMatchObject({ ok: false, configurationError: true })
     expect(model.doGenerateCalls).toHaveLength(0)
@@ -202,7 +267,7 @@ describe('chatWithTools', () => {
     })
     useModel(model, 'openai', 'gpt-6-sol')
 
-    const result = await chatWithTools({ system: 's', messages: [{ role: 'user', content: 'Hi' }], tools: TOOLS, attribution })
+    const result = await chatWithTools({ system: 's', messages: [{ role: 'user', content: 'Hi' }], tools: TOOLS, attribution, usagePrompt: [{ role: 'user', content: 'Hi' }] })
 
     expect(result).toEqual({ ok: false, error: 'The LLM provider returned HTTP 400' })
     expect(recordUsage).not.toHaveBeenCalled()

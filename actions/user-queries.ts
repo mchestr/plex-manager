@@ -1,15 +1,20 @@
 "use server"
 
-import { authOptions } from "@/lib/auth"
+import { z } from "zod"
+
+import { memberAction } from "@/lib/actions/define-action"
+import { type ActionErrorCode, type ActionResult, fail, ok, toActionError } from "@/lib/actions/result"
 import { requireAdmin } from "@/lib/admin"
 import { checkUserServerAccess, getPlexServerIdentity, getPlexUsers, unshareUserFromPlexServer } from "@/lib/connections/plex"
+import { type PlexUnshareErrorCode } from "@/lib/connections/plex-invitations"
 import { prisma } from "@/lib/prisma"
-import { getServerSession } from "next-auth"
+import { endUserSessions } from "@/lib/session-revocation"
 import { SubscriptionStatus } from "@/lib/generated/prisma/client"
 import { aggregateLlmUsage } from "@/lib/utils"
 import { createLogger } from "@/lib/utils/logger"
 import { parseStoredRewind } from "@/lib/wrapped/data/parse-stored"
 import { readStoredError, toStoredError } from "@/lib/wrapped/generation-errors"
+import { userIdSchema, yearSchema } from "@/lib/validations/shared-schemas"
 import {
   AdminUserWithWrappedStats,
   DiscordCommandActivity,
@@ -35,24 +40,26 @@ const logger = createLogger("USER_QUERIES")
  * `data` never carries `statistics.leaderboards`: rows written before P0.8
  * hold every member's name and yearly watch minutes there until P0.20's
  * clean-up runs, and no viewer reads them.
+ *
+ * A member may read only their own row (`FORBIDDEN` otherwise); admins may
+ * read any. `data` is null when there is no row for the year.
+ *
+ * @param input - `{ userId, year }`
  */
-export async function getUserPlexWrapped(userId: string, year: number) {
-  // Authorization: a user may only read their own Wrapped; admins may read any.
-  // This action is exposed as a public endpoint, so the check must live here —
-  // there is no middleware gating direct Server Action invocation.
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) {
-    return null
-  }
-  if (session.user.id !== userId && !session.user.isAdmin) {
-    logger.warn("Unauthorized attempt to read another user's wrapped", {
-      requesterId: session.user.id,
-      targetUserId: userId,
-    })
-    return null
-  }
+export const getUserPlexWrapped = memberAction({
+  input: z.object({ userId: userIdSchema, year: yearSchema }),
+  fallbackError: "Failed to load the Rewind",
+  handler: async ({ userId, year }, { session }) => {
+    // This action is a public endpoint, so the ownership check must live here:
+    // nothing gates direct Server Action calls.
+    if (session.user.id !== userId && !session.user.isAdmin) {
+      logger.warn("Unauthorized attempt to read another user's wrapped", {
+        requesterId: session.user.id,
+        targetUserId: userId,
+      })
+      return fail("FORBIDDEN", "You can only open your own Rewind.")
+    }
 
-  try {
     const wrapped = await prisma.plexWrapped.findUnique({
       where: {
         userId_year: {
@@ -73,18 +80,15 @@ export async function getUserPlexWrapped(userId: string, year: number) {
     })
 
     if (!wrapped) {
-      return null
+      return ok(null)
     }
     const visible = { ...wrapped, data: withoutLeaderboards(wrapped.data) }
     if (!visible.error || session.user.isAdmin) {
-      return visible
+      return ok(visible)
     }
-    return { ...visible, error: toStoredError(readStoredError(visible.error)) }
-  } catch (error) {
-    logger.error("Error getting user wrapped", error)
-    return null
-  }
-}
+    return ok({ ...visible, error: toStoredError(readStoredError(visible.error)) })
+  },
+})
 
 /**
  * Get detailed user information including all wrapped, shares, visits, and LLM usage
@@ -180,6 +184,7 @@ export async function getUserDetails(userId: string): Promise<UserDetails | null
       image: user.image,
       plexUserId: user.plexUserId,
       isAdmin: user.isAdmin,
+      disabledAt: user.disabledAt,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
       hasPlexAccess,
@@ -263,47 +268,53 @@ export async function getAllUsersWithWrapped(year: number): Promise<AdminUserWit
   }
 }
 
+/** Admin copy for each unshare failure; Plex's own text is never shown. */
+const UNSHARE_ERROR_COPY: Record<PlexUnshareErrorCode, string> = {
+  PLEX_AUTH: "Plex rejected Plex Manager's token. Reconnect Plex in settings.",
+  PLEX_UNAVAILABLE: "Plex didn't respond. Try again in a few minutes.",
+}
+
 /**
- * Unshare library access for a user from the Plex server (admin only)
+ * Removes a user's share of the configured Plex server (admin only), leaving
+ * their plex.tv friendship and the owner's other servers alone. A share that
+ * is already gone succeeds as `already_removed`. Either success also ends the
+ * user's sessions (SEC-10).
  */
-export async function unshareUserLibrary(userId: string): Promise<{ success: boolean; error?: string }> {
-  await requireAdmin()
+export async function unshareUserLibrary(
+  userId: string
+): Promise<ActionResult<{ status: "removed" | "already_removed" }, ActionErrorCode | PlexUnshareErrorCode>> {
+  const session = await requireAdmin()
 
   try {
-    // Get the user
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
         id: true,
-        email: true,
         plexUserId: true,
         isAdmin: true,
       },
     })
 
     if (!user) {
-      return { success: false, error: "User not found" }
+      return fail("NOT_FOUND", "User not found")
     }
 
-    // Don't allow unsharing admin users
     if (user.isAdmin) {
-      return { success: false, error: "Cannot unshare library access for admin users" }
+      return fail("FORBIDDEN", "Cannot unshare library access for admin users")
     }
 
     if (!user.plexUserId) {
-      return { success: false, error: "User Plex ID is required to unshare library access" }
+      return fail("VALIDATION", "User Plex ID is required to unshare library access")
     }
 
-    // Get active Plex server
     const plexServer = await prisma.plexServer.findFirst({
       where: { isActive: true },
     })
 
     if (!plexServer) {
-      return { success: false, error: "No active Plex server configured" }
+      return fail("NOT_FOUND", "No active Plex server configured")
     }
 
-    // Unshare the user
     const result = await unshareUserFromPlexServer(
       {
         url: plexServer.url,
@@ -313,26 +324,17 @@ export async function unshareUserLibrary(userId: string): Promise<{ success: boo
     )
 
     if (!result.success) {
-      logger.error("Failed to unshare user library", undefined, {
-        userId: user.id,
-        email: user.email,
-        error: result.error,
-      })
-      return result
+      logger.warn("Failed to unshare user library", { userId: user.id, code: result.code })
+      return { success: false, code: result.code, error: UNSHARE_ERROR_COPY[result.code] }
     }
 
-    logger.info("Successfully unshared user library", {
-      userId: user.id,
-      email: user.email,
-    })
+    await endUserSessions(user.id, "unshared", session.user.id)
 
-    return { success: true }
+    logger.info("Unshared user library", { userId: user.id, status: result.status })
+
+    return ok({ status: result.status })
   } catch (error) {
-    logger.error("Error unsharing user library", error, { userId })
-    if (error instanceof Error) {
-      return { success: false, error: `Error unsharing library: ${error.message}` }
-    }
-    return { success: false, error: "Failed to unshare user library" }
+    return toActionError(error, "Failed to unshare user library")
   }
 }
 

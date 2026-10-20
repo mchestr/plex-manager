@@ -67,6 +67,7 @@ export const envSchema = z.object({
   E2E_DATABASE_URL: text("Test only: the Playwright database; its name must end in _test."),
   E2E_PORT: text("Test only: the Playwright web server port (default 3100)."),
   SKIP_CONNECTION_TESTS: text('Test only: "true" skips live Plex and Prometheus checks.'),
+  ENABLE_DEV_UI: text('Development only: "1" serves the /dev/ui primitives sheet (Playwright sets it).'),
 })
 
 type Env = z.infer<typeof envSchema>

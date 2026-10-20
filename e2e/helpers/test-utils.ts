@@ -218,14 +218,14 @@ export async function fillForm(
 }
 
 /**
- * Wait for a toast/notification message to appear
+ * Wait for a toast whose text matches `message` to appear.
  */
 export async function waitForToast(
   page: Page,
   message: string | RegExp,
   options?: { timeout?: number }
 ): Promise<void> {
-  const toast = page.getByText(message);
+  const toast = page.getByTestId('toast').filter({ hasText: message });
   await expect(toast).toBeVisible({ timeout: options?.timeout ?? WAIT_TIMEOUTS.TOAST_APPEAR });
 }
 

@@ -49,7 +49,7 @@ const MONTH_NAMES = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
-const REWIND_STATISTICS: WrappedStatistics = {
+export const REWIND_STATISTICS: WrappedStatistics = {
   totalWatchTime: { total: 12840, movies: 4560, shows: 8280 },
   moviesWatched: 38,
   showsWatched: 12,

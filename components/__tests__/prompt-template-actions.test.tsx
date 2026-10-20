@@ -341,9 +341,9 @@ describe('PromptTemplateActions', () => {
     it('should have proper styling for Set Active button', () => {
       render(<PromptTemplateActions template={mockTemplate} />)
 
-      // Set Active now uses the shared <Button variant="primary"> (cyan→purple gradient).
-      const setActiveButton = screen.getByText('Set Active')
-      expect(setActiveButton).toHaveClass('bg-gradient-to-r', 'from-cyan-600', 'to-purple-600', 'text-white')
+      // Set Active uses the shared <Button variant="primary">.
+      const setActiveButton = screen.getByRole('button', { name: 'Set Active' })
+      expect(setActiveButton).toHaveClass('bg-primary')
     })
 
     it('should have proper styling for Edit link', () => {
@@ -363,9 +363,9 @@ describe('PromptTemplateActions', () => {
     it('should have proper styling for Delete button', () => {
       render(<PromptTemplateActions template={mockTemplate} />)
 
-      // Delete now uses the shared <Button variant="danger">.
-      const deleteButton = screen.getByText('Delete')
-      expect(deleteButton).toHaveClass('bg-red-600', 'hover:bg-red-500', 'text-white')
+      // Delete uses the shared <Button variant="danger">, now destructive.
+      const deleteButton = screen.getByRole('button', { name: 'Delete' })
+      expect(deleteButton).toHaveClass('bg-destructive-subtle', 'text-destructive')
     })
   })
 

@@ -19,8 +19,9 @@ jest.mock('next/navigation', () => ({ useRouter: () => ({ refresh: mockRefresh }
 const getStatus = jest.mocked(getRewindStatus)
 const GIVE_UP_MS = 10 * 60 * 1000
 
-function status(state: RewindStatus['state'], hasCompleted = false): RewindStatus {
-  return { state, errorCode: null, startedAt: null, hasCompleted }
+/** What getRewindStatus returns for a status. */
+function status(state: RewindStatus['state'], hasCompleted = false) {
+  return { success: true as const, data: { state, errorCode: null, startedAt: null, hasCompleted } }
 }
 
 async function advance(ms: number) {
@@ -58,7 +59,7 @@ describe('useRewindStatus', () => {
     await advance(0)
     await advance(60_000)
 
-    expect(result.current.status).toEqual(status('completed', true))
+    expect(result.current.status).toEqual(status('completed', true).data)
     expect(getStatus).toHaveBeenCalledTimes(1)
     expect(getStatus).toHaveBeenCalledWith({ year: 2026 })
   })
@@ -150,7 +151,7 @@ describe('useRewindStatus', () => {
   })
 
   it('reports an error result as an error', async () => {
-    getStatus.mockResolvedValue({ error: 'Unauthorized' })
+    getStatus.mockResolvedValue({ success: false, code: 'UNAUTHENTICATED', error: 'Unauthorized' })
 
     const { result } = renderStatusHook()
     await advance(0)

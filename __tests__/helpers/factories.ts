@@ -3,7 +3,7 @@
  * mocks (`prismaMock.user.findUnique.mockResolvedValue(buildUser())`) get a
  * valid shape without casts.
  */
-import { Prisma, type Config, type Invite, type LLMUsage, type PlexWrapped, type User } from '@/lib/generated/prisma/client'
+import { Prisma, type Config, type Invite, type LLMUsage, type PlexServer, type PlexWrapped, type PromptTemplate, type User } from '@/lib/generated/prisma/client'
 
 // A fresh Date per row, so a test that mutates one cannot leak into another.
 const fixedDate = () => new Date('2026-01-01T00:00:00.000Z')
@@ -24,6 +24,8 @@ export function buildUser(overrides: Partial<User> = {}): User {
     isExempt: false,
     exemptReason: null,
     timezone: null,
+    sessionVersion: 0,
+    disabledAt: null,
     createdAt: fixedDate(),
     updatedAt: fixedDate(),
     ...overrides,
@@ -50,6 +52,21 @@ export function buildPlexWrapped(overrides: Partial<PlexWrapped> = {}): PlexWrap
     notifiedAt: null,
     createdAt: fixedDate(),
     updatedAt: fixedDate(),
+    ...overrides,
+  }
+}
+
+export function buildPromptTemplate(overrides: Partial<PromptTemplate> = {}): PromptTemplate {
+  return {
+    id: 'template-1',
+    name: 'Test template',
+    description: null,
+    template: 'Hello {{userName}}',
+    isActive: true,
+    version: 1,
+    createdAt: fixedDate(),
+    updatedAt: fixedDate(),
+    updatedBy: null,
     ...overrides,
   }
 }
@@ -133,8 +150,26 @@ export function buildConfig(overrides: Partial<Config> = {}): Config {
     rewindAudio: false,
     rewindDisabledPages: null,
     rewindSerialKey: null,
+    llmDailyCapPerUserUsd: 0.5,
+    llmDailyCapAdminUsd: 5,
+    llmDailyCapServerUsd: 5,
     updatedAt: fixedDate(),
     updatedBy: null,
+    ...overrides,
+  }
+}
+
+export function buildPlexServer(overrides: Partial<PlexServer> = {}): PlexServer {
+  return {
+    id: 'plex-server-1',
+    name: 'Test Plex',
+    url: 'https://plex.example.com:32400',
+    publicUrl: null,
+    token: 'plex-token',
+    adminPlexUserId: null,
+    isActive: true,
+    createdAt: fixedDate(),
+    updatedAt: fixedDate(),
     ...overrides,
   }
 }

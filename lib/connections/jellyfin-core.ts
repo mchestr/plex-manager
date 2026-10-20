@@ -5,6 +5,7 @@
 import { createHash } from "node:crypto"
 
 import packageJson from "@/package.json"
+import { jellyfinClientName } from "@/lib/brand"
 import { createLogger, sanitizeUrlForLogging } from "@/lib/utils/logger"
 
 export const logger = createLogger("JELLYFIN_CONNECTION")
@@ -28,6 +29,8 @@ export interface JellyfinInviteSettings {
   allowDownloads?: boolean
   /** Whether to enable remote access */
   enableRemoteAccess?: boolean
+  /** Whether the account is disabled (default false) */
+  isDisabled?: boolean
 }
 
 /**
@@ -79,7 +82,7 @@ function getJellyfinDeviceId(): string {
  */
 function getMediaBrowserAuthorization(accessToken?: string): string {
   const params: Array<[string, string]> = [
-    ["Client", "Plex Manager"],
+    ["Client", jellyfinClientName],
     ["Device", "Server"],
     ["DeviceId", getJellyfinDeviceId()],
     ["Version", packageJson.version],

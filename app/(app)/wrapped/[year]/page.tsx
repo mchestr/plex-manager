@@ -6,7 +6,7 @@ import { WrappedSharedYearsNotice } from "@/components/wrapped/wrapped-shared-ye
 import { WrappedYearLinks } from "@/components/wrapped/wrapped-year-links"
 import { WrappedYearView } from "@/components/wrapped/wrapped-year-view"
 import { prisma } from "@/lib/prisma"
-import { yearParamSchema } from "@/lib/validations/shared-schemas"
+import { yearParamSchema } from "@/lib/validations/params"
 import { legacyWrappedData, readWrappedStatus } from "@/lib/wrapped/data/parse-stored"
 import { getSeasonYear, listCompletedRewindYears } from "@/lib/wrapped/season"
 
@@ -28,9 +28,9 @@ export default async function WrappedYearPage({ params }: { params: Promise<{ ye
   const year = parsedYear.data
   const userId = session.user.id
 
-  const [wrapped, sharedRows, completedYears, seasonYear] = await Promise.all([
+  const [wrappedResult, sharedRows, completedYears, seasonYear] = await Promise.all([
     // Reads only the session member's row: the ownership check is inside.
-    getUserPlexWrapped(userId, year),
+    getUserPlexWrapped({ userId, year }),
     // Every year of the member's own with a live public link, so links on
     // years the viewer does not show can still be stopped (SEC-16).
     prisma.plexWrapped.findMany({
@@ -42,6 +42,7 @@ export default async function WrappedYearPage({ params }: { params: Promise<{ ye
     getSeasonYear(),
   ])
 
+  const wrapped = wrappedResult.success ? wrappedResult.data : null
   const wrappedData =
     wrapped && readWrappedStatus(wrapped.status, wrapped.id) === "completed" && wrapped.data ? legacyWrappedData(wrapped) : null
   // The viewer has its own controls for the year it shows.

@@ -4,6 +4,7 @@ import { getRewindSeasonDataPreparedAt } from "@/actions/admin/rewind-season"
 import { DiscordIntegrationForm } from "@/components/admin/settings/discord-integration-form"
 import { JellyfinLoginToggle } from "@/components/admin/settings/jellyfin-login-toggle"
 import { LLMProviderForm } from "@/components/admin/settings/llm-provider-form"
+import { LlmSpendCapsForm } from "@/components/admin/settings/llm-spend-caps-form"
 import { LLMToggle } from "@/components/admin/settings/llm-toggle"
 import { ServerForm } from "@/components/admin/settings/server-form"
 import { StripeSettingsForm } from "@/components/admin/settings/stripe-settings-form"
@@ -162,6 +163,13 @@ export default async function SettingsPage() {
                     provider={settings.chatLLMProvider}
                     purpose="chat"
                   />
+                  <div className="pt-4 mt-4 border-t border-border">
+                    <LlmSpendCapsForm
+                      perUserUsd={settings.config.llmDailyCapPerUserUsd}
+                      adminUsd={settings.config.llmDailyCapAdminUsd}
+                      serverUsd={settings.config.llmDailyCapServerUsd}
+                    />
+                  </div>
                 </div>
 
                 {/* Wrapped Generation Configuration */}
@@ -403,6 +411,7 @@ export default async function SettingsPage() {
                   enabled={stripeConfig.enabled}
                   hasSecretKey={stripeConfig.hasSecretKey}
                   hasWebhookSecret={stripeConfig.hasWebhookSecret}
+                  hasJobQueue={stripeConfig.hasJobQueue}
                   priceIds={stripeConfig.priceIds}
                   librarySectionIds={stripeConfig.librarySectionIds}
                 />

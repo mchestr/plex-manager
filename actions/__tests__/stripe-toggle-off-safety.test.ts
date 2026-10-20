@@ -73,8 +73,9 @@ describe('setStripeEnabled(false) — safe & reversible toggle-off (FR-4)', () =
 
     expect(result.success).toBe(true)
 
-    // Disable never inspects config completeness.
-    expect(mockPrisma.config.findUnique).not.toHaveBeenCalled()
+    // Disable never inspects config completeness: it reads only the flag, for the audit diff.
+    expect(mockPrisma.config.findUnique).toHaveBeenCalledTimes(1)
+    expect(mockPrisma.config.findUnique).toHaveBeenCalledWith({ where: { id: 'config' }, select: { stripeEnabled: true } })
 
     // The only DB write is the flag itself.
     expect(mockPrisma.config.upsert).toHaveBeenCalledWith(

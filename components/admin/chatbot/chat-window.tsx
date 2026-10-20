@@ -3,21 +3,26 @@
 import { chatWithAdminBot } from "@/actions/chatbot"
 import { type ChatMessage } from "@/actions/chatbot/types"
 import { AnimatePresence, motion } from "motion/react"
-import dynamic from "next/dynamic"
 import { useEffect, useRef, useState } from "react"
+import { MarkdownBody } from "@/components/ui/markdown-body"
 import { useFormat } from "@/lib/format-context"
 import { useChat } from "./chat-context"
 
-// ReactMarkdown pulls in a number of micromark dependencies that Next.js
-// bundles into server vendor chunks. In some environments this can cause
-// missing vendor-chunk errors. Load it purely on the client to avoid
-// server-side bundling issues during E2E runs.
-const ReactMarkdown = dynamic(() => import("react-markdown"), {
-  ssr: false,
-})
-
 interface ChatbotProps {
   userName?: string
+}
+
+/** The newest turns that fit the action's bounds: 40 messages and 60,000 characters (SEC-42). */
+function boundedHistory(messages: ChatMessage[]) {
+  const history: { role: "user" | "assistant"; content: string }[] = []
+  let total = 0
+  for (const { role, content } of [...messages].reverse()) {
+    if (role === "system") continue
+    if (history.length === 40 || total + content.length > 60_000) break
+    total += content.length
+    history.unshift({ role, content })
+  }
+  return history
 }
 
 const getInitialMessage = (userName?: string): ChatMessage => ({
@@ -59,20 +64,23 @@ export function Chatbot({ userName }: ChatbotProps) {
     setIsLoading(true)
 
     try {
-      // Pass the entire conversation history (excluding the initial greeting if you want, but keeping it is fine)
-      const response = await chatWithAdminBot([...messages, userMessage], conversationId)
+      const response = await chatWithAdminBot({
+        messages: boundedHistory([...messages, userMessage]),
+        conversationId,
+      })
 
-      if (response.success && response.message) {
-        if (response.conversationId) {
-          setConversationId(response.conversationId)
+      if (response.success) {
+        const { message, conversationId: activeId } = response.data
+        if (activeId) {
+          setConversationId(activeId)
         }
-        setMessages((prev) => [...prev, response.message!])
+        setMessages((prev) => [...prev, message])
       } else {
         setMessages((prev) => [
           ...prev,
           {
             role: "assistant",
-            content: "Sorry, I encountered an error while processing your request.",
+            content: `Sorry, I couldn't answer that. ${response.error}`,
             timestamp: Date.now(),
           },
         ])
@@ -179,33 +187,9 @@ export function Chatbot({ userName }: ChatbotProps) {
                     }`}
                   >
                     {msg.role === "assistant" ? (
-                      <div>
-                        <ReactMarkdown
-                          components={{
-                            p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-                            ul: ({ children }) => <ul className="mb-2 ml-4 list-disc space-y-1">{children}</ul>,
-                            ol: ({ children }) => <ol className="mb-2 ml-4 list-decimal space-y-1">{children}</ol>,
-                            li: ({ children }) => <li className="leading-relaxed">{children}</li>,
-                            strong: ({ children }) => <strong className="font-semibold text-white">{children}</strong>,
-                            em: ({ children }) => <em className="italic">{children}</em>,
-                            code: ({ children }) => (
-                              <code className="px-1.5 py-0.5 bg-slate-900/50 rounded text-xs font-mono text-cyan-300">
-                                {children}
-                              </code>
-                            ),
-                            h1: ({ children }) => <h1 className="text-base font-bold mb-2 mt-3 first:mt-0">{children}</h1>,
-                            h2: ({ children }) => <h2 className="text-sm font-bold mb-2 mt-3 first:mt-0">{children}</h2>,
-                            h3: ({ children }) => <h3 className="text-sm font-semibold mb-1 mt-2 first:mt-0">{children}</h3>,
-                            blockquote: ({ children }) => (
-                              <blockquote className="border-l-2 border-slate-600 pl-3 my-2 italic text-slate-400">
-                                {children}
-                              </blockquote>
-                            ),
-                          }}
-                        >
-                          {msg.content}
-                        </ReactMarkdown>
-                      </div>
+                      <MarkdownBody className="[--typeset-flow:0.75em] [--typeset-leading:1.6]">
+                        {msg.content}
+                      </MarkdownBody>
                     ) : (
                       <div className="whitespace-pre-wrap">{msg.content}</div>
                     )}
@@ -256,6 +240,7 @@ export function Chatbot({ userName }: ChatbotProps) {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Ask about server status..."
+                  maxLength={8000}
                   className="w-full bg-slate-900 text-white border border-slate-600 rounded-lg py-2 pl-4 pr-10 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 text-sm placeholder-slate-500"
                   disabled={isLoading}
                 />

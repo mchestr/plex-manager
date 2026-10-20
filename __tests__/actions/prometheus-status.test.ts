@@ -56,18 +56,20 @@ describe('Prometheus Status Actions', () => {
     jest.useRealTimers()
   })
 
+  /** The status a signed-in member gets. */
+  async function status() {
+    const result = await getPrometheusStatus()
+    if (!result.success) throw new Error(result.error)
+    return result.data
+  }
+
   describe('getPrometheusStatus', () => {
     it('should return safe defaults without querying when unauthenticated', async () => {
       mockGetServerSession.mockResolvedValue(null)
 
       const result = await getPrometheusStatus()
 
-      expect(result).toEqual({
-        isConfigured: false,
-        serviceName: '',
-        segments: [],
-        overallStatus: 'unknown',
-      })
+      expect(result).toMatchObject({ success: false, code: 'UNAUTHENTICATED' })
       expect(mockPrisma.prometheus.findFirst).not.toHaveBeenCalled()
       expect(mockQueryPrometheusRange).not.toHaveBeenCalled()
     })
@@ -75,7 +77,7 @@ describe('Prometheus Status Actions', () => {
     it('should return not configured when no Prometheus config exists', async () => {
       mockPrisma.prometheus.findFirst.mockResolvedValue(null)
 
-      const result = await getPrometheusStatus()
+      const result = await status()
 
       expect(result.isConfigured).toBe(false)
       expect(result.serviceName).toBe('')
@@ -100,7 +102,7 @@ describe('Prometheus Status Actions', () => {
         error: 'Connection timeout',
       })
 
-      const result = await getPrometheusStatus()
+      const result = await status()
 
       expect(result.isConfigured).toBe(true)
       expect(result.serviceName).toBe('Plex Server')
@@ -147,7 +149,7 @@ describe('Prometheus Status Actions', () => {
         },
       })
 
-      const result = await getPrometheusStatus()
+      const result = await status()
 
       expect(result.isConfigured).toBe(true)
       expect(result.serviceName).toBe('Plex Server')
@@ -197,7 +199,7 @@ describe('Prometheus Status Actions', () => {
         },
       })
 
-      const result = await getPrometheusStatus()
+      const result = await status()
 
       expect(result.isConfigured).toBe(true)
       expect(result.overallStatus).toBe('issues')
@@ -245,7 +247,7 @@ describe('Prometheus Status Actions', () => {
         },
       })
 
-      const result = await getPrometheusStatus()
+      const result = await status()
 
       expect(result.isConfigured).toBe(true)
       expect(result.overallStatus).toBe('down')
@@ -268,7 +270,7 @@ describe('Prometheus Status Actions', () => {
       // Mock the second findFirst call in error handler
       mockPrisma.prometheus.findFirst.mockResolvedValueOnce(mockPrometheus)
 
-      const result = await getPrometheusStatus()
+      const result = await status()
 
       expect(result.isConfigured).toBe(true)
       expect(result.serviceName).toBe('Plex Server')
@@ -293,7 +295,7 @@ describe('Prometheus Status Actions', () => {
       // Mock the second findFirst call in error handler to also fail
       mockPrisma.prometheus.findFirst.mockRejectedValueOnce(new Error('Database error'))
 
-      const result = await getPrometheusStatus()
+      const result = await status()
 
       // When name lookup also fails, isConfigured should be false
       expect(result.isConfigured).toBe(false)
@@ -338,7 +340,7 @@ describe('Prometheus Status Actions', () => {
         },
       })
 
-      const result = await getPrometheusStatus()
+      const result = await status()
 
       // 7 days * 24 hours = 168 hours, plus current hour = 169 segments
       // (accounting for the hour boundary calculation)
@@ -366,7 +368,7 @@ describe('Prometheus Status Actions', () => {
         },
       })
 
-      await getPrometheusStatus()
+      await status()
 
       expect(mockQueryPrometheusRange).toHaveBeenCalledWith(
         {
@@ -400,7 +402,7 @@ describe('Prometheus Status Actions', () => {
         },
       })
 
-      const result = await getPrometheusStatus()
+      const result = await status()
 
       expect(result.isConfigured).toBe(true)
       // New logic: All segments should be unknown (not down) when no data returned

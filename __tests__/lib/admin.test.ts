@@ -1,4 +1,4 @@
-import { requireAdmin, getAdminStatus, UnauthorizedAdminError, UnauthenticatedError } from '@/lib/admin'
+import { requireAdmin, getAdminGate, getAdminStatus, UnauthorizedAdminError, UnauthenticatedError } from '@/lib/admin'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 
@@ -131,6 +131,35 @@ describe('getAdminStatus', () => {
     const result = await getAdminStatus()
 
     expect(result).toBeNull()
+  })
+})
+
+describe('getAdminGate (BP-27)', () => {
+  const session = (isAdmin: boolean) => ({ expires: '2099-01-01', user: { id: 'user-1', isAdmin } })
+
+  it('refuses a missing session as unauthenticated without throwing', async () => {
+    ;(getServerSession as jest.Mock).mockResolvedValue(null)
+    await expect(getAdminGate()).resolves.toEqual({ ok: false, reason: 'unauthenticated' })
+  })
+
+  it('refuses a member as forbidden', async () => {
+    ;(getServerSession as jest.Mock).mockResolvedValue(session(false))
+    await expect(getAdminGate()).resolves.toEqual({ ok: false, reason: 'forbidden' })
+  })
+
+  it('passes an admin with the session', async () => {
+    ;(getServerSession as jest.Mock).mockResolvedValue(session(true))
+    await expect(getAdminGate()).resolves.toEqual({ ok: true, session: session(true) })
+  })
+})
+
+describe('requireAdmin digests', () => {
+  it('throws errors whose digests survive a production build', async () => {
+    ;(getServerSession as jest.Mock).mockResolvedValue(null)
+    await expect(requireAdmin()).rejects.toMatchObject({ digest: 'PM_UNAUTHENTICATED' })
+
+    ;(getServerSession as jest.Mock).mockResolvedValue({ expires: '2099-01-01', user: { id: 'u', isAdmin: false } })
+    await expect(requireAdmin()).rejects.toMatchObject({ digest: 'PM_FORBIDDEN' })
   })
 })
 

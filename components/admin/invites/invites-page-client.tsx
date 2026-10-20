@@ -13,6 +13,9 @@ import { useCallback, useEffect, useState } from "react"
 
 type ServerType = "PLEX" | "JELLYFIN"
 
+/** The expiry options the select offers; createInvite accepts only these. */
+type ExpiresIn = "1d" | "48h" | "7d" | "30d" | "never"
+
 interface JellyfinLibrary {
   id: string
   name: string
@@ -38,7 +41,7 @@ export function InvitesPageClient() {
     code: "",
     serverType: "PLEX" as ServerType,
     maxUses: 1,
-    expiresIn: "48h", // Default to 48 hours
+    expiresIn: "48h" as ExpiresIn, // Default to 48 hours
     librarySectionIds: [] as number[],
     jellyfinLibraryIds: [] as string[],
     allowDownloads: false,
@@ -66,11 +69,11 @@ export function InvitesPageClient() {
     setLoadingLibraries(true)
     try {
       const result = await getAvailableLibraries()
-      if (result.success && result.data) {
+      if (result.success) {
         setPlexLibraries(result.data)
       } else {
         console.error("[INVITES] Failed to load Plex libraries:", result.error)
-        toast.showError(result.error || "Failed to load Plex libraries")
+        toast.showError(result.error)
       }
     } catch (error) {
       console.error("[INVITES] Error loading Plex libraries:", error)
@@ -457,7 +460,7 @@ export function InvitesPageClient() {
                 <select
                   id="expiration"
                   value={formData.expiresIn}
-                  onChange={(e) => setFormData({ ...formData, expiresIn: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, expiresIn: e.target.value as ExpiresIn })}
                   className="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500"
                 >
                   <option value="1d">24 Hours</option>

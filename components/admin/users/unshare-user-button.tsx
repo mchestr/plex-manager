@@ -38,13 +38,17 @@ export function UnshareUserButton({
 
         // Show success flash indicator
         setShowSuccess(true)
-        toast.showSuccess("Library access removed successfully")
+        toast.showSuccess(
+          result.data.status === "already_removed"
+            ? "Library access was already removed"
+            : "Library access removed successfully"
+        )
         // Hide success message after 3 seconds
         setTimeout(() => {
           setShowSuccess(false)
         }, 3000)
       } else {
-        toast.showError(result.error || "Failed to unshare library")
+        toast.showError(result.error)
       }
     } catch (err) {
       toast.showError(err instanceof Error ? err.message : "Failed to unshare library")

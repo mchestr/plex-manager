@@ -4,7 +4,8 @@
  * Covers:
  * - adminCancelSubscription: schedules cancel_at_period_end via Stripe, no
  *   immediate Plex removal, no-subscription / unconfigured handling, admin auth.
- * - adminGrantAccess: enqueues PLEX_ACCESS_GRANT and marks user comp-exempt.
+ * - adminGrantAccess: enqueues PLEX_ACCESS_GRANT and marks user comp-exempt;
+ *   without Redis, or when the enqueue fails, the user is left as they were.
  * - adminToggleExempt: flips isExempt and sets/clears exemptReason.
  * - Auth: non-admin callers are rejected before any side effect.
  *
@@ -45,6 +46,7 @@ jest.mock('@/lib/auth', () => ({
 
 jest.mock('next/cache', () => ({
   revalidatePath: jest.fn(),
+  unstable_cache: <T,>(fn: T) => fn,
 }))
 
 jest.mock('@/lib/utils/logger', () => ({
@@ -146,6 +148,37 @@ describe('adminCancelSubscription', () => {
 describe('adminGrantAccess', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    process.env.REDIS_URL = 'redis://localhost:6379/15'
+  })
+
+  afterEach(() => {
+    delete process.env.REDIS_URL
+  })
+
+  it('fails fast without Redis and leaves isExempt false (GAP-15)', async () => {
+    delete process.env.REDIS_URL
+    mockGetServerSession.mockResolvedValue(adminSession)
+
+    const result = await adminGrantAccess('user-9')
+
+    expect(result).toEqual({ error: expect.stringContaining('REDIS_URL') })
+    expect(mockUserUpdate).not.toHaveBeenCalled()
+    expect(mockAddJob).not.toHaveBeenCalled()
+  })
+
+  it('reverts the exemption when the enqueue throws', async () => {
+    mockGetServerSession.mockResolvedValue(adminSession)
+    mockUserFindUnique.mockResolvedValue({ id: 'user-9', isAdmin: false, isExempt: false, exemptReason: null })
+    mockUserUpdate.mockResolvedValue({ id: 'user-9' })
+    mockAddJob.mockRejectedValue(new Error('connect ECONNREFUSED 127.0.0.1:6379'))
+
+    const result = await adminGrantAccess('user-9')
+
+    expect(result).toEqual({ error: expect.not.stringContaining('ECONNREFUSED') })
+    expect(mockUserUpdate).toHaveBeenLastCalledWith({
+      where: { id: 'user-9' },
+      data: { isExempt: false, exemptReason: null },
+    })
   })
 
   it('enqueues the grant job and marks the user comp-exempt', async () => {

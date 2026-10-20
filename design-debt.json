@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "commit": "5c95ff09aff711cccff24432213248e1a69b83d3",
-  "generatedAt": "2026-10-19T06:37:41.603Z",
+  "commit": "5fef45f095821c37265becc27b5dec11f324640a",
+  "generatedAt": "2026-10-19T22:32:43.398Z",
   "files": {
     "app/(app)/discord/link/page.tsx": {
       "raw-palette": 2
@@ -101,10 +101,10 @@
       "raw-palette": 54
     },
     "app/admin/users/[userId]/page.tsx": {
-      "blur": 11,
+      "blur": 10,
       "caps-eyebrow": 6,
       "copy": 4,
-      "raw-palette": 127
+      "raw-palette": 122
     },
     "app/admin/users/[userId]/wrapped/page.tsx": {
       "blur": 5,
@@ -194,19 +194,16 @@
       "arbitrary-type-z": 3,
       "gradient": 2,
       "infinite-motion": 4,
-      "raw-palette": 51
+      "raw-palette": 46
     },
     "components/admin/cost-analysis/cost-date-filter.tsx": {
       "blur": 1,
-      "raw-palette": 10
+      "raw-palette": 6
     },
     "components/admin/cost-analysis/cost-model-chart.tsx": {
       "raw-palette": 1
     },
     "components/admin/cost-analysis/cost-provider-chart.tsx": {
-      "raw-palette": 1
-    },
-    "components/admin/cost-analysis/cost-trend-chart.tsx": {
       "raw-palette": 1
     },
     "components/admin/cost-analysis/cost-user-chart.tsx": {
@@ -231,7 +228,7 @@
     },
     "components/admin/discord/discord-date-filter.tsx": {
       "blur": 1,
-      "raw-palette": 7
+      "raw-palette": 3
     },
     "components/admin/discord/discord-error-analysis.tsx": {
       "raw-palette": 14
@@ -376,9 +373,6 @@
       "gradient": 2,
       "raw-palette": 43
     },
-    "components/admin/shared/confirm-modal.tsx": {
-      "raw-palette": 14
-    },
     "components/admin/shared/mobile-nav/MobileMoreMenu.tsx": {
       "blur": 1,
       "gradient": 1,
@@ -469,8 +463,8 @@
       "arbitrary-type-z": 1,
       "caps-eyebrow": 1,
       "gradient": 4,
-      "infinite-motion": 4,
-      "raw-palette": 31
+      "infinite-motion": 3,
+      "raw-palette": 29
     },
     "components/dashboard/discord-card.tsx": {
       "arbitrary-color": 17,
@@ -813,13 +807,13 @@
   "totals": {
     "arbitrary-color": 17,
     "arbitrary-type-z": 39,
-    "blur": 144,
+    "blur": 143,
     "caps-eyebrow": 91,
     "copy": 41,
     "gradient": 136,
     "gradient-text": 56,
-    "infinite-motion": 57,
-    "raw-palette": 3502,
+    "infinite-motion": 56,
+    "raw-palette": 3467,
     "zoom-lock": 2
   }
 }

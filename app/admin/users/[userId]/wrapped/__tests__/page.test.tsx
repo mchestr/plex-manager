@@ -62,7 +62,7 @@ describe('Admin user wrapped page failed state', () => {
   })
 
   it('shows the code and the hint with the Plex user ID', async () => {
-    mockGetUserPlexWrapped.mockResolvedValue(failedWrapped('{"code":"TAUTULLI_USER_NOT_FOUND"}'))
+    mockGetUserPlexWrapped.mockResolvedValue({ success: true, data: failedWrapped('{"code":"TAUTULLI_USER_NOT_FOUND"}') })
     mockUserFindUnique.mockResolvedValue({ plexUserId: '12345' })
 
     await renderPage()
@@ -79,7 +79,7 @@ describe('Admin user wrapped page failed state', () => {
   })
 
   it('shows GENERATION_FAILED with the stored detail for other failures', async () => {
-    mockGetUserPlexWrapped.mockResolvedValue(failedWrapped('LLM provider timed out'))
+    mockGetUserPlexWrapped.mockResolvedValue({ success: true, data: failedWrapped('LLM provider timed out') })
 
     await renderPage()
 
@@ -93,7 +93,7 @@ describe('Admin user wrapped page failed state', () => {
 describe('Admin user wrapped page year', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockGetUserPlexWrapped.mockResolvedValue(null)
+    mockGetUserPlexWrapped.mockResolvedValue({ success: true, data: null })
   })
 
   afterEach(() => {
@@ -111,13 +111,13 @@ describe('Admin user wrapped page year', () => {
     })
     render(<>{ui}</>)
 
-    expect(mockGetUserPlexWrapped).toHaveBeenCalledWith('user-1', 2026)
+    expect(mockGetUserPlexWrapped).toHaveBeenCalledWith({ userId: 'user-1', year: 2026 })
   })
 
   it('opens the year in ?year=', async () => {
     await renderPage()
 
-    expect(mockGetUserPlexWrapped).toHaveBeenCalledWith('user-1', 2025)
+    expect(mockGetUserPlexWrapped).toHaveBeenCalledWith({ userId: 'user-1', year: 2025 })
     expect(prisma.config.findUnique).not.toHaveBeenCalled()
   })
 })

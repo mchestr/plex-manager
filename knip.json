@@ -14,10 +14,13 @@
     "lib/rewind/typeset/fit-lines.ts!",
     "lib/rewind/typeset/metrics.ts!",
     "lib/wrapped/sources/fixture-source.ts!",
-    "evals/rewind/generate-fixtures.ts!"
+    "evals/rewind/generate-fixtures.ts!",
+    // a test helper for Rewind component tests (P5 onwards), which knip --production never sees
+    "lib/design/testing.ts!"
   ],
   "project": [
     "**/*.{js,mjs,cjs,ts,tsx}!",
+    "app/globals.css!",
     "!**/__tests__/**!",
     "!**/*.test.{ts,tsx}!",
     "!e2e/**!",

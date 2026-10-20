@@ -228,6 +228,22 @@ describe("assistantCommand.handle — ask", () => {
     expect(editArg.content).toMatch(/DM/i)
   })
 
+  it("fits a long answer and the DM note into one 2,000-character reply (SEC-51)", async () => {
+    mockChat.mockResolvedValue({
+      ...chatSuccess,
+      message: { role: "assistant", content: "All good here. ".repeat(300), timestamp: 0 },
+    })
+    const { ctx, editReply } = createMockContext({ subcommand: "ask", prompt: "explain" })
+
+    await assistantCommand.handle(ctx)
+
+    expect(editReply).toHaveBeenCalledTimes(1)
+    const { content } = editReply.mock.calls[0][0]
+    expect(content.length).toBeLessThanOrEqual(2000)
+    expect(content).toContain("(Reply cut short.)")
+    expect(content).toMatch(/DM me directly/)
+  })
+
   it("nudges via editReply when the chat result reports the user is not linked", async () => {
     mockChat.mockResolvedValue({ success: false, linked: false, error: "not linked" })
     const { ctx, editReply } = createMockContext({ subcommand: "ask" })
@@ -237,6 +253,16 @@ describe("assistantCommand.handle — ask", () => {
     expect(editReply).toHaveBeenCalledWith(
       expect.objectContaining({ content: expect.stringContaining("link your account") })
     )
+  })
+
+  it("shows a limit refusal with its reset time, never the fallback (P4.20)", async () => {
+    const refusal = "You've reached the assistant's message limit. You can ask again in 42 minutes."
+    mockChat.mockResolvedValue({ success: false, linked: true, refusal })
+    const { ctx, editReply } = createMockContext({ subcommand: "ask" })
+
+    await assistantCommand.handle(ctx)
+
+    expect(editReply).toHaveBeenCalledWith({ content: refusal })
   })
 
   it("surfaces a friendly error via editReply when the chat fails", async () => {

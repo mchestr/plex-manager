@@ -35,7 +35,7 @@ export interface FormatSettings {
   locale: string
 }
 
-type DateInput = Date | string | number
+export type DateInput = Date | string | number
 
 const intlCache = new Map<string, Intl.NumberFormat | Intl.DateTimeFormat | Intl.RelativeTimeFormat>()
 

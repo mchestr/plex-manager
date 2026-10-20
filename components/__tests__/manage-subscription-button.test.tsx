@@ -57,7 +57,8 @@ describe('ManageSubscriptionButton', () => {
   it('opens the billing portal and redirects to the returned URL', async () => {
     const user = userEvent.setup()
     mockOpenBillingPortal.mockResolvedValue({
-      url: 'https://billing.stripe.com/session/bps_1',
+      success: true,
+      data: { url: 'https://billing.stripe.com/session/bps_1' },
     })
 
     renderButton()
@@ -98,6 +99,8 @@ describe('ManageSubscriptionButton', () => {
   it('surfaces an error toast and stays on the page when the action returns an error', async () => {
     const user = userEvent.setup()
     mockOpenBillingPortal.mockResolvedValue({
+      success: false,
+      code: 'NOT_FOUND',
       error: 'No billing account found for your subscription.',
     })
 

@@ -1,15 +1,18 @@
 import { getHistoricalWrappedVersions } from "@/actions/admin"
 import { NextRequest, NextResponse } from "next/server"
+import { z } from "zod"
+
+import { parseRouteParams } from "@/lib/actions/route"
 import { requireAdminAPI } from "@/lib/security/api-helpers"
 import { limitRequest } from "@/lib/security/rate-limit"
 import { createSafeError, ErrorCode, getStatusCode, logError } from "@/lib/security/error-handler"
+import { recordIdSchema } from "@/lib/validations/params"
 
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ wrappedId: string }> }
 ) {
   try {
-    const { wrappedId } = await context.params
     // Apply rate limiting
     const rateLimitResponse = await limitRequest("admin", request)
     if (rateLimitResponse) {
@@ -22,7 +25,10 @@ export async function GET(
       return authResult.response
     }
 
-    const versions = await getHistoricalWrappedVersions(wrappedId)
+    const params = parseRouteParams(z.object({ wrappedId: recordIdSchema }), await context.params)
+    if (!params.ok) return params.response
+
+    const versions = await getHistoricalWrappedVersions(params.data.wrappedId)
 
     return NextResponse.json({ versions })
   } catch (error) {

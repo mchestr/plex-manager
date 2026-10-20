@@ -4,7 +4,7 @@ import { PromptTemplate } from "@/lib/generated/prisma/client"
 import { act, render, screen, waitFor } from "@testing-library/react"
 
 // Mock wrapped library functions
-jest.mock("@/lib/wrapped/prompt-template", () => ({
+jest.mock("@/lib/wrapped/prompt-text", () => ({
   generateSystemPrompt: jest.fn(() => "System prompt"),
 }))
 

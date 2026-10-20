@@ -71,7 +71,7 @@ describe('updateLLMProviderForPurpose key rule', () => {
       customModel: true,
     })
 
-    expect(result).toEqual({ success: true })
+    expect(result).toEqual({ success: true, data: null })
     expect(mockTest).toHaveBeenCalledWith(
       expect.objectContaining({ apiKey: 'stored-key', baseUrl: 'http://llm.lan:8000/v2' }),
       { customModel: true }
@@ -79,6 +79,23 @@ describe('updateLLMProviderForPurpose key rule', () => {
     expect(prismaMock.lLMProvider.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ apiKey: 'stored-key', baseUrl: 'http://llm.lan:8000/v2', purpose: 'chat' }),
     })
+  })
+
+  it('audits a same-origin save with the origin only and secretChanged: false', async () => {
+    prismaMock.lLMProvider.findFirst.mockResolvedValue(storedRow())
+
+    await updateChatLLMProvider({ provider: 'openai-compatible', baseUrl: 'http://llm.lan:8000/v2', model: 'qwen3.6:27b' })
+
+    expect(logAuditEvent).toHaveBeenCalledWith(
+      AuditEventType.CONFIG_CHANGED,
+      'admin-1',
+      expect.objectContaining({
+        changedFields: ['baseUrl'],
+        secretChanged: false,
+        origins: { before: { baseUrl: 'http://llm.lan:8000' }, after: { baseUrl: 'http://llm.lan:8000' } },
+      })
+    )
+    expect(JSON.stringify((logAuditEvent as jest.Mock).mock.calls)).not.toContain('stored-key')
   })
 
   it('never sends the stored key to a new origin', async () => {
@@ -91,7 +108,7 @@ describe('updateLLMProviderForPurpose key rule', () => {
     })
 
     // A keyless server is allowed, but the stored key does not go with it
-    expect(result).toEqual({ success: true })
+    expect(result).toEqual({ success: true, data: null })
     expect(mockTest).toHaveBeenCalledWith(expect.objectContaining({ apiKey: undefined }), expect.anything())
     expect(prismaMock.lLMProvider.create).toHaveBeenCalledWith({ data: expect.objectContaining({ apiKey: '' }) })
   })
@@ -101,7 +118,11 @@ describe('updateLLMProviderForPurpose key rule', () => {
 
     const result = await updateWrappedLLMProvider({ provider: 'anthropic', model: 'claude-sonnet-5-5' })
 
-    expect(result).toEqual({ success: false, error: 'Enter the API key again: the provider or its address changed.' })
+    expect(result).toEqual({
+      success: false,
+      code: 'SECRET_REQUIRED',
+      error: 'Enter the API key again: the provider or its address changed.',
+    })
     expect(mockTest).not.toHaveBeenCalled()
     expect(prismaMock.lLMProvider.create).not.toHaveBeenCalled()
   })
@@ -137,7 +158,7 @@ describe('updateLLMProviderForPurpose key rule', () => {
 
     const result = await updateChatLLMProvider({ provider: 'openai', apiKey: 'k', model: 'gpt-4o' })
 
-    expect(result).toEqual({ success: false, error: 'OpenAI returned HTTP 500' })
+    expect(result).toEqual({ success: false, code: 'UPSTREAM_UNAVAILABLE', error: 'OpenAI returned HTTP 500' })
     expect(prismaMock.$transaction).not.toHaveBeenCalled()
   })
 
@@ -159,9 +180,9 @@ describe('admin only, audited, rate-limited', () => {
   it('refuses non-admins without touching the database', async () => {
     mockSession.mockResolvedValue({ user: { id: 'member-1', isAdmin: false } })
 
-    expect(await updateChatLLMProvider({ provider: 'openai', apiKey: 'k', model: 'gpt-4o' })).toEqual({
+    expect(await updateChatLLMProvider({ provider: 'openai', apiKey: 'k', model: 'gpt-4o' })).toMatchObject({
       success: false,
-      error: 'Admin access required',
+      code: 'FORBIDDEN',
     })
     expect(await listLLMModels({ purpose: 'chat', provider: 'openai', apiKey: 'k' })).toEqual({
       success: false,
@@ -176,11 +197,13 @@ describe('admin only, audited, rate-limited', () => {
 
     await updateChatLLMProvider({ provider: 'openai', apiKey: 'sk-new-secret', model: 'gpt-6-sol' })
 
-    expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.LLM_PROVIDER_CHANGED, 'admin-1', {
-      purpose: 'chat',
-      from: { provider: 'openai', model: 'gpt-4o', baseUrlOrigin: null },
-      to: { provider: 'openai', model: 'gpt-6-sol', baseUrlOrigin: null },
-      keyChanged: true,
+    expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.CONFIG_CHANGED, 'admin-1', {
+      section: 'llm.chat',
+      changedFields: ['model'],
+      secretChanged: true,
+      origins: { before: { baseUrl: null }, after: { baseUrl: null } },
+      from: { provider: 'openai', model: 'gpt-4o' },
+      to: { provider: 'openai', model: 'gpt-6-sol' },
     })
     expect(JSON.stringify((logAuditEvent as jest.Mock).mock.calls)).not.toContain('sk-new-secret')
   })

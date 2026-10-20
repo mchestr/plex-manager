@@ -3,25 +3,25 @@
 import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 import { updateWatchlistSyncSettingsSchema } from "@/lib/validations/watchlist"
+import type { WatchlistSkipCode } from "@/lib/watchlist/skip"
 import { syncUserWatchlist } from "@/lib/watchlist/sync-service"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
+import { memberAction } from "@/lib/actions/define-action"
+import { hasEntitlement, NOT_ENTITLED_MESSAGE } from "@/lib/actions/entitlement"
+import { fail, ok, type ActionResult } from "@/lib/actions/result"
 
 const logger = createLogger("WATCHLIST_ACTIONS")
 
 /**
- * Get current user's watchlist sync settings and status
+ * Get current user's watchlist sync settings, status and recent history.
+ * A lapsed member may still read them (`read`).
  */
-export async function getWatchlistSyncSettings() {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) {
-    return { success: false as const, error: "Not authenticated" }
-  }
-
-  try {
+export const getWatchlistSyncSettings = memberAction({
+  entitlement: "read",
+  fallbackError: "Failed to fetch settings",
+  handler: async (_input, { userId }) => {
     // Get user's Plex auth token status and sync settings
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: userId },
       select: {
         plexAuthToken: true,
         watchlistSyncSettings: true,
@@ -52,7 +52,7 @@ export async function getWatchlistSyncSettings() {
 
     if (user?.watchlistSyncSettings?.syncEnabled) {
       recentHistory = await prisma.watchlistSyncHistory.findMany({
-        where: { userId: session.user.id },
+        where: { userId },
         orderBy: { syncedAt: "desc" },
         take: 5,
         select: {
@@ -66,9 +66,7 @@ export async function getWatchlistSyncSettings() {
       })
     }
 
-    return {
-      success: true as const,
-      data: {
+    return ok({
         hasPlexToken: !!user?.plexAuthToken,
         hasOverseerr: !!overseerr,
         globalSyncEnabled: config?.watchlistSyncEnabled ?? false,
@@ -85,42 +83,30 @@ export async function getWatchlistSyncSettings() {
             }
           : null,
         recentHistory,
-      },
-    }
-  } catch (error) {
-    logger.error("Error fetching watchlist sync settings", error)
-    return { success: false as const, error: "Failed to fetch settings" }
-  }
-}
+    })
+  },
+})
 
 /**
  * Update user's watchlist sync settings
  */
-export async function updateWatchlistSyncSettings(data: unknown) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) {
-    return { success: false as const, error: "Not authenticated" }
-  }
+export const updateWatchlistSyncSettings = memberAction({
+  input: updateWatchlistSyncSettingsSchema,
+  fallbackError: "Failed to update settings",
+  handler: async (settings, { userId }) => {
+    // Check prerequisites if enabling; turning sync off needs no membership
+    if (settings.syncEnabled) {
+      if (!(await hasEntitlement(userId, "full"))) {
+        return fail("NOT_ENTITLED", NOT_ENTITLED_MESSAGE)
+      }
 
-  // Validate input
-  const validated = updateWatchlistSyncSettingsSchema.safeParse(data)
-  if (!validated.success) {
-    return { success: false as const, error: "Invalid input" }
-  }
-
-  try {
-    // Check prerequisites if enabling
-    if (validated.data.syncEnabled) {
       const user = await prisma.user.findUnique({
-        where: { id: session.user.id },
+        where: { id: userId },
         select: { plexAuthToken: true },
       })
 
       if (!user?.plexAuthToken) {
-        return {
-          success: false as const,
-          error: "Please log in with Plex to enable watchlist sync",
-        }
+        return fail("CONFLICT", "Please log in with Plex to enable watchlist sync")
       }
 
       const overseerr = await prisma.overseerr.findFirst({
@@ -128,10 +114,7 @@ export async function updateWatchlistSyncSettings(data: unknown) {
       })
 
       if (!overseerr) {
-        return {
-          success: false as const,
-          error: "Overseerr is not configured. Please contact an administrator.",
-        }
+        return fail("CONFLICT", "Overseerr is not configured. Please contact an administrator.")
       }
 
       const config = await prisma.config.findUnique({
@@ -140,50 +123,56 @@ export async function updateWatchlistSyncSettings(data: unknown) {
       })
 
       if (!config?.watchlistSyncEnabled) {
-        return {
-          success: false as const,
-          error: "Watchlist sync is not enabled globally. Please contact an administrator.",
-        }
+        return fail("CONFLICT", "Watchlist sync is not enabled globally. Please contact an administrator.")
       }
     }
 
     // Upsert settings
     await prisma.watchlistSyncSettings.upsert({
-      where: { userId: session.user.id },
+      where: { userId },
       create: {
-        userId: session.user.id,
-        syncEnabled: validated.data.syncEnabled,
+        userId,
+        syncEnabled: settings.syncEnabled,
       },
       update: {
-        syncEnabled: validated.data.syncEnabled,
+        syncEnabled: settings.syncEnabled,
       },
     })
 
-    return { success: true as const }
-  } catch (error) {
-    logger.error("Error updating watchlist sync settings", error)
-    return { success: false as const, error: "Failed to update settings" }
-  }
-}
+    return ok(null)
+  },
+})
+
+/** A queued job (with Redis), or the counts of a sync run in this request. */
+export type TriggerWatchlistSyncData =
+  | { queued: true; jobId: string; message: string }
+  | {
+      queued: false
+      skipped?: WatchlistSkipCode
+      itemsSynced?: number
+      itemsRequested?: number
+      itemsSkipped?: number
+      itemsFailed?: number
+    }
 
 /**
- * Trigger a manual sync for the current user
- * Uses the job queue if Redis is configured, otherwise falls back to direct execution
+ * Trigger a manual sync for the current user, at most 4 an hour
+ * (`watchlist:manual`). Uses the job queue if Redis is configured, where a
+ * trigger while the member's job is waiting or running joins that job;
+ * otherwise it falls back to direct execution.
  */
-export async function triggerWatchlistSync() {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) {
-    return { success: false as const, error: "Not authenticated" }
-  }
-
-  try {
+export const triggerWatchlistSync = memberAction({
+  entitlement: "full",
+  rateLimit: { name: "watchlist:manual" },
+  fallbackError: "Failed to trigger sync",
+  handler: async (_input, { userId }): Promise<ActionResult<TriggerWatchlistSyncData>> => {
     // Check if sync is enabled for user
     const settings = await prisma.watchlistSyncSettings.findUnique({
-      where: { userId: session.user.id },
+      where: { userId },
     })
 
     if (!settings?.syncEnabled) {
-      return { success: false as const, error: "Watchlist sync is not enabled" }
+      return fail("CONFLICT", "Watchlist sync is not enabled")
     }
 
     // Check if queue is available (Redis configured)
@@ -191,43 +180,38 @@ export async function triggerWatchlistSync() {
 
     if (isRedisConfigured()) {
       // Use job queue
-      const { addJob } = await import("@/lib/queue/client")
-      const { JOB_TYPES } = await import("@/lib/queue/types")
+      const { addWatchlistSyncUserJob } = await import("@/lib/queue/client")
 
-      const jobId = await addJob(JOB_TYPES.WATCHLIST_SYNC_USER, {
-        userId: session.user.id,
+      const jobId = await addWatchlistSyncUserJob({
+        userId,
         triggeredBy: "manual",
-        triggeredByUserId: session.user.id,
+        triggeredByUserId: userId,
       })
 
-      logger.info("Watchlist sync job queued", { userId: session.user.id, jobId })
+      logger.info("Watchlist sync job queued", { userId, jobId })
 
-      return {
-        success: true as const,
-        data: {
-          queued: true,
-          jobId,
-          message: "Sync job has been queued and will be processed shortly",
-        },
-      }
+      return ok({
+        queued: true,
+        jobId,
+        message: "Sync job has been queued and will be processed shortly",
+      })
     }
 
     // Fallback: Direct execution when Redis is not configured
-    const result = await syncUserWatchlist(session.user.id)
+    const result = await syncUserWatchlist(userId)
 
     if (!result.success) {
-      return { success: false as const, error: result.error || "Sync failed" }
+      logger.warn("Manual watchlist sync failed", { userId, error: result.error })
+      return fail("UPSTREAM_UNAVAILABLE", "Sync failed. Please try again later.")
     }
 
-    return {
-      success: true as const,
-      data: {
-        queued: false,
-        ...result.data,
-      },
-    }
-  } catch (error) {
-    logger.error("Error triggering watchlist sync", error)
-    return { success: false as const, error: "Failed to trigger sync" }
-  }
-}
+    return ok({
+      queued: false,
+      skipped: result.skipped,
+      itemsSynced: result.data?.itemsSynced,
+      itemsRequested: result.data?.itemsRequested,
+      itemsSkipped: result.data?.itemsSkipped,
+      itemsFailed: result.data?.itemsFailed,
+    })
+  },
+})

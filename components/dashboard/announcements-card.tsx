@@ -1,14 +1,10 @@
 "use client"
 
 import { motion, AnimatePresence, useReducedMotion } from "motion/react"
-import dynamic from "next/dynamic"
 import type { AnnouncementData } from "@/actions/announcements"
+import { MarkdownBody } from "@/components/ui/markdown-body"
 import { loop } from "@/lib/utils/motion-loop"
 import { useFormat } from "@/lib/format-context"
-
-const ReactMarkdown = dynamic(() => import("react-markdown"), {
-  loading: () => <div className="h-4 w-24 animate-pulse rounded bg-slate-700" />,
-})
 
 interface AnnouncementsCardProps {
   announcements: AnnouncementData[]
@@ -99,9 +95,9 @@ export function AnnouncementsCard({ announcements, now }: AnnouncementsCardProps
                   </div>
                   <div className="flex-1 min-w-0">
                     <h4 className="text-sm sm:text-base font-semibold text-white">{announcement.title}</h4>
-                    <div className="mt-1.5 text-xs sm:text-sm text-slate-300 prose prose-sm prose-invert max-w-none prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 prose-a:text-amber-400 prose-a:no-underline hover:prose-a:underline">
-                      <ReactMarkdown>{announcement.content}</ReactMarkdown>
-                    </div>
+                    <MarkdownBody className="mt-1.5 text-xs sm:text-sm text-slate-300 [--typeset-flow:0.5em]">
+                      {announcement.content}
+                    </MarkdownBody>
                     <p className="mt-2 text-xs text-amber-300/60 font-medium">
                       {capitalize(f.relative(announcement.createdAt, now))}
                     </p>

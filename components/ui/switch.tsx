@@ -1,7 +1,7 @@
-"use client"
+import { Switch as SwitchPrimitive } from "@base-ui/react/switch"
+import type { Ref } from "react"
 
-import { forwardRef } from "react"
-
+import { Spinner } from "@/components/ui/spinner"
 import { cn } from "@/lib/utils"
 
 interface SwitchProps {
@@ -9,75 +9,71 @@ interface SwitchProps {
   checked: boolean
   /** Called with the next checked value when the user toggles the switch */
   onCheckedChange: (checked: boolean) => void
-  /** Disables interaction and dims the control */
+  /** Disables interaction */
   disabled?: boolean
-  /** Shows a loading spinner and disables interaction */
+  /** Shows a spinner in the thumb and disables interaction, keeping the state colour */
   loading?: boolean
-  /** Accessible label for the switch (used when no visible label is associated) */
+  /**
+   * The switch's stable accessible name ("Watchlist Sync"). Leave it out when a
+   * visible `<label htmlFor={id}>` or `FieldLabel` names the switch.
+   */
   label?: string
+  id?: string
+  name?: string
   /** Passthrough test id for stable selectors */
   "data-testid"?: string
   className?: string
+  ref?: Ref<HTMLButtonElement>
 }
 
 /**
- * Reusable, controlled toggle switch primitive.
- *
- * Uses `role="switch"` with `aria-checked`, is keyboard operable (native button
- * handles Space/Enter), shows a visible focus ring, and supports a
- * disabled/loading state. Presentational only — consumers wire `onCheckedChange`
- * to their own actions.
+ * The toggle switch, on Base UI Switch rendered as a native button
+ * (ui-design-system 5.4): 36x20, off `secondary` with a muted thumb, on
+ * `primary-indicator` with its foreground thumb sliding 16px over 180ms.
+ * The state lives in `aria-checked`, never in the name, and touch gets a
+ * 44px hit area. Presentational: wire `onCheckedChange` to your own action.
  */
-export const Switch = forwardRef<HTMLButtonElement, SwitchProps>(function Switch(
-  {
-    checked,
-    onCheckedChange,
-    disabled = false,
-    loading = false,
-    label,
-    "data-testid": testId,
-    className,
-  },
-  ref
-) {
-  const isDisabled = disabled || loading
-
+export function Switch({
+  checked,
+  onCheckedChange,
+  disabled = false,
+  loading = false,
+  label,
+  className,
+  ...props
+}: SwitchProps) {
   return (
-    <button
-      ref={ref}
-      type="button"
-      role="switch"
-      aria-checked={checked}
+    <SwitchPrimitive.Root
+      data-slot="switch"
+      checked={checked}
+      onCheckedChange={(next) => onCheckedChange(next)}
+      disabled={disabled || loading}
+      nativeButton
+      render={<button type="button" />}
       aria-label={label}
       aria-busy={loading || undefined}
-      disabled={isDisabled}
-      onClick={() => onCheckedChange(!checked)}
-      data-testid={testId}
       className={cn(
-        "relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200",
-        "focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900",
-        checked ? "bg-green-500" : "bg-slate-700",
-        isDisabled ? "opacity-50 cursor-not-allowed" : "hover:opacity-90",
+        "group/switch relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border border-input bg-secondary px-px",
+        "transition-colors duration-(--duration-base) ease-(--ease-out-quiet)",
+        "pointer-coarse:after:absolute pointer-coarse:after:-inset-x-1 pointer-coarse:after:-inset-y-3",
+        "data-checked:border-primary-indicator data-checked:bg-primary-indicator data-disabled:cursor-not-allowed",
+        // A busy switch keeps its state colour; only a plain disabled one turns muted.
+        disabled && !loading && "border-border bg-muted data-checked:border-border data-checked:bg-muted",
         className
       )}
+      {...props}
     >
-      <span
+      <SwitchPrimitive.Thumb
+        data-slot="switch-thumb"
         className={cn(
-          "inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200",
-          checked ? "translate-x-6" : "translate-x-1"
+          "flex size-4 items-center justify-center rounded-full bg-muted-foreground text-muted-foreground",
+          "transition-transform duration-(--duration-base) ease-(--ease-out-quiet)",
+          "data-checked:translate-x-4 data-checked:bg-primary-indicator-foreground",
+          disabled && !loading && "data-checked:bg-muted-foreground"
         )}
-      />
-      {loading && (
-        <svg
-          className="absolute -right-6 h-4 w-4 animate-spin text-slate-400"
-          fill="none"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-        </svg>
-      )}
-    </button>
+      >
+        {loading && <Spinner size={12} className={cn(checked ? "text-primary-indicator" : "text-background")} />}
+      </SwitchPrimitive.Thumb>
+    </SwitchPrimitive.Root>
   )
-})
+}

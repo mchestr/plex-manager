@@ -164,6 +164,35 @@ test.describe('Announcements User Dashboard', () => {
     await expect(regularUserPage.getByText('E2E Dashboard Active Announcement')).toBeVisible();
   });
 
+  test('renders announcement Markdown safely: bullets, no image, no javascript: link', async ({ regularUserPage }) => {
+    const prisma = createE2EPrismaClient();
+    let announcementId: string;
+    try {
+      const announcement = await prisma.announcement.create({
+        data: {
+          title: 'E2E Dashboard Markdown Announcement',
+          content: 'Tonight:\n\n- Plex restarts\n- Disks swap\n\n![x](https://attacker.invalid/?d=1)\n\n[click me](javascript:alert(1))',
+          priority: 0,
+          isActive: true,
+          createdBy: 'admin-user-id',
+        }
+      });
+      announcementId = announcement.id;
+    } finally {
+      await prisma.$disconnect();
+    }
+
+    await regularUserPage.goto('/');
+    // The home page renders the card in both its phone and desktop layouts.
+    const item = regularUserPage.getByTestId(`announcement-${announcementId}`).filter({ visible: true });
+    await expect(item).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+
+    await expect(item.locator('li')).toHaveCount(2);
+    await expect(item.locator('li').first()).toHaveCSS('list-style-type', 'disc');
+    await expect(item.locator('img')).toHaveCount(0);
+    await expect(item.locator('a')).toHaveCount(0);
+  });
+
   test('should hide expired announcements on home page', async ({ regularUserPage }) => {
     // Create expired announcement
     const prisma = createE2EPrismaClient();

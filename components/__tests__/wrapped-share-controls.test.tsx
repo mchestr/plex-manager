@@ -79,8 +79,7 @@ describe('WrappedShareControls', () => {
     const user = userEvent.setup()
     mockEnable.mockResolvedValue({
       success: true,
-      shareToken: 'new-token',
-      url: 'https://plex.example.com/wrapped/share/new-token',
+      data: { shareToken: 'new-token', url: 'https://plex.example.com/wrapped/share/new-token' },
     })
     renderControls(null)
 
@@ -109,7 +108,11 @@ describe('WrappedShareControls', () => {
 
   it('shows the error and stays unshared when creating fails', async () => {
     const user = userEvent.setup()
-    mockEnable.mockResolvedValue({ success: false, error: 'Too many share links created. Please try again later.' })
+    mockEnable.mockResolvedValue({
+      success: false,
+      code: 'RATE_LIMITED',
+      error: 'Too many share links created. Please try again later.',
+    })
     renderControls(null)
 
     await user.click(screen.getByTestId('wrapped-share-create'))
@@ -121,7 +124,7 @@ describe('WrappedShareControls', () => {
 
   it('lets the owner of a surviving link stop sharing', async () => {
     const user = userEvent.setup()
-    mockDisable.mockResolvedValue({ success: true })
+    mockDisable.mockResolvedValue({ success: true, data: null })
     renderControls('surviving-v2-token')
     expectSharedState('surviving-v2-token')
 
@@ -136,7 +139,7 @@ describe('WrappedShareControls', () => {
 
   it('keeps the link and shows the error when stopping fails', async () => {
     const user = userEvent.setup()
-    mockDisable.mockResolvedValue({ success: false, error: 'Failed to stop sharing' })
+    mockDisable.mockResolvedValue({ success: false, code: 'INTERNAL', error: 'Failed to stop sharing' })
     renderControls('surviving-v2-token')
 
     await user.click(screen.getByTestId('wrapped-share-stop'))

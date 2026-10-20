@@ -64,40 +64,6 @@ export async function testJellyfinConnection(
 }
 
 /**
- * Get Jellyfin server system info
- */
-export async function getJellyfinServerInfo(
-  config: { url: string; apiKey: string }
-): Promise<{ success: boolean; data?: JellyfinSystemInfo; error?: string }> {
-  try {
-    const url = `${config.url}/System/Info`
-
-    const response = await fetchWithTimeout(url, {
-      method: "GET",
-      headers: getJellyfinHeaders(config.apiKey),
-      timeoutMs: 5000,
-    })
-
-    if (!response.ok) {
-      return { success: false, error: `Failed to fetch server info: ${response.statusText}` }
-    }
-
-    const data: JellyfinSystemInfo = await response.json()
-
-    if (!data.Id) {
-      return { success: false, error: "Server ID not found in response" }
-    }
-
-    return { success: true, data }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: `Error fetching server info: ${error.message}` }
-    }
-    return { success: false, error: "Failed to fetch Jellyfin server info" }
-  }
-}
-
-/**
  * Get all libraries from a Jellyfin server
  */
 export async function getJellyfinLibraries(

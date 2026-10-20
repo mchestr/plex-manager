@@ -3,6 +3,7 @@
 import { getWatchlistSyncSettings, triggerWatchlistSync, updateWatchlistSyncSettings } from "@/actions/watchlist"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
+import { WATCHLIST_SKIP_COPY } from "@/lib/watchlist/skip"
 import { motion } from "motion/react"
 import { useCallback, useEffect, useState, useTransition } from "react"
 
@@ -40,7 +41,7 @@ export function WatchlistSyncCard() {
   const [isLoading, setIsLoading] = useState(true)
 
   const applySettings = useCallback((result: Awaited<ReturnType<typeof getWatchlistSyncSettings>>) => {
-    if (result.success && result.data) {
+    if (result.success) {
       setSettings(result.data)
     }
     setIsLoading(false)
@@ -65,7 +66,7 @@ export function WatchlistSyncCard() {
         showSuccess(newEnabled ? "Watchlist sync enabled" : "Watchlist sync disabled")
         await loadSettings()
       } else {
-        showError(result.error || "Failed to update settings")
+        showError(result.error)
       }
     })
   }
@@ -74,21 +75,21 @@ export function WatchlistSyncCard() {
     setIsSyncing(true)
     try {
       const result = await triggerWatchlistSync()
-      if (result.success && result.data) {
+      if (result.success) {
         // Handle queued response (when Redis is configured)
-        if ("queued" in result.data && result.data.queued) {
-          showSuccess(result.data.message || "Sync job queued")
+        if (result.data.queued) {
+          showSuccess(result.data.message)
           await loadSettings()
           return
         }
 
         // Handle direct sync response (when Redis is not configured)
-        const data = result.data as {
-          itemsSynced?: number
-          itemsRequested?: number
-          itemsFailed?: number
+        const { skipped, itemsSynced, itemsRequested, itemsFailed } = result.data
+        if (skipped) {
+          showInfo(WATCHLIST_SKIP_COPY[skipped])
+          await loadSettings()
+          return
         }
-        const { itemsSynced, itemsRequested, itemsFailed } = data
         if (itemsRequested && itemsRequested > 0) {
           showSuccess(`Synced ${itemsSynced} items, requested ${itemsRequested} new items`)
         } else if (itemsSynced && itemsSynced > 0) {
@@ -101,7 +102,7 @@ export function WatchlistSyncCard() {
         }
         await loadSettings()
       } else {
-        showError(result.error || "Sync failed")
+        showError(result.error)
       }
     } finally {
       setIsSyncing(false)
@@ -260,6 +261,7 @@ export function WatchlistSyncCard() {
                     {lastStatus === "success" && "Success"}
                     {lastStatus === "partial" && "Partial"}
                     {lastStatus === "failed" && "Failed"}
+                    {lastStatus === "skipped" && "Skipped"}
                   </span>
                 )}
               </div>
@@ -277,8 +279,12 @@ export function WatchlistSyncCard() {
               </div>
             )}
 
-            {/* Error message */}
-            {settings.settings?.lastSyncError && (
+            {/* Why the last sync was skipped, or its error */}
+            {lastStatus === "skipped" && settings.settings?.lastSyncError ? (
+              <p className="text-xs text-muted-foreground" data-testid="watchlist-sync-skip-reason">
+                {settings.settings.lastSyncError}
+              </p>
+            ) : settings.settings?.lastSyncError && (
               <p className="text-xs text-red-400 line-clamp-2">
                 {settings.settings.lastSyncError}
               </p>

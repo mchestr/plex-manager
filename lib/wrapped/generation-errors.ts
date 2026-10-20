@@ -7,7 +7,7 @@
  * One of those messages listed every Tautulli user's username and email, and it
  * was rendered to the member (RWP-02, SEC-17, DUP-01). Failures with a known
  * cause now store a code instead, and member surfaces only ever render fixed
- * copy looked up from that code.
+ * copy looked up from that code through `errorCopy` (`lib/ui/error-copy.ts`).
  *
  * ## Stored format
  *
@@ -46,20 +46,6 @@ const REWIND_ERROR_CODES = [
 export type RewindErrorCode = (typeof REWIND_ERROR_CODES)[number]
 
 const storedErrorSchema = z.object({ code: z.enum(REWIND_ERROR_CODES) })
-
-const INTERRUPTED = "Making your Rewind was interrupted. Please try again."
-
-const MEMBER_ERROR_COPY: Record<RewindErrorCode, string> = {
-  TAUTULLI_USER_NOT_FOUND:
-    "We couldn't find your account in Tautulli yet. Ask the server admin to refresh Tautulli's user list.",
-  GENERATION_FAILED: "Something went wrong while generating your Wrapped. Please try again.",
-  TIMEOUT: "Making your Rewind took too long. Please try again in a few minutes.",
-  UPSTREAM_ERROR: "We couldn't read your watch history just now. Please try again in a few minutes.",
-  LLM_FAILED: "We couldn't write your Rewind this time. Please try again.",
-  NOT_CONFIGURED: "Rewind isn't fully set up on this server yet. Ask the server admin.",
-  WORKER_LOST: INTERRUPTED,
-  JOB_LOST: INTERRUPTED,
-}
 
 /**
  * Read `RewindGeneration.error` (`{ code }`) back as a code; anything else,
@@ -107,11 +93,6 @@ export function readStoredError(error: string | null | undefined): RewindErrorCo
   } catch {
     return "GENERATION_FAILED"
   }
-}
-
-/** Fixed, member-facing copy for a code. */
-export function memberErrorCopy(code: RewindErrorCode): string {
-  return MEMBER_ERROR_COPY[code]
 }
 
 /**

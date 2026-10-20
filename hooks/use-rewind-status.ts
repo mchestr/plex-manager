@@ -40,8 +40,8 @@ export function useRewindStatus(year: number | null, options: { userId?: string 
     queryKey: ["rewind-status", year, userId ?? null],
     queryFn: async (): Promise<RewindStatus> => {
       const result = await getRewindStatus({ year: year as number, ...(userId && { userId }) })
-      if ("error" in result) throw new Error(result.error)
-      return result
+      if (!result.success) throw new Error(result.error)
+      return result.data
     },
     enabled: year !== null,
     staleTime: 0,

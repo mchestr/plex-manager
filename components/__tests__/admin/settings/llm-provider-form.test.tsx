@@ -57,7 +57,12 @@ async function openForm(provider: typeof STORED | null = null) {
 
 async function choose(user: ReturnType<typeof userEvent.setup>, select: string, value: string) {
   await user.click(screen.getByTestId(select))
-  await user.click(screen.getByTestId(`${select}-option-${value}`))
+  const option = await screen.findByTestId(`${select}-option-${value}`)
+  // The popup ignores the pointer until it is positioned.
+  await waitFor(() => expect(option.closest('[style*="pointer-events: none"]')).toBeNull())
+  await user.click(option)
+  // The Select is modal while open; wait for it to close before the next click.
+  await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument())
 }
 
 describe('LLMProviderForm', () => {
@@ -148,9 +153,8 @@ describe('LLMProviderForm', () => {
     expect(screen.getByTestId('llm-temperature-input')).toHaveValue(0.8)
 
     await user.click(screen.getByTestId('llm-model-select'))
-    const options = within(screen.getByTestId('llm-model-select').parentElement as HTMLElement)
-      .getAllByRole('button')
-      .slice(1)
+    const options = within(await screen.findByRole('listbox'))
+      .getAllByRole('option')
       .map((option) => option.getAttribute('data-testid'))
     // Known models first (catalogue order), then the rest of the provider's list, then the custom entry
     expect(options).toEqual([
@@ -160,6 +164,7 @@ describe('LLMProviderForm', () => {
       'llm-model-select-option-__custom__',
     ])
     await user.click(screen.getByTestId('llm-model-select-option-gpt-4o'))
+    await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument())
 
     await user.click(screen.getByTestId('llm-test-connection'))
     expect(await screen.findByTestId('llm-test-result')).toHaveTextContent('Connected: 3 models available')

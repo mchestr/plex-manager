@@ -1,4 +1,8 @@
 /**
+ * @jest-environment node
+ */
+
+/**
  * Tests for lib/queue/types.ts + lib/queue/jobs/index.ts - Stripe job type
  * registration and processor dispatch resolution.
  */

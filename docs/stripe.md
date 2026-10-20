@@ -24,6 +24,7 @@ feature safe to ship dark and enable per-deployment.
 - [Enabling the Feature](#enabling-the-feature)
 - [Grandfathering Existing Members](#grandfathering-existing-members)
 - [Subscription Lifecycle](#subscription-lifecycle)
+- [What a Lapsed Member Can Do](#what-a-lapsed-member-can-do)
 - [Admin Management](#admin-management)
 - [Disabling the Feature (Safe & Reversible)](#disabling-the-feature-safe--reversible)
 - [Environment & Config Notes](#environment--config-notes)
@@ -48,14 +49,18 @@ Plex login ─▶ member?  ──yes─▶ into app (unchanged)
                              user is in the app
 ```
 
-- **Gate:** a pure-DB check (`lib/guards.ts` → `getAccessGateStatus`) allows a
-  user into the app when ANY of: Stripe disabled, the user is an admin, the user
-  is exempt, or the user has an `ACTIVE`/`PAST_DUE` subscription. `PAST_DUE`
-  keeps access during Stripe's dunning/retry window.
+- **Gate:** a pure-DB check (`getAccessLevel` in `lib/access.ts`) gives a user
+  `full` access when ANY of: Stripe disabled, the user is an admin, the user is
+  exempt, or the user has an `ACTIVE`/`PAST_DUE` subscription. `PAST_DUE` keeps
+  access during Stripe's dunning/retry window. A disabled user is never
+  entitled. See [What a Lapsed Member Can Do](#what-a-lapsed-member-can-do)
+  for everyone else.
 - **Webhook:** `POST /api/stripe/webhook` verifies the Stripe signature against
   the raw body, dedupes on the event id, enqueues a BullMQ job, and returns 200
   quickly. All side effects (Plex invite/removal) happen asynchronously in the
-  job with retries.
+  job with retries. Each job re-reads the subscription from Stripe and never
+  applies an older event over a newer one (see
+  [Event Ordering and Recovery](#event-ordering-and-recovery)).
 - **Provisioning:** on a completed checkout the app invites the user to the
   active Plex server and auto-accepts on their behalf using their stored Plex
   token. If auto-accept can't run (missing/expired token), the invite is left
@@ -69,7 +74,9 @@ Plex login ─▶ member?  ──yes─▶ into app (unchanged)
    (Products → add a product → add a recurring price). Copy each Price ID
    (`price_…`). Multiple prices may be offered; all grant the same binary access.
 3. **A Redis-backed BullMQ queue** running (`REDIS_URL` configured) so webhook
-   jobs are processed. See the Job Queue section of `example.env`.
+   jobs are processed. See the Job Queue section of `example.env`. Without
+   `REDIS_URL` the toggle refuses to enable Stripe, and the admin "Grant access
+   (comp)" action refuses too, since no job would ever run.
 4. **A public webhook URL.** Stripe must be able to reach
    `https://yourdomain.com/api/stripe/webhook`. For local development use the
    Stripe CLI (`stripe listen --forward-to localhost:3000/api/stripe/webhook`).
@@ -107,6 +114,8 @@ whether a value is stored.
 
 3. Select these events to send:
    - `checkout.session.completed`
+   - `checkout.session.async_payment_succeeded`
+   - `checkout.session.async_payment_failed`
    - `customer.subscription.updated`
    - `customer.subscription.deleted`
    - `invoice.payment_failed`
@@ -119,8 +128,10 @@ Stripe signature is the authentication. It has no IP rate limit, because anyone
 who spoofs Stripe's addresses could otherwise get genuine deliveries rejected.
 Bodies over 1 MiB are refused with `413` before the signature check, so an
 unsigned request cannot make the app buffer an unbounded body. Bad signatures return
-`400` (never `5xx`, so Stripe does not retry a forged request); a duplicate event
-returns `200` with no re-enqueue.
+`400` (never `5xx`, so Stripe does not retry a forged request); an event that was
+already processed returns `200` with no re-enqueue. A resend of an event that
+was never processed recovers it (see
+[Event Ordering and Recovery](#event-ordering-and-recovery)).
 
 ## Enabling the Feature
 
@@ -129,10 +140,11 @@ fully configured (FR-3). It stays greyed out with a "Missing: …" hint until al
 of the following are present:
 
 - a secret key,
-- a webhook signing secret, and
-- at least one price ID.
+- a webhook signing secret,
+- at least one price ID, and
+- the job queue (`REDIS_URL` set on the server).
 
-Once all three are saved, flip the toggle on. From that point:
+Once all four are in place, flip the toggle on. From that point:
 
 - Plex non-members can create a session and are gated to `/subscribe`.
 - The `/subscribe` page lists your configured prices (fetched live from Stripe).
@@ -161,12 +173,27 @@ subject to the gate.
 
 ## Subscription Lifecycle
 
+Every handler re-reads the subscription from Stripe and writes its **live**
+status, period end and `cancelAtPeriodEnd`; the event's own payload is a
+snapshot from when it was created and is used only for its ids and time.
+
 | Stripe event | App effect | Plex effect (when enabled) |
 | --- | --- | --- |
-| `checkout.session.completed` | Upsert `Subscription` → `ACTIVE`; store customer/subscription/price/period-end | Enqueue **grant**: invite + auto-accept (or leave invite pending) |
-| `customer.subscription.updated` | Sync status, period end, and `cancelAtPeriodEnd` | Keeps access for `cancel_at_period_end` and `past_due`; enqueues **revoke** only on mapped `UNPAID` |
+| `checkout.session.completed`, `checkout.session.async_payment_succeeded` | Create or update the member's `Subscription` from the live subscription; store customer/subscription/price/period-end | Enqueue **grant** when the row moves into `ACTIVE` |
+| `checkout.session.async_payment_failed` | None (logged) | None |
+| `customer.subscription.updated` | Sync the live status, period end, and `cancelAtPeriodEnd` | Keeps access for `cancel_at_period_end` and `past_due`; enqueues **grant** on a move into `ACTIVE` from `UNPAID`, `CANCELED` or `INCOMPLETE`, and **revoke** on `UNPAID` or `CANCELED` |
 | `customer.subscription.deleted` | Status → `CANCELED` (fires **at period end**) | Enqueue **revoke**: unshare from Plex |
-| `invoice.payment_failed` | Status → `PAST_DUE` | None — access retained during dunning |
+| `invoice.payment_failed` | Sync the live status: `PAST_DUE` during dunning | None while `PAST_DUE` — access retained during dunning |
+
+A checkout is ignored, with no row and no grant, unless it is a subscription
+checkout whose `payment_status` is `paid` or `no_payment_required`, whose
+subscription's `metadata.appUserId` equals the session's `client_reference_id`
+(the app sets both, so Payment Links and other integrations never match), and
+whose price is one of the configured price IDs.
+
+A member whose subscription is `ACTIVE` or `PAST_DUE` cannot start a second
+checkout (`ALREADY_SUBSCRIBED`), and `/subscribe` shows them no plans. A
+returning member checks out as their existing Stripe customer.
 
 Status mapping (`lib/stripe/events.ts` → `mapStripeStatus`): Stripe
 `active`/`trialing` → `ACTIVE`; `past_due` → `PAST_DUE`; `canceled` → `CANCELED`;
@@ -180,7 +207,37 @@ paid time and the "Cancels on `<date>`" state is shown. Plex removal is driven b
 **Removal safety invariant (FR-19):** automatic removal
 (`evaluateRevokeGuard` in `lib/queue/jobs/stripe.ts`) never unshares an admin, an
 exempt user, a non-Stripe-managed user, or a `PAST_DUE` subscriber. The revoke
-job re-reads live DB state before acting.
+job re-reads live DB state before acting, requires the stored status to be
+`CANCELED` or `UNPAID`, and asks Stripe: unless the live status is `canceled`,
+`unpaid` or `incomplete_expired`, it skips with "subscription is active again".
+The removal deletes only the member's share of the configured server (their
+plex.tv friendship and other servers stay). A share that is already gone counts
+as success, so a retried or rerun revoke settles without ending the member's
+sessions twice. If plex.tv rejects the owner's token, the job fails at once
+without retries; reconnect Plex in settings, then retry the job.
+The grant job re-checks too: it does nothing unless the user has full access
+and is exempt (comp grants) or holds an `ACTIVE` subscription, confirmed with
+Stripe, and it records `accepted` without a new invite when the user already
+has access to the server.
+
+### Event Ordering and Recovery
+
+Stripe sends events in no fixed order and may send one more than once.
+
+- **Newer state only.** `Subscription.stripeEventAt` holds the creation time of
+  the newest event applied to the row. An older event is skipped (logged as
+  `stripe.stale_event`) and has no Plex effect, so a late
+  `customer.subscription.updated` can never revive a canceled subscription.
+- **Processed after success.** Each event gets a `StripeEvent` row when its job
+  starts (`receivedAt`, `attempts`), and `processedAt` is set only after its
+  handler succeeded. A failed attempt stores an error code in `lastError` and
+  the job retries; after the last attempt the failure is logged as
+  `stripe.event_failed` and audited as `STRIPE_EVENT_FAILED`.
+- **Resend to recover.** For an event whose `processedAt` is empty, use
+  **Resend** on the event in the Stripe Dashboard (Developers → Events): the
+  webhook retries its failed job, leaves a job that is still queued or running
+  alone, and enqueues it again when the job record has expired (after 7 days).
+  An event that was processed is never run twice.
 
 **Self-service (users):**
 - The account/status surface shows the current plan, state, and renewal/period-end
@@ -188,6 +245,34 @@ job re-reads live DB state before acting.
 - A `PAST_DUE` user keeps full access and sees a persistent global banner linking
   to the Billing Portal.
 - A canceled/removed user is gated back to `/subscribe` and can re-subscribe.
+
+## What a Lapsed Member Can Do
+
+With Stripe on, a user who is not entitled is **lapsed** when they have at
+least one completed Rewind, and has **no access** otherwise (`getAccessLevel`
+in `lib/access.ts`). A lapsed member keeps read-only access to their stored
+Rewinds (FR-51). Each surface checks this itself, not only the `(app)` layout:
+Server Actions through `memberAction({ entitlement })`, route handlers through
+`requireEntitlement` (`lib/actions/route.ts`), pages through `proxy.ts` (on
+every request, client-side navigations included) and the jobs in their queries.
+
+| Surface | Active member | Lapsed member | No access |
+| --- | --- | --- | --- |
+| Rewind pages (`/rewind`, `/rewind/*`, `/wrapped*`) | Yes | Read their stored Rewinds | Sent to `/subscribe` |
+| Home and every other app page | Yes | Sent to `/subscribe` | Sent to `/subscribe` |
+| Poster images on their own Rewind | Yes | Yes | 403, unless a share link covers the poster |
+| Generate a Rewind | Yes | `NOT_ENTITLED` | `NOT_ENTITLED` |
+| Watchlist sync: turn on, sync now | Yes | `NOT_ENTITLED` | `NOT_ENTITLED` |
+| Watchlist sync: settings and history | Yes | Yes | `NOT_ENTITLED` |
+| Watchlist sync: turn off | Yes | Yes | Yes |
+| Scheduled and queued watchlist syncs | Yes | Skipped (`NOT_ENTITLED`) | Skipped (`NOT_ENTITLED`) |
+| Link Discord, resync the Discord role | Yes | Sent to `/subscribe`, `NOT_ENTITLED` | Sent to `/subscribe`, `NOT_ENTITLED` |
+| Unlink Discord | Yes | Yes | Yes |
+| Discord bot commands | Yes | No | No |
+| Manage subscription, `/subscribe` | Yes | Yes | Yes |
+
+Admins and exempt users are always active members. With Stripe off every
+enabled user is an active member.
 
 ## Admin Management
 
@@ -224,7 +309,8 @@ Stripe credentials are **not** environment variables — they are stored (encryp
 in the `Config` singleton and edited from the admin UI. The only related
 infrastructure requirement is the job queue:
 
-- `REDIS_URL` — required so the BullMQ worker can process webhook jobs.
+- `REDIS_URL` — required so the BullMQ worker can process webhook jobs. Stripe
+  cannot be enabled without it.
 - `ENABLE_QUEUE_WORKER` — must not be disabled on the instance that should process
   the jobs.
 
@@ -253,7 +339,8 @@ re-verified against the **installed** `stripe` SDK:
 ## Troubleshooting
 
 - **Toggle won't enable / greyed out.** Stripe isn't fully configured. The card
-  shows exactly what's missing (secret key, webhook secret, or a price ID).
+  shows exactly what's missing (secret key, webhook secret, a price ID, or the
+  job queue).
 - **`/subscribe` shows "not available right now".** No prices resolved:
   Stripe is disabled/unconfigured, no price IDs are set, or every configured
   price ID is invalid/deleted in Stripe. Invalid IDs are skipped and logged; they
@@ -263,6 +350,8 @@ re-verified against the **installed** `stripe` SDK:
   altered by a proxy. Re-copy the `whsec_…` value.
 - **Subscribed but no Plex access.** Check the queue worker is running
   (`REDIS_URL` set, worker enabled) and that an active Plex server is configured.
+  If the event failed (`StripeEvent.lastError` is set, `processedAt` empty), fix
+  the cause and resend the event from the Stripe Dashboard.
   If the user's Plex token was missing/expired, the invite is left **pending** and
   the user must accept it from their email — this is expected (FR-13).
 - **A user wasn't removed after cancelling.** Removal happens at **period end**

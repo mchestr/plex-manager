@@ -47,26 +47,28 @@ export function QueueFilters() {
     <div className="mb-6 flex flex-wrap gap-4">
       {/* Status Filter */}
       <div className="flex-1 min-w-[200px]">
-        <label className="block text-xs font-medium text-slate-400 mb-1">
+        <label htmlFor="queue-filter-status" className="block text-xs font-medium text-slate-400 mb-1">
           Status
         </label>
         <StyledDropdown
           value={currentStatus}
           onChange={(value) => updateParams("status", value)}
           options={STATUS_OPTIONS}
+          id="queue-filter-status"
           data-testid="queue-filter-status"
         />
       </div>
 
       {/* Job Type Filter */}
       <div className="flex-1 min-w-[200px]">
-        <label className="block text-xs font-medium text-slate-400 mb-1">
+        <label htmlFor="queue-filter-job-type" className="block text-xs font-medium text-slate-400 mb-1">
           Job Type
         </label>
         <StyledDropdown
           value={currentJobType}
           onChange={(value) => updateParams("jobType", value)}
           options={JOB_TYPE_OPTIONS}
+          id="queue-filter-job-type"
           data-testid="queue-filter-job-type"
         />
       </div>

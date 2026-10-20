@@ -2,18 +2,19 @@
  * Plex mark watched/unwatched functionality
  */
 
-import { type PlexServerParsed } from "@/lib/validations/plex"
 import { z } from "zod"
 
 import { serviceErrorMessage, serviceFetch } from "@/lib/connections/http"
+import { type MemberServerAccess } from "@/lib/connections/plex-member-token"
 import { logger } from "./plex-core"
 
 /**
- * Mark a Plex item as watched
- * Uses the scrobble endpoint to mark content as watched
+ * Mark a Plex item as watched in the member's own history, through the
+ * scrobble endpoint. `access` carries the member's server token from
+ * `resolveMemberServerToken`, never the owner's (SEC-48).
  */
 export async function markPlexItemWatched(
-  config: PlexServerParsed,
+  access: MemberServerAccess,
   ratingKey: string
 ): Promise<{ success: boolean; error?: string }> {
   const startTime = Date.now()
@@ -22,8 +23,8 @@ export async function markPlexItemWatched(
   const params = new URLSearchParams({ identifier: "com.plexapp.plugins.library", key: ratingKey })
   const result = await serviceFetch({
     service: "Plex",
-    url: `${config.url}/:/scrobble?${params.toString()}`,
-    headers: { "X-Plex-Token": config.token },
+    url: `${access.url}/:/scrobble?${params.toString()}`,
+    headers: { "X-Plex-Token": access.token },
     responseType: "text",
     schema: z.string(),
   })
