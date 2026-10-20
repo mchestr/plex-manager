@@ -1,10 +1,18 @@
+import type { BackCoverData } from "@/lib/rewind/pages/back-cover.schema"
 import type { BookendsData } from "@/lib/rewind/pages/bookends.schema"
+import type { CalendarData } from "@/lib/rewind/pages/calendar.schema"
+import type { CentrefoldData } from "@/lib/rewind/pages/centrefold.schema"
+import type { ClockData } from "@/lib/rewind/pages/clock.schema"
 import type { CoverData } from "@/lib/rewind/pages/cover.schema"
 import type { NumberData } from "@/lib/rewind/pages/number.schema"
 import { registry, type RegistryEntry } from "@/lib/rewind/registry"
 import type { SelectedPage } from "@/lib/rewind/select-pages"
 
+import { BackCoverPage } from "./back-cover"
 import { BookendsPage } from "./bookends"
+import { CalendarPage } from "./calendar"
+import { CentrefoldPage } from "./centrefold"
+import { ClockPage } from "./clock"
 import { CoverPage } from "./cover"
 import type { IssueContext } from "./issue-context"
 import { NumberPage } from "./number"
@@ -23,6 +31,14 @@ export function PageBody({ page, issue }: { page: SelectedPage; issue: IssueCont
       return <NumberPage data={page.data as NumberData} issue={issue} />
     case "bookends":
       return <BookendsPage data={page.data as BookendsData} issue={issue} />
+    case "clock":
+      return <ClockPage data={page.data as ClockData} issue={issue} />
+    case "calendar":
+      return <CalendarPage data={page.data as CalendarData} issue={issue} />
+    case "centrefold":
+      return <CentrefoldPage data={page.data as CentrefoldData} issue={issue} />
+    case "back-cover":
+      return <BackCoverPage data={page.data as BackCoverData} issue={issue} />
     default: {
       const entry: RegistryEntry = registry[page.type]
       return (

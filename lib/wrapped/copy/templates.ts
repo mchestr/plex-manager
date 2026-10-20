@@ -17,7 +17,8 @@
  * templates and follows `window.finalCut`, so no sentence goes stale in
  * January.
  *
- * P5.5 to P5.7 add their pages' headlines and decks here.
+ * P5.5 to P5.7 add their pages' headlines and decks here; P5.7 adds the
+ * "Why this?" reasons (`whyReasons`).
  *
  * @module lib/wrapped/copy/templates
  */
@@ -25,9 +26,9 @@
 import { createHash } from "node:crypto"
 
 import type { IssuePageType } from "@/lib/rewind/registry"
-import { posterLineIds, type ArchetypeId } from "@/lib/wrapped/archetypes/catalogue"
+import { getArchetype, posterLineIds, type ArchetypeId } from "@/lib/wrapped/archetypes/catalogue"
 import type { PageType } from "@/lib/wrapped/data/page-types"
-import type { RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
+import type { FactId, RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 
 import { POSTER_LINES } from "./poster-lines"
 import { tokenIds, type TokenSource } from "./render-copy"
@@ -180,6 +181,50 @@ export function pocketNote(copySource: "llm" | "repair" | "template" | "mixed"):
   return copySource === "template"
     ? "Six pages for a quieter year, and every word on them comes from a template."
     : "The six pages that sum up your year."
+}
+
+/** One plain-language reason per evidence fact a scorer cites (`lib/wrapped/archetypes/scorers.ts`). */
+const REASONS: Partial<Record<FactId, string>> = {
+  "hours.afterDarkShare": `${t("hours.afterDarkShare")} of your plays started between 10 PM and 4 AM.`,
+  "hours.goldenShare": `${t("hours.goldenShare")} of your plays started between 6 PM and 10 PM.`,
+  "hours.peak": `Your busiest hour was ${t("hours.peak")}.`,
+  "hours.quietest": `Your quietest hour was ${t("hours.quietest")}.`,
+  "records.completionShare": `You finished ${t("records.completionShare")} of what you started.`,
+  "films.finishedShare": `You finished ${t("films.finishedShare")} of the films you started.`,
+  "records.rewatchShare": `${t("records.rewatchShare")} of your plays went to titles you kept coming back to.`,
+  "records.rewatchedTitles": `Titles you came back to: ${t("records.rewatchedTitles")}.`,
+  "taste.freshShare": `${t("taste.freshShare")} of your plays came within two weeks of a release.`,
+  "time.seriesShare": `Series took ${t("time.seriesShare")} of your time.`,
+  "time.filmsShare": `Films took ${t("time.filmsShare")} of your time.`,
+  "records.deepestBinge.episodes": `Episodes in your deepest binge: ${t("records.deepestBinge.episodes")}.`,
+  "days.weekendShare": `${t("days.weekendShare")} of your plays started at the weekend.`,
+  "time.totalHours": `Hours you watched in all: ${t("time.totalHours")}.`,
+  "time.totalMinutes": `Time you watched in all: ${t("time.totalMinutes")}.`,
+  "counts.titles": `Different titles you watched: ${t("counts.titles")}.`,
+  "counts.titlesPer10Hours": `New titles for every ten hours: ${t("counts.titlesPer10Hours")}.`,
+  "counts.films": `Films you watched: ${t("counts.films")}.`,
+  "series.top3Share": `Your top three series took ${t("series.top3Share")} of your series time.`,
+  "series[1].title": `${t("series[1].title")} came first, by a distance.`,
+  "days.active": `Days you pressed play: ${t("days.active")}.`,
+}
+
+/**
+ * The "Why this?" sheet's reasons (design 4.3 page 16): for each shortlisted
+ * archetype, one plain sentence per evidence fact the member has, each citing
+ * only that fact.
+ *
+ * @example
+ * ```ts
+ * whyReasons([{ id: "midnight-marathoner", evidence: ["hours.peak"] }])
+ * // [{ id: "midnight-marathoner", name: "The Midnight Marathoner", reasons: ["Your busiest hour was {{fact:hours.peak}}."] }]
+ * ```
+ */
+export function whyReasons(shortlist: ReadonlyArray<{ id: ArchetypeId; evidence: readonly FactId[] }>) {
+  return shortlist.map(({ id, evidence }) => ({
+    id,
+    name: getArchetype(id).name,
+    reasons: evidence.flatMap((fact) => (REASONS[fact] ? [REASONS[fact]] : [])),
+  }))
 }
 
 const HEADLINES: Readonly<Record<IssuePageType, (facts: RewindFactsV3) => string>> = {

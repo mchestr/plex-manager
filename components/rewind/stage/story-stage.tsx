@@ -162,7 +162,7 @@ export function StoryStage({ pages, year, archetype, closeHref, copy }: StorySta
   const chromeHidden = state.mode === "holding"
 
   return (
-    <PlayerProvider value={send}>
+    <PlayerProvider value={send} sheet={state.mode === "sheet" ? state.sheet : null}>
       <LazyMotion features={domAnimation} strict>
         <MotionConfig reducedMotion="user">
           {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- the labelled stage region takes the story keys while focus is inside it (design 4.6) */}
@@ -230,6 +230,7 @@ export function StoryStage({ pages, year, archetype, closeHref, copy }: StorySta
               <ChromeBottom
                 hasTable={table !== null}
                 poster={entry.type === "centrefold"}
+                share={entry.type !== "back-cover"}
                 canGoBack={state.index > 0}
                 canGoForward={state.index < last}
                 onTable={() => send({ type: "OPEN_SHEET", sheet: "table" })}

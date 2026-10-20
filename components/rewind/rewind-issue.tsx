@@ -37,6 +37,8 @@ export async function RewindIssue({ data, userId, returnTo }: { data: RewindData
     pages,
     copy: data.copy,
     copySource: data.copySource,
+    model: data.copyMeta.model,
+    returnTo,
     zone: data.window.zone === settings.timeZone ? "server" : "member",
     facts: data.facts,
   }

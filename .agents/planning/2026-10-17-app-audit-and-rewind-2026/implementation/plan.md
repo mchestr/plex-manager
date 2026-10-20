@@ -5136,12 +5136,14 @@ P5.1 and P5.2 start only once P3.1's scope contract and P3.7's primitives have m
 
 **Demo.** On the heavy fixture, the centrefold shows "Midnight / Marathoner" set at 87.2 px with no break inside a word, on chromium and on iOS Safari. "Why this?" lists the three evidence facts. From the back cover, Done returns home, and Read again restarts at page 02.
 
+(as merged: Page modules are `lib/rewind/pages/{clock,calendar,centrefold,back-cover}.ts` with their `.schema.ts`; `rules.ts` keeps only the P5.6/P7 pages (its `Landed` type excludes these four). Clock data is `{ hours[24], weekdays[7] }` (Monday first); its Table and the centrefold's are `hoursTable()`, captioned "Times in {tz.label}." because `table()` has no zone source. Calendar data is `{ days: [{ minutes, key }], titles, gap: { from, to } | null }` for every window day from `window.from` (`calendarDays()` dates them); the schema refines that every key is in `titles`. Centrefold data is `{ shortlist: [{ id, evidence }], hours, graphic }`, the shortlist being the chosen archetype then `selectArchetype`'s ranking, and `graphic` a union of `hour-ring | meter | calendar-dots | shelf` (null when its fact is missing or there is no archetype). Back-cover data is `{ minutes }`; `lib/rewind/billing-block.ts` `billingBlock(facts, { serverName, named, showtime, locale, measure, metrics })` returns the `<dl>` entries and justified lines (P5.11's card passes `named: options.signed`). `IssueContext` gained `model` and `returnTo`. Page islands open their own sheets through the player: `PlayerProvider` now takes `sheet`, and `useStageSheet(name)` (`player-context.tsx`) opens "why" and "contents" in `sheet` mode, so Esc closes them first. The back cover hides the bottom chrome's share pill (`ChromeBottom share`), and its own share button is `rewind-back-cover-share` (the chrome keeps `rewind-share-poster`); "Change" sends `OPEN_SHEET share` until P5.11 opens it at its settings, and the privacy line is static until P5.11 reads the share defaults. New test ids: `rewind-why-sheet`, `rewind-why-candidate`, `rewind-why-disclosure`, `rewind-contents-sheet`, `rewind-contents-page`, `rewind-archetype-rarity`, `rewind-billing(-list|-line)`, `rewind-calendar-dates`, `rewind-privacy-status`, `rewind-back-cover-share`. The calendar grid has no month labels (9 px rows cannot hold 12 px text); a key under it names the bracket, ring and dots. The low-end `scaleX` nameplate is not built (no low-end detection exists yet). `e2e/rewind-centrefold.spec.ts` is written but not run (no Playwright in this step), and the 09/10/16/18 visual baselines are left to the coordinator.)
+
 **Done when.**
-- [ ] Pages 09, 10, 16 and 18 match the design, with the evidence clock, the calendar strip and the billing block.
-- [ ] The archetype name is fitted without mid-word breaks, and the E2E check passes on chromium and webkit.
-- [ ] "Why this?", the AI disclosure and the privacy line are present.
-- [ ] Done, Read again and Contents work.
-- [ ] Tests and baselines pass for all four pages.
+- [x] Pages 09, 10, 16 and 18 match the design, with the evidence clock, the calendar strip and the billing block.
+- [ ] The archetype name is fitted without mid-word breaks, and the E2E check passes on chromium and webkit. (Fitted and unit-tested; the E2E is written, not run.)
+- [x] "Why this?", the AI disclosure and the privacy line are present.
+- [x] Done, Read again and Contents work.
+- [ ] Tests and baselines pass for all four pages. (Unit tests pass; baselines are not generated here.)
 
 ### Step P5.8: Copy slots, templates, grounding and token rendering
 

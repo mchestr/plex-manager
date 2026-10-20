@@ -7,7 +7,7 @@ import type { RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 import { groundArchetype, groundSlot } from "../grounding"
 import { renderCopy, renderCopyText } from "../render-copy"
 import { COPY_SLOTS, slotDependencyHash } from "../slots"
-import { coverLines, slotTemplate } from "../templates"
+import { coverLines, slotTemplate, whyReasons } from "../templates"
 
 const facts: RewindFactsV3 = {
   "series[1].title": { value: "Severance", display: "Severance", unit: "title" },
@@ -49,5 +49,11 @@ describe("JSDoc Documentation Examples", () => {
       { id: "midnight-marathoner", shortlist: [{ id: "midnight-marathoner", score: 80 }], llmMayChoose: false }
     )
     expect(archetype.ok ? [] : archetype.issues.map((i) => [i.rule, i.slot])).toEqual([[8, "archetype.posterLineId"]])
+  })
+
+  it("whyReasons: one reason per evidence fact", () => {
+    expect(whyReasons([{ id: "midnight-marathoner", evidence: ["hours.peak"] }])).toEqual([
+      { id: "midnight-marathoner", name: "The Midnight Marathoner", reasons: ["Your busiest hour was {{fact:hours.peak}}."] },
+    ])
   })
 })
