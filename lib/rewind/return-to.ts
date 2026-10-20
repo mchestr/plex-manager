@@ -7,8 +7,13 @@
 
 import type { Route } from "next"
 
-/** A path on this site: one leading slash, no second one, no backslash. */
-const SAME_SITE_PATH = /^\/(?!\/)[^\\]*$/
+/**
+ * A path on this site: one leading slash, no second one, no backslash and no
+ * control character (URL parsing strips tab, CR and LF, so `/\t/x` would
+ * become `//x`).
+ */
+// eslint-disable-next-line no-control-regex -- the control characters are what it rejects
+const SAME_SITE_PATH = /^\/(?![/\\])[^\\\u0000-\u001f\u007f]*$/
 
 /**
  * Returns `raw` when it is a relative path on this site, otherwise `/`, so a

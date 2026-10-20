@@ -5,7 +5,7 @@ describe("safeReturnPath", () => {
     expect(safeReturnPath(path)).toBe(path)
   })
 
-  it.each(["//evil.example", "/\\evil", "https://x", "", "account", "javascript:alert(1)", "/a\\b"])(
+  it.each(["//evil.example", "/\\evil", "https://x", "", "account", "javascript:alert(1)", "/a\\b", "/\t/evil.example", "/\n/evil.example", "/\r/evil.example", "/a\u0000b"])(
     "sends %j home",
     (raw) => {
       expect(safeReturnPath(raw)).toBe("/")
