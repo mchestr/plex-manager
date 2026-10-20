@@ -7,45 +7,37 @@ import { DiscordCard } from "@/components/dashboard/discord-card"
 import { MediaServerLinkCard } from "@/components/dashboard/media-server-link-card"
 import { RequestsCard } from "@/components/dashboard/requests-card"
 import { StatusFooter } from "@/components/dashboard/status-background"
-import { WrappedCard } from "@/components/dashboard/wrapped-card"
 import type { DashboardDiscordConnection } from "@/types/discord"
 import { WatchlistSyncCard } from "@/components/watchlist/sync-settings-card"
-import type { RewindEligibility } from "@/lib/wrapped/eligibility"
 
 interface UserDashboardProps {
-  userId: string
   serverName: string
-  isAdmin: boolean
   discordEnabled: boolean
   discordConnection: DashboardDiscordConnection | null
   serverInviteCode?: string | null
   announcements: AnnouncementData[]
   overseerrUrl?: string | null
   prometheusStatus?: StatusData
-  memberLongEnough: boolean // six calendar months since joining, decided on the server
   renderedAt: string // the server clock, so relative dates hydrate unchanged
-  rewindEligibility: RewindEligibility // decided on the server (FR-48)
   primaryAuthService?: string | null // "plex" or "jellyfin"
   mediaServerUrl?: string | null // URL to the media server
   subscriptionSlot?: React.ReactNode // server-rendered SubscriptionStatusView
+  rewindSlot?: React.ReactNode // the server-rendered RewindCard (P6.9)
 }
 
 export function UserDashboard({
-  userId,
   serverName,
-  isAdmin,
   discordEnabled,
   discordConnection,
   serverInviteCode,
   announcements,
   overseerrUrl,
   prometheusStatus,
-  memberLongEnough,
   renderedAt,
-  rewindEligibility,
   primaryAuthService,
   mediaServerUrl,
   subscriptionSlot,
+  rewindSlot,
 }: UserDashboardProps) {
   return (
     <div className="flex flex-1 flex-col">
@@ -63,8 +55,7 @@ export function UserDashboard({
             <AnnouncementsCard announcements={announcements} now={renderedAt} />
           )}
 
-            {/* Wrapped - Hero callout at the top */}
-            <WrappedCard userId={userId} memberLongEnough={memberLongEnough} rewindEligibility={rewindEligibility} isAdmin={isAdmin} />
+            {rewindSlot}
 
             {/* Quick Links - visually separated section */}
             <div className="space-y-3 sm:space-y-4 pt-2">

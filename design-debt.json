@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "commit": "48a8194d8431002c3513d57a6e6dacd40e4fb7f4",
-  "generatedAt": "2026-10-20T23:05:42.529Z",
+  "commit": "67260cc0341d67737fe86780763e4e01c91a9ec9",
+  "generatedAt": "2026-10-20T23:30:53.982Z",
   "files": {
     "app/(app)/discord/link/page.tsx": {
       "raw-palette": 1
@@ -460,10 +460,6 @@
       "gradient": 2,
       "raw-palette": 16
     },
-    "components/dashboard/rewind-not-eligible-card.tsx": {
-      "gradient": 1,
-      "raw-palette": 7
-    },
     "components/dashboard/status-background.tsx": {
       "blur": 1,
       "raw-palette": 27
@@ -473,13 +469,6 @@
       "gradient": 1,
       "gradient-text": 2,
       "raw-palette": 6
-    },
-    "components/dashboard/wrapped-card.tsx": {
-      "copy": 8,
-      "gradient": 17,
-      "gradient-text": 4,
-      "infinite-motion": 5,
-      "raw-palette": 96
     },
     "components/discord/link-panel.tsx": {
       "arbitrary-type-z": 5,
@@ -784,10 +773,10 @@
     "arbitrary-type-z": 39,
     "blur": 137,
     "caps-eyebrow": 91,
-    "copy": 36,
-    "gradient": 130,
-    "gradient-text": 56,
-    "infinite-motion": 56,
-    "raw-palette": 3406
+    "copy": 28,
+    "gradient": 112,
+    "gradient-text": 52,
+    "infinite-motion": 51,
+    "raw-palette": 3303
   }
 }

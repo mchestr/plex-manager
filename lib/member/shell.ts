@@ -3,7 +3,8 @@ import "server-only"
 import { serverName } from "@/lib/brand"
 import { memberNav, type MemberNavItem } from "@/lib/member/nav"
 import { prisma } from "@/lib/prisma"
-import { getSeasonYear } from "@/lib/wrapped/season"
+import { requestRewindCardModel } from "@/lib/rewind/home-card"
+import { rewindNavYear } from "@/lib/rewind/home-card-state"
 
 /** The signed-in member as the shell shows them (ui-design-system 5.5). */
 export interface ShellUser {
@@ -32,18 +33,12 @@ export function initialsFor(name: string): string {
 }
 
 /**
- * Rewind is in the nav when the member can open something there: the season
- * is on for their audience (admins are always in it), or they have a
- * completed Rewind of any year. P6.9 swaps in its card resolver.
+ * The year Rewind's nav item opens, from the home card's resolver (P6.9):
+ * null hides it when the member has nothing to open there.
  */
-async function canOpenRewind(userId: string, isAdmin: boolean): Promise<boolean> {
-  const config = await prisma.config.findUnique({
-    where: { id: "config" },
-    select: { rewindEnabled: true, rewindAudience: true },
-  })
-  if (config?.rewindEnabled && (config.rewindAudience === "all" || isAdmin)) return true
-  const completed = await prisma.plexWrapped.findFirst({ where: { userId, status: "completed" }, select: { id: true } })
-  return completed !== null
+async function rewindYearFor(userId: string, isAdmin: boolean): Promise<number | null> {
+  const card = await requestRewindCardModel(userId, isAdmin)
+  return card ? rewindNavYear(card.state, card.archive) : null
 }
 
 async function discordHandleFor(userId: string): Promise<string | null | undefined> {
@@ -60,11 +55,10 @@ async function discordHandleFor(userId: string): Promise<string | null | undefin
 
 /** Everything `AppShell` needs for the signed-in member, read once per layout render. */
 export async function getAppShellData(session: { id: string; isAdmin: boolean }): Promise<AppShellData> {
-  const [name, user, rewind, seasonYear, discordHandle] = await Promise.all([
+  const [name, user, rewindYear, discordHandle] = await Promise.all([
     serverName(),
     prisma.user.findUnique({ where: { id: session.id }, select: { name: true, email: true } }),
-    canOpenRewind(session.id, session.isAdmin),
-    getSeasonYear(),
+    rewindYearFor(session.id, session.isAdmin),
     discordHandleFor(session.id),
   ])
   const displayName = user?.name?.trim() || user?.email || "Member"
@@ -78,6 +72,6 @@ export async function getAppShellData(session: { id: string; isAdmin: boolean })
       isAdmin: session.isAdmin,
       ...(discordHandle === undefined ? {} : { discordHandle }),
     },
-    nav: memberNav({ rewindYear: rewind ? seasonYear : null }),
+    nav: memberNav({ rewindYear }),
   }
 }

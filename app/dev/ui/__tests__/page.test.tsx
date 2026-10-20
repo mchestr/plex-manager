@@ -13,6 +13,9 @@ jest.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: jest.fn() }),
 }))
 
+// The RewindCard specimens never poll; this keeps the status action's imports out
+jest.mock("@/hooks/use-rewind-status", () => ({ useRewindStatus: jest.fn() }))
+
 jest.mock("next/link", () => {
   const MockLink = ({ href, ...props }: { href: string } & React.ComponentProps<"a">) => <a href={href} {...props} />
   return MockLink
@@ -70,6 +73,7 @@ describe("/dev/ui", () => {
       "status-vocabulary",
       "icon-map",
       "poster-palette",
+      "rewind-card",
     ]) {
       expect(screen.getByTestId(`dev-ui-${primitive}`)).toBeInTheDocument()
     }

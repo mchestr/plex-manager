@@ -10,6 +10,7 @@ import { AlertSpecimen, SkeletonSpecimen, SpinnerSpecimen } from "./_sections/fe
 import { CheckboxSpecimen, FieldSpecimen, InputSpecimen, SelectSpecimen, SwitchSpecimen } from "./_sections/forms"
 import { InkSpecimen } from "./_sections/ink"
 import { DropdownMenuSpecimen, PopoverSpecimen, ToastSpecimen, TooltipSpecimen } from "./_sections/popups"
+import { RewindCardSpecimen } from "./_sections/rewind-card"
 import { SegmentedControlSpecimen, SheetSpecimen, SliderSpecimen, ToggleSpecimen } from "./_sections/rewind-ready"
 import { IconMapSpecimen, PosterPaletteSpecimen, StatusVocabularySpecimen } from "./_sections/vocabulary"
 
@@ -64,6 +65,7 @@ export default function DevUiPage() {
       <StatusVocabularySpecimen />
       <IconMapSpecimen />
       <PosterPaletteSpecimen />
+      <RewindCardSpecimen />
     </main>
   )
 }

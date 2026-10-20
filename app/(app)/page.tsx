@@ -2,26 +2,20 @@ import { getActiveAnnouncements } from "@/actions/announcements";
 import { getPrometheusStatus, type StatusData } from "@/actions/prometheus-status";
 import { ServiceSignInToggle } from "@/components/auth/service-sign-in-toggle";
 import { PublicShell } from "@/components/shell/public-shell";
+import { RewindCard } from "@/components/dashboard/rewind-card";
 import { UserDashboard } from "@/components/dashboard/user-dashboard";
 import { SubscriptionStatusView } from "@/components/subscription/subscription-status-view";
-import { hasEntitlement } from "@/lib/actions/entitlement";
 import { authOptions } from "@/lib/auth";
 import { serverName as getServerName } from "@/lib/brand";
-import { getFirstWatchDate } from "@/lib/connections/tautulli-first-watch";
 import { prisma } from "@/lib/prisma";
-import { getAppSettings } from "@/lib/settings/app-settings";
+import { requestRewindCardModel } from "@/lib/rewind/home-card";
 import { safeHref } from "@/lib/ui/markdown";
-import { calendarMonthsBetween } from "@/lib/utils/format";
-import { getRewindEligibility } from "@/lib/wrapped/eligibility";
 import type { AuthService } from "@/types/onboarding";
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
 export const dynamic = 'force-dynamic'
-
-// Calendar months since the first watch (or sign-up) before Rewind is offered
-const MIN_MEMBERSHIP_MONTHS = 6
 
 const OnboardingStatusSchema = z.object({
   plex: z.boolean(),
@@ -67,9 +61,6 @@ export default async function Home() {
       select: {
         onboardingStatus: true,
         primaryAuthService: true,
-        createdAt: true,
-        plexUserId: true,
-        jellyfinUserId: true,
       }
     });
     const discordConnectionPromise = discordEnabled
@@ -95,26 +86,9 @@ export default async function Home() {
       }
     }
 
-    // The first watch date from Tautulli gives the membership duration, and
-    // eligibility decides whether the Rewind card offers a Rewind (FR-48).
-    // Both find the member through findTautulliUser, which calls Tautulli's
-    // get_users once per render. The first watch date reads the member's
-    // history, so it needs at least read entitlement (SEC-28).
-    const plexUserId = user?.plexUserId ?? null;
-    const canReadHistory = await hasEntitlement(session.user.id, "read");
-    const [firstWatchResult, rewindEligibility, { timeZone }] = await Promise.all([
-      plexUserId && canReadHistory ? getFirstWatchDate(plexUserId) : null,
-      getRewindEligibility({ id: session.user.id, plexUserId }),
-      getAppSettings(),
-    ]);
-
-    // Falls back to account creation date if Tautulli is not available or user has no history
-    let memberSince = user?.createdAt?.toISOString() ?? new Date().toISOString();
-    if (firstWatchResult?.success && firstWatchResult.firstWatchDate) {
-      memberSince = firstWatchResult.firstWatchDate;
-    }
+    // The RewindCard resolves on the server (P6.9); the layout's nav read the same model
+    const rewindCard = await requestRewindCardModel(session.user.id, session.user.isAdmin);
     const now = new Date();
-    const memberLongEnough = calendarMonthsBetween(memberSince, now, timeZone) >= MIN_MEMBERSHIP_MONTHS;
 
     const discordConnectionSummary = discordConnection
       ? {
@@ -133,21 +107,18 @@ export default async function Home() {
 
     return (
       <UserDashboard
-        userId={session.user.id}
         serverName={serverName}
-        isAdmin={session.user.isAdmin}
         discordEnabled={discordEnabled}
         discordConnection={discordConnectionSummary}
         serverInviteCode={discordIntegration?.serverInviteCode ?? null}
         announcements={announcements}
         overseerrUrl={overseerrUrl}
         prometheusStatus={prometheusStatus}
-        memberLongEnough={memberLongEnough}
         renderedAt={now.toISOString()}
-        rewindEligibility={rewindEligibility}
         primaryAuthService={user?.primaryAuthService}
         mediaServerUrl={mediaServerUrl}
         subscriptionSlot={subscription ? <SubscriptionStatusView /> : null}
+        rewindSlot={rewindCard && <RewindCard {...rewindCard} />}
       />
     );
   }
