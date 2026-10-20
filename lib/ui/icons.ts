@@ -28,7 +28,9 @@ import {
   Layers,
   LayoutDashboard,
   Lock,
+  LogOut,
   Megaphone,
+  Menu,
   MessagesSquare,
   Pause,
   Play,
@@ -83,4 +85,7 @@ export const icons = {
   scheduled: Calendar,
   owner: Shield,
   notChecked: CircleDashed,
+  // Shell
+  menu: Menu,
+  signOut: LogOut,
 } as const satisfies Record<string, LucideIcon>

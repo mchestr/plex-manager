@@ -68,6 +68,25 @@ test.describe('Stripe subscription gate & admin visibility', () => {
       }
     });
 
+    // P6.3 (UI-37): the PublicShell on /subscribe always offers a way out.
+    test('a gated member can sign out from /subscribe and lands on /', async ({ regularUserPage }) => {
+      await setStripeEnabled(true, { configure: true });
+      await makeUserGatedNonMember(TEST_USERS.REGULAR.id);
+
+      await regularUserPage.goto('/');
+      await regularUserPage.waitForURL(/\/subscribe(?:$|\?|\/)/, {
+        timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION,
+      });
+      const signOut = regularUserPage.getByTestId('public-shell-sign-out');
+      await expect(signOut).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+
+      await signOut.click();
+      await regularUserPage.waitForURL((url) => url.pathname === '/', {
+        timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION,
+      });
+      await expect(regularUserPage.getByTestId('app-top-bar')).toHaveCount(0);
+    });
+
     test('admin is never gated even when Stripe is enabled', async ({ adminPage }) => {
       await setStripeEnabled(true, { configure: true });
 

@@ -1,15 +1,15 @@
 {
   "schema": 1,
-  "commit": "f17d25942db3675b3b10cd3d9bf6b7531ca528d6",
-  "generatedAt": "2026-10-20T01:00:25.060Z",
+  "commit": "48a8194d8431002c3513d57a6e6dacd40e4fb7f4",
+  "generatedAt": "2026-10-20T23:05:42.529Z",
   "files": {
     "app/(app)/discord/link/page.tsx": {
-      "raw-palette": 2
+      "raw-palette": 1
     },
     "app/(app)/page.tsx": {
-      "gradient": 4,
+      "gradient": 2,
       "gradient-text": 4,
-      "raw-palette": 13
+      "raw-palette": 7
     },
     "app/admin/cost-analysis/page.tsx": {
       "blur": 13,
@@ -118,10 +118,6 @@
       "infinite-motion": 4,
       "raw-palette": 12
     },
-    "app/auth/layout.tsx": {
-      "gradient": 1,
-      "raw-palette": 3
-    },
     "app/error.tsx": {
       "gradient": 1,
       "raw-palette": 3
@@ -162,10 +158,10 @@
       "raw-palette": 1
     },
     "app/subscribe/page.tsx": {
-      "raw-palette": 6
+      "raw-palette": 4
     },
     "app/subscribe/success/page.tsx": {
-      "raw-palette": 5
+      "raw-palette": 3
     },
     "components/admin/announcements/announcement-form-modal.tsx": {
       "raw-palette": 13
@@ -473,11 +469,10 @@
       "raw-palette": 27
     },
     "components/dashboard/user-dashboard.tsx": {
-      "blur": 2,
       "caps-eyebrow": 3,
-      "gradient": 2,
+      "gradient": 1,
       "gradient-text": 2,
-      "raw-palette": 17
+      "raw-palette": 6
     },
     "components/dashboard/wrapped-card.tsx": {
       "copy": 8,
@@ -787,12 +782,12 @@
   "totals": {
     "arbitrary-color": 17,
     "arbitrary-type-z": 39,
-    "blur": 139,
+    "blur": 137,
     "caps-eyebrow": 91,
     "copy": 36,
-    "gradient": 134,
+    "gradient": 130,
     "gradient-text": 56,
     "infinite-motion": 56,
-    "raw-palette": 3431
+    "raw-palette": 3406
   }
 }

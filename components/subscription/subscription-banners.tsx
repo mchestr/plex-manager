@@ -4,39 +4,24 @@ import { ManageSubscriptionButton } from "@/components/subscription/manage-subsc
 import { Alert } from "@/components/ui/alert"
 
 interface SubscriptionBannersProps {
-  /** Whether the current user's subscription is `PAST_DUE`. */
-  pastDue: boolean
-  /** Whether the current user's Plex invite is still pending acceptance. */
-  pendingInvite: boolean
+  /** The subscription notice the member shell's slot picked (`lib/member/notice.ts`). */
+  notice: "past-due" | "pending-invite"
 }
 
 /**
- * Persistent, request-scoped subscription notices shown at the top of the
- * authenticated app.
+ * The two subscription notices of the member shell's notice slot:
  *
  * - **Past-due (R9):** payment failed but access is retained during dunning; a
  *   danger banner links to the Billing Portal so the user can update payment.
  * - **Pending invite (R3):** the Plex invite was sent (or auto-accept failed),
  *   so the user is asked to check their email to accept it.
  *
- * Renders nothing when neither flag is set, so healthy users see no banner. The
- * flags are computed server-side by the `(app)` layout so this stays purely
- * presentational.
+ * The slot shows at most one notice, so past-due wins over the invite.
  */
-export function SubscriptionBanners({
-  pastDue,
-  pendingInvite,
-}: SubscriptionBannersProps) {
-  if (!pastDue && !pendingInvite) {
-    return null
-  }
-
+export function SubscriptionBanners({ notice }: SubscriptionBannersProps) {
   return (
-    <div
-      className="flex flex-col gap-2 px-4 pt-4 sm:px-6"
-      data-testid="subscription-banners"
-    >
-      {pastDue && (
+    <div data-testid="subscription-banners">
+      {notice === "past-due" ? (
         <Alert
           tone="danger"
           title="Payment failed"
@@ -52,9 +37,7 @@ export function SubscriptionBanners({
           Your last payment didn&apos;t go through. Update your payment method to
           keep your access.
         </Alert>
-      )}
-
-      {pendingInvite && (
+      ) : (
         <Alert
           tone="info"
           title="Check your email"

@@ -16,6 +16,10 @@ jest.mock('@/lib/auth', () => ({
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 
+jest.mock('@/lib/brand', () => ({ serverName: jest.fn().mockResolvedValue('Northfield Plex') }))
+jest.mock('next-auth/react', () => ({ signOut: jest.fn() }))
+jest.mock('next/navigation', () => ({ useRouter: () => ({ push: jest.fn(), refresh: jest.fn() }) }))
+
 beforeEach(() => mockReset(prismaMock))
 
 const mockGetServerSession = getServerSession as jest.MockedFunction<
@@ -45,6 +49,8 @@ describe('SubscribeSuccessPage', () => {
     await renderPage()
 
     expect(screen.getByTestId('subscribe-success-accepted')).toBeInTheDocument()
+    // PublicShell's Sign out escape for the signed-in member (UI-37)
+    expect(screen.getByTestId('public-shell-sign-out')).toBeInTheDocument()
     expect(
       screen.queryByTestId('subscribe-success-pending')
     ).not.toBeInTheDocument()
@@ -90,5 +96,6 @@ describe('SubscribeSuccessPage', () => {
       screen.getByTestId('subscribe-success-provisioning')
     ).toBeInTheDocument()
     expect(mockSubscriptionFindUnique).not.toHaveBeenCalled()
+    expect(screen.queryByTestId('public-shell-sign-out')).not.toBeInTheDocument()
   })
 })

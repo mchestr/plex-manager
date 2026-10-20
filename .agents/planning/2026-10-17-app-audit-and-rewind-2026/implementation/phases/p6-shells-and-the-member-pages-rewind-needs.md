@@ -143,10 +143,12 @@
 **Demo.** Sign in as a member: the top bar shows Home and Rewind 2026, and the account menu offers Link Discord. With Stripe on and a lapsed subscription, the member lands on `/subscribe`, signs out from the shell and returns to `/`.
 
 **Done when.**
-- [ ] AppShell has the top bar, the account menu, the mobile Sheet and one notice slot, with `aria-current`.
-- [ ] PublicShell wraps auth, invite and subscribe, with a Sign out escape when signed in.
-- [ ] The `(app)` layout gates as before, with no nested `main`s or gradient wrappers.
+- [x] AppShell has the top bar, the account menu, the mobile Sheet and one notice slot, with `aria-current`.
+- [x] PublicShell wraps auth, invite and subscribe, with a Sign out escape when signed in.
+- [x] The `(app)` layout gates as before, with no nested `main`s or gradient wrappers.
 - [ ] The visual baselines are updated with reviewed diffs.
+
+(as merged: the bar and the notice step aside on every `/rewind` page, which draws its own Close (`isImmersiveRoute` in `lib/member/nav.ts`, applied by the client island `components/shell/shell-chrome.tsx`, since the layout does not re-render on client navigation). The notice kinds, `pickNotice` and the home rule `noticeShownOn` live in the pure `lib/member/notice-rules.ts`; the kind `rewind-ready` already exists there, and P7.14 adds its producer in `getMemberNotice` and its body in `components/shell/app-notice.tsx`. Both subscription notices, the pending invite included, show only while `stripeEnabled` is on. The signed-out `/` already sits in a bare `PublicShell` so it keeps its one `main`; P10.27 restyles it. Shared for P6.1: `components/shell/use-sign-out.ts`, `DropdownMenuLinkItem` in `components/ui/dropdown-menu.tsx`, and `icons.menu` and `icons.signOut`. `ShellUser.discordHandle` is absent when Discord is off, `null` when unlinked. The avatar is an initials tile. Visual baselines are left to the coordinator's E2E pass.)
 
 ### Step P6.5: Admin composites
 

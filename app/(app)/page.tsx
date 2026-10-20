@@ -1,6 +1,7 @@
 import { getActiveAnnouncements } from "@/actions/announcements";
 import { getPrometheusStatus, type StatusData } from "@/actions/prometheus-status";
 import { ServiceSignInToggle } from "@/components/auth/service-sign-in-toggle";
+import { PublicShell } from "@/components/shell/public-shell";
 import { UserDashboard } from "@/components/dashboard/user-dashboard";
 import { SubscriptionStatusView } from "@/components/subscription/subscription-status-view";
 import { hasEntitlement } from "@/lib/actions/entitlement";
@@ -157,20 +158,20 @@ export default async function Home() {
 
   if (!hasPlex && !hasJellyfin) {
     return (
-      <div className="fixed inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 px-4">
+      <PublicShell serverName={serverName}>
         <div className="flex flex-col items-center gap-6 sm:gap-8 text-center">
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
             Media Server
           </h1>
           <p className="text-slate-400 text-lg">No media servers configured. Please contact your administrator.</p>
         </div>
-      </div>
+      </PublicShell>
     );
   }
 
   return (
-    <div className="fixed inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 px-4">
-      <div className="flex flex-col items-center gap-6 sm:gap-8 w-full max-w-md">
+    <PublicShell serverName={serverName}>
+      <div className="flex flex-col items-center gap-6 sm:gap-8 w-full">
         <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent text-center">
           {serverName}
         </h1>
@@ -182,7 +183,7 @@ export default async function Home() {
           jellyfinServerName={jellyfinServer?.name}
         />
       </div>
-    </div>
+    </PublicShell>
   );
 }
 

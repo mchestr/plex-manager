@@ -24,37 +24,21 @@ jest.mock('@/components/ui/toast', () => {
   }
 })
 
-const renderBanners = (props: { pastDue: boolean; pendingInvite: boolean }) =>
-  render(<SubscriptionBanners {...props} />)
-
 describe('SubscriptionBanners', () => {
-  it('renders nothing for a healthy user (no flags set)', () => {
-    const { container } = renderBanners({ pastDue: false, pendingInvite: false })
+  it('shows the past-due banner with a manage-payment action', () => {
+    render(<SubscriptionBanners notice="past-due" />)
 
-    expect(container.firstChild).toBeNull()
-    expect(screen.queryByTestId('subscription-banners')).not.toBeInTheDocument()
-  })
-
-  it('shows the past-due banner with a manage-payment action when pastDue', () => {
-    renderBanners({ pastDue: true, pendingInvite: false })
-
+    expect(screen.getByTestId('subscription-banners')).toBeInTheDocument()
     expect(screen.getByTestId('past-due-banner')).toBeInTheDocument()
     expect(screen.getByTestId('past-due-manage-payment')).toBeInTheDocument()
     expect(screen.queryByTestId('pending-invite-banner')).not.toBeInTheDocument()
   })
 
-  it('shows the pending-invite notice when pendingInvite', () => {
-    renderBanners({ pastDue: false, pendingInvite: true })
+  it('shows the pending-invite notice', () => {
+    render(<SubscriptionBanners notice="pending-invite" />)
 
     expect(screen.getByTestId('pending-invite-banner')).toBeInTheDocument()
     expect(screen.getByText(/accept it to finish setting up/i)).toBeInTheDocument()
     expect(screen.queryByTestId('past-due-banner')).not.toBeInTheDocument()
-  })
-
-  it('shows both banners when both flags are set', () => {
-    renderBanners({ pastDue: true, pendingInvite: true })
-
-    expect(screen.getByTestId('past-due-banner')).toBeInTheDocument()
-    expect(screen.getByTestId('pending-invite-banner')).toBeInTheDocument()
   })
 })
