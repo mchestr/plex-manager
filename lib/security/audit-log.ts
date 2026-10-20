@@ -78,6 +78,9 @@ export enum AuditEventType {
   SHARE_LINK_REVOKED = "SHARE_LINK_REVOKED",
   // The server time zone (Config.timezone) changed. Details carry the old and new zone.
   SERVER_TIMEZONE_CHANGED = "SERVER_TIMEZONE_CHANGED",
+  // A prompt template or Rewind style guide was created, edited, activated or
+  // deleted (P5.9). Details carry the kind and changed field names, never the text.
+  PROMPT_TEMPLATE_CHANGED = "PROMPT_TEMPLATE_CHANGED",
   /**
    * @public An LLM provider save, as P2.12 logged it. Kept so the type stays
    * known; saves are audited as CONFIG_CHANGED since P4.6.

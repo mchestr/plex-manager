@@ -118,7 +118,8 @@ export function WrappedPlayground({ templates, initialTemplateId }: WrappedPlayg
   // Fetch statistics when user/year changes
   useEffect(() => {
     async function fetchStats() {
-      if (!testConfig.userName || !testConfig.year) {
+      const member = plexUsers.find((u) => u.name === testConfig.userName)
+      if (!member || !testConfig.year) {
         setStatistics(null)
         setStatisticsError(null)
         return
@@ -128,7 +129,7 @@ export function WrappedPlayground({ templates, initialTemplateId }: WrappedPlayg
         setLoadingStatistics(true)
         setStatisticsError(null)
         const response = await fetch(
-          `/api/admin/playground/statistics?userName=${encodeURIComponent(testConfig.userName)}&year=${testConfig.year}`
+          `/api/admin/playground/statistics?userId=${encodeURIComponent(member.id)}&year=${testConfig.year}`
         )
         if (response.ok) {
           const data = await response.json()
@@ -148,7 +149,7 @@ export function WrappedPlayground({ templates, initialTemplateId }: WrappedPlayg
     }
 
     fetchStats()
-  }, [testConfig.userName, testConfig.year])
+  }, [plexUsers, testConfig.userName, testConfig.year])
 
   const selectedTemplate = templates.find((t) => t.id === selectedTemplateId)
 
