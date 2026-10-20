@@ -48,3 +48,29 @@ export async function clearRateLimits(redisUrl: string): Promise<number | null> 
     }
   }
 }
+
+/**
+ * Whether Redis at `redisUrl` answers a ping within two seconds. Rewind has
+ * no fallback without Redis (FR-50), so global setup stops the run when it
+ * does not: no baseline is ever taken of the unavailable panel.
+ */
+export async function redisAnswers(redisUrl: string | undefined): Promise<boolean> {
+  if (!redisUrl) return false
+  const redis = new Redis(redisUrl, {
+    lazyConnect: true,
+    maxRetriesPerRequest: 1,
+    connectTimeout: 2000,
+    retryStrategy: () => null,
+  })
+  redis.on('error', () => undefined)
+  try {
+    await redis.connect()
+    return (await redis.ping()) === 'PONG'
+  } catch {
+    return false
+  } finally {
+    if (redis.status !== 'end') {
+      redis.disconnect()
+    }
+  }
+}

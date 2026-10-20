@@ -23,8 +23,7 @@ const visualDesktop = {
   viewport: { width: 1440, height: 900 },
   deviceScaleFactor: 1,
 };
-// Chromium with a phone viewport. devices['iPhone ...'] would switch to webkit,
-// which arrives with the Rewind visual projects (P5.4).
+// Chromium with a phone viewport. devices['iPhone ...'] would switch to webkit.
 const visualMobile = {
   ...devices['Desktop Chrome'],
   viewport: { width: 390, height: 844 },
@@ -32,6 +31,23 @@ const visualMobile = {
   isMobile: true,
   hasTouch: true,
 };
+
+/*
+ * Rewind (P5.4, e2e/README.md "Rewind"): screenshots on chromium and webkit,
+ * axe on chromium, webkit and firefox (firefox runs the @article tests only),
+ * the throttled performance gate on chromium (it needs CDP) and the story
+ * flows on chromium and webkit. Each spec folder belongs to these projects
+ * alone, so the `chromium` project ignores them.
+ */
+const REWIND_VISUAL_SPECS = /visual\/rewind[^/]*\.spec\.ts$/;
+const REWIND_A11Y_SPECS = /a11y\/rewind[^/]*\.a11y\.spec\.ts$/;
+const REWIND_PERF_SPECS = /perf\/[^/]*\.perf\.spec\.ts$/;
+const REWIND_E2E_SPECS = /rewind\/[^/]*\.spec\.ts$/;
+// The visual specs loop over the five phone sizes themselves; this is the first.
+const rewindPhone = { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true };
+const rewindDesktop = { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 };
+// axe and the story flows run at the roomy phone size; firefox has no isMobile.
+const rewindPhoneViewport = { viewport: { width: 390, height: 844 } };
 /**
  * See https://playwright.dev/docs/test-configuration
  */
@@ -85,7 +101,15 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
-      testIgnore: [/setup-wizard\.spec\.ts/, /accessibility-setup\.spec\.ts/, /\.visual\.spec\.ts$/],
+      testIgnore: [
+        /setup-wizard\.spec\.ts/,
+        /accessibility-setup\.spec\.ts/,
+        /\.visual\.spec\.ts$/,
+        REWIND_VISUAL_SPECS,
+        REWIND_A11Y_SPECS,
+        REWIND_PERF_SPECS,
+        REWIND_E2E_SPECS,
+      ],
     },
     {
       name: 'setup-wizard',
@@ -109,6 +133,21 @@ export default defineConfig({
       dependencies: ['setup-wizard'],
       use: visualMobile,
     },
+    { name: 'rewind-visual-phone-chromium', testMatch: REWIND_VISUAL_SPECS, use: { ...devices['Desktop Chrome'], ...rewindPhone } },
+    { name: 'rewind-visual-phone-webkit', testMatch: REWIND_VISUAL_SPECS, use: { ...devices['Desktop Safari'], ...rewindPhone } },
+    { name: 'rewind-visual-desktop-chromium', testMatch: REWIND_VISUAL_SPECS, use: { ...devices['Desktop Chrome'], ...rewindDesktop } },
+    { name: 'rewind-visual-desktop-webkit', testMatch: REWIND_VISUAL_SPECS, use: { ...devices['Desktop Safari'], ...rewindDesktop } },
+    { name: 'rewind-a11y-chromium', testMatch: REWIND_A11Y_SPECS, use: { ...devices['Desktop Chrome'], ...rewindPhoneViewport } },
+    { name: 'rewind-a11y-webkit', testMatch: REWIND_A11Y_SPECS, use: { ...devices['Desktop Safari'], ...rewindPhoneViewport } },
+    {
+      name: 'rewind-a11y-firefox',
+      testMatch: REWIND_A11Y_SPECS,
+      grep: /@article/,
+      use: { ...devices['Desktop Firefox'], ...rewindPhoneViewport },
+    },
+    { name: 'rewind-perf', testMatch: REWIND_PERF_SPECS, use: { ...devices['Desktop Chrome'], ...rewindPhoneViewport } },
+    { name: 'rewind-e2e-chromium', testMatch: REWIND_E2E_SPECS, use: { ...devices['Desktop Chrome'], ...rewindPhoneViewport } },
+    { name: 'rewind-e2e-webkit', testMatch: REWIND_E2E_SPECS, use: { ...devices['Desktop Safari'], ...rewindPhoneViewport } },
   ],
 
   /* Run the app before starting the tests */

@@ -455,21 +455,29 @@ jobs:
 
   # The Playwright projects against `next build` plus `next start`, in the
   # image the visual baselines are taken in, on a throwaway Postgres and Redis.
-  # "E2E Tests" (required) runs every functional spec. "Visual Diffs" runs the
-  # screenshot projects and is advisory: a diff leaves a warning and the
-  # report, not a failed check (refresh baselines with visual-baselines.yml).
+  # "E2E Tests" (required) runs every functional spec, Rewind's story flows
+  # and its axe scans (chromium, webkit and firefox; the image ships all
+  # three). "Visual Diffs" and "Rewind Visual Diffs" run the screenshot
+  # projects and are advisory: a diff leaves a warning and the report, not a
+  # failed check (refresh baselines with visual-baselines.yml). "Rewind
+  # Performance" (the 4x-throttled long-task and commit gate plus the
+  # first-page JavaScript budget, P5.4) is advisory the same way.
   e2e:
     name: ${{ matrix.suite.name }}
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: ${{ matrix.suite.timeout }}
     strategy:
       fail-fast: false
       matrix:
         suite:
           - name: E2E Tests
-            projects: --project=chromium --project=setup-wizard
+            projects: >-
+              --project=chromium --project=setup-wizard
+              --project=rewind-e2e-chromium --project=rewind-e2e-webkit
+              --project=rewind-a11y-chromium --project=rewind-a11y-webkit --project=rewind-a11y-firefox
             advisory: false
             artifact: playwright-report
+            timeout: 40
           # The setup projects pull in setup-wizard, which they depend on.
           - name: Visual Diffs
             projects: >-
@@ -477,6 +485,24 @@ jobs:
               --project=visual-setup-desktop --project=visual-setup-mobile
             advisory: true
             artifact: visual-diffs
+            warning: Screenshots differ from the baselines. Review the visual-diffs artifact; if the change is intended, run the Visual Baselines workflow (e2e/visual/README.md).
+            timeout: 40
+          - name: Rewind Visual Diffs
+            projects: >-
+              --project=rewind-visual-phone-chromium --project=rewind-visual-phone-webkit
+              --project=rewind-visual-desktop-chromium --project=rewind-visual-desktop-webkit
+            advisory: true
+            artifact: rewind-visual-diffs
+            warning: Screenshots differ from the baselines. Review the rewind-visual-diffs artifact; if the change is intended, run the Visual Baselines workflow (e2e/visual/README.md). A 12 px text or 44 px target check may have failed instead; the job log names the page.
+            timeout: 60
+          # Advisory: long tasks under 4x throttling vary with the shared
+          # runner's CPU, and the JavaScript budget is not met yet (P5.4).
+          - name: Rewind Performance
+            projects: --project=rewind-perf
+            advisory: true
+            artifact: rewind-perf-report
+            warning: A Rewind performance budget failed (long tasks over 50 ms, commits between turns, or first-page JavaScript over 110 KB). The job log prints each measurement; see the rewind-perf-report artifact.
+            timeout: 15
     # Keep the tag equal to the exact @playwright/test version in package.json.
     container:
       image: mcr.microsoft.com/playwright:v1.57.0-noble
@@ -544,9 +570,12 @@ jobs:
         env:
           E2E_PREBUILT: "1"
 
-      - name: Flag visual diffs as advisory
+      - name: Flag the advisory failure
         if: steps.playwright.outcome == 'failure' && matrix.suite.advisory
-        run: echo "::warning title=Visual diffs::Screenshots differ from the baselines. Review the visual-diffs artifact; if the change is intended, run the Visual Baselines workflow (e2e/visual/README.md)."
+        env:
+          TITLE: ${{ matrix.suite.name }}
+          WARNING: ${{ matrix.suite.warning }}
+        run: echo "::warning title=$TITLE::$WARNING"
 
       - name: Upload the Playwright report and diffs
         if: failure() || steps.playwright.outcome == 'failure'

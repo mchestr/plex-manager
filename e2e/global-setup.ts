@@ -1,5 +1,5 @@
 import { createE2EPrismaClient } from './helpers/prisma';
-import { clearRateLimits } from './helpers/rate-limits';
+import { clearRateLimits, redisAnswers } from './helpers/rate-limits';
 
 /**
  * Global setup for Playwright tests
@@ -97,6 +97,12 @@ async function globalSetup() {
     const adminCount = await prisma.user.count({ where: { email: 'admin@example.com' } });
     const regularCount = await prisma.user.count({ where: { email: 'regular@example.com' } });
     console.log(`[E2E Setup] Admin users: ${adminCount}, Regular users: ${regularCount}`);
+
+    // Rewind's checkRewindInfra() fails without Redis (FR-50), and every
+    // Rewind spec would then screenshot or scan the unavailable panel.
+    if (!(await redisAnswers(process.env.REDIS_URL))) {
+      throw new Error('[E2E Setup] Redis does not answer at REDIS_URL; Rewind needs it (FR-50). Start Redis or set REDIS_URL.');
+    }
 
     // The web server inherits REDIS_URL from .env, so limiter counts from an
     // earlier run would otherwise carry over into this one.

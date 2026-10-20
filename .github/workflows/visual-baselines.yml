@@ -10,6 +10,15 @@ on:
         description: Branch of this repository to update (never main)
         required: true
         type: string
+      suite:
+        description: Which screenshots to regenerate
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - app
+          - rewind
 
 permissions:
   contents: write
@@ -24,7 +33,7 @@ jobs:
   update:
     name: Update visual baselines
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 90
     # The image the visual specs are compared in. Keep the tag equal to the
     # exact @playwright/test version in package-lock.json.
     container:
@@ -107,12 +116,21 @@ jobs:
       - name: Apply migrations
         run: npm run db:deploy
 
+      # The app's screens (P1.6) and Rewind's story pages on chromium and
+      # webkit (P5.4). The image ships both browsers.
       - name: Regenerate the baselines
-        run: >-
-          npx playwright test
-          --project=visual-desktop --project=visual-mobile
-          --project=visual-setup-desktop --project=visual-setup-mobile
-          --update-snapshots=all
+        env:
+          SUITE: ${{ inputs.suite }}
+        run: |
+          app="--project=visual-desktop --project=visual-mobile --project=visual-setup-desktop --project=visual-setup-mobile"
+          rewind="--project=rewind-visual-phone-chromium --project=rewind-visual-phone-webkit --project=rewind-visual-desktop-chromium --project=rewind-visual-desktop-webkit"
+          case "$SUITE" in
+            app) projects="$app" ;;
+            rewind) projects="$rewind" ;;
+            *) projects="$app $rewind" ;;
+          esac
+          # shellcheck disable=SC2086 # one word per --project flag
+          npx playwright test $projects --update-snapshots=all
 
       - name: Upload the report and diffs
         if: always()

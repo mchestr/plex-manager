@@ -47,7 +47,7 @@ describe("Button: the Rewind-only entries", () => {
       </Button>
     )
     const button = screen.getByRole("button", { name: "Pause" })
-    expect(button).toHaveClass("size-[38px]", "rounded-full", "relative", "before:absolute", "before:-inset-[3px]")
+    expect(button).toHaveClass("size-[38px]", "rounded-full", "relative", "before:absolute", "before:-inset-[4.5px]")
     expect(await axe(container)).toHaveNoViolations()
   })
 

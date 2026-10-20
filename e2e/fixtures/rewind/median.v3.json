@@ -1,0 +1,3601 @@
+{
+  "version": 3,
+  "year": 2026,
+  "statsVersion": "stats-2026.1",
+  "generatedAt": "2026-12-01T12:00:00.000Z",
+  "window": {
+    "from": "2026-01-01",
+    "through": "2026-11-30",
+    "zone": "Europe/London",
+    "finalCut": false
+  },
+  "edition": "full",
+  "facts": {
+    "time.totalMinutes": {
+      "value": 10800,
+      "display": "180 h",
+      "unit": "duration"
+    },
+    "time.totalHours": {
+      "value": 180,
+      "display": "180",
+      "unit": "hours"
+    },
+    "time.daysHours": {
+      "value": 10800,
+      "display": "7 days, 12 hours",
+      "unit": "days-hours"
+    },
+    "time.perDay": {
+      "value": 32,
+      "display": "32 minutes",
+      "unit": "duration"
+    },
+    "time.seriesHours": {
+      "value": 90,
+      "display": "90",
+      "unit": "hours"
+    },
+    "time.seriesShare": {
+      "value": 0.5,
+      "display": "50%",
+      "unit": "share"
+    },
+    "time.filmsHours": {
+      "value": 90,
+      "display": "90",
+      "unit": "hours"
+    },
+    "time.filmsShare": {
+      "value": 0.5,
+      "display": "50%",
+      "unit": "share"
+    },
+    "time.vsLastYear": {
+      "value": 0.2,
+      "display": "+20%",
+      "unit": "change"
+    },
+    "time.milestones[1].hours": {
+      "value": 10,
+      "display": "10",
+      "unit": "hours"
+    },
+    "time.milestones[1].date": {
+      "value": "2026-01-21",
+      "display": "January 21",
+      "unit": "date"
+    },
+    "time.milestones[2].hours": {
+      "value": 25,
+      "display": "25",
+      "unit": "hours"
+    },
+    "time.milestones[2].date": {
+      "value": "2026-02-16",
+      "display": "February 16",
+      "unit": "date"
+    },
+    "time.milestones[3].hours": {
+      "value": 50,
+      "display": "50",
+      "unit": "hours"
+    },
+    "time.milestones[3].date": {
+      "value": "2026-04-01",
+      "display": "April 1",
+      "unit": "date"
+    },
+    "time.milestones[4].hours": {
+      "value": 100,
+      "display": "100",
+      "unit": "hours"
+    },
+    "time.milestones[4].date": {
+      "value": "2026-06-27",
+      "display": "June 27",
+      "unit": "date"
+    },
+    "counts.episodes": {
+      "value": 90,
+      "display": "90",
+      "unit": "count"
+    },
+    "counts.series": {
+      "value": 3,
+      "display": "3",
+      "unit": "count"
+    },
+    "counts.films": {
+      "value": 45,
+      "display": "45",
+      "unit": "count"
+    },
+    "counts.seasons": {
+      "value": 11,
+      "display": "11",
+      "unit": "count"
+    },
+    "bookends.first.title": {
+      "value": "Doctor Who",
+      "display": "Doctor Who",
+      "unit": "title"
+    },
+    "bookends.first.date": {
+      "value": "2026-01-05",
+      "display": "January 5",
+      "unit": "date"
+    },
+    "bookends.first.time": {
+      "value": 1200,
+      "display": "8:00 PM",
+      "unit": "time"
+    },
+    "bookends.last.title": {
+      "value": "Kill Bill: Vol. 1",
+      "display": "Kill Bill: Vol. 1",
+      "unit": "title"
+    },
+    "bookends.last.date": {
+      "value": "2026-11-14",
+      "display": "November 14",
+      "unit": "date"
+    },
+    "bookends.last.time": {
+      "value": 1170,
+      "display": "7:30 PM",
+      "unit": "time"
+    },
+    "days.active": {
+      "value": 135,
+      "display": "135",
+      "unit": "count"
+    },
+    "days.biggest.date": {
+      "value": "2026-01-10",
+      "display": "January 10",
+      "unit": "date"
+    },
+    "days.biggest.minutes": {
+      "value": 120,
+      "display": "2 h",
+      "unit": "duration"
+    },
+    "days.longestGap.days": {
+      "value": 2,
+      "display": "2 days",
+      "unit": "days"
+    },
+    "days.longestGap.month": {
+      "value": 1,
+      "display": "January",
+      "unit": "month"
+    },
+    "streak.longest.days": {
+      "value": 1,
+      "display": "1 day",
+      "unit": "days"
+    },
+    "streak.longest.from": {
+      "value": "2026-01-05",
+      "display": "January 5",
+      "unit": "date"
+    },
+    "streak.longest.to": {
+      "value": "2026-01-05",
+      "display": "January 5",
+      "unit": "date"
+    },
+    "days.biggestWeek": {
+      "value": 240,
+      "display": "4 h",
+      "unit": "duration"
+    },
+    "days.biggestWeek.from": {
+      "value": "2026-01-05",
+      "display": "January 5",
+      "unit": "date"
+    },
+    "hours.peak": {
+      "value": 20,
+      "display": "8 PM",
+      "unit": "hour"
+    },
+    "hours.quietest": {
+      "value": 0,
+      "display": "12 AM",
+      "unit": "hour"
+    },
+    "hours.afterDarkShare": {
+      "value": 0,
+      "display": "0%",
+      "unit": "share"
+    },
+    "hours.goldenShare": {
+      "value": 1,
+      "display": "100%",
+      "unit": "share"
+    },
+    "hours.medianStart": {
+      "value": 1200,
+      "display": "8:00 PM",
+      "unit": "time"
+    },
+    "hours.latestStart.time": {
+      "value": 1200,
+      "display": "8:00 PM",
+      "unit": "time"
+    },
+    "hours.latestStart.weekday": {
+      "value": 3,
+      "display": "Wednesday",
+      "unit": "weekday"
+    },
+    "days.weekendShare": {
+      "value": 0.3333333333333333,
+      "display": "33%",
+      "unit": "share"
+    },
+    "series[1].title": {
+      "value": "Doctor Who",
+      "display": "Doctor Who",
+      "unit": "title"
+    },
+    "series[1].minutes": {
+      "value": 2700,
+      "display": "45 h",
+      "unit": "duration"
+    },
+    "series[1].episodes": {
+      "value": 45,
+      "display": "45",
+      "unit": "count"
+    },
+    "series[1].seasons": {
+      "value": 4,
+      "display": "4",
+      "unit": "count"
+    },
+    "series[1].monthsActive": {
+      "value": 11,
+      "display": "11",
+      "unit": "count"
+    },
+    "series[1].biggestNight.date": {
+      "value": "2026-01-05",
+      "display": "January 5",
+      "unit": "date"
+    },
+    "series[1].biggestNight.episodes": {
+      "value": 1,
+      "display": "1",
+      "unit": "count"
+    },
+    "series[2].title": {
+      "value": "Slow Horses",
+      "display": "Slow Horses",
+      "unit": "title"
+    },
+    "series[2].minutes": {
+      "value": 1440,
+      "display": "24 h",
+      "unit": "duration"
+    },
+    "series[2].episodes": {
+      "value": 24,
+      "display": "24",
+      "unit": "count"
+    },
+    "series[2].seasons": {
+      "value": 4,
+      "display": "4",
+      "unit": "count"
+    },
+    "series[2].monthsActive": {
+      "value": 6,
+      "display": "6",
+      "unit": "count"
+    },
+    "series[2].biggestNight.date": {
+      "value": "2026-01-07",
+      "display": "January 7",
+      "unit": "date"
+    },
+    "series[2].biggestNight.episodes": {
+      "value": 1,
+      "display": "1",
+      "unit": "count"
+    },
+    "series[3].title": {
+      "value": "The Last of Us",
+      "display": "The Last of Us",
+      "unit": "title"
+    },
+    "series[3].minutes": {
+      "value": 1260,
+      "display": "21 h",
+      "unit": "duration"
+    },
+    "series[3].episodes": {
+      "value": 21,
+      "display": "21",
+      "unit": "count"
+    },
+    "series[3].seasons": {
+      "value": 3,
+      "display": "3",
+      "unit": "count"
+    },
+    "series[3].monthsActive": {
+      "value": 6,
+      "display": "6",
+      "unit": "count"
+    },
+    "series[3].biggestNight.date": {
+      "value": "2026-06-24",
+      "display": "June 24",
+      "unit": "date"
+    },
+    "series[3].biggestNight.episodes": {
+      "value": 1,
+      "display": "1",
+      "unit": "count"
+    },
+    "films[1].title": {
+      "value": "Kill Bill: Vol. 1",
+      "display": "Kill Bill: Vol. 1",
+      "unit": "title"
+    },
+    "films[1].plays": {
+      "value": 1,
+      "display": "1",
+      "unit": "count"
+    },
+    "films[1].minutes": {
+      "value": 120,
+      "display": "2 h",
+      "unit": "duration"
+    },
+    "films[2].title": {
+      "value": "Lost in Translation",
+      "display": "Lost in Translation",
+      "unit": "title"
+    },
+    "films[2].plays": {
+      "value": 1,
+      "display": "1",
+      "unit": "count"
+    },
+    "films[2].minutes": {
+      "value": 120,
+      "display": "2 h",
+      "unit": "duration"
+    },
+    "films[3].title": {
+      "value": "Mulholland Drive",
+      "display": "Mulholland Drive",
+      "unit": "title"
+    },
+    "films[3].plays": {
+      "value": 1,
+      "display": "1",
+      "unit": "count"
+    },
+    "films[3].minutes": {
+      "value": 120,
+      "display": "2 h",
+      "unit": "duration"
+    },
+    "films[4].title": {
+      "value": "Memento",
+      "display": "Memento",
+      "unit": "title"
+    },
+    "films[4].plays": {
+      "value": 1,
+      "display": "1",
+      "unit": "count"
+    },
+    "films[4].minutes": {
+      "value": 120,
+      "display": "2 h",
+      "unit": "duration"
+    },
+    "films[5].title": {
+      "value": "Gladiator",
+      "display": "Gladiator",
+      "unit": "title"
+    },
+    "films[5].plays": {
+      "value": 1,
+      "display": "1",
+      "unit": "count"
+    },
+    "films[5].minutes": {
+      "value": 120,
+      "display": "2 h",
+      "unit": "duration"
+    },
+    "series.top3Share": {
+      "value": 1,
+      "display": "100%",
+      "unit": "share"
+    },
+    "films.finishedShare": {
+      "value": 1,
+      "display": "100%",
+      "unit": "share"
+    },
+    "films.longest.title": {
+      "value": "Kill Bill: Vol. 1",
+      "display": "Kill Bill: Vol. 1",
+      "unit": "title"
+    },
+    "films.longest.minutes": {
+      "value": 120,
+      "display": "2 h",
+      "unit": "duration"
+    },
+    "quiz.gapMinutes": {
+      "value": 1260,
+      "display": "21 h",
+      "unit": "duration"
+    },
+    "counts.titles": {
+      "value": 48,
+      "display": "48",
+      "unit": "count"
+    },
+    "records.mostEpisodesDay": {
+      "value": 1,
+      "display": "1",
+      "unit": "count"
+    },
+    "records.completionShare": {
+      "value": 1,
+      "display": "100%",
+      "unit": "share"
+    },
+    "records.mostPaused.title": {
+      "value": "Slow Horses",
+      "display": "Slow Horses",
+      "unit": "title"
+    },
+    "records.rewatchShare": {
+      "value": 0,
+      "display": "0%",
+      "unit": "share"
+    },
+    "records.rewatchedTitles": {
+      "value": 0,
+      "display": "0",
+      "unit": "count"
+    },
+    "counts.titlesPer10Hours": {
+      "value": 2.7,
+      "display": "2.7",
+      "unit": "decimal"
+    },
+    "taste.freshShare": {
+      "value": 0,
+      "display": "0%",
+      "unit": "share"
+    },
+    "taste.genre[1].name": {
+      "value": "Comedy",
+      "display": "Comedy",
+      "unit": "text"
+    },
+    "taste.genre[1].share": {
+      "value": 0.18820224719101122,
+      "display": "19%",
+      "unit": "share"
+    },
+    "taste.genre[2].name": {
+      "value": "Crime",
+      "display": "Crime",
+      "unit": "text"
+    },
+    "taste.genre[2].share": {
+      "value": 0.18820224719101122,
+      "display": "19%",
+      "unit": "share"
+    },
+    "taste.genre[3].name": {
+      "value": "Animation",
+      "display": "Animation",
+      "unit": "text"
+    },
+    "taste.genre[3].share": {
+      "value": 0.12921348314606743,
+      "display": "13%",
+      "unit": "share"
+    },
+    "taste.genre[4].name": {
+      "value": "Fantasy",
+      "display": "Fantasy",
+      "unit": "text"
+    },
+    "taste.genre[4].share": {
+      "value": 0.12640449438202248,
+      "display": "13%",
+      "unit": "share"
+    },
+    "taste.genre[5].name": {
+      "value": "Science Fiction",
+      "display": "Science Fiction",
+      "unit": "text"
+    },
+    "taste.genre[5].share": {
+      "value": 0.12359550561797752,
+      "display": "12%",
+      "unit": "share"
+    },
+    "taste.genreByMonth[1]": {
+      "value": "Animation",
+      "display": "Animation",
+      "unit": "text"
+    },
+    "taste.genreByMonth[2]": {
+      "value": "Comedy",
+      "display": "Comedy",
+      "unit": "text"
+    },
+    "taste.genreByMonth[3]": {
+      "value": "Animation",
+      "display": "Animation",
+      "unit": "text"
+    },
+    "taste.genreByMonth[4]": {
+      "value": "Comedy",
+      "display": "Comedy",
+      "unit": "text"
+    },
+    "taste.genreByMonth[5]": {
+      "value": "Animation",
+      "display": "Animation",
+      "unit": "text"
+    },
+    "taste.genreByMonth[6]": {
+      "value": "Comedy",
+      "display": "Comedy",
+      "unit": "text"
+    },
+    "taste.genreByMonth[7]": {
+      "value": "Fantasy",
+      "display": "Fantasy",
+      "unit": "text"
+    },
+    "taste.genreByMonth[8]": {
+      "value": "Thriller",
+      "display": "Thriller",
+      "unit": "text"
+    },
+    "taste.genreByMonth[9]": {
+      "value": "Fantasy",
+      "display": "Fantasy",
+      "unit": "text"
+    },
+    "taste.genreByMonth[10]": {
+      "value": "Crime",
+      "display": "Crime",
+      "unit": "text"
+    },
+    "taste.genreByMonth[11]": {
+      "value": "Comedy",
+      "display": "Comedy",
+      "unit": "text"
+    },
+    "taste.medianYear": {
+      "value": 1988,
+      "display": "1988",
+      "unit": "year"
+    },
+    "taste.oldest.title": {
+      "value": "Citizen Kane",
+      "display": "Citizen Kane",
+      "unit": "title"
+    },
+    "taste.oldest.year": {
+      "value": 1941,
+      "display": "1941",
+      "unit": "year"
+    },
+    "people.actor[1].name": {
+      "value": "Jun Ito",
+      "display": "Jun Ito",
+      "unit": "name"
+    },
+    "people.actor[1].minutes": {
+      "value": 4020,
+      "display": "67 h",
+      "unit": "duration"
+    },
+    "people.actor[2].name": {
+      "value": "Mira Okafor",
+      "display": "Mira Okafor",
+      "unit": "name"
+    },
+    "people.actor[2].minutes": {
+      "value": 4020,
+      "display": "67 h",
+      "unit": "duration"
+    },
+    "people.actor[3].name": {
+      "value": "Tomas Brandt",
+      "display": "Tomas Brandt",
+      "unit": "name"
+    },
+    "people.actor[3].minutes": {
+      "value": 2760,
+      "display": "46 h",
+      "unit": "duration"
+    },
+    "people.actor[4].name": {
+      "value": "Ines Varga",
+      "display": "Ines Varga",
+      "unit": "name"
+    },
+    "people.actor[4].minutes": {
+      "value": 2700,
+      "display": "45 h",
+      "unit": "duration"
+    },
+    "people.actor[5].name": {
+      "value": "Lena Marsh",
+      "display": "Lena Marsh",
+      "unit": "name"
+    },
+    "people.actor[5].minutes": {
+      "value": 2640,
+      "display": "44 h",
+      "unit": "duration"
+    },
+    "people.director[1].name": {
+      "value": "Jun Ito",
+      "display": "Jun Ito",
+      "unit": "name"
+    },
+    "people.director[2].name": {
+      "value": "Lena Marsh",
+      "display": "Lena Marsh",
+      "unit": "name"
+    },
+    "people.director[3].name": {
+      "value": "Noor Haddad",
+      "display": "Noor Haddad",
+      "unit": "name"
+    },
+    "race.leader[1]": {
+      "value": "Doctor Who",
+      "display": "Doctor Who",
+      "unit": "title"
+    },
+    "race.leader[2]": {
+      "value": "Doctor Who",
+      "display": "Doctor Who",
+      "unit": "title"
+    },
+    "race.leader[3]": {
+      "value": "Doctor Who",
+      "display": "Doctor Who",
+      "unit": "title"
+    },
+    "race.leader[4]": {
+      "value": "Doctor Who",
+      "display": "Doctor Who",
+      "unit": "title"
+    },
+    "race.leader[5]": {
+      "value": "Doctor Who",
+      "display": "Doctor Who",
+      "unit": "title"
+    },
+    "race.leader[6]": {
+      "value": "Doctor Who",
+      "display": "Doctor Who",
+      "unit": "title"
+    },
+    "race.leader[7]": {
+      "value": "Doctor Who",
+      "display": "Doctor Who",
+      "unit": "title"
+    },
+    "race.leader[8]": {
+      "value": "Doctor Who",
+      "display": "Doctor Who",
+      "unit": "title"
+    },
+    "race.leader[9]": {
+      "value": "Doctor Who",
+      "display": "Doctor Who",
+      "unit": "title"
+    },
+    "race.leader[10]": {
+      "value": "Doctor Who",
+      "display": "Doctor Who",
+      "unit": "title"
+    },
+    "race.leader[11]": {
+      "value": "Doctor Who",
+      "display": "Doctor Who",
+      "unit": "title"
+    },
+    "race.leadChanges": {
+      "value": 0,
+      "display": "0",
+      "unit": "count"
+    },
+    "race.closestGapMinutes": {
+      "value": 0,
+      "display": "0 minutes",
+      "unit": "duration"
+    },
+    "setup.directPlayShare": {
+      "value": 1,
+      "display": "100%",
+      "unit": "share"
+    },
+    "setup.homeShare": {
+      "value": 1,
+      "display": "100%",
+      "unit": "share"
+    },
+    "setup.topPlatform": {
+      "value": "Apple TV",
+      "display": "Apple TV",
+      "unit": "text"
+    },
+    "setup.topProduct": {
+      "value": "Plex for Apple TV",
+      "display": "Plex for Apple TV",
+      "unit": "text"
+    },
+    "setup.fourKShare": {
+      "value": 0,
+      "display": "0%",
+      "unit": "share"
+    },
+    "requests.made": {
+      "value": 5,
+      "display": "5",
+      "unit": "count"
+    },
+    "requests.approved": {
+      "value": 3,
+      "display": "3",
+      "unit": "count"
+    },
+    "requests.available": {
+      "value": 3,
+      "display": "3",
+      "unit": "count"
+    },
+    "requests.pending": {
+      "value": 1,
+      "display": "1",
+      "unit": "count"
+    },
+    "requests.declined": {
+      "value": 1,
+      "display": "1",
+      "unit": "count"
+    },
+    "requests.watched": {
+      "value": 3,
+      "display": "3",
+      "unit": "count"
+    },
+    "standing.percentile": {
+      "value": 59,
+      "display": "Top 59%",
+      "unit": "percentile"
+    },
+    "standing.members": {
+      "value": 12,
+      "display": "12",
+      "unit": "count"
+    },
+    "community.titlesAdded": {
+      "value": 0,
+      "display": "0",
+      "unit": "count"
+    },
+    "member.firstName": {
+      "value": "Sam",
+      "display": "Sam",
+      "unit": "name"
+    },
+    "member.since": {
+      "value": 2024,
+      "display": "2024",
+      "unit": "year"
+    },
+    "member.volume": {
+      "value": 3,
+      "display": "3",
+      "unit": "count"
+    },
+    "member.lifetimeHours": {
+      "value": 332,
+      "display": "332",
+      "unit": "hours"
+    },
+    "member.nthRewind": {
+      "value": 1,
+      "display": "1",
+      "unit": "count"
+    },
+    "member.serial": {
+      "value": "K7Q4",
+      "display": "K7Q4",
+      "unit": "text"
+    },
+    "window.from": {
+      "value": "2026-01-01",
+      "display": "January 1",
+      "unit": "date"
+    },
+    "window.through": {
+      "value": "2026-11-30",
+      "display": "November 30",
+      "unit": "date"
+    },
+    "window.finalCut": {
+      "value": 0,
+      "display": "0",
+      "unit": "count"
+    },
+    "window.elapsedDays": {
+      "value": 334,
+      "display": "334 days",
+      "unit": "days"
+    },
+    "tz.label": {
+      "value": "Europe/London",
+      "display": "Europe/London",
+      "unit": "text"
+    },
+    "archetype.id": {
+      "value": "golden-hour-viewer",
+      "display": "golden-hour-viewer",
+      "unit": "id"
+    },
+    "archetype.name": {
+      "value": "The Golden Hour Viewer",
+      "display": "The Golden Hour Viewer",
+      "unit": "name"
+    },
+    "archetype.runnerUp": {
+      "value": "The Credits Roller",
+      "display": "The Credits Roller",
+      "unit": "name"
+    },
+    "archetype.evidence[1]": {
+      "value": "hours.goldenShare",
+      "display": "100%",
+      "unit": "text"
+    },
+    "archetype.evidence[2]": {
+      "value": "hours.peak",
+      "display": "8 PM",
+      "unit": "text"
+    }
+  },
+  "pages": [
+    {
+      "type": "cover",
+      "data": {
+        "minutes": [
+          0,
+          0,
+          0,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "type": "number",
+      "data": {
+        "hero": "time.totalHours",
+        "minutes": [
+          0,
+          0,
+          0,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "type": "bookends",
+      "data": {
+        "first": {
+          "key": "series:1601",
+          "masked": true
+        },
+        "last": {
+          "key": "film:1654",
+          "masked": false
+        }
+      }
+    },
+    {
+      "type": "guess",
+      "data": {
+        "kind": "series",
+        "options": [
+          {
+            "key": "series:1603",
+            "title": "The Last of Us",
+            "rank": 3,
+            "minutes": "series[3].minutes"
+          },
+          {
+            "key": "series:1601",
+            "title": "Doctor Who",
+            "rank": 1,
+            "minutes": "series[1].minutes"
+          },
+          {
+            "key": "series:1602",
+            "title": "Slow Horses",
+            "rank": 2,
+            "minutes": "series[2].minutes"
+          }
+        ]
+      }
+    },
+    {
+      "type": "top-shows",
+      "data": {
+        "rows": [
+          {
+            "key": "series:1601",
+            "monthly": [
+              240,
+              240,
+              300,
+              240,
+              240,
+              300,
+              240,
+              300,
+              240,
+              240,
+              120,
+              0
+            ]
+          },
+          {
+            "key": "series:1602",
+            "monthly": [
+              240,
+              240,
+              240,
+              300,
+              240,
+              180,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ]
+          },
+          {
+            "key": "series:1603",
+            "monthly": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              60,
+              300,
+              240,
+              300,
+              240,
+              120,
+              0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "top-films",
+      "data": {
+        "rows": [
+          {
+            "key": "film:1654"
+          },
+          {
+            "key": "film:1653"
+          },
+          {
+            "key": "film:1652"
+          },
+          {
+            "key": "film:1651"
+          },
+          {
+            "key": "film:1650"
+          }
+        ]
+      }
+    },
+    {
+      "type": "clock",
+      "data": {
+        "hours": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          45,
+          90,
+          0,
+          0,
+          0
+        ],
+        "weekdays": [
+          0.3333333333333333,
+          0,
+          0.3333333333333333,
+          0,
+          0,
+          0.3333333333333333,
+          0
+        ]
+      }
+    },
+    {
+      "type": "calendar",
+      "data": {
+        "days": [
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1602"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1602"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1611"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1602"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1612"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1602"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1613"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1602"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1614"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1602"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1615"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1602"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1616"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1602"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1617"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1602"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1618"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1602"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1619"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1602"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1620"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1602"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1621"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1602"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1622"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1602"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1623"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1602"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1624"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1602"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1625"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1602"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1626"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1602"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1627"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1602"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1628"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1602"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1629"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1602"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1630"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1602"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1631"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1602"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1632"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1602"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1633"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1603"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1634"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1603"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1635"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1603"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1636"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1603"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1637"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1603"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1638"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1603"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1639"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1603"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1640"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1603"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1641"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1603"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1642"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1603"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1643"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1603"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1644"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1603"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1645"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1603"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1646"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1603"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1647"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1603"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1648"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1603"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1649"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1603"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1650"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1603"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1651"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1603"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1652"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1603"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1653"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1601"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 60,
+            "key": "series:1603"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 120,
+            "key": "film:1654"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          }
+        ],
+        "titles": {
+          "series:1601": "Doctor Who",
+          "series:1602": "Slow Horses",
+          "film:1611": "The Godfather Part II",
+          "film:1612": "Casablanca",
+          "film:1613": "Citizen Kane",
+          "film:1614": "Vertigo",
+          "film:1615": "Psycho",
+          "film:1616": "Rear Window",
+          "film:1617": "North by Northwest",
+          "film:1618": "Some Like It Hot",
+          "film:1619": "Sunset Boulevard",
+          "film:1620": "12 Angry Men",
+          "film:1621": "Lawrence of Arabia",
+          "film:1622": "2001: A Space Odyssey",
+          "film:1623": "Chinatown",
+          "film:1624": "Taxi Driver",
+          "film:1625": "Jaws",
+          "film:1626": "Star Wars",
+          "film:1627": "Alien",
+          "film:1628": "Apocalypse Now",
+          "film:1629": "Raging Bull",
+          "film:1630": "Blade Runner",
+          "film:1631": "E.T. the Extra-Terrestrial",
+          "film:1632": "Back to the Future",
+          "film:1633": "Aliens",
+          "series:1603": "The Last of Us",
+          "film:1634": "Die Hard",
+          "film:1635": "Do the Right Thing",
+          "film:1636": "Goodfellas",
+          "film:1637": "The Silence of the Lambs",
+          "film:1638": "Unforgiven",
+          "film:1639": "Jurassic Park",
+          "film:1640": "Schindler's List",
+          "film:1641": "Pulp Fiction",
+          "film:1642": "The Shawshank Redemption",
+          "film:1643": "Heat",
+          "film:1644": "Toy Story",
+          "film:1645": "Fargo",
+          "film:1646": "Titanic",
+          "film:1647": "The Big Lebowski",
+          "film:1648": "The Matrix",
+          "film:1649": "Fight Club",
+          "film:1650": "Gladiator",
+          "film:1651": "Memento",
+          "film:1652": "Mulholland Drive",
+          "film:1653": "Lost in Translation",
+          "film:1654": "Kill Bill: Vol. 1"
+        },
+        "gap": {
+          "from": "2026-01-08",
+          "to": "2026-01-09"
+        }
+      }
+    },
+    {
+      "type": "centrefold",
+      "data": {
+        "shortlist": [
+          {
+            "id": "golden-hour-viewer",
+            "evidence": [
+              "hours.goldenShare",
+              "hours.peak"
+            ]
+          },
+          {
+            "id": "credits-roller",
+            "evidence": [
+              "records.completionShare",
+              "films.finishedShare"
+            ]
+          },
+          {
+            "id": "festival-juror",
+            "evidence": [
+              "time.filmsShare",
+              "counts.films"
+            ]
+          }
+        ],
+        "hours": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          45,
+          90,
+          0,
+          0,
+          0
+        ],
+        "graphic": {
+          "kind": "hour-ring",
+          "arc": {
+            "from": 18,
+            "to": 21
+          },
+          "share": "hours.goldenShare"
+        }
+      }
+    },
+    {
+      "type": "back-cover",
+      "data": {
+        "minutes": [
+          0,
+          0,
+          0,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          60,
+          0,
+          60,
+          0,
+          0,
+          120,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "keys": {
+          "series": [
+            "series:1601",
+            "series:1602",
+            "series:1603"
+          ],
+          "film": "film:1654"
+        }
+      }
+    }
+  ],
+  "archetype": {
+    "id": "golden-hour-viewer",
+    "runnerUp": "credits-roller",
+    "evidence": [
+      "hours.goldenShare",
+      "hours.peak"
+    ],
+    "shortlist": [
+      {
+        "id": "golden-hour-viewer",
+        "score": 100
+      },
+      {
+        "id": "credits-roller",
+        "score": 80
+      },
+      {
+        "id": "festival-juror",
+        "score": 80
+      }
+    ],
+    "llmMayChoose": false,
+    "rarity": null
+  },
+  "copy": {
+    "decks": {
+      "number": "Every minute of it counted from your own history.",
+      "bookends": "Here since {{fact:member.since}}, and this is how the year opened and closed.",
+      "topShows": "The series you kept returning to, in order.",
+      "topFilms": "The longest was {{fact:films.longest.title}}, at {{fact:films.longest.minutes}}.",
+      "taste": null,
+      "people": null,
+      "clock": "Your latest start was {{fact:hours.latestStart.time}} on a {{fact:hours.latestStart.weekday}}.",
+      "calendar": "Your biggest day was {{fact:days.biggest.date}}, at {{fact:days.biggest.minutes}}.",
+      "records": null,
+      "requests": null,
+      "standing": null,
+      "nextYear": null
+    },
+    "archetype": {
+      "id": "golden-hour-viewer",
+      "tagline": "Same time, every evening.",
+      "dedication": "Every reason here comes from what you watched, not from a guess.",
+      "posterLineId": "gh.5"
+    },
+    "signOff": "See you in the final cut, {{fact:member.firstName}}."
+  },
+  "copySource": "template",
+  "copyMeta": {
+    "model": null,
+    "promptVersion": "rewind-2026.1",
+    "slotHashes": {
+      "deck.number": "8561c7b6ebff76c1c8ddb27d94e0e9ae895935690d5e188d482751890a36c22b",
+      "deck.bookends": "426184c1a110b3010130aeaa7ad28bd7959d596e8d276d96bea0b01585cabe53",
+      "deck.topShows": "0e730fe7b5352d058d6e68d2da0e5a7598f287b5bcba8b1ae4a5f2b329eaa05b",
+      "deck.topFilms": "6d7177f17784e218c919576e5ab6770860163df321e9a65938f2c756d642a429",
+      "deck.clock": "d21c4b4823d95af2214ae629b3b9b83f1838869009cb6c4103d80eb887f3cee1",
+      "deck.calendar": "9e9380ef0f27b796543cd53320c1429665c4e321646401598bcbb7676e105f49",
+      "archetype.tagline": "a7404707bf211dd1bbf84e3bec84a7c19d414e6907482145db2bf94c52efd81a",
+      "archetype.dedication": "a0604da90904baf65b8307fdc5f1d2d161b541c90e994f45d80b878eee86f44b",
+      "archetype.posterLineId": "fb1ed35aa65c9c955b39b8fc1c32585718eb785cb373f520cd1024af1d93f400",
+      "signOff": "07a308ad948d35ed6797985e8c2b1e3b81d7031b821656f173596b93138a7376"
+    }
+  },
+  "factsHash": "010f11163ff07d3cea6ebcfea22a83881a254b2ee1ef57f1c3eb4c213e0fc8cb"
+}
