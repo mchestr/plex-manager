@@ -237,6 +237,20 @@
 .rw-page[data-leaving] .rw-artboard { animation: rw-page-leave 200ms var(--rw-ease-ink) forwards; }
 /* the card-to-cover handoff runs on <html>, outside the scope, so it states --rw-dur-m and --rw-ease-ink literally */
 ::view-transition-group(rewind-field) { animation-duration: 420ms; animation-timing-function: cubic-bezier(.65, 0, .35, 1); }
+/* Reduced motion inside the scope (Rewind 5.6, 11.1): the base clamp skips the scope, so this rule stops every
+   transform, clip-path and font-axis animation and keeps only opacity fades of up to 120 ms. The progress
+   segment keeps its dwell timing, and a page turn becomes a 120 ms crossfade. */
+@keyframes rw-fade-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  :where([data-theme="rewind"], [data-theme="rewind"] *):not(.rw-progress),
+  :where([data-theme="rewind"], [data-theme="rewind"] *)::before,
+  :where([data-theme="rewind"], [data-theme="rewind"] *)::after {
+    animation: none !important;
+    transition-property: opacity !important;
+    transition-duration: var(--rw-dur-xs) !important;
+  }
+  .rw-page[data-turn] { animation: rw-fade-in var(--rw-dur-xs) linear both !important; }
+}
 /* rewind-scope:end */
 
 /* ---------- 4. Tailwind mapping ---------- */

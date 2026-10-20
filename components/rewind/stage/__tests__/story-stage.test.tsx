@@ -8,14 +8,16 @@ import type { IssuePageType } from "@/lib/rewind/registry"
 
 import { StoryStage } from "../story-stage"
 
+import { LLM_COPY, stagePages } from "./stage-fixture"
+
 const push = jest.fn()
 jest.mock("next/navigation", () => ({ useRouter: () => ({ push }) }))
 
 const TYPES: IssuePageType[] = ["cover", "number", "top-shows", "clock", "centrefold", "back-cover"]
-const pages = TYPES.map((type) => ({ type, content: <p>{`Body of ${type}`}</p> }))
+const pages = stagePages(TYPES)
 
 function renderStage(onCommit?: () => void) {
-  const stage = <StoryStage pages={pages} archetype="midnight-marathoner" closeHref="/home" />
+  const stage = <StoryStage pages={pages} year={2026} archetype="midnight-marathoner" closeHref="/home" copy={LLM_COPY} />
   return render(
     <div data-theme="rewind">{onCommit ? <Profiler id="stage" onRender={onCommit}>{stage}</Profiler> : stage}</div>
   )
@@ -147,7 +149,7 @@ describe("StoryStage", () => {
   it("ignores taps inside an interactive island", () => {
     render(
       <div data-theme="rewind">
-        <StoryStage pages={[{ type: "number", content: <button data-rw-interactive>Pick</button> }, { type: "clock", content: null }]} archetype={null} closeHref="/" />
+        <StoryStage pages={[{ type: "number", content: <button data-rw-interactive>Pick</button> }, { type: "clock", content: null }]} year={2026} archetype={null} closeHref="/" copy={LLM_COPY} />
       </div>
     )
     const button = screen.getByRole("button", { name: "Pick", hidden: true })

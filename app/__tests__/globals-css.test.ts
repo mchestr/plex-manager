@@ -171,7 +171,8 @@ describe("app/globals.css", () => {
   })
 
   it("skips spinners and the Rewind scope in the reduced-motion clamp", () => {
-    const media = CSS.indexOf("@media (prefers-reduced-motion: reduce)")
+    // The base layer's clamp; the Rewind block's own rule comes earlier (globals-rewind-motion.test.ts).
+    const media = CSS.indexOf("@media (prefers-reduced-motion: reduce)", CSS.indexOf("@layer base"))
     expect(media).toBeGreaterThan(-1)
     const block = CSS.slice(media, CSS.indexOf("}", media))
     expect(block).toContain('[data-slot="spinner"]')

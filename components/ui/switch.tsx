@@ -20,6 +20,8 @@ interface SwitchProps {
   label?: string
   id?: string
   name?: string
+  /** The id of a visible hint under the label */
+  "aria-describedby"?: string
   /** Passthrough test id for stable selectors */
   "data-testid"?: string
   className?: string

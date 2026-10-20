@@ -7,7 +7,8 @@
  *
  * Until P5.5, `select` returns null and `schema` accepts anything; P5.5 to
  * P7.2 fill them in page by page. `table` marks the ten chart pages, whose
- * Table sheet P5.3 builds; its stub returns null.
+ * Table sheet P5.3 renders (contract: `PageTable`); its stub returns null
+ * until each page step supplies the builder.
  *
  * ## Fields and the spot rule (design 5.3)
  *
@@ -36,7 +37,21 @@ export type IssuePageType = Exclude<PageType, "short-list">
  */
 export type Dwell = number | "tap" | "hold" | "end"
 
-/** A chart page's table: the same data as the graphic, for the Table sheet. */
+/**
+ * A chart page's table: the same data as the graphic, for the Table sheet,
+ * the desktop Notes and article mode (design 4.6, 11.1, FR-16).
+ *
+ * - `caption` names what is counted, the counting window and, on pages that
+ *   show clock times, the `tz.note` zone ("Hours by month, 1 January to
+ *   30 November 2026. Times in America/Chicago, the server's time zone").
+ * - `columns` are the header cells (`th scope="col"`).
+ * - Each row has one display string per column; its first cell names the row
+ *   (`th scope="row"`).
+ *
+ * The page's `table(data)` builds it from the same `lib/rewind/viz/*` data as
+ * the graphic, on the server, and returns null when the page has nothing to
+ * tabulate (no Table control then). P5.1 passes it to `StoryStage` per page.
+ */
 export interface PageTable {
   caption: string
   columns: string[]
