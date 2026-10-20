@@ -40,7 +40,7 @@ import { getSeasonYear } from "@/lib/wrapped/season"
 export type RewindStatusKind = "generating" | "failed" | "parse-error" | "not-found" | "unavailable" | "not-eligible"
 
 export type RewindYearView =
-  | { kind: "issue"; data: RewindDataV3 }
+  | { kind: "issue"; id: string; data: RewindDataV3 }
   | { kind: "legacy"; data: StoredWrappedData; shareToken: string | null }
   | { kind: "panel"; panel: RewindStatusKind; code: RewindPanelCode | RewindErrorCode }
 
@@ -86,7 +86,7 @@ export async function loadRewindYearView(viewer: Viewer, year: number): Promise<
   if (row?.status === "completed") {
     const stored = parseStoredRewind(row.data)
     if (stored.version === 3) {
-      return (await issueOpenTo(viewer)) ? { kind: "issue", data: stored.data } : panel("unavailable", "REWIND_NOT_OPEN")
+      return (await issueOpenTo(viewer)) ? { kind: "issue", id: row.id, data: stored.data } : panel("unavailable", "REWIND_NOT_OPEN")
     }
     if (stored.version === "invalid") return panel("parse-error", "REWIND_UNREADABLE")
     return { kind: "legacy", data: stored.legacy, shareToken: row.shareToken }

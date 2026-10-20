@@ -163,7 +163,7 @@ export const enableRewindShare = memberAction({
   },
 })
 
-/** Changes what the member's live link publishes, keeping its URL. */
+/** Changes what the member's live link publishes, keeping its URL. @public P7.5's "Change cards" calls it. */
 export const updateRewindShare = memberAction({
   input: updateSchema,
   rateLimit: { name: "rw:share-actions" },

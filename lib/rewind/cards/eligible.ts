@@ -6,16 +6,15 @@
  * @module lib/rewind/cards/eligible
  */
 
-import type { IssuePageType } from "@/lib/rewind/registry"
 import type { ShareOptions, SharePageType } from "@/lib/wrapped/data/share-safe-schema"
 
 /** The six core cards (P5.11), in registry order. P7.6 adds the rest. @internal */
 export const CARD_PAGE_TYPES = ["cover", "number", "top-shows", "clock", "centrefold", "back-cover"] as const satisfies readonly SharePageType[]
 
 /** Cards that exist only with Daily detail on: the calendar shows which days were watched. */
-const DAILY_ONLY: ReadonlySet<IssuePageType> = new Set(["calendar"])
+const DAILY_ONLY: ReadonlySet<string> = new Set(["calendar"])
 
-const HAS_CARD: ReadonlySet<IssuePageType> = new Set(CARD_PAGE_TYPES)
+const HAS_CARD: ReadonlySet<string> = new Set(CARD_PAGE_TYPES)
 
 /**
  * The cards available for an issue under the current options: every page the
@@ -28,7 +27,7 @@ const HAS_CARD: ReadonlySet<IssuePageType> = new Set(CARD_PAGE_TYPES)
  * ```
  */
 export function eligibleCards(
-  rewind: { pages: ReadonlyArray<{ type: IssuePageType }> },
+  rewind: { pages: ReadonlyArray<{ type: string }> },
   options: Pick<ShareOptions, "dailyDetail">
 ): SharePageType[] {
   return rewind.pages

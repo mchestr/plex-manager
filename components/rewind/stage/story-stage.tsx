@@ -14,9 +14,13 @@ import { registry, REVEAL_DWELL_MS, type IssuePageType, type PageTable } from "@
 import { keyToCommand, type StageCommand } from "@/lib/rewind/stage/keymap"
 import { pageInk } from "@/lib/rewind/stage/page-ink"
 import { pageKind } from "@/lib/rewind/stage/player-reducer"
+import type { ShareSetup } from "@/lib/rewind/share-sheet"
 import { readPrefs } from "@/lib/rewind/stage/prefs"
+import type { SheetName } from "@/lib/rewind/stage/player-reducer"
 import { cn } from "@/lib/utils"
 import type { ArchetypeId } from "@/lib/wrapped/archetypes/catalogue"
+
+import { ShareProvider, type ShareActions } from "@/components/rewind/share/share-context"
 
 import { ChromeBottom } from "./chrome-bottom"
 import { ChromeTop } from "./chrome-top"
@@ -50,6 +54,10 @@ interface StoryStageProps {
   closeHref: Route
   /** The stored `copySource` and `copyMeta.model`, for "About the words" in Settings. */
   copy: CopyAuthor
+  /** The share sheet's setup and actions (P5.11); without them the share controls open nothing. */
+  share?: { setup: ShareSetup; actions: ShareActions }
+  /** A sheet to open on load: `?sheet=share` opens Share over the cover, paused. */
+  initialSheet?: SheetName
 }
 
 /** Before the first fit: the 390 x 844 roomy layout at scale 1. */
@@ -67,9 +75,20 @@ const FIT_DEFAULTS = { "--u": 1, "--rw-artboard-h": 693, "--rw-chrome-top": "76p
  * (the quiz's chosen tile flying into page 05), the top and bottom chrome in
  * the current page's ink, the polite live region and the sheets. The quiz
  * answer lives in the stage's `QuizProvider`. Motion inside follows the
- * member's reduced-motion setting. P5.11 adds the share sheet.
+ * member's reduced-motion setting. The share sheet reads the issue's
+ * `ShareProvider`, which wraps the stage when `share` is set.
  */
-export function StoryStage({ pages, year, archetype, closeHref, copy }: StoryStageProps) {
+export function StoryStage({ share, ...props }: StoryStageProps) {
+  return share ? (
+    <ShareProvider setup={share.setup} actions={share.actions}>
+      <Stage {...props} />
+    </ShareProvider>
+  ) : (
+    <Stage {...props} />
+  )
+}
+
+function Stage({ pages, year, archetype, closeHref, copy, initialSheet }: Omit<StoryStageProps, "share">) {
   const router = useRouter()
   const root = useRef<HTMLElement>(null)
   const pagesRef = useRef<HTMLDivElement>(null)
@@ -107,6 +126,11 @@ export function StoryStage({ pages, year, archetype, closeHref, copy }: StorySta
   useEffect(() => {
     root.current?.focus({ preventScroll: true })
   }, [])
+
+  // `?sheet=share`: the story stays paused on the cover under the sheet, so nothing past it is spoiled.
+  useEffect(() => {
+    if (initialSheet) send({ type: "OPEN_SHEET", sheet: initialSheet })
+  }, [initialSheet, send])
 
   // Offer article mode once, on load, below the scale floor or at large text sizes.
   useEffect(() => {
@@ -251,6 +275,7 @@ export function StoryStage({ pages, year, archetype, closeHref, copy }: StorySta
               sheet={state.mode === "sheet" ? state.sheet : null}
               onClose={() => send({ type: "CLOSE_SHEET" })}
               pageName={entry.name}
+              page={entry.type}
               table={table}
               prefs={prefs}
               articleHref={articleHref}

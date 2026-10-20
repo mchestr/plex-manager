@@ -22,7 +22,9 @@
     // v2 mock data for the E2E seed and the v2 viewer tests, which knip --production never sees
     "lib/wrapped/mock-data.ts!",
     // a test helper for Rewind component tests (P5 onwards), which knip --production never sees
-    "lib/design/testing.ts!"
+    "lib/design/testing.ts!",
+    // the share visit counter (P5.11); P7.5's share page is its first caller
+    "lib/wrapped/share/visit-counter.ts!"
   ],
   "project": [
     "**/*.{js,mjs,cjs,ts,tsx}!",

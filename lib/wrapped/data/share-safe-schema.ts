@@ -22,8 +22,6 @@ export type SharePageType = z.infer<typeof SharePageTypeSchema>
 /**
  * The stats a member may put on the centrefold and back cover (design 6.3,
  * "Three stats on the poster"), as the facts that print them.
- *
- * @internal Read through `CardFactIdSchema`; tests read the list.
  */
 export const CARD_FACT_IDS = [
   "time.totalHours",

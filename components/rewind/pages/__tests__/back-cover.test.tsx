@@ -2,11 +2,13 @@ import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import { BackCoverPage } from "@/components/rewind/pages/back-cover"
+import { ShareProvider } from "@/components/rewind/share/share-context"
 import { PlayerProvider } from "@/components/rewind/stage/player-context"
 import { fixtureIssue, issueContext, type FixtureIssue } from "@/lib/rewind/__tests__/helpers/fixture-issue"
 import { billingBlock } from "@/lib/rewind/billing-block"
 import type { BackCoverData } from "@/lib/rewind/pages/back-cover.schema"
 import { registry } from "@/lib/rewind/registry"
+import type { ShareSetup } from "@/lib/rewind/share-sheet"
 import { pageMetrics } from "@/lib/rewind/typeset/metrics"
 import type { RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 
@@ -92,7 +94,24 @@ describe("18 Back cover", () => {
     await user.click(screen.getByTestId("rewind-read-again"))
     expect(send).toHaveBeenCalledWith({ type: "READ_AGAIN" })
     await user.click(screen.getByTestId("rewind-privacy-change"))
-    expect(send).toHaveBeenCalledWith({ type: "OPEN_SHEET", sheet: "share" })
+    expect(send).toHaveBeenCalledWith({ type: "OPEN_SHEET", sheet: "share-settings" })
+  })
+
+  it("reads the privacy line from the member's share choices and link", () => {
+    const setup: ShareSetup = {
+      rewindId: "wrapped-1", year: 2026, cards: ["cover"], allowArt: true, publicLinks: true, canShare: true,
+      choices: { signed: true, includeArt: true, dailyDetail: false, cardFacts: [] },
+      link: { shareId: "share-1", pages: ["cover"], expiresAt: null },
+      seasonCloses: "31 January 2027",
+    }
+    render(
+      <ShareProvider setup={setup} actions={{ enable: jest.fn(), rotate: jest.fn(), disable: jest.fn(), savePrefs: jest.fn() }}>
+        <PlayerProvider value={jest.fn()} sheet={null}>
+          <BackCoverPage data={dataOf(issues.heavy)} issue={issueContext(issues.heavy, { returnTo: "/account" })} />
+        </PlayerProvider>
+      </ShareProvider>
+    )
+    expect(screen.getByTestId("rewind-privacy-status")).toHaveTextContent("Public link on. Cards signed, with artwork.")
   })
 
   it("Done follows the return path", () => {
