@@ -1,5 +1,4 @@
-import { fixtureIssue } from '../lib/rewind/__tests__/helpers/fixture-issue';
-
+import heavyIssue from './fixtures/rewind/heavy-issue.json';
 import { expect, test, TEST_USERS } from './fixtures/auth';
 import { createE2EPrismaClient } from './helpers/prisma';
 import { WAIT_TIMEOUTS } from './helpers/test-utils';
@@ -18,8 +17,9 @@ const VIEWPORTS = [
   { width: 375, height: 548 },
 ];
 
-async function seedIssue() {
-  const issue = await fixtureIssue('heavy', { serial: 'K7Q4', nthRewind: 4 });
+// The heavy golden fixture as the pipeline builds it; lib/rewind/__tests__/e2e-issue-fixture.test.ts keeps it current
+function seedIssue() {
+  const issue = heavyIssue;
   return {
     version: 3,
     year: YEAR,
@@ -28,7 +28,7 @@ async function seedIssue() {
     window: { from: '2026-01-01', through: '2026-11-30', zone: 'America/Chicago', finalCut: false },
     edition: issue.edition,
     facts: issue.facts,
-    pages: issue.pages.map(({ type, data }) => ({ type, data })),
+    pages: issue.pages,
     archetype: issue.archetype,
     copy: null,
     copySource: 'template',
@@ -41,7 +41,7 @@ test.describe('Rewind centrefold', () => {
   let name = '';
 
   test.beforeAll(async () => {
-    const data = await seedIssue();
+    const data = seedIssue();
     name = String(data.facts['archetype.name']?.display ?? '').replace(/^The /, '');
     const prisma = createE2EPrismaClient();
     try {
