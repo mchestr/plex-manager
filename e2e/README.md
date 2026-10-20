@@ -9,6 +9,7 @@ This directory contains end-to-end tests for the Plex Wrapped application using 
 - [Available Fixtures](#available-fixtures)
 - [Test Utilities](#test-utilities)
 - [Running Tests](#running-tests)
+- [Rewind](#rewind)
 - [Writing New Tests](#writing-new-tests)
 - [Best Practices](#best-practices)
 
@@ -256,8 +257,9 @@ with `NEXT_PUBLIC_APP_URL` set to the test URL, which is inlined at build time)
 and then `next start`. With `E2E_PREBUILT=1` it skips the build and serves the
 one already in `.next/`; CI builds in its own step and sets it. The visual specs
 and `production.spec.ts` (image optimizer, CSP without `'unsafe-eval'`, admin
-and member access) skip unless `E2E_SERVER=prod`. Set `REDIS_URL` as CI does,
-or Rewind pages show their unavailable state.
+and member access) skip unless `E2E_SERVER=prod`. Global setup stops the run
+unless Redis answers at `REDIS_URL`, as CI's does: without it every Rewind page
+shows its unavailable state (FR-50).
 
 ### Run Specific Test File
 
@@ -282,6 +284,34 @@ npx playwright test --debug
 ```bash
 npx playwright test --headed
 ```
+
+## Rewind
+
+Rewind has its own projects in `playwright.config.ts` (P5.4), each owning one
+spec folder that the `chromium` project ignores:
+
+| Project | Specs | CI job |
+| --- | --- | --- |
+| `rewind-e2e-chromium`, `rewind-e2e-webkit` | `e2e/rewind/*.spec.ts`: the story flows (tap zones, keys, Pause, Settings, Table, a hidden tab), the quiz and its match cut, the centrefold, sharing | E2E Tests (required) |
+| `rewind-a11y-chromium`, `rewind-a11y-webkit`, `rewind-a11y-firefox` | `e2e/a11y/rewind*.a11y.spec.ts`: axe at WCAG 2.2 AA on every page and sheet, zero violations; firefox runs only the `@article` tests | E2E Tests (required) |
+| `rewind-visual-phone-*`, `rewind-visual-desktop-*` (chromium and webkit) | `e2e/visual/rewind*.spec.ts`: every page of three issues at the five phone sizes (390x844, 412x760, 390x664, 360x640, 375x548) or 1440x900, plus the 12 px text and 44 px target checks | Rewind Visual Diffs (advisory) |
+| `rewind-perf` (chromium, it needs CDP) | `e2e/perf/*.perf.spec.ts`: no long task over 50 ms and at most 3 stage commits per page in 30 s of autoplay at 4x CPU throttling; the scripts only `/rewind/<year>` loads gzip to 110 KB or less | Rewind Performance (advisory: long tasks vary with a shared runner's CPU) |
+
+- **Seed.** `e2e/helpers/seed-rewind.ts` gives four members (heavy, median,
+  light, extreme) a stored v3 Rewind from `e2e/fixtures/rewind/<id>.v3.json`,
+  opens Rewind to everyone, and undoes both afterwards. The files are P2.10's
+  golden fixtures through `generateUserRewind({ mode: 'dry-run', copyPolicy: 'no-llm' })`:
+  rebuild them with `npm run rewind:e2e-fixtures` after a change to the
+  pipeline, pages or copy (`__tests__/e2e-support/rewind-fixtures.test.ts`
+  fails until you do). Specs import the JSON, never the pipeline, which
+  reaches `server-only`.
+- **Driving the stage.** `e2e/helpers/rewind-stage.ts` opens the issue,
+  chooses the cut and turns pages on the design's test ids.
+- **Browsers.** CI's Playwright image has chromium, webkit and firefox. A
+  machine without webkit or firefox can still run the chromium projects.
+- **Placeholders.** Flows that later steps own stay `test.fixme`, named with
+  the step: hiding a title (P7.7), Redis down (FR-50) and a lapsed member
+  (FR-51).
 
 ## Writing New Tests
 

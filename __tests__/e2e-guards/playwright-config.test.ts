@@ -125,4 +125,27 @@ describe("playwright.config.ts database guard", () => {
       expect.arrayContaining(["visual-desktop", "visual-mobile", "visual-setup-desktop", "visual-setup-mobile"])
     )
   })
+
+  it("gives each Rewind spec folder to its own projects only (P5.4)", () => {
+    env.E2E_DATABASE_URL = TEST_URL
+    const projects = loadConfig().projects ?? []
+    const matches = (pattern: unknown, file: string) => [pattern].flat().some((p) => p instanceof RegExp && p.test(file))
+    const owners = (file: string) =>
+      projects
+        .filter((project) => (project.testMatch ? matches(project.testMatch, file) : !matches(project.testIgnore, file)))
+        .map((project) => project.name)
+        .sort()
+
+    expect(owners("/repo/e2e/visual/rewind.spec.ts")).toEqual([
+      "rewind-visual-desktop-chromium",
+      "rewind-visual-desktop-webkit",
+      "rewind-visual-phone-chromium",
+      "rewind-visual-phone-webkit",
+    ])
+    expect(owners("/repo/e2e/a11y/rewind.a11y.spec.ts")).toEqual(["rewind-a11y-chromium", "rewind-a11y-firefox", "rewind-a11y-webkit"])
+    expect(owners("/repo/e2e/perf/rewind.perf.spec.ts")).toEqual(["rewind-perf"])
+    expect(owners("/repo/e2e/rewind/story.spec.ts")).toEqual(["rewind-e2e-chromium", "rewind-e2e-webkit"])
+    expect(owners("/repo/e2e/rewind-routes.spec.ts")).toEqual(["chromium"])
+    expect(projects.find((project) => project.name === "rewind-a11y-firefox")?.grep).toEqual(/@article/)
+  })
 })

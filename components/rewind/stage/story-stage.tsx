@@ -30,6 +30,7 @@ import { useSetStageArchetype, useSetStageInk } from "./stage-ink"
 import { StagePage } from "./stage-page"
 import { ARTICLE_OFFER, StageSheets } from "./stage-sheets"
 import { useFitStage } from "./use-fit-stage"
+import { usePerfProbe } from "./use-perf-probe"
 import { useRewindPrefs } from "./use-rewind-prefs"
 import { useStageA11y } from "./use-stage-a11y"
 import { useStageGestures } from "./use-stage-gestures"
@@ -110,6 +111,7 @@ function Stage({ pages, year, archetype, closeHref, copy, initialSheet }: Omit<S
   const articleHref = `/rewind/${year}/read` as Route
   const pageLabel = (i: number) => `Page ${i + 1} of ${pages.length}: ${entries[i].name}`
   const { announcement, focusHandlers } = useStageA11y({ pagesRef, state, send, pageLabel })
+  usePerfProbe(state.index)
 
   // Registry entries are module constants, so the ink changes only with the page.
   useEffect(() => {
