@@ -38,8 +38,11 @@ function respond(status: number, body: string, contentType = "text/xml"): Respon
   return new Response(status === 204 || body === "" ? null : body, { status, headers: { "Content-Type": contentType } })
 }
 
+// replaceProperty needs the key to exist, and CI sets no PLEX_CLIENT_IDENTIFIER.
+const originalEnv = process.env
+
 beforeEach(() => {
-  jest.replaceProperty(process.env, "PLEX_CLIENT_IDENTIFIER", "plex-manager-test")
+  process.env = { ...originalEnv, PLEX_CLIENT_IDENTIFIER: "plex-manager-test" }
   requests = []
   deleteResponse = "200"
   usersResponse = { status: 200, body: USERS_XML }
@@ -58,6 +61,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  process.env = originalEnv
   jest.restoreAllMocks()
 })
 

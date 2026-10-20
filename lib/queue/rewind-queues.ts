@@ -21,7 +21,7 @@
 import { Worker, type Job } from "bullmq"
 
 import { onShutdown } from "@/lib/instrumentation/shutdown"
-import { getRedisConnection } from "@/lib/queue/connection"
+import { closeWorker, getRedisConnection } from "@/lib/queue/connection"
 import type { JobProcessor } from "@/lib/queue/jobs"
 import { REWIND_BATCH_PROCESSORS } from "@/lib/queue/jobs/rewind-batch"
 import { processRewindGenerateUser } from "@/lib/queue/jobs/rewind"
@@ -98,11 +98,11 @@ export function startRewindWorkers(): void {
   logger.info("Rewind workers started", { queues: Object.keys(REWIND_QUEUES) })
 }
 
-/** Closes the Rewind Workers, letting their active jobs finish. */
+/** Closes the Rewind Workers, letting their active jobs finish while Redis is connected. */
 export async function stopRewindWorkers(): Promise<void> {
   const running = workers
   if (!running) return
   workers = null
-  await Promise.allSettled(running.map((worker) => worker.close()))
+  await Promise.allSettled(running.map(closeWorker))
   logger.info("Rewind workers stopped")
 }
