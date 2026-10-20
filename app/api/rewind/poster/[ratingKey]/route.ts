@@ -124,6 +124,9 @@ async function fetchPoster(server: PosterServer, ratingKey: string, w: number, t
  * - **Tone**: `none` is full colour (WebP 76); a pair of inks is the
  *   duotone (WebP 72). A hero's `clash` pair is served instead of full
  *   colour when the art would clash with its page.
+ * - **Asset keys** (`s`, a v3 share's): serve only the art that share's
+ *   projection publishes, as a share. A key that does not cover the poster
+ *   leaves a signed-in viewer to their own access checks below.
  * - **Rate limits**: a share link spends a `poster` point before its token
  *   lookup; a session spends a `poster:access` point (2000 per 15 minutes)
  *   before its access checks, and a cache miss spends a `poster` point.
