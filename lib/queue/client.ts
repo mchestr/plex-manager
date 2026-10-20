@@ -5,10 +5,10 @@
  * All queue interactions should go through this module.
  */
 
-import { Queue, QueueEvents, JobsOptions } from "bullmq"
+import { Queue, QueueEvents, JobsOptions, type Job } from "bullmq"
 import { getRedisConnection } from "./connection"
 import { sanitizeJobId } from "./job-id"
-import { JobType, JobPayloadMap, JobMetadata, QueueStats, JobStatus } from "./types"
+import { JOB_TYPES, JobType, JobPayloadMap, JobMetadata, QueueStats, JobStatus } from "./types"
 import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("QUEUE_CLIENT")
@@ -84,6 +84,20 @@ export async function addJob<T extends JobType>(
 }
 
 /**
+ * Queue one member's watchlist sync. BullMQ deduplicates on
+ * `watchlist:user:<userId>` while a job for the member is waiting or running,
+ * so repeated triggers (the member's, an admin's) collapse into that job and
+ * get its id back (P4.13).
+ */
+export function addWatchlistSyncUserJob(
+  data: JobPayloadMap[typeof JOB_TYPES.WATCHLIST_SYNC_USER]
+): Promise<string> {
+  return addJob(JOB_TYPES.WATCHLIST_SYNC_USER, data, {
+    deduplication: { id: `watchlist:user:${data.userId}` },
+  })
+}
+
+/**
  * Schedule a repeating job using BullMQ's job scheduler
  *
  * @param schedulerId - Unique ID for this scheduler
@@ -116,6 +130,27 @@ export async function scheduleRepeatingJob<T extends JobType>(
     jobType,
     everyMs: every,
   })
+}
+
+/**
+ * Schedule a job on a cron pattern in a time zone, through BullMQ's job
+ * scheduler. Upserting the same `schedulerId` again replaces the schedule.
+ *
+ * @param schedulerId - Unique ID for this scheduler
+ * @param jobType - The type of job to schedule
+ * @param data - Job payload
+ * @param repeat - Cron `pattern` and IANA `tz`
+ * @param options - Optional job options
+ */
+export async function scheduleCronJob<T extends JobType>(
+  schedulerId: string,
+  jobType: T,
+  data: JobPayloadMap[T],
+  repeat: { pattern: string; tz: string },
+  options?: Partial<JobsOptions>
+): Promise<void> {
+  await getQueue().upsertJobScheduler(schedulerId, repeat, { name: jobType, data, opts: options })
+  logger.info("Cron job scheduled", { schedulerId, jobType, ...repeat })
 }
 
 /**
@@ -194,6 +229,14 @@ export async function getJobs(options: {
       progress: job.progress,
     }))
   )
+}
+
+/**
+ * Look up a job by the id it was added with, or `undefined` once BullMQ has
+ * dropped it (completed jobs after a day, failed ones after seven).
+ */
+export async function findJob(jobId: string): Promise<Job | undefined> {
+  return getQueue().getJob(sanitizeJobId(jobId))
 }
 
 /**

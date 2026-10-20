@@ -1,0 +1,6 @@
+{
+  "pageInfo": { "pages": 2, "pageSize": 100, "results": 102, "page": 2 },
+  "results": [
+    { "id": 7, "email": "member7@example.invalid", "plexUsername": "member7", "username": null, "plexId": 4815162, "userType": 1, "permissions": 32, "displayName": "member7", "requestCount": 1 }
+  ]
+}

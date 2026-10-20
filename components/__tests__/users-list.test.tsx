@@ -1,4 +1,5 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { UsersList } from '../admin/users/users-list'
 import {
   makeAdminUserWithStats,
@@ -62,10 +63,11 @@ describe('UsersList', () => {
       subscriptionStatus: null,
     })
 
-    const selectSubscription = (value: string) => {
-      // Open the custom StyledDropdown, then click the desired option.
-      fireEvent.click(screen.getByTestId('users-filter-subscription'))
-      fireEvent.click(screen.getByTestId(`users-filter-subscription-option-${value}`))
+    const selectSubscription = async (value: string) => {
+      // Open the Select, then choose the option from its portalled list.
+      const user = userEvent.setup()
+      await user.click(screen.getByTestId('users-filter-subscription'))
+      await user.click(await screen.findByTestId(`users-filter-subscription-option-${value}`))
     }
 
     it('shows all users when the subscription filter is "all"', () => {
@@ -74,10 +76,10 @@ describe('UsersList', () => {
       expect(screen.getAllByTestId('user-row')).toHaveLength(3)
     })
 
-    it('narrows the list to active subscriptions', () => {
+    it('narrows the list to active subscriptions', async () => {
       render(<UsersList users={[activeUser, canceledUser, noneUser]} currentYear={2024} />)
 
-      selectSubscription('active')
+      await selectSubscription('active')
 
       expect(screen.getAllByTestId('user-row')).toHaveLength(1)
       expect(screen.getByText('Active User')).toBeInTheDocument()
@@ -85,19 +87,19 @@ describe('UsersList', () => {
       expect(screen.queryByText('None User')).not.toBeInTheDocument()
     })
 
-    it('narrows the list to users without a subscription', () => {
+    it('narrows the list to users without a subscription', async () => {
       render(<UsersList users={[activeUser, canceledUser, noneUser]} currentYear={2024} />)
 
-      selectSubscription('none')
+      await selectSubscription('none')
 
       expect(screen.getAllByTestId('user-row')).toHaveLength(1)
       expect(screen.getByText('None User')).toBeInTheDocument()
     })
 
-    it('narrows the list to canceled subscriptions', () => {
+    it('narrows the list to canceled subscriptions', async () => {
       render(<UsersList users={[activeUser, canceledUser, noneUser]} currentYear={2024} />)
 
-      selectSubscription('canceled')
+      await selectSubscription('canceled')
 
       expect(screen.getAllByTestId('user-row')).toHaveLength(1)
       expect(screen.getByText('Canceled User')).toBeInTheDocument()

@@ -11,6 +11,7 @@ import {
   resumeQueue,
   isQueuePaused,
   addJob,
+  addWatchlistSyncUserJob,
   getJobSchedulers,
 } from "@/lib/queue/client"
 import { isRedisConfigured, isRedisHealthy } from "@/lib/queue/connection"
@@ -410,10 +411,12 @@ export async function triggerWatchlistSyncJob(
     const { userId } = validated.data
 
     if (userId) {
-      // Sync specific user
-      const jobId = await addJob(JOB_TYPES.WATCHLIST_SYNC_USER, {
+      // Sync specific user. The job skips a member who has not opted in
+      // (NOT_OPTED_IN), and joins one already waiting or running for them.
+      const jobId = await addWatchlistSyncUserJob({
         userId,
         triggeredBy: "admin",
+        triggeredByUserId: adminId,
       })
 
       logAuditEvent(AuditEventType.QUEUE_SYNC_TRIGGERED, adminId, {

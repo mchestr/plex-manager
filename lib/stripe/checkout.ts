@@ -32,8 +32,8 @@ const CANCEL_PATH = "/subscribe"
  * - `allow_promotion_codes: true` so users can redeem promo codes (R6).
  * - `success_url` returns to {@link SUCCESS_PATH} with the session id appended;
  *   `cancel_url` returns to {@link CANCEL_PATH}.
- * - `customer_email` is prefilled from the user's stored Plex email when
- *   available, so the user does not re-enter it.
+ * - `customer` is the member's stored `stripeCustomerId` when they have one;
+ *   only otherwise is `customer_email` prefilled from their stored Plex email.
  * - Returns `null` when Stripe is unconfigured/disabled (`getStripe()` is
  *   `null`), so callers can degrade gracefully.
  *
@@ -62,7 +62,7 @@ export async function createCheckoutSession(
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { email: true },
+    select: { email: true, subscription: { select: { stripeCustomerId: true } } },
   })
 
   const baseUrl = getBaseUrl()
@@ -79,9 +79,13 @@ export async function createCheckoutSession(
     cancel_url: `${baseUrl}${CANCEL_PATH}`,
   }
 
-  // Prefill the email only when we actually have one — an empty/absent value
-  // would make Stripe reject the parameter.
-  if (user?.email) {
+  // A returning member checks out as their existing customer (SEC-39), so
+  // Stripe keeps one customer per member. Otherwise prefill the email, only
+  // when we have one: an empty value would make Stripe reject the parameter.
+  const stripeCustomerId = user?.subscription?.stripeCustomerId
+  if (stripeCustomerId) {
+    params.customer = stripeCustomerId
+  } else if (user?.email) {
     params.customer_email = user.email
   }
 

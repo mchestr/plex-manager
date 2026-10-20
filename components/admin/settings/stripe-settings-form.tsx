@@ -16,6 +16,8 @@ interface StripeSettingsFormProps {
   hasSecretKey: boolean
   /** Whether a webhook secret is already stored (never the value itself) */
   hasWebhookSecret: boolean
+  /** Whether REDIS_URL is set, so webhook jobs can run */
+  hasJobQueue: boolean
   /** Configured Stripe price ids */
   priceIds: string[]
   /** Plex library section keys shared with subscribers (empty = all libraries) */
@@ -37,6 +39,7 @@ export function StripeSettingsForm({
   enabled,
   hasSecretKey,
   hasWebhookSecret,
+  hasJobQueue,
   priceIds,
   librarySectionIds,
 }: StripeSettingsFormProps) {
@@ -81,6 +84,7 @@ export function StripeSettingsForm({
   if (!willHaveSecretKey) missing.push("secret key")
   if (!willHaveWebhookSecret) missing.push("webhook secret")
   if (!willHavePriceIds) missing.push("at least one price ID")
+  if (!hasJobQueue) missing.push("job queue (REDIS_URL)")
 
   const canEnable = missing.length === 0
   const toggleDisabled = isToggling || (!enabled && !canEnable)

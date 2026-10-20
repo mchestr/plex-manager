@@ -1,173 +1,155 @@
 "use server"
 
+/**
+ * The Server Actions of the Plex sign-in, bound to the browser that started it
+ * (SEC-11).
+ *
+ * ```
+ * startPlexSignIn   creates a strong PIN with this browser's client id and
+ *                   keeps it in the signed httpOnly pm-plex-pin cookie;
+ *                   returns only the app.plex.tv URL
+ * pollPlexSignIn    reads that PIN from plex.tv: waiting | ready | expired
+ * signIn("plex")    the provider's authorize reads the cookie and the token
+ *                   itself (lib/auth.ts), and redeems the invite in it
+ * finishPlexSignIn  deletes the cookie and says where to go next
+ * ```
+ *
+ * The plex.tv account token never reaches the browser, and no action takes or
+ * returns it.
+ */
+
+import { randomUUID } from "node:crypto"
+import { cookies } from "next/headers"
 import { z } from "zod"
 
-import { actionClientIp, consume, type LimitName } from "@/lib/security/rate-limit"
+import { getOnboardingStatus } from "@/actions/onboarding"
+import { getAccessLevel } from "@/lib/access"
+import { publicAction } from "@/lib/actions/define-action"
+import { fail, ok } from "@/lib/actions/result"
+import { plexProduct } from "@/lib/brand"
+import { createPin, readPin } from "@/lib/connections/plex-pin"
+import { getBaseUrl } from "@/lib/env"
+import {
+  clientCookie,
+  PLEX_CLIENT_COOKIE,
+  PLEX_PIN_COOKIE,
+  pinCookie,
+  readClientCookie,
+  readPinCookie,
+} from "@/lib/plex-pin-cookie"
+import { consume } from "@/lib/security/rate-limit"
 import { RATE_LIMITED_MESSAGE } from "@/lib/security/rate-limit-messages"
 import { createLogger } from "@/lib/utils/logger"
-import { getBaseUrl } from "@/lib/env"
+import { inviteCodeSchema } from "@/lib/validations/invite"
 
 const logger = createLogger("PLEX_AUTH")
 
-const PLEX_API_ENDPOINT = "https://plex.tv/api/v2"
-const PLEX_PRODUCT_NAME = "Plex Manager"
+const START_FAILED = "We couldn't reach Plex. Please try again in a moment."
 
-interface PlexPinResponse {
-  id: number
-  code: string
-}
-
-interface PlexPinStatusResponse {
-  id: number
-  code: string
-  authToken?: string
-  expiresAt?: string
-}
-
-interface RateLimitedResult {
-  success: false
-  code: "RATE_LIMITED"
-  error: string
-}
-
-export type CreatePlexPinResult = { success: true; data: PlexPinResponse } | RateLimitedResult
-
-/** `authToken` is `null` until the user approves the PIN on plex.tv. */
-export type PlexAuthTokenResult =
-  | { success: true; authToken: string | null }
-  | RateLimitedResult
-  | { success: false; code: "INVALID_PIN"; error: string }
-
-/** plex.tv PIN ids are positive integers; anything else never reaches the URL. */
-const pinIdSchema = z.string().regex(/^\d{1,12}$/)
+export type PlexSignInStatus = "waiting" | "ready" | "expired"
 
 /**
- * Spends one point of an IP-keyed PIN limit. Returns the rate-limited result
- * when the caller is over it, otherwise `null`.
+ * The app.plex.tv URL that authorises `code` for `clientId`. plex.tv sends
+ * the browser back to the callback page with nothing in the URL: the PIN and
+ * any invite code stay in the cookie.
  */
-async function rateLimitPin(name: LimitName): Promise<RateLimitedResult | null> {
-  const limit = await consume(name, await actionClientIp())
-  if (limit.ok) {
-    return null
-  }
-  logger.warn("Plex PIN action rate-limited", { limit: name })
-  return { success: false, code: "RATE_LIMITED", error: RATE_LIMITED_MESSAGE }
-}
-
-/**
- * Get the application-wide client identifier from environment variables
- */
-function getClientIdentifier(): string {
-  const clientId = process.env.PLEX_CLIENT_IDENTIFIER
-
-  if (!clientId) {
-    throw new Error(
-      "PLEX_CLIENT_IDENTIFIER is not set in environment variables. " +
-      "Please add a unique identifier string to your .env file."
-    )
-  }
-
-  return clientId
-}
-
-/**
- * Create a Plex PIN for authentication. Limited per client IP
- * (`plex:pin:create`); throws when plex.tv fails.
- */
-export async function createPlexPin(): Promise<CreatePlexPinResult> {
-  const rateLimited = await rateLimitPin("plex:pin:create")
-  if (rateLimited) {
-    return rateLimited
-  }
-
-  const clientIdentifier = getClientIdentifier()
-
-  try {
-    const response = await fetch(`${PLEX_API_ENDPOINT}/pins?strong=true`, {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "X-Plex-Product": PLEX_PRODUCT_NAME,
-        "X-Plex-Client-Identifier": clientIdentifier,
-      },
-    })
-
-    if (!response.ok) {
-      throw new Error(`Failed to create Plex PIN: ${response.statusText}`)
-    }
-
-    const pin: PlexPinResponse = await response.json()
-    return { success: true, data: pin }
-  } catch (error) {
-    logger.error("Error creating Plex PIN", error)
-    throw error
-  }
-}
-
-/**
- * Get the auth token from a Plex PIN ID. The callback page calls this every
- * few seconds until the user authorizes or the PIN expires; it is limited per
- * client IP (`plex:pin:poll`). A `pinId` that is not a plex.tv PIN id (digits
- * only) is refused before it reaches the plex.tv URL. Binding the PIN to the
- * browser that created it is P4.8.
- */
-export async function getPlexAuthToken(pinId: string): Promise<PlexAuthTokenResult> {
-  if (!pinIdSchema.safeParse(pinId).success) {
-    return { success: false, code: "INVALID_PIN", error: "Invalid sign-in request. Please start signing in again." }
-  }
-
-  const rateLimited = await rateLimitPin("plex:pin:poll")
-  if (rateLimited) {
-    return rateLimited
-  }
-
-  const clientIdentifier = getClientIdentifier()
-
-  try {
-    const response = await fetch(`${PLEX_API_ENDPOINT}/pins/${pinId}`, {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-        "X-Plex-Client-Identifier": clientIdentifier,
-      },
-    })
-
-    if (!response.ok) {
-      throw new Error(`Failed to get Plex auth token: ${response.statusText}`)
-    }
-
-    const data: PlexPinStatusResponse = await response.json()
-    return { success: true, authToken: data.authToken || null }
-  } catch (error) {
-    logger.error("Error getting Plex auth token", error)
-    return { success: true, authToken: null }
-  }
-}
-
-/**
- * Create the Plex authorization URL with PIN code
- */
-export async function createPlexAuthUrl(pinId: number, pinCode: string, inviteCode?: string): Promise<string> {
-  const baseUrl = getBaseUrl()
-  let forwardUrl = `${baseUrl}/auth/callback/plex?plexPinId=${pinId}`
-
-  if (inviteCode) {
-    forwardUrl += `&inviteCode=${inviteCode}`
-  }
-
-  const clientIdentifier = getClientIdentifier()
+function plexAuthUrl(clientId: string, code: string): string {
+  // The path is appended, not resolved, so a base URL with a path keeps it.
+  const forwardUrl = `${getBaseUrl().replace(/\/+$/, "")}/auth/callback/plex`
 
   // URLSearchParams writes spaces as "+" (form encoding); plex.tv has always
   // received "%20". A literal "+" is already escaped as "%2B", so every "+"
   // left in the string is a space.
   const queryString = new URLSearchParams({
-    clientID: clientIdentifier,
-    code: pinCode,
+    clientID: clientId,
+    code,
     forwardUrl,
-    "context[device][product]": PLEX_PRODUCT_NAME,
+    "context[device][product]": plexProduct,
   })
     .toString()
     .replace(/\+/g, "%20")
 
   return `https://app.plex.tv/auth#?${queryString}`
 }
+
+/**
+ * This browser's Plex client identifier, from its signed `pm-plex-client`
+ * cookie, or a new random one that is stored for a year. The shared
+ * `PLEX_CLIENT_IDENTIFIER` stays for the server's own plex.tv calls.
+ */
+async function browserClientId(): Promise<string> {
+  const jar = await cookies()
+  const existing = readClientCookie(jar.get(PLEX_CLIENT_COOKIE)?.value)
+  if (existing) return existing
+  const clientId = randomUUID()
+  jar.set(clientCookie(clientId))
+  return clientId
+}
+
+/**
+ * Starts a Plex sign-in: a strong PIN for this browser, kept in the signed
+ * `pm-plex-pin` cookie for 15 minutes together with the optional invite code.
+ * Limited per client IP (`plex:pin:create`).
+ */
+export const startPlexSignIn = publicAction({
+  input: z.strictObject({ inviteCode: inviteCodeSchema.optional() }),
+  rateLimit: { name: "plex:pin:create" },
+  fallbackError: START_FAILED,
+  handler: async ({ inviteCode }) => {
+    const clientId = await browserClientId()
+    const pin = await createPin(clientId)
+    if (!pin.ok) {
+      return fail("UPSTREAM_UNAVAILABLE", START_FAILED)
+    }
+
+    const jar = await cookies()
+    jar.set(pinCookie({ pinId: pin.data.id, code: pin.data.code, clientId, inviteCode }))
+    return ok({ authUrl: plexAuthUrl(clientId, pin.data.code) })
+  },
+})
+
+/**
+ * Whether plex.tv has authorised the PIN in this browser's cookie. A request
+ * without a valid cookie is `expired` and reaches no PIN. Limited per client
+ * IP and per PIN (`plex:pin:poll`). A plex.tv hiccup reads as `waiting`, so
+ * the page keeps polling.
+ */
+export const pollPlexSignIn = publicAction({
+  rateLimit: { name: "plex:pin:poll" },
+  handler: async () => {
+    const pin = readPinCookie((await cookies()).get(PLEX_PIN_COOKIE)?.value)
+    if (!pin) {
+      return ok<{ status: PlexSignInStatus }>({ status: "expired" })
+    }
+
+    const limit = await consume("plex:pin:poll", `pin:${pin.pinId}`)
+    if (!limit.ok) {
+      logger.warn("Plex PIN poll rate-limited")
+      return fail("RATE_LIMITED", RATE_LIMITED_MESSAGE, { retryAfterSec: limit.retryAfterSec })
+    }
+
+    const { status } = await readPin(pin.pinId, pin.code, pin.clientId)
+    return ok<{ status: PlexSignInStatus }>({ status: status === "unavailable" ? "waiting" : status })
+  },
+})
+
+/**
+ * Ends the PIN binding after `signIn("plex")` succeeded, and returns where the
+ * member goes next: `/subscribe` without full access (a non-member with Stripe
+ * on), `/onboarding` until onboarding is done, otherwise `/`.
+ */
+export const finishPlexSignIn = publicAction({
+  handler: async (_input, { session }) => {
+    ;(await cookies()).delete(PLEX_PIN_COOKIE)
+
+    const userId = session?.user?.id
+    if (!userId) {
+      return fail("UNAUTHENTICATED", "Please sign in to continue.")
+    }
+    if ((await getAccessLevel(userId)) !== "full") {
+      return ok({ next: "/subscribe" })
+    }
+    const onboarding = await getOnboardingStatus()
+    return ok({ next: onboarding.success && !onboarding.data.isComplete ? "/onboarding" : "/" })
+  },
+})

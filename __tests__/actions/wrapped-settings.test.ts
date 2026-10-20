@@ -6,6 +6,7 @@
 
 import { getWrappedSettings, updateServerTimeZone, updateWrappedSettings } from '@/actions/admin'
 import { requireAdmin } from '@/lib/admin'
+import { getServerSession } from 'next-auth'
 import { AuditEventType, logAuditEvent } from '@/lib/security/audit-log'
 import { mockReset } from 'jest-mock-extended'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
@@ -13,6 +14,10 @@ import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 jest.mock('@/lib/admin', () => ({
   requireAdmin: jest.fn(),
 }))
+
+// `@/actions/admin` also exports actions built on the action helper, which reads the session
+jest.mock('next-auth', () => ({ getServerSession: jest.fn() }))
+jest.mock('@/lib/auth', () => ({ authOptions: {} }))
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 
@@ -62,6 +67,7 @@ beforeEach(() => {
   mockReset(prismaMock)
   jest.clearAllMocks()
   mockRequireAdmin.mockResolvedValue(mockAdminSession)
+  ;(getServerSession as jest.Mock).mockResolvedValue(mockAdminSession)
 })
 
 describe('getWrappedSettings', () => {
@@ -137,23 +143,31 @@ describe('getWrappedSettings', () => {
 describe('updateWrappedSettings', () => {
   const saved = { wrappedEnabled: true, rewindSeasonOpens: '12-01', rewindSeasonCloses: '01-31', updatedBy: 'admin-user-id' }
 
-  it('stores the month-day window and the switch', async () => {
+  it('stores the month-day window and the switch, and audits the change', async () => {
+    mockFindUnique.mockResolvedValue({ wrappedEnabled: false, rewindSeasonOpens: '12-01', rewindSeasonCloses: '01-15' })
     mockUpsert.mockResolvedValue({ id: 'config', ...saved })
 
     const result = await updateWrappedSettings({ enabled: true, opens: '12-01', closes: '01-31' })
 
-    expect(result.success).toBe(true)
+    expect(result).toEqual({ success: true, data: null })
     expect(mockUpsert).toHaveBeenCalledWith({
       where: { id: 'config' },
       update: saved,
       create: { id: 'config', llmDisabled: false, ...saved },
-      select: expect.not.objectContaining({ stripeSecretKey: true, rewindSerialKey: true }),
+      select: { id: true },
+    })
+    expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.CONFIG_CHANGED, 'admin-user-id', {
+      section: 'rewind.season',
+      changedFields: ['rewindSeasonCloses', 'wrappedEnabled'],
+      secretChanged: false,
+      origins: { before: {}, after: {} },
     })
     expect(mockRevalidatePath).toHaveBeenCalledWith('/')
     expect(mockRevalidatePath).toHaveBeenCalledWith('/wrapped')
   })
 
   it('accepts a window within one year and 29 February', async () => {
+    mockFindUnique.mockResolvedValue(null)
     mockUpsert.mockResolvedValue({ id: 'config' })
 
     await expect(updateWrappedSettings({ enabled: false, opens: '11-20', closes: '02-29' })).resolves.toMatchObject({
@@ -164,7 +178,11 @@ describe('updateWrappedSettings', () => {
   it('rejects the same day for opening and closing', async () => {
     const result = await updateWrappedSettings({ enabled: true, opens: '12-01', closes: '12-01' })
 
-    expect(result).toEqual({ success: false, error: 'The season cannot open and close on the same day' })
+    expect(result).toMatchObject({
+      success: false,
+      code: 'VALIDATION',
+      error: 'The season cannot open and close on the same day',
+    })
     expect(mockUpsert).not.toHaveBeenCalled()
   })
 
@@ -176,23 +194,32 @@ describe('updateWrappedSettings', () => {
   ])('rejects %p to %p', async (opens, closes) => {
     const result = await updateWrappedSettings({ enabled: true, opens, closes })
 
-    expect(result).toEqual({ success: false, error: 'Season dates must be real month-day values (MM-DD)' })
+    expect(result).toMatchObject({
+      success: false,
+      code: 'VALIDATION',
+      error: 'Season dates must be real month-day values (MM-DD)',
+    })
     expect(mockUpsert).not.toHaveBeenCalled()
   })
 
   it('requires an admin', async () => {
-    mockRequireAdmin.mockRejectedValue(new Error('Not admin'))
+    ;(getServerSession as jest.Mock).mockResolvedValue({ ...mockAdminSession, user: { ...mockAdminSession.user, isAdmin: false } })
 
-    await expect(updateWrappedSettings({ enabled: true, opens: '12-01', closes: '01-31' })).rejects.toThrow('Not admin')
+    await expect(updateWrappedSettings({ enabled: true, opens: '12-01', closes: '01-31' })).resolves.toMatchObject({
+      success: false,
+      code: 'FORBIDDEN',
+    })
     expect(mockUpsert).not.toHaveBeenCalled()
   })
 
-  it('returns database errors', async () => {
+  it('returns fixed copy for database errors', async () => {
+    mockFindUnique.mockResolvedValue(null)
     mockUpsert.mockRejectedValue(new Error('Database error'))
 
     await expect(updateWrappedSettings({ enabled: true, opens: '12-01', closes: '01-31' })).resolves.toEqual({
       success: false,
-      error: 'Database error',
+      code: 'INTERNAL',
+      error: 'Failed to update wrapped settings',
     })
   })
 })

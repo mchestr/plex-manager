@@ -39,7 +39,7 @@ export function RegenerateWrappedButton({
 
     try {
       const result = await adminRegenerateRewind({ userId, year })
-      if (result.success && result.alreadyQueued) {
+      if (result.success && result.data.alreadyQueued) {
         toast.showError(ALREADY_GENERATING_COPY)
       } else if (result.success) {
         onSuccess?.()

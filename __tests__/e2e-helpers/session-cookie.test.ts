@@ -22,6 +22,7 @@ const ADMIN = {
   email: "admin@example.com",
   image: null,
   isAdmin: true,
+  sessionVersion: 3,
 }
 
 describe("mintSessionToken", () => {
@@ -35,6 +36,7 @@ describe("mintSessionToken", () => {
       picture: null,
       isAdmin: true,
       checkedAt: 0,
+      sv: 3,
     })
   })
 

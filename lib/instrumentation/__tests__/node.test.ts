@@ -4,6 +4,8 @@
 
 import { BotLockPoller } from "@/lib/discord/lock/poller"
 import { startNodeInstrumentation } from "@/lib/instrumentation/node"
+import { getDiscordIntegration } from "@/lib/discord/integration"
+import { removeScheduledJob, scheduleCronJob } from "@/lib/queue/client"
 import { waitForRedis } from "@/lib/queue/connection"
 import { startWorker } from "@/lib/queue/worker"
 import { startWatchlistSyncPolling } from "@/lib/watchlist/lock"
@@ -23,8 +25,15 @@ jest.mock("@/lib/queue/connection", () => ({
 jest.mock("@/lib/queue/worker", () => ({ startWorker: jest.fn(), stopWorker: jest.fn() }))
 jest.mock("@/lib/queue/client", () => ({
   scheduleRepeatingJob: jest.fn(),
+  scheduleCronJob: jest.fn(),
   removeScheduledJob: jest.fn(),
   closeQueue: jest.fn(),
+}))
+jest.mock("@/lib/discord/integration", () => ({ getDiscordIntegration: jest.fn() }))
+jest.mock("@/lib/queue/jobs/discord-role", () => ({
+  ROLE_RECONCILE_PATTERN: "0 4 * * *",
+  ROLE_RECONCILE_SCHEDULER_ID: "discord-role-reconcile",
+  reconcileTimeZone: jest.fn().mockResolvedValue("UTC"),
 }))
 jest.mock("@/lib/watchlist/lock", () => ({
   isWatchlistSyncEnabled: jest.fn().mockResolvedValue(true),
@@ -103,5 +112,38 @@ describe("startNodeInstrumentation() with Redis unreachable", () => {
     expect(waitForRedis).not.toHaveBeenCalled()
     expect(startWatchlistSyncPolling).toHaveBeenCalledTimes(1)
     expect(botPollerStarted()).toBe(true)
+  })
+})
+
+describe("startNodeInstrumentation() and the Discord role reconcile", () => {
+  beforeEach(() => {
+    jest.mocked(waitForRedis).mockResolvedValue(true)
+    jest.mocked(startWorker).mockResolvedValue(undefined)
+  })
+
+  it("schedules the daily reconcile while the integration is on", async () => {
+    jest.mocked(getDiscordIntegration).mockResolvedValue(
+      {} as Awaited<ReturnType<typeof getDiscordIntegration>>
+    )
+
+    await startNodeInstrumentation()
+
+    expect(scheduleCronJob).toHaveBeenCalledWith(
+      "discord-role-reconcile",
+      "discord:role:reconcile",
+      {},
+      { pattern: "0 4 * * *", tz: "UTC" },
+      { attempts: 1 }
+    )
+    expect(removeScheduledJob).not.toHaveBeenCalledWith("discord-role-reconcile")
+  })
+
+  it("removes the schedule, and schedules nothing, while the integration is off", async () => {
+    jest.mocked(getDiscordIntegration).mockResolvedValue(null)
+
+    await startNodeInstrumentation()
+
+    expect(scheduleCronJob).not.toHaveBeenCalled()
+    expect(removeScheduledJob).toHaveBeenCalledWith("discord-role-reconcile")
   })
 })

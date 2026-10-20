@@ -534,3 +534,87 @@ describe('Setup Actions', () => {
   })
 })
 
+describe('setup saves keep a stored secret only for its own address (P4.6)', () => {
+  const storedTautulli = {
+    id: 't1',
+    name: 'Tautulli',
+    url: 'http://tautulli.lan:8181',
+    publicUrl: null,
+    apiKey: 'stored-tautulli-key',
+    isActive: true,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockPrisma.setup.findFirst.mockResolvedValue(null)
+    mockTestTautulliConnection.mockResolvedValue({ success: true })
+  })
+
+  /** Lets the fire-and-forget audit write settle. */
+  const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
+
+  it('refuses a blank key for a new host before any connection test', async () => {
+    mockPrisma.tautulli.findFirst.mockResolvedValue(storedTautulli)
+
+    const result = await saveTautulli({ name: 'Tautulli', url: 'http://listener.example:8181' })
+
+    expect(result).toEqual({
+      success: false,
+      code: 'SECRET_REQUIRED',
+      error: 'Enter the API key again to use it with the new address.',
+    })
+    expect(mockTestTautulliConnection).not.toHaveBeenCalled()
+  })
+
+  it('reuses the stored key for the same origin (Back and edit)', async () => {
+    mockPrisma.tautulli.findFirst.mockResolvedValue(storedTautulli)
+
+    const result = await saveTautulli({ name: 'Renamed', url: 'http://tautulli.lan:8181/' })
+
+    expect(result).toEqual({ success: true })
+    expect(mockTestTautulliConnection).toHaveBeenCalledWith(expect.objectContaining({ apiKey: 'stored-tautulli-key' }))
+  })
+
+  it('reuses a stored Plex token only for the same origin', async () => {
+    mockPrisma.plexServer.findFirst.mockResolvedValue({
+      id: 'p1',
+      name: 'Plex',
+      url: 'https://plex.lan:32400',
+      publicUrl: null,
+      token: 'stored-plex-token',
+      adminPlexUserId: null,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+
+    await expect(savePlexServer({ name: 'Plex', url: 'https://other.lan:32400' })).resolves.toMatchObject({
+      code: 'SECRET_REQUIRED',
+    })
+    expect(mockTestPlexConnection).not.toHaveBeenCalled()
+  })
+
+  it('audits the save as the setup actor with origins only', async () => {
+    mockPrisma.tautulli.findFirst.mockResolvedValue(null)
+
+    await saveTautulli({ name: 'Tautulli', url: 'http://tautulli.lan:8181/path', apiKey: 'first-key' })
+    await flush()
+
+    const rows = mockPrisma.auditLog.create.mock.calls.map(([args]) => args.data)
+    expect(rows).toEqual([
+      expect.objectContaining({
+        type: 'CONFIG_CHANGED',
+        actorUserId: 'setup',
+        details: expect.objectContaining({
+          section: 'setup.tautulli',
+          secretChanged: true,
+          origins: { before: null, after: { url: 'http://tautulli.lan:8181', publicUrl: null } },
+        }),
+      }),
+    ])
+    expect(JSON.stringify(rows)).not.toContain('first-key')
+  })
+})
+

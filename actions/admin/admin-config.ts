@@ -1,11 +1,15 @@
 "use server"
 
+import { adminAction } from "@/lib/actions/define-action"
+import { fail, ok } from "@/lib/actions/result"
 import { requireAdmin } from "@/lib/admin"
 import { prisma } from "@/lib/prisma"
 import { APP_SETTINGS_TAG } from "@/lib/settings/app-settings"
-import { parseStripeLibrarySectionIds } from "@/lib/stripe/config"
+import { isRedisConfigured } from "@/lib/queue/connection"
+import { parseStripeLibrarySectionIds, parseStripePriceIds } from "@/lib/stripe/config"
 import { clearOfferedPricesCache } from "@/lib/stripe/prices"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
+import { configDiff } from "@/lib/security/config-diff"
 import { createLogger } from "@/lib/utils/logger"
 import { normalizeTimeZone } from "@/lib/utils/zoned-time"
 import { DEFAULT_SEASON, getSeasonState, parseMonthDay, seasonStateAt } from "@/lib/wrapped/season"
@@ -67,6 +71,9 @@ const NON_SECRET_CONFIG_SELECT = {
   watchlistSyncIntervalMinutes: true,
   stripeEnabled: true,
   stripePriceIds: true,
+  llmDailyCapPerUserUsd: true,
+  llmDailyCapAdminUsd: true,
+  llmDailyCapServerUsd: true,
   updatedAt: true,
   updatedBy: true,
 } as const
@@ -113,6 +120,9 @@ export async function getConfig() {
       watchlistSyncIntervalMinutes: 60,
       stripeEnabled: false,
       stripePriceIds: null,
+      llmDailyCapPerUserUsd: 0.5,
+      llmDailyCapAdminUsd: 5,
+      llmDailyCapServerUsd: 5,
       updatedAt: new Date(),
       updatedBy: null,
     }
@@ -122,34 +132,57 @@ export async function getConfig() {
 /**
  * Update LLM disabled setting (admin only)
  */
-export async function setLLMDisabled(disabled: boolean) {
-  const session = await requireAdmin()
-
-  try {
-    const config = await prisma.config.upsert({
+export const setLLMDisabled = adminAction({
+  input: z.boolean(),
+  fallbackError: "Failed to update configuration",
+  handler: async (disabled, { userId }) => {
+    const before = await prisma.config.findUnique({ where: { id: "config" }, select: { llmDisabled: true } })
+    await prisma.config.upsert({
       where: { id: "config" },
-      update: {
-        llmDisabled: disabled,
-        updatedBy: session.user.id,
-      },
-      create: {
-        id: "config",
-        llmDisabled: disabled,
-        updatedBy: session.user.id,
-      },
-      // The full row holds secrets and Decimal columns, which must not reach the client
-      select: NON_SECRET_CONFIG_SELECT,
+      update: { llmDisabled: disabled, updatedBy: userId },
+      create: { id: "config", llmDisabled: disabled, updatedBy: userId },
+      select: { id: true },
     })
 
-    return { success: true, config }
-  } catch (error) {
-    logger.error("Error updating LLM disabled setting", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to update configuration",
-    }
-  }
-}
+    logAuditEvent(AuditEventType.CONFIG_CHANGED, userId, configDiff("llm", before, { llmDisabled: disabled }))
+    return ok(null)
+  },
+})
+
+/** A daily cap in US dollars. 0 refuses every assistant call for that tier. */
+const dailyCapSchema = z.number().min(0, "A cap cannot be negative").max(1000, "A cap can be at most 1000 USD a day")
+
+const llmCapsSchema = z.object({
+  llmDailyCapPerUserUsd: dailyCapSchema,
+  llmDailyCapAdminUsd: dailyCapSchema,
+  llmDailyCapServerUsd: dailyCapSchema,
+})
+
+/**
+ * Set the assistant's daily spend caps (admin only): per member, per admin and
+ * for the whole server, in US dollars per server-zone day. `lib/llm/budget.ts`
+ * checks them before every assistant LLM call.
+ */
+export const updateLlmCaps = adminAction({
+  input: llmCapsSchema,
+  fallbackError: "Failed to update the assistant spend caps",
+  handler: async (caps, { userId }) => {
+    const before = await prisma.config.findUnique({
+      where: { id: "config" },
+      select: { llmDailyCapPerUserUsd: true, llmDailyCapAdminUsd: true, llmDailyCapServerUsd: true },
+    })
+    await prisma.config.upsert({
+      where: { id: "config" },
+      update: { ...caps, updatedBy: userId },
+      create: { id: "config", ...caps, updatedBy: userId },
+      select: { id: true },
+    })
+
+    logAuditEvent(AuditEventType.CONFIG_CHANGED, userId, configDiff("llm.caps", before, caps))
+    revalidatePath("/admin/settings")
+    return ok(null)
+  },
+})
 
 const monthDaySchema = z.string().refine((value) => parseMonthDay(value) !== null, {
   message: "Season dates must be real month-day values (MM-DD)",
@@ -164,41 +197,28 @@ const wrappedSettingsSchema = z
  * `closes` are `MM-DD` values in the server zone; a window may cross the new
  * year (`12-01` to `01-31`).
  */
-export async function updateWrappedSettings(data: { enabled: boolean; opens: string; closes: string }) {
-  const session = await requireAdmin()
-
-  const validated = wrappedSettingsSchema.safeParse(data)
-  if (!validated.success) {
-    return { success: false, error: validated.error.issues[0]?.message ?? "Invalid season settings" }
-  }
-  const { enabled, opens, closes } = validated.data
-
-  try {
-    const values = {
-      wrappedEnabled: enabled,
-      rewindSeasonOpens: opens,
-      rewindSeasonCloses: closes,
-      updatedBy: session.user.id,
-    }
-    const config = await prisma.config.upsert({
+export const updateWrappedSettings = adminAction({
+  input: wrappedSettingsSchema,
+  fallbackError: "Failed to update wrapped settings",
+  handler: async ({ enabled, opens, closes }, { userId }) => {
+    const before = await prisma.config.findUnique({
       where: { id: "config" },
-      update: values,
-      create: { id: "config", llmDisabled: false, ...values },
-      select: NON_SECRET_CONFIG_SELECT,
+      select: { wrappedEnabled: true, rewindSeasonOpens: true, rewindSeasonCloses: true },
+    })
+    const values = { wrappedEnabled: enabled, rewindSeasonOpens: opens, rewindSeasonCloses: closes }
+    await prisma.config.upsert({
+      where: { id: "config" },
+      update: { ...values, updatedBy: userId },
+      create: { id: "config", llmDisabled: false, ...values, updatedBy: userId },
+      select: { id: true },
     })
 
+    logAuditEvent(AuditEventType.CONFIG_CHANGED, userId, configDiff("rewind.season", before, values))
     revalidatePath("/")
     revalidatePath("/wrapped")
-
-    return { success: true, config }
-  } catch (error) {
-    logger.error("Error updating wrapped settings", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to update wrapped settings",
-    }
-  }
-}
+    return ok(null)
+  },
+})
 
 const serverTimeZoneSchema = z
   .string()
@@ -252,23 +272,19 @@ export interface StripeConfigStatus {
   enabled: boolean
   hasSecretKey: boolean
   hasWebhookSecret: boolean
+  /** Whether `REDIS_URL` is set, so the queue that processes webhooks can run. */
+  hasJobQueue: boolean
   priceIds: string[]
   librarySectionIds: number[]
 }
 
-/**
- * Parses the stored `stripePriceIds` JSON value into a clean array of strings.
- * @internal
- */
-function parseStripePriceIds(value: unknown): string[] {
-  if (!Array.isArray(value)) return []
-  return value.filter((id): id is string => typeof id === "string" && id.trim().length > 0)
-}
+/** The missing-config entry for the job queue; the settings form shows the same words. */
+const STRIPE_QUEUE_REQUIREMENT = "job queue (REDIS_URL)"
 
 /**
- * Determines whether Stripe is fully configured (secret key, webhook secret, and
- * at least one price id present). Centralized so `setStripeEnabled` and the UI
- * agree on the requirement (FR-3).
+ * Determines whether Stripe is fully configured (secret key, webhook secret, at
+ * least one price id, and the job queue that processes webhooks, GAP-15).
+ * `setStripeEnabled` refuses on the same list the settings form shows (FR-3).
  * @internal
  */
 function getMissingStripeConfig(status: {
@@ -280,6 +296,7 @@ function getMissingStripeConfig(status: {
   if (!status.hasSecretKey) missing.push("secret key")
   if (!status.hasWebhookSecret) missing.push("webhook secret")
   if (status.priceIds.length === 0) missing.push("at least one price ID")
+  if (!isRedisConfigured()) missing.push(STRIPE_QUEUE_REQUIREMENT)
   return missing
 }
 
@@ -312,31 +329,32 @@ export async function getStripeConfig(): Promise<StripeConfigStatus> {
     })
 
     if (!config) {
-      return {
-        enabled: false,
-        hasSecretKey: false,
-        hasWebhookSecret: false,
-        priceIds: [],
-        librarySectionIds: [],
-      }
+      return emptyStripeConfigStatus()
     }
 
     return {
       enabled: config.stripeEnabled,
       hasSecretKey: Boolean(config.stripeSecretKey),
       hasWebhookSecret: Boolean(config.stripeWebhookSecret),
+      hasJobQueue: isRedisConfigured(),
       priceIds: parseStripePriceIds(config.stripePriceIds),
       librarySectionIds: parseStripeLibrarySectionIds(config.stripeLibrarySectionIds),
     }
   } catch (error) {
     logger.error("Error getting Stripe config", error)
-    return {
-      enabled: false,
-      hasSecretKey: false,
-      hasWebhookSecret: false,
-      priceIds: [],
-      librarySectionIds: [],
-    }
+    return emptyStripeConfigStatus()
+  }
+}
+
+/** @internal */
+function emptyStripeConfigStatus(): StripeConfigStatus {
+  return {
+    enabled: false,
+    hasSecretKey: false,
+    hasWebhookSecret: false,
+    hasJobQueue: isRedisConfigured(),
+    priceIds: [],
+    librarySectionIds: [],
   }
 }
 
@@ -345,43 +363,26 @@ export async function getStripeConfig(): Promise<StripeConfigStatus> {
  *
  * Secrets are encrypted at rest by the Prisma extension. `secretKey` and
  * `webhookSecret` are optional so admins can update price ids without
- * re-entering secrets (leave blank to keep the existing value). `priceIds` is
- * always persisted as a JSON array of strings.
+ * re-entering secrets (leave blank to keep the existing value): both go only
+ * to Stripe, so a kept secret cannot be redirected. `priceIds` is always
+ * persisted as a JSON array of strings.
  */
-export async function updateStripeSettings(data: {
-  secretKey?: string
-  webhookSecret?: string
-  priceIds: string[]
-  librarySectionIds: number[]
-}) {
-  const session = await requireAdmin()
-
-  const validated = updateStripeSettingsSchema.safeParse(data)
-  if (!validated.success) {
-    return { success: false, error: "Invalid Stripe settings input" }
-  }
-
-  const { secretKey, webhookSecret, priceIds, librarySectionIds } = validated.data
-
-  try {
-    const updateData: {
-      stripePriceIds: string[]
-      stripeLibrarySectionIds: number[]
-      stripeSecretKey?: string
-      stripeWebhookSecret?: string
-      updatedBy: string
-    } = {
-      stripePriceIds: priceIds,
-      stripeLibrarySectionIds: librarySectionIds,
-      updatedBy: session.user.id,
-    }
+export const updateStripeSettings = adminAction({
+  input: updateStripeSettingsSchema,
+  fallbackError: "Failed to update Stripe settings",
+  handler: async ({ secretKey, webhookSecret, priceIds, librarySectionIds }, { userId }) => {
+    // Read only for the audit diff, which records whether a secret changed, never its value
+    const before = await prisma.config.findUnique({
+      where: { id: "config" },
+      select: { stripeSecretKey: true, stripeWebhookSecret: true, stripePriceIds: true, stripeLibrarySectionIds: true },
+    })
 
     // Only overwrite secrets when a new value is provided (leave-blank-to-keep)
-    if (secretKey !== undefined) {
-      updateData.stripeSecretKey = secretKey
-    }
-    if (webhookSecret !== undefined) {
-      updateData.stripeWebhookSecret = webhookSecret
+    const updateData = {
+      stripePriceIds: priceIds,
+      stripeLibrarySectionIds: librarySectionIds,
+      ...(secretKey !== undefined && { stripeSecretKey: secretKey }),
+      ...(webhookSecret !== undefined && { stripeWebhookSecret: webhookSecret }),
     }
 
     // Do NOT return the upserted row: the Prisma extension decrypts the Stripe
@@ -389,59 +390,52 @@ export async function updateStripeSettings(data: {
     // and webhook secret into the Server Action's RSC response to the client.
     await prisma.config.upsert({
       where: { id: "config" },
-      update: updateData,
-      create: {
-        id: "config",
-        stripePriceIds: priceIds,
-        stripeLibrarySectionIds: librarySectionIds,
-        stripeSecretKey: secretKey,
-        stripeWebhookSecret: webhookSecret,
-        updatedBy: session.user.id,
-      },
+      update: { ...updateData, updatedBy: userId },
+      create: { id: "config", ...updateData, updatedBy: userId },
+      select: { id: true },
     })
+
+    logAuditEvent(
+      AuditEventType.CONFIG_CHANGED,
+      userId,
+      configDiff(
+        "stripe",
+        before,
+        { ...updateData, stripeSecretKey: secretKey, stripeWebhookSecret: webhookSecret },
+        { secretFields: ["stripeSecretKey", "stripeWebhookSecret"] }
+      )
+    )
 
     // Invalidate the offered-prices cache so a price-id change is reflected on
     // /subscribe immediately rather than after the TTL.
     clearOfferedPricesCache()
-
     revalidatePath("/admin/settings")
-
-    return { success: true }
-  } catch (error) {
-    logger.error("Error updating Stripe settings", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to update Stripe settings",
-    }
-  }
-}
+    return ok(null)
+  },
+})
 
 /**
  * Flip the master Stripe toggle (admin only).
  *
  * Enabling is blocked (FR-3) unless Stripe is fully configured: a secret key, a
- * webhook secret, and at least one price id must all be present. When any are
+ * webhook secret, at least one price id and the job queue (`REDIS_URL`, without
+ * which no webhook is ever processed) must all be present. When any are
  * missing, returns `{error}` naming what is missing and does NOT set
  * `stripeEnabled = true`. Disabling is always allowed.
  */
-export async function setStripeEnabled(enabled: boolean) {
-  const session = await requireAdmin()
+export const setStripeEnabled = adminAction({
+  input: z.boolean({ message: "Invalid input: enabled must be a boolean" }),
+  fallbackError: "Failed to update Stripe configuration",
+  handler: async (enabled, { userId }) => {
+    // Disabling reads only the flag (for the audit diff), never the secrets
+    const config = await prisma.config.findUnique({
+      where: { id: "config" },
+      select: enabled
+        ? { stripeEnabled: true, stripeSecretKey: true, stripeWebhookSecret: true, stripePriceIds: true }
+        : { stripeEnabled: true },
+    })
 
-  if (typeof enabled !== "boolean") {
-    return { success: false, error: "Invalid input: enabled must be a boolean" }
-  }
-
-  try {
     if (enabled) {
-      const config = await prisma.config.findUnique({
-        where: { id: "config" },
-        select: {
-          stripeSecretKey: true,
-          stripeWebhookSecret: true,
-          stripePriceIds: true,
-        },
-      })
-
       const missing = getMissingStripeConfig({
         hasSecretKey: Boolean(config?.stripeSecretKey),
         hasWebhookSecret: Boolean(config?.stripeWebhookSecret),
@@ -449,10 +443,10 @@ export async function setStripeEnabled(enabled: boolean) {
       })
 
       if (missing.length > 0) {
-        return {
-          success: false,
-          error: `Stripe cannot be enabled until it is fully configured. Missing: ${missing.join(", ")}.`,
-        }
+        return fail(
+          "VALIDATION",
+          `Stripe cannot be enabled until it is fully configured. Missing: ${missing.join(", ")}.`
+        )
       }
     }
 
@@ -461,31 +455,23 @@ export async function setStripeEnabled(enabled: boolean) {
     // Action response.
     await prisma.config.upsert({
       where: { id: "config" },
-      update: {
-        stripeEnabled: enabled,
-        updatedBy: session.user.id,
-      },
-      create: {
-        id: "config",
-        stripeEnabled: enabled,
-        updatedBy: session.user.id,
-      },
+      update: { stripeEnabled: enabled, updatedBy: userId },
+      create: { id: "config", stripeEnabled: enabled, updatedBy: userId },
+      select: { id: true },
     })
+
+    logAuditEvent(
+      AuditEventType.CONFIG_CHANGED,
+      userId,
+      configDiff("stripe.enabled", config && { stripeEnabled: config.stripeEnabled }, { stripeEnabled: enabled })
+    )
 
     // Invalidate the offered-prices cache so enabling/disabling takes effect on
     // /subscribe immediately (a stale cache could otherwise offer prices for up
     // to the TTL after disabling).
     clearOfferedPricesCache()
-
     revalidatePath("/admin/settings")
     revalidatePath("/")
-
-    return { success: true }
-  } catch (error) {
-    logger.error("Error updating Stripe enabled setting", error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to update Stripe configuration",
-    }
-  }
-}
+    return ok(null)
+  },
+})

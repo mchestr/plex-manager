@@ -1,6 +1,44 @@
 import { getAllOverseerrRequests, getOverseerrDiscoverMovies, getOverseerrDiscoverTV, getOverseerrMediaDetails, getOverseerrRequests, getOverseerrStatus, getOverseerrUsers } from "@/lib/connections/overseerr"
 import { prisma } from "@/lib/prisma"
+import { type ConnectionResult } from "@/types/connection"
+import { z } from "zod"
+import { withoutPersonalFields } from "./personal-fields"
 import { toToolOutput } from "./tool-output"
+
+/** The longest display name the model sees; members choose it, so it is untrusted text (SEC-42). */
+const DISPLAY_NAME_MAX = 64
+
+// `GET /user`: { pageInfo, results: [{ id, displayName, email, requestCount, permissions, ... }] }
+const usersSchema = z.object({
+  results: z.array(
+    z.looseObject({
+      id: z.number(),
+      displayName: z.string().nullish(),
+      requestCount: z.number().nullish(),
+      permissions: z.number().nullish(),
+    })
+  ),
+})
+
+/** Overseerr users projected to the fields an answer needs: no email, a bounded display name. */
+function projectUsers(result: ConnectionResult<unknown>): string {
+  if (!result.success) return toToolOutput(result)
+  const users = usersSchema.safeParse(result.data)
+  if (!users.success) return JSON.stringify({ error: "Unexpected response from Overseerr" })
+  return JSON.stringify({
+    users: users.data.results.map((user) => ({
+      id: user.id,
+      displayName: (user.displayName ?? "").slice(0, DISPLAY_NAME_MAX),
+      requestCount: user.requestCount ?? 0,
+      permissions: user.permissions ?? 0,
+    })),
+  })
+}
+
+/** A result with the requesters' emails removed. */
+function withoutEmails(result: ConnectionResult<unknown>): string {
+  return toToolOutput(result.success ? { ...result, data: withoutPersonalFields(result.data) } : result)
+}
 
 export async function executeOverseerrTool(
   toolName: string,
@@ -23,7 +61,7 @@ export async function executeOverseerrTool(
       return toToolOutput(await getOverseerrStatus(config))
     }
     case "get_overseerr_requests": {
-      return toToolOutput(await getOverseerrRequests(config))
+      return withoutEmails(await getOverseerrRequests(config))
     }
     case "get_overseerr_discover_movies": {
       const page = typeof args.page === "number" ? args.page : 1
@@ -42,14 +80,14 @@ export async function executeOverseerrTool(
       if (args.mediaType !== "movie" && args.mediaType !== "tv") {
         return "Error: 'mediaType' parameter must be 'movie' or 'tv'"
       }
-      return toToolOutput(await getOverseerrMediaDetails(config, args.mediaId, args.mediaType))
+      return withoutEmails(await getOverseerrMediaDetails(config, args.mediaId, args.mediaType))
     }
     case "get_overseerr_users": {
-      return toToolOutput(await getOverseerrUsers(config))
+      return projectUsers(await getOverseerrUsers(config))
     }
     case "get_overseerr_all_requests": {
       const limit = typeof args.limit === "number" ? args.limit : 20
-      return toToolOutput(await getAllOverseerrRequests(config, limit))
+      return withoutEmails(await getAllOverseerrRequests(config, limit))
     }
     default:
       return "Error: Unknown Overseerr tool"

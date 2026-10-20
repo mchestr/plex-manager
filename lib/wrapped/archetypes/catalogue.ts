@@ -11,7 +11,7 @@
  * @module lib/wrapped/archetypes/catalogue
  */
 
-import type { InkName } from "@/lib/rewind/registry"
+import type { InkName } from "@/lib/design/tokens"
 
 /** Every archetype, in the v2 order the stored v2 rows and prompt use. */
 export const ARCHETYPES = [

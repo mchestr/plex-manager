@@ -24,6 +24,46 @@ if (typeof global.TransformStream === 'undefined') {
   Object.assign(global, { ReadableStream, TransformStream, WritableStream })
 }
 
+// Browser APIs Base UI calls that jsdom lacks (P3.4). The node-environment
+// suites have no window, so only stub them where one exists.
+if (typeof window !== 'undefined') {
+  if (typeof global.ResizeObserver === 'undefined') {
+    global.ResizeObserver = class ResizeObserver {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+  }
+  if (!Element.prototype.getAnimations) Element.prototype.getAnimations = () => []
+  if (!Element.prototype.scrollIntoView) Element.prototype.scrollIntoView = () => {}
+  if (!Element.prototype.hasPointerCapture) Element.prototype.hasPointerCapture = () => false
+  if (!Element.prototype.setPointerCapture) Element.prototype.setPointerCapture = () => {}
+  if (!Element.prototype.releasePointerCapture) Element.prototype.releasePointerCapture = () => {}
+  // Base UI's Checkbox re-dispatches a click on its hidden input as a
+  // PointerEvent (P3.5).
+  if (typeof window.PointerEvent === 'undefined') {
+    window.PointerEvent = class PointerEvent extends MouseEvent {
+      constructor(type, init = {}) {
+        super(type, init)
+        this.pointerId = init.pointerId ?? 0
+        this.pointerType = init.pointerType ?? ''
+      }
+    }
+  }
+  if (!window.matchMedia) {
+    window.matchMedia = (query) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener() {},
+      removeListener() {},
+      addEventListener() {},
+      removeEventListener() {},
+      dispatchEvent: () => false,
+    })
+  }
+}
+
 // Mock motion to avoid animation issues in tests. `animate` and the motion
 // value hooks stay real (CountUp drives a motion value); a test that needs the
 // reduced-motion branch sets `useReducedMotion`'s return value. The elements

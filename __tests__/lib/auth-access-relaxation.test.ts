@@ -1,4 +1,4 @@
-import { authOptions } from '@/lib/auth'
+import { signInWithPlexToken } from '@/__tests__/helpers/plex-sign-in'
 import { checkUserServerAccess, getPlexUserInfo } from '@/lib/connections/plex'
 import { prisma } from '@/lib/prisma'
 
@@ -17,6 +17,8 @@ jest.mock('@/lib/prisma', () => ({
     },
   },
 }))
+
+jest.mock('@/lib/connections/plex-pin', () => ({ readPin: jest.fn() }))
 
 jest.mock('@/lib/connections/plex', () => ({
   checkUserServerAccess: jest.fn(),
@@ -42,30 +44,6 @@ const mockCheckUserServerAccess = checkUserServerAccess as jest.MockedFunction<
   typeof checkUserServerAccess
 >
 const mockGetPlexUserInfo = getPlexUserInfo as jest.MockedFunction<typeof getPlexUserInfo>
-
-/**
- * Resolve the Plex provider's `authorize` function from the NextAuth options.
- * next-auth normalizes every CredentialsProvider to a top-level `id`/`name` of
- * "credentials", preserving the configured name at `options.name` — so the Plex
- * provider is identified by `options.name === 'Plex'`. `authorize` is available
- * at the top level (with `options.authorize` as a cross-version fallback).
- */
-function getPlexAuthorize() {
-  const provider = authOptions.providers.find(
-    (p) => (p as { options?: { name?: string } }).options?.name === 'Plex'
-  ) as { authorize?: unknown; options?: { authorize?: unknown } } | undefined
-  // Prefer `options.authorize` — that's our raw handler. `provider.authorize`
-  // is next-auth's wrapper, which coerces/validates credentials and would not
-  // invoke our logic with a plain object.
-  const authorize = (provider?.options?.authorize ?? provider?.authorize) as (
-    credentials: Record<string, string> | undefined,
-    req?: unknown
-  ) => Promise<unknown>
-  if (typeof authorize !== 'function') {
-    throw new Error('Plex authorize function not found on authOptions')
-  }
-  return authorize
-}
 
 const PLEX_SERVER = {
   id: 'server-1',
@@ -99,8 +77,6 @@ afterEach(() => {
 })
 
 describe('Plex authorize access relaxation', () => {
-  const authorize = getPlexAuthorize()
-
   beforeEach(() => {
     jest.clearAllMocks()
     disableTestLogin()
@@ -108,7 +84,7 @@ describe('Plex authorize access relaxation', () => {
     mockGetPlexUserInfo.mockResolvedValue({ success: true, data: NON_MEMBER } as never)
   })
 
-  it('throws ACCESS_DENIED for a non-member when stripe is disabled', async () => {
+  it('throws access_denied for a non-member when stripe is disabled', async () => {
     mockCheckUserServerAccess.mockResolvedValue({
       success: true,
       hasAccess: false,
@@ -116,15 +92,15 @@ describe('Plex authorize access relaxation', () => {
     })
     mockPrisma.config.findUnique.mockResolvedValue({ stripeEnabled: false })
 
-    await expect(authorize({ authToken: 'tok' })).rejects.toThrow('ACCESS_DENIED')
+    await expect(signInWithPlexToken('tok')).rejects.toThrow('access_denied')
     expect(mockPrisma.user.create).not.toHaveBeenCalled()
   })
 
-  it('throws ACCESS_DENIED for a non-member when config row is missing', async () => {
+  it('throws access_denied for a non-member when config row is missing', async () => {
     mockCheckUserServerAccess.mockResolvedValue({ success: true, hasAccess: false })
     mockPrisma.config.findUnique.mockResolvedValue(null)
 
-    await expect(authorize({ authToken: 'tok' })).rejects.toThrow('ACCESS_DENIED')
+    await expect(signInWithPlexToken('tok')).rejects.toThrow('access_denied')
   })
 
   it('allows a non-member session when stripe is enabled (creates user)', async () => {
@@ -139,13 +115,13 @@ describe('Plex authorize access relaxation', () => {
       isAdmin: false,
     } as never)
 
-    const result = (await authorize({ authToken: 'tok' })) as { id: string; isAdmin: boolean }
+    const result = (await signInWithPlexToken('tok')) as { id: string; isAdmin: boolean }
 
     expect(result).toMatchObject({ id: 'db-user-99', isAdmin: false })
     expect(mockPrisma.user.create).toHaveBeenCalled()
   })
 
-  it('throws ACCESS_DENIED when the access check fails (API error), regardless of flag', async () => {
+  it('throws access_denied when the access check fails (API error), regardless of flag', async () => {
     mockCheckUserServerAccess.mockResolvedValue({
       success: false,
       hasAccess: false,
@@ -154,7 +130,7 @@ describe('Plex authorize access relaxation', () => {
     // Even with stripe enabled, a failed check must not admit the user.
     mockPrisma.config.findUnique.mockResolvedValue({ stripeEnabled: true })
 
-    await expect(authorize({ authToken: 'tok' })).rejects.toThrow('ACCESS_DENIED')
+    await expect(signInWithPlexToken('tok')).rejects.toThrow('access_denied')
     // Config should not even be consulted for a hard failure.
     expect(mockPrisma.config.findUnique).not.toHaveBeenCalled()
     expect(mockPrisma.user.create).not.toHaveBeenCalled()
@@ -171,7 +147,7 @@ describe('Plex authorize access relaxation', () => {
       isAdmin: false,
     } as never)
 
-    const result = (await authorize({ authToken: 'tok' })) as { id: string }
+    const result = (await signInWithPlexToken('tok')) as { id: string }
 
     expect(result).toMatchObject({ id: 'db-user-1' })
     expect(mockPrisma.config.findUnique).not.toHaveBeenCalled()
@@ -179,8 +155,6 @@ describe('Plex authorize access relaxation', () => {
 })
 
 describe('Plex authorize has no test-token login', () => {
-  const authorize = getPlexAuthorize()
-
   beforeEach(() => {
     jest.clearAllMocks()
     disableTestLogin()
@@ -195,7 +169,7 @@ describe('Plex authorize has no test-token login', () => {
   ])('sends TEST_ADMIN_TOKEN to Plex with E2E_TEST_MODE %s', async (_label, flag) => {
     if (flag) env.E2E_TEST_MODE = flag
 
-    const result = await authorize({ authToken: 'TEST_ADMIN_TOKEN' })
+    const result = await signInWithPlexToken('TEST_ADMIN_TOKEN')
 
     expect(result).toBeNull()
     expect(mockGetPlexUserInfo).toHaveBeenCalledWith('TEST_ADMIN_TOKEN')

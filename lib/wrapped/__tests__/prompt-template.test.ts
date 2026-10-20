@@ -1,16 +1,16 @@
-jest.mock("@/actions/prompts", () => ({
-  getActivePromptTemplate: jest.fn().mockResolvedValue(null),
-}))
+import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 
-import {
-  generateSystemPrompt,
-  generateWrappedPrompt,
-  getAvailablePlaceholders,
-  getDefaultPromptTemplate,
-} from "@/lib/wrapped/prompt-template"
+jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
+
+import { generateWrappedPrompt } from "@/lib/wrapped/prompt-template"
+import { generateSystemPrompt, getAvailablePlaceholders, getDefaultPromptTemplate } from "@/lib/wrapped/prompt-text"
 import { suggestArchetypes } from "@/lib/wrapped/archetype-scoring"
 
 import { buildStatistics } from "./fixtures"
+
+beforeEach(() => {
+  prismaMock.promptTemplate.findFirst.mockResolvedValue(null)
+})
 
 describe("generateWrappedPrompt", () => {
   it("renders the default template with derived-stat placeholders", async () => {

@@ -3,6 +3,7 @@
 import { processJellyfinInvite } from "@/actions/invite"
 import { Alert } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
+import { safeHref } from "@/lib/ui/markdown"
 import { jellyfinInviteCredentialsSchema } from "@/lib/validations/jellyfin"
 import { motion } from "motion/react"
 import { useState } from "react"
@@ -49,14 +50,14 @@ export function JellyfinSignInForm({
     setFormError(null)
     setIsSubmitting(true)
     try {
-      const result = await processJellyfinInvite(inviteCode, credentials.data)
+      const result = await processJellyfinInvite({ code: inviteCode, credentials: credentials.data })
 
-      if (result.success && result.data) {
+      if (result.success) {
         setShowSuccess(true)
-        setJellyfinUrl(result.data.serverUrl || null)
+        setJellyfinUrl(safeHref(result.data.serverUrl))
         onSuccess?.()
-      } else if (!result.success) {
-        onError(result.error || "Failed to create account")
+      } else {
+        onError(result.error)
       }
     } catch (error) {
       onError(error instanceof Error ? error.message : "An unexpected error occurred")

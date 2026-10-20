@@ -3,6 +3,8 @@ import userEvent from '@testing-library/user-event'
 
 // Mock dependencies BEFORE importing components
 
+jest.mock('next-auth', () => ({ getServerSession: jest.fn() }))
+jest.mock('@/lib/auth', () => ({ authOptions: {} }))
 jest.mock('@/actions/invite', () => ({
   getInviteDetails: jest.fn(),
   deleteInvite: jest.fn(),

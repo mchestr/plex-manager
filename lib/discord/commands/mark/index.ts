@@ -58,7 +58,7 @@ import {
   type PlexServerConfig,
 } from "@/lib/connections/plex-config"
 import { applyMark } from "@/lib/discord/media/mark-media"
-import { getMarkTypeLabel } from "@/lib/discord/media/mark-labels"
+import { getMarkTypeLabel, watchStatusNote, type WatchStatusSync } from "@/lib/discord/media/mark-labels"
 import { createLogger } from "@/lib/utils/logger"
 import type {
   ComponentHandler,
@@ -130,12 +130,9 @@ function formatItemDescription(item: PlexMediaItem): string | undefined {
  * Build the confirmation copy shown after a mark is applied.
  * @internal
  */
-function buildConfirmation(item: PlexMediaItem, markType: MarkType, watchedSynced: boolean): string {
-  const watchedNote =
-    markType === MarkType.FINISHED_WATCHING && watchedSynced
-      ? " and marked as watched in Plex"
-      : ""
-  return `✅ Marked "${formatItemLabel(item)}" as **${getMarkTypeLabel(markType)}**${watchedNote}.`
+function buildConfirmation(item: PlexMediaItem, markType: MarkType, watched: WatchStatusSync): string {
+  const note = watchStatusNote(watched)
+  return `✅ Marked "${formatItemLabel(item)}" as **${getMarkTypeLabel(markType)}**.${note ? ` ${note}` : ""}`
 }
 
 /**
@@ -167,7 +164,7 @@ async function markAndConfirm(
   }
 
   await interaction.editReply({
-    content: buildConfirmation(item, markType, result.watchedSynced),
+    content: buildConfirmation(item, markType, result.watched),
   })
 }
 
@@ -327,7 +324,7 @@ async function handleSelect(interaction: MessageComponentInteraction): Promise<v
   })
 
   const content = result.ok
-    ? buildConfirmation(item, pending.markType, result.watchedSynced)
+    ? buildConfirmation(item, pending.markType, result.watched)
     : `Unsupported media type: ${result.mediaType}. Only movies, TV shows, and episodes are supported.`
 
   await select.update({ content, components: [] })
@@ -376,7 +373,7 @@ export const markCommand: SlashCommand = {
     .addSubcommand((sub) =>
       sub
         .setName("finished")
-        .setDescription("Mark as finished watching (also marks watched in Plex)")
+        .setDescription("Mark as finished watching (marks it watched on your Plex account)")
         .addStringOption((option) =>
           option.setName("title").setDescription("Title to search for").setRequired(true)
         )

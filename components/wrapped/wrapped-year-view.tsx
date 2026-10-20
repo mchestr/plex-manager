@@ -2,7 +2,8 @@ import Link from "next/link"
 import { WrappedPageClient } from "@/components/wrapped/wrapped-page-client"
 import { WrappedViewerWrapper } from "@/components/wrapped/wrapped-viewer-wrapper"
 import { readWrappedStatus } from "@/lib/wrapped/data/parse-stored"
-import { memberErrorCopy, readStoredError } from "@/lib/wrapped/generation-errors"
+import { errorCopy } from "@/lib/ui/error-copy"
+import { readStoredError } from "@/lib/wrapped/generation-errors"
 import type { WrappedData } from "@/types/wrapped"
 
 interface WrappedYearViewProps {
@@ -122,7 +123,7 @@ export function WrappedYearView({ userId, year, wrapped, wrappedData, seasonYear
           </svg>
           <h2 className="text-2xl font-bold text-white mb-2">Generation Failed</h2>
           <p data-testid="wrapped-failed-message" className="text-red-300 mb-6">
-            {memberErrorCopy(readStoredError(wrapped.error))}
+            {errorCopy(readStoredError(wrapped.error), { audience: "member" }).description}
           </p>
           {year === seasonYear ? (
             <Link
@@ -160,7 +161,7 @@ export function WrappedYearView({ userId, year, wrapped, wrappedData, seasonYear
         {year === seasonYear ? (
           <>
             <p className="text-slate-400 mb-6">You haven&apos;t generated your {year} Plex Wrapped yet.</p>
-            <Link href="/" className={primaryLinkClass}>
+            <Link href="/" data-testid="wrapped-generate-link" className={primaryLinkClass}>
               Generate Your Wrapped
             </Link>
           </>

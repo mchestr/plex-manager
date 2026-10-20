@@ -92,7 +92,7 @@ describe('RegenerateWrappedButton', () => {
       const user = userEvent.setup({ delay: null })
       jest.spyOn(rewindActions, 'adminRegenerateRewind').mockResolvedValue({
         success: true,
-        alreadyQueued: false,
+        data: { alreadyQueued: false },
       })
 
       renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2024} />)
@@ -129,14 +129,14 @@ describe('RegenerateWrappedButton', () => {
         expect(svg).toBeInTheDocument()
       })
 
-      resolveGenerate!({ success: true, alreadyQueued: false })
+      resolveGenerate!({ success: true, data: { alreadyQueued: false } })
     })
 
     it('should show success state after successful regeneration', async () => {
       const user = userEvent.setup({ delay: null })
       jest.spyOn(rewindActions, 'adminRegenerateRewind').mockResolvedValue({
         success: true,
-        alreadyQueued: false,
+        data: { alreadyQueued: false },
       })
 
       renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} />)
@@ -159,7 +159,7 @@ describe('RegenerateWrappedButton', () => {
       const user = userEvent.setup({ delay: null })
       jest.spyOn(rewindActions, 'adminRegenerateRewind').mockResolvedValue({
         success: true,
-        alreadyQueued: false,
+        data: { alreadyQueued: false },
       })
 
       renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} />)
@@ -191,7 +191,7 @@ describe('RegenerateWrappedButton', () => {
       const user = userEvent.setup({ delay: null })
       jest.spyOn(rewindActions, 'adminRegenerateRewind').mockResolvedValue({
         success: true,
-        alreadyQueued: false,
+        data: { alreadyQueued: false },
       })
 
       renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} onSuccess={mockOnSuccess} />)
@@ -210,7 +210,7 @@ describe('RegenerateWrappedButton', () => {
       const user = userEvent.setup({ delay: null })
       jest.spyOn(rewindActions, 'adminRegenerateRewind').mockResolvedValue({
         success: true,
-        alreadyQueued: false,
+        data: { alreadyQueued: false },
       })
 
       renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} />)
@@ -229,6 +229,7 @@ describe('RegenerateWrappedButton', () => {
       const user = userEvent.setup({ delay: null })
       jest.spyOn(rewindActions, 'adminRegenerateRewind').mockResolvedValue({
         success: false,
+        code: 'INTERNAL',
         error: 'Failed to generate wrapped',
       })
 
@@ -248,6 +249,7 @@ describe('RegenerateWrappedButton', () => {
       const user = userEvent.setup({ delay: null })
       jest.spyOn(rewindActions, 'adminRegenerateRewind').mockResolvedValue({
         success: false,
+        code: 'INTERNAL',
         error: '',
       })
 
@@ -286,7 +288,7 @@ describe('RegenerateWrappedButton', () => {
 
     it('says a run is already in progress, in admin terms (P0.12)', async () => {
       const user = userEvent.setup({ delay: null })
-      jest.spyOn(rewindActions, 'adminRegenerateRewind').mockResolvedValue({ success: true, alreadyQueued: true })
+      jest.spyOn(rewindActions, 'adminRegenerateRewind').mockResolvedValue({ success: true, data: { alreadyQueued: true } })
 
       renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} />)
       await user.click(screen.getByRole('button', { name: /Regenerate wrapped/i }))
@@ -356,7 +358,7 @@ describe('RegenerateWrappedButton', () => {
       const currentYear = new Date().getFullYear()
       jest.spyOn(rewindActions, 'adminRegenerateRewind').mockResolvedValue({
         success: true,
-        alreadyQueued: false,
+        data: { alreadyQueued: false },
       })
 
       renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} />)
@@ -410,7 +412,7 @@ describe('RegenerateWrappedButton', () => {
         expect(screen.getByText('Regenerating...')).toBeInTheDocument()
       })
 
-      resolveGenerate!({ success: true, alreadyQueued: false })
+      resolveGenerate!({ success: true, data: { alreadyQueued: false } })
     })
 
     // P0.14: the menu passes the season year; there is no calendar default,
@@ -418,7 +420,7 @@ describe('RegenerateWrappedButton', () => {
     it('regenerates the season year it is given, also in January', async () => {
       jest.setSystemTime(new Date('2027-01-02T12:00:00Z'))
       const user = userEvent.setup({ delay: null })
-      jest.spyOn(rewindActions, 'adminRegenerateRewind').mockResolvedValue({ success: true, alreadyQueued: false })
+      jest.spyOn(rewindActions, 'adminRegenerateRewind').mockResolvedValue({ success: true, data: { alreadyQueued: false } })
 
       renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} inline={true} />)
       await user.click(screen.getByRole('button', { name: /Regenerate wrapped/i }))
@@ -434,7 +436,7 @@ describe('RegenerateWrappedButton', () => {
       const user = userEvent.setup({ delay: null })
       jest.spyOn(rewindActions, 'adminRegenerateRewind').mockResolvedValue({
         success: true,
-        alreadyQueued: false,
+        data: { alreadyQueued: false },
       })
 
       renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} inline={true} />)
@@ -453,6 +455,7 @@ describe('RegenerateWrappedButton', () => {
       const user = userEvent.setup({ delay: null })
       jest.spyOn(rewindActions, 'adminRegenerateRewind').mockResolvedValue({
         success: false,
+        code: 'INTERNAL',
         error: 'Inline error',
       })
 
@@ -472,7 +475,7 @@ describe('RegenerateWrappedButton', () => {
       const user = userEvent.setup({ delay: null })
       jest.spyOn(rewindActions, 'adminRegenerateRewind').mockResolvedValue({
         success: true,
-        alreadyQueued: false,
+        data: { alreadyQueued: false },
       })
 
       const { container } = renderWithToast(<RegenerateWrappedButton userId="user-1" plexUserId="plex-1" year={2026} inline={true} />)

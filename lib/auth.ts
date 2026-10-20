@@ -1,12 +1,19 @@
 import { createHash } from "node:crypto"
 
+import { getAccessLevel, type AccessLevel } from "@/lib/access"
 import { checkUserServerAccess, getPlexUserInfo } from "@/lib/connections/plex"
+import { waitForInvitedAccess } from "@/lib/connections/plex-access-wait"
+import { readPin } from "@/lib/connections/plex-pin"
 import { getEnv, usesSecureCookies } from "@/lib/env"
+import { redeemPlexInvite } from "@/lib/invites/plex-redemption"
 import { authenticateJellyfin } from "@/lib/jellyfin-auth"
+import { PLEX_PIN_COOKIE, readPinCookie } from "@/lib/plex-pin-cookie"
 import { prisma } from "@/lib/prisma"
 import { isUniqueEmailConflict } from "@/lib/prisma-errors"
 import { consume, reward } from "@/lib/security/rate-limit"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
+import { readCookie } from "@/lib/security/signed-cookie"
+import { SessionRevokedError } from "@/lib/session-revocation"
 import { createLogger } from "@/lib/utils/logger"
 import { NextAuthOptions } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
@@ -14,12 +21,28 @@ import CredentialsProvider from "next-auth/providers/credentials"
 const logger = createLogger("AUTH")
 
 /**
- * How often the JWT callback re-reads a user's admin status from the database.
- * Bounds how long a revoked (or newly granted) admin privilege can lag behind
- * the DB for an already-signed-in session. 5 minutes balances freshness against
- * per-request DB load (only one query per user per interval).
+ * How often the JWT callback re-reads a user's admin status, session version
+ * and disabled flag from the database. Bounds how long a revoked (or newly
+ * granted) privilege, or an ended session, can lag behind the DB for an
+ * already-signed-in session. 5 minutes balances freshness against per-request
+ * DB load (only one query per user per interval).
  */
 const ADMIN_RECHECK_INTERVAL_MS = 5 * 60 * 1000
+
+/**
+ * The member's access level for the session token's `accessLevel` claim, which
+ * `proxy.ts` reads to keep lapsed members on the read-only Rewind pages
+ * (P4.5). `undefined` when the read fails: the proxy then decides nothing and
+ * the `(app)` layout's own check still runs.
+ */
+async function readAccessLevel(userId: string): Promise<AccessLevel | undefined> {
+  try {
+    return await getAccessLevel(userId)
+  } catch (error) {
+    logger.warn("Failed to read the access level for the session token", { userId, error })
+    return undefined
+  }
+}
 
 /**
  * The `auth:jellyfin:user` subject for a submitted username.
@@ -69,6 +92,34 @@ async function writeWithPlexEmail<T>(
   }
 }
 
+/**
+ * The Plex sign-in this browser started: the PIN in its signed `pm-plex-pin`
+ * cookie, and the account token plex.tv issued for that PIN (SEC-11). The
+ * token is read here, on the server, so it never passes through the browser,
+ * and a request without the cookie (another browser, or one whose 15 minutes
+ * ran out) cannot finish anyone's sign-in. Throws a `PlexSignInCode`.
+ */
+async function readPlexSignIn(
+  headers: Record<string, unknown> | undefined
+): Promise<{ authToken: string; inviteCode?: string }> {
+  const cookieHeader = typeof headers?.cookie === "string" ? headers.cookie : undefined
+  const pin = readPinCookie(readCookie(cookieHeader, PLEX_PIN_COOKIE))
+  if (!pin) {
+    logger.warn("auth.plex_pin_missing")
+    throw new Error("plex_pin_expired")
+  }
+
+  const status = await readPin(pin.pinId, pin.code, pin.clientId)
+  if (status.status !== "ready") {
+    logger.warn("auth.plex_pin_not_ready", { status: status.status })
+    throw new Error(status.status === "unavailable" ? "sign_in_failed" : "plex_pin_expired")
+  }
+  return { authToken: status.authToken, inviteCode: pin.inviteCode }
+}
+
+/** Errors the Plex `authorize` passes on to the callback page, which maps them to its codes. */
+const PLEX_SIGN_IN_ERRORS = new Set(["access_denied", "NO_SERVER_CONFIGURED"])
+
 export const authOptions: NextAuthOptions = {
   // NOTE: PrismaAdapter is not compatible with CredentialsProvider
   // We use JWT strategy instead for Plex authentication
@@ -76,18 +127,21 @@ export const authOptions: NextAuthOptions = {
     CredentialsProvider({
       id: "plex",
       name: "Plex",
-      credentials: {
-        authToken: {
-          label: "Plex Auth Token",
-          type: "text",
-        },
-      },
-      async authorize(credentials) {
-        if (!credentials?.authToken) {
-          return null
-        }
+      // Nothing is read from the request body: a token sent there is ignored.
+      credentials: {},
+      async authorize(_credentials, req) {
+        const { authToken, inviteCode } = await readPlexSignIn(req?.headers)
 
-        const { authToken } = credentials
+        // The invite is redeemed here, on the server, with the token plex.tv
+        // issued (P4.12's service check included); it is idempotent per account.
+        if (inviteCode) {
+          const redeemed = await redeemPlexInvite(inviteCode, authToken)
+          if (!redeemed.success) {
+            logger.warn("auth.plex_invite_refused", { code: redeemed.code })
+            const invalid = redeemed.code === "INVITE_INVALID" || redeemed.code === "INVITE_WRONG_SERVICE"
+            throw new Error(invalid ? "invite_invalid" : "sign_in_failed")
+          }
+        }
 
         try {
           // Fetch user info from Plex API
@@ -112,14 +166,15 @@ export const authOptions: NextAuthOptions = {
           // Check if user has access to the configured Plex server
           // Use the server's admin token to check if the user exists in the server's user list
           // Also check if the user is the admin (admin users may not be in the user list)
-          const accessCheck = await checkUserServerAccess(
-            {
-              url: plexServer.url,
-              token: plexServer.token,
-              adminPlexUserId: plexServer.adminPlexUserId,
-            },
-            plexUser.id
-          )
+          // A member who just redeemed an invite waits for plex.tv to propagate the share.
+          const serverConfig = {
+            url: plexServer.url,
+            token: plexServer.token,
+            adminPlexUserId: plexServer.adminPlexUserId,
+          }
+          const accessCheck = inviteCode
+            ? await waitForInvitedAccess(serverConfig, plexUser.id)
+            : await checkUserServerAccess(serverConfig, plexUser.id)
 
           if (!accessCheck.success) {
             // A failed access check (Plex/API error) is always fatal, regardless
@@ -132,7 +187,7 @@ export const authOptions: NextAuthOptions = {
               serverUrl: plexServer.url,
               reason: accessCheck.error || "Access check failed",
             })
-            throw new Error("ACCESS_DENIED")
+            throw new Error("access_denied")
           }
 
           if (!accessCheck.hasAccess) {
@@ -153,7 +208,7 @@ export const authOptions: NextAuthOptions = {
                 serverUrl: plexServer.url,
                 reason: accessCheck.error || "No access to server",
               })
-              throw new Error("ACCESS_DENIED")
+              throw new Error("access_denied")
             }
 
             logger.info("Plex non-member allowed session (Stripe gating enabled)", {
@@ -163,15 +218,23 @@ export const authOptions: NextAuthOptions = {
             })
           }
 
-          // Check if this user is the admin by comparing Plex user IDs
-          const isAdmin = plexServer.adminPlexUserId === plexUser.id
+          // The server owner is always an admin. Everyone else keeps the role
+          // stored on their row, so a role set in the UI survives the next
+          // login (SEC-12): login only ever promotes.
+          const isOwner = plexServer.adminPlexUserId === plexUser.id
 
           // Find or create user
           let dbUser = await prisma.user.findUnique({
             where: { plexUserId: plexUser.id },
           })
 
+          if (dbUser?.disabledAt) {
+            logger.warn("auth.disabled", { userId: dbUser.id, provider: "plex" })
+            return null
+          }
+
           if (!dbUser) {
+            const isAdmin = isOwner
             // Create new user
             dbUser = await writeWithPlexEmail(plexUser, (email) =>
               prisma.user.create({
@@ -194,10 +257,9 @@ export const authOptions: NextAuthOptions = {
               })
             }
           } else {
-            // Check if admin status changed
-            const adminStatusChanged = dbUser.isAdmin !== isAdmin
+            const promotesOwner = isOwner && !dbUser.isAdmin
 
-            // Update existing user info and admin status
+            // Update existing user info; admin status only ever goes up
             const userId = dbUser.id
             dbUser = await writeWithPlexEmail(plexUser, (email) =>
               prisma.user.update({
@@ -207,23 +269,19 @@ export const authOptions: NextAuthOptions = {
                   name: plexUser.username,
                   ...email,
                   image: plexUser.thumb,
-                  isAdmin,
+                  ...(promotesOwner && { isAdmin: true }),
                 },
               })
             )
 
-            // Audit log: Admin privilege change
-            if (adminStatusChanged) {
-              logAuditEvent(
-                isAdmin ? AuditEventType.ADMIN_PRIVILEGE_GRANTED : AuditEventType.ADMIN_PRIVILEGE_REVOKED,
-                dbUser.id,
-                {
-                  targetUserId: dbUser.id,
-                  previousAdminStatus: !isAdmin,
-                  newAdminStatus: isAdmin,
-                  plexUserId: plexUser.id,
-                }
-              )
+            if (promotesOwner) {
+              logAuditEvent(AuditEventType.ADMIN_PRIVILEGE_GRANTED, dbUser.id, {
+                targetUserId: dbUser.id,
+                previousAdminStatus: false,
+                newAdminStatus: true,
+                plexUserId: plexUser.id,
+                reason: "server_owner",
+              })
             }
           }
 
@@ -233,11 +291,12 @@ export const authOptions: NextAuthOptions = {
             name: dbUser.name,
             image: dbUser.image,
             isAdmin: dbUser.isAdmin,
+            sessionVersion: dbUser.sessionVersion,
           }
         } catch (error) {
           logger.error("Error authenticating user", error)
-          // Re-throw access denied errors so they can be handled specially
-          if (error instanceof Error && (error.message === "ACCESS_DENIED" || error.message === "NO_SERVER_CONFIGURED")) {
+          // Re-throw access denied errors so the callback page can show them
+          if (error instanceof Error && PLEX_SIGN_IN_ERRORS.has(error.message)) {
             throw error
           }
           return null
@@ -287,7 +346,11 @@ export const authOptions: NextAuthOptions = {
           await reward("auth:jellyfin:user", usernameSubject)
 
           const jellyfinUser = authResult.data
-          const { isAdmin } = jellyfinUser
+          // Jellyfin has no server owner, so its administrators stay the
+          // promotion source. Login promotes on "admin" and never demotes: app
+          // admins demote members in the UI, and a failed lookup ("unknown")
+          // keeps the stored role (GAP-26).
+          const isJellyfinAdmin = jellyfinUser.adminStatus === "admin"
 
           // Match only by Jellyfin user ID. Jellyfin users can rename
           // themselves to any string, an email address included, so the
@@ -296,7 +359,13 @@ export const authOptions: NextAuthOptions = {
             where: { jellyfinUserId: jellyfinUser.id },
           })
 
+          if (dbUser?.disabledAt) {
+            logger.warn("auth.disabled", { userId: dbUser.id, provider: "jellyfin" })
+            return null
+          }
+
           if (!dbUser) {
+            const isAdmin = isJellyfinAdmin
             dbUser = await prisma.user.create({
               data: {
                 jellyfinUserId: jellyfinUser.id,
@@ -323,31 +392,25 @@ export const authOptions: NextAuthOptions = {
               })
             }
           } else {
-            // Check if admin status changed
-            const adminStatusChanged = dbUser.isAdmin !== isAdmin
+            const promotes = isJellyfinAdmin && !dbUser.isAdmin
 
-            // Update existing user
+            // Update existing user; admin status only ever goes up
             dbUser = await prisma.user.update({
               where: { id: dbUser.id },
               data: {
                 name: jellyfinUser.username,
-                isAdmin,
+                ...(promotes && { isAdmin: true }),
               },
             })
 
-            // Audit log: Admin privilege change
-            if (adminStatusChanged) {
-              logAuditEvent(
-                isAdmin ? AuditEventType.ADMIN_PRIVILEGE_GRANTED : AuditEventType.ADMIN_PRIVILEGE_REVOKED,
-                dbUser.id,
-                {
-                  targetUserId: dbUser.id,
-                  previousAdminStatus: !isAdmin,
-                  newAdminStatus: isAdmin,
-                  jellyfinUserId: jellyfinUser.id,
-                  authService: "jellyfin",
-                }
-              )
+            if (promotes) {
+              logAuditEvent(AuditEventType.ADMIN_PRIVILEGE_GRANTED, dbUser.id, {
+                targetUserId: dbUser.id,
+                previousAdminStatus: false,
+                newAdminStatus: true,
+                jellyfinUserId: jellyfinUser.id,
+                authService: "jellyfin",
+              })
             }
           }
 
@@ -357,6 +420,7 @@ export const authOptions: NextAuthOptions = {
             name: dbUser.name,
             image: dbUser.image,
             isAdmin: dbUser.isAdmin,
+            sessionVersion: dbUser.sessionVersion,
           }
         } catch (error) {
           logger.error("Error authenticating Jellyfin user", error)
@@ -371,6 +435,17 @@ export const authOptions: NextAuthOptions = {
   useSecureCookies: usesSecureCookies(),
   pages: {
     signIn: "/",
+  },
+  logger: {
+    error(code, metadata) {
+      // A revoked session (SEC-10) is expected, and the jwt callback already
+      // logged it as `auth.session_revoked`; next-auth would print its stack
+      // on every request until the cookie is cleared.
+      if (code === "JWT_SESSION_ERROR" && metadata instanceof Error && metadata.name === "SessionRevokedError") {
+        return
+      }
+      logger.error(`next-auth.${code}`, metadata)
+    },
   },
   session: {
     strategy: "jwt",
@@ -410,6 +485,8 @@ export const authOptions: NextAuthOptions = {
         token.email = user.email
         token.picture = user.image
         token.isAdmin = user.isAdmin || false
+        token.sv = user.sessionVersion
+        token.accessLevel = await readAccessLevel(user.id)
         token.checkedAt = Date.now()
         return token
       }
@@ -420,30 +497,51 @@ export const authOptions: NextAuthOptions = {
       // rather than at token expiry.
       const isStale =
         !token.checkedAt || Date.now() - token.checkedAt > ADMIN_RECHECK_INTERVAL_MS
-      if (token.sub && (trigger === "update" || isStale)) {
-        try {
-          const dbUser = await prisma.user.findUnique({
-            where: { id: token.sub },
-            select: { isAdmin: true },
-          })
-          if (dbUser) {
-            if (dbUser.isAdmin !== token.isAdmin) {
-              logger.info("Refreshed admin status from database", {
-                userId: token.sub,
-                previousAdminStatus: token.isAdmin,
-                newAdminStatus: dbUser.isAdmin,
-              })
-            }
-            token.isAdmin = dbUser.isAdmin
-          }
-          token.checkedAt = Date.now()
-        } catch (error) {
-          // On DB error, keep the existing token rather than logging the user
-          // out; the next request will retry the refresh.
-          logger.warn("Failed to refresh admin status in JWT callback", { error })
-        }
+      if (!token.sub || (trigger !== "update" && !isStale)) {
+        return token
       }
 
+      const userId = token.sub
+      let dbUser
+      try {
+        dbUser = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { isAdmin: true, sessionVersion: true, disabledAt: true },
+        })
+      } catch (error) {
+        // On DB error, keep the existing token rather than logging the user
+        // out; the next request will retry the refresh.
+        logger.warn("Failed to refresh admin status in JWT callback", { error })
+        return token
+      }
+
+      // Throwing is how a session ends (SEC-10): next-auth's session route
+      // then clears the cookie and answers `{}`, and getServerSession returns
+      // null. An emptied token would still yield a session object. Tokens
+      // issued before sessionVersion existed carry no `sv` and count as 0.
+      if (!dbUser) {
+        logger.info("auth.session_revoked", { userId, reason: "missing-user" })
+        throw new SessionRevokedError("missing-user")
+      }
+      if (dbUser.disabledAt) {
+        logger.info("auth.session_revoked", { userId, reason: "disabled" })
+        throw new SessionRevokedError("disabled")
+      }
+      if ((token.sv ?? 0) !== dbUser.sessionVersion) {
+        logger.info("auth.session_revoked", { userId, reason: "version-mismatch" })
+        throw new SessionRevokedError("version-mismatch")
+      }
+
+      if (dbUser.isAdmin !== token.isAdmin) {
+        logger.info("Refreshed admin status from database", {
+          userId,
+          previousAdminStatus: token.isAdmin,
+          newAdminStatus: dbUser.isAdmin,
+        })
+      }
+      token.isAdmin = dbUser.isAdmin
+      token.accessLevel = (await readAccessLevel(userId)) ?? token.accessLevel
+      token.checkedAt = Date.now()
       return token
     },
   },

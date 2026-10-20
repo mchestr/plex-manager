@@ -17,12 +17,19 @@ import { z } from "zod"
 
 const logger = createLogger("JELLYFIN_AUTH")
 
+/**
+ * What a sign-in learned about the user's Jellyfin administrator flag.
+ *
+ * @internal
+ */
+export type JellyfinAdminStatus = "admin" | "not-admin" | "unknown"
+
 interface JellyfinAuthResult {
   success: boolean
   data?: {
     id: string
     username: string
-    isAdmin: boolean
+    adminStatus: JellyfinAdminStatus
   }
   error?: string
 }
@@ -127,12 +134,12 @@ export async function authenticateJellyfin(
     }
 
     const { User } = authResult.data
-    const isAdmin = await isJellyfinAdmin(server, User.Id)
+    const adminStatus = await isJellyfinAdmin(server, User.Id)
 
     logger.info("Jellyfin user authenticated successfully", {
       userId: User.Id,
       username: User.Name,
-      isAdmin,
+      adminStatus,
     })
 
     return {
@@ -140,7 +147,7 @@ export async function authenticateJellyfin(
       data: {
         id: User.Id,
         username: User.Name,
-        isAdmin,
+        adminStatus,
       },
     }
   } catch (error) {
@@ -153,49 +160,39 @@ export async function authenticateJellyfin(
 }
 
 /**
- * Whether a Jellyfin user is an administrator of `server`, the row the
- * password was just checked against: either the admin user recorded for the
- * server, or a user whose Jellyfin policy has IsAdministrator.
+ * Whether a Jellyfin user administers `server`, the row the password was
+ * just checked against, from their Jellyfin policy's IsAdministrator.
+ *
+ * `'unknown'` when the lookup fails (a timeout, a 5xx) or the policy carries
+ * no flag: the sign-in then keeps the role it already stores (GAP-26).
  *
  * @internal
  * @param server - The sign-in server from `getJellyfinLoginServer`
  * @param jellyfinUserId - Jellyfin user ID
- * @returns True if user is admin; false when the check fails
  */
 async function isJellyfinAdmin(
-  server: Pick<JellyfinServer, "url" | "apiKey" | "adminUserId">,
+  server: Pick<JellyfinServer, "url" | "apiKey">,
   jellyfinUserId: string
-): Promise<boolean> {
+): Promise<JellyfinAdminStatus> {
+  let userResult: Awaited<ReturnType<typeof getJellyfinUserById>>
   try {
-    // First check: Does the user ID match the server's admin user ID?
-    if (server.adminUserId && jellyfinUserId === server.adminUserId) {
-      logger.debug("User is admin (matches server admin ID)", { userId: jellyfinUserId })
-      return true
-    }
-
-    // Second check: Fetch user details and check Policy.IsAdministrator
-    const userResult = await getJellyfinUserById(
-      { url: server.url, apiKey: server.apiKey },
-      jellyfinUserId
-    )
-
-    if (!userResult.success || !userResult.data) {
-      logger.warn("Failed to fetch Jellyfin user for admin check", {
-        userId: jellyfinUserId,
-        error: userResult.error,
-      })
-      return false
-    }
-
-    const isAdmin = userResult.data.Policy?.IsAdministrator || false
-    logger.debug("User admin status determined from policy", {
-      userId: jellyfinUserId,
-      isAdmin,
-    })
-
-    return isAdmin
+    userResult = await getJellyfinUserById({ url: server.url, apiKey: server.apiKey }, jellyfinUserId)
   } catch (error) {
     logger.error("Error checking Jellyfin admin status", error, { userId: jellyfinUserId })
-    return false
+    return "unknown"
   }
+
+  if (!userResult.success || !userResult.data) {
+    logger.warn("Failed to fetch Jellyfin user for admin check", {
+      userId: jellyfinUserId,
+      error: userResult.error,
+    })
+    return "unknown"
+  }
+
+  const flag = userResult.data.Policy?.IsAdministrator
+  if (typeof flag !== "boolean") {
+    return "unknown"
+  }
+  return flag ? "admin" : "not-admin"
 }

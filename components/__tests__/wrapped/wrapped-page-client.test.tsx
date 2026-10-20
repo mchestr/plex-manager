@@ -23,8 +23,9 @@ jest.mock('@/components/generator/wrapped-generating-animation', () => ({
 
 const getStatus = jest.mocked(getRewindStatus)
 
-function status(state: RewindStatus['state'], hasCompleted = false): RewindStatus {
-  return { state, errorCode: null, startedAt: null, hasCompleted }
+/** What getRewindStatus returns for a status. */
+function status(state: RewindStatus['state'], hasCompleted = false) {
+  return { success: true as const, data: { state, errorCode: null, startedAt: null, hasCompleted } }
 }
 
 async function advance(ms: number) {

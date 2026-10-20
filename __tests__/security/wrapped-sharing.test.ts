@@ -197,7 +197,7 @@ describe('Wrapped Sharing Security', () => {
       const data = await response.json()
 
       expect(response.status).toBe(400)
-      expect(data.error).toBe('Share token is required')
+      expect(data.code).toBe('VALIDATION_ERROR')
     })
 
     it('records no visit: the share page records each view once (RWP-09)', async () => {
@@ -215,12 +215,12 @@ describe('Wrapped Sharing Security', () => {
       expect(prisma.wrappedShareVisit.create).not.toHaveBeenCalled()
     })
 
-    it('answers a malformed token with the same 404, without a database call', async () => {
+    it('answers a malformed token with 400, without a database call', async () => {
       const response = await getSharedWrapped(createMockRequest(), { params: Promise.resolve({ token: 'valid-share-token' }) })
       const data = await response.json()
 
-      expect(response.status).toBe(404)
-      expect(data.error).toBe('Wrapped not found')
+      expect(response.status).toBe(400)
+      expect(data.code).toBe('VALIDATION_ERROR')
       expect(prisma.plexWrapped.findUnique).not.toHaveBeenCalled()
     })
 

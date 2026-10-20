@@ -15,7 +15,7 @@ jest.mock('@/actions/prompts', () => ({
   updatePromptTemplate: jest.fn(),
 }))
 
-jest.mock('@/lib/wrapped/prompt-template', () => ({
+jest.mock('@/lib/wrapped/prompt-text', () => ({
   getAvailablePlaceholders: jest.fn(() => [
     { placeholder: '{{userName}}', description: 'User name' },
     { placeholder: '{{year}}', description: 'Current year' },
@@ -533,7 +533,8 @@ describe('PromptTemplateEditor', () => {
       fireEvent.click(submitButton)
 
       await waitFor(() => {
-        expect(updatePromptTemplate).toHaveBeenCalledWith(mockTemplate.id, expect.objectContaining({
+        expect(updatePromptTemplate).toHaveBeenCalledWith(expect.objectContaining({
+          id: mockTemplate.id,
           name: 'Updated Name',
         }))
       })

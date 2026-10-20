@@ -82,3 +82,83 @@ export function sanitizeDiscordResponse(content: string) {
 
   return { content: sanitized, redacted }
 }
+
+/** Discord rejects a message longer than this many characters. */
+export const DISCORD_MESSAGE_LIMIT = 2000
+
+const CUT_SHORT_NOTE = "\n\n(Reply cut short.)"
+const FENCE = "```"
+const FENCE_CLOSE = `\n${FENCE}`
+
+/** The opening line of the code fence still open at the end of `text`, or null. */
+function openFence(text: string): string | null {
+  let open: string | null = null
+  for (const line of text.split("\n")) {
+    const trimmed = line.trim()
+    if (trimmed.startsWith(FENCE)) open = open === null ? trimmed : null
+  }
+  return open
+}
+
+/** Where to cut `text` so the piece fits in `budget`: paragraph, then line, sentence, word. */
+function findCut(text: string, budget: number): number {
+  const window = text.slice(0, budget + 1)
+  const floor = Math.floor(budget / 2)
+  for (const separator of ["\n\n", "\n"]) {
+    const at = window.lastIndexOf(separator, budget)
+    if (at > floor) return at
+  }
+  for (let at = budget; at > floor; at--) {
+    if (/\s/.test(window[at] ?? "") && /[.!?]/.test(window[at - 1] ?? "")) return at
+  }
+  for (let at = budget; at > 0; at--) {
+    if (/\s/.test(window[at] ?? "")) return at
+  }
+  // No boundary at all: hard cut, but never between the halves of a surrogate pair
+  const code = text.charCodeAt(budget - 1)
+  return code >= 0xd800 && code <= 0xdbff ? budget - 1 : budget
+}
+
+/**
+ * Fit an assistant reply into Discord messages of at most `limit` characters.
+ *
+ * Splits on paragraph, then line, sentence and word boundaries. A code fence
+ * open at a cut is closed at the end of that chunk and reopened (with its
+ * language) at the start of the next. When the text needs more than
+ * `maxChunks` messages, the last chunk ends with "(Reply cut short.)".
+ *
+ * @example
+ * ```ts
+ * fitDiscordContent("short answer") // => ["short answer"]
+ * fitDiscordContent("word ".repeat(600)).length // => 2
+ * ```
+ */
+export function fitDiscordContent(
+  text: string,
+  { limit = DISCORD_MESSAGE_LIMIT, maxChunks = 3 }: { limit?: number; maxChunks?: number } = {}
+): string[] {
+  const chunks: string[] = []
+  let rest = text
+  let reopen = ""
+  while (rest.length > 0) {
+    const prefix = reopen ? `${reopen}\n` : ""
+    if (prefix.length + rest.length <= limit) {
+      chunks.push(prefix + rest)
+      break
+    }
+    const last = chunks.length === maxChunks - 1
+    const budget = limit - prefix.length - FENCE_CLOSE.length - (last ? CUT_SHORT_NOTE.length : 0)
+    const cut = findCut(rest, Math.max(budget, 1))
+    const piece = prefix + rest.slice(0, cut).trimEnd()
+    const fence = openFence(piece)
+    const chunk = fence === null ? piece : piece + FENCE_CLOSE
+    if (last) {
+      chunks.push(chunk + CUT_SHORT_NOTE)
+      break
+    }
+    chunks.push(chunk)
+    reopen = fence ?? ""
+    rest = rest.slice(cut).replace(/^(\n+| )/, "")
+  }
+  return chunks
+}

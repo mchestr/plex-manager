@@ -9,7 +9,7 @@ import { DEFAULT_OPENAI_MODEL, isLLMProviderId } from "@/lib/llm/provider-preset
 import { estimateCostUsd, type LLMProviderId } from "@/lib/llm/models"
 import { assembleWrappedData } from "@/lib/wrapped/assemble-wrapped"
 import { parseWrappedLLMOutput } from "@/lib/wrapped/parse-llm-output"
-import { generateSystemPrompt } from "@/lib/wrapped/prompt-template"
+import { generateSystemPrompt } from "@/lib/wrapped/prompt-text"
 import { WrappedData, WrappedStatistics } from "@/types/wrapped"
 import { PromptTemplate } from "@/lib/generated/prisma/client"
 import { useEffect, useMemo, useState } from "react"
@@ -189,12 +189,12 @@ export function WrappedPlayground({ templates, initialTemplateId }: WrappedPlayg
         templateString: selectedTemplate.template,
       })
 
-      if (result.success && result.renderedPrompt) {
+      if (result.success) {
         setResult({
-          renderedPrompt: result.renderedPrompt,
+          renderedPrompt: result.data.renderedPrompt,
         })
       } else {
-        setSaveError(result.error || "Failed to render template")
+        setSaveError(result.error)
       }
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "Failed to render template")
@@ -223,14 +223,10 @@ export function WrappedPlayground({ templates, initialTemplateId }: WrappedPlayg
         maxTokens: testConfig.maxTokens,
       })
 
-      if (result.success && result.renderedPrompt) {
-        setResult({
-          renderedPrompt: result.renderedPrompt,
-          llmResponse: result.llmResponse,
-          tokenUsage: result.tokenUsage,
-        })
+      if (result.success) {
+        setResult(result.data)
       } else {
-        setSaveError(result.error || "Failed to generate response")
+        setSaveError(result.error)
       }
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "Failed to generate response")

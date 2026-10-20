@@ -1,4 +1,6 @@
 import { expect, test } from './fixtures/auth';
+import { signInAs } from './fixtures/session';
+import { createE2EPrismaClient } from './helpers/prisma';
 import { verifyPageAccessible, waitForAdminContent, waitForAdminPageReady, WAIT_TIMEOUTS } from './helpers/test-utils';
 
 test.describe('Admin Functionality', () => {
@@ -107,6 +109,56 @@ test.describe('Admin Functionality', () => {
 
       // Verify it changed back
       await expect(jellyfinToggle).toHaveText(buttonText!, { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+    }
+  });
+
+  // P4.7 (SEC-10): disabling a member ends their session at the next recheck.
+  // A member of its own, so the shared seeded users stay enabled.
+  test('disabling a member signs them out on their next navigation', async ({ adminPage, browser, baseURL }) => {
+    const memberId = `p47-disabled-member-${Date.now()}`;
+    const prisma = createE2EPrismaClient();
+    await prisma.user.create({
+      data: {
+        id: memberId,
+        name: 'Disabled Member',
+        email: `${memberId}@example.com`,
+        primaryAuthService: 'plex',
+        onboardingStatus: { plex: true, jellyfin: false },
+      },
+    });
+
+    // A first request refreshes the cookie's `checkedAt`, so the session that
+    // proves the minted cookie works is a separate one.
+    const probeContext = await browser.newContext();
+    const memberContext = await browser.newContext();
+    try {
+      await signInAs(probeContext, baseURL!, memberId);
+      const probe = await probeContext.request.get('/api/auth/session');
+      expect(await probe.json()).toMatchObject({ user: { id: memberId } });
+
+      // The member's minted session has a stale `checkedAt`, so their next
+      // navigation rechecks the row.
+      await signInAs(memberContext, baseURL!, memberId);
+      const memberPage = await memberContext.newPage();
+
+      await adminPage.goto(`/admin/users/${memberId}`);
+      await waitForAdminPageReady(adminPage);
+      await expect(adminPage.getByTestId('admin-user-disable-button')).toHaveCount(1);
+      await adminPage.getByTestId('admin-user-disable-button').click();
+      await adminPage.getByTestId('admin-user-disable-confirm').click();
+      await expect(adminPage.getByTestId('admin-user-disabled-badge')).toBeVisible({
+        timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION,
+      });
+
+      await memberPage.goto('/');
+      await expect(memberPage.getByTestId('sign-in-button')).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+      const session = await memberPage.request.get('/api/auth/session');
+      expect(await session.json()).toEqual({});
+    } finally {
+      await probeContext.close();
+      await memberContext.close();
+      await prisma.user.delete({ where: { id: memberId } });
+      await prisma.$disconnect();
     }
   });
 });

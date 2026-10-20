@@ -1,10 +1,15 @@
 /**
+ * @jest-environment node
+ */
+
+/**
  * Tests for lib/queue/jobs/stripe.ts - the STRIPE_WEBHOOK job processor.
  *
- * Establishes the BullMQ processor-as-plain-function test pattern: the
- * processor is invoked directly with a fixture `Job`, and BullMQ/Redis are not
- * touched. `stripe.events.retrieve` and Prisma are mocked; each event type's DB
- * mutation is asserted and the absence of Plex effects is verified.
+ * The processor is invoked directly with a fixture `Job`; BullMQ/Redis are not
+ * touched. A fake Stripe (`__tests__/helpers/stripe-fakes.ts`) returns event
+ * snapshots and live subscriptions, and an in-memory store stands behind the
+ * `Subscription` and `StripeEvent` delegates, so the tests follow the row
+ * through several events: reordered, resent and failed ones (P4.10).
  */
 
 import type { Job } from 'bullmq'
@@ -15,12 +20,24 @@ import {
   getStripeProcessor,
 } from '@/lib/queue/jobs/stripe'
 import { getStripe } from '@/lib/stripe/client'
-import { prisma } from '@/lib/prisma'
 import { addJob } from '@/lib/queue/client'
+import { logAuditEvent } from '@/lib/security/audit-log'
 import { SubscriptionStatus } from '@/lib/generated/prisma/client'
 import { JOB_TYPES } from '@/lib/queue/types'
 import { mockReset } from 'jest-mock-extended'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
+import { buildConfig } from '@/__tests__/helpers/factories'
+import {
+  checkoutSession,
+  createFakeStripe,
+  emptyStripeStore,
+  installStripeStore,
+  stripeEvent,
+  stripeSubscription,
+  subscriptionRow,
+  type FakeStripe,
+  type StripeStore,
+} from '@/__tests__/helpers/stripe-fakes'
 
 jest.mock('@/lib/stripe/client', () => ({
   getStripe: jest.fn(),
@@ -30,9 +47,12 @@ jest.mock('@/lib/queue/client', () => ({
   addJob: jest.fn(),
 }))
 
-jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+jest.mock('@/lib/security/audit-log', () => ({
+  AuditEventType: { STRIPE_EVENT_FAILED: 'STRIPE_EVENT_FAILED', SESSIONS_REVOKED: 'SESSIONS_REVOKED' },
+  logAuditEvent: jest.fn(),
+}))
 
-beforeEach(() => mockReset(prismaMock))
+jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 
 jest.mock('@/lib/utils/logger', () => ({
   createLogger: () => ({
@@ -43,289 +63,330 @@ jest.mock('@/lib/utils/logger', () => ({
   }),
 }))
 
-const mockEventsRetrieve = jest.fn()
-const mockSubscriptionsRetrieve = jest.fn()
-
-const mockStripe = {
-  events: { retrieve: mockEventsRetrieve },
-  subscriptions: { retrieve: mockSubscriptionsRetrieve },
-}
-
-/** Build a minimal fixture Job for the processor. */
-function makeJob(eventId: string): Job {
+/** A fixture Job; `attemptsMade` counts earlier failed attempts, of three. */
+function makeJob(eventId: string, attemptsMade = 0): Job {
   return {
-    id: 'job-1',
+    id: eventId,
     data: { eventId },
-    attemptsMade: 0,
+    attemptsMade,
+    opts: { attempts: 3 },
   } as unknown as Job
 }
 
-// 2024-01-01T00:00:00Z in epoch seconds.
+const T0 = 1_760_000_000
 const PERIOD_END_EPOCH = 1704067200
-const PERIOD_END_DATE = new Date(PERIOD_END_EPOCH * 1000)
 
-describe('processStripeWebhook', () => {
-  beforeEach(() => {
-    jest.clearAllMocks()
-    ;(getStripe as jest.Mock).mockResolvedValue(mockStripe)
-    ;(prisma.stripeEvent.upsert as jest.Mock).mockResolvedValue({})
-    ;(prisma.subscription.upsert as jest.Mock).mockResolvedValue({})
-    ;(prisma.subscription.updateMany as jest.Mock).mockResolvedValue({ count: 1 })
-    ;(prisma.subscription.findFirst as jest.Mock).mockResolvedValue({ userId: 'user-1' })
-    ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({ stripeEnabled: true })
-    ;(addJob as jest.Mock).mockResolvedValue('job-grant')
-  })
+let stripe: FakeStripe
+let store: StripeStore
 
+function grants() {
+  return (addJob as jest.Mock).mock.calls.filter(([type]) => type === JOB_TYPES.PLEX_ACCESS_GRANT)
+}
+
+function revokes() {
+  return (addJob as jest.Mock).mock.calls.filter(([type]) => type === JOB_TYPES.PLEX_ACCESS_REVOKE)
+}
+
+/** Registers an event with the fake Stripe and runs it through the processor. */
+async function deliver(event: ReturnType<typeof stripeEvent>, attemptsMade = 0) {
+  stripe.events.set(event.id, event)
+  return processStripeWebhook(makeJob(event.id, attemptsMade))
+}
+
+beforeEach(() => {
+  jest.clearAllMocks()
+  mockReset(prismaMock)
+  stripe = createFakeStripe()
+  store = emptyStripeStore()
+  installStripeStore(prismaMock, store)
+  ;(getStripe as jest.Mock).mockResolvedValue(stripe.client)
+  ;(addJob as jest.Mock).mockResolvedValue('job')
+  prismaMock.config.findUnique.mockResolvedValue(buildConfig({ stripeEnabled: true, stripePriceIds: ['price_1'] }))
+})
+
+describe('processStripeWebhook: recording (SEC-40)', () => {
   it('throws when Stripe is not configured', async () => {
     ;(getStripe as jest.Mock).mockResolvedValue(null)
-    await expect(processStripeWebhook(makeJob('evt_1'))).rejects.toThrow(
-      'Stripe is not configured'
-    )
+    await expect(processStripeWebhook(makeJob('evt_1'))).rejects.toThrow('Stripe is not configured')
   })
 
-  it('records the event for idempotency and performs no Plex effects', async () => {
-    mockEventsRetrieve.mockResolvedValue({
-      id: 'evt_unhandled',
-      type: 'customer.updated',
-      data: { object: {} },
+  it('leaves processedAt null on a fresh upsert, and sets it only after the handler succeeds', async () => {
+    store.subscriptions.push(subscriptionRow({ status: SubscriptionStatus.ACTIVE }))
+    stripe.subscriptions.set('sub_1', stripeSubscription({ status: 'past_due' }))
+    let processedDuringHandler: Date | null | undefined
+    ;(stripe.client.subscriptions.retrieve as jest.Mock).mockImplementationOnce(async () => {
+      processedDuringHandler = store.events.get('evt_upd')?.processedAt
+      return stripe.subscriptions.get('sub_1')
     })
 
-    const result = await processStripeWebhook(makeJob('evt_unhandled'))
+    await deliver(stripeEvent('evt_upd', 'customer.subscription.updated', { id: 'sub_1' }, T0))
 
-    expect(prisma.stripeEvent.upsert).toHaveBeenCalledWith({
-      where: { id: 'evt_unhandled' },
-      create: { id: 'evt_unhandled', type: 'customer.updated' },
-      update: {},
+    expect(store.events.has('evt_upd')).toBe(true)
+    expect(processedDuringHandler).toBeNull()
+    expect(store.events.get('evt_upd')).toMatchObject({ attempts: 1, lastError: null, processedAt: expect.any(Date) })
+  })
+
+  it('a failing handler leaves processedAt null and stores a code, not the message', async () => {
+    store.subscriptions.push(subscriptionRow())
+    stripe.failSubscriptionReads(new Error('connect ECONNREFUSED 10.0.0.5:443'))
+
+    await expect(
+      deliver(stripeEvent('evt_fail', 'customer.subscription.updated', { id: 'sub_1' }, T0))
+    ).rejects.toThrow('ECONNREFUSED')
+
+    const record = store.events.get('evt_fail')
+    expect(record?.processedAt).toBeNull()
+    expect(record?.lastError).toBe('HANDLER_FAILED')
+    // Not the last attempt yet: no failure audit.
+    expect(logAuditEvent).not.toHaveBeenCalled()
+  })
+
+  it('stores a Stripe error type as the code', async () => {
+    store.subscriptions.push(subscriptionRow())
+    stripe.failSubscriptionReads(Object.assign(new Error('Stripe is down'), { type: 'StripeConnectionError' }))
+
+    await expect(deliver(stripeEvent('evt_s', 'customer.subscription.updated', { id: 'sub_1' }, T0))).rejects.toThrow()
+
+    expect(store.events.get('evt_s')?.lastError).toBe('StripeConnectionError')
+  })
+
+  it('audits STRIPE_EVENT_FAILED after the last attempt', async () => {
+    store.subscriptions.push(subscriptionRow())
+    stripe.failSubscriptionReads(new Error('boom'))
+
+    await expect(
+      deliver(stripeEvent('evt_last', 'customer.subscription.updated', { id: 'sub_1' }, T0), 2)
+    ).rejects.toThrow('boom')
+
+    expect(logAuditEvent).toHaveBeenCalledWith('STRIPE_EVENT_FAILED', 'system', {
+      eventId: 'evt_last',
+      code: 'HANDLER_FAILED',
     })
-    // Unhandled event type is ignored gracefully.
+  })
+
+  it('a retry after a failure applies the event and clears lastError', async () => {
+    store.subscriptions.push(subscriptionRow({ status: SubscriptionStatus.ACTIVE }))
+    stripe.subscriptions.set('sub_1', stripeSubscription({ status: 'unpaid' }))
+    const event = stripeEvent('evt_retry', 'customer.subscription.updated', { id: 'sub_1' }, T0)
+    stripe.failSubscriptionReads(new Error('boom'))
+    await expect(deliver(event)).rejects.toThrow()
+
+    stripe.failSubscriptionReads(null)
+    await deliver(event, 1)
+
+    expect(store.events.get('evt_retry')).toMatchObject({ attempts: 2, lastError: null, processedAt: expect.any(Date) })
+    expect(store.subscriptions[0].status).toBe(SubscriptionStatus.UNPAID)
+    expect(revokes()).toHaveLength(1)
+  })
+
+  it('records an unhandled event type as processed, with no subscription write', async () => {
+    const result = await deliver(stripeEvent('evt_unhandled', 'customer.updated', {}, T0))
+
     expect(result.handled).toBe(false)
-    expect(prisma.subscription.upsert).not.toHaveBeenCalled()
-    expect(prisma.subscription.updateMany).not.toHaveBeenCalled()
-    // No Plex grant/revoke enqueue is wired in this task.
+    expect(store.events.get('evt_unhandled')?.processedAt).toEqual(expect.any(Date))
+    expect(prismaMock.subscription.updateMany).not.toHaveBeenCalled()
   })
 
-  it('activates a subscription on checkout.session.completed', async () => {
-    mockEventsRetrieve.mockResolvedValue({
-      id: 'evt_checkout',
-      type: 'checkout.session.completed',
-      data: {
-        object: {
-          id: 'cs_1',
-          client_reference_id: 'user-123',
-          customer: 'cus_1',
-          subscription: 'sub_1',
-        },
-      },
-    })
-    mockSubscriptionsRetrieve.mockResolvedValue({
-      id: 'sub_1',
-      current_period_end: PERIOD_END_EPOCH,
-      items: { data: [{ price: { id: 'price_1' } }] },
-    })
+  it('the same event twice produces one grant', async () => {
+    stripe.subscriptions.set('sub_1', stripeSubscription())
+    const event = stripeEvent('evt_checkout', 'checkout.session.completed', checkoutSession(), T0)
 
-    const result = await processStripeWebhook(makeJob('evt_checkout'))
+    await deliver(event)
+    await deliver(event)
 
-    expect(mockSubscriptionsRetrieve).toHaveBeenCalledWith('sub_1')
-    expect(prisma.subscription.upsert).toHaveBeenCalledWith({
-      where: { userId: 'user-123' },
-      create: {
-        userId: 'user-123',
+    expect(grants()).toHaveLength(1)
+    expect(store.events.get('evt_checkout')?.attempts).toBe(2)
+  })
+})
+
+describe('processStripeWebhook: checkout (SEC-41)', () => {
+  beforeEach(() => {
+    stripe.subscriptions.set('sub_1', stripeSubscription({ periodEnd: PERIOD_END_EPOCH }))
+  })
+
+  it('creates an ACTIVE row from the live subscription and enqueues the grant', async () => {
+    const result = await deliver(stripeEvent('evt_checkout', 'checkout.session.completed', checkoutSession(), T0))
+
+    expect(stripe.client.subscriptions.retrieve).toHaveBeenCalledWith('sub_1')
+    expect(store.subscriptions).toEqual([
+      expect.objectContaining({
+        userId: 'user-1',
         status: SubscriptionStatus.ACTIVE,
         stripeCustomerId: 'cus_1',
         stripeSubscriptionId: 'sub_1',
         priceId: 'price_1',
-        currentPeriodEnd: PERIOD_END_DATE,
-      },
-      update: {
-        status: SubscriptionStatus.ACTIVE,
-        stripeCustomerId: 'cus_1',
-        stripeSubscriptionId: 'sub_1',
-        priceId: 'price_1',
-        currentPeriodEnd: PERIOD_END_DATE,
-        cancelAtPeriodEnd: false,
-        canceledAt: null,
-      },
-    })
-    // Stripe is enabled: a Plex access grant is enqueued with a jobId keyed by
-    // user AND event id — redelivery of the same event dedupes, but a later
-    // grant (e.g. resubscribe) gets a distinct job.
+        currentPeriodEnd: new Date(PERIOD_END_EPOCH * 1000),
+        stripeEventAt: new Date(T0 * 1000),
+      }),
+    ])
     expect(addJob).toHaveBeenCalledWith(
       JOB_TYPES.PLEX_ACCESS_GRANT,
-      { userId: 'user-123' },
-      { jobId: `${JOB_TYPES.PLEX_ACCESS_GRANT}:user-123:evt_checkout` }
+      { userId: 'user-1' },
+      { jobId: `${JOB_TYPES.PLEX_ACCESS_GRANT}:user-1:evt_checkout` }
     )
     expect(result.handled).toBe(true)
+  })
+
+  it('reactivates a CANCELED row and grants again', async () => {
+    store.subscriptions.push(
+      subscriptionRow({ status: SubscriptionStatus.CANCELED, stripeSubscriptionId: 'sub_old', stripeEventAt: new Date((T0 - 100) * 1000) })
+    )
+
+    await deliver(stripeEvent('evt_resub', 'checkout.session.completed', checkoutSession(), T0))
+
+    expect(store.subscriptions[0]).toMatchObject({ status: SubscriptionStatus.ACTIVE, stripeSubscriptionId: 'sub_1', canceledAt: null })
+    expect(grants()).toHaveLength(1)
+  })
+
+  it('handles async_payment_succeeded the same way, and async_payment_failed as a no-op', async () => {
+    await deliver(stripeEvent('evt_async_fail', 'checkout.session.async_payment_failed', checkoutSession({ payment_status: 'unpaid' }), T0))
+    expect(store.subscriptions).toHaveLength(0)
+
+    await deliver(stripeEvent('evt_async_ok', 'checkout.session.async_payment_succeeded', checkoutSession(), T0 + 1))
+    expect(store.subscriptions[0]?.status).toBe(SubscriptionStatus.ACTIVE)
+    expect(grants()).toHaveLength(1)
+  })
+
+  it.each([
+    ['payment mode', checkoutSession({ mode: 'payment' })],
+    ['an unpaid session', checkoutSession({ payment_status: 'unpaid' })],
+    ['no client_reference_id', checkoutSession({ client_reference_id: null })],
+  ])('ignores %s: no row, no grant', async (_label, session) => {
+    await deliver(stripeEvent('evt_bad', 'checkout.session.completed', session, T0))
+
+    expect(store.subscriptions).toHaveLength(0)
+    expect(addJob).not.toHaveBeenCalled()
+    expect(store.events.get('evt_bad')?.processedAt).toEqual(expect.any(Date))
+  })
+
+  it('ignores a subscription whose metadata names another user', async () => {
+    stripe.subscriptions.set('sub_1', stripeSubscription({ appUserId: 'someone-else' }))
+
+    await deliver(stripeEvent('evt_meta', 'checkout.session.completed', checkoutSession(), T0))
+
+    expect(store.subscriptions).toHaveLength(0)
+    expect(addJob).not.toHaveBeenCalled()
+  })
+
+  it('ignores a price that is not in Config.stripePriceIds', async () => {
+    stripe.subscriptions.set('sub_1', stripeSubscription({ priceId: 'price_foreign' }))
+
+    await deliver(stripeEvent('evt_price', 'checkout.session.completed', checkoutSession(), T0))
+
+    expect(store.subscriptions).toHaveLength(0)
+    expect(addJob).not.toHaveBeenCalled()
   })
 
   it('records the subscription but skips the grant enqueue when Stripe is disabled', async () => {
-    ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({ stripeEnabled: false })
-    mockEventsRetrieve.mockResolvedValue({
-      id: 'evt_checkout_disabled',
-      type: 'checkout.session.completed',
-      data: {
-        object: {
-          id: 'cs_d',
-          client_reference_id: 'user-disabled',
-          customer: 'cus_d',
-          subscription: null,
-        },
-      },
-    })
+    prismaMock.config.findUnique.mockResolvedValue(buildConfig({ stripeEnabled: false, stripePriceIds: ['price_1'] }))
 
-    const result = await processStripeWebhook(makeJob('evt_checkout_disabled'))
+    await deliver(stripeEvent('evt_off', 'checkout.session.completed', checkoutSession(), T0))
 
-    // Status is still recorded...
-    expect(prisma.subscription.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { userId: 'user-disabled' } })
-    )
-    // ...but no Plex grant job is enqueued (FR-29).
+    expect(store.subscriptions[0]?.status).toBe(SubscriptionStatus.ACTIVE)
     expect(addJob).not.toHaveBeenCalled()
-    expect(result.handled).toBe(true)
+  })
+})
+
+describe('processStripeWebhook: newest state only (SEC-37, BP-14)', () => {
+  it('writes the live status, period end and cancelAtPeriodEnd on customer.subscription.updated', async () => {
+    store.subscriptions.push(subscriptionRow())
+    stripe.subscriptions.set('sub_1', stripeSubscription({ cancelAtPeriodEnd: true, periodEnd: PERIOD_END_EPOCH }))
+
+    await deliver(stripeEvent('evt_upd', 'customer.subscription.updated', { id: 'sub_1', status: 'past_due' }, T0))
+
+    // The event's snapshot said past_due; the live subscription is active.
+    expect(store.subscriptions[0]).toMatchObject({
+      status: SubscriptionStatus.ACTIVE,
+      cancelAtPeriodEnd: true,
+      currentPeriodEnd: new Date(PERIOD_END_EPOCH * 1000),
+      stripeEventAt: new Date(T0 * 1000),
+    })
+    // ACTIVE to ACTIVE is no transition: no grant, and a pending cancellation keeps access.
+    expect(addJob).not.toHaveBeenCalled()
   })
 
-  it('enqueues the grant with an event-keyed jobId so retried events dedupe', async () => {
-    mockEventsRetrieve.mockResolvedValue({
-      id: 'evt_checkout_retry',
-      type: 'checkout.session.completed',
-      data: {
-        object: {
-          id: 'cs_r',
-          client_reference_id: 'user-retry',
-          customer: 'cus_r',
-          subscription: null,
-        },
-      },
-    })
+  it('a deleted followed by a delayed updated(active) leaves the row CANCELED, with no grant', async () => {
+    store.subscriptions.push(subscriptionRow())
+    stripe.subscriptions.set('sub_1', stripeSubscription({ status: 'canceled', canceledAt: T0 }))
 
-    await processStripeWebhook(makeJob('evt_checkout_retry'))
-    await processStripeWebhook(makeJob('evt_checkout_retry'))
+    await deliver(stripeEvent('evt_deleted', 'customer.subscription.deleted', { id: 'sub_1' }, T0 + 60))
+    expect(store.subscriptions[0]).toMatchObject({ status: SubscriptionStatus.CANCELED, canceledAt: new Date(T0 * 1000) })
+    expect(revokes()).toHaveLength(1)
 
-    // Both deliveries carry the same event id, so the jobId is identical and
-    // BullMQ collapses them into a single grant.
-    expect(addJob).toHaveBeenCalledTimes(2)
-    expect(addJob).toHaveBeenNthCalledWith(
-      1,
-      JOB_TYPES.PLEX_ACCESS_GRANT,
-      { userId: 'user-retry' },
-      { jobId: `${JOB_TYPES.PLEX_ACCESS_GRANT}:user-retry:evt_checkout_retry` }
+    // The older update arrives late; even if a read raced to "active", it is stale.
+    stripe.subscriptions.set('sub_1', stripeSubscription({ status: 'active' }))
+    await deliver(stripeEvent('evt_late', 'customer.subscription.updated', { id: 'sub_1', status: 'active' }, T0))
+
+    expect(store.subscriptions[0].status).toBe(SubscriptionStatus.CANCELED)
+    expect(grants()).toHaveLength(0)
+    expect(store.events.get('evt_late')?.processedAt).toEqual(expect.any(Date))
+  })
+
+  it('a resent updated(active) after deleted reads the live CANCELED state', async () => {
+    store.subscriptions.push(subscriptionRow())
+    stripe.subscriptions.set('sub_1', stripeSubscription({ status: 'canceled' }))
+
+    await deliver(stripeEvent('evt_deleted', 'customer.subscription.deleted', { id: 'sub_1' }, T0))
+    await deliver(stripeEvent('evt_updated', 'customer.subscription.updated', { id: 'sub_1', status: 'active' }, T0 + 5))
+
+    expect(store.subscriptions[0].status).toBe(SubscriptionStatus.CANCELED)
+    expect(grants()).toHaveLength(0)
+  })
+
+  it('a payment_failed after deleted leaves the row CANCELED', async () => {
+    store.subscriptions.push(subscriptionRow())
+    stripe.subscriptions.set('sub_1', stripeSubscription({ status: 'canceled' }))
+
+    await deliver(stripeEvent('evt_deleted', 'customer.subscription.deleted', { id: 'sub_1' }, T0 + 60))
+    await deliver(stripeEvent('evt_failed', 'invoice.payment_failed', { id: 'in_1', subscription: 'sub_1' }, T0))
+    expect(store.subscriptions[0].status).toBe(SubscriptionStatus.CANCELED)
+
+    // A newer dunning event reads the live, still-canceled subscription too.
+    await deliver(stripeEvent('evt_failed_2', 'invoice.payment_failed', { id: 'in_2', subscription: 'sub_1' }, T0 + 120))
+    expect(store.subscriptions[0].status).toBe(SubscriptionStatus.CANCELED)
+  })
+
+  it('marks PAST_DUE on invoice.payment_failed during dunning, keeping access', async () => {
+    store.subscriptions.push(subscriptionRow())
+    stripe.subscriptions.set('sub_1', stripeSubscription({ status: 'past_due' }))
+
+    await deliver(
+      stripeEvent('evt_failed', 'invoice.payment_failed', { id: 'in_1', parent: { subscription_details: { subscription: 'sub_1' } } }, T0)
     )
-    expect(addJob).toHaveBeenNthCalledWith(
-      2,
-      JOB_TYPES.PLEX_ACCESS_GRANT,
-      { userId: 'user-retry' },
-      { jobId: `${JOB_TYPES.PLEX_ACCESS_GRANT}:user-retry:evt_checkout_retry` }
-    )
-  })
 
-  it('resolves the app user from metadata.appUserId when client_reference_id is absent', async () => {
-    mockEventsRetrieve.mockResolvedValue({
-      id: 'evt_checkout2',
-      type: 'checkout.session.completed',
-      data: {
-        object: {
-          id: 'cs_2',
-          client_reference_id: null,
-          metadata: { appUserId: 'user-meta' },
-          customer: 'cus_2',
-          subscription: null,
-        },
-      },
-    })
-
-    await processStripeWebhook(makeJob('evt_checkout2'))
-
-    expect(mockSubscriptionsRetrieve).not.toHaveBeenCalled()
-    expect(prisma.subscription.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { userId: 'user-meta' },
-      })
-    )
-  })
-
-  it('skips upsert when no app user id can be resolved', async () => {
-    mockEventsRetrieve.mockResolvedValue({
-      id: 'evt_checkout3',
-      type: 'checkout.session.completed',
-      data: {
-        object: { id: 'cs_3', client_reference_id: null, customer: 'cus_3' },
-      },
-    })
-
-    const result = await processStripeWebhook(makeJob('evt_checkout3'))
-
-    expect(prisma.subscription.upsert).not.toHaveBeenCalled()
-    expect(result.handled).toBe(true)
-  })
-
-  it('syncs status, period, and cancelAtPeriodEnd on customer.subscription.updated', async () => {
-    mockEventsRetrieve.mockResolvedValue({
-      id: 'evt_updated',
-      type: 'customer.subscription.updated',
-      data: {
-        object: {
-          id: 'sub_1',
-          status: 'active',
-          cancel_at_period_end: true,
-          current_period_end: PERIOD_END_EPOCH,
-        },
-      },
-    })
-
-    await processStripeWebhook(makeJob('evt_updated'))
-
-    expect(prisma.subscription.updateMany).toHaveBeenCalledWith({
-      where: { stripeSubscriptionId: 'sub_1' },
-      data: {
-        status: SubscriptionStatus.ACTIVE,
-        currentPeriodEnd: PERIOD_END_DATE,
-        cancelAtPeriodEnd: true,
-      },
-    })
-  })
-
-  it('marks the subscription CANCELED on customer.subscription.deleted', async () => {
-    mockEventsRetrieve.mockResolvedValue({
-      id: 'evt_deleted',
-      type: 'customer.subscription.deleted',
-      data: { object: { id: 'sub_1' } },
-    })
-
-    await processStripeWebhook(makeJob('evt_deleted'))
-
-    expect(prisma.subscription.updateMany).toHaveBeenCalledWith({
-      where: { stripeSubscriptionId: 'sub_1' },
-      data: {
-        status: SubscriptionStatus.CANCELED,
-        canceledAt: expect.any(Date),
-      },
-    })
-  })
-
-  it('marks the subscription PAST_DUE on invoice.payment_failed', async () => {
-    mockEventsRetrieve.mockResolvedValue({
-      id: 'evt_failed',
-      type: 'invoice.payment_failed',
-      data: { object: { id: 'in_1', subscription: 'sub_1' } },
-    })
-
-    await processStripeWebhook(makeJob('evt_failed'))
-
-    expect(prisma.subscription.updateMany).toHaveBeenCalledWith({
-      where: { stripeSubscriptionId: 'sub_1' },
-      data: { status: SubscriptionStatus.PAST_DUE },
-    })
+    expect(store.subscriptions[0].status).toBe(SubscriptionStatus.PAST_DUE)
+    expect(addJob).not.toHaveBeenCalled()
   })
 
   it('skips payment_failed handling when no subscription id is present', async () => {
-    mockEventsRetrieve.mockResolvedValue({
-      id: 'evt_failed2',
-      type: 'invoice.payment_failed',
-      data: { object: { id: 'in_2' } },
-    })
+    await deliver(stripeEvent('evt_failed2', 'invoice.payment_failed', { id: 'in_2' }, T0))
 
-    await processStripeWebhook(makeJob('evt_failed2'))
+    expect(prismaMock.subscription.updateMany).not.toHaveBeenCalled()
+  })
 
-    expect(prisma.subscription.updateMany).not.toHaveBeenCalled()
+  it('re-grants on a recovery from UNPAID, but not on PAST_DUE to ACTIVE', async () => {
+    store.subscriptions.push(subscriptionRow({ status: SubscriptionStatus.UNPAID }))
+    stripe.subscriptions.set('sub_1', stripeSubscription({ status: 'active' }))
+
+    await deliver(stripeEvent('evt_recovered', 'customer.subscription.updated', { id: 'sub_1' }, T0))
+    expect(addJob).toHaveBeenCalledWith(
+      JOB_TYPES.PLEX_ACCESS_GRANT,
+      { userId: 'user-1' },
+      { jobId: `${JOB_TYPES.PLEX_ACCESS_GRANT}:user-1:evt_recovered` }
+    )
+
+    store.subscriptions[0].status = SubscriptionStatus.PAST_DUE
+    await deliver(stripeEvent('evt_paid', 'customer.subscription.updated', { id: 'sub_1' }, T0 + 1))
+    expect(grants()).toHaveLength(1)
+  })
+
+  it('skips an event for a subscription with no local row', async () => {
+    stripe.subscriptions.set('sub_unknown', stripeSubscription({ id: 'sub_unknown', status: 'canceled' }))
+
+    await deliver(stripeEvent('evt_orphan', 'customer.subscription.deleted', { id: 'sub_unknown' }, T0))
+
+    expect(addJob).not.toHaveBeenCalled()
+    expect(store.events.get('evt_orphan')?.processedAt).toEqual(expect.any(Date))
   })
 })
 

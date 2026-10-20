@@ -6,11 +6,16 @@ import { mockReset } from 'jest-mock-extended'
 
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 import { buildLLMUsage } from '@/__tests__/helpers/factories'
+import { addSpend } from '@/lib/llm/budget'
 import { recordUsage } from '@/lib/llm/usage'
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+jest.mock('@/lib/llm/budget', () => ({ addSpend: jest.fn() }))
 
-beforeEach(() => mockReset(prismaMock))
+beforeEach(() => {
+  mockReset(prismaMock)
+  jest.mocked(addSpend).mockClear()
+})
 
 const usage = { inputTokens: 3000, cachedInputTokens: 1024, outputTokens: 900, reasoningTokens: 300 }
 
@@ -80,5 +85,31 @@ describe('recordUsage', () => {
     await expect(
       recordUsage({ attribution: { userId: 'user-1' }, provider: 'openai', modelId: 'gpt-4o', usage, cost: 0, outcome: 'ok' })
     ).resolves.toBeUndefined()
+  })
+
+  it('adds an assistant call\'s cost to today\'s cached spend', async () => {
+    prismaMock.lLMUsage.create.mockResolvedValue(buildLLMUsage())
+
+    await recordUsage({
+      attribution: { userId: 'user-1', chatConversationId: 'conv-1' },
+      provider: 'openai',
+      modelId: 'gpt-4o',
+      usage,
+      cost: 0.004,
+      outcome: 'content-filter',
+    })
+
+    expect(prismaMock.lLMUsage.create.mock.calls[0][0].data).toMatchObject({ outcome: 'content-filter', cost: 0.004 })
+    expect(addSpend).toHaveBeenCalledWith('user-1', 0.004)
+  })
+
+  it('leaves the assistant spend alone for Rewind calls and failed writes', async () => {
+    prismaMock.lLMUsage.create.mockResolvedValue(buildLLMUsage())
+    await recordUsage({ attribution: { userId: 'user-1', generationId: 'gen-1' }, provider: 'openai', modelId: 'gpt-4o', usage, cost: 0.1, outcome: 'ok' })
+
+    prismaMock.lLMUsage.create.mockRejectedValue(new Error('db down'))
+    await recordUsage({ attribution: { userId: 'user-1', chatConversationId: 'conv-1' }, provider: 'openai', modelId: 'gpt-4o', usage, cost: 0.1, outcome: 'ok' })
+
+    expect(addSpend).not.toHaveBeenCalled()
   })
 })

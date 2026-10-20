@@ -42,8 +42,9 @@ const toast = { showError: mockShowError, showInfo: mockShowInfo }
 const getStatus = jest.mocked(getRewindStatus)
 const requestGeneration = jest.mocked(requestRewindGeneration)
 
-function status(state: RewindStatus['state'], extra: Partial<RewindStatus> = {}): RewindStatus {
-  return { state, errorCode: null, startedAt: null, hasCompleted: false, ...extra }
+/** What getRewindStatus returns for a status. */
+function status(state: RewindStatus['state'], extra: Partial<RewindStatus> = {}) {
+  return { success: true as const, data: { state, errorCode: null, startedAt: null, hasCompleted: false, ...extra } }
 }
 
 function renderCard(props: Partial<Parameters<typeof WrappedCard>[0]> = {}) {
@@ -169,7 +170,7 @@ describe('WrappedCard generation requests', () => {
   it('requests the season year and follows the run until it completes', async () => {
     const replies = [status('none'), status('queued'), status('running')]
     getStatus.mockImplementation(async () => replies.shift() ?? status('completed', { hasCompleted: true }))
-    requestGeneration.mockResolvedValue({ success: true, alreadyQueued: false })
+    requestGeneration.mockResolvedValue({ success: true, data: { alreadyQueued: false } })
 
     await clickGenerate()
 
@@ -184,7 +185,7 @@ describe('WrappedCard generation requests', () => {
 
   it('follows the run another tab started', async () => {
     getStatus.mockResolvedValueOnce(status('none')).mockResolvedValue(status('running'))
-    requestGeneration.mockResolvedValue({ success: true, alreadyQueued: true })
+    requestGeneration.mockResolvedValue({ success: true, data: { alreadyQueued: true } })
 
     await clickGenerate()
 

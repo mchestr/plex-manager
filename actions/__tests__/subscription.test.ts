@@ -129,6 +129,19 @@ describe('createCheckoutSession', () => {
     expect(params).not.toHaveProperty('customer_email')
   })
 
+  it('reuses the existing Stripe customer instead of prefilling the email (SEC-39)', async () => {
+    const stripe = makeStripeMock()
+    stripe.checkout.sessions.create.mockResolvedValue({ id: 'cs_test_4', url: 'u' })
+    mockGetStripe.mockResolvedValue(stripe)
+    mockUserFindUnique.mockResolvedValue({ email: 'user@test.com', subscription: { stripeCustomerId: 'cus_existing' } })
+
+    await createCheckoutSession('user-123', 'price_month')
+
+    const params = stripe.checkout.sessions.create.mock.calls[0][0]
+    expect(params.customer).toBe('cus_existing')
+    expect(params).not.toHaveProperty('customer_email')
+  })
+
   it('returns null when Stripe is unconfigured', async () => {
     mockGetStripe.mockResolvedValue(null)
 
@@ -147,9 +160,9 @@ describe('startCheckout', () => {
   it('returns an error when unauthenticated', async () => {
     mockGetServerSession.mockResolvedValue(null)
 
-    const result = await startCheckout('price_month')
+    const result = await startCheckout({ priceId: 'price_month' })
 
-    expect(result).toEqual({ error: expect.any(String) })
+    expect(result).toMatchObject({ success: false, error: expect.any(String) })
     expect(mockGetOfferedPrices).not.toHaveBeenCalled()
   })
 
@@ -166,9 +179,43 @@ describe('startCheckout', () => {
     mockGetStripe.mockResolvedValue(stripe)
     mockUserFindUnique.mockResolvedValue({ email: 'user@test.com' })
 
-    const result = await startCheckout('price_month')
+    const result = await startCheckout({ priceId: 'price_month' })
 
-    expect(result).toEqual({ url: 'https://checkout.stripe.com/c/pay/cs_test_3' })
+    expect(result).toEqual({ success: true, data: { url: 'https://checkout.stripe.com/c/pay/cs_test_3' } })
+  })
+
+  it.each(['ACTIVE', 'PAST_DUE'])('refuses a member whose subscription is %s with ALREADY_SUBSCRIBED (SEC-39)', async (status) => {
+    mockGetServerSession.mockResolvedValue(userSession)
+    mockGetOfferedPrices.mockResolvedValue([
+      { priceId: 'price_month', amount: 500, currency: 'usd', interval: 'month', productName: 'Plex' },
+    ])
+    const stripe = makeStripeMock()
+    mockGetStripe.mockResolvedValue(stripe)
+    mockUserFindUnique.mockResolvedValue({ email: 'user@test.com', subscription: { status } })
+
+    const result = await startCheckout({ priceId: 'price_month' })
+
+    expect(result).toMatchObject({ success: false, code: 'ALREADY_SUBSCRIBED' })
+    expect(stripe.checkout.sessions.create).not.toHaveBeenCalled()
+  })
+
+  it('lets a CANCELED member check out again', async () => {
+    mockGetServerSession.mockResolvedValue(userSession)
+    mockGetOfferedPrices.mockResolvedValue([
+      { priceId: 'price_month', amount: 500, currency: 'usd', interval: 'month', productName: 'Plex' },
+    ])
+    const stripe = makeStripeMock()
+    stripe.checkout.sessions.create.mockResolvedValue({ id: 'cs_again', url: 'https://checkout.stripe.com/again' })
+    mockGetStripe.mockResolvedValue(stripe)
+    mockUserFindUnique.mockResolvedValue({
+      email: 'user@test.com',
+      subscription: { status: 'CANCELED', stripeCustomerId: 'cus_existing' },
+    })
+
+    const result = await startCheckout({ priceId: 'price_month' })
+
+    expect(result).toEqual({ success: true, data: { url: 'https://checkout.stripe.com/again' } })
+    expect(stripe.checkout.sessions.create.mock.calls[0][0].customer).toBe('cus_existing')
   })
 
   it('rejects a price that is not in the offered set without creating a session', async () => {
@@ -179,9 +226,9 @@ describe('startCheckout', () => {
     const stripe = makeStripeMock()
     mockGetStripe.mockResolvedValue(stripe)
 
-    const result = await startCheckout('price_evil')
+    const result = await startCheckout({ priceId: 'price_evil' })
 
-    expect(result).toEqual({ error: expect.any(String) })
+    expect(result).toMatchObject({ success: false, error: expect.any(String) })
     expect('url' in result).toBe(false)
     expect(stripe.checkout.sessions.create).not.toHaveBeenCalled()
   })
@@ -190,9 +237,9 @@ describe('startCheckout', () => {
     mockGetServerSession.mockResolvedValue(userSession)
     mockGetOfferedPrices.mockResolvedValue([])
 
-    const result = await startCheckout('price_month')
+    const result = await startCheckout({ priceId: 'price_month' })
 
-    expect(result).toEqual({ error: expect.any(String) })
+    expect(result).toMatchObject({ success: false, error: expect.any(String) })
     // No session attempt when nothing is offered.
     expect(mockGetStripe).not.toHaveBeenCalled()
   })
@@ -206,9 +253,9 @@ describe('startCheckout', () => {
     mockGetStripe.mockResolvedValue(stripe)
     mockUserFindUnique.mockResolvedValue({ email: null })
 
-    const result = await startCheckout('price_month')
+    const result = await startCheckout({ priceId: 'price_month' })
 
-    expect(result).toEqual({ error: expect.stringContaining('no email address') })
+    expect(result).toMatchObject({ success: false, error: expect.stringContaining('no email address') })
     expect(stripe.checkout.sessions.create).not.toHaveBeenCalled()
   })
 
@@ -222,9 +269,9 @@ describe('startCheckout', () => {
     mockGetStripe.mockResolvedValue(stripe)
     mockUserFindUnique.mockResolvedValue({ email: 'user@test.com' })
 
-    const result = await startCheckout('price_month')
+    const result = await startCheckout({ priceId: 'price_month' })
 
-    expect(result).toEqual({ error: expect.any(String) })
+    expect(result).toMatchObject({ success: false, error: expect.any(String) })
   })
 
   it('returns an error (does not throw) when checkout creation fails', async () => {
@@ -237,9 +284,9 @@ describe('startCheckout', () => {
     mockGetStripe.mockResolvedValue(stripe)
     mockUserFindUnique.mockResolvedValue({ email: 'user@test.com' })
 
-    const result = await startCheckout('price_month')
+    const result = await startCheckout({ priceId: 'price_month' })
 
-    expect(result).toEqual({ error: expect.any(String) })
+    expect(result).toMatchObject({ success: false, error: expect.any(String) })
   })
 })
 
@@ -253,7 +300,7 @@ describe('openBillingPortal', () => {
 
     const result = await openBillingPortal()
 
-    expect(result).toEqual({ error: expect.any(String) })
+    expect(result).toMatchObject({ success: false, error: expect.any(String) })
     expect(mockSubscriptionFindUnique).not.toHaveBeenCalled()
     expect(mockGetStripe).not.toHaveBeenCalled()
   })
@@ -270,7 +317,7 @@ describe('openBillingPortal', () => {
 
     const result = await openBillingPortal()
 
-    expect(result).toEqual({ url: 'https://billing.stripe.com/session/bps_1' })
+    expect(result).toEqual({ success: true, data: { url: 'https://billing.stripe.com/session/bps_1' } })
     expect(stripe.billingPortal.sessions.create).toHaveBeenCalledWith(
       expect.objectContaining({
         customer: 'cus_abc',
@@ -285,7 +332,7 @@ describe('openBillingPortal', () => {
 
     const result = await openBillingPortal()
 
-    expect(result).toEqual({ error: expect.any(String) })
+    expect(result).toMatchObject({ success: false, error: expect.any(String) })
     // No Stripe call attempted when there is nothing to manage.
     expect(mockGetStripe).not.toHaveBeenCalled()
   })
@@ -296,7 +343,7 @@ describe('openBillingPortal', () => {
 
     const result = await openBillingPortal()
 
-    expect(result).toEqual({ error: expect.any(String) })
+    expect(result).toMatchObject({ success: false, error: expect.any(String) })
     expect(mockGetStripe).not.toHaveBeenCalled()
   })
 
@@ -307,7 +354,7 @@ describe('openBillingPortal', () => {
 
     const result = await openBillingPortal()
 
-    expect(result).toEqual({ error: expect.any(String) })
+    expect(result).toMatchObject({ success: false, error: expect.any(String) })
   })
 
   it('returns an error when the created portal session has no URL', async () => {
@@ -319,7 +366,7 @@ describe('openBillingPortal', () => {
 
     const result = await openBillingPortal()
 
-    expect(result).toEqual({ error: expect.any(String) })
+    expect(result).toMatchObject({ success: false, error: expect.any(String) })
   })
 
   it('returns an error (does not throw) when portal creation fails', async () => {
@@ -331,6 +378,6 @@ describe('openBillingPortal', () => {
 
     const result = await openBillingPortal()
 
-    expect(result).toEqual({ error: expect.any(String) })
+    expect(result).toMatchObject({ success: false, error: expect.any(String) })
   })
 })

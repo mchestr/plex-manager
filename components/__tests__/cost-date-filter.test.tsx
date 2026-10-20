@@ -40,8 +40,8 @@ describe('CostDateFilter', () => {
     it('should render date filter with start and end date inputs', () => {
       render(<CostDateFilter />)
 
-      expect(screen.getByText('Start Date')).toBeInTheDocument()
-      expect(screen.getByText('End Date')).toBeInTheDocument()
+      expect(screen.getByText('Start date')).toBeInTheDocument()
+      expect(screen.getByText('End date')).toBeInTheDocument()
       expect(screen.getByText('Quick Filters:')).toBeInTheDocument()
     })
 
@@ -364,8 +364,8 @@ describe('CostDateFilter', () => {
     it('should have labels for date inputs', () => {
       render(<CostDateFilter />)
 
-      expect(screen.getByText('Start Date')).toBeInTheDocument()
-      expect(screen.getByText('End Date')).toBeInTheDocument()
+      expect(screen.getByText('Start date')).toBeInTheDocument()
+      expect(screen.getByText('End date')).toBeInTheDocument()
     })
 
     it('should have date input fields', () => {

@@ -1,6 +1,6 @@
 # Visual regression
 
-Full-page screenshots of 20 key screens, compared on every run against the
+Full-page screenshots of 20 key screens and the primitives sheet, compared on every run against the
 baselines committed in `__screenshots__/`. They exist so that every styling
 change shows up as a reviewed image diff. **An unexplained diff is a
 regression**: fix the code, do not update the baseline.
@@ -12,10 +12,11 @@ regression**: fix the code, do not update the baseline.
 | `member.visual.spec.ts` | sign-in (signed-out `/`), home, onboarding step 2, invite valid and expired, `/subscribe`, `/discord/link`, `/auth/denied`, the stored v2 Rewind at `/wrapped` |
 | `admin.visual.spec.ts` | users, users with Plex down, user detail, settings, invites, queues, LLM usage, prompts; a 404 and an error state |
 | `setup.visual.spec.ts` | setup wizard step 3 |
+| `primitives.visual.spec.ts` | the `/dev/ui` primitives sheet (P3.4), dark and light; the web server sets `ENABLE_DEV_UI=1` |
 
 Each screen is taken at 1440x900 (`visual-desktop`, `visual-setup-desktop`)
 and at 390x844 with a 2x phone screen (`visual-mobile`,
-`visual-setup-mobile`): 40 images. The setup projects depend on the
+`visual-setup-mobile`): 44 images. The setup projects depend on the
 `setup-wizard` project, because reopening setup sends every other page to
 `/setup`.
 
@@ -39,10 +40,6 @@ and at 390x844 with a 2x phone screen (`visual-mobile`,
   (absolute dates), and `screenshot.css` hides anything marked
   `data-visual-mask` (the Node.js version, the Rewind auto-advance progress
   fill). Give a new absolute date a `*-timestamp` test id.
-
-`screenshot.css` also undoes `html, body { height: 100%; overflow-x: hidden }`
-so full-page shots are not cut off at the viewport; drop that block when P3.1
-deletes the rule.
 
 ## Running the suite
 
@@ -86,7 +83,7 @@ workflow, so the workflow pushes with, in order of preference:
    contents write on this repository only. Same effect.
 3. **Neither.** The workflow pushes with `GITHUB_TOKEN` and then dispatches
    `build.yml` on the branch, so the checks with the same job names land on
-   the new SHA (Docker Build only runs on pull requests, so it does not). If
+   the new SHA (Image Smoke Test only runs on pull requests, so it does not). If
    that is not enough, push an empty commit
    (`git commit --allow-empty -m "ci: rerun checks"`) or close and reopen the
    pull request by hand.

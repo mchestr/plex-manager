@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { createLogger } from "@/lib/utils/logger"
 import { MarkType } from "@/lib/generated/prisma/client"
 import { applyMark } from "@/lib/discord/media/mark-media"
-import { getMarkTypeLabel } from "@/lib/discord/media/mark-labels"
+import { getMarkTypeLabel, watchStatusNote } from "@/lib/discord/media/mark-labels"
 
 const logger = createLogger("CHATBOT_MEDIA_MARKING")
 
@@ -64,7 +64,7 @@ export async function executeMediaMarkingTool(
             : item.title
         const yearDisplay = item.year ? ` (${item.year})` : ""
 
-        return `Successfully marked "${titleDisplay}${yearDisplay}" as finished watching and updated Plex watch status.`
+        return `Marked "${titleDisplay}${yearDisplay}" as finished watching. ${watchStatusNote(result.watched)}`
       } catch (error) {
         logger.error("Error marking media as finished", error, { userId, title: args.title })
         return `Error marking media as finished: ${error instanceof Error ? error.message : "Unknown error"}`

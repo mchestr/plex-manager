@@ -42,6 +42,7 @@ import {
   SlashCommandBuilder,
 } from "discord.js"
 import type { DiscordCommandType } from "@/lib/generated/prisma"
+import { DISCORD_MESSAGE_LIMIT, fitDiscordContent } from "@/lib/discord/chat-safety"
 import { clearDiscordChat, handleDiscordChat } from "@/lib/discord/services"
 import { createLogger } from "@/lib/utils/logger"
 import type { InteractionContext, SlashCommand } from "./registry"
@@ -94,6 +95,12 @@ async function handleAsk(ctx: InteractionContext): Promise<void> {
     return
   }
 
+  // A message limit or spend cap: say when it resets, never "couldn't reach"
+  if (response.refusal) {
+    await interaction.editReply({ content: response.refusal })
+    return
+  }
+
   if (!response.success || !response.message?.content) {
     logger.error("Assistant chat failed", undefined, {
       discordUserId,
@@ -107,8 +114,13 @@ async function handleAsk(ctx: InteractionContext): Promise<void> {
     return
   }
 
+  // One ephemeral reply: the answer and the note must fit in one message (SEC-51)
+  const [answer] = fitDiscordContent(response.message.content, {
+    limit: DISCORD_MESSAGE_LIMIT - CONTINUE_IN_DM_NOTE.length,
+    maxChunks: 1,
+  })
   await interaction.editReply({
-    content: `${response.message.content}${CONTINUE_IN_DM_NOTE}`,
+    content: `${answer}${CONTINUE_IN_DM_NOTE}`,
   })
 }
 

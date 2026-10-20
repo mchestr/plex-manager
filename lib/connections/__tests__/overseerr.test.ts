@@ -97,18 +97,19 @@ describe("testOverseerrConnection", () => {
 
 describe("submitOverseerrRequest", () => {
   const payload = { mediaType: "movie" as const, mediaId: 603 }
+  const member = { overseerrUserId: 7 }
 
   it("reports a title that is already available without posting", async () => {
     mockFetch.mockResolvedValueOnce(respond(200, { mediaInfo: { status: 5, requests: [] } }))
 
-    expect(await submitOverseerrRequest(config, payload)).toEqual({ success: true, status: "already_available" })
+    expect(await submitOverseerrRequest(config, payload, member)).toEqual({ success: true, status: "already_available" })
     expect(mockFetch).toHaveBeenCalledTimes(1)
   })
 
   it("reports a pending title as already requested, with its request id", async () => {
     mockFetch.mockResolvedValueOnce(respond(200, { mediaInfo: { status: 2, requests: [{ id: 42 }] } }))
 
-    expect(await submitOverseerrRequest(config, payload)).toEqual({
+    expect(await submitOverseerrRequest(config, payload, member)).toEqual({
       success: true,
       requestId: 42,
       status: "already_requested",
@@ -118,7 +119,7 @@ describe("submitOverseerrRequest", () => {
   it("posts a request for a title Overseerr does not know", async () => {
     mockFetch.mockResolvedValueOnce(respond(404)).mockResolvedValueOnce(respond(201, { id: 77 }))
 
-    const result = await submitOverseerrRequest(config, { ...payload, mediaType: "tv", seasons: [1, 2], is4k: false })
+    const result = await submitOverseerrRequest(config, { ...payload, mediaType: "tv", seasons: [1, 2], is4k: false }, member)
 
     expect(result).toEqual({ success: true, requestId: 77, status: "created" })
     const [url, init] = mockFetch.mock.calls[1]
@@ -135,7 +136,7 @@ describe("submitOverseerrRequest", () => {
   it("treats HTTP 409 as already requested", async () => {
     mockFetch.mockResolvedValueOnce(respond(200, { mediaInfo: null })).mockResolvedValueOnce(respond(409))
 
-    expect(await submitOverseerrRequest(config, payload)).toEqual({ success: true, status: "already_requested" })
+    expect(await submitOverseerrRequest(config, payload, member)).toEqual({ success: true, status: "already_requested" })
   })
 
   it("fails with a fixed message, never the upstream body", async () => {
@@ -143,7 +144,7 @@ describe("submitOverseerrRequest", () => {
       .mockResolvedValueOnce(respond(404))
       .mockResolvedValueOnce(respond(500, { message: "database at postgres://secret failed" }))
 
-    expect(await submitOverseerrRequest(config, payload)).toEqual({
+    expect(await submitOverseerrRequest(config, payload, member)).toEqual({
       success: false,
       error: "Overseerr returned HTTP 500",
       status: "failed",

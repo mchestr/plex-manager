@@ -138,7 +138,7 @@ export async function setJellyfinUserPolicy(
     const policy: JellyfinUpdateUserPolicyRequest = {
       ...currentPolicy,
       IsAdministrator: false,
-      IsDisabled: false,
+      IsDisabled: settings.isDisabled ?? false,
       EnableRemoteAccess: settings.enableRemoteAccess ?? true,
       EnableContentDownloading: settings.allowDownloads ?? false,
       EnableAudioPlaybackTranscoding: true,

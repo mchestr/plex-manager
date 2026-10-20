@@ -3,10 +3,6 @@ import { MotionConfig } from "motion/react"
 
 import { Providers } from "@/lib/providers"
 
-jest.mock("next-auth/react", () => ({
-  SessionProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}))
-
 describe("Providers", () => {
   it("applies the OS reduced-motion setting app-wide", () => {
     render(

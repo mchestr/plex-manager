@@ -1,4 +1,3 @@
-import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures/auth';
 import { createE2EPrismaClient } from './helpers/prisma';
 import { WAIT_TIMEOUTS } from './helpers/test-utils';
@@ -7,9 +6,6 @@ import { WAIT_TIMEOUTS } from './helpers/test-utils';
  * P1.1 (UI-01): /discord/link is the page every Discord nudge points at. It
  * says linking is unavailable while the integration is off, and offers the
  * Discord OAuth connect link once it is on.
- *
- * While React streams the page, a hidden copy of it sits in the `S:0`
- * container for a moment, so the assertions look only at visible elements.
  */
 
 const CONNECT_URL = '/discord/connect?redirect=%2Fdiscord%2Flink';
@@ -25,10 +21,6 @@ type IntegrationFields = {
   clientSecret: string | null;
   serverInviteCode: string | null;
 };
-
-function visibleByTestId(page: Page, testId: string) {
-  return page.getByTestId(testId).filter({ visible: true });
-}
 
 async function writeIntegration(data: IntegrationFields) {
   const prisma = createE2EPrismaClient();
@@ -76,7 +68,7 @@ test.describe('Discord link page', () => {
 
     await regularUserPage.goto('/discord/link');
 
-    await expect(visibleByTestId(regularUserPage, 'discord-link-unavailable')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    await expect(regularUserPage.getByTestId('discord-link-unavailable')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
     await expect(regularUserPage.getByTestId('discord-link-connect')).toHaveCount(0);
   });
 
@@ -85,8 +77,31 @@ test.describe('Discord link page', () => {
 
     await regularUserPage.goto('/discord/link');
 
-    await expect(visibleByTestId(regularUserPage, 'discord-link-panel')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
-    await expect(visibleByTestId(regularUserPage, 'discord-link-connect')).toHaveAttribute('href', CONNECT_URL);
-    await expect(visibleByTestId(regularUserPage, 'discord-link-join-server')).toHaveAttribute('href', 'https://discord.gg/e2einvite');
+    await expect(regularUserPage.getByTestId('discord-link-panel')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    await expect(regularUserPage.getByTestId('discord-link-connect')).toHaveAttribute('href', CONNECT_URL);
+    await expect(regularUserPage.getByTestId('discord-link-join-server')).toHaveAttribute('href', 'https://discord.gg/e2einvite');
+  });
+
+  // P4.9 (SEC-13): the authorization is bound to this browser by a cookie,
+  // and a callback whose state does not match it links nothing.
+  test('binds the authorization to the browser and refuses a foreign state', async ({ regularUserPage }) => {
+    await writeIntegration({ ...TEST_INTEGRATION, isEnabled: true });
+
+    const connect = await regularUserPage.request.get('/discord/connect?redirect=%2F%5Cevil.com', { maxRedirects: 0 });
+    expect(connect.status()).toBe(307);
+    const authorize = new URL(connect.headers()['location'] ?? '');
+    expect(authorize.origin).toBe('https://discord.com');
+
+    const cookie = (await regularUserPage.context().cookies()).find((c) => c.name === 'pm-discord-oauth');
+    expect(cookie).toMatchObject({ httpOnly: true, sameSite: 'Lax', path: '/api/discord/callback' });
+
+    const foreignState = 'Z'.repeat(32);
+    expect(authorize.searchParams.get('state')).not.toBe(foreignState);
+    const callback = await regularUserPage.request.get(`/api/discord/callback?code=abc&state=${foreignState}`, {
+      maxRedirects: 0,
+    });
+    const landing = new URL(callback.headers()['location'] ?? '');
+    expect(landing.pathname).toBe('/');
+    expect(landing.searchParams.get('flash')).toBe('discord_session_mismatch');
   });
 });

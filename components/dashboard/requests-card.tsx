@@ -1,15 +1,18 @@
 "use client"
 
 import { motion } from "motion/react"
+import { safeHref } from "@/lib/ui/markdown"
 
 interface RequestsCardProps {
   url: string
 }
 
 export function RequestsCard({ url }: RequestsCardProps) {
+  const href = safeHref(url)
+  if (!href) return null
   return (
     <motion.a
-      href={url}
+      href={href}
       target="_blank"
       rel="noopener noreferrer"
       className="group relative flex items-center gap-3 overflow-hidden rounded-xl border border-purple-500/20 bg-gradient-to-br from-purple-950/50 via-slate-900 to-slate-900 p-3 sm:p-4 shadow-lg shadow-black/20 transition-all duration-300 hover:border-purple-500/40 hover:shadow-purple-500/10"

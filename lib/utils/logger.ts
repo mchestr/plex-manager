@@ -14,6 +14,7 @@
 
 import type { AsyncLocalStorage } from "async_hooks"
 import type * as Winston from "winston"
+import { sanitizeText, sanitizeValue } from "./log-redaction"
 
 // --- Types ---
 
@@ -95,107 +96,6 @@ if (canUseWinston) {
   requestContext = createAsyncLocalStorage()
 }
 
-// --- Sanitization ---
-
-/**
- * Sensitive fields that should be redacted from logs
- */
-const SENSITIVE_FIELDS = [
-  "token",
-  "apiKey",
-  "password",
-  "secret",
-  "authToken",
-  "authorization",
-  "cookie",
-  "session",
-  "email", // PII - only log in development
-  "apikey",
-  "access_token",
-  "refresh_token",
-  "credentials",
-] as const
-
-/**
- * Redact sensitive values from objects
- */
-function sanitizeValue(value: unknown, isDevelopment: boolean): unknown {
-  if (value === null || value === undefined) {
-    return value
-  }
-
-  if (typeof value === "string") {
-    // Don't redact UUIDs (used for requestIds)
-    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-    if (uuidPattern.test(value)) {
-      return value
-    }
-    // Redact tokens, API keys, etc. (looks like long random strings)
-    if (value.length > 32 && /^[A-Za-z0-9_-]+$/.test(value)) {
-      return "[REDACTED]"
-    }
-    // Redact email addresses unless in development
-    if (!isDevelopment && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-      return "[REDACTED_EMAIL]"
-    }
-    return value
-  }
-
-  if (typeof value === "object") {
-    if (Array.isArray(value)) {
-      return value.map((item) => sanitizeValue(item, isDevelopment))
-    }
-
-    const sanitized: Record<string, unknown> = {}
-    for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
-      const lowerKey = key.toLowerCase()
-      const isSensitive = SENSITIVE_FIELDS.some((field) =>
-        lowerKey.includes(field.toLowerCase())
-      )
-
-      if (isSensitive && !isDevelopment) {
-        sanitized[key] = "[REDACTED]"
-      } else {
-        sanitized[key] = sanitizeValue(val, isDevelopment)
-      }
-    }
-    return sanitized
-  }
-
-  return value
-}
-
-/**
- * Sanitize URLs to remove tokens and sensitive query params
- */
-function sanitizeUrl(url: string | undefined, isDevelopment: boolean): string {
-  if (!url) {
-    return ""
-  }
-
-  if (isDevelopment) {
-    return url
-  }
-
-  try {
-    const urlObj = new URL(url)
-    // Remove common token params
-    const sensitiveParams = ["token", "apiKey", "key", "auth", "password", "secret", "apikey"]
-    sensitiveParams.forEach((param) => {
-      if (urlObj.searchParams.has(param)) {
-        urlObj.searchParams.set(param, "[REDACTED]")
-      }
-    })
-    return urlObj.toString()
-  } catch {
-    // If URL parsing fails, return as-is but truncate if suspicious
-    if (url.includes("token=") || url.includes("apiKey=")) {
-      return url.split("?")[0] + "?[REDACTED_PARAMS]"
-    }
-    return url
-  }
-}
-
 // --- Helper Functions ---
 
 /**
@@ -228,11 +128,11 @@ function createWinstonLogger(): Winston.Logger | null {
   const isDevelopment = process.env.NODE_ENV === "development"
   const isClient = typeof window !== "undefined"
 
-  // Custom format to sanitize sensitive data
+  // Redact the message and metadata in every environment (lib/utils/log-redaction.ts)
   const sanitizeFormat = winston.format((info: Winston.Logform.TransformableInfo) => {
-    const isDev = process.env.NODE_ENV === "development"
+    info.message = sanitizeText(String(info.message ?? ""))
     if (info.metadata) {
-      info.metadata = sanitizeValue(info.metadata, isDev) as Record<string, unknown>
+      info.metadata = sanitizeValue(info.metadata) as Record<string, unknown>
     }
     return info
   })
@@ -320,6 +220,7 @@ function createWinstonLogger(): Winston.Logger | null {
 
       // Build compact, single-line metadata string
       let metaStr = ""
+      const stackLines: string[] = []
       const metaEntries = Object.entries(allMetadata)
       if (metaEntries.length > 0) {
         const segments: string[] = []
@@ -334,7 +235,10 @@ function createWinstonLogger(): Winston.Logger | null {
           } else if (key === "err" || key === "error") {
             // Error objects get special formatting
             if (typeof value === "object" && value !== null) {
-              const serialized = JSON.stringify(value)
+              // A serialised Error keeps its stack, printed after the line
+              const { stack, ...summary } = value as { stack?: unknown }
+              if (typeof stack === "string") stackLines.push(stack)
+              const serialized = JSON.stringify(summary)
               // Truncate very large error payloads
               const truncated =
                 serialized.length > 300 ? serialized.slice(0, 297) + "..." : serialized
@@ -370,7 +274,7 @@ function createWinstonLogger(): Winston.Logger | null {
         messageStr,
       ].filter(Boolean)
 
-      return parts.join(" ") + metaStr
+      return [parts.join(" ") + metaStr, ...stackLines.map((stack) => chalk.gray(stack))].join("\n")
     })
   )
 
@@ -456,8 +360,7 @@ export function setRequestUserId(userId: string): void {
  * Sanitize URL for logging (standalone utility)
  */
 export function sanitizeUrlForLogging(url: string): string {
-  const isDev = process.env.NODE_ENV === "development"
-  return sanitizeUrl(url, isDev)
+  return sanitizeText(url)
 }
 
 /**
@@ -466,8 +369,7 @@ export function sanitizeUrlForLogging(url: string): string {
  * @internal
  */
 export function sanitizeForLogging(data: unknown): unknown {
-  const isDev = process.env.NODE_ENV === "development"
-  return sanitizeValue(data, isDev)
+  return sanitizeValue(data)
 }
 
 /**
@@ -490,35 +392,19 @@ export function createLogger(context: string): Logger {
   // Use Winston logger on server-side, console on client-side
   const childLogger = baseLogger ? baseLogger.child({ context }) : null
 
-  // Client-safe logger implementation
+  // Client and Edge fallback: the same redaction, printed through console
+  const toConsole = (write: (...args: unknown[]) => void, msg: string, meta?: LogMetadata) => {
+    const ctx = getRequestContext()
+    const logData = { ...meta, ...(ctx && { requestId: ctx.requestId, userId: ctx.userId }) }
+    write(`[${context}]`, sanitizeText(msg), sanitizeValue(logData))
+  }
   const clientLogger = {
     debug: (msg: string, meta?: LogMetadata) => {
-      if (!isDevelopment) return
-      const ctx = getRequestContext()
-      const logData = { ...meta, ...(ctx && { requestId: ctx.requestId, userId: ctx.userId }) }
-      console.debug(`[${context}]`, msg, logData)
+      if (isDevelopment) toConsole(console.debug, msg, meta)
     },
-    info: (msg: string, meta?: LogMetadata) => {
-      const ctx = getRequestContext()
-      const logData = { ...meta, ...(ctx && { requestId: ctx.requestId, userId: ctx.userId }) }
-      console.log(`[${context}]`, msg, logData)
-    },
-    warn: (msg: string, meta?: LogMetadata) => {
-      const ctx = getRequestContext()
-      const logData = { ...meta, ...(ctx && { requestId: ctx.requestId, userId: ctx.userId }) }
-      console.warn(`[${context}]`, msg, logData)
-    },
-    error: (msg: string, err?: unknown, meta?: LogMetadata) => {
-      const ctx = getRequestContext()
-      const errorMeta: LogMetadata = { ...meta }
-      if (err instanceof Error) {
-        errorMeta.err = { message: err.message, name: err.name, ...(isDevelopment && { stack: err.stack }) }
-      } else if (err !== undefined) {
-        errorMeta.error = String(err)
-      }
-      const logData = { ...errorMeta, ...(ctx && { requestId: ctx.requestId, userId: ctx.userId }) }
-      console.error(`[${context}]`, msg, logData)
-    },
+    info: (msg: string, meta?: LogMetadata) => toConsole(console.log, msg, meta),
+    warn: (msg: string, meta?: LogMetadata) => toConsole(console.warn, msg, meta),
+    error: (msg: string, meta: LogMetadata) => toConsole(console.error, msg, meta),
   }
 
   return {
@@ -584,14 +470,11 @@ export function createLogger(context: string): Logger {
         ...metadata,
       }
 
+      // Serialised with its stack, in every environment, by sanitizeValue
       if (error instanceof Error) {
-        errorMetadata.err = {
-          message: error.message,
-          name: error.name,
-          ...(isDevelopment && { stack: error.stack }),
-        }
+        errorMetadata.err = error
       } else if (error !== undefined) {
-        errorMetadata.error = String(error)
+        errorMetadata.error = error
       }
 
       const logData: LogMetadata = {
@@ -602,7 +485,7 @@ export function createLogger(context: string): Logger {
       if (childLogger) {
         childLogger.error(message, { metadata: logData })
       } else {
-        clientLogger.error(message, error, metadata)
+        clientLogger.error(message, errorMetadata)
       }
     },
 

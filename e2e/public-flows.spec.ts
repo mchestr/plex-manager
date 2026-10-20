@@ -9,9 +9,8 @@ test.describe('Public Flows', () => {
   test('home page has sign in button and initiates flow', async ({ page }) => {
     await navigateAndVerify(page, '/');
 
-    // Check for collapsed Sign In button. A production build can briefly hold a
-    // hidden streamed copy of the page (`<div hidden id="S:0">`).
-    const signInButton = page.getByTestId('sign-in-button').filter({ visible: true });
+    // Check for collapsed Sign In button
+    const signInButton = page.getByTestId('sign-in-button');
     await expect(signInButton).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
     await expect(signInButton).toBeEnabled();
 
@@ -21,6 +20,60 @@ test.describe('Public Flows', () => {
     // Verify Plex sign-in button is now visible (only Plex configured in E2E environment)
     const plexSignInButton = page.getByTestId('sign-in-with-plex');
     await expect(plexSignInButton).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+  });
+
+  // P4.8 (SEC-11). The E2E server skips plex.tv, so the PIN is made up and
+  // never becomes ready; app.plex.tv itself is never opened.
+  test('Plex sign-in binds the PIN to this browser and never hands the page a token', async ({ page, context }) => {
+    await page.route('https://app.plex.tv/**', (route) =>
+      route.fulfill({ status: 200, contentType: 'text/html', body: '<title>Plex</title>' })
+    );
+    // Every Server Action response the page receives, read in full on the way through
+    const actionBodies: string[] = [];
+    await page.route('**/*', async (route) => {
+      const request = route.request();
+      if (request.method() !== 'POST' || !request.headers()['next-action']) {
+        return route.fallback();
+      }
+      const response = await route.fetch();
+      const body = await response.text();
+      actionBodies.push(body);
+      return route.fulfill({ response, body });
+    });
+
+    await navigateAndVerify(page, '/');
+    await page.getByTestId('sign-in-button').click();
+    await page.getByTestId('sign-in-with-plex').click();
+    await page.waitForURL(/app\.plex\.tv/, { timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+
+    const cookies = await context.cookies();
+    const pinCookie = cookies.find((cookie) => cookie.name === 'pm-plex-pin');
+    expect(pinCookie).toMatchObject({ httpOnly: true, sameSite: 'Lax', path: '/' });
+    expect(cookies.find((cookie) => cookie.name === 'pm-plex-client')).toMatchObject({ httpOnly: true });
+    // plex.tv sends the browser back with nothing in the URL
+    const forwardUrl = new URLSearchParams(new URL(page.url()).hash.replace(/^#\?/, '')).get('forwardUrl');
+    expect(forwardUrl && new URL(forwardUrl).pathname).toBe('/auth/callback/plex');
+    expect(forwardUrl && new URL(forwardUrl).search).toBe('');
+
+    await page.goto('/auth/callback/plex');
+    await expect(page.getByTestId('plex-callback-waiting')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    // Wait for at least one status poll after the sign-in start
+    await expect.poll(() => actionBodies.length, { timeout: WAIT_TIMEOUTS.PAGE_CONTENT }).toBeGreaterThan(1);
+
+    const bodies = [...actionBodies];
+    expect(bodies.some((body) => body.includes('"waiting"'))).toBe(true);
+    for (const body of bodies) {
+      expect(body).not.toContain('authToken');
+      expect(body).not.toContain(pinCookie?.value ?? 'pm-plex-pin');
+    }
+  });
+
+  test('a callback opened in a browser that did not start the sign-in does not finish', async ({ page }) => {
+    await page.goto('/auth/callback/plex');
+
+    await expect(page.getByTestId('plex-callback-error-heading')).toHaveText("Sign-in didn't finish", {
+      timeout: WAIT_TIMEOUTS.PAGE_CONTENT,
+    });
   });
 
   test('invite page shows invalid state for unknown code', async ({ page }) => {
@@ -49,9 +102,9 @@ test.describe('Public Flows', () => {
     await page.goto('/auth/denied');
 
     // Should show access denied message
-    await expect(page.getByTestId('access-denied-heading').filter({ visible: true })).toBeVisible();
+    await expect(page.getByTestId('access-denied-heading')).toBeVisible();
     // The page actually has a "Try Again" link and a "Return Home" button, not a "Return to Home" link
-    await expect(page.getByTestId('return-home-button').filter({ visible: true })).toBeVisible();
+    await expect(page.getByTestId('return-home-button')).toBeVisible();
   });
 
   test('onboarding page accessibility check', async ({ page }) => {

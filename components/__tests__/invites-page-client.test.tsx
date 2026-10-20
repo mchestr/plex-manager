@@ -2,6 +2,8 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 // Mock dependencies BEFORE importing components
+jest.mock('next-auth', () => ({ getServerSession: jest.fn() }))
+jest.mock('@/lib/auth', () => ({ authOptions: {} }))
 jest.mock('@/actions/invite', () => ({
   getInvites: jest.fn(),
   createInvite: jest.fn(),
@@ -403,6 +405,7 @@ describe('InvitesPageClient', () => {
       const consoleError = jest.spyOn(console, 'error').mockImplementation()
       mockGetAvailableLibraries.mockResolvedValue({
         success: false,
+        code: 'UPSTREAM_UNAVAILABLE',
         error: 'Failed to load libraries',
       })
 
@@ -664,6 +667,7 @@ describe('InvitesPageClient', () => {
       const user = userEvent.setup()
       mockCreateInvite.mockResolvedValue({
         success: false,
+        code: 'CONFLICT',
         error: 'Code already exists',
       })
 

@@ -118,7 +118,7 @@ export function TestConfiguration({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1.5">
+          <label htmlFor="playground-user-name" className="block text-sm font-medium text-slate-300 mb-1.5">
             User Name
           </label>
           {loadingUsers ? (
@@ -127,6 +127,7 @@ export function TestConfiguration({
             </div>
           ) : (
             <StyledDropdown
+              id="playground-user-name"
               value={testConfig.userName}
               onChange={(value) => onTestConfigChange({ userName: value })}
               options={plexUsers.map((user) => ({
@@ -191,7 +192,7 @@ export function TestConfiguration({
         {showAIParameters && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
+              <label htmlFor="playground-model" className="block text-sm font-medium text-slate-300 mb-1.5">
                 Model <span className="text-xs text-slate-400 font-normal">(optional)</span>
               </label>
               {loadingModels ? (
@@ -200,6 +201,7 @@ export function TestConfiguration({
                 </div>
               ) : !useCustomModel ? (
                 <StyledDropdown
+                  id="playground-model"
                   value={testConfig.model}
                   onChange={(value) => {
                     if (value === "__custom__") {
@@ -407,6 +409,7 @@ export function TestConfiguration({
             onClick={onGenerateResponse}
             disabled={isPending || !testConfig.userName || !statistics || loadingStatistics}
             className="flex-1"
+            data-testid="playground-generate-button"
           >
             <svg
               className="w-4 h-4"

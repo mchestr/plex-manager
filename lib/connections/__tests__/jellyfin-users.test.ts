@@ -329,6 +329,23 @@ describe('Jellyfin Users', () => {
       expect(policyBody.EnableAllFolders).toBe(true)
     })
 
+    it.each([
+      [{}, false],
+      [{ isDisabled: true }, true],
+      [{ isDisabled: false }, false],
+    ])('sends IsDisabled from %p as %p, over the current policy', async (extra, expected) => {
+      const mockUser = { Id: userId, Name: 'testuser', Policy: { IsDisabled: !expected } }
+
+      ;(global.fetch as jest.Mock)
+        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => mockUser })
+        .mockResolvedValueOnce({ ok: true, status: 204 })
+
+      await setJellyfinUserPolicy(config, userId, { ...settings, ...extra })
+
+      const policyBody = JSON.parse((global.fetch as jest.Mock).mock.calls[1][1].body)
+      expect(policyBody.IsDisabled).toBe(expected)
+    })
+
     it('should handle user fetch failure', async () => {
       ;(global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: false,

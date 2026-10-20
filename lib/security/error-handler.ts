@@ -10,6 +10,8 @@ export enum ErrorCode {
   VALIDATION_ERROR = "VALIDATION_ERROR",
   RATE_LIMIT_EXCEEDED = "RATE_LIMIT_EXCEEDED",
   FORBIDDEN = "FORBIDDEN",
+  /** Signed in, but the surface needs an active membership (SEC-28). */
+  NOT_ENTITLED = "NOT_ENTITLED",
 }
 
 export interface SafeError {
@@ -59,6 +61,7 @@ export function getStatusCode(code: ErrorCode): number {
     case ErrorCode.UNAUTHORIZED:
       return 401
     case ErrorCode.FORBIDDEN:
+    case ErrorCode.NOT_ENTITLED:
       return 403
     case ErrorCode.NOT_FOUND:
       return 404

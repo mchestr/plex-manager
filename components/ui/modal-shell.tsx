@@ -1,7 +1,8 @@
 "use client"
 
-import { ReactNode, useEffect, useRef } from "react"
-import { createPortal } from "react-dom"
+import type { ReactNode } from "react"
+
+import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { cn } from "@/lib/utils"
 
 type ModalMaxWidth = "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl"
@@ -18,36 +19,27 @@ interface ModalShellProps {
   describedBy?: string
   /** Extra classes for the dialog card. */
   className?: string
-  /**
-   * When true, the overlay scrolls the whole page and the card aligns to top
-   * (for tall content like previews). When false (default), the card is
-   * vertically centered.
-   */
+  /** Aligns the card to the top instead of centring it, for tall content like previews. */
   scrollable?: boolean
   /** `data-testid` for the dialog element. */
   testId?: string
 }
 
 const maxWidthClasses: Record<ModalMaxWidth, string> = {
-  sm: "max-w-sm",
-  md: "max-w-md",
-  lg: "max-w-lg",
-  xl: "max-w-xl",
-  "2xl": "max-w-2xl",
-  "3xl": "max-w-3xl",
-  "4xl": "max-w-4xl",
+  sm: "md:max-w-sm",
+  md: "md:max-w-md",
+  lg: "md:max-w-lg",
+  xl: "md:max-w-xl",
+  "2xl": "md:max-w-2xl",
+  "3xl": "md:max-w-3xl",
+  "4xl": "md:max-w-4xl",
 }
 
 /**
- * Shared modal chrome: full-screen overlay + blurred backdrop + centered dialog
- * card, with focus trap, ESC-to-close, body-scroll lock, focus restoration, and
- * portal rendering to `document.body`.
- *
- * Previously each content modal (confirm, announcement form, invite create,
- * prompt-template preview) hand-rolled the overlay/backdrop/dialog markup with
- * drifting z-index and backdrop opacity, and most lacked the focus-trap/ESC
- * behavior that ConfirmModal had. Rendering their content inside <ModalShell>
- * standardizes the chrome and gives them all the same accessibility wiring.
+ * @deprecated Use Dialog from components/ui/dialog (ui-design-system 9.4).
+ * This adapter renders Dialog with today's props until its importers move
+ * (P10.11 deletes it); it gains no variants. The children bring their own
+ * padding, title and close button.
  */
 export function ModalShell({
   isOpen,
@@ -60,97 +52,23 @@ export function ModalShell({
   scrollable = false,
   testId,
 }: ModalShellProps) {
-  const dialogRef = useRef<HTMLDivElement>(null)
-  const previousActiveElement = useRef<Element | null>(null)
-
-  // ESC to close
-  useEffect(() => {
-    if (!isOpen) return
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose()
-    }
-    document.addEventListener("keydown", handleEscape)
-    return () => document.removeEventListener("keydown", handleEscape)
-  }, [isOpen, onClose])
-
-  // Lock body scroll while open
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = "hidden"
-    }
-    return () => {
-      document.body.style.overflow = ""
-    }
-  }, [isOpen])
-
-  // Focus management + focus trap
-  useEffect(() => {
-    if (!isOpen) return
-
-    previousActiveElement.current = document.activeElement
-
-    const focusableElements = dialogRef.current?.querySelectorAll<HTMLElement>(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-    )
-    const firstFocusable = focusableElements?.[0]
-    const lastFocusable = focusableElements?.[focusableElements.length - 1]
-    firstFocusable?.focus()
-
-    const handleTab = (e: KeyboardEvent) => {
-      if (e.key !== "Tab") return
-      if (e.shiftKey) {
-        if (document.activeElement === firstFocusable) {
-          e.preventDefault()
-          lastFocusable?.focus()
-        }
-      } else {
-        if (document.activeElement === lastFocusable) {
-          e.preventDefault()
-          firstFocusable?.focus()
-        }
-      }
-    }
-
-    document.addEventListener("keydown", handleTab)
-    return () => {
-      document.removeEventListener("keydown", handleTab)
-      if (previousActiveElement.current instanceof HTMLElement) {
-        previousActiveElement.current.focus()
-      }
-    }
-  }, [isOpen])
-
-  if (!isOpen || typeof window === "undefined") return null
-
-  return createPortal(
-    <div
-      className={cn(
-        "fixed inset-0 z-[9999] flex justify-center p-4 overflow-y-auto",
-        scrollable ? "items-start" : "items-center"
-      )}
-      onClick={onClose}
-      role="presentation"
+  return (
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
     >
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" aria-hidden="true" />
-
-      <div className={cn("relative w-full my-auto", maxWidthClasses[maxWidth])}>
-        <div
-          ref={dialogRef}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby={labelledBy}
-          aria-describedby={describedBy}
-          data-testid={testId}
-          className={cn(
-            "relative bg-slate-900 border border-slate-700 rounded-xl shadow-2xl",
-            className
-          )}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {children}
-        </div>
-      </div>
-    </div>,
-    document.body
+      <DialogContent
+        showCloseButton={false}
+        align={scrollable ? "top" : "center"}
+        data-testid={testId}
+        {...(labelledBy ? { "aria-labelledby": labelledBy } : {})}
+        {...(describedBy ? { "aria-describedby": describedBy } : {})}
+        className={cn("gap-0 p-0 pb-0 md:pb-0", maxWidthClasses[maxWidth], className)}
+      >
+        {children}
+      </DialogContent>
+    </Dialog>
   )
 }

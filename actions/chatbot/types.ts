@@ -14,5 +14,7 @@ export interface ChatResponse {
   message?: ChatMessage
   error?: string
   conversationId?: string
+  /** A daily spend cap stopped the turn before an LLM call; `error` is the copy to show. */
+  refusal?: "BUDGET_EXCEEDED" | "BUDGET_UNAVAILABLE"
 }
 

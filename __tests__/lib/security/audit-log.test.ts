@@ -16,14 +16,23 @@ jest.mock("@/lib/utils/logger", () => {
   }
 })
 
-import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
+jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
+
+import { mockReset } from "jest-mock-extended"
+
+import { asTransactionClient, prismaMock } from "@/__tests__/helpers/prisma-mock"
+import { AuditEventType, logAuditEvent, recordAuditEvent } from "@/lib/security/audit-log"
 import * as logger from "@/lib/utils/logger"
 
+/** Lets the fire-and-forget write settle. */
+const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
+
 describe("Audit Logging", () => {
-  let mockLogger: any
+  let mockLogger: { info: jest.Mock; error: jest.Mock; warn: jest.Mock; debug: jest.Mock }
 
   beforeEach(() => {
     jest.clearAllMocks()
+    mockReset(prismaMock)
     // Get the mock logger instance from createLogger
     const createLoggerMock = logger.createLogger as jest.Mock
     mockLogger = createLoggerMock()
@@ -230,5 +239,83 @@ describe("Audit Logging", () => {
         "DISCORD_INTEGRATION_CONFIG_CHANGED"
       )
     })
+  })
+})
+
+describe("persisted audit rows (SEC-55)", () => {
+  let mockLogger: { info: jest.Mock; error: jest.Mock }
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockReset(prismaMock)
+    mockLogger = (logger.createLogger as jest.Mock)()
+  })
+
+  it("writes a row with sanitised details and the target user", async () => {
+    logAuditEvent(AuditEventType.CONFIG_CHANGED, "admin-1", {
+      targetUserId: "user-9",
+      section: "tautulli",
+      apiKey: "super-secret-key",
+      note: "sent to http://x.lan/api?apikey=leaked-value",
+    })
+    await flush()
+
+    expect(prismaMock.auditLog.create).toHaveBeenCalledTimes(1)
+    const { data } = prismaMock.auditLog.create.mock.calls[0][0]
+    expect(data).toMatchObject({ type: "CONFIG_CHANGED", actorUserId: "admin-1", targetUserId: "user-9" })
+    expect(data.details).toMatchObject({ section: "tautulli", apiKey: "[REDACTED]" })
+    expect(JSON.stringify(data.details)).not.toContain("super-secret-key")
+    expect(JSON.stringify(data.details)).not.toContain("leaked-value")
+    expect(JSON.stringify(data.details)).not.toContain("targetUserId")
+  })
+
+  it("stores no details when the event has none", async () => {
+    logAuditEvent(AuditEventType.USER_CREATED, "system")
+    await flush()
+
+    expect(prismaMock.auditLog.create).toHaveBeenCalledWith({
+      data: { type: "USER_CREATED", actorUserId: "system", targetUserId: null, details: undefined },
+    })
+  })
+
+  it("never throws when the database write fails, and logs audit.persist_failed", async () => {
+    prismaMock.auditLog.create.mockRejectedValue(new Error("Can't reach database server"))
+
+    expect(() => logAuditEvent(AuditEventType.CONFIG_CHANGED, "admin-1", { section: "llm" })).not.toThrow()
+    await flush()
+
+    expect(mockLogger.info).toHaveBeenCalledWith("Audit event: CONFIG_CHANGED", expect.anything())
+    expect(mockLogger.error).toHaveBeenCalledWith("audit.persist_failed", expect.any(Error), { type: "CONFIG_CHANGED" })
+  })
+
+  it("recordAuditEvent awaits the write", async () => {
+    let finishWrite: () => void = () => undefined
+    prismaMock.auditLog.create.mockReturnValue(
+      new Promise<void>((resolve) => {
+        finishWrite = resolve
+      }) as never
+    )
+
+    let settled = false
+    const pending = recordAuditEvent(AuditEventType.CONFIG_CHANGED, "admin-1", { section: "prompt" }).then(() => {
+      settled = true
+    })
+    await flush()
+    expect(settled).toBe(false)
+
+    finishWrite()
+    await pending
+    expect(settled).toBe(true)
+  })
+
+  it("recordAuditEvent writes through a transaction client and throws when the write fails", async () => {
+    const create = jest.fn().mockRejectedValue(new Error("serialization failure"))
+    const tx = asTransactionClient({ auditLog: { create } })
+
+    await expect(recordAuditEvent(AuditEventType.CONFIG_CHANGED, "admin-1", undefined, tx)).rejects.toThrow(
+      "serialization failure"
+    )
+    expect(create).toHaveBeenCalledTimes(1)
+    expect(prismaMock.auditLog.create).not.toHaveBeenCalled()
   })
 })

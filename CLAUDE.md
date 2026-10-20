@@ -52,16 +52,24 @@ components/             # React components
 ├── onboarding/        # Onboarding components
 ├── setup/
 │   └── setup-wizard/  # Setup wizard steps
+├── shell/             # App and admin shells (from P6.1)
 ├── ui/                # Shared UI primitives
 └── wrapped/           # Wrapped display components
 
 hooks/                  # Shared client hooks
 lib/                    # Utilities, helpers, business logic
+├── brand.ts           # Product strings: serverName(), rewindName(), productName, monogramFor()
+├── charts/            # Chart.js theme from the token mirror (chartTheme, registerCharts)
 ├── connections/       # External API clients (Plex, Tautulli, Overseerr, etc.)
+├── design/            # Token mirror of app/globals.css and colour contrast helpers
 ├── discord/           # Discord bot, commands and linking
 ├── llm/               # LLM chat client and pricing
+├── og/                # App icons and the default OG card (next/og)
+│   └── fonts/         # Committed IBM Plex subsets for next/og (scripts/build-og-fonts.py)
 ├── rewind/            # Rewind 2026: typesetter, format rules, page registry, card fonts
 ├── security/          # Security utilities (rate limiting, CSRF, audit logging)
+├── settings/          # getAppSettings(): server zone, locale and server name
+├── ui/                # UI helpers: status vocabulary, icon map, poster palette, safe Markdown links, error copy
 ├── validations/       # Zod schemas for all services
 ├── wrapped/           # Wrapped generation and statistics
 └── utils/             # Shared utilities
@@ -105,41 +113,40 @@ export function ClientComponent() {
 ```
 
 ### Server Actions
+Build every action with `publicAction`, `memberAction` or `adminAction` from
+`@/lib/actions/define-action`. The helper checks the session, parses the input
+with Zod (`VALIDATION` with `fieldErrors`), spends an optional named rate limit,
+runs the handler and maps a thrown error to `INTERNAL` without its text. Results
+are `ActionResult<T>` (`@/lib/actions/result`):
+`{ success: true, data }` or `{ success: false, code, error }`.
+
 ```typescript
 'use server'
 
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 
-const schema = z.object({
-  field: z.string().min(1)
+import { memberAction } from '@/lib/actions/define-action'
+import { fail, ok } from '@/lib/actions/result'
+
+export const renameThing = memberAction({
+  input: z.object({ name: z.string().min(1).max(80) }),
+  rateLimit: { name: 'checkout' },           // optional; keyed by user id (public actions: by address)
+  fallbackError: 'Could not rename it',      // copy for a thrown error
+  handler: async ({ name }, { userId }) => {
+    const thing = await prisma.thing.findUnique({ where: { userId } })
+    if (!thing) return fail('NOT_FOUND', 'Nothing to rename')
+
+    await prisma.thing.update({ where: { userId }, data: { name } })
+    revalidatePath('/path')
+    return ok(null)
+  },
 })
-
-export async function myAction(formData: FormData) {
-  // 1. Validate input
-  const validated = schema.safeParse({
-    field: formData.get('field')
-  })
-
-  if (!validated.success) {
-    return { error: 'Invalid input' }
-  }
-
-  // 2. Auth check
-  const session = await getServerSession()
-  if (!session) {
-    return { error: 'Unauthorized' }
-  }
-
-  // 3. Perform operation
-  await db.update(validated.data)
-
-  // 4. Revalidate cache
-  revalidatePath('/path')
-
-  return { success: true }
-}
 ```
+
+- Never return `error.message`; ESLint bans `error instanceof Error ? error.message : ...` in `actions/` and `app/api/`.
+- Route handlers validate params with `parseRouteParams` / `parseSearchParams` (`@/lib/actions/route`) and the schemas in `@/lib/validations/params`.
+- Admin modules still on `requireAdmin()` move onto `adminAction` in P11.5.
 
 ### Styling
 - **Tailwind utility classes** - No custom CSS unless absolutely necessary
@@ -172,19 +179,9 @@ export function cn(...inputs: ClassValue[]) {
 - **Type-safe errors** - Return error objects, don't throw in Server Actions
 
 ```typescript
-// Good: Return errors
-export async function action() {
-  try {
-    await operation()
-    return { success: true }
-  } catch (error) {
-    return { error: 'Operation failed' }
-  }
-}
-
-// Component usage
-const result = await action()
-if (result.error) {
+// The action helper returns a coded failure; it never throws
+const result = await renameThing({ name })
+if (!result.success) {
   showToast({ type: 'error', message: result.error })
 }
 ```
@@ -325,7 +322,7 @@ describe('Component', () => {
 
 ### CI Checks
 
-`.github/workflows/build.yml` ("Checks") runs the checks that `main` requires: Lint (ESLint and actionlint), Typecheck, Audit (`scripts/audit-gate.mjs`; exceptions in `.github/audit-exceptions.json`, at most 14 days each), Knip, Design System, Unit Tests (with coverage floors), Integration, Schema Drift (a schema change without its migration fails), Build and E2E Tests (production build, Postgres and Redis). Docker Build runs on pull requests but is not required. Shared setup lives in `.github/actions/setup/action.yml`, and every action is pinned by SHA
+`.github/workflows/build.yml` ("Checks") runs the checks that `main` requires: Lint (ESLint and actionlint), Typecheck, Audit (`scripts/audit-gate.mjs`; exceptions in `.github/audit-exceptions.json`, at most 14 days each), Knip, Design System, Unit Tests (with coverage floors), Integration, Schema Drift (a schema change without its migration fails), Build and E2E Tests (production build, Postgres and Redis). Image Smoke Test runs on pull requests but is not required: it builds the image, starts it on a fresh Postgres and Redis until its `HEALTHCHECK` reports healthy (migrations, `SKIP_MIGRATIONS`, read-only files, tini, `docker stop`) and scans it with Trivy. Shared setup lives in `.github/actions/setup/action.yml`, and every action is pinned by SHA
 
 ## JSDoc Documentation Strategy
 
@@ -704,14 +701,19 @@ if (!stripe) return { error: 'Stripe is not configured' }
 - `actions/subscription.ts` — `startCheckout(priceId)`, `openBillingPortal()`.
 - `actions/admin/subscriptions.ts` — admin cancel/grant/toggle-exempt.
 - `app/api/stripe/webhook/route.ts` — **the only** Stripe API route: verifies the
-  signature, dedupes on `StripeEvent(event.id)`, enqueues a BullMQ job, returns
-  200 (400 on bad signature, never 5xx).
+  signature, dedupes on a processed `StripeEvent(event.id)`, enqueues a BullMQ
+  job (or retries its failed one), returns 200 (400 on bad signature, never 5xx).
 - `lib/queue/jobs/stripe.ts` — BullMQ processors (`STRIPE_WEBHOOK`,
   `PLEX_ACCESS_GRANT`, `PLEX_ACCESS_REVOKE`).
 
 **Handled webhook events**: `checkout.session.completed`,
-`customer.subscription.updated`, `customer.subscription.deleted`,
-`invoice.payment_failed`.
+`checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`
+(logged no-op), `customer.subscription.updated`, `customer.subscription.deleted`,
+`invoice.payment_failed`. Handlers write the live subscription
+(`stripe.subscriptions.retrieve`), never an older event over a newer one
+(`Subscription.stripeEventAt`, `lib/stripe/subscription-sync.ts`), and a
+`StripeEvent` is processed only after its handler succeeds, so a resend
+recovers a failed event.
 
 **⚠️ CRITICAL — disabled-state safety**: the webhook still verifies signatures and
 records subscription **status** while disabled, but performs **no** Plex

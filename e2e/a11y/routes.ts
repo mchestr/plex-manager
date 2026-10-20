@@ -62,6 +62,8 @@ export function routeUserId(route: A11yRoute): string | null {
 
 async function openWith(page: Page, trigger: string, opened: string): Promise<void> {
   await page.getByTestId(trigger).click();
+  // A Base UI popup mounts on an animation frame, and the scan's clock is paused.
+  await page.clock.runFor(100);
   await expect(page.getByTestId(opened)).toBeVisible();
 }
 

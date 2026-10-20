@@ -10,6 +10,9 @@ import { testSonarrConnection } from "@/lib/connections/sonarr"
 import { testTautulliConnection } from "@/lib/connections/tautulli"
 import { DEFAULT_OPENAI_MODEL } from "@/lib/llm/provider-presets"
 import { prisma } from "@/lib/prisma"
+import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
+import { configDiff } from "@/lib/security/config-diff"
+import { resolveSecretForOrigin, SECRET_REQUIRED_MESSAGE, type SecretRequiredCode } from "@/lib/security/secret-reuse"
 import { discordIntegrationSchema, type DiscordIntegrationInputData } from "@/lib/validations/discord"
 import { setupLLMProviderSchema, type SetupLLMProviderInput } from "@/lib/validations/llm-provider"
 import { overseerrSchema, type OverseerrInput, type OverseerrParsed } from "@/lib/validations/overseerr"
@@ -32,22 +35,60 @@ export async function getSetupStatus() {
 }
 
 /**
- * Requires admin authentication if setup is already complete.
- * During initial setup (before completion), anyone can access setup endpoints.
- * After setup is complete, only admins can modify configuration.
+ * Requires admin authentication if setup is already complete, and returns the
+ * actor for the audit trail: the admin's id, or `setup` during the first run
+ * (before completion anyone can reach these actions; P11.32 adds a claim).
  */
-async function requireAdminIfSetupComplete(): Promise<void> {
+async function setupActor(): Promise<string> {
   const setupStatus = await getSetupStatus()
-  if (setupStatus.isComplete) {
-    await requireAdmin()
-  }
+  if (!setupStatus.isComplete) return "setup"
+  return (await requireAdmin()).user.id
 }
 
-export async function savePlexServer(data: PlexServerInput) {
-  try {
-    await requireAdminIfSetupComplete()
+/** A setup input whose secret may be left blank to keep the stored one. */
+type WithOptionalSecret<T, K extends keyof T> = Omit<T, K> & { [P in K]?: string }
 
-    const validated: PlexServerParsed = plexServerSchema.parse(data)
+/**
+ * The secret for a setup save: the submitted one, or the stored one for the
+ * same origin (`resolveSecretForOrigin`), so Back-and-edit never sends a stored
+ * secret to a new address. With nothing stored, a blank secret is passed on for
+ * the schema to reject.
+ */
+function setupSecret(
+  submitted: string | undefined,
+  url: string,
+  stored: { secret: string; url: string } | null
+): { ok: true; secret: string | undefined } | { ok: false; result: { success: false; code: SecretRequiredCode; error: string } } {
+  if (!stored) return { ok: true, secret: submitted }
+  const resolution = resolveSecretForOrigin({ submitted, stored, submittedUrl: url })
+  if (!resolution.ok) {
+    return { ok: false, result: { success: false, code: resolution.code, error: SECRET_REQUIRED_MESSAGE } }
+  }
+  return { ok: true, secret: resolution.secret }
+}
+
+function auditSetupSave(
+  actor: string,
+  section: string,
+  before: Record<string, unknown> | null,
+  after: Record<string, unknown>,
+  secretFields: string[] = []
+) {
+  logAuditEvent(
+    AuditEventType.CONFIG_CHANGED,
+    actor,
+    configDiff(`setup.${section}`, before, after, { secretFields, urlFields: ["url", "publicUrl", "baseUrl"] })
+  )
+}
+
+export async function savePlexServer(data: WithOptionalSecret<PlexServerInput, "token">) {
+  try {
+    const actor = await setupActor()
+
+    const stored = await prisma.plexServer.findFirst({ where: { isActive: true } })
+    const secret = setupSecret(data.token, data.url, stored && { secret: stored.token, url: stored.url })
+    if (!secret.ok) return secret.result
+    const validated: PlexServerParsed = plexServerSchema.parse({ ...data, token: secret.secret })
 
     // Test connection before saving
     const connectionTest = await testPlexConnection(validated)
@@ -98,6 +139,13 @@ export async function savePlexServer(data: PlexServerInput) {
       })
     })
 
+    auditSetupSave(
+      actor,
+      "plex",
+      stored && { name: stored.name, url: stored.url, publicUrl: stored.publicUrl, token: stored.token },
+      { name: validated.name, url: validated.url, publicUrl: validated.publicUrl ?? null, token: validated.token },
+      ["token"]
+    )
     revalidatePath("/setup")
     return { success: true }
   } catch (error) {
@@ -108,11 +156,14 @@ export async function savePlexServer(data: PlexServerInput) {
   }
 }
 
-export async function saveTautulli(data: TautulliInput) {
+export async function saveTautulli(data: WithOptionalSecret<TautulliInput, "apiKey">) {
   try {
-    await requireAdminIfSetupComplete()
+    const actor = await setupActor()
 
-    const validated: TautulliParsed = tautulliSchema.parse(data)
+    const stored = await prisma.tautulli.findFirst({ where: { isActive: true } })
+    const secret = setupSecret(data.apiKey, data.url, stored && { secret: stored.apiKey, url: stored.url })
+    if (!secret.ok) return secret.result
+    const validated: TautulliParsed = tautulliSchema.parse({ ...data, apiKey: secret.secret })
 
     // Test connection before saving
     const connectionTest = await testTautulliConnection(validated)
@@ -153,6 +204,13 @@ export async function saveTautulli(data: TautulliInput) {
       })
     })
 
+    auditSetupSave(
+      actor,
+      "tautulli",
+      stored && { name: stored.name, url: stored.url, publicUrl: stored.publicUrl, apiKey: stored.apiKey },
+      { name: validated.name, url: validated.url, publicUrl: validated.publicUrl ?? null, apiKey: validated.apiKey },
+      ["apiKey"]
+    )
     revalidatePath("/setup")
     return { success: true }
   } catch (error) {
@@ -163,11 +221,14 @@ export async function saveTautulli(data: TautulliInput) {
   }
 }
 
-export async function saveOverseerr(data: OverseerrInput) {
+export async function saveOverseerr(data: WithOptionalSecret<OverseerrInput, "apiKey">) {
   try {
-    await requireAdminIfSetupComplete()
+    const actor = await setupActor()
 
-    const validated: OverseerrParsed = overseerrSchema.parse(data)
+    const stored = await prisma.overseerr.findFirst({ where: { isActive: true } })
+    const secret = setupSecret(data.apiKey, data.url, stored && { secret: stored.apiKey, url: stored.url })
+    if (!secret.ok) return secret.result
+    const validated: OverseerrParsed = overseerrSchema.parse({ ...data, apiKey: secret.secret })
 
     // Test connection before saving
     const connectionTest = await testOverseerrConnection(validated)
@@ -208,6 +269,13 @@ export async function saveOverseerr(data: OverseerrInput) {
       })
     })
 
+    auditSetupSave(
+      actor,
+      "overseerr",
+      stored && { name: stored.name, url: stored.url, publicUrl: stored.publicUrl, apiKey: stored.apiKey },
+      { name: validated.name, url: validated.url, publicUrl: validated.publicUrl ?? null, apiKey: validated.apiKey },
+      ["apiKey"]
+    )
     revalidatePath("/setup")
     return { success: true }
   } catch (error) {
@@ -218,11 +286,14 @@ export async function saveOverseerr(data: OverseerrInput) {
   }
 }
 
-export async function saveSonarr(data: SonarrInput) {
+export async function saveSonarr(data: WithOptionalSecret<SonarrInput, "apiKey">) {
   try {
-    await requireAdminIfSetupComplete()
+    const actor = await setupActor()
 
-    const validated: SonarrParsed = sonarrSchema.parse(data)
+    const stored = await prisma.sonarr.findFirst({ where: { isActive: true } })
+    const secret = setupSecret(data.apiKey, data.url, stored && { secret: stored.apiKey, url: stored.url })
+    if (!secret.ok) return secret.result
+    const validated: SonarrParsed = sonarrSchema.parse({ ...data, apiKey: secret.secret })
 
     // Test connection before saving
     const connectionTest = await testSonarrConnection(validated)
@@ -263,6 +334,13 @@ export async function saveSonarr(data: SonarrInput) {
       })
     })
 
+    auditSetupSave(
+      actor,
+      "sonarr",
+      stored && { name: stored.name, url: stored.url, publicUrl: stored.publicUrl, apiKey: stored.apiKey },
+      { name: validated.name, url: validated.url, publicUrl: validated.publicUrl ?? null, apiKey: validated.apiKey },
+      ["apiKey"]
+    )
     revalidatePath("/setup")
     return { success: true }
   } catch (error) {
@@ -273,11 +351,14 @@ export async function saveSonarr(data: SonarrInput) {
   }
 }
 
-export async function saveRadarr(data: RadarrInput) {
+export async function saveRadarr(data: WithOptionalSecret<RadarrInput, "apiKey">) {
   try {
-    await requireAdminIfSetupComplete()
+    const actor = await setupActor()
 
-    const validated: RadarrParsed = radarrSchema.parse(data)
+    const stored = await prisma.radarr.findFirst({ where: { isActive: true } })
+    const secret = setupSecret(data.apiKey, data.url, stored && { secret: stored.apiKey, url: stored.url })
+    if (!secret.ok) return secret.result
+    const validated: RadarrParsed = radarrSchema.parse({ ...data, apiKey: secret.secret })
 
     // Test connection before saving
     const connectionTest = await testRadarrConnection(validated)
@@ -318,6 +399,13 @@ export async function saveRadarr(data: RadarrInput) {
       })
     })
 
+    auditSetupSave(
+      actor,
+      "radarr",
+      stored && { name: stored.name, url: stored.url, publicUrl: stored.publicUrl, apiKey: stored.apiKey },
+      { name: validated.name, url: validated.url, publicUrl: validated.publicUrl ?? null, apiKey: validated.apiKey },
+      ["apiKey"]
+    )
     revalidatePath("/setup")
     return { success: true }
   } catch (error) {
@@ -330,7 +418,7 @@ export async function saveRadarr(data: RadarrInput) {
 
 export async function saveDiscordIntegration(data: DiscordIntegrationInputData) {
   try {
-    await requireAdminIfSetupComplete()
+    const actor = await setupActor()
 
     const validated = discordIntegrationSchema.parse(data)
     const isEnabled = validated.isEnabled ?? false
@@ -389,6 +477,23 @@ export async function saveDiscordIntegration(data: DiscordIntegrationInputData) 
       })
     })
 
+    // The client secret goes only to Discord, so it keeps "blank means keep"
+    auditSetupSave(
+      actor,
+      "discord",
+      null,
+      {
+        isEnabled,
+        botEnabled,
+        clientId: validated.clientId,
+        clientSecret: validated.clientSecret,
+        guildId: validated.guildId,
+        serverInviteCode: validated.serverInviteCode,
+        platformName: validated.platformName,
+        instructions: validated.instructions,
+      },
+      ["clientSecret"]
+    )
     revalidatePath("/setup")
     revalidatePath("/discord/link")
     revalidatePath("/admin/settings")
@@ -407,7 +512,7 @@ async function saveLLMProviderForPurpose(
   nextStep: number
 ) {
   try {
-    await requireAdminIfSetupComplete()
+    const actor = await setupActor()
 
     const validated = setupLLMProviderSchema.parse(data)
 
@@ -455,6 +560,14 @@ async function saveLLMProviderForPurpose(
       })
     })
 
+    // Setup is OpenAI only, so the key always goes to api.openai.com
+    auditSetupSave(
+      actor,
+      `llm.${purpose}`,
+      null,
+      { provider: validated.provider, model: validated.model || DEFAULT_OPENAI_MODEL, apiKey: validated.apiKey },
+      ["apiKey"]
+    )
     revalidatePath("/setup")
     return { success: true }
   } catch (error) {
@@ -475,7 +588,7 @@ export async function saveLLMProvider(data: SetupLLMProviderInput) {
 
 export async function savePrometheus(data: PrometheusInput) {
   try {
-    await requireAdminIfSetupComplete()
+    const actor = await setupActor()
 
     const validated: PrometheusParsed = prometheusSchema.parse(data)
 
@@ -518,6 +631,7 @@ export async function savePrometheus(data: PrometheusInput) {
       })
     })
 
+    auditSetupSave(actor, "prometheus", null, { name: validated.name, url: validated.url, query: validated.query })
     revalidatePath("/setup")
     return { success: true }
   } catch (error) {
@@ -529,7 +643,7 @@ export async function savePrometheus(data: PrometheusInput) {
 }
 
 export async function completeSetup() {
-  await requireAdminIfSetupComplete()
+  const actor = await setupActor()
 
   const setup = await prisma.setup.findFirst({
     orderBy: { createdAt: "desc" },
@@ -545,6 +659,7 @@ export async function completeSetup() {
     })
   }
 
+  auditSetupSave(actor, "complete", null, { isComplete: true })
   revalidatePath("/")
   return { success: true }
 }

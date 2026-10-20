@@ -1,6 +1,6 @@
 "use client"
 
-import { createPlexAuthUrl, createPlexPin } from "@/lib/plex-auth"
+import { startPlexSignIn } from "@/lib/plex-auth"
 import { useEffect, useState } from "react"
 
 export interface PlexSignInButtonProps {
@@ -71,7 +71,6 @@ export function PlexSignInButton({
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showWarningState, setShowWarningState] = useState(false)
-  const [_authUrl, setAuthUrl] = useState<string | null>(null)
 
   const handleSignIn = async () => {
     setIsLoading(true)
@@ -79,19 +78,16 @@ export function PlexSignInButton({
     onSignInStart?.()
 
     try {
-      // Create a Plex PIN
-      const pin = await createPlexPin()
-      if (!pin.success) {
-        setError(pin.error)
+      // The PIN (and any invite code) stays in an httpOnly cookie; only the
+      // app.plex.tv URL comes back.
+      const started = await startPlexSignIn({ inviteCode })
+      if (!started.success) {
+        setError(started.error)
         setIsLoading(false)
-        onError?.(pin.error)
+        onError?.(started.error)
         return
       }
-      const { id, code } = pin.data
-
-      // Create the authorization URL (with optional invite code)
-      const url = await createPlexAuthUrl(id, code, inviteCode)
-      setAuthUrl(url)
+      const url = started.data.authUrl
 
       if (showWarning) {
         // Show warning transition

@@ -10,6 +10,7 @@ export {
   setLLMDisabled,
   getWrappedSettings,
   updateWrappedSettings,
+  updateLlmCaps,
   updateServerTimeZone,
 } from "./admin-config"
 
@@ -46,6 +47,7 @@ export {
 export {
   getUserById,
   updateUserAdminStatus,
+  setUserDisabled,
 } from "./admin-users"
 
 // Combined settings

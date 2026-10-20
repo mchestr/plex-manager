@@ -7,7 +7,8 @@
  * gated surfaces (the authenticated web app AND the Discord bot). This is the
  * single source of truth so the bot and the web app agree on "who's a subscriber".
  *
- * A user is entitled when ANY of the following holds:
+ * A **disabled** user (`User.disabledAt` set by an admin) is never entitled.
+ * Otherwise a user is entitled when ANY of the following holds:
  * - **Stripe gating is disabled** (`Config.stripeEnabled === false`, the default) —
  *   the subscription feature is a no-op, so everyone is entitled (matches the
  *   app's behavior before subscriptions existed).
@@ -18,12 +19,13 @@
  *
  * This module is a plain (non-`"use server"`) module with no next-auth / Next.js
  * imports, so it is safe to use from the always-on Discord bot process as well as
- * from server actions. `lib/guards.ts` re-exports {@link getAccessGateStatus} for
- * the web request path.
+ * from server actions. {@link getAccessLevel} adds the read-only `lapsed` level
+ * for members whose access ended (FR-51); the web request path reads it once per
+ * request through `lib/actions/entitlement.ts`.
  */
 
 import { prisma } from "@/lib/prisma"
-import type { SubscriptionStatus } from "@/lib/generated/prisma"
+import type { Prisma, SubscriptionStatus } from "@/lib/generated/prisma/client"
 
 /** Subscription statuses that count as "active enough" to be entitled. */
 const ENTITLING_STATUSES: readonly SubscriptionStatus[] = ["ACTIVE", "PAST_DUE"]
@@ -36,6 +38,8 @@ const ENTITLING_STATUSES: readonly SubscriptionStatus[] = ["ACTIVE", "PAST_DUE"]
 export interface AccessFacts {
   /** Whether Stripe subscription gating is enabled globally. */
   stripeEnabled: boolean
+  /** Whether an admin disabled the account (`User.disabledAt` is set). */
+  disabled: boolean
   isAdmin: boolean
   isExempt: boolean
   subscriptionStatus: SubscriptionStatus | null | undefined
@@ -48,6 +52,9 @@ export interface AccessFacts {
  * @returns `true` when the user is an entitled member.
  */
 export function isAccessAllowed(facts: AccessFacts): boolean {
+  if (facts.disabled) {
+    return false
+  }
   if (!facts.stripeEnabled) {
     return true
   }
@@ -58,40 +65,73 @@ export function isAccessAllowed(facts: AccessFacts): boolean {
 }
 
 /**
- * Pure-DB access-gate check for a user id. Reads only the DB (no live Plex/Stripe
- * call), so it is cheap enough to run on every guarded request or bot command.
+ * How much of the app a user may use (SEC-28, FR-51):
+ * - `full`: an entitled member ({@link isAccessAllowed}), or anyone while
+ *   Stripe gating is off;
+ * - `lapsed`: not entitled, with Stripe on, but holding at least one completed
+ *   Rewind, which they keep reading (FR-51);
+ * - `none`: disabled, missing, or not entitled with no completed Rewind.
+ */
+export type AccessLevel = "full" | "lapsed" | "none"
+
+/**
+ * The {@link AccessLevel} of a user id, from the database only (no Stripe or
+ * Plex call). A disabled user is `none` whether or not gating is on.
  *
  * @param userId - The database user id.
- * @returns `true` when the user may access gated surfaces, `false` otherwise.
  */
-export async function getAccessGateStatus(userId: string): Promise<boolean> {
-  const config = await prisma.config.findUnique({
-    where: { id: "config" },
-    select: { stripeEnabled: true },
-  })
+export async function getAccessLevel(userId: string): Promise<AccessLevel> {
+  const [config, user] = await Promise.all([
+    prisma.config.findUnique({ where: { id: "config" }, select: { stripeEnabled: true } }),
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        disabledAt: true,
+        isAdmin: true,
+        isExempt: true,
+        subscription: { select: { status: true } },
+      },
+    }),
+  ])
 
-  // Fast path: gating disabled → everyone is entitled, no user lookup needed.
-  if (!config?.stripeEnabled) {
-    return true
+  if (!user || user.disabledAt) {
+    return "none"
   }
-
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      isAdmin: true,
-      isExempt: true,
-      subscription: { select: { status: true } },
-    },
-  })
-
-  if (!user) {
-    return false
-  }
-
-  return isAccessAllowed({
-    stripeEnabled: true,
+  const allowed = isAccessAllowed({
+    stripeEnabled: config?.stripeEnabled ?? false,
+    disabled: false,
     isAdmin: user.isAdmin,
     isExempt: user.isExempt,
     subscriptionStatus: user.subscription?.status ?? null,
   })
+  if (allowed) {
+    return "full"
+  }
+
+  const completed = await prisma.plexWrapped.findFirst({
+    where: { userId, status: "completed" },
+    select: { id: true },
+  })
+  return completed ? "lapsed" : "none"
+}
+
+/**
+ * The `User` filter for entitled members, the query form of
+ * {@link isAccessAllowed}, for batch jobs that must skip everyone else
+ * (`syncAllEnabledUsers`).
+ *
+ * @param stripeEnabled - `Config.stripeEnabled`.
+ */
+export function entitledUserWhere(stripeEnabled: boolean): Prisma.UserWhereInput {
+  if (!stripeEnabled) {
+    return { disabledAt: null }
+  }
+  return {
+    disabledAt: null,
+    OR: [
+      { isAdmin: true },
+      { isExempt: true },
+      { subscription: { status: { in: [...ENTITLING_STATUSES] } } },
+    ],
+  }
 }

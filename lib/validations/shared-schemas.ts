@@ -23,18 +23,6 @@ export const YEAR_MAX = 2100
 export const yearSchema = z.number().int().min(YEAR_MIN).max(YEAR_MAX)
 
 /**
- * A year as a URL segment (`/wrapped/<year>`): four digits in the yearSchema
- * range, so `/wrapped/0x7EA` or `/wrapped/2026.0` is not a second URL for 2026.
- */
-export const yearParamSchema = z.string().regex(/^\d{4}$/).pipe(z.coerce.number<string>().pipe(yearSchema))
-
-/**
- * A Rewind share token as a URL segment: 43 base64url characters, the 32
- * random bytes `generateShareToken` encodes.
- */
-export const shareTokenSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/)
-
-/**
  * Schema for LLM usage ID validation
  * UUID format expected (cuid is the actual format used by Prisma)
  */
@@ -76,6 +64,21 @@ export function createServerUrlSchema(examplePort?: string) {
       }
       return `${parsed.protocol}://${parsed.hostname}:${parsed.port}`
     })
+}
+
+/**
+ * True when a parsed URL uses `http:` or `https:` (SEC-57). Every other
+ * scheme, including `javascript:`, `data:` and `ftp:`, is refused. `safeHref`
+ * in `lib/ui/markdown.ts` and the public URL schema share this one check.
+ *
+ * @example
+ * ```ts
+ * isHttpUrl(new URL("https://example.com")) // true
+ * isHttpUrl(new URL("javascript:alert(1)")) // false
+ * ```
+ */
+export function isHttpUrl(url: URL): boolean {
+  return url.protocol === "http:" || url.protocol === "https:"
 }
 
 /**
@@ -134,15 +137,7 @@ export function createPublicUrlSchema(exampleDomain?: string) {
   return z.string()
     .optional()
     .refine(
-      (url) => {
-        if (!url) return true
-        try {
-          new URL(url)
-          return true
-        } catch {
-          return false
-        }
-      },
+      (url) => !url || (URL.canParse(url) && isHttpUrl(new URL(url))),
       { message: `Invalid URL format. Expected format: https://${domainExample}` }
     )
 }

@@ -16,6 +16,7 @@
  * /mystats
  *   │
  *   ├─ not linked ─────────────► ephemeral "link your account" nudge
+ *   ├─ over 5 an hour ─────────► ephemeral "try again in …" (no Tautulli call)
  *   └─ linked ─────────────────► deferReply (ephemeral; Tautulli fetch is slow,
  *                                 must ack < 3s)
  *                                    │
@@ -35,6 +36,8 @@ import { EmbedBuilder, MessageFlags, SlashCommandBuilder } from "discord.js"
 import type { DiscordCommandType } from "@/lib/generated/prisma"
 import { sanitizeDiscordResponse } from "@/lib/discord/chat-safety"
 import { prisma } from "@/lib/prisma"
+import { consume } from "@/lib/security/rate-limit"
+import { retryAfterCopy } from "@/lib/security/rate-limit-messages"
 import { createLogger } from "@/lib/utils/logger"
 import { formatDuration } from "@/lib/utils/format"
 import { fetchTautulliStatistics } from "@/lib/wrapped/tautulli-statistics"
@@ -125,6 +128,16 @@ async function handleMyStats(ctx: InteractionContext): Promise<void> {
 
   const user = await requireLinkedUser(ctx, { action: "viewing your stats" })
   if (!user) return
+
+  // Each call fetches a year of Tautulli history, so it is limited per member (SEC-23)
+  const limit = await consume("discord:mystats", user.id)
+  if (!limit.ok) {
+    await interaction.reply({
+      content: `You've checked your stats a lot this hour. You can look again ${retryAfterCopy(limit.retryAfterSec)}.`,
+      flags: MessageFlags.Ephemeral,
+    })
+    return
+  }
 
   const { plexUserId } = user
 

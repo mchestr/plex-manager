@@ -19,10 +19,10 @@ coverage
 *.tsbuildinfo
 next-env.d.ts
 
-# Environment files
-.env
-.env*.local
-.env.production
+# Environment files: every .env variant, so no local secret reaches a build
+# layer; the documented example stays
+.env*
+!example.env
 
 # Git
 .git
@@ -48,3 +48,8 @@ prisma/dev.db-journal
 build
 dist
 
+# Local data, tests and planning that the image never needs (P4.17)
+data/
+e2e/
+.agents/
+.claude/

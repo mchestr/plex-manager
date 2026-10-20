@@ -19,6 +19,32 @@ const logger = createLogger("CHATBOT_EXECUTOR")
  */
 const DISCORD_TOOL_NOT_PERMITTED = JSON.stringify({ error: "tool not permitted" })
 
+/**
+ * What the Discord context gets in place of any tool failure: a thrown
+ * executor, or an executor's own error result. Upstream error text can carry
+ * internal URLs and API keys, so none of it reaches the model (SEC-50).
+ */
+const DISCORD_TOOL_UNAVAILABLE = "Error: that tool isn't available right now."
+
+/** The admin context's message for a thrown executor: a code, never the error text (SEC-20). */
+const TOOL_EXECUTION_FAILED = "Error: tool execution failed (TOOL_EXECUTION_FAILED)."
+
+/**
+ * True when an executor's output is an error: an `"Error..."` string, or JSON
+ * with a non-null top-level `error` or `success: false`.
+ */
+function isToolError(output: string): boolean {
+  if (output.startsWith("Error")) return true
+  try {
+    const parsed: unknown = JSON.parse(output)
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return false
+    const { error, success } = parsed as { error?: unknown; success?: unknown }
+    return (error !== undefined && error !== null) || success === false
+  } catch {
+    return false
+  }
+}
+
 // Map tool names to their service executors
 const TOOL_SERVICE_MAP: Record<string, (toolName: string, args: Record<string, unknown>, userId?: string, context?: string) => Promise<string>> = {
   // Plex tools
@@ -165,8 +191,16 @@ export async function executeToolCall(
 
     // Discord context: scrub tool output to the per-tool safe-field allowlist
     // BEFORE it becomes the tool message the LLM sees (design §4.4, FR-8).
-    // Admin (default) context is unchanged.
+    // An executor's error result is replaced by the fixed text first, so no
+    // upstream error detail survives (SEC-50). Admin context is unchanged.
     if (context === "discord") {
+      if (isToolError(result)) {
+        logger.warn("Chatbot tool returned an error in Discord context", {
+          toolName,
+          toolCallId: toolCall.id,
+        })
+        return DISCORD_TOOL_UNAVAILABLE
+      }
       return scrubForDiscord(toolName, result)
     }
 
@@ -177,7 +211,7 @@ export async function executeToolCall(
       toolCallId: toolCall.id,
       args,
     })
-    return `Error executing tool: ${error instanceof Error ? error.message : "Unknown error"}`
+    return context === "discord" ? DISCORD_TOOL_UNAVAILABLE : TOOL_EXECUTION_FAILED
   }
 }
 

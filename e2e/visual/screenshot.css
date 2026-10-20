@@ -6,20 +6,3 @@
 [data-visual-mask] {
   visibility: hidden !important;
 }
-
-/*
- * app/globals.css sets `html, body { height: 100%; overflow-x: hidden }`,
- * which makes body the scroll container and cuts full-page shots off at the
- * viewport. Let the document grow so `fullPage` shows the whole page, and
- * give html the dark page colour (slate-900) so the area below the fixed
- * backgrounds is not white. P3.1 deletes that rule; this block goes with it.
- */
-html,
-body {
-  height: auto !important;
-  overflow: visible !important;
-}
-
-html {
-  background-color: #0f172a;
-}

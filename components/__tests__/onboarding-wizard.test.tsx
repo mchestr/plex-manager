@@ -8,10 +8,13 @@ jest.mock('next/navigation', () => ({
   useRouter: jest.fn(),
 }))
 
-const mockCompleteOnboarding = jest.fn().mockResolvedValue({ success: true })
+const mockCompleteOnboarding = jest.fn().mockResolvedValue({ success: true, data: null })
 jest.mock('@/actions/onboarding', () => ({
   completeOnboarding: (...args: any[]) => mockCompleteOnboarding(...args),
-  getOnboardingInfo: jest.fn().mockResolvedValue({ overseerrUrl: 'http://test-overseerr.com' }),
+  getOnboardingInfo: jest.fn().mockResolvedValue({
+    success: true,
+    data: { overseerrUrl: 'http://test-overseerr.com', discordEnabled: false, discordInstructions: null },
+  }),
 }))
 
 // Mock motion
@@ -89,7 +92,7 @@ describe('OnboardingWizard', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    mockCompleteOnboarding.mockResolvedValue({ success: true })
+    mockCompleteOnboarding.mockResolvedValue({ success: true, data: null })
     ;(useRouter as jest.Mock).mockReturnValue(mockRouter)
   })
 

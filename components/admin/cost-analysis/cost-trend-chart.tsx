@@ -1,27 +1,13 @@
 "use client"
 
-import {
-  CategoryScale,
-  Chart as ChartJS,
-  ChartOptions,
-  Legend,
-  LineElement,
-  LinearScale,
-  PointElement,
-  Tooltip,
-} from "chart.js"
+import type { ChartOptions } from "chart.js"
 import { Line } from "react-chartjs-2"
 
+import { chartTheme, registerCharts } from "@/lib/charts/theme"
 import { useFormat } from "@/lib/format-context"
+import type { ThemeName } from "@/lib/design/tokens"
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Tooltip,
-  Legend
-)
+registerCharts()
 
 interface CostTrendData {
   date: string
@@ -32,17 +18,26 @@ interface CostTrendData {
 
 interface CostTrendChartProps {
   data: CostTrendData[]
+  /** The resolved theme class; the app is dark until the light theme ships (P10). */
+  mode?: ThemeName
 }
 
-export function CostTrendChart({ data }: CostTrendChartProps) {
+/**
+ * Daily LLM cost as one filled line, in `chart-1`. The reference adopter of
+ * `lib/charts/theme.ts`: one series, so the card title names it and there is
+ * no legend.
+ */
+export function CostTrendChart({ data, mode = "dark" }: CostTrendChartProps) {
   const f = useFormat()
   if (data.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full text-slate-500 text-sm">
+      <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
         No data available
       </div>
     )
   }
+
+  const theme = chartTheme(mode)
 
   // Sort data by date (oldest first for line chart)
   const sortedData = [...data].sort((a, b) => a.date.localeCompare(b.date))
@@ -57,15 +52,15 @@ export function CostTrendChart({ data }: CostTrendChartProps) {
       {
         label: "Daily Cost",
         data: sortedData.map((point) => point.cost),
-        borderColor: "#22c55e",
-        backgroundColor: "rgba(34, 197, 94, 0.1)",
+        borderColor: theme.series[0],
+        backgroundColor: theme.area[0],
         borderWidth: 2,
         fill: true,
         tension: 0.4,
         pointRadius: 3,
         pointHoverRadius: 5,
-        pointBackgroundColor: "#22c55e",
-        pointBorderColor: "#16a34a",
+        pointBackgroundColor: theme.series[0],
+        pointBorderColor: theme.series[0],
       },
     ],
   }
@@ -74,27 +69,16 @@ export function CostTrendChart({ data }: CostTrendChartProps) {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: {
-        display: true,
-        position: "top" as const,
-        labels: {
-          color: "#94a3b8",
-          font: {
-            size: 12,
-          },
-          usePointStyle: true,
-          padding: 15,
-        },
-      },
+      legend: { display: false },
       tooltip: {
-        backgroundColor: "#1e293b",
-        titleColor: "#cbd5e1",
-        bodyColor: "#e2e8f0",
-        borderColor: "#475569",
+        backgroundColor: theme.tooltip.background,
+        titleColor: theme.tooltip.text,
+        bodyColor: theme.tooltip.text,
+        borderColor: theme.tooltip.border,
         borderWidth: 1,
         padding: 12,
         cornerRadius: 6,
-        displayColors: true,
+        displayColors: false,
         callbacks: {
           label: (context) => {
             const index = context.dataIndex
@@ -111,7 +95,7 @@ export function CostTrendChart({ data }: CostTrendChartProps) {
     scales: {
       x: {
         ticks: {
-          color: "#94a3b8",
+          color: theme.tick,
           font: {
             size: 11,
           },
@@ -119,7 +103,7 @@ export function CostTrendChart({ data }: CostTrendChartProps) {
           minRotation: 45,
         },
         grid: {
-          color: "rgba(71, 85, 105, 0.3)",
+          color: theme.grid,
         },
         border: {
           display: false,
@@ -128,14 +112,14 @@ export function CostTrendChart({ data }: CostTrendChartProps) {
       y: {
         beginAtZero: true,
         ticks: {
-          color: "#94a3b8",
+          color: theme.tick,
           font: {
             size: 11,
           },
           callback: (value) => f.money(Number(value)),
         },
         grid: {
-          color: "rgba(71, 85, 105, 0.3)",
+          color: theme.grid,
         },
         border: {
           display: false,
@@ -150,4 +134,3 @@ export function CostTrendChart({ data }: CostTrendChartProps) {
     </div>
   )
 }
-

@@ -96,7 +96,7 @@ export async function getPlexUserInfo(token: string): Promise<{ success: boolean
  */
 export async function getPlexUsers(
   token: string
-): Promise<{ success: boolean; data?: PlexUser[]; error?: string }> {
+): Promise<{ success: boolean; data?: PlexUser[]; error?: string; status?: number }> {
   const fetchStartTime = Date.now()
   const url = "https://clients.plex.tv/api/users"
 
@@ -132,9 +132,13 @@ export async function getPlexUsers(
         response: errorText.substring(0, 500),
       })
       if (response.status === 401) {
-        return { success: false, error: "Unauthorized - invalid token" }
+        return { success: false, error: "Unauthorized - invalid token", status: 401 }
       }
-      return { success: false, error: `API returned error status: ${response.status} ${response.statusText}` }
+      return {
+        success: false,
+        error: `API returned error status: ${response.status} ${response.statusText}`,
+        status: response.status,
+      }
     }
 
     const xmlText = await response.text()
@@ -201,8 +205,9 @@ export async function getPlexUsers(
         const serverElements: ParsedXmlServer[] = Array.isArray(user.Server) ? user.Server : [user.Server]
         for (const server of serverElements) {
           const machineIdentifier = server["@_machineIdentifier"]
+          const shareId = server["@_id"]
           if (machineIdentifier) {
-            servers.push({ machineIdentifier })
+            servers.push(shareId ? { machineIdentifier, shareId: String(shareId) } : { machineIdentifier })
           }
         }
       }

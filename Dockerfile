@@ -1,16 +1,27 @@
-FROM node:25.8-alpine AS base
+# Node 24 LTS, pinned by digest; Dependabot's docker entry keeps tag and digest current.
+FROM node:24-alpine@sha256:44fce696f38ba8c987c4db89954051000bbd05ffd8d8659ba15ed4a8602e937f AS base
 
 # Install dependencies only when needed
 FROM base AS deps
 # Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
 # No native toolchain: zlib-sync is an optional dependency, so `npm ci` skips its
 # failed build and discord.js falls back to an uncompressed gateway connection.
+# Alpine packages follow the digest-pinned base; a pinned apk version breaks
+# when the release drops it.
+# hadolint ignore=DL3018
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Install dependencies based on the preferred package manager
-COPY package.json package-lock.json* ./
+COPY package.json package-lock.json ./
 RUN npm ci
+
+# The Prisma CLI the entrypoint runs migrations with: exact pins and its own
+# lockfile (docker/prisma-cli), production dependencies only (SEC-03).
+FROM base AS prisma-cli
+WORKDIR /opt/prisma-cli
+COPY docker/prisma-cli/package.json docker/prisma-cli/package-lock.json ./
+RUN npm ci --omit=dev --prefix /opt/prisma-cli && \
+    npm cache clean --force
 
 # Dev stage with source code for docker-compose
 FROM base AS dev
@@ -32,49 +43,60 @@ COPY . .
 # Generate Prisma Client and build
 RUN npx prisma generate && npm run build
 
-# Production image, copy all the files and run next
+# Production image: root-owned app files, one writable path, no npm install
 FROM base AS runner
 WORKDIR /app
 
 # NEXT_MANUAL_SIG_HANDLE: the app's shutdown coordinator handles SIGTERM and
 # drains jobs and the Discord bot; Next's own handler would exit at once.
-ENV NEXT_TELEMETRY_DISABLED=1 \
+# REWIND_CACHE_DIR is the only path the app may write (posters, cards, fonts).
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
     NEXT_MANUAL_SIG_HANDLE=true \
     PORT=3000 \
-    HOSTNAME="0.0.0.0"
+    HOSTNAME=0.0.0.0 \
+    REWIND_CACHE_DIR=/app/.next/cache/rewind
 
-# Create non-root user and set up entrypoint
-RUN addgroup --system --gid 1001 nodejs && \
+# tini is PID 1: it forwards SIGTERM to Node and reaps zombies. The runner
+# installs nothing at runtime, so the base image's npm, npx, corepack and yarn
+# (and the advisories in their bundled packages) go.
+# hadolint ignore=DL3018
+RUN apk add --no-cache tini && \
+    rm -rf /usr/local/lib/node_modules /opt/yarn-* \
+      /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /usr/local/bin/yarn /usr/local/bin/yarnpkg && \
+    addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Copy public assets and Next.js standalone output
-# https://nextjs.org/docs/advanced-features/output-file-tracing
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+# Public assets and the Next.js standalone output, owned by root so the app
+# cannot rewrite its own code
+# https://nextjs.org/docs/app/api-reference/config/next-config-js/output
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 
-# Copy Prisma schema, migrations, config, and generated client
-COPY --from=builder --chown=nextjs:nodejs /app/prisma/schema.prisma ./prisma/schema.prisma
-COPY --from=builder --chown=nextjs:nodejs /app/prisma/migrations ./prisma/migrations
-COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./prisma.config.ts
-COPY --from=builder --chown=nextjs:nodejs /app/lib/generated/prisma ./lib/generated/prisma
+# Prisma schema, migrations, config and generated client, and the pinned CLI
+COPY --from=builder /app/prisma/schema.prisma ./prisma/schema.prisma
+COPY --from=builder /app/prisma/migrations ./prisma/migrations
+COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
+COPY --from=builder /app/lib/generated/prisma ./lib/generated/prisma
+COPY --from=prisma-cli /opt/prisma-cli /opt/prisma-cli
 
-# Install Prisma CLI for runtime migrations
-COPY --from=builder /app/package.json ./package.json
-RUN PRISMA_VERSION=$(node -p "require('./package.json').devDependencies.prisma") && \
-    DOTENV_VERSION=$(node -p "require('./package.json').dependencies.dotenv") && \
-    npm install --no-package-lock "prisma@${PRISMA_VERSION}" "dotenv@${DOTENV_VERSION}" && \
-    npm cache clean --force && \
-    chown -R nextjs:nodejs node_modules
+COPY --chmod=755 docker-entrypoint.sh ./docker-entrypoint.sh
 
-# Copy entrypoint script
-COPY --chmod=755 --chown=nextjs:nodejs docker-entrypoint.sh ./docker-entrypoint.sh
+# The one writable path: Next's own cache (images, data cache) and Rewind's.
+RUN mkdir -p .next/cache/rewind && \
+    chown -R nextjs:nodejs .next/cache
 
 USER nextjs
 
 EXPOSE 3000
 
+# Liveness only: a Redis outage, which the site survives (P4.2), must never get
+# the container marked unhealthy and restarted. /api/health without the probe
+# reports the database and Redis for monitoring.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+  CMD ["node", "-e", "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/health?probe=live').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+
 # server.js is created by next build from the standalone output
-# https://nextjs.org/docs/pages/api-reference/next-config-js/output
-ENTRYPOINT ["./docker-entrypoint.sh"]
-CMD ["npm", "run", "start:prod"]
+ENTRYPOINT ["/sbin/tini", "--", "./docker-entrypoint.sh"]
+CMD ["node", "server.js"]

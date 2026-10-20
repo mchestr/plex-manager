@@ -12,6 +12,7 @@ import {
   findOverseerrUser,
   type GenreCache,
 } from "@/lib/wrapped/sources/overseerr-requests"
+import { clearOverseerrUserIndexCache } from "@/lib/connections/overseerr"
 import { directLimiter } from "@/lib/wrapped/sources/watch-history-source"
 import { yearWindow } from "@/lib/wrapped/time/zone"
 
@@ -42,6 +43,7 @@ function route(url: string): Response {
 
 beforeEach(() => {
   mockFetch.mockReset()
+  clearOverseerrUserIndexCache()
   mockFetch.mockImplementation(async (url: string) => route(url))
   global.fetch = mockFetch as unknown as typeof fetch
 })

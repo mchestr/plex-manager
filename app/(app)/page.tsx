@@ -1,12 +1,15 @@
 import { getActiveAnnouncements } from "@/actions/announcements";
-import { getPrometheusStatus } from "@/actions/prometheus-status";
+import { getPrometheusStatus, type StatusData } from "@/actions/prometheus-status";
 import { ServiceSignInToggle } from "@/components/auth/service-sign-in-toggle";
 import { UserDashboard } from "@/components/dashboard/user-dashboard";
 import { SubscriptionStatusView } from "@/components/subscription/subscription-status-view";
+import { hasEntitlement } from "@/lib/actions/entitlement";
 import { authOptions } from "@/lib/auth";
+import { serverName as getServerName } from "@/lib/brand";
 import { getFirstWatchDate } from "@/lib/connections/tautulli-first-watch";
 import { prisma } from "@/lib/prisma";
 import { getAppSettings } from "@/lib/settings/app-settings";
+import { safeHref } from "@/lib/ui/markdown";
 import { calendarMonthsBetween } from "@/lib/utils/format";
 import { getRewindEligibility } from "@/lib/wrapped/eligibility";
 import type { AuthService } from "@/types/onboarding";
@@ -24,6 +27,8 @@ const OnboardingStatusSchema = z.object({
   jellyfin: z.boolean(),
 })
 
+const UNKNOWN_STATUS: StatusData = { isConfigured: false, serviceName: "", segments: [], overallStatus: "unknown" }
+
 interface OnboardingStatusRecord {
   plex: boolean
   jellyfin: boolean
@@ -31,7 +36,7 @@ interface OnboardingStatusRecord {
 
 export default async function Home() {
   const session = await getServerSession(authOptions);
-  const [plexServer, jellyfinServer, discordIntegration, announcements, overseerr, prometheusStatus, config] = await Promise.all([
+  const [plexServer, jellyfinServer, discordIntegration, announcementsResult, overseerr, prometheusResult, config, serverName] = await Promise.all([
     prisma.plexServer.findFirst({
       where: { isActive: true },
     }),
@@ -43,12 +48,16 @@ export default async function Home() {
     prisma.overseerr.findFirst({ where: { isActive: true } }),
     getPrometheusStatus(),
     prisma.config.findUnique({ where: { id: "config" }, select: { stripeEnabled: true } }),
+    getServerName(),
   ]);
 
-  // Determine server name based on what's configured
-  const serverName = plexServer?.name || jellyfinServer?.name || "Media Server";
+  const announcements = announcementsResult.success ? announcementsResult.data : []
+  const prometheusStatus = prometheusResult.success ? prometheusResult.data : UNKNOWN_STATUS
+
   const discordEnabled = Boolean(discordIntegration?.isEnabled && discordIntegration?.clientId && discordIntegration?.clientSecret);
-  const overseerrUrl = overseerr?.publicUrl || overseerr?.url || null;
+  // Members get public URLs only (the internal ones are often LAN or Docker
+  // addresses), and an admin-set one renders only when it is http or https (SEC-57).
+  const overseerrUrl = safeHref(overseerr?.publicUrl);
 
   // Handle redirect logic for authenticated users
   if (session?.user?.id) {
@@ -88,10 +97,12 @@ export default async function Home() {
     // The first watch date from Tautulli gives the membership duration, and
     // eligibility decides whether the Rewind card offers a Rewind (FR-48).
     // Both find the member through findTautulliUser, which calls Tautulli's
-    // get_users once per render.
+    // get_users once per render. The first watch date reads the member's
+    // history, so it needs at least read entitlement (SEC-28).
     const plexUserId = user?.plexUserId ?? null;
+    const canReadHistory = await hasEntitlement(session.user.id, "read");
     const [firstWatchResult, rewindEligibility, { timeZone }] = await Promise.all([
-      plexUserId ? getFirstWatchDate(plexUserId) : null,
+      plexUserId && canReadHistory ? getFirstWatchDate(plexUserId) : null,
       getRewindEligibility({ id: session.user.id, plexUserId }),
       getAppSettings(),
     ]);
@@ -116,8 +127,8 @@ export default async function Home() {
 
     // Determine media server URL based on primary auth service
     const mediaServerUrl = user?.primaryAuthService === "jellyfin"
-      ? jellyfinServer?.url
-      : plexServer?.url;
+      ? jellyfinServer?.publicUrl ?? null
+      : plexServer?.publicUrl ?? null;
 
     return (
       <UserDashboard

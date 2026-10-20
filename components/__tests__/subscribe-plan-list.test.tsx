@@ -80,14 +80,14 @@ describe('PlanList', () => {
 
   it('starts checkout and redirects to the returned URL when Subscribe is clicked', async () => {
     const user = userEvent.setup()
-    mockStartCheckout.mockResolvedValue({ url: 'https://checkout.stripe.com/c/pay/cs_1' })
+    mockStartCheckout.mockResolvedValue({ success: true, data: { url: 'https://checkout.stripe.com/c/pay/cs_1' } })
 
     renderList([monthPlan])
 
     await user.click(screen.getByTestId('subscribe-button-price_month'))
 
     await waitFor(() => {
-      expect(mockStartCheckout).toHaveBeenCalledWith('price_month')
+      expect(mockStartCheckout).toHaveBeenCalledWith({ priceId: 'price_month' })
     })
     await waitFor(() => {
       expect(mockRedirectTo).toHaveBeenCalledWith('https://checkout.stripe.com/c/pay/cs_1')
@@ -117,7 +117,11 @@ describe('PlanList', () => {
 
   it('surfaces an error toast and stays on the page when checkout returns an error', async () => {
     const user = userEvent.setup()
-    mockStartCheckout.mockResolvedValue({ error: 'Subscriptions are not available right now.' })
+    mockStartCheckout.mockResolvedValue({
+      success: false,
+      code: 'UPSTREAM_UNAVAILABLE',
+      error: 'Subscriptions are not available right now.',
+    })
 
     renderList([monthPlan])
 

@@ -1,15 +1,37 @@
 "use server"
 
-import { requireAdmin } from "@/lib/admin"
-import { prisma } from "@/lib/prisma"
+/**
+ * Admin settings for the connected services (Plex, Jellyfin, Tautulli,
+ * Overseerr, Sonarr, Radarr, Prometheus).
+ *
+ * Secrets are never sent to the client, so a blank token or API key means
+ * "keep the stored one", but only for the address it was saved with
+ * (`resolveSecretForOrigin`, SEC-31). The connection test runs after that rule,
+ * so a stored secret never reaches a new address. Every save is audited as
+ * `CONFIG_CHANGED` with a redacted diff (SEC-55).
+ */
+
+import { revalidatePath } from "next/cache"
 import { z } from "zod"
-import { getJellyfinLibraries as fetchLibraries, getJellyfinServerInfo, testJellyfinConnection } from "@/lib/connections/jellyfin"
+
+import { adminAction } from "@/lib/actions/define-action"
+import { ok, type ActionErrorCode, type ActionFailure, type ActionResult } from "@/lib/actions/result"
+import { requireAdmin } from "@/lib/admin"
+import { getJellyfinLibraries as fetchLibraries, testJellyfinConnection } from "@/lib/connections/jellyfin"
 import { testOverseerrConnection } from "@/lib/connections/overseerr"
 import { getPlexUserInfo, testPlexConnection } from "@/lib/connections/plex"
 import { testPrometheusConnection, validatePrometheusQuery } from "@/lib/connections/prometheus"
 import { testRadarrConnection } from "@/lib/connections/radarr"
 import { testSonarrConnection } from "@/lib/connections/sonarr"
 import { testTautulliConnection } from "@/lib/connections/tautulli"
+import { prisma, type PrismaTransactionClient } from "@/lib/prisma"
+import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
+import { configDiff } from "@/lib/security/config-diff"
+import {
+  resolveSecretForOrigin,
+  SECRET_REQUIRED_MESSAGE,
+  type SecretRequiredCode,
+} from "@/lib/security/secret-reuse"
 import { jellyfinServerSchema } from "@/lib/validations/jellyfin"
 import { overseerrSchema } from "@/lib/validations/overseerr"
 import { plexServerSchema } from "@/lib/validations/plex"
@@ -17,25 +39,74 @@ import { prometheusSchema } from "@/lib/validations/prometheus"
 import { radarrSchema } from "@/lib/validations/radarr"
 import { sonarrSchema } from "@/lib/validations/sonarr"
 import { tautulliSchema } from "@/lib/validations/tautulli"
-import { revalidatePath } from "next/cache"
+
+type ServerActionCode = ActionErrorCode | SecretRequiredCode
+type ServerResult = ActionResult<null, ServerActionCode>
+
+const SECRET_INPUT = z.string().max(500).optional()
 
 /**
- * Resolves a secret (server token/API key) for a "leave blank to keep current
- * value" update. Secrets are never sent to the client, so an empty submission
- * means "keep the stored value": in that case the currently-stored (decrypted)
- * secret is fetched and reused. When no secret was submitted and none is stored,
- * returns an empty string so the schema's `min(1)` check surfaces the usual
- * "required" error.
- *
- * @internal
+ * A blank secret that cannot be reused. With nothing stored this is a plain
+ * required field (`missing`); otherwise the address changed.
  */
-async function resolveSecret(
-  submitted: string | undefined,
-  fetchStored: () => Promise<string | null | undefined>,
-): Promise<string> {
-  const trimmed = submitted?.trim()
-  if (trimmed) return trimmed
-  return (await fetchStored()) ?? ""
+function secretRequired(missing: string | null): ActionFailure<ServerActionCode> {
+  if (missing) return { success: false, code: "VALIDATION", error: missing }
+  return { success: false, code: "SECRET_REQUIRED", error: SECRET_REQUIRED_MESSAGE }
+}
+
+function unreachable(error: string): ActionFailure<ServerActionCode> {
+  return { success: false, code: "UPSTREAM_UNAVAILABLE", error }
+}
+
+/** The fields every saved service row holds besides its secret. */
+interface ServiceValues {
+  name: string
+  url: string
+  publicUrl?: string
+}
+
+/**
+ * The delegate calls that replace a service's active row. Structural, so each
+ * service's transaction delegate fits.
+ */
+interface ActiveRowDelegate<D> {
+  updateMany(args: { where: { isActive: true }; data: { isActive: false } }): Promise<unknown>
+  findFirst(args: { where: { url: string } }): Promise<{ id: string } | null>
+  update(args: { where: { id: string }; data: D }): Promise<unknown>
+  create(args: { data: D }): Promise<unknown>
+}
+
+/** Deactivates the active row, then updates the row for this URL or creates one. */
+async function replaceActiveRow<D extends { url: string; isActive: true }>(delegate: ActiveRowDelegate<NoInfer<D>>, data: D) {
+  await delegate.updateMany({ where: { isActive: true }, data: { isActive: false } })
+  const existing = await delegate.findFirst({ where: { url: data.url } })
+  if (existing) {
+    await delegate.update({ where: { id: existing.id }, data })
+  } else {
+    await delegate.create({ data })
+  }
+}
+
+function auditServerChange(
+  actorId: string,
+  section: string,
+  before: Record<string, unknown> | null,
+  after: Record<string, unknown>,
+  secretField: string
+) {
+  logAuditEvent(
+    AuditEventType.CONFIG_CHANGED,
+    actorId,
+    configDiff(section, before, after, {
+      secretFields: [secretField],
+      urlFields: ["url", "publicUrl"],
+    })
+  )
+}
+
+/** A row's audited fields, so the stored and saved states compare like with like. */
+function auditedFields(row: { name: string; url: string; publicUrl?: string | null }, secret: string) {
+  return { name: row.name, url: row.url, publicUrl: row.publicUrl ?? null, secret }
 }
 
 /**
@@ -82,544 +153,243 @@ export async function getJellyfinLibraries() {
 /**
  * Update Plex server configuration (admin only)
  */
-export async function updatePlexServer(data: { name: string; url: string; token?: string; publicUrl?: string }) {
-  await requireAdmin()
-
-  try {
-
-    // Secrets are never sent to the client; a blank token means "keep current".
-    const token = await resolveSecret(data.token, async () => {
-      const active = await prisma.plexServer.findFirst({ where: { isActive: true } })
-      return active?.token
+export const updatePlexServer = adminAction({
+  input: plexServerSchema.extend({ token: SECRET_INPUT }),
+  fallbackError: "Failed to update Plex server configuration",
+  handler: async (input, { userId }): Promise<ServerResult> => {
+    const stored = await prisma.plexServer.findFirst({ where: { isActive: true } })
+    const secret = resolveSecretForOrigin({
+      submitted: input.token,
+      stored: stored && { secret: stored.token, url: stored.url },
+      submittedUrl: input.url,
     })
+    if (!secret.ok) return secretRequired(stored ? null : "Plex token is required")
+    const validated = { ...input, token: secret.secret }
 
-    const validated = plexServerSchema.parse({ ...data, token })
-
-    // Test connection before saving
     const connectionTest = await testPlexConnection(validated)
-    if (!connectionTest.success) {
-      return { success: false, error: connectionTest.error || "Failed to connect to Plex server" }
-    }
+    if (!connectionTest.success) return unreachable(connectionTest.error || "Failed to connect to Plex server")
 
-    // Fetch the admin's Plex user ID from the token
+    // The admin's Plex user ID comes from the token
     const userInfoResult = await getPlexUserInfo(validated.token)
     if (!userInfoResult.success || !userInfoResult.data) {
-      return { success: false, error: "Failed to fetch user info from Plex token" }
+      return unreachable("Failed to fetch user info from Plex token")
     }
-
     const adminPlexUserId = userInfoResult.data.id
 
-    await prisma.$transaction(async (tx) => {
-      // Deactivate existing active server
-      await tx.plexServer.updateMany({
-        where: { isActive: true },
-        data: { isActive: false },
+    await prisma.$transaction((tx) =>
+      replaceActiveRow(tx.plexServer, {
+        name: validated.name,
+        url: validated.url,
+        token: validated.token,
+        publicUrl: validated.publicUrl,
+        adminPlexUserId,
+        isActive: true,
       })
+    )
 
-      // Update or create server
-      const existing = await tx.plexServer.findFirst({
-        where: {
-          url: validated.url,
-        },
-      })
-
-      if (existing) {
-        await tx.plexServer.update({
-          where: { id: existing.id },
-          data: {
-            name: validated.name,
-            url: validated.url,
-            token: validated.token,
-            publicUrl: validated.publicUrl,
-            adminPlexUserId,
-            isActive: true,
-          },
-        })
-      } else {
-        await tx.plexServer.create({
-          data: {
-            name: validated.name,
-            url: validated.url,
-            token: validated.token,
-            publicUrl: validated.publicUrl,
-            adminPlexUserId,
-            isActive: true,
-          },
-        })
-      }
-    })
-
+    auditServerChange(
+      userId,
+      "plex",
+      stored && auditedFields(stored, stored.token),
+      auditedFields(validated, validated.token),
+      "secret"
+    )
     revalidatePath("/admin/settings")
-    return { success: true }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: "Failed to update Plex server configuration" }
-  }
+    return ok(null)
+  },
+})
+
+/** The five services that store a URL, an optional public URL and an API key. */
+type ApiKeyService = "jellyfin" | "tautulli" | "overseerr" | "sonarr" | "radarr"
+
+interface ApiKeyServiceDefinition {
+  label: string
+  findActive: () => Promise<{ name: string; url: string; publicUrl: string | null; apiKey: string } | null>
+  test: (config: ServiceValues & { apiKey: string }) => Promise<{ success: boolean; error?: string }>
+  delegate: (tx: PrismaTransactionClient) => ActiveRowDelegate<ServiceValues & { apiKey: string; isActive: true }>
 }
+
+const API_KEY_SERVICES: Record<ApiKeyService, ApiKeyServiceDefinition> = {
+  jellyfin: {
+    label: "Jellyfin server",
+    findActive: () => prisma.jellyfinServer.findFirst({ where: { isActive: true } }),
+    test: testJellyfinConnection,
+    delegate: (tx) => tx.jellyfinServer,
+  },
+  tautulli: {
+    label: "Tautulli",
+    findActive: () => prisma.tautulli.findFirst({ where: { isActive: true } }),
+    test: testTautulliConnection,
+    delegate: (tx) => tx.tautulli,
+  },
+  overseerr: {
+    label: "Overseerr",
+    findActive: () => prisma.overseerr.findFirst({ where: { isActive: true } }),
+    test: testOverseerrConnection,
+    delegate: (tx) => tx.overseerr,
+  },
+  sonarr: {
+    label: "Sonarr",
+    findActive: () => prisma.sonarr.findFirst({ where: { isActive: true } }),
+    test: testSonarrConnection,
+    delegate: (tx) => tx.sonarr,
+  },
+  radarr: {
+    label: "Radarr",
+    findActive: () => prisma.radarr.findFirst({ where: { isActive: true } }),
+    test: testRadarrConnection,
+    delegate: (tx) => tx.radarr,
+  },
+}
+
+/** The input every API-key service form sends: its schema, with the key optional. */
+const apiKeyInput = (schema: typeof tautulliSchema) => schema.extend({ apiKey: SECRET_INPUT })
+type ApiKeyInput = z.output<ReturnType<typeof apiKeyInput>>
 
 /**
- * Update Tautulli configuration (admin only)
+ * Saves one API-key service: resolve the key for the submitted origin, test
+ * the connection, replace the active row, audit the change.
  */
-export async function updateTautulli(data: { name: string; url: string; apiKey?: string; publicUrl?: string }) {
-  await requireAdmin()
+async function saveApiKeyService(service: ApiKeyService, input: ApiKeyInput, actorId: string): Promise<ServerResult> {
+  const definition = API_KEY_SERVICES[service]
+  const stored = await definition.findActive()
+  const secret = resolveSecretForOrigin({
+    submitted: input.apiKey,
+    stored: stored && { secret: stored.apiKey, url: stored.url },
+    submittedUrl: input.url,
+  })
+  if (!secret.ok) return secretRequired(stored ? null : "API key is required")
+  const validated = { ...input, apiKey: secret.secret }
 
-  try {
-
-    // Secrets are never sent to the client; a blank API key means "keep current".
-    const apiKey = await resolveSecret(data.apiKey, async () => {
-      const existing = await prisma.tautulli.findFirst({ where: { url: data.url } })
-      return existing?.apiKey ?? (await prisma.tautulli.findFirst({ where: { isActive: true } }))?.apiKey
-    })
-
-    const validated = tautulliSchema.parse({ ...data, apiKey })
-
-    // Test connection before saving
-    const connectionTest = await testTautulliConnection(validated)
-    if (!connectionTest.success) {
-      return { success: false, error: connectionTest.error || "Failed to connect to Tautulli server" }
-    }
-
-    await prisma.$transaction(async (tx) => {
-      // Deactivate existing active server
-      await tx.tautulli.updateMany({
-        where: { isActive: true },
-        data: { isActive: false },
-      })
-
-      // Update or create server
-      const existing = await tx.tautulli.findFirst({
-        where: {
-          url: validated.url,
-        },
-      })
-
-      if (existing) {
-        await tx.tautulli.update({
-          where: { id: existing.id },
-          data: {
-            name: validated.name,
-            url: validated.url,
-            apiKey: validated.apiKey,
-            publicUrl: validated.publicUrl,
-            isActive: true,
-          },
-        })
-      } else {
-        await tx.tautulli.create({
-          data: {
-            name: validated.name,
-            url: validated.url,
-            apiKey: validated.apiKey,
-            publicUrl: validated.publicUrl,
-            isActive: true,
-          },
-        })
-      }
-    })
-
-    revalidatePath("/admin/settings")
-    return { success: true }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: "Failed to update Tautulli configuration" }
+  const connectionTest = await definition.test(validated)
+  if (!connectionTest.success) {
+    return unreachable(connectionTest.error || `Failed to connect to ${definition.label}`)
   }
+
+  await prisma.$transaction((tx) =>
+    replaceActiveRow(definition.delegate(tx), {
+      name: validated.name,
+      url: validated.url,
+      apiKey: validated.apiKey,
+      publicUrl: validated.publicUrl,
+      isActive: true,
+    })
+  )
+
+  auditServerChange(
+    actorId,
+    service,
+    stored && auditedFields(stored, stored.apiKey),
+    auditedFields(validated, validated.apiKey),
+    "secret"
+  )
+  revalidatePath("/admin/settings")
+  return ok(null)
 }
 
-/**
- * Update Overseerr configuration (admin only)
- */
-export async function updateOverseerr(data: { name: string; url: string; apiKey?: string; publicUrl?: string }) {
-  await requireAdmin()
+/** Update Jellyfin server configuration (admin only) */
+export const updateJellyfinServer = adminAction({
+  input: apiKeyInput(jellyfinServerSchema),
+  fallbackError: "Failed to update Jellyfin server configuration",
+  handler: (input, { userId }) => saveApiKeyService("jellyfin", input, userId),
+})
 
-  try {
+/** Update Tautulli configuration (admin only) */
+export const updateTautulli = adminAction({
+  input: apiKeyInput(tautulliSchema),
+  fallbackError: "Failed to update Tautulli configuration",
+  handler: (input, { userId }) => saveApiKeyService("tautulli", input, userId),
+})
 
-    // Secrets are never sent to the client; a blank API key means "keep current".
-    const apiKey = await resolveSecret(data.apiKey, async () => {
-      const existing = await prisma.overseerr.findFirst({ where: { url: data.url } })
-      return existing?.apiKey ?? (await prisma.overseerr.findFirst({ where: { isActive: true } }))?.apiKey
-    })
+/** Update Overseerr configuration (admin only) */
+export const updateOverseerr = adminAction({
+  input: apiKeyInput(overseerrSchema),
+  fallbackError: "Failed to update Overseerr configuration",
+  handler: (input, { userId }) => saveApiKeyService("overseerr", input, userId),
+})
 
-    const validated = overseerrSchema.parse({ ...data, apiKey })
+/** Update Sonarr configuration (admin only) */
+export const updateSonarr = adminAction({
+  input: apiKeyInput(sonarrSchema),
+  fallbackError: "Failed to update Sonarr configuration",
+  handler: (input, { userId }) => saveApiKeyService("sonarr", input, userId),
+})
 
-    // Test connection before saving
-    const connectionTest = await testOverseerrConnection(validated)
-    if (!connectionTest.success) {
-      return { success: false, error: connectionTest.error || "Failed to connect to Overseerr server" }
-    }
-
-    await prisma.$transaction(async (tx) => {
-      // Deactivate existing active server
-      await tx.overseerr.updateMany({
-        where: { isActive: true },
-        data: { isActive: false },
-      })
-
-      // Update or create server
-      const existing = await tx.overseerr.findFirst({
-        where: {
-          url: validated.url,
-        },
-      })
-
-      if (existing) {
-        await tx.overseerr.update({
-          where: { id: existing.id },
-          data: {
-            name: validated.name,
-            url: validated.url,
-            apiKey: validated.apiKey,
-            publicUrl: validated.publicUrl,
-            isActive: true,
-          },
-        })
-      } else {
-        await tx.overseerr.create({
-          data: {
-            name: validated.name,
-            url: validated.url,
-            apiKey: validated.apiKey,
-            publicUrl: validated.publicUrl,
-            isActive: true,
-          },
-        })
-      }
-    })
-
-    revalidatePath("/admin/settings")
-    return { success: true }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: "Failed to update Overseerr configuration" }
-  }
-}
-
-/**
- * Update Sonarr configuration (admin only)
- */
-export async function updateSonarr(data: { name: string; url: string; apiKey?: string; publicUrl?: string }) {
-  await requireAdmin()
-
-  try {
-
-    // Secrets are never sent to the client; a blank API key means "keep current".
-    const apiKey = await resolveSecret(data.apiKey, async () => {
-      const existing = await prisma.sonarr.findFirst({ where: { url: data.url } })
-      return existing?.apiKey ?? (await prisma.sonarr.findFirst({ where: { isActive: true } }))?.apiKey
-    })
-
-    const validated = sonarrSchema.parse({ ...data, apiKey })
-
-    // Test connection before saving
-    const connectionTest = await testSonarrConnection(validated)
-    if (!connectionTest.success) {
-      return { success: false, error: connectionTest.error || "Failed to connect to Sonarr server" }
-    }
-
-    await prisma.$transaction(async (tx) => {
-      // Deactivate existing active server
-      await tx.sonarr.updateMany({
-        where: { isActive: true },
-        data: { isActive: false },
-      })
-
-      // Update or create server
-      const existing = await tx.sonarr.findFirst({
-        where: {
-          url: validated.url,
-        },
-      })
-
-      if (existing) {
-        await tx.sonarr.update({
-          where: { id: existing.id },
-          data: {
-            name: validated.name,
-            url: validated.url,
-            apiKey: validated.apiKey,
-            publicUrl: validated.publicUrl,
-            isActive: true,
-          },
-        })
-      } else {
-        await tx.sonarr.create({
-          data: {
-            name: validated.name,
-            url: validated.url,
-            apiKey: validated.apiKey,
-            publicUrl: validated.publicUrl,
-            isActive: true,
-          },
-        })
-      }
-    })
-
-    revalidatePath("/admin/settings")
-    return { success: true }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: "Failed to update Sonarr configuration" }
-  }
-}
-
-/**
- * Update Radarr configuration (admin only)
- */
-export async function updateRadarr(data: { name: string; url: string; apiKey?: string; publicUrl?: string }) {
-  await requireAdmin()
-
-  try {
-
-    // Secrets are never sent to the client; a blank API key means "keep current".
-    const apiKey = await resolveSecret(data.apiKey, async () => {
-      const existing = await prisma.radarr.findFirst({ where: { url: data.url } })
-      return existing?.apiKey ?? (await prisma.radarr.findFirst({ where: { isActive: true } }))?.apiKey
-    })
-
-    const validated = radarrSchema.parse({ ...data, apiKey })
-
-    // Test connection before saving
-    const connectionTest = await testRadarrConnection(validated)
-    if (!connectionTest.success) {
-      return { success: false, error: connectionTest.error || "Failed to connect to Radarr server" }
-    }
-
-    await prisma.$transaction(async (tx) => {
-      // Deactivate existing active server
-      await tx.radarr.updateMany({
-        where: { isActive: true },
-        data: { isActive: false },
-      })
-
-      // Update or create server
-      const existing = await tx.radarr.findFirst({
-        where: {
-          url: validated.url,
-        },
-      })
-
-      if (existing) {
-        await tx.radarr.update({
-          where: { id: existing.id },
-          data: {
-            name: validated.name,
-            url: validated.url,
-            apiKey: validated.apiKey,
-            publicUrl: validated.publicUrl,
-            isActive: true,
-          },
-        })
-      } else {
-        await tx.radarr.create({
-          data: {
-            name: validated.name,
-            url: validated.url,
-            apiKey: validated.apiKey,
-            publicUrl: validated.publicUrl,
-            isActive: true,
-          },
-        })
-      }
-    })
-
-    revalidatePath("/admin/settings")
-    return { success: true }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: "Failed to update Radarr configuration" }
-  }
-}
+/** Update Radarr configuration (admin only) */
+export const updateRadarr = adminAction({
+  input: apiKeyInput(radarrSchema),
+  fallbackError: "Failed to update Radarr configuration",
+  handler: (input, { userId }) => saveApiKeyService("radarr", input, userId),
+})
 
 /**
  * Update Prometheus configuration (admin only)
  */
-export async function updatePrometheus(data: { name: string; url: string; query: string }) {
-  await requireAdmin()
-
-  try {
-
-    const validated = prometheusSchema.parse(data)
-
-    // Test connection before saving
+export const updatePrometheus = adminAction({
+  input: prometheusSchema,
+  fallbackError: "Failed to update Prometheus configuration",
+  handler: async (validated, { userId }): Promise<ServerResult> => {
     const connectionTest = await testPrometheusConnection(validated)
     if (!connectionTest.success) {
-      return { success: false, error: connectionTest.error || "Failed to connect to Prometheus server" }
+      return unreachable(connectionTest.error || "Failed to connect to Prometheus server")
     }
 
-    // Validate the PromQL query
     const queryTest = await validatePrometheusQuery(validated)
     if (!queryTest.success) {
-      return { success: false, error: queryTest.error || "Invalid PromQL query" }
+      return { success: false, code: "VALIDATION", error: queryTest.error || "Invalid PromQL query" }
     }
 
-    await prisma.$transaction(async (txClient) => {
-      // Type assertion needed for Prisma 7 with driver adapters
-      const tx = txClient as unknown as typeof prisma
-      // Deactivate existing active server
-      await tx.prometheus.updateMany({
-        where: { isActive: true },
-        data: { isActive: false },
+    const stored = await prisma.prometheus.findFirst({ where: { isActive: true } })
+    await prisma.$transaction((tx) =>
+      replaceActiveRow(tx.prometheus, {
+        name: validated.name,
+        url: validated.url,
+        query: validated.query,
+        isActive: true,
       })
+    )
 
-      // Update or create server
-      const existing = await tx.prometheus.findFirst({
-        where: {
-          url: validated.url,
-        },
-      })
-
-      if (existing) {
-        await tx.prometheus.update({
-          where: { id: existing.id },
-          data: {
-            name: validated.name,
-            url: validated.url,
-            query: validated.query,
-            isActive: true,
-          },
-        })
-      } else {
-        await tx.prometheus.create({
-          data: {
-            name: validated.name,
-            url: validated.url,
-            query: validated.query,
-            isActive: true,
-          },
-        })
-      }
-    })
-
+    logAuditEvent(
+      AuditEventType.CONFIG_CHANGED,
+      userId,
+      configDiff(
+        "prometheus",
+        stored && { name: stored.name, url: stored.url, query: stored.query },
+        { name: validated.name, url: validated.url, query: validated.query },
+        { urlFields: ["url"] }
+      )
+    )
     revalidatePath("/admin/settings")
-    revalidatePath("/") // Revalidate homepage since status is shown there
-    return { success: true }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: "Failed to update Prometheus configuration" }
-  }
-}
-
-/**
- * Update Jellyfin server configuration (admin only)
- */
-export async function updateJellyfinServer(data: { name: string; url: string; apiKey?: string; publicUrl?: string }) {
-  await requireAdmin()
-
-  try {
-
-    // Secrets are never sent to the client; a blank API key means "keep current".
-    const apiKey = await resolveSecret(data.apiKey, async () => {
-      const existing = await prisma.jellyfinServer.findFirst({ where: { url: data.url } })
-      return existing?.apiKey ?? (await prisma.jellyfinServer.findFirst({ where: { isActive: true } }))?.apiKey
-    })
-
-    const validated = jellyfinServerSchema.parse({ ...data, apiKey })
-
-    // Test connection before saving
-    const connectionTest = await testJellyfinConnection(validated)
-    if (!connectionTest.success) {
-      return { success: false, error: connectionTest.error || "Failed to connect to Jellyfin server" }
-    }
-
-    // Get server info to retrieve admin user ID (optional)
-    let adminUserId: string | undefined
-    const serverInfoResult = await getJellyfinServerInfo(validated)
-    if (serverInfoResult.success && serverInfoResult.data) {
-      // The API key is associated with an admin user, but we can't easily get their ID
-      // from just the server info. This can be populated later if needed.
-      adminUserId = undefined
-    }
-
-    await prisma.$transaction(async (tx) => {
-      // Deactivate existing active server
-      await tx.jellyfinServer.updateMany({
-        where: { isActive: true },
-        data: { isActive: false },
-      })
-
-      // Update or create server
-      const existing = await tx.jellyfinServer.findFirst({
-        where: {
-          url: validated.url,
-        },
-      })
-
-      if (existing) {
-        await tx.jellyfinServer.update({
-          where: { id: existing.id },
-          data: {
-            name: validated.name,
-            url: validated.url,
-            apiKey: validated.apiKey,
-            publicUrl: validated.publicUrl,
-            adminUserId,
-            isActive: true,
-          },
-        })
-      } else {
-        await tx.jellyfinServer.create({
-          data: {
-            name: validated.name,
-            url: validated.url,
-            apiKey: validated.apiKey,
-            publicUrl: validated.publicUrl,
-            adminUserId,
-            isActive: true,
-          },
-        })
-      }
-    })
-
-    revalidatePath("/admin/settings")
-    return { success: true }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: "Failed to update Jellyfin server configuration" }
-  }
-}
-
-const toggleJellyfinLoginSchema = z.boolean()
+    revalidatePath("/") // The home page shows the status
+    return ok(null)
+  },
+})
 
 /**
  * Allow Jellyfin sign-in, or turn it off (admin only)
  * When off, the Jellyfin provider refuses every sign-in and the home page
  * shows no Jellyfin login option
  */
-export async function toggleJellyfinLogin(enabled: boolean) {
-  await requireAdmin()
-
-  const validated = toggleJellyfinLoginSchema.safeParse(enabled)
-  if (!validated.success) {
-    return { success: false, error: "Invalid input: enabled must be a boolean" }
-  }
-
-  try {
-
+export const toggleJellyfinLogin = adminAction({
+  input: z.boolean({ message: "Invalid input: enabled must be a boolean" }),
+  fallbackError: "Failed to toggle Jellyfin login setting",
+  handler: async (enabled, { userId }) => {
+    const stored = await prisma.jellyfinServer.findFirst({
+      where: { isActive: true },
+      select: { enabledForLogin: true },
+    })
     await prisma.jellyfinServer.updateMany({
       where: { isActive: true },
-      data: { enabledForLogin: validated.data },
+      data: { enabledForLogin: enabled },
     })
 
+    logAuditEvent(
+      AuditEventType.CONFIG_CHANGED,
+      userId,
+      configDiff("jellyfin.login", stored, { enabledForLogin: enabled })
+    )
     revalidatePath("/admin/settings")
     revalidatePath("/")
-    return { success: true }
-  } catch (error) {
-    if (error instanceof Error) {
-      return { success: false, error: error.message }
-    }
-    return { success: false, error: "Failed to toggle Jellyfin login setting" }
-  }
-}
+    return ok(null)
+  },
+})
