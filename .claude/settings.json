@@ -1,4 +1,5 @@
 {
+"disableSkillShellExecution": true,
   "permissions": {
     "allow": [
       "Edit(./app/**)",
