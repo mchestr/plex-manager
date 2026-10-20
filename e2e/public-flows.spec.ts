@@ -224,7 +224,7 @@ test.describe('Shared Rewind page', () => {
       // ...but the share page is outside them.
       await openShare(regularUserPage, shareToken);
       await expect(regularUserPage.getByTestId('wrapped-share-summary')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
-      await expect(regularUserPage).toHaveURL(new RegExp(`/wrapped/share/${shareToken}$`));
+      await expect(regularUserPage).toHaveURL(new RegExp(`/rewind/s/${shareToken}$`));
     } finally {
       await prisma.user.update({
         where: { id: TEST_USERS.REGULAR.id },

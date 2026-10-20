@@ -90,12 +90,20 @@ test.describe('Rewind routes', () => {
   });
 
   test('/rewind opens the latest completed year, titled with the server name', async ({ regularUserPage }) => {
+    test.setTimeout(150_000);
     await regularUserPage.goto('/rewind');
 
     await expect(regularUserPage).toHaveURL(/\/rewind\/2026$/);
+    // The app reads the server name through a 60-second data cache
+    // (lib/settings/app-settings.ts), so a name an earlier spec's seed left
+    // can outlive this spec's Config row for up to a minute. Reload until the
+    // cache serves the seeded name.
+    await expect(async () => {
+      await regularUserPage.reload();
+      await expect(regularUserPage).toHaveTitle(`${SERVER_NAME} Rewind 2026`, { timeout: 1_000 });
+    }).toPass({ intervals: [1_000, 5_000], timeout: 100_000 });
     // The v2 viewer shows after its intro transition
     await expect(regularUserPage.getByTestId('wrapped-viewer')).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
-    await expect(regularUserPage).toHaveTitle(`${SERVER_NAME} Rewind 2026`);
     await expect(regularUserPage.getByTestId('rewind-scope')).toHaveAttribute('data-theme', 'rewind');
     await expect(regularUserPage.getByTestId('wrapped-year-link-2025')).toHaveAttribute('href', '/rewind/2025');
   });
