@@ -1,0 +1,3410 @@
+{
+  "version": 3,
+  "year": 2026,
+  "statsVersion": "stats-2026.1",
+  "generatedAt": "2026-12-01T12:00:00.000Z",
+  "window": {
+    "from": "2026-01-01",
+    "through": "2026-11-30",
+    "zone": "America/Chicago",
+    "finalCut": false
+  },
+  "edition": "pocket",
+  "facts": {
+    "time.totalMinutes": {
+      "value": 252,
+      "display": "4 h 12 m",
+      "unit": "duration"
+    },
+    "time.totalHours": {
+      "value": 4,
+      "display": "4",
+      "unit": "hours"
+    },
+    "time.seriesHours": {
+      "value": 2,
+      "display": "2",
+      "unit": "hours"
+    },
+    "time.seriesShare": {
+      "value": 0.5158730158730159,
+      "display": "52%",
+      "unit": "share"
+    },
+    "time.filmsHours": {
+      "value": 2,
+      "display": "2",
+      "unit": "hours"
+    },
+    "time.filmsShare": {
+      "value": 0.48412698412698413,
+      "display": "48%",
+      "unit": "share"
+    },
+    "counts.episodes": {
+      "value": 5,
+      "display": "5",
+      "unit": "count"
+    },
+    "counts.series": {
+      "value": 2,
+      "display": "2",
+      "unit": "count"
+    },
+    "counts.films": {
+      "value": 1,
+      "display": "1",
+      "unit": "count"
+    },
+    "counts.seasons": {
+      "value": 2,
+      "display": "2",
+      "unit": "count"
+    },
+    "bookends.first.title": {
+      "value": "Le Fabuleux Destin d'Amélie Poulain",
+      "display": "Le Fabuleux Destin d'Amélie Poulain",
+      "unit": "title"
+    },
+    "bookends.first.date": {
+      "value": "2026-02-14",
+      "display": "February 14",
+      "unit": "date"
+    },
+    "bookends.first.time": {
+      "value": 1240,
+      "display": "8:40 PM",
+      "unit": "time"
+    },
+    "bookends.last.title": {
+      "value": "The Great British Bake Off",
+      "display": "The Great British Bake Off",
+      "unit": "title"
+    },
+    "bookends.last.date": {
+      "value": "2026-09-10",
+      "display": "September 10",
+      "unit": "date"
+    },
+    "bookends.last.time": {
+      "value": 1140,
+      "display": "7:00 PM",
+      "unit": "time"
+    },
+    "days.active": {
+      "value": 4,
+      "display": "4",
+      "unit": "count"
+    },
+    "days.biggest.date": {
+      "value": "2026-02-14",
+      "display": "February 14",
+      "unit": "date"
+    },
+    "days.biggest.minutes": {
+      "value": 122,
+      "display": "2 h 2 m",
+      "unit": "duration"
+    },
+    "days.longestGap.days": {
+      "value": 116,
+      "display": "116 days",
+      "unit": "days"
+    },
+    "days.longestGap.month": {
+      "value": 5,
+      "display": "May",
+      "unit": "month"
+    },
+    "streak.longest.days": {
+      "value": 1,
+      "display": "1 day",
+      "unit": "days"
+    },
+    "streak.longest.from": {
+      "value": "2026-02-14",
+      "display": "February 14",
+      "unit": "date"
+    },
+    "streak.longest.to": {
+      "value": "2026-02-14",
+      "display": "February 14",
+      "unit": "date"
+    },
+    "days.biggestWeek": {
+      "value": 122,
+      "display": "2 h 2 m",
+      "unit": "duration"
+    },
+    "days.biggestWeek.from": {
+      "value": "2026-02-09",
+      "display": "February 9",
+      "unit": "date"
+    },
+    "hours.peak": {
+      "value": 19,
+      "display": "7 PM",
+      "unit": "hour"
+    },
+    "hours.quietest": {
+      "value": 0,
+      "display": "12 AM",
+      "unit": "hour"
+    },
+    "hours.afterDarkShare": {
+      "value": 0.16666666666666666,
+      "display": "17%",
+      "unit": "share"
+    },
+    "hours.goldenShare": {
+      "value": 0.8333333333333334,
+      "display": "83%",
+      "unit": "share"
+    },
+    "hours.medianStart": {
+      "value": 1250,
+      "display": "8:50 PM",
+      "unit": "time"
+    },
+    "hours.latestStart.time": {
+      "value": 1320,
+      "display": "10:00 PM",
+      "unit": "time"
+    },
+    "hours.latestStart.weekday": {
+      "value": 6,
+      "display": "Saturday",
+      "unit": "weekday"
+    },
+    "days.weekendShare": {
+      "value": 0.8333333333333334,
+      "display": "83%",
+      "unit": "share"
+    },
+    "series[1].title": {
+      "value": "Only Murders in the Building",
+      "display": "Only Murders in the Building",
+      "unit": "title"
+    },
+    "series[1].minutes": {
+      "value": 82,
+      "display": "1 h 22 m",
+      "unit": "duration"
+    },
+    "series[1].episodes": {
+      "value": 3,
+      "display": "3",
+      "unit": "count"
+    },
+    "series[1].seasons": {
+      "value": 1,
+      "display": "1",
+      "unit": "count"
+    },
+    "series[1].monthsActive": {
+      "value": 1,
+      "display": "1",
+      "unit": "count"
+    },
+    "series[1].biggestNight.date": {
+      "value": "2026-03-07",
+      "display": "March 7",
+      "unit": "date"
+    },
+    "series[1].biggestNight.episodes": {
+      "value": 3,
+      "display": "3",
+      "unit": "count"
+    },
+    "series[2].title": {
+      "value": "The Great British Bake Off",
+      "display": "The Great British Bake Off",
+      "unit": "title"
+    },
+    "series[2].minutes": {
+      "value": 48,
+      "display": "48 minutes",
+      "unit": "duration"
+    },
+    "series[2].episodes": {
+      "value": 2,
+      "display": "2",
+      "unit": "count"
+    },
+    "series[2].seasons": {
+      "value": 1,
+      "display": "1",
+      "unit": "count"
+    },
+    "series[2].monthsActive": {
+      "value": 2,
+      "display": "2",
+      "unit": "count"
+    },
+    "series[2].biggestNight.date": {
+      "value": "2026-05-16",
+      "display": "May 16",
+      "unit": "date"
+    },
+    "series[2].biggestNight.episodes": {
+      "value": 1,
+      "display": "1",
+      "unit": "count"
+    },
+    "films[1].title": {
+      "value": "Le Fabuleux Destin d'Amélie Poulain",
+      "display": "Le Fabuleux Destin d'Amélie Poulain",
+      "unit": "title"
+    },
+    "films[1].plays": {
+      "value": 1,
+      "display": "1",
+      "unit": "count"
+    },
+    "films[1].minutes": {
+      "value": 122,
+      "display": "2 h 2 m",
+      "unit": "duration"
+    },
+    "series.top3Share": {
+      "value": 1,
+      "display": "100%",
+      "unit": "share"
+    },
+    "films.finishedShare": {
+      "value": 1,
+      "display": "100%",
+      "unit": "share"
+    },
+    "films.longest.title": {
+      "value": "Le Fabuleux Destin d'Amélie Poulain",
+      "display": "Le Fabuleux Destin d'Amélie Poulain",
+      "unit": "title"
+    },
+    "films.longest.minutes": {
+      "value": 122,
+      "display": "2 h 2 m",
+      "unit": "duration"
+    },
+    "quiz.gapMinutes": {
+      "value": 40,
+      "display": "40 minutes",
+      "unit": "duration"
+    },
+    "counts.titles": {
+      "value": 3,
+      "display": "3",
+      "unit": "count"
+    },
+    "records.longestBinge.episodes": {
+      "value": 3,
+      "display": "3",
+      "unit": "count"
+    },
+    "records.longestBinge.title": {
+      "value": "Only Murders in the Building",
+      "display": "Only Murders in the Building",
+      "unit": "title"
+    },
+    "records.longestBinge.date": {
+      "value": "2026-03-07",
+      "display": "March 7",
+      "unit": "date"
+    },
+    "records.deepestBinge.episodes": {
+      "value": 3,
+      "display": "3",
+      "unit": "count"
+    },
+    "records.deepestBinge.title": {
+      "value": "Only Murders in the Building",
+      "display": "Only Murders in the Building",
+      "unit": "title"
+    },
+    "records.mostEpisodesDay": {
+      "value": 3,
+      "display": "3",
+      "unit": "count"
+    },
+    "records.completionShare": {
+      "value": 1,
+      "display": "100%",
+      "unit": "share"
+    },
+    "records.rewatchShare": {
+      "value": 0,
+      "display": "0%",
+      "unit": "share"
+    },
+    "records.rewatchedTitles": {
+      "value": 0,
+      "display": "0",
+      "unit": "count"
+    },
+    "counts.titlesPer10Hours": {
+      "value": 7.1,
+      "display": "7.1",
+      "unit": "decimal"
+    },
+    "taste.freshShare": {
+      "value": 0,
+      "display": "0%",
+      "unit": "share"
+    },
+    "taste.genre[1].name": {
+      "value": "Animation",
+      "display": "Animation",
+      "unit": "text"
+    },
+    "taste.genre[1].share": {
+      "value": 0.3373015873015873,
+      "display": "34%",
+      "unit": "share"
+    },
+    "taste.genre[2].name": {
+      "value": "Drama",
+      "display": "Drama",
+      "unit": "text"
+    },
+    "taste.genre[2].share": {
+      "value": 0.24206349206349206,
+      "display": "24%",
+      "unit": "share"
+    },
+    "taste.genre[3].name": {
+      "value": "Comedy",
+      "display": "Comedy",
+      "unit": "text"
+    },
+    "taste.genre[3].share": {
+      "value": 0.1626984126984127,
+      "display": "16%",
+      "unit": "share"
+    },
+    "taste.genre[4].name": {
+      "value": "Crime",
+      "display": "Crime",
+      "unit": "text"
+    },
+    "taste.genre[4].share": {
+      "value": 0.1626984126984127,
+      "display": "16%",
+      "unit": "share"
+    },
+    "taste.genre[5].name": {
+      "value": "Science Fiction",
+      "display": "Science Fiction",
+      "unit": "text"
+    },
+    "taste.genre[5].share": {
+      "value": 0.09523809523809523,
+      "display": "10%",
+      "unit": "share"
+    },
+    "taste.genreByMonth[2]": {
+      "value": "Animation",
+      "display": "Animation",
+      "unit": "text"
+    },
+    "taste.genreByMonth[3]": {
+      "value": "Comedy",
+      "display": "Comedy",
+      "unit": "text"
+    },
+    "taste.genreByMonth[5]": {
+      "value": "Animation",
+      "display": "Animation",
+      "unit": "text"
+    },
+    "taste.genreByMonth[9]": {
+      "value": "Animation",
+      "display": "Animation",
+      "unit": "text"
+    },
+    "taste.medianYear": {
+      "value": 2010,
+      "display": "2010",
+      "unit": "year"
+    },
+    "taste.oldest.title": {
+      "value": "Le Fabuleux Destin d'Amélie Poulain",
+      "display": "Le Fabuleux Destin d'Amélie Poulain",
+      "unit": "title"
+    },
+    "taste.oldest.year": {
+      "value": 2001,
+      "display": "2001",
+      "unit": "year"
+    },
+    "people.actor[1].name": {
+      "value": "Tomas Brandt",
+      "display": "Tomas Brandt",
+      "unit": "name"
+    },
+    "people.actor[1].minutes": {
+      "value": 170,
+      "display": "2 h 50 m",
+      "unit": "duration"
+    },
+    "people.actor[2].name": {
+      "value": "Noor Haddad",
+      "display": "Noor Haddad",
+      "unit": "name"
+    },
+    "people.actor[2].minutes": {
+      "value": 122,
+      "display": "2 h 2 m",
+      "unit": "duration"
+    },
+    "people.actor[3].name": {
+      "value": "Jun Ito",
+      "display": "Jun Ito",
+      "unit": "name"
+    },
+    "people.actor[3].minutes": {
+      "value": 82,
+      "display": "1 h 22 m",
+      "unit": "duration"
+    },
+    "people.actor[4].name": {
+      "value": "Mira Okafor",
+      "display": "Mira Okafor",
+      "unit": "name"
+    },
+    "people.actor[4].minutes": {
+      "value": 82,
+      "display": "1 h 22 m",
+      "unit": "duration"
+    },
+    "people.actor[5].name": {
+      "value": "Lena Marsh",
+      "display": "Lena Marsh",
+      "unit": "name"
+    },
+    "people.actor[5].minutes": {
+      "value": 48,
+      "display": "48 minutes",
+      "unit": "duration"
+    },
+    "people.director[1].name": {
+      "value": "Lena Marsh",
+      "display": "Lena Marsh",
+      "unit": "name"
+    },
+    "standing.percentile": {
+      "value": 92,
+      "display": "Top 92%",
+      "unit": "percentile"
+    },
+    "standing.members": {
+      "value": 12,
+      "display": "12",
+      "unit": "count"
+    },
+    "community.titlesAdded": {
+      "value": 0,
+      "display": "0",
+      "unit": "count"
+    },
+    "next.leftForLater[1].title": {
+      "value": "The Great British Bake Off",
+      "display": "The Great British Bake Off",
+      "unit": "title"
+    },
+    "member.firstName": {
+      "value": "Priya",
+      "display": "Priya",
+      "unit": "name"
+    },
+    "member.since": {
+      "value": 2026,
+      "display": "2026",
+      "unit": "year"
+    },
+    "member.volume": {
+      "value": 1,
+      "display": "1",
+      "unit": "count"
+    },
+    "member.lifetimeHours": {
+      "value": 4,
+      "display": "4",
+      "unit": "hours"
+    },
+    "member.nthRewind": {
+      "value": 1,
+      "display": "1",
+      "unit": "count"
+    },
+    "member.serial": {
+      "value": "K7Q4",
+      "display": "K7Q4",
+      "unit": "text"
+    },
+    "window.from": {
+      "value": "2026-01-01",
+      "display": "January 1",
+      "unit": "date"
+    },
+    "window.through": {
+      "value": "2026-11-30",
+      "display": "November 30",
+      "unit": "date"
+    },
+    "window.finalCut": {
+      "value": 0,
+      "display": "0",
+      "unit": "count"
+    },
+    "window.elapsedDays": {
+      "value": 334,
+      "display": "334 days",
+      "unit": "days"
+    },
+    "tz.label": {
+      "value": "America/Chicago",
+      "display": "America/Chicago",
+      "unit": "text"
+    },
+    "archetype.id": {
+      "value": "casual-critic",
+      "display": "casual-critic",
+      "unit": "id"
+    },
+    "archetype.name": {
+      "value": "The Casual Critic",
+      "display": "The Casual Critic",
+      "unit": "name"
+    },
+    "archetype.runnerUp": {
+      "value": "The Explorer",
+      "display": "The Explorer",
+      "unit": "name"
+    },
+    "archetype.evidence[1]": {
+      "value": "time.totalHours",
+      "display": "4",
+      "unit": "text"
+    },
+    "archetype.evidence[2]": {
+      "value": "days.active",
+      "display": "4",
+      "unit": "text"
+    }
+  },
+  "pages": [
+    {
+      "type": "cover",
+      "data": {
+        "minutes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          122,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          82,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          24,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          24,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "type": "number",
+      "data": {
+        "hero": "time.totalMinutes",
+        "minutes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          122,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          82,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          24,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          24,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "type": "short-list",
+      "data": null
+    },
+    {
+      "type": "calendar",
+      "data": {
+        "days": [
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 122,
+            "key": "film:1101"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 82,
+            "key": "series:1201"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 24,
+            "key": "series:1202"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 24,
+            "key": "series:1202"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          }
+        ],
+        "titles": {
+          "film:1101": "Le Fabuleux Destin d'Amélie Poulain",
+          "series:1201": "Only Murders in the Building",
+          "series:1202": "The Great British Bake Off"
+        },
+        "gap": {
+          "from": "2026-05-17",
+          "to": "2026-09-09"
+        }
+      }
+    },
+    {
+      "type": "centrefold",
+      "data": {
+        "shortlist": [
+          {
+            "id": "casual-critic",
+            "evidence": [
+              "time.totalHours",
+              "days.active"
+            ]
+          },
+          {
+            "id": "explorer",
+            "evidence": [
+              "counts.titlesPer10Hours",
+              "counts.titles"
+            ]
+          },
+          {
+            "id": "curator",
+            "evidence": [
+              "time.totalHours",
+              "counts.titles"
+            ]
+          }
+        ],
+        "hours": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          2,
+          1,
+          2,
+          1,
+          0
+        ],
+        "graphic": {
+          "kind": "calendar-dots",
+          "weekends": false,
+          "minutes": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            122,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            82,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            24,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            24,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    {
+      "type": "back-cover",
+      "data": {
+        "minutes": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          122,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          82,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          24,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          24,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "keys": {
+          "series": [
+            "series:1201",
+            "series:1202"
+          ],
+          "film": "film:1101"
+        }
+      }
+    }
+  ],
+  "archetype": {
+    "id": "casual-critic",
+    "runnerUp": "explorer",
+    "evidence": [
+      "time.totalHours",
+      "days.active"
+    ],
+    "shortlist": [
+      {
+        "id": "casual-critic",
+        "score": 86
+      },
+      {
+        "id": "explorer",
+        "score": 50
+      },
+      {
+        "id": "curator",
+        "score": 41
+      }
+    ],
+    "llmMayChoose": false,
+    "rarity": null
+  },
+  "copy": null,
+  "copySource": "template",
+  "copyMeta": {
+    "model": null,
+    "promptVersion": "rewind-2026.1",
+    "slotHashes": {}
+  },
+  "factsHash": "e670fdcf8cc360aaf6f9b91f53fff8559a02b5aa9ee1cbee07dd5a704a77e4ae"
+}

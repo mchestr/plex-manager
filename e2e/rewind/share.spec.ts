@@ -1,6 +1,6 @@
-import heavyIssue from '../fixtures/rewind/heavy-issue.json';
 import { expect, test, TEST_USERS } from '../fixtures/auth';
 import { createE2EPrismaClient } from '../helpers/prisma';
+import { REWIND_YEAR, seedRewindIssue } from '../helpers/seed-rewind';
 import { WAIT_TIMEOUTS } from '../helpers/test-utils';
 
 /**
@@ -8,30 +8,12 @@ import { WAIT_TIMEOUTS } from '../helpers/test-utils';
  * the confirm step, its asset key (read through the E2E Prisma client) serves
  * the cover card; after a rotate the old key is a 404 and the new one works,
  * and after Stop sharing the new key is a 404 too. A stubbed `navigator.share`
- * receives the card as a `File`. P5.4 runs this on chromium and webkit; until
- * its projects land it runs in `chromium`. P7.5 adds the share page checks.
+ * receives the card as a `File`. `rewind-e2e-chromium` and `rewind-e2e-webkit`
+ * run it (P5.4); P7.5 adds the share page checks. The issue is the heavy
+ * golden fixture (`e2e/helpers/seed-rewind.ts`), seeded for the admin.
  */
 
-const YEAR = 2026;
-
-// The heavy golden fixture as the pipeline builds it; lib/rewind/__tests__/e2e-issue-fixture.test.ts keeps it current
-function seedIssue() {
-  return {
-    version: 3,
-    year: YEAR,
-    statsVersion: 'stats-2026.1',
-    generatedAt: new Date('2026-12-01T12:00:00Z').toISOString(),
-    window: { from: '2026-01-01', through: '2026-11-30', zone: 'America/Chicago', finalCut: false },
-    edition: heavyIssue.edition,
-    facts: heavyIssue.facts,
-    pages: heavyIssue.pages,
-    archetype: heavyIssue.archetype,
-    copy: null,
-    copySource: 'template',
-    copyMeta: { model: null, promptVersion: 'e2e', slotHashes: {} },
-    factsHash: 'e2e',
-  };
-}
+const YEAR = REWIND_YEAR;
 
 async function liveAssetKey(): Promise<string | null> {
   const prisma = createE2EPrismaClient();
@@ -62,16 +44,13 @@ test.describe('Rewind share sheet', () => {
 
   test.beforeAll(async () => {
     await cleanUp();
-    const data = seedIssue();
     const prisma = createE2EPrismaClient();
     try {
       await prisma.config.update({ where: { id: 'config' }, data: { rewindPublicLinks: true } });
-      await prisma.plexWrapped.create({
-        data: { userId: TEST_USERS.ADMIN.id, year: YEAR, status: 'completed', dataVersion: 3, data: JSON.stringify(data), generatedAt: new Date(data.generatedAt) },
-      });
     } finally {
       await prisma.$disconnect();
     }
+    await seedRewindIssue(TEST_USERS.ADMIN.id, 'heavy');
   });
 
   test.afterAll(cleanUp);

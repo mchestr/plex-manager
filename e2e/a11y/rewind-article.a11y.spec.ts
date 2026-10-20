@@ -1,45 +1,22 @@
 import type { Browser } from '@playwright/test';
 
-import heavyIssue from './fixtures/rewind/heavy-issue.json';
-
-import { axeFor } from './a11y/scan';
-import { expect, test, TEST_USERS } from './fixtures/auth';
-import { signInAs } from './fixtures/session';
-import { createE2EPrismaClient } from './helpers/prisma';
+import { expect, test, TEST_USERS } from '../fixtures/auth';
+import { signInAs } from '../fixtures/session';
+import { clearRewindIssue, REWIND_ISSUES, REWIND_YEAR, seedRewindIssue } from '../helpers/seed-rewind';
+import { axeFor } from './scan';
 
 /**
  * P5.12 (RWV-09, UI-09): `/rewind/[year]/read` is the whole issue as one
  * document that needs no JavaScript, reflows to 320 px, prints without its
  * chrome and passes axe at WCAG 2.2 AA. The issue is the heavy golden
- * fixture as P5.9's pipeline stores it, seeded for the admin. P5.4's
- * `rewind-a11y-*` projects run it on chromium, webkit and firefox (`@article`);
- * until they land it runs in the `chromium` project.
+ * fixture as P5.9's pipeline stores it (`e2e/helpers/seed-rewind.ts`),
+ * seeded for the admin. `rewind-a11y-chromium`, `rewind-a11y-webkit` and
+ * `rewind-a11y-firefox` run it (`@article`, P5.4).
  */
 
-const YEAR = 2026;
+const YEAR = REWIND_YEAR;
 const URL = `/rewind/${YEAR}/read`;
-let pageCount = 0;
-
-// The heavy golden fixture as the pipeline builds it; lib/rewind/__tests__/e2e-issue-fixture.test.ts keeps it current
-function seedIssue() {
-  const issue = heavyIssue;
-  pageCount = issue.pages.length;
-  return {
-    version: 3,
-    year: YEAR,
-    statsVersion: 'stats-2026.1',
-    generatedAt: new Date('2026-12-01T12:00:00Z').toISOString(),
-    window: { from: '2026-01-01', through: '2026-11-30', zone: 'America/Chicago', finalCut: false },
-    edition: issue.edition,
-    facts: issue.facts,
-    pages: issue.pages,
-    archetype: issue.archetype,
-    copy: null,
-    copySource: 'template',
-    copyMeta: { model: null, promptVersion: 'e2e', slotHashes: {} },
-    factsHash: 'e2e',
-  };
-}
+const pageCount = REWIND_ISSUES.heavy.pages.length;
 
 async function adminContext(browser: Browser, baseURL: string | undefined, options: { javaScriptEnabled?: boolean } = {}) {
   const context = await browser.newContext(options);
@@ -48,27 +25,8 @@ async function adminContext(browser: Browser, baseURL: string | undefined, optio
 }
 
 test.describe('Rewind article mode @article', () => {
-  test.beforeAll(async () => {
-    const data = seedIssue();
-    const prisma = createE2EPrismaClient();
-    try {
-      await prisma.plexWrapped.deleteMany({ where: { userId: TEST_USERS.ADMIN.id, year: YEAR } });
-      await prisma.plexWrapped.create({
-        data: { userId: TEST_USERS.ADMIN.id, year: YEAR, status: 'completed', data: JSON.stringify(data), generatedAt: new Date(data.generatedAt) },
-      });
-    } finally {
-      await prisma.$disconnect();
-    }
-  });
-
-  test.afterAll(async () => {
-    const prisma = createE2EPrismaClient();
-    try {
-      await prisma.plexWrapped.deleteMany({ where: { userId: TEST_USERS.ADMIN.id, year: YEAR } });
-    } finally {
-      await prisma.$disconnect();
-    }
-  });
+  test.beforeAll(() => seedRewindIssue(TEST_USERS.ADMIN.id, 'heavy'));
+  test.afterAll(() => clearRewindIssue(TEST_USERS.ADMIN.id));
 
   test('renders every section with JavaScript off, and the console stays clean', async ({ browser, baseURL }) => {
     const context = await adminContext(browser, baseURL, { javaScriptEnabled: false });
