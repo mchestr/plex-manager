@@ -10,7 +10,7 @@
  * |---|---|
  * | `enableRewindShare` | A new `RewindShare`: a 32-byte token (base64url) of which only the SHA-256 hex is stored, a separate 16-byte asset key, and the URL returned once |
  * | `updateRewindShare` | Changes what a link publishes; the URL stays |
- * | `rotateRewindShare` | Revokes the link and creates one with the same settings and a new token and asset key (`rotatedFromId`); the old URL is a 404 at once |
+ * | `rotateRewindShare` | Revokes the link and creates one with the same settings and a new token and asset key (`rotatedFromId`); the old URL is a 404 at once. An expired link is refused while the Rewind has another live one |
  * | `disableRewindShare` | Sets `revokedAt`; the URL is a 404 at once |
  *
  * Each checks the session and that the link is the member's own, spends a
@@ -52,6 +52,7 @@ import { getSeasonState } from "@/lib/wrapped/season"
 const NEEDS_MEMBERSHIP = "Sharing needs an active membership"
 const NOT_READY = "Your Rewind for this year is not ready to share"
 const NO_LINK = "That link was not found"
+const LIVE_LINK = "You already have a public link. Rotate it for a new address."
 
 const ExpirySchema = z.union([z.literal("season-close"), z.literal("never"), z.iso.date()])
 type Expiry = z.infer<typeof ExpirySchema>
@@ -102,6 +103,8 @@ const isPast = (expiresAt: Date | null) => expiresAt !== null && expiresAt.getTi
 
 /** Thrown inside a transaction when another request already replaced the link. */
 class LinkChanged extends Error {}
+/** Thrown inside rotate when the Rewind already has another live link; rolls the revoke back. */
+class LinkExists extends Error {}
 
 /** The stored v3 Rewind of a completed row, or null. */
 function completedV3(row: { id: string; status: string; data: string | null }): RewindDataV3 | null {
@@ -188,7 +191,7 @@ export const enableRewindShare = memberAction({
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") return null
         throw error
       })
-    if (!share) return fail("CONFLICT", "You already have a public link. Rotate it for a new address.")
+    if (!share) return fail("CONFLICT", LIVE_LINK)
     logAuditEvent(AuditEventType.REWIND_SHARE_CREATED, userId, { shareId: share.id, year, pages: options.pages })
     revalidateShares()
     return ok({ shareId: share.id, url: `${base}${token}`, expiresAt: share.expiresAt?.toISOString() ?? null })
@@ -251,17 +254,29 @@ export const rotateRewindShare = memberAction({
     const { token, tokenHash, assetKey } = mintCredentials()
     let created: { id: string; expiresAt: Date | null }
     try {
-      created = await prisma.$transaction(async (tx) => {
-        // Only the request that revokes the live link creates its successor.
-        const revoked = await tx.rewindShare.updateMany({ where: { id: share.id, revokedAt: null }, data: { revokedAt: new Date() } })
-        if (revoked.count === 0) throw new LinkChanged()
-        return tx.rewindShare.create({
-          data: { wrappedId: share.wrappedId, tokenHash, assetKey, ...options.data, expiresAt, rotatedFromId: share.id },
-          select: { id: true, expiresAt: true },
-        })
-      })
+      // Serializable, as enable is: an expired link's successor is live, so
+      // rotating one must not run alongside an enable that creates another.
+      created = await prisma.$transaction(
+        async (tx) => {
+          // Only the request that revokes the link creates its successor.
+          const revoked = await tx.rewindShare.updateMany({ where: { id: share.id, revokedAt: null }, data: { revokedAt: new Date() } })
+          if (revoked.count === 0) throw new LinkChanged()
+          const live = await tx.rewindShare.findFirst({
+            where: { wrappedId: share.wrappedId, id: { not: share.id }, revokedAt: null, OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
+            select: { id: true },
+          })
+          if (live) throw new LinkExists()
+          return tx.rewindShare.create({
+            data: { wrappedId: share.wrappedId, tokenHash, assetKey, ...options.data, expiresAt, rotatedFromId: share.id },
+            select: { id: true, expiresAt: true },
+          })
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+      )
     } catch (error) {
-      if (error instanceof LinkChanged) return fail("CONFLICT", "That link just changed. Refresh and try again.")
+      if (error instanceof LinkExists) return fail("CONFLICT", LIVE_LINK)
+      const raced = error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034"
+      if (error instanceof LinkChanged || raced) return fail("CONFLICT", "That link just changed. Refresh and try again.")
       throw error
     }
     logAuditEvent(AuditEventType.REWIND_SHARE_ROTATED, userId, { shareId: created.id, rotatedFromId: share.id, year: share.wrapped.year, pages: share.pages })

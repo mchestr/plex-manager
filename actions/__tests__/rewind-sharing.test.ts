@@ -71,8 +71,10 @@ function installTables() {
   prismaMock.config.findUnique.mockResolvedValue(buildConfig({ rewindPublicLinks: true }))
   prismaMock.plexWrapped.findUnique.mockImplementation((async ({ where }: { where: { userId_year: { userId: string; year: number } } }) =>
     wrapped.find((w) => w.userId === where.userId_year.userId && w.year === where.userId_year.year) ?? null) as never)
-  prismaMock.rewindShare.findFirst.mockImplementation((async ({ where }: { where: { wrappedId: string } }) =>
-    shares.find((s) => s.wrappedId === where.wrappedId && !s.revokedAt && (!s.expiresAt || s.expiresAt > new Date())) ?? null) as never)
+  prismaMock.rewindShare.findFirst.mockImplementation((async ({ where }: { where: { wrappedId: string; id?: { not: string } } }) =>
+    shares.find(
+      (s) => s.wrappedId === where.wrappedId && s.id !== where.id?.not && !s.revokedAt && (!s.expiresAt || s.expiresAt > new Date())
+    ) ?? null) as never)
   prismaMock.rewindShare.findUnique.mockImplementation((async ({ where }: { where: { id: string } }) => {
     const share = shares.find((s) => s.id === where.id)
     return share ? withWrapped(share) : null
@@ -265,6 +267,25 @@ describe("rotate, update and disable", () => {
     prismaMock.rewindShare.updateMany.mockResolvedValueOnce({ count: 0 })
     expect(await rotateRewindShare({ shareId })).toMatchObject({ success: false, code: "CONFLICT" })
     expect(shares).toHaveLength(2)
+  })
+
+  it("will not rotate an expired link back to life beside a newer live one", async () => {
+    seedRewind()
+    const { shareId: expiredId } = await enabled()
+    shares[0].expiresAt = new Date(Date.now() - 60_000)
+    await enabled()
+
+    expect(await rotateRewindShare({ shareId: expiredId })).toMatchObject({ success: false, code: "CONFLICT" })
+    expect(shares).toHaveLength(2)
+  })
+
+  it("answers a serialization failure on rotate with CONFLICT", async () => {
+    seedRewind()
+    const { shareId } = await enabled()
+    prismaMock.$transaction.mockRejectedValueOnce(
+      new Prisma.PrismaClientKnownRequestError("could not serialize", { code: "P2034", clientVersion: "7" })
+    )
+    expect(await rotateRewindShare({ shareId })).toMatchObject({ success: false, code: "CONFLICT" })
   })
 
   it("refuses another member's link", async () => {
