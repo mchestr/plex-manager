@@ -1,5 +1,5 @@
 import { milestoneMarks } from "@/lib/rewind/viz/milestones"
-import { soundtrack, yearDays } from "@/lib/rewind/viz/soundtrack"
+import { binsPath, soundtrack, yearDays } from "@/lib/rewind/viz/soundtrack"
 
 const YEAR = { from: "2026-01-01", days: 365 }
 /** A deterministic year: a weekly rhythm with a quiet May. */
@@ -51,6 +51,7 @@ describe("soundtrack", () => {
     const strip = soundtrack([60, 0, 15], { variant: "daily", window: { from: "2026-01-01", days: 4 }, width: 4, height: 2 })
     expect(strip.d).toBe("M0,1V0H1V1H2V0.5H3V1V1.5H2V1H1V2H0V1Z")
     expect(strip.dotted).toEqual({ x1: 3, x2: 4 })
+    expect(binsPath([1, 0.5], 2, 2)).toBe("M0,1V0H1V0.5H2V1V1.5H1V2H0V1Z")
   })
 
   it("counts leap years", () => {

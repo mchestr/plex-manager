@@ -7,7 +7,7 @@ import type { RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 import { groundArchetype, groundSlot } from "../grounding"
 import { renderCopy, renderCopyText } from "../render-copy"
 import { COPY_SLOTS, slotDependencyHash } from "../slots"
-import { coverLines, slotTemplate } from "../templates"
+import { coverLines, slotTemplate, titleFreeHeadline } from "../templates"
 
 const facts: RewindFactsV3 = {
   "series[1].title": { value: "Severance", display: "Severance", unit: "title" },
@@ -35,6 +35,7 @@ describe("JSDoc Documentation Examples", () => {
 
   it("templates", () => {
     expect(slotTemplate("deck.number", { facts, userId: "a" })).toMatch(/^(That.s|Put|Every)/)
+    expect(titleFreeHeadline("bookends")).toBe("How the year opened")
     expect(coverLines([{ type: "number", folio: 2 }, { type: "centrefold", folio: 9 }])).toEqual([
       { folio: 2, text: "One very large number" },
       { folio: 9, text: "Who you turned out to be" },

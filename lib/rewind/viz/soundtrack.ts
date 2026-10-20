@@ -105,6 +105,21 @@ export function soundtrack(minutes: readonly number[], { variant, window, width,
   return { d, centre, dotted: drawn < window.days ? { x1: r(drawn * column), x2: width } : null, months, bins: [] }
 }
 
+/**
+ * The step-area path of bins already scaled 0-1 (the projection's weekly
+ * bins, or the square root of its daily ones), mirrored about the centre:
+ * how a share card draws the soundtrack it was given.
+ *
+ * @example
+ * ```ts
+ * binsPath([1, 0.5], 2, 2) // "M0,1V0H1V0.5H2V1V1.5H1V2H0V1Z"
+ * ```
+ */
+export function binsPath(bins: readonly number[], width: number, height: number): string {
+  const centre = height / 2
+  return stepArea(bins.map((b) => b * centre), bins.length > 0 ? width / bins.length : 0, centre)
+}
+
 /** Days in the window's year: 365 or 366. */
 export function yearDays(from: string): number {
   const year = Number(from.slice(0, 4))

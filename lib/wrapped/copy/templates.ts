@@ -252,3 +252,18 @@ export function coverLines(selected: ReadonlyArray<{ type: PageType; folio: numb
     .map(([type, text]) => ({ folio: folios.get(type)!, text }))
     .sort((a, b) => a.folio - b.folio)
 }
+
+/**
+ * A page's headline that names no title or person: its cover line, else a
+ * plain line. A share card prints it when the page's own headline needs a
+ * fact the card may not show, such as a title the member hid (P5.10).
+ *
+ * @example
+ * ```ts
+ * titleFreeHeadline("bookends") // "How the year opened"
+ * ```
+ */
+export function titleFreeHeadline(page: IssuePageType): string {
+  const line = COVER_LINES.find(([type]) => type === page)?.[1]
+  return line ?? (page === "cover" ? "A year in film and television" : "That was the year")
+}

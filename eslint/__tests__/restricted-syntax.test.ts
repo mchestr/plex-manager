@@ -10,7 +10,7 @@ import path from "node:path"
 import { Linter } from "eslint"
 
 import config from "../../eslint.config.mjs"
-import { actionsAndApi, deprecatedImports, formatting, inlineSvg, rawControls } from "../restricted-syntax.mjs"
+import { actionsAndApi, deprecatedImports, formatting, inlineSvg, rawControls, rewindCards } from "../restricted-syntax.mjs"
 
 const linter = new Linter({ configType: "flat" })
 
@@ -114,6 +114,34 @@ describe("raw-element warnings (P3.4)", () => {
   })
 })
 
+describe("Satori bans in the share cards (P5.10)", () => {
+  it.each([
+    "const s = { display: 'grid' }",
+    "const s = { boxShadow: '0 1px 2px black' }",
+    "const s = { filter: 'blur(2px)' }",
+    "const s = { backdropFilter: 'blur(4px)' }",
+    "const s = { mixBlendMode: 'multiply' }",
+    "const s = { clipPath: 'circle(50%)' }",
+    "const s = { WebkitTextStroke: '1px black' }",
+    "const s = { color: 'var(--rw-ink)' }",
+    "const s = { width: `calc(100% - ${gap}px)` }",
+    "const s = { width: 'calc(100% - 4px)' }",
+    'const el = <svg><text x="0">Label</text></svg>',
+  ])("bans %s", (code) => {
+    expect(hits(code, rewindCards)).toBe(1)
+  })
+
+  it.each([
+    "const s = { display: 'flex' }",
+    "const s = { transform: 'rotate(-8deg)' }",
+    "const kept = rows.filter((row) => row.ok)",
+    "const s = { color: '#17130e', width: 936 / 1.029 }",
+    "const el = <div><span>Text</span></div>",
+  ])("allows %s", (code) => {
+    expect(hits(code, rewindCards)).toBe(0)
+  })
+})
+
 describe("deprecated adapter imports (P3.5, P3.6)", () => {
   it.each([
     'import { StyledInput } from "@/components/ui/styled-input"',
@@ -187,6 +215,16 @@ describe("what each kind of file gets from eslint.config.mjs", () => {
     const messages = realLinter
       .verify('import { StyledInput } from "@/components/ui/styled-input"\nexport { StyledInput }\n', config, path.join(root, file))
       .filter((m) => m.ruleId === "restricted-syntax/warn" || m.ruleId === "no-restricted-syntax")
+    expect(messages.map((m) => (m.severity === 2 ? "error" : "warn"))).toEqual(expected)
+  })
+
+  it.each([
+    ["lib/rewind/cards/fixture.tsx", ["error"]],
+    ["lib/rewind/fixture.tsx", []],
+  ])("%s (Satori ban)", (file, expected) => {
+    const messages = realLinter
+      .verify("export const style = { boxShadow: 'none' }\n", config, path.join(root, file))
+      .filter((m) => m.ruleId === "no-restricted-syntax" || m.ruleId === "restricted-syntax/warn")
     expect(messages.map((m) => (m.severity === 2 ? "error" : "warn"))).toEqual(expected)
   })
 

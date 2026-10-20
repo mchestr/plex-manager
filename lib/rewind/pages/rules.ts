@@ -78,8 +78,8 @@ export const pendingPages: Record<Pending, PageDefinition<Empty>> = {
   records: pending((f) => recordCells(f) >= RECORD_CELLS, () => "Your personal bests of the year.", ["records.longestBinge.episodes", "records.completionShare"]),
   setup: pending((_f, { stats }) => stats.devices.eligible, (f) => `Most of your viewing was on ${shown(f, "setup.topPlatform")}.`, ["setup.directPlayShare"], true),
   requests: pending((f) => has(f, "requests.made"), (f) => `You made ${shown(f, "requests.made")} requests.`, ["requests.made", "requests.available"]),
-  standing: pending((f) => has(f, "standing.members"), (f) => `${shown(f, "standing.percentile")} of ${shown(f, "standing.members")} members by hours watched.`, ["standing.percentile"], true),
-  centrefold: pending(always, (f) => `You are ${shown(f, "archetype.name") || "a viewer of your own kind"}.`, ["archetype.name"], true),
+  standing: pending((f) => has(f, "standing.members"), (f) => `${shown(f, "standing.percentile")} of ${shown(f, "standing.members")} members by hours watched.`, ["standing.percentile", "standing.members"], true),
+  centrefold: pending(always, (f) => `You are ${shown(f, "archetype.name") || "a viewer of your own kind"}.`, ["archetype.name", "archetype.rarityShare", "archetype.rarityCount", "archetype.scoredMembers"], true),
   "next-year": pending(
     (f) => has(f, "next.leftForLater[1].title") || has(f, "next.picks[1].title"),
     () => "Series and films waiting for next year.",

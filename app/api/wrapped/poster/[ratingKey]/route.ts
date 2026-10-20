@@ -16,6 +16,8 @@ import {
   remainingMs,
   resolveSessionPosterAccess,
 } from "@/lib/wrapped/poster-access"
+import { assetKeyAllowsRatingKey } from "@/lib/wrapped/data/share-asset"
+import { assetKeySchema } from "@/lib/wrapped/data/share-safe-schema"
 import { shareTokenAllowsRatingKey } from "@/lib/wrapped/poster-keys"
 
 export const dynamic = "force-dynamic"
@@ -23,7 +25,8 @@ export const dynamic = "force-dynamic"
 const logger = createLogger("WRAPPED_POSTER_API")
 
 const paramsSchema = z.object({ ratingKey: ratingKeySchema })
-const querySchema = z.object({ share: shareTokenSchema.optional() })
+/** `share` is a v2 share token; `s` is a v3 share's asset key (P5.10), never its token. */
+const querySchema = z.object({ share: shareTokenSchema.optional(), s: assetKeySchema.optional() })
 const POSTER_WIDTH = 400
 const POSTER_HEIGHT = 600
 /** Every upstream call of one request (lookups and the poster) shares this budget. */
@@ -117,7 +120,10 @@ async function fetchPoster(
 
 /**
  * GET /api/wrapped/poster/[ratingKey]?share=<token>
+ * GET /api/wrapped/poster/[ratingKey]?s=<assetKey>
  *
+ * - **Asset keys** (`s`, a v3 share link's) cover only the art keys that
+ *   share's projection publishes, and are answered as share responses.
  * Proxies poster art from the active Plex server so the Plex token never
  * reaches the client.
  *
@@ -152,6 +158,7 @@ export async function GET(
     const query = parseSearchParams(querySchema, request.nextUrl, { "Cache-Control": ERROR_CACHE_CONTROL })
     if (!query.ok) return query.response
     const shareToken = query.data.share ?? null
+    const assetKey = query.data.s ?? null
 
     let session = await getServerSession(authOptions)
     if (session) {
@@ -162,14 +169,16 @@ export async function GET(
         headers: { "Cache-Control": ERROR_CACHE_CONTROL },
       })
       if (!entitled.ok) {
-        if (!shareToken) return entitled.response
+        if (!shareToken && !assetKey) return entitled.response
         session = null
       }
     }
+    // A v3 share's asset key covers only the art keys its projection publishes,
+    // for any viewer, signed in or not.
+    const assetAllowed = assetKey ? await assetKeyAllowsRatingKey(assetKey, ratingKey) : false
+    if (assetAllowed) session = null
     if (!session) {
-      const allowed = shareToken
-        ? await shareTokenAllowsRatingKey(shareToken, ratingKey)
-        : false
+      const allowed = assetAllowed || (shareToken ? await shareTokenAllowsRatingKey(shareToken, ratingKey) : false)
       if (!allowed) {
         return errorResponse(ErrorCode.UNAUTHORIZED, "Authentication required")
       }

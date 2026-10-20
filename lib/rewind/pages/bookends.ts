@@ -13,6 +13,9 @@ import type { RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 import { BookendsDataSchema, type BookendsData } from "./bookends.schema"
 import { isFinalCut, issueYear, shown } from "./facts"
 
+/** `series:77` to `77`: the rating key a hidden title is stored under. */
+const ratingKeyOf = (key: string) => key.slice(key.indexOf(":") + 1)
+
 /** What a masked bookend reads in place of its title. */
 export const maskedTitle = (topShowsFolio: number) => `a series you will meet on page ${String(topShowsFolio).padStart(2, "0")}`
 
@@ -36,5 +39,11 @@ export const bookendsPage: PageDefinition<BookendsData> = {
   share: {
     facts: ["bookends.first.title", "bookends.first.date", "bookends.last.title", "bookends.last.date", "member.since"],
     titles: ["bookends.first.title", "bookends.last.title"],
+    // A masked bookend is the No. 1 series, so its key is also `series[1].title`'s.
+    titleKeys: ({ first, last }) => ({
+      "bookends.first.title": ratingKeyOf(first.key),
+      "bookends.last.title": ratingKeyOf(last.key),
+      ...(first.masked ? { "series[1].title": ratingKeyOf(first.key) } : last.masked ? { "series[1].title": ratingKeyOf(last.key) } : {}),
+    }),
   },
 }

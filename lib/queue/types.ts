@@ -26,6 +26,9 @@ export const JOB_TYPES = {
   REWIND_METADATA_WARM: "rewind:metadata-warm",
   REWIND_GENERATE_USER: "rewind:generate:user",
   REWIND_STALE_SWEEP: "rewind:stale:sweep",
+  // Share cards (P5.10), on `rewind-aux`
+  REWIND_CARD_PREWARM: "rewind:card:prewarm",
+  REWIND_CARD_SWEEP: "rewind:card:sweep",
 } as const
 
 export type JobType = (typeof JOB_TYPES)[keyof typeof JOB_TYPES]
@@ -219,6 +222,11 @@ export interface RewindGenerateUserPayload {
   year: number
 }
 
+/** Renders the cover, centrefold and back cover of one completed Rewind with the member's saved options. */
+export interface RewindCardPrewarmPayload {
+  wrappedId: string
+}
+
 // =============================================================================
 // Type Mapping
 // =============================================================================
@@ -238,6 +246,8 @@ export interface JobPayloadMap {
   [JOB_TYPES.REWIND_METADATA_WARM]: RewindMetadataWarmPayload
   [JOB_TYPES.REWIND_GENERATE_USER]: RewindGenerateUserPayload
   [JOB_TYPES.REWIND_STALE_SWEEP]: Record<string, never>
+  [JOB_TYPES.REWIND_CARD_PREWARM]: RewindCardPrewarmPayload
+  [JOB_TYPES.REWIND_CARD_SWEEP]: Record<string, never>
 }
 
 // =============================================================================
