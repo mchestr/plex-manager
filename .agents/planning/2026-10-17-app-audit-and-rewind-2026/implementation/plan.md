@@ -4858,16 +4858,18 @@ P5.1 and P5.2 start only once P3.1's scope contract and P3.7's primitives have m
   - an `animationend` on the segment advances one page, and `visibilitychange` pauses;
   - a test `Profiler` records no commit while a dwell runs.
 
+(as merged: `StoryStage({ pages: { type, content }[], archetype, closeHref: Route, prefs? })`; `prefs` defaults to autoplay on, normal pacing, shortcuts on until P5.3 passes the stored ones. The registry has no `interaction` flag, so `pageKind(dwell)` reads `hold` as an interaction page (`tap` the cover, `end` the back cover). The reducer state also holds `prevIndex` (the turn direction), `autoplay` and `kinds`, and takes `SET_AUTOPLAY`. The stage tells the scope root the current page's ink through `StageInkContext` (`components/rewind/stage/stage-ink.tsx`, a no-op without a provider), which P5.1's `RewindScope` should provide; each page and both chrome rows carry their own `inkProps`, so the scope root must not carry a `.light`/`.dark` class around the pages, or a dark page sits inside a light one. `NearPage` and `useStagePage()` (`stage-page.tsx`) mount `next/dynamic` islands within one turn, and `usePlayerSend()` (`player-context.tsx`) lets an island send `INTERACT_START`/`INTERACT_END`. Visually hidden `rewind-prev` and `rewind-next` buttons, shown on focus, are the tap and swipe equivalents. No sheet renders yet: Settings, Table and Share enter the `sheet` mode and Esc leaves it. The turn and progress CSS (`rw-progress`, `rw-ink-roll-*`, `rw-page-leave`) is in the Rewind block of `app/globals.css`; the hold is detected with one 250 ms timeout. Until P5.1 mounts it, `/dev/rewind-stage` (behind `ENABLE_DEV_UI=1`) drives the player with placeholder pages; `npm run design:rewind-motion` is the motion check.)
+
 **Integration.** P5.1's `[year]/page.tsx` renders `StoryStage` with the selected pages. P5.3 adds the sheets, focus handling and the live region, and P5.4's performance project enforces the zero-render rule. P5.5 to P5.7 supply the page slots, and P8.3 adds the first-tap completion of count-ups (FR-15, a P1 item).
 
 **Demo.** At 390x664 the compact chrome appears and the story never scrolls. A swipe, a tap on the left third and ArrowRight each turn a page, autoplay resumes after a manual turn, and a hold hides the chrome for a screenshot. The Performance panel shows no React commits during a dwell.
 
 **Done when.**
-- [ ] `fit-stage` returns the expected chrome and scale for every listed viewport, and the story never scrolls.
-- [ ] The reducer implements every state and transition in design 14.3, and autoplay survives manual turns.
-- [ ] Taps, swipes, hold, the Pause long-press and the stage-scoped keyboard map all work, and each gesture has a button equivalent.
-- [ ] Progress is CSS-driven with zero React renders per frame, and Settings, Pause and Close are `ink-outline icon-pill` Buttons with their test ids.
-- [ ] The Rewind motion check enforces NFR-6 in CI, with a test per rule.
+- [x] `fit-stage` returns the expected chrome and scale for every listed viewport, and the story never scrolls.
+- [x] The reducer implements every state and transition in design 14.3, and autoplay survives manual turns.
+- [x] Taps, swipes, hold, the Pause long-press and the stage-scoped keyboard map all work, and each gesture has a button equivalent.
+- [x] Progress is CSS-driven with zero React renders per frame, and Settings, Pause and Close are `ink-outline icon-pill` Buttons with their test ids.
+- [x] The Rewind motion check enforces NFR-6 in CI, with a test per rule.
 
 ### Step P5.3: Story sheets and accessibility semantics
 

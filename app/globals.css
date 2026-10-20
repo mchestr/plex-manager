@@ -221,6 +221,20 @@
 [data-theme="rewind"] [data-slot="slider-track"] { background: repeating-linear-gradient(-45deg, var(--ink) 0 1px, transparent 1px 3px); }
 @utility font-display { font-family: var(--font-display); }   /* Rewind chrome and controls (Rewind 5.1) */
 @utility font-text { font-family: var(--font-text); }
+/* the story player (P5.2). The progress segment fills on CSS, so a dwell costs no React render;
+   --rw-dwell is the registry dwell, set on the segment */
+@keyframes rw-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.rw-progress { transform-origin: left; animation: rw-progress var(--rw-dwell) linear forwards; animation-play-state: paused; }
+.rw-progress[data-playing="true"] { animation-play-state: running; }
+/* the page turn: the next field rolls in from the side it comes from; the old page's content shifts away and fades */
+@keyframes rw-ink-roll-forward { from { clip-path: inset(0 0 0 100%); } to { clip-path: inset(0); } }
+@keyframes rw-ink-roll-back { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
+@keyframes rw-page-leave { to { transform: translateX(var(--rw-leave-x)); opacity: 0; } }
+.rw-page[data-turn="forward"] { animation: rw-ink-roll-forward var(--rw-dur-m) var(--rw-ease-ink) both; }
+.rw-page[data-turn="back"] { animation: rw-ink-roll-back var(--rw-dur-m) var(--rw-ease-ink) both; }
+.rw-page[data-leaving="forward"] { --rw-leave-x: -24px; }
+.rw-page[data-leaving="back"] { --rw-leave-x: 24px; }
+.rw-page[data-leaving] .rw-artboard { animation: rw-page-leave 200ms var(--rw-ease-ink) forwards; }
 /* the card-to-cover handoff runs on <html>, outside the scope, so it states --rw-dur-m and --rw-ease-ink literally */
 ::view-transition-group(rewind-field) { animation-duration: 420ms; animation-timing-function: cubic-bezier(.65, 0, .35, 1); }
 /* rewind-scope:end */

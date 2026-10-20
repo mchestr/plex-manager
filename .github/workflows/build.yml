@@ -130,6 +130,10 @@ jobs:
       - name: Check design debt
         run: node scripts/check-design-system.mjs --check
 
+      # NFR-6 for Rewind, which the ratchet's infinite-motion rule skips (P5.2).
+      - name: Check Rewind motion
+        run: npm run design:rewind-motion
+
   build:
     name: Build
     runs-on: ubuntu-latest
