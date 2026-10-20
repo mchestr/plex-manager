@@ -540,6 +540,9 @@ jobs:
       E2E_TEST_MODE: "true"
       SKIP_CONNECTION_TESTS: "true"
       E2E_SERVER: prod
+      # Firefox will not start when $HOME is not owned by the container's user
+      # (root); GitHub sets HOME to the runner's /github/home.
+      HOME: /root
 
     steps:
       - name: Checkout code
