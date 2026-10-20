@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "commit": "48a8194d8431002c3513d57a6e6dacd40e4fb7f4",
-  "generatedAt": "2026-10-20T23:05:42.529Z",
+  "commit": "67260cc0341d67737fe86780763e4e01c91a9ec9",
+  "generatedAt": "2026-10-20T23:26:20.715Z",
   "files": {
     "app/(app)/discord/link/page.tsx": {
       "raw-palette": 1
@@ -172,12 +172,6 @@
     "components/admin/announcements/announcements-page-client.tsx": {
       "raw-palette": 10
     },
-    "components/admin/chatbot/chat-window.tsx": {
-      "arbitrary-type-z": 3,
-      "gradient": 2,
-      "infinite-motion": 4,
-      "raw-palette": 46
-    },
     "components/admin/cost-analysis/cost-date-filter.tsx": {
       "blur": 1,
       "raw-palette": 6
@@ -344,24 +338,6 @@
     "components/admin/settings/wrapped-settings-form.tsx": {
       "copy": 2,
       "raw-palette": 15
-    },
-    "components/admin/shared/admin-layout-shell.tsx": {
-      "gradient": 1,
-      "raw-palette": 3
-    },
-    "components/admin/shared/admin-nav.tsx": {
-      "blur": 2,
-      "caps-eyebrow": 2,
-      "gradient": 2,
-      "raw-palette": 43
-    },
-    "components/admin/shared/mobile-nav/MobileMoreMenu.tsx": {
-      "blur": 1,
-      "gradient": 1,
-      "raw-palette": 23
-    },
-    "components/admin/shared/mobile-nav/MobileNavButton.tsx": {
-      "raw-palette": 6
     },
     "components/admin/shared/unauthenticated-error.tsx": {
       "infinite-motion": 1,
@@ -781,13 +757,13 @@
   },
   "totals": {
     "arbitrary-color": 17,
-    "arbitrary-type-z": 39,
-    "blur": 137,
-    "caps-eyebrow": 91,
+    "arbitrary-type-z": 36,
+    "blur": 134,
+    "caps-eyebrow": 89,
     "copy": 36,
-    "gradient": 130,
+    "gradient": 124,
     "gradient-text": 56,
-    "infinite-motion": 56,
-    "raw-palette": 3406
+    "infinite-motion": 52,
+    "raw-palette": 3285
   }
 }

@@ -7,6 +7,7 @@ import { AdminUserWithWrappedStats } from "@/types/admin"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
+import { userDetail } from "@/lib/admin/routes"
 
 interface UserTableRowProps {
   user: AdminUserWithWrappedStats
@@ -60,7 +61,7 @@ export function UserTableRow({ user, currentYear, stripeDashboardBaseUrl }: User
   const f = useFormat()
 
   const handleRowClick = () => {
-    router.push(`/admin/users/${user.id}`)
+    router.push(userDetail(user.id))
   }
 
   const badge = subscriptionBadge(user.subscriptionStatus)

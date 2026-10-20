@@ -3,6 +3,7 @@ import { aggregateLlmUsage } from "@/lib/utils"
 import { getFormat } from "@/lib/settings/app-settings"
 import Image from "next/image"
 import Link from "next/link"
+import { llmUsageDetail, userDetail } from "@/lib/admin/routes"
 
 export const dynamic = 'force-dynamic'
 
@@ -256,9 +257,12 @@ export default async function LLMUsagePage({
                                 </div>
                               )}
                               <div>
-                                <div className="text-sm font-medium text-white">
+                                <Link
+                                  href={userDetail(group.user.id)}
+                                  className="text-sm font-medium text-white hover:underline"
+                                >
                                   {group.user.name || "Unknown"}
-                                </div>
+                                </Link>
                                 {group.user.email && (
                                   <div className="text-xs text-slate-400">{group.user.email}</div>
                                 )}
@@ -296,7 +300,7 @@ export default async function LLMUsagePage({
                             href={
                               group.isChat && group.conversationId
                                 ? `/admin/llm-usage/conversation/${group.conversationId}`
-                                : `/admin/llm-usage/${group.sampleUsageId}`
+                                : llmUsageDetail(group.sampleUsageId)
                             }
                             className="px-2 sm:px-3 py-1 sm:py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-medium rounded transition-colors inline-block"
                           >

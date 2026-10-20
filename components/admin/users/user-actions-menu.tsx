@@ -9,6 +9,7 @@ import { SubscriptionStatus } from "@/lib/generated/prisma/client"
 import Link from "next/link"
 import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
+import { userRewind } from "@/lib/admin/routes"
 
 interface UserActionsMenuProps {
   user: {
@@ -122,7 +123,7 @@ export function UserActionsMenu({ user, year, stripeDashboardBaseUrl }: UserActi
           {/* View Wrapped */}
           {user.wrappedStatus === "completed" && (
             <Link
-              href={`/admin/users/${user.id}/wrapped?year=${year}`}
+              href={userRewind(user.id, year)}
               className="flex items-center gap-2 px-3 py-2 text-sm text-slate-200 hover:bg-slate-700/50 transition-colors"
               onClick={() => setIsOpen(false)}
               role="menuitem"

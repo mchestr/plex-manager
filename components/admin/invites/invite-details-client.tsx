@@ -5,6 +5,7 @@ import { useToast } from "@/components/ui/toast"
 import { ConfirmModal } from "@/components/admin/shared/confirm-modal"
 import type { InviteWithUsages } from "@/lib/dto/user"
 import { useFormat } from "@/lib/format-context"
+import { userDetail } from "@/lib/admin/routes"
 import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -255,7 +256,9 @@ export function InviteDetailsClient({ id }: { id: string }) {
                           {(usage.user.name || "?").charAt(0).toUpperCase()}
                         </div>
                       )}
-                      <span className="font-medium text-white">{usage.user.name}</span>
+                      <Link href={userDetail(usage.user.id)} className="font-medium text-white hover:underline">
+                        {usage.user.name || usage.user.email || "Unknown"}
+                      </Link>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-slate-400">
