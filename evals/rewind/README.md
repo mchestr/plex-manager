@@ -152,6 +152,24 @@ CI never calls a model: it checks recorded outputs in `evals/rewind/recordings/`
 cost estimate first. This cap is separate from members' generation budget
 (`Config.rewindLlmBudgetUsd`, default $10).
 
+## Recordings (P5.9)
+
+`recordings/hand/<fixture>.json` holds hand-written model answers for every
+fixture, replayed by `lib/wrapped/pipeline/__tests__/generate-user.golden.test.ts`
+through the real `generateStructured`, grounding, repair and fallback. Each
+file is `{ fixture, promptVersion, note?, calls }`, where a call is
+`{ kind: "copy" | "repair", output }` (the JSON the model returns) or
+`{ kind, text }` (raw text, for a malformed answer). The pocket and postcard
+fixtures (`light`, `postcard`, `seven-minutes`) record no calls.
+
+Deliberate failures: `heavy` (rules 3 and 4, repaired), `hostile-titles`
+(the injected title obeyed outside a token, repaired into a token),
+`median` (a digit, then a number word: that slot alone falls back),
+`night-owl` (window words, repaired); also `weekend-binger` (another
+archetype's poster line, rule 8), `zero-series` (a truncated answer, so every
+slot is a template) and `single-title` (the model picks another shortlisted
+archetype). P5.13 adds real model recordings beside `hand/`.
+
 ## Sign-off
 
 The owner reviews the table above, the profiles and the budget on

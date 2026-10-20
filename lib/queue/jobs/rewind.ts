@@ -21,9 +21,11 @@
  *
  * A failure marks the generation `failed`, never the data: a completed Rewind
  * keeps its data and share links. A Rewind that has not completed yet mirrors
- * the failure, so the v2 pages show it. Retryable failures (upstream or
- * provider errors) go back to `queued` while attempts remain (3, backing off
- * from 30 s); the rest throw `UnrecoverableError`. The job never calls
+ * the failure, so the status panels show it. A model failure never fails a
+ * run (the pipeline falls back to templates); retryable failures (upstream
+ * errors) go back to `queued` while attempts remain (3, backing off from
+ * 30 s); the rest throw `UnrecoverableError`. A member who is not eligible
+ * ends `skipped` with the pipeline's typed reason. The job never calls
  * `revalidatePath`, which needs a request scope; the status hook refreshes the
  * member's page instead.
  *

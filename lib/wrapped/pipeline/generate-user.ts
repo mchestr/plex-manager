@@ -154,6 +154,8 @@ export async function generateUserRewind(options: GenerateUserOptions, deps: Pip
     },
   })
   if (copy.trail.reason) logger.warn("Rewind copy fell back to templates", { userId, year, reason: copy.trail.reason, source: copy.source })
+  // A model timeout only templates the copy; the run's own limit or a shutdown stops it here.
+  signal.throwIfAborted()
   const inputFactsHash = issue.factsHash
   if (copy.copy && copy.copy.archetype.id !== issue.archetype?.id) issue = withArchetype(issue, issueInput, copy.copy.archetype.id)
 
