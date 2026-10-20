@@ -1,7 +1,7 @@
 import { RewindFigure } from "@/components/rewind/a11y/figure"
 import { formatCount, formatRunningTime } from "@/lib/rewind/format"
-import { has, shown } from "@/lib/rewind/pages/facts"
-import { coverPage } from "@/lib/rewind/pages/cover"
+import { volumeLine } from "@/lib/rewind/pages/facts"
+import { coverCaption, coverPage } from "@/lib/rewind/pages/cover"
 import type { CoverData } from "@/lib/rewind/pages/cover.schema"
 import { issueDurationMs, POCKET_ESTIMATE } from "@/lib/rewind/registry"
 import { fitLines } from "@/lib/rewind/typeset/fit-lines"
@@ -31,9 +31,7 @@ export function CoverPage({ data, issue }: PageProps<CoverData>) {
   const { facts, locale } = issue
   const source = { ...facts, ...copyLocals({ year: issue.year }) }
   const nameplate = fitLines("Rewind", { role: "nameplate", metrics: pageMetrics, weight: 900, measure: MEASURE, maxLines: 1, sizeMin: 34, sizeMax: 120, widths: [100] })
-  const volume = [has(facts, "member.volume") && `Vol. ${shown(facts, "member.volume")}`, has(facts, "member.serial") && `No. ${shown(facts, "member.serial")}`]
-    .filter(Boolean)
-    .join(", ")
+  const volume = volumeLine(facts)
   const pocketMember = issue.edition === "pocket"
   const types = issue.pages.map((p) => p.type)
   const full = pocketMember ? null : cut("Read the full issue", issue.pages.length, issueDurationMs(types), locale)
@@ -64,7 +62,7 @@ export function CoverPage({ data, issue }: PageProps<CoverData>) {
         <SoundtrackStrip minutes={data.minutes} from={String(facts["window.from"]?.value)} locale={locale} width={MEASURE} height={150} months />
       </RewindFigure>
       <p className="italic" style={{ fontSize: u(14.5), lineHeight: 1.25, marginTop: u(4) }}>
-        Every line is a day you pressed play.{finalCut ? "" : " December is still being written."}
+        {coverCaption(finalCut)}
       </p>
       <h2 tabIndex={-1} className="font-lead outline-none" style={{ fontSize: u(36), lineHeight: 1.02, marginTop: u(14), letterSpacing: "-0.01em" }}>
         <CopyText text={headline("cover", facts)} source={source} />

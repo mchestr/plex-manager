@@ -299,6 +299,19 @@
   }
   .rw-page[data-turn] { animation: rw-fade-in var(--rw-dur-xs) linear both !important; }
 }
+/* article mode on paper (P5.12): ink on a paper field and no chrome; link targets follow their text; a section or a
+   table never splits across sheets, and the centrefold starts a new one; artwork stays off the page */
+@media print {
+  [data-rewind-article] { --field: var(--rw-paper); --ink: var(--rw-on-paper); min-height: 0; print-color-adjust: exact; }
+  body:has([data-rewind-article]) [data-testid="subscription-banners"],
+  [data-rewind-article] [data-print-hide],
+  [data-rewind-article] img,
+  [data-rewind-article] svg { display: none; }
+  [data-rewind-article] a[href]::after { content: " (" attr(href) ")"; }
+  [data-rewind-article] section,
+  [data-rewind-article] table { break-inside: avoid; }
+  [data-rewind-article] [data-article-page="centrefold"] { break-before: page; }
+}
 /* rewind-scope:end */
 
 /* ---------- 4. Tailwind mapping ---------- */

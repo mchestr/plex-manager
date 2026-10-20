@@ -1,7 +1,8 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
-import { archetypeNameFit, CentrefoldPage, nameAfterLead } from "@/components/rewind/pages/centrefold"
+import { archetypeNameFit, CentrefoldPage } from "@/components/rewind/pages/centrefold"
+import { nameAfterLead } from "@/lib/rewind/pages/centrefold"
 import { PlayerProvider } from "@/components/rewind/stage/player-context"
 import { fixtureIssue, issueContext, type FixtureIssue } from "@/lib/rewind/__tests__/helpers/fixture-issue"
 import type { CentrefoldData } from "@/lib/rewind/pages/centrefold.schema"

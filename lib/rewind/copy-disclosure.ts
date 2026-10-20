@@ -45,3 +45,7 @@ export function aboutTheWords({ copySource, model }: CopyAuthor): string {
   if (copySource === "template" || model === null) return TEMPLATE_WORDS
   return `Some of the words were written by ${author(model)}. ${RECEIVED}`
 }
+
+/** The back cover's one AI line (G7), or the template line when every word is a template. */
+export const backCoverDisclosure = (copySource: CopyAuthor["copySource"]) =>
+  copySource === "template" ? TEMPLATE_WORDS : "The numbers come from your history. Some of the words are written by AI."

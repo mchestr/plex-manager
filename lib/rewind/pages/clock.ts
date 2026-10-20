@@ -6,11 +6,14 @@
  * @module lib/rewind/pages/clock
  */
 
+import { figure, heading, note, paragraph, tableBlock } from "@/lib/rewind/article/blocks"
 import { formatCount, formatHour, formatShare } from "@/lib/rewind/format"
 import type { PageDefinition, PageTable } from "@/lib/rewind/registry"
+import { headline, tzNote } from "@/lib/wrapped/copy/templates"
 import type { FactId, RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 
 import { ClockDataSchema, type ClockData } from "./clock.schema"
+import { pageDeck } from "./deck"
 import { has, shown } from "./facts"
 
 /** Design 4.3: the clock needs more than 10 counted plays. @internal */
@@ -55,5 +58,12 @@ export const clockPage: PageDefinition<ClockData> = {
   schema: ClockDataSchema,
   srSummary: (_data, facts) => ringSummary(facts),
   table: (data, facts, settings) => hoursTable(data.hours, facts, settings),
+  article: (data, facts, ctx) => [
+    heading(headline("clock", facts), facts),
+    paragraph(pageDeck(ctx, facts, "clock"), facts),
+    ...figure(ringSummary(facts)),
+    ...tableBlock(hoursTable(data.hours, facts, ctx)),
+    note(tzNote(ctx.zone), facts),
+  ],
   share: { facts: ["hours.peak", "hours.afterDarkShare", "hours.quietest", "tz.label"] },
 }

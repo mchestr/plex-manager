@@ -6,17 +6,40 @@
  * @module lib/rewind/pages/number
  */
 
-import { formatRewindDuration } from "@/lib/rewind/format"
+import { figure, heading, paragraph, plain, tableBlock, type ArticleBlock, type ArticleContext } from "@/lib/rewind/article/blocks"
+import { formatRewindDuration, pluralWord } from "@/lib/rewind/format"
 import type { PageDefinition } from "@/lib/rewind/registry"
+import { headline } from "@/lib/wrapped/copy/templates"
 import { display } from "@/lib/wrapped/facts/display"
 import type { FactId, RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 
-import { has, num, shown } from "./facts"
+import { pageDeck } from "./deck"
+import { has, isFinalCut, issueYear, num, shown } from "./facts"
 import { NumberDataSchema, type NumberData } from "./number.schema"
 
 const HERO_HOURS = 10
 const MILESTONES = [1, 2, 3, 4] as const
 const DAY_MS = 86_400_000
+
+/** The counts row under the split, in order. */
+export const NUMBER_COUNTS: ReadonlyArray<[FactId, { one: string; other: string }]> = [
+  ["counts.episodes", { one: "episode", other: "episodes" }],
+  ["counts.series", { one: "series", other: "series" }],
+  ["counts.films", { one: "film", other: "films" }],
+]
+
+/** "872 h, 67%", or "4%" under an hour: one side of the series and films split. */
+export function splitShare(facts: RewindFactsV3, side: "series" | "films"): string {
+  const hours: FactId = side === "series" ? "time.seriesHours" : "time.filmsHours"
+  const share: FactId = side === "series" ? "time.seriesShare" : "time.filmsShare"
+  return has(facts, hours) ? `${shown(facts, hours)}\u00A0h, ${shown(facts, share)}` : shown(facts, share)
+}
+
+/** The split shows only when both sides are above zero. */
+export const hasSplit = (facts: RewindFactsV3) => num(facts, "time.seriesShare") > 0 && num(facts, "time.filmsShare") > 0
+
+/** The vs-2025 stamp's words after the change: "on 2025", or "on the same months of 2025" in the season. */
+const vsLastYearLabel = (facts: RewindFactsV3) => (isFinalCut(facts) ? `on ${issueYear(facts) - 1}` : `on the same months of ${issueYear(facts) - 1}`)
 
 /** The milestones the member passed: `{ hours, date }` displays plus the date key. */
 export function milestoneFacts(facts: RewindFactsV3) {
@@ -40,6 +63,36 @@ function monthlyMinutes(minutes: readonly number[], from: string): Map<number, n
     months.set(month, (months.get(month) ?? 0) + m)
   })
   return months
+}
+
+/** The hero in the headline, the stamp, the deck, the split, the counts, the road's summary and its Table. */
+function numberArticle(data: NumberData, facts: RewindFactsV3, ctx: ArticleContext): ArticleBlock[] {
+  const hours = data.hero === "time.totalHours"
+  const stamp: ArticleBlock[] = has(facts, "time.vsLastYear")
+    ? [{ kind: "factRow", items: [{ value: shown(facts, "time.vsLastYear"), label: vsLastYearLabel(facts) }] }]
+    : []
+  const split: ArticleBlock[] = hasSplit(facts)
+    ? [
+        {
+          kind: "definitionList",
+          label: "Series and films",
+          entries: [
+            { term: "Series", detail: plain(splitShare(facts, "series")) },
+            { term: "Films", detail: plain(splitShare(facts, "films")) },
+          ],
+        },
+      ]
+    : []
+  const counts = NUMBER_COUNTS.filter(([id]) => num(facts, id) > 0).map(([id, forms]) => ({ value: shown(facts, id), label: pluralWord(num(facts, id), forms, ctx) }))
+  return [
+    heading(`${headline("number", facts)} {{fact:${data.hero}}}${hours ? " hours" : ""}`, facts),
+    ...stamp,
+    paragraph(pageDeck(ctx, facts, "number"), facts),
+    ...split,
+    ...(counts.length > 0 ? [{ kind: "factRow" as const, items: counts }] : []),
+    ...figure(numberPage.srSummary(data, facts)),
+    ...tableBlock(numberPage.table?.(data, facts, ctx)),
+  ]
 }
 
 export const numberPage: PageDefinition<NumberData> = {
@@ -73,5 +126,6 @@ export const numberPage: PageDefinition<NumberData> = {
       rows,
     }
   },
+  article: numberArticle,
   share: { facts: ["time.totalHours", "time.totalMinutes", "window.through", "window.finalCut"] },
 }

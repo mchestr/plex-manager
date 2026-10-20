@@ -18,6 +18,7 @@
  *   desktop Notes and article mode read for the page's graphic.
  * - `table(data, facts, settings)` is the chart pages' Table sheet (P5.3).
  * - `share.facts` are the facts the page's card may print (P5.10).
+ * - `article(data, facts, ctx)` is the page in article mode (P5.12).
  *
  * Pages whose steps have not landed keep the page rule of design 4.3 as their
  * `select` with empty data (`lib/rewind/pages/rules.ts`); P5.7, P7.1 and P7.2
@@ -37,6 +38,7 @@
 import type { z } from "zod"
 
 import type { InkName } from "@/lib/design/tokens"
+import type { ArticleBlock, ArticleContext } from "@/lib/rewind/article/blocks"
 import { backCoverPage } from "@/lib/rewind/pages/back-cover"
 import { bookendsPage } from "@/lib/rewind/pages/bookends"
 import { calendarPage } from "@/lib/rewind/pages/calendar"
@@ -107,6 +109,12 @@ export interface PageDefinition<D> {
   schema: z.ZodType<D>
   srSummary(data: D, facts: RewindFactsV3): string
   table?(data: D, facts: RewindFactsV3, settings: { locale: string }): PageTable | null
+  /**
+   * The page in article mode (P5.12), from the same data, tables and copy as
+   * its story page. A page without one reads as its summary and Table
+   * (`articleBlocks`).
+   */
+  article?(data: D, facts: RewindFactsV3, ctx: ArticleContext): ArticleBlock[]
   /** The facts the page's share card may print; `titles` are those that name a title, `art` a poster. */
   share: { facts: FactId[]; titles?: FactId[]; art?: true }
 }

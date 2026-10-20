@@ -1,7 +1,6 @@
-import { formatCount } from "@/lib/rewind/format"
-import { maskedTitle } from "@/lib/rewind/pages/bookends"
+import { lastLead, lifetimeLine, maskedTitle } from "@/lib/rewind/pages/bookends"
 import type { BookendsData } from "@/lib/rewind/pages/bookends.schema"
-import { has, isFinalCut, num, shown } from "@/lib/rewind/pages/facts"
+import { shown } from "@/lib/rewind/pages/facts"
 import { fitLines } from "@/lib/rewind/typeset/fit-lines"
 import { pageMetrics } from "@/lib/rewind/typeset/metrics"
 import { renderCopy } from "@/lib/wrapped/copy/render-copy"
@@ -12,8 +11,6 @@ import { CopyText } from "./copy-text"
 import { FittedLines } from "./fitted-lines"
 import { deckText, folioOf, type PageProps } from "./issue-context"
 import { axes, MEASURE, u, ut } from "./units"
-
-const ORDINALS = ["first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth"]
 
 /** The No. 1 title role (design 5.4): Archivo 900, 34-52 px, up to 3 lines. */
 const titleFit = (title: string) => fitLines(title, { role: "nameplate", metrics: pageMetrics, weight: 900, measure: MEASURE, maxLines: 3, sizeMin: 34, sizeMax: 52 })
@@ -29,17 +26,6 @@ function When({ facts, side }: { facts: RewindFactsV3; side: "first" | "last" })
       {shown(facts, `bookends.${side}.date`)}, {shown(facts, `bookends.${side}.time`)}
     </p>
   )
-}
-
-/** "Member since 2023, 3,940 hours in all, your fourth Rewind", from whichever facts the member has. */
-function lifetimeLine(facts: RewindFactsV3, locale: string): string | null {
-  const nth = num(facts, "member.nthRewind")
-  const parts = [
-    has(facts, "member.since") && `Member since ${shown(facts, "member.since")}`,
-    num(facts, "member.lifetimeHours") > 0 && `${formatCount(num(facts, "member.lifetimeHours"), { one: "hour", other: "hours" }, { locale })} in all`,
-    nth > 0 && `your ${ORDINALS[nth - 1] ?? `${shown(facts, "member.nthRewind")}th`} Rewind`,
-  ].filter((part): part is string => typeof part === "string")
-  return parts.length > 0 ? parts.join(", ") : null
 }
 
 /**
@@ -77,7 +63,7 @@ export function BookendsPage({ data, issue }: PageProps<BookendsData>) {
       <div className="rw-slide-up border-b-[1.5px] border-current" style={{ padding: `${u(14)} 0` }}>
         <p>
           <span className="block font-lead" style={{ fontSize: u(28), lineHeight: 1.05, marginBottom: u(8) }}>
-            {isFinalCut(facts) ? "And you closed it with" : "And most recently,"}{" "}
+            {lastLead(facts)}{" "}
           </span>
           <BookTitle title={title("last")} masked={data.last.masked} />
         </p>
