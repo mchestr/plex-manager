@@ -5,6 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { notFound } from "next/navigation"
 import { getFormat } from "@/lib/settings/app-settings"
+import { userDetail, userRewind } from "@/lib/admin/routes"
 
 export const dynamic = 'force-dynamic'
 
@@ -161,10 +162,10 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
                   <div className="text-sm text-slate-400">{record.user.email}</div>
                 )}
                 <Link
-                  href="/admin/users"
+                  href={userDetail(record.user.id)}
                   className="text-sm text-cyan-400 hover:text-cyan-300 underline mt-1 inline-block"
                 >
-                  View All Users
+                  View user
                 </Link>
               </div>
             </div>
@@ -194,7 +195,7 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
                       </div>
                     )}
                     <Link
-                      href={`/admin/users/${record.userId}/wrapped`}
+                      href={userRewind(record.userId, record.wrapped.year)}
                       className="text-sm text-cyan-400 hover:text-cyan-300 underline inline-block mt-2"
                     >
                       View Wrapped

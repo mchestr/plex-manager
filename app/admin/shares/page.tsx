@@ -6,6 +6,7 @@ import {
 import { ShareTimeChart } from "@/components/admin/shares/share-time-chart"
 import { getFormat } from "@/lib/settings/app-settings"
 import Link from "next/link"
+import { userRewind } from "@/lib/admin/routes"
 
 export const dynamic = 'force-dynamic'
 
@@ -179,7 +180,7 @@ export default async function SharesDashboardPage() {
                             View
                           </Link>
                           <Link
-                            href={`/admin/users/${wrap.userId}/wrapped`}
+                            href={userRewind(wrap.userId, wrap.year)}
                             className="px-2 sm:px-3 py-1 sm:py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium rounded transition-colors text-center"
                           >
                             Admin

@@ -82,10 +82,12 @@
 **Demo.** On a phone, open the assistant from the top bar and close it with its close button. The tab bar shows Invites, Users, Rewind, Settings and More, and Rewind opens Season. On desktop, `/admin/users/<id>` lights Users. The Admin link of a 2025 row in Share analytics opens 2025.
 
 **Done when.**
-- [ ] `lib/admin/nav.ts`, `nav-counts.ts` and `routes.ts` exist with tests, and the UI-06 links use the builders.
+- [x] `lib/admin/nav.ts`, `nav-counts.ts` and `routes.ts` exist with tests, and the UI-06 links use the builders.
 - [ ] The sidebar, rail, top bar and tab bar match 6.2 at every breakpoint, with `aria-current` and the test ids above.
-- [ ] The assistant is a closable Sheet, gated on `llmDisabled`, and hidden on immersive routes; nothing floats over content.
-- [ ] The admin gate uses no error names, and the old nav files are deleted.
+- [x] The assistant is a closable Sheet, gated on `llmDisabled`, and hidden on immersive routes; nothing floats over content.
+- [x] The admin gate uses no error names, and the old nav files are deleted.
+
+(as merged: P7.8, P7.9 and P7.11 had not landed, so `lib/admin/` is new here (beside `lib/admin.ts`, which keeps `getAdminGate`), the nav has no Season or Gallery, the Rewind tab opens Prompts, and `userRewind(id, year)` builds today's `/admin/users/<id>/wrapped?year=<year>`; P7.9 repoints it to `/rewind/<year>`. `mobileTabs(items)` takes the item list, so Overview and Season light up when their steps add them. `ASSISTANT_HIDDEN` routes hide the whole admin chrome as well as the assistant (`components/shell/admin-chrome.tsx`), as the old shell did. The layout reads `getAdminShellData()` (`lib/admin/shell.ts`: server name, the 30 s `getAdminNavCounts()`, and `assistant = !llmDisabled && an active chat provider`). The assistant is `assistant-sheet.tsx` (Sheet and `AssistantTrigger`), `assistant-transcript.tsx` and `use-assistant-chat.ts`; `ChatProvider` holds the open state and the trigger focus returns to. The mobile assistant toggle is `admin-chat-toggle-mobile` and the sheets' links are `admin-nav-<id>-mobile`, so no test id appears twice. No search button yet: P10.16 adds it with the command menu. The sidebar stays an `<aside data-testid="admin-sidebar">`, so the specs' `locator('aside')` still works until P10.18. `llmUsage({ year })` emits `year`, which the LLM usage page does not read yet. The e2e spec and the visual baselines are left to the coordinator's pass.)
 
 ### Step P6.3: AppShell and PublicShell
 

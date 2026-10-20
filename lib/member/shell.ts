@@ -21,7 +21,7 @@ export interface AppShellData {
   nav: MemberNavItem[]
 }
 
-/** Up to two initials from the name's first words; "?" for an empty name. @internal */
+/** Up to two initials from the name's first words; "?" for an empty name. */
 export function initialsFor(name: string): string {
   const letters = name
     .trim()

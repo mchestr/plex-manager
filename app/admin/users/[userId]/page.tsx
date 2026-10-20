@@ -12,6 +12,7 @@ import { getSeasonYear } from "@/lib/wrapped/season"
 import Link from "next/link"
 import Image from "next/image"
 import { notFound } from "next/navigation"
+import { llmUsage, userRewind } from "@/lib/admin/routes"
 
 export const dynamic = 'force-dynamic'
 
@@ -244,7 +245,7 @@ export default async function UserDetailsPage({ params }: { params: Promise<{ us
                   <UserStatusBadge status={readWrappedStatus(seasonWrapped.status, seasonWrapped.id)} />
                   {readWrappedStatus(seasonWrapped.status, seasonWrapped.id) === "completed" && (
                     <Link
-                      href={`/admin/users/${user.id}/wrapped?year=${seasonYear}`}
+                      href={userRewind(user.id, seasonYear)}
                       data-testid="admin-user-season-wrapped-view"
                       className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-medium rounded transition-colors"
                     >
@@ -338,7 +339,7 @@ export default async function UserDetailsPage({ params }: { params: Promise<{ us
                         <td className="px-6 py-4 whitespace-nowrap">
                           {readWrappedStatus(wrapped.status, wrapped.id) === "completed" ? (
                             <Link
-                              href={`/admin/users/${user.id}/wrapped?year=${wrapped.year}`}
+                              href={userRewind(user.id, wrapped.year)}
                               className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-medium rounded transition-colors"
                             >
                               View
@@ -387,7 +388,7 @@ export default async function UserDetailsPage({ params }: { params: Promise<{ us
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-white">LLM Usage</h3>
                 <Link
-                  href={`/admin/llm-usage?userId=${user.id}`}
+                  href={llmUsage({ userId: user.id })}
                   className="text-sm text-cyan-400 hover:text-cyan-300"
                 >
                   View All →

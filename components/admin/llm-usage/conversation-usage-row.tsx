@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 
 import { useFormat } from "@/lib/format-context"
+import { llmUsageDetail } from "@/lib/admin/routes"
 
 interface ConversationUsageRowProps {
   record: {
@@ -46,7 +47,7 @@ export function ConversationUsageRow({
   const promptSnippet = getLastUserSnippet(record.prompt)
 
   const handleRowClick = () => {
-    router.push(`/admin/llm-usage/${record.id}`)
+    router.push(llmUsageDetail(record.id))
   }
 
   return (
@@ -92,7 +93,7 @@ export function ConversationUsageRow({
       </td>
       <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
         <Link
-          href={`/admin/llm-usage/${record.id}`}
+          href={llmUsageDetail(record.id)}
           onClick={(e) => e.stopPropagation()}
           className="px-2 sm:px-3 py-1 sm:py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-medium rounded transition-colors inline-block"
         >

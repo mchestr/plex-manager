@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
 
 import { useFormat } from "@/lib/format-context"
+import { rewindHistory, userRewind } from "@/lib/admin/routes"
 
 interface HistoricalVersion {
   id: string
@@ -79,15 +80,15 @@ export function HistoricalWrappedSelectorHeader({
     try {
       if (versionId === "current") {
         setSelectedVersion("current")
-        await router.push(`/admin/users/${userId}/wrapped?year=${year}`)
+        await router.push(userRewind(userId, year))
       } else {
         const version = versions.find(v => v.id === versionId)
         if (version?.isCurrent) {
           setSelectedVersion("current")
-          await router.push(`/admin/users/${userId}/wrapped?year=${year}`)
+          await router.push(userRewind(userId, year))
         } else {
           setSelectedVersion(versionId)
-          await router.push(`/admin/wrapped/${wrappedId}/history/${versionId}`)
+          await router.push(rewindHistory(wrappedId, versionId))
         }
       }
       setIsExpanded(false)

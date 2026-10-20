@@ -10,6 +10,7 @@ import type { InviteWithUsages } from "@/lib/dto/user"
 import { useFormat } from "@/lib/format-context"
 import Link from "next/link"
 import { useCallback, useEffect, useState } from "react"
+import { invite as inviteRoute } from "@/lib/admin/routes"
 
 type ServerType = "PLEX" | "JELLYFIN"
 
@@ -280,7 +281,7 @@ export function InvitesPageClient() {
                   <tr key={invite.id} className="hover:bg-slate-800/50 transition-colors">
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
                       <Link
-                        href={`/admin/invites/${invite.id}`}
+                        href={inviteRoute(invite.id)}
                         className="font-mono text-base sm:text-lg text-white tracking-wider hover:text-cyan-400 transition-colors break-all"
                       >
                         {invite.code}
