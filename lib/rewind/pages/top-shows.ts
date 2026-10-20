@@ -12,6 +12,7 @@ import type { PageDefinition } from "@/lib/rewind/registry"
 import type { FactId, RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 
 import { isFinalCut, shown } from "./facts"
+import { ratingKeyOf } from "./title-key.schema"
 import { TopShowsDataSchema, type TopShowsData } from "./top-lists.schema"
 
 /** A row's fact: `series[n].title` for the row at index n - 1. */
@@ -55,5 +56,6 @@ export const topShowsPage: PageDefinition<TopShowsData> = {
     facts: [1, 2, 3, 4, 5].flatMap((n) => [`series[${n}].title`, `series[${n}].minutes`] as FactId[]),
     titles: [1, 2, 3, 4, 5].map((n) => `series[${n}].title` as FactId),
     art: true,
+    titleKeys: ({ rows }) => Object.fromEntries(rows.map((row, i) => [`series[${i + 1}].title`, ratingKeyOf(row.key)])),
   },
 }

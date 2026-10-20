@@ -23,6 +23,7 @@ import {
 } from '@/lib/connections/plex-shared-sections'
 import { prisma } from '@/lib/prisma'
 import { limitRequest } from '@/lib/security/rate-limit'
+import { assetKeyAllowsRatingKey } from '@/lib/wrapped/data/share-asset'
 import { fetchWithTimeout } from '@/lib/utils/fetch-with-timeout'
 import { clearPosterAccessCaches } from '@/lib/wrapped/poster-access'
 import { forgetShareToken } from '@/lib/wrapped/poster-keys'
@@ -49,6 +50,10 @@ jest.mock('@/lib/actions/entitlement', () => ({
 
 jest.mock('@/lib/security/rate-limit', () => ({
   limitRequest: jest.fn().mockResolvedValue(null),
+}))
+
+jest.mock('@/lib/wrapped/data/share-asset', () => ({
+  assetKeyAllowsRatingKey: jest.fn().mockResolvedValue(false),
 }))
 
 jest.mock('@/lib/rewind/poster/image', () => ({
@@ -745,6 +750,19 @@ describe('GET /api/rewind/poster/[ratingKey]', () => {
       forgetShareToken(TOK)
 
       expect((await callRoute(posterUrl('123', TOK), '123')).status).toBe(401)
+    })
+
+    it('serves a v3 share asset key only the art its projection publishes, as a share', async () => {
+      const ASSET = 'a'.repeat(22)
+      jest.mocked(assetKeyAllowsRatingKey).mockImplementation(async (_key, ratingKey) => ratingKey === '123')
+      mockUpstreamImage()
+
+      const allowed = await callRoute(`http://localhost/api/rewind/poster/123?s=${ASSET}`, '123')
+      expect(allowed.status).toBe(200)
+      expect(allowed.headers.get('X-Robots-Tag')).toBe('noindex')
+      expect(limitRequest).toHaveBeenCalledWith('poster', expect.anything())
+
+      expect((await callRoute(`http://localhost/api/rewind/poster/456?s=${ASSET}`, '456')).status).toBe(401)
     })
 
     it('limits a session before its access checks', async () => {

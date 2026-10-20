@@ -180,5 +180,5 @@ export const centrefoldPage: PageDefinition<CentrefoldData> = {
   },
   table: (data, facts, settings) => (data.hours.some((n) => n > 0) ? hoursTable(data.hours, facts, settings) : null),
   article: centrefoldArticle,
-  share: { facts: ["archetype.name", "archetype.rarityShare", "archetype.evidence[1]", "archetype.evidence[2]", "archetype.evidence[3]", "tz.label"] },
+  share: { facts: ["archetype.name", "archetype.rarityShare", "archetype.rarityCount", "archetype.scoredMembers", "archetype.evidence[1]", "archetype.evidence[2]", "archetype.evidence[3]", "tz.label"] },
 }

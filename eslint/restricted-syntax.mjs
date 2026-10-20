@@ -156,6 +156,43 @@ export const rewindOnlyProps = [
   },
 ];
 
+/**
+ * What Satori cannot draw, or draws slowly, in the share cards (P5.10,
+ * design 6.4): grid, shadows, filters, blend modes, clip paths, text stroke,
+ * CSS variables, `calc()` and SVG `<text>`. Errors in `lib/rewind/cards/**`;
+ * the tree test there checks `display: 'flex'` on every element with
+ * children.
+ */
+const satoriBan = (name, why) => ({
+  selector: `Property[key.name='${name}']`,
+  message: `Satori cards cannot use ${name} (${why}).`,
+});
+
+export const rewindCards = [
+  {
+    selector: "Property[key.name='display'][value.value='grid']",
+    message: "Satori cards cannot use display: 'grid': lay out with flex.",
+  },
+  satoriBan("boxShadow", "about 6 s of an 8 s render in resvg"),
+  satoriBan("filter", "unsupported"),
+  satoriBan("backdropFilter", "unsupported"),
+  satoriBan("mixBlendMode", "unsupported"),
+  satoriBan("clipPath", "unsupported"),
+  satoriBan("WebkitTextStroke", "unsupported"),
+  {
+    selector: "Literal[value=/var\\(--|calc\\(/]",
+    message: "Satori cards cannot use CSS variables or calc(): compute the value in TypeScript.",
+  },
+  {
+    selector: "TemplateElement[value.raw=/var\\(--|calc\\(/]",
+    message: "Satori cards cannot use CSS variables or calc(): compute the value in TypeScript.",
+  },
+  {
+    selector: "JSXOpeningElement[name.name='text']",
+    message: "No SVG <text> in a card: set labels as HTML positioned from the graphic's anchors.",
+  },
+];
+
 /** Where the Rewind-only Button entries may appear. */
 const REWIND_ONLY_ALLOWED = ["components/ui/**", "components/rewind/**", "app/dev/**"];
 
@@ -178,6 +215,7 @@ const V2_VIEWER = "components/wrapped/**";
  *   formatting bans are errors only.
  * - The Rewind-only Button entries (P3.7) are errors everywhere but
  *   `REWIND_ONLY_ALLOWED`, so every error block outside it carries them.
+ * - The Satori bans (`rewindCards`, P5.10) are errors in `lib/rewind/cards/`.
  */
 export const restrictedSyntaxBlocks = [
   {
@@ -218,4 +256,5 @@ export const restrictedSyntaxBlocks = [
     level: "error",
     selectors: [...formatting, ...actionsAndApi, ...rewindOnlyProps],
   },
+  { files: ["lib/rewind/cards/**/*.{ts,tsx}"], level: "error", selectors: [...rewindOnlyProps, ...rewindCards] },
 ];

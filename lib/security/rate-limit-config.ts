@@ -52,6 +52,9 @@ export const LIMITS = {
   "watchlist:manual": { points: 4, duration: HOUR },
   "rw:share-actions": { points: 10, duration: 60 * MINUTE },
   "rw:share-page": { points: 60, duration: MINUTE },
+  // Card renders (cache misses only) per owner and per share link (P5.10)
+  "rw:card:session": { points: 60, duration: MINUTE },
+  "rw:card:share": { points: 30, duration: MINUTE },
   "rw:gen:burst": { points: 1, duration: 10 * MINUTE },
   "rw:gen:daily": { points: 3, duration: DAY },
   // Rewind copy calls per LLM provider (design 9.4); the pipeline waits for a point

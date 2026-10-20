@@ -115,8 +115,13 @@ export interface PageDefinition<D> {
    * (`articleBlocks`).
    */
   article?(data: D, facts: RewindFactsV3, ctx: ArticleContext): ArticleBlock[]
-  /** The facts the page's share card may print; `titles` are those that name a title, `art` a poster. */
-  share: { facts: FactId[]; titles?: FactId[]; art?: true }
+  /**
+   * The facts the page's share card may print (P5.10); `titles` are those
+   * that name a title, `art` a poster. `titleKeys` maps the title facts the
+   * page data knows to their rating keys, so a hidden title leaves the
+   * projection at once and art is published by key.
+   */
+  share: { facts: FactId[]; titles?: FactId[]; art?: true; titleKeys?(data: D): Partial<Record<FactId, string>> }
 }
 
 export interface RegistryEntry<D = unknown> extends PageDefinition<D> {
@@ -179,6 +184,12 @@ export const issuePages: RegistryEntry[] = Object.values(registry)
  * its pages from this list.
  */
 export const LATER_PAGES: readonly IssuePageType[] = ["taste", "people", "race", "records", "setup", "requests", "standing", "next-year"]
+
+/** The pages a card can print: every page but Setup and Next year (design 6.4). */
+export const SHARE_PAGE_TYPES = issuePages.map((p) => p.type).filter((t) => t !== "setup" && t !== "next-year") as [
+  IssuePageType,
+  ...IssuePageType[],
+]
 
 /**
  * The pocket edition's six pages as the running time counts them: Short list

@@ -416,7 +416,7 @@ gantt
 - [x] P5.7: Habits and centrefold: Clock, Calendar, Centrefold, Back cover (rewind, M, due 2026-11-16)
 - [x] P5.8: Copy slots, templates, grounding and token rendering (rewind, M, due 2026-11-09)
 - [x] P5.9: The v3 pipeline end to end (rewind, L, due 2026-11-12)
-- [ ] P5.10: Share-safe projection v3 and card routes (rewind, M, due 2026-11-13)
+- [x] P5.10: Share-safe projection v3 and card routes (rewind, M, due 2026-11-13)
 - [ ] P5.11: Share sheet, core cards and opt-in public links (rewind, M, due 2026-11-18)
 - [x] P5.12: Article mode (rewind, M, due 2026-11-18)
 - [x] P5.13: Eval harness and model bake-off (rewind, M, due 2026-11-20)
@@ -5307,11 +5307,13 @@ P5.1 and P5.2 start only once P3.1's scope contract and P3.7's primitives have m
 **Demo.** `curl` the owner cover card, then the share card for the same options: both PNGs have the same sha256. Hide the No. 1 title: the next projection drops it before the regeneration finishes. A revoked asset key returns 404, even though its PNG is still on disk.
 
 **Done when.**
-- [ ] `toShareSafe` is a strict, field-by-field allow-list, with percentages, weekly bins and hidden titles dropped at projection time.
-- [ ] The owner and asset-key card routes render through `next/og` with the card fonts, authorise first, and send noindex.
-- [ ] The Satori lint rule and the tree test guard `lib/rewind/cards/**`.
-- [ ] Cards are cached on disk by the projected input and `CARD_VERSION`, and the Redis limits apply only to cache misses.
-- [ ] The key-snapshot, property and owner-versus-link pixel tests pass.
+- [x] `toShareSafe` is a strict, field-by-field allow-list, with percentages, weekly bins and hidden titles dropped at projection time.
+- [x] The owner and asset-key card routes render through `next/og` with the card fonts, authorise first, and send noindex.
+- [x] The Satori lint rule and the tree test guard `lib/rewind/cards/**`.
+- [x] Cards are cached on disk by the projected input and `CARD_VERSION`, and the Redis limits apply only to cache misses.
+- [x] The key-snapshot, property and owner-versus-link pixel tests pass.
+
+(as merged: `loadShareContext({ userId, year })` takes the owner and year, not a wrapped id, and `findLiveShare(assetKey)` in `lib/wrapped/data/share-asset.ts` is the one asset-key lookup for the card and poster routes. Each projected page also carries `headline`, its card headline rendered from that page's published facts only, else `titleFreeHeadline(page)` from `templates.ts`; `serial` is nullable. Hidden titles leave through a registry hook, `share.titleKeys(data)`, mapping title facts to rating keys from page data, plus any title fact with the same display; only Bookends implements it, so P5.6, P7.1 and P7.2 add `titleKeys` (and `share.art: true` where a page publishes posters) for their pages, and P7.7's `ratingKeysIn` can reuse it. The share route always renders `story` and reads no query; P7.5 adds the OG card. Only the cover card ships (`RENDERERS` in `lib/rewind/cards/index.ts`); other pages answer 404 until their card lands, and a card prints the archetype colourway only where the projection publishes the archetype, so the cover prints on paper. The poster `?s=<assetKey>` check went into the existing `app/api/wrapped/poster/[ratingKey]/route.ts`, because P5.6's route has not merged; P5.6 carries it over. The routes are `route.ts`; the `rewindCards` selectors were new (P3.4 had not added the array); `SHARE_PAGE_TYPES` lives in the registry and the schemas in `lib/wrapped/data/share-safe-schema.ts`; `scripts/rewind-render-cards.tsx` renders cards outside Jest.)
 
 ### Step P5.11: Share sheet, core cards and opt-in public links
 

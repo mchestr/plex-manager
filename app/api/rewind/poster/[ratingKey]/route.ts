@@ -14,6 +14,8 @@ import { limitRequest } from "@/lib/security/rate-limit"
 import { fetchWithTimeout } from "@/lib/utils/fetch-with-timeout"
 import { createLogger } from "@/lib/utils/logger"
 import { ratingKeySchema, shareTokenSchema } from "@/lib/validations/params"
+import { assetKeyAllowsRatingKey } from "@/lib/wrapped/data/share-asset"
+import { assetKeySchema } from "@/lib/wrapped/data/share-safe-schema"
 import { isKnownPosterMiss, rememberPosterMiss, remainingMs, resolveSessionPosterAccess } from "@/lib/wrapped/poster-access"
 import { shareTokenAllowsRatingKey } from "@/lib/wrapped/poster-keys"
 
@@ -37,6 +39,8 @@ const querySchema = z.object({
   tone: z.union([z.literal("none"), PairSchema]).default("none"),
   clash: PairSchema.optional(),
   share: shareTokenSchema.optional(),
+  /** A v3 share's asset key (P5.10), never its token. */
+  s: assetKeySchema.optional(),
 })
 
 /** Every upstream call of one request (lookups and the poster) shares this budget. */
@@ -142,6 +146,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ rat
     if (!query.ok) return query.response
     const { w, tone, clash } = query.data
     const shareToken = query.data.share ?? null
+    const assetKey = query.data.s ?? null
 
     let session = await getServerSession(authOptions)
     if (session) {
@@ -149,19 +154,25 @@ export async function GET(request: NextRequest, context: { params: Promise<{ rat
       // even that is answered as signed out, so a covering share link still works.
       const entitled = await requireEntitlement(session, "read", { headers: { "Cache-Control": ERROR_CACHE_CONTROL } })
       if (!entitled.ok) {
-        if (!shareToken) return entitled.response
+        if (!shareToken && !assetKey) return entitled.response
         session = null
       }
     }
     // A share link is limited before its token lookup, so an unknown token costs
     // a request a point instead of an unlimited database read.
+    // A v3 share's asset key covers only the art its projection publishes, for
+    // any viewer, signed in or not, and is answered as a share.
     let limited = false
-    if (!session) {
-      if (!shareToken) return errorResponse(ErrorCode.UNAUTHORIZED, "Authentication required")
+    if (assetKey || !session) {
+      if (!assetKey && !shareToken) return errorResponse(ErrorCode.UNAUTHORIZED, "Authentication required")
       const rateLimitResponse = await limitRequest("poster", request)
       if (rateLimitResponse) return rateLimitResponse
       limited = true
-      if (!(await shareTokenAllowsRatingKey(shareToken, ratingKey))) return errorResponse(ErrorCode.UNAUTHORIZED, "Authentication required")
+      const assetAllowed = assetKey ? await assetKeyAllowsRatingKey(assetKey, ratingKey) : false
+      if (assetAllowed) session = null
+      if (!session && !assetAllowed && !(shareToken && (await shareTokenAllowsRatingKey(shareToken, ratingKey)))) {
+        return errorResponse(ErrorCode.UNAUTHORIZED, "Authentication required")
+      }
     }
 
     if (session) {

@@ -18,6 +18,7 @@ import type { MemberStats } from "@/lib/wrapped/stats/compute"
 
 import { has, issueYear } from "./facts"
 import { GuessDataSchema, type GuessData, type QuizOption } from "./guess.schema"
+import { ratingKeyOf } from "./title-key.schema"
 
 const MIN_OPTIONS = 3
 
@@ -68,5 +69,9 @@ export const guessPage: PageDefinition<GuessData> = {
   share: {
     facts: ["series[1].title", "series[2].title", "series[3].title", "series[4].title"],
     titles: ["series[1].title", "series[2].title", "series[3].title", "series[4].title"],
+    // A series quiz's candidates are the top series, so rank n is `series[n]`; a mixed quiz is
+    // covered by the lists' keys and by matching titles.
+    titleKeys: ({ kind, options }) =>
+      kind === "series" ? Object.fromEntries(options.map((o) => [`series[${o.rank}].title`, ratingKeyOf(o.key)])) : {},
   },
 }

@@ -48,6 +48,9 @@ module.exports = (phase) => ({
     '/apple-icon': ['./lib/og/fonts/*'],
     '/opengraph-image': ['./lib/og/fonts/*'],
     '/twitter-image': ['./lib/og/fonts/*'],
+    // The Rewind card fonts are read from disk (lib/rewind/cards/fonts.ts)
+    '/api/rewind/card/[rewindId]/[page]': ['./lib/rewind/cards/fonts/*.ttf'],
+    '/api/rewind/card/s/[assetKey]/[page]': ['./lib/rewind/cards/fonts/*.ttf'],
   },
   // Rewind moved from /wrapped (P5.1). Browsers cache a 308, so every target
   // must keep working; the share rule comes first, or the catch-all would send

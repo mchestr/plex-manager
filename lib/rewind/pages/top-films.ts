@@ -11,6 +11,7 @@ import type { PageDefinition } from "@/lib/rewind/registry"
 import type { FactId } from "@/lib/wrapped/facts/catalogue"
 
 import { shown } from "./facts"
+import { ratingKeyOf } from "./title-key.schema"
 import { TopFilmsDataSchema, type TopFilmsData } from "./top-lists.schema"
 import { filmFact } from "./top-shows"
 
@@ -36,5 +37,6 @@ export const topFilmsPage: PageDefinition<TopFilmsData> = {
     facts: [1, 2, 3, 4, 5].flatMap((n) => [`films[${n}].title`, `films[${n}].plays`] as FactId[]),
     titles: [1, 2, 3, 4, 5].map((n) => `films[${n}].title` as FactId),
     art: true,
+    titleKeys: ({ rows }) => Object.fromEntries(rows.map((row, i) => [`films[${i + 1}].title`, ratingKeyOf(row.key)])),
   },
 }
