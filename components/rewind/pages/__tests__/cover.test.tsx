@@ -58,6 +58,17 @@ describe("01 Cover", () => {
     expect(send).toHaveBeenCalledWith({ type: "CHOOSE_CUT" })
   })
 
+  it("draws the cuts at artboard scale with 44 px hit areas, and lets the soundtrack give way (design 4.7)", () => {
+    renderCover(heavy)
+    for (const id of ["rewind-cut-full", "rewind-cut-pocket"]) {
+      expect(screen.getByTestId(id)).toHaveClass("min-h-[calc(var(--u)*44px)]", "before:min-h-11", "before:min-w-11", "flex-wrap")
+      expect(screen.getByTestId(id)).not.toHaveClass("h-11")
+    }
+    const figure = screen.getByTestId("rewind-figure")
+    expect(figure).toHaveClass("min-h-0")
+    expect(figure.style.flexBasis).toBe("calc(var(--u) * 168px)")
+  })
+
   it("gives a pocket member the pocket cover and only the pocket cut", () => {
     renderCover(light)
     expect(light.edition).toBe("pocket")

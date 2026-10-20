@@ -90,7 +90,7 @@ describe("16 Centrefold", () => {
     expect(figure).toHaveClass("min-h-0")
     expect(figure.style.flexBasis).toBe("calc(var(--u) * 282px)")
     const why = screen.getByTestId("rewind-archetype-why")
-    expect(why).toHaveClass("h-[calc(var(--u)*44px)]", "before:h-11")
+    expect(why).toHaveClass("h-[calc(var(--u)*44px)]", "before:min-h-11")
     expect(why).not.toHaveClass("h-11")
   })
 

@@ -97,6 +97,14 @@ describe("18 Back cover", () => {
     expect(send).toHaveBeenCalledWith({ type: "OPEN_SHEET", sheet: "share-settings" })
   })
 
+  it("draws its controls at artboard scale, each with a 44 px hit area (design 4.7)", () => {
+    renderPage(issues.heavy)
+    for (const id of ["rewind-back-cover-share", "rewind-privacy-change", "rewind-read-again", "rewind-contents", "rewind-done"]) {
+      expect(screen.getByTestId(id)).toHaveClass("h-[calc(var(--u)*44px)]", "before:min-h-11", "before:min-w-11")
+      expect(screen.getByTestId(id)).not.toHaveClass("h-11")
+    }
+  })
+
   it("reads the privacy line from the member's share choices and link", () => {
     const setup: ShareSetup = {
       rewindId: "wrapped-1", year: 2026, cards: ["cover"], allowArt: true, publicLinks: true, canShare: true,

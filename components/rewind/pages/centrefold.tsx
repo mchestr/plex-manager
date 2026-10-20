@@ -16,6 +16,7 @@ import { RING_LABEL } from "./hour-ring-figure"
 import type { IssueContext, PageProps } from "./issue-context"
 import { axes, MEASURE, u, ut } from "./units"
 
+/** Crop marks in the artboard's corners, 8 px in from its sides and 4 px from its top and foot (`slide-16-centrefold.png`). */
 const CROPS = ["left-0 top-0 border-t-[1.5px] border-l-[1.5px]", "right-0 top-0 border-t-[1.5px] border-r-[1.5px]", "bottom-0 left-0 border-b-[1.5px] border-l-[1.5px]", "right-0 bottom-0 border-r-[1.5px] border-b-[1.5px]"]
 
 /**
@@ -122,7 +123,7 @@ export function CentrefoldPage({ data, issue }: PageProps<CentrefoldData>) {
   return (
     <div className="relative flex h-full flex-col font-text" style={{ padding: `${u(4)} ${u(16)} 0` }} data-testid="rewind-page-centrefold">
       {CROPS.map((corner) => (
-        <i key={corner} aria-hidden className={`absolute border-current ${corner}`} style={{ width: u(14), height: u(14), margin: `${u(-4)} ${u(-8)}` }} />
+        <i key={corner} aria-hidden className={`absolute border-current ${corner}`} style={{ width: u(14), height: u(14), margin: `${u(4)} ${u(8)}` }} />
       ))}
       <div className="flex items-baseline justify-between font-display" style={{ fontSize: ut(13), fontVariationSettings: axes(100, 600), marginTop: u(8) }}>
         <span>Pull-out poster</span>
