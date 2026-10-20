@@ -42,7 +42,7 @@
     "register-discord-commands": "tsx --conditions=react-server --tsconfig tsconfig.scripts.json scripts/register-discord-commands.ts"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "4.0.71",
+    "@ai-sdk/anthropic": "4.0.83",
     "@ai-sdk/google": "4.0.87",
     "@ai-sdk/openai": "4.0.83",
     "@ai-sdk/openai-compatible": "3.0.62",
