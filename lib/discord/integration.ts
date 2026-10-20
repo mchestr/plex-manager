@@ -118,6 +118,16 @@ export class DiscordStateError extends Error {
 }
 
 /**
+ * The page a failed link attempt started from: the member's own state row's
+ * vetted `redirectTo`, or `/discord/link` when the state is missing or not theirs.
+ */
+export async function discordLinkOrigin(state: string | undefined, userId: string | undefined): Promise<string> {
+  if (!state || !userId) return safeRedirectPath(null)
+  const row = await prisma.discordOAuthState.findFirst({ where: { state, userId }, select: { redirectTo: true } })
+  return safeRedirectPath(row?.redirectTo)
+}
+
+/**
  * Marks `userId`'s pending `state` consumed in one conditional write, so two
  * concurrent callbacks with the same state can never both pass.
  */

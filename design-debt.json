@@ -1,11 +1,8 @@
 {
   "schema": 1,
-  "commit": "48a8194d8431002c3513d57a6e6dacd40e4fb7f4",
-  "generatedAt": "2026-10-20T23:05:42.529Z",
+  "commit": "67260cc0341d67737fe86780763e4e01c91a9ec9",
+  "generatedAt": "2026-10-20T23:22:16.488Z",
   "files": {
-    "app/(app)/discord/link/page.tsx": {
-      "raw-palette": 1
-    },
     "app/(app)/page.tsx": {
       "gradient": 2,
       "gradient-text": 4,
@@ -481,13 +478,6 @@
       "infinite-motion": 5,
       "raw-palette": 96
     },
-    "components/discord/link-panel.tsx": {
-      "arbitrary-type-z": 5,
-      "blur": 1,
-      "caps-eyebrow": 5,
-      "gradient": 2,
-      "raw-palette": 84
-    },
     "components/generator/wrapped-generating-animation.tsx": {
       "copy": 2,
       "gradient": 4,
@@ -781,13 +771,13 @@
   },
   "totals": {
     "arbitrary-color": 17,
-    "arbitrary-type-z": 39,
-    "blur": 137,
-    "caps-eyebrow": 91,
+    "arbitrary-type-z": 34,
+    "blur": 136,
+    "caps-eyebrow": 86,
     "copy": 36,
-    "gradient": 130,
+    "gradient": 128,
     "gradient-text": 56,
     "infinite-motion": 56,
-    "raw-palette": 3406
+    "raw-palette": 3321
   }
 }

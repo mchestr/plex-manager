@@ -5,7 +5,8 @@
 /**
  * P4.9 (SEC-13): the Discord callback links only for the browser and member
  * that started the authorization, consumes the state once, and redirects with
- * a fixed flash code on the app's origin.
+ * a fixed flash code on the app's origin. P6.11 (UI-07): a failure lands on
+ * the page the attempt started from, read from the member's own state row.
  *
  * The real route, `completeDiscordLink` and signed cookie run; the session,
  * Prisma and Discord's API are mocked.
@@ -140,7 +141,7 @@ describe("GET /api/discord/callback", () => {
     const response = await GET(callback(`code=abc&state=${STATE}`, cookie))
 
     const { location, flash } = flashOf(response)
-    expect(location.pathname).toBe("/")
+    expect(location.pathname).toBe("/discord/link")
     expect(flash).toBe("discord_session_mismatch")
     expect(prismaMock.discordOAuthState.updateMany).not.toHaveBeenCalled()
     expect(exchangeDiscordCode).not.toHaveBeenCalled()
@@ -197,6 +198,36 @@ describe("GET /api/discord/callback", () => {
       expect(prismaMock.discordConnection.upsert).not.toHaveBeenCalled()
     }
   )
+
+  it("lands a failure on the page the member started from", async () => {
+    prismaMock.discordOAuthState.updateMany.mockResolvedValue({ count: 0 })
+    prismaMock.discordOAuthState.findFirst.mockResolvedValue(stateRow({ redirectTo: "/account" }))
+
+    const expired = await GET(callback(`code=abc&state=${STATE}`, cookieFor(STATE, "user-1")))
+    expect(flashOf(expired).location.pathname).toBe("/account")
+    expect(flashOf(expired).flash).toBe("discord_expired")
+    expect(prismaMock.discordOAuthState.findFirst).toHaveBeenCalledWith({
+      where: { state: STATE, userId: "user-1" },
+      select: { redirectTo: true },
+    })
+
+    const declined = await GET(callback(`error=access_denied&state=${STATE}`, cookieFor(STATE, "user-1")))
+    expect(flashOf(declined).location.pathname).toBe("/account")
+    expect(flashOf(declined).flash).toBe("discord_failed")
+  })
+
+  it("lands a failure on /discord/link when the stored origin is off the list or missing", async () => {
+    prismaMock.discordOAuthState.findFirst.mockResolvedValue(stateRow({ redirectTo: "/admin" }))
+    const offList = await GET(callback(`error=access_denied&state=${STATE}`, cookieFor(STATE, "user-1")))
+    expect(flashOf(offList).location.pathname).toBe("/discord/link")
+
+    prismaMock.discordOAuthState.findFirst.mockResolvedValue(null)
+    const missing = await GET(callback(`error=access_denied&state=${STATE}`, cookieFor(STATE, "user-1")))
+    expect(flashOf(missing).location.pathname).toBe("/discord/link")
+
+    const noState = await GET(callback("error=access_denied"))
+    expect(flashOf(noState).location.pathname).toBe("/discord/link")
+  })
 
   it("redirects every outcome to the app's origin", async () => {
     const outcomes = [

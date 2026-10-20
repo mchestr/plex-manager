@@ -1,5 +1,5 @@
 import { authOptions } from "@/lib/auth"
-import { completeDiscordLink, DiscordStateError } from "@/lib/discord/integration"
+import { completeDiscordLink, discordLinkOrigin, DiscordStateError } from "@/lib/discord/integration"
 import {
   clearedDiscordOAuthCookie,
   DISCORD_OAUTH_COOKIE,
@@ -14,6 +14,8 @@ import { z } from "zod"
 
 const logger = createLogger("DISCORD_CALLBACK")
 
+const STATE_PATTERN = /^[A-Za-z0-9_-]{32}$/
+
 /**
  * Discord's redirect: `code` and `state` on success, `error` (an OAuth error
  * code such as `access_denied`) and `error_description` when the member
@@ -22,24 +24,24 @@ const logger = createLogger("DISCORD_CALLBACK")
  */
 const querySchema = z.object({
   code: z.string().regex(/^[A-Za-z0-9_-]{1,256}$/).optional(),
-  state: z.string().regex(/^[A-Za-z0-9_-]{32}$/).optional(),
+  state: z.string().regex(STATE_PATTERN).optional(),
   error: z.string().regex(/^[a-z_]{1,64}$/).optional(),
   error_description: z.string().max(300).optional(),
 })
 
 const QUERY_KEYS = ["code", "state", "error", "error_description"] as const
 
-/** Failures land on home until P6.11 sends them back to where the member started. */
-const FAILURE_PATH = "/"
+type FailureFlash = Exclude<DiscordCallbackFlash, "discord_linked">
 
-interface Outcome {
-  path: string
-  flash: DiscordCallbackFlash
-}
+/**
+ * A success carries the stored page. A failure carries none: it lands on the
+ * page the attempt started from (`discordLinkOrigin`), so the flash shows there.
+ */
+type Outcome = { path: string; flash: "discord_linked" } | { path?: undefined; flash: FailureFlash }
 
-const failed = (flash: DiscordCallbackFlash): Outcome => ({ path: FAILURE_PATH, flash })
+const failed = (flash: FailureFlash): Outcome => ({ flash })
 
-async function linkFromCallback(request: NextRequest): Promise<Outcome> {
+async function linkFromCallback(request: NextRequest, userId: string | undefined): Promise<Outcome> {
   const values: Record<string, string> = {}
   for (const key of QUERY_KEYS) {
     const value = request.nextUrl.searchParams.get(key)
@@ -67,8 +69,6 @@ async function linkFromCallback(request: NextRequest): Promise<Outcome> {
 
   // The browser that finishes must be the one that started, signed in as the
   // same member: an authorize URL from another account cannot link this one.
-  const session = await getServerSession(authOptions)
-  const userId = session?.user?.id
   const cookie = request.cookies.get(DISCORD_OAUTH_COOKIE)?.value
   if (!userId || !matchesDiscordOAuthCookie(cookie, state, userId)) {
     logger.warn("Discord callback did not match the session that started it", {
@@ -92,8 +92,15 @@ async function linkFromCallback(request: NextRequest): Promise<Outcome> {
 }
 
 export async function GET(request: NextRequest) {
-  const { path, flash } = await linkFromCallback(request)
-  const response = NextResponse.redirect(new URL(withFlash(path, flash), getBaseUrl()))
+  const session = await getServerSession(authOptions)
+  const userId = session?.user?.id
+
+  const outcome = await linkFromCallback(request, userId)
+  const rawState = request.nextUrl.searchParams.get("state")
+  const state = rawState !== null && STATE_PATTERN.test(rawState) ? rawState : undefined
+  const path = outcome.path ?? (await discordLinkOrigin(state, userId))
+
+  const response = NextResponse.redirect(new URL(withFlash(path, outcome.flash), getBaseUrl()))
   response.cookies.set(clearedDiscordOAuthCookie())
   return response
 }

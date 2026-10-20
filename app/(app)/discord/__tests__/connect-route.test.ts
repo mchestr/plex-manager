@@ -8,6 +8,9 @@
  *
  * P4.5 (SEC-28): linking grants the Discord role, so it needs `full`
  * entitlement; anyone else is redirected to /subscribe before any of that.
+ *
+ * P6.11 (UI-07): every refusal lands on the vetted `redirect` (default
+ * /discord/link) with a flash code, so the toast shows where the member started.
  */
 
 import { GET } from "@/app/(app)/discord/connect/route"
@@ -35,6 +38,8 @@ const mockCreateUrl = createDiscordAuthorizationUrl as jest.MockedFunction<
   typeof createDiscordAuthorizationUrl
 >
 const mockConsume = consume as jest.MockedFunction<typeof consume>
+
+process.env.NEXT_PUBLIC_APP_URL = "http://localhost:3000"
 
 function makeRequest(url = "http://localhost:3000/discord/connect") {
   return { url, nextUrl: new URL(url) } as never
@@ -93,15 +98,17 @@ describe("discord connect route rate limiting", () => {
     expect(matchesDiscordOAuthCookie(cookie?.value, "t", "user-1")).toBe(false)
   })
 
-  it("passes the redirect through for createDiscordAuthorizationUrl to vet", async () => {
+  it("vets the redirect before createDiscordAuthorizationUrl stores it", async () => {
     mockConsume.mockResolvedValue({ ok: true })
 
     await GET(makeRequest("http://localhost:3000/discord/connect?redirect=https%3A%2F%2Fevil.com"))
+    expect(mockCreateUrl).toHaveBeenLastCalledWith("user-1", "/discord/link")
 
-    expect(mockCreateUrl).toHaveBeenCalledWith("user-1", "https://evil.com")
+    await GET(makeRequest("http://localhost:3000/discord/connect?redirect=%2Faccount"))
+    expect(mockCreateUrl).toHaveBeenLastCalledWith("user-1", "/account")
   })
 
-  it("blocks and redirects home with a fixed code when the rate limit is exceeded (URL not built)", async () => {
+  it("sends a rate-limited member back to /discord/link with a fixed code (URL not built)", async () => {
     mockConsume.mockResolvedValue({ ok: false, retryAfterSec: 120 })
 
     const res = await GET(makeRequest())
@@ -109,16 +116,26 @@ describe("discord connect route rate limiting", () => {
     expect(mockCreateUrl).not.toHaveBeenCalled()
     expect(res.status).toBe(307)
     // A code for FlashFromQuery (P3.2), never a message.
-    expect(res.headers.get("location")).toBe("http://localhost:3000/?flash=discord_rate_limited")
+    expect(res.headers.get("location")).toBe("http://localhost:3000/discord/link?flash=discord_rate_limited")
   })
 
-  it("redirects home with a fixed code when the authorize URL cannot be built, and logs the reason", async () => {
+  it("lands a refusal on the page the member came from, and an off-list redirect on /discord/link", async () => {
+    mockConsume.mockResolvedValue({ ok: false, retryAfterSec: 120 })
+
+    const fromAccount = await GET(makeRequest("http://localhost:3000/discord/connect?redirect=%2Faccount"))
+    expect(fromAccount.headers.get("location")).toBe("http://localhost:3000/account?flash=discord_rate_limited")
+
+    const fromAdmin = await GET(makeRequest("http://localhost:3000/discord/connect?redirect=%2Fadmin"))
+    expect(fromAdmin.headers.get("location")).toBe("http://localhost:3000/discord/link?flash=discord_rate_limited")
+  })
+
+  it("sends the member back with a fixed code when the authorize URL cannot be built", async () => {
     mockConsume.mockResolvedValue({ ok: true })
     mockCreateUrl.mockRejectedValue(new Error("Discord client id is not configured"))
 
     const res = await GET(makeRequest())
 
-    expect(res.headers.get("location")).toBe("http://localhost:3000/?flash=discord_unavailable")
+    expect(res.headers.get("location")).toBe("http://localhost:3000/discord/link?flash=discord_unavailable")
     expect(res.cookies.get(DISCORD_OAUTH_COOKIE)).toBeUndefined()
   })
 })
