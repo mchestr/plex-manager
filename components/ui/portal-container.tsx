@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, type ReactNode } from "react"
+import { createContext, useContext, useMemo, type ReactNode, type RefObject } from "react"
 
 /**
  * Attributes every popup spreads on its popup element. P5.1's Rewind layout
@@ -9,8 +9,11 @@ import { createContext, useContext, type ReactNode } from "react"
  */
 export type PopupProps = { className?: string } & { [key: `data-${string}`]: string | undefined }
 
+/** An element, or a ref to one that Base UI reads when the popup mounts. */
+type PortalContainer = HTMLElement | RefObject<HTMLElement | null>
+
 interface PortalContainerValue {
-  container?: HTMLElement | null
+  container?: PortalContainer | null
   popupProps?: PopupProps
 }
 
@@ -23,13 +26,20 @@ const PortalContainerContext = createContext<PortalContainerValue>({})
  * Sets where popups (Select, DropdownMenu, Popover, Tooltip, Dialog) portal
  * to, and the attributes they spread on their popup element, for everything
  * below it. P5.1's Rewind layout is its first production caller.
+ *
+ * A layout above a `loading.tsx` passes its root as a ref, not as an element
+ * held in state, and keeps `popupProps` stable. While the page below still
+ * streams, any change to this context, such as the state update a callback
+ * ref makes on hydration, makes React render a second copy of the page
+ * beside the hidden streamed one (`components/ui/flash-from-query.tsx`).
  */
 export function PortalContainerProvider({
   container,
   popupProps,
   children,
 }: PortalContainerValue & { children: ReactNode }) {
-  return <PortalContainerContext.Provider value={{ container, popupProps }}>{children}</PortalContainerContext.Provider>
+  const value = useMemo(() => ({ container, popupProps }), [container, popupProps])
+  return <PortalContainerContext.Provider value={value}>{children}</PortalContainerContext.Provider>
 }
 
 /**
@@ -37,7 +47,7 @@ export function PortalContainerProvider({
  * on the popup. The container defaults to `document.body` (undefined while
  * rendering on the server, where nothing portals).
  */
-export function usePortalContainer(): { container: HTMLElement | undefined; popupProps: PopupProps } {
+export function usePortalContainer(): { container: PortalContainer | undefined; popupProps: PopupProps } {
   const { container, popupProps } = useContext(PortalContainerContext)
   return {
     container: container ?? (typeof document === "undefined" ? undefined : document.body),

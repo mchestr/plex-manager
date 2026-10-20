@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState, type ReactNode } from "react"
+import { useMemo, useRef, useState, type ReactNode } from "react"
 
 import { StageArchetypeContext, StageInkContext } from "@/components/rewind/stage/stage-ink"
 import { PortalContainerProvider, type PopupProps } from "@/components/ui/portal-container"
@@ -31,7 +31,9 @@ interface RewindScopeProps {
  * `components/rewind/stage/stage-ink.tsx`.
  */
 export function RewindScope({ fontClassName, children }: RewindScopeProps) {
-  const [root, setRoot] = useState<HTMLDivElement | null>(null)
+  // A ref, not state: setting state when the root mounts would change the
+  // portal context above the still-streaming page and render it twice.
+  const root = useRef<HTMLDivElement>(null)
   const [ink, setInk] = useState<PageInk | null>(null)
   const [archetype, setArchetype] = useState<ArchetypeId | null>(null)
 
@@ -42,7 +44,7 @@ export function RewindScope({ fontClassName, children }: RewindScopeProps) {
 
   return (
     <div
-      ref={setRoot}
+      ref={root}
       data-theme="rewind"
       data-testid="rewind-scope"
       data-archetype={archetype ?? undefined}
