@@ -409,7 +409,7 @@ gantt
 
 - [x] P5.1: Rewind routes, layout and redirects (rewind, S, due 2026-11-09)
 - [x] P5.2: Story stage and player (rewind, L, due 2026-11-12)
-- [ ] P5.3: Story sheets and accessibility semantics (rewind, M, due 2026-11-16)
+- [x] P5.3: Story sheets and accessibility semantics (rewind, M, due 2026-11-16)
 - [ ] P5.4: Rewind visual, axe and performance test projects (rewind, M, due 2026-11-13)
 - [ ] P5.5: Registry and the front pages (rewind, M, due 2026-11-13)
 - [ ] P5.6: Features pages: Guess, Top shows, Top films (rewind, M, due 2026-11-17)
