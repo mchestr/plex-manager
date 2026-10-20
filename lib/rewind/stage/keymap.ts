@@ -3,7 +3,8 @@
  * it from `onKeyDown` on its own region, so keys work only while focus is in
  * the story.
  *
- * The arrows, PageUp, PageDown, Space, Home, End and Esc always work. The
+ * The arrows, PageUp, PageDown, Space, Home, End and Esc always work, and
+ * Enter chooses the full issue on the cover (design 4.3). The
  * letter keys (K, S, T and comma) work only while the Keyboard shortcuts
  * preference is on. Nothing fires from a text field or from inside a sheet,
  * modified keys are left to the browser, Space on a button or link is left to
@@ -13,7 +14,7 @@
  * @module lib/rewind/stage/keymap
  */
 
-export type StageCommand = "next" | "prev" | "first" | "last" | "toggle-play" | "escape" | "share" | "table" | "settings"
+export type StageCommand = "next" | "prev" | "first" | "last" | "toggle-play" | "escape" | "share" | "table" | "settings" | "choose"
 
 export interface KeyInput {
   key: string
@@ -32,6 +33,7 @@ const ALWAYS: Record<string, StageCommand> = {
   End: "last",
   " ": "toggle-play",
   Escape: "escape",
+  Enter: "choose",
 }
 
 const LETTERS: Record<string, StageCommand> = { k: "toggle-play", s: "share", t: "table", ",": "settings" }
@@ -50,6 +52,6 @@ export function keyToCommand(event: KeyInput, { shortcuts }: { shortcuts: boolea
   const command = ALWAYS[event.key] ?? (shortcuts ? LETTERS[event.key.toLowerCase()] : undefined) ?? null
   if (command === null || command === "escape") return command
   if (closest(event.target, "[data-rw-interactive]")) return null
-  if (event.key === " " && closest(event.target, CONTROL)) return null
+  if ((event.key === " " || event.key === "Enter") && closest(event.target, CONTROL)) return null
   return command
 }

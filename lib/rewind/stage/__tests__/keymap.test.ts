@@ -19,6 +19,7 @@ describe("keyToCommand", () => {
     ["End", "last"],
     [" ", "toggle-play"],
     ["Escape", "escape"],
+    ["Enter", "choose"],
   ])("%j always works, shortcuts off: %s", (key, command) => {
     expect(keyToCommand({ key, target: stage() }, { shortcuts: false })).toBe(command)
   })
@@ -48,6 +49,7 @@ describe("keyToCommand", () => {
   it("leaves Space to a focused button, and everything but Esc to an interactive island", () => {
     const button = element('<button id="b">Pause</button>', "#b")
     expect(keyToCommand({ key: " ", target: button }, { shortcuts: true })).toBeNull()
+    expect(keyToCommand({ key: "Enter", target: button }, { shortcuts: true })).toBeNull()
     expect(keyToCommand({ key: "ArrowRight", target: button }, { shortcuts: true })).toBe("next")
 
     const radio = element('<div data-rw-interactive><div role="radio" id="r"></div></div>', "#r")

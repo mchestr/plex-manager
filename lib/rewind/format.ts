@@ -43,13 +43,17 @@ export function formatHero(n: number, settings: Locale): string {
 
 /** "1 film", "2 films", "12,480 hours", with the plural form `Intl.PluralRules` picks. */
 export function formatCount(n: number, forms: { one: string; other: string }, { locale }: Locale): string {
+  return `${formatNumber(n, { locale })}${NBSP}${pluralWord(n, forms, { locale })}`
+}
+
+/** The plural form alone, for a count set apart from its word ("586" over "episodes"). */
+export function pluralWord(n: number, forms: { one: string; other: string }, { locale }: Locale): string {
   let rules = pluralRules.get(locale)
   if (!rules) {
     rules = new Intl.PluralRules(locale)
     pluralRules.set(locale, rules)
   }
-  const word = rules.select(n) === "one" ? forms.one : forms.other
-  return `${formatNumber(n, { locale })}${NBSP}${word}`
+  return rules.select(n) === "one" ? forms.one : forms.other
 }
 
 /**
@@ -80,6 +84,17 @@ export function formatHour(hour: number, { locale }: Locale): string {
     hourFormats.set(locale, format)
   }
   return unbreakable(format.format(Date.UTC(2026, 0, 1, hour)))
+}
+
+/**
+ * An issue's autoplay running time for the cut buttons and the RewindCard,
+ * to the nearest 10 seconds: "2 min 20 s", "40 s".
+ */
+export function formatRunningTime(ms: number): string {
+  const seconds = Math.round(ms / 10_000) * 10
+  const min = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return [min > 0 ? `${min}${NBSP}min` : "", s > 0 || min === 0 ? `${s}${NBSP}s` : ""].filter(Boolean).join(" ")
 }
 
 /** A `YYYY-MM-DD` day as "4 July" (en-GB) or "July 4" (en-US), never split. */

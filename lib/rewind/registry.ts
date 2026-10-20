@@ -5,9 +5,23 @@
  * the folio, progress label, Contents, cover lines, the back-cover index and
  * the RewindCard's "18 pages, about 2 min 20 s". Entries are in issue order.
  *
- * Until P5.5, `select` returns null and `schema` accepts anything; P5.5 to
- * P7.2 fill them in page by page. `table` marks the ten chart pages, whose
- * Table sheet P5.3 builds; its stub returns null.
+ * ## What an entry owns (P5.5)
+ *
+ * - `select(facts, ctx)` returns the page's data, or null when the page has
+ *   nothing to say, so the page omits itself (FR-2). Page data holds fact
+ *   ids, rating keys and geometry inputs, never a second copy of a number a
+ *   fact displays.
+ * - `schema` is the strict Zod schema of that data, in
+ *   `lib/rewind/pages/<page>.schema.ts`; a stored page is parsed with it on
+ *   read (`validatePagesOnRead`).
+ * - `srSummary(data, facts)` is the deterministic text a screen reader, the
+ *   desktop Notes and article mode read for the page's graphic.
+ * - `table(data, facts, settings)` is the chart pages' Table sheet (P5.3).
+ * - `share.facts` are the facts the page's card may print (P5.10).
+ *
+ * Pages whose steps have not landed keep the page rule of design 4.3 as their
+ * `select` with empty data (`lib/rewind/pages/rules.ts`); P5.6, P5.7, P7.1 and
+ * P7.2 replace them page by page.
  *
  * ## Fields and the spot rule (design 5.3)
  *
@@ -20,15 +34,24 @@
  * @module lib/rewind/registry
  */
 
-import { z } from "zod"
+import type { z } from "zod"
 
 import type { InkName } from "@/lib/design/tokens"
+import { bookendsPage } from "@/lib/rewind/pages/bookends"
+import { coverPage } from "@/lib/rewind/pages/cover"
+import { numberPage } from "@/lib/rewind/pages/number"
+import { pendingPages } from "@/lib/rewind/pages/rules"
+import type { ArchetypeId } from "@/lib/wrapped/archetypes/catalogue"
 import type { PageType } from "@/lib/wrapped/data/page-types"
+import type { FactId, RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
+import type { MemberStats } from "@/lib/wrapped/stats/compute"
 
 export type Act = "front" | "features" | "habits" | "server" | "centrefold" | "back"
 
 /** The pages of the full issue; the pocket edition's `short-list` arrives in P7.3. */
 export type IssuePageType = Exclude<PageType, "short-list">
+
+export type Edition = "full" | "pocket" | "postcard"
 
 /**
  * Autoplay hold in ms, or how the page waits instead: `tap` (the cover waits
@@ -43,7 +66,31 @@ export interface PageTable {
   rows: string[][]
 }
 
-export interface RegistryEntry {
+/**
+ * What a page's `select` reads besides the facts. `stats` carries the
+ * geometry inputs (the soundtrack's daily minutes) and the rules no fact
+ * answers (counted plays, Setup's eligibility); P5.9 passes the stats it
+ * built the facts from.
+ */
+export interface SelectContext {
+  edition: Edition
+  archetype: ArchetypeId | null
+  /** `Config.rewindDisabledPages`. */
+  disabledPages: readonly string[]
+  stats: MemberStats
+}
+
+/** The part of an entry each page module defines. Methods, so a typed page fits `RegistryEntry<unknown>`. */
+export interface PageDefinition<D> {
+  select(facts: RewindFactsV3, ctx: SelectContext): D | null
+  schema: z.ZodType<D>
+  srSummary(data: D, facts: RewindFactsV3): string
+  table?(data: D, facts: RewindFactsV3, settings: { locale: string }): PageTable | null
+  /** The facts the page's share card may print; `titles` are those that name a title, `art` a poster. */
+  share: { facts: FactId[]; titles?: FactId[]; art?: true }
+}
+
+export interface RegistryEntry<D = unknown> extends PageDefinition<D> {
   type: IssuePageType
   /** The page's one name, used on every surface. */
   name: string
@@ -55,11 +102,6 @@ export interface RegistryEntry {
   /** In the pocket edition: as itself, merged into Short list, or as whichever of clock and calendar says more. */
   pocket: false | "page" | "short-list" | "clock-or-calendar"
   dwell: Dwell
-  select: (facts: unknown, ctx: unknown) => unknown
-  schema: z.ZodType
-  table?: (data: unknown) => PageTable | null
-  srSummary?: (data: unknown, facts: unknown) => string
-  share?: { facts: string[] }
 }
 
 /** How long the guess is counted for in the issue's running time. */
@@ -67,40 +109,51 @@ export const HOLD_ESTIMATE_MS = 12_000
 /** One page turn. */
 export const TURN_MS = 420
 
-const unselected = () => null
-const tableStub = () => null
+type Spec = Pick<RegistryEntry, "name" | "act" | "field" | "altField" | "core" | "pocket" | "dwell">
 
-type Spec = Pick<RegistryEntry, "name" | "act" | "field" | "altField" | "core" | "pocket" | "dwell"> & { chart?: true }
-
-function entry(type: IssuePageType, spec: Spec): RegistryEntry {
-  const { chart, ...rest } = spec
+function entry<D>(type: IssuePageType, spec: Spec, page: PageDefinition<D>): RegistryEntry<D> {
   const spot = spec.field === "archetype" ? "arch" : spec.field === "paper" ? "arch-deep" : "ink"
-  return { type, ...rest, spot, select: unselected, schema: z.unknown(), ...(chart ? { table: tableStub } : {}) }
+  return { type, ...spec, spot, ...page }
 }
 
+const p = pendingPages
+
 export const registry = {
-  cover: entry("cover", { name: "Cover", act: "front", field: "archetype", altField: null, core: true, pocket: "page", dwell: "tap" }),
-  number: entry("number", { name: "The number", act: "front", field: "coral", altField: "peach", core: true, pocket: "page", dwell: 8000, chart: true }),
-  bookends: entry("bookends", { name: "Bookends", act: "front", field: "paper", altField: null, core: true, pocket: false, dwell: 7000 }),
-  guess: entry("guess", { name: "Guess", act: "features", field: "rose", altField: "lilac", core: true, pocket: false, dwell: "hold" }),
-  "top-shows": entry("top-shows", { name: "Top shows", act: "features", field: "paper", altField: null, core: true, pocket: "short-list", dwell: 9000, chart: true }),
-  "top-films": entry("top-films", { name: "Top films", act: "features", field: "marigold", altField: "sky", core: true, pocket: "short-list", dwell: 8000, chart: true }),
-  taste: entry("taste", { name: "Taste", act: "features", field: "petrol", altField: "oxblood", core: false, pocket: false, dwell: 8000, chart: true }),
-  people: entry("people", { name: "People", act: "features", field: "paper", altField: null, core: false, pocket: false, dwell: 7000 }),
-  clock: entry("clock", { name: "The clock", act: "habits", field: "forest", altField: "ultramarine", core: true, pocket: "clock-or-calendar", dwell: 8000, chart: true }),
-  calendar: entry("calendar", { name: "The calendar", act: "habits", field: "paper", altField: null, core: true, pocket: "clock-or-calendar", dwell: 9000, chart: true }),
-  race: entry("race", { name: "The race", act: "habits", field: "mint", altField: "sky", core: false, pocket: false, dwell: 10_000, chart: true }),
-  records: entry("records", { name: "Records", act: "habits", field: "peach", altField: "rose", core: false, pocket: false, dwell: 8000 }),
-  setup: entry("setup", { name: "Setup", act: "server", field: "paper", altField: null, core: false, pocket: false, dwell: 6000, chart: true }),
-  requests: entry("requests", { name: "Requests", act: "server", field: "lilac", altField: "mint", core: false, pocket: false, dwell: 7000 }),
-  standing: entry("standing", { name: "Standing", act: "server", field: "sky", altField: "coral", core: false, pocket: false, dwell: 7000, chart: true }),
-  centrefold: entry("centrefold", { name: "Centrefold", act: "centrefold", field: "archetype", altField: null, core: true, pocket: "page", dwell: 12_000, chart: true }),
-  "next-year": entry("next-year", { name: "Next year", act: "back", field: "paper", altField: null, core: false, pocket: false, dwell: 7000 }),
-  "back-cover": entry("back-cover", { name: "Back cover", act: "back", field: "paper", altField: null, core: true, pocket: "page", dwell: "end" }),
+  cover: entry("cover", { name: "Cover", act: "front", field: "archetype", altField: null, core: true, pocket: "page", dwell: "tap" }, coverPage),
+  number: entry("number", { name: "The number", act: "front", field: "coral", altField: "peach", core: true, pocket: "page", dwell: 8000 }, numberPage),
+  bookends: entry("bookends", { name: "Bookends", act: "front", field: "paper", altField: null, core: true, pocket: false, dwell: 7000 }, bookendsPage),
+  guess: entry("guess", { name: "Guess", act: "features", field: "rose", altField: "lilac", core: true, pocket: false, dwell: "hold" }, p.guess),
+  "top-shows": entry("top-shows", { name: "Top shows", act: "features", field: "paper", altField: null, core: true, pocket: "short-list", dwell: 9000 }, p["top-shows"]),
+  "top-films": entry("top-films", { name: "Top films", act: "features", field: "marigold", altField: "sky", core: true, pocket: "short-list", dwell: 8000 }, p["top-films"]),
+  taste: entry("taste", { name: "Taste", act: "features", field: "petrol", altField: "oxblood", core: false, pocket: false, dwell: 8000 }, p.taste),
+  people: entry("people", { name: "People", act: "features", field: "paper", altField: null, core: false, pocket: false, dwell: 7000 }, p.people),
+  clock: entry("clock", { name: "The clock", act: "habits", field: "forest", altField: "ultramarine", core: true, pocket: "clock-or-calendar", dwell: 8000 }, p.clock),
+  calendar: entry("calendar", { name: "The calendar", act: "habits", field: "paper", altField: null, core: true, pocket: "clock-or-calendar", dwell: 9000 }, p.calendar),
+  race: entry("race", { name: "The race", act: "habits", field: "mint", altField: "sky", core: false, pocket: false, dwell: 10_000 }, p.race),
+  records: entry("records", { name: "Records", act: "habits", field: "peach", altField: "rose", core: false, pocket: false, dwell: 8000 }, p.records),
+  setup: entry("setup", { name: "Setup", act: "server", field: "paper", altField: null, core: false, pocket: false, dwell: 6000 }, p.setup),
+  requests: entry("requests", { name: "Requests", act: "server", field: "lilac", altField: "mint", core: false, pocket: false, dwell: 7000 }, p.requests),
+  standing: entry("standing", { name: "Standing", act: "server", field: "sky", altField: "coral", core: false, pocket: false, dwell: 7000 }, p.standing),
+  centrefold: entry("centrefold", { name: "Centrefold", act: "centrefold", field: "archetype", altField: null, core: true, pocket: "page", dwell: 12_000 }, p.centrefold),
+  "next-year": entry("next-year", { name: "Next year", act: "back", field: "paper", altField: null, core: false, pocket: false, dwell: 7000 }, p["next-year"]),
+  "back-cover": entry("back-cover", { name: "Back cover", act: "back", field: "paper", altField: null, core: true, pocket: "page", dwell: "end" }, p["back-cover"]),
 } as const satisfies Record<IssuePageType, RegistryEntry>
 
 /** Every page in issue order. */
 export const issuePages: RegistryEntry[] = Object.values(registry)
+
+/**
+ * Pages whose components land in P7.1 and P7.2. Until then `selectPages`
+ * leaves them out, so the full issue is the ten core pages; each step removes
+ * its pages from this list.
+ */
+export const LATER_PAGES: readonly IssuePageType[] = ["taste", "people", "race", "records", "setup", "requests", "standing", "next-year"]
+
+/**
+ * The pocket edition's six pages as the running time counts them: Short list
+ * (P7.3) stands in as Top shows, and the clock for "clock or calendar".
+ */
+export const POCKET_ESTIMATE: readonly IssuePageType[] = ["cover", "number", "top-shows", "clock", "centrefold", "back-cover"]
 
 /**
  * The autoplay running time of an issue: each page's dwell (the guess counted

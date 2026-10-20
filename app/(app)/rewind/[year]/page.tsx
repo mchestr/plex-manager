@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { notFound, redirect } from "next/navigation"
 import { getServerSession } from "next-auth"
 
-import { RewindPageList } from "@/components/rewind/rewind-page-list"
+import { RewindIssue } from "@/components/rewind/rewind-issue"
 import { RewindStatusPanel } from "@/components/rewind/rewind-status-panel"
 import { WrappedSharedYearsNotice } from "@/components/wrapped/wrapped-shared-years-notice"
 import { WrappedViewerWrapper } from "@/components/wrapped/wrapped-viewer-wrapper"
@@ -66,7 +66,7 @@ export default async function RewindYearPage({ params, searchParams }: YearPageP
     return (
       <>
         {sharedNotice}
-        <RewindPageList data={view.data} returnTo={returnTo} />
+        <RewindIssue data={view.data} userId={userId} returnTo={returnTo} />
       </>
     )
   }

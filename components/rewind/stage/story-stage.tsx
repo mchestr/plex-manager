@@ -16,7 +16,7 @@ import { ChromeBottom } from "./chrome-bottom"
 import { ChromeTop } from "./chrome-top"
 import { PlayerProvider } from "./player-context"
 import { Progress } from "./progress"
-import { useSetStageInk } from "./stage-ink"
+import { useSetStageArchetype, useSetStageInk } from "./stage-ink"
 import { StagePage } from "./stage-page"
 import { useFitStage } from "./use-fit-stage"
 import { useStageGestures } from "./use-stage-gestures"
@@ -63,6 +63,7 @@ export function StoryStage({ pages, archetype, closeHref, prefs = DEFAULT_STAGE_
     prefs
   )
   const setStageInk = useSetStageInk()
+  const setStageArchetype = useSetStageArchetype()
 
   const entry = entries[state.index]
   const ink = pageInk(entry, archetype)
@@ -73,6 +74,11 @@ export function StoryStage({ pages, archetype, closeHref, prefs = DEFAULT_STAGE_
   useEffect(() => {
     setStageInk(pageInk(entry, archetype))
   }, [setStageInk, entry, archetype])
+
+  useEffect(() => {
+    setStageArchetype(archetype)
+    return () => setStageArchetype(null)
+  }, [setStageArchetype, archetype])
 
   useEffect(() => {
     root.current?.focus({ preventScroll: true })
@@ -98,6 +104,8 @@ export function StoryStage({ pages, archetype, closeHref, prefs = DEFAULT_STAGE_
         return send(state.mode === "cover" ? { type: "CHOOSE_CUT" } : { type: "NEXT", source: "key" })
       case "prev":
         return send({ type: "PREV", source: "key" })
+      case "choose":
+        return state.mode === "cover" ? send({ type: "CHOOSE_CUT" }) : undefined
       case "first":
         return send({ type: "GOTO", index: 0, source: "key" })
       case "last":

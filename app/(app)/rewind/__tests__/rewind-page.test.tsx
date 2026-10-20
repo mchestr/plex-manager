@@ -47,6 +47,16 @@ jest.mock('@/components/wrapped/wrapped-viewer-wrapper', () => ({ WrappedViewerW
 jest.mock('@/components/rewind/rewind-generating-watch', () => ({
   RewindGeneratingWatch: () => <p data-testid="generating-watch" />,
 }))
+// The story itself is tested in components/rewind; here only the branch matters.
+jest.mock('@/components/rewind/rewind-issue', () => ({
+  RewindIssue: ({ data }: { data: { pages: Array<{ type: string }> } }) => (
+    <ol data-testid="rewind-issue">
+      {data.pages.map((page) => (
+        <li key={page.type}>{page.type}</li>
+      ))}
+    </ol>
+  ),
+}))
 jest.mock('@/actions/wrapped-share-link', () => ({ disableWrappedShareLink: jest.fn() }))
 jest.mock('@/lib/queue/rewind-infra', () => ({ checkRewindInfra: jest.fn() }))
 jest.mock('@/lib/rewind/generation-guards', () => ({ generationBlocker: jest.fn() }))
@@ -244,8 +254,8 @@ describe('/rewind/[year] branches', () => {
 
     await renderYear('2026')
 
-    expect(screen.getByTestId('rewind-page-list')).toHaveTextContent('Cover')
-    expect(screen.getByTestId('rewind-page-list')).toHaveTextContent('The number')
+    expect(screen.getByTestId('rewind-issue')).toHaveTextContent('cover')
+    expect(screen.getByTestId('rewind-issue')).toHaveTextContent('number')
   })
 
   it('keeps a v3 issue closed to members while the flags are off, but not to admins', async () => {
@@ -257,7 +267,7 @@ describe('/rewind/[year] branches', () => {
 
     signIn(true)
     await renderYear('2026')
-    expect(screen.getByTestId('rewind-page-list')).toBeInTheDocument()
+    expect(screen.getByTestId('rewind-issue')).toBeInTheDocument()
   })
 
   it('always opens a stored v2 year for its owner, flags off', async () => {
