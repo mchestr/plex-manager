@@ -222,7 +222,7 @@ describe('GET /api/rewind/poster/[ratingKey]', () => {
     it('short-circuits a cache miss on the poster rate limit before Plex', async () => {
       ;(getServerSession as jest.Mock).mockResolvedValue(ADMIN_SESSION)
       const limited = { status: 429 }
-      ;(limitRequest as jest.Mock).mockResolvedValueOnce(limited)
+      ;(limitRequest as jest.Mock).mockResolvedValueOnce(null).mockResolvedValueOnce(limited)
 
       const response = await callRoute(posterUrl('123'), '123')
 
@@ -747,6 +747,16 @@ describe('GET /api/rewind/poster/[ratingKey]', () => {
       expect((await callRoute(posterUrl('123', TOK), '123')).status).toBe(401)
     })
 
+    it('limits a session before its access checks', async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValue(MEMBER_SESSION)
+      const limited = { status: 429 }
+      ;(limitRequest as jest.Mock).mockResolvedValueOnce(limited)
+
+      expect(await callRoute(posterUrl('123'), '123')).toBe(limited)
+      expect(limitRequest).toHaveBeenCalledWith('poster:access', expect.anything())
+      expect(prisma.plexServer.findFirst).not.toHaveBeenCalled()
+    })
+
     it('limits a share request before its token lookup, once per request', async () => {
       const limited = { status: 429 }
       ;(limitRequest as jest.Mock).mockResolvedValueOnce(limited)
@@ -980,7 +990,7 @@ describe('GET /api/rewind/poster/[ratingKey]', () => {
       expect(renderPoster).toHaveBeenCalledWith(expect.any(Buffer), { w: 480, tone: null, clash: null })
     })
 
-    it('answers a disk-cache hit without a limiter point or a Plex call', async () => {
+    it('answers a disk-cache hit with only the access-check point and no Plex call', async () => {
       jest.mocked(readCachedPoster).mockResolvedValue(Buffer.from('cached'))
 
       const response = await callRoute('http://localhost/api/rewind/poster/123?w=160', '123')
@@ -989,7 +999,7 @@ describe('GET /api/rewind/poster/[ratingKey]', () => {
       expect(response.headers.get('Cache-Control')).toBe(SESSION_CACHE)
       expect(response.headers.get('Content-Type')).toBe('image/webp')
       expect(readCachedPoster).toHaveBeenCalledWith('/cache/posters/123-none-160.webp')
-      expect(limitRequest).not.toHaveBeenCalled()
+      expect(jest.mocked(limitRequest).mock.calls.map(([name]) => name)).toEqual(['poster:access'])
       expect(fetchWithTimeout).not.toHaveBeenCalled()
     })
 

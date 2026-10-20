@@ -93,6 +93,7 @@ describe("rate-limit", () => {
       expect(LIMITS).toEqual({
         share: { points: 100, duration: 900 },
         poster: { points: 500, duration: 900 },
+        'poster:access': { points: 2000, duration: 900 },
         admin: { points: 50, duration: 900 },
         checkout: { points: 10, duration: 60 },
         portal: { points: 10, duration: 60 },

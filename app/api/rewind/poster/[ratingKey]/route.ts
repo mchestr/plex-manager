@@ -162,6 +162,11 @@ export async function GET(request: NextRequest, context: { params: Promise<{ rat
       if (!(await shareTokenAllowsRatingKey(shareToken, ratingKey))) return errorResponse(ErrorCode.UNAUTHORIZED, "Authentication required")
     }
 
+    if (session) {
+      const rateLimitResponse = await limitRequest("poster:access", request)
+      if (rateLimitResponse) return rateLimitResponse
+    }
+
     // A session sees the same 404 for a denied key and a known miss, so answering
     // from the negative cache before the access check leaks nothing.
     if (isKnownPosterMiss(ratingKey)) return posterNotFound()

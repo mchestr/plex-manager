@@ -27,6 +27,8 @@ interface LimitConfig {
 export const LIMITS = {
   share: { points: 100, duration: 15 * MINUTE },
   poster: { points: 500, duration: 15 * MINUTE },
+  // A session's poster access checks (database and Plex lookups), cache hits included; a page of posters is a few dozen.
+  "poster:access": { points: 2000, duration: 15 * MINUTE },
   admin: { points: 50, duration: 15 * MINUTE },
   checkout: { points: 10, duration: MINUTE },
   portal: { points: 10, duration: MINUTE },
