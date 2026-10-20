@@ -411,7 +411,7 @@ gantt
 - [x] P5.2: Story stage and player (rewind, L, due 2026-11-12)
 - [x] P5.3: Story sheets and accessibility semantics (rewind, M, due 2026-11-16)
 - [ ] P5.4: Rewind visual, axe and performance test projects (rewind, M, due 2026-11-13)
-- [ ] P5.5: Registry and the front pages (rewind, M, due 2026-11-13)
+- [x] P5.5: Registry and the front pages (rewind, M, due 2026-11-13)
 - [ ] P5.6: Features pages: Guess, Top shows, Top films (rewind, M, due 2026-11-17)
 - [ ] P5.7: Habits and centrefold: Clock, Calendar, Centrefold, Back cover (rewind, M, due 2026-11-16)
 - [x] P5.8: Copy slots, templates, grounding and token rendering (rewind, M, due 2026-11-09)
