@@ -86,6 +86,7 @@ export const A11Y_ROUTES: A11yRoute[] = [
   { path: `/rewind/${VISUAL_REWIND_YEAR}`, as: 'member', ready: 'wrapped-viewer' },
   { path: '/onboarding', as: 'member', userId: VISUAL_ONBOARDING_USER.id, ready: 'onboarding-welcome-heading' },
   { path: '/discord/link', as: 'member', ready: 'discord-link-panel' },
+  { path: '/account', as: 'member', ready: 'account-notifications' },
   { path: '/subscribe', as: 'member', stripe: true, ready: 'subscribe-page' },
   { path: '/subscribe/success', as: 'member', stripe: true, ready: 'subscribe-success-page' },
 

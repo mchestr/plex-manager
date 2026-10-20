@@ -103,6 +103,9 @@ describe('AppShell', () => {
     // Opening from the keyboard highlights the first item.
     await waitFor(() => expect(within(menu).getByRole('menuitem', { name: 'Link Discord' })).toHaveFocus())
     await user.keyboard('{ArrowDown}')
+    expect(within(menu).getByRole('menuitem', { name: 'Account settings' })).toHaveFocus()
+    expect(within(menu).getByRole('menuitem', { name: 'Account settings' })).toHaveAttribute('href', '/account')
+    await user.keyboard('{ArrowDown}')
     expect(screen.getByTestId('sign-out-button')).toHaveFocus()
     expect(await axe(document.body, { rules: { region: { enabled: false } } })).toHaveNoViolations()
 
@@ -131,7 +134,7 @@ describe('AppShell', () => {
     const menu = await screen.findByRole('menu')
 
     expect(within(menu).queryByTestId('account-menu-discord')).not.toBeInTheDocument()
-    expect(within(menu).getAllByRole('menuitem')).toHaveLength(1)
+    expect(within(menu).getAllByRole('menuitem')).toHaveLength(2)
   })
 
   it('opens the mobile Sheet with the same links and closes it on navigation', async () => {

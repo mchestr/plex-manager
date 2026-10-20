@@ -2,8 +2,8 @@
  * The member top bar's links (ui-design-system 6.1).
  *
  * `memberNav()` starts with Home and, when the member can open something
- * there, "Rewind {year}". P6.11 adds Account settings and P10.22 adds Help
- * and Membership; each step that ships a route adds its entry, because
+ * there, "Rewind {year}". P10.22 adds Help and Membership (Account settings
+ * lives in the account menu); each step that ships a route adds its entry, because
  * `typedRoutes` rejects links to routes that do not exist yet.
  *
  * @module lib/member/nav

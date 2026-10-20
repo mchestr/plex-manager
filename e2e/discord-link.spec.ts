@@ -101,7 +101,7 @@ test.describe('Discord link page', () => {
       maxRedirects: 0,
     });
     const landing = new URL(callback.headers()['location'] ?? '');
-    expect(landing.pathname).toBe('/');
+    expect(landing.pathname).toBe('/discord/link');
     expect(landing.searchParams.get('flash')).toBe('discord_session_mismatch');
   });
 });

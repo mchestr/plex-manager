@@ -315,7 +315,9 @@
 **Demo.** Open `/account` in a browser set to Europe/London on a Chicago server: the field suggests Europe/London; save it, and it persists. From `/discord/link`, link Discord and return to the same page with "Discord linked" and the checklist's second item done.
 
 **Done when.**
-- [ ] `/account` stores `RewindPrefs.notify` and `User.timezone` through Zod-validated member actions.
-- [ ] `/discord/link` is the checklist with one primary action, linked from the account menu and home.
-- [ ] Every Discord redirect lands on the safe origin page with a code, and `FlashFromQuery` shows it.
+- [x] `/account` stores `RewindPrefs.notify` and `User.timezone` through Zod-validated member actions.
+- [x] `/discord/link` is the checklist with one primary action, linked from the account menu and home.
+- [x] Every Discord redirect lands on the safe origin page with a code, and `FlashFromQuery` shows it.
 - [ ] The E2E and visual checks pass.
+
+(as merged: Account settings is an item of the account menu (`account-menu-settings`), not a `memberNav()` entry, as ui-design-system 6.1 places it. A failed callback finds its origin through `discordLinkOrigin(state, userId)` in `lib/discord/integration.ts`, which reads the member's own state row and falls back to `/discord/link`. The checklist's primary is Link Discord, then Join when the member is off the server, then Resync role; a complete checklist has none. `/discord/link` dropped the raw `lastError` text. `e2e/account.spec.ts`, the `/account` visual capture and its a11y route are written but not run; baselines are left to the coordinator's E2E pass.)

@@ -46,7 +46,8 @@ async function canOpenRewind(userId: string, isAdmin: boolean): Promise<boolean>
   return completed !== null
 }
 
-async function discordHandleFor(userId: string): Promise<string | null | undefined> {
+/** The member's Discord username, `null` when unlinked, `undefined` when Discord linking is off. */
+export async function discordHandleFor(userId: string): Promise<string | null | undefined> {
   const [integration, connection] = await Promise.all([
     prisma.discordIntegration.findUnique({
       where: { id: "discord" },
