@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react"
 
-import { Poster, posterSrc, posterWidthFor } from "@/components/ui/poster"
+import { Poster, posterSrc } from "@/components/ui/poster"
+import { posterWidthFor } from "@/lib/ui/poster-widths"
 
 describe("Poster", () => {
   it("requests the smallest served width that covers its box at 2x", () => {

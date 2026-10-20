@@ -1,7 +1,8 @@
 import { u } from "@/components/rewind/pages/units"
-import { Poster, posterWidthFor, type PosterSize } from "@/components/ui/poster"
+import { Poster, type PosterSize } from "@/components/ui/poster"
 import type { TonePair } from "@/lib/rewind/media/tone"
 import { posterKey } from "@/lib/rewind/pages/title-key.schema"
+import { posterWidthFor } from "@/lib/ui/poster-widths"
 import { cn } from "@/lib/utils"
 
 import { TitleCard } from "./title-card"
