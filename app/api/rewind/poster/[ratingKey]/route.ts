@@ -120,8 +120,11 @@ async function fetchPoster(server: PosterServer, ratingKey: string, w: number, t
  * - **Tone**: `none` is full colour (WebP 76); a pair of inks is the
  *   duotone (WebP 72). A hero's `clash` pair is served instead of full
  *   colour when the art would clash with its page.
+ * - **Rate limits**: a share link spends a `poster` point before its token
+ *   lookup; a session spends a `poster:access` point (2000 per 15 minutes)
+ *   before its access checks, and a cache miss spends a `poster` point.
  * - **Disk cache**: a served variant is kept under `REWIND_CACHE_DIR`, and a
- *   hit is answered before the rate limiter, with
+ *   hit is answered before the `poster` limit, with
  *   `private, max-age=31536000, immutable` like every poster.
  * - **Upstream calls** (access lookups, then the poster) share one 3 s
  *   deadline. Misses (Plex 404, timeout, network error, a denied key) are
@@ -151,8 +154,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ rat
       }
     }
     // A share link is limited before its token lookup, so an unknown token costs
-    // a request a point instead of an unlimited database read; a session's cache
-    // hits stay unlimited.
+    // a request a point instead of an unlimited database read.
     let limited = false
     if (!session) {
       if (!shareToken) return errorResponse(ErrorCode.UNAUTHORIZED, "Authentication required")
