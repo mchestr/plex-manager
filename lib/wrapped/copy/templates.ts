@@ -42,11 +42,12 @@ export interface TemplateContext {
   locals?: TokenSource
 }
 
-/** Template-only tokens: the issue year and, on Bookends, the first title of the year. */
-export function copyLocals({ year, firstTitle }: { year: number; firstTitle?: string }): TokenSource {
+/** Template-only tokens: the issue year, on Bookends the first title of the year, and on Top shows the quiz guess. */
+export function copyLocals({ year, firstTitle, guess }: { year: number; firstTitle?: string; guess?: string }): TokenSource {
   return {
     "copy.year": { display: String(year), unit: "year" },
     ...(firstTitle ? { "copy.firstTitle": { display: firstTitle, unit: "title" as const } } : {}),
+    ...(guess ? { "copy.guess": { display: guess, unit: "title" as const } } : {}),
   }
 }
 
@@ -257,6 +258,35 @@ const HEADLINES: Readonly<Record<IssuePageType, (facts: RewindFactsV3) => string
 /** A page's headline (or its lead line, on The number and the centrefold). */
 export function headline(page: IssuePageType, facts: RewindFactsV3): string {
   return HEADLINES[page](facts)
+}
+
+/** 04 Guess asks about series, or about titles of either kind with fewer than 3 series. */
+export function quizHeadline(kind: "series" | "mixed"): string {
+  return kind === "series" ? HEADLINES.guess({}) : "Which title did you watch most this year?"
+}
+
+const RANK_WORDS = ["", "one", "two", "three", "four"] as const
+
+/** The reveal under the tiles, by the chosen title's rank among the options (design 4.3). */
+export function quizReveal(rank: number): string {
+  if (rank === 1) return "You called it."
+  if (rank === 2) return "Close. It came second."
+  return `Not quite: that was your number ${RANK_WORDS[rank]}.`
+}
+
+/**
+ * Top shows' deck after the quiz was answered: it names the guess
+ * (`copy.guess`) and, for a near miss, the gap (design 4.3).
+ *
+ * @example
+ * ```ts
+ * quizCallback(2) // "You guessed {{fact:copy.guess}}. Close: it came second, {{fact:quiz.gapMinutes}} behind."
+ * ```
+ */
+export function quizCallback(rank: number): string {
+  if (rank === 1) return `You guessed ${t("copy.guess")}, and you called it.`
+  if (rank === 2) return `You guessed ${t("copy.guess")}. Close: it came second, ${t("quiz.gapMinutes")} behind.`
+  return `You guessed ${t("copy.guess")}. It came in at number ${RANK_WORDS[rank]}.`
 }
 
 /** Each page's cover line, and the order the cover prefers them in. */

@@ -64,6 +64,8 @@ export interface IssuePage {
 
 interface IssueContext {
   stats: MemberStats
+  /** Seeds the quiz's option order per member. */
+  userId: string
   archetype: ArchetypeId | null
   /** `Config.rewindDisabledPages`; the cover, the centrefold and the back cover always stay. */
   disabledPages: readonly string[]

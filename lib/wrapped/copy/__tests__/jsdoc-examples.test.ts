@@ -7,7 +7,7 @@ import type { RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 import { groundArchetype, groundSlot } from "../grounding"
 import { renderCopy, renderCopyText } from "../render-copy"
 import { COPY_SLOTS, slotDependencyHash } from "../slots"
-import { coverLines, slotTemplate, whyReasons } from "../templates"
+import { coverLines, quizCallback, slotTemplate, whyReasons } from "../templates"
 
 const facts: RewindFactsV3 = {
   "series[1].title": { value: "Severance", display: "Severance", unit: "title" },
@@ -55,5 +55,9 @@ describe("JSDoc Documentation Examples", () => {
     expect(whyReasons([{ id: "midnight-marathoner", evidence: ["hours.peak"] }])).toEqual([
       { id: "midnight-marathoner", name: "The Midnight Marathoner", reasons: ["Your busiest hour was {{fact:hours.peak}}."] },
     ])
+  })
+
+  it("quizCallback", () => {
+    expect(quizCallback(2)).toBe("You guessed {{fact:copy.guess}}. Close: it came second, {{fact:quiz.gapMinutes}} behind.")
   })
 })

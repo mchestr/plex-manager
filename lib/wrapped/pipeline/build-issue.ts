@@ -54,7 +54,7 @@ function factsFor(input: IssueInput, archetype: ArchetypeSelection | null): Rewi
 }
 
 function pagesFor(input: IssueInput, edition: Edition, facts: RewindFactsV3, archetype: ArchetypeSelection | null) {
-  return selectIssuePages(edition, facts, { stats: input.stats, archetype: archetype?.id ?? null, disabledPages: input.disabledPages })
+  return selectIssuePages(edition, facts, { stats: input.stats, userId: input.userId, archetype: archetype?.id ?? null, disabledPages: input.disabledPages })
 }
 
 /** Builds the issue from the member's stats. */

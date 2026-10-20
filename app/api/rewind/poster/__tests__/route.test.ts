@@ -1,16 +1,21 @@
 /**
- * Tests for app/api/wrapped/poster/[ratingKey]/route.ts - poster proxy route
+ * Tests for app/api/rewind/poster/[ratingKey]/route.ts - the Rewind poster
+ * route (P5.6), which also serves the v2 path.
  *
- * Covers SEC-21: private caching for sessions, public + noindex only for
- * share tokens, per-viewer access checks that answer 404, one 3 s deadline
- * per request, fast 404s with a negative cache, and one load per Rewind for a
- * burst of parallel posters.
+ * Covers SEC-21, carried over from P0.16: private caching for sessions and
+ * shares alike (noindex for shares), per-viewer access checks that answer
+ * 404, one 3 s deadline per request, fast 404s with a negative cache, and one
+ * load per Rewind for a burst of parallel posters. P5.6 adds `w` and `tone`
+ * validation and the disk cache, whose hits spend no limiter point; the
+ * pixels themselves are tested in lib/rewind/poster/__tests__/image.test.ts.
  *
  * SEC-28 (P4.5): a session needs `read` entitlement; one without it is
  * answered as signed out, so only a covering share token serves it.
  */
 
-import { GET } from '@/app/api/wrapped/poster/[ratingKey]/route'
+import { GET } from '@/app/api/rewind/poster/[ratingKey]/route'
+import { readCachedPoster, writeCachedPoster } from '@/lib/rewind/poster/disk-cache'
+import { renderPoster } from '@/lib/rewind/poster/image'
 import { hasEntitlement } from '@/lib/actions/entitlement'
 import {
   getItemSectionKey,
@@ -44,6 +49,16 @@ jest.mock('@/lib/actions/entitlement', () => ({
 
 jest.mock('@/lib/security/rate-limit', () => ({
   limitRequest: jest.fn().mockResolvedValue(null),
+}))
+
+jest.mock('@/lib/rewind/poster/image', () => ({
+  renderPoster: jest.fn().mockResolvedValue(Buffer.from('webp')),
+}))
+
+jest.mock('@/lib/rewind/poster/disk-cache', () => ({
+  posterCachePath: (key: string, tone: string, w: number) => `/cache/posters/${key}-${tone}-${w}.webp`,
+  readCachedPoster: jest.fn().mockResolvedValue(null),
+  writeCachedPoster: jest.fn().mockResolvedValue(undefined),
 }))
 
 jest.mock('@/lib/utils/fetch-with-timeout', () => ({
@@ -106,7 +121,8 @@ const SHARED_ROW = { year: 2026, status: 'completed', summary: null, archetype: 
 const ADMIN_SESSION = { user: { id: 'admin-1', isAdmin: true } }
 const MEMBER_SESSION = { user: { id: 'member-1', isAdmin: false } }
 
-const SESSION_CACHE = 'private, max-age=86400'
+/** Every poster, for sessions and shares alike (SEC-21). */
+const SESSION_CACHE = 'private, max-age=31536000, immutable'
 const NOT_FOUND_CACHE = 'private, max-age=60'
 const ERROR_CACHE = 'private, no-store'
 
@@ -148,7 +164,7 @@ async function callRoute(url: string, ratingKey: string) {
 }
 
 function posterUrl(ratingKey: string, share?: string) {
-  const base = `http://localhost/api/wrapped/poster/${ratingKey}`
+  const base = `http://localhost/api/rewind/poster/${ratingKey}`
   return share ? `${base}?share=${share}` : base
 }
 
@@ -167,9 +183,11 @@ function abortError() {
   return error
 }
 
-describe('GET /api/wrapped/poster/[ratingKey]', () => {
+describe('GET /api/rewind/poster/[ratingKey]', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    jest.mocked(readCachedPoster).mockResolvedValue(null)
+    jest.mocked(renderPoster).mockResolvedValue(Buffer.from('webp'))
     clearPosterAccessCaches()
     ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(PLEX_SERVER)
     ;(getSharedSectionKeys as jest.Mock).mockResolvedValue(new Set<string>())
@@ -201,7 +219,8 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
       expect((await response.json()).code).toBe('VALIDATION_ERROR')
     })
 
-    it('short-circuits on the poster rate limit before any lookup', async () => {
+    it('short-circuits a cache miss on the poster rate limit before Plex', async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValue(ADMIN_SESSION)
       const limited = { status: 429 }
       ;(limitRequest as jest.Mock).mockResolvedValueOnce(limited)
 
@@ -209,9 +228,21 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
 
       expect(response).toBe(limited)
       expect(limitRequest).toHaveBeenCalledWith('poster', expect.anything())
-      expect(getServerSession).not.toHaveBeenCalled()
       expect(fetchWithTimeout).not.toHaveBeenCalled()
     })
+
+    it.each(['w=100', 'w=abc', 'tone=gold.paper', 'tone=paper', 'tone=ultramarine.paper.coral', 'clash=none'])(
+      'rejects %s with 400',
+      async (query) => {
+        ;(getServerSession as jest.Mock).mockResolvedValue(ADMIN_SESSION)
+
+        const response = await callRoute(`http://localhost/api/rewind/poster/123?${query}`, '123')
+
+        expect(response.status).toBe(400)
+        expect(response.headers.get('Cache-Control')).toBe(ERROR_CACHE)
+        expect(fetchWithTimeout).not.toHaveBeenCalled()
+      }
+    )
 
     it('rejects unauthenticated requests without a share token', async () => {
       ;(getServerSession as jest.Mock).mockResolvedValue(null)
@@ -257,7 +288,7 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
       const response = await callRoute(posterUrl('123'), '123')
 
       expect(response.status).toBe(200)
-      expect(response.headers.get('Content-Type')).toBe('image/jpeg')
+      expect(response.headers.get('Content-Type')).toBe('image/webp')
       expect(response.headers.get('Cache-Control')).toBe(SESSION_CACHE)
       expect(response.headers.get('X-Robots-Tag')).toBeNull()
       expect(prisma.user.findUnique).not.toHaveBeenCalled()
@@ -434,7 +465,7 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
       const response = await callRoute(posterUrl('777', TOK), '777')
 
       expect(response.status).toBe(200)
-      expect(response.headers.get('Cache-Control')).toContain('public')
+      expect(response.headers.get('Cache-Control')).toBe(SESSION_CACHE)
       expect(response.headers.get('X-Robots-Tag')).toBe('noindex')
       expect(getSharedSectionKeys).not.toHaveBeenCalled()
     })
@@ -651,7 +682,7 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
       expect(fetchWithTimeout).not.toHaveBeenCalled()
     })
 
-    it('serves that member a key a share token covers, as a public share response', async () => {
+    it('serves that member a key a share token covers, as a share response', async () => {
       ;(getServerSession as jest.Mock).mockResolvedValue(MEMBER_SESSION)
       jest.mocked(hasEntitlement).mockResolvedValue(false)
       ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue({ ...SHARED_ROW, data: wrappedJson(['123']) })
@@ -660,7 +691,7 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
       const response = await callRoute(posterUrl('123', TOK), '123')
 
       expect(response.status).toBe(200)
-      expect(response.headers.get('Cache-Control')).toBe('public, max-age=300')
+      expect(response.headers.get('Cache-Control')).toBe(SESSION_CACHE)
       expect(prisma.user.findUnique).not.toHaveBeenCalled()
     })
   })
@@ -670,7 +701,7 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
       ;(getServerSession as jest.Mock).mockResolvedValue(null)
     })
 
-    it('serves a key covered by a valid share token as public with noindex', async () => {
+    it('serves a key covered by a valid share token privately with noindex', async () => {
       ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue({
         ...SHARED_ROW,
         data: wrappedJson(['123']),
@@ -680,7 +711,7 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
       const response = await callRoute(posterUrl('123', TOK), '123')
 
       expect(response.status).toBe(200)
-      expect(response.headers.get('Cache-Control')).toBe('public, max-age=300')
+      expect(response.headers.get('Cache-Control')).toBe(SESSION_CACHE)
       expect(response.headers.get('X-Robots-Tag')).toBe('noindex')
       expect(prisma.plexWrapped.findUnique).toHaveBeenCalledWith(
         expect.objectContaining({ where: { shareToken: TOK } })
@@ -902,6 +933,106 @@ describe('GET /api/wrapped/poster/[ratingKey]', () => {
 
       expect(response.status).toBe(404)
       expect(fetchWithTimeout).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('sizes, tones and the disk cache (P5.6)', () => {
+    beforeEach(() => {
+      ;(getServerSession as jest.Mock).mockResolvedValue(ADMIN_SESSION)
+      mockUpstreamImage()
+    })
+
+    it('asks Plex for the served width at 2:3 and renders the asked tone', async () => {
+      const response = await callRoute('http://localhost/api/rewind/poster/123?w=96&tone=ultramarine.paper', '123')
+
+      expect(response.status).toBe(200)
+      const [url] = (fetchWithTimeout as jest.Mock).mock.calls[0]
+      expect(url).toContain('width=96')
+      expect(url).toContain('height=144')
+      expect(renderPoster).toHaveBeenCalledWith(expect.any(Buffer), { w: 96, tone: { spot: 'ultramarine', field: 'paper' }, clash: null })
+      expect(writeCachedPoster).toHaveBeenCalledWith('/cache/posters/123-ultramarine.paper-96.webp', Buffer.from('webp'))
+    })
+
+    it("passes a hero slot's clash pair, and caches it apart from plain full colour", async () => {
+      await callRoute('http://localhost/api/rewind/poster/123?w=240&tone=none&clash=marigold.marigold', '123')
+
+      expect(renderPoster).toHaveBeenCalledWith(expect.any(Buffer), { w: 240, tone: null, clash: { spot: 'marigold', field: 'marigold' } })
+      expect(writeCachedPoster).toHaveBeenCalledWith('/cache/posters/123-none~marigold.marigold-240.webp', expect.any(Buffer))
+    })
+
+    it('serves the v2 path at 480 px in full colour', async () => {
+      await callRoute('http://localhost/api/wrapped/poster/123', '123')
+
+      expect(renderPoster).toHaveBeenCalledWith(expect.any(Buffer), { w: 480, tone: null, clash: null })
+    })
+
+    it('answers a disk-cache hit without a limiter point or a Plex call', async () => {
+      jest.mocked(readCachedPoster).mockResolvedValue(Buffer.from('cached'))
+
+      const response = await callRoute('http://localhost/api/rewind/poster/123?w=160', '123')
+
+      expect(response.status).toBe(200)
+      expect(response.headers.get('Cache-Control')).toBe(SESSION_CACHE)
+      expect(response.headers.get('Content-Type')).toBe('image/webp')
+      expect(readCachedPoster).toHaveBeenCalledWith('/cache/posters/123-none-160.webp')
+      expect(limitRequest).not.toHaveBeenCalled()
+      expect(fetchWithTimeout).not.toHaveBeenCalled()
+    })
+
+    it('still checks access before a cache hit', async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValue(MEMBER_SESSION)
+      mockMember()
+      jest.mocked(readCachedPoster).mockResolvedValue(Buffer.from('cached'))
+
+      const response = await callRoute(posterUrl('999'), '999')
+
+      expect(response.status).toBe(404)
+      expect(readCachedPoster).not.toHaveBeenCalled()
+    })
+
+    it('serves a member the posters their own v3 issue holds, without asking plex.tv', async () => {
+      ;(getServerSession as jest.Mock).mockResolvedValue(MEMBER_SESSION)
+      const v3 = {
+        version: 3,
+        year: 2026,
+        statsVersion: 'stats-2026.1',
+        generatedAt: '2026-11-20T10:00:00.000Z',
+        window: { from: '2026-01-01', through: '2026-11-30', zone: 'UTC', finalCut: false },
+        edition: 'full',
+        facts: {},
+        pages: [
+          { type: 'top-shows', data: { rows: [{ key: 'series:555', monthly: [] }] } },
+          { type: 'guess', data: { options: [{ key: 'film:556' }] } },
+        ],
+        archetype: null,
+        copy: null,
+        copySource: 'template',
+        copyMeta: { model: null, promptVersion: 'p', slotHashes: {} },
+        factsHash: 'h',
+      }
+      ;(prisma.user.findUnique as jest.Mock).mockResolvedValue(memberRow('member-plex-id', JSON.stringify(v3)))
+
+      expect((await callRoute(posterUrl('555'), '555')).status).toBe(200)
+      expect((await callRoute(posterUrl('556'), '556')).status).toBe(200)
+      expect(getSharedSectionKeys).not.toHaveBeenCalled()
+    })
+
+    it('answers an upstream timeout with a 404 within the 3 s budget', async () => {
+      ;(fetchWithTimeout as jest.Mock).mockRejectedValue(abortError())
+
+      const response = await callRoute(posterUrl('123'), '123')
+
+      expect(response.status).toBe(404)
+      expect((fetchWithTimeout as jest.Mock).mock.calls[0][1].timeoutMs).toBeLessThanOrEqual(3000)
+    })
+
+    it('answers art that is not an image with a 404', async () => {
+      jest.mocked(renderPoster).mockRejectedValue(new Error('unsupported image format'))
+
+      const response = await callRoute(posterUrl('123'), '123')
+
+      expect(response.status).toBe(404)
+      expect(writeCachedPoster).not.toHaveBeenCalled()
     })
   })
 })

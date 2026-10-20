@@ -1,13 +1,11 @@
 /**
- * The pages whose steps have not landed (P5.6, P5.7, P7.1, P7.2): each keeps
+ * The pages whose steps have not landed (P5.7, P7.1, P7.2): each keeps
  * its page rule from design 4.3 as `select`, with empty data, a summary read
  * off the facts and the facts its card will print. A page step replaces its
  * entry here with its own module, schema, table and summary.
  *
  * | Page | Kept when |
  * |---|---|
- * | 04 Guess | the quiz is on (`quiz.gapMinutes`: 3 candidates, No. 1 more than 2% ahead, D7) |
- * | 05, 06 | there is a series, a film |
  * | 07, 08 | Taste (60% genre coverage), People (70% cast coverage) |
  * | 11 The race | the race is eligible |
  * | 12 Records | 2 of 4 cells: a binge of 3+, a day of 3+ episodes, completion over 5+ started, a paused title |
@@ -28,7 +26,7 @@ import { has, num, shown } from "./facts"
 
 const EmptySchema = z.strictObject({})
 type Empty = z.infer<typeof EmptySchema>
-type Pending = Exclude<IssuePageType, "cover" | "number" | "bookends">
+type Pending = Exclude<IssuePageType, "cover" | "number" | "bookends" | "guess" | "top-shows" | "top-films">
 
 const RECORD_CELLS = 2
 
@@ -60,9 +58,6 @@ function recordCells(facts: RewindFactsV3): number {
 type Landed = "clock" | "calendar" | "centrefold" | "back-cover"
 
 export const pendingPages: Record<Exclude<Pending, Landed>, PageDefinition<Empty>> = {
-  guess: pending((f) => has(f, "quiz.gapMinutes"), () => "A quiz: which series did you watch most this year?", []),
-  "top-shows": pending((f) => has(f, "series[1].title"), (f) => `Your top series was ${shown(f, "series[1].title")}.`, ["series[1].title", "series[1].minutes"], true),
-  "top-films": pending((f) => has(f, "films[1].title"), (f) => `Your top film was ${shown(f, "films[1].title")}.`, ["films[1].title", "films[1].plays"], true),
   taste: pending((f) => has(f, "taste.genre[1].name"), (f) => `Your top genre was ${shown(f, "taste.genre[1].name")}.`, ["taste.genre[1].name", "taste.genre[1].share"], true),
   people: pending(
     (f) => has(f, "people.actor[1].name") || has(f, "people.director[1].name"),

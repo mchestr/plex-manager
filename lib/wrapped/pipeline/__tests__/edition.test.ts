@@ -29,7 +29,7 @@ describe('editionOf (FR-5)', () => {
 describe('selectIssuePages', () => {
   it('stores the selected pages with their data and drops disabled ones, never the fixed pages', async () => {
     const issue = await fixtureIssue('heavy')
-    const ctx = { stats: issue.stats, archetype: issue.archetype?.id ?? null }
+    const ctx = { userId: 'u1', stats: issue.stats, archetype: issue.archetype?.id ?? null }
     const all = selectIssuePages('full', issue.facts, { ...ctx, disabledPages: [] })
     expect(all.map((p) => p.type)).toEqual(issue.pages.map((p) => p.type))
     expect(all.find((p) => p.type === 'number')?.data).not.toBeNull()
@@ -41,7 +41,7 @@ describe('selectIssuePages', () => {
 
   it('gives the pocket edition its six pages, with the clock or else the calendar', async () => {
     const issue = await fixtureIssue('heavy')
-    const ctx = { stats: issue.stats, archetype: issue.archetype?.id ?? null, disabledPages: [] }
+    const ctx = { userId: 'u1', stats: issue.stats, archetype: issue.archetype?.id ?? null, disabledPages: [] }
     expect(selectIssuePages('pocket', issue.facts, ctx).map((p) => p.type)).toEqual(['cover', 'number', 'short-list', 'clock', 'centrefold', 'back-cover'])
     const light = await fixtureIssue('light')
     const types = selectIssuePages('pocket', light.facts, { ...ctx, stats: light.stats }).map((p) => p.type)
@@ -50,7 +50,7 @@ describe('selectIssuePages', () => {
 
   it('gives the postcard its cover alone', async () => {
     const issue = await fixtureIssue('light')
-    const pages = selectIssuePages('postcard', issue.facts, { stats: issue.stats, archetype: null, disabledPages: [] })
+    const pages = selectIssuePages('postcard', issue.facts, { userId: 'u1', stats: issue.stats, archetype: null, disabledPages: [] })
     expect(pages.map((p) => p.type)).toEqual(['cover'])
   })
 })

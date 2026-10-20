@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-import { TitleKeySchema } from "./bookends.schema"
+import { TitleKeySchema } from "./title-key.schema"
 
 /** One day of the window: its minutes, and the key of its top listed title (null when nothing listed was played). */
 const DaySchema = z.strictObject({ minutes: z.number().int().nonnegative(), key: TitleKeySchema.nullable() })
