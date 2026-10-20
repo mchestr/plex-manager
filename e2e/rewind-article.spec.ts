@@ -1,6 +1,6 @@
 import type { Browser } from '@playwright/test';
 
-import { fixtureIssue } from '../lib/rewind/__tests__/helpers/fixture-issue';
+import heavyIssue from './fixtures/rewind/heavy-issue.json';
 
 import { axeFor } from './a11y/scan';
 import { expect, test, TEST_USERS } from './fixtures/auth';
@@ -20,8 +20,9 @@ const YEAR = 2026;
 const URL = `/rewind/${YEAR}/read`;
 let pageCount = 0;
 
-async function seedIssue() {
-  const issue = await fixtureIssue('heavy', { serial: 'K7Q4', nthRewind: 4 });
+// The heavy golden fixture as the pipeline builds it; lib/rewind/__tests__/e2e-issue-fixture.test.ts keeps it current
+function seedIssue() {
+  const issue = heavyIssue;
   pageCount = issue.pages.length;
   return {
     version: 3,
@@ -31,7 +32,7 @@ async function seedIssue() {
     window: { from: '2026-01-01', through: '2026-11-30', zone: 'America/Chicago', finalCut: false },
     edition: issue.edition,
     facts: issue.facts,
-    pages: issue.pages.map(({ type, data }) => ({ type, data })),
+    pages: issue.pages,
     archetype: issue.archetype,
     copy: null,
     copySource: 'template',
@@ -48,7 +49,7 @@ async function adminContext(browser: Browser, baseURL: string | undefined, optio
 
 test.describe('Rewind article mode @article', () => {
   test.beforeAll(async () => {
-    const data = await seedIssue();
+    const data = seedIssue();
     const prisma = createE2EPrismaClient();
     try {
       await prisma.plexWrapped.deleteMany({ where: { userId: TEST_USERS.ADMIN.id, year: YEAR } });
