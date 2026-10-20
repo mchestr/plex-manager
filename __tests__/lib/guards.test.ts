@@ -54,7 +54,7 @@ describe('ensureSubscriptionOrAccess', () => {
     expect(mockLevel).toHaveBeenCalledWith('user-1')
   })
 
-  it.each(['/rewind/2026', '/rewind', '/wrapped', '/wrapped/2025'])('lets a lapsed member open %s', async (path) => {
+  it.each(['/rewind/2026', '/rewind', '/rewind/2025'])('lets a lapsed member open %s', async (path) => {
     mockLevel.mockResolvedValue('lapsed')
     onPath(path)
 
@@ -72,7 +72,7 @@ describe('ensureSubscriptionOrAccess', () => {
     expect(mockRedirect).toHaveBeenCalledWith('/subscribe')
   })
 
-  it.each(['/', '/wrapped/2026', '/rewind/2026'])('redirects a member with no access from %s', async (path) => {
+  it.each(['/', '/rewind', '/rewind/2026'])('redirects a member with no access from %s', async (path) => {
     mockLevel.mockResolvedValue('none')
     onPath(path)
 

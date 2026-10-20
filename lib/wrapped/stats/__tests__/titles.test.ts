@@ -28,6 +28,7 @@ describe.each(ZONES)("computeTitles in %s", (zone) => {
       expect(computeTitles(race(21), ctx, none).quiz).toEqual({
         kind: "series",
         options: ["series:1", "series:2", "series:3", "series:4"],
+        titles: ["Series 1", "Series 2", "Series 3", "Series 4"],
         gapMinutes: 21,
       })
     })
@@ -39,6 +40,7 @@ describe.each(ZONES)("computeTitles in %s", (zone) => {
       expect(computeTitles([...two, film], ctx, none).quiz).toEqual({
         kind: "mixed",
         options: ["film:77", "series:1", "series:2"],
+        titles: ["Film 77", "Series 1", "Series 2"],
         gapMinutes: 70,
       })
       expect(computeTitles(two, ctx, none).quiz).toBeNull()
@@ -50,6 +52,7 @@ describe.each(ZONES)("computeTitles in %s", (zone) => {
     const [series] = computeTitles([...events, play({ at: "2026-05-01T20:00", zone, series: "9", season: 2, episode: 1 })], ctx, none).series
 
     expect(series).toMatchObject({ key: "series:9", episodes: 3, seasons: 2, monthsActive: 2, rewatched: 2 })
+    expect(series.monthly).toEqual([0, 0, 180, 0, 30, 0, 0, 0, 0, 0, 0, 0])
   })
 
   it("ranks films by plays, then minutes", () => {

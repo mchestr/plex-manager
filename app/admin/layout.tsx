@@ -15,7 +15,11 @@ export default async function AdminLayout({
   // layout, and a production build hides a thrown error's name (BP-27).
   const gate = await getAdminGate()
   if (!gate.ok) {
-    return gate.reason === "unauthenticated" ? <UnauthenticatedError /> : <UnauthorizedError />
+    return (
+      <main id="main" tabIndex={-1} className="outline-none">
+        {gate.reason === "unauthenticated" ? <UnauthenticatedError /> : <UnauthorizedError />}
+      </main>
+    )
   }
   const { session } = gate
   const settings = await getAdminSettings()

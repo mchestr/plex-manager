@@ -76,7 +76,8 @@ describe('DiscordLinkPage', () => {
 
     expect(mockStatus).toHaveBeenCalledWith('user-1')
     expect(mockIntegration).toHaveBeenCalledWith(true)
-    expect(screen.getByRole('main')).toHaveAttribute('id', 'main')
+    // The (app) layout renders the route's one main#main (P3.2).
+    expect(screen.queryByRole('main')).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument()
     expect(screen.getByTestId('discord-link-panel')).toHaveAttribute(
       'data-connect-url',

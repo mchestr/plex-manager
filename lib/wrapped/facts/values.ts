@@ -48,6 +48,17 @@ function timeAndCounts({ totals, milestones }: MemberStats): FactValues {
   })
 }
 
+function bookends({ bookends: { first, last } }: MemberStats): FactValues {
+  return present({
+    "bookends.first.title": first?.title,
+    "bookends.first.date": first?.date,
+    "bookends.first.time": first && clock(first),
+    "bookends.last.title": last?.title,
+    "bookends.last.date": last?.date,
+    "bookends.last.time": last && clock(last),
+  })
+}
+
 function daysAndHours({ calendar, sessions, time }: MemberStats): FactValues {
   const counted = time.peak !== null
   return present({
@@ -200,6 +211,7 @@ function server({ race, devices, requests, community, nextYear }: MemberStats): 
 export function statFacts(stats: MemberStats): FactValues {
   return {
     ...timeAndCounts(stats),
+    ...bookends(stats),
     ...daysAndHours(stats),
     ...lists(stats),
     ...records(stats),

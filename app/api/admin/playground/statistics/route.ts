@@ -1,217 +1,74 @@
+/**
+ * The v2 playground's statistics (DUP-02, BP-25): one assembly path,
+ * `collectV2Statistics`, the same one the v2 job used, so the playground
+ * also gets the derived statistics and the percentile. The member is
+ * resolved by id (the app user id, or the Plex account id the playground's
+ * user list carries), never by name. P8.8 deletes this route.
+ */
+
+import { NextRequest, NextResponse } from "next/server"
+import { z } from "zod"
+
+import { parseSearchParams } from "@/lib/actions/route"
 import { prisma } from "@/lib/prisma"
 import { requireAdminAPI } from "@/lib/security/api-helpers"
-import { limitRequest } from "@/lib/security/rate-limit"
 import { createSafeError, ErrorCode, getStatusCode, logError } from "@/lib/security/error-handler"
-import { NextRequest, NextResponse } from "next/server"
-import { fetchOverseerrStatistics } from "@/lib/wrapped/overseerr-statistics"
-import { fetchPlexServerStatistics } from "@/lib/wrapped/server-statistics"
-import {
-  fetchTautulliStatistics,
-  fetchTopContentLeaderboards,
-  fetchWatchTimeLeaderboard,
-} from "@/lib/wrapped/tautulli-statistics"
-import { WrappedStatistics } from "@/types/wrapped"
+import { limitRequest } from "@/lib/security/rate-limit"
+import { collectV2Statistics } from "@/lib/wrapped/pipeline/collect-v2-statistics"
+import { RewindGenerationError } from "@/lib/wrapped/pipeline/generation-error"
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic"
+
+const querySchema = z.object({
+  userId: z.string().min(1, "userId parameter is required").max(64),
+  year: z.coerce.number().int().min(2000, "Invalid year parameter").max(2100, "Invalid year parameter"),
+})
+
+const PLAYGROUND_TIMEOUT_MS = 120_000
+
+function failure(code: ErrorCode, message: string) {
+  return NextResponse.json(createSafeError(code, message), { status: getStatusCode(code) })
+}
 
 export async function GET(request: NextRequest) {
   try {
-    // Apply rate limiting
-    const rateLimitResponse = await limitRequest("admin", request)
-    if (rateLimitResponse) {
-      return rateLimitResponse
-    }
+    const limited = await limitRequest("admin", request)
+    if (limited) return limited
+    const auth = await requireAdminAPI(request)
+    if (auth.response) return auth.response
 
-    // Require admin authentication
-    const authResult = await requireAdminAPI(request)
-    if (authResult.response) {
-      return authResult.response
-    }
+    const query = parseSearchParams(querySchema, request.nextUrl)
+    if (!query.ok) return query.response
+    const { userId, year } = query.data
 
-    const userName = request.nextUrl.searchParams.get("userName")
-    const yearParam = request.nextUrl.searchParams.get("year")
-    const year = yearParam ? parseInt(yearParam, 10) : new Date().getFullYear()
-
-    if (!userName) {
-      return NextResponse.json(
-        createSafeError(ErrorCode.VALIDATION_ERROR, "userName parameter is required"),
-        { status: getStatusCode(ErrorCode.VALIDATION_ERROR) }
-      )
-    }
-
-    if (isNaN(year) || year < 2000 || year > 2100) {
-      return NextResponse.json(
-        createSafeError(ErrorCode.VALIDATION_ERROR, "Invalid year parameter"),
-        { status: getStatusCode(ErrorCode.VALIDATION_ERROR) }
-      )
-    }
-
-    // Find user by name (try name first, then email)
     const user = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { name: userName },
-          { email: userName },
-        ],
-      },
+      where: { OR: [{ id: userId }, { plexUserId: userId }] },
+      select: { plexUserId: true, email: true },
     })
+    if (!user) return failure(ErrorCode.NOT_FOUND, "User not found")
+    if (!user.plexUserId) return failure(ErrorCode.VALIDATION_ERROR, "User does not have a Plex user ID")
 
-    if (!user) {
-      return NextResponse.json(
-        createSafeError(ErrorCode.NOT_FOUND, `User not found: ${userName}`),
-        { status: getStatusCode(ErrorCode.NOT_FOUND) }
-      )
-    }
+    const [plexServer, tautulli, overseerr] = await Promise.all([
+      prisma.plexServer.findFirst({ where: { isActive: true }, select: { name: true, url: true, token: true } }),
+      prisma.tautulli.findFirst({ where: { isActive: true }, select: { url: true, apiKey: true } }),
+      prisma.overseerr.findFirst({ where: { isActive: true }, select: { url: true, apiKey: true } }),
+    ])
+    if (!plexServer || !tautulli) return failure(ErrorCode.NOT_FOUND, "No active Plex or Tautulli server configured")
 
-    if (!user.plexUserId) {
-      return NextResponse.json(
-        createSafeError(ErrorCode.VALIDATION_ERROR, "User does not have a Plex user ID"),
-        { status: getStatusCode(ErrorCode.VALIDATION_ERROR) }
-      )
-    }
-
-    // Get Tautulli configuration
-    const tautulli = await prisma.tautulli.findFirst({
-      where: { isActive: true },
+    const statistics = await collectV2Statistics({
+      member: { plexUserId: user.plexUserId, email: user.email },
+      year,
+      plexServer,
+      tautulli,
+      overseerr,
+      signal: AbortSignal.timeout(PLAYGROUND_TIMEOUT_MS),
     })
-
-    if (!tautulli) {
-      return NextResponse.json(
-        createSafeError(ErrorCode.NOT_FOUND, "No active Tautulli server configured"),
-        { status: getStatusCode(ErrorCode.NOT_FOUND) }
-      )
-    }
-
-    // Fetch statistics from Tautulli
-    const tautulliStats = await fetchTautulliStatistics(
-      {
-        url: tautulli.url,
-        apiKey: tautulli.apiKey,
-      },
-      { plexUserId: user.plexUserId },
-      year
-    )
-
-    if (!tautulliStats.success || !tautulliStats.data) {
-      return NextResponse.json(
-        createSafeError(ErrorCode.INTERNAL_ERROR, tautulliStats.error || "Failed to fetch Tautulli statistics"),
-        { status: getStatusCode(ErrorCode.INTERNAL_ERROR) }
-      )
-    }
-
-    const tautulliStatsData = tautulliStats.data
-
-    // Fetch server statistics
-    const plexServer = await prisma.plexServer.findFirst({
-      where: { isActive: true },
-    })
-
-    let serverStats
-    if (plexServer && tautulli) {
-      const serverStatsResult = await fetchPlexServerStatistics(
-        {
-          url: plexServer.url,
-          token: plexServer.token,
-        },
-        {
-          url: tautulli.url,
-          apiKey: tautulli.apiKey,
-        }
-      )
-
-      if (serverStatsResult.success && serverStatsResult.data) {
-        serverStats = {
-          serverName: plexServer.name,
-          totalStorage: serverStatsResult.data.totalStorage,
-          totalStorageFormatted: serverStatsResult.data.totalStorageFormatted,
-          librarySize: serverStatsResult.data.librarySize,
-        }
-      }
-    }
-
-    // Fetch Overseerr statistics (optional)
-    let overseerrStats
-    const overseerr = await prisma.overseerr.findFirst({
-      where: { isActive: true },
-    })
-
-    if (overseerr) {
-      const overseerrData = await fetchOverseerrStatistics(
-        {
-          url: overseerr.url,
-          apiKey: overseerr.apiKey,
-        },
-        { plexUserId: user.plexUserId, email: user.email },
-        year
-      )
-      if (overseerrData.success && overseerrData.data) {
-        overseerrStats = overseerrData.data
-      }
-    }
-
-    // Fetch leaderboard data
-    let leaderboards
-    if (tautulli && tautulliStatsData.tautulliUserId) {
-      const [topContentLeaderboards, watchTimeLeaderboard] = await Promise.all([
-        fetchTopContentLeaderboards(
-          {
-            url: tautulli.url,
-            apiKey: tautulli.apiKey,
-          },
-          tautulliStatsData.topMovies,
-          tautulliStatsData.topShows,
-          tautulliStatsData.tautulliUserId,
-          year
-        ),
-        fetchWatchTimeLeaderboard(
-          {
-            url: tautulli.url,
-            apiKey: tautulli.apiKey,
-          },
-          year
-        ),
-      ])
-
-      if (topContentLeaderboards.success && topContentLeaderboards.data && watchTimeLeaderboard.success && watchTimeLeaderboard.data) {
-        const userIndex = watchTimeLeaderboard.data.findIndex(
-          (entry) => entry.userId === tautulliStatsData.tautulliUserId
-        )
-        leaderboards = {
-          topContent: topContentLeaderboards.data,
-          watchTime: {
-            leaderboard: watchTimeLeaderboard.data,
-            userPosition: userIndex >= 0 ? userIndex + 1 : undefined,
-            totalUsers: watchTimeLeaderboard.data.length,
-          },
-        }
-      }
-    }
-
-    // Build statistics object
-    const statistics: WrappedStatistics = {
-      totalWatchTime: {
-        total: tautulliStatsData.totalWatchTime,
-        movies: tautulliStatsData.moviesWatchTime,
-        shows: tautulliStatsData.showsWatchTime,
-      },
-      moviesWatched: tautulliStatsData.moviesWatched,
-      showsWatched: tautulliStatsData.showsWatched,
-      episodesWatched: tautulliStatsData.episodesWatched,
-      topMovies: tautulliStatsData.topMovies,
-      topShows: tautulliStatsData.topShows,
-      watchTimeByMonth: tautulliStatsData.watchTimeByMonth,
-      ...(serverStats && { serverStats }),
-      ...(overseerrStats && { overseerrStats }),
-      ...(leaderboards && { leaderboards }),
-    }
-
     return NextResponse.json({ statistics })
   } catch (error) {
+    if (error instanceof RewindGenerationError && error.code === "TAUTULLI_USER_NOT_FOUND") {
+      return failure(ErrorCode.NOT_FOUND, "The member is not in Tautulli's user list")
+    }
     logError("ADMIN_PLAYGROUND_STATISTICS_API", error)
-    return NextResponse.json(
-      createSafeError(ErrorCode.INTERNAL_ERROR, "Failed to fetch statistics"),
-      { status: getStatusCode(ErrorCode.INTERNAL_ERROR) }
-    )
+    return failure(ErrorCode.INTERNAL_ERROR, "Failed to fetch statistics")
   }
 }
-

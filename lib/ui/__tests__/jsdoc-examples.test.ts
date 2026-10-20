@@ -1,9 +1,10 @@
 /**
  * The @example blocks in lib/ui/markdown.ts, lib/ui/error-copy.ts,
- * lib/ui/status.ts and lib/ui/poster-palette.ts.
+ * lib/ui/status.ts, lib/ui/poster-palette.ts and lib/ui/flash-codes.ts.
  */
 
 import { errorCopy } from '../error-copy'
+import { readFlash } from '../flash-codes'
 import { safeHref, safeLink } from '../markdown'
 import { posterPalette } from '../poster-palette'
 import { resolveStatus, settingsCategory } from '../status'
@@ -51,6 +52,14 @@ describe('JSDoc Documentation Examples', () => {
     expect(errorCopy("Can't reach database server at db:5432", { audience: 'admin' }).title).toBe(
       'Something went wrong on our side'
     )
+  })
+
+  it('readFlash', () => {
+    const read = readFlash(new URLSearchParams('flash=discord_linked&tab=2'))
+    expect(read?.toasts[0].title).toBe('Discord linked')
+    expect(read?.query.toString()).toBe('tab=2')
+    expect(readFlash(new URLSearchParams('error=Your account is locked'))?.toasts).toEqual([])
+    expect(readFlash(new URLSearchParams('status=failed'))).toBeNull()
   })
 })
 

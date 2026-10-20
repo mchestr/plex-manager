@@ -38,9 +38,19 @@ export async function analyzeAtRest(page: Page, builder: AxeBuilder): Promise<Ax
  */
 export async function scanAgainstBaseline(page: Page, name: string): Promise<void> {
   const results = await analyzeAtRest(page, axeFor(page));
-  enforceBaseline({
-    route: name,
-    summary: summarizeAxe(results),
-    update: process.env.UPDATE_AXE_BASELINE === '1',
-  });
+  try {
+    enforceBaseline({
+      route: name,
+      summary: summarizeAxe(results),
+      update: process.env.UPDATE_AXE_BASELINE === '1',
+    });
+  } catch (error) {
+    // The message names three targets per key; the job log gets every one, so a
+    // count that differs only in CI can be traced without the report artifact.
+    const nodes = [...results.violations, ...results.incomplete].flatMap((rule) =>
+      rule.nodes.map((node) => `${rule.id}${results.incomplete.includes(rule) ? ' (incomplete)' : ''}: ${node.target.join(' ')}`)
+    );
+    console.log(`axe nodes on ${name}:\n  ${nodes.join('\n  ')}`);
+    throw error;
+  }
 }

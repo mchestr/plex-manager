@@ -20,8 +20,8 @@ export type A11yAudience = 'public' | 'member' | 'admin';
 export interface A11yRoute {
   path: string;
   as: A11yAudience;
-  /** Test id that marks the page as loaded; `null` for Next's built-in 404, which has none. */
-  ready: string | null;
+  /** Test id that marks the page as loaded. */
+  ready: string;
   /** Names an interactive state that `setup` opens; part of the baseline key. */
   state?: string;
   /** Opens the interactive state after `ready` shows. */
@@ -77,13 +77,13 @@ export const A11Y_ROUTES: A11yRoute[] = [
   { path: '/auth/denied', as: 'public', ready: 'access-denied-heading' },
   // No PIN in the URL: the callback's error state.
   { path: '/auth/callback/plex', as: 'public', ready: 'plex-callback-error-heading' },
-  { path: `/wrapped/share/${A11Y_SHARE_TOKEN}`, as: 'public', ready: 'wrapped-share-heading' },
-  { path: '/a11y-missing-page', as: 'public', ready: null },
+  { path: `/rewind/s/${A11Y_SHARE_TOKEN}`, as: 'public', ready: 'wrapped-share-heading' },
+  { path: '/a11y-missing-page', as: 'public', ready: 'not-found-heading' },
 
   // Member
   { path: '/', as: 'member', ready: 'plex-link-card' },
-  { path: '/wrapped', as: 'member', ready: 'wrapped-viewer' },
-  { path: `/wrapped/${VISUAL_REWIND_YEAR}`, as: 'member', ready: 'wrapped-viewer' },
+  { path: '/rewind', as: 'member', ready: 'wrapped-viewer' },
+  { path: `/rewind/${VISUAL_REWIND_YEAR}`, as: 'member', ready: 'wrapped-viewer' },
   { path: '/onboarding', as: 'member', userId: VISUAL_ONBOARDING_USER.id, ready: 'onboarding-welcome-heading' },
   { path: '/discord/link', as: 'member', ready: 'discord-link-panel' },
   { path: '/subscribe', as: 'member', stripe: true, ready: 'subscribe-page' },
@@ -98,7 +98,8 @@ export const A11Y_ROUTES: A11yRoute[] = [
     ready: 'users-filter-role',
     setup: (page) => openWith(page, 'users-filter-role', 'users-filter-role-option-admin'),
   },
-  { path: `/admin/users/${regularId}`, as: 'admin', ready: 'admin-user-season-wrapped-view' },
+  // Its Visits and Rewind table count the share visit the public share route records.
+  { path: `/admin/users/${regularId}`, as: 'admin', ready: 'admin-user-season-wrapped-view', reset: clearA11yShareVisits },
   { path: `/admin/users/${regularId}/wrapped`, as: 'admin', ready: 'admin-user-wrapped-heading' },
   { path: '/admin/invites', as: 'admin', ready: 'generate-invite-button' },
   {

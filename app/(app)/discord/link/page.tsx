@@ -25,7 +25,7 @@ export default async function DiscordLinkPage() {
   ])
 
   return (
-    <main id="main" className="min-h-screen bg-slate-950 px-4 py-12 sm:px-6">
+    <div className="min-h-screen bg-slate-950 px-4 py-12 sm:px-6">
       <div className="mx-auto w-full max-w-2xl space-y-6">
         <h1 className="text-3xl font-bold text-white">Discord</h1>
         {/* Only non-secret integration fields cross into the client component. */}
@@ -38,6 +38,6 @@ export default async function DiscordLinkPage() {
           serverInviteCode={integration?.serverInviteCode ?? null}
         />
       </div>
-    </main>
+    </div>
   )
 }

@@ -20,7 +20,7 @@ const logger = createLogger("LLM_STRUCTURED")
 
 type ProviderOptions = NonNullable<Parameters<typeof generateText>[0]["providerOptions"]>
 
-export type StructuredErrorCode =
+type StructuredErrorCode =
   | "NOT_CONFIGURED"
   | "TRUNCATED"
   | "CONTENT_FILTER"
@@ -68,6 +68,17 @@ export interface GenerateStructuredInput<S extends z.ZodType> {
   modelOverride?: string
   /** Kept on the usage row (the admin LLM history shows it). */
   recordText?: boolean
+}
+
+/** Where the model comes from and where usage goes; the eval harness swaps both. */
+export interface StructuredDeps {
+  resolve: (purpose: LLMPurpose, override: { model?: string }) => Promise<ResolvedModel | null>
+  record: typeof recordUsage
+}
+
+const defaultDeps: StructuredDeps = {
+  resolve: (purpose, override) => getLanguageModel(purpose, override),
+  record: (record) => recordUsage(record),
 }
 
 /** What the last step returned, captured before the SDK parses the output. */
@@ -144,11 +155,12 @@ const MESSAGES: Record<StructuredErrorCode, string> = {
  * the provider row itself cannot be read.
  */
 export async function generateStructured<S extends z.ZodType>(
-  input: GenerateStructuredInput<S>
+  input: GenerateStructuredInput<S>,
+  deps: StructuredDeps = defaultDeps
 ): Promise<StructuredResult<z.infer<S>>> {
   let resolved: ResolvedModel | null
   try {
-    resolved = await getLanguageModel(input.purpose, { model: input.modelOverride })
+    resolved = await deps.resolve(input.purpose, { model: input.modelOverride })
   } catch (error) {
     if (error instanceof LLMConfigError) return { ok: false, error: { code: "NOT_CONFIGURED", message: error.message } }
     throw error
@@ -163,7 +175,7 @@ export async function generateStructured<S extends z.ZodType>(
     const usage = toTokenUsage(snapshot.usage)
     const served = lookupModel(info.provider, snapshot.modelId)
     const cost = costUsd(served.known ? served : info, usage)
-    await recordUsage({
+    await deps.record({
       attribution: input.attribution,
       provider: info.provider,
       modelId: snapshot.modelId,

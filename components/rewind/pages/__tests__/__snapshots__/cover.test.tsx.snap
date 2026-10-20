@@ -1,0 +1,8 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`01 Cover summarises the soundtrack deterministically 1`] = `
+[
+  "The soundtrack of 2026: one line for each day, 289 of 334 days with something played.",
+  "The soundtrack of 2026: one line for each day, 4 of 334 days with something played.",
+]
+`;

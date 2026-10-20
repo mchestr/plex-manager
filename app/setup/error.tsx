@@ -10,9 +10,9 @@ export default function Error({
   reset: () => void
 }) {
   return (
-    <main className="min-h-screen bg-slate-950 flex items-center justify-center">
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center">
       <ErrorState error={error} reset={reset} title="Setup Error" />
-    </main>
+    </div>
   )
 }
 

@@ -84,7 +84,7 @@ export function UserDashboard({
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex items-start sm:items-center justify-center px-4 sm:px-6 lg:px-8 py-4 sm:py-0 pb-24 overflow-y-auto">
+      <div className="flex-1 flex items-start sm:items-center justify-center px-4 sm:px-6 lg:px-8 py-4 sm:py-0 pb-24 overflow-y-auto">
         <div className="w-full max-w-4xl space-y-6 sm:space-y-8">
           {/* Server Name - Front and Center */}
           <div className="text-center">
@@ -139,7 +139,7 @@ export function UserDashboard({
               </div>
             )}
           </div>
-        </main>
+        </div>
 
       {/* Status Footer */}
       {prometheusStatus && (

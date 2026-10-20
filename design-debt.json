@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "commit": "5fef45f095821c37265becc27b5dec11f324640a",
-  "generatedAt": "2026-10-19T22:32:43.398Z",
+  "commit": "f17d25942db3675b3b10cd3d9bf6b7531ca528d6",
+  "generatedAt": "2026-10-20T01:00:25.060Z",
   "files": {
     "app/(app)/discord/link/page.tsx": {
       "raw-palette": 2
@@ -10,24 +10,6 @@
       "gradient": 4,
       "gradient-text": 4,
       "raw-palette": 13
-    },
-    "app/(app)/wrapped/[year]/not-found.tsx": {
-      "blur": 1,
-      "gradient": 1,
-      "raw-palette": 9
-    },
-    "app/(app)/wrapped/error.tsx": {
-      "raw-palette": 1
-    },
-    "app/(app)/wrapped/loading.tsx": {
-      "raw-palette": 1
-    },
-    "app/(public)/wrapped/share/[token]/not-found.tsx": {
-      "gradient": 1,
-      "raw-palette": 8
-    },
-    "app/(public)/wrapped/share/[token]/page.tsx": {
-      "raw-palette": 2
     },
     "app/admin/cost-analysis/page.tsx": {
       "blur": 13,
@@ -156,9 +138,6 @@
       "gradient-text": 4,
       "raw-palette": 26
     },
-    "app/layout.tsx": {
-      "zoom-lock": 2
-    },
     "app/loading.tsx": {
       "gradient": 1,
       "raw-palette": 3
@@ -168,6 +147,13 @@
     },
     "app/onboarding/loading.tsx": {
       "raw-palette": 1
+    },
+    "app/rewind/s/[token]/not-found.tsx": {
+      "gradient": 1,
+      "raw-palette": 8
+    },
+    "app/rewind/s/[token]/page.tsx": {
+      "raw-palette": 2
     },
     "app/setup/error.tsx": {
       "raw-palette": 1
@@ -796,24 +782,17 @@
     },
     "components/wrapped/wrapped-year-links.tsx": {
       "raw-palette": 9
-    },
-    "components/wrapped/wrapped-year-view.tsx": {
-      "blur": 3,
-      "copy": 5,
-      "gradient": 1,
-      "raw-palette": 25
     }
   },
   "totals": {
     "arbitrary-color": 17,
     "arbitrary-type-z": 39,
-    "blur": 143,
+    "blur": 139,
     "caps-eyebrow": 91,
-    "copy": 41,
-    "gradient": 136,
+    "copy": 36,
+    "gradient": 134,
     "gradient-text": 56,
     "infinite-motion": 56,
-    "raw-palette": 3467,
-    "zoom-lock": 2
+    "raw-palette": 3431
   }
 }

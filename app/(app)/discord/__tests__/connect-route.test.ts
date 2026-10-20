@@ -101,16 +101,24 @@ describe("discord connect route rate limiting", () => {
     expect(mockCreateUrl).toHaveBeenCalledWith("user-1", "https://evil.com")
   })
 
-  it("blocks and redirects with an error when the rate limit is exceeded (URL not built)", async () => {
+  it("blocks and redirects home with a fixed code when the rate limit is exceeded (URL not built)", async () => {
     mockConsume.mockResolvedValue({ ok: false, retryAfterSec: 120 })
 
     const res = await GET(makeRequest())
 
     expect(mockCreateUrl).not.toHaveBeenCalled()
     expect(res.status).toBe(307)
-    const location = res.headers.get("location") ?? ""
-    expect(location).toContain("error=")
-    // Points back to the app root, not to Discord.
-    expect(location).not.toContain("discord.com")
+    // A code for FlashFromQuery (P3.2), never a message.
+    expect(res.headers.get("location")).toBe("http://localhost:3000/?flash=discord_rate_limited")
+  })
+
+  it("redirects home with a fixed code when the authorize URL cannot be built, and logs the reason", async () => {
+    mockConsume.mockResolvedValue({ ok: true })
+    mockCreateUrl.mockRejectedValue(new Error("Discord client id is not configured"))
+
+    const res = await GET(makeRequest())
+
+    expect(res.headers.get("location")).toBe("http://localhost:3000/?flash=discord_unavailable")
+    expect(res.cookies.get(DISCORD_OAUTH_COOKIE)).toBeUndefined()
   })
 })

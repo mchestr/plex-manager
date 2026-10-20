@@ -1,190 +1,136 @@
 {
   "admin /admin/announcements": {
     "color-contrast|incomplete": 24,
-    "heading-order|moderate": 1,
-    "meta-viewport|moderate": 1
+    "heading-order|moderate": 1
   },
   "admin /admin/cost-analysis": {
     "color-contrast|incomplete": 70,
-    "meta-viewport|moderate": 1,
     "role-img-alt|serious": 4
   },
   "admin /admin/discord": {
-    "color-contrast|incomplete": 79,
-    "meta-viewport|moderate": 1
+    "color-contrast|incomplete": 79
   },
   "admin /admin/invites": {
-    "color-contrast|incomplete": 35,
-    "meta-viewport|moderate": 1
+    "color-contrast|incomplete": 35
   },
   "admin /admin/invites [confirm dialog open]": {
-    "color-contrast|incomplete": 35,
-    "meta-viewport|moderate": 1
+    "color-contrast|incomplete": 35
   },
   "admin /admin/invites [create dialog open]": {
-    "color-contrast|incomplete": 35,
-    "meta-viewport|moderate": 1
+    "color-contrast|incomplete": 35
   },
   "admin /admin/invites/visual-invite-ok": {
     "color-contrast|incomplete": 37,
-    "heading-order|moderate": 1,
-    "meta-viewport|moderate": 1
+    "heading-order|moderate": 1
   },
   "admin /admin/llm-usage": {
-    "color-contrast|incomplete": 73,
-    "meta-viewport|moderate": 1
+    "color-contrast|incomplete": 73
   },
   "admin /admin/llm-usage/conversation/a11y-conversation": {
     "color-contrast|incomplete": 46,
-    "color-contrast|serious": 1,
-    "meta-viewport|moderate": 1
+    "color-contrast|serious": 1
   },
   "admin /admin/llm-usage/visual-llm-usage-1": {
-    "color-contrast|incomplete": 58,
-    "meta-viewport|moderate": 1
+    "color-contrast|incomplete": 58
   },
   "admin /admin/playground": {
     "color-contrast|incomplete": 30,
-    "label|critical": 1,
-    "meta-viewport|moderate": 1
+    "label|critical": 1
   },
   "admin /admin/prompts": {
     "color-contrast|incomplete": 36,
-    "color-contrast|serious": 2,
-    "meta-viewport|moderate": 1
+    "color-contrast|serious": 2
   },
   "admin /admin/prompts/new": {
-    "color-contrast|incomplete": 45,
-    "meta-viewport|moderate": 1
+    "color-contrast|incomplete": 45
   },
   "admin /admin/prompts/visual-prompt-active": {
     "color-contrast|incomplete": 33,
-    "color-contrast|serious": 1,
-    "meta-viewport|moderate": 1
+    "color-contrast|serious": 1
   },
   "admin /admin/prompts/visual-prompt-active/edit": {
-    "color-contrast|incomplete": 50,
-    "meta-viewport|moderate": 1
+    "color-contrast|incomplete": 50
   },
   "admin /admin/queues": {
     "color-contrast|incomplete": 48,
     "color-contrast|serious": 1,
-    "heading-order|moderate": 1,
-    "meta-viewport|moderate": 1
+    "heading-order|moderate": 1
   },
   "admin /admin/settings": {
-    "color-contrast|incomplete": 112,
-    "meta-viewport|moderate": 1
+    "color-contrast|incomplete": 112
   },
   "admin /admin/settings [Wrapped settings editing]": {
-    "color-contrast|incomplete": 112,
-    "meta-viewport|moderate": 1
+    "color-contrast|incomplete": 112
   },
   "admin /admin/shares": {
     "color-contrast|incomplete": 46,
     "color-contrast|serious": 1,
-    "meta-viewport|moderate": 1,
     "role-img-alt|serious": 1
   },
   "admin /admin/users": {
     "color-contrast|incomplete": 46,
-    "heading-order|moderate": 1,
-    "meta-viewport|moderate": 1
+    "heading-order|moderate": 1
   },
   "admin /admin/users [role filter open]": {
     "color-contrast|incomplete": 46,
-    "heading-order|moderate": 1,
-    "meta-viewport|moderate": 1
+    "heading-order|moderate": 1
   },
   "admin /admin/users/regular-user-id": {
-    "color-contrast|incomplete": 61,
-    "color-contrast|serious": 2,
-    "meta-viewport|moderate": 1
+    "color-contrast|incomplete": 60,
+    "color-contrast|serious": 2
   },
   "admin /admin/users/regular-user-id/wrapped": {
     "color-contrast|incomplete": 12,
-    "landmark-main-is-top-level|moderate": 1,
-    "landmark-no-duplicate-main|moderate": 1,
-    "landmark-unique|moderate": 1,
-    "link-name|serious": 1,
-    "meta-viewport|moderate": 1
+    "link-name|serious": 1
   },
   "admin /admin/wrapped/visual-rewind/history/visual-llm-usage-1": {
     "color-contrast|incomplete": 6,
-    "landmark-main-is-top-level|moderate": 1,
-    "landmark-no-duplicate-main|moderate": 1,
-    "landmark-unique|moderate": 1,
-    "link-name|serious": 1,
-    "meta-viewport|moderate": 1
+    "link-name|serious": 1
   },
   "member /": {
     "color-contrast|incomplete": 13,
-    "heading-order|moderate": 1,
-    "meta-viewport|moderate": 1
+    "heading-order|moderate": 1
   },
   "member /discord/link": {
     "color-contrast|incomplete": 2,
-    "color-contrast|serious": 1,
-    "meta-viewport|moderate": 1
+    "color-contrast|serious": 1
   },
   "member /onboarding": {
-    "color-contrast|incomplete": 16,
-    "meta-viewport|moderate": 1,
-    "region|moderate": 9
+    "color-contrast|incomplete": 16
   },
-  "member /subscribe": {
-    "meta-viewport|moderate": 1
+  "member /subscribe": {},
+  "member /subscribe/success": {},
+  "member /rewind": {
+    "color-contrast|incomplete": 8
   },
-  "member /subscribe/success": {
-    "meta-viewport|moderate": 1
-  },
-  "member /wrapped": {
-    "color-contrast|incomplete": 8,
-    "meta-viewport|moderate": 1
-  },
-  "member /wrapped/2026": {
-    "color-contrast|incomplete": 8,
-    "meta-viewport|moderate": 1
+  "member /rewind/2026": {
+    "color-contrast|incomplete": 8
   },
   "public /": {
-    "color-contrast|incomplete": 2,
-    "meta-viewport|moderate": 1
+    "color-contrast|incomplete": 2
   },
-  "public /a11y-missing-page": {
-    "landmark-one-main|moderate": 1,
-    "meta-viewport|moderate": 1,
-    "region|moderate": 2
-  },
+  "public /a11y-missing-page": {},
   "public /auth/callback/plex": {
-    "color-contrast|incomplete": 2,
-    "meta-viewport|moderate": 1
+    "color-contrast|incomplete": 2
   },
   "public /auth/denied": {
-    "color-contrast|incomplete": 3,
-    "meta-viewport|moderate": 1
+    "color-contrast|incomplete": 3
   },
   "public /invite/VISUALEXP": {
-    "color-contrast|incomplete": 2,
-    "meta-viewport|moderate": 1
+    "color-contrast|incomplete": 2
   },
   "public /invite/VISUALOK": {
-    "color-contrast|incomplete": 4,
-    "meta-viewport|moderate": 1
+    "color-contrast|incomplete": 4
   },
   "public /setup [step 1]": {
     "color-contrast|incomplete": 40,
-    "color-contrast|serious": 1,
-    "meta-viewport|moderate": 1,
-    "region|moderate": 25
+    "color-contrast|serious": 1
   },
   "public /setup [step 3]": {
     "color-contrast|incomplete": 38,
-    "color-contrast|serious": 1,
-    "meta-viewport|moderate": 1,
-    "region|moderate": 25
+    "color-contrast|serious": 1
   },
-  "public /wrapped/share/a11y-share-token000000000000000000000000000": {
-    "color-contrast|incomplete": 18,
-    "meta-viewport|moderate": 1
+  "public /rewind/s/a11y-share-token000000000000000000000000000": {
+    "color-contrast|incomplete": 18
   }
 }

@@ -9,7 +9,9 @@
  *
  * - `ErrorCode` from `lib/security/error-handler.ts` (API route errors);
  * - `RewindErrorCode` from `lib/wrapped/generation-errors.ts` (stored failures);
- * - `ActionErrorCode` from `lib/actions/result.ts` (Server Action results).
+ * - `ActionErrorCode` from `lib/actions/result.ts` (Server Action results);
+ * - `FlashErrorCode` from `lib/ui/flash-codes.ts` (redirects that carry a code);
+ * - `RewindPanelCode`, the states `/rewind/<year>` shows on a status panel (P5.1).
  *
  * The map `satisfies Record<AppErrorCode, ...>`, so a new code without copy is
  * a type error. Anything that is not a known code, including an exception's
@@ -23,9 +25,21 @@
 
 import type { ActionErrorCode } from "@/lib/actions/result"
 import type { ErrorCode } from "@/lib/security/error-handler"
+import type { FlashErrorCode } from "@/lib/ui/flash-codes"
+import { rewindInfraMessage, type RewindInfraCode } from "@/lib/rewind/infra-copy"
 import type { RewindErrorCode } from "@/lib/wrapped/generation-errors"
 
-type AppErrorCode = `${ErrorCode}` | RewindErrorCode | ActionErrorCode
+/** What a Rewind status panel says when there is no issue to show (P5.1). */
+export type RewindPanelCode =
+  | "REWIND_GENERATING"
+  | "REWIND_UNREADABLE"
+  | "REWIND_NOT_FOUND"
+  | "REWIND_NOT_MADE"
+  | "REWIND_NOT_OPEN"
+  | "REWIND_NOT_ELIGIBLE"
+  | RewindInfraCode
+
+type AppErrorCode = `${ErrorCode}` | RewindErrorCode | ActionErrorCode | FlashErrorCode | RewindPanelCode
 
 interface ErrorCopy {
   title: string
@@ -63,6 +77,19 @@ const REWIND_TITLE = "Your Rewind couldn't be made"
 const INTERRUPTED = "Making your Rewind was interrupted. Please try again."
 
 const rewind = (description: string): CopyEntry => ({ member: { title: REWIND_TITLE, description } })
+
+const REWIND_UNAVAILABLE = "Rewind isn't available"
+const infra = (code: RewindInfraCode): CopyEntry => ({
+  member: { title: REWIND_UNAVAILABLE, description: rewindInfraMessage(code, "member") },
+  admin: { title: REWIND_UNAVAILABLE, description: rewindInfraMessage(code, "admin") },
+})
+
+const DISCORD_NOT_LINKED = "Discord wasn't linked"
+const discord = (description: string): CopyEntry => ({ member: { title: DISCORD_NOT_LINKED, description } })
+
+const SIGN_IN_FAILED: CopyEntry = {
+  member: { title: "Sign-in didn't work", description: "We couldn't sign you in. Please try again." },
+}
 
 const COPY = {
   // lib/security/error-handler.ts ErrorCode
@@ -118,6 +145,65 @@ const COPY = {
   NOT_CONFIGURED: rewind("Rewind isn't fully set up on this server yet. Ask the server admin."),
   WORKER_LOST: rewind(INTERRUPTED),
   JOB_LOST: rewind(INTERRUPTED),
+  REWIND_DISABLED: rewind("Rewind isn't open on this server yet."),
+  NOT_IN_AUDIENCE: rewind("Rewind isn't open to everyone on this server yet."),
+  NO_PLEX_IDENTITY: rewind("Rewind needs Plex watch history. Jellyfin support is planned."),
+  MANAGED_ACCOUNT: rewind("Rewind isn't made for managed Plex accounts on this server."),
+
+  // RewindPanelCode: the /rewind/<year> status panels
+  REWIND_GENERATING: {
+    member: { title: "Setting your pages", description: "Your Rewind is being made. This page opens it when it's ready." },
+  },
+  REWIND_UNREADABLE: {
+    member: {
+      title: "Your Rewind couldn't be opened",
+      description: "Part of it couldn't be read. Ask the server admin to make it again.",
+    },
+  },
+  REWIND_NOT_FOUND: {
+    member: { title: "No Rewind for this year", description: "You don't have a Rewind for this year." },
+  },
+  REWIND_NOT_MADE: {
+    member: { title: "Your Rewind isn't made yet", description: "Start it from the home page. It takes a few minutes." },
+  },
+  REWIND_NOT_OPEN: {
+    member: { title: "Your Rewind isn't open yet", description: "It opens when the season starts on this server." },
+  },
+  REWIND_NOT_ELIGIBLE: {
+    member: {
+      title: "Rewind isn't available for your account",
+      description: "Rewind needs Plex watch history. Jellyfin support is planned.",
+    },
+  },
+  REDIS_NOT_CONFIGURED: infra("REDIS_NOT_CONFIGURED"),
+  REDIS_UNAVAILABLE: infra("REDIS_UNAVAILABLE"),
+
+  // lib/ui/flash-codes.ts FlashErrorCode: the Discord link routes
+  discord_failed: discord("Something went wrong while linking. Please try again."),
+  discord_expired: discord("That link expired. Start linking again."),
+  discord_session_mismatch: discord("Finish linking in the browser and account you started in."),
+  discord_rate_limited: {
+    member: { title: "Too many Discord link attempts", description: "Please wait a few minutes, then try again." },
+  },
+  discord_unavailable: {
+    member: { title: "Discord linking is unavailable", description: "Please try again in a few minutes." },
+  },
+
+  // lib/ui/flash-codes.ts FlashErrorCode: NextAuth's sign-in errors
+  CredentialsSignin: SIGN_IN_FAILED,
+  Default: SIGN_IN_FAILED,
+  AccessDenied: {
+    member: { title: "You don't have access", description: "This account isn't a member of this server." },
+  },
+  Configuration: {
+    member: {
+      title: "Sign-in isn't working",
+      description: "Something is wrong with this server's sign-in settings. Let the server admin know.",
+    },
+  },
+  Verification: {
+    member: { title: "That sign-in expired", description: "Start signing in again." },
+  },
 } satisfies Record<AppErrorCode, CopyEntry>
 
 function isKnownCode(code: unknown): code is AppErrorCode {

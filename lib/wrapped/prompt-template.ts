@@ -13,9 +13,9 @@
 
 import "server-only"
 
-import { prisma } from "@/lib/prisma"
 import { formatDuration } from "@/lib/utils/format"
 import { suggestArchetypes } from "@/lib/wrapped/archetype-scoring"
+import { findActivePromptTemplate } from "@/lib/wrapped/prompt/store"
 import { getDefaultPromptTemplate } from "@/lib/wrapped/prompt-text"
 import { WrappedStatistics } from "@/types/wrapped"
 
@@ -36,53 +36,54 @@ interface PlaceholderContext {
 function replacePlaceholders(template: string, context: PlaceholderContext): string {
   const { userName, year, statistics } = context
   const derived = statistics.derived
+  const serverName = statistics.serverStats?.serverName || ""
 
   // Build replacement map
   const replacements: Record<string, string> = {
     // Basic placeholders
-    "{{userName}}": userName,
-    "{{year}}": year.toString(),
+    userName: userName,
+    year: year.toString(),
 
     // Watch time placeholders
-    "{{totalWatchTime}}": formatDuration(statistics.totalWatchTime.total, "long", { largestUnit: "day" }),
-    "{{totalWatchTimeMinutes}}": statistics.totalWatchTime.total.toString(),
-    "{{moviesWatchTime}}": formatDuration(statistics.totalWatchTime.movies, "long", { largestUnit: "day" }),
-    "{{moviesWatchTimeMinutes}}": statistics.totalWatchTime.movies.toString(),
-    "{{showsWatchTime}}": formatDuration(statistics.totalWatchTime.shows, "long", { largestUnit: "day" }),
-    "{{showsWatchTimeMinutes}}": statistics.totalWatchTime.shows.toString(),
+    totalWatchTime: formatDuration(statistics.totalWatchTime.total, "long", { largestUnit: "day" }),
+    totalWatchTimeMinutes: statistics.totalWatchTime.total.toString(),
+    moviesWatchTime: formatDuration(statistics.totalWatchTime.movies, "long", { largestUnit: "day" }),
+    moviesWatchTimeMinutes: statistics.totalWatchTime.movies.toString(),
+    showsWatchTime: formatDuration(statistics.totalWatchTime.shows, "long", { largestUnit: "day" }),
+    showsWatchTimeMinutes: statistics.totalWatchTime.shows.toString(),
 
     // Content count placeholders
-    "{{moviesWatched}}": statistics.moviesWatched.toString(),
-    "{{showsWatched}}": statistics.showsWatched.toString(),
-    "{{episodesWatched}}": statistics.episodesWatched.toString(),
+    moviesWatched: statistics.moviesWatched.toString(),
+    showsWatched: statistics.showsWatched.toString(),
+    episodesWatched: statistics.episodesWatched.toString(),
 
     // Top movies list
-    "{{topMoviesList}}": statistics.topMovies.slice(0, 5).map((movie, idx) =>
+    topMoviesList: statistics.topMovies.slice(0, 5).map((movie, idx) =>
       `${idx + 1}. ${movie.title}${movie.year ? ` (${movie.year})` : ""} - ${formatDuration(movie.watchTime, "long", { largestUnit: "day" })} watched (${movie.watchTime} minutes)`
     ).join("\n"),
 
     // Top shows list
-    "{{topShowsList}}": statistics.topShows.slice(0, 5).map((show, idx) =>
+    topShowsList: statistics.topShows.slice(0, 5).map((show, idx) =>
       `${idx + 1}. ${show.title}${show.year ? ` (${show.year})` : ""} - ${formatDuration(show.watchTime, "long", { largestUnit: "day" })} watched (${show.watchTime} minutes), ${show.episodesWatched} episodes`
     ).join("\n"),
 
     // Top movies JSON (for data sections)
-    "{{topMoviesJson}}": JSON.stringify(statistics.topMovies.slice(0, 5)),
+    topMoviesJson: JSON.stringify(statistics.topMovies.slice(0, 5)),
 
     // Top shows JSON (for data sections)
-    "{{topShowsJson}}": JSON.stringify(statistics.topShows.slice(0, 5)),
+    topShowsJson: JSON.stringify(statistics.topShows.slice(0, 5)),
 
     // Derived viewing patterns (v2)
-    "{{longestStreak}}": derived?.longestStreak
+    longestStreak: derived?.longestStreak
       ? `${derived.longestStreak.days} consecutive days (${derived.longestStreak.start} to ${derived.longestStreak.end})`
       : "No streak data available",
-    "{{peakHour}}": derived?.peakHour
+    peakHour: derived?.peakHour
       ? `${derived.peakHour.label} (${derived.peakHour.plays} plays started in this hour)`
       : "No peak hour data available",
-    "{{peakDayOfWeek}}": derived
+    peakDayOfWeek: derived
       ? [...derived.dayOfWeekHistogram].sort((a, b) => b.watchTime - a.watchTime)[0]?.day || "Unknown"
       : "Unknown",
-    "{{derivedStatsSection}}": derived ? `
+    derivedStatsSection: derived ? `
 **Viewing Patterns:**
 - Longest streak: ${derived.longestStreak ? `${derived.longestStreak.days} consecutive days (${derived.longestStreak.start} to ${derived.longestStreak.end})` : "none"}
 - Peak viewing hour: ${derived.peakHour ? `${derived.peakHour.label} (${derived.peakHour.plays} plays)` : "unknown"}
@@ -92,14 +93,14 @@ function replacePlaceholders(template: string, context: PlaceholderContext): str
 ` : "",
 
     // Server percentile (v2, conditional)
-    "{{percentileSection}}": statistics.percentile ? `
+    percentileSection: statistics.percentile ? `
 **Server Standing:**
 - You are in the ${statistics.percentile.topPercentLabel} of viewers on this server by watch time${statistics.leaderboards?.watchTime.userPosition ? ` (ranked #${statistics.leaderboards.watchTime.userPosition} of ${statistics.leaderboards.watchTime.totalUsers})` : ""}
 ` : "",
 
     // Archetype candidates (v2): deterministic shortlist, best data fit
     // first, so the LLM cannot converge on the same pick for every user.
-    "{{archetypeCandidates}}": suggestArchetypes(statistics)
+    archetypeCandidates: suggestArchetypes(statistics)
       .map(
         (a, idx) =>
           `${idx + 1}. ${a.id}: "${a.name}" — ${a.motif} (evidence: ${a.evidence})`
@@ -107,7 +108,7 @@ function replacePlaceholders(template: string, context: PlaceholderContext): str
       .join("\n"),
 
     // Leaderboard section (conditional)
-    "{{leaderboardSection}}": statistics.leaderboards ? `
+    leaderboardSection: statistics.leaderboards ? `
 **Leaderboard Stats:**
 
 **Your Position in Overall Watch Time Leaderboard:**
@@ -141,9 +142,9 @@ ${statistics.leaderboards.topContent.shows.map((show) => {
 ` : "",
 
     // Server stats section (conditional)
-    "{{serverStatsSection}}": statistics.serverStats ? `
+    serverStatsSection: statistics.serverStats ? `
 **Plex Server Statistics:**
-- Server name: {{serverName}}
+- Server name: ${serverName}
 - Total storage: ${statistics.serverStats.totalStorageFormatted}
 - Library size:
   - Movies: ${statistics.serverStats.librarySize.movies.toLocaleString()}
@@ -152,7 +153,7 @@ ${statistics.leaderboards.topContent.shows.map((show) => {
 ` : "",
 
     // Overseerr stats section (conditional)
-    "{{overseerrStatsSection}}": statistics.overseerrStats ? `
+    overseerrStatsSection: statistics.overseerrStats ? `
 **Overseerr Requests:**
 - Your requests: ${statistics.overseerrStats.totalRequests}
 - Total server requests: ${statistics.overseerrStats.totalServerRequests}
@@ -161,7 +162,7 @@ ${statistics.leaderboards.topContent.shows.map((show) => {
 ` : "",
 
     // Watch time by month section (conditional)
-    "{{watchTimeByMonthSection}}": statistics.watchTimeByMonth && statistics.watchTimeByMonth.length > 0 ? `
+    watchTimeByMonthSection: statistics.watchTimeByMonth && statistics.watchTimeByMonth.length > 0 ? `
 **Watch Time by Month (all times in minutes):**
 ${statistics.watchTimeByMonth.map(month => {
   const watchTimeText = `${formatDuration(month.watchTime, "long", { largestUnit: "day" })} (${month.watchTime} minutes)`
@@ -176,37 +177,25 @@ ${statistics.watchTimeByMonth.map(month => {
 ` : "",
 
     // Server name (if available)
-    "{{serverName}}": statistics.serverStats?.serverName || "",
+    serverName,
 
     // Deprecated placeholders — resolve to empty so existing custom DB
     // templates keep rendering without stale scaffolding. bingeWatcher and
     // discoveryScore fed LLM-computed fields that left the contract (RWP-16).
-    "{{bingeWatcher}}": "",
-    "{{discoveryScore}}": "",
-    "{{overseerrSectionJson}}": "",
-    "{{overseerrAnimationDelay}}": "",
-    "{{insightsAnimationDelay}}": "",
-    "{{funFactsAnimationDelay}}": "",
-    "{{serverStatsFacts}}": "",
-    "{{serverStatsContent}}": "",
+    bingeWatcher: "",
+    discoveryScore: "",
+    overseerrSectionJson: "",
+    overseerrAnimationDelay: "",
+    insightsAnimationDelay: "",
+    funFactsAnimationDelay: "",
+    serverStatsFacts: "",
+    serverStatsContent: "",
   }
 
-  // Replace all placeholders
-  // First pass: Replace complex placeholders that may contain other placeholders
-  let result = template
-  for (const [placeholder, value] of Object.entries(replacements)) {
-    // Skip {{serverName}} in first pass - it will be replaced in second pass
-    if (placeholder === "{{serverName}}") {
-      continue
-    }
-    result = result.replace(new RegExp(placeholder.replace(/[{}]/g, "\\$&"), "g"), value)
-  }
-
-  // Second pass: Replace {{serverName}} after all other placeholders have been replaced
-  // This ensures {{serverName}} works even when nested in other placeholder replacements
-  result = result.replace(new RegExp("{{serverName}}".replace(/[{}]/g, "\\$&"), "g"), replacements["{{serverName}}"] || "")
-
-  return result
+  // One pass with a replacer function (SEC-46): a value is inserted literally,
+  // so "$&" or "$'" in a title stays text, and a value is never scanned for
+  // placeholders again. Unknown placeholders are left as written.
+  return template.replace(/\{\{(\w+)\}\}/g, (match, key: string) => (Object.hasOwn(replacements, key) ? replacements[key] : match))
 }
 
 /**
@@ -219,13 +208,7 @@ export async function generateWrappedPrompt(
   templateString?: string
 ): Promise<string> {
   // If template string is provided, use it; otherwise get active template from database
-  let finalTemplateString: string
-  if (templateString) {
-    finalTemplateString = templateString
-  } else {
-    const template = await prisma.promptTemplate.findFirst({ where: { isActive: true } })
-    finalTemplateString = template?.template || getDefaultPromptTemplate()
-  }
+  const finalTemplateString = templateString || (await findActivePromptTemplate()) || getDefaultPromptTemplate()
 
   // Replace placeholders with actual values
   return replacePlaceholders(finalTemplateString, { userName, year, statistics })

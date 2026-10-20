@@ -13,7 +13,7 @@ import { render, screen } from '@testing-library/react'
 import { notFound } from 'next/navigation'
 import { after } from 'next/server'
 
-import SharedWrappedPage, { generateMetadata } from '@/app/(public)/wrapped/share/[token]/page'
+import SharedWrappedPage, { generateMetadata } from '@/app/rewind/s/[token]/page'
 import { WrappedShareSummary } from '@/components/wrapped/wrapped-share-summary'
 import { prisma } from '@/lib/prisma'
 import type { ShareSafeRewindV2 } from '@/lib/wrapped/data/share-safe-v2'
@@ -216,7 +216,7 @@ describe('shared wrapped page', () => {
       expect(metadata.robots).toEqual({ index: false, follow: false })
       expect(metadata.title).toBe("Mike's 2026 Plex Wrapped")
       expect(metadata.description).toBe('A big year.')
-      expect(metadata.alternates?.canonical).toBe(`https://plex.example.com/wrapped/share/${TOKEN}`)
+      expect(metadata.alternates?.canonical).toBe(`https://plex.example.com/rewind/s/${TOKEN}`)
     })
 
     it('returns a neutral title with noindex and no lookup for a busy visitor', async () => {

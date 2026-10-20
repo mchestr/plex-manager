@@ -1,0 +1,3732 @@
+{
+  "edition": "full",
+  "facts": {
+    "time.totalMinutes": {
+      "value": 78420,
+      "display": "1,307 h",
+      "unit": "duration"
+    },
+    "time.totalHours": {
+      "value": 1307,
+      "display": "1,307",
+      "unit": "hours"
+    },
+    "time.daysHours": {
+      "value": 78420,
+      "display": "54 days, 11 hours",
+      "unit": "days-hours"
+    },
+    "time.perDay": {
+      "value": 234,
+      "display": "3 h 54 m",
+      "unit": "duration"
+    },
+    "time.seriesHours": {
+      "value": 872,
+      "display": "872",
+      "unit": "hours"
+    },
+    "time.seriesShare": {
+      "value": 0.667176740627391,
+      "display": "67%",
+      "unit": "share"
+    },
+    "time.filmsHours": {
+      "value": 435,
+      "display": "435",
+      "unit": "hours"
+    },
+    "time.filmsShare": {
+      "value": 0.33282325937260904,
+      "display": "33%",
+      "unit": "share"
+    },
+    "time.vsLastYear": {
+      "value": 0.17999337927713743,
+      "display": "+18%",
+      "unit": "change"
+    },
+    "time.milestones[1].hours": {
+      "value": 250,
+      "display": "250",
+      "unit": "hours"
+    },
+    "time.milestones[1].date": {
+      "value": "2026-03-14",
+      "display": "March 14",
+      "unit": "date"
+    },
+    "time.milestones[2].hours": {
+      "value": 500,
+      "display": "500",
+      "unit": "hours"
+    },
+    "time.milestones[2].date": {
+      "value": "2026-05-23",
+      "display": "May 23",
+      "unit": "date"
+    },
+    "time.milestones[3].hours": {
+      "value": 750,
+      "display": "750",
+      "unit": "hours"
+    },
+    "time.milestones[3].date": {
+      "value": "2026-07-17",
+      "display": "July 17",
+      "unit": "date"
+    },
+    "time.milestones[4].hours": {
+      "value": 1000,
+      "display": "1,000",
+      "unit": "hours"
+    },
+    "time.milestones[4].date": {
+      "value": "2026-09-18",
+      "display": "September 18",
+      "unit": "date"
+    },
+    "counts.episodes": {
+      "value": 586,
+      "display": "586",
+      "unit": "count"
+    },
+    "counts.series": {
+      "value": 31,
+      "display": "31",
+      "unit": "count"
+    },
+    "counts.films": {
+      "value": 112,
+      "display": "112",
+      "unit": "count"
+    },
+    "counts.seasons": {
+      "value": 70,
+      "display": "70",
+      "unit": "count"
+    },
+    "bookends.first.title": {
+      "value": "Dr. Strangelove or: How I Learned to Stop Worrying and Love the Bomb",
+      "display": "Dr. Strangelove or: How I Learned to Stop Worrying and Love the Bomb",
+      "unit": "title"
+    },
+    "bookends.first.date": {
+      "value": "2026-01-01",
+      "display": "January 1",
+      "unit": "date"
+    },
+    "bookends.first.time": {
+      "value": 1170,
+      "display": "7:30 PM",
+      "unit": "time"
+    },
+    "bookends.last.title": {
+      "value": "Seinfeld",
+      "display": "Seinfeld",
+      "unit": "title"
+    },
+    "bookends.last.date": {
+      "value": "2026-11-30",
+      "display": "November 30",
+      "unit": "date"
+    },
+    "bookends.last.time": {
+      "value": 1330,
+      "display": "10:10 PM",
+      "unit": "time"
+    },
+    "days.active": {
+      "value": 289,
+      "display": "289",
+      "unit": "count"
+    },
+    "days.biggest.date": {
+      "value": "2026-07-04",
+      "display": "July 4",
+      "unit": "date"
+    },
+    "days.biggest.minutes": {
+      "value": 744,
+      "display": "12 h 24 m",
+      "unit": "duration"
+    },
+    "days.longestGap.days": {
+      "value": 9,
+      "display": "9 days",
+      "unit": "days"
+    },
+    "days.longestGap.month": {
+      "value": 5,
+      "display": "May",
+      "unit": "month"
+    },
+    "streak.longest.days": {
+      "value": 23,
+      "display": "23 days",
+      "unit": "days"
+    },
+    "streak.longest.from": {
+      "value": "2026-03-02",
+      "display": "March 2",
+      "unit": "date"
+    },
+    "streak.longest.to": {
+      "value": "2026-03-24",
+      "display": "March 24",
+      "unit": "date"
+    },
+    "days.biggestWeek": {
+      "value": 2818,
+      "display": "46 h 58 m",
+      "unit": "duration"
+    },
+    "days.biggestWeek.from": {
+      "value": "2026-05-11",
+      "display": "May 11",
+      "unit": "date"
+    },
+    "hours.peak": {
+      "value": 22,
+      "display": "10 PM",
+      "unit": "hour"
+    },
+    "hours.quietest": {
+      "value": 5,
+      "display": "5 AM",
+      "unit": "hour"
+    },
+    "hours.afterDarkShare": {
+      "value": 0.33624801271860094,
+      "display": "34%",
+      "unit": "share"
+    },
+    "hours.goldenShare": {
+      "value": 0.5214626391096979,
+      "display": "52%",
+      "unit": "share"
+    },
+    "hours.medianStart": {
+      "value": 1265,
+      "display": "9:05 PM",
+      "unit": "time"
+    },
+    "hours.latestStart.time": {
+      "value": 210,
+      "display": "3:30 AM",
+      "unit": "time"
+    },
+    "hours.latestStart.weekday": {
+      "value": 4,
+      "display": "Thursday",
+      "unit": "weekday"
+    },
+    "days.weekendShare": {
+      "value": 0.2917329093799682,
+      "display": "29%",
+      "unit": "share"
+    },
+    "series[1].title": {
+      "value": "The Lord of the Rings: The Rings of Power",
+      "display": "The Lord of the Rings: The Rings of Power",
+      "unit": "title"
+    },
+    "series[1].minutes": {
+      "value": 3350,
+      "display": "55 h 50 m",
+      "unit": "duration"
+    },
+    "series[1].episodes": {
+      "value": 16,
+      "display": "16",
+      "unit": "count"
+    },
+    "series[1].seasons": {
+      "value": 2,
+      "display": "2",
+      "unit": "count"
+    },
+    "series[1].monthsActive": {
+      "value": 3,
+      "display": "3",
+      "unit": "count"
+    },
+    "series[1].rewatched": {
+      "value": 3,
+      "display": "watched three times",
+      "unit": "times"
+    },
+    "series[1].biggestNight.date": {
+      "value": "2026-10-06",
+      "display": "October 6",
+      "unit": "date"
+    },
+    "series[1].biggestNight.episodes": {
+      "value": 4,
+      "display": "4",
+      "unit": "count"
+    },
+    "series[2].title": {
+      "value": "Severance",
+      "display": "Severance",
+      "unit": "title"
+    },
+    "series[2].minutes": {
+      "value": 3300,
+      "display": "55 h",
+      "unit": "duration"
+    },
+    "series[2].episodes": {
+      "value": 19,
+      "display": "19",
+      "unit": "count"
+    },
+    "series[2].seasons": {
+      "value": 2,
+      "display": "2",
+      "unit": "count"
+    },
+    "series[2].monthsActive": {
+      "value": 10,
+      "display": "10",
+      "unit": "count"
+    },
+    "series[2].rewatched": {
+      "value": 3,
+      "display": "watched three times",
+      "unit": "times"
+    },
+    "series[2].biggestNight.date": {
+      "value": "2026-01-08",
+      "display": "January 8",
+      "unit": "date"
+    },
+    "series[2].biggestNight.episodes": {
+      "value": 3,
+      "display": "3",
+      "unit": "count"
+    },
+    "series[3].title": {
+      "value": "The Sopranos",
+      "display": "The Sopranos",
+      "unit": "title"
+    },
+    "series[3].minutes": {
+      "value": 2970,
+      "display": "49 h 30 m",
+      "unit": "duration"
+    },
+    "series[3].episodes": {
+      "value": 54,
+      "display": "54",
+      "unit": "count"
+    },
+    "series[3].seasons": {
+      "value": 5,
+      "display": "5",
+      "unit": "count"
+    },
+    "series[3].monthsActive": {
+      "value": 11,
+      "display": "11",
+      "unit": "count"
+    },
+    "series[3].biggestNight.date": {
+      "value": "2026-01-02",
+      "display": "January 2",
+      "unit": "date"
+    },
+    "series[3].biggestNight.episodes": {
+      "value": 1,
+      "display": "1",
+      "unit": "count"
+    },
+    "series[4].title": {
+      "value": "Breaking Bad",
+      "display": "Breaking Bad",
+      "unit": "title"
+    },
+    "series[4].minutes": {
+      "value": 2500,
+      "display": "41 h 40 m",
+      "unit": "duration"
+    },
+    "series[4].episodes": {
+      "value": 50,
+      "display": "50",
+      "unit": "count"
+    },
+    "series[4].seasons": {
+      "value": 5,
+      "display": "5",
+      "unit": "count"
+    },
+    "series[4].monthsActive": {
+      "value": 10,
+      "display": "10",
+      "unit": "count"
+    },
+    "series[4].biggestNight.date": {
+      "value": "2026-01-03",
+      "display": "January 3",
+      "unit": "date"
+    },
+    "series[4].biggestNight.episodes": {
+      "value": 1,
+      "display": "1",
+      "unit": "count"
+    },
+    "series[5].title": {
+      "value": "Game of Thrones",
+      "display": "Game of Thrones",
+      "unit": "title"
+    },
+    "series[5].minutes": {
+      "value": 2320,
+      "display": "38 h 40 m",
+      "unit": "duration"
+    },
+    "series[5].episodes": {
+      "value": 40,
+      "display": "40",
+      "unit": "count"
+    },
+    "series[5].seasons": {
+      "value": 4,
+      "display": "4",
+      "unit": "count"
+    },
+    "series[5].monthsActive": {
+      "value": 10,
+      "display": "10",
+      "unit": "count"
+    },
+    "series[5].biggestNight.date": {
+      "value": "2026-07-04",
+      "display": "July 4",
+      "unit": "date"
+    },
+    "series[5].biggestNight.episodes": {
+      "value": 3,
+      "display": "3",
+      "unit": "count"
+    },
+    "films[1].title": {
+      "value": "Dune: Part Two",
+      "display": "Dune: Part Two",
+      "unit": "title"
+    },
+    "films[1].plays": {
+      "value": 4,
+      "display": "4",
+      "unit": "count"
+    },
+    "films[1].minutes": {
+      "value": 660,
+      "display": "11 h",
+      "unit": "duration"
+    },
+    "films[2].title": {
+      "value": "Dune (2021)",
+      "display": "Dune (2021)",
+      "unit": "title"
+    },
+    "films[2].plays": {
+      "value": 2,
+      "display": "2",
+      "unit": "count"
+    },
+    "films[2].minutes": {
+      "value": 330,
+      "display": "5 h 30 m",
+      "unit": "duration"
+    },
+    "films[3].title": {
+      "value": "Moonlight",
+      "display": "Moonlight",
+      "unit": "title"
+    },
+    "films[3].plays": {
+      "value": 2,
+      "display": "2",
+      "unit": "count"
+    },
+    "films[3].minutes": {
+      "value": 330,
+      "display": "5 h 30 m",
+      "unit": "duration"
+    },
+    "films[4].title": {
+      "value": "The Artist",
+      "display": "The Artist",
+      "unit": "title"
+    },
+    "films[4].plays": {
+      "value": 2,
+      "display": "2",
+      "unit": "count"
+    },
+    "films[4].minutes": {
+      "value": 330,
+      "display": "5 h 30 m",
+      "unit": "duration"
+    },
+    "films[5].title": {
+      "value": "There Will Be Blood",
+      "display": "There Will Be Blood",
+      "unit": "title"
+    },
+    "films[5].plays": {
+      "value": 2,
+      "display": "2",
+      "unit": "count"
+    },
+    "films[5].minutes": {
+      "value": 330,
+      "display": "5 h 30 m",
+      "unit": "duration"
+    },
+    "series.top3Share": {
+      "value": 0.183868501529052,
+      "display": "18%",
+      "unit": "share"
+    },
+    "films.finishedShare": {
+      "value": 1,
+      "display": "100%",
+      "unit": "share"
+    },
+    "films.longest.title": {
+      "value": "Dune: Part Two",
+      "display": "Dune: Part Two",
+      "unit": "title"
+    },
+    "films.longest.minutes": {
+      "value": 165,
+      "display": "2 h 45 m",
+      "unit": "duration"
+    },
+    "counts.titles": {
+      "value": 143,
+      "display": "143",
+      "unit": "count"
+    },
+    "records.longestBinge.episodes": {
+      "value": 4,
+      "display": "4",
+      "unit": "count"
+    },
+    "records.longestBinge.title": {
+      "value": "The Lord of the Rings: The Rings of Power",
+      "display": "The Lord of the Rings: The Rings of Power",
+      "unit": "title"
+    },
+    "records.longestBinge.date": {
+      "value": "2026-10-06",
+      "display": "October 6",
+      "unit": "date"
+    },
+    "records.deepestBinge.episodes": {
+      "value": 5,
+      "display": "5",
+      "unit": "count"
+    },
+    "records.deepestBinge.title": {
+      "value": "The Last of Us",
+      "display": "The Last of Us",
+      "unit": "title"
+    },
+    "records.mostEpisodesDay": {
+      "value": 8,
+      "display": "8",
+      "unit": "count"
+    },
+    "records.completionShare": {
+      "value": 1,
+      "display": "100%",
+      "unit": "share"
+    },
+    "records.mostPaused.title": {
+      "value": "The Sopranos",
+      "display": "The Sopranos",
+      "unit": "title"
+    },
+    "records.rewatchShare": {
+      "value": 0.0890302066772655,
+      "display": "9%",
+      "unit": "share"
+    },
+    "records.rewatchedTitles": {
+      "value": 106,
+      "display": "106",
+      "unit": "count"
+    },
+    "counts.titlesPer10Hours": {
+      "value": 1.1,
+      "display": "1.1",
+      "unit": "decimal"
+    },
+    "taste.freshShare": {
+      "value": 0,
+      "display": "0%",
+      "unit": "share"
+    },
+    "taste.genre[1].name": {
+      "value": "Animation",
+      "display": "Animation",
+      "unit": "text"
+    },
+    "taste.genre[1].share": {
+      "value": 0.13717801581229278,
+      "display": "14%",
+      "unit": "share"
+    },
+    "taste.genre[2].name": {
+      "value": "Crime",
+      "display": "Crime",
+      "unit": "text"
+    },
+    "taste.genre[2].share": {
+      "value": 0.12818796225452692,
+      "display": "13%",
+      "unit": "share"
+    },
+    "taste.genre[3].name": {
+      "value": "Drama",
+      "display": "Drama",
+      "unit": "text"
+    },
+    "taste.genre[3].share": {
+      "value": 0.12668961999489925,
+      "display": "13%",
+      "unit": "share"
+    },
+    "taste.genre[4].name": {
+      "value": "Thriller",
+      "display": "Thriller",
+      "unit": "text"
+    },
+    "taste.genre[4].share": {
+      "value": 0.1252231573578169,
+      "display": "13%",
+      "unit": "share"
+    },
+    "taste.genre[5].name": {
+      "value": "Science Fiction",
+      "display": "Science Fiction",
+      "unit": "text"
+    },
+    "taste.genre[5].share": {
+      "value": 0.12346977811782708,
+      "display": "12%",
+      "unit": "share"
+    },
+    "taste.genreByMonth[1]": {
+      "value": "Animation",
+      "display": "Animation",
+      "unit": "text"
+    },
+    "taste.genreByMonth[2]": {
+      "value": "Science Fiction",
+      "display": "Science Fiction",
+      "unit": "text"
+    },
+    "taste.genreByMonth[3]": {
+      "value": "Animation",
+      "display": "Animation",
+      "unit": "text"
+    },
+    "taste.genreByMonth[4]": {
+      "value": "Science Fiction",
+      "display": "Science Fiction",
+      "unit": "text"
+    },
+    "taste.genreByMonth[5]": {
+      "value": "Fantasy",
+      "display": "Fantasy",
+      "unit": "text"
+    },
+    "taste.genreByMonth[6]": {
+      "value": "Thriller",
+      "display": "Thriller",
+      "unit": "text"
+    },
+    "taste.genreByMonth[7]": {
+      "value": "Drama",
+      "display": "Drama",
+      "unit": "text"
+    },
+    "taste.genreByMonth[8]": {
+      "value": "Science Fiction",
+      "display": "Science Fiction",
+      "unit": "text"
+    },
+    "taste.genreByMonth[9]": {
+      "value": "Comedy",
+      "display": "Comedy",
+      "unit": "text"
+    },
+    "taste.genreByMonth[10]": {
+      "value": "Animation",
+      "display": "Animation",
+      "unit": "text"
+    },
+    "taste.genreByMonth[11]": {
+      "value": "Crime",
+      "display": "Crime",
+      "unit": "text"
+    },
+    "taste.medianYear": {
+      "value": 2006,
+      "display": "2006",
+      "unit": "year"
+    },
+    "taste.oldest.title": {
+      "value": "Citizen Kane",
+      "display": "Citizen Kane",
+      "unit": "title"
+    },
+    "taste.oldest.year": {
+      "value": 1941,
+      "display": "1941",
+      "unit": "year"
+    },
+    "people.actor[1].name": {
+      "value": "Tomas Brandt",
+      "display": "Tomas Brandt",
+      "unit": "name"
+    },
+    "people.actor[1].minutes": {
+      "value": 21515,
+      "display": "358 h 35 m",
+      "unit": "duration"
+    },
+    "people.actor[2].name": {
+      "value": "Mira Okafor",
+      "display": "Mira Okafor",
+      "unit": "name"
+    },
+    "people.actor[2].minutes": {
+      "value": 20105,
+      "display": "335 h 5 m",
+      "unit": "duration"
+    },
+    "people.actor[3].name": {
+      "value": "Noor Haddad",
+      "display": "Noor Haddad",
+      "unit": "name"
+    },
+    "people.actor[3].minutes": {
+      "value": 19870,
+      "display": "331 h 10 m",
+      "unit": "duration"
+    },
+    "people.actor[4].name": {
+      "value": "Rowan Hale",
+      "display": "Rowan Hale",
+      "unit": "name"
+    },
+    "people.actor[4].minutes": {
+      "value": 19640,
+      "display": "327 h 20 m",
+      "unit": "duration"
+    },
+    "people.actor[5].name": {
+      "value": "Lena Marsh",
+      "display": "Lena Marsh",
+      "unit": "name"
+    },
+    "people.actor[5].minutes": {
+      "value": 19365,
+      "display": "322 h 45 m",
+      "unit": "duration"
+    },
+    "people.director[1].name": {
+      "value": "Tomas Brandt",
+      "display": "Tomas Brandt",
+      "unit": "name"
+    },
+    "people.director[2].name": {
+      "value": "Mira Okafor",
+      "display": "Mira Okafor",
+      "unit": "name"
+    },
+    "people.director[3].name": {
+      "value": "Lena Marsh",
+      "display": "Lena Marsh",
+      "unit": "name"
+    },
+    "race.leader[1]": {
+      "value": "Severance",
+      "display": "Severance",
+      "unit": "title"
+    },
+    "race.leader[2]": {
+      "value": "Severance",
+      "display": "Severance",
+      "unit": "title"
+    },
+    "race.leader[3]": {
+      "value": "Severance",
+      "display": "Severance",
+      "unit": "title"
+    },
+    "race.leader[4]": {
+      "value": "Severance",
+      "display": "Severance",
+      "unit": "title"
+    },
+    "race.leader[5]": {
+      "value": "Severance",
+      "display": "Severance",
+      "unit": "title"
+    },
+    "race.leader[6]": {
+      "value": "Severance",
+      "display": "Severance",
+      "unit": "title"
+    },
+    "race.leader[7]": {
+      "value": "Severance",
+      "display": "Severance",
+      "unit": "title"
+    },
+    "race.leader[8]": {
+      "value": "Severance",
+      "display": "Severance",
+      "unit": "title"
+    },
+    "race.leader[9]": {
+      "value": "Severance",
+      "display": "Severance",
+      "unit": "title"
+    },
+    "race.leader[10]": {
+      "value": "Severance",
+      "display": "Severance",
+      "unit": "title"
+    },
+    "race.leader[11]": {
+      "value": "The Lord of the Rings: The Rings of Power",
+      "display": "The Lord of the Rings: The Rings of Power",
+      "unit": "title"
+    },
+    "race.leadChanges": {
+      "value": 1,
+      "display": "1",
+      "unit": "count"
+    },
+    "race.overtakeMonth": {
+      "value": 11,
+      "display": "November",
+      "unit": "month"
+    },
+    "race.closestGapMinutes": {
+      "value": 50,
+      "display": "50 minutes",
+      "unit": "duration"
+    },
+    "setup.directPlayShare": {
+      "value": 0.9149443561208267,
+      "display": "91%",
+      "unit": "share"
+    },
+    "setup.homeShare": {
+      "value": 0.8926868044515104,
+      "display": "89%",
+      "unit": "share"
+    },
+    "setup.topPlatform": {
+      "value": "Apple TV",
+      "display": "Apple TV",
+      "unit": "text"
+    },
+    "setup.topProduct": {
+      "value": "Plex for Apple TV",
+      "display": "Plex for Apple TV",
+      "unit": "text"
+    },
+    "setup.fourKShare": {
+      "value": 0,
+      "display": "0%",
+      "unit": "share"
+    },
+    "requests.made": {
+      "value": 27,
+      "display": "27",
+      "unit": "count"
+    },
+    "requests.approved": {
+      "value": 20,
+      "display": "20",
+      "unit": "count"
+    },
+    "requests.available": {
+      "value": 15,
+      "display": "15",
+      "unit": "count"
+    },
+    "requests.pending": {
+      "value": 3,
+      "display": "3",
+      "unit": "count"
+    },
+    "requests.declined": {
+      "value": 2,
+      "display": "2",
+      "unit": "count"
+    },
+    "requests.watched": {
+      "value": 15,
+      "display": "15",
+      "unit": "count"
+    },
+    "standing.percentile": {
+      "value": 4,
+      "display": "Top 4%",
+      "unit": "percentile"
+    },
+    "standing.members": {
+      "value": 31,
+      "display": "31",
+      "unit": "count"
+    },
+    "community.titlesAdded": {
+      "value": 0,
+      "display": "0",
+      "unit": "count"
+    },
+    "next.picks[1].title": {
+      "value": "Killers of the Flower Moon",
+      "display": "Killers of the Flower Moon",
+      "unit": "title"
+    },
+    "member.firstName": {
+      "value": "Mike",
+      "display": "Mike",
+      "unit": "name"
+    },
+    "member.since": {
+      "value": 2023,
+      "display": "2023",
+      "unit": "year"
+    },
+    "member.volume": {
+      "value": 4,
+      "display": "4",
+      "unit": "count"
+    },
+    "member.lifetimeHours": {
+      "value": 3940,
+      "display": "3,940",
+      "unit": "hours"
+    },
+    "member.nthRewind": {
+      "value": 4,
+      "display": "4",
+      "unit": "count"
+    },
+    "member.serial": {
+      "value": "K7Q4",
+      "display": "K7Q4",
+      "unit": "text"
+    },
+    "window.from": {
+      "value": "2026-01-01",
+      "display": "January 1",
+      "unit": "date"
+    },
+    "window.through": {
+      "value": "2026-11-30",
+      "display": "November 30",
+      "unit": "date"
+    },
+    "window.finalCut": {
+      "value": 0,
+      "display": "0",
+      "unit": "count"
+    },
+    "window.elapsedDays": {
+      "value": 334,
+      "display": "334 days",
+      "unit": "days"
+    },
+    "tz.label": {
+      "value": "America/Chicago",
+      "display": "America/Chicago",
+      "unit": "text"
+    },
+    "archetype.id": {
+      "value": "midnight-marathoner",
+      "display": "midnight-marathoner",
+      "unit": "id"
+    },
+    "archetype.name": {
+      "value": "The Midnight Marathoner",
+      "display": "The Midnight Marathoner",
+      "unit": "name"
+    },
+    "archetype.runnerUp": {
+      "value": "The Credits Roller",
+      "display": "The Credits Roller",
+      "unit": "name"
+    },
+    "archetype.evidence[1]": {
+      "value": "hours.afterDarkShare",
+      "display": "34%",
+      "unit": "text"
+    },
+    "archetype.evidence[2]": {
+      "value": "hours.peak",
+      "display": "10 PM",
+      "unit": "text"
+    },
+    "archetype.evidence[3]": {
+      "value": "hours.quietest",
+      "display": "5 AM",
+      "unit": "text"
+    }
+  },
+  "pages": [
+    {
+      "type": "cover",
+      "data": {
+        "minutes": [
+          185,
+          190,
+          245,
+          205,
+          180,
+          228,
+          190,
+          165,
+          0,
+          365,
+          325,
+          200,
+          180,
+          113,
+          300,
+          235,
+          135,
+          0,
+          490,
+          190,
+          215,
+          198,
+          210,
+          210,
+          90,
+          335,
+          0,
+          380,
+          215,
+          238,
+          185,
+          135,
+          295,
+          210,
+          180,
+          0,
+          440,
+          193,
+          220,
+          95,
+          325,
+          200,
+          180,
+          113,
+          0,
+          535,
+          135,
+          285,
+          205,
+          190,
+          108,
+          290,
+          180,
+          0,
+          460,
+          190,
+          95,
+          348,
+          210,
+          0,
+          410,
+          145,
+          245,
+          205,
+          180,
+          228,
+          190,
+          165,
+          275,
+          235,
+          180,
+          200,
+          235,
+          223,
+          185,
+          230,
+          195,
+          180,
+          260,
+          215,
+          198,
+          255,
+          180,
+          0,
+          460,
+          100,
+          290,
+          95,
+          358,
+          230,
+          135,
+          295,
+          0,
+          390,
+          215,
+          225,
+          238,
+          220,
+          195,
+          225,
+          200,
+          0,
+          435,
+          158,
+          275,
+          200,
+          135,
+          295,
+          225,
+          180,
+          0,
+          423,
+          165,
+          280,
+          100,
+          335,
+          215,
+          238,
+          185,
+          0,
+          450,
+          215,
+          200,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          560,
+          558,
+          570,
+          560,
+          570,
+          380,
+          208,
+          150,
+          0,
+          530,
+          205,
+          255,
+          208,
+          330,
+          255,
+          295,
+          305,
+          0,
+          473,
+          325,
+          0,
+          535,
+          250,
+          305,
+          265,
+          258,
+          0,
+          515,
+          355,
+          265,
+          275,
+          150,
+          398,
+          245,
+          200,
+          0,
+          570,
+          345,
+          260,
+          230,
+          313,
+          255,
+          305,
+          280,
+          0,
+          415,
+          385,
+          268,
+          275,
+          285,
+          235,
+          300,
+          744,
+          45,
+          0,
+          305,
+          280,
+          255,
+          285,
+          135,
+          335,
+          345,
+          265,
+          0,
+          525,
+          305,
+          90,
+          345,
+          265,
+          135,
+          350,
+          255,
+          0,
+          345,
+          358,
+          100,
+          345,
+          260,
+          135,
+          345,
+          255,
+          0,
+          445,
+          140,
+          345,
+          255,
+          148,
+          220,
+          350,
+          225,
+          0,
+          380,
+          335,
+          113,
+          0,
+          580,
+          140,
+          335,
+          245,
+          0,
+          480,
+          245,
+          243,
+          165,
+          290,
+          255,
+          180,
+          295,
+          0,
+          483,
+          245,
+          205,
+          260,
+          240,
+          250,
+          235,
+          218,
+          0,
+          480,
+          180,
+          310,
+          135,
+          350,
+          170,
+          293,
+          210,
+          0,
+          515,
+          205,
+          280,
+          215,
+          178,
+          325,
+          235,
+          280,
+          0,
+          495,
+          260,
+          275,
+          218,
+          270,
+          225,
+          235,
+          275,
+          0,
+          405,
+          280,
+          308,
+          265,
+          205,
+          285,
+          170,
+          335,
+          0,
+          460,
+          293,
+          220,
+          285,
+          255,
+          270,
+          240,
+          228,
+          0,
+          485,
+          235,
+          275,
+          175,
+          325,
+          295,
+          208,
+          295,
+          0,
+          485,
+          230,
+          270,
+          225,
+          295,
+          250,
+          245,
+          220,
+          0,
+          505,
+          270,
+          225,
+          170,
+          345,
+          275,
+          225,
+          265,
+          0,
+          485,
+          200,
+          315,
+          265,
+          200,
+          270,
+          245,
+          270,
+          0,
+          510,
+          220,
+          295
+        ]
+      }
+    },
+    {
+      "type": "number",
+      "data": {
+        "hero": "time.totalHours",
+        "minutes": [
+          185,
+          190,
+          245,
+          205,
+          180,
+          228,
+          190,
+          165,
+          0,
+          365,
+          325,
+          200,
+          180,
+          113,
+          300,
+          235,
+          135,
+          0,
+          490,
+          190,
+          215,
+          198,
+          210,
+          210,
+          90,
+          335,
+          0,
+          380,
+          215,
+          238,
+          185,
+          135,
+          295,
+          210,
+          180,
+          0,
+          440,
+          193,
+          220,
+          95,
+          325,
+          200,
+          180,
+          113,
+          0,
+          535,
+          135,
+          285,
+          205,
+          190,
+          108,
+          290,
+          180,
+          0,
+          460,
+          190,
+          95,
+          348,
+          210,
+          0,
+          410,
+          145,
+          245,
+          205,
+          180,
+          228,
+          190,
+          165,
+          275,
+          235,
+          180,
+          200,
+          235,
+          223,
+          185,
+          230,
+          195,
+          180,
+          260,
+          215,
+          198,
+          255,
+          180,
+          0,
+          460,
+          100,
+          290,
+          95,
+          358,
+          230,
+          135,
+          295,
+          0,
+          390,
+          215,
+          225,
+          238,
+          220,
+          195,
+          225,
+          200,
+          0,
+          435,
+          158,
+          275,
+          200,
+          135,
+          295,
+          225,
+          180,
+          0,
+          423,
+          165,
+          280,
+          100,
+          335,
+          215,
+          238,
+          185,
+          0,
+          450,
+          215,
+          200,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          560,
+          558,
+          570,
+          560,
+          570,
+          380,
+          208,
+          150,
+          0,
+          530,
+          205,
+          255,
+          208,
+          330,
+          255,
+          295,
+          305,
+          0,
+          473,
+          325,
+          0,
+          535,
+          250,
+          305,
+          265,
+          258,
+          0,
+          515,
+          355,
+          265,
+          275,
+          150,
+          398,
+          245,
+          200,
+          0,
+          570,
+          345,
+          260,
+          230,
+          313,
+          255,
+          305,
+          280,
+          0,
+          415,
+          385,
+          268,
+          275,
+          285,
+          235,
+          300,
+          744,
+          45,
+          0,
+          305,
+          280,
+          255,
+          285,
+          135,
+          335,
+          345,
+          265,
+          0,
+          525,
+          305,
+          90,
+          345,
+          265,
+          135,
+          350,
+          255,
+          0,
+          345,
+          358,
+          100,
+          345,
+          260,
+          135,
+          345,
+          255,
+          0,
+          445,
+          140,
+          345,
+          255,
+          148,
+          220,
+          350,
+          225,
+          0,
+          380,
+          335,
+          113,
+          0,
+          580,
+          140,
+          335,
+          245,
+          0,
+          480,
+          245,
+          243,
+          165,
+          290,
+          255,
+          180,
+          295,
+          0,
+          483,
+          245,
+          205,
+          260,
+          240,
+          250,
+          235,
+          218,
+          0,
+          480,
+          180,
+          310,
+          135,
+          350,
+          170,
+          293,
+          210,
+          0,
+          515,
+          205,
+          280,
+          215,
+          178,
+          325,
+          235,
+          280,
+          0,
+          495,
+          260,
+          275,
+          218,
+          270,
+          225,
+          235,
+          275,
+          0,
+          405,
+          280,
+          308,
+          265,
+          205,
+          285,
+          170,
+          335,
+          0,
+          460,
+          293,
+          220,
+          285,
+          255,
+          270,
+          240,
+          228,
+          0,
+          485,
+          235,
+          275,
+          175,
+          325,
+          295,
+          208,
+          295,
+          0,
+          485,
+          230,
+          270,
+          225,
+          295,
+          250,
+          245,
+          220,
+          0,
+          505,
+          270,
+          225,
+          170,
+          345,
+          275,
+          225,
+          265,
+          0,
+          485,
+          200,
+          315,
+          265,
+          200,
+          270,
+          245,
+          270,
+          0,
+          510,
+          220,
+          295
+        ]
+      }
+    },
+    {
+      "type": "bookends",
+      "data": {
+        "first": {
+          "key": "film:5001",
+          "masked": false
+        },
+        "last": {
+          "key": "series:4035",
+          "masked": false
+        }
+      }
+    },
+    {
+      "type": "top-shows",
+      "data": {
+        "rows": [
+          {
+            "key": "series:4001",
+            "monthly": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              1120,
+              1120,
+              1110,
+              0
+            ]
+          },
+          {
+            "key": "series:4002",
+            "monthly": [
+              330,
+              330,
+              330,
+              330,
+              330,
+              330,
+              330,
+              330,
+              330,
+              330,
+              0,
+              0
+            ]
+          },
+          {
+            "key": "series:4003",
+            "monthly": [
+              275,
+              275,
+              275,
+              275,
+              275,
+              275,
+              275,
+              275,
+              275,
+              275,
+              220,
+              0
+            ]
+          },
+          {
+            "key": "series:4004",
+            "monthly": [
+              250,
+              250,
+              250,
+              250,
+              250,
+              250,
+              250,
+              250,
+              250,
+              250,
+              0,
+              0
+            ]
+          },
+          {
+            "key": "series:4005",
+            "monthly": [
+              232,
+              232,
+              232,
+              232,
+              232,
+              232,
+              232,
+              232,
+              232,
+              232,
+              0,
+              0
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "top-films",
+      "data": {
+        "rows": [
+          {
+            "key": "film:5013"
+          },
+          {
+            "key": "film:5104"
+          },
+          {
+            "key": "film:5096"
+          },
+          {
+            "key": "film:5088"
+          },
+          {
+            "key": "film:5080"
+          }
+        ]
+      }
+    },
+    {
+      "type": "clock",
+      "data": {
+        "hours": [
+          10,
+          10,
+          9,
+          10,
+          6,
+          0,
+          6,
+          7,
+          9,
+          8,
+          0,
+          1,
+          3,
+          7,
+          11,
+          21,
+          41,
+          59,
+          73,
+          150,
+          205,
+          228,
+          312,
+          72
+        ],
+        "weekdays": [
+          0.13990461049284578,
+          0.13910969793322733,
+          0.13990461049284578,
+          0.14546899841017488,
+          0.143879173290938,
+          0.1422893481717011,
+          0.1494435612082671
+        ]
+      }
+    },
+    {
+      "type": "calendar",
+      "data": {
+        "days": [
+          {
+            "minutes": 185,
+            "key": "film:5001"
+          },
+          {
+            "minutes": 190,
+            "key": "series:4010"
+          },
+          {
+            "minutes": 245,
+            "key": "film:5002"
+          },
+          {
+            "minutes": 205,
+            "key": "film:5003"
+          },
+          {
+            "minutes": 180,
+            "key": "series:4010"
+          },
+          {
+            "minutes": 228,
+            "key": "film:5004"
+          },
+          {
+            "minutes": 190,
+            "key": "series:4010"
+          },
+          {
+            "minutes": 165,
+            "key": "series:4002"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 365,
+            "key": "series:4011"
+          },
+          {
+            "minutes": 325,
+            "key": "series:4011"
+          },
+          {
+            "minutes": 200,
+            "key": "film:5007"
+          },
+          {
+            "minutes": 180,
+            "key": "series:4011"
+          },
+          {
+            "minutes": 113,
+            "key": "series:4005"
+          },
+          {
+            "minutes": 300,
+            "key": "film:5008"
+          },
+          {
+            "minutes": 235,
+            "key": "film:5009"
+          },
+          {
+            "minutes": 135,
+            "key": "series:4012"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 490,
+            "key": "series:4012"
+          },
+          {
+            "minutes": 190,
+            "key": "series:4012"
+          },
+          {
+            "minutes": 215,
+            "key": "film:5012"
+          },
+          {
+            "minutes": 198,
+            "key": "series:4013"
+          },
+          {
+            "minutes": 210,
+            "key": "film:5013"
+          },
+          {
+            "minutes": 210,
+            "key": "series:4002"
+          },
+          {
+            "minutes": 90,
+            "key": "series:4013"
+          },
+          {
+            "minutes": 335,
+            "key": "film:5014"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 380,
+            "key": "series:4013"
+          },
+          {
+            "minutes": 215,
+            "key": "film:5016"
+          },
+          {
+            "minutes": 238,
+            "key": "series:4014"
+          },
+          {
+            "minutes": 185,
+            "key": "film:5017"
+          },
+          {
+            "minutes": 135,
+            "key": "series:4014"
+          },
+          {
+            "minutes": 295,
+            "key": "series:4014"
+          },
+          {
+            "minutes": 210,
+            "key": "film:5019"
+          },
+          {
+            "minutes": 180,
+            "key": "series:4014"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 440,
+            "key": "series:4015"
+          },
+          {
+            "minutes": 193,
+            "key": "series:4015"
+          },
+          {
+            "minutes": 220,
+            "key": "series:4002"
+          },
+          {
+            "minutes": 95,
+            "key": "series:4004"
+          },
+          {
+            "minutes": 325,
+            "key": "series:4015"
+          },
+          {
+            "minutes": 200,
+            "key": "film:5023"
+          },
+          {
+            "minutes": 180,
+            "key": "series:4015"
+          },
+          {
+            "minutes": 113,
+            "key": "series:4005"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 535,
+            "key": "series:4016"
+          },
+          {
+            "minutes": 135,
+            "key": "series:4016"
+          },
+          {
+            "minutes": 285,
+            "key": "series:4016"
+          },
+          {
+            "minutes": 205,
+            "key": "film:5027"
+          },
+          {
+            "minutes": 190,
+            "key": "series:4017"
+          },
+          {
+            "minutes": 108,
+            "key": "series:4005"
+          },
+          {
+            "minutes": 290,
+            "key": "series:4002"
+          },
+          {
+            "minutes": 180,
+            "key": "series:4017"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 460,
+            "key": "series:4017"
+          },
+          {
+            "minutes": 190,
+            "key": "series:4017"
+          },
+          {
+            "minutes": 95,
+            "key": "series:4004"
+          },
+          {
+            "minutes": 348,
+            "key": "film:5031"
+          },
+          {
+            "minutes": 210,
+            "key": "film:5032"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 410,
+            "key": "series:4018"
+          },
+          {
+            "minutes": 145,
+            "key": "series:4018"
+          },
+          {
+            "minutes": 245,
+            "key": "film:5034"
+          },
+          {
+            "minutes": 205,
+            "key": "film:5035"
+          },
+          {
+            "minutes": 180,
+            "key": "series:4019"
+          },
+          {
+            "minutes": 228,
+            "key": "film:5036"
+          },
+          {
+            "minutes": 190,
+            "key": "series:4019"
+          },
+          {
+            "minutes": 165,
+            "key": "series:4002"
+          },
+          {
+            "minutes": 275,
+            "key": "film:5037"
+          },
+          {
+            "minutes": 235,
+            "key": "film:5038"
+          },
+          {
+            "minutes": 180,
+            "key": "series:4019"
+          },
+          {
+            "minutes": 200,
+            "key": "film:5039"
+          },
+          {
+            "minutes": 235,
+            "key": "series:4020"
+          },
+          {
+            "minutes": 223,
+            "key": "film:5040"
+          },
+          {
+            "minutes": 185,
+            "key": "series:4020"
+          },
+          {
+            "minutes": 230,
+            "key": "series:4020"
+          },
+          {
+            "minutes": 195,
+            "key": "film:5042"
+          },
+          {
+            "minutes": 180,
+            "key": "series:4020"
+          },
+          {
+            "minutes": 260,
+            "key": "film:5043"
+          },
+          {
+            "minutes": 215,
+            "key": "film:5044"
+          },
+          {
+            "minutes": 198,
+            "key": "series:4021"
+          },
+          {
+            "minutes": 255,
+            "key": "series:4002"
+          },
+          {
+            "minutes": 180,
+            "key": "film:5045"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 460,
+            "key": "series:4021"
+          },
+          {
+            "minutes": 100,
+            "key": "series:4003"
+          },
+          {
+            "minutes": 290,
+            "key": "film:5047"
+          },
+          {
+            "minutes": 95,
+            "key": "series:4004"
+          },
+          {
+            "minutes": 358,
+            "key": "film:5048"
+          },
+          {
+            "minutes": 230,
+            "key": "series:4022"
+          },
+          {
+            "minutes": 135,
+            "key": "series:4022"
+          },
+          {
+            "minutes": 295,
+            "key": "film:5050"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 390,
+            "key": "series:4023"
+          },
+          {
+            "minutes": 215,
+            "key": "film:5052"
+          },
+          {
+            "minutes": 225,
+            "key": "film:5053"
+          },
+          {
+            "minutes": 238,
+            "key": "series:4023"
+          },
+          {
+            "minutes": 220,
+            "key": "series:4002"
+          },
+          {
+            "minutes": 195,
+            "key": "film:5054"
+          },
+          {
+            "minutes": 225,
+            "key": "series:4024"
+          },
+          {
+            "minutes": 200,
+            "key": "film:5055"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 435,
+            "key": "series:4024"
+          },
+          {
+            "minutes": 158,
+            "key": "series:4005"
+          },
+          {
+            "minutes": 275,
+            "key": "series:4024"
+          },
+          {
+            "minutes": 200,
+            "key": "film:5058"
+          },
+          {
+            "minutes": 135,
+            "key": "series:4025"
+          },
+          {
+            "minutes": 295,
+            "key": "series:4025"
+          },
+          {
+            "minutes": 225,
+            "key": "film:5060"
+          },
+          {
+            "minutes": 180,
+            "key": "series:4025"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 423,
+            "key": "series:4025"
+          },
+          {
+            "minutes": 165,
+            "key": "series:4002"
+          },
+          {
+            "minutes": 280,
+            "key": "film:5062"
+          },
+          {
+            "minutes": 100,
+            "key": "series:4003"
+          },
+          {
+            "minutes": 335,
+            "key": "series:4026"
+          },
+          {
+            "minutes": 215,
+            "key": "film:5064"
+          },
+          {
+            "minutes": 238,
+            "key": "series:4026"
+          },
+          {
+            "minutes": 185,
+            "key": "film:5065"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 450,
+            "key": "series:4027"
+          },
+          {
+            "minutes": 215,
+            "key": "film:5067"
+          },
+          {
+            "minutes": 200,
+            "key": "series:4027"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 560,
+            "key": "series:4027"
+          },
+          {
+            "minutes": 558,
+            "key": "series:4028"
+          },
+          {
+            "minutes": 570,
+            "key": "series:4028"
+          },
+          {
+            "minutes": 560,
+            "key": "series:4028"
+          },
+          {
+            "minutes": 570,
+            "key": "series:4029"
+          },
+          {
+            "minutes": 380,
+            "key": "series:4029"
+          },
+          {
+            "minutes": 208,
+            "key": "series:4029"
+          },
+          {
+            "minutes": 150,
+            "key": "series:4030"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 530,
+            "key": "series:4030"
+          },
+          {
+            "minutes": 205,
+            "key": "series:4030"
+          },
+          {
+            "minutes": 255,
+            "key": "film:5079"
+          },
+          {
+            "minutes": 208,
+            "key": "series:4030"
+          },
+          {
+            "minutes": 330,
+            "key": "series:4002"
+          },
+          {
+            "minutes": 255,
+            "key": "series:4031"
+          },
+          {
+            "minutes": 295,
+            "key": "series:4031"
+          },
+          {
+            "minutes": 305,
+            "key": "series:4031"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 473,
+            "key": "series:4031"
+          },
+          {
+            "minutes": 325,
+            "key": "series:4032"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 535,
+            "key": "series:4032"
+          },
+          {
+            "minutes": 250,
+            "key": "series:4032"
+          },
+          {
+            "minutes": 305,
+            "key": "film:5087"
+          },
+          {
+            "minutes": 265,
+            "key": "film:5088"
+          },
+          {
+            "minutes": 258,
+            "key": "series:4033"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 515,
+            "key": "series:4033"
+          },
+          {
+            "minutes": 355,
+            "key": "series:4033"
+          },
+          {
+            "minutes": 265,
+            "key": "series:4034"
+          },
+          {
+            "minutes": 275,
+            "key": "series:4034"
+          },
+          {
+            "minutes": 150,
+            "key": "series:4034"
+          },
+          {
+            "minutes": 398,
+            "key": "series:4034"
+          },
+          {
+            "minutes": 245,
+            "key": "film:5094"
+          },
+          {
+            "minutes": 200,
+            "key": "series:4035"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 570,
+            "key": "series:4035"
+          },
+          {
+            "minutes": 345,
+            "key": "series:4035"
+          },
+          {
+            "minutes": 260,
+            "key": "film:5098"
+          },
+          {
+            "minutes": 230,
+            "key": "series:4010"
+          },
+          {
+            "minutes": 313,
+            "key": "film:5099"
+          },
+          {
+            "minutes": 255,
+            "key": "series:4002"
+          },
+          {
+            "minutes": 305,
+            "key": "series:4010"
+          },
+          {
+            "minutes": 280,
+            "key": "film:5101"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 415,
+            "key": "series:4011"
+          },
+          {
+            "minutes": 385,
+            "key": "series:4011"
+          },
+          {
+            "minutes": 268,
+            "key": "film:5104"
+          },
+          {
+            "minutes": 275,
+            "key": "series:4011"
+          },
+          {
+            "minutes": 285,
+            "key": "series:4011"
+          },
+          {
+            "minutes": 235,
+            "key": "series:4012"
+          },
+          {
+            "minutes": 300,
+            "key": "series:4012"
+          },
+          {
+            "minutes": 744,
+            "key": "series:4005"
+          },
+          {
+            "minutes": 45,
+            "key": "series:4012"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 305,
+            "key": "series:4012"
+          },
+          {
+            "minutes": 280,
+            "key": "film:5109"
+          },
+          {
+            "minutes": 255,
+            "key": "series:4002"
+          },
+          {
+            "minutes": 285,
+            "key": "film:5110"
+          },
+          {
+            "minutes": 135,
+            "key": "series:4013"
+          },
+          {
+            "minutes": 335,
+            "key": "series:4013"
+          },
+          {
+            "minutes": 345,
+            "key": "series:4013"
+          },
+          {
+            "minutes": 265,
+            "key": "film:5013"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 525,
+            "key": "series:4014"
+          },
+          {
+            "minutes": 305,
+            "key": "film:5013"
+          },
+          {
+            "minutes": 90,
+            "key": "series:4014"
+          },
+          {
+            "minutes": 345,
+            "key": "series:4014"
+          },
+          {
+            "minutes": 265,
+            "key": "film:5016"
+          },
+          {
+            "minutes": 135,
+            "key": "series:4015"
+          },
+          {
+            "minutes": 350,
+            "key": "film:5024"
+          },
+          {
+            "minutes": 255,
+            "key": "film:5032"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 345,
+            "key": "series:4015"
+          },
+          {
+            "minutes": 358,
+            "key": "film:5040"
+          },
+          {
+            "minutes": 100,
+            "key": "series:4003"
+          },
+          {
+            "minutes": 345,
+            "key": "series:4016"
+          },
+          {
+            "minutes": 260,
+            "key": "film:5056"
+          },
+          {
+            "minutes": 135,
+            "key": "series:4016"
+          },
+          {
+            "minutes": 345,
+            "key": "series:4016"
+          },
+          {
+            "minutes": 255,
+            "key": "film:5072"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 445,
+            "key": "film:5080"
+          },
+          {
+            "minutes": 140,
+            "key": "series:4017"
+          },
+          {
+            "minutes": 345,
+            "key": "series:4017"
+          },
+          {
+            "minutes": 255,
+            "key": "film:5096"
+          },
+          {
+            "minutes": 148,
+            "key": "series:4017"
+          },
+          {
+            "minutes": 220,
+            "key": "series:4002"
+          },
+          {
+            "minutes": 350,
+            "key": "film:5104"
+          },
+          {
+            "minutes": 225,
+            "key": "series:4018"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 380,
+            "key": "series:4018"
+          },
+          {
+            "minutes": 335,
+            "key": "series:4018"
+          },
+          {
+            "minutes": 113,
+            "key": "series:4005"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 580,
+            "key": "series:4019"
+          },
+          {
+            "minutes": 140,
+            "key": "series:4019"
+          },
+          {
+            "minutes": 335,
+            "key": "series:4019"
+          },
+          {
+            "minutes": 245,
+            "key": "film:5047"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 480,
+            "key": "series:4019"
+          },
+          {
+            "minutes": 245,
+            "key": "film:5063"
+          },
+          {
+            "minutes": 243,
+            "key": "series:4020"
+          },
+          {
+            "minutes": 165,
+            "key": "series:4002"
+          },
+          {
+            "minutes": 290,
+            "key": "film:5071"
+          },
+          {
+            "minutes": 255,
+            "key": "film:5079"
+          },
+          {
+            "minutes": 180,
+            "key": "series:4020"
+          },
+          {
+            "minutes": 295,
+            "key": "film:5087"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 483,
+            "key": "series:4021"
+          },
+          {
+            "minutes": 245,
+            "key": "film:5103"
+          },
+          {
+            "minutes": 205,
+            "key": "series:4021"
+          },
+          {
+            "minutes": 260,
+            "key": "series:4021"
+          },
+          {
+            "minutes": 240,
+            "key": "film:5006"
+          },
+          {
+            "minutes": 250,
+            "key": "series:4022"
+          },
+          {
+            "minutes": 235,
+            "key": "film:5014"
+          },
+          {
+            "minutes": 218,
+            "key": "series:4022"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 480,
+            "key": "series:4002"
+          },
+          {
+            "minutes": 180,
+            "key": "series:4022"
+          },
+          {
+            "minutes": 310,
+            "key": "film:5030"
+          },
+          {
+            "minutes": 135,
+            "key": "series:4022"
+          },
+          {
+            "minutes": 350,
+            "key": "film:5038"
+          },
+          {
+            "minutes": 170,
+            "key": "series:4001"
+          },
+          {
+            "minutes": 293,
+            "key": "film:5046"
+          },
+          {
+            "minutes": 210,
+            "key": "series:4023"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 515,
+            "key": "series:4023"
+          },
+          {
+            "minutes": 205,
+            "key": "series:4023"
+          },
+          {
+            "minutes": 280,
+            "key": "film:5070"
+          },
+          {
+            "minutes": 215,
+            "key": "series:4024"
+          },
+          {
+            "minutes": 178,
+            "key": "series:4001"
+          },
+          {
+            "minutes": 325,
+            "key": "series:4024"
+          },
+          {
+            "minutes": 235,
+            "key": "series:4002"
+          },
+          {
+            "minutes": 280,
+            "key": "film:5086"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 495,
+            "key": "film:5094"
+          },
+          {
+            "minutes": 260,
+            "key": "film:5102"
+          },
+          {
+            "minutes": 275,
+            "key": "series:4025"
+          },
+          {
+            "minutes": 218,
+            "key": "series:4025"
+          },
+          {
+            "minutes": 270,
+            "key": "series:4025"
+          },
+          {
+            "minutes": 225,
+            "key": "film:5021"
+          },
+          {
+            "minutes": 235,
+            "key": "series:4026"
+          },
+          {
+            "minutes": 275,
+            "key": "film:5029"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 405,
+            "key": "series:4026"
+          },
+          {
+            "minutes": 280,
+            "key": "series:4001"
+          },
+          {
+            "minutes": 308,
+            "key": "film:5045"
+          },
+          {
+            "minutes": 265,
+            "key": "series:4002"
+          },
+          {
+            "minutes": 205,
+            "key": "series:4026"
+          },
+          {
+            "minutes": 285,
+            "key": "film:5053"
+          },
+          {
+            "minutes": 170,
+            "key": "series:4027"
+          },
+          {
+            "minutes": 335,
+            "key": "series:4027"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 460,
+            "key": "series:4027"
+          },
+          {
+            "minutes": 293,
+            "key": "film:5077"
+          },
+          {
+            "minutes": 220,
+            "key": "series:4001"
+          },
+          {
+            "minutes": 285,
+            "key": "series:4028"
+          },
+          {
+            "minutes": 255,
+            "key": "film:5093"
+          },
+          {
+            "minutes": 270,
+            "key": "series:4028"
+          },
+          {
+            "minutes": 240,
+            "key": "film:5101"
+          },
+          {
+            "minutes": 228,
+            "key": "series:4001"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 485,
+            "key": "series:4028"
+          },
+          {
+            "minutes": 235,
+            "key": "series:4002"
+          },
+          {
+            "minutes": 275,
+            "key": "series:4029"
+          },
+          {
+            "minutes": 175,
+            "key": "series:4001"
+          },
+          {
+            "minutes": 325,
+            "key": "series:4029"
+          },
+          {
+            "minutes": 295,
+            "key": "film:5020"
+          },
+          {
+            "minutes": 208,
+            "key": "series:4029"
+          },
+          {
+            "minutes": 295,
+            "key": "film:5028"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 485,
+            "key": "series:4030"
+          },
+          {
+            "minutes": 230,
+            "key": "film:5044"
+          },
+          {
+            "minutes": 270,
+            "key": "series:4030"
+          },
+          {
+            "minutes": 225,
+            "key": "film:5052"
+          },
+          {
+            "minutes": 295,
+            "key": "film:5060"
+          },
+          {
+            "minutes": 250,
+            "key": "series:4031"
+          },
+          {
+            "minutes": 245,
+            "key": "film:5068"
+          },
+          {
+            "minutes": 220,
+            "key": "series:4031"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 505,
+            "key": "series:4031"
+          },
+          {
+            "minutes": 270,
+            "key": "series:4032"
+          },
+          {
+            "minutes": 225,
+            "key": "film:5092"
+          },
+          {
+            "minutes": 170,
+            "key": "series:4032"
+          },
+          {
+            "minutes": 345,
+            "key": "series:4032"
+          },
+          {
+            "minutes": 275,
+            "key": "series:4032"
+          },
+          {
+            "minutes": 225,
+            "key": "series:4001"
+          },
+          {
+            "minutes": 265,
+            "key": "series:4033"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 485,
+            "key": "series:4033"
+          },
+          {
+            "minutes": 200,
+            "key": "series:4033"
+          },
+          {
+            "minutes": 315,
+            "key": "series:4034"
+          },
+          {
+            "minutes": 265,
+            "key": "series:4034"
+          },
+          {
+            "minutes": 200,
+            "key": "series:4034"
+          },
+          {
+            "minutes": 270,
+            "key": "film:5017"
+          },
+          {
+            "minutes": 245,
+            "key": "series:4034"
+          },
+          {
+            "minutes": 270,
+            "key": "series:4035"
+          },
+          {
+            "minutes": 0,
+            "key": null
+          },
+          {
+            "minutes": 510,
+            "key": "series:4035"
+          },
+          {
+            "minutes": 220,
+            "key": "series:4035"
+          },
+          {
+            "minutes": 295,
+            "key": "series:4035"
+          }
+        ],
+        "titles": {
+          "film:5001": "Dr. Strangelove or: How I Learned to Stop Worrying and Love the Bomb",
+          "series:4010": "Only Murders in the Building",
+          "film:5002": "Le Fabuleux Destin d'Amélie Poulain",
+          "film:5003": "Birdman or (The Unexpected Virtue of Ignorance)",
+          "film:5004": "Borat Subsequent Moviefilm: Delivery of Prodigious Bribe to American Regime for Make Benefit Once Glorious Nation of Kazakhstan",
+          "series:4002": "Severance",
+          "series:4011": "Marvel's Agents of S.H.I.E.L.D.",
+          "film:5007": "Harry Potter and the Deathly Hallows: Part 2",
+          "series:4005": "Game of Thrones",
+          "film:5008": "Star Wars: Episode V - The Empire Strikes Back",
+          "film:5009": "Everything Everywhere All at Once",
+          "series:4012": "Unbreakable Kimmy Schmidt",
+          "film:5012": "Mission: Impossible - Dead Reckoning Part One",
+          "series:4013": "Crazy Ex-Girlfriend",
+          "film:5013": "Dune: Part Two",
+          "film:5014": "The Hitchhiker's Guide to the Galaxy",
+          "film:5016": "Crouching Tiger, Hidden Dragon",
+          "series:4014": "It's Always Sunny in Philadelphia",
+          "film:5017": "Portrait of a Lady on Fire",
+          "film:5019": "Les Misérables",
+          "series:4015": "Star Trek: Strange New Worlds",
+          "series:4004": "Breaking Bad",
+          "film:5023": "Der Himmel über Berlin",
+          "series:4016": "Avatar: The Last Airbender",
+          "film:5027": "Anatomie d'une chute",
+          "series:4017": "Shōgun",
+          "film:5031": "The Godfather Part II",
+          "film:5032": "Casablanca",
+          "series:4018": "Dix pour cent",
+          "film:5034": "Vertigo",
+          "film:5035": "Psycho",
+          "series:4019": "Bron/Broen",
+          "film:5036": "Rear Window",
+          "film:5037": "North by Northwest",
+          "film:5038": "Some Like It Hot",
+          "film:5039": "Sunset Boulevard",
+          "series:4020": "The Bear",
+          "film:5040": "12 Angry Men",
+          "film:5042": "2001: A Space Odyssey",
+          "film:5043": "Chinatown",
+          "film:5044": "Taxi Driver",
+          "series:4021": "Andor",
+          "film:5045": "Jaws",
+          "series:4003": "The Sopranos",
+          "film:5047": "Alien",
+          "film:5048": "Apocalypse Now",
+          "series:4022": "The Great British Bake Off",
+          "film:5050": "Blade Runner",
+          "series:4023": "Better Call Saul",
+          "film:5052": "Back to the Future",
+          "film:5053": "Aliens",
+          "film:5054": "Die Hard",
+          "series:4024": "The Wire",
+          "film:5055": "Do the Right Thing",
+          "film:5058": "Unforgiven",
+          "series:4025": "Mad Men",
+          "film:5060": "Schindler's List",
+          "film:5062": "The Shawshank Redemption",
+          "series:4026": "House of the Dragon",
+          "film:5064": "Toy Story",
+          "film:5065": "Fargo",
+          "series:4027": "Succession",
+          "film:5067": "The Big Lebowski",
+          "series:4028": "The Last of Us",
+          "series:4029": "Stranger Things",
+          "series:4030": "The Crown",
+          "film:5079": "No Country for Old Men",
+          "series:4031": "Fleabag",
+          "series:4032": "Ted Lasso",
+          "film:5087": "Drive",
+          "film:5088": "The Artist",
+          "series:4033": "The Office",
+          "series:4034": "Parks and Recreation",
+          "film:5094": "Mad Max: Fury Road",
+          "series:4035": "Seinfeld",
+          "film:5098": "Get Out",
+          "film:5099": "Lady Bird",
+          "film:5101": "The Favourite",
+          "film:5104": "Dune (2021)",
+          "film:5109": "Oppenheimer",
+          "film:5110": "Past Lives",
+          "film:5024": "Det sjunde inseglet",
+          "film:5056": "Goodfellas",
+          "film:5072": "Mulholland Drive",
+          "film:5080": "There Will Be Blood",
+          "film:5096": "Moonlight",
+          "film:5063": "Heat",
+          "film:5071": "Memento",
+          "film:5103": "Nomadland",
+          "film:5006": "Pirates of the Caribbean: The Curse of the Black Pearl",
+          "film:5030": "The Godfather",
+          "series:4001": "The Lord of the Rings: The Rings of Power",
+          "film:5046": "Star Wars",
+          "film:5070": "Gladiator",
+          "film:5086": "The Social Network",
+          "film:5102": "Knives Out",
+          "film:5021": "Y tu mamá también",
+          "film:5029": "După dealuri",
+          "film:5077": "Brokeback Mountain",
+          "film:5093": "Whiplash",
+          "film:5020": "La Haine",
+          "film:5028": "Moartea domnului Lăzărescu",
+          "film:5068": "The Matrix",
+          "film:5092": "Interstellar"
+        },
+        "gap": {
+          "from": "2026-05-04",
+          "to": "2026-05-12"
+        }
+      }
+    },
+    {
+      "type": "centrefold",
+      "data": {
+        "shortlist": [
+          {
+            "id": "midnight-marathoner",
+            "evidence": [
+              "hours.afterDarkShare",
+              "hours.peak",
+              "hours.quietest"
+            ]
+          },
+          {
+            "id": "credits-roller",
+            "evidence": [
+              "records.completionShare",
+              "films.finishedShare"
+            ]
+          },
+          {
+            "id": "festival-juror",
+            "evidence": [
+              "time.filmsShare",
+              "counts.films"
+            ]
+          }
+        ],
+        "hours": [
+          10,
+          10,
+          9,
+          10,
+          6,
+          0,
+          6,
+          7,
+          9,
+          8,
+          0,
+          1,
+          3,
+          7,
+          11,
+          21,
+          41,
+          59,
+          73,
+          150,
+          205,
+          228,
+          312,
+          72
+        ],
+        "graphic": {
+          "kind": "hour-ring",
+          "arc": {
+            "from": 22,
+            "to": 3
+          },
+          "share": "hours.afterDarkShare"
+        }
+      }
+    },
+    {
+      "type": "back-cover",
+      "data": {
+        "minutes": [
+          185,
+          190,
+          245,
+          205,
+          180,
+          228,
+          190,
+          165,
+          0,
+          365,
+          325,
+          200,
+          180,
+          113,
+          300,
+          235,
+          135,
+          0,
+          490,
+          190,
+          215,
+          198,
+          210,
+          210,
+          90,
+          335,
+          0,
+          380,
+          215,
+          238,
+          185,
+          135,
+          295,
+          210,
+          180,
+          0,
+          440,
+          193,
+          220,
+          95,
+          325,
+          200,
+          180,
+          113,
+          0,
+          535,
+          135,
+          285,
+          205,
+          190,
+          108,
+          290,
+          180,
+          0,
+          460,
+          190,
+          95,
+          348,
+          210,
+          0,
+          410,
+          145,
+          245,
+          205,
+          180,
+          228,
+          190,
+          165,
+          275,
+          235,
+          180,
+          200,
+          235,
+          223,
+          185,
+          230,
+          195,
+          180,
+          260,
+          215,
+          198,
+          255,
+          180,
+          0,
+          460,
+          100,
+          290,
+          95,
+          358,
+          230,
+          135,
+          295,
+          0,
+          390,
+          215,
+          225,
+          238,
+          220,
+          195,
+          225,
+          200,
+          0,
+          435,
+          158,
+          275,
+          200,
+          135,
+          295,
+          225,
+          180,
+          0,
+          423,
+          165,
+          280,
+          100,
+          335,
+          215,
+          238,
+          185,
+          0,
+          450,
+          215,
+          200,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          560,
+          558,
+          570,
+          560,
+          570,
+          380,
+          208,
+          150,
+          0,
+          530,
+          205,
+          255,
+          208,
+          330,
+          255,
+          295,
+          305,
+          0,
+          473,
+          325,
+          0,
+          535,
+          250,
+          305,
+          265,
+          258,
+          0,
+          515,
+          355,
+          265,
+          275,
+          150,
+          398,
+          245,
+          200,
+          0,
+          570,
+          345,
+          260,
+          230,
+          313,
+          255,
+          305,
+          280,
+          0,
+          415,
+          385,
+          268,
+          275,
+          285,
+          235,
+          300,
+          744,
+          45,
+          0,
+          305,
+          280,
+          255,
+          285,
+          135,
+          335,
+          345,
+          265,
+          0,
+          525,
+          305,
+          90,
+          345,
+          265,
+          135,
+          350,
+          255,
+          0,
+          345,
+          358,
+          100,
+          345,
+          260,
+          135,
+          345,
+          255,
+          0,
+          445,
+          140,
+          345,
+          255,
+          148,
+          220,
+          350,
+          225,
+          0,
+          380,
+          335,
+          113,
+          0,
+          580,
+          140,
+          335,
+          245,
+          0,
+          480,
+          245,
+          243,
+          165,
+          290,
+          255,
+          180,
+          295,
+          0,
+          483,
+          245,
+          205,
+          260,
+          240,
+          250,
+          235,
+          218,
+          0,
+          480,
+          180,
+          310,
+          135,
+          350,
+          170,
+          293,
+          210,
+          0,
+          515,
+          205,
+          280,
+          215,
+          178,
+          325,
+          235,
+          280,
+          0,
+          495,
+          260,
+          275,
+          218,
+          270,
+          225,
+          235,
+          275,
+          0,
+          405,
+          280,
+          308,
+          265,
+          205,
+          285,
+          170,
+          335,
+          0,
+          460,
+          293,
+          220,
+          285,
+          255,
+          270,
+          240,
+          228,
+          0,
+          485,
+          235,
+          275,
+          175,
+          325,
+          295,
+          208,
+          295,
+          0,
+          485,
+          230,
+          270,
+          225,
+          295,
+          250,
+          245,
+          220,
+          0,
+          505,
+          270,
+          225,
+          170,
+          345,
+          275,
+          225,
+          265,
+          0,
+          485,
+          200,
+          315,
+          265,
+          200,
+          270,
+          245,
+          270,
+          0,
+          510,
+          220,
+          295
+        ],
+        "keys": {
+          "series": [
+            "series:4001",
+            "series:4002",
+            "series:4003"
+          ],
+          "film": "film:5013"
+        }
+      }
+    }
+  ],
+  "archetype": {
+    "id": "midnight-marathoner",
+    "runnerUp": "credits-roller",
+    "evidence": [
+      "hours.afterDarkShare",
+      "hours.peak",
+      "hours.quietest"
+    ],
+    "shortlist": [
+      {
+        "id": "midnight-marathoner",
+        "score": 84
+      },
+      {
+        "id": "credits-roller",
+        "score": 80
+      },
+      {
+        "id": "festival-juror",
+        "score": 67
+      }
+    ],
+    "llmMayChoose": false,
+    "rarity": null
+  }
+}

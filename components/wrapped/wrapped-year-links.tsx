@@ -25,7 +25,7 @@ export function WrappedYearLinks({ years, currentYear }: WrappedYearLinksProps) 
         {years.map((year) => (
           <li key={year}>
             <Link
-              href={`/wrapped/${year}`}
+              href={`/rewind/${year}`}
               data-testid={`wrapped-year-link-${year}`}
               aria-current={year === currentYear ? "page" : undefined}
               className={cn(

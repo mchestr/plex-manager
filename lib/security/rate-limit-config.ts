@@ -27,6 +27,8 @@ interface LimitConfig {
 export const LIMITS = {
   share: { points: 100, duration: 15 * MINUTE },
   poster: { points: 500, duration: 15 * MINUTE },
+  // A session's poster access checks (database and Plex lookups), cache hits included; a page of posters is a few dozen.
+  "poster:access": { points: 2000, duration: 15 * MINUTE },
   admin: { points: 50, duration: 15 * MINUTE },
   checkout: { points: 10, duration: MINUTE },
   portal: { points: 10, duration: MINUTE },
@@ -50,8 +52,13 @@ export const LIMITS = {
   "watchlist:manual": { points: 4, duration: HOUR },
   "rw:share-actions": { points: 10, duration: 60 * MINUTE },
   "rw:share-page": { points: 60, duration: MINUTE },
+  // Card renders (cache misses only) per owner and per share link (P5.10)
+  "rw:card:session": { points: 60, duration: MINUTE },
+  "rw:card:share": { points: 30, duration: MINUTE },
   "rw:gen:burst": { points: 1, duration: 10 * MINUTE },
   "rw:gen:daily": { points: 3, duration: DAY },
+  // Rewind copy calls per LLM provider (design 9.4); the pipeline waits for a point
+  "rw:llm": { points: 30, duration: MINUTE },
 } as const satisfies Record<string, LimitConfig>
 
 export type LimitName = keyof typeof LIMITS

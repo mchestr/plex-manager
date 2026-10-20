@@ -14,7 +14,7 @@ export function WrappedShareButton({
   const [copied, setCopied] = useState(false)
   const [showTooltip, setShowTooltip] = useState(false)
 
-  const shareUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/wrapped/share/${shareToken}`
+  const shareUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/rewind/s/${shareToken}`
 
   const handleCopy = async () => {
     try {

@@ -76,8 +76,17 @@ export enum AuditEventType {
   // never the token, which is the credential for the public link.
   SHARE_LINK_CREATED = "SHARE_LINK_CREATED",
   SHARE_LINK_REVOKED = "SHARE_LINK_REVOKED",
+  // v3 Rewind public links (P5.11, design 6.2). Details carry the share id, the
+  // year and the published pages (and a rotation's old share id), never the token.
+  REWIND_SHARE_CREATED = "REWIND_SHARE_CREATED",
+  REWIND_SHARE_UPDATED = "REWIND_SHARE_UPDATED",
+  REWIND_SHARE_ROTATED = "REWIND_SHARE_ROTATED",
+  REWIND_SHARE_REVOKED = "REWIND_SHARE_REVOKED",
   // The server time zone (Config.timezone) changed. Details carry the old and new zone.
   SERVER_TIMEZONE_CHANGED = "SERVER_TIMEZONE_CHANGED",
+  // A prompt template or Rewind style guide was created, edited, activated or
+  // deleted (P5.9). Details carry the kind and changed field names, never the text.
+  PROMPT_TEMPLATE_CHANGED = "PROMPT_TEMPLATE_CHANGED",
   /**
    * @public An LLM provider save, as P2.12 logged it. Kept so the type stays
    * known; saves are audited as CONFIG_CHANGED since P4.6.

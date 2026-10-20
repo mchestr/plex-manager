@@ -56,7 +56,7 @@ describe.each(loadFixtures().map((fixture) => [fixture.id, fixture] as const))("
   })
 
   it("omits the hand-checked pages and gets the hand-checked edition", () => {
-    const omitted = omittedPages(result.facts, member.stats)
+    const omitted = omittedPages(result.facts, member.stats, result.archetype?.id ?? null)
     expect(omitted).toEqual(expected.omittedPages)
     expect(editionOf(member.stats, omitted)).toBe(expected.edition)
   })

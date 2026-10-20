@@ -301,6 +301,28 @@ describe('Prompt Template', () => {
       expect(result).toContain('My Plex Server')
     })
 
+    it('fills the server name inside the server stats section', async () => {
+      const result = await generateWrappedPrompt('Test User', 2024, mockStatistics, '{{serverStatsSection}}')
+
+      expect(result).toContain('Server name: My Plex Server')
+      expect(result).not.toContain('{{serverName}}')
+    })
+
+    it('inserts values containing $ patterns literally (SEC-46)', async () => {
+      const name = "Ca$$h $& $'"
+      const title = 'Ke$ha: $` {{userName}}'
+      const stats = { ...mockStatistics, topMovies: [{ title, watchTime: 10, playCount: 1 }] }
+      const result = await generateWrappedPrompt(name, 2024, stats, 'Hi {{userName}}! {{topMoviesList}} {{unknown}}')
+
+      expect(result).toBe(`Hi ${name}! 1. ${title} - 10 minutes watched (10 minutes) {{unknown}}`)
+    })
+
+    it('leaves prototype-named placeholders alone', async () => {
+      const result = await generateWrappedPrompt('Test User', 2024, mockStatistics, '{{constructor}} {{toString}}')
+
+      expect(result).toBe('{{constructor}} {{toString}}')
+    })
+
     it('resolves the retired calculated placeholders to empty (RWP-16)', async () => {
       const template = 'Binge watcher: {{bingeWatcher}}, Discovery score: {{discoveryScore}}'
       const result = await generateWrappedPrompt('Test User', 2024, mockStatistics, template)

@@ -585,7 +585,8 @@ model PromptTemplate {
   name        String // Human-readable name for the template
   description String? // Optional description
   template    String // The prompt template with placeholders like {{userName}}, {{year}}, etc.
-  isActive    Boolean  @default(false) // Only one active template at a time
+  kind        String   @default("v2-full") // "v2-full" (the v2 prompt) or "rewind-style-guide" (appended to the v3 prompt)
+  isActive    Boolean  @default(false) // Only one active template of each kind at a time
   version     Int      @default(1) // Version number for tracking changes
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

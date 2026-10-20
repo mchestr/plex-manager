@@ -374,7 +374,7 @@ gantt
 **UI foundations: tokens, fonts and primitives** (2026-10-26 to 2026-11-05)
 
 - [x] P3.1: Semantic tokens and the Rewind scope contract (ui, M, due 2026-10-27)
-- [ ] P3.2: Fonts and root layout (ui, M, due 2026-11-05)
+- [x] P3.2: Fonts and root layout (ui, M, due 2026-11-05)
 - [x] P3.3: Token mirror module and contrast tests (ui, S, due 2026-10-28)
 - [x] P3.4: Base primitives on Base UI behind adapters (ui, L, due 2026-10-30)
 - [x] P3.5: Form primitives and the Field pattern (ui, M, due 2026-11-04)
@@ -407,19 +407,19 @@ gantt
 
 **Rewind core experience and model bake-off** (2026-11-06 to 2026-11-20)
 
-- [ ] P5.1: Rewind routes, layout and redirects (rewind, S, due 2026-11-09)
-- [ ] P5.2: Story stage and player (rewind, L, due 2026-11-12)
-- [ ] P5.3: Story sheets and accessibility semantics (rewind, M, due 2026-11-16)
+- [x] P5.1: Rewind routes, layout and redirects (rewind, S, due 2026-11-09)
+- [x] P5.2: Story stage and player (rewind, L, due 2026-11-12)
+- [x] P5.3: Story sheets and accessibility semantics (rewind, M, due 2026-11-16)
 - [ ] P5.4: Rewind visual, axe and performance test projects (rewind, M, due 2026-11-13)
-- [ ] P5.5: Registry and the front pages (rewind, M, due 2026-11-13)
-- [ ] P5.6: Features pages: Guess, Top shows, Top films (rewind, M, due 2026-11-17)
-- [ ] P5.7: Habits and centrefold: Clock, Calendar, Centrefold, Back cover (rewind, M, due 2026-11-16)
-- [ ] P5.8: Copy slots, templates, grounding and token rendering (rewind, M, due 2026-11-09)
-- [ ] P5.9: The v3 pipeline end to end (rewind, L, due 2026-11-12)
-- [ ] P5.10: Share-safe projection v3 and card routes (rewind, M, due 2026-11-13)
-- [ ] P5.11: Share sheet, core cards and opt-in public links (rewind, M, due 2026-11-18)
-- [ ] P5.12: Article mode (rewind, M, due 2026-11-18)
-- [ ] P5.13: Eval harness and model bake-off (rewind, M, due 2026-11-20)
+- [x] P5.5: Registry and the front pages (rewind, M, due 2026-11-13)
+- [x] P5.6: Features pages: Guess, Top shows, Top films (rewind, M, due 2026-11-17)
+- [x] P5.7: Habits and centrefold: Clock, Calendar, Centrefold, Back cover (rewind, M, due 2026-11-16)
+- [x] P5.8: Copy slots, templates, grounding and token rendering (rewind, M, due 2026-11-09)
+- [x] P5.9: The v3 pipeline end to end (rewind, L, due 2026-11-12)
+- [x] P5.10: Share-safe projection v3 and card routes (rewind, M, due 2026-11-13)
+- [x] P5.11: Share sheet, core cards and opt-in public links (rewind, M, due 2026-11-18)
+- [x] P5.12: Article mode (rewind, M, due 2026-11-18)
+- [x] P5.13: Eval harness and model bake-off (rewind, M, due 2026-11-20)
 
 **Shells and the member pages Rewind needs** (2026-11-06 to 2026-12-04)
 
@@ -3141,13 +3141,15 @@ The token codemod and the spinner and icon sweeps (formerly P3.11 to P3.13) now 
 
 **Demo.** On `/`, press Tab: "Skip to content" appears, and Enter lands in `main`. Pinch-zoom works in Android Chrome. Complete a Discord link: a "Discord linked" toast appears, and the URL is clean. `/?error=anything` shows nothing.
 
+(as merged: the fonts load through `next/font/local`, not `next/font/google`, so a build never fetches a font and the source is pinned: `app/_fonts/` holds IBM's own unmodified WOFF2 releases (`@ibm/plex-sans-variable@0.2.0`, `@ibm/plex-mono@1.1.0`) with their OFL, and `scripts/plex-fonts.lock.json` pins each tarball and file by sha256 (`scripts/fetch-plex-fonts.mjs` re-copies them; `scripts/__tests__/plex-fonts.test.ts` checks them). IBM's variable Plex Sans has `wdth` 85 to 100 (Google's has 75 to 100), enough for the 85% and 92% the design uses. It ships split by script (Latin1, Latin2, Latin3 for Vietnamese, Pi, Greek, Cyrillic); `next/font/local` takes one `unicode-range` per call, so `app/fonts.ts` makes one call per subset on one family, and only Latin1 (69 KB) is preloaded. next/font names a call's class and variable after its JS name whatever `font-family` the `@font-face` declares, so the shared family is `plexSans` (`--font-plex-sans: "plexSans", "plexSans Fallback"`); the body's computed font contains `plexSans`, not `IBM_Plex_Sans`. `plexFontClassNames` puts every subset's faces on `<html>`. Plex Mono is the three complete files, not preloaded. The title template stays P3.9's `%s - {serverName}`, and `metadataBase` stays P3.9's (`NEXT_PUBLIC_APP_URL`, else `NEXTAUTH_URL`); the viewport test is in `app/__tests__/root-metadata.test.ts`. The toast slot was already P3.6's (a `<section>` named "Notifications" by Base UI, `role="status"`/`"alert"` items, `z-(--z-toast)`), so it is unchanged. `FlashFromQuery` strips the params with `history.replaceState` (Next keeps `useSearchParams` in step, with no server round trip and no `Route` cast), and only once the document has loaded and no streamed `[hidden][id^="S:"]` content is left: an update above `app/loading.tsx`'s boundary before React reveals it renders a second copy of the page beside the hidden one. `flash` and `error` (with `error_description`) are always stripped; `status` only when it is `linked`, because `/admin/queues` filters on `status`. The flash error copy lives in `lib/ui/error-copy.ts` under `FlashErrorCode`; `lib/plex-sign-in-codes.ts` is left for P10.27. The callback already sent codes (P4.9), so only `/discord/connect` changed. Mains: the admin layout's gate screens and the root `error.tsx`'s auth branches render inside a `main#main`, and a minimal `app/not-found.tsx` (Next's 404 text on the token canvas, `not-found-heading`) gives the 404 a `main#main` so the skip link has a target; P10.17 redesigns it. `e2e/a11y/routes.ts`'s `ready` is now always a test id. `typedRoutes` needed only the admin nav's `href: Route`. The axe baseline fell by 59 `region`, 39 `meta-viewport` (all), two each of `landmark-unique`, `landmark-no-duplicate-main` and `landmark-main-is-top-level`, and one `color-contrast|incomplete` on `/admin/users/regular-user-id` (61 to 60); the 404 scan is now clean. That last count is order-dependent: 60 when the axe specs run alone, 61 in the full suite after the setup-wizard project has changed the seeded data, so the full-suite run reports it as a rise until the phase E2E settles it. All 62 visual baselines were regenerated locally on a production build (desktop and mobile in one run, the setup screens in another, since the wizard renames the server): every screen's text is now Plex Sans, and the 404 is dark. design-debt lost `app/layout.tsx`'s two `zoom-lock` counts.)
+
 **Done when.**
-- [ ] Plex Sans and Plex Mono load through `next/font` on every page.
-- [ ] No route has zoom locks, and every route has one `main#main` reached by the skip link.
-- [ ] Toasts sit in a "Notifications" region and are announced.
-- [ ] `FlashFromQuery` handles every code in `flash-codes.ts`, and never renders query text.
-- [ ] `typedRoutes` is on, and typecheck passes with generated route types.
-- [ ] The axe and visual baselines are updated.
+- [x] Plex Sans and Plex Mono load through `next/font` on every page.
+- [x] No route has zoom locks, and every route has one `main#main` reached by the skip link.
+- [x] Toasts sit in a "Notifications" region and are announced.
+- [x] `FlashFromQuery` handles every code in `flash-codes.ts`, and never renders query text.
+- [x] `typedRoutes` is on, and typecheck passes with generated route types.
+- [x] The axe and visual baselines are updated.
 
 ### Step P3.3: Token mirror module and contrast tests
 
@@ -4797,12 +4799,14 @@ P5.1 and P5.2 start only once P3.1's scope contract and P3.7's primitives have m
 
 **Demo.** With the browser clock at 2027-01-02, follow an old `/wrapped` bookmark: it lands on `/rewind/2026`, the tab reads "Chester Family Plex Rewind 2026", and Close returns home. An old `/wrapped/share/<token>` link still opens the shared page.
 
+(as merged: `RewindScope` (`components/rewind/stage/rewind-scope.tsx`) takes `fontClassName`; its root carries no ink and no `.light`/`.dark` class (a paper root would restyle the v1/v2 viewer, and pages and chrome print their own ink). It has a marked slot for P5.2's `StageInkContext.Provider` and `data-archetype`, wired at merge. P5.2's `StoryStage` mounts in `app/(app)/rewind/[year]/page.tsx` in place of the `issue` branch's `RewindPageList`. Status panels, the loading skeleton and the v3 placeholder (`components/rewind/rewind-page-list.tsx`, for P5.2 to replace) print on paper themselves; the v1/v2 branch renders the old viewer, year links and share notice inside a `font-sans` wrapper, so its visual baseline is unchanged. Popups and toasts get `inkProps('paper')` plus the font variables. Close is `components/rewind/rewind-close.tsx` (`rewind-close`, an `ink-outline icon-pill` Link); `safeReturnPath` returns a typed `Route`. Branch logic is `lib/rewind/year-view.ts` (`loadRewindYearView`); the index keeps P0.14's `resolveRewindYear` (season-year row first). The flags gate only a v3 row (`unavailable`, `REWIND_NOT_OPEN`); Redis and eligibility are checked only for the season year. Panel copy codes (`RewindPanelCode`) are in `lib/ui/error-copy.ts`. `/rewind/1999` renders `[year]/not-found.tsx` (the `not-found` panel with `rewind-year-links`) with proxy's 404. `wrapped-year-view.tsx` is deleted. Share URLs, the admin Shares link and `revalidatePath('/rewind', 'layout')` all point at `/rewind`; `lib/access-paths.ts` drops `/wrapped` (next.config redirects before the proxy runs) and treats `/rewind/s/*` as public. The design-debt `rewind-only` and `infinite-motion` skips now include `app/(app)/rewind/`. The v2 share page moved unchanged; its design-debt counts moved with it.)
+
 **Done when.**
-- [ ] `/rewind` opens the latest completed year, `/rewind/[year]` opens any of the member's years, and every other state shows a status panel.
-- [ ] The layout is the scope root, with the Rewind fonts, the paper portal and a safe close control.
-- [ ] Both permanent redirects resolve in order, and `/rewind/s/:token` serves surviving share links.
-- [ ] Titles read "{server name} Rewind {year}", and no in-app link points at `/wrapped`.
-- [ ] The unit tests and the January-routing E2E pass.
+- [x] `/rewind` opens the latest completed year, `/rewind/[year]` opens any of the member's years, and every other state shows a status panel.
+- [x] The layout is the scope root, with the Rewind fonts, the paper portal and a safe close control.
+- [x] Both permanent redirects resolve in order, and `/rewind/s/:token` serves surviving share links.
+- [x] Titles read "{server name} Rewind {year}", and no in-app link points at `/wrapped`.
+- [x] The unit tests and the January-routing E2E pass.
 
 ### Step P5.2: Story stage and player
 
@@ -4856,16 +4860,18 @@ P5.1 and P5.2 start only once P3.1's scope contract and P3.7's primitives have m
   - an `animationend` on the segment advances one page, and `visibilitychange` pauses;
   - a test `Profiler` records no commit while a dwell runs.
 
+(as merged: `StoryStage({ pages: { type, content }[], archetype, closeHref: Route, prefs? })`; `prefs` defaults to autoplay on, normal pacing, shortcuts on until P5.3 passes the stored ones. The registry has no `interaction` flag, so `pageKind(dwell)` reads `hold` as an interaction page (`tap` the cover, `end` the back cover). The reducer state also holds `prevIndex` (the turn direction), `autoplay` and `kinds`, and takes `SET_AUTOPLAY`. The stage tells the scope root the current page's ink through `StageInkContext` (`components/rewind/stage/stage-ink.tsx`, a no-op without a provider), which P5.1's `RewindScope` should provide; each page and both chrome rows carry their own `inkProps`, so the scope root must not carry a `.light`/`.dark` class around the pages, or a dark page sits inside a light one. `NearPage` and `useStagePage()` (`stage-page.tsx`) mount `next/dynamic` islands within one turn, and `usePlayerSend()` (`player-context.tsx`) lets an island send `INTERACT_START`/`INTERACT_END`. Visually hidden `rewind-prev` and `rewind-next` buttons, shown on focus, are the tap and swipe equivalents. No sheet renders yet: Settings, Table and Share enter the `sheet` mode and Esc leaves it. The turn and progress CSS (`rw-progress`, `rw-ink-roll-*`, `rw-page-leave`) is in the Rewind block of `app/globals.css`; the hold is detected with one 250 ms timeout. Until P5.1 mounts it, `/dev/rewind-stage` (behind `ENABLE_DEV_UI=1`) drives the player with placeholder pages; `npm run design:rewind-motion` is the motion check.)
+
 **Integration.** P5.1's `[year]/page.tsx` renders `StoryStage` with the selected pages. P5.3 adds the sheets, focus handling and the live region, and P5.4's performance project enforces the zero-render rule. P5.5 to P5.7 supply the page slots, and P8.3 adds the first-tap completion of count-ups (FR-15, a P1 item).
 
 **Demo.** At 390x664 the compact chrome appears and the story never scrolls. A swipe, a tap on the left third and ArrowRight each turn a page, autoplay resumes after a manual turn, and a hold hides the chrome for a screenshot. The Performance panel shows no React commits during a dwell.
 
 **Done when.**
-- [ ] `fit-stage` returns the expected chrome and scale for every listed viewport, and the story never scrolls.
-- [ ] The reducer implements every state and transition in design 14.3, and autoplay survives manual turns.
-- [ ] Taps, swipes, hold, the Pause long-press and the stage-scoped keyboard map all work, and each gesture has a button equivalent.
-- [ ] Progress is CSS-driven with zero React renders per frame, and Settings, Pause and Close are `ink-outline icon-pill` Buttons with their test ids.
-- [ ] The Rewind motion check enforces NFR-6 in CI, with a test per rule.
+- [x] `fit-stage` returns the expected chrome and scale for every listed viewport, and the story never scrolls.
+- [x] The reducer implements every state and transition in design 14.3, and autoplay survives manual turns.
+- [x] Taps, swipes, hold, the Pause long-press and the stage-scoped keyboard map all work, and each gesture has a button equivalent.
+- [x] Progress is CSS-driven with zero React renders per frame, and Settings, Pause and Close are `ink-outline icon-pill` Buttons with their test ids.
+- [x] The Rewind motion check enforces NFR-6 in CI, with a test per rule.
 
 ### Step P5.3: Story sheets and accessibility semantics
 
@@ -4920,12 +4926,14 @@ P5.1 and P5.2 start only once P3.1's scope contract and P3.7's primitives have m
 
 **Demo.** With VoiceOver on iOS, a swipe announces the new heading once. During autoplay each automatic turn is announced while focus stays put. With shortcuts off, K does nothing. At 375x548 the article offer opens first, and under reduced motion pages crossfade while the dwell still runs.
 
+(as merged: `StoryStage({ pages: { type, content, table? }[], year, archetype, closeHref, copy: { copySource, model } })`: `year` and `copy` are new required props and `prefs` is gone (the stage reads `useRewindPrefs()`), so P5.1 passes the year and the row's `copySource` and `copyMeta.model`. Each page's `table` is the registry's `table(data)` result, built on the server; the Table control and T show only when it is non-null. The `PageTable` contract stays `{ caption, columns, rows }`: the caption names what is counted, the window and (on clock pages) `tz.note`, and each row's first cell is its `th scope="row"`. `copyMeta.model` is read as `"<provider>:<model id>"` (`lib/rewind/copy-disclosure.ts` `aboutTheWords`), so P5.9 should store it that way; a bare id is matched against the hosted catalogue, and `openai-compatible` or an unknown bare id reads "a model running on this server". Page bodies bring their own `h2 tabIndex={-1}`; `components/rewind/a11y/page-heading.tsx` `PageHeading({ lines, full? })` draws one (fitted lines, ellipsized full text in `sr-only`), and a page with no `h2` takes focus itself. `LazyMotion` is `strict`, so islands must use `m.*`. The article offer is the player sheet `article-offer`; "Read as an article" links go to `/rewind/<year>/read`, which 404s until P5.12. `Switch` gained an `aria-describedby` prop for the row hints. `/dev/rewind-stage` takes `?words=llm|local|template` and gives every chart page a placeholder table. No E2E spec was in scope; P5.4 drives the test ids.)
+
 **Done when.**
-- [ ] The Settings and Table sheets work from their buttons and keys, and the preferences live in `localStorage` with safe defaults.
-- [ ] The stage is a labelled region, each page is a labelled article with a real `h2`, and no generic span carries `aria-label`.
-- [ ] User turns move focus to the heading, automatic turns are announced once through the polite live region, and focus on a control pauses autoplay.
-- [ ] Rewind's own reduced-motion rule keeps the 120 ms crossfades and the dwell timing.
-- [ ] Article mode is offered below the 0.8 scale floor and at 130% text size.
+- [x] The Settings and Table sheets work from their buttons and keys, and the preferences live in `localStorage` with safe defaults.
+- [x] The stage is a labelled region, each page is a labelled article with a real `h2`, and no generic span carries `aria-label`.
+- [x] User turns move focus to the heading, automatic turns are announced once through the polite live region, and focus on a control pauses autoplay.
+- [x] Rewind's own reduced-motion rule keeps the 120 ms crossfades and the dwell timing.
+- [x] Article mode is offered below the 0.8 scale floor and at 130% text size.
 
 ### Step P5.4: Rewind visual, axe and performance test projects
 
@@ -5021,11 +5029,13 @@ P5.1 and P5.2 start only once P3.1's scope contract and P3.7's primitives have m
 
 **Demo.** The heavy fixture's cover matches `slide-01-cover.png`, and its cut button reads "10 pages" while only the core set exists. The light fixture shows the pocket cover. Adding `bookends` to `rewindDisabledPages` renumbers every folio.
 
+(as merged: `RegistryEntry<D>` (`lib/rewind/registry.ts`) is `{ type, name, act, field, altField, spot, core, pocket, dwell }` plus a `PageDefinition<D>`: `select(facts, ctx)`, `schema`, `srSummary(data, facts)`, optional `table(data, facts, { locale })` and `share: { facts, titles?, art? }`, written as methods so a typed page fits `RegistryEntry<unknown>`. `SelectContext` is `{ edition, archetype, disabledPages, stats }`: `stats` (the member's `MemberStats`) replaces the plan's `config`, because the soundtrack's daily minutes and three page rules (bookends' same-day rule, the clock's 10 plays, Setup's eligibility) are not facts. Page modules live in `lib/rewind/pages/<page>.ts` with `<page>.schema.ts`; pages whose steps have not landed keep design 4.3's rule as `select` with empty strict data in `lib/rewind/pages/rules.ts`, and P5.6, P5.7, P7.1 and P7.2 replace their entries. `LATER_PAGES` (the eight non-core pages) are left out by `selectPages` until P7.1 and P7.2 remove them; `eligiblePages` keeps them, and the golden test's `omittedPages` (`evals/rewind/__tests__/pages.ts`) now runs the registry's selects. `SelectedPage` is `{ type, folio, data, field }`; `validatePagesOnRead(pages, { archetype, disabledPages })` also applies `Config.rewindDisabledPages` on read and drops `short-list` until P7.3. The catalogue gained `bookends.first|last.title|date|time` (design 4.3 names them; snapshots updated). `lib/rewind/viz/soundtrack.ts` takes `window: { from, days }`. Page components are `components/rewind/pages/*` (`PageBody` maps a type to its component, `IssueContext` carries the locale, server name, selected list, stored copy and zone); `components/rewind/rewind-issue.tsx` renders a stored v3 issue through `StoryStage` on `/rewind/[year]`, and `RewindScope` now carries `data-archetype` and `data-stage-ink` from the stage. Enter on the cover chooses the full issue (`choose` in the keymap). The front-page entrance keyframes and the `.rw-hatch` and `.rw-halftone` textures are in the Rewind block of `app/globals.css`. Copy comes from P5.8's templates; `deck.bookends`' first template repeats the lifetime line, for P5.8 to vary. P5.4's `PENDING_PAGES` and the 01-03 visual baselines are left to the coordinator (no Playwright runs in this step). With D7, the heavy fixture's full issue is 9 pages, not 10.)
+
 **Done when.**
-- [ ] Every registry entry declares `select`, `schema`, `srSummary`, `spot`, `table` where it applies, and `share.facts`.
-- [ ] `selectPages` omits null and disabled pages, renumbers the folio and progress, and drops stored pages that fail validation.
-- [ ] Pages 01, 02 and 03 match the design on the heavy, median and light fixtures, with the soundtrack from `lib/rewind/viz`, the cut choice and the data-window line.
-- [ ] No page shows an eyebrow, a zero count or a hard-coded colour, and the component and visual tests pass.
+- [x] Every registry entry declares `select`, `schema`, `srSummary`, `spot`, `table` where it applies, and `share.facts`.
+- [x] `selectPages` omits null and disabled pages, renumbers the folio and progress, and drops stored pages that fail validation.
+- [x] Pages 01, 02 and 03 match the design on the heavy, median and light fixtures, with the soundtrack from `lib/rewind/viz`, the cut choice and the data-window line.
+- [ ] No page shows an eyebrow, a zero count or a hard-coded colour, and the component and visual tests pass. (Component tests pass; visual baselines are not run here.)
 
 ### Step P5.6: Features pages: Guess, Top shows, Top films
 
@@ -5071,12 +5081,14 @@ P5.1 and P5.2 start only once P3.1's scope contract and P3.7's primitives have m
 
 **Demo.** On the heavy fixture, answer the quiz wrongly: the reveal reads "Close. It came second.", the chosen tile flies into page 05's poster slot, and the deck names the guess. With Plex stopped, every poster slot shows its title card and nothing moves.
 
+(as merged: Page modules are `lib/rewind/pages/{guess,top-shows,top-films}.ts` with `guess.schema.ts`, `top-lists.schema.ts` and the shared `title-key.schema.ts` (`TitleKeySchema`, `posterKey`); `rules.ts` no longer holds them. `SelectContext` gained an optional `userId`, the quiz seed (`hash(userId, year)`): **P5.9 should pass the member's id**, or every member of a year gets the same order. Stats changed: `SeriesEntry.monthly` (12 calendar months of minutes, page 05's small multiples) and `quiz.titles` beside `quiz.options`. Guess data is `{ kind, options: [{ key, title, rank, minutes }] }` in stored, shuffled order; Top shows `{ rows: [{ key, monthly }] }`; Top films `{ rows: [{ key }] }`; row n's numbers stay `series[n].*` / `films[n].*` facts. Templates gained `quizHeadline(kind)`, `quizReveal(rank)`, `quizCallback(rank)` and the template-only token `copy.guess` (`copyLocals({ guess })`). The quiz answer lives in `components/rewind/stage/quiz-context.tsx` (`QuizProvider` in `StoryStage`, `sessionStorage` `rewind:quiz:<year>`); arrows move `aria-checked`, a click or Space answers, and after an answer the guess's progress segment runs `REVEAL_DWELL_MS` (4 s) so autoplay continues. The match cut (`components/rewind/stage/match-cut.tsx`) is a measured transform flight (WAAPI, 375 ms, `--rw-ease-ui`) of a cloned tile in a stage-level layer above the pages, not Motion `layoutId`: layout animation needs `domMax`, and the stage loads `domAnimation` strictly. It flies only for a series quiz (a mixed quiz's answer may not be page 05's No. 1), as does the Top shows callback deck. Top shows rows open a `RowSheet` (`OPEN_SHEET` `row`); the title card has no year (no fact holds a title's year). Islands are imported directly, not through `next/dynamic`. The poster route is `app/api/rewind/poster/[ratingKey]/route.ts` (pixels in `lib/rewind/poster/image.ts`, cache in `disk-cache.ts`, tone pairs in `lib/rewind/media/tone.ts`: `<spot>.<field>`, equal names meaning the field's own ink); every 200 is `private, max-age=31536000, immutable`, shares included (no more `public`); access is checked before the disk cache, and only misses spend a limiter point; `w` defaults to 480 and `tone` to `none`, so the v2 path (`app/api/wrapped/poster/...`, a re-export) keeps working. `sharp` 0.35.5 is now a direct dependency. P0.16's route test moved to `app/api/rewind/poster/__tests__/route.test.ts`. No E2E or visual baseline ran (FEATURE-FIRST): P5.4 has not merged, so its quiz and match-cut fixme and the 04-06 baselines are left to the coordinator.)
+
 **Done when.**
-- [ ] The quiz is a radiogroup that holds autoplay, and it is omitted with fewer than 3 candidates or a gap of 2% or less.
-- [ ] The match cut runs in a stage-level layer, and reduced motion skips it.
-- [ ] Top shows and Top films match the design, with full-colour No. 1 posters, duotone rows and title-card fallbacks that keep their size.
-- [ ] The Rewind poster route serves sized and toned WebP from a disk cache under P0.16's access rules.
-- [ ] Tests and baselines pass for pages 04 to 06.
+- [x] The quiz is a radiogroup that holds autoplay, and it is omitted with fewer than 3 candidates or a gap of 2% or less.
+- [x] The match cut runs in a stage-level layer, and reduced motion skips it.
+- [x] Top shows and Top films match the design, with full-colour No. 1 posters, duotone rows and title-card fallbacks that keep their size.
+- [x] The Rewind poster route serves sized and toned WebP from a disk cache under P0.16's access rules.
+- [ ] Tests and baselines pass for pages 04 to 06. (Unit and component tests pass; baselines are not run here.)
 
 ### Step P5.7: Habits and centrefold: Clock, Calendar, Centrefold, Back cover
 
@@ -5126,12 +5138,14 @@ P5.1 and P5.2 start only once P3.1's scope contract and P3.7's primitives have m
 
 **Demo.** On the heavy fixture, the centrefold shows "Midnight / Marathoner" set at 87.2 px with no break inside a word, on chromium and on iOS Safari. "Why this?" lists the three evidence facts. From the back cover, Done returns home, and Read again restarts at page 02.
 
+(as merged: Page modules are `lib/rewind/pages/{clock,calendar,centrefold,back-cover}.ts` with their `.schema.ts`; `rules.ts` keeps only the P5.6/P7 pages (its `Landed` type excludes these four). Clock data is `{ hours[24], weekdays[7] }` (Monday first); its Table and the centrefold's are `hoursTable()`, captioned "Times in {tz.label}." because `table()` has no zone source. Calendar data is `{ days: [{ minutes, key }], titles, gap: { from, to } | null }` for every window day from `window.from` (`calendarDays()` dates them); the schema refines that every key is in `titles`. Centrefold data is `{ shortlist: [{ id, evidence }], hours, graphic }`, the shortlist being the chosen archetype then `selectArchetype`'s ranking, and `graphic` a union of `hour-ring | meter | calendar-dots | shelf` (null when its fact is missing or there is no archetype). Back-cover data is `{ minutes }`; `lib/rewind/billing-block.ts` `billingBlock(facts, { serverName, named, showtime, locale, measure, metrics })` returns the `<dl>` entries and justified lines (P5.11's card passes `named: options.signed`). `IssueContext` gained `model` and `returnTo`. Page islands open their own sheets through the player: `PlayerProvider` now takes `sheet`, and `useStageSheet(name)` (`player-context.tsx`) opens "why" and "contents" in `sheet` mode, so Esc closes them first. The back cover hides the bottom chrome's share pill (`ChromeBottom share`), and its own share button is `rewind-back-cover-share` (the chrome keeps `rewind-share-poster`); "Change" sends `OPEN_SHEET share` until P5.11 opens it at its settings, and the privacy line is static until P5.11 reads the share defaults. New test ids: `rewind-why-sheet`, `rewind-why-candidate`, `rewind-why-disclosure`, `rewind-contents-sheet`, `rewind-contents-page`, `rewind-archetype-rarity`, `rewind-billing(-list|-line)`, `rewind-calendar-dates`, `rewind-privacy-status`, `rewind-back-cover-share`. The calendar grid has no month labels (9 px rows cannot hold 12 px text); a key under it names the bracket, ring and dots. The low-end `scaleX` nameplate is not built (no low-end detection exists yet). `e2e/rewind-centrefold.spec.ts` is written but not run (no Playwright in this step), and the 09/10/16/18 visual baselines are left to the coordinator.)
+
 **Done when.**
-- [ ] Pages 09, 10, 16 and 18 match the design, with the evidence clock, the calendar strip and the billing block.
-- [ ] The archetype name is fitted without mid-word breaks, and the E2E check passes on chromium and webkit.
-- [ ] "Why this?", the AI disclosure and the privacy line are present.
-- [ ] Done, Read again and Contents work.
-- [ ] Tests and baselines pass for all four pages.
+- [x] Pages 09, 10, 16 and 18 match the design, with the evidence clock, the calendar strip and the billing block.
+- [ ] The archetype name is fitted without mid-word breaks, and the E2E check passes on chromium and webkit. (Fitted and unit-tested; the E2E is written, not run.)
+- [x] "Why this?", the AI disclosure and the privacy line are present.
+- [x] Done, Read again and Contents work.
+- [ ] Tests and baselines pass for all four pages. (Unit tests pass; baselines are not generated here.)
 
 ### Step P5.8: Copy slots, templates, grounding and token rendering
 
@@ -5179,11 +5193,17 @@ P5.1 and P5.2 start only once P3.1's scope contract and P3.7's primitives have m
 
 **Demo.** Run `groundSlot` on the personal-signature line against the heavy fixture: it prints the rule 3 and rule 4 issues with their hints. Render a deck that names "Ke$ha: My Crazy Beautiful Life", and the title comes out intact.
 
+**As merged** (later steps rely on these):
+- `lib/wrapped/copy/`: `slots.ts` (`COPY_SLOTS`, `SLOT_IDS`, `HERO_FACTS`, `factPages(id)` for rule 5, `slotsForPages`, `slotDependencyHash`), `schema.ts` (`RewindCopyV3Wire`, now also the stored `copy` in `schema-v3.ts`; `RewindCopyV3` caps raw text at 3x `maxChars` as a runaway guard, since rule 7 checks the rendered length), `render-copy.ts` (`TOKEN_RE`, `renderCopy` segments `text`/`token`/`title`, `renderCopyText`, `tokenIds`, `TokenSource`), `grounding.ts` (`groundSlot(slotId, text, { facts, selected, source?, locals? })` for rules 1-7, `groundArchetype(choice, selection)` for rule 8), `templates.ts` (`slotTemplate`, `headline(page, facts)`, `coverLines([{ type, folio }])` returning `{ folio, text }` so the folio is set apart, `windowLine`, `tzNote('member' | 'server')`, `tzShort`, `pocketNote`, `posterLineTemplate`, `copyLocals({ year, firstTitle })`), `poster-lines.ts` (the 60 lines).
+- Values that are not facts (the issue year, Bookends' first title) are template-only tokens `copy.year` and `copy.firstTitle`, passed as `locals`; the catalogue has no year fact.
+- Rule 3 needs a share token cited in the same slot (the "Most of it after dark" line cites none). Templates pass `source: 'template'`, which allows "so far" and "still". The tagline's template is one of the archetype's poster lines.
+- Word list: the 10,000 English 1-grams of orgtre/google-books-ngram-frequency (CC BY 3.0, pinned by commit and sha256 in `scripts/build-wordlist.mjs`), minus capitalised entries, so a sentence can't start with a month or a place: 9,824 words, plus "starring" and "unfinished" for the design's headlines. Its source and licence are recorded in the generated file's header, not `.claude/skills/THIRD_PARTY.md`, which lists only vendored skills.
+
 **Done when.**
-- [ ] `slots.ts` declares every slot with its limits, allowed facts, identity facts and bands, and `slotDependencyHash` is stable.
-- [ ] Templates exist for every headline and slot, with variants and window wording keyed on `window.finalCut`.
-- [ ] All eight grounding rules have passing and failing fixtures, including the "Most of it after dark" line.
-- [ ] `render-copy` inserts titles containing `$` patterns literally, and the v2 prompt substitution uses a replacer function.
+- [x] `slots.ts` declares every slot with its limits, allowed facts, identity facts and bands, and `slotDependencyHash` is stable.
+- [x] Templates exist for every headline and slot, with variants and window wording keyed on `window.finalCut`.
+- [x] All eight grounding rules have passing and failing fixtures, including the "Most of it after dark" line.
+- [x] `render-copy` inserts titles containing `$` patterns literally, and the v2 prompt substitution uses a replacer function.
 
 ### Step P5.9: The v3 pipeline end to end
 
@@ -5228,14 +5248,23 @@ P5.1 and P5.2 start only once P3.1's scope contract and P3.7's primitives have m
 
 **Demo.** An admin regenerates the heavy test member: one `LLMUsage` row appears and the data is v3. A second regenerate makes no LLM call. With the provider key removed, the Rewind still completes, with `copySource: 'template'` and a warning in the logs.
 
+**As merged** (later steps rely on these):
+- Modules in `lib/wrapped/pipeline/`: `generate-user.ts` (`generateUserRewind(options, deps?)` returns `{ status: 'completed', data, trail }` or `{ status: 'skipped', reason }`; `source` is an injectable inputs reader, used by the fixtures), `load-context.ts` (`RewindContext`, `memberSerial`: 4 Crockford base32 characters of `HMAC-SHA256(rewindSerialKey, userId:year)`), `eligibility.ts` (`SkipReason`), `read-inputs.ts`, `build-issue.ts` (`buildIssue`, `withArchetype`), `edition.ts` (`omittedPages`, `editionOf`, `selectIssuePages`), `copy-step.ts`, `copy-draft.ts`, `copy-llm.ts`, `persist.ts`, `after-complete.ts` (`onRewindCompleted(name, hook)` for P5.10 and P7.14). The P2.16 page rules moved from `evals/rewind/__tests__/pages.ts` (now a re-export) into `edition.ts`. **Pages are stored as `{ type, data: null }`** until P5.5's `selectPages` replaces `selectIssuePages`; the pocket edition is cover, number, short-list, clock (else calendar), centrefold, back cover; the postcard is one `cover` page until P7.3.
+- Pocket and postcard store `copy: null` with `copySource: 'template'`. `copyMeta.model` is `"<provider>:<normalised id>"` (null for template-only copy). The model may pick another archetype only when `llmMayChoose`; the facts are then rebuilt around it (`withArchetype`, code's pick as runner-up). `RewindGeneration.factsHash` stores the copy step's input hash (before that choice), which the next run's reuse check reads; `PlexWrapped.factsHash` and `data.factsHash` are the stored facts' hash.
+- Skip reasons joined `RewindErrorCode` (with member copy in `lib/ui/error-copy.ts`); a skipped run marks a Rewind that has not completed `failed` with that code. Managed accounts are Tautulli `get_users` rows with `is_restricted: 1`. Entitlement uses `getAccessLevel()` (the job has no session). Members (`kind: 'member'`) are now skipped as `REWIND_DISABLED` until `rewindEnabled` is on; admin regenerations bypass both flags.
+- `budgetModelFor(provider)` is in `lib/llm/models.ts` (`claude-haiku-5-5`, `gpt-6-luna`, null otherwise: the configured model repairs). The `rw:llm` limit (30 a minute per provider) is in `LIMITS`; the wait is bounded by the job's signal. The aggregate job also caches the library listing (`rw:batch:{year}:{through}:library`) for next year's picks, read by `getBatchLibrary`.
+- RWP-13: the unauthenticated export at `actions/prompts.ts:53-59` was already gone; `lib/wrapped/prompt/store.ts` now serves both reads. The migration is `20261124000100_prompt_template_kind` (the planned `20261111000000` would sort before merged migrations). Activation is per kind; audit type `PROMPT_TEMPLATE_CHANGED`. The admin UI has no style-guide editor yet (the action takes `kind`).
+- `generate-v2.ts`, `generateRewindV2` and `lib/wrapped/llm.ts` (`generateWrappedWithLLM`) are deleted: no v2 path generates any more. The playground route resolves `userId` (app id or Plex account id) and calls `collectV2Statistics` from `collect-v2-statistics.ts`.
+- Not done here: the CLAUDE.md integration line about `generateUserRewind` (an agent may not edit CLAUDE.md; coordinator item).
+
 **Done when.**
-- [ ] `generateUserRewind` runs in persist and dry-run modes, and the job uses it.
-- [ ] Eligibility covers Redis, the audience, the Plex identity, managed accounts and entitlement, each with a typed skip reason.
-- [ ] The pocket and postcard editions make zero LLM calls, and unchanged inputs make none.
-- [ ] One repair call is followed by a per-slot template fallback, and no model failure fails a generation.
-- [ ] The prompt is frozen in code as `rewind-2026.1`, and the style guide is read through a server-only function, with no unauthenticated action left.
-- [ ] The final write is one atomic transaction, and the golden snapshot tests pass.
-- [ ] Dump taken before deploy; `prisma migrate status` clean.
+- [x] `generateUserRewind` runs in persist and dry-run modes, and the job uses it.
+- [x] Eligibility covers Redis, the audience, the Plex identity, managed accounts and entitlement, each with a typed skip reason.
+- [x] The pocket and postcard editions make zero LLM calls, and unchanged inputs make none.
+- [x] One repair call is followed by a per-slot template fallback, and no model failure fails a generation.
+- [x] The prompt is frozen in code as `rewind-2026.1`, and the style guide is read through a server-only function, with no unauthenticated action left.
+- [x] The final write is one atomic transaction, and the golden snapshot tests pass.
+- [ ] Dump taken before deploy; `prisma migrate status` clean. (Owner: dump and production deploy; `migrate status` is clean on the test database.)
 
 ### Step P5.10: Share-safe projection v3 and card routes
 
@@ -5278,11 +5307,13 @@ P5.1 and P5.2 start only once P3.1's scope contract and P3.7's primitives have m
 **Demo.** `curl` the owner cover card, then the share card for the same options: both PNGs have the same sha256. Hide the No. 1 title: the next projection drops it before the regeneration finishes. A revoked asset key returns 404, even though its PNG is still on disk.
 
 **Done when.**
-- [ ] `toShareSafe` is a strict, field-by-field allow-list, with percentages, weekly bins and hidden titles dropped at projection time.
-- [ ] The owner and asset-key card routes render through `next/og` with the card fonts, authorise first, and send noindex.
-- [ ] The Satori lint rule and the tree test guard `lib/rewind/cards/**`.
-- [ ] Cards are cached on disk by the projected input and `CARD_VERSION`, and the Redis limits apply only to cache misses.
-- [ ] The key-snapshot, property and owner-versus-link pixel tests pass.
+- [x] `toShareSafe` is a strict, field-by-field allow-list, with percentages, weekly bins and hidden titles dropped at projection time.
+- [x] The owner and asset-key card routes render through `next/og` with the card fonts, authorise first, and send noindex.
+- [x] The Satori lint rule and the tree test guard `lib/rewind/cards/**`.
+- [x] Cards are cached on disk by the projected input and `CARD_VERSION`, and the Redis limits apply only to cache misses.
+- [x] The key-snapshot, property and owner-versus-link pixel tests pass.
+
+(as merged: `loadShareContext({ userId, year })` takes the owner and year, not a wrapped id, and `findLiveShare(assetKey)` in `lib/wrapped/data/share-asset.ts` is the one asset-key lookup for the card and poster routes. Each projected page also carries `headline`, its card headline rendered from that page's published facts only, else `titleFreeHeadline(page)` from `templates.ts`; `serial` is nullable. Hidden titles leave through a registry hook, `share.titleKeys(data)`, mapping title facts to rating keys from page data, plus any title fact with the same display; only Bookends implements it, so P5.6, P7.1 and P7.2 add `titleKeys` (and `share.art: true` where a page publishes posters) for their pages, and P7.7's `ratingKeysIn` can reuse it. The share route always renders `story` and reads no query; P7.5 adds the OG card. Only the cover card ships (`RENDERERS` in `lib/rewind/cards/index.ts`); other pages answer 404 until their card lands, and a card prints the archetype colourway only where the projection publishes the archetype, so the cover prints on paper. The poster `?s=<assetKey>` check went into the existing `app/api/wrapped/poster/[ratingKey]/route.ts`, because P5.6's route has not merged; P5.6 carries it over. The routes are `route.ts`; the `rewindCards` selectors were new (P3.4 had not added the array); `SHARE_PAGE_TYPES` lives in the registry and the schemas in `lib/wrapped/data/share-safe-schema.ts`; `scripts/rewind-render-cards.tsx` renders cards outside Jest.)
 
 ### Step P5.11: Share sheet, core cards and opt-in public links
 
@@ -5325,11 +5356,13 @@ P5.1 and P5.2 start only once P3.1's scope contract and P3.7's primitives have m
 **Demo.** On an iPhone, Share image on the centrefold opens the iOS share sheet with the PNG. A desktop Firefox window shows only Save image and Copy link. Create a link, rotate it and stop it: each step returns 404 at once for the old address, and the audit log shows four entries.
 
 **Done when.**
-- [ ] The share sheet offers a live preview, Share image with a prefetched File, Save image, and Copy link or Create a public link, plus the sign, artwork and daily-detail switches.
-- [ ] The six core cards render from the projection, and unsigned cards never name the member.
-- [ ] Enable, update, rotate and disable store hashed tokens and asset keys, expire at season close, write audit entries and allow 10 actions per hour.
-- [ ] `RewindShareVisitDay` counts once per visitor per day through a daily rotating HMAC key, and the database stores nothing about visitors.
-- [ ] The E2E test covers create, rotate and revoke.
+- [x] The share sheet offers a live preview, Share image with a prefetched File, Save image, and Copy link or Create a public link, plus the sign, artwork and daily-detail switches.
+- [x] The six core cards render from the projection, and unsigned cards never name the member.
+- [x] Enable, update, rotate and disable store hashed tokens and asset keys, expire at season close, write audit entries and allow 10 actions per hour.
+- [x] `RewindShareVisitDay` counts once per visitor per day through a daily rotating HMAC key, and the database stores nothing about visitors.
+- [x] The E2E test covers create, rotate and revoke. (Written, not run: FEATURE-FIRST; `--list` collects it.)
+
+(as merged: **Projection.** `ShareSafePage` gained `titleIds` (the title fact behind each of `titles`, same order), `hours` (clock and centrefold: 24 plays-by-hour normalised to the busiest) and `stats` (centrefold and back cover: `cardFacts`, else `defaultCardFacts(page, printable)`, so an empty `cardFacts` means the defaults everywhere, prewarm included). The back cover publishes the soundtrack too. Art keys that are not Plex rating keys are dropped. **Registry.** Back-cover data is now `{ minutes, keys: { series: TitleKey[] (max 3), film: TitleKey | null } }` with `share.titleKeys` and `share.art: true`, so hidden titles leave its billing and fan even without Top shows or Top films in the issue; the centrefold's `share.facts` gained `hours.peak`, `hours.afterDarkShare` and `hours.goldenShare` for its clock, and `RINGS` is exported. `e2e/fixtures/rewind/heavy-issue.json` was regenerated. **Cards.** `renderCard(input, assets?)` takes `CardAssets { art: (dataUri | null)[] }`; `renderCardPng` loads published posters through `lib/rewind/cards/art.ts` (poster disk cache, else Plex at 240 px, as PNG through sharp; a missing poster is an empty slot). Plex fetching moved to `lib/rewind/poster/fetch.ts` (`fetchPlexPoster`). Shared card parts are in `lib/rewind/cards/parts.tsx` (`CardHeadline`, `SoundtrackStrip`, `ringSvg`, `StatsRow`, `PosterSlot`); `Text` (Newsreader, wraps when given a width) and `Picture` are in `type.tsx`; `cardInk` returns a `spot` and the back cover's archetype deep ink. The back-cover billing is `billingBlock` on the page's 358 px measure scaled to 936, its counts formatted `en-US`. `eligibleCards` and `CARD_PAGE_TYPES` are in the client-safe `lib/rewind/cards/eligible.ts`. **Actions.** Only one live link per Rewind: enable answers `CONFLICT` while one is live. Only the hash is stored, so the URL is known only in the session that made it; the sheet's "Copy a new link..." rotates. Lapsed copy is `NOT_ENTITLED` "Sharing needs an active membership"; `updateRewindShare` has no UI caller until P7.5. **Sheet.** `components/rewind/share/*`; the issue's Server Component passes the actions down as props (`StoryStage share={{ setup, actions }}`, `ShareActions`), so no client module imports `actions/`. `loadShareSetup` (`lib/rewind/share-setup.ts`) gives the eligible cards, admin flags, entitlement, saved choices, the live link (no URL) and the default expiry's date in the server locale. `?sheet=share` is `StoryStage initialSheet`; the back cover's Change opens `SHARE_SETTINGS_SHEET` ("share-settings"), focused on the sign switch, and its privacy line is `privacyStatus()` over the sheet's state. The sheet also has "Stop sharing" (`rewind-share-stop`), which the E2E uses for revoke. `RewindYearView`'s `issue` carries the row `id`. **Visits.** The test is `lib/wrapped/share/__tests__/visit-counter.redis.test.ts` (integration); `recordShareVisit(shareId, ip, deps?)`, and `knip.json` lists the module as an entry until P7.5 calls it. **E2E.** `e2e/rewind/share.spec.ts` runs in `chromium`; its `navigator.share` File check stubs the API with an init script, so it runs in any browser.)
 
 ### Step P5.12: Article mode
 
@@ -5374,11 +5407,13 @@ P5.1 and P5.2 start only once P3.1's scope contract and P3.7's primitives have m
 
 **Demo.** Open `/rewind/2026/read` with JavaScript disabled in Safari: the whole issue reads top to bottom, with headings and tables. Print preview shows paper pages with no chrome. VoiceOver's rotor lists one heading per page.
 
+(as merged: `ArticleBlock`, `ArticleText` (`renderCopy` segments) and `ArticleContext` (P5.5's `IssueContext` satisfies it) are in `lib/rewind/article/blocks.ts`; `articleSections(pages, facts, ctx)` in `sections.ts` returns `ArticleSection { id, folio, name, type, blocks }` (legacy sections pass `folio: null, type: null`). `PageDefinition.article?(data, facts, ctx)` is **optional**: a page without one reads as its `srSummary` plus its Table, so P5.6, P7.1 and P7.2 should add `article` to their page modules. The seven landed pages define it; story and article share the helpers moved into `lib/rewind/pages/*` (`pageDeck` in `deck.ts`, which `deckText` now calls, `lifetimeLine`, `lastLead`, `coverCaption`, `splitShare`, `NUMBER_COUNTS`, `backCoverCaption`, `colophon`, `volumeLine`, `showsRarity`, `STANDING`, `nameAfterLead`, and `backCoverDisclosure` in `copy-disclosure.ts`). The calendar's article is `monthTables()`, one table per month with a day played, holding the Table's rows. The route redirects to `/rewind/[year]` for any year without a v3 issue (P7.13 adds the legacy article); "Play the story" and "Close" are plain anchors (`rewind-article-story`, `rewind-article-close`), hidden in print through `data-print-hide`. With JavaScript off, the app's `loading.tsx` boundaries leave the streamed page in hidden `S:` segments, so the route ships a `<noscript>` style that shows them and hides the fallbacks. The E2E is `e2e/rewind-article.spec.ts` (tagged `@article`, runs in `chromium` until P5.4's projects land), written but not run; baselines are left to the coordinator.)
+
 **Done when.**
-- [ ] `/rewind/[year]/read` renders every selected page as one semantic document, with headings and tables, and needs no JavaScript.
-- [ ] The print stylesheet produces clean paper pages, and the article reflows to 320 px.
-- [ ] The renderer and its block contract are ready for the legacy adapter, with a contract test.
-- [ ] axe reports 0 violations on chromium, webkit and firefox.
+- [x] `/rewind/[year]/read` renders every selected page as one semantic document, with headings and tables, and needs no JavaScript.
+- [ ] The print stylesheet produces clean paper pages, and the article reflows to 320 px. (Stylesheet written; the print and 320 px E2E checks are written, not run.)
+- [x] The renderer and its block contract are ready for the legacy adapter, with a contract test.
+- [ ] axe reports 0 violations on chromium, webkit and firefox. (The axe E2E is written, not run; P5.4's webkit and firefox projects have not landed.)
 
 ### Step P5.13: Eval harness and model bake-off
 
@@ -5432,11 +5467,13 @@ P5.1 and P5.2 start only once P3.1's scope contract and P3.7's primitives have m
 **Demo.** Run `npm run eval:rewind -- --model=anthropic:claude-sonnet-5-5 --judge=openai:gpt-6-astra --fixtures=heavy,light`: it prints the estimated cost, asks for confirmation, then prints first-pass grounding, the judge scores, the cost and p95 latency. CI then passes offline on the recordings.
 
 **Done when.**
-- [ ] `npm run eval:rewind` prints a cost estimate before any paid call, and writes a results JSON and a `RewindEvalRun` row.
-- [ ] The deterministic gates run in CI on recorded outputs with no network access.
-- [ ] The judge always comes from a different model family, and its score stays advisory.
+- [x] `npm run eval:rewind` prints a cost estimate before any paid call, and writes a results JSON and a `RewindEvalRun` row.
+- [x] The deterministic gates run in CI on recorded outputs with no network access.
+- [x] The judge always comes from a different model family, and its score stays advisory.
 - [ ] Eval runs started on 2026-11-16, and the 18-20 November bake-off applied the selection rule; the default reaches 98% or more first-pass grounding.
 - [ ] The default and economy models are recorded in the planning folder and configured.
+
+(as merged: the harness and tooling only; the live runs, `selected.json`'s model, `model-selection.md`'s decision, `budgetModelFor()` and the production row are the owner's, with the runbook in `model-selection.md`. `run.ts` is the command line over `run-eval.ts`; `harness.ts` runs a fixture with injected model calls, since `generateStructured` and `PipelineDeps` now take optional `resolve`/`record` and `generate`/`consume`; P5.9's golden test uses it. `--replay=<set>` runs offline on a recording set; `npm run eval:rewind:select` prints the bake-off table. Recordings gained optional `model`, `finishReason`, `usage` and `latencyMs` (`recording-schema.ts`). `selected.json` has `model: null`, so CI checks every set but fails none until the decision; the hand set fails the overlap gate. Keys come from `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, `OPENAI_COMPATIBLE_BASE_URL`, not the stored provider rows.)
 
 ---
 

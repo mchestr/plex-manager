@@ -34,13 +34,13 @@ A Next.js-based Plex management platform that combines server management tools, 
 app/                     # Next.js App Router (pages, layouts, routes)
 ├── (app)/              # Authenticated member layout group
 │   ├── discord/        # Discord account linking
-│   └── wrapped/        # Wrapped viewer
-├── (public)/           # Public pages (shared Wrapped links)
+│   └── rewind/         # Rewind: /rewind, /rewind/[year], the scope layout and its fonts
 ├── admin/              # Admin dashboard and management
 ├── api/                # API routes (webhooks, external integrations)
 ├── auth/               # Authentication pages
 ├── invite/             # Invite redemption
 ├── onboarding/         # User onboarding flow
+├── rewind/s/           # Public Rewind share links (/wrapped/* redirects to /rewind/*)
 ├── setup/              # Initial setup wizard
 └── subscribe/          # Stripe subscription flow
 
@@ -50,6 +50,7 @@ components/             # React components
 ├── dashboard/         # Member home page cards
 ├── generator/         # Wrapped generating animation
 ├── onboarding/        # Onboarding components
+├── rewind/            # Rewind scope, status panels and the story stage
 ├── setup/
 │   └── setup-wizard/  # Setup wizard steps
 ├── shell/             # App and admin shells (from P6.1)
@@ -322,7 +323,7 @@ describe('Component', () => {
 
 ### CI Checks
 
-`.github/workflows/build.yml` ("Checks") runs the checks that `main` requires: Lint (ESLint and actionlint), Typecheck, Audit (`scripts/audit-gate.mjs`; exceptions in `.github/audit-exceptions.json`, at most 14 days each), Knip, Design System, Unit Tests (with coverage floors), Integration, Schema Drift (a schema change without its migration fails), Build and E2E Tests (production build, Postgres and Redis). Image Smoke Test runs on pull requests but is not required: it builds the image, starts it on a fresh Postgres and Redis until its `HEALTHCHECK` reports healthy (migrations, `SKIP_MIGRATIONS`, read-only files, tini, `docker stop`) and scans it with Trivy. Shared setup lives in `.github/actions/setup/action.yml`, and every action is pinned by SHA
+`.github/workflows/build.yml` ("Checks") runs the checks that `main` requires: Lint (ESLint and actionlint), Typecheck, Audit (`scripts/audit-gate.mjs`; exceptions in `.github/audit-exceptions.json`, at most 14 days each), Knip, Design System, Unit Tests (with coverage floors), Integration, Schema Drift (a schema change without its migration fails), Build and E2E Tests (production build, Postgres and Redis; every Playwright project but the visual ones). Visual Diffs runs the screenshot projects and is advisory, not required: a diff leaves a warning and the `visual-diffs` artifact but does not fail the workflow, and the Visual Baselines workflow (`.github/workflows/visual-baselines.yml`, see `e2e/visual/README.md`) refreshes the baselines. Image Smoke Test runs on pull requests but is not required: it builds the image, starts it on a fresh Postgres and Redis until its `HEALTHCHECK` reports healthy (migrations, `SKIP_MIGRATIONS`, read-only files, tini, `docker stop`) and scans it with Trivy. Shared setup lives in `.github/actions/setup/action.yml`, and every action is pinned by SHA
 
 ## JSDoc Documentation Strategy
 

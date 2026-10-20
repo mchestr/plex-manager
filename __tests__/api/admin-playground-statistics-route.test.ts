@@ -1,404 +1,82 @@
 /**
- * Tests for app/api/admin/playground/statistics/route.ts - admin playground statistics API route
+ * @jest-environment node
  */
 
+/**
+ * The v2 playground's statistics route (P5.9, DUP-02, BP-25): one assembly
+ * path through `collectV2Statistics`, members resolved by id.
+ */
+
+import { mockReset } from 'jest-mock-extended'
+import { NextRequest } from 'next/server'
+
+import { buildUser } from '@/__tests__/helpers/factories'
+import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 import { GET } from '@/app/api/admin/playground/statistics/route'
-import { prisma } from '@/lib/prisma'
 import { requireAdminAPI } from '@/lib/security/api-helpers'
 import { limitRequest } from '@/lib/security/rate-limit'
-import { fetchOverseerrStatistics } from '@/lib/wrapped/overseerr-statistics'
-import { fetchPlexServerStatistics } from '@/lib/wrapped/server-statistics'
-import {
-  fetchTautulliStatistics,
-  fetchTopContentLeaderboards,
-  fetchWatchTimeLeaderboard,
-} from '@/lib/wrapped/tautulli-statistics'
-import { mockReset } from 'jest-mock-extended'
-import { prismaMock } from '@/__tests__/helpers/prisma-mock'
+import { collectV2Statistics } from '@/lib/wrapped/pipeline/collect-v2-statistics'
+import { RewindGenerationError } from '@/lib/wrapped/pipeline/generation-error'
 
-// Mock dependencies
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+jest.mock('@/lib/security/api-helpers', () => ({ requireAdminAPI: jest.fn() }))
+jest.mock('@/lib/security/rate-limit', () => ({ limitRequest: jest.fn() }))
+jest.mock('@/lib/wrapped/pipeline/collect-v2-statistics', () => ({ collectV2Statistics: jest.fn() }))
 
-beforeEach(() => mockReset(prismaMock))
+const collect = jest.mocked(collectV2Statistics)
+const STATISTICS = { totalWatchTime: { total: 600, movies: 200, shows: 400 }, percentile: { value: 80 } }
 
-jest.mock('@/lib/security/api-helpers', () => ({
-  requireAdminAPI: jest.fn(),
-}))
+const get = (query: string) => GET(new NextRequest(`http://localhost/api/admin/playground/statistics?${query}`))
 
-jest.mock('@/lib/security/rate-limit', () => ({
-  limitRequest: jest.fn(),
-}))
-
-jest.mock('@/lib/wrapped/tautulli-statistics', () => ({
-  fetchTautulliStatistics: jest.fn(),
-  fetchTopContentLeaderboards: jest.fn(),
-  fetchWatchTimeLeaderboard: jest.fn(),
-}))
-jest.mock('@/lib/wrapped/server-statistics', () => ({
-  fetchPlexServerStatistics: jest.fn(),
-}))
-jest.mock('@/lib/wrapped/overseerr-statistics', () => ({
-  fetchOverseerrStatistics: jest.fn(),
-}))
-
-// Mock NextRequest
-jest.mock('next/server', () => {
-  const actual = jest.requireActual('next/server')
-  return {
-    ...actual,
-    NextRequest: class MockNextRequest {
-      nextUrl: URL
-      method: string
-      headers: Headers
-
-      constructor(input: string | URL, init?: { headers?: Record<string, string>; method?: string }) {
-        const url = typeof input === 'string' ? new URL(input) : input
-        this.nextUrl = url
-        this.method = init?.method || 'GET'
-        this.headers = new Headers(init?.headers || {})
-      }
-    },
-    NextResponse: {
-      ...actual.NextResponse,
-      json: jest.fn((data, init) => ({
-        json: () => Promise.resolve(data),
-        status: init?.status || 200,
-        ...init,
-      })),
-    },
-  }
+beforeEach(() => {
+  mockReset(prismaMock)
+  jest.clearAllMocks()
+  jest.mocked(limitRequest).mockResolvedValue(null)
+  jest.mocked(requireAdminAPI).mockResolvedValue({ response: null } as never)
+  prismaMock.user.findFirst.mockResolvedValue(buildUser({ plexUserId: 'plex-1', email: 'member@example.com' }))
+  prismaMock.plexServer.findFirst.mockResolvedValue({ name: 'Home', url: 'http://plex', token: 't' } as never)
+  prismaMock.tautulli.findFirst.mockResolvedValue({ url: 'http://tautulli', apiKey: 'k' } as never)
+  prismaMock.overseerr.findFirst.mockResolvedValue(null)
+  collect.mockResolvedValue(STATISTICS as never)
 })
 
 describe('GET /api/admin/playground/statistics', () => {
-  const mockUser = {
-    id: 'user-1',
-    name: 'Test User',
-    email: 'test@example.com',
-    plexUserId: 'plex-123',
-  }
-
-  const mockTautulli = {
-    url: 'http://localhost:8181',
-    apiKey: 'test-key',
-    isActive: true,
-  }
-
-  const mockTautulliStats = {
-    success: true,
-    data: {
-      totalWatchTime: 1000,
-      moviesWatchTime: 600,
-      showsWatchTime: 400,
-      moviesWatched: 10,
-      showsWatched: 5,
-      episodesWatched: 50,
-      topMovies: [{ title: 'Movie 1', plays: 3 }],
-      topShows: [{ title: 'Show 1', plays: 10 }],
-      watchTimeByMonth: [],
-      tautulliUserId: 'tautulli-1',
-    },
-  }
-
-  beforeEach(() => {
-    jest.clearAllMocks()
-    ;(limitRequest as jest.Mock).mockResolvedValue(null)
-    ;(requireAdminAPI as jest.Mock).mockResolvedValue({ session: { user: { isAdmin: true } }, response: null })
-  })
-
-  it('should return statistics for valid user and year', async () => {
-    ;(prisma.user.findFirst as jest.Mock).mockResolvedValue(mockUser)
-    ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(mockTautulli)
-    ;(fetchTautulliStatistics as jest.Mock).mockResolvedValue(mockTautulliStats)
-    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(null)
-    ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue(null)
-    ;(fetchTopContentLeaderboards as jest.Mock).mockResolvedValue({ success: false })
-    ;(fetchWatchTimeLeaderboard as jest.Mock).mockResolvedValue({ success: false })
-
-    const { NextRequest } = await import('next/server')
-    const request = new NextRequest('http://localhost/api/admin/playground/statistics?userName=Test User&year=2024')
-
-    const response = await GET(request)
-    const data = await response.json()
+  it('collects through collectV2Statistics, so the playground gets the derived statistics and percentile', async () => {
+    const response = await get('userId=user-1&year=2026')
 
     expect(response.status).toBe(200)
-    expect(data.statistics).toBeDefined()
-    expect(data.statistics.totalWatchTime).toEqual({
-      total: 1000,
-      movies: 600,
-      shows: 400,
-    })
-    expect(data.statistics.moviesWatched).toBe(10)
-    expect(data.statistics.showsWatched).toBe(5)
-  })
-
-  it('looks the member up in Overseerr by plexUserId and email and reports the request counts', async () => {
-    const overseerrStats = {
-      totalRequests: 4,
-      totalServerRequests: 30,
-      pendingRequests: 1,
-      approvedRequests: 2,
-      availableRequests: 1,
-      topRequestedGenres: [],
-    }
-    ;(prisma.user.findFirst as jest.Mock).mockResolvedValue(mockUser)
-    ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(mockTautulli)
-    ;(fetchTautulliStatistics as jest.Mock).mockResolvedValue(mockTautulliStats)
-    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(null)
-    ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue({
-      url: 'http://localhost:5055',
-      apiKey: 'overseerr-key',
-      isActive: true,
-    })
-    ;(fetchOverseerrStatistics as jest.Mock).mockResolvedValue({ success: true, data: overseerrStats })
-    ;(fetchTopContentLeaderboards as jest.Mock).mockResolvedValue({ success: false })
-    ;(fetchWatchTimeLeaderboard as jest.Mock).mockResolvedValue({ success: false })
-
-    const { NextRequest } = await import('next/server')
-    const request = new NextRequest('http://localhost/api/admin/playground/statistics?userName=Test User&year=2024')
-
-    const response = await GET(request)
-    const data = await response.json()
-
-    expect(fetchOverseerrStatistics).toHaveBeenCalledWith(
-      { url: 'http://localhost:5055', apiKey: 'overseerr-key' },
-      { plexUserId: 'plex-123', email: 'test@example.com' },
-      2024
+    expect(await response.json()).toEqual({ statistics: STATISTICS })
+    expect(collect).toHaveBeenCalledWith(
+      expect.objectContaining({ member: { plexUserId: 'plex-1', email: 'member@example.com' }, year: 2026, overseerr: null })
     )
-    expect(response.status).toBe(200)
-    expect(data.statistics.overseerrStats).toEqual(overseerrStats)
   })
 
-  it('should return 400 when userName is missing', async () => {
-    const { NextRequest } = await import('next/server')
-    const request = new NextRequest('http://localhost/api/admin/playground/statistics?year=2024')
+  it('resolves the member by app id or Plex account id, never by name', async () => {
+    await get('userId=plex-1&year=2026')
 
-    const response = await GET(request)
-    const data = await response.json()
-
-    expect(response.status).toBe(400)
-    expect(data.error).toBe('userName parameter is required')
-    expect(data.code).toBe('VALIDATION_ERROR')
+    expect(prismaMock.user.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { OR: [{ id: 'plex-1' }, { plexUserId: 'plex-1' }] } })
+    )
   })
 
-  it('should return 400 when year is invalid', async () => {
-    const { NextRequest } = await import('next/server')
-    const request = new NextRequest('http://localhost/api/admin/playground/statistics?userName=Test User&year=invalid')
-
-    const response = await GET(request)
-    const data = await response.json()
-
-    expect(response.status).toBe(400)
-    expect(data.error).toBe('Invalid year parameter')
-    expect(data.code).toBe('VALIDATION_ERROR')
+  it('rejects a missing id and a bad year', async () => {
+    expect((await get('year=2026')).status).toBe(400)
+    expect((await get('userId=user-1&year=1999')).status).toBe(400)
+    expect(collect).not.toHaveBeenCalled()
   })
 
-  it('should return 400 when year is out of range', async () => {
-    const { NextRequest } = await import('next/server')
-    const request = new NextRequest('http://localhost/api/admin/playground/statistics?userName=Test User&year=1999')
+  it('answers 404 for an unknown member or one missing from Tautulli', async () => {
+    prismaMock.user.findFirst.mockResolvedValueOnce(null)
+    expect((await get('userId=nobody&year=2026')).status).toBe(404)
 
-    const response = await GET(request)
-    const data = await response.json()
-
-    expect(response.status).toBe(400)
-    expect(data.error).toBe('Invalid year parameter')
+    collect.mockRejectedValueOnce(new RewindGenerationError('TAUTULLI_USER_NOT_FOUND', { retryable: false }))
+    expect((await get('userId=user-1&year=2026')).status).toBe(404)
   })
 
-  it('should return 404 when user is not found', async () => {
-    ;(prisma.user.findFirst as jest.Mock).mockResolvedValue(null)
+  it('stops at the admin check', async () => {
+    jest.mocked(requireAdminAPI).mockResolvedValueOnce({ response: new Response(null, { status: 401 }) } as never)
 
-    const { NextRequest } = await import('next/server')
-    const request = new NextRequest('http://localhost/api/admin/playground/statistics?userName=Unknown User&year=2024')
-
-    const response = await GET(request)
-    const data = await response.json()
-
-    expect(response.status).toBe(404)
-    expect(data.error).toContain('User not found')
-    expect(data.code).toBe('NOT_FOUND')
-  })
-
-  it('should return 400 when user has no plexUserId', async () => {
-    ;(prisma.user.findFirst as jest.Mock).mockResolvedValue({ ...mockUser, plexUserId: null })
-
-    const { NextRequest } = await import('next/server')
-    const request = new NextRequest('http://localhost/api/admin/playground/statistics?userName=Test User&year=2024')
-
-    const response = await GET(request)
-    const data = await response.json()
-
-    expect(response.status).toBe(400)
-    expect(data.error).toBe('User does not have a Plex user ID')
-  })
-
-  it('should return 404 when no active Tautulli server is configured', async () => {
-    ;(prisma.user.findFirst as jest.Mock).mockResolvedValue(mockUser)
-    ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(null)
-
-    const { NextRequest } = await import('next/server')
-    const request = new NextRequest('http://localhost/api/admin/playground/statistics?userName=Test User&year=2024')
-
-    const response = await GET(request)
-    const data = await response.json()
-
-    expect(response.status).toBe(404)
-    expect(data.error).toBe('No active Tautulli server configured')
-  })
-
-  it('should return 500 when Tautulli statistics fetch fails', async () => {
-    ;(prisma.user.findFirst as jest.Mock).mockResolvedValue(mockUser)
-    ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(mockTautulli)
-    ;(fetchTautulliStatistics as jest.Mock).mockResolvedValue({
-      success: false,
-      error: 'Failed to connect to Tautulli',
-    })
-
-    const { NextRequest } = await import('next/server')
-    const request = new NextRequest('http://localhost/api/admin/playground/statistics?userName=Test User&year=2024')
-
-    const response = await GET(request)
-    const data = await response.json()
-
-    expect(response.status).toBe(500)
-    expect(data.error).toContain('Failed to connect to Tautulli')
-  })
-
-  it('should find user by email when name does not match', async () => {
-    ;(prisma.user.findFirst as jest.Mock).mockResolvedValue(mockUser)
-    ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(mockTautulli)
-    ;(fetchTautulliStatistics as jest.Mock).mockResolvedValue(mockTautulliStats)
-    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(null)
-    ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue(null)
-    ;(fetchTopContentLeaderboards as jest.Mock).mockResolvedValue({ success: false })
-    ;(fetchWatchTimeLeaderboard as jest.Mock).mockResolvedValue({ success: false })
-
-    const { NextRequest } = await import('next/server')
-    const request = new NextRequest('http://localhost/api/admin/playground/statistics?userName=test@example.com&year=2024')
-
-    const response = await GET(request)
-
-    expect(response.status).toBe(200)
-    expect(prisma.user.findFirst).toHaveBeenCalledWith({
-      where: {
-        OR: [
-          { name: 'test@example.com' },
-          { email: 'test@example.com' },
-        ],
-      },
-    })
-  })
-
-  it('should include server stats when Plex server is configured', async () => {
-    const mockPlexServer = {
-      name: 'My Plex Server',
-      url: 'http://localhost:32400',
-      token: 'test-token',
-      isActive: true,
-    }
-
-    const mockServerStats = {
-      success: true,
-      data: {
-        totalStorage: 1000000000,
-        totalStorageFormatted: '1 TB',
-        librarySize: 500,
-      },
-    }
-
-    ;(prisma.user.findFirst as jest.Mock).mockResolvedValue(mockUser)
-    ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(mockTautulli)
-    ;(fetchTautulliStatistics as jest.Mock).mockResolvedValue(mockTautulliStats)
-    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(mockPlexServer)
-    ;(fetchPlexServerStatistics as jest.Mock).mockResolvedValue(mockServerStats)
-    ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue(null)
-    ;(fetchTopContentLeaderboards as jest.Mock).mockResolvedValue({ success: false })
-    ;(fetchWatchTimeLeaderboard as jest.Mock).mockResolvedValue({ success: false })
-
-    const { NextRequest } = await import('next/server')
-    const request = new NextRequest('http://localhost/api/admin/playground/statistics?userName=Test User&year=2024')
-
-    const response = await GET(request)
-    const data = await response.json()
-
-    expect(response.status).toBe(200)
-    expect(data.statistics.serverStats).toBeDefined()
-    expect(data.statistics.serverStats.serverName).toBe('My Plex Server')
-  })
-
-  it('should include leaderboards when tautulliUserId is available', async () => {
-    const mockLeaderboards = {
-      success: true,
-      data: [
-        { title: 'Movie 1', userRank: 1 },
-      ],
-    }
-
-    const mockWatchTimeLeaderboard = {
-      success: true,
-      data: [
-        { userId: 'tautulli-1', watchTime: 1000 },
-        { userId: 'tautulli-2', watchTime: 800 },
-      ],
-    }
-
-    ;(prisma.user.findFirst as jest.Mock).mockResolvedValue(mockUser)
-    ;(prisma.tautulli.findFirst as jest.Mock).mockResolvedValue(mockTautulli)
-    ;(fetchTautulliStatistics as jest.Mock).mockResolvedValue(mockTautulliStats)
-    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(null)
-    ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue(null)
-    ;(fetchTopContentLeaderboards as jest.Mock).mockResolvedValue(mockLeaderboards)
-    ;(fetchWatchTimeLeaderboard as jest.Mock).mockResolvedValue(mockWatchTimeLeaderboard)
-
-    const { NextRequest } = await import('next/server')
-    const request = new NextRequest('http://localhost/api/admin/playground/statistics?userName=Test User&year=2024')
-
-    const response = await GET(request)
-    const data = await response.json()
-
-    expect(response.status).toBe(200)
-    expect(data.statistics.leaderboards).toBeDefined()
-    expect(data.statistics.leaderboards.watchTime.userPosition).toBe(1)
-  })
-
-  it('should return 401 when user is not authenticated', async () => {
-    const mockResponse = { status: 401, json: () => Promise.resolve({ error: 'Authentication required' }) }
-    ;(requireAdminAPI as jest.Mock).mockResolvedValue({ session: null, response: mockResponse })
-
-    const { NextRequest } = await import('next/server')
-    const request = new NextRequest('http://localhost/api/admin/playground/statistics?userName=Test User&year=2024')
-
-    const response = await GET(request)
-
-    expect(response).toBe(mockResponse)
-  })
-
-  it('should return 429 when rate limit is exceeded', async () => {
-    const mockRateLimitResponse = { status: 429, json: () => Promise.resolve({ error: 'Too many requests' }) }
-    ;(limitRequest as jest.Mock).mockResolvedValue(mockRateLimitResponse)
-
-    const { NextRequest } = await import('next/server')
-    const request = new NextRequest('http://localhost/api/admin/playground/statistics?userName=Test User&year=2024')
-
-    const response = await GET(request)
-
-    expect(response).toBe(mockRateLimitResponse)
-    expect(limitRequest).toHaveBeenCalledWith('admin', request)
-  })
-
-  it('should handle database errors gracefully', async () => {
-    ;(prisma.user.findFirst as jest.Mock).mockRejectedValue(new Error('Database error'))
-
-    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation()
-
-    const { NextRequest } = await import('next/server')
-    const request = new NextRequest('http://localhost/api/admin/playground/statistics?userName=Test User&year=2024')
-
-    const response = await GET(request)
-    const data = await response.json()
-
-    expect(response.status).toBe(500)
-    expect(data.error).toContain('Failed to fetch statistics')
-    expect(consoleErrorSpy).toHaveBeenCalled()
-    consoleErrorSpy.mockRestore()
+    expect((await get('userId=user-1&year=2026')).status).toBe(401)
+    expect(prismaMock.user.findFirst).not.toHaveBeenCalled()
   })
 })
-

@@ -152,6 +152,79 @@ CI never calls a model: it checks recorded outputs in `evals/rewind/recordings/`
 cost estimate first. This cap is separate from members' generation budget
 (`Config.rewindLlmBudgetUsd`, default $10).
 
+## Recordings (P5.9)
+
+`recordings/hand/<fixture>.json` holds hand-written model answers for every
+fixture, replayed by `lib/wrapped/pipeline/__tests__/generate-user.golden.test.ts`
+through the real `generateStructured`, grounding, repair and fallback. Each
+file is `{ fixture, promptVersion, note?, calls }`, where a call is
+`{ kind: "copy" | "repair", output }` (the JSON the model returns) or
+`{ kind, text }` (raw text, for a malformed answer). The pocket and postcard
+fixtures (`light`, `postcard`, `seven-minutes`) record no calls.
+
+Deliberate failures: `heavy` (rules 3 and 4, repaired), `hostile-titles`
+(the injected title obeyed outside a token, repaired into a token),
+`median` (a digit, then a number word: that slot alone falls back),
+`night-owl` (window words, repaired); also `weekend-binger` (another
+archetype's poster line, rule 8), `zero-series` (a truncated answer, so every
+slot is a template) and `single-title` (the model picks another shortlisted
+archetype). P5.13 adds real model recordings beside `hand/`.
+
+## Eval harness and bake-off (P5.13)
+
+```bash
+# Offline: replay a recording set through the real pipeline (no key, no cost)
+npm run eval:rewind -- --replay=hand
+
+# Paid: prints the estimate, asks before the first call (--yes skips the question)
+ANTHROPIC_API_KEY=... OPENAI_API_KEY=... npm run eval:rewind -- \
+  --model=anthropic:claude-sonnet-5-5 --judge=openai:gpt-6-astra --fixtures=heavy,light [--effort=low] [--record]
+
+# The bake-off table and the selection rule over evals/rewind/results/
+npm run eval:rewind:select
+```
+
+- `run.ts` (command line) and `run-eval.ts`: estimate, confirm, then each
+  fixture through `generateUserRewind` in dry-run mode (`harness.ts`), the
+  gates, the judge, `results/<date>-<model>.json` and a `RewindEvalRun`
+  row (skipped with a warning without `DATABASE_URL`). `--record` writes
+  `recordings/<model-slug>/<fixture>.json` with each call's answer, served
+  model, tokens and latency, so a replay reports the real cost and latency.
+- The estimate is design 8.2's: 4,400 input and 1,500 output tokens for each
+  fixture that calls the model (the full editions; pocket and postcard make
+  no call) at the catalogue price, plus $0.05 a fixture for the judge. An
+  unpriced model (an Ollama tag) needs `--allow-unpriced`.
+- Keys: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`;
+  `ollama:<tag>` (short for `openai-compatible:`) calls
+  `OPENAI_COMPATIBLE_BASE_URL`, default `http://localhost:11434/v1`. The
+  repair call goes to the provider's `budgetModelFor()`, as in production.
+- `checks.ts` (gates, pure): the first answer parses as the wire schema, the
+  final copy as `RewindCopyV3`, every model-written slot passes grounding
+  again (lengths and banned phrases included), no archetype wins more than
+  half the non-postcard fixtures, and no two fixtures' model-written decks
+  share 35% or more of their word trigrams (each token read as its fact id,
+  so one sentence with other titles still counts as the same sentence). It
+  reports the first-pass and after-repair grounding rates over every slot
+  asked for, the poster line included; a failed first call fails them all.
+- `judge.ts` and `rubric.md`: voice, specificity, warmth, restraint and
+  faithfulness from 1 to 5. A judge from the generator's family (the
+  provider, or the trainer of a local model's weights) is refused. Advisory:
+  it only ranks candidates that passed the gates.
+- `select-model.ts` (design 8.6): gates pass, first-pass 98% or more and p95
+  under 60 s, then the judge score, then the cost. A local model is offered
+  as a preset at 95% first-pass and 100% after repair.
+- CI: `__tests__/recordings.test.ts` replays every set in `recordings/`
+  with `fetch` stubbed to throw. Only the set of the model in
+  `selected.json` can fail the job (all 20 fixtures, no gate issue, 98%
+  first-pass); `model` is null until the bake-off, so every set is advisory.
+  The hand set fails the overlap gate (its decks reuse sentences) and its
+  deliberate schema failure, which the test asserts the gates catch.
+
+The bake-off itself (live sweeps from 2026-11-16, the 18-20 November
+decision, `model-selection.md`, `selected.json`, `budgetModelFor()` and the
+production `wrapped` provider row) is the owner's: see
+`.agents/planning/2026-10-17-app-audit-and-rewind-2026/implementation/model-selection.md`.
+
 ## Sign-off
 
 The owner reviews the table above, the profiles and the budget on

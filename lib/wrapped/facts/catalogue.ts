@@ -23,7 +23,7 @@ import { FACT_UNITS, type FactUnit } from "./display"
 export const CATALOGUE_VERSION = "facts-2026.1"
 
 export type FactGroup =
-  | "member" | "window" | "time" | "counts" | "days" | "hours" | "series" | "films" | "quiz" | "taste"
+  | "member" | "window" | "bookends" | "time" | "counts" | "days" | "hours" | "series" | "films" | "quiz" | "taste"
   | "people" | "race" | "records" | "setup" | "requests" | "standing" | "archetype" | "next"
 
 export interface FactSpec {
@@ -80,6 +80,14 @@ export const FACTS = {
     "window.finalCut": f("count", "0", "window: 1 after the final cut"),
     "window.elapsedDays": f("days", "334 days", "window"),
     "tz.label": f("text", "America/Chicago", "Rewind zone"),
+  }),
+  ...group("bookends", {
+    "bookends.first.title": f("title", "Slow Horses", "bookends: the window's first counted play"),
+    "bookends.first.date": f("date", "January 1", "bookends"),
+    "bookends.first.time": f("time", "8:12 PM", "bookends"),
+    "bookends.last.title": f("title", "Severance", "bookends: the window's last counted play"),
+    "bookends.last.date": f("date", "November 29", "bookends"),
+    "bookends.last.time": f("time", "11:40 PM", "bookends"),
   }),
   ...group("time", {
     "time.totalMinutes": f("duration", "47 minutes", "totals"),

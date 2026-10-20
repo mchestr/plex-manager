@@ -9,7 +9,7 @@
  * |----------------|-------------|----------------------------------------------|
  * | `rewind-batch` | 1           | season prepare, aggregate, metadata warm (P2.6) |
  * | `rewind-gen`   | 4           | `REWIND_GENERATE_USER` (P2.17)               |
- * | `rewind-aux`   | 2           | `REWIND_STALE_SWEEP` (P2.17, every 10 min), cards, notify |
+ * | `rewind-aux`   | 2           | `REWIND_STALE_SWEEP` (P2.17, every 10 min), `REWIND_CARD_PREWARM` and the daily `REWIND_CARD_SWEEP` (P5.10), notify |
  *
  * Workers hold a job's lock for 60 s (BullMQ renews it every 30 s) and give a
  * stalled job one more attempt. Jobs have no BullMQ timeout; each processor
@@ -21,10 +21,11 @@
 import { Worker, type Job } from "bullmq"
 
 import { onShutdown } from "@/lib/instrumentation/shutdown"
-import { getRedisConnection } from "@/lib/queue/connection"
+import { closeWorker, getRedisConnection } from "@/lib/queue/connection"
 import type { JobProcessor } from "@/lib/queue/jobs"
 import { REWIND_BATCH_PROCESSORS } from "@/lib/queue/jobs/rewind-batch"
 import { processRewindGenerateUser } from "@/lib/queue/jobs/rewind"
+import { processRewindCardPrewarm, processRewindCardSweep, registerCardJobs } from "@/lib/queue/jobs/rewind-cards"
 import { processRewindStaleSweep } from "@/lib/queue/jobs/rewind-stale-sweep"
 import { getRewindQueue } from "@/lib/queue/rewind-producers"
 import { JOB_TYPES } from "@/lib/queue/types"
@@ -44,7 +45,11 @@ export type RewindQueueName = keyof typeof REWIND_QUEUES
 const PROCESSORS: Record<RewindQueueName, Record<string, JobProcessor>> = {
   "rewind-batch": REWIND_BATCH_PROCESSORS,
   "rewind-gen": { [JOB_TYPES.REWIND_GENERATE_USER]: processRewindGenerateUser as JobProcessor },
-  "rewind-aux": { [JOB_TYPES.REWIND_STALE_SWEEP]: processRewindStaleSweep },
+  "rewind-aux": {
+    [JOB_TYPES.REWIND_STALE_SWEEP]: processRewindStaleSweep,
+    [JOB_TYPES.REWIND_CARD_PREWARM]: processRewindCardPrewarm as JobProcessor,
+    [JOB_TYPES.REWIND_CARD_SWEEP]: processRewindCardSweep,
+  },
 }
 
 let workers: Worker[] | null = null
@@ -95,14 +100,15 @@ export function startRewindWorkers(): void {
   workers = (Object.keys(REWIND_QUEUES) as RewindQueueName[]).map(createRewindWorker)
   onShutdown("rewind-workers", "drain", stopRewindWorkers)
   scheduleStaleSweep().catch((error: unknown) => logger.error("Could not schedule the Rewind stale sweep", error))
+  registerCardJobs()
   logger.info("Rewind workers started", { queues: Object.keys(REWIND_QUEUES) })
 }
 
-/** Closes the Rewind Workers, letting their active jobs finish. */
+/** Closes the Rewind Workers, letting their active jobs finish while Redis is connected. */
 export async function stopRewindWorkers(): Promise<void> {
   const running = workers
   if (!running) return
   workers = null
-  await Promise.allSettled(running.map((worker) => worker.close()))
+  await Promise.allSettled(running.map(closeWorker))
   logger.info("Rewind workers stopped")
 }

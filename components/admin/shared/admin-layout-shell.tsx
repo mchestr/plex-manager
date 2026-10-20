@@ -29,7 +29,7 @@ export function AdminLayoutShell({ children, hasChatLLM, chatUserName }: AdminLa
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
       {!hideChrome && <AdminNav />}
-      <main className={cn("flex-1 pb-20 md:pb-6 transition-all", hideChrome ? "md:ml-0" : "md:ml-64")}>
+      <main id="main" tabIndex={-1} className={cn("outline-none flex-1 pb-20 md:pb-6 transition-all", hideChrome ? "md:ml-0" : "md:ml-64")}>
         {children}
       </main>
       {hasChatLLM && <Chatbot userName={chatUserName} />}

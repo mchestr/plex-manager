@@ -1,17 +1,20 @@
 import "@/app/globals.css";
+import { plexFontClassNames } from "@/app/fonts";
+import { FlashFromQuery } from "@/components/ui/flash-from-query";
 import { serverName } from "@/lib/brand";
 import { getEnv } from "@/lib/env";
 import { getFormatSettings } from "@/lib/settings/app-settings";
 import { Providers } from "@/lib/providers";
+import { cn } from "@/lib/utils";
 import type { Metadata, Viewport } from "next";
 import { connection } from "next/server";
+import { Suspense } from "react";
 
+/** No zoom locks: pinch-zoom and text resize stay available (WCAG 1.4.4). */
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
-  themeColor: "#0f172a",
+  themeColor: "#1a1c1e",
 };
 
 /** Titles read "{page} - {server name}"; the icons, manifest and OG card are file-based (`app/icon.tsx` and siblings). */
@@ -38,10 +41,21 @@ export default async function RootLayout({
   const format = await getFormatSettings();
 
   return (
-    <html lang="en" className="dark">
-      <body>
+    <html lang="en" className={cn("dark", plexFontClassNames)} suppressHydrationWarning>
+      <body className="min-h-dvh bg-background text-foreground">
+        {/* Each segment layout renders the one <main id="main" tabIndex={-1}> this skips to. */}
+        <a
+          href="#main"
+          data-testid="skip-to-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-(--z-toast) focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-ui focus:font-medium focus:text-primary-foreground focus:shadow-popover"
+        >
+          Skip to content
+        </a>
         <Providers format={format}>
           {children}
+          <Suspense fallback={null}>
+            <FlashFromQuery />
+          </Suspense>
         </Providers>
       </body>
     </html>

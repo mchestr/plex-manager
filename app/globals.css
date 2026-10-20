@@ -147,6 +147,7 @@
   /* next/font/local variables, defined where story pages load app/(app)/rewind/fonts.ts (P5.1) */
   --font-display: var(--font-rw-archivo);
   --font-text: var(--font-rw-newsreader);
+  --font-lead: var(--font-rw-newsreader-display);   /* Newsreader Display Italic, its own family */
   --rw-dur-xs: 120ms; --rw-dur-s: 240ms; --rw-dur-m: 420ms; --rw-dur-l: 640ms; --rw-dur-xl: 900ms;
   --rw-ease-stretch: cubic-bezier(.16, 1, .3, 1);   /* type and entrances */
   --rw-ease-ink: cubic-bezier(.65, 0, .35, 1);      /* page turns, gatefold */
@@ -221,8 +222,96 @@
 [data-theme="rewind"] [data-slot="slider-track"] { background: repeating-linear-gradient(-45deg, var(--ink) 0 1px, transparent 1px 3px); }
 @utility font-display { font-family: var(--font-display); }   /* Rewind chrome and controls (Rewind 5.1) */
 @utility font-text { font-family: var(--font-text); }
+@utility font-lead { font-family: var(--font-lead); font-style: italic; }
+/* the story player (P5.2). The progress segment fills on CSS, so a dwell costs no React render;
+   --rw-dwell is the registry dwell, set on the segment */
+@keyframes rw-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.rw-progress { transform-origin: left; animation: rw-progress var(--rw-dwell) linear forwards; animation-play-state: paused; }
+.rw-progress[data-playing="true"] { animation-play-state: running; }
+/* the page turn: the next field rolls in from the side it comes from; the old page's content shifts away and fades */
+@keyframes rw-ink-roll-forward { from { clip-path: inset(0 0 0 100%); } to { clip-path: inset(0); } }
+@keyframes rw-ink-roll-back { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
+@keyframes rw-page-leave { to { transform: translateX(var(--rw-leave-x)); opacity: 0; } }
+.rw-page[data-turn="forward"] { animation: rw-ink-roll-forward var(--rw-dur-m) var(--rw-ease-ink) both; }
+.rw-page[data-turn="back"] { animation: rw-ink-roll-back var(--rw-dur-m) var(--rw-ease-ink) both; }
+.rw-page[data-leaving="forward"] { --rw-leave-x: -24px; }
+.rw-page[data-leaving="back"] { --rw-leave-x: 24px; }
+.rw-page[data-leaving] .rw-artboard { animation: rw-page-leave 200ms var(--rw-ease-ink) forwards; }
+/* print textures (Rewind 5.2, 5.7): hatching means "the others", the halftone is the hero numeral's misregistration */
+.rw-hatch { background: repeating-linear-gradient(-45deg, var(--ink) 0 1.5px, transparent 1.5px 6px); }
+.rw-halftone { mask-image: radial-gradient(circle, black 42%, transparent 48%); mask-size: calc(var(--u) * 4px) calc(var(--u) * 4px); }
+/* the front pages' entrances (Rewind 4.3), on the current page only; the turn takes the first 420 ms */
+@keyframes rw-print { from { clip-path: inset(0 100% 0 0); } }
+@keyframes rw-stretch { from { font-variation-settings: "wdth" 62, "wght" 900; } }
+@keyframes rw-rise { from { transform: translateY(18%); opacity: 0; } }
+@keyframes rw-grow { from { transform: scaleX(0); } }
+@keyframes rw-appear { from { opacity: 0; } }
+@keyframes rw-stamp { from { transform: scale(1.6); opacity: 0; } }
+@keyframes rw-slide-down { from { transform: translateY(-24px); opacity: 0; } }
+@keyframes rw-slide-up { from { transform: translateY(24px); opacity: 0; } }
+.rw-page[data-current] .rw-print { animation: rw-print 1200ms linear 420ms both; }
+.rw-page[data-current] .rw-stretch span span { animation: rw-stretch var(--rw-dur-l) var(--rw-ease-stretch) 420ms both; }
+.rw-page[data-current] .rw-cover-line { animation: rw-appear var(--rw-dur-s) var(--rw-ease-data) both; }
+.rw-page[data-current] .rw-cover-line:nth-child(1) { animation-delay: 600ms; }
+.rw-page[data-current] .rw-cover-line:nth-child(2) { animation-delay: 660ms; }
+.rw-page[data-current] .rw-cover-line:nth-child(3) { animation-delay: 720ms; }
+.rw-page[data-current] .rw-cover-line:nth-child(4) { animation-delay: 780ms; }
+.rw-page[data-current] .rw-rise { animation: rw-rise var(--rw-dur-xl) var(--rw-ease-data) 240ms both; }
+.rw-page[data-current] .rw-grow { transform-origin: left; animation: rw-grow 480ms var(--rw-ease-data) 700ms both; }
+.rw-page[data-current] .rw-fade { animation: rw-appear var(--rw-dur-s) var(--rw-ease-data) 800ms both; }
+.rw-page[data-current] .rw-stamp { animation: rw-stamp var(--rw-dur-s) var(--rw-ease-stretch) 1000ms both; }
+.rw-page[data-current] .rw-pop { animation: rw-appear var(--rw-dur-xs) linear both; }
+.rw-page[data-current] .rw-slide-down { animation: rw-slide-down var(--rw-dur-m) var(--rw-ease-ink) both; }
+.rw-page[data-current] .rw-slide-up { animation: rw-slide-up var(--rw-dur-m) var(--rw-ease-ink) both; }
+/* the habits, centrefold and back-cover entrances (P5.7, Rewind 4.3, 5.6): the clock's bars appear clockwise from
+   midnight (delays inline), then its arc and leader; calendar rows fill month by month; the nameplate's lines stretch
+   70 ms apart; the gatefold's halves part from the centre; billing lines set in 50 ms apart (delays inline) */
+.rw-page[data-current] .rw-ring-bar { animation: rw-appear var(--rw-dur-s) var(--rw-ease-data) both; }
+.rw-page[data-current] .rw-ring-arc { animation: rw-appear var(--rw-dur-s) var(--rw-ease-data) 1140ms both; }
+.rw-page[data-current] .rw-cal-row { animation: rw-appear var(--rw-dur-s) var(--rw-ease-data) both; }
+.rw-page[data-current] .rw-stretch span span:nth-child(2) { animation-delay: 490ms; }
+.rw-page[data-current] .rw-stretch span span:nth-child(3) { animation-delay: 560ms; }
+@keyframes rw-gate-left { from { transform: none; opacity: 1; } 90% { opacity: 1; } to { transform: translateX(-101%); opacity: 0; } }
+@keyframes rw-gate-right { from { transform: none; opacity: 1; } 90% { opacity: 1; } to { transform: translateX(101%); opacity: 0; } }
+.rw-gate { opacity: 0; }
+.rw-page[data-current] .rw-gate[data-side="left"] { animation: rw-gate-left 700ms var(--rw-ease-ink) 300ms both; }
+.rw-page[data-current] .rw-gate[data-side="right"] { animation: rw-gate-right 700ms var(--rw-ease-ink) 300ms both; }
+.rw-page[data-current] .rw-bill-line { animation: rw-slide-up var(--rw-dur-s) var(--rw-ease-stretch) both; }
+/* features pages (P5.6): quiz tiles stagger in at 60 ms, list rows at 70 ms, the ticket stub tears in from its perforation */
+@keyframes rw-row { from { transform: translateX(-8px); opacity: 0; } }
+@keyframes rw-tear { from { clip-path: inset(0 0 0 100%); } }
+.rw-page[data-current] .rw-stagger { animation: rw-slide-up var(--rw-dur-m) var(--rw-ease-stretch) calc(420ms + var(--rw-i, 0) * 60ms) both; }
+.rw-page[data-current] .rw-row { animation: rw-row 360ms var(--rw-ease-data) calc(600ms + var(--rw-i, 0) * 70ms) both; }
+.rw-page[data-current] .rw-tear { animation: rw-tear var(--rw-dur-m) var(--rw-ease-ink) 420ms both; }
 /* the card-to-cover handoff runs on <html>, outside the scope, so it states --rw-dur-m and --rw-ease-ink literally */
 ::view-transition-group(rewind-field) { animation-duration: 420ms; animation-timing-function: cubic-bezier(.65, 0, .35, 1); }
+/* Reduced motion inside the scope (Rewind 5.6, 11.1): the base clamp skips the scope, so this rule stops every
+   transform, clip-path and font-axis animation and keeps only opacity fades of up to 120 ms. The progress
+   segment keeps its dwell timing, and a page turn becomes a 120 ms crossfade. */
+@keyframes rw-fade-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  :where([data-theme="rewind"], [data-theme="rewind"] *):not(.rw-progress),
+  :where([data-theme="rewind"], [data-theme="rewind"] *)::before,
+  :where([data-theme="rewind"], [data-theme="rewind"] *)::after {
+    animation: none !important;
+    transition-property: opacity !important;
+    transition-duration: var(--rw-dur-xs) !important;
+  }
+  .rw-page[data-turn] { animation: rw-fade-in var(--rw-dur-xs) linear both !important; }
+}
+/* article mode on paper (P5.12): ink on a paper field and no chrome; link targets follow their text; a section or a
+   table never splits across sheets, and the centrefold starts a new one; artwork stays off the page */
+@media print {
+  [data-rewind-article] { --field: var(--rw-paper); --ink: var(--rw-on-paper); min-height: 0; print-color-adjust: exact; }
+  body:has([data-rewind-article]) [data-testid="subscription-banners"],
+  [data-rewind-article] [data-print-hide],
+  [data-rewind-article] img,
+  [data-rewind-article] svg { display: none; }
+  [data-rewind-article] a[href]::after { content: " (" attr(href) ")"; }
+  [data-rewind-article] section,
+  [data-rewind-article] table { break-inside: avoid; }
+  [data-rewind-article] [data-article-page="centrefold"] { break-before: page; }
+}
 /* rewind-scope:end */
 
 /* ---------- 4. Tailwind mapping ---------- */
@@ -285,9 +374,8 @@
   --shadow-dialog: var(--elevation-dialog);
   --shadow-poster: var(--elevation-poster);
 
-  /* system stacks until P3.2 loads IBM Plex as --font-plex-sans and --font-plex-mono */
-  --font-sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 
   /* single-size steps; display, h1 and stat are @utility rules below */
   --text-h2: 1.25rem;       --text-h2--line-height: 1.75rem;    --text-h2--letter-spacing: -0.01em;       --text-h2--font-weight: 600;

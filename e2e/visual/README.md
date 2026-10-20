@@ -5,11 +5,17 @@ baselines committed in `__screenshots__/`. They exist so that every styling
 change shows up as a reviewed image diff. **An unexplained diff is a
 regression**: fix the code, do not update the baseline.
 
+In CI the diffs are **advisory**. The visual projects run in their own
+**Visual Diffs** job (`build.yml`), which is not a required check: a diff
+leaves a warning on the run and uploads the `visual-diffs` artifact, but does
+not fail the workflow. The required **E2E Tests** job runs every other
+project. Refresh the baselines with the Visual Baselines workflow below.
+
 ## What is covered
 
 | Spec | Screens |
 | --- | --- |
-| `member.visual.spec.ts` | sign-in (signed-out `/`), home, onboarding step 2, invite valid and expired, `/subscribe`, `/discord/link`, `/auth/denied`, the stored v2 Rewind at `/wrapped` |
+| `member.visual.spec.ts` | sign-in (signed-out `/`), home, onboarding step 2, invite valid and expired, `/subscribe`, `/discord/link`, `/auth/denied`, the stored v2 Rewind at `/rewind` |
 | `admin.visual.spec.ts` | users, users with Plex down, user detail, settings, invites, queues, LLM usage, prompts; a 404 and an error state |
 | `setup.visual.spec.ts` | setup wizard step 3 |
 | `primitives.visual.spec.ts` | the `/dev/ui` primitives sheet (P3.4), dark and light; the web server sets `ENABLE_DEV_UI=1` |
@@ -90,9 +96,10 @@ workflow, so the workflow pushes with, in order of preference:
 
 ## Reading a failure
 
-When a comparison fails, the Playwright HTML report and `test-results/` (the
-`playwright-report` artifact in CI, `visual-baselines-report` from the
-workflow) hold three images per screen: `-expected`, `-actual` and `-diff`,
-where changed pixels are highlighted in red. Open the report with
+When a comparison fails, the Visual Diffs job warns "Screenshots differ from
+the baselines", and the Playwright HTML report and `test-results/` (the
+`visual-diffs` artifact in CI, `visual-baselines-report` from the workflow)
+hold three images per screen: `-expected`, `-actual` and `-diff`, where
+changed pixels are highlighted in red. Open the report with
 `npx playwright show-report`, find the screen and compare. A diff you cannot
 explain from your change is a regression.

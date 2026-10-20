@@ -1,0 +1,9 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`02 The number summarises the page deterministically 1`] = `
+[
+  "1,307 hours of film and television, 872 hours of series and 435 hours of films, passing 250 hours on March 14, 500 hours on May 23, 750 hours on July 17, 1,000 hours on September 18.",
+  "180 hours of film and television, 90 hours of series and 90 hours of films, passing 10 hours on January 21, 25 hours on February 16, 50 hours on April 1, 100 hours on June 27.",
+  "4 h 12 m of film and television, 2 hours of series and 2 hours of films.",
+]
+`;

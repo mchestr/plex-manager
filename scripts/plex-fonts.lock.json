@@ -1,0 +1,64 @@
+{
+  "sources": {
+    "plex-sans-variable": {
+      "url": "https://registry.npmjs.org/@ibm/plex-sans-variable/-/plex-sans-variable-0.2.0.tgz",
+      "sha256": "6deffdab81404ee07dbe8d3044a8540aa0c3f02ca94996936f5dc55e11de4c20"
+    },
+    "plex-mono": {
+      "url": "https://registry.npmjs.org/@ibm/plex-mono/-/plex-mono-1.1.0.tgz",
+      "sha256": "744157918f504d2ec10ef2a26b7ec080e362743dda99618c8ff547e946e40d45"
+    }
+  },
+  "outputs": {
+    "app/_fonts/IBMPlexSansVar-Roman-Latin1.woff2": {
+      "source": "plex-sans-variable",
+      "path": "package/fonts/split/woff2/IBM Plex Sans Var-Roman-Latin1.woff2",
+      "sha256": "a18d94ea83c93f0a465d0976d8bc8ecbb031225dbaf76fd201d4e724a972034f"
+    },
+    "app/_fonts/IBMPlexSansVar-Roman-Latin2.woff2": {
+      "source": "plex-sans-variable",
+      "path": "package/fonts/split/woff2/IBM Plex Sans Var-Roman-Latin2.woff2",
+      "sha256": "53de8a1640c42f45de9483f816dfc71dad3e87c24fbd115f4c312b8eddf39545"
+    },
+    "app/_fonts/IBMPlexSansVar-Roman-Latin3.woff2": {
+      "source": "plex-sans-variable",
+      "path": "package/fonts/split/woff2/IBM Plex Sans Var-Roman-Latin3.woff2",
+      "sha256": "f08bc033a4959fb5fbc75a678fe56d2cd72ab5664bb3e6e1a41ac8f0d881c551"
+    },
+    "app/_fonts/IBMPlexSansVar-Roman-Pi.woff2": {
+      "source": "plex-sans-variable",
+      "path": "package/fonts/split/woff2/IBM Plex Sans Var-Roman-Pi.woff2",
+      "sha256": "0273a6b0411acbccb52b7d55af2bae2c58b35d68d6795a28c2f4db7ab21accbc"
+    },
+    "app/_fonts/IBMPlexSansVar-Roman-Greek.woff2": {
+      "source": "plex-sans-variable",
+      "path": "package/fonts/split/woff2/IBM Plex Sans Var-Roman-Greek.woff2",
+      "sha256": "00744cd9c1ed63fe2a37fbc45707ce0b9bfa949315c6dd8cf1436301e0c3817d"
+    },
+    "app/_fonts/IBMPlexSansVar-Roman-Cyrillic.woff2": {
+      "source": "plex-sans-variable",
+      "path": "package/fonts/split/woff2/IBM Plex Sans Var-Roman-Cyrillic.woff2",
+      "sha256": "9f9516a6454bb52d2c5a8da5c59c0ff87360a823e08774ccdbcc758268d6a199"
+    },
+    "app/_fonts/IBMPlexMono-Regular.woff2": {
+      "source": "plex-mono",
+      "path": "package/fonts/complete/woff2/IBMPlexMono-Regular.woff2",
+      "sha256": "49ce58b41a0e1cb921c0f58d9a5b8b96a2cc21437c7066f3ba4f24873076d131"
+    },
+    "app/_fonts/IBMPlexMono-Medium.woff2": {
+      "source": "plex-mono",
+      "path": "package/fonts/complete/woff2/IBMPlexMono-Medium.woff2",
+      "sha256": "8c2c290cbd998fa1f647e4572aca6ebbd72589551b0f3f9f8bb8628fbb8219d5"
+    },
+    "app/_fonts/IBMPlexMono-SemiBold.woff2": {
+      "source": "plex-mono",
+      "path": "package/fonts/complete/woff2/IBMPlexMono-SemiBold.woff2",
+      "sha256": "ed5eaca7522336959d6c3810bd9bb78424f0d964082d581bfbea169ee08d14e3"
+    },
+    "app/_fonts/OFL.txt": {
+      "source": "plex-sans-variable",
+      "path": "package/LICENSE.txt",
+      "sha256": "7e6b2818edbd8f6a01ae80641cc8f16a51080d08fb4e532be3a0b6f74adb07da"
+    }
+  }
+}

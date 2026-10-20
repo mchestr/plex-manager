@@ -1,0 +1,11 @@
+{
+  "fixture": "zero-series",
+  "promptVersion": "rewind-2026.1",
+  "note": "The model output is cut off mid-object, a SCHEMA failure, so every slot is a template.",
+  "calls": [
+    {
+      "kind": "copy",
+      "text": "{\"decks\": {\"number\": \"About {{fact:time.perDay}} a day\", \"bookends\": "
+    }
+  ]
+}

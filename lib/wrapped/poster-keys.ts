@@ -19,7 +19,9 @@
  * A viewer's keys come from `statistics.topMovies[].ratingKey` and
  * `statistics.topShows[].ratingKey` of their v1 and v2 Rewinds, read through
  * `parseStoredRewind`, which checks items one by one: a malformed item is
- * skipped without emptying the rest of the set. v3 rows cover no keys yet.
+ * skipped without emptying the rest of the set. A v3 row covers the title
+ * keys its stored pages hold (`film:<key>`, `series:<key>`: the quiz
+ * options, the list rows and the bookends).
  *
  * A share token's keys come from the share-safe projection
  * (`./data/share-safe-v2`), which keeps five titles per list, so a share link
@@ -56,9 +58,20 @@ const shareKeysCache = createLoadingCache<string, ReadonlySet<string> | null>({
   keep: (keys) => keys !== null,
 })
 
-/** The poster rating keys (top movies and shows) stored in one v1 or v2 Rewind. */
+const TITLE_KEY = /^(?:film|series):(\d{1,12})$/
+
+/** Every Plex rating key in a v3 page's data, at any depth. */
+function pageKeys(value: unknown): string[] {
+  if (typeof value === "string") return TITLE_KEY.exec(value)?.slice(1, 2) ?? []
+  if (Array.isArray(value)) return value.flatMap(pageKeys)
+  if (value !== null && typeof value === "object") return Object.values(value).flatMap(pageKeys)
+  return []
+}
+
+/** The poster rating keys stored in one Rewind: v1 and v2 top movies and shows, v3 page data. */
 function extractPosterKeys(data: string): string[] {
   const stored = parseStoredRewind(data)
+  if (stored.version === 3) return stored.data.pages.flatMap((page) => pageKeys(page.data))
   if (stored.version !== 1 && stored.version !== 2) return []
   const { topMovies, topShows } = stored.legacy.statistics
   return [...topMovies, ...topShows].flatMap((item) => (item.ratingKey ? [item.ratingKey] : []))

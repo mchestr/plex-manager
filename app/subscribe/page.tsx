@@ -38,8 +38,8 @@ export default async function SubscribePage() {
   const hasAccess = accessLevel === "full"
 
   return (
-    <main
-      className="flex min-h-screen flex-col items-center justify-center gap-6 bg-slate-900 p-6 text-center text-slate-100"
+    <main id="main" tabIndex={-1}
+      className="flex min-h-screen flex-col items-center justify-center gap-6 bg-slate-900 p-6 text-center text-slate-100 outline-none"
       data-testid="subscribe-page"
     >
       <div className="max-w-md">

@@ -14,7 +14,8 @@
 
 import { z } from "zod"
 
-import { ARCHETYPE_IDS, POSTER_LINE_IDS } from "@/lib/wrapped/archetypes/catalogue"
+import { ARCHETYPE_IDS } from "@/lib/wrapped/archetypes/catalogue"
+import { RewindCopyV3Wire } from "@/lib/wrapped/copy/schema"
 import { PageTypeSchema } from "@/lib/wrapped/data/page-types"
 import { FactIdSchema, RewindFactsV3Schema } from "@/lib/wrapped/facts/catalogue"
 
@@ -33,32 +34,6 @@ const ArchetypeResult = z.strictObject({
   rarity: z.strictObject({ count: z.number().int().nonnegative(), of: z.number().int().positive() }).nullable(),
 })
 
-const Slot = z.string().nullable()
-
-const RewindCopyV3 = z.strictObject({
-  decks: z.strictObject({
-    number: Slot,
-    bookends: Slot,
-    topShows: Slot,
-    topFilms: Slot,
-    taste: Slot,
-    people: Slot,
-    clock: Slot,
-    calendar: Slot,
-    records: Slot,
-    requests: Slot,
-    standing: Slot,
-    nextYear: Slot,
-  }),
-  archetype: z.strictObject({
-    id: ArchetypeIdEnum,
-    tagline: z.string(),
-    dedication: z.string(),
-    posterLineId: z.enum(POSTER_LINE_IDS),
-  }),
-  signOff: Slot,
-})
-
 export const RewindDataV3 = z.strictObject({
   version: z.literal(3),
   year: z.number().int(),
@@ -69,7 +44,7 @@ export const RewindDataV3 = z.strictObject({
   facts: RewindFactsV3Schema,
   pages: z.array(z.strictObject({ type: PageTypeSchema, data: z.unknown() })),
   archetype: ArchetypeResult.nullable(),
-  copy: RewindCopyV3.nullable(), // null for pocket and postcard
+  copy: RewindCopyV3Wire.nullable(), // null for pocket and postcard
   copySource: z.enum(["llm", "repair", "template", "mixed"]),
   copyMeta: z.strictObject({
     model: z.string().nullable(),

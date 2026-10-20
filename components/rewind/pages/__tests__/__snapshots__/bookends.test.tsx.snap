@@ -1,0 +1,9 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`03 Bookends summarises the page deterministically 1`] = `
+[
+  "2026 opened with Dr. Strangelove or: How I Learned to Stop Worrying and Love the Bomb, on January 1 at 7:30 PM. The latest was Seinfeld, on November 30 at 10:10 PM.",
+  "2026 opened with a series you will meet on the Top shows page, on January 5 at 8:00 PM. The latest was Kill Bill: Vol. 1, on November 14 at 7:30 PM.",
+  "2026 opened with Le Fabuleux Destin d'Amélie Poulain, on February 14 at 8:40 PM. The latest was The Great British Bake Off, on September 10 at 7:00 PM.",
+]
+`;

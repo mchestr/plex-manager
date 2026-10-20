@@ -1,10 +1,11 @@
 "use client"
 
+import type { Route } from "next"
 import Link from "next/link"
 import { type ReactNode, forwardRef } from "react"
 
 export type NavItem = {
-  href: string
+  href: Route
   label: string
   icon: ReactNode
   testId: string

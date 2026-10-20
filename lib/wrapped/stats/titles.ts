@@ -43,6 +43,8 @@ interface SeriesEntry extends RankedTitle {
   episodes: number
   seasons: number
   monthsActive: number
+  /** Minutes watched in each calendar month, January first (12 entries): page 05's small multiples. */
+  monthly: number[]
   /** Times over, 2 or more; null when not rewatched. */
   rewatched: number | null
 }
@@ -69,7 +71,8 @@ export interface TitleStats {
   distinctTitles: number
   /** The top three listed series' share of all series minutes; null without series. */
   top3SeriesShare: number | null
-  quiz: { kind: "series" | "mixed"; options: TitleKey[]; gapMinutes: number } | null
+  /** `options` in rank order (No. 1 first), with their display `titles`. */
+  quiz: { kind: "series" | "mixed"; options: TitleKey[]; titles: string[]; gapMinutes: number } | null
 }
 
 function completion(plays: readonly PlayEvent[]): Completion | null {
@@ -84,11 +87,14 @@ function seriesEntry(series: RankedTitle, events: ReturnType<typeof videoEvents>
   const counted = own.filter(isCountedPlay)
   const episodes = new Set(counted.map((e) => e.ratingKey)).size
   const times = episodes > 0 ? Math.floor(counted.length / episodes) : 0
+  const seconds = Array.from({ length: 12 }, () => 0)
+  for (const e of own) seconds[monthOf(e.startedAt, ctx.zone) - 1] += e.playSeconds
   return {
     ...series,
     episodes,
     seasons: new Set(counted.flatMap((e) => (e.parentMediaIndex === null ? [] : [e.parentMediaIndex]))).size,
     monthsActive: new Set(own.map((e) => monthOf(e.startedAt, ctx.zone))).size,
+    monthly: seconds.map(minutesOf),
     rewatched: times >= 2 ? times : null,
   }
 }
@@ -99,7 +105,8 @@ function quiz(ranked: RankedTitle[], series: RankedTitle[]): TitleStats["quiz"] 
   if (options.length < MIN_QUIZ) return null
   const gapMinutes = options[0].minutes - options[1].minutes
   if (gapMinutes <= options[0].minutes * QUIZ_GAP) return null
-  return { kind, options: options.slice(0, QUIZ_OPTIONS).map((t) => t.key), gapMinutes }
+  const asked = options.slice(0, QUIZ_OPTIONS)
+  return { kind, options: asked.map((t) => t.key), titles: asked.map((t) => t.title), gapMinutes }
 }
 
 /**

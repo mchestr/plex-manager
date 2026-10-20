@@ -8,7 +8,13 @@
 
 import { gunzipSync } from "node:zlib"
 
-import { getMemberEvents, getMemberLifetimeEvents, storeMemberEvents } from "@/lib/wrapped/aggregate/batch-cache"
+import {
+  getBatchLibrary,
+  getMemberEvents,
+  getMemberLifetimeEvents,
+  storeBatchLibrary,
+  storeMemberEvents,
+} from "@/lib/wrapped/aggregate/batch-cache"
 import { getContentRatings } from "@/lib/wrapped/metadata-cache"
 import { directLimiter } from "@/lib/wrapped/sources/watch-history-source"
 import { dataWindow } from "@/lib/wrapped/time/zone"
@@ -106,5 +112,20 @@ describe("the batch event cache", () => {
     expect(history.fetchLifetime).toHaveBeenCalledTimes(1)
     expect(second).toEqual({ ok: true, data: events })
     expect(redis.store.get("rw:batch:2026:2026-11-30:lifetime:user-1")?.ttlSeconds).toBe(86_400)
+  })
+
+  it("stores the batch's library listing with only the fields next year's picks read (P5.9)", async () => {
+    const redis = fakeRedis()
+    const item = {
+      ratingKey: "700", type: "movie" as const, title: "Arrival", year: 2016, addedAt: 1_700_000_000_000, contentRating: "PG-13",
+      librarySectionId: "1", genres: ["Drama"], directors: ["Denis Villeneuve"], actors: ["Amy Adams"], guids: ["tmdb://329865"],
+    }
+
+    await expect(getBatchLibrary({ ...batch, redis })).resolves.toBeNull()
+    await storeBatchLibrary(redis, { ...batch, titles: [item] })
+    const { librarySectionId: _section, guids: _guids, ...title } = item
+
+    await expect(getBatchLibrary({ ...batch, redis })).resolves.toEqual([title])
+    expect(redis.store.get("rw:batch:2026:2026-11-30:library")?.ttlSeconds).toBe(86_400)
   })
 })

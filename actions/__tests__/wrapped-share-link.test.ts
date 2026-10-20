@@ -140,10 +140,10 @@ describe('enableWrappedShareLink', () => {
 
     expect(result).toEqual({
       success: true,
-      data: { shareToken: 'token-1', url: 'https://plex.example.com/wrapped/share/token-1' },
+      data: { shareToken: 'token-1', url: 'https://plex.example.com/rewind/s/token-1' },
     })
     expect(rowOf(memberId).shareToken).toBe('token-1')
-    expect(revalidatePath).toHaveBeenCalledWith('/wrapped')
+    expect(revalidatePath).toHaveBeenCalledWith('/rewind', 'layout')
   })
 
   it('is idempotent: a second call returns the same link and mints nothing', async () => {
@@ -310,7 +310,7 @@ describe('disableWrappedShareLink', () => {
       year: YEAR,
     })
     expect(JSON.stringify((logAuditEvent as jest.Mock).mock.calls)).not.toContain('live-token')
-    expect(revalidatePath).toHaveBeenCalledWith('/wrapped')
+    expect(revalidatePath).toHaveBeenCalledWith('/rewind', 'layout')
     // The poster proxy stops serving the old token at once, not after its cache TTL.
     expect(forgetShareToken).toHaveBeenCalledWith('live-token')
   })

@@ -40,6 +40,7 @@ describe('PromptTemplateActions', () => {
     name: 'Test Template',
     description: 'Test description',
     template: 'Test content',
+    kind: 'v2-full',
     isActive: false,
     version: 1,
     createdAt: new Date(),

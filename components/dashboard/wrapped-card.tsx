@@ -265,7 +265,7 @@ export function WrappedCard({ userId, memberLongEnough, rewindEligibility, isAdm
 
             {/* CTA Button */}
             <Link
-              href={`/wrapped/${wrappedYear}`}
+              href={`/rewind/${wrappedYear}`}
               data-testid="wrapped-card-view-link"
               className="group/btn relative inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-pink-500 via-purple-500 to-pink-500 bg-[length:200%_100%] px-6 sm:px-8 py-3 sm:py-3.5 text-base sm:text-lg font-bold text-white shadow-lg shadow-pink-500/30 transition-all duration-300 hover:shadow-xl hover:shadow-pink-500/40 hover:bg-right"
             >
