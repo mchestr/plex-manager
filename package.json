@@ -58,7 +58,7 @@
     "discord.js": "^14.27.0",
     "dotenv": "^17.4.2",
     "fast-xml-parser": "^5.10.1",
-    "ioredis": "^5.8.2",
+    "ioredis": "^6.0.0",
     "lucide-react": "^1.23.0",
     "motion": "14.3.0",
     "next": "^16.4.2",
