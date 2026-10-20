@@ -293,7 +293,7 @@ describe('UserActivityTimeline', () => {
 
       renderComponent({ userId: 'user-1', initialData })
 
-      expect(screen.queryByTestId('pagination')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('activity-pagination')).not.toBeInTheDocument()
     })
 
     it('should show pagination when totalPages is greater than 1', () => {
@@ -307,7 +307,7 @@ describe('UserActivityTimeline', () => {
 
       renderComponent({ userId: 'user-1', initialData })
 
-      expect(screen.getByTestId('pagination')).toBeInTheDocument()
+      expect(screen.getByTestId('activity-pagination')).toBeInTheDocument()
     })
 
     it('should fetch new page when pagination is clicked', async () => {
@@ -333,7 +333,7 @@ describe('UserActivityTimeline', () => {
       const user = userEvent.setup()
 
       // Click next page
-      const nextButton = screen.getByTestId('pagination-next')
+      const nextButton = screen.getByTestId('activity-pagination-next')
       await user.click(nextButton)
 
       await waitFor(() => {

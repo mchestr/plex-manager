@@ -204,11 +204,13 @@
 
 **Demo.** On `/dev/ui`, sort the 120-row table, page through it and watch the URL change. Narrow to 390px: rows stack with their actions. Filter to zero rows: the filtered EmptyState offers Clear filters.
 
+(as merged: `@tanstack/react-table` is pinned at 8.21.3, the last v8; 9.x is a new API and was days old. DataTable also takes `getRowId`, `label` (the table's accessible name), `noun` (the footer) and `getRowName` (the actions menu heading); a column sorts only with `enableSorting: true`, and `?sort=` is `name` or `-name`. `meta` types come from `components/ui/data-table/column-meta.ts`. URL writes go through `hooks/use-replace-params.ts`; `parseDateRange` and `dateRangeToInstants` live in `lib/ui/date-range.ts`. DateRangeFilter takes `zone` (pass `serverZone()`) and an optional `season`, and adds "Any time". `FilterSelect` is not exported until a page needs it alone. PageHeader has no Assistant slot yet: P6.1 adds it with the AdminShell. Jest tests drive the URL through `__tests__/helpers/url-router.ts`. The composite screenshots are in `e2e/visual/primitives.visual.spec.ts` and the demo in `e2e/admin-composites.spec.ts`; neither was run and their baselines are not taken.)
+
 **Done when.**
-- [ ] The five composites follow 5.5, each with component tests and axe.
-- [ ] DataTable's sorting and pagination live in the URL, the first cell is a link, row actions work on mobile, and headers have `scope`.
-- [ ] FilterBar defaults to All and shows active chips; DateRangeFilter reads the server zone.
-- [ ] `/dev/ui` shows every composite and has a visual baseline.
+- [x] The five composites follow 5.5, each with component tests and axe.
+- [x] DataTable's sorting and pagination live in the URL, the first cell is a link, row actions work on mobile, and headers have `scope`.
+- [x] FilterBar defaults to All and shows active chips; DateRangeFilter reads the server zone.
+- [ ] `/dev/ui` shows every composite and has a visual baseline. (Every composite is there; the baseline is left to the coordinator.)
 
 ### Step P6.9: Home RewindCard
 

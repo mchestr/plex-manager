@@ -1,9 +1,12 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
+import { Suspense } from "react"
 
 import { getEnv } from "@/lib/env"
 
 import { ButtonSpecimen } from "./_sections/buttons"
+import { DataTableSpecimen } from "./_sections/composite-tables"
+import { EmptyStateSpecimen, PageHeaderSpecimen, StatTileSpecimen } from "./_sections/composites"
 import { AlertDialogSpecimen, ConfirmDialogSpecimen, DialogSpecimen } from "./_sections/dialogs"
 import { BadgeSpecimen, CardSpecimen, IconSpecimen, StatusSpecimen } from "./_sections/display"
 import { AlertSpecimen, SkeletonSpecimen, SpinnerSpecimen } from "./_sections/feedback"
@@ -22,8 +25,9 @@ export const metadata: Metadata = {
  * The primitives sheet (ui-design-system 9.6): every `components/ui`
  * primitive in every variant and state, rendered from the real components.
  * It is the visual-regression target for `components/ui` and grows with each
- * Phase 3 step. The last section draws them again in three Rewind inks
- * (P3.7). Off unless `ENABLE_DEV_UI=1`.
+ * Phase 3 step. The ink section draws them again in three Rewind inks
+ * (P3.7), and the last sections hold the admin composites (P6.5). Off unless
+ * `ENABLE_DEV_UI=1`.
  */
 export default function DevUiPage() {
   if (getEnv().ENABLE_DEV_UI !== "1") notFound()
@@ -64,6 +68,12 @@ export default function DevUiPage() {
       <StatusVocabularySpecimen />
       <IconMapSpecimen />
       <PosterPaletteSpecimen />
+      <PageHeaderSpecimen />
+      <StatTileSpecimen />
+      <Suspense>
+        <DataTableSpecimen />
+      </Suspense>
+      <EmptyStateSpecimen />
     </main>
   )
 }
