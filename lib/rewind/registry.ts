@@ -37,7 +37,11 @@
 import type { z } from "zod"
 
 import type { InkName } from "@/lib/design/tokens"
+import { backCoverPage } from "@/lib/rewind/pages/back-cover"
 import { bookendsPage } from "@/lib/rewind/pages/bookends"
+import { calendarPage } from "@/lib/rewind/pages/calendar"
+import { centrefoldPage } from "@/lib/rewind/pages/centrefold"
+import { clockPage } from "@/lib/rewind/pages/clock"
 import { coverPage } from "@/lib/rewind/pages/cover"
 import { numberPage } from "@/lib/rewind/pages/number"
 import { pendingPages } from "@/lib/rewind/pages/rules"
@@ -139,16 +143,16 @@ export const registry = {
   "top-films": entry("top-films", { name: "Top films", act: "features", field: "marigold", altField: "sky", core: true, pocket: "short-list", dwell: 8000 }, p["top-films"]),
   taste: entry("taste", { name: "Taste", act: "features", field: "petrol", altField: "oxblood", core: false, pocket: false, dwell: 8000 }, p.taste),
   people: entry("people", { name: "People", act: "features", field: "paper", altField: null, core: false, pocket: false, dwell: 7000 }, p.people),
-  clock: entry("clock", { name: "The clock", act: "habits", field: "forest", altField: "ultramarine", core: true, pocket: "clock-or-calendar", dwell: 8000 }, p.clock),
-  calendar: entry("calendar", { name: "The calendar", act: "habits", field: "paper", altField: null, core: true, pocket: "clock-or-calendar", dwell: 9000 }, p.calendar),
+  clock: entry("clock", { name: "The clock", act: "habits", field: "forest", altField: "ultramarine", core: true, pocket: "clock-or-calendar", dwell: 8000 }, clockPage),
+  calendar: entry("calendar", { name: "The calendar", act: "habits", field: "paper", altField: null, core: true, pocket: "clock-or-calendar", dwell: 9000 }, calendarPage),
   race: entry("race", { name: "The race", act: "habits", field: "mint", altField: "sky", core: false, pocket: false, dwell: 10_000 }, p.race),
   records: entry("records", { name: "Records", act: "habits", field: "peach", altField: "rose", core: false, pocket: false, dwell: 8000 }, p.records),
   setup: entry("setup", { name: "Setup", act: "server", field: "paper", altField: null, core: false, pocket: false, dwell: 6000 }, p.setup),
   requests: entry("requests", { name: "Requests", act: "server", field: "lilac", altField: "mint", core: false, pocket: false, dwell: 7000 }, p.requests),
   standing: entry("standing", { name: "Standing", act: "server", field: "sky", altField: "coral", core: false, pocket: false, dwell: 7000 }, p.standing),
-  centrefold: entry("centrefold", { name: "Centrefold", act: "centrefold", field: "archetype", altField: null, core: true, pocket: "page", dwell: 12_000 }, p.centrefold),
+  centrefold: entry("centrefold", { name: "Centrefold", act: "centrefold", field: "archetype", altField: null, core: true, pocket: "page", dwell: 12_000 }, centrefoldPage),
   "next-year": entry("next-year", { name: "Next year", act: "back", field: "paper", altField: null, core: false, pocket: false, dwell: 7000 }, p["next-year"]),
-  "back-cover": entry("back-cover", { name: "Back cover", act: "back", field: "paper", altField: null, core: true, pocket: "page", dwell: "end" }, p["back-cover"]),
+  "back-cover": entry("back-cover", { name: "Back cover", act: "back", field: "paper", altField: null, core: true, pocket: "page", dwell: "end" }, backCoverPage),
 } as const satisfies Record<IssuePageType, RegistryEntry>
 
 /** Every page in issue order. */

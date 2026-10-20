@@ -10,6 +10,8 @@ interface ChromeBottomProps {
   hasTable: boolean
   /** The centrefold shares its poster with the solid button. */
   poster: boolean
+  /** The back cover carries its own share actions, so the pill stays away. */
+  share: boolean
   canGoBack: boolean
   canGoForward: boolean
   onTable: () => void
@@ -20,11 +22,12 @@ interface ChromeBottomProps {
 
 /**
  * The bottom chrome: "Table" on chart pages and "Share this page", which is
- * the solid "Share the poster" on the centrefold (design 4.6). The page-turn
+ * the solid "Share the poster" on the centrefold (design 4.6). The back
+ * cover has neither: its page carries the share actions (4.3 page 18). The page-turn
  * buttons are the tap zones' and swipes' equivalents (WCAG 2.5.7); they stay
  * out of sight until they take keyboard focus.
  */
-export function ChromeBottom({ hasTable, poster, canGoBack, canGoForward, onTable, onShare, onPrev, onNext }: ChromeBottomProps) {
+export function ChromeBottom({ hasTable, poster, share, canGoBack, canGoForward, onTable, onShare, onPrev, onNext }: ChromeBottomProps) {
   const reveal = "sr-only focus-visible:not-sr-only"
   return (
     <div className="flex h-11 items-center justify-center gap-2.5 font-display">
@@ -38,7 +41,7 @@ export function ChromeBottom({ hasTable, poster, canGoBack, canGoForward, onTabl
           Table
         </Button>
       )}
-      {poster ? (
+      {!share ? null : poster ? (
         <Button variant="ink" size="pill" aria-haspopup="dialog" data-testid="rewind-share-poster" onClick={onShare} icon={<Icon icon={Share} />}>
           Share the poster
         </Button>

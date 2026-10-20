@@ -54,6 +54,8 @@ export function issueContext(issue: FixtureIssue, overrides: Partial<IssueContex
     pages: issue.pages,
     copy: null,
     copySource: "template",
+    model: null,
+    returnTo: "/",
     zone: "server",
     facts: issue.facts,
     ...overrides,

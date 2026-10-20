@@ -1,0 +1,10 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`10 The calendar summarises the page deterministically 1`] = `
+[
+  "You pressed play on 289 of 334 days. Your longest run was 23 days, from March 2 to March 24. Your biggest day was July 4, at 12 h 24 m. The longest gap was 9 days, in May.",
+  "You pressed play on 4 of 334 days. Your biggest day was February 14, at 2 h 2 m. The longest gap was 116 days, in May.",
+  "You pressed play on 167 of 334 days. Your longest run was 3 days, from January 2 to January 4. Your biggest day was January 4, at 2 h. The longest gap was 3 days, in January.",
+  "You pressed play on 2 of 334 days. Your longest run was 2 days, from June 20 to June 21. Your biggest day was June 21, at 4 minutes.",
+]
+`;

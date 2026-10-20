@@ -1,3 +1,5 @@
+import type { Route } from "next"
+
 import type { Edition } from "@/lib/rewind/registry"
 import type { SelectedPage } from "@/lib/rewind/select-pages"
 import { slotTemplate } from "@/lib/wrapped/copy/templates"
@@ -17,6 +19,10 @@ export interface IssueContext {
   pages: readonly SelectedPage[]
   copy: RewindCopyV3Wire | null
   copySource: RewindDataV3["copySource"]
+  /** Where Close and the back cover's "Done" go: P5.1's `safeReturnPath(from)`. */
+  returnTo: Route
+  /** `copyMeta.model`, for the AI disclosure in "Why this?". */
+  model: string | null
   /** Whose zone `tz.label` is, for the `tz.note` wording. */
   zone: "member" | "server"
   facts: RewindFactsV3
