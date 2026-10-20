@@ -99,6 +99,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
+    # knip's Playwright plugin loads playwright.config.ts, which refuses to
+    # load without a _test database URL. Nothing connects to it.
+    env:
+      E2E_DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/plex_manager_test?schema=public"
+
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -444,12 +449,30 @@ jobs:
           fi
           exit "$status"
 
-  # Every Playwright project against `next build` plus `next start`, in the
+  # The Playwright projects against `next build` plus `next start`, in the
   # image the visual baselines are taken in, on a throwaway Postgres and Redis.
+  # "E2E Tests" (required) runs every functional spec. "Visual Diffs" runs the
+  # screenshot projects and is advisory: a diff leaves a warning and the
+  # report, not a failed check (refresh baselines with visual-baselines.yml).
   e2e:
-    name: E2E Tests
+    name: ${{ matrix.suite.name }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        suite:
+          - name: E2E Tests
+            projects: --project=chromium --project=setup-wizard
+            advisory: false
+            artifact: playwright-report
+          # The setup projects pull in setup-wizard, which they depend on.
+          - name: Visual Diffs
+            projects: >-
+              --project=visual-desktop --project=visual-mobile
+              --project=visual-setup-desktop --project=visual-setup-mobile
+            advisory: true
+            artifact: visual-diffs
     # Keep the tag equal to the exact @playwright/test version in package.json.
     container:
       image: mcr.microsoft.com/playwright:v1.57.0-noble
@@ -511,15 +534,21 @@ jobs:
 
       # E2E_PREBUILT=1: the web server runs `next start` on the build above.
       - name: Run Playwright against the production build
-        run: npx playwright test
+        id: playwright
+        continue-on-error: ${{ matrix.suite.advisory }}
+        run: npx playwright test ${{ matrix.suite.projects }}
         env:
           E2E_PREBUILT: "1"
 
-      - name: Upload Playwright report and visual diffs
-        if: failure()
+      - name: Flag visual diffs as advisory
+        if: steps.playwright.outcome == 'failure' && matrix.suite.advisory
+        run: echo "::warning title=Visual diffs::Screenshots differ from the baselines. Review the visual-diffs artifact; if the change is intended, run the Visual Baselines workflow (e2e/visual/README.md)."
+
+      - name: Upload the Playwright report and diffs
+        if: failure() || steps.playwright.outcome == 'failure'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: playwright-report
+          name: ${{ matrix.suite.artifact }}
           path: |
             playwright-report/
             test-results/
