@@ -172,7 +172,7 @@ export default async function SharesDashboardPage() {
                       <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                         <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
                           <Link
-                            href={`/wrapped/share/${wrap.shareToken}`}
+                            href={`/rewind/s/${wrap.shareToken}`}
                             target="_blank"
                             className="px-2 sm:px-3 py-1 sm:py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-medium rounded transition-colors text-center"
                           >

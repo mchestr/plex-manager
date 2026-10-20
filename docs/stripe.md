@@ -258,7 +258,7 @@ every request, client-side navigations included) and the jobs in their queries.
 
 | Surface | Active member | Lapsed member | No access |
 | --- | --- | --- | --- |
-| Rewind pages (`/rewind`, `/rewind/*`, `/wrapped*`) | Yes | Read their stored Rewinds | Sent to `/subscribe` |
+| Rewind pages (`/rewind`, `/rewind/*`; old `/wrapped*` links redirect there) | Yes | Read their stored Rewinds | Sent to `/subscribe` |
 | Home and every other app page | Yes | Sent to `/subscribe` | Sent to `/subscribe` |
 | Poster images on their own Rewind | Yes | Yes | 403, unless a share link covers the poster |
 | Generate a Rewind | Yes | `NOT_ENTITLED` | `NOT_ENTITLED` |

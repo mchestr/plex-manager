@@ -186,7 +186,7 @@ const regularUser = getTestUser('regular');
 
 // Verify current page URL
 await verifyCurrentPage(page, '/admin');
-await verifyCurrentPage(page, /\/wrapped\/\d+/);
+await verifyCurrentPage(page, /\/rewind\/\d+/);
 
 // Check if element exists without throwing
 const hasElement = await elementExists(page, '[data-testid="modal"]');

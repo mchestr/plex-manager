@@ -215,7 +215,7 @@ export const updateWrappedSettings = adminAction({
 
     logAuditEvent(AuditEventType.CONFIG_CHANGED, userId, configDiff("rewind.season", before, values))
     revalidatePath("/")
-    revalidatePath("/wrapped")
+    revalidatePath("/rewind", "layout")
     return ok(null)
   },
 })

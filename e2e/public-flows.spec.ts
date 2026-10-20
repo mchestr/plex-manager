@@ -181,7 +181,7 @@ test.describe('Shared Rewind page', () => {
    * loading screen streams first, and next dev may still be compiling.
    */
   async function openShare(page: Page, token: string) {
-    const response = await page.goto(`/wrapped/share/${token}`);
+    const response = await page.goto(`/rewind/s/${token}`);
     await page.waitForLoadState('networkidle');
     await waitForLoadingGone(page);
     return response;

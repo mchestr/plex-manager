@@ -68,6 +68,6 @@ test.describe('Member and public screens', () => {
 
   test('stored v2 Rewind', async ({ page, signIn }) => {
     await signIn(TEST_USERS.REGULAR.id);
-    await capture(page, '/wrapped', 'rewind-v2');
+    await capture(page, '/rewind', 'rewind-v2');
   });
 });

@@ -23,7 +23,7 @@ const PALETTE =
 const PREFIXES =
   'bg|text|border|ring|from|via|to|fill|stroke|outline|divide|placeholder|shadow|decoration|caret|accent'
 
-const REWIND_PATHS = ['components/rewind/', 'lib/rewind/']
+const REWIND_PATHS = ['app/(app)/rewind/', 'components/rewind/', 'lib/rewind/']
 const outsideRewind = (path) => !REWIND_PATHS.some((prefix) => path.startsWith(prefix))
 
 /** The Rewind block of `app/globals.css` (P3.1 adds the markers). */

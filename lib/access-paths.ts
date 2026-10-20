@@ -7,10 +7,10 @@
  * listed; `__tests__/proxy.test.ts` checks every route folder against this.
  *
  * ```
- * level    (app) path         /rewind, /rewind/*, /wrapped*   other paths
- * full     open               open                            open
- * lapsed   -> /subscribe      open                            open
- * none     -> /subscribe      -> /subscribe                   open
+ * level    (app) path         /rewind, /rewind/*   other paths
+ * full     open               open                 open
+ * lapsed   -> /subscribe      open                 open
+ * none     -> /subscribe      -> /subscribe        open
  * ```
  *
  * A plain module (no `server-only`), so `proxy.ts` and the `(app)` layout share it.
@@ -23,11 +23,11 @@ import type { AccessLevel } from "@/lib/access"
 /** The first path segments of the folders outside `(app)`. */
 const NON_APP_SEGMENTS = new Set(["admin", "api", "auth", "dev", "invite", "onboarding", "setup", "subscribe"])
 
-/** Pages in `(public)`: anyone may open a share link. */
-const PUBLIC_PATH = /^\/wrapped\/share(\/|$)/
+/** `app/rewind/s/`, outside `(app)`: anyone may open a share link. */
+const PUBLIC_PATH = /^\/rewind\/s(\/|$)/
 
-/** The read-only Rewind pages a lapsed member keeps (FR-51). */
-const READ_ONLY_REWIND_PATH = /^\/(rewind|wrapped)(\/|$)/
+/** The read-only Rewind pages a lapsed member keeps (FR-51). `/wrapped*` redirects here before the proxy runs. */
+const READ_ONLY_REWIND_PATH = /^\/rewind(\/|$)/
 
 /** A file such as `/robots.txt`: never a page. */
 const FILE_PATH = /\/[^/]*\.[A-Za-z0-9]+$/

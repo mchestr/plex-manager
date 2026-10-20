@@ -3,8 +3,8 @@
  */
 
 /**
- * `/wrapped/<year>` with a year the route rejects (P0.14), and
- * `/wrapped/share/<token>` with a token that shares nothing (P0.11), get a
+ * `/rewind/<year>` with a year the route rejects (P0.14), and
+ * `/rewind/s/<token>` with a token that shares nothing (P0.11), get a
  * real 404 status. The routes render their own not-found pages, but
  * `app/loading.tsx` streams every page, so by then the status has already
  * gone out as 200.
@@ -96,15 +96,15 @@ beforeEach(() => {
   )
 })
 
-describe('proxy /wrapped/<year> status', () => {
-  it.each(['/wrapped/abc', '/wrapped/1999', '/wrapped/2101', '/wrapped/0x7EA', '/wrapped/2026.0', '/wrapped/20260', '/wrapped/share'])(
+describe('proxy /rewind/<year> status', () => {
+  it.each(['/rewind/abc', '/rewind/1999', '/rewind/2101', '/rewind/0x7EA', '/rewind/2026.0', '/rewind/20260', '/rewind/s'])(
     'answers %s with a 404 and the same page',
     async (path) => {
       expectNotFoundRewrite(await proxy(request(path)), path)
     }
   )
 
-  it.each(['/wrapped/2026', '/wrapped/2010', '/wrapped/2100', '/wrapped', '/', '/admin/users'])(
+  it.each(['/rewind/2026', '/rewind/2010', '/rewind/2100', '/rewind', '/', '/admin/users'])(
     'passes %s through',
     async (path) => {
       expectPassedThrough(await proxy(request(path)))
@@ -114,16 +114,16 @@ describe('proxy /wrapped/<year> status', () => {
   )
 })
 
-describe('proxy /wrapped/share/<token> status (P0.11)', () => {
+describe('proxy /rewind/s/<token> status (P0.11)', () => {
   it.each([
-    '/wrapped/share/bad-token',
-    '/wrapped/share/some-token',
-    `/wrapped/share/${'a'.repeat(42)}`,
-    `/wrapped/share/${'a'.repeat(44)}`,
-    `/wrapped/share/${'a'.repeat(42)}=`,
-    `/wrapped/share/${'a'.repeat(40)}%2F`,
+    '/rewind/s/bad-token',
+    '/rewind/s/some-token',
+    `/rewind/s/${'a'.repeat(42)}`,
+    `/rewind/s/${'a'.repeat(44)}`,
+    `/rewind/s/${'a'.repeat(42)}=`,
+    `/rewind/s/${'a'.repeat(40)}%2F`,
     // Not valid percent-encoding, so it is no token at all.
-    `/wrapped/share/${'a'.repeat(40)}%E0%A4%A`,
+    `/rewind/s/${'a'.repeat(40)}%E0%A4%A`,
   ])('answers the malformed share path %s with a 404 and no database call', async (path) => {
     expectNotFoundRewrite(await proxy(request(path)), path)
     expect(mockFindUnique).not.toHaveBeenCalled()
@@ -131,7 +131,7 @@ describe('proxy /wrapped/share/<token> status (P0.11)', () => {
   })
 
   it('passes a token that shares a completed Rewind through, after reading only its status', async () => {
-    expectPassedThrough(await proxy(request(`/wrapped/share/${TOKEN}`)))
+    expectPassedThrough(await proxy(request(`/rewind/s/${TOKEN}`)))
 
     expect(mockFindUnique).toHaveBeenCalledTimes(1)
     expect(mockFindUnique).toHaveBeenCalledWith({ where: { shareToken: TOKEN }, select: { status: true } })
@@ -141,12 +141,12 @@ describe('proxy /wrapped/share/<token> status (P0.11)', () => {
     // %4B is "K", the token's first character.
     const encoded = `%4B${TOKEN.slice(1)}`
 
-    expectPassedThrough(await proxy(request(`/wrapped/share/${encoded}`)))
+    expectPassedThrough(await proxy(request(`/rewind/s/${encoded}`)))
     expect(mockFindUnique).toHaveBeenCalledWith({ where: { shareToken: TOKEN }, select: { status: true } })
   })
 
   it('answers an unknown or revoked token with a 404 and the same page', async () => {
-    const path = '/wrapped/share/vZ2bLJpJkqoegfJ4-9rodbBNhGs3XZ-sdNzNXJC96wI'
+    const path = '/rewind/s/vZ2bLJpJkqoegfJ4-9rodbBNhGs3XZ-sdNzNXJC96wI'
 
     expectNotFoundRewrite(await proxy(request(path)), path)
     expect(mockFindUnique).toHaveBeenCalledTimes(1)
@@ -154,14 +154,14 @@ describe('proxy /wrapped/share/<token> status (P0.11)', () => {
 
   it.each(['generating', 'failed'])('answers a token whose Rewind is %s with a 404', async (status) => {
     mockFindUnique.mockResolvedValue({ status })
-    const path = `/wrapped/share/${TOKEN}`
+    const path = `/rewind/s/${TOKEN}`
 
     expectNotFoundRewrite(await proxy(request(path)), path)
   })
 
   it("spends the visitor's rw:share-page point, keyed by the trusted proxy's entry, before the lookup", async () => {
     const response = await proxy(
-      request(`/wrapped/share/${TOKEN}`, { 'x-forwarded-for': '10.0.0.1, 203.0.113.7' })
+      request(`/rewind/s/${TOKEN}`, { 'x-forwarded-for': '10.0.0.1, 203.0.113.7' })
     )
 
     expectPassedThrough(response)
@@ -173,7 +173,7 @@ describe('proxy /wrapped/share/<token> status (P0.11)', () => {
   it('marks a visitor over the limit busy for the page, without a lookup', async () => {
     mockConsume.mockResolvedValue({ ok: false, retryAfterSec: 30 })
 
-    const response = await proxy(request('/wrapped/share/vZ2bLJpJkqoegfJ4-9rodbBNhGs3XZ-sdNzNXJC96wI'))
+    const response = await proxy(request('/rewind/s/vZ2bLJpJkqoegfJ4-9rodbBNhGs3XZ-sdNzNXJC96wI'))
 
     expectPassedThrough(response)
     expect(forwardedHeader(response, 'x-rewind-share-busy')).toBe('1')
@@ -181,7 +181,7 @@ describe('proxy /wrapped/share/<token> status (P0.11)', () => {
   })
 
   it('drops a busy header the client sent', async () => {
-    const response = await proxy(request(`/wrapped/share/${TOKEN}`, { 'x-rewind-share-busy': '1' }))
+    const response = await proxy(request(`/rewind/s/${TOKEN}`, { 'x-rewind-share-busy': '1' }))
 
     expectPassedThrough(response)
     expect(response.headers.get('x-middleware-override-headers')).not.toContain('x-rewind-share-busy')
@@ -192,7 +192,7 @@ describe('proxy /wrapped/share/<token> status (P0.11)', () => {
     const error = new Error('limiter down')
     mockConsume.mockRejectedValue(error)
 
-    expectPassedThrough(await proxy(request(`/wrapped/share/${TOKEN}`)))
+    expectPassedThrough(await proxy(request(`/rewind/s/${TOKEN}`)))
     expect(mockFindUnique).toHaveBeenCalledTimes(1)
     expect(mockLogError).toHaveBeenCalledWith('Share page rate limit failed', error)
   })
@@ -201,7 +201,7 @@ describe('proxy /wrapped/share/<token> status (P0.11)', () => {
     const error = new Error('Database unavailable')
     mockFindUnique.mockRejectedValue(error)
 
-    expectPassedThrough(await proxy(request(`/wrapped/share/${TOKEN}`)))
+    expectPassedThrough(await proxy(request(`/rewind/s/${TOKEN}`)))
     expect(mockLogError).toHaveBeenCalledWith('Share token lookup failed', error)
   })
 })
@@ -209,7 +209,7 @@ describe('proxy /wrapped/share/<token> status (P0.11)', () => {
 describe('proxy request log (P4.16)', () => {
   it('logs the method, the masked pathname and allow-listed query keys at debug', async () => {
     await proxy(
-      request(`/wrapped/share/${TOKEN}?year=2026&tab=stats&code=oauth-code&state=oauth-state`, {
+      request(`/rewind/s/${TOKEN}?year=2026&tab=stats&code=oauth-code&state=oauth-state`, {
         'x-forwarded-for': '203.0.113.7',
       })
     )
@@ -220,7 +220,7 @@ describe('proxy request log (P4.16)', () => {
     expect(message).toBe('Incoming request')
     expect(metadata).toEqual({
       method: 'GET',
-      pathname: '/wrapped/share/[masked]',
+      pathname: '/rewind/s/[masked]',
       query: { year: '2026', tab: 'stats' },
     })
     expect(metadata).not.toHaveProperty('searchParams')
@@ -241,7 +241,7 @@ describe('proxy request log (P4.16)', () => {
 })
 
 describe('proxy x-pm-pathname header (P4.5)', () => {
-  it.each(['/', '/wrapped/2026', `/wrapped/share/${TOKEN}`, '/admin/users'])(
+  it.each(['/', '/rewind/2026', `/rewind/s/${TOKEN}`, '/admin/users'])(
     'forwards the pathname of %s to the page',
     async (path) => {
       const response = await proxy(request(path))
@@ -257,10 +257,10 @@ describe('proxy x-pm-pathname header (P4.5)', () => {
   })
 
   it('forwards it on a 404 rewrite too', async () => {
-    const response = await proxy(request('/wrapped/abc'))
+    const response = await proxy(request('/rewind/abc'))
 
     expect(response.status).toBe(404)
-    expect(forwardedHeader(response, 'x-pm-pathname')).toBe('/wrapped/abc')
+    expect(forwardedHeader(response, 'x-pm-pathname')).toBe('/rewind/abc')
   })
 })
 
@@ -295,19 +295,19 @@ describe('proxy lapsed-member redirect (P4.5, FR-51)', () => {
     expectSubscribeRedirect(await proxy(request('/?from=/', headers)))
   })
 
-  it.each(['/rewind/2026', '/rewind', '/wrapped', '/wrapped/2025'])('lets a lapsed member open %s', async (path) => {
+  it.each(['/rewind/2026', '/rewind', '/rewind/2025'])('lets a lapsed member open %s', async (path) => {
     signedIn('lapsed')
 
     expectPassedThrough(await proxy(request(path)))
   })
 
-  it.each(['/rewind/2026', '/wrapped/2025', '/'])('sends a member with no access from %s', async (path) => {
+  it.each(['/rewind/2026', '/rewind', '/'])('sends a member with no access from %s', async (path) => {
     signedIn('none')
 
     expectSubscribeRedirect(await proxy(request(path)))
   })
 
-  it.each(['/subscribe', '/admin/users', '/api/wrapped/poster/1', '/api/health', '/auth/denied', `/wrapped/share/${TOKEN}`, '/robots.txt'])(
+  it.each(['/subscribe', '/admin/users', '/api/wrapped/poster/1', '/api/health', '/auth/denied', `/rewind/s/${TOKEN}`, '/robots.txt'])(
     'leaves %s alone, whatever the level',
     async (path) => {
       signedIn('none')
@@ -384,7 +384,7 @@ describe('proxy coverage of the route folders (P4.5)', () => {
 
   it('finds the (app) routes', () => {
     expect(all.filter((route) => route.group === '(app)').map((route) => route.url)).toEqual(
-      expect.arrayContaining(['/', '/wrapped', '/wrapped/2026', '/discord/link'])
+      expect.arrayContaining(['/', '/rewind', '/rewind/2026', '/discord/link'])
     )
   })
 

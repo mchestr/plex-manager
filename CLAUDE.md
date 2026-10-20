@@ -34,13 +34,13 @@ A Next.js-based Plex management platform that combines server management tools, 
 app/                     # Next.js App Router (pages, layouts, routes)
 ├── (app)/              # Authenticated member layout group
 │   ├── discord/        # Discord account linking
-│   └── wrapped/        # Wrapped viewer
-├── (public)/           # Public pages (shared Wrapped links)
+│   └── rewind/         # Rewind: /rewind, /rewind/[year], the scope layout and its fonts
 ├── admin/              # Admin dashboard and management
 ├── api/                # API routes (webhooks, external integrations)
 ├── auth/               # Authentication pages
 ├── invite/             # Invite redemption
 ├── onboarding/         # User onboarding flow
+├── rewind/s/           # Public Rewind share links (/wrapped/* redirects to /rewind/*)
 ├── setup/              # Initial setup wizard
 └── subscribe/          # Stripe subscription flow
 
@@ -50,6 +50,7 @@ components/             # React components
 ├── dashboard/         # Member home page cards
 ├── generator/         # Wrapped generating animation
 ├── onboarding/        # Onboarding components
+├── rewind/            # Rewind scope, status panels and the story stage
 ├── setup/
 │   └── setup-wizard/  # Setup wizard steps
 ├── shell/             # App and admin shells (from P6.1)

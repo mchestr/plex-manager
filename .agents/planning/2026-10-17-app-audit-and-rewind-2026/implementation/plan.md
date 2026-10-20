@@ -4799,12 +4799,14 @@ P5.1 and P5.2 start only once P3.1's scope contract and P3.7's primitives have m
 
 **Demo.** With the browser clock at 2027-01-02, follow an old `/wrapped` bookmark: it lands on `/rewind/2026`, the tab reads "Chester Family Plex Rewind 2026", and Close returns home. An old `/wrapped/share/<token>` link still opens the shared page.
 
+(as merged: `RewindScope` (`components/rewind/stage/rewind-scope.tsx`) takes `fontClassName`; its root carries no ink and no `.light`/`.dark` class (a paper root would restyle the v1/v2 viewer, and pages and chrome print their own ink). It has a marked slot for P5.2's `StageInkContext.Provider` and `data-archetype`, wired at merge. P5.2's `StoryStage` mounts in `app/(app)/rewind/[year]/page.tsx` in place of the `issue` branch's `RewindPageList`. Status panels, the loading skeleton and the v3 placeholder (`components/rewind/rewind-page-list.tsx`, for P5.2 to replace) print on paper themselves; the v1/v2 branch renders the old viewer, year links and share notice inside a `font-sans` wrapper, so its visual baseline is unchanged. Popups and toasts get `inkProps('paper')` plus the font variables. Close is `components/rewind/rewind-close.tsx` (`rewind-close`, an `ink-outline icon-pill` Link); `safeReturnPath` returns a typed `Route`. Branch logic is `lib/rewind/year-view.ts` (`loadRewindYearView`); the index keeps P0.14's `resolveRewindYear` (season-year row first). The flags gate only a v3 row (`unavailable`, `REWIND_NOT_OPEN`); Redis and eligibility are checked only for the season year. Panel copy codes (`RewindPanelCode`) are in `lib/ui/error-copy.ts`. `/rewind/1999` renders `[year]/not-found.tsx` (the `not-found` panel with `rewind-year-links`) with proxy's 404. `wrapped-year-view.tsx` is deleted. Share URLs, the admin Shares link and `revalidatePath('/rewind', 'layout')` all point at `/rewind`; `lib/access-paths.ts` drops `/wrapped` (next.config redirects before the proxy runs) and treats `/rewind/s/*` as public. The design-debt `rewind-only` and `infinite-motion` skips now include `app/(app)/rewind/`. The v2 share page moved unchanged; its design-debt counts moved with it.)
+
 **Done when.**
-- [ ] `/rewind` opens the latest completed year, `/rewind/[year]` opens any of the member's years, and every other state shows a status panel.
-- [ ] The layout is the scope root, with the Rewind fonts, the paper portal and a safe close control.
-- [ ] Both permanent redirects resolve in order, and `/rewind/s/:token` serves surviving share links.
-- [ ] Titles read "{server name} Rewind {year}", and no in-app link points at `/wrapped`.
-- [ ] The unit tests and the January-routing E2E pass.
+- [x] `/rewind` opens the latest completed year, `/rewind/[year]` opens any of the member's years, and every other state shows a status panel.
+- [x] The layout is the scope root, with the Rewind fonts, the paper portal and a safe close control.
+- [x] Both permanent redirects resolve in order, and `/rewind/s/:token` serves surviving share links.
+- [x] Titles read "{server name} Rewind {year}", and no in-app link points at `/wrapped`.
+- [x] The unit tests and the January-routing E2E pass.
 
 ### Step P5.2: Story stage and player
 

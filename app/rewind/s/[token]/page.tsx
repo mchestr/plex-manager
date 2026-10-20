@@ -37,7 +37,7 @@ export async function generateMetadata({ params }: ShareParams): Promise<Metadat
 
   const { ownerName, year } = found.share
   const baseUrl = getBaseUrl()
-  const shareUrl = `${baseUrl}/wrapped/share/${token}`
+  const shareUrl = `${baseUrl}/rewind/s/${token}`
   const ogImageUrl = `${baseUrl}/api/wrapped/og-image?token=${token}`
   const title = `${ownerName}'s ${year} Plex Wrapped`
   // Highlight tags look broken in link previews.
