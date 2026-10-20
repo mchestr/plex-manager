@@ -4,7 +4,7 @@
 
 import { SHARE_PAGE_TYPES } from "@/lib/rewind/registry"
 import type { RewindDataV3 } from "@/lib/wrapped/data/schema-v3"
-import { cardInput, toShareSafe } from "@/lib/wrapped/data/share-safe"
+import { cardInput, defaultCardFacts, toShareSafe } from "@/lib/wrapped/data/share-safe"
 import { ShareSafeRewindV3 } from "@/lib/wrapped/data/share-safe-schema"
 
 import { fixtureRewind, shareContext, shareOptions } from "./share-fixture"
@@ -168,6 +168,31 @@ describe("rules", () => {
     const shared = toShareSafe(heavy, options, shareContext())
     expect(shared.pages.map((p) => p.type)).toEqual(["top-shows"])
     expect(shared.ownerName).toBeNull()
+  })
+
+  it("matches defaultCardFacts' @example", () => {
+    expect(defaultCardFacts("centrefold", (id) => id !== "standing.percentile")).toEqual(["time.totalHours", "streak.longest.days", "time.seriesHours"])
+  })
+
+  it("defaults the poster's stats: hours, the percentile at top 25%, and the peak unless the clock shows it", () => {
+    const shared = toShareSafe(heavy, shareOptions({ pages: ["centrefold", "back-cover"] }), shareContext())
+    expect(shared.pages.map((p) => p.stats)).toEqual([
+      ["time.totalHours", "standing.percentile", "streak.longest.days"],
+      ["time.totalHours", "standing.percentile", "hours.peak"],
+    ])
+    const chosen = toShareSafe(heavy, shareOptions({ pages: ["centrefold"], cardFacts: ["counts.films"] }), shareContext())
+    expect(chosen.pages[0].stats).toEqual(["counts.films"])
+    expect(chosen.pages[0].facts["counts.films"]).toEqual({ display: "112" })
+  })
+
+  it("publishes the clock's 24 hours normalised to the busiest, and pairs each title with its fact", () => {
+    const shared = toShareSafe(heavy, shareOptions({ pages: ["top-shows", "clock"] }), shareContext())
+    const clock = shared.pages.find((p) => p.type === "clock")!
+    expect(clock.hours).toHaveLength(24)
+    expect(Math.max(...clock.hours!)).toBe(1)
+    const shows = shared.pages.find((p) => p.type === "top-shows")!
+    expect(shows.titleIds[0]).toBe("series[1].title")
+    expect(shows.titles[0]).toBe(heavy.facts["series[1].title"]!.display)
   })
 
   it("parses with the strict schema, which refuses an unlisted key", () => {

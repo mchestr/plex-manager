@@ -9,7 +9,7 @@
 
 import type { CSSProperties, ReactElement } from "react"
 
-import { archivoFamily } from "@/lib/rewind/cards/fonts"
+import { archivoFamily, NEWSREADER } from "@/lib/rewind/cards/fonts"
 import { CARD_SLACK, fitLines, type FitResult } from "@/lib/rewind/typeset/fit-lines"
 import { cardMetrics } from "@/lib/rewind/typeset/metrics"
 
@@ -63,6 +63,31 @@ export function Nameplate({ fit, lineHeight = 0.9 }: { fit: FitResult; lineHeigh
       ))}
     </div>
   )
+}
+
+/**
+ * Newsreader text. Newsreader has no built metrics, so a `width` lets Satori
+ * break a longer line (a poster line, a caption); without one it is one line.
+ */
+export function Text({
+  text, family, size, lineHeight = 1.25, width, style,
+}: { text: string; family: keyof typeof NEWSREADER; size: number; lineHeight?: number; width?: number; style?: CSSProperties }): ReactElement {
+  return (
+    <div
+      style={{
+        display: "flex", fontFamily: NEWSREADER[family], fontStyle: family === "text" ? "normal" : "italic", fontSize: size,
+        lineHeight: `${Math.round(size * lineHeight)}px`, ...(width ? { width } : { whiteSpace: "nowrap" }), ...style,
+      }}
+    >
+      {text}
+    </div>
+  )
+}
+
+/** A raster image (a poster) or a data URI, at its outer size. */
+export function Picture({ src, width, height, style }: { src: string; width: number; height: number; style?: CSSProperties }): ReactElement {
+  // eslint-disable-next-line @next/next/no-img-element -- Satori draws <img>, not next/image
+  return <img src={src} width={width} height={height} alt="" style={{ display: "flex", ...style }} />
 }
 
 /** A graphic: an SVG data URI with no `<text>` inside. */

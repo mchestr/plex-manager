@@ -39,7 +39,9 @@ import { FACTS, type FactId, type RewindFactsV3 } from "@/lib/wrapped/facts/cata
 import type { RewindDataV3 } from "@/lib/wrapped/data/schema-v3"
 
 import {
+  CARD_FACT_IDS,
   ShareSafeRewindV3,
+  type CardFactId,
   type ShareContext,
   type ShareOptions,
   type ShareSafePage,
@@ -48,9 +50,11 @@ import {
 
 const SERVER_COUNTS = /^(standing\.members|archetype\.(rarityCount|scoredMembers)|community\..+|series\[\d\]\.viewer(Count|Rank))$/
 const ARCHETYPE_PAGES: ReadonlySet<IssuePageType> = new Set(["centrefold", "back-cover"])
-const SOUNDTRACK_PAGES: ReadonlySet<IssuePageType> = new Set(["cover", "number", "centrefold"])
+const SOUNDTRACK_PAGES: ReadonlySet<IssuePageType> = new Set(["cover", "number", "centrefold", "back-cover"])
+const HOURS_PAGES: ReadonlySet<IssuePageType> = new Set(["clock", "centrefold"])
 const TOP_PERCENTILE = 25
 const MAX_DISPLAY = 80
+const RATING_KEY = /^\d{1,12}$/
 
 const isTitle = (id: FactId) => FACTS[id].unit === "title"
 
@@ -106,6 +110,38 @@ function soundtrackOf(rewind: RewindDataV3, daily: boolean): ShareSafePage["soun
   return { grain: "weekly", bins: soundtrack(minutes, { variant: "weekly", window, width: 48, height: 2 }).bins }
 }
 
+/** The page's 24 hours, normalised to the busiest, from its own stored data. */
+function hoursOf(rewind: RewindDataV3, type: IssuePageType): number[] | null {
+  if (!HOURS_PAGES.has(type)) return null
+  const page = rewind.pages.find((p) => p.type === type)
+  const parsed = page ? (type === "clock" ? registry.clock : registry.centrefold).schema.safeParse(page.data) : null
+  if (!parsed?.success) return null
+  const max = Math.max(0, ...parsed.data.hours)
+  return max > 0 ? parsed.data.hours.map((n) => n / max) : null
+}
+
+/** The stat each page's own graphic already shows: the centrefold's clock shows the peak hour. */
+const SHOWN_BY_GRAPHIC: Partial<Record<IssuePageType, CardFactId>> = { centrefold: "hours.peak" }
+
+/**
+ * The poster's three stats when the member has not chosen (design 6.3): the
+ * hours; the percentile at top 25% or better, else the longest streak; and
+ * the peak hour. A stat the page's graphic already shows, or one the member
+ * does not have, gives way to the next allowed stat.
+ *
+ * @example
+ * ```ts
+ * defaultCardFacts("centrefold", (id) => id !== "standing.percentile")
+ * // ["time.totalHours", "streak.longest.days", "time.seriesHours"]
+ * ```
+ */
+export function defaultCardFacts(page: IssuePageType, allowed: (id: CardFactId) => boolean): CardFactId[] {
+  const ok = (id: CardFactId) => allowed(id) && SHOWN_BY_GRAPHIC[page] !== id
+  const second: CardFactId = ok("standing.percentile") ? "standing.percentile" : "streak.longest.days"
+  const order: CardFactId[] = ["time.totalHours", second, "hours.peak", "streak.longest.days", ...CARD_FACT_IDS]
+  return [...new Set(order)].filter(ok).slice(0, 3)
+}
+
 function archetypeOf(rewind: RewindDataV3, ctx: ShareContext): ShareSafePage["archetype"] {
   if (!rewind.archetype) return null
   const id = rewind.archetype.id
@@ -132,16 +168,16 @@ interface PageInput {
 
 function projectPage(type: SharePageType, { rewind, options, ctx, keys, hidden }: PageInput): ShareSafePage {
   const entry = registry[type]
-  const extra = ARCHETYPE_PAGES.has(type) ? options.cardFacts : []
-  const ids = [...new Set<FactId>([...entry.share.facts, ...extra])].filter(
-    (id) => rewind.facts[id] && !hidden.has(id) && mayPrint(id, type, rewind.facts, ctx)
-  )
+  const printable = (id: FactId) => Boolean(rewind.facts[id]) && !hidden.has(id) && mayPrint(id, type, rewind.facts, ctx)
+  const chosen = options.cardFacts.length > 0 ? options.cardFacts : defaultCardFacts(type, printable)
+  const stats = ARCHETYPE_PAGES.has(type) ? chosen.filter(printable) : []
+  const ids = [...new Set<FactId>([...entry.share.facts, ...stats])].filter(printable)
   const allowed: RewindFactsV3 = Object.fromEntries(ids.map((id) => [id, rewind.facts[id]]))
   if (options.signed && rewind.facts["member.firstName"]) allowed["member.firstName"] = rewind.facts["member.firstName"]
   const titleIds = ids.filter(isTitle).slice(0, 5)
   const art = options.includeArt && ctx.allowArt && entry.share.art ? titleIds.flatMap((id) => {
           const key = keys[id]?.at(-1)
-          return key ? [{ ratingKey: key }] : []
+          return key && RATING_KEY.test(key) ? [{ ratingKey: key }] : []
         }) : null
 
   return {
@@ -149,9 +185,12 @@ function projectPage(type: SharePageType, { rewind, options, ctx, keys, hidden }
     headline: cardHeadline(type, allowed, rewind.year),
     facts: Object.fromEntries(ids.filter((id) => !isTitle(id)).map((id) => [id, { display: rewind.facts[id]!.display }])),
     titles: titleIds.map((id) => rewind.facts[id]!.display.slice(0, 200)),
+    titleIds,
     art: art && art.slice(0, 4),
     soundtrack: SOUNDTRACK_PAGES.has(type) ? soundtrackOf(rewind, options.dailyDetail) : null,
     archetype: ARCHETYPE_PAGES.has(type) ? archetypeOf(rewind, ctx) : null,
+    hours: hoursOf(rewind, type),
+    stats,
   }
 }
 

@@ -14,11 +14,14 @@ import type { CardInput } from "@/lib/wrapped/data/share-safe"
 
 import { CARD_SIZES } from "./frame"
 import { loadCardFonts } from "./fonts"
-import { renderCard } from "./index"
+import { hasCard, renderCard } from "./index"
 
 /** The card's PNG, or null when its page has no card yet. */
 export async function renderCardPng(input: CardInput): Promise<Buffer | null> {
-  const element = renderCard(input)
+  if (!hasCard(input.page.type)) return null
+  // Imported only for art, so a type-only render never loads the database client.
+  const assets = input.art?.length ? await (await import("./art")).loadCardArt(input.art) : undefined
+  const element = renderCard(input, assets)
   if (!element) return null
   const fonts = await loadCardFonts()
   const response = new ImageResponse(element, { ...CARD_SIZES[input.size], fonts })

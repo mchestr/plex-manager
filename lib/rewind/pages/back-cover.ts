@@ -17,6 +17,7 @@ import type { RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 
 import { BackCoverDataSchema, type BackCoverData } from "./back-cover.schema"
 import { has, isFinalCut, issueYear, shown, volumeLine } from "./facts"
+import { ratingKeyOf } from "./title-key.schema"
 
 /** The page's measure in artboard px; the billing block's lines are justified to it. */
 const MEASURE = 358
@@ -33,7 +34,10 @@ export const colophon = (facts: RewindFactsV3, issue: { serverName: string; year
   [`${issue.serverName} Rewind ${issue.year}`, volumeLine(facts)].filter(Boolean).join(", ")
 
 export const backCoverPage: PageDefinition<BackCoverData> = {
-  select: (_facts, { stats }) => ({ minutes: stats.calendar.minutes.map((day) => day.minutes) }),
+  select: (_facts, { stats }) => ({
+    minutes: stats.calendar.minutes.map((day) => day.minutes),
+    keys: { series: stats.titles.series.slice(0, 3).map((s) => s.key), film: stats.titles.films[0]?.key ?? null },
+  }),
   schema: BackCoverDataSchema,
   srSummary: (data, facts) => {
     const days = has(facts, "days.active") ? shown(facts, "days.active") : "0"
@@ -73,5 +77,10 @@ export const backCoverPage: PageDefinition<BackCoverData> = {
       "archetype.name",
     ],
     titles: ["series[1].title", "series[2].title", "series[3].title", "films[1].title"],
+    art: true,
+    titleKeys: ({ keys }) => ({
+      ...Object.fromEntries(keys.series.map((key, i) => [`series[${i + 1}].title`, ratingKeyOf(key)])),
+      ...(keys.film ? { "films[1].title": ratingKeyOf(keys.film) } : {}),
+    }),
   },
 }
