@@ -99,7 +99,15 @@ export function ShareSheet({ open, onClose, page, atSettings }: ShareSheetProps)
   }
 
   return (
-    <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
+    <Sheet
+      open={open}
+      onOpenChange={(next) => {
+        if (next) return
+        // The next opening starts again from the page the story is on.
+        setPicked(null)
+        onClose()
+      }}
+    >
       <SheetContent side="bottom" grabber data-testid="rewind-share-sheet" className="font-display" initialFocus={atSettings ? signRef : undefined}>
         <SheetHeader>
           <SheetTitle>Share</SheetTitle>
