@@ -75,7 +75,11 @@ export function StagePage({ index, current, previous, ink, label, children }: St
           isCurrent ? "z-2" : index === previous ? "z-1" : "z-0"
         )}
       >
-        <div className="rw-artboard relative h-[calc(var(--rw-artboard-h)*var(--u)*1px)] w-[calc(390px*var(--u))] shrink-0">
+        {/* The body's 24 px line box scales with the page too, so text that sets no line height never outgrows the artboard */}
+        <div
+          data-testid="rewind-artboard"
+          className="rw-artboard relative h-[calc(var(--rw-artboard-h)*var(--u)*1px)] w-[calc(390px*var(--u))] shrink-0 leading-[max(15px,calc(var(--u)*24px))]"
+        >
           {children}
         </div>
       </article>

@@ -16,6 +16,9 @@ import { SoundtrackStrip } from "./soundtrack-strip"
 import { axes, MEASURE, u, ut } from "./units"
 
 const rule = "border-current border-b-[1.5px]"
+/** The soundtrack's full height and its month initials' row, in logical px. */
+const STRIP_H = 150
+const MONTHS_H = 18
 
 function cut(label: string, pages: number, ms: number, locale: string): Cut {
   return { label, meta: `${formatCount(pages, { one: "page", other: "pages" }, { locale })}, about ${formatRunningTime(ms)}` }
@@ -25,7 +28,9 @@ function cut(label: string, pages: number, ms: number, locale: string): Cut {
  * 01 Cover (design 4.3, `slide-01-cover.png`): the masthead with the server
  * and "Vol. 4, No. K7Q4", the "Rewind" nameplate, the issue and its data
  * window, the soundtrack, the headline, four cover lines that point at the
- * selected pages, and the cut choice.
+ * selected pages, and the cut choice. When the column runs out of height
+ * (the cut buttons keep 44 px hit areas and small text its 12 px floor),
+ * the soundtrack gives way from its 150 px.
  */
 export function CoverPage({ data, issue }: PageProps<CoverData>) {
   const { facts, locale } = issue
@@ -40,7 +45,7 @@ export function CoverPage({ data, issue }: PageProps<CoverData>) {
 
   return (
     <div className="flex h-full flex-col font-text" style={{ padding: `${u(4)} ${u(16)} ${u(16)}` }} data-testid="rewind-page-cover">
-      <div className={`flex items-baseline justify-between font-display ${rule}`} style={{ fontSize: u(15), fontVariationSettings: axes(100, 650), paddingBottom: u(7) }}>
+      <div className={`flex items-baseline justify-between font-display ${rule}`} style={{ fontSize: u(15), lineHeight: 1.2, fontVariationSettings: axes(100, 650), paddingBottom: u(7) }}>
         <span>{issue.serverName}</span>
         {volume && <span className="tabular-nums">{volume}</span>}
       </div>
@@ -52,14 +57,15 @@ export function CoverPage({ data, issue }: PageProps<CoverData>) {
           The pocket edition
         </p>
       )}
-      <div className="flex justify-between border-t-[1.5px] border-current font-display" style={{ marginTop: u(10), paddingTop: u(7), fontSize: ut(13), fontVariationSettings: axes(100, 600) }}>
+      <div className="flex justify-between border-t-[1.5px] border-current font-display" style={{ marginTop: u(10), paddingTop: u(7), fontSize: ut(13), lineHeight: 1.2, fontVariationSettings: axes(100, 600) }}>
         <span>The {issue.year} issue</span>
         <span data-testid="rewind-cover-window">
           <CopyText text={windowLine(facts)} source={source} />
         </span>
       </div>
-      <RewindFigure summary={coverPage.srSummary(data, facts)} className="mt-[calc(var(--u)*18px)]">
-        <SoundtrackStrip minutes={data.minutes} from={String(facts["window.from"]?.value)} locale={locale} width={MEASURE} height={150} months />
+      {/* The strip is the column's one part that gives way, so the cut choice stays inside the artboard (design 4.7) */}
+      <RewindFigure summary={coverPage.srSummary(data, facts)} className="mt-[calc(var(--u)*18px)] flex min-h-0 flex-col" style={{ flexBasis: u(STRIP_H + MONTHS_H) }}>
+        <SoundtrackStrip minutes={data.minutes} from={String(facts["window.from"]?.value)} locale={locale} width={MEASURE} height={STRIP_H} months fit />
       </RewindFigure>
       <p className="italic" style={{ fontSize: u(14.5), lineHeight: 1.25, marginTop: u(4) }}>
         {coverCaption(finalCut)}

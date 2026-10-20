@@ -43,6 +43,9 @@ describe("02 The number", () => {
   it("stamps the change on the same months of 2025, and hides it without last year's data", () => {
     renderNumber(issues.heavy)
     expect(screen.getByTestId("rewind-number-stamp")).toHaveTextContent("+18%on the samemonths of 2025")
+    // In the flow beside "hours", so the deck starts below it
+    expect(screen.getByTestId("rewind-number-stamp")).not.toHaveClass("absolute")
+    expect(screen.getByTestId("rewind-number-stamp").style.marginTop).toBe("calc(var(--u) * -62px)")
     const facts = { ...issues.heavy.facts }
     delete facts["time.vsLastYear"]
     renderNumber(issues.light, facts)
