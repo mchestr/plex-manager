@@ -22,8 +22,6 @@ export type SharePageType = z.infer<typeof SharePageTypeSchema>
 /**
  * The stats a member may put on the centrefold and back cover (design 6.3,
  * "Three stats on the poster"), as the facts that print them.
- *
- * @internal Read through `CardFactIdSchema`; tests read the list.
  */
 export const CARD_FACT_IDS = [
   "time.totalHours",
@@ -38,6 +36,7 @@ export const CARD_FACT_IDS = [
   "records.completionShare",
 ] as const
 export const CardFactIdSchema = z.enum(CARD_FACT_IDS)
+export type CardFactId = z.infer<typeof CardFactIdSchema>
 
 /** A share's asset key: 16 random bytes as 22 base64url characters. Card and poster URLs carry it, never the token. */
 export const assetKeySchema = z.string().regex(/^[A-Za-z0-9_-]{22}$/, "Invalid asset key")
@@ -83,11 +82,17 @@ export const ShareSafePage = z.strictObject({
   headline: z.string().max(200),
   facts: z.partialRecord(FactIdSchema, z.strictObject({ display: z.string().max(80) })),
   titles: z.array(z.string().max(200)).max(5),
+  /** The title fact each of `titles` prints, in the same order, so a card can pair a title with its row's facts. */
+  titleIds: z.array(FactIdSchema).max(5),
   art: z.array(z.strictObject({ ratingKey: RatingKey })).max(4).nullable(),
   soundtrack: z
     .strictObject({ grain: z.enum(["weekly", "daily"]), bins: z.array(z.number().min(0).max(1)).max(366) })
     .nullable(),
   archetype: z.strictObject({ id: z.enum(ARCHETYPE_IDS), name: z.string().max(60), posterLine: z.string().max(120) }).nullable(),
+  /** Plays by start hour, normalised to the busiest (the clock and the centrefold's evidence clock), else null. */
+  hours: z.array(z.number().min(0).max(1)).length(24).nullable(),
+  /** The poster's three stats (centrefold and back cover): `cardFacts`, else the defaults, as printed facts. */
+  stats: z.array(CardFactIdSchema).max(3),
 })
 export type ShareSafePage = z.infer<typeof ShareSafePage>
 

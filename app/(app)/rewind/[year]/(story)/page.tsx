@@ -43,7 +43,7 @@ export default async function RewindYearPage({ params, searchParams }: YearPageP
   }
   const year = parsedYear.data
   const userId = session.user.id
-  const from = (await searchParams).from
+  const { from, sheet } = await searchParams
   const returnTo = safeReturnPath(typeof from === "string" ? from : null)
 
   const [view, sharedRows, completedYears] = await Promise.all([
@@ -66,7 +66,7 @@ export default async function RewindYearPage({ params, searchParams }: YearPageP
     return (
       <>
         {sharedNotice}
-        <RewindIssue data={view.data} userId={userId} returnTo={returnTo} />
+        <RewindIssue rewindId={view.id} data={view.data} userId={userId} returnTo={returnTo} initialSheet={sheet === "share" ? "share" : undefined} />
       </>
     )
   }

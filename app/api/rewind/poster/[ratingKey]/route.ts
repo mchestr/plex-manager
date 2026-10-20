@@ -8,11 +8,10 @@ import { rewindInks, type InkName } from "@/lib/design/tokens"
 import { prisma } from "@/lib/prisma"
 import type { TonePair } from "@/lib/rewind/media/tone"
 import { posterCachePath, readCachedPoster, writeCachedPoster } from "@/lib/rewind/poster/disk-cache"
+import { fetchPlexPoster } from "@/lib/rewind/poster/fetch"
 import { renderPoster } from "@/lib/rewind/poster/image"
 import { createSafeError, ErrorCode, getStatusCode, logError } from "@/lib/security/error-handler"
 import { limitRequest } from "@/lib/security/rate-limit"
-import { fetchWithTimeout } from "@/lib/utils/fetch-with-timeout"
-import { createLogger } from "@/lib/utils/logger"
 import { ratingKeySchema, shareTokenSchema } from "@/lib/validations/params"
 import { assetKeyAllowsRatingKey } from "@/lib/wrapped/data/share-asset"
 import { assetKeySchema } from "@/lib/wrapped/data/share-safe-schema"
@@ -20,8 +19,6 @@ import { isKnownPosterMiss, rememberPosterMiss, remainingMs, resolveSessionPoste
 import { shareTokenAllowsRatingKey } from "@/lib/wrapped/poster-keys"
 
 export const dynamic = "force-dynamic"
-
-const logger = createLogger("REWIND_POSTER_API")
 
 const INKS = Object.keys(rewindInks) as [InkName, ...InkName[]]
 const InkSchema = z.enum(INKS)
@@ -54,14 +51,6 @@ const NOT_FOUND_CACHE_CONTROL = "private, max-age=60"
 /** Errors (400, 401, 500): never stored. */
 const ERROR_CACHE_CONTROL = "private, no-store"
 
-interface PosterServer {
-  url: string
-  token: string
-  adminPlexUserId: string | null
-}
-
-type PosterFetch = { status: "ok"; body: Buffer } | { status: "missing" } | { status: "failed" }
-
 function errorResponse(code: ErrorCode, message: string) {
   return NextResponse.json(createSafeError(code, message), {
     status: getStatusCode(code),
@@ -80,32 +69,6 @@ function posterResponse(body: Buffer, servedAs: "private" | "share") {
   const headers: Record<string, string> = { "Content-Type": "image/webp", "Cache-Control": POSTER_CACHE_CONTROL }
   if (servedAs === "share") headers["X-Robots-Tag"] = "noindex"
   return new NextResponse(new Uint8Array(body), { headers })
-}
-
-/** The poster from the Plex photo transcoder at the served width; the timeout covers reading the image. */
-async function fetchPoster(server: PosterServer, ratingKey: string, w: number, timeoutMs: number): Promise<PosterFetch> {
-  const transcodeUrl = new URL("/photo/:/transcode", server.url)
-  transcodeUrl.searchParams.set("width", String(w))
-  transcodeUrl.searchParams.set("height", String(Math.round(w * 1.5)))
-  transcodeUrl.searchParams.set("minSize", "1")
-  transcodeUrl.searchParams.set("upscale", "1")
-  transcodeUrl.searchParams.set("url", `/library/metadata/${ratingKey}/thumb`)
-
-  try {
-    const upstream = await fetchWithTimeout(transcodeUrl.toString(), {
-      headers: { "X-Plex-Token": server.token },
-      timeoutMs,
-      timeoutCoversBody: true,
-    })
-    if (!upstream.ok) {
-      logger.debug("Plex could not produce the poster", { ratingKey, status: upstream.status })
-      return { status: "missing" }
-    }
-    return { status: "ok", body: Buffer.from(await upstream.arrayBuffer()) }
-  } catch (error) {
-    logger.debug("Poster request to Plex failed", { ratingKey, error: error instanceof Error ? error.name : String(error) })
-    return { status: "failed" }
-  }
 }
 
 /**
@@ -213,7 +176,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ rat
 
     const timeoutMs = remainingMs(deadline)
     if (timeoutMs === 0) return posterNotFound()
-    const poster = await fetchPoster(plexServer, ratingKey, w, timeoutMs)
+    const poster = await fetchPlexPoster(plexServer, ratingKey, w, timeoutMs)
     if (poster.status !== "ok") {
       if (poster.status === "missing" || timeoutMs >= MIN_MISS_TIMEOUT_MS) rememberPosterMiss(ratingKey)
       return posterNotFound()

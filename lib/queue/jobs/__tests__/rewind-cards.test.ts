@@ -52,11 +52,11 @@ afterEach(() => {
 })
 
 describe("REWIND_CARD_PREWARM", () => {
-  it("renders the prewarm cards that exist yet, once", async () => {
-    expect(await processRewindCardPrewarm(job("wrapped-1"))).toEqual({ rendered: 1 })
-    expect(readdirSync(path.join(dir, "cards"))).toHaveLength(1)
+  it("renders the cover, centrefold and back cover once", async () => {
+    expect(await processRewindCardPrewarm(job("wrapped-1"))).toEqual({ rendered: 3 })
+    expect(readdirSync(path.join(dir, "cards"))).toHaveLength(3)
     expect(await processRewindCardPrewarm(job("wrapped-1"))).toEqual({ rendered: 0 })
-    expect(renderCardPng).toHaveBeenCalledTimes(1)
+    expect(renderCardPng).toHaveBeenCalledTimes(3)
   })
 
   it("does nothing for a row that is gone or not completed", async () => {

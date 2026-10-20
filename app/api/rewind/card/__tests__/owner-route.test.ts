@@ -109,7 +109,7 @@ describe("GET /api/rewind/card/[rewindId]/[page]", () => {
 
   it("answers 404 for a page the issue did not print, or that has no card yet", async () => {
     expect((await get("standing")).status).toBe(404)
-    expect((await get("clock")).status).toBe(404)
+    expect((await get("top-films")).status).toBe(404)
     expect((await get("not-a-page")).status).toBe(404)
   })
 

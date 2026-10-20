@@ -5,9 +5,11 @@ import type { Route } from "next"
 import Link from "next/link"
 
 import { ContentsSheet } from "@/components/rewind/sheets/contents-sheet"
+import { useShare } from "@/components/rewind/share/share-context"
 import { usePlayerSend, useStageSheet } from "@/components/rewind/stage/player-context"
 import { Button } from "@/components/ui/button"
 import { Icon } from "@/components/ui/icon"
+import { privacyStatus, SHARE_SETTINGS_SHEET } from "@/lib/rewind/share-sheet"
 
 interface BackCoverActionsProps {
   pages: ReadonlyArray<{ folio: number; name: string }>
@@ -16,18 +18,21 @@ interface BackCoverActionsProps {
 
 const footerLink = "h-11 px-0 font-semibold decoration-current decoration-[1.5px]"
 
-/** "Share the poster" and the privacy status line with "Change". */
+/** "Share the poster" and the privacy status line, read from the member's share choices, with "Change". */
 export function BackCoverShare() {
   const send = usePlayerSend()
+  const state = useShare()
   const share = () => send({ type: "OPEN_SHEET", sheet: "share" })
+  const change = () => send({ type: "OPEN_SHEET", sheet: SHARE_SETTINGS_SHEET })
+  const status = privacyStatus({ link: Boolean(state?.link), signed: state?.choices.signed ?? false, includeArt: state?.choices.includeArt ?? false })
   return (
     <div data-rw-interactive className="flex flex-col gap-2.5 font-display">
       <Button variant="ink" size="pill" className="w-full" aria-haspopup="dialog" data-testid="rewind-back-cover-share" onClick={share} icon={<Icon icon={Share} />}>
         Share the poster
       </Button>
       <p className="flex items-baseline justify-between gap-3 text-ui" data-testid="rewind-privacy-status">
-        <span>Public link off. Cards unsigned, no artwork.</span>
-        <Button variant="link" className={footerLink} aria-haspopup="dialog" data-testid="rewind-privacy-change" onClick={share}>
+        <span>{status}</span>
+        <Button variant="link" className={footerLink} aria-haspopup="dialog" data-testid="rewind-privacy-change" onClick={change}>
           Change
         </Button>
       </p>

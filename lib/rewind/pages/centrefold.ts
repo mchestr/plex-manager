@@ -66,7 +66,8 @@ export const METER_CAPTION: Partial<Record<FactId, string>> = {
   "series.top3Share": "of your series time on your top three",
 }
 
-const RINGS: Partial<Record<ArchetypeId, { arc: { from: number; to: number }; share: FactId }>> = {
+/** The archetypes whose evidence is the clock: the window the arc brackets and the share in its centre. */
+export const RINGS: Partial<Record<ArchetypeId, { arc: { from: number; to: number }; share: FactId }>> = {
   "midnight-marathoner": { arc: { from: 22, to: 3 }, share: "hours.afterDarkShare" },
   "golden-hour-viewer": { arc: { from: 18, to: 21 }, share: "hours.goldenShare" },
 }
@@ -180,5 +181,12 @@ export const centrefoldPage: PageDefinition<CentrefoldData> = {
   },
   table: (data, facts, settings) => (data.hours.some((n) => n > 0) ? hoursTable(data.hours, facts, settings) : null),
   article: centrefoldArticle,
-  share: { facts: ["archetype.name", "archetype.rarityShare", "archetype.rarityCount", "archetype.scoredMembers", "archetype.evidence[1]", "archetype.evidence[2]", "archetype.evidence[3]", "tz.label"] },
+  share: {
+    facts: [
+      "archetype.name", "archetype.rarityShare", "archetype.rarityCount", "archetype.scoredMembers",
+      "archetype.evidence[1]", "archetype.evidence[2]", "archetype.evidence[3]", "tz.label",
+      // The card's evidence clock: its peak label and the share its arc brackets.
+      "hours.peak", "hours.afterDarkShare", "hours.goldenShare",
+    ],
+  },
 }

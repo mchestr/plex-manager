@@ -14,7 +14,7 @@
 
 import type { ReactElement, ReactNode } from "react"
 
-import { rewindInks } from "@/lib/design/tokens"
+import { archetypeInks, rewindInks } from "@/lib/design/tokens"
 import { registry } from "@/lib/rewind/registry"
 import { pageInk } from "@/lib/rewind/stage/page-ink"
 import type { CardInput, CardSize } from "@/lib/wrapped/data/share-safe"
@@ -32,12 +32,27 @@ const SAFE_ZONE = { top: 290, height: 1340 } as const
 export interface CardInk {
   field: string
   on: string
+  /** The page's one other colour: the arc, a rule or a key. */
+  spot: string
 }
 
-/** The page's field and ink; the archetype colourway only where the projection published it. */
+/**
+ * The page's field, ink and spot; the archetype colourway only where the
+ * projection published it (the centrefold in the archetype's field and spot,
+ * the back cover on paper in its deep ink).
+ */
 export function cardInk(input: CardInput): CardInk {
-  const { ink } = pageInk(registry[input.page.type], input.page.archetype?.id ?? null)
-  return { field: rewindInks[ink].field.hex, on: rewindInks[ink].on.hex }
+  const archetype = input.page.archetype?.id ?? null
+  const arch = archetype ? archetypeInks[archetype] : null
+  const { ink, opts } = pageInk(registry[input.page.type], archetype)
+  const field = rewindInks[ink].field.hex
+  const on = opts.ink === "arch-deep" && arch ? rewindInks[arch.deep].deep.hex : rewindInks[ink].on.hex
+  const own = rewindInks[ink].spot
+  const spot =
+    opts.spot === "arch" && arch
+      ? arch.spot === "own" ? on : rewindInks[arch.spot].field.hex
+      : own === "on" || own === "arch-deep" ? on : rewindInks[own].field.hex
+  return { field, on, spot }
 }
 
 const LABEL = { wdth: 100, weight: 600 } as const
