@@ -8,6 +8,7 @@ import type { IssueContext } from "@/components/rewind/pages/issue-context"
 import { StoryStage } from "@/components/rewind/stage/story-stage"
 import { serverName } from "@/lib/brand"
 import { prisma } from "@/lib/prisma"
+import { registry, type RegistryEntry } from "@/lib/rewind/registry"
 import { validatePagesOnRead } from "@/lib/rewind/select-pages"
 import { getAppSettings } from "@/lib/settings/app-settings"
 import type { RewindDataV3 } from "@/lib/wrapped/data/schema-v3"
@@ -42,9 +43,18 @@ export async function RewindIssue({ data, userId, returnTo }: { data: RewindData
 
   return (
     <StoryStage
-      pages={pages.map((page) => ({ type: page.type, content: <PageBody page={page} issue={issue} /> }))}
+      pages={pages.map((page) => {
+        const entry: RegistryEntry = registry[page.type]
+        return {
+          type: page.type,
+          content: <PageBody page={page} issue={issue} />,
+          table: entry.table?.(page.data, data.facts, { locale: settings.locale }) ?? null,
+        }
+      })}
+      year={data.year}
       archetype={archetype}
       closeHref={returnTo}
+      copy={{ copySource: data.copySource, model: data.copyMeta.model }}
     />
   )
 }

@@ -36,7 +36,7 @@ export async function fixtureCopyInputs(): Promise<FixtureCopyInput[]> {
         archetype,
         locale: "en-US",
       })
-      const omitted = omittedPages(facts, member.stats)
+      const omitted = omittedPages(facts, member.stats, archetype?.id ?? null)
       const edition = editionOf(member.stats, omitted)
       const selected = edition === "postcard" ? [] : issuePages.map((p) => p.type).filter((_, i) => !omitted.includes(i + 1))
       return { id: fixture.id, year: fixture.window.year, facts, archetype, edition, selected }

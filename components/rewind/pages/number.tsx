@@ -1,6 +1,7 @@
+import { RewindFigure } from "@/components/rewind/a11y/figure"
 import { pluralWord } from "@/lib/rewind/format"
 import { has, num, shown } from "@/lib/rewind/pages/facts"
-import { milestoneFacts } from "@/lib/rewind/pages/number"
+import { milestoneFacts, numberPage } from "@/lib/rewind/pages/number"
 import type { NumberData } from "@/lib/rewind/pages/number.schema"
 import { fitLines } from "@/lib/rewind/typeset/fit-lines"
 import { pageMetrics } from "@/lib/rewind/typeset/metrics"
@@ -96,7 +97,7 @@ export function NumberPage({ data, issue }: PageProps<NumberData>) {
           ))}
         </dl>
       )}
-      <div className="mt-auto" style={{ paddingBottom: u(12) }}>
+      <RewindFigure summary={numberPage.srSummary(data, facts)} className="mt-auto pb-[calc(var(--u)*12px)]">
         <p className="font-display" style={{ fontSize: ut(13), fontVariationSettings: axes(100, 650) }}>
           The road to {hero}
         </p>
@@ -108,7 +109,7 @@ export function NumberPage({ data, issue }: PageProps<NumberData>) {
           ))}
         </div>
         <SoundtrackStrip minutes={data.minutes} from={from} locale={locale} width={MEASURE} height={ROAD_HEIGHT} />
-      </div>
+      </RewindFigure>
     </div>
   )
 }

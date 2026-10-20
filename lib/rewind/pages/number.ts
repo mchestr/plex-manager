@@ -28,7 +28,7 @@ export function milestoneFacts(facts: RewindFactsV3) {
 }
 
 /** "1,307 hours", or the duration under 10 hours: the hero as a sentence reads it. */
-export function heroText(data: NumberData, facts: RewindFactsV3): string {
+function heroText(data: NumberData, facts: RewindFactsV3): string {
   return data.hero === "time.totalHours" ? `${shown(facts, data.hero)} hours` : shown(facts, data.hero)
 }
 

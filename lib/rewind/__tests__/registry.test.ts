@@ -1,4 +1,5 @@
-import { issueDurationMs, issuePages, registry, type IssuePageType } from "@/lib/rewind/registry"
+import { issueDurationMs, issuePages, LATER_PAGES, POCKET_ESTIMATE, registry } from "@/lib/rewind/registry"
+import { FACTS } from "@/lib/wrapped/facts/catalogue"
 import { PageTypeSchema } from "@/lib/wrapped/data/page-types"
 
 /** Design 4.2's slide catalogue: number, page name, field. */
@@ -53,18 +54,27 @@ describe("lib/rewind/registry", () => {
     }
   })
 
-  it("has table stubs on exactly the ten chart pages", () => {
+  it("has a table builder on exactly the ten chart pages", () => {
     const withTable = CATALOGUE.filter((_, i) => issuePages[i].table).map(([n]) => n)
     expect(withTable).toEqual(CHART_PAGES)
-    for (const page of issuePages) expect(page.table?.({}) ?? null).toBeNull()
   })
 
-  it("marks the ten core pages and stubs select and schema until P5.5", () => {
+  it("marks the ten core pages", () => {
     expect(CATALOGUE.filter((_, i) => issuePages[i].core).map(([n]) => n)).toEqual(CORE)
+  })
+
+  it("gives every page a select, a strict schema, a summary and share facts from the catalogue", () => {
     for (const page of issuePages) {
-      expect(page.select({}, {})).toBeNull()
-      expect(page.schema.safeParse({ anything: 1 }).success).toBe(true)
+      expect(typeof page.select).toBe("function")
+      expect(typeof page.srSummary).toBe("function")
+      expect(page.schema.safeParse({ unknownKey: 1 }).success).toBe(false)
+      for (const id of [...page.share.facts, ...(page.share.titles ?? [])]) expect(FACTS).toHaveProperty([id])
+      for (const id of page.share.titles ?? []) expect(page.share.facts).toContain(id)
     }
+  })
+
+  it("leaves only the non-core pages for P7.1 and P7.2", () => {
+    expect(LATER_PAGES).toEqual(issuePages.filter((p) => !p.core).map((p) => p.type))
   })
 
   it("runs about 2 min 20 s for the full issue and about 40 s for the pocket edition", () => {
@@ -73,8 +83,7 @@ describe("lib/rewind/registry", () => {
     expect(Math.abs(full - 140_000)).toBeLessThan(5_000)
 
     // Short list (P7.3) stands in as Top shows' 9 s here.
-    const pocket: IssuePageType[] = ["cover", "number", "top-shows", "clock", "centrefold", "back-cover"]
-    expect(Math.abs(issueDurationMs(pocket) - 40_000)).toBeLessThan(2_000)
+    expect(Math.abs(issueDurationMs(POCKET_ESTIMATE) - 40_000)).toBeLessThan(2_000)
     expect(issueDurationMs([])).toBe(0)
   })
 })

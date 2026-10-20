@@ -50,7 +50,7 @@ function number(pages: ReadonlyArray<{ type: IssuePageType; data: unknown }>, { 
     .map((page, i) => ({ ...page, folio: i + 1, field: pageInk(registry[page.type], archetype).ink }))
 }
 
-/** Every page whose own rule holds, in issue order, before disabled and later pages are removed. */
+/** Every page whose own rule holds, in issue order, before disabled and later pages are removed. @public The goldens read it. */
 export function eligiblePages(facts: RewindFactsV3, ctx: SelectContext): Array<{ type: IssuePageType; data: unknown }> {
   return issuePages.flatMap((entry) => {
     const data = entry.select(facts, ctx)
@@ -59,6 +59,8 @@ export function eligiblePages(facts: RewindFactsV3, ctx: SelectContext): Array<{
 }
 
 /**
+ * @public P5.9 stores its output in `RewindDataV3.pages`.
+ *
  * @example
  * ```ts
  * selectPages(facts, { edition: "full", archetype, disabledPages: ["bookends"], stats })

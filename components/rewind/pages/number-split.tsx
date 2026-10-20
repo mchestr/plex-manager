@@ -5,7 +5,7 @@ import { axes, u, ut } from "./units"
 
 /** "Series 872 h, 67%", or "Series 4%" under an hour. */
 function label(facts: RewindFactsV3, name: string, hours: "time.seriesHours" | "time.filmsHours", share: "time.seriesShare" | "time.filmsShare") {
-  return has(facts, hours) ? `${name} ${shown(facts, hours)} h, ${shown(facts, share)}` : `${name} ${shown(facts, share)}`
+  return has(facts, hours) ? `${name} ${shown(facts, hours)}\u00A0h, ${shown(facts, share)}` : `${name} ${shown(facts, share)}`
 }
 
 /**

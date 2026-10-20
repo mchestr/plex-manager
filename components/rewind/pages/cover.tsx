@@ -1,5 +1,7 @@
+import { RewindFigure } from "@/components/rewind/a11y/figure"
 import { formatCount, formatRunningTime } from "@/lib/rewind/format"
 import { has, shown } from "@/lib/rewind/pages/facts"
+import { coverPage } from "@/lib/rewind/pages/cover"
 import type { CoverData } from "@/lib/rewind/pages/cover.schema"
 import { issueDurationMs, POCKET_ESTIMATE } from "@/lib/rewind/registry"
 import { fitLines } from "@/lib/rewind/typeset/fit-lines"
@@ -58,7 +60,9 @@ export function CoverPage({ data, issue }: PageProps<CoverData>) {
           <CopyText text={windowLine(facts)} source={source} />
         </span>
       </div>
-      <SoundtrackStrip minutes={data.minutes} from={String(facts["window.from"]?.value)} locale={locale} width={MEASURE} height={150} months className="mt-[calc(var(--u)*18px)]" />
+      <RewindFigure summary={coverPage.srSummary(data, facts)} className="mt-[calc(var(--u)*18px)]">
+        <SoundtrackStrip minutes={data.minutes} from={String(facts["window.from"]?.value)} locale={locale} width={MEASURE} height={150} months />
+      </RewindFigure>
       <p className="italic" style={{ fontSize: u(14.5), lineHeight: 1.25, marginTop: u(4) }}>
         Every line is a day you pressed play.{finalCut ? "" : " December is still being written."}
       </p>

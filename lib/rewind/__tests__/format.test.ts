@@ -4,7 +4,9 @@ import {
   formatHero,
   formatHour,
   formatRewindDuration,
+  formatRunningTime,
   formatShare,
+  pluralWord,
 } from "@/lib/rewind/format"
 
 const US = { locale: "en-US" }
@@ -61,5 +63,19 @@ describe("lib/rewind/format", () => {
     for (const text of [formatHour(22, US), formatDayMonth("2026-07-04", GB), formatRewindDuration(1570, US)]) {
       expect(text).not.toMatch(/\d[  ]/)
     }
+  })
+})
+
+describe("formatRunningTime and pluralWord", () => {
+  it("rounds an issue's running time to 10 seconds", () => {
+    expect(formatRunningTime(140_140)).toBe(`2${NBSP}min 20${NBSP}s`)
+    expect(formatRunningTime(40_100)).toBe(`40${NBSP}s`)
+    expect(formatRunningTime(120_000)).toBe(`2${NBSP}min`)
+    expect(formatRunningTime(0)).toBe(`0${NBSP}s`)
+  })
+
+  it("picks the plural form alone", () => {
+    expect(pluralWord(1, { one: "film", other: "films" }, US)).toBe("film")
+    expect(pluralWord(112, { one: "film", other: "films" }, GB)).toBe("films")
   })
 })

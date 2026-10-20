@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react"
+import { Fragment, type CSSProperties } from "react"
 
 import type { FitResult } from "@/lib/rewind/typeset/fit-lines"
 import { cn } from "@/lib/utils"
@@ -32,10 +32,14 @@ export function FittedLines({ fit, weight, tnum = false, lineHeight = 0.86, clas
     )
   }
   const style: CSSProperties = { fontSize: u(fit.size), lineHeight, letterSpacing: "-0.01em", ...(tnum ? { fontFeatureSettings: TNUM } : {}) }
+  // a space between the block lines keeps the heading's text whole ("or: How"); it does not render
   const lines = fit.lines.map((line, i) => (
-    <span key={i} className="block whitespace-nowrap" style={{ fontVariationSettings: axes(line.wdth, weight) }}>
-      {line.text}
-    </span>
+    <Fragment key={i}>
+      {i > 0 && " "}
+      <span className="block whitespace-nowrap" style={{ fontVariationSettings: axes(line.wdth, weight) }}>
+        {line.text}
+      </span>
+    </Fragment>
   ))
   return (
     <span className={cn("block font-display", className)} style={style}>

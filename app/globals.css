@@ -237,6 +237,32 @@
 .rw-page[data-leaving="forward"] { --rw-leave-x: -24px; }
 .rw-page[data-leaving="back"] { --rw-leave-x: 24px; }
 .rw-page[data-leaving] .rw-artboard { animation: rw-page-leave 200ms var(--rw-ease-ink) forwards; }
+/* print textures (Rewind 5.2, 5.7): hatching means "the others", the halftone is the hero numeral's misregistration */
+.rw-hatch { background: repeating-linear-gradient(-45deg, var(--ink) 0 1.5px, transparent 1.5px 6px); }
+.rw-halftone { mask-image: radial-gradient(circle, black 42%, transparent 48%); mask-size: calc(var(--u) * 4px) calc(var(--u) * 4px); }
+/* the front pages' entrances (Rewind 4.3), on the current page only; the turn takes the first 420 ms */
+@keyframes rw-print { from { clip-path: inset(0 100% 0 0); } }
+@keyframes rw-stretch { from { font-variation-settings: "wdth" 62, "wght" 900; } }
+@keyframes rw-rise { from { transform: translateY(18%); opacity: 0; } }
+@keyframes rw-grow { from { transform: scaleX(0); } }
+@keyframes rw-appear { from { opacity: 0; } }
+@keyframes rw-stamp { from { transform: scale(1.6); opacity: 0; } }
+@keyframes rw-slide-down { from { transform: translateY(-24px); opacity: 0; } }
+@keyframes rw-slide-up { from { transform: translateY(24px); opacity: 0; } }
+.rw-page[data-current] .rw-print { animation: rw-print 1200ms linear 420ms both; }
+.rw-page[data-current] .rw-stretch span span { animation: rw-stretch var(--rw-dur-l) var(--rw-ease-stretch) 420ms both; }
+.rw-page[data-current] .rw-cover-line { animation: rw-appear var(--rw-dur-s) var(--rw-ease-data) both; }
+.rw-page[data-current] .rw-cover-line:nth-child(1) { animation-delay: 600ms; }
+.rw-page[data-current] .rw-cover-line:nth-child(2) { animation-delay: 660ms; }
+.rw-page[data-current] .rw-cover-line:nth-child(3) { animation-delay: 720ms; }
+.rw-page[data-current] .rw-cover-line:nth-child(4) { animation-delay: 780ms; }
+.rw-page[data-current] .rw-rise { animation: rw-rise var(--rw-dur-xl) var(--rw-ease-data) 240ms both; }
+.rw-page[data-current] .rw-grow { transform-origin: left; animation: rw-grow 480ms var(--rw-ease-data) 700ms both; }
+.rw-page[data-current] .rw-fade { animation: rw-appear var(--rw-dur-s) var(--rw-ease-data) 800ms both; }
+.rw-page[data-current] .rw-stamp { animation: rw-stamp var(--rw-dur-s) var(--rw-ease-stretch) 1000ms both; }
+.rw-page[data-current] .rw-pop { animation: rw-appear var(--rw-dur-xs) linear both; }
+.rw-page[data-current] .rw-slide-down { animation: rw-slide-down var(--rw-dur-m) var(--rw-ease-ink) both; }
+.rw-page[data-current] .rw-slide-up { animation: rw-slide-up var(--rw-dur-m) var(--rw-ease-ink) both; }
 /* the card-to-cover handoff runs on <html>, outside the scope, so it states --rw-dur-m and --rw-ease-ink literally */
 ::view-transition-group(rewind-field) { animation-duration: 420ms; animation-timing-function: cubic-bezier(.65, 0, .35, 1); }
 /* Reduced motion inside the scope (Rewind 5.6, 11.1): the base clamp skips the scope, so this rule stops every
