@@ -129,10 +129,13 @@ describe("REWIND_SERVER_AGGREGATE", () => {
     expect(JSON.stringify(data)).not.toMatch(/user1\d\d|example\.com/)
   })
 
-  it("stores each matched member's plays in the batch cache and queues the warm", async () => {
+  it("stores each matched member's plays and the library listing in the batch cache, and queues the warm", async () => {
     await run()
 
-    expect([...redis.store.keys()].sort()).toEqual(plexIds.map((id) => `rw:batch:2026:2026-11-30:events:user-${id}`))
+    expect([...redis.store.keys()].sort()).toEqual([
+      "rw:batch:2026:2026-11-30:library",
+      ...plexIds.map((id) => `rw:batch:2026:2026-11-30:events:user-${id}`),
+    ].sort())
     expect(enqueueMetadataWarm).toHaveBeenCalledWith({ batch: "2026:0", keys: ["50000"], topSeries: ["50000"] })
   })
 

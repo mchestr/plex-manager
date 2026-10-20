@@ -26,6 +26,7 @@ import { z } from "zod"
 import { getRequestPathRedis, readyWithin } from "@/lib/queue/connection"
 import { createLogger } from "@/lib/utils/logger"
 import { getContentRatings } from "@/lib/wrapped/metadata-cache"
+import type { LibraryTitle } from "@/lib/wrapped/stats/next-year"
 import type { TautulliHistorySource } from "@/lib/wrapped/sources/tautulli-history"
 import type { PlayEvent, SourceContext, SourceResult } from "@/lib/wrapped/sources/watch-history-source"
 import type { TimeWindow } from "@/lib/wrapped/time/zone"
@@ -48,6 +49,9 @@ export type BatchCacheRedis = Pick<Redis, "getBuffer" | "set">
 const events = z.array(z.custom<PlayEvent>((v) => typeof v === "object" && v !== null))
 const yearEntrySchema = z.object({ start: z.number(), end: z.number(), events })
 const lifetimeEntrySchema = z.object({ events })
+const libraryEntrySchema = z.object({
+  titles: z.array(z.custom<LibraryTitle>((v) => typeof v === "object" && v !== null)),
+})
 
 /** The member an entry belongs to. @public P5.9 */
 export interface BatchMember {
@@ -62,6 +66,8 @@ interface BatchKey {
 
 const entryKey = (batch: BatchKey, kind: "events" | "lifetime", userId: string) =>
   `rw:batch:${batch.year}:${batch.through}:${kind}:${userId}`
+
+const libraryKey = (batch: BatchKey) => `rw:batch:${batch.year}:${batch.through}:library`
 
 /** The fail-fast request-path client, once it is ready (or after 2 s). */
 export async function batchCacheRedis(): Promise<BatchCacheRedis> {
@@ -162,4 +168,29 @@ export async function getMemberLifetimeEvents(
     )
   }
   return fetched
+}
+
+/**
+ * Stores the batch's library listing (films and series, with the fields
+ * next year's picks read), so no member's Rewind lists the Plex library again.
+ */
+export async function storeBatchLibrary(
+  redis: BatchCacheRedis,
+  batch: BatchKey & { titles: readonly LibraryTitle[] }
+): Promise<void> {
+  const titles = batch.titles.map(({ ratingKey, type, title, year, addedAt, contentRating, genres, directors, actors }) => ({
+    ratingKey, type, title, year, addedAt, contentRating, genres, directors, actors,
+  }))
+  await write(redis, libraryKey(batch), { titles })
+}
+
+/**
+ * The batch's library listing, or null before the aggregate pass has run
+ * (next year's picks then omit themselves, NFR-3).
+ *
+ * @public P5.9
+ */
+export async function getBatchLibrary(batch: BatchKey & { redis?: BatchCacheRedis }): Promise<LibraryTitle[] | null> {
+  const redis = batch.redis ?? (await batchCacheRedis())
+  return (await read(redis, libraryKey(batch), libraryEntrySchema))?.titles ?? null
 }

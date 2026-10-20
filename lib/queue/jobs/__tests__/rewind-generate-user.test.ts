@@ -3,8 +3,9 @@
  */
 
 /**
- * The `REWIND_GENERATE_USER` processor (P2.17): the per-member lock, the
- * atomic final write that keeps `previousData` (RWP-14, FR-40), typed
+ * The `REWIND_GENERATE_USER` processor (P2.17, P5.9): the per-member lock,
+ * the v3 pipeline in persist mode (its final write is tested in
+ * `lib/wrapped/pipeline/__tests__/persist.test.ts`), skipped members, typed
  * failures, the 5-minute limit and shutdown retries.
  */
 
@@ -15,13 +16,13 @@ import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 import { processRewindGenerateUser } from '@/lib/queue/jobs/rewind'
 import { acquireGenerationLock } from '@/lib/queue/redis-lock'
 import type { RewindGenerateUserPayload } from '@/lib/queue/types'
-import { generateRewindV2 } from '@/lib/wrapped/pipeline/generate-v2'
+import { generateUserRewind } from '@/lib/wrapped/pipeline/generate-user'
 import { RewindGenerationError } from '@/lib/wrapped/pipeline/generation-error'
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 jest.mock('@/lib/queue/connection', () => ({ getRedisConnection: jest.fn(() => ({ fake: 'redis' })) }))
 jest.mock('@/lib/queue/redis-lock', () => ({ acquireGenerationLock: jest.fn() }))
-jest.mock('@/lib/wrapped/pipeline/generate-v2', () => ({ generateRewindV2: jest.fn() }))
+jest.mock('@/lib/wrapped/pipeline/generate-user', () => ({ generateUserRewind: jest.fn() }))
 
 let mockShutdown = new AbortController()
 jest.mock('@/lib/instrumentation/shutdown', () => ({
@@ -30,11 +31,11 @@ jest.mock('@/lib/instrumentation/shutdown', () => ({
   },
 }))
 
-const generate = jest.mocked(generateRewindV2)
+const generate = jest.mocked(generateUserRewind)
 const acquire = jest.mocked(acquireGenerationLock)
 const release = jest.fn(async () => true)
 
-const NEW_DATA = { summary: 'New summary', archetype: { name: 'The Binger' }, metadata: {} }
+const COMPLETED = { status: 'completed', data: { version: 3 }, trail: {} }
 
 function job(overrides: { id?: string; attemptsMade?: number; attempts?: number } = {}): Job<RewindGenerateUserPayload> {
   return {
@@ -45,6 +46,8 @@ function job(overrides: { id?: string; attemptsMade?: number; attempts?: number 
   } as unknown as Job<RewindGenerateUserPayload>
 }
 
+const QUEUED = { wrappedId: 'wrapped-1', status: 'queued', kind: 'member', copyPolicy: 'default' }
+
 function generationUpdates() {
   return prismaMock.rewindGeneration.update.mock.calls.map(([args]) => args.data)
 }
@@ -53,7 +56,7 @@ beforeEach(() => {
   mockReset(prismaMock)
   jest.clearAllMocks()
   mockShutdown = new AbortController()
-  prismaMock.rewindGeneration.findUnique.mockResolvedValue({ wrappedId: 'wrapped-1', status: 'queued' } as never)
+  prismaMock.rewindGeneration.findUnique.mockResolvedValue(QUEUED as never)
   prismaMock.lLMUsage.aggregate.mockResolvedValue({ _count: { _all: 2 }, _sum: { cost: 0.0123 } } as never)
   prismaMock.$transaction.mockImplementation((async (fn: (tx: typeof prismaMock) => unknown) => fn(prismaMock)) as never)
   acquire.mockResolvedValue({ release })
@@ -63,9 +66,8 @@ describe('processRewindGenerateUser', () => {
   it('runs one of two jobs for one member; the second is skipped as LOCKED', async () => {
     let finishFirst!: () => void
     generate.mockImplementation(
-      () => new Promise((resolve) => (finishFirst = () => resolve(NEW_DATA as never)))
+      () => new Promise((resolve) => (finishFirst = () => resolve(COMPLETED as never)))
     )
-    prismaMock.plexWrapped.findUniqueOrThrow.mockResolvedValue({ status: 'pending', data: '{}' } as never)
     acquire.mockResolvedValueOnce({ release }).mockResolvedValueOnce(null)
 
     const first = processRewindGenerateUser(job({ id: 'gen-1' }))
@@ -82,38 +84,29 @@ describe('processRewindGenerateUser', () => {
     expect(acquire).toHaveBeenCalledWith({ fake: 'redis' }, { year: 2026, userId: 'user-1', owner: 'gen-1' })
   })
 
-  it('copies the replaced data into previousData, and the Rewind stays completed throughout', async () => {
-    generate.mockResolvedValue(NEW_DATA as never)
-    prismaMock.plexWrapped.findUniqueOrThrow.mockResolvedValue({ status: 'completed', data: '{"old":true}' } as never)
+  it('completes when the pipeline has written the Rewind, and releases the lock', async () => {
+    generate.mockResolvedValue(COMPLETED as never)
 
     await expect(processRewindGenerateUser(job())).resolves.toEqual({ status: 'completed' })
 
-    expect(prismaMock.$transaction).toHaveBeenCalledTimes(1)
-    expect(generationUpdates()).toContainEqual(
-      expect.objectContaining({ status: 'completed', previousData: '{"old":true}', llmCalls: 2, costUsd: 0.0123 })
-    )
-    expect(prismaMock.plexWrapped.update).toHaveBeenCalledWith({
-      where: { id: 'wrapped-1' },
-      data: expect.objectContaining({
-        data: JSON.stringify(NEW_DATA),
-        status: 'completed',
-        dataVersion: 2,
-        summary: 'New summary',
-        archetype: 'The Binger',
-      }),
-    })
-    // Never set back to generating, so the viewer and its share links keep working.
+    expect(generationUpdates()).toContainEqual(expect.objectContaining({ status: 'running' }))
+    // The pipeline's own transaction writes the data; the job never sets a Rewind back to generating.
     expect(prismaMock.plexWrapped.updateMany).not.toHaveBeenCalled()
     expect(release).toHaveBeenCalledTimes(1)
   })
 
-  it('keeps no previousData for a first Rewind', async () => {
-    generate.mockResolvedValue(NEW_DATA as never)
-    prismaMock.plexWrapped.findUniqueOrThrow.mockResolvedValue({ status: 'generating', data: '{}' } as never)
+  it('marks a member who is not eligible as skipped with the typed reason', async () => {
+    generate.mockResolvedValue({ status: 'skipped', reason: 'NOT_IN_AUDIENCE' } as never)
 
-    await processRewindGenerateUser(job())
+    await expect(processRewindGenerateUser(job())).resolves.toEqual({ status: 'skipped' })
 
-    expect(generationUpdates()).toContainEqual(expect.objectContaining({ status: 'completed', previousData: null }))
+    expect(generationUpdates()).toContainEqual(
+      expect.objectContaining({ status: 'skipped', error: { code: 'NOT_IN_AUDIENCE' } })
+    )
+    expect(prismaMock.plexWrapped.updateMany).toHaveBeenCalledWith({
+      where: { id: 'wrapped-1', status: { not: 'completed' } },
+      data: { status: 'failed', error: '{"code":"NOT_IN_AUDIENCE"}' },
+    })
   })
 
   it('leaves the data untouched on a failure, marking only the generation and a Rewind not yet completed', async () => {
@@ -172,7 +165,7 @@ describe('processRewindGenerateUser', () => {
     expect(retried).not.toBeInstanceOf(UnrecoverableError)
     expect(generationUpdates().at(-1)).toEqual({ status: 'queued', error: { code: 'UPSTREAM_ERROR' } })
 
-    prismaMock.rewindGeneration.findUnique.mockResolvedValue({ wrappedId: 'wrapped-1', status: 'queued' } as never)
+    prismaMock.rewindGeneration.findUnique.mockResolvedValue(QUEUED as never)
     await expect(processRewindGenerateUser(job({ attemptsMade: 2 }))).rejects.toThrow(
       new UnrecoverableError('UPSTREAM_ERROR')
     )
@@ -188,23 +181,25 @@ describe('processRewindGenerateUser', () => {
   })
 
   it('ignores a run the stale sweep already closed', async () => {
-    prismaMock.rewindGeneration.findUnique.mockResolvedValue({ wrappedId: 'wrapped-1', status: 'failed' } as never)
+    prismaMock.rewindGeneration.findUnique.mockResolvedValue({ ...QUEUED, status: 'failed' } as never)
 
     await expect(processRewindGenerateUser(job())).resolves.toEqual({ status: 'ignored' })
     expect(acquire).not.toHaveBeenCalled()
     expect(generate).not.toHaveBeenCalled()
   })
 
-  it('passes the run its signal, ids and year', async () => {
-    generate.mockResolvedValue(NEW_DATA as never)
-    prismaMock.plexWrapped.findUniqueOrThrow.mockResolvedValue({ status: 'pending', data: '{}' } as never)
+  it('runs the pipeline in persist mode with the run kind, copy policy, ids and signal', async () => {
+    generate.mockResolvedValue(COMPLETED as never)
+    prismaMock.rewindGeneration.findUnique.mockResolvedValue({ ...QUEUED, kind: 'admin', copyPolicy: 'no-llm' } as never)
 
     await processRewindGenerateUser(job())
 
     expect(generate).toHaveBeenCalledWith({
       userId: 'user-1',
       year: 2026,
-      wrappedId: 'wrapped-1',
+      kind: 'admin',
+      mode: 'persist',
+      copyPolicy: 'no-llm',
       generationId: 'gen-1',
       signal: expect.any(AbortSignal),
     })

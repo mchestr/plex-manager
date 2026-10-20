@@ -171,6 +171,8 @@ export interface TautulliUserIdentity {
 const tautulliUserRowSchema = z.object({
   user_id: z.number().int(),
   username: z.string().nullish(),
+  /** 1 for a managed (restricted) Plex Home account; Rewind leaves those out by default (P5.9). */
+  is_restricted: z.number().int().nullish(),
 })
 
 /** The `get_users` fields the lookup relies on. Other fields are stripped. */

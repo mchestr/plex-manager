@@ -20,7 +20,7 @@ const logger = createLogger("LLM_STRUCTURED")
 
 type ProviderOptions = NonNullable<Parameters<typeof generateText>[0]["providerOptions"]>
 
-export type StructuredErrorCode =
+type StructuredErrorCode =
   | "NOT_CONFIGURED"
   | "TRUNCATED"
   | "CONTENT_FILTER"

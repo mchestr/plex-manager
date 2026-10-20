@@ -17,6 +17,8 @@
     "lib/rewind/typeset/metrics.ts!",
     "lib/wrapped/sources/fixture-source.ts!",
     "evals/rewind/generate-fixtures.ts!",
+    // v2 mock data for the E2E seed and the v2 viewer tests, which knip --production never sees
+    "lib/wrapped/mock-data.ts!",
     // a test helper for Rewind component tests (P5 onwards), which knip --production never sees
     "lib/design/testing.ts!"
   ],

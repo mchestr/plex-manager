@@ -31,6 +31,10 @@ import { z } from "zod"
  * limit), `UPSTREAM_ERROR` (Tautulli, Plex or Overseerr failed), `LLM_FAILED`,
  * `NOT_CONFIGURED` (no active Plex, Tautulli or LLM provider), `WORKER_LOST`
  * (the run stopped with its worker) and `JOB_LOST` (the queued job vanished).
+ * Then the v3 pipeline's skip reasons (P5.9), stored on a run that was
+ * `skipped` because the member is not eligible: `REDIS_UNAVAILABLE`,
+ * `REWIND_DISABLED`, `NOT_IN_AUDIENCE`, `NO_PLEX_IDENTITY`, `MANAGED_ACCOUNT`
+ * and `NOT_ENTITLED` (`TAUTULLI_USER_NOT_FOUND` above is one too).
  */
 const REWIND_ERROR_CODES = [
   "TAUTULLI_USER_NOT_FOUND",
@@ -41,6 +45,12 @@ const REWIND_ERROR_CODES = [
   "NOT_CONFIGURED",
   "WORKER_LOST",
   "JOB_LOST",
+  "REDIS_UNAVAILABLE",
+  "REWIND_DISABLED",
+  "NOT_IN_AUDIENCE",
+  "NO_PLEX_IDENTITY",
+  "MANAGED_ACCOUNT",
+  "NOT_ENTITLED",
 ] as const
 
 export type RewindErrorCode = (typeof REWIND_ERROR_CODES)[number]
@@ -128,6 +138,18 @@ export function adminErrorHint(
       return "The run hit its 5-minute limit. Check that Tautulli and the LLM provider respond quickly."
     case "UPSTREAM_ERROR":
       return "Tautulli, Plex or Overseerr failed after three attempts. Check that they are reachable."
+    case "REWIND_DISABLED":
+      return "Rewind is switched off, so only admin regenerations run. Turn it on in the Rewind settings."
+    case "NOT_IN_AUDIENCE":
+      return "Rewind is open to admins only. Set its audience to Everyone to include this member."
+    case "NO_PLEX_IDENTITY":
+      return "This member has no linked Plex account, so there is no watch history for a Rewind."
+    case "MANAGED_ACCOUNT":
+      return "This is a managed Plex account. Include managed accounts in the Rewind settings to make one."
+    case "NOT_ENTITLED":
+      return "This member has no active subscription or exemption."
+    case "REDIS_UNAVAILABLE":
+      return "Rewind needs Redis (REDIS_URL), and it did not answer."
     case "GENERATION_FAILED":
     case "LLM_FAILED":
     case "WORKER_LOST":

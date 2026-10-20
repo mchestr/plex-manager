@@ -15,6 +15,7 @@ jest.mock('@/lib/utils/logger', () => ({
 
 import { MODEL_CATALOG } from '@/lib/llm/model-catalog'
 import {
+  budgetModelFor,
   costUsd,
   estimateCostUsd,
   listKnownModels,
@@ -183,5 +184,15 @@ describe('estimateCostUsd', () => {
     const estimate = estimateCostUsd({ provider: 'openai', model: 'gpt-4o', prompt: 'abcd', systemPrompt: 'abcd' })
     expect(estimate.promptTokens).toBe(3)
     expect(estimate.estimatedCompletionTokens).toBe(6000)
+  })
+})
+
+describe('budgetModelFor', () => {
+  it("names each first-party provider's repair and economy model, and none for the rest", () => {
+    expect(budgetModelFor('anthropic')).toBe('claude-haiku-5-5')
+    expect(budgetModelFor('openai')).toBe('gpt-6-luna')
+    expect(budgetModelFor('google')).toBeNull()
+    expect(budgetModelFor('openai-compatible')).toBeNull()
+    expect(lookupModel('anthropic', budgetModelFor('anthropic')!).known).toBe(true)
   })
 })

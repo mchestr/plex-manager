@@ -93,6 +93,30 @@ export function lookupModel(provider: LLMProviderId, id: string): ModelInfo {
   }
 }
 
+/**
+ * The repair pass and economy model of each provider (design 8.2): the same
+ * provider's cheapest model that still writes good copy. Null where the
+ * provider has none, such as a self-hosted server, which then uses its own
+ * model for both.
+ *
+ * @example
+ * ```ts
+ * budgetModelFor("anthropic")         // "claude-haiku-5-5"
+ * budgetModelFor("openai-compatible") // null
+ * ```
+ */
+export function budgetModelFor(provider: LLMProviderId): string | null {
+  switch (provider) {
+    case "openai":
+      return "gpt-6-luna"
+    case "anthropic":
+      return "claude-haiku-5-5"
+    case "google":
+    case "openai-compatible":
+      return null
+  }
+}
+
 /** Every catalogue entry, optionally for one provider. */
 export function listKnownModels(provider?: LLMProviderId): ModelInfo[] {
   return MODEL_CATALOG.filter((info) => !provider || info.provider === provider)

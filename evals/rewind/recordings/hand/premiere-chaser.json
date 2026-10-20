@@ -1,0 +1,32 @@
+{
+  "fixture": "premiere-chaser",
+  "promptVersion": "rewind-2026.1",
+  "calls": [
+    {
+      "kind": "copy",
+      "output": {
+        "decks": {
+          "number": "About {{fact:time.perDay}} for every day of the year, and {{fact:time.seriesShare}} of it went to series.",
+          "bookends": "Here since {{fact:member.since}}, with {{fact:member.lifetimeHours}} hours on the clock in that time.",
+          "topShows": "{{fact:series[1].title}} led the way, with {{fact:series[2].title}} close behind.",
+          "topFilms": "{{fact:films[1].title}} came out on top, and {{fact:films.longest.title}} was the longest sit.",
+          "taste": "After {{fact:taste.genre[1].name}}, you kept coming back to {{fact:taste.genre[2].name}}.",
+          "people": null,
+          "clock": "{{fact:hours.afterDarkShare}} of your viewing started after dark, the latest at {{fact:hours.latestStart.time}}.",
+          "calendar": "You pressed play on {{fact:days.active}} days, and {{fact:days.biggest.date}} was the biggest of them.",
+          "records": null,
+          "requests": null,
+          "standing": "You were one of {{fact:standing.members}} members pressing play here this year.",
+          "nextYear": null
+        },
+        "archetype": {
+          "id": "premiere-chaser",
+          "tagline": "New releases never waited long for you.",
+          "dedication": "You earned {{fact:archetype.name}} on the evidence, and {{fact:archetype.runnerUp}} came a close second.",
+          "posterLineId": "pc.1"
+        },
+        "signOff": "Thanks for pressing play this year, {{fact:member.firstName}}."
+      }
+    }
+  ]
+}
