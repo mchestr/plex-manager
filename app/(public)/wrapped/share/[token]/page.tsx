@@ -92,7 +92,7 @@ export default async function SharedWrappedPage({ params }: ShareParams) {
 
   if (await isShareBusy()) {
     return (
-      <main className="min-h-screen">
+      <main id="main" tabIndex={-1} className="min-h-screen outline-none">
         <ShareBusy />
       </main>
     )
@@ -113,7 +113,7 @@ export default async function SharedWrappedPage({ params }: ShareParams) {
   })
 
   return (
-    <main className="min-h-screen">
+    <main id="main" tabIndex={-1} className="min-h-screen outline-none">
       <WrappedShareSummary rewind={found.share} shareToken={token} />
     </main>
   )

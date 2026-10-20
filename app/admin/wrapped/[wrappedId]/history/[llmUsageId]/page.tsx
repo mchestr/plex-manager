@@ -21,7 +21,7 @@ export default async function HistoricalWrappedPage({
 
   if (!historicalData) {
     return (
-      <main className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
+      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
         <div className="fixed top-0 left-0 right-0 z-50 bg-slate-900/90 backdrop-blur-sm border-b border-slate-700">
           <div className="max-w-7xl mx-auto px-6 py-4">
             <div className="flex justify-between items-center gap-4">
@@ -73,14 +73,14 @@ export default async function HistoricalWrappedPage({
             </div>
           </div>
         </div>
-      </main>
+      </div>
     )
   }
 
   const { llmUsage, userId, userName, year } = historicalData
 
   return (
-    <main className="min-h-screen">
+    <div className="min-h-screen">
       <div className="fixed top-0 left-0 right-0 z-50 bg-slate-900/90 backdrop-blur-sm border-b border-slate-700">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex justify-between items-center gap-4">
@@ -128,7 +128,7 @@ export default async function HistoricalWrappedPage({
           )}
         </div>
       </div>
-    </main>
+    </div>
   )
 }
 

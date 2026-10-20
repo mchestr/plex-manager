@@ -82,7 +82,7 @@ export default async function UserWrappedPage({
 
   if (!wrapped) {
     return (
-      <main className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
+      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
         <AdminHeader userName={null} userId={userId} year={year} />
         <div className="pt-20 p-6">
           <div className="max-w-7xl mx-auto">
@@ -97,12 +97,12 @@ export default async function UserWrappedPage({
             </div>
           </div>
         </div>
-      </main>
+      </div>
     )
   }
 
   return (
-    <main className="min-h-screen">
+    <div className="min-h-screen">
       <AdminHeader userName={wrapped.user.name || wrapped.user.email} wrappedId={wrapped.id} userId={userId} year={year} />
       <div className="pt-20">
         {status === "completed" && wrapped.data ? (
@@ -203,7 +203,7 @@ export default async function UserWrappedPage({
           </div>
         )}
       </div>
-    </main>
+    </div>
   )
 }
 

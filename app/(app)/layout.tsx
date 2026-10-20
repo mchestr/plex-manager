@@ -53,7 +53,9 @@ export default async function AppGuardLayout({
   return (
     <>
       <SubscriptionBanners pastDue={pastDue} pendingInvite={pendingInvite} />
-      {children}
+      <main id="main" tabIndex={-1} className="outline-none">
+        {children}
+      </main>
     </>
   )
 }

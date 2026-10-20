@@ -29,7 +29,7 @@ export default function DevUiPage() {
   if (getEnv().ENABLE_DEV_UI !== "1") notFound()
 
   return (
-    <main id="main" className="mx-auto flex max-w-5xl flex-col gap-12 px-4 py-10" data-testid="dev-ui">
+    <main id="main" tabIndex={-1} className="mx-auto flex max-w-5xl flex-col gap-12 px-4 py-10 outline-none" data-testid="dev-ui">
       <header className="flex flex-col gap-2">
         <h1 className="text-h1">UI primitives</h1>
         <p className="text-ui text-muted-foreground">

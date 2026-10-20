@@ -6,7 +6,7 @@ import Link from "next/link"
  */
 export default function WrappedShareNotFound() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-900 px-4">
+    <main id="main" tabIndex={-1} className="flex min-h-screen items-center justify-center bg-slate-900 px-4 outline-none">
       <div className="max-w-md text-center">
         <h1 data-testid="wrapped-share-not-found" className="mb-2 text-2xl font-bold text-white">
           Share link not available

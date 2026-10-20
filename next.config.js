@@ -29,6 +29,7 @@ function contentSecurityPolicy(phase) {
  */
 module.exports = (phase) => ({
   reactStrictMode: true,
+  typedRoutes: true,
   output: 'standalone',
   poweredByHeader: false,
   // Stops `next dev` from writing AGENTS.md into the repo; CLAUDE.md already

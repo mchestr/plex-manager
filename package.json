@@ -12,7 +12,7 @@
     "start": "next start",
     "start:prod": "NEXT_MANUAL_SIG_HANDLE=true node server.js",
     "lint": "eslint .",
-    "typecheck": "prisma generate && tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json",
+    "typecheck": "prisma generate && next typegen && tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.test.json",
     "knip": "knip --production",
     "design:report": "node scripts/check-design-system.mjs --report",
     "design:check": "node scripts/check-design-system.mjs --check",

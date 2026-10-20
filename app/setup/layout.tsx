@@ -5,7 +5,9 @@ export default function SetupLayout({ children }: { children: React.ReactNode })
   return (
     <div className="min-h-screen relative py-12 px-4 sm:px-6 lg:px-8">
       <SpaceBackground />
-      {children}
+      <main id="main" tabIndex={-1} className="outline-none">
+        {children}
+      </main>
     </div>
   )
 }

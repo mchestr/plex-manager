@@ -285,9 +285,8 @@
   --shadow-dialog: var(--elevation-dialog);
   --shadow-poster: var(--elevation-poster);
 
-  /* system stacks until P3.2 loads IBM Plex as --font-plex-sans and --font-plex-mono */
-  --font-sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 
   /* single-size steps; display, h1 and stat are @utility rules below */
   --text-h2: 1.25rem;       --text-h2--line-height: 1.75rem;    --text-h2--letter-spacing: -0.01em;       --text-h2--font-weight: 600;

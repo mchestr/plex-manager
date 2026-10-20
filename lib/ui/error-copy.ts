@@ -9,7 +9,8 @@
  *
  * - `ErrorCode` from `lib/security/error-handler.ts` (API route errors);
  * - `RewindErrorCode` from `lib/wrapped/generation-errors.ts` (stored failures);
- * - `ActionErrorCode` from `lib/actions/result.ts` (Server Action results).
+ * - `ActionErrorCode` from `lib/actions/result.ts` (Server Action results);
+ * - `FlashErrorCode` from `lib/ui/flash-codes.ts` (redirects that carry a code).
  *
  * The map `satisfies Record<AppErrorCode, ...>`, so a new code without copy is
  * a type error. Anything that is not a known code, including an exception's
@@ -23,9 +24,10 @@
 
 import type { ActionErrorCode } from "@/lib/actions/result"
 import type { ErrorCode } from "@/lib/security/error-handler"
+import type { FlashErrorCode } from "@/lib/ui/flash-codes"
 import type { RewindErrorCode } from "@/lib/wrapped/generation-errors"
 
-type AppErrorCode = `${ErrorCode}` | RewindErrorCode | ActionErrorCode
+type AppErrorCode = `${ErrorCode}` | RewindErrorCode | ActionErrorCode | FlashErrorCode
 
 interface ErrorCopy {
   title: string
@@ -63,6 +65,13 @@ const REWIND_TITLE = "Your Rewind couldn't be made"
 const INTERRUPTED = "Making your Rewind was interrupted. Please try again."
 
 const rewind = (description: string): CopyEntry => ({ member: { title: REWIND_TITLE, description } })
+
+const DISCORD_NOT_LINKED = "Discord wasn't linked"
+const discord = (description: string): CopyEntry => ({ member: { title: DISCORD_NOT_LINKED, description } })
+
+const SIGN_IN_FAILED: CopyEntry = {
+  member: { title: "Sign-in didn't work", description: "We couldn't sign you in. Please try again." },
+}
 
 const COPY = {
   // lib/security/error-handler.ts ErrorCode
@@ -118,6 +127,33 @@ const COPY = {
   NOT_CONFIGURED: rewind("Rewind isn't fully set up on this server yet. Ask the server admin."),
   WORKER_LOST: rewind(INTERRUPTED),
   JOB_LOST: rewind(INTERRUPTED),
+
+  // lib/ui/flash-codes.ts FlashErrorCode: the Discord link routes
+  discord_failed: discord("Something went wrong while linking. Please try again."),
+  discord_expired: discord("That link expired. Start linking again."),
+  discord_session_mismatch: discord("Finish linking in the browser and account you started in."),
+  discord_rate_limited: {
+    member: { title: "Too many Discord link attempts", description: "Please wait a few minutes, then try again." },
+  },
+  discord_unavailable: {
+    member: { title: "Discord linking is unavailable", description: "Please try again in a few minutes." },
+  },
+
+  // lib/ui/flash-codes.ts FlashErrorCode: NextAuth's sign-in errors
+  CredentialsSignin: SIGN_IN_FAILED,
+  Default: SIGN_IN_FAILED,
+  AccessDenied: {
+    member: { title: "You don't have access", description: "This account isn't a member of this server." },
+  },
+  Configuration: {
+    member: {
+      title: "Sign-in isn't working",
+      description: "Something is wrong with this server's sign-in settings. Let the server admin know.",
+    },
+  },
+  Verification: {
+    member: { title: "That sign-in expired", description: "Start signing in again." },
+  },
 } satisfies Record<AppErrorCode, CopyEntry>
 
 function isKnownCode(code: unknown): code is AppErrorCode {
