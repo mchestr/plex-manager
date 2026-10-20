@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import type { CSSProperties, ReactNode } from "react"
 
 import { cn } from "@/lib/utils"
 
@@ -7,6 +7,7 @@ interface RewindFigureProps {
   summary: string
   children: ReactNode
   className?: string
+  style?: CSSProperties
 }
 
 /**
@@ -14,9 +15,9 @@ interface RewindFigureProps {
  * deterministic text alternative (Rewind design 11.1). Its children are
  * presentational to assistive technology; the Table sheet carries the data.
  */
-export function RewindFigure({ summary, children, className }: RewindFigureProps) {
+export function RewindFigure({ summary, children, className, style }: RewindFigureProps) {
   return (
-    <div role="img" aria-label={summary} data-testid="rewind-figure" className={cn("relative", className)}>
+    <div role="img" aria-label={summary} data-testid="rewind-figure" className={cn("relative", className)} style={style}>
       {children}
     </div>
   )

@@ -1,3 +1,5 @@
+import type { CSSProperties } from "react"
+
 import { hourRing } from "@/lib/rewind/viz/hour-ring"
 import { cn } from "@/lib/utils"
 
@@ -9,6 +11,13 @@ const FACE: Record<0 | 6 | 12 | 18, { label: string; place: string }> = {
   12: { label: "noon", place: "-translate-x-1/2" },
   18: { label: "6\u00A0PM", place: "-translate-x-[130%] -translate-y-1/2" },
 }
+
+/**
+ * A clock-face label's line box: its text size at a line height of 1. "noon"
+ * hangs this far below the ring's box, so whatever follows the ring leaves
+ * this much room above it.
+ */
+export const RING_LABEL = ut(12.5)
 
 interface HourRingFigureProps {
   hours: readonly number[]
@@ -27,6 +36,12 @@ interface HourRingFigureProps {
    * colour (the centrefold), outlined on a two-ink page whose spot is its ink.
    */
   rest: "solid" | "outline"
+  /**
+   * Take the height the parent leaves, up to `size`, and stay square: the
+   * centrefold's ring gives way when floored text fills its artboard (below
+   * the 0.8 scale floor, design 4.7). The parent sets a definite height.
+   */
+  fit?: boolean
 }
 
 /**
@@ -39,12 +54,16 @@ interface HourRingFigureProps {
  * Motion: the bars appear clockwise from midnight (30 ms an hour), then the
  * arc and the leader; reduced motion shows the final state.
  */
-export function HourRingFigure({ hours, arc, peak, share, caption, peakLabel, size, gutter, rest }: HourRingFigureProps) {
+export function HourRingFigure({ hours, arc, peak, share, caption, peakLabel, size, gutter, rest, fit = false }: HourRingFigureProps) {
   const ring = hourRing(hours, { size, arc, peak, gutter })
   const at = (n: number) => `${(n / size) * 100}%`
+  // A container, so the centre sizes in `cqw` and keeps its place in a fitted ring
+  const box: CSSProperties = fit
+    ? { height: "100%", maxHeight: u(size), aspectRatio: "1", containerType: "size" }
+    : { width: u(size), height: u(size), containerType: "size" }
 
   return (
-    <div aria-hidden className="relative mx-auto" style={{ width: u(size), height: u(size) }}>
+    <div aria-hidden className="relative mx-auto" style={box}>
       <svg viewBox={`0 0 ${size} ${size}`} className="absolute inset-0 size-full overflow-visible">
         {ring.bars.map((bar) => (
           <rect
@@ -64,10 +83,10 @@ export function HourRingFigure({ hours, arc, peak, share, caption, peakLabel, si
         {ring.leader && <path d={ring.leader.d} fill="none" strokeWidth={1.5} className="rw-ring-arc stroke-current" />}
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <b className="font-display tabular-nums" style={{ fontSize: u(size * 0.15), lineHeight: 0.9, fontVariationSettings: axes(75, 900) }}>
+        <b className="font-display tabular-nums" style={{ fontSize: "15cqw", lineHeight: 0.9, fontVariationSettings: axes(75, 900) }}>
           {share}
         </b>
-        <span className="italic" style={{ fontSize: ut(13), lineHeight: 1.15, marginTop: u(3), maxWidth: u(size * 0.42) }}>
+        <span className="italic" style={{ fontSize: ut(13), lineHeight: 1.15, marginTop: u(3), maxWidth: "42cqw" }}>
           {caption}
         </span>
       </div>
@@ -75,7 +94,7 @@ export function HourRingFigure({ hours, arc, peak, share, caption, peakLabel, si
         <span
           key={label.hour}
           className={cn("absolute whitespace-nowrap font-display", FACE[label.hour].place)}
-          style={{ left: at(label.x), top: at(label.y), fontSize: ut(12.5), fontVariationSettings: axes(100, 650) }}
+          style={{ left: at(label.x), top: at(label.y), fontSize: RING_LABEL, lineHeight: 1, fontVariationSettings: axes(100, 650) }}
         >
           {FACE[label.hour].label}
         </span>
