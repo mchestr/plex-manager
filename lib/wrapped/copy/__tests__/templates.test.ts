@@ -11,7 +11,8 @@ import { POSTER_LINES } from "../poster-lines"
 import { renderCopyText, tokenIds } from "../render-copy"
 import { slotsForPages } from "../slots"
 import {
-  copyLocals, coverLines, headline, pocketNote, posterLineTemplate, slotTemplate, tzNote, tzShort, windowLine,
+  copyLocals, coverLines, headline, pocketNote, posterLineTemplate, quizCallback, quizHeadline, quizReveal, slotTemplate, tzNote, tzShort,
+  windowLine,
 } from "../templates"
 import { fixtureCopyInputs, type FixtureCopyInput } from "./fixture-facts"
 
@@ -113,6 +114,24 @@ describe("headlines and page lines", () => {
       }
     }
     expect(failures).toEqual([])
+  })
+
+  it("renders the quiz lines for every fixture with a quiz, passing rules 4, 6 and 7", () => {
+    const failures: string[] = []
+    for (const input of inputs.filter((i) => i.facts["quiz.gapMinutes"])) {
+      const locals = copyLocals({ year: input.year, guess: "Severance" })
+      for (const rank of [1, 2, 3, 4]) {
+        for (const text of [quizCallback(rank), quizReveal(rank)]) {
+          for (const id of tokenIds(text)) if (!input.facts[id as keyof RewindFactsV3] && !locals[id]) failures.push(`${input.id}: ${id} is missing`)
+          const result = groundSlot("deck.topShows", text, { facts: input.facts, selected: input.selected, source: "template", locals })
+          for (const issue of rules(issuesOf(result), [4, 6, 7])) failures.push(`${input.id} rank ${rank}: ${issue.message}`)
+        }
+      }
+    }
+    expect(failures).toEqual([])
+    expect(quizHeadline("series")).toBe(headline("guess", {}))
+    expect(quizHeadline("mixed")).toBe("Which title did you watch most this year?")
+    expect(quizReveal(4)).toBe("Not quite: that was your number four.")
   })
 
   it("names the member on the cover only when there is a name", () => {

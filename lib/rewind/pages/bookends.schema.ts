@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-const TitleKeySchema = z.string().regex(/^(?:film|series):[^\s]+$/)
+import { TitleKeySchema } from "./title-key.schema"
 
 /**
  * One bookend: its title's key (the list key and, later, the poster), and

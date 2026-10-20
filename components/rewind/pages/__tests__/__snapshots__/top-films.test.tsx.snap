@@ -1,0 +1,3 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`06 Top films tabulates the films and summarises deterministically 1`] = `"Your top films: Dune: Part Two, 11 h; Dune (2021), 5 h 30 m; Moonlight, 5 h 30 m; The Artist, 5 h 30 m; There Will Be Blood, 5 h 30 m."`;

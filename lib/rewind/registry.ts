@@ -20,8 +20,8 @@
  * - `share.facts` are the facts the page's card may print (P5.10).
  *
  * Pages whose steps have not landed keep the page rule of design 4.3 as their
- * `select` with empty data (`lib/rewind/pages/rules.ts`); P5.6, P5.7, P7.1 and
- * P7.2 replace them page by page.
+ * `select` with empty data (`lib/rewind/pages/rules.ts`); P5.7, P7.1 and P7.2
+ * replace them page by page.
  *
  * ## Fields and the spot rule (design 5.3)
  *
@@ -39,8 +39,11 @@ import type { z } from "zod"
 import type { InkName } from "@/lib/design/tokens"
 import { bookendsPage } from "@/lib/rewind/pages/bookends"
 import { coverPage } from "@/lib/rewind/pages/cover"
+import { guessPage } from "@/lib/rewind/pages/guess"
 import { numberPage } from "@/lib/rewind/pages/number"
 import { pendingPages } from "@/lib/rewind/pages/rules"
+import { topFilmsPage } from "@/lib/rewind/pages/top-films"
+import { topShowsPage } from "@/lib/rewind/pages/top-shows"
 import type { ArchetypeId } from "@/lib/wrapped/archetypes/catalogue"
 import type { PageType } from "@/lib/wrapped/data/page-types"
 import type { FactId, RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
@@ -90,6 +93,8 @@ export interface SelectContext {
   /** `Config.rewindDisabledPages`. */
   disabledPages: readonly string[]
   stats: MemberStats
+  /** Seeds the quiz's option order with the year (`hash(userId, year)`); P5.9 passes the member's id. */
+  userId?: string
 }
 
 /** The part of an entry each page module defines. Methods, so a typed page fits `RegistryEntry<unknown>`. */
@@ -118,6 +123,8 @@ export interface RegistryEntry<D = unknown> extends PageDefinition<D> {
 
 /** How long the guess is counted for in the issue's running time. */
 export const HOLD_ESTIMATE_MS = 12_000
+/** After an answer, how long the reveal stays before autoplay turns the page. */
+export const REVEAL_DWELL_MS = 4000
 /** One page turn. */
 export const TURN_MS = 420
 
@@ -134,9 +141,9 @@ export const registry = {
   cover: entry("cover", { name: "Cover", act: "front", field: "archetype", altField: null, core: true, pocket: "page", dwell: "tap" }, coverPage),
   number: entry("number", { name: "The number", act: "front", field: "coral", altField: "peach", core: true, pocket: "page", dwell: 8000 }, numberPage),
   bookends: entry("bookends", { name: "Bookends", act: "front", field: "paper", altField: null, core: true, pocket: false, dwell: 7000 }, bookendsPage),
-  guess: entry("guess", { name: "Guess", act: "features", field: "rose", altField: "lilac", core: true, pocket: false, dwell: "hold" }, p.guess),
-  "top-shows": entry("top-shows", { name: "Top shows", act: "features", field: "paper", altField: null, core: true, pocket: "short-list", dwell: 9000 }, p["top-shows"]),
-  "top-films": entry("top-films", { name: "Top films", act: "features", field: "marigold", altField: "sky", core: true, pocket: "short-list", dwell: 8000 }, p["top-films"]),
+  guess: entry("guess", { name: "Guess", act: "features", field: "rose", altField: "lilac", core: true, pocket: false, dwell: "hold" }, guessPage),
+  "top-shows": entry("top-shows", { name: "Top shows", act: "features", field: "paper", altField: null, core: true, pocket: "short-list", dwell: 9000 }, topShowsPage),
+  "top-films": entry("top-films", { name: "Top films", act: "features", field: "marigold", altField: "sky", core: true, pocket: "short-list", dwell: 8000 }, topFilmsPage),
   taste: entry("taste", { name: "Taste", act: "features", field: "petrol", altField: "oxblood", core: false, pocket: false, dwell: 8000 }, p.taste),
   people: entry("people", { name: "People", act: "features", field: "paper", altField: null, core: false, pocket: false, dwell: 7000 }, p.people),
   clock: entry("clock", { name: "The clock", act: "habits", field: "forest", altField: "ultramarine", core: true, pocket: "clock-or-calendar", dwell: 8000 }, p.clock),

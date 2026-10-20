@@ -10,7 +10,7 @@ import { shouldOfferArticle } from "@/components/rewind/sheets/article-offer-she
 import { Button } from "@/components/ui/button"
 import { inkProps } from "@/lib/design/tokens"
 import type { CopyAuthor } from "@/lib/rewind/copy-disclosure"
-import { registry, type IssuePageType, type PageTable } from "@/lib/rewind/registry"
+import { registry, REVEAL_DWELL_MS, type IssuePageType, type PageTable } from "@/lib/rewind/registry"
 import { keyToCommand, type StageCommand } from "@/lib/rewind/stage/keymap"
 import { pageInk } from "@/lib/rewind/stage/page-ink"
 import { pageKind } from "@/lib/rewind/stage/player-reducer"
@@ -20,8 +20,10 @@ import type { ArchetypeId } from "@/lib/wrapped/archetypes/catalogue"
 
 import { ChromeBottom } from "./chrome-bottom"
 import { ChromeTop } from "./chrome-top"
+import { MatchCut } from "./match-cut"
 import { PlayerProvider } from "./player-context"
 import { Progress } from "./progress"
+import { QuizProvider } from "./quiz-context"
 import { useSetStageArchetype, useSetStageInk } from "./stage-ink"
 import { StagePage } from "./stage-page"
 import { ARTICLE_OFFER, StageSheets } from "./stage-sheets"
@@ -61,10 +63,11 @@ const FIT_DEFAULTS = { "--u": 1, "--rw-artboard-h": 693, "--rw-chrome-top": "76p
  *
  * The stage is a region labelled "Rewind {year}" whose first focusable
  * element is "Read as an article". Layers, bottom to top: the pages
- * (`StagePage`, with the gesture and focus handlers), the top and bottom
- * chrome in the current page's ink, the polite live region and the sheets.
- * Motion inside follows the member's reduced-motion setting. P5.6 adds the
- * match-cut layer and P5.11 the share sheet.
+ * (`StagePage`, with the gesture and focus handlers), the match-cut layer
+ * (the quiz's chosen tile flying into page 05), the top and bottom chrome in
+ * the current page's ink, the polite live region and the sheets. The quiz
+ * answer lives in the stage's `QuizProvider`. Motion inside follows the
+ * member's reduced-motion setting. P5.11 adds the share sheet.
  */
 export function StoryStage({ pages, year, archetype, closeHref, copy }: StoryStageProps) {
   const router = useRouter()
@@ -163,6 +166,7 @@ export function StoryStage({ pages, year, archetype, closeHref, copy }: StorySta
 
   return (
     <PlayerProvider value={send}>
+      <QuizProvider year={year}>
       <LazyMotion features={domAnimation} strict>
         <MotionConfig reducedMotion="user">
           {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- the labelled stage region takes the story keys while focus is inside it (design 4.6) */}
@@ -196,6 +200,7 @@ export function StoryStage({ pages, year, archetype, closeHref, copy }: StorySta
                 </StagePage>
               ))}
             </div>
+            <MatchCut pagesRef={pagesRef} types={pages.map((page) => page.type)} index={state.index} previous={state.prevIndex} />
             <header
               {...chromeInk}
               data-testid="rewind-chrome-top"
@@ -205,7 +210,7 @@ export function StoryStage({ pages, year, archetype, closeHref, copy }: StorySta
                 compact={fit.chrome === "compact"}
                 progress={
                   <Progress
-                    dwells={entries.map((e) => (typeof e.dwell === "number" ? e.dwell : null))}
+                    dwells={entries.map((e) => (typeof e.dwell === "number" ? e.dwell : e.dwell === "hold" ? REVEAL_DWELL_MS : null))}
                     index={state.index}
                     playing={state.mode === "playing"}
                     slowerPacing={prefs.slowerPacing}
@@ -253,6 +258,7 @@ export function StoryStage({ pages, year, archetype, closeHref, copy }: StorySta
           </section>
         </MotionConfig>
       </LazyMotion>
+      </QuizProvider>
     </PlayerProvider>
   )
 }
