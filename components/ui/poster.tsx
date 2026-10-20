@@ -4,21 +4,13 @@ import { useState, type CSSProperties, type ReactNode } from "react"
 
 import type { InkName } from "@/lib/design/tokens"
 import { posterPalette } from "@/lib/ui/poster-palette"
+import { posterWidthFor, type PosterWidth } from "@/lib/ui/poster-widths"
 import { cn } from "@/lib/utils"
-
-/** The widths the poster route serves (`?w=`). */
-const POSTER_WIDTHS = [96, 160, 240, 480] as const
-export type PosterWidth = (typeof POSTER_WIDTHS)[number]
 
 export type PosterSize = "xs" | "sm" | "md" | "lg"
 
 /** Each size's box width in CSS px; the box is always 2:3. */
 const SIZE_PX: Record<PosterSize, number> = { xs: 48, sm: 96, md: 160, lg: 240 }
-
-/** The smallest served width that covers `px` CSS pixels at 2x. */
-export function posterWidthFor(px: number): PosterWidth {
-  return POSTER_WIDTHS.find((w) => w >= px * 2) ?? 480
-}
 
 /** A duotone between two Rewind inks (Rewind 5.8), or full colour. */
 type PosterTone = "none" | { spot: InkName; field: InkName }

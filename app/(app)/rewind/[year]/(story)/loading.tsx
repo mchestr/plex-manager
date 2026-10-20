@@ -2,7 +2,11 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { inkProps } from "@/lib/design/tokens"
 import { cn } from "@/lib/utils"
 
-/** A blank sheet of paper while the issue loads. */
+/**
+ * A blank sheet of paper while the issue loads. It lives in the `(story)`
+ * group so `/rewind/[year]/read` has no boundary of its own and still reads
+ * with JavaScript off.
+ */
 export default function RewindYearLoading() {
   const paper = inkProps("paper")
   return (

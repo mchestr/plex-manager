@@ -1,0 +1,15 @@
+/**
+ * The widths the poster route serves (`?w=`), in a module without
+ * `"use client"`, so a Rewind page rendered on the server can size its
+ * request too (calling a client module's function from the server throws).
+ *
+ * @module lib/ui/poster-widths
+ */
+
+const POSTER_WIDTHS = [96, 160, 240, 480] as const
+export type PosterWidth = (typeof POSTER_WIDTHS)[number]
+
+/** The smallest served width that covers `px` CSS pixels at 2x. */
+export function posterWidthFor(px: number): PosterWidth {
+  return POSTER_WIDTHS.find((w) => w >= px * 2) ?? 480
+}

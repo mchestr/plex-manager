@@ -16,7 +16,7 @@ import { render, screen } from '@testing-library/react'
 import { getServerSession } from 'next-auth'
 
 import RewindResolverPage from '@/app/(app)/rewind/page'
-import RewindYearPage, { generateMetadata } from '@/app/(app)/rewind/[year]/page'
+import RewindYearPage, { generateMetadata } from '@/app/(app)/rewind/[year]/(story)/page'
 import { ToastProvider } from '@/components/ui/toast'
 import { WrappedViewerWrapper } from '@/components/wrapped/wrapped-viewer-wrapper'
 import { prisma } from '@/lib/prisma'
