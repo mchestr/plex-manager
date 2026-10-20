@@ -129,6 +129,8 @@ const SHOWN_BY_GRAPHIC: Partial<Record<IssuePageType, CardFactId>> = { centrefol
  * the peak hour. A stat the page's graphic already shows, or one the member
  * does not have, gives way to the next allowed stat.
  *
+ * @internal Exported for its test.
+ *
  * @example
  * ```ts
  * defaultCardFacts("centrefold", (id) => id !== "standing.percentile")

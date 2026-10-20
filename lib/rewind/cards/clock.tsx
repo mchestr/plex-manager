@@ -17,7 +17,7 @@ import { CARD_MEASURE, Graphic, Line, Text } from "./type"
 const AFTER_DARK = { from: 22, to: 3 }
 
 /** A clock's centre: the share its arc brackets and what it counts. */
-export function RingFace({ share, caption, size }: { share: string; caption: string; size: number }): ReactElement {
+function RingFace({ share, caption, size }: { share: string; caption: string; size: number }): ReactElement {
   return (
     <div style={{ display: "flex", position: "absolute", left: 0, top: 0, width: size, height: size, flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
       <Line text={share} face={{ wdth: 75, weight: 900, size: Math.round(size * 0.12), measure: size * 0.34 }} style={{ lineHeight: `${Math.round(size * 0.12)}px` }} />
