@@ -419,7 +419,7 @@ gantt
 - [ ] P5.10: Share-safe projection v3 and card routes (rewind, M, due 2026-11-13)
 - [ ] P5.11: Share sheet, core cards and opt-in public links (rewind, M, due 2026-11-18)
 - [x] P5.12: Article mode (rewind, M, due 2026-11-18)
-- [ ] P5.13: Eval harness and model bake-off (rewind, M, due 2026-11-20)
+- [x] P5.13: Eval harness and model bake-off (rewind, M, due 2026-11-20)
 
 **Shells and the member pages Rewind needs** (2026-11-06 to 2026-12-04)
 
