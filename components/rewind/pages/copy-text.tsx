@@ -5,7 +5,8 @@ import { axes } from "./units"
 /**
  * Rewind copy with its `{{fact:id}}` tokens filled in (design 8.3): numbers
  * and other facts set as `.tok` (Archivo 760 at width 87.5, tabular, never
- * wrapping), titles in italics. Every value is inserted as text.
+ * wrapping, a touch smaller than the line but never under 12 px), titles in
+ * italics. Every value is inserted as text.
  */
 export function CopyText({ text, source }: { text: string; source: TokenSource }) {
   return renderCopy(text, source).map((segment, i) => {
@@ -15,7 +16,7 @@ export function CopyText({ text, source }: { text: string; source: TokenSource }
       <span
         key={i}
         className="tok whitespace-nowrap font-display not-italic"
-        style={{ fontVariationSettings: axes(87.5, 760), fontFeatureSettings: '"tnum" 1, "lnum" 1', fontSize: "0.93em" }}
+        style={{ fontVariationSettings: axes(87.5, 760), fontFeatureSettings: '"tnum" 1, "lnum" 1', fontSize: "max(12px, 0.93em)" }}
       >
         {segment.text}
       </span>
