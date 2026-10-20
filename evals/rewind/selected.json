@@ -1,0 +1,8 @@
+{
+  "model": null,
+  "economy": null,
+  "effort": "low",
+  "promptVersion": "rewind-2026.1",
+  "decidedOn": null,
+  "note": "Set by the 18-20 November bake-off (P5.13, implementation/model-selection.md). While model is null, CI checks every recording set but fails none."
+}

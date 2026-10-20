@@ -29,6 +29,8 @@
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:headed": "playwright test --headed",
     "rewind:fixtures": "tsx evals/rewind/generate-fixtures.ts",
+    "eval:rewind": "tsx --conditions=react-server evals/rewind/run.ts",
+    "eval:rewind:select": "tsx evals/rewind/bake-off.ts",
     "rewind:strip-leaderboards": "tsx --tsconfig tsconfig.scripts.json scripts/rewind-strip-leaderboards.ts",
     "rewind:measure-cards": "NODE_ENV=production tsx --conditions=react-server scripts/rewind-measure-cards.tsx",
     "rewind:card-version": "node scripts/write-card-version.mjs",
