@@ -5457,11 +5457,13 @@ P5.1 and P5.2 start only once P3.1's scope contract and P3.7's primitives have m
 **Demo.** Run `npm run eval:rewind -- --model=anthropic:claude-sonnet-5-5 --judge=openai:gpt-6-astra --fixtures=heavy,light`: it prints the estimated cost, asks for confirmation, then prints first-pass grounding, the judge scores, the cost and p95 latency. CI then passes offline on the recordings.
 
 **Done when.**
-- [ ] `npm run eval:rewind` prints a cost estimate before any paid call, and writes a results JSON and a `RewindEvalRun` row.
-- [ ] The deterministic gates run in CI on recorded outputs with no network access.
-- [ ] The judge always comes from a different model family, and its score stays advisory.
+- [x] `npm run eval:rewind` prints a cost estimate before any paid call, and writes a results JSON and a `RewindEvalRun` row.
+- [x] The deterministic gates run in CI on recorded outputs with no network access.
+- [x] The judge always comes from a different model family, and its score stays advisory.
 - [ ] Eval runs started on 2026-11-16, and the 18-20 November bake-off applied the selection rule; the default reaches 98% or more first-pass grounding.
 - [ ] The default and economy models are recorded in the planning folder and configured.
+
+(as merged: the harness and tooling only; the live runs, `selected.json`'s model, `model-selection.md`'s decision, `budgetModelFor()` and the production row are the owner's, with the runbook in `model-selection.md`. `run.ts` is the command line over `run-eval.ts`; `harness.ts` runs a fixture with injected model calls, since `generateStructured` and `PipelineDeps` now take optional `resolve`/`record` and `generate`/`consume`; P5.9's golden test uses it. `--replay=<set>` runs offline on a recording set; `npm run eval:rewind:select` prints the bake-off table. Recordings gained optional `model`, `finishReason`, `usage` and `latencyMs` (`recording-schema.ts`). `selected.json` has `model: null`, so CI checks every set but fails none until the decision; the hand set fails the overlap gate. Keys come from `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, `OPENAI_COMPATIBLE_BASE_URL`, not the stored provider rows.)
 
 ---
 
