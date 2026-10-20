@@ -28,11 +28,16 @@ type ReadPageProps = {
 const DisabledPagesSchema = z.array(z.string()).catch([])
 
 /**
- * With JavaScript off, the app's loading boundaries leave the streamed page in
- * a hidden `S:` segment behind its fallback. Show the segments and hide the
- * fallbacks, so the article reads without any script.
+ * With JavaScript off, `app/loading.tsx` leaves the streamed page in a hidden
+ * `S:` segment behind its fallback. Show the segment and hide the fallback, so
+ * the article reads without any script. The story's skeleton sits in
+ * `[year]/(story)/`, so this route has no second boundary and the segment
+ * holds the whole page in order. The rules sit in Tailwind's `base` layer:
+ * its preflight hides `[hidden]` with a layered `!important`, which beats any
+ * unlayered one.
  */
-const NO_SCRIPT_STREAM = "div[hidden][id^=S]{display:block!important}template[id^=B]+*{display:none!important}"
+const NO_SCRIPT_STREAM =
+  "@layer base{div[hidden][id^=S]{display:block!important}template[id^=B]+*{display:none!important}}"
 
 /** "{server name} Rewind {year}, article", absolute: the root template would add the server name again. */
 export async function generateMetadata({ params }: ReadPageProps): Promise<Metadata> {
