@@ -28,6 +28,7 @@
  */
 
 import type { Edition, IssuePageType, PageTable } from "@/lib/rewind/registry"
+import type { FontMetrics } from "@/lib/rewind/typeset/measure"
 import { renderCopy, type CopySegment, type TokenSource } from "@/lib/wrapped/copy/render-copy"
 import type { RewindCopyV3Wire } from "@/lib/wrapped/copy/schema"
 import type { RewindDataV3 } from "@/lib/wrapped/data/schema-v3"
@@ -61,6 +62,8 @@ export interface ArticleContext {
   copySource: RewindDataV3["copySource"]
   model: string | null
   zone: "member" | "server"
+  /** The page font metrics (`pageMetrics`), passed in so no page module imports the server-only JSON. */
+  metrics: FontMetrics
 }
 
 /** Plain text, with no facts. */

@@ -12,7 +12,6 @@ import { billingBlock } from "@/lib/rewind/billing-block"
 import { backCoverDisclosure } from "@/lib/rewind/copy-disclosure"
 import { formatDayMonth } from "@/lib/rewind/format"
 import type { PageDefinition } from "@/lib/rewind/registry"
-import { pageMetrics } from "@/lib/rewind/typeset/metrics"
 import { copyLocals, headline } from "@/lib/wrapped/copy/templates"
 import type { RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 
@@ -47,7 +46,7 @@ export const backCoverPage: PageDefinition<BackCoverData> = {
       showtime: ctx.pages.some((page) => page.type === "clock"),
       locale: ctx.locale,
       measure: MEASURE,
-      metrics: pageMetrics,
+      metrics: ctx.metrics,
     })
     const signOff = ctx.copy?.signOff
     const blocks: ArticleBlock[] = [

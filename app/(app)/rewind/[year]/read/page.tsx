@@ -11,6 +11,7 @@ import { copyText, plain } from "@/lib/rewind/article/blocks"
 import { articleSections } from "@/lib/rewind/article/sections"
 import { volumeLine } from "@/lib/rewind/pages/facts"
 import { safeReturnPath } from "@/lib/rewind/return-to"
+import { pageMetrics } from "@/lib/rewind/typeset/metrics"
 import { validatePagesOnRead } from "@/lib/rewind/select-pages"
 import { loadRewindYearView } from "@/lib/rewind/year-view"
 import { getAppSettings } from "@/lib/settings/app-settings"
@@ -81,6 +82,7 @@ export default async function RewindArticlePage({ params, searchParams }: ReadPa
     copySource: data.copySource,
     model: data.copyMeta.model,
     zone: data.window.zone === settings.timeZone ? "server" : "member",
+    metrics: pageMetrics,
   })
   const volume = volumeLine(data.facts)
 

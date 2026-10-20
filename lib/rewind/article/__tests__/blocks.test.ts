@@ -2,7 +2,7 @@
  * @jest-environment node
  */
 
-import { FIXTURE_IDS, fixtureIssue, issueContext, type FixtureIssue } from "@/lib/rewind/__tests__/helpers/fixture-issue"
+import { FIXTURE_IDS, fixtureIssue, articleContext, type FixtureIssue } from "@/lib/rewind/__tests__/helpers/fixture-issue"
 import { textOf, type ArticleBlock } from "@/lib/rewind/article/blocks"
 import { articleSections } from "@/lib/rewind/article/sections"
 import { monthTables } from "@/lib/rewind/pages/calendar"
@@ -18,7 +18,7 @@ beforeAll(async () => {
 
 function article(id: string) {
   const issue = issues.get(id)!
-  return { issue, sections: articleSections(issue.pages, issue.facts, issueContext(issue)) }
+  return { issue, sections: articleSections(issue.pages, issue.facts, articleContext(issue)) }
 }
 
 const texts = (block: ArticleBlock) => {
@@ -89,7 +89,7 @@ describe("article blocks over the 20 golden fixtures", () => {
   it("masks a bookend that is the No. 1 series with the Top shows folio", () => {
     const issue = issues.get("heavy")!
     const pages = issue.pages.map((p) => (p.type === "bookends" ? { ...p, data: { first: { key: "1", masked: true }, last: { key: "2", masked: true } } } : p))
-    const section = articleSections(pages, issue.facts, issueContext({ ...issue, pages })).find((s) => s.type === "bookends")!
+    const section = articleSections(pages, issue.facts, articleContext({ ...issue, pages })).find((s) => s.type === "bookends")!
     const all = section.blocks.flatMap(texts).map(textOf).join(" ")
     const folio = String(pages.find((p) => p.type === "top-shows")!.folio).padStart(2, "0")
     expect(all).toContain(`a series you will meet on page ${folio}`)

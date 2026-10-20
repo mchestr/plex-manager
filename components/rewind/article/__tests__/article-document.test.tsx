@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react"
 
 import { ArticleDocument } from "@/components/rewind/article/article-document"
-import { fixtureIssue, issueContext, type FixtureIssue } from "@/lib/rewind/__tests__/helpers/fixture-issue"
+import { fixtureIssue, articleContext, type FixtureIssue } from "@/lib/rewind/__tests__/helpers/fixture-issue"
 import { plain, type ArticleBlock, type ArticleBlockKind } from "@/lib/rewind/article/blocks"
 import { articleSections, type ArticleSection } from "@/lib/rewind/article/sections"
 
@@ -14,7 +14,7 @@ beforeAll(async () => {
 })
 
 function renderIssue(issue: FixtureIssue) {
-  const sections = articleSections(issue.pages, issue.facts, issueContext(issue))
+  const sections = articleSections(issue.pages, issue.facts, articleContext(issue))
   render(<ArticleDocument title="The 2026 issue" masthead={[plain("Chester Family Plex, Vol. 4, No. K7Q4"), plain("Data through 30 November")]} sections={sections} />)
   return sections
 }

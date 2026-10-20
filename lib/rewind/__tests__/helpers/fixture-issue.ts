@@ -5,6 +5,8 @@
  */
 
 import type { IssueContext } from "@/components/rewind/pages/issue-context"
+import type { ArticleContext } from "@/lib/rewind/article/blocks"
+import { pageMetrics } from "@/lib/rewind/typeset/metrics"
 import { loadFixtures } from "@/evals/rewind/__tests__/load-fixtures"
 import { fixtureMember } from "@/evals/rewind/__tests__/member-stats"
 import { FIXTURE_USER_ID } from "@/evals/rewind/__tests__/stats-inputs"
@@ -60,4 +62,9 @@ export function issueContext(issue: FixtureIssue, overrides: Partial<IssueContex
     facts: issue.facts,
     ...overrides,
   }
+}
+
+/** The issue's context for article mode: the page context plus the font metrics. */
+export function articleContext(issue: FixtureIssue, overrides: Partial<IssueContext> = {}): ArticleContext {
+  return { ...issueContext(issue, overrides), metrics: pageMetrics }
 }
