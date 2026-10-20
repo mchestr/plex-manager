@@ -44,6 +44,9 @@ import { parseStoredRewind, readWrappedStatus } from "@/lib/wrapped/data/parse-s
 import type { RewindDataV3 } from "@/lib/wrapped/data/schema-v3"
 import { CardFactIdSchema, ShareOptions } from "@/lib/wrapped/data/share-safe-schema"
 import { getSeasonState } from "@/lib/wrapped/season"
+import { serverZone } from "@/lib/utils/server-zone"
+import { wallTimeToInstant } from "@/lib/utils/zoned-time"
+import { Prisma } from "@/lib/generated/prisma/client"
 
 /** What a lapsed member reads when sharing needs a membership; the sheet links it to `/subscribe`. */
 const NEEDS_MEMBERSHIP = "Sharing needs an active membership"
@@ -79,12 +82,21 @@ function mintCredentials() {
   return { token, tokenHash: sha256(token), assetKey: randomBytes(16).toString("base64url") }
 }
 
-/** `'season-close'` is the last second before the season closes, in the server zone. */
+/**
+ * `'season-close'` is the last second before the season closes, and a date is
+ * the last second of that day, both in the server zone.
+ */
 async function resolveExpiry(expiry: Expiry): Promise<Date | null> {
   if (expiry === "never") return null
   if (expiry === "season-close") return new Date((await getSeasonState()).closesAt.getTime() - 1000)
-  return new Date(`${expiry}T23:59:59Z`)
+  return new Date(wallTimeToInstant(`${expiry}T23:59`, await serverZone()).getTime() + 59_000)
 }
+
+const PAST_EXPIRY = "Pick an expiry date that has not passed"
+const isPast = (expiresAt: Date | null) => expiresAt !== null && expiresAt.getTime() <= Date.now()
+
+/** Thrown inside a transaction when another request already replaced the link. */
+class LinkChanged extends Error {}
 
 /** The stored v3 Rewind of a completed row, or null. */
 function completedV3(row: { id: string; status: string; data: string | null }): RewindDataV3 | null {
@@ -145,18 +157,28 @@ export const enableRewindShare = memberAction({
     if (!row || !rewind) return fail("CONFLICT", NOT_READY)
     if (!printsAll(rewind, options.pages)) return fail("VALIDATION", "Those pages are not in your Rewind")
 
-    const live = await prisma.rewindShare.findFirst({
-      where: { wrappedId: row.id, revokedAt: null, OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
-      select: { id: true },
-    })
-    if (live) return fail("CONFLICT", "You already have a public link. Rotate it for a new address.")
+    const expiresAt = await resolveExpiry(expiry)
+    if (isPast(expiresAt)) return fail("VALIDATION", PAST_EXPIRY)
 
     const base = linkBase()
     const { token, tokenHash, assetKey } = mintCredentials()
-    const share = await prisma.rewindShare.create({
-      data: { wrappedId: row.id, tokenHash, assetKey, ...options, expiresAt: await resolveExpiry(expiry) },
-      select: { id: true, expiresAt: true },
-    })
+    // Serializable, so two requests at once cannot both see no live link and
+    // both create one: the second fails and the member tries again.
+    const share = await prisma.$transaction(
+      async (tx) => {
+        const live = await tx.rewindShare.findFirst({
+          where: { wrappedId: row.id, revokedAt: null, OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
+          select: { id: true },
+        })
+        if (live) return null
+        return tx.rewindShare.create({
+          data: { wrappedId: row.id, tokenHash, assetKey, ...options, expiresAt },
+          select: { id: true, expiresAt: true },
+        })
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+    )
+    if (!share) return fail("CONFLICT", "You already have a public link. Rotate it for a new address.")
     logAuditEvent(AuditEventType.REWIND_SHARE_CREATED, userId, { shareId: share.id, year, pages: options.pages })
     revalidateShares()
     return ok({ shareId: share.id, url: `${base}${token}`, expiresAt: share.expiresAt?.toISOString() ?? null })
@@ -176,9 +198,11 @@ export const updateRewindShare = memberAction({
     if (!rewind) return fail("CONFLICT", NOT_READY)
     if (changes.pages && !printsAll(rewind, changes.pages)) return fail("VALIDATION", "Those pages are not in your Rewind")
 
+    const expiresAt = expiry ? await resolveExpiry(expiry) : undefined
+    if (expiresAt !== undefined && isPast(expiresAt)) return fail("VALIDATION", PAST_EXPIRY)
     const updated = await prisma.rewindShare.update({
       where: { id: share.id },
-      data: { ...changes, ...(expiry ? { expiresAt: await resolveExpiry(expiry) } : {}) },
+      data: { ...changes, ...(expiresAt !== undefined ? { expiresAt } : {}) },
       select: { id: true, pages: true, expiresAt: true },
     })
     logAuditEvent(AuditEventType.REWIND_SHARE_UPDATED, userId, { shareId: share.id, year: share.wrapped.year, pages: updated.pages })
@@ -211,22 +235,25 @@ export const rotateRewindShare = memberAction({
     })
     if (!options.success) return fail("CONFLICT", "That link cannot be rotated. Stop it and create a new one.")
 
+    // An expired link comes back with the default expiry, not a dead one.
+    const expiresAt = isPast(share.expiresAt) ? await resolveExpiry("season-close") : share.expiresAt
     const base = linkBase()
     const { token, tokenHash, assetKey } = mintCredentials()
-    const created = await prisma.$transaction(async (tx) => {
-      await tx.rewindShare.update({ where: { id: share.id }, data: { revokedAt: new Date() } })
-      return tx.rewindShare.create({
-        data: {
-          wrappedId: share.wrappedId,
-          tokenHash,
-          assetKey,
-          ...options.data,
-          expiresAt: share.expiresAt,
-          rotatedFromId: share.id,
-        },
-        select: { id: true, expiresAt: true },
+    let created: { id: string; expiresAt: Date | null }
+    try {
+      created = await prisma.$transaction(async (tx) => {
+        // Only the request that revokes the live link creates its successor.
+        const revoked = await tx.rewindShare.updateMany({ where: { id: share.id, revokedAt: null }, data: { revokedAt: new Date() } })
+        if (revoked.count === 0) throw new LinkChanged()
+        return tx.rewindShare.create({
+          data: { wrappedId: share.wrappedId, tokenHash, assetKey, ...options.data, expiresAt, rotatedFromId: share.id },
+          select: { id: true, expiresAt: true },
+        })
       })
-    })
+    } catch (error) {
+      if (error instanceof LinkChanged) return fail("CONFLICT", "That link just changed. Refresh and try again.")
+      throw error
+    }
     logAuditEvent(AuditEventType.REWIND_SHARE_ROTATED, userId, { shareId: created.id, rotatedFromId: share.id, year: share.wrapped.year, pages: share.pages })
     revalidateShares()
     return ok({ shareId: created.id, url: `${base}${token}`, expiresAt: created.expiresAt?.toISOString() ?? null })

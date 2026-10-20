@@ -87,6 +87,11 @@ function installTables() {
     Object.assign(share, data)
     return share
   }) as never)
+  prismaMock.rewindShare.updateMany.mockImplementation((async ({ where, data }: { where: { id: string; revokedAt: null }; data: Partial<RewindShare> }) => {
+    const share = shares.find((s) => s.id === where.id && !s.revokedAt)
+    if (share) Object.assign(share, data)
+    return { count: share ? 1 : 0 }
+  }) as never)
   prismaMock.$transaction.mockImplementation((async (fn: (tx: unknown) => Promise<unknown>) => fn(asTransactionClient(prismaMock))) as never)
 }
 
@@ -131,6 +136,23 @@ describe("enableRewindShare", () => {
       await enabled()
       // 2027-01-31 23:59:59 in America/Chicago (UTC-6)
       expect(shares[0].expiresAt?.toISOString()).toBe("2027-02-01T05:59:59.000Z")
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  it("ends a chosen date at its last second in the server zone, and refuses a date that has passed", async () => {
+    jest.useFakeTimers({ now: new Date("2026-12-05T12:00:00Z"), advanceTimers: true })
+    try {
+      seedRewind()
+      expect(await enable({ expiresAt: "2026-12-01" })).toMatchObject({ success: false, code: "VALIDATION" })
+      expect(shares).toHaveLength(0)
+      await enabled()
+      expect((await enable({ expiresAt: "2026-12-31" })).success).toBe(false)
+      shares.length = 0
+      await enable({ expiresAt: "2026-12-31" })
+      // 2026-12-31 23:59:59 in America/Chicago (UTC-6)
+      expect(shares[0].expiresAt?.toISOString()).toBe("2027-01-01T05:59:59.000Z")
     } finally {
       jest.useRealTimers()
     }
@@ -206,6 +228,21 @@ describe("rotate, update and disable", () => {
     if (!rotated.success) throw new Error(rotated.error)
     expect((await disableRewindShare({ shareId: rotated.data.shareId })).success).toBe(true)
     expect(shares.every((s) => s.revokedAt !== null)).toBe(true)
+  })
+
+  it("rotates an expired link to one that is live, and lets only one of two rotations through", async () => {
+    seedRewind()
+    const { shareId } = await enabled()
+    shares[0].expiresAt = new Date(Date.now() - 60_000)
+    const rotated = await rotateRewindShare({ shareId })
+    if (!rotated.success) throw new Error(rotated.error)
+    expect(new Date(rotated.data.expiresAt!).getTime()).toBeGreaterThan(Date.now())
+
+    // A second rotation of the same (now revoked) link finds it already replaced.
+    shares[0].revokedAt = null
+    prismaMock.rewindShare.updateMany.mockResolvedValueOnce({ count: 0 })
+    expect(await rotateRewindShare({ shareId })).toMatchObject({ success: false, code: "CONFLICT" })
+    expect(shares).toHaveLength(2)
   })
 
   it("refuses another member's link", async () => {
