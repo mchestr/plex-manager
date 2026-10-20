@@ -747,6 +747,20 @@ describe('GET /api/rewind/poster/[ratingKey]', () => {
       expect((await callRoute(posterUrl('123', TOK), '123')).status).toBe(401)
     })
 
+    it('limits a share request before its token lookup, once per request', async () => {
+      const limited = { status: 429 }
+      ;(limitRequest as jest.Mock).mockResolvedValueOnce(limited)
+
+      expect(await callRoute(posterUrl('123', BOGUS), '123')).toBe(limited)
+      expect(prisma.plexWrapped.findUnique).not.toHaveBeenCalled()
+
+      ;(limitRequest as jest.Mock).mockClear()
+      ;(prisma.plexWrapped.findUnique as jest.Mock).mockResolvedValue({ ...SHARED_ROW, data: wrappedJson(['123']) })
+      mockUpstreamImage()
+      expect((await callRoute(posterUrl('123', TOK), '123')).status).toBe(200)
+      expect(limitRequest).toHaveBeenCalledTimes(1)
+    })
+
     it('refuses a malformed share token with 400 before any lookup', async () => {
       const response = await callRoute(posterUrl('123', 'not-a-token'), '123')
 

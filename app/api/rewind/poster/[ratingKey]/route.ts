@@ -150,9 +150,16 @@ export async function GET(request: NextRequest, context: { params: Promise<{ rat
         session = null
       }
     }
+    // A share link is limited before its token lookup, so an unknown token costs
+    // a request a point instead of an unlimited database read; a session's cache
+    // hits stay unlimited.
+    let limited = false
     if (!session) {
-      const allowed = shareToken ? await shareTokenAllowsRatingKey(shareToken, ratingKey) : false
-      if (!allowed) return errorResponse(ErrorCode.UNAUTHORIZED, "Authentication required")
+      if (!shareToken) return errorResponse(ErrorCode.UNAUTHORIZED, "Authentication required")
+      const rateLimitResponse = await limitRequest("poster", request)
+      if (rateLimitResponse) return rateLimitResponse
+      limited = true
+      if (!(await shareTokenAllowsRatingKey(shareToken, ratingKey))) return errorResponse(ErrorCode.UNAUTHORIZED, "Authentication required")
     }
 
     // A session sees the same 404 for a denied key and a known miss, so answering
@@ -178,8 +185,10 @@ export async function GET(request: NextRequest, context: { params: Promise<{ rat
     const cached = await readCachedPoster(file)
     if (cached) return posterResponse(cached, servedAs)
 
-    const rateLimitResponse = await limitRequest("poster", request)
-    if (rateLimitResponse) return rateLimitResponse
+    if (!limited) {
+      const rateLimitResponse = await limitRequest("poster", request)
+      if (rateLimitResponse) return rateLimitResponse
+    }
 
     const timeoutMs = remainingMs(deadline)
     if (timeoutMs === 0) return posterNotFound()
