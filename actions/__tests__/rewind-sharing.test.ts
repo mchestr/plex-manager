@@ -26,7 +26,7 @@ import {
   updateRewindShare,
 } from "@/actions/rewind-sharing"
 import { hasEntitlement } from "@/lib/actions/entitlement"
-import type { PlexWrapped, RewindShare } from "@/lib/generated/prisma/client"
+import { Prisma, type PlexWrapped, type RewindShare } from "@/lib/generated/prisma/client"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { fixtureRewind } from "@/lib/wrapped/data/__tests__/share-fixture"
 
@@ -156,6 +156,28 @@ describe("enableRewindShare", () => {
     } finally {
       jest.useRealTimers()
     }
+  })
+
+  it("moves the default expiry to next year's close once a season within one year has closed", async () => {
+    jest.useFakeTimers({ now: new Date("2026-05-10T12:00:00Z"), advanceTimers: true })
+    try {
+      prismaMock.config.findUnique.mockResolvedValue(buildConfig({ rewindPublicLinks: true, rewindSeasonOpens: "03-01", rewindSeasonCloses: "04-30" }))
+      seedRewind()
+      await enabled()
+      // 2027-04-30 23:59:59 in America/Chicago (UTC-5), not this year's close, which has passed
+      expect(shares[0].expiresAt?.toISOString()).toBe("2027-05-01T04:59:59.000Z")
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  it("answers the losing request of a race with CONFLICT, not a generic error", async () => {
+    seedRewind()
+    prismaMock.$transaction.mockRejectedValueOnce(
+      new Prisma.PrismaClientKnownRequestError("write conflict", { code: "P2034", clientVersion: "7" })
+    )
+    expect(await enable()).toMatchObject({ success: false, code: "CONFLICT" })
+    expect(shares).toHaveLength(0)
   })
 
   it("stores no expiry when the member chooses none", async () => {

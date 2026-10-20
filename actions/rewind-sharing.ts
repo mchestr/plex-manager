@@ -37,16 +37,16 @@ import { memberAction } from "@/lib/actions/define-action"
 import { hasEntitlement } from "@/lib/actions/entitlement"
 import { fail, ok } from "@/lib/actions/result"
 import { getBaseUrl } from "@/lib/env"
+import { Prisma } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
+import { serverZone } from "@/lib/utils/server-zone"
+import { wallTimeToInstant } from "@/lib/utils/zoned-time"
 import { yearSchema } from "@/lib/validations/shared-schemas"
 import { parseStoredRewind, readWrappedStatus } from "@/lib/wrapped/data/parse-stored"
 import type { RewindDataV3 } from "@/lib/wrapped/data/schema-v3"
 import { CardFactIdSchema, ShareOptions } from "@/lib/wrapped/data/share-safe-schema"
 import { getSeasonState } from "@/lib/wrapped/season"
-import { serverZone } from "@/lib/utils/server-zone"
-import { wallTimeToInstant } from "@/lib/utils/zoned-time"
-import { Prisma } from "@/lib/generated/prisma/client"
 
 /** What a lapsed member reads when sharing needs a membership; the sheet links it to `/subscribe`. */
 const NEEDS_MEMBERSHIP = "Sharing needs an active membership"
@@ -88,7 +88,12 @@ function mintCredentials() {
  */
 async function resolveExpiry(expiry: Expiry): Promise<Date | null> {
   if (expiry === "never") return null
-  if (expiry === "season-close") return new Date((await getSeasonState()).closesAt.getTime() - 1000)
+  if (expiry === "season-close") {
+    // After a season that ends within its year has closed, the next close is a year on.
+    const close = new Date((await getSeasonState()).closesAt)
+    if (close.getTime() <= Date.now()) close.setUTCFullYear(close.getUTCFullYear() + 1)
+    return new Date(close.getTime() - 1000)
+  }
   return new Date(wallTimeToInstant(`${expiry}T23:59`, await serverZone()).getTime() + 59_000)
 }
 
@@ -163,21 +168,26 @@ export const enableRewindShare = memberAction({
     const base = linkBase()
     const { token, tokenHash, assetKey } = mintCredentials()
     // Serializable, so two requests at once cannot both see no live link and
-    // both create one: the second fails and the member tries again.
-    const share = await prisma.$transaction(
-      async (tx) => {
-        const live = await tx.rewindShare.findFirst({
-          where: { wrappedId: row.id, revokedAt: null, OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
-          select: { id: true },
-        })
-        if (live) return null
-        return tx.rewindShare.create({
-          data: { wrappedId: row.id, tokenHash, assetKey, ...options, expiresAt },
-          select: { id: true, expiresAt: true },
-        })
-      },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
-    )
+    // both create one: the losing one fails with P2034 and is told a link exists.
+    const share = await prisma
+      .$transaction(
+        async (tx) => {
+          const live = await tx.rewindShare.findFirst({
+            where: { wrappedId: row.id, revokedAt: null, OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
+            select: { id: true },
+          })
+          if (live) return null
+          return tx.rewindShare.create({
+            data: { wrappedId: row.id, tokenHash, assetKey, ...options, expiresAt },
+            select: { id: true, expiresAt: true },
+          })
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
+      )
+      .catch((error: unknown) => {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034") return null
+        throw error
+      })
     if (!share) return fail("CONFLICT", "You already have a public link. Rotate it for a new address.")
     logAuditEvent(AuditEventType.REWIND_SHARE_CREATED, userId, { shareId: share.id, year, pages: options.pages })
     revalidateShares()
