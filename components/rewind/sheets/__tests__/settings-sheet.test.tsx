@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react"
+import { screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { useReducedMotion } from "motion/react"
 
@@ -54,6 +54,7 @@ describe("SettingsSheet", () => {
     expect(JSON.parse(window.localStorage.getItem(PREFS_KEY) ?? "{}")).toMatchObject({ shortcuts: false })
 
     await user.keyboard("{Escape}")
+    await waitFor(() => expect(screen.queryByTestId("rewind-settings-sheet")).not.toBeInTheDocument())
     expect(stage()).toHaveAttribute("data-mode", "playing")
     stage().focus()
     await user.keyboard("k")

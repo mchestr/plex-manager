@@ -67,6 +67,10 @@ updates:
     commit-message:
       prefix: "chore"
       include: "scope"
+    ignore:
+      # The image runs Node 24 LTS, as CI does; a Node major moves both together.
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
 
   # Enable version updates for GitHub Actions (SHA pins included), in the
   # workflows and in the composite actions under .github/actions/.
