@@ -105,8 +105,8 @@ describe("app/globals.css", () => {
   it("keeps every Rewind-only name between the markers", () => {
     const { start, end } = rewindBlock()
     const outside = CSS.slice(0, start) + CSS.slice(end)
-    expect(outside).not.toMatch(/--(?:rw-|field\b|ink\b|spot\b|deep\b|arch-|font-display\b|font-text\b)/)
-    expect(outside).not.toMatch(/@utility\s+font-(?:display|text)\b/)
+    expect(outside).not.toMatch(/--(?:rw-|field\b|ink\b|spot\b|deep\b|arch-|font-display\b|font-text\b|font-lead\b)/)
+    expect(outside).not.toMatch(/@utility\s+font-(?:display|text|lead)\b/)
   })
 
   it("declares a field, ink and deep ink for each of the twelve inks", () => {
@@ -118,6 +118,11 @@ describe("app/globals.css", () => {
     }
     for (const ink of DARK_INKS) expect(root[`--rw-${ink}-deep`]).toBe(`var(--rw-${ink})`)
     expect(root["font-family"]).toBe("var(--font-text)")
+    // the variables app/(app)/rewind/fonts.ts defines (P5.1)
+    expect(root["--font-display"]).toBe("var(--font-rw-archivo)")
+    expect(root["--font-lead"]).toBe("var(--font-rw-newsreader-display)")
+    const fonts = readFileSync(join(process.cwd(), "app/(app)/rewind/fonts.ts"), "utf8")
+    for (const name of new Set(CSS.match(/--font-rw-[a-z-]+/g))) expect(fonts).toContain(`variable: "${name}"`)
   })
 
   it("gives each ink its scheme, and light and dark inks no other", () => {

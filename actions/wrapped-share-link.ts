@@ -19,7 +19,7 @@ const logger = createLogger("WRAPPED_SHARE_LINK")
 const shareLinkInputSchema = z.object({ year: yearSchema }, { error: "Invalid year" })
 
 function revalidateSharePaths() {
-  revalidatePath("/wrapped")
+  revalidatePath("/rewind", "layout")
   revalidatePath("/")
 }
 
@@ -92,7 +92,7 @@ export const enableWrappedShareLink = memberAction({
     }
 
     revalidateSharePaths()
-    return ok({ shareToken, url: `${baseUrl}/wrapped/share/${shareToken}` })
+    return ok({ shareToken, url: `${baseUrl}/rewind/s/${shareToken}` })
   },
 })
 

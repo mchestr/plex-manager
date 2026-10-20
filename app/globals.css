@@ -147,6 +147,7 @@
   /* next/font/local variables, defined where story pages load app/(app)/rewind/fonts.ts (P5.1) */
   --font-display: var(--font-rw-archivo);
   --font-text: var(--font-rw-newsreader);
+  --font-lead: var(--font-rw-newsreader-display);   /* Newsreader Display Italic, its own family */
   --rw-dur-xs: 120ms; --rw-dur-s: 240ms; --rw-dur-m: 420ms; --rw-dur-l: 640ms; --rw-dur-xl: 900ms;
   --rw-ease-stretch: cubic-bezier(.16, 1, .3, 1);   /* type and entrances */
   --rw-ease-ink: cubic-bezier(.65, 0, .35, 1);      /* page turns, gatefold */
@@ -221,6 +222,7 @@
 [data-theme="rewind"] [data-slot="slider-track"] { background: repeating-linear-gradient(-45deg, var(--ink) 0 1px, transparent 1px 3px); }
 @utility font-display { font-family: var(--font-display); }   /* Rewind chrome and controls (Rewind 5.1) */
 @utility font-text { font-family: var(--font-text); }
+@utility font-lead { font-family: var(--font-lead); font-style: italic; }
 /* the story player (P5.2). The progress segment fills on CSS, so a dwell costs no React render;
    --rw-dwell is the registry dwell, set on the segment */
 @keyframes rw-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }

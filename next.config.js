@@ -49,6 +49,15 @@ module.exports = (phase) => ({
     '/opengraph-image': ['./lib/og/fonts/*'],
     '/twitter-image': ['./lib/og/fonts/*'],
   },
+  // Rewind moved from /wrapped (P5.1). Browsers cache a 308, so every target
+  // must keep working; the share rule comes first, or the catch-all would send
+  // /wrapped/share/<token> to /rewind/share/<token>. Query strings are kept.
+  async redirects() {
+    return [
+      { source: '/wrapped/share/:token', destination: '/rewind/s/:token', permanent: true },
+      { source: '/wrapped/:path*', destination: '/rewind/:path*', permanent: true },
+    ]
+  },
   async headers() {
     return [
       {

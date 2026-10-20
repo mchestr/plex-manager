@@ -45,26 +45,26 @@ function loggedQuery(searchParams: URLSearchParams): Record<string, string> | un
   return entries.length > 0 ? Object.fromEntries(entries) : undefined
 }
 
-/** `/wrapped/<segment>`: one segment, so `/wrapped/share/<token>` never matches. */
-const WRAPPED_YEAR_PATH = /^\/wrapped\/([^/]+)$/
+/** `/rewind/<segment>`: one segment, so `/rewind/s/<token>` never matches. */
+const REWIND_YEAR_PATH = /^\/rewind\/([^/]+)$/
 
 /**
- * Whether the path is `/wrapped/<year>` with a year the route rejects.
+ * Whether the path is `/rewind/<year>` with a year the route rejects.
  *
  * The route renders its not-found page itself, but `app/loading.tsx` streams
  * every page, so the status is already sent as 200 by then. Answering here
  * gives the same page with a real 404 (P0.14).
  */
-function isInvalidWrappedYearPath(pathname: string): boolean {
-  const segment = WRAPPED_YEAR_PATH.exec(pathname)?.[1]
+function isInvalidRewindYearPath(pathname: string): boolean {
+  const segment = REWIND_YEAR_PATH.exec(pathname)?.[1]
   return segment !== undefined && !yearParamSchema.safeParse(segment).success
 }
 
-/** `/wrapped/share/<token>` */
-const WRAPPED_SHARE_PATH = /^\/wrapped\/share\/([^/]+)$/
+/** `/rewind/s/<token>`, where next.config.js sends the old `/wrapped/share/<token>` (P5.1) */
+const REWIND_SHARE_PATH = /^\/rewind\/s\/([^/]+)$/
 
 /**
- * What the share page should do for `/wrapped/share/<token>`, or `null` for
+ * What the share page should do for `/rewind/s/<token>`, or `null` for
  * any other path.
  *
  * - `missing`: the token shares nothing. The page renders its not-found page,
@@ -86,7 +86,7 @@ const WRAPPED_SHARE_PATH = /^\/wrapped\/share\/([^/]+)$/
  * then renders the Rewind, or throws and renders the error page.
  */
 async function checkSharePath(pathname: string, headers: Headers): Promise<"missing" | "busy" | "shown" | null> {
-  const segment = WRAPPED_SHARE_PATH.exec(pathname)?.[1]
+  const segment = REWIND_SHARE_PATH.exec(pathname)?.[1]
   if (segment === undefined) {
     return null
   }
@@ -210,7 +210,7 @@ export async function proxy(request: NextRequest) {
     // year or a share token that shares nothing
     const share = await checkSharePath(pathname, request.headers)
     const init = { request: { headers: pageRequestHeaders(request.headers, pathname, share) } }
-    const notFound = isInvalidWrappedYearPath(pathname) || share === "missing"
+    const notFound = isInvalidRewindYearPath(pathname) || share === "missing"
     const response = notFound
       ? NextResponse.rewrite(request.nextUrl, { ...init, status: 404 })
       : NextResponse.next(init)

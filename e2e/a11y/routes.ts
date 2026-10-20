@@ -77,13 +77,13 @@ export const A11Y_ROUTES: A11yRoute[] = [
   { path: '/auth/denied', as: 'public', ready: 'access-denied-heading' },
   // No PIN in the URL: the callback's error state.
   { path: '/auth/callback/plex', as: 'public', ready: 'plex-callback-error-heading' },
-  { path: `/wrapped/share/${A11Y_SHARE_TOKEN}`, as: 'public', ready: 'wrapped-share-heading' },
+  { path: `/rewind/s/${A11Y_SHARE_TOKEN}`, as: 'public', ready: 'wrapped-share-heading' },
   { path: '/a11y-missing-page', as: 'public', ready: 'not-found-heading' },
 
   // Member
   { path: '/', as: 'member', ready: 'plex-link-card' },
-  { path: '/wrapped', as: 'member', ready: 'wrapped-viewer' },
-  { path: `/wrapped/${VISUAL_REWIND_YEAR}`, as: 'member', ready: 'wrapped-viewer' },
+  { path: '/rewind', as: 'member', ready: 'wrapped-viewer' },
+  { path: `/rewind/${VISUAL_REWIND_YEAR}`, as: 'member', ready: 'wrapped-viewer' },
   { path: '/onboarding', as: 'member', userId: VISUAL_ONBOARDING_USER.id, ready: 'onboarding-welcome-heading' },
   { path: '/discord/link', as: 'member', ready: 'discord-link-panel' },
   { path: '/subscribe', as: 'member', stripe: true, ready: 'subscribe-page' },

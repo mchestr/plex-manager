@@ -28,7 +28,7 @@ test.describe('User Scenarios', () => {
       await regularUserPage.goto('/');
 
       // Navigate to wrapped
-      await regularUserPage.goto('/wrapped');
+      await regularUserPage.goto('/rewind');
 
       // Navigate back to home - should still be authenticated
       await regularUserPage.goto('/');
@@ -104,7 +104,7 @@ test.describe('User Scenarios', () => {
         });
 
         // Navigate to wrapped page
-        await regularUserPage.goto('/wrapped');
+        await regularUserPage.goto('/rewind');
         await regularUserPage.waitForLoadState('networkidle');
         await waitForLoadingGone(regularUserPage);
 
@@ -116,8 +116,8 @@ test.describe('User Scenarios', () => {
         const noWrappedFound = regularUserPage.getByTestId('no-wrapped-found');
         await expect(noWrappedFound).not.toBeVisible();
 
-        // /wrapped resolves to the latest completed year, and the viewer shows it
-        await expect(regularUserPage).toHaveURL(new RegExp(`/wrapped/${currentYear}$`));
+        // /rewind resolves to the latest completed year, and the viewer shows it
+        await expect(regularUserPage).toHaveURL(new RegExp(`/rewind/${currentYear}$`));
         // after the ~6.5 s intro transition
         await expect(regularUserPage.getByTestId('wrapped-viewer')).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
 
@@ -208,7 +208,7 @@ test.describe('User Scenarios', () => {
         });
 
         // Navigate to share page as anonymous user
-        await anonymousPage.goto(`/wrapped/share/${shareToken}`);
+        await anonymousPage.goto(`/rewind/s/${shareToken}`);
         await anonymousPage.waitForLoadState('networkidle');
         await waitForLoadingGone(anonymousPage);
 
@@ -240,7 +240,7 @@ test.describe('User Scenarios', () => {
         await expect(showsWatchedLabel).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
 
         // Verify we're on the share page URL
-        expect(anonymousPage.url()).toContain(`/wrapped/share/${shareToken}`);
+        expect(anonymousPage.url()).toContain(`/rewind/s/${shareToken}`);
 
       } finally {
         // Cleanup: delete the mock wrapped data

@@ -1,7 +1,7 @@
 /**
  * The Rewind season: when generation is open and which year is "the" year,
  * one rule for the dashboard card (through `getWrappedSettings()`), the
- * `/wrapped` resolver and the admin screens (RWP-04, RWV-02, UI-02, GAP-40).
+ * `/rewind` resolver and the admin screens (RWP-04, RWV-02, UI-02, GAP-40).
  *
  * The module imports `server-only`. The package is installed, but its default
  * export throws outside the `react-server` condition (Next resolves it for
@@ -125,7 +125,7 @@ export async function getSeasonState(now: Date = new Date()): Promise<SeasonStat
 }
 
 /**
- * Completed rows in the range `/wrapped/<year>` accepts: a playground save
+ * Completed rows in the range `/rewind/<year>` accepts: a playground save
  * for 2005 or 9999 would otherwise send the member to a 404.
  */
 const OPENABLE_YEARS = { gte: YEAR_MIN, lte: YEAR_MAX }
@@ -160,7 +160,7 @@ export async function listCompletedRewindYears(userId: string): Promise<number[]
 }
 
 /**
- * The year `/wrapped` opens for a member:
+ * The year `/rewind` opens for a member:
  *
  * 1. the season year when the member has a row for it in any state, so a
  *    generating or failed Rewind still shows its progress or failure;

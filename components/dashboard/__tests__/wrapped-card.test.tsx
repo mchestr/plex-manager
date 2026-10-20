@@ -91,7 +91,7 @@ describe('WrappedCard states', () => {
 
     renderCard()
 
-    expect(await screen.findByTestId('wrapped-card-view-link')).toHaveAttribute('href', '/wrapped/2026')
+    expect(await screen.findByTestId('wrapped-card-view-link')).toHaveAttribute('href', '/rewind/2026')
     expect(screen.queryByTestId('wrapped-card-generating')).not.toBeInTheDocument()
   })
 
@@ -119,13 +119,13 @@ describe('WrappedCard states', () => {
     expect(screen.getByTestId('wrapped-card-retry')).toBeEnabled()
   })
 
-  it('opens /wrapped/<season year> in January, and reads the season year only', async () => {
+  it('opens /rewind/<season year> in January, and reads the season year only', async () => {
     jest.setSystemTime(new Date('2027-01-02T12:00:00Z'))
     getStatus.mockResolvedValue(status('completed', { hasCompleted: true }))
 
     renderCard()
 
-    expect(await screen.findByTestId('wrapped-card-view-link')).toHaveAttribute('href', '/wrapped/2026')
+    expect(await screen.findByTestId('wrapped-card-view-link')).toHaveAttribute('href', '/rewind/2026')
     expect(getStatus).toHaveBeenCalledWith({ year: 2026 })
   })
 
@@ -154,7 +154,7 @@ describe('WrappedCard states', () => {
 
       fireEvent.click(screen.getByTestId('wrapped-card-error-retry'))
 
-      expect(await screen.findByTestId('wrapped-card-view-link')).toHaveAttribute('href', '/wrapped/2026')
+      expect(await screen.findByTestId('wrapped-card-view-link')).toHaveAttribute('href', '/rewind/2026')
     } finally {
       consoleError.mockRestore()
     }

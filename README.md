@@ -177,7 +177,7 @@ plex-wrapped/
 │   ├── auth/               # Authentication pages
 │   ├── onboarding/         # User onboarding flow
 │   ├── setup/              # Initial setup wizard
-│   └── wrapped/            # Wrapped viewer and sharing
+│   └── rewind/             # Rewind pages and public share links
 ├── actions/                # Server Actions (mutations, data operations)
 ├── components/             # React components
 │   ├── admin/              # Admin-specific components

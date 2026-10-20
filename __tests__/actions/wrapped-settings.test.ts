@@ -163,7 +163,7 @@ describe('updateWrappedSettings', () => {
       origins: { before: {}, after: {} },
     })
     expect(mockRevalidatePath).toHaveBeenCalledWith('/')
-    expect(mockRevalidatePath).toHaveBeenCalledWith('/wrapped')
+    expect(mockRevalidatePath).toHaveBeenCalledWith('/rewind', 'layout')
   })
 
   it('accepts a window within one year and 29 February', async () => {

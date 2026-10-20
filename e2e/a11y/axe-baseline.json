@@ -100,10 +100,10 @@
   },
   "member /subscribe": {},
   "member /subscribe/success": {},
-  "member /wrapped": {
+  "member /rewind": {
     "color-contrast|incomplete": 8
   },
-  "member /wrapped/2026": {
+  "member /rewind/2026": {
     "color-contrast|incomplete": 8
   },
   "public /": {
@@ -130,7 +130,7 @@
     "color-contrast|incomplete": 38,
     "color-contrast|serious": 1
   },
-  "public /wrapped/share/a11y-share-token000000000000000000000000000": {
+  "public /rewind/s/a11y-share-token000000000000000000000000000": {
     "color-contrast|incomplete": 18
   }
 }

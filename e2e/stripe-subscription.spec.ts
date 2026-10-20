@@ -148,8 +148,8 @@ test.describe('Stripe subscription gate & admin visibility', () => {
     test('opens their stored Rewind, and is sent from / to /subscribe', async () => {
       const page = await context.newPage();
 
-      await page.goto('/wrapped');
-      await page.waitForURL(new RegExp(`/wrapped/${rewindYear}$`), { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+      await page.goto('/rewind');
+      await page.waitForURL(new RegExp(`/rewind/${rewindYear}$`), { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
       await expect(page.getByTestId('subscribe-page')).toHaveCount(0);
 
       await page.goto('/');
@@ -164,8 +164,8 @@ test.describe('Stripe subscription gate & admin visibility', () => {
       // proxy.ts redirects the router's RSC request; __tests__/proxy.test.ts
       // covers that rule on its own, since here the (app) layout also renders
       // below the root loading boundary and would redirect too
-      await page.goto(`/wrapped/${seasonYear}`);
-      const home = page.getByTestId('wrapped-generate-link');
+      await page.goto(`/rewind/${seasonYear}`);
+      const home = page.getByTestId('rewind-close');
       await expect(home).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
       // Hydrated, so the click is a client-side navigation; the marker proves
       // no full load happened on the way to /subscribe
