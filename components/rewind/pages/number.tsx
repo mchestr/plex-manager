@@ -1,14 +1,13 @@
 import { RewindFigure } from "@/components/rewind/a11y/figure"
 import { pluralWord } from "@/lib/rewind/format"
 import { has, num, shown } from "@/lib/rewind/pages/facts"
-import { milestoneFacts, numberPage } from "@/lib/rewind/pages/number"
+import { milestoneFacts, NUMBER_COUNTS, numberPage } from "@/lib/rewind/pages/number"
 import type { NumberData } from "@/lib/rewind/pages/number.schema"
 import { fitLines } from "@/lib/rewind/typeset/fit-lines"
 import { pageMetrics } from "@/lib/rewind/typeset/metrics"
 import { milestoneMarks } from "@/lib/rewind/viz/milestones"
 import { yearDays } from "@/lib/rewind/viz/soundtrack"
 import { headline } from "@/lib/wrapped/copy/templates"
-import type { FactId } from "@/lib/wrapped/facts/catalogue"
 
 import { CopyText } from "./copy-text"
 import { FittedLines } from "./fitted-lines"
@@ -16,12 +15,6 @@ import { deckText, type PageProps } from "./issue-context"
 import { NumberSplit } from "./number-split"
 import { SoundtrackStrip } from "./soundtrack-strip"
 import { axes, MEASURE, u, ut } from "./units"
-
-const COUNTS: ReadonlyArray<[FactId, { one: string; other: string }]> = [
-  ["counts.episodes", { one: "episode", other: "episodes" }],
-  ["counts.series", { one: "series", other: "series" }],
-  ["counts.films", { one: "film", other: "films" }],
-]
 
 const ROAD_HEIGHT = 64
 
@@ -38,7 +31,7 @@ export function NumberPage({ data, issue }: PageProps<NumberData>) {
   const hero = shown(facts, data.hero)
   const hours = data.hero === "time.totalHours"
   const fit = fitLines(hero, { role: "nameplate", metrics: pageMetrics, weight: 900, measure: MEASURE, maxLines: 1, sizeMin: 34, sizeMax: 185.3, widths: [62, 75], tnum: true })
-  const counts = COUNTS.filter(([id]) => num(facts, id) > 0)
+  const counts = NUMBER_COUNTS.filter(([id]) => num(facts, id) > 0)
   const from = String(facts["window.from"]?.value)
   const marks = milestoneFacts(facts)
   const xs = milestoneMarks(marks.map((m) => m.key), { from, days: yearDays(from), width: MEASURE })

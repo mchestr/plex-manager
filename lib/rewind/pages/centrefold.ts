@@ -16,7 +16,10 @@
  * @module lib/rewind/pages/centrefold
  */
 
+import { copyText, figure, paragraph, plain, tableBlock, type ArticleBlock, type ArticleContext } from "@/lib/rewind/article/blocks"
+import { aboutTheWords } from "@/lib/rewind/copy-disclosure"
 import type { PageDefinition } from "@/lib/rewind/registry"
+import { headline, slotTemplate, whyReasons } from "@/lib/wrapped/copy/templates"
 import { ARCHETYPE_STYLE, type ArchetypeId } from "@/lib/wrapped/archetypes/catalogue"
 import { scoreArchetypes } from "@/lib/wrapped/archetypes/scorers"
 import { selectArchetype } from "@/lib/wrapped/archetypes/select"
@@ -26,6 +29,17 @@ import type { MemberStats } from "@/lib/wrapped/stats/compute"
 import { CentrefoldDataSchema, type CentrefoldData, type EvidenceGraphic } from "./centrefold.schema"
 import { hoursTable, ringSummary } from "./clock"
 import { has, num, shown } from "./facts"
+
+/** Rarity prints only with 10 or more scored members (D13). */
+const RARITY_MEMBERS = 10
+/** Each shortlisted archetype's standing in "Why this?". */
+export const STANDING = ["Your archetype", "Close second", "Also in the running"]
+
+/** "Midnight Marathoner": the name after "You are the". */
+export const nameAfterLead = (name: string) => name.replace(/^The\s+/, "")
+
+/** The rarity stamp shows with 10 or more scored members. */
+export const showsRarity = (facts: RewindFactsV3) => num(facts, "archetype.scoredMembers") >= RARITY_MEMBERS && has(facts, "archetype.rarityCount")
 
 const SHORTLIST = 3
 const EVIDENCE = 4
@@ -122,6 +136,37 @@ export function graphicSummary(graphic: EvidenceGraphic | null, facts: RewindFac
   }
 }
 
+/** The reveal, the tagline, the graphic's summary, the foot, "Why this?" with its disclosure, and the 24 hours. */
+function centrefoldArticle(data: CentrefoldData, facts: RewindFactsV3, ctx: ArticleContext): ArticleBlock[] {
+  const name = shown(facts, "archetype.name")
+  const template = (slot: "archetype.tagline" | "archetype.dedication") => slotTemplate(slot, { facts, userId: ctx.userId })
+  const reveal: ArticleBlock = name
+    ? { kind: "heading", text: [{ kind: "text", text: `${headline("centrefold", facts)} ` }, { kind: "token", id: "archetype.name", text: nameAfterLead(name) }] }
+    : { kind: "heading", text: plain("You are a viewer of your own kind") }
+  const blocks: ArticleBlock[] = [reveal]
+  if (name) blocks.push(paragraph(`\u201C${ctx.copy?.archetype.tagline ?? template("archetype.tagline")}\u201D`, facts))
+  blocks.push(...figure(graphicSummary(data.graphic, facts)))
+  if (showsRarity(facts)) {
+    blocks.push({ kind: "factRow", items: [{ value: `${shown(facts, "archetype.rarityCount")} of ${shown(facts, "archetype.scoredMembers")}`, label: "Rewinds here" }] })
+  }
+  if (has(facts, "archetype.runnerUp")) blocks.push({ kind: "definitionList", entries: [{ term: "Close second", detail: plain(shown(facts, "archetype.runnerUp")) }] })
+  if (data.shortlist.length > 0) {
+    blocks.push(
+      {
+        kind: "definitionList",
+        label: `Why ${name}?`,
+        entries: whyReasons(data.shortlist).map((candidate, i) => ({
+          term: `${candidate.name}, ${STANDING[i].toLowerCase()}`,
+          detail: copyText(candidate.reasons.join(" "), facts),
+        })),
+      },
+      paragraph(ctx.copy?.archetype.dedication ?? template("archetype.dedication"), facts),
+      { kind: "note", text: plain(aboutTheWords({ copySource: ctx.copySource, model: ctx.model })) }
+    )
+  }
+  return [...blocks, ...tableBlock(centrefoldPage.table?.(data, facts, ctx))]
+}
+
 export const centrefoldPage: PageDefinition<CentrefoldData> = {
   select: (facts, { archetype, stats }) => ({
     shortlist: archetype ? shortlist(archetype, facts, stats) : [],
@@ -134,5 +179,6 @@ export const centrefoldPage: PageDefinition<CentrefoldData> = {
     return [name ? `You are ${name.replace(/^The /, "the ")}.` : "You are a viewer of your own kind.", graphicSummary(data.graphic, facts)].filter(Boolean).join(" ")
   },
   table: (data, facts, settings) => (data.hours.some((n) => n > 0) ? hoursTable(data.hours, facts, settings) : null),
+  article: centrefoldArticle,
   share: { facts: ["archetype.name", "archetype.rarityShare", "archetype.evidence[1]", "archetype.evidence[2]", "archetype.evidence[3]", "tz.label"] },
 }

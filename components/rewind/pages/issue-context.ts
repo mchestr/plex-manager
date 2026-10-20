@@ -1,8 +1,8 @@
 import type { Route } from "next"
 
+import { pageDeck, type DeckKey } from "@/lib/rewind/pages/deck"
 import type { Edition } from "@/lib/rewind/registry"
 import type { SelectedPage } from "@/lib/rewind/select-pages"
-import { slotTemplate } from "@/lib/wrapped/copy/templates"
 import type { RewindCopyV3Wire } from "@/lib/wrapped/copy/schema"
 import type { RewindDataV3 } from "@/lib/wrapped/data/schema-v3"
 import type { RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
@@ -33,14 +33,9 @@ export interface PageProps<D> {
   issue: IssueContext
 }
 
-type DeckKey = keyof RewindCopyV3Wire["decks"]
-
 /** A page's deck: the stored model copy, else its template (design 8.5). */
 export function deckText(issue: IssueContext, key: DeckKey): string {
-  const stored = issue.copy?.decks[key]
-  if (stored) return stored
-  const slot = `deck.${key}` as const
-  return slotTemplate(slot, { facts: issue.facts, userId: issue.userId })
+  return pageDeck(issue, issue.facts, key)
 }
 
 /** The folio of a selected page, or null when it is not in the issue. */

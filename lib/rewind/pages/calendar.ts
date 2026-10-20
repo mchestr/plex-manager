@@ -8,11 +8,15 @@
  * @module lib/rewind/pages/calendar
  */
 
+import { figure, heading, paragraph, tableBlock } from "@/lib/rewind/article/blocks"
 import { formatDayMonth, formatRewindDuration } from "@/lib/rewind/format"
-import type { PageDefinition } from "@/lib/rewind/registry"
+import type { PageDefinition, PageTable } from "@/lib/rewind/registry"
+import { headline } from "@/lib/wrapped/copy/templates"
+import { display } from "@/lib/wrapped/facts/display"
 import type { RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 
 import { CalendarDataSchema, type CalendarData } from "./calendar.schema"
+import { pageDeck } from "./deck"
 import { has, num, shown } from "./facts"
 
 /** Under this many active days the page lists the dates instead of drawing the grid. */
@@ -25,6 +29,34 @@ export function calendarDays(data: CalendarData, facts: RewindFactsV3) {
   const from = facts["window.from"]?.value
   const start = Date.parse(`${typeof from === "string" ? from : "1970-01-01"}T00:00:00Z`)
   return data.days.map((day, i) => ({ ...day, date: new Date(start + i * DAY_MS).toISOString().slice(0, 10) }))
+}
+
+const COLUMNS = ["Day", "Watched", "Most watched"]
+
+/** The days played as Table rows, each with its month. */
+function playedRows(data: CalendarData, facts: RewindFactsV3, settings: { locale: string }) {
+  return calendarDays(data, facts)
+    .filter((day) => day.minutes > 0)
+    .map((day) => ({
+      month: Number(day.date.slice(5, 7)),
+      row: [formatDayMonth(day.date, settings), formatRewindDuration(day.minutes, settings), day.key ? data.titles[day.key] : ""],
+    }))
+}
+
+/**
+ * Article mode's calendar: one table per month with a day played, holding
+ * the Table's rows for that month (P8.3 adds the roving-focus grid).
+ *
+ * @internal Exported for the tests.
+ */
+export function monthTables(data: CalendarData, facts: RewindFactsV3, settings: { locale: string }): PageTable[] {
+  const months = new Map<number, string[][]>()
+  for (const { month, row } of playedRows(data, facts, settings)) months.set(month, [...(months.get(month) ?? []), row])
+  return [...months].map(([month, rows]) => ({
+    caption: `${display("month", month, settings)}: minutes watched on each day you pressed play, by day in ${shown(facts, "tz.label")}.`,
+    columns: COLUMNS,
+    rows,
+  }))
 }
 
 export const calendarPage: PageDefinition<CalendarData> = {
@@ -50,13 +82,19 @@ export const calendarPage: PageDefinition<CalendarData> = {
     return parts.join(" ")
   },
   table: (data, facts, settings) => {
-    const played = calendarDays(data, facts).filter((day) => day.minutes > 0)
+    const played = playedRows(data, facts, settings)
     if (played.length === 0) return null
     return {
       caption: `Minutes watched on each day you pressed play, from ${shown(facts, "window.from")} to ${shown(facts, "window.through")}, by day in ${shown(facts, "tz.label")}.`,
-      columns: ["Day", "Watched", "Most watched"],
-      rows: played.map((day) => [formatDayMonth(day.date, settings), formatRewindDuration(day.minutes, settings), day.key ? data.titles[day.key] : ""]),
+      columns: COLUMNS,
+      rows: played.map((day) => day.row),
     }
   },
+  article: (data, facts, ctx) => [
+    heading(headline("calendar", facts), facts),
+    paragraph(pageDeck(ctx, facts, "calendar"), facts),
+    ...figure(calendarPage.srSummary(data, facts)),
+    ...monthTables(data, facts, ctx).flatMap(tableBlock),
+  ],
   share: { facts: ["days.active", "window.elapsedDays", "streak.longest.days", "days.biggest.date", "days.biggest.minutes"] },
 }

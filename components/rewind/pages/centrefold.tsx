@@ -1,8 +1,8 @@
 import { RewindFigure } from "@/components/rewind/a11y/figure"
 import { aboutTheWords } from "@/lib/rewind/copy-disclosure"
-import { centrefoldPage, graphicSummary } from "@/lib/rewind/pages/centrefold"
+import { centrefoldPage, graphicSummary, nameAfterLead, showsRarity, STANDING } from "@/lib/rewind/pages/centrefold"
 import type { CentrefoldData } from "@/lib/rewind/pages/centrefold.schema"
-import { has, num, shown } from "@/lib/rewind/pages/facts"
+import { has, shown } from "@/lib/rewind/pages/facts"
 import { fitLines } from "@/lib/rewind/typeset/fit-lines"
 import { pageMetrics } from "@/lib/rewind/typeset/metrics"
 import { headline, slotTemplate, tzShort, whyReasons } from "@/lib/wrapped/copy/templates"
@@ -15,13 +15,7 @@ import { FittedLines } from "./fitted-lines"
 import type { IssueContext, PageProps } from "./issue-context"
 import { axes, MEASURE, u, ut } from "./units"
 
-/** Rarity prints only with 10 or more scored members (D13). */
-const RARITY_MEMBERS = 10
-const STANDING = ["Your archetype", "Close second", "Also in the running"]
 const CROPS = ["left-0 top-0 border-t-[1.5px] border-l-[1.5px]", "right-0 top-0 border-t-[1.5px] border-r-[1.5px]", "bottom-0 left-0 border-b-[1.5px] border-l-[1.5px]", "right-0 bottom-0 border-r-[1.5px] border-b-[1.5px]"]
-
-/** "Midnight Marathoner": the name after "You are the". @internal */
-export const nameAfterLead = (name: string) => name.replace(/^The\s+/, "")
 
 /**
  * The archetype name as a nameplate (RWV-01): one size for the block, each
@@ -56,7 +50,7 @@ function KeyRow({ graphic, facts }: { graphic: Extract<CentrefoldData["graphic"]
 function Foot({ data, issue }: { data: CentrefoldData; issue: IssueContext }) {
   const { facts } = issue
   const name = shown(facts, "archetype.name")
-  const rarity = num(facts, "archetype.scoredMembers") >= RARITY_MEMBERS && has(facts, "archetype.rarityCount")
+  const rarity = showsRarity(facts)
   const dedication = issue.copy?.archetype.dedication ?? slotTemplate("archetype.dedication", { facts, userId: issue.userId })
 
   return (

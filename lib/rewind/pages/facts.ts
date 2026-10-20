@@ -26,3 +26,7 @@ export function issueYear(facts: RewindFactsV3): number {
 
 /** The window is the full year: after the final cut. */
 export const isFinalCut = (facts: RewindFactsV3): boolean => num(facts, "window.finalCut") === 1
+
+/** "Vol. 4, No. K7Q4" from the member's volume and serial, or "" without them. */
+export const volumeLine = (facts: RewindFactsV3): string =>
+  [has(facts, "member.volume") && `Vol. ${shown(facts, "member.volume")}`, has(facts, "member.serial") && `No. ${shown(facts, "member.serial")}`].filter(Boolean).join(", ")

@@ -5401,11 +5401,13 @@ P5.1 and P5.2 start only once P3.1's scope contract and P3.7's primitives have m
 
 **Demo.** Open `/rewind/2026/read` with JavaScript disabled in Safari: the whole issue reads top to bottom, with headings and tables. Print preview shows paper pages with no chrome. VoiceOver's rotor lists one heading per page.
 
+(as merged: `ArticleBlock`, `ArticleText` (`renderCopy` segments) and `ArticleContext` (P5.5's `IssueContext` satisfies it) are in `lib/rewind/article/blocks.ts`; `articleSections(pages, facts, ctx)` in `sections.ts` returns `ArticleSection { id, folio, name, type, blocks }` (legacy sections pass `folio: null, type: null`). `PageDefinition.article?(data, facts, ctx)` is **optional**: a page without one reads as its `srSummary` plus its Table, so P5.6, P7.1 and P7.2 should add `article` to their page modules. The seven landed pages define it; story and article share the helpers moved into `lib/rewind/pages/*` (`pageDeck` in `deck.ts`, which `deckText` now calls, `lifetimeLine`, `lastLead`, `coverCaption`, `splitShare`, `NUMBER_COUNTS`, `backCoverCaption`, `colophon`, `volumeLine`, `showsRarity`, `STANDING`, `nameAfterLead`, and `backCoverDisclosure` in `copy-disclosure.ts`). The calendar's article is `monthTables()`, one table per month with a day played, holding the Table's rows. The route redirects to `/rewind/[year]` for any year without a v3 issue (P7.13 adds the legacy article); "Play the story" and "Close" are plain anchors (`rewind-article-story`, `rewind-article-close`), hidden in print through `data-print-hide`. With JavaScript off, the app's `loading.tsx` boundaries leave the streamed page in hidden `S:` segments, so the route ships a `<noscript>` style that shows them and hides the fallbacks. The E2E is `e2e/rewind-article.spec.ts` (tagged `@article`, runs in `chromium` until P5.4's projects land), written but not run; baselines are left to the coordinator.)
+
 **Done when.**
-- [ ] `/rewind/[year]/read` renders every selected page as one semantic document, with headings and tables, and needs no JavaScript.
-- [ ] The print stylesheet produces clean paper pages, and the article reflows to 320 px.
-- [ ] The renderer and its block contract are ready for the legacy adapter, with a contract test.
-- [ ] axe reports 0 violations on chromium, webkit and firefox.
+- [x] `/rewind/[year]/read` renders every selected page as one semantic document, with headings and tables, and needs no JavaScript.
+- [ ] The print stylesheet produces clean paper pages, and the article reflows to 320 px. (Stylesheet written; the print and 320 px E2E checks are written, not run.)
+- [x] The renderer and its block contract are ready for the legacy adapter, with a contract test.
+- [ ] axe reports 0 violations on chromium, webkit and firefox. (The axe E2E is written, not run; P5.4's webkit and firefox projects have not landed.)
 
 ### Step P5.13: Eval harness and model bake-off
 

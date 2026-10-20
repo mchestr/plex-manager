@@ -1,9 +1,8 @@
 import { RewindFigure } from "@/components/rewind/a11y/figure"
 import { billingBlock } from "@/lib/rewind/billing-block"
-import { formatDayMonth } from "@/lib/rewind/format"
-import { backCoverPage } from "@/lib/rewind/pages/back-cover"
+import { backCoverDisclosure } from "@/lib/rewind/copy-disclosure"
+import { backCoverCaption, backCoverPage, colophon } from "@/lib/rewind/pages/back-cover"
 import type { BackCoverData } from "@/lib/rewind/pages/back-cover.schema"
-import { has, isFinalCut, shown } from "@/lib/rewind/pages/facts"
 import { registry } from "@/lib/rewind/registry"
 import { pageMetrics } from "@/lib/rewind/typeset/metrics"
 import { copyLocals, headline } from "@/lib/wrapped/copy/templates"
@@ -11,15 +10,11 @@ import { copyLocals, headline } from "@/lib/wrapped/copy/templates"
 import { BackCoverFooter, BackCoverShare } from "./back-cover-actions"
 import { BillingBlock } from "./billing-block"
 import { CopyText } from "./copy-text"
-import type { IssueContext, PageProps } from "./issue-context"
+import type { PageProps } from "./issue-context"
 import { SoundtrackStrip } from "./soundtrack-strip"
 import { MEASURE, u, ut } from "./units"
 
 const STRIP_H = 40
-
-/** The one AI line (G7), or the template line when every word is a template. */
-const backCoverDisclosure = (copySource: IssueContext["copySource"]) =>
-  copySource === "template" ? "Every word here comes from a template." : "The numbers come from your history. Some of the words are written by AI."
 
 /**
  * 18 Back cover (design 4.3, `slide-18-back-cover.png`): paper in the
@@ -41,7 +36,6 @@ export function BackCoverPage({ data, issue }: PageProps<BackCoverData>) {
     metrics: pageMetrics,
   })
   const from = String(facts["window.from"]?.value)
-  const volume = [has(facts, "member.volume") && `Vol. ${shown(facts, "member.volume")}`, has(facts, "member.serial") && `No. ${shown(facts, "member.serial")}`].filter(Boolean)
   const signOff = issue.copy?.signOff
 
   return (
@@ -56,9 +50,7 @@ export function BackCoverPage({ data, issue }: PageProps<BackCoverData>) {
         <SoundtrackStrip minutes={data.minutes} from={from} locale={locale} width={MEASURE} height={STRIP_H} />
       </RewindFigure>
       <p className="italic" style={{ fontSize: ut(14), lineHeight: 1.25, marginTop: u(6) }}>
-        {isFinalCut(facts)
-          ? "One line per day, the whole year."
-          : `One line per day. December is still being written; it joins in the final cut on ${formatDayMonth(`${issue.year + 1}-01-01`, { locale })}.`}
+        {backCoverCaption(facts, issue.year, locale)}
       </p>
       {signOff && (
         <p style={{ fontSize: u(17), lineHeight: 1.3, marginTop: u(8) }} data-testid="rewind-sign-off">
@@ -72,7 +64,7 @@ export function BackCoverPage({ data, issue }: PageProps<BackCoverData>) {
         <BackCoverShare />
       </div>
       <p className="text-center italic" style={{ fontSize: ut(13.5), lineHeight: 1.3, marginTop: u(10) }}>
-        {[`${issue.serverName} Rewind ${issue.year}`, ...volume].join(", ")}
+        {colophon(facts, issue)}
       </p>
       <div className="mt-auto">
         <BackCoverFooter pages={issue.pages.map((page) => ({ folio: page.folio, name: registry[page.type].name }))} returnTo={issue.returnTo} />
