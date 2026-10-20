@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "commit": "5fef45f095821c37265becc27b5dec11f324640a",
-  "generatedAt": "2026-10-19T22:32:43.398Z",
+  "commit": "700fe61da366477e04fa457ac0cd864f76951b31",
+  "generatedAt": "2026-10-20T00:05:44.501Z",
   "files": {
     "app/(app)/discord/link/page.tsx": {
       "raw-palette": 2
@@ -155,9 +155,6 @@
       "gradient": 3,
       "gradient-text": 4,
       "raw-palette": 26
-    },
-    "app/layout.tsx": {
-      "zoom-lock": 2
     },
     "app/loading.tsx": {
       "gradient": 1,
@@ -813,7 +810,6 @@
     "gradient": 136,
     "gradient-text": 56,
     "infinite-motion": 56,
-    "raw-palette": 3467,
-    "zoom-lock": 2
+    "raw-palette": 3467
   }
 }

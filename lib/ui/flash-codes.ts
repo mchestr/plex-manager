@@ -57,23 +57,23 @@ const DISCORD_LINKED: FlashToast = {
   tone: "success",
 }
 
-const error = (code: FlashErrorCode): FlashToast => ({ ...errorCopy(code, { audience: "member" }), tone: "error" })
+const errorToast = (code: FlashErrorCode): FlashToast => ({ ...errorCopy(code, { audience: "member" }), tone: "error" })
 
 const FLASH: Record<FlashCode, FlashToast> = {
   discord_linked: DISCORD_LINKED,
-  discord_failed: error("discord_failed"),
-  discord_expired: error("discord_expired"),
-  discord_session_mismatch: error("discord_session_mismatch"),
-  discord_rate_limited: error("discord_rate_limited"),
-  discord_unavailable: error("discord_unavailable"),
+  discord_failed: errorToast("discord_failed"),
+  discord_expired: errorToast("discord_expired"),
+  discord_session_mismatch: errorToast("discord_session_mismatch"),
+  discord_rate_limited: errorToast("discord_rate_limited"),
+  discord_unavailable: errorToast("discord_unavailable"),
 }
 
 const NEXT_AUTH: Record<NextAuthErrorCode, FlashToast> = {
-  CredentialsSignin: error("CredentialsSignin"),
-  AccessDenied: error("AccessDenied"),
-  Configuration: error("Configuration"),
-  Verification: error("Verification"),
-  Default: error("Default"),
+  CredentialsSignin: errorToast("CredentialsSignin"),
+  AccessDenied: errorToast("AccessDenied"),
+  Configuration: errorToast("Configuration"),
+  Verification: errorToast("Verification"),
+  Default: errorToast("Default"),
 }
 
 const STATUS: Record<string, FlashToast> = { linked: DISCORD_LINKED }

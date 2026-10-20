@@ -41,7 +41,7 @@ test.describe('Accessibility', () => {
         try {
           await page.goto(route.path);
           await settlePage(page);
-          if (route.ready) await expect(page.getByTestId(route.ready)).toBeVisible();
+          await expect(page.getByTestId(route.ready)).toBeVisible();
           if (route.setup) {
             await route.setup(page);
             await settlePage(page);

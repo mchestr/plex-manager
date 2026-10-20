@@ -20,8 +20,8 @@ export type A11yAudience = 'public' | 'member' | 'admin';
 export interface A11yRoute {
   path: string;
   as: A11yAudience;
-  /** Test id that marks the page as loaded; `null` for Next's built-in 404, which has none. */
-  ready: string | null;
+  /** Test id that marks the page as loaded. */
+  ready: string;
   /** Names an interactive state that `setup` opens; part of the baseline key. */
   state?: string;
   /** Opens the interactive state after `ready` shows. */
@@ -78,7 +78,7 @@ export const A11Y_ROUTES: A11yRoute[] = [
   // No PIN in the URL: the callback's error state.
   { path: '/auth/callback/plex', as: 'public', ready: 'plex-callback-error-heading' },
   { path: `/wrapped/share/${A11Y_SHARE_TOKEN}`, as: 'public', ready: 'wrapped-share-heading' },
-  { path: '/a11y-missing-page', as: 'public', ready: null },
+  { path: '/a11y-missing-page', as: 'public', ready: 'not-found-heading' },
 
   // Member
   { path: '/', as: 'member', ready: 'plex-link-card' },

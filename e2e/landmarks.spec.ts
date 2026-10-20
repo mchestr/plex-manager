@@ -1,6 +1,6 @@
 import { TEST_USERS } from './fixtures/auth';
 import { test as realTimeTest } from './fixtures/session';
-import { A11Y_ROUTES, routeUserId, type A11yRoute } from './a11y/routes';
+import { A11Y_ROUTES, routeUserId } from './a11y/routes';
 import { clearA11yFixtures, seedA11yFixtures } from './a11y/seed';
 import { resetStripeState, setStripeEnabled } from './helpers/stripe';
 import { expect, settlePage, test } from './visual/visual-test';
@@ -9,14 +9,12 @@ import { expect, settlePage, test } from './visual/visual-test';
  * The root layout's contract on every page of the axe route table (P3.2):
  * one `main#main`, a skip link that reaches it, no zoom lock, and IBM Plex
  * Sans on the body. Pages are taken at rest, as the axe spec takes them
- * (`settlePage`). Next's built-in 404 has no layout of ours until P10.17
- * adds `app/not-found.tsx`, so it is left out.
+ * (`settlePage`).
  */
 
+/** One test per page: the interactive states share their page's layout. */
 const routes = A11Y_ROUTES.filter(
-  (route, index): route is A11yRoute & { ready: string } =>
-    route.ready !== null &&
-    A11Y_ROUTES.findIndex((other) => other.path === route.path && other.as === route.as) === index
+  (route, index) => A11Y_ROUTES.findIndex((other) => other.path === route.path && other.as === route.as) === index
 );
 
 test.describe('Landmarks and the root layout', () => {
