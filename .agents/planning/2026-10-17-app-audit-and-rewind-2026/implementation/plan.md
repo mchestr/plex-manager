@@ -374,7 +374,7 @@ gantt
 **UI foundations: tokens, fonts and primitives** (2026-10-26 to 2026-11-05)
 
 - [x] P3.1: Semantic tokens and the Rewind scope contract (ui, M, due 2026-10-27)
-- [ ] P3.2: Fonts and root layout (ui, M, due 2026-11-05)
+- [x] P3.2: Fonts and root layout (ui, M, due 2026-11-05)
 - [x] P3.3: Token mirror module and contrast tests (ui, S, due 2026-10-28)
 - [x] P3.4: Base primitives on Base UI behind adapters (ui, L, due 2026-10-30)
 - [x] P3.5: Form primitives and the Field pattern (ui, M, due 2026-11-04)
@@ -407,14 +407,14 @@ gantt
 
 **Rewind core experience and model bake-off** (2026-11-06 to 2026-11-20)
 
-- [ ] P5.1: Rewind routes, layout and redirects (rewind, S, due 2026-11-09)
-- [ ] P5.2: Story stage and player (rewind, L, due 2026-11-12)
+- [x] P5.1: Rewind routes, layout and redirects (rewind, S, due 2026-11-09)
+- [x] P5.2: Story stage and player (rewind, L, due 2026-11-12)
 - [ ] P5.3: Story sheets and accessibility semantics (rewind, M, due 2026-11-16)
 - [ ] P5.4: Rewind visual, axe and performance test projects (rewind, M, due 2026-11-13)
 - [ ] P5.5: Registry and the front pages (rewind, M, due 2026-11-13)
 - [ ] P5.6: Features pages: Guess, Top shows, Top films (rewind, M, due 2026-11-17)
 - [ ] P5.7: Habits and centrefold: Clock, Calendar, Centrefold, Back cover (rewind, M, due 2026-11-16)
-- [ ] P5.8: Copy slots, templates, grounding and token rendering (rewind, M, due 2026-11-09)
+- [x] P5.8: Copy slots, templates, grounding and token rendering (rewind, M, due 2026-11-09)
 - [ ] P5.9: The v3 pipeline end to end (rewind, L, due 2026-11-12)
 - [ ] P5.10: Share-safe projection v3 and card routes (rewind, M, due 2026-11-13)
 - [ ] P5.11: Share sheet, core cards and opt-in public links (rewind, M, due 2026-11-18)
