@@ -51,7 +51,7 @@ describe('Pagination', () => {
       )
     })
 
-    it('should display 0 to 0 of 0 when empty', () => {
+    it('should say how many there are, with no pager, on one page', () => {
       render(
         <Pagination
           {...defaultProps}
@@ -63,9 +63,15 @@ describe('Pagination', () => {
         />
       )
 
-      expect(screen.getByTestId('pagination-info')).toHaveTextContent(
-        'Showing 0 to 0 of 0 results'
-      )
+      expect(screen.getByTestId('pagination-info')).toHaveTextContent('Showing all 0 results')
+      expect(screen.queryByTestId('pagination-next')).not.toBeInTheDocument()
+    })
+
+    it('should hang its test ids off a forwarded data-testid', () => {
+      render(<Pagination {...defaultProps} data-testid="activity-pagination" />)
+
+      expect(screen.getByTestId('activity-pagination')).toBeInTheDocument()
+      expect(screen.getByTestId('activity-pagination-info')).toHaveTextContent('Showing 1 to 25 of 100 results')
     })
   })
 
@@ -188,12 +194,14 @@ describe('Pagination', () => {
 
       render(<Pagination {...defaultProps} onPageSizeChange={onPageSizeChange} />)
 
-      await user.selectOptions(screen.getByTestId('pagination-page-size'), '50')
+      await user.click(screen.getByTestId('pagination-page-size'))
+      await user.click(await screen.findByRole('option', { name: '50' }))
 
       expect(onPageSizeChange).toHaveBeenCalledWith(50)
     })
 
-    it('should show custom page size options', () => {
+    it('should show custom page size options', async () => {
+      const user = userEvent.setup()
       const onPageSizeChange = jest.fn()
 
       render(
@@ -204,10 +212,9 @@ describe('Pagination', () => {
         />
       )
 
-      const select = screen.getByTestId('pagination-page-size')
-      expect(select).toContainHTML('<option value="5">5</option>')
-      expect(select).toContainHTML('<option value="15">15</option>')
-      expect(select).toContainHTML('<option value="30">30</option>')
+      await user.click(screen.getByTestId('pagination-page-size'))
+      const options = await screen.findAllByRole('option')
+      expect(options.map((option) => option.textContent)).toEqual(['5', '15', '30'])
     })
   })
 

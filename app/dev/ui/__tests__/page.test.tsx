@@ -6,12 +6,7 @@ import { ToastProvider } from "@/components/ui/toast"
 
 expect.extend(toHaveNoViolations)
 
-jest.mock("next/navigation", () => ({
-  notFound: () => {
-    throw new Error("NEXT_NOT_FOUND")
-  },
-  useRouter: () => ({ refresh: jest.fn() }),
-}))
+jest.mock("next/navigation", () => require("@/__tests__/helpers/url-router").navigationModule)
 
 jest.mock("next/link", () => {
   const MockLink = ({ href, ...props }: { href: string } & React.ComponentProps<"a">) => <a href={href} {...props} />
@@ -70,9 +65,27 @@ describe("/dev/ui", () => {
       "status-vocabulary",
       "icon-map",
       "poster-palette",
+      "page-header",
+      "stat-tile",
+      "stat-grid",
+      "data-table",
+      "users-table",
+      "plays-table",
+      "filter-bar",
+      "date-range-filter",
+      "empty-state",
     ]) {
       expect(screen.getByTestId(`dev-ui-${primitive}`)).toBeInTheDocument()
     }
     expect(await axe(container)).toHaveNoViolations()
+  })
+
+  it("draws the composites from 7 members and 120 plays", () => {
+    process.env.ENABLE_DEV_UI = "1"
+    render(<ToastProvider>{DevUiPage()}</ToastProvider>)
+
+    expect(screen.getByTestId("dev-ui-users-table-pagination-info")).toHaveTextContent("Showing all 7 members")
+    expect(screen.getByTestId("dev-ui-plays-table-pagination-info")).toHaveTextContent("Showing 1 to 25 of 120 plays")
+    expect(screen.getByTestId("dev-ui-plays-filters-count")).toHaveTextContent("120 plays")
   })
 })
