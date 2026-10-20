@@ -415,7 +415,7 @@ gantt
 - [ ] P5.6: Features pages: Guess, Top shows, Top films (rewind, M, due 2026-11-17)
 - [ ] P5.7: Habits and centrefold: Clock, Calendar, Centrefold, Back cover (rewind, M, due 2026-11-16)
 - [x] P5.8: Copy slots, templates, grounding and token rendering (rewind, M, due 2026-11-09)
-- [ ] P5.9: The v3 pipeline end to end (rewind, L, due 2026-11-12)
+- [x] P5.9: The v3 pipeline end to end (rewind, L, due 2026-11-12)
 - [ ] P5.10: Share-safe projection v3 and card routes (rewind, M, due 2026-11-13)
 - [ ] P5.11: Share sheet, core cards and opt-in public links (rewind, M, due 2026-11-18)
 - [ ] P5.12: Article mode (rewind, M, due 2026-11-18)
