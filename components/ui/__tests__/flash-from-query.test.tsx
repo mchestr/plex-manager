@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { act, render, screen } from "@testing-library/react"
 import { StrictMode } from "react"
 
 import { FlashFromQuery } from "@/components/ui/flash-from-query"
@@ -59,6 +59,24 @@ describe("FlashFromQuery", () => {
     const replaceState = renderAt("/?status=linked")
     expect(await screen.findByTestId("toast")).toHaveTextContent("Discord linked")
     expect(replaceState).toHaveBeenCalledWith(null, "", "/")
+  })
+
+  it("waits for a hidden streamed boundary, and shows the toast after 5 s if it never reveals", () => {
+    jest.useFakeTimers()
+    const stuck = document.createElement("div")
+    stuck.hidden = true
+    stuck.id = "S:0"
+    document.body.append(stuck)
+    try {
+      renderAt("/discord/link?flash=discord_linked")
+      act(() => jest.advanceTimersByTime(4900))
+      expect(screen.queryByTestId("toast")).not.toBeInTheDocument()
+      act(() => jest.advanceTimersByTime(200))
+      expect(screen.getByTestId("toast")).toHaveTextContent("Discord linked")
+    } finally {
+      stuck.remove()
+      jest.useRealTimers()
+    }
   })
 
   it("does nothing on a page whose query carries no code", () => {

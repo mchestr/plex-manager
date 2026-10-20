@@ -6,6 +6,8 @@ import { useEffect, useRef } from "react"
 import { useToast } from "@/components/ui/toast"
 import { readFlash } from "@/lib/ui/flash-codes"
 
+const REVEAL_WAIT_MS = 5000
+
 /**
  * Turns the codes a redirect left in the URL (`?flash=`, NextAuth's `?error=`,
  * the legacy `?status=linked`) into toasts, then takes them out of the URL and
@@ -40,9 +42,13 @@ export function FlashFromQuery() {
     // fallback, and React renders a second copy of the page beside the hidden
     // streamed one. So wait until the document has loaded and nothing
     // streamed is still hidden.
+    // A boundary that never reveals (a failed stream) stops the wait after
+    // REVEAL_WAIT_MS, and the toast shows anyway.
     let timer: ReturnType<typeof setTimeout> | undefined
+    const giveUpAt = Date.now() + REVEAL_WAIT_MS
     const showWhenRevealed = () => {
-      if (document.readyState === "complete" && !document.querySelector('[hidden][id^="S:"]')) show()
+      const revealed = document.readyState === "complete" && !document.querySelector('[hidden][id^="S:"]')
+      if (revealed || Date.now() >= giveUpAt) show()
       else timer = setTimeout(showWhenRevealed, 50)
     }
     showWhenRevealed()
