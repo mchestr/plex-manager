@@ -83,6 +83,17 @@ describe("16 Centrefold", () => {
     expect(screen.getByText("No. K7Q4")).toBeInTheDocument()
   })
 
+  it("lets the ring give way and scales Why this?, so the column fits a small artboard (design 4.7)", () => {
+    const { data, issue } = as(heavy, "midnight-marathoner")
+    renderPage(data, issue)
+    const figure = screen.getByTestId("rewind-figure")
+    expect(figure).toHaveClass("min-h-0")
+    expect(figure.style.flexBasis).toBe("calc(var(--u) * 282px)")
+    const why = screen.getByTestId("rewind-archetype-why")
+    expect(why).toHaveClass("h-[calc(var(--u)*44px)]", "before:h-11")
+    expect(why).not.toHaveClass("h-11")
+  })
+
   it("hides the rarity stamp below 10 scored members", () => {
     const low = as(heavy, "midnight-marathoner", { "archetype.rarityCount": count(2), "archetype.scoredMembers": count(9) })
     const { unmount } = renderPage(low.data, low.issue)

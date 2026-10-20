@@ -218,7 +218,8 @@ export function SetupWizard({ currentStep: initialStep }: SetupWizardProps) {
         {/* Dev Mode Banner */}
         <DevModeBanner devDefaults={devDefaults} />
 
-        {/* Step Content */}
+        {/* Step Content: an opaque panel, so the drifting stars and nebulae
+            behind it never change the colour its text sits on */}
         <AnimatePresence mode="wait">
           <motion.div
             key={currentStep}
@@ -226,8 +227,7 @@ export function SetupWizard({ currentStep: initialStep }: SetupWizardProps) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.4 }}
-            className="bg-slate-900/90 border border-cyan-400/20 shadow-2xl rounded-lg p-6"
-            style={{ backdropFilter: "blur(8px)" }}
+            className="bg-slate-900 border border-cyan-400/20 shadow-2xl rounded-lg p-6"
           >
             {renderStep()}
           </motion.div>

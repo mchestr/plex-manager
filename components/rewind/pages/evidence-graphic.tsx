@@ -16,6 +16,14 @@ import { axes, MEASURE, u, ut } from "./units"
 
 /** The ring's box on the centrefold: the bars and arc span 252 of its 256 px (design 4.3). */
 const RING = 256
+/** The room above the ring for "midnight" and the leader label. */
+const RING_TOP = 26
+/**
+ * The ring's flex basis on the centrefold: its full size and the room above
+ * it. The page lets it shrink (`fit`) when the rest of the column needs the
+ * height.
+ */
+export const RING_BASIS = u(RING_TOP + RING)
 const METER_H = 28
 const DOTS_H = 120
 const SHELF_H = 210
@@ -119,8 +127,9 @@ export function EvidenceGraphicView({ data, facts }: { data: CentrefoldData; fac
   switch (graphic.kind) {
     case "hour-ring":
       return (
-        <div style={{ marginTop: u(26) }}>
+        <div className="flex min-h-0 flex-1 flex-col" style={{ paddingTop: u(RING_TOP) }}>
           <HourRingFigure
+            fit
             hours={data.hours}
             arc={graphic.arc}
             peak={typeof facts["hours.peak"]?.value === "number" ? facts["hours.peak"].value : null}
