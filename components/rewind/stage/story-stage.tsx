@@ -4,7 +4,7 @@ import { domAnimation, LazyMotion, MotionConfig } from "motion/react"
 import type { Route } from "next"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useEffect, useRef, type CSSProperties, type KeyboardEvent, type ReactNode } from "react"
+import { useEffect, useLayoutEffect, useRef, type CSSProperties, type KeyboardEvent, type ReactNode } from "react"
 
 import { ShareProvider, type ShareActions } from "@/components/rewind/share/share-context"
 import { shouldOfferArticle } from "@/components/rewind/sheets/article-offer-sheet"
@@ -133,7 +133,8 @@ function Stage({ pages, year, archetype, closeHref, copy, initialSheet }: Omit<S
   }, [initialSheet, send])
 
   // Offer article mode once, on load, below the scale floor or at large text sizes.
-  useEffect(() => {
+  // A layout effect, so the first fitted paint (`data-fitted`) already has the sheet open.
+  useLayoutEffect(() => {
     if (offered.current || !shouldOfferArticle(fit, readPrefs().smallScreenChoice)) return
     offered.current = true
     send({ type: "OPEN_SHEET", sheet: ARTICLE_OFFER })
@@ -201,6 +202,7 @@ function Stage({ pages, year, archetype, closeHref, copy, initialSheet }: Omit<S
             data-testid="rewind-stage"
             data-mode={state.mode}
             data-chrome={fit.chrome}
+            data-fitted={fit.measured || undefined}
             style={FIT_DEFAULTS}
             onKeyDown={onKeyDown}
             className="fixed inset-0 overflow-hidden overscroll-none outline-none"

@@ -48,14 +48,19 @@ interface OpenOptions {
 export async function openStage(page: Page, options: OpenOptions = {}): Promise<boolean> {
   await page.goto(`/rewind/${REWIND_YEAR}${options.query ?? ''}`);
   await options.settle?.(page);
-  await expect(page.getByTestId('rewind-stage')).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
-  // The offer opens in a layout effect after the first fit.
+  const stage = page.getByTestId('rewind-stage');
+  await expect(stage).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+  // The streamed stage shows before it hydrates. `data-fitted` marks the first
+  // fit, whose commit already decided the offer (a layout effect).
+  await expect(stage).toHaveAttribute('data-fitted');
   await expect(currentPage(page)).toBeVisible();
-  const offered = await page.getByTestId('rewind-article-offer').isVisible();
+  const offer = page.getByTestId('rewind-article-offer');
+  if ((await stage.getAttribute('data-mode')) === 'sheet') await expect(page.getByRole('dialog')).toBeVisible();
+  const offered = await offer.isVisible();
   if (offered && options.offer !== 'leave') {
     await page.getByTestId('rewind-article-offer-story').click();
     await options.settle?.(page);
-    await expect(page.getByTestId('rewind-article-offer')).toBeHidden();
+    await expect(offer).toBeHidden();
   }
   return offered;
 }
