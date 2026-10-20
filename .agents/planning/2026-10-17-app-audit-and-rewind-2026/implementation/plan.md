@@ -417,7 +417,7 @@ gantt
 - [x] P5.8: Copy slots, templates, grounding and token rendering (rewind, M, due 2026-11-09)
 - [x] P5.9: The v3 pipeline end to end (rewind, L, due 2026-11-12)
 - [x] P5.10: Share-safe projection v3 and card routes (rewind, M, due 2026-11-13)
-- [ ] P5.11: Share sheet, core cards and opt-in public links (rewind, M, due 2026-11-18)
+- [x] P5.11: Share sheet, core cards and opt-in public links (rewind, M, due 2026-11-18)
 - [x] P5.12: Article mode (rewind, M, due 2026-11-18)
 - [x] P5.13: Eval harness and model bake-off (rewind, M, due 2026-11-20)
 
