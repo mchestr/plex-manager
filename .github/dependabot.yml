@@ -48,6 +48,10 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "eslint"
         update-types: ["version-update:semver-major"]
+      # bullmq pins its own ioredis; a second copy breaks the typecheck, so
+      # ioredis moves only when bullmq's pin does.
+      - dependency-name: "ioredis"
+        update-types: ["version-update:semver-major"]
 
   # Enable version updates for Docker
   - package-ecosystem: "docker"
