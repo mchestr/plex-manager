@@ -27,7 +27,7 @@ import type { TextSlotId } from "./copy-draft"
 const CALL_TIMEOUT_MS = 90_000
 const MAX_OUTPUT_TOKENS = 1800
 
-/** `generateStructured`, injectable for tests. @internal */
+/** `generateStructured`, injectable for tests and the eval harness. */
 export type GenerateFn = <S extends z.ZodType>(input: GenerateStructuredInput<S>) => Promise<StructuredResult<z.infer<S>>>
 
 export interface LlmCall {

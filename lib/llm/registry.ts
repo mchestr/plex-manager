@@ -76,8 +76,6 @@ function factoryFor(row: LLMProvider): ModelFactory {
 /**
  * Build the model for a provider row. Throws `LLMConfigError` when the row
  * cannot build one.
- *
- * @internal
  */
 export function resolveModel(row: LLMProvider, modelId: string = row.model): ResolvedModel {
   if (!isLLMProviderId(row.provider)) {

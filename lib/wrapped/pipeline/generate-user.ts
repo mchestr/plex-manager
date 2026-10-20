@@ -26,7 +26,7 @@ import { generateStructured } from "@/lib/llm/generate-structured"
 import { redisLimiter } from "@/lib/queue/redis-semaphore"
 import { checkRewindInfra } from "@/lib/queue/rewind-infra"
 import type { RewindGenerationKind } from "@/lib/rewind/enqueue-generation"
-import { consume } from "@/lib/security/rate-limit"
+import { consume, type ConsumeResult } from "@/lib/security/rate-limit"
 import { createLogger } from "@/lib/utils/logger"
 import type { RewindDataV3 } from "@/lib/wrapped/data/schema-v3"
 import { buildFactSheet, type FactSheet } from "@/lib/wrapped/facts/fact-sheet"
@@ -38,6 +38,7 @@ import { computeMemberStats } from "@/lib/wrapped/stats/compute"
 import { dayKey } from "@/lib/wrapped/time/zone"
 
 import { buildIssue, disagreesWithAggregate, withArchetype, type IssueInput } from "./build-issue"
+import type { GenerateFn } from "./copy-llm"
 import { runCopyStep, type CopyTrail } from "./copy-step"
 import { checkEligibility, type SkipReason } from "./eligibility"
 import { loadRewindContext, type RewindContext } from "./load-context"
@@ -79,10 +80,14 @@ export type GenerateUserResult =
   | { status: "skipped"; reason: SkipReason }
   | { status: "completed"; data: RewindDataV3; trail: GenerationTrail }
 
-/** What the pipeline reads and calls, injectable for tests. */
+/** What the pipeline reads and calls, injectable for tests and the eval harness. */
 export interface PipelineDeps {
   loadContext: typeof loadRewindContext
   checkEligibility: (ctx: RewindContext) => ReturnType<typeof checkEligibility>
+  /** The model call; `generateStructured` on the stored provider row by default. */
+  generate?: GenerateFn
+  /** The `rw:llm` limit; the Redis limiter by default. */
+  consume?: (provider: string) => Promise<ConsumeResult>
 }
 
 const defaultDeps: PipelineDeps = {
@@ -140,8 +145,8 @@ export async function generateUserRewind(options: GenerateUserOptions, deps: Pip
       override: options.model,
     },
     call: {
-      generate: generateStructured,
-      consume: (provider) => consume("rw:llm", provider),
+      generate: deps.generate ?? generateStructured,
+      consume: deps.consume ?? ((provider) => consume("rw:llm", provider)),
       signal,
       styleGuide: options.styleGuide === undefined ? ctx.styleGuide : options.styleGuide,
       attribution: {

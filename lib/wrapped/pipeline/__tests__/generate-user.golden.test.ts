@@ -13,31 +13,16 @@
  * call count and every copy slot as rendered text.
  */
 
-import { readFileSync } from 'node:fs'
-import path from 'node:path'
-
-import { MockLanguageModelV4 } from 'ai/test'
-import { z } from 'zod'
-
 import type { Fixture } from '@/evals/rewind/fixture-schema'
+import { readRecording, replayDeps, runFixture } from '@/evals/rewind/harness'
 import { loadFixtures } from '@/evals/rewind/__tests__/load-fixtures'
-import { fixtureInputs } from '@/evals/rewind/__tests__/member-stats'
-import { FIXTURE_USER_ID } from '@/evals/rewind/__tests__/stats-inputs'
-import type { LLMProvider } from '@/lib/generated/prisma/client'
-import { lookupModel } from '@/lib/llm/models'
-import { getLanguageModel } from '@/lib/llm/registry'
-import { recordUsage } from '@/lib/llm/usage'
+import type { UsageRecord } from '@/lib/llm/usage'
 import { renderCopyText } from '@/lib/wrapped/copy/render-copy'
 import type { RewindCopyV3Wire } from '@/lib/wrapped/copy/schema'
-import { generateUserRewind, type GenerateUserResult, type PipelineDeps } from '@/lib/wrapped/pipeline/generate-user'
-import type { RewindContext } from '@/lib/wrapped/pipeline/load-context'
+import type { GenerateUserResult } from '@/lib/wrapped/pipeline/generate-user'
 import { persistRewind } from '@/lib/wrapped/pipeline/persist'
-import { resolveZone } from '@/lib/wrapped/time/zone'
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
-jest.mock('@/lib/llm/registry', () => ({ getLanguageModel: jest.fn(), LLMConfigError: class extends Error {} }))
-jest.mock('@/lib/llm/usage', () => ({ recordUsage: jest.fn() }))
-jest.mock('@/lib/security/rate-limit', () => ({ consume: jest.fn(async () => ({ ok: true })) }))
 jest.mock('@/lib/wrapped/pipeline/persist', () => ({
   ...jest.requireActual('@/lib/wrapped/pipeline/persist'),
   persistRewind: jest.fn(),
@@ -46,123 +31,14 @@ jest.mock('@/lib/utils/logger', () => ({
   createLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
 }))
 
-const RECORDINGS = path.join(__dirname, '..', '..', '..', '..', 'evals', 'rewind', 'recordings', 'hand')
+const MODEL = { provider: 'anthropic', id: 'claude-sonnet-5-5' } as const
+const recordUsage = jest.fn(async (_record: UsageRecord) => {})
 
-const recordingSchema = z.object({
-  fixture: z.string(),
-  promptVersion: z.string(),
-  note: z.string().optional(),
-  calls: z.array(
-    z.union([
-      z.object({ kind: z.enum(['copy', 'repair']), output: z.record(z.string(), z.unknown()) }),
-      z.object({ kind: z.enum(['copy', 'repair']), text: z.string() }),
-    ])
-  ),
-})
-
-type Recording = z.infer<typeof recordingSchema>
-
-function readRecording(id: string): Recording {
-  return recordingSchema.parse(JSON.parse(readFileSync(path.join(RECORDINGS, `${id}.json`), 'utf8')))
-}
-
-const ROW: LLMProvider = {
-  id: 'row-1',
-  provider: 'anthropic',
-  purpose: 'wrapped',
-  apiKey: 'key',
-  model: 'claude-sonnet-5-5',
-  temperature: null,
-  maxTokens: null,
-  baseUrl: null,
-  effort: null,
-  isActive: true,
-  createdAt: new Date(0),
-  updatedAt: new Date(0),
-}
-
-/** A model that answers each call with the recording's next reply. */
-function replay(recording: Recording) {
-  let next = 0
-  const model = new MockLanguageModelV4({
-    doGenerate: async () => {
-      const call = recording.calls[next++]
-      if (!call) throw new Error(`${recording.fixture}: more model calls than recorded`)
-      return {
-        content: [{ type: 'text', text: 'text' in call ? call.text : JSON.stringify(call.output) }],
-        finishReason: { unified: 'stop', raw: 'end_turn' },
-        usage: { inputTokens: { total: 4400, noCache: 2800, cacheRead: 1600, cacheWrite: 0 }, outputTokens: { total: 900, text: 600, reasoning: 300 } },
-        warnings: [],
-        response: { id: `${recording.fixture}-${next}`, modelId: 'claude-sonnet-5-5', timestamp: new Date(0) },
-      }
-    },
-  })
-  jest.mocked(getLanguageModel).mockImplementation(async (_purpose, override) => ({
-    model,
-    info: lookupModel('anthropic', override?.model ?? ROW.model),
-    row: ROW,
-  }))
-  return () => next
-}
-
-function context(fixture: Fixture, inputs: Awaited<ReturnType<typeof fixtureInputs>>): RewindContext {
-  return {
-    userId: FIXTURE_USER_ID,
-    year: fixture.window.year,
-    kind: 'admin',
-    through: `${fixture.window.year}-${fixture.window.finalCut ? '12-31' : '11-30'}`,
-    finalCut: fixture.window.finalCut,
-    member: { userId: FIXTURE_USER_ID, name: fixture.member.userName ?? fixture.member.displayName, plexUserId: '1', isAdmin: true },
-    zone: resolveZone({ timezone: fixture.member.timezone }, fixture.server.zone),
-    window: inputs.ctx.window,
-    config: {
-      rewindEnabled: true,
-      rewindAudience: 'all',
-      rewindIncludeManagedUsers: false,
-      stripeEnabled: false,
-      llmDisabled: false,
-      llmMode: 'standard',
-      budgetUsd: 10,
-      locale: 'en-US',
-      excludedSectionIds: [],
-      excludedContentRatings: [],
-      disabledPages: [],
-    },
-    tautulli: { url: 'http://tautulli', apiKey: 'key' },
-    overseerr: null,
-    hiddenKeys: inputs.ctx.hiddenKeys,
-    aggregate: null,
-    serial: 'K7Q4',
-    nthRewind: 1,
-    wrappedId: 'wrapped-1',
-    previous: null,
-    llmProvider: { provider: 'anthropic', model: ROW.model },
-    spentUsd: 0,
-    styleGuide: null,
-  }
-}
-
+/** The fixture through the harness, its model answering from `recordings/hand`. */
 async function run(fixture: Fixture, mode: 'dry-run' | 'persist' = 'dry-run') {
-  const inputs = await fixtureInputs(fixture)
-  const calls = replay(readRecording(fixture.id))
-  const deps: PipelineDeps = {
-    loadContext: async () => context(fixture, inputs),
-    checkEligibility: async () => ({ ok: true }),
-  }
-  const result = await generateUserRewind(
-    {
-      userId: FIXTURE_USER_ID,
-      year: fixture.window.year,
-      kind: 'admin',
-      mode,
-      copyPolicy: 'default',
-      signal: new AbortController().signal,
-      generationId: mode === 'persist' ? 'gen-1' : undefined,
-      source: async () => ({ events: inputs.events, sources: inputs.sources }),
-    },
-    deps
-  )
-  return { result, calls: calls() }
+  const { deps, next } = replayDeps(readRecording('hand', fixture.id), MODEL, recordUsage)
+  const { result } = await runFixture(fixture, MODEL, deps, { mode })
+  return { result, calls: next() }
 }
 
 function rendered(result: GenerateUserResult) {
@@ -187,7 +63,7 @@ beforeEach(() => jest.clearAllMocks())
 
 it('has a hand-written recording for every fixture, with deliberate grounding failures in four', () => {
   const ids = fixtures.map((f) => f.id).sort()
-  const recordings = ids.map(readRecording)
+  const recordings = ids.map((id) => readRecording('hand', id))
   expect(recordings.map((r) => r.fixture)).toEqual(ids)
   expect(recordings.filter((r) => r.calls.some((c) => c.kind === 'repair'))).toHaveLength(4)
 })
@@ -202,7 +78,7 @@ describe.each(fixtures.map((f) => [f.id, f] as const))('generateUserRewind (dry 
     expect(data.edition).toBe(fixture.expected.edition)
     if (fixture.id !== 'single-title') expect(data.archetype?.id ?? null).toBe(fixture.expected.archetype)
     expect(trail.omitted.map((o) => o.folio)).toEqual(fixture.expected.omittedPages)
-    expect(calls).toBe(readRecording(fixture.id).calls.length)
+    expect(calls).toBe(readRecording('hand', fixture.id).calls.length)
     expect(jest.mocked(persistRewind)).not.toHaveBeenCalled()
     expect({
       edition: data.edition,
@@ -259,7 +135,7 @@ describe('pipeline rules on the fixtures', () => {
 
   it('gives persist and dry-run modes the same factsHash, and attributes dry-run usage without a generation', async () => {
     const dry = await run(byId('heavy'))
-    const usage = jest.mocked(recordUsage).mock.calls.map(([record]) => record.attribution)
+    const usage = recordUsage.mock.calls.map(([record]) => record.attribution)
     expect(usage.length).toBeGreaterThan(0)
     expect(usage.every((a) => a.generationId === null && a.wrappedId === null && a.promptVersion === 'rewind-2026.1')).toBe(true)
 
