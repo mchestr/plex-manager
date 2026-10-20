@@ -79,6 +79,12 @@ async function enqueue(userId: string, year: number, kind: RewindGenerationKind)
 /**
  * Asks for the signed-in member's Rewind for the season year.
  *
+ * No member UI calls it since P6.9: the home RewindCard offers no generate
+ * action, and the season fan-out makes every issue. It stays, with its
+ * limits, until it is decided whether members may ask for one.
+ *
+ * @public
+ *
  * Checks, in order: the session and entitlement (`NOT_ENTITLED`, the action
  * helper's `full`); `{ year }`; the season window for members (admins
  * whenever the feature is on); `year` is the season year; only admins regenerate a completed Rewind; a run already

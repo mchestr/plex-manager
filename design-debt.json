@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "commit": "0e03512e044802feb1db5b9ab10099ded6bfa2de",
-  "generatedAt": "2026-10-20T23:29:52.506Z",
+  "commit": "4c0daeb2273a7217cdca6f7b06dbea11de74e179",
+  "generatedAt": "2026-10-20T23:37:40.199Z",
   "files": {
     "app/(app)/page.tsx": {
       "gradient": 2,
@@ -433,10 +433,6 @@
       "gradient": 2,
       "raw-palette": 16
     },
-    "components/dashboard/rewind-not-eligible-card.tsx": {
-      "gradient": 1,
-      "raw-palette": 7
-    },
     "components/dashboard/status-background.tsx": {
       "blur": 1,
       "raw-palette": 27
@@ -446,13 +442,6 @@
       "gradient": 1,
       "gradient-text": 2,
       "raw-palette": 6
-    },
-    "components/dashboard/wrapped-card.tsx": {
-      "copy": 8,
-      "gradient": 17,
-      "gradient-text": 4,
-      "infinite-motion": 5,
-      "raw-palette": 96
     },
     "components/generator/wrapped-generating-animation.tsx": {
       "copy": 2,
@@ -750,10 +739,10 @@
     "arbitrary-type-z": 31,
     "blur": 133,
     "caps-eyebrow": 84,
-    "copy": 36,
-    "gradient": 122,
-    "gradient-text": 56,
-    "infinite-motion": 52,
-    "raw-palette": 3200
+    "copy": 28,
+    "gradient": 104,
+    "gradient-text": 52,
+    "infinite-motion": 47,
+    "raw-palette": 3097
   }
 }

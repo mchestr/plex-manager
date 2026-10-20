@@ -265,9 +265,11 @@
 **Demo.** On 21 November, a member sees a paper strip with "Your Rewind arrives on December 1". An admin with a generated issue sees the ink strip and the pip, and opening it morphs the strip into the cover.
 
 **Done when.**
-- [ ] All eight states resolve on the server from data, with tests, and none offers a generate action.
-- [ ] The strip prints the soundtrack in the archetype ink, and the meta line comes from the registry.
-- [ ] Share links to `?sheet=share`, and the archive lists past years.
+- [x] All eight states resolve on the server from data, with tests, and none offers a generate action.
+- [x] The strip prints the soundtrack in the archetype ink, and the meta line comes from the registry.
+- [x] Share links to `?sheet=share`, and the archive lists past years.
+
+(as merged: `requestRewindCardModel(userId, isAdmin)` in `lib/rewind/home-card.ts` is React-`cache`d, so the `(app)` layout's nav (`rewindNavYear`) and home read one model per request; `RewindCard` takes `{ state, archive, name, settings }` and `specimen` for `/dev/ui`, and home passes it to `UserDashboard` as `rewindSlot`. `generating`, `failed` and `unavailable` apply only while nothing is completed (FR-40), so a completed issue stays ready through a regeneration or a Redis outage. A managed account is recognised by a season run skipped with `MANAGED_ACCOUNT`; the joining date is the earlier of `createdAt` and the first watch, asked only when `createdAt` is after 1 October. The meta uses the cover's `formatRunningTime` string ("18 pages, about 2 min 20 s"), not `formatApproxDuration`. Both view-transition wrappers use `default="none" share="auto"`, so story page turns never start one. `requestRewindGeneration` has no caller now and is kept `@public`. The E2E spec is `e2e/rewind/rewind-card.spec.ts`, so the rewind-e2e chromium and webkit projects run it; since the card resolves on the server, it moves the season window around the server's date instead of using `page.clock`. Visual baselines for home and `/dev/ui` are not regenerated yet.)
 - [ ] The view transition runs on chromium and webkit, and the card is merged by 2026-11-20.
 
 ### Step P6.11: Account page and Discord link page
