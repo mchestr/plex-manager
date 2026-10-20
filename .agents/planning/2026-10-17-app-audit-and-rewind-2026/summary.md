@@ -28,7 +28,10 @@ skills we can use to help generate visuals better."_
 │   ├── rewind-2026-design.md              Rewind 2026 "The Annual": experience + system design
 │   └── mockups/{ui,rewind}/               HTML mockups + rendered PNGs (fonts, sources)
 ├── implementation/
-│   ├── plan.md                            181 test-driven steps in 12 phases + traceability
+│   ├── plan.md                            index: 181 steps in 12 phases, timeline, progress checklist
+│   ├── phases/p6-…p11-*.md                one file per remaining phase
+│   ├── phases/archive/p0-…p5-*.md         finished phases
+│   ├── appendices.md                      traceability, risks, owner decisions
 │   └── issues-backlog.md                  /create-issues input, one item per step
 └── summary.md                             this document
 ```
