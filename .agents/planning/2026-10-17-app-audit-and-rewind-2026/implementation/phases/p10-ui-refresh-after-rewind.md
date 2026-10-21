@@ -252,10 +252,12 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 **Demo.** Write an announcement with a bulleted list and a link, and watch the preview render them as home will. Save it, open home in another tab, then hide it with the Switch. On the Discord page, stop the bot: within 30 s "Support bot" reads offline while "Linked roles" stays on.
 
 **Done when.**
-- [ ] Announcements render through `MarkdownBody` in the table, the preview and home, and "New" follows read state everywhere.
-- [ ] The announcement form is a Dialog with a live preview and inline errors.
+- [x] Announcements render through `MarkdownBody` in the table, the preview and home, and "New" follows read state everywhere.
+- [x] The announcement form is a Dialog with a live preview and inline errors.
 - [ ] The Discord page has two status rows, a DateRangeFilter, a StatGrid and ChartCards, all refreshed while visible.
 - [ ] No Discord or announcement component hand-builds a panel, a badge, an empty state or a chart, and the baselines are updated.
+
+(as merged: P10.2's ChartCard and `day-window.ts` were not on the start point, so the Discord charts (`discord-trend-chart`, `discord-command-chart` and the help, linking, marking, context, selection and error components) stay on their Chart.js bodies inside Cards; the coordinator moves them onto ChartCard specs (and writes `components/admin/discord/__tests__/specs.test.ts`) after P10.2 merges. Status rows, DateRangeFilter, StatGrid, the recent-commands, commands-by-type and active-members DataTables and the 30 s `LiveRefreshProvider` are in. The period is `presetRange("30d", today)` from `lib/ui/date-range.ts`, and `actions/discord-activity.ts` bounds every stat with `dateRangeToInstants` in the server zone; old `startDate`/`endDate` URLs are read. `DateRangeFilter` gained `defaultRange` (replaces "Any time"). New `server-only` reads: `lib/admin/announcements.ts` (`listAnnouncements`) and `lib/admin/discord.ts` (`getDiscordOverview`); `getAllAnnouncements` and the bot-status read in `getDiscordDashboardData` are gone. Announcement mutations are `adminAction`s on `lib/validations/announcement.ts` and revalidate `/`, `/announcements` and `/admin/announcements`. `lib/ui/status.ts` gained the `announcement`, `linkedRoles`, `supportBot` and `discordCommand` domains, a `{time}` placeholder and `discordStatus()` (P10.20's mapping was not there to move). The member item is `components/announcements/announcement-item.tsx`, shared by `/announcements` and the admin preview; the home card only lost its permanent "NEW" badge, and its per-item pip is P10.21's. Delete is the row-menu item `admin-announcements-actions-<id>-delete`, not `delete-announcement-<id>`. The token codemod was not run; E2E specs were written but not run; visual and axe baselines are the owner's.)
 
 ### Step P10.6: User detail, Rewind history and conversation pages
 

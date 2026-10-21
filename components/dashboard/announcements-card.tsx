@@ -56,16 +56,7 @@ export function AnnouncementsCard({ announcements, now }: AnnouncementsCardProps
           </motion.div>
 
           <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <h3 className="text-base sm:text-lg font-bold text-white">Announcements</h3>
-              {/* Pulsing new badge */}
-              <span className="relative flex">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-50" />
-                <span className="relative inline-flex items-center rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
-                  New
-                </span>
-              </span>
-            </div>
+            <h3 className="text-base sm:text-lg font-bold text-white">Announcements</h3>
             <p className="text-xs text-amber-200/70">Important updates from the server</p>
           </div>
 

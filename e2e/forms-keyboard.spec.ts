@@ -40,7 +40,7 @@ test.describe('Form primitives', () => {
     }
 
     await adminPage.goto('/admin/discord');
-    for (const id of ['discord-start-date', 'discord-end-date']) {
+    for (const id of ['discord-date-range-from', 'discord-date-range-to']) {
       await expect(adminPage.getByTestId(id)).toHaveCSS('font-size', '16px');
     }
   });
@@ -51,7 +51,7 @@ test.describe('Form primitives', () => {
     await expect(adminPage.getByTestId('cost-end-date')).toHaveAccessibleName('End date');
 
     await adminPage.goto('/admin/discord');
-    await expect(adminPage.getByTestId('discord-start-date')).toHaveAccessibleName('Start date');
-    await expect(adminPage.getByTestId('discord-end-date')).toHaveAccessibleName('End date');
+    await expect(adminPage.getByTestId('discord-date-range-from')).toHaveAccessibleName('From');
+    await expect(adminPage.getByTestId('discord-date-range-to')).toHaveAccessibleName('To');
   });
 });
