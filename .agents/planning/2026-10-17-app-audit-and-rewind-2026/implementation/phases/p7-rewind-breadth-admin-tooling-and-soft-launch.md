@@ -501,8 +501,10 @@ The ten core pages (Bookends included), sharing, privacy and accessibility are n
 **Demo.** From a script or the Node REPL, start a dry run of the `heavy` fixture in "Templates only": `/rewind/2026?preview=<id>` opens the story with the Preview banner, and the preview card route returns its centrefold card. Nothing is written to `PlexWrapped`.
 
 **Done when.**
-- [ ] `REWIND_DRY_RUN` runs `generateUserRewind` in dry-run mode on a member or a fixture, rate-limited, with an estimate first, and writes no Rewind rows.
-- [ ] Admins open a dry run through `?preview=` and the preview card route, and members cannot.
+- [x] `REWIND_DRY_RUN` runs `generateUserRewind` in dry-run mode on a member or a fixture, rate-limited, with an estimate first, and writes no Rewind rows.
+- [x] Admins open a dry run through `?preview=` and the preview card route, and members cannot.
+
+(as merged: the processor is `lib/queue/jobs/rewind-dry-run.ts`, not `jobs/rewind.ts`, to keep clear of P7.8's edits; it is registered on `rewind-aux` in `lib/queue/rewind-queues.ts`. The input schema is `DryRunInput` in `lib/rewind/dry-run/input.ts`, the subject `{ kind: "member", userId } | { kind: "fixture", fixtureId }`, and a fixture run must name the fixture's year (2026). `effort` is plumbed through `generateUserRewind` to the copy and repair calls (default `low`). `actions/admin/rewind-playground.ts` exports `estimateRewindDryRun`, `startRewindDryRun` (returns `{ previewId }`, also the job id) and `getRewindDryRun` (`pending` while the job waits or runs, then the stored `completed | skipped | failed` entry); the file is a knip entry until P7.11 calls it. Redis entries are read with `readDryRun` / `readPreview` in `lib/rewind/dry-run/store.ts`; a fixture preview runs as `FIXTURE_USER_ID`. The preview card route is `route.ts`, `Cache-Control: private, no-store`, spending `rw:card:session` by admin id on a cache miss. `outputFileTracingIncludes` lists the fixtures under `/admin/**`, so P7.11's gallery page must live under `/admin`. In preview mode the stage hides the share pill and the Share key; P7.7 (Hide) and P7.14 (views) must also check `mode === "preview"`.)
 
 ### Step P7.11: Gallery of the review fixtures
 
