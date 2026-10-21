@@ -200,9 +200,6 @@ export default function InvitePage() {
               <PlexSignInButton
                 data-testid="plex-invite-sign-in"
                 inviteCode={code}
-                serverName={serverName}
-                showWarning={true}
-                warningDelay={3000}
                 onError={(errorMessage) => {
                   setError(errorMessage)
                 }}

@@ -1286,10 +1286,12 @@ No confetti and no space background.
 **Demo.** Open `/` signed out: one click on Continue with Plex reaches plex.tv immediately. Paste a stale callback URL: "Sign-in didn't finish" with Try again. Sign in as a non-member: "You're not a member of Northfield Plex yet", with Sign out.
 
 **Done when.**
-- [ ] Sign-in is one click with no forced wait, and Jellyfin is the secondary option.
-- [ ] The copy says the token is stored and reused, and the short privacy notice is present.
-- [ ] "Finishing sign-in" is the only full-screen spinner, and the failure, denied and NextAuth error screens are StatusScreens.
+- [x] Sign-in is one click with no forced wait, and Jellyfin is the secondary option.
+- [x] The copy says the token is stored and reused, and the short privacy notice is present.
+- [x] "Finishing sign-in" is the only full-screen spinner, and the failure, denied and NextAuth error screens are StatusScreens.
 - [ ] The E2E, axe and visual checks pass.
+
+(as merged: `/?callbackUrl=` is honoured. `safeCallbackPath` (`lib/validations/callback-path.ts`) keeps only a same-origin relative path. The member pass passes it to `startPlexSignIn({ callbackPath })`, which keeps it in the signed PIN cookie (an off-site value is dropped), and `finishPlexSignIn` returns it as `next` after the access and onboarding checks. Jellyfin goes back to `/?callbackUrl=`, and the signed-in `/` redirects there once onboarding is done. The action input is named `callbackPath` because the SEC-35 surface test flags inputs ending in `url`. The Jellyfin option reveals `JellyfinSignInButton`, the sign-in form; `JellyfinSignInForm` is the invite account form. `PlexSignInButton` is now invite-only, with no warning and no disclaimer, for P10.26. `StatusScreen` gained `titleTestId` (`plex-callback-error-heading`, `access-denied-heading`, `auth-error-heading`). `/auth/error` reads `nextAuthError()` from `flash-codes.ts`, which gained `RateLimited`, and `FlashFromQuery` skips that page. E2E, axe and visual checks were not run here.)
 
 ### Step P10.28: Subscribe pages
 

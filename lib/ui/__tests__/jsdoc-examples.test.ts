@@ -4,7 +4,7 @@
  */
 
 import { boundaryCopy, errorCopy } from '../error-copy'
-import { readFlash } from '../flash-codes'
+import { nextAuthError, readFlash } from '../flash-codes'
 import { safeHref, safeLink } from '../markdown'
 import { posterPalette } from '../poster-palette'
 import { resolveStatus, settingsCategory } from '../status'
@@ -66,6 +66,11 @@ describe('JSDoc Documentation Examples', () => {
     expect(read?.query.toString()).toBe('tab=2')
     expect(readFlash(new URLSearchParams('error=Your account is locked'))?.toasts).toEqual([])
     expect(readFlash(new URLSearchParams('status=failed'))).toBeNull()
+  })
+
+  it('nextAuthError', () => {
+    expect(nextAuthError('Verification').code).toBe('Verification')
+    expect(nextAuthError('<script>alert(1)</script>').code).toBe('Default')
   })
 })
 

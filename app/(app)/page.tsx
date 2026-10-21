@@ -1,17 +1,24 @@
 import { getActiveAnnouncements } from "@/actions/announcements";
 import { getPrometheusStatus, type StatusData } from "@/actions/prometheus-status";
-import { ServiceSignInToggle } from "@/components/auth/service-sign-in-toggle";
+import { MemberPass } from "@/components/auth/member-pass";
 import { PublicShell } from "@/components/shell/public-shell";
 import { RewindCard } from "@/components/dashboard/rewind-card";
 import { UserDashboard } from "@/components/dashboard/user-dashboard";
 import { MembershipLinkCard } from "@/components/dashboard/membership-link-card";
+import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
+import { StatusScreen } from "@/components/ui/status-screen";
 import { authOptions } from "@/lib/auth";
-import { serverName as getServerName } from "@/lib/brand";
+import { monogramFor, serverName as getServerName } from "@/lib/brand";
 import { prisma } from "@/lib/prisma";
 import { requestRewindCardModel } from "@/lib/rewind/home-card";
+import { icons } from "@/lib/ui/icons";
 import { safeHref } from "@/lib/ui/markdown";
+import { safeCallbackPath } from "@/lib/validations/callback-path";
 import type { AuthService } from "@/types/onboarding";
+import type { Metadata, Route } from "next";
 import { getServerSession } from "next-auth";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
@@ -29,8 +36,19 @@ interface OnboardingStatusRecord {
   jellyfin: boolean
 }
 
-export default async function Home() {
+interface HomeProps {
+  /** `callbackUrl`: where sign-in lands afterwards, such as the admin denial's `/admin` (same-origin paths only). */
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}
+
+export async function generateMetadata(): Promise<Metadata> {
   const session = await getServerSession(authOptions);
+  return session?.user?.id ? {} : { title: "Sign in" };
+}
+
+export default async function Home({ searchParams }: HomeProps) {
+  const session = await getServerSession(authOptions);
+  const callbackPath = safeCallbackPath((await searchParams).callbackUrl);
   const [plexServer, jellyfinServer, discordIntegration, announcementsResult, overseerr, prometheusResult, config, serverName] = await Promise.all([
     prisma.plexServer.findFirst({
       where: { isActive: true },
@@ -86,6 +104,11 @@ export default async function Home() {
       }
     }
 
+    // Signed in already (or back from Jellyfin): go where the sign-in link pointed
+    if (callbackPath && callbackPath !== "/" && !callbackPath.startsWith("/?")) {
+      redirect(callbackPath as Route);
+    }
+
     // The RewindCard resolves on the server (P6.9); the layout's nav read the same model
     const rewindCard = await requestRewindCardModel(session.user.id, session.user.isAdmin);
     const now = new Date();
@@ -128,33 +151,44 @@ export default async function Home() {
   const hasJellyfin = !!jellyfinServer;
 
   if (!hasPlex && !hasJellyfin) {
+    const inviteCode = discordIntegration?.serverInviteCode;
     return (
       <PublicShell serverName={serverName}>
-        <div className="flex flex-col items-center gap-6 sm:gap-8 text-center">
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-            Media Server
-          </h1>
-          <p className="text-slate-400 text-lg">No media servers configured. Please contact your administrator.</p>
-        </div>
+        <StatusScreen
+          icon={icons.plex}
+          title="Sign-in isn't set up yet"
+          description="This server has no media server to sign in with. Let the server owner know."
+          primaryAction={
+            inviteCode ? (
+              <Button
+                size="lg"
+                nativeButton={false}
+                render={<a href={`https://discord.gg/${encodeURIComponent(inviteCode)}`} target="_blank" rel="noopener noreferrer" />}
+                data-testid="sign-in-unavailable-discord"
+              >
+                Ask for help on Discord
+                <Icon icon={icons.externalLink} />
+              </Button>
+            ) : (
+              <Button size="lg" nativeButton={false} render={<Link href="/" />} data-testid="sign-in-unavailable-retry">
+                Try again
+              </Button>
+            )
+          }
+        />
       </PublicShell>
     );
   }
 
   return (
     <PublicShell serverName={serverName}>
-      <div className="flex flex-col items-center gap-6 sm:gap-8 w-full">
-        <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent text-center">
-          {serverName}
-        </h1>
-
-        <ServiceSignInToggle
-          hasPlex={hasPlex}
-          hasJellyfin={hasJellyfin}
-          plexServerName={plexServer?.name}
-          jellyfinServerName={jellyfinServer?.name}
-        />
-      </div>
+      <MemberPass
+        serverName={serverName}
+        monogram={monogramFor(serverName)}
+        plex={hasPlex}
+        jellyfin={hasJellyfin}
+        callbackUrl={callbackPath ?? undefined}
+      />
     </PublicShell>
   );
 }
-

@@ -206,6 +206,9 @@ const COPY = {
   Verification: {
     member: { title: "That sign-in expired", description: "Start signing in again." },
   },
+  RateLimited: {
+    member: { title: "Too many attempts", description: "Please wait a few minutes, then sign in again." },
+  },
 } satisfies Record<AppErrorCode, CopyEntry>
 
 function isKnownCode(code: unknown): code is AppErrorCode {

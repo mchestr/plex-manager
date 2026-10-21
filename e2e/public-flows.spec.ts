@@ -6,20 +6,21 @@ import { createE2EPrismaClient } from './helpers/prisma';
 import { navigateAndVerify, waitForLoadingGone, WAIT_TIMEOUTS } from './helpers/test-utils';
 
 test.describe('Public Flows', () => {
-  test('home page has sign in button and initiates flow', async ({ page }) => {
+  // P10.27 (UI-35): one click on Continue with Plex reaches plex.tv, with no forced wait
+  test('one click on the member pass reaches plex.tv within a second', async ({ page }) => {
+    await page.route('https://app.plex.tv/**', (route) =>
+      route.fulfill({ status: 200, contentType: 'text/html', body: '<title>Plex</title>' })
+    );
     await navigateAndVerify(page, '/');
 
-    // Check for collapsed Sign In button
     const signInButton = page.getByTestId('sign-in-button');
-    await expect(signInButton).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
-    await expect(signInButton).toBeEnabled();
+    await expect(signInButton).toBeEnabled({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    await expect(page.getByTestId('member-pass-token-copy')).toContainText('keeps your Plex sign-in token');
 
-    // Click the button to expand and reveal sign-in options
+    const clickedAt = Date.now();
     await signInButton.click();
-
-    // Verify Plex sign-in button is now visible (only Plex configured in E2E environment)
-    const plexSignInButton = page.getByTestId('sign-in-with-plex');
-    await expect(plexSignInButton).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    await page.waitForURL(/app\.plex\.tv/, { timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    expect(Date.now() - clickedAt).toBeLessThan(1000);
   });
 
   // P4.8 (SEC-11). The E2E server skips plex.tv, so the PIN is made up and
@@ -43,7 +44,6 @@ test.describe('Public Flows', () => {
 
     await navigateAndVerify(page, '/');
     await page.getByTestId('sign-in-button').click();
-    await page.getByTestId('sign-in-with-plex').click();
     await page.waitForURL(/app\.plex\.tv/, { timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
 
     const cookies = await context.cookies();
@@ -101,10 +101,23 @@ test.describe('Public Flows', () => {
   test('denied page is accessible', async ({ page }) => {
     await page.goto('/auth/denied');
 
-    // Should show access denied message
     await expect(page.getByTestId('access-denied-heading')).toBeVisible();
-    // The page actually has a "Try Again" link and a "Return Home" button, not a "Return to Home" link
-    await expect(page.getByTestId('return-home-button')).toBeVisible();
+    await expect(page.getByTestId('denied-sign-out')).toBeVisible();
+  });
+
+  test('a NextAuth error lands on the branded error page', async ({ page }) => {
+    await page.goto('/api/auth/error?error=AccessDenied');
+
+    await expect(page).toHaveURL(/\/auth\/error\?error=AccessDenied/);
+    await expect(page.getByTestId('auth-error-page')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    await expect(page.getByTestId('status-screen-code')).toHaveText('AccessDenied');
+  });
+
+  test('the branded error page never shows the query text', async ({ page }) => {
+    await page.goto('/auth/error?error=Your%20account%20is%20locked');
+
+    await expect(page.getByTestId('status-screen-code')).toHaveText('Default', { timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    await expect(page.getByText('Your account is locked')).toHaveCount(0);
   });
 
   test('onboarding page accessibility check', async ({ page }) => {

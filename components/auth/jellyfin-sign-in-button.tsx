@@ -30,6 +30,10 @@ export interface JellyfinSignInButtonProps {
    */
   showDisclaimer?: boolean
   /**
+   * A same-origin path to land on afterwards; `/` reads it once onboarding is checked
+   */
+  callbackUrl?: string
+  /**
    * Callback fired when sign-in is initiated
    */
   onSignInStart?: () => void
@@ -48,6 +52,7 @@ export function JellyfinSignInButton({
   buttonText = "Sign in with Jellyfin",
   loadingText = "Signing in...",
   showDisclaimer = true,
+  callbackUrl,
   onSignInStart,
   onError,
   onSuccess,
@@ -88,8 +93,8 @@ export function JellyfinSignInButton({
         setIsLoading(false)
       } else if (result?.ok) {
         onSuccess?.()
-        // Redirect to home page to check onboarding status
-        window.location.href = "/"
+        // Home checks onboarding first, then follows the callback path
+        window.location.href = callbackUrl ? `/?callbackUrl=${encodeURIComponent(callbackUrl)}` : "/"
       } else {
         const errorMsg = "An unexpected error occurred. Please try again."
         setError(errorMsg)
@@ -98,18 +103,8 @@ export function JellyfinSignInButton({
       }
     } catch (err) {
       logger.error('Sign-in error', err)
-      let errorMsg = "Failed to sign in. Please try again."
-
-      // Provide more specific error messages based on error type
-      if (err instanceof Error) {
-        if (err.message.includes('fetch')) {
-          errorMsg = "Unable to reach the server. Please check your connection."
-        } else if (err.message.includes('credentials') || err.message.includes('unauthorized')) {
-          errorMsg = "Invalid username or password."
-        } else if (err.message) {
-          errorMsg = `Failed to sign in: ${err.message}`
-        }
-      }
+      // Fixed copy only: an exception's text never reaches the screen (UI-19)
+      const errorMsg = "We couldn't sign you in. Please check your connection and try again."
 
       setError(errorMsg)
       onError?.(errorMsg)

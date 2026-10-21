@@ -8,8 +8,10 @@
 
 import { render, screen } from '@testing-library/react'
 import { getServerSession } from 'next-auth'
+import { redirect } from 'next/navigation'
 
 import Home from '@/app/(app)/page'
+import { MemberPass } from '@/components/auth/member-pass'
 import { RewindCard } from '@/components/dashboard/rewind-card'
 import { prisma } from '@/lib/prisma'
 import { requestRewindCardModel, type RewindCardModel } from '@/lib/rewind/home-card'
@@ -61,7 +63,9 @@ jest.mock('@/components/dashboard/media-server-link-card', () => ({ MediaServerL
 jest.mock('@/components/dashboard/requests-card', () => ({ RequestsCard: () => null }))
 jest.mock('@/components/dashboard/status-background', () => ({ StatusFooter: () => null }))
 jest.mock('@/components/watchlist/sync-settings-card', () => ({ WatchlistSyncCard: () => null }))
-jest.mock('@/components/auth/service-sign-in-toggle', () => ({ ServiceSignInToggle: () => null }))
+jest.mock('@/components/auth/member-pass', () => ({
+  MemberPass: jest.fn(() => <div data-testid="member-pass-stub" />),
+}))
 
 const MODEL: RewindCardModel = {
   state: { kind: 'not-started', year: 2026 },
@@ -69,6 +73,8 @@ const MODEL: RewindCardModel = {
   name: 'Northfield Plex Rewind 2026',
   settings: { timeZone: 'America/Chicago', locale: 'en-US' },
 }
+
+const props = (query: Record<string, string | string[]> = {}) => ({ searchParams: Promise.resolve(query) })
 
 function signIn(isAdmin = false) {
   ;(getServerSession as jest.Mock).mockResolvedValue({ user: { id: 'user-1', isAdmin } })
@@ -92,7 +98,7 @@ describe('Home page RewindCard', () => {
     signIn(true)
     jest.mocked(requestRewindCardModel).mockResolvedValue(MODEL)
 
-    render(await Home())
+    render(await Home(props()))
 
     expect(requestRewindCardModel).toHaveBeenCalledWith('user-1', true)
     expect(screen.getByTestId('rewind-card-stub')).toBeInTheDocument()
@@ -103,9 +109,86 @@ describe('Home page RewindCard', () => {
     signIn()
     jest.mocked(requestRewindCardModel).mockResolvedValue(null)
 
-    render(await Home())
+    render(await Home(props()))
 
     expect(requestRewindCardModel).toHaveBeenCalledWith('user-1', false)
     expect(screen.queryByTestId('rewind-card-stub')).not.toBeInTheDocument()
+  })
+})
+
+describe('Home page signed out', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    ;(getServerSession as jest.Mock).mockResolvedValue(null)
+    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue({ name: 'Test Plex', url: 'https://plex.example.com' })
+    ;(prisma.jellyfinServer.findFirst as jest.Mock).mockResolvedValue(null)
+    ;(prisma.discordIntegration.findUnique as jest.Mock).mockResolvedValue(null)
+    ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue(null)
+    ;(prisma.config.findUnique as jest.Mock).mockResolvedValue(null)
+  })
+
+  const passProps = () => jest.mocked(MemberPass).mock.calls.at(-1)?.[0]
+
+  it('renders the member pass with the options that are configured', async () => {
+    render(await Home(props()))
+
+    expect(screen.getByTestId('member-pass-stub')).toBeInTheDocument()
+    expect(passProps()).toMatchObject({ plex: true, jellyfin: false, callbackUrl: undefined })
+  })
+
+  it('hands a same-origin callbackUrl to the pass', async () => {
+    render(await Home(props({ callbackUrl: '/admin' })))
+
+    expect(passProps()?.callbackUrl).toBe('/admin')
+  })
+
+  it.each(['https://evil.example/admin', '//evil.example', '/\\evil.example', 'javascript:alert(1)'])(
+    'drops the off-site callbackUrl %s',
+    async (callbackUrl) => {
+      render(await Home(props({ callbackUrl })))
+
+      expect(passProps()?.callbackUrl).toBeUndefined()
+    }
+  )
+
+  it('shows a StatusScreen when no media server is configured', async () => {
+    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue(null)
+
+    render(await Home(props()))
+
+    expect(screen.getByTestId('status-screen')).toBeInTheDocument()
+    expect(screen.queryByTestId('member-pass-stub')).not.toBeInTheDocument()
+  })
+})
+
+describe('Home page callbackUrl when signed in', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    signIn(true)
+    ;(prisma.plexServer.findFirst as jest.Mock).mockResolvedValue({ name: 'Test Plex', url: 'https://plex.example.com' })
+    ;(prisma.jellyfinServer.findFirst as jest.Mock).mockResolvedValue(null)
+    ;(prisma.discordIntegration.findUnique as jest.Mock).mockResolvedValue(null)
+    ;(prisma.overseerr.findFirst as jest.Mock).mockResolvedValue(null)
+    ;(prisma.config.findUnique as jest.Mock).mockResolvedValue(null)
+    jest.mocked(requestRewindCardModel).mockResolvedValue(null)
+  })
+
+  it('follows a same-origin callbackUrl', async () => {
+    await expect(Home(props({ callbackUrl: '/admin' }))).rejects.toThrow('NEXT_REDIRECT /admin')
+  })
+
+  it('stays home for an off-site callbackUrl', async () => {
+    render(await Home(props({ callbackUrl: 'https://evil.example' })))
+
+    expect(redirect).not.toHaveBeenCalled()
+  })
+
+  it('checks onboarding before following the callbackUrl', async () => {
+    ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
+      onboardingStatus: { plex: false, jellyfin: false },
+      primaryAuthService: 'plex',
+    })
+
+    await expect(Home(props({ callbackUrl: '/admin' }))).rejects.toThrow('NEXT_REDIRECT /onboarding')
   })
 })

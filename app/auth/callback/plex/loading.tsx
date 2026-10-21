@@ -1,11 +1,6 @@
-import { Spinner } from "@/components/ui/spinner"
+import { FinishingSignIn } from "@/components/auth/finishing-sign-in"
 
-/** The one spinner screen the app keeps (ui-design-system 6.7); P10.27 finishes it. */
+/** The one spinner screen the app keeps (ui-design-system 6.7). */
 export default function Loading() {
-  return (
-    <div role="status" className="flex flex-col items-center gap-4" data-testid="plex-callback-loading">
-      <Spinner size={24} className="text-muted-foreground" />
-      <p className="text-ui text-muted-foreground">Finishing sign-in</p>
-    </div>
-  )
+  return <FinishingSignIn data-testid="plex-callback-loading" />
 }
