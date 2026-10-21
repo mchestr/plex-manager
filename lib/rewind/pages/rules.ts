@@ -9,10 +9,6 @@
  * | 07, 08 | Taste (60% genre coverage), People (70% cast coverage) |
  * | 11 The race | the race is eligible |
  * | 12 Records | 2 of 4 cells: a binge of 3+, a day of 3+ episodes, completion over 5+ started, a paused title |
- * | 13 Setup | 20 plays (Setup is eligible) |
- * | 14 Requests | one request or more |
- * | 15 Standing | 5 members with a Rewind |
- * | 17 Next year | a series left for later or a pick |
  *
  * @module lib/rewind/pages/rules
  */
@@ -54,8 +50,8 @@ function recordCells(facts: RewindFactsV3): number {
   ].filter(Boolean).length
 }
 
-/** Pages P5.7 built: the clock, the calendar, the centrefold and the back cover. */
-type Landed = "clock" | "calendar" | "centrefold" | "back-cover"
+/** Pages P5.7 and P7.2 built. */
+type Landed = "clock" | "calendar" | "centrefold" | "back-cover" | "setup" | "requests" | "standing" | "next-year"
 
 export const pendingPages: Record<Exclude<Pending, Landed>, PageDefinition<Empty>> = {
   taste: pending((f) => has(f, "taste.genre[1].name"), (f) => `Your top genre was ${shown(f, "taste.genre[1].name")}.`, ["taste.genre[1].name", "taste.genre[1].share"], true),
@@ -66,12 +62,4 @@ export const pendingPages: Record<Exclude<Pending, Landed>, PageDefinition<Empty
   ),
   race: pending((f) => has(f, "race.leadChanges"), (f) => `${shown(f, "race.leader[12]") || shown(f, "race.leader[11]")} finished the race in front.`, ["race.leadChanges"], true),
   records: pending((f) => recordCells(f) >= RECORD_CELLS, () => "Your personal bests of the year.", ["records.longestBinge.episodes", "records.completionShare"]),
-  setup: pending((_f, { stats }) => stats.devices.eligible, (f) => `Most of your viewing was on ${shown(f, "setup.topPlatform")}.`, ["setup.directPlayShare"], true),
-  requests: pending((f) => has(f, "requests.made"), (f) => `You made ${shown(f, "requests.made")} requests.`, ["requests.made", "requests.available"]),
-  standing: pending((f) => has(f, "standing.members"), (f) => `${shown(f, "standing.percentile")} of ${shown(f, "standing.members")} members by hours watched.`, ["standing.percentile", "standing.members"], true),
-  "next-year": pending(
-    (f) => has(f, "next.leftForLater[1].title") || has(f, "next.picks[1].title"),
-    () => "Series and films waiting for next year.",
-    ["next.leftForLater[1].title", "next.picks[1].title"]
-  ),
 }

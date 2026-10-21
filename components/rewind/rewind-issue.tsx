@@ -9,6 +9,7 @@ import type { IssueContext } from "@/components/rewind/pages/issue-context"
 import { StoryStage } from "@/components/rewind/stage/story-stage"
 import { serverName } from "@/lib/brand"
 import { prisma } from "@/lib/prisma"
+import { loadItemLinks } from "@/lib/rewind/item-links"
 import { registry, type RegistryEntry } from "@/lib/rewind/registry"
 import { validatePagesOnRead } from "@/lib/rewind/select-pages"
 import { loadShareSetup } from "@/lib/rewind/share-setup"
@@ -42,7 +43,10 @@ export async function RewindIssue({ rewindId, data, userId, returnTo, initialShe
   ])
   const archetype = data.archetype?.id ?? null
   const pages = validatePagesOnRead(data.pages, { archetype, disabledPages: DisabledPagesSchema.parse(config?.rewindDisabledPages ?? []) })
-  const share = await loadShareSetup({ userId, rewindId, year: data.year, pages })
+  const [share, links] = await Promise.all([
+    loadShareSetup({ userId, rewindId, year: data.year, pages }),
+    pages.some((page) => page.type === "next-year") ? loadItemLinks() : undefined,
+  ])
   const issue: IssueContext = {
     year: data.year,
     userId,
@@ -56,6 +60,7 @@ export async function RewindIssue({ rewindId, data, userId, returnTo, initialShe
     returnTo,
     zone: data.window.zone === settings.timeZone ? "server" : "member",
     facts: data.facts,
+    links,
   }
 
   return (

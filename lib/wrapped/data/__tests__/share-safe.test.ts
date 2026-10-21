@@ -136,7 +136,9 @@ describe("rules", () => {
     expect(facts).not.toContain("standing.members")
 
     const counted = centrefold(rewind, true).flatMap((p) => Object.keys(p.facts))
-    expect(counted).toEqual(expect.arrayContaining(["archetype.rarityCount", "standing.members"]))
+    expect(counted).toEqual(expect.arrayContaining(["archetype.rarityCount"]))
+    // the member count stays in-app even with public counts: page 15 shares only its percentile (P7.2)
+    expect(counted).not.toContain("standing.members")
   })
 
   it("publishes the percentile at top 25% and drops it at top 26%", () => {
@@ -159,7 +161,7 @@ describe("rules", () => {
   })
 
   it("publishes pages in registry order, and only pages the issue printed", () => {
-    const shared = toShareSafe(heavy, shareOptions({ pages: ["clock", "cover", "standing"] }), shareContext())
+    const shared = toShareSafe(heavy, shareOptions({ pages: ["clock", "cover", "guess"] }), shareContext())
     expect(shared.pages.map((p) => p.type)).toEqual(["cover", "clock"])
   })
 

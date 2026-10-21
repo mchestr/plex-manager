@@ -3122,6 +3122,34 @@
       }
     },
     {
+      "type": "setup",
+      "data": {
+        "meters": [
+          "setup.directPlayShare",
+          "setup.homeShare"
+        ]
+      }
+    },
+    {
+      "type": "requests",
+      "data": {
+        "lines": [
+          "requests.approved",
+          "requests.available",
+          "requests.watched",
+          "requests.pending",
+          "requests.declined"
+        ]
+      }
+    },
+    {
+      "type": "standing",
+      "data": {
+        "rank": 7,
+        "community": []
+      }
+    },
+    {
       "type": "centrefold",
       "data": {
         "shortlist": [
@@ -3568,8 +3596,8 @@
       "clock": "Your latest start was {{fact:hours.latestStart.time}} on a {{fact:hours.latestStart.weekday}}.",
       "calendar": "Your biggest day was {{fact:days.biggest.date}}, at {{fact:days.biggest.minutes}}.",
       "records": null,
-      "requests": null,
-      "standing": null,
+      "requests": "{{fact:requests.available}} of them have arrived on the server.",
+      "standing": "Where you stand, with nobody named.",
       "nextYear": null
     },
     "archetype": {
@@ -3591,6 +3619,8 @@
       "deck.topFilms": "6d7177f17784e218c919576e5ab6770860163df321e9a65938f2c756d642a429",
       "deck.clock": "d21c4b4823d95af2214ae629b3b9b83f1838869009cb6c4103d80eb887f3cee1",
       "deck.calendar": "9e9380ef0f27b796543cd53320c1429665c4e321646401598bcbb7676e105f49",
+      "deck.requests": "bad653121839928d5e771da38fe05778bc47d40d438f86f442aafb5d3cf648ce",
+      "deck.standing": "5b8bb6df6b94baba0c1e3854080993bfd17ed02d55e94d2530cf167a56e0b0e9",
       "archetype.tagline": "a7404707bf211dd1bbf84e3bec84a7c19d414e6907482145db2bf94c52efd81a",
       "archetype.dedication": "a0604da90904baf65b8307fdc5f1d2d161b541c90e994f45d80b878eee86f44b",
       "archetype.posterLineId": "fb1ed35aa65c9c955b39b8fc1c32585718eb785cb373f520cd1024af1d93f400",

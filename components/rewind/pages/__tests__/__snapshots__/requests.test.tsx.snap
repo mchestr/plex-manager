@@ -1,0 +1,8 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`14 Requests summarises the page deterministically 1`] = `
+[
+  "Your requests this year: asked for 27, approved 20, arrived on the server 15, watched 15, still waiting 3, declined 2.",
+  "Your requests this year: asked for 5, approved 3, arrived on the server 3, watched 3, still waiting 1, declined 1.",
+]
+`;

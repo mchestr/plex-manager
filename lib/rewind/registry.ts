@@ -46,8 +46,12 @@ import { centrefoldPage } from "@/lib/rewind/pages/centrefold"
 import { clockPage } from "@/lib/rewind/pages/clock"
 import { coverPage } from "@/lib/rewind/pages/cover"
 import { guessPage } from "@/lib/rewind/pages/guess"
+import { nextYearPage } from "@/lib/rewind/pages/next-year"
 import { numberPage } from "@/lib/rewind/pages/number"
+import { requestsPage } from "@/lib/rewind/pages/requests"
 import { pendingPages } from "@/lib/rewind/pages/rules"
+import { setupPage } from "@/lib/rewind/pages/setup"
+import { standingPage } from "@/lib/rewind/pages/standing"
 import { topFilmsPage } from "@/lib/rewind/pages/top-films"
 import { topShowsPage } from "@/lib/rewind/pages/top-shows"
 import type { ArchetypeId } from "@/lib/wrapped/archetypes/catalogue"
@@ -167,11 +171,11 @@ export const registry = {
   calendar: entry("calendar", { name: "The calendar", act: "habits", field: "paper", altField: null, core: true, pocket: "clock-or-calendar", dwell: 9000 }, calendarPage),
   race: entry("race", { name: "The race", act: "habits", field: "mint", altField: "sky", core: false, pocket: false, dwell: 10_000 }, p.race),
   records: entry("records", { name: "Records", act: "habits", field: "peach", altField: "rose", core: false, pocket: false, dwell: 8000 }, p.records),
-  setup: entry("setup", { name: "Setup", act: "server", field: "paper", altField: null, core: false, pocket: false, dwell: 6000 }, p.setup),
-  requests: entry("requests", { name: "Requests", act: "server", field: "lilac", altField: "mint", core: false, pocket: false, dwell: 7000 }, p.requests),
-  standing: entry("standing", { name: "Standing", act: "server", field: "sky", altField: "coral", core: false, pocket: false, dwell: 7000 }, p.standing),
+  setup: entry("setup", { name: "Setup", act: "server", field: "paper", altField: null, core: false, pocket: false, dwell: 6000 }, setupPage),
+  requests: entry("requests", { name: "Requests", act: "server", field: "lilac", altField: "mint", core: false, pocket: false, dwell: 7000 }, requestsPage),
+  standing: entry("standing", { name: "Standing", act: "server", field: "sky", altField: "coral", core: false, pocket: false, dwell: 7000 }, standingPage),
   centrefold: entry("centrefold", { name: "Centrefold", act: "centrefold", field: "archetype", altField: null, core: true, pocket: "page", dwell: 12_000 }, centrefoldPage),
-  "next-year": entry("next-year", { name: "Next year", act: "back", field: "paper", altField: null, core: false, pocket: false, dwell: 7000 }, p["next-year"]),
+  "next-year": entry("next-year", { name: "Next year", act: "back", field: "paper", altField: null, core: false, pocket: false, dwell: 7000 }, nextYearPage),
   "back-cover": entry("back-cover", { name: "Back cover", act: "back", field: "paper", altField: null, core: true, pocket: "page", dwell: "end" }, backCoverPage),
 } as const satisfies Record<IssuePageType, RegistryEntry>
 
@@ -183,7 +187,7 @@ export const issuePages: RegistryEntry[] = Object.values(registry)
  * leaves them out, so the full issue is the ten core pages; each step removes
  * its pages from this list.
  */
-export const LATER_PAGES: readonly IssuePageType[] = ["taste", "people", "race", "records", "setup", "requests", "standing", "next-year"]
+export const LATER_PAGES: readonly IssuePageType[] = ["taste", "people", "race", "records"]
 
 /** The pages a card can print: every page but Setup and Next year (design 6.4). */
 export const SHARE_PAGE_TYPES = issuePages.map((p) => p.type).filter((t) => t !== "setup" && t !== "next-year") as [
