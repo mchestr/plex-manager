@@ -46,11 +46,14 @@ import { centrefoldPage } from "@/lib/rewind/pages/centrefold"
 import { clockPage } from "@/lib/rewind/pages/clock"
 import { coverPage } from "@/lib/rewind/pages/cover"
 import { guessPage } from "@/lib/rewind/pages/guess"
+import { nextYearPage } from "@/lib/rewind/pages/next-year"
 import { numberPage } from "@/lib/rewind/pages/number"
 import { peoplePage } from "@/lib/rewind/pages/people"
 import { racePage } from "@/lib/rewind/pages/race"
 import { recordsPage } from "@/lib/rewind/pages/records"
-import { pendingPages } from "@/lib/rewind/pages/rules"
+import { requestsPage } from "@/lib/rewind/pages/requests"
+import { setupPage } from "@/lib/rewind/pages/setup"
+import { standingPage } from "@/lib/rewind/pages/standing"
 import { tastePage } from "@/lib/rewind/pages/taste"
 import { topFilmsPage } from "@/lib/rewind/pages/top-films"
 import { topShowsPage } from "@/lib/rewind/pages/top-shows"
@@ -156,7 +159,6 @@ function entry<D>(type: IssuePageType, spec: Spec, page: PageDefinition<D>): Reg
   return { type, ...spec, spot, ...page }
 }
 
-const p = pendingPages
 
 export const registry = {
   cover: entry("cover", { name: "Cover", act: "front", field: "archetype", altField: null, core: true, pocket: "page", dwell: "tap" }, coverPage),
@@ -171,11 +173,11 @@ export const registry = {
   calendar: entry("calendar", { name: "The calendar", act: "habits", field: "paper", altField: null, core: true, pocket: "clock-or-calendar", dwell: 9000 }, calendarPage),
   race: entry("race", { name: "The race", act: "habits", field: "mint", altField: "sky", core: false, pocket: false, dwell: 10_000 }, racePage),
   records: entry("records", { name: "Records", act: "habits", field: "peach", altField: "rose", core: false, pocket: false, dwell: 8000 }, recordsPage),
-  setup: entry("setup", { name: "Setup", act: "server", field: "paper", altField: null, core: false, pocket: false, dwell: 6000 }, p.setup),
-  requests: entry("requests", { name: "Requests", act: "server", field: "lilac", altField: "mint", core: false, pocket: false, dwell: 7000 }, p.requests),
-  standing: entry("standing", { name: "Standing", act: "server", field: "sky", altField: "coral", core: false, pocket: false, dwell: 7000 }, p.standing),
+  setup: entry("setup", { name: "Setup", act: "server", field: "paper", altField: null, core: false, pocket: false, dwell: 6000 }, setupPage),
+  requests: entry("requests", { name: "Requests", act: "server", field: "lilac", altField: "mint", core: false, pocket: false, dwell: 7000 }, requestsPage),
+  standing: entry("standing", { name: "Standing", act: "server", field: "sky", altField: "coral", core: false, pocket: false, dwell: 7000 }, standingPage),
   centrefold: entry("centrefold", { name: "Centrefold", act: "centrefold", field: "archetype", altField: null, core: true, pocket: "page", dwell: 12_000 }, centrefoldPage),
-  "next-year": entry("next-year", { name: "Next year", act: "back", field: "paper", altField: null, core: false, pocket: false, dwell: 7000 }, p["next-year"]),
+  "next-year": entry("next-year", { name: "Next year", act: "back", field: "paper", altField: null, core: false, pocket: false, dwell: 7000 }, nextYearPage),
   "back-cover": entry("back-cover", { name: "Back cover", act: "back", field: "paper", altField: null, core: true, pocket: "page", dwell: "end" }, backCoverPage),
 } as const satisfies Record<IssuePageType, RegistryEntry>
 
@@ -183,11 +185,10 @@ export const registry = {
 export const issuePages: RegistryEntry[] = Object.values(registry)
 
 /**
- * Pages whose components land in P7.1 and P7.2. Until then `selectPages`
- * leaves them out, so the full issue is the ten core pages; each step removes
- * its pages from this list.
+ * Pages whose components have not landed yet: `selectPages` leaves them
+ * out. Every page of the issue has landed (P7.1 and P7.2 took the last eight).
  */
-export const LATER_PAGES: readonly IssuePageType[] = ["setup", "requests", "standing", "next-year"]
+export const LATER_PAGES: readonly IssuePageType[] = []
 
 /** The pages a card can print: every page but Setup and Next year (design 6.4). */
 export const SHARE_PAGE_TYPES = issuePages.map((p) => p.type).filter((t) => t !== "setup" && t !== "next-year") as [

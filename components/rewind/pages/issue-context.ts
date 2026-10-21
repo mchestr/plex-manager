@@ -3,6 +3,7 @@ import type { Route } from "next"
 import { pageDeck, type DeckKey } from "@/lib/rewind/pages/deck"
 import type { Edition } from "@/lib/rewind/registry"
 import type { SelectedPage } from "@/lib/rewind/select-pages"
+import type { ItemLinks } from "@/lib/ui/plex-links"
 import type { RewindCopyV3Wire } from "@/lib/wrapped/copy/schema"
 import type { RewindDataV3 } from "@/lib/wrapped/data/schema-v3"
 import type { RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
@@ -26,6 +27,8 @@ export interface IssueContext {
   /** Whose zone `tz.label` is, for the `tz.note` wording. */
   zone: "member" | "server"
   facts: RewindFactsV3
+  /** Where Next year's titles link (P7.2); absent when the issue has no Next year. */
+  links?: ItemLinks
 }
 
 export interface PageProps<D> {

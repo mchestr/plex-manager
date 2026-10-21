@@ -134,12 +134,14 @@ The ten core pages (Bookends included), sharing, privacy and accessibility are n
 
 **Demo.** On the heavy fixture, Requests reads "You asked for 27. You watched 15 of them." and Standing says "Top 3%". The `solo-server` fixture omits Standing with gap-free folios, and adding `next-year.picks` to `rewindDisabledPages` leaves only "Unfinished business".
 
+(as merged: `PENDING_PAGES` is `LATER_PAGES` in `lib/rewind/registry.ts`. The Sonarr match runs in `lib/wrapped/stats/next-year.ts` over `MemberSources.premieres` (optional), which `read-inputs.ts` fills from `fetchSeasonPremieres()` in `lib/wrapped/sources/sonarr-calendar.ts` when `RewindContext.sonarr` is set; `getSonarrCalendar()` gained an `includeSeries` option and keeps `serviceFetch`'s default 10 s timeout. `lib/ui/plex-links.ts` (`plexItemHref`, `overseerrSeriesHref`, `ItemLinks`) was created here for P10.21; `lib/rewind/item-links.ts` reads the machine id, cached 24 h under `plex-identity`, into the optional `IssueContext.links`. `NEXT_YEAR_PARTS` in `lib/rewind/pages/next-year.ts` holds the part keys P7.12 lists. Page 15's `share.facts` is the percentile only, so `standing.members` no longer prints even with `rewindPublicCounts`. The requests headline now drops "You watched 0 of them". Visual baselines for the four pages were not generated: the coordinator regenerates them with the phase.)
+
 **Done when.**
-- [ ] Pages 13, 14, 15 and 17 render with schemas, srSummaries and their omission rules.
-- [ ] Setup is template-only with no path to player names, and Requests counts through cached guids with the corrected statuses.
-- [ ] Standing's percentile comes from the server-wide pass, community facts need 3 or more contributors, and counts stay in-app.
-- [ ] Next year's parts can be cut on their own, and Setup and Next year offer no card.
-- [ ] The select, component and visual tests pass on all fixtures.
+- [x] Pages 13, 14, 15 and 17 render with schemas, srSummaries and their omission rules.
+- [x] Setup is template-only with no path to player names, and Requests counts through cached guids with the corrected statuses.
+- [x] Standing's percentile comes from the server-wide pass, community facts need 3 or more contributors, and counts stay in-app.
+- [x] Next year's parts can be cut on their own, and Setup and Next year offer no card.
+- [ ] The select, component and visual tests pass on all fixtures. (Select and component tests pass; visual baselines pending.)
 
 ### Step P7.3: Pocket edition, Short list and postcard
 

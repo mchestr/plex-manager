@@ -5,11 +5,15 @@ import type { CentrefoldData } from "@/lib/rewind/pages/centrefold.schema"
 import type { ClockData } from "@/lib/rewind/pages/clock.schema"
 import type { CoverData } from "@/lib/rewind/pages/cover.schema"
 import type { GuessData } from "@/lib/rewind/pages/guess.schema"
+import type { NextYearData } from "@/lib/rewind/pages/next-year.schema"
 import type { NumberData } from "@/lib/rewind/pages/number.schema"
 import type { PeopleData } from "@/lib/rewind/pages/people.schema"
 import type { RaceData } from "@/lib/rewind/pages/race.schema"
 import type { RecordsData } from "@/lib/rewind/pages/records.schema"
 import type { TasteData } from "@/lib/rewind/pages/taste.schema"
+import type { RequestsData } from "@/lib/rewind/pages/requests.schema"
+import type { SetupData } from "@/lib/rewind/pages/setup.schema"
+import type { StandingData } from "@/lib/rewind/pages/standing.schema"
 import type { TopFilmsData, TopShowsData } from "@/lib/rewind/pages/top-lists.schema"
 import { registry, type RegistryEntry } from "@/lib/rewind/registry"
 import type { SelectedPage } from "@/lib/rewind/select-pages"
@@ -22,11 +26,15 @@ import { ClockPage } from "./clock"
 import { CoverPage } from "./cover"
 import { GuessPage } from "./guess"
 import type { IssueContext } from "./issue-context"
+import { NextYearPage } from "./next-year"
 import { NumberPage } from "./number"
 import { PeoplePage } from "./people"
 import { RacePage } from "./race"
 import { RecordsPage } from "./records"
 import { TastePage } from "./taste"
+import { RequestsPage } from "./requests"
+import { SetupPage } from "./setup"
+import { StandingPage } from "./standing"
 import { TopFilmsPage } from "./top-films"
 import { TopShowsPage } from "./top-shows"
 import { u } from "./units"
@@ -62,8 +70,16 @@ export function PageBody({ page, issue }: { page: SelectedPage; issue: IssueCont
       return <RacePage data={page.data as RaceData} issue={issue} />
     case "records":
       return <RecordsPage data={page.data as RecordsData} issue={issue} />
+    case "setup":
+      return <SetupPage data={page.data as SetupData} issue={issue} />
+    case "requests":
+      return <RequestsPage data={page.data as RequestsData} issue={issue} />
+    case "standing":
+      return <StandingPage data={page.data as StandingData} issue={issue} />
     case "centrefold":
       return <CentrefoldPage data={page.data as CentrefoldData} issue={issue} />
+    case "next-year":
+      return <NextYearPage data={page.data as NextYearData} issue={issue} />
     case "back-cover":
       return <BackCoverPage data={page.data as BackCoverData} issue={issue} />
     default: {

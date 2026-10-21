@@ -271,7 +271,7 @@ const HEADLINES: Readonly<Record<IssuePageType, (facts: RewindFactsV3) => string
   race: raceHeadline,
   records: () => "Personal bests",
   setup: (f) => (Number(f["setup.directPlayShare"]?.value) >= 0.8 ? `${t("setup.directPlayShare")} direct play. Your setup is dialled in.` : "How you watched"),
-  requests: (f) => (f["requests.watched"] ? `You asked for ${t("requests.made")}. You watched ${t("requests.watched")} of them.` : `You asked for ${t("requests.made")}.`),
+  requests: (f) => (Number(f["requests.watched"]?.value) > 0 ? `You asked for ${t("requests.made")}. You watched ${t("requests.watched")} of them.` : `You asked for ${t("requests.made")}.`),
   standing: (f) =>
     Number(f["standing.percentile"]?.value) <= 50
       ? `${t("standing.percentile")} by hours watched`

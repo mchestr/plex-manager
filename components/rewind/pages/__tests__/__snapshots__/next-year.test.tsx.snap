@@ -1,0 +1,8 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`17 Next year summarises the page deterministically 1`] = `
+[
+  "Picks from the library: Killers of the Flower Moon.",
+  "Left for later: Severance. Returning: Slow Horses season 5, January 16. Picks from the library: Arrival.",
+]
+`;

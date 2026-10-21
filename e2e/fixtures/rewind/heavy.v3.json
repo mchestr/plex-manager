@@ -3534,6 +3534,34 @@
       }
     },
     {
+      "type": "setup",
+      "data": {
+        "meters": [
+          "setup.directPlayShare",
+          "setup.homeShare"
+        ]
+      }
+    },
+    {
+      "type": "requests",
+      "data": {
+        "lines": [
+          "requests.approved",
+          "requests.available",
+          "requests.watched",
+          "requests.pending",
+          "requests.declined"
+        ]
+      }
+    },
+    {
+      "type": "standing",
+      "data": {
+        "rank": 1,
+        "community": []
+      }
+    },
+    {
       "type": "centrefold",
       "data": {
         "shortlist": [
@@ -3594,6 +3622,21 @@
           },
           "share": "hours.afterDarkShare"
         }
+      }
+    },
+    {
+      "type": "next-year",
+      "data": {
+        "leftForLater": [],
+        "returning": [],
+        "picks": [
+          {
+            "ratingKey": "5114",
+            "kind": "film",
+            "year": 2023,
+            "because": "people.actor[1].name"
+          }
+        ]
       }
     },
     {
@@ -3982,9 +4025,9 @@
       "clock": "Your latest start was {{fact:hours.latestStart.time}} on a {{fact:hours.latestStart.weekday}}.",
       "calendar": "Your biggest day was {{fact:days.biggest.date}}, at {{fact:days.biggest.minutes}}.",
       "records": "You finished {{fact:records.completionShare}} of what you started.",
-      "requests": null,
-      "standing": null,
-      "nextYear": null
+      "requests": "{{fact:requests.available}} of them have arrived on the server.",
+      "standing": "Where you stand, with nobody named.",
+      "nextYear": "A pick for the new year: {{fact:next.picks[1].title}}."
     },
     "archetype": {
       "id": "midnight-marathoner",
@@ -4008,6 +4051,9 @@
       "deck.clock": "7e2cf557e4fd3084f4f19f4d770a2c5ccb0b03ceb32516d847233e5f3ab4ff7f",
       "deck.calendar": "91ae0d9fe232ce5b52c732219db1007124c4500eb5f09f680854cd14899747b8",
       "deck.records": "9c6c6f023d710139d954d7410bc5d4a6051163e94a6ceb7b7a56a543cf142ef6",
+      "deck.requests": "bad653121839928d5e771da38fe05778bc47d40d438f86f442aafb5d3cf648ce",
+      "deck.standing": "5b8bb6df6b94baba0c1e3854080993bfd17ed02d55e94d2530cf167a56e0b0e9",
+      "deck.nextYear": "45bb9c49e205dd2bb9698bd3c623390b122e43f46956d9bb33eece1010c3dfe0",
       "archetype.tagline": "bbe47e8e679a44cc390d72bbbd5a84af3b0125ce8c1f8b381ebaa0fab4ef3295",
       "archetype.dedication": "36e809250218668021554139c15e07a989efedcd6c344bcfb85e055ba2c38ff0",
       "archetype.posterLineId": "6ad5d4456c4261f374b8c0c96ae25105b7bd7f34f315c00d688c904eaa3af5f2",
