@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "commit": "e6a1ac14117a5a4db1d4cf62dda989ed6c03e59a",
-  "generatedAt": "2026-10-21T22:28:51.994Z",
+  "commit": "3a00c6d0418e9392c68acfc12208ca2a1406ce0f",
+  "generatedAt": "2026-10-21T22:33:09.566Z",
   "files": {
     "app/admin/llm-usage/[usageId]/page.tsx": {
       "blur": 7,
@@ -174,11 +174,6 @@
     "components/auth/plex-sign-in-button.tsx": {
       "gradient": 1,
       "raw-palette": 9
-    },
-    "components/dashboard/announcements-card.tsx": {
-      "gradient": 3,
-      "infinite-motion": 2,
-      "raw-palette": 25
     },
     "components/setup/setup-wizard/dev-mode-banner.tsx": {
       "raw-palette": 8
@@ -406,9 +401,9 @@
     "blur": 53,
     "caps-eyebrow": 53,
     "copy": 12,
-    "gradient": 56,
+    "gradient": 53,
     "gradient-text": 32,
-    "infinite-motion": 25,
-    "raw-palette": 1538
+    "infinite-motion": 23,
+    "raw-palette": 1513
   }
 }
