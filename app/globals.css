@@ -248,6 +248,12 @@
 /* print textures (Rewind 5.2, 5.7): hatching means "the others", the halftone is the hero numeral's misregistration */
 .rw-hatch { background: repeating-linear-gradient(-45deg, var(--ink) 0 1.5px, transparent 1.5px 6px); }
 .rw-halftone { mask-image: radial-gradient(circle, black 42%, transparent 48%); mask-size: calc(var(--u) * 4px) calc(var(--u) * 4px); }
+/* forced colours (P7.15, Rewind 11.1): the browser drops background images and forces background colours to Canvas,
+   so the hatch keeps its own background with CanvasText as its ink, and solid data marks fill with CanvasText */
+@media (forced-colors: active) {
+  .rw-hatch { forced-color-adjust: none; --ink: CanvasText; }
+  :where([data-theme="rewind"]) .bg-current { forced-color-adjust: none; background-color: CanvasText; }
+}
 /* the front pages' entrances (Rewind 4.3), on the current page only; the turn takes the first 420 ms */
 @keyframes rw-print { from { clip-path: inset(0 100% 0 0); } }
 @keyframes rw-stretch { from { font-variation-settings: "wdth" 62, "wght" 900; } }
@@ -279,6 +285,11 @@
 .rw-page[data-current] .rw-cal-row { animation: rw-appear var(--rw-dur-s) var(--rw-ease-data) both; }
 .rw-page[data-current] .rw-stretch span span:nth-child(2) { animation-delay: 490ms; }
 .rw-page[data-current] .rw-stretch span span:nth-child(3) { animation-delay: 560ms; }
+/* low-end mode (P7.15, Rewind 5.6, 11.2), data-low-end on the scope root: the nameplate stretches from the left edge
+   with scaleX over 420 ms instead of the width axis (the line delays stay), and the cover's soundtrack does not print in */
+@keyframes rw-stretch-low { from { transform: scaleX(0.82); opacity: 0; } }
+[data-low-end] .rw-page[data-current] .rw-stretch span span { transform-origin: left; animation-name: rw-stretch-low; animation-duration: var(--rw-dur-m); }
+[data-low-end] .rw-page[data-current] .rw-print { animation: none; }
 @keyframes rw-gate-left { from { transform: none; opacity: 1; } 90% { opacity: 1; } to { transform: translateX(-101%); opacity: 0; } }
 @keyframes rw-gate-right { from { transform: none; opacity: 1; } 90% { opacity: 1; } to { transform: translateX(101%); opacity: 0; } }
 .rw-gate { opacity: 0; }

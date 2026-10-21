@@ -17,6 +17,18 @@ const REWIND_AXE_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']
 
 const FIXTURES: RewindFixtureId[] = ['heavy', 'median', 'light'];
 
+/**
+ * The roomy phone and the small viewports of design 12 (P7.15). 375 x 548 is
+ * below the 0.8 scale floor, so the article offer opens first and the spec
+ * plays the story from it.
+ */
+const VIEWPORTS = [
+  { width: 390, height: 844 },
+  { width: 390, height: 664 },
+  { width: 360, height: 640 },
+  { width: 375, height: 548 },
+];
+
 /** Waits until no animation runs, so axe never reads a colour mid-fade. */
 async function animationsDone(page: Page): Promise<void> {
   await page.waitForFunction(() => document.getAnimations().every((animation) => animation.playState !== 'running'));
@@ -50,19 +62,23 @@ test.describe('Rewind story axe', () => {
   });
 
   for (const fixture of FIXTURES) {
-    test(`${fixture}: every page`, async ({ page, signIn }) => {
-      test.setTimeout(120_000);
-      await signIn(REWIND_MEMBERS[fixture].id);
-      await openStage(page);
-      const total = await pageCount(page);
-      for (let i = 0; i < total; i++) {
-        if (i === 1) await chooseCut(page);
-        else if (i > 1) await turnForward(page);
-        await expect(currentPage(page)).toBeVisible();
-        const { type } = await currentPageInfo(page);
-        await expectNoViolations(page, `${fixture} page ${i + 1} (${type})`);
-      }
-    });
+    for (const viewport of VIEWPORTS) {
+      const size = `${viewport.width}x${viewport.height}`;
+      test(`${fixture} at ${size}: every page`, async ({ page, signIn }) => {
+        test.setTimeout(180_000);
+        await signIn(REWIND_MEMBERS[fixture].id);
+        await page.setViewportSize(viewport);
+        await openStage(page);
+        const total = await pageCount(page);
+        for (let i = 0; i < total; i++) {
+          if (i === 1) await chooseCut(page);
+          else if (i > 1) await turnForward(page);
+          await expect(currentPage(page)).toBeVisible();
+          const { type } = await currentPageInfo(page);
+          await expectNoViolations(page, `${fixture} at ${size}, page ${i + 1} (${type})`);
+        }
+      });
+    }
   }
 
   test('every sheet', async ({ page, signIn }) => {
@@ -102,6 +118,8 @@ test.describe('Rewind story axe', () => {
       const { type } = await currentPageInfo(page);
       await expectNoViolations(page, `spread page ${i + 1} (${type})`);
     }
+    // goToPage only turns forward, so start again from the cover.
+    await openStage(page);
     await goToPage(page, 'top-shows');
     await page.getByTestId('rewind-notes-table-toggle').click();
     await expectNoViolations(page, 'spread Notes as a table');

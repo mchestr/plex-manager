@@ -7,6 +7,10 @@ jest.mock("server-only", () => ({}))
 const TONE = { spot: "ultramarine", field: "paper" } as const
 
 describe("RewindPoster", () => {
+  // jsdom reports the machine's cores; 8 keeps low-end mode (P7.15) off on every runner.
+  beforeEach(() => jest.spyOn(navigator, "hardwareConcurrency", "get").mockReturnValue(8))
+  afterEach(() => jest.restoreAllMocks())
+
   it("sizes the box in artboard units and picks w from the logical width", () => {
     const { container } = render(<RewindPoster titleKey="series:77" title="Severance" width={32} colour="duo" tone={TONE} />)
     const img = container.querySelector("img")!

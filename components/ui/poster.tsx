@@ -22,7 +22,7 @@ export function posterSrc(ratingKey: string, w: PosterWidth, tone: PosterTone = 
   return `/api/rewind/poster/${ratingKey}?${params}`
 }
 
-interface PosterProps {
+export interface PosterProps {
   /** Null when the item has no Plex rating key: the fallback shows at once. */
   ratingKey: string | null
   title: string
