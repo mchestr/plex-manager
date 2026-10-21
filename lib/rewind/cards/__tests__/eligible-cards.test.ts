@@ -7,7 +7,7 @@
 
 import { eligibleCards } from "@/lib/rewind/cards/eligible"
 import { registry } from "@/lib/rewind/registry"
-import { fixtureRewind, shareContext, shareOptions } from "@/lib/wrapped/data/__tests__/share-fixture"
+import { editionRewind, fixtureRewind, shareContext, shareOptions } from "@/lib/wrapped/data/__tests__/share-fixture"
 import type { RewindDataV3 } from "@/lib/wrapped/data/schema-v3"
 import { toShareSafe } from "@/lib/wrapped/data/share-safe"
 import type { ShareContext, ShareOptions, SharePageType } from "@/lib/wrapped/data/share-safe-schema"
@@ -15,7 +15,9 @@ import type { ShareContext, ShareOptions, SharePageType } from "@/lib/wrapped/da
 const fixtures = new Map<string, RewindDataV3>()
 
 beforeAll(async () => {
-  for (const id of ["heavy", "light", "postcard"]) fixtures.set(id, await fixtureRewind(id))
+  fixtures.set("heavy", await fixtureRewind("heavy"))
+  fixtures.set("pocket", await editionRewind("pocket"))
+  fixtures.set("postcard", await editionRewind("postcard"))
 })
 
 function cards(id: string, overrides: Partial<ShareOptions> = {}, ctx: ShareContext = shareContext()): SharePageType[] {
@@ -40,12 +42,20 @@ it("never lists Setup or Next year, which the heavy issue printed", () => {
 })
 
 it("lists the pocket and postcard editions' cards", () => {
-  expect(fixtures.get("light")!.edition).toBe("pocket")
-  expect(cards("light")).toEqual([
-    "cover", "number", "bookends", "guess", "top-shows", "top-films", "taste", "people", "records", "centrefold", "back-cover",
-  ])
-  expect(fixtures.get("postcard")!.edition).toBe("postcard")
-  expect(cards("postcard")).toEqual(["cover", "number", "top-shows", "taste", "people", "centrefold", "back-cover"])
+  expect(cards("pocket")).toEqual(["cover", "number", "short-list", "centrefold", "back-cover"])
+  expect(cards("pocket", { dailyDetail: true })).toEqual(["cover", "number", "short-list", "calendar", "centrefold", "back-cover"])
+  expect(cards("postcard")).toEqual(["postcard"])
+})
+
+it("prints the Short list's own rows in order, and the postcard's titles without counts", () => {
+  const ctx = shareContext()
+  const pocket = toShareSafe(fixtures.get("pocket")!, shareOptions(), ctx).pages.find((page) => page.type === "short-list")!
+  expect(pocket.headline).toBe("Three things you made time for")
+  expect(pocket.titleIds).toHaveLength(3)
+  const postcard = toShareSafe(fixtures.get("postcard")!, shareOptions(), shareContext({ hiddenKeys: new Set(["202"]) })).pages[0]
+  expect(postcard.headline).toBe("A quiet year on Chester Family Plex")
+  expect(postcard.graphic).toEqual({ kind: "titles", titles: ["Severance", "Slow Horses"] })
+  expect(postcard.facts).toEqual({})
 })
 
 it("drops a card whose titles are all hidden", () => {

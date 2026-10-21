@@ -133,7 +133,7 @@ export async function savePlaygroundWrapped(input: SavePlaygroundWrappedInput): 
     // Revalidate relevant paths
     revalidatePath("/admin")
     revalidatePath("/admin/users")
-    revalidatePath(`/admin/users/${user.id}/wrapped`)
+    revalidatePath(`/admin/users/${user.id}/rewind/${input.year}`)
     revalidatePath("/rewind", "layout")
     revalidatePath("/")
 

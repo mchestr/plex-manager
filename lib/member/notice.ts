@@ -3,6 +3,7 @@ import "server-only"
 import { getPrometheusStatus } from "@/actions/prometheus-status"
 import { pickNotice, type MemberNotice } from "@/lib/member/notice-rules"
 import { prisma } from "@/lib/prisma"
+import { getRewindNotice } from "@/lib/wrapped/notify/notice"
 
 /**
  * The subscription notices: payment past due, then the pending Plex invite.
@@ -30,8 +31,8 @@ async function outageNotice(): Promise<MemberNotice | null> {
 
 /**
  * The one notice the member shell shows under its top bar, or `null`
- * (ui-design-system 6.1). P7.14 adds "Your Rewind is ready".
+ * (ui-design-system 6.1), "Your Rewind is ready" (P7.14) last.
  */
 export async function getMemberNotice(userId: string): Promise<MemberNotice | null> {
-  return pickNotice(await Promise.all([subscriptionNotice(userId), outageNotice()]))
+  return pickNotice(await Promise.all([subscriptionNotice(userId), outageNotice(), getRewindNotice(userId)]))
 }

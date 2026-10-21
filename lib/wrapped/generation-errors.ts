@@ -34,7 +34,8 @@ import { z } from "zod"
  * Then the v3 pipeline's skip reasons (P5.9), stored on a run that was
  * `skipped` because the member is not eligible: `REDIS_UNAVAILABLE`,
  * `REWIND_DISABLED`, `NOT_IN_AUDIENCE`, `NO_PLEX_IDENTITY`, `MANAGED_ACCOUNT`
- * and `NOT_ENTITLED` (`TAUTULLI_USER_NOT_FOUND` above is one too).
+ * and `NOT_ENTITLED` (`TAUTULLI_USER_NOT_FOUND` above is one too), and
+ * P7.3's `JOINED_LATE`.
  */
 const REWIND_ERROR_CODES = [
   "TAUTULLI_USER_NOT_FOUND",
@@ -51,6 +52,7 @@ const REWIND_ERROR_CODES = [
   "NO_PLEX_IDENTITY",
   "MANAGED_ACCOUNT",
   "NOT_ENTITLED",
+  "JOINED_LATE",
 ] as const
 
 export type RewindErrorCode = (typeof REWIND_ERROR_CODES)[number]
@@ -148,6 +150,8 @@ export function adminErrorHint(
       return "This is a managed Plex account. Include managed accounts in the Rewind settings to make one."
     case "NOT_ENTITLED":
       return "This member has no active subscription or exemption."
+    case "JOINED_LATE":
+      return "This member joined on or after 1 October, so their first Rewind is next year's."
     case "REDIS_UNAVAILABLE":
       return "Rewind needs Redis (REDIS_URL), and it did not answer."
     case "GENERATION_FAILED":

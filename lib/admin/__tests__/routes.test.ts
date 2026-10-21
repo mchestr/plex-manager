@@ -5,8 +5,8 @@ import { invite, llmUsage, llmUsageDetail, rewindHistory, userDetail, userRewind
 describe("admin routes", () => {
   it("builds the user pages, with the year on the Rewind link", () => {
     expect(userDetail("u1")).toBe("/admin/users/u1")
-    expect(userRewind("u1", 2025)).toBe("/admin/users/u1/wrapped?year=2025")
-    expect(userRewind("u1", 2026)).toBe("/admin/users/u1/wrapped?year=2026")
+    expect(userRewind("u1", 2025)).toBe("/admin/users/u1/rewind/2025")
+    expect(userRewind("u1", 2026)).toBe("/admin/users/u1/rewind/2026")
   })
 
   it("filters LLM usage by member and year when given", () => {
@@ -23,7 +23,7 @@ describe("admin routes", () => {
 
   it("encodes ids", () => {
     expect(userDetail("a/b?c")).toBe("/admin/users/a%2Fb%3Fc")
-    expect(userRewind("a b", 2025)).toBe("/admin/users/a%20b/wrapped?year=2025")
+    expect(userRewind("a b", 2025)).toBe("/admin/users/a%20b/rewind/2025")
     expect(llmUsage({ userId: "a&b" })).toBe("/admin/llm-usage?userId=a%26b")
     expect(rewindHistory("w/1", "l#1")).toBe("/admin/wrapped/w%2F1/history/l%231")
     expect(invite("x/y")).toBe("/admin/invites/x%2Fy")

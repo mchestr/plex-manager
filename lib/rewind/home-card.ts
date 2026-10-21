@@ -43,6 +43,7 @@ import { YEAR_MAX, YEAR_MIN } from "@/lib/validations/shared-schemas"
 import { ARCHETYPES } from "@/lib/wrapped/archetypes/catalogue"
 import { parseStoredRewind } from "@/lib/wrapped/data/parse-stored"
 import { getRewindEligibility, type RewindEligibility } from "@/lib/wrapped/eligibility"
+import { isRewindUnread } from "@/lib/wrapped/notify/notice"
 import { DEFAULT_SEASON, seasonStateAt, seasonWindow } from "@/lib/wrapped/season"
 
 export interface RewindCardModel {
@@ -93,7 +94,7 @@ async function completedIssue(
     }),
     hasEntitlement(ctx.userId, "full"),
   ])
-  const unread = !ctx.viewedAt.some((at) => !row.generatedAt || at >= row.generatedAt)
+  const unread = isRewindUnread(row.generatedAt, ctx.viewedAt)
   const base = {
     share: share ? { state: "on" as const, pages: SharedPagesSchema.parse(share.pages).length, expiresOn: share.expiresAt } : { state: "off" as const },
     canShare,

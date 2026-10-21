@@ -80,11 +80,13 @@ const RecordCell = z.enum(RECORD_CELLS)
  * stored data and never a number a fact displays: `bars` are lengths against
  * the longest (Taste's genre column, the race's final standings, in the
  * order of the page's runners); `records` are the box's cells and the cell
- * the "record" stamp marks, which exists only with server medians.
+ * the "record" stamp marks, which exists only with server medians; `titles`
+ * are the postcard's titles 3 or more members watched, with no counts.
  */
 export const ShareGraphic = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("bars"), bars: z.array(z.number().min(0).max(1)).max(5) }),
   z.strictObject({ kind: z.literal("records"), cells: z.array(RecordCell).max(4), stamp: RecordCell.nullable() }),
+  z.strictObject({ kind: z.literal("titles"), titles: z.array(z.string().max(200)).max(3) }),
 ])
 export type ShareGraphic = z.infer<typeof ShareGraphic>
 

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache"
 import { adminAction } from "@/lib/actions/define-action"
 import { fail, ok } from "@/lib/actions/result"
 import { prisma } from "@/lib/prisma"
+import { enqueueSeasonReadyNotifications } from "@/lib/queue/jobs/rewind-notify"
 import { scheduleSeasonOpenRun } from "@/lib/rewind/season-runs"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { configDiff } from "@/lib/security/config-diff"
@@ -12,10 +13,15 @@ import { rewindSettingsSchema, unknownEntries, type RewindSettings } from "@/lib
 import { getRewindContentRatings, getRewindLibraries } from "@/lib/wrapped/admin/settings-options"
 import { createLogger } from "@/lib/utils/logger"
 import { REWIND_SETTINGS_SELECT, rewindSettingsFromConfig } from "@/lib/wrapped/config"
+import { getSeasonYear } from "@/lib/wrapped/season"
 
 const logger = createLogger("REWIND_SETTINGS")
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
+
+/** Whether every member can open Rewind under these settings. */
+const openToEveryone = (settings: Pick<RewindSettings, "rewindEnabled" | "rewindAudience"> | null) =>
+  settings?.rewindEnabled === true && settings.rewindAudience === "all"
 
 /**
  * Saves the Rewind settings section (admin only, P7.12). The input is the
@@ -28,6 +34,8 @@ const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
  * outage does not block the other fields.
  *
  * A change to the season dates reschedules the season-open Prepare (P7.8).
+ * When the save opens Rewind to everyone (the audience becomes `all` with
+ * Rewind on), it fans out the season's ready notifications (P7.14).
  */
 export const updateRewindSettings = adminAction({
   input: rewindSettingsSchema,
@@ -72,6 +80,13 @@ export const updateRewindSettings = adminAction({
     // Best effort: the save stands while Redis is down, and the stale sweep reschedules within 10 minutes.
     if (changed.includes("rewindSeasonOpens") || changed.includes("rewindSeasonCloses")) {
       await scheduleSeasonOpenRun().catch((error: unknown) => logger.warn("Could not reschedule the season-open run", { error: String(error) }))
+    }
+
+    // Members whose Rewinds completed while only admins could see them are told now; each job waits for its member's daytime.
+    if (!openToEveryone(before) && openToEveryone(input)) {
+      await getSeasonYear().then(enqueueSeasonReadyNotifications).catch((error: unknown) =>
+        logger.warn("Could not enqueue the season's ready notifications", { error: String(error) })
+      )
     }
 
     revalidatePath("/admin/settings")

@@ -82,8 +82,8 @@ export const A11Y_ROUTES: A11yRoute[] = [
 
   // Member
   { path: '/', as: 'member', ready: 'plex-link-card' },
-  { path: '/rewind', as: 'member', ready: 'wrapped-viewer' },
-  { path: `/rewind/${VISUAL_REWIND_YEAR}`, as: 'member', ready: 'wrapped-viewer' },
+  { path: '/rewind', as: 'member', ready: 'rewind-article-mode' },
+  { path: `/rewind/${VISUAL_REWIND_YEAR}`, as: 'member', ready: 'rewind-article-mode' },
   { path: '/onboarding', as: 'member', userId: VISUAL_ONBOARDING_USER.id, ready: 'onboarding-welcome-heading' },
   { path: '/discord/link', as: 'member', ready: 'discord-link-panel' },
   { path: '/account', as: 'member', ready: 'account-notifications' },
@@ -101,7 +101,7 @@ export const A11Y_ROUTES: A11yRoute[] = [
   },
   // Its Visits and Rewind table count the share visit the public share route records.
   { path: `/admin/users/${regularId}`, as: 'admin', ready: 'admin-user-season-wrapped-view', reset: clearA11yShareVisits },
-  { path: `/admin/users/${regularId}/wrapped`, as: 'admin', ready: 'admin-user-wrapped-heading' },
+  { path: `/admin/users/${regularId}/rewind/2026`, as: 'admin', ready: 'admin-rewind-preview-header' },
   { path: '/admin/invites', as: 'admin', ready: 'generate-invite-button' },
   {
     path: '/admin/invites',

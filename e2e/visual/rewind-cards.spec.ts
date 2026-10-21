@@ -25,10 +25,10 @@ import { expect, skipUnlessProductionBuild, test } from './visual-test';
 
 const FIXTURES: RewindFixtureId[] = ['heavy', 'median', 'light', 'extreme'];
 
-/** Every page a card can print, in issue order (`SHARE_PAGE_TYPES`). */
+/** Every page a card can print (`SHARE_PAGE_TYPES`): the full issue's, then the short editions'. */
 const SHARE_PAGES = [
   'cover', 'number', 'bookends', 'guess', 'top-shows', 'top-films', 'taste', 'people', 'clock',
-  'calendar', 'race', 'records', 'requests', 'standing', 'centrefold', 'back-cover',
+  'calendar', 'race', 'records', 'requests', 'standing', 'centrefold', 'back-cover', 'short-list', 'postcard',
 ];
 
 const OPTIONS = 'signed=0&art=0&daily=1';

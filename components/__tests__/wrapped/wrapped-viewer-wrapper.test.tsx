@@ -1,4 +1,4 @@
-import { render, screen, waitFor, act, within } from '@testing-library/react'
+import { render, screen, waitFor, act } from '@testing-library/react'
 import { WrappedViewerWrapper } from '@/components/wrapped/wrapped-viewer-wrapper'
 import { WrappedData } from '@/types/wrapped'
 
@@ -20,8 +20,7 @@ jest.mock('@/components/wrapped/wrapped-transition', () => ({
   ),
 }))
 
-// Mock WrappedViewer. It shows the share-controls slot twice, as the real one
-// can on the last slide and under "Show all".
+// Mock WrappedViewer
 jest.mock('@/components/wrapped/wrapped-viewer', () => ({
   WrappedViewer: ({
     wrappedData,
@@ -29,14 +28,12 @@ jest.mock('@/components/wrapped/wrapped-viewer', () => ({
     userName,
     summary,
     shareToken,
-    shareControls,
   }: {
     wrappedData: WrappedData
     isShared?: boolean
     userName?: string
     summary?: string
     shareToken?: string
-    shareControls?: React.ReactNode
   }) => (
     <div data-testid="wrapped-viewer">
       <div>Wrapped Viewer</div>
@@ -45,27 +42,6 @@ jest.mock('@/components/wrapped/wrapped-viewer', () => ({
       {isShared && <div>Shared View</div>}
       {summary && <div>Summary: {summary}</div>}
       {shareToken && <div>Token: {shareToken}</div>}
-      <div data-testid="slide-slot">{shareControls}</div>
-      <div data-testid="show-all-slot">{shareControls}</div>
-    </div>
-  ),
-}))
-
-// Mock the share-link controls (they call Server Actions)
-jest.mock('@/components/wrapped/wrapped-share-controls', () => ({
-  WrappedShareControls: ({
-    year,
-    shareToken,
-    onShareTokenChange,
-  }: {
-    year: number
-    shareToken: string | null
-    onShareTokenChange: (shareToken: string | null) => void
-  }) => (
-    <div data-testid="share-controls">
-      Controls {year} {shareToken ?? 'no-link'}
-      <button onClick={() => onShareTokenChange('fresh-token')}>create</button>
-      <button onClick={() => onShareTokenChange(null)}>stop</button>
     </div>
   ),
 }))
@@ -203,46 +179,6 @@ describe('WrappedViewerWrapper', () => {
     )
 
     expect(screen.getByText('Token: abc123')).toBeInTheDocument()
-  })
-
-  it('should offer the share controls only when the page asks for them', () => {
-    const wrappedData = createMockWrappedData()
-    const { rerender } = render(<WrappedViewerWrapper wrappedData={wrappedData} year={2024} isShared />)
-    expect(screen.queryByTestId('share-controls')).not.toBeInTheDocument()
-
-    rerender(<WrappedViewerWrapper wrappedData={wrappedData} year={2024} isShared canManageShare />)
-    expect(screen.getAllByTestId('share-controls')).toHaveLength(2)
-  })
-
-  it('should point the share controls at the row year, not the year in the stored JSON', () => {
-    // A row looked up by 2025 whose JSON says 2024 (or has no year at all)
-    const wrappedData = createMockWrappedData()
-    render(
-      <WrappedViewerWrapper wrappedData={wrappedData} year={2025} isShared canManageShare shareToken="live-token" />
-    )
-
-    for (const controls of screen.getAllByTestId('share-controls')) {
-      expect(controls).toHaveTextContent('Controls 2025 live-token')
-    }
-  })
-
-  it('should keep every copy of the share controls on the same link', () => {
-    const wrappedData = createMockWrappedData()
-    render(<WrappedViewerWrapper wrappedData={wrappedData} year={2024} isShared canManageShare />)
-
-    act(() => {
-      within(screen.getByTestId('slide-slot')).getByText('create').click()
-    })
-    expect(within(screen.getByTestId('show-all-slot')).getByTestId('share-controls')).toHaveTextContent(
-      'Controls 2024 fresh-token'
-    )
-
-    act(() => {
-      within(screen.getByTestId('show-all-slot')).getByText('stop').click()
-    })
-    expect(within(screen.getByTestId('slide-slot')).getByTestId('share-controls')).toHaveTextContent(
-      'Controls 2024 no-link'
-    )
   })
 
   it('should handle transition completion callback', async () => {

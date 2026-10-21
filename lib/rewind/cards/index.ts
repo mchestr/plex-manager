@@ -2,8 +2,8 @@
  * The share cards by page type (design 6.4). Each renderer draws one card
  * from a `CardInput`, the projected page and nothing else, plus the poster
  * art already fetched for it. P5.10 shipped the cover, P5.11 the other core
- * cards and P7.6 the rest (`CARD_PAGE_TYPES`); Setup and Next year have
- * none, and P7.3's Short list and postcard add theirs. A page with no
+ * cards and P7.6 the rest, the short editions' Short list and postcard
+ * included (`CARD_PAGE_TYPES`); Setup and Next year have none. A page with no
  * renderer has no card, and the card routes answer 404 for it.
  *
  * Satori rules hold for every file here: the `rewindCards` lint selectors
@@ -27,9 +27,11 @@ import { GuessTeaserCard } from "./guess-teaser"
 import { NumberCard } from "./number"
 import { NO_ASSETS, type CardAssets } from "./parts"
 import { PeopleCard } from "./people"
+import { PostcardCard } from "./postcard"
 import { RaceCard } from "./race"
 import { RecordsCard } from "./records"
 import { RequestsCard } from "./requests"
+import { ShortListCard } from "./short-list"
 import { StandingCard } from "./standing"
 import { TasteCard } from "./taste"
 import { TopFilmsCard } from "./top-films"
@@ -54,6 +56,8 @@ const RENDERERS: Partial<Record<SharePageType, CardRenderer>> = {
   standing: StandingCard,
   centrefold: CentrefoldCard,
   "back-cover": BackCoverCard,
+  "short-list": ShortListCard,
+  postcard: PostcardCard,
 }
 
 /** The pages that have a card. @internal */

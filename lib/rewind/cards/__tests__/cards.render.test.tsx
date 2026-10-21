@@ -2,7 +2,7 @@
  * @jest-environment node
  *
  * Every card (P5.11's core cards and P7.6's rest) on the heavy, median,
- * light and extreme fixtures: each eligible card renders to a PNG through
+ * light and extreme fixtures, the light member's pocket cut and a postcard: each eligible card renders to a PNG through
  * the installed next/og (in a child process, since Jest cannot load
  * `@vercel/og`'s WASM), and the card rules hold in the element tree:
  *
@@ -21,14 +21,14 @@ import { isValidElement, type ReactElement, type ReactNode } from "react"
 
 import { CARD_PAGES, renderCard } from "@/lib/rewind/cards"
 import { CARD_PAGE_TYPES, eligibleCards } from "@/lib/rewind/cards/eligible"
-import { fixtureRewind, shareContext, shareOptions } from "@/lib/wrapped/data/__tests__/share-fixture"
+import { editionRewind, fixtureRewind, shareContext, shareOptions } from "@/lib/wrapped/data/__tests__/share-fixture"
 import type { RewindDataV3 } from "@/lib/wrapped/data/schema-v3"
 import { cardInput, toShareSafe, type CardInput } from "@/lib/wrapped/data/share-safe"
 import type { ShareOptions, SharePageType } from "@/lib/wrapped/data/share-safe-schema"
 import { FACTS, type FactId } from "@/lib/wrapped/facts/catalogue"
 
 const ROOT = path.resolve(__dirname, "../../../..")
-const FIXTURES = ["heavy", "median", "light", "extreme"] as const
+const FIXTURES = ["heavy", "median", "light", "extreme", "pocket", "postcard"] as const
 
 /** Every string a card's host tree prints. */
 function texts(node: ReactNode): string[] {
@@ -44,7 +44,9 @@ function texts(node: ReactNode): string[] {
 const rewinds = new Map<string, RewindDataV3>()
 
 beforeAll(async () => {
-  for (const id of [...FIXTURES, "night-owl"]) rewinds.set(id, await fixtureRewind(id))
+  for (const id of ["heavy", "median", "light", "extreme", "night-owl"]) rewinds.set(id, await fixtureRewind(id))
+  rewinds.set("pocket", await editionRewind("pocket"))
+  rewinds.set("postcard", await editionRewind("postcard"))
 })
 
 /** The eligible cards' inputs under `overrides`, every page published. */
@@ -69,6 +71,8 @@ it.each([
   ["median", 14],
   ["light", 11],
   ["extreme", 10],
+  ["pocket", 5],
+  ["postcard", 1],
 ] as const)("lists the %s issue's eligible cards", (id, count) => {
   const rewind = rewinds.get(id)!
   const cards = inputs(rewind).map((input) => input.page.type)

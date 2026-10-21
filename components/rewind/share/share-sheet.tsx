@@ -4,13 +4,14 @@ import { Download, Share } from "lucide-react"
 import Link from "next/link"
 import { useId, useRef, useState, type Ref } from "react"
 
+import { useRecordShare } from "@/components/rewind/stage/use-record-view"
 import { Button } from "@/components/ui/button"
 import { Icon } from "@/components/ui/icon"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Switch } from "@/components/ui/switch"
-import { registry, type IssuePageType } from "@/lib/rewind/registry"
+import { registry, type RewindPageType } from "@/lib/rewind/registry"
 import { cardFileName, cardUrl, type CardChoices } from "@/lib/rewind/share-sheet"
 import type { SharePageType } from "@/lib/wrapped/data/share-safe-schema"
 
@@ -23,7 +24,7 @@ interface ShareSheetProps {
   open: boolean
   onClose: () => void
   /** The page the story is on; the picker starts there when it has a card. */
-  page: IssuePageType
+  page: RewindPageType
   /** Opened from the back cover's "Change": focus starts on the switches. */
   atSettings: boolean
 }
@@ -74,6 +75,7 @@ function SwitchRow({ id, label, hint, checked, disabled, onChange, testId, input
  */
 export function ShareSheet({ open, onClose, page, atSettings }: ShareSheetProps) {
   const share = useShare()
+  const recordShare = useRecordShare()
   const id = useId()
   const signRef = useRef<HTMLButtonElement>(null)
   const [picked, setPicked] = useState<SharePageType | null>(null)
@@ -95,7 +97,11 @@ export function ShareSheet({ open, onClose, page, atSettings }: ShareSheetProps)
   const onShare = async () => {
     if (!file || !url) return
     const outcome = await shareFile(file, `My Rewind ${setup.year}`)
-    if (outcome === "failed") setPressAndHold(saveFile(file, url, name) === "opened")
+    if (outcome === "shared") recordShare("image")
+    if (outcome === "failed") {
+      setPressAndHold(saveFile(file, url, name) === "opened")
+      recordShare("save")
+    }
   }
 
   return (
@@ -171,7 +177,11 @@ export function ShareSheet({ open, onClose, page, atSettings }: ShareSheetProps)
               variant={filesShareable ? "ink-outline" : "ink"}
               size="pill"
               disabled={!url}
-              onClick={() => url && setPressAndHold(saveFile(file, url, name) === "opened")}
+              onClick={() => {
+                if (!url) return
+                setPressAndHold(saveFile(file, url, name) === "opened")
+                recordShare("save")
+              }}
               icon={<Icon icon={Download} />}
               data-testid="rewind-share-save"
             >

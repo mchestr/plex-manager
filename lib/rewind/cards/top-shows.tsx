@@ -42,10 +42,14 @@ function ListRow({ rank, title, sub, measure, ink, first }: { rank: number; titl
 }
 
 /** The rank a title fact holds: `films[3].title` is 3. */
-export const rankOf = (id: FactId, fallback: number) => Number(/\[(\d)\]/.exec(id)?.[1] ?? fallback)
+export const rankOf = (id: FactId, fallback: number): number => Number(/\[(\d)\]/.exec(id)?.[1] ?? fallback)
 
-/** A top-five list card: the headline, the posters with art, and a row per published title with `sub(titleId)` under it. */
-export function TopListCard(input: CardInput, assets: CardAssets, sub: (id: FactId) => string): ReactElement {
+/**
+ * A top-five list card: the headline, the posters with art, and a row per
+ * published title with `sub(titleId)` under it, numbered by its list rank
+ * (or by `rank`, as the Short list numbers its rows in order).
+ */
+export function TopListCard(input: CardInput, assets: CardAssets, sub: (id: FactId) => string, rank: (id: FactId, i: number) => number = (id, i) => rankOf(id, i + 1)): ReactElement {
   const ink = cardInk(input)
   const og = input.size === "og"
   const measure = og ? 1080 : CARD_MEASURE
@@ -70,7 +74,7 @@ export function TopListCard(input: CardInput, assets: CardAssets, sub: (id: Fact
       ) : null}
       <div style={{ display: "flex", flexDirection: "column", marginTop: og ? 20 : 48, width: measure }}>
         {shown.map((row, i) => (
-          <ListRow key={row.id} rank={rankOf(row.id, i + 1)} title={row.title} sub={row.sub} measure={measure} ink={ink.on} first={i === 0} />
+          <ListRow key={row.id} rank={rank(row.id, i)} title={row.title} sub={row.sub} measure={measure} ink={ink.on} first={i === 0} />
         ))}
       </div>
     </Frame>

@@ -138,7 +138,7 @@ const COPY = {
   TAUTULLI_USER_NOT_FOUND: rewind(
     "We couldn't find your account in Tautulli yet. Ask the server admin to refresh Tautulli's user list."
   ),
-  GENERATION_FAILED: rewind("Something went wrong while generating your Wrapped. Please try again."),
+  GENERATION_FAILED: rewind("Something went wrong while making your Rewind. Please try again."),
   TIMEOUT: rewind("Making your Rewind took too long. Please try again in a few minutes."),
   UPSTREAM_ERROR: rewind("We couldn't read your watch history just now. Please try again in a few minutes."),
   LLM_FAILED: rewind("We couldn't write your Rewind this time. Please try again."),
@@ -149,6 +149,7 @@ const COPY = {
   NOT_IN_AUDIENCE: rewind("Rewind isn't open to everyone on this server yet."),
   NO_PLEX_IDENTITY: rewind("Rewind needs Plex watch history. Jellyfin support is planned."),
   MANAGED_ACCOUNT: rewind("Rewind isn't made for managed Plex accounts on this server."),
+  JOINED_LATE: rewind("Your first Rewind arrives next year."),
 
   // RewindPanelCode: the /rewind/<year> status panels
   REWIND_GENERATING: {

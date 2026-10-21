@@ -1,6 +1,5 @@
 import {
   cn,
-  generateShareToken,
   parseServerUrl,
   aggregateLlmUsage,
 } from '@/lib/utils'
@@ -49,53 +48,6 @@ describe('cn', () => {
   it('should handle long strings without issues', () => {
     const longClass = 'a'.repeat(1000)
     expect(cn(longClass)).toBe(longClass)
-  })
-})
-
-describe('generateShareToken', () => {
-  it('should generate a token', () => {
-    const token = generateShareToken()
-    expect(token).toBeDefined()
-    expect(typeof token).toBe('string')
-    expect(token.length).toBeGreaterThan(0)
-  })
-
-  it('should generate unique tokens', () => {
-    const token1 = generateShareToken()
-    const token2 = generateShareToken()
-    expect(token1).not.toBe(token2)
-  })
-
-  it('should generate URL-safe tokens', () => {
-    const token = generateShareToken()
-    // URL-safe base64 should not contain +, /, or = characters
-    expect(token).not.toContain('+')
-    expect(token).not.toContain('/')
-    expect(token).not.toContain('=')
-  })
-
-  it('should generate tokens of consistent length', () => {
-    const tokens = Array.from({ length: 10 }, () => generateShareToken())
-    const lengths = tokens.map((t) => t.length)
-    const uniqueLengths = new Set(lengths)
-    // All tokens should have the same length (43 characters for 32 bytes in base64url)
-    expect(uniqueLengths.size).toBe(1)
-    expect(lengths[0]).toBe(43)
-  })
-
-  it('should generate tokens with only valid base64url characters', () => {
-    const tokens = Array.from({ length: 100 }, () => generateShareToken())
-    const base64urlPattern = /^[A-Za-z0-9_-]+$/
-    tokens.forEach((token) => {
-      expect(token).toMatch(base64urlPattern)
-    })
-  })
-
-  it('should generate cryptographically random tokens', () => {
-    // Generate many tokens and ensure high entropy (no duplicates in reasonable sample)
-    const tokens = Array.from({ length: 1000 }, () => generateShareToken())
-    const uniqueTokens = new Set(tokens)
-    expect(uniqueTokens.size).toBe(1000)
   })
 })
 

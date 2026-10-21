@@ -10,8 +10,8 @@
  *
  * ## Rules
  *
- * - Only the pages in `options.pages` that the issue printed, in registry
- *   order, each with only its registry `share.facts` displays (never raw
+ * - Only the pages in `options.pages` that the issue printed, in the
+ *   issue's order, each with only its registry `share.facts` displays (never raw
  *   values). Title facts go to `titles`, everything else to `facts`.
  * - Counts that reveal the server's size (`standing.members`, rarity counts,
  *   `community.*`, viewer counts) only with `Config.rewindPublicCounts`; the
@@ -20,7 +20,8 @@
  * - The soundtrack as 48 weekly bins unless `dailyDetail`; the calendar
  *   card's days only with `dailyDetail`.
  * - A card's `graphic` (Taste's column, the race's standings, the Records
- *   box) as lengths and cell names from the page's own data, never a value.
+ *   box) as lengths and cell names from the page's own data, never a value;
+ *   the postcard's community titles, without counts and without hidden ones.
  * - `ownerName` only when signed; `brand` only when the admin shows the
  *   server name; art only when the member includes it and the admin allows it.
  * - The archetype, and every `archetype.*` fact, only on pages 16 and 18.
@@ -32,12 +33,12 @@
  * @module lib/wrapped/data/share-safe
  */
 
-import { registry, type IssuePageType, type RegistryEntry } from "@/lib/rewind/registry"
+import { registry, type RegistryEntry, type RewindPageType } from "@/lib/rewind/registry"
 import { soundtrack, yearDays } from "@/lib/rewind/viz/soundtrack"
 import { getArchetype } from "@/lib/wrapped/archetypes/catalogue"
 import { POSTER_LINES } from "@/lib/wrapped/copy/poster-lines"
 import { renderCopyText, tokenIds } from "@/lib/wrapped/copy/render-copy"
-import { copyLocals, headline, posterLineTemplate, titleFreeHeadline } from "@/lib/wrapped/copy/templates"
+import { copyLocals, headline, postcardHeadline, posterLineTemplate, shortListHeadline, titleFreeHeadline } from "@/lib/wrapped/copy/templates"
 import { FACTS, type FactId, type RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 import type { RewindDataV3 } from "@/lib/wrapped/data/schema-v3"
 
@@ -53,9 +54,9 @@ import {
 } from "./share-safe-schema"
 
 const SERVER_COUNTS = /^(standing\.members|archetype\.(rarityCount|scoredMembers)|community\..+|series\[\d\]\.viewer(Count|Rank))$/
-const ARCHETYPE_PAGES: ReadonlySet<IssuePageType> = new Set(["centrefold", "back-cover"])
-const SOUNDTRACK_PAGES: ReadonlySet<IssuePageType> = new Set(["cover", "number", "centrefold", "back-cover"])
-const HOURS_PAGES: ReadonlySet<IssuePageType> = new Set(["clock", "centrefold"])
+const ARCHETYPE_PAGES: ReadonlySet<RewindPageType> = new Set(["centrefold", "back-cover"])
+const SOUNDTRACK_PAGES: ReadonlySet<RewindPageType> = new Set(["cover", "number", "centrefold", "back-cover"])
+const HOURS_PAGES: ReadonlySet<RewindPageType> = new Set(["clock", "centrefold"])
 const TOP_PERCENTILE = 25
 const MAX_DISPLAY = 80
 const RATING_KEY = /^\d{1,12}$/
@@ -70,7 +71,6 @@ const isTitle = (id: FactId) => FACTS[id].unit === "title"
 function titleKeys(rewind: RewindDataV3): Partial<Record<FactId, string[]>> {
   const keys: Partial<Record<FactId, string[]>> = {}
   for (const page of rewind.pages) {
-    if (page.type === "short-list") continue
     const entry: RegistryEntry = registry[page.type]
     const parsed = entry.schema.safeParse(page.data)
     if (!parsed.success || !entry.share.titleKeys) continue
@@ -90,7 +90,7 @@ function hiddenTitleFacts(rewind: RewindDataV3, keys: Partial<Record<FactId, str
 }
 
 /** Whether `id` may print on `page` under these options and flags. */
-function mayPrint(id: FactId, page: IssuePageType, facts: RewindFactsV3, ctx: ShareContext): boolean {
+function mayPrint(id: FactId, page: RewindPageType, facts: RewindFactsV3, ctx: ShareContext): boolean {
   if (id.startsWith("archetype.") && !ARCHETYPE_PAGES.has(page)) return false
   if (id === "member.firstName") return false
   if (!ctx.publicCounts && SERVER_COUNTS.test(id)) return false
@@ -115,7 +115,7 @@ function soundtrackOf(rewind: RewindDataV3, daily: boolean): ShareSafePage["soun
 }
 
 /** The page's 24 hours, normalised to the busiest, from its own stored data. */
-function hoursOf(rewind: RewindDataV3, type: IssuePageType): number[] | null {
+function hoursOf(rewind: RewindDataV3, type: RewindPageType): number[] | null {
   if (!HOURS_PAGES.has(type)) return null
   const page = rewind.pages.find((p) => p.type === type)
   const parsed = page ? (type === "clock" ? registry.clock : registry.centrefold).schema.safeParse(page.data) : null
@@ -125,7 +125,7 @@ function hoursOf(rewind: RewindDataV3, type: IssuePageType): number[] | null {
 }
 
 /** The page's stored data, parsed with its registry schema, or null. */
-function storedData(rewind: RewindDataV3, type: IssuePageType): unknown {
+function storedData(rewind: RewindDataV3, type: RewindPageType): unknown {
   const page = rewind.pages.find((p) => p.type === type)
   const entry: RegistryEntry = registry[type]
   const parsed = page ? entry.schema.safeParse(page.data) : null
@@ -144,7 +144,13 @@ type RecordCells = Extract<ShareGraphic, { kind: "records" }>["cells"]
  * bar lengths, and the Records cells that print a fact (the paused cell's
  * minutes are no fact, so it stays in-app).
  */
-function graphicOf(rewind: RewindDataV3, type: IssuePageType): ShareGraphic | null {
+function graphicOf(rewind: RewindDataV3, type: RewindPageType, ctx: ShareContext): ShareGraphic | null {
+  if (type === "postcard") {
+    // Titles 3 or more members watched: no names and no counts, and none the member hid.
+    const data = storedData(rewind, type) as { titles: Array<{ key: string; title: string }> } | null
+    const titles = (data?.titles ?? []).filter((t) => !ctx.hiddenKeys.has(t.key.slice(t.key.indexOf(":") + 1))).map((t) => t.title.slice(0, 200))
+    return { kind: "titles", titles: titles.slice(0, 3) }
+  }
   if (type === "taste") {
     const data = storedData(rewind, type) as { genres: Array<{ minutes: number }> } | null
     return data ? { kind: "bars", bars: lengths(data.genres.slice(0, 5).map((g) => g.minutes)) } : null
@@ -163,7 +169,7 @@ function graphicOf(rewind: RewindDataV3, type: IssuePageType): ShareGraphic | nu
 }
 
 /** The stat each page's own graphic already shows: the centrefold's clock shows the peak hour. */
-const SHOWN_BY_GRAPHIC: Partial<Record<IssuePageType, CardFactId>> = { centrefold: "hours.peak" }
+const SHOWN_BY_GRAPHIC: Partial<Record<RewindPageType, CardFactId>> = { centrefold: "hours.peak" }
 
 /**
  * The poster's three stats when the member has not chosen (design 6.3): the
@@ -179,7 +185,7 @@ const SHOWN_BY_GRAPHIC: Partial<Record<IssuePageType, CardFactId>> = { centrefol
  * // ["time.totalHours", "streak.longest.days", "time.seriesHours"]
  * ```
  */
-export function defaultCardFacts(page: IssuePageType, allowed: (id: CardFactId) => boolean): CardFactId[] {
+export function defaultCardFacts(page: RewindPageType, allowed: (id: CardFactId) => boolean): CardFactId[] {
   const ok = (id: CardFactId) => allowed(id) && SHOWN_BY_GRAPHIC[page] !== id
   const second: CardFactId = ok("standing.percentile") ? "standing.percentile" : "streak.longest.days"
   const order: CardFactId[] = ["time.totalHours", second, "hours.peak", "streak.longest.days", ...CARD_FACT_IDS]
@@ -193,8 +199,10 @@ function archetypeOf(rewind: RewindDataV3, ctx: ShareContext): ShareSafePage["ar
   return { id, name: getArchetype(id).name, posterLine: POSTER_LINES[lineId] ?? "" }
 }
 
-/** The page's headline from its published facts only, else its title-free line. */
-function cardHeadline(page: IssuePageType, allowed: RewindFactsV3, year: number): string {
+/** The page's headline from its published facts only, else its title-free line; the short editions' pages have their own. */
+function cardHeadline(page: RewindPageType, allowed: RewindFactsV3, year: number, edition: { titles: number; brand: string | null }): string {
+  if (page === "short-list") return shortListHeadline(edition.titles)
+  if (page === "postcard") return edition.brand ? postcardHeadline(edition.brand).slice(0, 200) : "A quiet year"
   const firstTitle = allowed["bookends.first.title"]?.display
   const source = { ...allowed, ...copyLocals({ year, firstTitle }) }
   const template = headline(page, allowed)
@@ -208,18 +216,22 @@ interface PageInput {
   ctx: ShareContext
   keys: Partial<Record<FactId, string[]>>
   hidden: Set<FactId>
+  brand: string | null
 }
 
-function projectPage(type: SharePageType, { rewind, options, ctx, keys, hidden }: PageInput): ShareSafePage {
-  const entry = registry[type]
+function projectPage(type: SharePageType, { rewind, options, ctx, keys, hidden, brand }: PageInput): ShareSafePage {
+  const entry: RegistryEntry = registry[type]
+  // A page whose data picks its facts prints them in the data's order (the Short list's rows).
+  const data = entry.share.pick ? storedData(rewind, type) : null
+  const shareFacts = data === null ? entry.share.facts : entry.share.pick!(data).filter((id) => entry.share.facts.includes(id))
   const printable = (id: FactId) => Boolean(rewind.facts[id]) && !hidden.has(id) && mayPrint(id, type, rewind.facts, ctx)
   const chosen = options.cardFacts.length > 0 ? options.cardFacts : defaultCardFacts(type, printable)
   const stats = ARCHETYPE_PAGES.has(type) ? chosen.filter(printable) : []
-  const ids = [...new Set<FactId>([...entry.share.facts, ...stats])].filter(printable)
+  const ids = [...new Set<FactId>([...shareFacts, ...stats])].filter(printable)
   const allowed: RewindFactsV3 = Object.fromEntries(ids.map((id) => [id, rewind.facts[id]]))
   if (options.signed && rewind.facts["member.firstName"]) allowed["member.firstName"] = rewind.facts["member.firstName"]
   const titleIds = ids.filter(isTitle).slice(0, 5)
-  const graphic = graphicOf(rewind, type)
+  const graphic = graphicOf(rewind, type, ctx)
   const art = options.includeArt && ctx.allowArt && entry.share.art ? titleIds.flatMap((id) => {
           const key = keys[id]?.at(-1)
           return key && RATING_KEY.test(key) ? [{ ratingKey: key }] : []
@@ -227,7 +239,7 @@ function projectPage(type: SharePageType, { rewind, options, ctx, keys, hidden }
 
   return {
     type,
-    headline: cardHeadline(type, allowed, rewind.year),
+    headline: cardHeadline(type, allowed, rewind.year, { titles: titleIds.length, brand }),
     facts: Object.fromEntries(ids.filter((id) => !isTitle(id)).map((id) => [id, { display: rewind.facts[id]!.display }])),
     titles: titleIds.map((id) => rewind.facts[id]!.display.slice(0, 200)),
     titleIds,
@@ -259,14 +271,14 @@ function ogText(year: number, ownerName: string | null, brand: string | null, fi
  */
 export function toShareSafe(rewind: RewindDataV3, options: ShareOptions, ctx: ShareContext): ShareSafeRewindV3 {
   const keys = titleKeys(rewind)
-  const input: PageInput = { rewind, options, ctx, keys, hidden: hiddenTitleFacts(rewind, keys, ctx) }
-  const stored = new Set(rewind.pages.map((page) => page.type))
+  const brand = ctx.showServerName && ctx.serverName ? ctx.serverName.slice(0, 60) : null
+  const input: PageInput = { rewind, options, ctx, keys, hidden: hiddenTitleFacts(rewind, keys, ctx), brand }
   const published = new Set(options.pages)
-  const pages = (Object.keys(registry) as IssuePageType[])
-    .filter((type): type is SharePageType => published.has(type as SharePageType) && stored.has(type))
+  // In the issue's own order: registry order for the full issue, the pocket edition's for a pocket member.
+  const pages = [...new Set(rewind.pages.map((page) => page.type))]
+    .filter((type): type is SharePageType => published.has(type as SharePageType))
     .map((type) => projectPage(type, input))
   const ownerName = options.signed ? (rewind.facts["member.firstName"]?.display.slice(0, 24) ?? null) : null
-  const brand = ctx.showServerName && ctx.serverName ? ctx.serverName.slice(0, 60) : null
   const serial = rewind.facts["member.serial"]?.display
 
   return ShareSafeRewindV3.parse({

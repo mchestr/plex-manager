@@ -13,15 +13,14 @@
  *
  * | Card | Needs |
  * |---|---|
- * | Bookends, Guess, Top shows, Top films, The race | a title that is not hidden |
+ * | Bookends, Guess, Top shows, Top films, Short list, The race | a title that is not hidden |
  * | Calendar | Daily detail, and its days |
  * | Taste, Records | their graphic |
  * | People | a name |
  * | Requests | the request count |
  * | Standing | the percentile, which the projection prints only at top 25% or better |
  *
- * Setup and Next year have no card. The heavy fixture lists 15 cards with
- * Daily detail off and 16 with it on.
+ * The postcard always has its card. Setup and Next year have none.
  *
  * @module lib/rewind/cards/eligible
  */
@@ -29,10 +28,11 @@
 import type { FactId } from "@/lib/wrapped/facts/catalogue"
 import type { ShareOptions, ShareSafePage, SharePageType } from "@/lib/wrapped/data/share-safe-schema"
 
-/** Every card, in registry order. P7.3 adds `short-list` and `postcard`. @internal */
+/** Every card, in registry order: the full issue's, then the short editions' Short list and postcard. */
 export const CARD_PAGE_TYPES = [
   "cover", "number", "bookends", "guess", "top-shows", "top-films", "taste", "people",
   "clock", "calendar", "race", "records", "requests", "standing", "centrefold", "back-cover",
+  "short-list", "postcard",
 ] as const satisfies readonly SharePageType[]
 
 /** What the rule reads of a projected page. */
@@ -45,6 +45,7 @@ const CONDITIONS: Partial<Record<SharePageType, (page: EligiblePage, options: Pi
   guess: (page) => page.titles.length > 0,
   "top-shows": (page) => page.titles.length > 0,
   "top-films": (page) => page.titles.length > 0,
+  "short-list": (page) => page.titles.length > 0,
   race: (page) => page.titles.length > 0 && page.graphic?.kind === "bars",
   calendar: (page, options) => options.dailyDetail && page.soundtrack?.grain === "daily",
   taste: (page) => page.graphic?.kind === "bars" && hasFact(page, /^taste\.genre\[\d\]\.name$/),

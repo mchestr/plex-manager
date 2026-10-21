@@ -72,13 +72,15 @@ export function StagePage({ index, current, previous, ink, label, children }: St
         className={cn(
           scheme,
           "rw-page absolute inset-0 flex outline-none items-center justify-center overflow-hidden bg-background pt-(--rw-chrome-top) pb-(--rw-chrome-bottom) text-foreground",
+          // The desktop spread (P7.4): the field fills only the framed artboard; the spread around it is paper
+          "rw-spread:bg-transparent rw-spread:p-0",
           isCurrent ? "z-2" : index === previous ? "z-1" : "z-0"
         )}
       >
         {/* The body's 24 px line box scales with the page too, so text that sets no line height never outgrows the artboard */}
         <div
           data-testid="rewind-artboard"
-          className="rw-artboard relative h-[calc(var(--rw-artboard-h)*var(--u)*1px)] w-[calc(390px*var(--u))] shrink-0 leading-[max(15px,calc(var(--u)*24px))]"
+          className="rw-artboard relative h-[calc(var(--rw-artboard-h)*var(--u)*1px)] w-[calc(390px*var(--u))] shrink-0 leading-[max(15px,calc(var(--u)*24px))] rw-spread:bg-background"
         >
           {children}
         </div>
