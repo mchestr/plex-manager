@@ -42,5 +42,7 @@ test.describe('Member pages', () => {
     expect(response?.status()).toBe(404);
     await expect(page.getByTestId('status-screen-code')).toHaveText('404');
     await expect(page.getByTestId('member-nav-membership')).toHaveCount(0);
+    // The member 404 sits in the app shell's main, not in a second shell of its own
+    await expect(page.locator('main')).toHaveCount(1);
   });
 });
