@@ -21,7 +21,7 @@ interface UserDashboardProps {
   renderedAt: string // the server clock, so relative dates hydrate unchanged
   primaryAuthService?: string | null // "plex" or "jellyfin"
   mediaServerUrl?: string | null // URL to the media server
-  subscriptionSlot?: React.ReactNode // server-rendered SubscriptionStatusView
+  subscriptionSlot?: React.ReactNode // the link to /membership, for Stripe subscribers
   rewindSlot?: React.ReactNode // the server-rendered RewindCard (P6.9)
 }
 
@@ -87,7 +87,7 @@ export function UserDashboard({
               </div>
             </div>
 
-            {/* Subscription - server-rendered, only present for Stripe subscribers */}
+            {/* Membership - a link to /membership, only present for Stripe subscribers */}
             {subscriptionSlot && (
               <div className="space-y-3 sm:space-y-4 pt-2">
                 <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground px-1">Membership</h2>

@@ -62,7 +62,6 @@ jest.mock('@/components/dashboard/requests-card', () => ({ RequestsCard: () => n
 jest.mock('@/components/dashboard/status-background', () => ({ StatusFooter: () => null }))
 jest.mock('@/components/watchlist/sync-settings-card', () => ({ WatchlistSyncCard: () => null }))
 jest.mock('@/components/auth/service-sign-in-toggle', () => ({ ServiceSignInToggle: () => null }))
-jest.mock('@/components/subscription/subscription-status-view', () => ({ SubscriptionStatusView: () => null }))
 
 const MODEL: RewindCardModel = {
   state: { kind: 'not-started', year: 2026 },

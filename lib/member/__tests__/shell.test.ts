@@ -40,23 +40,23 @@ const labels = async (session = { id: 'u1', isAdmin: false }) =>
 describe('getAppShellData', () => {
   it('hides Rewind when the home card resolves to nothing', async () => {
     setup()
-    await expect(labels()).resolves.toEqual(['Home'])
+    await expect(labels()).resolves.toEqual(['Home', 'Help'])
     expect(cardModel).toHaveBeenCalledWith('u1', false)
   })
 
   it('shows Rewind for the card year when there is something to open', async () => {
     setup({ card: model({ kind: 'generating', year: 2026 }) })
-    await expect(labels({ id: 'u1', isAdmin: true })).resolves.toEqual(['Home', 'Rewind 2026'])
+    await expect(labels({ id: 'u1', isAdmin: true })).resolves.toEqual(['Home', 'Rewind 2026', 'Help'])
     expect(cardModel).toHaveBeenCalledWith('u1', true)
   })
 
   it('opens the newest past year before the season, and hides Rewind with no past year', async () => {
     const teaser = { kind: 'before-season', year: 2026, opensOn: new Date('2026-12-01T06:00:00Z'), lastYear: 2025 } as const
     setup({ card: model(teaser, [{ year: 2025, ink: 'marigold', status: 'watched' }]) })
-    await expect(labels()).resolves.toEqual(['Home', 'Rewind 2025'])
+    await expect(labels()).resolves.toEqual(['Home', 'Rewind 2025', 'Help'])
 
     setup({ card: model({ ...teaser, lastYear: null }) })
-    await expect(labels()).resolves.toEqual(['Home'])
+    await expect(labels()).resolves.toEqual(['Home', 'Help'])
   })
 
   it.each([
@@ -71,6 +71,24 @@ describe('getAppShellData', () => {
     expect(user).toMatchObject({ name: 'Theo Marsh', email: 'theo@example.com', initials: 'TM' })
     expect(user.discordHandle).toBe(handle)
     expect('discordHandle' in user).toBe(handle !== undefined)
+  })
+})
+
+describe('getAppShellData membership', () => {
+  it('adds Membership to the nav and the account menu when Stripe is on', async () => {
+    setup()
+    prismaMock.config.findUnique.mockResolvedValue({ stripeEnabled: true } as Awaited<ReturnType<typeof prismaMock.config.findUnique>>)
+    const shell = await getAppShellData({ id: 'u1', isAdmin: false })
+
+    expect(shell.nav.map((item) => item.label)).toEqual(['Home', 'Membership', 'Help'])
+    expect(shell.user.membership).toBe(true)
+  })
+
+  it('keeps Membership for a past subscriber after Stripe is turned off', async () => {
+    setup()
+    prismaMock.subscription.findUnique.mockResolvedValue({ id: 's1' } as Awaited<ReturnType<typeof prismaMock.subscription.findUnique>>)
+
+    expect((await getAppShellData({ id: 'u1', isAdmin: false })).user.membership).toBe(true)
   })
 })
 

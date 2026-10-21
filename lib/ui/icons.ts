@@ -21,6 +21,7 @@ import {
   Ellipsis,
   Clock,
   Coins,
+  CreditCard,
   FileText,
   Film,
   FlaskConical,
@@ -80,6 +81,7 @@ export const icons = {
   settings: Settings,
   overview: LayoutDashboard,
   shares: Share2,
+  membership: CreditCard,
   assistant: MessageCircle,
   // Actions and states
   externalLink: ArrowUpRight,

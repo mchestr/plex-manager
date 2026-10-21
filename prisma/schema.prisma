@@ -38,6 +38,7 @@ model User {
   timezone              String? // IANA zone the member chose for Rewind; null = the server zone
   sessionVersion        Int                    @default(0) // Bumped by endUserSessions(); a JWT carrying another version ends
   disabledAt            DateTime? // Set by an admin; a disabled user cannot sign in and their sessions end
+  announcementsSeenAt   DateTime? // The newest announcement the member has seen; later ones carry the "New" pip
   rewindGenerations     RewindGeneration[]
   rewindPrefs           RewindPrefs[]
   rewindExclusions      RewindExclusion[]
