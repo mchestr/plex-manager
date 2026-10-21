@@ -69,9 +69,9 @@ export interface ServeCardRequest {
   cacheControl: string
 }
 
-/** The card input of an authorised request, or null when the page is not published or has no card. */
+/** The card input of an authorised request, or null when the page is not published or has no card (every page has an OG card). */
 export function projectCard({ rewind, options, ctx, page, size }: Omit<ServeCardRequest, "limit" | "cacheControl">): CardInput | null {
-  if (!hasCard(page)) return null
+  if (size !== "og" && !hasCard(page)) return null
   const shared = toShareSafe(rewind, options, ctx)
   return cardInput(shared, page, size, { factsHash: rewind.factsHash, options, ctx })
 }

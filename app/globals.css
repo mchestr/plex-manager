@@ -144,7 +144,7 @@
   --rw-forest: oklch(40% 0.075 165);        --rw-on-forest: var(--rw-paper);          --rw-forest-deep: var(--rw-forest);
   --rw-oxblood: oklch(33% 0.1 18);          --rw-on-oxblood: oklch(93% 0.03 60);      --rw-oxblood-deep: var(--rw-oxblood);
   --rw-petrol: oklch(40.5% 0.065 215);      --rw-on-petrol: var(--rw-paper);          --rw-petrol-deep: var(--rw-petrol);
-  /* next/font/local variables, defined where story pages load app/(app)/rewind/fonts.ts (P5.1) */
+  /* next/font/local variables, defined where story pages load lib/rewind/fonts.ts (P5.1) */
   --font-display: var(--font-rw-archivo);
   --font-text: var(--font-rw-newsreader);
   --font-lead: var(--font-rw-newsreader-display);   /* Newsreader Display Italic, its own family */

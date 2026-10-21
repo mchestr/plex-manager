@@ -106,10 +106,18 @@ describe("GET /api/rewind/card/s/[assetKey]/[page]", () => {
     expect((await get("cover")).status).toBe(404)
   })
 
-  it("ignores its query: the options come from the row", async () => {
-    await get("cover", "?signed=1&daily=1&art=1&size=og&facts=time.totalHours")
-    const input = jest.mocked(renderCardPng).mock.calls[0][0]
-    expect(input).toMatchObject({ size: "story", signed: false, daily: false, ownerName: null, cardFacts: [] })
+  it("reads only size from its query: the options come from the row", async () => {
+    await get("cover", "?signed=1&daily=1&art=1&facts=time.totalHours")
+    expect(jest.mocked(renderCardPng).mock.calls[0][0]).toMatchObject({ size: "story", signed: false, daily: false, ownerName: null, cardFacts: [] })
+
+    await get("top-shows", "?size=og&signed=1")
+    expect(jest.mocked(renderCardPng).mock.calls[1][0]).toMatchObject({ size: "og", signed: false, ownerName: null })
+  })
+
+  it("serves the OG card of any published page, and refuses an unknown size", async () => {
+    liveShare({ pages: ["top-shows"] })
+    expect((await get("top-shows", "?size=og")).status).toBe(200)
+    expect((await get("top-shows", "?size=square")).status).toBe(400)
   })
 
   it("serves a cache hit without spending a limit point, and limits misses to 30 a minute", async () => {

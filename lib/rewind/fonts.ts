@@ -1,7 +1,7 @@
 import localFont from "next/font/local"
 
 /**
- * Rewind's web fonts (P2.13's subset, renamed OFL files in `_fonts/`), loaded
+ * Rewind's web fonts (P2.13's subset, renamed OFL files in `web-fonts/`), loaded
  * through `next/font/local` so a build never fetches a font. The variables
  * feed `--font-display`, `--font-text` and `--font-lead` in the Rewind block
  * of `app/globals.css` (Rewind 5.1, NFR-5).
@@ -9,7 +9,7 @@ import localFont from "next/font/local"
 
 /** Archivo, variable width and weight 600-900: headlines, numerals and chrome. Blocks so a fit never reflows. */
 const rwArchivo = localFont({
-  src: "./_fonts/archivo-vf.woff2",
+  src: "./web-fonts/archivo-vf.woff2",
   variable: "--font-rw-archivo",
   weight: "600 900",
   style: "normal",
@@ -22,8 +22,8 @@ const rwArchivo = localFont({
 /** Newsreader Text roman and italic at opsz 16: decks and body copy. */
 const rwNewsreader = localFont({
   src: [
-    { path: "./_fonts/newsreader-text.woff2", weight: "400", style: "normal" },
-    { path: "./_fonts/newsreader-text-italic.woff2", weight: "400", style: "italic" },
+    { path: "./web-fonts/newsreader-text.woff2", weight: "400", style: "normal" },
+    { path: "./web-fonts/newsreader-text-italic.woff2", weight: "400", style: "italic" },
   ],
   variable: "--font-rw-newsreader",
   display: "swap",
@@ -36,7 +36,7 @@ const rwNewsreader = localFont({
  * with Text Italic, so it is its own family rather than a face of that one.
  */
 const rwNewsreaderDisplay = localFont({
-  src: "./_fonts/newsreader-display-italic.woff2",
+  src: "./web-fonts/newsreader-display-italic.woff2",
   variable: "--font-rw-newsreader-display",
   weight: "400",
   style: "italic",

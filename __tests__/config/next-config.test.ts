@@ -130,3 +130,17 @@ describe("next.config.js", () => {
     }
   )
 })
+
+describe("next.config.js share page headers (P7.5, UI-39)", () => {
+  it("keeps /rewind/s/* out of search results and sends no referrer, after the catch-all", async () => {
+    const config = loadConfig(PHASE_PRODUCTION_SERVER, "production")
+    if (!config.headers) throw new Error("next.config.js has no headers()")
+    const routes = await config.headers()
+    const index = routes.findIndex((route) => route.source === "/rewind/s/:path*")
+    expect(index).toBeGreaterThan(routes.findIndex((route) => route.source === "/:path*"))
+    expect(routes[index].headers).toEqual([
+      { key: "X-Robots-Tag", value: "noindex, nofollow" },
+      { key: "Referrer-Policy", value: "no-referrer" },
+    ])
+  })
+})

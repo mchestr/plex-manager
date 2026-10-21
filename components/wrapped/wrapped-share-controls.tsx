@@ -4,7 +4,6 @@ import { useTransition } from "react"
 import { disableWrappedShareLink, enableWrappedShareLink } from "@/actions/wrapped-share-link"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
-import { ShareCardDownload } from "@/components/wrapped/share-card-download"
 import { WrappedShareButton } from "@/components/wrapped/wrapped-share-button"
 
 interface WrappedShareControlsProps {
@@ -18,8 +17,8 @@ interface WrappedShareControlsProps {
 /**
  * The owner's controls for the public share link. Sharing is opt-in: without a
  * link the member sees "Create share link"; with one, including a v2 link that
- * was minted before sharing became opt-in, they can copy it, download the
- * card or stop sharing (SEC-16).
+ * was minted before sharing became opt-in, they can copy it or stop sharing
+ * (SEC-16). The card download went with the v2 OG route in P7.5.
  *
  * The token is held by the parent, so the controls on the last slide and under
  * "Show all" stay in step.
@@ -69,7 +68,6 @@ export function WrappedShareControls({ year, shareToken, onShareTokenChange }: W
   return (
     <>
       <WrappedShareButton shareToken={shareToken} year={year} />
-      <ShareCardDownload shareToken={shareToken} year={year} />
       <Button
         data-testid="wrapped-share-stop"
         variant="secondary"
