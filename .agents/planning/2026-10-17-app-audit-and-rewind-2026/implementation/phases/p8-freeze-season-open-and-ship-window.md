@@ -385,6 +385,8 @@ No new feature code lands from 10 to 12 December. Every P1 feature ships with it
 
 **Tests.** No new test files; the gate is the validator's zero-failure run and the recorded re-call rate.
 
+(as merged: the procedure is `docs/rewind.md`, "Staging rehearsal", and the report is `implementation/final-cut-dry-run.md`. `scripts/rewind-staging-neutralise.sql` holds the saved statements (it refuses any database but `plex_manager_staging` and needs `-v budget=<USD>`). New read-only `npm run rewind:final-cut-report -- --year=2026 --since=<start> --log=<worker log> --warn=20` measures the run from the `final-cut` generations: the re-call rate overall and for full editions, the reasons (`planFinalCut()` of `previousData` against the result), cost per member, timings, and Tautulli 429s from a `LOG_LEVEL=debug` log, since `serviceFetch` logs 4xx at debug; it has a unit test. Fix found on the way: the staging worker schedules the 1 January run under `rewind:final:2026`, so `--apply` would have joined that delayed job and waited until New Year; `enqueueFinalCut` now gives a `through` before 31 December its own id, `rewind:final:{year}:{through}`. Owner, not done: build staging, run the final cut with `--through=2026-12-10`, the report and the validator, fill in `final-cut-dry-run.md`, and tear staging down, all on 2026-12-11.)
+
 **Integration.** P9.2 reruns the same procedure on 2026-12-28 with `--through=2026-12-27`, and P9.3 relies on both.
 
 **Demo.** The dry-run report shows a re-call rate under 30% with its reasons, and the validator prints zero failures.

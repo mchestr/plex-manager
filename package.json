@@ -37,6 +37,7 @@
     "rewind:card-version": "node scripts/write-card-version.mjs",
     "rewind:validate": "tsx --conditions=react-server --tsconfig tsconfig.scripts.json scripts/rewind-validate.ts",
     "rewind:final-cut": "tsx --conditions=react-server --tsconfig tsconfig.scripts.json scripts/rewind-final-cut.ts",
+    "rewind:final-cut-report": "tsx --conditions=react-server --tsconfig tsconfig.scripts.json scripts/rewind-final-cut-report.ts",
     "rewind:rollback-final-cut": "tsx --conditions=react-server --tsconfig tsconfig.scripts.json scripts/rewind-rollback-final-cut.ts",
     "rewind:probe-sources": "tsx --conditions=react-server --tsconfig tsconfig.scripts.json scripts/rewind-probe-sources.ts",
     "rewind:gallery": "tsx --tsconfig tsconfig.scripts.json scripts/rewind-gallery.ts",

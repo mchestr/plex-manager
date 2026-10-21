@@ -482,13 +482,86 @@ full-year window and writes nothing. Without `--with-llm` it calls no model
 prints "N of M keep all copy, K re-call (reasons)", the re-call share (pass
 mark under 30%), the cost and the validator's result.
 
-Rehearse on staging on 11 and 28 December (P8.10, P9.2): restore the latest
-dump into `plex_manager_staging`, give it its own Redis, neutralise Discord,
-watchlist sync, Stripe and the notification channels, set `REWIND_STAGING=1`,
-then run `npm run rewind:final-cut -- --year=2026 --through=<yesterday> --with-llm --apply`.
-`--apply` enqueues `REWIND_FINAL_CUT` itself; with a `--through` before
-31 December it refuses unless `REWIND_STAGING=1`, which production never sets.
-Then run the validator with `--final-cut`.
+### Staging rehearsal
+
+Rehearse the real final cut on a staging copy of production on 11 December
+(P8.10, `--through=2026-12-10`) and 28 December (P9.2,
+`--through=2026-12-27`), in the evening when production is quiet. Record
+everything in the plan's `final-cut-dry-run.md`, which has a section per run.
+
+1. **Restore** the latest dump (decrypted) into a new database on the same
+   private network. Do not use `--create`: it would recreate the dump's own
+   database, which is production's.
+
+   ```bash
+   createdb plex_manager_staging
+   pg_restore -d postgresql://user:password@host:5432/plex_manager_staging --no-owner plex-manager-….dump
+   DATABASE_URL=postgresql://…/plex_manager_staging npx prisma migrate status   # nothing pending
+   ```
+
+2. **Redis.** Start a throwaway `redis:7` for staging
+   (`docker run -d --rm --name rewind-staging-redis -p 127.0.0.1:6380:6379 redis:7`).
+   Never point staging at production Redis: the queue names are the same, so
+   staging workers would take production's jobs.
+3. **Neutralise** the side effects before the first boot. Estimate the cost
+   first with the plan (`npm run rewind:final-cut -- --year=2026 --through=<day>`
+   against staging), then pass that estimate plus 50% as the budget:
+
+   ```bash
+   psql -v budget=<USD> -d postgresql://…/plex_manager_staging -f scripts/rewind-staging-neutralise.sql
+   ```
+
+   It refuses any database but `plex_manager_staging`, turns Discord off and
+   clears its bot token, turns watchlist sync off, sets the notification
+   channels to `["banner"]`, nulls the Stripe keys (leaving `stripeEnabled`,
+   so entitlement skips match production) and sets `rewindLlmBudgetUsd`.
+   Copy its output into the report. The model calls are real and billed to the
+   production key.
+4. **Boot** the production image digest from `season-log.md`, not a fresh
+   build, with: `DATABASE_URL` on staging; `REDIS_URL` on the throwaway Redis;
+   the production `ENCRYPTION_KEY` (so stored keys decrypt); a new
+   `NEXTAUTH_SECRET`; both app URLs on `http://127.0.0.1:3100`, reached through
+   an SSH tunnel; `ENABLE_DISCORD_BOT=false`, `ENABLE_WATCHLIST_SYNC=false`,
+   `REWIND_STAGING=1` and `LOG_LEVEL=debug` (Tautulli's 429s log at debug);
+   never `E2E_TEST_MODE`. The worker schedules its own 1 January final cut,
+   which the teardown removes; the season-open Prepare has passed, so it
+   schedules none (check the console's queue).
+5. **Run** from a checkout, against staging:
+
+   ```bash
+   REWIND_STAGING=1 DATABASE_URL=… REDIS_URL=redis://127.0.0.1:6380 \
+     npm run rewind:final-cut -- --year=2026 --through=2026-12-10 --with-llm --apply
+   ```
+
+   `--apply` enqueues `REWIND_FINAL_CUT` with the full-year window and
+   `window.finalCut: true`. With a `--through` before 31 December it refuses
+   unless `REWIND_STAGING=1`, which production never sets, and it gets its own
+   deduplication id (`rewind:final:2026:2026-12-10`), so it never joins the
+   delayed 1 January run. Note the time you started it.
+6. **Measure** once the console shows every member finished:
+
+   ```bash
+   docker logs <staging app> > staging-worker.log 2>&1
+   DATABASE_URL=… npm run rewind:final-cut-report -- --year=2026 --since=<start time> --log=staging-worker.log --warn=20
+   ```
+
+   It prints the re-call rate (completed final-cut generations with a model
+   call, overall and for full editions), the per-slot reasons, the cost per
+   member, the timings, failures by code, skips by reason and the Tautulli
+   429s, and exits 1 on a failure or a rate of 30% or more. Use `--warn=20` on
+   11 December (real data stops three weeks short) and `--warn=25` on
+   28 December. One slot behind most re-calls usually means its `COPY_SLOTS`
+   entry is wrong.
+7. **Validate:** `DATABASE_URL=… npm run rewind:validate -- --year=2026 --final-cut`
+   must report zero failures.
+8. **Tear down** the same day: stop the staging app and Redis, then
+   `dropdb plex_manager_staging` and delete `staging-worker.log` and the
+   decrypted dump, so no copy of member data or tokens lingers and staging's
+   own 1 January final cut never fires.
+
+A failure is fixed in an ordinary PR before the code freeze (14 December),
+and the rehearsal is repeated on a fresh copy; after it, only under the freeze
+rules.
 
 ## Season close
 
