@@ -15,7 +15,13 @@ import { CheckboxSpecimen, FieldSpecimen, InputSpecimen, SelectSpecimen, SwitchS
 import { InkSpecimen } from "./_sections/ink"
 import { DropdownMenuSpecimen, PopoverSpecimen, ToastSpecimen, TooltipSpecimen } from "./_sections/popups"
 import { RewindCardSpecimen } from "./_sections/rewind-card"
-import { SegmentedControlSpecimen, SheetSpecimen, SliderSpecimen, ToggleSpecimen } from "./_sections/rewind-ready"
+import {
+  LiveStatusSpecimen,
+  SegmentedControlSpecimen,
+  SheetSpecimen,
+  SliderSpecimen,
+  ToggleSpecimen,
+} from "./_sections/rewind-ready"
 import { IconMapSpecimen, PosterPaletteSpecimen, StatusVocabularySpecimen } from "./_sections/vocabulary"
 
 export const metadata: Metadata = {
@@ -68,6 +74,7 @@ export default function DevUiPage() {
       <ToggleSpecimen />
       <SliderSpecimen />
       <SegmentedControlSpecimen />
+      <LiveStatusSpecimen />
       <InkSpecimen />
       <StatusVocabularySpecimen />
       <IconMapSpecimen />

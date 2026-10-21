@@ -225,12 +225,13 @@ export function toEndOfDayExclusive(dateStr: string | undefined): Date | undefin
 
 // ---- Durations, sizes, resolution -------------------------------------------
 
-type DurationUnit = "day" | "hour" | "minute"
+type DurationUnit = "day" | "hour" | "minute" | "second"
 
-const UNITS: { unit: DurationUnit; minutes: number; short: string; long: [string, string] }[] = [
-  { unit: "day", minutes: 1440, short: "d", long: ["day", "days"] },
-  { unit: "hour", minutes: 60, short: "h", long: ["hour", "hours"] },
-  { unit: "minute", minutes: 1, short: "m", long: ["minute", "minutes"] },
+const UNITS: { unit: DurationUnit; seconds: number; short: string; long: [string, string] }[] = [
+  { unit: "day", seconds: 86_400, short: "d", long: ["day", "days"] },
+  { unit: "hour", seconds: 3600, short: "h", long: ["hour", "hours"] },
+  { unit: "minute", seconds: 60, short: "m", long: ["minute", "minutes"] },
+  { unit: "second", seconds: 1, short: "s", long: ["second", "seconds"] },
 ]
 
 export interface DurationOptions {
@@ -243,12 +244,13 @@ export interface DurationOptions {
 /**
  * A duration in minutes, every unit floored: "26 h 10 m" (`short`) or
  * "26 hours, 10 minutes" (`long`). Zero units are left out; an empty result
- * shows 0 of the smallest unit.
+ * shows 0 of the smallest unit. `smallestUnit: "second"` suits job runs.
  *
  * @example
  * ```ts
  * formatDuration(119.9, "short")                         // "1 h 59 m"
  * formatDuration(1500, "long", { largestUnit: "day" })   // "1 day, 1 hour"
+ * formatDuration(1.5, "short", { smallestUnit: "second" }) // "1 m 30 s"
  * ```
  */
 export function formatDuration(
@@ -260,7 +262,9 @@ export function formatDuration(
     UNITS.findIndex((u) => u.unit === largestUnit),
     UNITS.findIndex((u) => u.unit === smallestUnit) + 1,
   )
-  let rest = Math.floor(Number.isFinite(minutes) && minutes > 0 ? minutes : 0)
+  const step = units[units.length - 1].seconds
+  // Floored to the smallest unit first, so the default floors whole minutes as before.
+  let rest = Math.floor((Number.isFinite(minutes) && minutes > 0 ? minutes * 60 : 0) / step) * step
   const label = (value: number, u: (typeof UNITS)[number]) =>
     style === "short"
       ? `${formatNumber(value, { locale })} ${u.short}`
@@ -268,8 +272,8 @@ export function formatDuration(
 
   const parts: string[] = []
   for (const u of units) {
-    const value = Math.floor(rest / u.minutes)
-    rest -= value * u.minutes
+    const value = Math.floor(rest / u.seconds)
+    rest -= value * u.seconds
     if (value > 0 && parts.length < maxUnits) parts.push(label(value, u))
   }
   if (parts.length === 0) return label(0, units[units.length - 1])

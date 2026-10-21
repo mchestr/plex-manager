@@ -62,6 +62,7 @@ describe("/dev/ui", () => {
       "toggle",
       "slider",
       "segmented-control",
+      "live-status",
       "ink",
       "ink-paper",
       "ink-marigold",

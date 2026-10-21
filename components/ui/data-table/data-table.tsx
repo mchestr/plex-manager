@@ -24,6 +24,8 @@ export interface RowLinks<T> {
   rowActions?: (row: T) => RowAction[]
   /** Required with `rowActions`: "Actions for {name}". */
   getRowName?: (row: T) => string
+  /** Told when any row's action menu opens or closes (a live page holds its refresh). */
+  onRowActionsOpenChange?: (open: boolean) => void
 }
 
 interface DataTableProps<T> extends RowLinks<T> {
@@ -81,6 +83,7 @@ export function DataTable<T>({
   getRowHref,
   rowActions,
   getRowName,
+  onRowActionsOpenChange,
   ...props
 }: DataTableProps<T>) {
   const testId = props["data-testid"] ?? "data-table"
@@ -152,7 +155,15 @@ export function DataTable<T>({
     body = empty
   } else if (stacked) {
     body = (
-      <StackedList rows={rows} label={label} getRowHref={getRowHref} rowActions={rowActions} getRowName={getRowName} testId={testId} />
+      <StackedList
+        rows={rows}
+        label={label}
+        getRowHref={getRowHref}
+        rowActions={rowActions}
+        getRowName={getRowName}
+        onRowActionsOpenChange={onRowActionsOpenChange}
+        testId={testId}
+      />
     )
   } else {
     body = (
@@ -201,6 +212,7 @@ export function DataTable<T>({
                     <RowActions
                       name={getRowName!(row.original)}
                       actions={rowActions!(row.original)}
+                      onOpenChange={onRowActionsOpenChange}
                       data-testid={`${testId}-actions-${row.id}`}
                     />
                   </td>

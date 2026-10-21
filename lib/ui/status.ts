@@ -105,6 +105,16 @@ export const STATUS = {
     running: { label: "Worker running", tone: "success", mark: "dot", sub: "Updated {ago}" },
     stopped: { label: "Worker stopped", tone: "destructive", mark: "dot", sub: "Updated {ago}" },
   },
+  // The queues page's status row (P10.3)
+  redis: {
+    connected: { label: "Redis connected", tone: "success", mark: "dot" },
+    unreachable: { label: "Redis unreachable", tone: "destructive", mark: "dot" },
+  },
+  queue: {
+    running: { label: "Queue running", tone: "success", mark: "dot" },
+    paused: { label: "Queue paused", tone: "warning", mark: icons.paused },
+    unknown: { label: "Queue state unknown", tone: "neutral", mark: "dot" },
+  },
   invite: {
     active: { label: "Active", tone: "success", mark: "dot", sub: "{left} of {total} uses left" },
     expired: { label: "Expired", tone: "neutral" },

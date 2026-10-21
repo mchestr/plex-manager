@@ -163,10 +163,12 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 **Demo.** Run the web process without workers: within 10 s the row reads "Worker stopped", with no reload. Trigger a watchlist sync from another tab and watch the job appear. Pause and resume through the confirm, and open the page at 390px.
 
 **Done when.**
-- [ ] Worker, Redis and queue state are words with dots, and the worker state is read from Redis.
-- [ ] The page refreshes every 10 s while visible, shows "Updated Ns ago" and can be paused.
-- [ ] Pause and Resume are labelled Buttons with a confirm, and no `window.location.reload()` remains.
-- [ ] Jobs are in a DataTable with Retry, a page total and FilterBar, and the page meets 9.5 at 390px.
+- [x] Worker, Redis and queue state are words with dots, and the worker state is read from Redis.
+- [x] The page refreshes every 10 s while visible, shows "Updated Ns ago" and can be paused.
+- [x] Pause and Resume are labelled Buttons with a confirm, and no `window.location.reload()` remains.
+- [x] Jobs are in a DataTable with Retry, a page total and FilterBar, and the page meets 9.5 at 390px.
+
+(as merged: the reads moved out of `actions/admin/queue.ts` into `lib/admin/queues.ts` (`server-only`: `getQueueDashboard`, `listQueueJobs`), so the worker-state test is `lib/admin/__tests__/queues.test.ts`; the actions file keeps only the mutations, each revalidating `/admin/queues`. Shared API for P10.5 and P10.8: `useLiveRefresh({ intervalMs, paused })` in `hooks/use-live-refresh.ts`; `components/ui/live-status.tsx` exports `LiveStatus` (presentational), `LiveRefreshProvider` (`renderedAt`, `intervalMs`), `LiveRefreshStatus` and `useHoldLiveRefresh(open)`, which dialogs and menus call to hold the refresh. `RowActions` and `DataTable` gained `onOpenChange` / `onRowActionsOpenChange` for that. `formatDuration` takes `smallestUnit: "second"`. `lib/ui/status.ts` gained the `redis` and `queue` domains (`queue.unknown` when Redis does not answer). `lib/queue/client.ts`'s `getJobs` became `getJobPage` (page plus total) and `getWorkerCount`; `isWorkerRunning` and `isRedisHealthy` are gone. The token codemod was not run (P10.13 owns it); the files were written on tokens. Visual and axe baselines for `/admin/queues` are left to the owner's workflow; `e2e/admin/queues.spec.ts` was written but not run.)
 
 ### Step P10.4: Prompts pages and the split editor
 

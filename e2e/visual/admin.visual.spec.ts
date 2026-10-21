@@ -75,8 +75,14 @@ test.describe('Admin screens', () => {
     await capture(page, '/admin/invites', 'admin-invites');
   });
 
+  // P10.3: the live page, with its "Updated Ns ago" line and the run-dependent jobs masked.
   test('queues', async ({ page }) => {
-    await capture(page, '/admin/queues', 'admin-queues');
+    await page.goto('/admin/queues');
+    await settlePage(page);
+    await expect(page).toHaveScreenshot('admin-queues.png', {
+      fullPage: true,
+      mask: [page.getByTestId('queue-live-updated'), page.getByTestId('queue-jobs')],
+    });
   });
 
   test('LLM usage', async ({ page }) => {
