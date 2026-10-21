@@ -1,0 +1,10 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`07 Taste summarises the page deterministically 1`] = `
+[
+  "Genres by minutes watched: Animation 14%, Crime 13%, Drama 13%, Thriller 13%, Science Fiction 12%. Animation was the top genre in 3 of 11 months. Titles by the decade they were made: 2020s, 26 titles; 2010s, 35 titles; 2000s, 31 titles; 1990s, 16 titles; 1980s, 12 titles; 1970s, 8 titles; 1960s, 5 titles; 1950s, 7 titles; 1940s, 3 titles. The median year was 2006.",
+  "Genres by minutes watched: Comedy 19%, Crime 19%, Animation 13%, Fantasy 13%, Science Fiction 12%. Comedy was the top genre in 4 of 11 months. Titles by the decade they were made: 2020s, 2 titles; 2000s, 6 titles; 1990s, 14 titles; 1980s, 7 titles; 1970s, 7 titles; 1960s, 3 titles; 1950s, 6 titles; 1940s, 2 titles. The median year was 1988.",
+  "Genres by minutes watched: Animation 34%, Drama 24%, Comedy 16%, Crime 16%, Science Fiction 10%. Animation was the top genre in 3 of 4 months. Titles by the decade they were made: 2020s, 1 title; 2010s, 1 title; 2000s, 1 title. The median year was 2010.",
+  "Genres by minutes watched: Drama 100%. Drama was the top genre in 7 of 7 months. Titles by the decade they were made: 2020s, 40 titles; 2010s, 57 titles; 2000s, 41 titles; 1990s, 22 titles; 1980s, 14 titles; 1970s, 10 titles; 1960s, 5 titles; 1950s, 8 titles; 1940s, 3 titles. The median year was 2009.",
+]
+`;

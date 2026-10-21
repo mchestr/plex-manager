@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
 
-import { chooseCut, currentPage, currentPageInfo, disableAutoplay, openStage, pageCount, turnForward } from '../helpers/rewind-stage';
+import { chooseCut, currentPage, currentPageInfo, disableAutoplay, goToPage, openStage, pageCount, turnForward } from '../helpers/rewind-stage';
 import { clearRewindSeed, REWIND_MEMBERS, seedRewind, type RewindFixtureId } from '../helpers/seed-rewind';
 import { settle } from '../helpers/deterministic';
 import { expect, settlePage, skipUnlessProductionBuild, test } from './visual-test';
@@ -134,6 +134,28 @@ test.describe('Rewind story', () => {
           await shootEveryPage(page, `${fixture}-${size}`, phone && !belowFloor);
         }
       });
+
+      if (fixture === 'heavy') {
+        // P7.1: the race mid-run. Its frames are `element.animate()` runs that start after the 420 ms turn;
+        // pausing them 2.6 s in shows the frame a member sees then, and every other animation is finished.
+        test('the race at 2.6 s', async ({ page }, testInfo) => {
+          const viewport = testInfo.project.use.isMobile ? PHONE_VIEWPORTS[0] : testInfo.project.use.viewport!;
+          await page.setViewportSize(viewport);
+          await page.emulateMedia({ reducedMotion: 'no-preference' });
+          await openStage(page, { settle: settlePage });
+          await goToPage(page, 'race');
+          await page.evaluate((at) => {
+            for (const animation of document.getAnimations()) {
+              const target = animation.effect instanceof KeyframeEffect ? animation.effect.target : null;
+              if (target?.closest('[data-testid="rewind-race-animator"]')) {
+                animation.pause();
+                animation.currentTime = at;
+              } else animation.finish();
+            }
+          }, 420 + 2600);
+          await expect(page.getByTestId('rewind-stage')).toHaveScreenshot('heavy-race-2600ms.png');
+        });
+      }
 
       test('every page in motion', async ({ page }, testInfo) => {
         test.setTimeout(120_000);

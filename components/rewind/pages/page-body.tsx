@@ -6,6 +6,10 @@ import type { ClockData } from "@/lib/rewind/pages/clock.schema"
 import type { CoverData } from "@/lib/rewind/pages/cover.schema"
 import type { GuessData } from "@/lib/rewind/pages/guess.schema"
 import type { NumberData } from "@/lib/rewind/pages/number.schema"
+import type { PeopleData } from "@/lib/rewind/pages/people.schema"
+import type { RaceData } from "@/lib/rewind/pages/race.schema"
+import type { RecordsData } from "@/lib/rewind/pages/records.schema"
+import type { TasteData } from "@/lib/rewind/pages/taste.schema"
 import type { TopFilmsData, TopShowsData } from "@/lib/rewind/pages/top-lists.schema"
 import { registry, type RegistryEntry } from "@/lib/rewind/registry"
 import type { SelectedPage } from "@/lib/rewind/select-pages"
@@ -19,6 +23,10 @@ import { CoverPage } from "./cover"
 import { GuessPage } from "./guess"
 import type { IssueContext } from "./issue-context"
 import { NumberPage } from "./number"
+import { PeoplePage } from "./people"
+import { RacePage } from "./race"
+import { RecordsPage } from "./records"
+import { TastePage } from "./taste"
 import { TopFilmsPage } from "./top-films"
 import { TopShowsPage } from "./top-shows"
 import { u } from "./units"
@@ -42,10 +50,18 @@ export function PageBody({ page, issue }: { page: SelectedPage; issue: IssueCont
       return <TopShowsPage data={page.data as TopShowsData} issue={issue} />
     case "top-films":
       return <TopFilmsPage data={page.data as TopFilmsData} issue={issue} />
+    case "taste":
+      return <TastePage data={page.data as TasteData} issue={issue} />
+    case "people":
+      return <PeoplePage data={page.data as PeopleData} issue={issue} />
     case "clock":
       return <ClockPage data={page.data as ClockData} issue={issue} />
     case "calendar":
       return <CalendarPage data={page.data as CalendarData} issue={issue} />
+    case "race":
+      return <RacePage data={page.data as RaceData} issue={issue} />
+    case "records":
+      return <RecordsPage data={page.data as RecordsData} issue={issue} />
     case "centrefold":
       return <CentrefoldPage data={page.data as CentrefoldData} issue={issue} />
     case "back-cover":

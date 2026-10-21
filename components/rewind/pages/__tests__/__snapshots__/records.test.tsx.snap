@@ -1,0 +1,10 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`12 Records summarises the page deterministically 1`] = `
+[
+  "Your personal bests: 4 episodes of The Lord of the Rings: The Rings of Power in a row; 8 episodes in one day; 46 h 58 m in the week of May 11; 100% of what you started, finished.",
+  "Your personal bests: 100% of what you started, finished; 48 minutes paused, most of it in Slow Horses.",
+  "Your personal bests: 3 episodes of Only Murders in the Building in a row; 3 episodes in one day; 100% of what you started, finished.",
+  null,
+]
+`;
