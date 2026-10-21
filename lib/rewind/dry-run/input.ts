@@ -12,7 +12,8 @@ import { z } from "zod"
 import type { EffortLevel } from "@/lib/llm/models"
 import { recordIdSchema } from "@/lib/validations/params"
 import { yearSchema } from "@/lib/validations/shared-schemas"
-import { PROMPT_VERSION, styleGuideSchema } from "@/lib/wrapped/prompt/rewind-2026"
+import { styleGuideSchema } from "@/lib/validations/prompt"
+import { PROMPT_VERSION } from "@/lib/wrapped/prompt/rewind-2026"
 
 export const DRY_RUN_EFFORTS = ["none", "minimal", "low", "medium", "high", "xhigh", "max"] as const satisfies readonly EffortLevel[]
 

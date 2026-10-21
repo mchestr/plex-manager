@@ -1,8 +1,9 @@
 /**
- * Tests for actions/prompts.ts - prompt template CRUD operations.
+ * Tests for actions/prompts.ts - the style-guide mutations.
  *
  * P4.6: each mutation writes one audit row (`PROMPT_TEMPLATE_CHANGED` since P5.9) with a redacted
- * diff, and a change of the active template runs in one transaction.
+ * diff, and a change of the active template runs in one transaction. P10.4: only style guides are
+ * created or edited, through the shared `styleGuideFormSchema`; a v2 template is read-only.
  */
 
 import { mockReset } from 'jest-mock-extended'
@@ -12,23 +13,18 @@ import { revalidatePath } from 'next/cache'
 import {
   createPromptTemplate,
   deletePromptTemplate,
-  getPromptTemplate,
-  getPromptTemplates,
   setActivePromptTemplate,
   updatePromptTemplate,
 } from '@/actions/prompts'
 import { buildPromptTemplate } from '@/__tests__/helpers/factories'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
-import { requireAdmin } from '@/lib/admin'
 import { AuditEventType } from '@/lib/security/audit-log'
 
-jest.mock('@/lib/admin', () => ({ requireAdmin: jest.fn() }))
 jest.mock('next-auth', () => ({ getServerSession: jest.fn() }))
 jest.mock('@/lib/auth', () => ({ authOptions: {} }))
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 jest.mock('next/cache', () => ({ revalidatePath: jest.fn() }))
 
-const mockRequireAdmin = requireAdmin as jest.MockedFunction<typeof requireAdmin>
 const mockSession = getServerSession as jest.Mock
 const mockRevalidatePath = revalidatePath as jest.MockedFunction<typeof revalidatePath>
 
@@ -48,46 +44,15 @@ const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
 beforeEach(() => {
   mockReset(prismaMock)
   jest.clearAllMocks()
-  mockRequireAdmin.mockResolvedValue(adminSession)
   mockSession.mockResolvedValue(adminSession)
   prismaMock.$transaction.mockImplementation((async (fn: (tx: typeof prismaMock) => unknown) => fn(prismaMock)) as never)
 })
 
-describe('getPromptTemplates', () => {
-  it('returns all prompt templates ordered by active status', async () => {
-    const templates = [buildPromptTemplate({ id: '1', isActive: true }), buildPromptTemplate({ id: '2' })]
-    prismaMock.promptTemplate.findMany.mockResolvedValue(templates)
-
-    const result = await getPromptTemplates()
-
-    expect(result).toEqual({ success: true, data: templates })
-    expect(prismaMock.promptTemplate.findMany).toHaveBeenCalledWith({
-      orderBy: [{ isActive: 'desc' }, { updatedAt: 'desc' }],
-    })
-    expect(mockRequireAdmin).toHaveBeenCalled()
-  })
-})
-
-describe('getPromptTemplate', () => {
-  it('returns the template when found', async () => {
-    const template = buildPromptTemplate({ id: '1' })
-    prismaMock.promptTemplate.findUnique.mockResolvedValue(template)
-
-    await expect(getPromptTemplate('1')).resolves.toEqual({ success: true, data: template })
-  })
-
-  it('returns an error when the template is not found', async () => {
-    prismaMock.promptTemplate.findUnique.mockResolvedValue(null)
-
-    await expect(getPromptTemplate('missing')).resolves.toEqual({ success: false, error: 'Template not found' })
-  })
-})
-
 describe('createPromptTemplate', () => {
-  const input = { name: 'New Template', description: 'A test template', template: 'Hello {{userName}}', isActive: false }
+  const input = { name: 'House style', description: 'A test guide', template: 'Short sentences. British spelling.', isActive: false }
 
   it('creates an inactive template and writes one PROMPT_TEMPLATE_CHANGED row without the text', async () => {
-    const created = buildPromptTemplate({ id: 't1', ...input, updatedBy: 'admin-1' })
+    const created = buildPromptTemplate({ id: 't1', ...input, kind: 'rewind-style-guide', updatedBy: 'admin-1' })
     prismaMock.promptTemplate.create.mockResolvedValue(created)
 
     const result = await createPromptTemplate(input)
@@ -95,7 +60,7 @@ describe('createPromptTemplate', () => {
 
     expect(result).toEqual({ success: true, data: created })
     expect(prismaMock.promptTemplate.create).toHaveBeenCalledWith({
-      data: { name: input.name, description: input.description, template: input.template, kind: 'v2-full', isActive: false, updatedBy: 'admin-1' },
+      data: { name: input.name, description: input.description, template: input.template, kind: 'rewind-style-guide', isActive: false, updatedBy: 'admin-1' },
     })
     expect(prismaMock.promptTemplate.updateMany).not.toHaveBeenCalled()
     expect(auditRows()).toEqual([
@@ -110,12 +75,12 @@ describe('createPromptTemplate', () => {
         }),
       }),
     ])
-    expect(JSON.stringify(auditRows())).not.toContain('Hello {{userName}}')
+    expect(JSON.stringify(auditRows())).not.toContain('British spelling')
     expect(mockRevalidatePath).toHaveBeenCalledWith('/admin/prompts')
   })
 
   it('activates a new active template in the same transaction', async () => {
-    const created = buildPromptTemplate({ id: 't1', ...input })
+    const created = buildPromptTemplate({ id: 't1', ...input, kind: 'rewind-style-guide' })
     prismaMock.promptTemplate.create.mockResolvedValue(created)
     prismaMock.promptTemplate.update.mockResolvedValue({ ...created, isActive: true })
 
@@ -123,14 +88,14 @@ describe('createPromptTemplate', () => {
 
     expect(result).toMatchObject({ success: true, data: { isActive: true } })
     expect(prismaMock.$transaction).toHaveBeenCalledTimes(1)
-    expect(prismaMock.promptTemplate.updateMany).toHaveBeenCalledWith({ where: { kind: 'v2-full' }, data: { isActive: false } })
+    expect(prismaMock.promptTemplate.updateMany).toHaveBeenCalledWith({ where: { kind: 'rewind-style-guide' }, data: { isActive: false } })
     expect(prismaMock.promptTemplate.update).toHaveBeenCalledWith({ where: { id: 't1' }, data: { isActive: true } })
   })
 
   it('returns a validation error for invalid input', async () => {
     const result = await createPromptTemplate({ name: '', template: 'x' })
 
-    expect(result).toMatchObject({ success: false, code: 'VALIDATION', error: 'Name is required' })
+    expect(result).toMatchObject({ success: false, code: 'VALIDATION', error: 'Name is required', fieldErrors: { name: ['Name is required'] } })
     expect(prismaMock.promptTemplate.create).not.toHaveBeenCalled()
   })
 
@@ -140,7 +105,7 @@ describe('createPromptTemplate', () => {
     await expect(createPromptTemplate(input)).resolves.toEqual({
       success: false,
       code: 'INTERNAL',
-      error: 'Failed to create prompt template',
+      error: 'Failed to create the style guide',
     })
   })
 
@@ -153,7 +118,7 @@ describe('createPromptTemplate', () => {
 })
 
 describe('updatePromptTemplate', () => {
-  const existing = buildPromptTemplate({ id: 't1', name: 'Old', template: 'Old text', isActive: false, version: 1 })
+  const existing = buildPromptTemplate({ id: 't1', name: 'Old', template: 'Old text', kind: 'rewind-style-guide', isActive: false, version: 1 })
   const input = { id: 't1', name: 'Updated', template: 'Old text' }
 
   it('updates the template, bumps the version and writes one PROMPT_TEMPLATE_CHANGED row', async () => {
@@ -186,7 +151,7 @@ describe('updatePromptTemplate', () => {
     await updatePromptTemplate({ ...input, isActive: true })
 
     expect(prismaMock.$transaction).toHaveBeenCalledTimes(1)
-    expect(prismaMock.promptTemplate.updateMany).toHaveBeenCalledWith({ where: { kind: 'v2-full' }, data: { isActive: false } })
+    expect(prismaMock.promptTemplate.updateMany).toHaveBeenCalledWith({ where: { kind: 'rewind-style-guide' }, data: { isActive: false } })
     expect(prismaMock.promptTemplate.update).toHaveBeenLastCalledWith({ where: { id: 't1' }, data: { isActive: true } })
   })
 
@@ -226,6 +191,13 @@ describe('updatePromptTemplate', () => {
   it('refuses a malformed id', async () => {
     await expect(updatePromptTemplate({ ...input, id: '../1' })).resolves.toMatchObject({ code: 'VALIDATION' })
   })
+
+  it('refuses to edit a v2 template, which is read-only', async () => {
+    prismaMock.promptTemplate.findUnique.mockResolvedValue({ ...existing, kind: 'v2-full' })
+
+    await expect(updatePromptTemplate(input)).resolves.toMatchObject({ success: false, code: 'CONFLICT' })
+    expect(prismaMock.promptTemplate.update).not.toHaveBeenCalled()
+  })
 })
 
 describe('deletePromptTemplate', () => {
@@ -242,8 +214,14 @@ describe('deletePromptTemplate', () => {
     ])
   })
 
-  it('refuses to delete the active template', async () => {
-    prismaMock.promptTemplate.findUnique.mockResolvedValue(buildPromptTemplate({ id: 't1', isActive: true }))
+  it('deletes an active v2 template, which Rewind never reads', async () => {
+    prismaMock.promptTemplate.findUnique.mockResolvedValue(buildPromptTemplate({ id: 'v1', kind: 'v2-full', isActive: true }))
+
+    await expect(deletePromptTemplate('v1')).resolves.toEqual({ success: true, data: null })
+  })
+
+  it('refuses to delete the style guide in use', async () => {
+    prismaMock.promptTemplate.findUnique.mockResolvedValue(buildPromptTemplate({ id: 't1', kind: 'rewind-style-guide', isActive: true }))
 
     const result = await deletePromptTemplate('t1')
 
@@ -261,7 +239,7 @@ describe('deletePromptTemplate', () => {
 
 describe('setActivePromptTemplate', () => {
   it('activates in one transaction and writes its audit row inside it', async () => {
-    const template = buildPromptTemplate({ id: 't2', isActive: false })
+    const template = buildPromptTemplate({ id: 't2', kind: 'rewind-style-guide', isActive: false })
     prismaMock.promptTemplate.findUnique.mockResolvedValue(template)
     prismaMock.promptTemplate.update.mockResolvedValue({ ...template, isActive: true })
 
@@ -270,7 +248,7 @@ describe('setActivePromptTemplate', () => {
     expect(result).toEqual({ success: true, data: null })
     expect(prismaMock.$transaction).toHaveBeenCalledTimes(1)
     // The unfiltered deactivation locks every row, then the one template is switched on
-    expect(prismaMock.promptTemplate.updateMany).toHaveBeenCalledWith({ where: { kind: 'v2-full' }, data: { isActive: false } })
+    expect(prismaMock.promptTemplate.updateMany).toHaveBeenCalledWith({ where: { kind: 'rewind-style-guide' }, data: { isActive: false } })
     expect(prismaMock.promptTemplate.update).toHaveBeenCalledWith({ where: { id: 't2' }, data: { isActive: true } })
     const updateOrder = prismaMock.promptTemplate.updateMany.mock.invocationCallOrder[0]
     expect(updateOrder).toBeLessThan(prismaMock.promptTemplate.update.mock.invocationCallOrder[0])
@@ -291,8 +269,15 @@ describe('setActivePromptTemplate', () => {
     expect(prismaMock.auditLog.create).not.toHaveBeenCalled()
   })
 
+  it('refuses to activate a v2 template', async () => {
+    prismaMock.promptTemplate.findUnique.mockResolvedValue(buildPromptTemplate({ id: 'v1', kind: 'v2-full' }))
+
+    await expect(setActivePromptTemplate('v1')).resolves.toMatchObject({ success: false, code: 'CONFLICT' })
+    expect(prismaMock.promptTemplate.updateMany).not.toHaveBeenCalled()
+  })
+
   it('fails as a whole when the audit row cannot be written', async () => {
-    prismaMock.promptTemplate.findUnique.mockResolvedValue(buildPromptTemplate({ id: 't2' }))
+    prismaMock.promptTemplate.findUnique.mockResolvedValue(buildPromptTemplate({ id: 't2', kind: 'rewind-style-guide' }))
     prismaMock.auditLog.create.mockRejectedValue(new Error('write failed'))
 
     await expect(setActivePromptTemplate('t2')).resolves.toMatchObject({ success: false, code: 'INTERNAL' })
@@ -303,10 +288,19 @@ describe('setActivePromptTemplate', () => {
 describe('Rewind style guides (P5.9)', () => {
   const guide = { name: 'House style', template: 'Short sentences. British spelling.', kind: 'rewind-style-guide' as const }
 
-  it('refuses a style guide over 1,200 characters', async () => {
+  it('accepts 1,200 characters and refuses 1,201', async () => {
+    prismaMock.promptTemplate.create.mockResolvedValue(buildPromptTemplate({ id: 'g1', ...guide }))
+    await expect(createPromptTemplate({ ...guide, template: 'a'.repeat(1200) })).resolves.toMatchObject({ success: true })
+    prismaMock.promptTemplate.create.mockClear()
+
     const result = await createPromptTemplate({ ...guide, template: 'a'.repeat(1201) })
 
-    expect(result).toMatchObject({ success: false, code: 'VALIDATION', error: 'A style guide is at most 1200 characters' })
+    expect(result).toMatchObject({
+      success: false,
+      code: 'VALIDATION',
+      error: 'A style guide is at most 1,200 characters',
+      fieldErrors: { template: ['A style guide is at most 1,200 characters'] },
+    })
     expect(prismaMock.promptTemplate.create).not.toHaveBeenCalled()
   })
 

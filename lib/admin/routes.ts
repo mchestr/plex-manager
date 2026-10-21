@@ -45,3 +45,21 @@ export function invite(id: string): Route {
 export function rewindHistory(wrappedId: string, usageId: string): Route {
   return `/admin/wrapped/${seg(wrappedId)}/history/${seg(usageId)}` as Route
 }
+
+export function promptDetail(id: string): Route {
+  return `/admin/prompts/${seg(id)}` as Route
+}
+
+export function promptEdit(id: string): Route {
+  return `/admin/prompts/${seg(id)}/edit` as Route
+}
+
+/** A new style guide, prefilled from a v2 template's text when `fromId` is given. */
+export function newStyleGuide(fromId?: string): Route {
+  return (fromId ? `/admin/prompts/new?from=${seg(fromId)}` : "/admin/prompts/new") as Route
+}
+
+/** The playground with a style guide selected for the dry run. */
+export function playgroundWithStyleGuide(id: string): Route {
+  return `/admin/rewind/playground?styleGuideId=${seg(id)}` as Route
+}

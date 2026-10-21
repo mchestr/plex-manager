@@ -1,5 +1,6 @@
 import { buildFactSheet } from '@/lib/wrapped/facts/fact-sheet'
-import { PROMPT_VERSION, styleGuideSchema, systemPrompt, userPrompt } from '@/lib/wrapped/prompt/rewind-2026'
+import { styleGuideSchema } from '@/lib/validations/prompt'
+import { PROMPT_VERSION, systemPrompt, userPrompt } from '@/lib/wrapped/prompt/rewind-2026'
 
 describe('the Rewind 2026 prompt (P5.9)', () => {
   it('is version rewind-2026.1', () => {
