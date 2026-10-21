@@ -1,13 +1,8 @@
 {
   "schema": 1,
-  "commit": "842934d7bddd6a2817d5874fc699028a0eed29d3",
-  "generatedAt": "2026-10-21T20:11:15.929Z",
+  "commit": "afaf2fdc47465eec747d1659d04a9b9e4dcfd56d",
+  "generatedAt": "2026-10-21T21:38:36.785Z",
   "files": {
-    "app/(app)/page.tsx": {
-      "gradient": 2,
-      "gradient-text": 4,
-      "raw-palette": 7
-    },
     "app/admin/cost-analysis/page.tsx": {
       "blur": 13,
       "infinite-motion": 1,
@@ -474,19 +469,9 @@
     "components/shared/rex-dinosaur.tsx": {
       "infinite-motion": 1
     },
-    "components/subscribe/plan-list.tsx": {
-      "raw-palette": 4
-    },
-    "components/subscription/manage-subscription-button.tsx": {
-      "raw-palette": 1
-    },
-    "components/subscription/subscription-status-view.tsx": {
-      "raw-palette": 3
-    },
     "components/watchlist/sync-settings-card.tsx": {
-      "gradient": 3,
       "infinite-motion": 1,
-      "raw-palette": 44
+      "raw-palette": 4
     },
     "components/wrapped/cinematic/gold-count-up.tsx": {
       "gradient": 1,
@@ -653,9 +638,9 @@
     "blur": 114,
     "caps-eyebrow": 84,
     "copy": 13,
-    "gradient": 92,
-    "gradient-text": 50,
+    "gradient": 87,
+    "gradient-text": 46,
     "infinite-motion": 42,
-    "raw-palette": 2663
+    "raw-palette": 2608
   }
 }

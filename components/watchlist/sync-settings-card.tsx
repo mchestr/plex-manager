@@ -118,15 +118,15 @@ export function WatchlistSyncCard() {
   if (isLoading) {
     return (
       <motion.div
-        className="relative overflow-hidden rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-950/30 via-slate-900 to-slate-900 p-4 shadow-lg"
+        className="relative overflow-hidden rounded-xl border border-border bg-card p-4"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: "easeOut", delay: 0.15 }}
         data-testid="watchlist-sync-card-loading"
       >
         <div className="animate-pulse space-y-3">
-          <div className="h-5 w-32 rounded bg-slate-700/50" />
-          <div className="h-4 w-48 rounded bg-slate-700/30" />
+          <div className="h-5 w-32 rounded bg-secondary" />
+          <div className="h-4 w-48 rounded bg-secondary" />
         </div>
       </motion.div>
     )
@@ -172,23 +172,20 @@ export function WatchlistSyncCard() {
 
   return (
     <motion.div
-      className="relative overflow-hidden rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-950/30 via-slate-900 to-slate-900 p-4 shadow-lg"
+      className="relative overflow-hidden rounded-xl border border-border bg-card p-4"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: "easeOut", delay: 0.15 }}
       data-testid="watchlist-sync-card"
     >
-      {/* Ambient glow */}
-      <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-amber-500/10 blur-2xl" />
-
       <div className="relative space-y-4">
         {/* Header */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
             {/* Watchlist Icon */}
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 shadow-md shadow-amber-500/20">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-secondary">
               <svg
-                className="h-5 w-5 text-white"
+                className="h-5 w-5 text-foreground"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -202,8 +199,8 @@ export function WatchlistSyncCard() {
               </svg>
             </div>
             <div>
-              <h3 className="font-semibold text-white">Watchlist Sync</h3>
-              <p className="text-xs text-slate-400">
+              <h3 className="font-semibold text-foreground">Watchlist Sync</h3>
+              <p className="text-xs text-muted-foreground">
                 Auto-request items from your Plex watchlist
               </p>
             </div>
@@ -215,7 +212,7 @@ export function WatchlistSyncCard() {
             disabled={!canEnable || isPending}
             className={`
               relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200
-              ${isEnabled ? "bg-amber-500" : "bg-slate-700"}
+              ${isEnabled ? "bg-primary" : "bg-secondary"}
               ${(!canEnable || isPending) ? "opacity-50 cursor-not-allowed" : "hover:opacity-90"}
             `}
             role="switch"
@@ -225,7 +222,7 @@ export function WatchlistSyncCard() {
           >
             <span
               className={`
-                inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200
+                inline-block h-4 w-4 transform rounded-full bg-foreground shadow-sm transition-transform duration-200
                 ${isEnabled ? "translate-x-6" : "translate-x-1"}
               `}
             />
@@ -234,7 +231,7 @@ export function WatchlistSyncCard() {
 
         {/* Prerequisites warning */}
         {!canEnable && (
-          <div className="rounded-lg bg-slate-800/50 p-3 text-xs text-slate-400">
+          <div className="rounded-lg bg-muted p-3 text-xs text-muted-foreground">
             {!settings.hasPlexToken && (
               <p>Log in with Plex to enable watchlist sync</p>
             )}
@@ -252,9 +249,9 @@ export function WatchlistSyncCard() {
           <div className="space-y-3">
             {/* Stats row */}
             <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-4 text-slate-400">
+              <div className="flex items-center gap-4 text-muted-foreground">
                 <span>
-                  Last sync: <span className="text-white">{formatLastSync(lastSync)}</span>
+                  Last sync: <span className="text-foreground">{formatLastSync(lastSync)}</span>
                 </span>
                 {lastStatus && (
                   <span className={getStatusColor(lastStatus)}>
@@ -270,11 +267,11 @@ export function WatchlistSyncCard() {
             {/* Cumulative stats */}
             {settings.settings && (settings.settings.totalItemsSynced > 0 || settings.settings.totalItemsRequested > 0) && (
               <div className="flex items-center gap-4 text-xs">
-                <span className="text-slate-400">
-                  <span className="text-white font-medium">{settings.settings.totalItemsSynced}</span> items synced
+                <span className="text-muted-foreground">
+                  <span className="text-foreground font-medium">{settings.settings.totalItemsSynced}</span> items synced
                 </span>
-                <span className="text-slate-400">
-                  <span className="text-green-400 font-medium">{settings.settings.totalItemsRequested}</span> requested
+                <span className="text-muted-foreground">
+                  <span className="text-success font-medium">{settings.settings.totalItemsRequested}</span> requested
                 </span>
               </div>
             )}
@@ -285,15 +282,15 @@ export function WatchlistSyncCard() {
                 {settings.settings.lastSyncError}
               </p>
             ) : settings.settings?.lastSyncError && (
-              <p className="text-xs text-red-400 line-clamp-2">
+              <p className="text-xs text-destructive line-clamp-2">
                 {settings.settings.lastSyncError}
               </p>
             )}
 
             {/* Recent sync history */}
             {settings.recentHistory && settings.recentHistory.length > 0 && (
-              <div className="space-y-2 pt-2 border-t border-slate-700/50">
-                <p className="text-xs text-slate-500 font-medium">Recent items</p>
+              <div className="space-y-2 pt-2 border-t border-border/50">
+                <p className="text-xs text-muted-foreground font-medium">Recent items</p>
                 <div className="space-y-1">
                   {settings.recentHistory.map((item) => (
                     <div
@@ -301,25 +298,25 @@ export function WatchlistSyncCard() {
                       className="flex items-center justify-between text-xs"
                     >
                       <div className="flex items-center gap-2 truncate">
-                        <span className={item.mediaType === "MOVIE" ? "text-blue-400" : "text-purple-400"}>
+                        <span className={item.mediaType === "MOVIE" ? "text-info" : "text-foreground"}>
                           {item.mediaType === "MOVIE" ? "🎬" : "📺"}
                         </span>
-                        <span className="text-slate-300 truncate">
+                        <span className="text-foreground truncate">
                           {item.title}
-                          {item.year && <span className="text-slate-500 ml-1">({item.year})</span>}
+                          {item.year && <span className="text-muted-foreground ml-1">({item.year})</span>}
                         </span>
                       </div>
                       <span
                         className={`shrink-0 ml-2 ${
                           item.status === "REQUESTED"
-                            ? "text-green-400"
+                            ? "text-success"
                             : item.status === "ALREADY_AVAILABLE"
-                            ? "text-cyan-400"
+                            ? "text-info"
                             : item.status === "ALREADY_REQUESTED"
-                            ? "text-amber-400"
+                            ? "text-warning"
                             : item.status === "FAILED"
-                            ? "text-red-400"
-                            : "text-slate-500"
+                            ? "text-destructive"
+                            : "text-muted-foreground"
                         }`}
                       >
                         {item.status === "REQUESTED" && "Requested"}

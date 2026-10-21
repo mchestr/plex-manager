@@ -85,8 +85,8 @@ export async function SubscriptionStatusView() {
     <Card padding="md" className="flex flex-col gap-4" data-testid="subscription-status-view">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-white">Subscription</h2>
-          <p className="mt-1 text-sm text-slate-400" data-testid="subscription-plan">
+          <h2 className="text-lg font-semibold text-foreground">Subscription</h2>
+          <p className="mt-1 text-sm text-muted-foreground" data-testid="subscription-plan">
             {subscription.priceId ?? "Plex Access"}
           </p>
         </div>
@@ -95,7 +95,7 @@ export async function SubscriptionStatusView() {
         </Badge>
       </div>
 
-      <p className="text-sm text-slate-300" data-testid="subscription-period">
+      <p className="text-sm text-muted-foreground" data-testid="subscription-period">
         {periodLine}
       </p>
 

@@ -131,10 +131,10 @@ export default async function Home() {
     return (
       <PublicShell serverName={serverName}>
         <div className="flex flex-col items-center gap-6 sm:gap-8 text-center">
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-foreground">
             Media Server
           </h1>
-          <p className="text-slate-400 text-lg">No media servers configured. Please contact your administrator.</p>
+          <p className="text-muted-foreground text-lg">No media servers configured. Please contact your administrator.</p>
         </div>
       </PublicShell>
     );
@@ -143,7 +143,7 @@ export default async function Home() {
   return (
     <PublicShell serverName={serverName}>
       <div className="flex flex-col items-center gap-6 sm:gap-8 w-full">
-        <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent text-center">
+        <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-foreground text-center">
           {serverName}
         </h1>
 
