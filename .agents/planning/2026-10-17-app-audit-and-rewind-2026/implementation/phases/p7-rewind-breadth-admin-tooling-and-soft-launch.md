@@ -679,13 +679,15 @@ The ten core pages (Bookends included), sharing, privacy and accessibility are n
 **Demo.** A seeded member's Rewind completes at 21:00 in their zone, and the DM arrives once, at 09:00 the next morning (a fake clock in the job test, or a real delayed job on staging). The notice shows on `/account` until the member opens their Rewind, and `RewindView` then holds one row with `furthestPage` 18.
 
 **Done when.**
-- [ ] `REWIND_NOTIFY` sends one Discord DM between 09:00 and 20:00 in the member's zone, and `notifiedAt` prevents duplicates.
-- [ ] Switching the audience to `all` fans out one season notification per completed member, and completions outside the live audience enqueue none.
-- [ ] The home card's ready state and the AppShell notice use the same unread rule.
-- [ ] `notifyWhenRewindReady` turns notifications on, and `/account` can turn them off.
-- [ ] `recordRewindView` upserts `RewindView` rows with no viewer data, and previews write none.
-- [ ] The tests pass.
-- [ ] If this step adds the `RewindView` unique index: dump taken before deploy; `prisma migrate status` clean.
+- [x] `REWIND_NOTIFY` sends one Discord DM between 09:00 and 20:00 in the member's zone, and `notifiedAt` prevents duplicates.
+- [x] Switching the audience to `all` fans out one season notification per completed member, and completions outside the live audience enqueue none.
+- [x] The home card's ready state and the AppShell notice use the same unread rule.
+- [x] `notifyWhenRewindReady` turns notifications on, and `/account` can turn them off.
+- [x] `recordRewindView` upserts `RewindView` rows with no viewer data, and previews write none.
+- [x] The tests pass.
+- [x] If this step adds the `RewindView` unique index: dump taken before deploy; `prisma migrate status` clean. (Not needed: P2.1 already has `@@unique([wrappedId, sessionKey])`.)
+
+(as merged: no migration, because `RewindView` already had its unique index. The processor, `enqueueSeasonReadyNotifications` and the completion hook live in `lib/queue/jobs/rewind-notify.ts`, not `jobs/rewind.ts`; the hook reads the generation's `kind` from its `RewindGeneration` row, so `CompletedRewind` is unchanged. The fan-out runs when a save opens Rewind to everyone (`rewindEnabled` and audience `all`, either changed), and the job also skips the DM, without claiming `notifiedAt`, when the member is outside the live audience. `isRewindUnread`, `getRewindNotice` and `notifyChannels` are in `lib/wrapped/notify/notice.ts`; the home card imports the rule. `StoryStage` takes `views: { rewindId, record }` from `RewindIssue` (none in preview), records the 1-based folio, and exposes `useRecordShare()` to the share sheet. "Notify me" is `RewindNotifyMe`, shown by `RewindStatusPanel` when the page passes `onNotify`. The dashboard shows the measures as a Readers section (`components/admin/rewind/season-measures.tsx`); the centrefold measure counts openers of a full edition whose furthest page reached its folio. P8.5 adds `final-cut` to `RewindNotifyPayload.kind`.)
 
 ### Step P7.15: Accessibility and low-end performance pass
 

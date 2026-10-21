@@ -1,6 +1,7 @@
 import { getRewindSeasonDataPreparedAt } from "@/actions/admin/rewind-season"
 import { SeasonActions } from "@/components/admin/rewind/season-actions"
 import { SeasonFacts } from "@/components/admin/rewind/season-facts"
+import { SeasonMeasures } from "@/components/admin/rewind/season-measures"
 import { SeasonMemberTable } from "@/components/admin/rewind/season-member-table"
 import { SeasonPreflight } from "@/components/admin/rewind/season-preflight"
 import { SeasonProgress } from "@/components/admin/rewind/season-progress"
@@ -11,6 +12,7 @@ import { getFormat } from "@/lib/settings/app-settings"
 import { parseTableParams } from "@/lib/ui/table-params"
 import { serverZone } from "@/lib/utils/server-zone"
 import { instantToWallTime } from "@/lib/utils/zoned-time"
+import { getRewindSuccessMeasures } from "@/lib/wrapped/admin/measures"
 import { getRewindPreflight } from "@/lib/wrapped/admin/preflight"
 import { getSeasonCounts, SEASON_STATES, type SeasonMemberState } from "@/lib/wrapped/admin/season"
 import { getSeasonBudget, loadSeasonEstimate } from "@/lib/wrapped/admin/season-estimate"
@@ -62,7 +64,7 @@ export default async function RewindSeasonPage({ searchParams }: { searchParams:
     prisma.lLMProvider.findFirst({ where: { isActive: true, purpose: "wrapped" }, select: { model: true } }),
     getRewindSeasonDataPreparedAt(year),
   ])
-  const [preflight, counts, budget, all, failed, members, memberTotal] = await Promise.all([
+  const [preflight, counts, budget, all, failed, members, memberTotal, measures] = await Promise.all([
     getRewindPreflight(),
     getSeasonCounts(year, now),
     getSeasonBudget(year),
@@ -70,6 +72,7 @@ export default async function RewindSeasonPage({ searchParams }: { searchParams:
     loadSeasonEstimate(year, through, "failed"),
     listSeasonMembers(year, filters, table, now),
     prisma.user.count({ where: { disabledAt: null, plexUserId: { not: null } } }),
+    getRewindSuccessMeasures(year),
   ])
 
   const opensMd = config?.rewindSeasonOpens ?? "12-01"
@@ -86,6 +89,7 @@ export default async function RewindSeasonPage({ searchParams }: { searchParams:
         data-testid="admin-rewind-header"
       />
       <SeasonProgress year={year} initial={counts} budget={budget} />
+      <SeasonMeasures measures={measures} />
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
         <SeasonPreflight rows={preflight} />
         <SeasonFacts

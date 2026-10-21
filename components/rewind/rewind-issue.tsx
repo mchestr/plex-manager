@@ -4,6 +4,7 @@ import type { Route } from "next"
 import { z } from "zod"
 
 import { disableRewindShare, enableRewindShare, rotateRewindShare, saveRewindSharePrefs } from "@/actions/rewind-sharing"
+import { recordRewindView } from "@/actions/rewind-views"
 import { PageBody } from "@/components/rewind/pages/page-body"
 import type { IssueContext } from "@/components/rewind/pages/issue-context"
 import { StoryStage } from "@/components/rewind/stage/story-stage"
@@ -82,6 +83,7 @@ export async function RewindIssue({ rewindId, data, userId, returnTo, initialShe
       share={share ? { setup: share, actions: { enable: enableRewindShare, rotate: rotateRewindShare, disable: disableRewindShare, savePrefs: saveRewindSharePrefs } } : undefined}
       initialSheet={initialSheet}
       mode={preview ? "preview" : "member"}
+      views={preview ? undefined : { rewindId, record: recordRewindView }}
     />
   )
 }

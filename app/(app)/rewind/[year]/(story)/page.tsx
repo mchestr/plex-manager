@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { notFound, redirect } from "next/navigation"
 import { getServerSession } from "next-auth"
 
+import { notifyWhenRewindReady } from "@/actions/rewind-notify"
 import { RewindIssue } from "@/components/rewind/rewind-issue"
 import { RewindStatusPanel } from "@/components/rewind/rewind-status-panel"
 import { WrappedSharedYearsNotice } from "@/components/wrapped/wrapped-shared-years-notice"
@@ -106,6 +107,7 @@ export default async function RewindYearPage({ params, searchParams }: YearPageP
       returnTo={returnTo}
       audience={session.user.isAdmin ? "admin" : "member"}
       completedYears={completedYears}
+      onNotify={notifyWhenRewindReady}
     >
       {sharedNotice}
     </RewindStatusPanel>

@@ -31,6 +31,9 @@ jest.mock('@/lib/wrapped/admin/settings-options', () => ({
   getRewindContentRatings: jest.fn(),
 }))
 jest.mock('@/lib/rewind/season-runs', () => ({ scheduleSeasonOpenRun: jest.fn(async () => null) }))
+jest.mock('@/lib/wrapped/season', () => ({ getSeasonYear: jest.fn(async () => 2026) }))
+const mockAddBulk = jest.fn(async () => [])
+jest.mock('@/lib/queue/rewind-producers', () => ({ getRewindQueue: jest.fn(() => ({ add: jest.fn(), addBulk: mockAddBulk })) }))
 jest.mock('@/lib/security/audit-log', () => ({
   ...jest.requireActual('@/lib/security/audit-log'),
   logAuditEvent: jest.fn(),
@@ -183,6 +186,52 @@ describe('updateRewindSettings', () => {
       code: 'VALIDATION',
     })
     expect(prismaMock.config.findUnique).not.toHaveBeenCalled()
+  })
+})
+
+describe('the season-open fan-out (P7.14)', () => {
+  const live = { ...stored, rewindEnabled: true }
+
+  beforeEach(() => {
+    prismaMock.config.findUnique.mockResolvedValue(live as never)
+    // Two completed season Rewinds nobody has been told about yet
+    prismaMock.plexWrapped.findMany.mockResolvedValue([
+      { id: 'wrapped-1', userId: 'member-1' },
+      { id: 'wrapped-2', userId: 'member-2' },
+    ] as never)
+  })
+
+  it('enqueues one notification per completed, un-notified member when the audience becomes everyone', async () => {
+    await expect(updateRewindSettings({ ...unchanged, rewindEnabled: true, rewindAudience: 'all' })).resolves.toEqual({ success: true, data: null })
+
+    expect(prismaMock.plexWrapped.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { year: 2026, status: 'completed', notifiedAt: null } }))
+    expect(mockAddBulk).toHaveBeenCalledTimes(1)
+    expect(mockAddBulk).toHaveBeenCalledWith([
+      expect.objectContaining({ data: { wrappedId: 'wrapped-1', userId: 'member-1', year: 2026, kind: 'season' }, opts: expect.objectContaining({ deduplication: { id: 'rewind:notify:2026:member-1:season' } }) }),
+      expect.objectContaining({ data: { wrappedId: 'wrapped-2', userId: 'member-2', year: 2026, kind: 'season' }, opts: expect.objectContaining({ deduplication: { id: 'rewind:notify:2026:member-2:season' } }) }),
+    ])
+  })
+
+  it('enqueues none when saving again', async () => {
+    prismaMock.config.findUnique.mockResolvedValue({ ...live, rewindAudience: 'all' } as never)
+
+    await updateRewindSettings({ ...unchanged, rewindEnabled: true, rewindAudience: 'all', rewindLlmBudgetUsd: 4 })
+
+    expect(mockAddBulk).not.toHaveBeenCalled()
+  })
+
+  it('enqueues none when the audience goes back to admins', async () => {
+    prismaMock.config.findUnique.mockResolvedValue({ ...live, rewindAudience: 'all' } as never)
+
+    await updateRewindSettings({ ...unchanged, rewindEnabled: true, rewindAudience: 'admins' })
+
+    expect(mockAddBulk).not.toHaveBeenCalled()
+  })
+
+  it('saves the switch while Redis is down', async () => {
+    mockAddBulk.mockRejectedValueOnce(new Error('Redis down'))
+
+    await expect(updateRewindSettings({ ...unchanged, rewindEnabled: true, rewindAudience: 'all' })).resolves.toEqual({ success: true, data: null })
   })
 })
 

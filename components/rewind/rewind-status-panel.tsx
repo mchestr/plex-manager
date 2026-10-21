@@ -2,8 +2,10 @@ import type { Route } from "next"
 import Link from "next/link"
 import type { ReactNode } from "react"
 
+import type { notifyWhenRewindReady } from "@/actions/rewind-notify"
 import { RewindClose } from "@/components/rewind/rewind-close"
 import { RewindGeneratingWatch } from "@/components/rewind/rewind-generating-watch"
+import { RewindNotifyMe } from "@/components/rewind/rewind-notify-me"
 import { inkProps } from "@/lib/design/tokens"
 import type { RewindStatusKind } from "@/lib/rewind/year-view"
 import { errorCopy, type RewindPanelCode } from "@/lib/ui/error-copy"
@@ -26,6 +28,8 @@ interface RewindStatusPanelProps {
   completedYears?: number[]
   /** Shown under the copy, such as the live share links of other years. */
   children?: ReactNode
+  /** The member's "Notify me" action (P7.14), offered while their Rewind generates. */
+  onNotify?: typeof notifyWhenRewindReady
 }
 
 /**
@@ -42,6 +46,7 @@ export function RewindStatusPanel({
   audience,
   completedYears = [],
   children,
+  onNotify,
 }: RewindStatusPanelProps) {
   const copy = errorCopy(code, { audience })
   const otherYears = completedYears.filter((completed) => completed !== year)
@@ -67,6 +72,7 @@ export function RewindStatusPanel({
           {copy.description}
         </p>
         {kind === "generating" && year !== null && <RewindGeneratingWatch year={year} />}
+        {kind === "generating" && year !== null && onNotify && <RewindNotifyMe year={year} action={onNotify} />}
         {kind === "not-found" && otherYears.length > 0 && (
           <nav aria-label="Your Rewinds" data-testid="rewind-year-links">
             <ul className="flex flex-wrap gap-2">

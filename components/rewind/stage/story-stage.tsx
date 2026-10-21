@@ -35,6 +35,7 @@ import { useRewindPrefs } from "./use-rewind-prefs"
 import { useStageA11y } from "./use-stage-a11y"
 import { useStageGestures } from "./use-stage-gestures"
 import { useStoryPlayer } from "./use-story-player"
+import { RecordShareProvider, useRecordView, type ViewTracking } from "./use-record-view"
 
 /** @public P5.1 builds the page list. */
 export interface StoryStagePage {
@@ -59,6 +60,8 @@ interface StoryStageProps {
   initialSheet?: SheetName
   /** `preview`: an admin's dry run (P7.10), under a Preview banner, with no sharing. */
   mode?: "member" | "preview"
+  /** View tracking (P7.14); only the member mode records views. */
+  views?: ViewTracking
 }
 
 /** Before the first fit: the 390 x 844 roomy layout at scale 1. */
@@ -89,7 +92,7 @@ export function StoryStage({ share, ...props }: StoryStageProps) {
   )
 }
 
-function Stage({ pages, year, archetype, closeHref, copy, initialSheet, mode = "member" }: Omit<StoryStageProps, "share">) {
+function Stage({ pages, year, archetype, closeHref, copy, initialSheet, mode = "member", views }: Omit<StoryStageProps, "share">) {
   const router = useRouter()
   const root = useRef<HTMLElement>(null)
   const pagesRef = useRef<HTMLDivElement>(null)
@@ -115,6 +118,7 @@ function Stage({ pages, year, archetype, closeHref, copy, initialSheet, mode = "
   const pageLabel = (i: number) => `Page ${i + 1} of ${pages.length}: ${entries[i].name}`
   const { announcement, focusHandlers } = useStageA11y({ pagesRef, state, send, pageLabel })
   usePerfProbe(state.index)
+  const recordShare = useRecordView(mode === "member" ? (views ?? null) : null, state.index)
 
   // Registry entries are module constants, so the ink changes only with the page.
   useEffect(() => {
@@ -286,16 +290,18 @@ function Stage({ pages, year, archetype, closeHref, copy, initialSheet, mode = "
             <div aria-live="polite" aria-atomic="true" className="sr-only" data-testid="rewind-live">
               {announcement}
             </div>
-            <StageSheets
-              sheet={state.mode === "sheet" ? state.sheet : null}
-              onClose={() => send({ type: "CLOSE_SHEET" })}
-              pageName={entry.name}
-              page={entry.type}
-              table={table}
-              prefs={prefs}
-              articleHref={articleHref}
-              copy={copy}
-            />
+            <RecordShareProvider value={recordShare}>
+              <StageSheets
+                sheet={state.mode === "sheet" ? state.sheet : null}
+                onClose={() => send({ type: "CLOSE_SHEET" })}
+                pageName={entry.name}
+                page={entry.type}
+                table={table}
+                prefs={prefs}
+                articleHref={articleHref}
+                copy={copy}
+              />
+            </RecordShareProvider>
           </section>
         </MotionConfig>
       </LazyMotion>
