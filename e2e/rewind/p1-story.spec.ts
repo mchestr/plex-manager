@@ -108,7 +108,8 @@ test.describe('Rewind P1 story features', () => {
       const rows = sheet.getByTestId('rewind-day-picker-row');
       expect(await rows.count()).toBeGreaterThanOrEqual(28);
       const box = await rows.first().boundingBox();
-      expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+      // Layout can land a hair under a whole pixel (43.9999); round to the 1/100 px a screen can show
+      expect(Math.round((box?.height ?? 0) * 100) / 100).toBeGreaterThanOrEqual(44);
 
       const results = await new AxeBuilder({ page: adminPage }).include('[data-testid="rewind-day-picker-sheet"]').withTags(AXE_TAGS).analyze();
       expect(results.violations).toEqual([]);
