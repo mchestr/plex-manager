@@ -1,201 +1,80 @@
-import {
-  getShareAnalyticsStats,
-  getShareTimeSeriesData,
-  getTopSharedWraps,
-} from "@/actions/share-analytics"
-import { ShareTimeChart } from "@/components/admin/shares/share-time-chart"
+import { ShareLinksTable } from "@/components/admin/shares/share-links-table"
+import { ChartCard } from "@/components/ui/chart-card"
+import { DateRangeFilter } from "@/components/ui/date-range-filter"
+import { PageHeader } from "@/components/ui/page-header"
+import { StatGrid, StatTile } from "@/components/ui/stat-tile"
+import { getShareAnalytics, listShareLinks, SHARE_LINK_SORTS } from "@/lib/admin/analytics/shares"
 import { getFormat } from "@/lib/settings/app-settings"
-import Link from "next/link"
-import { userRewind } from "@/lib/admin/routes"
+import { parseDateRange } from "@/lib/ui/date-range"
+import { parseTableParams } from "@/lib/ui/table-params"
+import { formatPeriod } from "@/lib/utils/day-window"
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic"
 
-export default async function SharesDashboardPage() {
-  const [stats, timeSeriesData, topWraps, f] = await Promise.all([
-    getShareAnalyticsStats(),
-    getShareTimeSeriesData(30),
-    getTopSharedWraps(20),
-    getFormat(),
+type Params = Record<string, string | string[] | undefined>
+
+export default async function SharesDashboardPage({ searchParams }: { searchParams: Promise<Params> }) {
+  const params = await searchParams
+  const range = parseDateRange(params)
+  const table = parseTableParams(params, { sortable: SHARE_LINK_SORTS, defaultSort: { id: "created", desc: true } })
+  const f = await getFormat()
+  const zone = f.settings.timeZone
+  const [stats, links] = await Promise.all([
+    getShareAnalytics(range, zone),
+    listShareLinks({ page: table.page, pageSize: table.pageSize, sort: table.sort }),
   ])
+  const period = formatPeriod(stats.window, f.settings)
 
   return (
-    <div className="p-4 sm:p-6">
-      <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="mb-6">
-            <h1 data-testid="admin-shares-heading" className="text-2xl sm:text-3xl font-bold text-white mb-2">
-              Share Analytics
-            </h1>
-            <p className="text-sm text-slate-400">
-              Track shares and visits over time
-            </p>
-          </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
-            <div className="text-sm text-slate-400 mb-1">Total Shares</div>
-            <div className="text-2xl font-bold text-cyan-400">
-              {f.number(stats.totalShares)}
-            </div>
-            <div className="text-xs text-muted-foreground mt-1">
-              Wraps with share tokens
-            </div>
-          </div>
-          <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
-            <div className="text-sm text-slate-400 mb-1">Total Visits</div>
-            <div className="text-2xl font-bold text-green-400">
-              {f.number(stats.totalVisits)}
-            </div>
-            <div className="text-xs text-muted-foreground mt-1">
-              All-time share visits
-            </div>
-          </div>
-          <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
-            <div className="text-sm text-slate-400 mb-1">Unique Wraps</div>
-            <div className="text-2xl font-bold text-white">
-              {f.number(stats.uniqueWrapsShared)}
-            </div>
-            <div className="text-xs text-muted-foreground mt-1">
-              Different wraps shared
-            </div>
-          </div>
-          <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
-            <div className="text-sm text-slate-400 mb-1">Avg Visits/Share</div>
-            <div className="text-2xl font-bold text-purple-400">
-              {stats.averageVisitsPerShare.toFixed(1)}
-            </div>
-            <div className="text-xs text-muted-foreground mt-1">
-              Average per shared wrap
-            </div>
-          </div>
-        </div>
-
-        {/* Time Series Chart */}
-        <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4 sm:p-6 mb-6">
-          <div className="mb-4">
-            <h2 className="text-lg sm:text-xl font-bold text-white mb-1">
-              Shares & Visits Over Time
-            </h2>
-            <p className="text-sm text-slate-400">
-              Last 30 days of share and visit activity
-            </p>
-          </div>
-          <div className="overflow-x-auto">
-            <ShareTimeChart data={timeSeriesData} height={250} />
-          </div>
-        </div>
-
-        {/* Top Shared Wraps */}
-        <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg overflow-hidden">
-          <div className="p-4 sm:p-6 border-b border-slate-700">
-            <h2 className="text-lg sm:text-xl font-bold text-white mb-1">
-              Top Shared Wraps
-            </h2>
-            <p className="text-sm text-slate-400">
-              Most visited shared wraps by visit count
-            </p>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-slate-700/30 border-b border-slate-700">
-                <tr>
-                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
-                    User
-                  </th>
-                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
-                    Year
-                  </th>
-                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
-                    Visits
-                  </th>
-                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider hidden sm:table-cell">
-                    First Shared
-                  </th>
-                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider hidden md:table-cell">
-                    Last Visit
-                  </th>
-                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-700">
-                {topWraps.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={6}
-                      className="px-6 py-8 text-center text-slate-400"
-                    >
-                      No shared wraps found
-                    </td>
-                  </tr>
-                ) : (
-                  topWraps.map((wrap) => (
-                    <tr
-                      key={wrap.wrappedId}
-                      className="hover:bg-slate-700/20 transition-colors"
-                    >
-                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-white">
-                          {wrap.userName || wrap.userEmail || "Unknown"}
-                        </div>
-                        {wrap.userEmail && wrap.userName && (
-                          <div className="text-xs text-slate-400 hidden sm:block">
-                            {wrap.userEmail}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm text-slate-300">
-                          {wrap.year}
-                        </span>
-                      </td>
-                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm font-medium text-green-400">
-                          {f.number(wrap.visitCount)}
-                        </span>
-                      </td>
-                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap hidden sm:table-cell">
-                        <div className="text-sm text-slate-300">
-                          {wrap.firstSharedAt
-                            ? f.date(wrap.firstSharedAt)
-                            : "—"}
-                        </div>
-                      </td>
-                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap hidden md:table-cell">
-                        <div className="text-sm text-slate-300">
-                          {wrap.lastVisitedAt
-                            ? f.date(wrap.lastVisitedAt)
-                            : "—"}
-                        </div>
-                      </td>
-                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
-                        <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
-                          <Link
-                            href={`/rewind/s/${wrap.shareToken}`}
-                            target="_blank"
-                            className="px-2 sm:px-3 py-1 sm:py-1.5 bg-cyan-700 hover:bg-cyan-800 text-white text-xs font-medium rounded transition-colors text-center"
-                          >
-                            View
-                          </Link>
-                          <Link
-                            href={userRewind(wrap.userId, wrap.year)}
-                            className="px-2 sm:px-3 py-1 sm:py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-medium rounded transition-colors text-center"
-                          >
-                            Admin
-                          </Link>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 md:px-6" data-testid="admin-shares-page">
+      <PageHeader
+        title="Share analytics"
+        description="Public Rewind links: how many are on, and how often they are opened."
+        meta={<span data-testid="admin-shares-period">Period: {period}</span>}
+        data-testid="admin-shares-header"
+      />
+      <DateRangeFilter zone={zone} data-testid="shares-dates" />
+      <StatGrid data-testid="shares-stats">
+        <StatTile label="Public links on" value={f.number(stats.linksOn)} data-testid="shares-links-on" />
+        <StatTile
+          label="Visits in the period"
+          value={f.number(stats.visitsInPeriod)}
+          meta={
+            stats.legacyVisitsInPeriod > 0
+              ? `Plus ${f.number(stats.legacyVisitsInPeriod)} to older v2 links`
+              : undefined
+          }
+          data-testid="shares-visits"
+        />
+        <StatTile label="Links created" value={f.number(stats.linksCreatedInPeriod)} data-testid="shares-created" />
+        <StatTile
+          label="Visits per link"
+          value={f.number(stats.averageVisitsPerLink, { maximumFractionDigits: 1 })}
+          meta="Visits in the period over links on"
+          data-testid="shares-average"
+        />
+      </StatGrid>
+      <ChartCard
+        title="Links and visits per day"
+        description={period}
+        summary={`Share links created and visits per day, ${period}`}
+        spec={{
+          kind: "bar",
+          x: { type: "day", keys: stats.window.keys },
+          series: [
+            { id: "links", label: "Links created", values: stats.daily.map((day) => day.links) },
+            { id: "visits", label: "Visits", values: stats.daily.map((day) => day.visits) },
+          ],
+          format: "number",
+        }}
+        data-testid="shares-daily-chart"
+      />
+      <section aria-labelledby="shares-links-heading" className="flex flex-col gap-3">
+        <h2 id="shares-links-heading" className="text-h3">
+          Links
+        </h2>
+        <ShareLinksTable rows={links.rows} total={links.total} page={table.page} pageSize={table.pageSize} sort={table.sort} />
+      </section>
     </div>
   )
 }
-

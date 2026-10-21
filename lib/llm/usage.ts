@@ -52,6 +52,8 @@ export async function recordUsage(record: UsageRecord): Promise<void> {
         wrappedId: attribution.wrappedId ?? null,
         generationId: attribution.generationId ?? null,
         chatConversationId: attribution.chatConversationId ?? null,
+        // An assistant call joins its conversation's row on the LLM usage list; any other call is its own.
+        ...(attribution.chatConversationId ? { groupKey: attribution.chatConversationId } : {}),
         promptVersion: attribution.promptVersion ?? null,
         factsHash: attribution.factsHash ?? null,
         provider: record.provider,

@@ -5,7 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { notFound } from "next/navigation"
 import { getFormat } from "@/lib/settings/app-settings"
-import { userDetail, userRewind } from "@/lib/admin/routes"
+import { llmConversation, llmUsage, userDetail, userRewind } from "@/lib/admin/routes"
 
 export const dynamic = 'force-dynamic'
 
@@ -167,6 +167,13 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
                 >
                   View user
                 </Link>
+                <Link
+                  href={llmUsage({ userId: record.userId, year: record.wrapped?.year })}
+                  className="text-sm text-primary underline mt-1 ml-4 inline-block"
+                  data-testid="llm-usage-detail-view-all"
+                >
+                  View all
+                </Link>
               </div>
             </div>
           </div>
@@ -198,7 +205,7 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
                       href={userRewind(record.userId, record.wrapped.year)}
                       className="text-sm text-cyan-400 hover:text-cyan-300 underline inline-block mt-2"
                     >
-                      View Wrapped
+                      View Rewind
                     </Link>
                   </div>
                 )}
@@ -209,7 +216,7 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
                       Started {f.dateTime(record.chatConversation.createdAt, { zoneLabel: true })}
                     </div>
                     <Link
-                      href={`/admin/llm-usage/conversation/${record.chatConversation.id}`}
+                      href={llmConversation(record.chatConversation.id)}
                       className="text-sm text-cyan-400 hover:text-cyan-300 underline inline-block mt-2"
                     >
                       View Conversation Calls

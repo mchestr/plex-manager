@@ -113,6 +113,7 @@ export function buildLLMUsage(overrides: Partial<LLMUsage> = {}): LLMUsage {
     factsHash: null,
     generationId: null,
     outcome: 'ok',
+    groupKey: overrides.chatConversationId ?? overrides.id ?? 'llm-usage-1',
     createdAt: fixedDate(),
     ...overrides,
   }

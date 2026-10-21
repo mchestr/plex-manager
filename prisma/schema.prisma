@@ -425,12 +425,15 @@ model LLMUsage {
   generationId       String?
   generation         RewindGeneration? @relation(fields: [generationId], references: [id], onDelete: SetNull)
   outcome            String            @default("ok") // "ok", or why a billed call failed
+  // The LLM usage list's row: the conversation id for assistant calls, else unique to the call (P10.2)
+  groupKey           String            @default(uuid())
   createdAt          DateTime          @default(now())
 
   @@index([userId])
   @@index([wrappedId])
   @@index([generationId])
   @@index([chatConversationId])
+  @@index([groupKey, createdAt])
   @@index([provider])
   @@index([createdAt])
 }

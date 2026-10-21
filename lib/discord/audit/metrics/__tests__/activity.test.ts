@@ -2,6 +2,7 @@ import { getDailyActivity, getSummaryStats } from "../activity"
 import { prisma } from "@/lib/prisma"
 import { mockReset } from 'jest-mock-extended'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
+import { dayWindow } from "@/lib/utils/day-window"
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 
@@ -26,112 +27,62 @@ describe("getDailyActivity", () => {
     jest.clearAllMocks()
   })
 
-  it("should return daily activity grouped by date", async () => {
-    const startDate = new Date("2024-01-01")
-    const endDate = new Date("2024-01-03")
-
+  it("queries the window's bounds and returns every day, zero-filled", async () => {
+    const window = dayWindow({ from: "2024-01-01", to: "2024-01-04" }, "UTC")
     mockFindMany.mockResolvedValue([
       { createdAt: new Date("2024-01-01T10:00:00Z"), status: "SUCCESS" },
       { createdAt: new Date("2024-01-01T11:00:00Z"), status: "SUCCESS" },
       { createdAt: new Date("2024-01-01T12:00:00Z"), status: "FAILED" },
-      { createdAt: new Date("2024-01-02T10:00:00Z"), status: "SUCCESS" },
       { createdAt: new Date("2024-01-03T10:00:00Z"), status: "PENDING" },
     ])
 
-    const result = await getDailyActivity(startDate, endDate)
+    const result = await getDailyActivity(window)
 
     expect(mockFindMany).toHaveBeenCalledWith({
-      where: {
-        createdAt: {
-          gte: startDate,
-          lt: endDate,
-        },
-      },
-      select: {
-        createdAt: true,
-        status: true,
-      },
-      orderBy: {
-        createdAt: "asc",
-      },
+      where: { createdAt: { gte: window.gte, lt: window.lt } },
+      select: { createdAt: true, status: true },
+      orderBy: { createdAt: "asc" },
     })
-
     expect(result).toEqual([
       { date: "2024-01-01", total: 3, success: 2, failed: 1 },
-      { date: "2024-01-02", total: 1, success: 1, failed: 0 },
+      { date: "2024-01-02", total: 0, success: 0, failed: 0 },
       { date: "2024-01-03", total: 1, success: 0, failed: 0 },
+      { date: "2024-01-04", total: 0, success: 0, failed: 0 },
     ])
   })
 
-  it("should handle empty results", async () => {
-    mockFindMany.mockResolvedValue([])
+  it("keys days in the server zone", async () => {
+    const window = dayWindow({ from: "2026-10-16", to: "2026-10-17" }, "America/Los_Angeles")
+    // 03:00Z on the 17th is 20:00 on the 16th in Los Angeles.
+    mockFindMany.mockResolvedValue([{ createdAt: new Date("2026-10-17T03:00:00Z"), status: "SUCCESS" }])
 
-    const result = await getDailyActivity(
-      new Date("2024-01-01"),
-      new Date("2024-01-31")
-    )
+    const result = await getDailyActivity(window)
 
-    expect(result).toEqual([])
+    expect(window.gte.toISOString()).toBe("2026-10-16T07:00:00.000Z")
+    expect(result).toEqual([
+      { date: "2026-10-16", total: 1, success: 1, failed: 0 },
+      { date: "2026-10-17", total: 0, success: 0, failed: 0 },
+    ])
   })
 
-  it("should only count SUCCESS and FAILED statuses", async () => {
+  it("returns zeros for an empty window", async () => {
+    mockFindMany.mockResolvedValue([])
+    const result = await getDailyActivity(dayWindow({ from: "2024-01-01", to: "2024-01-02" }, "UTC"))
+    expect(result).toEqual([
+      { date: "2024-01-01", total: 0, success: 0, failed: 0 },
+      { date: "2024-01-02", total: 0, success: 0, failed: 0 },
+    ])
+  })
+
+  it("counts only SUCCESS and FAILED in their columns", async () => {
     mockFindMany.mockResolvedValue([
       { createdAt: new Date("2024-01-01T10:00:00Z"), status: "PENDING" },
       { createdAt: new Date("2024-01-01T11:00:00Z"), status: "TIMEOUT" },
       { createdAt: new Date("2024-01-01T12:00:00Z"), status: "SUCCESS" },
       { createdAt: new Date("2024-01-01T13:00:00Z"), status: "FAILED" },
     ])
-
-    const result = await getDailyActivity(
-      new Date("2024-01-01"),
-      new Date("2024-01-01")
-    )
-
-    expect(result).toEqual([
-      { date: "2024-01-01", total: 4, success: 1, failed: 1 },
-    ])
-  })
-
-  describe("date range boundary behavior", () => {
-    it("should use lt operator for end date", async () => {
-      const startDate = new Date("2024-01-01T00:00:00.000Z")
-      const endDate = new Date("2024-01-04T00:00:00.000Z")
-
-      mockFindMany.mockResolvedValue([])
-
-      await getDailyActivity(startDate, endDate)
-
-      expect(mockFindMany).toHaveBeenCalledWith({
-        where: {
-          createdAt: {
-            gte: startDate,
-            lt: endDate,
-          },
-        },
-        select: {
-          createdAt: true,
-          status: true,
-        },
-        orderBy: {
-          createdAt: "asc",
-        },
-      })
-    })
-
-    it("should include activity from late evening of end date", async () => {
-      const startDate = new Date("2024-01-01T00:00:00.000Z")
-      const endDate = new Date("2024-01-02T00:00:00.000Z")
-
-      mockFindMany.mockResolvedValue([
-        { createdAt: new Date("2024-01-01T23:59:59.000Z"), status: "SUCCESS" },
-      ])
-
-      const result = await getDailyActivity(startDate, endDate)
-
-      expect(result).toEqual([
-        { date: "2024-01-01", total: 1, success: 1, failed: 0 },
-      ])
-    })
+    const result = await getDailyActivity(dayWindow({ from: "2024-01-01", to: "2024-01-01" }, "UTC"))
+    expect(result).toEqual([{ date: "2024-01-01", total: 4, success: 1, failed: 1 }])
   })
 })
 

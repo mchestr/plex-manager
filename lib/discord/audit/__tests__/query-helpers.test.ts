@@ -21,12 +21,13 @@ describe("dateRangeWhere", () => {
 })
 
 describe("toDateKey", () => {
-  it("buckets a timestamp into its UTC YYYY-MM-DD key", () => {
-    expect(toDateKey(new Date("2024-01-15T10:30:00Z"))).toBe("2024-01-15")
+  it("buckets a timestamp into its YYYY-MM-DD key in the zone", () => {
+    expect(toDateKey(new Date("2024-01-15T10:30:00Z"), "UTC")).toBe("2024-01-15")
+    expect(toDateKey(new Date("2024-01-01T23:59:59.000Z"), "UTC")).toBe("2024-01-01")
   })
 
-  it("uses UTC and includes late-evening records in the same day", () => {
-    expect(toDateKey(new Date("2024-01-01T23:59:59.000Z"))).toBe("2024-01-01")
+  it("puts an evening in Los Angeles on that day, not the UTC one", () => {
+    expect(toDateKey(new Date("2024-01-02T03:00:00Z"), "America/Los_Angeles")).toBe("2024-01-01")
   })
 })
 

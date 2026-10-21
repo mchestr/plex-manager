@@ -1,13 +1,8 @@
 {
   "schema": 1,
-  "commit": "eddf281041a11dcf06748af8fc0a8486efd6271e",
-  "generatedAt": "2026-10-21T22:26:52.260Z",
+  "commit": "38955dff068e2733d5c844475b6da08c790dd452",
+  "generatedAt": "2026-10-21T22:28:34.428Z",
   "files": {
-    "app/admin/cost-analysis/page.tsx": {
-      "blur": 13,
-      "infinite-motion": 1,
-      "raw-palette": 76
-    },
     "app/admin/discord/page.tsx": {
       "blur": 16,
       "infinite-motion": 2,
@@ -15,27 +10,17 @@
     },
     "app/admin/llm-usage/[usageId]/page.tsx": {
       "blur": 7,
-      "copy": 2,
+      "copy": 1,
       "raw-palette": 67
     },
     "app/admin/llm-usage/conversation/[conversationId]/page.tsx": {
       "caps-eyebrow": 6,
       "raw-palette": 36
     },
-    "app/admin/llm-usage/page.tsx": {
-      "blur": 5,
-      "caps-eyebrow": 7,
-      "raw-palette": 66
-    },
     "app/admin/settings/page.tsx": {
       "blur": 5,
       "copy": 1,
       "raw-palette": 95
-    },
-    "app/admin/shares/page.tsx": {
-      "blur": 6,
-      "caps-eyebrow": 6,
-      "raw-palette": 50
     },
     "app/admin/users/[userId]/page.tsx": {
       "blur": 10,
@@ -71,10 +56,6 @@
     },
     "components/admin/announcements/announcements-page-client.tsx": {
       "raw-palette": 9
-    },
-    "components/admin/cost-analysis/cost-date-filter.tsx": {
-      "blur": 1,
-      "raw-palette": 6
     },
     "components/admin/discord/discord-active-users.tsx": {
       "raw-palette": 13
@@ -453,12 +434,12 @@
   },
   "totals": {
     "arbitrary-type-z": 29,
-    "blur": 97,
-    "caps-eyebrow": 67,
-    "copy": 13,
+    "blur": 72,
+    "caps-eyebrow": 54,
+    "copy": 12,
     "gradient": 57,
     "gradient-text": 32,
-    "infinite-motion": 31,
-    "raw-palette": 1925
+    "infinite-motion": 30,
+    "raw-palette": 1727
   }
 }

@@ -17,7 +17,6 @@ export {
 export {
   getLLMUsageRecords,
   getLLMUsageById,
-  getLLMUsageStats,
 } from "./admin-llm-usage"
 
 export {
@@ -44,7 +43,6 @@ export {
 
 // User management
 export {
-  getUserById,
   updateUserAdminStatus,
   setUserDisabled,
 } from "./admin-users"

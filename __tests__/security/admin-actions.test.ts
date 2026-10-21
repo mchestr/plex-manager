@@ -8,8 +8,6 @@ import {
   setLLMDisabled,
   getLLMUsageRecords,
   getLLMUsageById,
-  getLLMUsageStats,
-  getUserById,
   getHistoricalWrappedVersions,
   getHistoricalWrappedData,
   setUserDisabled,
@@ -55,11 +53,6 @@ jest.mock('next/navigation', () => ({
 
 jest.mock('@/lib/auth', () => ({ authOptions: {} }))
 
-const mockGetLLMUsageStats = jest.fn()
-jest.mock('@/lib/wrapped/usage', () => ({
-  getLLMUsageStats: (...args: any[]) => mockGetLLMUsageStats(...args),
-}))
-
 const mockAdminSession = {
   user: {
     id: 'admin-user-id',
@@ -72,7 +65,6 @@ const mockAdminSession = {
 describe('Admin Actions Security', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockGetLLMUsageStats.mockClear()
   })
 
   describe('getConfig', () => {
@@ -256,76 +248,6 @@ describe('Admin Actions Security', () => {
 
       await expect(getLLMUsageById('usage-1')).rejects.toThrow()
       expect(prisma.lLMUsage.findUnique).not.toHaveBeenCalled()
-    })
-  })
-
-  describe('getLLMUsageStats', () => {
-    it('should allow admin to get LLM usage stats', async () => {
-      ;(requireAdmin as jest.Mock).mockResolvedValue(mockAdminSession)
-      mockGetLLMUsageStats.mockResolvedValue({
-        totalCost: 10.5,
-        totalTokens: 100000,
-      })
-
-      const result = await getLLMUsageStats()
-
-      expect(requireAdmin).toHaveBeenCalled()
-      expect(mockGetLLMUsageStats).toHaveBeenCalled()
-      expect(result).toBeTruthy()
-    })
-
-    it('should reject non-admin user', async () => {
-      ;(requireAdmin as jest.Mock).mockImplementation(() => {
-        redirect('/')
-        throw new Error('Not admin')
-      })
-
-      await expect(getLLMUsageStats()).rejects.toThrow()
-      expect(mockGetLLMUsageStats).not.toHaveBeenCalled()
-    })
-  })
-
-  describe('getUserById', () => {
-    it('should allow admin to get user by ID', async () => {
-      ;(requireAdmin as jest.Mock).mockResolvedValue(mockAdminSession)
-      ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
-        id: 'user-1',
-        name: 'Test User',
-        email: 'user@example.com',
-        image: 'https://example.com/image.jpg',
-      })
-
-      const result = await getUserById('user-1')
-
-      expect(requireAdmin).toHaveBeenCalled()
-      expect(result).toBeTruthy()
-      expect(result?.id).toBe('user-1')
-    })
-
-    it('should reject non-admin user', async () => {
-      ;(requireAdmin as jest.Mock).mockImplementation(() => {
-        redirect('/')
-        throw new Error('Not admin')
-      })
-
-      await expect(getUserById('user-1')).rejects.toThrow()
-      expect(prisma.user.findUnique).not.toHaveBeenCalled()
-    })
-
-    it('should only return safe user fields', async () => {
-      ;(requireAdmin as jest.Mock).mockResolvedValue(mockAdminSession)
-      ;(prisma.user.findUnique as jest.Mock).mockResolvedValue({
-        id: 'user-1',
-        name: 'Test User',
-        email: 'user@example.com',
-        image: 'https://example.com/image.jpg',
-      })
-
-      const result = await getUserById('user-1')
-
-      expect(result).not.toHaveProperty('plexUserId')
-      expect(result).not.toHaveProperty('isAdmin')
-      expect(result).not.toHaveProperty('accounts')
     })
   })
 

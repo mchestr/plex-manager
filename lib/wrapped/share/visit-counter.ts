@@ -5,7 +5,8 @@
  * ## Process
  *
  * 1. The day key is 32 random bytes held only in Redis at
- *    `rw:visitkey:<UTC day>` for 48 hours; the first visit of a day creates it
+ *    `rw:visitkey:<day>` for 48 hours, the day being the server zone's (so
+ *    the share analytics chart buckets visits on the days it labels); the first visit of a day creates it
  *    (`SET NX`), so every process uses the same key and no key is stored.
  * 2. `SET rw:visit:<shareId>:<HMAC-SHA256(dayKey, ip)> 1 NX EX 86400` marks the
  *    visitor for the day. Only when that write succeeds is the visit new.
@@ -26,6 +27,8 @@ import type Redis from "ioredis"
 
 import { prisma as defaultPrisma } from "@/lib/prisma"
 import { getRequestPathRedis } from "@/lib/queue/connection"
+import { serverZone } from "@/lib/utils/server-zone"
+import { dayKey as zoneDayKey } from "@/lib/utils/zoned-time"
 
 const DAY_KEY_TTL_S = 48 * 60 * 60
 const VISIT_TTL_S = 24 * 60 * 60
@@ -45,6 +48,8 @@ interface VisitDeps {
   redis: Pick<Redis, "set" | "getBuffer">
   prisma: VisitWriter
   now: Date
+  /** The server zone, which decides the day. */
+  zone: string
 }
 
 /** Today's key: the one in Redis, or a new one when this is the day's first visit. */
@@ -57,7 +62,7 @@ async function dayKey(redis: VisitDeps["redis"], day: string): Promise<Buffer> {
 }
 
 /**
- * Records one visit to `shareId` from `ip`: counted once per visitor per UTC day.
+ * Records one visit to `shareId` from `ip`: counted once per visitor per day in the server zone.
  * @public P7.5's share page calls it.
  *
  * @returns whether this visit was counted.
@@ -66,7 +71,7 @@ export async function recordShareVisit(shareId: string, ip: string, deps: Partia
   const redis = deps.redis ?? getRequestPathRedis()
   const prisma = deps.prisma ?? defaultPrisma
   const now = deps.now ?? new Date()
-  const day = now.toISOString().slice(0, 10)
+  const day = zoneDayKey(now.getTime(), deps.zone ?? (await serverZone()))
 
   const visitor = createHmac("sha256", await dayKey(redis, day)).update(ip).digest("hex")
   const fresh = await redis.set(`rw:visit:${shareId}:${visitor}`, "1", "EX", VISIT_TTL_S, "NX")

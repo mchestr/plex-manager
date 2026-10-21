@@ -9,6 +9,8 @@ import type {
   DiscordCommandStatus,
   DiscordCommandType,
 } from "@/lib/generated/prisma/client"
+import { zeroFill, type DayWindow } from "@/lib/utils/day-window"
+
 import { dateRangeWhere, toDateKey } from "../query-helpers"
 
 export interface ErrorAnalysis {
@@ -23,15 +25,12 @@ export interface ErrorAnalysis {
 }
 
 /**
- * Get error analysis
+ * Error analysis; `errorTrend` has one entry per day of the window, zero-filled.
  */
-export async function getErrorAnalysis(
-  startDate: Date,
-  endDate: Date
-): Promise<ErrorAnalysis> {
+export async function getErrorAnalysis(window: DayWindow): Promise<ErrorAnalysis> {
   const where = {
     status: { in: ["FAILED", "TIMEOUT"] as DiscordCommandStatus[] },
-    ...dateRangeWhere(startDate, endDate),
+    ...dateRangeWhere(window.gte, window.lt),
   }
 
   const [totalErrors, typeGroups, commandGroups, logs] = await Promise.all([
@@ -70,10 +69,10 @@ export async function getErrorAnalysis(
   }
 
   // Group by date for trend
-  const errorsByDate = new Map<string, number>()
+  const errorsByDate = new Map<string, { count: number }>()
   for (const log of logs) {
-    const dateKey = toDateKey(log.createdAt)
-    errorsByDate.set(dateKey, (errorsByDate.get(dateKey) || 0) + 1)
+    const dateKey = toDateKey(log.createdAt, window.zone)
+    errorsByDate.set(dateKey, { count: (errorsByDate.get(dateKey)?.count ?? 0) + 1 })
   }
 
   return {
@@ -92,10 +91,7 @@ export async function getErrorAnalysis(
         count: g._count,
         sampleErrors: errorSamples.get(g.commandName) || [],
       })),
-    errorTrend: Array.from(errorsByDate.entries()).map(([date, count]) => ({
-      date,
-      count,
-    })),
+    errorTrend: zeroFill(window.keys, errorsByDate, { count: 0 }),
   }
 }
 

@@ -24,17 +24,27 @@ export function playgroundFor(userId: string): Route {
   return `/admin/rewind/playground?subject=${seg(userId)}` as Route
 }
 
-/** LLM usage, filtered to a member and a year when given. */
-export function llmUsage({ userId, year }: { userId?: string; year?: number } = {}): Route {
+/**
+ * LLM usage, filtered to a member, a Rewind year and an inclusive day range
+ * (`YYYY-MM-DD` in the server zone) when given.
+ */
+export function llmUsage({ userId, year, from, to }: { userId?: string; year?: number; from?: string; to?: string } = {}): Route {
   const params = new URLSearchParams()
   if (userId) params.set("userId", userId)
   if (year !== undefined) params.set("year", String(year))
+  if (from) params.set("from", from)
+  if (to) params.set("to", to)
   const query = params.toString()
   return (query ? `/admin/llm-usage?${query}` : "/admin/llm-usage") as Route
 }
 
 export function llmUsageDetail(id: string): Route {
   return `/admin/llm-usage/${seg(id)}` as Route
+}
+
+/** One assistant conversation's calls. */
+export function llmConversation(id: string): Route {
+  return `/admin/llm-usage/conversation/${seg(id)}` as Route
 }
 
 export function invite(id: string): Route {

@@ -119,14 +119,14 @@ export const A11Y_ROUTES: A11yRoute[] = [
   },
   { path: `/admin/invites/${VISUAL_INVITE_IDS.valid}`, as: 'admin', ready: 'admin-invite-details-heading' },
   { path: '/admin/announcements', as: 'admin', ready: 'announcements-list' },
-  { path: '/admin/cost-analysis', as: 'admin', ready: 'admin-cost-analysis-heading' },
+  { path: '/admin/cost-analysis', as: 'admin', ready: 'admin-cost-analysis-header' },
   { path: '/admin/discord', as: 'admin', ready: 'discord-bot-status' },
   { path: '/admin/rewind/playground', as: 'admin', ready: 'admin-rewind-playground-header' },
   { path: '/admin/queues', as: 'admin', ready: 'queue-status' },
   { path: '/admin/settings', as: 'admin', ready: 'stripe-settings-card' },
   // The public share route records a visit; a worker restart's re-seed drops it.
-  { path: '/admin/shares', as: 'admin', ready: 'admin-shares-heading', reset: clearA11yShareVisits },
-  { path: '/admin/llm-usage', as: 'admin', ready: 'admin-llm-usage-heading' },
+  { path: '/admin/shares', as: 'admin', ready: 'admin-shares-header', reset: clearA11yShareVisits },
+  { path: '/admin/llm-usage', as: 'admin', ready: 'admin-llm-usage-header' },
   { path: '/admin/llm-usage/visual-llm-usage-1', as: 'admin', ready: 'admin-llm-usage-detail-heading' },
   {
     path: `/admin/llm-usage/conversation/${A11Y_CONVERSATION_ID}`,

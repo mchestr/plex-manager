@@ -70,6 +70,7 @@ test.describe('Hydration across zones and locales', () => {
             id,
             userId: TEST_USERS.ADMIN.id,
             chatConversationId: CONVERSATION_ID,
+            groupKey: CONVERSATION_ID,
             provider: 'openai',
             model: 'gpt-5-mini',
             prompt: JSON.stringify([{ role: 'user', content: 'How many films this year?' }]),
