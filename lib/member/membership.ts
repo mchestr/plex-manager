@@ -4,18 +4,6 @@ import type { SubscriptionStatus } from "@/lib/generated/prisma/client"
 import { prisma } from "@/lib/prisma"
 import { getPlanName, getPlanPrice } from "@/lib/stripe/prices"
 
-/**
- * Whether the member has a `/membership` page (ui-design-system 6.1): Stripe
- * is on, or they have a subscription row from when it was.
- */
-export async function hasMembershipPage(userId: string): Promise<boolean> {
-  const [config, subscription] = await Promise.all([
-    prisma.config.findUnique({ where: { id: "config" }, select: { stripeEnabled: true } }),
-    prisma.subscription.findUnique({ where: { userId }, select: { id: true } }),
-  ])
-  return Boolean(config?.stripeEnabled || subscription)
-}
-
 /** Why a member without a subscription still has access. */
 type MembershipExemption = "comp" | "notRequired"
 

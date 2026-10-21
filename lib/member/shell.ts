@@ -1,7 +1,7 @@
 import "server-only"
 
 import { serverName } from "@/lib/brand"
-import { hasMembershipPage } from "@/lib/member/membership"
+import { hasMembershipPage } from "@/lib/member/membership-page"
 import { memberNav, type MemberNavItem } from "@/lib/member/nav"
 import { prisma } from "@/lib/prisma"
 import { requestRewindCardModel } from "@/lib/rewind/home-card"

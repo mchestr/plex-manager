@@ -4,7 +4,8 @@ import { notFound, redirect } from "next/navigation"
 
 import { MembershipDetails } from "@/components/subscription/membership-details"
 import { authOptions } from "@/lib/auth"
-import { getMembership, hasMembershipPage } from "@/lib/member/membership"
+import { getMembership } from "@/lib/member/membership"
+import { hasMembershipPage } from "@/lib/member/membership-page"
 import { getFormatSettings } from "@/lib/settings/app-settings"
 
 export const dynamic = "force-dynamic"
