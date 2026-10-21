@@ -20,7 +20,7 @@
  * @module lib/wrapped/archetypes/select
  */
 
-import { createHash } from "node:crypto"
+import { sha256Hex } from "@/lib/utils/sha256"
 
 import { MIN_SCORED_MEMBERS } from "@/lib/wrapped/aggregate/schema"
 import type { FactId } from "@/lib/wrapped/facts/catalogue"
@@ -60,7 +60,7 @@ export function isPostcard(stats: Pick<MemberStats, "totals" | "plays">): boolea
 }
 
 function seed(userId: string, year: number): number {
-  return parseInt(createHash("sha256").update(`${userId}:${year}`).digest("hex").slice(0, 8), 16)
+  return parseInt(sha256Hex(`${userId}:${year}`).slice(0, 8), 16)
 }
 
 /**

@@ -23,7 +23,7 @@
  * @module lib/wrapped/copy/templates
  */
 
-import { createHash } from "node:crypto"
+import { sha256Hex } from "@/lib/utils/sha256"
 
 import type { IssuePageType } from "@/lib/rewind/registry"
 import { getArchetype, posterLineIds, type ArchetypeId } from "@/lib/wrapped/archetypes/catalogue"
@@ -53,7 +53,7 @@ export function copyLocals({ year, firstTitle, guess }: { year: number; firstTit
 
 /** A stable pick for this member and key. */
 function pickIndex(userId: string, key: string, n: number): number {
-  return parseInt(createHash("sha256").update(`${userId}:${key}`).digest("hex").slice(0, 8), 16) % n
+  return parseInt(sha256Hex(`${userId}:${key}`).slice(0, 8), 16) % n
 }
 
 const isFinal = (facts: RewindFactsV3) => facts["window.finalCut"]?.value === 1

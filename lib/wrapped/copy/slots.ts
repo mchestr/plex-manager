@@ -23,7 +23,7 @@
  * @module lib/wrapped/copy/slots
  */
 
-import { createHash } from "node:crypto"
+import { sha256Hex } from "@/lib/utils/sha256"
 
 import type { IssuePageType } from "@/lib/rewind/registry"
 import type { PageType } from "@/lib/wrapped/data/page-types"
@@ -240,5 +240,5 @@ export function slotDependencyHash(slot: CopySlot, facts: RewindFactsV3): string
       return [fact, typeof value === "number" ? at.filter((t) => value >= t).length : null]
     })
   )
-  return createHash("sha256").update(canonicalJson({ slot: slot.id, identity, bands })).digest("hex")
+  return sha256Hex(canonicalJson({ slot: slot.id, identity, bands }))
 }
