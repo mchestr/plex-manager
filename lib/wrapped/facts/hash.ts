@@ -13,7 +13,7 @@
  * @module lib/wrapped/facts/hash
  */
 
-import { createHash } from "node:crypto"
+import { sha256Hex } from "@/lib/utils/sha256"
 
 import type { RewindFactsV3 } from "./catalogue"
 
@@ -50,5 +50,5 @@ export function canonicalJson(value: unknown): string {
  */
 export function factsHash(facts: RewindFactsV3): string {
   const values = Object.fromEntries(Object.entries(facts).map(([id, fact]) => [id, fact?.value ?? null]))
-  return createHash("sha256").update(canonicalJson({ statsVersion: STATS_VERSION, facts: values })).digest("hex")
+  return sha256Hex(canonicalJson({ statsVersion: STATS_VERSION, facts: values }))
 }

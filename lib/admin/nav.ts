@@ -8,14 +8,14 @@
  * ```
  * Overview            hidden until P10.8 ships the page
  * Community           Users, Invites, Announcements, Discord bot
- * Rewind              Playground, Gallery, Prompts, Share analytics
+ * Rewind              Season, Playground, Gallery, Prompts, Share analytics
  * Usage and cost      LLM usage, Cost analysis
  * System              Job queues, Settings
  * ```
  *
  * `typedRoutes` rejects links to routes that do not exist yet, so the step
- * that ships a route adds its item: Season (P7.8), Evals (P11.30) and
- * Overview (P10.8); Gallery shipped with P7.11. P8.8 moves Playground to
+ * that ships a route adds its item: Season (P7.8, shipped), Gallery (P7.11,
+ * shipped), Evals (P11.30) and Overview (P10.8). P8.8 moves Playground to
  * `/admin/rewind/playground`.
  *
  * Labels are sentence case, equal the page titles (UI-21) and say Rewind,
@@ -95,6 +95,15 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     href: "/admin/discord",
     icon: icons.discordBot,
     group: "Community",
+    match: "prefix",
+    mobile: "more",
+  },
+  {
+    id: "season",
+    label: "Season",
+    href: "/admin/rewind",
+    icon: icons.rewind,
+    group: "Rewind",
     match: "prefix",
     mobile: "more",
   },
@@ -263,13 +272,20 @@ export function titleFor(pathname: string): string {
 
 /**
  * Immersive routes draw their own full-screen chrome, so the shell hides its
- * sidebar, bars and the assistant there: the admin Rewind viewer and a stored
- * generation's history. P8.8 adds the playground's story preview.
+ * sidebar, bars and the assistant there: a stored generation's history. P8.8
+ * adds the playground's story preview.
  */
-const ASSISTANT_HIDDEN: readonly RegExp[] = [
-  /^\/admin\/users\/[^/]+\/(wrapped|rewind)(?:\/|$)/,
-  /^\/admin\/wrapped\/[^/]+\/history\//,
-]
+const IMMERSIVE: readonly RegExp[] = [/^\/admin\/wrapped\/[^/]+\/history\//]
+
+/**
+ * Routes that hide only the assistant: the immersive ones, and the admin
+ * Rewind preview (P7.9), which keeps the nav around its framed stage.
+ */
+const ASSISTANT_HIDDEN: readonly RegExp[] = [...IMMERSIVE, /^\/admin\/users\/[^/]+\/rewind(?:\/|$)/]
+
+export function isImmersive(pathname: string): boolean {
+  return IMMERSIVE.some((pattern) => pattern.test(pathname))
+}
 
 export function isAssistantHidden(pathname: string): boolean {
   return ASSISTANT_HIDDEN.some((pattern) => pattern.test(pathname))

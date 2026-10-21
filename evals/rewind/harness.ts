@@ -70,8 +70,8 @@ export function evalRow(ref: ModelRef, options: { apiKey?: string; baseUrl?: str
   }
 }
 
-/** The dry-run context of a fixture member: an admin run on a server with Rewind on and no database. */
-function fixtureContext(fixture: Fixture, inputs: FixtureInputs, model: ModelRef): RewindContext {
+/** The dry-run context of a fixture member: an admin run on a server with Rewind on and no database. @internal */
+export function fixtureContext(fixture: Fixture, inputs: FixtureInputs, model: ModelRef): RewindContext {
   return {
     userId: FIXTURE_USER_ID,
     year: fixture.window.year,

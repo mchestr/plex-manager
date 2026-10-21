@@ -14,9 +14,9 @@ export function userDetail(id: string): Route {
   return `/admin/users/${seg(id)}` as Route
 }
 
-/** One member's Rewind for `year`, through today's admin viewer (P7.9 moves it under `/rewind/`). */
+/** One member's Rewind for `year`, in the admin preview (P7.9). */
 export function userRewind(id: string, year: number): Route {
-  return `/admin/users/${seg(id)}/wrapped?year=${year}` as Route
+  return `/admin/users/${seg(id)}/rewind/${year}` as Route
 }
 
 /** LLM usage, filtered to a member and a year when given. */

@@ -60,3 +60,34 @@ export function fitStage({ vw, vh, safeBottom, rootFontPx }: FitInput): StageFit
 
   return { chrome, u, artboardH, belowFloor: u < FLOOR_U, largeText: rootFontPx > LARGE_TEXT_PX }
 }
+
+/**
+ * The desktop spread (design 4.7, P7.4): from 1024 px wide at 4:3 or wider.
+ * The stage renders both chromes and this query shows one, so the switch is
+ * CSS only (the `rw-spread:` variant in `app/globals.css` is the same query).
+ */
+export const SPREAD_QUERY = "(min-width: 1024px) and (min-aspect-ratio: 4/3)"
+
+const SPREAD_MAX_U = 1.1
+/** The top bar (brand, tabs, progress) and the margin under the artboard. */
+const SPREAD_CHROME_H = 140
+/** The side gutter, and each previous and next button's column beside the artboard. */
+const SPREAD_GUTTER = 24
+const SPREAD_NAV_W = 80
+
+const clamp = (min: number, value: number, max: number) => Math.min(max, Math.max(min, value))
+
+/** The contents rail and Notes widths at a window width: narrow enough at 1024 px to keep the artboard at 0.8 or more. */
+export function spreadColumns(vw: number): { railW: number; notesW: number } {
+  return { railW: Math.round(clamp(176, vw * 0.17, 248)), notesW: Math.round(clamp(280, vw * 0.3, 500)) }
+}
+
+/**
+ * The spread's artboard scale: `min(1.1, (vh - 140) / 693, columnWidth / 390)`,
+ * where the column is what the rail, the Notes, the two button columns and
+ * the gutters leave. 1440 x 900 gives 1.1 and 1366 x 768 about 0.9.
+ */
+export function fitSpread({ vw, vh, railW, notesW }: { vw: number; vh: number; railW: number; notesW: number }): number {
+  const column = vw - 2 * SPREAD_GUTTER - railW - notesW - 2 * SPREAD_NAV_W
+  return Math.max(0, Math.min(SPREAD_MAX_U, (vh - SPREAD_CHROME_H) / ARTBOARD_H, column / ARTBOARD_W))
+}

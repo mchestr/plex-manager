@@ -4,6 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 import { AssistantTrigger } from "@/components/admin/chatbot/assistant-sheet"
+import { AdminChrome } from "@/components/shell/admin-chrome"
 import { useSignOut } from "@/components/shell/use-sign-out"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -104,14 +105,16 @@ export function AdminSidebar({ serverName, user, navCounts, assistant }: AdminSi
         </Badge>
       </div>
       {assistant && (
-        <div className="px-2 pb-2">
-          <RailTip label="Assistant">
-            <AssistantTrigger className="w-full justify-center gap-3 lg:justify-start" data-testid="admin-chat-toggle">
-              <Icon icon={icons.assistant} />
-              <span className="sr-only lg:not-sr-only">Assistant</span>
-            </AssistantTrigger>
-          </RailTip>
-        </div>
+        <AdminChrome part="assistant">
+          <div className="px-2 pb-2">
+            <RailTip label="Assistant">
+              <AssistantTrigger className="w-full justify-center gap-3 lg:justify-start" data-testid="admin-chat-toggle">
+                <Icon icon={icons.assistant} />
+                <span className="sr-only lg:not-sr-only">Assistant</span>
+              </AssistantTrigger>
+            </RailTip>
+          </div>
+        </AdminChrome>
       )}
       <nav aria-label="Admin" className="flex-1 overflow-y-auto px-2 py-2">
         {ADMIN_NAV_GROUPS.map((group) => (

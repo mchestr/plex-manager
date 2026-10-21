@@ -1,6 +1,7 @@
 /**
  * The page ids of a v3 Rewind: the 18 pages of the slide catalogue
- * (design 4.2), in issue order, plus the pocket edition's `short-list`.
+ * (design 4.2), in issue order, plus the pocket edition's `short-list` and
+ * the one-page `postcard` (P7.3).
  *
  * @module lib/wrapped/data/page-types
  */
@@ -27,6 +28,7 @@ const PAGE_TYPES = [
   "next-year",
   "back-cover",
   "short-list",
+  "postcard",
 ] as const
 
 export const PageTypeSchema = z.enum(PAGE_TYPES)

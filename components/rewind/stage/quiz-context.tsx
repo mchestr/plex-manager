@@ -1,7 +1,6 @@
 "use client"
 
 import { createContext, useContext, useMemo, useSyncExternalStore, type ReactNode } from "react"
-import { z } from "zod"
 
 /**
  * The quiz answer (Rewind design 4.3, page 04): which option the member
@@ -10,13 +9,25 @@ import { z } from "zod"
  * tab, and never reaches the server. Storage that throws (private windows,
  * blocked storage) leaves the answer in memory only.
  */
-const AnswerSchema = z.union([
-  z.strictObject({ key: z.string(), rank: z.number().int().min(1).max(4), title: z.string(), kind: z.enum(["series", "mixed"]) }),
-  z.strictObject({ skipped: z.literal(true) }),
-])
+export type QuizPick = { key: string; rank: number; title: string; kind: "series" | "mixed" }
+export type QuizAnswer = QuizPick | { skipped: true }
 
-export type QuizAnswer = z.infer<typeof AnswerSchema>
-export type QuizPick = Extract<QuizAnswer, { key: string }>
+/**
+ * A stored answer, read without Zod (the stage's first page loads this
+ * module, P7.15): exactly a pick's four fields with a rank of 1 to 4, or
+ * exactly `{ skipped: true }`; anything else is null.
+ */
+function parseAnswer(value: unknown): QuizAnswer | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return null
+  const stored = value as Record<string, unknown>
+  const keys = Object.keys(stored).sort().join(",")
+  if (keys === "skipped") return stored.skipped === true ? { skipped: true } : null
+  if (keys !== "key,kind,rank,title") return null
+  const { key, rank, title, kind } = stored
+  const validRank = typeof rank === "number" && Number.isInteger(rank) && rank >= 1 && rank <= 4
+  if (typeof key !== "string" || typeof title !== "string" || !validRank || (kind !== "series" && kind !== "mixed")) return null
+  return { key, rank, title, kind }
+}
 
 const storageKey = (year: number) => `rewind:quiz:${year}`
 
@@ -28,8 +39,7 @@ function read(year: number): QuizAnswer | null {
     let stored: QuizAnswer | null = null
     try {
       const raw = window.sessionStorage.getItem(storageKey(year))
-      const parsed = raw ? AnswerSchema.safeParse(JSON.parse(raw)) : null
-      stored = parsed?.success ? parsed.data : null
+      stored = raw ? parseAnswer(JSON.parse(raw)) : null
     } catch {
       stored = null
     }

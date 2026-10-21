@@ -22,15 +22,12 @@ jest.mock('@/lib/guards', () => ({
 jest.mock('@/lib/member/notice', () => ({ getMemberNotice: jest.fn() }))
 jest.mock('@/lib/member/shell', () => ({ getAppShellData: jest.fn() }))
 jest.mock('@/components/shell/app-shell', () => ({
-  AppShell: ({ children, notice }: { children: React.ReactNode; notice?: React.ReactNode }) => (
+  AppShell: ({ children, notice }: { children: React.ReactNode; notice?: { kind: string } | null }) => (
     <div data-testid="app-shell">
-      {notice}
+      {notice && <div data-testid="app-notice">{notice.kind}</div>}
       {children}
     </div>
   ),
-}))
-jest.mock('@/components/shell/app-notice', () => ({
-  AppNotice: ({ notice }: { notice: { kind: string } }) => <div data-testid="app-notice">{notice.kind}</div>,
 }))
 
 const mockSession = getServerSession as jest.Mock

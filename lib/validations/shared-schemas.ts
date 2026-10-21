@@ -1,4 +1,5 @@
 import { parseServerUrl } from "@/lib/utils"
+import { YEAR_MAX, YEAR_MIN } from "@/lib/validations/year-range"
 import { z } from "zod"
 
 /**
@@ -13,8 +14,7 @@ export const daysSchema = z.number().int().min(1).max(365)
 export const limitSchema = z.number().int().min(1).max(100)
 
 /** The first and last years a Rewind can be generated or opened for. */
-export const YEAR_MIN = 2010
-export const YEAR_MAX = 2100
+export { YEAR_MAX, YEAR_MIN }
 
 /**
  * Schema for year parameter

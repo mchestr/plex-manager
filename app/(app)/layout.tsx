@@ -1,7 +1,6 @@
 import type { ReactNode } from "react"
 import { getServerSession } from "next-auth"
 
-import { AppNotice } from "@/components/shell/app-notice"
 import { AppShell } from "@/components/shell/app-shell"
 import { authOptions } from "@/lib/auth"
 import {
@@ -39,7 +38,7 @@ export default async function AppGuardLayout({
   ])
 
   return (
-    <AppShell {...shell} notice={notice && <AppNotice notice={notice} />}>
+    <AppShell {...shell} notice={notice}>
       {children}
     </AppShell>
   )

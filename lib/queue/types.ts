@@ -7,6 +7,7 @@
 
 import type { DryRunInput } from "@/lib/rewind/dry-run/input"
 import type { SessionRevocationReason } from "@/lib/session-revocation"
+import type { GenerationAudience } from "@/lib/wrapped/pipeline/eligibility"
 import type { WatchlistSkipCode } from "@/lib/watchlist/skip"
 
 /**
@@ -27,11 +28,16 @@ export const JOB_TYPES = {
   REWIND_METADATA_WARM: "rewind:metadata-warm",
   REWIND_GENERATE_USER: "rewind:generate:user",
   REWIND_STALE_SWEEP: "rewind:stale:sweep",
+  // Season console (P7.8), on `rewind-batch`
+  REWIND_SEASON_PREPARE: "rewind:season:prepare",
+  REWIND_GENERATE_ALL: "rewind:generate:all",
   // Share cards (P5.10), on `rewind-aux`
   REWIND_CARD_PREWARM: "rewind:card:prewarm",
   REWIND_CARD_SWEEP: "rewind:card:sweep",
   // Admin dry runs (P7.10), on `rewind-aux`
   REWIND_DRY_RUN: "rewind:dry-run",
+  // Ready notifications (P7.14), on `rewind-aux`
+  REWIND_NOTIFY: "rewind:notify",
 } as const
 
 export type JobType = (typeof JOB_TYPES)[keyof typeof JOB_TYPES]
@@ -198,6 +204,11 @@ export interface DiscordRoleReconcileResult {
 export interface RewindServerAggregatePayload {
   year: number
   through: string
+  /**
+   * `return` hands the warm batches back in the job's result instead of
+   * enqueuing them, so `REWIND_SEASON_PREPARE` adds them as its children.
+   */
+  warm?: "enqueue" | "return"
 }
 
 /**
@@ -223,6 +234,35 @@ export interface RewindGenerateUserPayload {
   generationId: string
   userId: string
   year: number
+  /** A hide or unhide's regeneration (P7.7): it waits out a held lock and runs again when a hide arrived mid-run. */
+  exclusion?: true
+  /** How many times an exclusion run has waited for the member's lock. */
+  lockWaits?: number
+  /** Set by the season fan-out (P7.8): whose Rewinds it generates, and the batch's last data day. */
+  audience?: GenerationAudience
+  through?: string
+}
+
+/**
+ * The season console's runs (P7.8). `audience` is `all` for the scheduled
+ * season-open run and `config` for the buttons; `step` is the step-job
+ * pattern's progress, so a retry resumes where it stopped.
+ */
+export interface RewindSeasonPreparePayload {
+  year: number
+  through: string
+  audience: GenerationAudience
+  triggeredBy: "scheduled" | "admin"
+  step?: "aggregate" | "warm" | "generate" | "done"
+}
+
+/** Fans out one `REWIND_GENERATE_USER` per member; `scope: 'failed'` only those whose latest run failed. */
+export interface RewindGenerateAllPayload {
+  year: number
+  through: string
+  audience: GenerationAudience
+  scope: "all" | "failed"
+  step?: "fan-out" | "done"
 }
 
 /** Renders the cover, centrefold and back cover of one completed Rewind with the member's saved options. */
@@ -235,6 +275,17 @@ export interface RewindDryRunPayload {
   previewId: string
   adminId: string
   input: DryRunInput
+}
+
+/**
+ * One "your Rewind is ready" message (P7.14), deduplicated on
+ * `rewind:notify:{year}:{userId}:{kind}`. P8.5 adds the `final-cut` kind.
+ */
+export interface RewindNotifyPayload {
+  wrappedId: string
+  userId: string
+  year: number
+  kind: "season" | "member"
 }
 
 // =============================================================================
@@ -256,9 +307,12 @@ export interface JobPayloadMap {
   [JOB_TYPES.REWIND_METADATA_WARM]: RewindMetadataWarmPayload
   [JOB_TYPES.REWIND_GENERATE_USER]: RewindGenerateUserPayload
   [JOB_TYPES.REWIND_STALE_SWEEP]: Record<string, never>
+  [JOB_TYPES.REWIND_SEASON_PREPARE]: RewindSeasonPreparePayload
+  [JOB_TYPES.REWIND_GENERATE_ALL]: RewindGenerateAllPayload
   [JOB_TYPES.REWIND_CARD_PREWARM]: RewindCardPrewarmPayload
   [JOB_TYPES.REWIND_CARD_SWEEP]: Record<string, never>
   [JOB_TYPES.REWIND_DRY_RUN]: RewindDryRunPayload
+  [JOB_TYPES.REWIND_NOTIFY]: RewindNotifyPayload
 }
 
 // =============================================================================

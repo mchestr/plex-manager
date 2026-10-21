@@ -127,7 +127,7 @@ describe('runEval', () => {
       source: 'live',
       judge: 'openai:gpt-6-astra',
       judgeMean: 4.4,
-      rates: { firstPass: 12 / 13, afterRepair: 1 },
+      rates: { firstPass: 15 / 16, afterRepair: 1 },
       gates: { passed: true },
     })
     expect(results!.fixtures.find((f) => f.id === 'light')).toMatchObject({ calls: 0, judge: null })

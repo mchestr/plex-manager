@@ -116,10 +116,9 @@ test.describe('User Scenarios', () => {
         const noWrappedFound = regularUserPage.getByTestId('no-wrapped-found');
         await expect(noWrappedFound).not.toBeVisible();
 
-        // /rewind resolves to the latest completed year, and the viewer shows it
+        // /rewind resolves to the latest completed year, a stored v2 row read as an archive article (P7.13)
         await expect(regularUserPage).toHaveURL(new RegExp(`/rewind/${currentYear}$`));
-        // after the ~6.5 s intro transition
-        await expect(regularUserPage.getByTestId('wrapped-viewer')).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+        await expect(regularUserPage.getByTestId('rewind-article-mode')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
 
       } finally {
         // Cleanup: delete the mock wrapped data
@@ -219,25 +218,14 @@ test.describe('User Scenarios', () => {
         const notFoundError = anonymousPage.getByText('404', { exact: true });
         await expect(notFoundError).not.toBeVisible();
 
-        // Verify shared wrapped content is displayed using stable data-testid selectors
-        const wrappedHeading = anonymousPage.getByTestId('wrapped-share-heading');
-        await expect(wrappedHeading).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
-
-        // Verify statistics are visible using data-testid selectors
-        const totalWatchTime = anonymousPage.getByTestId('wrapped-total-watch-time');
-        await expect(totalWatchTime).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
-
-        // Verify "Total Watch Time" label is visible
-        const totalWatchTimeLabel = anonymousPage.getByTestId('wrapped-total-watch-time-label');
-        await expect(totalWatchTimeLabel).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
-
-        // Verify "Movies Watched" label is visible
-        const moviesWatchedLabel = anonymousPage.getByTestId('wrapped-movies-watched-label');
-        await expect(moviesWatchedLabel).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
-
-        // Verify "Shows Watched" label is visible
-        const showsWatchedLabel = anonymousPage.getByTestId('wrapped-shows-watched-label');
-        await expect(showsWatchedLabel).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
+        // A surviving v2 link renders the stripped summary as a short paper
+        // article, without cards (P7.5)
+        const article = anonymousPage.getByTestId('rewind-share-v2');
+        await expect(article).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
+        await expect(article.getByTestId('rewind-share-v2-totals')).toContainText('10 films');
+        await expect(article.getByTestId('rewind-share-v2-films')).toContainText('Test Movie');
+        await expect(article.getByTestId('rewind-share-v2-shows')).toContainText('Test Show');
+        await expect(anonymousPage.getByTestId('rewind-share-cards')).toHaveCount(0);
 
         // Verify we're on the share page URL
         expect(anonymousPage.url()).toContain(`/rewind/s/${shareToken}`);

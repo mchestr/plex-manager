@@ -11,6 +11,7 @@ import {
   activeItem,
   isActive,
   isAssistantHidden,
+  isImmersive,
   isTabActive,
   mobileTabs,
   navTestId,
@@ -31,7 +32,7 @@ describe("ADMIN_NAV", () => {
   })
 
   it("keeps the test ids the E2E specs use", () => {
-    for (const id of ["users", "invites", "share-analytics", "announcements", "llm-usage", "cost-analysis", "discord", "queues", "prompts", "playground", "gallery", "settings"]) {
+    for (const id of ["users", "invites", "share-analytics", "announcements", "llm-usage", "cost-analysis", "discord", "queues", "season", "prompts", "playground", "gallery", "settings"]) {
       expect(ADMIN_NAV.map(navTestId)).toContain(`admin-nav-${id}`)
     }
   })
@@ -103,18 +104,19 @@ describe("mobileTabs", () => {
     mobile: id === "overview" ? "tab" : "more",
   })
 
-  it("shows Invites, Users, Rewind, Settings and More until Overview and Season ship", () => {
+  it("shows Invites, Users, Rewind, Settings and More until Overview ships, with the Rewind tab on Season (P7.8)", () => {
     const tabs = mobileTabs()
     expect(tabs.map((tab) => tab.label)).toEqual(["Invites", "Users", "Rewind", "Settings", "More"])
     const rewind = tabs.find((tab) => tab.id === "rewind") as MobileLinkTab
-    expect(rewind.href).toBe("/admin/prompts")
+    expect(rewind.href).toBe("/admin/rewind")
+    expect(isTabActive(rewind, "/admin/rewind")).toBe(true)
     expect(isTabActive(rewind, "/admin/playground")).toBe(true)
     expect(isTabActive(rewind, "/admin/shares")).toBe(true)
     expect(isTabActive(rewind, "/admin/users")).toBe(false)
   })
 
   it("puts Overview first and opens Season from the Rewind tab once they exist", () => {
-    const items = [extra("overview", "/admin", null), ...ADMIN_NAV, extra("season", "/admin/rewind", "Rewind")]
+    const items = [extra("overview", "/admin", null), ...ADMIN_NAV]
     const tabs = mobileTabs(items)
     expect(tabs.map((tab) => tab.label)).toEqual(["Overview", "Users", "Rewind", "Settings", "More"])
     expect((tabs.find((tab) => tab.id === "rewind") as MobileLinkTab).href).toBe("/admin/rewind")
@@ -123,13 +125,24 @@ describe("mobileTabs", () => {
 
 describe("isAssistantHidden", () => {
   it.each([
-    ["/admin/users/u1/wrapped", true],
     ["/admin/users/u1/rewind/2025", true],
     ["/admin/wrapped/w1/history/l1", true],
+    ["/admin/users/u1/wrapped", false],
     ["/admin/users/u1", false],
     ["/admin/users", false],
     ["/admin/playground", false],
   ])("%s is %s", (pathname, expected) => {
     expect(isAssistantHidden(pathname)).toBe(expected)
+  })
+})
+
+describe("isImmersive", () => {
+  it.each([
+    // The admin Rewind preview keeps the nav (P7.9): only the assistant steps aside.
+    ["/admin/users/u1/rewind/2025", false],
+    ["/admin/wrapped/w1/history/l1", true],
+    ["/admin/users/u1", false],
+  ])("%s is %s", (pathname, expected) => {
+    expect(isImmersive(pathname)).toBe(expected)
   })
 })

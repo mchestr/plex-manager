@@ -33,7 +33,8 @@ jest.mock("@/lib/rewind/year-view", () => ({
   loadRewindYearView: async () => ({ kind: "issue", id: "wrapped-1", data: jest.requireActual("@/lib/wrapped/data/__tests__/v3-row").minimalV3() }),
 }))
 jest.mock("@/lib/wrapped/season", () => ({ listCompletedRewindYears: async () => [] }))
-jest.mock("@/components/wrapped/wrapped-shared-years-notice", () => ({ WrappedSharedYearsNotice: () => null }))
+jest.mock("@/components/rewind/shared-years-notice", () => ({ RewindSharedYearsNotice: () => null }))
+jest.mock("@/actions/rewind-notify", () => ({ notifyWhenRewindReady: jest.fn() }))
 jest.mock("@/components/rewind/rewind-generating-watch", () => ({ RewindGeneratingWatch: () => null }))
 jest.mock("@/components/rewind/rewind-issue", () => ({ RewindIssue: jest.fn(() => <div data-testid="issue" />) }))
 

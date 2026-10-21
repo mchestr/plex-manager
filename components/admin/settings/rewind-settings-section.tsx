@@ -261,7 +261,11 @@ export function RewindSettingsSection({ saved, zone, llmDisabled, discordBotOn, 
       </CardContent>
 
       <CardFooter className="justify-end">
-        {dirty && <span className="mr-auto text-label text-muted-foreground">Unsaved changes</span>}
+        {dirty && (
+          <span className="mr-auto text-label text-muted-foreground" data-testid="rewind-settings-unsaved">
+            Unsaved changes
+          </span>
+        )}
         <Button variant="secondary" onClick={() => setDraft(toDraft(saved))} disabled={!dirty || isPending} data-testid="rewind-settings-discard">
           Discard
         </Button>

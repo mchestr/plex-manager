@@ -1,0 +1,8 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`Short list (pocket edition) summarises the list deterministically 1`] = `
+[
+  "Your short list: 1, Le Fabuleux Destin d'Amélie Poulain, film, 2 h 2 m; 2, Only Murders in the Building, series, 1 h 22 m; 3, The Great British Bake Off, series, 48 minutes.",
+  "Your short list: 1, The Lord of the Rings: The Rings of Power, series, 55 h 50 m; 2, Severance, series, 55 h; 3, The Sopranos, series, 49 h 30 m.",
+]
+`;

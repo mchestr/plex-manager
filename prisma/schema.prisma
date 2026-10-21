@@ -293,6 +293,7 @@ model RewindExclusion {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   ratingKey String
   kind      String // "film", "series"
+  title     String?  @db.VarChar(200) // copied from the member's own page data at hide time, for the unhide list; never projected
   createdAt DateTime @default(now())
 
   @@unique([userId, ratingKey])

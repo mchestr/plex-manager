@@ -2769,6 +2769,22 @@
       }
     },
     {
+      "type": "setup",
+      "data": {
+        "meters": [
+          "setup.directPlayShare",
+          "setup.homeShare"
+        ]
+      }
+    },
+    {
+      "type": "standing",
+      "data": {
+        "rank": 1,
+        "community": []
+      }
+    },
+    {
       "type": "centrefold",
       "data": {
         "shortlist": [
@@ -3216,7 +3232,7 @@
       "calendar": "Your biggest day was {{fact:days.biggest.date}}, at {{fact:days.biggest.minutes}}.",
       "records": null,
       "requests": null,
-      "standing": null,
+      "standing": "Where you stand, with nobody named.",
       "nextYear": null
     },
     "archetype": {
@@ -3239,6 +3255,7 @@
       "deck.people": "693af38bfd8fa2cad657b3c7801fe4f655e47c7c655bb9b3960a17eb7a2daf15",
       "deck.clock": "54a31c163f4af94b5335b5fa9fdb6f9398a38c19029ee95bbfbba2ac346b550a",
       "deck.calendar": "7a7abce11024cfefee2f36894f925561b415718593b1eaa998aefe2a6c4c6a4e",
+      "deck.standing": "5b8bb6df6b94baba0c1e3854080993bfd17ed02d55e94d2530cf167a56e0b0e9",
       "archetype.tagline": "bbe47e8e679a44cc390d72bbbd5a84af3b0125ce8c1f8b381ebaa0fab4ef3295",
       "archetype.dedication": "ac6b95c524e0cabb26904674718dfb75490c36b10aecab4595c1d61be1b520e8",
       "archetype.posterLineId": "6ad5d4456c4261f374b8c0c96ae25105b7bd7f34f315c00d688c904eaa3af5f2",

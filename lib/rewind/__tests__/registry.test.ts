@@ -31,7 +31,7 @@ describe("lib/rewind/registry", () => {
   it("lists the 18 pages of design 4.2 in issue order, with unique names", () => {
     expect(issuePages.map((p) => [p.name, p.field])).toEqual(CATALOGUE.map(([, name, field]) => [name, field]))
     expect(new Set(issuePages.map((p) => p.name)).size).toBe(18)
-    expect(issuePages.map((p) => p.type)).toEqual(PageTypeSchema.options.filter((t) => t !== "short-list"))
+    expect(issuePages.map((p) => p.type)).toEqual(PageTypeSchema.options.filter((t) => t !== "short-list" && t !== "postcard"))
     for (const [type, page] of Object.entries(registry)) expect(page.type).toBe(type)
   })
 
@@ -73,9 +73,8 @@ describe("lib/rewind/registry", () => {
     }
   })
 
-  it("leaves only P7.2's non-core pages for later", () => {
-    const built = ["taste", "people", "race", "records"]
-    expect(LATER_PAGES).toEqual(issuePages.filter((p) => !p.core && !built.includes(p.type)).map((p) => p.type))
+  it("leaves no page for later: every page of the issue has landed", () => {
+    expect(LATER_PAGES).toEqual([])
   })
 
   it("runs about 2 min 20 s for the full issue and about 40 s for the pocket edition", () => {
@@ -83,7 +82,7 @@ describe("lib/rewind/registry", () => {
     expect(full).toBe(140_140)
     expect(Math.abs(full - 140_000)).toBeLessThan(5_000)
 
-    // Short list (P7.3) stands in as Top shows' 9 s here.
+    // Short list (P7.3) holds for 9 s, as Top shows does.
     expect(Math.abs(issueDurationMs(POCKET_ESTIMATE) - 40_000)).toBeLessThan(2_000)
     expect(issueDurationMs([])).toBe(0)
   })

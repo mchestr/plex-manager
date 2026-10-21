@@ -23,7 +23,7 @@
  * @module lib/wrapped/copy/templates
  */
 
-import { createHash } from "node:crypto"
+import { sha256Hex } from "@/lib/utils/sha256"
 
 import type { IssuePageType } from "@/lib/rewind/registry"
 import { getArchetype, posterLineIds, type ArchetypeId } from "@/lib/wrapped/archetypes/catalogue"
@@ -53,7 +53,7 @@ export function copyLocals({ year, firstTitle, guess }: { year: number; firstTit
 
 /** A stable pick for this member and key. */
 function pickIndex(userId: string, key: string, n: number): number {
-  return parseInt(createHash("sha256").update(`${userId}:${key}`).digest("hex").slice(0, 8), 16) % n
+  return parseInt(sha256Hex(`${userId}:${key}`).slice(0, 8), 16) % n
 }
 
 const isFinal = (facts: RewindFactsV3) => facts["window.finalCut"]?.value === 1
@@ -184,6 +184,21 @@ export function pocketNote(copySource: "llm" | "repair" | "template" | "mixed"):
     : "The six pages that sum up your year."
 }
 
+/** The pocket Short list's headline, by how many titles it lists (P7.3, `pocket-short-list.png`). */
+export function shortListHeadline(rows: number): string {
+  return rows >= 3 ? "Three things you made time for" : rows === 2 ? "Two things you made time for" : "The one thing you made time for"
+}
+
+/** The Short list's deck: template-only, for a pocket member and for a full issue's pocket cut alike. */
+export function shortListDeck(edition: "full" | "pocket" | "postcard"): string {
+  return edition === "full" ? `The titles at the top of ${t("time.totalMinutes")} in all.` : `A small year, well chosen: ${t("time.totalMinutes")} in all.`
+}
+
+/** The postcard's headline (design 4.5); the server name is plain text, never a token. */
+export function postcardHeadline(serverName: string): string {
+  return `A quiet year on ${serverName}`
+}
+
 /** One plain-language reason per evidence fact a scorer cites (`lib/wrapped/archetypes/scorers.ts`). */
 const REASONS: Partial<Record<FactId, string>> = {
   "hours.afterDarkShare": `${t("hours.afterDarkShare")} of your plays started between 10 PM and 4 AM.`,
@@ -271,7 +286,7 @@ const HEADLINES: Readonly<Record<IssuePageType, (facts: RewindFactsV3) => string
   race: raceHeadline,
   records: () => "Personal bests",
   setup: (f) => (Number(f["setup.directPlayShare"]?.value) >= 0.8 ? `${t("setup.directPlayShare")} direct play. Your setup is dialled in.` : "How you watched"),
-  requests: (f) => (f["requests.watched"] ? `You asked for ${t("requests.made")}. You watched ${t("requests.watched")} of them.` : `You asked for ${t("requests.made")}.`),
+  requests: (f) => (Number(f["requests.watched"]?.value) > 0 ? `You asked for ${t("requests.made")}. You watched ${t("requests.watched")} of them.` : `You asked for ${t("requests.made")}.`),
   standing: (f) =>
     Number(f["standing.percentile"]?.value) <= 50
       ? `${t("standing.percentile")} by hours watched`

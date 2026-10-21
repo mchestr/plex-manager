@@ -77,13 +77,13 @@ export const A11Y_ROUTES: A11yRoute[] = [
   { path: '/auth/denied', as: 'public', ready: 'access-denied-heading' },
   // No PIN in the URL: the callback's error state.
   { path: '/auth/callback/plex', as: 'public', ready: 'plex-callback-error-heading' },
-  { path: `/rewind/s/${A11Y_SHARE_TOKEN}`, as: 'public', ready: 'wrapped-share-heading' },
+  { path: `/rewind/s/${A11Y_SHARE_TOKEN}`, as: 'public', ready: 'rewind-share-v2' },
   { path: '/a11y-missing-page', as: 'public', ready: 'not-found-heading' },
 
   // Member
   { path: '/', as: 'member', ready: 'plex-link-card' },
-  { path: '/rewind', as: 'member', ready: 'wrapped-viewer' },
-  { path: `/rewind/${VISUAL_REWIND_YEAR}`, as: 'member', ready: 'wrapped-viewer' },
+  { path: '/rewind', as: 'member', ready: 'rewind-article-mode' },
+  { path: `/rewind/${VISUAL_REWIND_YEAR}`, as: 'member', ready: 'rewind-article-mode' },
   { path: '/onboarding', as: 'member', userId: VISUAL_ONBOARDING_USER.id, ready: 'onboarding-welcome-heading' },
   { path: '/discord/link', as: 'member', ready: 'discord-link-panel' },
   { path: '/account', as: 'member', ready: 'account-notifications' },
@@ -101,7 +101,7 @@ export const A11Y_ROUTES: A11yRoute[] = [
   },
   // Its Visits and Rewind table count the share visit the public share route records.
   { path: `/admin/users/${regularId}`, as: 'admin', ready: 'admin-user-season-wrapped-view', reset: clearA11yShareVisits },
-  { path: `/admin/users/${regularId}/wrapped`, as: 'admin', ready: 'admin-user-wrapped-heading' },
+  { path: `/admin/users/${regularId}/rewind/2026`, as: 'admin', ready: 'admin-rewind-preview-header' },
   { path: '/admin/invites', as: 'admin', ready: 'generate-invite-button' },
   {
     path: '/admin/invites',

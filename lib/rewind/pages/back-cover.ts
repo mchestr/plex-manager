@@ -17,7 +17,7 @@ import type { RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 
 import { BackCoverDataSchema, type BackCoverData } from "./back-cover.schema"
 import { has, isFinalCut, issueYear, shown, volumeLine } from "./facts"
-import { ratingKeyOf } from "./title-key.schema"
+import { ratingKeyOf } from "./title-key"
 
 /** The page's measure in artboard px; the billing block's lines are justified to it. */
 const MEASURE = 358

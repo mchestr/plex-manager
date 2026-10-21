@@ -16,6 +16,11 @@
  * playing. A `paused` state with `resumeTo: 'playing'` was paused by focus on
  * a control, and `BLUR_CONTROL` resumes it; a member's Pause clears it.
  *
+ * A cut (P7.3) swaps the page list while the story sits on the cover:
+ * `SET_KINDS` replaces the kinds there and nowhere else, and `CHOOSE_CUT`
+ * names the cut the stage swapped to. A one-page issue whose page is an end
+ * page (the postcard) opens `ended`.
+ *
  * Member turns (`source` other than auto) keep autoplay on; automatic turns
  * come only from `DWELL_END` and record `lastTurn: 'auto'`, which P5.3 uses to
  * decide between moving focus and announcing the page.
@@ -48,7 +53,8 @@ export interface PlayerState {
 }
 
 export type PlayerEvent =
-  | { type: "CHOOSE_CUT" }
+  | { type: "CHOOSE_CUT"; cut?: "full" | "pocket" }
+  | { type: "SET_KINDS"; kinds: readonly PageKind[] }
   | { type: "NEXT" | "PREV"; source: TurnSource }
   | { type: "GOTO"; index: number; source: TurnSource }
   | { type: "DWELL_END" }
@@ -68,7 +74,8 @@ export function pageKind(dwell: number | "tap" | "hold" | "end"): PageKind {
 }
 
 export function initPlayer({ kinds, autoplay }: { kinds: readonly PageKind[]; autoplay: boolean }): PlayerState {
-  return { mode: kinds[0] === "cover" ? "cover" : autoplay ? "playing" : "paused", index: 0, prevIndex: null, resumeTo: null, lastTurn: null, sheet: null, autoplay, kinds }
+  const mode: PlayerMode = kinds[0] === "cover" ? "cover" : kinds[0] === "end" ? "ended" : autoplay ? "playing" : "paused"
+  return { mode, index: 0, prevIndex: null, resumeTo: null, lastTurn: null, sheet: null, autoplay, kinds }
 }
 
 const TEMPORARY: readonly PlayerMode[] = ["holding", "interacting", "sheet"]
@@ -112,6 +119,9 @@ export function playerReducer(state: PlayerState, event: PlayerEvent): PlayerSta
   switch (event.type) {
     case "CHOOSE_CUT":
       return state.mode === "cover" ? turnTo(state, state.index + 1, "user") : state
+    case "SET_KINDS":
+      if (state.mode !== "cover" || state.index !== 0 || event.kinds.join() === state.kinds.join()) return state
+      return { ...state, kinds: event.kinds }
     case "NEXT":
       if (!canTurn(state) || state.mode === "ended") return state
       return turnTo(state, state.index + 1, "user")

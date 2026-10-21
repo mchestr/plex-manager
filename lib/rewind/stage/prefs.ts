@@ -6,26 +6,39 @@
  * share defaults and notifications).
  *
  * Every read and write sits in try/catch: a private window, blocked storage
- * or garbage JSON gives the defaults, and a failed write is dropped.
+ * or garbage JSON gives the defaults, and a failed write is dropped. The
+ * stage loads this module on its first page, so it checks fields by hand
+ * rather than with Zod (P7.15).
  *
  * @module lib/rewind/stage/prefs
  */
 
-import { z } from "zod"
-
 export const PREFS_KEY = "rewind:prefs:v1"
 
-const StagePrefsSchema = z.object({
-  autoplay: z.boolean().catch(true),
-  slowerPacing: z.boolean().catch(false),
-  shortcuts: z.boolean().catch(true),
+export interface StagePrefs {
+  autoplay: boolean
+  slowerPacing: boolean
+  shortcuts: boolean
   /** What the member chose when the article-mode offer opened; null until then. */
-  smallScreenChoice: z.enum(["article", "story"]).nullable().catch(null),
-})
-
-export type StagePrefs = z.infer<typeof StagePrefsSchema>
+  smallScreenChoice: "article" | "story" | null
+}
 
 export const DEFAULT_STAGE_PREFS: StagePrefs = Object.freeze({ autoplay: true, slowerPacing: false, shortcuts: true, smallScreenChoice: null })
+
+const flag = (value: unknown, fallback: boolean) => (typeof value === "boolean" ? value : fallback)
+
+/** A stored object's fields, each bad one replaced by its default; anything but an object gives null. */
+function readFields(value: unknown): StagePrefs | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return null
+  const stored = value as Record<string, unknown>
+  const choice = stored.smallScreenChoice
+  return {
+    autoplay: flag(stored.autoplay, DEFAULT_STAGE_PREFS.autoplay),
+    slowerPacing: flag(stored.slowerPacing, DEFAULT_STAGE_PREFS.slowerPacing),
+    shortcuts: flag(stored.shortcuts, DEFAULT_STAGE_PREFS.shortcuts),
+    smallScreenChoice: choice === "article" || choice === "story" ? choice : null,
+  }
+}
 
 /** The raw stored string, or null when storage is empty or unavailable. */
 export function readRawPrefs(): string | null {
@@ -40,8 +53,7 @@ export function readRawPrefs(): string | null {
 export function parsePrefs(raw: string | null): StagePrefs {
   if (raw === null) return DEFAULT_STAGE_PREFS
   try {
-    const parsed = StagePrefsSchema.safeParse(JSON.parse(raw))
-    return parsed.success ? parsed.data : DEFAULT_STAGE_PREFS
+    return readFields(JSON.parse(raw)) ?? DEFAULT_STAGE_PREFS
   } catch {
     return DEFAULT_STAGE_PREFS
   }

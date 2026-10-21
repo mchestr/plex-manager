@@ -13,20 +13,29 @@ import { z } from "zod"
 import { hasEntitlement } from "@/lib/actions/entitlement"
 import { prisma } from "@/lib/prisma"
 import { eligibleCards } from "@/lib/rewind/cards/eligible"
+import { registry } from "@/lib/rewind/registry"
 import type { ShareSetup } from "@/lib/rewind/share-sheet"
 import { getAppSettings } from "@/lib/settings/app-settings"
-import { CardFactIdSchema, SharePageTypeSchema } from "@/lib/wrapped/data/share-safe-schema"
+import type { RewindDataV3 } from "@/lib/wrapped/data/schema-v3"
+import { toShareSafe } from "@/lib/wrapped/data/share-safe"
+import { loadShareContext } from "@/lib/wrapped/data/share-context"
+import { CardFactIdSchema, SharePageTypeSchema, type SharePageType } from "@/lib/wrapped/data/share-safe-schema"
 import { getSeasonState } from "@/lib/wrapped/season"
 
 const CardFactsSchema = z.array(CardFactIdSchema).max(3).catch([])
 const PagesSchema = z.array(SharePageTypeSchema).catch([])
 
-/** The setup for `userId`'s Rewind row `rewindId` of `year`, whose printed pages are `pages`. */
+/**
+ * The setup for `userId`'s Rewind row `rewindId`, whose printed pages are
+ * `pages`. Its cards are `eligibleCards` of the issue projected as a link
+ * would publish it, so a hidden title or an admin flag already counts.
+ */
 export async function loadShareSetup({
-  userId, rewindId, year, pages,
-}: { userId: string; rewindId: string; year: number; pages: ReadonlyArray<{ type: string }> }): Promise<ShareSetup> {
+  userId, rewindId, rewind, pages,
+}: { userId: string; rewindId: string; rewind: RewindDataV3; pages: ReadonlyArray<{ type: string }> }): Promise<ShareSetup> {
   const now = new Date()
-  const [config, prefs, link, canShare, season, settings] = await Promise.all([
+  const { year } = rewind
+  const [config, prefs, link, canShare, season, settings, ctx] = await Promise.all([
     prisma.config.findUnique({ where: { id: "config" }, select: { rewindAllowArtOnCards: true, rewindPublicLinks: true } }),
     prisma.rewindPrefs.findUnique({
       where: { userId_year: { userId, year } },
@@ -40,19 +49,25 @@ export async function loadShareSetup({
     hasEntitlement(userId, "full"),
     getSeasonState(now),
     getAppSettings(),
+    loadShareContext({ userId, year }),
   ])
+  const dailyDetail = prefs?.dailyDetail ?? false
+  const printed = pages.map((page) => page.type).filter((type): type is SharePageType => SharePageTypeSchema.safeParse(type).success)
+  const shared = toShareSafe(rewind, { pages: printed, signed: false, includeArt: false, dailyDetail, cardFacts: [] }, ctx)
+  const cards = eligibleCards(shared, { dailyDetail })
   const closes = new Date(season.closesAt.getTime() - 1000)
   return {
     rewindId,
     year,
-    cards: eligibleCards({ pages }, { dailyDetail: prefs?.dailyDetail ?? false }),
+    cards,
+    artCards: cards.filter((card) => registry[card].share.art === true),
     allowArt: config?.rewindAllowArtOnCards ?? true,
     publicLinks: config?.rewindPublicLinks ?? true,
     canShare,
     choices: {
       signed: prefs?.signed ?? false,
       includeArt: prefs?.includeArt ?? false,
-      dailyDetail: prefs?.dailyDetail ?? false,
+      dailyDetail,
       cardFacts: CardFactsSchema.parse(prefs?.cardFacts ?? []),
     },
     link: link ? { shareId: link.id, pages: PagesSchema.parse(link.pages), expiresAt: link.expiresAt?.toISOString() ?? null } : null,

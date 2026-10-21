@@ -38,6 +38,12 @@ jest.mock('@/lib/connections/plex', () => ({
 }))
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+// Usage totals come from aggregate queries (P7.8); every id has some usage here.
+jest.mock('@/lib/llm/usage-totals', () => {
+  const totals = { totalTokens: 1, promptTokens: 1, completionTokens: 0, cost: 0.01, provider: 'openai', model: 'gpt-4', count: 1 }
+  const each = async (ids: string[]) => new Map(ids.map((id) => [id, totals]))
+  return { usageTotalsByUser: each, usageTotalsForWrapped: each }
+})
 
 beforeEach(() => mockReset(prismaMock))
 

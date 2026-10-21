@@ -18,6 +18,6 @@
  *
  * @internal
  */
-export const CARD_RENDERER_VERSION = 1
+export const CARD_RENDERER_VERSION = 3
 
 export { CARD_VERSION } from "./card-version.generated"

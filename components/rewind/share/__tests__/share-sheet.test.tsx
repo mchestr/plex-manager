@@ -17,6 +17,7 @@ const SETUP: ShareSetup = {
   rewindId: "wrapped-1",
   year: 2026,
   cards: ["cover", "number", "top-shows", "clock", "back-cover"],
+  artCards: ["top-shows", "back-cover"],
   allowArt: true,
   publicLinks: true,
   canShare: true,

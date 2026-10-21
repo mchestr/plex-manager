@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, type ReactNode } from "react"
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
 
 import { inkProps } from "@/lib/design/tokens"
 import type { PageInk } from "@/lib/rewind/stage/page-ink"
@@ -48,12 +48,33 @@ interface StagePageProps {
  * `<article aria-roledescription="page">` labelled with its position (design
  * 11.1); its body brings the `h2` that a member's turn focuses, and the page
  * itself takes focus when the body has none. P5.6 adds the match-cut layer.
+ *
+ * A neighbour that a turn brings within reach is revealed in idle time after
+ * the turn, not in the turn's own frame: styling a whole page costs a long
+ * task on a low-end phone (P7.15, design 11.2). A turn onto a page that is
+ * not revealed yet shows it at once.
  */
 export function StagePage({ index, current, previous, ink, label, children }: StagePageProps) {
   const distance = index - current
   const isCurrent = distance === 0
   const direction = previous === null ? null : current > previous ? "forward" : "back"
   const { className: scheme, ...fieldProps } = inkProps(ink.ink, ink.opts)
+  const near = Math.abs(distance) <= 1
+  const onTurn = isCurrent || index === previous
+  // The current page this slot was last revealed for; the first render reveals every neighbour.
+  const [revealedAt, setRevealedAt] = useState<number | null>(near ? current : null)
+  const waiting = near && !onTurn && revealedAt !== current
+
+  useEffect(() => {
+    if (!waiting) return
+    const reveal = () => setRevealedAt(current)
+    if (typeof window.requestIdleCallback === "function") {
+      const id = window.requestIdleCallback(reveal, { timeout: 1000 })
+      return () => window.cancelIdleCallback(id)
+    }
+    const id = window.setTimeout(reveal, 200)
+    return () => window.clearTimeout(id)
+  }, [waiting, current])
 
   return (
     <StagePageContext.Provider value={{ index, distance }}>
@@ -67,18 +88,20 @@ export function StagePage({ index, current, previous, ink, label, children }: St
         data-current={isCurrent || undefined}
         data-turn={isCurrent && direction ? direction : undefined}
         data-leaving={index === previous && direction ? direction : undefined}
-        hidden={Math.abs(distance) > 1}
+        hidden={!near || waiting}
         inert={!isCurrent}
         className={cn(
           scheme,
           "rw-page absolute inset-0 flex outline-none items-center justify-center overflow-hidden bg-background pt-(--rw-chrome-top) pb-(--rw-chrome-bottom) text-foreground",
+          // The desktop spread (P7.4): the field fills only the framed artboard; the spread around it is paper
+          "rw-spread:bg-transparent rw-spread:p-0",
           isCurrent ? "z-2" : index === previous ? "z-1" : "z-0"
         )}
       >
         {/* The body's 24 px line box scales with the page too, so text that sets no line height never outgrows the artboard */}
         <div
           data-testid="rewind-artboard"
-          className="rw-artboard relative h-[calc(var(--rw-artboard-h)*var(--u)*1px)] w-[calc(390px*var(--u))] shrink-0 leading-[max(15px,calc(var(--u)*24px))]"
+          className="rw-artboard relative h-[calc(var(--rw-artboard-h)*var(--u)*1px)] w-[calc(390px*var(--u))] shrink-0 leading-[max(15px,calc(var(--u)*24px))] rw-spread:bg-background"
         >
           {children}
         </div>

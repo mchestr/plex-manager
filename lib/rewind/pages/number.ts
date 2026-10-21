@@ -99,7 +99,8 @@ export const numberPage: PageDefinition<NumberData> = {
   select: (facts, { stats }) => {
     if (!has(facts, "time.totalMinutes")) return null
     const hero: FactId = num(facts, "time.totalHours") >= HERO_HOURS ? "time.totalHours" : "time.totalMinutes"
-    return { hero, minutes: stats.calendar.minutes.map((day) => day.minutes) }
+    const lastYearDaily = stats.totals.minutes2025
+    return { hero, minutes: stats.calendar.minutes.map((day) => day.minutes), ...(lastYearDaily ? { lastYearDaily } : {}) }
   },
   schema: NumberDataSchema,
   srSummary: (data, facts) => {

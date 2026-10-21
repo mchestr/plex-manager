@@ -54,11 +54,18 @@ export async function getSonarrSeriesById(config: SonarrParsed, seriesId: number
   return arrGet("Sonarr", config, `/api/v3/series/${seriesId}`)
 }
 
-export async function getSonarrCalendar(config: SonarrParsed, startDate?: string, endDate?: string): Promise<ConnectionResult<unknown>> {
+/** `includeSeries` adds each episode's series (its title, `tvdbId` and `tmdbId`). */
+export async function getSonarrCalendar(
+  config: SonarrParsed,
+  startDate?: string,
+  endDate?: string,
+  options: { includeSeries?: boolean } = {}
+): Promise<ConnectionResult<unknown>> {
   let path = "/api/v3/calendar"
   const params = new URLSearchParams()
   if (startDate) params.append("start", startDate)
   if (endDate) params.append("end", endDate)
+  if (options.includeSeries) params.append("includeSeries", "true")
   if (params.toString()) path += `?${params.toString()}`
   return arrGet("Sonarr", config, path)
 }

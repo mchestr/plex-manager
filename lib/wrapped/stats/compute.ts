@@ -11,6 +11,7 @@
  */
 
 import type { RequestEvent } from "@/lib/wrapped/sources/request-event"
+import type { SeasonPremiere } from "@/lib/wrapped/sources/sonarr-calendar"
 import { isCountedPlay, type PlayEvent } from "@/lib/wrapped/sources/watch-history-source"
 
 import { computeBookends } from "./bookends"
@@ -22,6 +23,7 @@ import type { AggregateView, MetadataLookup } from "./metadata"
 import { computeMilestones } from "./milestones"
 import { computeNextYear, type LibraryTitle } from "./next-year"
 import { computePeople } from "./people"
+import { computePopular } from "./popular"
 import { computeRace } from "./race"
 import { computeRequests } from "./requests"
 import { computeSessions } from "./sessions"
@@ -40,6 +42,8 @@ export interface MemberSources {
   aggregate: AggregateView | null
   library: readonly LibraryTitle[] | null
   excludedContentRatings: readonly string[]
+  /** Sonarr's season premieres for Next year's returning part; null or absent without Sonarr. */
+  premieres?: readonly SeasonPremiere[] | null
 }
 
 const noMetadata: MetadataLookup = () => undefined
@@ -75,11 +79,14 @@ export function computeMemberStats(events: readonly PlayEvent[], ctx: StatsConte
     devices: computeDevices(events, lookup),
     requests: computeRequests(events, sources.requests, lookup),
     community: computeCommunity(events, ctx, sources.aggregate),
+    /** The postcard's community titles (P7.3). */
+    popular: computePopular(sources.aggregate, sources.library, ctx, sources.excludedContentRatings),
     nextYear: computeNextYear(events, ctx, lookup, {
       taste,
       people,
       library: sources.library,
       excludedContentRatings: sources.excludedContentRatings,
+      premieres: sources.premieres,
     }),
   }
 }

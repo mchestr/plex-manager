@@ -1,9 +1,12 @@
 "use client"
 
+import type { Route } from "next"
+import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 import { SubscriptionBanners } from "@/components/subscription/subscription-banners"
 import { Alert } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
 import { noticeShownOn, type MemberNotice } from "@/lib/member/notice-rules"
 
 function NoticeBody({ notice }: { notice: MemberNotice }) {
@@ -18,8 +21,26 @@ function NoticeBody({ notice }: { notice: MemberNotice }) {
         </Alert>
       )
     case "rewind-ready":
-      // P7.14 writes this notice and its "Open Rewind" action.
-      return null
+      return (
+        <Alert
+          tone="info"
+          title={`Your Rewind ${notice.year} is ready`}
+          action={
+            <Button
+              size="sm"
+              variant="secondary"
+              render={<Link href={`/rewind/${notice.year}` as Route} />}
+              nativeButton={false}
+              data-testid="rewind-ready-open"
+            >
+              Open Rewind
+            </Button>
+          }
+          data-testid="rewind-ready-notice"
+        >
+          This notice goes away once you open it.
+        </Alert>
+      )
   }
 }
 

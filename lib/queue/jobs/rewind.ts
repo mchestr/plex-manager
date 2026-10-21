@@ -3,9 +3,10 @@
  *
  * ```
  * RewindGeneration queued ──► lock rw:lock:gen:{year}:{userId}
- *                               ├─ held by another job ─► skipped (LOCKED)
+ *                               ├─ held by another job ─► skipped (LOCKED); an exclusion run waits 30 s, 10 times at most
  *                               └─ taken ─► running ─► generateUserRewind({ mode: 'persist', signal })
  *                                             ├─ completed ─► (its one $transaction: previousData, v3 data, completed)
+ *                                             │    └─ exclusion run whose exclusionsVersion moved ─► one more run
  *                                             ├─ not eligible ─► skipped with the typed reason
  *                                             └─ error ─► retry (queued) or failed with a typed code
  * ```
@@ -32,7 +33,7 @@
  * @module
  */
 
-import { UnrecoverableError, type Job } from "bullmq"
+import { DelayedError, UnrecoverableError, type Job } from "bullmq"
 
 import { Prisma } from "@/lib/generated/prisma/client"
 import { shutdownSignal } from "@/lib/instrumentation/shutdown"
@@ -42,7 +43,7 @@ import { acquireGenerationLock } from "@/lib/queue/redis-lock"
 import type { RewindGenerateUserPayload } from "@/lib/queue/types"
 import { createLogger } from "@/lib/utils/logger"
 import { type RewindErrorCode, toStoredError } from "@/lib/wrapped/generation-errors"
-import type { RewindGenerationKind } from "@/lib/rewind/enqueue-generation"
+import { enqueueRewindGeneration, type RewindGenerationKind } from "@/lib/rewind/enqueue-generation"
 import { generateUserRewind } from "@/lib/wrapped/pipeline/generate-user"
 import { RewindGenerationError } from "@/lib/wrapped/pipeline/generation-error"
 
@@ -112,9 +113,40 @@ async function settleFailure(job: Job, run: Run, error: unknown, timedOut: boole
   throw new UnrecoverableError(code)
 }
 
+const LOCK_WAIT_MS = 30_000
+const MAX_LOCK_WAITS = 10
+
+/**
+ * An exclusion run that finds the member's lock held waits 30 s and tries
+ * again, up to 10 times, instead of ending as `skipped` (P7.7). Throws
+ * BullMQ's `DelayedError` while it waits; returns once the waits are spent.
+ */
+async function waitForLock(job: Job<RewindGenerateUserPayload>): Promise<void> {
+  const waits = job.data.lockWaits ?? 0
+  if (waits >= MAX_LOCK_WAITS) return
+  await job.updateData({ ...job.data, lockWaits: waits + 1 })
+  await job.moveToDelayed(Date.now() + LOCK_WAIT_MS, job.token)
+  throw new DelayedError()
+}
+
+async function exclusionsVersion(userId: string, year: number): Promise<number> {
+  const prefs = await prisma.rewindPrefs.findUnique({ where: { userId_year: { userId, year } }, select: { exclusionsVersion: true } })
+  return prefs?.exclusionsVersion ?? 0
+}
+
+/** A hide or unhide that landed during an exclusion run: run once more, so the new list counts it. */
+async function followUpHides(userId: string, year: number, versionRead: number): Promise<void> {
+  if ((await exclusionsVersion(userId, year)) === versionRead) return
+  try {
+    await enqueueRewindGeneration({ userId, year, kind: "member", exclusion: { followUp: true } })
+  } catch (error) {
+    logger.warn("Could not enqueue the follow-up exclusion run", { userId, year, error: String(error) })
+  }
+}
+
 /** Generates one member's Rewind; see the module comment. */
 export async function processRewindGenerateUser(job: Job<RewindGenerateUserPayload>): Promise<GenerateResult> {
-  const { generationId, userId, year } = job.data
+  const { generationId, userId, year, audience, through } = job.data
   const generation = await prisma.rewindGeneration.findUnique({
     where: { id: generationId },
     select: { wrappedId: true, status: true, kind: true, copyPolicy: true },
@@ -126,6 +158,7 @@ export async function processRewindGenerateUser(job: Job<RewindGenerateUserPaylo
   const run: Run = { generationId, wrappedId: generation.wrappedId }
 
   const lock = await acquireGenerationLock(getRedisConnection(), { year, userId, owner: job.id ?? generationId })
+  if (!lock && job.data.exclusion) await waitForLock(job)
   if (!lock) {
     await prisma.rewindGeneration.update({
       where: { id: generationId },
@@ -141,6 +174,7 @@ export async function processRewindGenerateUser(job: Job<RewindGenerateUserPaylo
       where: { id: generationId },
       data: { status: "running", startedAt: new Date(), error: Prisma.DbNull },
     })
+    const versionRead = job.data.exclusion ? await exclusionsVersion(userId, year) : null
     const result = await generateUserRewind({
       userId,
       year,
@@ -149,11 +183,14 @@ export async function processRewindGenerateUser(job: Job<RewindGenerateUserPaylo
       copyPolicy: generation.copyPolicy === "no-llm" ? "no-llm" : "default",
       signal,
       generationId,
+      audience,
+      through,
     })
     if (result.status === "skipped") {
       await fail(run, result.reason, "skipped")
       return { status: "skipped" }
     }
+    if (versionRead !== null) await followUpHides(userId, year, versionRead)
     return { status: "completed" }
   } catch (error) {
     logger.warn("Rewind generation attempt failed", {

@@ -113,7 +113,6 @@ test.describe('Rewind story', () => {
     await expect(pause).toHaveAttribute('aria-label', 'Play');
   });
 
-  test.fixme('hiding a title removes it from the issue (P7.7)', async () => {});
   test.fixme('with Redis down the issue shows the unavailable panel (FR-50)', async () => {});
   test.fixme('a lapsed subscriber keeps their Rewind but cannot share it (FR-51)', async () => {});
 });

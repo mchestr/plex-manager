@@ -16,7 +16,7 @@ commit pinned in the lockfile. Each download is checked against its sha256;
 `--sources DIR` reads already-downloaded files instead.
 
 Outputs (design 5.4, 6.4):
-  app/(app)/rewind/_fonts/     4 WOFF2 web fonts (Archivo variable at wght 600-900,
+  lib/rewind/web-fonts/     4 WOFF2 web fonts (Archivo variable at wght 600-900,
                                Newsreader statics) + OFL licences
   lib/rewind/cards/fonts/      11 static TTF card instances + OFL licences
   lib/rewind/typeset/metrics.json  advances, kerning, tnum digits, coverage
@@ -36,7 +36,7 @@ from fontTools.varLib import instancer
 
 ROOT = Path(__file__).resolve().parent.parent
 LOCK = ROOT / "scripts" / "rewind-fonts.lock.json"
-WEB_DIR = ROOT / "app" / "(app)" / "rewind" / "_fonts"
+WEB_DIR = ROOT / "lib" / "rewind" / "web-fonts"
 CARD_DIR = ROOT / "lib" / "rewind" / "cards" / "fonts"
 METRICS = ROOT / "lib" / "rewind" / "typeset" / "metrics.json"
 

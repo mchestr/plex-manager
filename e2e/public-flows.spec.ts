@@ -203,8 +203,8 @@ test.describe('Shared Rewind page', () => {
     const response = await openShare(page, shareToken);
 
     expect(response?.status()).toBe(200);
-    await expect(page.getByTestId('wrapped-share-summary')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
-    await expect(page.getByTestId('wrapped-total-watch-time')).toBeVisible();
+    await expect(page.getByTestId('rewind-share-v2')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    await expect(page.getByTestId('rewind-share-v2-totals')).toBeVisible();
   });
 
   test('renders for a signed-in member who has not finished onboarding', async ({ regularUserPage }) => {
@@ -223,7 +223,7 @@ test.describe('Shared Rewind page', () => {
 
       // ...but the share page is outside them.
       await openShare(regularUserPage, shareToken);
-      await expect(regularUserPage.getByTestId('wrapped-share-summary')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+      await expect(regularUserPage.getByTestId('rewind-share-v2')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
       await expect(regularUserPage).toHaveURL(new RegExp(`/rewind/s/${shareToken}$`));
     } finally {
       await prisma.user.update({
@@ -243,7 +243,7 @@ test.describe('Shared Rewind page', () => {
 
       for (let view = 0; view < 3; view++) {
         await openShare(page, shareToken);
-        await expect(page.getByTestId('wrapped-share-summary')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+        await expect(page.getByTestId('rewind-share-v2')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
       }
 
       // after() writes the row once the response is done.
@@ -259,7 +259,7 @@ test.describe('Shared Rewind page', () => {
     const response = await openShare(page, 'bad-token');
 
     expect(response?.status()).toBe(404);
-    await expect(page.getByTestId('wrapped-share-not-found')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    await expect(page.getByTestId('rewind-share-not-found')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
   });
 
   // The page's notFound() streams after app/loading.tsx with status 200, so
@@ -271,19 +271,19 @@ test.describe('Shared Rewind page', () => {
     try {
       const unknown = await openShare(page, newToken());
       expect(unknown?.status()).toBe(404);
-      await expect(page.getByTestId('wrapped-share-not-found')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+      await expect(page.getByTestId('rewind-share-not-found')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
 
       const shared = await openShare(page, revokedToken);
       expect(shared?.status()).toBe(200);
-      await expect(page.getByTestId('wrapped-share-summary')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+      await expect(page.getByTestId('rewind-share-v2')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
 
       await prisma.plexWrapped.update({ where: { shareToken: revokedToken }, data: { shareToken: null } });
       // A fresh visit, not a reload of the page on screen.
       await page.goto('about:blank');
       const revoked = await openShare(page, revokedToken);
       expect(revoked?.status()).toBe(404);
-      await expect(page.getByTestId('wrapped-share-not-found')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
-      await expect(page.getByTestId('wrapped-share-summary')).toHaveCount(0);
+      await expect(page.getByTestId('rewind-share-not-found')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+      await expect(page.getByTestId('rewind-share-v2')).toHaveCount(0);
     } finally {
       await prisma.$disconnect();
     }

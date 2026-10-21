@@ -19,6 +19,8 @@
  * - `table(data, facts, settings)` is the chart pages' Table sheet (P5.3).
  * - `share.facts` are the facts the page's card may print (P5.10).
  * - `article(data, facts, ctx)` is the page in article mode (P5.12).
+ * - `notes(data, facts, ctx)` is the page's desktop Notes column (P7.4); a
+ *   page without one shows its `srSummary` there (`pageNotes`).
  *
  * Pages whose steps have not landed keep the page rule of design 4.3 as their
  * `select` with empty data (`lib/rewind/pages/rules.ts`); P5.7, P7.1 and P7.2
@@ -37,8 +39,8 @@
 
 import type { z } from "zod"
 
-import type { InkName } from "@/lib/design/tokens"
 import type { ArticleBlock, ArticleContext } from "@/lib/rewind/article/blocks"
+import { HOLD_ESTIMATE_MS, pageMeta, TURN_MS, type IssuePageType, type PageMeta, type RewindPageType } from "@/lib/rewind/page-meta"
 import { backCoverPage } from "@/lib/rewind/pages/back-cover"
 import { bookendsPage } from "@/lib/rewind/pages/bookends"
 import { calendarPage } from "@/lib/rewind/pages/calendar"
@@ -46,31 +48,28 @@ import { centrefoldPage } from "@/lib/rewind/pages/centrefold"
 import { clockPage } from "@/lib/rewind/pages/clock"
 import { coverPage } from "@/lib/rewind/pages/cover"
 import { guessPage } from "@/lib/rewind/pages/guess"
+import { nextYearPage } from "@/lib/rewind/pages/next-year"
 import { numberPage } from "@/lib/rewind/pages/number"
+import { postcardPage } from "@/lib/rewind/pages/postcard"
+import { shortListPage } from "@/lib/rewind/pages/short-list"
 import { peoplePage } from "@/lib/rewind/pages/people"
 import { racePage } from "@/lib/rewind/pages/race"
 import { recordsPage } from "@/lib/rewind/pages/records"
-import { pendingPages } from "@/lib/rewind/pages/rules"
+import { requestsPage } from "@/lib/rewind/pages/requests"
+import { setupPage } from "@/lib/rewind/pages/setup"
+import { standingPage } from "@/lib/rewind/pages/standing"
 import { tastePage } from "@/lib/rewind/pages/taste"
 import { topFilmsPage } from "@/lib/rewind/pages/top-films"
 import { topShowsPage } from "@/lib/rewind/pages/top-shows"
 import type { ArchetypeId } from "@/lib/wrapped/archetypes/catalogue"
-import type { PageType } from "@/lib/wrapped/data/page-types"
+import type { ShareSafePage } from "@/lib/wrapped/data/share-safe-schema"
 import type { FactId, RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 import type { MemberStats } from "@/lib/wrapped/stats/compute"
 
-export type Act = "front" | "features" | "habits" | "server" | "centrefold" | "back"
-
-/** The pages of the full issue; the pocket edition's `short-list` arrives in P7.3. */
-export type IssuePageType = Exclude<PageType, "short-list">
+export type { Act, Dwell, EditionPageType, IssuePageType, PageMeta, RewindPageType } from "@/lib/rewind/page-meta"
+export { HOLD_ESTIMATE_MS, REVEAL_DWELL_MS, SHARE_PAGE_TYPES, TURN_MS } from "@/lib/rewind/page-meta"
 
 export type Edition = "full" | "pocket" | "postcard"
-
-/**
- * Autoplay hold in ms, or how the page waits instead: `tap` (the cover waits
- * for a cut), `hold` (the guess waits for an answer), `end` (the back cover).
- */
-export type Dwell = number | "tap" | "hold" | "end"
 
 /**
  * A chart page's table: the same data as the graphic, for the Table sheet,
@@ -107,6 +106,15 @@ export interface SelectContext {
   userId?: string
 }
 
+/** What a page's desktop Notes read besides its data and facts (P7.4). */
+export interface NotesContext {
+  locale: string
+  /** Whose time zone the issue counts in: the counting rule names it. */
+  zone: "member" | "server"
+  /** Rating keys the member hid (P7.7), left out before the no-LLM regeneration lands. */
+  hiddenKeys?: ReadonlySet<string>
+}
+
 /** The part of an entry each page module defines. Methods, so a typed page fits `RegistryEntry<unknown>`. */
 export interface PageDefinition<D> {
   select(facts: RewindFactsV3, ctx: SelectContext): D | null
@@ -120,86 +128,72 @@ export interface PageDefinition<D> {
    */
   article?(data: D, facts: RewindFactsV3, ctx: ArticleContext): ArticleBlock[]
   /**
+   * The page's desktop Notes (P7.4): blocks that extend the page rather than
+   * repeat it. P7.4 writes Top shows, the calendar and the centrefold; P8.4
+   * adds the other core pages.
+   */
+  notes?(data: D, facts: RewindFactsV3, ctx: NotesContext): ArticleBlock[]
+  /**
    * The facts the page's share card may print (P5.10); `titles` are those
    * that name a title, `art` a poster. `titleKeys` maps the title facts the
    * page data knows to their rating keys, so a hidden title leaves the
-   * projection at once and art is published by key.
+   * projection at once and art is published by key. `pick` narrows `facts`
+   * to the ones this issue's page prints, where its data decides (P7.6's
+   * Short list card prints its own three rows of the two lists).
    */
-  share: { facts: FactId[]; titles?: FactId[]; art?: true; titleKeys?(data: D): Partial<Record<FactId, string>> }
+  share: { facts: FactId[]; titles?: FactId[]; art?: true; titleKeys?(data: D): Partial<Record<FactId, string>>; pick?(data: D): FactId[] }
 }
 
-export interface RegistryEntry<D = unknown> extends PageDefinition<D> {
-  type: IssuePageType
-  /** The page's one name, used on every surface. */
-  name: string
-  act: Act
-  field: InkName | "archetype"
-  altField: InkName | null
-  spot: "arch" | "arch-deep" | "ink"
-  core: boolean
-  /** In the pocket edition: as itself, merged into Short list, or as whichever of clock and calendar says more. */
-  pocket: false | "page" | "short-list" | "clock-or-calendar"
-  dwell: Dwell
+export interface RegistryEntry<D = unknown> extends PageDefinition<D>, PageMeta {}
+
+function entry<D>(meta: PageMeta, page: PageDefinition<D>): RegistryEntry<D> {
+  return { ...meta, ...page }
 }
 
-/** How long the guess is counted for in the issue's running time. */
-export const HOLD_ESTIMATE_MS = 12_000
-/** After an answer, how long the reveal stays before autoplay turns the page. */
-export const REVEAL_DWELL_MS = 4000
-/** One page turn. */
-export const TURN_MS = 420
-
-type Spec = Pick<RegistryEntry, "name" | "act" | "field" | "altField" | "core" | "pocket" | "dwell">
-
-function entry<D>(type: IssuePageType, spec: Spec, page: PageDefinition<D>): RegistryEntry<D> {
-  const spot = spec.field === "archetype" ? "arch" : spec.field === "paper" ? "arch-deep" : "ink"
-  return { type, ...spec, spot, ...page }
-}
-
-const p = pendingPages
-
+/** Each page's metadata (`pageMeta`, which the client stage reads alone) with its definition. */
 export const registry = {
-  cover: entry("cover", { name: "Cover", act: "front", field: "archetype", altField: null, core: true, pocket: "page", dwell: "tap" }, coverPage),
-  number: entry("number", { name: "The number", act: "front", field: "coral", altField: "peach", core: true, pocket: "page", dwell: 8000 }, numberPage),
-  bookends: entry("bookends", { name: "Bookends", act: "front", field: "paper", altField: null, core: true, pocket: false, dwell: 7000 }, bookendsPage),
-  guess: entry("guess", { name: "Guess", act: "features", field: "rose", altField: "lilac", core: true, pocket: false, dwell: "hold" }, guessPage),
-  "top-shows": entry("top-shows", { name: "Top shows", act: "features", field: "paper", altField: null, core: true, pocket: "short-list", dwell: 9000 }, topShowsPage),
-  "top-films": entry("top-films", { name: "Top films", act: "features", field: "marigold", altField: "sky", core: true, pocket: "short-list", dwell: 8000 }, topFilmsPage),
-  taste: entry("taste", { name: "Taste", act: "features", field: "petrol", altField: "oxblood", core: false, pocket: false, dwell: 8000 }, tastePage),
-  people: entry("people", { name: "People", act: "features", field: "paper", altField: null, core: false, pocket: false, dwell: 7000 }, peoplePage),
-  clock: entry("clock", { name: "The clock", act: "habits", field: "forest", altField: "ultramarine", core: true, pocket: "clock-or-calendar", dwell: 8000 }, clockPage),
-  calendar: entry("calendar", { name: "The calendar", act: "habits", field: "paper", altField: null, core: true, pocket: "clock-or-calendar", dwell: 9000 }, calendarPage),
-  race: entry("race", { name: "The race", act: "habits", field: "mint", altField: "sky", core: false, pocket: false, dwell: 10_000 }, racePage),
-  records: entry("records", { name: "Records", act: "habits", field: "peach", altField: "rose", core: false, pocket: false, dwell: 8000 }, recordsPage),
-  setup: entry("setup", { name: "Setup", act: "server", field: "paper", altField: null, core: false, pocket: false, dwell: 6000 }, p.setup),
-  requests: entry("requests", { name: "Requests", act: "server", field: "lilac", altField: "mint", core: false, pocket: false, dwell: 7000 }, p.requests),
-  standing: entry("standing", { name: "Standing", act: "server", field: "sky", altField: "coral", core: false, pocket: false, dwell: 7000 }, p.standing),
-  centrefold: entry("centrefold", { name: "Centrefold", act: "centrefold", field: "archetype", altField: null, core: true, pocket: "page", dwell: 12_000 }, centrefoldPage),
-  "next-year": entry("next-year", { name: "Next year", act: "back", field: "paper", altField: null, core: false, pocket: false, dwell: 7000 }, p["next-year"]),
-  "back-cover": entry("back-cover", { name: "Back cover", act: "back", field: "paper", altField: null, core: true, pocket: "page", dwell: "end" }, backCoverPage),
-} as const satisfies Record<IssuePageType, RegistryEntry>
+  cover: entry(pageMeta.cover, coverPage),
+  number: entry(pageMeta.number, numberPage),
+  bookends: entry(pageMeta.bookends, bookendsPage),
+  guess: entry(pageMeta.guess, guessPage),
+  "top-shows": entry(pageMeta["top-shows"], topShowsPage),
+  "top-films": entry(pageMeta["top-films"], topFilmsPage),
+  taste: entry(pageMeta.taste, tastePage),
+  people: entry(pageMeta.people, peoplePage),
+  clock: entry(pageMeta.clock, clockPage),
+  calendar: entry(pageMeta.calendar, calendarPage),
+  race: entry(pageMeta.race, racePage),
+  records: entry(pageMeta.records, recordsPage),
+  setup: entry(pageMeta.setup, setupPage),
+  requests: entry(pageMeta.requests, requestsPage),
+  standing: entry(pageMeta.standing, standingPage),
+  centrefold: entry(pageMeta.centrefold, centrefoldPage),
+  "next-year": entry(pageMeta["next-year"], nextYearPage),
+  "back-cover": entry(pageMeta["back-cover"], backCoverPage),
+  // The short editions' own pages (P7.3): never in the full issue, so outside `issuePages`.
+  "short-list": entry(pageMeta["short-list"], shortListPage),
+  postcard: entry(pageMeta.postcard, postcardPage),
+} as const satisfies Record<RewindPageType, RegistryEntry>
 
-/** Every page in issue order. */
-export const issuePages: RegistryEntry[] = Object.values(registry)
+/** A full-issue page's entry. */
+export type IssueEntry = RegistryEntry & { type: IssuePageType }
 
-/**
- * Pages whose components land in P7.1 and P7.2. Until then `selectPages`
- * leaves them out, so the full issue is the ten core pages; each step removes
- * its pages from this list.
- */
-export const LATER_PAGES: readonly IssuePageType[] = ["setup", "requests", "standing", "next-year"]
+const EDITION_PAGES: readonly RewindPageType[] = ["short-list", "postcard"]
 
-/** The pages a card can print: every page but Setup and Next year (design 6.4). */
-export const SHARE_PAGE_TYPES = issuePages.map((p) => p.type).filter((t) => t !== "setup" && t !== "next-year") as [
-  IssuePageType,
-  ...IssuePageType[],
-]
+/** Every page of the full issue, in issue order. */
+export const issuePages: IssueEntry[] = (Object.values(registry) as RegistryEntry[]).filter((entry): entry is IssueEntry => !EDITION_PAGES.includes(entry.type))
 
 /**
- * The pocket edition's six pages as the running time counts them: Short list
- * (P7.3) stands in as Top shows, and the clock for "clock or calendar".
+ * Pages whose components have not landed yet: `selectPages` leaves them
+ * out. Every page of the issue has landed (P7.1 and P7.2 took the last eight).
  */
-export const POCKET_ESTIMATE: readonly IssuePageType[] = ["cover", "number", "top-shows", "clock", "centrefold", "back-cover"]
+export const LATER_PAGES: readonly IssuePageType[] = []
+
+/**
+ * The pocket edition's six pages as the running time counts them before an
+ * issue's own cut is known, with the clock for "clock or calendar".
+ */
+export const POCKET_ESTIMATE: readonly RewindPageType[] = ["cover", "number", "short-list", "clock", "centrefold", "back-cover"]
 
 /**
  * The autoplay running time of an issue: each page's dwell (the guess counted
@@ -210,10 +204,31 @@ export const POCKET_ESTIMATE: readonly IssuePageType[] = ["cover", "number", "to
  * issueDurationMs(issuePages.map((p) => p.type)) // 140140, "about 2 min 20 s"
  * ```
  */
-export function issueDurationMs(pages: readonly IssuePageType[]): number {
+export function issueDurationMs(pages: readonly RewindPageType[]): number {
   const dwell = pages.reduce((sum, type) => {
     const d = registry[type].dwell
     return sum + (typeof d === "number" ? d : d === "hold" ? HOLD_ESTIMATE_MS : 0)
   }, 0)
   return dwell + Math.max(0, pages.length - 1) * TURN_MS
+}
+
+const sentence = (text: string) => (/[.!?…]$/.test(text) ? text : `${text}.`)
+
+/**
+ * The alt text of a page's published card on the share page (P7.5), built
+ * only from the projected page, so it names nothing the card does not: the
+ * page name, its card headline, the archetype where the page publishes it,
+ * and its published titles.
+ *
+ * @example
+ * ```ts
+ * shareAlt({ type: "top-shows", headline: "Severance led your year", titles: ["Severance", "Andor"], archetype: null })
+ * // "Top shows card. Severance led your year. Severance, Andor."
+ * ```
+ */
+export function shareAlt(page: Pick<ShareSafePage, "type" | "headline" | "titles" | "archetype">): string {
+  const parts = [`${registry[page.type].name} card`, page.headline]
+  if (page.archetype && !page.headline.includes(page.archetype.name)) parts.push(`I’m the ${page.archetype.name}`)
+  if (page.titles.length > 0) parts.push(page.titles.join(", "))
+  return parts.filter(Boolean).map(sentence).join(" ")
 }

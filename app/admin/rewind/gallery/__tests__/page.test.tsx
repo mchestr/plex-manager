@@ -13,11 +13,16 @@ import { GalleryRun } from "@/components/admin/rewind/gallery/gallery-run"
 import { getAdminGate } from "@/lib/admin"
 import { selectedReplay } from "@/lib/llm/replay"
 import { eligibleCards } from "@/lib/rewind/cards/eligible"
+import { pagesForCut } from "@/lib/rewind/editions"
 import { validatePagesOnRead } from "@/lib/rewind/select-pages"
 import { RewindDataV3 } from "@/lib/wrapped/data/schema-v3"
+import { toShareSafe } from "@/lib/wrapped/data/share-safe"
+import { SharePageTypeSchema, type SharePageType } from "@/lib/wrapped/data/share-safe-schema"
 import heavy from "@/e2e/fixtures/rewind/heavy.v3.json"
 
 jest.mock("@/lib/admin", () => ({ getAdminGate: jest.fn() }))
+const mockShareCtx = { userId: "fixture", serverName: "Northfield", showServerName: true, publicCounts: false, allowArt: true, hiddenKeys: new Set<string>(), exclusionsVersion: 0 }
+jest.mock("@/lib/wrapped/data/share-context", () => ({ loadShareContext: async () => mockShareCtx }))
 jest.mock("@/lib/llm/replay", () => ({ selectedReplay: jest.fn() }))
 jest.mock("@/lib/prisma", () => ({ prisma: { config: { findUnique: async () => ({ rewindDisabledPages: [] }) } } }))
 jest.mock("next/navigation", () => ({
@@ -70,7 +75,7 @@ it("has a tab for each of the five review fixtures, the current one marked", asy
 
 it("shows one settled frame per selected page and one image per eligible card", async () => {
   await renderPage({ fixture: "heavy", preview: ID })
-  const pages = validatePagesOnRead(data.pages, { archetype: data.archetype?.id ?? null, disabledPages: [] })
+  const pages = validatePagesOnRead(pagesForCut(data, "full"), { archetype: data.archetype?.id ?? null, disabledPages: [] })
   const frames = screen.getAllByTestId("rewind-gallery-page")
   expect(frames).toHaveLength(pages.length)
   frames.forEach((frame, i) => {
@@ -79,7 +84,8 @@ it("shows one settled frame per selected page and one image per eligible card", 
     expect(Object.fromEntries(src.searchParams)).toEqual({ preview: ID, page: pages[i].type, still: "1" })
   })
 
-  const cards = eligibleCards({ pages }, { dailyDetail: true })
+  const printed = pages.map((page) => page.type).filter((type): type is SharePageType => SharePageTypeSchema.safeParse(type).success)
+  const cards = eligibleCards(toShareSafe(data, { pages: printed, signed: false, includeArt: false, dailyDetail: true, cardFacts: [] }, mockShareCtx), { dailyDetail: true })
   expect(cards.length).toBeGreaterThan(0)
   expect(screen.getAllByTestId("rewind-gallery-card").map((card) => card.querySelector("img")?.getAttribute("src"))).toEqual(
     cards.map((card) => `/api/rewind/card/preview/${ID}/${card}?daily=1`)

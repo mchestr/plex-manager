@@ -204,7 +204,7 @@ describe("enableRewindShare", () => {
 
   it("refuses pages the issue did not print", async () => {
     seedRewind()
-    expect(await enable({ pages: ["standing"] })).toMatchObject({ success: false, code: "VALIDATION" })
+    expect(await enable({ pages: ["guess"] })).toMatchObject({ success: false, code: "VALIDATION" })
   })
 
   it("is refused while public links are off", async () => {

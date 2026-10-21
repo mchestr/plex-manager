@@ -18,7 +18,7 @@ import type { MemberStats } from "@/lib/wrapped/stats/compute"
 
 import { has, issueYear } from "./facts"
 import { GuessDataSchema, type GuessData, type QuizOption } from "./guess.schema"
-import { ratingKeyOf } from "./title-key.schema"
+import { ratingKeyOf } from "./title-key"
 
 const MIN_OPTIONS = 3
 
@@ -66,12 +66,14 @@ export const guessPage: PageDefinition<GuessData> = {
   },
   schema: GuessDataSchema,
   srSummary: (data) => `A quiz with ${data.options.length} options: ${data.options.map((o) => o.title).join(", ")}.`,
+  // The "Guess my No. 1" teaser (P7.6) prints the runners-up only, never the answer, `series[1]`.
   share: {
-    facts: ["series[1].title", "series[2].title", "series[3].title", "series[4].title"],
-    titles: ["series[1].title", "series[2].title", "series[3].title", "series[4].title"],
+    facts: ["series[2].title", "series[3].title", "series[4].title"],
+    titles: ["series[2].title", "series[3].title", "series[4].title"],
+    art: true,
     // A series quiz's candidates are the top series, so rank n is `series[n]`; a mixed quiz is
     // covered by the lists' keys and by matching titles.
     titleKeys: ({ kind, options }) =>
-      kind === "series" ? Object.fromEntries(options.map((o) => [`series[${o.rank}].title`, ratingKeyOf(o.key)])) : {},
+      kind === "series" ? Object.fromEntries(options.filter((o) => o.rank > 1).map((o) => [`series[${o.rank}].title`, ratingKeyOf(o.key)])) : {},
   },
 }

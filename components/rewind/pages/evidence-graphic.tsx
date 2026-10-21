@@ -68,11 +68,11 @@ function DotsGraphic({ graphic, facts }: { graphic: Extract<EvidenceGraphic, { k
   const { dots } = calendarDots(days, { width: MEASURE, height: DOTS_H, solid: (weekday) => !graphic.weekends || weekday >= 5 })
   return (
     <div aria-hidden style={{ marginTop: u(24) }}>
-      <svg viewBox={`0 0 ${MEASURE} ${DOTS_H}`} className="block w-full" style={{ height: u(DOTS_H) }}>
+      {/* One entrance for the whole grid: a few hundred dots each starting their own animation cost a long task on a turn (P7.15) */}
+      <svg viewBox={`0 0 ${MEASURE} ${DOTS_H}`} className="rw-ring-bar block w-full" style={{ height: u(DOTS_H) }}>
         {dots.map((dot) => (
           <circle
             key={dot.date}
-            className="rw-ring-bar"
             cx={dot.cx}
             cy={dot.cy}
             r={dot.r}

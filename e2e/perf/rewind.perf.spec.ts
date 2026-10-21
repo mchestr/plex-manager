@@ -15,6 +15,11 @@ import { clearRewindSeed, REWIND_MEMBERS, seedRewind, type RewindFixtureId } fro
  *   (`components/rewind/stage/use-perf-probe.ts`), because React Profiler
  *   callbacks do not run in a production build.
  *
+ * Each fixture runs twice (P7.15): as a capable phone (8 cores, 8 GB) and as
+ * a low-end one (2 cores, 1 GB), which turns on low-end mode (`data-low-end`,
+ * `lib/rewind/stage/low-end.ts`). Otherwise the runner's own core count
+ * would decide the mode.
+ *
  * A last test injects an 80 ms busy loop on a turn and checks the gate sees
  * it, so a probe that stopped measuring cannot pass silently.
  */
@@ -23,6 +28,20 @@ const FIXTURES: RewindFixtureId[] = ['heavy', 'median', 'light'];
 const PLAY_MS = 30_000;
 const LONG_TASK_MS = 50;
 const COMMITS_PER_PAGE = 3;
+
+const DEVICES = {
+  normal: { hardwareConcurrency: 8, deviceMemory: 8 },
+  'low-end': { hardwareConcurrency: 2, deviceMemory: 1 },
+} as const;
+type DeviceClass = keyof typeof DEVICES;
+
+/** Reports `device`'s cores and memory to the page before any script runs. */
+async function emulateDevice(page: Page, device: DeviceClass): Promise<void> {
+  await page.addInitScript((signals) => {
+    Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => signals.hardwareConcurrency });
+    Object.defineProperty(navigator, 'deviceMemory', { get: () => signals.deviceMemory });
+  }, DEVICES[device]);
+}
 
 interface Probe {
   longTasks: { start: number; duration: number }[];
@@ -79,28 +98,34 @@ test.describe('Rewind performance', () => {
   test.afterAll(clearRewindSeed);
 
   for (const fixture of FIXTURES) {
-    test(`${fixture}: 30 s of autoplay at 4x throttling`, async ({ page, signIn }, testInfo) => {
-      test.setTimeout(PLAY_MS + 90_000);
-      await signIn(REWIND_MEMBERS[fixture].id);
-      await openThrottled(page);
-      await resetProbe(page);
+    for (const device of Object.keys(DEVICES) as DeviceClass[]) {
+      test(`${fixture} on a ${device} phone: 30 s of autoplay at 4x throttling`, async ({ page, signIn }, testInfo) => {
+        test.setTimeout(PLAY_MS + 90_000);
+        await signIn(REWIND_MEMBERS[fixture].id);
+        await emulateDevice(page, device);
+        await openThrottled(page);
+        const scope = page.getByTestId('rewind-scope');
+        if (device === 'low-end') await expect(scope).toHaveAttribute('data-low-end', '');
+        else await expect(scope).not.toHaveAttribute('data-low-end');
+        await resetProbe(page);
 
-      await page.getByTestId('rewind-stage').focus();
-      await page.keyboard.press('Enter');
-      await expect(currentPage(page)).toHaveAttribute('data-index', '1');
-      await page.waitForTimeout(PLAY_MS);
+        await page.getByTestId('rewind-stage').focus();
+        await page.keyboard.press('Enter');
+        await expect(currentPage(page)).toHaveAttribute('data-index', '1');
+        await page.waitForTimeout(PLAY_MS);
 
-      const { longTasks, commits } = await readProbe(page);
-      const longest = Math.max(0, ...longTasks.map((task) => task.duration));
-      const perPage = commitsPerPage(commits);
-      const summary = `${fixture}: longest task ${Math.round(longest)} ms over ${longTasks.length} long tasks; commits per page ${JSON.stringify(Object.fromEntries(perPage))}`;
-      console.log(summary);
-      testInfo.annotations.push({ type: 'rewind-perf', description: summary });
+        const { longTasks, commits } = await readProbe(page);
+        const longest = Math.max(0, ...longTasks.map((task) => task.duration));
+        const perPage = commitsPerPage(commits);
+        const summary = `${fixture} (${device}): longest task ${Math.round(longest)} ms over ${longTasks.length} long tasks; commits per page ${JSON.stringify(Object.fromEntries(perPage))}`;
+        console.log(summary);
+        testInfo.annotations.push({ type: 'rewind-perf', description: summary });
 
-      expect(perPage.size, 'autoplay turned at least one page').toBeGreaterThan(1);
-      expect(longest, summary).toBeLessThanOrEqual(LONG_TASK_MS);
-      for (const [index, count] of perPage) expect(count, `commits on page ${index + 1}`).toBeLessThanOrEqual(COMMITS_PER_PAGE);
-    });
+        expect(perPage.size, 'autoplay turned at least one page').toBeGreaterThan(1);
+        expect(longest, summary).toBeLessThanOrEqual(LONG_TASK_MS);
+        for (const [index, count] of perPage) expect(count, `commits on page ${index + 1}`).toBeLessThanOrEqual(COMMITS_PER_PAGE);
+      });
+    }
   }
 
   test('an 80 ms task on a turn fails the gate', async ({ page, signIn }) => {

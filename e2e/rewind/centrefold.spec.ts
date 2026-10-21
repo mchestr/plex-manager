@@ -1,6 +1,6 @@
 import { expect, test, TEST_USERS } from '../fixtures/auth';
-import { clearRewindIssue, REWIND_ISSUES, REWIND_YEAR, seedRewindIssue } from '../helpers/seed-rewind';
-import { WAIT_TIMEOUTS } from '../helpers/test-utils';
+import { disableAutoplay, goToPage, openStage } from '../helpers/rewind-stage';
+import { clearRewindIssue, REWIND_ISSUES, seedRewindIssue } from '../helpers/seed-rewind';
 
 /**
  * P5.7 (RWV-01): the centrefold sets the archetype name in whole words, and
@@ -10,7 +10,6 @@ import { WAIT_TIMEOUTS } from '../helpers/test-utils';
  * at both phone sizes (P5.4).
  */
 
-const YEAR = REWIND_YEAR;
 const VIEWPORTS = [
   { width: 390, height: 844 },
   { width: 375, height: 548 },
@@ -25,13 +24,11 @@ test.describe('Rewind centrefold', () => {
   for (const viewport of VIEWPORTS) {
     test(`at ${viewport.width}x${viewport.height} the name breaks only between words, and Why this? opens and closes`, async ({ adminPage }) => {
       await adminPage.setViewportSize(viewport);
-      await adminPage.goto(`/rewind/${YEAR}`);
-      await expect(adminPage.getByTestId('rewind-stage')).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
-      // Below the 0.8 scale floor the article offer opens first; keep the story.
-      if (viewport.height < 600) await adminPage.getByTestId('rewind-article-offer-story').click();
-      await adminPage.getByTestId('rewind-stage').focus();
-      await adminPage.keyboard.press('End');
-      await adminPage.keyboard.press('ArrowLeft');
+      await disableAutoplay(adminPage);
+      // Below the 0.8 scale floor the article offer opens first; openStage keeps the story.
+      await openStage(adminPage);
+      // Next year (P7.2) now sits between the centrefold and the back cover
+      await goToPage(adminPage, 'centrefold');
 
       const nameplate = adminPage.locator('[data-current] [data-testid="rewind-archetype-name"]');
       await expect(nameplate).toBeVisible();

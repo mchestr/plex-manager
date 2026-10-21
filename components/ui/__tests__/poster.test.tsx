@@ -5,7 +5,8 @@ import { posterWidthFor } from "@/lib/ui/poster-widths"
 
 describe("Poster", () => {
   it("requests the smallest served width that covers its box at 2x", () => {
-    expect([48, 96, 160, 240].map(posterWidthFor)).toEqual([96, 240, 480, 480])
+    expect([48, 96, 160, 240].map((px) => posterWidthFor(px))).toEqual([96, 240, 480, 480])
+    expect([48, 96, 160, 240].map((px) => posterWidthFor(px, 1))).toEqual([96, 96, 160, 240])
     render(<Poster ratingKey="123" title="Severance" size="sm" />)
     const img = screen.getByRole("img", { name: "Severance" })
     expect(img).toHaveAttribute("src", "/api/rewind/poster/123?w=240&tone=none")

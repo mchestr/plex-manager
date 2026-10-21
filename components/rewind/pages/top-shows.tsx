@@ -17,6 +17,7 @@ import { deckText, type IssueContext, type PageProps } from "./issue-context"
 import { ListRows, type ListRow } from "./list-rows"
 import { QuizDeck } from "./quiz-deck"
 import { SmallMultiple } from "./small-multiple"
+import { TitleSheetButton } from "./title-sheet-button"
 import { axes, MEASURE, tight, u, ut } from "./units"
 
 const EPISODES = { one: "episode", other: "episodes" }
@@ -72,6 +73,7 @@ function rowDetail(data: TopShowsData, i: number, issue: IssueContext): ListRow[
   const months = countedMonths(facts)
   return {
     title: shown(facts, seriesFact(i, "title")),
+    titleKey: data.rows[i].key,
     numbers: [
       ["Watched", shown(facts, seriesFact(i, "minutes"))],
       ["Episodes", shown(facts, seriesFact(i, "episodes"))],
@@ -156,7 +158,9 @@ export function TopShowsPage({ data, issue }: PageProps<TopShowsData>) {
           )}
         </p>
         <h3 id="rewind-top-shows-no1" style={{ marginTop: tight(7) }}>
-          <FittedLines fit={featureTitle(no1)} weight={900} />
+          <TitleSheetButton detail={rowDetail(data, 0, issue)}>
+            <FittedLines fit={featureTitle(no1)} weight={900} />
+          </TitleSheetButton>
         </h3>
         <div className="flex items-start" style={{ gap: u(14), marginTop: tight(11) }}>
           <span data-rw-match-slot className="block">

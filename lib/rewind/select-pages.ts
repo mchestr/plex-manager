@@ -15,7 +15,7 @@
  */
 
 import type { InkName } from "@/lib/design/tokens"
-import { issuePages, LATER_PAGES, registry, type IssuePageType, type SelectContext } from "@/lib/rewind/registry"
+import { issuePages, LATER_PAGES, registry, type IssuePageType, type RegistryEntry, type RewindPageType, type SelectContext } from "@/lib/rewind/registry"
 import { pageInk } from "@/lib/rewind/stage/page-ink"
 import type { ArchetypeId } from "@/lib/wrapped/archetypes/catalogue"
 import type { PageType } from "@/lib/wrapped/data/page-types"
@@ -31,7 +31,7 @@ export interface StoredPage {
 }
 
 export interface SelectedPage {
-  type: IssuePageType
+  type: RewindPageType
   /** 1-based, over the selected list. */
   folio: number
   data: unknown
@@ -44,7 +44,7 @@ interface Numbering {
   disabledPages: readonly string[]
 }
 
-function number(pages: ReadonlyArray<{ type: IssuePageType; data: unknown }>, { archetype, disabledPages }: Numbering): SelectedPage[] {
+function number(pages: ReadonlyArray<{ type: RewindPageType; data: unknown }>, { archetype, disabledPages }: Numbering): SelectedPage[] {
   return pages
     .filter((page) => !disabledPages.includes(page.type))
     .map((page, i) => ({ ...page, folio: i + 1, field: pageInk(registry[page.type], archetype).ink }))
@@ -76,9 +76,9 @@ export function selectPages(facts: RewindFactsV3, ctx: SelectContext): SelectedP
 export function validatePagesOnRead(pages: readonly StoredPage[], numbering: Numbering): SelectedPage[] {
   const dropped: string[] = []
   const valid = pages.flatMap((page) => {
-    const entry = page.type === "short-list" ? null : registry[page.type]
-    const parsed = entry?.schema.safeParse(page.data)
-    if (!entry || !parsed?.success) {
+    const entry: RegistryEntry = registry[page.type]
+    const parsed = entry.schema.safeParse(page.data)
+    if (!parsed.success) {
       dropped.push(page.type)
       return []
     }

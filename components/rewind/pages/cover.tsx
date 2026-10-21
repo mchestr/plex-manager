@@ -45,9 +45,10 @@ export function CoverPage({ data, issue }: PageProps<CoverData>) {
   const nameplate = fitLines("Rewind", { role: "nameplate", metrics: pageMetrics, weight: 900, measure: MEASURE, maxLines: 1, sizeMin: 34, sizeMax: 120, widths: [100] })
   const volume = volumeLine(facts)
   const pocketMember = issue.edition === "pocket"
-  const types = issue.pages.map((p) => p.type)
-  const full = pocketMember ? null : cut("Read the full issue", issue.pages.length, issueDurationMs(types), locale)
-  const pocket = cut("Pocket edition", POCKET_ESTIMATE.length, issueDurationMs(POCKET_ESTIMATE), locale)
+  const fullTypes = issue.cuts ? issue.cuts.full : issue.pages.map((p) => p.type)
+  const pocketTypes = issue.cuts?.pocket ?? POCKET_ESTIMATE
+  const full = pocketMember || !fullTypes ? null : cut("Read the full issue", fullTypes.length, issueDurationMs(fullTypes), locale)
+  const pocket = cut("Pocket edition", pocketTypes.length, issueDurationMs(pocketTypes), locale)
   const finalCut = facts["window.finalCut"]?.value === 1
 
   return (

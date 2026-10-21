@@ -91,7 +91,7 @@ describe('getRewindCardModel', () => {
     expect(model?.state).toMatchObject({
       kind: 'ready',
       year: 2026,
-      pages: 14,
+      pages: 17,
       edition: 'full',
       ink: 'marigold',
       share: { state: 'off' },

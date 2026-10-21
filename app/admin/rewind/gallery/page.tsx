@@ -12,11 +12,15 @@ import { selectedReplay } from "@/lib/llm/replay"
 import { prisma } from "@/lib/prisma"
 import { eligibleCards } from "@/lib/rewind/cards/eligible"
 import { previewIdSchema, REPLAY_SELECTED } from "@/lib/rewind/dry-run/input"
-import { readDryRun } from "@/lib/rewind/dry-run/store"
+import { pagesForCut } from "@/lib/rewind/editions"
+import { previewOwnerId, readDryRun } from "@/lib/rewind/dry-run/store"
 import { REVIEW_FIXTURE_IDS, REVIEW_FIXTURES, REVIEW_YEAR, type GalleryCopy, type GalleryView, type ReviewFixtureId } from "@/lib/rewind/gallery/review"
 import { registry } from "@/lib/rewind/registry"
 import { validatePagesOnRead } from "@/lib/rewind/select-pages"
 import { cn } from "@/lib/utils"
+import { loadShareContext } from "@/lib/wrapped/data/share-context"
+import { toShareSafe } from "@/lib/wrapped/data/share-safe"
+import { SharePageTypeSchema, type SharePageType } from "@/lib/wrapped/data/share-safe-schema"
 
 export const dynamic = "force-dynamic"
 
@@ -76,17 +80,24 @@ export default async function RewindGalleryPage({ searchParams }: { searchParams
 
   let sheet = null
   if (run && raw.preview) {
-    const config = await prisma.config.findUnique({ where: { id: "config" }, select: { rewindDisabledPages: true } })
-    const pages = validatePagesOnRead(run.data.pages, {
-      archetype: run.data.archetype?.id ?? null,
-      disabledPages: DisabledPagesSchema.parse(config?.rewindDisabledPages ?? []),
-    })
+    const [config, shareCtx] = await Promise.all([
+      prisma.config.findUnique({ where: { id: "config" }, select: { rewindDisabledPages: true } }),
+      loadShareContext({ userId: previewOwnerId(run.subject), year: run.data.year }),
+    ])
+    const numbering = { archetype: run.data.archetype?.id ?? null, disabledPages: DisabledPagesSchema.parse(config?.rewindDisabledPages ?? []) }
+    const pages = validatePagesOnRead(pagesForCut(run.data, "full"), numbering)
+    // Cards come from every printed page, the pocket cut's short list included, as the share sheet projects them.
+    const pocket = run.data.edition === "full" ? validatePagesOnRead(pagesForCut(run.data, "pocket"), numbering) : []
+    const printed = [...new Set([...pages, ...pocket].map((page) => page.type))].filter(
+      (type): type is SharePageType => SharePageTypeSchema.safeParse(type).success
+    )
+    const shared = toShareSafe(run.data, { pages: printed, signed: false, includeArt: false, dailyDetail: true, cardFacts: [] }, shareCtx)
     sheet = (
       <GallerySheet
         previewId={raw.preview}
         fixture={query.fixture}
         pages={pages.map((page) => ({ type: page.type, folio: page.folio, name: registry[page.type].name }))}
-        cards={eligibleCards({ pages }, { dailyDetail: true })}
+        cards={eligibleCards(shared, { dailyDetail: true })}
         view={query.view}
       />
     )

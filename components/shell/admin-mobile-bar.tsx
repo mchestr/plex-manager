@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useState } from "react"
 
 import { AssistantTrigger } from "@/components/admin/chatbot/assistant-sheet"
+import { AdminChrome } from "@/components/shell/admin-chrome"
 import { AdminNavList } from "@/components/shell/admin-nav-list"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -49,10 +50,12 @@ export function AdminMobileBar({ serverName, navCounts, assistant }: AdminMobile
       </Link>
       <Badge variant="outline">Admin</Badge>
       {assistant && (
-        <AssistantTrigger size="icon" className="ml-auto" data-testid="admin-chat-toggle-mobile">
-          <Icon icon={icons.assistant} size={20} />
-          <span className="sr-only">Assistant</span>
-        </AssistantTrigger>
+        <AdminChrome part="assistant">
+          <AssistantTrigger size="icon" className="ml-auto" data-testid="admin-chat-toggle-mobile">
+            <Icon icon={icons.assistant} size={20} />
+            <span className="sr-only">Assistant</span>
+          </AssistantTrigger>
+        </AdminChrome>
       )}
     </header>
   )
