@@ -501,8 +501,10 @@ jobs:
             artifact: rewind-visual-diffs
             warning: Screenshots differ from the baselines. Review the rewind-visual-diffs artifact; if the change is intended, run the Visual Baselines workflow (e2e/visual/README.md). A 12 px text or 44 px target check may have failed instead; the job log names the page.
             timeout: 60
-          # Blocking since the first-page JavaScript fits its 110 KB budget
-          # (about 102 KB, P7.15).
+          # Blocking: the first-page JavaScript fits its 110 KB budget (about
+          # 102 KB) and, since a turn no longer toggles inert on the pages or
+          # restarts the chrome's colour transitions, heavy's longest task
+          # stays under the 50 ms gate (P7.15).
           - name: Rewind Performance
             projects: --project=rewind-perf
             advisory: false

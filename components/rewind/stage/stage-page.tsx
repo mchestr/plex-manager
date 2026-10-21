@@ -28,6 +28,9 @@ export function NearPage({ children }: { children: ReactNode }) {
   return Math.abs(useStagePage().distance) <= 1 ? children : null
 }
 
+/** How long the leaving page shows under the incoming one: the ink roll's `--rw-dur-m`. */
+const LEAVE_MS = 420
+
 interface StagePageProps {
   index: number
   current: number
@@ -42,10 +45,15 @@ interface StagePageProps {
 /**
  * One full-bleed page: its field fills the stage, and its content sits on the
  * scaled artboard between the chrome rows. Only the current page and its
- * neighbours are rendered visible; the rest are `hidden`. Pages other than
- * the current one are `inert`. A turn sets `data-turn` on the incoming page
- * (the ink roll) and `data-leaving` on the outgoing one. Each page is an
- * `<article aria-roledescription="page">` labelled with its position (design
+ * neighbours are rendered; the rest are `hidden` and `inert`. A neighbour is
+ * `invisible` (`visibility: hidden`), which keeps it out of the focus order,
+ * the accessibility tree and hit testing as `inert` does, but which a turn
+ * flips without restyling the page's whole subtree, as toggling `inert`
+ * would (P7.15). The leaving page stays visible under the incoming page's
+ * ink roll for `LEAVE_MS`, then hides; a timer, not a CSS transition, so the
+ * turn's frame dispatches no transition event. A turn sets `data-turn` on the
+ * incoming page (the ink roll) and `data-leaving` on the outgoing one. Each
+ * page is an `<article aria-roledescription="page">` labelled with its position (design
  * 11.1); its body brings the `h2` that a member's turn focuses, and the page
  * itself takes focus when the body has none. P5.6 adds the match-cut layer.
  *
@@ -64,6 +72,16 @@ export function StagePage({ index, current, previous, ink, label, children }: St
   // The current page this slot was last revealed for; the first render reveals every neighbour.
   const [revealedAt, setRevealedAt] = useState<number | null>(near ? current : null)
   const waiting = near && !onTurn && revealedAt !== current
+  // The current page this slot last finished leaving for.
+  const leaving = index === previous && !isCurrent
+  const [leftAt, setLeftAt] = useState<number | null>(null)
+  const veiled = !isCurrent && !(leaving && leftAt !== current)
+
+  useEffect(() => {
+    if (!leaving || leftAt === current) return
+    const id = window.setTimeout(() => setLeftAt(current), LEAVE_MS)
+    return () => window.clearTimeout(id)
+  }, [leaving, leftAt, current])
 
   useEffect(() => {
     if (!waiting) return
@@ -89,13 +107,14 @@ export function StagePage({ index, current, previous, ink, label, children }: St
         data-turn={isCurrent && direction ? direction : undefined}
         data-leaving={index === previous && direction ? direction : undefined}
         hidden={!near || waiting}
-        inert={!isCurrent}
+        inert={!near || waiting}
         className={cn(
           scheme,
           "rw-page absolute inset-0 flex outline-none items-center justify-center overflow-hidden bg-background pt-(--rw-chrome-top) pb-(--rw-chrome-bottom) text-foreground",
           // The desktop spread (P7.4): the field fills only the framed artboard; the spread around it is paper
           "rw-spread:bg-transparent rw-spread:p-0",
-          isCurrent ? "z-2" : index === previous ? "z-1" : "z-0"
+          isCurrent ? "z-2" : index === previous ? "z-1" : "z-0",
+          veiled && "invisible"
         )}
       >
         {/* The body's 24 px line box scales with the page too, so text that sets no line height never outgrows the artboard */}
