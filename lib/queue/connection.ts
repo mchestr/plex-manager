@@ -104,21 +104,6 @@ export function closeWorker(worker: Pick<Worker, "close">): Promise<void> {
   return worker.close(redisConnection?.status !== "ready")
 }
 
-/**
- * Check if Redis connection is healthy
- */
-export async function isRedisHealthy(): Promise<boolean> {
-  if (!redisConnection) {
-    return false
-  }
-
-  try {
-    const result = await redisConnection.ping()
-    return result === "PONG"
-  } catch {
-    return false
-  }
-}
 
 /**
  * A Redis client whose commands fail within about two seconds instead of

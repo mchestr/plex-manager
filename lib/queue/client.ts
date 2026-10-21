@@ -187,48 +187,73 @@ export async function getQueueStats(): Promise<QueueStats> {
   }
 }
 
+/** The states the admin page lists, newest job first. */
+export const LISTED_JOB_STATUSES = ["waiting", "active", "completed", "failed", "delayed"] as const
+export type ListedJobStatus = (typeof LISTED_JOB_STATUSES)[number]
+
+function toMetadata(job: Job, status: JobStatus): JobMetadata {
+  return {
+    jobId: job.id!,
+    jobType: job.name,
+    status,
+    data: job.data,
+    result: job.returnvalue,
+    error: job.failedReason,
+    attempts: job.attemptsMade,
+    maxAttempts: job.opts.attempts ?? 3,
+    createdAt: new Date(job.timestamp ?? Date.now()),
+    startedAt: job.processedOn ? new Date(job.processedOn) : undefined,
+    finishedAt: job.finishedOn ? new Date(job.finishedOn) : undefined,
+    processedOn: job.processedOn,
+    finishedOn: job.finishedOn,
+    progress: job.progress,
+  }
+}
+
 /**
- * Get jobs with pagination and optional filtering
+ * One page of jobs, newest first, and how many jobs match in all (UI-23).
+ *
+ * The total comes from `getJobCounts` for the filtered states. BullMQ cannot
+ * count one job type, so with `jobType` every job in those states is read and
+ * the matches are counted; BullMQ keeps at most a day of completed jobs and a
+ * week of failed ones, so that stays small.
  */
-export async function getJobs(options: {
-  status?: JobStatus
+export async function getJobPage(options: {
+  status?: ListedJobStatus
   jobType?: JobType
-  start?: number
-  end?: number
-}): Promise<JobMetadata[]> {
+  page: number
+  pageSize: number
+}): Promise<{ jobs: JobMetadata[]; total: number }> {
   const q = getQueue()
-  const { status, jobType, start = 0, end = 49 } = options
+  const { status, jobType, page, pageSize } = options
+  const statuses: readonly ListedJobStatus[] = status ? [status] : LISTED_JOB_STATUSES
+  const start = (page - 1) * pageSize
+  const end = start + pageSize - 1
 
-  // Get jobs by status or all statuses
-  const statusTypes = status
-    ? [status]
-    : (["waiting", "active", "completed", "failed", "delayed"] as const)
+  const read = async (from: number, to: number) => {
+    const lists = await Promise.all(statuses.map(async (s) => (await q.getJobs([s], from, to)).map((job) => toMetadata(job, s))))
+    return lists.flat().sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+  }
 
-  const allJobs = await Promise.all(statusTypes.map((s) => q.getJobs([s], start, end)))
+  if (jobType) {
+    const matching = (await read(0, -1)).filter((job) => job.jobType === jobType)
+    return { jobs: matching.slice(start, end + 1), total: matching.length }
+  }
 
-  const jobs = allJobs
-    .flat()
-    .filter((job) => !jobType || job.name === jobType)
-    .sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0))
+  const counts = await q.getJobCounts(...statuses)
+  const total = statuses.reduce((sum, s) => sum + (counts[s] ?? 0), 0)
+  // One state pages in Redis; several merge their first `end + 1` jobs and slice.
+  const jobs = status ? await read(start, end) : (await read(0, end)).slice(start, end + 1)
+  return { jobs, total }
+}
 
-  return Promise.all(
-    jobs.map(async (job) => ({
-      jobId: job.id!,
-      jobType: job.name,
-      status: (await job.getState()) as JobStatus,
-      data: job.data,
-      result: job.returnvalue,
-      error: job.failedReason,
-      attempts: job.attemptsMade,
-      maxAttempts: job.opts.attempts ?? 3,
-      createdAt: new Date(job.timestamp ?? Date.now()),
-      startedAt: job.processedOn ? new Date(job.processedOn) : undefined,
-      finishedAt: job.finishedOn ? new Date(job.finishedOn) : undefined,
-      processedOn: job.processedOn,
-      finishedOn: job.finishedOn,
-      progress: job.progress,
-    }))
-  )
+/**
+ * How many workers are connected to the queue, read from the connections
+ * BullMQ registers in Redis rather than from this process, so the answer holds
+ * when the workers run elsewhere (P11.3).
+ */
+export async function getWorkerCount(): Promise<number> {
+  return (await getQueue().getWorkers()).length
 }
 
 /**

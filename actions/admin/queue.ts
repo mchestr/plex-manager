@@ -1,27 +1,23 @@
 "use server"
 
-import { requireAdmin } from "@/lib/admin"
-import { createLogger } from "@/lib/utils/logger"
-import {
-  getQueueStats,
-  getJobs,
-  retryJob,
-  removeJob,
-  pauseQueue,
-  resumeQueue,
-  isQueuePaused,
-  addJob,
-  addWatchlistSyncUserJob,
-  getJobSchedulers,
-} from "@/lib/queue/client"
-import { isRedisConfigured, isRedisHealthy } from "@/lib/queue/connection"
-import { JOB_TYPES, JobStatus, JobMetadata, QueueStats } from "@/lib/queue/types"
-import { isRegisteredJobType } from "@/lib/queue/jobs"
-import { isWorkerRunning } from "@/lib/queue/worker"
-import { logAuditEvent, AuditEventType } from "@/lib/security/audit-log"
+import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
+import { requireAdmin } from "@/lib/admin"
+import { addJob, addWatchlistSyncUserJob, pauseQueue, removeJob, resumeQueue, retryJob } from "@/lib/queue/client"
+import { isRedisConfigured } from "@/lib/queue/connection"
+import { JOB_TYPES } from "@/lib/queue/types"
+import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
+import { createLogger } from "@/lib/utils/logger"
+
 const logger = createLogger("ADMIN_QUEUE_ACTIONS")
+
+/**
+ * The page these actions change. Revalidating it refreshes the open page, so
+ * no client reloads or `router.refresh()` calls are needed (BP-31). The page's
+ * reads live in `lib/admin/queues.ts`.
+ */
+const QUEUES_PATH = "/admin/queues"
 
 // =============================================================================
 // Rate Limiting for Server Actions
@@ -64,13 +60,6 @@ function isRateLimited(adminId: string): boolean {
 // Validation Schemas
 // =============================================================================
 
-const getJobsSchema = z.object({
-  status: z.enum(["waiting", "active", "completed", "failed", "delayed"]).optional(),
-  jobType: z.string().optional(),
-  page: z.number().min(1).default(1),
-  limit: z.number().min(1).max(100).default(50),
-})
-
 const jobIdSchema = z.object({
   jobId: z.string().min(1),
 })
@@ -79,151 +68,10 @@ const triggerSyncSchema = z.object({
   userId: z.string().optional(),
 })
 
-// =============================================================================
-// Types
-// =============================================================================
+type ActionResult = { success: true } | { success: false; error: string }
 
-export interface QueueDashboardData {
-  stats: QueueStats
-  isPaused: boolean
-  workerRunning: boolean
-  redisConnected: boolean
-  schedulers: Array<{
-    id: string
-    pattern: string
-    next: Date | null
-  }>
-}
-
-export interface JobsResponse {
-  jobs: JobMetadata[]
-  page: number
-  limit: number
-  hasMore: boolean
-}
-
-// =============================================================================
-// Dashboard Actions
-// =============================================================================
-
-/**
- * Get queue dashboard data including stats, status, and schedulers
- */
-export async function getQueueDashboardData(): Promise<
-  | { success: true; data: QueueDashboardData }
-  | { success: false; error: string }
-> {
-  try {
-    await requireAdmin()
-  } catch {
-    return { success: false, error: "Unauthorized" }
-  }
-
-  // Check if Redis is configured
-  if (!isRedisConfigured()) {
-    return {
-      success: false,
-      error: "Redis is not configured. Set REDIS_URL environment variable.",
-    }
-  }
-
-  try {
-    const [stats, isPaused, redisConnected, schedulers] = await Promise.all([
-      getQueueStats(),
-      isQueuePaused(),
-      isRedisHealthy(),
-      getJobSchedulers(),
-    ])
-
-    const workerRunning = isWorkerRunning()
-
-    return {
-      success: true,
-      data: {
-        stats,
-        isPaused,
-        workerRunning,
-        redisConnected,
-        schedulers: schedulers
-          .filter((s) => s.id && s.pattern)
-          .map((s) => ({
-            id: s.id as string,
-            pattern: s.pattern as string,
-            next: s.next ? new Date(s.next) : null,
-          })),
-      },
-    }
-  } catch (error) {
-    logger.error("Error fetching queue dashboard data", error)
-    return {
-      success: false,
-      error: "Failed to load queue dashboard. Please try again.",
-    }
-  }
-}
-
-// =============================================================================
-// Job Management Actions
-// =============================================================================
-
-/**
- * Get jobs with pagination and optional filtering
- */
-export async function getQueueJobs(
-  input: unknown
-): Promise<{ success: true; data: JobsResponse } | { success: false; error: string }> {
-  try {
-    await requireAdmin()
-  } catch {
-    return { success: false, error: "Unauthorized" }
-  }
-
-  const validated = getJobsSchema.safeParse(input)
-  if (!validated.success) {
-    return { success: false, error: "Invalid input" }
-  }
-
-  if (!isRedisConfigured()) {
-    return { success: false, error: "Redis is not configured" }
-  }
-
-  const { status, jobType, page, limit } = validated.data
-
-  try {
-    const start = (page - 1) * limit
-    const end = start + limit - 1
-
-    // Validate jobType if provided
-    const validJobType = jobType && isRegisteredJobType(jobType) ? jobType : undefined
-
-    const jobs = await getJobs({
-      status: status as JobStatus | undefined,
-      jobType: validJobType as (typeof JOB_TYPES)[keyof typeof JOB_TYPES] | undefined,
-      start,
-      end,
-    })
-
-    return {
-      success: true,
-      data: {
-        jobs,
-        page,
-        limit,
-        hasMore: jobs.length === limit,
-      },
-    }
-  } catch (error) {
-    logger.error("Error fetching jobs", error)
-    return { success: false, error: "Failed to fetch jobs" }
-  }
-}
-
-/**
- * Retry a failed job
- */
-export async function retryQueueJob(
-  input: unknown
-): Promise<{ success: true } | { success: false; error: string }> {
+/** The admin's id, or the failure to return: signed out, rate limited or no Redis. */
+async function guard(): Promise<{ adminId: string } | { success: false; error: string }> {
   let session: Awaited<ReturnType<typeof requireAdmin>>
   try {
     session = await requireAdmin()
@@ -235,14 +83,27 @@ export async function retryQueueJob(
   if (isRateLimited(adminId)) {
     return { success: false, error: "Too many requests. Please try again later." }
   }
+  if (!isRedisConfigured()) {
+    return { success: false, error: "Redis is not configured" }
+  }
+  return { adminId }
+}
+
+// =============================================================================
+// Job Management Actions
+// =============================================================================
+
+/**
+ * Retry a failed job
+ */
+export async function retryQueueJob(input: unknown): Promise<ActionResult> {
+  const guarded = await guard()
+  if (!("adminId" in guarded)) return guarded
+  const { adminId } = guarded
 
   const validated = jobIdSchema.safeParse(input)
   if (!validated.success) {
     return { success: false, error: "Invalid job ID" }
-  }
-
-  if (!isRedisConfigured()) {
-    return { success: false, error: "Redis is not configured" }
   }
 
   try {
@@ -253,6 +114,7 @@ export async function retryQueueJob(
     })
     logger.info("Job retried by admin", { jobId: validated.data.jobId, adminId })
 
+    revalidatePath(QUEUES_PATH)
     return { success: true }
   } catch (error) {
     logger.error("Error retrying job", error, { jobId: validated.data.jobId })
@@ -263,28 +125,14 @@ export async function retryQueueJob(
 /**
  * Remove a job from the queue
  */
-export async function removeQueueJob(
-  input: unknown
-): Promise<{ success: true } | { success: false; error: string }> {
-  let session: Awaited<ReturnType<typeof requireAdmin>>
-  try {
-    session = await requireAdmin()
-  } catch {
-    return { success: false, error: "Unauthorized" }
-  }
-
-  const adminId = session.user.id
-  if (isRateLimited(adminId)) {
-    return { success: false, error: "Too many requests. Please try again later." }
-  }
+export async function removeQueueJob(input: unknown): Promise<ActionResult> {
+  const guarded = await guard()
+  if (!("adminId" in guarded)) return guarded
+  const { adminId } = guarded
 
   const validated = jobIdSchema.safeParse(input)
   if (!validated.success) {
     return { success: false, error: "Invalid job ID" }
-  }
-
-  if (!isRedisConfigured()) {
-    return { success: false, error: "Redis is not configured" }
   }
 
   try {
@@ -295,6 +143,7 @@ export async function removeQueueJob(
     })
     logger.info("Job removed by admin", { jobId: validated.data.jobId, adminId })
 
+    revalidatePath(QUEUES_PATH)
     return { success: true }
   } catch (error) {
     logger.error("Error removing job", error, { jobId: validated.data.jobId })
@@ -309,24 +158,10 @@ export async function removeQueueJob(
 /**
  * Pause the queue (stops processing new jobs)
  */
-export async function pauseJobQueue(): Promise<
-  { success: true } | { success: false; error: string }
-> {
-  let session: Awaited<ReturnType<typeof requireAdmin>>
-  try {
-    session = await requireAdmin()
-  } catch {
-    return { success: false, error: "Unauthorized" }
-  }
-
-  const adminId = session.user.id
-  if (isRateLimited(adminId)) {
-    return { success: false, error: "Too many requests. Please try again later." }
-  }
-
-  if (!isRedisConfigured()) {
-    return { success: false, error: "Redis is not configured" }
-  }
+export async function pauseJobQueue(): Promise<ActionResult> {
+  const guarded = await guard()
+  if (!("adminId" in guarded)) return guarded
+  const { adminId } = guarded
 
   try {
     await pauseQueue()
@@ -334,6 +169,7 @@ export async function pauseJobQueue(): Promise<
     logAuditEvent(AuditEventType.QUEUE_PAUSED, adminId)
     logger.info("Queue paused by admin", { adminId })
 
+    revalidatePath(QUEUES_PATH)
     return { success: true }
   } catch (error) {
     logger.error("Error pausing queue", error)
@@ -344,24 +180,10 @@ export async function pauseJobQueue(): Promise<
 /**
  * Resume the queue
  */
-export async function resumeJobQueue(): Promise<
-  { success: true } | { success: false; error: string }
-> {
-  let session: Awaited<ReturnType<typeof requireAdmin>>
-  try {
-    session = await requireAdmin()
-  } catch {
-    return { success: false, error: "Unauthorized" }
-  }
-
-  const adminId = session.user.id
-  if (isRateLimited(adminId)) {
-    return { success: false, error: "Too many requests. Please try again later." }
-  }
-
-  if (!isRedisConfigured()) {
-    return { success: false, error: "Redis is not configured" }
-  }
+export async function resumeJobQueue(): Promise<ActionResult> {
+  const guarded = await guard()
+  if (!("adminId" in guarded)) return guarded
+  const { adminId } = guarded
 
   try {
     await resumeQueue()
@@ -369,6 +191,7 @@ export async function resumeJobQueue(): Promise<
     logAuditEvent(AuditEventType.QUEUE_RESUMED, adminId)
     logger.info("Queue resumed by admin", { adminId })
 
+    revalidatePath(QUEUES_PATH)
     return { success: true }
   } catch (error) {
     logger.error("Error resuming queue", error)
@@ -386,34 +209,23 @@ export async function resumeJobQueue(): Promise<
 export async function triggerWatchlistSyncJob(
   input: unknown
 ): Promise<{ success: true; data: { jobId: string } } | { success: false; error: string }> {
-  let session: Awaited<ReturnType<typeof requireAdmin>>
-  try {
-    session = await requireAdmin()
-  } catch {
-    return { success: false, error: "Unauthorized" }
-  }
-
-  const adminId = session.user.id
-  if (isRateLimited(adminId)) {
-    return { success: false, error: "Too many requests. Please try again later." }
-  }
+  const guarded = await guard()
+  if (!("adminId" in guarded)) return guarded
+  const { adminId } = guarded
 
   const validated = triggerSyncSchema.safeParse(input)
   if (!validated.success) {
     return { success: false, error: "Invalid input" }
   }
 
-  if (!isRedisConfigured()) {
-    return { success: false, error: "Redis is not configured" }
-  }
-
   try {
     const { userId } = validated.data
+    let jobId: string
 
     if (userId) {
       // Sync specific user. The job skips a member who has not opted in
       // (NOT_OPTED_IN), and joins one already waiting or running for them.
-      const jobId = await addWatchlistSyncUserJob({
+      jobId = await addWatchlistSyncUserJob({
         userId,
         triggeredBy: "admin",
         triggeredByUserId: adminId,
@@ -425,11 +237,9 @@ export async function triggerWatchlistSyncJob(
         jobId,
       })
       logger.info("User watchlist sync job triggered by admin", { userId, jobId, adminId })
-
-      return { success: true, data: { jobId } }
     } else {
       // Sync all enabled users
-      const jobId = await addJob(JOB_TYPES.WATCHLIST_SYNC_ALL, {
+      jobId = await addJob(JOB_TYPES.WATCHLIST_SYNC_ALL, {
         triggeredBy: "admin",
       })
 
@@ -438,9 +248,10 @@ export async function triggerWatchlistSyncJob(
         jobId,
       })
       logger.info("Batch watchlist sync job triggered by admin", { jobId, adminId })
-
-      return { success: true, data: { jobId } }
     }
+
+    revalidatePath(QUEUES_PATH)
+    return { success: true, data: { jobId } }
   } catch (error) {
     logger.error("Error triggering sync job", error)
     return { success: false, error: "Failed to trigger sync. Please try again." }

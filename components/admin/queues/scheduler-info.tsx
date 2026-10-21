@@ -1,60 +1,40 @@
-"use client"
-
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Time } from "@/components/ui/time"
+import type { QueueScheduler } from "@/lib/admin/queues"
+import type { BoundFormat } from "@/lib/utils/format"
 
-interface SchedulerInfoProps {
-  schedulers: Array<{
-    id: string
-    pattern: string
-    next: Date | null
-  }>
+function cadence(scheduler: QueueScheduler, f: BoundFormat): string {
+  if (scheduler.everyMs !== null) {
+    return `Every ${f.duration(scheduler.everyMs / 60_000, "short", { largestUnit: "day", smallestUnit: "second" })}`
+  }
+  if (scheduler.pattern) return scheduler.tz ? `${scheduler.pattern} (${scheduler.tz})` : scheduler.pattern
+  return "—"
 }
 
-export function SchedulerInfo({ schedulers }: SchedulerInfoProps) {
-  const formatPattern = (pattern: string) => {
-    // Handle BullMQ repeat patterns like "every 3600000" (ms)
-    if (pattern.startsWith("every ")) {
-      const ms = parseInt(pattern.replace("every ", ""), 10)
-      if (!isNaN(ms)) {
-        if (ms >= 3600000) return `Every ${Math.round(ms / 3600000)}h`
-        if (ms >= 60000) return `Every ${Math.round(ms / 60000)}m`
-        return `Every ${Math.round(ms / 1000)}s`
-      }
-    }
-    return pattern
-  }
-
+/** The repeating jobs: what runs, how often, and when next. */
+export function SchedulerInfo({ schedulers, f }: { schedulers: QueueScheduler[]; f: BoundFormat }) {
   return (
-    <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
-      <h3 className="text-sm font-semibold text-white mb-3">Scheduled Jobs</h3>
-
-      {schedulers.length === 0 ? (
-        <p className="text-sm text-slate-400">No scheduled jobs configured</p>
-      ) : (
-        <div className="space-y-2">
-          {schedulers.map((scheduler) => (
-            <div
-              key={scheduler.id}
-              className="flex items-center justify-between text-sm"
-            >
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-cyan-500" />
-                <span className="text-slate-300 font-mono text-xs">
-                  {scheduler.id}
-                </span>
+    <Card data-testid="queue-schedulers">
+      <CardHeader>
+        <CardTitle as="h2">Scheduled jobs</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {schedulers.length === 0 ? (
+          <p className="text-ui text-muted-foreground">No scheduled jobs.</p>
+        ) : (
+          <dl className="divide-y">
+            {schedulers.map((scheduler) => (
+              <div key={scheduler.id} className="flex flex-col gap-1 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-baseline sm:justify-between">
+                <dt className="text-ui font-medium text-foreground">{scheduler.jobLabel}</dt>
+                <dd className="flex flex-wrap gap-x-3 text-label text-muted-foreground tabular-nums">
+                  <span>{cadence(scheduler, f)}</span>
+                  <span>{scheduler.next ? <>Next <Time value={scheduler.next} /></> : "Not scheduled"}</span>
+                </dd>
               </div>
-              <div className="flex items-center gap-4">
-                <span className="text-slate-400">
-                  {formatPattern(scheduler.pattern)}
-                </span>
-                <span className="text-cyan-400">
-                  {scheduler.next ? <Time value={scheduler.next} /> : "N/A"}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+            ))}
+          </dl>
+        )}
+      </CardContent>
+    </Card>
   )
 }
