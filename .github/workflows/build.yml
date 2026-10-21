@@ -462,7 +462,7 @@ jobs:
   # failed check (refresh baselines with visual-baselines.yml). "Rewind
   # Performance" (the 4x-throttled long-task and commit gate on a normal and
   # a low-end device, the first-page JavaScript and page-chunk budgets; P5.4,
-  # P7.15) is advisory the same way until its budgets pass.
+  # P7.15) is a blocking gate.
   e2e:
     name: ${{ matrix.suite.name }}
     runs-on: ubuntu-latest
@@ -496,14 +496,12 @@ jobs:
             artifact: rewind-visual-diffs
             warning: Screenshots differ from the baselines. Review the rewind-visual-diffs artifact; if the change is intended, run the Visual Baselines workflow (e2e/visual/README.md). A 12 px text or 44 px target check may have failed instead; the job log names the page.
             timeout: 60
-          # Advisory until the first-page JavaScript fits its 110 KB budget
-          # (230 KB after P7.15) and heavy's low-end run stays under 50 ms;
-          # then set advisory to false (P7.15's blocking gate).
+          # Blocking since the first-page JavaScript fits its 110 KB budget
+          # (about 102 KB, P7.15).
           - name: Rewind Performance
             projects: --project=rewind-perf
-            advisory: true
+            advisory: false
             artifact: rewind-perf-report
-            warning: A Rewind performance budget failed (long tasks over 50 ms, commits between turns, first-page JavaScript over 110 KB or a page chunk over 12 KB). The job log prints each measurement; see the rewind-perf-report artifact.
             timeout: 30
     # Keep the tag equal to the exact @playwright/test version in package.json.
     container:
