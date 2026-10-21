@@ -1,3 +1,5 @@
+import type { Page } from '@playwright/test';
+
 import { TEST_USERS } from '../fixtures/auth';
 import { expect, test } from '../fixtures/session';
 import { createE2EPrismaClient } from '../helpers/prisma';
@@ -33,6 +35,18 @@ async function setFlags(data: Partial<Flags>): Promise<void> {
   } finally {
     await prisma.$disconnect();
   }
+}
+
+/**
+ * Saves the section and waits for the write. Save is disabled while the
+ * action runs too, so wait for "Unsaved changes" to go, which happens only
+ * once the saved settings come back.
+ */
+async function saveSettings(page: Page): Promise<void> {
+  await expect(page.getByTestId('rewind-settings-unsaved')).toBeVisible();
+  await page.getByTestId('rewind-settings-save').click();
+  await expect(page.getByTestId('rewind-settings-unsaved')).toHaveCount(0);
+  await expect(page.getByTestId('rewind-settings-save')).toBeDisabled();
 }
 
 test.describe('Rewind settings section', () => {
@@ -79,8 +93,7 @@ test.describe('Rewind settings section', () => {
 
     await page.getByTestId('rewind-settings-audience-trigger').click();
     await page.getByTestId('rewind-settings-audience-option-admins').click();
-    await page.getByTestId('rewind-settings-save').click();
-    await expect(page.getByTestId('rewind-settings-save')).toBeDisabled();
+    await saveSettings(page);
 
     await page.goto('/');
     await expect(page.getByTestId('rewind-card')).toBeVisible();
@@ -95,8 +108,7 @@ test.describe('Rewind settings section', () => {
     await page.goto('/admin/settings#rewind');
 
     await page.getByTestId('rewind-settings-pages-people').click();
-    await page.getByTestId('rewind-settings-save').click();
-    await expect(page.getByTestId('rewind-settings-save')).toBeDisabled();
+    await saveSettings(page);
 
     await signIn(REWIND_MEMBERS.heavy.id);
     await page.goto(`/rewind/${REWIND_YEAR}/read`);
