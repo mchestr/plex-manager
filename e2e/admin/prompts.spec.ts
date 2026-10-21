@@ -1,4 +1,5 @@
 import { expect, test } from '../fixtures/auth';
+import { createE2EPrismaClient } from '../helpers/prisma';
 
 /**
  * P10.4: create a Rewind style guide, see it in the assembled prompt,
@@ -30,8 +31,36 @@ test('a new style guide is previewed, activated and listed as in use', async ({ 
   await expect(row).toContainText('In use');
 });
 
-test('a v2 template opens read-only on its edit page', async ({ adminPage }) => {
-  await adminPage.goto('/admin/prompts/visual-prompt-active/edit');
-  await expect(adminPage.getByTestId('admin-prompt-editor-v2-notice')).toBeVisible();
-  await expect(adminPage.getByTestId('admin-prompt-editor-save')).toHaveCount(0);
+test.describe('a v2 template', () => {
+  /** Its own row: the visual seed's v2 templates exist only while the visual and axe specs run. */
+  const V2_ID = 'e2e-prompt-v2';
+
+  async function removeV2(): Promise<void> {
+    const prisma = createE2EPrismaClient();
+    try {
+      await prisma.promptTemplate.deleteMany({ where: { id: V2_ID } });
+    } finally {
+      await prisma.$disconnect();
+    }
+  }
+
+  test.beforeAll(async () => {
+    await removeV2();
+    const prisma = createE2EPrismaClient();
+    try {
+      await prisma.promptTemplate.create({
+        data: { id: V2_ID, name: 'E2E v2 template', kind: 'v2-full', template: 'Write the Rewind for {{userName}}.' },
+      });
+    } finally {
+      await prisma.$disconnect();
+    }
+  });
+
+  test.afterAll(removeV2);
+
+  test('opens read-only on its edit page', async ({ adminPage }) => {
+    await adminPage.goto(`/admin/prompts/${V2_ID}/edit`);
+    await expect(adminPage.getByTestId('admin-prompt-editor-v2-notice')).toBeVisible();
+    await expect(adminPage.getByTestId('admin-prompt-editor-save')).toHaveCount(0);
+  });
 });

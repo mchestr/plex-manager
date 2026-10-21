@@ -40,7 +40,7 @@ test.describe('Member pages', () => {
   test('/membership is a 404 with Stripe off and no subscription', async ({ regularUserPage: page }) => {
     const response = await page.goto('/membership');
     expect(response?.status()).toBe(404);
-    await expect(page.getByTestId('not-found-heading')).toBeVisible();
+    await expect(page.getByTestId('status-screen-code')).toHaveText('404');
     await expect(page.getByTestId('member-nav-membership')).toHaveCount(0);
   });
 });

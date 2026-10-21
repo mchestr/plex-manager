@@ -81,7 +81,7 @@ export const A11Y_ROUTES: A11yRoute[] = [
   { path: '/a11y-missing-page', as: 'public', ready: 'status-screen' },
 
   // Member
-  { path: '/', as: 'member', ready: 'plex-link-card' },
+  { path: '/', as: 'member', ready: 'home-greeting' },
   { path: '/rewind', as: 'member', ready: 'rewind-article-mode' },
   { path: `/rewind/${VISUAL_REWIND_YEAR}`, as: 'member', ready: 'rewind-article-mode' },
   { path: '/onboarding', as: 'member', userId: VISUAL_ONBOARDING_USER.id, ready: 'onboarding-welcome-heading' },

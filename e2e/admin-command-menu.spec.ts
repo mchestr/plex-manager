@@ -33,6 +33,8 @@ test.describe('Admin command menu', () => {
   test('Ctrl K, a member name and Enter open the member', async ({ adminPage: page }) => {
     await page.goto('/admin/invites');
     await expect(page.getByTestId('admin-command-trigger')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    // The server-rendered trigger shows before the shortcut's listener hydrates
+    await page.waitForLoadState('networkidle');
 
     await page.keyboard.press('ControlOrMeta+k');
     const input = page.getByTestId('admin-command-input');

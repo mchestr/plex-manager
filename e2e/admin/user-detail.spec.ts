@@ -11,6 +11,12 @@ import { REWIND_YEAR } from '../helpers/seed-rewind';
 
 const MEMBER = { id: 'user-detail-e2e-id', plexUserId: 'user-detail-e2e-plex', name: 'Aaa Detail Member', email: 'user-detail@example.com' };
 const USAGE_ID = 'user-detail-e2e-usage';
+/**
+ * Regenerate refuses without an active Tautulli, and the global seed has none
+ * (the visual seed deletes any). Nothing listens here: the eligibility lookup
+ * fails open, and the job fails on its own after the dialog has closed.
+ */
+const TAUTULLI = { id: 'user-detail-e2e-tautulli', name: 'E2E Tautulli', url: 'http://127.0.0.1:9', apiKey: 'e2e-key', isActive: true };
 const ARCHIVE_YEAR = REWIND_YEAR - 1;
 
 async function seedMember(): Promise<void> {
@@ -18,6 +24,9 @@ async function seedMember(): Promise<void> {
   try {
     const row = { ...MEMBER, isAdmin: false, primaryAuthService: 'plex', onboardingStatus: { plex: true, jellyfin: false } };
     await prisma.user.upsert({ where: { id: MEMBER.id }, create: row, update: row });
+    await prisma.tautulli.upsert({ where: { id: TAUTULLI.id }, create: TAUTULLI, update: TAUTULLI });
+    // Deleting the Rewind rows only unlinks their usage, so each test's seed clears it first
+    await prisma.lLMUsage.deleteMany({ where: { userId: MEMBER.id } });
     await prisma.plexWrapped.deleteMany({ where: { userId: MEMBER.id } });
     const stuck = await prisma.plexWrapped.create({ data: { userId: MEMBER.id, year: REWIND_YEAR, status: 'generating', data: '{}' } });
     const startedAt = new Date(Date.now() - 20 * 60_000);
@@ -53,6 +62,7 @@ async function clearMember(): Promise<void> {
   try {
     await prisma.lLMUsage.deleteMany({ where: { userId: MEMBER.id } });
     await prisma.user.deleteMany({ where: { id: MEMBER.id } });
+    await prisma.tautulli.deleteMany({ where: { id: TAUTULLI.id } });
   } finally {
     await prisma.$disconnect();
   }
@@ -65,6 +75,9 @@ test.describe('Admin user detail', () => {
 
   test('opens from the users list by keyboard and switches tabs through the URL', async ({ adminPage }) => {
     await adminPage.goto('/admin/users');
+    // The list starts on "Plex access: Yes", and no seeded member is shared on a live Plex server
+    await adminPage.getByTestId('users-filter-plex-access').click();
+    await adminPage.getByTestId('users-filter-plex-access-option-all').click();
     const link = adminPage.getByTestId(`user-name-link-${MEMBER.id}`);
     await link.focus();
     await adminPage.keyboard.press('Enter');
