@@ -116,6 +116,7 @@ describe("rate-limit", () => {
         "rw:share-page": { points: 60, duration: 60 },
         "rw:card:session": { points: 60, duration: 60 },
         "rw:card:share": { points: 30, duration: 60 },
+        "rw:dryrun": { points: 10, duration: 600 },
         "rw:gen:burst": { points: 1, duration: 600 },
         "rw:gen:daily": { points: 3, duration: 86400 },
         "rw:llm": { points: 30, duration: 60 },

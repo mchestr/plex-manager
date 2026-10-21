@@ -24,7 +24,7 @@ import { checkRewindInfra } from "@/lib/queue/rewind-infra"
 import { rewindInfraMessage } from "@/lib/rewind/infra-copy"
 import type { STATUS } from "@/lib/ui/status"
 
-export type PreflightStatus = keyof typeof STATUS.connection
+type PreflightStatus = keyof typeof STATUS.connection
 
 export interface PreflightRow {
   /** Test id `admin-rewind-preflight-<id>`. */

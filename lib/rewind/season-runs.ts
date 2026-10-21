@@ -115,6 +115,8 @@ export async function enqueueGenerateAll(data: Omit<RewindGenerateAllPayload, "s
  * Keeps the season-open `REWIND_SEASON_PREPARE` scheduled; see the module
  * comment. Returns the instant it is scheduled for, or null when that has
  * passed.
+ *
+ * @internal callers use {@link scheduleSeasonOpenRun}, which picks the season year
  */
 export async function ensureSeasonPrepareScheduled(year: number, now: number = Date.now()): Promise<Date | null> {
   const config = await prisma.config.findUnique({ where: { id: "config" }, select: { rewindSeasonOpens: true } })

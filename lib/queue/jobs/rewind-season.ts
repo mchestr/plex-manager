@@ -128,7 +128,11 @@ async function fanOut(job: Job<RewindGenerateAllPayload>): Promise<number> {
   return runs.length
 }
 
-/** `REWIND_GENERATE_ALL`: fans out, then waits for every child; see the module comment. */
+/**
+ * `REWIND_GENERATE_ALL`: fans out, then waits for every child; see the module comment.
+ *
+ * @internal Workers reach it through `REWIND_SEASON_PROCESSORS`
+ */
 export async function processRewindGenerateAll(job: Job<RewindGenerateAllPayload>, token?: string) {
   if ((job.data.step ?? "fan-out") === "fan-out") {
     const queued = await fanOut(job)
@@ -145,7 +149,11 @@ async function warmBatches(job: Job): Promise<RewindMetadataWarmPayload[]> {
   return Object.values(values).flatMap((value) => value?.warmBatches ?? [])
 }
 
-/** `REWIND_SEASON_PREPARE`: the aggregate, then the warm batches, then `REWIND_GENERATE_ALL`. */
+/**
+ * `REWIND_SEASON_PREPARE`: the aggregate, then the warm batches, then `REWIND_GENERATE_ALL`.
+ *
+ * @internal Workers reach it through `REWIND_SEASON_PROCESSORS`
+ */
 export async function processRewindSeasonPrepare(job: Job<RewindSeasonPreparePayload>, token?: string) {
   const { year, through, audience } = job.data
   const queue = getRewindQueue("rewind-batch")

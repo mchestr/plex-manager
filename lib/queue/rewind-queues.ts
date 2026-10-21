@@ -9,7 +9,7 @@
  * |----------------|-------------|----------------------------------------------|
  * | `rewind-batch` | 1           | season prepare, aggregate, metadata warm (P2.6) |
  * | `rewind-gen`   | 4           | `REWIND_GENERATE_USER` (P2.17)               |
- * | `rewind-aux`   | 2           | `REWIND_STALE_SWEEP` (P2.17, every 10 min), `REWIND_CARD_PREWARM` and the daily `REWIND_CARD_SWEEP` (P5.10), notify |
+ * | `rewind-aux`   | 2           | `REWIND_STALE_SWEEP` (P2.17, every 10 min), `REWIND_CARD_PREWARM` and the daily `REWIND_CARD_SWEEP` (P5.10), `REWIND_DRY_RUN` (P7.10), notify |
  *
  * Workers hold a job's lock for 60 s (BullMQ renews it every 30 s) and give a
  * stalled job one more attempt. Jobs have no BullMQ timeout; each processor
@@ -27,6 +27,7 @@ import { REWIND_BATCH_PROCESSORS } from "@/lib/queue/jobs/rewind-batch"
 import { processRewindGenerateUser } from "@/lib/queue/jobs/rewind"
 import { REWIND_SEASON_PROCESSORS } from "@/lib/queue/jobs/rewind-season"
 import { processRewindCardPrewarm, processRewindCardSweep, registerCardJobs } from "@/lib/queue/jobs/rewind-cards"
+import { processRewindDryRun } from "@/lib/queue/jobs/rewind-dry-run"
 import { processRewindStaleSweep } from "@/lib/queue/jobs/rewind-stale-sweep"
 import { getRewindQueue } from "@/lib/queue/rewind-producers"
 import { scheduleSeasonOpenRun } from "@/lib/rewind/season-runs"
@@ -51,6 +52,7 @@ const PROCESSORS: Record<RewindQueueName, Record<string, JobProcessor>> = {
     [JOB_TYPES.REWIND_STALE_SWEEP]: processRewindStaleSweep,
     [JOB_TYPES.REWIND_CARD_PREWARM]: processRewindCardPrewarm as JobProcessor,
     [JOB_TYPES.REWIND_CARD_SWEEP]: processRewindCardSweep,
+    [JOB_TYPES.REWIND_DRY_RUN]: processRewindDryRun as JobProcessor,
   },
 }
 

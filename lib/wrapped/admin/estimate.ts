@@ -15,7 +15,7 @@
 import { costUsd, type ModelInfo } from "@/lib/llm/models"
 
 /** Tokens of one member's copy call (design 8.2). */
-export const COPY_CALL_TOKENS = { input: 4_400, output: 1_500 } as const
+const COPY_CALL_TOKENS = { input: 4_400, output: 1_500 } as const
 
 export interface SeasonCostCandidate {
   edition: string | null

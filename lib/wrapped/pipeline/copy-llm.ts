@@ -16,6 +16,7 @@ import { setTimeout as sleep } from "node:timers/promises"
 import { z } from "zod"
 
 import type { GenerateStructuredInput, StructuredResult } from "@/lib/llm/generate-structured"
+import type { EffortLevel } from "@/lib/llm/models"
 import type { UsageAttribution } from "@/lib/llm/usage"
 import type { ConsumeResult } from "@/lib/security/rate-limit"
 import { RewindCopyV3Wire } from "@/lib/wrapped/copy/schema"
@@ -25,7 +26,8 @@ import { PROMPT_VERSION, systemPrompt, userPrompt, type UserPromptInput } from "
 import type { TextSlotId } from "./copy-draft"
 
 const CALL_TIMEOUT_MS = 90_000
-const MAX_OUTPUT_TOKENS = 1800
+/** The copy and repair calls' output limit; the dry-run estimate prices a call at it. */
+export const MAX_OUTPUT_TOKENS = 1800
 
 /** `generateStructured`, injectable for tests and the eval harness. */
 export type GenerateFn = <S extends z.ZodType>(input: GenerateStructuredInput<S>) => Promise<StructuredResult<z.infer<S>>>
@@ -38,6 +40,8 @@ export interface LlmCall {
   signal: AbortSignal
   attribution: UsageAttribution
   styleGuide: string | null
+  /** A reasoning effort for this run only (dry runs); `low` by default. */
+  effort?: EffortLevel
 }
 
 /** Waits, bounded by the signal, until the provider's `rw:llm` limit has a point. */
@@ -53,7 +57,7 @@ function base(call: LlmCall, modelOverride: string | undefined) {
   return {
     purpose: "wrapped" as const,
     system: systemPrompt(call.styleGuide),
-    effort: "low" as const,
+    effort: call.effort ?? "low",
     maxOutputTokens: MAX_OUTPUT_TOKENS,
     cacheKey: PROMPT_VERSION,
     signal: AbortSignal.any([call.signal, AbortSignal.timeout(CALL_TIMEOUT_MS)]),

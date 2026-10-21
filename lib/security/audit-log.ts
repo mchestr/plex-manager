@@ -92,8 +92,10 @@ export enum AuditEventType {
    * known; saves are audited as CONFIG_CHANGED since P4.6.
    */
   LLM_PROVIDER_CHANGED = "LLM_PROVIDER_CHANGED",
-  // An admin asked for the Rewind season data (server aggregate and metadata
-  // warm) to be prepared. Details carry the year, the last data day and the job id.
+  /**
+   * @public P2.6's "Prepare season data" press (year, last data day, job id).
+   * Kept so stored rows stay known; P7.8's Prepare season writes REWIND_SEASON_PREPARED.
+   */
   REWIND_SEASON_DATA_PREPARED = "REWIND_SEASON_DATA_PREPARED",
   // An admin asked for a member's Rewind to be regenerated. Details carry the year
   // and whether a run was already queued.
@@ -103,6 +105,7 @@ export enum AuditEventType {
   REWIND_SEASON_PREPARED = "REWIND_SEASON_PREPARED",
   REWIND_GENERATE_ALL_STARTED = "REWIND_GENERATE_ALL_STARTED",
   REWIND_RETRY_FAILED = "REWIND_RETRY_FAILED",
+  /** @public P8.5 writes it when Run final cut enqueues `REWIND_FINAL_CUT`. */
   REWIND_FINAL_CUT_STARTED = "REWIND_FINAL_CUT_STARTED",
   // A credential, settings, setup or prompt-template change. Details carry the
   // redacted diff from lib/security/config-diff.ts: changed field names, whether

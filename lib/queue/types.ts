@@ -5,6 +5,7 @@
  * Add new job types here as the system grows.
  */
 
+import type { DryRunInput } from "@/lib/rewind/dry-run/input"
 import type { SessionRevocationReason } from "@/lib/session-revocation"
 import type { GenerationAudience } from "@/lib/wrapped/pipeline/eligibility"
 import type { WatchlistSkipCode } from "@/lib/watchlist/skip"
@@ -33,6 +34,8 @@ export const JOB_TYPES = {
   // Share cards (P5.10), on `rewind-aux`
   REWIND_CARD_PREWARM: "rewind:card:prewarm",
   REWIND_CARD_SWEEP: "rewind:card:sweep",
+  // Admin dry runs (P7.10), on `rewind-aux`
+  REWIND_DRY_RUN: "rewind:dry-run",
 } as const
 
 export type JobType = (typeof JOB_TYPES)[keyof typeof JOB_TYPES]
@@ -261,6 +264,13 @@ export interface RewindCardPrewarmPayload {
   wrappedId: string
 }
 
+/** One admin dry run (P7.10): its preview id (also the job id), the admin, and the parsed input. */
+export interface RewindDryRunPayload {
+  previewId: string
+  adminId: string
+  input: DryRunInput
+}
+
 // =============================================================================
 // Type Mapping
 // =============================================================================
@@ -284,6 +294,7 @@ export interface JobPayloadMap {
   [JOB_TYPES.REWIND_GENERATE_ALL]: RewindGenerateAllPayload
   [JOB_TYPES.REWIND_CARD_PREWARM]: RewindCardPrewarmPayload
   [JOB_TYPES.REWIND_CARD_SWEEP]: Record<string, never>
+  [JOB_TYPES.REWIND_DRY_RUN]: RewindDryRunPayload
 }
 
 // =============================================================================

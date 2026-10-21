@@ -42,7 +42,11 @@ export async function getRewindSeasonSpend(year: number): Promise<number> {
   return spent._sum.cost ?? 0
 }
 
-/** Each member's most recent provider and model, from one `distinct` query. */
+/**
+ * Each member's most recent provider and model, from one `distinct` query.
+ *
+ * @internal until P10.8's Overview reads it; `usageTotalsByUser` uses it today
+ */
 export async function latestModelByUser(userIds?: readonly string[]): Promise<Map<string, LatestModel>> {
   const rows = await prisma.lLMUsage.findMany({
     where: userIds ? { userId: { in: [...userIds] } } : undefined,

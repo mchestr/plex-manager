@@ -98,7 +98,9 @@ const FINAL_CUT_NOT_YET = "Available from 1 January"
 /**
  * Run final cut: refused until 1 January has begun in the westernmost zone.
  * P8.5 registers `REWIND_FINAL_CUT` and replaces the second refusal with the
- * enqueue and its `REWIND_FINAL_CUT_STARTED` audit entry.
+ * enqueue and its `REWIND_FINAL_CUT_STARTED` audit entry, and enables the button.
+ *
+ * @internal until P8.5 wires the console's button to it
  */
 export const runRewindFinalCut = adminAction({
   input: yearInput,

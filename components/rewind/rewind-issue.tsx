@@ -26,6 +26,8 @@ interface RewindIssueProps {
   returnTo: Route
   /** `?sheet=share` opens the share sheet over the cover. */
   initialSheet?: SheetName
+  /** An admin's dry run (P7.10): no share setup, and the stage runs in preview mode. */
+  preview?: boolean
 }
 
 /**
@@ -34,7 +36,7 @@ interface RewindIssueProps {
  * the server and handed to P5.2's `StoryStage` as slots, with the share
  * sheet's setup (P5.11).
  */
-export async function RewindIssue({ rewindId, data, userId, returnTo, initialSheet }: RewindIssueProps) {
+export async function RewindIssue({ rewindId, data, userId, returnTo, initialSheet, preview = false }: RewindIssueProps) {
   const [settings, brand, config] = await Promise.all([
     getAppSettings(),
     serverName(),
@@ -42,7 +44,7 @@ export async function RewindIssue({ rewindId, data, userId, returnTo, initialShe
   ])
   const archetype = data.archetype?.id ?? null
   const pages = validatePagesOnRead(data.pages, { archetype, disabledPages: DisabledPagesSchema.parse(config?.rewindDisabledPages ?? []) })
-  const share = await loadShareSetup({ userId, rewindId, year: data.year, pages })
+  const share = preview ? null : await loadShareSetup({ userId, rewindId, year: data.year, pages })
   const issue: IssueContext = {
     year: data.year,
     userId,
@@ -72,8 +74,9 @@ export async function RewindIssue({ rewindId, data, userId, returnTo, initialShe
       archetype={archetype}
       closeHref={returnTo}
       copy={{ copySource: data.copySource, model: data.copyMeta.model }}
-      share={{ setup: share, actions: { enable: enableRewindShare, rotate: rotateRewindShare, disable: disableRewindShare, savePrefs: saveRewindSharePrefs } }}
+      share={share ? { setup: share, actions: { enable: enableRewindShare, rotate: rotateRewindShare, disable: disableRewindShare, savePrefs: saveRewindSharePrefs } } : undefined}
       initialSheet={initialSheet}
+      mode={preview ? "preview" : "member"}
     />
   )
 }

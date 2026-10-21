@@ -124,13 +124,6 @@ export const A11Y_ROUTES: A11yRoute[] = [
   { path: '/admin/playground', as: 'admin', ready: 'admin-playground-heading' },
   { path: '/admin/queues', as: 'admin', ready: 'queue-status' },
   { path: '/admin/settings', as: 'admin', ready: 'stripe-settings-card' },
-  {
-    path: '/admin/settings',
-    as: 'admin',
-    state: 'Wrapped settings editing',
-    ready: 'wrapped-settings-edit-button',
-    setup: (page) => openWith(page, 'wrapped-settings-edit-button', 'wrapped-settings-year-note'),
-  },
   // The public share route records a visit; a worker restart's re-seed drops it.
   { path: '/admin/shares', as: 'admin', ready: 'admin-shares-heading', reset: clearA11yShareVisits },
   { path: '/admin/llm-usage', as: 'admin', ready: 'admin-llm-usage-heading' },

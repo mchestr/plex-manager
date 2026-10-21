@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "commit": "ea274ee4a67ffb04aef7ec99494b9c4659a7980b",
-  "generatedAt": "2026-10-20T23:59:18.150Z",
+  "commit": "82877bc725f43d35516bbaad65167ec6580708b2",
+  "generatedAt": "2026-10-21T06:33:42.445Z",
   "files": {
     "app/(app)/page.tsx": {
       "gradient": 2,
@@ -71,7 +71,7 @@
     },
     "app/admin/settings/page.tsx": {
       "blur": 5,
-      "copy": 2,
+      "copy": 1,
       "raw-palette": 95
     },
     "app/admin/shares/page.tsx": {
@@ -316,10 +316,6 @@
       "blur": 2,
       "infinite-motion": 1,
       "raw-palette": 42
-    },
-    "components/admin/settings/wrapped-settings-form.tsx": {
-      "copy": 2,
-      "raw-palette": 15
     },
     "components/admin/shared/unauthenticated-error.tsx": {
       "infinite-motion": 1,
@@ -721,10 +717,10 @@
     "arbitrary-type-z": 31,
     "blur": 133,
     "caps-eyebrow": 84,
-    "copy": 28,
+    "copy": 25,
     "gradient": 104,
     "gradient-text": 52,
     "infinite-motion": 47,
-    "raw-palette": 2975
+    "raw-palette": 2960
   }
 }
