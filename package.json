@@ -19,6 +19,7 @@
     "design:update": "node scripts/check-design-system.mjs --update",
     "design:baseline": "node scripts/check-design-system.mjs --baseline",
     "design:rewind-motion": "node scripts/design-system/rewind-motion.mjs",
+    "codemod:tokens": "tsx --tsconfig tsconfig.scripts.json scripts/codemods/tokens.ts",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
