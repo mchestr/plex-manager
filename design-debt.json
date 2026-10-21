@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "commit": "fd241d92fa33ee567dff2a6095fbaa61d1a7531b",
-  "generatedAt": "2026-10-21T06:56:22.574Z",
+  "commit": "9b8517c08a2ccf964af179de461e4853d3fb7134",
+  "generatedAt": "2026-10-21T07:11:53.270Z",
   "files": {
     "app/(app)/page.tsx": {
       "gradient": 2,
@@ -96,7 +96,6 @@
     },
     "app/admin/wrapped/[wrappedId]/history/[llmUsageId]/page.tsx": {
       "blur": 3,
-      "copy": 1,
       "gradient": 2,
       "raw-palette": 24
     },
@@ -673,10 +672,6 @@
       "gradient-text": 2,
       "raw-palette": 10
     },
-    "components/wrapped/wrapped-share-button.tsx": {
-      "gradient": 1,
-      "raw-palette": 9
-    },
     "components/wrapped/wrapped-transition.tsx": {
       "copy": 1,
       "gradient": 8,
@@ -693,9 +688,6 @@
     },
     "components/wrapped/wrapped-viewer.tsx": {
       "raw-palette": 11
-    },
-    "components/wrapped/wrapped-year-links.tsx": {
-      "raw-palette": 9
     }
   },
   "totals": {
@@ -703,10 +695,10 @@
     "arbitrary-type-z": 31,
     "blur": 126,
     "caps-eyebrow": 84,
-    "copy": 23,
-    "gradient": 101,
+    "copy": 22,
+    "gradient": 100,
     "gradient-text": 50,
     "infinite-motion": 47,
-    "raw-palette": 2907
+    "raw-palette": 2889
   }
 }

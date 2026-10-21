@@ -4,16 +4,22 @@ import type { Page, Response } from '@playwright/test';
 
 import { expect, signInAs, test } from '../fixtures/session';
 import { openStage } from '../helpers/rewind-stage';
-import { clearRewindSeed, REWIND_MEMBERS, seedRewind } from '../helpers/seed-rewind';
+import { ARCHIVE_YEAR, clearRewindSeed, REWIND_MEMBERS, seedArchiveRewind, seedRewind } from '../helpers/seed-rewind';
+import { WAIT_TIMEOUTS } from '../helpers/test-utils';
 
 /**
  * The first-page JavaScript budget (P5.4, NFR-5): the scripts that only
  * `/rewind/<year>` loads, up to `networkidle`, gzip to at most 110 KB.
  * React, Next and the root providers load on a 404 page of the same build
  * too, so they are left out. The measured size is logged on every run.
+ *
+ * No `/rewind` route loads chart.js (P7.13): the story, the article and a
+ * stored 2025 year, now an archive article, are checked for its code.
  */
 
 const BUDGET_BYTES = 110 * 1024;
+/** An error message only chart.js's own code holds, minified or not. */
+const CHART_JS_MARKER = 'Failed to create chart';
 
 /** Every script `page` receives while `load` runs, by URL, with its body. */
 async function scriptsWhile(page: Page, load: () => Promise<void>): Promise<Map<string, Buffer>> {
@@ -37,7 +43,10 @@ async function scriptsWhile(page: Page, load: () => Promise<void>): Promise<Map<
 }
 
 test.describe('Rewind first-page JavaScript', () => {
-  test.beforeAll(seedRewind);
+  test.beforeAll(async () => {
+    await seedRewind();
+    await seedArchiveRewind(REWIND_MEMBERS.heavy.id);
+  });
   test.afterAll(clearRewindSeed);
 
   test('the scripts only Rewind loads gzip to 110 KB or less', async ({ browser, baseURL }) => {
@@ -71,5 +80,27 @@ test.describe('Rewind first-page JavaScript', () => {
     expect(total, summary).toBeLessThanOrEqual(BUDGET_BYTES);
     await shell.close();
     await rewind.close();
+  });
+
+  test('no /rewind route loads chart.js, the 2025 archive included', async ({ page, signIn }) => {
+    await signIn(REWIND_MEMBERS.heavy.id);
+
+    const archive = await scriptsWhile(page, async () => {
+      await page.goto(`/rewind/${ARCHIVE_YEAR}`);
+      await expect(page.getByTestId('rewind-article-mode')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    });
+    const article = await scriptsWhile(page, async () => {
+      await page.goto('/rewind/2026/read');
+      await expect(page.getByTestId('rewind-article-mode')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    });
+    const story = await scriptsWhile(page, async () => {
+      await openStage(page);
+    });
+
+    const charted = [...archive, ...article, ...story]
+      .filter(([, body]) => body.toString('utf8').includes(CHART_JS_MARKER))
+      .map(([url]) => new URL(url).pathname);
+    expect(archive.size, 'the archive page loaded scripts').toBeGreaterThan(0);
+    expect(charted).toEqual([]);
   });
 });

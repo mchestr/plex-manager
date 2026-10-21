@@ -631,10 +631,12 @@ The ten core pages (Bookends included), sharing, privacy and accessibility are n
 **Demo.** Open `/rewind/2025` on a phone: a paper archive article with the 2025 totals, top lists and archetype, in the Rewind fonts. The build's chunk list shows no chart.js for `/rewind/*`, and no route under `app/(app)/rewind/` imports `components/wrapped`.
 
 **Done when.**
-- [ ] `legacy-article.ts` renders stored v1 and v2 years as archive articles in the Rewind theme, on the member, article and admin routes.
-- [ ] No member or admin Rewind route imports `components/wrapped`, and no `/rewind` route loads chart.js.
-- [ ] No member-facing surface says "Wrapped".
-- [ ] The tests on stored fixtures pass.
+- [x] `legacy-article.ts` renders stored v1 and v2 years as archive articles in the Rewind theme, on the member, article and admin routes.
+- [x] No member or admin Rewind route imports `components/wrapped`, and no `/rewind` route loads chart.js.
+- [x] No member-facing surface says "Wrapped".
+- [x] The tests on stored fixtures pass.
+
+(as merged: `legacyToArticle(legacy, { year, brand, locale })` returns `{ title, masthead, sections }` (`ArticleSection`s with no folio or type), not a flat `ArticleBlock[]`; `components/rewind/article/archive-article.tsx` (`ArchiveArticle`, `ArchiveActions`) renders it, and `ArticleDocument` gained a `notice` slot. P7.9 ran in parallel, so its preview's v1/v2 branch should render `<RewindScope><ArchiveArticle …/></RewindScope>` at merge, as the admin history page does; `app/admin/users/[userId]/wrapped/page.tsx` still uses the viewer until P7.9 turns it into a redirect. The live v2 share links of every year, the archive year included, are stopped through `components/rewind/shared-years-notice.tsx` (moved from `components/wrapped`, test ids `rewind-share-stop-<year>`). Deleted with `enableWrappedShareLink`: `generateShareToken`, `AuditEventType.SHARE_LINK_CREATED`, `WrappedShareControls`, `WrappedShareButton`, `WrappedYearLinks` and the viewer wrapper's `canManageShare`. The member-facing "Wrapped" strings in `lib/ui/error-copy.ts` (`GENERATION_FAILED`) and `actions/rewind-generation.ts` were reworded. `e2e/a11y/routes.ts` now waits for `rewind-article-mode` on `/rewind`, so the `rewind-v2` visual baseline and the axe baseline for the member Rewind routes need regenerating. E2E specs were written but not run.)
 
 ### Step P7.14: Ready notifications and view tracking
 

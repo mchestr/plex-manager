@@ -1,6 +1,6 @@
 /**
  * What `/rewind/<year>` shows for the signed-in member (P5.1, design FR-1):
- * their v3 issue, their stored v1 or v2 Rewind in the legacy viewer, or a
+ * their v3 issue, their stored v1 or v2 Rewind as an archive article (P7.13), or a
  * status panel for every other state.
  *
  * ## Branches
@@ -8,7 +8,7 @@
  * 1. A completed row is read through `parseStoredRewind()`:
  *    - v3 opens the issue. `rewindEnabled` and `rewindAudience` gate it for
  *      members until the season's launch; admins pass both flags;
- *    - v1 and v2 always open for their owner, in the legacy viewer;
+ *    - v1 and v2 always open for their owner, as an archive article;
  *    - a row that does not parse shows `parse-error`.
  * 2. Otherwise the status rule of `deriveRewindStatus()` decides: a queued
  *    or running run shows `generating`, Redis missing or down `unavailable`
@@ -41,7 +41,7 @@ export type RewindStatusKind = "generating" | "failed" | "parse-error" | "not-fo
 
 export type RewindYearView =
   | { kind: "issue"; id: string; data: RewindDataV3 }
-  | { kind: "legacy"; data: StoredWrappedData; shareToken: string | null }
+  | { kind: "legacy"; data: StoredWrappedData }
   | { kind: "panel"; panel: RewindStatusKind; code: RewindPanelCode | RewindErrorCode }
 
 interface Viewer {
@@ -89,7 +89,7 @@ export async function loadRewindYearView(viewer: Viewer, year: number): Promise<
       return (await issueOpenTo(viewer)) ? { kind: "issue", id: row.id, data: stored.data } : panel("unavailable", "REWIND_NOT_OPEN")
     }
     if (stored.version === "invalid") return panel("parse-error", "REWIND_UNREADABLE")
-    return { kind: "legacy", data: stored.legacy, shareToken: row.shareToken }
+    return { kind: "legacy", data: stored.legacy }
   }
 
   const latest = await prisma.rewindGeneration.findFirst({

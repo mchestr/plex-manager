@@ -11,7 +11,7 @@ import { yearSchema } from "@/lib/validations/shared-schemas"
 
 /**
  * A Rewind share token as a URL segment: 43 base64url characters, the 32
- * random bytes `generateShareToken` encodes.
+ * random bytes a share token encodes.
  */
 export const shareTokenSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/, "Invalid share token")
 

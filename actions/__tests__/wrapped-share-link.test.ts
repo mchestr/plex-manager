@@ -1,14 +1,14 @@
 /**
- * Tests for actions/wrapped-share-link.ts - opt-in share links (P0.19, SEC-16).
+ * Tests for actions/wrapped-share-link.ts: stopping a v2 share link (P0.19,
+ * SEC-16). P7.13 deleted the action that minted one.
  *
  * The Prisma mock is a small in-memory PlexWrapped table, so the tests check
  * what ends up stored rather than which calls were made.
  */
 
-import { disableWrappedShareLink, enableWrappedShareLink } from '@/actions/wrapped-share-link'
+import { disableWrappedShareLink } from '@/actions/wrapped-share-link'
 import { prisma } from '@/lib/prisma'
 import { AuditEventType, logAuditEvent } from '@/lib/security/audit-log'
-import { generateShareToken } from '@/lib/utils'
 import { forgetShareToken } from '@/lib/wrapped/poster-keys'
 import { getServerSession } from 'next-auth'
 import { revalidatePath } from 'next/cache'
@@ -36,11 +36,6 @@ jest.mock('@/lib/security/audit-log', () => ({
   logAuditEvent: jest.fn(),
 }))
 
-jest.mock('@/lib/utils', () => ({
-  ...jest.requireActual('@/lib/utils'),
-  generateShareToken: jest.fn(),
-}))
-
 jest.mock('@/lib/wrapped/poster-keys', () => ({
   forgetShareToken: jest.fn(),
 }))
@@ -48,8 +43,6 @@ jest.mock('@/lib/wrapped/poster-keys', () => ({
 jest.mock('@/lib/utils/logger', () => ({
   createLogger: () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }),
 }))
-
-process.env.NEXT_PUBLIC_APP_URL = 'https://plex.example.com'
 
 const YEAR = 2026
 
@@ -62,7 +55,6 @@ interface Row {
 }
 
 let rows: Row[]
-let mintedCount: number
 // The rate limiter's store lives for the whole file, so each test signs in as
 // a member of its own.
 let memberId: string
@@ -72,11 +64,6 @@ function seed(row: Partial<Row> & Pick<Row, 'userId'>): Row {
   const full: Row = { id: `wrapped-${row.userId}`, year: YEAR, status: 'completed', shareToken: null, ...row }
   rows.push(full)
   return full
-}
-
-function tokenOf(result: Awaited<ReturnType<typeof enableWrappedShareLink>>): string {
-  if (!result.success) throw new Error(`enable failed: ${result.error}`)
-  return result.data.shareToken
 }
 
 function rowOf(userId: string): Row {
@@ -101,13 +88,6 @@ function installFakeTable() {
     const row = rows.find((r) => matches(r, where))
     return row ? { ...row } : null
   })
-  ;(prisma.plexWrapped.updateMany as jest.Mock).mockImplementation(
-    async ({ where, data }: { where: Where; data: Partial<Row> }) => {
-      const hit = rows.filter((r) => matches(r, where))
-      hit.forEach((r) => Object.assign(r, data))
-      return { count: hit.length }
-    }
-  )
   ;(prisma.plexWrapped.update as jest.Mock).mockImplementation(
     async ({ where, data }: { where: Where; data: Partial<Row> }) => {
       const row = rows.find((r) => matches(r, where))
@@ -121,180 +101,13 @@ function installFakeTable() {
 beforeEach(() => {
   jest.clearAllMocks()
   rows = []
-  mintedCount = 0
   memberCounter += 1
   memberId = `member-${memberCounter}`
   ;(getServerSession as jest.Mock).mockResolvedValue({
     user: { id: memberId, isAdmin: false },
     expires: new Date(Date.now() + 86400000).toISOString(),
   })
-  ;(generateShareToken as jest.Mock).mockImplementation(() => `token-${++mintedCount}`)
   installFakeTable()
-})
-
-describe('enableWrappedShareLink', () => {
-  it('mints a token for the member\'s own completed Rewind and returns the URL', async () => {
-    seed({ userId: memberId })
-
-    const result = await enableWrappedShareLink({ year: YEAR })
-
-    expect(result).toEqual({
-      success: true,
-      data: { shareToken: 'token-1', url: 'https://plex.example.com/rewind/s/token-1' },
-    })
-    expect(rowOf(memberId).shareToken).toBe('token-1')
-    expect(revalidatePath).toHaveBeenCalledWith('/rewind', 'layout')
-  })
-
-  it('is idempotent: a second call returns the same link and mints nothing', async () => {
-    seed({ userId: memberId })
-
-    const first = await enableWrappedShareLink({ year: YEAR })
-    const second = await enableWrappedShareLink({ year: YEAR })
-
-    expect(second).toEqual(first)
-    expect(generateShareToken).toHaveBeenCalledTimes(1)
-    expect(prisma.plexWrapped.updateMany).toHaveBeenCalledTimes(1)
-    expect(rowOf(memberId).shareToken).toBe('token-1')
-  })
-
-  it('returns a link that survives from before opt-in instead of replacing it', async () => {
-    seed({ userId: memberId, shareToken: 'surviving-v2-token' })
-
-    const result = await enableWrappedShareLink({ year: YEAR })
-
-    expect(result).toMatchObject({ success: true, data: { shareToken: 'surviving-v2-token' } })
-    expect(generateShareToken).not.toHaveBeenCalled()
-    expect(logAuditEvent).not.toHaveBeenCalled()
-  })
-
-  it('gives two concurrent calls the same link', async () => {
-    seed({ userId: memberId })
-
-    const [a, b] = await Promise.all([
-      enableWrappedShareLink({ year: YEAR }),
-      enableWrappedShareLink({ year: YEAR }),
-    ])
-
-    expect(tokenOf(a)).toBe(tokenOf(b))
-    expect(rowOf(memberId).shareToken).toBe(tokenOf(a))
-    expect(logAuditEvent).toHaveBeenCalledTimes(1)
-  })
-
-  it('works only on the caller\'s own row, whatever the input claims', async () => {
-    seed({ userId: memberId })
-    seed({ userId: 'someone-else' })
-
-    const result = await enableWrappedShareLink({ year: YEAR, userId: 'someone-else' } as { year: number })
-
-    expect(result.success).toBe(true)
-    expect(rowOf(memberId).shareToken).toBe('token-1')
-    expect(rowOf('someone-else').shareToken).toBeNull()
-  })
-
-  it('refuses when the member has no Rewind for that year, even if others do', async () => {
-    seed({ userId: 'someone-else' })
-
-    const result = await enableWrappedShareLink({ year: YEAR })
-
-    expect(result).toEqual({ success: false, code: 'CONFLICT', error: 'Your Rewind for this year is not ready to share' })
-    expect(rowOf('someone-else').shareToken).toBeNull()
-    expect(generateShareToken).not.toHaveBeenCalled()
-  })
-
-  it.each(['generating', 'failed', 'pending'])('refuses a %s Rewind', async (status) => {
-    seed({ userId: memberId, status })
-
-    const result = await enableWrappedShareLink({ year: YEAR })
-
-    expect(result.success).toBe(false)
-    expect(rowOf(memberId).shareToken).toBeNull()
-    expect(generateShareToken).not.toHaveBeenCalled()
-  })
-
-  it('records an audit entry that never carries the token', async () => {
-    const row = seed({ userId: memberId })
-
-    await enableWrappedShareLink({ year: YEAR })
-
-    expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.SHARE_LINK_CREATED, memberId, {
-      wrappedId: row.id,
-      year: YEAR,
-    })
-    expect(JSON.stringify((logAuditEvent as jest.Mock).mock.calls)).not.toContain('token-1')
-  })
-
-  it('requires a session', async () => {
-    seed({ userId: memberId })
-    ;(getServerSession as jest.Mock).mockResolvedValue(null)
-
-    const result = await enableWrappedShareLink({ year: YEAR })
-
-    expect(result).toMatchObject({ success: false, code: 'UNAUTHENTICATED' })
-    expect(prisma.plexWrapped.findUnique).not.toHaveBeenCalled()
-  })
-
-  it.each([
-    ['a year out of range', { year: 1999 }],
-    ['a non-integer year', { year: 2026.5 }],
-    ['a string year', { year: '2026' }],
-  ])('rejects %s', async (_label, input) => {
-    seed({ userId: memberId })
-
-    const result = await enableWrappedShareLink(input as { year: number })
-
-    expect(result).toMatchObject({ success: false, code: 'VALIDATION' })
-    expect(prisma.plexWrapped.findUnique).not.toHaveBeenCalled()
-  })
-
-  it('allows ten share-link creations an hour and refuses the eleventh', async () => {
-    seed({ userId: memberId })
-
-    for (let i = 0; i < 10; i++) {
-      const result = await enableWrappedShareLink({ year: YEAR })
-      expect(result.success).toBe(true)
-    }
-    ;(prisma.plexWrapped.findUnique as jest.Mock).mockClear()
-
-    const limited = await enableWrappedShareLink({ year: YEAR })
-
-    expect(limited).toMatchObject({ success: false, code: 'RATE_LIMITED' })
-    expect(prisma.plexWrapped.findUnique).not.toHaveBeenCalled()
-  })
-
-  it('does not count stopping a link against the limit', async () => {
-    seed({ userId: memberId })
-
-    for (let i = 0; i < 5; i++) {
-      expect((await enableWrappedShareLink({ year: YEAR })).success).toBe(true)
-      expect((await disableWrappedShareLink({ year: YEAR })).success).toBe(true)
-    }
-    for (let i = 0; i < 5; i++) {
-      expect((await enableWrappedShareLink({ year: YEAR })).success).toBe(true)
-    }
-
-    expect(await enableWrappedShareLink({ year: YEAR })).toMatchObject({ success: false, code: 'RATE_LIMITED' })
-  })
-
-  it('creates no link when the public URL cannot be built', async () => {
-    seed({ userId: memberId })
-    const saved = { app: process.env.NEXT_PUBLIC_APP_URL, auth: process.env.NEXTAUTH_URL }
-    delete process.env.NEXT_PUBLIC_APP_URL
-    delete process.env.NEXTAUTH_URL
-
-    try {
-      const result = await enableWrappedShareLink({ year: YEAR })
-
-      expect(result).toEqual({ success: false, code: 'INTERNAL', error: 'Failed to create share link' })
-    } finally {
-      process.env.NEXT_PUBLIC_APP_URL = saved.app
-      if (saved.auth !== undefined) process.env.NEXTAUTH_URL = saved.auth
-    }
-    expect(rowOf(memberId).shareToken).toBeNull()
-    expect(generateShareToken).not.toHaveBeenCalled()
-    expect(prisma.plexWrapped.updateMany).not.toHaveBeenCalled()
-    expect(logAuditEvent).not.toHaveBeenCalled()
-  })
 })
 
 describe('disableWrappedShareLink', () => {
@@ -313,16 +126,6 @@ describe('disableWrappedShareLink', () => {
     expect(revalidatePath).toHaveBeenCalledWith('/rewind', 'layout')
     // The poster proxy stops serving the old token at once, not after its cache TTL.
     expect(forgetShareToken).toHaveBeenCalledWith('live-token')
-  })
-
-  it('makes a later enable mint a new token rather than revive the old one', async () => {
-    seed({ userId: memberId, shareToken: 'old-token' })
-
-    await disableWrappedShareLink({ year: YEAR })
-    const result = await enableWrappedShareLink({ year: YEAR })
-
-    expect(result).toMatchObject({ success: true, data: { shareToken: 'token-1' } })
-    expect(rowOf(memberId).shareToken).toBe('token-1')
   })
 
   it('succeeds without writing when no link is on', async () => {
@@ -361,20 +164,6 @@ describe('disableWrappedShareLink', () => {
 
     expect(result).toMatchObject({ success: false, code: 'UNAUTHENTICATED' })
     expect(rowOf(memberId).shareToken).toBe('live-token')
-  })
-
-  it('stops a live link for a member who has used up the creation limit', async () => {
-    seed({ userId: memberId })
-    for (let i = 0; i < 10; i++) {
-      expect((await enableWrappedShareLink({ year: YEAR })).success).toBe(true)
-    }
-    expect((await enableWrappedShareLink({ year: YEAR })).success).toBe(false)
-    expect(rowOf(memberId).shareToken).toBe('token-1')
-
-    const result = await disableWrappedShareLink({ year: YEAR })
-
-    expect(result).toEqual({ success: true, data: null })
-    expect(rowOf(memberId).shareToken).toBeNull()
   })
 
   it('stops a link for another year than the one on screen', async () => {

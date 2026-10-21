@@ -15,6 +15,8 @@ interface ArticleDocumentProps {
   sections: readonly ArticleSection[]
   /** Links out of the article ("Play the story"), hidden in print. */
   actions?: ReactNode
+  /** Shown under the masthead, such as the archive's live share links (P7.13). */
+  notice?: ReactNode
 }
 
 /**
@@ -24,7 +26,7 @@ interface ArticleDocumentProps {
  * "05 Top shows", then the page's blocks. P7.13's legacy years and P7.9's
  * admin preview render through it with their own sections.
  */
-export function ArticleDocument({ title, masthead, sections, actions }: ArticleDocumentProps) {
+export function ArticleDocument({ title, masthead, sections, actions, notice }: ArticleDocumentProps) {
   const paper = inkProps("paper")
   return (
     <article
@@ -48,6 +50,7 @@ export function ArticleDocument({ title, masthead, sections, actions }: ArticleD
             </nav>
           )}
         </header>
+        {notice}
         {sections.map((section) => (
           <section
             key={section.id}
