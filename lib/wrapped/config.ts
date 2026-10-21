@@ -4,7 +4,7 @@
  * @module lib/wrapped/config
  */
 
-import { DISABLED_LIST_ENTRIES, REWIND_NOTIFY_CHANNELS, type RewindSettings } from "@/lib/validations/rewind-settings"
+import { REWIND_DISABLED_PAGE_ENTRIES, REWIND_NOTIFY_CHANNELS, type RewindSettings } from "@/lib/validations/rewind-settings"
 import { excludedSectionIdsSchema } from "@/lib/wrapped/sources/schemas"
 
 export type RewindLlmMode = "standard" | "economy" | "off"
@@ -96,7 +96,7 @@ export function rewindSettingsFromConfig(row: RewindSettingsRow): RewindSettings
     rewindExcludedSectionIds: sortedStrings(excludedSectionIdsSchema.parse(row.rewindExcludedSectionIds ?? null)),
     rewindExcludedContentRatings: sortedStrings(ratings),
     rewindIncludeManagedUsers: row.rewindIncludeManagedUsers,
-    rewindDisabledPages: pick(DISABLED_LIST_ENTRIES, row.rewindDisabledPages),
+    rewindDisabledPages: pick(REWIND_DISABLED_PAGE_ENTRIES, row.rewindDisabledPages),
     rewindNotifyChannels: pick(REWIND_NOTIFY_CHANNELS, row.rewindNotifyChannels),
   }
 }

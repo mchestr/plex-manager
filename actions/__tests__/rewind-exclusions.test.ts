@@ -69,12 +69,22 @@ beforeEach(() => {
   jest.mocked(enqueueRewindGeneration).mockResolvedValue({ alreadyQueued: false, generationId: "gen-1" })
   prismaMock.plexWrapped.findUnique.mockImplementation((async ({ where }: { where: { userId_year: { userId: string; year: number } } }) =>
     wrapped.find((w) => w.userId === where.userId_year.userId && w.year === where.userId_year.year) ?? null) as never)
+  prismaMock.plexWrapped.findMany.mockResolvedValue([])
   prismaMock.$transaction.mockImplementation((async (fn: (tx: unknown) => Promise<unknown>) => fn(asTransactionClient(prismaMock))) as never)
   seedRewind(memberId)
 })
 
 describe("hideRewindTitle", () => {
+  it("treats hiding a title that is already hidden as done, with no point spent and no regeneration", async () => {
+    prismaMock.rewindExclusion.findUnique.mockResolvedValue({ id: "ex-1" } as never)
+    expect(await hide()).toEqual({ success: true, data: { regenerating: false } })
+    expect(consume).not.toHaveBeenCalled()
+    expect(prismaMock.$transaction).not.toHaveBeenCalled()
+    expect(enqueueRewindGeneration).not.toHaveBeenCalled()
+  })
+
   it("writes the row and bumps the version in one transaction, then enqueues a no-LLM run", async () => {
+    prismaMock.plexWrapped.findMany.mockResolvedValue([{ year: YEAR }, { year: 2025 }] as never)
     expect(await hide()).toEqual({ success: true, data: { regenerating: true } })
 
     expect(prismaMock.$transaction).toHaveBeenCalledTimes(1)
@@ -83,10 +93,17 @@ describe("hideRewindTitle", () => {
       create: { userId: memberId, ratingKey: no1.ratingKey, kind: "series", title: no1.title },
       update: {},
     })
-    expect(prismaMock.rewindPrefs.upsert).toHaveBeenCalledWith({
-      where: { userId_year: { userId: memberId, year: YEAR } },
-      create: { userId: memberId, year: YEAR, exclusionsVersion: 1 },
-      update: { exclusionsVersion: { increment: 1 } },
+    // A hide holds in every year: each year with a Rewind gets a prefs row (2025 had none), then every row is bumped
+    expect(prismaMock.rewindPrefs.createMany).toHaveBeenCalledWith({
+      data: [
+        { userId: memberId, year: YEAR, exclusionsVersion: 0 },
+        { userId: memberId, year: 2025, exclusionsVersion: 0 },
+      ],
+      skipDuplicates: true,
+    })
+    expect(prismaMock.rewindPrefs.updateMany).toHaveBeenCalledWith({
+      where: { userId: memberId },
+      data: { exclusionsVersion: { increment: 1 } },
     })
     // The exclusion run: copyPolicy no-llm, the rewind:hide dedup id and the 5 s delay (enqueue-generation)
     expect(enqueueRewindGeneration).toHaveBeenCalledWith({ userId: memberId, year: YEAR, kind: "member", exclusion: {} })
@@ -143,7 +160,7 @@ describe("unhideRewindTitle", () => {
       expect.objectContaining({ where: { userId_ratingKey: { userId: memberId, ratingKey: no1.ratingKey } } })
     )
     expect(prismaMock.rewindExclusion.deleteMany).toHaveBeenCalledWith({ where: { userId: memberId, ratingKey: no1.ratingKey } })
-    expect(prismaMock.rewindPrefs.upsert).toHaveBeenCalledTimes(1)
+    expect(prismaMock.rewindPrefs.updateMany).toHaveBeenCalledTimes(1)
     expect(enqueueRewindGeneration).toHaveBeenCalledWith({ userId: memberId, year: YEAR, kind: "member", exclusion: {} })
     expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.REWIND_TITLE_UNHIDDEN, memberId, { year: YEAR, ratingKey: no1.ratingKey, kind: "series" })
   })

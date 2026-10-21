@@ -42,6 +42,8 @@ function blockText(block: ArticleBlock): string {
       return [block.label ?? "", ...block.entries.map((entry) => `${entry.term} ${textOf(entry.detail)}`)].join(" ")
     case "figure":
       return block.summary
+    case "calendar":
+      return [block.caption, ...block.tables.flatMap((table) => [table.caption, ...table.rows.flat()])].join(" ")
   }
 }
 const textOfNotes = (blocks: readonly ArticleBlock[]) => blocks.map(blockText).join("\n")

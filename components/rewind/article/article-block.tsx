@@ -1,6 +1,12 @@
+import dynamic from "next/dynamic"
 import Link from "next/link"
 
 import type { ArticleBlock, ArticleText } from "@/lib/rewind/article/blocks"
+
+import { ArticleTable } from "./article-table"
+
+// The calendar grid (P8.3, `calendar.grid`) is its own chunk; its server render is the month tables.
+const CalendarGrid = dynamic(() => import("@/components/rewind/calendar/calendar-grid").then((m) => m.CalendarGrid))
 
 /** Article text: tokens as tabular numbers that never wrap, titles in italics in their own direction. */
 export function ArticleTextView({ text }: { text: ArticleText }) {
@@ -20,8 +26,6 @@ export function ArticleTextView({ text }: { text: ArticleText }) {
     )
   })
 }
-
-const cell = "border-b border-current/40 py-1.5 pr-3 text-left align-top [overflow-wrap:anywhere]"
 
 /**
  * One article block (P5.12). Every block is static HTML: a page's headline is
@@ -72,37 +76,9 @@ export function ArticleBlockView({ block }: { block: ArticleBlock }) {
         </div>
       )
     case "table":
-      return (
-        <table className="w-full table-fixed border-collapse" data-testid="rewind-article-table">
-          <caption className="pb-2 text-left italic">{block.table.caption}</caption>
-          <thead>
-            <tr>
-              {block.table.columns.map((column) => (
-                <th key={column} scope="col" className={`${cell} font-display font-semibold`}>
-                  {column}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {block.table.rows.map((row, r) => (
-              <tr key={r}>
-                {row.map((value, c) =>
-                  c === 0 ? (
-                    <th key={c} scope="row" className={`${cell} font-normal`}>
-                      {value}
-                    </th>
-                  ) : (
-                    <td key={c} className={`${cell} tabular-nums`} dir="auto">
-                      {value}
-                    </td>
-                  )
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )
+      return <ArticleTable table={block.table} />
+    case "calendar":
+      return <CalendarGrid caption={block.caption} tables={block.tables} months={block.months} />
     case "definitionList":
       return (
         <div>

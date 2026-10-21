@@ -41,6 +41,8 @@ function blockText(block: ArticleBlock): string {
       return block.entries.map((entry) => `${entry.term} ${textOf(entry.detail)}`).join(" ")
     case "figure":
       return block.summary
+    case "calendar":
+      return block.caption
   }
 }
 

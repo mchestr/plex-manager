@@ -32,7 +32,7 @@ const HOURS_H = 56
  */
 function comparison(data: NumberData, issue: IssueContext) {
   const lastYear = data.lastYearDaily
-  if (!issue.features?.compare2025 || !lastYear || lastYear.reduce((sum, m) => sum + m, 0) === 0) return null
+  if (!issue.features?.["number.compare-2025"] || !lastYear || lastYear.reduce((sum, m) => sum + m, 0) === 0) return null
   const from = String(issue.facts["window.from"]?.value)
   const strip = soundtrackCompare(data.minutes, lastYear, { variant: "compare", window: { from, days: yearDays(from) }, width: MEASURE, height: ROAD_HEIGHT })
   return { lastYear, strip: { above: strip.above, below: strip.below, centre: strip.centre } }

@@ -24,6 +24,7 @@ import { keyToCommand, type StageCommand } from "@/lib/rewind/stage/keymap"
 import { pageInk } from "@/lib/rewind/stage/page-ink"
 import { pageKind, type PlayerEvent, type SheetName } from "@/lib/rewind/stage/player-reducer"
 import { readPrefs } from "@/lib/rewind/stage/prefs"
+import { completeRunning } from "@/lib/rewind/stage/running-animations"
 import { cn } from "@/lib/utils"
 import type { ArchetypeId } from "@/lib/wrapped/archetypes/catalogue"
 
@@ -87,6 +88,12 @@ interface StoryStageProps {
   articleHref?: Route
   /** View tracking (P7.14); only the member mode records views. */
   views?: ViewTracking
+  /** Preview only (P7.11's gallery): the page to open on, an index into `pages`. */
+  initialIndex?: number
+  /** Preview only: no autoplay and motion settled, so the page holds its reduced-motion final state. */
+  still?: boolean
+  /** `stage.tap-completes` (P8.3): a forward tap first lands a running count-up. */
+  tapCompletes?: boolean
 }
 
 /** Before the first fit: the 390 x 844 roomy layout at scale 1, and the spread at 1440 x 900. */
@@ -141,7 +148,22 @@ export function StoryStage({ share, hide, ...props }: StoryStageProps) {
 
 const kindsOf = (pages: readonly StoryStagePage[]) => pages.map((page) => pageKind(pageMeta[page.type].dwell))
 
-function Stage({ pages: fullPages, pocket, year, serverName, archetype, closeHref, copy, initialSheet, mode = "member", articleHref: articleHrefProp, views }: Omit<StoryStageProps, "share" | "hide">) {
+function Stage({
+  pages: fullPages,
+  pocket,
+  year,
+  serverName,
+  archetype,
+  closeHref,
+  copy,
+  initialSheet,
+  mode = "member",
+  articleHref: articleHrefProp,
+  views,
+  initialIndex = 0,
+  still = false,
+  tapCompletes = false,
+}: Omit<StoryStageProps, "share" | "hide">) {
   const router = useRouter()
   const root = useRef<HTMLElement>(null)
   const pagesRef = useRef<HTMLDivElement>(null)
@@ -153,7 +175,7 @@ function Stage({ pages: fullPages, pocket, year, serverName, archetype, closeHre
   const [cut, chooseCut] = useStoryCut(year)
   const pages = cut === "pocket" && pocket ? pocket : fullPages
   const entries = pages.map((page) => pageMeta[page.type])
-  const { state, send: sendPlayer } = useStoryPlayer(kindsOf(pages), prefs.autoplay)
+  const { state, send: sendPlayer } = useStoryPlayer(kindsOf(pages), prefs.autoplay && !still)
   // The cover's cut (FR-4): the page list swaps while the story is still on the cover, then the story starts.
   const send = useCallback(
     (event: PlayerEvent) => {
@@ -205,6 +227,11 @@ function Stage({ pages: fullPages, pocket, year, serverName, archetype, closeHre
     if (initialSheet) send({ type: "OPEN_SHEET", sheet: initialSheet })
   }, [initialSheet, send])
 
+  // The gallery's `?page=`: open on that page.
+  useEffect(() => {
+    if (initialIndex > 0) send({ type: "GOTO", index: initialIndex, source: "key" })
+  }, [initialIndex, send])
+
   // Offer article mode once, on load, below the scale floor or at large text sizes.
   // A layout effect, so the first fitted paint (`data-fitted`) already has the sheet open.
   useLayoutEffect(() => {
@@ -225,6 +252,7 @@ function Stage({ pages: fullPages, pocket, year, serverName, archetype, closeHre
     },
     onHoldStart: () => send({ type: "HOLD_START" }),
     onHoldEnd: () => send({ type: "HOLD_END" }),
+    completeFirst: tapCompletes ? () => completeRunning(pagesRef.current?.querySelector("[data-current]")) : undefined,
   })
 
   const run = (command: StageCommand) => {
@@ -271,7 +299,7 @@ function Stage({ pages: fullPages, pocket, year, serverName, archetype, closeHre
   return (
     <PlayerProvider value={send} sheet={state.mode === "sheet" ? state.sheet : null}>
       <QuizProvider year={year}>
-        <MotionConfig reducedMotion="user">
+        <MotionConfig reducedMotion={still ? "always" : "user"}>
           {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- the labelled stage region takes the story keys while focus is inside it (design 4.6) */}
           <section
             ref={root}
@@ -280,6 +308,7 @@ function Stage({ pages: fullPages, pocket, year, serverName, archetype, closeHre
             data-testid="rewind-stage"
             data-mode={state.mode}
             data-preview={preview || undefined}
+            data-still={still || undefined}
             data-chrome={fit.chrome}
             data-fitted={fit.measured || undefined}
             style={FIT_DEFAULTS}

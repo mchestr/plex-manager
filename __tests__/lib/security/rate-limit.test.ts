@@ -119,6 +119,7 @@ describe("rate-limit", () => {
         "rw:dryrun": { points: 10, duration: 600 },
         "rw:gen:burst": { points: 1, duration: 600 },
         "rw:gen:daily": { points: 3, duration: 86400 },
+        "rw:view": { points: 120, duration: 900 },
         "rw:hide": { points: 20, duration: 86400 },
         "rw:llm": { points: 30, duration: 60 },
       })

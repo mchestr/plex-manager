@@ -12,6 +12,7 @@ the bundled `docker-compose.yml` (database `plex_wrapped`, user `postgres`, the
 - [Dump before every migration](#dump-before-every-migration)
 - [Applying migrations](#applying-migrations)
 - [Migration calendar for the 2026 season](#migration-calendar-for-the-2026-season)
+- [Code freeze gate](#code-freeze-gate)
 - [Installed with db push](#installed-with-db-push)
 
 ## What holds state
@@ -125,6 +126,55 @@ The last pre-season migration ships in the 2026-11-24 soft-launch release. No
 migration merges or deploys from 2026-11-25 to 2027-01-02 except a named freeze
 exception, and that one follows this page: take a dump, then deploy with
 `SKIP_MIGRATIONS=true` on all replicas but one.
+
+## Code freeze gate
+
+`.github/workflows/freeze-gate.yml` runs the "Freeze gate" check on every pull
+request to `main`. While the repository variable `CODE_FREEZE` is `on`, the
+check fails unless the pull request is labelled `freeze:data` or
+`freeze:security`, or changes only files under `.agents/planning/`. While the
+variable is `off` or unset, it passes. It reads the labels and the changed files
+when it runs, so adding a label re-runs it, and a re-run judges the pull request
+as it is now.
+
+Set it up once, before the freeze (an owner with admin rights to the repository):
+
+```bash
+gh variable set CODE_FREEZE --body off
+gh label create freeze:data --description "Data fix allowed during the code freeze"
+gh label create freeze:security --description "Security fix allowed during the code freeze"
+```
+
+After the check has passed on `main`, add "Freeze gate" to the required checks
+of the `main` branch rule, next to Build.
+
+Test it before 2026-12-10. Set `CODE_FREEZE` to `on` for ten minutes, open three
+throwaway pull requests, then set it back to `off` and close them unmerged:
+
+| Pull request | Expected |
+| --- | --- |
+| A one-line change outside `.agents/planning/`, no label | Fails, naming both labels |
+| The same change, labelled `freeze:data` | Passes |
+| A change only under `.agents/planning/`, no label | Passes |
+
+Record the three run ids in
+`.agents/planning/2026-10-17-app-audit-and-rewind-2026/implementation/ship-check.md`.
+
+At 00:00 server time on 2026-12-14, set `CODE_FREEZE` to `on`. Changing the
+variable does not re-run the checks of pull requests that are already open, so
+re-run the gate on each of them:
+
+```bash
+for branch in $(gh pr list --base main --state open --json headRefName --jq '.[].headRefName'); do
+  run=$(gh run list --workflow freeze-gate.yml --branch "$branch" --limit 1 --json databaseId --jq '.[0].databaseId')
+  [ -n "$run" ] && gh run rerun "$run"
+done
+```
+
+Pull requests from forks may not see repository variables, and then the gate
+reads `CODE_FREEZE` as unset and passes; review any fork pull request by hand
+during the freeze. Once the final cut has finished (P9.3), set `CODE_FREEZE`
+back to `off`.
 
 ## Installed with db push
 

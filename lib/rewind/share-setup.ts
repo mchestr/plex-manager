@@ -33,7 +33,7 @@ const PagesSchema = z.array(SharePageTypeSchema).catch([])
  */
 export async function loadShareSetup({
   userId, rewindId, rewind, pages, features,
-}: { userId: string; rewindId: string; rewind: RewindDataV3; pages: ReadonlyArray<{ type: string; folio?: number }>; features?: Pick<RewindFeatureFlags, "editCard" | "saveAll"> }): Promise<ShareSetup> {
+}: { userId: string; rewindId: string; rewind: RewindDataV3; pages: ReadonlyArray<{ type: string; folio?: number }>; features?: Partial<RewindFeatureFlags> }): Promise<ShareSetup> {
   const now = new Date()
   const { year } = rewind
   const [config, prefs, link, canShare, season, settings, ctx] = await Promise.all([
@@ -78,7 +78,7 @@ export async function loadShareSetup({
     folios: Object.fromEntries(pages.flatMap((page) => (page.folio === undefined ? [] : [[page.type, page.folio]]))),
     cardFactOptions: cardFactOptions(rewind, ctx),
     cardFactDefaults: defaults,
-    features: { editCard: features?.editCard ?? false, saveAll: features?.saveAll ?? false },
+    features: { editCard: features?.["share.edit-card"] ?? false, saveAll: features?.["share.save-all"] ?? false },
     seasonCloses: new Intl.DateTimeFormat(settings.locale, { day: "numeric", month: "long", year: "numeric", timeZone: settings.timeZone }).format(closes),
   }
 }

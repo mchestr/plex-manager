@@ -19,13 +19,15 @@ const PREVIEW_CACHE_CONTROL = "private, no-store"
 
 const paramsSchema = z.object({ previewId: previewIdSchema, page: SharePageTypeSchema })
 const sizeSchema = z.enum(["story", "og"]).default("story")
+const dailySchema = z.enum(["0", "1"]).default("0")
 
 /**
- * GET /api/rewind/card/preview/[previewId]/[page]?size=story|og
+ * GET /api/rewind/card/preview/[previewId]/[page]?size=story|og&daily=0|1
  *
  * A dry run's card (P7.10), for admins only: the stored preview through
  * `toShareSafe` with the default options (unsigned, no art, no daily detail,
- * no chosen facts), exactly as the owner route draws the same data. Every
+ * no chosen facts), exactly as the owner route draws the same data. The
+ * gallery (P7.11) passes `daily=1`, so the calendar card exists. Every
  * response is noindex; anything unauthorised, unknown or expired is a 404.
  */
 export async function GET(request: NextRequest, context: { params: Promise<{ previewId: string; page: string }> }) {
@@ -34,6 +36,8 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pre
     if (!params.success) return cardNotFound()
     const size = sizeSchema.safeParse(request.nextUrl.searchParams.get("size") ?? undefined)
     if (!size.success) return cardBadRequest("Invalid size")
+    const daily = dailySchema.safeParse(request.nextUrl.searchParams.get("daily") ?? undefined)
+    if (!daily.success) return cardBadRequest("Invalid daily")
 
     const session = await getServerSession(authOptions)
     if (!session?.user?.isAdmin) return cardNotFound()
@@ -45,7 +49,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ pre
 
     return await serveCard({
       rewind,
-      options: { pages: [page], signed: false, includeArt: false, dailyDetail: false, cardFacts: [] },
+      options: { pages: [page], signed: false, includeArt: false, dailyDetail: daily.data === "1", cardFacts: [] },
       ctx: await loadShareContext({ userId: previewOwnerId(stored.subject), year: rewind.year }),
       page,
       size: size.data,

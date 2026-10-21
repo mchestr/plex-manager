@@ -100,24 +100,25 @@ install stored it off, the console's Regenerate is refused; set it back with
 
 ### Features added in December
 
-`lib/rewind/features.ts` lists the P1 features (`REWIND_FEATURES`). Each is
-off until it is checked under "Features added in December" in the Rewind
-section, which writes the enable entry `+<key>` into `rewindDisabledPages`
-(audited as `CONFIG_CHANGED`); unchecking removes it. The plain key next to
-it switches the feature off again. A fresh install has every feature off, so
-no deploy can turn one on. Turn each on in production only after checking it
-on the heavy test member, and record the enable, the date and the check in
-`ship-check.md`. A flag that misbehaves stays off.
+`lib/rewind/features.ts` lists the P1 interactions, each behind its own flag
+and off on a fresh `Config`. They share `rewindDisabledPages`: a feature is on
+only while the list holds `+<key>` and not the plain `<key>` (the plain key
+beside it switches it off again), so a deploy never turns one on by itself.
+The "Features added in December" switches in the Rewind section write or
+remove the `+` entry, audited as `CONFIG_CHANGED`. Turn each on in production
+only after checking it on the heavy test member, and record the enable, with
+the date and the check, in `ship-check.md`. A flag that misbehaves stays off.
 
-| Key | Feature | Off means |
-| --- | --- | --- |
-| `number.compare-2025` | "Compare with 2025" on page 02: both years as mirrored 7-day averages (P8.4). Hidden without last-year history. | The daily strip only. |
-| `share.edit-card` | Edit card in the share sheet on the centrefold and back cover: three stats from the member's allow-list, saved in their prefs and on a live link (P8.4). | The posters print the default stats. |
-| `share.save-all` | "Save all {n} cards" on the back cover and in the share sheet: one ZIP built in the browser (P8.4). Each run records one `save` share action. | One card at a time. |
-| `notes.core` | Desktop Notes for the cover, the number, the bookends, the guess (no answer until the quiz is answered), top films, the clock and the back cover (P8.4). | Those pages' Notes show their summary. |
-
-P8.3 adds its own keys (`race.scrubber`, `calendar.day-picker`,
-`calendar.grid`, `stage.tap-completes`) to the same list.
+| Switch | Key | What it adds | Off |
+|---|---|---|---|
+| The race: scrubber and Replay | `race.scrubber` | A month slider and Replay under the race, after its single run (at once under reduced motion or on a revisit) | Autoplay once, then the final frame |
+| The calendar: Pick a day | `calendar.day-picker` | "Pick a day" under the calendar: a bottom sheet with a month selector and a row per day | The grid only |
+| Notes and article calendar: arrow-key grid | `calendar.grid` | The desktop Notes and article calendars become a roving-focus grid once hydrated; without JavaScript they stay month tables | Month tables |
+| First tap completes a count-up | `stage.tap-completes` | A forward tap on a page whose count-up is still running lands it; the next tap turns | Every tap turns |
+| The number: Compare with last year | `number.compare-2025` | "Compare with 2025" on page 02: both years as mirrored 7-day averages; hidden without last-year history | The daily strip only |
+| Share: Edit card | `share.edit-card` | Three poster stats on the centrefold and back cover, from the member's allow-list, saved in their prefs and on a live link | The default stats |
+| Share: Save all cards | `share.save-all` | "Save all {n} cards" on the back cover and in the share sheet: one ZIP built in the browser; each run records one `save` share action | One card at a time |
+| Notes for the core pages | `notes.core` | Desktop Notes for the cover, the number, the bookends, the guess (no answer until the quiz is answered or skipped), top films, the clock and the back cover | Their summary |
 
 ## Cut list
 
@@ -223,12 +224,16 @@ rotated and revoked; any new P0 is filed as `rewind-signoff`. Confirm that log
 redaction is live (open a share link and an invite, then search the logs for
 unmasked tokens).
 
-> **Pending P7.11 (gallery).** `/admin/rewind/gallery` and
-> `npm run rewind:gallery` render every page and card of the five review
-> fixtures for the review. Until it merges, review on the admins' own issues.
-> The dry runs it is built on have merged (P7.10): an admin can open a dry run
-> at `/rewind/2026?preview=<id>`, which writes nothing; previews expire after
-> one hour.
+**Gallery.** `/admin/rewind/gallery` renders every page and card of the five
+review fixtures (heavy, median, light, postcard, extreme) from dry runs, which
+write nothing and expire after one hour. Each tab starts or reuses its dry run;
+the copy replays the selected model's recordings, or is "Templates only" until
+`evals/rewind/selected.json` names a model. "Desktop spread" switches the
+frames to 1440 x 900. For the same set headless, run `npm run rewind:gallery --
+--base-url=<server>` against a server started for E2E (it signs in as the first
+admin with `NEXTAUTH_SECRET` and needs a `_test` database), or run the manual
+Rewind Gallery workflow and download its `rewind-gallery` artifact; open
+`index.html` for the contact sheet.
 
 ## Season open, hour by hour
 

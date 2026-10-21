@@ -14,6 +14,12 @@ describe('JSDoc Documentation Examples', () => {
     expect(seasonPrepareAt(2026, '12-01', ['America/Chicago', 'America/Los_Angeles']).toISOString()).toBe('2026-12-01T08:15:00.000Z')
   })
 
+  it('rewindFeatureOn: on only with the +key and without the plain key', () => {
+    expect(rewindFeatureOn({ rewindDisabledPages: ['+race.scrubber'] }, 'race.scrubber')).toBe(true)
+    expect(rewindFeatureOn({ rewindDisabledPages: ['+race.scrubber', 'race.scrubber'] }, 'race.scrubber')).toBe(false)
+    expect(rewindFeatureOn(null, 'race.scrubber')).toBe(false)
+  })
+
   it('shareFormats: a card page names its card, Setup offers none', () => {
     expect(shareFormats('top-shows')).toBe('Story card, 1080 by 1920')
     expect(shareFormats('setup')).toBeNull()

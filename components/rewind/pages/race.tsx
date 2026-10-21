@@ -1,7 +1,7 @@
 import { useId } from "react"
 
 import { RewindFigure } from "@/components/rewind/a11y/figure"
-import { frameMonth, racePage } from "@/lib/rewind/pages/race"
+import { frameMonth, racePage, standingsAfter } from "@/lib/rewind/pages/race"
 import type { RaceData } from "@/lib/rewind/pages/race.schema"
 import { fitLines } from "@/lib/rewind/typeset/fit-lines"
 import { pageMetrics } from "@/lib/rewind/typeset/metrics"
@@ -73,9 +73,9 @@ function WhoLed({ data, strip, winner }: { data: RaceData; strip: LeadSegment[];
  * ("Standings after November"), five bars with titles above them (the
  * final leader solid, the rest hatched) and the who-led strip. The client
  * island plays the months once; the server renders the final frame, which
- * is what a revisit, reduced motion and the share card show. P8.3 adds the
- * scrubber (`rewind-race-scrubber`) and replay (`rewind-race-play`) below
- * the strip.
+ * is what a revisit, reduced motion and the share card show. With
+ * `race.scrubber` on (P8.3), the scrubber (`rewind-race-scrubber`) and
+ * Replay (`rewind-race-play`) follow the strip.
  */
 export function RacePage({ data, issue }: PageProps<RaceData>) {
   const { facts, locale } = issue
@@ -96,8 +96,15 @@ export function RacePage({ data, issue }: PageProps<RaceData>) {
     <div className="flex h-full flex-col font-text" style={{ padding: `${u(4)} ${u(16)} ${u(12)}` }} data-testid="rewind-page-race">
       <SentenceHeadline text={renderCopyText(headline("race", facts), facts)} />
       <RewindFigure summary={racePage.srSummary(data, facts)} className="mt-auto" style={{ paddingTop: u(10) }}>
-        <RaceAnimator rows={rows} months={data.frames.map((_f, m) => frameMonth(data, m, locale))} pitch={PITCH} />
-        <WhoLed data={data} strip={geometry.strip} winner={winner} />
+        <RaceAnimator
+          rows={rows}
+          months={data.frames.map((_f, m) => frameMonth(data, m, locale))}
+          pitch={PITCH}
+          scrubber={issue.features?.["race.scrubber"] ?? false}
+          standings={data.frames.map((_f, m) => standingsAfter(data, m, locale))}
+        >
+          <WhoLed data={data} strip={geometry.strip} winner={winner} />
+        </RaceAnimator>
       </RewindFigure>
     </div>
   )

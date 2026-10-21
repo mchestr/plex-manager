@@ -16,6 +16,7 @@ import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { generateStructured } from "@/lib/llm/generate-structured"
 import { getRewindQueue } from "@/lib/queue/rewind-producers"
 import { JOB_TYPES } from "@/lib/queue/types"
+import { selectedReplay } from "@/lib/llm/replay"
 import { readDryRun } from "@/lib/rewind/dry-run/store"
 
 jest.mock("next-auth", () => ({ getServerSession: jest.fn() }))
@@ -24,6 +25,7 @@ jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prism
 jest.mock("@/lib/queue/rewind-producers", () => ({ getRewindQueue: jest.fn() }))
 jest.mock("@/lib/llm/generate-structured", () => ({ generateStructured: jest.fn() }))
 jest.mock("@/lib/rewind/dry-run/store", () => ({ readDryRun: jest.fn() }))
+jest.mock("@/lib/llm/replay", () => ({ selectedReplay: jest.fn(() => null) }))
 
 const add = jest.fn()
 const getJob = jest.fn()
@@ -123,9 +125,34 @@ describe("getRewindDryRun", () => {
     expect(await getRewindDryRun({ id })).toMatchObject({ success: false, code: "NOT_FOUND" })
   })
 
+  it("returns the result when the job finishes between the read and the state check", async () => {
+    const done = { status: "skipped", reason: "NO_HISTORY" } as never
+    jest.mocked(readDryRun).mockResolvedValueOnce(null).mockResolvedValueOnce(done)
+    getJob.mockResolvedValueOnce({ getState: async () => "completed" })
+    expect(await getRewindDryRun({ id })).toEqual({ success: true, data: done })
+  })
+
   it("refuses a member", async () => {
     signIn("member-1", false)
     expect(await getRewindDryRun({ id })).toMatchObject({ success: false, code: "FORBIDDEN" })
     expect(readDryRun).not.toHaveBeenCalled()
+  })
+})
+
+describe("replay:selected (P7.11)", () => {
+  const replayRun = { subject: { kind: "fixture", fixtureId: "heavy" }, year: 2026, model: "replay:selected" } as const
+
+  it("refuses a member subject and a run before a model is selected", async () => {
+    expect(await startRewindDryRun({ ...replayRun, subject: { kind: "member", userId: "member-1" } })).toMatchObject({ success: false, code: "VALIDATION" })
+    expect(await startRewindDryRun(replayRun)).toMatchObject({ success: false, code: "VALIDATION" })
+    expect(add).not.toHaveBeenCalled()
+  })
+
+  it("queues a fixture's replay once a model is selected, and estimates it at nothing", async () => {
+    jest.mocked(selectedReplay).mockReturnValue({ model: { provider: "anthropic", id: "claude-sonnet-5-5" }, set: "anthropic-claude-sonnet-5-5" })
+    expect((await startRewindDryRun(replayRun)).success).toBe(true)
+    expect(add).toHaveBeenCalledWith(JOB_TYPES.REWIND_DRY_RUN, expect.objectContaining({ input: expect.objectContaining({ model: "replay:selected" }) }), expect.anything())
+    expect(await estimateRewindDryRun(replayRun)).toEqual({ success: true, data: { llm: false, costUsd: 0, maxCostUsd: 0 } })
+    expect(generateStructured).not.toHaveBeenCalled()
   })
 })

@@ -12,8 +12,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { FormField } from "@/components/ui/form-field"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/components/ui/toast"
-import { enabledFeatures, REWIND_FEATURE_KEYS, REWIND_FEATURES, withEnabledFeatures, type RewindFeatureKey } from "@/lib/rewind/features"
-import { DISABLED_LIST_ENTRIES, REWIND_CUT_PAGES, rewindBudgetSchema, type RewindSettings } from "@/lib/validations/rewind-settings"
+import { enableEntry, isFeatureEntry, REWIND_FEATURES } from "@/lib/rewind/features"
+import { REWIND_CUT_PAGES, REWIND_DISABLED_PAGE_ENTRIES, rewindBudgetSchema, type RewindSettings } from "@/lib/validations/rewind-settings"
 
 interface RewindSettingsSectionProps {
   /** The stored settings, from `rewindSettingsFromConfig`. */
@@ -48,12 +48,10 @@ const LLM_MODES = [
   { value: "off", label: "Off (template copy)" },
 ]
 
+/** A `rewindDisabledPages` draft in its stored order, so a change undone reads as no change. */
+const storedOrder = (entries: readonly string[]) => REWIND_DISABLED_PAGE_ENTRIES.filter((entry) => entries.includes(entry))
+
 const NEXT_GENERATION = "Takes effect at the next generation."
-
-const cutKeys = new Set<string>(REWIND_CUT_PAGES.map((page) => page.key))
-
-/** The disabled list in its stored order, so a change and its undo compare equal. */
-const orderDisabled = (list: readonly string[]) => DISABLED_LIST_ENTRIES.filter((entry) => list.includes(entry))
 
 /** Options for the stored entries the lists no longer offer, so they can still be cleared. */
 function withStored(options: { value: string; label: string }[], stored: readonly string[], label: (value: string) => string) {
@@ -247,17 +245,16 @@ export function RewindSettingsSection({ saved, zone, llmDisabled, discordBotOn, 
           description="In cut-list order. The ten core pages are always included."
           options={REWIND_CUT_PAGES.map((page) => ({ value: page.key, label: page.label }))}
           selected={draft.rewindDisabledPages}
-          onChange={(pages) => set("rewindDisabledPages")(orderDisabled([...pages, ...draft.rewindDisabledPages.filter((entry) => !cutKeys.has(entry))]))}
+          onChange={(pages) => set("rewindDisabledPages")(storedOrder([...pages, ...draft.rewindDisabledPages.filter(isFeatureEntry)]))}
         />
+        {/* The December features (P8.3, P8.4) share the list: a switch writes or removes its `+key` entry. */}
         <CheckboxList
           name="features"
           legend="Features added in December"
-          description="Each stays off until it is checked here. Check it on a test member first."
-          options={REWIND_FEATURES.map((feature) => ({ value: feature.key, label: feature.label }))}
-          selected={enabledFeatures(draft.rewindDisabledPages)}
-          onChange={(keys) =>
-            set("rewindDisabledPages")(orderDisabled(withEnabledFeatures(draft.rewindDisabledPages, keys.filter((key): key is RewindFeatureKey => (REWIND_FEATURE_KEYS as string[]).includes(key)))))
-          }
+          description="Each is off until turned on here. Check it on the heavy test member first, and record the enable in ship-check.md."
+          options={REWIND_FEATURES.map((feature) => ({ value: enableEntry(feature.key), label: feature.label }))}
+          selected={draft.rewindDisabledPages}
+          onChange={(features) => set("rewindDisabledPages")(storedOrder([...draft.rewindDisabledPages.filter((entry) => !entry.startsWith("+")), ...features]))}
         />
         <CheckboxList
           name="channels"

@@ -28,7 +28,7 @@ jest.mock("next/navigation", () => ({
 }))
 // The real store, on a Redis that holds one key.
 const mockGet = jest.fn()
-jest.mock("@/lib/queue/connection", () => ({ getRequestPathRedis: () => ({ get: mockGet }) }))
+jest.mock("@/lib/queue/connection", () => ({ readyWithin: async () => true, getRequestPathRedis: () => ({ get: mockGet }) }))
 jest.mock("@/components/rewind/rewind-generating-watch", () => ({ RewindGeneratingWatch: () => null }))
 // The real stage, on the stage fixture's pages, in the mode the issue passes it.
 jest.mock("@/components/rewind/rewind-issue", () => ({

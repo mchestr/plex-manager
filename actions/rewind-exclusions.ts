@@ -68,12 +68,17 @@ async function gate(userId: string) {
   return limit.ok ? null : fail("RATE_LIMITED", LIMITED, { retryAfterSec: limit.retryAfterSec })
 }
 
-function bumpVersion(tx: PrismaTransactionClient, userId: string, year: number) {
-  return tx.rewindPrefs.upsert({
-    where: { userId_year: { userId, year } },
-    create: { userId, year, exclusionsVersion: 1 },
-    update: { exclusionsVersion: { increment: 1 } },
-  })
+/**
+ * A hide applies to the member in every year (`RewindExclusion` is keyed by
+ * user and title), so every year's card cache key moves. A year without a
+ * prefs row reads version 0 and would keep its cached cards, so each year
+ * the member has a Rewind for gets a row first, then every row is bumped.
+ */
+async function bumpVersion(tx: PrismaTransactionClient, userId: string, year: number) {
+  const rewinds = await tx.plexWrapped.findMany({ where: { userId }, select: { year: true } })
+  const years = [...new Set([year, ...rewinds.map((row) => row.year)])]
+  await tx.rewindPrefs.createMany({ data: years.map((y) => ({ userId, year: y, exclusionsVersion: 0 })), skipDuplicates: true })
+  await tx.rewindPrefs.updateMany({ where: { userId }, data: { exclusionsVersion: { increment: 1 } } })
 }
 
 /** The no-LLM regeneration; a failed add is logged, since the change already holds on every card. */
@@ -95,6 +100,9 @@ export const hideRewindTitle = memberAction({
     const rewind = await completedRewind(userId, year)
     const title = rewind ? ratingKeysIn(rewind).get(ratingKey) : undefined
     if (!rewind || title === undefined) return fail("NOT_FOUND", NOT_IN_REWIND)
+    // Already hidden: nothing to write, regenerate or spend a point on
+    const existing = await prisma.rewindExclusion.findUnique({ where: { userId_ratingKey: { userId, ratingKey } }, select: { id: true } })
+    if (existing) return ok({ regenerating: false })
 
     const blocked = await gate(userId)
     if (blocked) return blocked

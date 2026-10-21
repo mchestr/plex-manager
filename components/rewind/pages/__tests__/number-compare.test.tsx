@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event"
 
 import { NumberPage } from "@/components/rewind/pages/number"
 import { fixtureIssue, issueContext, type FixtureIssue } from "@/lib/rewind/__tests__/helpers/fixture-issue"
-import { NO_REWIND_FEATURES } from "@/lib/rewind/features"
+import { REWIND_FEATURES, type RewindFeatureFlags } from "@/lib/rewind/features"
 import type { NumberData } from "@/lib/rewind/pages/number.schema"
 import { registry } from "@/lib/rewind/registry"
 
@@ -15,7 +15,8 @@ beforeAll(async () => {
   heavy = await fixtureIssue("heavy")
 })
 
-const ON = { ...NO_REWIND_FEATURES, compare2025: true }
+const OFF = Object.fromEntries(REWIND_FEATURES.map(({ key }) => [key, false])) as Record<keyof RewindFeatureFlags, boolean>
+const ON: RewindFeatureFlags = { ...OFF, "number.compare-2025": true }
 
 function renderNumber(data: NumberData, features = ON) {
   render(<NumberPage data={data} issue={issueContext(heavy, { features })} />)
@@ -59,7 +60,7 @@ describe("Compare with 2025 (P8.4)", () => {
   })
 
   it("is absent with the flag off, and the page keeps its road", () => {
-    renderNumber(dataOf(), NO_REWIND_FEATURES)
+    renderNumber(dataOf(), OFF)
     expect(screen.queryByTestId("rewind-compare-2025")).not.toBeInTheDocument()
     expect(screen.getByText("The road to 1,307")).toBeInTheDocument()
   })

@@ -1,7 +1,7 @@
 import type { Route } from "next"
 
-import { pageDeck, type DeckKey } from "@/lib/rewind/pages/deck"
 import type { RewindFeatureFlags } from "@/lib/rewind/features"
+import { pageDeck, type DeckKey } from "@/lib/rewind/pages/deck"
 import type { Edition, RewindPageType } from "@/lib/rewind/registry"
 import type { SelectedPage } from "@/lib/rewind/select-pages"
 import type { ItemLinks } from "@/lib/ui/plex-links"
@@ -38,7 +38,7 @@ export interface IssueContext {
   libraryHref?: string
   /** Where Next year's titles link (P7.2); absent when the issue has no Next year. */
   links?: ItemLinks
-  /** The P1 flags the member's stage reads (P8.4); absent means every one is off. */
+  /** The December features (P8.3, `rewindFeatureFlags`); absent means every one is off. */
   features?: RewindFeatureFlags
 }
 

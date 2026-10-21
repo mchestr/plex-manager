@@ -13,8 +13,8 @@ import { StoryStage } from "@/components/rewind/stage/story-stage"
 import { serverName } from "@/lib/brand"
 import { prisma } from "@/lib/prisma"
 import { pagesForCut } from "@/lib/rewind/editions"
-import { loadItemLinks } from "@/lib/rewind/item-links"
 import { rewindFeatureFlags } from "@/lib/rewind/features"
+import { loadItemLinks } from "@/lib/rewind/item-links"
 import { answeredNotes, pageNotes, type CoreNotesContext } from "@/lib/rewind/notes"
 import { registry, type RegistryEntry } from "@/lib/rewind/registry"
 import { validatePagesOnRead, type SelectedPage } from "@/lib/rewind/select-pages"
@@ -35,6 +35,9 @@ interface RewindIssueProps {
   initialSheet?: SheetName
   /** An admin's dry run (P7.10): no share setup, and the stage runs in preview mode. */
   preview?: boolean
+  /** Preview only (P7.11): open on this page, and with `still`, hold it settled. */
+  initialPage?: string
+  still?: boolean
   /** A member's stored Rewind in the admin shell (P7.9): no share setup, and the stage runs framed in admin-preview mode. */
   adminPreview?: boolean
   /** Where the stage's "Read as an article" goes, when not the member's own article. */
@@ -59,8 +62,20 @@ async function earlierYears(userId: string, year: number): Promise<number[]> {
  * the server and handed to P5.2's `StoryStage` as slots, with the share
  * sheet's setup (P5.11). A full issue also typesets its pocket cut
  * (`pagesForCut`, P7.3), numbered 1 to 6, which the cover can swap to.
+ * The December feature flags (P8.3) are read here and passed down as booleans.
  */
-export async function RewindIssue({ rewindId, data, userId, returnTo, initialSheet, preview = false, adminPreview = false, articleHref }: RewindIssueProps) {
+export async function RewindIssue({
+  rewindId,
+  data,
+  userId,
+  returnTo,
+  initialSheet,
+  preview = false,
+  adminPreview = false,
+  articleHref,
+  initialPage,
+  still = false,
+}: RewindIssueProps) {
   const mode = adminPreview ? "admin-preview" : preview ? "preview" : "member"
   const [settings, brand, config] = await Promise.all([
     getAppSettings(),
@@ -68,8 +83,8 @@ export async function RewindIssue({ rewindId, data, userId, returnTo, initialShe
     prisma.config.findUnique({ where: { id: "config" }, select: { rewindDisabledPages: true } }),
   ])
   const archetype = data.archetype?.id ?? null
-  const numbering = { archetype, disabledPages: DisabledPagesSchema.parse(config?.rewindDisabledPages ?? []) }
   const features = rewindFeatureFlags(config)
+  const numbering = { archetype, disabledPages: DisabledPagesSchema.parse(config?.rewindDisabledPages ?? []) }
   const pages = validatePagesOnRead(pagesForCut(data, "full"), numbering)
   const pocket = data.edition === "full" ? validatePagesOnRead(pagesForCut(data, "pocket"), numbering) : null
   const [share, hidden, links, library, earlier] = await Promise.all([
@@ -79,7 +94,7 @@ export async function RewindIssue({ rewindId, data, userId, returnTo, initialShe
       : prisma.rewindExclusion.findMany({ where: { userId }, select: { ratingKey: true, kind: true, title: true }, orderBy: { createdAt: "asc" } }),
     pages.some((page) => page.type === "next-year") ? loadItemLinks() : undefined,
     data.edition === "postcard" ? libraryHref() : undefined,
-    features.coreNotes && pages.some((page) => page.type === "bookends") ? earlierYears(userId, data.year) : [],
+    features["notes.core"] && pages.some((page) => page.type === "bookends") ? earlierYears(userId, data.year) : [],
   ])
   const types = (list: readonly SelectedPage[]) => list.map((page) => page.type)
   const hiddenKeys = new Set((hidden ?? []).map((row) => row.ratingKey))
@@ -106,7 +121,8 @@ export async function RewindIssue({ rewindId, data, userId, returnTo, initialShe
       locale: settings.locale,
       zone: context.zone,
       hiddenKeys,
-      coreNotes: features.coreNotes,
+      features,
+      coreNotes: features["notes.core"],
       pages: list.map((page) => ({ folio: page.folio, name: registry[page.type].name, type: page.type })),
       earlierYears: earlier,
       serverName: brand,
@@ -148,6 +164,9 @@ export async function RewindIssue({ rewindId, data, userId, returnTo, initialShe
       mode={mode}
       articleHref={articleHref}
       views={mode === "member" ? { rewindId, record: recordRewindView } : undefined}
+      initialIndex={mode === "preview" ? Math.max(0, pages.findIndex((page) => page.type === initialPage)) : undefined}
+      still={mode === "preview" && still}
+      tapCompletes={features["stage.tap-completes"]}
     />
   )
 }

@@ -11,8 +11,8 @@
  * - The budget is 0 to 1,000 US dollars with at most 2 decimals.
  * - Disabled pages are only the non-core page keys of the cut list
  *   ({@link REWIND_CUT_PAGES}); the ten core pages are never accepted. The
- *   same list holds the P1 feature flags (`lib/rewind/features.ts`): `+key`
- *   enables a feature and the plain key disables it; an unknown key is refused.
+ *   same list holds the December feature flags (`lib/rewind/features.ts`):
+ *   a known feature's `+key` or plain key, never an unknown one.
  * - Lists are de-duplicated and put in a stable order, so two saves of the
  *   same choice compare equal.
  *
@@ -49,8 +49,8 @@ const CUT_PAGE_KEYS = REWIND_CUT_PAGES.map((page) => page.key) as [
   ...(typeof REWIND_CUT_PAGES)[number]["key"][],
 ]
 
-/** Every entry `rewindDisabledPages` may hold, in its stored order: the cut list, then the feature flags. */
-export const DISABLED_LIST_ENTRIES = [...CUT_PAGE_KEYS, ...REWIND_FEATURE_ENTRIES] as [string, ...string[]]
+/** Every value `rewindDisabledPages` may hold, in its stored order: the cut list, then the feature flags. */
+export const REWIND_DISABLED_PAGE_ENTRIES = [...CUT_PAGE_KEYS, ...REWIND_FEATURE_ENTRIES] as [string, ...string[]]
 
 const MONTH_DAYS = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 
@@ -101,7 +101,7 @@ export const rewindSettingsSchema = z
     rewindExcludedSectionIds: z.array(z.string().regex(/^\d+$/, "Unknown library")).max(500).transform(stableList()),
     rewindExcludedContentRatings: z.array(z.string().trim().min(1).max(40)).max(500).transform(stableList()),
     rewindIncludeManagedUsers: z.boolean(),
-    rewindDisabledPages: z.array(z.enum(DISABLED_LIST_ENTRIES)).transform(stableList(DISABLED_LIST_ENTRIES)),
+    rewindDisabledPages: z.array(z.enum(REWIND_DISABLED_PAGE_ENTRIES)).transform(stableList(REWIND_DISABLED_PAGE_ENTRIES)),
     rewindNotifyChannels: z.array(z.enum(REWIND_NOTIFY_CHANNELS)).transform(stableList(REWIND_NOTIFY_CHANNELS)),
   })
   .refine((data) => data.rewindSeasonOpens !== data.rewindSeasonCloses, {

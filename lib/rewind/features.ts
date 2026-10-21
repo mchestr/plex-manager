@@ -1,25 +1,28 @@
 /**
- * Rewind's P1 features (P8.3, P8.4): each behind its own flag, off until the
- * owner enables it in production.
+ * Rewind's December features (P8.3, P8.4): each P1 interaction ships behind
+ * its own flag, off until the owner checks it on the heavy test member and
+ * turns it on (the P8 header's ship routine).
  *
- * ## The rule
+ * ## Storage
  *
- * Flags live in `Config.rewindDisabledPages`, beside the cut list's page
- * keys, so no migration is needed. A feature is on only when the list holds
- * its enable entry `+<key>` (`+race.scrubber`) and not the plain key, which
- * switches it off again. A fresh `Config` therefore has every feature off, and
- * a deploy can never switch an unchecked interaction on for every member.
+ * The flags live in `Config.rewindDisabledPages`, beside the cut-list page
+ * keys, so no migration is needed. A feature is on only while the list holds
+ * its enable entry `+<key>` (for example `+race.scrubber`) and not the plain
+ * key, which switches it off again. A fresh `Config` therefore has every
+ * feature off, and a deploy can never turn an unchecked interaction on for
+ * every member.
  *
- * Server Components read the flags and pass booleans to the islands.
+ * Server Components read the flags with {@link rewindFeatureFlags} and pass
+ * booleans to the client islands.
  *
  * @module lib/rewind/features
  */
 
-/** Every P1 feature, in the order the admin settings list them. */
+/** The December features, in the order P7.12's settings section lists them. */
 export const REWIND_FEATURES = [
-  { key: "race.scrubber", label: "The race: scrubber and replay" },
-  { key: "calendar.day-picker", label: "Calendar: Pick a day" },
-  { key: "calendar.grid", label: "Calendar: keyboard grid" },
+  { key: "race.scrubber", label: "The race: scrubber and Replay" },
+  { key: "calendar.day-picker", label: "The calendar: Pick a day" },
+  { key: "calendar.grid", label: "Notes and article calendar: arrow-key grid" },
   { key: "stage.tap-completes", label: "First tap completes a count-up" },
   { key: "number.compare-2025", label: "The number: Compare with last year" },
   { key: "share.edit-card", label: "Share: Edit card" },
@@ -29,59 +32,35 @@ export const REWIND_FEATURES = [
 
 export type RewindFeatureKey = (typeof REWIND_FEATURES)[number]["key"]
 
-export const REWIND_FEATURE_KEYS = REWIND_FEATURES.map((feature) => feature.key) as RewindFeatureKey[]
+export type RewindFeatureFlags = Readonly<Record<RewindFeatureKey, boolean>>
 
-/** The entries `Config.rewindDisabledPages` may hold for the features: `+key` enables, the plain key disables. */
-export const REWIND_FEATURE_ENTRIES = REWIND_FEATURE_KEYS.flatMap((key) => [`+${key}`, key])
+/** The entry that turns `key` on. */
+export const enableEntry = (key: RewindFeatureKey) => `+${key}` as const
+
+/** Every entry the flags may store: each feature's `+key`, then its plain key. */
+export const REWIND_FEATURE_ENTRIES = REWIND_FEATURES.flatMap(({ key }) => [enableEntry(key), key])
+
+/** Whether `entry` (a `rewindDisabledPages` value) belongs to the feature flags rather than the cut list. */
+export const isFeatureEntry = (entry: string) => (REWIND_FEATURE_ENTRIES as readonly string[]).includes(entry)
 
 /**
- * Whether `key` is on: `+key` is stored and the plain key is not.
- *
- * @public P8.3's Server Components read their flags with it.
+ * Whether one feature is on: the stored list holds `+key` and not `key`.
  *
  * @example
  * ```ts
  * rewindFeatureOn({ rewindDisabledPages: ["+race.scrubber"] }, "race.scrubber") // true
  * rewindFeatureOn({ rewindDisabledPages: ["+race.scrubber", "race.scrubber"] }, "race.scrubber") // false
- * rewindFeatureOn({ rewindDisabledPages: [] }, "race.scrubber") // false
+ * rewindFeatureOn(null, "race.scrubber") // false
  * ```
+ *
+ * @internal Server code reads every flag at once through {@link rewindFeatureFlags}.
  */
 export function rewindFeatureOn(config: { rewindDisabledPages: unknown } | null | undefined, key: RewindFeatureKey): boolean {
-  const list = config?.rewindDisabledPages
-  return Array.isArray(list) && list.includes(`+${key}`) && !list.includes(key)
+  const entries = config?.rewindDisabledPages
+  return Array.isArray(entries) && entries.includes(enableEntry(key)) && !entries.includes(key)
 }
 
-/** The P8.4 flags the issue's islands read, as booleans. */
-export interface RewindFeatureFlags {
-  compare2025: boolean
-  editCard: boolean
-  saveAll: boolean
-  coreNotes: boolean
-}
-
-/** @internal Tests build issues with it. */
-export const NO_REWIND_FEATURES: RewindFeatureFlags = { compare2025: false, editCard: false, saveAll: false, coreNotes: false }
-
-/** The P8.4 flags of a stored `Config`. */
+/** Every feature's flag, for the Server Components that pass them to the islands. */
 export function rewindFeatureFlags(config: { rewindDisabledPages: unknown } | null | undefined): RewindFeatureFlags {
-  return {
-    compare2025: rewindFeatureOn(config, "number.compare-2025"),
-    editCard: rewindFeatureOn(config, "share.edit-card"),
-    saveAll: rewindFeatureOn(config, "share.save-all"),
-    coreNotes: rewindFeatureOn(config, "notes.core"),
-  }
-}
-
-/**
- * `list` with the enable entries set to exactly `enabled`: every other entry
- * (page keys, and plain feature keys) is kept. What the admin switches write.
- */
-export function withEnabledFeatures<T extends string>(list: readonly T[], enabled: readonly RewindFeatureKey[]): string[] {
-  const kept = list.filter((entry) => !(entry.startsWith("+") && (REWIND_FEATURE_KEYS as string[]).includes(entry.slice(1))))
-  return [...kept, ...enabled.map((key) => `+${key}`)]
-}
-
-/** The features `list` enables (whether or not a plain key switches them off again). */
-export function enabledFeatures(list: readonly string[]): RewindFeatureKey[] {
-  return REWIND_FEATURE_KEYS.filter((key) => list.includes(`+${key}`))
+  return Object.fromEntries(REWIND_FEATURES.map(({ key }) => [key, rewindFeatureOn(config, key)])) as Record<RewindFeatureKey, boolean>
 }

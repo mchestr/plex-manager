@@ -45,6 +45,8 @@ const counted = (stored: unknown, kind: ShareAction) => {
 export const recordRewindView = memberAction({
   entitlement: "read",
   input: recordViewSchema,
+  // The session key is the client's, so a limit bounds the rows one member can write
+  rateLimit: { name: "rw:view" },
   fallbackError: "Could not record the view",
   handler: async ({ wrappedId, sessionKey, page, shareAction }, { userId }) => {
     const rewind = await prisma.plexWrapped.findFirst({
