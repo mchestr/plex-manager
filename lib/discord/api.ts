@@ -1,4 +1,3 @@
-import { getDiscordBotToken } from "@/lib/discord/config"
 import { createLogger } from "@/lib/utils/logger"
 
 const DISCORD_API_BASE = "https://discord.com/api"
@@ -339,6 +338,8 @@ async function discordApiError(response: Response): Promise<DiscordApiError> {
  * are closed), and an `Error` when no bot token is configured.
  */
 export async function sendDiscordDirectMessage(discordUserId: string, content: string, signal: AbortSignal): Promise<void> {
+  // Loaded on use, so `scripts/register-discord-metadata.ts` can import this module without a database
+  const { getDiscordBotToken } = await import("@/lib/discord/config")
   const botToken = await getDiscordBotToken()
   if (!botToken) throw new Error("No Discord bot token is configured")
   const headers = { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" }
