@@ -59,6 +59,7 @@ import { topFilmsPage } from "@/lib/rewind/pages/top-films"
 import { topShowsPage } from "@/lib/rewind/pages/top-shows"
 import type { ArchetypeId } from "@/lib/wrapped/archetypes/catalogue"
 import type { PageType } from "@/lib/wrapped/data/page-types"
+import type { ShareSafePage } from "@/lib/wrapped/data/share-safe-schema"
 import type { FactId, RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 import type { MemberStats } from "@/lib/wrapped/stats/compute"
 
@@ -217,4 +218,25 @@ export function issueDurationMs(pages: readonly IssuePageType[]): number {
     return sum + (typeof d === "number" ? d : d === "hold" ? HOLD_ESTIMATE_MS : 0)
   }, 0)
   return dwell + Math.max(0, pages.length - 1) * TURN_MS
+}
+
+const sentence = (text: string) => (/[.!?…]$/.test(text) ? text : `${text}.`)
+
+/**
+ * The alt text of a page's published card on the share page (P7.5), built
+ * only from the projected page, so it names nothing the card does not: the
+ * page name, its card headline, the archetype where the page publishes it,
+ * and its published titles.
+ *
+ * @example
+ * ```ts
+ * shareAlt({ type: "top-shows", headline: "Severance led your year", titles: ["Severance", "Andor"], archetype: null })
+ * // "Top shows card. Severance led your year. Severance, Andor."
+ * ```
+ */
+export function shareAlt(page: Pick<ShareSafePage, "type" | "headline" | "titles" | "archetype">): string {
+  const parts = [`${registry[page.type].name} card`, page.headline]
+  if (page.archetype && !page.headline.includes(page.archetype.name)) parts.push(`I’m the ${page.archetype.name}`)
+  if (page.titles.length > 0) parts.push(page.titles.join(", "))
+  return parts.filter(Boolean).map(sentence).join(" ")
 }

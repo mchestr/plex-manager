@@ -53,17 +53,3 @@ export function parseStyledText(text: string): TextPart[] {
 
   return parts
 }
-
-/**
- * Strip highlight tags from text for plain text output (e.g., social media sharing)
- * Removes <highlight> and </highlight> tags while preserving the content
- */
-export function stripHighlightTags(text: string): string {
-  if (!text) return text
-
-  // First, convert old **double asterisks** format to <highlight> tags for consistency
-  let processedText = text.replace(/\*\*([^*]+)\*\*/g, "<highlight>$1</highlight>")
-
-  // Remove <highlight> and </highlight> tags, keeping the content
-  return processedText.replace(/<highlight>([^<]*)<\/highlight>/gi, "$1")
-}

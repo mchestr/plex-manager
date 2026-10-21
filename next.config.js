@@ -103,6 +103,16 @@ module.exports = (phase) => ({
           }
         ],
       },
+      // The public share page (P7.5, UI-39): kept out of search results, and
+      // its token never leaves in a Referer. After the catch-all, so its
+      // Referrer-Policy wins.
+      {
+        source: '/rewind/s/:path*',
+        headers: [
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+        ],
+      },
     ]
   },
 })

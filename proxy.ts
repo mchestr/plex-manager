@@ -17,14 +17,12 @@
 import { getAccessLevel } from "@/lib/access"
 import { isMemberAppPath, needsSubscribeRedirect } from "@/lib/access-paths"
 import { getEnv, usesSecureCookies } from "@/lib/env"
-import { prisma } from "@/lib/prisma"
 import { PATHNAME_HEADER } from "@/lib/request-headers"
-import { clientIp } from "@/lib/security/client-ip"
-import { consume } from "@/lib/security/rate-limit"
 import { sanitizeText } from "@/lib/utils/log-redaction"
 import { createLogger, generateRequestId, runWithRequestContext } from "@/lib/utils/logger"
-import { shareTokenSchema, yearParamSchema } from "@/lib/validations/params"
-import { SHARE_BUSY_HEADER } from "@/lib/wrapped/share-page-limit"
+import { gateSharePath } from "@/lib/rewind/share/share-gate"
+import { SHARE_RETRY_AFTER_S, shareStatusHtml } from "@/lib/rewind/share/status-html"
+import { yearParamSchema } from "@/lib/validations/params"
 import { getToken } from "next-auth/jwt"
 import type { NextRequest } from "next/server"
 import { NextResponse } from "next/server"
@@ -58,67 +56,6 @@ const REWIND_YEAR_PATH = /^\/rewind\/([^/]+)$/
 function isInvalidRewindYearPath(pathname: string): boolean {
   const segment = REWIND_YEAR_PATH.exec(pathname)?.[1]
   return segment !== undefined && !yearParamSchema.safeParse(segment).success
-}
-
-/** `/rewind/s/<token>`, where next.config.js sends the old `/wrapped/share/<token>` (P5.1) */
-const REWIND_SHARE_PATH = /^\/rewind\/s\/([^/]+)$/
-
-/**
- * What the share page should do for `/rewind/s/<token>`, or `null` for
- * any other path.
- *
- * - `missing`: the token shares nothing. The page renders its not-found page,
- *   streamed with status 200 for the same reason as above, so the 404 status
- *   is set here (P0.11). A token that cannot exist (not the 43 base64url
- *   characters of a share token, or not valid percent-encoding) is answered
- *   without a database call; an unknown or revoked token, or one whose Rewind
- *   is not `completed`, is found with one indexed read of the status, the same
- *   rule as `getShareSafeRewind`.
- * - `busy`: the visitor is over `rw:share-page`. Their point is spent before
- *   the lookup, so a flood of share URLs never reaches the database at full
- *   rate; the page renders its busy state without a lookup of its own.
- * - `shown`: the page renders the Rewind.
- *
- * The segment is decoded first, as the page's `params.token` is, so a token
- * with a percent-encoded character is the same token in both places.
- *
- * A failed limiter or lookup lets the request through: the page's own lookup
- * then renders the Rewind, or throws and renders the error page.
- */
-async function checkSharePath(pathname: string, headers: Headers): Promise<"missing" | "busy" | "shown" | null> {
-  const segment = REWIND_SHARE_PATH.exec(pathname)?.[1]
-  if (segment === undefined) {
-    return null
-  }
-
-  let token: string
-  try {
-    token = decodeURIComponent(segment)
-  } catch {
-    return "missing"
-  }
-  if (!shareTokenSchema.safeParse(token).success) {
-    return "missing"
-  }
-
-  try {
-    if (!(await consume("rw:share-page", clientIp(headers))).ok) {
-      return "busy"
-    }
-  } catch (error) {
-    logger.error("Share page rate limit failed", error)
-  }
-
-  try {
-    const wrapped = await prisma.plexWrapped.findUnique({
-      where: { shareToken: token },
-      select: { status: true },
-    })
-    return wrapped?.status === "completed" ? "shown" : "missing"
-  } catch (error) {
-    logger.error("Share token lookup failed", error)
-    return "shown"
-  }
 }
 
 /**
@@ -156,23 +93,28 @@ async function needsMemberRedirect(request: NextRequest): Promise<boolean> {
   }
 }
 
-/**
- * The request headers a page receives: the client's, with the proxy's
- * {@link PATHNAME_HEADER} and, on a share page, its busy verdict in place of
- * any value the client sent for either.
- */
-function pageRequestHeaders(
-  headers: Headers,
-  pathname: string,
-  share: Awaited<ReturnType<typeof checkSharePath>>
-): Headers {
+/** The request headers a page receives: the client's, with the proxy's {@link PATHNAME_HEADER} in place of any value the client sent. */
+function pageRequestHeaders(headers: Headers, pathname: string): Headers {
   const next = new Headers(headers)
   next.set(PATHNAME_HEADER, pathname)
-  next.delete(SHARE_BUSY_HEADER)
-  if (share === "busy") {
-    next.set(SHARE_BUSY_HEADER, "1")
-  }
   return next
+}
+
+/**
+ * The share page's static busy (429) or unavailable (503) page
+ * (`lib/rewind/share/status-html.ts`).
+ */
+function shareStatusResponse(pathname: string, status: 429 | 503): NextResponse {
+  return new NextResponse(shareStatusHtml(pathname), {
+    status,
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "no-store",
+      "X-Robots-Tag": "noindex, nofollow",
+      "Referrer-Policy": "no-referrer",
+      ...(status === 503 ? { "Retry-After": String(SHARE_RETRY_AFTER_S) } : {}),
+    },
+  })
 }
 
 /**
@@ -206,10 +148,18 @@ export async function proxy(request: NextRequest) {
       return redirect
     }
 
+    // A share path is gated first (lib/rewind/share/share-gate.ts): 429 when
+    // over the limit, 503 when the database is down
+    const share = await gateSharePath(pathname, request.headers)
+    if (share === "busy" || share === "down") {
+      const status = shareStatusResponse(pathname, share === "busy" ? 429 : 503)
+      status.headers.set("X-Request-ID", requestId)
+      return status
+    }
+
     // Create response: the same page, with a 404 status for an invalid Rewind
     // year or a share token that shares nothing
-    const share = await checkSharePath(pathname, request.headers)
-    const init = { request: { headers: pageRequestHeaders(request.headers, pathname, share) } }
+    const init = { request: { headers: pageRequestHeaders(request.headers, pathname) } }
     const notFound = isInvalidRewindYearPath(pathname) || share === "missing"
     const response = notFound
       ? NextResponse.rewrite(request.nextUrl, { ...init, status: 404 })

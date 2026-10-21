@@ -282,11 +282,13 @@ The ten core pages (Bookends included), sharing, privacy and accessibility are n
 **Demo.** Paste a link that publishes only Top shows into Discord: the unfurl shows "Top shows" and the No. 1 title, with no archetype or hours. Open it signed out (cards only, no name), then as the owner (the banner). Rotate it and reload the old URL: "This Rewind is no longer shared", with status 404.
 
 **Done when.**
-- [ ] `/rewind/s/[token]` renders outside `(app)`, in the Rewind theme, and shows only the published cards.
-- [ ] noindex is set in headers and metadata, and the owner banner offers Change cards, Rotate link and Stop sharing.
-- [ ] Unknown, revoked, rotated and expired tokens get the branded 404, rate-limited visitors get 429, and database failures get 503 with `Retry-After`.
-- [ ] Surviving v2 tokens render through the v2 projection until the season closes.
-- [ ] The 1200x630 OG card comes from the first published page, and the page-05-only contract test passes.
+- [x] `/rewind/s/[token]` renders outside `(app)`, in the Rewind theme, and shows only the published cards.
+- [x] noindex is set in headers and metadata, and the owner banner offers Change cards, Rotate link and Stop sharing.
+- [x] Unknown, revoked, rotated and expired tokens get the branded 404, rate-limited visitors get 429, and database failures get 503 with `Retry-After`.
+- [x] Surviving v2 tokens render through the v2 projection until the season closes.
+- [x] The 1200x630 OG card comes from the first published page, and the page-05-only contract test passes.
+
+(as merged: the proxy gate is `lib/rewind/share/share-gate.ts` and the token rule `lib/wrapped/data/share-token.ts` (`shareTokenKind`, `v2LinksOpen`: v2 tokens open while `getSeasonState().seasonYear <= 2026` and before its `closesAt`); the busy header and `lib/wrapped/share-page-limit.ts` are gone. The probe is a one-row Prisma read, not raw `SELECT 1`. The OG card is `size=og` on both card routes for every page (`OgCard`); the metadata points at `ogPage()`, which prefers the centrefold, then the back cover, else the first published page; `CARD_RENDERER_VERSION` is 2. The web fonts moved to `lib/rewind/fonts.ts` and `lib/rewind/web-fonts/`. `RewindScope` takes an optional `archetype`. Deleting the v2 OG route also removed the v2 viewer's card download (`ShareCardDownload`) and `WrappedShareSummary`. The share page lists only pages with a card (`eligibleCards`), so P7.6's cards appear with no page change. `e2e/rewind/share-page.spec.ts` runs on the new `rewind-e2e-firefox` project too; it and the visual baselines were not run here.)
 
 ### Step P7.6: Remaining cards
 

@@ -27,10 +27,10 @@
     }
   },
   "outputs": {
-    "app/(app)/rewind/_fonts/archivo-vf.woff2": "79bf3fa8b00c1bc9ba1a25da234a669215ea158c16b546b3fa3dc5baa524fb6d",
-    "app/(app)/rewind/_fonts/newsreader-display-italic.woff2": "17bd2521785141a39f8206143d868214ebfad806a2a1116bf0ae139838a34525",
-    "app/(app)/rewind/_fonts/newsreader-text-italic.woff2": "132a32e8256ff95106b650bfa957deda2abdba8d6c358e4b8459d224bbfcb53b",
-    "app/(app)/rewind/_fonts/newsreader-text.woff2": "b470cfc6f59728e29b38f746c037d44c49db4f7d586b7a091076d4cf7a6d09d3",
+    "lib/rewind/web-fonts/archivo-vf.woff2": "79bf3fa8b00c1bc9ba1a25da234a669215ea158c16b546b3fa3dc5baa524fb6d",
+    "lib/rewind/web-fonts/newsreader-display-italic.woff2": "17bd2521785141a39f8206143d868214ebfad806a2a1116bf0ae139838a34525",
+    "lib/rewind/web-fonts/newsreader-text-italic.woff2": "132a32e8256ff95106b650bfa957deda2abdba8d6c358e4b8459d224bbfcb53b",
+    "lib/rewind/web-fonts/newsreader-text.woff2": "b470cfc6f59728e29b38f746c037d44c49db4f7d586b7a091076d4cf7a6d09d3",
     "lib/rewind/cards/fonts/RewindArchivo-W100-600.ttf": "ecba50c5cffbe06b881d7bfd19f2cde6da38b6133bda9dd1541293e7ec7b266d",
     "lib/rewind/cards/fonts/RewindArchivo-W100-900.ttf": "deec5b00cc382c43caa37570c6968f781ddba02fa7021fd7fdf535ab5e120379",
     "lib/rewind/cards/fonts/RewindArchivo-W125-900.ttf": "4664370089c8de8be57f93783ab2a682b3eb8f7d561a7c14cad6000420c8d187",
