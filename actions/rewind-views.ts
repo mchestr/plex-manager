@@ -37,6 +37,23 @@ const counted = (stored: unknown, kind: ShareAction) => {
 }
 
 /**
+ * Adds one to `shareActions[kind]` as a compare-and-swap on the stored counts,
+ * so two share actions at once never overwrite each other's increment. A row
+ * that has gone (its Rewind was deleted) counts nothing.
+ */
+async function countShareAction(wrappedId: string, sessionKey: string, kind: ShareAction) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const view = await prisma.rewindView.findUnique({ where: { wrappedId_sessionKey: { wrappedId, sessionKey } }, select: { shareActions: true } })
+    if (!view) return
+    const swapped = await prisma.rewindView.updateMany({
+      where: { wrappedId, sessionKey, shareActions: { equals: view.shareActions ?? {} } },
+      data: { shareActions: counted(view.shareActions, kind) },
+    })
+    if (swapped.count > 0) return
+  }
+}
+
+/**
  * Records that the member reached `page` in this open, and a share action
  * when one is passed. The first call of an open creates the row; later ones
  * raise `furthestPage` (never lower it) and add to `shareActions[kind]`. The
@@ -61,14 +78,8 @@ export const recordRewindView = memberAction({
     })
     if (created.count > 0) return ok(null)
 
-    const key = { wrappedId_sessionKey: { wrappedId, sessionKey } }
     await prisma.rewindView.updateMany({ where: { wrappedId, sessionKey, furthestPage: { lt: page } }, data: { furthestPage: page } })
-    if (shareAction) {
-      await prisma.$transaction(async (tx) => {
-        const view = await tx.rewindView.findUniqueOrThrow({ where: key, select: { shareActions: true } })
-        await tx.rewindView.update({ where: key, data: { shareActions: counted(view.shareActions, shareAction) } })
-      })
-    }
+    if (shareAction) await countShareAction(wrappedId, sessionKey, shareAction)
     return ok(null)
   },
 })
