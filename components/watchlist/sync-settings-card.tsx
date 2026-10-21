@@ -124,7 +124,7 @@ export function WatchlistSyncCard() {
         transition={{ duration: 0.4, ease: "easeOut", delay: 0.15 }}
         data-testid="watchlist-sync-card-loading"
       >
-        <div className="animate-pulse space-y-3">
+        <div className="animate-skeleton space-y-3">
           <div className="h-5 w-32 rounded bg-secondary" />
           <div className="h-4 w-48 rounded bg-secondary" />
         </div>
@@ -160,13 +160,13 @@ export function WatchlistSyncCard() {
   const getStatusColor = (status: string | null) => {
     switch (status) {
       case "success":
-        return "text-green-400"
+        return "text-success"
       case "partial":
-        return "text-amber-400"
+        return "text-warning"
       case "failed":
-        return "text-red-400"
+        return "text-destructive"
       default:
-        return "text-slate-400"
+        return "text-muted-foreground"
     }
   }
 
