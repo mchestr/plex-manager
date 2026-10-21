@@ -32,6 +32,10 @@ interface RewindIssueProps {
   initialSheet?: SheetName
   /** An admin's dry run (P7.10): no share setup, and the stage runs in preview mode. */
   preview?: boolean
+  /** A member's stored Rewind in the admin shell (P7.9): no share setup, and the stage runs framed in admin-preview mode. */
+  adminPreview?: boolean
+  /** Where the stage's "Read as an article" goes, when not the member's own article. */
+  articleHref?: Route
 }
 
 /** "Browse the library" on the postcard: the server's own Plex web app when it has a public URL. */
@@ -47,7 +51,8 @@ async function libraryHref(): Promise<string | undefined> {
  * sheet's setup (P5.11). A full issue also typesets its pocket cut
  * (`pagesForCut`, P7.3), numbered 1 to 6, which the cover can swap to.
  */
-export async function RewindIssue({ rewindId, data, userId, returnTo, initialSheet, preview = false }: RewindIssueProps) {
+export async function RewindIssue({ rewindId, data, userId, returnTo, initialSheet, preview = false, adminPreview = false, articleHref }: RewindIssueProps) {
+  const mode = adminPreview ? "admin-preview" : preview ? "preview" : "member"
   const [settings, brand, config] = await Promise.all([
     getAppSettings(),
     serverName(),
@@ -58,8 +63,8 @@ export async function RewindIssue({ rewindId, data, userId, returnTo, initialShe
   const pages = validatePagesOnRead(pagesForCut(data, "full"), numbering)
   const pocket = data.edition === "full" ? validatePagesOnRead(pagesForCut(data, "pocket"), numbering) : null
   const [share, hidden, links, library] = await Promise.all([
-    preview ? null : loadShareSetup({ userId, rewindId, year: data.year, pages }),
-    preview
+    mode !== "member" ? null : loadShareSetup({ userId, rewindId, year: data.year, pages }),
+    mode !== "member"
       ? null
       : prisma.rewindExclusion.findMany({ where: { userId }, select: { ratingKey: true, kind: true, title: true }, orderBy: { createdAt: "asc" } }),
     pages.some((page) => page.type === "next-year") ? loadItemLinks() : undefined,
@@ -112,7 +117,8 @@ export async function RewindIssue({ rewindId, data, userId, returnTo, initialShe
           : undefined
       }
       initialSheet={initialSheet}
-      mode={preview ? "preview" : "member"}
+      mode={mode}
+      articleHref={articleHref}
     />
   )
 }

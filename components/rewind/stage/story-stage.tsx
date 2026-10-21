@@ -63,8 +63,15 @@ interface StoryStageProps {
   hide?: HideSetup
   /** A sheet to open on load: `?sheet=share` opens Share over the cover, paused. */
   initialSheet?: SheetName
-  /** `preview`: an admin's dry run (P7.10), under a Preview banner, with no sharing. */
-  mode?: "member" | "preview"
+  /**
+   * `preview`: an admin's dry run (P7.10), under a Preview banner, with no sharing.
+   * `admin-preview`: a member's stored Rewind in the admin shell (P7.9), framed
+   * in its parent instead of the window, with no share, hide or notify controls
+   * and no `RewindView`.
+   */
+  mode?: "member" | "preview" | "admin-preview"
+  /** Where "Read as an article" goes; the member's `/rewind/{year}/read` by default. */
+  articleHref?: Route
 }
 
 /** Before the first fit: the 390 x 844 roomy layout at scale 1. */
@@ -94,7 +101,7 @@ export function StoryStage({ share, hide, ...props }: StoryStageProps) {
     <Stage {...props} />
   )
   // Hiding is a member's own action: never in preview mode.
-  return hide && props.mode !== "preview" ? (
+  return hide && (props.mode ?? "member") === "member" ? (
     <HideProvider year={props.year} setup={hide}>
       {stage}
     </HideProvider>
@@ -105,13 +112,14 @@ export function StoryStage({ share, hide, ...props }: StoryStageProps) {
 
 const kindsOf = (pages: readonly StoryStagePage[]) => pages.map((page) => pageKind(registry[page.type].dwell))
 
-function Stage({ pages: fullPages, pocket, year, archetype, closeHref, copy, initialSheet, mode = "member" }: Omit<StoryStageProps, "share" | "hide">) {
+function Stage({ pages: fullPages, pocket, year, archetype, closeHref, copy, initialSheet, mode = "member", articleHref: articleHrefProp }: Omit<StoryStageProps, "share" | "hide">) {
   const router = useRouter()
   const root = useRef<HTMLElement>(null)
   const pagesRef = useRef<HTMLDivElement>(null)
   const safeArea = useRef<HTMLDivElement>(null)
   const offered = useRef(false)
-  const fit = useFitStage(root, safeArea)
+  const framed = mode === "admin-preview"
+  const fit = useFitStage(root, safeArea, framed)
   const prefs = useRewindPrefs()
   const [cut, chooseCut] = useStoryCut(year)
   const pages = cut === "pocket" && pocket ? pocket : fullPages
@@ -139,9 +147,10 @@ function Stage({ pages: fullPages, pocket, year, archetype, closeHref, copy, ini
   const table = pages[state.index].table ?? null
   const ink = pageInk(entry, archetype)
   const last = pages.length - 1
-  const preview = mode === "preview"
+  // Both previews: no sharing (and, from P7.7 and P7.14, no hiding and no views).
+  const preview = mode !== "member"
   const playing = state.mode === "playing" || (["holding", "interacting", "sheet"].includes(state.mode) && state.resumeTo === "playing")
-  const articleHref = `/rewind/${year}/read` as Route
+  const articleHref = articleHrefProp ?? (`/rewind/${year}/read` as Route)
   const pageLabel = (i: number) => `Page ${i + 1} of ${pages.length}: ${entries[i].name}`
   const { announcement, focusHandlers } = useStageA11y({ pagesRef, state, send, pageLabel })
   usePerfProbe(state.index)
@@ -240,7 +249,7 @@ function Stage({ pages: fullPages, pocket, year, archetype, closeHref, copy, ini
             data-fitted={fit.measured || undefined}
             style={FIT_DEFAULTS}
             onKeyDown={onKeyDown}
-            className="fixed inset-0 overflow-hidden overscroll-none outline-none"
+            className={cn(framed ? "absolute" : "fixed", "inset-0 overflow-hidden overscroll-none outline-none")}
           >
             <Button
               {...chromeInk}
@@ -305,7 +314,7 @@ function Stage({ pages: fullPages, pocket, year, archetype, closeHref, copy, ini
                 onNext={forward}
               />
             </footer>
-            {preview && (
+            {mode === "preview" && (
               <p
                 data-testid="rewind-preview-banner"
                 className="pointer-events-none absolute inset-x-0 top-(--rw-chrome-top) z-10 mx-auto w-fit rounded-full bg-background px-3 py-1 text-sm text-foreground"

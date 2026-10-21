@@ -1,13 +1,21 @@
 "use server"
 
+import { randomUUID } from "node:crypto"
+
+import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
 import { adminAction } from "@/lib/actions/define-action"
 import { fail, ok } from "@/lib/actions/result"
 import { requireAdmin } from "@/lib/admin"
+import { userRewind } from "@/lib/admin/routes"
 import { prisma } from "@/lib/prisma"
+import { getRedisConnection } from "@/lib/queue/connection"
+import { acquireGenerationLock } from "@/lib/queue/redis-lock"
 import { checkRewindInfra } from "@/lib/queue/rewind-infra"
+import { hasActiveGeneration } from "@/lib/rewind/generation-guards"
 import { rewindInfraMessage } from "@/lib/rewind/infra-copy"
+import { findRollbackTarget, rollbackStoredRewind } from "@/lib/rewind/rollback"
 import {
   enqueueGenerateAll,
   enqueueSeasonPrepare,
@@ -17,7 +25,7 @@ import {
   type RunStarted,
 } from "@/lib/rewind/season-runs"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
-import { yearSchema } from "@/lib/validations/shared-schemas"
+import { userIdSchema, yearSchema } from "@/lib/validations/shared-schemas"
 import { getSeasonCounts, type SeasonCounts } from "@/lib/wrapped/admin/season"
 import { loadSeasonEstimate } from "@/lib/wrapped/admin/season-estimate"
 
@@ -133,3 +141,51 @@ export async function getRewindSeasonDataPreparedAt(year: number): Promise<strin
   })
   return latest?.computedAt.toISOString() ?? null
 }
+
+const memberYearInput = z.object({ userId: userIdSchema, year: yearSchema })
+
+const ROLLBACK_REFUSALS = {
+  NO_PREVIOUS: fail("NOT_FOUND", "There is no earlier version of this Rewind to roll back to"),
+  UNREADABLE: fail("CONFLICT", "The earlier version could not be read, so it was not restored"),
+} as const
+
+const RUN_ACTIVE = fail("CONFLICT", "This Rewind is generating. Roll back once the run ends")
+
+/** The date of the version a roll back would restore, for its confirm (P7.9). */
+export const getRewindRollbackTarget = adminAction({
+  input: memberYearInput,
+  fallbackError: "Could not load the earlier version",
+  handler: async ({ userId, year }) => {
+    const target = await findRollbackTarget(userId, year)
+    return target.ok ? ok({ from: target.from }) : ROLLBACK_REFUSALS[target.reason]
+  },
+})
+
+/**
+ * Roll back (P7.9, design 7.9): restores the member's previous Rewind in one
+ * audited transaction, under the member's generation lock. Refused while a
+ * run is queued or running, without an earlier version, or when that version
+ * does not parse. A second roll back undoes the first.
+ */
+export const rollbackRewind = adminAction({
+  input: memberYearInput,
+  fallbackError: "Could not roll back the Rewind",
+  handler: async ({ userId, year }, { userId: adminId }) => {
+    const refused = await infraRefusal()
+    if (refused) return refused
+    if (await hasActiveGeneration(userId, year)) return RUN_ACTIVE
+    const lock = await acquireGenerationLock(getRedisConnection(), { year, userId, owner: `rollback:${randomUUID()}` })
+    if (!lock) return RUN_ACTIVE
+    try {
+      // Checked again under the lock: a run queued in between would overwrite the roll back.
+      if (await hasActiveGeneration(userId, year)) return RUN_ACTIVE
+      const result = await rollbackStoredRewind({ userId, year, adminId })
+      if (!result.ok) return ROLLBACK_REFUSALS[result.reason]
+      revalidatePath(userRewind(userId, year))
+      revalidatePath("/admin/rewind")
+      return ok({ generationId: result.generationId })
+    } finally {
+      await lock.release()
+    }
+  },
+})

@@ -100,7 +100,7 @@ describe('Admin user page season year', () => {
     expect(screen.queryByRole('heading', { name: '2027 Wrapped' })).not.toBeInTheDocument()
     expect(screen.getByTestId('admin-user-season-wrapped-view')).toHaveAttribute(
       'href',
-      '/admin/users/user-1/wrapped?year=2026'
+      '/admin/users/user-1/rewind/2026'
     )
     expect((RegenerateWrappedButton as jest.Mock).mock.calls[0][0]).toMatchObject({ userId: 'user-1', year: 2026 })
   })
