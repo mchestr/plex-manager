@@ -18,7 +18,8 @@ const valid: RewindSettingsInput = {
   rewindNotifyChannels: ['discord', 'banner'],
 }
 
-const parse = (overrides: Partial<RewindSettingsInput>) => rewindSettingsSchema.safeParse({ ...valid, ...overrides })
+/** Parses `valid` with `overrides`, which may hold values the input type refuses. */
+const parse = (overrides: Record<string, unknown>) => rewindSettingsSchema.safeParse({ ...valid, ...overrides })
 
 describe('rewindSettingsSchema', () => {
   it('accepts a season that wraps the year, 12-01 to 01-31', () => {
@@ -52,9 +53,9 @@ describe('rewindSettingsSchema', () => {
   })
 
   it('limits the audience, mode and channels to the known values', () => {
-    expect(parse({ rewindAudience: 'members' as 'all' }).success).toBe(false)
-    expect(parse({ rewindLlmMode: 'turbo' as 'off' }).success).toBe(false)
-    expect(parse({ rewindNotifyChannels: ['email' as 'banner'] }).success).toBe(false)
+    expect(parse({ rewindAudience: 'members' }).success).toBe(false)
+    expect(parse({ rewindLlmMode: 'turbo' }).success).toBe(false)
+    expect(parse({ rewindNotifyChannels: ['email'] }).success).toBe(false)
   })
 
   it('de-duplicates and orders the lists', () => {
