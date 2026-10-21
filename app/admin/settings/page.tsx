@@ -1,3 +1,5 @@
+import Link from "next/link"
+
 import { getAdminSettings } from "@/actions/admin"
 import { getStripeConfig } from "@/actions/admin/admin-config"
 import { getRewindSeasonDataPreparedAt } from "@/actions/admin/rewind-season"
@@ -9,17 +11,16 @@ import { LLMToggle } from "@/components/admin/settings/llm-toggle"
 import { ServerForm } from "@/components/admin/settings/server-form"
 import { StripeSettingsForm } from "@/components/admin/settings/stripe-settings-form"
 import { WatchlistSyncSettings } from "@/components/admin/settings/watchlist-sync-settings"
-import { PrepareSeasonDataButton } from "@/components/admin/settings/prepare-season-data-button"
 import { RewindSettingsSection } from "@/components/admin/settings/rewind-settings-section"
 import { ServerTimeZoneForm } from "@/components/admin/settings/server-time-zone-form"
 import { Card, CardContent } from "@/components/ui/card"
 import { getBaseUrl } from "@/lib/env"
 import { getFormat } from "@/lib/settings/app-settings"
 import { serverZone } from "@/lib/utils/server-zone"
-import { instantToWallTime } from "@/lib/utils/zoned-time"
 import { checkRewindInfra } from "@/lib/queue/rewind-infra"
 import { rewindInfraMessage } from "@/lib/rewind/infra-copy"
-import { getRewindContentRatings, getRewindLibraries, getRewindSeasonSpendUsd } from "@/lib/wrapped/admin/settings-options"
+import { getRewindSeasonSpend } from "@/lib/llm/usage-totals"
+import { getRewindContentRatings, getRewindLibraries } from "@/lib/wrapped/admin/settings-options"
 import { rewindSettingsFromConfig } from "@/lib/wrapped/config"
 import { getSeasonState } from "@/lib/wrapped/season"
 
@@ -78,7 +79,7 @@ export default async function SettingsPage() {
     checkRewindInfra(),
     getRewindLibraries(),
     getRewindContentRatings(),
-    getRewindSeasonSpendUsd(season.seasonYear),
+    getRewindSeasonSpend(season.seasonYear),
   ])
   const baseUrl = getBaseUrl()
   const discordPortalUrl = `${baseUrl}/discord/link`
@@ -238,11 +239,13 @@ export default async function SettingsPage() {
             />
             <Card>
               <CardContent className="flex flex-col gap-4">
-                <PrepareSeasonDataButton
-                  year={season.seasonYear}
-                  preparedAt={seasonDataPreparedAt && instantToWallTime(new Date(seasonDataPreparedAt), zone)}
-                  zone={zone}
-                />
+                {/* P7.8: Prepare season moved to the season console. */}
+                <p className="text-ui text-muted-foreground" data-testid="rewind-season-data-prepared-at">
+                  {seasonDataPreparedAt ? `Season data last prepared ${f.dateTime(seasonDataPreparedAt)}. ` : "Season data not prepared yet. "}
+                  <Link href="/admin/rewind" className="text-foreground underline underline-offset-3" data-testid="rewind-season-console-link">
+                    Prepare the season on the Season page
+                  </Link>
+                </p>
                 <div id="server-time-zone">
                   <ServerTimeZoneForm configured={settings.config.timezone} effective={zone} />
                 </div>

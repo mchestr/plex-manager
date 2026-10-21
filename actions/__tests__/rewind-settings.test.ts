@@ -19,6 +19,7 @@ import { Prisma } from '@/lib/generated/prisma/client'
 import { AuditEventType, logAuditEvent } from '@/lib/security/audit-log'
 import type { RewindSettingsInput } from '@/lib/validations/rewind-settings'
 import { getRewindContentRatings, getRewindLibraries } from '@/lib/wrapped/admin/settings-options'
+import { scheduleSeasonOpenRun } from '@/lib/rewind/season-runs'
 import type { RewindSettingsRow } from '@/lib/wrapped/config'
 
 jest.mock('next-auth', () => ({ getServerSession: jest.fn() }))
@@ -29,6 +30,7 @@ jest.mock('@/lib/wrapped/admin/settings-options', () => ({
   getRewindLibraries: jest.fn(),
   getRewindContentRatings: jest.fn(),
 }))
+jest.mock('@/lib/rewind/season-runs', () => ({ scheduleSeasonOpenRun: jest.fn(async () => null) }))
 jest.mock('@/lib/security/audit-log', () => ({
   ...jest.requireActual('@/lib/security/audit-log'),
   logAuditEvent: jest.fn(),
@@ -140,6 +142,21 @@ describe('updateRewindSettings', () => {
       'admin-1',
       expect.objectContaining({ changedFields: ['rewindSeasonOpens'] })
     )
+  })
+
+  it('a date change reschedules Prepare (P7.8), and other changes do not', async () => {
+    await updateRewindSettings({ ...unchanged, rewindSeasonOpens: '11-25' })
+    expect(scheduleSeasonOpenRun).toHaveBeenCalledTimes(1)
+
+    jest.mocked(scheduleSeasonOpenRun).mockClear()
+    await updateRewindSettings({ ...unchanged, rewindEnabled: true })
+    expect(scheduleSeasonOpenRun).not.toHaveBeenCalled()
+  })
+
+  it('saves a date change while the reschedule fails', async () => {
+    jest.mocked(scheduleSeasonOpenRun).mockRejectedValueOnce(new Error('Redis down'))
+
+    await expect(updateRewindSettings({ ...unchanged, rewindSeasonCloses: '01-15' })).resolves.toEqual({ success: true, data: null })
   })
 
   it('refuses a library Tautulli does not list, but keeps one already stored', async () => {

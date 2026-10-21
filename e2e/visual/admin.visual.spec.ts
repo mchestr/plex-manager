@@ -57,6 +57,11 @@ test.describe('Admin screens', () => {
     await capture(page, '/admin/settings', 'admin-settings');
   });
 
+  // P7.8: the season console at 1440x900 and 390x844 (the two viewport projects).
+  test('rewind season', async ({ page }) => {
+    await capture(page, '/admin/rewind', 'admin-rewind-season');
+  });
+
   test('settings, Rewind section', async ({ page }) => {
     await page.goto('/admin/settings#rewind');
     await settlePage(page);

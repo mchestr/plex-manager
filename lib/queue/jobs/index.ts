@@ -14,7 +14,7 @@ import { getDiscordRoleProcessor } from "./discord-role"
 /**
  * Job processor function type
  */
-export type JobProcessor = (job: Job) => Promise<unknown>
+export type JobProcessor = (job: Job, token?: string) => Promise<unknown>
 
 /**
  * Get the processor function for a given job type

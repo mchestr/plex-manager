@@ -44,8 +44,6 @@ const MONTH_DAYS = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 /**
  * `{ month, day }` for a `MM-DD` value that exists in some year, else null.
  *
- * @internal
- *
  * @example
  * ```ts
  * parseMonthDay("12-01") // { month: 12, day: 1 }

@@ -12,6 +12,7 @@ import "server-only"
 import { createHmac, randomBytes } from "node:crypto"
 
 import { type LLMProviderId } from "@/lib/llm/models"
+import { getRewindSeasonSpend } from "@/lib/llm/usage-totals"
 import { isLLMProviderId } from "@/lib/llm/provider-presets"
 import { prisma } from "@/lib/prisma"
 import type { RewindGenerationKind } from "@/lib/rewind/enqueue-generation"
@@ -140,7 +141,7 @@ export async function loadRewindContext(options: {
   const [aggregateRow, nth, spent, key] = await Promise.all([
     prisma.rewindServerAggregate.findUnique({ where: { year_dataThrough: { year, dataThrough: dataThroughDate(through) } }, select: { data: true } }),
     prisma.plexWrapped.count({ where: { userId, status: "completed", year: { lt: year } } }),
-    prisma.lLMUsage.aggregate({ where: { generation: { year } }, _sum: { cost: true } }),
+    getRewindSeasonSpend(year),
     serialKey(),
   ])
   const aggregate = aggregateRow ? serverAggregateSchema.safeParse(aggregateRow.data) : null
@@ -177,7 +178,7 @@ export async function loadRewindContext(options: {
     wrappedId: wrapped?.id ?? null,
     previous: wrapped?.status === "completed" ? await previousCopy(userId, year, wrapped.data) : null,
     llmProvider: provider && isLLMProviderId(provider.provider) && provider.model ? { provider: provider.provider, model: provider.model } : null,
-    spentUsd: spent._sum.cost ?? 0,
+    spentUsd: spent,
     styleGuide,
   }
 }

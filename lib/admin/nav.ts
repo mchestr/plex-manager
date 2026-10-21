@@ -8,13 +8,13 @@
  * ```
  * Overview            hidden until P10.8 ships the page
  * Community           Users, Invites, Announcements, Discord bot
- * Rewind              Playground, Prompts, Share analytics
+ * Rewind              Season, Playground, Prompts, Share analytics
  * Usage and cost      LLM usage, Cost analysis
  * System              Job queues, Settings
  * ```
  *
  * `typedRoutes` rejects links to routes that do not exist yet, so the step
- * that ships a route adds its item: Season (P7.8), Gallery (P7.11), Evals
+ * that ships a route adds its item: Season (P7.8, shipped), Gallery (P7.11), Evals
  * (P11.30) and Overview (P10.8). P8.8 moves Playground to
  * `/admin/rewind/playground`.
  *
@@ -95,6 +95,15 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     href: "/admin/discord",
     icon: icons.discordBot,
     group: "Community",
+    match: "prefix",
+    mobile: "more",
+  },
+  {
+    id: "season",
+    label: "Season",
+    href: "/admin/rewind",
+    icon: icons.rewind,
+    group: "Rewind",
     match: "prefix",
     mobile: "more",
   },

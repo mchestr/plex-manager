@@ -114,7 +114,7 @@ async function settleFailure(job: Job, run: Run, error: unknown, timedOut: boole
 
 /** Generates one member's Rewind; see the module comment. */
 export async function processRewindGenerateUser(job: Job<RewindGenerateUserPayload>): Promise<GenerateResult> {
-  const { generationId, userId, year } = job.data
+  const { generationId, userId, year, audience, through } = job.data
   const generation = await prisma.rewindGeneration.findUnique({
     where: { id: generationId },
     select: { wrappedId: true, status: true, kind: true, copyPolicy: true },
@@ -149,6 +149,8 @@ export async function processRewindGenerateUser(job: Job<RewindGenerateUserPaylo
       copyPolicy: generation.copyPolicy === "no-llm" ? "no-llm" : "default",
       signal,
       generationId,
+      audience,
+      through,
     })
     if (result.status === "skipped") {
       await fail(run, result.reason, "skipped")

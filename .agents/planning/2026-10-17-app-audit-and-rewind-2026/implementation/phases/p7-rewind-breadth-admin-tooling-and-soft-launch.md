@@ -427,12 +427,14 @@ The ten core pages (Bookends included), sharing, privacy and accessibility are n
 
 **Demo.** On a seeded server, Prepare season runs the aggregate, the warm batches and the fan-out in order, and the tiles move every 5 s until every member is ready. A second Generate all during the run leaves the running members out. `/admin/users` loads without selecting any prompt text.
 
+(as merged: the Season nav item went into `lib/admin/nav.ts` (P6 had merged; the mobile Rewind tab now opens `/admin/rewind`), not `admin-nav.tsx`. Processors live in `lib/queue/jobs/rewind-season.ts` and producers plus `ensureSeasonPrepareScheduled`/`scheduleSeasonOpenRun` in `lib/rewind/season-runs.ts`; `JobProcessor` now receives the BullMQ token. The fan-out adds children with `parent` from the step job (`addBulk`), not a `FlowProducer`; children set `ignoreDependencyOnFailure`, the aggregate child `failParentOnFailure`. `REWIND_SERVER_AGGREGATE` takes `warm: 'return'` so Prepare adds the warm batches as its own children. `through` is the batch's day (`YYYY-11-30`); the "end of yesterday" clip is left to the data window. The season-open run uses the opening day from `rewindSeasonOpens` at 00:15, and is replaced (remove and re-add, job id carries the instant) when it moves; P7.12's `updateRewindSettings` reschedules it on a date change. Run final cut is a disabled button; `runRewindFinalCut` refuses before 1 January in the westernmost zone and, after, until P8.5. P2.6's Prepare season data button and `prepareRewindSeasonData`/`enqueueServerAggregate` are gone; settings links to Season. P7.12's stopgap `getRewindSeasonSpendUsd` was replaced by `getRewindSeasonSpend`. `aggregateLlmUsage` stays for the LLM usage list and conversation pages, which sum the rows already on the page; those pages and the usage detail still read prompt text by design. Visual baseline `admin-rewind-season` and the E2E spec were written but not run.)
+
 **Done when.**
-- [ ] `/admin/rewind` shows the preflight rows, the StatGrid, live progress and the per-member DataTable.
-- [ ] Prepare season, Generate all, Retry failed and Run final cut each show a cost estimate and write an audit entry, and the fan-out skips queued and running members.
-- [ ] `REWIND_SEASON_PREPARE` is scheduled for 00:15 on 1 December in the westernmost zone with audience `all`, the buttons use the configured audience, and the season budget cap is shown and enforced.
+- [x] `/admin/rewind` shows the preflight rows, the StatGrid, live progress and the per-member DataTable.
+- [x] Prepare season, Generate all, Retry failed and Run final cut each show a cost estimate and write an audit entry, and the fan-out skips queued and running members.
+- [x] `REWIND_SEASON_PREPARE` is scheduled for 00:15 on 1 December in the westernmost zone with audience `all`, the buttons use the configured audience, and the season budget cap is shown and enforced.
 - [ ] Admin-audience generation has run on production data from 2026-11-20.
-- [ ] Cost totals come from aggregate queries, and no admin page loads `LLMUsage` prompt or response text.
+- [x] Cost totals come from aggregate queries, and no admin page loads `LLMUsage` prompt or response text.
 
 ### Step P7.9: Admin preview, roll back and audited reads
 

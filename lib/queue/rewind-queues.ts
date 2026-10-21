@@ -25,10 +25,12 @@ import { closeWorker, getRedisConnection } from "@/lib/queue/connection"
 import type { JobProcessor } from "@/lib/queue/jobs"
 import { REWIND_BATCH_PROCESSORS } from "@/lib/queue/jobs/rewind-batch"
 import { processRewindGenerateUser } from "@/lib/queue/jobs/rewind"
+import { REWIND_SEASON_PROCESSORS } from "@/lib/queue/jobs/rewind-season"
 import { processRewindCardPrewarm, processRewindCardSweep, registerCardJobs } from "@/lib/queue/jobs/rewind-cards"
 import { processRewindDryRun } from "@/lib/queue/jobs/rewind-dry-run"
 import { processRewindStaleSweep } from "@/lib/queue/jobs/rewind-stale-sweep"
 import { getRewindQueue } from "@/lib/queue/rewind-producers"
+import { scheduleSeasonOpenRun } from "@/lib/rewind/season-runs"
 import { JOB_TYPES } from "@/lib/queue/types"
 import { createLogger } from "@/lib/utils/logger"
 
@@ -44,7 +46,7 @@ export type RewindQueueName = keyof typeof REWIND_QUEUES
 
 /** Processors by job name, per queue. Later steps add their jobs here. */
 const PROCESSORS: Record<RewindQueueName, Record<string, JobProcessor>> = {
-  "rewind-batch": REWIND_BATCH_PROCESSORS,
+  "rewind-batch": { ...REWIND_BATCH_PROCESSORS, ...REWIND_SEASON_PROCESSORS },
   "rewind-gen": { [JOB_TYPES.REWIND_GENERATE_USER]: processRewindGenerateUser as JobProcessor },
   "rewind-aux": {
     [JOB_TYPES.REWIND_STALE_SWEEP]: processRewindStaleSweep,
@@ -60,10 +62,10 @@ function createRewindWorker(name: RewindQueueName): Worker {
   const processors = PROCESSORS[name]
   const worker = new Worker(
     name,
-    async (job: Job) => {
+    async (job: Job, token?: string) => {
       const processor = processors[job.name]
       if (!processor) throw new Error(`Unknown job type on ${name}: ${job.name}`)
-      return processor(job)
+      return processor(job, token)
     },
     {
       connection: getRedisConnection(),
@@ -102,6 +104,7 @@ export function startRewindWorkers(): void {
   workers = (Object.keys(REWIND_QUEUES) as RewindQueueName[]).map(createRewindWorker)
   onShutdown("rewind-workers", "drain", stopRewindWorkers)
   scheduleStaleSweep().catch((error: unknown) => logger.error("Could not schedule the Rewind stale sweep", error))
+  scheduleSeasonOpenRun().catch((error: unknown) => logger.error("Could not schedule the season-open Rewind run", error))
   registerCardJobs()
   logger.info("Rewind workers started", { queues: Object.keys(REWIND_QUEUES) })
 }
