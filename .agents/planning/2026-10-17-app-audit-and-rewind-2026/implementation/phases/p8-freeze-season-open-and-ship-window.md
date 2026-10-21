@@ -89,11 +89,19 @@ No new feature code lands from 10 to 12 December. Every P1 feature ships with it
 
 **Done when.**
 - [ ] The last prompt edits reach 98% or more first-pass grounding on all 20 fixtures, and their recordings are committed.
-- [ ] `PROMPT_VERSION` is `rewind-2026.1`, and the lock covers the model, the prompt and the catalogue, with a CI check that fails on any change.
-- [ ] The Rewind model cannot be changed in settings until the season closes, and a provider mismatch falls back to templates.
+- [x] `PROMPT_VERSION` is `rewind-2026.1`, and the lock covers the model, the prompt and the catalogue, with a CI check that fails on any change. (The lock's `model` is null until the bake-off fills `selected.json`; see the note.)
+- [x] The Rewind model cannot be changed in settings until the season closes, and a provider mismatch falls back to templates.
 - [ ] The page data that P8.3 and P8.4 need is verified in the stored soft-launch issues, with no change to the data contract on the day.
 - [ ] The tag, the dump and the deploy happened before 18:00 on 30 November, and the staging rehearsal's timings are in `ship-check.md`.
 - [ ] Prices were re-checked on 2026-12-01 and recorded in `model-selection.md`.
+
+(as merged, code only:
+- The lock is `lib/wrapped/freeze/rewind-2026.1.lock.json` with nine sections (`lib/wrapped/freeze/sections.ts`: `promptVersion`, `systemPrompt`, `wireSchema`, `copySlots`, `grounding`, `posterLines`, `slotTemplates`, `catalogue`, `model`), a `frozenAt` of 2026-12-01 and dated reason lines; `npm run rewind:freeze -- --check` runs in CI's Unit Tests job, and `--write --reason=...` refuses a changed lock under the same version from `frozenAt`. `copySlots` hashes the lists with `window.finalCut` already removed by P8.5. `SLOT_TEMPLATES` in `lib/wrapped/copy/templates.ts` is now exported for the hash.
+- `evals/rewind/selected.json` still names no model, so the committed lock has `model: null`. While it does, `getFrozenRewindModel()` (`lib/llm/registry.ts`, pure rule `frozenModelFor` in `lib/wrapped/freeze/lock.ts`) returns the active row's own model ("unfrozen"); once the lock names one it returns the lock's model and budget model on the row's key, and "mismatch" for a row on another provider. `loadRewindContext` uses it, so the default and P8.5's `changed-slots` policies both write with the frozen model; a mismatch makes every slot a template (`PROVIDER_MISMATCH`, one warning per process) and turns the preflight's AI copy row red (`unreachable`). Dry runs on fixtures keep the active row, so the playground can still try other models.
+- The settings refusal covers a provider, model or OpenAI-compatible base-URL change for `wrapped` while `getSeasonState().isOpen`, returned as `CONFLICT` before the connection test; key rotation and the assistant pass.
+- `/admin/rewind` shows "Model freeze" ("Frozen 1 December 2026", or "Not frozen: no model selected yet") and the frozen model.
+- `models.test.ts`'s `asOf` check is skipped until the lock names a model, and from 2026-12-02 it fails until the frozen pair carries a 2026-12-01 price check.
+- Owner-only, not done (dated checklist in `docs/rewind.md`, "Owner checklist, 30 November to 2 December"): by 29 Nov record the bake-off in `selected.json` with its recordings, reach 98% first-pass grounding, and merge `npm run rewind:freeze -- --write --reason=...`; 30 Nov after 12:00 run the validator's page-schema pass on an admin's soft-launch issue, tag `rewind-2026.1`, dump, deploy before 18:00, check `/admin/rewind`, rehearse on staging in the evening and record the timings in `ship-check.md`; 1 Dec re-check the prices and append them to `model-selection.md`.)
 
 ### Step P8.2: Season open
 
@@ -134,6 +142,8 @@ No new feature code lands from 10 to 12 December. Every P1 feature ships with it
 - [ ] 100% of eligible members have a completed Rewind, and every skip carries an eligibility reason.
 - [ ] `rewindAudience` became `all` at 08:00, and each member received one ready notification inside their window.
 - [ ] `RewindView` rows are recording, and spend is within the cap and under $0.03 per member.
+
+(as merged, code only: unlike "This step merges no code", the season open is now scheduled code. The Prepare through 30 November at 00:15 in the westernmost zone was already P7.8's `ensureSeasonPrepareScheduled`; P8.2 adds the 08:00 audience switch. `REWIND_SEASON_OPEN` on `rewind-aux` (`lib/queue/jobs/rewind-season-open.ts`, rules in `lib/rewind/season-open.ts`) is kept as one delayed job (dedup `rewind:open:{year}`) for 08:00 on the opening day in the server zone, at worker start and by the stale sweep, through the shared `keepDelayedRun` now in `lib/rewind/season-runs.ts` (the Prepare and the final cut use it too). It switches only with the owner's opt-in, the new `+season.auto-open` entry in `REWIND_FEATURES` (no migration; listed under "Features added in December"), with Rewind on, the audience still `admins`, the season-open Prepare finished and no member generating or failed; while a run is going it re-checks every 10 minutes until 12:00, and with failures it leaves the switch to the owner. The switch (`openRewindToEveryone`) is a compare-and-set to `all`, a `CONFIG_CHANGED` entry by `system` and `enqueueSeasonReadyNotifications`, the same effects as P7.12's save. `scripts/rewind-season-open.ts` (`npm run rewind:season-open`) prints the schedule read-only, and `--rehearse` (only with `REWIND_STAGING=1`) enqueues the Prepare at once with audience `all`, waits, switches and prints the timings; `--switch-only` switches after Retry failed. `/admin/rewind` shows "Opens to everyone". `e2e/rewind/season-open.spec.ts` is written, not run. Owner-only, not done (dated in `docs/rewind.md`'s checklist): on 30 Nov turn on `+season.auto-open` if wanted and run the staging rehearsal; 1 Dec 00:15 to 08:00 verify the dashboard, Retry failed, and at 08:00 confirm the audience is Everyone or switch by hand; watch DMs, `RewindView` rows and spend; 2 Dec run `npm run rewind:validate -- --year=2026` against production and record zero failures in `ship-check.md`.)
 
 ### Step P8.3: P1 story features
 
