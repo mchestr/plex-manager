@@ -55,7 +55,7 @@
     "@prisma/client": "^7.10.1",
     "@tanstack/react-query": "^5.101.2",
     "ai": "7.0.147",
-    "bullmq": "^5.81.5",
+    "bullmq": "^6.3.16",
     "chart.js": "^4.5.1",
     "class-variance-authority": "0.7.1",
     "clsx": "^2.1.1",
