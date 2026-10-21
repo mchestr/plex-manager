@@ -12,9 +12,12 @@ import { LIMITS } from '../../lib/security/rate-limit-config'
  * unreachable Redis is reported and skipped: the app then counts in memory,
  * and the web server starts fresh for each run unless E2E_REUSE_SERVER=1.
  *
+ * A spec that asserts on a limited write can pass `names` to start that
+ * limit fresh mid-run, since earlier specs signed in as the same member spend it.
+ *
  * @returns The number of keys deleted, or `null` when Redis was unreachable
  */
-export async function clearRateLimits(redisUrl: string): Promise<number | null> {
+export async function clearRateLimits(redisUrl: string, names: readonly (keyof typeof LIMITS)[] = Object.keys(LIMITS) as (keyof typeof LIMITS)[]): Promise<number | null> {
   // One attempt, no reconnects: a setup step either reaches Redis or moves on.
   const redis = new Redis(redisUrl, {
     lazyConnect: true,
@@ -28,7 +31,7 @@ export async function clearRateLimits(redisUrl: string): Promise<number | null> 
   try {
     await redis.connect()
     let deleted = 0
-    for (const name of Object.keys(LIMITS)) {
+    for (const name of names) {
       for await (const keys of redis.scanStream({ match: `${name}:*`, count: 500 })) {
         const batch = keys as string[]
         if (batch.length > 0) {
