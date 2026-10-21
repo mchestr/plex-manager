@@ -40,32 +40,36 @@ export function AnnouncementsCard({ announcements, seenAt }: AnnouncementsCardPr
           </Link>
         </CardAction>
       </CardHeader>
-      <ul className="flex flex-col">
+      {/* Not a list: an announcement's own Markdown list would nest in it and read as a sub-list */}
+      <div className="flex flex-col">
         {announcements.map((announcement) => {
           const titleId = `home-announcement-${announcement.id}-title`
           return (
-            <li key={announcement.id} className="border-t px-5 pt-3.5 pb-4 first:border-t-0 first:pt-0.5">
-              <article aria-labelledby={titleId} data-testid={`announcement-${announcement.id}`}>
-                <div className="flex items-center gap-2.5">
-                  {isNewAnnouncement(announcement.createdAt, seenAt) && (
-                    <NewPip data-testid={`announcement-${announcement.id}-new`} />
-                  )}
-                  <h3 id={titleId} className="text-ui font-semibold text-foreground">
-                    {announcement.title}
-                  </h3>
-                  <Time
-                    value={announcement.createdAt}
-                    className="ml-auto shrink-0 text-caption whitespace-nowrap text-muted-foreground"
-                  />
-                </div>
-                <MarkdownBody className="mt-1.5 text-ui text-muted-foreground [--typeset-flow:0.5em]">
-                  {announcement.content}
-                </MarkdownBody>
-              </article>
-            </li>
+            <article
+              key={announcement.id}
+              aria-labelledby={titleId}
+              className="border-t px-5 pt-3.5 pb-4 first:border-t-0 first:pt-0.5"
+              data-testid={`announcement-${announcement.id}`}
+            >
+              <div className="flex items-center gap-2.5">
+                {isNewAnnouncement(announcement.createdAt, seenAt) && (
+                  <NewPip data-testid={`announcement-${announcement.id}-new`} />
+                )}
+                <h3 id={titleId} className="text-ui font-semibold text-foreground">
+                  {announcement.title}
+                </h3>
+                <Time
+                  value={announcement.createdAt}
+                  className="ml-auto shrink-0 text-caption whitespace-nowrap text-muted-foreground"
+                />
+              </div>
+              <MarkdownBody className="mt-1.5 text-ui text-muted-foreground [--typeset-flow:0.5em]">
+                {announcement.content}
+              </MarkdownBody>
+            </article>
           )
         })}
-      </ul>
+      </div>
       <MarkAnnouncementsSeen through={newestCreatedAt(announcements)} />
     </Card>
   )

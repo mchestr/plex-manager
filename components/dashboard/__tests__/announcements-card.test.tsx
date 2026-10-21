@@ -45,6 +45,8 @@ describe('AnnouncementsCard', () => {
     expect(typeset).not.toBeNull()
     expect(within(item).getAllByRole('listitem')).toHaveLength(2)
     expect(typeset?.querySelector('ul > li')).toHaveTextContent('Plex restarts')
+    // The card itself is no list, so the body's list is not nested (circle bullets)
+    expect(screen.getByTestId('announcements-card').querySelectorAll('ul')).toHaveLength(1)
     expect(screen.getByTestId('announcements-card').querySelector('[class*="overflow-y"]')).toBeNull()
   })
 
