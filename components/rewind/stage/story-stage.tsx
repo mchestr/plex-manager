@@ -6,6 +6,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useLayoutEffect, useRef, type CSSProperties, type KeyboardEvent, type ReactNode } from "react"
 
+import { HideProvider, type HideSetup } from "@/components/rewind/hide/hide-context"
 import { ShareProvider, type ShareActions } from "@/components/rewind/share/share-context"
 import { shouldOfferArticle } from "@/components/rewind/sheets/article-offer-sheet"
 import { Button } from "@/components/ui/button"
@@ -55,6 +56,8 @@ interface StoryStageProps {
   copy: CopyAuthor
   /** The share sheet's setup and actions (P5.11); without them the share controls open nothing. */
   share?: { setup: ShareSetup; actions: ShareActions }
+  /** The member's hidden titles and the hide actions (P7.7); without them, and in preview mode, no Hide controls show. */
+  hide?: HideSetup
   /** A sheet to open on load: `?sheet=share` opens Share over the cover, paused. */
   initialSheet?: SheetName
   /** `preview`: an admin's dry run (P7.10), under a Preview banner, with no sharing. */
@@ -79,17 +82,25 @@ const FIT_DEFAULTS = { "--u": 1, "--rw-artboard-h": 693, "--rw-chrome-top": "76p
  * member's reduced-motion setting. The share sheet reads the issue's
  * `ShareProvider`, which wraps the stage when `share` is set.
  */
-export function StoryStage({ share, ...props }: StoryStageProps) {
-  return share ? (
+export function StoryStage({ share, hide, ...props }: StoryStageProps) {
+  const stage = share ? (
     <ShareProvider setup={share.setup} actions={share.actions}>
       <Stage {...props} />
     </ShareProvider>
   ) : (
     <Stage {...props} />
   )
+  // Hiding is a member's own action: never in preview mode.
+  return hide && props.mode !== "preview" ? (
+    <HideProvider year={props.year} setup={hide}>
+      {stage}
+    </HideProvider>
+  ) : (
+    stage
+  )
 }
 
-function Stage({ pages, year, archetype, closeHref, copy, initialSheet, mode = "member" }: Omit<StoryStageProps, "share">) {
+function Stage({ pages, year, archetype, closeHref, copy, initialSheet, mode = "member" }: Omit<StoryStageProps, "share" | "hide">) {
   const router = useRouter()
   const root = useRef<HTMLElement>(null)
   const pagesRef = useRef<HTMLDivElement>(null)
