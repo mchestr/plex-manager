@@ -1,300 +1,132 @@
+import { MessagesSquare } from "lucide-react"
+
 import { getLLMUsageRecords } from "@/actions/admin"
-import { aggregateLlmUsage } from "@/lib/utils"
-import { getFormat } from "@/lib/settings/app-settings"
-import type { BoundFormat } from "@/lib/utils/format"
-import { dayKey } from "@/lib/utils/zoned-time"
-import Link from "next/link"
-import Image from "next/image"
+import { ConversationTranscript } from "@/components/admin/llm-usage/conversation-transcript"
 import { ConversationUsageRow } from "@/components/admin/llm-usage/conversation-usage-row"
 import { LlmTextRemovedNotice } from "@/components/admin/llm-usage/llm-text-removed-notice"
-import { ExpandablePrompt } from "@/components/admin/prompts/expandable-prompt"
+import { EmptyState } from "@/components/ui/empty-state"
+import { PageHeader } from "@/components/ui/page-header"
+import { StatGrid, StatTile } from "@/components/ui/stat-tile"
+import { llmUsage } from "@/lib/admin/routes"
+import { getFormat } from "@/lib/settings/app-settings"
+import { aggregateLlmUsage } from "@/lib/utils"
+import type { BoundFormat } from "@/lib/utils/format"
+import { dayKey } from "@/lib/utils/zoned-time"
 
 export const dynamic = "force-dynamic"
 
+/** "Oct 12, 2026, 2:26 PM CDT to 2:28 PM", or both dates when the range spans days; always in `Config.timezone` (GAP-43). */
 function formatTimeRange(start: Date, end: Date, f: BoundFormat) {
   const { timeZone } = f.settings
   const sameDay = dayKey(start.getTime(), timeZone) === dayKey(end.getTime(), timeZone)
-  const startDate = f.date(start)
-  const endDate = f.date(end)
-  const startTime = f.time(start)
-  const endTime = f.time(end)
-
-  if (sameDay) {
-    // Example: "Nov 24 · 10:12–10:14"
-    return `${startDate} · ${startTime}–${endTime}`
-  }
-
-  // Example: "Nov 24 10:12 → Nov 25 11:03"
-  return `${startDate} ${startTime} → ${endDate} ${endTime}`
+  const from = f.dateTime(start, { zoneLabel: true })
+  return sameDay ? `${from} to ${f.time(end)}` : `${from} to ${f.dateTime(end, { zoneLabel: true })}`
 }
 
 function getDurationLabel(start: Date, end: Date) {
-  const ms = end.getTime() - start.getTime()
-  if (ms <= 0) return "0s"
-  const seconds = Math.floor(ms / 1000)
+  const seconds = Math.max(0, Math.floor((end.getTime() - start.getTime()) / 1000))
   if (seconds < 60) return `${seconds}s`
   const minutes = Math.floor(seconds / 60)
-  const remSeconds = seconds % 60
-  if (minutes < 60) {
-    return remSeconds > 0 ? `${minutes}m ${remSeconds}s` : `${minutes}m`
-  }
+  if (minutes < 60) return seconds % 60 > 0 ? `${minutes}m ${seconds % 60}s` : `${minutes}m`
   const hours = Math.floor(minutes / 60)
-  const remMinutes = minutes % 60
-  return remMinutes > 0 ? `${hours}h ${remMinutes}m` : `${hours}h`
+  return minutes % 60 > 0 ? `${hours}h ${minutes % 60}m` : `${hours}h`
 }
 
-export default async function LLMConversationPage({
-  params,
-}: {
-  params: Promise<{ conversationId: string }>
-}) {
-  const { conversationId } = await params
+const HEADINGS = ["#", "Time", "Model", "Tokens", "Cost"]
 
-  // For now, fetch first page with a generous page size – chatbot conversations are short
-  const [{ records }, f] = await Promise.all([
-    getLLMUsageRecords(1, 100, undefined, conversationId),
-    getFormat(),
-  ])
+/** One chat conversation's LLM calls (P10.6): breadcrumbs, server-formatted zoned times and the transcript. */
+export default async function LLMConversationPage({ params }: { params: Promise<{ conversationId: string }> }) {
+  const { conversationId } = await params
+  const [{ records }, f] = await Promise.all([getLLMUsageRecords(1, 100, undefined, conversationId), getFormat()])
 
   if (!records.length) {
     return (
-      <div className="p-4 sm:p-6">
-        <div className="max-w-5xl mx-auto">
-          <Link
-            href="/admin/llm-usage"
-            className="text-sm text-cyan-400 hover:text-cyan-300 mb-4 inline-block"
-          >
-            ← Back to LLM Requests
-          </Link>
-          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
-            Conversation LLM Usage
-          </h1>
-          <p className="text-sm text-slate-400">
-            No LLM usage records were found for this conversation.
-          </p>
-        </div>
+      <div className="mx-auto flex max-w-5xl flex-col gap-6 p-4 sm:p-6">
+        <PageHeader
+          breadcrumbs={[{ label: "LLM usage", href: llmUsage() }, { label: "Conversation" }]}
+          title="Conversation"
+          data-testid="admin-llm-conversation-heading"
+        />
+        <EmptyState kind="first-use" icon={MessagesSquare} title="No calls" description="No LLM usage records were found for this conversation." />
       </div>
     )
   }
 
-  const summary = aggregateLlmUsage(
-    records.map((r) => ({
-      totalTokens: r.totalTokens,
-      promptTokens: r.promptTokens,
-      completionTokens: r.completionTokens,
-      cost: r.cost,
-      provider: r.provider,
-      model: r.model,
-    }))
-  )
-
+  const summary = aggregateLlmUsage(records)
   const user = records[0].user
-  const startedAt = records.reduce(
-    (earliest, r) => (r.createdAt < earliest ? r.createdAt : earliest),
-    records[0].createdAt
-  )
-  const endedAt = records.reduce(
-    (latest, r) => (r.createdAt > latest ? r.createdAt : latest),
-    records[0].createdAt
-  )
-  const callsCount = records.length
-
-  // Get the latest record (most recent) which contains the full conversation prompt
-  const latestRecord = records.reduce(
-    (mostRecent, r) => (r.createdAt > mostRecent.createdAt ? r : mostRecent),
-    records[0]
-  )
-
-  // Format prompt nicely - check if it's a chat message array
-  // The column is nullable since the October 2026 privacy clean-up (P0.20),
-  // which strips non-chat rows; chat calls keep their text.
-  let formattedPrompt = latestRecord.prompt ?? ""
-  let promptIsChatMessages = false
-  try {
-    const parsedPrompt = JSON.parse(formattedPrompt)
-
-    // Check if it's an array of chat messages
-    if (Array.isArray(parsedPrompt) && parsedPrompt.length > 0) {
-      const firstItem = parsedPrompt[0]
-      if (typeof firstItem === 'object' && firstItem !== null && ('role' in firstItem || 'content' in firstItem)) {
-        promptIsChatMessages = true
-        // Format as readable chat messages with separator
-        formattedPrompt = parsedPrompt.map((msg: any) => {
-          const role = msg.role || 'unknown'
-          let content: string
-
-          if (typeof msg.content === 'string') {
-            // Check if the string is JSON (common for tool outputs)
-            try {
-              const parsed = JSON.parse(msg.content)
-              content = JSON.stringify(parsed, null, 2)
-            } catch {
-              // Not JSON, use as-is
-              content = msg.content
-            }
-          } else {
-            content = JSON.stringify(msg.content, null, 2)
-          }
-
-          const name = msg.name ? ` (${msg.name})` : ''
-          return `[${role.toUpperCase()}${name}]\n${content}`
-        }).join('\n\n---\n\n')
-      } else {
-        // Regular JSON array/object
-        formattedPrompt = JSON.stringify(parsedPrompt, null, 2)
-      }
-    } else {
-      // Regular JSON object
-      formattedPrompt = JSON.stringify(parsedPrompt, null, 2)
-    }
-  } catch {
-    // Not JSON, will display as text
-  }
+  const name = user.name || user.email || "Unknown member"
+  const times = records.map((r) => r.createdAt.getTime())
+  const startedAt = new Date(Math.min(...times))
+  const endedAt = new Date(Math.max(...times))
+  const latestRecord = records.reduce((latest, r) => (r.createdAt > latest.createdAt ? r : latest), records[0])
 
   return (
-    <div className="p-4 sm:p-6">
-      <div className="max-w-5xl mx-auto">
-        <div className="mb-6">
-          <Link
-            href="/admin/llm-usage"
-            className="text-sm text-cyan-400 hover:text-cyan-300 mb-4 inline-block"
-          >
-            ← Back to LLM Requests
-          </Link>
-          <h1 data-testid="admin-llm-conversation-heading" className="text-2xl sm:text-3xl font-bold text-white mb-2">
-            Conversation LLM Usage
-          </h1>
-          <p className="text-sm text-slate-400">
-            Inspect individual LLM calls that belong to this chat conversation.
-          </p>
-        </div>
+    <div className="mx-auto flex max-w-5xl flex-col gap-6 p-4 sm:p-6">
+      <PageHeader
+        breadcrumbs={[{ label: "LLM usage", href: llmUsage() }, { label: name, href: llmUsage({ userId: user.id }) }, { label: "Conversation" }]}
+        title={`${name}'s conversation`}
+        description="Each LLM call in this chat conversation."
+        data-testid="admin-llm-conversation-heading"
+      />
 
-        {/* Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
-            <div className="text-sm text-slate-400 mb-1">User</div>
-            <div className="flex items-center gap-2">
-              {user.image ? (
-                <div className="relative w-8 h-8 rounded-full overflow-hidden bg-slate-700">
-                  <Image
-                    src={user.image}
-                    alt={user.name || "User"}
-                    width={32}
-                    height={32}
-                    className="w-full h-full object-cover"
-                    unoptimized
-                  />
-                </div>
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center">
-                  <span className="text-slate-400 text-xs font-medium">
-                    {(user.name || user.email || "U")[0].toUpperCase()}
-                  </span>
-                </div>
-              )}
-              <div>
-                <div className="text-sm font-medium text-white">
-                  {user.name || "Unknown"}
-                </div>
-                {user.email && (
-                  <div className="text-xs text-slate-400">{user.email}</div>
-                )}
-              </div>
-            </div>
-          </div>
-          <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
-            <div className="text-sm text-slate-400 mb-1">Conversation Summary</div>
-            <div className="text-2xl font-bold text-cyan-400">
-              {callsCount} call{callsCount === 1 ? "" : "s"}
-            </div>
-            <div className="text-xs text-muted-foreground mt-1">
+      <StatGrid data-testid="admin-llm-conversation-summary">
+        <StatTile
+          label="Calls"
+          value={f.number(records.length)}
+          meta={
+            <span data-testid="admin-llm-conversation-range">
               {formatTimeRange(startedAt, endedAt, f)} ({getDurationLabel(startedAt, endedAt)})
-            </div>
-            {summary?.model && (
-              <div className="text-xs text-muted-foreground mt-1">
-                Model: <span className="font-mono text-slate-300">{summary.model}</span>
-              </div>
-            )}
-          </div>
-          <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
-            <div className="text-sm text-slate-400 mb-1">Total Usage</div>
-            <div className="text-2xl font-bold text-green-400">
-              {f.money(summary?.cost ?? 0)}
-            </div>
-            <div className="text-xs text-muted-foreground mt-1">
-              {f.tokens(summary?.totalTokens ?? 0)}
-            </div>
-            <div className="text-xs text-muted-foreground">
-              {f.number(summary?.promptTokens ?? 0)} prompt +{" "}
-              {f.number(summary?.completionTokens ?? 0)} completion
-            </div>
-          </div>
-        </div>
+            </span>
+          }
+        />
+        <StatTile label="Cost" value={f.money(summary?.cost ?? 0)} meta={summary?.model ?? undefined} />
+        <StatTile
+          label="Tokens"
+          value={f.number(summary?.totalTokens ?? 0)}
+          meta={`${f.number(summary?.promptTokens ?? 0)} prompt + ${f.number(summary?.completionTokens ?? 0)} completion`}
+        />
+      </StatGrid>
 
-        {/* Latest Conversation Prompt */}
-        <div className="mb-6">
-          {latestRecord.prompt === null ? (
-            <LlmTextRemovedNotice title="Latest Conversation Prompt" />
-          ) : (
-            <ExpandablePrompt
-              content={formattedPrompt}
-              title="Latest Conversation Prompt"
-              characterCount={latestRecord.prompt.length}
-              characterCountSuffix={promptIsChatMessages ? "(Chat messages)" : undefined}
-            />
-          )}
-        </div>
+      {latestRecord.prompt === null ? (
+        <LlmTextRemovedNotice title="Latest Conversation Prompt" />
+      ) : (
+        <ConversationTranscript prompt={latestRecord.prompt} />
+      )}
 
-        {/* Per-call table */}
-        <div className="bg-slate-800/50 border border-slate-700 rounded-lg overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-slate-700/30 border-b border-slate-700">
-                <tr>
-                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
-                    #
-                  </th>
-                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
-                    Time
-                  </th>
-                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider hidden lg:table-cell">
-                    Model
-                  </th>
-                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
-                    Tokens
-                  </th>
-                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
-                    Cost
-                  </th>
-                  <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-700">
-                {records.map((record, index) => (
-                  <ConversationUsageRow
-                    key={record.id}
-                    record={{
-                      id: record.id,
-                      createdAt: record.createdAt,
-                      model: record.model,
-                      totalTokens: record.totalTokens,
-                      promptTokens: record.promptTokens,
-                      completionTokens: record.completionTokens,
-                      cost: record.cost,
-                      prompt: record.prompt,
-                    }}
-                    index={index}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+      <div className="overflow-x-auto rounded-lg border bg-card">
+        <table aria-label="Calls in this conversation" className="w-full border-collapse text-ui">
+          <thead className="border-b">
+            <tr>
+              {HEADINGS.map((label) => (
+                <th
+                  key={label}
+                  scope="col"
+                  className={`h-10 px-4 text-label font-medium whitespace-nowrap text-muted-foreground ${label === "Tokens" || label === "Cost" ? "text-right" : "text-left"} ${label === "Model" ? "hidden lg:table-cell" : ""}`}
+                >
+                  {label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {records.map((record, index) => (
+              <ConversationUsageRow
+                key={record.id}
+                index={index}
+                record={{
+                  id: record.id,
+                  time: f.dateTime(record.createdAt, { zoneLabel: true }),
+                  model: record.model,
+                  totalTokens: f.number(record.totalTokens),
+                  tokenSplit: `${f.number(record.promptTokens)} + ${f.number(record.completionTokens)}`,
+                  cost: f.money(record.cost),
+                  prompt: record.prompt,
+                }}
+              />
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   )
 }
-
-

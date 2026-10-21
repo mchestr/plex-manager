@@ -78,6 +78,12 @@ describe("dates and times", () => {
     expect(formatTime(NEW_YEARS_EVE, { timeZone: "Europe/Berlin", locale: "de-DE" })).toBe("0:30")
   })
 
+  it("labels Chicago times CDT in October and CST in January (P10.6)", () => {
+    const chicago = { timeZone: "America/Chicago", locale: "en-US" }
+    expect(formatDateTime("2026-10-12T19:26:00Z", chicago, { zoneLabel: true })).toBe("Oct 12, 2026, 2:26 PM CDT")
+    expect(formatDateTime("2027-01-12T20:26:00Z", chicago, { zoneLabel: true })).toBe("Jan 12, 2027, 2:26 PM CST")
+  })
+
   it.each([
     // US spring change on 8 March 2026: 02:00 PST jumps to 03:00 PDT.
     ["2026-03-08T09:30:00Z", "Mar 8, 2026, 1:30 AM PST"],

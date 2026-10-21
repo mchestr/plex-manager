@@ -223,6 +223,7 @@ describe('getAllUsersWithWrapped', () => {
     // No subscriptions by default; fetchSubscriptionMap returns an empty map so
     // the existing (non-subscription) assertions are unaffected.
     mockPrisma.subscription.findMany.mockResolvedValue([])
+    mockPrisma.rewindGeneration.findMany.mockResolvedValue([])
   })
 
   afterEach(() => {

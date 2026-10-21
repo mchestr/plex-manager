@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "commit": "17bdaf72324067c53873c270b6762cb3a8daa0f0",
-  "generatedAt": "2026-10-21T21:51:42.641Z",
+  "commit": "a348701834378e96a859792d640311f62a0250f8",
+  "generatedAt": "2026-10-21T22:27:36.325Z",
   "files": {
     "app/(app)/page.tsx": {
       "gradient": 2,
@@ -23,10 +23,6 @@
       "copy": 2,
       "raw-palette": 67
     },
-    "app/admin/llm-usage/conversation/[conversationId]/page.tsx": {
-      "caps-eyebrow": 6,
-      "raw-palette": 36
-    },
     "app/admin/llm-usage/page.tsx": {
       "blur": 5,
       "caps-eyebrow": 7,
@@ -42,19 +38,8 @@
       "caps-eyebrow": 6,
       "raw-palette": 50
     },
-    "app/admin/users/[userId]/page.tsx": {
-      "blur": 10,
-      "caps-eyebrow": 6,
-      "copy": 4,
-      "raw-palette": 117
-    },
     "app/admin/users/page.tsx": {
       "raw-palette": 2
-    },
-    "app/admin/wrapped/[wrappedId]/history/[llmUsageId]/page.tsx": {
-      "blur": 3,
-      "gradient": 2,
-      "raw-palette": 24
     },
     "app/auth/callback/plex/callback-client.tsx": {
       "blur": 2,
@@ -134,12 +119,6 @@
       "caps-eyebrow": 6,
       "raw-palette": 108
     },
-    "components/admin/llm-usage/conversation-usage-row.tsx": {
-      "arbitrary-type-z": 1,
-      "caps-eyebrow": 1,
-      "copy": 1,
-      "raw-palette": 10
-    },
     "components/admin/llm-usage/llm-text-removed-notice.tsx": {
       "blur": 1,
       "raw-palette": 4
@@ -200,14 +179,8 @@
       "copy": 1,
       "raw-palette": 21
     },
-    "components/admin/users/user-activity-timeline.tsx": {
-      "raw-palette": 37
-    },
-    "components/admin/users/user-status-badge.tsx": {
-      "raw-palette": 12
-    },
     "components/admin/users/user-table-row.tsx": {
-      "raw-palette": 19
+      "raw-palette": 18
     },
     "components/admin/users/users-filter.tsx": {
       "blur": 1,
@@ -222,10 +195,6 @@
       "blur": 6,
       "copy": 1,
       "raw-palette": 24
-    },
-    "components/admin/wrapped/historical-wrapped-selector-header.tsx": {
-      "arbitrary-type-z": 3,
-      "raw-palette": 20
     },
     "components/auth/jellyfin-sign-in-button.tsx": {
       "raw-palette": 6
@@ -537,13 +506,13 @@
   },
   "totals": {
     "arbitrary-color": 17,
-    "arbitrary-type-z": 29,
-    "blur": 101,
-    "caps-eyebrow": 71,
-    "copy": 13,
-    "gradient": 82,
+    "arbitrary-type-z": 25,
+    "blur": 88,
+    "caps-eyebrow": 58,
+    "copy": 8,
+    "gradient": 80,
     "gradient-text": 46,
     "infinite-motion": 36,
-    "raw-palette": 2294
+    "raw-palette": 2037
   }
 }

@@ -10,8 +10,13 @@ import type { Route } from "next"
 
 const seg = encodeURIComponent
 
-export function userDetail(id: string): Route {
-  return `/admin/users/${seg(id)}` as Route
+/** The user detail page's tabs (P10.6); `overview` is the default and leaves the URL bare. */
+export const USER_DETAIL_TABS = ["overview", "rewind", "usage", "billing"] as const
+export type UserDetailTab = (typeof USER_DETAIL_TABS)[number]
+
+export function userDetail(id: string, { tab }: { tab?: UserDetailTab } = {}): Route {
+  const base = `/admin/users/${seg(id)}`
+  return (tab && tab !== "overview" ? `${base}?tab=${tab}` : base) as Route
 }
 
 /** One member's Rewind for `year`, in the admin preview (P7.9). */

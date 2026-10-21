@@ -59,6 +59,7 @@ describe('getAllUsersWithWrapped - subscription attach', () => {
     // No share stats by default.
     mockPrisma.plexWrapped.findMany.mockResolvedValue([])
     mockPrisma.subscription.findMany.mockResolvedValue([])
+    mockPrisma.rewindGeneration.findMany.mockResolvedValue([])
   })
 
   it('loads subscriptions in a single batched query (no N+1)', async () => {

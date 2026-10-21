@@ -5,6 +5,8 @@ import { invite, llmUsage, llmUsageDetail, playgroundFor, rewindHistory, userDet
 describe("admin routes", () => {
   it("builds the user pages, with the year on the Rewind link", () => {
     expect(userDetail("u1")).toBe("/admin/users/u1")
+    expect(userDetail("u1", { tab: "overview" })).toBe("/admin/users/u1")
+    expect(userDetail("u1", { tab: "rewind" })).toBe("/admin/users/u1?tab=rewind")
     expect(userRewind("u1", 2025)).toBe("/admin/users/u1/rewind/2025")
     expect(userRewind("u1", 2026)).toBe("/admin/users/u1/rewind/2026")
     expect(playgroundFor("u 1")).toBe("/admin/rewind/playground?subject=u%201")
