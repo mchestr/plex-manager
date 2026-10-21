@@ -9,7 +9,7 @@
  * |----------------|-------------|----------------------------------------------|
  * | `rewind-batch` | 1           | season prepare, aggregate, metadata warm (P2.6), final cut (P8.5) |
  * | `rewind-gen`   | 4           | `REWIND_GENERATE_USER` (P2.17)               |
- * | `rewind-aux`   | 2           | `REWIND_STALE_SWEEP` (P2.17, every 10 min), `REWIND_CARD_PREWARM` and the daily `REWIND_CARD_SWEEP` (P5.10), `REWIND_DRY_RUN` (P7.10), `REWIND_NOTIFY` (P7.14) |
+ * | `rewind-aux`   | 2           | `REWIND_STALE_SWEEP` (P2.17, every 10 min), `REWIND_CARD_PREWARM` and the daily `REWIND_CARD_SWEEP` (P5.10), `REWIND_DRY_RUN` (P7.10), `REWIND_NOTIFY` (P7.14), `REWIND_SEASON_OPEN` (P8.2) |
  *
  * Workers hold a job's lock for 60 s (BullMQ renews it every 30 s) and give a
  * stalled job one more attempt. Jobs have no BullMQ timeout; each processor
@@ -30,8 +30,10 @@ import { REWIND_SEASON_PROCESSORS } from "@/lib/queue/jobs/rewind-season"
 import { processRewindCardPrewarm, processRewindCardSweep, registerCardJobs } from "@/lib/queue/jobs/rewind-cards"
 import { processRewindDryRun } from "@/lib/queue/jobs/rewind-dry-run"
 import { processRewindNotify, registerNotifyJobs } from "@/lib/queue/jobs/rewind-notify"
+import { processRewindSeasonOpen } from "@/lib/queue/jobs/rewind-season-open"
 import { processRewindStaleSweep } from "@/lib/queue/jobs/rewind-stale-sweep"
 import { getRewindQueue } from "@/lib/queue/rewind-producers"
+import { scheduleSeasonAudienceSwitch } from "@/lib/rewind/season-open"
 import { scheduleFinalCutRun, scheduleSeasonOpenRun } from "@/lib/rewind/season-runs"
 import { JOB_TYPES } from "@/lib/queue/types"
 import { createLogger } from "@/lib/utils/logger"
@@ -60,6 +62,7 @@ const PROCESSORS: Record<RewindQueueName, Record<string, JobProcessor>> = {
     [JOB_TYPES.REWIND_CARD_SWEEP]: processRewindCardSweep,
     [JOB_TYPES.REWIND_DRY_RUN]: processRewindDryRun as JobProcessor,
     [JOB_TYPES.REWIND_NOTIFY]: processRewindNotify as JobProcessor,
+    [JOB_TYPES.REWIND_SEASON_OPEN]: processRewindSeasonOpen as JobProcessor,
   },
 }
 
@@ -113,6 +116,7 @@ export function startRewindWorkers(): void {
   scheduleStaleSweep().catch((error: unknown) => logger.error("Could not schedule the Rewind stale sweep", error))
   scheduleSeasonOpenRun().catch((error: unknown) => logger.error("Could not schedule the season-open Rewind run", error))
   scheduleFinalCutRun().catch((error: unknown) => logger.error("Could not schedule the Rewind final cut", error))
+  scheduleSeasonAudienceSwitch().catch((error: unknown) => logger.error("Could not schedule the season open's audience switch", error))
   registerCardJobs()
   registerNotifyJobs()
   logger.info("Rewind workers started", { queues: Object.keys(REWIND_QUEUES) })
