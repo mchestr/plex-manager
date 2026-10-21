@@ -131,6 +131,22 @@ describe('RewindSettingsSection', () => {
     expect(screen.queryByRole('checkbox', { name: /cover/i })).not.toBeInTheDocument()
   })
 
+  it('switches the December features by writing and removing their +key, keeping the pages (P8.4)', async () => {
+    const user = userEvent.setup()
+    renderSection({ saved: { ...saved, rewindDisabledPages: ['people', '+notes.core'] } })
+
+    const features = within(screen.getByTestId('rewind-settings-features'))
+    expect(features.getAllByRole('checkbox')).toHaveLength(8)
+    expect(features.getByRole('checkbox', { name: 'Notes for the core pages' })).toHaveAttribute('aria-checked', 'true')
+    expect(features.getByRole('checkbox', { name: 'Share: Save all cards' })).toHaveAttribute('aria-checked', 'false')
+
+    await user.click(features.getByRole('checkbox', { name: 'Share: Save all cards' }))
+    await user.click(features.getByRole('checkbox', { name: 'Notes for the core pages' }))
+    await user.click(screen.getByRole('checkbox', { name: 'Setup' }))
+    await user.click(screen.getByTestId('rewind-settings-save'))
+    expect(updateRewindSettings).toHaveBeenCalledWith({ ...saved, rewindDisabledPages: ['people', 'setup', '+share.save-all'] })
+  })
+
   it('labels every control', () => {
     renderSection()
 

@@ -6,6 +6,8 @@ import { pageNotes } from "@/lib/rewind/notes"
 import type { TopShowsData } from "@/lib/rewind/pages/top-lists.schema"
 import { registry, type IssuePageType, type RegistryEntry } from "@/lib/rewind/registry"
 
+import { QuizProvider, resetQuizAnswers } from "@/components/rewind/stage/quiz-context"
+
 import { NotesColumn } from "../notes-column"
 
 jest.mock("server-only", () => ({}))
@@ -98,5 +100,25 @@ describe("NotesColumn (P7.4)", () => {
     expect(screen.getByRole("table")).toHaveAccessibleName(/^Minutes of each series by month/)
     expect(screen.getByTestId("rewind-notes-table-toggle")).toHaveAttribute("aria-pressed", "true")
     expect(screen.queryByTestId("rewind-notes-formats")).not.toBeInTheDocument()
+  })
+
+  it("swaps in the answered Notes once the quiz is answered or skipped (P8.4)", async () => {
+    const before = [{ kind: "paragraph" as const, text: [{ kind: "text" as const, text: "How the quiz works" }] }]
+    const after = [{ kind: "paragraph" as const, text: [{ kind: "text" as const, text: "The answer" }] }]
+    const column = (
+      <QuizProvider year={2026}>
+        <NotesColumn folio="04" pageName="Guess" notes={before} answeredNotes={after} table={null} showTable={false} onToggleTable={jest.fn()} formats={null} />
+      </QuizProvider>
+    )
+    resetQuizAnswers()
+    window.sessionStorage.removeItem("rewind:quiz:2026")
+    const { unmount } = render(column)
+    expect(screen.getByTestId("rewind-notes-body")).toHaveTextContent("How the quiz works")
+    unmount()
+    resetQuizAnswers()
+    window.sessionStorage.setItem("rewind:quiz:2026", JSON.stringify({ skipped: true }))
+    render(column)
+    expect(screen.getByTestId("rewind-notes-body")).toHaveTextContent("The answer")
+    window.sessionStorage.removeItem("rewind:quiz:2026")
   })
 })

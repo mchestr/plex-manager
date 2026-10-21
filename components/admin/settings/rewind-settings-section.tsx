@@ -12,7 +12,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { FormField } from "@/components/ui/form-field"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/components/ui/toast"
-import { REWIND_CUT_PAGES, rewindBudgetSchema, type RewindSettings } from "@/lib/validations/rewind-settings"
+import { enabledFeatures, REWIND_FEATURE_KEYS, REWIND_FEATURES, withEnabledFeatures, type RewindFeatureKey } from "@/lib/rewind/features"
+import { DISABLED_LIST_ENTRIES, REWIND_CUT_PAGES, rewindBudgetSchema, type RewindSettings } from "@/lib/validations/rewind-settings"
 
 interface RewindSettingsSectionProps {
   /** The stored settings, from `rewindSettingsFromConfig`. */
@@ -48,6 +49,11 @@ const LLM_MODES = [
 ]
 
 const NEXT_GENERATION = "Takes effect at the next generation."
+
+const cutKeys = new Set<string>(REWIND_CUT_PAGES.map((page) => page.key))
+
+/** The disabled list in its stored order, so a change and its undo compare equal. */
+const orderDisabled = (list: readonly string[]) => DISABLED_LIST_ENTRIES.filter((entry) => list.includes(entry))
 
 /** Options for the stored entries the lists no longer offer, so they can still be cleared. */
 function withStored(options: { value: string; label: string }[], stored: readonly string[], label: (value: string) => string) {
@@ -241,7 +247,17 @@ export function RewindSettingsSection({ saved, zone, llmDisabled, discordBotOn, 
           description="In cut-list order. The ten core pages are always included."
           options={REWIND_CUT_PAGES.map((page) => ({ value: page.key, label: page.label }))}
           selected={draft.rewindDisabledPages}
-          onChange={(pages) => set("rewindDisabledPages")(pages as Draft["rewindDisabledPages"])}
+          onChange={(pages) => set("rewindDisabledPages")(orderDisabled([...pages, ...draft.rewindDisabledPages.filter((entry) => !cutKeys.has(entry))]))}
+        />
+        <CheckboxList
+          name="features"
+          legend="Features added in December"
+          description="Each stays off until it is checked here. Check it on a test member first."
+          options={REWIND_FEATURES.map((feature) => ({ value: feature.key, label: feature.label }))}
+          selected={enabledFeatures(draft.rewindDisabledPages)}
+          onChange={(keys) =>
+            set("rewindDisabledPages")(orderDisabled(withEnabledFeatures(draft.rewindDisabledPages, keys.filter((key): key is RewindFeatureKey => (REWIND_FEATURE_KEYS as string[]).includes(key)))))
+          }
         />
         <CheckboxList
           name="channels"

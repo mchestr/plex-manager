@@ -230,11 +230,13 @@ No new feature code lands from 10 to 12 December. Every P1 feature ships with it
 **Demo.** On page 02, "Compare with 2025" mirrors last year under this one. On the back cover, "Save all 15 cards" downloads a ZIP that opens to 15 posters. At 1440x900 every core page has real Notes, and Guess shows its answer only after the quiz.
 
 **Done when.**
-- [ ] "Compare with 2025" is a Toggle with `aria-pressed`, draws mirrored 7-day averages on one scale, and is hidden without 2025 data.
-- [ ] Edit card offers the three-stat allow-list on the centrefold and back cover, saved in the prefs and on links.
-- [ ] "Save all {n} cards" builds the ZIP in the browser with fflate, and its count comes from `eligibleCards()`.
-- [ ] The seven remaining core pages have Notes, and the Guess Notes never spoil the quiz.
-- [ ] Each feature has its own default-off flag, and the unit, E2E, visual and budget checks pass.
+- [x] "Compare with 2025" is a Toggle with `aria-pressed`, draws mirrored 7-day averages on one scale, and is hidden without 2025 data.
+- [x] Edit card offers the three-stat allow-list on the centrefold and back cover, saved in the prefs and on links.
+- [x] "Save all {n} cards" builds the ZIP in the browser with fflate, and its count comes from `eligibleCards()`.
+- [x] The seven remaining core pages have Notes, and the Guess Notes never spoil the quiz.
+- [ ] Each feature has its own default-off flag, and the unit, E2E, visual and budget checks pass. (Flags and unit tests done; `e2e/rewind/p1-share.spec.ts` is written but not run, and no visual baselines were added: the coordinator's E2E pass.)
+
+(as merged: `lib/rewind/features.ts` was written in parallel with P8.3 and already lists P8.3's four keys, with `rewindFeatureOn`, `rewindFeatureFlags` and `withEnabledFeatures`; `rewindSettingsSchema` accepts `+key` and the plain key of each feature in `rewindDisabledPages` (`DISABLED_LIST_ENTRIES`), and the settings section's "Features added in December" list writes the `+` entries. Merge with P8.3 by keeping one copy. The compare variant lives in `lib/rewind/viz/soundtrack-compare.ts` (`soundtrackCompare`), not inside `soundtrack.ts`, for the module size limit. `lib/rewind/notes.ts` became `lib/rewind/notes/index.ts`; the core builders are gated by `CoreNotesContext.coreNotes`, and `answeredNotes()` gives the stage a second list (`StoryStagePage.notesAnswered`) that `NotesColumn` swaps in once the quiz is answered or skipped. A `definitionList` entry may carry an `href` (the bookends' earlier years). Top films' Notes list the stored top five with plays and minutes plus the year's `films.finishedShare`: the stored page has no per-film finish, and adding one needs a regeneration. The heavy golden fixture has no Guess page, so it has 14 cards with Daily detail off and 15 with it on (the design's mock member has 15 and 16, as P7.6 noted). `ShareSetup` gained `dailyCards`, `folios`, `cardFactOptions`, `cardFactDefaults` and `features`. Edit card updates a live link only when three or none are chosen, to spare the 10-an-hour share limit; `enableRewindShare`, `updateRewindShare` and the owner card route refuse stats outside `cardFactOptions`. The islands load through `next/dynamic`, so with the flags off nothing new reaches the first page. Owner: turn each flag on in production after checking it on the heavy test member, and record it in `ship-check.md`.)
 
 ### Step P8.5: Validator and final-cut job
 

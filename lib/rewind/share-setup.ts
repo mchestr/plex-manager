@@ -17,7 +17,8 @@ import { registry } from "@/lib/rewind/registry"
 import type { ShareSetup } from "@/lib/rewind/share-sheet"
 import { getAppSettings } from "@/lib/settings/app-settings"
 import type { RewindDataV3 } from "@/lib/wrapped/data/schema-v3"
-import { toShareSafe } from "@/lib/wrapped/data/share-safe"
+import type { RewindFeatureFlags } from "@/lib/rewind/features"
+import { cardFactOptions, toShareSafe } from "@/lib/wrapped/data/share-safe"
 import { loadShareContext } from "@/lib/wrapped/data/share-context"
 import { CardFactIdSchema, SharePageTypeSchema, type SharePageType } from "@/lib/wrapped/data/share-safe-schema"
 import { getSeasonState } from "@/lib/wrapped/season"
@@ -31,8 +32,8 @@ const PagesSchema = z.array(SharePageTypeSchema).catch([])
  * would publish it, so a hidden title or an admin flag already counts.
  */
 export async function loadShareSetup({
-  userId, rewindId, rewind, pages,
-}: { userId: string; rewindId: string; rewind: RewindDataV3; pages: ReadonlyArray<{ type: string }> }): Promise<ShareSetup> {
+  userId, rewindId, rewind, pages, features,
+}: { userId: string; rewindId: string; rewind: RewindDataV3; pages: ReadonlyArray<{ type: string; folio?: number }>; features?: Pick<RewindFeatureFlags, "editCard" | "saveAll"> }): Promise<ShareSetup> {
   const now = new Date()
   const { year } = rewind
   const [config, prefs, link, canShare, season, settings, ctx] = await Promise.all([
@@ -55,6 +56,8 @@ export async function loadShareSetup({
   const printed = pages.map((page) => page.type).filter((type): type is SharePageType => SharePageTypeSchema.safeParse(type).success)
   const shared = toShareSafe(rewind, { pages: printed, signed: false, includeArt: false, dailyDetail, cardFacts: [] }, ctx)
   const cards = eligibleCards(shared, { dailyDetail })
+  const daily = toShareSafe(rewind, { pages: printed, signed: false, includeArt: false, dailyDetail: true, cardFacts: [] }, ctx)
+  const defaults = Object.fromEntries(shared.pages.filter((page) => page.stats.length > 0).map((page) => [page.type, page.stats]))
   const closes = new Date(season.closesAt.getTime() - 1000)
   return {
     rewindId,
@@ -71,6 +74,11 @@ export async function loadShareSetup({
       cardFacts: CardFactsSchema.parse(prefs?.cardFacts ?? []),
     },
     link: link ? { shareId: link.id, pages: PagesSchema.parse(link.pages), expiresAt: link.expiresAt?.toISOString() ?? null } : null,
+    dailyCards: eligibleCards(daily, { dailyDetail: true }),
+    folios: Object.fromEntries(pages.flatMap((page) => (page.folio === undefined ? [] : [[page.type, page.folio]]))),
+    cardFactOptions: cardFactOptions(rewind, ctx),
+    cardFactDefaults: defaults,
+    features: { editCard: features?.editCard ?? false, saveAll: features?.saveAll ?? false },
     seasonCloses: new Intl.DateTimeFormat(settings.locale, { day: "numeric", month: "long", year: "numeric", timeZone: settings.timeZone }).format(closes),
   }
 }

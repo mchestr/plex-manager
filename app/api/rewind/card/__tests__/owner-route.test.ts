@@ -18,8 +18,9 @@ import { prismaMock } from "@/__tests__/helpers/prisma-mock"
 import { GET } from "@/app/api/rewind/card/[rewindId]/[page]/route"
 import { hasEntitlement } from "@/lib/actions/entitlement"
 import { renderCardPng } from "@/lib/rewind/cards/render"
-import { fixtureRewind } from "@/lib/wrapped/data/__tests__/share-fixture"
+import { fixtureRewind, shareContext } from "@/lib/wrapped/data/__tests__/share-fixture"
 import type { RewindDataV3 } from "@/lib/wrapped/data/schema-v3"
+import { cardFactOptions } from "@/lib/wrapped/data/share-safe"
 import { CARD_FACT_IDS } from "@/lib/wrapped/data/share-safe-schema"
 
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
@@ -122,6 +123,14 @@ describe("GET /api/rewind/card/[rewindId]/[page]", () => {
     }
   })
 
+  it("refuses poster stats outside the member's own options (Edit card, P8.4)", async () => {
+    const options = cardFactOptions(heavy, shareContext({ userId }))
+    const outside = CARD_FACT_IDS.filter((id) => !options.includes(id))
+    expect(outside.length).toBeGreaterThan(0)
+    expect((await get("centrefold", `?facts=${options.slice(0, 3).join(",")}`)).status).toBe(200)
+    expect((await get("centrefold", `?facts=${outside[0]}`)).status).toBe(400)
+  })
+
   it("serves a cache hit without rendering again or spending a limit point", async () => {
     await get("cover")
     expect(renderCardPng).toHaveBeenCalledTimes(1)
@@ -131,7 +140,8 @@ describe("GET /api/rewind/card/[rewindId]/[page]", () => {
 
   it("limits renders to 60 a minute per member: the 61st miss gets a 429", async () => {
     // 61 distinct options, so every request is a cache miss
-    const pairs = CARD_FACT_IDS.flatMap((a, i) => [a, ...CARD_FACT_IDS.slice(i + 1).map((b) => `${a},${b}`)])
+    const options = cardFactOptions(heavy, shareContext({ userId }))
+    const pairs = options.flatMap((a, i) => [a, ...options.slice(i + 1).map((b) => `${a},${b}`)])
     const variants = ["0", "1"].flatMap((signed) => pairs.map((facts) => `?signed=${signed}&facts=${facts}`))
     const statuses: number[] = []
     for (const query of variants.slice(0, 61)) statuses.push((await get("cover", query)).status)

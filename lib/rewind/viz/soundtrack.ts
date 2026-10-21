@@ -17,7 +17,9 @@
  * ```
  *
  * `weekly` folds the year into 48 bins (the public cards' default), each
- * normalised the same way; `compare` lands in P8.4.
+ * normalised the same way. `compare` (P8.4, `./soundtrack-compare`) draws this
+ * year above the centre and last year mirrored below it, each as a trailing
+ * 7-day average on one shared scale.
  *
  * @module lib/rewind/viz/soundtrack
  */
@@ -47,7 +49,8 @@ const DAY_MS = 86_400_000
 
 const r = (n: number) => Math.round(n * 100) / 100
 
-function monthAnchors(from: string, days: number, width: number): Soundtrack["months"] {
+/** Each month's first day as an x over the window; the compare variant reads it too. */
+export function monthAnchors(from: string, days: number, width: number): Soundtrack["months"] {
   const start = Date.parse(`${from}T00:00:00Z`)
   const year = new Date(start).getUTCFullYear()
   return Array.from({ length: 12 }, (_, m) => ({ month: m + 1, x: r((((Date.UTC(year, m, 1) - start) / DAY_MS) * width) / days) }))

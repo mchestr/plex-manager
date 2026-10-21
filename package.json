@@ -63,6 +63,7 @@
     "discord.js": "^14.27.0",
     "dotenv": "^18.0.8",
     "fast-xml-parser": "^5.10.1",
+    "fflate": "0.8.2",
     "ioredis": "5.11.1",
     "lucide-react": "^1.58.0",
     "motion": "14.3.0",

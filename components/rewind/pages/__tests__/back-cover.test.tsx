@@ -111,6 +111,7 @@ describe("18 Back cover", () => {
       choices: { signed: true, includeArt: true, dailyDetail: false, cardFacts: [] },
       link: { shareId: "share-1", pages: ["cover"], expiresAt: null },
       seasonCloses: "31 January 2027",
+      dailyCards: ["cover"], folios: {}, cardFactOptions: [], cardFactDefaults: {}, features: { editCard: false, saveAll: false },
     }
     render(
       <ShareProvider setup={setup} actions={{ enable: jest.fn(), rotate: jest.fn(), disable: jest.fn(), savePrefs: jest.fn() }}>

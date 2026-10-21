@@ -7,7 +7,7 @@
  * @module lib/rewind/share-sheet
  */
 
-import type { ShareOptions, SharePageType } from "@/lib/wrapped/data/share-safe-schema"
+import type { CardFactId, ShareOptions, SharePageType } from "@/lib/wrapped/data/share-safe-schema"
 
 /** The sheet name the back cover's "Change" opens: the share sheet, focused on its switches. */
 export const SHARE_SETTINGS_SHEET = "share-settings"
@@ -35,6 +35,46 @@ export interface ShareSetup {
   link: { shareId: string; pages: SharePageType[]; expiresAt: string | null } | null
   /** "31 January 2027": when a link created now with the default expiry stops. */
   seasonCloses: string
+  /** `eligibleCards` with Daily detail on, for "Save all" under either setting (P8.4). */
+  dailyCards: SharePageType[]
+  /** Each printed page's folio, for the ZIP's entry names. */
+  folios: Partial<Record<SharePageType, number>>
+  /** The poster stats the member may choose (`cardFactOptions`), in allow-list order. */
+  cardFactOptions: CardFactId[]
+  /** The stats each poster prints when the member has not chosen (P5.11's rule). */
+  cardFactDefaults: Partial<Record<SharePageType, CardFactId[]>>
+  /** The P1 share flags (P8.4): Edit card and Save all. */
+  features: { editCard: boolean; saveAll: boolean }
+}
+
+/** Edit card's name for each poster stat. */
+export const CARD_FACT_LABELS: Record<CardFactId, string> = {
+  "time.totalHours": "Hours watched",
+  "time.seriesHours": "Hours of series",
+  "counts.films": "Films",
+  "counts.episodes": "Episodes",
+  "standing.percentile": "Standing on the server",
+  "hours.peak": "Busiest hour",
+  "streak.longest.days": "Longest streak",
+  "archetype.rarityShare": "How rare your type is",
+  "taste.genre[1].name": "Top genre",
+  "records.completionShare": "How much you finished",
+}
+
+/** The pages whose poster prints three stats the member can choose (Edit card). */
+export const EDIT_CARD_PAGES: readonly SharePageType[] = ["centrefold", "back-cover"]
+
+/**
+ * The cards "Save all" saves under the current Daily detail choice: the
+ * calendar card is the only one that needs Daily detail (`eligibleCards`).
+ *
+ * @example
+ * ```ts
+ * saveAllCards(["cover", "calendar", "clock"], false) // ["cover", "clock"]
+ * ```
+ */
+export function saveAllCards(dailyCards: readonly SharePageType[], dailyDetail: boolean): SharePageType[] {
+  return dailyDetail ? [...dailyCards] : dailyCards.filter((card) => card !== "calendar")
 }
 
 /**

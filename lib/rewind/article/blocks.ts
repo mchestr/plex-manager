@@ -17,7 +17,7 @@
  * | `factRow` | a row of key figures, value first ("586 episodes") |
  * | `rankedList` | an `ol` whose items keep their rank or folio |
  * | `table` | a captioned table with scoped headers (P5.3's contract) |
- * | `definitionList` | a `dl`, such as the billing block |
+ * | `definitionList` | a `dl`, such as the billing block; an entry with `href` links its detail |
  * | `figure` | a graphic's `srSummary` text |
  * | `note` | small print: the zone note, a caption |
  *
@@ -26,6 +26,8 @@
  *
  * @module lib/rewind/article/blocks
  */
+
+import type { Route } from "next"
 
 import type { Edition, PageTable, RewindPageType } from "@/lib/rewind/registry"
 import type { FontMetrics } from "@/lib/rewind/typeset/measure"
@@ -42,7 +44,7 @@ export type ArticleBlock =
   | { kind: "factRow"; items: Array<{ value: string; label: string }> }
   | { kind: "rankedList"; label: string; items: Array<{ rank: number; title: string; detail?: string }> }
   | { kind: "table"; table: PageTable }
-  | { kind: "definitionList"; label?: string; entries: Array<{ term: string; detail: ArticleText }> }
+  | { kind: "definitionList"; label?: string; entries: Array<{ term: string; detail: ArticleText; href?: Route }> }
   | { kind: "figure"; summary: string }
   | { kind: "note"; text: ArticleText }
 

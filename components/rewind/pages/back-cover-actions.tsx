@@ -2,6 +2,7 @@
 
 import { Share } from "lucide-react"
 import type { Route } from "next"
+import dynamic from "next/dynamic"
 import Link from "next/link"
 
 import { ContentsSheet } from "@/components/rewind/sheets/contents-sheet"
@@ -19,11 +20,14 @@ interface BackCoverActionsProps {
   returnTo: Route
 }
 
+// Behind its default-off flag (P8.4): the chunk loads only when the button shows.
+const SaveAll = dynamic(() => import("@/components/rewind/share/save-all").then((m) => m.SaveAll))
+
 /** The page's controls are drawn at artboard scale, each with a 44 px hit area (design 4.7). */
 const footerLink = cn(ARTBOARD_TARGET, "h-[calc(var(--u)*44px)] px-0 font-semibold decoration-current decoration-[1.5px]")
 const label = { fontSize: ut(14) }
 
-/** "Share the poster" and the privacy status line, read from the member's share choices, with "Change". */
+/** "Share the poster", "Save all {n} cards" (P8.4, behind its flag) and the privacy status line, read from the member's share choices, with "Change". */
 export function BackCoverShare() {
   const send = usePlayerSend()
   const state = useShare()
@@ -44,6 +48,7 @@ export function BackCoverShare() {
       >
         Share the poster
       </Button>
+      {state?.setup.features.saveAll ? <SaveAll className={cn(ARTBOARD_PILL, "w-full")} style={label} /> : null}
       <p className="flex items-baseline justify-between gap-3" style={{ ...label, lineHeight: 1.25 }} data-testid="rewind-privacy-status">
         <span>{status}</span>
         <Button variant="link" className={footerLink} style={label} aria-haspopup="dialog" data-testid="rewind-privacy-change" onClick={change}>

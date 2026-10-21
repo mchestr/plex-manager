@@ -98,13 +98,26 @@ is generated again.
 install stored it off, the console's Regenerate is refused; set it back with
 `UPDATE "Config" SET "wrappedEnabled" = true;` after a dump.
 
-> **Pending P8.3 and P8.4 (P1 feature flags).** `lib/rewind/features.ts` adds
-> `REWIND_FEATURES`, each off by default: the race scrubber and replay, Pick a
-> day, the calendar grid, first-tap completion, Compare with 2025, Edit card,
-> Save all and the remaining Notes. Each is turned on in production only after
-> checking it on the heavy test member, and the enable is recorded in
-> `ship-check.md`. A flag that misbehaves stays off. List each key here when
-> the step merges.
+### Features added in December
+
+`lib/rewind/features.ts` lists the P1 features (`REWIND_FEATURES`). Each is
+off until it is checked under "Features added in December" in the Rewind
+section, which writes the enable entry `+<key>` into `rewindDisabledPages`
+(audited as `CONFIG_CHANGED`); unchecking removes it. The plain key next to
+it switches the feature off again. A fresh install has every feature off, so
+no deploy can turn one on. Turn each on in production only after checking it
+on the heavy test member, and record the enable, the date and the check in
+`ship-check.md`. A flag that misbehaves stays off.
+
+| Key | Feature | Off means |
+| --- | --- | --- |
+| `number.compare-2025` | "Compare with 2025" on page 02: both years as mirrored 7-day averages (P8.4). Hidden without last-year history. | The daily strip only. |
+| `share.edit-card` | Edit card in the share sheet on the centrefold and back cover: three stats from the member's allow-list, saved in their prefs and on a live link (P8.4). | The posters print the default stats. |
+| `share.save-all` | "Save all {n} cards" on the back cover and in the share sheet: one ZIP built in the browser (P8.4). Each run records one `save` share action. | One card at a time. |
+| `notes.core` | Desktop Notes for the cover, the number, the bookends, the guess (no answer until the quiz is answered), top films, the clock and the back cover (P8.4). | Those pages' Notes show their summary. |
+
+P8.3 adds its own keys (`race.scrubber`, `calendar.day-picker`,
+`calendar.grid`, `stage.tap-completes`) to the same list.
 
 ## Cut list
 

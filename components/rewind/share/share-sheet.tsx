@@ -1,6 +1,7 @@
 "use client"
 
 import { Download, Share } from "lucide-react"
+import dynamic from "next/dynamic"
 import Link from "next/link"
 import { useId, useRef, useState, type Ref } from "react"
 
@@ -12,13 +13,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Switch } from "@/components/ui/switch"
 import { pageMeta, type RewindPageType } from "@/lib/rewind/page-meta"
-import { cardFileName, cardUrl, type CardChoices } from "@/lib/rewind/share-sheet"
-import type { SharePageType } from "@/lib/wrapped/data/share-safe-schema"
+import { cardFileName, cardUrl, EDIT_CARD_PAGES, type CardChoices } from "@/lib/rewind/share-sheet"
+import type { CardFactId, SharePageType } from "@/lib/wrapped/data/share-safe-schema"
 
+import { CARD_STATS } from "./card-stats"
 import { useShare } from "./share-context"
 import { ShareLink } from "./share-link"
 import { useCardFile } from "./use-card-file"
 import { canShareFiles, saveFile, shareFile } from "./web-share"
+
+// P1 islands behind default-off flags (P8.4): their chunks load only when shown, outside the first-page budget.
+const EditCard = dynamic(() => import("./edit-card").then((m) => m.EditCard))
+const SaveAll = dynamic(() => import("./save-all").then((m) => m.SaveAll))
 
 interface ShareSheetProps {
   open: boolean
@@ -93,6 +99,15 @@ export function ShareSheet({ open, onClose, page, atSettings }: ShareSheetProps)
   if (!share || !setup || !choices) return null
   const artOffered = current !== null && setup.allowArt && setup.artCards.includes(current)
   const membership = lapsed || !setup.canShare
+  const editing = setup.features.editCard && current !== null && EDIT_CARD_PAGES.includes(current) && setup.cardFactOptions.length > CARD_STATS
+
+  // Edit card: the choice saves to the prefs at once, and reaches a live link once three are chosen.
+  const chooseFacts = (cardFacts: CardFactId[]) => {
+    share.choose({ cardFacts })
+    if (share.link && share.actions.update && (cardFacts.length === CARD_STATS || cardFacts.length === 0)) {
+      void share.actions.update({ shareId: share.link.shareId, cardFacts })
+    }
+  }
 
   const onShare = async () => {
     if (!file || !url) return
@@ -166,6 +181,13 @@ export function ShareSheet({ open, onClose, page, atSettings }: ShareSheetProps)
             testId="rewind-share-daily"
           />
         </ul>
+        {editing && !membership ? (
+          <EditCard
+            options={setup.cardFactOptions}
+            selected={choices.cardFacts.length > 0 ? choices.cardFacts : (setup.cardFactDefaults[current] ?? [])}
+            onChange={chooseFacts}
+          />
+        ) : null}
         {membership ? null : (
           <div className="flex flex-col gap-2">
             {filesShareable ? (
@@ -188,6 +210,7 @@ export function ShareSheet({ open, onClose, page, atSettings }: ShareSheetProps)
               Save image
             </Button>
             {pressAndHold ? <p className="font-text text-ui">Press and hold to save</p> : null}
+            {setup.features.saveAll ? <SaveAll /> : null}
             <ShareLink onNeedsMembership={() => setLapsed(true)} />
           </div>
         )}

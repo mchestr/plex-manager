@@ -1,3 +1,5 @@
+import Link from "next/link"
+
 import type { ArticleBlock, ArticleText } from "@/lib/rewind/article/blocks"
 
 /** Article text: tokens as tabular numbers that never wrap, titles in italics in their own direction. */
@@ -110,7 +112,13 @@ export function ArticleBlockView({ block }: { block: ArticleBlock }) {
               <div key={entry.term}>
                 <dt className="font-display font-semibold">{entry.term}</dt>
                 <dd>
-                  <ArticleTextView text={entry.detail} />
+                  {entry.href ? (
+                    <Link href={entry.href} className="underline underline-offset-3">
+                      <ArticleTextView text={entry.detail} />
+                    </Link>
+                  ) : (
+                    <ArticleTextView text={entry.detail} />
+                  )}
                 </dd>
               </div>
             ))}

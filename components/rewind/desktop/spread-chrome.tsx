@@ -30,6 +30,8 @@ interface SpreadChromeProps {
   share: boolean
   closeHref: Route
   notes: readonly ArticleBlock[]
+  /** The Notes once the quiz is answered or skipped, when they differ (P8.4). */
+  answeredNotes?: readonly ArticleBlock[] | null
   table: PageTable | null
   showTable: boolean
   onToggleTable: () => void
@@ -95,6 +97,7 @@ export function SpreadChrome(props: SpreadChromeProps) {
         folio={pad(index + 1)}
         pageName={names[index]}
         notes={props.notes}
+        answeredNotes={props.answeredNotes}
         table={props.table}
         showTable={props.showTable}
         onToggleTable={props.onToggleTable}

@@ -28,12 +28,14 @@ import {
 import { hasEntitlement } from "@/lib/actions/entitlement"
 import { Prisma, type PlexWrapped, type RewindShare } from "@/lib/generated/prisma/client"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
-import { fixtureRewind } from "@/lib/wrapped/data/__tests__/share-fixture"
+import { loadShareContext } from "@/lib/wrapped/data/share-context"
+import { fixtureRewind, shareContext } from "@/lib/wrapped/data/__tests__/share-fixture"
 
 jest.mock("@/lib/prisma", () => require("@/__tests__/helpers/prisma-mock").prismaModule)
 jest.mock("next-auth", () => ({ getServerSession: jest.fn() }))
 jest.mock("@/lib/auth", () => ({ authOptions: {} }))
 jest.mock("next/cache", () => ({ revalidatePath: jest.fn() }))
+jest.mock("@/lib/wrapped/data/share-context", () => ({ loadShareContext: jest.fn() }))
 jest.mock("@/lib/actions/entitlement", () => ({ hasEntitlement: jest.fn(), NOT_ENTITLED_MESSAGE: "This needs an active membership." }))
 jest.mock("@/lib/utils/server-zone", () => ({ serverZone: jest.fn().mockResolvedValue("America/Chicago") }))
 jest.mock("@/lib/security/audit-log", () => ({
@@ -115,6 +117,7 @@ beforeEach(() => {
   memberId = `member-${counter}`
   jest.mocked(getServerSession).mockResolvedValue({ user: { id: memberId, isAdmin: false }, expires: "2099-01-01" })
   jest.mocked(hasEntitlement).mockResolvedValue(true)
+  jest.mocked(loadShareContext).mockResolvedValue(shareContext({ userId: memberId }))
   installTables()
 })
 
@@ -295,6 +298,19 @@ describe("rotate, update and disable", () => {
     expect(await disableRewindShare({ shareId })).toMatchObject({ success: false, code: "NOT_FOUND" })
     expect(await rotateRewindShare({ shareId })).toMatchObject({ success: false, code: "NOT_FOUND" })
     expect(shares[0].revokedAt).toBeNull()
+  })
+
+  it("takes the poster's stats only from the member's own options (Edit card, P8.4)", async () => {
+    const data = JSON.parse(v3Data)
+    data.facts["standing.percentile"] = { value: 40, display: "Top 40%", unit: "percentile" }
+    seedRewind({ data: JSON.stringify(data) })
+    const { shareId } = await enabled()
+    expect((await updateRewindShare({ shareId, cardFacts: ["time.totalHours", "counts.films", "hours.peak"] })).success).toBe(true)
+    expect(shares[0].cardFacts).toEqual(["time.totalHours", "counts.films", "hours.peak"])
+    // Top 40% is outside the top 25%, so the percentile is not one of this member's options.
+    expect(await updateRewindShare({ shareId, cardFacts: ["standing.percentile"] })).toMatchObject({ success: false, code: "VALIDATION" })
+    expect(await enable({ cardFacts: ["standing.percentile"] })).toMatchObject({ success: false, code: "VALIDATION" })
+    expect(shares[0].cardFacts).toEqual(["time.totalHours", "counts.films", "hours.peak"])
   })
 
   it("updates what a link publishes without a new token", async () => {

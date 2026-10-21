@@ -54,6 +54,8 @@ export interface StoryStagePage {
   table?: PageTable | null
   /** The desktop Notes (`pageNotes`, P7.4), built on the server. */
   notes?: readonly ArticleBlock[]
+  /** The Notes once the quiz is answered or skipped, when they differ (`answeredNotes`, P8.4). */
+  notesAnswered?: readonly ArticleBlock[] | null
 }
 
 interface StoryStageProps {
@@ -371,6 +373,7 @@ function Stage({ pages: fullPages, pocket, year, serverName, archetype, closeHre
               share={!preview}
               closeHref={closeHref}
               notes={pages[state.index].notes ?? []}
+              answeredNotes={pages[state.index].notesAnswered}
               table={table}
               showTable={notesTable}
               onToggleTable={() => setNotesTable((on) => !on)}

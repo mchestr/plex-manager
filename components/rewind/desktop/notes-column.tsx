@@ -3,6 +3,7 @@
 import { Table } from "lucide-react"
 
 import { ArticleBlockView } from "@/components/rewind/article/article-block"
+import { useQuiz } from "@/components/rewind/stage/quiz-context"
 import { Button } from "@/components/ui/button"
 import { Icon } from "@/components/ui/icon"
 import type { ArticleBlock } from "@/lib/rewind/article/blocks"
@@ -17,6 +18,8 @@ interface NotesColumnProps {
   pageName: string
   /** The page's Notes blocks (`pageNotes`), built on the server. */
   notes: readonly ArticleBlock[]
+  /** The Notes once the quiz is answered or skipped (P8.4), so the Guess Notes never spoil it. */
+  answeredNotes?: readonly ArticleBlock[] | null
   /** The page's own `table()`, which "Show as table" swaps in; null hides the toggle. */
   table: PageTable | null
   showTable: boolean
@@ -32,7 +35,9 @@ interface NotesColumnProps {
  * is the only part of the spread that scrolls, vertically, and it keeps the
  * arrow keys for that (`data-rw-scroll`).
  */
-export function NotesColumn({ folio, pageName, notes, table, showTable, onToggleTable, formats }: NotesColumnProps) {
+export function NotesColumn({ folio, pageName, notes: before, answeredNotes, table, showTable, onToggleTable, formats }: NotesColumnProps) {
+  const { answer } = useQuiz()
+  const notes = answer && answeredNotes ? answeredNotes : before
   const label = `Notes on page ${folio}, ${pageName}`
   const asTable = showTable && table !== null
 
