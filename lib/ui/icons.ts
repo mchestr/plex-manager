@@ -12,7 +12,6 @@ import {
   ArrowUpRight,
   Bookmark,
   Bot,
-  ChevronRight,
   Calendar,
   ChartLine,
   Check,
