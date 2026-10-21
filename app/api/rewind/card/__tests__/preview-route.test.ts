@@ -34,7 +34,7 @@ jest.mock("@/lib/rewind/cards/render", () => ({
   renderCardPng: jest.fn(async (input: unknown) => Buffer.from(JSON.stringify(input))),
 }))
 const mockGet = jest.fn()
-jest.mock("@/lib/queue/connection", () => ({ getRequestPathRedis: () => ({ get: mockGet }) }))
+jest.mock("@/lib/queue/connection", () => ({ readyWithin: async () => true, getRequestPathRedis: () => ({ get: mockGet }) }))
 
 const ID = "0b6c1f7e-3c1a-4f7e-9d0a-2f4b8c6d1e3a"
 const MEMBER = "member-7"

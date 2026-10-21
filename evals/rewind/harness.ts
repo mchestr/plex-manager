@@ -44,7 +44,7 @@ export function readRecording(set: string, fixtureId: string): Recording {
   return recordingSchema.parse(JSON.parse(readFileSync(path.join(RECORDINGS_DIR, set, `${fixtureId}.json`), "utf8")))
 }
 
-/** Every recording set committed beside `hand/`. @internal */
+/** Every recording set committed beside `hand/`. */
 export function recordingSets(): string[] {
   return readdirSync(RECORDINGS_DIR, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())

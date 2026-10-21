@@ -210,12 +210,16 @@ rotated and revoked; any new P0 is filed as `rewind-signoff`. Confirm that log
 redaction is live (open a share link and an invite, then search the logs for
 unmasked tokens).
 
-> **Pending P7.11 (gallery).** `/admin/rewind/gallery` and
-> `npm run rewind:gallery` render every page and card of the five review
-> fixtures for the review. Until it merges, review on the admins' own issues.
-> The dry runs it is built on have merged (P7.10): an admin can open a dry run
-> at `/rewind/2026?preview=<id>`, which writes nothing; previews expire after
-> one hour.
+**Gallery.** `/admin/rewind/gallery` renders every page and card of the five
+review fixtures (heavy, median, light, postcard, extreme) from dry runs, which
+write nothing and expire after one hour. Each tab starts or reuses its dry run;
+the copy replays the selected model's recordings, or is "Templates only" until
+`evals/rewind/selected.json` names a model. "Desktop spread" switches the
+frames to 1440 x 900. For the same set headless, run `npm run rewind:gallery --
+--base-url=<server>` against a server started for E2E (it signs in as the first
+admin with `NEXTAUTH_SECRET` and needs a `_test` database), or run the manual
+Rewind Gallery workflow and download its `rewind-gallery` artifact; open
+`index.html` for the contact sheet.
 
 ## Season open, hour by hour
 

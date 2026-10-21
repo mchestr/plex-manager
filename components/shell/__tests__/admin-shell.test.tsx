@@ -90,6 +90,7 @@ describe('AdminShell', () => {
     expect(within(within(sheet).getByRole('region', { name: 'Rewind' })).getAllByRole('link').map((a) => a.textContent)).toEqual([
       'Season',
       'Playground',
+      'Gallery',
       'Prompts',
       'Share analytics',
     ])

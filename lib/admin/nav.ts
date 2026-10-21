@@ -8,14 +8,14 @@
  * ```
  * Overview            hidden until P10.8 ships the page
  * Community           Users, Invites, Announcements, Discord bot
- * Rewind              Season, Playground, Prompts, Share analytics
+ * Rewind              Season, Playground, Gallery, Prompts, Share analytics
  * Usage and cost      LLM usage, Cost analysis
  * System              Job queues, Settings
  * ```
  *
  * `typedRoutes` rejects links to routes that do not exist yet, so the step
- * that ships a route adds its item: Season (P7.8, shipped), Gallery (P7.11), Evals
- * (P11.30) and Overview (P10.8). P8.8 moves Playground to
+ * that ships a route adds its item: Season (P7.8, shipped), Gallery (P7.11,
+ * shipped), Evals (P11.30) and Overview (P10.8). P8.8 moves Playground to
  * `/admin/rewind/playground`.
  *
  * Labels are sentence case, equal the page titles (UI-21) and say Rewind,
@@ -104,7 +104,8 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     href: "/admin/rewind",
     icon: icons.rewind,
     group: "Rewind",
-    match: "prefix",
+    // Exact: the Rewind pages below it (Gallery, later Playground) light their own items.
+    match: "exact",
     mobile: "more",
   },
   {
@@ -112,6 +113,15 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     label: "Playground",
     href: "/admin/playground",
     icon: icons.playground,
+    group: "Rewind",
+    match: "prefix",
+    mobile: "more",
+  },
+  {
+    id: "gallery",
+    label: "Gallery",
+    href: "/admin/rewind/gallery",
+    icon: icons.gallery,
     group: "Rewind",
     match: "prefix",
     mobile: "more",

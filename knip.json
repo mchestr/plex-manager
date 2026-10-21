@@ -24,9 +24,7 @@
     // a test helper for Rewind component tests (P5 onwards), which knip --production never sees
     "lib/design/testing.ts!",
     // the share visit counter (P5.11); P7.5's share page is its first caller
-    "lib/wrapped/share/visit-counter.ts!",
-    // the dry-run actions (P7.10); P7.11's gallery and P8.8's playground are their first callers
-    "actions/admin/rewind-playground.ts!"
+    "lib/wrapped/share/visit-counter.ts!"
   ],
   "project": [
     "**/*.{js,mjs,cjs,ts,tsx}!",

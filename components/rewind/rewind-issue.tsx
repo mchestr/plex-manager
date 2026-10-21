@@ -34,6 +34,9 @@ interface RewindIssueProps {
   initialSheet?: SheetName
   /** An admin's dry run (P7.10): no share setup, and the stage runs in preview mode. */
   preview?: boolean
+  /** Preview only (P7.11): open on this page, and with `still`, hold it settled. */
+  initialPage?: string
+  still?: boolean
   /** A member's stored Rewind in the admin shell (P7.9): no share setup, and the stage runs framed in admin-preview mode. */
   adminPreview?: boolean
   /** Where the stage's "Read as an article" goes, when not the member's own article. */
@@ -53,7 +56,18 @@ async function libraryHref(): Promise<string | undefined> {
  * sheet's setup (P5.11). A full issue also typesets its pocket cut
  * (`pagesForCut`, P7.3), numbered 1 to 6, which the cover can swap to.
  */
-export async function RewindIssue({ rewindId, data, userId, returnTo, initialSheet, preview = false, adminPreview = false, articleHref }: RewindIssueProps) {
+export async function RewindIssue({
+  rewindId,
+  data,
+  userId,
+  returnTo,
+  initialSheet,
+  preview = false,
+  adminPreview = false,
+  articleHref,
+  initialPage,
+  still = false,
+}: RewindIssueProps) {
   const mode = adminPreview ? "admin-preview" : preview ? "preview" : "member"
   const [settings, brand, config] = await Promise.all([
     getAppSettings(),
@@ -125,6 +139,8 @@ export async function RewindIssue({ rewindId, data, userId, returnTo, initialShe
       mode={mode}
       articleHref={articleHref}
       views={mode === "member" ? { rewindId, record: recordRewindView } : undefined}
+      initialIndex={mode === "preview" ? Math.max(0, pages.findIndex((page) => page.type === initialPage)) : undefined}
+      still={mode === "preview" && still}
     />
   )
 }
