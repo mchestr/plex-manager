@@ -17,7 +17,7 @@ import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 import { processRewindSeasonPrepare } from '@/lib/queue/jobs/rewind-season'
 import { getRewindQueue } from '@/lib/queue/rewind-producers'
 import { JOB_TYPES, type RewindSeasonPreparePayload } from '@/lib/queue/types'
-import { ensureFinalCutScheduled, ensureSeasonPrepareScheduled } from '@/lib/rewind/season-runs'
+import { enqueueFinalCut, ensureFinalCutScheduled, ensureSeasonPrepareScheduled } from '@/lib/rewind/season-runs'
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 jest.mock('@/lib/queue/rewind-producers', () => ({ getRewindQueue: jest.fn() }))
@@ -198,5 +198,27 @@ describe('ensureFinalCutScheduled (P8.5)', () => {
     await ensureFinalCutScheduled(2026, NOW)
     expect(queue.add).not.toHaveBeenCalled()
     expect(await ensureFinalCutScheduled(2026, AT)).toBeNull()
+  })
+})
+
+describe('enqueueFinalCut (P8.5, P8.10)', () => {
+  it('joins the year run for the real final cut', async () => {
+    await enqueueFinalCut({ year: 2026, through: '2026-12-31', triggeredBy: 'admin' })
+    expect(queue.add).toHaveBeenCalledWith(
+      JOB_TYPES.REWIND_FINAL_CUT,
+      { year: 2026, through: '2026-12-31', triggeredBy: 'admin' },
+      expect.objectContaining({ attempts: 1, deduplication: { id: 'rewind:final:2026' } })
+    )
+  })
+
+  it('gives a staging rehearsal its own id, so it never joins the delayed 1 January run', async () => {
+    queue.getDeduplicationJobId.mockResolvedValue('rewind-final-2026-1798792200000')
+    const run = await enqueueFinalCut({ year: 2026, through: '2026-12-10', triggeredBy: 'script' })
+    expect(queue.add).toHaveBeenCalledWith(
+      JOB_TYPES.REWIND_FINAL_CUT,
+      { year: 2026, through: '2026-12-10', triggeredBy: 'script' },
+      expect.objectContaining({ deduplication: { id: 'rewind:final:2026:2026-12-10' } })
+    )
+    expect(run.alreadyQueued).toBe(false)
   })
 })

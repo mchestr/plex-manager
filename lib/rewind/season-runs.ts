@@ -33,7 +33,7 @@ import { getRewindQueue } from "@/lib/queue/rewind-producers"
 import { JOB_TYPES, type RewindFinalCutPayload, type RewindGenerateAllPayload, type RewindSeasonPreparePayload } from "@/lib/queue/types"
 import { serverZone } from "@/lib/utils/server-zone"
 import { normalizeTimeZone } from "@/lib/utils/zoned-time"
-import { batchWindowAt, throughFor } from "@/lib/wrapped/aggregate/window"
+import { batchWindowAt, isFinalCut, throughFor } from "@/lib/wrapped/aggregate/window"
 import { DEFAULT_SEASON, getSeasonYear, parseMonthDay } from "@/lib/wrapped/season"
 import { latestLocalInstant } from "@/lib/wrapped/time/zone"
 
@@ -164,9 +164,17 @@ export async function scheduleSeasonOpenRun(): Promise<Date | null> {
  * Run final cut (P8.5): one `REWIND_FINAL_CUT` per year, deduplicated on
  * `rewind:final:{year}`, so the button joins the scheduled run when it is
  * waiting or running. It never retries; a failed final cut is started again.
+ *
+ * A staging rehearsal (a `through` before 31 December, P8.10) gets its own
+ * id, `rewind:final:{year}:{through}`: the staging worker has already
+ * scheduled the 1 January run under the year's id, and joining that delayed
+ * job would leave the rehearsal waiting until New Year.
  */
 export async function enqueueFinalCut(data: Omit<RewindFinalCutPayload, "step">): Promise<RunStarted> {
-  return addDeduplicated(JOB_TYPES.REWIND_FINAL_CUT, data, finalCutDeduplicationId(data.year), { attempts: 1 })
+  const deduplicationId = isFinalCut(data.year, data.through)
+    ? finalCutDeduplicationId(data.year)
+    : `${finalCutDeduplicationId(data.year)}:${data.through}`
+  return addDeduplicated(JOB_TYPES.REWIND_FINAL_CUT, data, deduplicationId, { attempts: 1 })
 }
 
 /** The final cut's deduplication id: one run per year. */
