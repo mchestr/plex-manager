@@ -17,13 +17,16 @@ import type Redis from "ioredis"
 import { z } from "zod"
 
 import { FIXTURE_USER_ID } from "@/evals/rewind/__tests__/stats-inputs"
-import { getRequestPathRedis } from "@/lib/queue/connection"
+import { getRequestPathRedis, readyWithin } from "@/lib/queue/connection"
 import { createLogger } from "@/lib/utils/logger"
 import { RewindDataV3 } from "@/lib/wrapped/data/schema-v3"
 
 import { DryRunSubject, previewIdSchema } from "./input"
 
 const logger = createLogger("REWIND_PREVIEW")
+
+/** How long a read waits for the fail-fast client to finish connecting (it refuses commands until then). */
+const READY_WAIT_MS = 2000
 
 /** How long a preview lives, in seconds. */
 const PREVIEW_TTL_SEC = 3600
@@ -58,6 +61,7 @@ export async function saveDryRun(redis: Redis, id: string, value: StoredDryRun):
 
 /** The finished dry run, or null when it is unknown, expired, still running or unreadable. */
 export async function readDryRun(id: string, redis: Redis = getRequestPathRedis()): Promise<StoredDryRun | null> {
+  await readyWithin(redis, READY_WAIT_MS)
   const raw = await redis.get(previewKey(id))
   if (!raw) return null
   try {

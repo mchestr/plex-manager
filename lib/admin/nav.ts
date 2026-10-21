@@ -104,7 +104,8 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     href: "/admin/rewind",
     icon: icons.rewind,
     group: "Rewind",
-    match: "prefix",
+    // Exact: the Rewind pages below it (Gallery, later Playground) light their own items.
+    match: "exact",
     mobile: "more",
   },
   {

@@ -31,7 +31,7 @@ jest.mock("next/navigation", () => ({
   }),
 }))
 const mockGet = jest.fn()
-jest.mock("@/lib/queue/connection", () => ({ getRequestPathRedis: () => ({ get: mockGet }) }))
+jest.mock("@/lib/queue/connection", () => ({ readyWithin: async () => true, getRequestPathRedis: () => ({ get: mockGet }) }))
 jest.mock("@/components/admin/rewind/gallery/gallery-run", () => ({ GalleryRun: jest.fn(() => <p data-testid="gallery-run" />) }))
 
 const ID = "0b6c1f7e-3c1a-4f7e-9d0a-2f4b8c6d1e3a"

@@ -28,7 +28,7 @@ jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: jest.fn() }),
 }))
 const mockGet = jest.fn()
-jest.mock("@/lib/queue/connection", () => ({ getRequestPathRedis: () => ({ get: mockGet }) }))
+jest.mock("@/lib/queue/connection", () => ({ readyWithin: async () => true, getRequestPathRedis: () => ({ get: mockGet }) }))
 jest.mock("@/lib/rewind/year-view", () => ({
   loadRewindYearView: async () => ({ kind: "issue", id: "wrapped-1", data: jest.requireActual("@/lib/wrapped/data/__tests__/v3-row").minimalV3() }),
 }))

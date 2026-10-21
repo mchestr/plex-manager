@@ -66,6 +66,9 @@ export const getRewindDryRun = adminAction({
     const job = await getRewindQueue("rewind-aux").getJob(id)
     const state = job ? await job.getState() : null
     if (state && state !== "completed" && state !== "failed" && state !== "unknown") return ok<RewindDryRunState>({ status: "pending" })
+    // The job may have finished between the first read and the state check.
+    const late = await readDryRun(id)
+    if (late) return ok<RewindDryRunState>(late)
     return fail("NOT_FOUND", "That dry run has expired or never existed")
   },
 })

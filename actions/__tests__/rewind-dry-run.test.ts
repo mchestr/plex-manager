@@ -125,6 +125,13 @@ describe("getRewindDryRun", () => {
     expect(await getRewindDryRun({ id })).toMatchObject({ success: false, code: "NOT_FOUND" })
   })
 
+  it("returns the result when the job finishes between the read and the state check", async () => {
+    const done = { status: "skipped", reason: "NO_HISTORY" } as never
+    jest.mocked(readDryRun).mockResolvedValueOnce(null).mockResolvedValueOnce(done)
+    getJob.mockResolvedValueOnce({ getState: async () => "completed" })
+    expect(await getRewindDryRun({ id })).toEqual({ success: true, data: done })
+  })
+
   it("refuses a member", async () => {
     signIn("member-1", false)
     expect(await getRewindDryRun({ id })).toMatchObject({ success: false, code: "FORBIDDEN" })
