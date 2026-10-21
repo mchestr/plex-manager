@@ -59,6 +59,10 @@ interface StoryStageProps {
   initialSheet?: SheetName
   /** `preview`: an admin's dry run (P7.10), under a Preview banner, with no sharing. */
   mode?: "member" | "preview"
+  /** Preview only (P7.11's gallery): the page to open on, an index into `pages`. */
+  initialIndex?: number
+  /** Preview only: no autoplay and motion settled, so the page holds its reduced-motion final state. */
+  still?: boolean
 }
 
 /** Before the first fit: the 390 x 844 roomy layout at scale 1. */
@@ -89,7 +93,7 @@ export function StoryStage({ share, ...props }: StoryStageProps) {
   )
 }
 
-function Stage({ pages, year, archetype, closeHref, copy, initialSheet, mode = "member" }: Omit<StoryStageProps, "share">) {
+function Stage({ pages, year, archetype, closeHref, copy, initialSheet, mode = "member", initialIndex = 0, still = false }: Omit<StoryStageProps, "share">) {
   const router = useRouter()
   const root = useRef<HTMLElement>(null)
   const pagesRef = useRef<HTMLDivElement>(null)
@@ -100,7 +104,7 @@ function Stage({ pages, year, archetype, closeHref, copy, initialSheet, mode = "
   const entries = pages.map((page) => registry[page.type])
   const { state, send } = useStoryPlayer(
     entries.map((entry) => pageKind(entry.dwell)),
-    prefs.autoplay
+    prefs.autoplay && !still
   )
   const setStageInk = useSetStageInk()
   const setStageArchetype = useSetStageArchetype()
@@ -134,6 +138,11 @@ function Stage({ pages, year, archetype, closeHref, copy, initialSheet, mode = "
   useEffect(() => {
     if (initialSheet) send({ type: "OPEN_SHEET", sheet: initialSheet })
   }, [initialSheet, send])
+
+  // The gallery's `?page=`: open on that page.
+  useEffect(() => {
+    if (initialIndex > 0) send({ type: "GOTO", index: initialIndex, source: "key" })
+  }, [initialIndex, send])
 
   // Offer article mode once, on load, below the scale floor or at large text sizes.
   // A layout effect, so the first fitted paint (`data-fitted`) already has the sheet open.
@@ -197,7 +206,7 @@ function Stage({ pages, year, archetype, closeHref, copy, initialSheet, mode = "
     <PlayerProvider value={send} sheet={state.mode === "sheet" ? state.sheet : null}>
       <QuizProvider year={year}>
       <LazyMotion features={domAnimation} strict>
-        <MotionConfig reducedMotion="user">
+        <MotionConfig reducedMotion={still ? "always" : "user"}>
           {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- the labelled stage region takes the story keys while focus is inside it (design 4.6) */}
           <section
             ref={root}
@@ -206,6 +215,7 @@ function Stage({ pages, year, archetype, closeHref, copy, initialSheet, mode = "
             data-testid="rewind-stage"
             data-mode={state.mode}
             data-preview={preview || undefined}
+            data-still={still || undefined}
             data-chrome={fit.chrome}
             data-fitted={fit.measured || undefined}
             style={FIT_DEFAULTS}

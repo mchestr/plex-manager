@@ -539,9 +539,11 @@ The ten core pages (Bookends included), sharing, privacy and accessibility are n
 **Demo.** Open `/admin/rewind/gallery`, switch to `extreme`, and scroll through every page at phone size and then its cards. Run `npm run rewind:gallery` and open the contact sheet.
 
 **Done when.**
-- [ ] `/admin/rewind/gallery` renders every page and card of the five review fixtures through the real routes, using the selected model's recordings.
+- [x] `/admin/rewind/gallery` renders every page and card of the five review fixtures through the real routes, using the selected model's recordings.
 - [ ] `npm run rewind:gallery` produces the same set headless, with a contact sheet, both locally and from the manual workflow.
 - [ ] The tests pass, and Gallery appears in the admin nav.
+
+(as merged: the replay model id is `REPLAY_SELECTED = "replay:selected"` in `lib/rewind/dry-run/input.ts`; `lib/llm/replay.ts` (`selectedReplay`, `replayGenerate`) answers through `evals/rewind/harness.ts`'s `replayDeps` with no usage row, and a replay run uses the selected model as its provider with the LLM on, whatever the server's settings. `startRewindDryRun` refuses `replay:selected` for a member or before `selected.json` names a model with a committed recording set, and the estimate is 0. The gallery's state is in the address (`fixture`, `copy=selected|templates`, `view=phone|spread`, `preview`); a client island starts or reuses the run (sessionStorage per fixture and copy) and adds `preview` when it completes. The preview card route gained `daily=0|1`; the gallery passes `daily=1`. The stage takes `initialIndex` and `still` (no autoplay, `MotionConfig reducedMotion="always"`, `data-still`), set only in preview mode. The script signs in by minting the NextAuth cookie for the first admin (P0.4's test-token login is gone), so it needs `NEXTAUTH_SECRET` and a `_test` `DATABASE_URL`; spreads go to `<fixture>/spread/<nn>-<page>.png`. The headless run, the workflow and the E2E spec were written but not run in this step.)
 
 ### Step P7.12: Rewind settings section and feature flags
 

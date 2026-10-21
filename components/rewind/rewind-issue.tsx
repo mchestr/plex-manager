@@ -28,6 +28,9 @@ interface RewindIssueProps {
   initialSheet?: SheetName
   /** An admin's dry run (P7.10): no share setup, and the stage runs in preview mode. */
   preview?: boolean
+  /** Preview only (P7.11): open on this page, and with `still`, hold it settled. */
+  initialPage?: string
+  still?: boolean
 }
 
 /**
@@ -36,7 +39,7 @@ interface RewindIssueProps {
  * the server and handed to P5.2's `StoryStage` as slots, with the share
  * sheet's setup (P5.11).
  */
-export async function RewindIssue({ rewindId, data, userId, returnTo, initialSheet, preview = false }: RewindIssueProps) {
+export async function RewindIssue({ rewindId, data, userId, returnTo, initialSheet, preview = false, initialPage, still = false }: RewindIssueProps) {
   const [settings, brand, config] = await Promise.all([
     getAppSettings(),
     serverName(),
@@ -77,6 +80,8 @@ export async function RewindIssue({ rewindId, data, userId, returnTo, initialShe
       share={share ? { setup: share, actions: { enable: enableRewindShare, rotate: rotateRewindShare, disable: disableRewindShare, savePrefs: saveRewindSharePrefs } } : undefined}
       initialSheet={initialSheet}
       mode={preview ? "preview" : "member"}
+      initialIndex={preview ? Math.max(0, pages.findIndex((page) => page.type === initialPage)) : undefined}
+      still={preview && still}
     />
   )
 }

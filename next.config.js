@@ -52,8 +52,9 @@ module.exports = (phase) => ({
     '/api/rewind/card/[rewindId]/[page]': ['./lib/rewind/cards/fonts/*.ttf'],
     '/api/rewind/card/s/[assetKey]/[page]': ['./lib/rewind/cards/fonts/*.ttf'],
     '/api/rewind/card/preview/[previewId]/[page]': ['./lib/rewind/cards/fonts/*.ttf'],
-    // Dry runs read the golden fixtures from disk (lib/rewind/dry-run/fixtures.ts): the admin pages that start them
-    '/admin/**': ['./evals/rewind/fixtures/*.json'],
+    // Dry runs read the golden fixtures from disk (lib/rewind/dry-run/fixtures.ts): the admin pages that start them,
+    // and, for the gallery's replay (lib/llm/replay.ts), the selected model and its recordings
+    '/admin/**': ['./evals/rewind/fixtures/*.json', './evals/rewind/selected.json', './evals/rewind/recordings/**/*.json'],
   },
   // Rewind moved from /wrapped (P5.1). Browsers cache a 308, so every target
   // must keep working; the share rule comes first, or the catch-all would send

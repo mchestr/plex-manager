@@ -31,7 +31,7 @@ describe("ADMIN_NAV", () => {
   })
 
   it("keeps the test ids the E2E specs use", () => {
-    for (const id of ["users", "invites", "share-analytics", "announcements", "llm-usage", "cost-analysis", "discord", "queues", "prompts", "playground", "settings"]) {
+    for (const id of ["users", "invites", "share-analytics", "announcements", "llm-usage", "cost-analysis", "discord", "queues", "prompts", "playground", "gallery", "settings"]) {
       expect(ADMIN_NAV.map(navTestId)).toContain(`admin-nav-${id}`)
     }
   })

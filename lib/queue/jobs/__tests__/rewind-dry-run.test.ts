@@ -18,6 +18,7 @@ import { readRecording, replayDeps } from "@/evals/rewind/harness"
 import type { StructuredDeps } from "@/lib/llm/generate-structured"
 import type { UsageRecord } from "@/lib/llm/usage"
 import { getRedisConnection } from "@/lib/queue/connection"
+import { selectedReplay } from "@/lib/llm/replay"
 import { processRewindDryRun } from "@/lib/queue/jobs/rewind-dry-run"
 import type { RewindDryRunPayload } from "@/lib/queue/types"
 import { DryRunInput } from "@/lib/rewind/dry-run/input"
@@ -36,8 +37,10 @@ jest.mock("@/lib/utils/logger", () => ({
 // The real generateStructured, with the provider replaced by the hand recording.
 jest.mock("@/lib/llm/generate-structured", () => {
   const actual = jest.requireActual("@/lib/llm/generate-structured")
-  return { ...actual, generateStructured: (input: unknown) => actual.generateStructured(input, mockReplay.deps) }
+  return { ...actual, generateStructured: (input: unknown, deps?: StructuredDeps) => actual.generateStructured(input, deps ?? mockReplay.deps) }
 })
+// The real replay provider (P7.11), with the hand set standing in for the selected model's.
+jest.mock("@/lib/llm/replay", () => ({ ...jest.requireActual("@/lib/llm/replay"), selectedReplay: jest.fn(() => null) }))
 
 const set = jest.fn(async () => "OK")
 
@@ -55,6 +58,7 @@ beforeEach(() => {
   mockReset(prismaMock)
   jest.clearAllMocks()
   mockReplay.deps = replayDeps(readRecording("hand", "heavy"), MODEL, mockRecord).deps
+  jest.mocked(selectedReplay).mockReturnValue(null)
   jest.mocked(getRedisConnection).mockReturnValue({ set } as never)
   prismaMock.config.findUnique.mockResolvedValue(buildConfig())
   prismaMock.lLMProvider.findFirst.mockResolvedValue({ provider: MODEL.provider, model: MODEL.id } as never)
@@ -120,4 +124,22 @@ it("stores a failure for a fixture that no longer exists and does not retry", as
   const gone = { data: { ...job().data, input: { ...job().data.input, subject: { kind: "fixture", fixtureId: "gone" } } } } as Job<RewindDryRunPayload>
   await expect(processRewindDryRun(gone)).rejects.toThrow("NOT_FOUND")
   expect(stored().value).toMatchObject({ status: "failed", code: "NOT_FOUND" })
+})
+
+it("replays the selected model's recording for replay:selected, unbilled, whatever the server's LLM settings", async () => {
+  jest.mocked(selectedReplay).mockReturnValue({ model: MODEL, set: "hand" })
+  prismaMock.config.findUnique.mockResolvedValue(buildConfig({ llmDisabled: true }))
+  prismaMock.lLMProvider.findFirst.mockResolvedValue(null)
+  await processRewindDryRun(job({ model: "replay:selected" }))
+  const { data, trail } = stored().value
+  expect(trail.copy.path).toBe("llm")
+  expect(trail.copy.calls).toBe(2)
+  expect(data.copySource).toBe("repair")
+  expect(data.copyMeta.model).toBe("anthropic:claude-sonnet-5-5")
+  expect(mockRecord).not.toHaveBeenCalled()
+})
+
+it("fails replay:selected while no model is selected", async () => {
+  await expect(processRewindDryRun(job({ model: "replay:selected" }))).rejects.toThrow("GENERATION_FAILED")
+  expect(stored().value).toMatchObject({ status: "failed", code: "GENERATION_FAILED" })
 })

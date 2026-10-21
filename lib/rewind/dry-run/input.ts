@@ -16,6 +16,13 @@ import { PROMPT_VERSION, styleGuideSchema } from "@/lib/wrapped/prompt/rewind-20
 
 const EFFORTS = ["none", "minimal", "low", "medium", "high", "xhigh", "max"] as const satisfies readonly EffortLevel[]
 
+/**
+ * The model id that replays the selected model's recorded answers for a
+ * fixture (P7.11, `lib/llm/replay.ts`): no provider is called and nothing is
+ * billed. Fixtures only.
+ */
+export const REPLAY_SELECTED = "replay:selected"
+
 /** A fixture id is a file name in `evals/rewind/fixtures/` without `.json`. */
 const fixtureIdSchema = z.string().regex(/^[a-z0-9][a-z0-9-]{0,63}$/, "Invalid fixture id")
 
