@@ -1,20 +1,16 @@
-"use client"
-
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 
-import { useFormat } from "@/lib/format-context"
 import { llmUsageDetail } from "@/lib/admin/routes"
 
 interface ConversationUsageRowProps {
   record: {
     id: string
-    createdAt: Date
+    /** Formatted on the server in `Config.timezone`, with the zone (GAP-43). */
+    time: string
     model: string | null
-    totalTokens: number
-    promptTokens: number
-    completionTokens: number
-    cost: number
+    totalTokens: string
+    tokenSplit: string
+    cost: string
     /** Nullable since the October 2026 privacy clean-up (P0.20); chat calls keep their text. */
     prompt: string | null
   }
@@ -38,69 +34,34 @@ function getLastUserSnippet(prompt: string | null, maxLength: number = 80): stri
   }
 }
 
-export function ConversationUsageRow({
-  record,
-  index,
-}: ConversationUsageRowProps) {
-  const router = useRouter()
-  const f = useFormat()
+/** One call of a conversation: the first cell links to the request (no row click, UI-23). */
+export function ConversationUsageRow({ record, index }: ConversationUsageRowProps) {
   const promptSnippet = getLastUserSnippet(record.prompt)
 
-  const handleRowClick = () => {
-    router.push(llmUsageDetail(record.id))
-  }
-
   return (
-    <tr
-      data-testid={`conversation-usage-row-${record.id}`}
-      onClick={handleRowClick}
-      className="hover:bg-slate-700/20 transition-colors cursor-pointer group"
-    >
-      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-xs sm:text-sm text-slate-300">
-        #{index + 1}
+    <tr data-testid={`conversation-usage-row-${record.id}`} className="hover:bg-accent/40">
+      <td className="px-4 py-3 whitespace-nowrap">
+        <Link href={llmUsageDetail(record.id)} className="rounded-sm font-medium text-foreground hover:underline" aria-label={`Call ${index + 1}, ${record.time}`}>
+          #{index + 1}
+        </Link>
       </td>
-      <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
-        <div className="text-xs sm:text-sm text-slate-300">
-          {f.dateTime(record.createdAt)}
+      <td className="px-4 py-3">
+        <div className="whitespace-nowrap text-foreground" data-testid={`conversation-usage-time-${record.id}`}>
+          {record.time}
         </div>
         {promptSnippet && (
-          <div className="mt-1 text-[11px] text-muted-foreground line-clamp-1">
-            <span className="uppercase tracking-wide mr-1">User:</span>
+          <div className="mt-1 line-clamp-1 text-caption text-muted-foreground">
+            <span className="mr-1">User:</span>
             {promptSnippet}
           </div>
         )}
       </td>
-      <td className="px-3 sm:px-6 py-4 whitespace-nowrap hidden lg:table-cell">
-        <div className="text-sm text-slate-300 font-mono truncate max-w-[160px]">
-          {record.model || <span className="text-muted-foreground">—</span>}
-        </div>
+      <td className="hidden px-4 py-3 font-mono text-muted-foreground lg:table-cell">{record.model || "—"}</td>
+      <td className="px-4 py-3 text-right tabular-nums">
+        <div className="text-foreground">{record.totalTokens}</div>
+        <div className="hidden text-caption text-muted-foreground sm:block">{record.tokenSplit}</div>
       </td>
-      <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
-        <div className="text-sm">
-          <div className="text-white font-medium">
-            {f.number(record.totalTokens)}
-          </div>
-          <div className="text-xs text-slate-400 hidden sm:block">
-            {f.number(record.promptTokens)} +{" "}
-            {f.number(record.completionTokens)}
-          </div>
-        </div>
-      </td>
-      <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
-        <div className="text-sm text-green-400 font-medium">
-          {f.money(record.cost)}
-        </div>
-      </td>
-      <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
-        <Link
-          href={llmUsageDetail(record.id)}
-          onClick={(e) => e.stopPropagation()}
-          className="px-2 sm:px-3 py-1 sm:py-1.5 bg-cyan-700 hover:bg-cyan-800 text-white text-xs font-medium rounded transition-colors inline-block"
-        >
-          View Request →
-        </Link>
-      </td>
+      <td className="px-4 py-3 text-right tabular-nums">{record.cost}</td>
     </tr>
   )
 }
-

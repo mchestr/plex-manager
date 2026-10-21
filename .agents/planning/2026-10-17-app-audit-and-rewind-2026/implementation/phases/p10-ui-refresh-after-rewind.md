@@ -308,11 +308,13 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 **Demo.** From the users list, use only the keyboard to open Morgan Lee. The Rewind tab shows 2026 "Generating" for 20 minutes, with Regenerate; run it. Open a history page and read the breadcrumb. On the conversation page, the summary and every row show the same zone name ("CDT" for October turns, "CST" for January ones).
 
 **Done when.**
-- [ ] User detail has the name as h1, status badges and four URL-driven tabs, and no file is over 200 lines.
-- [ ] Stuck rows can be regenerated from the detail page and from the users list through `canRegenerate`.
-- [ ] The timeline is keyset-paged, and the Postgres test for pages 3 and 5 passes.
-- [ ] The history and conversation pages have breadcrumbs, and every server-rendered time carries its zone.
-- [ ] Dump taken before deploy; `prisma migrate status` clean.
+- [x] User detail has the name as h1, status badges and four URL-driven tabs, and no file is over 200 lines.
+- [x] Stuck rows can be regenerated from the detail page and from the users list through `canRegenerate`.
+- [x] The timeline is keyset-paged, and the Postgres test for pages 3 and 5 passes.
+- [x] The history and conversation pages have breadcrumbs, and every server-rendered time carries its zone.
+- [ ] Dump taken before deploy; `prisma migrate status` clean. (Owner.)
+
+(as merged: `canRegenerate({ status, runStartedAt }, now)` in `lib/admin/can-regenerate.ts` is pure; callers pass `status: "generating"` whenever a queued or running `RewindGeneration` exists, and `runStartedAt` from `lib/admin/active-runs.ts` (`startedAt ?? createdAt`). `AdminUserWithWrappedStats.wrappedRunStartedAt` carries it to the users list menu. P10.18 was not on the start point, so the header reuses the old `UserActionsMenu` plus the Disable and Change role buttons, and the users list name became a `userDetail` link; P10.18 replaces both. The tabs use `@base-ui/react/tabs` directly in `components/admin/users/detail/detail-tabs.tsx` (P10.19 owns `components/ui/tabs.tsx`). `getUserActivityTimeline(userId, { cursor, pageSize })` returns `ActionResult<{ items, total, nextCursor }>`; the core is `lib/admin/activity-timeline.ts`, and its test is `actions/__tests__/user-activity-timeline.pg.test.ts`. Migration `20270113000000_p106_activity_timeline_indexes`. Last sign-in is not stored anywhere, so the Overview lists email, service, joined and Discord only. The history page reads its versions on the server; `/api/admin/wrapped/[wrappedId]/versions` now has no caller, for P10.7 to delete. `getUserDetails`, `user-status-badge.tsx` and the unused `components/ui/pagination.tsx` are gone.)
 
 ### Step P10.7: Client data-loading and boundary sweep
 

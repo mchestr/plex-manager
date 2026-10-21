@@ -674,6 +674,7 @@ model UserMediaMark {
 
   @@unique([userId, plexRatingKey, markType])
   @@index([userId, mediaType])
+  @@index([userId, markedAt])
   @@index([plexRatingKey])
   @@index([markType])
   @@index([markedAt])
@@ -733,6 +734,7 @@ model DiscordCommandLog {
 
   @@index([discordUserId])
   @@index([userId])
+  @@index([userId, createdAt])
   @@index([commandType])
   @@index([commandName])
   @@index([status])

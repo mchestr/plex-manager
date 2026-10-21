@@ -100,7 +100,7 @@ export const A11Y_ROUTES: A11yRoute[] = [
     setup: (page) => openWith(page, 'users-filter-role', 'users-filter-role-option-admin'),
   },
   // Its Visits and Rewind table count the share visit the public share route records.
-  { path: `/admin/users/${regularId}`, as: 'admin', ready: 'admin-user-season-wrapped-view', reset: clearA11yShareVisits },
+  { path: `/admin/users/${regularId}`, as: 'admin', ready: 'admin-user-header', reset: clearA11yShareVisits },
   { path: `/admin/users/${regularId}/rewind/2026`, as: 'admin', ready: 'admin-rewind-preview-header' },
   { path: '/admin/invites', as: 'admin', ready: 'generate-invite-button' },
   {

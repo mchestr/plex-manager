@@ -1,123 +1,106 @@
 /**
- * The admin user page shows, views and regenerates the season year's Rewind,
- * not the calendar year's, so January does not create a near-empty new-year
- * Rewind (P0.14: RWP-04).
+ * The user detail page (P10.6): it loads the header, then only the active
+ * tab's panel, and shows Billing only when Stripe is on or the member has a
+ * subscription row.
  */
 
 import { render, screen } from '@testing-library/react'
 
-import UserDetailsPage from '@/app/admin/users/[userId]/page'
-import { getUserActivityTimeline, getUserDetails } from '@/actions/users'
-import { RegenerateWrappedButton } from '@/components/admin/users/regenerate-wrapped-button'
-import { DisableUserButton } from '@/components/admin/users/disable-user-button'
-import { prisma } from '@/lib/prisma'
-import { mockReset } from 'jest-mock-extended'
-import { prismaMock } from '@/__tests__/helpers/prisma-mock'
+import UserDetailPage from '@/app/admin/users/[userId]/page'
+import { getUserDetailHeader, type UserDetailHeaderData } from '@/lib/admin/user-detail'
 
-jest.mock('@/actions/users', () => ({
-  getUserDetails: jest.fn(),
-  getUserActivityTimeline: jest.fn(),
+jest.mock('server-only', () => ({}))
+jest.mock('@/lib/prisma', () => ({ prisma: {} }))
+jest.mock('@/lib/admin', () => ({ requireAdmin: jest.fn() }))
+jest.mock('@/lib/wrapped/season', () => ({ getSeasonYear: async () => 2026 }))
+jest.mock('@/lib/stripe/client', () => ({ getStripeDashboardBaseUrl: async () => null }))
+jest.mock('@/lib/settings/app-settings', () => ({
+  getFormat: async () => (await import('@/lib/utils/format')).bindFormat({ timeZone: 'America/Chicago', locale: 'en-US' }),
 }))
-
-jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
-
-beforeEach(() => mockReset(prismaMock))
-
-jest.mock('next/navigation', () => ({
-  notFound: jest.fn(() => {
-    throw new Error('NEXT_NOT_FOUND')
-  }),
+jest.mock('@/lib/admin/user-detail', () => ({
+  ...jest.requireActual('@/lib/admin/user-detail'),
+  getUserDetailHeader: jest.fn(),
 }))
-
-jest.mock('@/components/admin/users/regenerate-wrapped-button', () => ({
-  RegenerateWrappedButton: jest.fn(() => null),
+jest.mock('@/components/admin/users/detail/user-detail-header', () => ({
+  UserDetailHeader: ({ header }: { header: { name: string } }) => <h1>{header.name}</h1>,
 }))
-
-jest.mock('@/components/admin/users/unshare-user-button', () => ({
-  UnshareUserButton: () => null,
+jest.mock('@/components/admin/users/detail/detail-tabs', () => ({
+  DetailTabs: ({ tabs, active, children }: { tabs: { label: string }[]; active: string; children: React.ReactNode }) => (
+    <div data-testid="tabs" data-active={active}>
+      {tabs.map((tab) => tab.label).join(',')}
+      {children}
+    </div>
+  ),
 }))
+jest.mock('@/components/admin/users/detail/overview-tab', () => ({ OverviewTab: () => <p>overview panel</p> }))
+jest.mock('@/components/admin/users/detail/rewind-tab', () => ({ RewindTab: () => <p>rewind panel</p> }))
+jest.mock('@/components/admin/users/detail/usage-tab', () => ({ UsageTab: () => <p>usage panel</p> }))
+jest.mock('@/components/admin/users/detail/billing-tab', () => ({ BillingTab: () => <p>billing panel</p> }))
 
-jest.mock('@/components/admin/users/change-user-role-button', () => ({
-  ChangeUserRoleButton: () => null,
-}))
+const mockHeader = getUserDetailHeader as jest.MockedFunction<typeof getUserDetailHeader>
 
-jest.mock('@/components/admin/users/disable-user-button', () => ({
-  DisableUserButton: jest.fn(() => null),
-}))
-
-jest.mock('@/components/admin/users/user-activity-timeline', () => ({
-  UserActivityTimeline: () => null,
-}))
-
-function wrappedRow(year: number) {
+function header(overrides: Partial<UserDetailHeaderData> = {}): UserDetailHeaderData {
   return {
-    id: `wrapped-${year}`,
-    year,
-    status: 'completed',
-    generatedAt: new Date(`${year}-12-05T12:00:00Z`),
-    shareToken: null,
-    shareVisits: 0,
+    id: 'u1',
+    name: 'Morgan Lee',
+    email: null,
+    plexUserId: 'plex-1',
+    primaryAuthService: 'plex',
+    isAdmin: false,
+    isOwner: false,
+    disabledAt: null,
+    createdAt: new Date('2025-01-02T00:00:00Z'),
+    isExempt: false,
+    exemptReason: null,
+    plexAccess: 'shared',
+    subscription: null,
+    stripeEnabled: false,
+    season: { year: 2026, status: null, runStartedAt: null },
+    discord: null,
+    ...overrides,
   }
 }
 
-const userDetails = {
-  id: 'user-1',
-  name: 'Member',
-  email: 'member@example.com',
-  image: null,
-  plexUserId: 'plex-1',
-  isAdmin: false,
-  disabledAt: null as Date | null,
-  hasPlexAccess: null,
-  discordConnection: null,
-  // A stray 2027 row, as January's calendar-year Regenerate used to create
-  wrapped: [wrappedRow(2027), wrappedRow(2026)],
-  totalShares: 0,
-  totalVisits: 0,
-  llmUsage: null,
-  createdAt: new Date('2024-01-01T12:00:00Z'),
-  updatedAt: new Date('2026-12-05T12:00:00Z'),
+async function renderPage(tab?: string) {
+  render(await UserDetailPage({ params: Promise.resolve({ userId: 'u1' }), searchParams: Promise.resolve(tab ? { tab } : {}) }))
 }
 
-describe('Admin user page season year', () => {
-  beforeEach(() => {
-    jest.clearAllMocks()
-    jest.useFakeTimers().setSystemTime(new Date('2027-01-02T12:00:00Z'))
-    ;(getUserDetails as jest.Mock).mockResolvedValue(userDetails)
-    ;(getUserActivityTimeline as jest.Mock).mockResolvedValue({ items: [], page: 1, pageSize: 10, totalItems: 0, totalPages: 0 })
-    // The default season, 12-01 to 01-31: on 2 January 2027 it is the 2026 season
-    ;(prisma.config.findUnique as jest.Mock).mockResolvedValue({ rewindSeasonOpens: '12-01', rewindSeasonCloses: '01-31', timezone: null })
+describe('Admin user detail page', () => {
+  it('defaults to Overview and renders only its panel', async () => {
+    mockHeader.mockResolvedValue(header())
+    await renderPage()
+
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Morgan Lee')
+    expect(screen.getByTestId('tabs')).toHaveAttribute('data-active', 'overview')
+    expect(screen.getByText('overview panel')).toBeInTheDocument()
+    expect(screen.queryByText('rewind panel')).not.toBeInTheDocument()
   })
 
-  afterEach(() => {
-    jest.useRealTimers()
+  it('opens the tab the URL names, and falls back to Overview for an unknown one', async () => {
+    mockHeader.mockResolvedValue(header())
+    await renderPage('usage')
+    expect(screen.getByText('usage panel')).toBeInTheDocument()
   })
 
-  it('shows, views and regenerates the 2026 Rewind on 2027-01-02', async () => {
-    render(await UserDetailsPage({ params: Promise.resolve({ userId: 'user-1' }) }))
+  it('hides Billing with Stripe off and no subscription, even when the URL asks for it', async () => {
+    mockHeader.mockResolvedValue(header())
+    await renderPage('billing')
 
-    expect(screen.getByRole('heading', { name: '2026 Wrapped' })).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: '2027 Wrapped' })).not.toBeInTheDocument()
-    expect(screen.getByTestId('admin-user-season-wrapped-view')).toHaveAttribute(
-      'href',
-      '/admin/users/user-1/rewind/2026'
-    )
-    expect((RegenerateWrappedButton as jest.Mock).mock.calls[0][0]).toMatchObject({ userId: 'user-1', year: 2026 })
+    expect(screen.getByTestId('tabs')).toHaveTextContent('Overview,Rewind,Usage')
+    expect(screen.getByTestId('tabs')).not.toHaveTextContent('Billing')
+    expect(screen.getByText('overview panel')).toBeInTheDocument()
   })
 
-  it('marks a disabled account and offers to enable it (P4.7)', async () => {
-    ;(getUserDetails as jest.Mock).mockResolvedValue({ ...userDetails, disabledAt: new Date('2026-12-06T12:00:00Z') })
+  it('shows Billing with Stripe on', async () => {
+    mockHeader.mockResolvedValue(header({ stripeEnabled: true }))
+    await renderPage('billing')
 
-    render(await UserDetailsPage({ params: Promise.resolve({ userId: 'user-1' }) }))
-
-    expect(screen.getByTestId('admin-user-disabled-badge')).toHaveTextContent('Disabled')
-    expect((DisableUserButton as jest.Mock).mock.calls[0][0]).toMatchObject({ userId: 'user-1', disabled: true })
+    expect(screen.getByTestId('tabs')).toHaveTextContent('Overview,Rewind,Usage,Billing')
+    expect(screen.getByText('billing panel')).toBeInTheDocument()
   })
 
-  it('shows no disabled badge for an enabled account', async () => {
-    render(await UserDetailsPage({ params: Promise.resolve({ userId: 'user-1' }) }))
-
-    expect(screen.queryByTestId('admin-user-disabled-badge')).not.toBeInTheDocument()
-    expect((DisableUserButton as jest.Mock).mock.calls[0][0]).toMatchObject({ disabled: false })
+  it('is a 404 for an unknown member', async () => {
+    mockHeader.mockResolvedValue(null)
+    await expect(renderPage()).rejects.toThrow()
   })
 })
