@@ -41,12 +41,20 @@ function countingRule(facts: RewindFactsV3, zone: NotesContext["zone"]): string 
   return `Counted from ${shown(facts, "window.from")} to ${shown(facts, "window.through")} in ${shown(facts, "tz.label")}, ${whose}. Rewatches count; trailers and extras do not.`
 }
 
-/** Top shows' Notes: every listed series as a table, under the counting rule (design 4.7). */
+/**
+ * Top shows' Notes: every listed series as a table, under the counting rule
+ * (design 4.7). A series the member hid since the issue was stored is left
+ * out at once; the no-LLM regeneration then drops it from `more` (P7.7).
+ */
 function topShowsNotes(data: TopShowsData, facts: RewindFactsV3, ctx: NotesContext): ArticleBlock[] {
   const count = { format: (n: number) => formatHero(n, ctx) }
-  const top = data.rows.map((_row, i) => [shown(facts, seriesFact(i, "title")), shown(facts, seriesFact(i, "episodes")), shown(facts, seriesFact(i, "minutes"))])
-  const more = (data.more ?? []).map((row) => [row.title, count.format(row.episodes), formatRewindDuration(row.minutes, ctx)])
+  const shownKey = (key: string) => !ctx.hiddenKeys?.has(ratingKeyOf(key))
+  const top = data.rows.flatMap((row, i) =>
+    shownKey(row.key) ? [[shown(facts, seriesFact(i, "title")), shown(facts, seriesFact(i, "episodes")), shown(facts, seriesFact(i, "minutes"))]] : []
+  )
+  const more = (data.more ?? []).filter((row) => shownKey(row.key)).map((row) => [row.title, count.format(row.episodes), formatRewindDuration(row.minutes, ctx)])
   const rows = [...top, ...more].map((row, i) => [count.format(i + 1), ...row])
+  if (rows.length === 0) return []
   const title = rows.length === 1 ? "Your one series" : `All ${count.format(rows.length)} series, ranked by time watched`
   return [
     { kind: "heading", text: plain(title) },

@@ -5,7 +5,7 @@
  * @module lib/rewind/stage/acts
  */
 
-import { registry, type Act, type IssuePageType } from "@/lib/rewind/registry"
+import { registry, type Act, type RewindPageType } from "@/lib/rewind/registry"
 
 const ACT_LABELS: Record<Act, string> = {
   front: "Front",
@@ -33,7 +33,7 @@ export interface ActGroup {
  * // [["Front", [0, 1]], ["Features", [2]], ["Centrefold", [3]], ["Back", [4]]]
  * ```
  */
-export function actGroups(types: readonly IssuePageType[]): ActGroup[] {
+export function actGroups(types: readonly RewindPageType[]): ActGroup[] {
   const groups: ActGroup[] = []
   types.forEach((type, index) => {
     const act = registry[type].act

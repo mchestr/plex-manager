@@ -3,7 +3,7 @@
 import { useReducedMotion } from "motion/react"
 import { useLayoutEffect, useRef, type RefObject } from "react"
 
-import type { IssuePageType } from "@/lib/rewind/registry"
+import type { RewindPageType } from "@/lib/rewind/registry"
 
 import { usePick } from "./quiz-context"
 
@@ -14,7 +14,7 @@ const EASE_FALLBACK = "cubic-bezier(0.2, 0, 0, 1)"
 interface MatchCutProps {
   /** The pages layer: the source tile and the target slot are found inside it by page index. */
   pagesRef: RefObject<HTMLDivElement | null>
-  types: readonly IssuePageType[]
+  types: readonly RewindPageType[]
   index: number
   previous: number | null
 }

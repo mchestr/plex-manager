@@ -11,11 +11,11 @@
 
 import type { ArticleBlock } from "@/lib/rewind/article/blocks"
 import { CARD_PAGE_TYPES } from "@/lib/rewind/cards/eligible"
-import { registry, SHARE_PAGE_TYPES, type IssuePageType, type NotesContext, type RegistryEntry } from "@/lib/rewind/registry"
+import { registry, SHARE_PAGE_TYPES, type NotesContext, type RewindPageType, type RegistryEntry } from "@/lib/rewind/registry"
 import type { RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 
 /** The Notes blocks of one selected page: its `notes()`, or its summary as a paragraph. */
-export function pageNotes(page: { type: IssuePageType; data: unknown }, facts: RewindFactsV3, ctx: NotesContext): ArticleBlock[] {
+export function pageNotes(page: { type: RewindPageType; data: unknown }, facts: RewindFactsV3, ctx: NotesContext): ArticleBlock[] {
   const entry: RegistryEntry = registry[page.type]
   const notes = entry.notes?.(page.data, facts, ctx)
   if (notes && notes.length > 0) return notes
@@ -36,7 +36,7 @@ const SHAREABLE: ReadonlySet<string> = new Set(SHARE_PAGE_TYPES)
  * shareFormats("setup")     // null
  * ```
  */
-export function shareFormats(type: IssuePageType): string | null {
+export function shareFormats(type: RewindPageType): string | null {
   if (CARDS.has(type)) return "Story card, 1080 by 1920"
   return SHAREABLE.has(type) ? "A link to your shared Rewind" : null
 }

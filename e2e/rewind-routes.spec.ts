@@ -119,17 +119,18 @@ test.describe('Rewind routes', () => {
 
     await expect(regularUserPage).toHaveURL(/\/rewind\/2026$/);
     await expect(regularUserPage).toHaveTitle(`${SERVER_NAME} Rewind 2026`);
-    // The v2 viewer shows after its intro transition
-    await expect(regularUserPage.getByTestId('wrapped-viewer')).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+    // A stored v2 year is an archive article (P7.13)
+    await expect(regularUserPage.getByTestId('rewind-article-mode')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
     await expect(regularUserPage.getByTestId('rewind-scope')).toHaveAttribute('data-theme', 'rewind');
-    await expect(regularUserPage.getByTestId('wrapped-year-link-2025')).toHaveAttribute('href', '/rewind/2025');
+    await expect(regularUserPage.getByTestId('rewind-year-link-2025')).toHaveAttribute('href', '/rewind/2025');
   });
 
   test('/rewind/2025 opens the past year', async ({ regularUserPage }) => {
     await regularUserPage.goto('/rewind/2025');
 
-    await expect(regularUserPage.getByTestId('wrapped-viewer')).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
-    await expect(regularUserPage.getByTestId('wrapped-year-link-2025')).toHaveAttribute('aria-current', 'page');
+    await expect(regularUserPage.getByRole('heading', { level: 1 })).toHaveText(`${SERVER_NAME} Rewind 2025`);
+    await expect(regularUserPage.getByTestId('rewind-year-link-2026')).toHaveAttribute('href', '/rewind/2026');
+    await expect(regularUserPage.getByTestId('rewind-year-link-2025')).toHaveCount(0);
   });
 
   test('/rewind/1999 is a 404 that links to the member\'s years', async ({ regularUserPage }) => {

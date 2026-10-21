@@ -100,3 +100,51 @@ export async function clearRewindSeed(): Promise<void> {
     await prisma.$disconnect();
   }
 }
+
+/** The year of the stored v2 Rewind {@link seedArchiveRewind} writes (P7.13). */
+export const ARCHIVE_YEAR = 2025;
+
+/** A stored v2 Rewind as generation wrote it before 2026, "Wrapped" copy included. */
+function archiveData(userId: string) {
+  return {
+    version: 2,
+    year: ARCHIVE_YEAR,
+    userId,
+    userName: 'Archive member',
+    generatedAt: '2025-12-05T12:00:00.000Z',
+    archetype: { id: 'midnight-marathoner', name: 'The Midnight Marathoner', tagline: 'The night belongs to you', dedication: 'For the late shows.' },
+    statistics: {
+      totalWatchTime: { total: 60480, movies: 20160, shows: 40320 },
+      moviesWatched: 85,
+      showsWatched: 23,
+      episodesWatched: 412,
+      topMovies: [{ title: 'Dune: Part Two', watchTime: 166, playCount: 1, year: 2024, ratingKey: '101' }],
+      topShows: [{ title: 'Severance', watchTime: 900, playCount: 18, episodesWatched: 18, year: 2022, ratingKey: '202' }],
+      watchTimeByMonth: [
+        { month: 1, monthName: 'January', watchTime: 5040 },
+        { month: 2, monthName: 'February', watchTime: 4200 },
+      ],
+    },
+    sections: [
+      { id: 'hero', type: 'hero', title: 'Your 2025 Wrapped', content: 'Your <highlight>2025</highlight> Wrapped is here.' },
+      { id: 'finale', type: 'finale', title: 'The end', content: 'See you next year.' },
+    ],
+    insights: { funFacts: ['Your busiest night was a Tuesday.'] },
+    metadata: { totalSections: 2, generationTime: 5 },
+  };
+}
+
+/** Writes `userId`'s completed v2 Rewind for {@link ARCHIVE_YEAR}, replacing any row there. */
+export async function seedArchiveRewind(userId: string): Promise<void> {
+  const prisma = createE2EPrismaClient();
+  try {
+    const row = { status: 'completed', data: JSON.stringify(archiveData(userId)), generatedAt: new Date('2025-12-05T12:00:00Z') };
+    await prisma.plexWrapped.upsert({
+      where: { userId_year: { userId, year: ARCHIVE_YEAR } },
+      create: { userId, year: ARCHIVE_YEAR, ...row },
+      update: row,
+    });
+  } finally {
+    await prisma.$disconnect();
+  }
+}

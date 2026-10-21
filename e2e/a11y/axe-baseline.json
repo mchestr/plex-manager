@@ -54,10 +54,7 @@
     "heading-order|moderate": 1
   },
   "admin /admin/users/regular-user-id": {},
-  "admin /admin/users/regular-user-id/wrapped": {
-    "color-contrast|incomplete": 11,
-    "link-name|serious": 1
-  },
+  "admin /admin/users/regular-user-id/rewind/2026": {},
   "admin /admin/wrapped/visual-rewind/history/visual-llm-usage-1": {
     "link-name|serious": 1
   },

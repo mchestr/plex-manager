@@ -31,6 +31,19 @@ import { toStoredError } from "@/lib/wrapped/generation-errors"
 
 export type RewindGenerationKind = "member" | "admin" | "season" | "final-cut"
 
+/**
+ * A hide or unhide's regeneration (P7.7): `no-llm` copy, its own
+ * deduplication id (`rewind:hide:{year}:{userId}`) and a 5 s delay that
+ * collapse a burst of hides into one run. `followUp` is the job's own re-run
+ * after a hide arrived mid-run; it takes no deduplication id, because its
+ * still-active job holds that one.
+ */
+export interface ExclusionRun {
+  followUp?: boolean
+}
+
+const EXCLUSION_DELAY_MS = 5_000
+
 /** Mirrors a run on a Rewind that has not completed yet; a completed one is never touched (FR-40). */
 function markNotCompleted(wrappedId: string, data: { status: string; error: string | null }) {
   return prisma.plexWrapped.updateMany({ where: { id: wrappedId, status: { not: "completed" } }, data })
@@ -55,10 +68,12 @@ export async function enqueueRewindGeneration({
   userId,
   year,
   kind,
+  exclusion,
 }: {
   userId: string
   year: number
   kind: RewindGenerationKind
+  exclusion?: ExclusionRun
 }): Promise<{ alreadyQueued: boolean; generationId: string }> {
   await prisma.plexWrapped.createMany({
     data: [{ userId, year, status: "pending", data: "{}" }],
@@ -71,19 +86,30 @@ export async function enqueueRewindGeneration({
 
   const generationId = randomUUID()
   await prisma.rewindGeneration.create({
-    data: { id: generationId, wrappedId: wrapped.id, userId, year, kind, status: "queued", jobId: generationId },
+    data: {
+      id: generationId,
+      wrappedId: wrapped.id,
+      userId,
+      year,
+      kind,
+      status: "queued",
+      jobId: generationId,
+      ...(exclusion && { copyPolicy: "no-llm" }),
+    },
   })
 
   // Before the add, so a run that fails at once cannot be overwritten by this write.
   await markNotCompleted(wrapped.id, { status: "generating", error: null })
 
-  const payload: RewindGenerateUserPayload = { generationId, userId, year }
+  const payload: RewindGenerateUserPayload = { generationId, userId, year, ...(exclusion && { exclusion: true as const }) }
+  const deduplicationId = exclusion ? `rewind:hide:${year}:${userId}` : `rewind:gen:${year}:${userId}`
   let jobId: string | undefined
   try {
     const job = await getRewindQueue("rewind-gen").add(JOB_TYPES.REWIND_GENERATE_USER, payload, {
       ...GENERATE_JOB_OPTIONS,
       jobId: generationId,
-      deduplication: { id: `rewind:gen:${year}:${userId}` },
+      ...(exclusion && { delay: EXCLUSION_DELAY_MS }),
+      ...(!exclusion?.followUp && { deduplication: { id: deduplicationId } }),
     })
     jobId = job.id
   } catch (error) {

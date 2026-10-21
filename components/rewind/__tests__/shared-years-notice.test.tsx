@@ -1,7 +1,7 @@
 /**
- * The notice on /wrapped that lets a member stop public links on years the
- * viewer does not show, which is where most links minted before sharing
- * became opt-in sit (P0.19, SEC-16).
+ * The notice on /rewind/<year> that lets a member stop the public v2 links
+ * still on, which is where most links minted before sharing became opt-in
+ * sit (P0.19, SEC-16).
  */
 
 import { render, screen, waitFor, within } from '@testing-library/react'
@@ -9,7 +9,7 @@ import userEvent from '@testing-library/user-event'
 
 import { disableWrappedShareLink } from '@/actions/wrapped-share-link'
 import { ToastProvider } from '@/components/ui/toast'
-import { WrappedSharedYearsNotice } from '@/components/wrapped/wrapped-shared-years-notice'
+import { RewindSharedYearsNotice } from '@/components/rewind/shared-years-notice'
 
 jest.mock('@/actions/wrapped-share-link', () => ({
   disableWrappedShareLink: jest.fn(),
@@ -20,12 +20,12 @@ const mockDisable = disableWrappedShareLink as jest.Mock
 function renderNotice(years: number[]) {
   return render(
     <ToastProvider>
-      <WrappedSharedYearsNotice years={years} />
+      <RewindSharedYearsNotice years={years} />
     </ToastProvider>
   )
 }
 
-describe('WrappedSharedYearsNotice', () => {
+describe('RewindSharedYearsNotice', () => {
   beforeEach(() => {
     jest.clearAllMocks()
   })
@@ -33,16 +33,16 @@ describe('WrappedSharedYearsNotice', () => {
   it('renders nothing when no other year has a link', () => {
     renderNotice([])
 
-    expect(screen.queryByTestId('wrapped-shared-years')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('rewind-shared-years')).not.toBeInTheDocument()
   })
 
   it('offers "Stop sharing" for every year with a live link', () => {
     renderNotice([2025, 2024])
 
-    const notice = screen.getByTestId('wrapped-shared-years')
+    const notice = screen.getByTestId('rewind-shared-years')
     expect(within(notice).getByText('Public links are still on')).toBeInTheDocument()
-    expect(screen.getByTestId('wrapped-share-stop-2025')).toHaveTextContent('Stop sharing 2025')
-    expect(screen.getByTestId('wrapped-share-stop-2024')).toHaveTextContent('Stop sharing 2024')
+    expect(screen.getByTestId('rewind-share-stop-2025')).toHaveTextContent('Stop sharing 2025')
+    expect(screen.getByTestId('rewind-share-stop-2024')).toHaveTextContent('Stop sharing 2024')
   })
 
   it('stops the chosen year and removes it from the list', async () => {
@@ -50,12 +50,12 @@ describe('WrappedSharedYearsNotice', () => {
     mockDisable.mockResolvedValue({ success: true })
     renderNotice([2025, 2024])
 
-    await user.click(screen.getByTestId('wrapped-share-stop-2025'))
+    await user.click(screen.getByTestId('rewind-share-stop-2025'))
 
-    await waitFor(() => expect(screen.queryByTestId('wrapped-share-stop-2025')).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByTestId('rewind-share-stop-2025')).not.toBeInTheDocument())
     expect(mockDisable).toHaveBeenCalledTimes(1)
     expect(mockDisable).toHaveBeenCalledWith({ year: 2025 })
-    expect(screen.getByTestId('wrapped-share-stop-2024')).toBeInTheDocument()
+    expect(screen.getByTestId('rewind-share-stop-2024')).toBeInTheDocument()
     expect(screen.getByText('Sharing stopped for 2025. The link no longer opens.')).toBeInTheDocument()
   })
 
@@ -64,9 +64,9 @@ describe('WrappedSharedYearsNotice', () => {
     mockDisable.mockResolvedValue({ success: true })
     renderNotice([2025])
 
-    await user.click(screen.getByTestId('wrapped-share-stop-2025'))
+    await user.click(screen.getByTestId('rewind-share-stop-2025'))
 
-    await waitFor(() => expect(screen.queryByTestId('wrapped-shared-years')).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByTestId('rewind-shared-years')).not.toBeInTheDocument())
   })
 
   it('disables the buttons while a link is being stopped', async () => {
@@ -75,14 +75,14 @@ describe('WrappedSharedYearsNotice', () => {
     mockDisable.mockReturnValue(new Promise((resolve) => { resolveDisable = resolve }))
     renderNotice([2025, 2024])
 
-    await user.click(screen.getByTestId('wrapped-share-stop-2025'))
+    await user.click(screen.getByTestId('rewind-share-stop-2025'))
 
-    await waitFor(() => expect(screen.getByTestId('wrapped-share-stop-2025')).toBeDisabled())
-    expect(screen.getByTestId('wrapped-share-stop-2025')).toHaveTextContent('Stopping…')
-    expect(screen.getByTestId('wrapped-share-stop-2024')).toBeDisabled()
+    await waitFor(() => expect(screen.getByTestId('rewind-share-stop-2025')).toBeDisabled())
+    expect(screen.getByTestId('rewind-share-stop-2025')).toHaveTextContent('Stopping…')
+    expect(screen.getByTestId('rewind-share-stop-2024')).toBeDisabled()
 
     resolveDisable({ success: true })
-    await waitFor(() => expect(screen.getByTestId('wrapped-share-stop-2024')).toBeEnabled())
+    await waitFor(() => expect(screen.getByTestId('rewind-share-stop-2024')).toBeEnabled())
   })
 
   it('keeps the year and shows the error when stopping fails', async () => {
@@ -90,9 +90,9 @@ describe('WrappedSharedYearsNotice', () => {
     mockDisable.mockResolvedValue({ success: false, error: 'Failed to stop sharing' })
     renderNotice([2025])
 
-    await user.click(screen.getByTestId('wrapped-share-stop-2025'))
+    await user.click(screen.getByTestId('rewind-share-stop-2025'))
 
     expect(await screen.findByText('Failed to stop sharing')).toBeInTheDocument()
-    expect(screen.getByTestId('wrapped-share-stop-2025')).toHaveTextContent('Stop sharing 2025')
+    expect(screen.getByTestId('rewind-share-stop-2025')).toHaveTextContent('Stop sharing 2025')
   })
 })

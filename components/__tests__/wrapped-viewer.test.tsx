@@ -12,10 +12,6 @@ jest.mock('../setup/setup-wizard/space-background', () => ({
   SpaceBackground: () => <div data-testid="space-background" />,
 }))
 
-jest.mock('../wrapped/wrapped-share-button', () => ({
-  WrappedShareButton: () => <div data-testid="share-button">Share</div>,
-}))
-
 describe('WrappedViewer', () => {
   const createMockWrappedData = (overrides?: Partial<WrappedData>): WrappedData => ({
     year: 2024,

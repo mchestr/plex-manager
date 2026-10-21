@@ -27,7 +27,7 @@
  * @module lib/rewind/article/blocks
  */
 
-import type { Edition, IssuePageType, PageTable } from "@/lib/rewind/registry"
+import type { Edition, PageTable, RewindPageType } from "@/lib/rewind/registry"
 import type { FontMetrics } from "@/lib/rewind/typeset/measure"
 import { renderCopy, type CopySegment, type TokenSource } from "@/lib/wrapped/copy/render-copy"
 import type { RewindCopyV3Wire } from "@/lib/wrapped/copy/schema"
@@ -57,7 +57,7 @@ export interface ArticleContext {
   serverName: string
   edition: Edition
   /** The selected list, for folios and cover lines. */
-  pages: ReadonlyArray<{ type: IssuePageType; folio: number }>
+  pages: ReadonlyArray<{ type: RewindPageType; folio: number }>
   copy: RewindCopyV3Wire | null
   copySource: RewindDataV3["copySource"]
   model: string | null

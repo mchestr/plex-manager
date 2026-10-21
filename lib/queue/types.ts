@@ -36,6 +36,8 @@ export const JOB_TYPES = {
   REWIND_CARD_SWEEP: "rewind:card:sweep",
   // Admin dry runs (P7.10), on `rewind-aux`
   REWIND_DRY_RUN: "rewind:dry-run",
+  // Ready notifications (P7.14), on `rewind-aux`
+  REWIND_NOTIFY: "rewind:notify",
 } as const
 
 export type JobType = (typeof JOB_TYPES)[keyof typeof JOB_TYPES]
@@ -232,6 +234,10 @@ export interface RewindGenerateUserPayload {
   generationId: string
   userId: string
   year: number
+  /** A hide or unhide's regeneration (P7.7): it waits out a held lock and runs again when a hide arrived mid-run. */
+  exclusion?: true
+  /** How many times an exclusion run has waited for the member's lock. */
+  lockWaits?: number
   /** Set by the season fan-out (P7.8): whose Rewinds it generates, and the batch's last data day. */
   audience?: GenerationAudience
   through?: string
@@ -271,6 +277,17 @@ export interface RewindDryRunPayload {
   input: DryRunInput
 }
 
+/**
+ * One "your Rewind is ready" message (P7.14), deduplicated on
+ * `rewind:notify:{year}:{userId}:{kind}`. P8.5 adds the `final-cut` kind.
+ */
+export interface RewindNotifyPayload {
+  wrappedId: string
+  userId: string
+  year: number
+  kind: "season" | "member"
+}
+
 // =============================================================================
 // Type Mapping
 // =============================================================================
@@ -295,6 +312,7 @@ export interface JobPayloadMap {
   [JOB_TYPES.REWIND_CARD_PREWARM]: RewindCardPrewarmPayload
   [JOB_TYPES.REWIND_CARD_SWEEP]: Record<string, never>
   [JOB_TYPES.REWIND_DRY_RUN]: RewindDryRunPayload
+  [JOB_TYPES.REWIND_NOTIFY]: RewindNotifyPayload
 }
 
 // =============================================================================

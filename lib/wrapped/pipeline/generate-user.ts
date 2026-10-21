@@ -9,7 +9,9 @@
  *   ─► RewindDataV3 ─► persist (one transaction) │ dry run (validate only)
  * ```
  *
- * A failed eligibility check returns `skipped` with its typed reason. An
+ * A failed eligibility check returns `skipped` with its typed reason; a late
+ * joiner (`JOINED_LATE`) is skipped once the lifetime plays are read, before
+ * any copy step, so no model is called. An
  * upstream failure throws `RewindGenerationError` (`UPSTREAM_ERROR` is
  * retryable); a model failure never fails the run, it only turns slots into
  * templates. A dry run writes no `PlexWrapped` or `RewindGeneration` row, and
@@ -42,7 +44,8 @@ import { dayKey } from "@/lib/wrapped/time/zone"
 import { buildIssue, disagreesWithAggregate, withArchetype, type IssueInput } from "./build-issue"
 import type { GenerateFn } from "./copy-llm"
 import { runCopyStep, type CopyTrail } from "./copy-step"
-import { checkEligibility, type GenerationAudience, type SkipReason } from "./eligibility"
+import { checkEligibility, checkJoinedLate, type GenerationAudience, type SkipReason } from "./eligibility"
+import { firstPlayAt } from "./late-joiner"
 import { loadRewindContext, type RewindContext } from "./load-context"
 import { persistRewind, validateRewind } from "./persist"
 import { readMemberInputs, type MemberInputs } from "./read-inputs"
@@ -113,6 +116,8 @@ export async function generateUserRewind(options: GenerateUserOptions, deps: Pip
   if (!eligibility.ok) return { status: "skipped", reason: eligibility.reason }
 
   const inputs = await (options.source ?? ((c) => readMemberInputs(c, { signal, limiter: redisLimiter })))(ctx)
+  const joined = checkJoinedLate({ since: firstPlayAt(inputs.sources.lifetime), createdAt: ctx.member.createdAt ?? null }, year, ctx.zone.zone)
+  if (!joined.ok) return { status: "skipped", reason: joined.reason }
   const statsCtx = { zone: ctx.zone.zone, window: ctx.window, finalCut: ctx.finalCut, hiddenKeys: ctx.hiddenKeys }
   const issueInput: IssueInput = {
     userId,

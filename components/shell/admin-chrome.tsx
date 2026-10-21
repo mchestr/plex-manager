@@ -3,15 +3,22 @@
 import { usePathname } from "next/navigation"
 import type { ReactNode } from "react"
 
-import { isAssistantHidden } from "@/lib/admin/nav"
+import { isAssistantHidden, isImmersive } from "@/lib/admin/nav"
+
+interface AdminChromeProps {
+  /** `assistant`: the assistant and its triggers, which also step aside on the admin Rewind preview. */
+  part?: "chrome" | "assistant"
+  children: ReactNode
+}
 
 /**
- * Renders the admin shell's chrome and assistant except on immersive routes
- * (the admin Rewind viewer, a stored generation), which draw their own. A
- * client island, because the admin layout does not re-render on client
- * navigation.
+ * Renders the admin shell's chrome except on immersive routes (a stored
+ * generation), which draw their own, and the assistant except where it is
+ * hidden as well (the admin Rewind preview, P7.9). A client island, because
+ * the admin layout does not re-render on client navigation.
  */
-export function AdminChrome({ children }: { children: ReactNode }) {
+export function AdminChrome({ part = "chrome", children }: AdminChromeProps) {
   const pathname = usePathname() ?? "/admin"
-  return isAssistantHidden(pathname) ? null : children
+  const hidden = part === "assistant" ? isAssistantHidden(pathname) : isImmersive(pathname)
+  return hidden ? null : children
 }

@@ -82,7 +82,7 @@ describe('member copy for stored codes (errorCopy)', () => {
     const copy = memberErrorCopy(readStoredError(LEGACY_ROSTER_ERROR))
     expect(copy).not.toContain('alice')
     expect(copy).not.toContain('@example.com')
-    expect(copy).toBe('Something went wrong while generating your Wrapped. Please try again.')
+    expect(copy).toBe('Something went wrong while making your Rewind. Please try again.')
   })
 })
 

@@ -2,6 +2,7 @@
 
 import { useId, useState } from "react"
 
+import { useRecordShare } from "@/components/rewind/stage/use-record-view"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
@@ -10,10 +11,11 @@ import { confirmLine } from "@/lib/rewind/share-sheet"
 
 import { useShare } from "./share-context"
 
-async function copy(url: string, showSuccess: (message: string) => void) {
+async function copy(url: string, showSuccess: (message: string) => void, onCopied: () => void) {
   try {
     await navigator.clipboard.writeText(url)
     showSuccess("Link copied")
+    onCopied()
   } catch {
     // The address stays on screen to copy by hand.
   }
@@ -29,6 +31,7 @@ async function copy(url: string, showSuccess: (message: string) => void) {
  */
 export function ShareLink({ onNeedsMembership, stopOnly = false }: { onNeedsMembership: () => void; stopOnly?: boolean }) {
   const share = useShare()
+  const recordShare = useRecordShare()
   const { showSuccess, showError } = useToast()
   const id = useId()
   const [step, setStep] = useState<"idle" | "confirm" | "busy">("idle")
@@ -48,7 +51,7 @@ export function ShareLink({ onNeedsMembership, stopOnly = false }: { onNeedsMemb
       return
     }
     setLink({ shareId: result.data.shareId, pages: link?.pages ?? setup.cards, expiresAt: result.data.expiresAt }, result.data.url)
-    await copy(result.data.url, showSuccess)
+    await copy(result.data.url, showSuccess, () => recordShare("link"))
   }
 
   const stop = async () => {
@@ -103,7 +106,7 @@ export function ShareLink({ onNeedsMembership, stopOnly = false }: { onNeedsMemb
       <Button
         variant="ink-outline"
         size="pill"
-        onClick={() => (url ? void copy(url, showSuccess) : setStep("confirm"))}
+        onClick={() => (url ? void copy(url, showSuccess, () => recordShare("link")) : setStep("confirm"))}
         data-testid="rewind-share-copy-link"
       >
         {url ? "Copy link" : link ? "Copy a new link..." : "Create a public link..."}

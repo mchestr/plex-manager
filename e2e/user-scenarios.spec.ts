@@ -116,10 +116,9 @@ test.describe('User Scenarios', () => {
         const noWrappedFound = regularUserPage.getByTestId('no-wrapped-found');
         await expect(noWrappedFound).not.toBeVisible();
 
-        // /rewind resolves to the latest completed year, and the viewer shows it
+        // /rewind resolves to the latest completed year, a stored v2 row read as an archive article (P7.13)
         await expect(regularUserPage).toHaveURL(new RegExp(`/rewind/${currentYear}$`));
-        // after the ~6.5 s intro transition
-        await expect(regularUserPage.getByTestId('wrapped-viewer')).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+        await expect(regularUserPage.getByTestId('rewind-article-mode')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
 
       } finally {
         // Cleanup: delete the mock wrapped data

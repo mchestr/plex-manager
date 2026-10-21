@@ -24,7 +24,7 @@ const INITIAL: FitSummary = { chrome: "roomy", measured: false, belowFloor: fals
  * article-mode flags does.
  * `safeArea` is an element padded by `env(safe-area-inset-bottom)`.
  */
-export function useFitStage(root: RefObject<HTMLElement | null>, safeArea: RefObject<HTMLElement | null>): FitSummary {
+export function useFitStage(root: RefObject<HTMLElement | null>, safeArea: RefObject<HTMLElement | null>, framed = false): FitSummary {
   const [summary, setSummary] = useState(INITIAL)
 
   useLayoutEffect(() => {
@@ -33,8 +33,9 @@ export function useFitStage(root: RefObject<HTMLElement | null>, safeArea: RefOb
     const viewport = window.visualViewport
 
     const refit = () => {
-      const vw = viewport?.width ?? window.innerWidth
-      const vh = viewport?.height ?? window.innerHeight
+      // A framed stage (the admin preview, P7.9) fits its frame, not the window.
+      const vw = framed ? el.clientWidth : (viewport?.width ?? window.innerWidth)
+      const vh = framed ? el.clientHeight : (viewport?.height ?? window.innerHeight)
       const fit = fitStage({
         vw,
         vh,
@@ -63,7 +64,7 @@ export function useFitStage(root: RefObject<HTMLElement | null>, safeArea: RefOb
       window.removeEventListener("resize", refit)
       viewport?.removeEventListener("resize", refit)
     }
-  }, [root, safeArea])
+  }, [root, safeArea, framed])
 
   return summary
 }

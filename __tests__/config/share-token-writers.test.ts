@@ -3,26 +3,23 @@
  */
 
 /**
- * Only one action may set `PlexWrapped.shareToken` (P0.19, SEC-16).
+ * No code may set a non-null `PlexWrapped.shareToken` (P0.19, SEC-16, P7.13).
  *
- * Sharing is opt-in: `enableWrappedShareLink` mints the token when a member
- * asks for a link, and nothing else creates one. This test parses every
- * source file under `app`, `actions`, `lib` and `components` (tests and the
- * generated Prisma client excluded) and checks two things:
+ * Sharing was opt-in through `enableWrappedShareLink`, the one action that
+ * minted a v2 token; P7.13 deleted it with the legacy viewer, and v3 links
+ * are `RewindShare` rows. This test parses every source file under `app`,
+ * `actions`, `lib` and `components` (tests and the generated Prisma client
+ * excluded) and checks two things:
  *
- * 1. `generateShareToken` is mentioned only where it is defined
- *    (`lib/utils.ts`) and in `actions/wrapped-share-link.ts`, the only caller.
+ * 1. Nothing mentions `generateShareToken`, the token minter.
  * 2. A `shareToken` key in a Prisma write payload (`data`, or an upsert's
  *    `create` and `update`, followed through spreads, conditionals, arrays,
  *    same-file variables and destructuring, property reads, `Object.assign`,
  *    and the returns of same-file helpers and callbacks such as
  *    `rows.map((r) => ({ ... }))`), an assignment to a `.shareToken` property,
  *    an `Object.assign` that sets the key, or a raw query naming the column
- *    appears only in `actions/wrapped-share-link.ts` and in P0.20's
- *    `lib/wrapped/maintenance/strip-rosters.ts`, which may only write `null`.
- *
- * P7.13 deletes `enableWrappedShareLink`; this test then asserts that no code
- * sets a non-null `shareToken` at all.
+ *    only ever writes `null`, and only in `actions/wrapped-share-link.ts`
+ *    (Stop sharing) and P0.20's `lib/wrapped/maintenance/strip-rosters.ts`.
  */
 
 import fs from 'fs'
@@ -34,7 +31,6 @@ const SCANNED_DIRS = ['app', 'actions', 'lib', 'components']
 const SKIPPED_DIRS = new Set(['node_modules', '__tests__', '__mocks__'])
 const SKIPPED_PATHS = new Set(['lib/generated'])
 
-const TOKEN_DEFINITION = 'lib/utils.ts'
 const SHARE_LINK_ACTIONS = 'actions/wrapped-share-link.ts'
 const ROSTER_STRIPPER = 'lib/wrapped/maintenance/strip-rosters.ts'
 
@@ -416,29 +412,19 @@ describe('share token writers', () => {
     expect(scan.fileCount).toBeGreaterThan(300)
   })
 
-  it('mentions generateShareToken only where it is defined and in the share-link actions', () => {
-    const files = [...new Set(scan.tokenMentions.map((f) => f.file))].sort()
-    expect(files).toEqual([SHARE_LINK_ACTIONS, TOKEN_DEFINITION].sort())
-    expect(scan.tokenMentions.filter((f) => f.file === TOKEN_DEFINITION)).toHaveLength(1)
+  it('no longer mints a token anywhere', () => {
+    expect(scan.tokenMentions.map(describeFinding)).toEqual([])
+    expect(scan.tokenCalls.map(describeFinding)).toEqual([])
   })
 
-  it('calls generateShareToken only from the share-link actions', () => {
-    expect(scan.tokenCalls.map(describeFinding)).toEqual(
-      scan.tokenCalls.filter((f) => f.file === SHARE_LINK_ACTIONS).map(describeFinding)
-    )
-    expect(scan.tokenCalls.length).toBeGreaterThan(0)
+  it('never writes a non-null shareToken', () => {
+    expect(scan.shareTokenWrites.filter((f) => f.value !== 'null').map(describeFinding)).toEqual([])
   })
 
-  it('writes shareToken only from the share-link actions and, as null, from the roster stripper', () => {
-    const allowed = (f: Finding) =>
-      f.file === SHARE_LINK_ACTIONS || (f.file === ROSTER_STRIPPER && f.value === 'null')
+  it('clears shareToken only from the share-link actions and the roster stripper', () => {
+    const allowed = (f: Finding) => f.file === SHARE_LINK_ACTIONS || f.file === ROSTER_STRIPPER
 
     expect(scan.shareTokenWrites.filter((f) => !allowed(f)).map(describeFinding)).toEqual([])
-  })
-
-  it('finds both share-link writes: the minted token and the revocation', () => {
-    const values = scan.shareTokenWrites.filter((f) => f.file === SHARE_LINK_ACTIONS).map((f) => f.value)
-    expect(values).toContain('null')
-    expect(values.filter((value) => value !== 'null')).toHaveLength(1)
+    expect(scan.shareTokenWrites.filter((f) => f.file === SHARE_LINK_ACTIONS).map((f) => f.value)).toEqual(['null'])
   })
 })

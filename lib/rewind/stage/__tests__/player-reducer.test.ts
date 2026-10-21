@@ -131,3 +131,23 @@ describe("playerReducer (design 14.3)", () => {
     expect(cover.mode).toBe("playing")
   })
 })
+
+describe("cuts (P7.3)", () => {
+  const POCKET: PageKind[] = ["cover", "timed", "timed", "end"]
+
+  it("swaps the kinds on the cover, then plays the chosen cut", () => {
+    const state = run([{ type: "SET_KINDS", kinds: POCKET }, { type: "CHOOSE_CUT", cut: "pocket" }])
+    expect(state).toMatchObject({ mode: "playing", index: 1, kinds: POCKET })
+    expect(run([{ type: "DWELL_END" }, { type: "DWELL_END" }], state)).toMatchObject({ mode: "ended", index: 3 })
+  })
+
+  it("keeps the kinds once the story has left the cover", () => {
+    const state = run([{ type: "CHOOSE_CUT" }, { type: "SET_KINDS", kinds: POCKET }])
+    expect(state.kinds).toBe(KINDS)
+  })
+
+  it("opens a one-page postcard as ended", () => {
+    expect(initPlayer({ kinds: ["end"], autoplay: true })).toMatchObject({ mode: "ended", index: 0 })
+    expect(run([{ type: "READ_AGAIN" }, next], initPlayer({ kinds: ["end"], autoplay: true }))).toMatchObject({ mode: "ended", index: 0 })
+  })
+})

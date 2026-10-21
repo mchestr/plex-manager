@@ -2,6 +2,7 @@
  * Shared test fixtures for Wrapped v2 generation tests
  */
 
+import { assembleWrappedData } from "@/lib/wrapped/assemble-wrapped"
 import type { WrappedLLMOutput } from "@/lib/wrapped/llm-output-schema"
 import type { WrappedStatistics } from "@/types/wrapped"
 
@@ -127,4 +128,49 @@ export function buildLeaderboards(): NonNullable<WrappedStatistics["leaderboards
       totalUsers: 2,
     },
   }
+}
+
+/**
+ * A stored v2 row (P7.13) as generation wrote it, with the leaderboards a
+ * row from before P0.8's strip could still hold.
+ */
+export function buildStoredV2Json(): string {
+  const data = assembleWrappedData({
+    output: buildValidOutput(),
+    statistics: buildStatistics({ leaderboards: buildLeaderboards() }),
+    userId: "user-1",
+    userName: "Mike",
+    year: 2025,
+  })
+  return JSON.stringify({ ...data, generatedAt: "2025-12-05T12:00:00.000Z" })
+}
+
+/** A stored v1 row (P7.13): no version, no derived statistics, no archetype. */
+export function buildStoredV1Json(): string {
+  return JSON.stringify({
+    year: 2024,
+    userId: "user-1",
+    userName: "Mike",
+    generatedAt: "2024-12-03T09:00:00.000Z",
+    statistics: {
+      totalWatchTime: { total: 30240, movies: 10080, shows: 20160 },
+      moviesWatched: 41,
+      showsWatched: 12,
+      episodesWatched: 233,
+      topMovies: [
+        { title: "Arrival", watchTime: 116, playCount: 1, year: 2016, ratingKey: 501 },
+        { title: "Heat", watchTime: 170, playCount: 1, year: 1995 },
+      ],
+      topShows: [{ title: "The Bear", watchTime: 600, playCount: 20, episodesWatched: 20, ratingKey: "602" }],
+      leaderboards: buildLeaderboards(),
+    },
+    sections: [
+      { id: "hero", type: "hero", title: "Your 2024 Wrapped", content: "Your <highlight>2024</highlight> Wrapped is here." },
+      { id: "top-movies", type: "top-movies", title: "Top films", content: "Arrival led the way.", data: { movies: [] } },
+      { id: "fun-facts", type: "fun-facts", title: "Fun facts", content: "", data: { facts: ["You watched Heat twice in one week."] } },
+      { id: "finale", type: "finale", title: "That's a wrap", content: "See you next year." },
+    ],
+    insights: { personality: "Night owl", topGenre: "Drama", bingeWatcher: true, discoveryScore: 60, funFacts: [] },
+    metadata: { totalSections: 4, generationTime: 12 },
+  })
 }

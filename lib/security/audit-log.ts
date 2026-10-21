@@ -72,9 +72,9 @@ export enum AuditEventType {
   // Emitted when the Discord bot token / config version is rotated on a config
   // change. Details never carry the token value.
   DISCORD_TOKEN_ROTATED = "DISCORD_TOKEN_ROTATED",
-  // Rewind share links (opt-in, SEC-16). Details carry the wrapped id and year,
+  // v2 Rewind share links (SEC-16). P7.13 deleted the action that created one,
+  // so only revocations are written. Details carry the wrapped id and year,
   // never the token, which is the credential for the public link.
-  SHARE_LINK_CREATED = "SHARE_LINK_CREATED",
   SHARE_LINK_REVOKED = "SHARE_LINK_REVOKED",
   // v3 Rewind public links (P5.11, design 6.2). Details carry the share id, the
   // year and the published pages (and a rotation's old share id), never the token.
@@ -82,6 +82,10 @@ export enum AuditEventType {
   REWIND_SHARE_UPDATED = "REWIND_SHARE_UPDATED",
   REWIND_SHARE_ROTATED = "REWIND_SHARE_ROTATED",
   REWIND_SHARE_REVOKED = "REWIND_SHARE_REVOKED",
+  // A member hid or unhid a title in their Rewind (P7.7, FR-7). Details carry the
+  // year, rating key and kind, never the title.
+  REWIND_TITLE_HIDDEN = "REWIND_TITLE_HIDDEN",
+  REWIND_TITLE_UNHIDDEN = "REWIND_TITLE_UNHIDDEN",
   // The server time zone (Config.timezone) changed. Details carry the old and new zone.
   SERVER_TIMEZONE_CHANGED = "SERVER_TIMEZONE_CHANGED",
   // A prompt template or Rewind style guide was created, edited, activated or
@@ -107,6 +111,12 @@ export enum AuditEventType {
   REWIND_RETRY_FAILED = "REWIND_RETRY_FAILED",
   /** @public P8.5 writes it when Run final cut enqueues `REWIND_FINAL_CUT`. */
   REWIND_FINAL_CUT_STARTED = "REWIND_FINAL_CUT_STARTED",
+  // An admin opened a member's stored Rewind (P7.9, GAP-33). Details carry the
+  // target user, the year and the wrapped id.
+  REWIND_ADMIN_VIEWED = "REWIND_ADMIN_VIEWED",
+  // An admin restored a member's previous Rewind (P7.9). Details carry the
+  // target user, the year, the source generation and the new one.
+  REWIND_ROLLED_BACK = "REWIND_ROLLED_BACK",
   // A credential, settings, setup or prompt-template change. Details carry the
   // redacted diff from lib/security/config-diff.ts: changed field names, whether
   // a secret changed, and URL origins only.

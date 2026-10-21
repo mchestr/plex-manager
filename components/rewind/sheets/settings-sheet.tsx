@@ -4,6 +4,7 @@ import type { Route } from "next"
 import Link from "next/link"
 import { useId } from "react"
 
+import { HiddenTitles } from "@/components/rewind/hide/hidden-titles"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
@@ -30,7 +31,8 @@ interface SettingsSheetProps {
 
 /**
  * The story's Settings sheet (Rewind design 4.6): the per-device switches,
- * "Read as an article" and the "About the words" disclosure (8.1). It opens
+ * "Read as an article", the member's hidden titles (P7.7) and the "About the
+ * words" disclosure (8.1). It opens
  * from the Settings button, the comma key and a long press on Pause, and
  * prints on paper through the scope's portal.
  */
@@ -65,6 +67,7 @@ export function SettingsSheet({ open, onClose, prefs, onChange, articleHref, abo
         <Button variant="ink-outline" size="pill" className="self-start" nativeButton={false} render={<Link href={articleHref} />} data-testid="rewind-settings-article">
           Read as an article
         </Button>
+        <HiddenTitles />
         <section aria-labelledby={`${id}-words`} className="flex flex-col gap-1 border-t border-border pt-4">
           <h3 id={`${id}-words`} className="text-ui font-semibold">
             About the words

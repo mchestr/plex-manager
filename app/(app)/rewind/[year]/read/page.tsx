@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation"
 import { getServerSession } from "next-auth"
 import { z } from "zod"
 
+import { ArchiveActions, ArchiveArticle } from "@/components/rewind/article/archive-article"
 import { ArticleDocument } from "@/components/rewind/article/article-document"
 import { authOptions } from "@/lib/auth"
 import { rewindName, serverName } from "@/lib/brand"
@@ -17,6 +18,7 @@ import { loadRewindYearView } from "@/lib/rewind/year-view"
 import { getAppSettings } from "@/lib/settings/app-settings"
 import { yearParamSchema } from "@/lib/validations/params"
 import { windowLine } from "@/lib/wrapped/copy/templates"
+import { listCompletedRewindYears } from "@/lib/wrapped/season"
 
 export const dynamic = "force-dynamic"
 
@@ -49,8 +51,9 @@ export async function generateMetadata({ params }: ReadPageProps): Promise<Metad
 /**
  * Article mode (P5.12, RWV-09, UI-09): the member's v3 issue as one semantic
  * document, with no client component on the page, for small screens, large
- * text, assistive technology and print. Years with no v3 issue go to the
- * story route, which shows their viewer or status panel.
+ * text, assistive technology and print. A stored v1 or v2 year renders the
+ * same archive article as the story route (P7.13); any other year goes to
+ * the story route, which shows its status panel.
  */
 export default async function RewindArticlePage({ params, searchParams }: ReadPageProps) {
   const session = await getServerSession(authOptions)
@@ -64,6 +67,23 @@ export default async function RewindArticlePage({ params, searchParams }: ReadPa
   const storyHref = `/rewind/${year}${returnTo === "/" ? "" : `?from=${encodeURIComponent(returnTo)}`}` as Route
 
   const view = await loadRewindYearView({ userId: session.user.id, isAdmin: session.user.isAdmin }, year)
+  if (view.kind === "legacy") {
+    const [brand, settings, years] = await Promise.all([serverName(), getAppSettings(), listCompletedRewindYears(session.user.id)])
+    return (
+      <>
+        <noscript>
+          <style>{NO_SCRIPT_STREAM}</style>
+        </noscript>
+        <ArchiveArticle
+          legacy={view.data}
+          year={year}
+          brand={brand}
+          locale={settings.locale}
+          actions={<ArchiveActions year={year} years={years} returnTo={returnTo} />}
+        />
+      </>
+    )
+  }
   if (view.kind !== "issue") redirect(storyHref)
 
   const { data } = view
