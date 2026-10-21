@@ -79,9 +79,16 @@ test.describe('Rewind ready notifications', () => {
 
   test('a completed Rewind shows the notice on /account until it is opened', async ({ page, signIn }) => {
     const member = REWIND_MEMBERS.median;
-    // A fresh row has no views
+    // A fresh row has no views. The fixture's generatedAt is in December, and
+    // only a view from on or after it clears the notice, so date it an hour ago.
     await seedRewindIssue(member.id, 'median');
-    await withPrisma((prisma) => prisma.rewindPrefs.deleteMany({ where: { userId: member.id, year: REWIND_YEAR } }));
+    await withPrisma(async (prisma) => {
+      await prisma.rewindPrefs.deleteMany({ where: { userId: member.id, year: REWIND_YEAR } });
+      await prisma.plexWrapped.update({
+        where: { userId_year: { userId: member.id, year: REWIND_YEAR } },
+        data: { generatedAt: new Date(Date.now() - 60 * 60 * 1000) },
+      });
+    });
     await signIn(member.id);
 
     await page.goto('/account');

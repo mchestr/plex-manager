@@ -67,12 +67,8 @@
   "member /onboarding": {
     "color-contrast|incomplete": 16
   },
-  "member /rewind": {
-    "color-contrast|incomplete": 8
-  },
-  "member /rewind/2026": {
-    "color-contrast|incomplete": 8
-  },
+  "member /rewind": {},
+  "member /rewind/2026": {},
   "member /subscribe": {},
   "member /subscribe/success": {},
   "public /": {
@@ -85,9 +81,7 @@
   "public /invite/VISUALOK": {
     "color-contrast|incomplete": 3
   },
-  "public /rewind/s/a11y-share-token000000000000000000000000000": {
-    "color-contrast|incomplete": 18
-  },
+  "public /rewind/s/a11y-share-token000000000000000000000000000": {},
   "public /setup [step 1]": {
     "color-contrast|incomplete": 40,
     "color-contrast|serious": 1

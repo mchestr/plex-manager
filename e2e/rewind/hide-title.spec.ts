@@ -83,7 +83,8 @@ test.describe('Rewind hide a title', () => {
       const response = await page.goto(`/rewind/s/${TOKEN}`);
       expect(response?.status()).toBe(200);
       await expect(page.locator('body')).not.toContainText(NO1_TITLE);
-      expect((await page.request.get(`/api/rewind/poster/${NO1_KEY}?w=160&s=${ASSET_KEY}`)).status()).toBe(404);
+      // The asset key no longer covers the poster, so a signed-out request is refused (P5.10)
+      expect((await page.request.get(`/api/rewind/poster/${NO1_KEY}?w=160&s=${ASSET_KEY}`)).status()).toBe(401);
       expect((await page.request.get(`/api/rewind/card/s/${ASSET_KEY}/top-shows`)).status()).toBe(200);
     } finally {
       await visitor.close();

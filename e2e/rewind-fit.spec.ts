@@ -165,6 +165,8 @@ test.describe('Rewind pages fit the phone', () => {
       await expect(stage.filter({ visible: true })).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
       // A streamed copy of the stage can sit hidden in the document until React swaps it in
       await expect(stage).toHaveCount(1);
+      // The streamed stage shows before it hydrates, and a key pressed before then is lost
+      await expect(stage).toHaveAttribute('data-fitted');
 
       // The stage takes the story keys; a quiz tile keeps the arrows for itself
       const turn = async (key: 'ArrowRight' | 'ArrowLeft') => {

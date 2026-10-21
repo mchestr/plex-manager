@@ -131,7 +131,14 @@ test.describe('Rewind share page', () => {
     await expect(cards.first()).toHaveAttribute('src', new RegExp(`^/api/rewind/card/s/[A-Za-z0-9_-]{${ASSET_KEY_LENGTH}}/top-shows$`));
     await expect(page.getByTestId('rewind-share-owner-banner')).toHaveCount(0);
     await expect(page.getByTestId('rewind-share-open-own')).toHaveCount(0);
-    expect(await page.content()).not.toContain(token);
+    // No link, image, meta tag or text carries the token. The router's own
+    // state in the inline scripts holds the page's URL, which the visitor has.
+    const markup = await page.evaluate(() => {
+      const copy = document.documentElement.cloneNode(true) as HTMLElement;
+      copy.querySelectorAll('script').forEach((script) => script.remove());
+      return copy.outerHTML;
+    });
+    expect(markup).not.toContain(token);
 
     const og = await page.locator('meta[property="og:image"]').getAttribute('content');
     expect(og).toMatch(/\/api\/rewind\/card\/s\/[A-Za-z0-9_-]{22}\/top-shows\?size=og$/);
