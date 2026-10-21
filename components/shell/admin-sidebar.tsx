@@ -4,6 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 import { AssistantTrigger } from "@/components/admin/chatbot/assistant-sheet"
+import { CommandMenuKeyHint, CommandMenuTrigger } from "@/components/admin/command-menu"
 import { AdminChrome } from "@/components/shell/admin-chrome"
 import { useSignOut } from "@/components/shell/use-sign-out"
 import { Badge } from "@/components/ui/badge"
@@ -103,6 +104,22 @@ export function AdminSidebar({ serverName, user, navCounts, assistant }: AdminSi
         <Badge variant="outline" className="hidden lg:inline-flex">
           Admin
         </Badge>
+      </div>
+      <div className="px-2 pb-1">
+        <RailTip label="Search or jump to">
+          <CommandMenuTrigger
+            variant="outline"
+            size="sm"
+            className="w-full justify-center gap-3 px-2 text-muted-foreground lg:justify-start"
+            data-testid="admin-command-trigger"
+          >
+            <Icon icon={icons.search} />
+            <span className="sr-only lg:not-sr-only lg:flex-1 lg:text-left">Search or jump to</span>
+            <span className="hidden lg:contents">
+              <CommandMenuKeyHint />
+            </span>
+          </CommandMenuTrigger>
+        </RailTip>
       </div>
       {assistant && (
         <AdminChrome part="assistant">

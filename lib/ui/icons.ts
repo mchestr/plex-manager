@@ -43,6 +43,7 @@ import {
   Play,
   Plug,
   Rewind,
+  Search,
   SendHorizontal,
   Server,
   Settings,
@@ -106,6 +107,7 @@ export const icons = {
   forbidden: ShieldX,
   // Shell
   menu: Menu,
+  search: Search,
   close: X,
   signOut: LogOut,
   home: House,

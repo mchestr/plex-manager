@@ -5,6 +5,7 @@ import { Suspense } from "react"
 import { getEnv } from "@/lib/env"
 
 import { ButtonSpecimen } from "./_sections/buttons"
+import { CommandSpecimen } from "./_sections/command"
 import { DataTableSpecimen } from "./_sections/composite-tables"
 import { EmptyStateSpecimen, PageHeaderSpecimen, StatTileSpecimen } from "./_sections/composites"
 import { AlertDialogSpecimen, ConfirmDialogSpecimen, DialogSpecimen } from "./_sections/dialogs"
@@ -59,6 +60,7 @@ export default function DevUiPage() {
       <AlertDialogSpecimen />
       <ConfirmDialogSpecimen />
       <DropdownMenuSpecimen />
+      <CommandSpecimen />
       <PopoverSpecimen />
       <TooltipSpecimen />
       <ToastSpecimen />
