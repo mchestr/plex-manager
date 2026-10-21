@@ -75,7 +75,7 @@ export function MediaServerLinkCard({ serverName, service, serverUrl }: MediaSer
 
       {/* Arrow indicator */}
       <svg
-        className="ml-auto h-4 w-4 text-slate-500 transition-all duration-200 group-hover:translate-x-0.5"
+        className="ml-auto h-4 w-4 text-muted-foreground transition-all duration-200 group-hover:translate-x-0.5"
         style={{
           color: `${brandColor}80`,
         }}

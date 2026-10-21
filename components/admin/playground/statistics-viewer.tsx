@@ -26,7 +26,7 @@ export function StatisticsViewer({
             onClick={() => onViewModeChange("formatted")}
             className={`px-2 py-1 text-xs rounded transition-colors ${
               viewMode === "formatted"
-                ? "bg-cyan-600 text-white"
+                ? "bg-cyan-700 text-white"
                 : "bg-slate-700 text-slate-300 hover:bg-slate-600"
             }`}
           >
@@ -37,7 +37,7 @@ export function StatisticsViewer({
             onClick={() => onViewModeChange("json")}
             className={`px-2 py-1 text-xs rounded transition-colors ${
               viewMode === "json"
-                ? "bg-cyan-600 text-white"
+                ? "bg-cyan-700 text-white"
                 : "bg-slate-700 text-slate-300 hover:bg-slate-600"
             }`}
           >
@@ -94,7 +94,7 @@ export function StatisticsViewer({
                       </span>
                     </div>
                     {movie.year && (
-                      <div className="text-slate-500 mt-0.5">{movie.year}</div>
+                      <div className="text-muted-foreground mt-0.5">{movie.year}</div>
                     )}
                   </div>
                 ))}
@@ -119,7 +119,7 @@ export function StatisticsViewer({
                       </span>
                     </div>
                     {show.year && (
-                      <div className="text-slate-500 mt-0.5">{show.year}</div>
+                      <div className="text-muted-foreground mt-0.5">{show.year}</div>
                     )}
                   </div>
                 ))}

@@ -2,9 +2,11 @@ import { getServerSession } from "next-auth"
 import Link from "next/link"
 import { redirect } from "next/navigation"
 
+import { PublicShell } from "@/components/shell/public-shell"
 import { PlanList } from "@/components/subscribe/plan-list"
 import { getAccessLevel } from "@/lib/access"
 import { authOptions } from "@/lib/auth"
+import { serverName } from "@/lib/brand"
 import { getOfferedPrices } from "@/lib/stripe/prices"
 
 export const dynamic = "force-dynamic"
@@ -34,42 +36,50 @@ export default async function SubscribePage() {
 
   // An entitled member gets no plan buttons: a second checkout would bill them
   // twice (SEC-39). P10.28 designs this state.
-  const [plans, accessLevel] = await Promise.all([getOfferedPrices(), getAccessLevel(session.user.id)])
+  const [plans, accessLevel, name] = await Promise.all([
+    getOfferedPrices(),
+    getAccessLevel(session.user.id),
+    serverName(),
+  ])
   const hasAccess = accessLevel === "full"
 
   return (
-    <main id="main" tabIndex={-1}
-      className="flex min-h-screen flex-col items-center justify-center gap-6 bg-slate-900 p-6 text-center text-slate-100 outline-none"
+    <PublicShell
+      serverName={name}
+      width="wide"
+      account={{ name: session.user.name || session.user.email || "Member" }}
       data-testid="subscribe-page"
     >
-      <div className="max-w-md">
-        <h1 className="text-2xl font-semibold">Subscription required</h1>
-        <p className="mt-2 text-slate-400">
-          A subscription is required to access the media server.
-        </p>
-      </div>
-
-      {plans.length > 0 && !hasAccess ? (
-        <PlanList plans={plans} />
-      ) : (
-        <div
-          className="max-w-md text-slate-400"
-          data-testid={hasAccess ? "subscribe-has-access" : "subscribe-unavailable"}
-        >
-          <p>
-            {hasAccess
-              ? "You already have access to the media server. Manage your subscription from the home page."
-              : "Subscriptions are not available right now. Please check back later or contact the server administrator."}
+      <div className="flex flex-col items-center gap-6 text-center">
+        <div className="max-w-md">
+          <h1 className="text-2xl font-semibold">Subscription required</h1>
+          <p className="mt-2 text-slate-400">
+            A subscription is required to access the media server.
           </p>
-          <Link
-            href="/"
-            className="mt-4 inline-block text-cyan-400 hover:text-cyan-300"
-            data-testid="subscribe-home-link"
-          >
-            Return home
-          </Link>
         </div>
-      )}
-    </main>
+
+        {plans.length > 0 && !hasAccess ? (
+          <PlanList plans={plans} />
+        ) : (
+          <div
+            className="max-w-md text-slate-400"
+            data-testid={hasAccess ? "subscribe-has-access" : "subscribe-unavailable"}
+          >
+            <p>
+              {hasAccess
+                ? "You already have access to the media server. Manage your subscription from the home page."
+                : "Subscriptions are not available right now. Please check back later or contact the server administrator."}
+            </p>
+            <Link
+              href="/"
+              className="mt-4 inline-block text-cyan-400 hover:text-cyan-300"
+              data-testid="subscribe-home-link"
+            >
+              Return home
+            </Link>
+          </div>
+        )}
+      </div>
+    </PublicShell>
   )
 }

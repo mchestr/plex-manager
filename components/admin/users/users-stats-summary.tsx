@@ -47,7 +47,7 @@ export function UsersStatsSummary({ users }: UsersStatsSummaryProps) {
         <div className="text-2xl font-bold text-cyan-400">
           {f.number(totalTokens)}
         </div>
-        <div className="text-xs text-slate-500 mt-1">
+        <div className="text-xs text-muted-foreground mt-1">
           Across all years & regenerations
         </div>
       </div>
@@ -56,7 +56,7 @@ export function UsersStatsSummary({ users }: UsersStatsSummaryProps) {
         <div className="text-2xl font-bold text-green-400">
           {f.money(totalCost)}
         </div>
-        <div className="text-xs text-slate-500 mt-1">
+        <div className="text-xs text-muted-foreground mt-1">
           Across all years & regenerations
         </div>
       </div>

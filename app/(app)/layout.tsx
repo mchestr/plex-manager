@@ -1,44 +1,24 @@
 import type { ReactNode } from "react"
 import { getServerSession } from "next-auth"
 
-import { SubscriptionBanners } from "@/components/subscription/subscription-banners"
+import { AppNotice } from "@/components/shell/app-notice"
+import { AppShell } from "@/components/shell/app-shell"
 import { authOptions } from "@/lib/auth"
 import {
   ensureOnboardingComplete,
   ensureSetupComplete,
   ensureSubscriptionOrAccess,
 } from "@/lib/guards"
-import { prisma } from "@/lib/prisma"
+import { getMemberNotice } from "@/lib/member/notice"
+import { getAppShellData } from "@/lib/member/shell"
 
 export const dynamic = 'force-dynamic'
 
 /**
- * Computes the request-scoped subscription banner flags for the current user.
- *
- * Reads only the DB (cheap enough for the guarded layout). Returns both flags
- * `false` when there is no session or no subscription row, so healthy users see
- * no banner.
+ * The member layout: the setup, onboarding and access guards (a gated member
+ * goes to `/subscribe`), then the AppShell with its one notice. Signed out it
+ * renders the page bare, because the signed-out `/` draws its own PublicShell.
  */
-async function getBannerFlags(): Promise<{
-  pastDue: boolean
-  pendingInvite: boolean
-}> {
-  const session = await getServerSession(authOptions)
-  if (!session?.user?.id) {
-    return { pastDue: false, pendingInvite: false }
-  }
-
-  const subscription = await prisma.subscription.findUnique({
-    where: { userId: session.user.id },
-    select: { status: true, plexInviteStatus: true },
-  })
-
-  return {
-    pastDue: subscription?.status === "PAST_DUE",
-    pendingInvite: subscription?.plexInviteStatus === "pending",
-  }
-}
-
 export default async function AppGuardLayout({
   children,
 }: {
@@ -48,14 +28,19 @@ export default async function AppGuardLayout({
   await ensureOnboardingComplete()
   await ensureSubscriptionOrAccess()
 
-  const { pastDue, pendingInvite } = await getBannerFlags()
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) {
+    return children
+  }
+
+  const [shell, notice] = await Promise.all([
+    getAppShellData({ id: session.user.id, isAdmin: session.user.isAdmin }),
+    getMemberNotice(session.user.id),
+  ])
 
   return (
-    <>
-      <SubscriptionBanners pastDue={pastDue} pendingInvite={pendingInvite} />
-      <main id="main" tabIndex={-1} className="outline-none">
-        {children}
-      </main>
-    </>
+    <AppShell {...shell} notice={notice && <AppNotice notice={notice} />}>
+      {children}
+    </AppShell>
   )
 }

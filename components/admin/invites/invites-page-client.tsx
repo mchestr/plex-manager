@@ -10,6 +10,7 @@ import type { InviteWithUsages } from "@/lib/dto/user"
 import { useFormat } from "@/lib/format-context"
 import Link from "next/link"
 import { useCallback, useEffect, useState } from "react"
+import { invite as inviteRoute } from "@/lib/admin/routes"
 
 type ServerType = "PLEX" | "JELLYFIN"
 
@@ -255,7 +256,7 @@ export function InvitesPageClient() {
         </div>
       ) : invites.length === 0 ? (
         <div className="text-center py-12 bg-slate-800/50 rounded-lg border border-slate-700">
-          <svg className="w-12 h-12 text-slate-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-12 h-12 text-muted-foreground mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
           </svg>
           <h3 className="text-lg font-medium text-white mb-2">No invites yet</h3>
@@ -280,7 +281,7 @@ export function InvitesPageClient() {
                   <tr key={invite.id} className="hover:bg-slate-800/50 transition-colors">
                     <td className="px-3 sm:px-6 py-3 sm:py-4">
                       <Link
-                        href={`/admin/invites/${invite.id}`}
+                        href={inviteRoute(invite.id)}
                         className="font-mono text-base sm:text-lg text-white tracking-wider hover:text-cyan-400 transition-colors break-all"
                       >
                         {invite.code}
@@ -310,7 +311,7 @@ export function InvitesPageClient() {
                         </span>
                       </div>
                       {/* Show expires on mobile as part of usage cell */}
-                      <div className="text-xs text-slate-500 mt-1 sm:hidden">
+                      <div className="text-xs text-muted-foreground mt-1 sm:hidden">
                         {getExpirationLabel(invite.expiresAt ? new Date(invite.expiresAt) : null)}
                       </div>
                     </td>
@@ -504,7 +505,7 @@ export function InvitesPageClient() {
                       // Plex libraries
                       <div className="space-y-2 max-h-48 overflow-y-auto">
                         {plexLibraries.length === 0 ? (
-                          <p className="text-sm text-slate-500">No Plex libraries available</p>
+                          <p className="text-sm text-muted-foreground">No Plex libraries available</p>
                         ) : (
                           plexLibraries.map((lib) => (
                             <label key={lib.id} className="flex items-center space-x-2 cursor-pointer">
@@ -537,7 +538,7 @@ export function InvitesPageClient() {
                       // Jellyfin libraries
                       <div className="space-y-2 max-h-48 overflow-y-auto">
                         {jellyfinLibraries.length === 0 ? (
-                          <p className="text-sm text-slate-500">No Jellyfin libraries available</p>
+                          <p className="text-sm text-muted-foreground">No Jellyfin libraries available</p>
                         ) : (
                           jellyfinLibraries.map((lib) => (
                             <label key={lib.id} className="flex items-center space-x-2 cursor-pointer">

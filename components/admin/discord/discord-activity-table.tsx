@@ -106,7 +106,7 @@ export function DiscordActivityTable({ logs }: DiscordActivityTableProps) {
   const f = useFormat()
   if (logs.length === 0) {
     return (
-      <div className="p-8 text-center text-slate-500">
+      <div className="p-8 text-center text-muted-foreground">
         No activity recorded yet
       </div>
     )
@@ -148,7 +148,7 @@ export function DiscordActivityTable({ logs }: DiscordActivityTableProps) {
                   <span className="text-slate-300">
                     <Time value={log.createdAt} />
                   </span>
-                  <span className="text-xs text-slate-500">
+                  <span className="text-xs text-muted-foreground">
                     {f.time(log.createdAt)}
                   </span>
                 </div>
@@ -158,7 +158,7 @@ export function DiscordActivityTable({ logs }: DiscordActivityTableProps) {
                   <span className="text-sm text-slate-300 font-medium">
                     {log.discordUsername ?? "Unknown"}
                   </span>
-                  <span className="text-xs text-slate-500 font-mono">
+                  <span className="text-xs text-muted-foreground font-mono">
                     {log.discordUserId}
                   </span>
                 </div>
@@ -173,7 +173,7 @@ export function DiscordActivityTable({ logs }: DiscordActivityTableProps) {
                   </span>
                   {log.commandArgs && (
                     <span
-                      className="text-xs text-slate-500 truncate max-w-[200px]"
+                      className="text-xs text-muted-foreground truncate max-w-[200px]"
                       title={log.commandArgs}
                     >
                       {log.commandArgs}

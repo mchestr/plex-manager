@@ -64,7 +64,7 @@ export default async function CostAnalysisPage({ searchParams }: CostAnalysisPag
             <p className="text-sm text-slate-400">
               Comprehensive cost breakdowns and projections for LLM usage
             </p>
-            <div className="mt-2 text-xs text-slate-500">
+            <div className="mt-2 text-xs text-muted-foreground">
               Period: {formatDateRange()}
             </div>
           </div>
@@ -79,28 +79,28 @@ export default async function CostAnalysisPage({ searchParams }: CostAnalysisPag
             <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
               <div className="text-sm text-slate-400 mb-1">Total Cost</div>
               <div className="text-3xl font-bold text-green-400">{f.money(stats.totalCost)}</div>
-              <div className="text-xs text-slate-500 mt-1">
+              <div className="text-xs text-muted-foreground mt-1">
                 {f.money(stats.averageCostPerRequest, "prose")} avg per request
               </div>
             </div>
             <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
               <div className="text-sm text-slate-400 mb-1">Total Tokens</div>
               <div className="text-3xl font-bold text-cyan-400">{f.number(stats.totalTokens)}</div>
-              <div className="text-xs text-slate-500 mt-1">
+              <div className="text-xs text-muted-foreground mt-1">
                 {f.money(costPer1MTokens)} per 1M tokens
               </div>
             </div>
             <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
               <div className="text-sm text-slate-400 mb-1">30-Day Projection</div>
               <div className="text-3xl font-bold text-purple-400">{f.money(projectedCost30Days)}</div>
-              <div className="text-xs text-slate-500 mt-1">
+              <div className="text-xs text-muted-foreground mt-1">
                 Based on recent trends
               </div>
             </div>
             <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
               <div className="text-sm text-slate-400 mb-1">12-Month Projection</div>
               <div className="text-3xl font-bold text-yellow-400">{f.money(projectedCost12Months)}</div>
-              <div className="text-xs text-slate-500 mt-1">
+              <div className="text-xs text-muted-foreground mt-1">
                 Annual estimate
               </div>
             </div>
@@ -111,14 +111,14 @@ export default async function CostAnalysisPage({ searchParams }: CostAnalysisPag
             <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
               <div className="text-sm text-slate-400 mb-1">Total Requests</div>
               <div className="text-2xl font-bold text-white">{f.number(stats.totalRequests)}</div>
-              <div className="text-xs text-slate-500 mt-1">
+              <div className="text-xs text-muted-foreground mt-1">
                 {f.number(stats.averageTokensPerRequest)} avg tokens/request
               </div>
             </div>
             <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
               <div className="text-sm text-slate-400 mb-1">Unique Providers</div>
               <div className="text-2xl font-bold text-white">{stats.byProvider.length}</div>
-              <div className="text-xs text-slate-500 mt-1">
+              <div className="text-xs text-muted-foreground mt-1">
                 {stats.byProvider.map(p => p.provider).join(", ")}
               </div>
             </div>
@@ -127,7 +127,7 @@ export default async function CostAnalysisPage({ searchParams }: CostAnalysisPag
               <div className="text-2xl font-bold text-white">
                 {mostExpensiveDay ? f.money(mostExpensiveDay.cost) : "N/A"}
               </div>
-              <div className="text-xs text-slate-500 mt-1">
+              <div className="text-xs text-muted-foreground mt-1">
                 {mostExpensiveDay
                   ? f.dayKey(mostExpensiveDay.date, "day-month-short")
                   : "No data"}

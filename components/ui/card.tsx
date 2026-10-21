@@ -53,11 +53,12 @@ export function CardHeader({ className, ...props }: ComponentProps<"div">) {
   )
 }
 
-export function CardTitle({ className, children, ...props }: ComponentProps<"h3">) {
+/** An `h3` by default; `as="h2"` where the card sits straight under the page's `h1`, so no heading level is skipped. */
+export function CardTitle({ as: Heading = "h3", className, children, ...props }: ComponentProps<"h3"> & { as?: "h2" | "h3" }) {
   return (
-    <h3 data-slot="card-title" className={cn("text-h3 text-foreground", className)} {...props}>
+    <Heading data-slot="card-title" className={cn("text-h3 text-foreground", className)} {...props}>
       {children}
-    </h3>
+    </Heading>
   )
 }
 

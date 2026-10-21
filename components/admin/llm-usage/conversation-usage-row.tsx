@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 
 import { useFormat } from "@/lib/format-context"
+import { llmUsageDetail } from "@/lib/admin/routes"
 
 interface ConversationUsageRowProps {
   record: {
@@ -46,7 +47,7 @@ export function ConversationUsageRow({
   const promptSnippet = getLastUserSnippet(record.prompt)
 
   const handleRowClick = () => {
-    router.push(`/admin/llm-usage/${record.id}`)
+    router.push(llmUsageDetail(record.id))
   }
 
   return (
@@ -63,7 +64,7 @@ export function ConversationUsageRow({
           {f.dateTime(record.createdAt)}
         </div>
         {promptSnippet && (
-          <div className="mt-1 text-[11px] text-slate-500 line-clamp-1">
+          <div className="mt-1 text-[11px] text-muted-foreground line-clamp-1">
             <span className="uppercase tracking-wide mr-1">User:</span>
             {promptSnippet}
           </div>
@@ -71,7 +72,7 @@ export function ConversationUsageRow({
       </td>
       <td className="px-3 sm:px-6 py-4 whitespace-nowrap hidden lg:table-cell">
         <div className="text-sm text-slate-300 font-mono truncate max-w-[160px]">
-          {record.model || <span className="text-slate-500">—</span>}
+          {record.model || <span className="text-muted-foreground">—</span>}
         </div>
       </td>
       <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
@@ -92,9 +93,9 @@ export function ConversationUsageRow({
       </td>
       <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
         <Link
-          href={`/admin/llm-usage/${record.id}`}
+          href={llmUsageDetail(record.id)}
           onClick={(e) => e.stopPropagation()}
-          className="px-2 sm:px-3 py-1 sm:py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-medium rounded transition-colors inline-block"
+          className="px-2 sm:px-3 py-1 sm:py-1.5 bg-cyan-700 hover:bg-cyan-800 text-white text-xs font-medium rounded transition-colors inline-block"
         >
           View Request →
         </Link>

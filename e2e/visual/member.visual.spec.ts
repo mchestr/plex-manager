@@ -62,6 +62,11 @@ test.describe('Member and public screens', () => {
     await capture(page, '/discord/link', 'discord-link');
   });
 
+  test('account', async ({ page, signIn }) => {
+    await signIn(TEST_USERS.REGULAR.id);
+    await capture(page, '/account', 'account');
+  });
+
   test('access denied', async ({ page }) => {
     await capture(page, '/auth/denied', 'auth-denied');
   });

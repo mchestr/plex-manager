@@ -351,7 +351,7 @@ describe('PromptTemplateActions', () => {
       render(<PromptTemplateActions template={mockTemplate} />)
 
       const editLink = screen.getByText('Edit')
-      expect(editLink).toHaveClass('bg-cyan-600', 'hover:bg-cyan-700', 'text-white')
+      expect(editLink).toHaveClass('bg-cyan-700', 'hover:bg-cyan-800', 'text-white')
     })
 
     it('should have proper styling for Playground link', () => {

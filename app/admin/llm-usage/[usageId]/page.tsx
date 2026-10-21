@@ -5,6 +5,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { notFound } from "next/navigation"
 import { getFormat } from "@/lib/settings/app-settings"
+import { userDetail, userRewind } from "@/lib/admin/routes"
 
 export const dynamic = 'force-dynamic'
 
@@ -111,20 +112,20 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
           <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
             <div className="text-sm text-slate-400 mb-1">Model</div>
             <div className="text-lg font-bold text-white font-mono">
-              {record.model || <span className="text-slate-500">Not specified</span>}
+              {record.model || <span className="text-muted-foreground">Not specified</span>}
             </div>
           </div>
           <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
             <div className="text-sm text-slate-400 mb-1">Total Tokens</div>
             <div className="text-2xl font-bold text-cyan-400">{f.number(record.totalTokens)}</div>
-            <div className="text-xs text-slate-500 mt-1">
+            <div className="text-xs text-muted-foreground mt-1">
               {f.number(record.promptTokens)} prompt + {f.number(record.completionTokens)} completion
             </div>
           </div>
           <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
             <div className="text-sm text-slate-400 mb-1">Total Cost</div>
             <div className="text-2xl font-bold text-green-400">{f.money(record.cost)}</div>
-            <div className="text-xs text-slate-500 mt-1">
+            <div className="text-xs text-muted-foreground mt-1">
               {record.totalTokens > 0
                 ? `${f.money((record.cost / record.totalTokens) * 1000000)} per 1M tokens`
                 : "N/A"}
@@ -161,10 +162,10 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
                   <div className="text-sm text-slate-400">{record.user.email}</div>
                 )}
                 <Link
-                  href="/admin/users"
+                  href={userDetail(record.user.id)}
                   className="text-sm text-cyan-400 hover:text-cyan-300 underline mt-1 inline-block"
                 >
-                  View All Users
+                  View user
                 </Link>
               </div>
             </div>
@@ -194,7 +195,7 @@ export default async function LLMUsageDetailPage({ params }: { params: Promise<{
                       </div>
                     )}
                     <Link
-                      href={`/admin/users/${record.userId}/wrapped`}
+                      href={userRewind(record.userId, record.wrapped.year)}
                       className="text-sm text-cyan-400 hover:text-cyan-300 underline inline-block mt-2"
                     >
                       View Wrapped

@@ -91,6 +91,8 @@ async function measureCurrentPage(page: Page): Promise<Fit> {
     for (const el of artboard.querySelectorAll('*')) {
       const style = getComputedStyle(el);
       if (style.visibility === 'hidden' || style.display === 'none') continue;
+      // A decorative layer fixed to the viewport (the cover's field) is not page content.
+      if (style.position === 'fixed' && el.getAttribute('aria-hidden') === 'true') continue;
       const box = clipOf(el);
       if (!box) continue;
       content = content

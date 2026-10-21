@@ -32,7 +32,7 @@ export function ShareTimeChart({ data, height = 250 }: ShareTimeChartProps) {
   if (data.length === 0) {
     return (
       <div
-        className="flex items-center justify-center text-slate-500 text-sm"
+        className="flex items-center justify-center text-muted-foreground text-sm"
         style={{ height }}
       >
         No data available

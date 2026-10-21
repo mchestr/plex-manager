@@ -36,7 +36,7 @@ const SELECTION_COLORS = [
 export function DiscordSelectionStats({ data }: DiscordSelectionStatsProps) {
   if (!data || data.totalSelections === 0) {
     return (
-      <div className="flex items-center justify-center h-full text-slate-500 text-sm">
+      <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
         No selection menu data available
       </div>
     )

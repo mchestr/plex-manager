@@ -30,7 +30,7 @@ const COLORS = ["#22d3ee", "#a855f7", "#22c55e", "#f59e0b"]
 export function DiscordContextMetrics({ data }: DiscordContextMetricsProps) {
   if (!data || data.totalClears === 0) {
     return (
-      <div className="flex items-center justify-center h-full text-slate-500 text-sm">
+      <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
         No context clear data available
       </div>
     )

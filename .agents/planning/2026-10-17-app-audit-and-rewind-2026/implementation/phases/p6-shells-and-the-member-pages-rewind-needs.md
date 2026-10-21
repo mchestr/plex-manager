@@ -82,10 +82,12 @@
 **Demo.** On a phone, open the assistant from the top bar and close it with its close button. The tab bar shows Invites, Users, Rewind, Settings and More, and Rewind opens Season. On desktop, `/admin/users/<id>` lights Users. The Admin link of a 2025 row in Share analytics opens 2025.
 
 **Done when.**
-- [ ] `lib/admin/nav.ts`, `nav-counts.ts` and `routes.ts` exist with tests, and the UI-06 links use the builders.
+- [x] `lib/admin/nav.ts`, `nav-counts.ts` and `routes.ts` exist with tests, and the UI-06 links use the builders.
 - [ ] The sidebar, rail, top bar and tab bar match 6.2 at every breakpoint, with `aria-current` and the test ids above.
-- [ ] The assistant is a closable Sheet, gated on `llmDisabled`, and hidden on immersive routes; nothing floats over content.
-- [ ] The admin gate uses no error names, and the old nav files are deleted.
+- [x] The assistant is a closable Sheet, gated on `llmDisabled`, and hidden on immersive routes; nothing floats over content.
+- [x] The admin gate uses no error names, and the old nav files are deleted.
+
+(as merged: P7.8, P7.9 and P7.11 had not landed, so `lib/admin/` is new here (beside `lib/admin.ts`, which keeps `getAdminGate`), the nav has no Season or Gallery, the Rewind tab opens Prompts, and `userRewind(id, year)` builds today's `/admin/users/<id>/wrapped?year=<year>`; P7.9 repoints it to `/rewind/<year>`. `mobileTabs(items)` takes the item list, so Overview and Season light up when their steps add them. `ASSISTANT_HIDDEN` routes hide the whole admin chrome as well as the assistant (`components/shell/admin-chrome.tsx`), as the old shell did. The layout reads `getAdminShellData()` (`lib/admin/shell.ts`: server name, the 30 s `getAdminNavCounts()`, and `assistant = !llmDisabled && an active chat provider`). The assistant is `assistant-sheet.tsx` (Sheet and `AssistantTrigger`), `assistant-transcript.tsx` and `use-assistant-chat.ts`; `ChatProvider` holds the open state and the trigger focus returns to. The mobile assistant toggle is `admin-chat-toggle-mobile` and the sheets' links are `admin-nav-<id>-mobile`, so no test id appears twice. No search button yet: P10.16 adds it with the command menu. The sidebar stays an `<aside data-testid="admin-sidebar">`, so the specs' `locator('aside')` still works until P10.18. `llmUsage({ year })` emits `year`, which the LLM usage page does not read yet. The e2e spec and the visual baselines are left to the coordinator's pass.)
 
 ### Step P6.3: AppShell and PublicShell
 
@@ -143,10 +145,12 @@
 **Demo.** Sign in as a member: the top bar shows Home and Rewind 2026, and the account menu offers Link Discord. With Stripe on and a lapsed subscription, the member lands on `/subscribe`, signs out from the shell and returns to `/`.
 
 **Done when.**
-- [ ] AppShell has the top bar, the account menu, the mobile Sheet and one notice slot, with `aria-current`.
-- [ ] PublicShell wraps auth, invite and subscribe, with a Sign out escape when signed in.
-- [ ] The `(app)` layout gates as before, with no nested `main`s or gradient wrappers.
+- [x] AppShell has the top bar, the account menu, the mobile Sheet and one notice slot, with `aria-current`.
+- [x] PublicShell wraps auth, invite and subscribe, with a Sign out escape when signed in.
+- [x] The `(app)` layout gates as before, with no nested `main`s or gradient wrappers.
 - [ ] The visual baselines are updated with reviewed diffs.
+
+(as merged: the bar and the notice step aside on every `/rewind` page, which draws its own Close (`isImmersiveRoute` in `lib/member/nav.ts`, applied by the client island `components/shell/shell-chrome.tsx`, since the layout does not re-render on client navigation). The notice kinds, `pickNotice` and the home rule `noticeShownOn` live in the pure `lib/member/notice-rules.ts`; the kind `rewind-ready` already exists there, and P7.14 adds its producer in `getMemberNotice` and its body in `components/shell/app-notice.tsx`. Both subscription notices, the pending invite included, show only while `stripeEnabled` is on. The signed-out `/` already sits in a bare `PublicShell` so it keeps its one `main`; P10.27 restyles it. Shared for P6.1: `components/shell/use-sign-out.ts`, `DropdownMenuLinkItem` in `components/ui/dropdown-menu.tsx`, and `icons.menu` and `icons.signOut`. `ShellUser.discordHandle` is absent when Discord is off, `null` when unlinked. The avatar is an initials tile. Visual baselines are left to the coordinator's E2E pass.)
 
 ### Step P6.5: Admin composites
 
@@ -202,11 +206,13 @@
 
 **Demo.** On `/dev/ui`, sort the 120-row table, page through it and watch the URL change. Narrow to 390px: rows stack with their actions. Filter to zero rows: the filtered EmptyState offers Clear filters.
 
+(as merged: `@tanstack/react-table` is pinned at 8.21.3, the last v8; 9.x is a new API and was days old. DataTable also takes `getRowId`, `label` (the table's accessible name), `noun` (the footer) and `getRowName` (the actions menu heading); a column sorts only with `enableSorting: true`, and `?sort=` is `name` or `-name`. `meta` types come from `components/ui/data-table/column-meta.ts`. URL writes go through `hooks/use-replace-params.ts`; `parseDateRange` and `dateRangeToInstants` live in `lib/ui/date-range.ts`. DateRangeFilter takes `zone` (pass `serverZone()`) and an optional `season`, and adds "Any time". `FilterSelect` is not exported until a page needs it alone. PageHeader has no Assistant slot yet: P6.1 adds it with the AdminShell. Jest tests drive the URL through `__tests__/helpers/url-router.ts`. The composite screenshots are in `e2e/visual/primitives.visual.spec.ts` and the demo in `e2e/admin-composites.spec.ts`; neither was run and their baselines are not taken.)
+
 **Done when.**
-- [ ] The five composites follow 5.5, each with component tests and axe.
-- [ ] DataTable's sorting and pagination live in the URL, the first cell is a link, row actions work on mobile, and headers have `scope`.
-- [ ] FilterBar defaults to All and shows active chips; DateRangeFilter reads the server zone.
-- [ ] `/dev/ui` shows every composite and has a visual baseline.
+- [x] The five composites follow 5.5, each with component tests and axe.
+- [x] DataTable's sorting and pagination live in the URL, the first cell is a link, row actions work on mobile, and headers have `scope`.
+- [x] FilterBar defaults to All and shows active chips; DateRangeFilter reads the server zone.
+- [ ] `/dev/ui` shows every composite and has a visual baseline. (Every composite is there; the baseline is left to the coordinator.)
 
 ### Step P6.9: Home RewindCard
 
@@ -259,9 +265,11 @@
 **Demo.** On 21 November, a member sees a paper strip with "Your Rewind arrives on December 1". An admin with a generated issue sees the ink strip and the pip, and opening it morphs the strip into the cover.
 
 **Done when.**
-- [ ] All eight states resolve on the server from data, with tests, and none offers a generate action.
-- [ ] The strip prints the soundtrack in the archetype ink, and the meta line comes from the registry.
-- [ ] Share links to `?sheet=share`, and the archive lists past years.
+- [x] All eight states resolve on the server from data, with tests, and none offers a generate action.
+- [x] The strip prints the soundtrack in the archetype ink, and the meta line comes from the registry.
+- [x] Share links to `?sheet=share`, and the archive lists past years.
+
+(as merged: `requestRewindCardModel(userId, isAdmin)` in `lib/rewind/home-card.ts` is React-`cache`d, so the `(app)` layout's nav (`rewindNavYear`) and home read one model per request; `RewindCard` takes `{ state, archive, name, settings }` and `specimen` for `/dev/ui`, and home passes it to `UserDashboard` as `rewindSlot`. `generating`, `failed` and `unavailable` apply only while nothing is completed (FR-40), so a completed issue stays ready through a regeneration or a Redis outage. A managed account is recognised by a season run skipped with `MANAGED_ACCOUNT`; the joining date is the earlier of `createdAt` and the first watch, asked only when `createdAt` is after 1 October. The meta uses the cover's `formatRunningTime` string ("18 pages, about 2 min 20 s"), not `formatApproxDuration`. Both view-transition wrappers use `default="none" share="auto"`, so story page turns never start one. `requestRewindGeneration` has no caller now and is kept `@public`. The E2E spec is `e2e/rewind/rewind-card.spec.ts`, so the rewind-e2e chromium and webkit projects run it; since the card resolves on the server, it moves the season window around the server's date instead of using `page.clock`. Visual baselines for home and `/dev/ui` are not regenerated yet.)
 - [ ] The view transition runs on chromium and webkit, and the card is merged by 2026-11-20.
 
 ### Step P6.11: Account page and Discord link page
@@ -313,7 +321,9 @@
 **Demo.** Open `/account` in a browser set to Europe/London on a Chicago server: the field suggests Europe/London; save it, and it persists. From `/discord/link`, link Discord and return to the same page with "Discord linked" and the checklist's second item done.
 
 **Done when.**
-- [ ] `/account` stores `RewindPrefs.notify` and `User.timezone` through Zod-validated member actions.
-- [ ] `/discord/link` is the checklist with one primary action, linked from the account menu and home.
-- [ ] Every Discord redirect lands on the safe origin page with a code, and `FlashFromQuery` shows it.
+- [x] `/account` stores `RewindPrefs.notify` and `User.timezone` through Zod-validated member actions.
+- [x] `/discord/link` is the checklist with one primary action, linked from the account menu and home.
+- [x] Every Discord redirect lands on the safe origin page with a code, and `FlashFromQuery` shows it.
 - [ ] The E2E and visual checks pass.
+
+(as merged: Account settings is an item of the account menu (`account-menu-settings`), not a `memberNav()` entry, as ui-design-system 6.1 places it. A failed callback finds its origin through `discordLinkOrigin(state, userId)` in `lib/discord/integration.ts`, which reads the member's own state row and falls back to `/discord/link`. The checklist's primary is Link Discord, then Join when the member is off the server, then Resync role; a complete checklist has none. `/discord/link` dropped the raw `lastError` text. `e2e/account.spec.ts`, the `/account` visual capture and its a11y route are written but not run; baselines are left to the coordinator's E2E pass.)

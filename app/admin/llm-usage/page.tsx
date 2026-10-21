@@ -3,6 +3,7 @@ import { aggregateLlmUsage } from "@/lib/utils"
 import { getFormat } from "@/lib/settings/app-settings"
 import Image from "next/image"
 import Link from "next/link"
+import { llmUsageDetail, userDetail } from "@/lib/admin/routes"
 
 export const dynamic = 'force-dynamic'
 
@@ -151,7 +152,7 @@ export default async function LLMUsagePage({
               {filteredUser ? "User Requests" : "Total Requests"}
             </div>
             <div className="text-2xl font-bold text-white">{f.number(stats.totalRequests)}</div>
-            <div className="text-xs text-slate-500 mt-1">
+            <div className="text-xs text-muted-foreground mt-1">
               {f.number(stats.averageTokensPerRequest)} avg tokens
             </div>
           </div>
@@ -160,7 +161,7 @@ export default async function LLMUsagePage({
               {filteredUser ? "User Tokens" : "Total Tokens"}
             </div>
             <div className="text-2xl font-bold text-cyan-400">{f.number(stats.totalTokens)}</div>
-            <div className="text-xs text-slate-500 mt-1">
+            <div className="text-xs text-muted-foreground mt-1">
               {stats.byProvider.length} provider{stats.byProvider.length !== 1 ? "s" : ""}
             </div>
           </div>
@@ -169,14 +170,14 @@ export default async function LLMUsagePage({
               {filteredUser ? "User Cost" : "Total Cost"}
             </div>
             <div className="text-2xl font-bold text-green-400">{f.money(stats.totalCost)}</div>
-            <div className="text-xs text-slate-500 mt-1">
+            <div className="text-xs text-muted-foreground mt-1">
               {f.money(stats.averageCostPerRequest, "prose")} avg per request
             </div>
           </div>
           <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-4">
             <div className="text-sm text-slate-400 mb-1">Unique Models</div>
             <div className="text-2xl font-bold text-purple-400">{stats.byModel.length}</div>
-            <div className="text-xs text-slate-500 mt-1">
+            <div className="text-xs text-muted-foreground mt-1">
               {filteredUser
                 ? "This user only"
                 : `${stats.byUser.length} user${stats.byUser.length !== 1 ? "s" : ""}`}
@@ -256,9 +257,12 @@ export default async function LLMUsagePage({
                                 </div>
                               )}
                               <div>
-                                <div className="text-sm font-medium text-white">
+                                <Link
+                                  href={userDetail(group.user.id)}
+                                  className="text-sm font-medium text-white hover:underline"
+                                >
                                   {group.user.name || "Unknown"}
-                                </div>
+                                </Link>
                                 {group.user.email && (
                                   <div className="text-xs text-slate-400">{group.user.email}</div>
                                 )}
@@ -267,7 +271,7 @@ export default async function LLMUsagePage({
                           </td>
                           <td className="px-3 sm:px-6 py-4 whitespace-nowrap hidden lg:table-cell">
                             <div className="text-sm text-slate-300 font-mono truncate max-w-[140px]">
-                              {group.model || <span className="text-slate-500">—</span>}
+                              {group.model || <span className="text-muted-foreground">—</span>}
                             </div>
                           </td>
                           <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
@@ -296,9 +300,9 @@ export default async function LLMUsagePage({
                             href={
                               group.isChat && group.conversationId
                                 ? `/admin/llm-usage/conversation/${group.conversationId}`
-                                : `/admin/llm-usage/${group.sampleUsageId}`
+                                : llmUsageDetail(group.sampleUsageId)
                             }
-                            className="px-2 sm:px-3 py-1 sm:py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-medium rounded transition-colors inline-block"
+                            className="px-2 sm:px-3 py-1 sm:py-1.5 bg-cyan-700 hover:bg-cyan-800 text-white text-xs font-medium rounded transition-colors inline-block"
                           >
                             {group.isChat ? "View Calls" : "View Details"}
                           </Link>

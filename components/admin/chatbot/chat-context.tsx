@@ -1,33 +1,40 @@
 "use client"
 
-import { createContext, useContext, useState, useMemo, useCallback, type ReactNode } from "react"
+import { usePathname } from "next/navigation"
+import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode, type RefObject } from "react"
+
+import { isAssistantHidden } from "@/lib/admin/nav"
 
 interface ChatContextType {
   isOpen: boolean
-  toggleChat: () => void
-  openChat: () => void
-  closeChat: () => void
+  setOpen: (open: boolean) => void
+  /** Opens or closes the sheet, and remembers `trigger` so focus returns to it on close. */
+  toggleFrom: (trigger: HTMLElement) => void
+  /** The trigger that last opened the sheet, for its `finalFocus`. */
+  returnFocus: RefObject<HTMLElement | null>
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined)
 
+/**
+ * The assistant sheet's open state, shared by its triggers in the sidebar and
+ * the mobile top bar. It closes on navigation to a route that hides it.
+ */
 export function ChatProvider({ children }: { children: ReactNode }) {
-  const [isOpen, setIsOpen] = useState(false)
+  const pathname = usePathname() ?? "/admin"
+  const [isOpen, setOpen] = useState(false)
+  const returnFocus = useRef<HTMLElement | null>(null)
 
-  const toggleChat = useCallback(() => setIsOpen((prev) => !prev), [])
-  const openChat = useCallback(() => setIsOpen(true), [])
-  const closeChat = useCallback(() => setIsOpen(false), [])
+  if (isOpen && isAssistantHidden(pathname)) setOpen(false)
 
-  const value = useMemo(
-    () => ({ isOpen, toggleChat, openChat, closeChat }),
-    [isOpen, toggleChat, openChat, closeChat]
-  )
+  const toggleFrom = useCallback((trigger: HTMLElement) => {
+    returnFocus.current = trigger
+    setOpen((open) => !open)
+  }, [])
 
-  return (
-    <ChatContext.Provider value={value}>
-      {children}
-    </ChatContext.Provider>
-  )
+  const value = useMemo(() => ({ isOpen, setOpen, toggleFrom, returnFocus }), [isOpen, toggleFrom])
+
+  return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>
 }
 
 export function useChat() {
@@ -37,4 +44,3 @@ export function useChat() {
   }
   return context
 }
-

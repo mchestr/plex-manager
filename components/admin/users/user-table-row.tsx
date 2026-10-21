@@ -7,6 +7,7 @@ import { AdminUserWithWrappedStats } from "@/types/admin"
 import Link from "next/link"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
+import { userDetail } from "@/lib/admin/routes"
 
 interface UserTableRowProps {
   user: AdminUserWithWrappedStats
@@ -60,7 +61,7 @@ export function UserTableRow({ user, currentYear, stripeDashboardBaseUrl }: User
   const f = useFormat()
 
   const handleRowClick = () => {
-    router.push(`/admin/users/${user.id}`)
+    router.push(userDetail(user.id))
   }
 
   const badge = subscriptionBadge(user.subscriptionStatus)
@@ -123,7 +124,7 @@ export function UserTableRow({ user, currentYear, stripeDashboardBaseUrl }: User
               No
             </span>
           ) : (
-            <span className="text-slate-500">—</span>
+            <span className="text-muted-foreground">—</span>
           )}
         </div>
       </td>
@@ -142,7 +143,7 @@ export function UserTableRow({ user, currentYear, stripeDashboardBaseUrl }: User
           ) : user.isExempt && exemptLabel(user.exemptReason) ? (
             <Badge tone="info">{exemptLabel(user.exemptReason)}</Badge>
           ) : (
-            <span className="text-slate-500">—</span>
+            <span className="text-muted-foreground">—</span>
           )}
         </div>
       </td>
@@ -160,14 +161,14 @@ export function UserTableRow({ user, currentYear, stripeDashboardBaseUrl }: User
             </div>
           </div>
         ) : (
-          <span className="text-xs text-slate-500">—</span>
+          <span className="text-xs text-muted-foreground">—</span>
         )}
       </td>
       <td className="px-2 py-2" data-testid="user-joined-timestamp">
         <div className="text-xs text-slate-400">
           {f.date(user.createdAt)}
         </div>
-        <div className="text-xs text-slate-500">
+        <div className="text-xs text-muted-foreground">
           {f.time(user.createdAt)}
         </div>
       </td>

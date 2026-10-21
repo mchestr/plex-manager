@@ -19,7 +19,7 @@ export function DiscordActiveUsers({ users }: DiscordActiveUsersProps) {
   const f = useFormat()
   if (users.length === 0) {
     return (
-      <div className="p-8 text-center text-slate-500">
+      <div className="p-8 text-center text-muted-foreground">
         No user activity in this period
       </div>
     )
@@ -57,7 +57,7 @@ export function DiscordActiveUsers({ users }: DiscordActiveUsersProps) {
                     <span className="text-sm text-slate-300 font-medium">
                       {user.discordUsername ?? "Unknown User"}
                     </span>
-                    <span className="text-xs text-slate-500 font-mono">
+                    <span className="text-xs text-muted-foreground font-mono">
                       {user.discordUserId}
                     </span>
                     {user.userId && (

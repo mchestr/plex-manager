@@ -102,7 +102,7 @@ export function JobTable({ jobs, page, hasMore, disabled = false }: JobTableProp
           />
         </svg>
         <p>No jobs found</p>
-        <p className="text-sm text-slate-500 mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           Jobs will appear here when they are added to the queue
         </p>
       </div>

@@ -71,7 +71,7 @@ export function PromptTemplateActions({ template }: PromptTemplateActionsProps) 
         )}
         <Link
           href={`/admin/prompts/${template.id}/edit`}
-          className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-medium rounded transition-colors"
+          className="px-3 py-1.5 bg-cyan-700 hover:bg-cyan-800 text-white text-sm font-medium rounded transition-colors"
         >
           Edit
         </Link>

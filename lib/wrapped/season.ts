@@ -76,6 +76,33 @@ function startOfMonthDay(year: number, md: { month: number; day: number }, zone:
   return wallTimeToInstant(`${key}T00:00`, zone)
 }
 
+type MonthDay = { month: number; day: number }
+
+function windowOf(year: number, opensMd: MonthDay, closesMd: MonthDay, zone: string): Pick<SeasonState, "opensAt" | "closesAt"> {
+  const crossesYear = opensMd.month * 100 + opensMd.day > closesMd.month * 100 + closesMd.day
+  return {
+    opensAt: startOfMonthDay(year, opensMd, zone),
+    closesAt: startOfMonthDay(crossesYear ? year + 1 : year, closesMd, zone, true),
+  }
+}
+
+/**
+ * When the season of `year` opens and closes (`closesAt` exclusive), for a
+ * stored window; invalid stored values fall back to the defaults. The home
+ * RewindCard reads the last season's close from it.
+ *
+ * @example
+ * ```ts
+ * seasonWindow(2026, "12-01", "01-31", "UTC")
+ * // { opensAt: 2026-12-01T00:00Z, closesAt: 2027-02-01T00:00Z }
+ * ```
+ */
+export function seasonWindow(year: number, opens: string, closes: string, zone: string): Pick<SeasonState, "opensAt" | "closesAt"> {
+  const opensMd = parseMonthDay(opens) ?? parseMonthDay(DEFAULT_SEASON.opens)!
+  const closesMd = parseMonthDay(closes) ?? parseMonthDay(DEFAULT_SEASON.closes)!
+  return windowOf(year, opensMd, closesMd, zone)
+}
+
 /**
  * The season at `now` for a stored window, evaluated in `zone` (see the
  * module rule). Invalid stored values fall back to the defaults.
@@ -101,8 +128,7 @@ export function seasonStateAt(now: Date, opens: string, closes: string, zone: st
   const beforeClose = today.month * 100 + today.day <= closesMd.month * 100 + closesMd.day
   const seasonYear = crossesYear && beforeClose ? today.year - 1 : today.year
 
-  const opensAt = startOfMonthDay(seasonYear, opensMd, zone)
-  const closesAt = startOfMonthDay(crossesYear ? seasonYear + 1 : seasonYear, closesMd, zone, true)
+  const { opensAt, closesAt } = windowOf(seasonYear, opensMd, closesMd, zone)
   const isOpen = now.getTime() >= opensAt.getTime() && now.getTime() < closesAt.getTime()
   return { seasonYear, isOpen, opensAt, closesAt }
 }

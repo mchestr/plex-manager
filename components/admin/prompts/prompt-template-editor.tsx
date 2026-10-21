@@ -537,7 +537,7 @@ export function PromptTemplateEditor({ template, userWrapped, userName = "User" 
                 className="block text-sm font-medium text-slate-300"
               >
                 Description
-                <span className="text-xs text-slate-500 font-normal ml-2">(optional)</span>
+                <span className="text-xs text-muted-foreground font-normal ml-2">(optional)</span>
               </label>
               <input
                 type="text"
@@ -565,7 +565,7 @@ export function PromptTemplateEditor({ template, userWrapped, userName = "User" 
                 <span className="text-sm font-medium text-slate-300 group-hover:text-white transition-colors">
                   Set as active template
                 </span>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-xs text-muted-foreground mt-0.5">
                   Only one template can be active at a time
                 </p>
               </div>

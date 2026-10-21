@@ -92,6 +92,35 @@ export function DropdownMenuItem({ className, icon, variant = "default", childre
   )
 }
 
+interface LinkItemProps extends Omit<MenuPrimitive.LinkItem.Props, "className"> {
+  className?: string
+  /** A 16px lucide glyph before the label. */
+  icon?: ReactNode
+}
+
+/**
+ * A menu item that navigates: an `<a>`, so it keeps the link's semantics.
+ * Pass `render={<Link href="/x" />}` for an app route. Choosing it closes the menu.
+ */
+export function DropdownMenuLinkItem({ className, icon, children, ...props }: LinkItemProps) {
+  return (
+    <MenuPrimitive.LinkItem
+      data-slot="dropdown-menu-item"
+      closeOnClick
+      className={cn(
+        "flex h-8 cursor-default items-center gap-2 rounded-sm px-2 text-ui outline-none select-none",
+        "[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground",
+        "data-highlighted:bg-accent data-highlighted:text-accent-foreground",
+        className
+      )}
+      {...props}
+    >
+      {icon}
+      {children}
+    </MenuPrimitive.LinkItem>
+  )
+}
+
 export function DropdownMenuSeparator({ className, ...props }: Omit<MenuPrimitive.Separator.Props, "className"> & { className?: string }) {
   return <MenuPrimitive.Separator data-slot="dropdown-menu-separator" className={cn("-mx-1 my-1 h-px bg-border", className)} {...props} />
 }

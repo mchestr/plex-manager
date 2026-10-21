@@ -116,8 +116,14 @@ describe("startNodeInstrumentation() with Redis starting late", () => {
       .mockRejectedValueOnce(new Error("connect ECONNREFUSED"))
       .mockResolvedValue("PONG")
 
-    const started = startNodeInstrumentation()
-    await jest.advanceTimersByTimeAsync(3000)
+    // Startup's dynamic imports read files for real, which fake timers cannot
+    // advance, so a single fixed advance can run before the first retry is
+    // scheduled. Advance until startup has finished.
+    let done = false
+    const started = startNodeInstrumentation().finally(() => {
+      done = true
+    })
+    for (let ms = 0; !done && ms < 60_000; ms += 500) await jest.advanceTimersByTimeAsync(500)
     await started
 
     expect(mockProbe.ping).toHaveBeenCalledTimes(3)

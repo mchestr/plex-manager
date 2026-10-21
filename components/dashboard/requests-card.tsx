@@ -49,7 +49,7 @@ export function RequestsCard({ url }: RequestsCardProps) {
 
       {/* Arrow indicator */}
       <svg
-        className="ml-auto h-4 w-4 text-slate-500 transition-all duration-200 group-hover:text-purple-400 group-hover:translate-x-0.5"
+        className="ml-auto h-4 w-4 text-muted-foreground transition-all duration-200 group-hover:text-purple-400 group-hover:translate-x-0.5"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
 
 import { useFormat } from "@/lib/format-context"
+import { rewindHistory, userRewind } from "@/lib/admin/routes"
 
 interface HistoricalVersion {
   id: string
@@ -79,15 +80,15 @@ export function HistoricalWrappedSelectorHeader({
     try {
       if (versionId === "current") {
         setSelectedVersion("current")
-        await router.push(`/admin/users/${userId}/wrapped?year=${year}`)
+        await router.push(userRewind(userId, year))
       } else {
         const version = versions.find(v => v.id === versionId)
         if (version?.isCurrent) {
           setSelectedVersion("current")
-          await router.push(`/admin/users/${userId}/wrapped?year=${year}`)
+          await router.push(userRewind(userId, year))
         } else {
           setSelectedVersion(versionId)
-          await router.push(`/admin/wrapped/${wrappedId}/history/${versionId}`)
+          await router.push(rewindHistory(wrappedId, versionId))
         }
       }
       setIsExpanded(false)
@@ -134,7 +135,7 @@ export function HistoricalWrappedSelectorHeader({
         <span className="font-medium">
           {selectedVersion === "current" ? "Current" : f.dateTime(selectedVersionData?.createdAt || new Date())}
         </span>
-        <span className="text-slate-500">({versions.length})</span>
+        <span className="text-muted-foreground">({versions.length})</span>
         <svg
           className={`w-3 h-3 transition-transform ${isExpanded ? "rotate-180" : ""}`}
           fill="none"

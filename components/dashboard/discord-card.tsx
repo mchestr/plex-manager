@@ -37,7 +37,7 @@ export function DiscordCard({ connection }: DiscordCardProps) {
 
         {/* Arrow indicator */}
         <svg
-          className="ml-auto h-4 w-4 text-slate-500 transition-all duration-200 group-hover:text-[#5865F2] group-hover:translate-x-0.5"
+          className="ml-auto h-4 w-4 text-muted-foreground transition-all duration-200 group-hover:text-[#5865F2] group-hover:translate-x-0.5"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"

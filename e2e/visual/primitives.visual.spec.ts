@@ -65,6 +65,15 @@ test.describe('UI primitives sheet', () => {
     );
   });
 
+  // The admin composites (P6.5), at both visual sizes.
+  for (const composite of ['page-header', 'stat-tile', 'data-table', 'empty-state'] as const) {
+    test(`${composite} composite`, async ({ page }) => {
+      await page.goto('/dev/ui');
+      await settlePage(page);
+      await expect(page.getByTestId(`dev-ui-${composite}`)).toHaveScreenshot(`composites-${composite}.png`);
+    });
+  }
+
   test('right sheet open', async ({ page }) => {
     await captureOpen(page, 'primitives-sheet-right', () => page.getByTestId('dev-ui-sheet-right-open').click());
   });

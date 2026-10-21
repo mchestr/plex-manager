@@ -80,7 +80,7 @@ export function DiscordBotStatus({ status }: DiscordBotStatusProps) {
             <div className="flex items-center gap-2">
               <span className="text-white font-medium">{indicator.text}</span>
               {status.isConnected && status.instanceId && (
-                <span className="text-xs text-slate-500 font-mono">
+                <span className="text-xs text-muted-foreground font-mono">
                   ({status.instanceId.slice(0, 8)})
                 </span>
               )}
@@ -97,14 +97,14 @@ export function DiscordBotStatus({ status }: DiscordBotStatusProps) {
             <div className="text-lg font-bold text-cyan-400">
               {status.recentActivityCount}
             </div>
-            <div className="text-xs text-slate-500">Last hour</div>
+            <div className="text-xs text-muted-foreground">Last hour</div>
           </div>
           {status.lastCommandAt && (
             <div className="text-center">
               <div className="text-lg font-bold text-slate-300">
                 <Time value={status.lastCommandAt} />
               </div>
-              <div className="text-xs text-slate-500">Last command</div>
+              <div className="text-xs text-muted-foreground">Last command</div>
             </div>
           )}
           {status.isConnected && status.expiresAt && (
@@ -112,7 +112,7 @@ export function DiscordBotStatus({ status }: DiscordBotStatusProps) {
               <div className="text-lg font-bold text-slate-300">
                 <Time value={status.expiresAt} />
               </div>
-              <div className="text-xs text-slate-500">Lock expires</div>
+              <div className="text-xs text-muted-foreground">Lock expires</div>
             </div>
           )}
         </div>

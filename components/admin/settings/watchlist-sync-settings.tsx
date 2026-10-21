@@ -200,7 +200,7 @@ export function WatchlistSyncSettings() {
                 Save
               </Button>
             </div>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted-foreground">
               How often to check for new items in users&apos; watchlists (15-1440 minutes)
             </p>
           </div>
@@ -237,7 +237,7 @@ export function WatchlistSyncSettings() {
                     >
                       <div className="flex items-center gap-3">
                         <span className="text-white">{item.title}</span>
-                        <span className="text-xs text-slate-500">
+                        <span className="text-xs text-muted-foreground">
                           by {item.user.name || item.user.email || "Unknown"}
                         </span>
                       </div>

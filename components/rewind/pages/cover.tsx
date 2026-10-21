@@ -1,3 +1,5 @@
+import { ViewTransition } from "react"
+
 import { RewindFigure } from "@/components/rewind/a11y/figure"
 import { formatCount, formatRunningTime } from "@/lib/rewind/format"
 import { volumeLine } from "@/lib/rewind/pages/facts"
@@ -31,6 +33,11 @@ function cut(label: string, pages: number, ms: number, locale: string): Cut {
  * selected pages, and the cut choice. When the column runs out of height
  * (the cut buttons keep 44 px hit areas and small text its 12 px floor),
  * the soundtrack gives way from its 150 px.
+ *
+ * The full-bleed field layer is named `rewind-field`: the home RewindCard's
+ * strip morphs into it, and back on Done (Rewind 4.4). It animates only as
+ * that shared pair (`default="none"`), so page turns, which run in
+ * transitions too, never start a view transition.
  */
 export function CoverPage({ data, issue }: PageProps<CoverData>) {
   const { facts, locale } = issue
@@ -45,6 +52,9 @@ export function CoverPage({ data, issue }: PageProps<CoverData>) {
 
   return (
     <div className="flex h-full flex-col font-text" style={{ padding: `${u(4)} ${u(16)} ${u(16)}` }} data-testid="rewind-page-cover">
+      <ViewTransition name="rewind-field" default="none" share="auto">
+        <div aria-hidden="true" data-testid="rewind-cover-field" className="pointer-events-none fixed inset-0 -z-1 bg-background" />
+      </ViewTransition>
       <div className={`flex items-baseline justify-between font-display ${rule}`} style={{ fontSize: u(15), lineHeight: 1.2, fontVariationSettings: axes(100, 650), paddingBottom: u(7) }}>
         <span>{issue.serverName}</span>
         {volume && <span className="tabular-nums">{volume}</span>}

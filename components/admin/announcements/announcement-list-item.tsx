@@ -56,7 +56,7 @@ export function AnnouncementListItem({
           <p className="mt-2 text-slate-300 text-sm whitespace-pre-wrap line-clamp-3">
             {announcement.content}
           </p>
-          <div className="mt-3 flex items-center gap-4 text-xs text-slate-500">
+          <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
             <span>Created: {f.date(announcement.createdAt)}</span>
             {announcement.expiresAt && (
               <span>Expires: {f.date(announcement.expiresAt)}</span>

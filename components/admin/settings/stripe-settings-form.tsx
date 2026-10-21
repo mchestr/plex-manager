@@ -193,7 +193,7 @@ export function StripeSettingsForm({
 
         <div>
           <label className="block text-xs font-medium text-slate-400 mb-1">
-            Price IDs <span className="text-slate-500 font-normal">(one per line or comma separated)</span>
+            Price IDs <span className="text-muted-foreground font-normal">(one per line or comma separated)</span>
           </label>
           <StyledInput
             type="text"
@@ -203,7 +203,7 @@ export function StripeSettingsForm({
             disabled={isSaving}
             data-testid="stripe-price-ids-input"
           />
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-muted-foreground mt-1">
             The Stripe price IDs offered on the subscribe page. At least one is required to enable Stripe.
           </p>
         </div>
@@ -212,13 +212,13 @@ export function StripeSettingsForm({
           <label className="block text-xs font-medium text-slate-400 mb-1">
             Subscriber Library Access
           </label>
-          <p className="text-xs text-slate-500 mb-2">
+          <p className="text-xs text-muted-foreground mb-2">
             Libraries shared with subscribers when access is granted. Leave all unchecked to share every library.
           </p>
           {loadingLibraries ? (
             <p className="text-sm text-slate-400">Loading libraries...</p>
           ) : libraries.length === 0 ? (
-            <p className="text-sm text-slate-500">No Plex libraries available</p>
+            <p className="text-sm text-muted-foreground">No Plex libraries available</p>
           ) : (
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {libraries.map((lib) => (

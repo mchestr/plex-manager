@@ -172,7 +172,7 @@ const GENERATION_REFUSAL_CODES = [
 
 export type GenerationRefusalCode = (typeof GENERATION_REFUSAL_CODES)[number]
 
-/** True for a refusal code, false for a stored failure code or none. */
+/** True for a refusal code, false for a stored failure code or none. @internal */
 export function isGenerationRefusal(code: string | undefined): code is GenerationRefusalCode {
   return GENERATION_REFUSAL_CODES.some((refusal) => refusal === code)
 }

@@ -68,7 +68,7 @@ describe('ShareTimeChart', () => {
       const { container } = render(<ShareTimeChart data={[]} />)
 
       const emptyState = screen.getByText('No data available')
-      expect(emptyState).toHaveClass('text-slate-500', 'text-sm')
+      expect(emptyState).toHaveClass('text-muted-foreground', 'text-sm')
 
       const emptyContainer = container.querySelector('.flex.items-center.justify-center')
       expect(emptyContainer).toBeInTheDocument()
@@ -577,7 +577,7 @@ describe('ShareTimeChart', () => {
       render(<ShareTimeChart data={[]} />)
 
       const message = screen.getByText('No data available')
-      expect(message).toHaveClass('text-slate-500')
+      expect(message).toHaveClass('text-muted-foreground')
     })
 
     it('should render chart in a container with proper structure', () => {

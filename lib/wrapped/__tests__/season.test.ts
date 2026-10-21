@@ -13,6 +13,7 @@ import {
   parseMonthDay,
   resolveRewindYear,
   seasonStateAt,
+  seasonWindow,
 } from '@/lib/wrapped/season'
 import { mockReset } from 'jest-mock-extended'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
@@ -227,5 +228,16 @@ describe('resolveRewindYear', () => {
     mockWrappedFindFirst.mockResolvedValue(null)
 
     await expect(resolveRewindYear('user-1', JAN_2027)).resolves.toBe(2026)
+  })
+})
+
+describe('seasonWindow', () => {
+  it("gives a year's opening and exclusive close, as the JSDoc example says", () => {
+    expect(seasonWindow(2026, '12-01', '01-31', 'UTC')).toEqual({ opensAt: at('2026-12-01T00:00:00Z'), closesAt: at('2027-02-01T00:00:00Z') })
+    expect(seasonWindow(2025, '11-20', '12-31', 'UTC')).toEqual({ opensAt: at('2025-11-20T00:00:00Z'), closesAt: at('2026-01-01T00:00:00Z') })
+  })
+
+  it('falls back to the defaults for an invalid stored value', () => {
+    expect(seasonWindow(2026, '13-01', '01-31', 'UTC').opensAt).toEqual(at('2026-12-01T00:00:00Z'))
   })
 })
