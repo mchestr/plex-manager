@@ -1,5 +1,4 @@
 import { type ClassValue, clsx } from "clsx"
-import { randomBytes } from "crypto"
 import { extendTailwindMerge } from "tailwind-merge"
 
 /**
@@ -19,18 +18,6 @@ const twMerge = extendTailwindMerge({
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
-}
-
-/**
- * Generate a secure random token for sharing wrapped content
- * Uses crypto.randomBytes for cryptographically secure randomness
- * Returns a URL-safe base64 string (32 bytes = 43 characters)
- */
-export function generateShareToken(): string {
-  // Generate 32 random bytes (256 bits) for strong security
-  const bytes = randomBytes(32)
-  // Convert to base64url (URL-safe base64)
-  return bytes.toString("base64url")
 }
 
 /**

@@ -72,9 +72,9 @@ export enum AuditEventType {
   // Emitted when the Discord bot token / config version is rotated on a config
   // change. Details never carry the token value.
   DISCORD_TOKEN_ROTATED = "DISCORD_TOKEN_ROTATED",
-  // Rewind share links (opt-in, SEC-16). Details carry the wrapped id and year,
+  // v2 Rewind share links (SEC-16). P7.13 deleted the action that created one,
+  // so only revocations are written. Details carry the wrapped id and year,
   // never the token, which is the credential for the public link.
-  SHARE_LINK_CREATED = "SHARE_LINK_CREATED",
   SHARE_LINK_REVOKED = "SHARE_LINK_REVOKED",
   // v3 Rewind public links (P5.11, design 6.2). Details carry the share id, the
   // year and the published pages (and a rotation's old share id), never the token.

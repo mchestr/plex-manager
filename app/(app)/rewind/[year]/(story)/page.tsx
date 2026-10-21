@@ -2,17 +2,17 @@ import type { Metadata } from "next"
 import { notFound, redirect } from "next/navigation"
 import { getServerSession } from "next-auth"
 
+import { ArchiveActions, ArchiveArticle } from "@/components/rewind/article/archive-article"
 import { RewindIssue } from "@/components/rewind/rewind-issue"
 import { RewindStatusPanel } from "@/components/rewind/rewind-status-panel"
-import { WrappedSharedYearsNotice } from "@/components/wrapped/wrapped-shared-years-notice"
-import { WrappedViewerWrapper } from "@/components/wrapped/wrapped-viewer-wrapper"
-import { WrappedYearLinks } from "@/components/wrapped/wrapped-year-links"
+import { RewindSharedYearsNotice } from "@/components/rewind/shared-years-notice"
 import { authOptions } from "@/lib/auth"
-import { rewindName } from "@/lib/brand"
+import { rewindName, serverName } from "@/lib/brand"
 import { prisma } from "@/lib/prisma"
 import { previewOwnerId, readPreview } from "@/lib/rewind/dry-run/store"
 import { safeReturnPath } from "@/lib/rewind/return-to"
 import { loadRewindYearView } from "@/lib/rewind/year-view"
+import { getAppSettings } from "@/lib/settings/app-settings"
 import { yearParamSchema } from "@/lib/validations/params"
 import { listCompletedRewindYears } from "@/lib/wrapped/season"
 
@@ -59,8 +59,8 @@ export default async function RewindYearPage({ params, searchParams }: YearPageP
 
   const [view, sharedRows, completedYears] = await Promise.all([
     loadRewindYearView({ userId, isAdmin: session.user.isAdmin }, year),
-    // Every year of the member's own with a live public link, so links on
-    // years the viewer does not show can still be stopped (SEC-16).
+    // Every year of the member's own with a live v2 public link, so they can
+    // still be stopped: archive articles have no share controls (SEC-16).
     prisma.plexWrapped.findMany({
       where: { userId, shareToken: { not: null } },
       select: { year: true },
@@ -69,9 +69,7 @@ export default async function RewindYearPage({ params, searchParams }: YearPageP
     listCompletedRewindYears(userId),
   ])
 
-  // The legacy viewer has its own controls for the year it shows.
-  const otherSharedYears = sharedRows.map((row) => row.year).filter((shared) => !(view.kind === "legacy" && shared === year))
-  const sharedNotice = <WrappedSharedYearsNotice years={otherSharedYears} />
+  const sharedNotice = <RewindSharedYearsNotice years={sharedRows.map((row) => row.year)} />
 
   if (view.kind === "issue") {
     return (
@@ -83,18 +81,17 @@ export default async function RewindYearPage({ params, searchParams }: YearPageP
   }
 
   if (view.kind === "legacy") {
-    // v1 and v2 keep the app's font and colours until P7.13's archive article
+    // A stored v1 or v2 year is an archive article: no story, cards or sharing (P7.13)
+    const [brand, settings] = await Promise.all([serverName(), getAppSettings()])
     return (
-      <div className="font-sans">
-        {sharedNotice}
-        <WrappedYearLinks years={completedYears} currentYear={year} />
-        <WrappedViewerWrapper
-          wrappedData={view.data}
-          year={year}
-          shareToken={view.shareToken ?? undefined}
-          canManageShare
-        />
-      </div>
+      <ArchiveArticle
+        legacy={view.data}
+        year={year}
+        brand={brand}
+        locale={settings.locale}
+        notice={sharedNotice}
+        actions={<ArchiveActions year={year} years={completedYears} returnTo={returnTo} />}
+      />
     )
   }
 

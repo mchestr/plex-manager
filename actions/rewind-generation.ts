@@ -49,7 +49,7 @@ const BLOCKER_COPY = {
   NO_TAUTULLI: "No active Tautulli server configured",
 } as const
 
-const DISABLED = "Wrapped generation is currently disabled"
+const DISABLED = "Rewind generation is currently off"
 
 const onlySeasonYear = (wrappedYear: number) => fail("VALIDATION", `Rewind is only available for ${wrappedYear}`)
 

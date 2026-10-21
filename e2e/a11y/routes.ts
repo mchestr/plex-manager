@@ -82,8 +82,8 @@ export const A11Y_ROUTES: A11yRoute[] = [
 
   // Member
   { path: '/', as: 'member', ready: 'plex-link-card' },
-  { path: '/rewind', as: 'member', ready: 'wrapped-viewer' },
-  { path: `/rewind/${VISUAL_REWIND_YEAR}`, as: 'member', ready: 'wrapped-viewer' },
+  { path: '/rewind', as: 'member', ready: 'rewind-article-mode' },
+  { path: `/rewind/${VISUAL_REWIND_YEAR}`, as: 'member', ready: 'rewind-article-mode' },
   { path: '/onboarding', as: 'member', userId: VISUAL_ONBOARDING_USER.id, ready: 'onboarding-welcome-heading' },
   { path: '/discord/link', as: 'member', ready: 'discord-link-panel' },
   { path: '/account', as: 'member', ready: 'account-notifications' },

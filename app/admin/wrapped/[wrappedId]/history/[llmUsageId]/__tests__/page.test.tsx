@@ -1,12 +1,15 @@
 /**
  * A historical version whose LLM text the October 2026 privacy clean-up
- * removed shows the clean-up notice in place of the viewer (P0.20).
+ * removed shows the clean-up notice in place of the article (P0.20); one with
+ * text renders as an archive article (P7.13).
  */
 
 import { render, screen } from '@testing-library/react'
 
 import HistoricalWrappedPage from '@/app/admin/wrapped/[wrappedId]/history/[llmUsageId]/page'
 import { getHistoricalWrappedData } from '@/actions/admin'
+import { buildStoredV2Json } from '@/lib/wrapped/__tests__/fixtures'
+import { parseStoredRewind } from '@/lib/wrapped/data/parse-stored'
 
 jest.mock('@/lib/admin', () => ({
   requireAdmin: jest.fn(),
@@ -20,8 +23,11 @@ jest.mock('@/components/admin/wrapped/historical-wrapped-selector-header', () =>
   HistoricalWrappedSelectorHeader: ({ userId }: { userId: string }) => <div data-testid="selector-header">{userId}</div>,
 }))
 
-jest.mock('@/components/wrapped/wrapped-viewer-wrapper', () => ({
-  WrappedViewerWrapper: () => <div data-testid="wrapped-viewer" />,
+jest.mock('@/lib/rewind/fonts', () => ({ rewindFontVariables: 'rw-fonts' }))
+jest.mock('@/lib/brand', () => ({ serverName: async () => 'Chester Family Plex' }))
+jest.mock('@/lib/settings/app-settings', () => ({
+  getAppSettings: async () => ({ locale: 'en-US', timeZone: 'UTC', serverName: 'Chester Family Plex' }),
+  getFormat: async () => ({ dateTime: (date: Date) => date.toISOString() }),
 }))
 
 const mockGetHistoricalWrappedData = getHistoricalWrappedData as jest.Mock
@@ -60,17 +66,20 @@ describe('Admin historical Rewind version page', () => {
     expect(screen.getByTestId('llm-text-removed-notice')).toHaveTextContent(
       'Text removed in the October 2026 privacy clean-up'
     )
-    expect(screen.queryByTestId('wrapped-viewer')).not.toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: "Mike's 2025 Wrapped" })).toBeInTheDocument()
+    expect(screen.queryByTestId('rewind-article-mode')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: "Mike's Rewind 2025" })).toBeInTheDocument()
     expect(screen.getByTestId('selector-header')).toHaveTextContent('user-1')
   })
 
-  it('shows the viewer for a version that has text', async () => {
-    mockGetHistoricalWrappedData.mockResolvedValue({ ...version, removed: false, wrappedData: { year: 2025, userId: 'user-1' } })
+  it('shows the archive article, in the Rewind scope, for a version that has text', async () => {
+    const stored = parseStoredRewind(buildStoredV2Json())
+    if (stored.version !== 2) throw new Error('fixture is not v2')
+    mockGetHistoricalWrappedData.mockResolvedValue({ ...version, removed: false, wrappedData: stored.legacy })
 
     await renderPage()
 
-    expect(screen.getByTestId('wrapped-viewer')).toBeInTheDocument()
+    expect(screen.getByTestId('rewind-scope')).toContainElement(screen.getByTestId('rewind-article-mode'))
+    expect(screen.getByRole('heading', { level: 1, name: 'Chester Family Plex Rewind 2025' })).toBeInTheDocument()
     expect(screen.queryByTestId('llm-text-removed-notice')).not.toBeInTheDocument()
   })
 })
