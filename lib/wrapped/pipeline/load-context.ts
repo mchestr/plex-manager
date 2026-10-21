@@ -4,6 +4,10 @@
  * aggregate, the zone and window, the serial, the previous copy, the LLM
  * provider and the season's Rewind spend.
  *
+ * The LLM provider is `getFrozenRewindModel()` (P8.1): the freeze lock's
+ * model on the active row's key. A row on another provider than the lock
+ * sets `llmProviderMismatch`, and the copy step writes templates.
+ *
  * @module lib/wrapped/pipeline/load-context
  */
 
@@ -11,9 +15,8 @@ import "server-only"
 
 import { createHmac, randomBytes } from "node:crypto"
 
-import { type LLMProviderId } from "@/lib/llm/models"
+import { getFrozenRewindModel } from "@/lib/llm/registry"
 import { getRewindSeasonSpend } from "@/lib/llm/usage-totals"
-import { isLLMProviderId } from "@/lib/llm/provider-presets"
 import { prisma } from "@/lib/prisma"
 import type { RewindGenerationKind } from "@/lib/rewind/enqueue-generation"
 import { serverZone } from "@/lib/utils/server-zone"
@@ -25,7 +28,7 @@ import { excludedContentRatingsSchema, excludedSectionIdsSchema } from "@/lib/wr
 import type { SonarrEndpoint } from "@/lib/wrapped/sources/sonarr-calendar"
 import { dataWindow, resolveDataWindow, resolveZone, seasonWindowAt, type RewindZone, type TimeWindow } from "@/lib/wrapped/time/zone"
 
-import type { PreviousCopy } from "./copy-step"
+import type { CopyProvider, PreviousCopy } from "./copy-step"
 import { storedIssueOf } from "./final-cut"
 import { RewindGenerationError } from "./generation-error"
 
@@ -62,7 +65,9 @@ export interface RewindContext {
   nthRewind: number
   wrappedId: string | null
   previous: PreviousCopy | null
-  llmProvider: { provider: LLMProviderId; model: string } | null
+  llmProvider: CopyProvider | null
+  /** The active row names another provider than the freeze lock (P8.1). */
+  llmProviderMismatch?: boolean
   spentUsd: number
   styleGuide: string | null
 }
@@ -151,7 +156,7 @@ export async function loadRewindContext(options: {
     serverZone(),
     prisma.rewindExclusion.findMany({ where: { userId }, select: { ratingKey: true } }),
     prisma.plexWrapped.findUnique({ where: { userId_year: { userId, year } }, select: { id: true, data: true, status: true } }),
-    prisma.lLMProvider.findFirst({ where: { isActive: true, purpose: "wrapped" }, select: { provider: true, model: true } }),
+    getFrozenRewindModel(),
     findRewindStyleGuide(),
   ])
   if (!user) throw new RewindGenerationError("NOT_CONFIGURED", { retryable: false })
@@ -197,7 +202,8 @@ export async function loadRewindContext(options: {
     nthRewind: nth + 1,
     wrappedId: wrapped?.id ?? null,
     previous: wrapped?.status === "completed" ? await previousCopy(userId, year, wrapped.data) : null,
-    llmProvider: provider && isLLMProviderId(provider.provider) && provider.model ? { provider: provider.provider, model: provider.model } : null,
+    llmProvider: provider && provider.status !== "mismatch" ? { provider: provider.provider, model: provider.model, budgetModel: provider.budgetModel, rowModel: provider.rowModel } : null,
+    llmProviderMismatch: provider?.status === "mismatch",
     spentUsd: spent,
     styleGuide,
   }

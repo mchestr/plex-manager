@@ -28,8 +28,9 @@ import { runCopyStep, type CopyInput, type PreviousCopy } from '@/lib/wrapped/pi
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 jest.mock('@/lib/llm/registry', () => ({ getLanguageModel: jest.fn(), LLMConfigError: class extends Error {} }))
 jest.mock('@/lib/llm/usage', () => ({ recordUsage: jest.fn() }))
+const mockWarn = jest.fn()
 jest.mock('@/lib/utils/logger', () => ({
-  createLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() }),
+  createLogger: () => ({ debug: jest.fn(), info: jest.fn(), warn: (...args: unknown[]) => mockWarn(...args), error: jest.fn() }),
 }))
 
 type Reply = Awaited<ReturnType<MockLanguageModelV4['doGenerate']>>
@@ -115,6 +116,30 @@ function input(overrides: Partial<CopyInput> = {}, llm: Partial<CopyInput['llm']
 const templateOf = (id: Parameters<typeof slotTemplate>[0]) => slotTemplate(id, { facts: issue.facts, userId: FIXTURE_USER_ID })
 
 describe('runCopyStep', () => {
+  it("writes with the frozen model on the active row's key (P8.1)", async () => {
+    const model = answer(reply(JSON.stringify(GOOD)))
+    const frozen = { provider: 'anthropic' as const, model: 'claude-sonnet-5-5', budgetModel: 'claude-haiku-5-5', rowModel: 'claude-opus-5-5' }
+
+    const result = await runCopyStep(input({}, { provider: frozen }))
+
+    expect(model.asked).toEqual(['claude-sonnet-5-5'])
+    expect(result).toMatchObject({ source: 'llm', model: 'anthropic:claude-sonnet-5-5' })
+  })
+
+  it('writes templates when the row names another provider than the lock, with one warning (P8.1)', async () => {
+    const model = answer(reply(JSON.stringify(GOOD)))
+
+    const first = await runCopyStep(input({}, { provider: null, providerMismatch: true }))
+    const second = await runCopyStep(input({}, { provider: null, providerMismatch: true }))
+
+    expect(model.calls()).toBe(0)
+    for (const result of [first, second]) {
+      expect(result).toMatchObject({ source: 'template', model: null, trail: { path: 'template', reason: 'PROVIDER_MISMATCH' } })
+    }
+    expect(first.copy?.decks.clock).toBe(templateOf('deck.clock'))
+    expect(mockWarn).toHaveBeenCalledTimes(1)
+  })
+
   it('writes every slot from one call when grounding passes', async () => {
     const model = answer(reply(JSON.stringify(GOOD)))
 

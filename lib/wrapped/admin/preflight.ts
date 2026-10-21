@@ -7,7 +7,7 @@
  * | Redis | `checkRewindInfra()` answers | "Rewind needs Redis (REDIS_URL)" (FR-50) |
  * | Tautulli | 2.17 or later | below 2.17 (CVE-2026-31799), unreachable, not set up |
  * | Overseerr, Sonarr | set up | optional: not set up is not a warning |
- * | AI copy | a priced model that does not retire before 2027-01-02 | unpriced, retiring, or template-only mode |
+ * | AI copy | the frozen model (P8.1), priced, not retiring before 2027-01-02 | unpriced, retiring, template-only mode, or a provider other than the lock's (red) |
  * | Entitlement | Stripe off, or every member entitled | members skipped for entitlement (P4.5) |
  *
  * @module lib/wrapped/admin/preflight
@@ -19,6 +19,7 @@ import { entitledUserWhere } from "@/lib/access"
 import { getTautulliInfo } from "@/lib/connections/tautulli"
 import { lookupModel } from "@/lib/llm/models"
 import { isLLMProviderId } from "@/lib/llm/provider-presets"
+import { frozenModelFor, lockedModelLabel, REWIND_LOCK } from "@/lib/wrapped/freeze/lock"
 import { prisma } from "@/lib/prisma"
 import { checkRewindInfra } from "@/lib/queue/rewind-infra"
 import { rewindInfraMessage } from "@/lib/rewind/infra-copy"
@@ -98,17 +99,26 @@ async function llmRow(config: { llmDisabled: boolean; rewindLlmMode: string } | 
     where: { isActive: true, purpose: "wrapped" },
     select: { provider: true, model: true },
   })
-  if (!provider?.model || !isLLMProviderId(provider.provider)) {
+  const frozen = frozenModelFor(provider, REWIND_LOCK.model)
+  if (frozen?.status === "mismatch") {
+    return {
+      id: "llm",
+      label,
+      status: "unreachable",
+      detail: `The Rewind provider is ${frozen.provider}, but the frozen model is ${lockedModelLabel(frozen.locked)}: Rewind writes template copy`,
+    }
+  }
+  if (!frozen || !isLLMProviderId(frozen.provider)) {
     return { id: "llm", label, status: "degraded", detail: "No AI provider: Rewind writes template copy" }
   }
-  const info = lookupModel(provider.provider, provider.model)
+  const info = lookupModel(frozen.provider, frozen.model)
   if (!info.pricing) {
     return { id: "llm", label, status: "incomplete", detail: `${info.displayName} has no known price, so the budget cap can't count it` }
   }
   if (info.retiresOn && info.retiresOn < MODEL_NEEDED_UNTIL) {
     return { id: "llm", label, status: "incomplete", detail: `${info.displayName} retires on ${info.retiresOn}, before the season ends` }
   }
-  return { id: "llm", label, status: "ok", detail: `${info.displayName}, priced` }
+  return { id: "llm", label, status: "ok", detail: `${info.displayName}, priced${frozen.status === "frozen" ? `, frozen in ${REWIND_LOCK.version}` : ""}` }
 }
 
 async function entitlementRow(stripeEnabled: boolean): Promise<PreflightRow | null> {

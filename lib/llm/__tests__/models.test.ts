@@ -26,6 +26,7 @@ import {
   type TokenUsage,
 } from '@/lib/llm/models'
 import { createLogger } from '@/lib/utils/logger'
+import { REWIND_LOCK } from '@/lib/wrapped/freeze/lock'
 
 const MILLION = 1_000_000
 
@@ -194,5 +195,26 @@ describe('budgetModelFor', () => {
     expect(budgetModelFor('google')).toBeNull()
     expect(budgetModelFor('openai-compatible')).toBeNull()
     expect(lookupModel('anthropic', budgetModelFor('anthropic')!).known).toBe(true)
+  })
+})
+
+describe('the frozen pair (P8.1)', () => {
+  // The prices are re-checked against the providers' pages on 2026-12-01 (design 8.2); from
+  // 2 December this fails CI until the frozen model and its budget model carry that check.
+  const locked = REWIND_LOCK.model
+  const due = Date.now() >= Date.parse('2026-12-02T00:00:00Z')
+
+  ;(locked && due ? it : it.skip)('carries prices checked on 2026-12-01 or later', () => {
+    const ids = [locked!.modelId, ...(locked!.budgetModelId ? [locked!.budgetModelId] : [])]
+    for (const id of ids) {
+      const price = priceAt(lookupModel(locked!.provider, id))
+      expect((price?.asOf ?? '') >= '2026-12-01').toBe(true)
+    }
+  })
+
+  ;(locked ? it : it.skip)('is priced and does not retire before 2027-01-02', () => {
+    const info = lookupModel(locked!.provider, locked!.modelId)
+    expect(info.pricing).not.toBeNull()
+    expect(info.retiresOn === null || info.retiresOn > '2027-01-02').toBe(true)
   })
 })

@@ -6,7 +6,8 @@
  * same factsHash, prompt and model as last time ──► reuse that copy, 0 calls
  * copyPolicy 'no-llm' ────────────────────────────► keep slots whose dependency hash held, template the rest
  * copyPolicy 'changed-slots' (the final cut) ─────► keep those slots, write only the rest (below)
- * llmDisabled, mode 'off', no provider, budget ───► templates, 0 calls
+ * llmDisabled, mode 'off', provider mismatch,
+ *   no provider, budget ──────────────────────────► templates, 0 calls
  * otherwise: copy call ─► ground each slot ─► one repair call on the budget model
  *            ─► slots that still fail fall back to templates one by one
  * ```
@@ -14,6 +15,13 @@
  * A schema failure, refusal, truncation or provider error makes every slot a
  * template (SEC-43); no model failure fails the generation. `economy` mode
  * writes with the budget model. `copyMeta.model` is `"<provider>:<id>"`.
+ *
+ * ## The frozen model (P8.1)
+ *
+ * The provider is `getFrozenRewindModel()`: the freeze lock's model and
+ * budget model on the active row's key. When the row names another provider
+ * than the lock, every slot is a template (`PROVIDER_MISMATCH`), and the
+ * step logs one warning per process rather than one per member.
  *
  * ## Kept slots
  *
@@ -31,6 +39,7 @@
  */
 
 import { budgetModelFor, normalizeModelId, type LLMProviderId } from "@/lib/llm/models"
+import { createLogger } from "@/lib/utils/logger"
 import type { ArchetypeId } from "@/lib/wrapped/archetypes/catalogue"
 import type { ArchetypeSelection } from "@/lib/wrapped/archetypes/select"
 import { groundArchetype, groundSlot, type GroundingIssue } from "@/lib/wrapped/copy/grounding"
@@ -59,6 +68,16 @@ export interface PreviousCopy {
 
 export type CopyPolicy = "default" | "no-llm" | "changed-slots"
 
+/** The model the copy step writes with (`getFrozenRewindModel()`). */
+export interface CopyProvider {
+  provider: LLMProviderId
+  model: string
+  /** The repair and economy model; undefined picks the provider's own (`budgetModelFor`). */
+  budgetModel?: string | null
+  /** The active row's stored model, when the lock's differs from it; the call names the lock's as an override. */
+  rowModel?: string
+}
+
 export interface CopyInput {
   userId: string
   year: number
@@ -74,7 +93,9 @@ export interface CopyInput {
     /** `Config.llmDisabled`, `rewindLlmMode`, the active provider row, and whether the season budget is spent. */
     disabled: boolean
     mode: string
-    provider: { provider: LLMProviderId; model: string } | null
+    provider: CopyProvider | null
+    /** The active row names another provider than the freeze lock: templates (P8.1). */
+    providerMismatch?: boolean
     budgetReached: boolean
     /** A model for this run only (the playground). */
     override?: string
@@ -109,7 +130,26 @@ export interface CopyResult {
   trail: CopyTrail
 }
 
+const logger = createLogger("REWIND_COPY")
+
 const modelKey = (provider: string, model: string) => `${provider}:${normalizeModelId(model)}`
+
+const budgetOf = (p: CopyProvider) => (p.budgetModel !== undefined ? p.budgetModel : budgetModelFor(p.provider))
+
+/** The model a run plans to write with: the run's override, the budget model in economy mode, else the provider's. */
+function plannedModel(llm: CopyInput["llm"]): string | null {
+  if (!llm.provider) return null
+  return llm.override ?? (llm.mode === "economy" ? budgetOf(llm.provider) : null) ?? llm.provider.model
+}
+
+let mismatchWarned = false
+
+/** One warning per process: every member of a run would log the same mismatch. */
+function warnMismatch() {
+  if (mismatchWarned) return
+  mismatchWarned = true
+  logger.warn("The Rewind provider is not the frozen model's provider; Rewind writes template copy until it is (docs/rewind.md, The freeze lock)")
+}
 
 /** Each selected slot's dependency hash over `facts`: what `copyMeta.slotHashes` stores. */
 export function slotHashesFor(selected: readonly PageType[], facts: RewindFactsV3): Record<string, string> {
@@ -126,7 +166,7 @@ export async function runCopyStep(input: CopyInput): Promise<CopyResult> {
     return { copy: null, source: "template", model: null, slotHashes: {}, trail: { ...trail, path: "none" } }
   }
   const { llm, previous } = input
-  const planned = llm.provider && (llm.override ?? (llm.mode === "economy" ? budgetModelFor(llm.provider.provider) : null) ?? llm.provider.model)
+  const planned = plannedModel(llm)
   const plannedKey = llm.provider && planned ? modelKey(llm.provider.provider, planned) : null
 
   if (previous?.factsHash === input.factsHash && previous.promptVersion === input.promptVersion && previous.model === plannedKey) {
@@ -178,10 +218,21 @@ async function withModel(
 ): Promise<CopyResult> {
   const { llm } = input
   const archetype = input.archetype!
-  const planned = llm.provider && (llm.override ?? (llm.mode === "economy" ? budgetModelFor(llm.provider.provider) : null) ?? llm.provider.model)
+  const planned = plannedModel(llm)
   const plannedKey = llm.provider && planned ? modelKey(llm.provider.provider, planned) : null
   const kept = path === "changed-slots" ? (input.previous?.model ?? null) : null
-  const reason = llm.disabled ? "LLM_DISABLED" : llm.mode === "off" ? "MODE_OFF" : !llm.provider ? "NO_PROVIDER" : llm.budgetReached ? "BUDGET_REACHED" : null
+  const reason = llm.disabled
+    ? "LLM_DISABLED"
+    : llm.mode === "off"
+      ? "MODE_OFF"
+      : llm.providerMismatch
+        ? "PROVIDER_MISMATCH"
+        : !llm.provider
+          ? "NO_PROVIDER"
+          : llm.budgetReached
+            ? "BUDGET_REACHED"
+            : null
+  if (reason === "PROVIDER_MISMATCH") warnMismatch()
   if (reason || !llm.provider || !plannedKey) return finish(path === "llm" ? "template" : path, kept, reason ?? "NO_PROVIDER")
 
   const call: LlmCall = { ...input.call, provider: llm.provider.provider }
@@ -191,7 +242,9 @@ async function withModel(
     slots,
     archetype: { id: archetype.id, shortlist: archetype.shortlist.map((s) => s.id), mayChoose: posterLine && archetype.llmMayChoose },
   }
-  const override = (model: string | null) => (model && model !== llm.provider!.model ? model : undefined)
+  // The call runs on the active row; any other model, the lock's included, goes as an override.
+  const rowModel = llm.provider.rowModel ?? llm.provider.model
+  const override = (model: string | null) => (model && model !== rowModel ? model : undefined)
   const first = await callCopy(call, promptInput, override(planned))
   trail.calls++
   if (!first.ok) return finish(path, path === "llm" ? plannedKey : kept, first.error.code)
@@ -210,7 +263,7 @@ async function withModel(
   failing.forEach((issues, id) => (trail.issues[id] = issues))
 
   if (failing.size > 0) {
-    const repair = await callRepair(call, promptInput, failing, override(budgetModelFor(llm.provider.provider) ?? planned))
+    const repair = await callRepair(call, promptInput, failing, override(budgetOf(llm.provider) ?? planned))
     trail.calls++
     if (repair.result.ok) trail.costUsd += repair.result.value.cost
     for (const id of failing.keys()) {
