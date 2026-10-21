@@ -1,65 +1,44 @@
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
-import { getPromptTemplate } from "@/actions/prompts"
-import { getUserPlexWrapped } from "@/actions/user-queries"
-import { PromptTemplateEditor } from "@/components/admin/prompts/prompt-template-editor"
-import Link from "next/link"
 import { notFound } from "next/navigation"
 
-export const dynamic = 'force-dynamic'
+import { PromptEditor } from "@/components/admin/prompts/editor/prompt-editor"
+import { PageHeader } from "@/components/ui/page-header"
+import { getAdminGate } from "@/lib/admin"
+import { getPromptTemplateDetail } from "@/lib/admin/prompts/queries"
+import { promptDetail } from "@/lib/admin/routes"
 
-export default async function EditPromptTemplatePage({
-  params,
-}: {
-  params: Promise<{ promptId: string }>
-}) {
-  const session = await getServerSession(authOptions)
+export const dynamic = "force-dynamic"
+
+/** `/admin/prompts/[promptId]/edit` (P10.4): the style-guide editor; a v2 template opens read-only. */
+export default async function EditPromptTemplatePage({ params }: { params: Promise<{ promptId: string }> }) {
+  const gate = await getAdminGate()
+  if (!gate.ok) notFound()
+
   const { promptId } = await params
-
-  const result = await getPromptTemplate(promptId)
-  if (!result.success || !result.data) {
-    notFound()
-  }
-
-  // Get current user's wrapped data for placeholder examples
-  const currentYear = new Date().getFullYear()
-  const wrappedResult = session?.user?.id
-    ? await getUserPlexWrapped({ userId: session.user.id, year: currentYear })
-    : null
-  const userWrapped = wrappedResult?.success ? wrappedResult.data : null
+  const prompt = await getPromptTemplateDetail(promptId)
+  if (!prompt) notFound()
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto">
-          <div className="mb-8">
-            <Link
-              href={`/admin/prompts/${promptId}`}
-              className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-cyan-400 mb-6 transition-colors group"
-            >
-              <svg className="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              Back to Template Details
-            </Link>
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h1 data-testid="admin-prompt-edit-heading" className="text-3xl sm:text-4xl font-bold text-white mb-2 bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
-                  Edit Prompt Template
-                </h1>
-                <p className="text-sm text-slate-400">
-                  Modify the prompt template and preview how placeholders are replaced with your data
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <PromptTemplateEditor
-            template={result.data}
-            userWrapped={userWrapped}
-            userName={session?.user?.name || "User"}
-          />
-      </div>
+    <div className="mx-auto flex max-w-[960px] flex-col gap-8 p-4 sm:p-6">
+      <PageHeader
+        title={`Edit ${prompt.name}`}
+        breadcrumbs={[
+          { label: "Prompts", href: "/admin/prompts" },
+          { label: prompt.name, href: promptDetail(prompt.id) },
+          { label: "Edit" },
+        ]}
+        data-testid="admin-prompt-edit-heading"
+      />
+      <PromptEditor
+        prompt={{
+          id: prompt.id,
+          name: prompt.name,
+          description: prompt.description,
+          template: prompt.template,
+          isActive: prompt.isActive,
+          kind: prompt.kind,
+        }}
+        cancelHref={promptDetail(prompt.id)}
+      />
     </div>
   )
 }
-

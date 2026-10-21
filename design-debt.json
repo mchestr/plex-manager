@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "commit": "40c98b09508956891255cd39cea0a7bf1ec064c2",
-  "generatedAt": "2026-10-21T21:43:57.785Z",
+  "commit": "2a5efbac47c83eceaae3347547b191a52ebdeed9",
+  "generatedAt": "2026-10-21T21:47:42.965Z",
   "files": {
     "app/(app)/page.tsx": {
       "gradient": 2,
@@ -31,26 +31,6 @@
       "blur": 5,
       "caps-eyebrow": 7,
       "raw-palette": 66
-    },
-    "app/admin/prompts/[promptId]/edit/page.tsx": {
-      "gradient": 1,
-      "gradient-text": 2,
-      "raw-palette": 6
-    },
-    "app/admin/prompts/[promptId]/page.tsx": {
-      "blur": 4,
-      "raw-palette": 23
-    },
-    "app/admin/prompts/new/page.tsx": {
-      "gradient": 1,
-      "gradient-text": 2,
-      "raw-palette": 6
-    },
-    "app/admin/prompts/page.tsx": {
-      "blur": 1,
-      "caps-eyebrow": 6,
-      "gradient": 2,
-      "raw-palette": 37
     },
     "app/admin/queues/page.tsx": {
       "blur": 1,
@@ -176,14 +156,6 @@
     },
     "components/admin/prompts/prompt-scrollspy.tsx": {
       "raw-palette": 15
-    },
-    "components/admin/prompts/prompt-template-actions.tsx": {
-      "raw-palette": 11
-    },
-    "components/admin/prompts/prompt-template-editor.tsx": {
-      "blur": 3,
-      "gradient": 1,
-      "raw-palette": 139
     },
     "components/admin/queues/job-table.tsx": {
       "caps-eyebrow": 7,
@@ -598,12 +570,12 @@
   "totals": {
     "arbitrary-color": 17,
     "arbitrary-type-z": 29,
-    "blur": 114,
-    "caps-eyebrow": 84,
+    "blur": 106,
+    "caps-eyebrow": 78,
     "copy": 13,
-    "gradient": 87,
-    "gradient-text": 50,
+    "gradient": 82,
+    "gradient-text": 46,
     "infinite-motion": 38,
-    "raw-palette": 2628
+    "raw-palette": 2406
   }
 }

@@ -207,10 +207,12 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 **Demo.** Open a v2 template and see the read-only notice. Copy it into a style guide, edit it with Undo and Redo, and watch the preview. Activate it, then run a playground dry run and find the same block in the prompt.
 
 **Done when.**
-- [ ] The list is a DataTable with the `prompt` status badges, an EmptyState and test ids.
-- [ ] The editor is a 960px page with breadcrumbs; its files are each under 200 lines, and its state lives in two tested hooks.
-- [ ] The preview is built by the pipeline's own `systemPrompt()`, and the 1,200-character rule is shared with the actions and the playground.
-- [ ] No client copy of placeholder replacement remains.
+- [x] The list is a DataTable with the `prompt` status badges, an EmptyState and test ids.
+- [x] The editor is a 960px page with breadcrumbs; its files are each under 200 lines, and its state lives in two tested hooks.
+- [x] The preview is built by the pipeline's own `systemPrompt()`, and the 1,200-character rule is shared with the actions and the playground.
+- [x] No client copy of placeholder replacement remains.
+
+(as merged: P8.8 had already deleted `lib/wrapped/prompt-template.ts`, so there was no `replacePlaceholders` to move; the editor's last v2 leftover, `lib/wrapped/prompt-text.ts` (the placeholder catalogue), and the now-unused `legacyWrappedData` were deleted. `styleGuideSchema` and `STYLE_GUIDE_MAX_CHARS` moved from `rewind-2026.ts` to `lib/validations/prompt.ts`, beside `styleGuideFormSchema`; the dry-run input imports them from there. `rewind-2026.ts` needed no split: it imports nothing server-only. Reads moved out of `actions/prompts.ts` into `server-only` `lib/admin/prompts/queries.ts` (`getPromptTemplates`/`getPromptTemplate` are gone). Create and update take style guides only; editing or activating a v2 row is refused (`CONFLICT`), and a v2 row may be deleted even when its legacy `isActive` is set. "Copy into a new style guide" is `/admin/prompts/new?from=<id>`, which prefills the first 1,200 characters with a note; the admin removes its placeholders before saving. `RowAction` gained `disabled`. The token codemod was not run (Phase 10 rules); `expandable-prompt.tsx` and `prompt-scrollspy.tsx` are untouched.)
 
 ### Step P10.5: Announcements and Discord admin pages
 

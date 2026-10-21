@@ -26,6 +26,8 @@ export interface RowAction {
   href?: Route
   /** Destructive items sit last, after a separator. */
   variant?: "default" | "destructive"
+  /** Shown but not selectable, such as Delete on the row in use. */
+  disabled?: boolean
 }
 
 interface RowActionsProps {
@@ -47,6 +49,7 @@ export function RowActions({ name, actions, ...props }: RowActionsProps) {
       variant={action.variant}
       icon={action.icon && <Icon icon={action.icon} />}
       onClick={action.onSelect}
+      disabled={action.disabled}
       render={action.href ? <Link href={action.href} /> : undefined}
       data-testid={testId && `${testId}-${action.id}`}
     >

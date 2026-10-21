@@ -58,6 +58,9 @@ const TABLE: Row[] = [
   ["request", "processing", "Requested", "info", icons.pending],
   ["request", "available", "Available", "success", icons.done],
   ["request", "declined", "Declined", "destructive", undefined],
+  ["prompt", "inUse", "In use", "success", "dot"],
+  ["prompt", "notInUse", "Not in use", "neutral", undefined],
+  ["prompt", "v2", "v2, not used", "outline", undefined],
 ]
 
 describe("STATUS", () => {

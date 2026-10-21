@@ -21,7 +21,6 @@
  *
  * It never throws and never logs: the result says what was wrong, and the
  * caller decides. A reason names schema paths only, never stored values.
- * {@link legacyWrappedData} wraps it for the v1/v2 viewer sites.
  *
  * ## Special cases
  *
@@ -101,21 +100,6 @@ export function parseStoredRewind(data: string | null): StoredRewind {
   return parsed.success
     ? { version, legacy: parsed.data }
     : { version: "invalid", reason: `v${version}: ${describeIssues(parsed.error)}` }
-}
-
-/**
- * The v1 or v2 data the legacy viewer renders, or null for a v3 row (which
- * the legacy viewer cannot show) and for a row that does not parse. A null
- * logs a warning with the row id and the reason only.
- */
-export function legacyWrappedData(row: { id: string; data: string | null }): StoredWrappedData | null {
-  const stored = parseStoredRewind(row.data)
-  if (stored.version === 1 || stored.version === 2) return stored.legacy
-  logger.warn("Stored Rewind cannot be shown in the legacy viewer", {
-    wrappedId: row.id,
-    reason: stored.version === 3 ? "v3" : stored.reason,
-  })
-  return null
 }
 
 const wrappedStatusSchema = z.enum(["pending", "generating", "completed", "failed"])

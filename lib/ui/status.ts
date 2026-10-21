@@ -118,6 +118,11 @@ export const STATUS = {
     available: { label: "Available", tone: "success", mark: icons.done },
     declined: { label: "Declined", tone: "destructive" },
   },
+  prompt: {
+    inUse: { label: "In use", tone: "success", mark: "dot" },
+    notInUse: { label: "Not in use", tone: "neutral" },
+    v2: { label: "v2, not used", tone: "outline" },
+  },
 } as const satisfies Record<string, Record<string, StatusEntry>>
 
 export type StatusDomain = keyof typeof STATUS
