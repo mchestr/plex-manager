@@ -35,7 +35,7 @@ test.describe('Form primitives', () => {
     await adminPage.setViewportSize({ width: 390, height: 844 });
 
     await adminPage.goto('/admin/cost-analysis');
-    for (const id of ['cost-start-date', 'cost-end-date']) {
+    for (const id of ['cost-dates-from', 'cost-dates-to']) {
       await expect(adminPage.getByTestId(id)).toHaveCSS('font-size', '16px');
     }
 
@@ -47,8 +47,8 @@ test.describe('Form primitives', () => {
 
   test('the date inputs are labelled', async ({ adminPage }) => {
     await adminPage.goto('/admin/cost-analysis');
-    await expect(adminPage.getByTestId('cost-start-date')).toHaveAccessibleName('Start date');
-    await expect(adminPage.getByTestId('cost-end-date')).toHaveAccessibleName('End date');
+    await expect(adminPage.getByTestId('cost-dates-from')).toHaveAccessibleName('From');
+    await expect(adminPage.getByTestId('cost-dates-to')).toHaveAccessibleName('To');
 
     await adminPage.goto('/admin/discord');
     await expect(adminPage.getByTestId('discord-start-date')).toHaveAccessibleName('Start date');

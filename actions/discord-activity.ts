@@ -16,7 +16,9 @@ import {
   type GetCommandLogsParams,
 } from "@/lib/discord/audit"
 import { prisma } from "@/lib/prisma"
+import { dayWindow } from "@/lib/utils/day-window"
 import { toEndOfDayExclusive } from "@/lib/utils/format"
+import { serverZone } from "@/lib/utils/server-zone"
 import { createLogger } from "@/lib/utils/logger"
 import type {
   DiscordCommandType,
@@ -83,6 +85,11 @@ export interface GetStatsParams {
   endDate: string
 }
 
+/** The params' inclusive days as a window in the server zone, for the zero-filled daily series. */
+async function statsWindow(params: GetStatsParams) {
+  return dayWindow({ from: params.startDate, to: params.endDate }, await serverZone())
+}
+
 async function getDiscordCommandStats(params: GetStatsParams) {
   await requireAdmin()
 
@@ -107,10 +114,7 @@ async function getDiscordDailyActivity(params: GetStatsParams) {
   await requireAdmin()
 
   try {
-    const activity = await getDailyActivity(
-      new Date(params.startDate),
-      toEndOfDayExclusive(params.endDate)!
-    )
+    const activity = await getDailyActivity(await statsWindow(params))
 
     return { success: true, activity }
   } catch (error) {
@@ -280,10 +284,8 @@ async function getDiscordLinkingMetrics(params: GetStatsParams) {
   await requireAdmin()
 
   try {
-    const metrics = await getAccountLinkingMetrics(
-      new Date(params.startDate),
-      toEndOfDayExclusive(params.endDate)!
-    )
+    const window = await statsWindow(params)
+    const metrics = await getAccountLinkingMetrics(window.gte, window.lt, window.zone)
 
     return { success: true, metrics }
   } catch (error) {
@@ -340,10 +342,7 @@ async function getDiscordErrorAnalysis(params: GetStatsParams) {
   await requireAdmin()
 
   try {
-    const analysis = await getErrorAnalysis(
-      new Date(params.startDate),
-      toEndOfDayExclusive(params.endDate)!
-    )
+    const analysis = await getErrorAnalysis(await statsWindow(params))
 
     return { success: true, analysis }
   } catch (error) {

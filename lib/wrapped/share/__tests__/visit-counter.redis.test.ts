@@ -46,7 +46,7 @@ describeRedis("share visit counter", (redisUrl) => {
     await redis.quit()
   })
 
-  const visit = (ip: string, now: Date) => recordShareVisit(shareId, ip, { redis, prisma, now })
+  const visit = (ip: string, now: Date) => recordShareVisit(shareId, ip, { redis, prisma, now, zone: "UTC" })
 
   it("counts a visitor once a day", async () => {
     expect(await visit("203.0.113.7", DAY_1)).toBe(true)

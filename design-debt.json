@@ -1,17 +1,12 @@
 {
   "schema": 1,
-  "commit": "17bdaf72324067c53873c270b6762cb3a8daa0f0",
-  "generatedAt": "2026-10-21T21:51:42.641Z",
+  "commit": "a348701834378e96a859792d640311f62a0250f8",
+  "generatedAt": "2026-10-21T22:21:09.987Z",
   "files": {
     "app/(app)/page.tsx": {
       "gradient": 2,
       "gradient-text": 4,
       "raw-palette": 7
-    },
-    "app/admin/cost-analysis/page.tsx": {
-      "blur": 13,
-      "infinite-motion": 1,
-      "raw-palette": 76
     },
     "app/admin/discord/page.tsx": {
       "blur": 16,
@@ -20,27 +15,17 @@
     },
     "app/admin/llm-usage/[usageId]/page.tsx": {
       "blur": 7,
-      "copy": 2,
+      "copy": 1,
       "raw-palette": 67
     },
     "app/admin/llm-usage/conversation/[conversationId]/page.tsx": {
       "caps-eyebrow": 6,
       "raw-palette": 36
     },
-    "app/admin/llm-usage/page.tsx": {
-      "blur": 5,
-      "caps-eyebrow": 7,
-      "raw-palette": 66
-    },
     "app/admin/settings/page.tsx": {
       "blur": 5,
       "copy": 1,
       "raw-palette": 95
-    },
-    "app/admin/shares/page.tsx": {
-      "blur": 6,
-      "caps-eyebrow": 6,
-      "raw-palette": 50
     },
     "app/admin/users/[userId]/page.tsx": {
       "blur": 10,
@@ -85,10 +70,6 @@
     },
     "components/admin/announcements/announcements-page-client.tsx": {
       "raw-palette": 9
-    },
-    "components/admin/cost-analysis/cost-date-filter.tsx": {
-      "blur": 1,
-      "raw-palette": 6
     },
     "components/admin/discord/discord-active-users.tsx": {
       "raw-palette": 13
@@ -538,12 +519,12 @@
   "totals": {
     "arbitrary-color": 17,
     "arbitrary-type-z": 29,
-    "blur": 101,
-    "caps-eyebrow": 71,
-    "copy": 13,
+    "blur": 76,
+    "caps-eyebrow": 58,
+    "copy": 12,
     "gradient": 82,
     "gradient-text": 46,
-    "infinite-motion": 36,
-    "raw-palette": 2294
+    "infinite-motion": 35,
+    "raw-palette": 2096
   }
 }

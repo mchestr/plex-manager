@@ -66,7 +66,8 @@ export interface AccountLinkingMetrics {
  */
 export async function getAccountLinkingMetrics(
   startDate: Date,
-  endDate: Date
+  endDate: Date,
+  zone: string
 ): Promise<AccountLinkingMetrics> {
   const where = {
     commandType: "LINK_REQUEST" as DiscordCommandType,
@@ -90,7 +91,7 @@ export async function getAccountLinkingMetrics(
   // Group by date for trend
   const requestsByDate = new Map<string, number>()
   for (const log of logs) {
-    const dateKey = toDateKey(log.createdAt)
+    const dateKey = toDateKey(log.createdAt, zone)
     requestsByDate.set(dateKey, (requestsByDate.get(dateKey) || 0) + 1)
   }
 

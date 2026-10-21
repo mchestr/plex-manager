@@ -121,6 +121,11 @@ export const STATUS = {
     usedUp: { label: "Used up", tone: "neutral" },
     revoked: { label: "Revoked", tone: "neutral" },
   },
+  share: {
+    active: { label: "Active", tone: "success", mark: "dot" },
+    expired: { label: "Expired", tone: "neutral" },
+    stopped: { label: "Stopped", tone: "neutral" },
+  },
   request: {
     pending: { label: "Waiting for approval", tone: "neutral" },
     approved: { label: "Requested", tone: "info", mark: icons.pending },

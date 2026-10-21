@@ -3,6 +3,7 @@ import {
   getSelectionMenuStats,
   getHelpCommandStats,
 } from "../errors"
+import { dayWindow } from "@/lib/utils/day-window"
 import { prisma } from "@/lib/prisma"
 import { mockReset } from 'jest-mock-extended'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
@@ -31,8 +32,9 @@ describe("getErrorAnalysis", () => {
   })
 
   it("should analyze errors by type, command, samples, and trend", async () => {
-    const startDate = new Date("2024-01-01")
-    const endDate = new Date("2024-01-31")
+    const window = dayWindow({ from: "2024-01-01", to: "2024-01-03" }, "UTC")
+    const startDate = window.gte
+    const endDate = window.lt
 
     mockCount.mockResolvedValue(3)
     mockGroupBy
@@ -62,7 +64,7 @@ describe("getErrorAnalysis", () => {
       },
     ])
 
-    const result = await getErrorAnalysis(startDate, endDate)
+    const result = await getErrorAnalysis(window)
 
     expect(mockCount).toHaveBeenCalledWith({
       where: {
@@ -87,6 +89,7 @@ describe("getErrorAnalysis", () => {
     expect(result.errorTrend).toEqual([
       { date: "2024-01-01", count: 2 },
       { date: "2024-01-02", count: 1 },
+      { date: "2024-01-03", count: 0 },
     ])
   })
 })

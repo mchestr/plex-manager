@@ -122,12 +122,21 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 **Demo.** With `Config.timezone` set to `America/Los_Angeles`, open cost analysis after 17:00 Pacific: today's bar carries today's label, the period header matches the picker, and the projection hint states its method. On a quiet day the shares chart still shows today at zero. A row opens that member's year.
 
 **Done when.**
-- [ ] All three pages bucket and label days in `Config.timezone`, include today and show an inclusive period.
-- [ ] Projections divide by calendar days, and every amount goes through `formatMoney`.
-- [ ] ChartCard is the only chart wrapper on these pages, and one Chart.js registration serves them.
-- [ ] LLM usage groups before paginating, keeps every param and links members; share rows keep the year.
+- [x] All three pages bucket and label days in `Config.timezone`, include today and show an inclusive period.
+- [x] Projections divide by calendar days, and every amount goes through `formatMoney`.
+- [x] ChartCard is the only chart wrapper on these pages, and one Chart.js registration serves them.
+- [x] LLM usage groups before paginating, keeps every param and links members; share rows keep the year.
 - [ ] axe passes and the visual baselines are updated.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
+
+**(as merged: P10.2)**
+- `lib/utils/day-window.ts`: `dayWindow(range, zone)` and `defaultWindow(days, zone, now?)` return `{ from, to, zone, gte, lt, keys }`. It also has `windowSince(first, zone)` (for "Any time": from the first row through today), `sumByDay(rows, zone, at, value?)`, `zeroFill(keys, map, empty)` (gives `{ date, ...T }[]`) and `formatPeriod(range, settings)` ("Oct 1 – Oct 17, 2026"). It builds on `lib/ui/date-range.ts`.
+- ChartCard: `components/ui/chart-card.tsx` (client) takes `{ title, description?, summary, spec, mode?, empty?, heightClassName? }`. The spec types and `rankedSpec(rows, { series, format, limit })` live in `components/ui/chart-card/chart-spec.ts`; server pages import them from there, never from the client file. The Chart.js body is `chart-card/chartjs-body.tsx` (`next/dynamic`, `ssr: false`), with its options built in `chartjs-config.ts`, which a snapshot test covers. P10.9 replaces those two files.
+- The Discord readers take a window: `getDailyActivity(window)` and `getErrorAnalysis(window)` zero-fill; `toDateKey(date, zone)` and `getAccountLinkingMetrics(start, end, zone)` take the zone. `actions/discord-activity.ts` builds the window from `startDate`/`endDate` in `serverZone()`.
+- `LLMUsage.groupKey` is `@default(uuid())`: the migration backfills `chatConversationId ?? id`, and `recordUsage` writes the conversation id. A seed that creates assistant rows sets `groupKey` itself.
+- Share visit days now count on the server zone's day (`recordShareVisit`), so the shares chart buckets visits on the days it labels. Older rows keep their UTC day.
+- New `share` status domain (Active, Expired, Stopped) and `llmConversation(id)` in `lib/admin/routes.ts`. `actions/share-analytics.ts`, `lib/wrapped/usage.ts`, `getLLMUsageStats`, `getUserById` and the old chart and filter components are gone.
+- Left for the coordinator and owner: visual and axe baselines, E2E runs, and a dump before the migration deploys.
 
 ### Step P10.3: Queues page with live status
 

@@ -1,6 +1,6 @@
 /** The admin route builders (P6.1, UI-06): each carries the year it is given and encodes ids. */
 
-import { invite, llmUsage, llmUsageDetail, playgroundFor, rewindHistory, userDetail, userRewind } from "@/lib/admin/routes"
+import { invite, llmConversation, llmUsage, llmUsageDetail, playgroundFor, rewindHistory, userDetail, userRewind } from "@/lib/admin/routes"
 
 describe("admin routes", () => {
   it("builds the user pages, with the year on the Rewind link", () => {
@@ -14,6 +14,8 @@ describe("admin routes", () => {
     expect(llmUsage()).toBe("/admin/llm-usage")
     expect(llmUsage({ userId: "u1" })).toBe("/admin/llm-usage?userId=u1")
     expect(llmUsage({ userId: "u1", year: 2025 })).toBe("/admin/llm-usage?userId=u1&year=2025")
+    expect(llmUsage({ from: "2026-10-01", to: "2026-10-31" })).toBe("/admin/llm-usage?from=2026-10-01&to=2026-10-31")
+    expect(llmConversation("c/1")).toBe("/admin/llm-usage/conversation/c%2F1")
   })
 
   it("builds the detail pages", () => {

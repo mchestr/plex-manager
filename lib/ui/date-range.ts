@@ -25,7 +25,7 @@ export function isDayKey(value: string): boolean {
   return isWallTime(`${value}T00:00`)
 }
 
-/** `key` moved by `days` calendar days. @internal */
+/** `key` moved by `days` calendar days. */
 export function addDays(key: string, days: number): string {
   const [year, month, day] = key.split("-").map(Number)
   return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10)

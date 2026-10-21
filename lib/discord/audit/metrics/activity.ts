@@ -7,6 +7,8 @@
 
 import { prisma } from "@/lib/prisma"
 import type { DiscordCommandType } from "@/lib/generated/prisma/client"
+import { zeroFill, type DayWindow } from "@/lib/utils/day-window"
+
 import { dateRangeWhere, toDateKey } from "../query-helpers"
 
 export interface DailyActivity {
@@ -17,15 +19,12 @@ export interface DailyActivity {
 }
 
 /**
- * Get daily activity counts for trending chart
+ * Daily command counts for the trend chart: one entry per day of the window,
+ * keyed in its zone, with zeros on quiet days.
  */
-export async function getDailyActivity(
-  startDate: Date,
-  endDate: Date
-): Promise<DailyActivity[]> {
-  // Get all logs in the date range
+export async function getDailyActivity(window: DayWindow): Promise<DailyActivity[]> {
   const logs = await prisma.discordCommandLog.findMany({
-    where: dateRangeWhere(startDate, endDate),
+    where: dateRangeWhere(window.gte, window.lt),
     select: {
       createdAt: true,
       status: true,
@@ -42,7 +41,7 @@ export async function getDailyActivity(
   >()
 
   for (const log of logs) {
-    const dateKey = toDateKey(log.createdAt)
+    const dateKey = toDateKey(log.createdAt, window.zone)
     const existing = activityByDate.get(dateKey) || {
       total: 0,
       success: 0,
@@ -57,11 +56,7 @@ export async function getDailyActivity(
     activityByDate.set(dateKey, existing)
   }
 
-  // Convert to array
-  return Array.from(activityByDate.entries()).map(([date, counts]) => ({
-    date,
-    ...counts,
-  }))
+  return zeroFill(window.keys, activityByDate, { total: 0, success: 0, failed: 0 })
 }
 
 export interface SummaryStats {
