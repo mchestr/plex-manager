@@ -5,7 +5,7 @@
  */
 
 import { icons } from "@/lib/ui/icons"
-import { resolveStatus, settingsCategory, STATUS, type StatusDomain, type StatusMark, type Tone } from "@/lib/ui/status"
+import { discordStatus, type DiscordState, resolveStatus, settingsCategory, STATUS, type StatusDomain, type StatusMark, type Tone } from "@/lib/ui/status"
 import { formatDate, formatRelative } from "@/lib/utils/format"
 
 type Row = [domain: StatusDomain, value: string, label: string, tone: Tone, mark: StatusMark | undefined]
@@ -69,6 +69,20 @@ const TABLE: Row[] = [
   ["prompt", "inUse", "In use", "success", "dot"],
   ["prompt", "notInUse", "Not in use", "neutral", undefined],
   ["prompt", "v2", "v2, not used", "outline", undefined],
+  ["announcement", "active", "Active", "success", "dot"],
+  ["announcement", "hidden", "Hidden", "neutral", undefined],
+  ["announcement", "expired", "Expired", "destructive", undefined],
+  ["linkedRoles", "on", "On", "success", "dot"],
+  ["linkedRoles", "needsSetup", "Needs setup", "warning", icons.warning],
+  ["linkedRoles", "off", "Off", "neutral", "dot"],
+  ["supportBot", "online", "Online", "success", "dot"],
+  ["supportBot", "offline", "Offline", "destructive", "dot"],
+  ["supportBot", "needsSetup", "Needs setup", "warning", icons.warning],
+  ["supportBot", "off", "Off", "neutral", "dot"],
+  ["discordCommand", "SUCCESS", "Succeeded", "success", "dot"],
+  ["discordCommand", "FAILED", "Failed", "destructive", undefined],
+  ["discordCommand", "PENDING", "Running", "info", "spinner"],
+  ["discordCommand", "TIMEOUT", "Timed out", "warning", icons.warning],
 ]
 
 describe("STATUS", () => {
@@ -137,5 +151,55 @@ describe("settingsCategory", () => {
     ["notConfigured", "off", "Off, not set up or not checked", "neutral", icons.notChecked],
   ] as const)("%s is %s", (status, category, label, tone, icon) => {
     expect(settingsCategory(status)).toEqual({ category, label, tone, icon })
+  })
+})
+
+describe("discordStatus", () => {
+  const now = new Date("2026-10-20T19:14:30Z")
+  const chicago = { timeZone: "America/Chicago", locale: "en-US" }
+  const ready: DiscordState = {
+    isEnabled: true,
+    hasClientCredentials: true,
+    botEnabled: true,
+    hasBotToken: true,
+    lastRenewedAt: new Date("2026-10-20T19:14:18Z"),
+  }
+  const rows = (patch: Partial<DiscordState>) => discordStatus({ ...ready, ...patch }, now, chicago)
+
+  it("reads both rows on when everything is set up and the lease is fresh", () => {
+    const { linkedRoles, supportBot } = rows({})
+    expect(linkedRoles.label).toBe("On")
+    expect(supportBot).toMatchObject({ label: "Online", tone: "success", sub: "Lease renewed 12 seconds ago" })
+  })
+
+  it.each([
+    [{ isEnabled: false }, "Off"],
+    [{ isEnabled: false, hasClientCredentials: false }, "Off"],
+    [{ hasClientCredentials: false }, "Needs setup"],
+  ])("linked roles with %o read %s", (patch, label) => {
+    expect(rows(patch).linkedRoles.label).toBe(label)
+  })
+
+  it.each([
+    [{ botEnabled: false }, "Off"],
+    [{ botEnabled: false, lastRenewedAt: null }, "Off"],
+    [{ hasBotToken: false }, "Needs setup"],
+    [{ lastRenewedAt: null }, "Offline"],
+    [{ lastRenewedAt: new Date(now.getTime() - 90_000) }, "Online"],
+    [{ lastRenewedAt: new Date(now.getTime() - 90_001) }, "Offline"],
+  ])("the support bot with %o reads %s", (patch, label) => {
+    expect(rows(patch).supportBot.label).toBe(label)
+  })
+
+  it("dates an offline bot from its last renewal in the server zone", () => {
+    const stale = rows({ lastRenewedAt: new Date("2026-10-20T14:14:00Z") }).supportBot
+    expect(stale).toMatchObject({ label: "Offline", tone: "destructive", sub: "Since Oct 20, 2026, 9:14 AM CDT" })
+    expect(rows({ lastRenewedAt: null }).supportBot.sub).toBeUndefined()
+  })
+
+  it("keeps linked roles on while the bot is offline", () => {
+    const { linkedRoles, supportBot } = rows({ lastRenewedAt: null })
+    expect(linkedRoles.label).toBe("On")
+    expect(supportBot.label).toBe("Offline")
   })
 })

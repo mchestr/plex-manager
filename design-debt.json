@@ -1,13 +1,8 @@
 {
   "schema": 1,
-  "commit": "38955dff068e2733d5c844475b6da08c790dd452",
-  "generatedAt": "2026-10-21T22:28:34.428Z",
+  "commit": "e6a1ac14117a5a4db1d4cf62dda989ed6c03e59a",
+  "generatedAt": "2026-10-21T22:28:51.994Z",
   "files": {
-    "app/admin/discord/page.tsx": {
-      "blur": 16,
-      "infinite-motion": 2,
-      "raw-palette": 73
-    },
     "app/admin/llm-usage/[usageId]/page.tsx": {
       "blur": 7,
       "copy": 1,
@@ -48,32 +43,8 @@
     "app/subscribe/success/page.tsx": {
       "raw-palette": 3
     },
-    "components/admin/announcements/announcement-form-modal.tsx": {
-      "raw-palette": 11
-    },
-    "components/admin/announcements/announcement-list-item.tsx": {
-      "raw-palette": 21
-    },
-    "components/admin/announcements/announcements-page-client.tsx": {
-      "raw-palette": 9
-    },
-    "components/admin/discord/discord-active-users.tsx": {
-      "raw-palette": 13
-    },
-    "components/admin/discord/discord-activity-table.tsx": {
-      "raw-palette": 40
-    },
-    "components/admin/discord/discord-bot-status.tsx": {
-      "blur": 2,
-      "infinite-motion": 2,
-      "raw-palette": 15
-    },
     "components/admin/discord/discord-context-metrics.tsx": {
       "raw-palette": 7
-    },
-    "components/admin/discord/discord-date-filter.tsx": {
-      "blur": 1,
-      "raw-palette": 3
     },
     "components/admin/discord/discord-error-analysis.tsx": {
       "raw-palette": 13
@@ -205,11 +176,9 @@
       "raw-palette": 9
     },
     "components/dashboard/announcements-card.tsx": {
-      "arbitrary-type-z": 1,
-      "caps-eyebrow": 1,
-      "gradient": 4,
-      "infinite-motion": 3,
-      "raw-palette": 29
+      "gradient": 3,
+      "infinite-motion": 2,
+      "raw-palette": 25
     },
     "components/setup/setup-wizard/dev-mode-banner.tsx": {
       "raw-palette": 8
@@ -433,13 +402,13 @@
     }
   },
   "totals": {
-    "arbitrary-type-z": 29,
-    "blur": 72,
-    "caps-eyebrow": 54,
+    "arbitrary-type-z": 28,
+    "blur": 53,
+    "caps-eyebrow": 53,
     "copy": 12,
-    "gradient": 57,
+    "gradient": 56,
     "gradient-text": 32,
-    "infinite-motion": 30,
-    "raw-palette": 1727
+    "infinite-motion": 25,
+    "raw-palette": 1538
   }
 }

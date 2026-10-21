@@ -11,7 +11,7 @@
  *   `triangle-alert` (3.1) unless the table names another mark.
  * - `label` and `sub` may hold placeholders, which `resolveStatus` fills:
  *   `{date}` ("Nov 6, 2026"), `{day}` ("Oct 20"), `{ago}` ("2 minutes ago"),
- *   `{by}`, `{left}` and `{total}`.
+ *   `{time}` ("Oct 20, 2026, 2:14 PM CST"), `{by}`, `{left}` and `{total}`.
  *
  * ## Special cases
  *
@@ -34,7 +34,7 @@
 import type { LucideIcon } from "lucide-react"
 
 import { icons } from "@/lib/ui/icons"
-import { formatDate, formatRelative, type DateInput, type FormatSettings } from "@/lib/utils/format"
+import { formatDate, formatDateTime, formatRelative, type DateInput, type FormatSettings } from "@/lib/utils/format"
 
 /** How a state reads: a status colour, a neutral or outline badge, or plain text. */
 export type Tone = "success" | "warning" | "info" | "destructive" | "neutral" | "outline" | "plain"
@@ -138,6 +138,30 @@ export const STATUS = {
     notInUse: { label: "Not in use", tone: "neutral" },
     v2: { label: "v2, not used", tone: "outline" },
   },
+  // The announcements admin table (P10.5)
+  announcement: {
+    active: { label: "Active", tone: "success", mark: "dot" },
+    hidden: { label: "Hidden", tone: "neutral" },
+    expired: { label: "Expired", tone: "destructive" },
+  },
+  // The Discord page's two status rows (P10.5), from `discordStatus`
+  linkedRoles: {
+    on: { label: "On", tone: "success", mark: "dot" },
+    needsSetup: { label: "Needs setup", ...warning, sub: "Add the client ID and secret in settings" },
+    off: { label: "Off", tone: "neutral", mark: "dot" },
+  },
+  supportBot: {
+    online: { label: "Online", tone: "success", mark: "dot", sub: "Lease renewed {ago}" },
+    offline: { label: "Offline", tone: "destructive", mark: "dot", sub: "Since {time}" },
+    needsSetup: { label: "Needs setup", ...warning, sub: "Add the bot token in settings" },
+    off: { label: "Off", tone: "neutral", mark: "dot" },
+  },
+  discordCommand: {
+    SUCCESS: { label: "Succeeded", tone: "success", mark: "dot" },
+    FAILED: { label: "Failed", tone: "destructive" },
+    PENDING: { label: "Running", tone: "info", mark: "spinner" },
+    TIMEOUT: { label: "Timed out", ...warning },
+  },
 } as const satisfies Record<string, Record<string, StatusEntry>>
 
 export type StatusDomain = keyof typeof STATUS
@@ -171,6 +195,7 @@ function placeholders(fill: StatusFill): Record<string, string | undefined> {
     date: date === undefined ? undefined : formatDate(date, "short", settings),
     day: date === undefined ? undefined : formatDate(date, "day-month-short", settings),
     ago: date === undefined || now === undefined ? undefined : formatRelative(date, { ...settings, now }),
+    time: date === undefined ? undefined : formatDateTime(date, settings, { zoneLabel: true }),
     by: fill.by,
     left: fill.usesLeft?.toString(),
     total: fill.usesTotal?.toString(),
@@ -234,4 +259,36 @@ const CATEGORY_OF = {
 export function settingsCategory(status: StatusValue<"connection">) {
   const category = CATEGORY_OF[status]
   return { category, ...CATEGORIES[category] }
+}
+
+/** A `DiscordBotLock` renewed within this long counts as a live bot (a lease lasts 30 s). */
+const DISCORD_HEARTBEAT_MS = 90_000
+
+export interface DiscordState {
+  /** `DiscordIntegration.isEnabled`: linked roles and account linking. */
+  isEnabled: boolean
+  /** A client ID and secret are saved. */
+  hasClientCredentials: boolean
+  /** `DiscordIntegration.botEnabled`: the support bot. */
+  botEnabled: boolean
+  hasBotToken: boolean
+  /** The bot lease's last renewal, or null when no instance ever held it. */
+  lastRenewedAt: Date | null
+}
+
+/**
+ * The Discord page's two rows (P10.5, UI-08): "Linked roles" from the enabled
+ * flag and the OAuth credentials, and "Support bot" from `botEnabled`, the
+ * token and a lease heartbeat within {@link DISCORD_HEARTBEAT_MS}. Each row
+ * reads on its own, so a stopped bot never turns linked roles off.
+ */
+export function discordStatus(state: DiscordState, now: Date, settings?: FormatSettings) {
+  const linkedRoles = !state.isEnabled ? "off" : state.hasClientCredentials ? "on" : "needsSetup"
+  const live = state.lastRenewedAt !== null && now.getTime() - state.lastRenewedAt.getTime() <= DISCORD_HEARTBEAT_MS
+  const supportBot = !state.botEnabled ? "off" : !state.hasBotToken ? "needsSetup" : live ? "online" : "offline"
+  const fill = { date: state.lastRenewedAt ?? undefined, now, settings }
+  return {
+    linkedRoles: resolveStatus("linkedRoles", linkedRoles),
+    supportBot: resolveStatus("supportBot", supportBot, fill),
+  }
 }

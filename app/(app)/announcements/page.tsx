@@ -4,11 +4,9 @@ import { redirect } from "next/navigation"
 
 import { getActiveAnnouncements } from "@/actions/announcements"
 import { MarkAnnouncementsSeen } from "@/components/announcements/mark-announcements-seen"
-import { NewPip } from "@/components/announcements/new-pip"
+import { AnnouncementItem } from "@/components/announcements/announcement-item"
 import { Card, CardContent } from "@/components/ui/card"
 import { EmptyState } from "@/components/ui/empty-state"
-import { MarkdownBody } from "@/components/ui/markdown-body"
-import { Time } from "@/components/ui/time"
 import { authOptions } from "@/lib/auth"
 import { isNewAnnouncement, newestCreatedAt } from "@/lib/member/announcements"
 import { prisma } from "@/lib/prisma"
@@ -51,31 +49,13 @@ export default async function AnnouncementsPage() {
           </Card>
         ) : (
           <div className="flex flex-col gap-4" data-testid="announcements-list">
-            {announcements.map((announcement) => {
-              const titleId = `announcement-${announcement.id}-title`
-              return (
-                <Card key={announcement.id}>
-                  <CardContent className="p-6">
-                    <article
-                      aria-labelledby={titleId}
-                      className="flex flex-col gap-3"
-                      data-testid={`announcement-${announcement.id}`}
-                    >
-                      <div className="flex items-center gap-2">
-                        {isNewAnnouncement(announcement.createdAt, seenAt) && (
-                          <NewPip data-testid={`announcement-${announcement.id}-new`} />
-                        )}
-                        <h2 id={titleId} className="text-h3 text-foreground">
-                          {announcement.title}
-                        </h2>
-                      </div>
-                      <Time value={announcement.createdAt} className="text-caption text-muted-foreground" />
-                      <MarkdownBody className="text-ui text-foreground">{announcement.content}</MarkdownBody>
-                    </article>
-                  </CardContent>
-                </Card>
-              )
-            })}
+            {announcements.map((announcement) => (
+              <Card key={announcement.id}>
+                <CardContent className="p-6">
+                  <AnnouncementItem announcement={announcement} isNew={isNewAnnouncement(announcement.createdAt, seenAt)} />
+                </CardContent>
+              </Card>
+            ))}
           </div>
         )}
       </div>

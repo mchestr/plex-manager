@@ -80,6 +80,7 @@ export async function getDiscordActivityLogs(params: GetActivityLogsParams = {})
   }
 }
 
+/** An inclusive range of `YYYY-MM-DD` day keys in the server zone (`?from=` and `?to=`). */
 export interface GetStatsParams {
   startDate: string
   endDate: string
@@ -90,13 +91,18 @@ async function statsWindow(params: GetStatsParams) {
   return dayWindow({ from: params.startDate, to: params.endDate }, await serverZone())
 }
 
+/** The same window as instants: its first midnight and the midnight after its last day. */
+async function statBounds(params: GetStatsParams): Promise<[Date, Date]> {
+  const { gte, lt } = await statsWindow(params)
+  return [gte, lt]
+}
+
 async function getDiscordCommandStats(params: GetStatsParams) {
   await requireAdmin()
 
   try {
     const stats = await getCommandStats(
-      new Date(params.startDate),
-      toEndOfDayExclusive(params.endDate)!
+      ...(await statBounds(params))
     )
 
     return { success: true, stats }
@@ -132,8 +138,7 @@ async function getDiscordActiveUsers(params: GetStatsParams & { limit?: number }
 
   try {
     const users = await getActiveUsers(
-      new Date(params.startDate),
-      toEndOfDayExclusive(params.endDate)!,
+      ...(await statBounds(params)),
       params.limit ?? 20
     )
 
@@ -159,8 +164,7 @@ async function getDiscordSummaryStats(params: GetStatsParams) {
 
   try {
     const summary = await getSummaryStats(
-      new Date(params.startDate),
-      toEndOfDayExclusive(params.endDate)!
+      ...(await statBounds(params))
     )
 
     return { success: true, summary }
@@ -174,70 +178,15 @@ async function getDiscordSummaryStats(params: GetStatsParams) {
   }
 }
 
-async function getDiscordBotStatus() {
-  await requireAdmin()
-
-  try {
-    // Get Discord integration settings
-    const integration = await prisma.discordIntegration.findUnique({
-      where: { id: "discord" },
-    })
-
-    // Get bot lock status
-    const lock = await prisma.discordBotLock.findUnique({
-      where: { id: "discord-bot" },
-    })
-
-    // Check if lock is still valid (not expired)
-    const isLockValid = lock != null && lock.expiresAt > new Date()
-
-    // Get recent activity count (last hour)
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
-    const recentActivityCount = await prisma.discordCommandLog.count({
-      where: {
-        createdAt: { gte: oneHourAgo },
-      },
-    })
-
-    // Get last command time
-    const lastCommand = await prisma.discordCommandLog.findFirst({
-      orderBy: { createdAt: "desc" },
-      select: { createdAt: true },
-    })
-
-    return {
-      success: true,
-      status: {
-        isEnabled: integration?.isEnabled ?? false,
-        botEnabled: integration?.botEnabled ?? false,
-        isConnected: isLockValid,
-        instanceId: lock?.instanceId ?? null,
-        lastRenewedAt: lock?.lastRenewedAt?.toISOString() ?? null,
-        expiresAt: lock?.expiresAt?.toISOString() ?? null,
-        recentActivityCount,
-        lastCommandAt: lastCommand?.createdAt?.toISOString() ?? null,
-      },
-    }
-  } catch (error) {
-    logger.error("Failed to get Discord bot status", error instanceof Error ? error : undefined)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Failed to get bot status",
-      status: null,
-    }
-  }
-}
-
 export async function getDiscordDashboardData(params: GetStatsParams) {
   await requireAdmin()
 
   try {
-    const [summaryResult, activityResult, statsResult, usersResult, statusResult] = await Promise.all([
+    const [summaryResult, activityResult, statsResult, usersResult] = await Promise.all([
       getDiscordSummaryStats(params),
       getDiscordDailyActivity(params),
       getDiscordCommandStats(params),
       getDiscordActiveUsers({ ...params, limit: 10 }),
-      getDiscordBotStatus(),
     ])
 
     return {
@@ -247,7 +196,6 @@ export async function getDiscordDashboardData(params: GetStatsParams) {
         dailyActivity: activityResult.success ? activityResult.activity : [],
         commandStats: statsResult.success ? statsResult.stats : [],
         activeUsers: usersResult.success ? usersResult.users : [],
-        botStatus: statusResult.success ? statusResult.status : null,
       },
     }
   } catch (error) {
@@ -265,8 +213,7 @@ async function getDiscordHelpStats(params: GetStatsParams) {
 
   try {
     const stats = await getHelpCommandStats(
-      new Date(params.startDate),
-      toEndOfDayExclusive(params.endDate)!
+      ...(await statBounds(params))
     )
 
     return { success: true, stats }
@@ -303,8 +250,7 @@ async function getDiscordMediaMarkingBreakdown(params: GetStatsParams) {
 
   try {
     const breakdown = await getMediaMarkingBreakdown(
-      new Date(params.startDate),
-      toEndOfDayExclusive(params.endDate)!
+      ...(await statBounds(params))
     )
 
     return { success: true, breakdown }
@@ -323,8 +269,7 @@ async function getDiscordContextMetrics(params: GetStatsParams) {
 
   try {
     const metrics = await getContextMetrics(
-      new Date(params.startDate),
-      toEndOfDayExclusive(params.endDate)!
+      ...(await statBounds(params))
     )
 
     return { success: true, metrics }
@@ -360,8 +305,7 @@ async function getDiscordSelectionStats(params: GetStatsParams) {
 
   try {
     const stats = await getSelectionMenuStats(
-      new Date(params.startDate),
-      toEndOfDayExclusive(params.endDate)!
+      ...(await statBounds(params))
     )
 
     return { success: true, stats }
@@ -441,8 +385,9 @@ export async function getDiscordMarkedMedia(params: GetMarkedMediaParams = {}) {
   await requireAdmin()
 
   try {
-    const startDate = params.startDate ? new Date(params.startDate) : undefined
-    const endDate = toEndOfDayExclusive(params.endDate)
+    const range =
+      params.startDate && params.endDate ? await statBounds({ startDate: params.startDate, endDate: params.endDate }) : null
+    const [startDate, endDate] = range ?? [undefined, undefined]
 
     // Date range applies to when the mark was made.
     const markedAtFilter: Prisma.DateTimeFilter = {}

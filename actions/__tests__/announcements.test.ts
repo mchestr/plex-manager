@@ -3,14 +3,14 @@
  *
  * These tests cover:
  * - Getting active announcements (filters expired/inactive)
- * - Admin-only operations (create, update, delete, setActive)
- * - Input validation with Zod
- * - Prisma error handling (P2025 not found)
+ * - Admin-only adminActions (create, update, delete, setActive) (P10.5)
+ * - Input validation with the shared announcementSchema
+ * - Revalidating home, /announcements and the admin page
+ * - Prisma not-found (P2025) as NOT_FOUND
  */
 
 import {
   getActiveAnnouncements,
-  getAllAnnouncements,
   createAnnouncement,
   updateAnnouncement,
   deleteAnnouncement,
@@ -20,6 +20,7 @@ import { getServerSession } from 'next-auth'
 import { revalidatePath } from 'next/cache'
 import { mockReset } from 'jest-mock-extended'
 import { prismaMock } from '@/__tests__/helpers/prisma-mock'
+import { Prisma } from '@/lib/generated/prisma/client'
 
 // Mock dependencies
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
@@ -123,312 +124,162 @@ describe('announcements actions', () => {
     })
   })
 
-  describe('getAllAnnouncements', () => {
-    it('should return all announcements for admin', async () => {
-      mockGetServerSession.mockResolvedValue(mockAdminSession)
-      mockPrisma.announcement.findMany.mockResolvedValue([mockAnnouncement])
-
-      const result = await getAllAnnouncements()
-
-      expect(result).toHaveLength(1)
-      expect(result[0].id).toBe('ann-123')
-    })
-
-    it('should return empty array for non-admin', async () => {
-      mockGetServerSession.mockResolvedValue(mockNonAdminSession)
-
-      const result = await getAllAnnouncements()
-
-      expect(result).toEqual([])
-      expect(mockPrisma.announcement.findMany).not.toHaveBeenCalled()
-    })
-
-    it('should return empty array when not authenticated', async () => {
-      mockGetServerSession.mockResolvedValue(null)
-
-      const result = await getAllAnnouncements()
-
-      expect(result).toEqual([])
-    })
-  })
+  const PATHS = ['/', '/announcements', '/admin/announcements']
+  const expectRevalidated = () => PATHS.forEach((path) => expect(mockRevalidatePath).toHaveBeenCalledWith(path))
+  const notFound = () => new Prisma.PrismaClientKnownRequestError('Record not found', { code: 'P2025', clientVersion: '7' })
+  const input = { title: 'Storage upgrade', content: '- Disks swap', priority: 10, isActive: true, expiresAt: '' }
 
   describe('createAnnouncement', () => {
-    it('should create announcement for admin', async () => {
-      mockGetServerSession.mockResolvedValue(mockAdminSession)
+    beforeEach(() => mockGetServerSession.mockResolvedValue(mockAdminSession))
+
+    it('creates the announcement and revalidates the three pages', async () => {
       mockPrisma.announcement.create.mockResolvedValue(mockAnnouncement)
 
-      const result = await createAnnouncement({
-        title: 'Test Announcement',
-        content: 'This is test content',
-        priority: 10,
-        isActive: true,
-        expiresAt: '2025-12-31T00:00',
-      })
+      await expect(createAnnouncement(input)).resolves.toEqual({ success: true, data: { id: 'ann-123' } })
 
-      expect(result.success).toBe(true)
-      expect(result.data?.title).toBe('Test Announcement')
-      expect(mockRevalidatePath).toHaveBeenCalledWith('/')
-      expect(mockRevalidatePath).toHaveBeenCalledWith('/admin/announcements')
+      expect(mockPrisma.announcement.create).toHaveBeenCalledWith({
+        data: { ...input, expiresAt: null, createdBy: 'admin-123' },
+        select: { id: true },
+      })
+      expectRevalidated()
     })
 
     it('reads the expiry as wall time in the server zone', async () => {
-      mockGetServerSession.mockResolvedValue(mockAdminSession)
       mockPrisma.config.findUnique.mockResolvedValue({ timezone: 'America/Los_Angeles' } as never)
       mockPrisma.announcement.create.mockResolvedValue(mockAnnouncement)
 
-      await createAnnouncement({ title: 'T', content: 'C', priority: 0, isActive: true, expiresAt: '2026-12-31T23:59' })
+      await createAnnouncement({ ...input, expiresAt: '2026-12-31T23:59' })
 
-      expect(mockPrisma.announcement.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({ expiresAt: new Date('2027-01-01T07:59:00Z') }),
-      })
+      expect(mockPrisma.announcement.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ expiresAt: new Date('2027-01-01T07:59:00Z') }) })
+      )
     })
 
     it('rejects an expiry with a zone or offset, which would bypass the server zone', async () => {
-      mockGetServerSession.mockResolvedValue(mockAdminSession)
+      const result = await createAnnouncement({ ...input, expiresAt: '2026-12-31T23:59:00Z' })
 
-      const result = await createAnnouncement({ title: 'T', content: 'C', priority: 0, isActive: true, expiresAt: '2026-12-31T23:59:00Z' })
-
-      expect(result).toEqual({ success: false, error: 'Invalid date format' })
+      expect(result).toMatchObject({ success: false, code: 'VALIDATION', fieldErrors: { expiresAt: ['Enter a date and time'] } })
       expect(mockPrisma.announcement.create).not.toHaveBeenCalled()
     })
 
-    it('should reject for non-admin', async () => {
+    it.each([
+      [{ title: '' }, 'title', 'Add a title'],
+      [{ title: 'a'.repeat(201) }, 'title', 'Keep the title to 200 characters'],
+      [{ content: '   ' }, 'content', 'Add the announcement text'],
+      [{ content: 'a'.repeat(5001) }, 'content', 'Keep the text to 5,000 characters'],
+      [{ priority: 101 }, 'priority', 'Priority is a whole number from 0 to 100'],
+    ])('rejects %o with a field error', async (patch, field, message) => {
+      const result = await createAnnouncement({ ...input, ...patch })
+
+      expect(result).toMatchObject({ success: false, code: 'VALIDATION', fieldErrors: { [field]: [message] } })
+      expect(mockPrisma.announcement.create).not.toHaveBeenCalled()
+    })
+
+    it('refuses a member', async () => {
       mockGetServerSession.mockResolvedValue(mockNonAdminSession)
 
-      const result = await createAnnouncement({
-        title: 'Test',
-        content: 'Content',
-        priority: 0,
-        isActive: true,
-      })
-
-      expect(result.success).toBe(false)
-      expect(result.error).toBe('Unauthorized')
+      await expect(createAnnouncement(input)).resolves.toMatchObject({ success: false, code: 'FORBIDDEN' })
+      expect(mockPrisma.announcement.create).not.toHaveBeenCalled()
     })
 
-    it('should validate title is required', async () => {
-      mockGetServerSession.mockResolvedValue(mockAdminSession)
+    it('returns its own copy, never the database error', async () => {
+      mockPrisma.announcement.create.mockRejectedValue(new Error('connection refused at db:5432'))
 
-      const result = await createAnnouncement({
-        title: '',
-        content: 'Content',
-        priority: 0,
-        isActive: true,
+      await expect(createAnnouncement(input)).resolves.toEqual({
+        success: false,
+        code: 'INTERNAL',
+        error: "Couldn't create the announcement",
       })
-
-      expect(result.success).toBe(false)
-      expect(result.error).toBe('Title is required')
-    })
-
-    it('should validate content is required', async () => {
-      mockGetServerSession.mockResolvedValue(mockAdminSession)
-
-      const result = await createAnnouncement({
-        title: 'Title',
-        content: '',
-        priority: 0,
-        isActive: true,
-      })
-
-      expect(result.success).toBe(false)
-      expect(result.error).toBe('Content is required')
-    })
-
-    it('should validate title max length', async () => {
-      mockGetServerSession.mockResolvedValue(mockAdminSession)
-
-      const result = await createAnnouncement({
-        title: 'a'.repeat(201),
-        content: 'Content',
-        priority: 0,
-        isActive: true,
-      })
-
-      expect(result.success).toBe(false)
-      expect(result.error).toBe('Title too long')
-    })
-
-    it('should validate invalid date format', async () => {
-      mockGetServerSession.mockResolvedValue(mockAdminSession)
-
-      const result = await createAnnouncement({
-        title: 'Title',
-        content: 'Content',
-        expiresAt: 'invalid-date',
-        priority: 0,
-        isActive: true,
-      })
-
-      expect(result.success).toBe(false)
-      expect(result.error).toBe('Invalid date format')
-    })
-
-    it('should allow null expiresAt', async () => {
-      mockGetServerSession.mockResolvedValue(mockAdminSession)
-      mockPrisma.announcement.create.mockResolvedValue({
-        ...mockAnnouncement,
-        expiresAt: null,
-      })
-
-      const result = await createAnnouncement({
-        title: 'Test',
-        content: 'Content',
-        expiresAt: null,
-        priority: 0,
-        isActive: true,
-      })
-
-      expect(result.success).toBe(true)
-      expect(result.data?.expiresAt).toBeNull()
     })
   })
 
   describe('updateAnnouncement', () => {
-    it('should update announcement for admin', async () => {
-      mockGetServerSession.mockResolvedValue(mockAdminSession)
+    beforeEach(() => mockGetServerSession.mockResolvedValue(mockAdminSession))
+
+    it('updates the row and revalidates the three pages', async () => {
       mockPrisma.announcement.update.mockResolvedValue(mockAnnouncement)
 
-      const result = await updateAnnouncement({
-        id: 'ann-123',
-        title: 'Updated Title',
-        content: 'Updated content',
-        priority: 5,
-        isActive: true,
-        expiresAt: null,
-      })
-
-      expect(result.success).toBe(true)
-      expect(mockRevalidatePath).toHaveBeenCalledWith('/')
-    })
-
-    it('reads the expiry as wall time in the server zone', async () => {
-      mockGetServerSession.mockResolvedValue(mockAdminSession)
-      mockPrisma.config.findUnique.mockResolvedValue({ timezone: 'America/Chicago' } as never)
-      mockPrisma.announcement.update.mockResolvedValue(mockAnnouncement)
-
-      await updateAnnouncement({ id: 'ann-123', title: 'T', content: 'C', priority: 0, isActive: true, expiresAt: '2026-12-31T23:59' })
+      await expect(updateAnnouncement({ id: 'ann-123', ...input })).resolves.toEqual({ success: true, data: { id: 'ann-123' } })
 
       expect(mockPrisma.announcement.update).toHaveBeenCalledWith({
         where: { id: 'ann-123' },
-        data: expect.objectContaining({ expiresAt: new Date('2027-01-01T05:59:00Z') }),
+        data: { title: input.title, content: input.content, priority: 10, isActive: true, expiresAt: null },
       })
+      expectRevalidated()
     })
 
-    it('should return error for non-existent announcement', async () => {
-      mockGetServerSession.mockResolvedValue(mockAdminSession)
-      mockPrisma.announcement.update.mockRejectedValue({ code: 'P2025' })
+    it('converts the expiry in the server zone', async () => {
+      mockPrisma.config.findUnique.mockResolvedValue({ timezone: 'Europe/Berlin' } as never)
+      mockPrisma.announcement.update.mockResolvedValue(mockAnnouncement)
 
-      const result = await updateAnnouncement({
-        id: 'non-existent',
-        title: 'Title',
-        content: 'Content',
-        priority: 0,
-        isActive: true,
-      })
+      await updateAnnouncement({ id: 'ann-123', ...input, expiresAt: '2026-07-01T12:00' })
 
-      expect(result.success).toBe(false)
-      expect(result.error).toBe('Announcement not found')
+      expect(mockPrisma.announcement.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ expiresAt: new Date('2026-07-01T10:00:00Z') }) })
+      )
     })
 
-    it('should reject for non-admin', async () => {
+    it('reads a missing row as NOT_FOUND', async () => {
+      mockPrisma.announcement.update.mockRejectedValue(notFound())
+
+      await expect(updateAnnouncement({ id: 'gone', ...input })).resolves.toMatchObject({ success: false, code: 'NOT_FOUND' })
+    })
+
+    it('refuses a member', async () => {
       mockGetServerSession.mockResolvedValue(mockNonAdminSession)
 
-      const result = await updateAnnouncement({
-        id: 'ann-123',
-        title: 'Title',
-        content: 'Content',
-        priority: 0,
-        isActive: true,
-      })
-
-      expect(result.success).toBe(false)
-      expect(result.error).toBe('Unauthorized')
+      await expect(updateAnnouncement({ id: 'ann-123', ...input })).resolves.toMatchObject({ code: 'FORBIDDEN' })
     })
   })
 
   describe('deleteAnnouncement', () => {
-    it('should delete announcement for admin', async () => {
-      mockGetServerSession.mockResolvedValue(mockAdminSession)
+    beforeEach(() => mockGetServerSession.mockResolvedValue(mockAdminSession))
+
+    it('deletes the row and revalidates the three pages', async () => {
       mockPrisma.announcement.delete.mockResolvedValue(mockAnnouncement)
 
-      const result = await deleteAnnouncement('ann-123')
+      await expect(deleteAnnouncement({ id: 'ann-123' })).resolves.toEqual({ success: true, data: null })
 
-      expect(result.success).toBe(true)
-      expect(mockRevalidatePath).toHaveBeenCalledWith('/')
-      expect(mockRevalidatePath).toHaveBeenCalledWith('/admin/announcements')
+      expect(mockPrisma.announcement.delete).toHaveBeenCalledWith({ where: { id: 'ann-123' } })
+      expectRevalidated()
     })
 
-    it('should return error for non-existent announcement', async () => {
-      mockGetServerSession.mockResolvedValue(mockAdminSession)
-      mockPrisma.announcement.delete.mockRejectedValue({ code: 'P2025' })
+    it('reads a missing row as NOT_FOUND', async () => {
+      mockPrisma.announcement.delete.mockRejectedValue(notFound())
 
-      const result = await deleteAnnouncement('non-existent')
-
-      expect(result.success).toBe(false)
-      expect(result.error).toBe('Announcement not found')
+      await expect(deleteAnnouncement({ id: 'gone' })).resolves.toMatchObject({ success: false, code: 'NOT_FOUND' })
     })
 
-    it('should reject for non-admin', async () => {
+    it('refuses a member', async () => {
       mockGetServerSession.mockResolvedValue(mockNonAdminSession)
 
-      const result = await deleteAnnouncement('ann-123')
-
-      expect(result.success).toBe(false)
-      expect(result.error).toBe('Unauthorized')
+      await expect(deleteAnnouncement({ id: 'ann-123' })).resolves.toMatchObject({ code: 'FORBIDDEN' })
+      expect(mockPrisma.announcement.delete).not.toHaveBeenCalled()
     })
   })
 
   describe('setAnnouncementActive', () => {
-    it('should set announcement to active', async () => {
-      mockGetServerSession.mockResolvedValue(mockAdminSession)
-      mockPrisma.announcement.update.mockResolvedValue({
-        ...mockAnnouncement,
-        isActive: true,
-      })
+    beforeEach(() => mockGetServerSession.mockResolvedValue(mockAdminSession))
 
-      const result = await setAnnouncementActive('ann-123', true)
+    it.each([true, false])('sets isActive to %s and revalidates the three pages', async (isActive) => {
+      mockPrisma.announcement.update.mockResolvedValue({ ...mockAnnouncement, isActive })
 
-      expect(result.success).toBe(true)
-      expect(mockPrisma.announcement.update).toHaveBeenCalledWith({
-        where: { id: 'ann-123' },
-        data: { isActive: true },
-      })
-      expect(mockRevalidatePath).toHaveBeenCalledWith('/')
+      await expect(setAnnouncementActive({ id: 'ann-123', isActive })).resolves.toEqual({ success: true, data: null })
+
+      expect(mockPrisma.announcement.update).toHaveBeenCalledWith({ where: { id: 'ann-123' }, data: { isActive } })
+      expectRevalidated()
     })
 
-    it('should set announcement to inactive', async () => {
-      mockGetServerSession.mockResolvedValue(mockAdminSession)
-      mockPrisma.announcement.update.mockResolvedValue({
-        ...mockAnnouncement,
-        isActive: false,
-      })
+    it('reads a missing row as NOT_FOUND', async () => {
+      mockPrisma.announcement.update.mockRejectedValue(notFound())
 
-      const result = await setAnnouncementActive('ann-123', false)
-
-      expect(result.success).toBe(true)
-      expect(mockPrisma.announcement.update).toHaveBeenCalledWith({
-        where: { id: 'ann-123' },
-        data: { isActive: false },
-      })
+      await expect(setAnnouncementActive({ id: 'gone', isActive: true })).resolves.toMatchObject({ code: 'NOT_FOUND' })
     })
 
-    it('should return error for non-existent announcement', async () => {
-      mockGetServerSession.mockResolvedValue(mockAdminSession)
-      mockPrisma.announcement.update.mockRejectedValue({ code: 'P2025' })
-
-      const result = await setAnnouncementActive('non-existent', true)
-
-      expect(result.success).toBe(false)
-      expect(result.error).toBe('Announcement not found')
-    })
-
-    it('should reject for non-admin', async () => {
+    it('refuses a member', async () => {
       mockGetServerSession.mockResolvedValue(mockNonAdminSession)
 
-      const result = await setAnnouncementActive('ann-123', true)
-
-      expect(result.success).toBe(false)
-      expect(result.error).toBe('Unauthorized')
+      await expect(setAnnouncementActive({ id: 'ann-123', isActive: true })).resolves.toMatchObject({ code: 'FORBIDDEN' })
     })
   })
 })

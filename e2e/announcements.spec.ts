@@ -39,37 +39,36 @@ test.describe('Announcements Admin', () => {
     ], { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
   });
 
-  // Basic functionality test - just verify page loads
-  test('should create a new announcement', async ({ adminPage }) => {
+  test('creates one with a list, previews the bullets, and shows them on home', async ({ adminPage }) => {
     await adminPage.goto('/admin/announcements');
-    await waitForAdminContent(adminPage, [
-      { type: 'heading', value: 'Announcements' }
-    ], { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+    await expect(adminPage.getByTestId('admin-announcements-header')).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
 
-    // Open create modal
     await adminPage.getByTestId('create-announcement-button').click();
-    await expect(adminPage.getByRole('dialog')).toBeVisible({ timeout: WAIT_TIMEOUTS.DIALOG_APPEAR });
+    await expect(adminPage.getByTestId('announcement-dialog')).toBeVisible({ timeout: WAIT_TIMEOUTS.DIALOG_APPEAR });
 
-    // Fill form
     await adminPage.getByTestId('announcement-title-input').fill('E2E Test Announcement');
-    await adminPage.getByTestId('announcement-content-input').fill('This is a test announcement created by E2E tests');
+    await adminPage.getByTestId('announcement-content-input').fill('Tonight:\n\n- Plex restarts\n- Disks swap');
     await adminPage.getByTestId('announcement-priority-input').fill('5');
 
-    // Submit form
+    // The live preview renders the list as home will
+    const preview = adminPage.getByTestId('announcement-preview-item');
+    await expect(preview.locator('li')).toHaveCount(2);
+    await expect(preview.getByText('New')).toBeAttached();
+
     await adminPage.getByTestId('announcement-submit-button').click();
-
-    // Should show success toast
     await waitForToast(adminPage, /created/i, { timeout: WAIT_TIMEOUTS.TOAST_APPEAR });
+    await expect(adminPage.getByTestId('announcement-dialog')).not.toBeVisible({ timeout: WAIT_TIMEOUTS.DIALOG_APPEAR });
 
-    // Modal should close
-    await expect(adminPage.getByRole('dialog')).not.toBeVisible({ timeout: WAIT_TIMEOUTS.DIALOG_APPEAR });
+    const row = adminPage.getByTestId('admin-announcements').getByText('E2E Test Announcement');
+    await expect(row).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
 
-    // Announcement should appear in list
-    await expect(adminPage.getByText('E2E Test Announcement')).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
+    await adminPage.goto('/');
+    const card = adminPage.getByTestId('announcements-card').filter({ visible: true });
+    await expect(card.getByText('E2E Test Announcement')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    await expect(card.locator('li').filter({ hasText: 'Plex restarts' })).toHaveCount(1);
   });
 
-  test('should toggle announcement active status', async ({ adminPage }) => {
-    // Create announcement
+  test('hides one with the switch, then deletes it through the confirm', async ({ adminPage }) => {
     const prisma = createE2EPrismaClient();
     let announcementId: string;
     try {
@@ -88,25 +87,24 @@ test.describe('Announcements Admin', () => {
     }
 
     await adminPage.goto('/admin/announcements');
-    await waitForAdminContent(adminPage, [
-      { type: 'heading', value: 'Announcements' }
-    ], { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+    const row = adminPage.getByTestId(`admin-announcements-row-${announcementId}`);
+    await expect(row).toBeVisible({ timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+    await expect(row.getByText('Active')).toBeVisible();
 
-    // Wait for announcement
-    const announcementCard = adminPage.getByTestId(`announcement-${announcementId}`);
-    await expect(announcementCard).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
+    const toggle = adminPage.getByTestId(`toggle-announcement-${announcementId}`);
+    await expect(toggle).toHaveAttribute('aria-checked', 'true');
+    await toggle.click();
+    await waitForToast(adminPage, /is hidden/i, { timeout: WAIT_TIMEOUTS.TOAST_APPEAR });
+    await expect(toggle).toHaveAttribute('aria-checked', 'false');
+    await expect(row.getByText('Hidden')).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
 
-    // Should show Active badge initially
-    await expect(announcementCard.getByText('Active')).toBeVisible();
-
-    // Click toggle button to deactivate
-    await adminPage.getByTestId(`toggle-announcement-${announcementId}`).click();
-
-    // Should show success toast
-    await waitForToast(adminPage, /status updated/i, { timeout: WAIT_TIMEOUTS.TOAST_APPEAR });
-
-    // Should now show Inactive badge
-    await expect(announcementCard.getByText('Inactive')).toBeVisible({ timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
+    await adminPage.getByTestId(`admin-announcements-actions-${announcementId}`).click();
+    await adminPage.getByTestId(`admin-announcements-actions-${announcementId}-delete`).click();
+    const dialog = adminPage.getByTestId('announcement-delete-dialog');
+    await expect(dialog).toContainText("Delete the announcement 'E2E Test Toggle Announcement'?");
+    await adminPage.getByTestId('announcement-delete-confirm').click();
+    await waitForToast(adminPage, /deleted/i, { timeout: WAIT_TIMEOUTS.TOAST_APPEAR });
+    await expect(row).toHaveCount(0, { timeout: WAIT_TIMEOUTS.ADMIN_CONTENT });
   });
 });
 
