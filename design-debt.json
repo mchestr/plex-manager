@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "commit": "2a5efbac47c83eceaae3347547b191a52ebdeed9",
-  "generatedAt": "2026-10-21T21:47:42.965Z",
+  "commit": "b2a20eddc0a4cfe0a836d1040fa52dad4702e28e",
+  "generatedAt": "2026-10-21T21:47:55.705Z",
   "files": {
     "app/(app)/page.tsx": {
       "gradient": 2,
@@ -400,9 +400,6 @@
     "components/subscription/manage-subscription-button.tsx": {
       "raw-palette": 1
     },
-    "components/subscription/subscription-status-view.tsx": {
-      "raw-palette": 3
-    },
     "components/watchlist/sync-settings-card.tsx": {
       "gradient": 3,
       "infinite-motion": 1,
@@ -576,6 +573,6 @@
     "gradient": 82,
     "gradient-text": 46,
     "infinite-motion": 38,
-    "raw-palette": 2406
+    "raw-palette": 2403
   }
 }

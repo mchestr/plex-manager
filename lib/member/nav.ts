@@ -2,9 +2,10 @@
  * The member top bar's links (ui-design-system 6.1).
  *
  * `memberNav()` starts with Home and, when the member can open something
- * there, "Rewind {year}". P10.22 adds Help and Membership (Account settings
- * lives in the account menu); each step that ships a route adds its entry, because
- * `typedRoutes` rejects links to routes that do not exist yet.
+ * there, "Rewind {year}", then Membership when the member has that page and
+ * Help always (Account settings lives in the account menu). Each step that
+ * ships a route adds its entry, because `typedRoutes` rejects links to routes
+ * that do not exist yet.
  *
  * @module lib/member/nav
  */
@@ -21,11 +22,15 @@ export interface MemberNavItem {
 interface MemberNavOptions {
   /** The season year, for the "Rewind {year}" label; `null` hides the item. */
   rewindYear: number | null
+  /** Stripe is on or the member has a subscription row, so `/membership` exists. */
+  membership: boolean
 }
 
-export function memberNav({ rewindYear }: MemberNavOptions): MemberNavItem[] {
+export function memberNav({ rewindYear, membership }: MemberNavOptions): MemberNavItem[] {
   const items: MemberNavItem[] = [{ href: "/", label: "Home", match: "exact" }]
   if (rewindYear !== null) items.push({ href: "/rewind", label: `Rewind ${rewindYear}`, match: "prefix" })
+  if (membership) items.push({ href: "/membership", label: "Membership", match: "exact" })
+  items.push({ href: "/help", label: "Help", match: "exact" })
   return items
 }
 

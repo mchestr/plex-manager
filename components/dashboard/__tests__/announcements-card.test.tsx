@@ -63,6 +63,12 @@ describe('AnnouncementsCard', () => {
 
     expect(container.querySelector('img')).toBeNull()
     expect(screen.getByText('click')).toBeInTheDocument()
-    expect(container.querySelector('a')).toBeNull()
+    expect(screen.getByTestId('announcement-a1').querySelector('a')).toBeNull()
+  })
+
+  it('links to every announcement', () => {
+    render(<AnnouncementsCard announcements={[announcement('Hi')]} now={NOW} />)
+
+    expect(screen.getByTestId('announcements-view-all')).toHaveAttribute('href', '/announcements')
   })
 })

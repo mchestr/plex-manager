@@ -26,6 +26,7 @@ export function buildUser(overrides: Partial<User> = {}): User {
     timezone: null,
     sessionVersion: 0,
     disabledAt: null,
+    announcementsSeenAt: null,
     createdAt: fixedDate(),
     updatedAt: fixedDate(),
     ...overrides,

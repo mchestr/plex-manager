@@ -4,7 +4,7 @@ import { ServiceSignInToggle } from "@/components/auth/service-sign-in-toggle";
 import { PublicShell } from "@/components/shell/public-shell";
 import { RewindCard } from "@/components/dashboard/rewind-card";
 import { UserDashboard } from "@/components/dashboard/user-dashboard";
-import { SubscriptionStatusView } from "@/components/subscription/subscription-status-view";
+import { MembershipLinkCard } from "@/components/dashboard/membership-link-card";
 import { authOptions } from "@/lib/auth";
 import { serverName as getServerName } from "@/lib/brand";
 import { prisma } from "@/lib/prisma";
@@ -117,7 +117,7 @@ export default async function Home() {
         renderedAt={now.toISOString()}
         primaryAuthService={user?.primaryAuthService}
         mediaServerUrl={mediaServerUrl}
-        subscriptionSlot={subscription ? <SubscriptionStatusView /> : null}
+        subscriptionSlot={subscription ? <MembershipLinkCard /> : null}
         rewindSlot={rewindCard && <RewindCard {...rewindCard} />}
       />
     );

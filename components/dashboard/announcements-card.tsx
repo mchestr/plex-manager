@@ -1,6 +1,7 @@
 "use client"
 
 import { motion, AnimatePresence, useReducedMotion } from "motion/react"
+import Link from "next/link"
 import type { AnnouncementData } from "@/actions/announcements"
 import { MarkdownBody } from "@/components/ui/markdown-body"
 import { loop } from "@/lib/utils/motion-loop"
@@ -73,6 +74,13 @@ export function AnnouncementsCard({ announcements, now }: AnnouncementsCardProps
               {announcements.length}
             </span>
           )}
+          <Link
+            href="/announcements"
+            className="rounded-sm text-ui font-medium text-foreground underline-offset-4 hover:underline"
+            data-testid="announcements-view-all"
+          >
+            View all
+          </Link>
         </div>
 
         {/* Announcements list */}

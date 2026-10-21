@@ -35,11 +35,11 @@ jest.mock('next/dynamic', () => () => require('@/components/shell/app-chrome').A
 
 const OUTAGE: MemberNotice = { kind: 'outage', serviceName: 'Plex' }
 
-const member: ShellUser = { name: 'Theo Marsh', email: 'theo@example.com', initials: 'TM', isAdmin: false }
+const member: ShellUser = { name: 'Theo Marsh', email: 'theo@example.com', initials: 'TM', isAdmin: false, membership: false }
 
 function renderShell(user: ShellUser = member, notice?: MemberNotice) {
   return render(
-    <AppShell serverName="Northfield Plex" user={user} nav={memberNav({ rewindYear: 2026 })} notice={notice}>
+    <AppShell serverName="Northfield Plex" user={user} nav={memberNav({ rewindYear: 2026, membership: false })} notice={notice}>
       <p>Page</p>
     </AppShell>
   )
@@ -73,7 +73,7 @@ describe('AppShell', () => {
   it('marks Rewind current on its subpaths', () => {
     // The shell hides its bar on Rewind pages, so this reads the nav island itself.
     mockPathname.mockReturnValue('/rewind/2025/read')
-    render(<MemberNav items={memberNav({ rewindYear: 2026 })} />)
+    render(<MemberNav items={memberNav({ rewindYear: 2026, membership: false })} />)
 
     expect(screen.getByTestId('member-nav-rewind')).toHaveAttribute('aria-current', 'page')
     expect(screen.getByTestId('member-nav-home')).not.toHaveAttribute('aria-current')
@@ -142,6 +142,25 @@ describe('AppShell', () => {
 
     expect(within(menu).queryByTestId('account-menu-discord')).not.toBeInTheDocument()
     expect(within(menu).getAllByRole('menuitem')).toHaveLength(2)
+  })
+
+  it('offers Membership in the account menu only when the page exists', async () => {
+    const user = userEvent.setup()
+    renderShell({ ...member, membership: true })
+
+    await user.click(screen.getByTestId('account-menu-trigger'))
+    const menu = await screen.findByRole('menu')
+
+    expect(within(menu).getByRole('menuitem', { name: 'Membership' })).toHaveAttribute('href', '/membership')
+    expect(within(menu).getAllByRole('menuitem')).toHaveLength(3)
+  })
+
+  it('marks Help current on /help', () => {
+    mockPathname.mockReturnValue('/help')
+    renderShell()
+
+    expect(screen.getByTestId('member-nav-help')).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByTestId('member-nav-home')).not.toHaveAttribute('aria-current')
   })
 
   it('opens the mobile Sheet with the same links and closes it on navigation', async () => {

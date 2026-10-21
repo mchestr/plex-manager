@@ -1017,10 +1017,12 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 **Demo.** Follow "View all" from home: every announcement renders with real bullets, and the pips clear on the next visit. Open Help as a Jellyfin member: Jellyfin settings only. With Stripe on, Membership shows "Supporter plan, Active, Renews November 6, 2026" and opens Stripe.
 
 **Done when.**
-- [ ] `/announcements`, `/help` and `/membership` exist with metadata, nav entries and tests.
-- [ ] The guides are shared components with service-aware copy and no admin hints.
-- [ ] `/membership` never shows a raw price id, and the subscription section is gone from home.
+- [x] `/announcements`, `/help` and `/membership` exist with metadata, nav entries and tests.
+- [x] The guides are shared components with service-aware copy and no admin hints.
+- [x] `/membership` never shows a raw price id, and the subscription section is gone from home.
 - [ ] E2E, visual and axe checks pass.
+
+(as merged: P10.21 was not on the start point, so this step ships the pieces it shares: migration `20270112000000_p1022_user_announcements_seen` (`User.announcementsSeenAt`), `markAnnouncementsSeen` in `actions/announcements-seen.ts` (moves forward only, never past now), `components/announcements/mark-announcements-seen.tsx`, `components/announcements/new-pip.tsx` and `lib/member/announcements.ts`; P10.21 reuses them instead of adding its own. Guides render no heading (`PlaybackGuide({ service, serverName })`, `RequestsGuide({ requestsUrl })`, `SupportGuide({ discord, linkHref?, instructions? })`, with `linkHref` for onboarding's `/discord/connect?redirect=/onboarding`); `getHelpData(userId)` in `lib/member/help.ts` loads their props. `memberNav({ rewindYear, membership })` orders Home, Rewind, Membership, Help (6.1); `hasMembershipPage` in `lib/member/membership.ts` feeds the nav, the account menu (`ShellUser.membership`) and the page's `notFound()`. `getPlanName` sits beside `getPlanPrice` in `lib/stripe/prices.ts`; their tests are in `__tests__/lib/stripe/prices.test.ts`. Pre-P10.21 home keeps its layout: the announcements card gains "View all" and `MembershipLinkCard` replaces the subscription view; P10.21's help card links `/help#playback` and `#support`. The three visual captures are added to `e2e/visual/member.visual.spec.ts` for the owner's baseline workflow.)
 
 ### Step P10.23: Onboarding refresh
 

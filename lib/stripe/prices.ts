@@ -138,10 +138,60 @@ export async function getOfferedPrices(): Promise<OfferedPrice[]> {
   return resolved
 }
 
+/** How long a member's retrieved plan price is cached, in milliseconds. */
+const PLAN_CACHE_TTL_MS = 60 * 60_000
+
+const planCache = new Map<string, { expiresAt: number; price: OfferedPrice }>()
+
 /**
- * Clears the offered-prices cache. Intended for tests and for use after an admin
- * updates the configured price IDs.
+ * The display details of the price a member subscribes to: the offered price
+ * when it is still on offer, else `stripe.prices.retrieve(priceId, { expand:
+ * ['product'] })` cached for an hour (a retired price still names its plan).
+ * Null when Stripe is unconfigured or the price cannot be read; never throws.
+ */
+export async function getPlanPrice(priceId: string | null): Promise<OfferedPrice | null> {
+  if (!priceId) return null
+
+  const offered = (await getOfferedPrices()).find((price) => price.priceId === priceId)
+  if (offered) return offered
+
+  const cached = planCache.get(priceId)
+  if (cached && cached.expiresAt > Date.now()) return cached.price
+
+  const stripe = await getStripe()
+  if (!stripe) return null
+  try {
+    const price = await stripe.prices.retrieve(priceId, { expand: ["product"] })
+    const resolved: OfferedPrice = {
+      priceId: price.id,
+      amount: price.unit_amount ?? null,
+      currency: price.currency,
+      interval: price.recurring?.interval ?? null,
+      productName: resolveProductName(price.product),
+    }
+    planCache.set(priceId, { expiresAt: Date.now() + PLAN_CACHE_TTL_MS, price: resolved })
+    return resolved
+  } catch (error) {
+    logger.warn("Could not read a member's Stripe price", { priceId, error })
+    return null
+  }
+}
+
+/**
+ * The plan's name for a member (UI-37): the price's product name, else
+ * "Membership". Never the raw price id.
+ */
+export async function getPlanName(priceId: string | null): Promise<string> {
+  const name = (await getPlanPrice(priceId))?.productName
+  // An unexpanded product resolves to its own id ("prod_..."), which is no name either.
+  return name && !name.startsWith("prod_") ? name : "Membership"
+}
+
+/**
+ * Clears the offered-prices and plan caches. Intended for tests and for use
+ * after an admin updates the configured price IDs.
  */
 export function clearOfferedPricesCache(): void {
   cache = null
+  planCache.clear()
 }
