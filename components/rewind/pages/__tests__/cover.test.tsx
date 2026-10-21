@@ -55,7 +55,9 @@ describe("01 Cover", () => {
     expect(screen.getByTestId("rewind-cut-pocket")).toHaveTextContent("Pocket edition6 pages, about 40 s")
 
     await userEvent.setup().click(screen.getByTestId("rewind-cut-full"))
-    expect(send).toHaveBeenCalledWith({ type: "CHOOSE_CUT" })
+    expect(send).toHaveBeenCalledWith({ type: "CHOOSE_CUT", cut: "full" })
+    await userEvent.setup().click(screen.getByTestId("rewind-cut-pocket"))
+    expect(send).toHaveBeenCalledWith({ type: "CHOOSE_CUT", cut: "pocket" })
   })
 
   it("draws the cuts at artboard scale with 44 px hit areas, and lets the soundtrack give way (design 4.7)", () => {

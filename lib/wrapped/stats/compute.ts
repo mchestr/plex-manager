@@ -22,6 +22,7 @@ import type { AggregateView, MetadataLookup } from "./metadata"
 import { computeMilestones } from "./milestones"
 import { computeNextYear, type LibraryTitle } from "./next-year"
 import { computePeople } from "./people"
+import { computePopular } from "./popular"
 import { computeRace } from "./race"
 import { computeRequests } from "./requests"
 import { computeSessions } from "./sessions"
@@ -75,6 +76,8 @@ export function computeMemberStats(events: readonly PlayEvent[], ctx: StatsConte
     devices: computeDevices(events, lookup),
     requests: computeRequests(events, sources.requests, lookup),
     community: computeCommunity(events, ctx, sources.aggregate),
+    /** The postcard's community titles (P7.3). */
+    popular: computePopular(sources.aggregate, sources.library, ctx, sources.excludedContentRatings),
     nextYear: computeNextYear(events, ctx, lookup, {
       taste,
       people,

@@ -6,6 +6,8 @@ import type { ClockData } from "@/lib/rewind/pages/clock.schema"
 import type { CoverData } from "@/lib/rewind/pages/cover.schema"
 import type { GuessData } from "@/lib/rewind/pages/guess.schema"
 import type { NumberData } from "@/lib/rewind/pages/number.schema"
+import type { PostcardData } from "@/lib/rewind/pages/postcard.schema"
+import type { ShortListData } from "@/lib/rewind/pages/short-list.schema"
 import type { TopFilmsData, TopShowsData } from "@/lib/rewind/pages/top-lists.schema"
 import { registry, type RegistryEntry } from "@/lib/rewind/registry"
 import type { SelectedPage } from "@/lib/rewind/select-pages"
@@ -19,6 +21,8 @@ import { CoverPage } from "./cover"
 import { GuessPage } from "./guess"
 import type { IssueContext } from "./issue-context"
 import { NumberPage } from "./number"
+import { PostcardPage } from "./postcard"
+import { ShortListPage } from "./short-list"
 import { TopFilmsPage } from "./top-films"
 import { TopShowsPage } from "./top-shows"
 import { u } from "./units"
@@ -50,6 +54,10 @@ export function PageBody({ page, issue }: { page: SelectedPage; issue: IssueCont
       return <CentrefoldPage data={page.data as CentrefoldData} issue={issue} />
     case "back-cover":
       return <BackCoverPage data={page.data as BackCoverData} issue={issue} />
+    case "short-list":
+      return <ShortListPage data={page.data as ShortListData} issue={issue} />
+    case "postcard":
+      return <PostcardPage data={page.data as PostcardData} issue={issue} />
     default: {
       const entry: RegistryEntry = registry[page.type]
       return (

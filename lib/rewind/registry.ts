@@ -47,7 +47,9 @@ import { clockPage } from "@/lib/rewind/pages/clock"
 import { coverPage } from "@/lib/rewind/pages/cover"
 import { guessPage } from "@/lib/rewind/pages/guess"
 import { numberPage } from "@/lib/rewind/pages/number"
+import { postcardPage } from "@/lib/rewind/pages/postcard"
 import { pendingPages } from "@/lib/rewind/pages/rules"
+import { shortListPage } from "@/lib/rewind/pages/short-list"
 import { topFilmsPage } from "@/lib/rewind/pages/top-films"
 import { topShowsPage } from "@/lib/rewind/pages/top-shows"
 import type { ArchetypeId } from "@/lib/wrapped/archetypes/catalogue"
@@ -57,8 +59,14 @@ import type { MemberStats } from "@/lib/wrapped/stats/compute"
 
 export type Act = "front" | "features" | "habits" | "server" | "centrefold" | "back"
 
-/** The pages of the full issue; the pocket edition's `short-list` arrives in P7.3. */
-export type IssuePageType = Exclude<PageType, "short-list">
+/** The 18 pages of the full issue. */
+export type IssuePageType = Exclude<PageType, EditionPageType>
+
+/** The pages only the short editions print (P7.3): the pocket edition's Short list and the postcard. */
+export type EditionPageType = "short-list" | "postcard"
+
+/** Every page a stored issue can hold. */
+export type RewindPageType = IssuePageType | EditionPageType
 
 export type Edition = "full" | "pocket" | "postcard"
 
@@ -125,7 +133,7 @@ export interface PageDefinition<D> {
 }
 
 export interface RegistryEntry<D = unknown> extends PageDefinition<D> {
-  type: IssuePageType
+  type: RewindPageType
   /** The page's one name, used on every surface. */
   name: string
   act: Act
@@ -147,7 +155,7 @@ export const TURN_MS = 420
 
 type Spec = Pick<RegistryEntry, "name" | "act" | "field" | "altField" | "core" | "pocket" | "dwell">
 
-function entry<D>(type: IssuePageType, spec: Spec, page: PageDefinition<D>): RegistryEntry<D> {
+function entry<D>(type: RewindPageType, spec: Spec, page: PageDefinition<D>): RegistryEntry<D> {
   const spot = spec.field === "archetype" ? "arch" : spec.field === "paper" ? "arch-deep" : "ink"
   return { type, ...spec, spot, ...page }
 }
@@ -173,10 +181,18 @@ export const registry = {
   centrefold: entry("centrefold", { name: "Centrefold", act: "centrefold", field: "archetype", altField: null, core: true, pocket: "page", dwell: 12_000 }, centrefoldPage),
   "next-year": entry("next-year", { name: "Next year", act: "back", field: "paper", altField: null, core: false, pocket: false, dwell: 7000 }, p["next-year"]),
   "back-cover": entry("back-cover", { name: "Back cover", act: "back", field: "paper", altField: null, core: true, pocket: "page", dwell: "end" }, backCoverPage),
-} as const satisfies Record<IssuePageType, RegistryEntry>
+  // The short editions' own pages (P7.3): never in the full issue, so outside `issuePages`.
+  "short-list": entry("short-list", { name: "Short list", act: "features", field: "paper", altField: null, core: false, pocket: "page", dwell: 9000 }, shortListPage),
+  postcard: entry("postcard", { name: "Postcard", act: "front", field: "paper", altField: null, core: false, pocket: false, dwell: "end" }, postcardPage),
+} as const satisfies Record<RewindPageType, RegistryEntry>
 
-/** Every page in issue order. */
-export const issuePages: RegistryEntry[] = Object.values(registry)
+/** A full-issue page's entry. */
+export type IssueEntry = RegistryEntry & { type: IssuePageType }
+
+const EDITION_PAGES: readonly RewindPageType[] = ["short-list", "postcard"]
+
+/** Every page of the full issue, in issue order. */
+export const issuePages: IssueEntry[] = (Object.values(registry) as RegistryEntry[]).filter((entry): entry is IssueEntry => !EDITION_PAGES.includes(entry.type))
 
 /**
  * Pages whose components land in P7.1 and P7.2. Until then `selectPages`
@@ -192,10 +208,10 @@ export const SHARE_PAGE_TYPES = issuePages.map((p) => p.type).filter((t) => t !=
 ]
 
 /**
- * The pocket edition's six pages as the running time counts them: Short list
- * (P7.3) stands in as Top shows, and the clock for "clock or calendar".
+ * The pocket edition's six pages as the running time counts them before an
+ * issue's own cut is known, with the clock for "clock or calendar".
  */
-export const POCKET_ESTIMATE: readonly IssuePageType[] = ["cover", "number", "top-shows", "clock", "centrefold", "back-cover"]
+export const POCKET_ESTIMATE: readonly RewindPageType[] = ["cover", "number", "short-list", "clock", "centrefold", "back-cover"]
 
 /**
  * The autoplay running time of an issue: each page's dwell (the guess counted
@@ -206,7 +222,7 @@ export const POCKET_ESTIMATE: readonly IssuePageType[] = ["cover", "number", "to
  * issueDurationMs(issuePages.map((p) => p.type)) // 140140, "about 2 min 20 s"
  * ```
  */
-export function issueDurationMs(pages: readonly IssuePageType[]): number {
+export function issueDurationMs(pages: readonly RewindPageType[]): number {
   const dwell = pages.reduce((sum, type) => {
     const d = registry[type].dwell
     return sum + (typeof d === "number" ? d : d === "hold" ? HOLD_ESTIMATE_MS : 0)

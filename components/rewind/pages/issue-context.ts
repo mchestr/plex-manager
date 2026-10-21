@@ -1,7 +1,7 @@
 import type { Route } from "next"
 
 import { pageDeck, type DeckKey } from "@/lib/rewind/pages/deck"
-import type { Edition } from "@/lib/rewind/registry"
+import type { Edition, RewindPageType } from "@/lib/rewind/registry"
 import type { SelectedPage } from "@/lib/rewind/select-pages"
 import type { RewindCopyV3Wire } from "@/lib/wrapped/copy/schema"
 import type { RewindDataV3 } from "@/lib/wrapped/data/schema-v3"
@@ -26,6 +26,14 @@ export interface IssueContext {
   /** Whose zone `tz.label` is, for the `tz.note` wording. */
   zone: "member" | "server"
   facts: RewindFactsV3
+  /**
+   * The page types of both cuts (P7.3), for the cover's cut buttons: `full`
+   * is null for a pocket member. Without it the cover counts `pages` and
+   * `POCKET_ESTIMATE`.
+   */
+  cuts?: { full: readonly RewindPageType[] | null; pocket: readonly RewindPageType[] }
+  /** The server's Plex web app, for the postcard's "Browse the library". */
+  libraryHref?: string
 }
 
 export interface PageProps<D> {

@@ -7,7 +7,7 @@ import { ShareSheet } from "@/components/rewind/share/share-sheet"
 import { SettingsSheet } from "@/components/rewind/sheets/settings-sheet"
 import { TableSheet } from "@/components/rewind/sheets/table-sheet"
 import { aboutTheWords, type CopyAuthor } from "@/lib/rewind/copy-disclosure"
-import type { IssuePageType, PageTable } from "@/lib/rewind/registry"
+import type { RewindPageType, PageTable } from "@/lib/rewind/registry"
 import { SHARE_SETTINGS_SHEET } from "@/lib/rewind/share-sheet"
 import type { SheetName } from "@/lib/rewind/stage/player-reducer"
 import type { StagePrefs } from "@/lib/rewind/stage/prefs"
@@ -23,7 +23,7 @@ interface StageSheetsProps {
   onClose: () => void
   pageName: string
   /** The current page, where the share sheet's picker starts. */
-  page: IssuePageType
+  page: RewindPageType
   table: PageTable | null
   prefs: StagePrefs
   articleHref: Route

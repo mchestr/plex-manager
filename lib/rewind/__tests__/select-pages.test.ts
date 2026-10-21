@@ -32,7 +32,7 @@ describe("selectPages over the 20 golden fixtures", () => {
   it.each(FIXTURE_IDS)("%s: numbers the folios 1 to n, without the later pages", (id) => {
     const { pages } = issues.get(id)!
     expect(pages.map((p) => p.folio)).toEqual(pages.map((_, i) => i + 1))
-    expect(pages.some((p) => LATER_PAGES.includes(p.type))).toBe(false)
+    expect(pages.some((p) => (LATER_PAGES as readonly string[]).includes(p.type))).toBe(false)
     expect(pages[0].type).toBe("cover")
     expect(pages.at(-1)!.type).toBe("back-cover")
   })

@@ -32,7 +32,8 @@ export interface RewindContext {
   kind: RewindGenerationKind
   through: string
   finalCut: boolean
-  member: { userId: string; name: string | null; plexUserId: string | null; isAdmin: boolean }
+  /** `createdAt` is the account's, for the late-joiner rule; fixture contexts leave it out. */
+  member: { userId: string; name: string | null; plexUserId: string | null; isAdmin: boolean; createdAt?: Date }
   zone: RewindZone
   window: TimeWindow
   config: {
@@ -118,7 +119,7 @@ export async function loadRewindContext(options: {
 }): Promise<RewindContext> {
   const { userId, year } = options
   const [user, config, tautulli, overseerr, zone, exclusions, wrapped, provider, styleGuide] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userId }, select: { name: true, plexUserId: true, isAdmin: true, timezone: true } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { name: true, plexUserId: true, isAdmin: true, timezone: true, createdAt: true } }),
     prisma.config.findUnique({ where: { id: "config" } }),
     prisma.tautulli.findFirst({ where: { isActive: true }, select: { url: true, apiKey: true } }),
     prisma.overseerr.findFirst({ where: { isActive: true }, select: { url: true, apiKey: true } }),
@@ -147,7 +148,7 @@ export async function loadRewindContext(options: {
     kind: options.kind,
     through,
     finalCut,
-    member: { userId, name: user.name, plexUserId: user.plexUserId, isAdmin: user.isAdmin },
+    member: { userId, name: user.name, plexUserId: user.plexUserId, isAdmin: user.isAdmin, createdAt: user.createdAt },
     zone: memberZone,
     window: dataWindow(year, memberZone.zone, { finalCut }),
     config: {

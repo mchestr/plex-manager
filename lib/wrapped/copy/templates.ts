@@ -184,6 +184,21 @@ export function pocketNote(copySource: "llm" | "repair" | "template" | "mixed"):
     : "The six pages that sum up your year."
 }
 
+/** The pocket Short list's headline, by how many titles it lists (P7.3, `pocket-short-list.png`). */
+export function shortListHeadline(rows: number): string {
+  return rows >= 3 ? "Three things you made time for" : rows === 2 ? "Two things you made time for" : "The one thing you made time for"
+}
+
+/** The Short list's deck: template-only, for a pocket member and for a full issue's pocket cut alike. */
+export function shortListDeck(edition: "full" | "pocket" | "postcard"): string {
+  return edition === "full" ? `The titles at the top of ${t("time.totalMinutes")} in all.` : `A small year, well chosen: ${t("time.totalMinutes")} in all.`
+}
+
+/** The postcard's headline (design 4.5); the server name is plain text, never a token. */
+export function postcardHeadline(serverName: string): string {
+  return `A quiet year on ${serverName}`
+}
+
 /** One plain-language reason per evidence fact a scorer cites (`lib/wrapped/archetypes/scorers.ts`). */
 const REASONS: Partial<Record<FactId, string>> = {
   "hours.afterDarkShare": `${t("hours.afterDarkShare")} of your plays started between 10 PM and 4 AM.`,

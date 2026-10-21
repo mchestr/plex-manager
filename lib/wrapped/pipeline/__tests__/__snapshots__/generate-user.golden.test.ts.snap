@@ -382,7 +382,7 @@ exports[`generateUserRewind (dry run): postcard matches the golden edition, arch
   "edition": "postcard",
   "model": null,
   "pages": [
-    "cover",
+    "postcard",
   ],
 }
 `;
@@ -467,7 +467,7 @@ exports[`generateUserRewind (dry run): seven-minutes matches the golden edition,
   "edition": "postcard",
   "model": null,
   "pages": [
-    "cover",
+    "postcard",
   ],
 }
 `;
