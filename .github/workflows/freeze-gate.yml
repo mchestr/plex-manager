@@ -1,0 +1,72 @@
+# The code freeze gate (P8.9). While the repository variable CODE_FREEZE is
+# "on", a pull request to main fails this check unless it carries the
+# freeze:data or freeze:security label, or touches only .agents/planning/**.
+# While CODE_FREEZE is "off" or unset, it passes. docs/operations.md
+# ("Code freeze gate") has the owner's procedure.
+#
+# Labels and changed files are read from the API at run time, not from the
+# event payload, so re-running the check after CODE_FREEZE flips judges the
+# pull request as it is now. The job checks out no code and runs none of it.
+name: Freeze gate
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+      - labeled
+      - unlabeled
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  freeze-gate:
+    name: Freeze gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check the code freeze
+        env:
+          CODE_FREEZE: ${{ vars.CODE_FREEZE }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+
+          state="${CODE_FREEZE:-unset}"
+          if [ "${state,,}" != "on" ]; then
+            echo "CODE_FREEZE is ${state}: the code freeze is not in force."
+            exit 0
+          fi
+
+          labels="$(gh api --paginate "repos/${REPO}/issues/${PR_NUMBER}/labels" --jq '.[].name')"
+          if grep -qxE 'freeze:(data|security)' <<<"${labels}"; then
+            echo "Labelled $(grep -xE 'freeze:(data|security)' <<<"${labels}" | paste -sd ' '): allowed during the code freeze."
+            exit 0
+          fi
+
+          # The files API lists at most 3000 files, so a listing that long
+          # may be cut short and never counts as planning-only.
+          files="$(gh api --paginate "repos/${REPO}/pulls/${PR_NUMBER}/files" \
+            --jq '.[] | .filename, (.previous_filename // empty)')"
+          count="$(grep -c . <<<"${files}" || true)"
+          outside="$(grep -v '^\.agents/planning/' <<<"${files}" || true)"
+          if [ "${count}" -gt 0 ] && [ "${count}" -lt 3000 ] && [ -z "${outside}" ]; then
+            echo "Touches only .agents/planning/**: allowed during the code freeze."
+            exit 0
+          fi
+
+          echo "::error title=Code freeze::The code freeze is on (CODE_FREEZE=on). Only data or security fixes merge: add the freeze:data or freeze:security label, or limit the change to .agents/planning/**."
+          exit 1
