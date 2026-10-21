@@ -441,11 +441,11 @@ gantt
 
 **Shells and the member pages Rewind needs** (2026-11-06 to 2026-12-04)
 
-- [ ] P6.1: AdminShell, navigation config and route builders (ui, M, due 2026-12-04)
-- [ ] P6.3: AppShell and PublicShell (ui, M, due 2026-11-09)
-- [ ] P6.5: Admin composites (ui, M, due 2026-11-09)
-- [ ] P6.9: Home RewindCard (ui, M, due 2026-11-18)
-- [ ] P6.11: Account page and Discord link page (ui, M, due 2026-11-18)
+- [x] P6.1: AdminShell, navigation config and route builders (ui, M, due 2026-12-04)
+- [x] P6.3: AppShell and PublicShell (ui, M, due 2026-11-09)
+- [x] P6.5: Admin composites (ui, M, due 2026-11-09)
+- [x] P6.9: Home RewindCard (ui, M, due 2026-11-18)
+- [x] P6.11: Account page and Discord link page (ui, M, due 2026-11-18)
 
 **Rewind breadth, admin tooling and soft launch** (2026-11-10 to 2026-12-04)
 
