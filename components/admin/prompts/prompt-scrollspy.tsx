@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react"
 
+import { Button } from "@/components/ui/button"
+
 interface PromptMessage {
   id: string
   role: string
@@ -91,33 +93,25 @@ export function PromptScrollspy({ messages, containerId }: PromptScrollspyProps)
 
   if (messages.length <= 1) return null
 
-  const roleColors: Record<string, { text: string; bg: string }> = {
-    SYSTEM: { text: "text-purple-400", bg: "bg-purple-500/20" },
-    USER: { text: "text-blue-400", bg: "bg-blue-500/20" },
-    ASSISTANT: { text: "text-green-400", bg: "bg-green-500/20" },
-    TOOL: { text: "text-yellow-400", bg: "bg-yellow-500/20" },
-  }
-
   return (
-    <div className="mb-3 pb-3 border-b border-slate-700">
+    <div className="mb-3 pb-3 border-b border-border">
       <div className="flex gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {messages.map((message) => {
           const isActive = activeMessage === message.id
-          const colors = roleColors[message.role] || { text: "text-slate-400", bg: "bg-slate-700/20" }
-          const label = message.name ? `${message.role} (${message.name})` : message.role
+          const role = message.role.charAt(0) + message.role.slice(1).toLowerCase().replace(/_/g, " ")
+          const label = message.name ? `${role} (${message.name})` : role
 
           return (
-            <button
+            <Button
               key={message.id}
+              variant={isActive ? "secondary" : "ghost"}
+              size="sm"
+              aria-current={isActive ? "true" : undefined}
               onClick={() => scrollToMessage(message.id)}
-              className={`whitespace-nowrap px-3 py-1.5 text-xs rounded transition-colors ${
-                isActive
-                  ? `${colors.bg} ${colors.text} font-medium`
-                  : "bg-slate-800 text-slate-400 hover:text-slate-300 hover:bg-slate-700/50"
-              }`}
+              className="whitespace-nowrap"
             >
               {label}
-            </button>
+            </Button>
           )
         })}
       </div>

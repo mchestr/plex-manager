@@ -1,6 +1,8 @@
 "use client"
 
+import { Alert } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
 import { StyledInput } from "@/components/ui/styled-input"
 import { isRateLimitedSignInError, RATE_LIMITED_MESSAGE } from "@/lib/security/rate-limit-messages"
 import { createLogger } from "@/lib/utils/logger"
@@ -116,9 +118,9 @@ export function JellyfinSignInButton({
     <div className="w-full max-w-md mx-auto space-y-6" data-testid="jellyfin-sign-in-form">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
-          <label htmlFor="jellyfin-username" className="block text-sm font-medium text-cyan-400">
+          <Label htmlFor="jellyfin-username">
             Username
-          </label>
+          </Label>
           <StyledInput
             id="jellyfin-username"
             name="username"
@@ -134,9 +136,9 @@ export function JellyfinSignInButton({
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="jellyfin-password" className="block text-sm font-medium text-cyan-400">
+          <Label htmlFor="jellyfin-password">
             Password
-          </label>
+          </Label>
           <StyledInput
             id="jellyfin-password"
             name="password"
@@ -152,13 +154,9 @@ export function JellyfinSignInButton({
         </div>
 
         {error && (
-          <div
-            className="bg-red-500/10 border border-red-500/50 text-red-500 px-4 py-3 rounded-lg text-sm"
-            role="alert"
-            data-testid="jellyfin-error"
-          >
+          <Alert tone="destructive" data-testid="jellyfin-error">
             {error}
-          </div>
+          </Alert>
         )}
 
         <Button
@@ -198,7 +196,7 @@ export function JellyfinSignInButton({
       </form>
 
       {showDisclaimer && (
-        <p className="text-xs text-slate-400 text-center">
+        <p className="text-xs text-muted-foreground text-center">
           By signing in, you agree to allow this application to access your {serverName || "Jellyfin"} account information.
         </p>
       )}

@@ -26,7 +26,7 @@ describe('ExpandablePrompt', () => {
 
       const preElement = container.querySelector('pre')
       expect(preElement).toBeInTheDocument()
-      expect(preElement).toHaveClass('text-sm', 'text-slate-300', 'whitespace-pre-wrap', 'font-mono')
+      expect(preElement).toHaveClass('text-sm', 'text-foreground', 'whitespace-pre-wrap', 'font-mono')
     })
 
     it('should render with character count when provided', () => {
@@ -84,19 +84,14 @@ describe('ExpandablePrompt', () => {
       expect(screen.queryByText('Collapse')).not.toBeInTheDocument()
     })
 
-    it('should show up arrow icon when expanded', () => {
+    it('should report the expanded state on the button', () => {
       render(<ExpandablePrompt {...defaultProps} />)
 
-      const button = screen.getByText('Expand')
+      const button = screen.getByRole('button')
+      expect(button).toHaveAttribute('aria-expanded', 'false')
       fireEvent.click(button)
 
-      expect(screen.getByText('↑')).toBeInTheDocument()
-    })
-
-    it('should show down arrow icon when collapsed', () => {
-      render(<ExpandablePrompt {...defaultProps} />)
-
-      expect(screen.getByText('↓')).toBeInTheDocument()
+      expect(button).toHaveAttribute('aria-expanded', 'true')
     })
 
     it('should apply correct max-height class when collapsed', () => {
@@ -155,19 +150,17 @@ describe('ExpandablePrompt', () => {
   })
 
   describe('Styling and Layout', () => {
-    it('should have proper container styling', () => {
-      const { container } = render(<ExpandablePrompt {...defaultProps} />)
-
-      const mainContainer = container.querySelector('.bg-slate-800\\/50')
-      expect(mainContainer).toBeInTheDocument()
-      expect(mainContainer).toHaveClass('backdrop-blur-sm', 'border', 'border-slate-700', 'rounded-lg', 'p-6', 'mb-6')
-    })
-
-    it('should have proper title styling', () => {
+    it('should render inside a Card', () => {
       render(<ExpandablePrompt {...defaultProps} />)
 
-      const title = screen.getByText('Test Prompt Title')
-      expect(title).toHaveClass('text-lg', 'font-semibold', 'text-white')
+      const card = screen.getByTestId('expandable-prompt-Test Prompt Title')
+      expect(card).toHaveClass('bg-card', 'border', 'rounded-lg', 'mb-6')
+    })
+
+    it('should render the title as a heading', () => {
+      render(<ExpandablePrompt {...defaultProps} />)
+
+      expect(screen.getByRole('heading', { level: 2, name: 'Test Prompt Title' })).toBeInTheDocument()
     })
 
     it('should have proper button styling', () => {
@@ -182,7 +175,7 @@ describe('ExpandablePrompt', () => {
     it('should have proper content container styling', () => {
       const { container } = render(<ExpandablePrompt {...defaultProps} />)
 
-      const contentContainer = container.querySelector('.bg-slate-900\\/50')
+      const contentContainer = container.querySelector('.bg-secondary')
       expect(contentContainer).toBeInTheDocument()
       expect(contentContainer).toHaveClass('rounded-lg', 'p-4', 'overflow-x-auto', 'transition-all')
     })
@@ -269,11 +262,11 @@ describe('ExpandablePrompt', () => {
       expect(button.tagName).toBe('BUTTON')
     })
 
-    it('should have proper text contrast', () => {
+    it('should draw the title in the foreground token', () => {
       render(<ExpandablePrompt {...defaultProps} />)
 
       const title = screen.getByText('Test Prompt Title')
-      expect(title).toHaveClass('text-white')
+      expect(title).toHaveClass('text-foreground')
     })
 
     it('should maintain focus after clicking expand/collapse', () => {

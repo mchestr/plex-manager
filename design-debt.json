@@ -1,12 +1,10 @@
 {
   "schema": 1,
-  "commit": "06c55f09cfc52dbc8af8811c9c2cf101c6019e5c",
-  "generatedAt": "2026-10-21T22:43:23.010Z",
+  "commit": "7141df188f5ec72542d9be0dedfb2916c8e1146b",
+  "generatedAt": "2026-10-21T22:48:30.723Z",
   "files": {
     "app/admin/llm-usage/[usageId]/page.tsx": {
-      "blur": 7,
-      "copy": 1,
-      "raw-palette": 67
+      "copy": 1
     },
     "app/admin/settings/page.tsx": {
       "blur": 5,
@@ -28,9 +26,6 @@
     "app/subscribe/success/page.tsx": {
       "raw-palette": 3
     },
-    "components/admin/discord/discord-marked-media.tsx": {
-      "raw-palette": 42
-    },
     "components/admin/invites/invite-details-client.tsx": {
       "caps-eyebrow": 6,
       "raw-palette": 65
@@ -38,18 +33,6 @@
     "components/admin/invites/invites-page-client.tsx": {
       "caps-eyebrow": 6,
       "raw-palette": 108
-    },
-    "components/admin/llm-usage/llm-text-removed-notice.tsx": {
-      "blur": 1,
-      "raw-palette": 4
-    },
-    "components/admin/prompts/expandable-prompt.tsx": {
-      "blur": 1,
-      "caps-eyebrow": 2,
-      "raw-palette": 28
-    },
-    "components/admin/prompts/prompt-scrollspy.tsx": {
-      "raw-palette": 15
     },
     "components/admin/settings/discord-integration-form.tsx": {
       "raw-palette": 30
@@ -116,15 +99,12 @@
       "copy": 1,
       "raw-palette": 24
     },
-    "components/auth/jellyfin-sign-in-button.tsx": {
-      "raw-palette": 6
-    },
     "components/auth/jellyfin-sign-in-form.tsx": {
       "raw-palette": 27
     },
     "components/auth/plex-sign-in-button.tsx": {
       "gradient": 1,
-      "raw-palette": 9
+      "raw-palette": 6
     },
     "components/setup/setup-wizard/dev-mode-banner.tsx": {
       "raw-palette": 8
@@ -349,12 +329,12 @@
   },
   "totals": {
     "arbitrary-type-z": 24,
-    "blur": 40,
-    "caps-eyebrow": 40,
+    "blur": 31,
+    "caps-eyebrow": 38,
     "copy": 7,
     "gradient": 51,
     "gradient-text": 32,
     "infinite-motion": 23,
-    "raw-palette": 1196
+    "raw-palette": 1031
   }
 }

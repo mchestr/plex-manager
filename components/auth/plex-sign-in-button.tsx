@@ -1,5 +1,6 @@
 "use client"
 
+import { Alert } from "@/components/ui/alert"
 import { Spinner } from "@/components/ui/spinner"
 import { startPlexSignIn } from "@/lib/plex-auth"
 import { redirectTo } from "@/lib/utils/navigation"
@@ -94,9 +95,9 @@ export function PlexSignInButton({
       </button>
 
       {error && (
-        <div className="w-full max-w-md rounded-lg bg-red-900/30 border border-red-500/50 p-3 sm:p-4">
-          <p className="text-xs sm:text-sm text-red-300 text-center">{error}</p>
-        </div>
+        <Alert tone="destructive" className="w-full max-w-md">
+          {error}
+        </Alert>
       )}
     </div>
   )
