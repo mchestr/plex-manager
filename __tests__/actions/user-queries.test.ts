@@ -3,6 +3,7 @@ import { requireAdmin } from '@/lib/admin'
 import { unshareUserFromPlexServer } from '@/lib/connections/plex'
 import { buildUser } from '@/__tests__/helpers/factories'
 import { aggregateLlmUsage } from '@/lib/utils'
+import { usageTotalsByUser, usageTotalsForWrapped } from '@/lib/llm/usage-totals'
 import { getServerSession } from 'next-auth'
 import { makePrismaUser, makePrismaWrapped, makePrismaLlmUsage } from '../utils/test-builders'
 import { mockReset } from 'jest-mock-extended'
@@ -21,6 +22,11 @@ jest.mock('@/lib/admin', () => ({
 }))
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
+// Usage totals come from aggregate queries (P7.8, BP-28); lib/llm/__tests__/usage-totals.pg.test.ts covers the sums.
+jest.mock('@/lib/llm/usage-totals', () => ({
+  usageTotalsByUser: jest.fn(async () => new Map()),
+  usageTotalsForWrapped: jest.fn(async () => new Map()),
+}))
 
 beforeEach(() => mockReset(prismaMock))
 
@@ -268,8 +274,14 @@ describe('getAllUsersWithWrapped', () => {
       },
     ] as any)
 
+    const totals = { totalTokens: 1000, promptTokens: 500, completionTokens: 500, cost: 0.01, provider: 'openai', model: 'gpt-4', count: 1 }
+    jest.mocked(usageTotalsForWrapped).mockResolvedValueOnce(new Map([['wrapped-1', totals]]))
+    jest.mocked(usageTotalsByUser).mockResolvedValueOnce(new Map([['user-1', totals]]))
+
     const result = await getAllUsersWithWrapped(2024)
 
+    expect(usageTotalsForWrapped).toHaveBeenCalledWith(['wrapped-1'])
+    expect(usageTotalsByUser).toHaveBeenCalledWith(['user-1'])
     expect(result).toHaveLength(1)
     expect(result[0]).toMatchObject({
       id: 'user-1',
@@ -310,11 +322,8 @@ describe('getAllUsersWithWrapped', () => {
             year: seasonYear,
           },
           take: 1,
-          include: {
-            llmUsage: true,
-          },
+          select: { id: true, status: true, generatedAt: true },
         },
-        llmUsage: true,
         _count: {
           select: {
             plexWrapped: true,
@@ -407,6 +416,9 @@ describe('getAllUsersWithWrapped', () => {
 
     mockPrisma.user.findMany.mockResolvedValue(mockUsers as any)
     mockPrisma.plexWrapped.findMany.mockResolvedValue([])
+    jest.mocked(usageTotalsForWrapped).mockResolvedValueOnce(
+      new Map([['wrapped-1', { totalTokens: 3000, promptTokens: 1500, completionTokens: 1500, cost: 0.03, provider: 'openai', model: 'gpt-4', count: 2 }]])
+    )
 
     const result = await getAllUsersWithWrapped(2024)
 

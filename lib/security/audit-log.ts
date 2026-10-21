@@ -98,6 +98,12 @@ export enum AuditEventType {
   // An admin asked for a member's Rewind to be regenerated. Details carry the year
   // and whether a run was already queued.
   REWIND_REGENERATE_REQUESTED = "REWIND_REGENERATE_REQUESTED",
+  // The season console's bulk runs (P7.8). Details carry the year, the audience,
+  // the member count and the cost estimate, and the job id.
+  REWIND_SEASON_PREPARED = "REWIND_SEASON_PREPARED",
+  REWIND_GENERATE_ALL_STARTED = "REWIND_GENERATE_ALL_STARTED",
+  REWIND_RETRY_FAILED = "REWIND_RETRY_FAILED",
+  REWIND_FINAL_CUT_STARTED = "REWIND_FINAL_CUT_STARTED",
   // A credential, settings, setup or prompt-template change. Details carry the
   // redacted diff from lib/security/config-diff.ts: changed field names, whether
   // a secret changed, and URL origins only.

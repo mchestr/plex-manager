@@ -13,6 +13,9 @@
  * row's `error.requeuedAs` names it). Every close is a compare-and-set on the
  * row's status, so a run that finishes during the sweep keeps its outcome.
  *
+ * Each sweep also re-checks the season-open run's schedule (P7.8,
+ * `ensureSeasonPrepareScheduled`).
+ *
  * @module
  */
 
@@ -21,6 +24,7 @@ import type { Queue } from "bullmq"
 import { prisma } from "@/lib/prisma"
 import { getRewindQueue } from "@/lib/queue/rewind-producers"
 import { enqueueRewindGeneration, type RewindGenerationKind } from "@/lib/rewind/enqueue-generation"
+import { scheduleSeasonOpenRun } from "@/lib/rewind/season-runs"
 import { createLogger } from "@/lib/utils/logger"
 import { toStoredError } from "@/lib/wrapped/generation-errors"
 
@@ -122,5 +126,8 @@ export async function processRewindStaleSweep(): Promise<SweepResult> {
   result.abandoned = abandoned.count
 
   if (result.workerLost + result.jobLost + result.abandoned > 0) logger.warn("Closed lost Rewind runs", { ...result })
+
+  // Keeps the season-open run on the westernmost zone as members change zones (P7.8).
+  await scheduleSeasonOpenRun().catch((error: unknown) => logger.error("Could not schedule the season-open Rewind run", error))
   return result
 }

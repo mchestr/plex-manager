@@ -17,7 +17,6 @@ jest.mock('@/actions/admin', () => ({
   updateServerTimeZone: jest.fn(),
   updateWrappedSettings: jest.fn(),
 }))
-jest.mock('@/actions/admin/rewind-season', () => ({ prepareRewindSeasonData: jest.fn() }))
 
 const mockRefresh = jest.fn()
 jest.mock('next/navigation', () => ({
@@ -43,7 +42,7 @@ function Card({ configured = null }: { configured?: string | null }) {
         seasonOpen={false}
         zone="Europe/Berlin"
         configuredZone={configured}
-        seasonDataPreparedAt={null}
+       
       />
     </div>
   )
@@ -91,7 +90,7 @@ describe('WrappedSettingsForm', () => {
   it('saves the month-day window', async () => {
     const user = userEvent.setup()
     mockUpdateWrappedSettings.mockResolvedValue({ success: true })
-    render(<WrappedSettingsForm enabled year={2026} opens="12-01" closes="01-31" seasonOpen zone="UTC" configuredZone={null} seasonDataPreparedAt={null} />)
+    render(<WrappedSettingsForm enabled year={2026} opens="12-01" closes="01-31" seasonOpen zone="UTC" configuredZone={null} />)
 
     expect(screen.getByTestId('wrapped-settings-open')).toHaveTextContent('Open now')
     await user.click(screen.getByTestId('wrapped-settings-edit-button'))
@@ -103,7 +102,7 @@ describe('WrappedSettingsForm', () => {
   })
 
   it('says generation is off when the feature is switched off', () => {
-    render(<WrappedSettingsForm enabled={false} year={2026} opens="11-20" closes="12-31" seasonOpen zone="UTC" configuredZone={null} seasonDataPreparedAt={null} />)
+    render(<WrappedSettingsForm enabled={false} year={2026} opens="11-20" closes="12-31" seasonOpen zone="UTC" configuredZone={null} />)
 
     expect(screen.getByTestId('wrapped-settings-window')).toHaveTextContent('November 20 to December 31')
     expect(screen.getByTestId('wrapped-settings-open')).toHaveTextContent('Off')

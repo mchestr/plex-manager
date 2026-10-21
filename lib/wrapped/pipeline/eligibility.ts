@@ -15,7 +15,10 @@
  * | `NOT_ENTITLED` | Stripe is on and the member has no active access (FR-51) |
  *
  * Admin regenerations (`kind: 'admin'`) bypass the two flags, never the
- * identity or entitlement checks. A Tautulli outage is not a reason: it
+ * identity or entitlement checks. A run whose payload carries audience `all`
+ * (the scheduled season-open fan-out, P7.8) ignores `rewindAudience`, so
+ * members are generated while viewing is still limited to admins; the
+ * Prepare and Generate all buttons carry `config`, which respects it. A Tautulli outage is not a reason: it
  * throws a retryable `UPSTREAM_ERROR`, and a missing Tautulli throws
  * `NOT_CONFIGURED`.
  *
@@ -37,6 +40,9 @@ export type SkipReason =
   | "MANAGED_ACCOUNT"
   | "NOT_ENTITLED"
 
+/** Whose Rewinds a fan-out generates: the configured `rewindAudience`, or everyone (season open). */
+export type GenerationAudience = "config" | "all"
+
 export type EligibilityResult = { ok: true } | { ok: false; reason: SkipReason }
 
 export interface EligibilityInput {
@@ -44,6 +50,8 @@ export interface EligibilityInput {
   member: { userId: string; plexUserId: string | null; isAdmin: boolean }
   config: { rewindEnabled: boolean; rewindAudience: string; rewindIncludeManagedUsers: boolean; stripeEnabled: boolean }
   tautulli: { url: string; apiKey: string } | null
+  /** The run's payload audience; `config` when absent. */
+  audience?: GenerationAudience
 }
 
 export interface EligibilityDeps {
@@ -61,7 +69,8 @@ export async function checkEligibility(input: EligibilityInput, deps: Eligibilit
 
   if (kind !== "admin") {
     if (!config.rewindEnabled) return skip("REWIND_DISABLED")
-    if (config.rewindAudience !== "all" && !member.isAdmin) return skip("NOT_IN_AUDIENCE")
+    const everyone = input.audience === "all" || config.rewindAudience === "all"
+    if (!everyone && !member.isAdmin) return skip("NOT_IN_AUDIENCE")
   }
 
   if (!member.plexUserId) return skip("NO_PLEX_IDENTITY")
