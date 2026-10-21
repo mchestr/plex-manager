@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "commit": "afaf2fdc47465eec747d1659d04a9b9e4dcfd56d",
-  "generatedAt": "2026-10-21T21:38:36.785Z",
+  "commit": "0cd0244c8be81528bd15dc001bb1051fada3f272",
+  "generatedAt": "2026-10-21T21:53:36.588Z",
   "files": {
     "app/admin/cost-analysis/page.tsx": {
       "blur": 13,
@@ -342,35 +342,6 @@
       "gradient": 6,
       "raw-palette": 42
     },
-    "components/dashboard/announcements-card.tsx": {
-      "arbitrary-type-z": 1,
-      "caps-eyebrow": 1,
-      "gradient": 4,
-      "infinite-motion": 3,
-      "raw-palette": 29
-    },
-    "components/dashboard/discord-card.tsx": {
-      "arbitrary-color": 17,
-      "gradient": 2,
-      "raw-palette": 10
-    },
-    "components/dashboard/media-server-link-card.tsx": {
-      "raw-palette": 4
-    },
-    "components/dashboard/requests-card.tsx": {
-      "gradient": 2,
-      "raw-palette": 15
-    },
-    "components/dashboard/status-background.tsx": {
-      "blur": 1,
-      "raw-palette": 24
-    },
-    "components/dashboard/user-dashboard.tsx": {
-      "caps-eyebrow": 3,
-      "gradient": 1,
-      "gradient-text": 2,
-      "raw-palette": 3
-    },
     "components/onboarding/onboarding-steps/discord-support-step.tsx": {
       "caps-eyebrow": 1,
       "raw-palette": 43
@@ -633,14 +604,13 @@
     }
   },
   "totals": {
-    "arbitrary-color": 17,
-    "arbitrary-type-z": 29,
-    "blur": 114,
-    "caps-eyebrow": 84,
+    "arbitrary-type-z": 28,
+    "blur": 113,
+    "caps-eyebrow": 80,
     "copy": 13,
-    "gradient": 87,
-    "gradient-text": 46,
-    "infinite-motion": 42,
-    "raw-palette": 2608
+    "gradient": 78,
+    "gradient-text": 44,
+    "infinite-motion": 39,
+    "raw-palette": 2523
   }
 }

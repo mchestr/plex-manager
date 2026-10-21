@@ -12,21 +12,13 @@ export function MediaServerLinkCard({ serverName, service, serverUrl }: MediaSer
   // Determine service-specific properties
   const isPlex = service === "plex"
   const href = isPlex ? "https://plex.tv" : (serverUrl || "https://jellyfin.org")
-  const brandColor = isPlex ? "#e5a00d" : "#00a4dc"
-  const gradientFrom = isPlex ? "#1f1f1f" : "#0b1423"
-  const gradientVia = isPlex ? "#282828" : "#132033"
-  const gradientTo = isPlex ? "#1a1a1a" : "#0a1420"
 
   return (
     <motion.a
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="group relative flex items-center gap-3 overflow-hidden rounded-xl border p-3 sm:p-4 shadow-lg shadow-black/20 transition-all duration-300 hover:shadow-xl"
-      style={{
-        borderColor: `${brandColor}20`,
-        background: `linear-gradient(to bottom right, ${gradientFrom}, ${gradientVia}, ${gradientTo})`,
-      }}
+      className="group relative flex items-center gap-3 overflow-hidden rounded-xl border border-border bg-card p-3 sm:p-4 transition-colors duration-300 hover:bg-accent"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
@@ -34,25 +26,11 @@ export function MediaServerLinkCard({ serverName, service, serverUrl }: MediaSer
       whileTap={{ scale: 0.98 }}
       data-testid={`${service}-link-card`}
     >
-      {/* Ambient glow effect */}
-      <div
-        className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full blur-2xl transition-all duration-500"
-        style={{
-          backgroundColor: `${brandColor}10`,
-        }}
-      />
-
       {/* Service Logo */}
-      <div
-        className="relative flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-lg shadow-md"
-        style={{
-          background: `linear-gradient(to bottom right, ${brandColor}, ${adjustBrightness(brandColor, -20)})`,
-          boxShadow: `0 4px 6px -1px ${brandColor}20`,
-        }}
-      >
+      <div className="relative flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-lg bg-secondary">
         {isPlex ? (
           <svg
-            className="h-5 w-5 sm:h-6 sm:w-6 text-black"
+            className="h-5 w-5 sm:h-6 sm:w-6 text-foreground"
             viewBox="0 0 24 24"
             fill="currentColor"
           >
@@ -60,7 +38,7 @@ export function MediaServerLinkCard({ serverName, service, serverUrl }: MediaSer
           </svg>
         ) : (
           <svg
-            className="h-5 w-5 sm:h-6 sm:w-6 text-white"
+            className="h-5 w-5 sm:h-6 sm:w-6 text-foreground"
             viewBox="0 0 24 24"
             fill="currentColor"
           >
@@ -69,16 +47,13 @@ export function MediaServerLinkCard({ serverName, service, serverUrl }: MediaSer
         )}
       </div>
 
-      <span className="relative text-base sm:text-lg font-semibold text-white">
+      <span className="relative text-base sm:text-lg font-semibold text-foreground">
         {serverName}
       </span>
 
       {/* Arrow indicator */}
       <svg
-        className="ml-auto h-4 w-4 text-muted-foreground transition-all duration-200 group-hover:translate-x-0.5"
-        style={{
-          color: `${brandColor}80`,
-        }}
+        className="ml-auto h-4 w-4 text-muted-foreground transition-all duration-200 group-hover:text-foreground group-hover:translate-x-0.5"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -94,19 +69,3 @@ export function MediaServerLinkCard({ serverName, service, serverUrl }: MediaSer
   )
 }
 
-/**
- * Adjust color brightness by a percentage
- */
-function adjustBrightness(color: string, percent: number): string {
-  const num = parseInt(color.replace("#", ""), 16)
-  const amt = Math.round(2.55 * percent)
-  const R = (num >> 16) + amt
-  const G = (num >> 8 & 0x00FF) + amt
-  const B = (num & 0x0000FF) + amt
-  return "#" + (
-    0x1000000 +
-    (R < 255 ? (R < 1 ? 0 : R) : 255) * 0x10000 +
-    (G < 255 ? (G < 1 ? 0 : G) : 255) * 0x100 +
-    (B < 255 ? (B < 1 ? 0 : B) : 255)
-  ).toString(16).slice(1)
-}

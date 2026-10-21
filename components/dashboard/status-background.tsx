@@ -25,11 +25,10 @@ export function StatusFooter({ status, primaryAuthService }: StatusFooterProps) 
 
   // Format auth service name for display
   const authServiceName = primaryAuthService === "jellyfin" ? "Jellyfin" : "Plex"
-  const authServiceColor = primaryAuthService === "jellyfin" ? "text-purple-400" : "text-cyan-400"
 
   return (
     <footer
-      className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-sm border-t border-slate-700/50"
+      className="fixed bottom-0 left-0 right-0 z-40 bg-background border-t border-border"
       data-testid="status-footer"
     >
       {/* Status bars */}
@@ -51,7 +50,7 @@ export function StatusFooter({ status, primaryAuthService }: StatusFooterProps) 
           {primaryAuthService && (
             <>
               <div className="flex items-center gap-1.5">
-                <span className={`text-xs font-medium ${authServiceColor}`}>
+                <span className="text-xs font-medium text-foreground">
                   {authServiceName}
                 </span>
               </div>
@@ -60,8 +59,8 @@ export function StatusFooter({ status, primaryAuthService }: StatusFooterProps) 
           )}
           <div className="flex items-center gap-2">
             <span className={`w-2 h-2 rounded-full ${dotColor}`} />
-            <span className="text-xs text-slate-400">
-              {status.serviceName}: <span className="text-slate-300">{label}</span>
+            <span className="text-xs text-muted-foreground">
+              {status.serviceName}: <span className="text-foreground">{label}</span>
             </span>
           </div>
           <span className="text-xs text-muted-foreground">•</span>
@@ -92,12 +91,12 @@ function UptimePercentage({ segments }: { segments: StatusSegment[] }) {
 
   // Color based on uptime
   const colorClass = percentage >= 99
-    ? "text-emerald-400"
+    ? "text-success"
     : percentage >= 95
-    ? "text-emerald-300"
+    ? "text-success"
     : percentage >= 90
-    ? "text-amber-400"
-    : "text-red-400"
+    ? "text-warning"
+    : "text-destructive"
 
   return (
     <span className={`text-xs font-medium ${colorClass}`}>
@@ -113,10 +112,10 @@ function HoveredSegmentInfo({ segment }: { segment: StatusSegment }) {
   const f = useFormat()
   const date = new Date(segment.timestamp * 1000)
   const statusLabel = segment.status === "up" ? "Up" : segment.status === "down" ? "Down" : "Unknown"
-  const statusColor = segment.status === "up" ? "text-emerald-400" : segment.status === "down" ? "text-red-400" : "text-slate-400"
+  const statusColor = segment.status === "up" ? "text-success" : segment.status === "down" ? "text-destructive" : "text-muted-foreground"
 
   return (
-    <span className="text-xs text-slate-400">
+    <span className="text-xs text-muted-foreground">
       {f.date(date, "day-month-short")}
       {' '}
       {f.time(date)}
@@ -159,12 +158,12 @@ function StatusBar({
 function getSegmentColor(status: StatusSegment["status"]): string {
   switch (status) {
     case "up":
-      return "bg-emerald-500/80"
+      return "bg-success/80"
     case "down":
-      return "bg-red-500/80"
+      return "bg-destructive/80"
     case "unknown":
     default:
-      return "bg-slate-600/80"
+      return "bg-muted-foreground/40"
   }
 }
 
@@ -174,12 +173,12 @@ function getSegmentColor(status: StatusSegment["status"]): string {
 function getSegmentHoverColor(status: StatusSegment["status"]): string {
   switch (status) {
     case "up":
-      return "hover:bg-emerald-400"
+      return "hover:bg-success"
     case "down":
-      return "hover:bg-red-400"
+      return "hover:bg-destructive"
     case "unknown":
     default:
-      return "hover:bg-slate-500"
+      return "hover:bg-muted-foreground"
   }
 }
 
@@ -189,13 +188,13 @@ function getSegmentHoverColor(status: StatusSegment["status"]): string {
 function getOverallStatusStyles(status: StatusData["overallStatus"]): { dotColor: string; label: string } {
   switch (status) {
     case "operational":
-      return { dotColor: "bg-emerald-400", label: "Operational" }
+      return { dotColor: "bg-success", label: "Operational" }
     case "issues":
-      return { dotColor: "bg-amber-400", label: "Having Issues" }
+      return { dotColor: "bg-warning", label: "Having Issues" }
     case "down":
-      return { dotColor: "bg-red-400", label: "Down" }
+      return { dotColor: "bg-destructive", label: "Down" }
     case "unknown":
     default:
-      return { dotColor: "bg-slate-400", label: "Unknown" }
+      return { dotColor: "bg-muted-foreground", label: "Unknown" }
   }
 }
