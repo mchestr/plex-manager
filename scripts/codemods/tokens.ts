@@ -27,7 +27,10 @@
  * `bg-slate-800/50` panel, `bg-cyan-600`, a brand hex, an unmapped palette
  * class), nothing in the unit is rewritten and every string in it that holds a
  * match goes to review, so `text-white` on a coloured fill never becomes
- * `text-foreground` on amber.
+ * `text-foreground` on amber. A fill can also come from the element tree, so
+ * `text-white` goes to review (`on-fill`) when its element is a `<Button>`,
+ * paints a `style` background, or sits within three elements of a `<Button>`,
+ * a `style` background or a className with a coloured fill.
  *
  * ## Classes
  *
@@ -319,6 +322,19 @@ function paintsFill(text: string): boolean {
   })
 }
 
+/** True for `style={{ background… }}`, which paints a fill the class strings can't show. */
+function paintsStyleFill(attribute: ts.JsxAttribute): boolean {
+  const value = attribute.initializer
+  if (!value || !ts.isJsxExpression(value) || !value.expression) return false
+  const style = unwrap(value.expression)
+  return (
+    ts.isObjectLiteralExpression(style) &&
+    style.properties.some(
+      (property) => property.name !== undefined && ts.isIdentifier(property.name) && /^background/.test(property.name.text)
+    )
+  )
+}
+
 const FILL_DEPTH = 3
 
 /**
@@ -337,15 +353,16 @@ function onFill(attribute: ts.JsxAttribute, file: ts.SourceFile): boolean {
         : null
     if (opening) {
       if (opening.tagName.getText(file) === 'Button') return true
-      if (depth > 0) {
-        for (const property of opening.attributes.properties) {
-          if (!ts.isJsxAttribute(property) || !ts.isIdentifier(property.name) || property.name.text !== 'className') continue
-          const segments: Segment[] = []
-          const value = property.initializer
-          if (value && ts.isStringLiteral(value)) collect(value, file, segments)
-          else if (value && ts.isJsxExpression(value) && value.expression) collect(value.expression, file, segments)
-          if (segments.some((segment) => paintsFill(file.text.slice(segment.start, segment.end)))) return true
-        }
+      for (const property of opening.attributes.properties) {
+        if (!ts.isJsxAttribute(property) || !ts.isIdentifier(property.name)) continue
+        if (property.name.text === 'style' && paintsStyleFill(property)) return true
+        // The owner's own className is the unit itself, which the context rule covers.
+        if (property.name.text !== 'className' || depth === 0) continue
+        const segments: Segment[] = []
+        const value = property.initializer
+        if (value && ts.isStringLiteral(value)) collect(value, file, segments)
+        else if (value && ts.isJsxExpression(value) && value.expression) collect(value.expression, file, segments)
+        if (segments.some((segment) => paintsFill(file.text.slice(segment.start, segment.end)))) return true
       }
       if (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node)) depth++
     }

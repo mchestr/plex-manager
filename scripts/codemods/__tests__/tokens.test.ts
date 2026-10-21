@@ -130,6 +130,7 @@ describe('review routing', () => {
       `  <div className="bg-slate-800/50">`,
       `    <Button><Spinner className="text-white" /></Button>`,
       `    <div className="bg-gradient-to-br from-amber-500 to-orange-600"><svg className="h-5 text-white" /></div>`,
+      `    <div style={{ background: brand }}><svg className="text-white" /></div>`,
       `    <p className="text-white" />`,
       `  </div>`,
       `)`,
@@ -137,7 +138,7 @@ describe('review routing', () => {
     ].join('\n')
     const result = transformSource('a.tsx', source)
     expect(result.output).toBe(source.replace('<p className="text-white" />', '<p className="text-foreground" />'))
-    expect(result.reviews.filter((item) => item.rule === 'on-fill').map((item) => item.line)).toEqual([3, 4])
+    expect(result.reviews.filter((item) => item.rule === 'on-fill').map((item) => item.line)).toEqual([3, 4, 5])
   })
 
   it('holds the whole className unit, across cn() arguments', () => {
