@@ -30,6 +30,17 @@ function Controlled(props: Partial<React.ComponentProps<typeof StyledDropdown>>)
 
 const trigger = () => screen.getByRole("combobox")
 
+/** Base UI holds the opening popup at `pointer-events: none` for a moment; waits until the option takes a click. */
+async function clickable(testId: string) {
+  const option = await screen.findByTestId(testId)
+  await waitFor(() => {
+    for (let node: HTMLElement | null = option; node; node = node.parentElement) {
+      expect(getComputedStyle(node).pointerEvents).not.toBe("none")
+    }
+  })
+  return option
+}
+
 describe("StyledDropdown (deprecated adapter)", () => {
   describe("rendering", () => {
     it("shows the default placeholder, a custom one, or the selected label", () => {
@@ -178,7 +189,7 @@ describe("StyledDropdown (deprecated adapter)", () => {
       render(<Controlled data-testid="users-filter-plex-access" />)
 
       await user.click(screen.getByTestId("users-filter-plex-access"))
-      await user.click(await screen.findByTestId("users-filter-plex-access-option-yes"))
+      await user.click(await clickable("users-filter-plex-access-option-yes"))
       expect(screen.getByTestId("users-filter-plex-access")).toHaveTextContent("Yes")
     })
 
@@ -197,7 +208,7 @@ describe("StyledDropdown (deprecated adapter)", () => {
       expect(screen.getByTestId("setup-input-provider")).toBe(trigger())
 
       await user.click(trigger())
-      await user.click(await screen.findByTestId("setup-input-provider-option-no"))
+      await user.click(await clickable("setup-input-provider-option-no"))
       expect(hidden).toHaveValue("no")
       const form = screen.getByRole("form", { name: "Setup" }) as HTMLFormElement
       expect(new FormData(form).getAll("provider")).toEqual(["no"])

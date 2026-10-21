@@ -17,6 +17,9 @@ import { z } from "zod"
 import { memberAction } from "@/lib/actions/define-action"
 import { fail, ok } from "@/lib/actions/result"
 import { prisma } from "@/lib/prisma"
+import { createLogger } from "@/lib/utils/logger"
+
+const logger = createLogger("REWIND_VIEWS")
 
 const SHARE_ACTIONS = ["image", "save", "link"] as const
 type ShareAction = (typeof SHARE_ACTIONS)[number]
@@ -39,7 +42,8 @@ const counted = (stored: unknown, kind: ShareAction) => {
 /**
  * Adds one to `shareActions[kind]` as a compare-and-swap on the stored counts,
  * so two share actions at once never overwrite each other's increment. A row
- * that has gone (its Rewind was deleted) counts nothing.
+ * that has gone (its Rewind was deleted) counts nothing, and a count still
+ * contended after three tries is dropped with a warning.
  */
 async function countShareAction(wrappedId: string, sessionKey: string, kind: ShareAction) {
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -51,6 +55,7 @@ async function countShareAction(wrappedId: string, sessionKey: string, kind: Sha
     })
     if (swapped.count > 0) return
   }
+  logger.warn("Dropped a share action after three contended writes", { wrappedId, kind })
 }
 
 /**
