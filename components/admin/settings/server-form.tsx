@@ -183,7 +183,7 @@ export function ServerForm({ type, server }: ServerFormProps) {
         {type === "prometheus" ? (
           <div className="md:col-span-2">
             <label className="block text-xs font-medium text-slate-400 mb-1">
-              PromQL Query <span className="text-slate-500 font-normal">(e.g. up{`{job="plex"}`})</span>
+              PromQL Query <span className="text-muted-foreground font-normal">(e.g. up{`{job="plex"}`})</span>
             </label>
             <StyledInput
               type="text"
@@ -198,7 +198,7 @@ export function ServerForm({ type, server }: ServerFormProps) {
           <>
             <div className="md:col-span-2">
               <label className="block text-xs font-medium text-slate-400 mb-1">
-                Public URL <span className="text-slate-500 font-normal">(optional, e.g. https://{type}.example.com)</span>
+                Public URL <span className="text-muted-foreground font-normal">(optional, e.g. https://{type}.example.com)</span>
               </label>
               <StyledInput
                 type="text"

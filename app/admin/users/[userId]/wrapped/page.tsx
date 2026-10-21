@@ -176,7 +176,7 @@ export default async function UserWrappedPage({
           <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg p-12 text-center max-w-2xl mx-auto mt-8">
             <div className="max-w-md mx-auto">
               <svg
-                className="w-16 h-16 mx-auto mb-4 text-slate-500"
+                className="w-16 h-16 mx-auto mb-4 text-muted-foreground"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"

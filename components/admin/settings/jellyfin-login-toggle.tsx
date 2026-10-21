@@ -32,7 +32,7 @@ export function JellyfinLoginToggle({ enabledForLogin }: JellyfinLoginToggleProp
       <div className="flex items-center justify-between">
         <div>
           <h4 className="text-xs font-medium text-slate-300">Allow Jellyfin sign-in</h4>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-muted-foreground mt-0.5">
             {enabledForLogin
               ? "Members can sign in with their Jellyfin account"
               : "Jellyfin sign-in is off and hidden from the login page"}

@@ -92,7 +92,7 @@ export default async function DiscordDashboardPage({
           <p className="text-sm text-slate-400">
             Monitor bot activity, command usage, and user interactions
           </p>
-          <div className="mt-2 text-xs text-slate-500">
+          <div className="mt-2 text-xs text-muted-foreground">
             Period: {formatDateRange()}
           </div>
         </div>
@@ -122,7 +122,7 @@ export default async function DiscordDashboardPage({
             <div className="text-3xl font-bold text-cyan-400">
               {f.number(dashboard?.summary?.totalCommands ?? 0)}
             </div>
-            <div className="text-xs text-slate-500 mt-1">
+            <div className="text-xs text-muted-foreground mt-1">
               In selected period
             </div>
           </div>
@@ -131,7 +131,7 @@ export default async function DiscordDashboardPage({
             <div className="text-3xl font-bold text-green-400">
               {dashboard?.summary?.successRate?.toFixed(1) ?? 0}%
             </div>
-            <div className="text-xs text-slate-500 mt-1">
+            <div className="text-xs text-muted-foreground mt-1">
               Commands completed successfully
             </div>
           </div>
@@ -140,7 +140,7 @@ export default async function DiscordDashboardPage({
             <div className="text-3xl font-bold text-purple-400">
               {dashboard?.summary?.avgResponseTimeMs?.toFixed(0) ?? 0}ms
             </div>
-            <div className="text-xs text-slate-500 mt-1">
+            <div className="text-xs text-muted-foreground mt-1">
               Average command processing time
             </div>
           </div>
@@ -149,7 +149,7 @@ export default async function DiscordDashboardPage({
             <div className="text-3xl font-bold text-yellow-400">
               {f.number(dashboard?.summary?.uniqueUsers ?? 0)}
             </div>
-            <div className="text-xs text-slate-500 mt-1">
+            <div className="text-xs text-muted-foreground mt-1">
               Users who used the bot
             </div>
           </div>
@@ -237,7 +237,7 @@ export default async function DiscordDashboardPage({
                     <tr>
                       <td
                         colSpan={3}
-                        className="px-4 py-8 text-center text-slate-500"
+                        className="px-4 py-8 text-center text-muted-foreground"
                       >
                         No data available
                       </td>

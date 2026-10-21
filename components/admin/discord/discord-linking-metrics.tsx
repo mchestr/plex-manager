@@ -41,7 +41,7 @@ interface DiscordLinkingMetricsProps {
 export function DiscordLinkingMetrics({ data }: DiscordLinkingMetricsProps) {
   if (!data || data.totalLinkRequests === 0) {
     return (
-      <div className="flex items-center justify-center h-full text-slate-500 text-sm">
+      <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
         No account linking data available
       </div>
     )

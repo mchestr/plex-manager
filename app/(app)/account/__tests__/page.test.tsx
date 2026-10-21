@@ -62,7 +62,7 @@ describe('AccountPage', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Account' })).toBeInTheDocument()
     expect(screen.queryByRole('main')).not.toBeInTheDocument()
     for (const title of ['Discord', 'Notifications', 'Time zone']) {
-      expect(screen.getByRole('heading', { level: 3, name: title })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { level: 2, name: title })).toBeInTheDocument()
     }
     expect(screen.queryByText(/Appearance/)).not.toBeInTheDocument()
     expect(fieldProps[0]).toMatchObject({ value: 'Europe/London', serverZone: 'America/Chicago' })

@@ -169,7 +169,7 @@ export function ExpandablePrompt({ content, title, characterCount, characterCoun
         {node}
       </div>
       {characterCount !== undefined && (
-        <div className="mt-2 text-xs text-slate-500">
+        <div className="mt-2 text-xs text-muted-foreground">
           {f.number(characterCount)} characters
           {characterCountSuffix && ` ${characterCountSuffix}`}
         </div>

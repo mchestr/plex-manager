@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "commit": "4c0daeb2273a7217cdca6f7b06dbea11de74e179",
-  "generatedAt": "2026-10-20T23:37:40.199Z",
+  "commit": "ea274ee4a67ffb04aef7ec99494b9c4659a7980b",
+  "generatedAt": "2026-10-20T23:59:18.150Z",
   "files": {
     "app/(app)/page.tsx": {
       "gradient": 2,
@@ -11,12 +11,12 @@
     "app/admin/cost-analysis/page.tsx": {
       "blur": 13,
       "infinite-motion": 1,
-      "raw-palette": 84
+      "raw-palette": 76
     },
     "app/admin/discord/page.tsx": {
       "blur": 16,
       "infinite-motion": 2,
-      "raw-palette": 79
+      "raw-palette": 73
     },
     "app/admin/error.tsx": {
       "infinite-motion": 1,
@@ -25,16 +25,16 @@
     "app/admin/llm-usage/[usageId]/page.tsx": {
       "blur": 7,
       "copy": 2,
-      "raw-palette": 70
+      "raw-palette": 67
     },
     "app/admin/llm-usage/conversation/[conversationId]/page.tsx": {
       "caps-eyebrow": 6,
-      "raw-palette": 40
+      "raw-palette": 36
     },
     "app/admin/llm-usage/page.tsx": {
       "blur": 5,
       "caps-eyebrow": 7,
-      "raw-palette": 71
+      "raw-palette": 66
     },
     "app/admin/loading.tsx": {
       "gradient": 1,
@@ -62,7 +62,7 @@
       "blur": 1,
       "caps-eyebrow": 6,
       "gradient": 2,
-      "raw-palette": 38
+      "raw-palette": 37
     },
     "app/admin/queues/page.tsx": {
       "blur": 1,
@@ -77,19 +77,19 @@
     "app/admin/shares/page.tsx": {
       "blur": 6,
       "caps-eyebrow": 6,
-      "raw-palette": 54
+      "raw-palette": 50
     },
     "app/admin/users/[userId]/page.tsx": {
       "blur": 10,
       "caps-eyebrow": 6,
       "copy": 4,
-      "raw-palette": 122
+      "raw-palette": 117
     },
     "app/admin/users/[userId]/wrapped/page.tsx": {
       "blur": 5,
       "copy": 3,
       "gradient": 3,
-      "raw-palette": 44
+      "raw-palette": 43
     },
     "app/admin/users/page.tsx": {
       "raw-palette": 2
@@ -161,82 +161,67 @@
       "raw-palette": 3
     },
     "components/admin/announcements/announcement-form-modal.tsx": {
-      "raw-palette": 13
+      "raw-palette": 11
     },
     "components/admin/announcements/announcement-list-item.tsx": {
-      "raw-palette": 22
+      "raw-palette": 21
     },
     "components/admin/announcements/announcements-page-client.tsx": {
-      "raw-palette": 10
+      "raw-palette": 9
     },
     "components/admin/cost-analysis/cost-date-filter.tsx": {
       "blur": 1,
       "raw-palette": 6
     },
-    "components/admin/cost-analysis/cost-model-chart.tsx": {
-      "raw-palette": 1
-    },
-    "components/admin/cost-analysis/cost-provider-chart.tsx": {
-      "raw-palette": 1
-    },
-    "components/admin/cost-analysis/cost-user-chart.tsx": {
-      "raw-palette": 1
-    },
     "components/admin/discord/discord-active-users.tsx": {
-      "raw-palette": 15
+      "raw-palette": 13
     },
     "components/admin/discord/discord-activity-table.tsx": {
-      "raw-palette": 44
+      "raw-palette": 40
     },
     "components/admin/discord/discord-bot-status.tsx": {
       "blur": 2,
       "infinite-motion": 2,
-      "raw-palette": 19
-    },
-    "components/admin/discord/discord-command-chart.tsx": {
-      "raw-palette": 1
+      "raw-palette": 15
     },
     "components/admin/discord/discord-context-metrics.tsx": {
-      "raw-palette": 8
+      "raw-palette": 7
     },
     "components/admin/discord/discord-date-filter.tsx": {
       "blur": 1,
       "raw-palette": 3
     },
     "components/admin/discord/discord-error-analysis.tsx": {
-      "raw-palette": 14
+      "raw-palette": 13
     },
     "components/admin/discord/discord-help-stats.tsx": {
-      "raw-palette": 10
+      "raw-palette": 9
     },
     "components/admin/discord/discord-linking-metrics.tsx": {
-      "raw-palette": 11
+      "raw-palette": 10
     },
     "components/admin/discord/discord-marked-media.tsx": {
-      "raw-palette": 44
+      "raw-palette": 42
     },
     "components/admin/discord/discord-media-marking-breakdown.tsx": {
-      "raw-palette": 12
-    },
-    "components/admin/discord/discord-selection-stats.tsx": {
       "raw-palette": 11
     },
-    "components/admin/discord/discord-trend-chart.tsx": {
-      "raw-palette": 1
+    "components/admin/discord/discord-selection-stats.tsx": {
+      "raw-palette": 10
     },
     "components/admin/invites/invite-details-client.tsx": {
       "caps-eyebrow": 6,
-      "raw-palette": 67
+      "raw-palette": 65
     },
     "components/admin/invites/invites-page-client.tsx": {
       "caps-eyebrow": 6,
-      "raw-palette": 112
+      "raw-palette": 108
     },
     "components/admin/llm-usage/conversation-usage-row.tsx": {
       "arbitrary-type-z": 1,
       "caps-eyebrow": 1,
       "copy": 1,
-      "raw-palette": 12
+      "raw-palette": 10
     },
     "components/admin/llm-usage/llm-text-removed-notice.tsx": {
       "blur": 1,
@@ -259,7 +244,7 @@
       "raw-palette": 10
     },
     "components/admin/playground/statistics-viewer.tsx": {
-      "raw-palette": 67
+      "raw-palette": 65
     },
     "components/admin/playground/template-selector.tsx": {
       "blur": 1,
@@ -272,7 +257,7 @@
     "components/admin/prompts/expandable-prompt.tsx": {
       "blur": 1,
       "caps-eyebrow": 2,
-      "raw-palette": 29
+      "raw-palette": 28
     },
     "components/admin/prompts/prompt-scrollspy.tsx": {
       "raw-palette": 15
@@ -283,11 +268,11 @@
     "components/admin/prompts/prompt-template-editor.tsx": {
       "blur": 3,
       "gradient": 1,
-      "raw-palette": 141
+      "raw-palette": 139
     },
     "components/admin/queues/job-table.tsx": {
       "caps-eyebrow": 7,
-      "raw-palette": 50
+      "raw-palette": 49
     },
     "components/admin/queues/queue-controls.tsx": {
       "blur": 1,
@@ -298,7 +283,7 @@
     },
     "components/admin/queues/queue-stats.tsx": {
       "blur": 1,
-      "raw-palette": 9
+      "raw-palette": 8
     },
     "components/admin/queues/queue-status.tsx": {
       "blur": 1,
@@ -310,10 +295,10 @@
       "raw-palette": 8
     },
     "components/admin/settings/discord-integration-form.tsx": {
-      "raw-palette": 39
+      "raw-palette": 30
     },
     "components/admin/settings/jellyfin-login-toggle.tsx": {
-      "raw-palette": 5
+      "raw-palette": 4
     },
     "components/admin/settings/llm-provider-form.tsx": {
       "raw-palette": 9
@@ -322,15 +307,15 @@
       "raw-palette": 2
     },
     "components/admin/settings/server-form.tsx": {
-      "raw-palette": 23
+      "raw-palette": 21
     },
     "components/admin/settings/stripe-settings-form.tsx": {
-      "raw-palette": 18
+      "raw-palette": 14
     },
     "components/admin/settings/watchlist-sync-settings.tsx": {
       "blur": 2,
       "infinite-motion": 1,
-      "raw-palette": 44
+      "raw-palette": 42
     },
     "components/admin/settings/wrapped-settings-form.tsx": {
       "copy": 2,
@@ -344,9 +329,6 @@
       "gradient": 2,
       "infinite-motion": 1,
       "raw-palette": 14
-    },
-    "components/admin/shares/share-time-chart.tsx": {
-      "raw-palette": 1
     },
     "components/admin/users/cancel-subscription-button.tsx": {
       "raw-palette": 4
@@ -371,16 +353,16 @@
     },
     "components/admin/users/user-actions-menu.tsx": {
       "copy": 1,
-      "raw-palette": 22
+      "raw-palette": 21
     },
     "components/admin/users/user-activity-timeline.tsx": {
-      "raw-palette": 44
+      "raw-palette": 37
     },
     "components/admin/users/user-status-badge.tsx": {
       "raw-palette": 12
     },
     "components/admin/users/user-table-row.tsx": {
-      "raw-palette": 23
+      "raw-palette": 19
     },
     "components/admin/users/users-filter.tsx": {
       "blur": 1,
@@ -394,11 +376,11 @@
     "components/admin/users/users-stats-summary.tsx": {
       "blur": 6,
       "copy": 1,
-      "raw-palette": 26
+      "raw-palette": 24
     },
     "components/admin/wrapped/historical-wrapped-selector-header.tsx": {
       "arbitrary-type-z": 3,
-      "raw-palette": 21
+      "raw-palette": 20
     },
     "components/auth/jellyfin-sign-in-button.tsx": {
       "raw-palette": 6
@@ -424,24 +406,24 @@
     "components/dashboard/discord-card.tsx": {
       "arbitrary-color": 17,
       "gradient": 2,
-      "raw-palette": 11
+      "raw-palette": 10
     },
     "components/dashboard/media-server-link-card.tsx": {
-      "raw-palette": 5
+      "raw-palette": 4
     },
     "components/dashboard/requests-card.tsx": {
       "gradient": 2,
-      "raw-palette": 16
+      "raw-palette": 15
     },
     "components/dashboard/status-background.tsx": {
       "blur": 1,
-      "raw-palette": 27
+      "raw-palette": 24
     },
     "components/dashboard/user-dashboard.tsx": {
       "caps-eyebrow": 3,
       "gradient": 1,
       "gradient-text": 2,
-      "raw-palette": 6
+      "raw-palette": 3
     },
     "components/generator/wrapped-generating-animation.tsx": {
       "copy": 2,
@@ -743,6 +725,6 @@
     "gradient": 104,
     "gradient-text": 52,
     "infinite-motion": 47,
-    "raw-palette": 3097
+    "raw-palette": 2975
   }
 }

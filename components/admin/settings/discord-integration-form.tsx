@@ -220,7 +220,7 @@ export function DiscordIntegrationForm({ integration, linkedCount, portalUrl }: 
         </div>
         <div>
           <label className="block text-xs font-medium text-slate-400 mb-1">
-            Guild ID <span className="text-slate-500 font-normal">(optional)</span>
+            Guild ID <span className="text-muted-foreground font-normal">(optional)</span>
           </label>
           <StyledInput
             type="text"
@@ -232,7 +232,7 @@ export function DiscordIntegrationForm({ integration, linkedCount, portalUrl }: 
         </div>
         <div>
           <label className="block text-xs font-medium text-slate-400 mb-1">
-            Server Invite Code <span className="text-slate-500 font-normal">(optional)</span>
+            Server Invite Code <span className="text-muted-foreground font-normal">(optional)</span>
           </label>
           <StyledInput
             type="text"
@@ -246,7 +246,7 @@ export function DiscordIntegrationForm({ integration, linkedCount, portalUrl }: 
             placeholder="Discord invite code or full link (e.g., abc123 or https://discord.gg/abc123)"
             disabled={isPending}
           />
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-muted-foreground mt-1">
             Paste the invite code or full Discord invite link (e.g., https://discord.gg/axzpDYH6jz)
           </p>
         </div>
@@ -262,7 +262,7 @@ export function DiscordIntegrationForm({ integration, linkedCount, portalUrl }: 
         </div>
         <div>
           <label className="block text-xs font-medium text-slate-400 mb-1">
-            Bot Token <span className="text-slate-500 font-normal">(optional)</span>
+            Bot Token <span className="text-muted-foreground font-normal">(optional)</span>
           </label>
           <StyledInput
             type="password"
@@ -272,13 +272,13 @@ export function DiscordIntegrationForm({ integration, linkedCount, portalUrl }: 
             disabled={isPending}
             autoComplete="off"
           />
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-muted-foreground mt-1">
             Used by the Discord bot. Falls back to the DISCORD_BOT_TOKEN environment variable when blank.
           </p>
         </div>
         <div>
           <label className="block text-xs font-medium text-slate-400 mb-1">
-            Support Channel ID <span className="text-slate-500 font-normal">(optional)</span>
+            Support Channel ID <span className="text-muted-foreground font-normal">(optional)</span>
           </label>
           <StyledInput
             type="text"
@@ -290,7 +290,7 @@ export function DiscordIntegrationForm({ integration, linkedCount, portalUrl }: 
         </div>
         <div>
           <label className="block text-xs font-medium text-slate-400 mb-1">
-            Support Thread IDs <span className="text-slate-500 font-normal">(optional)</span>
+            Support Thread IDs <span className="text-muted-foreground font-normal">(optional)</span>
           </label>
           <StyledInput
             type="text"
@@ -304,9 +304,9 @@ export function DiscordIntegrationForm({ integration, linkedCount, portalUrl }: 
 
       <div>
         <label className="block text-xs font-medium text-slate-400 mb-1">
-          Server Notes for Onboarding <span className="text-slate-500 font-normal">(optional)</span>
+          Server Notes for Onboarding <span className="text-muted-foreground font-normal">(optional)</span>
         </label>
-        <p className="text-xs text-slate-500 mb-2">
+        <p className="text-xs text-muted-foreground mb-2">
           Custom notes displayed to users during the onboarding guide's Discord support step. Use this to provide server-specific instructions or important information.
         </p>
         <StyledTextarea

@@ -66,7 +66,7 @@ export function DiscordMediaMarkingBreakdown({
 }: DiscordMediaMarkingBreakdownProps) {
   if (!data || data.byCommand.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full text-slate-500 text-sm">
+      <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
         No media marking data available
       </div>
     )

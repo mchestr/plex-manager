@@ -61,7 +61,7 @@ describe('CostProviderChart', () => {
       render(<CostProviderChart data={[]} />)
 
       const emptyState = screen.getByText('No data available')
-      expect(emptyState).toHaveClass('text-slate-500', 'text-sm')
+      expect(emptyState).toHaveClass('text-muted-foreground', 'text-sm')
     })
   })
 

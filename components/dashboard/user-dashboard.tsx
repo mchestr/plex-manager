@@ -59,7 +59,7 @@ export function UserDashboard({
 
             {/* Quick Links - visually separated section */}
             <div className="space-y-3 sm:space-y-4 pt-2">
-              <h2 className="text-xs font-medium uppercase tracking-wider text-slate-500 px-1">Quick Links</h2>
+              <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground px-1">Quick Links</h2>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                 <MediaServerLinkCard
                   serverName={serverName}
@@ -81,7 +81,7 @@ export function UserDashboard({
 
             {/* Features section */}
             <div className="space-y-3 sm:space-y-4 pt-2">
-              <h2 className="text-xs font-medium uppercase tracking-wider text-slate-500 px-1">Features</h2>
+              <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground px-1">Features</h2>
               <div className="grid grid-cols-1 gap-3 sm:gap-4">
                 <WatchlistSyncCard />
               </div>
@@ -90,7 +90,7 @@ export function UserDashboard({
             {/* Subscription - server-rendered, only present for Stripe subscribers */}
             {subscriptionSlot && (
               <div className="space-y-3 sm:space-y-4 pt-2">
-                <h2 className="text-xs font-medium uppercase tracking-wider text-slate-500 px-1">Membership</h2>
+                <h2 className="text-xs font-medium uppercase tracking-wider text-muted-foreground px-1">Membership</h2>
                 {subscriptionSlot}
               </div>
             )}

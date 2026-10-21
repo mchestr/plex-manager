@@ -55,7 +55,7 @@ export function StatusFooter({ status, primaryAuthService }: StatusFooterProps) 
                   {authServiceName}
                 </span>
               </div>
-              <span className="text-xs text-slate-500">•</span>
+              <span className="text-xs text-muted-foreground">•</span>
             </>
           )}
           <div className="flex items-center gap-2">
@@ -64,13 +64,13 @@ export function StatusFooter({ status, primaryAuthService }: StatusFooterProps) 
               {status.serviceName}: <span className="text-slate-300">{label}</span>
             </span>
           </div>
-          <span className="text-xs text-slate-500">•</span>
+          <span className="text-xs text-muted-foreground">•</span>
           <UptimePercentage segments={status.segments} />
         </div>
         {hoveredSegment ? (
           <HoveredSegmentInfo segment={hoveredSegment} />
         ) : (
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-muted-foreground">
             Last 7 days
           </span>
         )}

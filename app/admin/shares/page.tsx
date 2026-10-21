@@ -38,7 +38,7 @@ export default async function SharesDashboardPage() {
             <div className="text-2xl font-bold text-cyan-400">
               {f.number(stats.totalShares)}
             </div>
-            <div className="text-xs text-slate-500 mt-1">
+            <div className="text-xs text-muted-foreground mt-1">
               Wraps with share tokens
             </div>
           </div>
@@ -47,7 +47,7 @@ export default async function SharesDashboardPage() {
             <div className="text-2xl font-bold text-green-400">
               {f.number(stats.totalVisits)}
             </div>
-            <div className="text-xs text-slate-500 mt-1">
+            <div className="text-xs text-muted-foreground mt-1">
               All-time share visits
             </div>
           </div>
@@ -56,7 +56,7 @@ export default async function SharesDashboardPage() {
             <div className="text-2xl font-bold text-white">
               {f.number(stats.uniqueWrapsShared)}
             </div>
-            <div className="text-xs text-slate-500 mt-1">
+            <div className="text-xs text-muted-foreground mt-1">
               Different wraps shared
             </div>
           </div>
@@ -65,7 +65,7 @@ export default async function SharesDashboardPage() {
             <div className="text-2xl font-bold text-purple-400">
               {stats.averageVisitsPerShare.toFixed(1)}
             </div>
-            <div className="text-xs text-slate-500 mt-1">
+            <div className="text-xs text-muted-foreground mt-1">
               Average per shared wrap
             </div>
           </div>
@@ -175,7 +175,7 @@ export default async function SharesDashboardPage() {
                           <Link
                             href={`/rewind/s/${wrap.shareToken}`}
                             target="_blank"
-                            className="px-2 sm:px-3 py-1 sm:py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-medium rounded transition-colors text-center"
+                            className="px-2 sm:px-3 py-1 sm:py-1.5 bg-cyan-700 hover:bg-cyan-800 text-white text-xs font-medium rounded transition-colors text-center"
                           >
                             View
                           </Link>

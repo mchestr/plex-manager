@@ -64,7 +64,7 @@ export function UserActionsMenu({ user, year, stripeDashboardBaseUrl }: UserActi
 
   if (!hasActions) {
     return (
-      <div className="text-xs text-slate-500">
+      <div className="text-xs text-muted-foreground">
         {user.wrappedStatus === "generating" ? "Generating..." : "No actions"}
       </div>
     )

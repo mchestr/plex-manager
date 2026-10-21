@@ -219,7 +219,7 @@ export function DiscordMarkedMedia({
 
       {/* Table */}
       {marks.length === 0 ? (
-        <div className="p-8 text-center text-slate-500">
+        <div className="p-8 text-center text-muted-foreground">
           No marked media matches these filters.
         </div>
       ) : (
@@ -258,7 +258,7 @@ export function DiscordMarkedMedia({
                         <span className="text-sm text-slate-200 font-medium">
                           {formatMediaLabel(mark)}
                         </span>
-                        <span className="text-xs text-slate-500">
+                        <span className="text-xs text-muted-foreground">
                           {mark.mediaType.replace(/_/g, " ")}
                           {mark.note ? ` · ${mark.note}` : ""}
                         </span>

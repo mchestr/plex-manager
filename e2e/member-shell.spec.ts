@@ -22,9 +22,13 @@ test.describe('Member shell', () => {
     await page.goto('/');
     await expect(page.getByTestId('member-nav-home')).toHaveAttribute('aria-current', 'page');
 
-    await page.getByTestId('account-menu-trigger').focus();
-    await page.keyboard.press('Enter');
-    await expect(page.getByTestId('account-menu')).toBeVisible();
+    // The streamed trigger is in the page before React hydrates it, so a
+    // keypress can land first; retry until Enter opens the menu.
+    await expect(async () => {
+      await page.getByTestId('account-menu-trigger').focus();
+      await page.keyboard.press('Enter');
+      await expect(page.getByTestId('account-menu')).toBeVisible({ timeout: 1000 });
+    }).toPass();
     await expect(page.getByTestId('sign-out-button')).toBeVisible();
 
     await page.keyboard.press('Escape');

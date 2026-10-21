@@ -53,7 +53,7 @@ export default async function AccountPage() {
         {discordHandle !== undefined && (
           <Card data-testid="account-discord">
             <CardHeader className="pb-5">
-              <CardTitle>Discord</CardTitle>
+              <CardTitle as="h2">Discord</CardTitle>
               <CardDescription>
                 {discordHandle ? `Linked as ${discordHandle}` : "Link Discord to get the Member role on the server."}
               </CardDescription>
@@ -74,7 +74,7 @@ export default async function AccountPage() {
 
         <Card data-testid="account-notifications">
           <CardHeader>
-            <CardTitle>Notifications</CardTitle>
+            <CardTitle as="h2">Notifications</CardTitle>
           </CardHeader>
           <CardContent>
             <NotifySwitch notify={notify} />
@@ -83,7 +83,7 @@ export default async function AccountPage() {
 
         <Card data-testid="account-timezone-section">
           <CardHeader>
-            <CardTitle>Time zone</CardTitle>
+            <CardTitle as="h2">Time zone</CardTitle>
           </CardHeader>
           <CardContent>
             <TimezoneField value={user?.timezone ?? null} serverZone={zone} options={timeZoneOptions()} />

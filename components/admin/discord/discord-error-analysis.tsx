@@ -146,7 +146,7 @@ export function DiscordErrorAnalysis({ data }: DiscordErrorAnalysisProps) {
                   </span>
                 </div>
                 {cmd.sampleErrors.length > 0 && (
-                  <div className="text-xs text-slate-500 truncate">
+                  <div className="text-xs text-muted-foreground truncate">
                     {cmd.sampleErrors[0]}
                   </div>
                 )}

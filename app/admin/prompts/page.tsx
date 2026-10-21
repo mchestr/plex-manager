@@ -86,7 +86,7 @@ export default async function PromptsPage() {
                         </td>
                         <td className="px-3 sm:px-6 py-4 hidden md:table-cell">
                           <div className="text-sm text-slate-300 max-w-md truncate">
-                            {template.description || <span className="text-slate-500">—</span>}
+                            {template.description || <span className="text-muted-foreground">—</span>}
                           </div>
                         </td>
                         <td className="px-3 sm:px-6 py-4">
@@ -114,7 +114,7 @@ export default async function PromptsPage() {
                           <div className="flex items-center gap-2">
                             <Link
                               href={`/admin/prompts/${template.id}`}
-                              className="px-2 sm:px-3 py-1 sm:py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-medium rounded transition-colors"
+                              className="px-2 sm:px-3 py-1 sm:py-1.5 bg-cyan-700 hover:bg-cyan-800 text-white text-xs font-medium rounded transition-colors"
                             >
                               <span className="hidden sm:inline">View</span>
                               <span className="sm:hidden">View</span>

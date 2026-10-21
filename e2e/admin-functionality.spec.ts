@@ -36,12 +36,13 @@ test.describe('Admin Functionality', () => {
     await adminPage.getByTestId('users-filter-plex-access-option-all').click();
 
     // Wait for filtered results to appear - should now show all users
-    await waitForAdminContent(adminPage, [
-      { type: 'text', value: 'Admin User' },
-      { type: 'text', value: 'admin@example.com' },
-      { type: 'text', value: 'Regular User' },
-      { type: 'text', value: 'regular@example.com' }
-    ], { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+    // Scoped to the rows: the admin sidebar shows the signed-in admin's name too
+    const adminRow = adminPage.getByTestId('user-row-admin-user-id');
+    const regularRow = adminPage.getByTestId('user-row-regular-user-id');
+    await expect(adminRow).toContainText('Admin User', { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+    await expect(adminRow).toContainText('admin@example.com');
+    await expect(regularRow).toContainText('Regular User');
+    await expect(regularRow).toContainText('regular@example.com');
   });
 
   test('should access admin cost analysis', async ({ adminPage }) => {

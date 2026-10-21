@@ -106,14 +106,14 @@ describe("StatisticsViewer", () => {
       render(<StatisticsViewer {...mockProps} viewMode="formatted" />)
 
       const formattedButton = screen.getByRole("button", { name: /formatted/i })
-      expect(formattedButton).toHaveClass("bg-cyan-600", "text-white")
+      expect(formattedButton).toHaveClass("bg-cyan-700", "text-white")
     })
 
     it("should highlight json button when in json mode", () => {
       render(<StatisticsViewer {...mockProps} viewMode="json" />)
 
       const jsonButton = screen.getByRole("button", { name: /json/i })
-      expect(jsonButton).toHaveClass("bg-cyan-600", "text-white")
+      expect(jsonButton).toHaveClass("bg-cyan-700", "text-white")
     })
   })
 
@@ -154,7 +154,7 @@ describe("StatisticsViewer", () => {
     it("should display movie years", () => {
       const { container } = render(<StatisticsViewer {...mockProps} viewMode="formatted" />)
 
-      const yearElements = container.querySelectorAll(".text-slate-500")
+      const yearElements = container.querySelectorAll(".text-muted-foreground")
       const yearTexts = Array.from(yearElements).map((el) => el.textContent)
       expect(yearTexts).toContain("2023")
       expect(yearTexts).toContain("2022")

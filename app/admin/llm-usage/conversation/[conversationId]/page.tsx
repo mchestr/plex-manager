@@ -207,11 +207,11 @@ export default async function LLMConversationPage({
             <div className="text-2xl font-bold text-cyan-400">
               {callsCount} call{callsCount === 1 ? "" : "s"}
             </div>
-            <div className="text-xs text-slate-500 mt-1">
+            <div className="text-xs text-muted-foreground mt-1">
               {formatTimeRange(startedAt, endedAt, f)} ({getDurationLabel(startedAt, endedAt)})
             </div>
             {summary?.model && (
-              <div className="text-xs text-slate-500 mt-1">
+              <div className="text-xs text-muted-foreground mt-1">
                 Model: <span className="font-mono text-slate-300">{summary.model}</span>
               </div>
             )}
@@ -221,10 +221,10 @@ export default async function LLMConversationPage({
             <div className="text-2xl font-bold text-green-400">
               {f.money(summary?.cost ?? 0)}
             </div>
-            <div className="text-xs text-slate-500 mt-1">
+            <div className="text-xs text-muted-foreground mt-1">
               {f.tokens(summary?.totalTokens ?? 0)}
             </div>
-            <div className="text-xs text-slate-500">
+            <div className="text-xs text-muted-foreground">
               {f.number(summary?.promptTokens ?? 0)} prompt +{" "}
               {f.number(summary?.completionTokens ?? 0)} completion
             </div>

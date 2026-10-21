@@ -54,7 +54,7 @@ export function QueueStats({ stats }: QueueStatsProps) {
           <div className={`text-3xl font-bold ${stat.color}`}>
             {f.number(stat.value)}
           </div>
-          <div className="text-xs text-slate-500 mt-1">{stat.description}</div>
+          <div className="text-xs text-muted-foreground mt-1">{stat.description}</div>
         </div>
       ))}
     </div>

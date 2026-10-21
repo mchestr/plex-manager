@@ -112,7 +112,7 @@ export function AnnouncementFormModal({
                 onChange={(e) => onFormChange({ ...formData, priority: parseInt(e.target.value) || 0 })}
                 data-testid="announcement-priority-input"
               />
-              <p className="text-xs text-slate-500 mt-1">Higher = shown first</p>
+              <p className="text-xs text-muted-foreground mt-1">Higher = shown first</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1">Status</label>
@@ -140,7 +140,7 @@ export function AnnouncementFormModal({
               onChange={(e) => onFormChange({ ...formData, expiresAt: e.target.value })}
               data-testid="announcement-expires-input"
             />
-            <p className="text-xs text-slate-500 mt-1" data-testid="announcement-expires-zone">
+            <p className="text-xs text-muted-foreground mt-1" data-testid="announcement-expires-zone">
               Times in {zone}. Leave empty for no expiration.
             </p>
           </div>

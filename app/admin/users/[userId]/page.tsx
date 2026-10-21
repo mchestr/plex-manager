@@ -227,7 +227,7 @@ export default async function UserDetailsPage({ params }: { params: Promise<{ us
                 {f.money(user.llmUsage?.cost ?? 0)}
               </div>
               {user.llmUsage && (
-                <div className="text-xs text-slate-500 mt-1">
+                <div className="text-xs text-muted-foreground mt-1">
                   {f.tokens(user.llmUsage.totalTokens)}
                 </div>
               )}
@@ -247,7 +247,7 @@ export default async function UserDetailsPage({ params }: { params: Promise<{ us
                     <Link
                       href={userRewind(user.id, seasonYear)}
                       data-testid="admin-user-season-wrapped-view"
-                      className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-medium rounded transition-colors"
+                      className="px-3 py-1.5 bg-cyan-700 hover:bg-cyan-800 text-white text-sm font-medium rounded transition-colors"
                     >
                       View
                     </Link>
@@ -322,7 +322,7 @@ export default async function UserDetailsPage({ params }: { params: Promise<{ us
                               Yes
                             </span>
                           ) : (
-                            <span className="text-sm text-slate-500">—</span>
+                            <span className="text-sm text-muted-foreground">—</span>
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -332,7 +332,7 @@ export default async function UserDetailsPage({ params }: { params: Promise<{ us
                                 {f.number(wrapped.shareVisits)}
                               </span>
                             ) : (
-                              <span className="text-slate-500">—</span>
+                              <span className="text-muted-foreground">—</span>
                             )}
                           </span>
                         </td>
@@ -340,12 +340,12 @@ export default async function UserDetailsPage({ params }: { params: Promise<{ us
                           {readWrappedStatus(wrapped.status, wrapped.id) === "completed" ? (
                             <Link
                               href={userRewind(user.id, wrapped.year)}
-                              className="px-3 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-medium rounded transition-colors"
+                              className="px-3 py-1.5 bg-cyan-700 hover:bg-cyan-800 text-white text-xs font-medium rounded transition-colors"
                             >
                               View
                             </Link>
                           ) : (
-                            <span className="text-xs text-slate-500">—</span>
+                            <span className="text-xs text-muted-foreground">—</span>
                           )}
                         </td>
                       </tr>
@@ -400,7 +400,7 @@ export default async function UserDetailsPage({ params }: { params: Promise<{ us
                   <div className="text-lg font-bold text-cyan-400">
                     {f.number(user.llmUsage.totalTokens)}
                   </div>
-                  <div className="text-xs text-slate-500 mt-1">
+                  <div className="text-xs text-muted-foreground mt-1">
                     {f.number(user.llmUsage.promptTokens)} prompt + {f.number(user.llmUsage.completionTokens)} completion
                   </div>
                 </div>

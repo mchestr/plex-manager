@@ -150,7 +150,7 @@ function ActivityItem({ item }: { item: UserActivityItem }) {
           )}
 
           {/* Timestamp */}
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-muted-foreground">
             <Time value={item.timestamp} />
           </span>
         </div>
@@ -164,20 +164,20 @@ function ActivityItem({ item }: { item: UserActivityItem }) {
               </span>
               {getStatusBadge(item.status)}
               {item.responseTimeMs != null && (
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-muted-foreground">
                   {item.responseTimeMs}ms
                 </span>
               )}
             </div>
             {item.commandArgs && (
               <p
-                className="text-xs text-slate-500 truncate"
+                className="text-xs text-muted-foreground truncate"
                 title={item.commandArgs}
               >
                 {item.commandArgs}
               </p>
             )}
-            <p className="text-xs text-slate-500 mt-1 capitalize">
+            <p className="text-xs text-muted-foreground mt-1 capitalize">
               via {item.channelType.replace(/-/g, " ")}
             </p>
           </div>
@@ -187,7 +187,7 @@ function ActivityItem({ item }: { item: UserActivityItem }) {
               {getMarkTypeBadge(item.markType)}
             </div>
             <p className="text-sm text-slate-300">{formatMediaTitle(item)}</p>
-            <p className="text-xs text-slate-500 mt-1 capitalize">
+            <p className="text-xs text-muted-foreground mt-1 capitalize">
               via {item.markedVia}
             </p>
           </div>
@@ -213,7 +213,7 @@ export function UserActivityTimeline({
 
   if (isLoading && !data) {
     return (
-      <div className="p-8 text-center text-slate-500">
+      <div className="p-8 text-center text-muted-foreground">
         Loading activity...
       </div>
     )
@@ -221,7 +221,7 @@ export function UserActivityTimeline({
 
   if (!data || data.items.length === 0) {
     return (
-      <div className="p-8 text-center text-slate-500">
+      <div className="p-8 text-center text-muted-foreground">
         No activity recorded for this user yet
       </div>
     )
