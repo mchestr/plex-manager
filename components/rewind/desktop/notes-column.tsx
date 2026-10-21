@@ -33,7 +33,8 @@ interface NotesColumnProps {
  * than repeat it, "Show as table" (`rewind-notes-table-toggle`, also T on
  * desktop) for the page's own chart, and the share formats at the foot. It
  * is the only part of the spread that scrolls, vertically, and it keeps the
- * arrow keys for that (`data-rw-scroll`).
+ * arrow keys for that (`data-rw-scroll`). It takes focus, so a keyboard can
+ * scroll a page whose Notes have no control of their own.
  */
 export function NotesColumn({ folio, pageName, notes: before, answeredNotes, table, showTable, onToggleTable, formats }: NotesColumnProps) {
   const { answer } = useQuiz()
@@ -42,7 +43,7 @@ export function NotesColumn({ folio, pageName, notes: before, answeredNotes, tab
   const asTable = showTable && table !== null
 
   return (
-    <aside aria-label={label} data-rw-scroll className={cn(SPREAD_SIDE, "pointer-events-auto right-6 w-(--rw-notes-w) pl-2 font-text")} data-testid="rewind-notes">
+    <aside aria-label={label} data-rw-scroll tabIndex={0} className={cn(SPREAD_SIDE, "pointer-events-auto right-6 w-(--rw-notes-w) pl-2 font-text")} data-testid="rewind-notes">
       <div className="flex items-center justify-between gap-3">
         <p className="font-display text-ui font-semibold">{label}</p>
         {table && (

@@ -54,11 +54,12 @@ interface SessionResponse {
 }
 
 /**
- * Opens a new context signed in as `user` through the minted session cookie
+ * Opens a new context signed in as `user` through the minted session cookie,
+ * with the test's `hasTouch` option
  * (`./session.ts`), after marking the user's onboarding complete. Works
  * against `next dev` and a production build alike.
  */
-async function authenticatedContextPage(browser: Browser, baseURL: string | undefined, user: TestUser): Promise<Page> {
+async function authenticatedContextPage(browser: Browser, baseURL: string | undefined, user: TestUser, hasTouch = false): Promise<Page> {
   if (!baseURL) {
     throw new Error('The auth fixtures need `use.baseURL` in playwright.config.ts.');
   }
@@ -73,7 +74,7 @@ async function authenticatedContextPage(browser: Browser, baseURL: string | unde
     await prisma.$disconnect();
   }
 
-  const context = await browser.newContext({ acceptDownloads: true });
+  const context = await browser.newContext({ acceptDownloads: true, hasTouch });
   await signInAs(context, baseURL, user.id);
   const page = await context.newPage();
 
@@ -115,23 +116,23 @@ async function verifyAuthentication(page: Page, isAdmin: boolean): Promise<void>
  */
 export const test = base.extend<AuthFixtures>({
   // Generic authenticated page (defaults to admin for backward compatibility)
-  authenticatedPage: async ({ browser, baseURL }, use) => {
-    const page = await authenticatedContextPage(browser, baseURL, TEST_USERS.ADMIN);
+  authenticatedPage: async ({ browser, baseURL, hasTouch }, use) => {
+    const page = await authenticatedContextPage(browser, baseURL, TEST_USERS.ADMIN, hasTouch);
     await use(page);
     await page.context().close();
   },
 
   // Admin user page
-  adminPage: async ({ browser, baseURL }, use) => {
-    const page = await authenticatedContextPage(browser, baseURL, TEST_USERS.ADMIN);
+  adminPage: async ({ browser, baseURL, hasTouch }, use) => {
+    const page = await authenticatedContextPage(browser, baseURL, TEST_USERS.ADMIN, hasTouch);
     await verifyAuthentication(page, true);
     await use(page);
     await page.context().close();
   },
 
   // Regular user page
-  regularUserPage: async ({ browser, baseURL }, use) => {
-    const page = await authenticatedContextPage(browser, baseURL, TEST_USERS.REGULAR);
+  regularUserPage: async ({ browser, baseURL, hasTouch }, use) => {
+    const page = await authenticatedContextPage(browser, baseURL, TEST_USERS.REGULAR, hasTouch);
     await verifyAuthentication(page, false);
     await use(page);
     await page.context().close();

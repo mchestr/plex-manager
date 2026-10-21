@@ -62,14 +62,33 @@ test.describe('Rewind P1 story features', () => {
     await expect(slider).toHaveAttribute('aria-valuetext', 'November');
   });
 
-  test('the race scrubber answers a tap, and pauses the story while in use', async ({ adminPage }) => {
-    await adminPage.emulateMedia({ reducedMotion: 'reduce' });
-    await openStage(adminPage);
-    await goToPage(adminPage, 'race');
-    const { index } = await currentPageInfo(adminPage);
-    await currentPage(adminPage).getByTestId('rewind-race-scrubber').tap();
-    await expect(adminPage.getByTestId('rewind-stage')).toHaveAttribute('data-mode', /interacting|paused/);
-    await expect(currentPage(adminPage)).toHaveAttribute('data-index', String(index));
+  test.describe('on a touch screen', () => {
+    test.use({ hasTouch: true });
+
+    test('the race scrubber answers a tap, and pauses the story while in use', async ({ adminPage }) => {
+      await adminPage.emulateMedia({ reducedMotion: 'reduce' });
+      await openStage(adminPage);
+      await goToPage(adminPage, 'race');
+      const { index } = await currentPageInfo(adminPage);
+      await currentPage(adminPage).getByTestId('rewind-race-scrubber').tap();
+      await expect(adminPage.getByTestId('rewind-stage')).toHaveAttribute('data-mode', /interacting|paused/);
+      await expect(currentPage(adminPage)).toHaveAttribute('data-index', String(index));
+    });
+
+    test('on page 02 the first tap lands the count-up and the second turns the page', async ({ adminPage }) => {
+      await disableAutoplay(adminPage);
+      await openStage(adminPage);
+      await chooseCut(adminPage);
+      expect((await currentPageInfo(adminPage)).type).toBe('number');
+
+      const pages = adminPage.getByTestId('rewind-pages');
+      const box = (await pages.boundingBox())!;
+      const tapForward = () => adminPage.touchscreen.tap(box.x + box.width * 0.8, box.y + box.height / 2);
+      await tapForward();
+      await expect(currentPage(adminPage)).toHaveAttribute('data-index', '1');
+      await tapForward();
+      await expect(currentPage(adminPage)).toHaveAttribute('data-index', '2');
+    });
   });
 
   for (const viewport of [
@@ -121,20 +140,5 @@ test.describe('Rewind P1 story features', () => {
 
     const results = await new AxeBuilder({ page: adminPage }).include('[data-testid="rewind-calendar-grid"]').withTags(AXE_TAGS).analyze();
     expect(results.violations).toEqual([]);
-  });
-
-  test('on page 02 the first tap lands the count-up and the second turns the page', async ({ adminPage }) => {
-    await disableAutoplay(adminPage);
-    await openStage(adminPage);
-    await chooseCut(adminPage);
-    expect((await currentPageInfo(adminPage)).type).toBe('number');
-
-    const pages = adminPage.getByTestId('rewind-pages');
-    const box = (await pages.boundingBox())!;
-    const tapForward = () => adminPage.touchscreen.tap(box.x + box.width * 0.8, box.y + box.height / 2);
-    await tapForward();
-    await expect(currentPage(adminPage)).toHaveAttribute('data-index', '1');
-    await tapForward();
-    await expect(currentPage(adminPage)).toHaveAttribute('data-index', '2');
   });
 });
