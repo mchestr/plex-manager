@@ -45,7 +45,7 @@ export function AdminShell({ serverName, user, navCounts, assistant, children }:
           </AdminChrome>
         </div>
         {assistant && (
-          <AdminChrome>
+          <AdminChrome part="assistant">
             <AssistantSheet userName={user.name} />
           </AdminChrome>
         )}

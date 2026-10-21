@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react"
 
 import { issueTone } from "@/components/rewind/media/issue-tone"
+import type { RowDetail } from "@/components/rewind/sheets/row-sheet"
 import { RewindPoster } from "@/components/rewind/media/poster"
 import { has, num, shown } from "@/lib/rewind/pages/facts"
 import { FILM_LIST_MIN } from "@/lib/rewind/pages/top-films"
@@ -15,6 +16,7 @@ import { CopyText } from "./copy-text"
 import { FittedLines } from "./fitted-lines"
 import { SentenceHeadline } from "./headline"
 import { deckText, type PageProps } from "./issue-context"
+import { TitleSheetButton } from "./title-sheet-button"
 import { rowTitle } from "./top-shows"
 import { axes, u, ut } from "./units"
 
@@ -31,6 +33,18 @@ function Rewatch({ facts, i }: { facts: RewindFactsV3; i: number }) {
       <span className="sr-only">, watched {shown(facts, filmFact(i, "plays"))} times</span>
     </span>
   )
+}
+
+/** A film's row sheet: its minutes and plays (P7.7 hides it from there). */
+function filmDetail(data: TopFilmsData, i: number, facts: RewindFactsV3): RowDetail {
+  return {
+    title: shown(facts, filmFact(i, "title")),
+    titleKey: data.rows[i].key,
+    numbers: [
+      ["Watched", shown(facts, filmFact(i, "minutes"))],
+      ["Plays", shown(facts, filmFact(i, "plays"))],
+    ],
+  }
 }
 
 /**
@@ -58,7 +72,9 @@ export function TopFilmsPage({ data, issue }: PageProps<TopFilmsData>) {
           <RewindPoster titleKey={data.rows[0].key} title={title} width={84} colour="full" tone={tone} priority />
           <div className="min-w-0 flex-1">
             <h3 id="rewind-top-films-no1">
-              <FittedLines fit={fitLines(title, { role: "nameplate", metrics: pageMetrics, weight: 900, measure: STUB_TITLE, maxLines: 3, sizeMin: 22, sizeMax: 40, widths: [62] })} weight={900} />
+              <TitleSheetButton detail={filmDetail(data, 0, facts)}>
+                <FittedLines fit={fitLines(title, { role: "nameplate", metrics: pageMetrics, weight: 900, measure: STUB_TITLE, maxLines: 3, sizeMin: 22, sizeMax: 40, widths: [62] })} weight={900} />
+              </TitleSheetButton>
             </h3>
             <p className="font-display tabular-nums" style={{ fontSize: u(30), lineHeight: 1, marginTop: u(8), fontVariationSettings: axes(75, 900) }}>
               {shown(facts, filmFact(0, "minutes"))}
@@ -89,20 +105,22 @@ export function TopFilmsPage({ data, issue }: PageProps<TopFilmsData>) {
             const i = j + 1
             const film = shown(facts, filmFact(i, "title"))
             return (
-              <li key={row.key} className="rw-row flex items-center border-b border-current/40" style={{ gap: u(10), padding: `${u(5)} 0`, "--rw-i": j } as CSSProperties}>
-                <span aria-hidden className="w-[calc(var(--u)*18px)] text-center font-display tabular-nums" style={{ fontSize: u(32), lineHeight: 1, fontVariationSettings: axes(62, 900) }}>
-                  {i + 1}
-                </span>
-                <RewindPoster titleKey={row.key} title={film} width={32} colour="duo" tone={tone} className="text-chart-2" />
-                <span className="min-w-0 flex-1">
-                  <FittedLines fit={rowTitle(film, ROW_TITLE)} weight={760} lineHeight={1.08} />
-                </span>
-                <span className="flex flex-col items-end" style={{ fontSize: u(15.5), gap: u(2) }}>
-                  <span className="font-display whitespace-nowrap tabular-nums" style={{ fontVariationSettings: axes(87.5, 700) }}>
-                    {shown(facts, filmFact(i, "minutes"))}
+              <li key={row.key} className="rw-row border-b border-current/40" style={{ "--rw-i": j } as CSSProperties}>
+                <TitleSheetButton detail={filmDetail(data, i, facts)} className="flex items-center" style={{ gap: u(10), padding: `${u(5)} 0` }}>
+                  <span aria-hidden className="w-[calc(var(--u)*18px)] text-center font-display tabular-nums" style={{ fontSize: u(32), lineHeight: 1, fontVariationSettings: axes(62, 900) }}>
+                    {i + 1}
                   </span>
-                  <Rewatch facts={facts} i={i} />
-                </span>
+                  <RewindPoster titleKey={row.key} title={film} width={32} colour="duo" tone={tone} className="text-chart-2" />
+                  <span className="min-w-0 flex-1">
+                    <FittedLines fit={rowTitle(film, ROW_TITLE)} weight={760} lineHeight={1.08} />
+                  </span>
+                  <span className="flex flex-col items-end" style={{ fontSize: u(15.5), gap: u(2) }}>
+                    <span className="font-display whitespace-nowrap tabular-nums" style={{ fontVariationSettings: axes(87.5, 700) }}>
+                      {shown(facts, filmFact(i, "minutes"))}
+                    </span>
+                    <Rewatch facts={facts} i={i} />
+                  </span>
+                </TitleSheetButton>
               </li>
             )
           })}

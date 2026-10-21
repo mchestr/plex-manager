@@ -20,7 +20,7 @@ describe('HistoricalWrappedSelectorHeader', () => {
     ;(useRouter as jest.Mock).mockReturnValue({
       push: mockPush,
     })
-    ;(usePathname as jest.Mock).mockReturnValue(`/admin/users/${mockUserId}/wrapped`)
+    ;(usePathname as jest.Mock).mockReturnValue(`/admin/users/${mockUserId}/rewind/2026`)
     global.fetch = jest.fn()
   })
 
@@ -298,7 +298,7 @@ describe('HistoricalWrappedSelectorHeader', () => {
       fireEvent.click(currentVersionButton)
 
       await waitFor(() => {
-        expect(mockPush).toHaveBeenCalledWith(`/admin/users/${mockUserId}/wrapped?year=2025`)
+        expect(mockPush).toHaveBeenCalledWith(`/admin/users/${mockUserId}/rewind/2025`)
       })
     })
 
@@ -492,7 +492,7 @@ describe('HistoricalWrappedSelectorHeader', () => {
 
   describe('Pathname Detection', () => {
     it('should detect current version from current wrapped page', async () => {
-      ;(usePathname as jest.Mock).mockReturnValue(`/admin/users/${mockUserId}/wrapped`)
+      ;(usePathname as jest.Mock).mockReturnValue(`/admin/users/${mockUserId}/rewind/2026`)
       ;(global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ versions: mockVersions }),

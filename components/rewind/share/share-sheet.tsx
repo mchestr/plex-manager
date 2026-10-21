@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Switch } from "@/components/ui/switch"
-import { registry, type IssuePageType } from "@/lib/rewind/registry"
+import { registry, type RewindPageType } from "@/lib/rewind/registry"
 import { cardFileName, cardUrl, type CardChoices } from "@/lib/rewind/share-sheet"
 import type { SharePageType } from "@/lib/wrapped/data/share-safe-schema"
 
@@ -24,7 +24,7 @@ interface ShareSheetProps {
   open: boolean
   onClose: () => void
   /** The page the story is on; the picker starts there when it has a card. */
-  page: IssuePageType
+  page: RewindPageType
   /** Opened from the back cover's "Change": focus starts on the switches. */
   atSettings: boolean
 }

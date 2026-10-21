@@ -183,10 +183,12 @@ The ten core pages (Bookends included), sharing, privacy and accessibility are n
 **Demo.** The `light` fixture opens on "The pocket edition" and plays its six pages in about 40 seconds. The heavy member picks "Pocket edition" and gets six pages with their own LLM decks. A member whose first play was on 3 October sees "Your first Rewind arrives next year" on home.
 
 **Done when.**
-- [ ] The pocket edition has six pages, including the merged Short list with its `tz.note`, and the postcard lists community titles without names.
-- [ ] The cover's cut choice switches between the editions and renumbers every folio.
-- [ ] Late joiners are skipped with `JOINED_LATE` and see the next-year message.
-- [ ] No pocket, postcard or late-joiner path makes an LLM call, and the tests pass.
+- [x] The pocket edition has six pages, including the merged Short list with its `tz.note`, and the postcard lists community titles without names.
+- [x] The cover's cut choice switches between the editions and renumbers every folio.
+- [x] Late joiners are skipped with `JOINED_LATE` and see the next-year message.
+- [x] No pocket, postcard or late-joiner path makes an LLM call, and the tests pass.
+
+(as merged: `PageType` gains `postcard`; the registry adds `short-list` and `postcard` entries with `RewindPageType = IssuePageType | EditionPageType`, and `issuePages` stays the 18 full-issue pages. Short list stores `{ rows: [{ key, rank }] }` (facts `series[rank].*` or `films[rank].*`), the postcard `{ titles: [{ key, title }] }` from the new `MemberStats.popular` (`lib/wrapped/stats/popular.ts`, aggregate titles named by the library). The habit rule is `habitPage` in `lib/rewind/editions.ts`. The Short list's clock time is `hours.medianStart`, since no fact holds the No. 1's watch time. `StoryStage` takes a `pocket` page list; `CHOOSE_CUT` carries `cut` and a new `SET_KINDS` event swaps the kinds on the cover; `IssueContext` gains `cuts` and `libraryHref`. `JOINED_LATE` is checked in `generate-user.ts` after the inputs are read (it needs the first lifetime play) and is a stored `RewindErrorCode`; the home card's `joinedLate` now uses the same on-or-after-1-October rule. Short list and postcard baselines are left for the coordinator's visual pass.)
 
 ### Step P7.4: Desktop spread and Notes
 
@@ -374,11 +376,13 @@ The ten core pages (Bookends included), sharing, privacy and accessibility are n
 **Demo.** Hide "Severance" from Top shows. On reload, the public link's Top shows card no longer names it. About a minute later the in-app page shows the new No. 1 with a template deck, and page 02's hours are unchanged. Unhiding it from Settings brings the old deck back.
 
 **Done when.**
-- [ ] `hideRewindTitle` and `unhideRewindTitle` validate with Zod, check ownership, allow 20 per day, and write `RewindExclusion` rows with an `exclusionsVersion` bump.
-- [ ] Each change enqueues a no-LLM regeneration that is exempt from the generation limit and waits out a held lock.
-- [ ] The title leaves public cards and the share page at once, and in-app lists after the regeneration, while still counting toward totals.
+- [x] `hideRewindTitle` and `unhideRewindTitle` validate with Zod, check ownership, allow 20 per day, and write `RewindExclusion` rows with an `exclusionsVersion` bump.
+- [x] Each change enqueues a no-LLM regeneration that is exempt from the generation limit and waits out a held lock.
+- [x] The title leaves public cards and the share page at once, and in-app lists after the regeneration, while still counting toward totals.
 - [ ] The E2E test passes.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
+
+(as merged: the migration is `20261124000700_p77_rewind_exclusion_title`. `ratingKeysIn(rewind)` lives in `lib/rewind/rating-keys.ts` (key → title), not in `registry.ts`. `enqueueRewindGeneration` takes `exclusion: { followUp? }`, which sets `copyPolicy: "no-llm"`, the `rewind:hide:{year}:{userId}` deduplication id and the 5 s delay; the payload carries `exclusion: true` and `lockWaits`. The job's follow-up run after a mid-run hide takes no deduplication id, since its own active job still holds it. `rw:hide` (20 a day) is shared by hide and unhide. The stage takes `hide?: HideSetup` and wraps itself in `HideProvider` unless `mode === "preview"`; `RewindIssue` passes the hidden list, the actions and a `RegenerationWatch` node (so the stage never imports the status action). Top films had no row sheet: `TitleSheetButton` now opens one for its rows and for both No. 1 features. P7.3 adds "Hide this title" to the Short list rows by passing `titleKey` in their `RowDetail`. The E2E spec's share-page check needs P7.5's v3 share page.)
 
 ### Step P7.8: Season dashboard and bulk generation
 
@@ -476,11 +480,13 @@ The ten core pages (Bookends included), sharing, privacy and accessibility are n
 
 **Demo.** Open Morgan Lee's 2025 row from Share analytics: it lands on her 2025 Rewind in the admin shell, with the banner, and the audit table gains a `REWIND_ADMIN_VIEWED` row. Roll back her 2026 issue, then roll back again to restore it.
 
+(as merged: P6.1 had merged, so the shell rule lives in `lib/admin/nav.ts`: `isImmersive()` (chrome hidden: the history route only) and `isAssistantHidden()` (immersive plus `/admin/users/*/rewind`); `AdminChrome` takes `part="assistant"`. `StoryStage` gains `mode="admin-preview"` (absolute in its frame, fitted to the frame, no share) and an `articleHref` prop; it sets `preview = mode !== "member"`, so P7.7 (Hide) and P7.14 (views) must test `mode !== "member"`, not `mode === "preview"`. `RewindIssue` takes `adminPreview` and `articleHref`; `RewindStatusPanel` takes `embedded` (h2, no Close, Back, year links or watch). "Read as an article" is `?view=article` on the preview route (`components/admin/rewind/admin-rewind-article.tsx`). The audit read is written whenever the member has a `PlexWrapped` row for the year (failed rows included). Roll back is `lib/rewind/rollback.ts` plus `rollbackRewind` and `getRewindRollbackTarget` (the confirm's date, `previousData.generatedAt`) in `actions/admin/rewind-season.ts`; it also restores v1 and v2 data. `WrappedPageClient` and `wrapped-generating-animation` were deleted as unused. The a11y route and its axe baseline key moved to `/admin/users/regular-user-id/rewind/2026` with an empty baseline; the E2E spec was written but not run.)
+
 **Done when.**
-- [ ] `/admin/users/[userId]/rewind/[year]` renders inside the admin shell with the Rewind fonts and the banner, and writes an audit read entry.
-- [ ] The old `[userId]/wrapped` route redirects with the year, and every admin link passes the year.
-- [ ] Roll back restores `previousData` in one audited transaction, and can be undone.
-- [ ] The tests pass.
+- [x] `/admin/users/[userId]/rewind/[year]` renders inside the admin shell with the Rewind fonts and the banner, and writes an audit read entry.
+- [x] The old `[userId]/wrapped` route redirects with the year, and every admin link passes the year.
+- [x] Roll back restores `previousData` in one audited transaction, and can be undone.
+- [x] The tests pass.
 
 ### Step P7.10: Dry runs and preview mode
 
@@ -631,10 +637,12 @@ The ten core pages (Bookends included), sharing, privacy and accessibility are n
 **Demo.** Open `/rewind/2025` on a phone: a paper archive article with the 2025 totals, top lists and archetype, in the Rewind fonts. The build's chunk list shows no chart.js for `/rewind/*`, and no route under `app/(app)/rewind/` imports `components/wrapped`.
 
 **Done when.**
-- [ ] `legacy-article.ts` renders stored v1 and v2 years as archive articles in the Rewind theme, on the member, article and admin routes.
-- [ ] No member or admin Rewind route imports `components/wrapped`, and no `/rewind` route loads chart.js.
-- [ ] No member-facing surface says "Wrapped".
-- [ ] The tests on stored fixtures pass.
+- [x] `legacy-article.ts` renders stored v1 and v2 years as archive articles in the Rewind theme, on the member, article and admin routes.
+- [x] No member or admin Rewind route imports `components/wrapped`, and no `/rewind` route loads chart.js.
+- [x] No member-facing surface says "Wrapped".
+- [x] The tests on stored fixtures pass.
+
+(as merged: `legacyToArticle(legacy, { year, brand, locale })` returns `{ title, masthead, sections }` (`ArticleSection`s with no folio or type), not a flat `ArticleBlock[]`; `components/rewind/article/archive-article.tsx` (`ArchiveArticle`, `ArchiveActions`) renders it, and `ArticleDocument` gained a `notice` slot. P7.9 ran in parallel, so its preview's v1/v2 branch should render `<RewindScope><ArchiveArticle …/></RewindScope>` at merge, as the admin history page does; `app/admin/users/[userId]/wrapped/page.tsx` still uses the viewer until P7.9 turns it into a redirect. The live v2 share links of every year, the archive year included, are stopped through `components/rewind/shared-years-notice.tsx` (moved from `components/wrapped`, test ids `rewind-share-stop-<year>`). Deleted with `enableWrappedShareLink`: `generateShareToken`, `AuditEventType.SHARE_LINK_CREATED`, `WrappedShareControls`, `WrappedShareButton`, `WrappedYearLinks` and the viewer wrapper's `canManageShare`. The member-facing "Wrapped" strings in `lib/ui/error-copy.ts` (`GENERATION_FAILED`) and `actions/rewind-generation.ts` were reworded. `e2e/a11y/routes.ts` now waits for `rewind-article-mode` on `/rewind`, so the `rewind-v2` visual baseline and the axe baseline for the member Rewind routes need regenerating. E2E specs were written but not run.)
 
 ### Step P7.14: Ready notifications and view tracking
 
@@ -803,5 +811,7 @@ The ten core pages (Bookends included), sharing, privacy and accessibility are n
 **Demo.** A reader who has not seen the plan finds, in `docs/rewind.md`, what to do at 00:15 and 08:00 on 1 December, how to roll back one member, and which key turns off People.
 
 **Done when.**
-- [ ] `docs/rewind.md` covers the requirements, flags and cut keys, the season-open checklist, monitoring, roll back, the final cut and the Tautulli 2.17 warning.
-- [ ] It is merged by 2026-11-25, and the runbook test passes.
+- [x] `docs/rewind.md` covers the requirements, flags and cut keys, the season-open checklist, monitoring, roll back, the final cut and the Tautulli 2.17 warning.
+- [ ] It is merged by 2026-11-25, and the runbook test passes. (The test passes; the merge is the coordinator's.)
+
+(as merged: sections for steps not yet merged are blockquotes headed "**Pending P7.x/P8.x**" (P7.3's `JOINED_LATE`, P7.9 roll back, P7.11 gallery, P7.14 notifications, P8.1 lock, P8.3/P8.4 feature flags, P8.5 validator, final cut and bulk roll back); each step replaces its blockquote with plain text when it merges. `__tests__/docs/rewind-runbook.test.ts` skips blockquote lines when checking that backticked paths exist, checks every key of `rewindSettingsSchema.shape` and `REWIND_CUT_PAGES`, and checks `REWIND_FEATURES` keys only once `lib/rewind/features.ts` exists. The Rewind queues are not on `/admin/queues`, so the runbook reads the season-open job from Redis (`bull:rewind-batch:delayed`).)

@@ -4,18 +4,19 @@ import { domAnimation, LazyMotion, MotionConfig } from "motion/react"
 import type { Route } from "next"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useEffect, useLayoutEffect, useRef, type CSSProperties, type KeyboardEvent, type ReactNode } from "react"
+import { useCallback, useEffect, useLayoutEffect, useRef, type CSSProperties, type KeyboardEvent, type ReactNode } from "react"
 
+import { HideProvider, type HideSetup } from "@/components/rewind/hide/hide-context"
 import { ShareProvider, type ShareActions } from "@/components/rewind/share/share-context"
 import { shouldOfferArticle } from "@/components/rewind/sheets/article-offer-sheet"
 import { Button } from "@/components/ui/button"
 import { inkProps } from "@/lib/design/tokens"
 import type { CopyAuthor } from "@/lib/rewind/copy-disclosure"
-import { registry, REVEAL_DWELL_MS, type IssuePageType, type PageTable } from "@/lib/rewind/registry"
+import { registry, REVEAL_DWELL_MS, type PageTable, type RewindPageType } from "@/lib/rewind/registry"
 import type { ShareSetup } from "@/lib/rewind/share-sheet"
 import { keyToCommand, type StageCommand } from "@/lib/rewind/stage/keymap"
 import { pageInk } from "@/lib/rewind/stage/page-ink"
-import { pageKind, type SheetName } from "@/lib/rewind/stage/player-reducer"
+import { pageKind, type PlayerEvent, type SheetName } from "@/lib/rewind/stage/player-reducer"
 import { readPrefs } from "@/lib/rewind/stage/prefs"
 import { cn } from "@/lib/utils"
 import type { ArchetypeId } from "@/lib/wrapped/archetypes/catalogue"
@@ -34,12 +35,13 @@ import { usePerfProbe } from "./use-perf-probe"
 import { useRewindPrefs } from "./use-rewind-prefs"
 import { useStageA11y } from "./use-stage-a11y"
 import { useStageGestures } from "./use-stage-gestures"
+import { useStoryCut } from "./use-story-cut"
 import { useStoryPlayer } from "./use-story-player"
 import { RecordShareProvider, useRecordView, type ViewTracking } from "./use-record-view"
 
 /** @public P5.1 builds the page list. */
 export interface StoryStagePage {
-  type: IssuePageType
+  type: RewindPageType
   /** The page body: a Server Component, typeset on the server, with the page's `h2`. */
   content: ReactNode
   /** The registry's `table(data)` for a chart page, built on the server; the Table control shows only when it is set. */
@@ -48,6 +50,8 @@ export interface StoryStagePage {
 
 interface StoryStageProps {
   pages: readonly StoryStagePage[]
+  /** The pocket cut's pages (P7.3), when a full issue offers it on the cover; the cover's choice swaps to them. */
+  pocket?: readonly StoryStagePage[]
   year: number
   archetype: ArchetypeId | null
   /** Where Close, Esc and a swipe down go: P5.1's `safeReturnPath(from)`. */
@@ -56,10 +60,19 @@ interface StoryStageProps {
   copy: CopyAuthor
   /** The share sheet's setup and actions (P5.11); without them the share controls open nothing. */
   share?: { setup: ShareSetup; actions: ShareActions }
+  /** The member's hidden titles and the hide actions (P7.7); without them, and in preview mode, no Hide controls show. */
+  hide?: HideSetup
   /** A sheet to open on load: `?sheet=share` opens Share over the cover, paused. */
   initialSheet?: SheetName
-  /** `preview`: an admin's dry run (P7.10), under a Preview banner, with no sharing. */
-  mode?: "member" | "preview"
+  /**
+   * `preview`: an admin's dry run (P7.10), under a Preview banner, with no sharing.
+   * `admin-preview`: a member's stored Rewind in the admin shell (P7.9), framed
+   * in its parent instead of the window, with no share, hide or notify controls
+   * and no `RewindView`.
+   */
+  mode?: "member" | "preview" | "admin-preview"
+  /** Where "Read as an article" goes; the member's `/rewind/{year}/read` by default. */
+  articleHref?: Route
   /** View tracking (P7.14); only the member mode records views. */
   views?: ViewTracking
 }
@@ -82,29 +95,54 @@ const FIT_DEFAULTS = { "--u": 1, "--rw-artboard-h": 693, "--rw-chrome-top": "76p
  * member's reduced-motion setting. The share sheet reads the issue's
  * `ShareProvider`, which wraps the stage when `share` is set.
  */
-export function StoryStage({ share, ...props }: StoryStageProps) {
-  return share ? (
+export function StoryStage({ share, hide, ...props }: StoryStageProps) {
+  const stage = share ? (
     <ShareProvider setup={share.setup} actions={share.actions}>
       <Stage {...props} />
     </ShareProvider>
   ) : (
     <Stage {...props} />
   )
+  // Hiding is a member's own action: never in preview mode.
+  return hide && (props.mode ?? "member") === "member" ? (
+    <HideProvider year={props.year} setup={hide}>
+      {stage}
+    </HideProvider>
+  ) : (
+    stage
+  )
 }
 
-function Stage({ pages, year, archetype, closeHref, copy, initialSheet, mode = "member", views }: Omit<StoryStageProps, "share">) {
+const kindsOf = (pages: readonly StoryStagePage[]) => pages.map((page) => pageKind(registry[page.type].dwell))
+
+function Stage({ pages: fullPages, pocket, year, archetype, closeHref, copy, initialSheet, mode = "member", articleHref: articleHrefProp, views }: Omit<StoryStageProps, "share" | "hide">) {
   const router = useRouter()
   const root = useRef<HTMLElement>(null)
   const pagesRef = useRef<HTMLDivElement>(null)
   const safeArea = useRef<HTMLDivElement>(null)
   const offered = useRef(false)
-  const fit = useFitStage(root, safeArea)
+  const framed = mode === "admin-preview"
+  const fit = useFitStage(root, safeArea, framed)
   const prefs = useRewindPrefs()
+  const [cut, chooseCut] = useStoryCut(year)
+  const pages = cut === "pocket" && pocket ? pocket : fullPages
   const entries = pages.map((page) => registry[page.type])
-  const { state, send } = useStoryPlayer(
-    entries.map((entry) => pageKind(entry.dwell)),
-    prefs.autoplay
+  const { state, send: sendPlayer } = useStoryPlayer(kindsOf(pages), prefs.autoplay)
+  // The cover's cut (FR-4): the page list swaps while the story is still on the cover, then the story starts.
+  const send = useCallback(
+    (event: PlayerEvent) => {
+      if (event.type === "CHOOSE_CUT" && event.cut && pocket) {
+        chooseCut(event.cut)
+        sendPlayer({ type: "SET_KINDS", kinds: kindsOf(event.cut === "pocket" ? pocket : fullPages) })
+      }
+      sendPlayer(event)
+    },
+    [chooseCut, sendPlayer, pocket, fullPages]
   )
+  // A reload resumes the stored cut once hydration reads it.
+  useEffect(() => {
+    sendPlayer({ type: "SET_KINDS", kinds: kindsOf(pages) })
+  }, [pages, sendPlayer])
   const setStageInk = useSetStageInk()
   const setStageArchetype = useSetStageArchetype()
 
@@ -112,9 +150,10 @@ function Stage({ pages, year, archetype, closeHref, copy, initialSheet, mode = "
   const table = pages[state.index].table ?? null
   const ink = pageInk(entry, archetype)
   const last = pages.length - 1
-  const preview = mode === "preview"
+  // Both previews: no sharing (and, from P7.7 and P7.14, no hiding and no views).
+  const preview = mode !== "member"
   const playing = state.mode === "playing" || (["holding", "interacting", "sheet"].includes(state.mode) && state.resumeTo === "playing")
-  const articleHref = `/rewind/${year}/read` as Route
+  const articleHref = articleHrefProp ?? (`/rewind/${year}/read` as Route)
   const pageLabel = (i: number) => `Page ${i + 1} of ${pages.length}: ${entries[i].name}`
   const { announcement, focusHandlers } = useStageA11y({ pagesRef, state, send, pageLabel })
   usePerfProbe(state.index)
@@ -214,7 +253,7 @@ function Stage({ pages, year, archetype, closeHref, copy, initialSheet, mode = "
             data-fitted={fit.measured || undefined}
             style={FIT_DEFAULTS}
             onKeyDown={onKeyDown}
-            className="fixed inset-0 overflow-hidden overscroll-none outline-none"
+            className={cn(framed ? "absolute" : "fixed", "inset-0 overflow-hidden overscroll-none outline-none")}
           >
             <Button
               {...chromeInk}
@@ -279,7 +318,7 @@ function Stage({ pages, year, archetype, closeHref, copy, initialSheet, mode = "
                 onNext={forward}
               />
             </footer>
-            {preview && (
+            {mode === "preview" && (
               <p
                 data-testid="rewind-preview-banner"
                 className="pointer-events-none absolute inset-x-0 top-(--rw-chrome-top) z-10 mx-auto w-fit rounded-full bg-background px-3 py-1 text-sm text-foreground"

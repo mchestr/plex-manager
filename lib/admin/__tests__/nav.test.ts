@@ -11,6 +11,7 @@ import {
   activeItem,
   isActive,
   isAssistantHidden,
+  isImmersive,
   isTabActive,
   mobileTabs,
   navTestId,
@@ -124,13 +125,24 @@ describe("mobileTabs", () => {
 
 describe("isAssistantHidden", () => {
   it.each([
-    ["/admin/users/u1/wrapped", true],
     ["/admin/users/u1/rewind/2025", true],
     ["/admin/wrapped/w1/history/l1", true],
+    ["/admin/users/u1/wrapped", false],
     ["/admin/users/u1", false],
     ["/admin/users", false],
     ["/admin/playground", false],
   ])("%s is %s", (pathname, expected) => {
     expect(isAssistantHidden(pathname)).toBe(expected)
+  })
+})
+
+describe("isImmersive", () => {
+  it.each([
+    // The admin Rewind preview keeps the nav (P7.9): only the assistant steps aside.
+    ["/admin/users/u1/rewind/2025", false],
+    ["/admin/wrapped/w1/history/l1", true],
+    ["/admin/users/u1", false],
+  ])("%s is %s", (pathname, expected) => {
+    expect(isImmersive(pathname)).toBe(expected)
   })
 })

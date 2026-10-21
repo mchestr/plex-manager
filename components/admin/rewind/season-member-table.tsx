@@ -1,9 +1,11 @@
 "use client"
 
 import type { ColumnDef } from "@tanstack/react-table"
-import { RefreshCw, SearchX, Users } from "lucide-react"
+import { Eye, RefreshCw, SearchX, Undo2, Users } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useState } from "react"
 
+import { getRewindRollbackTarget } from "@/actions/admin/rewind-season"
 import { adminRegenerateRewind } from "@/actions/rewind-generation"
 import { Badge } from "@/components/ui/badge"
 import { DataTable } from "@/components/ui/data-table/data-table"
@@ -11,10 +13,13 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { FilterBar } from "@/components/ui/filter-bar"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { useToast } from "@/components/ui/toast"
+import { userRewind } from "@/lib/admin/routes"
 import { useFormat } from "@/lib/format-context"
 import type { BoundFormat } from "@/lib/utils/format"
 import type { SeasonMemberState } from "@/lib/wrapped/admin/season"
 import type { SeasonMemberRow } from "@/lib/wrapped/admin/season-members"
+
+import { RollbackDialog } from "./rollback-dialog"
 
 const STATE_BADGE = {
   ready: { domain: "rewind", value: "ready" },
@@ -94,6 +99,18 @@ export function SeasonMemberTable({ year, rows, total, members, page, pageSize, 
   const toast = useToast()
   const router = useRouter()
 
+  const [rollback, setRollback] = useState<{ row: SeasonMemberRow; from: string | null } | null>(null)
+
+  // The confirm names the version's date, so it opens once the target is known.
+  const askRollback = async (row: SeasonMemberRow) => {
+    const result = await getRewindRollbackTarget({ userId: row.id, year })
+    if (!result.success) {
+      toast.showError(result.error)
+      return
+    }
+    setRollback({ row, from: result.data.from })
+  }
+
   const regenerate = async (row: SeasonMemberRow) => {
     const result = await adminRegenerateRewind({ userId: row.id, year })
     if (!result.success) {
@@ -105,6 +122,7 @@ export function SeasonMemberTable({ year, rows, total, members, page, pageSize, 
   }
 
   return (
+    <>
     <DataTable
       label="Members"
       noun="members"
@@ -113,12 +131,14 @@ export function SeasonMemberTable({ year, rows, total, members, page, pageSize, 
       getRowId={(row) => row.id}
       getRowName={(row) => row.name}
       rowActions={(row) => [
+        { id: "preview", label: "Preview", icon: Eye, href: userRewind(row.id, year) },
         {
           id: "regenerate",
           label: row.state === "stuck" ? "Regenerate (stuck)" : "Regenerate",
           icon: RefreshCw,
           onSelect: () => void regenerate(row),
         },
+        { id: "rollback", label: "Roll back...", icon: Undo2, variant: "destructive", onSelect: () => void askRollback(row) },
       ]}
       pagination={{ page, pageSize, total }}
       toolbar={
@@ -141,5 +161,16 @@ export function SeasonMemberTable({ year, rows, total, members, page, pageSize, 
       }
       data-testid="admin-rewind-members"
     />
+    {rollback && (
+      <RollbackDialog
+        userId={rollback.row.id}
+        year={year}
+        name={rollback.row.name}
+        from={rollback.from}
+        open
+        onOpenChange={(open) => !open && setRollback(null)}
+      />
+    )}
+    </>
   )
 }

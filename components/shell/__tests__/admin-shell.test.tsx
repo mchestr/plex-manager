@@ -151,12 +151,22 @@ describe('AdminShell', () => {
   })
 
   it('steps aside on an immersive route, assistant included', () => {
-    mockPathname.mockReturnValue('/admin/users/u1/wrapped')
+    mockPathname.mockReturnValue('/admin/wrapped/w1/history/l1')
     renderShell()
 
     expect(screen.queryByTestId('admin-sidebar')).not.toBeInTheDocument()
     expect(screen.queryByTestId('admin-tab-bar')).not.toBeInTheDocument()
     expect(screen.queryByTestId('admin-chat-toggle')).not.toBeInTheDocument()
     expect(screen.getByRole('main')).toHaveTextContent('Page')
+  })
+
+  it('keeps the nav on the admin Rewind preview and hides only the assistant (P7.9)', () => {
+    mockPathname.mockReturnValue('/admin/users/u1/rewind/2026')
+    renderShell()
+
+    expect(screen.getByTestId('admin-sidebar')).toBeInTheDocument()
+    expect(screen.getByTestId('admin-tab-bar')).toBeInTheDocument()
+    expect(screen.queryByTestId('admin-chat-toggle')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('admin-chat-toggle-mobile')).not.toBeInTheDocument()
   })
 })

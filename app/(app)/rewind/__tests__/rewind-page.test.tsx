@@ -1,8 +1,8 @@
 /**
  * `/rewind` and `/rewind/[year]` (P5.1, FR-1): the index opens a year from
  * data, an invalid year is a 404, only the member's own row is read, and each
- * state of that row renders its branch: the v3 issue, the v1/v2 viewer, or a
- * status panel with copy from a code.
+ * state of that row renders its branch: the v3 issue, the v1/v2 archive
+ * article (P7.13), or a status panel with copy from a code.
  *
  * It keeps the guarantees of the `/wrapped` pages it replaces: fixed copy for
  * a failed generation, never the stored error text (P0.9), and "Stop sharing"
@@ -17,11 +17,12 @@ import { getServerSession } from 'next-auth'
 
 import RewindResolverPage from '@/app/(app)/rewind/page'
 import RewindYearPage, { generateMetadata } from '@/app/(app)/rewind/[year]/(story)/page'
+import RewindArticlePage from '@/app/(app)/rewind/[year]/read/page'
 import { ToastProvider } from '@/components/ui/toast'
-import { WrappedViewerWrapper } from '@/components/wrapped/wrapped-viewer-wrapper'
 import { prisma } from '@/lib/prisma'
 import { checkRewindInfra } from '@/lib/queue/rewind-infra'
 import { generationBlocker } from '@/lib/rewind/generation-guards'
+import { buildStoredV1Json, buildStoredV2Json } from '@/lib/wrapped/__tests__/fixtures'
 import { minimalV3 } from '@/lib/wrapped/data/__tests__/v3-row'
 
 jest.mock('next-auth', () => ({ getServerSession: jest.fn() }))
@@ -43,7 +44,6 @@ jest.mock('next/navigation', () => ({
 jest.mock('@/actions/users', () => ({
   getUserPlexWrapped: jest.requireActual('@/actions/user-queries').getUserPlexWrapped,
 }))
-jest.mock('@/components/wrapped/wrapped-viewer-wrapper', () => ({ WrappedViewerWrapper: jest.fn(() => null) }))
 jest.mock('@/components/rewind/rewind-generating-watch', () => ({
   RewindGeneratingWatch: () => <p data-testid="generating-watch" />,
 }))
@@ -60,7 +60,13 @@ jest.mock('@/components/rewind/rewind-issue', () => ({
 jest.mock('@/actions/wrapped-share-link', () => ({ disableWrappedShareLink: jest.fn() }))
 jest.mock('@/lib/queue/rewind-infra', () => ({ checkRewindInfra: jest.fn() }))
 jest.mock('@/lib/rewind/generation-guards', () => ({ generationBlocker: jest.fn() }))
-jest.mock('@/lib/brand', () => ({ rewindName: async (year: number) => `Northfield Plex Rewind ${year}` }))
+jest.mock('@/lib/brand', () => ({
+  serverName: async () => 'Chester Family Plex',
+  rewindName: async (year: number) => `Chester Family Plex Rewind ${year}`,
+}))
+jest.mock('@/lib/settings/app-settings', () => ({
+  getAppSettings: async () => ({ locale: 'en-US', timeZone: 'UTC', serverName: 'Chester Family Plex' }),
+}))
 
 interface MockRow {
   id: string
@@ -234,14 +240,14 @@ describe('/rewind/[year] route year and ownership', () => {
     expect(mockFindUnique).toHaveBeenCalledWith(
       expect.objectContaining({ where: { userId_year: { userId: 'user-1', year: 2025 } } })
     )
-    expect(WrappedViewerWrapper).not.toHaveBeenCalled()
+    expect(screen.queryByTestId('rewind-article-mode')).not.toBeInTheDocument()
     expect(panel()).toHaveAttribute('data-kind', 'not-found')
     expect(screen.getByTestId('rewind-year-link-2026')).toHaveAttribute('href', '/rewind/2026')
   })
 
   it('titles the page with the server name, absolutely, and keeps it out of search', async () => {
     await expect(generateMetadata({ params: Promise.resolve({ year: '2026' }), searchParams: Promise.resolve({}) })).resolves.toEqual({
-      title: { absolute: 'Northfield Plex Rewind 2026' },
+      title: { absolute: 'Chester Family Plex Rewind 2026' },
       robots: { index: false },
     })
   })
@@ -270,14 +276,32 @@ describe('/rewind/[year] branches', () => {
     expect(screen.getByTestId('rewind-issue')).toBeInTheDocument()
   })
 
-  it('always opens a stored v2 year for its owner, flags off', async () => {
-    seed(row(2025, { data: JSON.stringify({ version: 2, year: 2025 }), shareToken: 'tok' }))
+  it.each([
+    ['v1', buildStoredV1Json],
+    ['v2', buildStoredV2Json],
+  ])('always opens a stored %s year for its owner as an archive article, flags off', async (_version, build) => {
+    seed(row(2025, { data: build() }), row(2024))
 
     await renderYear('2025')
 
-    const props = (WrappedViewerWrapper as jest.Mock).mock.calls[0][0]
-    expect(props).toMatchObject({ year: 2025, shareToken: 'tok', canManageShare: true })
-    expect(screen.getByTestId('wrapped-year-link-2025')).toHaveAttribute('href', '/rewind/2025')
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Chester Family Plex Rewind 2025')
+    expect(screen.getByTestId('rewind-article-mode')).toHaveTextContent('From the archive')
+    expect(screen.getAllByTestId('rewind-article-section')[0]).toHaveTextContent('The year in numbers')
+    expect(screen.queryByTestId('rewind-issue')).not.toBeInTheDocument()
+    expect(document.body).not.toHaveTextContent(/Wrapped/)
+    expect(screen.getByTestId('rewind-year-link-2024')).toHaveAttribute('href', '/rewind/2024')
+    expect(screen.queryByTestId('rewind-year-link-2025')).not.toBeInTheDocument()
+    expect(screen.getByTestId('rewind-article-close')).toHaveAttribute('href', '/')
+  })
+
+  it('renders the same archive article at /read for a legacy year', async () => {
+    seed(row(2025, { data: buildStoredV2Json() }))
+
+    const ui = await RewindArticlePage({ params: Promise.resolve({ year: '2025' }), searchParams: Promise.resolve({}) })
+    render(ui)
+
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Chester Family Plex Rewind 2025')
+    expect(screen.getByTestId('rewind-article-mode')).toHaveTextContent('Your most watched films')
   })
 
   it('shows parse-error for a completed row that does not parse', async () => {
@@ -286,7 +310,7 @@ describe('/rewind/[year] branches', () => {
     await renderYear('2025')
 
     expect(panel()).toHaveAttribute('data-kind', 'parse-error')
-    expect(WrappedViewerWrapper).not.toHaveBeenCalled()
+    expect(screen.queryByTestId('rewind-article-mode')).not.toBeInTheDocument()
   })
 
   it('shows generating, and polls, while a run is queued', async () => {
@@ -367,15 +391,15 @@ describe('/rewind/[year] Close and share links', () => {
 
     await renderYear('2026')
 
-    expect(panel()).toContainElement(screen.getByTestId('wrapped-share-stop-2025'))
+    expect(panel()).toContainElement(screen.getByTestId('rewind-share-stop-2025'))
   })
 
-  it('leaves the year on screen to the legacy viewer', async () => {
-    seed(row(2026, { shareToken: 'current' }), row(2025, { shareToken: 'old' }))
+  it('offers "Stop sharing" for the archive year on screen too, which has no share controls', async () => {
+    seed(row(2025, { data: buildStoredV2Json(), shareToken: 'current' }), row(2024, { shareToken: 'old' }))
 
-    await renderYear('2026')
+    await renderYear('2025')
 
-    expect(screen.getByTestId('wrapped-share-stop-2025')).toBeInTheDocument()
-    expect(screen.queryByTestId('wrapped-share-stop-2026')).not.toBeInTheDocument()
+    expect(screen.getByTestId('rewind-article-mode')).toContainElement(screen.getByTestId('rewind-share-stop-2025'))
+    expect(screen.getByTestId('rewind-share-stop-2024')).toBeInTheDocument()
   })
 })

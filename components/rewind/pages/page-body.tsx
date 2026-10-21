@@ -7,6 +7,8 @@ import type { CoverData } from "@/lib/rewind/pages/cover.schema"
 import type { GuessData } from "@/lib/rewind/pages/guess.schema"
 import type { NextYearData } from "@/lib/rewind/pages/next-year.schema"
 import type { NumberData } from "@/lib/rewind/pages/number.schema"
+import type { PostcardData } from "@/lib/rewind/pages/postcard.schema"
+import type { ShortListData } from "@/lib/rewind/pages/short-list.schema"
 import type { PeopleData } from "@/lib/rewind/pages/people.schema"
 import type { RaceData } from "@/lib/rewind/pages/race.schema"
 import type { RecordsData } from "@/lib/rewind/pages/records.schema"
@@ -28,6 +30,8 @@ import { GuessPage } from "./guess"
 import type { IssueContext } from "./issue-context"
 import { NextYearPage } from "./next-year"
 import { NumberPage } from "./number"
+import { PostcardPage } from "./postcard"
+import { ShortListPage } from "./short-list"
 import { PeoplePage } from "./people"
 import { RacePage } from "./race"
 import { RecordsPage } from "./records"
@@ -82,6 +86,10 @@ export function PageBody({ page, issue }: { page: SelectedPage; issue: IssueCont
       return <NextYearPage data={page.data as NextYearData} issue={issue} />
     case "back-cover":
       return <BackCoverPage data={page.data as BackCoverData} issue={issue} />
+    case "short-list":
+      return <ShortListPage data={page.data as ShortListData} issue={issue} />
+    case "postcard":
+      return <PostcardPage data={page.data as PostcardData} issue={issue} />
     default: {
       const entry: RegistryEntry = registry[page.type]
       return (

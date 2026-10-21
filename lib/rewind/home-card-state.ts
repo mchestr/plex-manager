@@ -10,7 +10,7 @@
  * outside the teaser window, flags off or not in the audience ─► null
  * before the teaser window ──► last season: closed (completed) or null
  * Redis missing or down, nothing completed (FR-50) ───────────► unavailable
- * no Plex history, or joined after 1 October (FR-48, 4.5) ─────► not-eligible
+ * no Plex history, or joined on or after 1 October (FR-48, 4.5) ► not-eligible
  * teaser window (opens minus 11 days), flags off or no run ───► before-season
  * queued or running, nothing completed ───────────────────────► generating
  * failed, nothing completed ──────────────────────────────────► failed
@@ -39,7 +39,8 @@ import type { RewindInfraCode } from "@/lib/rewind/infra-copy"
 import type { RewindStatus } from "@/lib/rewind/rewind-status"
 import type { RewindEligibility } from "@/lib/wrapped/eligibility"
 import type { RewindErrorCode } from "@/lib/wrapped/generation-errors"
-import { dayKey, formatDayKey, wallTimeToInstant, zonedParts } from "@/lib/utils/zoned-time"
+import { isLateJoiner } from "@/lib/wrapped/pipeline/late-joiner"
+import { formatDayKey, wallTimeToInstant, zonedParts } from "@/lib/utils/zoned-time"
 
 /** The weekly soundtrack as the strip draws it, in a `width` x `height` viewBox. */
 export interface SoundtrackGeometry {
@@ -121,9 +122,9 @@ export function teaserStartsAt(opensAt: Date, zone: string): Date {
   return wallTimeToInstant(`${formatDayKey(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate())}T00:00`, zone)
 }
 
-/** Joined after 1 October of the season year, in the server zone (Rewind 4.5). */
+/** Joined on or after 1 October of the season year, in the server zone: the pipeline's `JOINED_LATE` rule (Rewind 4.5, P7.3). */
 export function joinedLate(joinedAt: Date, seasonYear: number, zone: string): boolean {
-  return dayKey(joinedAt.getTime(), zone) > `${seasonYear}-10-01`
+  return isLateJoiner({ since: null, createdAt: joinedAt }, seasonYear, zone)
 }
 
 /** Resolves the card in the module's order; null means no card at all. */

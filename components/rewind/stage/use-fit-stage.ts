@@ -21,7 +21,7 @@ const INITIAL: FitSummary = { chrome: "roomy", measured: false, belowFloor: fals
  * the chrome variant or one of P5.3's two article-mode flags does.
  * `safeArea` is an element padded by `env(safe-area-inset-bottom)`.
  */
-export function useFitStage(root: RefObject<HTMLElement | null>, safeArea: RefObject<HTMLElement | null>): FitSummary {
+export function useFitStage(root: RefObject<HTMLElement | null>, safeArea: RefObject<HTMLElement | null>, framed = false): FitSummary {
   const [summary, setSummary] = useState(INITIAL)
 
   useLayoutEffect(() => {
@@ -30,9 +30,10 @@ export function useFitStage(root: RefObject<HTMLElement | null>, safeArea: RefOb
     const viewport = window.visualViewport
 
     const refit = () => {
+      // A framed stage (the admin preview, P7.9) fits its frame, not the window.
       const fit = fitStage({
-        vw: viewport?.width ?? window.innerWidth,
-        vh: viewport?.height ?? window.innerHeight,
+        vw: framed ? el.clientWidth : (viewport?.width ?? window.innerWidth),
+        vh: framed ? el.clientHeight : (viewport?.height ?? window.innerHeight),
         safeBottom: safeArea.current ? parseFloat(getComputedStyle(safeArea.current).paddingBottom) || 0 : 0,
         rootFontPx: parseFloat(getComputedStyle(document.documentElement).fontSize) || 16,
       })
@@ -54,7 +55,7 @@ export function useFitStage(root: RefObject<HTMLElement | null>, safeArea: RefOb
       window.removeEventListener("resize", refit)
       viewport?.removeEventListener("resize", refit)
     }
-  }, [root, safeArea])
+  }, [root, safeArea, framed])
 
   return summary
 }
