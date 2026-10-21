@@ -1,5 +1,6 @@
 "use server"
 
+import { Prisma } from "@/lib/generated/prisma/client"
 import { adminAction } from "@/lib/actions/define-action"
 import { fail, ok } from "@/lib/actions/result"
 import { requireAdmin } from "@/lib/admin"
@@ -12,7 +13,8 @@ import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { configDiff } from "@/lib/security/config-diff"
 import { createLogger } from "@/lib/utils/logger"
 import { normalizeTimeZone } from "@/lib/utils/zoned-time"
-import { DEFAULT_SEASON, getSeasonState, parseMonthDay, seasonStateAt } from "@/lib/wrapped/season"
+import { REWIND_SETTINGS_SELECT } from "@/lib/wrapped/config"
+import { DEFAULT_SEASON, getSeasonState, seasonStateAt } from "@/lib/wrapped/season"
 import { revalidatePath, updateTag } from "next/cache"
 import { z } from "zod"
 
@@ -64,8 +66,7 @@ const NON_SECRET_CONFIG_SELECT = {
   id: true,
   llmDisabled: true,
   wrappedEnabled: true,
-  rewindSeasonOpens: true,
-  rewindSeasonCloses: true,
+  ...REWIND_SETTINGS_SELECT,
   timezone: true,
   watchlistSyncEnabled: true,
   watchlistSyncIntervalMinutes: true,
@@ -113,8 +114,21 @@ export async function getConfig() {
       id: "config",
       llmDisabled: false,
       wrappedEnabled: true,
+      rewindEnabled: false,
+      rewindAudience: "admins",
       rewindSeasonOpens: DEFAULT_SEASON.opens,
       rewindSeasonCloses: DEFAULT_SEASON.closes,
+      rewindLlmMode: "standard",
+      rewindLlmBudgetUsd: new Prisma.Decimal(10),
+      rewindPublicLinks: true,
+      rewindPublicCounts: false,
+      rewindShowServerNameOnCards: true,
+      rewindAllowArtOnCards: true,
+      rewindExcludedSectionIds: null,
+      rewindExcludedContentRatings: null,
+      rewindIncludeManagedUsers: false,
+      rewindDisabledPages: null,
+      rewindNotifyChannels: ["discord", "banner"],
       timezone: null,
       watchlistSyncEnabled: false,
       watchlistSyncIntervalMinutes: 60,
@@ -180,42 +194,6 @@ export const updateLlmCaps = adminAction({
 
     logAuditEvent(AuditEventType.CONFIG_CHANGED, userId, configDiff("llm.caps", before, caps))
     revalidatePath("/admin/settings")
-    return ok(null)
-  },
-})
-
-const monthDaySchema = z.string().refine((value) => parseMonthDay(value) !== null, {
-  message: "Season dates must be real month-day values (MM-DD)",
-})
-
-const wrappedSettingsSchema = z
-  .object({ enabled: z.boolean(), opens: monthDaySchema, closes: monthDaySchema })
-  .refine((data) => data.opens !== data.closes, { message: "The season cannot open and close on the same day" })
-
-/**
- * Update the Rewind switch and season window (admin only). `opens` and
- * `closes` are `MM-DD` values in the server zone; a window may cross the new
- * year (`12-01` to `01-31`).
- */
-export const updateWrappedSettings = adminAction({
-  input: wrappedSettingsSchema,
-  fallbackError: "Failed to update wrapped settings",
-  handler: async ({ enabled, opens, closes }, { userId }) => {
-    const before = await prisma.config.findUnique({
-      where: { id: "config" },
-      select: { wrappedEnabled: true, rewindSeasonOpens: true, rewindSeasonCloses: true },
-    })
-    const values = { wrappedEnabled: enabled, rewindSeasonOpens: opens, rewindSeasonCloses: closes }
-    await prisma.config.upsert({
-      where: { id: "config" },
-      update: { ...values, updatedBy: userId },
-      create: { id: "config", llmDisabled: false, ...values, updatedBy: userId },
-      select: { id: true },
-    })
-
-    logAuditEvent(AuditEventType.CONFIG_CHANGED, userId, configDiff("rewind.season", before, values))
-    revalidatePath("/")
-    revalidatePath("/rewind", "layout")
     return ok(null)
   },
 })

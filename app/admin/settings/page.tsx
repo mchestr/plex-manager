@@ -9,11 +9,18 @@ import { LLMToggle } from "@/components/admin/settings/llm-toggle"
 import { ServerForm } from "@/components/admin/settings/server-form"
 import { StripeSettingsForm } from "@/components/admin/settings/stripe-settings-form"
 import { WatchlistSyncSettings } from "@/components/admin/settings/watchlist-sync-settings"
-import { WrappedSettingsForm } from "@/components/admin/settings/wrapped-settings-form"
+import { PrepareSeasonDataButton } from "@/components/admin/settings/prepare-season-data-button"
+import { RewindSettingsSection } from "@/components/admin/settings/rewind-settings-section"
+import { ServerTimeZoneForm } from "@/components/admin/settings/server-time-zone-form"
+import { Card, CardContent } from "@/components/ui/card"
 import { getBaseUrl } from "@/lib/env"
 import { getFormat } from "@/lib/settings/app-settings"
 import { serverZone } from "@/lib/utils/server-zone"
 import { instantToWallTime } from "@/lib/utils/zoned-time"
+import { checkRewindInfra } from "@/lib/queue/rewind-infra"
+import { rewindInfraMessage } from "@/lib/rewind/infra-copy"
+import { getRewindContentRatings, getRewindLibraries, getRewindSeasonSpendUsd } from "@/lib/wrapped/admin/settings-options"
+import { rewindSettingsFromConfig } from "@/lib/wrapped/config"
 import { getSeasonState } from "@/lib/wrapped/season"
 
 export const dynamic = 'force-dynamic'
@@ -66,7 +73,13 @@ export default async function SettingsPage() {
   const settings = await getAdminSettings()
   const stripeConfig = await getStripeConfig()
   const [season, zone, f] = await Promise.all([getSeasonState(), serverZone(), getFormat()])
-  const seasonDataPreparedAt = await getRewindSeasonDataPreparedAt(season.seasonYear)
+  const [seasonDataPreparedAt, rewindInfra, libraries, ratings, spentUsd] = await Promise.all([
+    getRewindSeasonDataPreparedAt(season.seasonYear),
+    checkRewindInfra(),
+    getRewindLibraries(),
+    getRewindContentRatings(),
+    getRewindSeasonSpendUsd(season.seasonYear),
+  ])
   const baseUrl = getBaseUrl()
   const discordPortalUrl = `${baseUrl}/discord/link`
   const nodeVersion = process.version
@@ -172,38 +185,21 @@ export default async function SettingsPage() {
                   </div>
                 </div>
 
-                {/* Wrapped Generation Configuration */}
+                {/* Rewind copy model */}
                 <div className="border border-slate-700 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="mb-3">
                     <h3 className="text-sm font-semibold text-white flex items-center gap-2">
                       <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
-                      Wrapped Generation
+                      Rewind copy
                     </h3>
-                    <FeatureStatusBadge
-                      featureName="Plex Wrapped"
-                      enabled={settings.config.wrappedEnabled ?? true}
-                    />
+                    <p className="text-xs text-slate-400 mt-1">The model that writes each issue&apos;s lines; mode and budget are in the Rewind section</p>
                   </div>
-                  <div className="space-y-4">
-                    <WrappedSettingsForm
-                      enabled={settings.config.wrappedEnabled ?? true}
-                      year={season.seasonYear}
-                      opens={settings.config.rewindSeasonOpens}
-                      closes={settings.config.rewindSeasonCloses}
-                      seasonOpen={season.isOpen}
-                      zone={zone}
-                      configuredZone={settings.config.timezone}
-                      seasonDataPreparedAt={seasonDataPreparedAt && instantToWallTime(new Date(seasonDataPreparedAt), zone)}
-                    />
-                    <div className="pt-4 border-t border-slate-700">
-                      <LLMProviderForm
-                        provider={settings.wrappedLLMProvider}
-                        purpose="wrapped"
-                      />
-                    </div>
-                  </div>
+                  <LLMProviderForm
+                    provider={settings.wrappedLLMProvider}
+                    purpose="wrapped"
+                  />
                 </div>
 
                 {/* Discord Configuration */}
@@ -228,6 +224,30 @@ export default async function SettingsPage() {
                 </div>
               </div>
             </div>
+
+            {/* Rewind */}
+            <RewindSettingsSection
+              saved={rewindSettingsFromConfig(settings.config)}
+              zone={zone}
+              llmDisabled={settings.config.llmDisabled}
+              discordBotOn={Boolean(settings.discordIntegration?.isEnabled && settings.discordIntegration.botEnabled)}
+              spent={f.money(spentUsd, "prose")}
+              libraries={libraries.libraries}
+              ratings={ratings}
+              status={{ redis: rewindInfra.ok ? null : rewindInfraMessage(rewindInfra.code, "admin"), tautulli: libraries.status }}
+            />
+            <Card>
+              <CardContent className="flex flex-col gap-4">
+                <PrepareSeasonDataButton
+                  year={season.seasonYear}
+                  preparedAt={seasonDataPreparedAt && instantToWallTime(new Date(seasonDataPreparedAt), zone)}
+                  zone={zone}
+                />
+                <div id="server-time-zone">
+                  <ServerTimeZoneForm configured={settings.config.timezone} effective={zone} />
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Server Configuration */}
             <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-lg overflow-hidden">

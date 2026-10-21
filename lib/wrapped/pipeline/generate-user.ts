@@ -23,6 +23,7 @@ import "server-only"
 import { findTautulliUser } from "@/lib/connections/tautulli"
 import { getAccessLevel } from "@/lib/access"
 import { generateStructured } from "@/lib/llm/generate-structured"
+import { effectiveRewindLlmMode } from "@/lib/wrapped/config"
 import { redisLimiter } from "@/lib/queue/redis-semaphore"
 import { checkRewindInfra } from "@/lib/queue/rewind-infra"
 import type { RewindGenerationKind } from "@/lib/rewind/enqueue-generation"
@@ -139,7 +140,7 @@ export async function generateUserRewind(options: GenerateUserOptions, deps: Pip
     previous: ctx.previous,
     llm: {
       disabled: ctx.config.llmDisabled,
-      mode: ctx.config.llmMode,
+      mode: effectiveRewindLlmMode({ llmDisabled: ctx.config.llmDisabled, rewindLlmMode: ctx.config.llmMode }),
       provider: ctx.llmProvider,
       budgetReached: ctx.spentUsd >= ctx.config.budgetUsd,
       override: options.model,

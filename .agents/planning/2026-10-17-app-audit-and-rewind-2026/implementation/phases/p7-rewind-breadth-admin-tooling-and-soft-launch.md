@@ -579,10 +579,12 @@ The ten core pages (Bookends included), sharing, privacy and accessibility are n
 **Demo.** Turn Rewind on for admins only, set the budget to $5 and disable People. The audit table shows one `CONFIG_CHANGED` row, a member sees no Rewind card, and the season dashboard shows the new cap.
 
 **Done when.**
-- [ ] The Rewind section in the Features group covers the season dates, audience, LLM mode and budget, public links and counts, server name and artwork on cards, excluded libraries and ratings, managed accounts, disabled pages and notification channels.
-- [ ] Every field is Zod-validated, and every save writes an audit entry with a diff.
-- [ ] `llmDisabled` forces template copy everywhere.
-- [ ] The tests pass, and the old wrapped settings form is gone.
+- [x] The Rewind section in the Features group covers the season dates, audience, LLM mode and budget, public links and counts, server name and artwork on cards, excluded libraries and ratings, managed accounts, disabled pages and notification channels.
+- [x] Every field is Zod-validated, and every save writes an audit entry with a diff.
+- [x] `llmDisabled` forces template copy everywhere.
+- [x] The tests pass, and the old wrapped settings form is gone.
+
+(as merged: P7.8 was not on the branch, so `updateRewindSettings` does not yet call `ensureSeasonPrepareScheduled()`; P7.8 adds the call when `rewindSeasonOpens` or `rewindSeasonCloses` is among the changed fields, with the "a date change reschedules Prepare" test. The spend comes from `getRewindSeasonSpendUsd(year)` in `lib/wrapped/admin/settings-options.ts` (same aggregate as `load-context.ts`), which P7.8's `getRewindSeasonSpend` replaces; the status line shows `checkRewindInfra()` and whether Tautulli answered `get_libraries`, until `getRewindPreflight()` lands. Disabled-page keys are `REWIND_CUT_PAGES` in `lib/validations/rewind-settings.ts`, including `next-year.picks` and `next-year.returning`; P8's `+key` entries must extend that list. `getWrappedSettings` stays, because `actions/rewind-generation.ts` still calls it; `Config.wrappedEnabled` has no UI now and stays at its default. The section is a card on today's settings page, with Prepare season data and the server time zone (`#server-time-zone`) in a card under it; `components/ui/date-range-picker.tsx` went with the old form.)
 
 ### Step P7.13: Legacy archive articles
 

@@ -5,7 +5,7 @@ import {
   setVisualPlexServerUrl,
   VISUAL_PLEX_SERVER,
 } from '../helpers/seed-fixtures';
-import { capture, skipUnlessProductionBuild, test } from './visual-test';
+import { capture, expect, settlePage, skipUnlessProductionBuild, test } from './visual-test';
 
 /**
  * Admin and status screens (P1.6): 8 admin screens and 2 status screens per
@@ -55,6 +55,15 @@ test.describe('Admin screens', () => {
 
   test('settings', async ({ page }) => {
     await capture(page, '/admin/settings', 'admin-settings');
+  });
+
+  test('settings, Rewind section', async ({ page }) => {
+    await page.goto('/admin/settings#rewind');
+    await settlePage(page);
+    // The status line reports this run's Redis and Tautulli
+    await expect(page.getByTestId('rewind-settings-section')).toHaveScreenshot('admin-settings-rewind.png', {
+      mask: [page.getByTestId('rewind-settings-status')],
+    });
   });
 
   test('invites', async ({ page }) => {
