@@ -14,6 +14,8 @@ import {
   Calendar,
   ChartLine,
   Check,
+  ChevronLeft,
+  ChevronRight,
   CircleCheck,
   CircleDashed,
   CirclePlus,
@@ -113,4 +115,7 @@ export const icons = {
   home: House,
   more: Ellipsis,
   send: SendHorizontal,
+  // Wizards
+  back: ChevronLeft,
+  chevronRight: ChevronRight,
 } as const satisfies Record<string, LucideIcon>

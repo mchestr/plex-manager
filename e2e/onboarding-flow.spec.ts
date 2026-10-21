@@ -1,125 +1,129 @@
+import type { Page } from '@playwright/test';
+import { axeFor } from './a11y/scan';
 import { expect, test, TEST_USERS } from './fixtures/auth';
 import { signInAs } from './fixtures/session';
 import { createE2EPrismaClient } from './helpers/prisma';
 import { waitForLoadingGone, WAIT_TIMEOUTS } from './helpers/test-utils';
 
+type Service = 'plex' | 'jellyfin';
+
+/**
+ * Member onboarding (P10.23, ui-design-system 6.5): five steps (four without
+ * a public request URL) with no interstitials. Every Continue moves focus to
+ * the new step's h1 at once, and every step passes axe.
+ */
+async function expectStepReady(page: Page, stepId: string, focused: boolean) {
+  const heading = page.getByTestId(`onboarding-${stepId}-heading`);
+  await expect(heading).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+  if (focused) await expect(heading).toBeFocused();
+  await expect(page.getByTestId('onboarding-stepper').locator('[aria-current="step"]')).toHaveCount(1);
+  const results = await axeFor(page).analyze();
+  expect(results.violations).toEqual([]);
+}
+
+async function walkOnboarding(page: Page, service: Service) {
+  await expectStepReady(page, 'welcome', false);
+  await expect(page.getByTestId('onboarding-wizard-subheading')).toBeVisible();
+  await page.getByTestId('onboarding-welcome-continue').click();
+
+  await expectStepReady(page, 'playback', true);
+  const guide = page.getByTestId('playback-guide');
+  await expect(guide).toContainText(service === 'jellyfin' ? 'Jellyfin' : 'Plex');
+  if (service === 'jellyfin') await expect(page.getByTestId('onboarding-step-playback')).not.toContainText('Plex');
+  await page.getByTestId('onboarding-playback-continue').click();
+
+  // Requests shows only when the request site has a public URL
+  const requests = page.getByTestId('onboarding-requests-heading');
+  const support = page.getByTestId('onboarding-support-heading');
+  await expect(requests.or(support)).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+  if (await requests.isVisible()) {
+    await expectStepReady(page, 'requests', true);
+    await page.getByTestId('onboarding-requests-continue').click();
+  }
+
+  await expectStepReady(page, 'support', true);
+  await page.getByTestId('onboarding-support-continue').click();
+
+  await expectStepReady(page, 'final', true);
+  await expect(page.getByTestId('onboarding-help-note')).toBeVisible();
+  await page.getByTestId('onboarding-final-complete').click();
+}
+
+async function setOnboarding(service: Service, done: boolean) {
+  const prisma = createE2EPrismaClient();
+  try {
+    await prisma.user.update({
+      where: { id: TEST_USERS.REGULAR.id },
+      data: {
+        primaryAuthService: service,
+        onboardingStatus: done ? TEST_USERS.REGULAR.onboardingStatus : { plex: false, jellyfin: false },
+      },
+    });
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+async function onboardingStatus() {
+  const prisma = createE2EPrismaClient();
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: TEST_USERS.REGULAR.id },
+      select: { onboardingStatus: true },
+    });
+    return user?.onboardingStatus as { plex: boolean; jellyfin: boolean } | null;
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
 test.describe('Onboarding Flow', () => {
-  test('new user completes onboarding and is redirected to homepage', async ({ browser, baseURL }) => {
-    const prisma = createE2EPrismaClient();
+  test.describe.configure({ mode: 'serial' });
+
+  test.afterEach(async () => {
+    await setOnboarding('plex', true);
+  });
+
+  test('a Plex member is sent to onboarding, walks every step and lands home', async ({ browser, baseURL }) => {
+    await setOnboarding('plex', false);
+    if (!baseURL) throw new Error('This spec needs `use.baseURL` in playwright.config.ts.');
+    const context = await browser.newContext();
+    await signInAs(context, baseURL, TEST_USERS.REGULAR.id);
+    const page = await context.newPage();
 
     try {
-      // Set regular user's onboarding to false for this test
-      await prisma.user.update({
-        where: { id: TEST_USERS.REGULAR.id },
-        data: {
-          primaryAuthService: 'plex',
-          onboardingStatus: { plex: false, jellyfin: false },
-        },
-      });
+      // Home sends a member who has not finished onboarding to /onboarding
+      await page.goto('/', { waitUntil: 'load' });
+      await page.waitForURL((url) => url.pathname === '/onboarding', { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+      await waitForLoadingGone(page);
+      await expect(page.getByTestId('onboarding-shell')).toBeVisible();
 
-      // Create a new browser context and page for this test
-      const context = await browser.newContext({
-        acceptDownloads: true,
-      });
-      if (!baseURL) throw new Error('This spec needs `use.baseURL` in playwright.config.ts.');
-      await signInAs(context, baseURL, TEST_USERS.REGULAR.id);
-      const page = await context.newPage();
+      await walkOnboarding(page, 'plex');
 
-      try {
-        // Home sends a signed-in user who has not finished onboarding to /onboarding
-        await page.goto('/', { waitUntil: 'load' });
-
-        // Wait for redirect to onboarding page
-        await page.waitForURL((url) => {
-          return url.pathname === '/onboarding';
-        }, { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
-
-        // Verify we're on the onboarding page
-        expect(page.url()).toContain('/onboarding');
-        await waitForLoadingGone(page);
-
-        // Verify the welcome step is visible
-        await expect(page.getByTestId('onboarding-welcome-heading')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
-        await expect(page.getByTestId('onboarding-wizard-subheading')).toBeVisible();
-
-        // Step 1: Welcome - Click "Let's Go" button
-        const letsGoButton = page.getByTestId('onboarding-welcome-continue');
-        await expect(letsGoButton).toBeVisible();
-        await letsGoButton.click();
-
-        // Wait for next step to be visible
-        // Step 2: Plex Configuration - Click "Got it" button
-        await expect(page.getByTestId('onboarding-plex-config-heading')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
-        const gotItButton = page.getByTestId('onboarding-plex-config-continue');
-        await expect(gotItButton).toBeVisible();
-        await gotItButton.click();
-
-        // Wait for next step to be visible
-        // Step 3: Media Requests - Click "Next" button
-        await expect(page.getByTestId('onboarding-media-request-heading')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
-        const nextButton = page.getByTestId('onboarding-media-request-continue');
-        await expect(nextButton).toBeVisible();
-        await nextButton.click();
-
-        // Wait for next step to be visible
-        // Step 4: Support & Discord - Click "Next" button
-        await expect(page.getByTestId('onboarding-discord-support-heading')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
-        const supportNextButton = page.getByTestId('onboarding-discord-support-continue');
-        await expect(supportNextButton).toBeVisible();
-        await supportNextButton.click();
-
-        // Wait for final step to be visible
-        // Step 5: Final Step - Click "Go to Dashboard" button
-        await expect(page.getByTestId('onboarding-final-heading')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
-        const goToDashboardButton = page.getByTestId('onboarding-final-complete');
-        await expect(goToDashboardButton).toBeVisible();
-        await goToDashboardButton.click();
-
-        // Wait for redirect to homepage
-        await page.waitForURL((url) => {
-          const isHome = url.pathname === '/' || url.pathname === '';
-          return isHome;
-        }, { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
-
-        expect(page.url()).toMatch(/\/(\?.*)?$/); // Should be on homepage
-
-        // Verify user is on homepage (not onboarding)
-        expect(page.url()).not.toContain('/onboarding');
-
-        // Verify onboarding was marked as complete in database
-        const updatedUser = await prisma.user.findUnique({
-          where: { id: TEST_USERS.REGULAR.id },
-          select: { onboardingStatus: true },
-        });
-
-        const onboardingStatus = updatedUser?.onboardingStatus as { plex: boolean; jellyfin: boolean } | null;
-        expect(onboardingStatus?.plex).toBe(true);
-
-        // Verify homepage content is visible (dashboard or welcome content)
-        await waitForLoadingGone(page);
-        // The homepage should show some content - either dashboard or welcome message
-        const hasContent = await Promise.race([
-          page.getByRole('heading').first().isVisible().then(() => true),
-          page.getByText(/Welcome|Dashboard|Plex/i).first().isVisible().then(() => true),
-        ]).catch(() => false);
-
-        expect(hasContent).toBe(true);
-
-      } finally {
-        await context.close();
-      }
-
+      await page.waitForURL((url) => url.pathname === '/', { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+      expect((await onboardingStatus())?.plex).toBe(true);
     } finally {
-      // Restore regular user's onboarding status
-      await prisma.user.update({
-        where: { id: TEST_USERS.REGULAR.id },
-        data: {
-          primaryAuthService: 'plex',
-          onboardingStatus: { plex: true, jellyfin: false },
-        },
-      });
-      await prisma.$disconnect();
+      await context.close();
+    }
+  });
+
+  test('a Jellyfin member sees Jellyfin instructions only', async ({ browser, baseURL }) => {
+    await setOnboarding('jellyfin', false);
+    if (!baseURL) throw new Error('This spec needs `use.baseURL` in playwright.config.ts.');
+    const context = await browser.newContext();
+    await signInAs(context, baseURL, TEST_USERS.REGULAR.id);
+    const page = await context.newPage();
+
+    try {
+      await page.goto('/onboarding', { waitUntil: 'load' });
+      await waitForLoadingGone(page);
+
+      await walkOnboarding(page, 'jellyfin');
+
+      await page.waitForURL((url) => url.pathname !== '/onboarding', { timeout: WAIT_TIMEOUTS.EXTENDED_OPERATION });
+      expect((await onboardingStatus())?.jellyfin).toBe(true);
+    } finally {
+      await context.close();
     }
   });
 });
-

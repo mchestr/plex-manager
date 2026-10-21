@@ -1,5 +1,0 @@
-export { DiscordSupportStep } from "@/components/onboarding/onboarding-steps/discord-support-step"
-export { FinalStep } from "@/components/onboarding/onboarding-steps/final-step"
-export { MediaRequestStep } from "@/components/onboarding/onboarding-steps/media-request-step"
-export { PlexConfigurationStep } from "@/components/onboarding/onboarding-steps/plex-configuration-step"
-export { WelcomeStep } from "@/components/onboarding/onboarding-steps/welcome-step"

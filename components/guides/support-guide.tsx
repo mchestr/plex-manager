@@ -1,6 +1,3 @@
-import type { Route } from "next"
-import Link from "next/link"
-
 import { Button } from "@/components/ui/button"
 import { Icon } from "@/components/ui/icon"
 import { icons } from "@/lib/ui/icons"
@@ -20,8 +17,12 @@ export interface SupportDiscord {
 interface SupportGuideProps {
   /** Null when Discord is not set up: only the reporting guidance shows. */
   discord: SupportDiscord | null
-  /** Where "Link Discord" goes; onboarding passes its own return path. Default `/discord/link`. */
-  linkHref?: Route
+  /**
+   * Where "Link Discord" goes; onboarding passes the connect route with its own
+   * return path. A plain link, since the connect route is a route handler that
+   * redirects to Discord. Default `/discord/link`.
+   */
+  linkHref?: string
   /** The admin's server notes for Discord, shown as plain text. */
   instructions?: string | null
 }
@@ -85,7 +86,7 @@ export function SupportGuide({ discord, linkHref = "/discord/link", instructions
                 variant="secondary"
                 size="sm"
                 nativeButton={false}
-                render={<Link href={linkHref} />}
+                render={<a href={linkHref} />}
                 data-testid="support-guide-link-discord"
               >
                 Link Discord

@@ -1,14 +1,22 @@
-import { SpaceBackground } from "@/components/setup/setup-wizard/space-background"
-import React from "react"
+import { getServerSession } from "next-auth"
+import type { ReactNode } from "react"
 
-export default function OnboardingLayout({ children }: { children: React.ReactNode }) {
+import { PublicShell } from "@/components/shell/public-shell"
+import { authOptions } from "@/lib/auth"
+import { serverName } from "@/lib/brand"
+
+/** Onboarding's minimal shell (ui-design-system 6.5): the Wordmark and Sign out, no space background (UI-15, UI-16). */
+export default async function OnboardingLayout({ children }: { children: ReactNode }) {
+  const [session, name] = await Promise.all([getServerSession(authOptions), serverName()])
+  const user = session?.user
   return (
-    <div className="min-h-screen relative py-12 px-4 sm:px-6 lg:px-8">
-      <SpaceBackground />
-      <main id="main" tabIndex={-1} className="outline-none">
-        {children}
-      </main>
-    </div>
+    <PublicShell
+      serverName={name}
+      width="wide"
+      account={user ? { name: user.name || user.email || "Member" } : undefined}
+      data-testid="onboarding-shell"
+    >
+      {children}
+    </PublicShell>
   )
 }
-
