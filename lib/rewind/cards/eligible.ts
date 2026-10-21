@@ -8,7 +8,7 @@
 
 import type { ShareOptions, SharePageType } from "@/lib/wrapped/data/share-safe-schema"
 
-/** The six core cards (P5.11), in registry order. P7.6 adds the rest. @internal */
+/** The six core cards (P5.11), in registry order. P7.6 adds the rest. */
 export const CARD_PAGE_TYPES = ["cover", "number", "top-shows", "clock", "centrefold", "back-cover"] as const satisfies readonly SharePageType[]
 
 /** Cards that exist only with Daily detail on: the calendar shows which days were watched. */

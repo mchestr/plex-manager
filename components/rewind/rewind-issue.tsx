@@ -10,6 +10,7 @@ import { StoryStage } from "@/components/rewind/stage/story-stage"
 import { serverName } from "@/lib/brand"
 import { prisma } from "@/lib/prisma"
 import { loadItemLinks } from "@/lib/rewind/item-links"
+import { pageNotes } from "@/lib/rewind/notes"
 import { registry, type RegistryEntry } from "@/lib/rewind/registry"
 import { validatePagesOnRead } from "@/lib/rewind/select-pages"
 import { loadShareSetup } from "@/lib/rewind/share-setup"
@@ -73,9 +74,11 @@ export async function RewindIssue({ rewindId, data, userId, returnTo, initialShe
           type: page.type,
           content: <PageBody page={page} issue={issue} />,
           table: entry.table?.(page.data, data.facts, { locale: settings.locale }) ?? null,
+          notes: pageNotes(page, data.facts, { locale: settings.locale, zone: issue.zone }),
         }
       })}
       year={data.year}
+      serverName={brand}
       archetype={archetype}
       closeHref={returnTo}
       copy={{ copySource: data.copySource, model: data.copyMeta.model }}

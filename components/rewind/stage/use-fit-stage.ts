@@ -2,7 +2,7 @@
 
 import { useLayoutEffect, useState, type RefObject } from "react"
 
-import { fitStage, type StageFit } from "@/lib/rewind/stage/fit-stage"
+import { fitSpread, fitStage, spreadColumns, type StageFit } from "@/lib/rewind/stage/fit-stage"
 
 export interface FitSummary {
   chrome: StageFit["chrome"]["variant"]
@@ -16,9 +16,12 @@ const INITIAL: FitSummary = { chrome: "roomy", measured: false, belowFloor: fals
 
 /**
  * Re-fits the stage on `resize` and `visualViewport` changes. The scale and
- * sizes go straight to CSS variables on `root` (`--u`, `--rw-chrome-top`,
- * `--rw-chrome-bottom`, `--rw-artboard-h`), so React state changes only when
- * the chrome variant or one of P5.3's two article-mode flags does.
+ * sizes go straight to CSS variables on `root` (`--rw-u-story`,
+ * `--rw-chrome-top`, `--rw-chrome-bottom`, `--rw-artboard-h-story`, and the
+ * desktop spread's `--rw-u-spread`, `--rw-rail-w` and `--rw-notes-w`); the
+ * stage's classes pick `--u` from the story or the spread by media query, so
+ * React state changes only when the chrome variant or one of P5.3's two
+ * article-mode flags does.
  * `safeArea` is an element padded by `env(safe-area-inset-bottom)`.
  */
 export function useFitStage(root: RefObject<HTMLElement | null>, safeArea: RefObject<HTMLElement | null>): FitSummary {
@@ -30,16 +33,22 @@ export function useFitStage(root: RefObject<HTMLElement | null>, safeArea: RefOb
     const viewport = window.visualViewport
 
     const refit = () => {
+      const vw = viewport?.width ?? window.innerWidth
+      const vh = viewport?.height ?? window.innerHeight
       const fit = fitStage({
-        vw: viewport?.width ?? window.innerWidth,
-        vh: viewport?.height ?? window.innerHeight,
+        vw,
+        vh,
         safeBottom: safeArea.current ? parseFloat(getComputedStyle(safeArea.current).paddingBottom) || 0 : 0,
         rootFontPx: parseFloat(getComputedStyle(document.documentElement).fontSize) || 16,
       })
-      el.style.setProperty("--u", String(fit.u))
+      const columns = spreadColumns(vw)
+      el.style.setProperty("--rw-u-story", String(fit.u))
       el.style.setProperty("--rw-chrome-top", `${fit.chrome.top}px`)
       el.style.setProperty("--rw-chrome-bottom", `${fit.chrome.bottom}px`)
-      el.style.setProperty("--rw-artboard-h", String(fit.artboardH))
+      el.style.setProperty("--rw-artboard-h-story", String(fit.artboardH))
+      el.style.setProperty("--rw-u-spread", String(fitSpread({ vw, vh, ...columns })))
+      el.style.setProperty("--rw-rail-w", `${columns.railW}px`)
+      el.style.setProperty("--rw-notes-w", `${columns.notesW}px`)
       setSummary((prev) =>
         prev.measured && prev.chrome === fit.chrome.variant && prev.belowFloor === fit.belowFloor && prev.largeText === fit.largeText
           ? prev

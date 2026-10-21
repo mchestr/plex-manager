@@ -19,6 +19,8 @@
  * - `table(data, facts, settings)` is the chart pages' Table sheet (P5.3).
  * - `share.facts` are the facts the page's card may print (P5.10).
  * - `article(data, facts, ctx)` is the page in article mode (P5.12).
+ * - `notes(data, facts, ctx)` is the page's desktop Notes column (P7.4); a
+ *   page without one shows its `srSummary` there (`pageNotes`).
  *
  * Pages whose steps have not landed keep the page rule of design 4.3 as their
  * `select` with empty data (`lib/rewind/pages/rules.ts`); P5.7, P7.1 and P7.2
@@ -111,6 +113,13 @@ export interface SelectContext {
   userId?: string
 }
 
+/** What a page's desktop Notes read besides its data and facts (P7.4). */
+export interface NotesContext {
+  locale: string
+  /** Whose time zone the issue counts in: the counting rule names it. */
+  zone: "member" | "server"
+}
+
 /** The part of an entry each page module defines. Methods, so a typed page fits `RegistryEntry<unknown>`. */
 export interface PageDefinition<D> {
   select(facts: RewindFactsV3, ctx: SelectContext): D | null
@@ -123,6 +132,12 @@ export interface PageDefinition<D> {
    * (`articleBlocks`).
    */
   article?(data: D, facts: RewindFactsV3, ctx: ArticleContext): ArticleBlock[]
+  /**
+   * The page's desktop Notes (P7.4): blocks that extend the page rather than
+   * repeat it. P7.4 writes Top shows, the calendar and the centrefold; P8.4
+   * adds the other core pages.
+   */
+  notes?(data: D, facts: RewindFactsV3, ctx: NotesContext): ArticleBlock[]
   /**
    * The facts the page's share card may print (P5.10); `titles` are those
    * that name a title, `art` a poster. `titleKeys` maps the title facts the

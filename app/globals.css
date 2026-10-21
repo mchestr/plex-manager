@@ -11,6 +11,8 @@
 @import "./typeset.css"; /* prose for MarkdownBody (P3.8) */
 
 @custom-variant dark (&:where(.dark, .dark *):not(:where(.light, .light *)));
+/* Rewind's desktop spread (P7.4): SPREAD_QUERY in lib/rewind/stage/fit-stage.ts */
+@custom-variant rw-spread (@media (min-width: 1024px) and (min-aspect-ratio: 4/3));
 
 /* ---------- 1. Light values (shadcn convention; ships behind a flag, ui-design-system 3.3) ---------- */
 :root {

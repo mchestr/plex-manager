@@ -88,6 +88,25 @@ test.describe('Rewind story axe', () => {
     await expect(stage).toBeVisible();
   });
 
+  // P7.4: the desktop spread at 1440x900, its rail, Notes and tabs included, on every page of the heavy issue.
+  test('the desktop spread at 1440x900', async ({ page, signIn }) => {
+    test.setTimeout(120_000);
+    await signIn(REWIND_MEMBERS.heavy.id);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await openStage(page);
+    await expect(page.getByTestId('rewind-spread')).toBeVisible();
+    const total = await pageCount(page);
+    for (let i = 0; i < total; i++) {
+      if (i === 1) await chooseCut(page);
+      else if (i > 1) await turnForward(page);
+      const { type } = await currentPageInfo(page);
+      await expectNoViolations(page, `spread page ${i + 1} (${type})`);
+    }
+    await goToPage(page, 'top-shows');
+    await page.getByTestId('rewind-notes-table-toggle').click();
+    await expectNoViolations(page, 'spread Notes as a table');
+  });
+
   test('the article offer below the scale floor', async ({ page, signIn }) => {
     await signIn(REWIND_MEMBERS.heavy.id);
     await page.setViewportSize({ width: 375, height: 548 });

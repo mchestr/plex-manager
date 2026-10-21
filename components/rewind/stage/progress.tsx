@@ -11,6 +11,10 @@ interface ProgressProps {
   playing: boolean
   slowerPacing: boolean
   onDwellEnd: () => void
+  /** Each page's act group (P7.4's spread): a wider gap opens between acts. */
+  groups?: readonly number[]
+  /** `rewind-progress`, or the spread's own copy's id. */
+  testId?: string
 }
 
 /**
@@ -20,15 +24,15 @@ interface ProgressProps {
  * `data-playing`, and its `animationend` turns the page, so a dwell costs no
  * React render (RWV-13).
  */
-export function Progress({ dwells, index, playing, slowerPacing, onDwellEnd }: ProgressProps) {
+export function Progress({ dwells, index, playing, slowerPacing, onDwellEnd, groups, testId = "rewind-progress" }: ProgressProps) {
   return (
-    <div aria-hidden className="flex h-[3px] gap-[3px]" data-testid="rewind-progress">
+    <div aria-hidden className="flex h-[3px] gap-[3px]" data-testid={testId}>
       {dwells.map((dwell, i) => {
         const timed = i === index && dwell !== null
         return (
-          <span key={i} className="relative flex-1 overflow-hidden rounded-[2px] bg-foreground/30">
+          <span key={i} className={cn("relative flex-1 overflow-hidden rounded-[2px] bg-foreground/30", i > 0 && groups && groups[i] !== groups[i - 1] && "ml-3")}>
             <span
-              data-testid={i === index ? "rewind-progress-current" : undefined}
+              data-testid={i === index ? `${testId}-current` : undefined}
               data-playing={timed ? String(playing) : undefined}
               className={cn(
                 "absolute inset-0 origin-left bg-foreground",

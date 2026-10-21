@@ -230,11 +230,13 @@ The ten core pages (Bookends included), sharing, privacy and accessibility are n
 
 **Demo.** At 1440x900, Top shows matches `desktop-top-shows.png`: the rail lists "16 Centrefold", "Show as table" swaps the Notes, and "06 Top films" turns the page. Resized to 1366x768, the artboard shrinks to about 0.9 without re-breaking a line.
 
+(as merged: the registry's builder is `notes(data, facts, { locale, zone })` and `lib/rewind/notes.ts` `pageNotes()` falls back to the srSummary; `StoryStagePage.notes` carries the blocks and `StoryStage` takes `serverName` for the brand. Top shows' "every series" needed stored data too: `TopShowsData.more` (optional) holds series 6 on with title, minutes and episodes, from the new `TitleStats.moreSeries`; P7.7's hiding must drop hidden titles from `more` as well. Page 02's field is `lastYearDaily` (optional), from `totals.minutes2025`. The switch is the `rw-spread:` custom variant in `app/globals.css` (`SPREAD_QUERY`); `useFitStage` writes `--rw-u-story`, `--rw-u-spread`, `--rw-rail-w` and `--rw-notes-w`, and the stage's classes pick `--u` by media query. Spread controls have their own test ids (`rewind-spread-*`, `rewind-rail-item`, `rewind-notes*`); inside `[data-rw-scroll]` the keymap leaves the scroll keys alone. 1366x768 is a second viewport in the desktop visual projects' loop rather than a new project. E2E, visual and axe runs and the new baselines are left for the coordinator.)
+
 **Done when.**
-- [ ] At 1024 px and wider (aspect 4:3 or wider), every page is a spread with act tabs, the contents rail, labelled previous and next buttons and the framed artboard.
-- [ ] Notes hold the P0 Notes for Top shows, the calendar and the centrefold, and the srSummary on every other page.
-- [ ] The switch is CSS only, with no layout shift and no horizontal scroll.
-- [ ] Visual tests pass at 1440x900 and 1366x768 on chromium and webkit.
+- [x] At 1024 px and wider (aspect 4:3 or wider), every page is a spread with act tabs, the contents rail, labelled previous and next buttons and the framed artboard.
+- [x] Notes hold the P0 Notes for Top shows, the calendar and the centrefold, and the srSummary on every other page.
+- [x] The switch is CSS only, with no layout shift and no horizontal scroll. (CSS only by construction; the scroll-width assertion runs with the visual suite.)
+- [ ] Visual tests pass at 1440x900 and 1366x768 on chromium and webkit. (Specs written; baselines pending the coordinator's run.)
 
 ### Step P7.5: Public share page and OG card
 

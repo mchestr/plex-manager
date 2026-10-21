@@ -4,15 +4,20 @@ import { domAnimation, LazyMotion, MotionConfig } from "motion/react"
 import type { Route } from "next"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useEffect, useLayoutEffect, useRef, type CSSProperties, type KeyboardEvent, type ReactNode } from "react"
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react"
 
+import { SPREAD_PAGES } from "@/components/rewind/desktop/geometry"
+import { SpreadChrome } from "@/components/rewind/desktop/spread-chrome"
 import { ShareProvider, type ShareActions } from "@/components/rewind/share/share-context"
 import { shouldOfferArticle } from "@/components/rewind/sheets/article-offer-sheet"
 import { Button } from "@/components/ui/button"
 import { inkProps } from "@/lib/design/tokens"
+import type { ArticleBlock } from "@/lib/rewind/article/blocks"
 import type { CopyAuthor } from "@/lib/rewind/copy-disclosure"
 import { registry, REVEAL_DWELL_MS, type IssuePageType, type PageTable } from "@/lib/rewind/registry"
 import type { ShareSetup } from "@/lib/rewind/share-sheet"
+import { actGroups } from "@/lib/rewind/stage/acts"
+import { SPREAD_QUERY } from "@/lib/rewind/stage/fit-stage"
 import { keyToCommand, type StageCommand } from "@/lib/rewind/stage/keymap"
 import { pageInk } from "@/lib/rewind/stage/page-ink"
 import { pageKind, type SheetName } from "@/lib/rewind/stage/player-reducer"
@@ -43,11 +48,15 @@ export interface StoryStagePage {
   content: ReactNode
   /** The registry's `table(data)` for a chart page, built on the server; the Table control shows only when it is set. */
   table?: PageTable | null
+  /** The desktop Notes (`pageNotes`, P7.4), built on the server. */
+  notes?: readonly ArticleBlock[]
 }
 
 interface StoryStageProps {
   pages: readonly StoryStagePage[]
   year: number
+  /** The server's name, for the desktop spread's brand (P7.4). */
+  serverName?: string
   archetype: ArchetypeId | null
   /** Where Close, Esc and a swipe down go: P5.1's `safeReturnPath(from)`. */
   closeHref: Route
@@ -61,8 +70,22 @@ interface StoryStageProps {
   mode?: "member" | "preview"
 }
 
-/** Before the first fit: the 390 x 844 roomy layout at scale 1. */
-const FIT_DEFAULTS = { "--u": 1, "--rw-artboard-h": 693, "--rw-chrome-top": "76px", "--rw-chrome-bottom": "75px" } as CSSProperties
+/** Before the first fit: the 390 x 844 roomy layout at scale 1, and the spread at 1440 x 900. */
+const FIT_DEFAULTS = {
+  "--rw-u-story": 1,
+  "--rw-artboard-h-story": 693,
+  "--rw-chrome-top": "76px",
+  "--rw-chrome-bottom": "75px",
+  "--rw-u-spread": 1.1,
+  "--rw-rail-w": "245px",
+  "--rw-notes-w": "432px",
+} as CSSProperties
+
+/** `--u` and the artboard height: the story's fit, or the spread's at 693 under the desktop query (CSS only, P7.4). */
+const FIT_VARS =
+  "[--u:var(--rw-u-story)] [--rw-artboard-h:var(--rw-artboard-h-story)] rw-spread:[--u:var(--rw-u-spread)] rw-spread:[--rw-artboard-h:693]"
+
+const isSpread = () => typeof window.matchMedia === "function" && window.matchMedia(SPREAD_QUERY).matches
 
 /**
  * The story player (Rewind design 4.6, 4.7 and 11.1): a fixed 9:16 artboard
@@ -89,7 +112,7 @@ export function StoryStage({ share, ...props }: StoryStageProps) {
   )
 }
 
-function Stage({ pages, year, archetype, closeHref, copy, initialSheet, mode = "member" }: Omit<StoryStageProps, "share">) {
+function Stage({ pages, year, serverName, archetype, closeHref, copy, initialSheet, mode = "member" }: Omit<StoryStageProps, "share">) {
   const router = useRouter()
   const root = useRef<HTMLElement>(null)
   const pagesRef = useRef<HTMLDivElement>(null)
@@ -104,6 +127,7 @@ function Stage({ pages, year, archetype, closeHref, copy, initialSheet, mode = "
   )
   const setStageInk = useSetStageInk()
   const setStageArchetype = useSetStageArchetype()
+  const [notesTable, setNotesTable] = useState(false)
 
   const entry = entries[state.index]
   const table = pages[state.index].table ?? null
@@ -175,7 +199,9 @@ function Stage({ pages, year, archetype, closeHref, copy, initialSheet, mode = "
       case "escape":
         return state.mode === "sheet" ? send({ type: "CLOSE_SHEET" }) : close()
       case "table":
-        return table ? send({ type: "OPEN_SHEET", sheet: "table" }) : undefined
+        if (!table) return
+        // On the spread, T swaps the Notes for the page's table instead of opening the sheet.
+        return isSpread() ? setNotesTable((on) => !on) : send({ type: "OPEN_SHEET", sheet: "table" })
       case "share":
         return preview ? undefined : send({ type: "OPEN_SHEET", sheet: command })
       case "settings":
@@ -192,6 +218,9 @@ function Stage({ pages, year, archetype, closeHref, copy, initialSheet, mode = "
 
   const chromeInk = inkProps(ink.ink, ink.opts)
   const chromeHidden = state.mode === "holding"
+  const dwells = entries.map((e) => (typeof e.dwell === "number" ? e.dwell : e.dwell === "hold" ? REVEAL_DWELL_MS : null))
+  const types = pages.map((page) => page.type)
+  const groups = actGroups(types)
 
   return (
     <PlayerProvider value={send} sheet={state.mode === "sheet" ? state.sheet : null}>
@@ -210,7 +239,7 @@ function Stage({ pages, year, archetype, closeHref, copy, initialSheet, mode = "
             data-fitted={fit.measured || undefined}
             style={FIT_DEFAULTS}
             onKeyDown={onKeyDown}
-            className="fixed inset-0 overflow-hidden overscroll-none outline-none"
+            className={cn("fixed inset-0 overflow-hidden overscroll-none outline-none rw-spread:bg-(--rw-paper)", FIT_VARS)}
           >
             <Button
               {...chromeInk}
@@ -224,7 +253,7 @@ function Stage({ pages, year, archetype, closeHref, copy, initialSheet, mode = "
               Read as an article
             </Button>
             <div aria-hidden ref={safeArea} className="pointer-events-none invisible absolute pb-[env(safe-area-inset-bottom)]" />
-            <div ref={pagesRef} className="absolute inset-0 touch-pinch-zoom select-none" data-testid="rewind-pages" {...gestures} {...focusHandlers}>
+            <div ref={pagesRef} className={cn("absolute inset-0 touch-pinch-zoom select-none", SPREAD_PAGES)} data-testid="rewind-pages" {...gestures} {...focusHandlers}>
               {pages.map((page, i) => (
                 <StagePage key={i} index={i} current={state.index} previous={state.prevIndex} ink={pageInk(entries[i], archetype)} label={pageLabel(i)}>
                   {page.content}
@@ -235,13 +264,13 @@ function Stage({ pages, year, archetype, closeHref, copy, initialSheet, mode = "
             <header
               {...chromeInk}
               data-testid="rewind-chrome-top"
-              className={cn(chromeInk.className, "absolute inset-x-0 top-0 z-10 h-(--rw-chrome-top) text-foreground transition-opacity duration-(--rw-dur-s)", chromeHidden && "pointer-events-none opacity-0")}
+              className={cn(chromeInk.className, "absolute inset-x-0 top-0 z-10 h-(--rw-chrome-top) text-foreground transition-opacity duration-(--rw-dur-s) rw-spread:hidden", chromeHidden && "pointer-events-none opacity-0")}
             >
               <ChromeTop
                 compact={fit.chrome === "compact"}
                 progress={
                   <Progress
-                    dwells={entries.map((e) => (typeof e.dwell === "number" ? e.dwell : e.dwell === "hold" ? REVEAL_DWELL_MS : null))}
+                    dwells={dwells}
                     index={state.index}
                     playing={state.mode === "playing"}
                     slowerPacing={prefs.slowerPacing}
@@ -261,7 +290,7 @@ function Stage({ pages, year, archetype, closeHref, copy, initialSheet, mode = "
             <footer
               {...chromeInk}
               data-testid="rewind-chrome-bottom"
-              className={cn(chromeInk.className, "absolute inset-x-0 bottom-0 z-10 flex h-(--rw-chrome-bottom) items-center justify-center pb-[env(safe-area-inset-bottom)] text-foreground transition-opacity duration-(--rw-dur-s)", chromeHidden && "pointer-events-none opacity-0")}
+              className={cn(chromeInk.className, "absolute inset-x-0 bottom-0 z-10 flex h-(--rw-chrome-bottom) items-center justify-center pb-[env(safe-area-inset-bottom)] text-foreground transition-opacity duration-(--rw-dur-s) rw-spread:hidden", chromeHidden && "pointer-events-none opacity-0")}
             >
               <ChromeBottom
                 hasTable={table !== null}
@@ -275,10 +304,43 @@ function Stage({ pages, year, archetype, closeHref, copy, initialSheet, mode = "
                 onNext={forward}
               />
             </footer>
+            <SpreadChrome
+              serverName={serverName}
+              year={year}
+              types={types}
+              names={entries.map((e) => e.name)}
+              groups={groups}
+              index={state.index}
+              progress={
+                <Progress
+                  dwells={dwells}
+                  index={state.index}
+                  playing={state.mode === "playing"}
+                  slowerPacing={prefs.slowerPacing}
+                  onDwellEnd={() => send({ type: "DWELL_END" })}
+                  groups={types.map((type) => groups.findIndex((group) => group.act === registry[type].act))}
+                  testId="rewind-spread-progress"
+                />
+              }
+              showPause={state.mode !== "cover" && state.mode !== "ended"}
+              playing={playing}
+              share={!preview}
+              closeHref={closeHref}
+              notes={pages[state.index].notes ?? []}
+              table={table}
+              showTable={notesTable}
+              onToggleTable={() => setNotesTable((on) => !on)}
+              onGoto={(index) => send({ type: "GOTO", index, source: "button" })}
+              onPrev={() => send({ type: "PREV", source: "button" })}
+              onNext={forward}
+              onTogglePlay={() => send({ type: playing ? "PAUSE" : "PLAY" })}
+              onShare={() => send({ type: "OPEN_SHEET", sheet: "share" })}
+              onSettings={() => send({ type: "OPEN_SHEET", sheet: "settings" })}
+            />
             {preview && (
               <p
                 data-testid="rewind-preview-banner"
-                className="pointer-events-none absolute inset-x-0 top-(--rw-chrome-top) z-10 mx-auto w-fit rounded-full bg-background px-3 py-1 text-sm text-foreground"
+                className="pointer-events-none absolute inset-x-0 top-(--rw-chrome-top) z-10 mx-auto w-fit rounded-full bg-background px-3 py-1 text-sm text-foreground rw-spread:top-[100px]"
               >
                 Preview
               </p>

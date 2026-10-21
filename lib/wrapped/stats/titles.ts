@@ -57,6 +57,8 @@ interface Completion {
 
 export interface TitleStats {
   series: SeriesEntry[]
+  /** Every listed series past the top five, in the same order: the desktop Notes' full table (P7.4). */
+  moreSeries: Array<{ key: TitleKey; title: string; minutes: number; episodes: number }>
   films: RankedTitle[]
   /** Null under 5 started films and episodes. */
   completion: Completion | null
@@ -138,6 +140,7 @@ export function computeTitles(events: readonly PlayEvent[], ctx: StatsContext, l
 
   return {
     series: entries.slice(0, LIST),
+    moreSeries: entries.slice(LIST).map(({ key, title, minutes, episodes }) => ({ key, title, minutes, episodes })),
     films: [...films].sort((a, b) => b.plays - a.plays || compareRanked(a, b)).slice(0, LIST),
     completion: (() => {
       const c = completion(counted)
