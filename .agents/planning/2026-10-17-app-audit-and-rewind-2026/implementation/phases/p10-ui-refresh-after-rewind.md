@@ -693,10 +693,12 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 **Demo.** Press Cmd K on any admin page, type part of a member's name and press Enter: the detail page opens. Type an invite code and open it. The network panel shows debounced GETs, and the list never flashes empty.
 
 **Done when.**
-- [ ] The dialog opens from the keyboard and both triggers, and it covers destinations, users, invites and quick actions.
-- [ ] The search route is admin-only, Zod-validated and rate-limited, and returns only public fields.
-- [ ] The hook debounces, keeps previous results and validates responses.
-- [ ] Keyboard tests and the E2E spec pass.
+- [x] The dialog opens from the keyboard and both triggers, and it covers destinations, users, invites and quick actions.
+- [x] The search route is admin-only, Zod-validated and rate-limited, and returns only public fields.
+- [x] The hook debounces, keeps previous results and validates responses.
+- [ ] Keyboard tests and the E2E spec pass. (Jest keyboard tests pass; the E2E spec is written and collects, not yet run.)
+
+(as merged: cmdk 1.1.1 is pinned exactly. cmdk has no per-group `shouldFilter`, so the root sets `shouldFilter={false}` and the menu filters destinations and quick actions itself (label or group substring). The query and response schemas live client-safe in `lib/admin/search.ts` (`adminSearchQuerySchema`, `adminSearchResponseSchema`, `adminSearchUrl`); result `href`s must start with `/admin/`. The menu is `CommandMenuProvider` (mounted once in `AdminShell`, owns the Ctrl or Cmd K listener and the Dialog), `CommandMenuTrigger` (sidebar `admin-command-trigger`, mobile bar `admin-command-trigger-mobile`) and `CommandMenuKeyHint`; items are `admin-command-{page,user,invite,action}-<id>` and the input `admin-command-input`. New shared hooks: `hooks/use-debounced-value.ts` and `hooks/use-open-from-param.ts` (reads `?create=1` / `?new=1`, then drops the param). "Generate all Rewinds" opens the Season page, where its confirm stays; it does not auto-open the confirm. `icons.search` was added. The `/dev/ui` Command specimen shows the content open inline, not the live dialog.)
 
 ### Step P10.17: Status screens, 404, global error and route skeletons
 

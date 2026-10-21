@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useState } from "react"
 
 import { AssistantTrigger } from "@/components/admin/chatbot/assistant-sheet"
+import { CommandMenuTrigger } from "@/components/admin/command-menu"
 import { AdminChrome } from "@/components/shell/admin-chrome"
 import { AdminNavList } from "@/components/shell/admin-nav-list"
 import { Badge } from "@/components/ui/badge"
@@ -22,8 +23,8 @@ interface AdminMobileBarProps {
 
 /**
  * Below `md`: a 56px top bar with the menu (the grouped nav in a right
- * Sheet), the Wordmark, the "Admin" badge and the assistant button.
- * P10.16 adds the search button.
+ * Sheet), the Wordmark, the "Admin" badge, the command menu's search
+ * button (P10.16) and the assistant button.
  */
 export function AdminMobileBar({ serverName, navCounts, assistant }: AdminMobileBarProps) {
   const [open, setOpen] = useState(false)
@@ -49,9 +50,13 @@ export function AdminMobileBar({ serverName, navCounts, assistant }: AdminMobile
         <Wordmark serverName={serverName} size="sm" />
       </Link>
       <Badge variant="outline">Admin</Badge>
+      <CommandMenuTrigger size="icon" className="ml-auto" data-testid="admin-command-trigger-mobile">
+        <Icon icon={icons.search} size={20} />
+        <span className="sr-only">Search or jump to</span>
+      </CommandMenuTrigger>
       {assistant && (
         <AdminChrome part="assistant">
-          <AssistantTrigger size="icon" className="ml-auto" data-testid="admin-chat-toggle-mobile">
+          <AssistantTrigger size="icon" data-testid="admin-chat-toggle-mobile">
             <Icon icon={icons.assistant} size={20} />
             <span className="sr-only">Assistant</span>
           </AssistantTrigger>

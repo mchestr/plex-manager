@@ -11,6 +11,7 @@ import {
 import { ConfirmModal } from "@/components/admin/shared/confirm-modal"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/toast"
+import { useOpenFromParam } from "@/hooks/use-open-from-param"
 import { instantToWallTime } from "@/lib/utils/zoned-time"
 import { useCallback, useState } from "react"
 import { AnnouncementFormModal, type AnnouncementFormData } from "./announcement-form-modal"
@@ -141,6 +142,9 @@ export function AnnouncementsPageClient({ initialAnnouncements, zone }: Announce
       expiresAt: announcement.expiresAt ? instantToWallTime(new Date(announcement.expiresAt), zone) : "",
     })
   }
+
+  // The command menu's New announcement quick action (P10.16)
+  useOpenFromParam("new", () => setShowCreateModal(true))
 
   const closeModal = () => {
     setShowCreateModal(false)

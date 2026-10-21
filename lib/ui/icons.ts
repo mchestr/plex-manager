@@ -40,6 +40,7 @@ import {
   Play,
   Plug,
   Rewind,
+  Search,
   SendHorizontal,
   Server,
   Settings,
@@ -97,6 +98,7 @@ export const icons = {
   notChecked: CircleDashed,
   // Shell
   menu: Menu,
+  search: Search,
   close: X,
   signOut: LogOut,
   home: House,

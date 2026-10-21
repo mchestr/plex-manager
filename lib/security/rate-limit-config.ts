@@ -30,6 +30,8 @@ export const LIMITS = {
   // A session's poster access checks (database and Plex lookups), cache hits included; a page of posters is a few dozen.
   "poster:access": { points: 2000, duration: 15 * MINUTE },
   admin: { points: 50, duration: 15 * MINUTE },
+  // The command menu's search-as-you-type (P10.16); `admin` would throttle typing
+  "admin:search": { points: 120, duration: MINUTE },
   checkout: { points: 10, duration: MINUTE },
   portal: { points: 10, duration: MINUTE },
   "discord-link": { points: 5, duration: 5 * MINUTE },
