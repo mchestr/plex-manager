@@ -476,11 +476,13 @@ The ten core pages (Bookends included), sharing, privacy and accessibility are n
 
 **Demo.** Open Morgan Lee's 2025 row from Share analytics: it lands on her 2025 Rewind in the admin shell, with the banner, and the audit table gains a `REWIND_ADMIN_VIEWED` row. Roll back her 2026 issue, then roll back again to restore it.
 
+(as merged: P6.1 had merged, so the shell rule lives in `lib/admin/nav.ts`: `isImmersive()` (chrome hidden: the history route only) and `isAssistantHidden()` (immersive plus `/admin/users/*/rewind`); `AdminChrome` takes `part="assistant"`. `StoryStage` gains `mode="admin-preview"` (absolute in its frame, fitted to the frame, no share) and an `articleHref` prop; it sets `preview = mode !== "member"`, so P7.7 (Hide) and P7.14 (views) must test `mode !== "member"`, not `mode === "preview"`. `RewindIssue` takes `adminPreview` and `articleHref`; `RewindStatusPanel` takes `embedded` (h2, no Close, Back, year links or watch). "Read as an article" is `?view=article` on the preview route (`components/admin/rewind/admin-rewind-article.tsx`). The audit read is written whenever the member has a `PlexWrapped` row for the year (failed rows included). Roll back is `lib/rewind/rollback.ts` plus `rollbackRewind` and `getRewindRollbackTarget` (the confirm's date, `previousData.generatedAt`) in `actions/admin/rewind-season.ts`; it also restores v1 and v2 data. `WrappedPageClient` and `wrapped-generating-animation` were deleted as unused. The a11y route and its axe baseline key moved to `/admin/users/regular-user-id/rewind/2026` with an empty baseline; the E2E spec was written but not run.)
+
 **Done when.**
-- [ ] `/admin/users/[userId]/rewind/[year]` renders inside the admin shell with the Rewind fonts and the banner, and writes an audit read entry.
-- [ ] The old `[userId]/wrapped` route redirects with the year, and every admin link passes the year.
-- [ ] Roll back restores `previousData` in one audited transaction, and can be undone.
-- [ ] The tests pass.
+- [x] `/admin/users/[userId]/rewind/[year]` renders inside the admin shell with the Rewind fonts and the banner, and writes an audit read entry.
+- [x] The old `[userId]/wrapped` route redirects with the year, and every admin link passes the year.
+- [x] Roll back restores `previousData` in one audited transaction, and can be undone.
+- [x] The tests pass.
 
 ### Step P7.10: Dry runs and preview mode
 

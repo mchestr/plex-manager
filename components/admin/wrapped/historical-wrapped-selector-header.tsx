@@ -27,7 +27,7 @@ interface HistoricalWrappedSelectorHeaderProps {
 function versionFromPathname(pathname: string | null, userId: string): string | null {
   const historyMatch = pathname?.match(/\/admin\/wrapped\/[^/]+\/history\/([^/]+)/)
   if (historyMatch) return historyMatch[1]
-  if (pathname?.includes(`/admin/users/${userId}/wrapped`)) return "current"
+  if (pathname?.includes(`/admin/users/${userId}/rewind/`)) return "current"
   return null
 }
 

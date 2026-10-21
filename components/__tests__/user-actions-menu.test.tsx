@@ -77,7 +77,7 @@ describe('UserActionsMenu', () => {
 
     expect(screen.getByRole('menuitem', { name: /View Wrapped/ })).toHaveAttribute(
       'href',
-      '/admin/users/user-9/wrapped?year=2026'
+      '/admin/users/user-9/rewind/2026'
     )
     expect(screen.getByTestId('regenerate-year')).toHaveTextContent('Regenerate Wrapped 2026')
   })

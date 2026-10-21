@@ -107,6 +107,12 @@ export enum AuditEventType {
   REWIND_RETRY_FAILED = "REWIND_RETRY_FAILED",
   /** @public P8.5 writes it when Run final cut enqueues `REWIND_FINAL_CUT`. */
   REWIND_FINAL_CUT_STARTED = "REWIND_FINAL_CUT_STARTED",
+  // An admin opened a member's stored Rewind (P7.9, GAP-33). Details carry the
+  // target user, the year and the wrapped id.
+  REWIND_ADMIN_VIEWED = "REWIND_ADMIN_VIEWED",
+  // An admin restored a member's previous Rewind (P7.9). Details carry the
+  // target user, the year, the source generation and the new one.
+  REWIND_ROLLED_BACK = "REWIND_ROLLED_BACK",
   // A credential, settings, setup or prompt-template change. Details carry the
   // redacted diff from lib/security/config-diff.ts: changed field names, whether
   // a secret changed, and URL origins only.

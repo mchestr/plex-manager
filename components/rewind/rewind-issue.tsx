@@ -29,6 +29,10 @@ interface RewindIssueProps {
   initialSheet?: SheetName
   /** An admin's dry run (P7.10): no share setup, and the stage runs in preview mode. */
   preview?: boolean
+  /** A member's stored Rewind in the admin shell (P7.9): no share setup, and the stage runs framed in admin-preview mode. */
+  adminPreview?: boolean
+  /** Where the stage's "Read as an article" goes, when not the member's own article. */
+  articleHref?: Route
 }
 
 /**
@@ -37,7 +41,8 @@ interface RewindIssueProps {
  * the server and handed to P5.2's `StoryStage` as slots, with the share
  * sheet's setup (P5.11).
  */
-export async function RewindIssue({ rewindId, data, userId, returnTo, initialSheet, preview = false }: RewindIssueProps) {
+export async function RewindIssue({ rewindId, data, userId, returnTo, initialSheet, preview = false, adminPreview = false, articleHref }: RewindIssueProps) {
+  const mode = adminPreview ? "admin-preview" : preview ? "preview" : "member"
   const [settings, brand, config] = await Promise.all([
     getAppSettings(),
     serverName(),
@@ -46,7 +51,7 @@ export async function RewindIssue({ rewindId, data, userId, returnTo, initialShe
   const archetype = data.archetype?.id ?? null
   const pages = validatePagesOnRead(data.pages, { archetype, disabledPages: DisabledPagesSchema.parse(config?.rewindDisabledPages ?? []) })
   const [share, links] = await Promise.all([
-    preview ? null : loadShareSetup({ userId, rewindId, year: data.year, pages }),
+    mode !== "member" ? null : loadShareSetup({ userId, rewindId, year: data.year, pages }),
     pages.some((page) => page.type === "next-year") ? loadItemLinks() : undefined,
   ])
   const issue: IssueContext = {
@@ -81,7 +86,8 @@ export async function RewindIssue({ rewindId, data, userId, returnTo, initialShe
       copy={{ copySource: data.copySource, model: data.copyMeta.model }}
       share={share ? { setup: share, actions: { enable: enableRewindShare, rotate: rotateRewindShare, disable: disableRewindShare, savePrefs: saveRewindSharePrefs } } : undefined}
       initialSheet={initialSheet}
-      mode={preview ? "preview" : "member"}
+      mode={mode}
+      articleHref={articleHref}
     />
   )
 }

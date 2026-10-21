@@ -263,13 +263,20 @@ export function titleFor(pathname: string): string {
 
 /**
  * Immersive routes draw their own full-screen chrome, so the shell hides its
- * sidebar, bars and the assistant there: the admin Rewind viewer and a stored
- * generation's history. P8.8 adds the playground's story preview.
+ * sidebar, bars and the assistant there: a stored generation's history. P8.8
+ * adds the playground's story preview.
  */
-const ASSISTANT_HIDDEN: readonly RegExp[] = [
-  /^\/admin\/users\/[^/]+\/(wrapped|rewind)(?:\/|$)/,
-  /^\/admin\/wrapped\/[^/]+\/history\//,
-]
+const IMMERSIVE: readonly RegExp[] = [/^\/admin\/wrapped\/[^/]+\/history\//]
+
+/**
+ * Routes that hide only the assistant: the immersive ones, and the admin
+ * Rewind preview (P7.9), which keeps the nav around its framed stage.
+ */
+const ASSISTANT_HIDDEN: readonly RegExp[] = [...IMMERSIVE, /^\/admin\/users\/[^/]+\/rewind(?:\/|$)/]
+
+export function isImmersive(pathname: string): boolean {
+  return IMMERSIVE.some((pattern) => pattern.test(pathname))
+}
 
 export function isAssistantHidden(pathname: string): boolean {
   return ASSISTANT_HIDDEN.some((pattern) => pattern.test(pathname))

@@ -26,6 +26,12 @@ interface RewindStatusPanelProps {
   completedYears?: number[]
   /** Shown under the copy, such as the live share links of other years. */
   children?: ReactNode
+  /**
+   * Inside the admin preview's frame (P7.9): an `h2` under the page's
+   * header, and no Close, Back, year links or generating watch, which all
+   * address the viewer's own Rewind.
+   */
+  embedded?: boolean
 }
 
 /**
@@ -42,10 +48,12 @@ export function RewindStatusPanel({
   audience,
   completedYears = [],
   children,
+  embedded = false,
 }: RewindStatusPanelProps) {
   const copy = errorCopy(code, { audience })
   const otherYears = completedYears.filter((completed) => completed !== year)
   const paper = inkProps("paper")
+  const Heading = embedded ? "h2" : "h1"
 
   return (
     <section
@@ -53,21 +61,21 @@ export function RewindStatusPanel({
       data-testid="rewind-status-panel"
       data-kind={kind}
       aria-labelledby="rewind-status-title"
-      className={cn(paper.className, "flex min-h-dvh flex-col bg-background px-4 py-4 text-foreground sm:px-8")}
+      className={cn(paper.className, "flex flex-col", embedded ? "h-full" : "min-h-dvh", "bg-background px-4 py-4 text-foreground sm:px-8")}
     >
       <div className="flex items-center justify-between gap-4">
         <p className="font-display text-label">{year === null ? "Rewind" : `Rewind ${year}`}</p>
-        <RewindClose href={returnTo} />
+        {!embedded && <RewindClose href={returnTo} />}
       </div>
       <div className="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center gap-4 py-12">
-        <h1 id="rewind-status-title" data-testid="rewind-status-title" className="font-display text-h1">
+        <Heading id="rewind-status-title" data-testid="rewind-status-title" className="font-display text-h1">
           {copy.title}
-        </h1>
+        </Heading>
         <p data-testid="rewind-status-message" className="font-text text-body">
           {copy.description}
         </p>
-        {kind === "generating" && year !== null && <RewindGeneratingWatch year={year} />}
-        {kind === "not-found" && otherYears.length > 0 && (
+        {!embedded && kind === "generating" && year !== null && <RewindGeneratingWatch year={year} />}
+        {!embedded && kind === "not-found" && otherYears.length > 0 && (
           <nav aria-label="Your Rewinds" data-testid="rewind-year-links">
             <ul className="flex flex-wrap gap-2">
               {otherYears.map((other) => (
@@ -85,9 +93,11 @@ export function RewindStatusPanel({
           </nav>
         )}
         {children}
-        <Link href={returnTo} data-testid="rewind-status-back" className="font-display text-ui underline underline-offset-4">
-          Back
-        </Link>
+        {!embedded && (
+          <Link href={returnTo} data-testid="rewind-status-back" className="font-display text-ui underline underline-offset-4">
+            Back
+          </Link>
+        )}
       </div>
     </section>
   )
