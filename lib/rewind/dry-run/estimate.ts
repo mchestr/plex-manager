@@ -21,7 +21,7 @@ import { findRewindStyleGuide } from "@/lib/wrapped/prompt/store"
 
 import type { DryRunInput } from "./input"
 
-/** A full issue's user prompt (the heavy fixture's fact sheet, slots and titles), in characters. */
+/** A rough allowance for a full issue's user prompt (fact sheet, slots and titles), in characters. */
 const FULL_ISSUE_USER_PROMPT_CHARS = 9000
 
 export type DryRunEstimate =
