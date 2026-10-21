@@ -20,7 +20,7 @@ import { generateStructured } from '@/lib/llm/generate-structured'
 import { lookupModel } from '@/lib/llm/models'
 import { getLanguageModel } from '@/lib/llm/registry'
 import type { RewindCopyV3Wire } from '@/lib/wrapped/copy/schema'
-import { slotTemplate } from '@/lib/wrapped/copy/templates'
+import { copyLocals, slotTemplate } from '@/lib/wrapped/copy/templates'
 import { buildIssue, type Issue } from '@/lib/wrapped/pipeline/build-issue'
 import type { GenerateFn } from '@/lib/wrapped/pipeline/copy-llm'
 import { runCopyStep, type CopyInput, type PreviousCopy } from '@/lib/wrapped/pipeline/copy-step'
@@ -240,5 +240,89 @@ describe('runCopyStep', () => {
 
     expect(consume).toHaveBeenCalledTimes(2)
     expect(consume).toHaveBeenCalledWith('anthropic')
+  })
+})
+
+describe("copyPolicy 'changed-slots' (the final cut, P8.5)", () => {
+  const KEPT_CLOCK = 'Kept from the season: {{fact:hours.afterDarkShare}} of it started after dark.'
+  const final = () => ({ ...issue.facts, 'window.finalCut': { value: 1, display: '1', unit: 'count' as const } })
+
+  async function seasonCopy(): Promise<PreviousCopy> {
+    answer(reply(JSON.stringify(GOOD)))
+    const first = await runCopyStep(input())
+    return {
+      factsHash: 'season', promptVersion: 'rewind-2026.1', model: first.model, copySource: 'llm',
+      copy: { ...first.copy!, decks: { ...first.copy!.decks, clock: KEPT_CLOCK } },
+      slotHashes: first.slotHashes,
+    }
+  }
+
+  it('makes no call and keeps every slot when no dependency changed', async () => {
+    const previous = await seasonCopy()
+    const model = answer()
+
+    const result = await runCopyStep(input({ policy: 'changed-slots', previous, facts: final(), factsHash: 'final' }))
+
+    expect(model.calls()).toBe(0)
+    expect(result).toMatchObject({ source: 'llm', model: previous.model, trail: { path: 'changed-slots', calls: 0 } })
+    expect(result.copy?.decks.clock).toBe(KEPT_CLOCK)
+  })
+
+  it('sends only the changed slots to the model and keeps the rest', async () => {
+    const previous = await seasonCopy()
+    const model = answer(reply(JSON.stringify(GOOD)))
+    const prompts: string[] = []
+    const base = input({ policy: 'changed-slots', previous: { ...previous, slotHashes: { ...previous.slotHashes, 'deck.topShows': 'changed' } }, facts: final(), factsHash: 'final' })
+    const generate: GenerateFn = (call) => {
+      prompts.push(call.prompt)
+      return generateStructured(call)
+    }
+
+    const result = await runCopyStep({ ...base, call: { ...base.call, generate } })
+
+    expect(model.calls()).toBe(1)
+    expect(prompts[0]).toContain('deck.topShows')
+    expect(prompts[0]).not.toContain('deck.clock')
+    expect(result.copy?.decks.topShows).toBe(GOOD.decks.topShows)
+    expect(result.copy?.decks.clock).toBe(KEPT_CLOCK)
+    expect(result.copy?.archetype.posterLineId).toBe(previous.copy.archetype.posterLineId)
+    expect(Object.keys(result.slotHashes)).toEqual(Object.keys(previous.slotHashes))
+  })
+
+  it('templates only the changed slots once the season budget is reached', async () => {
+    const previous = await seasonCopy()
+    const model = answer()
+
+    const result = await runCopyStep(
+      input({ policy: 'changed-slots', previous: { ...previous, slotHashes: { ...previous.slotHashes, 'deck.topShows': 'changed' } }, facts: final() }, { budgetReached: true })
+    )
+
+    expect(model.calls()).toBe(0)
+    expect(result).toMatchObject({ source: 'mixed', trail: { path: 'changed-slots', reason: 'BUDGET_REACHED' } })
+    expect(result.copy?.decks.topShows).toBe(slotTemplate('deck.topShows', { facts: final(), userId: FIXTURE_USER_ID, locals: copyLocals({ year: 2026 }) }))
+    expect(result.copy?.decks.clock).toBe(KEPT_CLOCK)
+  })
+
+  it('templates a kept text with window words again for the full year', async () => {
+    const previous = await seasonCopy()
+    const soFar = 'That is {{fact:time.perDay}} a day so far.'
+    answer()
+
+    const result = await runCopyStep(
+      input({ policy: 'changed-slots', previous: { ...previous, copy: { ...previous.copy, decks: { ...previous.copy.decks, number: soFar } } }, facts: final() })
+    )
+
+    const template = slotTemplate('deck.number', { facts: final(), userId: FIXTURE_USER_ID, locals: copyLocals({ year: 2026 }) })
+    expect(result.copy?.decks.number).toBe(template)
+    expect(template).not.toContain('so far')
+  })
+
+  it('writes every slot, as the default policy does, for a member with no stored copy', async () => {
+    const model = answer(reply(JSON.stringify(GOOD)))
+
+    const result = await runCopyStep(input({ policy: 'changed-slots', previous: null, facts: final() }))
+
+    expect(model.calls()).toBe(1)
+    expect(result).toMatchObject({ source: 'llm', trail: { path: 'llm' } })
   })
 })

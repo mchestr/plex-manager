@@ -3,13 +3,17 @@
  */
 
 import { shareFormats } from '@/lib/rewind/page-meta'
-import { seasonPrepareAt } from '@/lib/rewind/season-runs'
+import { finalCutOpensAt, seasonPrepareAt } from '@/lib/rewind/season-runs'
 
 jest.mock('@/lib/prisma', () => ({ prisma: {} }))
 
 describe('JSDoc Documentation Examples', () => {
   it('seasonPrepareAt: 00:15 on the opening day in the westernmost zone', () => {
     expect(seasonPrepareAt(2026, '12-01', ['America/Chicago', 'America/Los_Angeles']).toISOString()).toBe('2026-12-01T08:15:00.000Z')
+  })
+
+  it('finalCutOpensAt: 00:30 on 1 January in the westernmost zone', () => {
+    expect(finalCutOpensAt(2026, ['America/Chicago', 'America/Los_Angeles']).toISOString()).toBe('2027-01-01T08:30:00.000Z')
   })
 
   it('shareFormats: a card page names its card, Setup offers none', () => {

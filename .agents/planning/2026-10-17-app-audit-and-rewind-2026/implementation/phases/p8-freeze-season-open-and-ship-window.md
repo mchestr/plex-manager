@@ -277,13 +277,24 @@ No new feature code lands from 10 to 12 December. Every P1 feature ships with it
 
 **Demo.** On the December fixtures, the script prints "18 of 20 keep all copy, 2 re-call (series[1].title changed; afterDark band crossed)", and the heavy cover reads "Final cut" with December drawn in. A hide dated 3 January keeps "Final cut".
 
+(As merged:
+- `window.finalCut` is no longer an identity fact of any slot (`deck.number`, `deck.calendar`, `deck.standing`, `signOff` listed it): model copy may not use window words, so it only forced a re-call for every full issue. This is P8.1's "that list should be empty" check, done here; P8.1's lock hashes the emptied lists.
+- `getFrozenRewindModel()` is P8.1's and was not on the branch, so `changed-slots` writes with the active `wrapped` provider row, like the default policy; P8.1 swaps it in.
+- `copyMeta.slotHashes` now describe the stored facts: when the model picks another archetype from the shortlist, the hashes are retaken after the rebuild, and `no-llm` and `changed-slots` plan against the facts of that stored pick (`CopyInput.factsFor`). A kept text with window words (only a template can have them) is templated again. Rows written before this report `SLOT_HASH_STALE` in the validator when the model picked the archetype; the season-open generation rewrites them.
+- The window rule also clamps the season window to the end of yesterday, so a run before 30 November reads "Data through <yesterday>".
+- `REWIND_FINAL_CUT` lives in `lib/queue/jobs/rewind-final-cut.ts` (it reuses `rewind-season.ts`'s step helpers), not `jobs/rewind.ts`. Its fan-out uses audience `all` and leaves out members whose Rewind already holds that final cut, which makes a re-run a no-op. `latestLocalInstant(day, time, zones)` takes a `YYYY-MM-DD` day.
+- "December's readers" are members with a `RewindView` from before `finalCutAt`, for the DM and the banner ("Your Rewind 2026 now includes December").
+- The December fixtures repeat 3 to 30 November four weeks later for members active in November's last week; `heavy` (new No. 1) and `night-owl` (afternoons cross the after-dark band) are written to move, and `zero-films` re-calls on a near tie: 3 of 20 (15%).
+- Scripts: `npm run rewind:validate`, `npm run rewind:final-cut` (`--apply` needs `--with-llm`) and `npm run rewind:rollback-final-cut` (`--apply` needs `--admin=<id>` for the audit rows).
+- Owner: run `npm run rewind:validate -- --year=2026` against production on 2026-12-02 and record the zero-failure result in `ship-check.md`.)
+
 **Done when.**
-- [ ] `REWIND_FINAL_CUT` recomputes the full-year aggregate and fans out `final-cut` jobs, scheduled for 1 January 00:30 in the westernmost zone.
-- [ ] Only slots with a changed identity fact, a crossed band or a newly selected page call the LLM, and fewer than 30% of the fixtures re-call.
-- [ ] Every later 2026 regeneration keeps the full-year window, and the template wording reads "Final cut".
-- [ ] The final-cut notification reaches December's readers once, from 2 January.
-- [ ] `scripts/rewind-validate.ts` and `lib/wrapped/maintenance/validate-year.ts` are merged with their tests, and the validator reported zero failures against production on 2026-12-02.
-- [ ] The fixture dry-run tests pass, and the dry-run and bulk roll-back scripts exist.
+- [x] `REWIND_FINAL_CUT` recomputes the full-year aggregate and fans out `final-cut` jobs, scheduled for 1 January 00:30 in the westernmost zone.
+- [x] Only slots with a changed identity fact, a crossed band or a newly selected page call the LLM, and fewer than 30% of the fixtures re-call.
+- [x] Every later 2026 regeneration keeps the full-year window, and the template wording reads "Final cut".
+- [x] The final-cut notification reaches December's readers once, from 2 January.
+- [ ] `scripts/rewind-validate.ts` and `lib/wrapped/maintenance/validate-year.ts` are merged with their tests, and the validator reported zero failures against production on 2026-12-02. (Code and tests done; the production run is the owner's.)
+- [x] The fixture dry-run tests pass, and the dry-run and bulk roll-back scripts exist.
 
 ### Step P8.8: Playground on the production pipeline (P1)
 

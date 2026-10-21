@@ -27,6 +27,7 @@ import { costUsd, lookupModel, type TokenUsage } from "@/lib/llm/models"
 import type { ResolvedModel } from "@/lib/llm/registry"
 import { RewindCopyV3Wire } from "@/lib/wrapped/copy/schema"
 import type { GenerateFn } from "@/lib/wrapped/pipeline/copy-llm"
+import type { CopyPolicy, PreviousCopy } from "@/lib/wrapped/pipeline/copy-step"
 import { generateUserRewind, type GenerateUserResult } from "@/lib/wrapped/pipeline/generate-user"
 import type { RewindContext } from "@/lib/wrapped/pipeline/load-context"
 import { resolveZone } from "@/lib/wrapped/time/zone"
@@ -70,8 +71,12 @@ export function evalRow(ref: ModelRef, options: { apiKey?: string; baseUrl?: str
   }
 }
 
-/** The dry-run context of a fixture member: an admin run on a server with Rewind on and no database. @internal */
-export function fixtureContext(fixture: Fixture, inputs: FixtureInputs, model: ModelRef): RewindContext {
+/**
+ * The dry-run context of a fixture member: an admin run on a server with
+ * Rewind on and no database. `previous` is a stored issue's copy (the final
+ * cut's golden test passes the season run's). @internal
+ */
+export function fixtureContext(fixture: Fixture, inputs: FixtureInputs, model: ModelRef, previous: PreviousCopy | null = null): RewindContext {
   return {
     userId: FIXTURE_USER_ID,
     year: fixture.window.year,
@@ -101,7 +106,7 @@ export function fixtureContext(fixture: Fixture, inputs: FixtureInputs, model: M
     serial: "K7Q4",
     nthRewind: 1,
     wrappedId: "wrapped-1",
-    previous: null,
+    previous,
     llmProvider: { provider: model.provider, model: model.id },
     spentUsd: 0,
     styleGuide: null,
@@ -121,7 +126,7 @@ export async function runFixture(
   fixture: Fixture,
   model: ModelRef,
   deps: StructuredDeps,
-  options: { mode?: "dry-run" | "persist"; copyPolicy?: "default" | "no-llm" } = {}
+  options: { mode?: "dry-run" | "persist"; copyPolicy?: CopyPolicy; previous?: PreviousCopy | null } = {}
 ): Promise<FixtureRun> {
   const inputs = await fixtureInputs(fixture)
   const calls: RecordedCall[] = []
@@ -140,7 +145,7 @@ export async function runFixture(
       source: async () => ({ events: inputs.events, sources: inputs.sources }),
     },
     {
-      loadContext: async () => fixtureContext(fixture, inputs, model),
+      loadContext: async () => fixtureContext(fixture, inputs, model, options.previous ?? null),
       checkEligibility: async () => ({ ok: true }),
       generate,
       consume: async () => ({ ok: true }),

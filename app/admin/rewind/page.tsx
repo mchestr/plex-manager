@@ -85,7 +85,7 @@ export default async function RewindSeasonPage({ searchParams }: { searchParams:
       <PageHeader
         title="Season"
         description={`Rewind ${year}: prepare the season's data, generate every member's Rewind and follow the runs.`}
-        actions={<SeasonActions year={year} estimates={{ all, failed }} finalCutNote={finalCutOpen ? "Arrives in a later release" : "Available from 1 January"} />}
+        actions={<SeasonActions year={year} estimates={{ all, failed }} finalCutOpen={finalCutOpen} />}
         data-testid="admin-rewind-header"
       />
       <SeasonProgress year={year} initial={counts} budget={budget} />

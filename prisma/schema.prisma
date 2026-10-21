@@ -223,7 +223,7 @@ model RewindGeneration {
   error        Json? // typed error code, never a roster
   factsHash    String?
   copySource   String? // "llm", "repair", "template", "mixed"
-  copyPolicy   String      @default("default") // "default", "no-llm"
+  copyPolicy   String      @default("default") // "default", "no-llm", "changed-slots"
   llmCalls     Int         @default(0)
   costUsd      Decimal?    @db.Decimal(10, 4)
   previousData String? // the PlexWrapped.data this generation replaced, kept until 2027-06-30

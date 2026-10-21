@@ -109,7 +109,7 @@ export enum AuditEventType {
   REWIND_SEASON_PREPARED = "REWIND_SEASON_PREPARED",
   REWIND_GENERATE_ALL_STARTED = "REWIND_GENERATE_ALL_STARTED",
   REWIND_RETRY_FAILED = "REWIND_RETRY_FAILED",
-  /** @public P8.5 writes it when Run final cut enqueues `REWIND_FINAL_CUT`. */
+  /** Run final cut enqueued `REWIND_FINAL_CUT` (P8.5). */
   REWIND_FINAL_CUT_STARTED = "REWIND_FINAL_CUT_STARTED",
   // An admin opened a member's stored Rewind (P7.9, GAP-33). Details carry the
   // target user, the year and the wrapped id.

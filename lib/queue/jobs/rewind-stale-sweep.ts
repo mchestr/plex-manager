@@ -14,7 +14,8 @@
  * row's status, so a run that finishes during the sweep keeps its outcome.
  *
  * Each sweep also re-checks the season-open run's schedule (P7.8,
- * `ensureSeasonPrepareScheduled`).
+ * `ensureSeasonPrepareScheduled`) and the final cut's (P8.5,
+ * `ensureFinalCutScheduled`).
  *
  * @module
  */
@@ -24,7 +25,7 @@ import type { Queue } from "bullmq"
 import { prisma } from "@/lib/prisma"
 import { getRewindQueue } from "@/lib/queue/rewind-producers"
 import { enqueueRewindGeneration, type RewindGenerationKind } from "@/lib/rewind/enqueue-generation"
-import { scheduleSeasonOpenRun } from "@/lib/rewind/season-runs"
+import { scheduleFinalCutRun, scheduleSeasonOpenRun } from "@/lib/rewind/season-runs"
 import { createLogger } from "@/lib/utils/logger"
 import { toStoredError } from "@/lib/wrapped/generation-errors"
 
@@ -129,5 +130,7 @@ export async function processRewindStaleSweep(): Promise<SweepResult> {
 
   // Keeps the season-open run on the westernmost zone as members change zones (P7.8).
   await scheduleSeasonOpenRun().catch((error: unknown) => logger.error("Could not schedule the season-open Rewind run", error))
+  // And the final cut's, on the latest 1 January 00:30 (P8.5).
+  await scheduleFinalCutRun().catch((error: unknown) => logger.error("Could not schedule the Rewind final cut", error))
   return result
 }

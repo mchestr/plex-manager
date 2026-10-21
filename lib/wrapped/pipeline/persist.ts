@@ -23,6 +23,7 @@ import { RewindDataV3 } from "@/lib/wrapped/data/schema-v3"
 
 import { afterRewindCompleted } from "./after-complete"
 import type { CopySource } from "./copy-draft"
+import type { CopyPolicy } from "./copy-step"
 
 export interface PersistRun {
   generationId: string
@@ -32,7 +33,7 @@ export interface PersistRun {
   /** The facts hash the copy step keyed on (before a model's archetype choice), for the next run's reuse check. */
   inputFactsHash: string
   copySource: CopySource
-  copyPolicy: "default" | "no-llm"
+  copyPolicy: CopyPolicy
   dataThrough: Date
 }
 

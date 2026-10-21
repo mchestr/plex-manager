@@ -44,6 +44,7 @@ import type { RewindGenerateUserPayload } from "@/lib/queue/types"
 import { createLogger } from "@/lib/utils/logger"
 import { type RewindErrorCode, toStoredError } from "@/lib/wrapped/generation-errors"
 import { enqueueRewindGeneration, type RewindGenerationKind } from "@/lib/rewind/enqueue-generation"
+import type { CopyPolicy } from "@/lib/wrapped/pipeline/copy-step"
 import { generateUserRewind } from "@/lib/wrapped/pipeline/generate-user"
 import { RewindGenerationError } from "@/lib/wrapped/pipeline/generation-error"
 
@@ -144,9 +145,11 @@ async function followUpHides(userId: string, year: number, versionRead: number):
   }
 }
 
+const copyPolicyOf = (stored: string): CopyPolicy => (stored === "no-llm" || stored === "changed-slots" ? stored : "default")
+
 /** Generates one member's Rewind; see the module comment. */
 export async function processRewindGenerateUser(job: Job<RewindGenerateUserPayload>): Promise<GenerateResult> {
-  const { generationId, userId, year, audience, through } = job.data
+  const { generationId, userId, year, audience, through, finalCut } = job.data
   const generation = await prisma.rewindGeneration.findUnique({
     where: { id: generationId },
     select: { wrappedId: true, status: true, kind: true, copyPolicy: true },
@@ -180,11 +183,12 @@ export async function processRewindGenerateUser(job: Job<RewindGenerateUserPaylo
       year,
       kind: generation.kind as RewindGenerationKind,
       mode: "persist",
-      copyPolicy: generation.copyPolicy === "no-llm" ? "no-llm" : "default",
+      copyPolicy: copyPolicyOf(generation.copyPolicy),
       signal,
       generationId,
       audience,
       through,
+      finalCut,
     })
     if (result.status === "skipped") {
       await fail(run, result.reason, "skipped")

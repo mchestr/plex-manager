@@ -163,7 +163,7 @@ never cut, and the settings never offer them.
 | 30 Nov 18:00 to 1 Dec 12:00 | **Deploy blackout.** |
 | 1 Dec, 00:15 in the westernmost zone | Season-open Prepare runs by itself. |
 | 1 Dec, 08:00 | Audience to Everyone. |
-| 2 Dec | Validator against production (pending P8.5). |
+| 2 Dec | Validator against production: `npm run rewind:validate -- --year=2026`, zero failures. |
 | 10 Dec | Feature freeze. |
 | 11 Dec | First final-cut dry run on staging. |
 | 14 Dec, 00:00 | Code freeze: `CODE_FREEZE` on; only `freeze:data` or `freeze:security` PRs merge. |
@@ -299,10 +299,32 @@ Once a day through December, on `/admin/rewind`:
 - **Logs**: warnings from `REWIND_STALE_SWEEP` ("Closed lost Rewind runs"),
   `REWIND_QUEUES` and `REWIND_SEASON_JOBS`.
 
-> **Pending P8.5 (validator).** `scripts/rewind-validate.ts --year=2026`,
-> run read-only from a checkout, checks every stored issue and prints counts
-> per code. Run it on 2 December and after every bulk run; it must report zero
-> failures.
+### The validator
+
+`npm run rewind:validate -- --year=2026 [--final-cut]` runs
+`scripts/rewind-validate.ts` read-only from a checkout (the runtime image has
+no scripts) against `DATABASE_URL`. For each eligible member it checks that
+the stored issue parses as v3, that every page passes its schema (so the
+viewer drops none), that `factsHash` and every `copyMeta.slotHashes` entry
+match the stored facts, and that every copy slot passes grounding again with
+today's displays; for every live share link, that its projection passes the
+allow-list. `--final-cut` adds `window.finalCut` and `finalCutAt`. It prints
+counts per code, the skipped members by reason and the failing row ids, never
+a title or a name, and exits 1 on any failure.
+
+Run it on 2 December, after every bulk run, in each final-cut dry run and
+after the final cut; it must report zero failures. A failure is a data fix:
+regenerate the members it names.
+
+| Code | Meaning |
+|---|---|
+| `NOT_COMPLETED` | An eligible member has no completed Rewind and was not skipped. |
+| `UNPARSABLE`, `NOT_V3` | The stored data does not parse, or is an older version. |
+| `PAGE_SCHEMA` | A page fails its registry schema; the viewer would drop it. |
+| `FACTS_HASH_MISMATCH`, `SLOT_HASH_STALE` | The stored hashes do not match the stored facts. |
+| `SLOT_MISSING`, `SLOT_TOO_LONG`, `SLOT_TOKEN`, `SLOT_GROUNDING` | A copy slot is empty, too long, cites a fact it may not, or breaks another grounding rule. |
+| `NOT_FINAL_CUT`, `FINAL_CUT_AT_MISSING` | With `--final-cut`: the issue is still the season's. |
+| `SHARE_KEYS`, `SHARE_PROJECTION` | A live link's projection carries an unlisted key, or cannot be built. |
 
 ## When something goes wrong
 
@@ -366,11 +388,14 @@ From the smallest to the largest:
    > roll back undoes the first. It is refused while a run is queued or
    > running.
 
-3. **Every final-cut issue**:
-
-   > **Pending P8.5 (bulk roll back).** `scripts/rewind-rollback-final-cut.ts`
-   > (a dry run unless told to apply) rolls back each member whose latest issue
-   > is a final cut, one audited transaction each.
+3. **Every final-cut issue**: `npm run rewind:rollback-final-cut -- --year=2026`
+   counts the members whose latest completed generation is a final cut;
+   `--apply --admin=<your user id>` rolls each back to the season issue with
+   P7.9's roll back, one audited transaction (`REWIND_ROLLED_BACK`) each,
+   under the member's generation lock, skipping members whose run is queued or
+   running. It needs `DATABASE_URL` and `REDIS_URL`. A second `--apply`
+   changes nothing, and a member skipped as generating is picked up by the
+   next one. Set **LLM mode** to `off` first if the model is the problem.
 
 4. **Sharing**: turn **Public links** off. Every link answers 404 at once; no
    row is deleted, and turning it back on restores them.
@@ -395,21 +420,57 @@ this release is `prisma/migrations/20261124000700_p77_rewind_exclusion_title`.
 
 ## The final cut
 
-On 1 January every issue is regenerated with the whole year. The console's
-**Run final cut** button reads "Available from 1 January" and is disabled; it
-is refused before 1 January has begun in the westernmost zone.
+On 1 January every issue is regenerated with the whole year, almost for
+free. `REWIND_FINAL_CUT` runs by itself at 00:30 on 1 January in the
+westernmost zone (the worker and the stale sweep keep it scheduled, as they do
+the season-open Prepare). The console's **Run final cut** button reads
+"Available from 1 January" and is disabled until then; after it, it asks to
+confirm, joins the scheduled run when that is waiting or running
+(`rewind:final:<year>`) and writes `REWIND_FINAL_CUT_STARTED`.
 
-> **Pending P8.5 (final cut).** `REWIND_FINAL_CUT` runs by itself at 00:30 on
-> 1 January in the westernmost zone (the button enables after that): the
-> full-year aggregate, the December metadata, then one `final-cut` generation
-> per member that calls the LLM only for slots whose facts changed (expected
-> for under 30% of members). Issues then read "Final cut". Take a dump before
-> it. Rehearse on staging on 11 and 28 December with
-> `scripts/rewind-final-cut.ts --year=2026 --through=<date> --with-llm --apply`
-> (`REWIND_STAGING=1` only), on a restored dump with its own Redis and every
-> outbound side effect (Discord, watchlist sync, Stripe, notifications)
-> neutralised, then run the validator with `--final-cut`. Fill in the
-> procedure and its checks here when it merges.
+The job runs three steps:
+
+1. `REWIND_SERVER_AGGREGATE` for the full year (through 31 December), with the
+   archetype counts and medians;
+2. `REWIND_METADATA_WARM` for the titles not warm yet, in practice those first
+   watched in December;
+3. `REWIND_GENERATE_ALL` with `kind: 'final-cut'`, one generation per member
+   with `copyPolicy: 'changed-slots'`: facts, pages and cards are rebuilt, and
+   the model is called only for slots whose identity facts changed (a new
+   No. 1), whose band was crossed or whose page is new. Every other slot keeps
+   its text, and numbers re-render through their tokens. A member without a
+   completed season issue gets a full generation; `JOINED_LATE` stays skipped.
+   The season issue is kept in `previousData`, and the budget cap still
+   applies.
+
+The job never retries; start it again if it fails, and it leaves out the
+members it already finished. Every later 2026 regeneration (a member's
+request, an admin run, a hide) keeps the full-year window, so issues keep
+"Final cut". December's readers (members who opened the season issue) get one
+DM, "Your <server> Rewind 2026 now includes December.", from 09:00 on 2 January
+in their zone, and the banner uses the same words.
+
+**Before it:** take a dump. **After it:** check the dashboard (every member
+`completed`, spend under the cap) and run
+`npm run rewind:validate -- --year=2026 --final-cut`, which must report zero
+failures. A bad final cut is rolled back with the bulk roll back above.
+
+### Dry runs
+
+`npm run rewind:final-cut -- --year=2026 [--through=YYYY-MM-DD] [--with-llm]`
+runs every eligible member through the pipeline in dry-run mode with the
+full-year window and writes nothing. Without `--with-llm` it calls no model
+(changed slots get templates) and estimates the cost from the price table. It
+prints "N of M keep all copy, K re-call (reasons)", the re-call share (pass
+mark under 30%), the cost and the validator's result.
+
+Rehearse on staging on 11 and 28 December (P8.10, P9.2): restore the latest
+dump into `plex_manager_staging`, give it its own Redis, neutralise Discord,
+watchlist sync, Stripe and the notification channels, set `REWIND_STAGING=1`,
+then run `npm run rewind:final-cut -- --year=2026 --through=<yesterday> --with-llm --apply`.
+`--apply` enqueues `REWIND_FINAL_CUT` itself; with a `--through` before
+31 December it refuses unless `REWIND_STAGING=1`, which production never sets.
+Then run the validator with `--final-cut`.
 
 ## Season close
 
