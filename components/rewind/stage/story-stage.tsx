@@ -235,14 +235,16 @@ function Stage({
   }, [fit, send])
 
   const close = () => router.push(closeHref)
-  const forward = () => send(state.mode === "cover" ? { type: "CHOOSE_CUT" } : { type: "NEXT", source: "button" })
+  // NEXT, not a cut-less CHOOSE_CUT, on the cover too (the reducer turns the same way): a second press that lands
+  // before the first turn commits still reads the cover in this closure, and CHOOSE_CUT off the cover does nothing.
+  const forward = () => send({ type: "NEXT", source: "button" })
 
   const gestures = useStageGestures({
     onGesture: (gesture) => {
       if (gesture.kind === "close") return close()
       const source = gesture.kind
       if (gesture.direction === "back") send({ type: "PREV", source })
-      else send(state.mode === "cover" ? { type: "CHOOSE_CUT" } : { type: "NEXT", source })
+      else send({ type: "NEXT", source })
     },
     onHoldStart: () => send({ type: "HOLD_START" }),
     onHoldEnd: () => send({ type: "HOLD_END" }),
@@ -251,7 +253,7 @@ function Stage({
   const run = (command: StageCommand) => {
     switch (command) {
       case "next":
-        return send(state.mode === "cover" ? { type: "CHOOSE_CUT" } : { type: "NEXT", source: "key" })
+        return send({ type: "NEXT", source: "key" })
       case "prev":
         return send({ type: "PREV", source: "key" })
       case "choose":
