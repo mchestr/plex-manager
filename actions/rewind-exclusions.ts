@@ -68,7 +68,13 @@ async function gate(userId: string) {
   return limit.ok ? null : fail("RATE_LIMITED", LIMITED, { retryAfterSec: limit.retryAfterSec })
 }
 
-function bumpVersion(tx: PrismaTransactionClient, userId: string, year: number) {
+/**
+ * A hide applies to the member in every year (`RewindExclusion` is keyed by
+ * user and title), so every year's card cache key moves: the other years'
+ * prefs rows are bumped, and `year`'s row is created when it is missing.
+ */
+async function bumpVersion(tx: PrismaTransactionClient, userId: string, year: number) {
+  await tx.rewindPrefs.updateMany({ where: { userId, year: { not: year } }, data: { exclusionsVersion: { increment: 1 } } })
   return tx.rewindPrefs.upsert({
     where: { userId_year: { userId, year } },
     create: { userId, year, exclusionsVersion: 1 },

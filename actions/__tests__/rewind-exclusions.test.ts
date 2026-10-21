@@ -88,6 +88,11 @@ describe("hideRewindTitle", () => {
       create: { userId: memberId, year: YEAR, exclusionsVersion: 1 },
       update: { exclusionsVersion: { increment: 1 } },
     })
+    // A hide holds in every year, so the other years' card cache keys move too
+    expect(prismaMock.rewindPrefs.updateMany).toHaveBeenCalledWith({
+      where: { userId: memberId, year: { not: YEAR } },
+      data: { exclusionsVersion: { increment: 1 } },
+    })
     // The exclusion run: copyPolicy no-llm, the rewind:hide dedup id and the 5 s delay (enqueue-generation)
     expect(enqueueRewindGeneration).toHaveBeenCalledWith({ userId: memberId, year: YEAR, kind: "member", exclusion: {} })
     expect(consume).toHaveBeenCalledWith("rw:hide", memberId)
