@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "commit": "82877bc725f43d35516bbaad65167ec6580708b2",
-  "generatedAt": "2026-10-21T06:33:42.445Z",
+  "commit": "fd241d92fa33ee567dff2a6095fbaa61d1a7531b",
+  "generatedAt": "2026-10-21T06:56:22.574Z",
   "files": {
     "app/(app)/page.tsx": {
       "gradient": 2,
@@ -140,13 +140,6 @@
     },
     "app/onboarding/loading.tsx": {
       "raw-palette": 1
-    },
-    "app/rewind/s/[token]/not-found.tsx": {
-      "gradient": 1,
-      "raw-palette": 8
-    },
-    "app/rewind/s/[token]/page.tsx": {
-      "raw-palette": 2
     },
     "app/setup/error.tsx": {
       "raw-palette": 1
@@ -684,13 +677,6 @@
       "gradient": 1,
       "raw-palette": 9
     },
-    "components/wrapped/wrapped-share-summary.tsx": {
-      "blur": 7,
-      "copy": 2,
-      "gradient": 2,
-      "gradient-text": 2,
-      "raw-palette": 43
-    },
     "components/wrapped/wrapped-transition.tsx": {
       "copy": 1,
       "gradient": 8,
@@ -715,12 +701,12 @@
   "totals": {
     "arbitrary-color": 17,
     "arbitrary-type-z": 31,
-    "blur": 133,
+    "blur": 126,
     "caps-eyebrow": 84,
-    "copy": 25,
-    "gradient": 104,
-    "gradient-text": 52,
+    "copy": 23,
+    "gradient": 101,
+    "gradient-text": 50,
     "infinite-motion": 47,
-    "raw-palette": 2960
+    "raw-palette": 2907
   }
 }

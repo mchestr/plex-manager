@@ -12,6 +12,7 @@ import "server-only"
 import { createHmac, randomBytes } from "node:crypto"
 
 import { type LLMProviderId } from "@/lib/llm/models"
+import { getRewindSeasonSpend } from "@/lib/llm/usage-totals"
 import { isLLMProviderId } from "@/lib/llm/provider-presets"
 import { prisma } from "@/lib/prisma"
 import type { RewindGenerationKind } from "@/lib/rewind/enqueue-generation"
@@ -21,6 +22,7 @@ import { batchWindowAt, dataThroughDate, isFinalCut, throughFor } from "@/lib/wr
 import { parseStoredRewind } from "@/lib/wrapped/data/parse-stored"
 import { findRewindStyleGuide } from "@/lib/wrapped/prompt/store"
 import { excludedContentRatingsSchema, excludedSectionIdsSchema } from "@/lib/wrapped/sources/schemas"
+import type { SonarrEndpoint } from "@/lib/wrapped/sources/sonarr-calendar"
 import { dataWindow, resolveZone, type RewindZone, type TimeWindow } from "@/lib/wrapped/time/zone"
 
 import type { PreviousCopy } from "./copy-step"
@@ -51,6 +53,8 @@ export interface RewindContext {
   }
   tautulli: { url: string; apiKey: string } | null
   overseerr: { url: string; apiKey: string } | null
+  /** The active Sonarr row, for Next year's returning part; absent or null without one. */
+  sonarr?: SonarrEndpoint | null
   hiddenKeys: ReadonlySet<string>
   aggregate: ServerAggregate | null
   serial: string
@@ -118,11 +122,12 @@ export async function loadRewindContext(options: {
   through?: string
 }): Promise<RewindContext> {
   const { userId, year } = options
-  const [user, config, tautulli, overseerr, zone, exclusions, wrapped, provider, styleGuide] = await Promise.all([
+  const [user, config, tautulli, overseerr, sonarr, zone, exclusions, wrapped, provider, styleGuide] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId }, select: { name: true, plexUserId: true, isAdmin: true, timezone: true, createdAt: true } }),
     prisma.config.findUnique({ where: { id: "config" } }),
     prisma.tautulli.findFirst({ where: { isActive: true }, select: { url: true, apiKey: true } }),
     prisma.overseerr.findFirst({ where: { isActive: true }, select: { url: true, apiKey: true } }),
+    prisma.sonarr.findFirst({ where: { isActive: true }, select: { name: true, url: true, apiKey: true, publicUrl: true } }),
     serverZone(),
     prisma.rewindExclusion.findMany({ where: { userId }, select: { ratingKey: true } }),
     prisma.plexWrapped.findUnique({ where: { userId_year: { userId, year } }, select: { id: true, data: true, status: true } }),
@@ -137,7 +142,7 @@ export async function loadRewindContext(options: {
   const [aggregateRow, nth, spent, key] = await Promise.all([
     prisma.rewindServerAggregate.findUnique({ where: { year_dataThrough: { year, dataThrough: dataThroughDate(through) } }, select: { data: true } }),
     prisma.plexWrapped.count({ where: { userId, status: "completed", year: { lt: year } } }),
-    prisma.lLMUsage.aggregate({ where: { generation: { year } }, _sum: { cost: true } }),
+    getRewindSeasonSpend(year),
     serialKey(),
   ])
   const aggregate = aggregateRow ? serverAggregateSchema.safeParse(aggregateRow.data) : null
@@ -166,6 +171,7 @@ export async function loadRewindContext(options: {
     },
     tautulli,
     overseerr,
+    sonarr,
     hiddenKeys: new Set(exclusions.map((e) => e.ratingKey)),
     aggregate: aggregate?.success ? aggregate.data : null,
     serial: memberSerial(key, userId, year),
@@ -173,7 +179,7 @@ export async function loadRewindContext(options: {
     wrappedId: wrapped?.id ?? null,
     previous: wrapped?.status === "completed" ? await previousCopy(userId, year, wrapped.data) : null,
     llmProvider: provider && isLLMProviderId(provider.provider) && provider.model ? { provider: provider.provider, model: provider.model } : null,
-    spentUsd: spent._sum.cost ?? 0,
+    spentUsd: spent,
     styleGuide,
   }
 }

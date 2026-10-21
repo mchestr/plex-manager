@@ -49,12 +49,3 @@ export async function getRewindContentRatings(): Promise<string[]> {
   })
   return rows.flatMap((row) => (row.contentRating?.trim() ? [row.contentRating.trim()] : [])).sort()
 }
-
-/**
- * The LLM cost of this year's generations, in US dollars, with one
- * `aggregate()` (the sum the pipeline checks against `rewindLlmBudgetUsd`).
- */
-export async function getRewindSeasonSpendUsd(year: number): Promise<number> {
-  const spent = await prisma.lLMUsage.aggregate({ where: { generation: { year } }, _sum: { cost: true } })
-  return spent._sum.cost ?? 0
-}

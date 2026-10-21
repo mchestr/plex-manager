@@ -5,11 +5,15 @@ import { revalidatePath } from "next/cache"
 import { adminAction } from "@/lib/actions/define-action"
 import { fail, ok } from "@/lib/actions/result"
 import { prisma } from "@/lib/prisma"
+import { scheduleSeasonOpenRun } from "@/lib/rewind/season-runs"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { configDiff } from "@/lib/security/config-diff"
 import { rewindSettingsSchema, unknownEntries, type RewindSettings } from "@/lib/validations/rewind-settings"
 import { getRewindContentRatings, getRewindLibraries } from "@/lib/wrapped/admin/settings-options"
+import { createLogger } from "@/lib/utils/logger"
 import { REWIND_SETTINGS_SELECT, rewindSettingsFromConfig } from "@/lib/wrapped/config"
+
+const logger = createLogger("REWIND_SETTINGS")
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
 
@@ -22,6 +26,8 @@ const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
  * Excluded libraries must be ones Tautulli lists and excluded ratings ones the
  * metadata cache has seen; entries already stored stay allowed, so a Tautulli
  * outage does not block the other fields.
+ *
+ * A change to the season dates reschedules the season-open Prepare (P7.8).
  */
 export const updateRewindSettings = adminAction({
   input: rewindSettingsSchema,
@@ -61,6 +67,12 @@ export const updateRewindSettings = adminAction({
       userId,
       configDiff("rewind", before && Object.fromEntries(changed.map((key) => [key, before[key]])), values)
     )
+
+    // The season-open Prepare runs at 00:15 on the opening day (P7.8): a new date moves it.
+    // Best effort: the save stands while Redis is down, and the stale sweep reschedules within 10 minutes.
+    if (changed.includes("rewindSeasonOpens") || changed.includes("rewindSeasonCloses")) {
+      await scheduleSeasonOpenRun().catch((error: unknown) => logger.warn("Could not reschedule the season-open run", { error: String(error) }))
+    }
 
     revalidatePath("/admin/settings")
     revalidatePath("/admin/rewind")

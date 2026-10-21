@@ -14,7 +14,7 @@ const lock = JSON.parse(readFileSync(path.join(ROOT, "scripts/rewind-fonts.lock.
   source: { commit: string; files: Record<string, { path: string; sha256: string }> }
   outputs: Record<string, string>
 }
-const WEB = "app/(app)/rewind/_fonts"
+const WEB = "lib/rewind/web-fonts"
 const CARDS = "lib/rewind/cards/fonts"
 const PRELOADED = ["archivo-vf.woff2", "newsreader-display-italic.woff2"]
 

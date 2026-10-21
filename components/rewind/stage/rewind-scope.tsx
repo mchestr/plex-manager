@@ -10,8 +10,13 @@ import { cn } from "@/lib/utils"
 import type { ArchetypeId } from "@/lib/wrapped/archetypes/catalogue"
 
 interface RewindScopeProps {
-  /** The next/font variable classes of `app/(app)/rewind/fonts.ts`. */
+  /** The next/font variable classes of `lib/rewind/fonts.ts`. */
   fontClassName: string
+  /**
+   * The archetype the scope starts with, for a page with no story stage to
+   * report one: the share page passes the archetype its projection published.
+   */
+  archetype?: ArchetypeId | null
   children: ReactNode
 }
 
@@ -30,12 +35,12 @@ interface RewindScopeProps {
  * spot and deep ink of design 5.3) through the contexts in
  * `components/rewind/stage/stage-ink.tsx`.
  */
-export function RewindScope({ fontClassName, children }: RewindScopeProps) {
+export function RewindScope({ fontClassName, archetype: initialArchetype = null, children }: RewindScopeProps) {
   // A ref, not state: setting state when the root mounts would change the
   // portal context above the still-streaming page and render it twice.
   const root = useRef<HTMLDivElement>(null)
   const [ink, setInk] = useState<PageInk | null>(null)
-  const [archetype, setArchetype] = useState<ArchetypeId | null>(null)
+  const [archetype, setArchetype] = useState<ArchetypeId | null>(initialArchetype)
 
   const popupProps = useMemo<PopupProps>(() => {
     const paper = inkProps("paper")

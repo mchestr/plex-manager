@@ -1,6 +1,5 @@
 /**
- * Enqueues the `rewind-batch` jobs of P2.6 (design 9.1): the server-wide
- * aggregate and the metadata warm.
+ * Enqueues the `rewind-batch` jobs of P2.6 (design 9.1): the metadata warm.
  *
  * Single-flight comes from BullMQ `deduplication`, which holds only while a
  * job with that id is waiting or active, so a second press during a run is a
@@ -30,7 +29,7 @@ function batchQueue(): Queue {
   return queue
 }
 
-type BatchJobType = typeof JOB_TYPES.REWIND_SERVER_AGGREGATE | typeof JOB_TYPES.REWIND_METADATA_WARM
+type BatchJobType = typeof JOB_TYPES.REWIND_METADATA_WARM
 
 /** Whether the job joined one already waiting or running, and its id. */
 export interface EnqueueResult {
@@ -49,14 +48,6 @@ async function enqueue<T extends BatchJobType>(
   const existing = await q.getDeduplicationJobId(deduplicationId)
   const job = await q.add(name, data, { ...options, deduplication: { id: deduplicationId } })
   return { jobId: job.id ?? "", alreadyQueued: existing !== null && job.id === existing }
-}
-
-/** `REWIND_SERVER_AGGREGATE`, deduplicated on `rewind:agg:{year}:{through}`, 3 attempts. */
-export function enqueueServerAggregate(data: JobPayloadMap[typeof JOB_TYPES.REWIND_SERVER_AGGREGATE]) {
-  return enqueue(JOB_TYPES.REWIND_SERVER_AGGREGATE, data, `rewind:agg:${data.year}:${data.through}`, {
-    attempts: 3,
-    backoff: { type: "exponential", delay: 30_000 },
-  })
 }
 
 /** `REWIND_METADATA_WARM`, deduplicated on `rewind:meta:{batch}`, 3 attempts. */

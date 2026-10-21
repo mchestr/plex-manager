@@ -26,7 +26,7 @@ import { RULES, compare, countFile, nonZero, sortKeys, totals, update } from './
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const BASELINE = join(ROOT, 'design-debt.json')
 const EXTENSIONS = /\.(?:ts|tsx|css)$/
-const EXCLUDED = [/^components\/ui\//, /^app\/api\/wrapped\/og-image\//, /(?:^|\/)__tests__\//, /\.test\.tsx?$/]
+const EXCLUDED = [/^components\/ui\//, /(?:^|\/)__tests__\//, /\.test\.tsx?$/]
 
 function git(args) {
   return execFileSync('git', args, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })

@@ -73,8 +73,8 @@ describe("lib/rewind/registry", () => {
     }
   })
 
-  it("leaves only the non-core pages for P7.1 and P7.2", () => {
-    expect(LATER_PAGES).toEqual(issuePages.filter((p) => !p.core).map((p) => p.type))
+  it("leaves no page for later: every page of the issue has landed", () => {
+    expect(LATER_PAGES).toEqual([])
   })
 
   it("runs about 2 min 20 s for the full issue and about 40 s for the pocket edition", () => {

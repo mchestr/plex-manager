@@ -43,7 +43,8 @@ describe("selectPages over the 20 golden fixtures", () => {
   })
 
   it("has the ten core pages in the heavy fixture's full issue, less Guess (D7)", () => {
-    expect(issues.get("heavy")!.pages.map((p) => p.type)).toEqual(issuePages.filter((p) => p.core && p.type !== "guess").map((p) => p.type))
+    const types = issues.get("heavy")!.pages.map((p) => p.type)
+    expect(types.filter((type) => registry[type].core)).toEqual(issuePages.filter((p) => p.core && p.type !== "guess").map((p) => p.type))
   })
 
   it("renumbers every folio when Bookends is disabled", () => {

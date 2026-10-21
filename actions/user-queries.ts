@@ -10,7 +10,7 @@ import { type PlexUnshareErrorCode } from "@/lib/connections/plex-invitations"
 import { prisma } from "@/lib/prisma"
 import { endUserSessions } from "@/lib/session-revocation"
 import { SubscriptionStatus } from "@/lib/generated/prisma/client"
-import { aggregateLlmUsage } from "@/lib/utils"
+import { usageTotalsByUser, usageTotalsForWrapped } from "@/lib/llm/usage-totals"
 import { createLogger } from "@/lib/utils/logger"
 import { parseStoredRewind } from "@/lib/wrapped/data/parse-stored"
 import { readStoredError, toStoredError } from "@/lib/wrapped/generation-errors"
@@ -110,15 +110,17 @@ export async function getUserDetails(userId: string): Promise<UserDetails | null
       include: {
         plexWrapped: {
           orderBy: { year: "desc" },
-          include: {
-            _count: {
-              select: {
-                shareVisits: true,
-              },
-            },
+          // Never `data`: the summary needs the status columns only (BP-28).
+          select: {
+            id: true,
+            year: true,
+            status: true,
+            generatedAt: true,
+            createdAt: true,
+            shareToken: true,
+            _count: { select: { shareVisits: true } },
           },
         },
-        llmUsage: true,
         discordConnection: true,
       },
     })
@@ -160,8 +162,7 @@ export async function getUserDetails(userId: string): Promise<UserDetails | null
       }
     })
 
-    // Aggregate LLM usage
-    const llmUsage = aggregateLlmUsage(user.llmUsage || [])
+    const llmUsage = (await usageTotalsByUser([user.id])).get(user.id) ?? null
 
     const discordConnection = user.discordConnection
       ? {
@@ -219,19 +220,21 @@ export async function getAllUsersWithWrapped(year: number): Promise<AdminUserWit
     // 3. Fetch share statistics for all users
     const shareStatsMap = await fetchShareStatsMap(users.map(u => u.id))
 
-    // 4. Batch-load subscriptions for all users (single query; no N+1)
-    const subscriptionMap = await fetchSubscriptionMap(users.map(u => u.id))
+    // 4. Batch-load subscriptions and LLM usage totals (aggregate queries; no N+1)
+    const userIds = users.map((u) => u.id)
+    const wrappedIds = users.flatMap((u) => u.plexWrapped.map((w) => w.id))
+    const [subscriptionMap, totalUsageMap, yearUsageMap] = await Promise.all([
+      fetchSubscriptionMap(userIds),
+      usageTotalsByUser(userIds),
+      usageTotalsForWrapped(wrappedIds),
+    ])
 
     // 5. Map users to DTO
     return users.map((user) => {
       const wrapped = user.plexWrapped[0]
-      const currentYearLlmUsageRecords = wrapped?.llmUsage || []
-
-      // Aggregate all LLM usage records for current year's wrapped (includes regenerations)
-      const currentYearUsage = aggregateLlmUsage(currentYearLlmUsageRecords)
-
-      // Aggregate ALL LLM usage records for this user (across all years and regenerations)
-      const totalUsage = aggregateLlmUsage(user.llmUsage || [])
+      // This year's Rewind (regenerations included), and every call across all years
+      const currentYearUsage = (wrapped && yearUsageMap.get(wrapped.id)) ?? null
+      const totalUsage = totalUsageMap.get(user.id) ?? null
 
       const hasPlexAccess = accessMap.get(user.id) ?? null
       const shareStatsForUser = shareStatsMap.get(user.id) || { totalShares: 0, totalVisits: 0 }
@@ -355,8 +358,9 @@ function withoutLeaderboards(data: string): string {
 
 async function fetchUsersWithWrappedData(year: number) {
   // Uses `include` (not `select`), so every scalar User column — including
-  // `isExempt` and `exemptReason` used by the subscription column — is returned
-  // by default alongside the related wrapped/llmUsage records below.
+  // `isExempt` and `exemptReason` used by the subscription column — is returned.
+  // The Rewind row carries only its status and date; LLM usage comes from
+  // aggregate queries (BP-28), never the rows with their prompt text.
   return prisma.user.findMany({
     orderBy: [
       { isAdmin: "desc" },
@@ -368,11 +372,8 @@ async function fetchUsersWithWrappedData(year: number) {
           year: year,
         },
         take: 1,
-        include: {
-          llmUsage: true,
-        },
+        select: { id: true, status: true, generatedAt: true },
       },
-      llmUsage: true, // Include ALL LLM usage records for this user
       _count: {
         select: {
           plexWrapped: true,

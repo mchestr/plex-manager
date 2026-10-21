@@ -1,0 +1,137 @@
+"use client"
+
+import { useReducedMotion } from "motion/react"
+import { useEffect, useId, useRef, type ReactNode } from "react"
+
+import { useStagePage } from "@/components/rewind/stage/stage-page"
+import { TURN_MS } from "@/lib/rewind/registry"
+import { BAR_TWEEN_MS, frameKeyframes, ORDER_TWEEN_MS, raceDurationMs, type RaceRow } from "@/lib/rewind/viz/race"
+
+import { HatchDefs } from "./hatch"
+import { axes, MEASURE, u, ut } from "./units"
+
+const BAR_H = 12
+const CLOCK_LINE = 30
+
+interface RaceAnimatorRow {
+  key: string
+  /** The title as typeset on the server, above its bar. */
+  title: ReactNode
+  geometry: RaceRow
+  /** The final leader's bar prints solid, the others hatched. */
+  solid: boolean
+}
+
+interface RaceAnimatorProps {
+  rows: readonly RaceAnimatorRow[]
+  /** The race clock's month labels, one per frame ("30 Nov" style or "November"). */
+  months: readonly string[]
+  /** Row pitch in logical px. */
+  pitch: number
+}
+
+const ease = "cubic-bezier(0.2, 0, 0, 1)"
+/** A row moved down `rank` places: each lane is one pitch tall. */
+const lane = (rank: number) => `translateY(${rank * 100}%)`
+/** The month clock showing frame `i` of `n`: its column of months moved up `i` lines. */
+const tick = (i: number, n: number) => `translateY(${(-i / n) * 100}%)`
+
+/**
+ * The race's client island (design 4.3 page 11): the rows sit at their
+ * final standings as rendered, and on the first visit only, the 11 frames
+ * play once with `element.animate()` on refs: each bar's `scaleX` tweens
+ * over 420 ms, rows re-order over 360 ms and the month clock steps, one
+ * frame every 520 ms after the page turn. Nothing sets React state during
+ * the run, so the story commits no render for it. A revisit, reduced
+ * motion, or leaving the page mid-run shows the final frame.
+ */
+export function RaceAnimator({ rows, months, pitch }: RaceAnimatorProps) {
+  const hatch = useId()
+  const current = useStagePage().distance === 0
+  const reduce = useReducedMotion()
+  const played = useRef(false)
+  const bars = useRef<Array<Element | null>>([])
+  const lanes = useRef<Array<Element | null>>([])
+  const clock = useRef<HTMLSpanElement | null>(null)
+  const last = months.length - 1
+
+  useEffect(() => {
+    if (!current || played.current) return
+    played.current = true
+    if (reduce) return
+    const timing = { duration: raceDurationMs(months.length), delay: TURN_MS, fill: "backwards" as const }
+    const runs: Animation[] = []
+    const run = (el: Element | null, keyframes: Keyframe[]) => {
+      if (el && typeof el.animate === "function") runs.push(el.animate(keyframes, timing))
+    }
+    rows.forEach((row, i) => {
+      run(
+        bars.current[i],
+        frameKeyframes(row.geometry.scale, BAR_TWEEN_MS, 0).map(({ offset, value }) => ({ offset, transform: `scaleX(${value})`, easing: ease }))
+      )
+      run(
+        lanes.current[i],
+        frameKeyframes(row.geometry.offset, ORDER_TWEEN_MS, row.geometry.offset[0]).map(({ offset, value }) => ({ offset, transform: lane(value / pitch), easing: ease }))
+      )
+    })
+    run(
+      clock.current,
+      frameKeyframes(
+        months.map((_m, i) => i),
+        0,
+        0
+      ).map(({ offset, value }) => ({ offset, transform: tick(value, months.length) }))
+    )
+    return () => runs.forEach((a) => a.cancel())
+  }, [current, reduce, rows, months, pitch])
+
+  return (
+    <div data-testid="rewind-race-animator">
+      <p className="flex items-baseline font-display" style={{ gap: u(8), fontVariationSettings: axes(125, 760) }}>
+        <span style={{ fontSize: ut(14) }}>Standings after</span>
+        <span className="relative block overflow-hidden" style={{ height: u(CLOCK_LINE), fontSize: u(24), lineHeight: u(CLOCK_LINE) }}>
+          <span ref={clock} className="block" style={{ transform: tick(last, months.length) }}>
+            {months.map((month, i) => (
+              <span key={i} className="block whitespace-nowrap" data-testid={i === last ? "rewind-race-clock" : undefined}>
+                {month}
+              </span>
+            ))}
+          </span>
+        </span>
+      </p>
+      <div className="relative" style={{ height: u(pitch * rows.length), marginTop: u(8) }}>
+        <svg aria-hidden className="absolute size-0">
+          <HatchDefs id={hatch} />
+        </svg>
+        {rows.map((row, i) => (
+          <div
+            key={row.key}
+            ref={(el) => {
+              lanes.current[i] = el
+            }}
+            className="absolute inset-x-0 top-0"
+            style={{ height: u(pitch), transform: lane(row.geometry.offset.at(-1)! / pitch) }}
+            data-testid="rewind-race-row"
+          >
+            {row.title}
+            <svg viewBox={`0 0 ${MEASURE} ${BAR_H}`} preserveAspectRatio="none" className="block w-full" style={{ height: u(BAR_H), marginTop: u(3) }}>
+              <rect
+                ref={(el) => {
+                  bars.current[i] = el
+                }}
+                x={0.75}
+                y={0.75}
+                width={MEASURE - 1.5}
+                height={BAR_H - 1.5}
+                fill={row.solid ? "currentColor" : `url(#${hatch})`}
+                stroke="currentColor"
+                strokeWidth={row.solid ? 0 : 1.5}
+                style={{ transformBox: "fill-box", transformOrigin: "left", transform: `scaleX(${row.geometry.scale.at(-1)})` }}
+              />
+            </svg>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}

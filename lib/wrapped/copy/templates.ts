@@ -243,6 +243,32 @@ export function whyReasons(shortlist: ReadonlyArray<{ id: ArchetypeId; evidence:
   }))
 }
 
+const MONTH_WORDS = ["", "one month", "two months", "three months", "four months", "five months", "six months", "seven months", "eight months", "nine months", "ten months", "eleven months"]
+
+/**
+ * 11 The race's headline from its events (design 4.3): "Severance led for
+ * ten months. Then came November." when the lead changed, naming the leader
+ * the final overtake displaced and how long its run lasted, or "Severance
+ * led all year. Nothing came close." when it never did.
+ */
+function raceHeadline(f: RewindFactsV3): string {
+  const leaderOf = (month: number) => `race.leader[${month}]` as FactId
+  const months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].filter((m) => f[leaderOf(m)])
+  if (months.length === 0) return "The race for your attention"
+  if (f["race.leadChanges"]?.value === 0) return `${t(leaderOf(months[0]))} led all year. Nothing came close.`
+  const overtake = Number(f["race.overtakeMonth"]?.value)
+  const before = months.filter((m) => m < overtake)
+  const displaced = before.at(-1)
+  if (displaced === undefined) return "The race for your attention"
+  const title = f[leaderOf(displaced)]?.display
+  let run = 0
+  for (const m of [...before].reverse()) {
+    if (f[leaderOf(m)]?.display !== title) break
+    run += 1
+  }
+  return `${t(leaderOf(displaced))} led for ${MONTH_WORDS[run]}. Then came ${t("race.overtakeMonth")}.`
+}
+
 const HEADLINES: Readonly<Record<IssuePageType, (facts: RewindFactsV3) => string>> = {
   cover: (f) => (f["member.firstName"] ? `${t("member.firstName")}'s year in film and television` : "Your year in film and television"),
   number: () => "This year you pressed play for",
@@ -250,17 +276,17 @@ const HEADLINES: Readonly<Record<IssuePageType, (facts: RewindFactsV3) => string
   guess: () => "Which series did you watch most this year?",
   "top-shows": () => "The shows you kept coming back to",
   "top-films": () => "Your double features",
-  taste: (f) =>
-    Number(f["taste.genre[1].share"]?.value) >= 0.5
-      ? `Mostly ${t("taste.genre[1].name")}, made around ${t("taste.medianYear")}`
-      : `Led by ${t("taste.genre[1].name")}, made around ${t("taste.medianYear")}`,
+  taste: (f) => {
+    const lead = Number(f["taste.genre[1].share"]?.value) >= 0.5 ? `Mostly ${t("taste.genre[1].name")}` : `Led by ${t("taste.genre[1].name")}`
+    return f["taste.medianYear"] ? `${lead}, made around ${t("taste.medianYear")}` : lead
+  },
   people: () => "Starring",
   clock: () => `Your hour is ${t("hours.peak")}`,
   calendar: (f) => (Number(f["streak.longest.days"]?.value) >= 2 ? `${t("streak.longest.days")} without a night off` : "Your year, day by day"),
-  race: (f) => (f["race.leadChanges"]?.value === 0 ? `${t("race.leader[1]")} led all year. Nothing came close.` : "The race for your attention"),
+  race: raceHeadline,
   records: () => "Personal bests",
   setup: (f) => (Number(f["setup.directPlayShare"]?.value) >= 0.8 ? `${t("setup.directPlayShare")} direct play. Your setup is dialled in.` : "How you watched"),
-  requests: (f) => (f["requests.watched"] ? `You asked for ${t("requests.made")}. You watched ${t("requests.watched")} of them.` : `You asked for ${t("requests.made")}.`),
+  requests: (f) => (Number(f["requests.watched"]?.value) > 0 ? `You asked for ${t("requests.made")}. You watched ${t("requests.watched")} of them.` : `You asked for ${t("requests.made")}.`),
   standing: (f) =>
     Number(f["standing.percentile"]?.value) <= 50
       ? `${t("standing.percentile")} by hours watched`

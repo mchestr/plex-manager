@@ -77,7 +77,7 @@ export const A11Y_ROUTES: A11yRoute[] = [
   { path: '/auth/denied', as: 'public', ready: 'access-denied-heading' },
   // No PIN in the URL: the callback's error state.
   { path: '/auth/callback/plex', as: 'public', ready: 'plex-callback-error-heading' },
-  { path: `/rewind/s/${A11Y_SHARE_TOKEN}`, as: 'public', ready: 'wrapped-share-heading' },
+  { path: `/rewind/s/${A11Y_SHARE_TOKEN}`, as: 'public', ready: 'rewind-share-v2' },
   { path: '/a11y-missing-page', as: 'public', ready: 'not-found-heading' },
 
   // Member

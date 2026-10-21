@@ -43,15 +43,16 @@ describe("01 Cover", () => {
     const folios = Object.fromEntries(heavy.pages.map((p) => [registry[p.type].name, p.folio]))
     const lines = within(screen.getByTestId("rewind-cover-lines")).getAllByRole("listitem")
     expect(lines).toHaveLength(4)
-    expect(lines[0]).toHaveTextContent(`0${folios["The number"]}One very large number`)
-    expect(lines.map((li) => li.textContent)).toContain(`0${folios.Centrefold}Who you turned out to be`)
+    const folio = (n: number) => String(n).padStart(2, "0")
+    expect(lines[0]).toHaveTextContent(`${folio(folios["The number"])}One very large number`)
+    expect(lines.map((li) => li.textContent)).toContain(`${folio(folios.Centrefold)}Who you turned out to be`)
   })
 
   it("offers both cuts with the selected list's count and running time, and either starts the story", async () => {
     const send = jest.fn()
     renderCover(heavy, send)
-    expect(heavy.pages).toHaveLength(9)
-    expect(screen.getByTestId("rewind-cut-full")).toHaveTextContent("Read the full issue9 pages, about 1 min")
+    expect(heavy.pages).toHaveLength(17)
+    expect(screen.getByTestId("rewind-cut-full")).toHaveTextContent("Read the full issue17 pages, about 2 min 10 s")
     expect(screen.getByTestId("rewind-cut-pocket")).toHaveTextContent("Pocket edition6 pages, about 40 s")
 
     await userEvent.setup().click(screen.getByTestId("rewind-cut-full"))

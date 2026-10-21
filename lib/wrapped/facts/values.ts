@@ -203,6 +203,7 @@ function server({ race, devices, requests, community, nextYear }: MemberStats): 
         }
       : {}),
     ...Object.fromEntries(nextYear.leftForLater.map((t, i) => [`next.leftForLater[${i + 1}].title`, t.title])),
+    ...Object.fromEntries((nextYear.returning ?? []).flatMap((t, i) => [[`next.returning[${i + 1}].title`, t.title], [`next.returning[${i + 1}].date`, t.date]])),
     ...Object.fromEntries(nextYear.picks.map((t, i) => [`next.picks[${i + 1}].title`, t.title])),
   })
 }

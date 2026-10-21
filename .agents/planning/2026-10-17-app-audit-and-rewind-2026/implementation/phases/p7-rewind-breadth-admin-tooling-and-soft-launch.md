@@ -85,10 +85,12 @@ The ten core pages (Bookends included), sharing, privacy and accessibility are n
 **Demo.** The heavy fixture's full issue grows to 14 pages. Taste reads "Mostly drama, made around 2022", and the race runs its 5.7 s sequence once, then rests on November; a second visit shows the final frame at once. Adding `people` to `rewindDisabledPages` renumbers every folio.
 
 **Done when.**
-- [ ] Pages 07, 08, 11 and 12 render from the registry with schemas, srSummaries and omission rules, and Taste and The race have Table builders.
-- [ ] The race autoplays once with zero React commits during the run, then holds a static final frame, which reduced motion shows at once.
-- [ ] No page shows a zero count, a wrong plural or a split word on any of the 20 fixtures.
-- [ ] The select, component and visual tests pass, and the golden recordings cover the new decks.
+- [x] Pages 07, 08, 11 and 12 render from the registry with schemas, srSummaries and omission rules, and Taste and The race have Table builders.
+- [x] The race autoplays once with zero React commits during the run, then holds a static final frame, which reduced motion shows at once.
+- [x] No page shows a zero count, a wrong plural or a split word on any of the 20 fixtures.
+- [ ] The select, component and visual tests pass, and the golden recordings cover the new decks. (Select and component tests pass and the goldens snapshot the new decks; the visual baselines, including `heavy-race-2600ms.png`, are left for the coordinator's E2E run.)
+
+(as merged: the race's page data is `series[]` (key and display title, final standing order) plus `frames[]` of `{ month, minutes[] (one per runner), leader (runner index or null) }`, so titles and keys are stored once rather than in every frame; P8.3's scrubber reads these. Records keeps the hand-checked page rule (2 of binge, day, completion and paused); the biggest week (5 h or more) and the latest start (11 PM to 4 AM) only fill the box. There was no `PENDING_PAGES`: the four pages left `LATER_PAGES` in `lib/rewind/registry.ts`. The hand recordings already held `deck.taste`, `deck.people` and `deck.records`; the golden snapshots now cover them, and `e2e/fixtures/rewind/*.v3.json` were regenerated with the new pages. `srSummary` takes no locale, so the race's month names and Records' paused minutes in summaries are en-US.)
 
 ### Step P7.2: Pages: Setup, Requests, Standing, Next year
 
@@ -132,12 +134,14 @@ The ten core pages (Bookends included), sharing, privacy and accessibility are n
 
 **Demo.** On the heavy fixture, Requests reads "You asked for 27. You watched 15 of them." and Standing says "Top 3%". The `solo-server` fixture omits Standing with gap-free folios, and adding `next-year.picks` to `rewindDisabledPages` leaves only "Unfinished business".
 
+(as merged: `PENDING_PAGES` is `LATER_PAGES` in `lib/rewind/registry.ts`. The Sonarr match runs in `lib/wrapped/stats/next-year.ts` over `MemberSources.premieres` (optional), which `read-inputs.ts` fills from `fetchSeasonPremieres()` in `lib/wrapped/sources/sonarr-calendar.ts` when `RewindContext.sonarr` is set; `getSonarrCalendar()` gained an `includeSeries` option and keeps `serviceFetch`'s default 10 s timeout. `lib/ui/plex-links.ts` (`plexItemHref`, `overseerrSeriesHref`, `ItemLinks`) was created here for P10.21; `lib/rewind/item-links.ts` reads the machine id, cached 24 h under `plex-identity`, into the optional `IssueContext.links`. `NEXT_YEAR_PARTS` in `lib/rewind/pages/next-year.ts` holds the part keys P7.12 lists. Page 15's `share.facts` is the percentile only, so `standing.members` no longer prints even with `rewindPublicCounts`. The requests headline now drops "You watched 0 of them". Visual baselines for the four pages were not generated: the coordinator regenerates them with the phase.)
+
 **Done when.**
-- [ ] Pages 13, 14, 15 and 17 render with schemas, srSummaries and their omission rules.
-- [ ] Setup is template-only with no path to player names, and Requests counts through cached guids with the corrected statuses.
-- [ ] Standing's percentile comes from the server-wide pass, community facts need 3 or more contributors, and counts stay in-app.
-- [ ] Next year's parts can be cut on their own, and Setup and Next year offer no card.
-- [ ] The select, component and visual tests pass on all fixtures.
+- [x] Pages 13, 14, 15 and 17 render with schemas, srSummaries and their omission rules.
+- [x] Setup is template-only with no path to player names, and Requests counts through cached guids with the corrected statuses.
+- [x] Standing's percentile comes from the server-wide pass, community facts need 3 or more contributors, and counts stay in-app.
+- [x] Next year's parts can be cut on their own, and Setup and Next year offer no card.
+- [ ] The select, component and visual tests pass on all fixtures. (Select and component tests pass; visual baselines pending.)
 
 ### Step P7.3: Pocket edition, Short list and postcard
 
@@ -280,11 +284,13 @@ The ten core pages (Bookends included), sharing, privacy and accessibility are n
 **Demo.** Paste a link that publishes only Top shows into Discord: the unfurl shows "Top shows" and the No. 1 title, with no archetype or hours. Open it signed out (cards only, no name), then as the owner (the banner). Rotate it and reload the old URL: "This Rewind is no longer shared", with status 404.
 
 **Done when.**
-- [ ] `/rewind/s/[token]` renders outside `(app)`, in the Rewind theme, and shows only the published cards.
-- [ ] noindex is set in headers and metadata, and the owner banner offers Change cards, Rotate link and Stop sharing.
-- [ ] Unknown, revoked, rotated and expired tokens get the branded 404, rate-limited visitors get 429, and database failures get 503 with `Retry-After`.
-- [ ] Surviving v2 tokens render through the v2 projection until the season closes.
-- [ ] The 1200x630 OG card comes from the first published page, and the page-05-only contract test passes.
+- [x] `/rewind/s/[token]` renders outside `(app)`, in the Rewind theme, and shows only the published cards.
+- [x] noindex is set in headers and metadata, and the owner banner offers Change cards, Rotate link and Stop sharing.
+- [x] Unknown, revoked, rotated and expired tokens get the branded 404, rate-limited visitors get 429, and database failures get 503 with `Retry-After`.
+- [x] Surviving v2 tokens render through the v2 projection until the season closes.
+- [x] The 1200x630 OG card comes from the first published page, and the page-05-only contract test passes.
+
+(as merged: the proxy gate is `lib/rewind/share/share-gate.ts` and the token rule `lib/wrapped/data/share-token.ts` (`shareTokenKind`, `v2LinksOpen`: v2 tokens open while `getSeasonState().seasonYear <= 2026` and before its `closesAt`); the busy header and `lib/wrapped/share-page-limit.ts` are gone. The probe is a one-row Prisma read, not raw `SELECT 1`. The OG card is `size=og` on both card routes for every page (`OgCard`); the metadata points at `ogPage()`, which prefers the centrefold, then the back cover, else the first published page; `CARD_RENDERER_VERSION` is 2. The web fonts moved to `lib/rewind/fonts.ts` and `lib/rewind/web-fonts/`. `RewindScope` takes an optional `archetype`. Deleting the v2 OG route also removed the v2 viewer's card download (`ShareCardDownload`) and `WrappedShareSummary`. The share page lists only pages with a card (`eligibleCards`), so P7.6's cards appear with no page change. `e2e/rewind/share-page.spec.ts` runs on the new `rewind-e2e-firefox` project too; it and the visual baselines were not run here.)
 
 ### Step P7.6: Remaining cards
 
@@ -423,12 +429,14 @@ The ten core pages (Bookends included), sharing, privacy and accessibility are n
 
 **Demo.** On a seeded server, Prepare season runs the aggregate, the warm batches and the fan-out in order, and the tiles move every 5 s until every member is ready. A second Generate all during the run leaves the running members out. `/admin/users` loads without selecting any prompt text.
 
+(as merged: the Season nav item went into `lib/admin/nav.ts` (P6 had merged; the mobile Rewind tab now opens `/admin/rewind`), not `admin-nav.tsx`. Processors live in `lib/queue/jobs/rewind-season.ts` and producers plus `ensureSeasonPrepareScheduled`/`scheduleSeasonOpenRun` in `lib/rewind/season-runs.ts`; `JobProcessor` now receives the BullMQ token. The fan-out adds children with `parent` from the step job (`addBulk`), not a `FlowProducer`; children set `ignoreDependencyOnFailure`, the aggregate child `failParentOnFailure`. `REWIND_SERVER_AGGREGATE` takes `warm: 'return'` so Prepare adds the warm batches as its own children. `through` is the batch's day (`YYYY-11-30`); the "end of yesterday" clip is left to the data window. The season-open run uses the opening day from `rewindSeasonOpens` at 00:15, and is replaced (remove and re-add, job id carries the instant) when it moves; P7.12's `updateRewindSettings` reschedules it on a date change. Run final cut is a disabled button; `runRewindFinalCut` refuses before 1 January in the westernmost zone and, after, until P8.5. P2.6's Prepare season data button and `prepareRewindSeasonData`/`enqueueServerAggregate` are gone; settings links to Season. P7.12's stopgap `getRewindSeasonSpendUsd` was replaced by `getRewindSeasonSpend`. `aggregateLlmUsage` stays for the LLM usage list and conversation pages, which sum the rows already on the page; those pages and the usage detail still read prompt text by design. Visual baseline `admin-rewind-season` and the E2E spec were written but not run.)
+
 **Done when.**
-- [ ] `/admin/rewind` shows the preflight rows, the StatGrid, live progress and the per-member DataTable.
-- [ ] Prepare season, Generate all, Retry failed and Run final cut each show a cost estimate and write an audit entry, and the fan-out skips queued and running members.
-- [ ] `REWIND_SEASON_PREPARE` is scheduled for 00:15 on 1 December in the westernmost zone with audience `all`, the buttons use the configured audience, and the season budget cap is shown and enforced.
+- [x] `/admin/rewind` shows the preflight rows, the StatGrid, live progress and the per-member DataTable.
+- [x] Prepare season, Generate all, Retry failed and Run final cut each show a cost estimate and write an audit entry, and the fan-out skips queued and running members.
+- [x] `REWIND_SEASON_PREPARE` is scheduled for 00:15 on 1 December in the westernmost zone with audience `all`, the buttons use the configured audience, and the season budget cap is shown and enforced.
 - [ ] Admin-audience generation has run on production data from 2026-11-20.
-- [ ] Cost totals come from aggregate queries, and no admin page loads `LLMUsage` prompt or response text.
+- [x] Cost totals come from aggregate queries, and no admin page loads `LLMUsage` prompt or response text.
 
 ### Step P7.9: Admin preview, roll back and audited reads
 
@@ -503,8 +511,10 @@ The ten core pages (Bookends included), sharing, privacy and accessibility are n
 **Demo.** From a script or the Node REPL, start a dry run of the `heavy` fixture in "Templates only": `/rewind/2026?preview=<id>` opens the story with the Preview banner, and the preview card route returns its centrefold card. Nothing is written to `PlexWrapped`.
 
 **Done when.**
-- [ ] `REWIND_DRY_RUN` runs `generateUserRewind` in dry-run mode on a member or a fixture, rate-limited, with an estimate first, and writes no Rewind rows.
-- [ ] Admins open a dry run through `?preview=` and the preview card route, and members cannot.
+- [x] `REWIND_DRY_RUN` runs `generateUserRewind` in dry-run mode on a member or a fixture, rate-limited, with an estimate first, and writes no Rewind rows.
+- [x] Admins open a dry run through `?preview=` and the preview card route, and members cannot.
+
+(as merged: the processor is `lib/queue/jobs/rewind-dry-run.ts`, not `jobs/rewind.ts`, to keep clear of P7.8's edits; it is registered on `rewind-aux` in `lib/queue/rewind-queues.ts`. The input schema is `DryRunInput` in `lib/rewind/dry-run/input.ts`, the subject `{ kind: "member", userId } | { kind: "fixture", fixtureId }`, and a fixture run must name the fixture's year (2026). `effort` is plumbed through `generateUserRewind` to the copy and repair calls (default `low`). `actions/admin/rewind-playground.ts` exports `estimateRewindDryRun`, `startRewindDryRun` (returns `{ previewId }`, also the job id) and `getRewindDryRun` (`pending` while the job waits or runs, then the stored `completed | skipped | failed` entry); the file is a knip entry until P7.11 calls it. Redis entries are read with `readDryRun` / `readPreview` in `lib/rewind/dry-run/store.ts`; a fixture preview runs as `FIXTURE_USER_ID`. The preview card route is `route.ts`, `Cache-Control: private, no-store`, spending `rw:card:session` by admin id on a cache miss. `outputFileTracingIncludes` lists the fixtures under `/admin/**`, so P7.11's gallery page must live under `/admin`. In preview mode the stage hides the share pill and the Share key; P7.7 (Hide) and P7.14 (views) must also check `mode === "preview"`.)
 
 ### Step P7.11: Gallery of the review fixtures
 

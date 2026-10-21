@@ -159,7 +159,7 @@ test.describe('Rewind routes', () => {
     await page.goto(`/wrapped/share/${SHARE_TOKEN}`);
 
     await expect(page).toHaveURL(new RegExp(`/rewind/s/${SHARE_TOKEN}$`));
-    await expect(page.getByTestId('wrapped-share-summary')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
+    await expect(page.getByTestId('rewind-share-v2')).toBeVisible({ timeout: WAIT_TIMEOUTS.PAGE_CONTENT });
   });
 
   test('Close returns to ?from=, or home', async ({ regularUserPage }) => {

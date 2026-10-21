@@ -1,0 +1,10 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`08 People summarises the page deterministically 1`] = `
+[
+  "Starring Tomas Brandt, with Mira Okafor, Noor Haddad, Rowan Hale and Lena Marsh. Directed by Tomas Brandt, Mira Okafor and Lena Marsh.",
+  "Starring Jun Ito, with Mira Okafor, Tomas Brandt, Ines Varga and Lena Marsh. Directed by Jun Ito, Lena Marsh and Noor Haddad.",
+  "Starring Tomas Brandt, with Noor Haddad, Jun Ito, Mira Okafor and Lena Marsh. Directed by Lena Marsh.",
+  null,
+]
+`;

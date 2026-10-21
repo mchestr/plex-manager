@@ -60,6 +60,8 @@ interface StoryStageProps {
   share?: { setup: ShareSetup; actions: ShareActions }
   /** A sheet to open on load: `?sheet=share` opens Share over the cover, paused. */
   initialSheet?: SheetName
+  /** `preview`: an admin's dry run (P7.10), under a Preview banner, with no sharing. */
+  mode?: "member" | "preview"
 }
 
 /** Before the first fit: the 390 x 844 roomy layout at scale 1. */
@@ -92,7 +94,7 @@ export function StoryStage({ share, ...props }: StoryStageProps) {
 
 const kindsOf = (pages: readonly StoryStagePage[]) => pages.map((page) => pageKind(registry[page.type].dwell))
 
-function Stage({ pages: fullPages, pocket, year, archetype, closeHref, copy, initialSheet }: Omit<StoryStageProps, "share">) {
+function Stage({ pages: fullPages, pocket, year, archetype, closeHref, copy, initialSheet, mode = "member" }: Omit<StoryStageProps, "share">) {
   const router = useRouter()
   const root = useRef<HTMLElement>(null)
   const pagesRef = useRef<HTMLDivElement>(null)
@@ -126,6 +128,7 @@ function Stage({ pages: fullPages, pocket, year, archetype, closeHref, copy, ini
   const table = pages[state.index].table ?? null
   const ink = pageInk(entry, archetype)
   const last = pages.length - 1
+  const preview = mode === "preview"
   const playing = state.mode === "playing" || (["holding", "interacting", "sheet"].includes(state.mode) && state.resumeTo === "playing")
   const articleHref = `/rewind/${year}/read` as Route
   const pageLabel = (i: number) => `Page ${i + 1} of ${pages.length}: ${entries[i].name}`
@@ -193,6 +196,7 @@ function Stage({ pages: fullPages, pocket, year, archetype, closeHref, copy, ini
       case "table":
         return table ? send({ type: "OPEN_SHEET", sheet: "table" }) : undefined
       case "share":
+        return preview ? undefined : send({ type: "OPEN_SHEET", sheet: command })
       case "settings":
         return send({ type: "OPEN_SHEET", sheet: command })
     }
@@ -220,6 +224,7 @@ function Stage({ pages: fullPages, pocket, year, archetype, closeHref, copy, ini
             aria-label={`Rewind ${year}`}
             data-testid="rewind-stage"
             data-mode={state.mode}
+            data-preview={preview || undefined}
             data-chrome={fit.chrome}
             data-fitted={fit.measured || undefined}
             style={FIT_DEFAULTS}
@@ -280,7 +285,7 @@ function Stage({ pages: fullPages, pocket, year, archetype, closeHref, copy, ini
               <ChromeBottom
                 hasTable={table !== null}
                 poster={entry.type === "centrefold"}
-                share={entry.type !== "back-cover"}
+                share={!preview && entry.type !== "back-cover"}
                 canGoBack={state.index > 0}
                 canGoForward={state.index < last}
                 onTable={() => send({ type: "OPEN_SHEET", sheet: "table" })}
@@ -289,6 +294,14 @@ function Stage({ pages: fullPages, pocket, year, archetype, closeHref, copy, ini
                 onNext={forward}
               />
             </footer>
+            {preview && (
+              <p
+                data-testid="rewind-preview-banner"
+                className="pointer-events-none absolute inset-x-0 top-(--rw-chrome-top) z-10 mx-auto w-fit rounded-full bg-background px-3 py-1 text-sm text-foreground"
+              >
+                Preview
+              </p>
+            )}
             <div aria-live="polite" aria-atomic="true" className="sr-only" data-testid="rewind-live">
               {announcement}
             </div>

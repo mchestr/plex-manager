@@ -54,14 +54,12 @@ function expectNoLinkState() {
   expect(screen.getByTestId('wrapped-share-create')).toHaveTextContent('Create share link')
   expect(screen.queryByTestId('wrapped-share-stop')).not.toBeInTheDocument()
   expect(screen.queryByTestId('share-button')).not.toBeInTheDocument()
-  expect(screen.queryByTestId('wrapped-download-card')).not.toBeInTheDocument()
 }
 
 function expectSharedState(shareToken: string) {
   expect(screen.queryByTestId('wrapped-share-create')).not.toBeInTheDocument()
   expect(screen.getByTestId('wrapped-share-stop')).toHaveTextContent('Stop sharing')
   expect(screen.getByTestId('share-button')).toHaveTextContent(shareToken)
-  expect(screen.getByTestId('wrapped-download-card')).toBeInTheDocument()
 }
 
 describe('WrappedShareControls', () => {

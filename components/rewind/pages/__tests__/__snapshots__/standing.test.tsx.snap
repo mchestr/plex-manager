@@ -1,0 +1,9 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`15 Standing summarises the page deterministically 1`] = `
+[
+  "Top 4% by hours watched, among 31 members who pressed play. One mark per member, most hours first; yours is number 1.",
+  "You were one of 12 members who pressed play this year. One mark per member, most hours first; yours is number 7.",
+  "You were one of 12 members who pressed play this year. One mark per member, most hours first; yours is number 9.",
+]
+`;

@@ -10,6 +10,7 @@ import { StoryStage } from "@/components/rewind/stage/story-stage"
 import { serverName } from "@/lib/brand"
 import { prisma } from "@/lib/prisma"
 import { pagesForCut } from "@/lib/rewind/editions"
+import { loadItemLinks } from "@/lib/rewind/item-links"
 import { registry, type RegistryEntry } from "@/lib/rewind/registry"
 import { validatePagesOnRead, type SelectedPage } from "@/lib/rewind/select-pages"
 import { loadShareSetup } from "@/lib/rewind/share-setup"
@@ -27,6 +28,8 @@ interface RewindIssueProps {
   returnTo: Route
   /** `?sheet=share` opens the share sheet over the cover. */
   initialSheet?: SheetName
+  /** An admin's dry run (P7.10): no share setup, and the stage runs in preview mode. */
+  preview?: boolean
 }
 
 /** "Browse the library" on the postcard: the server's own Plex web app when it has a public URL. */
@@ -42,7 +45,7 @@ async function libraryHref(): Promise<string | undefined> {
  * sheet's setup (P5.11). A full issue also typesets its pocket cut
  * (`pagesForCut`, P7.3), numbered 1 to 6, which the cover can swap to.
  */
-export async function RewindIssue({ rewindId, data, userId, returnTo, initialSheet }: RewindIssueProps) {
+export async function RewindIssue({ rewindId, data, userId, returnTo, initialSheet, preview = false }: RewindIssueProps) {
   const [settings, brand, config] = await Promise.all([
     getAppSettings(),
     serverName(),
@@ -52,8 +55,9 @@ export async function RewindIssue({ rewindId, data, userId, returnTo, initialShe
   const numbering = { archetype, disabledPages: DisabledPagesSchema.parse(config?.rewindDisabledPages ?? []) }
   const pages = validatePagesOnRead(pagesForCut(data, "full"), numbering)
   const pocket = data.edition === "full" ? validatePagesOnRead(pagesForCut(data, "pocket"), numbering) : null
-  const [share, library] = await Promise.all([
-    loadShareSetup({ userId, rewindId, year: data.year, pages }),
+  const [share, links, library] = await Promise.all([
+    preview ? null : loadShareSetup({ userId, rewindId, year: data.year, pages }),
+    pages.some((page) => page.type === "next-year") ? loadItemLinks() : undefined,
     data.edition === "postcard" ? libraryHref() : undefined,
   ])
   const types = (list: readonly SelectedPage[]) => list.map((page) => page.type)
@@ -72,6 +76,7 @@ export async function RewindIssue({ rewindId, data, userId, returnTo, initialShe
     facts: data.facts,
     cuts: { full: data.edition === "full" ? types(pages) : null, pocket: types(pocket ?? pages) },
     libraryHref: library,
+    links,
   }
   const slots = (list: readonly SelectedPage[], context: IssueContext) =>
     list.map((page) => {
@@ -91,8 +96,9 @@ export async function RewindIssue({ rewindId, data, userId, returnTo, initialShe
       archetype={archetype}
       closeHref={returnTo}
       copy={{ copySource: data.copySource, model: data.copyMeta.model }}
-      share={{ setup: share, actions: { enable: enableRewindShare, rotate: rotateRewindShare, disable: disableRewindShare, savePrefs: saveRewindSharePrefs } }}
+      share={share ? { setup: share, actions: { enable: enableRewindShare, rotate: rotateRewindShare, disable: disableRewindShare, savePrefs: saveRewindSharePrefs } } : undefined}
       initialSheet={initialSheet}
+      mode={preview ? "preview" : "member"}
     />
   )
 }

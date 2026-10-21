@@ -51,6 +51,9 @@ module.exports = (phase) => ({
     // The Rewind card fonts are read from disk (lib/rewind/cards/fonts.ts)
     '/api/rewind/card/[rewindId]/[page]': ['./lib/rewind/cards/fonts/*.ttf'],
     '/api/rewind/card/s/[assetKey]/[page]': ['./lib/rewind/cards/fonts/*.ttf'],
+    '/api/rewind/card/preview/[previewId]/[page]': ['./lib/rewind/cards/fonts/*.ttf'],
+    // Dry runs read the golden fixtures from disk (lib/rewind/dry-run/fixtures.ts): the admin pages that start them
+    '/admin/**': ['./evals/rewind/fixtures/*.json'],
   },
   // Rewind moved from /wrapped (P5.1). Browsers cache a 308, so every target
   // must keep working; the share rule comes first, or the catch-all would send
@@ -98,6 +101,16 @@ module.exports = (phase) => ({
             key: 'Content-Security-Policy',
             value: contentSecurityPolicy(phase)
           }
+        ],
+      },
+      // The public share page (P7.5, UI-39): kept out of search results, and
+      // its token never leaves in a Referer. After the catch-all, so its
+      // Referrer-Policy wins.
+      {
+        source: '/rewind/s/:path*',
+        headers: [
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
+          { key: 'Referrer-Policy', value: 'no-referrer' },
         ],
       },
     ]
