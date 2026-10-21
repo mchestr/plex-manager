@@ -17,7 +17,9 @@ import { getSeasonYear } from "@/lib/wrapped/season"
 
 const logger = createLogger("REWIND_SETTINGS")
 
-const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
+/** Lists of ids (disabled pages, excluded sections, flags) are sets: order is not a change. */
+const asSet = (value: unknown) => (Array.isArray(value) && value.every((item) => typeof item === "string") ? [...value].sort() : value)
+const same = (a: unknown, b: unknown) => JSON.stringify(asSet(a)) === JSON.stringify(asSet(b))
 
 /** Whether every member can open Rewind under these settings. */
 const openToEveryone = (settings: Pick<RewindSettings, "rewindEnabled" | "rewindAudience"> | null) =>

@@ -100,6 +100,9 @@ export const hideRewindTitle = memberAction({
     const rewind = await completedRewind(userId, year)
     const title = rewind ? ratingKeysIn(rewind).get(ratingKey) : undefined
     if (!rewind || title === undefined) return fail("NOT_FOUND", NOT_IN_REWIND)
+    // Already hidden: nothing to write, regenerate or spend a point on
+    const existing = await prisma.rewindExclusion.findUnique({ where: { userId_ratingKey: { userId, ratingKey } }, select: { id: true } })
+    if (existing) return ok({ regenerating: false })
 
     const blocked = await gate(userId)
     if (blocked) return blocked

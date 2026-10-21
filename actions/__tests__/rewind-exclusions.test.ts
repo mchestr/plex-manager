@@ -75,6 +75,14 @@ beforeEach(() => {
 })
 
 describe("hideRewindTitle", () => {
+  it("treats hiding a title that is already hidden as done, with no point spent and no regeneration", async () => {
+    prismaMock.rewindExclusion.findUnique.mockResolvedValue({ id: "ex-1" } as never)
+    expect(await hide()).toEqual({ success: true, data: { regenerating: false } })
+    expect(consume).not.toHaveBeenCalled()
+    expect(prismaMock.$transaction).not.toHaveBeenCalled()
+    expect(enqueueRewindGeneration).not.toHaveBeenCalled()
+  })
+
   it("writes the row and bumps the version in one transaction, then enqueues a no-LLM run", async () => {
     prismaMock.plexWrapped.findMany.mockResolvedValue([{ year: YEAR }, { year: 2025 }] as never)
     expect(await hide()).toEqual({ success: true, data: { regenerating: true } })

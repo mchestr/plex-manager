@@ -134,6 +134,12 @@ describe('updateRewindSettings', () => {
     expect(logAuditEvent).not.toHaveBeenCalled()
   })
 
+  it('treats the same lists in another order as no change', async () => {
+    await expect(updateRewindSettings({ ...unchanged, rewindNotifyChannels: ['banner', 'discord'] })).resolves.toEqual({ success: true, data: null })
+    expect(prismaMock.config.upsert).not.toHaveBeenCalled()
+    expect(logAuditEvent).not.toHaveBeenCalled()
+  })
+
   it('records a season date change', async () => {
     await updateRewindSettings({ ...unchanged, rewindSeasonOpens: '11-25' })
 
