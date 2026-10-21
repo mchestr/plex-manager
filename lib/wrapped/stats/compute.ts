@@ -11,6 +11,7 @@
  */
 
 import type { RequestEvent } from "@/lib/wrapped/sources/request-event"
+import type { SeasonPremiere } from "@/lib/wrapped/sources/sonarr-calendar"
 import { isCountedPlay, type PlayEvent } from "@/lib/wrapped/sources/watch-history-source"
 
 import { computeBookends } from "./bookends"
@@ -40,6 +41,8 @@ export interface MemberSources {
   aggregate: AggregateView | null
   library: readonly LibraryTitle[] | null
   excludedContentRatings: readonly string[]
+  /** Sonarr's season premieres for Next year's returning part; null or absent without Sonarr. */
+  premieres?: readonly SeasonPremiere[] | null
 }
 
 const noMetadata: MetadataLookup = () => undefined
@@ -80,6 +83,7 @@ export function computeMemberStats(events: readonly PlayEvent[], ctx: StatsConte
       people,
       library: sources.library,
       excludedContentRatings: sources.excludedContentRatings,
+      premieres: sources.premieres,
     }),
   }
 }
