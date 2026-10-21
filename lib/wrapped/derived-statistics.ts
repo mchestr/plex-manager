@@ -17,7 +17,7 @@
  *   zeroed histograms, and a `peakHour` of `null`.
  */
 
-import type { DerivedStatistics, PercentileResult } from "@/lib/wrapped/data/schema-legacy"
+import type { DerivedStatistics } from "@/lib/wrapped/data/schema-legacy"
 import type { TautulliHistoryItem } from "@/lib/validations/tautulli"
 
 const DAY_NAMES = [
@@ -149,22 +149,4 @@ export function computeDerivedStatistics(
     mostActiveDay,
     weekendVsWeekday: { weekendPct },
   }
-}
-
-/**
- * Convert a leaderboard position into a "Top X%" percentile.
- *
- * @example
- * ```ts
- * computePercentile(1, 50) // { percentile: 2, topPercentLabel: "Top 2%" }
- * computePercentile(25, 50) // { percentile: 50, topPercentLabel: "Top 50%" }
- * ```
- */
-export function computePercentile(
-  userPosition: number,
-  totalUsers: number
-): PercentileResult {
-  const raw = Math.ceil((userPosition / totalUsers) * 100)
-  const percentile = Math.min(100, Math.max(1, raw))
-  return { percentile, topPercentLabel: `Top ${percentile}%` }
 }

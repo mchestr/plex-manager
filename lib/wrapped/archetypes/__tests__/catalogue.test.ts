@@ -12,12 +12,11 @@ import {
   posterLineIds,
   TIE_BREAK_ORDER,
 } from "@/lib/wrapped/archetypes/catalogue"
-import { ARCHETYPES as V2_ARCHETYPES } from "@/lib/wrapped/llm-output-schema"
 
 describe("the archetype catalogue", () => {
-  it("has twelve archetypes, which v2 still reads from its schema module", () => {
+  it("has twelve archetypes", () => {
     expect(ARCHETYPE_IDS).toHaveLength(12)
-    expect(V2_ARCHETYPES).toBe(ARCHETYPES)
+    expect(ARCHETYPES).toHaveLength(12)
   })
 
   it("orders every archetype exactly once for tie-breaks", () => {

@@ -95,7 +95,7 @@ describe('PromptTemplateActions', () => {
       render(<PromptTemplateActions template={mockTemplate} />)
 
       const playgroundLink = screen.getByText('Playground')
-      expect(playgroundLink).toHaveAttribute('href', `/admin/playground?templateId=${mockTemplate.id}`)
+      expect(playgroundLink).toHaveAttribute('href', `/admin/rewind/playground?styleGuideId=${mockTemplate.id}`)
     })
   })
 

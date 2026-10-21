@@ -22,9 +22,6 @@
   "admin /admin/llm-usage/visual-llm-usage-1": {
     "color-contrast|incomplete": 1
   },
-  "admin /admin/playground": {
-    "label|critical": 1
-  },
   "admin /admin/prompts": {
     "color-contrast|incomplete": 1
   },

@@ -121,7 +121,7 @@ export const A11Y_ROUTES: A11yRoute[] = [
   { path: '/admin/announcements', as: 'admin', ready: 'announcements-list' },
   { path: '/admin/cost-analysis', as: 'admin', ready: 'admin-cost-analysis-heading' },
   { path: '/admin/discord', as: 'admin', ready: 'discord-bot-status' },
-  { path: '/admin/playground', as: 'admin', ready: 'admin-playground-heading' },
+  { path: '/admin/rewind/playground', as: 'admin', ready: 'admin-rewind-playground-header' },
   { path: '/admin/queues', as: 'admin', ready: 'queue-status' },
   { path: '/admin/settings', as: 'admin', ready: 'stripe-settings-card' },
   // The public share route records a visit; a worker restart's re-seed drops it.

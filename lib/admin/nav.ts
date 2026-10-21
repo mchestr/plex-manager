@@ -15,8 +15,8 @@
  *
  * `typedRoutes` rejects links to routes that do not exist yet, so the step
  * that ships a route adds its item: Season (P7.8, shipped), Gallery (P7.11,
- * shipped), Evals (P11.30) and Overview (P10.8). P8.8 moves Playground to
- * `/admin/rewind/playground`.
+ * shipped), Playground (P8.8, `/admin/rewind/playground`), Evals (P11.30)
+ * and Overview (P10.8).
  *
  * Labels are sentence case, equal the page titles (UI-21) and say Rewind,
  * never Wrapped (UI-32). Each item's test id is `admin-nav-<id>`.
@@ -104,14 +104,14 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     href: "/admin/rewind",
     icon: icons.rewind,
     group: "Rewind",
-    // Exact: the Rewind pages below it (Gallery, later Playground) light their own items.
+    // Exact: the Rewind pages below it (Playground, Gallery) light their own items.
     match: "exact",
     mobile: "more",
   },
   {
     id: "playground",
     label: "Playground",
-    href: "/admin/playground",
+    href: "/admin/rewind/playground",
     icon: icons.playground,
     group: "Rewind",
     match: "prefix",
@@ -273,16 +273,16 @@ export function titleFor(pathname: string): string {
 
 /**
  * Immersive routes draw their own full-screen chrome, so the shell hides its
- * sidebar, bars and the assistant there: a stored generation's history. P8.8
- * adds the playground's story preview.
+ * sidebar, bars and the assistant there: a stored generation's history.
  */
 const IMMERSIVE: readonly RegExp[] = [/^\/admin\/wrapped\/[^/]+\/history\//]
 
 /**
- * Routes that hide only the assistant: the immersive ones, and the admin
- * Rewind preview (P7.9), which keeps the nav around its framed stage.
+ * Routes that hide only the assistant: the immersive ones, the admin Rewind
+ * preview (P7.9), which keeps the nav around its framed stage, and the
+ * playground, whose story preview opens in a Dialog (P8.8).
  */
-const ASSISTANT_HIDDEN: readonly RegExp[] = [...IMMERSIVE, /^\/admin\/users\/[^/]+\/rewind(?:\/|$)/]
+const ASSISTANT_HIDDEN: readonly RegExp[] = [...IMMERSIVE, /^\/admin\/users\/[^/]+\/rewind(?:\/|$)/, /^\/admin\/rewind\/playground(?:\/|$)/]
 
 export function isImmersive(pathname: string): boolean {
   return IMMERSIVE.some((pattern) => pattern.test(pathname))

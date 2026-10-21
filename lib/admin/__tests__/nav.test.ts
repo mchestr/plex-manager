@@ -69,8 +69,9 @@ describe("isActive", () => {
     ["users", "/admin/users/abc", true],
     ["users", "/admin/users-archive", false],
     ["prompts", "/admin/prompts/p1/edit", true],
-    ["prompts", "/admin/playground", false],
-    ["playground", "/admin/playground", true],
+    ["prompts", "/admin/rewind/playground", false],
+    ["playground", "/admin/rewind/playground", true],
+    ["season", "/admin/rewind/playground", false],
     ["invites", "/admin/invites/i1", true],
     ["settings", "/admin/users", false],
   ])("%s on %s is %s", (id, pathname, expected) => {
@@ -110,7 +111,7 @@ describe("mobileTabs", () => {
     const rewind = tabs.find((tab) => tab.id === "rewind") as MobileLinkTab
     expect(rewind.href).toBe("/admin/rewind")
     expect(isTabActive(rewind, "/admin/rewind")).toBe(true)
-    expect(isTabActive(rewind, "/admin/playground")).toBe(true)
+    expect(isTabActive(rewind, "/admin/rewind/playground")).toBe(true)
     expect(isTabActive(rewind, "/admin/shares")).toBe(true)
     expect(isTabActive(rewind, "/admin/users")).toBe(false)
   })
@@ -130,7 +131,8 @@ describe("isAssistantHidden", () => {
     ["/admin/users/u1/wrapped", false],
     ["/admin/users/u1", false],
     ["/admin/users", false],
-    ["/admin/playground", false],
+    ["/admin/rewind/playground", true],
+    ["/admin/rewind", false],
   ])("%s is %s", (pathname, expected) => {
     expect(isAssistantHidden(pathname)).toBe(expected)
   })

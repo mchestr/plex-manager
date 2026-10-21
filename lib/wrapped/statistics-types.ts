@@ -9,16 +9,6 @@ export interface TautulliConfig {
   apiKey: string
 }
 
-export interface PlexConfig {
-  url: string
-  token: string
-}
-
-export interface OverseerrConfig {
-  url: string
-  apiKey: string
-}
-
 export interface TopMedia {
   title: string
   watchTime: number
@@ -65,47 +55,4 @@ export interface TautulliStatisticsData {
   topShows: TopShow[]
   watchTimeByMonth: MonthlyWatchTime[]
   derived: DerivedStatistics
-}
-
-interface LibrarySize {
-  movies: number
-  shows: number
-  episodes: number
-}
-
-export interface ServerStatisticsData {
-  totalStorage: number
-  totalStorageFormatted: string
-  librarySize: LibrarySize
-}
-
-export interface OverseerrStatisticsData {
-  totalRequests: number
-  totalServerRequests: number
-  approvedRequests: number
-  pendingRequests: number
-  /** Requests whose title is available (partially available counts for TV). */
-  availableRequests?: number
-  topRequestedGenres: Array<{
-    genre: string
-    count: number
-  }>
-}
-
-export interface LeaderboardEntry {
-  userId: string
-  username: string
-  friendlyName: string
-  watchTime: number
-  playCount: number
-  episodesWatched?: number
-}
-
-export interface WatchTimeLeaderboardEntry {
-  userId: string
-  username: string
-  friendlyName: string
-  totalWatchTime: number
-  moviesWatchTime: number
-  showsWatchTime: number
 }

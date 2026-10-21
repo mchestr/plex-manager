@@ -16,7 +16,7 @@ import { fixtureSchema, type Fixture } from "@/evals/rewind/fixture-schema"
 const FIXTURES_DIR = path.join(process.cwd(), "evals", "rewind", "fixtures")
 
 /** Every fixture id, sorted. */
-async function listDryRunFixtures(): Promise<string[]> {
+export async function listDryRunFixtures(): Promise<string[]> {
   const files = await readdir(FIXTURES_DIR)
   return files
     .filter((file) => file.endsWith(".json"))
