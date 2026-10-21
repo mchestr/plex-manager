@@ -183,10 +183,12 @@ The ten core pages (Bookends included), sharing, privacy and accessibility are n
 **Demo.** The `light` fixture opens on "The pocket edition" and plays its six pages in about 40 seconds. The heavy member picks "Pocket edition" and gets six pages with their own LLM decks. A member whose first play was on 3 October sees "Your first Rewind arrives next year" on home.
 
 **Done when.**
-- [ ] The pocket edition has six pages, including the merged Short list with its `tz.note`, and the postcard lists community titles without names.
-- [ ] The cover's cut choice switches between the editions and renumbers every folio.
-- [ ] Late joiners are skipped with `JOINED_LATE` and see the next-year message.
-- [ ] No pocket, postcard or late-joiner path makes an LLM call, and the tests pass.
+- [x] The pocket edition has six pages, including the merged Short list with its `tz.note`, and the postcard lists community titles without names.
+- [x] The cover's cut choice switches between the editions and renumbers every folio.
+- [x] Late joiners are skipped with `JOINED_LATE` and see the next-year message.
+- [x] No pocket, postcard or late-joiner path makes an LLM call, and the tests pass.
+
+(as merged: `PageType` gains `postcard`; the registry adds `short-list` and `postcard` entries with `RewindPageType = IssuePageType | EditionPageType`, and `issuePages` stays the 18 full-issue pages. Short list stores `{ rows: [{ key, rank }] }` (facts `series[rank].*` or `films[rank].*`), the postcard `{ titles: [{ key, title }] }` from the new `MemberStats.popular` (`lib/wrapped/stats/popular.ts`, aggregate titles named by the library). The habit rule is `habitPage` in `lib/rewind/editions.ts`. The Short list's clock time is `hours.medianStart`, since no fact holds the No. 1's watch time. `StoryStage` takes a `pocket` page list; `CHOOSE_CUT` carries `cut` and a new `SET_KINDS` event swaps the kinds on the cover; `IssueContext` gains `cuts` and `libraryHref`. `JOINED_LATE` is checked in `generate-user.ts` after the inputs are read (it needs the first lifetime play) and is a stored `RewindErrorCode`; the home card's `joinedLate` now uses the same on-or-after-1-October rule. Short list and postcard baselines are left for the coordinator's visual pass.)
 
 ### Step P7.4: Desktop spread and Notes
 

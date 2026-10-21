@@ -4,7 +4,7 @@ import { domAnimation, LazyMotion, MotionConfig } from "motion/react"
 import type { Route } from "next"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useEffect, useLayoutEffect, useRef, type CSSProperties, type KeyboardEvent, type ReactNode } from "react"
+import { useCallback, useEffect, useLayoutEffect, useRef, type CSSProperties, type KeyboardEvent, type ReactNode } from "react"
 
 import { HideProvider, type HideSetup } from "@/components/rewind/hide/hide-context"
 import { ShareProvider, type ShareActions } from "@/components/rewind/share/share-context"
@@ -12,11 +12,11 @@ import { shouldOfferArticle } from "@/components/rewind/sheets/article-offer-she
 import { Button } from "@/components/ui/button"
 import { inkProps } from "@/lib/design/tokens"
 import type { CopyAuthor } from "@/lib/rewind/copy-disclosure"
-import { registry, REVEAL_DWELL_MS, type IssuePageType, type PageTable } from "@/lib/rewind/registry"
+import { registry, REVEAL_DWELL_MS, type PageTable, type RewindPageType } from "@/lib/rewind/registry"
 import type { ShareSetup } from "@/lib/rewind/share-sheet"
 import { keyToCommand, type StageCommand } from "@/lib/rewind/stage/keymap"
 import { pageInk } from "@/lib/rewind/stage/page-ink"
-import { pageKind, type SheetName } from "@/lib/rewind/stage/player-reducer"
+import { pageKind, type PlayerEvent, type SheetName } from "@/lib/rewind/stage/player-reducer"
 import { readPrefs } from "@/lib/rewind/stage/prefs"
 import { cn } from "@/lib/utils"
 import type { ArchetypeId } from "@/lib/wrapped/archetypes/catalogue"
@@ -35,11 +35,12 @@ import { usePerfProbe } from "./use-perf-probe"
 import { useRewindPrefs } from "./use-rewind-prefs"
 import { useStageA11y } from "./use-stage-a11y"
 import { useStageGestures } from "./use-stage-gestures"
+import { useStoryCut } from "./use-story-cut"
 import { useStoryPlayer } from "./use-story-player"
 
 /** @public P5.1 builds the page list. */
 export interface StoryStagePage {
-  type: IssuePageType
+  type: RewindPageType
   /** The page body: a Server Component, typeset on the server, with the page's `h2`. */
   content: ReactNode
   /** The registry's `table(data)` for a chart page, built on the server; the Table control shows only when it is set. */
@@ -48,6 +49,8 @@ export interface StoryStagePage {
 
 interface StoryStageProps {
   pages: readonly StoryStagePage[]
+  /** The pocket cut's pages (P7.3), when a full issue offers it on the cover; the cover's choice swaps to them. */
+  pocket?: readonly StoryStagePage[]
   year: number
   archetype: ArchetypeId | null
   /** Where Close, Esc and a swipe down go: P5.1's `safeReturnPath(from)`. */
@@ -100,7 +103,9 @@ export function StoryStage({ share, hide, ...props }: StoryStageProps) {
   )
 }
 
-function Stage({ pages, year, archetype, closeHref, copy, initialSheet, mode = "member" }: Omit<StoryStageProps, "share" | "hide">) {
+const kindsOf = (pages: readonly StoryStagePage[]) => pages.map((page) => pageKind(registry[page.type].dwell))
+
+function Stage({ pages: fullPages, pocket, year, archetype, closeHref, copy, initialSheet, mode = "member" }: Omit<StoryStageProps, "share" | "hide">) {
   const router = useRouter()
   const root = useRef<HTMLElement>(null)
   const pagesRef = useRef<HTMLDivElement>(null)
@@ -108,11 +113,25 @@ function Stage({ pages, year, archetype, closeHref, copy, initialSheet, mode = "
   const offered = useRef(false)
   const fit = useFitStage(root, safeArea)
   const prefs = useRewindPrefs()
+  const [cut, chooseCut] = useStoryCut(year)
+  const pages = cut === "pocket" && pocket ? pocket : fullPages
   const entries = pages.map((page) => registry[page.type])
-  const { state, send } = useStoryPlayer(
-    entries.map((entry) => pageKind(entry.dwell)),
-    prefs.autoplay
+  const { state, send: sendPlayer } = useStoryPlayer(kindsOf(pages), prefs.autoplay)
+  // The cover's cut (FR-4): the page list swaps while the story is still on the cover, then the story starts.
+  const send = useCallback(
+    (event: PlayerEvent) => {
+      if (event.type === "CHOOSE_CUT" && event.cut && pocket) {
+        chooseCut(event.cut)
+        sendPlayer({ type: "SET_KINDS", kinds: kindsOf(event.cut === "pocket" ? pocket : fullPages) })
+      }
+      sendPlayer(event)
+    },
+    [chooseCut, sendPlayer, pocket, fullPages]
   )
+  // A reload resumes the stored cut once hydration reads it.
+  useEffect(() => {
+    sendPlayer({ type: "SET_KINDS", kinds: kindsOf(pages) })
+  }, [pages, sendPlayer])
   const setStageInk = useSetStageInk()
   const setStageArchetype = useSetStageArchetype()
 

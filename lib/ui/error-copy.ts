@@ -149,6 +149,7 @@ const COPY = {
   NOT_IN_AUDIENCE: rewind("Rewind isn't open to everyone on this server yet."),
   NO_PLEX_IDENTITY: rewind("Rewind needs Plex watch history. Jellyfin support is planned."),
   MANAGED_ACCOUNT: rewind("Rewind isn't made for managed Plex accounts on this server."),
+  JOINED_LATE: rewind("Your first Rewind arrives next year."),
 
   // RewindPanelCode: the /rewind/<year> status panels
   REWIND_GENERATING: {

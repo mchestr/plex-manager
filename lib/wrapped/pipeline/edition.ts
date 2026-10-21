@@ -5,8 +5,8 @@
  *
  * | Edition | Who | Pages |
  * |---|---|---|
- * | postcard | under 30 minutes, or 0 counted plays | 1 (the cover, until P7.3 draws the postcard) |
- * | pocket | under 5 hours, under 10 plays, or under 10 eligible pages | cover, number, short list, clock or calendar, centrefold, back cover |
+ * | postcard | under 30 minutes, or 0 counted plays | 1: the postcard |
+ * | pocket | under 5 hours, under 10 plays, or under 10 eligible pages | cover, number, short list, clock or calendar (`habitPage`), centrefold, back cover |
  * | full | everyone else | every eligible page, in issue order |
  *
  * Pocket and postcard copy is template-only (zero LLM calls, RWP-19).
@@ -21,7 +21,8 @@
  * @module lib/wrapped/pipeline/edition
  */
 
-import { issuePages, type IssuePageType } from "@/lib/rewind/registry"
+import { pocketTypes } from "@/lib/rewind/editions"
+import { issuePages, registry, type RewindPageType } from "@/lib/rewind/registry"
 import { eligiblePages, selectPages } from "@/lib/rewind/select-pages"
 import type { ArchetypeId } from "@/lib/wrapped/archetypes/catalogue"
 import { isPostcard } from "@/lib/wrapped/archetypes/select"
@@ -79,13 +80,12 @@ export function selectIssuePages(edition: Edition, facts: RewindFactsV3, ctx: Is
     const disabledPages = ctx.disabledPages.filter((type) => !FIXED.has(type))
     return selectPages(facts, { ...ctx, edition, disabledPages }).map(({ type, data }) => ({ type, data }))
   }
-  const eligible = new Map<IssuePageType, unknown>(
-    eligiblePages(facts, { ...ctx, edition, disabledPages: [] }).map((p) => [p.type, p.data])
-  )
-  const page = (type: PageType): IssuePage => ({ type, data: type === "short-list" ? null : (eligible.get(type) ?? null) })
-  if (edition === "postcard") return [page("cover")]
-  const types: PageType[] = ["cover", "number"]
-  if (eligible.has("top-shows") || eligible.has("top-films")) types.push("short-list")
-  types.push(eligible.has("clock") ? "clock" : "calendar", "centrefold", "back-cover")
-  return types.map(page)
+  const select = { ...ctx, edition, disabledPages: [] }
+  if (edition === "postcard") return [{ type: "postcard", data: registry.postcard.select(facts, select) }]
+  const eligible = new Map<RewindPageType, unknown>(eligiblePages(facts, select).map((p) => [p.type, p.data]))
+  const shortList = registry["short-list"].select(facts, select)
+  return pocketTypes(facts, (type) => eligible.has(type), shortList !== null).map((type) => ({
+    type,
+    data: type === "short-list" ? shortList : eligible.get(type),
+  }))
 }

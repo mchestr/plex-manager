@@ -105,11 +105,11 @@ describe("resolveCardState", () => {
     expect(resolveCardState(input({ eligibility: { eligible: false, reason } }))).toEqual({ kind: "not-eligible", reason: "jellyfin-only" })
   })
 
-  it("counts a member who joined on 1 October, and not one who joined on 2 October", () => {
-    expect(joinedLate(at("2026-10-01T23:30"), 2026, ZONE)).toBe(false)
-    expect(joinedLate(at("2026-10-02T00:00"), 2026, ZONE)).toBe(true)
-    expect(resolveCardState(input({ viewer: { isAdmin: false, joinedAt: at("2026-10-01T23:30") } }))?.kind).toBe("not-started")
-    expect(resolveCardState(input({ viewer: { isAdmin: false, joinedAt: at("2026-10-02T00:00") } }))).toEqual({
+  it("counts a member who joined on 30 September, and not one who joined on 1 October (P7.3)", () => {
+    expect(joinedLate(at("2026-09-30T23:59"), 2026, ZONE)).toBe(false)
+    expect(joinedLate(at("2026-10-01T00:00"), 2026, ZONE)).toBe(true)
+    expect(resolveCardState(input({ viewer: { isAdmin: false, joinedAt: at("2026-09-30T23:59") } }))?.kind).toBe("not-started")
+    expect(resolveCardState(input({ viewer: { isAdmin: false, joinedAt: at("2026-10-01T00:00") } }))).toEqual({
       kind: "not-eligible",
       reason: "joined-late",
       firstYear: 2027,
