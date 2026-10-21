@@ -38,7 +38,7 @@ export default async function RootLayout({
   // Every page formats in the stored zone and locale, so none prerenders at
   // build time, when there is no database.
   await connection();
-  const format = await getFormatSettings();
+  const [format, name] = await Promise.all([getFormatSettings(), serverName()]);
 
   return (
     <html lang="en" className={cn("dark", plexFontClassNames)} suppressHydrationWarning>
@@ -51,7 +51,7 @@ export default async function RootLayout({
         >
           Skip to content
         </a>
-        <Providers format={format}>
+        <Providers format={format} serverName={name}>
           {children}
           <Suspense fallback={null}>
             <FlashFromQuery />

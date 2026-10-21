@@ -1,19 +1,12 @@
 /**
- * Tests for admin error boundary
- * Tests that the error boundary properly handles unauthorized errors
+ * The admin boundary, inside the shell (P10.17): the gate's denials by
+ * digest, else an ErrorState whose Try again calls reset and a link to Users.
  */
 
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+
 import AdminError from '@/app/admin/error'
-
-// Mock the error components
-jest.mock('@/components/admin/shared/unauthorized-error', () => ({
-  UnauthorizedError: () => <div data-testid="unauthorized-error">Unauthorized Error Component</div>,
-}))
-
-jest.mock('@/components/admin/shared/unauthenticated-error', () => ({
-  UnauthenticatedError: () => <div data-testid="unauthenticated-error">Unauthenticated Error Component</div>,
-}))
 
 /** What the browser receives in production: a generic message and the digest. */
 function productionError(digest?: string): Error & { digest?: string } {
@@ -25,7 +18,6 @@ describe('AdminError Boundary', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    // Suppress console.error in tests
     jest.spyOn(console, 'error').mockImplementation(() => {})
   })
 
@@ -33,16 +25,18 @@ describe('AdminError Boundary', () => {
     jest.restoreAllMocks()
   })
 
-  it('renders UnauthenticatedError for the PM_UNAUTHENTICATED digest', () => {
+  it('renders the sign-in StatusScreen for the PM_UNAUTHENTICATED digest', () => {
     render(<AdminError error={productionError('PM_UNAUTHENTICATED')} reset={mockReset} />)
 
-    expect(screen.getByTestId('unauthenticated-error')).toBeInTheDocument()
+    expect(screen.getByTestId('unauthenticated-error-page')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Sign in to continue' })).toBeInTheDocument()
   })
 
-  it('renders UnauthorizedError for the PM_FORBIDDEN digest', () => {
+  it('renders the admins-only StatusScreen for the PM_FORBIDDEN digest', () => {
     render(<AdminError error={productionError('PM_FORBIDDEN')} reset={mockReset} />)
 
-    expect(screen.getByTestId('unauthorized-error')).toBeInTheDocument()
+    expect(screen.getByTestId('unauthorized-error-page')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Admins only' })).toBeInTheDocument()
   })
 
   it.each(['UNAUTHENTICATED', 'UNAUTHORIZED', 'FORBIDDEN', 'Admin access required'])(
@@ -50,49 +44,33 @@ describe('AdminError Boundary', () => {
     (message) => {
       render(<AdminError error={new Error(message)} reset={mockReset} />)
 
-      expect(screen.queryByTestId('unauthorized-error')).not.toBeInTheDocument()
-      expect(screen.queryByTestId('unauthenticated-error')).not.toBeInTheDocument()
-      expect(screen.getByText('500')).toBeInTheDocument()
+      expect(screen.queryByTestId('unauthorized-error-page')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('unauthenticated-error-page')).not.toBeInTheDocument()
+      expect(screen.getByTestId('error-state')).toBeInTheDocument()
     }
   )
 
-  it('should render generic error page for other errors', () => {
-    const error = new Error('Something broke')
+  it('renders an ErrorState whose Try again calls reset', async () => {
+    const user = userEvent.setup()
+    render(<AdminError error={new Error('Something broke')} reset={mockReset} />)
 
-    render(<AdminError error={error} reset={mockReset} />)
+    await user.click(screen.getByRole('button', { name: 'Try again' }))
 
-    expect(screen.queryByTestId('unauthorized-error')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('unauthenticated-error')).not.toBeInTheDocument()
-    expect(screen.getByText('500')).toBeInTheDocument()
+    expect(mockReset).toHaveBeenCalledTimes(1)
   })
 
-  it('should display Rex mascot for generic errors', () => {
-    const error = new Error('Something broke')
-    const { container } = render(<AdminError error={error} reset={mockReset} />)
+  it('links back to Users', () => {
+    render(<AdminError error={new Error('Something broke')} reset={mockReset} />)
 
-    const svg = container.querySelector('svg')
-    expect(svg).toBeInTheDocument()
-    expect(svg).toHaveAttribute('viewBox', '0 0 200 200')
+    expect(screen.getByRole('link', { name: 'Back to users' })).toHaveAttribute('href', '/admin/users')
   })
 
-  it('should log error to console', () => {
-    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
-    const error = new Error('Test error')
+  it('shows the digest and never the message', () => {
+    const { container } = render(
+      <AdminError error={Object.assign(new Error('token=abc rejected'), { digest: 'test-digest-123' })} reset={mockReset} />
+    )
 
-    render(<AdminError error={error} reset={mockReset} />)
-
-    expect(consoleSpy).toHaveBeenCalledWith('Admin page error:', error)
-
-    consoleSpy.mockRestore()
-  })
-
-  it('should handle error with digest property', () => {
-    const error = new Error('Test error') as Error & { digest?: string }
-    error.digest = 'test-digest-123'
-
-    render(<AdminError error={error} reset={mockReset} />)
-
-    expect(screen.getByText('500')).toBeInTheDocument()
+    expect(screen.getByTestId('error-state-digest')).toHaveTextContent('test-digest-123')
+    expect(container).not.toHaveTextContent('token=abc')
   })
 })
-

@@ -1,9 +1,12 @@
 import { Button } from "@/components/ui/button"
 import { Alert } from "@/components/ui/alert"
-import { LoadingScreen } from "@/components/ui/loading-screen"
+import { HomeSkeleton } from "@/components/dashboard/home-skeleton"
+import { ErrorState } from "@/components/ui/error-state"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { PageHeaderSkeleton, Skeleton, StatGridSkeleton, TableSkeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
+import { StatusScreen } from "@/components/ui/status-screen"
+import { icons } from "@/lib/ui/icons"
 
 import { Row, Specimen } from "./specimen"
 
@@ -50,8 +53,6 @@ export function SpinnerSpecimen() {
         <LoadingSpinner size="lg" />
         <LoadingSpinner size="xl" label="Loading users" />
       </Row>
-      <p className="text-label text-muted-foreground">LoadingScreen</p>
-      <LoadingScreen message="Loading your Rewind" className="min-h-0 rounded-lg border py-8" />
     </Specimen>
   )
 }
@@ -66,6 +67,33 @@ export function SkeletonSpecimen() {
       <PageHeaderSkeleton />
       <StatGridSkeleton count={4} />
       <TableSkeleton rows={3} columns={4} />
+      <p className="text-label text-muted-foreground">Home loading</p>
+      <div className="rounded-lg border">
+        <HomeSkeleton />
+      </div>
+    </Specimen>
+  )
+}
+
+/** The status screen and the in-card error (P10.17). */
+export function StatusSpecimens() {
+  return (
+    <Specimen id="status-screen" title="StatusScreen and ErrorState">
+      <div className="flex justify-center rounded-lg border px-4 py-10">
+        <StatusScreen
+          icon={icons.notFound}
+          code="404"
+          title="This page doesn't exist"
+          description="The link may be old, or the page may have moved."
+          primaryAction={<Button size="lg">Go to home</Button>}
+          secondaryAction={
+            <Button size="lg" variant="secondary">
+              Ask for help on Discord
+            </Button>
+          }
+        />
+      </div>
+      <ErrorState secondaryAction={<Button variant="secondary">Back to users</Button>} />
     </Specimen>
   )
 }
