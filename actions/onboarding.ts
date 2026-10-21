@@ -94,36 +94,3 @@ export const completeOnboarding = memberAction({
     return ok(null)
   },
 })
-
-/**
- * What the onboarding wizard shows: the requests link and the Discord step.
- *
- * Only the Overseerr public URL is returned, or null when none is set; the
- * internal URL is often a LAN or Docker address and is never sent to a member.
- */
-export const getOnboardingInfo = memberAction({
-  fallbackError: "Failed to load onboarding",
-  handler: async () => {
-    const [overseerr, discordIntegration] = await Promise.all([
-      prisma.overseerr.findFirst({
-        where: { isActive: true },
-        select: { publicUrl: true },
-      }),
-      prisma.discordIntegration.findUnique({
-        where: { id: "discord" },
-        select: {
-          isEnabled: true,
-          clientId: true,
-          clientSecret: true,
-          instructions: true,
-        },
-      }),
-    ])
-
-    return ok({
-      overseerrUrl: overseerr?.publicUrl || null,
-      discordEnabled: Boolean(discordIntegration?.isEnabled && discordIntegration?.clientId && discordIntegration?.clientSecret),
-      discordInstructions: discordIntegration?.instructions ?? null,
-    })
-  },
-})

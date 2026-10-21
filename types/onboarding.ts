@@ -1,67 +1,22 @@
-export interface OnboardingStep {
-  id: number
-  title: string
-  description: string
-}
-
 export type AuthService = "plex" | "jellyfin"
 
-const PLEX_ONBOARDING_STEPS: OnboardingStep[] = [
-  {
-    id: 1,
-    title: "Welcome",
-    description: "How it works",
-  },
-  {
-    id: 2,
-    title: "Configuration",
-    description: "Optimize Plex settings",
-  },
-  {
-    id: 3,
-    title: "Requests",
-    description: "Request new media",
-  },
-  {
-    id: 4,
-    title: "Support",
-    description: "Get help & join community",
-  },
-  {
-    id: 5,
-    title: "All Set!",
-    description: "Start exploring",
-  },
+/** The onboarding steps (ui-design-system 6.5); `final` is the Done step. */
+export type OnboardingStepId = "welcome" | "playback" | "requests" | "support" | "final"
+
+export interface OnboardingStep {
+  id: OnboardingStepId
+  label: string
+}
+
+const ONBOARDING_STEPS: readonly OnboardingStep[] = [
+  { id: "welcome", label: "Welcome" },
+  { id: "playback", label: "Playback" },
+  { id: "requests", label: "Requests" },
+  { id: "support", label: "Support" },
+  { id: "final", label: "Done" },
 ]
 
-const JELLYFIN_ONBOARDING_STEPS: OnboardingStep[] = [
-  {
-    id: 1,
-    title: "Welcome",
-    description: "How it works",
-  },
-  {
-    id: 2,
-    title: "Configuration",
-    description: "Optimize Jellyfin settings",
-  },
-  {
-    id: 3,
-    title: "Requests",
-    description: "Request new media",
-  },
-  {
-    id: 4,
-    title: "Support",
-    description: "Get help & join community",
-  },
-  {
-    id: 5,
-    title: "All Set!",
-    description: "Start exploring",
-  },
-]
-
-export function getOnboardingSteps(service: AuthService): OnboardingStep[] {
-  return service === "jellyfin" ? JELLYFIN_ONBOARDING_STEPS : PLEX_ONBOARDING_STEPS
+/** The member's steps: Requests only when the request site has a public URL. */
+export function getOnboardingSteps({ hasRequests }: { hasRequests: boolean }): OnboardingStep[] {
+  return ONBOARDING_STEPS.filter((step) => hasRequests || step.id !== "requests")
 }

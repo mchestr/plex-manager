@@ -1071,10 +1071,12 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 **Demo.** Complete onboarding on a phone in under 20 seconds: no overlays, a sticky Continue, and VoiceOver announcing each step's heading. A Jellyfin member sees Jellyfin instructions, and Link Discord returns to the Support step with "Discord linked".
 
 **Done when.**
-- [ ] The Stepper exists in both orientations with tests.
-- [ ] Onboarding has no space background, no interstitials and no infinite animation, and focus lands on each h1.
-- [ ] The copy is service-aware, has no admin hints and promises only configured features.
+- [x] The Stepper exists in both orientations with tests.
+- [x] Onboarding has no space background, no interstitials and no infinite animation, and focus lands on each h1.
+- [x] The copy is service-aware, has no admin hints and promises only configured features.
 - [ ] Discord goes through `/discord/connect?redirect=/onboarding`, and the E2E and visual checks pass.
+
+(as merged: `Stepper({ steps, orientation, label?, meta?, showCurrentLabel?, onSelect? })` in `components/ui/stepper.tsx`; steps are `{ id, label, state, optional?, group? }` with `state` `done | current | upcoming | skipped`. Horizontal hides the labels visually above five steps; `showCurrentLabel` gives "Step 3 of 9, Overseerr" for setup below `lg`; `onSelect` makes done and skipped steps buttons (setup's Back). The page reads `getOnboardingData(userId)` (`lib/member/onboarding.ts`: P10.22's `getHelpData` plus `Config.rewindEnabled`) instead of `getOnboardingInfo()`, which is deleted. Step ids are `welcome | playback | requests | support | final` (`types/onboarding.ts`), so the test ids are `onboarding-<id>-heading` and `-continue`. The Discord flow returns with a `discord_*` flash, which reopens the Support step. `SupportGuide`'s `linkHref` is now a plain `<a>` string, because the connect route is a route handler. Illustrations live in `components/guides/playback-illustration.tsx` and `requests-illustration.tsx`, so Help can reuse them. `space-background`, `success-animation` and `final-success-animation` stay until P10.25, since setup still imports them. The E2E spec is written but has not been run, and the step 2 baseline belongs to the owner.)
 
 ### Step P10.24: Setup wizard model: string step ids and Skip
 
