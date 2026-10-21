@@ -460,8 +460,9 @@ jobs:
   # three). "Visual Diffs" and "Rewind Visual Diffs" run the screenshot
   # projects and are advisory: a diff leaves a warning and the report, not a
   # failed check (refresh baselines with visual-baselines.yml). "Rewind
-  # Performance" (the 4x-throttled long-task and commit gate plus the
-  # first-page JavaScript budget, P5.4) is advisory the same way.
+  # Performance" (the 4x-throttled long-task and commit gate on a normal and
+  # a low-end device, the first-page JavaScript and page-chunk budgets; P5.4,
+  # P7.15) is advisory the same way until its budgets pass.
   e2e:
     name: ${{ matrix.suite.name }}
     runs-on: ubuntu-latest
@@ -477,7 +478,7 @@ jobs:
               --project=rewind-a11y-chromium --project=rewind-a11y-webkit --project=rewind-a11y-firefox
             advisory: false
             artifact: playwright-report
-            timeout: 40
+            timeout: 60
           # The setup projects pull in setup-wizard, which they depend on.
           - name: Visual Diffs
             projects: >-
@@ -495,14 +496,15 @@ jobs:
             artifact: rewind-visual-diffs
             warning: Screenshots differ from the baselines. Review the rewind-visual-diffs artifact; if the change is intended, run the Visual Baselines workflow (e2e/visual/README.md). A 12 px text or 44 px target check may have failed instead; the job log names the page.
             timeout: 60
-          # Advisory: long tasks under 4x throttling vary with the shared
-          # runner's CPU, and the JavaScript budget is not met yet (P5.4).
+          # Advisory until the first-page JavaScript fits its 110 KB budget
+          # (230 KB after P7.15) and heavy's low-end run stays under 50 ms;
+          # then set advisory to false (P7.15's blocking gate).
           - name: Rewind Performance
             projects: --project=rewind-perf
             advisory: true
             artifact: rewind-perf-report
-            warning: A Rewind performance budget failed (long tasks over 50 ms, commits between turns, or first-page JavaScript over 110 KB). The job log prints each measurement; see the rewind-perf-report artifact.
-            timeout: 15
+            warning: A Rewind performance budget failed (long tasks over 50 ms, commits between turns, first-page JavaScript over 110 KB or a page chunk over 12 KB). The job log prints each measurement; see the rewind-perf-report artifact.
+            timeout: 30
     # Keep the tag equal to the exact @playwright/test version in package.json.
     container:
       image: mcr.microsoft.com/playwright:v1.57.0-noble

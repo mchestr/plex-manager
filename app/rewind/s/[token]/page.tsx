@@ -16,6 +16,7 @@ import { isRedisConfigured } from "@/lib/queue/connection"
 import { ogPage } from "@/lib/rewind/cards/og"
 import { rewindFontVariables } from "@/lib/rewind/fonts"
 import { registry } from "@/lib/rewind/registry"
+import { saveDataRequested } from "@/lib/rewind/stage/low-end"
 import { pageInk } from "@/lib/rewind/stage/page-ink"
 import { clientIp } from "@/lib/security/client-ip"
 import { getAppSettings } from "@/lib/settings/app-settings"
@@ -126,7 +127,7 @@ export default async function SharedRewindPage({ params }: ShareParams) {
   const field = inkProps(ink.ink, ink.opts)
 
   return (
-    <RewindScope fontClassName={rewindFontVariables} archetype={archetype}>
+    <RewindScope fontClassName={rewindFontVariables} archetype={archetype} saveData={saveDataRequested(requestHeaders.get("save-data"))}>
       <main
         id="main"
         tabIndex={-1}

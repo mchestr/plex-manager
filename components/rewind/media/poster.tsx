@@ -1,10 +1,11 @@
 import { u } from "@/components/rewind/pages/units"
-import { Poster, type PosterSize } from "@/components/ui/poster"
+import type { PosterSize } from "@/components/ui/poster"
 import type { TonePair } from "@/lib/rewind/media/tone"
 import { posterKey } from "@/lib/rewind/pages/title-key.schema"
 import { posterWidthFor } from "@/lib/ui/poster-widths"
 import { cn } from "@/lib/utils"
 
+import { LowEndPoster } from "./low-end-poster"
 import { TitleCard } from "./title-card"
 
 interface RewindPosterProps {
@@ -25,18 +26,20 @@ const sizeFor = (px: number): PosterSize => (px <= 48 ? "xs" : px <= 96 ? "sm" :
 
 /**
  * A poster on a Rewind page (design 5.8): the shared `Poster` sized in
- * artboard units, requesting the smallest width that covers 2x, in full
- * colour or the page's duotone, with the 1.5 px keyline in the current ink
- * and the halftone title card as its fallback at the same size.
+ * artboard units, requesting the smallest width that covers 2x (1x in
+ * low-end mode, design 11.2), in full colour or the page's duotone, with
+ * the 1.5 px keyline in the current ink and the halftone title card as its
+ * fallback at the same size.
  */
 export function RewindPoster({ titleKey, title, width, colour, tone, priority, className }: RewindPosterProps) {
   const height = width * 1.5
   return (
-    <Poster
+    <LowEndPoster
       ratingKey={posterKey(titleKey)}
       title={title}
       size={sizeFor(width)}
       w={posterWidthFor(width)}
+      lowEndW={posterWidthFor(width, 1)}
       tone={colour === "full" ? "none" : tone}
       clash={colour === "full" ? tone : undefined}
       decorative

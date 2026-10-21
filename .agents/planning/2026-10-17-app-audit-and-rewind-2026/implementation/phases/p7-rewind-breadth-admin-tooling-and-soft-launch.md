@@ -737,9 +737,11 @@ The ten core pages (Bookends included), sharing, privacy and accessibility are n
 
 **Done when.**
 - [ ] The VoiceOver (iOS 26) and TalkBack (Android 16) scripts have been run, their failures fixed and the results recorded in the PR.
-- [ ] The forced-colours checks pass on every page.
-- [ ] Low-end mode uses the `scaleX` stretch, drops the grain blend and loads the smallest posters.
+- [x] The forced-colours checks pass on every page.
+- [x] Low-end mode uses the `scaleX` stretch, drops the grain blend and loads the smallest posters.
 - [ ] axe, the long-task gate and the bundle budget pass on every page of three fixtures.
+
+(as merged: `PENDING_PAGES` was already gone. Low-end mode: `lib/rewind/stage/low-end.ts`, `components/rewind/stage/low-end.tsx` (`useLowEnd`; the scope's context carries only the server's Save-Data answer and never changes) and `components/rewind/media/low-end-poster.tsx`, a client island so `RewindPoster` stays a server component; no paper grain exists yet, so there was none to drop, and a grain added later must sit under `[data-low-end]`. Forced colours: `.rw-hatch` keeps its own background with `--ink: CanvasText` and `.bg-current` fills with `CanvasText`; the blocking checks are `e2e/a11y/rewind-forced-colors.a11y.spec.ts` and the screenshots moved to `e2e/visual/rewind-forced-colors.spec.ts` (advisory, baselines from the Visual Baselines workflow). axe passes at 390x844, 390x664, 360x640 and 375x548 on chromium (webkit and firefox not run locally). Fixes: `node:crypto` in `lib/wrapped/copy/templates.ts`, `slots.ts`, `facts/hash.ts` and `archetypes/select.ts` pulled crypto-browserify (131 KB gzipped) into the story; they now use `lib/utils/sha256.ts` (same digests). A turn reveals the new neighbour page in idle time (`stage-page.tsx`), and the evidence dots animate as one element. Measured at 4x: longest task 0 ms on five of six runs and 57 ms on heavy low-end; first-page JavaScript 230 KB against 110 KB (Rewind's own segments about 167 KB: zod through the registry's page schemas, about 31 KB, and motion, about 48 KB, are the next cuts), no page chunk loads on a turn. So Rewind Performance stays advisory until the budget passes. Owner: the VoiceOver and TalkBack runs in `e2e/manual/rewind-screen-reader.md`.)
 
 ### Step P7.16: Gallery review and admin soft launch
 
