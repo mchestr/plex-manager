@@ -9,7 +9,7 @@
  */
 
 import { archetypeInks, type InkName, type InkPropsOptions } from "@/lib/design/tokens"
-import type { RegistryEntry } from "@/lib/rewind/registry"
+import type { PageMeta } from "@/lib/rewind/page-meta"
 import type { ArchetypeId } from "@/lib/wrapped/archetypes/catalogue"
 
 export interface PageInk {
@@ -17,7 +17,7 @@ export interface PageInk {
   opts: InkPropsOptions
 }
 
-export function pageInk(entry: Pick<RegistryEntry, "type" | "field" | "altField">, archetype: ArchetypeId | null): PageInk {
+export function pageInk(entry: Pick<PageMeta, "type" | "field" | "altField">, archetype: ArchetypeId | null): PageInk {
   const arch = archetype ? archetypeInks[archetype] : null
   if (entry.field === "archetype") return { ink: arch?.field ?? "paper", opts: arch ? { spot: "arch" } : {} }
   if (entry.type === "back-cover" && arch) return { ink: "paper", opts: { ink: "arch-deep" } }

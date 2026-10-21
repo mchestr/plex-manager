@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Switch } from "@/components/ui/switch"
-import { registry, type RewindPageType } from "@/lib/rewind/registry"
+import { pageMeta, type RewindPageType } from "@/lib/rewind/page-meta"
 import { cardFileName, cardUrl, type CardChoices } from "@/lib/rewind/share-sheet"
 import type { SharePageType } from "@/lib/wrapped/data/share-safe-schema"
 
@@ -91,7 +91,7 @@ export function ShareSheet({ open, onClose, page, atSettings }: ShareSheetProps)
   const file = useCardFile(url, name)
 
   if (!share || !setup || !choices) return null
-  const artOffered = current !== null && setup.allowArt && registry[current].share.art === true
+  const artOffered = current !== null && setup.allowArt && setup.artCards.includes(current)
   const membership = lapsed || !setup.canShare
 
   const onShare = async () => {
@@ -131,14 +131,14 @@ export function ShareSheet({ open, onClose, page, atSettings }: ShareSheetProps)
             {cards.length > 1 && current ? (
               <div className="flex items-center justify-between gap-4">
                 <Label id={`${id}-card`}>Card</Label>
-                <Select items={cards.map((card) => ({ value: card, label: registry[card].name }))} value={current} onValueChange={(value) => value && setPicked(value as SharePageType)}>
+                <Select items={cards.map((card) => ({ value: card, label: pageMeta[card].name }))} value={current} onValueChange={(value) => value && setPicked(value as SharePageType)}>
                   <SelectTrigger aria-labelledby={`${id}-card`} data-testid="rewind-share-picker">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {cards.map((card) => (
-                      <SelectItem key={card} value={card} label={registry[card].name} data-testid={`rewind-share-pick-${card}`}>
-                        {registry[card].name}
+                      <SelectItem key={card} value={card} label={pageMeta[card].name} data-testid={`rewind-share-pick-${card}`}>
+                        {pageMeta[card].name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -147,7 +147,7 @@ export function ShareSheet({ open, onClose, page, atSettings }: ShareSheetProps)
             ) : null}
             {url ? (
               // eslint-disable-next-line @next/next/no-img-element -- the preview is the card route's PNG, exactly what will be posted
-              <img src={url} alt={`${registry[current!].name} card`} width={1080} height={1920} className="mx-auto h-72 w-auto rounded-md border border-border" data-testid="rewind-share-preview" />
+              <img src={url} alt={`${pageMeta[current!].name} card`} width={1080} height={1920} className="mx-auto h-72 w-auto rounded-md border border-border" data-testid="rewind-share-preview" />
             ) : null}
           </>
         )}

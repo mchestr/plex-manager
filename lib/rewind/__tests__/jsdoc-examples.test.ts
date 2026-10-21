@@ -2,7 +2,7 @@
  * @jest-environment node
  */
 
-import { shareFormats } from '@/lib/rewind/notes'
+import { shareFormats } from '@/lib/rewind/page-meta'
 import { seasonPrepareAt } from '@/lib/rewind/season-runs'
 
 jest.mock('@/lib/prisma', () => ({ prisma: {} }))

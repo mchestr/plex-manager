@@ -19,12 +19,10 @@
  * ```
  *
  * This module is imported by client components, so it must stay free of
- * server-only imports.
+ * server-only imports, and of Zod, which the story's first page would load.
  *
  * @module lib/wrapped/generation-errors
  */
-
-import { z } from "zod"
 
 /**
  * P0.9's codes, then the generation job's (P2.17): `TIMEOUT` (the 5-minute
@@ -57,7 +55,13 @@ const REWIND_ERROR_CODES = [
 
 export type RewindErrorCode = (typeof REWIND_ERROR_CODES)[number]
 
-const storedErrorSchema = z.object({ code: z.enum(REWIND_ERROR_CODES) })
+const CODES: ReadonlySet<unknown> = new Set(REWIND_ERROR_CODES)
+
+/** The code of a stored `{ code }` object, or null. */
+function storedCode(value: unknown): RewindErrorCode | null {
+  if (typeof value !== "object" || value === null || !("code" in value)) return null
+  return CODES.has(value.code) ? (value.code as RewindErrorCode) : null
+}
 
 /**
  * Read `RewindGeneration.error` (`{ code }`) back as a code; anything else,
@@ -70,8 +74,7 @@ const storedErrorSchema = z.object({ code: z.enum(REWIND_ERROR_CODES) })
  * ```
  */
 export function readGenerationError(error: unknown): RewindErrorCode {
-  const parsed = storedErrorSchema.safeParse(error)
-  return parsed.success ? parsed.data.code : "GENERATION_FAILED"
+  return storedCode(error) ?? "GENERATION_FAILED"
 }
 
 /**
@@ -100,8 +103,7 @@ export function toStoredError(code: RewindErrorCode): string {
 export function readStoredError(error: string | null | undefined): RewindErrorCode {
   if (!error) return "GENERATION_FAILED"
   try {
-    const parsed = storedErrorSchema.safeParse(JSON.parse(error))
-    return parsed.success ? parsed.data.code : "GENERATION_FAILED"
+    return storedCode(JSON.parse(error)) ?? "GENERATION_FAILED"
   } catch {
     return "GENERATION_FAILED"
   }

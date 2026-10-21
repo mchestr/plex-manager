@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
-import { posterKey } from "@/lib/rewind/pages/title-key.schema"
+import { posterKey } from "@/lib/rewind/pages/title-key"
 
 import { useHideTitles } from "./hide-context"
 

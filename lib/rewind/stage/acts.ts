@@ -5,7 +5,7 @@
  * @module lib/rewind/stage/acts
  */
 
-import { registry, type Act, type RewindPageType } from "@/lib/rewind/registry"
+import { pageMeta, type Act, type RewindPageType } from "@/lib/rewind/page-meta"
 
 const ACT_LABELS: Record<Act, string> = {
   front: "Front",
@@ -36,7 +36,7 @@ export interface ActGroup {
 export function actGroups(types: readonly RewindPageType[]): ActGroup[] {
   const groups: ActGroup[] = []
   types.forEach((type, index) => {
-    const act = registry[type].act
+    const act = pageMeta[type].act
     const last = groups.at(-1)
     if (last?.act === act) last.pages.push(index)
     else groups.push({ act, label: ACT_LABELS[act], pages: [index] })

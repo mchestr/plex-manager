@@ -4,7 +4,7 @@ import { useReducedMotion } from "motion/react"
 import { useEffect, useId, useRef, type ReactNode } from "react"
 
 import { useStagePage } from "@/components/rewind/stage/stage-page"
-import { TURN_MS } from "@/lib/rewind/registry"
+import { TURN_MS } from "@/lib/rewind/page-meta"
 import { BAR_TWEEN_MS, frameKeyframes, ORDER_TWEEN_MS, raceDurationMs, type RaceRow } from "@/lib/rewind/viz/race"
 
 import { HatchDefs } from "./hatch"

@@ -13,6 +13,7 @@ import { usePathname } from 'next/navigation'
 import { AppShell } from '@/components/shell/app-shell'
 import { MemberNav } from '@/components/shell/member-nav'
 import { memberNav } from '@/lib/member/nav'
+import type { MemberNotice } from '@/lib/member/notice-rules'
 import type { ShellUser } from '@/lib/member/shell'
 
 expect.extend(toHaveNoViolations)
@@ -28,9 +29,15 @@ jest.mock('next/navigation', () => ({
 
 const mockPathname = usePathname as jest.Mock
 
+// The chrome is a `next/dynamic` chunk in the app; here it renders at once.
+jest.mock('@/components/subscription/subscription-banners', () => ({ SubscriptionBanners: () => null }))
+jest.mock('next/dynamic', () => () => require('@/components/shell/app-chrome').AppChrome)
+
+const OUTAGE: MemberNotice = { kind: 'outage', serviceName: 'Plex' }
+
 const member: ShellUser = { name: 'Theo Marsh', email: 'theo@example.com', initials: 'TM', isAdmin: false }
 
-function renderShell(user: ShellUser = member, notice?: React.ReactNode) {
+function renderShell(user: ShellUser = member, notice?: MemberNotice) {
   return render(
     <AppShell serverName="Northfield Plex" user={user} nav={memberNav({ rewindYear: 2026 })} notice={notice}>
       <p>Page</p>
@@ -74,7 +81,7 @@ describe('AppShell', () => {
 
   it('steps aside on Rewind pages, which draw their own chrome', () => {
     mockPathname.mockReturnValue('/rewind/2026')
-    renderShell(member, <div data-testid="app-notice" />)
+    renderShell(member, OUTAGE)
 
     expect(screen.queryByTestId('app-top-bar')).not.toBeInTheDocument()
     expect(screen.queryByTestId('app-notice')).not.toBeInTheDocument()
@@ -82,9 +89,9 @@ describe('AppShell', () => {
   })
 
   it('renders the notice under the top bar', () => {
-    renderShell(member, <div data-testid="app-notice">Payment failed</div>)
+    renderShell(member, OUTAGE)
 
-    expect(screen.getByTestId('app-notice')).toHaveTextContent('Payment failed')
+    expect(screen.getByTestId('app-notice')).toHaveTextContent('Plex is down')
   })
 
   it('opens the account menu by keyboard and signs out', async () => {

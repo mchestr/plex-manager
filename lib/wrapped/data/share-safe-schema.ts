@@ -12,7 +12,7 @@
 import { z } from "zod"
 
 import { RECORD_CELLS } from "@/lib/rewind/pages/records.schema"
-import { SHARE_PAGE_TYPES } from "@/lib/rewind/registry"
+import { SHARE_PAGE_TYPES } from "@/lib/rewind/page-meta"
 import { ARCHETYPE_IDS } from "@/lib/wrapped/archetypes/catalogue"
 import { FactIdSchema } from "@/lib/wrapped/facts/catalogue"
 

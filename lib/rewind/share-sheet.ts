@@ -21,6 +21,8 @@ export interface ShareSetup {
   year: number
   /** `eligibleCards` of the issue, in issue order. */
   cards: SharePageType[]
+  /** The cards whose page may print poster art (`share.art`). */
+  artCards: SharePageType[]
   /** `Config.rewindAllowArtOnCards`. */
   allowArt: boolean
   /** `Config.rewindPublicLinks`. */

@@ -5,7 +5,7 @@ import type { ReactNode } from "react"
 
 import { inkProps } from "@/lib/design/tokens"
 import type { ArticleBlock } from "@/lib/rewind/article/blocks"
-import { shareFormats } from "@/lib/rewind/notes"
+import { shareFormats } from "@/lib/rewind/page-meta"
 import type { PageTable, RewindPageType } from "@/lib/rewind/registry"
 import type { ActGroup } from "@/lib/rewind/stage/acts"
 import { cn } from "@/lib/utils"

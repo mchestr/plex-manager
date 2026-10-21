@@ -19,7 +19,7 @@ import type { FactId, RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 
 import { shown } from "./facts"
 import { RaceDataSchema, type RaceData } from "./race.schema"
-import { ratingKeyOf } from "./title-key.schema"
+import { ratingKeyOf } from "./title-key"
 import { monthName } from "./top-shows"
 
 const PLACES = ["first", "second", "third", "fourth", "fifth"]

@@ -18,7 +18,7 @@ import type { MemberStats } from "@/lib/wrapped/stats/compute"
 
 import { has, issueYear } from "./facts"
 import { GuessDataSchema, type GuessData, type QuizOption } from "./guess.schema"
-import { ratingKeyOf } from "./title-key.schema"
+import { ratingKeyOf } from "./title-key"
 
 const MIN_OPTIONS = 3
 

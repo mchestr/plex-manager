@@ -1,6 +1,6 @@
 "use client"
 
-import { domAnimation, LazyMotion, MotionConfig } from "motion/react"
+import { MotionConfig } from "motion/react"
 import type { Route } from "next"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -15,7 +15,8 @@ import { Button } from "@/components/ui/button"
 import { inkProps } from "@/lib/design/tokens"
 import type { ArticleBlock } from "@/lib/rewind/article/blocks"
 import type { CopyAuthor } from "@/lib/rewind/copy-disclosure"
-import { registry, REVEAL_DWELL_MS, type PageTable, type RewindPageType } from "@/lib/rewind/registry"
+import { pageMeta, REVEAL_DWELL_MS, type RewindPageType } from "@/lib/rewind/page-meta"
+import type { PageTable } from "@/lib/rewind/registry"
 import type { ShareSetup } from "@/lib/rewind/share-sheet"
 import { actGroups } from "@/lib/rewind/stage/acts"
 import { SPREAD_QUERY } from "@/lib/rewind/stage/fit-stage"
@@ -136,7 +137,7 @@ export function StoryStage({ share, hide, ...props }: StoryStageProps) {
   )
 }
 
-const kindsOf = (pages: readonly StoryStagePage[]) => pages.map((page) => pageKind(registry[page.type].dwell))
+const kindsOf = (pages: readonly StoryStagePage[]) => pages.map((page) => pageKind(pageMeta[page.type].dwell))
 
 function Stage({ pages: fullPages, pocket, year, serverName, archetype, closeHref, copy, initialSheet, mode = "member", articleHref: articleHrefProp, views }: Omit<StoryStageProps, "share" | "hide">) {
   const router = useRouter()
@@ -149,7 +150,7 @@ function Stage({ pages: fullPages, pocket, year, serverName, archetype, closeHre
   const prefs = useRewindPrefs()
   const [cut, chooseCut] = useStoryCut(year)
   const pages = cut === "pocket" && pocket ? pocket : fullPages
-  const entries = pages.map((page) => registry[page.type])
+  const entries = pages.map((page) => pageMeta[page.type])
   const { state, send: sendPlayer } = useStoryPlayer(kindsOf(pages), prefs.autoplay)
   // The cover's cut (FR-4): the page list swaps while the story is still on the cover, then the story starts.
   const send = useCallback(
@@ -268,7 +269,6 @@ function Stage({ pages: fullPages, pocket, year, serverName, archetype, closeHre
   return (
     <PlayerProvider value={send} sheet={state.mode === "sheet" ? state.sheet : null}>
       <QuizProvider year={year}>
-      <LazyMotion features={domAnimation} strict>
         <MotionConfig reducedMotion="user">
           {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- the labelled stage region takes the story keys while focus is inside it (design 4.6) */}
           <section
@@ -362,7 +362,7 @@ function Stage({ pages: fullPages, pocket, year, serverName, archetype, closeHre
                   playing={state.mode === "playing"}
                   slowerPacing={prefs.slowerPacing}
                   onDwellEnd={() => send({ type: "DWELL_END" })}
-                  groups={types.map((type) => groups.findIndex((group) => group.act === registry[type].act))}
+                  groups={types.map((type) => groups.findIndex((group) => group.act === pageMeta[type].act))}
                   testId="rewind-spread-progress"
                 />
               }
@@ -406,7 +406,6 @@ function Stage({ pages: fullPages, pocket, year, serverName, archetype, closeHre
             </RecordShareProvider>
           </section>
         </MotionConfig>
-      </LazyMotion>
       </QuizProvider>
     </PlayerProvider>
   )

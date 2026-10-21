@@ -13,6 +13,7 @@ import { z } from "zod"
 import { hasEntitlement } from "@/lib/actions/entitlement"
 import { prisma } from "@/lib/prisma"
 import { eligibleCards } from "@/lib/rewind/cards/eligible"
+import { registry } from "@/lib/rewind/registry"
 import type { ShareSetup } from "@/lib/rewind/share-sheet"
 import { getAppSettings } from "@/lib/settings/app-settings"
 import type { RewindDataV3 } from "@/lib/wrapped/data/schema-v3"
@@ -53,11 +54,13 @@ export async function loadShareSetup({
   const dailyDetail = prefs?.dailyDetail ?? false
   const printed = pages.map((page) => page.type).filter((type): type is SharePageType => SharePageTypeSchema.safeParse(type).success)
   const shared = toShareSafe(rewind, { pages: printed, signed: false, includeArt: false, dailyDetail, cardFacts: [] }, ctx)
+  const cards = eligibleCards(shared, { dailyDetail })
   const closes = new Date(season.closesAt.getTime() - 1000)
   return {
     rewindId,
     year,
-    cards: eligibleCards(shared, { dailyDetail }),
+    cards,
+    artCards: cards.filter((card) => registry[card].share.art === true),
     allowArt: config?.rewindAllowArtOnCards ?? true,
     publicLinks: config?.rewindPublicLinks ?? true,
     canShare,

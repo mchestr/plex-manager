@@ -2,7 +2,7 @@
 
 import { Radio } from "@base-ui/react/radio"
 import { RadioGroup } from "@base-ui/react/radio-group"
-import { m, useReducedMotion } from "motion/react"
+import { useReducedMotion } from "motion/react"
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react"
 
 import { usePlayerSend } from "@/components/rewind/stage/player-context"
@@ -33,8 +33,6 @@ interface QuizProps {
   reveals: Readonly<Record<number, string>>
 }
 
-const FLIP = { duration: 0.42, ease: [0.16, 1, 0.3, 1] as const }
-
 /** The answer's tile turns over to show "No. 1" and its hours (420 ms on Y; a 120 ms crossfade under reduced motion). */
 function TileArt({ art, back, flipped, reduce }: { art: ReactNode; back: ReactNode | null; flipped: boolean; reduce: boolean }) {
   if (!back) return art
@@ -48,10 +46,10 @@ function TileArt({ art, back, flipped, reduce }: { art: ReactNode; back: ReactNo
   }
   return (
     <span className="relative block perspective-[600px]">
-      <m.span className="relative block transform-3d" animate={{ rotateY: flipped ? 180 : 0 }} transition={FLIP}>
+      <span className={cn("relative block transition-transform duration-(--rw-dur-m) ease-(--rw-ease-stretch) transform-3d", flipped && "rotate-y-180")}>
         <span className="block backface-hidden">{art}</span>
         <span className="absolute inset-0 rotate-y-180 backface-hidden">{back}</span>
-      </m.span>
+      </span>
     </span>
   )
 }

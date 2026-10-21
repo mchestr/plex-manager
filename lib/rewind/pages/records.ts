@@ -33,7 +33,7 @@ import type { FactId, RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 import { pageDeck } from "./deck"
 import { has, num, shown } from "./facts"
 import { RECORD_CELLS, RecordsDataSchema, type RecordCell, type RecordsData } from "./records.schema"
-import { ratingKeyOf } from "./title-key.schema"
+import { ratingKeyOf } from "./title-key"
 
 /** A binge, and a day's episodes, need 3 or more. */
 const RECORD_MIN_EPISODES = 3

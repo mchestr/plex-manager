@@ -13,7 +13,7 @@ import type { NotesContext, PageDefinition } from "@/lib/rewind/registry"
 import type { FactId, RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 
 import { isFinalCut, shown } from "./facts"
-import { ratingKeyOf } from "./title-key.schema"
+import { ratingKeyOf } from "./title-key"
 import { TopShowsDataSchema, type TopShowsData } from "./top-lists.schema"
 
 /** A row's fact: `series[n].title` for the row at index n - 1. */

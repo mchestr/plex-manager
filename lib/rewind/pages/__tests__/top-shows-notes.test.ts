@@ -10,7 +10,7 @@ import { fixtureIssue } from "@/lib/rewind/__tests__/helpers/fixture-issue"
 import { textOf, type ArticleBlock } from "@/lib/rewind/article/blocks"
 import { topShowsPage } from "@/lib/rewind/pages/top-shows"
 import type { TopShowsData } from "@/lib/rewind/pages/top-lists.schema"
-import { ratingKeyOf } from "@/lib/rewind/pages/title-key.schema"
+import { ratingKeyOf } from "@/lib/rewind/pages/title-key"
 import { computeMemberStats } from "@/lib/wrapped/stats/compute"
 
 jest.mock("server-only", () => ({}))

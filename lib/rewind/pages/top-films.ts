@@ -11,7 +11,7 @@ import type { PageDefinition } from "@/lib/rewind/registry"
 import type { FactId } from "@/lib/wrapped/facts/catalogue"
 
 import { shown } from "./facts"
-import { ratingKeyOf } from "./title-key.schema"
+import { ratingKeyOf } from "./title-key"
 import { TopFilmsDataSchema, type TopFilmsData } from "./top-lists.schema"
 import { filmFact } from "./top-shows"
 

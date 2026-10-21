@@ -21,7 +21,7 @@ import { compareRanked } from "@/lib/wrapped/stats/rank"
 
 import { has, num, shown } from "./facts"
 import { ShortListDataSchema, type ShortListData, type ShortListRow } from "./short-list.schema"
-import { ratingKeyOf } from "./title-key.schema"
+import { ratingKeyOf } from "./title-key"
 
 /** Titles on the Short list. */
 const SHORT_LIST_LENGTH = 3
