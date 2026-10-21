@@ -9,7 +9,7 @@ import { DataTableSpecimen } from "./_sections/composite-tables"
 import { EmptyStateSpecimen, PageHeaderSpecimen, StatTileSpecimen } from "./_sections/composites"
 import { AlertDialogSpecimen, ConfirmDialogSpecimen, DialogSpecimen } from "./_sections/dialogs"
 import { BadgeSpecimen, CardSpecimen, IconSpecimen, StatusSpecimen } from "./_sections/display"
-import { AlertSpecimen, SkeletonSpecimen, SpinnerSpecimen } from "./_sections/feedback"
+import { AlertSpecimen, SkeletonSpecimen, SpinnerSpecimen, StatusSpecimens } from "./_sections/feedback"
 import { CheckboxSpecimen, FieldSpecimen, InputSpecimen, SelectSpecimen, SwitchSpecimen } from "./_sections/forms"
 import { InkSpecimen } from "./_sections/ink"
 import { DropdownMenuSpecimen, PopoverSpecimen, ToastSpecimen, TooltipSpecimen } from "./_sections/popups"
@@ -48,6 +48,7 @@ export default function DevUiPage() {
       <AlertSpecimen />
       <SpinnerSpecimen />
       <SkeletonSpecimen />
+      <StatusSpecimens />
       <IconSpecimen />
       <InputSpecimen />
       <FieldSpecimen />

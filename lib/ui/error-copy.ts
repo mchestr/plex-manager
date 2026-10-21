@@ -24,6 +24,7 @@
  */
 
 import type { ActionErrorCode } from "@/lib/actions/result"
+import { authErrorKind, type AuthErrorKind } from "@/lib/auth-errors"
 import type { ErrorCode } from "@/lib/security/error-handler"
 import type { FlashErrorCode } from "@/lib/ui/flash-codes"
 import { rewindInfraMessage, type RewindInfraCode } from "@/lib/rewind/infra-copy"
@@ -230,4 +231,50 @@ export function errorCopy(code: unknown, { audience }: { audience: Audience }): 
   if (!isKnownCode(code)) return GENERIC
   const entry: CopyEntry = COPY[code]
   return (audience === "admin" ? entry.admin : undefined) ?? entry.member
+}
+
+/** The admin gate's two denials (ui-design-system 6.7). */
+const AUTH_COPY: Record<AuthErrorKind, ErrorCopy> = {
+  unauthenticated: {
+    title: "Sign in to continue",
+    description: "The admin pages need you to sign in with your Plex account first.",
+  },
+  forbidden: {
+    title: "Admins only",
+    description: "These pages are for the server's admins, and your account isn't one.",
+  },
+}
+
+/** The copy for one of the admin gate's denials. */
+export function authCopy(kind: AuthErrorKind): ErrorCopy {
+  return AUTH_COPY[kind]
+}
+
+/** What an error boundary shows: the auth denial it is, or the copy for its digest. */
+interface BoundaryCopy extends ErrorCopy {
+  /** `unauthenticated` or `forbidden` for the admin gate's errors, else null. */
+  auth: AuthErrorKind | null
+  /** The digest to show in mono, when the error has one. */
+  code?: string
+}
+
+/**
+ * The copy an `error.tsx` boundary renders (SEC-20, UI-19). The auth errors
+ * are told apart by digest (`authErrorKind`), since a production build strips
+ * their name and message; any other error gets the copy for its digest when
+ * that is a known code, else "Something went wrong on our side". The message
+ * is never read.
+ *
+ * @example
+ * ```ts
+ * boundaryCopy(Object.assign(new Error("x"), { digest: "PM_FORBIDDEN" })).title // "Admins only"
+ * boundaryCopy(Object.assign(new Error("db:5432"), { digest: "abc123" })).code // "abc123"
+ * boundaryCopy(new Error("db:5432")).title // "Something went wrong on our side"
+ * ```
+ */
+export function boundaryCopy(error: Error & { digest?: string }): BoundaryCopy {
+  const auth = authErrorKind(error)
+  if (auth) return { auth, ...AUTH_COPY[auth] }
+  const copy = errorCopy(error.digest, { audience: "member" })
+  return error.digest ? { auth: null, ...copy, code: error.digest } : { auth: null, ...copy }
 }

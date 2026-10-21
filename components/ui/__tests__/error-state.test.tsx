@@ -76,6 +76,23 @@ describe('ErrorState', () => {
   })
 
   describe('digest', () => {
+    it("shows abc123 and never the message of Error('Can't reach database server at db:5432')", () => {
+      const { container } = render(
+        <ErrorState error={withDigest("Can't reach database server at db:5432", 'abc123')} />
+      )
+
+      expect(screen.getByText('abc123')).toHaveClass('font-mono')
+      expect(container).not.toHaveTextContent('db:5432')
+      expect(screen.getByRole('heading', { name: GENERIC_TITLE })).toBeInTheDocument()
+    })
+
+    it('renders as a Card with a secondary action beside Try again', () => {
+      render(<ErrorState reset={jest.fn()} secondaryAction={<a href="/admin/users">Back to users</a>} />)
+
+      expect(screen.getByTestId('error-state')).toHaveAttribute('data-slot', 'card')
+      expect(screen.getByRole('link', { name: 'Back to users' })).toBeInTheDocument()
+    })
+
     it('shows the digest in mono', () => {
       render(<ErrorState error={withDigest('secret detail', '2349871')} />)
 

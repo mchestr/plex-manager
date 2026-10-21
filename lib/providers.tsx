@@ -1,13 +1,22 @@
 'use client'
 
 import { ToastProvider } from '@/components/ui/toast'
+import { ServerNameProvider } from '@/lib/brand-context'
 import { FormatProvider } from '@/lib/format-context'
 import type { FormatSettings } from '@/lib/utils/format'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MotionConfig } from 'motion/react'
 import { useState } from 'react'
 
-export function Providers({ children, format }: { children: React.ReactNode; format: FormatSettings }) {
+export function Providers({
+  children,
+  format,
+  serverName,
+}: {
+  children: React.ReactNode
+  format: FormatSettings
+  serverName: string
+}) {
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -29,9 +38,11 @@ export function Providers({ children, format }: { children: React.ReactNode; for
       {/* The OS reduced-motion setting turns off transform and layout animations app-wide. */}
       <MotionConfig reducedMotion="user">
         <FormatProvider value={format}>
-          <ToastProvider>
-            {children}
-          </ToastProvider>
+          <ServerNameProvider value={serverName}>
+            <ToastProvider>
+              {children}
+            </ToastProvider>
+          </ServerNameProvider>
         </FormatProvider>
       </MotionConfig>
     </QueryClientProvider>

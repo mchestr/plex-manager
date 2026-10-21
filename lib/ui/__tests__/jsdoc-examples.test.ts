@@ -3,7 +3,7 @@
  * lib/ui/status.ts, lib/ui/poster-palette.ts and lib/ui/flash-codes.ts.
  */
 
-import { errorCopy } from '../error-copy'
+import { boundaryCopy, errorCopy } from '../error-copy'
 import { readFlash } from '../flash-codes'
 import { safeHref, safeLink } from '../markdown'
 import { posterPalette } from '../poster-palette'
@@ -52,6 +52,12 @@ describe('JSDoc Documentation Examples', () => {
     expect(errorCopy("Can't reach database server at db:5432", { audience: 'admin' }).title).toBe(
       'Something went wrong on our side'
     )
+  })
+
+  it('boundaryCopy', () => {
+    expect(boundaryCopy(Object.assign(new Error('x'), { digest: 'PM_FORBIDDEN' })).title).toBe('Admins only')
+    expect(boundaryCopy(Object.assign(new Error('db:5432'), { digest: 'abc123' })).code).toBe('abc123')
+    expect(boundaryCopy(new Error('db:5432')).title).toBe('Something went wrong on our side')
   })
 
   it('readFlash', () => {

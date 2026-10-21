@@ -741,10 +741,12 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 **Demo.** Open `/does-not-exist`: a branded 404 with Go to home. Throw from the dev route in a production build: the screen shows a digest, and `docker logs` shows the full error. Click between admin pages on a throttled connection: header and table skeletons appear inside the shell.
 
 **Done when.**
-- [ ] StatusScreen and ErrorState exist with tests, and no boundary renders `error.message`.
-- [ ] `app/not-found.tsx` and `app/global-error.tsx` exist, and the admin denial screens are StatusScreens.
-- [ ] Every `loading.tsx` in scope is a shaped skeleton, and the brand-text loaders are gone.
+- [x] StatusScreen and ErrorState exist with tests, and no boundary renders `error.message`.
+- [x] `app/not-found.tsx` and `app/global-error.tsx` exist, and the admin denial screens are StatusScreens.
+- [x] Every `loading.tsx` in scope is a shaped skeleton, and the brand-text loaders are gone.
 - [ ] The production-mode E2E spec and the baselines pass.
+
+(as merged: the denials are `components/shell/admin-denial.tsx` (`AdminDenial`, codes 401 and 403, ids `unauthenticated-error-page` and `unauthorized-error-page`, buttons `admin-denial-sign-in` and `go-home-button`); copy comes from `authCopy` and `boundaryCopy` in `lib/ui/error-copy.ts`. Client boundaries get the server name from `useServerName()` (`lib/brand-context.tsx`, which the root layout fills through `Providers`). `app/(app)/loading.tsx` was NOT added: a loader at the `(app)` level becomes the prefetched fallback for `/rewind/<year>` and replaces the story loader's `rewind-field` layer that the morph needs. The home skeleton is `components/dashboard/home-skeleton.tsx`, drawn on `/dev/ui` for the "home loading" frame; P10.21 wires it once the home page has its own segment. The callback loader is "Finishing sign-in" with a Spinner inside the auth PublicShell; P10.27 finishes it. `LoadingScreen`, both P6.1 denial files and `RexDinosaur` are deleted. `global-error.tsx` keeps a raw `<button>` (no Tailwind, no providers): P10.11 must allow it when the raw-element ban becomes an error. The admin sign-in link is `/?callbackUrl=/admin`, which nothing reads yet; P10.27's sign-in should honour it. E2E, visual and axe baselines were not run here.)
 
 ### Step P10.18: Admin users page as the reference list page
 

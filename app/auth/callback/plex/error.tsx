@@ -1,7 +1,13 @@
 "use client"
 
-import { ErrorState } from "@/components/ui/error-state"
+import { useEffect } from "react"
 
+import { Button } from "@/components/ui/button"
+import { StatusScreen } from "@/components/ui/status-screen"
+import { boundaryCopy } from "@/lib/ui/error-copy"
+import { icons } from "@/lib/ui/icons"
+
+/** The callback's boundary, inside the auth PublicShell: "Sign-in didn't finish" (ui-design-system 6.7). */
 export default function Error({
   error,
   reset,
@@ -9,10 +15,21 @@ export default function Error({
   error: Error & { digest?: string }
   reset: () => void
 }) {
+  useEffect(() => {
+    console.error("Sign-in callback error:", error)
+  }, [error])
+
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-      <ErrorState error={error} reset={reset} title="Sign In Error" />
-    </div>
+    <StatusScreen
+      icon={icons.warning}
+      code={boundaryCopy(error).code}
+      title="Sign-in didn't finish"
+      description="We couldn't finish signing you in. Please try again."
+      primaryAction={
+        <Button size="lg" onClick={reset} data-testid="error-retry">
+          Try again
+        </Button>
+      }
+    />
   )
 }
-

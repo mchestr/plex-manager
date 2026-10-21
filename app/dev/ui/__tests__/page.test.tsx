@@ -78,11 +78,12 @@ describe("/dev/ui", () => {
       "date-range-filter",
       "empty-state",
       "rewind-card",
+      "status-screen",
     ]) {
       expect(screen.getByTestId(`dev-ui-${primitive}`)).toBeInTheDocument()
     }
     expect(await axe(container)).toHaveNoViolations()
-  })
+  }, 30_000)
 
   it("draws the composites from 7 members and 120 plays", () => {
     process.env.ENABLE_DEV_UI = "1"

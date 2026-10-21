@@ -5,12 +5,11 @@ import { z } from "zod"
 
 import { AdminRewindArticle } from "@/components/admin/rewind/admin-rewind-article"
 import { RewindPreviewActions } from "@/components/admin/rewind/rewind-preview-actions"
-import { UnauthenticatedError } from "@/components/admin/shared/unauthenticated-error"
-import { UnauthorizedError } from "@/components/admin/shared/unauthorized-error"
 import { ArchiveArticle } from "@/components/rewind/article/archive-article"
 import { RewindIssue } from "@/components/rewind/rewind-issue"
 import { RewindStatusPanel } from "@/components/rewind/rewind-status-panel"
 import { RewindScope } from "@/components/rewind/stage/rewind-scope"
+import { AdminDenial } from "@/components/shell/admin-denial"
 import { Alert } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { PageHeader } from "@/components/ui/page-header"
@@ -72,7 +71,7 @@ function ViewStatus({ view }: { view: RewindYearView }) {
  */
 export default async function AdminUserRewindPage({ params, searchParams }: PreviewPageProps) {
   const gate = await getAdminGate()
-  if (!gate.ok) return gate.reason === "unauthenticated" ? <UnauthenticatedError /> : <UnauthorizedError />
+  if (!gate.ok) return <AdminDenial reason={gate.reason} />
 
   const parsed = ParamsSchema.safeParse(await params)
   if (!parsed.success) notFound()
