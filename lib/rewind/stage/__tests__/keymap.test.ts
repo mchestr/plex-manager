@@ -1,4 +1,4 @@
-import { keyToCommand } from "../keymap"
+import { isCompositeWidgetTarget, keyToCommand } from "../keymap"
 
 function element(html: string, selector: string): Element {
   document.body.innerHTML = html
@@ -69,5 +69,26 @@ describe("keyToCommand", () => {
     }
     expect(keyToCommand({ key: "t", target: notes }, { shortcuts: true })).toBe("table")
     expect(keyToCommand({ key: "Escape", target: notes }, { shortcuts: true })).toBe("escape")
+  })
+
+  describe("composite widgets (P8.3)", () => {
+    it.each([
+      ['<div role="slider" tabindex="0" id="w"></div>', "#w"],
+      ['<table role="grid"><tbody><tr role="row"><td role="gridcell" tabindex="0" id="w">4</td></tr></tbody></table>', "#w"],
+      ['<div role="radiogroup"><button role="radio" id="w">Jul</button></div>', "#w"],
+      ['<div role="tablist"><button role="tab" id="w">One</button></div>', "#w"],
+    ])("leaves the arrows, Home, End and the Page keys to %s", (html, selector) => {
+      const target = element(html, selector)
+      expect(isCompositeWidgetTarget(target)).toBe(true)
+      for (const key of ["ArrowRight", "ArrowLeft", "ArrowUp", "ArrowDown", "Home", "End", "PageUp", "PageDown"]) {
+        expect(keyToCommand({ key, target }, { shortcuts: true })).toBeNull()
+      }
+      expect(keyToCommand({ key: "Escape", target }, { shortcuts: true })).toBe("escape")
+    })
+
+    it("is not a widget outside one", () => {
+      expect(isCompositeWidgetTarget(stage())).toBe(false)
+      expect(isCompositeWidgetTarget(null)).toBe(false)
+    })
   })
 })

@@ -274,4 +274,41 @@ describe("StoryStage cuts (P7.3)", () => {
     expect(screen.queryByTestId("rewind-pause")).not.toBeInTheDocument()
     expect(screen.getByTestId("rewind-folio")).toHaveTextContent("01/01Postcard")
   })
+
+  describe("first tap completes a count-up (P8.3, stage.tap-completes)", () => {
+    /** Page 02 with its odometer still rising, as `getAnimations` would report it. */
+    async function onNumberPage(tapCompletes: boolean) {
+      const user = userEvent.setup()
+      render(<StoryStage pages={pages} year={2026} archetype="midnight-marathoner" closeHref="/home" copy={LLM_COPY} tapCompletes={tapCompletes} />)
+      const layer = screen.getByTestId("rewind-pages")
+      layer.getBoundingClientRect = () => ({ left: 0, top: 0, width: 390, height: 844, right: 390, bottom: 844, x: 0, y: 0, toJSON: () => ({}) })
+      await user.keyboard("{ArrowRight}")
+      const odometer = { playState: "running", effect: { target: current()!.querySelector("h2"), getComputedTiming: () => ({ endTime: 1200 }) }, finish: jest.fn() }
+      odometer.finish.mockImplementation(() => {
+        odometer.playState = "finished"
+      })
+      Object.defineProperty(current()!, "getAnimations", { value: () => [odometer], configurable: true })
+      const tap = (id: number) => {
+        fireEvent.pointerDown(layer, { pointerId: id, button: 0, clientX: 300, clientY: 400 })
+        fireEvent.pointerUp(layer, { pointerId: id, button: 0, clientX: 300, clientY: 400 })
+      }
+      return { odometer, tap }
+    }
+
+    it("lands the odometer on the first tap and turns the page on the second", async () => {
+      const { odometer, tap } = await onNumberPage(true)
+      tap(1)
+      expect(odometer.finish).toHaveBeenCalledTimes(1)
+      expect(current()).toHaveAttribute("data-index", "1")
+      tap(2)
+      expect(current()).toHaveAttribute("data-index", "2")
+    })
+
+    it("turns at once with the flag off", async () => {
+      const { odometer, tap } = await onNumberPage(false)
+      tap(1)
+      expect(odometer.finish).not.toHaveBeenCalled()
+      expect(current()).toHaveAttribute("data-index", "2")
+    })
+  })
 })

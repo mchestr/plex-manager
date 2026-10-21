@@ -1,8 +1,9 @@
+import dynamic from "next/dynamic"
 import { useId } from "react"
 
 import { RewindFigure } from "@/components/rewind/a11y/figure"
 import { formatDayMonth } from "@/lib/rewind/format"
-import { calendarDays, calendarPage, GRID_ACTIVE_DAYS } from "@/lib/rewind/pages/calendar"
+import { calendarDayRows, calendarDays, calendarPage, GRID_ACTIVE_DAYS } from "@/lib/rewind/pages/calendar"
 import type { CalendarData } from "@/lib/rewind/pages/calendar.schema"
 import { has, num, shown } from "@/lib/rewind/pages/facts"
 import { calendarGrid, type CalendarCell } from "@/lib/rewind/viz/calendar"
@@ -14,8 +15,17 @@ import { HatchDefs } from "./hatch"
 import { deckText, type PageProps } from "./issue-context"
 import { axes, u, ut } from "./units"
 
+// "Pick a day" (P8.3) loads as its own chunk, only on an issue whose flag is on.
+const DayPicker = dynamic(() => import("@/components/rewind/sheets/day-picker-sheet").then((m) => m.DayPicker))
+
 const CELL = 9
 const GAP = 2.5
+
+/** The month "Pick a day" opens on: the biggest day's, else the window's last. */
+function biggestMonth(facts: RewindFactsV3, days: ReadonlyArray<{ date: string }>): number {
+  const date = str(facts, "days.biggest.date") ?? days.at(-1)?.date
+  return date ? Number(date.slice(5, 7)) : 1
+}
 
 const str = (facts: RewindFactsV3, id: "streak.longest.from" | "streak.longest.to" | "days.biggest.date") => {
   const value = facts[id]?.value
@@ -122,7 +132,9 @@ export function CalendarPage({ data, issue }: PageProps<CalendarData>) {
           </>
         )}
       </RewindFigure>
-      {/* P8.3 adds "Pick a day" (rewind-day-picker, FR-9) here, reading only this page's stored days and titles. */}
+      {issue.features?.["calendar.day-picker"] && played.length > 0 && (
+        <DayPicker days={calendarDayRows(data, facts, { locale })} initialMonth={biggestMonth(facts, days)} locale={locale} />
+      )}
     </div>
   )
 }

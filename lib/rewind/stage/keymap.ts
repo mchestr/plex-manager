@@ -9,7 +9,9 @@
  * preference is on. Nothing fires from a text field or from inside a sheet,
  * modified keys are left to the browser, Space on a button or link is left to
  * that control, and inside `[data-rw-interactive]` (quiz, scrubber) only Esc
- * is taken. Inside `[data-rw-scroll]` (the desktop spread's rail and Notes,
+ * is taken. Inside a composite widget (a slider, a grid, a radio group or a
+ * tab list; {@link isCompositeWidgetTarget}) the arrows, Home, End and the Page
+ * keys belong to the widget and Esc still closes. Inside `[data-rw-scroll]` (the desktop spread's rail and Notes,
  * P7.4) the arrows, Page keys, Home, End and Space are left to scroll it.
  *
  * @module lib/rewind/stage/keymap
@@ -45,8 +47,22 @@ const SCROLL_KEYS = new Set(["ArrowRight", "ArrowLeft", "ArrowUp", "ArrowDown", 
 const TEXT_FIELD = 'input, textarea, select, [contenteditable=""], [contenteditable="true"]'
 const CONTROL = 'button, a[href], [role="button"], [role="switch"], [role="checkbox"], [role="radio"], [role="link"]'
 
+/** Keys a composite widget (the race scrubber, the calendar grid, a month selector) moves itself with. */
+const WIDGET_KEYS = new Set(["ArrowRight", "ArrowLeft", "ArrowUp", "ArrowDown", "PageDown", "PageUp", "Home", "End"])
+
+const COMPOSITE_WIDGET = '[role="slider"], [role="grid"], [role="radiogroup"], [role="tablist"]'
+
 function closest(target: EventTarget | null, selector: string): boolean {
   return typeof Element !== "undefined" && target instanceof Element && target.closest(selector) !== null
+}
+
+/**
+ * Whether `target` sits inside a slider, a grid, a radio group or a tab list, whose arrow keys are its own (P8.3).
+ *
+ * @internal `keyToCommand` uses it; the tests check it directly.
+ */
+export function isCompositeWidgetTarget(target: EventTarget | null): boolean {
+  return closest(target, COMPOSITE_WIDGET)
 }
 
 export function keyToCommand(event: KeyInput, { shortcuts }: { shortcuts: boolean }): StageCommand | null {
@@ -56,6 +72,7 @@ export function keyToCommand(event: KeyInput, { shortcuts }: { shortcuts: boolea
   const command = ALWAYS[event.key] ?? (shortcuts ? LETTERS[event.key.toLowerCase()] : undefined) ?? null
   if (command === null || command === "escape") return command
   if (closest(event.target, "[data-rw-interactive]")) return null
+  if (WIDGET_KEYS.has(event.key) && isCompositeWidgetTarget(event.target)) return null
   if (SCROLL_KEYS.has(event.key) && closest(event.target, "[data-rw-scroll]")) return null
   if ((event.key === " " || event.key === "Enter") && closest(event.target, CONTROL)) return null
   return command

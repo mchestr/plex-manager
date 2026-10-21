@@ -20,7 +20,7 @@ function renderIssue(issue: FixtureIssue) {
 }
 
 /** Every block kind P7.13's legacy adapter will emit, built by hand as the adapter would from a v2 section. */
-const LEGACY_BLOCKS: Record<ArticleBlockKind, ArticleBlock> = {
+const LEGACY_BLOCKS: Record<Exclude<ArticleBlockKind, "calendar">, ArticleBlock> = {
   heading: { kind: "heading", text: plain("Your year in review") },
   paragraph: { kind: "paragraph", text: [{ kind: "text", text: "You watched " }, { kind: "title", id: "legacy.title", text: "שוגון" }, { kind: "text", text: " most." }] },
   factRow: { kind: "factRow", items: [{ value: "412", label: "hours" }] },

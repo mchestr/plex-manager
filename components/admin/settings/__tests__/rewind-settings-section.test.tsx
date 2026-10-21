@@ -131,6 +131,21 @@ describe('RewindSettingsSection', () => {
     expect(screen.queryByRole('checkbox', { name: /cover/i })).not.toBeInTheDocument()
   })
 
+  it('turns a December feature on with its +key, keeping the disabled pages (P8.3)', async () => {
+    const user = userEvent.setup()
+    renderSection({ saved: { ...saved, rewindDisabledPages: ['people', '+calendar.grid'] } })
+
+    const features = within(screen.getByTestId('rewind-settings-features')).getAllByRole('checkbox')
+    expect(features.length).toBeGreaterThanOrEqual(4)
+    expect(screen.getByRole('checkbox', { name: 'Notes and article calendar: arrow-key grid' })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'The race: scrubber and Replay' })).not.toBeChecked()
+
+    await user.click(screen.getByRole('checkbox', { name: 'The race: scrubber and Replay' }))
+    await user.click(screen.getByRole('checkbox', { name: 'Taste' }))
+    await user.click(screen.getByTestId('rewind-settings-save'))
+    expect(updateRewindSettings).toHaveBeenCalledWith({ ...saved, rewindDisabledPages: ['people', 'taste', '+race.scrubber', '+calendar.grid'] })
+  })
+
   it('labels every control', () => {
     renderSection()
 

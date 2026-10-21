@@ -1,7 +1,8 @@
 "use client"
 
 import { useReducedMotion } from "motion/react"
-import { useEffect, useId, useRef, type ReactNode } from "react"
+import dynamic from "next/dynamic"
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react"
 
 import { useStagePage } from "@/components/rewind/stage/stage-page"
 import { TURN_MS } from "@/lib/rewind/page-meta"
@@ -9,6 +10,9 @@ import { BAR_TWEEN_MS, frameKeyframes, ORDER_TWEEN_MS, raceDurationMs, type Race
 
 import { HatchDefs } from "./hatch"
 import { axes, MEASURE, u, ut } from "./units"
+
+// The scrubber's island loads only once its controls show (P8.3), outside the first page's budget.
+const RaceControls = dynamic(() => import("./race-controls").then((m) => m.RaceControls), { ssr: false })
 
 const BAR_H = 12
 const CLOCK_LINE = 30
@@ -28,6 +32,12 @@ interface RaceAnimatorProps {
   months: readonly string[]
   /** Row pitch in logical px. */
   pitch: number
+  /** The scrubber's live line per frame ("Standings after August: ..."). */
+  standings?: readonly string[]
+  /** `race.scrubber` (P8.3): the scrubber and Replay show after the run. */
+  scrubber?: boolean
+  /** The who-led strip, between the bars and the controls. */
+  children?: ReactNode
 }
 
 const ease = "cubic-bezier(0.2, 0, 0, 1)"
@@ -44,46 +54,87 @@ const tick = (i: number, n: number) => `translateY(${(-i / n) * 100}%)`
  * frame every 520 ms after the page turn. Nothing sets React state during
  * the run, so the story commits no render for it. A revisit, reduced
  * motion, or leaving the page mid-run shows the final frame.
+ *
+ * With `scrubber` on (P8.3), the controls show once the run has ended, or at
+ * once under reduced motion or on a revisit. `seek(frame)` sets each bar's
+ * `scaleX`, each lane's `translateY` and the clock straight on the elements,
+ * and Replay plays the months again from January.
  */
-export function RaceAnimator({ rows, months, pitch }: RaceAnimatorProps) {
+export function RaceAnimator({ rows, months, pitch, standings = [], scrubber = false, children }: RaceAnimatorProps) {
   const hatch = useId()
   const current = useStagePage().distance === 0
   const reduce = useReducedMotion()
   const played = useRef(false)
-  const bars = useRef<Array<Element | null>>([])
-  const lanes = useRef<Array<Element | null>>([])
+  const bars = useRef<Array<SVGRectElement | null>>([])
+  const lanes = useRef<Array<HTMLDivElement | null>>([])
   const clock = useRef<HTMLSpanElement | null>(null)
+  const runs = useRef<Animation[]>([])
+  const [ran, setRan] = useState(false)
   const last = months.length - 1
+
+  const stop = useCallback(() => {
+    runs.current.forEach((a) => a.cancel())
+    runs.current = []
+  }, [])
+
+  /** Sets every element at `frame`; the rendered resting frame is the last. */
+  const seek = useCallback(
+    (frame: number) => {
+      stop()
+      rows.forEach((row, i) => {
+        const bar = bars.current[i]
+        const laneEl = lanes.current[i]
+        if (bar) bar.style.transform = `scaleX(${row.geometry.scale[frame]})`
+        if (laneEl) laneEl.style.transform = lane(row.geometry.offset[frame] / pitch)
+      })
+      if (clock.current) clock.current.style.transform = tick(frame, months.length)
+    },
+    [rows, months.length, pitch, stop]
+  )
+
+  /** Plays every frame from January after `delay` ms; settles when the run ends or is stopped. */
+  const play = useCallback(
+    (delay: number) => {
+      stop()
+      const timing = { duration: raceDurationMs(months.length), delay, fill: "backwards" as const }
+      const run = (el: Element | null, keyframes: Keyframe[]) => {
+        if (el && typeof el.animate === "function") runs.current.push(el.animate(keyframes, timing))
+      }
+      rows.forEach((row, i) => {
+        run(
+          bars.current[i],
+          frameKeyframes(row.geometry.scale, BAR_TWEEN_MS, 0).map(({ offset, value }) => ({ offset, transform: `scaleX(${value})`, easing: ease }))
+        )
+        run(
+          lanes.current[i],
+          frameKeyframes(row.geometry.offset, ORDER_TWEEN_MS, row.geometry.offset[0]).map(({ offset, value }) => ({ offset, transform: lane(value / pitch), easing: ease }))
+        )
+      })
+      run(
+        clock.current,
+        frameKeyframes(
+          months.map((_m, i) => i),
+          0,
+          0
+        ).map(({ offset, value }) => ({ offset, transform: tick(value, months.length) }))
+      )
+      return Promise.allSettled(runs.current.map((a) => a.finished))
+    },
+    [rows, months, pitch, stop]
+  )
 
   useEffect(() => {
     if (!current || played.current) return
     played.current = true
     if (reduce) return
-    const timing = { duration: raceDurationMs(months.length), delay: TURN_MS, fill: "backwards" as const }
-    const runs: Animation[] = []
-    const run = (el: Element | null, keyframes: Keyframe[]) => {
-      if (el && typeof el.animate === "function") runs.push(el.animate(keyframes, timing))
-    }
-    rows.forEach((row, i) => {
-      run(
-        bars.current[i],
-        frameKeyframes(row.geometry.scale, BAR_TWEEN_MS, 0).map(({ offset, value }) => ({ offset, transform: `scaleX(${value})`, easing: ease }))
-      )
-      run(
-        lanes.current[i],
-        frameKeyframes(row.geometry.offset, ORDER_TWEEN_MS, row.geometry.offset[0]).map(({ offset, value }) => ({ offset, transform: lane(value / pitch), easing: ease }))
-      )
-    })
-    run(
-      clock.current,
-      frameKeyframes(
-        months.map((_m, i) => i),
-        0,
-        0
-      ).map(({ offset, value }) => ({ offset, transform: tick(value, months.length) }))
-    )
-    return () => runs.forEach((a) => a.cancel())
-  }, [current, reduce, rows, months, pitch])
+    void play(TURN_MS).then(() => setRan(true))
+    return stop
+  }, [current, reduce, play, stop])
+
+  const replay = () => {
+    seek(last)
+    void play(0)
+  }
 
   return (
     <div data-testid="rewind-race-animator">
@@ -132,6 +183,8 @@ export function RaceAnimator({ rows, months, pitch }: RaceAnimatorProps) {
           </div>
         ))}
       </div>
+      {children}
+      {scrubber && (ran || reduce) && <RaceControls months={months} standings={standings} onSeek={seek} onReplay={replay} />}
     </div>
   )
 }

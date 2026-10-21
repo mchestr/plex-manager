@@ -8,6 +8,12 @@ export interface GestureHandlers {
   onGesture: (gesture: Exclude<Gesture, { kind: "none" | "hold" }>) => void
   onHoldStart: () => void
   onHoldEnd: () => void
+  /**
+   * `stage.tap-completes` (P8.3): called on a forward tap before it turns the
+   * page; returning true (it finished a running count-up) stops the tap there.
+   * Swipes, keys and buttons always turn.
+   */
+  completeFirst?: () => boolean
 }
 
 interface Press {
@@ -24,13 +30,14 @@ interface Press {
  * Feeds pointer samples from the page layer to the pure classifier in
  * `lib/rewind/stage/gestures`. A press that starts inside
  * `[data-rw-interactive]` is left alone. One timer checks for a hold at
- * 250 ms; nothing else runs while a finger is down.
+ * 250 ms; nothing else runs while a finger is down. With `completeFirst`
+ * (P8.3), a forward tap first lands a running count-up.
  */
-export function useStageGestures({ onGesture, onHoldStart, onHoldEnd }: GestureHandlers) {
+export function useStageGestures({ onGesture, onHoldStart, onHoldEnd, completeFirst }: GestureHandlers) {
   const press = useRef<Press | null>(null)
-  const handlers = useRef({ onGesture, onHoldStart, onHoldEnd })
+  const handlers = useRef({ onGesture, onHoldStart, onHoldEnd, completeFirst })
   useEffect(() => {
-    handlers.current = { onGesture, onHoldStart, onHoldEnd }
+    handlers.current = { onGesture, onHoldStart, onHoldEnd, completeFirst }
   })
 
   const end = useCallback((event: ReactPointerEvent<HTMLElement>, cancelled: boolean) => {
@@ -42,6 +49,7 @@ export function useStageGestures({ onGesture, onHoldStart, onHoldEnd }: GestureH
     if (cancelled) return
     current.samples.push({ x: event.clientX - current.left, y: event.clientY, t: event.timeStamp })
     const gesture = classifyPress(current.samples, current.width, current.origin)
+    if (gesture.kind === "tap" && gesture.direction === "forward" && handlers.current.completeFirst?.()) return
     if (gesture.kind !== "none" && gesture.kind !== "hold") handlers.current.onGesture(gesture)
   }, [])
 

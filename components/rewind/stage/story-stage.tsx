@@ -24,6 +24,7 @@ import { keyToCommand, type StageCommand } from "@/lib/rewind/stage/keymap"
 import { pageInk } from "@/lib/rewind/stage/page-ink"
 import { pageKind, type PlayerEvent, type SheetName } from "@/lib/rewind/stage/player-reducer"
 import { readPrefs } from "@/lib/rewind/stage/prefs"
+import { completeRunning } from "@/lib/rewind/stage/running-animations"
 import { cn } from "@/lib/utils"
 import type { ArchetypeId } from "@/lib/wrapped/archetypes/catalogue"
 
@@ -85,6 +86,8 @@ interface StoryStageProps {
   articleHref?: Route
   /** View tracking (P7.14); only the member mode records views. */
   views?: ViewTracking
+  /** `stage.tap-completes` (P8.3): a forward tap first lands a running count-up. */
+  tapCompletes?: boolean
 }
 
 /** Before the first fit: the 390 x 844 roomy layout at scale 1, and the spread at 1440 x 900. */
@@ -139,7 +142,7 @@ export function StoryStage({ share, hide, ...props }: StoryStageProps) {
 
 const kindsOf = (pages: readonly StoryStagePage[]) => pages.map((page) => pageKind(pageMeta[page.type].dwell))
 
-function Stage({ pages: fullPages, pocket, year, serverName, archetype, closeHref, copy, initialSheet, mode = "member", articleHref: articleHrefProp, views }: Omit<StoryStageProps, "share" | "hide">) {
+function Stage({ pages: fullPages, pocket, year, serverName, archetype, closeHref, copy, initialSheet, mode = "member", articleHref: articleHrefProp, views, tapCompletes = false }: Omit<StoryStageProps, "share" | "hide">) {
   const router = useRouter()
   const root = useRef<HTMLElement>(null)
   const pagesRef = useRef<HTMLDivElement>(null)
@@ -223,6 +226,7 @@ function Stage({ pages: fullPages, pocket, year, serverName, archetype, closeHre
     },
     onHoldStart: () => send({ type: "HOLD_START" }),
     onHoldEnd: () => send({ type: "HOLD_END" }),
+    completeFirst: tapCompletes ? () => completeRunning(pagesRef.current?.querySelector("[data-current]")) : undefined,
   })
 
   const run = (command: StageCommand) => {
