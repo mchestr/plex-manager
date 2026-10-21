@@ -15,7 +15,7 @@ export function RequestsCard({ url }: RequestsCardProps) {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="group relative flex items-center gap-3 overflow-hidden rounded-xl border border-purple-500/20 bg-gradient-to-br from-purple-950/50 via-slate-900 to-slate-900 p-3 sm:p-4 shadow-lg shadow-black/20 transition-all duration-300 hover:border-purple-500/40 hover:shadow-purple-500/10"
+      className="group relative flex items-center gap-3 overflow-hidden rounded-xl border border-border bg-card p-3 sm:p-4 transition-colors duration-300 hover:bg-accent"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: "easeOut", delay: 0.05 }}
@@ -23,13 +23,10 @@ export function RequestsCard({ url }: RequestsCardProps) {
       whileTap={{ scale: 0.98 }}
       data-testid="requests-card"
     >
-      {/* Ambient glow effect */}
-      <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-purple-500/10 blur-2xl transition-all duration-500 group-hover:bg-purple-500/20" />
-
       {/* Overseerr-style icon */}
-      <div className="relative flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-purple-700 shadow-md shadow-purple-500/20">
+      <div className="relative flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-lg bg-secondary">
         <svg
-          className="h-5 w-5 sm:h-6 sm:w-6 text-white"
+          className="h-5 w-5 sm:h-6 sm:w-6 text-foreground"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -43,13 +40,12 @@ export function RequestsCard({ url }: RequestsCardProps) {
         </svg>
       </div>
 
-      <span className="relative text-base sm:text-lg font-semibold text-white">
+      <span className="relative text-base sm:text-lg font-semibold text-foreground">
         Requests
       </span>
-
       {/* Arrow indicator */}
       <svg
-        className="ml-auto h-4 w-4 text-muted-foreground transition-all duration-200 group-hover:text-purple-400 group-hover:translate-x-0.5"
+        className="ml-auto h-4 w-4 text-muted-foreground transition-all duration-200 group-hover:text-foreground group-hover:translate-x-0.5"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"

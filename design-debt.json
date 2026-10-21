@@ -1,13 +1,8 @@
 {
   "schema": 1,
-  "commit": "17bdaf72324067c53873c270b6762cb3a8daa0f0",
-  "generatedAt": "2026-10-21T21:51:42.641Z",
+  "commit": "cf0de46dc1e409713fc96a43aa2211dcb719678a",
+  "generatedAt": "2026-10-21T21:57:53.332Z",
   "files": {
-    "app/(app)/page.tsx": {
-      "gradient": 2,
-      "gradient-text": 4,
-      "raw-palette": 7
-    },
     "app/admin/cost-analysis/page.tsx": {
       "blur": 13,
       "infinite-motion": 1,
@@ -17,6 +12,10 @@
       "blur": 16,
       "infinite-motion": 2,
       "raw-palette": 73
+    },
+    "app/admin/error.tsx": {
+      "infinite-motion": 1,
+      "raw-palette": 2
     },
     "app/admin/llm-usage/[usageId]/page.tsx": {
       "blur": 7,
@@ -31,6 +30,35 @@
       "blur": 5,
       "caps-eyebrow": 7,
       "raw-palette": 66
+    },
+    "app/admin/loading.tsx": {
+      "gradient": 1,
+      "raw-palette": 3
+    },
+    "app/admin/prompts/[promptId]/edit/page.tsx": {
+      "gradient": 1,
+      "gradient-text": 2,
+      "raw-palette": 6
+    },
+    "app/admin/prompts/[promptId]/page.tsx": {
+      "blur": 4,
+      "raw-palette": 23
+    },
+    "app/admin/prompts/new/page.tsx": {
+      "gradient": 1,
+      "gradient-text": 2,
+      "raw-palette": 6
+    },
+    "app/admin/prompts/page.tsx": {
+      "blur": 1,
+      "caps-eyebrow": 6,
+      "gradient": 2,
+      "raw-palette": 37
+    },
+    "app/admin/queues/page.tsx": {
+      "blur": 1,
+      "infinite-motion": 1,
+      "raw-palette": 13
     },
     "app/admin/settings/page.tsx": {
       "blur": 5,
@@ -60,16 +88,48 @@
       "blur": 2,
       "raw-palette": 9
     },
+    "app/auth/callback/plex/error.tsx": {
+      "raw-palette": 1
+    },
+    "app/auth/callback/plex/loading.tsx": {
+      "raw-palette": 1
+    },
     "app/auth/denied/denied-client.tsx": {
       "blur": 1,
       "infinite-motion": 4,
       "raw-palette": 12
+    },
+    "app/error.tsx": {
+      "gradient": 1,
+      "raw-palette": 3
+    },
+    "app/invite/[code]/error.tsx": {
+      "raw-palette": 1
+    },
+    "app/invite/[code]/loading.tsx": {
+      "raw-palette": 1
     },
     "app/invite/[code]/page.tsx": {
       "blur": 3,
       "gradient": 3,
       "gradient-text": 4,
       "raw-palette": 26
+    },
+    "app/loading.tsx": {
+      "gradient": 1,
+      "raw-palette": 3
+    },
+    "app/onboarding/error.tsx": {
+      "raw-palette": 1
+    },
+    "app/onboarding/loading.tsx": {
+      "raw-palette": 1
+    },
+    "app/setup/error.tsx": {
+      "raw-palette": 1
+    },
+    "app/setup/loading.tsx": {
+      "raw-palette": 1
     },
     "app/subscribe/page.tsx": {
       "raw-palette": 4
@@ -152,6 +212,38 @@
     "components/admin/prompts/prompt-scrollspy.tsx": {
       "raw-palette": 15
     },
+    "components/admin/prompts/prompt-template-actions.tsx": {
+      "raw-palette": 11
+    },
+    "components/admin/prompts/prompt-template-editor.tsx": {
+      "blur": 3,
+      "gradient": 1,
+      "raw-palette": 139
+    },
+    "components/admin/queues/job-table.tsx": {
+      "caps-eyebrow": 7,
+      "raw-palette": 49
+    },
+    "components/admin/queues/queue-controls.tsx": {
+      "blur": 1,
+      "raw-palette": 9
+    },
+    "components/admin/queues/queue-filters.tsx": {
+      "raw-palette": 2
+    },
+    "components/admin/queues/queue-stats.tsx": {
+      "blur": 1,
+      "raw-palette": 8
+    },
+    "components/admin/queues/queue-status.tsx": {
+      "blur": 1,
+      "infinite-motion": 1,
+      "raw-palette": 20
+    },
+    "components/admin/queues/scheduler-info.tsx": {
+      "blur": 1,
+      "raw-palette": 8
+    },
     "components/admin/settings/discord-integration-form.tsx": {
       "raw-palette": 30
     },
@@ -174,6 +266,15 @@
       "blur": 2,
       "infinite-motion": 1,
       "raw-palette": 42
+    },
+    "components/admin/shared/unauthenticated-error.tsx": {
+      "infinite-motion": 1,
+      "raw-palette": 2
+    },
+    "components/admin/shared/unauthorized-error.tsx": {
+      "gradient": 2,
+      "infinite-motion": 1,
+      "raw-palette": 14
     },
     "components/admin/users/cancel-subscription-button.tsx": {
       "raw-palette": 4
@@ -240,35 +341,6 @@
     "components/auth/service-sign-in-toggle.tsx": {
       "gradient": 6,
       "raw-palette": 42
-    },
-    "components/dashboard/announcements-card.tsx": {
-      "arbitrary-type-z": 1,
-      "caps-eyebrow": 1,
-      "gradient": 4,
-      "infinite-motion": 3,
-      "raw-palette": 29
-    },
-    "components/dashboard/discord-card.tsx": {
-      "arbitrary-color": 17,
-      "gradient": 2,
-      "raw-palette": 10
-    },
-    "components/dashboard/media-server-link-card.tsx": {
-      "raw-palette": 4
-    },
-    "components/dashboard/requests-card.tsx": {
-      "gradient": 2,
-      "raw-palette": 15
-    },
-    "components/dashboard/status-background.tsx": {
-      "blur": 1,
-      "raw-palette": 24
-    },
-    "components/dashboard/user-dashboard.tsx": {
-      "caps-eyebrow": 3,
-      "gradient": 1,
-      "gradient-text": 2,
-      "raw-palette": 3
     },
     "components/onboarding/onboarding-steps/discord-support-step.tsx": {
       "caps-eyebrow": 1,
@@ -365,16 +437,8 @@
       "infinite-motion": 1,
       "raw-palette": 3
     },
-    "components/subscribe/plan-list.tsx": {
-      "raw-palette": 4
-    },
-    "components/subscription/manage-subscription-button.tsx": {
-      "raw-palette": 1
-    },
-    "components/watchlist/sync-settings-card.tsx": {
-      "gradient": 3,
-      "infinite-motion": 1,
-      "raw-palette": 44
+    "components/shared/rex-dinosaur.tsx": {
+      "infinite-motion": 1
     },
     "components/wrapped/cinematic/gold-count-up.tsx": {
       "gradient": 1,
@@ -536,14 +600,13 @@
     }
   },
   "totals": {
-    "arbitrary-color": 17,
-    "arbitrary-type-z": 29,
-    "blur": 101,
-    "caps-eyebrow": 71,
+    "arbitrary-type-z": 28,
+    "blur": 113,
+    "caps-eyebrow": 80,
     "copy": 13,
-    "gradient": 82,
-    "gradient-text": 46,
-    "infinite-motion": 36,
-    "raw-palette": 2294
+    "gradient": 78,
+    "gradient-text": 44,
+    "infinite-motion": 38,
+    "raw-palette": 2519
   }
 }

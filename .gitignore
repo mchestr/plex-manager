@@ -51,3 +51,6 @@ playwright-report/
 
 # Downloaded font sources (scripts/build-rewind-fonts.py)
 /.cache/
+
+# Token codemod review list (scripts/codemods/tokens.ts, P10.13)
+/codemod-review.md

@@ -87,7 +87,7 @@ export function ManageSubscriptionButton({
     >
       {isPending ? (
         <>
-          <LoadingSpinner size="sm" className="text-white" />
+          <LoadingSpinner size="sm" />
           Opening...
         </>
       ) : (

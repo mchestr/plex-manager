@@ -95,18 +95,18 @@ export function PlanList({ plans }: PlanListProps) {
             data-testid={`subscribe-plan-${plan.priceId}`}
           >
             <div>
-              <h2 className="text-lg font-semibold text-white">
+              <h2 className="text-lg font-semibold text-foreground">
                 {plan.productName || "Plex Access"}
               </h2>
               <p className="mt-1 flex items-baseline gap-1">
                 <span
-                  className="text-2xl font-bold text-white"
+                  className="text-2xl font-bold text-foreground"
                   data-testid={`subscribe-plan-price-${plan.priceId}`}
                 >
                   {formatPrice(plan.amount, plan.currency, f.settings.locale)}
                 </span>
                 {plan.interval && (
-                  <span className="text-sm text-slate-400">/ {plan.interval}</span>
+                  <span className="text-sm text-muted-foreground">/ {plan.interval}</span>
                 )}
               </p>
             </div>
@@ -119,7 +119,7 @@ export function PlanList({ plans }: PlanListProps) {
             >
               {isPending ? (
                 <>
-                  <LoadingSpinner size="sm" className="text-white" />
+                  <LoadingSpinner size="sm" />
                   Redirecting...
                 </>
               ) : (
