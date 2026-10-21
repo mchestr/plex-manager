@@ -836,5 +836,6 @@ The project includes custom slash commands in `.claude/commands/`:
 - Discord Bot: See `docs/discord-bot.md`
 - Stripe Subscriptions: See `docs/stripe.md`
 - Operations (backup, restore, upgrades): See `docs/operations.md`
+- Rewind season runbook (flags, season open, roll back, final cut): See `docs/rewind.md`
 - Performance Testing: See `docs/performance-testing.md`
 - Project README: See `README.md`

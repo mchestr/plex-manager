@@ -803,5 +803,7 @@ The ten core pages (Bookends included), sharing, privacy and accessibility are n
 **Demo.** A reader who has not seen the plan finds, in `docs/rewind.md`, what to do at 00:15 and 08:00 on 1 December, how to roll back one member, and which key turns off People.
 
 **Done when.**
-- [ ] `docs/rewind.md` covers the requirements, flags and cut keys, the season-open checklist, monitoring, roll back, the final cut and the Tautulli 2.17 warning.
-- [ ] It is merged by 2026-11-25, and the runbook test passes.
+- [x] `docs/rewind.md` covers the requirements, flags and cut keys, the season-open checklist, monitoring, roll back, the final cut and the Tautulli 2.17 warning.
+- [ ] It is merged by 2026-11-25, and the runbook test passes. (The test passes; the merge is the coordinator's.)
+
+(as merged: sections for steps not yet merged are blockquotes headed "**Pending P7.x/P8.x**" (P7.3's `JOINED_LATE`, P7.9 roll back, P7.11 gallery, P7.14 notifications, P8.1 lock, P8.3/P8.4 feature flags, P8.5 validator, final cut and bulk roll back); each step replaces its blockquote with plain text when it merges. `__tests__/docs/rewind-runbook.test.ts` skips blockquote lines when checking that backticked paths exist, checks every key of `rewindSettingsSchema.shape` and `REWIND_CUT_PAGES`, and checks `REWIND_FEATURES` keys only once `lib/rewind/features.ts` exists. The Rewind queues are not on `/admin/queues`, so the runbook reads the season-open job from Redis (`bull:rewind-batch:delayed`).)
