@@ -974,11 +974,13 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 **Demo.** Sign in as a Jellyfin member: the tile names the Jellyfin server and opens its public URL. As a Plex member, Watch on Plex opens the server in Plex Web. Post an announcement: its pip shows once, and is gone after a reload. With reduced motion off, nothing on the page keeps moving.
 
 **Done when.**
-- [ ] Home follows `home.html` (minus "New on") as a Server Component page with no client fetch waterfall.
-- [ ] The quick links go to the server's own Plex Web, the public Requests URL, `/discord/link`, and Jellyfin with the right name.
-- [ ] Announcements render through MarkdownBody with seen-based pips, and the UptimeStrip hides without Prometheus.
+- [x] Home follows `home.html` (minus "New on") as a Server Component page with no client fetch waterfall.
+- [x] The quick links go to the server's own Plex Web, the public Requests URL, `/discord/link`, and Jellyfin with the right name.
+- [x] Announcements render through MarkdownBody with seen-based pips, and the UptimeStrip hides without Prometheus.
 - [ ] No infinite animation remains, and the E2E, visual and axe checks pass.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
+
+(as merged: no new migration; it reuses P10.22's `announcementsSeenAt`, `markAnnouncementsSeen`, `MarkAnnouncementsSeen` and `NewPip`. The home skeleton is the signed-in page's own `<Suspense>` fallback in `app/(app)/page.tsx`, not a `loading.tsx`: an `(app)/loading.tsx` would replace the Rewind story's `rewind-field` fallback, and a route-level loader would also flash member cards on the signed-out `/`. The page no longer repeats the layout's onboarding redirect. The cached machine id is `plexServerId` exported from `lib/rewind/item-links.ts` (one `plex-identity` cache for Rewind and home); P10.12's `plexItemUrl` can use `plexItemHref` in `lib/ui/plex-links.ts`. Fold and copy logic for the strip is in `lib/ui/uptime.ts` (one down hour of a pair reads as degraded, two as down). Discord shows a separate "Join the Discord" tile when an invite code exists. The membership card stays P10.22's `MembershipLinkCard` (plan and billing live on `/membership`). The help card links `/help#playback` and the Discord support channel, else `/help#support`. `formatDate` gains a `month-year` style. The RewindCard's generating badge still spins (P6.9, kept as is), so `e2e/home.spec.ts`'s no-infinite-animation check assumes a non-generating card. E2E, visual and axe were not run.)
 
 ### Step P10.22: Announcements, help and membership pages
 

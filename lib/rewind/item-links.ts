@@ -19,8 +19,11 @@ import { createLogger } from "@/lib/utils/logger"
 const logger = createLogger("rewind-links")
 const DAY_S = 24 * 60 * 60
 
-/** The active server's machine id; the token is read inside, so it never enters the cache key. */
-const plexServerId = unstable_cache(
+/**
+ * The active server's machine id; the token is read inside, so it never
+ * enters the cache key. Home's Watch on Plex link reads it too (P10.21).
+ */
+export const plexServerId = unstable_cache(
   async (): Promise<string | null> => {
     const plex = await prisma.plexServer.findFirst({ where: { isActive: true }, select: { url: true, token: true } })
     if (!plex) return null

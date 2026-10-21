@@ -1,70 +1,76 @@
 "use client"
 
+import { useState, useTransition } from "react"
+
 import { getWatchlistSyncSettings, triggerWatchlistSync, updateWatchlistSyncSettings } from "@/actions/watchlist"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Icon } from "@/components/ui/icon"
+import { Spinner } from "@/components/ui/spinner"
+import { Switch } from "@/components/ui/switch"
+import { Time } from "@/components/ui/time"
 import { useToast } from "@/components/ui/toast"
+import { icons } from "@/lib/ui/icons"
 import { WATCHLIST_SKIP_COPY } from "@/lib/watchlist/skip"
-import { motion } from "motion/react"
-import { useCallback, useEffect, useState, useTransition } from "react"
+import type { AuthService } from "@/types/onboarding"
 
-interface RecentHistoryItem {
-  id: string
-  title: string
-  year: number | null
-  mediaType: string
-  status: string
-  syncedAt: Date
+type SettingsResult = Awaited<ReturnType<typeof getWatchlistSyncSettings>>
+export type WatchlistSyncSettings = Extract<SettingsResult, { success: true }>["data"]
+
+type BadgeVariant = "success" | "warning" | "destructive" | "info" | "neutral"
+
+const LAST_STATUS: Record<string, { label: string; variant: BadgeVariant }> = {
+  success: { label: "Success", variant: "success" },
+  partial: { label: "Partial", variant: "warning" },
+  failed: { label: "Failed", variant: "destructive" },
+  skipped: { label: "Skipped", variant: "neutral" },
 }
 
-interface SyncSettings {
-  hasPlexToken: boolean
-  hasOverseerr: boolean
-  globalSyncEnabled: boolean
-  settings: {
-    syncEnabled: boolean
-    lastSyncAt: Date | null
-    lastSyncStatus: string | null
-    lastSyncError: string | null
-    itemsSynced: number
-    itemsRequested: number
-    totalItemsSynced: number
-    totalItemsRequested: number
-  } | null
-  recentHistory: RecentHistoryItem[]
+const ITEM_STATUS: Record<string, { label: string; variant: BadgeVariant }> = {
+  REQUESTED: { label: "Requested", variant: "info" },
+  ALREADY_AVAILABLE: { label: "Available", variant: "success" },
+  ALREADY_REQUESTED: { label: "Pending", variant: "neutral" },
+  FAILED: { label: "Failed", variant: "destructive" },
+  SYNCED: { label: "Synced", variant: "neutral" },
 }
 
-export function WatchlistSyncCard() {
+/**
+ * Whether the card can work (UI-38): a Plex member with a stored token, the
+ * admin's global switch on and Overseerr configured. Anything else hides it,
+ * so home never offers a feature that cannot run.
+ */
+function canShowWatchlistSync(settings: WatchlistSyncSettings | null, service: AuthService): boolean {
+  return Boolean(
+    settings && service === "plex" && settings.hasPlexToken && settings.globalSyncEnabled && settings.hasOverseerr
+  )
+}
+
+interface WatchlistSyncCardProps {
+  /** Loaded by the page on the server (UI-41); null when the read failed. */
+  initialSettings: WatchlistSyncSettings | null
+  service: AuthService
+}
+
+export function WatchlistSyncCard({ initialSettings, service }: WatchlistSyncCardProps) {
   const { showSuccess, showError, showInfo } = useToast()
   const [isPending, startTransition] = useTransition()
   const [isSyncing, setIsSyncing] = useState(false)
-  const [settings, setSettings] = useState<SyncSettings | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [settings, setSettings] = useState(initialSettings)
 
-  const applySettings = useCallback((result: Awaited<ReturnType<typeof getWatchlistSyncSettings>>) => {
-    if (result.success) {
-      setSettings(result.data)
-    }
-    setIsLoading(false)
-  }, [])
+  if (!settings || !canShowWatchlistSync(settings, service)) return null
 
-  const loadSettings = useCallback(async () => {
-    applySettings(await getWatchlistSyncSettings())
-  }, [applySettings])
+  const reload = async () => {
+    const result = await getWatchlistSyncSettings()
+    if (result.success) setSettings(result.data)
+  }
 
-  useEffect(() => {
-    getWatchlistSyncSettings().then(applySettings)
-  }, [applySettings])
-
-  const handleToggleSync = () => {
-    if (!settings) return
-
-    const newEnabled = !settings.settings?.syncEnabled
-
+  const handleToggle = (next: boolean) => {
     startTransition(async () => {
-      const result = await updateWatchlistSyncSettings({ syncEnabled: newEnabled })
+      const result = await updateWatchlistSyncSettings({ syncEnabled: next })
       if (result.success) {
-        showSuccess(newEnabled ? "Watchlist sync enabled" : "Watchlist sync disabled")
-        await loadSettings()
+        showSuccess(next ? "Watchlist sync enabled" : "Watchlist sync disabled")
+        await reload()
       } else {
         showError(result.error)
       }
@@ -75,309 +81,127 @@ export function WatchlistSyncCard() {
     setIsSyncing(true)
     try {
       const result = await triggerWatchlistSync()
-      if (result.success) {
-        // Handle queued response (when Redis is configured)
-        if (result.data.queued) {
-          showSuccess(result.data.message)
-          await loadSettings()
-          return
-        }
-
-        // Handle direct sync response (when Redis is not configured)
+      if (!result.success) {
+        showError(result.error)
+        return
+      }
+      if (result.data.queued) {
+        showSuccess(result.data.message)
+      } else {
         const { skipped, itemsSynced, itemsRequested, itemsFailed } = result.data
         if (skipped) {
           showInfo(WATCHLIST_SKIP_COPY[skipped])
-          await loadSettings()
-          return
-        }
-        if (itemsRequested && itemsRequested > 0) {
+        } else if (itemsRequested && itemsRequested > 0) {
           showSuccess(`Synced ${itemsSynced} items, requested ${itemsRequested} new items`)
         } else if (itemsSynced && itemsSynced > 0) {
           showInfo(`Synced ${itemsSynced} items (all already available or requested)`)
         } else {
           showInfo("Watchlist is up to date")
         }
-        if (itemsFailed && itemsFailed > 0) {
-          showError(`${itemsFailed} items failed to sync`)
-        }
-        await loadSettings()
-      } else {
-        showError(result.error)
+        if (itemsFailed && itemsFailed > 0) showError(`${itemsFailed} items failed to sync`)
       }
+      await reload()
     } finally {
       setIsSyncing(false)
     }
   }
 
-  // Not configured - don't show card
-  if (!isLoading && settings && !settings.hasOverseerr) {
-    return null
-  }
-
-  // Loading state
-  if (isLoading) {
-    return (
-      <motion.div
-        className="relative overflow-hidden rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-950/30 via-slate-900 to-slate-900 p-4 shadow-lg"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: "easeOut", delay: 0.15 }}
-        data-testid="watchlist-sync-card-loading"
-      >
-        <div className="animate-pulse space-y-3">
-          <div className="h-5 w-32 rounded bg-slate-700/50" />
-          <div className="h-4 w-48 rounded bg-slate-700/30" />
-        </div>
-      </motion.div>
-    )
-  }
-
-  if (!settings) {
-    return null
-  }
-
-  const canEnable = settings.hasPlexToken && settings.hasOverseerr && settings.globalSyncEnabled
-  const isEnabled = settings.settings?.syncEnabled ?? false
-  const lastSync = settings.settings?.lastSyncAt
-  const lastStatus = settings.settings?.lastSyncStatus
-
-  // Format last sync time
-  const formatLastSync = (date: Date | null | undefined) => {
-    if (!date) return "Never"
-    const d = new Date(date)
-    const now = new Date()
-    const diffMs = now.getTime() - d.getTime()
-    const diffMins = Math.floor(diffMs / 60000)
-    const diffHours = Math.floor(diffMs / 3600000)
-    const diffDays = Math.floor(diffMs / 86400000)
-
-    if (diffMins < 1) return "Just now"
-    if (diffMins < 60) return `${diffMins}m ago`
-    if (diffHours < 24) return `${diffHours}h ago`
-    return `${diffDays}d ago`
-  }
-
-  const getStatusColor = (status: string | null) => {
-    switch (status) {
-      case "success":
-        return "text-green-400"
-      case "partial":
-        return "text-amber-400"
-      case "failed":
-        return "text-red-400"
-      default:
-        return "text-slate-400"
-    }
-  }
+  const sync = settings.settings
+  const isEnabled = sync?.syncEnabled ?? false
+  const lastStatus = sync?.lastSyncStatus ? LAST_STATUS[sync.lastSyncStatus] : undefined
 
   return (
-    <motion.div
-      className="relative overflow-hidden rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-950/30 via-slate-900 to-slate-900 p-4 shadow-lg"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: "easeOut", delay: 0.15 }}
-      data-testid="watchlist-sync-card"
-    >
-      {/* Ambient glow */}
-      <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-amber-500/10 blur-2xl" />
-
-      <div className="relative space-y-4">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3">
-            {/* Watchlist Icon */}
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 shadow-md shadow-amber-500/20">
-              <svg
-                className="h-5 w-5 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
-                />
-              </svg>
-            </div>
-            <div>
-              <h3 className="font-semibold text-white">Watchlist Sync</h3>
-              <p className="text-xs text-slate-400">
-                Auto-request items from your Plex watchlist
-              </p>
-            </div>
+    <Card aria-labelledby="watchlist-sync-title" role="region" data-testid="watchlist-sync-card">
+      <CardHeader>
+        <div className="flex gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-secondary text-foreground">
+            <Icon icon={icons.watchlist} size={20} />
+          </span>
+          <div className="flex flex-col gap-1">
+            <CardTitle as="h2" id="watchlist-sync-title">
+              Watchlist Sync
+            </CardTitle>
+            <CardDescription>Anything you add to your Plex watchlist is requested for you.</CardDescription>
           </div>
-
-          {/* Toggle */}
-          <button
-            onClick={handleToggleSync}
-            disabled={!canEnable || isPending}
-            className={`
-              relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200
-              ${isEnabled ? "bg-amber-500" : "bg-slate-700"}
-              ${(!canEnable || isPending) ? "opacity-50 cursor-not-allowed" : "hover:opacity-90"}
-            `}
-            role="switch"
-            aria-checked={isEnabled}
-            aria-label={isEnabled ? "Disable watchlist sync" : "Enable watchlist sync"}
-            data-testid="watchlist-sync-toggle"
-          >
-            <span
-              className={`
-                inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200
-                ${isEnabled ? "translate-x-6" : "translate-x-1"}
-              `}
-            />
-          </button>
         </div>
+        <CardAction>
+          <Switch
+            checked={isEnabled}
+            onCheckedChange={handleToggle}
+            loading={isPending}
+            label="Watchlist Sync"
+            data-testid="watchlist-sync-toggle"
+          />
+        </CardAction>
+      </CardHeader>
 
-        {/* Prerequisites warning */}
-        {!canEnable && (
-          <div className="rounded-lg bg-slate-800/50 p-3 text-xs text-slate-400">
-            {!settings.hasPlexToken && (
-              <p>Log in with Plex to enable watchlist sync</p>
-            )}
-            {settings.hasPlexToken && !settings.globalSyncEnabled && (
-              <p>Watchlist sync is disabled by your administrator</p>
-            )}
-            {settings.hasPlexToken && settings.globalSyncEnabled && !settings.hasOverseerr && (
-              <p>Overseerr is not configured</p>
-            )}
-          </div>
-        )}
-
-        {/* Status when enabled */}
-        {isEnabled && (
-          <div className="space-y-3">
-            {/* Stats row */}
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-4 text-slate-400">
-                <span>
-                  Last sync: <span className="text-white">{formatLastSync(lastSync)}</span>
+      {isEnabled && (
+        <CardContent className="flex flex-col gap-3 pt-4 pb-5">
+          <div className="flex flex-col gap-3 rounded-md border bg-secondary/40 p-3 sm:flex-row sm:items-center">
+            <div className="flex flex-1 flex-col gap-1 text-ui text-muted-foreground">
+              <span className="flex flex-wrap items-center gap-2">
+                <span className="text-foreground">
+                  {sync?.lastSyncAt ? (
+                    <>
+                      Synced <Time value={sync.lastSyncAt} />
+                    </>
+                  ) : (
+                    "Not synced yet"
+                  )}
                 </span>
-                {lastStatus && (
-                  <span className={getStatusColor(lastStatus)}>
-                    {lastStatus === "success" && "Success"}
-                    {lastStatus === "partial" && "Partial"}
-                    {lastStatus === "failed" && "Failed"}
-                    {lastStatus === "skipped" && "Skipped"}
-                  </span>
-                )}
-              </div>
+                {lastStatus && <Badge variant={lastStatus.variant}>{lastStatus.label}</Badge>}
+              </span>
+              {sync && (sync.totalItemsSynced > 0 || sync.totalItemsRequested > 0) && (
+                <span className="tabular-nums">
+                  {sync.totalItemsSynced} items synced, {sync.totalItemsRequested} requested
+                </span>
+              )}
             </div>
-
-            {/* Cumulative stats */}
-            {settings.settings && (settings.settings.totalItemsSynced > 0 || settings.settings.totalItemsRequested > 0) && (
-              <div className="flex items-center gap-4 text-xs">
-                <span className="text-slate-400">
-                  <span className="text-white font-medium">{settings.settings.totalItemsSynced}</span> items synced
-                </span>
-                <span className="text-slate-400">
-                  <span className="text-green-400 font-medium">{settings.settings.totalItemsRequested}</span> requested
-                </span>
-              </div>
-            )}
-
-            {/* Why the last sync was skipped, or its error */}
-            {lastStatus === "skipped" && settings.settings?.lastSyncError ? (
-              <p className="text-xs text-muted-foreground" data-testid="watchlist-sync-skip-reason">
-                {settings.settings.lastSyncError}
-              </p>
-            ) : settings.settings?.lastSyncError && (
-              <p className="text-xs text-red-400 line-clamp-2">
-                {settings.settings.lastSyncError}
-              </p>
-            )}
-
-            {/* Recent sync history */}
-            {settings.recentHistory && settings.recentHistory.length > 0 && (
-              <div className="space-y-2 pt-2 border-t border-slate-700/50">
-                <p className="text-xs text-slate-500 font-medium">Recent items</p>
-                <div className="space-y-1">
-                  {settings.recentHistory.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center justify-between text-xs"
-                    >
-                      <div className="flex items-center gap-2 truncate">
-                        <span className={item.mediaType === "MOVIE" ? "text-blue-400" : "text-purple-400"}>
-                          {item.mediaType === "MOVIE" ? "🎬" : "📺"}
-                        </span>
-                        <span className="text-slate-300 truncate">
-                          {item.title}
-                          {item.year && <span className="text-slate-500 ml-1">({item.year})</span>}
-                        </span>
-                      </div>
-                      <span
-                        className={`shrink-0 ml-2 ${
-                          item.status === "REQUESTED"
-                            ? "text-green-400"
-                            : item.status === "ALREADY_AVAILABLE"
-                            ? "text-cyan-400"
-                            : item.status === "ALREADY_REQUESTED"
-                            ? "text-amber-400"
-                            : item.status === "FAILED"
-                            ? "text-red-400"
-                            : "text-slate-500"
-                        }`}
-                      >
-                        {item.status === "REQUESTED" && "Requested"}
-                        {item.status === "ALREADY_AVAILABLE" && "Available"}
-                        {item.status === "ALREADY_REQUESTED" && "Pending"}
-                        {item.status === "FAILED" && "Failed"}
-                        {item.status === "SYNCED" && "Synced"}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Manual sync button */}
             <Button
               variant="secondary"
+              size="sm"
               onClick={handleManualSync}
               disabled={isSyncing}
-              className="px-3"
               data-testid="watchlist-sync-now-button"
             >
-              {isSyncing ? (
-                <>
-                  <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
-                  </svg>
-                  <span>Syncing...</span>
-                </>
-              ) : (
-                <>
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                    />
-                  </svg>
-                  <span>Sync Now</span>
-                </>
-              )}
+              {isSyncing ? <Spinner size={14} /> : <Icon icon={icons.sync} size={14} />}
+              {isSyncing ? "Syncing" : "Sync now"}
             </Button>
           </div>
-        )}
-      </div>
-    </motion.div>
+
+          {sync?.lastSyncStatus === "skipped" && sync.lastSyncError ? (
+            <p className="text-caption text-muted-foreground" data-testid="watchlist-sync-skip-reason">
+              {sync.lastSyncError}
+            </p>
+          ) : (
+            sync?.lastSyncError && <p className="line-clamp-2 text-caption text-destructive">{sync.lastSyncError}</p>
+          )}
+
+          {settings.recentHistory.length > 0 && (
+            <ul className="flex flex-col" aria-label="Recent items">
+              {settings.recentHistory.map((item) => {
+                const status = ITEM_STATUS[item.status]
+                return (
+                  <li key={item.id} className="flex items-center gap-3 border-b py-2.5 last:border-b-0 last:pb-0">
+                    <span className="flex min-w-0 flex-col">
+                      <span className="truncate text-ui font-medium text-foreground">{item.title}</span>
+                      <span className="text-caption text-muted-foreground">
+                        {item.mediaType === "MOVIE" ? "Film" : "Series"}
+                        {item.year ? `, ${item.year}` : ""}
+                      </span>
+                    </span>
+                    {status && (
+                      <Badge variant={status.variant} className="ml-auto">
+                        {status.label}
+                      </Badge>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </CardContent>
+      )}
+    </Card>
   )
 }

@@ -113,14 +113,16 @@ export function formatTokens(n: number, settings: Pick<FormatSettings, "locale">
  * - `long`: "October 11, 2026" (prose)
  * - `day-month`: "October 11" in en-US, "11 October" in en-GB (Rewind copy)
  * - `day-month-short`: "Oct 11" (chart axes)
+ * - `month-year`: "October 2026" (member-since lines)
  */
-export type DateStyle = "short" | "long" | "day-month" | "day-month-short"
+export type DateStyle = "short" | "long" | "day-month" | "day-month-short" | "month-year"
 
 const DATE_STYLES: Record<DateStyle, Intl.DateTimeFormatOptions> = {
   short: { year: "numeric", month: "short", day: "numeric" },
   long: { year: "numeric", month: "long", day: "numeric" },
   "day-month": { month: "long", day: "numeric" },
   "day-month-short": { month: "short", day: "numeric" },
+  "month-year": { year: "numeric", month: "long" },
 }
 
 const TIME: Intl.DateTimeFormatOptions = { hour: "numeric", minute: "2-digit" }
