@@ -3,7 +3,9 @@ import "server-only"
 import type { Route } from "next"
 import { z } from "zod"
 
+import { hideRewindTitle, unhideRewindTitle } from "@/actions/rewind-exclusions"
 import { disableRewindShare, enableRewindShare, rotateRewindShare, saveRewindSharePrefs } from "@/actions/rewind-sharing"
+import { RegenerationWatch } from "@/components/rewind/hide/regeneration-watch"
 import { PageBody } from "@/components/rewind/pages/page-body"
 import type { IssueContext } from "@/components/rewind/pages/issue-context"
 import { StoryStage } from "@/components/rewind/stage/story-stage"
@@ -44,7 +46,12 @@ export async function RewindIssue({ rewindId, data, userId, returnTo, initialShe
   ])
   const archetype = data.archetype?.id ?? null
   const pages = validatePagesOnRead(data.pages, { archetype, disabledPages: DisabledPagesSchema.parse(config?.rewindDisabledPages ?? []) })
-  const share = preview ? null : await loadShareSetup({ userId, rewindId, year: data.year, pages })
+  const [share, hidden] = preview
+    ? [null, null]
+    : await Promise.all([
+        loadShareSetup({ userId, rewindId, year: data.year, pages }),
+        prisma.rewindExclusion.findMany({ where: { userId }, select: { ratingKey: true, kind: true, title: true }, orderBy: { createdAt: "asc" } }),
+      ])
   const issue: IssueContext = {
     year: data.year,
     userId,
@@ -75,6 +82,15 @@ export async function RewindIssue({ rewindId, data, userId, returnTo, initialShe
       closeHref={returnTo}
       copy={{ copySource: data.copySource, model: data.copyMeta.model }}
       share={share ? { setup: share, actions: { enable: enableRewindShare, rotate: rotateRewindShare, disable: disableRewindShare, savePrefs: saveRewindSharePrefs } } : undefined}
+      hide={
+        hidden
+          ? {
+              hidden: hidden.map((row) => ({ ratingKey: row.ratingKey, kind: row.kind === "film" ? "film" : "series", title: row.title })),
+              actions: { hide: hideRewindTitle, unhide: unhideRewindTitle },
+              watch: <RegenerationWatch year={data.year} />,
+            }
+          : undefined
+      }
       initialSheet={initialSheet}
       mode={preview ? "preview" : "member"}
     />

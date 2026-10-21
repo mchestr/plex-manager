@@ -370,11 +370,13 @@ The ten core pages (Bookends included), sharing, privacy and accessibility are n
 **Demo.** Hide "Severance" from Top shows. On reload, the public link's Top shows card no longer names it. About a minute later the in-app page shows the new No. 1 with a template deck, and page 02's hours are unchanged. Unhiding it from Settings brings the old deck back.
 
 **Done when.**
-- [ ] `hideRewindTitle` and `unhideRewindTitle` validate with Zod, check ownership, allow 20 per day, and write `RewindExclusion` rows with an `exclusionsVersion` bump.
-- [ ] Each change enqueues a no-LLM regeneration that is exempt from the generation limit and waits out a held lock.
-- [ ] The title leaves public cards and the share page at once, and in-app lists after the regeneration, while still counting toward totals.
+- [x] `hideRewindTitle` and `unhideRewindTitle` validate with Zod, check ownership, allow 20 per day, and write `RewindExclusion` rows with an `exclusionsVersion` bump.
+- [x] Each change enqueues a no-LLM regeneration that is exempt from the generation limit and waits out a held lock.
+- [x] The title leaves public cards and the share page at once, and in-app lists after the regeneration, while still counting toward totals.
 - [ ] The E2E test passes.
 - [ ] Dump taken before deploy; `prisma migrate status` clean.
+
+(as merged: the migration is `20261124000700_p77_rewind_exclusion_title`. `ratingKeysIn(rewind)` lives in `lib/rewind/rating-keys.ts` (key → title), not in `registry.ts`. `enqueueRewindGeneration` takes `exclusion: { followUp? }`, which sets `copyPolicy: "no-llm"`, the `rewind:hide:{year}:{userId}` deduplication id and the 5 s delay; the payload carries `exclusion: true` and `lockWaits`. The job's follow-up run after a mid-run hide takes no deduplication id, since its own active job still holds it. `rw:hide` (20 a day) is shared by hide and unhide. The stage takes `hide?: HideSetup` and wraps itself in `HideProvider` unless `mode === "preview"`; `RewindIssue` passes the hidden list, the actions and a `RegenerationWatch` node (so the stage never imports the status action). Top films had no row sheet: `TitleSheetButton` now opens one for its rows and for both No. 1 features. P7.3 adds "Hide this title" to the Short list rows by passing `titleKey` in their `RowDetail`. The E2E spec's share-page check needs P7.5's v3 share page.)
 
 ### Step P7.8: Season dashboard and bulk generation
 

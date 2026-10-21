@@ -2,6 +2,7 @@
  * @jest-environment node
  */
 
+import { cardCacheKey } from "@/lib/rewind/cards/cache"
 import { SHARE_PAGE_TYPES } from "@/lib/rewind/registry"
 import type { RewindDataV3 } from "@/lib/wrapped/data/schema-v3"
 import { cardInput, defaultCardFacts, toShareSafe } from "@/lib/wrapped/data/share-safe"
@@ -251,5 +252,26 @@ describe("hidden titles", () => {
       return cardInput(toShareSafe(rewind, options, ctx), "bookends", "story", { factsHash: rewind.factsHash, options, ctx })
     }
     expect(input([key], 1)).not.toEqual(input([], 0))
+  })
+
+  it("drops a title hidden between two projections, with its poster key, and changes the card cache key (P7.7)", () => {
+    const shows = heavy.pages.find((p) => p.type === "top-shows")!.data as { rows: { key: string }[] }
+    const key = shows.rows[0].key.slice(shows.rows[0].key.indexOf(":") + 1)
+    const title = heavy.facts["series[1].title"]!.display
+    const options = shareOptions({ pages: ["top-shows"], includeArt: true })
+    const project = (ctx: ReturnType<typeof shareContext>) => {
+      const shared = toShareSafe(heavy, options, ctx)
+      return { shared, cacheKey: cardCacheKey(cardInput(shared, "top-shows", "story", { factsHash: heavy.factsHash, options, ctx })!) }
+    }
+
+    const before = project(shareContext())
+    expect(before.shared.pages[0].titles).toContain(title)
+    expect(before.shared.pages[0].art).toContainEqual({ ratingKey: key })
+
+    // The member hides it: the next request reads the new exclusion and version.
+    const after = project(shareContext({ hiddenKeys: new Set([key]), exclusionsVersion: 1 }))
+    expect(JSON.stringify(after.shared)).not.toContain(title)
+    expect(after.shared.pages[0].art).not.toContainEqual({ ratingKey: key })
+    expect(after.cacheKey).not.toBe(before.cacheKey)
   })
 })

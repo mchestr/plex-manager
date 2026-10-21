@@ -223,6 +223,10 @@ export interface RewindGenerateUserPayload {
   generationId: string
   userId: string
   year: number
+  /** A hide or unhide's regeneration (P7.7): it waits out a held lock and runs again when a hide arrived mid-run. */
+  exclusion?: true
+  /** How many times an exclusion run has waited for the member's lock. */
+  lockWaits?: number
 }
 
 /** Renders the cover, centrefold and back cover of one completed Rewind with the member's saved options. */

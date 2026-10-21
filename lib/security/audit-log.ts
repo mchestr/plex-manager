@@ -82,6 +82,10 @@ export enum AuditEventType {
   REWIND_SHARE_UPDATED = "REWIND_SHARE_UPDATED",
   REWIND_SHARE_ROTATED = "REWIND_SHARE_ROTATED",
   REWIND_SHARE_REVOKED = "REWIND_SHARE_REVOKED",
+  // A member hid or unhid a title in their Rewind (P7.7, FR-7). Details carry the
+  // year, rating key and kind, never the title.
+  REWIND_TITLE_HIDDEN = "REWIND_TITLE_HIDDEN",
+  REWIND_TITLE_UNHIDDEN = "REWIND_TITLE_UNHIDDEN",
   // The server time zone (Config.timezone) changed. Details carry the old and new zone.
   SERVER_TIMEZONE_CHANGED = "SERVER_TIMEZONE_CHANGED",
   // A prompt template or Rewind style guide was created, edited, activated or
