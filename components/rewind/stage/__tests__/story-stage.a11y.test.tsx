@@ -1,4 +1,4 @@
-import { fireEvent, screen } from "@testing-library/react"
+import { fireEvent, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { MotionConfig, useReducedMotion } from "motion/react"
 
@@ -35,7 +35,8 @@ describe("StoryStage semantics", () => {
     renderStage([...CORE])
     await user.keyboard("{ArrowRight}")
     expect(heading()).toHaveTextContent("Heading of number")
-    expect(heading()).toHaveFocus()
+    // Focus moves in the turn's frame, not in its commit (P7.15).
+    await waitFor(() => expect(heading()).toHaveFocus())
     expect(screen.getByTestId("rewind-live")).toBeEmptyDOMElement()
     expect(screen.getByTestId("rewind-live")).toHaveAttribute("aria-live", "polite")
     expect(screen.getByTestId("rewind-live")).toHaveAttribute("aria-atomic", "true")
@@ -72,7 +73,7 @@ describe("StoryStage semantics", () => {
     await user.click(screen.getByTestId("rewind-next"))
     expect(screen.getByTestId("rewind-stage")).toHaveAttribute("data-mode", "playing")
     expect(currentPage()).toHaveAttribute("data-index", "4")
-    expect(heading()).toHaveFocus()
+    await waitFor(() => expect(heading()).toHaveFocus())
     expect(stage()).toHaveAttribute("data-mode", "playing")
 
     await user.tab()

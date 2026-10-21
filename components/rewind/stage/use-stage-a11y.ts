@@ -1,6 +1,6 @@
 "use client"
 
-import { useLayoutEffect, useRef, type FocusEvent, type RefObject } from "react"
+import { useEffect, useLayoutEffect, useRef, type FocusEvent, type RefObject } from "react"
 
 import type { PlayerEvent, PlayerState } from "@/lib/rewind/stage/player-reducer"
 
@@ -34,15 +34,29 @@ export function useStageA11y({
   pageLabel: (index: number) => string
 }) {
   const shown = useRef(state.index)
+  const pendingFocus = useRef<number | null>(null)
 
   useLayoutEffect(() => {
     if (shown.current === state.index) return
     shown.current = state.index
     if (state.lastTurn !== "user") return
-    const page = pagesRef.current?.querySelector<HTMLElement>(`${PAGE}[data-current]`)
-    const target = page?.querySelector<HTMLElement>("h2") ?? page
-    target?.focus({ preventScroll: true })
+    // In the turn's frame, not in its commit: focus forces the incoming page's
+    // style, which on a heavy issue made the commit one long task (P7.15).
+    if (pendingFocus.current !== null) cancelAnimationFrame(pendingFocus.current)
+    pendingFocus.current = requestAnimationFrame(() => {
+      pendingFocus.current = null
+      const page = pagesRef.current?.querySelector<HTMLElement>(`${PAGE}[data-current]`)
+      const target = page?.querySelector<HTMLElement>("h2") ?? page
+      target?.focus({ preventScroll: true })
+    })
   }, [pagesRef, state.index, state.lastTurn])
+
+  useEffect(
+    () => () => {
+      if (pendingFocus.current !== null) cancelAnimationFrame(pendingFocus.current)
+    },
+    []
+  )
 
   return {
     announcement: state.lastTurn === "auto" ? pageLabel(state.index) : "",

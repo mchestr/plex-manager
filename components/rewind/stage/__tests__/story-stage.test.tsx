@@ -148,6 +148,29 @@ describe("StoryStage", () => {
     }
   })
 
+  it("veils the neighbours by visibility and keeps the leaving page shown under the ink roll (P7.15)", () => {
+    jest.useFakeTimers()
+    try {
+      renderStage()
+      const all = () => screen.getAllByTestId("rewind-page", { hidden: true } as never)
+      expect(all()[0]).not.toHaveClass("invisible")
+      expect(all()[1]).toHaveClass("invisible")
+      expect(all()[1]).not.toHaveAttribute("inert")
+      fireEvent.keyDown(screen.getByTestId("rewind-stage"), { key: "ArrowRight" })
+      expect(current()).toHaveAttribute("data-index", "1")
+      expect(all()[1]).not.toHaveClass("invisible")
+      // The leaving cover shows until the 420 ms ink roll has covered it, then hides; it never turns inert.
+      expect(all()[0]).not.toHaveClass("invisible")
+      act(() => {
+        jest.advanceTimersByTime(420)
+      })
+      expect(all()[0]).toHaveClass("invisible")
+      expect(all()[0]).not.toHaveAttribute("inert")
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
   it("ignores taps inside an interactive island", () => {
     render(
       <div data-theme="rewind">
@@ -195,7 +218,8 @@ describe("StoryStage", () => {
     // The jump shows the back cover at once; its new neighbour is revealed after the turn, in idle time (P7.15).
     expect(all.map((p) => p.hidden)).toEqual([true, true, true, true, true, false])
     await waitFor(() => expect(all.map((p) => p.hidden)).toEqual([true, true, true, true, false, false]))
-    expect(all[4]).toHaveAttribute("inert")
+    // Hidden pages are inert; the neighbour hides by visibility, so a turn onto it never toggles inert (P7.15).
+    expect(all.map((p) => p.hasAttribute("inert"))).toEqual([true, true, true, true, false, false])
     expectNoDarkInsideLight(container)
   })
 
@@ -245,6 +269,8 @@ describe("StoryStage cuts (P7.3)", () => {
     const { unmount } = renderCuts()
     await user.click(screen.getByTestId("rewind-cut-pocket"))
     expect(screen.getByTestId("rewind-folio")).toHaveTextContent("02/06The number")
+    // The turn's focus lands on the new page's heading a frame later (P7.15).
+    await waitFor(() => expect(document.activeElement?.tagName).toBe("H2"))
     await user.keyboard("{ArrowRight}")
     expect(screen.getByTestId("rewind-folio")).toHaveTextContent("03/06Short list")
     expect(window.sessionStorage.getItem("rewind:cut:2026")).toBe("pocket")

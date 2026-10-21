@@ -283,6 +283,8 @@ function Stage({
     run(command)
   }
 
+  // The chrome swaps ink with the page and does not transition (`transition-none`): restarting each control's
+  // colour transitions on every turn cost the turn's frame a long task on a heavy issue (P7.15).
   const chromeInk = inkProps(ink.ink, ink.opts)
   const chromeHidden = state.mode === "holding"
   const dwells = entries.map((e) => (typeof e.dwell === "number" ? e.dwell : e.dwell === "hold" ? REVEAL_DWELL_MS : null))
@@ -316,7 +318,7 @@ function Stage({
               nativeButton={false}
               render={<Link href={articleHref} />}
               data-testid="rewind-article-mode"
-              className={cn(chromeInk.className, "sr-only focus-visible:not-sr-only focus-visible:absolute focus-visible:top-2 focus-visible:left-3 focus-visible:z-20")}
+              className={cn(chromeInk.className, "transition-none sr-only focus-visible:not-sr-only focus-visible:absolute focus-visible:top-2 focus-visible:left-3 focus-visible:z-20")}
             >
               Read as an article
             </Button>
@@ -332,7 +334,7 @@ function Stage({
             <header
               {...chromeInk}
               data-testid="rewind-chrome-top"
-              className={cn(chromeInk.className, "absolute inset-x-0 top-0 z-10 h-(--rw-chrome-top) text-foreground transition-opacity duration-(--rw-dur-s) rw-spread:hidden", chromeHidden && "pointer-events-none opacity-0")}
+              className={cn(chromeInk.className, "absolute inset-x-0 top-0 z-10 h-(--rw-chrome-top) text-foreground **:transition-none transition-opacity duration-(--rw-dur-s) rw-spread:hidden", chromeHidden && "pointer-events-none opacity-0")}
             >
               <ChromeTop
                 compact={fit.chrome === "compact"}
@@ -358,7 +360,7 @@ function Stage({
             <footer
               {...chromeInk}
               data-testid="rewind-chrome-bottom"
-              className={cn(chromeInk.className, "absolute inset-x-0 bottom-0 z-10 flex h-(--rw-chrome-bottom) items-center justify-center pb-[env(safe-area-inset-bottom)] text-foreground transition-opacity duration-(--rw-dur-s) rw-spread:hidden", chromeHidden && "pointer-events-none opacity-0")}
+              className={cn(chromeInk.className, "absolute inset-x-0 bottom-0 z-10 flex h-(--rw-chrome-bottom) items-center justify-center pb-[env(safe-area-inset-bottom)] text-foreground **:transition-none transition-opacity duration-(--rw-dur-s) rw-spread:hidden", chromeHidden && "pointer-events-none opacity-0")}
             >
               <ChromeBottom
                 hasTable={table !== null}
