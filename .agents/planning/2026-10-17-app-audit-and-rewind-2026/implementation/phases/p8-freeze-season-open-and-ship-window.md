@@ -344,6 +344,8 @@ No new feature code lands from 10 to 12 December. Every P1 feature ships with it
 
 **Tests.** `actionlint` passes on the workflow, and the three throwaway PRs above are the behavioural test.
 
+(as merged: the workflow reads labels and changed files from the API at run time, so a re-run after `CODE_FREEZE` flips judges the PR as it is now; it also runs on `labeled`/`unlabeled`. Flipping the variable does not re-run open PRs, so the owner re-runs them with the loop in `docs/operations.md` "Code freeze gate", which holds the whole owner procedure. Owner-only, not done: create the variable and the two labels, make "Freeze gate" a required check after it passes on main, run the three throwaway PRs and record their run ids in `ship-check.md`, flip `CODE_FREEZE` on 2026-12-14.)
+
 **Integration.** P9.1's freeze rules rely on the gate; P9.3 lifts it.
 
 **Demo.** With `CODE_FREEZE=on`, an unlabelled PR shows a failed "Freeze gate" check with the message naming the two labels; with the label it passes.
