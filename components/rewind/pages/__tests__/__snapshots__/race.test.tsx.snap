@@ -1,0 +1,10 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`11 The race summarises the page deterministically 1`] = `
+[
+  "Final standings after November: The Lord of the Rings: The Rings of Power first, Severance second, The Sopranos third, Breaking Bad fourth, Game of Thrones fifth. Who led: Severance from January to October, then The Lord of the Rings: The Rings of Power in November.",
+  "Final standings after November: Doctor Who first, Slow Horses second, The Last of Us third. Who led: Doctor Who from January to November.",
+  null,
+  null,
+]
+`;

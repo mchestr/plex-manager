@@ -42,8 +42,11 @@ describe("selectPages over the 20 golden fixtures", () => {
     expect(selections).toMatchSnapshot()
   })
 
-  it("has the ten core pages in the heavy fixture's full issue, less Guess (D7)", () => {
-    expect(issues.get("heavy")!.pages.map((p) => p.type)).toEqual(issuePages.filter((p) => p.core && p.type !== "guess").map((p) => p.type))
+  it("has the ten core pages and P7.1's four in the heavy fixture's full issue, less Guess (D7)", () => {
+    const built = ["taste", "people", "race", "records"]
+    expect(issues.get("heavy")!.pages.map((p) => p.type)).toEqual(
+      issuePages.filter((p) => (p.core || built.includes(p.type)) && p.type !== "guess").map((p) => p.type)
+    )
   })
 
   it("renumbers every folio when Bookends is disabled", () => {

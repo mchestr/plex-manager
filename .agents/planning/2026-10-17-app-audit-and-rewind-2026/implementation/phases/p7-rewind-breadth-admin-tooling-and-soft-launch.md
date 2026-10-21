@@ -85,10 +85,12 @@ The ten core pages (Bookends included), sharing, privacy and accessibility are n
 **Demo.** The heavy fixture's full issue grows to 14 pages. Taste reads "Mostly drama, made around 2022", and the race runs its 5.7 s sequence once, then rests on November; a second visit shows the final frame at once. Adding `people` to `rewindDisabledPages` renumbers every folio.
 
 **Done when.**
-- [ ] Pages 07, 08, 11 and 12 render from the registry with schemas, srSummaries and omission rules, and Taste and The race have Table builders.
-- [ ] The race autoplays once with zero React commits during the run, then holds a static final frame, which reduced motion shows at once.
-- [ ] No page shows a zero count, a wrong plural or a split word on any of the 20 fixtures.
-- [ ] The select, component and visual tests pass, and the golden recordings cover the new decks.
+- [x] Pages 07, 08, 11 and 12 render from the registry with schemas, srSummaries and omission rules, and Taste and The race have Table builders.
+- [x] The race autoplays once with zero React commits during the run, then holds a static final frame, which reduced motion shows at once.
+- [x] No page shows a zero count, a wrong plural or a split word on any of the 20 fixtures.
+- [ ] The select, component and visual tests pass, and the golden recordings cover the new decks. (Select and component tests pass and the goldens snapshot the new decks; the visual baselines, including `heavy-race-2600ms.png`, are left for the coordinator's E2E run.)
+
+(as merged: the race's page data is `series[]` (key and display title, final standing order) plus `frames[]` of `{ month, minutes[] (one per runner), leader (runner index or null) }`, so titles and keys are stored once rather than in every frame; P8.3's scrubber reads these. Records keeps the hand-checked page rule (2 of binge, day, completion and paused); the biggest week (5 h or more) and the latest start (11 PM to 4 AM) only fill the box. There was no `PENDING_PAGES`: the four pages left `LATER_PAGES` in `lib/rewind/registry.ts`. The hand recordings already held `deck.taste`, `deck.people` and `deck.records`; the golden snapshots now cover them, and `e2e/fixtures/rewind/*.v3.json` were regenerated with the new pages. `srSummary` takes no locale, so the race's month names and Records' paused minutes in summaries are en-US.)
 
 ### Step P7.2: Pages: Setup, Requests, Standing, Next year
 
