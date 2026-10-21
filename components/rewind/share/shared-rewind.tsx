@@ -52,7 +52,9 @@ export function SharedRewind({ share, assetKey, signedIn, banner }: SharedRewind
       </header>
       <ul
         aria-label="Shared cards"
-        className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 lg:mx-0 lg:grid lg:grid-cols-3 lg:gap-6 lg:overflow-visible lg:px-0"
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- on phones the row scrolls sideways and holds only images, so it takes focus itself for the keyboard
+        tabIndex={0}
+        className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 outline-none focus-visible:ring-[3px] focus-visible:ring-ring lg:mx-0 lg:grid lg:grid-cols-3 lg:gap-6 lg:overflow-visible lg:px-0"
         data-testid="rewind-share-cards"
       >
         {pages.map((page, i) => (
