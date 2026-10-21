@@ -29,7 +29,7 @@ import { getContentRatings } from "@/lib/wrapped/metadata-cache"
 import type { LibraryTitle } from "@/lib/wrapped/stats/next-year"
 import type { TautulliHistorySource } from "@/lib/wrapped/sources/tautulli-history"
 import type { PlayEvent, SourceContext, SourceResult } from "@/lib/wrapped/sources/watch-history-source"
-import type { TimeWindow } from "@/lib/wrapped/time/zone"
+import { inWindow, type TimeWindow } from "@/lib/wrapped/time/zone"
 
 import { applyRatingExclusions, metadataKeyOf } from "./rating-exclusions"
 
@@ -115,9 +115,9 @@ export interface MemberEventsRequest extends BatchKey {
 }
 
 /**
- * The member's plays for the batch window, from the batch cache or a
- * per-member `fetchYear()`, with each play's content rating filled and the
- * rating exclusions applied.
+ * The member's plays for the batch window, from the batch cache (an entry
+ * whose window covers it, trimmed to it) or a per-member `fetchYear()`, with
+ * each play's content rating filled and the rating exclusions applied.
  *
  * @example
  * ```ts
@@ -131,7 +131,9 @@ export async function getMemberEvents(request: MemberEventsRequest, ctx: SourceC
   const { member, window } = request
   const redis = request.redis ?? (await batchCacheRedis())
   const cached = await read(redis, entryKey(request, "events", member.userId), yearEntrySchema)
-  const usable = cached && cached.start === window.start && cached.end === window.end ? cached.events : null
+  // A season window cut at yesterday (P8.5) reads the batch's wider entry, trimmed to it.
+  const covers = cached && cached.start <= window.start && cached.end >= window.end
+  const usable = covers ? cached.events.filter((play) => inWindow(play.startedAt, window)) : null
 
   let plays: PlayEvent[]
   if (usable) plays = usable

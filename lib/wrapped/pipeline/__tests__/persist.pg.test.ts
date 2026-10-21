@@ -96,6 +96,27 @@ describePg('persistRewind on PostgreSQL', (databaseUrl) => {
     expect(generation).toMatchObject({ status: 'completed', previousData: OLD_DATA, factsHash: run.inputFactsHash, copySource: 'template', llmCalls: 0 })
   })
 
+  it('keeps the season version in previousData on the final cut, and sets finalCutAt and dataThrough (P8.5)', async () => {
+    const { wrappedId, run } = await seed()
+    await persistRewind(DATA, run)
+    const season = (await mockDb.plexWrapped.findUniqueOrThrow({ where: { id: wrappedId } })).data
+    const finalRun = await mockDb.rewindGeneration.create({
+      data: { wrappedId, userId: run.userId, year: 2026, kind: 'final-cut', status: 'running', copyPolicy: 'changed-slots' },
+    })
+    const final: RewindDataV3 = { ...DATA, generatedAt: '2027-01-01T08:40:00.000Z', window: { ...DATA.window, through: '2026-12-31', finalCut: true } }
+
+    await persistRewind(final, { ...run, generationId: finalRun.id, copyPolicy: 'changed-slots', dataThrough: new Date('2026-12-31T00:00:00.000Z') })
+
+    const wrapped = await mockDb.plexWrapped.findUniqueOrThrow({ where: { id: wrappedId } })
+    expect(wrapped.finalCutAt).toBeInstanceOf(Date)
+    expect(wrapped.dataThrough).toEqual(new Date('2026-12-31T00:00:00.000Z'))
+    expect(await mockDb.rewindGeneration.findUniqueOrThrow({ where: { id: finalRun.id } })).toMatchObject({
+      status: 'completed',
+      copyPolicy: 'changed-slots',
+      previousData: season,
+    })
+  })
+
   it('leaves the old data and its share links untouched when the write fails', async () => {
     const { wrappedId, run } = await seed()
 

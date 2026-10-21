@@ -17,7 +17,7 @@ import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 import { processRewindSeasonPrepare } from '@/lib/queue/jobs/rewind-season'
 import { getRewindQueue } from '@/lib/queue/rewind-producers'
 import { JOB_TYPES, type RewindSeasonPreparePayload } from '@/lib/queue/types'
-import { ensureSeasonPrepareScheduled } from '@/lib/rewind/season-runs'
+import { ensureFinalCutScheduled, ensureSeasonPrepareScheduled } from '@/lib/rewind/season-runs'
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 jest.mock('@/lib/queue/rewind-producers', () => ({ getRewindQueue: jest.fn() }))
@@ -173,5 +173,30 @@ describe('ensureSeasonPrepareScheduled', () => {
     expect(queue.add).not.toHaveBeenCalled()
 
     expect(await ensureSeasonPrepareScheduled(2026, Date.parse('2026-12-02T00:00:00Z'))).toBeNull()
+  })
+})
+
+describe('ensureFinalCutScheduled (P8.5)', () => {
+  const NOW = Date.parse('2026-12-20T12:00:00Z')
+  const AT = Date.parse('2027-01-01T08:30:00Z') // 00:30 in Los Angeles
+
+  it('keeps one delayed REWIND_FINAL_CUT for 00:30 on 1 January in the westernmost zone, never retried', async () => {
+    prismaMock.user.findMany.mockResolvedValue([{ timezone: 'America/Los_Angeles' }] as never)
+
+    expect((await ensureFinalCutScheduled(2026, NOW))?.toISOString()).toBe('2027-01-01T08:30:00.000Z')
+    expect(queue.add).toHaveBeenCalledWith(
+      JOB_TYPES.REWIND_FINAL_CUT,
+      { year: 2026, through: '2026-12-31', triggeredBy: 'scheduled' },
+      expect.objectContaining({ attempts: 1, jobId: `rewind-final-2026-${AT}`, delay: AT - NOW, deduplication: { id: 'rewind:final:2026' } })
+    )
+  })
+
+  it('keeps the delayed job while the instant holds, and schedules nothing once it has passed', async () => {
+    prismaMock.user.findMany.mockResolvedValue([{ timezone: 'America/Los_Angeles' }] as never)
+    queue.getDeduplicationJobId.mockResolvedValue(`rewind-final-2026-${AT}`)
+
+    await ensureFinalCutScheduled(2026, NOW)
+    expect(queue.add).not.toHaveBeenCalled()
+    expect(await ensureFinalCutScheduled(2026, AT)).toBeNull()
   })
 })

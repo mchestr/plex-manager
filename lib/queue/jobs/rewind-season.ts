@@ -14,15 +14,18 @@
  *
  * ## Fan-out
  *
- * One `REWIND_GENERATE_USER` child (`kind: 'season'`) per member: enabled,
+ * One `REWIND_GENERATE_USER` child (`kind: 'season'`, or `final-cut` with
+ * `copyPolicy: 'changed-slots'` and the full-year window for the final cut's
+ * fan-out, P8.5) per member: enabled,
  * with a Plex identity, admins only when the run's audience is `config` and
  * `rewindAudience` is `admins`. Members whose generation for the year is
  * queued or running are left out, and the children carry no deduplication id
  * (design 9.1); a child that finds the member's lock taken ends `skipped`.
  * `scope: 'failed'` keeps only members whose latest run failed (`WORKER_LOST`
- * and `JOB_LOST` included). The rest of eligibility (entitlement, managed
- * accounts, Tautulli identity) is each child's own check, with the payload's
- * audience.
+ * and `JOB_LOST` included). A `final-cut` fan-out leaves out members whose
+ * Rewind already holds that final cut, so running it again is a no-op. The
+ * rest of eligibility (entitlement, managed accounts, Tautulli identity) is
+ * each child's own check, with the payload's audience.
  *
  * @module
  */
@@ -42,23 +45,24 @@ import {
   type RewindSeasonPreparePayload,
 } from "@/lib/queue/types"
 import { createLogger } from "@/lib/utils/logger"
+import { dataThroughDate } from "@/lib/wrapped/aggregate/window"
 import { toStoredError } from "@/lib/wrapped/generation-errors"
 
 import type { JobProcessor } from "./index"
 
 const logger = createLogger("REWIND_SEASON_JOBS")
 
-const RETRY = { attempts: 3, backoff: { type: "exponential", delay: 30_000 } } as const
+export const RETRY = { attempts: 3, backoff: { type: "exponential", delay: 30_000 } } as const
 
-const parentOf = (job: Job) => ({ id: job.id!, queue: job.queueQualifiedName })
+export const parentOf = (job: Job) => ({ id: job.id!, queue: job.queueQualifiedName })
 
 /** Parks the job until its children finish; returns when there is nothing left to wait for. */
-async function waitForChildren(job: Job, token: string | undefined): Promise<void> {
+export async function waitForChildren(job: Job, token: string | undefined): Promise<void> {
   if (token && (await job.moveToWaitingChildren(token))) throw new WaitingChildrenError()
 }
 
 /** The members a fan-out generates; see the module comment. */
-async function fanOutMembers({ year, audience, scope }: RewindGenerateAllPayload): Promise<string[]> {
+async function fanOutMembers({ year, audience, scope, kind, through }: RewindGenerateAllPayload): Promise<string[]> {
   const config = await prisma.config.findUnique({ where: { id: "config" }, select: { rewindAudience: true } })
   const adminsOnly = audience === "config" && (config?.rewindAudience ?? "admins") !== "all"
   const members = await prisma.user.findMany({
@@ -67,6 +71,10 @@ async function fanOutMembers({ year, audience, scope }: RewindGenerateAllPayload
       plexUserId: { not: null },
       ...(adminsOnly && { isAdmin: true }),
       rewindGenerations: { none: { year, status: { in: ["queued", "running"] } } },
+      // A re-run of the final cut leaves out the members it already finished.
+      ...(kind === "final-cut" && {
+        plexWrapped: { none: { year, status: "completed", finalCutAt: { not: null }, dataThrough: { gte: dataThroughDate(through) } } },
+      }),
     },
     select: { id: true },
   })
@@ -87,7 +95,8 @@ async function fanOutMembers({ year, audience, scope }: RewindGenerateAllPayload
  * "generating"; a completed one keeps its data and links (FR-40).
  */
 async function fanOut(job: Job<RewindGenerateAllPayload>): Promise<number> {
-  const { year, audience, through } = job.data
+  const { year, audience, through, finalCut } = job.data
+  const kind = job.data.kind ?? "season"
   const userIds = await fanOutMembers(job.data)
   if (userIds.length === 0) return 0
 
@@ -98,7 +107,14 @@ async function fanOut(job: Job<RewindGenerateAllPayload>): Promise<number> {
   const wrapped = await prisma.plexWrapped.findMany({ where: { year, userId: { in: userIds } }, select: { id: true, userId: true } })
   const runs = wrapped.map((w) => ({ id: randomUUID(), wrappedId: w.id, userId: w.userId }))
   await prisma.rewindGeneration.createMany({
-    data: runs.map((run) => ({ ...run, year, kind: "season", status: "queued", jobId: run.id })),
+    data: runs.map((run) => ({
+      ...run,
+      year,
+      kind,
+      status: "queued",
+      jobId: run.id,
+      ...(kind === "final-cut" && { copyPolicy: "changed-slots" }),
+    })),
   })
   const wrappedIds = runs.map((run) => run.wrappedId)
   await prisma.plexWrapped.updateMany({
@@ -110,7 +126,7 @@ async function fanOut(job: Job<RewindGenerateAllPayload>): Promise<number> {
     await getRewindQueue("rewind-gen").addBulk(
       runs.map((run) => ({
         name: JOB_TYPES.REWIND_GENERATE_USER,
-        data: { generationId: run.id, userId: run.userId, year, audience, through } satisfies RewindGenerateUserPayload,
+        data: { generationId: run.id, userId: run.userId, year, audience, through, ...(finalCut && { finalCut }) } satisfies RewindGenerateUserPayload,
         opts: { ...RETRY, jobId: run.id, parent: parentOf(job), ignoreDependencyOnFailure: true },
       }))
     )
@@ -136,7 +152,7 @@ async function fanOut(job: Job<RewindGenerateAllPayload>): Promise<number> {
 export async function processRewindGenerateAll(job: Job<RewindGenerateAllPayload>, token?: string) {
   if ((job.data.step ?? "fan-out") === "fan-out") {
     const queued = await fanOut(job)
-    logger.info("Rewind fan-out queued", { year: job.data.year, scope: job.data.scope, audience: job.data.audience, queued })
+    logger.info("Rewind fan-out queued", { year: job.data.year, kind: job.data.kind ?? "season", scope: job.data.scope, audience: job.data.audience, queued })
     await job.updateData({ ...job.data, step: "done" })
   }
   await waitForChildren(job, token)
@@ -144,7 +160,7 @@ export async function processRewindGenerateAll(job: Job<RewindGenerateAllPayload
 }
 
 /** The warm batches the aggregate child handed back. */
-async function warmBatches(job: Job): Promise<RewindMetadataWarmPayload[]> {
+export async function warmBatches(job: Job): Promise<RewindMetadataWarmPayload[]> {
   const values = await job.getChildrenValues<{ warmBatches?: RewindMetadataWarmPayload[] }>()
   return Object.values(values).flatMap((value) => value?.warmBatches ?? [])
 }

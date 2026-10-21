@@ -130,3 +130,52 @@ export function paddedDateRange(window: TimeWindow): { after: string; before: st
 export function inWindow(ms: number, window: Pick<TimeWindow, "start" | "end">): boolean {
   return ms >= window.start && ms < window.end
 }
+
+const startOfDayIn = (ms: number, zone: string) => wallTimeToInstant(`${dayKey(ms, zone)}T00:00`, zone).getTime()
+
+/** A member's data window as of `now`, and whether it is the final cut. */
+export interface ResolvedDataWindow {
+  window: TimeWindow
+  finalCut: boolean
+}
+
+/**
+ * The one window rule (design 7.7, P8.5): until 1 January 00:00 of the next
+ * year in `zone`, the season window, ending at the end of 30 November or of
+ * yesterday when that is earlier; from then on the full year, `finalCut`.
+ * Every regeneration (fan-outs, member requests, admin runs, hide runs, the
+ * stale sweep's re-runs) reads it, so a title hidden on 3 January keeps the
+ * issue's "Final cut".
+ *
+ * @example
+ * ```ts
+ * resolveDataWindow({ year: 2026, zone: "America/Los_Angeles", now: Date.parse("2027-01-01T08:00:00Z") }).finalCut // true
+ * resolveDataWindow({ year: 2026, zone: "America/Los_Angeles", now: Date.parse("2027-01-01T07:59:00Z") }).finalCut // false
+ * ```
+ */
+export function resolveDataWindow({ year, zone, now }: { year: number; zone: string; now: number }): ResolvedDataWindow {
+  const full = yearWindow(year, zone)
+  if (now >= full.end) return { window: full, finalCut: true }
+  return { window: seasonWindowAt(year, zone, now), finalCut: false }
+}
+
+/** The season window in `zone`, ending at the start of `now`'s day when that comes before 1 December. */
+export function seasonWindowAt(year: number, zone: string, now: number): TimeWindow {
+  const season = dataWindow(year, zone, { finalCut: false })
+  return { ...season, end: Math.max(season.start, Math.min(season.end, startOfDayIn(now, zone))) }
+}
+
+/**
+ * The latest instant, across `zones`, at which clocks read `time` (`HH:MM`)
+ * on `day` (`YYYY-MM-DD`): the westernmost zone's. The season-open Prepare
+ * (00:15 on the opening day) and the final cut (00:30 on 1 January) run then.
+ *
+ * @example
+ * ```ts
+ * latestLocalInstant("2027-01-01", "00:30", ["America/Chicago", "America/Los_Angeles"]).toISOString()
+ * // "2027-01-01T08:30:00.000Z"
+ * ```
+ */
+export function latestLocalInstant(day: string, time: string, zones: readonly string[]): Date {
+  return new Date(Math.max(...zones.map((zone) => wallTimeToInstant(`${day}T${time}`, zone).getTime())))
+}

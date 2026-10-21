@@ -18,7 +18,7 @@ import {
   runRewindFinalCut,
 } from '@/actions/admin/rewind-season'
 import { checkRewindInfra } from '@/lib/queue/rewind-infra'
-import { enqueueGenerateAll, enqueueSeasonPrepare, seasonZones } from '@/lib/rewind/season-runs'
+import { enqueueFinalCut, enqueueGenerateAll, enqueueSeasonPrepare, seasonZones } from '@/lib/rewind/season-runs'
 import { AuditEventType, logAuditEvent } from '@/lib/security/audit-log'
 import { getSeasonCounts } from '@/lib/wrapped/admin/season'
 import { loadSeasonEstimate } from '@/lib/wrapped/admin/season-estimate'
@@ -31,6 +31,7 @@ jest.mock('@/lib/rewind/season-runs', () => ({
   ...jest.requireActual('@/lib/rewind/season-runs'),
   enqueueSeasonPrepare: jest.fn(),
   enqueueGenerateAll: jest.fn(),
+  enqueueFinalCut: jest.fn(),
   seasonThrough: jest.fn(async () => '2026-11-30'),
   seasonZones: jest.fn(async () => ['America/Chicago', 'America/Los_Angeles']),
 }))
@@ -121,10 +122,35 @@ describe('runRewindFinalCut', () => {
     expect(logAuditEvent).not.toHaveBeenCalled()
   })
 
-  it('stays refused after the date until P8.5 registers the job', async () => {
-    jest.setSystemTime(new Date('2027-01-01T09:00:00Z'))
+  it('is refused until 00:30 on 1 January in the westernmost zone', async () => {
+    jest.setSystemTime(new Date('2027-01-01T08:29:00Z')) // 00:29 in Los Angeles
 
-    expect(await runRewindFinalCut({ year: 2026 })).toMatchObject({ success: false, code: 'CONFLICT', error: 'The final cut arrives in a later release' })
+    expect(await runRewindFinalCut({ year: 2026 })).toMatchObject({ success: false, code: 'CONFLICT', error: 'Available from 1 January' })
+    expect(enqueueFinalCut).not.toHaveBeenCalled()
+  })
+
+  it('enqueues REWIND_FINAL_CUT for the full year from then, and audits it with the estimate', async () => {
+    jest.setSystemTime(new Date('2027-01-01T08:30:00Z'))
+    jest.mocked(enqueueFinalCut).mockResolvedValue({ jobId: 'final-1', alreadyQueued: true })
+
+    expect(await runRewindFinalCut({ year: 2026 })).toEqual({ success: true, data: { jobId: 'final-1', alreadyQueued: true } })
+    expect(enqueueFinalCut).toHaveBeenCalledWith({ year: 2026, through: '2026-12-31', triggeredBy: 'admin' })
+    expect(loadSeasonEstimate).toHaveBeenCalledWith(2026, '2026-12-31', 'all')
+    expect(logAuditEvent).toHaveBeenCalledWith(AuditEventType.REWIND_FINAL_CUT_STARTED, 'admin-1', expect.objectContaining({
+      year: 2026,
+      through: '2026-12-31',
+      members: 12,
+      jobId: 'final-1',
+      alreadyQueued: true,
+    }))
+  })
+
+  it('queues nothing without Redis', async () => {
+    jest.setSystemTime(new Date('2027-01-02T12:00:00Z'))
+    jest.mocked(checkRewindInfra).mockResolvedValue({ ok: false, code: 'REDIS_NOT_CONFIGURED' })
+
+    expect(await runRewindFinalCut({ year: 2026 })).toMatchObject({ success: false, code: 'UPSTREAM_UNAVAILABLE' })
+    expect(enqueueFinalCut).not.toHaveBeenCalled()
   })
 })
 

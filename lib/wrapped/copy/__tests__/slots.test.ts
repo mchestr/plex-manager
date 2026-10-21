@@ -28,10 +28,8 @@ describe("COPY_SLOTS", () => {
     }
   })
 
-  it("lists window.finalCut on the slots whose templates speak of the window", () => {
-    for (const id of ["deck.number", "deck.calendar", "deck.standing", "signOff"] as const) {
-      expect(COPY_SLOTS[id].identity).toContain("window.finalCut")
-    }
+  it("lists window.finalCut on no slot: window wording belongs to the templates (P8.5)", () => {
+    for (const slot of Object.values(COPY_SLOTS)) expect(slot.identity).not.toContain("window.finalCut")
   })
 
   it("returns only the selected pages' slots", () => {
@@ -71,8 +69,8 @@ describe("slotDependencyHash", () => {
     expect(slotDependencyHash(clock, { ...base, "hours.afterDarkShare": fact(0.52, "share") })).not.toBe(slotDependencyHash(clock, base))
   })
 
-  it("changes with the final cut on window slots", () => {
+  it("holds across the final cut, so a deck whose numbers only grew keeps its copy", () => {
     const number = COPY_SLOTS["deck.number"]
-    expect(slotDependencyHash(number, { "window.finalCut": fact(1) })).not.toBe(slotDependencyHash(number, { "window.finalCut": fact(0) }))
+    expect(slotDependencyHash(number, { "window.finalCut": fact(1) })).toBe(slotDependencyHash(number, { "window.finalCut": fact(0) }))
   })
 })

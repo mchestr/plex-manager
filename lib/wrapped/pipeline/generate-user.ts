@@ -43,7 +43,7 @@ import { dayKey } from "@/lib/wrapped/time/zone"
 
 import { buildIssue, disagreesWithAggregate, withArchetype, type IssueInput } from "./build-issue"
 import type { GenerateFn } from "./copy-llm"
-import { runCopyStep, type CopyTrail } from "./copy-step"
+import { runCopyStep, slotHashesFor, type CopyPolicy, type CopyTrail } from "./copy-step"
 import { checkEligibility, checkJoinedLate, type GenerationAudience, type SkipReason } from "./eligibility"
 import { firstPlayAt } from "./late-joiner"
 import { loadRewindContext, type RewindContext } from "./load-context"
@@ -58,8 +58,10 @@ export interface GenerateUserOptions {
   kind: RewindGenerationKind
   /** The batch's last data day (`YYYY-11-30` or `YYYY-12-31`); defaults to the current one. */
   through?: string
+  /** The final cut's full-year window with an earlier `through` (a staging rehearsal, P8.5). */
+  finalCut?: boolean
   mode: "persist" | "dry-run"
-  copyPolicy: "default" | "no-llm"
+  copyPolicy: CopyPolicy
   signal: AbortSignal
   /** Persist mode: the run's `RewindGeneration` row. */
   generationId?: string
@@ -111,7 +113,7 @@ const defaultDeps: PipelineDeps = {
 /** Generates (or, in a dry run, only builds) the member's v3 Rewind. */
 export async function generateUserRewind(options: GenerateUserOptions, deps: PipelineDeps = defaultDeps): Promise<GenerateUserResult> {
   const { userId, year, signal } = options
-  const ctx = await deps.loadContext({ userId, year, kind: options.kind, through: options.through })
+  const ctx = await deps.loadContext({ userId, year, kind: options.kind, through: options.through, finalCut: options.finalCut })
   const eligibility = await deps.checkEligibility(ctx, options.audience ?? "config")
   if (!eligibility.ok) return { status: "skipped", reason: eligibility.reason }
 
@@ -148,6 +150,7 @@ export async function generateUserRewind(options: GenerateUserOptions, deps: Pip
     policy: options.copyPolicy,
     promptVersion,
     previous: ctx.previous,
+    factsFor: (id) => withArchetype(issue, issueInput, id).facts,
     llm: {
       disabled: ctx.config.llmDisabled,
       mode: effectiveRewindLlmMode({ llmDisabled: ctx.config.llmDisabled, rewindLlmMode: ctx.config.llmMode }),
@@ -174,7 +177,12 @@ export async function generateUserRewind(options: GenerateUserOptions, deps: Pip
   // A model timeout only templates the copy; the run's own limit or a shutdown stops it here.
   signal.throwIfAborted()
   const inputFactsHash = issue.factsHash
-  if (copy.copy && copy.copy.archetype.id !== issue.archetype?.id) issue = withArchetype(issue, issueInput, copy.copy.archetype.id)
+  let slotHashes = copy.slotHashes
+  if (copy.copy && copy.copy.archetype.id !== issue.archetype?.id) {
+    issue = withArchetype(issue, issueInput, copy.copy.archetype.id)
+    // The stored hashes describe the stored facts, which now carry the model's archetype.
+    slotHashes = slotHashesFor(issue.pages.map((p) => p.type), issue.facts)
+  }
 
   const data = validateRewind({
     version: 3,
@@ -188,7 +196,7 @@ export async function generateUserRewind(options: GenerateUserOptions, deps: Pip
     archetype: issue.archetype,
     copy: copy.copy,
     copySource: copy.source,
-    copyMeta: { model: copy.model, promptVersion, slotHashes: copy.slotHashes },
+    copyMeta: { model: copy.model, promptVersion, slotHashes },
     factsHash: issue.factsHash,
   } satisfies RewindDataV3)
 

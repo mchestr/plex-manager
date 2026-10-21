@@ -3,7 +3,7 @@
 import { useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 
-import { generateAllRewinds, prepareRewindSeason, retryFailedRewinds } from "@/actions/admin/rewind-season"
+import { generateAllRewinds, prepareRewindSeason, retryFailedRewinds, runRewindFinalCut } from "@/actions/admin/rewind-season"
 import { Button } from "@/components/ui/button"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useToast } from "@/components/ui/toast"
@@ -15,8 +15,8 @@ import { seasonStatusKey } from "./season-progress"
 interface SeasonActionsProps {
   year: number
   estimates: { all: SeasonCostEstimate; failed: SeasonCostEstimate }
-  /** Why Run final cut is disabled ("Available from 1 January"); P8.5 enables it. */
-  finalCutNote: string
+  /** Whether the final cut has opened (00:30 on 1 January in the westernmost zone, P8.5). */
+  finalCutOpen: boolean
 }
 
 type BulkAction = typeof prepareRewindSeason
@@ -39,7 +39,7 @@ function useDescribe() {
 }
 
 /** Prepare season, Generate all, Retry failed and Run final cut, each behind a confirm (P7.8). */
-export function SeasonActions({ year, estimates, finalCutNote }: SeasonActionsProps) {
+export function SeasonActions({ year, estimates, finalCutOpen }: SeasonActionsProps) {
   const router = useRouter()
   const toast = useToast()
   const queryClient = useQueryClient()
@@ -56,12 +56,34 @@ export function SeasonActions({ year, estimates, finalCutNote }: SeasonActionsPr
 
   return (
     <div className="flex flex-wrap items-center gap-2" data-testid="admin-rewind-actions">
-      <span className="text-label text-muted-foreground" id="admin-rewind-final-cut-note">
-        {finalCutNote}
-      </span>
-      <Button variant="secondary" disabled aria-describedby="admin-rewind-final-cut-note" data-testid="admin-rewind-final-cut-button">
-        Run final cut
-      </Button>
+      {finalCutOpen ? (
+        <ConfirmDialog
+          trigger={
+            <Button variant="secondary" data-testid="admin-rewind-final-cut-button">
+              Run final cut
+            </Button>
+          }
+          title={`Run the final cut of ${year}?`}
+          description={describe(
+            "Reads the full year, then rebuilds every Rewind with December and writes only the copy whose facts changed, for",
+            estimates.all
+          )}
+          confirmLabel="Run final cut"
+          pendingLabel="Starting"
+          action={run(runRewindFinalCut, "Running the final cut. This can take a few minutes.")}
+          data-testid="admin-rewind-final-cut-dialog"
+          confirmTestId="admin-rewind-final-cut-confirm"
+        />
+      ) : (
+        <>
+          <span className="text-label text-muted-foreground" id="admin-rewind-final-cut-note">
+            Available from 1 January
+          </span>
+          <Button variant="secondary" disabled aria-describedby="admin-rewind-final-cut-note" data-testid="admin-rewind-final-cut-button">
+            Run final cut
+          </Button>
+        </>
+      )}
       <ConfirmDialog
         trigger={
           <Button variant="secondary" disabled={estimates.failed.members === 0} data-testid="admin-rewind-retry-failed-button">
