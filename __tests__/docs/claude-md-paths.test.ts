@@ -43,7 +43,7 @@ describe('CLAUDE.md paths', () => {
   const paths = repositoryPaths(markdown)
 
   it('finds the paths it is meant to check', () => {
-    expect(paths).toEqual(expect.arrayContaining(['lib/wrapped/archetype-scoring.ts', '@/lib/security/rate-limit']))
+    expect(paths).toEqual(expect.arrayContaining(['lib/wrapped/archetypes/scorers.ts', '@/lib/security/rate-limit']))
   })
 
   it.each(paths)('%s exists', (repoPath) => {

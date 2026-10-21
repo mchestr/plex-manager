@@ -12,14 +12,9 @@ lists the known hotspots and says where performance checks will come from.
 Each Rewind generation downloads far more than it needs, and most of these calls
 have no effective timeout:
 
-- **Plex:** `lib/wrapped/server-statistics.ts` fetches every library section in
-  full (`/library/sections/{id}/all`, plus every episode) to sum storage. It does
-  this on every user's generation, with no cache.
 - **Tautulli:** `lib/wrapped/tautulli-user-statistics.ts` pages through the
   user's lifetime `get_history` 1,000 rows at a time, then filters by year in
   memory.
-- **Overseerr:** `lib/wrapped/overseerr-statistics.ts` pages through every
-  user's requests and calls `/user` without paging.
 
 P2.4 (Rewind sources) and P2.6 (one server-wide history pass with a metadata
 cache) replace this path.

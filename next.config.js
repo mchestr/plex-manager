@@ -64,6 +64,15 @@ module.exports = (phase) => ({
     return [
       { source: '/wrapped/share/:token', destination: '/rewind/s/:token', permanent: true },
       { source: '/wrapped/:path*', destination: '/rewind/:path*', permanent: true },
+      // The v2 playground moved onto the production pipeline (P8.8); a prompt
+      // template's id becomes the style guide to try.
+      {
+        source: '/admin/playground',
+        has: [{ type: 'query', key: 'templateId', value: '(?<templateId>[A-Za-z0-9_-]+)' }],
+        destination: '/admin/rewind/playground?styleGuideId=:templateId',
+        permanent: false,
+      },
+      { source: '/admin/playground', destination: '/admin/rewind/playground', permanent: false },
     ]
   },
   async headers() {

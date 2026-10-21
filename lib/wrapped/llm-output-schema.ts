@@ -19,14 +19,14 @@
 
 import { z } from "zod"
 
-import { ARCHETYPE_IDS, ARCHETYPES, getArchetype, type ArchetypeId } from "@/lib/wrapped/archetypes/catalogue"
+import { ARCHETYPE_IDS, getArchetype } from "@/lib/wrapped/archetypes/catalogue"
 
 /**
  * The curated archetypes now live in `lib/wrapped/archetypes/catalogue.ts`
  * (P2.9); v2 keeps reading them from here. The LLM selects one id (enforced
  * by the schema enum) and writes the tagline and dedication.
  */
-export { ARCHETYPES, getArchetype, type ArchetypeId }
+export { getArchetype }
 
 export const wrappedLLMOutputSchema = z.object({
   archetype: z.object({

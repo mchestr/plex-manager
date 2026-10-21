@@ -321,11 +321,13 @@ No new feature code lands from 10 to 12 December. Every P1 feature ships with it
 
 **Demo.** Pick the `hostile-titles` fixture and the default model. The estimate appears first, then the fact sheet, the selection, the grounding trail with the injection title held inside a token, and the cost. Open the preview, step to Top shows and close it. `/admin/playground` lands here.
 
+(as merged: the page polls the run, then puts its id in the address as `?preview=` and renders the panes on the server from `lib/rewind/playground/view.ts`; the pane tests read a committed `hostile-titles` view that `lib/rewind/playground/__tests__/view.test.ts` keeps current (`UPDATE_PLAYGROUND_VIEW=1`). The prompt-version list holds only `rewind-2026.1`, the one version `DryRunInput` accepts; there is no `-rc`. Both `/admin/playground` redirects are temporary (307). `generate-v2.ts` and `app/api/admin/models` were already gone; knip then also removed `prompt-template.ts` (no longer used by the prompts editor), `archetype-scoring.ts`, `server-statistics.ts`, `overseerr-statistics.ts`, `collect-v2-statistics.ts`, the Tautulli leaderboard and library fetchers and `hooks/use-playground-state.ts`. `components/wrapped/**` lost its last caller with `preview-modal.tsx`; it stays for P11.29 through a temporary knip entry on `wrapped-viewer-wrapper.tsx`, which P11.29 deletes. CLAUDE.md's JSDoc reference module is now `lib/wrapped/archetypes/scorers.ts`. `e2e/admin/rewind-playground.spec.ts` was written but not run here; the axe route moved to `/admin/rewind/playground` with no baseline entry.)
+
 **Done when.**
-- [ ] `/admin/rewind/playground` runs `generateUserRewind` in dry-run mode on a member or a fixture, with model, prompt-version and style-guide inputs.
-- [ ] It shows the facts, the page selection, the raw output, the grounding trail and the cost, and previews through `?preview=`.
-- [ ] A paid run shows its estimate first, and P7.10's limit of 10 dry runs per 10 minutes applies.
-- [ ] The copied statistics route, the v2 playground client and their API routes are deleted, and `/admin/playground` redirects.
+- [x] `/admin/rewind/playground` runs `generateUserRewind` in dry-run mode on a member or a fixture, with model, prompt-version and style-guide inputs.
+- [x] It shows the facts, the page selection, the raw output, the grounding trail and the cost, and previews through `?preview=`.
+- [x] A paid run shows its estimate first, and P7.10's limit of 10 dry runs per 10 minutes applies.
+- [x] The copied statistics route, the v2 playground client and their API routes are deleted, and `/admin/playground` redirects.
 
 ### Step P8.9: CI freeze gate, off until the code freeze
 
