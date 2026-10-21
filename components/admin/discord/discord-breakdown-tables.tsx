@@ -9,15 +9,7 @@ import { useFormat } from "@/lib/format-context"
 import { icons } from "@/lib/ui/icons"
 
 import { DiscordMember } from "./recent-commands-table"
-
-const COMMAND_TYPE_LABELS: Record<string, string> = {
-  CHAT: "Chat",
-  MEDIA_MARK: "Media marking",
-  CLEAR_CONTEXT: "Clear context",
-  SELECTION: "Selection",
-  LINK_REQUEST: "Link request",
-  HELP: "Help",
-}
+import { COMMAND_TYPE_LABELS } from "./specs"
 
 const onePage = (rows: unknown[]) => ({ page: 1, pageSize: Math.max(rows.length, 1), total: rows.length })
 

@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "commit": "cdb4c89cda7088bf81ece9b952e337be2bc781a9",
-  "generatedAt": "2026-10-21T22:33:14.544Z",
+  "commit": "06c55f09cfc52dbc8af8811c9c2cf101c6019e5c",
+  "generatedAt": "2026-10-21T22:43:23.010Z",
   "files": {
     "app/admin/llm-usage/[usageId]/page.tsx": {
       "blur": 7,
@@ -28,26 +28,8 @@
     "app/subscribe/success/page.tsx": {
       "raw-palette": 3
     },
-    "components/admin/discord/discord-context-metrics.tsx": {
-      "raw-palette": 7
-    },
-    "components/admin/discord/discord-error-analysis.tsx": {
-      "raw-palette": 13
-    },
-    "components/admin/discord/discord-help-stats.tsx": {
-      "raw-palette": 9
-    },
-    "components/admin/discord/discord-linking-metrics.tsx": {
-      "raw-palette": 10
-    },
     "components/admin/discord/discord-marked-media.tsx": {
       "raw-palette": 42
-    },
-    "components/admin/discord/discord-media-marking-breakdown.tsx": {
-      "raw-palette": 11
-    },
-    "components/admin/discord/discord-selection-stats.tsx": {
-      "raw-palette": 10
     },
     "components/admin/invites/invite-details-client.tsx": {
       "caps-eyebrow": 6,
@@ -373,6 +355,6 @@
     "gradient": 51,
     "gradient-text": 32,
     "infinite-motion": 23,
-    "raw-palette": 1256
+    "raw-palette": 1196
   }
 }

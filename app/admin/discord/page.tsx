@@ -8,19 +8,25 @@ import {
   getDiscordMarkedMedia,
 } from "@/actions/discord-activity"
 import { ActiveMembersTable, CommandTypesTable } from "@/components/admin/discord/discord-breakdown-tables"
-import { DiscordCommandChart } from "@/components/admin/discord/discord-command-chart"
-import { DiscordContextMetrics } from "@/components/admin/discord/discord-context-metrics"
-import { DiscordErrorAnalysis } from "@/components/admin/discord/discord-error-analysis"
-import { DiscordHelpStats } from "@/components/admin/discord/discord-help-stats"
-import { DiscordLinkingMetrics } from "@/components/admin/discord/discord-linking-metrics"
 import { DiscordMarkedMedia } from "@/components/admin/discord/discord-marked-media"
-import { DiscordMediaMarkingBreakdown } from "@/components/admin/discord/discord-media-marking-breakdown"
-import { DiscordSelectionStats } from "@/components/admin/discord/discord-selection-stats"
 import { DiscordStatGrid } from "@/components/admin/discord/discord-stat-grid"
 import { DiscordStatusRows } from "@/components/admin/discord/discord-status-rows"
-import { DiscordTrendChart } from "@/components/admin/discord/discord-trend-chart"
+import { DiscordTopList } from "@/components/admin/discord/discord-top-list"
 import { type RecentCommand, RecentCommandsTable } from "@/components/admin/discord/recent-commands-table"
+import {
+  commandUsageSpec,
+  contextClearsSpec,
+  dailyCommandsSpec,
+  errorsByTypeSpec,
+  errorTrendSpec,
+  helpTopicsSpec,
+  linkRequestsSpec,
+  markingCommandsSpec,
+  selectionSpec,
+  topMarkedSpec,
+} from "@/components/admin/discord/specs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ChartCard } from "@/components/ui/chart-card"
 import { DateRangeFilter } from "@/components/ui/date-range-filter"
 import { EmptyState } from "@/components/ui/empty-state"
 import { LiveRefreshProvider, LiveRefreshStatus } from "@/components/ui/live-status"
@@ -31,6 +37,7 @@ import { getFormat } from "@/lib/settings/app-settings"
 import { parseDateRange, presetRange } from "@/lib/ui/date-range"
 import { icons } from "@/lib/ui/icons"
 import { discordStatus } from "@/lib/ui/status"
+import { dayWindow } from "@/lib/utils/day-window"
 import { serverZone } from "@/lib/utils/server-zone"
 import { dayKey } from "@/lib/utils/zoned-time"
 
@@ -104,6 +111,15 @@ export default async function DiscordDashboardPage({ searchParams }: { searchPar
     createdAt: log.createdAt,
   }))
   const quiet = summary !== null && summary.totalCommands === 0
+  const keys = dayWindow(range, zone).keys
+  const periodText = `${f.dayKey(range.from)} to ${f.dayKey(range.to)}`
+  const help = detailed?.helpStats ?? null
+  const linking = detailed?.linkingMetrics ?? null
+  const context = detailed?.contextMetrics ?? null
+  const selection = detailed?.selectionStats ?? null
+  const marking = detailed?.mediaMarkingBreakdown ?? null
+  const errors = detailed?.errorAnalysis ?? null
+  const markTotal = (marking?.byCommand ?? []).reduce((sum, row) => sum + row.count, 0)
 
   return (
     <LiveRefreshProvider renderedAt={renderedAt} intervalMs={LIVE_INTERVAL_MS}>
@@ -140,41 +156,131 @@ export default async function DiscordDashboardPage({ searchParams }: { searchPar
         ) : (
           <>
             <div className="grid gap-6 lg:grid-cols-2">
-              <Panel title="Commands per day">
-                <div className="h-64">
-                  <DiscordTrendChart data={dashboard?.dailyActivity ?? []} />
-                </div>
-              </Panel>
-              <Panel title="Command usage">
-                <div className="h-64">
-                  <DiscordCommandChart data={dashboard?.commandStats ?? []} />
-                </div>
-              </Panel>
+              <ChartCard
+                title="Commands per day"
+                description="Successful and failed"
+                summary={`Successful and failed commands per day, ${periodText}`}
+                spec={dailyCommandsSpec(keys, dashboard?.dailyActivity ?? [])}
+                data-testid="discord-daily-chart"
+              />
+              <ChartCard
+                title="Command usage"
+                summary={`Commands run most often, ${periodText}`}
+                spec={commandUsageSpec(dashboard?.commandStats ?? [])}
+                data-testid="discord-command-chart"
+              />
               <Panel title="Commands by type">
                 <CommandTypesTable rows={summary?.commandsByType ?? []} total={summary?.totalCommands ?? 0} />
               </Panel>
               <Panel title="Most active members">
                 <ActiveMembersTable rows={dashboard?.activeUsers ?? []} />
               </Panel>
-              <Panel title="Help usage">
-                <DiscordHelpStats data={detailed?.helpStats ?? null} />
-              </Panel>
-              <Panel title="Account linking">
-                <DiscordLinkingMetrics data={detailed?.linkingMetrics ?? null} />
-              </Panel>
-              <Panel title="Context management">
-                <DiscordContextMetrics data={detailed?.contextMetrics ?? null} />
-              </Panel>
-              <Panel title="Selection menu">
-                <DiscordSelectionStats data={detailed?.selectionStats ?? null} />
-              </Panel>
+              <ChartCard
+                title="Help usage"
+                description={
+                  help
+                    ? `${f.number(help.totalHelpRequests)} requests: ${f.number(help.generalHelpCount)} general, ${f.number(help.specificHelpCount)} on a topic`
+                    : undefined
+                }
+                summary={`Help requests by topic, ${periodText}`}
+                spec={helpTopicsSpec(help)}
+                empty={{ title: "No help requests", description: "Nobody asked the bot for help in this period." }}
+                data-testid="discord-help-chart"
+              />
+              <ChartCard
+                title="Account linking"
+                description={
+                  linking
+                    ? `${f.number(linking.totalLinkRequests)} link requests from ${f.number(linking.uniqueUnlinkedUsers)} unlinked members`
+                    : undefined
+                }
+                summary={`Account link requests per day, ${periodText}`}
+                spec={linkRequestsSpec(keys, linking)}
+                empty={{ title: "No link requests", description: "No unlinked member asked to link in this period." }}
+                data-testid="discord-linking-chart"
+              />
+              <ChartCard
+                title="Context management"
+                description={context ? `${f.number(context.totalClears)} context clears` : undefined}
+                summary={`Context clears by command, ${periodText}`}
+                spec={contextClearsSpec(context)}
+                empty={{ title: "No context clears", description: "Nobody cleared their chat context in this period." }}
+                data-testid="discord-context-chart"
+              />
+              <ChartCard
+                title="Selection menu"
+                description={
+                  selection && selection.totalSelections > 0
+                    ? `${f.number(selection.totalSelections)} selections, ${f.percent(selection.successRate / 100)} successful`
+                    : undefined
+                }
+                summary={`Selection menu choices by option, ${periodText}`}
+                spec={selectionSpec(selection)}
+                empty={{ title: "No selections", description: "Nobody used a selection menu in this period." }}
+                data-testid="discord-selection-chart"
+              />
+              <DiscordTopList
+                title="Repeat link requesters"
+                items={(linking?.repeatRequestUsers ?? []).slice(0, 5).map((user) => ({
+                  id: user.discordUserId,
+                  label: user.discordUsername ?? user.discordUserId,
+                  value: `${f.number(user.requestCount)} requests`,
+                }))}
+                rowTestIdPrefix="repeat-user"
+                data-testid="discord-repeat-requesters"
+              />
+              <DiscordTopList
+                title="Frequent context clears"
+                items={(context?.topClearUsers ?? []).slice(0, 5).map((user) => ({
+                  id: user.discordUserId,
+                  label: user.discordUsername ?? user.discordUserId,
+                  value: `${f.number(user.clearCount)} clears`,
+                }))}
+                rowTestIdPrefix="clear-user"
+                data-testid="discord-frequent-clearers"
+              />
+              <ChartCard
+                title="Marks by command"
+                description={marking ? `${f.number(markTotal)} marks` : undefined}
+                summary={`Media marks by command, ${periodText}`}
+                spec={markingCommandsSpec(marking)}
+                empty={{ title: "No marks", description: "Nobody marked media from Discord in this period." }}
+                data-testid="discord-marking-chart"
+              />
+              <ChartCard
+                title="Most marked media"
+                summary={`Titles marked most often, ${periodText}`}
+                spec={topMarkedSpec(marking)}
+                empty={{ title: "No marks", description: "Nobody marked media from Discord in this period." }}
+                data-testid="discord-top-marked-chart"
+              />
+              <ChartCard
+                title="Errors per day"
+                description={errors ? `${f.number(errors.totalErrors)} errors` : undefined}
+                summary={`Failed commands per day, ${periodText}`}
+                spec={errorTrendSpec(keys, errors)}
+                empty={{ title: "No errors", description: "Every command in this period succeeded." }}
+                data-testid="discord-error-trend-chart"
+              />
+              <ChartCard
+                title="Errors by type"
+                summary={`Failed commands by command type, ${periodText}`}
+                spec={errorsByTypeSpec(errors)}
+                empty={{ title: "No errors", description: "Every command in this period succeeded." }}
+                data-testid="discord-error-type-chart"
+              />
+              <DiscordTopList
+                title="Most failing commands"
+                items={(errors?.errorsByCommand ?? []).slice(0, 5).map((cmd) => ({
+                  id: cmd.commandName,
+                  label: cmd.commandName,
+                  value: `${f.number(cmd.count)} errors`,
+                  sub: cmd.sampleErrors[0],
+                }))}
+                rowTestIdPrefix="error-command"
+                data-testid="discord-failing-commands"
+              />
             </div>
-            <Panel title="Media marking breakdown">
-              <DiscordMediaMarkingBreakdown data={detailed?.mediaMarkingBreakdown ?? null} />
-            </Panel>
-            <Panel title="Errors">
-              <DiscordErrorAnalysis data={detailed?.errorAnalysis ?? null} />
-            </Panel>
           </>
         )}
 
