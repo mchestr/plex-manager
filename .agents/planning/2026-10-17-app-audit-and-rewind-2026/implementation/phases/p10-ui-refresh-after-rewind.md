@@ -573,9 +573,11 @@ P10.13 to P10.28 moved here from P3 and P6 (formerly P3.11 to P3.13, P6.2, P6.4,
 **Demo.** Run `--slice components/dashboard` as a dry run: it prints the auto and review counts. Then open the slice PR, showing its screenshot diff and the `design-debt.json` totals before and after.
 
 **Done when.**
-- [ ] The tool implements every 9.3 pair, with tests, and is idempotent.
+- [x] The tool implements every 9.3 pair, with tests, and is idempotent.
 - [ ] The two slice PRs are merged, each with a reviewed screenshot diff and resolved review items, and the tool is ready for P10.14 and the page rebuilds.
-- [ ] `design-debt.json` counts are lower for every file in those slices.
+- [x] `design-debt.json` counts are lower for every file in those slices.
+
+(as merged: run the tool over any folders, files or globs with `npm run codemod:tokens -- --slice <folder|file|glob> [...more]` for a dry run (counts per rule; it writes only the git-ignored `codemod-review.md`), then add `--write` to rewrite; `--review-file <path>` moves the review list. Rerunning is a no-op, so it is safe over folders already done. Built on the `typescript` compiler API the design check already uses (`scripts/design-system/ast.mjs`) instead of a new `ts-morph` dependency, so P10.11's `adapters.ts` builds on the same API. Beyond 9.3: neutral rows also take `gray-` and `zinc-`; `text-cyan-400` is always review (link, label and stat value can't be told apart); any palette class with no pair goes to review (`raw-palette`), which holds its whole unit under the context rule; the context unit is the whole className or class-function call, not one string; and `text-white` goes to review (`on-fill`) inside a `<Button>`, under a `style` background or within three elements of a coloured fill. The skip list already holds P10.14's admin entries. Class strings returned from plain helper functions are not class contexts and stay hand work. Both slices are tokenised with every review item resolved by hand, and every file in them leaves `design-debt.json`; screenshot diffs and axe baselines are left to the owner's Visual Baselines workflow.)
 
 ### Step P10.14: Token codemod: admin users and settings slices
 
