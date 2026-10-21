@@ -15,10 +15,11 @@ import { formatRewindDuration } from "@/lib/rewind/format"
 import type { PageDefinition, PageTable } from "@/lib/rewind/registry"
 import { raceGeometry } from "@/lib/rewind/viz/race"
 import { headline } from "@/lib/wrapped/copy/templates"
-import type { RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
+import type { FactId, RewindFactsV3 } from "@/lib/wrapped/facts/catalogue"
 
 import { shown } from "./facts"
 import { RaceDataSchema, type RaceData } from "./race.schema"
+import { ratingKeyOf } from "./title-key.schema"
 import { monthName } from "./top-shows"
 
 const PLACES = ["first", "second", "third", "fourth", "fifth"]
@@ -71,5 +72,13 @@ export const racePage: PageDefinition<RaceData> = {
   srSummary: (data) => raceSummary(data),
   table: raceTable,
   article: (data, facts, ctx) => [heading(headline("race", facts), facts), ...figure(raceSummary(data)), ...tableBlock(raceTable(data, facts, ctx))],
-  share: { facts: ["race.leadChanges", "race.overtakeMonth", "race.closestGapMinutes"] },
+  // The card's final standings (P7.6): the runners are the top series in rank order, so runner i is `series[i + 1]`.
+  share: {
+    facts: [
+      "race.leadChanges", "race.overtakeMonth", "race.closestGapMinutes",
+      ...[1, 2, 3, 4, 5].flatMap((n) => [`series[${n}].title`, `series[${n}].minutes`] as FactId[]),
+    ],
+    titles: [1, 2, 3, 4, 5].map((n) => `series[${n}].title` as FactId),
+    titleKeys: ({ series }) => Object.fromEntries(series.map((s, i) => [`series[${i + 1}].title`, ratingKeyOf(s.key)])),
+  },
 }

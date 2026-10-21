@@ -107,9 +107,10 @@ describe("GET /api/rewind/card/[rewindId]/[page]", () => {
     expect(hasEntitlement).toHaveBeenCalledWith(userId, "full")
   })
 
-  it("answers 404 for a page the issue did not print, or that has no card yet", async () => {
-    expect((await get("standing")).status).toBe(404)
-    expect((await get("top-films")).status).toBe(404)
+  it("answers 404 for a page the issue did not print, or whose card is not eligible", async () => {
+    expect((await get("guess")).status).toBe(404)
+    expect((await get("calendar", "?daily=0")).status).toBe(404)
+    expect((await get("setup")).status).toBe(404)
     expect((await get("not-a-page")).status).toBe(404)
   })
 

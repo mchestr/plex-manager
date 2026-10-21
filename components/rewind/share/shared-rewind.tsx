@@ -35,7 +35,7 @@ const STORY = { width: 1080, height: 1920 } as const
  * reads nothing but the projection, so it shows no more than the cards do.
  */
 export function SharedRewind({ share, assetKey, signedIn, banner }: SharedRewindProps) {
-  // Only pages with a card: P7.6 adds the rest, and a link cannot publish one before then.
+  // Only pages with a card under the link's own options (the calendar needs its days).
   const carded = new Set(eligibleCards(share, { dailyDetail: true }))
   const pages = share.pages.filter((page) => carded.has(page.type))
 

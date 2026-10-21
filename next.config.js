@@ -35,7 +35,7 @@ module.exports = (phase) => ({
   // Stops `next dev` from writing AGENTS.md into the repo; CLAUDE.md already
   // holds the agent guidance.
   agentRules: false,
-  serverExternalPackages: ['discord.js', '@discordjs/ws', 'zlib-sync', 'bufferutil', 'utf-8-validate'],
+  serverExternalPackages: ['discord.js', '@discordjs/ws', 'zlib-sync', 'bufferutil', 'utf-8-validate', 'subset-font'],
   // The optimizer would fetch and decode any URL an anonymous caller passes to
   // /_next/image. With it off, Next answers that route with a 404.
   images: {
@@ -48,10 +48,11 @@ module.exports = (phase) => ({
     '/apple-icon': ['./lib/og/fonts/*'],
     '/opengraph-image': ['./lib/og/fonts/*'],
     '/twitter-image': ['./lib/og/fonts/*'],
-    // The Rewind card fonts are read from disk (lib/rewind/cards/fonts.ts)
-    '/api/rewind/card/[rewindId]/[page]': ['./lib/rewind/cards/fonts/*.ttf'],
-    '/api/rewind/card/s/[assetKey]/[page]': ['./lib/rewind/cards/fonts/*.ttf'],
-    '/api/rewind/card/preview/[previewId]/[page]': ['./lib/rewind/cards/fonts/*.ttf'],
+    // The Rewind card fonts are read from disk (lib/rewind/cards/fonts.ts), and so
+    // are the safe-mode Noto faces and harfbuzz's subsetter (lib/rewind/cards/noto.ts)
+    '/api/rewind/card/[rewindId]/[page]': ['./lib/rewind/cards/fonts/*.ttf', './lib/rewind/cards/fonts/noto/*.ttf', './node_modules/harfbuzzjs/dist/harfbuzz-subset.wasm'],
+    '/api/rewind/card/s/[assetKey]/[page]': ['./lib/rewind/cards/fonts/*.ttf', './lib/rewind/cards/fonts/noto/*.ttf', './node_modules/harfbuzzjs/dist/harfbuzz-subset.wasm'],
+    '/api/rewind/card/preview/[previewId]/[page]': ['./lib/rewind/cards/fonts/*.ttf', './lib/rewind/cards/fonts/noto/*.ttf', './node_modules/harfbuzzjs/dist/harfbuzz-subset.wasm'],
     // Dry runs read the golden fixtures from disk (lib/rewind/dry-run/fixtures.ts): the admin pages that start them
     '/admin/**': ['./evals/rewind/fixtures/*.json'],
   },

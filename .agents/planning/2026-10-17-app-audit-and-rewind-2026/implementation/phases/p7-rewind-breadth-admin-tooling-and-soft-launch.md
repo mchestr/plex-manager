@@ -327,9 +327,11 @@ The ten core pages (Bookends included), sharing, privacy and accessibility are n
 **Demo.** The heavy member's share-sheet picker lists 15 cards. A shared Top films card with a Japanese title prints it in Noto Sans JP.
 
 **Done when.**
-- [ ] Every eligible page except Setup and Next year has a card, and `eligibleCards()` returns 15 for the mock member with Daily detail off.
-- [ ] Safe-mode titles render in Noto subsets on cards, and the standalone build ships the fonts.
+- [x] Every eligible page except Setup and Next year has a card, and `eligibleCards()` returns 15 for the mock member with Daily detail off.
+- [x] Safe-mode titles render in Noto subsets on cards, and the standalone build ships the fonts.
 - [ ] Pixelmatch baselines pass for the owner and link renders.
+
+(as merged: `eligibleCards(shared, options)` now reads the share-safe projection (`EligiblePage`: type, titles, facts, soundtrack, graphic), not the stored pages, so hidden titles and the admin flags already count; `loadShareSetup` takes `rewind` and projects the issue, and `projectCard` answers 404 for a story card that is not eligible. The heavy golden fixture prints no Guess page, so it lists 14 cards with Daily detail off and 15 with it on (the design's 15 and 16 are the mock member's, who has one). `ShareSafePage` gained an optional `graphic` (Taste and race bar lengths, the Records cells and stamp, from the page data), and the calendar page carries the daily soundtrack only with Daily detail. Share entries changed: Guess publishes only `series[2..4]` (never the answer) with art, Top films adds `films[n].minutes`, and The race adds `series[n].title`/`minutes` with title keys. The Records card leaves out the paused cell (its minutes are no fact). Safe mode is `fitCard`/`safeFit` in `cards/type.tsx`; Noto ships as one static Bold per face (Sans, JP, SC, KR, Arabic, Hebrew, Devanagari, Thai; about 24 MB from the `@expo-google-fonts` npm packages) with the licence record in `lib/rewind/cards/fonts/noto/THIRD_PARTY.md`, not the skills' `THIRD_PARTY.md`. Wholly right-to-left lines are reversed into visual order, but Satori does not shape Arabic. `subset-font@2.9.0` is a new dependency (in `serverExternalPackages`, its wasm traced). `CARD_RENDERER_VERSION` is 3 and the font hash covers `fonts/noto/`. Short list and postcard cards are left to P7.3. `e2e/visual/rewind-cards.spec.ts` uses Playwright's PNG snapshot comparison (pixelmatch) at `maxDiffPixelRatio: 0.005`; neither it nor its baselines were run here.)
 
 ### Step P7.7: Hide and unhide a title
 

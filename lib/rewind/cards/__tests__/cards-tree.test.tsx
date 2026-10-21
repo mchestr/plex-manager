@@ -42,14 +42,20 @@ function text(node: HostNode | string): string {
 }
 
 let heavy: RewindDataV3
+let median: RewindDataV3
 
 beforeAll(async () => {
   heavy = await fixtureRewind("heavy")
+  median = await fixtureRewind("median")
 })
+
+/** The heavy issue, or the median one for a page heavy did not print (Guess). */
+const issueWith = (page: string) => (heavy.pages.some((p) => p.type === page) ? heavy : median)
 
 function tree(page: (typeof CARD_PAGES)[number], size: CardSize, overrides: Partial<ShareOptions> = {}, ctx = shareContext()) {
   const options = shareOptions({ pages: [page], ...overrides })
-  const input = cardInput(toShareSafe(heavy, options, ctx), page, size, { factsHash: heavy.factsHash, options, ctx })
+  const rewind = issueWith(page)
+  const input = cardInput(toShareSafe(rewind, options, ctx), page, size, { factsHash: rewind.factsHash, options, ctx })
   if (!input) throw new Error(`${page} is not published`)
   return expand(renderCard(input))[0]
 }
@@ -71,7 +77,7 @@ describe.each(CASES)("%s card (%s, %j)", (page, size, overrides) => {
   })
 
   it("names the member only when signed", () => {
-    const first = heavy.facts["member.firstName"]!.display
+    const first = issueWith(page).facts["member.firstName"]!.display
     expect(text(tree(page, size, { ...overrides, signed: false }))).not.toContain(first)
   })
 })

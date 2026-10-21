@@ -1,4 +1,3 @@
-import { eligibleCards } from "@/lib/rewind/cards/eligible"
 import { cardFileName, cardUrl, confirmLine, privacyStatus } from "@/lib/rewind/share-sheet"
 
 describe("share sheet wording and addresses (JSDoc examples)", () => {
@@ -20,9 +19,5 @@ describe("share sheet wording and addresses (JSDoc examples)", () => {
   it("states the back cover's privacy line", () => {
     expect(privacyStatus({ link: false, signed: false, includeArt: false })).toBe("Public link off. Cards unsigned, no artwork.")
     expect(privacyStatus({ link: true, signed: true, includeArt: true })).toBe("Public link on. Cards signed, with artwork.")
-  })
-
-  it("lists the eligible cards in issue order", () => {
-    expect(eligibleCards({ pages: [{ type: "cover" }, { type: "bookends" }, { type: "clock" }] }, { dailyDetail: false })).toEqual(["cover", "clock"])
   })
 })

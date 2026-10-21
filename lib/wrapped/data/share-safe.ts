@@ -17,7 +17,10 @@
  *   `community.*`, viewer counts) only with `Config.rewindPublicCounts`; the
  *   percentage facts stand in for them.
  * - The percentile only at top 25% or better.
- * - The soundtrack as 48 weekly bins unless `dailyDetail`.
+ * - The soundtrack as 48 weekly bins unless `dailyDetail`; the calendar
+ *   card's days only with `dailyDetail`.
+ * - A card's `graphic` (Taste's column, the race's standings, the Records
+ *   box) as lengths and cell names from the page's own data, never a value.
  * - `ownerName` only when signed; `brand` only when the admin shows the
  *   server name; art only when the member includes it and the admin allows it.
  * - The archetype, and every `archetype.*` fact, only on pages 16 and 18.
@@ -43,6 +46,7 @@ import {
   ShareSafeRewindV3,
   type CardFactId,
   type ShareContext,
+  type ShareGraphic,
   type ShareOptions,
   type ShareSafePage,
   type SharePageType,
@@ -120,6 +124,44 @@ function hoursOf(rewind: RewindDataV3, type: IssuePageType): number[] | null {
   return max > 0 ? parsed.data.hours.map((n) => n / max) : null
 }
 
+/** The page's stored data, parsed with its registry schema, or null. */
+function storedData(rewind: RewindDataV3, type: IssuePageType): unknown {
+  const page = rewind.pages.find((p) => p.type === type)
+  const entry: RegistryEntry = registry[type]
+  const parsed = page ? entry.schema.safeParse(page.data) : null
+  return parsed?.success ? parsed.data : null
+}
+
+const lengths = (values: readonly number[]) => {
+  const max = Math.max(0, ...values)
+  return values.map((v) => (max > 0 ? Math.round((v / max) * 1000) / 1000 : 0))
+}
+
+type RecordCells = Extract<ShareGraphic, { kind: "records" }>["cells"]
+
+/**
+ * What the page's card graphic needs besides facts (P7.6): genre and runner
+ * bar lengths, and the Records cells that print a fact (the paused cell's
+ * minutes are no fact, so it stays in-app).
+ */
+function graphicOf(rewind: RewindDataV3, type: IssuePageType): ShareGraphic | null {
+  if (type === "taste") {
+    const data = storedData(rewind, type) as { genres: Array<{ minutes: number }> } | null
+    return data ? { kind: "bars", bars: lengths(data.genres.slice(0, 5).map((g) => g.minutes)) } : null
+  }
+  if (type === "race") {
+    const last = (storedData(rewind, type) as { frames: Array<{ minutes: number[] }> } | null)?.frames.at(-1)
+    return last ? { kind: "bars", bars: lengths(last.minutes) } : null
+  }
+  if (type === "records") {
+    const data = storedData(rewind, type) as { cells: RecordCells; stamp: RecordCells[number] | null } | null
+    if (!data) return null
+    const cells = data.cells.filter((cell) => cell !== "paused")
+    return { kind: "records", cells, stamp: cells.find((cell) => cell === data.stamp) ?? null }
+  }
+  return null
+}
+
 /** The stat each page's own graphic already shows: the centrefold's clock shows the peak hour. */
 const SHOWN_BY_GRAPHIC: Partial<Record<IssuePageType, CardFactId>> = { centrefold: "hours.peak" }
 
@@ -177,6 +219,7 @@ function projectPage(type: SharePageType, { rewind, options, ctx, keys, hidden }
   const allowed: RewindFactsV3 = Object.fromEntries(ids.map((id) => [id, rewind.facts[id]]))
   if (options.signed && rewind.facts["member.firstName"]) allowed["member.firstName"] = rewind.facts["member.firstName"]
   const titleIds = ids.filter(isTitle).slice(0, 5)
+  const graphic = graphicOf(rewind, type)
   const art = options.includeArt && ctx.allowArt && entry.share.art ? titleIds.flatMap((id) => {
           const key = keys[id]?.at(-1)
           return key && RATING_KEY.test(key) ? [{ ratingKey: key }] : []
@@ -189,10 +232,11 @@ function projectPage(type: SharePageType, { rewind, options, ctx, keys, hidden }
     titles: titleIds.map((id) => rewind.facts[id]!.display.slice(0, 200)),
     titleIds,
     art: art && art.slice(0, 4),
-    soundtrack: SOUNDTRACK_PAGES.has(type) ? soundtrackOf(rewind, options.dailyDetail) : null,
+    soundtrack: SOUNDTRACK_PAGES.has(type) || (type === "calendar" && options.dailyDetail) ? soundtrackOf(rewind, options.dailyDetail) : null,
     archetype: ARCHETYPE_PAGES.has(type) ? archetypeOf(rewind, ctx) : null,
     hours: hoursOf(rewind, type),
     stats,
+    ...(graphic ? { graphic } : {}),
   }
 }
 

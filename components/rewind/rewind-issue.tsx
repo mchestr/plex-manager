@@ -48,7 +48,7 @@ export async function RewindIssue({ rewindId, data, userId, returnTo, initialShe
   const archetype = data.archetype?.id ?? null
   const pages = validatePagesOnRead(data.pages, { archetype, disabledPages: DisabledPagesSchema.parse(config?.rewindDisabledPages ?? []) })
   const [share, hidden, links] = await Promise.all([
-    preview ? null : loadShareSetup({ userId, rewindId, year: data.year, pages }),
+    preview ? null : loadShareSetup({ userId, rewindId, rewind: data, pages }),
     preview
       ? null
       : prisma.rewindExclusion.findMany({ where: { userId }, select: { ratingKey: true, kind: true, title: true }, orderBy: { createdAt: "asc" } }),

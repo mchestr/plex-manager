@@ -11,6 +11,7 @@
 
 import { z } from "zod"
 
+import { RECORD_CELLS } from "@/lib/rewind/pages/records.schema"
 import { SHARE_PAGE_TYPES } from "@/lib/rewind/registry"
 import { ARCHETYPE_IDS } from "@/lib/wrapped/archetypes/catalogue"
 import { FactIdSchema } from "@/lib/wrapped/facts/catalogue"
@@ -72,6 +73,21 @@ export interface ShareContext {
 const IsoDate = z.iso.date()
 const RatingKey = z.string().regex(/^\d{1,12}$/)
 
+const RecordCell = z.enum(RECORD_CELLS)
+
+/**
+ * What a card's graphic draws that no fact holds (P7.6), from the page's own
+ * stored data and never a number a fact displays: `bars` are lengths against
+ * the longest (Taste's genre column, the race's final standings, in the
+ * order of the page's runners); `records` are the box's cells and the cell
+ * the "record" stamp marks, which exists only with server medians.
+ */
+export const ShareGraphic = z.discriminatedUnion("kind", [
+  z.strictObject({ kind: z.literal("bars"), bars: z.array(z.number().min(0).max(1)).max(5) }),
+  z.strictObject({ kind: z.literal("records"), cells: z.array(RecordCell).max(4), stamp: RecordCell.nullable() }),
+])
+export type ShareGraphic = z.infer<typeof ShareGraphic>
+
 /**
  * One published page. `headline` is the page's card headline rendered from
  * this page's own published facts (a template, never model text), or its
@@ -93,6 +109,8 @@ export const ShareSafePage = z.strictObject({
   hours: z.array(z.number().min(0).max(1)).length(24).nullable(),
   /** The poster's three stats (centrefold and back cover): `cardFacts`, else the defaults, as printed facts. */
   stats: z.array(CardFactIdSchema).max(3),
+  /** Only on pages whose card draws one (Taste, The race, Records). */
+  graphic: ShareGraphic.optional(),
 })
 export type ShareSafePage = z.infer<typeof ShareSafePage>
 

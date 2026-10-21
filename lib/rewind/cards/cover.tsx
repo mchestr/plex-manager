@@ -2,8 +2,7 @@
  * 01 Cover card: the first card (design 6.4). The page's card headline as a
  * nameplate, the year's soundtrack (48 weekly bars unless the member chose
  * daily detail) and the data window. Everything it prints comes from the
- * projected page: a headline that cannot be set in the card fonts (safe
- * mode) prints the page's title-free line instead, until P7.6's Noto subsets.
+ * projected page; a headline the card fonts cannot set prints in Noto.
  *
  * @module lib/rewind/cards/cover
  */
@@ -11,7 +10,6 @@
 import type { ReactElement } from "react"
 
 import { binsPath } from "@/lib/rewind/viz/soundtrack"
-import { titleFreeHeadline } from "@/lib/wrapped/copy/templates"
 import type { CardInput } from "@/lib/wrapped/data/share-safe"
 
 import { cardInk, Frame } from "./frame"
@@ -29,8 +27,7 @@ export function CoverCard(input: CardInput): ReactElement {
   const ink = cardInk(input)
   const og = input.size === "og"
   const measure = og ? 1080 : CARD_MEASURE
-  const fitted = fitNameplate(page.headline, measure, og ? 96 : 150, og ? 2 : 4)
-  const headline = fitted.safeMode ? fitNameplate(titleFreeHeadline(page.type), measure, og ? 96 : 150, og ? 2 : 4) : fitted
+  const headline = fitNameplate(page.headline, measure, og ? 96 : 150, og ? 2 : 4)
   const daily = page.soundtrack?.grain === "daily"
   const through = page.facts["window.through"]?.display
   const windowLine = input.window.finalCut ? "Final cut" : through ? `Data through ${through}` : ""

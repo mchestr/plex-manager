@@ -1,36 +1,72 @@
 /**
  * Which cards a member can share (design 6.4 "Card list"). Client-safe: the
- * share sheet's page picker reads it, and `lib/rewind/cards/index.ts` keeps a
- * renderer for exactly these pages (its test checks).
+ * share sheet's page picker, the share page and P8.4's "Save all {n} cards"
+ * read it, and `lib/rewind/cards/index.ts` keeps a renderer for exactly
+ * these pages (its test checks).
+ *
+ * ## The rule (P7.6)
+ *
+ * It reads the share-safe projection of the issue, so the admin flags and
+ * the member's hidden titles have already been applied. A page's card is
+ * listed when the issue printed the page, the projection published it, and
+ * the card's own condition holds:
+ *
+ * | Card | Needs |
+ * |---|---|
+ * | Bookends, Guess, Top shows, Top films, The race | a title that is not hidden |
+ * | Calendar | Daily detail, and its days |
+ * | Taste, Records | their graphic |
+ * | People | a name |
+ * | Requests | the request count |
+ * | Standing | the percentile, which the projection prints only at top 25% or better |
+ *
+ * Setup and Next year have no card. The heavy fixture lists 15 cards with
+ * Daily detail off and 16 with it on.
  *
  * @module lib/rewind/cards/eligible
  */
 
-import type { ShareOptions, SharePageType } from "@/lib/wrapped/data/share-safe-schema"
+import type { FactId } from "@/lib/wrapped/facts/catalogue"
+import type { ShareOptions, ShareSafePage, SharePageType } from "@/lib/wrapped/data/share-safe-schema"
 
-/** The six core cards (P5.11), in registry order. P7.6 adds the rest. @internal */
-export const CARD_PAGE_TYPES = ["cover", "number", "top-shows", "clock", "centrefold", "back-cover"] as const satisfies readonly SharePageType[]
+/** Every card, in registry order. P7.3 adds `short-list` and `postcard`. @internal */
+export const CARD_PAGE_TYPES = [
+  "cover", "number", "bookends", "guess", "top-shows", "top-films", "taste", "people",
+  "clock", "calendar", "race", "records", "requests", "standing", "centrefold", "back-cover",
+] as const satisfies readonly SharePageType[]
 
-/** Cards that exist only with Daily detail on: the calendar shows which days were watched. */
-const DAILY_ONLY: ReadonlySet<string> = new Set(["calendar"])
+/** What the rule reads of a projected page. */
+export type EligiblePage = Pick<ShareSafePage, "type" | "titles" | "facts" | "soundtrack" | "graphic">
+
+const hasFact = (page: EligiblePage, pattern: RegExp) => (Object.keys(page.facts) as FactId[]).some((id) => pattern.test(id))
+
+const CONDITIONS: Partial<Record<SharePageType, (page: EligiblePage, options: Pick<ShareOptions, "dailyDetail">) => boolean>> = {
+  bookends: (page) => page.titles.length > 0,
+  guess: (page) => page.titles.length > 0,
+  "top-shows": (page) => page.titles.length > 0,
+  "top-films": (page) => page.titles.length > 0,
+  race: (page) => page.titles.length > 0 && page.graphic?.kind === "bars",
+  calendar: (page, options) => options.dailyDetail && page.soundtrack?.grain === "daily",
+  taste: (page) => page.graphic?.kind === "bars" && hasFact(page, /^taste\.genre\[\d\]\.name$/),
+  records: (page) => page.graphic?.kind === "records" && page.graphic.cells.length > 0,
+  people: (page) => hasFact(page, /^people\.(actor|director)\[\d\]\.name$/),
+  requests: (page) => hasFact(page, /^requests\.made$/),
+  standing: (page) => hasFact(page, /^standing\.percentile$/),
+}
 
 const HAS_CARD: ReadonlySet<string> = new Set(CARD_PAGE_TYPES)
 
 /**
- * The cards available for an issue under the current options: every page the
- * issue printed that has a card, in issue order.
+ * The cards available for a projected issue under the current options, in
+ * issue order: every published page that has a card and meets its condition.
  *
  * @example
  * ```ts
- * eligibleCards({ pages: [{ type: "cover" }, { type: "bookends" }, { type: "clock" }] }, { dailyDetail: false })
- * // ["cover", "clock"]
+ * const page = (type: SharePageType, titles: string[] = []) => ({ type, titles, facts: {}, soundtrack: null })
+ * eligibleCards({ pages: [page("cover"), page("top-shows"), page("calendar")] }, { dailyDetail: false })
+ * // ["cover"]: no title is left on Top shows, and the calendar needs Daily detail
  * ```
  */
-export function eligibleCards(
-  rewind: { pages: ReadonlyArray<{ type: string }> },
-  options: Pick<ShareOptions, "dailyDetail">
-): SharePageType[] {
-  return rewind.pages
-    .map((page) => page.type)
-    .filter((type): type is SharePageType => HAS_CARD.has(type) && (options.dailyDetail || !DAILY_ONLY.has(type)))
+export function eligibleCards(shared: { pages: ReadonlyArray<EligiblePage> }, options: Pick<ShareOptions, "dailyDetail">): SharePageType[] {
+  return shared.pages.filter((page) => HAS_CARD.has(page.type) && (CONDITIONS[page.type]?.(page, options) ?? true)).map((page) => page.type)
 }
