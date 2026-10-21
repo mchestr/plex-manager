@@ -4,12 +4,17 @@
 
 import { rewindFeatureOn } from '@/lib/rewind/features'
 import { shareFormats } from '@/lib/rewind/page-meta'
+import { seasonAudienceSwitchAt } from '@/lib/rewind/season-open'
 import { finalCutOpensAt, seasonPrepareAt } from '@/lib/rewind/season-runs'
 import { saveAllCards } from '@/lib/rewind/share-sheet'
 
 jest.mock('@/lib/prisma', () => ({ prisma: {} }))
 
 describe('JSDoc Documentation Examples', () => {
+  it('seasonAudienceSwitchAt: 08:00 on the opening day in the server zone', () => {
+    expect(seasonAudienceSwitchAt(2026, '12-01', 'America/Chicago').toISOString()).toBe('2026-12-01T14:00:00.000Z')
+  })
+
   it('seasonPrepareAt: 00:15 on the opening day in the westernmost zone', () => {
     expect(seasonPrepareAt(2026, '12-01', ['America/Chicago', 'America/Los_Angeles']).toISOString()).toBe('2026-12-01T08:15:00.000Z')
   })

@@ -40,6 +40,8 @@ export const JOB_TYPES = {
   REWIND_DRY_RUN: "rewind:dry-run",
   // Ready notifications (P7.14), on `rewind-aux`
   REWIND_NOTIFY: "rewind:notify",
+  // The season open's audience switch (P8.2), on `rewind-aux`
+  REWIND_SEASON_OPEN: "rewind:season:open",
 } as const
 
 export type JobType = (typeof JOB_TYPES)[keyof typeof JOB_TYPES]
@@ -310,6 +312,16 @@ export interface RewindNotifyPayload {
   kind: "season" | "member" | "final-cut"
 }
 
+/**
+ * The season open's audience switch (P8.2): at 08:00 on the opening day in
+ * the server zone, Rewind opens to everyone once the season-open generation
+ * is clean.
+ */
+export interface RewindSeasonOpenPayload {
+  year: number
+  triggeredBy: "scheduled"
+}
+
 // =============================================================================
 // Type Mapping
 // =============================================================================
@@ -336,6 +348,7 @@ export interface JobPayloadMap {
   [JOB_TYPES.REWIND_CARD_SWEEP]: Record<string, never>
   [JOB_TYPES.REWIND_DRY_RUN]: RewindDryRunPayload
   [JOB_TYPES.REWIND_NOTIFY]: RewindNotifyPayload
+  [JOB_TYPES.REWIND_SEASON_OPEN]: RewindSeasonOpenPayload
 }
 
 // =============================================================================

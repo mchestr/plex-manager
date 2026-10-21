@@ -19,6 +19,10 @@
  * minutes. The buttons' runs use another deduplication id, so pressing
  * Prepare season never joins the delayed season-open run.
  *
+ * {@link keepDelayedRun} is the one keep-it-scheduled rule, for this run, the
+ * final cut (P8.5) and the season open's audience switch (P8.2,
+ * `lib/rewind/season-open.ts`).
+ *
  * @module
  */
 
@@ -87,10 +91,12 @@ export async function seasonThrough(year: number, now: number = Date.now()): Pro
   return throughFor(year, batchWindowAt(year, await serverZone(), now))
 }
 
-async function batchQueue() {
+async function readyQueue(name: "rewind-batch" | "rewind-aux") {
   await readyWithin(getRequestPathRedis(), READY_WAIT_MS)
-  return getRewindQueue("rewind-batch")
+  return getRewindQueue(name)
 }
+
+const batchQueue = () => readyQueue("rewind-batch")
 
 /** Whether the run joined one already waiting or running, and its job id. */
 export interface RunStarted {
@@ -119,6 +125,43 @@ export async function enqueueGenerateAll(data: Omit<RewindGenerateAllPayload, "s
   return { jobId: job.id ?? "", alreadyQueued: false }
 }
 
+/** One delayed run that {@link keepDelayedRun} keeps scheduled. */
+export interface DelayedRun {
+  queue: "rewind-batch" | "rewind-aux"
+  name: string
+  data: object
+  at: Date
+  deduplicationId: string
+  /** Includes the instant, so a moved instant replaces the job. */
+  jobId: string
+  options: JobsOptions
+}
+
+/**
+ * Keeps one delayed job for `run.at`: nothing when that job is there, the
+ * job replaced when the instant moved while it still waits, and left alone
+ * once it started. Returns the instant, or null when it has passed.
+ */
+export async function keepDelayedRun(run: DelayedRun, now: number): Promise<Date | null> {
+  if (run.at.getTime() <= now) return null
+  const queue = await readyQueue(run.queue)
+  const existingId = await queue.getDeduplicationJobId(run.deduplicationId)
+  if (existingId === run.jobId) return run.at
+  const existing = existingId ? await queue.getJob(existingId) : undefined
+  if (existing) {
+    // Started already: the run is under way.
+    if (!(await existing.isDelayed())) return run.at
+    await existing.remove()
+  }
+  await queue.add(run.name, run.data, {
+    ...run.options,
+    jobId: run.jobId,
+    delay: run.at.getTime() - now,
+    deduplication: { id: run.deduplicationId },
+  })
+  return run.at
+}
+
 /**
  * Keeps the season-open `REWIND_SEASON_PREPARE` scheduled; see the module
  * comment. Returns the instant it is scheduled for, or null when that has
@@ -129,31 +172,24 @@ export async function enqueueGenerateAll(data: Omit<RewindGenerateAllPayload, "s
 export async function ensureSeasonPrepareScheduled(year: number, now: number = Date.now()): Promise<Date | null> {
   const config = await prisma.config.findUnique({ where: { id: "config" }, select: { rewindSeasonOpens: true } })
   const at = seasonPrepareAt(year, config?.rewindSeasonOpens ?? DEFAULT_SEASON.opens, await seasonZones())
-  if (at.getTime() <= now) return null
-
   const through = throughFor(year, { finalCut: false })
-  const deduplicationId = `rewind:prepare:${year}:${through}`
-  const jobId = sanitizeJobId(`rewind:prepare:${year}:${at.getTime()}`)
-  const queue = await batchQueue()
-
-  const existingId = await queue.getDeduplicationJobId(deduplicationId)
-  if (existingId === jobId) return at
-  const existing = existingId ? await queue.getJob(existingId) : undefined
-  if (existing) {
-    // Started already: the season-open run is under way.
-    if (!(await existing.isDelayed())) return at
-    await existing.remove()
-  }
-
   const data: RewindSeasonPreparePayload = { year, through, audience: "all", triggeredBy: "scheduled" }
-  await queue.add(JOB_TYPES.REWIND_SEASON_PREPARE, data, {
-    ...RUN_OPTIONS,
-    jobId,
-    delay: at.getTime() - now,
-    deduplication: { id: deduplicationId },
-  })
-  return at
+  return keepDelayedRun(
+    {
+      queue: "rewind-batch",
+      name: JOB_TYPES.REWIND_SEASON_PREPARE,
+      data,
+      at,
+      deduplicationId: seasonPrepareDeduplicationId(year),
+      jobId: sanitizeJobId(`rewind:prepare:${year}:${at.getTime()}`),
+      options: RUN_OPTIONS,
+    },
+    now
+  )
 }
+
+/** The season-open Prepare's deduplication id, `rewind:prepare:{year}:{through}`; P8.2's audience switch waits for it. */
+export const seasonPrepareDeduplicationId = (year: number) => `rewind:prepare:${year}:${throughFor(year, { finalCut: false })}`
 
 /** {@link ensureSeasonPrepareScheduled} for the current season year: at worker start and in the stale sweep. */
 export async function scheduleSeasonOpenRun(): Promise<Date | null> {
@@ -189,23 +225,19 @@ const finalCutDeduplicationId = (year: number) => `rewind:final:${year}`
  */
 export async function ensureFinalCutScheduled(year: number, now: number = Date.now()): Promise<Date | null> {
   const at = finalCutOpensAt(year, await seasonZones())
-  if (at.getTime() <= now) return null
-
-  const deduplicationId = finalCutDeduplicationId(year)
-  const jobId = sanitizeJobId(`rewind:final:${year}:${at.getTime()}`)
-  const queue = await batchQueue()
-
-  const existingId = await queue.getDeduplicationJobId(deduplicationId)
-  if (existingId === jobId) return at
-  const existing = existingId ? await queue.getJob(existingId) : undefined
-  if (existing) {
-    if (!(await existing.isDelayed())) return at
-    await existing.remove()
-  }
-
   const data: RewindFinalCutPayload = { year, through: throughFor(year, { finalCut: true }), triggeredBy: "scheduled" }
-  await queue.add(JOB_TYPES.REWIND_FINAL_CUT, data, { attempts: 1, jobId, delay: at.getTime() - now, deduplication: { id: deduplicationId } })
-  return at
+  return keepDelayedRun(
+    {
+      queue: "rewind-batch",
+      name: JOB_TYPES.REWIND_FINAL_CUT,
+      data,
+      at,
+      deduplicationId: finalCutDeduplicationId(year),
+      jobId: sanitizeJobId(`rewind:final:${year}:${at.getTime()}`),
+      options: { attempts: 1 },
+    },
+    now
+  )
 }
 
 /** {@link ensureFinalCutScheduled} for the current season year. */

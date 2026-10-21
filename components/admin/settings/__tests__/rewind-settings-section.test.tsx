@@ -136,7 +136,8 @@ describe('RewindSettingsSection', () => {
     renderSection({ saved: { ...saved, rewindDisabledPages: ['people', '+notes.core'] } })
 
     const features = within(screen.getByTestId('rewind-settings-features'))
-    expect(features.getAllByRole('checkbox')).toHaveLength(8)
+    // Eight member features (P8.3, P8.4) and the season open's scheduled switch (P8.2)
+    expect(features.getAllByRole('checkbox')).toHaveLength(9)
     expect(features.getByRole('checkbox', { name: 'Notes for the core pages' })).toHaveAttribute('aria-checked', 'true')
     expect(features.getByRole('checkbox', { name: 'Share: Save all cards' })).toHaveAttribute('aria-checked', 'false')
 

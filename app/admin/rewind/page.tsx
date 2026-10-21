@@ -6,7 +6,10 @@ import { SeasonMemberTable } from "@/components/admin/rewind/season-member-table
 import { SeasonPreflight } from "@/components/admin/rewind/season-preflight"
 import { SeasonProgress } from "@/components/admin/rewind/season-progress"
 import { PageHeader } from "@/components/ui/page-header"
+import { getFrozenRewindModel } from "@/lib/llm/registry"
 import { prisma } from "@/lib/prisma"
+import { rewindFeatureOn } from "@/lib/rewind/features"
+import { seasonAudienceSwitchAt } from "@/lib/rewind/season-open"
 import { finalCutOpensAt, seasonPrepareAt, seasonThrough, seasonZones } from "@/lib/rewind/season-runs"
 import { getFormat } from "@/lib/settings/app-settings"
 import { parseTableParams } from "@/lib/ui/table-params"
@@ -17,6 +20,7 @@ import { getRewindPreflight } from "@/lib/wrapped/admin/preflight"
 import { getSeasonCounts, SEASON_STATES, type SeasonMemberState } from "@/lib/wrapped/admin/season"
 import { getSeasonBudget, loadSeasonEstimate } from "@/lib/wrapped/admin/season-estimate"
 import { listSeasonMembers } from "@/lib/wrapped/admin/season-members"
+import { lockedModelLabel, REWIND_LOCK, type FrozenRewindModel } from "@/lib/wrapped/freeze/lock"
 import { PROMPT_VERSION } from "@/lib/wrapped/prompt/rewind-2026"
 import { getSeasonState } from "@/lib/wrapped/season"
 
@@ -32,6 +36,26 @@ const onOff = (value: boolean) => (value ? "On" : "Off")
 
 /** A JSON string list as "discord, banner"; anything else is empty. */
 const listOf = (value: unknown) => (Array.isArray(value) ? value.filter((v) => typeof v === "string").join(", ") : "")
+
+/** The model line: the frozen model, the row's own before the lock names one, or why it writes templates. */
+function describeModel(frozen: FrozenRewindModel | null, templateOnly: boolean): string {
+  if (templateOnly) return "Template copy only"
+  if (!frozen) return "None set"
+  if (frozen.status === "mismatch") return `Template copy: the provider is ${frozen.provider}, the frozen model ${lockedModelLabel(frozen.locked)}`
+  return frozen.model
+}
+
+/** "Frozen 1 December 2026" once the lock names a model; until then what is left to do. */
+function describeFreeze(frozenAt: string, formatDate: (date: Date) => string): string {
+  return REWIND_LOCK.model ? `Frozen ${formatDate(new Date(`${frozenAt}T12:00:00Z`))}` : "Not frozen: no model selected yet"
+}
+
+/** The 08:00 audience switch, or that the owner switches by hand. */
+function describeSwitch(at: Date, now: number, server: string, autoOpen: boolean, formatDate: (date: Date) => string): string {
+  if (at.getTime() <= now) return "Not scheduled: the season has opened"
+  const time = `${instantToWallTime(at, server).slice(11)} in ${server} on ${formatDate(at)}`
+  return autoOpen ? `Everyone at ${time}` : `By hand in Settings (${time} when the scheduled switch is on)`
+}
 
 /** "02:15 in America/Chicago, which is 00:15 in America/Los_Angeles" for the season-open run. */
 function describePrepare(at: Date, now: number, server: string, zones: string[], opens: string): string {
@@ -61,7 +85,7 @@ export default async function RewindSeasonPage({ searchParams }: { searchParams:
     seasonZones(),
     seasonThrough(year, now),
     prisma.config.findUnique({ where: { id: "config" } }),
-    prisma.lLMProvider.findFirst({ where: { isActive: true, purpose: "wrapped" }, select: { model: true } }),
+    getFrozenRewindModel(),
     getRewindSeasonDataPreparedAt(year),
   ])
   const [preflight, counts, budget, all, failed, members, memberTotal, measures] = await Promise.all([
@@ -77,6 +101,8 @@ export default async function RewindSeasonPage({ searchParams }: { searchParams:
 
   const opensMd = config?.rewindSeasonOpens ?? "12-01"
   const prepareAt = seasonPrepareAt(year, opensMd, zones)
+  const switchAt = seasonAudienceSwitchAt(year, opensMd, zone)
+  const longDate = (date: Date) => f.date(date, "long")
   const finalCutOpen = now >= finalCutOpensAt(year, zones).getTime()
   const lastDay = through.endsWith("12-31") ? "31 December" : "30 November"
 
@@ -96,8 +122,10 @@ export default async function RewindSeasonPage({ searchParams }: { searchParams:
           opens={f.date(season.opensAt, "long")}
           closes={f.date(season.closesAt.getTime() - 1, "long")}
           dataWindow={`1 January to ${lastDay} ${year}, in each member's zone`}
-          model={config?.llmDisabled || config?.rewindLlmMode === "off" ? "Template copy only" : (provider?.model ?? "None set")}
+          model={describeModel(provider, Boolean(config?.llmDisabled || config?.rewindLlmMode === "off"))}
           promptVersion={PROMPT_VERSION}
+          freeze={describeFreeze(REWIND_LOCK.frozenAt, longDate)}
+          audienceSwitch={describeSwitch(switchAt, now, zone, rewindFeatureOn(config, "season.auto-open"), longDate)}
           prepareRuns={describePrepare(prepareAt, now, zone, zones, f.date(prepareAt, "long"))}
           dataPreparedAt={preparedAt ? f.dateTime(preparedAt) : "Not yet"}
           flags={[

@@ -28,6 +28,8 @@ export const REWIND_FEATURES = [
   { key: "share.edit-card", label: "Share: Edit card" },
   { key: "share.save-all", label: "Share: Save all cards" },
   { key: "notes.core", label: "Notes for the core pages" },
+  // Not a member feature: the season open's scheduled audience switch (P8.2, lib/rewind/season-open.ts).
+  { key: "season.auto-open", label: "Season open: switch the audience to Everyone at 08:00 on the opening day" },
 ] as const
 
 export type RewindFeatureKey = (typeof REWIND_FEATURES)[number]["key"]
@@ -53,7 +55,7 @@ export const isFeatureEntry = (entry: string) => (REWIND_FEATURE_ENTRIES as read
  * rewindFeatureOn(null, "race.scrubber") // false
  * ```
  *
- * @internal Server code reads every flag at once through {@link rewindFeatureFlags}.
+ * Server Components read every flag at once through {@link rewindFeatureFlags}.
  */
 export function rewindFeatureOn(config: { rewindDisabledPages: unknown } | null | undefined, key: RewindFeatureKey): boolean {
   const entries = config?.rewindDisabledPages

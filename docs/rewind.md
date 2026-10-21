@@ -41,7 +41,7 @@ fallback they name applies.
 | PostgreSQL | **Yes** | Migrated with `npm run db:deploy` (the image does it at start). |
 | Plex and Tautulli | **Yes** | Rewind reads every play from Tautulli. Use **Tautulli 2.17 or later**: the season console warns below it ("Update Tautulli: versions before 2.17 are affected by CVE-2026-31799"). A member Tautulli does not list is skipped with `TAUTULLI_USER_NOT_FOUND`. |
 | `REWIND_CACHE_DIR` | No | Where posters, cards and fonts are cached (default `.next/cache/rewind`). Rebuildable; it needs no backup, but it must be writable. |
-| An LLM provider | No | The active provider for the `wrapped` purpose writes the copy. Without one, or with LLM mode Off, every issue is complete with template copy. The preflight wants a model that is priced and does not retire before 2027-01-02. |
+| An LLM provider | No | The active provider for the `wrapped` purpose supplies the key; once the freeze lock names a model, Rewind writes with that model (see [The freeze lock](#the-freeze-lock)). Without a provider, or with LLM mode Off, every issue is complete with template copy. The preflight wants a model that is priced and does not retire before 2027-01-02. |
 | Overseerr | No | Only the Requests page uses it; without it the page leaves the issue. |
 | Sonarr | No | Only Next year's returning shows use it; a failure or a missing Sonarr omits that part. |
 | Stripe | No | With subscriptions on, members without access are skipped with `NOT_ENTITLED`, and the preflight counts them. |
@@ -57,6 +57,8 @@ fallback they name applies.
 | Season dates, the season year | `lib/wrapped/season.ts` |
 | Preflight rows | `lib/wrapped/admin/preflight.ts` |
 | Prepare, Generate all, Retry failed, the season-open schedule | `actions/admin/rewind-season.ts`, `lib/rewind/season-runs.ts`, `lib/queue/jobs/rewind-season.ts` |
+| The 08:00 audience switch and the staging rehearsal | `lib/rewind/season-open.ts`, `lib/queue/jobs/rewind-season-open.ts`, `scripts/rewind-season-open.ts` |
+| The freeze lock and the frozen model | `lib/wrapped/freeze/rewind-2026.1.lock.json`, `lib/wrapped/freeze/lock.ts`, `scripts/rewind-freeze.ts`, `getFrozenRewindModel()` in `lib/llm/registry.ts` |
 | Lost-run sweep (every 10 minutes) | `lib/queue/jobs/rewind-stale-sweep.ts` |
 | Eligibility and skip reasons | `lib/wrapped/pipeline/eligibility.ts`, `lib/wrapped/generation-errors.ts` |
 | Share page gate (404, 429, 503) | `lib/rewind/share/share-gate.ts`, `lib/rewind/share/status-html.ts` |
@@ -119,6 +121,7 @@ the date and the check, in `ship-check.md`. A flag that misbehaves stays off.
 | Share: Edit card | `share.edit-card` | Three poster stats on the centrefold and back cover, from the member's allow-list, saved in their prefs and on a live link | The default stats |
 | Share: Save all cards | `share.save-all` | "Save all {n} cards" on the back cover and in the share sheet: one ZIP built in the browser; each run records one `save` share action | One card at a time |
 | Notes for the core pages | `notes.core` | Desktop Notes for the cover, the number, the bookends, the guess (no answer until the quiz is answered or skipped), top films, the clock and the back cover | Their summary |
+| Season open: switch the audience to Everyone at 08:00 on the opening day | `season.auto-open` | Not a member feature: the scheduled 08:00 audience switch (P8.2, [Season open](#season-open-hour-by-hour)). It switches only when the season-open generation is clean | The owner switches Audience by hand at 08:00 |
 
 ## Cut list
 
@@ -152,18 +155,56 @@ never cut, and the settings never offer them.
 
 ## The freeze lock
 
-> **Pending P8.1 (freeze lock).** On 30 November, `PROMPT_VERSION` becomes
-> `rewind-2026.1` and `lib/wrapped/freeze/rewind-2026.1.lock.json` records
-> hashes of the prompt, the fact catalogue and the model; CI fails on any
-> change (`npx tsx scripts/rewind-freeze.ts --check`). Headlines, Notes and UI
-> strings are outside the lock. **Exception rule:** changing the lock needs a
-> reason line, the owner's sign-off in the PR and a new version
-> (`rewind-2026.2`); after 14 December only a data or security fix qualifies.
-> From the season's opening to its close, settings refuse a provider or model
-> change for Rewind ("Rewind's model is frozen until the season closes on 31
-> January"); key rotation stays open, and LLM mode stays the emergency switch.
-> Until P8.1 merges: do not change the Rewind provider or model after the
-> soft launch.
+`lib/wrapped/freeze/rewind-2026.1.lock.json` freezes what Rewind's copy rests
+on, so the season's model and prompt cannot drift between 1 December and the
+season close. It holds a sha256 of `canonicalJson` for each section:
+
+| Section | Covers |
+| --- | --- |
+| `promptVersion` | `PROMPT_VERSION` (`rewind-2026.1`, also OpenAI's `prompt_cache_key`) |
+| `systemPrompt`, `wireSchema` | the frozen system block and the copy's JSON schema |
+| `copySlots` | each slot's length cap, allowed facts, identity facts and bands; no slot lists `window.finalCut` (P8.5), so the final cut re-calls only changed slots |
+| `grounding` | banned and window phrases, number words, quantifier thresholds and the word list |
+| `posterLines`, `slotTemplates` | the sixty poster lines and every slot's fallback templates |
+| `catalogue` | `CATALOGUE_VERSION` and each fact's id, group, unit and format; `statsVersion` stays outside, because a stats fix is a data fix |
+| `model` | provider, model, budget model, effort `low` and the 1,800-token output limit, from `evals/rewind/selected.json` |
+
+Headlines, Notes and UI strings are outside the lock, so typo fixes and the
+December features never trip it.
+
+- **CI.** The Unit Tests job runs `npm run rewind:freeze -- --check`, which
+  fails naming each changed section ("systemPrompt changed"), and also when
+  the locked model has no price, no structured outputs or retires before
+  2027-01-02. `lib/wrapped/freeze/__tests__/rewind-freeze.test.ts` checks the
+  same in Jest.
+- **Writing it.** `npm run rewind:freeze -- --write --reason="<why>"` writes the
+  lock with a dated reason line. Until `frozenAt` (2026-12-01) it may be
+  rewritten under `rewind-2026.1`; this is how the bake-off's model goes in.
+- **Exception rule.** From 1 December a changed lock needs a reason line, the
+  owner's sign-off in the PR and a new version (`rewind-2026.2`: bump
+  `PROMPT_VERSION` and `LOCK_PATH` in `lib/wrapped/freeze/lock.ts`); the script
+  refuses otherwise. After 14 December only a data or security fix qualifies.
+- **The model at runtime.** `getFrozenRewindModel()` returns the lock's model
+  (and budget model) with the key of the active `wrapped` provider. Until the
+  lock names a model, Rewind writes with the provider's own model. If the
+  provider is another company than the lock's, every issue gets template copy,
+  the log warns once, and the preflight's AI copy row turns red ("The Rewind
+  provider is openai, but the frozen model is anthropic:..."). Fix it by
+  setting the provider back, not by editing the lock.
+- **Settings.** From the season's opening to its close, saving the Rewind
+  provider refuses a provider, model or base-URL change ("Rewind's model is
+  frozen until the season closes on 31 January"): member and hide
+  regenerations still run after the final cut. Rotating the key works, the
+  assistant's provider is never blocked, and LLM mode stays the emergency
+  switch.
+- **Prices are not frozen.** `costUsd()` takes the dated entry in
+  `lib/llm/models.ts`. On 1 December the owner re-checks the frozen pair, the
+  judge and `gemini-4-argon` against the providers' price pages (see the
+  [owner checklist](#owner-checklist-30-november-to-2-december)); from
+  2 December `lib/llm/__tests__/models.test.ts` fails until the frozen pair
+  carries a price with `asOf` 2026-12-01 or later.
+- `/admin/rewind` shows the model, the prompt version and "Model freeze:
+  Frozen 1 December 2026" (or "Not frozen: no model selected yet").
 
 ## Calendar
 
@@ -176,7 +217,7 @@ never cut, and the settings never offer them.
 | 30 Nov, 12:00 | Cutoff for sign-off fixes. Then tag `rewind-2026.1`, dump, deploy **before 18:00**, rehearse on staging in the evening. |
 | 30 Nov 18:00 to 1 Dec 12:00 | **Deploy blackout.** |
 | 1 Dec, 00:15 in the westernmost zone | Season-open Prepare runs by itself. |
-| 1 Dec, 08:00 | Audience to Everyone. |
+| 1 Dec, 08:00 | Audience to Everyone: the scheduled switch when `+season.auto-open` is on and the run is clean, else by hand. |
 | 2 Dec | Validator against production: `npm run rewind:validate -- --year=2026`, zero failures. |
 | 10 Dec | Feature freeze. |
 | 11 Dec | First final-cut dry run on staging. |
@@ -185,6 +226,60 @@ never cut, and the settings never offer them.
 | 1 Jan 2027, 00:30 in the westernmost zone | Final cut. Dump first. |
 | 2 Jan 2027 | Final-cut notifications, from 09:00 in each member's zone. |
 | 31 Jan 2027 | Season close. |
+
+### Owner checklist, 30 November to 2 December
+
+These are the owner's steps on production; no code does them. Tick each in
+`ship-check.md` with the time.
+
+**By 29 November**
+- [ ] The bake-off (P5.13) is recorded: `evals/rewind/selected.json` names
+  the model, its recordings are committed, and the last prompt edits reach
+  98% or more first-pass grounding on all 20 fixtures
+  (`npx jest evals/rewind`, then `npm run eval:rewind -- --model=<selected>
+  --judge=<other family> --record`).
+- [ ] `npm run rewind:freeze -- --write --reason="Bake-off winner <model>"`,
+  merged by 30 November 12:00 with the owner's sign-off.
+
+**30 November**
+- [ ] 12:00: sign-off fixes merged; nothing else merges that day.
+- [ ] Run the validator's page-schema pass on one admin's soft-launch issue
+  (`npm run rewind:validate -- --year=2026` from a checkout): page 02's
+  `lastYearDaily`, page 10's per-day minutes and titles and page 11's
+  `frames` parse, with zero failures.
+- [ ] Tag the commit `rewind-2026.1` and push the tag.
+- [ ] Take the dump (`pg_dump -Fc`, encrypted, off the host, kept 30 days).
+- [ ] Deploy before 18:00; `npx prisma migrate status` reports nothing
+  pending.
+- [ ] `/admin/rewind`: preflight green, "Model freeze: Frozen 1 December
+  2026", the frozen model and `rewind-2026.1` shown, the budget at its season
+  value, the Prepare at 00:15 in the westernmost zone and "Opens to
+  everyone" at 08:00; `redis-cli ZRANGE bull:rewind-batch:delayed 0 -1` lists the
+  Prepare and `redis-cli ZRANGE bull:rewind-aux:delayed 0 -1` the switch.
+- [ ] Settings: Rewind on, Audience "Admins only", LLM mode standard. Turn on
+  "Season open: switch the audience to Everyone at 08:00" (`+season.auto-open`)
+  if you want the scheduled switch; leave it off to switch by hand.
+- [ ] Evening: staging rehearsal (`npm run rewind:season-open -- --year=2026
+  --rehearse`); timings into `ship-check.md`. Deploy blackout from 18:00.
+
+**1 December**
+- [ ] 00:15 to 08:00: every eligible member ready (Retry failed until no
+  failure is left), every skip with a reason, spend under $0.03 per member
+  and under the cap; admins see "Data through 30 November" on a phone.
+- [ ] 08:00: the audience is "Everyone" (the console's Audience fact). If the
+  scheduled switch left it to you, save Audience "Everyone" yourself.
+- [ ] During the day: DMs arrive inside each member's window, `RewindView`
+  rows appear, new share links work, no new P0.
+- [ ] Prices: compare `lib/llm/models.ts` for the frozen model and budget
+  model, the judge and `gemini-4-argon` (its price doubles that day) with the
+  price pages; update changed prices with `asOf: '2026-12-01'`, confirm
+  `retiresOn` is after 2027-01-02, and append the check to
+  `model-selection.md`.
+- [ ] From 12:00: other work may merge and deploy again.
+
+**2 December**
+- [ ] `npm run rewind:validate -- --year=2026` against production from a
+  checkout, read-only: zero failures, recorded in `ship-check.md`.
 
 ## Admin-audience runs and the soft launch
 
@@ -212,7 +307,7 @@ The preflight must be green before any run:
 | Redis | the queues answer |
 | Tautulli | 2.17 or later |
 | Overseerr, Sonarr | set up, or "not set up" (optional, not a warning) |
-| AI copy | a priced model that does not retire before 2027-01-02; template-only mode shows as degraded on purpose |
+| AI copy | the frozen model (or, before the lock names one, the provider's), priced and not retiring before 2027-01-02; template-only mode shows as degraded on purpose; a provider other than the lock's is red |
 | Entitlement (Stripe on only) | every member entitled, else the skip count you expect |
 
 **Soft launch (25 to 27 November).** Review the gallery, confirm Rewind on,
@@ -256,9 +351,21 @@ that day.
   running; it schedules the run at start and every 10 minutes.
 - Settings read: Rewind on, Audience "Admins only", LLM mode standard.
 
-**30 November, evening.** Rehearse on staging (pending P8.2's
-`scripts/rewind-season-open.ts --rehearse`) and record the timings in
+**30 November, evening.** Rehearse on staging and record the timings in
 `ship-check.md`. Deploy blackout from 18:00.
+
+```
+REWIND_STAGING=1 DATABASE_URL=<staging> REDIS_URL=<staging redis> npm run rewind:season-open -- --year=2026 --rehearse
+```
+
+It refuses without `REWIND_STAGING=1`. It enqueues the season-open Prepare at
+once with audience `all`, waits for it and every generation it started, then
+switches the audience the way the 08:00 job does, and prints the timings.
+With a failed member it stops before the switch: use Retry failed on the
+staging console, then run it again with `--switch-only`. Without a mode,
+`npm run rewind:season-open -- --year=2026` prints the production schedule
+read-only: the Prepare's instant, the switch's instant and whether the
+scheduled switch is on.
 
 **1 December, 00:15 in the westernmost zone (02:15 Chicago).** The scheduled
 Prepare runs with audience "all": the server aggregate with data through 30
@@ -276,10 +383,21 @@ soft-launch issues are regenerated with the rest.
 - Admins open their own issue on a phone and see "Data through 30 November".
   Check members only through counts, not by opening their issues.
 
-**08:00.** Set **Audience** to "Everyone" and save. That writes
-`CONFIG_CHANGED`, and members' home cards turn from before season to ready.
+**08:00.** Rewind opens to everyone. With `+season.auto-open` on (the
+"Season open" switch under Features added in December), `REWIND_SEASON_OPEN`
+does it on `rewind-aux` at 08:00 server time
+(`lib/queue/jobs/rewind-season-open.ts`), kept scheduled at worker start and
+by the stale sweep like the Prepare; the console's "Opens to everyone" fact
+shows when. It switches only when the audience is still "Admins only", Rewind
+is on, the season-open Prepare has finished and no member is generating or
+failed. While a run is still going it checks again every 10 minutes until
+12:00, then leaves it to you; with a failed member it leaves it to you at
+once (the log says which). With the switch off, or whenever it leaves it to
+you, set **Audience** to "Everyone" and save. Either way the change writes
+`CONFIG_CHANGED` (the job as actor `system`, `source: season-open`), and
+members' home cards turn from before season to ready.
 
-**Notifications.** The 08:00 save also enqueues one `REWIND_NOTIFY` job per
+**Notifications.** The 08:00 switch also enqueues one `REWIND_NOTIFY` job per
 completed member who has not been told yet
 (`lib/queue/jobs/rewind-notify.ts`). Each job waits for 09:00 to 20:00 in its
 member's zone, checks again that the member can open Rewind, has an active

@@ -15,6 +15,7 @@ import { prismaMock } from '@/__tests__/helpers/prisma-mock'
 import { getTautulliInfo } from '@/lib/connections/tautulli'
 import { checkRewindInfra } from '@/lib/queue/rewind-infra'
 import { getRewindPreflight, type PreflightRow } from '@/lib/wrapped/admin/preflight'
+import { REWIND_LOCK } from '@/lib/wrapped/freeze/lock'
 
 jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prismaModule)
 jest.mock('@/lib/connections/tautulli', () => ({ getTautulliInfo: jest.fn() }))
@@ -32,6 +33,8 @@ beforeEach(() => {
   prismaMock.sonarr.count.mockResolvedValue(0)
   prismaMock.lLMProvider.findFirst.mockResolvedValue({ provider: 'openai', model: 'gpt-6-luna' } as never)
   prismaMock.user.count.mockResolvedValue(0)
+  // These rows read the active provider's own model: no model frozen (P8.1 cases below).
+  jest.replaceProperty(REWIND_LOCK, 'model', null)
 })
 
 const row = (rows: PreflightRow[], id: PreflightRow['id']) => rows.find((r) => r.id === id)
@@ -81,6 +84,18 @@ describe('getRewindPreflight', () => {
 
     prismaMock.lLMProvider.findFirst.mockResolvedValue({ provider: 'openai-compatible', model: 'qwen3.6:27b' } as never)
     expect(row(await getRewindPreflight(), 'llm')).toMatchObject({ status: 'incomplete', detail: expect.stringMatching(/no known price/) })
+  })
+
+  it('reads the frozen model, and turns red when the provider is not the lock\'s (P8.1)', async () => {
+    jest.replaceProperty(REWIND_LOCK, 'model', { provider: 'anthropic', modelId: 'claude-sonnet-5-5', budgetModelId: 'claude-haiku-5-5', effort: 'low', maxOutputTokens: 1800 })
+    prismaMock.lLMProvider.findFirst.mockResolvedValue({ provider: 'anthropic', model: 'claude-opus-5-5' } as never)
+    expect(row(await getRewindPreflight(), 'llm')).toMatchObject({ status: 'ok', detail: expect.stringMatching(/Sonnet.*frozen in rewind-2026\.1/) })
+
+    prismaMock.lLMProvider.findFirst.mockResolvedValue({ provider: 'openai', model: 'gpt-6-sol' } as never)
+    expect(row(await getRewindPreflight(), 'llm')).toMatchObject({
+      status: 'unreachable',
+      detail: 'The Rewind provider is openai, but the frozen model is anthropic:claude-sonnet-5-5: Rewind writes template copy',
+    })
   })
 
   it('reports template-only mode', async () => {

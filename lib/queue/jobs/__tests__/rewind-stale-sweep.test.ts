@@ -19,6 +19,7 @@ jest.mock('@/lib/prisma', () => require('@/__tests__/helpers/prisma-mock').prism
 jest.mock('@/lib/queue/rewind-producers', () => ({ getRewindQueue: jest.fn() }))
 jest.mock('@/lib/rewind/enqueue-generation', () => ({ enqueueRewindGeneration: jest.fn() }))
 jest.mock('@/lib/rewind/season-runs', () => ({ scheduleSeasonOpenRun: jest.fn(async () => null), scheduleFinalCutRun: jest.fn(async () => null) }))
+jest.mock('@/lib/rewind/season-open', () => ({ scheduleSeasonAudienceSwitch: jest.fn(async () => null) }))
 
 const NOW = new Date('2026-12-05T12:00:00Z')
 const minutesAgo = (minutes: number) => new Date(NOW.getTime() - minutes * 60_000)

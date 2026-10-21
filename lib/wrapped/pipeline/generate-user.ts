@@ -155,6 +155,7 @@ export async function generateUserRewind(options: GenerateUserOptions, deps: Pip
       disabled: ctx.config.llmDisabled,
       mode: effectiveRewindLlmMode({ llmDisabled: ctx.config.llmDisabled, rewindLlmMode: ctx.config.llmMode }),
       provider: ctx.llmProvider,
+      providerMismatch: ctx.llmProviderMismatch,
       budgetReached: ctx.spentUsd >= ctx.config.budgetUsd,
       override: options.model,
     },

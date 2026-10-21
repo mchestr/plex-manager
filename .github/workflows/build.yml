@@ -347,6 +347,11 @@ jobs:
       - name: Check the Rewind fixtures match their profiles
         run: npm run rewind:fixtures -- --check
 
+      # The prompt, the fact catalogue and the model are frozen for the
+      # season (P8.1, docs/rewind.md "The freeze lock").
+      - name: Check the Rewind freeze lock
+        run: npm run rewind:freeze -- --check
+
       - name: Upload coverage report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
