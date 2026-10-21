@@ -72,7 +72,7 @@ describe('AdminShell', () => {
     expect(within(sidebar).getByTestId('admin-nav-queues')).toHaveTextContent('2 failed')
     const tabs = within(screen.getByTestId('admin-tab-bar')).getAllByRole('listitem')
     expect(tabs.map((tab) => tab.textContent)).toEqual(['Invites', 'Users', 'Rewind', 'Settings', 'More, jobs have failed'])
-    expect(screen.getByTestId('admin-tab-rewind')).toHaveAttribute('href', '/admin/prompts')
+    expect(screen.getByTestId('admin-tab-rewind')).toHaveAttribute('href', '/admin/rewind')
   })
 
   it('opens the grouped More sheet, and Escape returns focus to More', async () => {
@@ -88,6 +88,7 @@ describe('AdminShell', () => {
       expect(within(sheet).getByRole('region', { name: group })).toBeInTheDocument()
     }
     expect(within(within(sheet).getByRole('region', { name: 'Rewind' })).getAllByRole('link').map((a) => a.textContent)).toEqual([
+      'Season',
       'Playground',
       'Prompts',
       'Share analytics',
