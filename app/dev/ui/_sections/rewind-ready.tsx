@@ -4,6 +4,7 @@ import { Bold, Table2 } from "lucide-react"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
+import { LiveStatus } from "@/components/ui/live-status"
 import { Segment, SegmentedControl } from "@/components/ui/segmented-control"
 import {
   Sheet,
@@ -139,6 +140,18 @@ export function SliderSpecimen() {
           disabled
           getAriaValueText={(formatted) => `${formatted} percent`}
         />
+      </Row>
+    </Specimen>
+  )
+}
+
+export function LiveStatusSpecimen() {
+  const [renderedAt] = useState(() => Date.now())
+  const [paused, setPaused] = useState(false)
+  return (
+    <Specimen id="live-status" title="LiveStatus">
+      <Row label="Live">
+        <LiveStatus renderedAt={renderedAt} paused={paused} onPausedChange={setPaused} data-testid="dev-ui-live-status-demo" />
       </Row>
     </Specimen>
   )

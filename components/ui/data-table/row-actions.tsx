@@ -32,11 +32,13 @@ interface RowActionsProps {
   /** The row's name: "Actions for {name}" on the button, and the menu's heading. */
   name: string
   actions: RowAction[]
+  /** Told when the menu opens and closes, so a live page can hold its refresh. */
+  onOpenChange?: (open: boolean) => void
   "data-testid"?: string
 }
 
 /** A row's ghost icon button and the action menu it opens, headed with the row's name. */
-export function RowActions({ name, actions, ...props }: RowActionsProps) {
+export function RowActions({ name, actions, onOpenChange, ...props }: RowActionsProps) {
   const testId = props["data-testid"]
   const regular = actions.filter((action) => action.variant !== "destructive")
   const destructive = actions.filter((action) => action.variant === "destructive")
@@ -55,7 +57,7 @@ export function RowActions({ name, actions, ...props }: RowActionsProps) {
   )
 
   return (
-    <DropdownMenu>
+    <DropdownMenu onOpenChange={onOpenChange}>
       <DropdownMenuTrigger
         render={<Button variant="ghost" size="icon-sm" aria-label={`Actions for ${name}`} data-testid={testId} />}
       >

@@ -170,6 +170,13 @@ describe("formatDuration", () => {
     expect(formatDuration(0, "short")).toBe("0 m")
   })
 
+  it("goes down to seconds for job runs", () => {
+    expect(formatDuration(1.5, "short", { smallestUnit: "second" })).toBe("1 m 30 s")
+    expect(formatDuration(2.4 / 60, "short", { smallestUnit: "second" })).toBe("2 s")
+    expect(formatDuration(0.2 / 60, "short", { smallestUnit: "second" })).toBe("0 s")
+    expect(formatDuration(0.5, "short")).toBe("0 m")
+  })
+
   it("groups large values in the given locale", () => {
     expect(formatDuration(1440000, "short", { largestUnit: "day", locale: "de-DE" })).toBe("1.000 d")
   })
