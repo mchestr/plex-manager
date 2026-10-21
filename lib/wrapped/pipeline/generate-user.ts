@@ -23,6 +23,7 @@ import "server-only"
 import { findTautulliUser } from "@/lib/connections/tautulli"
 import { getAccessLevel } from "@/lib/access"
 import { generateStructured } from "@/lib/llm/generate-structured"
+import type { EffortLevel } from "@/lib/llm/models"
 import { effectiveRewindLlmMode } from "@/lib/wrapped/config"
 import { redisLimiter } from "@/lib/queue/redis-semaphore"
 import { checkRewindInfra } from "@/lib/queue/rewind-infra"
@@ -62,6 +63,8 @@ export interface GenerateUserOptions {
   /** A model on the Rewind provider for this run only (dry runs and the bake-off). */
   model?: string
   promptVersion?: string
+  /** The copy call's reasoning effort for this run only (dry runs). */
+  effort?: EffortLevel
   /** Replaces the stored style guide for this run (the playground). */
   styleGuide?: string | null
   /** Reads the member's inputs instead of Tautulli and the batch cache (fixtures). */
@@ -149,6 +152,7 @@ export async function generateUserRewind(options: GenerateUserOptions, deps: Pip
       generate: deps.generate ?? generateStructured,
       consume: deps.consume ?? ((provider) => consume("rw:llm", provider)),
       signal,
+      effort: options.effort,
       styleGuide: options.styleGuide === undefined ? ctx.styleGuide : options.styleGuide,
       attribution: {
         userId,

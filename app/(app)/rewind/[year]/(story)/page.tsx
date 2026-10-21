@@ -10,6 +10,7 @@ import { WrappedYearLinks } from "@/components/wrapped/wrapped-year-links"
 import { authOptions } from "@/lib/auth"
 import { rewindName } from "@/lib/brand"
 import { prisma } from "@/lib/prisma"
+import { previewOwnerId, readPreview } from "@/lib/rewind/dry-run/store"
 import { safeReturnPath } from "@/lib/rewind/return-to"
 import { loadRewindYearView } from "@/lib/rewind/year-view"
 import { yearParamSchema } from "@/lib/validations/params"
@@ -43,8 +44,18 @@ export default async function RewindYearPage({ params, searchParams }: YearPageP
   }
   const year = parsedYear.data
   const userId = session.user.id
-  const { from, sheet } = await searchParams
+  const { from, sheet, preview } = await searchParams
   const returnTo = safeReturnPath(typeof from === "string" ? from : null)
+
+  // An admin's dry run (P7.10); members get the 404 the route gives any unknown page.
+  if (preview !== undefined) {
+    if (!session.user.isAdmin) notFound()
+    const found = await readPreview(preview, year)
+    if (!found) {
+      return <RewindStatusPanel kind="not-found" code="REWIND_NOT_FOUND" year={year} returnTo={returnTo} audience="admin" />
+    }
+    return <RewindIssue rewindId={found.id} data={found.run.data} userId={previewOwnerId(found.run.subject)} returnTo={returnTo} preview />
+  }
 
   const [view, sharedRows, completedYears] = await Promise.all([
     loadRewindYearView({ userId, isAdmin: session.user.isAdmin }, year),

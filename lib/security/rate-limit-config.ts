@@ -57,6 +57,8 @@ export const LIMITS = {
   "rw:card:share": { points: 30, duration: MINUTE },
   "rw:gen:burst": { points: 1, duration: 10 * MINUTE },
   "rw:gen:daily": { points: 3, duration: DAY },
+  // Admin dry runs of the Rewind pipeline per admin (P7.10)
+  "rw:dryrun": { points: 10, duration: 10 * MINUTE },
   // Rewind copy calls per LLM provider (design 9.4); the pipeline waits for a point
   "rw:llm": { points: 30, duration: MINUTE },
 } as const satisfies Record<string, LimitConfig>
