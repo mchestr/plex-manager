@@ -7,6 +7,7 @@
  *
  * - `flash`: this app's codes, set with `withFlash()`.
  * - `error`: NextAuth's sign-in error codes (`pages.signIn` is `/`).
+ *   `/auth/error` (`pages.error`) reads its own `error` with `nextAuthError()`.
  * - `status`: the Discord callback's legacy `status=linked`. Other values are
  *   left alone, because pages such as `/admin/queues` filter on `status`.
  *
@@ -37,8 +38,18 @@ type DiscordConnectFlash = "discord_rate_limited" | "discord_unavailable"
 
 type FlashCode = DiscordCallbackFlash | DiscordConnectFlash
 
-/** NextAuth's sign-in error codes that reach the sign-in page as `?error=`. */
-type NextAuthErrorCode = "CredentialsSignin" | "AccessDenied" | "Configuration" | "Verification" | "Default"
+/**
+ * NextAuth's error codes: sign-in errors reach the sign-in page as `?error=`,
+ * and the rest `/auth/error` (`pages.error`). `RateLimited` is P0.10's
+ * per-IP limit on the auth route.
+ */
+type NextAuthErrorCode =
+  | "CredentialsSignin"
+  | "AccessDenied"
+  | "Configuration"
+  | "Verification"
+  | "RateLimited"
+  | "Default"
 
 /** The codes whose toast is an error, with copy in `error-copy.ts`. */
 export type FlashErrorCode = Exclude<FlashCode, "discord_linked"> | NextAuthErrorCode
@@ -73,6 +84,7 @@ const NEXT_AUTH: Record<NextAuthErrorCode, FlashToast> = {
   AccessDenied: errorToast("AccessDenied"),
   Configuration: errorToast("Configuration"),
   Verification: errorToast("Verification"),
+  RateLimited: errorToast("RateLimited"),
   Default: errorToast("Default"),
 }
 
@@ -109,6 +121,23 @@ export function readFlash(params: URLSearchParams): { toasts: FlashToast[]; quer
     (toast) => toast !== undefined
   )
   return { toasts, query }
+}
+
+/**
+ * What `/auth/error` shows for NextAuth's `?error=`: the code and its copy
+ * when it is a known code, otherwise `Default`. The query text itself is
+ * never returned.
+ *
+ * @example
+ * ```ts
+ * nextAuthError("Verification").code // "Verification"
+ * nextAuthError("<script>alert(1)</script>").code // "Default"
+ * ```
+ */
+export function nextAuthError(value: unknown): FlashToast & { code: NextAuthErrorCode } {
+  const code: NextAuthErrorCode =
+    typeof value === "string" && Object.hasOwn(NEXT_AUTH, value) ? (value as NextAuthErrorCode) : "Default"
+  return { ...NEXT_AUTH[code], code }
 }
 
 /** `path` (which may already carry a query) with `flash=<code>` set. */

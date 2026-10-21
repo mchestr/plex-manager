@@ -435,6 +435,8 @@ export const authOptions: NextAuthOptions = {
   useSecureCookies: usesSecureCookies(),
   pages: {
     signIn: "/",
+    // NextAuth's non-sign-in errors (Configuration, AccessDenied, Verification, RateLimited) land on a StatusScreen
+    error: "/auth/error",
   },
   logger: {
     error(code, metadata) {

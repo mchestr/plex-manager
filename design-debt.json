@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "commit": "7564460b57dead340cfa760aa949bf1c38a38c60",
-  "generatedAt": "2026-10-21T22:14:42.322Z",
+  "commit": "eddf281041a11dcf06748af8fc0a8486efd6271e",
+  "generatedAt": "2026-10-21T22:26:52.260Z",
   "files": {
     "app/admin/cost-analysis/page.tsx": {
       "blur": 13,
@@ -50,15 +50,6 @@
       "blur": 3,
       "gradient": 2,
       "raw-palette": 24
-    },
-    "app/auth/callback/plex/callback-client.tsx": {
-      "blur": 2,
-      "raw-palette": 9
-    },
-    "app/auth/denied/denied-client.tsx": {
-      "blur": 1,
-      "infinite-motion": 4,
-      "raw-palette": 12
     },
     "app/invite/[code]/page.tsx": {
       "blur": 3,
@@ -230,11 +221,7 @@
     },
     "components/auth/plex-sign-in-button.tsx": {
       "gradient": 1,
-      "raw-palette": 19
-    },
-    "components/auth/service-sign-in-toggle.tsx": {
-      "gradient": 6,
-      "raw-palette": 42
+      "raw-palette": 9
     },
     "components/dashboard/announcements-card.tsx": {
       "arbitrary-type-z": 1,
@@ -466,12 +453,12 @@
   },
   "totals": {
     "arbitrary-type-z": 29,
-    "blur": 100,
+    "blur": 97,
     "caps-eyebrow": 67,
     "copy": 13,
-    "gradient": 63,
+    "gradient": 57,
     "gradient-text": 32,
-    "infinite-motion": 35,
-    "raw-palette": 1998
+    "infinite-motion": 31,
+    "raw-palette": 1925
   }
 }

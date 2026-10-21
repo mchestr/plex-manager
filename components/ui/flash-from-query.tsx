@@ -7,6 +7,7 @@ import { useToast } from "@/components/ui/toast"
 import { readFlash } from "@/lib/ui/flash-codes"
 
 const REVEAL_WAIT_MS = 5000
+const AUTH_ERROR_PAGE = "/auth/error"
 
 /**
  * Turns the codes a redirect left in the URL (`?flash=`, NextAuth's `?error=`,
@@ -23,6 +24,8 @@ export function FlashFromQuery() {
   const handled = useRef<string | null>(null)
 
   useEffect(() => {
+    // The NextAuth error page shows its own `error` as a StatusScreen
+    if (pathname === AUTH_ERROR_PAGE) return
     const read = readFlash(new URLSearchParams(searchParams.toString()))
     if (!read) return
     const key = `${pathname}?${searchParams.toString()}`

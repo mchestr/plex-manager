@@ -40,6 +40,7 @@ import {
 import { consume } from "@/lib/security/rate-limit"
 import { RATE_LIMITED_MESSAGE } from "@/lib/security/rate-limit-messages"
 import { createLogger } from "@/lib/utils/logger"
+import { safeCallbackPath } from "@/lib/validations/callback-path"
 import { inviteCodeSchema } from "@/lib/validations/invite"
 
 const logger = createLogger("PLEX_AUTH")
@@ -88,14 +89,16 @@ async function browserClientId(): Promise<string> {
 
 /**
  * Starts a Plex sign-in: a strong PIN for this browser, kept in the signed
- * `pm-plex-pin` cookie for 15 minutes together with the optional invite code.
- * Limited per client IP (`plex:pin:create`).
+ * `pm-plex-pin` cookie for 15 minutes together with the optional invite code
+ * and `callbackPath` (from `/?callbackUrl=`). A `callbackPath` that is not a same-origin path
+ * (`safeCallbackPath`) is dropped, never stored. Limited per client IP
+ * (`plex:pin:create`).
  */
 export const startPlexSignIn = publicAction({
-  input: z.strictObject({ inviteCode: inviteCodeSchema.optional() }),
+  input: z.strictObject({ inviteCode: inviteCodeSchema.optional(), callbackPath: z.string().max(2048).optional() }),
   rateLimit: { name: "plex:pin:create" },
   fallbackError: START_FAILED,
-  handler: async ({ inviteCode }) => {
+  handler: async ({ inviteCode, callbackPath: requested }) => {
     const clientId = await browserClientId()
     const pin = await createPin(clientId)
     if (!pin.ok) {
@@ -103,7 +106,8 @@ export const startPlexSignIn = publicAction({
     }
 
     const jar = await cookies()
-    jar.set(pinCookie({ pinId: pin.data.id, code: pin.data.code, clientId, inviteCode }))
+    const callbackPath = safeCallbackPath(requested) ?? undefined
+    jar.set(pinCookie({ pinId: pin.data.id, code: pin.data.code, clientId, inviteCode, callbackPath }))
     return ok({ authUrl: plexAuthUrl(clientId, pin.data.code) })
   },
 })
@@ -136,11 +140,14 @@ export const pollPlexSignIn = publicAction({
 /**
  * Ends the PIN binding after `signIn("plex")` succeeded, and returns where the
  * member goes next: `/subscribe` without full access (a non-member with Stripe
- * on), `/onboarding` until onboarding is done, otherwise `/`.
+ * on), `/onboarding` until onboarding is done, otherwise the PIN cookie's
+ * `callbackPath` or `/`.
  */
 export const finishPlexSignIn = publicAction({
   handler: async (_input, { session }) => {
-    ;(await cookies()).delete(PLEX_PIN_COOKIE)
+    const jar = await cookies()
+    const callbackPath = readPinCookie(jar.get(PLEX_PIN_COOKIE)?.value)?.callbackPath
+    jar.delete(PLEX_PIN_COOKIE)
 
     const userId = session?.user?.id
     if (!userId) {
@@ -150,6 +157,6 @@ export const finishPlexSignIn = publicAction({
       return ok({ next: "/subscribe" })
     }
     const onboarding = await getOnboardingStatus()
-    return ok({ next: onboarding.success && !onboarding.data.isComplete ? "/onboarding" : "/" })
+    return ok({ next: onboarding.success && !onboarding.data.isComplete ? "/onboarding" : (callbackPath ?? "/") })
   },
 })

@@ -87,12 +87,10 @@ export async function verifyPageAccessible(page: Page): Promise<void> {
   const unauthorizedErrorPage = page.getByTestId('unauthorized-error-page');
   const accessDeniedHeading = page.getByTestId('access-denied-heading');
   const unauthorizedError = page.getByText('401', { exact: true });
-  const accessDeniedError = page.getByText('Access Denied');
 
   await expect(unauthorizedErrorPage).not.toBeVisible();
   await expect(accessDeniedHeading).not.toBeVisible();
   await expect(unauthorizedError).not.toBeVisible();
-  await expect(accessDeniedError).not.toBeVisible();
 }
 
 /**
@@ -107,14 +105,12 @@ export async function verifyPageUnauthorized(page: Page): Promise<void> {
   const unauthorizedErrorPage = page.getByTestId('unauthorized-error-page');
   const accessDeniedHeading = page.getByTestId('access-denied-heading');
   const unauthorizedError = page.getByText('401', { exact: true });
-  const accessDeniedError = page.getByText('Access Denied');
 
   // Wait for error boundary to render by checking for any error element to be visible
   const errorAppeared = await Promise.race([
     unauthorizedErrorPage.waitFor({ state: 'visible', timeout: WAIT_TIMEOUTS.ERROR_BOUNDARY }).then(() => true).catch(() => false),
     accessDeniedHeading.waitFor({ state: 'visible', timeout: WAIT_TIMEOUTS.ERROR_BOUNDARY }).then(() => true).catch(() => false),
     unauthorizedError.waitFor({ state: 'visible', timeout: WAIT_TIMEOUTS.ERROR_BOUNDARY }).then(() => true).catch(() => false),
-    accessDeniedError.waitFor({ state: 'visible', timeout: WAIT_TIMEOUTS.ERROR_BOUNDARY }).then(() => true).catch(() => false),
   ]);
 
   if (!errorAppeared) {
@@ -130,9 +126,8 @@ export async function verifyPageUnauthorized(page: Page): Promise<void> {
 
   // Fallback to text-based checks
   const is401Visible = await unauthorizedError.isVisible().catch(() => false);
-  const isAccessDeniedTextVisible = await accessDeniedError.isVisible().catch(() => false);
 
-  const isUnauthorized = isUnauthorizedPageVisible || isAccessDeniedHeadingVisible || is401Visible || isAccessDeniedTextVisible;
+  const isUnauthorized = isUnauthorizedPageVisible || isAccessDeniedHeadingVisible || is401Visible;
 
   if (!isUnauthorized) {
     // Check if we're seeing a 404 page instead

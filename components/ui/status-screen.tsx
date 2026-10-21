@@ -12,6 +12,8 @@ interface StatusScreenProps {
   description: string
   primaryAction: ReactNode
   secondaryAction?: ReactNode
+  /** A stable test id for the h1, where a flow already relies on one. */
+  titleTestId?: string
   className?: string
 }
 
@@ -28,6 +30,7 @@ export function StatusScreen({
   description,
   primaryAction,
   secondaryAction,
+  titleTestId,
   className,
 }: StatusScreenProps) {
   return (
@@ -45,7 +48,7 @@ export function StatusScreen({
         </p>
       )}
       <div className="flex flex-col gap-2">
-        <h1 className="text-h1 text-foreground">{title}</h1>
+        <h1 className="text-h1 text-foreground" data-testid={titleTestId}>{title}</h1>
         <p className="text-body text-muted-foreground">{description}</p>
       </div>
       <div className="mt-2 flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:justify-center" data-slot="status-screen-actions">
