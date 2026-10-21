@@ -40,6 +40,7 @@
 import type { z } from "zod"
 
 import type { ArticleBlock, ArticleContext } from "@/lib/rewind/article/blocks"
+import type { RewindFeatureFlags } from "@/lib/rewind/features"
 import { HOLD_ESTIMATE_MS, pageMeta, TURN_MS, type IssuePageType, type PageMeta, type RewindPageType } from "@/lib/rewind/page-meta"
 import { backCoverPage } from "@/lib/rewind/pages/back-cover"
 import { bookendsPage } from "@/lib/rewind/pages/bookends"
@@ -113,6 +114,8 @@ export interface NotesContext {
   zone: "member" | "server"
   /** Rating keys the member hid (P7.7), left out before the no-LLM regeneration lands. */
   hiddenKeys?: ReadonlySet<string>
+  /** The December features (P8.3); the calendar reads `calendar.grid`. */
+  features?: Partial<RewindFeatureFlags>
 }
 
 /** The part of an entry each page module defines. Methods, so a typed page fits `RegistryEntry<unknown>`. */

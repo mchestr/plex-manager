@@ -12,7 +12,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { FormField } from "@/components/ui/form-field"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/components/ui/toast"
-import { REWIND_CUT_PAGES, rewindBudgetSchema, type RewindSettings } from "@/lib/validations/rewind-settings"
+import { enableEntry, isFeatureEntry, REWIND_FEATURES } from "@/lib/rewind/features"
+import { REWIND_CUT_PAGES, REWIND_DISABLED_PAGE_ENTRIES, rewindBudgetSchema, type RewindSettings } from "@/lib/validations/rewind-settings"
 
 interface RewindSettingsSectionProps {
   /** The stored settings, from `rewindSettingsFromConfig`. */
@@ -46,6 +47,9 @@ const LLM_MODES = [
   { value: "economy", label: "Economy (the budget model)" },
   { value: "off", label: "Off (template copy)" },
 ]
+
+/** A `rewindDisabledPages` draft in its stored order, so a change undone reads as no change. */
+const storedOrder = (entries: readonly string[]) => REWIND_DISABLED_PAGE_ENTRIES.filter((entry) => entries.includes(entry))
 
 const NEXT_GENERATION = "Takes effect at the next generation."
 
@@ -241,7 +245,16 @@ export function RewindSettingsSection({ saved, zone, llmDisabled, discordBotOn, 
           description="In cut-list order. The ten core pages are always included."
           options={REWIND_CUT_PAGES.map((page) => ({ value: page.key, label: page.label }))}
           selected={draft.rewindDisabledPages}
-          onChange={(pages) => set("rewindDisabledPages")(pages as Draft["rewindDisabledPages"])}
+          onChange={(pages) => set("rewindDisabledPages")(storedOrder([...pages, ...draft.rewindDisabledPages.filter(isFeatureEntry)]))}
+        />
+        {/* The December features (P8.3, P8.4) share the list: a switch writes or removes its `+key` entry. */}
+        <CheckboxList
+          name="features"
+          legend="Features added in December"
+          description="Each is off until turned on here. Check it on the heavy test member first, and record the enable in ship-check.md."
+          options={REWIND_FEATURES.map((feature) => ({ value: enableEntry(feature.key), label: feature.label }))}
+          selected={draft.rewindDisabledPages}
+          onChange={(features) => set("rewindDisabledPages")(storedOrder([...draft.rewindDisabledPages.filter((entry) => !entry.startsWith("+")), ...features]))}
         />
         <CheckboxList
           name="channels"

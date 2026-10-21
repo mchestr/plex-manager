@@ -29,6 +29,21 @@ const COPY_LOCALE = "en-US"
 /** The month a frame closes, in full. */
 export const frameMonth = (data: RaceData, m: number, locale = COPY_LOCALE) => monthName(data.frames[m].month, locale, "long")
 
+/**
+ * The scrubber's live line for one frame (P8.3): "Standings after August:
+ * Severance first, Shogun second." Series not started by then are left out.
+ */
+export function standingsAfter(data: RaceData, m: number, locale = COPY_LOCALE): string {
+  const { rows } = raceGeometry(data.frames, { pitch: 1 })
+  const order = data.series
+    .map((series, i) => ({ title: series.title, rank: rows[i].offset[m], minutes: data.frames[m].minutes[i] }))
+    .filter((runner) => runner.minutes > 0)
+    .sort((a, b) => a.rank - b.rank)
+  const month = frameMonth(data, m, locale)
+  if (order.length === 0) return `Standings after ${month}: nobody has started yet.`
+  return `Standings after ${month}: ${order.map((runner, place) => `${runner.title} ${PLACES[place]}`).join(", ")}.`
+}
+
 function raceSummary(data: RaceData): string {
   const last = data.frames.length - 1
   const { finalOrder, strip } = raceGeometry(data.frames, { pitch: 1 })

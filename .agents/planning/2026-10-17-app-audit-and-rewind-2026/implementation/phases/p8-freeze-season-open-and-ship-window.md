@@ -177,11 +177,13 @@ No new feature code lands from 10 to 12 December. Every P1 feature ships with it
 **Demo.** On the heavy member's race, the bars run once; scrubbing to August announces the standings, and Replay runs them again. On the calendar, "Pick a day" opens July at "4 Jul, 12 h 24 m, mostly The Bear". On desktop, the arrow keys walk the Notes grid without turning the page. On page 02, the first tap lands the odometer and the second turns the page.
 
 **Done when.**
-- [ ] The race scrubber (Slider with month `aria-valuetext`) and Replay work by touch, mouse and keyboard, and pause autoplay while in use.
-- [ ] "Pick a day" opens a bottom sheet with a month selector and 44 px day rows.
-- [ ] The desktop Notes and article calendars are a grid with roving focus, and remain a table without JavaScript.
-- [ ] The first tap completes a running count-up or stretch, and the second advances.
-- [ ] Each feature has its own flag, off on a fresh `Config` until its `+key` is set, and the unit, E2E, visual, axe and perf checks pass.
+- [x] The race scrubber (Slider with month `aria-valuetext`) and Replay work by touch, mouse and keyboard, and pause autoplay while in use.
+- [x] "Pick a day" opens a bottom sheet with a month selector and 44 px day rows.
+- [x] The desktop Notes and article calendars are a grid with roving focus, and remain a table without JavaScript.
+- [x] The first tap completes a running count-up or stretch, and the second advances.
+- [ ] Each feature has its own flag, off on a fresh `Config` until its `+key` is set, and the unit, E2E, visual, axe and perf checks pass. (Flags and unit tests done; `e2e/rewind/p1-story.spec.ts` is written but not run, and no visual baselines were added: the coordinator runs E2E, axe and perf.)
+
+(as merged: `lib/rewind/features.ts` exports `REWIND_FEATURES` (key and label), `rewindFeatureFlags(config)` and `rewindFeatureOn`; P8.4 appends its entries to `REWIND_FEATURES`, and `lib/validations/rewind-settings.ts` accepts each feature's `+key` and plain key through `REWIND_DISABLED_PAGE_ENTRIES`, with no further edit there. Server code passes the flags down as `IssueContext.features`, `NotesContext.features`, `ArticleContext.features` and `StoryStage`'s `tapCompletes`. The Notes and article calendar is a new `ArticleBlock` kind, `calendar`, holding the month tables (the server render) and the grid's month rows. The count-ups on page 02 are CSS animations, not Motion controls, so `running-animations.ts` finishes `article.getAnimations({ subtree: true })` only and keeps no handle registry. The Settings section lists the switches under "Features added in December". Owner: enable each `+key` in production after checking it on the heavy member, and record it in `ship-check.md`.)
 
 ### Step P8.4: P1 comparison, Edit card, Save all and remaining Notes
 

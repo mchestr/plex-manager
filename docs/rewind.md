@@ -98,13 +98,26 @@ is generated again.
 install stored it off, the console's Regenerate is refused; set it back with
 `UPDATE "Config" SET "wrappedEnabled" = true;` after a dump.
 
-> **Pending P8.3 and P8.4 (P1 feature flags).** `lib/rewind/features.ts` adds
-> `REWIND_FEATURES`, each off by default: the race scrubber and replay, Pick a
-> day, the calendar grid, first-tap completion, Compare with 2025, Edit card,
-> Save all and the remaining Notes. Each is turned on in production only after
-> checking it on the heavy test member, and the enable is recorded in
-> `ship-check.md`. A flag that misbehaves stays off. List each key here when
-> the step merges.
+### Features added in December
+
+`lib/rewind/features.ts` lists the P1 interactions, each behind its own flag
+and off on a fresh `Config`. They share `rewindDisabledPages`: a feature is on
+only while the list holds `+<key>` and not the plain `<key>` (the plain key
+beside it switches it off again), so a deploy never turns one on by itself.
+The "Features added in December" switches in the Rewind section write or
+remove the `+` entry, audited as `CONFIG_CHANGED`. Turn each on in production
+only after checking it on the heavy test member, and record the enable, with
+the date and the check, in `ship-check.md`. A flag that misbehaves stays off.
+
+| Switch | Key | What it adds | Off |
+|---|---|---|---|
+| The race: scrubber and Replay | `race.scrubber` | A month slider and Replay under the race, after its single run (at once under reduced motion or on a revisit) | Autoplay once, then the final frame |
+| The calendar: Pick a day | `calendar.day-picker` | "Pick a day" under the calendar: a bottom sheet with a month selector and a row per day | The grid only |
+| Notes and article calendar: arrow-key grid | `calendar.grid` | The desktop Notes and article calendars become a roving-focus grid once hydrated; without JavaScript they stay month tables | Month tables |
+| First tap completes a count-up | `stage.tap-completes` | A forward tap on a page whose count-up is still running lands it; the next tap turns | Every tap turns |
+
+> **Pending P8.4.** Compare with 2025, Edit card, Save all and the remaining
+> Notes join this table when that step merges.
 
 ## Cut list
 

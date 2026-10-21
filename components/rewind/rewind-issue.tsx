@@ -13,6 +13,7 @@ import { StoryStage } from "@/components/rewind/stage/story-stage"
 import { serverName } from "@/lib/brand"
 import { prisma } from "@/lib/prisma"
 import { pagesForCut } from "@/lib/rewind/editions"
+import { rewindFeatureFlags } from "@/lib/rewind/features"
 import { loadItemLinks } from "@/lib/rewind/item-links"
 import { pageNotes } from "@/lib/rewind/notes"
 import { registry, type RegistryEntry } from "@/lib/rewind/registry"
@@ -55,6 +56,7 @@ async function libraryHref(): Promise<string | undefined> {
  * the server and handed to P5.2's `StoryStage` as slots, with the share
  * sheet's setup (P5.11). A full issue also typesets its pocket cut
  * (`pagesForCut`, P7.3), numbered 1 to 6, which the cover can swap to.
+ * The December feature flags (P8.3) are read here and passed down as booleans.
  */
 export async function RewindIssue({
   rewindId,
@@ -75,6 +77,7 @@ export async function RewindIssue({
     prisma.config.findUnique({ where: { id: "config" }, select: { rewindDisabledPages: true } }),
   ])
   const archetype = data.archetype?.id ?? null
+  const features = rewindFeatureFlags(config)
   const numbering = { archetype, disabledPages: DisabledPagesSchema.parse(config?.rewindDisabledPages ?? []) }
   const pages = validatePagesOnRead(pagesForCut(data, "full"), numbering)
   const pocket = data.edition === "full" ? validatePagesOnRead(pagesForCut(data, "pocket"), numbering) : null
@@ -104,6 +107,7 @@ export async function RewindIssue({
     cuts: { full: data.edition === "full" ? types(pages) : null, pocket: types(pocket ?? pages) },
     libraryHref: library,
     links,
+    features,
   }
   const slots = (list: readonly SelectedPage[], context: IssueContext) =>
     list.map((page) => {
@@ -112,7 +116,7 @@ export async function RewindIssue({
         type: page.type,
         content: <PageBody page={page} issue={context} />,
         table: entry.table?.(page.data, data.facts, { locale: settings.locale }) ?? null,
-        notes: pageNotes(page, data.facts, { locale: settings.locale, zone: context.zone, hiddenKeys }),
+        notes: pageNotes(page, data.facts, { locale: settings.locale, zone: context.zone, hiddenKeys, features }),
       }
     })
 
@@ -141,6 +145,7 @@ export async function RewindIssue({
       views={mode === "member" ? { rewindId, record: recordRewindView } : undefined}
       initialIndex={mode === "preview" ? Math.max(0, pages.findIndex((page) => page.type === initialPage)) : undefined}
       still={mode === "preview" && still}
+      tapCompletes={features["stage.tap-completes"]}
     />
   )
 }
