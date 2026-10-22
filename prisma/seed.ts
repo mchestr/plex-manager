@@ -1,5 +1,6 @@
 import { PrismaClient } from '../lib/generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
+import { pgAdapterOptionsFor } from '../lib/db/schema-param'
 import { resolveSeedTarget } from '../lib/security/test-mode'
 
 /**
@@ -11,7 +12,7 @@ import { resolveSeedTarget } from '../lib/security/test-mode'
 async function main() {
   const target = resolveSeedTarget(process.env)
   console.log(`Seeding database "${target.database}" on host "${target.host}"`)
-  const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: target.url }) })
+  const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: target.url }, pgAdapterOptionsFor(target.url)) })
   try {
     await seed(prisma)
   } finally {

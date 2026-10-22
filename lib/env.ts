@@ -3,6 +3,7 @@ import "server-only"
 import path from "node:path"
 import { z } from "zod"
 
+import { isValidSchemaName, schemaParamOf } from "@/lib/db/schema-param"
 import { createLogger } from "@/lib/utils/logger"
 
 /**
@@ -141,7 +142,7 @@ const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"])
 /** @internal */
 export interface EnvIssue {
   variable: string
-  code: "missing" | "too_short" | "low_entropy" | "known_placeholder" | "not_https" | "origin_mismatch"
+  code: "missing" | "too_short" | "low_entropy" | "known_placeholder" | "not_https" | "origin_mismatch" | "schema_invalid"
   severity: "error" | "warning"
   hint: string
 }
@@ -202,6 +203,15 @@ export function checkProductionEnv(env: Env): EnvIssue[] {
   ]
   if (!env.PLEX_CLIENT_IDENTIFIER?.trim()) {
     issues.push({ variable: "PLEX_CLIENT_IDENTIFIER", code: "missing", severity: "error", hint: "not set; generate one with openssl rand -hex 16" })
+  }
+  const schema = env.DATABASE_URL ? schemaParamOf(env.DATABASE_URL) : null
+  if (schema !== null && !isValidSchemaName(schema)) {
+    issues.push({
+      variable: "DATABASE_URL",
+      code: "schema_invalid",
+      severity: "error",
+      hint: "?schema= must be a letter or _ followed by up to 62 letters, digits or _",
+    })
   }
   if (env.NEXTAUTH_URL && env.NEXT_PUBLIC_APP_URL && originOf(env.NEXTAUTH_URL) !== originOf(env.NEXT_PUBLIC_APP_URL)) {
     issues.push({ variable: "NEXT_PUBLIC_APP_URL", code: "origin_mismatch", severity: "warning", hint: "has a different origin from NEXTAUTH_URL" })

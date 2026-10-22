@@ -1,6 +1,7 @@
 import { PrismaClient } from '@/lib/generated/prisma/client'
 import { PrismaPg } from '@prisma/adapter-pg'
 import { poolConfigFor, processRole } from '@/lib/db/pool-config'
+import { pgAdapterOptionsFor } from '@/lib/db/schema-param'
 import { decryptSecret, encryptSecret } from '@/lib/security/crypto'
 
 const globalForPrisma = globalThis as unknown as {
@@ -78,14 +79,21 @@ function decryptRow(fields: readonly string[], row: unknown): void {
   }
 }
 
-function createPrismaClient() {
-  if (!process.env.DATABASE_URL) {
+/**
+ * The app's Prisma client: the pg adapter with the role's pool limits and the
+ * `?schema=` of `DATABASE_URL` (P11.6), plus the encryption extension.
+ *
+ * @internal
+ */
+export function createPrismaClient() {
+  const connectionString = process.env.DATABASE_URL
+  if (!connectionString) {
     throw new Error('DATABASE_URL environment variable is not defined')
   }
-  const adapter = new PrismaPg({
-    connectionString: process.env.DATABASE_URL,
-    ...poolConfigFor(processRole()),
-  })
+  const adapter = new PrismaPg(
+    { connectionString, ...poolConfigFor(processRole()) },
+    pgAdapterOptionsFor(connectionString)
+  )
 
   return new PrismaClient({ adapter }).$extends({
     query: {
