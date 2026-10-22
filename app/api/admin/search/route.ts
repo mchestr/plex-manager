@@ -29,7 +29,8 @@ async function searchUsers(q: string): Promise<AdminSearchResult[]> {
 
 async function searchInvites(q: string): Promise<AdminSearchResult[]> {
   const invites = await prisma.invite.findMany({
-    where: { code: { startsWith: q.toUpperCase() } },
+    // New codes are stored uppercase (SEC-56); older ones may not be
+    where: { code: { startsWith: q, mode: "insensitive" } },
     select: { id: true, code: true, serverType: true, useCount: true, maxUses: true, expiresAt: true },
     orderBy: { code: "asc" },
     take: TAKE,
