@@ -291,15 +291,17 @@ export default async function DiscordDashboardPage({ searchParams }: { searchPar
             </h2>
             <p className="text-ui text-muted-foreground">What members marked in this period, from Discord or the web.</p>
           </div>
-          <Card padding="md">
-            <DiscordMarkedMedia
-              marks={markedMedia?.marks ?? []}
-              total={markedMedia?.total ?? 0}
-              summary={markedMedia?.summary ?? []}
-              filters={{ markType: markType ?? "all", source: source ?? "all", search: marksSearch }}
-              offset={marksOffset}
-              limit={MARKED_MEDIA_PAGE_SIZE}
-            />
+          <Card>
+            <CardContent className="p-6">
+              <DiscordMarkedMedia
+                marks={markedMedia?.marks ?? []}
+                total={markedMedia?.total ?? 0}
+                summary={markedMedia?.summary ?? []}
+                filters={{ markType: markType ?? "all", source: source ?? "all", search: marksSearch }}
+                offset={marksOffset}
+                limit={MARKED_MEDIA_PAGE_SIZE}
+              />
+            </CardContent>
           </Card>
         </section>
 

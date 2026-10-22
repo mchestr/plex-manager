@@ -2,14 +2,14 @@
 
 import { type ComponentProps, useCallback } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { StyledInput } from "@/components/ui/styled-input"
-import { StyledDropdown } from "@/components/ui/styled-dropdown"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Time } from "@/components/ui/time"
 import { Toggle } from "@/components/ui/toggle"
 import { useFormat } from "@/lib/format-context"
 import type { MarkType, MediaType } from "@/lib/generated/prisma"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface MarkedMediaUser {
   id: string
@@ -77,6 +77,32 @@ const SOURCE_OPTIONS = [
   { value: "discord", label: "Discord" },
   { value: "web", label: "Web" },
 ]
+
+interface FilterSelectProps {
+  label: string
+  items: { value: string; label: string }[]
+  value: string
+  onChange: (value: string) => void
+  testId: string
+}
+
+/** One filter of the marks table: the trigger takes `testId`, each option `<testId>-option-<value>`. */
+function FilterSelect({ label, items, value, onChange, testId }: FilterSelectProps) {
+  return (
+    <Select items={items} value={value} onValueChange={(next) => next !== null && onChange(next)}>
+      <SelectTrigger aria-label={label} data-testid={testId}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {items.map((item) => (
+          <SelectItem key={item.value} value={item.value} label={item.label} data-testid={`${testId}-option-${item.value}`}>
+            {item.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
+}
 
 function formatMediaLabel(item: MarkedMediaItem): string {
   const yearPart = item.year ? ` (${item.year})` : ""
@@ -162,27 +188,25 @@ export function DiscordMarkedMedia({
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <div className="sm:w-48">
-          <StyledDropdown
+          <FilterSelect
+            label="Mark type"
+            items={MARK_TYPE_OPTIONS}
             value={filters.markType || "all"}
             onChange={(v) => setFilter("markType", v)}
-            options={MARK_TYPE_OPTIONS}
-            size="md"
-            aria-label="Mark type"
-            data-testid="marks-type-filter"
+            testId="marks-type-filter"
           />
         </div>
         <div className="sm:w-40">
-          <StyledDropdown
+          <FilterSelect
+            label="Source"
+            items={SOURCE_OPTIONS}
             value={filters.source || "all"}
             onChange={(v) => setFilter("source", v)}
-            options={SOURCE_OPTIONS}
-            size="md"
-            aria-label="Source"
-            data-testid="marks-source-filter"
+            testId="marks-source-filter"
           />
         </div>
         <form onSubmit={handleSearchSubmit} className="flex gap-2 flex-1">
-          <StyledInput
+          <Input
             name="marksSearch"
             defaultValue={filters.search}
             placeholder="Search by title…"
