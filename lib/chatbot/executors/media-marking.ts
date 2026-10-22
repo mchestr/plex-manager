@@ -1,3 +1,5 @@
+import "server-only"
+
 import { searchPlexMedia } from "@/lib/connections/plex"
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
 import { prisma } from "@/lib/prisma"

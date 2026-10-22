@@ -1,5 +1,7 @@
+import "server-only"
+
 import { type ChatTool } from "@/lib/llm/chat"
-import { ALL_TOOLS } from "@/actions/chatbot/tools/registry"
+import { ALL_TOOLS } from "@/lib/chatbot/tools/registry"
 
 export function generateSystemPrompt(toolset: ChatTool[] = ALL_TOOLS): string {
   const toolList = toolset.map((tool) => `- ${tool.function.name}: ${tool.function.description}`).join("\n    ")

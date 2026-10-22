@@ -1,6 +1,6 @@
 /**
- * Tests for actions/chatbot/executors/tautulli.ts and the Discord tool gating
- * in actions/chatbot/tools.ts.
+ * Tests for lib/chatbot/executors/tautulli.ts and the Discord tool gating
+ * in lib/chatbot/tools.
  *
  * Covers two Phase 0 bug fixes:
  * 1. get_tautulli_library_stats must invoke the stats client
@@ -18,8 +18,8 @@ import { executeTautulliTool } from "../tautulli"
 import {
   DISCORD_SAFE_TOOLS,
   generateDiscordSystemPrompt,
-} from "@/actions/chatbot/tools"
-import { DISCORD_SAFE_TOOL_NAMES } from "@/actions/chatbot/tools/registry"
+} from "@/lib/chatbot/tools"
+import { DISCORD_SAFE_TOOL_NAMES } from "@/lib/chatbot/tools/registry"
 import {
   findTautulliUser,
   getTautulliActivity,

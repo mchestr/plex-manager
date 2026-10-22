@@ -1,3 +1,5 @@
+import "server-only"
+
 import type { ModelMessage } from "ai"
 
 import { ASSISTANT_BUDGET_MESSAGE, ASSISTANT_BUDGET_UNAVAILABLE_MESSAGE, checkSpend } from "@/lib/llm/budget"

@@ -1,5 +1,5 @@
 /**
- * Tests for actions/chatbot/executors/scrub.ts
+ * Tests for lib/chatbot/executors/scrub.ts
  *
  * scrubForDiscord() is the PII/data-leak firewall for the Discord context: it
  * projects a tool's raw output down to a per-tool allowlist of safe fields
@@ -17,8 +17,8 @@
  */
 
 import { scrubForDiscord, DISCORD_REDACTED_MARKER } from "../scrub"
-import { getRegisteredTool } from "@/actions/chatbot/tools"
-import type { RegisteredTool } from "@/actions/chatbot/tools/types"
+import { getRegisteredTool } from "@/lib/chatbot/tools"
+import type { RegisteredTool } from "@/lib/chatbot/tools/types"
 
 jest.mock("@/lib/utils/logger", () => ({
   createLogger: jest.fn(() => ({
@@ -29,8 +29,8 @@ jest.mock("@/lib/utils/logger", () => ({
   })),
 }))
 
-jest.mock("@/actions/chatbot/tools", () => {
-  const actual = jest.requireActual("@/actions/chatbot/tools")
+jest.mock("@/lib/chatbot/tools", () => {
+  const actual = jest.requireActual("@/lib/chatbot/tools")
   return {
     ...actual,
     getRegisteredTool: jest.fn(actual.getRegisteredTool),
@@ -185,7 +185,7 @@ describe("scrubForDiscord", () => {
     afterEach(() => {
       mockGetRegisteredTool.mockClear()
       mockGetRegisteredTool.mockImplementation(
-        jest.requireActual("@/actions/chatbot/tools").getRegisteredTool
+        jest.requireActual("@/lib/chatbot/tools").getRegisteredTool
       )
     })
 

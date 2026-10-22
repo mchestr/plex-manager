@@ -45,7 +45,9 @@
  * @module
  */
 
-import { getRegisteredTool } from "@/actions/chatbot/tools"
+import "server-only"
+
+import { getRegisteredTool } from "@/lib/chatbot/tools"
 import { createLogger } from "@/lib/utils/logger"
 
 const logger = createLogger("CHATBOT_DISCORD_SCRUB")

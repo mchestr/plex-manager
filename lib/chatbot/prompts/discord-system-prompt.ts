@@ -1,3 +1,5 @@
+import "server-only"
+
 import { type ChatTool } from "@/lib/llm/chat"
 
 export function generateDiscordSystemPrompt(toolset: ChatTool[]): string {

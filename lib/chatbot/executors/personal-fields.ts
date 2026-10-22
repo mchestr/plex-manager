@@ -1,3 +1,5 @@
+import "server-only"
+
 /**
  * Field names the admin assistant never needs: contact details, addresses and
  * per-user tokens. Tautulli puts them on its user, activity and history rows,

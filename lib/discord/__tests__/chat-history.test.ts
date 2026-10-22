@@ -3,7 +3,7 @@
  */
 
 import { coerceHistory, trimHistory, HISTORY_LIMIT } from "@/lib/discord/chat-history"
-import { type ChatMessage } from "@/actions/chatbot/types"
+import { type ChatMessage } from "@/lib/chatbot/types"
 
 describe("coerceHistory", () => {
   it("returns [] for non-array input", () => {

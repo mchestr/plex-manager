@@ -1,3 +1,5 @@
+import "server-only"
+
 import { getAllOverseerrRequests, getOverseerrDiscoverMovies, getOverseerrDiscoverTV, getOverseerrMediaDetails, getOverseerrRequests, getOverseerrStatus, getOverseerrUsers } from "@/lib/connections/overseerr"
 import { prisma } from "@/lib/prisma"
 import { type ConnectionResult } from "@/types/connection"

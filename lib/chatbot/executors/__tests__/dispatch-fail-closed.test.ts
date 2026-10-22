@@ -1,5 +1,5 @@
 /**
- * Fail-closed dispatch test (actions/chatbot/executors/index.ts, FR-9):
+ * Fail-closed dispatch test (lib/chatbot/executors/index.ts, FR-9):
  * in the Discord context a tool that is NOT in the resolved Discord-safe set
  * MUST be refused — the executor is never called — and the refusal is audited.
  * Admin/default context may call any registered tool.

@@ -1,3 +1,5 @@
+import "server-only"
+
 import { type ConnectionResult } from "@/types/connection"
 
 /** A connection result as tool output: the data, or `{ error }` with the client's fixed message. */

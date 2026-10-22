@@ -1,3 +1,5 @@
+import "server-only"
+
 import { type ChatTool } from "@/lib/llm/chat"
 import { MEDIA_MARKING_TOOLS } from "./media-marking"
 import { OVERSEERR_TOOLS } from "./overseerr"

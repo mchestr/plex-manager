@@ -1,3 +1,5 @@
+import "server-only"
+
 import { type ChatToolCall } from "@/lib/llm/chat"
 import { AuditEventType, logAuditEvent } from "@/lib/security/audit-log"
 import { createLogger } from "@/lib/utils/logger"

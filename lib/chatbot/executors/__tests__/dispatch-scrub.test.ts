@@ -1,5 +1,5 @@
 /**
- * Integration-ish test for the executor dispatch (actions/chatbot/executors/index.ts):
+ * Integration-ish test for the executor dispatch (lib/chatbot/executors/index.ts):
  * the Discord context MUST scrub tool output before returning it to the
  * conversation loop, while the default (admin) context returns it unscrubbed.
  *

@@ -15,7 +15,7 @@ import { createLogger } from "@/lib/utils/logger"
  *
  * `chatWithTools` sends the conversation and the tool definitions, and
  * returns the model's text and tool calls. It never runs a tool: the tools
- * carry no `execute`, so the caller (`actions/chatbot/conversation.ts`) keeps
+ * carry no `execute`, so the caller (`lib/chatbot/conversation.ts`) keeps
  * its own loop and executors, and appends `responseMessages` plus its tool
  * results before the next turn. `responseMessages` keeps the provider's
  * reasoning parts, which Claude and the OpenAI reasoning models need back on

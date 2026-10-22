@@ -6,7 +6,7 @@
  * Shows the requesting user their OWN current Plex streams as an ephemeral
  * embed. Sessions are scoped to the caller's `plexUserId` the same way the
  * chatbot's `get_plex_sessions` executor scopes them in Discord context
- * (`actions/chatbot/executors/plex.ts`): the raw `MediaContainer.Metadata` list
+ * (`lib/chatbot/executors/plex.ts`): the raw `MediaContainer.Metadata` list
  * is filtered to entries whose `User.id` (or `user_id`) equals the caller's Plex
  * user id. Because the result is self-scoped, no other viewer's activity is ever
  * rendered.

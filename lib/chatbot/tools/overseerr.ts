@@ -1,3 +1,5 @@
+import "server-only"
+
 import { type RegisteredTool } from "./types"
 
 export const OVERSEERR_TOOLS: RegisteredTool[] = [

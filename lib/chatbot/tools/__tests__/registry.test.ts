@@ -12,7 +12,7 @@ import {
   DISCORD_ADMIN_ONLY_TOOL_NAMES,
   DISCORD_SAFE_TOOLS,
   DISCORD_SAFE_TOOL_NAMES,
-} from "@/actions/chatbot/tools/registry"
+} from "@/lib/chatbot/tools/registry"
 
 /**
  * The exact 14-tool Discord safe set as it existed before the registry

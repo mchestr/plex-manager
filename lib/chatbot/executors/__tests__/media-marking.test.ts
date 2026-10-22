@@ -8,7 +8,7 @@
 import { mockReset } from "jest-mock-extended"
 
 import { prismaMock } from "@/__tests__/helpers/prisma-mock"
-import { executeMediaMarkingTool } from "@/actions/chatbot/executors/media-marking"
+import { executeMediaMarkingTool } from "@/lib/chatbot/executors/media-marking"
 import { getActivePlexServerConfig } from "@/lib/connections/plex-config"
 import { clearMemberTokenCache } from "@/lib/connections/plex-member-token"
 import { searchPlexMedia } from "@/lib/connections/plex-search"
